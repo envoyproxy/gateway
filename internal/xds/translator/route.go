@@ -127,11 +127,8 @@ func buildUpgradeConfig(trafficFeatures *ir.TrafficFeatures) []*routev3.RouteAct
 
 	upgradeConfigs := make([]*routev3.RouteAction_UpgradeConfig, 0, len(trafficFeatures.HTTPUpgrade))
 	for _, protocol := range trafficFeatures.HTTPUpgrade {
-		if !protocol.Enabled {
-			continue
-		}
 		upgradeConfigs = append(upgradeConfigs, &routev3.RouteAction_UpgradeConfig{
-			UpgradeType: protocol.Type,
+			UpgradeType: protocol,
 		})
 	}
 	if len(upgradeConfigs) == 0 {

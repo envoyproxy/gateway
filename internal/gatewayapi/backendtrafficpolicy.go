@@ -306,7 +306,7 @@ func (t *Translator) translateBackendTrafficPolicyForRoute(
 		h2          *ir.HTTP2Settings
 		ro          *ir.ResponseOverride
 		cp          []*ir.Compression
-		httpUpgrade []*ir.ProtocolUpgradeConfig
+		httpUpgrade []string
 		err, errs   error
 	)
 
@@ -460,7 +460,7 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(
 		h2          *ir.HTTP2Settings
 		ro          *ir.ResponseOverride
 		cp          []*ir.Compression
-		httpUpgrade []*ir.ProtocolUpgradeConfig
+		httpUpgrade []string
 		err, errs   error
 	)
 
@@ -975,28 +975,14 @@ func buildCompression(compression []*egv1a1.Compression) []*ir.Compression {
 	return irCompression
 }
 
-func buildHTTPProtocolUpgradeConfig(cfgs []*egv1a1.ProtocolUpgradeConfig) []*ir.ProtocolUpgradeConfig {
+func buildHTTPProtocolUpgradeConfig(cfgs []*egv1a1.ProtocolUpgradeConfig) []string {
 	if len(cfgs) == 0 {
 		return nil
 	}
 
-	result := make([]*ir.ProtocolUpgradeConfig, 0, len(cfgs))
-	idxMap := map[string]int{}
-	for i, cfg := range cfgs {
-		enabled := true
-		if cfg.Disabled != nil {
-			enabled = !*cfg.Disabled
-		}
-
-		if idx, ok := idxMap[cfg.Type]; ok {
-			result[idx].Enabled = result[idx].Enabled && enabled
-			continue
-		}
-		idxMap[cfg.Type] = i
-		result = append(result, &ir.ProtocolUpgradeConfig{
-			Type:    cfg.Type,
-			Enabled: enabled,
-		})
+	result := make([]string, 0, len(cfgs))
+	for _, cfg := range cfgs {
+		result = append(result, cfg.Type)
 	}
 
 	return result

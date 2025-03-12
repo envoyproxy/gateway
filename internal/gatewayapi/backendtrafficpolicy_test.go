@@ -137,7 +137,7 @@ func TestBuildHTTPProtocolUpgradeConfig(t *testing.T) {
 	cases := []struct {
 		name     string
 		cfgs     []*egv1a1.ProtocolUpgradeConfig
-		expected []*ir.ProtocolUpgradeConfig
+		expected []string
 	}{
 		{
 			name:     "empty",
@@ -145,58 +145,37 @@ func TestBuildHTTPProtocolUpgradeConfig(t *testing.T) {
 			expected: nil,
 		},
 		{
-			name: "disable-websockets",
+			name: "spdy",
 			cfgs: []*egv1a1.ProtocolUpgradeConfig{
 				{
-					Type:     "websocket",
-					Disabled: ptr.To(true),
+					Type: "spdy/3.1",
 				},
 			},
-			expected: []*ir.ProtocolUpgradeConfig{
-				{
-					Type:    "websocket",
-					Enabled: false,
-				},
-			},
+			expected: []string{"spdy/3.1"},
 		},
 		{
-			name: "enable-websockets",
+			name: "websockets-spdy",
 			cfgs: []*egv1a1.ProtocolUpgradeConfig{
 				{
-					Type: "websocket",
-				},
-			},
-			expected: []*ir.ProtocolUpgradeConfig{
-				{
-					Type:    "websocket",
-					Enabled: true,
-				},
-			},
-		},
-		{
-			name: "enable-and-disable",
-			cfgs: []*egv1a1.ProtocolUpgradeConfig{
-				{
-					Type: "websocket",
-				},
-				{
-					Type:     "websocket",
-					Disabled: ptr.To(true),
+					Type: "websockets",
 				},
 				{
 					Type: "spdy/3.1",
 				},
 			},
-			expected: []*ir.ProtocolUpgradeConfig{
+			expected: []string{"websockets", "spdy/3.1"},
+		},
+		{
+			name: "spdy-websockets",
+			cfgs: []*egv1a1.ProtocolUpgradeConfig{
 				{
-					Type:    "websocket",
-					Enabled: false,
+					Type: "spdy/3.1",
 				},
 				{
-					Type:    "spdy/3.1",
-					Enabled: true,
+					Type: "websockets",
 				},
 			},
+			expected: []string{"spdy/3.1", "websockets"},
 		},
 	}
 

@@ -7,8 +7,7 @@ backendTrafficPolicies:
     namespace: default
   spec:
     httpUpgrade:
-    - disabled: true
-      type: websocket
+    - type: spdy/3.1
     targetRef:
       group: gateway.networking.k8s.io
       kind: HTTPRoute
@@ -168,8 +167,7 @@ xdsIR:
           prefix: /
         traffic:
           httpUpgrade:
-          - enabled: false
-            type: websocket
+          - spdy/3.1
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4

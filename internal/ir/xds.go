@@ -795,13 +795,6 @@ type Compression struct {
 	Type egv1a1.CompressorType `json:"type" yaml:"type"`
 }
 
-// ProtocolUpgradeConfig defines the configuration for upgrading the protocol.
-// +k8s:deepcopy-gen=true
-type ProtocolUpgradeConfig struct {
-	Type    string `json:"type" yaml:"type"`
-	Enabled bool   `json:"enabled" yaml:"enabled"`
-}
-
 // TrafficFeatures holds the information associated with the Backend Traffic Policy.
 // +k8s:deepcopy-gen=true
 type TrafficFeatures struct {
@@ -835,8 +828,8 @@ type TrafficFeatures struct {
 	ResponseOverride *ResponseOverride `json:"responseOverride,omitempty" yaml:"responseOverride,omitempty"`
 	// Compression settings for HTTP Response
 	Compression []*Compression `json:"compression,omitempty" yaml:"compression,omitempty"`
-	// HTTPProtocolUpgradeConfig defines the schema for upgrading the HTTP protocol.
-	HTTPUpgrade []*ProtocolUpgradeConfig `json:"httpUpgrade,omitempty" yaml:"httpUpgrade,omitempty"`
+	// HTTPUpgrade defines the schema for upgrading the HTTP protocol.
+	HTTPUpgrade []string `json:"httpUpgrade,omitempty" yaml:"httpUpgrade,omitempty"`
 }
 
 func (b *TrafficFeatures) Validate() error {

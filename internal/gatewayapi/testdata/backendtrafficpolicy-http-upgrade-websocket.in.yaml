@@ -45,5 +45,5 @@ backendTrafficPolicies:
         kind: HTTPRoute
         name: httproute-1
       httpUpgrade:
-        - type: "spdy/3.1"
-        - type: "websocket"
+        - type: websocket
+        - type: spdy/3.1

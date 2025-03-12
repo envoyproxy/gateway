@@ -37,5 +37,5 @@ http:
           prefix: /
         traffic:
           httpUpgrade:
-            - type: "websocket"
-              enable: false
+            - "websocket"
+            - "spdy/3.1"

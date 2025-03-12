@@ -538,9 +538,6 @@ spec:
                   If not specified, the default upgrade configuration(websocket) will be used.
                 items:
                   properties:
-                    disabled:
-                      description: Disabled indicates whether the upgrade is disabled.
-                      type: boolean
                     type:
                       description: |-
                         Type is the case-insensitive type of protocol upgrade.
