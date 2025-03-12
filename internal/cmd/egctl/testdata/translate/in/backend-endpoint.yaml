@@ -34,6 +34,12 @@ spec:
         - path:
             type: PathPrefix
             value: /
+      filters:
+        - extensionRef:
+            group: gateway.envoyproxy.io
+            kind: HTTPRouteFilter
+            name: host-rewrite
+          type: ExtensionRef
 ---
 apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: Backend
@@ -75,3 +81,12 @@ spec:
         request: {}
         response:
           body: Streamed
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: HTTPRouteFilter
+metadata:
+  name: host-rewrite
+spec:
+  urlRewrite:
+    hostname:
+      type: Backend

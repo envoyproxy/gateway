@@ -791,7 +791,7 @@ func (t *Translator) processExtensionRefHTTPFilter(extFilter *gwapiv1.LocalObjec
 	if string(extFilter.Kind) == egv1a1.KindHTTPRouteFilter {
 		found := false
 		for _, hrf := range resources.HTTPRouteFilters {
-			if hrf.Namespace == filterNs && hrf.Name == string(extFilter.Name) {
+			if hrf.GetNamespace() == filterNs && hrf.Name == string(extFilter.Name) {
 				found = true
 				if hrf.Spec.URLRewrite != nil {
 
