@@ -92,10 +92,14 @@ func (r *Runner) Start(ctx context.Context) (err error) {
 	}
 	r.Logger.Info("loaded TLS certificate and key")
 
-	r.grpc = grpc.NewServer(grpc.Creds(credentials.NewTLS(tlsConfig)), grpc.KeepaliveEnforcementPolicy(keepalive.EnforcementPolicy{
-		MinTime:             15 * time.Second,
-		PermitWithoutStream: true,
-	}))
+	r.grpc = grpc.NewServer(
+		grpc.Creds(credentials.NewTLS(tlsConfig)),
+		grpc.KeepaliveEnforcementPolicy(keepalive.EnforcementPolicy{
+			MinTime:             15 * time.Second,
+			PermitWithoutStream: true,
+		}),
+		grpc.UnaryInterceptor(NewJWTAuthInterceptor().Unary()),
+	)
 
 	r.cache = cache.NewSnapshotCache(true, r.Logger)
 	registerServer(serverv3.NewServer(ctx, r.cache, r.cache), r.grpc)

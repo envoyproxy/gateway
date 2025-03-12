@@ -219,17 +219,51 @@ static_resources:
           tls_params:
             tls_maximum_protocol_version: TLSv1_3
           tls_certificate_sds_secret_configs:
+{{- if not .GatewayNamespaceMode }}
           - name: xds_certificate
             sds_config:
               path_config_source:
                 path: {{ .SdsCertificatePath }}
               resource_api_version: V3
+{{- end }}
           validation_context_sds_secret_config:
             name: xds_trusted_ca
             sds_config:
               path_config_source:
                 path: {{ .SdsTrustedCAPath }}
               resource_api_version: V3
+{{- if .GatewayNamespacedMode }}
+    filter_chains:
+    - filters:
+      - name: envoy.filters.network.http_connection_manager
+        typed_config:
+          "@type": type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
+          stat_prefix: ingress_http
+          route_config:
+            virtual_hosts:
+            - name: local_xds
+              domains: ["*"]
+              routes:
+              - match:
+                  prefix: "/"
+                route:
+                  cluster: xds_service
+          http_filters:
+          - name: envoy.filters.http.credential_injector
+            typed_config:
+              "@type": type.googleapis.com/envoy.extensions.filters.http.credential_injector.v3.CredentialInjector
+              allow_request_without_credential: true
+              overwrite: true
+              credential:
+                name: envoy.http.injected_credentials.generic
+                typed_config:
+                  "@type": type.googleapis.com/envoy.extensions.http.injected_credentials.generic.v3.Generic
+                  credential:
+                    name: jwt-sa-bearer
+          - name: envoy.filters.http.router
+            typed_config:
+              "@type": type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+  {{- end }}
   - name: wasm_cluster
     type: STRICT_DNS
     connect_timeout: 10s
@@ -292,3 +326,10 @@ overload_manager:
       threshold:
         value: 0.98
   {{- end }}
+{{- if .GatewayNamespacedMode }}
+secrets:
+  - name: jwt-sa-bearer
+    generic_secret:
+      secret:
+        inline_string: "Bearer $(cat /var/run/secrets/kubernetes.io/serviceaccount/token)"
+{{- end }}
