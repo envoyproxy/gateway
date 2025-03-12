@@ -12,3 +12,7 @@ config:
       kubernetes:
         deploy:
           type: GatewayNamespace
+        watch:
+          namespaces:
+          - "default"
+          - "app-ns"
