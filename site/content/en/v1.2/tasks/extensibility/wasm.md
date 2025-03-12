@@ -149,14 +149,35 @@ kubectl get envoyextensionpolicy/http-wasm-source-test -o yaml
 
 ### Testing
 
-Ensure you have completed the [Quickstart](../../quickstart). If not, follow the
+{{< tabpane text=true >}}
+{{% tab header="With External LoadBalancer Support" %}}
+
+
+Ensure the `GATEWAY_HOST` environment variable from the [Quickstart](../../quickstart) is set. If not, follow the
 Quickstart instructions to set the variable.
+
+```shell
+echo $GATEWAY_HOST
+```
 
 Send a request to the backend service:
 
 ```shell
-curl -i -H "Host: www.example.com" http://localhost:8888
+curl -i -H "Host: www.example.com" "http://${GATEWAY_HOST}"
 ```
+{{% /tab %}}
+{{% tab header="Without LoadBalancer Support" %}}
+
+Ensure you have completed the [Quickstart](../../quickstart).
+
+Send a request to the backend service:
+
+```shell
+curl -i -H "Host: www.example.com" "http://${GATEWAY_HOST}"
+```
+
+{{% /tab %}}
+{{< /tabpane >}}
 
 You should see that the wasm extension has added this header to the response:
 
