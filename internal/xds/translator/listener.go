@@ -200,6 +200,7 @@ func buildXdsTCPListener(
 	listener := &listenerv3.Listener{
 		Name:                          name,
 		AccessLog:                     al,
+		EnableReusePort:               wrapperspb.Bool(false),
 		SocketOptions:                 socketOptions,
 		PerConnectionBufferLimitBytes: bufferLimitBytes,
 		Address: &corev3.Address{
