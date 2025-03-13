@@ -7,6 +7,7 @@ package cmd
 
 import (
 	"context"
+	"io"
 
 	"github.com/spf13/cobra"
 
@@ -37,7 +38,7 @@ func GetServerCommand() *cobra.Command {
 		Aliases: []string{"serve"},
 		Short:   "Serve Envoy Gateway",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return server(cmd.Context())
+			return server(cmd.Context(), cmd.OutOrStdout())
 		},
 	}
 	cmd.PersistentFlags().StringVarP(&cfgPath, "config-path", "c", "",
@@ -47,8 +48,8 @@ func GetServerCommand() *cobra.Command {
 }
 
 // server serves Envoy Gateway.
-func server(ctx context.Context) error {
-	cfg, err := getConfig()
+func server(ctx context.Context, logOut io.Writer) error {
+	cfg, err := getConfig(logOut)
 	if err != nil {
 		return err
 	}
@@ -62,7 +63,7 @@ func server(ctx context.Context) error {
 		return nil
 	}
 	l := loader.New(cfgPath, cfg, hook)
-	if err := l.Start(ctx); err != nil {
+	if err := l.Start(ctx, logOut); err != nil {
 		return err
 	}
 
@@ -84,12 +85,12 @@ func server(ctx context.Context) error {
 }
 
 // getConfig gets the Server configuration
-func getConfig() (*config.Server, error) {
-	return getConfigByPath(cfgPath)
+func getConfig(logOut io.Writer) (*config.Server, error) {
+	return getConfigByPath(logOut, cfgPath)
 }
 
 // make `cfgPath` an argument to test it without polluting the global var
-func getConfigByPath(cfgPath string) (*config.Server, error) {
+func getConfigByPath(logOut io.Writer, cfgPath string) (*config.Server, error) {
 	// Initialize with default config parameters.
 	cfg, err := config.New()
 	if err != nil {
@@ -114,7 +115,7 @@ func getConfigByPath(cfgPath string) (*config.Server, error) {
 		cfg.EnvoyGateway = eg
 		// update cfg logger
 		eg.Logging.SetEnvoyGatewayLoggingDefaults()
-		cfg.Logger = logging.NewLogger(eg.Logging)
+		cfg.Logger = logging.NewLogger(logOut, eg.Logging)
 	}
 
 	if err := cfg.Validate(); err != nil {

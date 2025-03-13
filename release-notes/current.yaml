@@ -20,6 +20,7 @@ new features: |
   Added support for HorizontalPodAutoscaler to helm chart
   Added support for distinct header and distinct source CIDR based local rate limiting
   Added support for forwarding the authenticated username to the backend via a configurable header in BasicAuth
+  Added support for HTTP Methods and Headers based authorization in SecurityPolicy
   Added support for zone aware routing
   Added support for per-host circuit breaker thresholds
 
@@ -29,10 +30,13 @@ bug fixes: |
   Bypass overload manager for stats and ready listeners
   Fix translating backendSettings for extAuth
   Fix an issue that stats compressor was not working.
+  Added support for BackendTLSPolicy and EnvoyExtensionPolicy parsing in Standalone mode.
+  Retrigger reconciliation when backendRef of type ServiceImport is updated or when EndpointSlice(s) for a ServiceImport are updated.
 
 # Enhancements that improve performance.
 performance improvements: |
-
+  Added a cache for the Wasm OCI image permission checks and check the pullSecrets against the OCI image registry in
+  a background goroutine.
 # Deprecated features or APIs.
 deprecations: |
   Deprecated the PreserveXRequestID field.

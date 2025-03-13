@@ -17,6 +17,8 @@ const (
 	StreamedExtProcBodyProcessingMode ExtProcBodyProcessingMode = "Streamed"
 	// BufferedExtProcBodyProcessingMode will buffer the message body in memory and send the entire body at once. If the body exceeds the configured buffer limit, then the downstream system will receive an error.
 	BufferedExtProcBodyProcessingMode ExtProcBodyProcessingMode = "Buffered"
+	// FullDuplexStreamedExtBodyProcessingMode will send the body in pieces, to be read in a stream. Full details here: https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/http/ext_proc/v3/processing_mode.proto.html#enum-extensions-filters-http-ext-proc-v3-processingmode-bodysendmode
+	FullDuplexStreamedExtBodyProcessingMode ExtProcBodyProcessingMode = "FullDuplexStreamed"
 	// BufferedPartialExtBodyHeaderProcessingMode will buffer the message body in memory and send the entire body in one chunk. If the body exceeds the configured buffer limit, then the body contents up to the buffer limit will be sent.
 	BufferedPartialExtBodyHeaderProcessingMode ExtProcBodyProcessingMode = "BufferedPartial"
 )

@@ -15,3 +15,8 @@ IMAGE_NAME ?= gateway-dev
 IMAGE ?= ${REGISTRY}/${IMAGE_NAME}
 # Tag is the tag to use for build and push image targets.
 TAG ?= $(REV)
+
+# Fuzzing variables
+
+# FUZZ_TIME is the time to run the fuzzer for
+FUZZ_TIME ?= 5s
