@@ -42,7 +42,6 @@ backends:
     - fqdn:
         hostname: foo.bar.com
         port: 443
-    type: ""
   status:
     conditions:
     - lastTransitionTime: null

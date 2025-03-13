@@ -10,7 +10,6 @@ backends:
     - fqdn:
         hostname: '*.foo.com'
         port: 3000
-    type: ""
   status:
     conditions:
     - lastTransitionTime: null
@@ -29,7 +28,6 @@ backends:
     - fqdn:
         hostname: localhost
         port: 3000
-    type: ""
   status:
     conditions:
     - lastTransitionTime: null
@@ -49,7 +47,6 @@ backends:
     - ip:
         address: 127.0.0.3
         port: 3000
-    type: ""
   status:
     conditions:
     - lastTransitionTime: null
@@ -69,7 +66,6 @@ backends:
     - ip:
         address: example.com
         port: 3001
-    type: ""
   status:
     conditions:
     - lastTransitionTime: null
