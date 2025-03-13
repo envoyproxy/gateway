@@ -10,6 +10,7 @@ package celvalidation
 import (
 	"context"
 	"fmt"
+	"k8s.io/utils/ptr"
 	"strings"
 	"testing"
 	"time"
@@ -39,7 +40,6 @@ func TestBackend(t *testing.T) {
 			desc: "Valid static",
 			mutate: func(backend *egv1a1.Backend) {
 				backend.Spec = egv1a1.BackendSpec{
-					Type:         egv1a1.BackendTypeEndpoints,
 					AppProtocols: []egv1a1.AppProtocolType{egv1a1.AppProtocolTypeH2C},
 					Endpoints: []egv1a1.BackendEndpoint{
 						{
@@ -62,7 +62,6 @@ func TestBackend(t *testing.T) {
 			desc: "Valid DNS",
 			mutate: func(backend *egv1a1.Backend) {
 				backend.Spec = egv1a1.BackendSpec{
-					Type:         egv1a1.BackendTypeEndpoints,
 					AppProtocols: []egv1a1.AppProtocolType{egv1a1.AppProtocolTypeH2C},
 					Endpoints: []egv1a1.BackendEndpoint{
 						{
@@ -104,7 +103,6 @@ func TestBackend(t *testing.T) {
 			desc: "unsupported application protocol type",
 			mutate: func(backend *egv1a1.Backend) {
 				backend.Spec = egv1a1.BackendSpec{
-					Type:         egv1a1.BackendTypeEndpoints,
 					AppProtocols: []egv1a1.AppProtocolType{"HTTP7"},
 					Endpoints: []egv1a1.BackendEndpoint{
 						{
@@ -122,7 +120,6 @@ func TestBackend(t *testing.T) {
 			desc: "No address",
 			mutate: func(backend *egv1a1.Backend) {
 				backend.Spec = egv1a1.BackendSpec{
-					Type:         egv1a1.BackendTypeEndpoints,
 					AppProtocols: []egv1a1.AppProtocolType{egv1a1.AppProtocolTypeH2C},
 					Endpoints:    []egv1a1.BackendEndpoint{{}},
 				}
@@ -133,7 +130,6 @@ func TestBackend(t *testing.T) {
 			desc: "Multiple addresses",
 			mutate: func(backend *egv1a1.Backend) {
 				backend.Spec = egv1a1.BackendSpec{
-					Type:         egv1a1.BackendTypeEndpoints,
 					AppProtocols: []egv1a1.AppProtocolType{egv1a1.AppProtocolTypeH2C},
 					Endpoints: []egv1a1.BackendEndpoint{
 						{
@@ -154,7 +150,6 @@ func TestBackend(t *testing.T) {
 			desc: "Mixed types",
 			mutate: func(backend *egv1a1.Backend) {
 				backend.Spec = egv1a1.BackendSpec{
-					Type:         egv1a1.BackendTypeEndpoints,
 					AppProtocols: []egv1a1.AppProtocolType{egv1a1.AppProtocolTypeH2C},
 					Endpoints: []egv1a1.BackendEndpoint{
 						{
@@ -178,7 +173,6 @@ func TestBackend(t *testing.T) {
 			desc: "Invalid hostname",
 			mutate: func(backend *egv1a1.Backend) {
 				backend.Spec = egv1a1.BackendSpec{
-					Type:         egv1a1.BackendTypeEndpoints,
 					AppProtocols: []egv1a1.AppProtocolType{egv1a1.AppProtocolTypeH2C},
 					Endpoints: []egv1a1.BackendEndpoint{
 						{
@@ -219,7 +213,6 @@ func TestBackend(t *testing.T) {
 			desc: "Invalid IP",
 			mutate: func(backend *egv1a1.Backend) {
 				backend.Spec = egv1a1.BackendSpec{
-					Type:         egv1a1.BackendTypeEndpoints,
 					AppProtocols: []egv1a1.AppProtocolType{egv1a1.AppProtocolTypeH2C},
 					Endpoints: []egv1a1.BackendEndpoint{
 						{
@@ -259,14 +252,14 @@ func TestBackend(t *testing.T) {
 		{
 			desc: "invalid type",
 			mutate: func(backend *egv1a1.Backend) {
-				backend.Spec = egv1a1.BackendSpec{Type: "FOO"}
+				backend.Spec = egv1a1.BackendSpec{Type: ptr.To[egv1a1.BackendType]("FOO")}
 			},
 			wantErrors: []string{`spec.type: Unsupported value: "FOO": supported values: "Endpoints"`},
 		},
 		{
 			desc: "dynamic forward proxy type",
 			mutate: func(backend *egv1a1.Backend) {
-				backend.Spec = egv1a1.BackendSpec{Type: egv1a1.BackendTypeDynamicForwardProxy}
+				backend.Spec = egv1a1.BackendSpec{Type: ptr.To(egv1a1.BackendTypeDynamicForwardProxy)}
 			},
 			wantErrors: []string{},
 		},

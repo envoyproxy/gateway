@@ -118,7 +118,7 @@ type BackendSpec struct {
 	// +kubebuilder:validation:Enum=Endpoints;DynamicForwardProxy
 	// +kubebuilder:default=Endpoints
 	// +optional
-	Type BackendType `json:"type"`
+	Type *BackendType `json:"type,omitempty"`
 
 	// Endpoints defines the endpoints to be used when connecting to the backend.
 	//
