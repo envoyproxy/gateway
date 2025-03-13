@@ -10,7 +10,7 @@ backends:
     - fqdn:
         hostname: primary.foo.com
         port: 3000
-    type: ""
+    type: "Endpoints"
   status:
     conditions:
     - lastTransitionTime: null

@@ -9,7 +9,7 @@ backendTrafficPolicies:
     loadBalancer:
       consistentHash:
         tableSize: 1024
-        type: ""
+        type: "Endpoints"
       type: ConsistentHash
     targetRef:
       group: gateway.networking.k8s.io
@@ -40,7 +40,7 @@ backendTrafficPolicies:
     loadBalancer:
       consistentHash:
         tableSize: 5000012
-        type: ""
+        type: "Endpoints"
       type: ConsistentHash
     targetRef:
       group: gateway.networking.k8s.io

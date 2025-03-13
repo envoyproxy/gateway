@@ -12,7 +12,7 @@ backends:
     - ip:
         address: 1.1.1.1
         port: 3001
-    type: ""
+    type: "Endpoints"
   status:
     conditions:
     - lastTransitionTime: null
@@ -33,7 +33,7 @@ backends:
     - ip:
         address: 1.1.1.1
         port: 3001
-    type: ""
+    type: "Endpoints"
   status:
     conditions:
     - lastTransitionTime: null
@@ -55,7 +55,7 @@ backends:
     - ip:
         address: 1.1.1.1
         port: 3001
-    type: ""
+    type: "Endpoints"
   status:
     conditions:
     - lastTransitionTime: null
@@ -77,7 +77,7 @@ backends:
     - ip:
         address: 1.1.1.1
         port: 3001
-    type: ""
+    type: "Endpoints"
   status:
     conditions:
     - lastTransitionTime: null
