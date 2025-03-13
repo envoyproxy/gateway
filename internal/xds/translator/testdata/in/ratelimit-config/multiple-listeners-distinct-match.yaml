@@ -30,3 +30,34 @@ http:
       - endpoints:
         - host: "1.2.3.4"
           port: 50000
+- name: "second-listener"
+  address: "0.0.0.0"
+  port: 10081
+  hostnames:
+  - "*"
+  path:
+    mergeSlashes: true
+    escapedSlashesAction: UnescapeAndRedirect
+  routes:
+  - name: "first-route"
+    traffic:
+      backendTrafficPolicy:
+        name: "test-policy-"
+        namespace: "test-namespace"
+      rateLimit:
+        global:
+          rules:
+          - headerMatches:
+            - name: "x-user-id"
+              distinct: true
+            limit:
+              requests: 5
+              unit: second
+    pathMatch:
+      exact: "foo/bar"
+    destination:
+      name: "first-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000

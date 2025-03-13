@@ -19,11 +19,28 @@ http:
           rules:
           - headerMatches:
             - name: "x-user-id"
-              exact: "one"
+              distinct: true
             limit:
               requests: 5
               unit: second
-  - name: "second-route"
+    pathMatch:
+      exact: "foo/bar"
+    destination:
+      name: "first-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
+- name: "second-listener"
+  address: "0.0.0.0"
+  port: 10081
+  hostnames:
+  - "*"
+  path:
+    mergeSlashes: true
+    escapedSlashesAction: UnescapeAndRedirect
+  routes:
+  - name: "first-route"
     traffic:
       backendTrafficPolicy:
         name: "test-policy-1"
@@ -32,44 +49,11 @@ http:
         global:
           shared: true
           rules:
-          - clientSelectors:
-            - sourceCIDR:
-                type: "Distinct"
-                values: "0.0.0.0/0"
+          - headerMatches:
+            - name: "x-user-id"
+              distinct: true
             limit:
               requests: 5
-              unit: second
-    pathMatch:
-      exact: "foo/baz"
-  - name: "third-route"
-    traffic:
-      backendTrafficPolicy:
-        name: "test-policy-2"
-        namespace: "test-namespace"
-      rateLimit:
-        global:
-          shared: true
-          rules:
-          - headerMatches:
-            - name: "x-user-id"
-              exact: "two"
-            limit:
-              requests: 10
-              unit: second
-  - name: "fourth-route"
-    traffic:
-      backendTrafficPolicy:
-        name: "test-policy-3"
-        namespace: "test-namespace"
-      rateLimit:
-        global:
-          shared: false
-          rules:
-          - headerMatches:
-            - name: "x-user-id"
-              exact: "two"
-            limit:
-              requests: 10
               unit: second
     pathMatch:
       exact: "foo/bar"

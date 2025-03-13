@@ -1,0 +1,20 @@
+name: test-policy-1-test-namespace
+domain: test-policy-1-test-namespace
+descriptors:
+  - key: test-policy-1
+    value: test-namespace
+    rate_limit: null
+    descriptors:
+      - key: rule-0-match-0
+        value: ""
+        rate_limit:
+          requests_per_unit: 5
+          unit: SECOND
+          unlimited: false
+          name: ""
+          replaces: []
+        descriptors: []
+        shadow_mode: false
+        detailed_metric: false
+    shadow_mode: false
+    detailed_metric: false

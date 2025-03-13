@@ -412,40 +412,43 @@ func GetRateLimitServiceConfigStr(pbCfg *rlsconfv3.RateLimitConfig) (string, err
 
 // BuildRateLimitServiceConfig builds the rate limit service configurations based on
 // https://github.com/envoyproxy/ratelimit#the-configuration-format
-// It returns a list of configurations, one for each unique domain needed.
-func BuildRateLimitServiceConfig(irListener *ir.HTTPListener) []*rlsconfv3.RateLimitConfig {
+// It returns a list of unique configurations, one for each domain needed across all listeners.
+func BuildRateLimitServiceConfig(irListeners []*ir.HTTPListener) []*rlsconfv3.RateLimitConfig {
 	// Map to store descriptors for each domain
 	domainDescriptors := make(map[string][]*rlsconfv3.RateLimitDescriptor)
 
-	// Process each route to build descriptors
-	for _, route := range irListener.Routes {
-		if !routeContainsGlobalRateLimit(route) {
-			continue
-		}
+	// Process each listener
+	for _, irListener := range irListeners {
+		// Process each route to build descriptors
+		for _, route := range irListener.Routes {
+			if !routeContainsGlobalRateLimit(route) {
+				continue
+			}
 
-		// Get route rule descriptors within each route
-		serviceDescriptors := buildRateLimitServiceDescriptors(route)
-		if len(serviceDescriptors) == 0 {
-			continue
-		}
+			// Get route rule descriptors within each route
+			serviceDescriptors := buildRateLimitServiceDescriptors(route)
+			if len(serviceDescriptors) == 0 {
+				continue
+			}
 
-		// Determine the domain for this route
-		domain := irListener.Name // Default domain
-		if isSharedRateLimit(route) && route.Traffic.BackendTrafficPolicy != nil &&
-			route.Traffic.BackendTrafficPolicy.Name != "" && route.Traffic.BackendTrafficPolicy.Namespace != "" {
-			domain = route.Traffic.BackendTrafficPolicy.Name + "-" + route.Traffic.BackendTrafficPolicy.Namespace
-		}
+			// Determine the domain for this route
+			domain := irListener.Name // Default domain
+			if isSharedRateLimit(route) && route.Traffic.BackendTrafficPolicy != nil &&
+				route.Traffic.BackendTrafficPolicy.Name != "" && route.Traffic.BackendTrafficPolicy.Namespace != "" {
+				domain = route.Traffic.BackendTrafficPolicy.Name + "-" + route.Traffic.BackendTrafficPolicy.Namespace
+			}
 
-		// Handle shared and non-shared rate limits differently
-		if isSharedRateLimit(route) {
-			addSharedRateLimitDescriptor(route, serviceDescriptors, domain, domainDescriptors)
-		} else {
-			addRouteSpecificDescriptor(route, serviceDescriptors, domain, domainDescriptors)
+			// Handle shared and non-shared rate limits differently
+			if isSharedRateLimit(route) {
+				addSharedRateLimitDescriptor(route, serviceDescriptors, domain, domainDescriptors)
+			} else {
+				addRouteSpecificDescriptor(route, serviceDescriptors, domain, domainDescriptors)
+			}
 		}
 	}
 
-	// Convert map to list of RateLimitConfig objects
-	return createRateLimitConfigs(domainDescriptors)
+	configs := createRateLimitConfigs(domainDescriptors)
+	return configs
 }
 
 // addSharedRateLimitDescriptor adds shared rate limit descriptors to the domain descriptor map

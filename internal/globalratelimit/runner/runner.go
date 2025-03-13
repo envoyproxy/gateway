@@ -163,21 +163,19 @@ func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 func (r *Runner) translate(xdsIR *ir.Xds) (*types.ResourceVersionTable, error) {
 	resourceVT := new(types.ResourceVersionTable)
 
-	// Iterate over each HTTP listener
-	for _, listener := range xdsIR.HTTP {
-		// Build the rate limit service config for this listener
-		configs := translator.BuildRateLimitServiceConfig(listener)
+	// Generate rate limit configurations for all listeners at once
+	configs := translator.BuildRateLimitServiceConfig(xdsIR.HTTP)
 
-		// Iterate through each config
-		for _, cfg := range configs {
-			// If the config is not nil, add it to the xDS Config resources
-			if cfg != nil {
-				if err := resourceVT.AddXdsResource(resourcev3.RateLimitConfigType, cfg); err != nil {
-					return nil, err
-				}
+	// Add each configuration to the resource version table
+	for _, cfg := range configs {
+		// If the config is not nil, add it to the xDS Config resources
+		if cfg != nil {
+			if err := resourceVT.AddXdsResource(resourcev3.RateLimitConfigType, cfg); err != nil {
+				return nil, err
 			}
 		}
 	}
+
 	return resourceVT, nil
 }
 

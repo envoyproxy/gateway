@@ -1,33 +1,34 @@
-name: "first-listener"
-address: "0.0.0.0"
-port: 10080
-hostnames:
-- "*"
-path:
-  mergeSlashes: true
-  escapedSlashesAction: UnescapeAndRedirect
-routes:
-- name: "first-route"
-  traffic:
-    backendTrafficPolicy:
-      name: "test-policy-1"
-      namespace: "test-namespace"
-    rateLimit:
-      global:
-        rules:
-        - cidrMatch:
-            cidr: "192.168.0.0/16"
-            ipv6: false
-            maskLen: 16
-            distinct: true
-          limit:
-            requests: 5
-            unit: second
-  pathMatch:
-    exact: "foo/bar"
-  destination:
-    name: "first-route-dest"
-    settings:
-    - endpoints:
-      - host: "1.2.3.4"
-        port: 50000
+http:
+- name: "first-listener"
+  address: "0.0.0.0"
+  port: 10080
+  hostnames:
+  - "*"
+  path:
+    mergeSlashes: true
+    escapedSlashesAction: UnescapeAndRedirect
+  routes:
+  - name: "first-route"
+    traffic:
+      backendTrafficPolicy:
+        name: "test-policy-1"
+        namespace: "test-namespace"
+      rateLimit:
+        global:
+          rules:
+          - cidrMatch:
+              cidr: "192.168.0.0/16"
+              ipv6: false
+              maskLen: 16
+              distinct: true
+            limit:
+              requests: 5
+              unit: second
+    pathMatch:
+      exact: "foo/bar"
+    destination:
+      name: "first-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
