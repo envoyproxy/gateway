@@ -254,7 +254,7 @@ func TestBackend(t *testing.T) {
 			mutate: func(backend *egv1a1.Backend) {
 				backend.Spec = egv1a1.BackendSpec{Type: ptr.To[egv1a1.BackendType]("FOO")}
 			},
-			wantErrors: []string{`spec.type: Unsupported value: "FOO": supported values: "Endpoints"`},
+			wantErrors: []string{`spec.type: Unsupported value: "FOO": supported values: "Endpoints", "DynamicForwardProxy"`},
 		},
 		{
 			desc: "dynamic forward proxy type",
