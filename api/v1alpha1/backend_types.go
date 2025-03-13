@@ -113,6 +113,12 @@ type UnixSocket struct {
 
 // BackendSpec describes the desired state of BackendSpec.
 type BackendSpec struct {
+	// Type defines the type of the backend. Defaults to "Endpoints"
+	//
+	// +kubebuilder:validation:Enum=Endpoints;DynamicForwardProxy
+	// +optional
+	Type BackendType `json:"type"`
+
 	// Endpoints defines the endpoints to be used when connecting to the backend.
 	//
 	// +kubebuilder:validation:MinItems=1
@@ -134,6 +140,16 @@ type BackendSpec struct {
 	// +optional
 	Fallback *bool `json:"fallback,omitempty"`
 }
+
+// BackendType defines the type of the Backend.
+type BackendType string
+
+const (
+	// BackendTypeEndpoints defines the type of the backend as Endpoints.
+	BackendTypeEndpoints BackendType = "Endpoints"
+	// BackendTypeDynamicForwardProxy defines the type of the backend as DynamicForwardProxy.
+	BackendTypeDynamicForwardProxy BackendType = "DynamicForwardProxy"
+)
 
 // BackendConditionType is a type of condition for a backend. This type should be
 // used with a Backend resource Status.Conditions field.
