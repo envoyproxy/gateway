@@ -42,6 +42,7 @@ backends:
     - fqdn:
         hostname: oauth.foo.com
         port: 443
+    type: ""
   status:
     conditions:
     - lastTransitionTime: null

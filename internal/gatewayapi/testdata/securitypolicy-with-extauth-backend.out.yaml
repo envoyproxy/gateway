@@ -10,6 +10,7 @@ backends:
     - fqdn:
         hostname: primary.foo.com
         port: 3000
+    type: ""
   status:
     conditions:
     - lastTransitionTime: null
@@ -27,6 +28,7 @@ backends:
     endpoints:
     - unix:
         path: /var/run/uds.sock
+    type: ""
   status:
     conditions:
     - lastTransitionTime: null

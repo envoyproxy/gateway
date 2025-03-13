@@ -401,6 +401,7 @@ _Appears in:_
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
+| `type` | _[BackendType](#backendtype)_ |  false  | Endpoints | Type defines the type of the backend. Defaults to "Endpoints" |
 | `endpoints` | _[BackendEndpoint](#backendendpoint) array_ |  true  |  | Endpoints defines the endpoints to be used when connecting to the backend. |
 | `appProtocols` | _[AppProtocolType](#appprotocoltype) array_ |  false  |  | AppProtocols defines the application protocols to be supported when connecting to the backend. |
 | `fallback` | _boolean_ |  false  |  | Fallback indicates whether the backend is designated as a fallback.<br />It is highly recommended to configure active or passive health checks to ensure that failover can be detected<br />when the active backends become unhealthy and to automatically readjust once the primary backends are healthy again.<br />The overprovisioning factor is set to 1.4, meaning the fallback backends will only start receiving traffic when<br />the health of the active backends falls below 72%. |
@@ -487,6 +488,21 @@ _Appears in:_
 | `useClientProtocol` | _boolean_ |  false  |  | UseClientProtocol configures Envoy to prefer sending requests to backends using<br />the same HTTP protocol that the incoming request used. Defaults to false, which means<br />that Envoy will use the protocol indicated by the attached BackendRef. |
 | `compression` | _[Compression](#compression) array_ |  false  |  | The compression config for the http streams. |
 | `responseOverride` | _[ResponseOverride](#responseoverride) array_ |  false  |  | ResponseOverride defines the configuration to override specific responses with a custom one.<br />If multiple configurations are specified, the first one to match wins. |
+
+
+#### BackendType
+
+_Underlying type:_ _string_
+
+BackendType defines the type of the Backend.
+
+_Appears in:_
+- [BackendSpec](#backendspec)
+
+| Value | Description |
+| ----- | ----------- |
+| `Endpoints` | BackendTypeEndpoints defines the type of the backend as Endpoints.<br /> | 
+| `DynamicForwardProxy` | BackendTypeDynamicForwardProxy defines the type of the backend as DynamicForwardProxy.<br /> | 
 
 
 #### BasicAuth

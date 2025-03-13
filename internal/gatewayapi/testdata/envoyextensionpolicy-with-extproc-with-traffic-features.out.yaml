@@ -74,6 +74,7 @@ backends:
     - ip:
         address: 1.1.1.1
         port: 3001
+    type: ""
   status:
     conditions:
     - lastTransitionTime: null
@@ -92,6 +93,7 @@ backends:
     - ip:
         address: 2.2.2.2
         port: 3443
+    type: ""
   status:
     conditions:
     - lastTransitionTime: null

@@ -10,6 +10,7 @@ backends:
     - ip:
         address: 10.244.0.28
         port: 3000
+    type: ""
   status:
     conditions:
     - lastTransitionTime: null
@@ -28,6 +29,7 @@ backends:
     - fqdn:
         hostname: primary.foo.com
         port: 3000
+    type: ""
   status:
     conditions:
     - lastTransitionTime: null

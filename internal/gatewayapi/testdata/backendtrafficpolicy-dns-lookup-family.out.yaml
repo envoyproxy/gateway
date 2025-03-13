@@ -41,6 +41,7 @@ backends:
     - fqdn:
         hostname: backend-v2.gateway-conformance-infra.svc.cluster.local
         port: 9090
+    type: ""
   status:
     conditions:
     - lastTransitionTime: null
@@ -59,6 +60,7 @@ backends:
     - fqdn:
         hostname: grpc-infra-backend.gateway-conformance-infra.svc.cluster.local
         port: 8080
+    type: ""
   status:
     conditions:
     - lastTransitionTime: null
@@ -77,6 +79,7 @@ backends:
     - fqdn:
         hostname: backend-v3.gateway-conformance-infra.svc.cluster.local
         port: 8080
+    type: ""
   status:
     conditions:
     - lastTransitionTime: null
@@ -95,6 +98,7 @@ backends:
     - fqdn:
         hostname: grpc-infra-backend-v1.gateway-conformance-infra.svc.cluster.local
         port: 8080
+    type: ""
   status:
     conditions:
     - lastTransitionTime: null

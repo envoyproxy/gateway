@@ -9,6 +9,7 @@ backends:
     endpoints:
     - unix:
         path: /var/run/backend.sock
+    type: ""
   status:
     conditions:
     - lastTransitionTime: null
@@ -27,6 +28,7 @@ backends:
     - fqdn:
         hostname: primary.foo.com
         port: 3000
+    type: ""
   status:
     conditions:
     - lastTransitionTime: null
@@ -45,6 +47,7 @@ backends:
     - ip:
         address: 1.1.1.1
         port: 3001
+    type: ""
   status:
     conditions:
     - lastTransitionTime: null
@@ -62,6 +65,7 @@ backends:
     endpoints:
     - unix:
         path: /var/run/backend2.sock
+    type: ""
   status:
     conditions:
     - lastTransitionTime: null
@@ -80,6 +84,7 @@ backends:
     - fqdn:
         hostname: primary2.foo.com
         port: 3000
+    type: ""
   status:
     conditions:
     - lastTransitionTime: null
@@ -98,6 +103,7 @@ backends:
     - ip:
         address: 2.2.2.2
         port: 3001
+    type: ""
   status:
     conditions:
     - lastTransitionTime: null

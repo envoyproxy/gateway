@@ -10,6 +10,7 @@ backends:
     - ip:
         address: 1.1.1.1
         port: 3001
+    type: ""
   status:
     conditions:
     - lastTransitionTime: null
