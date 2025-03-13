@@ -17,7 +17,7 @@ http:
         maxParallelRequests: 1
         maxParallelRetries: 2
         maxRequestsPerConnection: 10
-        perHost:
+        perEndpoint:
           maxConnections: 1
     destination:
       name: "first-route-dest"

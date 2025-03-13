@@ -594,7 +594,7 @@ _Appears in:_
 | `maxParallelRequests` | _integer_ |  false  | 1024 | The maximum number of parallel requests that Envoy will make to the referenced backend defined within a xRoute rule. |
 | `maxParallelRetries` | _integer_ |  false  | 1024 | The maximum number of parallel retries that Envoy will make to the referenced backend defined within a xRoute rule. |
 | `maxRequestsPerConnection` | _integer_ |  false  |  | The maximum number of requests that Envoy will make over a single connection to the referenced backend defined within a xRoute rule.<br />Default: unlimited. |
-| `perHost` | _[PerHostCircuitBreakers](#perhostcircuitbreakers)_ |  false  |  | PerHost defines per-host Circuit Breakers |
+| `perEndpoint` | _[PerEndpointCircuitBreakers](#perendpointcircuitbreakers)_ |  false  |  | PerEndpoint defines Circuit Breakers that will apply per-endpoint for an upstream cluster |
 
 
 #### ClaimToHeader
@@ -3104,18 +3104,18 @@ _Appears in:_
 | `disableMergeSlashes` | _boolean_ |  false  |  | DisableMergeSlashes allows disabling the default configuration of merging adjacent<br />slashes in the path.<br />Note that slash merging is not part of the HTTP spec and is provided for convenience. |
 
 
-#### PerHostCircuitBreakers
+#### PerEndpointCircuitBreakers
 
 
 
-PerHostCircuitBreakers defines the per-host Circuit Breaker configuration.
+PerEndpointCircuitBreakers defines Circuit Breakers that will apply per-endpoint for an upstream cluster
 
 _Appears in:_
 - [CircuitBreaker](#circuitbreaker)
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `maxConnections` | _integer_ |  false  | 1024 | MaxConnections configures the maximum number of connections that Envoy will establish per-host to the referenced backend defined within a xRoute rule. |
+| `maxConnections` | _integer_ |  false  | 1024 | MaxConnections configures the maximum number of connections that Envoy will establish per-endpoint to the referenced backend defined within a xRoute rule. |
 
 
 #### PerRetryPolicy

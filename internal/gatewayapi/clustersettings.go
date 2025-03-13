@@ -259,14 +259,14 @@ func buildCircuitBreaker(policy egv1a1.ClusterSettings) (*ir.CircuitBreaker, err
 			}
 		}
 
-		if pcb.PerHost != nil {
-			perHost := &ir.PerHostCircuitBreakers{}
-			if pcb.PerHost.MaxConnections != nil {
-				if ui32, ok := int64ToUint32(*pcb.PerHost.MaxConnections); ok {
-					perHost.MaxConnections = &ui32
+		if pcb.PerEndpoint != nil {
+			perEndpoint := &ir.PerEndpointCircuitBreakers{}
+			if pcb.PerEndpoint.MaxConnections != nil {
+				if ui32, ok := int64ToUint32(*pcb.PerEndpoint.MaxConnections); ok {
+					perEndpoint.MaxConnections = &ui32
 				}
 			}
-			cb.PerHost = perHost
+			cb.PerEndpoint = perEndpoint
 		}
 	}
 
