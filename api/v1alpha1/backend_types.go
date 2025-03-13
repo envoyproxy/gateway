@@ -116,6 +116,7 @@ type BackendSpec struct {
 	// Type defines the type of the backend. Defaults to "Endpoints"
 	//
 	// +kubebuilder:validation:Enum=Endpoints;DynamicForwardProxy
+	// +kubebuilder:default=Endpoints
 	// +optional
 	Type BackendType `json:"type"`
 
