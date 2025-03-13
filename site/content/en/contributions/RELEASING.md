@@ -125,7 +125,7 @@ export GITHUB_REMOTE=origin
       {{- with (strings.HasPrefix $pagePrefix "v1.2") -}}
       {{- "v1.2.0" -}}
       {{- end -}}
-      {{- with (strings.HasPrefix $pagePrefix "doc") -}}
+      {{- with (strings.HasPrefix $pagePrefix "docs") -}}
       {{- "v1.2.0" -}}
       {{- end -}}
       ```
@@ -143,10 +143,18 @@ export GITHUB_REMOTE=origin
       {{- with (strings.HasPrefix $pagePrefix "v1.2") -}}
       {{- "v1.2.0" -}}
       {{- end -}}
-      {{- with (strings.HasPrefix $pagePrefix "doc") -}}
+      {{- with (strings.HasPrefix $pagePrefix "docs") -}}
       {{- "v1.2.0" -}}
       {{- end -}}
       ```
+      
+   1. Update `site/layouts/partials/page-meta-links.html`, change the version to current major version.
+
+      ```console
+      {{ with (strings.HasPrefix $path "docs") -}}
+      {{ $path = replaceRE "docs" "v1.3" $path -}}
+      {{ end -}}
+      ```  
 
 3. Sign, commit, and push your changes to your fork.
 4. Submit a [Pull Request][] to merge the changes into the `main` branch. Do not proceed until all your PRs have merged

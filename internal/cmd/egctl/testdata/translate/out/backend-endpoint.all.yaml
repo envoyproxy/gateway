@@ -43,6 +43,43 @@ backends:
       reason: Accepted
       status: "True"
       type: Accepted
+envoyExtensionPolicies:
+- kind: EnvoyExtensionPolicy
+  metadata:
+    creationTimestamp: null
+    name: ext-proc-example
+    namespace: envoy-gateway-system
+  spec:
+    extProc:
+    - backendRefs:
+      - group: ""
+        kind: Service
+        name: grpc-ext-proc
+        port: 9002
+      processingMode:
+        request: {}
+        response:
+          body: Streamed
+    targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: backend
+  status:
+    ancestors:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: eg
+        namespace: envoy-gateway-system
+      conditions:
+      - lastTransitionTime: null
+        message: |-
+          Wasm: wasm cache is not initialized
+          ExtProc: service envoy-gateway-system/grpc-ext-proc not found.
+        reason: Invalid
+        status: "False"
+        type: Accepted
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
 gatewayClass:
   kind: GatewayClass
   metadata:

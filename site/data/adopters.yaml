@@ -47,3 +47,7 @@ adopters:
     logo: "/logos/kubermatic.svg"
     url: "https://www.kubermatic.com/"
     description: "Kubermatic is using Envoy Gateway in KubeLB to provide L7 Load Balancing for multiple Kubernetes clusters using GatewayAPI."
+  - name: "Docker"
+    logo: "/logos/docker.png"
+    url: "https://www.docker.com/"
+    description: "Docker is using Envoy Gateway to route all internal traffic for Docker Hub."
