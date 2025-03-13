@@ -111,7 +111,7 @@ func backendHTTPRouteIndexFunc(rawObj client.Object) []string {
 	var backendRefs []string
 	for _, rule := range httproute.Spec.Rules {
 		for _, backend := range rule.BackendRefs {
-			if backend.Kind == nil || string(*backend.Kind) == resource.KindService || string(*backend.Kind) == egv1a1.KindBackend {
+			if backend.Kind == nil || string(*backend.Kind) == resource.KindService || string(*backend.Kind) == resource.KindServiceImport || string(*backend.Kind) == egv1a1.KindBackend {
 				backendRefs = append(backendRefs,
 					types.NamespacedName{
 						Namespace: gatewayapi.NamespaceDerefOr(backend.Namespace, httproute.Namespace),
