@@ -25,15 +25,16 @@ routes:
 - name: "second-route"
   traffic:
     backendTrafficPolicy:
-      name: "test-policy-2"
+      name: "test-policy-1"
       namespace: "test-namespace"
     rateLimit:
       global:
         shared: true
         rules:
-        - headerMatches:
-          - name: "x-user-id"
-            exact: "one"
+        - clientSelectors:
+          - sourceCIDR:
+              type: "Distinct"
+              values: "0.0.0.0/0"
           limit:
             requests: 5
             unit: second
@@ -42,7 +43,7 @@ routes:
 - name: "third-route"
   traffic:
     backendTrafficPolicy:
-      name: "test-policy-3"
+      name: "test-policy-2"
       namespace: "test-namespace"
     rateLimit:
       global:
@@ -54,6 +55,21 @@ routes:
           limit:
             requests: 10
             unit: second
+- name: "fourth-route"
+  traffic:
+    backendTrafficPolicy:
+      name: "test-policy-3"
+      namespace: "test-namespace"
+    rateLimit:
+      global:
+        shared: false
+        rules:
+        - headerMatches:
+          - name: "x-user-id"
+            exact: "two"
+          limit:
+            requests: 10
+            unit: second            
   pathMatch:
     exact: "foo/bar"
   destination:
