@@ -1,5 +1,5 @@
 +++
-title = "Configuruation Issues"
+title = "Configuration Issues"
 +++
 
 ## Overview
