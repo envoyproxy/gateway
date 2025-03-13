@@ -502,7 +502,7 @@ _Appears in:_
 | Value | Description |
 | ----- | ----------- |
 | `Endpoints` | BackendTypeEndpoints defines the type of the backend as Endpoints.<br /> | 
-| `DynamicForwardProxy` | BackendTypeDynamicForwardProxy defines the type of the backend as DynamicForwardProxy.<br /> | 
+| `DynamicResolver` | BackendTypeDynamicResolver defines the type of the backend as DynamicResolver.<br />When a backend is of type DynamicResolver, the Envoy will resolve the upstream<br />ip address and port from the host header of the incoming request. If the ip address<br />is directly set in the host header, the Envoy will use the ip address and port as the<br />upstream address. If the hostname is set in the host header, the Envoy will resolve the<br />ip address and port from the hostname using the DNS resolver.<br /> | 
 
 
 #### BasicAuth

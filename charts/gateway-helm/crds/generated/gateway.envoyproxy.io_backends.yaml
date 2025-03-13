@@ -151,7 +151,7 @@ spec:
                 description: Type defines the type of the backend. Defaults to "Endpoints"
                 enum:
                 - Endpoints
-                - DynamicForwardProxy
+                - DynamicResolver
                 type: string
             type: object
           status:
