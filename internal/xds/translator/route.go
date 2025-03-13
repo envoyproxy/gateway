@@ -121,7 +121,7 @@ func buildXdsRoute(httpRoute *ir.HTTPRoute) (*routev3.Route, error) {
 }
 
 func buildUpgradeConfig(trafficFeatures *ir.TrafficFeatures) []*routev3.RouteAction_UpgradeConfig {
-	if trafficFeatures == nil || len(trafficFeatures.HTTPUpgrade) == 0 {
+	if trafficFeatures == nil || trafficFeatures.HTTPUpgrade == nil {
 		return defaultUpgradeConfig
 	}
 
@@ -130,9 +130,6 @@ func buildUpgradeConfig(trafficFeatures *ir.TrafficFeatures) []*routev3.RouteAct
 		upgradeConfigs = append(upgradeConfigs, &routev3.RouteAction_UpgradeConfig{
 			UpgradeType: protocol,
 		})
-	}
-	if len(upgradeConfigs) == 0 {
-		return nil
 	}
 
 	return upgradeConfigs
