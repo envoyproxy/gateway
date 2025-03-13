@@ -30,6 +30,7 @@ bug fixes: |
   Fix translating backendSettings for extAuth
   Fix an issue that stats compressor was not working.
   Added support for BackendTLSPolicy and EnvoyExtensionPolicy parsing in Standalone mode.
+  Retrigger reconciliation when backendRef of type ServiceImport is updated or when EndpointSlice(s) for a ServiceImport are updated.
 
 # Enhancements that improve performance.
 performance improvements: |
