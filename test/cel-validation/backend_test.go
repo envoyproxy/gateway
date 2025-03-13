@@ -257,11 +257,22 @@ func TestBackend(t *testing.T) {
 			wantErrors: []string{`spec.type: Unsupported value: "FOO": supported values: "Endpoints", "DynamicResolver"`},
 		},
 		{
-			desc: "dynamic forward proxy type",
+			desc: "dynamic resolver ok",
 			mutate: func(backend *egv1a1.Backend) {
 				backend.Spec = egv1a1.BackendSpec{Type: ptr.To(egv1a1.BackendTypeDynamicResolver)}
 			},
 			wantErrors: []string{},
+		},
+		{
+			desc: "dynamic resolver invalid",
+			mutate: func(backend *egv1a1.Backend) {
+				backend.Spec = egv1a1.BackendSpec{
+					Type:         ptr.To(egv1a1.BackendTypeDynamicResolver),
+					Endpoints:    []egv1a1.BackendEndpoint{},
+					AppProtocols: []egv1a1.AppProtocolType{egv1a1.AppProtocolTypeH2C},
+				}
+			},
+			wantErrors: []string{"DynamicResolver type cannot have endpoints and appProtocols specified"},
 		},
 	}
 
