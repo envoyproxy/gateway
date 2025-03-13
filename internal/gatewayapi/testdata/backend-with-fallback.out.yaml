@@ -10,7 +10,7 @@ backends:
     - ip:
         address: 1.1.1.1
         port: 3001
-    type: "Endpoints"
+    type: ""
   status:
     conditions:
     - lastTransitionTime: null
@@ -30,7 +30,7 @@ backends:
         address: 2.2.2.2
         port: 3001
     fallback: true
-    type: "Endpoints"
+    type: ""
   status:
     conditions:
     - lastTransitionTime: null

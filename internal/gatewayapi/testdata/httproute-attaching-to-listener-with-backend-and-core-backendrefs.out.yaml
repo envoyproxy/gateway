@@ -9,7 +9,7 @@ backends:
     endpoints:
     - unix:
         path: /var/run/backend.sock
-    type: "Endpoints"
+    type: ""
   status:
     conditions:
     - lastTransitionTime: null
@@ -28,7 +28,7 @@ backends:
     - fqdn:
         hostname: primary.foo.com
         port: 3000
-    type: "Endpoints"
+    type: ""
   status:
     conditions:
     - lastTransitionTime: null
@@ -47,7 +47,7 @@ backends:
     - ip:
         address: 1.1.1.1
         port: 3001
-    type: "Endpoints"
+    type: ""
   status:
     conditions:
     - lastTransitionTime: null

@@ -56,7 +56,7 @@ backends:
     - ip:
         address: 2.2.2.2
         port: 3443
-    type: "Endpoints"
+    type: ""
   status:
     conditions:
     - lastTransitionTime: null

@@ -42,7 +42,7 @@ backends:
     - fqdn:
         hostname: foo.bar.com
         port: 443
-    type: "Endpoints"
+    type: ""
   status:
     conditions:
     - lastTransitionTime: null
