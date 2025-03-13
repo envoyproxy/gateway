@@ -250,6 +250,10 @@ const (
 	// EnvoyFilterCustomResponse defines the Envoy HTTP custom response filter.
 	EnvoyFilterCustomResponse EnvoyFilter = "envoy.filters.http.custom_response"
 
+	// EnvoyFilterCredentialInjector defines the Envoy HTTP credential injector filter.
+	// nolint: gosec
+	EnvoyFilterCredentialInjector EnvoyFilter = "envoy.filters.http.credential_injector"
+
 	// EnvoyFilterCompressor defines the Envoy HTTP compressor filter.
 	EnvoyFilterCompressor EnvoyFilter = "envoy.filters.http.compressor"
 
