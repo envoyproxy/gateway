@@ -10724,6 +10724,23 @@ spec:
                                                 maximum: 4294967295
                                                 minimum: 0
                                                 type: integer
+                                              perEndpoint:
+                                                description: PerEndpoint defines Circuit
+                                                  Breakers that will apply per-endpoint
+                                                  for an upstream cluster
+                                                properties:
+                                                  maxConnections:
+                                                    default: 1024
+                                                    description: MaxConnections configures
+                                                      the maximum number of connections
+                                                      that Envoy will establish per-endpoint
+                                                      to the referenced backend defined
+                                                      within a xRoute rule.
+                                                    format: int64
+                                                    maximum: 4294967295
+                                                    minimum: 0
+                                                    type: integer
+                                                type: object
                                             type: object
                                           connection:
                                             description: Connection includes backend
@@ -11722,6 +11739,23 @@ spec:
                                                 maximum: 4294967295
                                                 minimum: 0
                                                 type: integer
+                                              perEndpoint:
+                                                description: PerEndpoint defines Circuit
+                                                  Breakers that will apply per-endpoint
+                                                  for an upstream cluster
+                                                properties:
+                                                  maxConnections:
+                                                    default: 1024
+                                                    description: MaxConnections configures
+                                                      the maximum number of connections
+                                                      that Envoy will establish per-endpoint
+                                                      to the referenced backend defined
+                                                      within a xRoute rule.
+                                                    format: int64
+                                                    maximum: 4294967295
+                                                    minimum: 0
+                                                    type: integer
+                                                type: object
                                             type: object
                                           connection:
                                             description: Connection includes backend
@@ -12814,6 +12848,23 @@ spec:
                                           maximum: 4294967295
                                           minimum: 0
                                           type: integer
+                                        perEndpoint:
+                                          description: PerEndpoint defines Circuit
+                                            Breakers that will apply per-endpoint
+                                            for an upstream cluster
+                                          properties:
+                                            maxConnections:
+                                              default: 1024
+                                              description: MaxConnections configures
+                                                the maximum number of connections
+                                                that Envoy will establish per-endpoint
+                                                to the referenced backend defined
+                                                within a xRoute rule.
+                                              format: int64
+                                              maximum: 4294967295
+                                              minimum: 0
+                                              type: integer
+                                          type: object
                                       type: object
                                     connection:
                                       description: Connection includes backend connection
@@ -13820,6 +13871,22 @@ spec:
                                     maximum: 4294967295
                                     minimum: 0
                                     type: integer
+                                  perEndpoint:
+                                    description: PerEndpoint defines Circuit Breakers
+                                      that will apply per-endpoint for an upstream
+                                      cluster
+                                    properties:
+                                      maxConnections:
+                                        default: 1024
+                                        description: MaxConnections configures the
+                                          maximum number of connections that Envoy
+                                          will establish per-endpoint to the referenced
+                                          backend defined within a xRoute rule.
+                                        format: int64
+                                        maximum: 4294967295
+                                        minimum: 0
+                                        type: integer
+                                    type: object
                                 type: object
                               connection:
                                 description: Connection includes backend connection

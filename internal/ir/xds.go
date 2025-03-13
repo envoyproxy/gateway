@@ -2405,6 +2405,16 @@ type CircuitBreaker struct {
 
 	// The maximum number of parallel retries that Envoy will make.
 	MaxParallelRetries *uint32 `json:"maxParallelRetries,omitempty" yaml:"maxParallelRetries,omitempty"`
+
+	// PerEndpoint defines per-endpoint Circuit Breakers
+	PerEndpoint *PerEndpointCircuitBreakers `json:"perEndpoint,omitempty"`
+}
+
+// PerEndpointCircuitBreakers defines the per-endpoint Circuit Breaker configuration.
+// +k8s:deepcopy-gen=true
+type PerEndpointCircuitBreakers struct {
+	// MaxConnections configures the maximum number of connections that Envoy will establish per-endpoint to the referenced backend defined within a xRoute rule.
+	MaxConnections *uint32 `json:"maxConnections,omitempty"`
 }
 
 // HealthCheck defines health check settings
