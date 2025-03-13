@@ -154,6 +154,10 @@ spec:
                 - DynamicResolver
                 type: string
             type: object
+            x-kubernetes-validations:
+            - message: DynamicResolver type cannot have endpoints and appProtocols
+                specified
+              rule: self.type != 'DynamicResolver' || !has(self.endpoints) && !has(self.appProtocols)
           status:
             description: Status defines the current status of Backend.
             properties:
