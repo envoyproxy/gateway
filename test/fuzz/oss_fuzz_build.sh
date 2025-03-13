@@ -1,5 +1,10 @@
 #!/bin/bash
 
+# Copyright Envoy Gateway Authors
+# SPDX-License-Identifier: Apache-2.0
+# The full text of the Apache license is available in the LICENSE file at
+# the root of the repo.
+
 # This file contains code derived from Istio, https://github.com/istio/istio
 # from the source file https://github.com/istio/istio/blob/master/tests/fuzz/oss_fuzz_build.sh
 # and is provided here subject to the following: Copyright Istio Authors SPDX-License-Identifier: Apache-2.0
