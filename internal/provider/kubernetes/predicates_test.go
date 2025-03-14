@@ -463,6 +463,52 @@ func TestValidateEndpointSliceForReconcile(t *testing.T) {
 			endpointSlice: test.GetEndpointSlice(types.NamespacedName{Name: "endpointslice"}, "imported-service", true),
 			expect:        true,
 		},
+		{
+			name: "mirrored backend route exists",
+			configs: []client.Object{
+				test.GetGatewayClass("test-gc", egv1a1.GatewayControllerName, nil),
+				sampleGateway,
+				&gwapiv1.HTTPRoute{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "httproute-test",
+					},
+					Spec: gwapiv1.HTTPRouteSpec{
+						CommonRouteSpec: gwapiv1.CommonRouteSpec{
+							ParentRefs: []gwapiv1.ParentReference{
+								{Name: gwapiv1.ObjectName("scheduled-status-test")},
+							},
+						},
+						Rules: []gwapiv1.HTTPRouteRule{
+							{
+								BackendRefs: []gwapiv1.HTTPBackendRef{
+									{
+										BackendRef: gwapiv1.BackendRef{
+											BackendObjectReference: gwapiv1.BackendObjectReference{
+												Name: gwapiv1.ObjectName("service"),
+												Port: ptr.To(gwapiv1.PortNumber(80)),
+											},
+										},
+									},
+								},
+								Filters: []gwapiv1.HTTPRouteFilter{
+									{
+										Type: gwapiv1.HTTPRouteFilterRequestMirror,
+										RequestMirror: &gwapiv1.HTTPRequestMirrorFilter{
+											BackendRef: gwapiv1.BackendObjectReference{
+												Name: "mirror-service",
+												Port: ptr.To(gwapiv1.PortNumber(80)),
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			endpointSlice: test.GetEndpointSlice(types.NamespacedName{Name: "endpointslice"}, "mirror-service"),
+			expect:        true,
+		},
 	}
 
 	// Create the reconciler.
