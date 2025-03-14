@@ -506,7 +506,7 @@ func TestValidateEndpointSliceForReconcile(t *testing.T) {
 					},
 				},
 			},
-			endpointSlice: test.GetEndpointSlice(types.NamespacedName{Name: "endpointslice"}, "mirror-service"),
+			endpointSlice: test.GetEndpointSlice(types.NamespacedName{Name: "endpointslice"}, "mirror-service", false),
 			expect:        true,
 		},
 	}
