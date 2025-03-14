@@ -206,13 +206,11 @@ xdsIR:
           name: ""
           prefix: /
         traffic:
-          backendTrafficPolicy:
-            name: policy-for-httproute-1
-            namespace: default
           circuitBreaker:
             maxConnections: 2048
             maxParallelRequests: 4294967295
             maxPendingRequests: 1
+          name: policy-for-httproute-1/default
       - destination:
           name: httproute/default/httproute-1-1/rule/0
           settings:

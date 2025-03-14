@@ -237,6 +237,7 @@ xdsIR:
           consistentHash:
             header:
               name: X-some-header
+        name: ""
         proxyProtocol:
           version: V2
         tcpKeepalive:

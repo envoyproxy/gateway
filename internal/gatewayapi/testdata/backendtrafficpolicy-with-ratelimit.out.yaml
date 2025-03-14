@@ -310,9 +310,7 @@ xdsIR:
           namespace: default
         name: grpcroute/default/grpcroute-1/rule/0/match/-1/*
         traffic:
-          backendTrafficPolicy:
-            name: policy-for-gateway
-            namespace: envoy-gateway
+          name: policy-for-gateway/envoy-gateway
           rateLimit:
             global:
               rules:
@@ -376,9 +374,7 @@ xdsIR:
           name: ""
           prefix: /
         traffic:
-          backendTrafficPolicy:
-            name: policy-for-route
-            namespace: default
+          name: policy-for-route/default
           rateLimit:
             global:
               rules:

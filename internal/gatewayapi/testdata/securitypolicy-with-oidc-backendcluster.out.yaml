@@ -278,6 +278,7 @@ xdsIR:
                   weight: 1
               tokenEndpoint: https://oauth.foo.com/token
               traffic:
+                name: ""
                 retry:
                   numRetries: 3
                   perRetry:

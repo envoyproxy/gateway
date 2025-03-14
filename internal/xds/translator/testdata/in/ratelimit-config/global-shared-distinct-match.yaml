@@ -10,9 +10,7 @@ http:
   routes:
   - name: "first-route"
     traffic:
-      backendTrafficPolicy:
-        name: "test-policy-1"
-        namespace: "test-namespace"
+      name: "test-policy-1/test-namespace"
       rateLimit:
         global:
           shared: true

@@ -10,9 +10,7 @@ http:
   routes:
   - name: "first-route"
     traffic:
-      backendTrafficPolicy:
-        name: "test-policy-1"
-        namespace: "test-namespace"
+      name: "test-policy-1/test-namespace"
       rateLimit:
         global:
           shared: true
@@ -25,9 +23,7 @@ http:
               unit: second
   - name: "second-route"
     traffic:
-      backendTrafficPolicy:
-        name: "test-policy-1"
-        namespace: "test-namespace"
+      name: "test-policy-1/test-namespace"
       rateLimit:
         global:
           shared: true
@@ -43,9 +39,7 @@ http:
       exact: "foo/baz"
   - name: "third-route"
     traffic:
-      backendTrafficPolicy:
-        name: "test-policy-2"
-        namespace: "test-namespace"
+      name: "test-policy-2/test-namespace"
       rateLimit:
         global:
           shared: true
@@ -58,9 +52,7 @@ http:
               unit: second
   - name: "fourth-route"
     traffic:
-      backendTrafficPolicy:
-        name: "test-policy-3"
-        namespace: "test-namespace"
+      name: "test-policy-3/test-namespace"
       rateLimit:
         global:
           shared: false

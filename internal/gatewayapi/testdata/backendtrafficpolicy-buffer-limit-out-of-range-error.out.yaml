@@ -282,9 +282,7 @@ xdsIR:
           namespace: default
         name: grpcroute/default/grpcroute-1/rule/0/match/-1/*
         traffic:
-          backendTrafficPolicy:
-            name: policy-for-gateway
-            namespace: envoy-gateway
+          name: policy-for-gateway/envoy-gateway
           timeout:
             http:
               connectionIdleTimeout: 16s

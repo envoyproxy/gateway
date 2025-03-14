@@ -286,15 +286,13 @@ xdsIR:
           namespace: default
         name: grpcroute/default/grpcroute-1/rule/0/match/-1/*
         traffic:
-          backendTrafficPolicy:
-            name: policy-for-gateway
-            namespace: envoy-gateway
           circuitBreaker:
             maxConnections: 2048
             maxParallelRequests: 4294967295
             maxParallelRetries: 1024
             maxPendingRequests: 1
             maxRequestsPerConnection: 1
+          name: policy-for-gateway/envoy-gateway
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4
@@ -342,15 +340,13 @@ xdsIR:
           name: ""
           prefix: /
         traffic:
-          backendTrafficPolicy:
-            name: policy-for-route
-            namespace: default
           circuitBreaker:
             maxConnections: 42
             maxParallelRequests: 42
             maxParallelRetries: 24
             maxPendingRequests: 42
             maxRequestsPerConnection: 42
+          name: policy-for-route/default
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4

@@ -346,9 +346,7 @@ xdsIR:
             - x-header-8
             maxAge: 33m20s
         traffic:
-          backendTrafficPolicy:
-            name: policy-for-gateway
-            namespace: default
+          name: policy-for-gateway/default
           tcpKeepalive:
             idleTime: 1200
             interval: 60

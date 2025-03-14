@@ -355,12 +355,10 @@ xdsIR:
           name: ""
           prefix: /v3
         traffic:
-          backendTrafficPolicy:
-            name: policy-for-all-routes-in-gateway-1
-            namespace: envoy-gateway
           dns:
             dnsRefreshRate: 10s
             respectDnsTtl: true
+          name: policy-for-all-routes-in-gateway-1/envoy-gateway
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4
@@ -408,12 +406,10 @@ xdsIR:
           name: ""
           prefix: /v2
         traffic:
-          backendTrafficPolicy:
-            name: policy-for-route-2
-            namespace: default
           dns:
             dnsRefreshRate: 5s
             respectDnsTtl: false
+          name: policy-for-route-2/default
       - destination:
           name: httproute/default/httproute-1/rule/0
           settings:
@@ -436,12 +432,10 @@ xdsIR:
           name: ""
           prefix: /
         traffic:
-          backendTrafficPolicy:
-            name: policy-for-route-1
-            namespace: default
           dns:
             dnsRefreshRate: 1s
             respectDnsTtl: true
+          name: policy-for-route-1/default
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4

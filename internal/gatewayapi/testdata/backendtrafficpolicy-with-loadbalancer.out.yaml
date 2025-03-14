@@ -454,11 +454,9 @@ xdsIR:
           namespace: default
         name: grpcroute/default/grpcroute-1/rule/0/match/-1/*
         traffic:
-          backendTrafficPolicy:
-            name: policy-for-gateway
-            namespace: envoy-gateway
           loadBalancer:
             random: {}
+          name: policy-for-gateway/envoy-gateway
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4
@@ -506,13 +504,11 @@ xdsIR:
           name: ""
           prefix: /test2
         traffic:
-          backendTrafficPolicy:
-            name: policy-for-route2
-            namespace: default
           loadBalancer:
             leastRequest:
               slowStart:
                 window: 5m0s
+          name: policy-for-route2/default
       - destination:
           name: httproute/default/httproute-3/rule/0
           settings:
@@ -535,13 +531,11 @@ xdsIR:
           name: ""
           prefix: /test3
         traffic:
-          backendTrafficPolicy:
-            name: policy-for-route3
-            namespace: default
           loadBalancer:
             consistentHash:
               cookie:
                 name: test
+          name: policy-for-route3/default
       - destination:
           name: httproute/default/httproute-1/rule/0
           settings:
@@ -564,13 +558,11 @@ xdsIR:
           name: ""
           prefix: /
         traffic:
-          backendTrafficPolicy:
-            name: policy-for-route
-            namespace: default
           loadBalancer:
             consistentHash:
               sourceIP: true
               tableSize: 524287
+          name: policy-for-route/default
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4

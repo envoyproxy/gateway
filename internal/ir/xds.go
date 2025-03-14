@@ -798,6 +798,8 @@ type Compression struct {
 // TrafficFeatures holds the information associated with the Backend Traffic Policy.
 // +k8s:deepcopy-gen=true
 type TrafficFeatures struct {
+	// Name of the backend traffic policy and namespace
+	Name string `json:"name"`
 	// RateLimit defines the more specific match conditions as well as limits for ratelimiting
 	// the requests on this route.
 	RateLimit *RateLimit `json:"rateLimit,omitempty" yaml:"rateLimit,omitempty"`
@@ -828,8 +830,6 @@ type TrafficFeatures struct {
 	ResponseOverride *ResponseOverride `json:"responseOverride,omitempty" yaml:"responseOverride,omitempty"`
 	// Compression settings for HTTP Response
 	Compression []*Compression `json:"compression,omitempty" yaml:"compression,omitempty"`
-	// BackendTrafficPolicy holds the associated BackendTrafficPolicy object.
-	BackendTrafficPolicy *BackendTrafficPolicy `json:"backendTrafficPolicy,omitempty" yaml:"backendTrafficPolicy,omitempty"`
 }
 
 func (b *TrafficFeatures) Validate() error {

@@ -187,9 +187,7 @@ xdsIR:
           name: ""
           prefix: /
         traffic:
-          backendTrafficPolicy:
-            name: policy-for-gateway
-            namespace: envoy-gateway
+          name: policy-for-gateway/envoy-gateway
           rateLimit:
             local:
               default:
