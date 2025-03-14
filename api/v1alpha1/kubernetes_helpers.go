@@ -69,6 +69,19 @@ func DefaultKubernetesContainer(image string) *KubernetesContainerSpec {
 	}
 }
 
+// DefaultKubernetesContainer returns a new KubernetesContainerSpec with default settings.
+func DefaultKubernetesInitContainer(image string) *KubernetesContainerSpec {
+	return &KubernetesContainerSpec{
+		Resources: &corev1.ResourceRequirements{
+			Requests: corev1.ResourceList{
+				corev1.ResourceCPU:    resource.MustParse(DefaultInitContainerCPUResourceRequests),
+				corev1.ResourceMemory: resource.MustParse(DefaultInitContainerMemoryResourceRequests),
+			},
+		},
+		Image: DefaultKubernetesContainerImage(image),
+	}
+}
+
 // DefaultResourceRequirements returns a new ResourceRequirements with default settings.
 func DefaultResourceRequirements() *corev1.ResourceRequirements {
 	return &corev1.ResourceRequirements{

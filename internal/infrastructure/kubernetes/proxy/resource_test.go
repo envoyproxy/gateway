@@ -6,6 +6,7 @@
 package proxy
 
 import (
+	"github.com/stretchr/testify/assert"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -84,6 +85,35 @@ func TestExpectedShutdownManagerSecurityContext(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			got := expectedShutdownManagerSecurityContext(tc.in)
 			require.Equal(t, tc.expected, got)
+		})
+	}
+}
+
+func Test_expectedProxyInitContainers(t *testing.T) {
+	type args struct {
+		containerSpec   *egv1a1.KubernetesContainerSpec
+		initConfig      *egv1a1.InitConfig
+		initManager     *egv1a1.InitManager
+		extraContainers []corev1.Container
+	}
+	tests := []struct {
+		name string
+		args args
+		want []corev1.Container
+	}{
+		{
+			name: "testing",
+			args: args{containerSpec: &egv1a1.KubernetesContainerSpec{},
+				initConfig:      &egv1a1.InitConfig{},
+				initManager:     &egv1a1.InitManager{},
+				extraContainers: []corev1.Container{},
+			},
+			want: []corev1.Container{},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equalf(t, tt.want, expectedProxyInitContainers(tt.args.containerSpec, tt.args.initConfig, tt.args.initManager, tt.args.extraContainers), "expectedProxyInitContainers(%v, %v, %v, %v)", tt.args.containerSpec, tt.args.initConfig, tt.args.initManager, tt.args.extraContainers)
 		})
 	}
 }
