@@ -7,6 +7,7 @@ package file
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"os"
@@ -201,7 +202,7 @@ func (p *Provider) startHealthProbeServer(ctx context.Context, readyzChecker hea
 	}()
 
 	p.logger.Info("starting health probe server", "address", srv.Addr)
-	if err := srv.ListenAndServe(); err != nil {
+	if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 		p.logger.Error(err, "failed to start health probe server")
 	}
 }

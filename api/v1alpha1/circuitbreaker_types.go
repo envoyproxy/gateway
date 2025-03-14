@@ -46,4 +46,20 @@ type CircuitBreaker struct {
 	// +kubebuilder:validation:Maximum=4294967295
 	// +optional
 	MaxRequestsPerConnection *int64 `json:"maxRequestsPerConnection,omitempty"`
+
+	// PerEndpoint defines Circuit Breakers that will apply per-endpoint for an upstream cluster
+	//
+	// +optional
+	PerEndpoint *PerEndpointCircuitBreakers `json:"perEndpoint,omitempty"`
+}
+
+// PerEndpointCircuitBreakers defines Circuit Breakers that will apply per-endpoint for an upstream cluster
+type PerEndpointCircuitBreakers struct {
+	// MaxConnections configures the maximum number of connections that Envoy will establish per-endpoint to the referenced backend defined within a xRoute rule.
+	//
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=4294967295
+	// +kubebuilder:default=1024
+	// +optional
+	MaxConnections *int64 `json:"maxConnections,omitempty"`
 }

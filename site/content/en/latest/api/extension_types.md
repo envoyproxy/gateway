@@ -487,6 +487,7 @@ _Appears in:_
 | `useClientProtocol` | _boolean_ |  false  |  | UseClientProtocol configures Envoy to prefer sending requests to backends using<br />the same HTTP protocol that the incoming request used. Defaults to false, which means<br />that Envoy will use the protocol indicated by the attached BackendRef. |
 | `compression` | _[Compression](#compression) array_ |  false  |  | The compression config for the http streams. |
 | `responseOverride` | _[ResponseOverride](#responseoverride) array_ |  false  |  | ResponseOverride defines the configuration to override specific responses with a custom one.<br />If multiple configurations are specified, the first one to match wins. |
+| `httpUpgrade` | _[ProtocolUpgradeConfig](#protocolupgradeconfig) array_ |  false  |  | HTTPUpgrade defines the configuration for HTTP protocol upgrades.<br />If not specified, the default upgrade configuration(websocket) will be used. |
 
 
 #### BasicAuth
@@ -596,6 +597,7 @@ _Appears in:_
 | `maxParallelRequests` | _integer_ |  false  | 1024 | The maximum number of parallel requests that Envoy will make to the referenced backend defined within a xRoute rule. |
 | `maxParallelRetries` | _integer_ |  false  | 1024 | The maximum number of parallel retries that Envoy will make to the referenced backend defined within a xRoute rule. |
 | `maxRequestsPerConnection` | _integer_ |  false  |  | The maximum number of requests that Envoy will make over a single connection to the referenced backend defined within a xRoute rule.<br />Default: unlimited. |
+| `perEndpoint` | _[PerEndpointCircuitBreakers](#perendpointcircuitbreakers)_ |  false  |  | PerEndpoint defines Circuit Breakers that will apply per-endpoint for an upstream cluster |
 
 
 #### ClaimToHeader
@@ -1721,14 +1723,14 @@ _Appears in:_
 
 
 
-ExtensionTLS defines the TLS configuration when connecting to an extension service
+ExtensionTLS defines the TLS configuration when connecting to an extension service.
 
 _Appears in:_
 - [ExtensionService](#extensionservice)
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `certificateRef` | _[SecretObjectReference](https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1.SecretObjectReference)_ |  true  |  | CertificateRef contains a references to objects (Kubernetes objects or otherwise) that<br />contains a TLS certificate and private keys. These certificates are used to<br />establish a TLS handshake to the extension server.<br />CertificateRef can only reference a Kubernetes Secret at this time. |
+| `certificateRef` | _[SecretObjectReference](https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1.SecretObjectReference)_ |  true  |  | CertificateRef is a reference to a Kubernetes Secret with a CA certificate in a key named "tls.crt".<br />The CA certificate is used by Envoy Gateway the verify the server certificate presented by the extension server.<br />At this time, Envoy Gateway does not support Client Certificate authentication of Envoy Gateway towards the extension server (mTLS). |
 
 
 #### ExtractFrom
@@ -3140,6 +3142,20 @@ _Appears in:_
 | `disableMergeSlashes` | _boolean_ |  false  |  | DisableMergeSlashes allows disabling the default configuration of merging adjacent<br />slashes in the path.<br />Note that slash merging is not part of the HTTP spec and is provided for convenience. |
 
 
+#### PerEndpointCircuitBreakers
+
+
+
+PerEndpointCircuitBreakers defines Circuit Breakers that will apply per-endpoint for an upstream cluster
+
+_Appears in:_
+- [CircuitBreaker](#circuitbreaker)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `maxConnections` | _integer_ |  false  | 1024 | MaxConnections configures the maximum number of connections that Envoy will establish per-endpoint to the referenced backend defined within a xRoute rule. |
+
+
 #### PerRetryPolicy
 
 
@@ -3190,6 +3206,7 @@ _Appears in:_
 | ---   | ---  | ---      | ---     | ---         |
 | `clientCIDRs` | _[CIDR](#cidr) array_ |  false  |  | ClientCIDRs are the IP CIDR ranges of the client.<br />Valid examples are "192.168.1.0/24" or "2001:db8::/64"<br />If multiple CIDR ranges are specified, one of the CIDR ranges must match<br />the client IP for the rule to match.<br />The client IP is inferred from the X-Forwarded-For header, a custom header,<br />or the proxy protocol.<br />You can use the `ClientIPDetection` or the `EnableProxyProtocol` field in<br />the `ClientTrafficPolicy` to configure how the client IP is detected. |
 | `jwt` | _[JWTPrincipal](#jwtprincipal)_ |  false  |  | JWT authorize the request based on the JWT claims and scopes.<br />Note: in order to use JWT claims for authorization, you must configure the<br />JWT authentication in the same `SecurityPolicy`. |
+| `headers` | _[AuthorizationHeaderMatch](#authorizationheadermatch) array_ |  false  |  | Headers authorize the request based on user identity extracted from custom headers.<br />If multiple headers are specified, all headers must match for the rule to match. |
 
 
 #### ProcessingModeOptions
@@ -3220,7 +3237,6 @@ _Appears in:_
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
 | `type` | _string_ |  true  |  | Type is the case-insensitive type of protocol upgrade.<br />e.g. `websocket`, `CONNECT`, `spdy/3.1` etc. |
-| `disabled` | _boolean_ |  false  |  | Disabled indicates whether the upgrade is disabled. |
 
 
 #### ProviderType
