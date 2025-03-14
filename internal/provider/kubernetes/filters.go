@@ -82,13 +82,45 @@ func (r *gatewayAPIReconciler) processRouteFilterConfigMapRef(
 			r.log.Error(err,
 				"failed to process DirectResponse ValueRef for HTTPRouteFilter",
 				"filter", filter, "ValueRef", filter.Spec.DirectResponse.Body.ValueRef.Name)
+		} else {
+			resourceMap.allAssociatedNamespaces.Insert(filter.Namespace)
+			if !resourceMap.allAssociatedConfigMaps.Has(utils.NamespacedName(configMap).String()) {
+				resourceMap.allAssociatedConfigMaps.Insert(utils.NamespacedName(configMap).String())
+				resourceTree.ConfigMaps = append(resourceTree.ConfigMaps, configMap)
+				r.log.Info("processing ConfigMap", "namespace", filter.Namespace, "name", string(filter.Spec.DirectResponse.Body.ValueRef.Name))
+			}
 		}
+	}
+}
 
-		resourceMap.allAssociatedNamespaces.Insert(filter.Namespace)
-		if !resourceMap.allAssociatedConfigMaps.Has(utils.NamespacedName(configMap).String()) {
-			resourceMap.allAssociatedConfigMaps.Insert(utils.NamespacedName(configMap).String())
-			resourceTree.ConfigMaps = append(resourceTree.ConfigMaps, configMap)
-			r.log.Info("processing ConfigMap", "namespace", filter.Namespace, "name", string(filter.Spec.DirectResponse.Body.ValueRef.Name))
+// processRouteFilterSecretRef adds the referenced Secret in a HTTPRouteFilter
+// to the resourceTree
+func (r *gatewayAPIReconciler) processRouteFilterSecretRef(
+	ctx context.Context, filter *egv1a1.HTTPRouteFilter,
+	resourceMap *resourceMappings, resourceTree *resource.Resources,
+) {
+	name := string(filter.Spec.CredentialInjection.Credential.ValueRef.Name)
+
+	if filter.Spec.CredentialInjection != nil {
+		secret := new(corev1.Secret)
+		err := r.client.Get(ctx,types.NamespacedName{Namespace: filter.Namespace, Name: name},secret)
+		// we don't return an error here, because we want to continue
+		// reconciling the rest of the HTTPRouteFilter despite that this
+		// reference is invalid.
+		// This HTTPRouteFilter will be marked as invalid in its status
+		// when translating to IR because the referenced secret can't be
+		// found.
+		if err != nil {
+			r.log.Error(err,
+				"failed to process CredentialInjection ValueRef for HTTPRouteFilter",
+				"filter", filter, "ValueRef", filter.Spec.CredentialInjection.Credential.ValueRef.Name)
+		} else {
+			resourceMap.allAssociatedNamespaces.Insert(filter.Namespace)
+			if !resourceMap.allAssociatedSecrets.Has(utils.NamespacedName(secret).String()) {
+				resourceMap.allAssociatedSecrets.Insert(utils.NamespacedName(secret).String())
+				resourceTree.Secrets = append(resourceTree.Secrets, secret)
+				r.log.Info("processing Secret", "namespace", filter.Namespace, "name", name)
+			}
 		}
 	}
 }
