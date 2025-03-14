@@ -28,10 +28,9 @@ http:
         global:
           shared: true
           rules:
-          - clientSelectors:
-            - sourceCIDR:
-                type: "Distinct"
-                values: "0.0.0.0/0"
+          - headerMatches:
+            - name: "x-user-id"
+              exact: "one"
             limit:
               requests: 5
               unit: second
