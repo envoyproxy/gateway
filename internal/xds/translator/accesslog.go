@@ -336,12 +336,10 @@ func buildXdsAccessLog(al *ir.AccessLog, accessLogType ir.ProxyAccessLogType) ([
 			ResourceAttributes: convertToKeyValueList(otel.Resources, false),
 		}
 
-		if otel.Text == nil {
-			return nil, errors.New("otel.Text is nil")
-		}
-		format := *otel.Text
+		var format string
+		if otel.Text != nil && *otel.Text != "" {
+			format = *otel.Text
 
-		if format != "" {
 			al.Body = &otlpcommonv1.AnyValue{
 				Value: &otlpcommonv1.AnyValue_StringValue{
 					StringValue: format,
