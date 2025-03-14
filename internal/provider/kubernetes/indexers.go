@@ -49,7 +49,7 @@ const (
 	httpRouteFilterHTTPRouteIndex    = "httpRouteFilterHTTPRouteIndex"
 	configMapBtpIndex                = "configMapBtpIndex"
 	configMapHTTPRouteFilterIndex    = "configMapHTTPRouteFilterIndex"
-	secretHTTPRouteFilterIndex    = "secretHTTPRouteFilterIndex"
+	secretHTTPRouteFilterIndex       = "secretHTTPRouteFilterIndex"
 )
 
 func addReferenceGrantIndexers(ctx context.Context, mgr manager.Manager) error {
