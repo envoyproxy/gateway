@@ -28,9 +28,9 @@ const (
 	DefaultEnvoyInitConfigPath = "/envoyconfigs/config.json"
 )
 
-func EnvoyInit(configPath string, regionDiscoveryDisabled bool, regionOverride string, zoneDiscoveryDisabled bool, zoneOverride string) error {
-	if regionOverride != "" && zoneOverride != "" {
-		return writeConfig(configPath, regionOverride, zoneOverride)
+func EnvoyInit(configPath string, zoneDiscoveryDisabled bool, zoneOverride string) error {
+	if zoneOverride != "" {
+		return writeConfig(configPath, zoneOverride)
 	}
 
 	nodeName := os.Getenv("NODE_NAME")
@@ -44,18 +44,13 @@ func EnvoyInit(configPath string, regionDiscoveryDisabled bool, regionOverride s
 		return fmt.Errorf("error getting node %q: %w", nodeName, err)
 	}
 
-	region, err := buildLocalityRegion(node, regionOverride, regionDiscoveryDisabled)
-	if err != nil {
-		return fmt.Errorf("error getting node topology region: %w", err)
-	}
-
 	zone, err := buildLocalityZone(node, zoneOverride, zoneDiscoveryDisabled)
 	if err != nil {
 		return fmt.Errorf("error getting node topology zone: %w", err)
 	}
 
 	// Write locality information to envoy config file
-	if err = writeConfig(configPath, region, zone); err != nil {
+	if err = writeConfig(configPath, zone); err != nil {
 		return fmt.Errorf("error writing config file: %w", err)
 	}
 
@@ -84,22 +79,6 @@ func getClient(kubeconfigPath *string) (kubernetes.Interface, error) {
 	return kubernetes.NewForConfig(config)
 }
 
-// buildLocalityRegion configures the envoy locality region using the Kubernetes node topology labels.
-func buildLocalityRegion(node *corev1.Node, override string, discoveryDisabled bool) (string, error) {
-	if override != "" {
-		return override, nil
-	}
-	if discoveryDisabled {
-		return "", nil
-	}
-
-	region, exists := node.Labels[corev1.LabelTopologyRegion]
-	if !exists {
-		return "", fmt.Errorf("region label %q not found on node %q", corev1.LabelTopologyRegion, node.Name)
-	}
-	return region, nil
-}
-
 // buildLocalityZone configures the envoy locality zone using the Kubernetes node topology labels.
 func buildLocalityZone(node *corev1.Node, override string, discoveryDisabled bool) (string, error) {
 	if override != "" {
@@ -117,14 +96,13 @@ func buildLocalityZone(node *corev1.Node, override string, discoveryDisabled boo
 }
 
 // writeConfig writes the locality information to the config file used for Envoy bootstrapping.
-func writeConfig(configPath, region, zone string) error {
+func writeConfig(configPath, zone string) error {
 	clusterName := "local_cluster"
 	// Construct JSON structure as a map
 	config := &bootstrapv3.Bootstrap{
 		Node: &corev3.Node{
 			Locality: &corev3.Locality{
-				Region: region,
-				Zone:   zone,
+				Zone: zone,
 			},
 		},
 		ClusterManager: &bootstrapv3.ClusterManager{

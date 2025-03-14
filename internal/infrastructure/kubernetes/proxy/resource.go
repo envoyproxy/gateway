@@ -133,12 +133,6 @@ func expectedInitManagerArgs(cfg *egv1a1.InitConfig) []string {
 	if cfg.ConfigPath != nil {
 		args = append(args, fmt.Sprintf("--config-path=%s", *cfg.ConfigPath))
 	}
-	if cfg.RegionDiscoveryDisabled != nil {
-		args = append(args, fmt.Sprintf("--disable-region-discovery=%t", *cfg.RegionDiscoveryDisabled))
-	}
-	if cfg.RegionOverride != nil {
-		args = append(args, fmt.Sprintf("--override-region=%s", *cfg.RegionOverride))
-	}
 	if cfg.ZoneDiscoveryDisabled != nil {
 		args = append(args, fmt.Sprintf("--disable-zone-discovery=%t", *cfg.ZoneDiscoveryDisabled))
 	}

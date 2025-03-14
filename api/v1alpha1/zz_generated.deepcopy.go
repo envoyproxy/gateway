@@ -3392,16 +3392,6 @@ func (in *InitConfig) DeepCopyInto(out *InitConfig) {
 		*out = new(string)
 		**out = **in
 	}
-	if in.RegionDiscoveryDisabled != nil {
-		in, out := &in.RegionDiscoveryDisabled, &out.RegionDiscoveryDisabled
-		*out = new(bool)
-		**out = **in
-	}
-	if in.RegionOverride != nil {
-		in, out := &in.RegionOverride, &out.RegionOverride
-		*out = new(string)
-		**out = **in
-	}
 	if in.ZoneDiscoveryDisabled != nil {
 		in, out := &in.ZoneDiscoveryDisabled, &out.ZoneDiscoveryDisabled
 		*out = new(bool)

@@ -2423,8 +2423,6 @@ _Appears in:_
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
 | `configPath` | _string_ |  false  |  | ConfigPath defines the file path to write the discovered zone information.<br />Default: /envoyconfigs/config.json |
-| `regionDiscoveryDisabled` | _boolean_ |  false  |  | RegionDiscoveryDisabled defines whether to enable service region discovery via<br />topology.kubernetes.io/region label on the underlying node<br />Default: false |
-| `regionOverride` | _string_ |  false  |  | RegionOverride allows for manual configuration of service region |
 | `zoneDiscoveryDisabled` | _boolean_ |  false  |  | ZoneDiscoveryDisabled defines whether to enable service zone discovery via<br />topology.kubernetes.io/zone label on the underlying node<br />Default: false |
 | `zoneOverride` | _string_ |  false  |  | ZoneOverride allows for manual configuration of  service zone |
 

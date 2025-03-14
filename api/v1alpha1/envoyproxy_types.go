@@ -316,16 +316,6 @@ type InitConfig struct {
 	//
 	// +optional
 	ConfigPath *string `json:"configPath,omitempty"`
-	// RegionDiscoveryDisabled defines whether to enable service region discovery via
-	// topology.kubernetes.io/region label on the underlying node
-	// Default: false
-	//
-	// +optional
-	RegionDiscoveryDisabled *bool `json:"regionDiscoveryDisabled,omitempty"`
-	// RegionOverride allows for manual configuration of service region
-	//
-	// +optional
-	RegionOverride *string `json:"regionOverride,omitempty"`
 	// ZoneDiscoveryDisabled defines whether to enable service zone discovery via
 	// topology.kubernetes.io/zone label on the underlying node
 	// Default: false
