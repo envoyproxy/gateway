@@ -429,6 +429,8 @@ func (t *Translator) translateBackendTrafficPolicyForRoute(
 					}
 
 					r.Traffic.Name = irTrafficName(policy)
+
+					// Update the Host field in HealthCheck, now that we have access to the Route Hostname.
 					r.Traffic.HealthCheck.SetHTTPHostIfAbsent(r.Hostname)
 
 					if policy.Spec.UseClientProtocol != nil {
