@@ -79,7 +79,7 @@ var (
 	ErrBothXForwardedForAndCustomHeaderInvalid  = errors.New("only one of ClientIPDetection.XForwardedFor and ClientIPDetection.CustomHeader must be set")
 	ErrBothNumTrustedHopsAndTrustedCIDRsInvalid = errors.New("only one of ClientIPDetection.XForwardedFor.NumTrustedHops and ClientIPDetection.XForwardedFor.TrustedCIDRs must be set")
 	ErrPanicThresholdInvalid                    = errors.New("PanicThreshold value is outside of 0-100 range")
-	ErrCredentialInjectionCredentialEmpty = errors.New("field CredentialInjection.Credential must be specified")
+	ErrCredentialInjectionCredentialEmpty       = errors.New("field CredentialInjection.Credential must be specified")
 
 	redacted = []byte("[redacted]")
 )

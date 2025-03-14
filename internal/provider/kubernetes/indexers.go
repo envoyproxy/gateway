@@ -737,13 +737,13 @@ func secretRouteFilterIndexFunc(rawObj client.Object) []string {
 	filter := rawObj.(*egv1a1.HTTPRouteFilter)
 	var secretReferences []string
 	if filter.Spec.CredentialInjection != nil {
-			secretReferences = append(secretReferences,
-				types.NamespacedName{
-					Namespace: filter.Namespace,
-					Name:      string(filter.Spec.CredentialInjection.Credential.ValueRef.Name),
-				}.String(),
-			)
-		}
+		secretReferences = append(secretReferences,
+			types.NamespacedName{
+				Namespace: filter.Namespace,
+				Name:      string(filter.Spec.CredentialInjection.Credential.ValueRef.Name),
+			}.String(),
+		)
+	}
 
 	return secretReferences
 }

@@ -9,7 +9,6 @@ package tests
 
 import (
 	"testing"
-	"time"
 
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/gateway-api/conformance/utils/http"
@@ -49,9 +48,7 @@ var CredentialInjectionTest = suite.ConformanceTest{
 				},
 				Namespace: ns,
 			}
-			config := suite.TimeoutConfig
-			config.MaxTimeToConsistency = 5 * time.Hour
-			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, config, gwAddr, expectedResponse)
+			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
 		})
 	},
 }
