@@ -22,6 +22,7 @@ new features: |
   Added support for forwarding the authenticated username to the backend via a configurable header in BasicAuth
   Added support for HTTP Methods and Headers based authorization in SecurityPolicy
   Added support for zone aware routing
+  Added support for BackendTLSPolicy to target ServiceImport
   Added support for per-host circuit breaker thresholds
 
 bug fixes: |
