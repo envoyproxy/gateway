@@ -63,7 +63,7 @@ func server(ctx context.Context, logOut io.Writer) error {
 		return nil
 	}
 	l := loader.New(cfgPath, cfg, hook)
-	if err := l.Start(ctx); err != nil {
+	if err := l.Start(ctx, logOut); err != nil {
 		return err
 	}
 

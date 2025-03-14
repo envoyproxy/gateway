@@ -77,7 +77,6 @@ type BackendTrafficPolicySpec struct {
 	// If not specified, the default upgrade configuration(websocket) will be used.
 	//
 	// +optional
-	// +notImplementedHide
 	HTTPUpgrade []*ProtocolUpgradeConfig `json:"httpUpgrade,omitempty"`
 }
 
@@ -87,9 +86,8 @@ type ProtocolUpgradeConfig struct {
 	//
 	// +kubebuilder:validation:Required
 	Type string `json:"type"`
-	// Disabled indicates whether the upgrade is disabled.
-	// +optional
-	Disabled *bool `json:"disabled"`
+
+	// TODO: support more options for CONNECT
 }
 
 // BackendTrafficPolicyList contains a list of BackendTrafficPolicy resources.

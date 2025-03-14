@@ -414,6 +414,7 @@ func buildXdsClusterCircuitBreaker(circuitBreaker *ir.CircuitBreaker) *clusterv3
 			Value: uint32(1024),
 		},
 	}
+	cbtPerEndpoint := []*clusterv3.CircuitBreakers_Thresholds{}
 
 	if circuitBreaker != nil {
 		if circuitBreaker.MaxConnections != nil {
@@ -439,10 +440,23 @@ func buildXdsClusterCircuitBreaker(circuitBreaker *ir.CircuitBreaker) *clusterv3
 				Value: *circuitBreaker.MaxParallelRetries,
 			}
 		}
+
+		if circuitBreaker.PerEndpoint != nil {
+			if circuitBreaker.PerEndpoint.MaxConnections != nil {
+				cbtPerEndpoint = []*clusterv3.CircuitBreakers_Thresholds{
+					{
+						MaxConnections: &wrapperspb.UInt32Value{
+							Value: *circuitBreaker.PerEndpoint.MaxConnections,
+						},
+					},
+				}
+			}
+		}
 	}
 
 	ecb := &clusterv3.CircuitBreakers{
-		Thresholds: []*clusterv3.CircuitBreakers_Thresholds{cbt},
+		Thresholds:        []*clusterv3.CircuitBreakers_Thresholds{cbt},
+		PerHostThresholds: cbtPerEndpoint,
 	}
 
 	return ecb

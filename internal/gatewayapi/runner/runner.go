@@ -13,7 +13,6 @@ import (
 	"os"
 	"path"
 	"reflect"
-	"runtime"
 
 	"github.com/docker/docker/pkg/fileutils"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
@@ -97,13 +96,11 @@ func (r *Runner) startWasmCache(ctx context.Context) {
 		return
 	}
 	cacheOption := wasm.CacheOptions{}
-	switch runtime.GOOS {
-	case "darwin":
-		// On darwin, /var/lib/eg/wasm is not writable by non-root users.
+	if r.Config.EnvoyGateway.Provider.Type == egv1a1.ProviderTypeKubernetes {
+		cacheOption.CacheDir = "/var/lib/eg/wasm"
+	} else {
 		h, _ := os.UserHomeDir() // Assume we always get the home directory.
 		cacheOption.CacheDir = path.Join(h, ".eg", "wasm")
-	default:
-		cacheOption.CacheDir = "/var/lib/eg/wasm"
 	}
 	// Create the file directory if it does not exist.
 	if err = fileutils.CreateIfNotExists(cacheOption.CacheDir, true); err != nil {

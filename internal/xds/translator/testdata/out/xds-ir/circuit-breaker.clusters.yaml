@@ -1,4 +1,6 @@
 - circuitBreakers:
+    perHostThresholds:
+    - maxConnections: 1
     thresholds:
     - maxConnections: 1
       maxPendingRequests: 1

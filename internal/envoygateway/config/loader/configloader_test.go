@@ -50,7 +50,7 @@ func TestConfigLoader(t *testing.T) {
 		return nil
 	})
 
-	require.NoError(t, loader.Start(ctx))
+	require.NoError(t, loader.Start(ctx, os.Stdout))
 	go func() {
 		_ = os.WriteFile(cfgPath, []byte(redisConfig), 0o600)
 	}()
