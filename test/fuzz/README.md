@@ -5,7 +5,18 @@ available [here](https://gateway.envoyproxy.io/contributions/design/fuzzing/).
 
 ## Local testing
 
-To run the fuzzers locally, you can use the following command:
+### Run the fuzzers locally
+
+Run the following command from the root of the repository.
+
+```bash
+make go.test.fuzz FUZZ_TIME=10s
+```
+
+
+### Run the fuzzers locally with OSS-Fuzz infra
+
+To run the fuzzers locally using oss-fuzz infra, you can use the following commands:
 
 ```bash
 git clone --depth=1 https://github.com/google/oss-fuzz.git
