@@ -114,13 +114,11 @@ func (*credentialInjector) patchResources(resource *types.ResourceVersionTable, 
 	var errs error
 
 	for _, route := range routes {
-		if route.CredentialInjection == nil {
-			continue
-		}
-
-		secret := buildCredentialSecret(route.CredentialInjection, route.Name)
-		if err := addXdsSecret(resource, secret); err != nil {
-			errs = errors.Join(errs, err)
+		if route.CredentialInjection != nil {
+			secret := buildCredentialSecret(route.CredentialInjection, route.Name)
+			if err := addXdsSecret(resource, secret); err != nil {
+				errs = errors.Join(errs, err)
+			}
 		}
 	}
 
