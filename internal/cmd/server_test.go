@@ -60,7 +60,7 @@ func TestGetConfigValidate(t *testing.T) {
 			_, err = file.Write([]byte(test.input))
 			require.NoError(t, err)
 
-			_, err = getConfigByPath(file.Name())
+			_, err = getConfigByPath(os.Stderr, file.Name())
 			if test.errors == nil {
 				require.NoError(t, err)
 			} else {

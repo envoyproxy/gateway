@@ -56,7 +56,6 @@ type AuthorizationRule struct {
 }
 
 // Operation specifies the operation of a request.
-// +notImplementedHide
 type Operation struct {
 	// Methods are the HTTP methods of the request.
 	// If multiple methods are specified, all specified methods are allowed or denied, based on the action of the rule.
@@ -102,7 +101,6 @@ type Principal struct {
 	// +optional
 	// +kubebuilder:validation:MinItems=1
 	// +kubebuilder:validation:MaxItems=256
-	// +notImplementedHide
 	Headers []AuthorizationHeaderMatch `json:"headers,omitempty"`
 }
 

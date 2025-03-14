@@ -6,6 +6,7 @@
 package cmd
 
 import (
+	"os"
 	"path/filepath"
 	"testing"
 
@@ -21,7 +22,7 @@ func TestGetCertgenCommand(t *testing.T) {
 }
 
 func TestOutputCertsForLocal(t *testing.T) {
-	cfg, err := getConfig()
+	cfg, err := getConfig(os.Stdout)
 	require.NoError(t, err)
 
 	certs, err := crypto.GenerateCerts(cfg)
