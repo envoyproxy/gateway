@@ -73,6 +73,9 @@ func (t *Translator) translateExtServiceBackendRefs(
 		Name:     destName,
 		Settings: ds,
 	}
+	if validationErr := rs.Validate(); validationErr != nil {
+		return nil, validationErr
+	}
 	return rs, nil
 }
 

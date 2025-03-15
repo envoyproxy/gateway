@@ -43,6 +43,7 @@ var (
 	ErrTLSPrivateKey                            = errors.New("field PrivateKey must be specified")
 	ErrRouteNameEmpty                           = errors.New("field Name must be specified")
 	ErrHTTPRouteHostnameEmpty                   = errors.New("field Hostname must be specified")
+	ErrRouteDestinationsFQDNMixed               = errors.New("mixed endpoints address type for the same route destination is not supported")
 	ErrDestinationNameEmpty                     = errors.New("field Name must be specified")
 	ErrDestEndpointHostInvalid                  = errors.New("field Address must be a valid IP or FQDN address")
 	ErrDestEndpointPortInvalid                  = errors.New("field Port specified is invalid")
@@ -1429,10 +1430,17 @@ func (r *RouteDestination) Validate() error {
 	if len(r.Name) == 0 {
 		errs = errors.Join(errs, ErrDestinationNameEmpty)
 	}
+	routeHasAddressTypes := make(map[DestinationAddressType]bool)
 	for _, s := range r.Settings {
 		if err := s.Validate(); err != nil {
 			errs = errors.Join(errs, err)
 		}
+		if s.AddressType != nil {
+			routeHasAddressTypes[*s.AddressType] = true
+		}
+	}
+	if len(routeHasAddressTypes) > 1 || (len(routeHasAddressTypes) == 1 && routeHasAddressTypes[MIXED]) {
+		errs = errors.Join(ErrRouteDestinationsFQDNMixed)
 	}
 
 	return errs
