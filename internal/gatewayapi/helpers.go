@@ -449,6 +449,11 @@ func irTLSCACertName(namespace, name string) string {
 	return fmt.Sprintf("%s/%s/%s", namespace, name, caCertKey)
 }
 
+// Helper function to format the policy name and namespace
+func irTrafficName(policy *egv1a1.BackendTrafficPolicy) string {
+	return fmt.Sprintf("%s/%s", policy.Name, policy.Namespace)
+}
+
 func IsMergeGatewaysEnabled(resources *resource.Resources) bool {
 	return resources.EnvoyProxyForGatewayClass != nil && resources.EnvoyProxyForGatewayClass.Spec.MergeGateways != nil && *resources.EnvoyProxyForGatewayClass.Spec.MergeGateways
 }

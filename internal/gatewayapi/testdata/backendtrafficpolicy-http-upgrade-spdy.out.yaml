@@ -168,6 +168,7 @@ xdsIR:
         traffic:
           httpUpgrade:
           - spdy/3.1
+          name: policy-for-route/default
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4

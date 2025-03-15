@@ -9,6 +9,7 @@ import (
 	"embed"
 	"flag"
 	"path/filepath"
+	"sort"
 	"strings"
 	"testing"
 	"time"
@@ -201,12 +202,16 @@ func TestTranslateRateLimitConfig(t *testing.T) {
 	for _, inputFile := range inputFiles {
 		inputFileName := testName(inputFile)
 		t.Run(inputFileName, func(t *testing.T) {
-			in := requireXdsIRListenerFromInputTestData(t, inputFile)
-			out := BuildRateLimitServiceConfig(in)
+			// Get listeners from the test data
+			listeners := requireXdsIRListenersFromInputTestData(t, inputFile)
+
+			// Call BuildRateLimitServiceConfig with the list of listeners
+			configs := BuildRateLimitServiceConfig(listeners)
+
 			if *overrideTestData {
-				require.NoError(t, file.Write(requireYamlRootToYAMLString(t, out), filepath.Join("testdata", "out", "ratelimit-config", inputFileName+".yaml")))
+				require.NoError(t, file.Write(requireRateLimitConfigsToYAMLString(t, configs), filepath.Join("testdata", "out", "ratelimit-config", inputFileName+".yaml")))
 			}
-			require.Equal(t, requireTestDataOutFile(t, "ratelimit-config", inputFileName+".yaml"), requireYamlRootToYAMLString(t, out))
+			require.Equal(t, requireTestDataOutFile(t, "ratelimit-config", inputFileName+".yaml"), requireRateLimitConfigsToYAMLString(t, configs))
 		})
 	}
 }
@@ -333,14 +338,27 @@ func requireXdsIRFromInputTestData(t *testing.T, name string) *ir.Xds {
 	return x
 }
 
-func requireXdsIRListenerFromInputTestData(t *testing.T, name string) *ir.HTTPListener {
+func requireXdsIRListenersFromInputTestData(t *testing.T, name string) []*ir.HTTPListener {
 	t.Helper()
 	content, err := inFiles.ReadFile(name)
 	require.NoError(t, err)
+
+	// Try to unmarshal as a list of listeners first (new format)
+	xdsIR := struct {
+		HTTP []*ir.HTTPListener `yaml:"http"`
+	}{}
+
+	err = yaml.Unmarshal(content, &xdsIR)
+	if err == nil && len(xdsIR.HTTP) > 0 {
+		// Return the list of listeners
+		return xdsIR.HTTP
+	}
+
+	// Fall back to the old format (single listener)
 	listener := &ir.HTTPListener{}
 	err = yaml.Unmarshal(content, listener)
 	require.NoError(t, err)
-	return listener
+	return []*ir.HTTPListener{listener}
 }
 
 func requireTestDataOutFile(t *testing.T, name ...string) string {
@@ -351,10 +369,27 @@ func requireTestDataOutFile(t *testing.T, name ...string) string {
 	return string(content)
 }
 
-func requireYamlRootToYAMLString(t *testing.T, pbRoot *ratelimitv3.RateLimitConfig) string {
-	str, err := GetRateLimitServiceConfigStr(pbRoot)
-	require.NoError(t, err)
-	return str
+func requireRateLimitConfigsToYAMLString(t *testing.T, configs []*ratelimitv3.RateLimitConfig) string {
+	if len(configs) == 0 {
+		return ""
+	}
+
+	// Sort configs by domain to ensure consistent output regardless of map iteration order
+	sort.Slice(configs, func(i, j int) bool {
+		return configs[i].Domain < configs[j].Domain
+	})
+
+	var result string
+	for i, config := range configs {
+		str, err := GetRateLimitServiceConfigStr(config)
+		require.NoError(t, err)
+
+		if i > 0 {
+			result += "---\n"
+		}
+		result += str
+	}
+	return result
 }
 
 func requireResourcesToYAMLString(t *testing.T, resources []types.Resource) string {

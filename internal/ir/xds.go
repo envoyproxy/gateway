@@ -798,6 +798,8 @@ type Compression struct {
 // TrafficFeatures holds the information associated with the Backend Traffic Policy.
 // +k8s:deepcopy-gen=true
 type TrafficFeatures struct {
+	// Name of the backend traffic policy and namespace
+	Name string `json:"name"`
 	// RateLimit defines the more specific match conditions as well as limits for ratelimiting
 	// the requests on this route.
 	RateLimit *RateLimit `json:"rateLimit,omitempty" yaml:"rateLimit,omitempty"`
@@ -1997,6 +1999,15 @@ type GlobalRateLimit struct {
 
 	// Rules for rate limiting.
 	Rules []*RateLimitRule `json:"rules,omitempty" yaml:"rules,omitempty"`
+
+	// Shared determines whether this rate limit rule applies globally across the gateway.
+	// If set to true, the rule is treated as a common bucket and is shared across all routes under the gateway.
+	// Must have targetRef set to Gateway
+	// Default: false.
+	//
+	// +optional
+	// +kubebuilder:default=false
+	Shared *bool `json:"shared,omitempty" yaml:"shared,omitempty"`
 }
 
 // LocalRateLimit holds the local rate limiting configuration.
@@ -2955,4 +2966,12 @@ type ResourceMetadata struct {
 	Annotations map[string]string `json:"annotations,omitempty" yaml:"annotations,omitempty"`
 	// SectionName is the name of a section of a resource
 	SectionName string `json:"sectionName,omitempty" yaml:"sectionName,omitempty"`
+}
+
+// BackendTrafficPolicy represents the policy associated with backend traffic.
+type BackendTrafficPolicy struct {
+	// Name is the name of the associated BackendTrafficPolicy.
+	Name string `json:"name,omitempty" yaml:"name,omitempty"`
+	// Namespace is the namespace of the associated BackendTrafficPolicy.
+	Namespace string `json:"namespace,omitempty" yaml:"namespace,omitempty"`
 }
