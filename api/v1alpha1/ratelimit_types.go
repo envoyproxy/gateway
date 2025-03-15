@@ -51,6 +51,16 @@ type GlobalRateLimit struct {
 	//
 	// +kubebuilder:validation:MaxItems=64
 	Rules []RateLimitRule `json:"rules"`
+
+	// Shared determines whether the rate limit rules apply across all the policy targets.
+	// If set to true, the rule is treated as a common bucket and is shared across all policy targets (xRoutes).
+	// Must have targetRef set to Gateway
+	// Default: false.
+	//
+	// +optional
+	// +notImplementedHide
+	// +kubebuilder:default=false
+	Shared *bool `json:"shared,omitempty"`
 }
 
 // LocalRateLimit defines local rate limit configuration.
@@ -202,7 +212,6 @@ const (
 	SourceMatchExact SourceMatchType = "Exact"
 	// SourceMatchDistinct Each IP Address within the specified Source IP CIDR is treated as a distinct client selector
 	// and uses a separate rate limit bucket/counter.
-	// Note: This is only supported for Global Rate Limits.
 	SourceMatchDistinct SourceMatchType = "Distinct"
 )
 
@@ -270,7 +279,6 @@ const (
 	// HeaderMatchDistinct matches any and all possible unique values encountered in the
 	// specified HTTP Header. Note that each unique value will receive its own rate limit
 	// bucket.
-	// Note: This is only supported for Global Rate Limits.
 	HeaderMatchDistinct HeaderMatchType = "Distinct"
 )
 

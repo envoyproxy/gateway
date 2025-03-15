@@ -26,7 +26,17 @@ const (
 	retryDefaultRetryOn             = "connect-failure,refused-stream,unavailable,cancelled,retriable-status-codes"
 	retryDefaultRetriableStatusCode = 503
 	retryDefaultNumRetries          = 2
+
+	websocketUpgradeType = "websocket"
 )
+
+// Allow websocket upgrades for HTTP 1.1
+// Reference: https://developer.mozilla.org/en-US/docs/Web/HTTP/Protocol_upgrade_mechanism
+var defaultUpgradeConfig = []*routev3.RouteAction_UpgradeConfig{
+	{
+		UpgradeType: websocketUpgradeType,
+	},
+}
 
 func buildXdsRoute(httpRoute *ir.HTTPRoute) (*routev3.Route, error) {
 	router := &routev3.Route{
@@ -61,13 +71,7 @@ func buildXdsRoute(httpRoute *ir.HTTPRoute) (*routev3.Route, error) {
 		}
 
 		if !httpRoute.IsHTTP2 {
-			// Allow websocket upgrades for HTTP 1.1
-			// Reference: https://developer.mozilla.org/en-US/docs/Web/HTTP/Protocol_upgrade_mechanism
-			routeAction.UpgradeConfigs = []*routev3.RouteAction_UpgradeConfig{
-				{
-					UpgradeType: "websocket",
-				},
-			}
+			routeAction.UpgradeConfigs = buildUpgradeConfig(httpRoute.Traffic)
 		}
 
 		router.Action = &routev3.Route_Route{Route: routeAction}
@@ -80,13 +84,7 @@ func buildXdsRoute(httpRoute *ir.HTTPRoute) (*routev3.Route, error) {
 			routeAction.RequestMirrorPolicies = buildXdsRequestMirrorPolicies(httpRoute.Mirrors)
 		}
 		if !httpRoute.IsHTTP2 {
-			// Allow websocket upgrades for HTTP 1.1
-			// Reference: https://developer.mozilla.org/en-US/docs/Web/HTTP/Protocol_upgrade_mechanism
-			routeAction.UpgradeConfigs = []*routev3.RouteAction_UpgradeConfig{
-				{
-					UpgradeType: "websocket",
-				},
-			}
+			routeAction.UpgradeConfigs = buildUpgradeConfig(httpRoute.Traffic)
 		}
 		router.Action = &routev3.Route_Route{Route: routeAction}
 	}
@@ -120,6 +118,21 @@ func buildXdsRoute(httpRoute *ir.HTTPRoute) (*routev3.Route, error) {
 	}
 
 	return router, nil
+}
+
+func buildUpgradeConfig(trafficFeatures *ir.TrafficFeatures) []*routev3.RouteAction_UpgradeConfig {
+	if trafficFeatures == nil || trafficFeatures.HTTPUpgrade == nil {
+		return defaultUpgradeConfig
+	}
+
+	upgradeConfigs := make([]*routev3.RouteAction_UpgradeConfig, 0, len(trafficFeatures.HTTPUpgrade))
+	for _, protocol := range trafficFeatures.HTTPUpgrade {
+		upgradeConfigs = append(upgradeConfigs, &routev3.RouteAction_UpgradeConfig{
+			UpgradeType: protocol,
+		})
+	}
+
+	return upgradeConfigs
 }
 
 func buildXdsRouteMatch(pathMatch *ir.StringMatch, headerMatches []*ir.StringMatch, queryParamMatches []*ir.StringMatch) *routev3.RouteMatch {
@@ -224,7 +237,7 @@ func buildXdsStringMatcher(irMatch *ir.StringMatch) *matcherv3.StringMatcher {
 
 func buildXdsRouteAction(backendWeights *ir.BackendWeights, settings []*ir.DestinationSetting) *routev3.RouteAction {
 	// only use weighted cluster when there are invalid weights
-	if hasFiltersInSettings(settings) || backendWeights.Invalid != 0 {
+	if needsClusterPerSetting(settings) || backendWeights.Invalid != 0 {
 		return buildXdsWeightedRouteAction(backendWeights, settings)
 	}
 
@@ -236,7 +249,7 @@ func buildXdsRouteAction(backendWeights *ir.BackendWeights, settings []*ir.Desti
 }
 
 func buildXdsWeightedRouteAction(backendWeights *ir.BackendWeights, settings []*ir.DestinationSetting) *routev3.RouteAction {
-	weightedClusters := []*routev3.WeightedCluster_ClusterWeight{}
+	weightedClusters := make([]*routev3.WeightedCluster_ClusterWeight, 0, len(settings))
 	if backendWeights.Invalid > 0 {
 		invalidCluster := &routev3.WeightedCluster_ClusterWeight{
 			Name:   "invalid-backend-cluster",
@@ -708,10 +721,30 @@ func buildRetryOn(triggers []ir.TriggerEnum) (string, error) {
 	return b.String(), nil
 }
 
+func needsClusterPerSetting(settings []*ir.DestinationSetting) bool {
+	if hasFiltersInSettings(settings) || hasZoneAwareRouting(settings) {
+		return true
+	}
+	return false
+}
+
 func hasFiltersInSettings(settings []*ir.DestinationSetting) bool {
 	for _, setting := range settings {
 		filters := setting.Filters
 		if filters != nil {
+			return true
+		}
+	}
+	return false
+}
+
+func hasZoneAwareRouting(settings []*ir.DestinationSetting) bool {
+	// Only use weighted clusters if more than one setting
+	if len(settings) < 2 {
+		return false
+	}
+	for _, setting := range settings {
+		if setting.ZoneAwareRoutingEnabled {
 			return true
 		}
 	}

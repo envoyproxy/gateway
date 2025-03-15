@@ -292,21 +292,22 @@ func (t *Translator) translateBackendTrafficPolicyForRoute(
 	resources *resource.Resources,
 ) error {
 	var (
-		rl        *ir.RateLimit
-		lb        *ir.LoadBalancer
-		pp        *ir.ProxyProtocol
-		hc        *ir.HealthCheck
-		cb        *ir.CircuitBreaker
-		fi        *ir.FaultInjection
-		to        *ir.Timeout
-		ka        *ir.TCPKeepalive
-		rt        *ir.Retry
-		bc        *ir.BackendConnection
-		ds        *ir.DNS
-		h2        *ir.HTTP2Settings
-		ro        *ir.ResponseOverride
-		cp        []*ir.Compression
-		err, errs error
+		rl          *ir.RateLimit
+		lb          *ir.LoadBalancer
+		pp          *ir.ProxyProtocol
+		hc          *ir.HealthCheck
+		cb          *ir.CircuitBreaker
+		fi          *ir.FaultInjection
+		to          *ir.Timeout
+		ka          *ir.TCPKeepalive
+		rt          *ir.Retry
+		bc          *ir.BackendConnection
+		ds          *ir.DNS
+		h2          *ir.HTTP2Settings
+		ro          *ir.ResponseOverride
+		cp          []*ir.Compression
+		httpUpgrade []string
+		err, errs   error
 	)
 
 	// Build IR
@@ -359,6 +360,7 @@ func (t *Translator) translateBackendTrafficPolicyForRoute(
 		errs = errors.Join(errs, err)
 	}
 	cp = buildCompression(policy.Spec.Compression)
+	httpUpgrade = buildHTTPProtocolUpgradeConfig(policy.Spec.HTTPUpgrade)
 
 	ds = translateDNS(policy.Spec.ClusterSettings)
 
@@ -423,6 +425,7 @@ func (t *Translator) translateBackendTrafficPolicyForRoute(
 						Timeout:           to,
 						ResponseOverride:  ro,
 						Compression:       cp,
+						HTTPUpgrade:       httpUpgrade,
 					}
 
 					// Update the Host field in HealthCheck, now that we have access to the Route Hostname.
@@ -440,27 +443,25 @@ func (t *Translator) translateBackendTrafficPolicyForRoute(
 }
 
 func (t *Translator) translateBackendTrafficPolicyForGateway(
-	policy *egv1a1.BackendTrafficPolicy,
-	target gwapiv1a2.LocalPolicyTargetReferenceWithSectionName,
-	gateway *GatewayContext,
-	xdsIR resource.XdsIRMap,
-	resources *resource.Resources,
+	policy *egv1a1.BackendTrafficPolicy, target gwapiv1a2.LocalPolicyTargetReferenceWithSectionName,
+	gateway *GatewayContext, xdsIR resource.XdsIRMap, resources *resource.Resources,
 ) error {
 	var (
-		rl        *ir.RateLimit
-		lb        *ir.LoadBalancer
-		pp        *ir.ProxyProtocol
-		hc        *ir.HealthCheck
-		cb        *ir.CircuitBreaker
-		fi        *ir.FaultInjection
-		ct        *ir.Timeout
-		ka        *ir.TCPKeepalive
-		rt        *ir.Retry
-		ds        *ir.DNS
-		h2        *ir.HTTP2Settings
-		ro        *ir.ResponseOverride
-		cp        []*ir.Compression
-		err, errs error
+		rl          *ir.RateLimit
+		lb          *ir.LoadBalancer
+		pp          *ir.ProxyProtocol
+		hc          *ir.HealthCheck
+		cb          *ir.CircuitBreaker
+		fi          *ir.FaultInjection
+		ct          *ir.Timeout
+		ka          *ir.TCPKeepalive
+		rt          *ir.Retry
+		ds          *ir.DNS
+		h2          *ir.HTTP2Settings
+		ro          *ir.ResponseOverride
+		cp          []*ir.Compression
+		httpUpgrade []string
+		err, errs   error
 	)
 
 	// Build IR
@@ -506,6 +507,7 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(
 		errs = errors.Join(errs, err)
 	}
 	cp = buildCompression(policy.Spec.Compression)
+	httpUpgrade = buildHTTPProtocolUpgradeConfig(policy.Spec.HTTPUpgrade)
 
 	ds = translateDNS(policy.Spec.ClusterSettings)
 
@@ -591,6 +593,7 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(
 				DNS:              ds,
 				ResponseOverride: ro,
 				Compression:      cp,
+				HTTPUpgrade:      httpUpgrade,
 			}
 
 			// Update the Host field in HealthCheck, now that we have access to the Route Hostname.
@@ -675,16 +678,6 @@ func (t *Translator) buildLocalRateLimit(policy *egv1a1.BackendTrafficPolicy) (*
 		irRule, err = buildRateLimitRule(rule)
 		if err != nil {
 			return nil, err
-		}
-
-		if irRule.CIDRMatch != nil && irRule.CIDRMatch.Distinct {
-			return nil, fmt.Errorf("local rateLimit does not support distinct CIDRMatch")
-		}
-
-		for _, match := range irRule.HeaderMatches {
-			if match.Distinct {
-				return nil, fmt.Errorf("local rateLimit does not support distinct HeaderMatch")
-			}
 		}
 		irRules = append(irRules, irRule)
 	}
@@ -980,4 +973,17 @@ func buildCompression(compression []*egv1a1.Compression) []*ir.Compression {
 	}
 
 	return irCompression
+}
+
+func buildHTTPProtocolUpgradeConfig(cfgs []*egv1a1.ProtocolUpgradeConfig) []string {
+	if len(cfgs) == 0 {
+		return nil
+	}
+
+	result := make([]string, 0, len(cfgs))
+	for _, cfg := range cfgs {
+		result = append(result, cfg.Type)
+	}
+
+	return result
 }

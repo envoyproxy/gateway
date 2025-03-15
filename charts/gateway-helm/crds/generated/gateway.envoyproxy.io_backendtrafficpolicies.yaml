@@ -98,6 +98,20 @@ spec:
                     maximum: 4294967295
                     minimum: 0
                     type: integer
+                  perEndpoint:
+                    description: PerEndpoint defines Circuit Breakers that will apply
+                      per-endpoint for an upstream cluster
+                    properties:
+                      maxConnections:
+                        default: 1024
+                        description: MaxConnections configures the maximum number
+                          of connections that Envoy will establish per-endpoint to
+                          the referenced backend defined within a xRoute rule.
+                        format: int64
+                        maximum: 4294967295
+                        minimum: 0
+                        type: integer
+                    type: object
                 type: object
               compression:
                 description: The compression config for the http streams.
@@ -538,9 +552,6 @@ spec:
                   If not specified, the default upgrade configuration(websocket) will be used.
                 items:
                   properties:
-                    disabled:
-                      description: Disabled indicates whether the upgrade is disabled.
-                      type: boolean
                     type:
                       description: |-
                         Type is the case-insensitive type of protocol upgrade.
@@ -933,6 +944,14 @@ spec:
                           type: object
                         maxItems: 64
                         type: array
+                      shared:
+                        default: false
+                        description: |-
+                          Shared determines whether the rate limit rules apply across all the policy targets.
+                          If set to true, the rule is treated as a common bucket and is shared across all policy targets (xRoutes).
+                          Must have targetRef set to Gateway
+                          Default: false.
+                        type: boolean
                     required:
                     - rules
                     type: object

@@ -1313,89 +1313,43 @@ func (t *Translator) processDestination(name string, backendRefContext BackendRe
 		envoyProxy = gatewayCtx.envoyProxy
 	}
 
-	var (
-		endpoints []*ir.DestinationEndpoint
-		addrType  *ir.DestinationAddressType
-	)
 	protocol := inspectAppProtocolByRouteKind(routeType)
 
 	switch KindDerefOr(backendRef.Kind, resource.KindService) {
 	case resource.KindServiceImport:
-		serviceImport := resources.GetServiceImport(backendNamespace, string(backendRef.Name))
-		var servicePort mcsapiv1a1.ServicePort
-		for _, port := range serviceImport.Spec.Ports {
-			if port.Port == int32(*backendRef.Port) {
-				servicePort = port
-				break
-			}
-		}
-
-		if !t.IsEnvoyServiceRouting(envoyProxy) {
-			endpointSlices := resources.GetEndpointSlicesForBackend(backendNamespace, string(backendRef.Name), KindDerefOr(backendRef.Kind, resource.KindService))
-			endpoints, addrType = getIREndpointsFromEndpointSlices(endpointSlices, servicePort.Name, servicePort.Protocol)
-		} else {
-			backendIps := resources.GetServiceImport(backendNamespace, string(backendRef.Name)).Spec.IPs
-			for _, ip := range backendIps {
-				ep := ir.NewDestEndpoint(ip, uint32(*backendRef.Port), false)
-				endpoints = append(endpoints, ep)
-			}
-		}
-
-		ds = &ir.DestinationSetting{
-			Name:        name,
-			Weight:      &weight,
-			Protocol:    protocol,
-			Endpoints:   endpoints,
-			AddressType: addrType,
-		}
+		ds = t.processServiceImportDestinationSetting(name, backendRef.BackendObjectReference, backendNamespace, protocol, resources, envoyProxy)
 
 	case resource.KindService:
 		ds = t.processServiceDestinationSetting(name, backendRef.BackendObjectReference, backendNamespace, protocol, resources, envoyProxy)
-		ds.TLS, err = t.applyBackendTLSSetting(
-			backendRef.BackendObjectReference,
-			backendNamespace,
-			gwapiv1a2.ParentReference{
-				Group:       parentRef.Group,
-				Kind:        parentRef.Kind,
-				Namespace:   parentRef.Namespace,
-				Name:        parentRef.Name,
-				SectionName: parentRef.SectionName,
-				Port:        parentRef.Port,
-			},
-			resources,
-			envoyProxy,
-		)
-		if err != nil {
-			return nil, err
-		}
-		ds.Filters, err = t.processDestinationFilters(routeType, backendRefContext, parentRef, route, resources)
-		if err != nil {
-			return nil, err
-		}
-		ds.IPFamily = getServiceIPFamily(resources.GetService(backendNamespace, string(backendRef.Name)))
+		svc := resources.GetService(backendNamespace, string(backendRef.Name))
+		ds.IPFamily = getServiceIPFamily(svc)
+		ds.ZoneAwareRoutingEnabled = isZoneAwareRoutingEnabled(svc)
+
 	case egv1a1.KindBackend:
 		ds = t.processBackendDestinationSetting(name, backendRef.BackendObjectReference, backendNamespace, protocol, resources)
-		ds.TLS, err = t.applyBackendTLSSetting(
-			backendRef.BackendObjectReference,
-			backendNamespace,
-			gwapiv1a2.ParentReference{
-				Group:       parentRef.Group,
-				Kind:        parentRef.Kind,
-				Namespace:   parentRef.Namespace,
-				Name:        parentRef.Name,
-				SectionName: parentRef.SectionName,
-				Port:        parentRef.Port,
-			},
-			resources,
-			envoyProxy,
-		)
-		if err != nil {
-			return nil, err
-		}
-		ds.Filters, err = t.processDestinationFilters(routeType, backendRefContext, parentRef, route, resources)
-		if err != nil {
-			return nil, err
-		}
+	}
+
+	ds.TLS, err = t.applyBackendTLSSetting(
+		backendRef.BackendObjectReference,
+		backendNamespace,
+		gwapiv1a2.ParentReference{
+			Group:       parentRef.Group,
+			Kind:        parentRef.Kind,
+			Namespace:   parentRef.Namespace,
+			Name:        parentRef.Name,
+			SectionName: parentRef.SectionName,
+			Port:        parentRef.Port,
+		},
+		resources,
+		envoyProxy,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	ds.Filters, err = t.processDestinationFilters(routeType, backendRefContext, parentRef, route, resources)
+	if err != nil {
+		return nil, err
 	}
 
 	if err := validateDestinationSettings(ds, t.IsEnvoyServiceRouting(envoyProxy), backendRef.Kind); err != nil {
@@ -1430,6 +1384,55 @@ func validateDestinationSettings(destinationSettings *ir.DestinationSetting, end
 	return nil
 }
 
+func (t *Translator) processServiceImportDestinationSetting(
+	name string,
+	backendRef gwapiv1.BackendObjectReference,
+	backendNamespace string,
+	protocol ir.AppProtocol,
+	resources *resource.Resources,
+	envoyProxy *egv1a1.EnvoyProxy,
+) *ir.DestinationSetting {
+	var (
+		endpoints []*ir.DestinationEndpoint
+		addrType  *ir.DestinationAddressType
+	)
+
+	serviceImport := resources.GetServiceImport(backendNamespace, string(backendRef.Name))
+	var servicePort mcsapiv1a1.ServicePort
+	for _, port := range serviceImport.Spec.Ports {
+		if port.Port == int32(*backendRef.Port) {
+			servicePort = port
+			break
+		}
+	}
+
+	// TODO(#5485): Should these protocols be supported for ServiceImport?
+	//
+	// if servicePort.AppProtocol != nil {
+	// 	protocol = serviceAppProtocolToIRAppProtocol(*servicePort.AppProtocol)
+	// }
+
+	// Route to endpoints by default
+	if !t.IsEnvoyServiceRouting(envoyProxy) {
+		endpointSlices := resources.GetEndpointSlicesForBackend(backendNamespace, string(backendRef.Name), resource.KindServiceImport)
+		endpoints, addrType = getIREndpointsFromEndpointSlices(endpointSlices, servicePort.Name, servicePort.Protocol)
+	} else {
+		// Fall back to Service ClusterIP routing
+		backendIps := resources.GetServiceImport(backendNamespace, string(backendRef.Name)).Spec.IPs
+		for _, ip := range backendIps {
+			ep := ir.NewDestEndpoint(ip, uint32(*backendRef.Port), false, nil)
+			endpoints = append(endpoints, ep)
+		}
+	}
+
+	return &ir.DestinationSetting{
+		Name:        name,
+		Protocol:    protocol,
+		Endpoints:   endpoints,
+		AddressType: addrType,
+	}
+}
+
 func (t *Translator) processServiceDestinationSetting(
 	name string,
 	backendRef gwapiv1.BackendObjectReference,
@@ -1454,12 +1457,7 @@ func (t *Translator) processServiceDestinationSetting(
 
 	// support HTTPRouteBackendProtocolH2C/GRPC
 	if servicePort.AppProtocol != nil {
-		switch *servicePort.AppProtocol {
-		case "kubernetes.io/h2c":
-			protocol = ir.HTTP2
-		case "grpc":
-			protocol = ir.GRPC
-		}
+		protocol = serviceAppProtocolToIRAppProtocol(*servicePort.AppProtocol, protocol)
 	}
 
 	// Route to endpoints by default
@@ -1468,15 +1466,16 @@ func (t *Translator) processServiceDestinationSetting(
 		endpoints, addrType = getIREndpointsFromEndpointSlices(endpointSlices, servicePort.Name, servicePort.Protocol)
 	} else {
 		// Fall back to Service ClusterIP routing
-		ep := ir.NewDestEndpoint(service.Spec.ClusterIP, uint32(*backendRef.Port), false)
+		ep := ir.NewDestEndpoint(service.Spec.ClusterIP, uint32(*backendRef.Port), false, nil)
 		endpoints = append(endpoints, ep)
 	}
 
 	return &ir.DestinationSetting{
-		Name:        name,
-		Protocol:    protocol,
-		Endpoints:   endpoints,
-		AddressType: addrType,
+		Name:                    name,
+		Protocol:                protocol,
+		Endpoints:               endpoints,
+		AddressType:             addrType,
+		ZoneAwareRoutingEnabled: isZoneAwareRoutingEnabled(service),
 	}
 }
 
@@ -1494,6 +1493,22 @@ func getBackendFilters(routeType gwapiv1.Kind, backendRefContext BackendRefConte
 	}
 
 	return nil
+}
+
+func isZoneAwareRoutingEnabled(svc *corev1.Service) bool {
+	if trafficDist := svc.Spec.TrafficDistribution; trafficDist != nil {
+		return *trafficDist == corev1.ServiceTrafficDistributionPreferClose
+	}
+
+	// Allows annotation values that align with Kubernetes defaults.
+	// Ref:
+	// https://kubernetes.io/docs/concepts/services-networking/topology-aware-routing/#enabling-topology-aware-routing
+	// https://github.com/kubernetes/kubernetes/blob/9d9e1afdf78bce0a517cc22557457f942040ca19/staging/src/k8s.io/endpointslice/utils.go#L355-L368
+	if val, ok := svc.Annotations[corev1.AnnotationTopologyMode]; ok {
+		return val == "Auto" || val == "auto"
+	}
+
+	return false
 }
 
 func (t *Translator) processDestinationFilters(routeType gwapiv1.Kind, backendRefContext BackendRefContext, parentRef *RouteParentContext, route RouteContext, resources *resource.Resources) (*ir.DestinationFilters, error) {
@@ -1693,12 +1708,12 @@ func getIREndpointsFromEndpointSlice(endpointSlice *discoveryv1.EndpointSlice, p
 				// Drain the endpoint if it is being terminated
 				draining := *conditions.Terminating
 				for _, address := range endpoint.Addresses {
-					ep := ir.NewDestEndpoint(address, uint32(*endpointPort.Port), draining)
+					ep := ir.NewDestEndpoint(address, uint32(*endpointPort.Port), draining, endpoint.Zone)
 					endpoints = append(endpoints, ep)
 				}
 			} else if conditions.Ready == nil || *conditions.Ready {
 				for _, address := range endpoint.Addresses {
-					ep := ir.NewDestEndpoint(address, uint32(*endpointPort.Port), false)
+					ep := ir.NewDestEndpoint(address, uint32(*endpointPort.Port), false, endpoint.Zone)
 					endpoints = append(endpoints, ep)
 				}
 			}
@@ -1730,8 +1745,8 @@ func getTargetBackendReference(backendRef gwapiv1a2.BackendObjectReference, back
 		return ref
 	}
 
-	// Set the section name to the port name if the backend is a Kubernetes Service
-	if backendRef.Kind == nil || *backendRef.Kind == resource.KindService {
+	switch {
+	case backendRef.Kind == nil || *backendRef.Kind == resource.KindService:
 		if service := resources.GetService(backendNamespace, string(backendRef.Name)); service != nil {
 			for _, port := range service.Spec.Ports {
 				if port.Port == int32(*backendRef.Port) {
@@ -1742,7 +1757,20 @@ func getTargetBackendReference(backendRef gwapiv1a2.BackendObjectReference, back
 				}
 			}
 		}
-	} else {
+
+	case *backendRef.Kind == resource.KindServiceImport:
+		if si := resources.GetServiceImport(backendNamespace, string(backendRef.Name)); si != nil {
+			for _, port := range si.Spec.Ports {
+				if port.Port == int32(*backendRef.Port) {
+					if port.Name != "" {
+						ref.SectionName = SectionNamePtr(port.Name)
+						break
+					}
+				}
+			}
+		}
+
+	default:
 		// Set the section name to the port number if the backend is a EG Backend
 		ref.SectionName = SectionNamePtr(strconv.Itoa(int(*backendRef.Port)))
 	}
@@ -1799,12 +1827,7 @@ func (t *Translator) processBackendDestinationSetting(name string, backendRef gw
 	}
 
 	for _, ap := range backend.Spec.AppProtocols {
-		switch ap {
-		case egv1a1.AppProtocolTypeH2C:
-			protocol = ir.HTTP2
-		case "grpc":
-			protocol = ir.GRPC
-		}
+		protocol = backendAppProtocolToIRAppProtocol(ap, protocol)
 	}
 
 	ds := &ir.DestinationSetting{
@@ -1822,4 +1845,26 @@ func (t *Translator) processBackendDestinationSetting(name string, backendRef gw
 	}
 
 	return ds
+}
+
+func serviceAppProtocolToIRAppProtocol(ap string, defaultProtocol ir.AppProtocol) ir.AppProtocol {
+	switch ap {
+	case "kubernetes.io/h2c":
+		return ir.HTTP2
+	case "grpc":
+		return ir.GRPC
+	default:
+		return defaultProtocol
+	}
+}
+
+func backendAppProtocolToIRAppProtocol(ap egv1a1.AppProtocolType, defaultProtocol ir.AppProtocol) ir.AppProtocol {
+	switch ap {
+	case egv1a1.AppProtocolTypeH2C:
+		return ir.HTTP2
+	case "grpc":
+		return ir.GRPC
+	default:
+		return defaultProtocol
+	}
 }

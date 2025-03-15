@@ -644,12 +644,6 @@ type HeaderSettings struct {
 	// Refer to https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/core/v3/protocol.proto#envoy-v3-api-enum-config-core-v3-httpprotocoloptions-headerswithunderscoresaction
 	WithUnderscoresAction WithUnderscoresAction `json:"withUnderscoresAction,omitempty" yaml:"withUnderscoresAction,omitempty"`
 
-	// PreserveXRequestID configures whether Envoy will keep the x-request-id header if passed for a request that is edge
-	// (Edge request is the request from external clients to front Envoy) and not reset it, which is the current Envoy behaviour.
-	// It defaults to false.
-	// Deprecated: use RequestID instead
-	PreserveXRequestID bool `json:"preserveXRequestID,omitempty" yaml:"preserveXRequestID,omitempty"`
-
 	// RequestID configures Envoy's behavior for handling the `X-Request-ID` header.
 	// Defaults to `Generate` and builds the `X-Request-ID` for every request and ignores pre-existing values from the edge.
 	// (An "edge request" refers to a request from an external client to the Envoy entrypoint.)
@@ -834,6 +828,8 @@ type TrafficFeatures struct {
 	ResponseOverride *ResponseOverride `json:"responseOverride,omitempty" yaml:"responseOverride,omitempty"`
 	// Compression settings for HTTP Response
 	Compression []*Compression `json:"compression,omitempty" yaml:"compression,omitempty"`
+	// HTTPUpgrade defines the schema for upgrading the HTTP protocol.
+	HTTPUpgrade []string `json:"httpUpgrade,omitempty" yaml:"httpUpgrade,omitempty"`
 }
 
 func (b *TrafficFeatures) Validate() error {
@@ -1083,6 +1079,12 @@ type BasicAuth struct {
 
 	// The username-password pairs in htpasswd format.
 	Users PrivateBytes `json:"users,omitempty" yaml:"users,omitempty"`
+
+	// This field specifies the header name to forward a successfully authenticated user to
+	// the backend. The header will be added to the request with the username as the value.
+	//
+	// If it is not specified, the username will not be forwarded.
+	ForwardUsernameHeader *string `json:"forwardUsernameHeader,omitempty" yaml:"forwardUsernameHeader,omitempty"`
 }
 
 // APIKeyAuth defines the schema for the API Key Authentication.
@@ -1241,6 +1243,9 @@ type AuthorizationRule struct {
 	// Action defines the action to be taken if the rule matches.
 	Action egv1a1.AuthorizationAction `json:"action"`
 
+	// Operation specifies the operation of a request, such as HTTP methods.
+	Operation *egv1a1.Operation `json:"operation,omitempty"`
+
 	// Principal defines the principal to be matched.
 	Principal Principal `json:"principal"`
 }
@@ -1253,6 +1258,8 @@ type Principal struct {
 	ClientCIDRs []*CIDRMatch `json:"clientCIDRs,omitempty"`
 	// JWT defines the JWT principal to be matched.
 	JWT *egv1a1.JWTPrincipal `json:"jwt,omitempty"`
+	// Headers defines the headers to be matched.
+	Headers []egv1a1.AuthorizationHeaderMatch `json:"headers,omitempty"`
 }
 
 // FaultInjection defines the schema for injecting faults into requests.
@@ -1474,6 +1481,9 @@ type DestinationSetting struct {
 	IPFamily *egv1a1.IPFamily    `json:"ipFamily,omitempty" yaml:"ipFamily,omitempty"`
 	TLS      *TLSUpstreamConfig  `json:"tls,omitempty" yaml:"tls,omitempty"`
 	Filters  *DestinationFilters `json:"filters,omitempty" yaml:"filters,omitempty"`
+	// ZoneAwareRoutingEnabled specifies whether to enable Zone Aware Routing for this destination's endpoints.
+	// This is derived from the backend service and depends on having Kubernetes Topology Aware Routing or Traffic Distribution enabled.
+	ZoneAwareRoutingEnabled bool `json:"zoneAwareRoutingEnabled,omitempty" yaml:"zoneAwareRoutingEnabled,omitempty"`
 }
 
 // Validate the fields within the DestinationSetting structure
@@ -1508,6 +1518,8 @@ type DestinationEndpoint struct {
 	Path *string `json:"path,omitempty" yaml:"path,omitempty"`
 	// Draining is true if this endpoint should be drained
 	Draining bool `json:"draining,omitempty" yaml:"draining,omitempty"`
+	// Zone refers to the topology zone the Endpoint resides in
+	Zone *string `json:"zone,omitempty" yaml:"zone,omitempty"`
 }
 
 // Validate the fields within the DestinationEndpoint structure
@@ -1539,11 +1551,12 @@ func (d DestinationEndpoint) Validate() error {
 }
 
 // NewDestEndpoint creates a new DestinationEndpoint.
-func NewDestEndpoint(host string, port uint32, draining bool) *DestinationEndpoint {
+func NewDestEndpoint(host string, port uint32, draining bool, zone *string) *DestinationEndpoint {
 	return &DestinationEndpoint{
 		Host:     host,
 		Port:     port,
 		Draining: draining,
+		Zone:     zone,
 	}
 }
 
@@ -2392,6 +2405,16 @@ type CircuitBreaker struct {
 
 	// The maximum number of parallel retries that Envoy will make.
 	MaxParallelRetries *uint32 `json:"maxParallelRetries,omitempty" yaml:"maxParallelRetries,omitempty"`
+
+	// PerEndpoint defines per-endpoint Circuit Breakers
+	PerEndpoint *PerEndpointCircuitBreakers `json:"perEndpoint,omitempty"`
+}
+
+// PerEndpointCircuitBreakers defines the per-endpoint Circuit Breaker configuration.
+// +k8s:deepcopy-gen=true
+type PerEndpointCircuitBreakers struct {
+	// MaxConnections configures the maximum number of connections that Envoy will establish per-endpoint to the referenced backend defined within a xRoute rule.
+	MaxConnections *uint32 `json:"maxConnections,omitempty"`
 }
 
 // HealthCheck defines health check settings
@@ -2788,6 +2811,8 @@ const (
 	ExtProcBodyBuffered = ExtProcBodyProcessingMode(egv1a1.BufferedExtProcBodyProcessingMode)
 	// ExtProcBodyBufferedPartial sets the partial buffered body processing mode
 	ExtProcBodyBufferedPartial = ExtProcBodyProcessingMode(egv1a1.BufferedPartialExtBodyHeaderProcessingMode)
+	// ExtProcBodyFullDuplexStreamed sets the full duplex streamed processing mode
+	ExtProcBodyFullDuplexStreamed = ExtProcBodyProcessingMode(egv1a1.FullDuplexStreamedExtBodyProcessingMode)
 )
 
 // ExtProc holds the information associated with the ExtProc extensions.
