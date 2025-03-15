@@ -5,6 +5,7 @@ backends:
     name: backend
     namespace: envoy-gateway-system
   spec:
+    type: Endpoints
     endpoints:
     - ip:
         address: 0.0.0.0

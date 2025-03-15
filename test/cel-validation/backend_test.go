@@ -15,6 +15,7 @@ import (
 	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/ptr"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 )
@@ -247,6 +248,31 @@ func TestBackend(t *testing.T) {
 				"spec.endpoints[2].ip.address: Invalid value: \"0.0.0.0/12\": spec.endpoints[2].ip.address in body should match '^((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$|^(([0-9a-fA-F]{1,4}:){1,7}[0-9a-fA-F]{1,4}|::|(([0-9a-fA-F]{1,4}:){0,5})?(:[0-9a-fA-F]{1,4}){1,2})$'",
 				"spec.endpoints[3].ip.address: Invalid value: \"a.b.c.e\": spec.endpoints[3].ip.address in body should match '^((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$|^(([0-9a-fA-F]{1,4}:){1,7}[0-9a-fA-F]{1,4}|::|(([0-9a-fA-F]{1,4}:){0,5})?(:[0-9a-fA-F]{1,4}){1,2})$'",
 			},
+		},
+		{
+			desc: "invalid type",
+			mutate: func(backend *egv1a1.Backend) {
+				backend.Spec = egv1a1.BackendSpec{Type: ptr.To[egv1a1.BackendType]("FOO")}
+			},
+			wantErrors: []string{`spec.type: Unsupported value: "FOO": supported values: "Endpoints", "DynamicResolver"`},
+		},
+		{
+			desc: "dynamic resolver ok",
+			mutate: func(backend *egv1a1.Backend) {
+				backend.Spec = egv1a1.BackendSpec{Type: ptr.To(egv1a1.BackendTypeDynamicResolver)}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "dynamic resolver invalid",
+			mutate: func(backend *egv1a1.Backend) {
+				backend.Spec = egv1a1.BackendSpec{
+					Type:         ptr.To(egv1a1.BackendTypeDynamicResolver),
+					Endpoints:    []egv1a1.BackendEndpoint{},
+					AppProtocols: []egv1a1.AppProtocolType{egv1a1.AppProtocolTypeH2C},
+				}
+			},
+			wantErrors: []string{"DynamicResolver type cannot have endpoints and appProtocols specified"},
 		},
 	}
 
