@@ -11,6 +11,7 @@ new features: |
 
 bug fixes: |
   Added support for BackendTLSPolicy and EnvoyExtensionPolicy parsing in Standalone mode.
+  Fixed updates of endpoints when mirrored backend Pod IPs are changed.
 
 # Enhancements that improve performance.
 performance improvements: |
