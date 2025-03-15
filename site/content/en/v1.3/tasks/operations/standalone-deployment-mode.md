@@ -31,7 +31,7 @@ Create a local directory just for testing:
 mkdir -p /tmp/envoy-gateway-test
 ```
 
-You can download the Envoy Gateway binary from [Github release](https://github.com/envoyproxy/gateway/tags),
+You can download the Envoy Gateway binary from [Github release](https://github.com/envoyproxy/gateway/releases/tag/{{< yaml-version >}}),
 or compile the binary on your own from project by using command:
 
 ```shell
