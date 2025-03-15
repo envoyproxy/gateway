@@ -72,10 +72,11 @@ func (p *Provider) Start(ctx context.Context) error {
 	go p.startHealthProbeServer(ctx, readyzChecker)
 
 	initDirs, initFiles := path.ListDirsAndFiles(p.paths)
-	// Initially load resources from paths on host.
-	if err := p.resourcesStore.LoadAndStore(initFiles.UnsortedList(), initDirs.UnsortedList()); err != nil {
-		return fmt.Errorf("failed to load resources into store: %w", err)
-	}
+	// Initially load resources from paths by sending a dummy remove event.
+	p.resourcesStore.HandleEvent(
+		fsnotify.Event{Op: fsnotify.Remove},
+		initFiles.UnsortedList(), initDirs.UnsortedList(),
+	)
 
 	// Add paths to the watcher, and aggregate all path channels into one.
 	aggCh := make(chan fsnotify.Event)
@@ -156,7 +157,7 @@ func (p *Provider) Start(ctx context.Context) error {
 			}
 
 		handle:
-			p.resourcesStore.HandleEvent(curFiles.UnsortedList(), curDirs.UnsortedList())
+			p.resourcesStore.HandleEvent(event, curFiles.UnsortedList(), curDirs.UnsortedList())
 		}
 	}
 }

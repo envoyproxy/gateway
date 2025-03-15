@@ -6,6 +6,7 @@
 package file
 
 import (
+	"bytes"
 	"context"
 	"html/template"
 	"io"
@@ -111,15 +112,15 @@ func TestFileProvider(t *testing.T) {
 	})
 
 	t.Run("rename the watched file then rename it back", func(t *testing.T) {
-		// Rename it
+		// Rename it, won't cause any resources change and update
 		renameFilePath := filepath.Join(watchFileBase, "foobar.yaml")
 		err := os.Rename(watchFilePath, renameFilePath)
 		require.NoError(t, err)
 		require.Eventually(t, func() bool {
-			return pResources.GetResourcesByGatewayClass("eg") == nil
+			return pResources.GetResourcesByGatewayClass("eg") != nil
 		}, resourcesUpdateTimeout, resourcesUpdateTick)
 
-		// Rename it back
+		// Rename it back, also won't cause any resources change and update
 		err = os.Rename(renameFilePath, watchFilePath)
 		require.NoError(t, err)
 		require.Eventually(t, func() bool {
@@ -141,11 +142,11 @@ func TestFileProvider(t *testing.T) {
 		err := os.Remove(watchFilePath)
 		require.NoError(t, err)
 		require.Eventually(t, func() bool {
-			return pResources.GetResourcesByGatewayClass("eg") == nil
+			return len(pResources.GetResources()) == 0
 		}, resourcesUpdateTimeout, resourcesUpdateTick)
 	})
 
-	t.Run("add a file in watched dir", func(t *testing.T) {
+	t.Run("add one new file in watched dir", func(t *testing.T) {
 		// Write a new file under watched directory.
 		newFilePath := filepath.Join(watchDirPath, "test.yaml")
 		writeResourcesFile(t, "testdata/resources.tmpl", newFilePath, newDefaultResourcesParam())
@@ -165,12 +166,46 @@ func TestFileProvider(t *testing.T) {
 		require.Empty(t, cmp.Diff(want, resources, opts...))
 	})
 
+	t.Run("update file content without changing gateway class name in watched dir", func(t *testing.T) {
+		// Rewrite the file under watched directory.
+		newFilePath := filepath.Join(watchDirPath, "test.yaml")
+		writeResourcesFile(t, "testdata/resources.tmpl", newFilePath, &resourcesParam{
+			GatewayClassName:    "eg",
+			GatewayName:         "eg-1",
+			GatewayListenerPort: "8889",
+			HTTPRouteName:       "backend-1",
+			BackendName:         "backend-1",
+		})
+
+		require.Eventually(t, func() bool {
+			return pResources.GetResourcesByGatewayClass("eg") != nil &&
+				pResources.GetResourcesByGatewayClass("eg-1") == nil
+		}, resourcesUpdateTimeout, resourcesUpdateTick)
+	})
+
+	t.Run("update file content with changing gateway class name in watched dir", func(t *testing.T) {
+		// Rewrite the file under watched directory.
+		newFilePath := filepath.Join(watchDirPath, "test.yaml")
+		writeResourcesFile(t, "testdata/resources.tmpl", newFilePath, &resourcesParam{
+			GatewayClassName:    "eg-1",
+			GatewayName:         "eg-1",
+			GatewayListenerPort: "8889",
+			HTTPRouteName:       "backend-1",
+			BackendName:         "backend-1",
+		})
+
+		require.Eventually(t, func() bool {
+			return pResources.GetResourcesByGatewayClass("eg") == nil &&
+				pResources.GetResourcesByGatewayClass("eg-1") != nil
+		}, resourcesUpdateTimeout, resourcesUpdateTick)
+	})
+
 	t.Run("remove a file in watched dir", func(t *testing.T) {
 		newFilePath := filepath.Join(watchDirPath, "test.yaml")
 		err := os.Remove(newFilePath)
 		require.NoError(t, err)
 		require.Eventually(t, func() bool {
-			return pResources.GetResourcesByGatewayClass("eg") == nil
+			return len(pResources.GetResources()) == 0
 		}, resourcesUpdateTimeout, resourcesUpdateTick)
 	})
 
@@ -180,17 +215,16 @@ func TestFileProvider(t *testing.T) {
 	})
 }
 
-func writeResourcesFile(t *testing.T, tmpl, dst string, params *resourcesParam) {
-	dstFile, err := os.Create(dst)
-	require.NoError(t, err)
+func writeResourcesFile(t *testing.T, tmpl, dst string, params *resourcesParam) { // nolint:unparam
+	var buf bytes.Buffer
 
 	// Write parameters into target file.
 	tmplFile, err := template.ParseFiles(tmpl)
 	require.NoError(t, err)
 
-	err = tmplFile.Execute(dstFile, params)
+	err = tmplFile.Execute(&buf, params)
 	require.NoError(t, err)
-	require.NoError(t, dstFile.Close())
+	require.NoError(t, os.WriteFile(dst, buf.Bytes(), 0o600))
 }
 
 func waitFileProviderReady(t *testing.T) {
