@@ -21,7 +21,7 @@ import (
 )
 
 func init() {
-	ConformanceTests = append(ConformanceTests, FileAccessLogTest, OpenTelemetryTest, ALSTest)
+	ConformanceTests = append(ConformanceTests, FileAccessLogTest, OpenTelemetryTest, OpenTelemetryTestJSON, ALSTest)
 }
 
 var FileAccessLogTest = suite.ConformanceTest{
@@ -120,6 +120,59 @@ var OpenTelemetryTest = suite.ConformanceTest{
 	ShortName:   "OpenTelemetryAccessLog",
 	Description: "Make sure OpenTelemetry access log is working",
 	Manifests:   []string{"testdata/accesslog-otel.yaml"},
+	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
+		labels := map[string]string{
+			"k8s_namespace_name": "envoy-gateway-system",
+			"exporter":           "OTLP",
+		}
+
+		ns := "gateway-conformance-infra"
+		routeNN := types.NamespacedName{Name: "accesslog-otel", Namespace: ns}
+		gwNN := types.NamespacedName{Name: "accesslog-gtw", Namespace: ns}
+		gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
+
+		t.Run("Positive", func(t *testing.T) {
+			expectedResponse := httputils.ExpectedResponse{
+				Request: httputils.Request{
+					Path: "/otel",
+					Headers: map[string]string{
+						"x-envoy-logged": "1",
+					},
+				},
+				Response: httputils.Response{
+					StatusCode: 200,
+				},
+				Namespace: ns,
+			}
+			// make sure listener is ready
+			httputils.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
+
+			runLogTest(t, suite, gwAddr, expectedResponse, labels, "", 1)
+		})
+
+		t.Run("Negative", func(t *testing.T) {
+			expectedResponse := httputils.ExpectedResponse{
+				Request: httputils.Request{
+					Path: "/otel",
+					// envoy will not log this request without the header x-envoy-logged
+				},
+				Response: httputils.Response{
+					StatusCode: 200,
+				},
+				Namespace: ns,
+			}
+			// make sure listener is ready
+			httputils.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
+
+			runLogTest(t, suite, gwAddr, expectedResponse, labels, "", 0)
+		})
+	},
+}
+
+var OpenTelemetryTestJSON = suite.ConformanceTest{
+	ShortName:   "OpenTelemetryAccessLogJSON",
+	Description: "Make sure OpenTelemetry JSON access log is working",
+	Manifests:   []string{"testdata/accesslog-otel-json.yaml"},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
 		labels := map[string]string{
 			"k8s_namespace_name": "envoy-gateway-system",
