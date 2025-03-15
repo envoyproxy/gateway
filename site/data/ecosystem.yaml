@@ -1,0 +1,5 @@
+adopters:
+  - name: "Envoy AI Gateway"
+    logo: "/logos/envoy-ai-gateway.svg"
+    url: "https://aigateway.envoyproxy.io"
+    description: "Envoy AI Gateway is built on top of Envoy Gateway to handle request traffic from application services to Gen AI services."
