@@ -421,16 +421,17 @@ func buildXdsURLRewriteAction(destName string, urlRewrite *ir.URLRewrite, pathMa
 			// An empty replace string does not seem to solve the issue so we are using
 			// a regex match and replace instead
 			// Remove this workaround once https://github.com/envoyproxy/envoy/issues/26055 is fixed
-			if useRegexRewriteForPrefixMatchReplace(pathMatch, *urlRewrite.Path.PrefixMatchReplace) {
+			switch {
+			case useRegexRewriteForPrefixMatchReplace(pathMatch, *urlRewrite.Path.PrefixMatchReplace):
 				routeAction.RegexRewrite = prefix2RegexRewrite(*pathMatch.Prefix)
-			} else if prefixPathMatchAll(pathMatch) {
+			case prefixPathMatchAll(pathMatch):
 				routeAction.RegexRewrite = &matcherv3.RegexMatchAndSubstitute{
 					Pattern: &matcherv3.RegexMatcher{
 						Regex: "(^/$)|(.*)",
 					},
 					Substitution: strings.TrimSuffix(*urlRewrite.Path.PrefixMatchReplace, "/") + "\\2",
 				}
-			} else {
+			default:
 				// remove trailing / to fix #3989
 				// when the pathMath.Prefix has suffix / but EG has removed it,
 				// and the urlRewrite.Path.PrefixMatchReplace suffix with / the upstream will get unwanted /
