@@ -3,7 +3,7 @@ module github.com/exampleorg/envoygateway-extension
 go 1.24.0
 
 require (
-	github.com/envoyproxy/gateway v1.3.0
+	github.com/envoyproxy/gateway v1.3.1
 	github.com/envoyproxy/go-control-plane v0.13.5-0.20250303232259-0c5cb90447bb
 	github.com/envoyproxy/go-control-plane/envoy v1.32.5-0.20250303232259-0c5cb90447bb
 	github.com/urfave/cli/v2 v2.27.6
