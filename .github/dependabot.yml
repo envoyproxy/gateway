@@ -33,6 +33,8 @@ updates:
     ignore:
       # Ignore cel-go, since it should be updated alongside k8s.io/apiserver
       - dependency-name: "github.com/google/cel-go"
+      # Ignore github.com/docker/docker, since it should be updated alongside github.com/google/go-containerregistry
+      - dependency-name: github.com/docker/docker
     groups:
       github.com:
         patterns:
