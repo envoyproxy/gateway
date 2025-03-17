@@ -28,7 +28,7 @@ var CredentialInjectionTest = suite.ConformanceTest{
 		t.Run("inject credential to the default Authorization header", func(t *testing.T) {
 			ns := "gateway-conformance-infra"
 			routeNN := types.NamespacedName{Name: "credential-injection", Namespace: ns}
-			gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
+			gwNN := types.NamespacedName{Name: "cj-gtw", Namespace: ns}
 			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
 
 			expectedResponse := http.ExpectedResponse{
