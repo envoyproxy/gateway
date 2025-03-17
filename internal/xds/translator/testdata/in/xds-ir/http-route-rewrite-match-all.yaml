@@ -1,0 +1,28 @@
+name: "http-route"
+http:
+- name: "first-listener"
+  address: "::"
+  port: 10080
+  hostnames:
+  - "*"
+  path:
+    mergeSlashes: true
+    escapedSlashesAction: UnescapeAndRedirect
+  routes:
+  - name: "rewrite-route"
+    pathMatch:
+      prefix: "/"
+    hostname: gateway.envoyproxy.io
+    headerMatches:
+    - name: ":authority"
+      exact: gateway.envoyproxy.io
+    destination:
+      name: "rewrite-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
+        name: "rewrite-route-dest/backend/0"
+    urlRewrite:
+      path:
+        prefixMatchReplace: /docs/
