@@ -779,7 +779,6 @@ type BufferRequests struct {
 	//
 	// +kubebuilder:validation:XIntOrString
 	// +kubebuilder:validation:Pattern="^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$"
-	// +optional
 	// +notImplementedHide
-	MaxBufferSize *resource.Quantity `json:"maxBufferSize,omitempty"`
+	MaxBufferSize resource.Quantity `json:"maxBufferSize,omitempty"`
 }
