@@ -44,7 +44,7 @@ http:
               rules:
                 - headerMatches:
                     - name: "x-user-id"
-                      distinct: true
+                      exact: "one"
                   limit:
                     requests: 5
                     unit: second

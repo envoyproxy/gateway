@@ -58,7 +58,7 @@ http:
           rules:
           - headerMatches:
             - name: "x-user-id"
-              exact: "two"
+              exact: "three"
             limit:
               requests: 10
               unit: second

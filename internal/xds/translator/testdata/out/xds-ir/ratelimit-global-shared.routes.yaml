@@ -43,9 +43,14 @@
             - genericKey:
                 descriptorKey: test-policy-1
                 descriptorValue: test-namespace
-            - requestHeaders:
+            - headerValueMatch:
                 descriptorKey: rule-0-match-0
-                headerName: x-user-id
+                descriptorValue: rule-0-match-0
+                expectMatch: true
+                headers:
+                - name: x-user-id
+                  stringMatch:
+                    exact: one
     - match:
         path: test
       name: third-route

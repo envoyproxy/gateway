@@ -94,75 +94,87 @@ func (t *Translator) buildRateLimitFilter(irListener *ir.HTTPListener) []*hcmv3.
 	}
 
 	var filters []*hcmv3.HttpFilter
-	domainMap := make(map[string]bool) // Track domains for which filters have been created
+	domainMap := make(map[string]bool)
 
-	// Iterate over each route in the listener to create rate limit filters.
+	// Iterate over each route in the listener to create rate limit filters for shared rate limits.
 	for _, route := range irListener.Routes {
 		if !routeContainsGlobalRateLimit(route) {
 			continue
 		}
 
-		// Determine the domain for the rate limit filter. If the rate limit is shared, use a shared domain.
-		domain := getRateLimitDomainFilters(irListener, isSharedRateLimit(route), domainMap)
+		var domain string
+		if isSharedRateLimit(route) {
+			// For shared rate limits, use the domain derived from the traffic policy
+			domain = getDomainName(route)
+		} else {
+			// For non-shared rate limits, use the listener domain
+			domain = irListener.Name
+		}
 
-		// Check if a filter for this domain already exists to avoid duplicates.
+		// Skip if we've already created a filter for this domain
 		if _, exists := domainMap[domain]; exists {
 			continue
 		}
 
-		// Create a new rate limit filter configuration.
-		rateLimitFilterProto := &ratelimitfilterv3.RateLimit{
-			Domain: domain,
-			RateLimitService: &ratelimitv3.RateLimitServiceConfig{
-				GrpcService: &corev3.GrpcService{
-					TargetSpecifier: &corev3.GrpcService_EnvoyGrpc_{
-						EnvoyGrpc: &corev3.GrpcService_EnvoyGrpc{
-							ClusterName: getRateLimitServiceClusterName(),
-						},
-					},
-				},
-				TransportApiVersion: corev3.ApiVersion_V3,
-			},
+		// Create a filter for this domain
+		filter := createRateLimitFilter(t, irListener, domain)
+		if filter != nil {
+			filters = append(filters, filter)
+			domainMap[domain] = true
 		}
-
-		// Set the timeout for the rate limit service if specified.
-		if t.GlobalRateLimit.Timeout > 0 {
-			rateLimitFilterProto.Timeout = durationpb.New(t.GlobalRateLimit.Timeout)
-		}
-
-		// Configure the X-RateLimit headers based on the listener's header settings.
-		if irListener.Headers != nil && irListener.Headers.DisableRateLimitHeaders {
-			rateLimitFilterProto.EnableXRatelimitHeaders = ratelimitfilterv3.RateLimit_OFF
-		} else {
-			rateLimitFilterProto.EnableXRatelimitHeaders = ratelimitfilterv3.RateLimit_DRAFT_VERSION_03
-		}
-
-		// Set the failure mode to deny if the global rate limit is configured to fail closed.
-		if t.GlobalRateLimit.FailClosed {
-			rateLimitFilterProto.FailureModeDeny = t.GlobalRateLimit.FailClosed
-		}
-
-		// Convert the rate limit filter configuration to a protobuf Any type.
-		rateLimitFilterAny, err := anypb.New(rateLimitFilterProto)
-		if err != nil {
-			// Skip this filter if there is an error in conversion.
-			continue
-		}
-
-		// Create the HTTP filter with the rate limit configuration.
-		rateLimitFilter := &hcmv3.HttpFilter{
-			Name: egv1a1.EnvoyFilterRateLimit.String(),
-			ConfigType: &hcmv3.HttpFilter_TypedConfig{
-				TypedConfig: rateLimitFilterAny,
-			},
-		}
-
-		// Add the filter to the list and mark the domain as having a filter.
-		filters = append(filters, rateLimitFilter)
-		domainMap[domain] = true
 	}
 
 	return filters
+}
+
+// createRateLimitFilter creates a single rate limit filter for the given domain
+func createRateLimitFilter(t *Translator, irListener *ir.HTTPListener, domain string) *hcmv3.HttpFilter {
+	// Create a new rate limit filter configuration
+	rateLimitFilterProto := &ratelimitfilterv3.RateLimit{
+		Domain: domain,
+		RateLimitService: &ratelimitv3.RateLimitServiceConfig{
+			GrpcService: &corev3.GrpcService{
+				TargetSpecifier: &corev3.GrpcService_EnvoyGrpc_{
+					EnvoyGrpc: &corev3.GrpcService_EnvoyGrpc{
+						ClusterName: getRateLimitServiceClusterName(),
+					},
+				},
+			},
+			TransportApiVersion: corev3.ApiVersion_V3,
+		},
+	}
+
+	// Set the timeout for the rate limit service if specified
+	if t.GlobalRateLimit.Timeout > 0 {
+		rateLimitFilterProto.Timeout = durationpb.New(t.GlobalRateLimit.Timeout)
+	}
+
+	// Configure the X-RateLimit headers based on the listener's header settings
+	if irListener.Headers != nil && irListener.Headers.DisableRateLimitHeaders {
+		rateLimitFilterProto.EnableXRatelimitHeaders = ratelimitfilterv3.RateLimit_OFF
+	} else {
+		rateLimitFilterProto.EnableXRatelimitHeaders = ratelimitfilterv3.RateLimit_DRAFT_VERSION_03
+	}
+
+	// Set the failure mode to deny if the global rate limit is configured to fail closed
+	if t.GlobalRateLimit.FailClosed {
+		rateLimitFilterProto.FailureModeDeny = t.GlobalRateLimit.FailClosed
+	}
+
+	// Convert the rate limit filter configuration to a protobuf Any type
+	rateLimitFilterAny, err := anypb.New(rateLimitFilterProto)
+	if err != nil {
+		// Return nil if there is an error in conversion
+		return nil
+	}
+
+	// Create the HTTP filter with the rate limit configuration
+	return &hcmv3.HttpFilter{
+		Name: egv1a1.EnvoyFilterRateLimit.String(),
+		ConfigType: &hcmv3.HttpFilter_TypedConfig{
+			TypedConfig: rateLimitFilterAny,
+		},
+	}
 }
 
 // patchRouteWithRateLimit builds rate limit actions and appends to the route.
@@ -759,20 +771,6 @@ func getRouteDescriptor(routeName string) string {
 
 func getRateLimitServiceClusterName() string {
 	return "ratelimit_cluster"
-}
-
-func getRateLimitDomainFilters(irListener *ir.HTTPListener, isShared bool, usedDomains map[string]bool) string {
-	// Iterate over the routes to find a domain that hasn't been used yet
-	for _, route := range irListener.Routes {
-		if route.Traffic != nil {
-			domain := getDomainName(route)
-			if isShared && !usedDomains[domain] {
-				return domain
-			}
-		}
-	}
-	// Fallback to using the listener's name if no unused domain is found
-	return irListener.Name
 }
 
 func (t *Translator) getRateLimitServiceGrpcHostPort() (string, uint32) {
