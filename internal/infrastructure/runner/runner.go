@@ -28,6 +28,12 @@ type Runner struct {
 	mgr infrastructure.Manager
 }
 
+// Close implements Runner interface.
+func (r *Runner) Close() error {
+	return r.mgr.Close()
+}
+
+// Name implements Runner interface.
 func (r *Runner) Name() string {
 	return string(egv1a1.LogComponentInfrastructureRunner)
 }

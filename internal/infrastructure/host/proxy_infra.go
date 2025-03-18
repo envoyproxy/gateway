@@ -8,7 +8,10 @@ package host
 import (
 	"context"
 	"errors"
+	"io"
+	"os"
 	"path/filepath"
+	"time"
 
 	funcE "github.com/tetratelabs/func-e/api"
 	"k8s.io/utils/ptr"
@@ -20,9 +23,20 @@ import (
 	"github.com/envoyproxy/gateway/internal/xds/bootstrap"
 )
 
+// proxyContext corresponds to the context of the Envoy process.
 type proxyContext struct {
-	ctx    context.Context
+	// cancel is the function to cancel the context passed to the Envoy process.
 	cancel context.CancelFunc
+	// exit will receive an item when the Envoy process completely stopped, via funcE.ExitChannel.
+	exit chan struct{}
+}
+
+// Close implements the Manager interface.
+func (i *Infra) Close() error {
+	for name := range i.proxyContextMap {
+		i.stopEnvoy(name)
+	}
+	return nil
 }
 
 // CreateOrUpdateProxyInfra creates the managed host process, if it doesn't exist.
@@ -65,25 +79,46 @@ func (i *Infra) CreateOrUpdateProxyInfra(ctx context.Context, infra *ir.Infra) e
 	if err != nil {
 		return err
 	}
+	i.runEnvoy(ctx, os.Stdout, proxyName, args)
+	return nil
+}
 
-	// Create a new context for up-running proxy.
-	pCtx, cancel := context.WithCancel(context.Background())
-	i.proxyContextMap[proxyName] = &proxyContext{ctx: pCtx, cancel: cancel}
-	return funcE.Run(pCtx, args, funcE.HomeDir(i.HomeDir))
+// runEnvoy runs the Envoy process with the given arguments and name in a separate goroutine.
+func (i *Infra) runEnvoy(ctx context.Context, out io.Writer, name string, args []string) {
+	pCtx, cancel := context.WithCancel(ctx)
+	exit := make(chan struct{}, 1)
+	i.proxyContextMap[name] = &proxyContext{cancel: cancel, exit: exit}
+	go func() {
+		// Run blocks until pCtx is done or the process exits where the latter doesn't happen when
+		// Envoy successfully starts up. So, this will not return until pCtx is done in practice.
+		err := funcE.Run(pCtx, args, funcE.HomeDir(i.HomeDir), funcE.ExitChannel(exit), funcE.Out(out))
+		if err != nil {
+			i.Logger.Error(err, "failed to run envoy")
+		}
+	}()
+	// This is ad-hoc sleep to wait for the Envoy process to start up to avoid canceling the context too early,
+	// which also results in the Envoy process being orphaned.
+	time.Sleep(1 * time.Second)
 }
 
 // DeleteProxyInfra removes the managed host process, if it doesn't exist.
-func (i *Infra) DeleteProxyInfra(ctx context.Context, infra *ir.Infra) error {
+func (i *Infra) DeleteProxyInfra(_ context.Context, infra *ir.Infra) error {
 	if infra == nil {
 		return errors.New("infra ir is nil")
 	}
 
 	proxyInfra := infra.GetProxyInfra()
 	proxyName := utils.GetHashedName(proxyInfra.Name, 64)
-	if pCtx, ok := i.proxyContextMap[proxyName]; ok {
-		pCtx.cancel()
-	}
-
-	// Return directly if the proxy is already stopped.
+	i.stopEnvoy(proxyName)
 	return nil
+}
+
+// stopEnvoy stops the Envoy process by its name. It will block until the process completely stopped.
+func (i *Infra) stopEnvoy(proxyName string) {
+	if pCtx, ok := i.proxyContextMap[proxyName]; ok {
+		pCtx.cancel()    // Cancel causes the Envoy process to exit.
+		<-pCtx.exit      // Wait for the Envoy process to completely exit.
+		close(pCtx.exit) // Close the channel to avoid leaking.
+		delete(i.proxyContextMap, proxyName)
+	}
 }

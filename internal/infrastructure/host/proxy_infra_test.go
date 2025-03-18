@@ -6,6 +6,7 @@
 package host
 
 import (
+	"bytes"
 	"context"
 	"path"
 	"testing"
@@ -20,7 +21,7 @@ import (
 	"github.com/envoyproxy/gateway/internal/utils/file"
 )
 
-func newMockInfra(t *testing.T, tCtx context.Context, cfg *config.Server, cleanProxy bool) *Infra {
+func newMockInfra(t *testing.T, cfg *config.Server) *Infra {
 	t.Helper()
 	homeDir := t.TempDir()
 	// Create envoy certs under home dir.
@@ -45,16 +46,13 @@ func newMockInfra(t *testing.T, tCtx context.Context, cfg *config.Server, cleanP
 		proxyContextMap: make(map[string]*proxyContext),
 		sdsConfigPath:   proxyDir,
 	}
-	if cleanProxy {
-		go infra.cleanProxy(tCtx)
-	}
 	return infra
 }
 
 func TestInfraCreateProxy(t *testing.T) {
 	cfg, err := config.New()
 	require.NoError(t, err)
-	infra := newMockInfra(t, context.Background(), cfg, true)
+	infra := newMockInfra(t, cfg)
 
 	// TODO: add more tests once it supports configurable homeDir and runDir.
 	testCases := []struct {
@@ -85,5 +83,23 @@ func TestInfraCreateProxy(t *testing.T) {
 				require.Error(t, err)
 			}
 		})
+	}
+}
+
+func TestInfra_runEnvoy_stopEnvoy(t *testing.T) {
+	i := &Infra{proxyContextMap: make(map[string]*proxyContext)}
+	// Ensures that run -> stop will successfully stop the envoy and we can
+	// run it again without any issues.
+	for range 10 {
+		args := []string{
+			"--config-yaml",
+			"admin: {address: {socket_address: {address: '127.0.0.1', port_value: 9901}}}",
+		}
+		out := &bytes.Buffer{}
+		i.runEnvoy(context.Background(), out, "test", args)
+		require.Len(t, i.proxyContextMap, 1)
+		i.stopEnvoy("test")
+		require.Empty(t, i.proxyContextMap)
+		require.NotContains(t, out.String(), "Address already in use")
 	}
 }
