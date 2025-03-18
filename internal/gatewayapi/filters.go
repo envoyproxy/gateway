@@ -453,28 +453,19 @@ func (t *Translator) processRequestHeaderModifierFilter(
 		for _, addHeader := range headersToAdd {
 			emptyFilterConfig = false
 			if addHeader.Name == "" {
-				routeStatus := GetRouteStatus(filterContext.Route)
-				status.SetRouteStatusCondition(routeStatus,
-					filterContext.ParentRef.routeParentStatusIdx,
-					filterContext.Route.GetGeneration(),
-					gwapiv1.RouteConditionAccepted,
-					metav1.ConditionFalse,
-					gwapiv1.RouteReasonUnsupportedValue,
+				updateRouteStatusForRHMFilter(
+					filterContext,
 					"RequestHeaderModifier Filter cannot add a header with an empty name",
 				)
 				// try to process the rest of the headers and produce a valid config.
 				continue
 			}
-			// Per Gateway API specification on HTTPHeaderName, : and / are invalid characters in header names
-			if strings.Contains(string(addHeader.Name), "/") || strings.Contains(string(addHeader.Name), ":") {
-				routeStatus := GetRouteStatus(filterContext.Route)
-				status.SetRouteStatusCondition(routeStatus,
-					filterContext.ParentRef.routeParentStatusIdx,
-					filterContext.Route.GetGeneration(),
-					gwapiv1.RouteConditionAccepted,
-					metav1.ConditionFalse,
-					gwapiv1.RouteReasonUnsupportedValue,
-					fmt.Sprintf("RequestHeaderModifier Filter cannot set headers with a '/' or ':' character in them. Header: %q", string(addHeader.Name)),
+			if !isModifiableHeader(string(addHeader.Name)) {
+				updateRouteStatusForRHMFilter(
+					filterContext,
+					fmt.Sprintf(
+						"RequestHeaderModifier Filter cannot set headers with a '/' or ':' character in them, or the host header. Header: %q",
+						string(addHeader.Name)),
 				)
 				continue
 			}
@@ -510,27 +501,19 @@ func (t *Translator) processRequestHeaderModifierFilter(
 		for _, setHeader := range headersToSet {
 
 			if setHeader.Name == "" {
-				routeStatus := GetRouteStatus(filterContext.Route)
-				status.SetRouteStatusCondition(routeStatus,
-					filterContext.ParentRef.routeParentStatusIdx,
-					filterContext.Route.GetGeneration(),
-					gwapiv1.RouteConditionAccepted,
-					metav1.ConditionFalse,
-					gwapiv1.RouteReasonUnsupportedValue,
+				updateRouteStatusForRHMFilter(
+					filterContext,
 					"RequestHeaderModifier Filter cannot set a header with an empty name",
 				)
 				continue
 			}
-			// Per Gateway API specification on HTTPHeaderName, : and / are invalid characters in header names
-			if strings.Contains(string(setHeader.Name), "/") || strings.Contains(string(setHeader.Name), ":") {
-				routeStatus := GetRouteStatus(filterContext.Route)
-				status.SetRouteStatusCondition(routeStatus,
-					filterContext.ParentRef.routeParentStatusIdx,
-					filterContext.Route.GetGeneration(),
-					gwapiv1.RouteConditionAccepted,
-					metav1.ConditionFalse,
-					gwapiv1.RouteReasonUnsupportedValue,
-					fmt.Sprintf("RequestHeaderModifier Filter cannot set headers with a '/' or ':' character in them. Header: '%s'", string(setHeader.Name)),
+
+			if !isModifiableHeader(string(setHeader.Name)) {
+				updateRouteStatusForRHMFilter(
+					filterContext,
+					fmt.Sprintf(
+						"RequestHeaderModifier Filter cannot set headers with a '/' or ':' character in them, or the host header. Header: %q",
+						string(setHeader.Name)),
 				)
 				continue
 			}
@@ -566,14 +549,19 @@ func (t *Translator) processRequestHeaderModifierFilter(
 		}
 		for _, removedHeader := range headersToRemove {
 			if removedHeader == "" {
-				routeStatus := GetRouteStatus(filterContext.Route)
-				status.SetRouteStatusCondition(routeStatus,
-					filterContext.ParentRef.routeParentStatusIdx,
-					filterContext.Route.GetGeneration(),
-					gwapiv1.RouteConditionAccepted,
-					metav1.ConditionFalse,
-					gwapiv1.RouteReasonUnsupportedValue,
+				updateRouteStatusForRHMFilter(
+					filterContext,
 					"RequestHeaderModifier Filter cannot remove a header with an empty name",
+				)
+				continue
+			}
+
+			if !isModifiableHeader(removedHeader) {
+				updateRouteStatusForRHMFilter(
+					filterContext,
+					fmt.Sprintf(
+						"RequestHeaderModifier Filter cannot remove headers with a '/' or ':' character in them, or the host header. Header: %q",
+						removedHeader),
 				)
 				continue
 			}
@@ -595,16 +583,29 @@ func (t *Translator) processRequestHeaderModifierFilter(
 
 	// Update the status if the filter failed to configure any valid headers to add/remove
 	if len(filterContext.AddRequestHeaders) == 0 && len(filterContext.RemoveRequestHeaders) == 0 && !emptyFilterConfig {
-		routeStatus := GetRouteStatus(filterContext.Route)
-		status.SetRouteStatusCondition(routeStatus,
-			filterContext.ParentRef.routeParentStatusIdx,
-			filterContext.Route.GetGeneration(),
-			gwapiv1.RouteConditionAccepted,
-			metav1.ConditionFalse,
-			gwapiv1.RouteReasonUnsupportedValue,
+		updateRouteStatusForRHMFilter(
+			filterContext,
 			"RequestHeaderModifier Filter did not provide valid configuration to add/set/remove any headers",
 		)
 	}
+}
+
+func updateRouteStatusForRHMFilter(filterContext *HTTPFiltersContext, message string) {
+	routeStatus := GetRouteStatus(filterContext.Route)
+	status.SetRouteStatusCondition(routeStatus,
+		filterContext.ParentRef.routeParentStatusIdx,
+		filterContext.Route.GetGeneration(),
+		gwapiv1.RouteConditionAccepted,
+		metav1.ConditionFalse,
+		gwapiv1.RouteReasonUnsupportedValue,
+		message,
+	)
+}
+
+func isModifiableHeader(headerName string) bool {
+	// Per Gateway API specification on HTTPHeaderName, : and / are invalid characters in header names
+	// And Envoy does not allow modification the pseudo headers and the host header
+	return !strings.Contains(headerName, "/") && !strings.Contains(headerName, ":") && !strings.EqualFold(headerName, "host")
 }
 
 func (t *Translator) processResponseHeaderModifierFilter(
@@ -625,28 +626,18 @@ func (t *Translator) processResponseHeaderModifierFilter(
 		for _, addHeader := range headersToAdd {
 			emptyFilterConfig = false
 			if addHeader.Name == "" {
-				routeStatus := GetRouteStatus(filterContext.Route)
-				status.SetRouteStatusCondition(routeStatus,
-					filterContext.ParentRef.routeParentStatusIdx,
-					filterContext.Route.GetGeneration(),
-					gwapiv1.RouteConditionAccepted,
-					metav1.ConditionFalse,
-					gwapiv1.RouteReasonUnsupportedValue,
+				updateRouteStatusForRHMFilter(
+					filterContext,
 					"ResponseHeaderModifier Filter cannot add a header with an empty name",
 				)
 				// try to process the rest of the headers and produce a valid config.
 				continue
 			}
-			// Per Gateway API specification on HTTPHeaderName, : and / are invalid characters in header names
-			if strings.Contains(string(addHeader.Name), "/") || strings.Contains(string(addHeader.Name), ":") {
-				routeStatus := GetRouteStatus(filterContext.Route)
-				status.SetRouteStatusCondition(routeStatus,
-					filterContext.ParentRef.routeParentStatusIdx,
-					filterContext.Route.GetGeneration(),
-					gwapiv1.RouteConditionAccepted,
-					metav1.ConditionFalse,
-					gwapiv1.RouteReasonUnsupportedValue,
-					fmt.Sprintf("ResponseHeaderModifier Filter cannot set headers with a '/' or ':' character in them. Header: %q", string(addHeader.Name)),
+			if !isModifiableHeader(string(addHeader.Name)) {
+				updateRouteStatusForRHMFilter(
+					filterContext,
+					fmt.Sprintf("ResponseHeaderModifier Filter cannot set headers with a '/' or ':' character in them, or the host header. Header: %q",
+						string(addHeader.Name)),
 				)
 				continue
 			}
@@ -682,27 +673,18 @@ func (t *Translator) processResponseHeaderModifierFilter(
 		for _, setHeader := range headersToSet {
 
 			if setHeader.Name == "" {
-				routeStatus := GetRouteStatus(filterContext.Route)
-				status.SetRouteStatusCondition(routeStatus,
-					filterContext.ParentRef.routeParentStatusIdx,
-					filterContext.Route.GetGeneration(),
-					gwapiv1.RouteConditionAccepted,
-					metav1.ConditionFalse,
-					gwapiv1.RouteReasonUnsupportedValue,
+				updateRouteStatusForRHMFilter(
+					filterContext,
 					"ResponseHeaderModifier Filter cannot set a header with an empty name",
 				)
 				continue
 			}
-			// Per Gateway API specification on HTTPHeaderName, : and / are invalid characters in header names
-			if strings.Contains(string(setHeader.Name), "/") || strings.Contains(string(setHeader.Name), ":") {
-				routeStatus := GetRouteStatus(filterContext.Route)
-				status.SetRouteStatusCondition(routeStatus,
-					filterContext.ParentRef.routeParentStatusIdx,
-					filterContext.Route.GetGeneration(),
-					gwapiv1.RouteConditionAccepted,
-					metav1.ConditionFalse,
-					gwapiv1.RouteReasonUnsupportedValue,
-					fmt.Sprintf("ResponseHeaderModifier Filter cannot set headers with a '/' or ':' character in them. Header: '%s'", string(setHeader.Name)),
+
+			if !isModifiableHeader(string(setHeader.Name)) {
+				updateRouteStatusForRHMFilter(
+					filterContext,
+					fmt.Sprintf("ResponseHeaderModifier Filter cannot set headers with a '/' or ':' character in them, or the host header. Header: %q",
+						string(setHeader.Name)),
 				)
 				continue
 			}
@@ -738,14 +720,18 @@ func (t *Translator) processResponseHeaderModifierFilter(
 		}
 		for _, removedHeader := range headersToRemove {
 			if removedHeader == "" {
-				routeStatus := GetRouteStatus(filterContext.Route)
-				status.SetRouteStatusCondition(routeStatus,
-					filterContext.ParentRef.routeParentStatusIdx,
-					filterContext.Route.GetGeneration(),
-					gwapiv1.RouteConditionAccepted,
-					metav1.ConditionFalse,
-					gwapiv1.RouteReasonUnsupportedValue,
+				updateRouteStatusForRHMFilter(
+					filterContext,
 					"ResponseHeaderModifier Filter cannot remove a header with an empty name",
+				)
+				continue
+			}
+			if !isModifiableHeader(removedHeader) {
+				updateRouteStatusForRHMFilter(
+					filterContext,
+					fmt.Sprintf(
+						"ResponseHeaderModifier Filter cannot remove headers with a '/' or ':' character in them, or the host header. Header: %q",
+						removedHeader),
 				)
 				continue
 			}
@@ -768,13 +754,8 @@ func (t *Translator) processResponseHeaderModifierFilter(
 
 	// Update the status if the filter failed to configure any valid headers to add/remove
 	if len(filterContext.AddResponseHeaders) == 0 && len(filterContext.RemoveResponseHeaders) == 0 && !emptyFilterConfig {
-		routeStatus := GetRouteStatus(filterContext.Route)
-		status.SetRouteStatusCondition(routeStatus,
-			filterContext.ParentRef.routeParentStatusIdx,
-			filterContext.Route.GetGeneration(),
-			gwapiv1.RouteConditionAccepted,
-			metav1.ConditionFalse,
-			gwapiv1.RouteReasonUnsupportedValue,
+		updateRouteStatusForRHMFilter(
+			filterContext,
 			"ResponseHeaderModifier Filter did not provide valid configuration to add/set/remove any headers",
 		)
 	}

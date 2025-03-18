@@ -17,7 +17,7 @@ gateways:
       protocol: HTTP
   status:
     listeners:
-    - attachedRoutes: 1
+    - attachedRoutes: 3
       conditions:
       - lastTransitionTime: null
         message: Sending translated listener configuration to the data plane
@@ -60,9 +60,6 @@ httpRoutes:
         port: 8080
       filters:
       - responseHeaderModifier:
-          add:
-          - name: example/2
-            value: some-value
           set:
           - name: example:1
             value: some-value
@@ -71,13 +68,107 @@ httpRoutes:
         type: ResponseHeaderModifier
       matches:
       - path:
-          value: /
+          value: /foo
   status:
     parents:
     - conditions:
       - lastTransitionTime: null
         message: 'ResponseHeaderModifier Filter cannot set headers with a ''/'' or
-          '':'' character in them. Header: ''example:1'''
+          '':'' character in them, or the host header. Header: "example:1"'
+        reason: UnsupportedValue
+        status: "False"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Resolved all the Object references for the Route
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+      parentRef:
+        name: gateway-1
+        namespace: envoy-gateway
+        sectionName: http
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    creationTimestamp: null
+    name: httproute-2
+    namespace: default
+  spec:
+    hostnames:
+    - gateway.envoyproxy.io
+    parentRefs:
+    - name: gateway-1
+      namespace: envoy-gateway
+      sectionName: http
+    rules:
+    - backendRefs:
+      - name: service-1
+        port: 8080
+      filters:
+      - responseHeaderModifier:
+          remove:
+          - example/2
+          set:
+          - name: good-header
+            value: some-value
+        type: ResponseHeaderModifier
+      matches:
+      - path:
+          value: /bar
+  status:
+    parents:
+    - conditions:
+      - lastTransitionTime: null
+        message: 'ResponseHeaderModifier Filter cannot remove headers with a ''/''
+          or '':'' character in them, or the host header. Header: "example/2"'
+        reason: UnsupportedValue
+        status: "False"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Resolved all the Object references for the Route
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+      parentRef:
+        name: gateway-1
+        namespace: envoy-gateway
+        sectionName: http
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    creationTimestamp: null
+    name: httproute-3
+    namespace: default
+  spec:
+    hostnames:
+    - gateway.envoyproxy.io
+    parentRefs:
+    - name: gateway-1
+      namespace: envoy-gateway
+      sectionName: http
+    rules:
+    - backendRefs:
+      - name: service-1
+        port: 8080
+      filters:
+      - responseHeaderModifier:
+          set:
+          - name: host
+            value: example.com
+          - name: good-header
+            value: some-value
+        type: ResponseHeaderModifier
+      matches:
+      - path:
+          value: /baz
+  status:
+    parents:
+    - conditions:
+      - lastTransitionTime: null
+        message: 'ResponseHeaderModifier Filter cannot set headers with a ''/'' or
+          '':'' character in them, or the host header. Header: "host"'
         reason: UnsupportedValue
         status: "False"
         type: Accepted
