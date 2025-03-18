@@ -148,9 +148,6 @@ securityPolicies:
           - header2
         grpc:
           backendRefs:
-            - name: service-2
-              kind: Service
-              port: 8080
             - name: backend-fqdn
               kind: Backend
               group: gateway.envoyproxy.io
