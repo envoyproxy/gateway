@@ -119,3 +119,5 @@ no_list: true
 </section>
 
 {{< adopters >}}
+
+{{< ecosystem >}}

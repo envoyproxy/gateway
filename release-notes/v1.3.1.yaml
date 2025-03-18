@@ -26,4 +26,4 @@ Other changes: |
   Bump ratelimit to ae4cee11.
   Bump golang.org/x/oauth2 to v0.27.0.
   Bump golang.org/x/crypto to v0.35.0.
-
+  Added Ecosystem section to docs
