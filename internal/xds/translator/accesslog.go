@@ -339,7 +339,9 @@ func buildXdsAccessLog(al *ir.AccessLog, accessLogType ir.ProxyAccessLogType) ([
 		var format string
 		if otel.Text != nil && *otel.Text != "" {
 			format = *otel.Text
+		}
 
+		if format != "" {
 			al.Body = &otlpcommonv1.AnyValue{
 				Value: &otlpcommonv1.AnyValue_StringValue{
 					StringValue: format,
@@ -347,12 +349,16 @@ func buildXdsAccessLog(al *ir.AccessLog, accessLogType ir.ProxyAccessLogType) ([
 			}
 		}
 
-		al.Attributes = convertToKeyValueList(otel.Attributes, true)
-
-		formatters := accessLogOpenTelemetryFormatters(format, otel.Attributes)
-		if len(formatters) != 0 {
-			al.Formatters = formatters
+		var attrs map[string]string
+		if len(otel.Attributes) != 0 {
+			attrs = otel.Attributes
+		} else if len(otel.Attributes) == 0 && format == "" {
+			// if there are no attributes and text format is unset, use the default EnvoyJSONLogFields
+			attrs = EnvoyJSONLogFields
 		}
+
+		al.Attributes = convertToKeyValueList(attrs, true)
+		al.Formatters = accessLogOpenTelemetryFormatters(format, attrs)
 
 		accesslogAny, err := proto.ToAnyWithValidation(al)
 		if err != nil {
