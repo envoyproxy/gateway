@@ -47,17 +47,23 @@ endif
 
 ##@ Kubernetes Development
 
+GNU_SED := $(shell sed --version >/dev/null 2>&1 && echo "yes" || echo "no")
+
 YEAR := $(shell date +%Y)
 CONTROLLERGEN_OBJECT_FLAGS :=  object:headerFile="$(ROOT_DIR)/tools/boilerplate/boilerplate.generatego.txt",year=$(YEAR)
 
 .PHONY: prepare-ip-family
 prepare-ip-family:
-	@find ./test -type f -name "*.yaml" | xargs sed -i -e 's/ipFamily: IPv4/ipFamily: $(ENVOY_PROXY_IP_FAMILY)/g'
+ifeq ($(GNU_SED),yes)
+	@find ./test -type f -name "*.yaml" | xargs sed -i'' 's/ipFamily: IPv4/ipFamily: $(ENVOY_PROXY_IP_FAMILY)/g'
+else
+	@find ./test -type f -name "*.yaml" | xargs sed -i '' 's/ipFamily: IPv4/ipFamily: $(ENVOY_PROXY_IP_FAMILY)/g'
+endif
 
 .PHONY: manifests
-manifests: $(tools/controller-gen) generate-gwapi-manifests ## Generate WebhookConfiguration and CustomResourceDefinition objects.
+manifests: generate-gwapi-manifests ## Generate WebhookConfiguration and CustomResourceDefinition objects.
 	@$(LOG_TARGET)
-	$(tools/controller-gen) crd:allowDangerousTypes=true paths="./api/..." output:crd:artifacts:config=charts/gateway-helm/crds/generated
+	@go tool controller-gen crd:allowDangerousTypes=true paths="./api/..." output:crd:artifacts:config=charts/gateway-helm/crds/generated
 
 .PHONY: generate-gwapi-manifests
 generate-gwapi-manifests:
@@ -68,15 +74,15 @@ generate-gwapi-manifests: ## Generate GWAPI manifests and make it consistent wit
 	mv $(OUTPUT_DIR)/gatewayapi-crds.yaml charts/gateway-helm/crds/gatewayapi-crds.yaml
 
 .PHONY: kube-generate
-kube-generate: $(tools/controller-gen) ## Generate code containing DeepCopy, DeepCopyInto, and DeepCopyObject method implementations.
+kube-generate: ## Generate code containing DeepCopy, DeepCopyInto, and DeepCopyObject method implementations.
 # Note that the paths can't just be "./..." with the header file, or the tool will panic on run. Sorry.
 	@$(LOG_TARGET)
-	$(tools/controller-gen) $(CONTROLLERGEN_OBJECT_FLAGS) paths="{$(ROOT_DIR)/api/...,$(ROOT_DIR)/internal/ir/...,$(ROOT_DIR)/internal/gatewayapi/...}"
+	@go tool controller-gen $(CONTROLLERGEN_OBJECT_FLAGS) paths="{$(ROOT_DIR)/api/...,$(ROOT_DIR)/internal/ir/...,$(ROOT_DIR)/internal/gatewayapi/...}"
 
 .PHONY: kube-test
-kube-test: manifests generate $(tools/setup-envtest) ## Run Kubernetes provider tests.
+kube-test: manifests generate ## Run Kubernetes provider tests.
 	@$(LOG_TARGET)
-	KUBEBUILDER_ASSETS="$(shell $(tools/setup-envtest) use $(ENVTEST_K8S_VERSION) -p path)" go test --tags=integration,celvalidation ./... -coverprofile cover.out
+	KUBEBUILDER_ASSETS="$(shell go tool setup-envtest use $(ENVTEST_K8S_VERSION) -p path)" go test --tags=integration,celvalidation ./... -coverprofile cover.out
 
 ##@ Kubernetes Deployment
 
@@ -152,7 +158,7 @@ resilience: create-cluster kube-install-image kube-deploy run-resilience delete-
 .PHONY: e2e
 e2e: create-cluster kube-install-image kube-deploy \
 	install-ratelimit install-eg-addons kube-install-examples-image \
-	run-e2e delete-cluster
+	e2e-prepare run-e2e delete-cluster
 
 .PHONY: install-ratelimit
 install-ratelimit:
@@ -169,7 +175,7 @@ e2e-prepare: prepare-ip-family ## Prepare the environment for running e2e tests
 	kubectl apply -f test/config/gatewayclass.yaml
 
 .PHONY: run-e2e
-run-e2e: e2e-prepare ## Run e2e tests
+run-e2e: ## Run e2e tests
 	@$(LOG_TARGET)
 ifeq ($(E2E_RUN_TEST),)
 	go test $(E2E_TEST_ARGS) ./test/e2e --gateway-class=envoy-gateway --debug=true --cleanup-base-resources=false
@@ -180,6 +186,9 @@ else
 	go test $(E2E_TEST_ARGS) ./test/e2e --gateway-class=envoy-gateway --debug=true --cleanup-base-resources=$(E2E_CLEANUP) \
 		--run-test $(E2E_RUN_TEST)
 endif
+
+run-e2e-upgrade:
+	go test $(E2E_TEST_ARGS) ./test/e2e/upgrade --gateway-class=upgrade --debug=true --cleanup-base-resources=$(E2E_CLEANUP)
 
 .PHONY: run-resilience
 run-resilience: ## Run resilience tests
@@ -233,12 +242,12 @@ uninstall-eg-addons:
 	helm delete $(shell helm list -n monitoring -q) -n monitoring
 
 .PHONY: create-cluster
-create-cluster: $(tools/kind) ## Create a kind cluster suitable for running Gateway API conformance.
+create-cluster: ## Create a kind cluster suitable for running Gateway API conformance.
 	@$(LOG_TARGET)
 	tools/hack/create-cluster.sh
 
 .PHONY: kube-install-image
-kube-install-image: image.build $(tools/kind) ## Install the EG image to a kind cluster using the provided $IMAGE and $TAG.
+kube-install-image: image.build ## Install the EG image to a kind cluster using the provided $IMAGE and $TAG.
 	@$(LOG_TARGET)
 	tools/hack/kind-load-image.sh $(IMAGE) $(TAG)
 
@@ -259,9 +268,9 @@ run-experimental-conformance: prepare-ip-family ## Run Experimental Gateway API 
 	go test -v -tags experimental ./test/conformance -run TestExperimentalConformance --gateway-class=envoy-gateway --debug=true --organization=envoyproxy --project=envoy-gateway --url=https://github.com/envoyproxy/gateway --version=latest --report-output="$(CONFORMANCE_REPORT_PATH)" --contact=https://github.com/envoyproxy/gateway/blob/main/GOVERNANCE.md
 
 .PHONY: delete-cluster
-delete-cluster: $(tools/kind) ## Delete kind cluster.
+delete-cluster: ## Delete kind cluster.
 	@$(LOG_TARGET)
-	$(tools/kind) delete cluster --name envoy-gateway
+	@go tool kind delete cluster --name envoy-gateway
 
 .PHONY: generate-manifests
 generate-manifests: helm-generate.gateway-helm ## Generate Kubernetes release manifests.

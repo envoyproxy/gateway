@@ -47,6 +47,12 @@ spec:
     - match:
         statusCodes:
           - type: Value
+            value: 403
+      response:
+        statusCode: 404
+    - match:
+        statusCodes:
+          - type: Value
             value: 500
           - type: Range
             range:

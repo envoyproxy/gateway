@@ -17,9 +17,12 @@ http:
         maxParallelRequests: 1
         maxParallelRetries: 2
         maxRequestsPerConnection: 10
+        perEndpoint:
+          maxConnections: 1
     destination:
       name: "first-route-dest"
       settings:
       - endpoints:
         - host: "1.2.3.4"
           port: 50000
+        name: "first-route-dest/backend/0"

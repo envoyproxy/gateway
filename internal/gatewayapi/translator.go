@@ -17,6 +17,7 @@ import (
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
+	"github.com/envoyproxy/gateway/internal/gatewayapi/status"
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/wasm"
 )
@@ -43,7 +44,7 @@ var _ TranslatorManager = (*Translator)(nil)
 
 type TranslatorManager interface {
 	Translate(resources *resource.Resources) (*TranslateResult, error)
-	GetRelevantGateways(resources *resource.Resources) []*GatewayContext
+	GetRelevantGateways(resources *resource.Resources) (acceptedGateways []*GatewayContext, failedGateways []*GatewayContext)
 
 	RoutesTranslator
 	ListenersTranslator
@@ -156,45 +157,45 @@ func newTranslateResult(gateways []*GatewayContext,
 
 func (t *Translator) Translate(resources *resource.Resources) (*TranslateResult, error) {
 	// Get Gateways belonging to our GatewayClass.
-	gateways := t.GetRelevantGateways(resources)
+	acceptedGateways, failedGateways := t.GetRelevantGateways(resources)
 
 	// Sort gateways based on timestamp.
-	sort.Slice(gateways, func(i, j int) bool {
-		return gateways[i].CreationTimestamp.Before(&(gateways[j].CreationTimestamp))
+	sort.Slice(acceptedGateways, func(i, j int) bool {
+		return acceptedGateways[i].CreationTimestamp.Before(&(acceptedGateways[j].CreationTimestamp))
 	})
 
 	// Build IR maps.
-	xdsIR, infraIR := t.InitIRs(gateways)
+	xdsIR, infraIR := t.InitIRs(acceptedGateways)
 
 	// Process all Listeners for all relevant Gateways.
-	t.ProcessListeners(gateways, xdsIR, infraIR, resources)
+	t.ProcessListeners(acceptedGateways, xdsIR, infraIR, resources)
 
 	// Process EnvoyPatchPolicies
 	t.ProcessEnvoyPatchPolicies(resources.EnvoyPatchPolicies, xdsIR)
 
 	// Process all Addresses for all relevant Gateways.
-	t.ProcessAddresses(gateways, xdsIR, infraIR)
+	t.ProcessAddresses(acceptedGateways, xdsIR, infraIR)
 
 	// process all Backends
 	backends := t.ProcessBackends(resources.Backends)
 
 	// Process all relevant HTTPRoutes.
-	httpRoutes := t.ProcessHTTPRoutes(resources.HTTPRoutes, gateways, resources, xdsIR)
+	httpRoutes := t.ProcessHTTPRoutes(resources.HTTPRoutes, acceptedGateways, resources, xdsIR)
 
 	// Process all relevant GRPCRoutes.
-	grpcRoutes := t.ProcessGRPCRoutes(resources.GRPCRoutes, gateways, resources, xdsIR)
+	grpcRoutes := t.ProcessGRPCRoutes(resources.GRPCRoutes, acceptedGateways, resources, xdsIR)
 
 	// Process all relevant TLSRoutes.
-	tlsRoutes := t.ProcessTLSRoutes(resources.TLSRoutes, gateways, resources, xdsIR)
+	tlsRoutes := t.ProcessTLSRoutes(resources.TLSRoutes, acceptedGateways, resources, xdsIR)
 
 	// Process all relevant TCPRoutes.
-	tcpRoutes := t.ProcessTCPRoutes(resources.TCPRoutes, gateways, resources, xdsIR)
+	tcpRoutes := t.ProcessTCPRoutes(resources.TCPRoutes, acceptedGateways, resources, xdsIR)
 
 	// Process all relevant UDPRoutes.
-	udpRoutes := t.ProcessUDPRoutes(resources.UDPRoutes, gateways, resources, xdsIR)
+	udpRoutes := t.ProcessUDPRoutes(resources.UDPRoutes, acceptedGateways, resources, xdsIR)
 
 	// Process ClientTrafficPolicies
-	clientTrafficPolicies := t.ProcessClientTrafficPolicies(resources, gateways, xdsIR, infraIR)
+	clientTrafficPolicies := t.ProcessClientTrafficPolicies(resources, acceptedGateways, xdsIR, infraIR)
 
 	// Process BackendTrafficPolicies
 	routes := []RouteContext{}
@@ -216,32 +217,36 @@ func (t *Translator) Translate(resources *resource.Resources) (*TranslateResult,
 
 	// Process BackendTrafficPolicies
 	backendTrafficPolicies := t.ProcessBackendTrafficPolicies(
-		resources, gateways, routes, xdsIR)
+		resources, acceptedGateways, routes, xdsIR)
 
 	// Process SecurityPolicies
 	securityPolicies := t.ProcessSecurityPolicies(
-		resources.SecurityPolicies, gateways, routes, resources, xdsIR)
+		resources.SecurityPolicies, acceptedGateways, routes, resources, xdsIR)
 
 	// Process EnvoyExtensionPolicies
 	envoyExtensionPolicies := t.ProcessEnvoyExtensionPolicies(
-		resources.EnvoyExtensionPolicies, gateways, routes, resources, xdsIR)
+		resources.EnvoyExtensionPolicies, acceptedGateways, routes, resources, xdsIR)
 
 	extServerPolicies, translateErrs := t.ProcessExtensionServerPolicies(
-		resources.ExtensionServerPolicies, gateways, xdsIR)
+		resources.ExtensionServerPolicies, acceptedGateways, xdsIR)
 
 	// Sort xdsIR based on the Gateway API spec
 	sortXdsIRMap(xdsIR)
 
 	// Set custom filter order if EnvoyProxy is set
 	// The custom filter order will be applied when generating the HTTP filter chain.
-	for _, gateway := range gateways {
+	for _, gateway := range acceptedGateways {
 		if gateway.envoyProxy != nil {
 			irKey := t.getIRKey(gateway.Gateway)
 			xdsIR[irKey].FilterOrder = gateway.envoyProxy.Spec.FilterOrder
 		}
 	}
 
-	return newTranslateResult(gateways, httpRoutes, grpcRoutes, tlsRoutes,
+	// Add both accepted and failed gateways to the result because we need to update the status of all gateways.
+	allGateways := make([]*GatewayContext, 0, len(acceptedGateways)+len(failedGateways))
+	allGateways = append(allGateways, acceptedGateways...)
+	allGateways = append(allGateways, failedGateways...)
+	return newTranslateResult(allGateways, httpRoutes, grpcRoutes, tlsRoutes,
 		tcpRoutes, udpRoutes, clientTrafficPolicies, backendTrafficPolicies,
 		securityPolicies, resources.BackendTLSPolicies, envoyExtensionPolicies,
 		extServerPolicies, backends, xdsIR, infraIR), translateErrs
@@ -249,9 +254,9 @@ func (t *Translator) Translate(resources *resource.Resources) (*TranslateResult,
 
 // GetRelevantGateways returns GatewayContexts, containing a copy of the original
 // Gateway with the Listener statuses reset.
-func (t *Translator) GetRelevantGateways(resources *resource.Resources) []*GatewayContext {
-	var relevant []*GatewayContext
-
+func (t *Translator) GetRelevantGateways(resources *resource.Resources) (
+	acceptedGateways []*GatewayContext, failedGateways []*GatewayContext,
+) {
 	for _, gateway := range resources.Gateways {
 		if gateway == nil {
 			panic("received nil gateway")
@@ -261,13 +266,17 @@ func (t *Translator) GetRelevantGateways(resources *resource.Resources) []*Gatew
 			gc := &GatewayContext{
 				Gateway: gateway.DeepCopy(),
 			}
-			gc.ResetListeners(resources)
 
-			relevant = append(relevant, gc)
+			// Gateways that are not accepted by the controller because they reference an invalid EnvoyProxy.
+			if status.GatewayNotAccepted(gc.Gateway) {
+				failedGateways = append(failedGateways, gc)
+			} else {
+				gc.ResetListeners(resources)
+				acceptedGateways = append(acceptedGateways, gc)
+			}
 		}
 	}
-
-	return relevant
+	return
 }
 
 // InitIRs checks if mergeGateways is enabled in EnvoyProxy config and initializes XdsIR and InfraIR maps with adequate keys.

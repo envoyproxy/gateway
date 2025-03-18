@@ -1,0 +1,115 @@
+- address:
+    socketAddress:
+      address: '::'
+      portValue: 10080
+  filterChains:
+  - filterChainMatch:
+      serverNames:
+      - foo.com
+    filters:
+    - name: envoy.filters.network.http_connection_manager
+      typedConfig:
+        '@type': type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
+        commonHttpProtocolOptions:
+          headersWithUnderscoresAction: REJECT_REQUEST
+        http2ProtocolOptions:
+          initialConnectionWindowSize: 1048576
+          initialStreamWindowSize: 65536
+          maxConcurrentStreams: 100
+        httpFilters:
+        - name: envoy.filters.http.router
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+            suppressEnvoyHeaders: true
+        mergeSlashes: true
+        normalizePath: true
+        pathWithEscapedSlashesAction: UNESCAPE_AND_REDIRECT
+        routeConfig:
+          name: error_route_configuration
+          virtualHosts:
+          - domains:
+            - '*'
+            name: error_vhost
+            routes:
+            - directResponse:
+                status: 500
+              match:
+                prefix: /
+              name: error_route
+        serverHeaderTransformation: PASS_THROUGH
+        statPrefix: https-10080
+        useRemoteAddress: true
+    name: first-listener-error
+    transportSocket:
+      name: envoy.transport_sockets.tls
+      typedConfig:
+        '@type': type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.DownstreamTlsContext
+        commonTlsContext:
+          alpnProtocols:
+          - h2
+          - http/1.1
+          tlsCertificateSdsSecretConfigs:
+          - name: first-listener
+            sdsConfig:
+              ads: {}
+              resourceApiVersion: V3
+        disableStatefulSessionResumption: true
+        disableStatelessSessionResumption: true
+  - filterChainMatch:
+      serverNames:
+      - foo.net
+    filters:
+    - name: envoy.filters.network.http_connection_manager
+      typedConfig:
+        '@type': type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
+        commonHttpProtocolOptions:
+          headersWithUnderscoresAction: REJECT_REQUEST
+        http2ProtocolOptions:
+          initialConnectionWindowSize: 1048576
+          initialStreamWindowSize: 65536
+          maxConcurrentStreams: 100
+        httpFilters:
+        - name: envoy.filters.http.router
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+            suppressEnvoyHeaders: true
+        mergeSlashes: true
+        normalizePath: true
+        pathWithEscapedSlashesAction: UNESCAPE_AND_REDIRECT
+        routeConfig:
+          name: error_route_configuration
+          virtualHosts:
+          - domains:
+            - '*'
+            name: error_vhost
+            routes:
+            - directResponse:
+                status: 500
+              match:
+                prefix: /
+              name: error_route
+        serverHeaderTransformation: PASS_THROUGH
+        statPrefix: https-10080
+        useRemoteAddress: true
+    name: second-listener
+    transportSocket:
+      name: envoy.transport_sockets.tls
+      typedConfig:
+        '@type': type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.DownstreamTlsContext
+        commonTlsContext:
+          alpnProtocols:
+          - h2
+          - http/1.1
+          tlsCertificateSdsSecretConfigs:
+          - name: second-listener
+            sdsConfig:
+              ads: {}
+              resourceApiVersion: V3
+        disableStatefulSessionResumption: true
+        disableStatelessSessionResumption: true
+  listenerFilters:
+  - name: envoy.filters.listener.tls_inspector
+    typedConfig:
+      '@type': type.googleapis.com/envoy.extensions.filters.listener.tls_inspector.v3.TlsInspector
+  name: first-listener-error
+  perConnectionBufferLimitBytes: 32768

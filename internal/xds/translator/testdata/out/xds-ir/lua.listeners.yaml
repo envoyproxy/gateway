@@ -1,0 +1,55 @@
+- address:
+    socketAddress:
+      address: 0.0.0.0
+      portValue: 10080
+  defaultFilterChain:
+    filters:
+    - name: envoy.filters.network.http_connection_manager
+      typedConfig:
+        '@type': type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
+        commonHttpProtocolOptions:
+          headersWithUnderscoresAction: REJECT_REQUEST
+        http2ProtocolOptions:
+          initialConnectionWindowSize: 1048576
+          initialStreamWindowSize: 65536
+          maxConcurrentStreams: 100
+        httpFilters:
+        - disabled: true
+          name: envoy.filters.http.lua/envoyextensionpolicy/default/policy-for-http-route/lua/0
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.lua.v3.Lua
+            defaultSourceCode:
+              inlineString: function envoy_on_request(request_handle) request_handle:logInfo('Goodbye.')
+                end
+        - disabled: true
+          name: envoy.filters.http.lua/envoyextensionpolicy/envoy-gateway/policy-for-gateway/lua/0
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.lua.v3.Lua
+            defaultSourceCode:
+              inlineString: function envoy_on_response(response_handle) response_handle:logWarn('Goodbye.')
+                end
+        - disabled: true
+          name: envoy.filters.http.lua/envoyextensionpolicy/envoy-gateway/policy-for-gateway/lua/1
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.lua.v3.Lua
+            defaultSourceCode:
+              inlineString: function envoy_on_response(response_handle) response_handle:logError('Hello.')
+                end
+        - name: envoy.filters.http.router
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+            suppressEnvoyHeaders: true
+        mergeSlashes: true
+        normalizePath: true
+        pathWithEscapedSlashesAction: UNESCAPE_AND_REDIRECT
+        rds:
+          configSource:
+            ads: {}
+            resourceApiVersion: V3
+          routeConfigName: envoy-gateway/gateway-1/http
+        serverHeaderTransformation: PASS_THROUGH
+        statPrefix: http-10080
+        useRemoteAddress: true
+    name: envoy-gateway/gateway-1/http
+  name: envoy-gateway/gateway-1/http
+  perConnectionBufferLimitBytes: 32768

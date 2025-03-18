@@ -117,6 +117,7 @@ envoyExtensionPolicies:
         writableNamespaces:
         - envoy.filters.http.my_custom
       processingMode:
+        allowModeOverride: true
         request:
           attributes:
           - request.path
@@ -287,7 +288,7 @@ infraIR:
 xdsIR:
   default/gateway-1:
     accessLog:
-      text:
+      json:
       - path: /dev/stdout
     http:
     - address: 0.0.0.0
@@ -312,6 +313,7 @@ xdsIR:
             endpoints:
             - host: 7.7.7.7
               port: 8080
+            name: httproute/default/httproute-1/rule/0/backend/0
             protocol: HTTP
             weight: 1
         envoyExtensions:
@@ -324,6 +326,7 @@ xdsIR:
                 endpoints:
                 - host: 8.8.8.8
                   port: 9000
+                name: envoyextensionpolicy/default/policy-for-http-route/extproc/0/backend/0
                 protocol: GRPC
                 tls:
                   alpnProtocols: null
@@ -353,15 +356,18 @@ xdsIR:
             endpoints:
             - host: 7.7.7.7
               port: 8080
+            name: httproute/default/httproute-2/rule/0/backend/0
             protocol: HTTP
             weight: 1
         envoyExtensions:
           extProcs:
-          - authority: grpc-backend.envoy-gateway:8000
+          - allowModeOverride: true
+            authority: grpc-backend.envoy-gateway:8000
             destination:
               name: envoyextensionpolicy/default/policy-for-gateway/extproc/0
               settings:
               - addressType: IP
+                name: envoyextensionpolicy/default/policy-for-gateway/extproc/0/backend/0
                 protocol: GRPC
                 tls:
                   alpnProtocols: null
@@ -397,3 +403,8 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /bar
+    readyListener:
+      address: 0.0.0.0
+      ipFamily: IPv4
+      path: /ready
+      port: 19003

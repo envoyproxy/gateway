@@ -102,6 +102,9 @@ func TestTranslateXds(t *testing.T) {
 		"accesslog-invalid": {
 			errMsg: "validation failed for xds resource",
 		},
+		"accesslog-without-format": {
+			errMsg: "text.Format is nil",
+		},
 		"tracing-invalid": {
 			errMsg: "validation failed for xds resource",
 		},
@@ -221,6 +224,9 @@ func TestTranslateXdsWithExtension(t *testing.T) {
 		},
 		"http-route-extension-translate-error": {
 			errMsg: "rpc error: code = Unknown desc = cluster hook resource error: fail-close-error",
+		},
+		"multiple-listeners-same-port-error": {
+			errMsg: "rpc error: code = Unknown desc = simulate error when there is no default filter chain in the original resources",
 		},
 	}
 

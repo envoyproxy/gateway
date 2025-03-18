@@ -28,9 +28,14 @@ emeritus-maintainers:
 
 reviewers:
 
-- chauhanshubham
 - kflynn
-- tmsnan
 - tanujd11
 - cnvergence
 - liorokman
+- rudrakhp
+- sanposhiho
+
+emeritus-reviewers:
+
+- chauhanshubham
+- tmsnan

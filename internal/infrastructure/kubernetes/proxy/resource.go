@@ -81,21 +81,23 @@ func enablePrometheus(infra *ir.ProxyInfra) bool {
 // expectedProxyContainers returns expected proxy containers.
 func expectedProxyContainers(infra *ir.ProxyInfra,
 	containerSpec *egv1a1.KubernetesContainerSpec,
-	shutdownConfig *egv1a1.ShutdownConfig,
-	shutdownManager *egv1a1.ShutdownManager,
-	namespace string,
-	dnsDomain string,
+	shutdownConfig *egv1a1.ShutdownConfig, shutdownManager *egv1a1.ShutdownManager,
+	namespace string, dnsDomain string,
 ) ([]corev1.Container, error) {
-	// Define slice to hold container ports
-	var ports []corev1.ContainerPort
-
+	ports := make([]corev1.ContainerPort, 0, 2)
 	if enablePrometheus(infra) {
 		ports = append(ports, corev1.ContainerPort{
 			Name:          "metrics",
-			ContainerPort: bootstrap.EnvoyReadinessPort, // TODO: make this configurable
+			ContainerPort: bootstrap.EnvoyStatsPort, // TODO: make this configurable
 			Protocol:      corev1.ProtocolTCP,
 		})
 	}
+
+	ports = append(ports, corev1.ContainerPort{
+		Name:          "readiness",
+		ContainerPort: bootstrap.EnvoyReadinessPort, // TODO: make this configurable
+		Protocol:      corev1.ProtocolTCP,
+	})
 
 	var proxyMetrics *egv1a1.ProxyMetrics
 	if infra.Config != nil &&

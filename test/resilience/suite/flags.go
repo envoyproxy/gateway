@@ -9,6 +9,4 @@ package suite
 
 import "flag"
 
-var (
-	ReportSaveDir = flag.String("report-save-dir", "benchmark_report", "The dir where to save the benchmark test report.")
-)
+var ReportSaveDir = flag.String("report-save-dir", "benchmark_report", "The dir where to save the benchmark test report.")

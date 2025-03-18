@@ -30,8 +30,8 @@ func init() {
 // Almost like HTTPExtAuthTest, but the security policy reference to the backend service.
 var HTTPBackendExtAuthTest = suite.ConformanceTest{
 	ShortName:   "HTTPBackendExtAuth",
-	Description: "Test ExtAuth authentication with backend",
-	Manifests:   []string{"testdata/ext-auth-http-backend.yaml", "testdata/ext-auth-http-backend-securitypolicy.yaml"},
+	Description: "Test HTTP ExtAuth authentication with backend",
+	Manifests:   []string{"testdata/ext-auth-service.yaml", "testdata/ext-auth-http-backend-securitypolicy.yaml"},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
 		ns := "gateway-conformance-infra"
 		routeNN := types.NamespacedName{Name: "http-ext-auth-backend", Namespace: ns}
@@ -45,11 +45,8 @@ var HTTPBackendExtAuthTest = suite.ConformanceTest{
 			Name:      gwapiv1.ObjectName(gwNN.Name),
 		}
 		SecurityPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "ext-auth-backend", Namespace: ns}, suite.ControllerName, ancestorRef)
-
-		podReady := corev1.PodCondition{Type: corev1.PodReady, Status: corev1.ConditionTrue}
-
 		// Wait for the http ext auth service pod to be ready
-		WaitForPods(t, suite.Client, ns, map[string]string{"app": "http-ext-auth-backend"}, corev1.PodRunning, podReady)
+		WaitForPods(t, suite.Client, ns, map[string]string{"app": "envoy-ext-auth"}, corev1.PodRunning, PodReady)
 
 		t.Run("http route with ext auth backend ref", func(t *testing.T) {
 			expectedResponse := http.ExpectedResponse{

@@ -48,20 +48,42 @@ var EnvoyProxyDaemonSetTest = suite.ConformanceTest{
 				Namespace: ns,
 			}
 
+			// Make sure there's no deployment for the gateway
+			err := wait.PollUntilContextTimeout(context.TODO(), time.Second, suite.TimeoutConfig.DeleteTimeout, true, func(ctx context.Context) (bool, error) {
+				deploys := &appsv1.DeploymentList{}
+				err := suite.Client.List(ctx, deploys, &client.ListOptions{
+					Namespace: "envoy-gateway-system",
+					LabelSelector: labels.SelectorFromSet(map[string]string{
+						"app.kubernetes.io/managed-by":                   "envoy-gateway",
+						"app.kubernetes.io/name":                         "envoy",
+						"gateway.envoyproxy.io/owning-gateway-name":      gwNN.Name,
+						"gateway.envoyproxy.io/owning-gateway-namespace": gwNN.Namespace,
+					}),
+				})
+				if err != nil {
+					return false, err
+				}
+
+				return len(deploys.Items) == 0, err
+			})
+			if err != nil {
+				t.Fatalf("Failed to check no deployments for the Gateway: %v", err)
+			}
+
 			// Send a request to a valid path and expect a successful response
 			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, OkResp)
 
+			// Delete the Gateway and wait for the DaemonSet to be deleted
 			gtw := &gwapiv1.Gateway{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: gwNN.Namespace,
 					Name:      gwNN.Name,
 				},
 			}
-			err := suite.Client.Delete(context.TODO(), gtw)
+			err = suite.Client.Delete(context.TODO(), gtw)
 			if err != nil {
 				t.Fatalf("Failed to delete Gateway: %v", err)
 			}
-
 			err = wait.PollUntilContextTimeout(context.TODO(), time.Second, suite.TimeoutConfig.DeleteTimeout, true, func(ctx context.Context) (bool, error) {
 				dsList := &appsv1.DaemonSetList{}
 				err := suite.Client.List(ctx, dsList, &client.ListOptions{

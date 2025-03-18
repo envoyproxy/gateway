@@ -1,0 +1,34 @@
+http:
+  - name: "first-listener"
+    address: "::"
+    port: 8081
+    hostnames:
+      - "*"
+    routes:
+      - name: "first-route"
+        hostname: "*"
+        destination:
+          name: "first-route-dest"
+          settings:
+            - endpoints:
+                - host: "1.1.1.1"
+                  port: 8081
+              name: "first-route-dest/backend/0"
+    headers:
+      requestID: Preserve
+  - name: "second-listener"
+    address: "::"
+    port: 8082
+    hostnames:
+      - "*"
+    routes:
+      - name: "second-route"
+        hostname: "*"
+        destination:
+          name: "second-route-dest"
+          settings:
+            - endpoints:
+                - host: "2.2.2.2"
+                  port: 8082
+              name: "second-route-dest/backend/0"
+

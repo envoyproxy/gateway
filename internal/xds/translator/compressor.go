@@ -16,12 +16,12 @@ import (
 	gzipv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/compression/gzip/compressor/v3"
 	compressorv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/compressor/v3"
 	hcmv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/http_connection_manager/v3"
-	"google.golang.org/protobuf/proto"
+	protobuf "google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/anypb"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/ir"
-	"github.com/envoyproxy/gateway/internal/utils/protocov"
+	"github.com/envoyproxy/gateway/internal/utils/proto"
 	"github.com/envoyproxy/gateway/internal/xds/types"
 )
 
@@ -98,7 +98,7 @@ func buildCompressorFilter(compressionType egv1a1.CompressorType) (*hcmv3.HttpFi
 	var (
 		compressorProto *compressorv3.Compressor
 		extensionName   string
-		extensionMsg    proto.Message
+		extensionMsg    protobuf.Message
 		extensionAny    *anypb.Any
 		compressorAny   *anypb.Any
 		err             error
@@ -113,7 +113,7 @@ func buildCompressorFilter(compressionType egv1a1.CompressorType) (*hcmv3.HttpFi
 		extensionMsg = &gzipv3.Gzip{}
 	}
 
-	if extensionAny, err = protocov.ToAnyWithValidation(extensionMsg); err != nil {
+	if extensionAny, err = proto.ToAnyWithValidation(extensionMsg); err != nil {
 		return nil, err
 	}
 
@@ -124,7 +124,7 @@ func buildCompressorFilter(compressionType egv1a1.CompressorType) (*hcmv3.HttpFi
 		},
 	}
 
-	if compressorAny, err = protocov.ToAnyWithValidation(compressorProto); err != nil {
+	if compressorAny, err = proto.ToAnyWithValidation(compressorProto); err != nil {
 		return nil, err
 	}
 
@@ -182,7 +182,7 @@ func (*compressor) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute) error
 	}
 
 	compressorProto := compressorPerRouteConfig()
-	if compressorAny, err = protocov.ToAnyWithValidation(compressorProto); err != nil {
+	if compressorAny, err = proto.ToAnyWithValidation(compressorProto); err != nil {
 		return err
 	}
 

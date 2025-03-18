@@ -18,6 +18,7 @@
           name: envoy.filters.http.ext_proc/envoyextensionpolicy/default/policy-for-route-2/extproc/0
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.ext_proc.v3.ExternalProcessor
+            allowModeOverride: true
             failureModeAllow: true
             grpcService:
               envoyGrpc:

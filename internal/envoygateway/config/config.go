@@ -7,7 +7,6 @@ package config
 
 import (
 	"errors"
-	"sync"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/api/v1alpha1/validation"
@@ -37,23 +36,19 @@ type Server struct {
 	DNSDomain string
 	// Logger is the logr implementation used by Envoy Gateway.
 	Logger logging.Logger
-	// Elected chan is used to signal what a leader is elected
-	Elected *sync.WaitGroup
+	// Elected chan is used to signal when an EG instance is elected as leader.
+	Elected chan struct{}
 }
 
 // New returns a Server with default parameters.
 func New() (*Server, error) {
-	server := &Server{
+	return &Server{
 		EnvoyGateway: egv1a1.DefaultEnvoyGateway(),
 		Namespace:    env.Lookup("ENVOY_GATEWAY_NAMESPACE", DefaultNamespace),
 		DNSDomain:    env.Lookup("KUBERNETES_CLUSTER_DOMAIN", DefaultDNSDomain),
-		// the default logger
-		Logger:  logging.DefaultLogger(egv1a1.LogLevelInfo),
-		Elected: &sync.WaitGroup{},
-	}
-	// Block the tasks that are waiting for the leader to be elected
-	server.Elected.Add(1)
-	return server, nil
+		Logger:       logging.DefaultLogger(egv1a1.LogLevelInfo),
+		Elected:      make(chan struct{}),
+	}, nil
 }
 
 // Validate validates a Server config.

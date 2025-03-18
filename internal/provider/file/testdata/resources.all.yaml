@@ -5,6 +5,7 @@ backends:
     name: backend
     namespace: envoy-gateway-system
   spec:
+    type: Endpoints
     endpoints:
     - ip:
         address: 0.0.0.0
@@ -28,7 +29,10 @@ gateways:
   spec:
     gatewayClassName: eg
     listeners:
-    - name: http
+    - allowedRoutes:
+        namespaces:
+          from: Same
+      name: http
       port: 8888
       protocol: HTTP
   status: {}
@@ -42,12 +46,15 @@ httpRoutes:
     hostnames:
     - www.example.com
     parentRefs:
-    - name: eg
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: eg
     rules:
     - backendRefs:
       - group: gateway.envoyproxy.io
         kind: Backend
         name: backend
+        weight: 1
       matches:
       - path:
           type: PathPrefix

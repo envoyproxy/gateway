@@ -26,7 +26,7 @@ An Add-ons Helm chart for Envoy Gateway
 | https://grafana.github.io/helm-charts | grafana | 8.0.0 |
 | https://grafana.github.io/helm-charts | loki | 4.8.0 |
 | https://grafana.github.io/helm-charts | tempo | 1.3.1 |
-| https://open-telemetry.github.io/opentelemetry-helm-charts | opentelemetry-collector | 0.108.0 |
+| https://open-telemetry.github.io/opentelemetry-helm-charts | opentelemetry-collector | 0.117.3 |
 | https://prometheus-community.github.io/helm-charts | prometheus | 25.21.0 |
 
 ## Usage
@@ -59,6 +59,7 @@ To uninstall the chart:
 | alloy.alloy.configMap.content | string | `"// Write your Alloy config here:\nlogging {\n  level = \"info\"\n  format = \"logfmt\"\n}\nloki.write \"alloy\" {\n  endpoint {\n    url = \"http://loki.monitoring.svc:3100/loki/api/v1/push\"\n  }\n}\n// discovery.kubernetes allows you to find scrape targets from Kubernetes resources.\n// It watches cluster state and ensures targets are continually synced with what is currently running in your cluster.\ndiscovery.kubernetes \"pod\" {\n  role = \"pod\"\n}\n\n// discovery.relabel rewrites the label set of the input targets by applying one or more relabeling rules.\n// If no rules are defined, then the input targets are exported as-is.\ndiscovery.relabel \"pod_logs\" {\n  targets = discovery.kubernetes.pod.targets\n\n  // Label creation - \"namespace\" field from \"__meta_kubernetes_namespace\"\n  rule {\n    source_labels = [\"__meta_kubernetes_namespace\"]\n    action = \"replace\"\n    target_label = \"namespace\"\n  }\n\n  // Label creation - \"pod\" field from \"__meta_kubernetes_pod_name\"\n  rule {\n    source_labels = [\"__meta_kubernetes_pod_name\"]\n    action = \"replace\"\n    target_label = \"pod\"\n  }\n\n  // Label creation - \"container\" field from \"__meta_kubernetes_pod_container_name\"\n  rule {\n    source_labels = [\"__meta_kubernetes_pod_container_name\"]\n    action = \"replace\"\n    target_label = \"container\"\n  }\n\n  // Label creation -  \"app\" field from \"__meta_kubernetes_pod_label_app_kubernetes_io_name\"\n  rule {\n    source_labels = [\"__meta_kubernetes_pod_label_app_kubernetes_io_name\"]\n    action = \"replace\"\n    target_label = \"app\"\n  }\n\n  // Label creation -  \"job\" field from \"__meta_kubernetes_namespace\" and \"__meta_kubernetes_pod_container_name\"\n  // Concatenate values __meta_kubernetes_namespace/__meta_kubernetes_pod_container_name\n  rule {\n    source_labels = [\"__meta_kubernetes_namespace\", \"__meta_kubernetes_pod_container_name\"]\n    action = \"replace\"\n    target_label = \"job\"\n    separator = \"/\"\n    replacement = \"$1\"\n  }\n\n  // Label creation - \"container\" field from \"__meta_kubernetes_pod_uid\" and \"__meta_kubernetes_pod_container_name\"\n  // Concatenate values __meta_kubernetes_pod_uid/__meta_kubernetes_pod_container_name.log\n  rule {\n    source_labels = [\"__meta_kubernetes_pod_uid\", \"__meta_kubernetes_pod_container_name\"]\n    action = \"replace\"\n    target_label = \"__path__\"\n    separator = \"/\"\n    replacement = \"/var/log/pods/*$1/*.log\"\n  }\n\n  // Label creation -  \"container_runtime\" field from \"__meta_kubernetes_pod_container_id\"\n  rule {\n    source_labels = [\"__meta_kubernetes_pod_container_id\"]\n    action = \"replace\"\n    target_label = \"container_runtime\"\n    regex = \"^(\\\\S+):\\\\/\\\\/.+$\"\n    replacement = \"$1\"\n  }\n}\n\n// loki.source.kubernetes tails logs from Kubernetes containers using the Kubernetes API.\nloki.source.kubernetes \"pod_logs\" {\n  targets    = discovery.relabel.pod_logs.output\n  forward_to = [loki.process.pod_logs.receiver]\n}\n// loki.process receives log entries from other Loki components, applies one or more processing stages,\n// and forwards the results to the list of receivers in the component’s arguments.\nloki.process \"pod_logs\" {\n  stage.static_labels {\n      values = {\n        cluster = \"envoy-gateway\",\n      }\n  }\n\n  forward_to = [loki.write.alloy.receiver]\n}"` |  |
 | alloy.enabled | bool | `false` |  |
 | alloy.fullnameOverride | string | `"alloy"` |  |
+| dashboard.labels | object | `{}` |  |
 | fluent-bit.config.filters | string | `"[FILTER]\n    Name kubernetes\n    Match kube.*\n    Merge_Log On\n    Keep_Log Off\n    K8S-Logging.Parser On\n    K8S-Logging.Exclude On\n\n[FILTER]\n    Name grep\n    Match kube.*\n    Regex $kubernetes['container_name'] ^envoy$\n\n[FILTER]\n    Name parser\n    Match kube.*\n    Key_Name log\n    Parser envoy\n    Reserve_Data True\n"` |  |
 | fluent-bit.config.inputs | string | `"[INPUT]\n    Name tail\n    Path /var/log/containers/*.log\n    multiline.parser docker, cri\n    Tag kube.*\n    Mem_Buf_Limit 5MB\n    Skip_Long_Lines On\n"` |  |
 | fluent-bit.config.outputs | string | `"[OUTPUT]\n    Name                   loki\n    Match                  kube.*\n    Host                   loki.monitoring.svc.cluster.local\n    Port                   3100\n    Labels                 job=fluentbit, app=$kubernetes['labels']['app'], k8s_namespace_name=$kubernetes['namespace_name'], k8s_pod_name=$kubernetes['pod_name'], k8s_container_name=$kubernetes['container_name']\n"` |  |
@@ -117,6 +118,7 @@ To uninstall the chart:
 | opentelemetry-collector.config.processors.attributes.actions[0].key | string | `"loki.attribute.labels"` |  |
 | opentelemetry-collector.config.processors.attributes.actions[0].value | string | `"k8s.pod.name, k8s.namespace.name"` |  |
 | opentelemetry-collector.config.receivers.datadog.endpoint | string | `"[${env:MY_POD_IP}]:8126"` |  |
+| opentelemetry-collector.config.receivers.envoyals.endpoint | string | `"[${env:MY_POD_IP}]:9000"` |  |
 | opentelemetry-collector.config.receivers.jaeger.protocols.grpc.endpoint | string | `"[${env:MY_POD_IP}]:14250"` |  |
 | opentelemetry-collector.config.receivers.jaeger.protocols.thrift_compact.endpoint | string | `"[${env:MY_POD_IP}]:6831"` |  |
 | opentelemetry-collector.config.receivers.jaeger.protocols.thrift_http.endpoint | string | `"[${env:MY_POD_IP}]:14268"` |  |
@@ -130,6 +132,7 @@ To uninstall the chart:
 | opentelemetry-collector.config.service.pipelines.logs.exporters[0] | string | `"loki"` |  |
 | opentelemetry-collector.config.service.pipelines.logs.processors[0] | string | `"attributes"` |  |
 | opentelemetry-collector.config.service.pipelines.logs.receivers[0] | string | `"otlp"` |  |
+| opentelemetry-collector.config.service.pipelines.logs.receivers[1] | string | `"envoyals"` |  |
 | opentelemetry-collector.config.service.pipelines.metrics.exporters[0] | string | `"prometheus"` |  |
 | opentelemetry-collector.config.service.pipelines.metrics.receivers[0] | string | `"datadog"` |  |
 | opentelemetry-collector.config.service.pipelines.metrics.receivers[1] | string | `"otlp"` |  |
@@ -137,11 +140,21 @@ To uninstall the chart:
 | opentelemetry-collector.config.service.pipelines.traces.receivers[0] | string | `"datadog"` |  |
 | opentelemetry-collector.config.service.pipelines.traces.receivers[1] | string | `"otlp"` |  |
 | opentelemetry-collector.config.service.pipelines.traces.receivers[2] | string | `"zipkin"` |  |
-| opentelemetry-collector.config.service.telemetry.metrics.address | string | `"[${env:MY_POD_IP}]:8888"` |  |
+| opentelemetry-collector.config.service.telemetry.metrics.address | string | `nil` |  |
+| opentelemetry-collector.config.service.telemetry.metrics.level | string | `"none"` |  |
+| opentelemetry-collector.config.service.telemetry.metrics.readers[0].pull.exporter.prometheus.host | string | `"localhost"` |  |
+| opentelemetry-collector.config.service.telemetry.metrics.readers[0].pull.exporter.prometheus.port | int | `8888` |  |
 | opentelemetry-collector.enabled | bool | `false` |  |
 | opentelemetry-collector.fullnameOverride | string | `"otel-collector"` |  |
 | opentelemetry-collector.image.repository | string | `"otel/opentelemetry-collector-contrib"` |  |
+| opentelemetry-collector.image.tag | string | `"0.121.0"` |  |
 | opentelemetry-collector.mode | string | `"deployment"` |  |
+| opentelemetry-collector.ports.envoy-als.appProtocol | string | `"grpc"` |  |
+| opentelemetry-collector.ports.envoy-als.containerPort | int | `9000` |  |
+| opentelemetry-collector.ports.envoy-als.enabled | bool | `true` |  |
+| opentelemetry-collector.ports.envoy-als.hostPort | int | `9000` |  |
+| opentelemetry-collector.ports.envoy-als.protocol | string | `"TCP"` |  |
+| opentelemetry-collector.ports.envoy-als.servicePort | int | `9000` |  |
 | prometheus.alertmanager.enabled | bool | `false` |  |
 | prometheus.enabled | bool | `true` |  |
 | prometheus.kube-state-metrics.enabled | bool | `false` |  |

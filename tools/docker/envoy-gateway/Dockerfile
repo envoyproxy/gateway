@@ -1,10 +1,10 @@
-FROM busybox@sha256:2919d0172f7524b2d8df9e50066a682669e6d170ac0f6a49676d54358fe970b5 AS source
+FROM busybox@sha256:498a000f370d8c37927118ed80afe8adc38d1edcbfc071627d17b25c88efcab0 AS source
 # Create the data directory for eg
 RUN mkdir -p /var/lib/eg
 
 # Use distroless as minimal base image to package the manager binary
 # Refer to https://github.com/GoogleContainerTools/distroless for more details
-FROM gcr.io/distroless/base-nossl:nonroot@sha256:2a803cc873dc1a69a33087ee10c75755367dd2c259219893504680480ad563f0
+FROM gcr.io/distroless/base-nossl:nonroot@sha256:e9554da0d9569cfa21023ee8d2624d7326d80791b49b7c71b08a8b4e8d206129
 ARG TARGETPLATFORM
 COPY $TARGETPLATFORM/envoy-gateway /usr/local/bin/
 COPY --from=source --chown=65532:65532 /var/lib /var/lib

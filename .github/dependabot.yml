@@ -20,38 +20,40 @@ updates:
     ignore:
       # skip to update retest, because it won't work with the latest version
       - dependency-name: "envoyproxy/toolshed/gh-actions/retest"
+    groups:
+      github-actions:
+        patterns:
+          - "actions*"
   - package-ecosystem: gomod
     directories:
       - "/"
-      - "examples/extension-server"
+      - "examples/*"
     schedule:
       interval: weekly
+    ignore:
+      # Ignore cel-go, since it should be updated alongside k8s.io/apiserver
+      - dependency-name: "github.com/google/cel-go"
+      # Ignore github.com/docker/docker, since it should be updated alongside github.com/google/go-containerregistry
+      - dependency-name: github.com/docker/docker
     groups:
+      github.com:
+        patterns:
+          - "github.com*"
       k8s.io:
         patterns:
           - "k8s.io/*"
           - "sigs.k8s.io/*"
       go.opentelemetry.io:
         patterns:
-          - "go.opentelemetry.io/*"
+          - "go.opentelemetry.io*"
       golang.org:
         patterns:
-          - "golang.org/*"
-          - "google.golang.org/*"
-          - "google.golang.org/genproto/googleapis/*"
+          - "golang*"
+          - "google*"
   - package-ecosystem: pip
     directories:
       - /tools/src/codespell
       - /tools/src/sphinx-build
       - /tools/src/yamllint
-    schedule:
-      interval: weekly
-  - package-ecosystem: gomod
-    directories:
-      - /tools/src/helm-docs
-      - /tools/src/buf
-      - /tools/src/golangci-lint
-      - /tools/src/kind
-      - /tools/src/setup-envtest
     schedule:
       interval: weekly

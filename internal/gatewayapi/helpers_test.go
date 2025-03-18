@@ -16,6 +16,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
@@ -468,6 +469,106 @@ func TestGetPolicyTargetRefs(t *testing.T) {
 							"namespace": "default",
 							"labels": map[string]any{
 								"pick": "me",
+							},
+						},
+					},
+				},
+			},
+			results: []gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{},
+		},
+		{
+			name: "match expression",
+			policy: egv1a1.PolicyTargetReferences{
+				TargetSelectors: []egv1a1.TargetSelector{
+					{
+						Kind: "Gateway",
+						MatchExpressions: []metav1.LabelSelectorRequirement{
+							{
+								Key:      "environment",
+								Operator: "In",
+								Values:   []string{"prod", "staging"},
+							},
+						},
+					},
+				},
+			},
+			targets: []*unstructured.Unstructured{
+				{
+					Object: map[string]any{
+						"apiVersion": "gateway.networking.k8s.io/v1",
+						"kind":       "Gateway",
+						"metadata": map[string]any{
+							"name":      "first",
+							"namespace": "default",
+							"labels": map[string]any{
+								"environment": "prod",
+							},
+						},
+					},
+				},
+				{
+					Object: map[string]any{
+						"apiVersion": "gateway.networking.k8s.io/v1",
+						"kind":       "Gateway",
+						"metadata": map[string]any{
+							"name":      "second",
+							"namespace": "default",
+							"labels": map[string]any{
+								"environment": "dev",
+							},
+						},
+					},
+				},
+			},
+			results: []gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
+				{
+					LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
+						Group: "gateway.networking.k8s.io",
+						Kind:  "Gateway",
+						Name:  "first",
+					},
+				},
+			},
+		},
+		{
+			name: "match expression - bad expression matches nothing",
+			policy: egv1a1.PolicyTargetReferences{
+				TargetSelectors: []egv1a1.TargetSelector{
+					{
+						Kind: "Gateway",
+						MatchExpressions: []metav1.LabelSelectorRequirement{
+							{
+								Key:      "environment",
+								Operator: "Foo",
+								Values:   []string{"prod", "staging"},
+							},
+						},
+					},
+				},
+			},
+			targets: []*unstructured.Unstructured{
+				{
+					Object: map[string]any{
+						"apiVersion": "gateway.networking.k8s.io/v1",
+						"kind":       "Gateway",
+						"metadata": map[string]any{
+							"name":      "first",
+							"namespace": "default",
+							"labels": map[string]any{
+								"environment": "prod",
+							},
+						},
+					},
+				},
+				{
+					Object: map[string]any{
+						"apiVersion": "gateway.networking.k8s.io/v1",
+						"kind":       "Gateway",
+						"metadata": map[string]any{
+							"name":      "second",
+							"namespace": "default",
+							"labels": map[string]any{
+								"environment": "dev",
 							},
 						},
 					},

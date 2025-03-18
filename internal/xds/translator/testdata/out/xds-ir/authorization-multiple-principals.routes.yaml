@@ -26,8 +26,44 @@
                         '@type': type.googleapis.com/envoy.config.rbac.v3.Action
                         name: ALLOW
                   predicate:
+                    singlePredicate:
+                      input:
+                        name: http_header
+                        typedConfig:
+                          '@type': type.googleapis.com/envoy.type.matcher.v3.HttpRequestHeaderMatchInput
+                          headerName: :method
+                      valueMatch:
+                        exact: GET
+                        ignoreCase: true
+                - onMatch:
+                    action:
+                      name: allow-rule-2
+                      typedConfig:
+                        '@type': type.googleapis.com/envoy.config.rbac.v3.Action
+                        name: ALLOW
+                  predicate:
                     andMatcher:
                       predicate:
+                      - orMatcher:
+                          predicate:
+                          - singlePredicate:
+                              input:
+                                name: http_header
+                                typedConfig:
+                                  '@type': type.googleapis.com/envoy.type.matcher.v3.HttpRequestHeaderMatchInput
+                                  headerName: :method
+                              valueMatch:
+                                exact: DELETE
+                                ignoreCase: true
+                          - singlePredicate:
+                              input:
+                                name: http_header
+                                typedConfig:
+                                  '@type': type.googleapis.com/envoy.type.matcher.v3.HttpRequestHeaderMatchInput
+                                  headerName: :method
+                              valueMatch:
+                                exact: POST
+                                ignoreCase: true
                       - singlePredicate:
                           customMatch:
                             name: ip_matcher
@@ -117,7 +153,7 @@
                               - key: department
                 - onMatch:
                     action:
-                      name: allow-rule-2
+                      name: allow-rule-3
                       typedConfig:
                         '@type': type.googleapis.com/envoy.config.rbac.v3.Action
                         name: ALLOW

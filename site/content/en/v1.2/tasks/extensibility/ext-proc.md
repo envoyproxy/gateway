@@ -173,7 +173,6 @@ spec:
   - group: ''
     kind: Service
     name: grpc-ext-proc
-    sectionName: "9002"
   validation:
     caCertificateRefs:
     - name: grpc-ext-proc-ca
@@ -198,7 +197,6 @@ spec:
     - group: ''
       kind: Service
       name: grpc-ext-proc
-      sectionName: "9002"
   validation:
     caCertificateRefs:
       - name: grpc-ext-proc-ca

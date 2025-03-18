@@ -194,6 +194,12 @@ func (t *testingExtensionServer) PostHTTPListenerModify(_ context.Context, req *
 		return &pb.PostHTTPListenerModifyResponse{
 			Listener: modifiedListener,
 		}, nil
+	case "first-listener-error":
+		modifiedListener := proto.Clone(req.Listener).(*listenerV3.Listener)
+		modifiedListener.StatPrefix = req.Listener.Name
+		return &pb.PostHTTPListenerModifyResponse{
+			Listener: modifiedListener,
+		}, fmt.Errorf("simulate error when there is no default filter chain in the original resources")
 	}
 	return &pb.PostHTTPListenerModifyResponse{
 		Listener: req.Listener,

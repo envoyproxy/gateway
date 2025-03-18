@@ -262,7 +262,7 @@ securityPolicies:
 xdsIR:
   envoy-gateway-class:
     accessLog:
-      text:
+      json:
       - path: /dev/stdout
     http:
     - address: 0.0.0.0
@@ -287,6 +287,7 @@ xdsIR:
             endpoints:
             - host: 7.7.7.7
               port: 8080
+            name: httproute/default/bdkzlmibsivuiqav/rule/0/backend/0
             protocol: HTTP
             weight: 1
         hostname: ntjxuedx.192.168.0.15.nip.io
@@ -322,6 +323,7 @@ xdsIR:
             endpoints:
             - host: 7.7.7.7
               port: 8080
+            name: httproute/default/mfqjpuycbgjrtdww/rule/0/backend/0
             protocol: HTTP
             weight: 1
         hostname: qccbahgo.qccbahgo
@@ -350,3 +352,8 @@ xdsIR:
               name: ""
               safeRegex: http://.*\.foo\.com
             maxAge: 10m0s
+    readyListener:
+      address: 0.0.0.0
+      ipFamily: IPv4
+      path: /ready
+      port: 19003

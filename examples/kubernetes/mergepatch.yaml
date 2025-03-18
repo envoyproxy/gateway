@@ -8,9 +8,9 @@ spec:
     type: Kubernetes
     kubernetes:
       envoyDeployment:
-        merge:
+        patch:
           type: StrategicMerge
-          object:
+          value:
             spec:
               template:
                 spec:

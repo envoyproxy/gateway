@@ -1,0 +1,51 @@
+http:
+- address: 0.0.0.0
+  hostnames:
+  - '*'
+  isHTTP2: false
+  name: envoy-gateway/gateway-1/http
+  path:
+    escapedSlashesAction: UnescapeAndRedirect
+    mergeSlashes: true
+  port: 10080
+  routes:
+  - destination:
+      name: httproute/default/httproute-1/rule/0
+      settings:
+      - addressType: IP
+        endpoints:
+        - host: 7.7.7.7
+          port: 8080
+        protocol: HTTP
+        weight: 1
+        name: httproute/default/httproute-1/rule/0/backend/0
+    hostname: www.example.com
+    isHTTP2: false
+    name: httproute/default/httproute-1/rule/0/match/0/www_example_com
+    pathMatch:
+      distinct: false
+      name: ""
+      prefix: /foo
+    security:
+      authorization:
+        defaultAction: Deny
+        rules:
+        - action: Allow
+          name: allow-specific-headers
+          principal:
+            headers:
+            - name: x-user-id
+              values:
+              - john
+              - alice
+        - action: Allow
+          name: allow-multiple-headers
+          principal:
+            headers:
+            - name: x-location-id
+              values:
+              - chengdu
+            - name: x-org-id
+              values:
+              - 123
+              - 456

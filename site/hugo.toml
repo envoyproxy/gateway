@@ -8,7 +8,7 @@ defaultContentLanguageInSubdir = false
 # Useful when translating.
 enableMissingTranslationPlaceholders = true
 
-enableRobotsTXT = true
+enableRobotsTXT = false
 
 # Will give values to .Lastmod etc.
 enableGitInfo = true
@@ -66,15 +66,6 @@ id = "G-DXJEH1ZRXX"
   [languages.en.params]
     title = "Envoy Gateway"
     description = "Manages Envoy Proxy as a Standalone or Kubernetes-based API Gateway"
-
-  [languages.zh]
-    contentDir = "content/zh"
-    languageName = "中文"
-    # Weight used for sorting.
-    weight = 2
-  [languages.zh.params]
-    title = "Envoy Gateway"
-    description = "将 Envoy 代理作为独立或基于 Kubernetes 的 API 网关进行管理"
 
 [markup]
   [markup.goldmark]
@@ -152,7 +143,7 @@ footer_about_enable = true
 # Set to false if you don't want to display a logo (/assets/icons/logo.svg) in the top navbar
 navbar_logo = true
 # Set to true if you don't want the top navbar to be translucent when over a `block/cover`, like on the homepage.
-navbar_translucent_over_cover_disable = false
+navbar_translucent_over_cover_disable = true
 # Enable to show the side bar menu in its compact state.
 sidebar_menu_compact = true
 # Set to true to hide the sidebar search box (the top nav search box will still be displayed if search is enabled)
@@ -215,28 +206,6 @@ enable = true
     icon = "fab fa-slack"
     desc = "Chat with other project developers"
 
-  # i18n for Chinese
-  [[languages.zh.params.links.user]]
-    name = "邮件列表"
-    url = "mailto:envoy-users@googlegroups.com"
-    icon = "fa fa-envelope"
-    desc = "来自其他用户的讨论和帮助"
-  [[languages.zh.params.links.user]]
-    name ="推特"
-    url = "https://twitter.com/EnvoyProxy"
-    icon = "fab fa-twitter"
-    desc = "在 Twitter 上关注我们以获取最新消息！"
-  [[languages.zh.params.links.developer]]
-    name = "GitHub"
-    url = "https://github.com/envoyproxy/gateway"
-    icon = "fab fa-github"
-    desc = "在这里进行开发！"
-  [[languages.zh.params.links.developer]]
-    name = "Slack"
-    url = "https://envoyproxy.slack.com/archives/C03E6NHLESV"
-    icon = "fab fa-slack"
-    desc = "与其他项目开发人员沟通"
-
 [menu]
   [[menu.main]]
     name = "Contributions"
@@ -255,27 +224,13 @@ enable = true
     weight = -102
     url = "/docs"
 
-  # i18n for Chinese
-  [[languages.zh.menu.main]]
-    name = "贡献"
-    weight = -98
-    url = "/contributions"
-  [[languages.zh.menu.main]]
-    name = "关于"
-    weight = -100
-    url = "/about"
-  [[languages.zh.menu.main]]
-    name = "新闻"
-    weight = -101
-    url = "/news"
-  [[languages.zh.menu.main]]
-    name = "文档"
-    weight = -102
-    url = "/latest"
-
 [[params.versions]]
   version = "latest"
   url = "/latest"
+
+[[params.versions]]
+  version = "v1.3"
+  url = "/v1.3"
 
 [[params.versions]]
   version = "v1.2"
@@ -308,4 +263,3 @@ enable = true
 [[params.versions]]
   version = "v0.2"
   url = "/v0.2"
-

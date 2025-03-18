@@ -110,6 +110,27 @@
                             name: http-attributes-cel-match-input
                             typedConfig:
                               '@type': type.googleapis.com/xds.type.matcher.v3.HttpAttributesCelMatchInput
+        - disabled: true
+          name: envoy.filters.http.custom_response/backendtrafficpolicy/default/policy-for-route
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.custom_response.v3.CustomResponse
+            customResponseMatcher:
+              matcherList:
+                matchers:
+                - onMatch:
+                    action:
+                      name: backendtrafficpolicy/default/policy-for-route/responseoverride/rule/0
+                      typedConfig:
+                        '@type': type.googleapis.com/envoy.extensions.http.custom_response.local_response_policy.v3.LocalResponsePolicy
+                        statusCode: 404
+                  predicate:
+                    singlePredicate:
+                      input:
+                        name: http-response-status-code-match-input
+                        typedConfig:
+                          '@type': type.googleapis.com/envoy.type.matcher.v3.HttpResponseStatusCodeMatchInput
+                      valueMatch:
+                        exact: "403"
         - name: envoy.filters.http.router
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router

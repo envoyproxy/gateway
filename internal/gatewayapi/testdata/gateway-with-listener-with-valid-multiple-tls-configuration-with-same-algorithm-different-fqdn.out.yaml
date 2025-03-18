@@ -102,7 +102,7 @@ infraIR:
 xdsIR:
   envoy-gateway/gateway-1:
     accessLog:
-      text:
+      json:
       - path: /dev/stdout
     http:
     - address: 0.0.0.0
@@ -127,6 +127,7 @@ xdsIR:
             endpoints:
             - host: 7.7.7.7
               port: 8080
+            name: httproute/default/httproute-1/rule/0/backend/0
             protocol: HTTP
             weight: 1
         hostname: '*'
@@ -149,3 +150,8 @@ xdsIR:
         - name: envoy-gateway/tls-secret-ecdsa-2
           privateKey: '[redacted]'
           serverCertificate: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUJ5RENDQVU2Z0F3SUJBZ0lVUWltVUFlSExNdHo0dEdSdG5oNG9qWHRhVXpzd0NnWUlLb1pJemowRUF3SXcKR3pFWk1CY0dBMVVFQXd3UWRHVnpkQzVsZUdGdGNHeGxMbU52YlRBZUZ3MHlOREExTWpVd09URXhNemRhRncwegpOREExTWpNd09URXhNemRhTUJzeEdUQVhCZ05WQkFNTUVIUmxjM1F1WlhoaGJYQnNaUzVqYjIwd2RqQVFCZ2NxCmhrak9QUUlCQmdVcmdRUUFJZ05pQUFSNHkwY0xlRWg2clpDeDJTMUtMOWsxSDh3bzFxOUtiY2MyZnUwYWlCK3AKcXFmd0JLQWNocnZKUlQ3NCt5Z01QcVIvNzRKN3U2eDNTWkE3VktkMWdoYVBaQXVJalBRMWtmd0g5Q3ZpTHNuUQpnckN4Q1ZTZTZkbXEva3BqMU10QnJTZWpVekJSTUIwR0ExVWREZ1FXQkJUYVNlb1RtY3JlRU5Kd0t5ZmlZS3JnCjlIdnFVREFmQmdOVkhTTUVHREFXZ0JUYVNlb1RtY3JlRU5Kd0t5ZmlZS3JnOUh2cVVEQVBCZ05WSFJNQkFmOEUKQlRBREFRSC9NQW9HQ0NxR1NNNDlCQU1DQTJnQU1HVUNNRzFPSlUrRTlEaCt4TjdJMFZVTXIwdmt3S0h6V2Q3NwpTQXFXQjJVcG4vNThQTzd3eWNvWHZNMjlwREU0SkUvRzVRSXhBT2FhemxKZ1M3Z081eU50aW1tZ0llWFJ1K2pwCkNXb3kxb3hZU2ZSMmh1YkJ1Q1RUUkFqNkhPODBjTUVrZHFrMWp3PT0KLS0tLS1FTkQgQ0VSVElGSUNBVEUtLS0tLQo=
+    readyListener:
+      address: 0.0.0.0
+      ipFamily: IPv4
+      path: /ready
+      port: 19003

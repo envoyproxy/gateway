@@ -120,7 +120,7 @@ infraIR:
 xdsIR:
   envoy-gateway/gateway-1:
     accessLog:
-      text:
+      json:
       - path: /dev/stdout
     http:
     - address: 0.0.0.0
@@ -145,6 +145,7 @@ xdsIR:
             endpoints:
             - host: 1.1.1.1
               port: 3001
+            name: grpcroute/default/grpcroute-1/rule/0/backend/0
             protocol: GRPC
             weight: 1
         hostname: '*'
@@ -166,6 +167,7 @@ xdsIR:
             endpoints:
             - host: 1.1.1.1
               port: 3001
+            name: grpcroute/default/grpcroute-1/rule/0/backend/0
             protocol: GRPC
             weight: 1
         hostname: '*'
@@ -180,3 +182,8 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /com.ExampleExact
+    readyListener:
+      address: 0.0.0.0
+      ipFamily: IPv4
+      path: /ready
+      port: 19003

@@ -160,7 +160,7 @@ func (b *BenchmarkTestSuite) Run(t *testing.T, tests []BenchmarkTest) {
 		// Generate a human-readable benchmark report for each test.
 		t.Logf("Got %d reports for test: %s", len(reports), test.ShortName)
 
-		if err := RenderReport(writer, "Test: "+test.ShortName, test.Description, 2, reports); err != nil {
+		if err := RenderReport(writer, test.ShortName, test.Description, 2, reports); err != nil {
 			t.Errorf("Error generating report for %s: %v", test.ShortName, err)
 		}
 	}
@@ -182,10 +182,15 @@ func (b *BenchmarkTestSuite) Run(t *testing.T, tests []BenchmarkTest) {
 // TODO: currently running benchmark test via nighthawk_client,
 // consider switching to gRPC nighthawk-service for benchmark test.
 // ref: https://github.com/envoyproxy/nighthawk/blob/main/api/client/service.proto
-func (b *BenchmarkTestSuite) Benchmark(t *testing.T, ctx context.Context, name, gatewayHostPort string, requestHeaders ...string) (*BenchmarkReport, error) {
-	t.Logf("Running benchmark test: %s", name)
+func (b *BenchmarkTestSuite) Benchmark(t *testing.T, ctx context.Context, jobName, resultTitle, gatewayHostPort, hostnamePattern string, host int) (*BenchmarkReport, error) {
+	t.Logf("Running benchmark test: %s", resultTitle)
 
-	jobNN, err := b.createBenchmarkClientJob(ctx, name, gatewayHostPort, requestHeaders...)
+	requestHeaders := make([]string, 0, host)
+	// hostname index starts with 1
+	for i := 1; i <= host; i++ {
+		requestHeaders = append(requestHeaders, "Host: "+fmt.Sprintf(hostnamePattern, i))
+	}
+	jobNN, err := b.createBenchmarkClientJob(ctx, jobName, gatewayHostPort, requestHeaders)
 	if err != nil {
 		return nil, err
 	}
@@ -214,7 +219,7 @@ func (b *BenchmarkTestSuite) Benchmark(t *testing.T, ctx context.Context, name, 
 			}
 		}
 
-		t.Logf("Job %s still not complete", name)
+		t.Logf("Job %s still not complete", jobName)
 
 		return false, nil
 	}); err != nil {
@@ -223,9 +228,9 @@ func (b *BenchmarkTestSuite) Benchmark(t *testing.T, ctx context.Context, name, 
 		return nil, err
 	}
 
-	t.Logf("Running benchmark test: %s successfully", name)
+	t.Logf("Running benchmark test: %s successfully", resultTitle)
 
-	report, err := NewBenchmarkReport(name, path.Join(b.ReportSaveDir, "profiles"), b.kubeClient, b.promClient)
+	report, err := NewBenchmarkReport(resultTitle, path.Join(b.ReportSaveDir, "profiles"), b.kubeClient, b.promClient)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create benchmark report: %w", err)
 	}
@@ -238,14 +243,14 @@ func (b *BenchmarkTestSuite) Benchmark(t *testing.T, ctx context.Context, name, 
 	return report, nil
 }
 
-func (b *BenchmarkTestSuite) createBenchmarkClientJob(ctx context.Context, name, gatewayHostPort string, requestHeaders ...string) (*types.NamespacedName, error) {
+func (b *BenchmarkTestSuite) createBenchmarkClientJob(ctx context.Context, name, gatewayHostPort string, requestHeaders []string) (*types.NamespacedName, error) {
 	job := b.BenchmarkClientJob.DeepCopy()
 	job.SetName(name)
 	job.SetLabels(map[string]string{
 		BenchmarkTestClientKey: "true",
 	})
 
-	runtimeArgs := prepareBenchmarkClientRuntimeArgs(gatewayHostPort, requestHeaders...)
+	runtimeArgs := prepareBenchmarkClientRuntimeArgs(gatewayHostPort, requestHeaders)
 	container := &job.Spec.Template.Spec.Containers[0]
 	container.Args = append(container.Args, runtimeArgs...)
 
@@ -266,7 +271,7 @@ func prepareBenchmarkClientStaticArgs(options BenchmarkOptions) []string {
 	return staticArgs
 }
 
-func prepareBenchmarkClientRuntimeArgs(gatewayHostPort string, requestHeaders ...string) []string {
+func prepareBenchmarkClientRuntimeArgs(gatewayHostPort string, requestHeaders []string) []string {
 	args := make([]string, 0, len(requestHeaders)*2+1)
 
 	for _, reqHeader := range requestHeaders {
@@ -284,7 +289,7 @@ func prepareBenchmarkClientRuntimeArgs(gatewayHostPort string, requestHeaders ..
 // has been created successfully.
 //
 // All created scaled resources will be labeled with BenchmarkTestScaledKey.
-func (b *BenchmarkTestSuite) ScaleUpHTTPRoutes(ctx context.Context, scaleRange [2]uint16, routeNameFormat, refGateway string, afterCreation func(*gwapiv1.HTTPRoute)) error {
+func (b *BenchmarkTestSuite) ScaleUpHTTPRoutes(ctx context.Context, scaleRange [2]uint16, routeNameFormat, routeHostnameFormat, refGateway string, batchNumPerHost uint16, afterCreation func(*gwapiv1.HTTPRoute)) error {
 	var i, begin, end uint16
 	begin, end = scaleRange[0], scaleRange[1]
 
@@ -292,12 +297,16 @@ func (b *BenchmarkTestSuite) ScaleUpHTTPRoutes(ctx context.Context, scaleRange [
 		return fmt.Errorf("got wrong scale range, %d is not greater than %d", end, begin)
 	}
 
+	var counterPerBatch, currentBatch uint16 = 0, 1
 	for i = begin + 1; i <= end; i++ {
 		routeName := fmt.Sprintf(routeNameFormat, i)
+		routeHostname := fmt.Sprintf(routeHostnameFormat, currentBatch)
+
 		newRoute := b.HTTPRouteTemplate.DeepCopy()
 		newRoute.SetName(routeName)
 		newRoute.SetLabels(b.scaledLabels)
 		newRoute.Spec.ParentRefs[0].Name = gwapiv1.ObjectName(refGateway)
+		newRoute.Spec.Hostnames[0] = gwapiv1.Hostname(routeHostname)
 
 		if err := b.CreateResource(ctx, newRoute); err != nil {
 			return err
@@ -305,6 +314,12 @@ func (b *BenchmarkTestSuite) ScaleUpHTTPRoutes(ctx context.Context, scaleRange [
 
 		if afterCreation != nil {
 			afterCreation(newRoute)
+		}
+
+		counterPerBatch++
+		if counterPerBatch == batchNumPerHost {
+			counterPerBatch = 0
+			currentBatch++
 		}
 	}
 

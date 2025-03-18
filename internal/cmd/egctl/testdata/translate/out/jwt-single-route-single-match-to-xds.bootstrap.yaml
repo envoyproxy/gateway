@@ -138,23 +138,17 @@ xds:
             socketAddress:
               address: 0.0.0.0
               portValue: 19001
+          bypassOverloadManager: true
           filterChains:
           - filters:
             - name: envoy.filters.network.http_connection_manager
               typedConfig:
                 '@type': type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
                 httpFilters:
-                - name: envoy.filters.http.health_check
-                  typedConfig:
-                    '@type': type.googleapis.com/envoy.extensions.filters.http.health_check.v3.HealthCheck
-                    headers:
-                    - name: :path
-                      stringMatch:
-                        exact: /ready
-                    passThroughMode: false
                 - name: envoy.filters.http.router
                   typedConfig:
                     '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+                normalizePath: true
                 routeConfig:
                   name: local_route
                   virtualHosts:
@@ -163,8 +157,12 @@ xds:
                     name: prometheus_stats
                     routes:
                     - match:
-                        prefix: /stats/prometheus
+                        headers:
+                        - name: :method
+                          stringMatch:
+                            exact: GET
+                        path: /stats/prometheus
                       route:
                         cluster: prometheus_stats
-                statPrefix: eg-ready-http
-          name: envoy-gateway-proxy-ready-0.0.0.0-19001
+                statPrefix: eg-stats-http
+          name: envoy-gateway-proxy-stats-0.0.0.0-19001

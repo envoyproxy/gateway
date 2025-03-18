@@ -22,6 +22,7 @@ import (
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/yaml"
 
@@ -1320,14 +1321,14 @@ func TestPDB(t *testing.T) {
 			caseName: "default",
 			infra:    newTestInfra(),
 			pdb: &egv1a1.KubernetesPodDisruptionBudgetSpec{
-				MinAvailable: ptr.To(int32(1)),
+				MinAvailable: ptr.To(intstr.IntOrString{Type: intstr.Int, IntVal: 1}),
 			},
 		},
 		{
 			caseName: "patch-json-pdb",
 			infra:    newTestInfra(),
 			pdb: &egv1a1.KubernetesPodDisruptionBudgetSpec{
-				MinAvailable: ptr.To(int32(1)),
+				MinAvailable: ptr.To(intstr.IntOrString{Type: intstr.Int, IntVal: 1}),
 				Patch: &egv1a1.KubernetesPatchSpec{
 					Type: ptr.To(egv1a1.JSONMerge),
 					Value: apiextensionsv1.JSON{
@@ -1340,11 +1341,44 @@ func TestPDB(t *testing.T) {
 			caseName: "patch-strategic-pdb",
 			infra:    newTestInfra(),
 			pdb: &egv1a1.KubernetesPodDisruptionBudgetSpec{
-				MinAvailable: ptr.To(int32(1)),
+				MinAvailable: ptr.To(intstr.IntOrString{Type: intstr.Int, IntVal: 1}),
 				Patch: &egv1a1.KubernetesPatchSpec{
 					Type: ptr.To(egv1a1.StrategicMerge),
 					Value: apiextensionsv1.JSON{
 						Raw: []byte("{\"metadata\":{\"name\":\"foo\"}, \"spec\": {\"selector\": {\"matchLabels\": {\"app\": \"bar\"}}}}"),
+					},
+				},
+			},
+		},
+		{
+			caseName: "max-unavailable",
+			infra:    newTestInfra(),
+			pdb: &egv1a1.KubernetesPodDisruptionBudgetSpec{
+				MaxUnavailable: ptr.To(intstr.IntOrString{Type: intstr.Int, IntVal: 1}),
+			},
+		},
+		{
+			caseName: "max-unavailable-percent",
+			infra:    newTestInfra(),
+			pdb: &egv1a1.KubernetesPodDisruptionBudgetSpec{
+				MaxUnavailable: ptr.To(intstr.IntOrString{Type: intstr.String, StrVal: "20%"}),
+			},
+		},
+		{
+			caseName: "min-available-percent",
+			infra:    newTestInfra(),
+			pdb: &egv1a1.KubernetesPodDisruptionBudgetSpec{
+				MinAvailable: ptr.To(intstr.IntOrString{Type: intstr.String, StrVal: "20%"}),
+			},
+		},
+		{
+			caseName: "patch-pdb-no-minmax",
+			infra:    newTestInfra(),
+			pdb: &egv1a1.KubernetesPodDisruptionBudgetSpec{
+				Patch: &egv1a1.KubernetesPatchSpec{
+					Type: ptr.To(egv1a1.StrategicMerge),
+					Value: apiextensionsv1.JSON{
+						Raw: []byte("{\"metadata\":{\"name\":\"foo\"}, \"spec\": {\"minAvailable\": 1, \"selector\": {\"matchLabels\": {\"app\": \"bar\"}}}}"),
 					},
 				},
 			},

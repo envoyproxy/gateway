@@ -36,7 +36,7 @@ type Provider struct {
 }
 
 // New creates a new Provider from the provided EnvoyGateway.
-func New(restCfg *rest.Config, svrCfg *ec.Server, resources *message.ProviderResources) (*Provider, error) {
+func New(ctx context.Context, restCfg *rest.Config, svrCfg *ec.Server, resources *message.ProviderResources) (*Provider, error) {
 	// TODO: Decide which mgr opts should be exposed through envoygateway.provider.kubernetes API.
 
 	mgrOpts := manager.Options{
@@ -95,7 +95,7 @@ func New(restCfg *rest.Config, svrCfg *ec.Server, resources *message.ProviderRes
 	}
 
 	// Create and register the controllers with the manager.
-	if err := newGatewayAPIController(mgr, svrCfg, updateHandler.Writer(), resources); err != nil {
+	if err := newGatewayAPIController(ctx, mgr, svrCfg, updateHandler.Writer(), resources); err != nil {
 		return nil, fmt.Errorf("failted to create gatewayapi controller: %w", err)
 	}
 
@@ -112,7 +112,9 @@ func New(restCfg *rest.Config, svrCfg *ec.Server, resources *message.ProviderRes
 	// Emit elected & continue with the tasks that require leadership.
 	go func() {
 		<-mgr.Elected()
-		svrCfg.Elected.Done()
+		// Close the elected channel to signal that this EG instance has been elected as leader.
+		// This allows the tasks that require leadership to proceed.
+		close(svrCfg.Elected)
 	}()
 
 	return &Provider{

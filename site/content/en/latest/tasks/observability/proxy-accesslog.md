@@ -145,10 +145,6 @@ curl -s "http://$LOKI_IP:3100/loki/api/v1/query_range" --data-urlencode "query={
 Envoy Gateway can send logs to a backend implemented [gRPC access log service proto](https://www.envoyproxy.io/docs/envoy/latest/api-v3/service/accesslog/v3/als.proto).
 There's an example service [here](https://raw.githubusercontent.com/envoyproxy/gateway/main/examples/kubernetes/envoy-als.yaml), which simply count the log and export to prometheus endpoint.
 
-```shell
-kubectl apply -f https://raw.githubusercontent.com/envoyproxy/gateway/main/examples/kubernetes/envoy-als.yaml -n monitoring
-```
-
 The following configuration sends logs to the gRPC access log service:
 
 ```shell
@@ -178,9 +174,9 @@ spec:
             - type: ALS
               als:
                 backendRefs:
-                  - name: envoy-als
+                  - name: otel-collector
                     namespace: monitoring
-                    port: 8080
+                    port: 9000
                 type: HTTP
 EOF
 ```
@@ -188,7 +184,7 @@ EOF
 Verify logs from envoy-als:
 
 ```shell
-curl -s "http://$(kubectl get svc envoy-als -n monitoring -o jsonpath='{.status.loadBalancer.ingress[0].ip}'):19001/metrics" | grep log_count
+curl -s "http://$LOKI_IP:3100/loki/api/v1/query_range" --data-urlencode "query={exporter=\"OTLP\"}" | jq '.data.result[0].values'
 ```
 
 ## CEL Expressions

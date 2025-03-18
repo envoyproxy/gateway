@@ -74,7 +74,15 @@ deployment:
 service:
   annotations: {}
 
+hpa:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 1
+  metrics: []
+  behavior: {}
+
 config:
+# -- EnvoyGateway configuration. Visit https://gateway.envoyproxy.io/docs/api/extension_types/#envoygateway to view all options.
   envoyGateway:
     gateway:
       controllerName: gateway.envoyproxy.io/gatewayclass-controller

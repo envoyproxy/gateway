@@ -17,12 +17,17 @@ http:
       - endpoints:
         - host: "1.2.3.4"
           port: 50000
+        name: "route-dest/backend/0"
     mirrors:
-    - name: "mirror-route-dest"
-      settings:
-      - endpoints:
-        - host: "2.3.4.5"
-    - name: "mirror-route-dest1"
-      settings:
-      - endpoints:
-        - host: "3.4.5.6"
+    - destination:
+        name: "mirror-route-dest"
+        settings:
+        - endpoints:
+          - host: "2.3.4.5"
+          name: "mirror-route-dest/backend/0"
+    - destination:
+        name: "mirror-route-dest1"
+        settings:
+        - endpoints:
+          - host: "3.4.5.6"
+          name: "mirror-route-dest1/backend/0"

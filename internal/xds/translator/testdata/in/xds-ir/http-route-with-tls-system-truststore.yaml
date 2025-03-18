@@ -21,9 +21,12 @@ http:
                   port: 8080
               protocol: HTTP
               tls:
+                CACertificate:
+                  name: policy-btls/policies-ca
                 sni: example.com
                 useSystemTrustStore: true
               weight: 1
+              name: httproute/envoy-gateway/httproute-btls/rule/0/backend/0
         hostname: '*'
         name: httproute/envoy-gateway/httproute-btls/rule/0/match/0/*
         pathMatch:

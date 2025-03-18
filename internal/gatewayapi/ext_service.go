@@ -43,7 +43,8 @@ func (t *Translator) translateExtServiceBackendRefs(
 	}
 
 	pnn := utils.NamespacedName(policy)
-	for _, backendRef := range backendRefs {
+	destName := irIndexedExtServiceDestinationName(pnn, policy.GetObjectKind().GroupVersionKind().Kind, configType, index)
+	for i, backendRef := range backendRefs {
 		if err = t.validateExtServiceBackendReference(
 			&backendRef.BackendObjectReference,
 			policy.GetNamespace(),
@@ -52,8 +53,10 @@ func (t *Translator) translateExtServiceBackendRefs(
 			return nil, err
 		}
 
+		settingName := irDestinationSettingName(destName, i)
 		var extServiceDest *ir.DestinationSetting
 		if extServiceDest, err = t.processExtServiceDestination(
+			settingName,
 			&backendRef,
 			pnn,
 			policy.GetObjectKind().GroupVersionKind().Kind,
@@ -67,13 +70,14 @@ func (t *Translator) translateExtServiceBackendRefs(
 	}
 
 	rs = &ir.RouteDestination{
-		Name:     irIndexedExtServiceDestinationName(pnn, policy.GetObjectKind().GroupVersionKind().Kind, configType, index),
+		Name:     destName,
 		Settings: ds,
 	}
 	return rs, nil
 }
 
 func (t *Translator) processExtServiceDestination(
+	settingName string,
 	backendRef *egv1a1.BackendRef,
 	policyNamespacedName types.NamespacedName,
 	policyKind string,
@@ -90,12 +94,12 @@ func (t *Translator) processExtServiceDestination(
 
 	switch KindDerefOr(backendRef.Kind, resource.KindService) {
 	case resource.KindService:
-		ds = t.processServiceDestinationSetting(backendRef.BackendObjectReference, backendNamespace, protocol, resources, envoyProxy)
+		ds = t.processServiceDestinationSetting(settingName, backendRef.BackendObjectReference, backendNamespace, protocol, resources, envoyProxy)
 	case egv1a1.KindBackend:
 		if !t.BackendEnabled {
 			return nil, fmt.Errorf("resource %s of type Backend cannot be used since Backend is disabled in Envoy Gateway configuration", string(backendRef.Name))
 		}
-		ds = t.processBackendDestinationSetting(backendRef.BackendObjectReference, backendNamespace, protocol, resources)
+		ds = t.processBackendDestinationSetting(settingName, backendRef.BackendObjectReference, backendNamespace, protocol, resources)
 	}
 
 	if ds == nil {

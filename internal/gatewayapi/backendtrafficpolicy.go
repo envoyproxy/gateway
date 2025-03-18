@@ -292,21 +292,22 @@ func (t *Translator) translateBackendTrafficPolicyForRoute(
 	resources *resource.Resources,
 ) error {
 	var (
-		rl        *ir.RateLimit
-		lb        *ir.LoadBalancer
-		pp        *ir.ProxyProtocol
-		hc        *ir.HealthCheck
-		cb        *ir.CircuitBreaker
-		fi        *ir.FaultInjection
-		to        *ir.Timeout
-		ka        *ir.TCPKeepalive
-		rt        *ir.Retry
-		bc        *ir.BackendConnection
-		ds        *ir.DNS
-		h2        *ir.HTTP2Settings
-		ro        *ir.ResponseOverride
-		cp        []*ir.Compression
-		err, errs error
+		rl          *ir.RateLimit
+		lb          *ir.LoadBalancer
+		pp          *ir.ProxyProtocol
+		hc          *ir.HealthCheck
+		cb          *ir.CircuitBreaker
+		fi          *ir.FaultInjection
+		to          *ir.Timeout
+		ka          *ir.TCPKeepalive
+		rt          *ir.Retry
+		bc          *ir.BackendConnection
+		ds          *ir.DNS
+		h2          *ir.HTTP2Settings
+		ro          *ir.ResponseOverride
+		cp          []*ir.Compression
+		httpUpgrade []string
+		err, errs   error
 	)
 
 	// Build IR
@@ -333,9 +334,12 @@ func (t *Translator) translateBackendTrafficPolicyForRoute(
 		err = perr.WithMessage(err, "TCPKeepalive")
 		errs = errors.Join(errs, err)
 	}
-	if policy.Spec.Retry != nil {
-		rt = buildRetry(policy.Spec.Retry)
+
+	if rt, err = buildRetry(policy.Spec.Retry); err != nil {
+		err = perr.WithMessage(err, "Retry")
+		errs = errors.Join(errs, err)
 	}
+
 	if to, err = buildClusterSettingsTimeout(policy.Spec.ClusterSettings); err != nil {
 		err = perr.WithMessage(err, "Timeout")
 		errs = errors.Join(errs, err)
@@ -356,6 +360,7 @@ func (t *Translator) translateBackendTrafficPolicyForRoute(
 		errs = errors.Join(errs, err)
 	}
 	cp = buildCompression(policy.Spec.Compression)
+	httpUpgrade = buildHTTPProtocolUpgradeConfig(policy.Spec.HTTPUpgrade)
 
 	ds = translateDNS(policy.Spec.ClusterSettings)
 
@@ -420,6 +425,7 @@ func (t *Translator) translateBackendTrafficPolicyForRoute(
 						Timeout:           to,
 						ResponseOverride:  ro,
 						Compression:       cp,
+						HTTPUpgrade:       httpUpgrade,
 					}
 
 					// Update the Host field in HealthCheck, now that we have access to the Route Hostname.
@@ -437,27 +443,25 @@ func (t *Translator) translateBackendTrafficPolicyForRoute(
 }
 
 func (t *Translator) translateBackendTrafficPolicyForGateway(
-	policy *egv1a1.BackendTrafficPolicy,
-	target gwapiv1a2.LocalPolicyTargetReferenceWithSectionName,
-	gateway *GatewayContext,
-	xdsIR resource.XdsIRMap,
-	resources *resource.Resources,
+	policy *egv1a1.BackendTrafficPolicy, target gwapiv1a2.LocalPolicyTargetReferenceWithSectionName,
+	gateway *GatewayContext, xdsIR resource.XdsIRMap, resources *resource.Resources,
 ) error {
 	var (
-		rl        *ir.RateLimit
-		lb        *ir.LoadBalancer
-		pp        *ir.ProxyProtocol
-		hc        *ir.HealthCheck
-		cb        *ir.CircuitBreaker
-		fi        *ir.FaultInjection
-		ct        *ir.Timeout
-		ka        *ir.TCPKeepalive
-		rt        *ir.Retry
-		ds        *ir.DNS
-		h2        *ir.HTTP2Settings
-		ro        *ir.ResponseOverride
-		cp        []*ir.Compression
-		err, errs error
+		rl          *ir.RateLimit
+		lb          *ir.LoadBalancer
+		pp          *ir.ProxyProtocol
+		hc          *ir.HealthCheck
+		cb          *ir.CircuitBreaker
+		fi          *ir.FaultInjection
+		ct          *ir.Timeout
+		ka          *ir.TCPKeepalive
+		rt          *ir.Retry
+		ds          *ir.DNS
+		h2          *ir.HTTP2Settings
+		ro          *ir.ResponseOverride
+		cp          []*ir.Compression
+		httpUpgrade []string
+		err, errs   error
 	)
 
 	// Build IR
@@ -484,9 +488,12 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(
 		err = perr.WithMessage(err, "TCPKeepalive")
 		errs = errors.Join(errs, err)
 	}
-	if policy.Spec.Retry != nil {
-		rt = buildRetry(policy.Spec.Retry)
+
+	if rt, err = buildRetry(policy.Spec.Retry); err != nil {
+		err = perr.WithMessage(err, "Retry")
+		errs = errors.Join(errs, err)
 	}
+
 	if ct, err = buildClusterSettingsTimeout(policy.Spec.ClusterSettings); err != nil {
 		err = perr.WithMessage(err, "Timeout")
 		errs = errors.Join(errs, err)
@@ -500,6 +507,7 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(
 		errs = errors.Join(errs, err)
 	}
 	cp = buildCompression(policy.Spec.Compression)
+	httpUpgrade = buildHTTPProtocolUpgradeConfig(policy.Spec.HTTPUpgrade)
 
 	ds = translateDNS(policy.Spec.ClusterSettings)
 
@@ -585,6 +593,7 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(
 				DNS:              ds,
 				ResponseOverride: ro,
 				Compression:      cp,
+				HTTPUpgrade:      httpUpgrade,
 			}
 
 			// Update the Host field in HealthCheck, now that we have access to the Route Hostname.
@@ -669,16 +678,6 @@ func (t *Translator) buildLocalRateLimit(policy *egv1a1.BackendTrafficPolicy) (*
 		irRule, err = buildRateLimitRule(rule)
 		if err != nil {
 			return nil, err
-		}
-
-		if irRule.CIDRMatch != nil && irRule.CIDRMatch.Distinct {
-			return nil, fmt.Errorf("local rateLimit does not support distinct CIDRMatch")
-		}
-
-		for _, match := range irRule.HeaderMatches {
-			if match.Distinct {
-				return nil, fmt.Errorf("local rateLimit does not support distinct HeaderMatch")
-			}
 		}
 		irRules = append(irRules, irRule)
 	}
@@ -905,6 +904,10 @@ func buildResponseOverride(policy *egv1a1.BackendTrafficPolicy, resources *resou
 			ContentType: ro.Response.ContentType,
 		}
 
+		if ro.Response.StatusCode != nil {
+			response.StatusCode = ptr.To(uint32(*ro.Response.StatusCode))
+		}
+
 		var err error
 		response.Body, err = getCustomResponseBody(ro.Response.Body, resources, policy.Namespace)
 		if err != nil {
@@ -923,8 +926,8 @@ func buildResponseOverride(policy *egv1a1.BackendTrafficPolicy, resources *resou
 	}, nil
 }
 
-func getCustomResponseBody(body egv1a1.CustomResponseBody, resources *resource.Resources, policyNs string) (*string, error) {
-	if body.Type != nil && *body.Type == egv1a1.ResponseValueTypeValueRef {
+func getCustomResponseBody(body *egv1a1.CustomResponseBody, resources *resource.Resources, policyNs string) (*string, error) {
+	if body != nil && body.Type != nil && *body.Type == egv1a1.ResponseValueTypeValueRef {
 		cm := resources.GetConfigMap(policyNs, string(body.ValueRef.Name))
 		if cm != nil {
 			b, dataOk := cm.Data["response.body"]
@@ -944,7 +947,7 @@ func getCustomResponseBody(body egv1a1.CustomResponseBody, resources *resource.R
 		} else {
 			return nil, fmt.Errorf("can't find the referenced configmap %s", body.ValueRef.Name)
 		}
-	} else if body.Inline != nil {
+	} else if body != nil && body.Inline != nil {
 		return body.Inline, nil
 	}
 
@@ -970,4 +973,17 @@ func buildCompression(compression []*egv1a1.Compression) []*ir.Compression {
 	}
 
 	return irCompression
+}
+
+func buildHTTPProtocolUpgradeConfig(cfgs []*egv1a1.ProtocolUpgradeConfig) []string {
+	if len(cfgs) == 0 {
+		return nil
+	}
+
+	result := make([]string, 0, len(cfgs))
+	for _, cfg := range cfgs {
+		result = append(result, cfg.Type)
+	}
+
+	return result
 }

@@ -3,7 +3,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.16.1
+    controller-gen.kubebuilder.io/version: v0.17.1
   name: envoyproxies.gateway.envoyproxy.io
 spec:
   group: gateway.envoyproxy.io
@@ -247,7 +247,7 @@ spec:
                   type:
                     default: Replace
                     description: |-
-                      Type is the type of the bootstrap configuration, it should be either Replace,  Merge, or JSONPatch.
+                      Type is the type of the bootstrap configuration, it should be either **Replace**,  **Merge**, or **JSONPatch**.
                       If unspecified, it defaults to Replace.
                     enum:
                     - Merge
@@ -300,6 +300,8 @@ spec:
 
                   - envoy.filters.http.stateful_session
 
+                  - envoy.filters.http.lua
+
                   - envoy.filters.http.ext_proc
 
                   - envoy.filters.http.wasm
@@ -328,16 +330,19 @@ spec:
                       - envoy.filters.http.fault
                       - envoy.filters.http.cors
                       - envoy.filters.http.ext_authz
+                      - envoy.filters.http.api_key_auth
                       - envoy.filters.http.basic_auth
                       - envoy.filters.http.oauth2
                       - envoy.filters.http.jwt_authn
                       - envoy.filters.http.stateful_session
+                      - envoy.filters.http.lua
                       - envoy.filters.http.ext_proc
                       - envoy.filters.http.wasm
                       - envoy.filters.http.rbac
                       - envoy.filters.http.local_ratelimit
                       - envoy.filters.http.ratelimit
                       - envoy.filters.http.custom_response
+                      - envoy.filters.http.compressor
                       type: string
                     before:
                       description: |-
@@ -348,16 +353,19 @@ spec:
                       - envoy.filters.http.fault
                       - envoy.filters.http.cors
                       - envoy.filters.http.ext_authz
+                      - envoy.filters.http.api_key_auth
                       - envoy.filters.http.basic_auth
                       - envoy.filters.http.oauth2
                       - envoy.filters.http.jwt_authn
                       - envoy.filters.http.stateful_session
+                      - envoy.filters.http.lua
                       - envoy.filters.http.ext_proc
                       - envoy.filters.http.wasm
                       - envoy.filters.http.rbac
                       - envoy.filters.http.local_ratelimit
                       - envoy.filters.http.ratelimit
                       - envoy.filters.http.custom_response
+                      - envoy.filters.http.compressor
                       type: string
                     name:
                       description: Name of the filter.
@@ -366,16 +374,19 @@ spec:
                       - envoy.filters.http.fault
                       - envoy.filters.http.cors
                       - envoy.filters.http.ext_authz
+                      - envoy.filters.http.api_key_auth
                       - envoy.filters.http.basic_auth
                       - envoy.filters.http.oauth2
                       - envoy.filters.http.jwt_authn
                       - envoy.filters.http.stateful_session
+                      - envoy.filters.http.lua
                       - envoy.filters.http.ext_proc
                       - envoy.filters.http.wasm
                       - envoy.filters.http.rbac
                       - envoy.filters.http.local_ratelimit
                       - envoy.filters.http.ratelimit
                       - envoy.filters.http.custom_response
+                      - envoy.filters.http.compressor
                       type: string
                   required:
                   - name
@@ -10220,13 +10231,24 @@ spec:
                         description: EnvoyPDB allows to control the pod disruption
                           budget of an Envoy Proxy.
                         properties:
-                          minAvailable:
+                          maxUnavailable:
+                            anyOf:
+                            - type: integer
+                            - type: string
                             description: |-
-                              MinAvailable specifies the minimum number of pods that must be available at all times during voluntary disruptions,
+                              MaxUnavailable specifies the maximum amount of pods (can be expressed as integers or as a percentage) that can be unavailable at all times during voluntary disruptions,
                               such as node drains or updates. This setting ensures that your envoy proxy maintains a certain level of availability
-                              and resilience during maintenance operations.
-                            format: int32
-                            type: integer
+                              and resilience during maintenance operations. Cannot be combined with minAvailable.
+                            x-kubernetes-int-or-string: true
+                          minAvailable:
+                            anyOf:
+                            - type: integer
+                            - type: string
+                            description: |-
+                              MinAvailable specifies the minimum amount of pods (can be expressed as integers or as a percentage) that must be available at all times during voluntary disruptions,
+                              such as node drains or updates. This setting ensures that your envoy proxy maintains a certain level of availability
+                              and resilience during maintenance operations. Cannot be combined with maxUnavailable.
+                            x-kubernetes-int-or-string: true
                           patch:
                             description: Patch defines how to perform the patch operation
                               to the PodDisruptionBudget
@@ -10245,6 +10267,11 @@ spec:
                             - value
                             type: object
                         type: object
+                        x-kubernetes-validations:
+                        - message: only one of minAvailable or maxUnavailable can
+                            be specified
+                          rule: (has(self.minAvailable) && !has(self.maxUnavailable))
+                            || (!has(self.minAvailable) && has(self.maxUnavailable))
                       envoyService:
                         description: |-
                           EnvoyService defines the desired state of the Envoy service resource.
@@ -10697,6 +10724,23 @@ spec:
                                                 maximum: 4294967295
                                                 minimum: 0
                                                 type: integer
+                                              perEndpoint:
+                                                description: PerEndpoint defines Circuit
+                                                  Breakers that will apply per-endpoint
+                                                  for an upstream cluster
+                                                properties:
+                                                  maxConnections:
+                                                    default: 1024
+                                                    description: MaxConnections configures
+                                                      the maximum number of connections
+                                                      that Envoy will establish per-endpoint
+                                                      to the referenced backend defined
+                                                      within a xRoute rule.
+                                                    format: int64
+                                                    maximum: 4294967295
+                                                    minimum: 0
+                                                    type: integer
+                                                type: object
                                             type: object
                                           connection:
                                             description: Connection includes backend
@@ -10739,6 +10783,17 @@ spec:
                                                 description: |-
                                                   DNSRefreshRate specifies the rate at which DNS records should be refreshed.
                                                   Defaults to 30 seconds.
+                                                type: string
+                                              lookupFamily:
+                                                description: |-
+                                                  LookupFamily determines how Envoy would resolve DNS for Routes where the backend is specified as a fully qualified domain name (FQDN).
+                                                  If set, this configuration overrides other defaults.
+                                                enum:
+                                                - IPv4
+                                                - IPv6
+                                                - IPv4Preferred
+                                                - IPv6Preferred
+                                                - IPv4AndIPv6
                                                 type: string
                                               respectDnsTtl:
                                                 description: |-
@@ -10986,6 +11041,16 @@ spec:
                                                     is GRPC.
                                                   rule: 'has(self.grpc) ? self.type
                                                     == ''GRPC'' : true'
+                                              panicThreshold:
+                                                description: |-
+                                                  When number of unhealthy endpoints for a backend reaches this threshold
+                                                  Envoy will disregard health status and balance across all endpoints.
+                                                  It's designed to prevent a situation in which host failures cascade throughout the cluster
+                                                  as load increases. If not set, the default value is 50%. To disable panic mode, set value to `0`.
+                                                format: int32
+                                                maximum: 100
+                                                minimum: 0
+                                                type: integer
                                               passive:
                                                 description: Passive passive check
                                                   configuration
@@ -11674,6 +11739,23 @@ spec:
                                                 maximum: 4294967295
                                                 minimum: 0
                                                 type: integer
+                                              perEndpoint:
+                                                description: PerEndpoint defines Circuit
+                                                  Breakers that will apply per-endpoint
+                                                  for an upstream cluster
+                                                properties:
+                                                  maxConnections:
+                                                    default: 1024
+                                                    description: MaxConnections configures
+                                                      the maximum number of connections
+                                                      that Envoy will establish per-endpoint
+                                                      to the referenced backend defined
+                                                      within a xRoute rule.
+                                                    format: int64
+                                                    maximum: 4294967295
+                                                    minimum: 0
+                                                    type: integer
+                                                type: object
                                             type: object
                                           connection:
                                             description: Connection includes backend
@@ -11716,6 +11798,17 @@ spec:
                                                 description: |-
                                                   DNSRefreshRate specifies the rate at which DNS records should be refreshed.
                                                   Defaults to 30 seconds.
+                                                type: string
+                                              lookupFamily:
+                                                description: |-
+                                                  LookupFamily determines how Envoy would resolve DNS for Routes where the backend is specified as a fully qualified domain name (FQDN).
+                                                  If set, this configuration overrides other defaults.
+                                                enum:
+                                                - IPv4
+                                                - IPv6
+                                                - IPv4Preferred
+                                                - IPv6Preferred
+                                                - IPv4AndIPv6
                                                 type: string
                                               respectDnsTtl:
                                                 description: |-
@@ -11963,6 +12056,16 @@ spec:
                                                     is GRPC.
                                                   rule: 'has(self.grpc) ? self.type
                                                     == ''GRPC'' : true'
+                                              panicThreshold:
+                                                description: |-
+                                                  When number of unhealthy endpoints for a backend reaches this threshold
+                                                  Envoy will disregard health status and balance across all endpoints.
+                                                  It's designed to prevent a situation in which host failures cascade throughout the cluster
+                                                  as load increases. If not set, the default value is 50%. To disable panic mode, set value to `0`.
+                                                format: int32
+                                                maximum: 100
+                                                minimum: 0
+                                                type: integer
                                               passive:
                                                 description: Passive passive check
                                                   configuration
@@ -12745,6 +12848,23 @@ spec:
                                           maximum: 4294967295
                                           minimum: 0
                                           type: integer
+                                        perEndpoint:
+                                          description: PerEndpoint defines Circuit
+                                            Breakers that will apply per-endpoint
+                                            for an upstream cluster
+                                          properties:
+                                            maxConnections:
+                                              default: 1024
+                                              description: MaxConnections configures
+                                                the maximum number of connections
+                                                that Envoy will establish per-endpoint
+                                                to the referenced backend defined
+                                                within a xRoute rule.
+                                              format: int64
+                                              maximum: 4294967295
+                                              minimum: 0
+                                              type: integer
+                                          type: object
                                       type: object
                                     connection:
                                       description: Connection includes backend connection
@@ -12786,6 +12906,17 @@ spec:
                                           description: |-
                                             DNSRefreshRate specifies the rate at which DNS records should be refreshed.
                                             Defaults to 30 seconds.
+                                          type: string
+                                        lookupFamily:
+                                          description: |-
+                                            LookupFamily determines how Envoy would resolve DNS for Routes where the backend is specified as a fully qualified domain name (FQDN).
+                                            If set, this configuration overrides other defaults.
+                                          enum:
+                                          - IPv4
+                                          - IPv6
+                                          - IPv4Preferred
+                                          - IPv6Preferred
+                                          - IPv4AndIPv6
                                           type: string
                                         respectDnsTtl:
                                           description: |-
@@ -13019,6 +13150,16 @@ spec:
                                               if the Health Checker type is GRPC.
                                             rule: 'has(self.grpc) ? self.type == ''GRPC''
                                               : true'
+                                        panicThreshold:
+                                          description: |-
+                                            When number of unhealthy endpoints for a backend reaches this threshold
+                                            Envoy will disregard health status and balance across all endpoints.
+                                            It's designed to prevent a situation in which host failures cascade throughout the cluster
+                                            as load increases. If not set, the default value is 50%. To disable panic mode, set value to `0`.
+                                          format: int32
+                                          maximum: 100
+                                          minimum: 0
+                                          type: integer
                                         passive:
                                           description: Passive passive check configuration
                                           properties:
@@ -13730,6 +13871,22 @@ spec:
                                     maximum: 4294967295
                                     minimum: 0
                                     type: integer
+                                  perEndpoint:
+                                    description: PerEndpoint defines Circuit Breakers
+                                      that will apply per-endpoint for an upstream
+                                      cluster
+                                    properties:
+                                      maxConnections:
+                                        default: 1024
+                                        description: MaxConnections configures the
+                                          maximum number of connections that Envoy
+                                          will establish per-endpoint to the referenced
+                                          backend defined within a xRoute rule.
+                                        format: int64
+                                        maximum: 4294967295
+                                        minimum: 0
+                                        type: integer
+                                    type: object
                                 type: object
                               connection:
                                 description: Connection includes backend connection
@@ -13771,6 +13928,17 @@ spec:
                                     description: |-
                                       DNSRefreshRate specifies the rate at which DNS records should be refreshed.
                                       Defaults to 30 seconds.
+                                    type: string
+                                  lookupFamily:
+                                    description: |-
+                                      LookupFamily determines how Envoy would resolve DNS for Routes where the backend is specified as a fully qualified domain name (FQDN).
+                                      If set, this configuration overrides other defaults.
+                                    enum:
+                                    - IPv4
+                                    - IPv6
+                                    - IPv4Preferred
+                                    - IPv6Preferred
+                                    - IPv4AndIPv6
                                     type: string
                                   respectDnsTtl:
                                     description: |-
@@ -14002,6 +14170,16 @@ spec:
                                         Health Checker type is GRPC.
                                       rule: 'has(self.grpc) ? self.type == ''GRPC''
                                         : true'
+                                  panicThreshold:
+                                    description: |-
+                                      When number of unhealthy endpoints for a backend reaches this threshold
+                                      Envoy will disregard health status and balance across all endpoints.
+                                      It's designed to prevent a situation in which host failures cascade throughout the cluster
+                                      as load increases. If not set, the default value is 50%. To disable panic mode, set value to `0`.
+                                    format: int32
+                                    maximum: 100
+                                    minimum: 0
+                                    type: integer
                                   passive:
                                     description: Passive passive check configuration
                                     properties:
@@ -14431,12 +14609,38 @@ spec:
                         - message: BackendRefs only supports Core group.
                           rule: 'has(self.backendRefs) ? (self.backendRefs.all(f,
                             f.group == "")) : true'
+                      samplingFraction:
+                        description: |-
+                          SamplingFraction represents the fraction of requests that should be
+                          selected for tracing if no prior sampling decision has been made.
+
+                          Only one of SamplingRate or SamplingFraction may be specified.
+                          If neither field is specified, all requests will be sampled.
+                        properties:
+                          denominator:
+                            default: 100
+                            format: int32
+                            minimum: 1
+                            type: integer
+                          numerator:
+                            format: int32
+                            minimum: 0
+                            type: integer
+                        required:
+                        - numerator
+                        type: object
+                        x-kubernetes-validations:
+                        - message: numerator must be less than or equal to denominator
+                          rule: self.numerator <= self.denominator
                       samplingRate:
                         default: 100
                         description: |-
                           SamplingRate controls the rate at which traffic will be
                           selected for tracing if no prior sampling decision has been made.
                           Defaults to 100, valid values [0-100]. 100 indicates 100% sampling.
+
+                          Only one of SamplingRate or SamplingFraction may be specified.
+                          If neither field is specified, all requests will be sampled.
                         format: int32
                         maximum: 100
                         minimum: 0
@@ -14444,6 +14648,10 @@ spec:
                     required:
                     - provider
                     type: object
+                    x-kubernetes-validations:
+                    - message: only one of SamplingRate or SamplingFraction can be
+                        specified
+                      rule: '!(has(self.samplingRate) && has(self.samplingFraction))'
                 type: object
             type: object
           status:

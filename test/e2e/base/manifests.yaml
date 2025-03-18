@@ -545,29 +545,6 @@ metadata:
   name: backend-tls-certificate
   namespace: gateway-conformance-infra
 type: kubernetes.io/tls
-# This is a trick to pass EnvoyProxy BackendRef check.
-# In the future, plan to make OTel-collector support envoy ALS receiver,
-# then we can remove this.
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: envoy-als
-  namespace: monitoring
-spec:
-  selector:
-    app: envoy-als
-  type: LoadBalancer
-  ports:
-    - name: grpc-als
-      protocol: TCP
-      appProtocol: grpc
-      port: 8080
-      targetPort: 8080
-    - name: http-monitoring
-      protocol: TCP
-      port: 19001
-      targetPort: 19001
 ---
 apiVersion: v1
 kind: Service

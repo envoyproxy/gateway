@@ -2,46 +2,45 @@ date: Pending
 
 # Changes that are expected to cause an incompatibility with previous versions, such as deletions or modifications to existing APIs.
 breaking changes: |
-  The Container `ports` field of the gateway instance has been removed, which will cause the gateway Pod to be rebuilt when upgrading the version.
-  ClientTrafficPolicy previously treated an empty TLS ALPNProtocols list as being undefined and applied Envoy Gateway defaults.
-  An empty TLS ALPNProtocols list is now treated as user-defined disablement of the TLS ALPN extension.
-  Outlier detection (passive health check) is now disabled by default.
-  refer to https://gateway.envoyproxy.io/docs/api/extension_types/#backendtrafficpolicy for working with passive health checks.
-  Envoy Gateway treats errors in calls to an extension service as fail-closed by default. Any error returned from the extension server will replace the affected resource with an "Internal Server Error" immediate response. The previous behavior can be enabled by setting the `failOpen` field to `true` in the extension service configuration.
-  Envoy Gateway now return a 500 response when a ClientTrafficPolicy translation fails for HTTP/GRPC routes, and forwards
-  client traffic to an empty cluster when a ClientTrafficPolicy translation fails for TCP routes.
+  Use a dedicated listener port(19003) for envoy proxy readiness
+  Uses the envoy JSON formatter for the default access log instead of text formatter.
 
 # Updates addressing vulnerabilities, security flaws, or compliance requirements.
 security updates: |
-  Add a security update here
+  Fixed CVE-2025-25294
 
 # New features or capabilities added in this release.
 new features: |
-  Added support for trusted CIDRs in the ClientIPDetectionSettings API
-  Added support for sending attributes to external processor in EnvoyExtensionPolicy API
-  Added support for patching EnvoyProxy.spec.provider.kubernetes.envoyHpa and EnvoyProxy.spec.provider.kubernetes.envoyPDB
-  Added support for defining rateLimitHpa in EnvoyGateway API
-  Added support for preserving the user defined HTTPRoute match order in EnvoyProxy API
-  Added support for response compression in the BackendTrafficPolicy API
-  Added support for cost specifier in the rate limit API.
-  Added support for specifying dynamic metadata namespaces that External Processing services can access read from and write to in EnvoyExtensionPolicy API
-  Added support for API Key Authentication in the SecurityPolicy API
-  Added support for GEP-1731 (HTTPRoute Retries)
-  Added support for routing to Backend resources in the GRPCRoute, TCPRoute and UDPRoute APIs
+  Added support for configuring maxUnavailable in KubernetesPodDisruptionBudgetSpec
+  Added support for percentage-based request mirroring
+  Allow matchExpressions in TargetSelector
+  Add defaulter for gateway-api resources loading from file to be able to set default values.
+  Added support for defining Lua EnvoyExtensionPolicies
+  Added RequestID field in ClientTrafficPolicy.HeaderSettings to configure Envoy X-Request-ID behavior.
+  Added support for HorizontalPodAutoscaler to helm chart
+  Added support for distinct header and distinct source CIDR based local rate limiting
+  Added support for forwarding the authenticated username to the backend via a configurable header in BasicAuth
+  Added support for HTTP Methods and Headers based authorization in SecurityPolicy
+  Added support for zone aware routing
+  Added support for BackendTLSPolicy to target ServiceImport
+  Added support for per-host circuit breaker thresholds
 
 bug fixes: |
-  Fixed the ability to overwrite control plane certs with the certgen command by using a new command arg (-o)
+  Fix traffic splitting when filters are attached to the backendRef.
+  Added support for Secret and ConfigMap parsing in Standalone mode.
+  Bypass overload manager for stats and ready listeners
+  Fix translating backendSettings for extAuth
+  Fix an issue that stats compressor was not working.
+  Added support for BackendTLSPolicy and EnvoyExtensionPolicy parsing in Standalone mode.
+  Retrigger reconciliation when backendRef of type ServiceImport is updated or when EndpointSlice(s) for a ServiceImport are updated.
 
 # Enhancements that improve performance.
 performance improvements: |
-  Add a performance improvement here
-
+  Added a cache for the Wasm OCI image permission checks and check the pullSecrets against the OCI image registry in
+  a background goroutine.
 # Deprecated features or APIs.
 deprecations: |
-  Add a deprecation here
+  Deprecated the PreserveXRequestID field.
 
 # Other notable changes not covered by the above sections.
 Other changes: |
-  Modified the base container image to gcr.io/distroless/base-nossl:nonroot
-  [SecurityPolicy] Modify the JWT Provider Issuer validation constraint
-  Add support for Kubernetes 1.32.x in the test matrix, and remove support for Kubernetes 1.28.x.

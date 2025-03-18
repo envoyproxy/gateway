@@ -23,6 +23,7 @@ http:
                   port: 8080
               protocol: HTTP
               weight: 1
+              name: httproute/default/httproute-1/rule/0/backend/0
         hostname: "*"
         isHTTP2: false
         metadata:
@@ -54,3 +55,30 @@ http:
                       "error": "Internal Server Error"
                     }
                   contentType: application/json
+      - destination:
+          name: httproute/default/httproute-2/rule/0
+          settings:
+            - addressType: IP
+              endpoints:
+                - host: 7.7.7.7
+                  port: 8080
+              protocol: HTTP
+              weight: 1
+              name: httproute/default/httproute-2/rule/0/backend/0
+        hostname: "*"
+        isHTTP2: false
+        metadata:
+          kind: HTTPRoute
+          name: httproute-2
+          namespace: default
+        name: httproute/default/httproute-2/rule/0/match/-1/*
+        traffic:
+          responseOverride:
+            name: backendtrafficpolicy/default/policy-for-route
+            rules:
+              - match:
+                  statusCodes:
+                    - value: 403
+                name: backendtrafficpolicy/default/policy-for-route/responseoverride/rule/0
+                response:
+                  statusCode: 404

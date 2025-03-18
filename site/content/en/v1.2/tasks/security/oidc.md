@@ -456,7 +456,6 @@ spec:
   - group: gateway.envoyproxy.io
     kind: Backend
     name: backend-keycloak
-    sectionName: "443"
   validation:
     caCertificateRefs:
     - name: backend-tls-certificate
@@ -525,7 +524,6 @@ spec:
   - group: gateway.envoyproxy.io
     kind: Backend
     name: backend-keycloak
-    sectionName: "443"
   validation:
     caCertificateRefs:
     - name: backend-tls-certificate

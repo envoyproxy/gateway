@@ -108,8 +108,13 @@ udpRoutes:
 xdsIR:
   envoy-gateway/gateway-1:
     accessLog:
-      text:
+      json:
       - path: /dev/stdout
+    readyListener:
+      address: 0.0.0.0
+      ipFamily: IPv4
+      path: /ready
+      port: 19003
     udp:
     - address: 0.0.0.0
       name: envoy-gateway/gateway-1/udp
@@ -122,6 +127,7 @@ xdsIR:
             endpoints:
             - host: 1.1.1.1
               port: 3001
+            name: udproute/default/udproute-1/rule/-1/backend/0
             protocol: UDP
             weight: 1
         name: udproute/default/udproute-1

@@ -10,6 +10,7 @@ import (
 	"crypto/sha256"
 	"crypto/tls"
 	"encoding/base64"
+	"errors"
 	"fmt"
 	"net/http"
 	"strings"
@@ -126,7 +127,7 @@ func (s *HTTPServer) Start(ctx context.Context) {
 		} else {
 			err = s.server.ListenAndServe()
 		}
-		if err != nil {
+		if err != nil && !errors.Is(err, http.ErrServerClosed) {
 			s.logger.Error(err, "Failed to start Wasm HTTP server")
 			return
 		}

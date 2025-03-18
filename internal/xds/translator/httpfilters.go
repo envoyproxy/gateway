@@ -14,7 +14,6 @@ import (
 
 	routev3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
 	hcmv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/http_connection_manager/v3"
-	"github.com/envoyproxy/go-control-plane/pkg/wellknown"
 	"k8s.io/utils/ptr"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
@@ -80,7 +79,7 @@ type OrderedHTTPFilters []*OrderedHTTPFilter
 // For example, the health_check filter should be placed in the first position because external load
 // balancer determines whether envoy should receive traffic based on the health check result which
 // only depending on the current draining state of the envoy, result should not be affected by other
-// filters, or else user traffic discruption may happen.
+// filters, or else user traffic disruption may happen.
 // the fault filter should be placed in the second position because
 // it doesn't rely on the functionality of other filters, and rejecting early can save computation costs
 // for the remaining filters, the cors filter should be put at the third to avoid unnecessary
@@ -98,7 +97,6 @@ func newOrderedHTTPFilter(filter *hcmv3.HttpFilter) *OrderedHTTPFilter {
 	// When the fault filter is configured to be at the first, the computation of
 	// the remaining filters is skipped when rejected early
 	// Important: After adding new filter types, don't forget to modify the validation rule of the EnvoyFilter type in the API
-	// TODO (zhaohuabing): remove duplicate filter type constants and replace them with the type constants in the api package
 	switch {
 	case isFilterType(filter, egv1a1.EnvoyFilterHealthCheck):
 		order = 0
@@ -118,18 +116,24 @@ func newOrderedHTTPFilter(filter *hcmv3.HttpFilter) *OrderedHTTPFilter {
 		order = 7
 	case isFilterType(filter, egv1a1.EnvoyFilterSessionPersistence):
 		order = 8
-	case isFilterType(filter, egv1a1.EnvoyFilterExtProc):
+	case isFilterType(filter, egv1a1.EnvoyFilterLua):
 		order = 9 + mustGetFilterIndex(filter.Name)
-	case isFilterType(filter, egv1a1.EnvoyFilterWasm):
+	case isFilterType(filter, egv1a1.EnvoyFilterExtProc):
 		order = 100 + mustGetFilterIndex(filter.Name)
+	case isFilterType(filter, egv1a1.EnvoyFilterWasm):
+		order = 200 + mustGetFilterIndex(filter.Name)
 	case isFilterType(filter, egv1a1.EnvoyFilterRBAC):
-		order = 201
+		order = 301
 	case isFilterType(filter, egv1a1.EnvoyFilterLocalRateLimit):
-		order = 202
+		order = 302
 	case isFilterType(filter, egv1a1.EnvoyFilterRateLimit):
-		order = 203
-	case isFilterType(filter, wellknown.Router):
-		order = 204
+		order = 303
+	case isFilterType(filter, egv1a1.EnvoyFilterCustomResponse):
+		order = 304
+	case isFilterType(filter, egv1a1.EnvoyFilterCompressor):
+		order = 305
+	case isFilterType(filter, egv1a1.EnvoyFilterRouter):
+		order = 306
 	}
 
 	return &OrderedHTTPFilter{
@@ -267,7 +271,7 @@ func (t *Translator) patchHCMWithFilters(
 	// Add the router filter if it doesn't exist.
 	hasRouter := false
 	for _, filter := range mgr.HttpFilters {
-		if filter.Name == wellknown.Router {
+		if filter.Name == string(egv1a1.EnvoyFilterRouter) {
 			hasRouter = true
 			break
 		}

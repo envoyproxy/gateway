@@ -1,136 +1,107 @@
----
-title: About Envoy Gateway
-linkTitle: About
----
++++
+title = "About Envoy Gateway"
+linktitle = "About"
++++
 
-{{% blocks/cover title="About Envoy Gateway" height="auto" %}}
-
-Envoy Gateway is an open source project for managing Envoy Proxy as a standalone or Kubernetes-based application gateway.
-
-Gateway API resources are used to dynamically provision and configure the managed Envoy Proxies.
-
-Read on to find out more, or visit our [documentation](/latest/) to get started!
+{{% blocks/cover title="Advanced Traffic Management for Everyone" height="auto" color="primary" %}}
+<div class="container">
+<p class="lead">
+Envoy Gateway democratizes the power of <a href="https://www.envoyproxy.io/">Envoy Proxy</a>, bringing you it's battle-tested traffic management via a Kubernetes Gateway API implementation. Envoy is trusted by tech giants worldwide, we're making enterprise capabilities accessible to everyone.
+</p>
+<div class="mt-5">
+<a class="btn btn-lg btn-glass me-3" href="/docs/tasks/quickstart/">
+<i class="fas fa-rocket me-2"></i>Get Started
+</a>
+<a class="btn btn-lg btn-glass" href="https://github.com/envoyproxy/gateway">
+<i class="fab fa-github me-2"></i>GitHub
+</a>
+</div>
+</div>
 {{% /blocks/cover %}}
 
-{{% blocks/section color="black" %}}
+{{% blocks/section color="white" %}}
+<div class="row justify-content-center">
+<div class="col-md-10">
+<h2 class="text-center mb-5">Our Vision</h2>
+<p class="text-center mb-5 lead">
+Envoy Gateway was created with a clear mission: to make Envoy Proxy's powerful features accessible to all users while providing a robust implementation of the Kubernetes Gateway API. We believe that managing application
+traffic should be straightforward, allowing teams to focus on building great applications rather than wrestling with complex proxy configurations.
+</p
 
-## Objectives
-
----
-
-The high-level goal of the Envoy Gateway project is to attract more users to Envoy by lowering barriers to adoption through expressive, extensible, role-oriented APIs that support a multitude of ingress and L7/L4 traffic routing use cases; and provide a common foundation for vendors to build value-added products without having to re-engineer fundamental interactions.
-
+</div>
 {{% /blocks/section %}}
 
-{{% blocks/section color="dark" %}}
+{{% blocks/section color="light" %}}
+<div class="col-12">
+<h2 class="text-center mb-5">Why Choose Envoy Gateway?</h2>
+</div>
 
-### ***Expressive API***
+<div class="feature-grid">
+  <div class="feature-card">
+    <div class="icon-container">
+      <i class="fas fa-shield-alt"></i>
+    </div>
+    <h3>A Battle-Tested Foundation</h3>
+    <p>By using Envoy Gateway, you're using Envoy Proxy's proven architecture that powers mission-critical systems at leading cloud providers and companies worldwide. When reliability at scale matters, trust the proxy that's been hardened by the world's most demanding network traffic environments.</p>
+  </div>
 
-The Envoy Gateway project will expose a simple and expressive API, with defaults set for many capabilities.
+  <div class="feature-card">
+    <div class="icon-container">
+      <i class="fas fa-cube"></i>
+    </div>
+    <h3>Implements and Extends the Kubernetes Gateway API </h3>
+    <p>Experience seamless integration with Kubernetes through the Gateway API implementation, and . Manage traffic with modern, standardized patterns that align perfectly with cloud native best practices.</p>
+  </div>
 
-The API will be the Kubernetes-native [Gateway API](https://gateway-api.sigs.k8s.io), plus Envoy-specific extensions and extension points.  This
-expressive and familiar API will make Envoy accessible to more users, especially application developers, and make Envoy
-a stronger option for "getting started" as compared to other proxies.  Application developers will use the API out of
-the box without needing to understand in-depth concepts of Envoy Proxy or use OSS wrappers.  The API will use familiar
-nouns that [users](#personas) understand.
-
-The core full-featured Envoy xDS APIs will remain available for those who need more capability and for those who
-add functionality on top of Envoy Gateway, such as commercial API gateway products.
-
-This expressive API will not be implemented by Envoy Proxy, but rather an officially supported translation layer
-on top.
-
----
-
-### ***Batteries included***
-
-Envoy Gateway will simplify how Envoy is deployed and managed, allowing application developers to focus on
-delivering core business value.
-
-The project plans to include additional infrastructure components required by users to fulfill their Ingress and API
-gateway needs: It will handle Envoy infrastructure provisioning (e.g. Kubernetes Service, Deployment, et cetera), and
-possibly infrastructure provisioning of related sidecar services.  It will include sensible defaults with the ability to
-override.  It will include channels for improving ops by exposing status through API conditions and Kubernetes status
-sub-resources.
-
-Making an application accessible needs to be a trivial task for any developer. Similarly, infrastructure administrators
-will enjoy a simplified management model that doesn't require extensive knowledge of the solution's architecture to
-operate.
-
----
-
-### ***All environments***
-
-Envoy Gateway will support running natively in Kubernetes environments as well as non-Kubernetes deployments.
-
-Initially, Kubernetes will receive the most focus, with the aim of having Envoy Gateway become the de facto
-standard for Kubernetes ingress supporting the [Gateway API](https://gateway-api.sigs.k8s.io/).
-Additional goals include multi-cluster support and various runtime environments.
-
----
-
-### ***Extensibility***
-
-Vendors will have the ability to provide value-added products built on the Envoy Gateway foundation.
-
-It will remain easy for end-users to leverage common Envoy Proxy extension points such as providing an implementation
-for authentication methods and rate-limiting.  For advanced use cases, users will have the ability to use the full power
-of xDS.
-
-Since a general-purpose API cannot address all use cases, Envoy Gateway will provide additional extension points
-for flexibility. As such, Envoy Gateway will form the base of vendor-provided managed control plane solutions,
-allowing vendors to shift to a higher management plane layer.
-
-{{% /blocks/section %}}
-{{% blocks/section color="black" %}}
-
-## Non-objectives
-
----
-
-### Cannibalize vendor models
-
-Vendors need to have the ability to drive commercial value, so the goal is not to cannibalize any existing vendor
-monetization model, though some vendors may be affected by it.
-
----
-
-### Disrupt current Envoy usage patterns
-
-Envoy Gateway is purely an additive convenience layer and is not meant to disrupt any usage pattern of any user
-with Envoy Proxy, xDS, or go-control-plane.
-
+  <div class="feature-card">
+    <div class="icon-container">
+      <i class="fas fa-puzzle-piece"></i>
+    </div>
+    <h3>Extensible Architecture</h3>
+    <p>The Envoy Gateway control plane is designed for extensibility, just as the Envoy Proxy data plane. Enabling you to create custom policies, specialized solutions, and a growing ecosystem of extensions. Build and integrate exactly what your organization needs.</p>
+  </div>
+</div>
 {{% /blocks/section %}}
 
-{{% blocks/section color="dark" %}}
 
-## Personas
 
-***In order of priority***
+{{% blocks/section color="light" %}}
+<div class="col-12">
+<h2 class="text-center mb-5">Join Our Community</h2>
+</div>
 
----
+<div class="feature-grid">
+  <div class="feature-card">
+    <div class="icon-container">
+      <i class="fas fa-book"></i>
+    </div>
+    <h3>Start Building</h3>
+    <p>Dive into our <a href="/docs/">comprehensive documentation</a> and start building with enterprise-grade traffic management capabilities.</p>
+  </div>
 
-### Application developer
+  <div class="feature-card">
+    <div class="icon-container">
+      <i class="fas fa-users"></i>
+    </div>
+    <h3>Connect & Contribute</h3>
+    <p>Join our thriving community of developers and contribute to shaping the future of cloud native networking.</p>
+  </div>
 
-The application developer spends the majority of their time developing business logic code.  They require the ability to
-manage access to their application.
-
----
-
-### Infrastructure administrators
-
-The infrastructure administrators are responsible for the installation, maintenance, and operation of
-API gateways appliances in infrastructure, such as CRDs, roles, service accounts, certificates, etc.
-Infrastructure administrators support the needs of application developers by managing instances of Envoy Gateway.
-
----
-
+  <div class="feature-card">
+    <div class="icon-container">
+      <i class="fas fa-lightbulb"></i>
+    </div>
+    <h3>Share & Learn</h3>
+    <p>Share your experiences, learn from others, and help us improve Envoy Gateway for everyone.</p>
+  </div>
+</div>
 {{% /blocks/section %}}
 
-{{% blocks/lead type="row" color="white" %}}
-
-<img src="/img/cncf.svg" alt="CNCF" width="40%">
-
----
-Member of the [Envoy Proxy](https://www.envoyproxy.io/) family aimed at significantly decreasing the barrier to entry when using Envoy for **API Gateway**.
-{{% /blocks/lead %}}
+{{% blocks/section color="white" %}}
+<div class="cncf-section">
+  <img src="/img/cncf.svg" alt="Cloud Native Computing Foundation" width="300">
+  <p class="mt-4">
+    A proud member of the <a href="https://www.envoyproxy.io/">Envoy Proxy</a> family, backed by the Cloud Native Computing Foundation. Together, we're building the future of cloud native networking.
+  </p>
+</div>
+{{% /blocks/section %}}
