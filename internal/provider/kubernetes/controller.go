@@ -215,8 +215,7 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 					string(gwapiv1.GatewayClassReasonInvalidParameters),
 					msg)
 				r.resources.GatewayClassStatuses.Store(utils.NamespacedName(gc), &gc.Status)
-				r.log.Error(err, "failed to process parametersRef for gatewayclass", "name", managedGC.Name)
-				return reconcile.Result{}, err
+				return reconcile.Result{}, nil
 			}
 		}
 
