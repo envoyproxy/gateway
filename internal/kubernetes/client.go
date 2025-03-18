@@ -170,7 +170,7 @@ func (c *client) PodExec(namespacedName types.NamespacedName, container string, 
 		return "", "", err
 	}
 
-	// Pefer to Websocket, fallback to SPDY
+	// Prefer to Websocket, fallback to SPDY
 	exec, err = remotecommand.NewFallbackExecutor(websocketExec, exec, func(err error) bool {
 		return httpstream.IsUpgradeFailure(err) || httpstream.IsHTTPSProxyError(err)
 	})

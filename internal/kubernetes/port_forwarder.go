@@ -118,7 +118,7 @@ func (f *localForwarder) buildKubernetesPortForwarder(readyCh chan struct{}) (*p
 	if err != nil {
 		return nil, err
 	}
-	// Pefer Websocket dialer, fallback to SPDY dialer.
+	// Prefer Websocket dialer, fallback to SPDY dialer.
 	dialer = portforward.NewFallbackDialer(tunnelingDialer, dialer, func(err error) bool {
 		return httpstream.IsUpgradeFailure(err) || httpstream.IsHTTPSProxyError(err)
 	})
