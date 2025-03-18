@@ -46,8 +46,7 @@ updates:
       go.opentelemetry.io:
         patterns:
           - "go.opentelemetry.io*"
-      golang.org:
-        patterns:
+          # Merge golang/google groups into group, since it should be updated alongside opentelemetry
           - "golang*"
           - "google*"
   - package-ecosystem: pip
