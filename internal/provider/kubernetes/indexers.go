@@ -49,6 +49,7 @@ const (
 	httpRouteFilterHTTPRouteIndex    = "httpRouteFilterHTTPRouteIndex"
 	configMapBtpIndex                = "configMapBtpIndex"
 	configMapHTTPRouteFilterIndex    = "configMapHTTPRouteFilterIndex"
+	secretHTTPRouteFilterIndex       = "secretHTTPRouteFilterIndex"
 )
 
 func addReferenceGrantIndexers(ctx context.Context, mgr manager.Manager) error {
@@ -705,6 +706,12 @@ func addRouteFilterIndexers(ctx context.Context, mgr manager.Manager) error {
 		configMapHTTPRouteFilterIndex, configMapRouteFilterIndexFunc); err != nil {
 		return err
 	}
+
+	if err := mgr.GetFieldIndexer().IndexField(ctx, &egv1a1.HTTPRouteFilter{},
+		secretHTTPRouteFilterIndex, secretRouteFilterIndexFunc); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -724,6 +731,21 @@ func configMapRouteFilterIndexFunc(rawObj client.Object) []string {
 		}
 	}
 	return configMapReferences
+}
+
+func secretRouteFilterIndexFunc(rawObj client.Object) []string {
+	filter := rawObj.(*egv1a1.HTTPRouteFilter)
+	var secretReferences []string
+	if filter.Spec.CredentialInjection != nil {
+		secretReferences = append(secretReferences,
+			types.NamespacedName{
+				Namespace: filter.Namespace,
+				Name:      string(filter.Spec.CredentialInjection.Credential.ValueRef.Name),
+			}.String(),
+		)
+	}
+
+	return secretReferences
 }
 
 // addBtlsIndexers adds indexing on BackendTLSPolicy, for ConfigMap and Secret objects that are

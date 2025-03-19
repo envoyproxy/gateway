@@ -13,6 +13,9 @@ import (
 const (
 	// KindHTTPRouteFilter is the name of the HTTPRouteFilter kind.
 	KindHTTPRouteFilter = "HTTPRouteFilter"
+
+	// InjectedCredentialKey is the key in the secret where the injected credential is stored.
+	InjectedCredentialKey = "credential"
 )
 
 // +kubebuilder:object:root=true

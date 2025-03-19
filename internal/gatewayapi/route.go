@@ -489,6 +489,9 @@ func applyHTTPFiltersContextToIRRoute(httpFiltersContext *HTTPFiltersContext, ir
 	if httpFiltersContext.URLRewrite != nil {
 		irRoute.URLRewrite = httpFiltersContext.URLRewrite
 	}
+	if httpFiltersContext.CredentialInjection != nil {
+		irRoute.CredentialInjection = httpFiltersContext.CredentialInjection
+	}
 	if len(httpFiltersContext.AddRequestHeaders) > 0 {
 		irRoute.AddRequestHeaders = httpFiltersContext.AddRequestHeaders
 	}
@@ -793,6 +796,7 @@ func (t *Translator) processHTTPRouteParentRefListener(route RouteContext, route
 					Destination:           routeRoute.Destination,
 					Redirect:              routeRoute.Redirect,
 					DirectResponse:        routeRoute.DirectResponse,
+					CredentialInjection:   routeRoute.CredentialInjection,
 					URLRewrite:            routeRoute.URLRewrite,
 					Mirrors:               routeRoute.Mirrors,
 					ExtensionRefs:         routeRoute.ExtensionRefs,
