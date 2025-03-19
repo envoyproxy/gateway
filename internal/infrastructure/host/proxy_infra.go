@@ -8,7 +8,6 @@ package host
 import (
 	"context"
 	"errors"
-	"fmt"
 	"io"
 	"os"
 	"path/filepath"
@@ -23,15 +22,6 @@ import (
 	"github.com/envoyproxy/gateway/internal/utils"
 	"github.com/envoyproxy/gateway/internal/xds/bootstrap"
 )
-
-func init() {
-	// Ensures that all the required binaries are available.
-	err := funcE.Run(context.Background(), []string{"--version"})
-	if err != nil {
-		// Failing this means that the currently platform is not supported.
-		panic(fmt.Sprintf("failed to run Envoy: %v", err))
-	}
-}
 
 // proxyContext corresponds to the context of the Envoy process.
 type proxyContext struct {

@@ -8,6 +8,7 @@ package host
 import (
 	"bytes"
 	"context"
+	funcE "github.com/tetratelabs/func-e/api"
 	"path"
 	"testing"
 
@@ -87,7 +88,12 @@ func TestInfraCreateProxy(t *testing.T) {
 }
 
 func TestInfra_runEnvoy_stopEnvoy(t *testing.T) {
-	i := &Infra{proxyContextMap: make(map[string]*proxyContext)}
+	tmpdir := t.TempDir()
+	// Ensures that all the required binaries are available.
+	err := funcE.Run(context.Background(), []string{"--version"}, funcE.HomeDir(tmpdir))
+	require.NoError(t, err)
+
+	i := &Infra{proxyContextMap: make(map[string]*proxyContext), HomeDir: tmpdir}
 	// Ensures that run -> stop will successfully stop the envoy and we can
 	// run it again without any issues.
 	for range 10 {
