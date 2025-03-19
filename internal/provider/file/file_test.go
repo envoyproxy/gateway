@@ -8,6 +8,7 @@ package file
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"html/template"
 	"io"
 	"net/http"
@@ -28,8 +29,9 @@ import (
 )
 
 const (
-	resourcesUpdateTimeout = 1 * time.Minute
-	resourcesUpdateTick    = 1 * time.Second
+	resourcesUpdateTimeout   = 1 * time.Minute
+	resourcesUpdateTick      = 1 * time.Second
+	providerHealthServerPort = 8082
 )
 
 type resourcesParam struct {
@@ -83,6 +85,8 @@ func TestFileProvider(t *testing.T) {
 	require.NoError(t, err)
 	pResources := new(message.ProviderResources)
 	fp, err := New(cfg, pResources)
+	// Set different health server port, in case of conflicts with other tests.
+	fp.healthServerPort = providerHealthServerPort
 	require.NoError(t, err)
 	// Start file provider.
 	go func() {
@@ -257,7 +261,7 @@ func writeResourcesFile(t *testing.T, tmpl, dst string, params *resourcesParam) 
 
 func waitFileProviderReady(t *testing.T) {
 	require.Eventually(t, func() bool {
-		resp, err := http.Get("http://localhost:8081/readyz")
+		resp, err := http.Get(fmt.Sprintf("http://localhost:%d/readyz", providerHealthServerPort))
 		if err != nil {
 			t.Logf("failed to get from heathlz server")
 			return false
@@ -278,7 +282,7 @@ func waitFileProviderReady(t *testing.T) {
 	}, 3*resourcesUpdateTimeout, resourcesUpdateTick)
 }
 
-func mustUnmarshal(t *testing.T, path string, out interface{}) {
+func mustUnmarshal(t *testing.T, path string, out interface{}) { // nolint:unparam
 	t.Helper()
 
 	content, err := os.ReadFile(path)

@@ -36,6 +36,9 @@ type Provider struct {
 
 	// ready indicates whether the provider can start watching filesystem events.
 	ready atomic.Bool
+
+	// TODO: make this port configurable.
+	healthServerPort int32
 }
 
 func New(svr *config.Server, resources *message.ProviderResources) (*Provider, error) {
@@ -46,10 +49,11 @@ func New(svr *config.Server, resources *message.ProviderResources) (*Provider, e
 	}
 
 	return &Provider{
-		paths:          paths.UnsortedList(),
-		logger:         logger,
-		watcher:        filewatcher.NewWatcher(),
-		resourcesStore: newResourcesStore(svr.EnvoyGateway.Gateway.ControllerName, resources, logger),
+		paths:            paths.UnsortedList(),
+		logger:           logger,
+		watcher:          filewatcher.NewWatcher(),
+		resourcesStore:   newResourcesStore(svr.EnvoyGateway.Gateway.ControllerName, resources, logger),
+		healthServerPort: 8081,
 	}, nil
 }
 
@@ -167,7 +171,7 @@ func (p *Provider) startHealthProbeServer(ctx context.Context, readyzChecker hea
 
 	mux := http.NewServeMux()
 	srv := &http.Server{
-		Addr:              ":8081",
+		Addr:              fmt.Sprintf(":%d", p.healthServerPort),
 		Handler:           mux,
 		MaxHeaderBytes:    1 << 20,
 		IdleTimeout:       90 * time.Second, // matches http.DefaultTransport keep-alive timeout
