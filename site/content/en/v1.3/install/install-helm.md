@@ -63,7 +63,7 @@ consideration when debugging.
 
 [Helm](https://helm.sh/docs/chart_best_practices/custom_resource_definitions/#some-caveats-and-explanations) does not update CRDs
 that live in the `/crds` folder in the Helm Chart. So you will manually need to update the CRDs.
-Follow the steps outlined in [this](./install-yaml/#upgrading-from-v1.1) section if you're upgrading from a previous version.
+Follow the steps outlined in [this](./install-yaml/#upgrading-from-v1.2) section if you're upgrading from a previous version.
 
 ## Helm chart customizations
 
@@ -130,20 +130,22 @@ These are the ports used by Envoy Gateway and the managed Envoy Proxy.
 
 ### Envoy Gateway
 
-| Envoy Gateway          | Address   |  Port  |  Configurable  |
-|:----------------------:|:---------:|:------:|    :------:    |
-| Xds EnvoyProxy Server  | 0.0.0.0   | 18000  |       No       |
-| Xds RateLimit Server   | 0.0.0.0   | 18001  |       No       |
-| Admin Server           | 127.0.0.1 | 19000  |       Yes      |
-| Metrics Server         |  0.0.0.0  | 19001  |       No       |
-| Health Check           | 127.0.0.1 |  8081  |       No       |
+|     Envoy Gateway     |  Address  | Port  | Configurable |
+| :-------------------: | :-------: | :---: | :----------: |
+| Xds EnvoyProxy Server |  0.0.0.0  | 18000 |      No      |
+| Xds RateLimit Server  |  0.0.0.0  | 18001 |      No      |
+|     Admin Server      | 127.0.0.1 | 19000 |     Yes      |
+|    Metrics Server     |  0.0.0.0  | 19001 |      No      |
+|     Health Check      | 127.0.0.1 | 8081  |      No      |
 
 ### EnvoyProxy
 
-| Envoy Proxy                       | Address     | Port    |
-|:---------------------------------:|:-----------:| :-----: |
-| Admin Server                      | 127.0.0.1   | 19000   |
-| Heath Check  | 0.0.0.0     | 19001   |
+|   Envoy Proxy    |  Address  | Port  |
+| :--------------: | :-------: | :---: |
+|   Admin Server   | 127.0.0.1 | 19000 |
+|      Stats       |  0.0.0.0  | 19001 |
+| Shutdown Manager |  0.0.0.0  | 19002 |
+|    Readiness     |  0.0.0.0  | 19003 |
 
 {{% alert title="Next Steps" color="warning" %}}
 Envoy Gateway should now be successfully installed and running.  To experience more abilities of Envoy Gateway, refer to [Tasks](../tasks).
