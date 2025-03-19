@@ -1,0 +1,17 @@
+{{ $color := "primary" }}
+{{ $latest_version := .Site.Params.url_latest_version }}
+{{ $path := strings.TrimPrefix (add hugo.WorkingDir "/") $.File.Filename -}}
+{{ $current_version := .Site.Params.version }}
+{{ if not (strings.Contains $path "docs") }}
+{{ if not (strings.Contains $path "latest") }}
+{{ if not (strings.Contains $path $current_version) }}
+<div class="pageinfo pageinfo-{{ $color }}">
+    This version documentation for Envoy Gateway is no longer actively maintained.
+    {{ with $latest_version }}
+    For up-to-date documentation, see the
+    <a href="{{ $latest_version | safeURL }}" target="_blank">{{$current_version}}</a>.</p>
+    {{ end }}
+</div>
+{{ end }}
+{{ end }}
+{{ end }}

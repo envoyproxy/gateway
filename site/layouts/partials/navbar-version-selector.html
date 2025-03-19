@@ -1,4 +1,5 @@
 {{ $baseURL := .Site.BaseURL }}
+{{ $current_version := .Site.Params.version }}
 <div class="dropdown">
     <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
         {{- .Site.Params.version_menu -}}
@@ -9,10 +10,14 @@
         {{ $path = .Page.RelPermalink -}}
         {{ end -}}
         {{ range .Site.Params.versions -}}
+        {{ $url := .url }}
+        {{ if eq .version $current_version }}
+        {{ $url = "/docs" }}
+        {{ end -}}
         {{ if ne $baseURL "/" }}
-        <li><a class="dropdown-item" href="{{ $baseURL }}{{ .url }}{{ $path }}">{{ .version }}</a></li>
+        <li><a class="dropdown-item" href="{{ $baseURL }}{{ $url }}{{ $path }}">{{ .version }}</a></li>
         {{ else }}
-        <li><a class="dropdown-item" href="{{ .url }}{{ $path }}">{{ .version }}</a></li>
+        <li><a class="dropdown-item" href="{{ $url }}{{ $path }}">{{ .version }}</a></li>
         {{ end }}
         {{ end -}}
     </ul>
