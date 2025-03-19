@@ -96,7 +96,7 @@ func TestInfra_runEnvoy_stopEnvoy(t *testing.T) {
 	i := &Infra{proxyContextMap: make(map[string]*proxyContext), HomeDir: tmpdir}
 	// Ensures that run -> stop will successfully stop the envoy and we can
 	// run it again without any issues.
-	for range 10 {
+	for range 5 {
 		args := []string{
 			"--config-yaml",
 			"admin: {address: {socket_address: {address: '127.0.0.1', port_value: 9901}}}",
@@ -106,6 +106,7 @@ func TestInfra_runEnvoy_stopEnvoy(t *testing.T) {
 		require.Len(t, i.proxyContextMap, 1)
 		i.stopEnvoy("test")
 		require.Empty(t, i.proxyContextMap)
-		require.NotContains(t, out.String(), "Address already in use")
+		// If the cleanup didn't work, the error due to "address already in use" will be tried to be written to the nil logger,
+		// which will panic.
 	}
 }

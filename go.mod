@@ -46,7 +46,7 @@ require (
 	github.com/spf13/pflag v1.0.6
 	github.com/stretchr/testify v1.10.0
 	github.com/telepresenceio/watchable v0.0.0-20220726211108-9bb86f92afa7
-	github.com/tetratelabs/func-e v1.1.5-0.20250318224823-b69d1c096c7a
+	github.com/tetratelabs/func-e v1.1.5-0.20250319205758-07e93e08850f
 	github.com/tsaarni/certyaml v0.10.0
 	github.com/yuin/gopher-lua v1.1.1
 	go.opentelemetry.io/otel v1.35.0

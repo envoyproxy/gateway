@@ -8,13 +8,11 @@ package host
 import (
 	"context"
 	"errors"
+	funcE "github.com/tetratelabs/func-e/api"
 	"io"
+	"k8s.io/utils/ptr"
 	"os"
 	"path/filepath"
-	"time"
-
-	funcE "github.com/tetratelabs/func-e/api"
-	"k8s.io/utils/ptr"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/infrastructure/common"
@@ -91,14 +89,14 @@ func (i *Infra) runEnvoy(ctx context.Context, out io.Writer, name string, args [
 	go func() {
 		// Run blocks until pCtx is done or the process exits where the latter doesn't happen when
 		// Envoy successfully starts up. So, this will not return until pCtx is done in practice.
-		err := funcE.Run(pCtx, args, funcE.HomeDir(i.HomeDir), funcE.ExitChannel(exit), funcE.Out(out))
+		defer func() {
+			exit <- struct{}{}
+		}()
+		err := funcE.Run(pCtx, args, funcE.HomeDir(i.HomeDir), funcE.Out(out))
 		if err != nil {
 			i.Logger.Error(err, "failed to run envoy")
 		}
 	}()
-	// This is ad-hoc sleep to wait for the Envoy process to start up to avoid canceling the context too early,
-	// which also results in the Envoy process being orphaned.
-	time.Sleep(1 * time.Second)
 }
 
 // DeleteProxyInfra removes the managed host process, if it doesn't exist.
