@@ -22,7 +22,7 @@ Kubernetes-based application gateway.
 
 ## Compatibility
 
-Now Envoy Gateway use Envoy v1.33.0 as default.
+Refer to [Compatibility Matrix](https://gateway.envoyproxy.io/news/releases/matrix/).
 
 ## Contact
 
