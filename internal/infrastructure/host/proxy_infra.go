@@ -8,11 +8,12 @@ package host
 import (
 	"context"
 	"errors"
-	funcE "github.com/tetratelabs/func-e/api"
 	"io"
-	"k8s.io/utils/ptr"
 	"os"
 	"path/filepath"
+
+	funcE "github.com/tetratelabs/func-e/api"
+	"k8s.io/utils/ptr"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/infrastructure/common"
