@@ -20,6 +20,10 @@ Kubernetes-based application gateway.
 * [Quickstart](https://gateway.envoyproxy.io/latest/tasks/quickstart/) to use Envoy Gateway in a few simple steps.
 * [Roadmap](https://gateway.envoyproxy.io/contributions/roadmap/)
 
+## Compatibility
+
+Now Envoy Gateway use Envoy v1.33.0 as default.
+
 ## Contact
 
 * [envoy-gateway-announce](https://groups.google.com/g/envoy-gateway-announce): Join our mailing list to receive important announcements.
