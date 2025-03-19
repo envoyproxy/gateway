@@ -25,8 +25,7 @@ func newConfigCommand() *cobra.Command {
 	cfgCommand.AddCommand(proxyCommand())
 	cfgCommand.AddCommand(ratelimitCommand())
 
-	flags := cfgCommand.Flags()
-	options.AddKubeConfigFlags(flags)
+	options.AddKubeConfigFlags(cfgCommand.PersistentFlags())
 
 	cfgCommand.PersistentFlags().StringVarP(&output, "output", "o", "json", "One of 'yaml' or 'json'")
 	cfgCommand.PersistentFlags().StringVarP(&podNamespace, "namespace", "n", "envoy-gateway-system", "Namespace where envoy proxy pod are installed.")

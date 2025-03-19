@@ -24,6 +24,7 @@ new features: |
   Added support for zone aware routing
   Added support for BackendTLSPolicy to target ServiceImport
   Added support for per-host circuit breaker thresholds
+  Added support for egctl Websocket in addation to SPDY
 
 bug fixes: |
   Fix traffic splitting when filters are attached to the backendRef.
@@ -33,6 +34,7 @@ bug fixes: |
   Fix an issue that stats compressor was not working.
   Added support for BackendTLSPolicy and EnvoyExtensionPolicy parsing in Standalone mode.
   Retrigger reconciliation when backendRef of type ServiceImport is updated or when EndpointSlice(s) for a ServiceImport are updated.
+  Fix not logging an error and returning it in the K8s Reconcile method when a GatewayClass is not accepted.
 
 # Enhancements that improve performance.
 performance improvements: |

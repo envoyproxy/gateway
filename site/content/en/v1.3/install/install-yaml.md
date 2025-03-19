@@ -38,14 +38,11 @@ Refer to the [Developer Guide](../../contributions/develop) to learn more.
 
    Envoy Gateway should now be successfully installed and running, but in order to experience more abilities of Envoy Gateway, you can refer to [Tasks](/latest/tasks).
 
-## Upgrading from v1.1
+## Upgrading from v1.2
 
-Some manual migration steps are required to upgrade Envoy Gateway to v1.2.
+Some manual migration steps are required to upgrade Envoy Gateway to v1.3.
 
-1. Update your `GRPCRoute` and `ReferenceGrant` resources if the storage version being used is `v1alpha2`.
-Follow the steps in Gateway-API [v1.2 Upgrade Notes](https://gateway-api.sigs.k8s.io/guides/#v12-upgrade-notes)
-
-2. Update Gateway-API and Envoy Gateway CRDs:
+1. Update Gateway-API and Envoy Gateway CRDs:
 
 ```shell
 helm pull oci://docker.io/envoyproxy/gateway-helm --version {{< yaml-version >}} --untar
@@ -53,7 +50,7 @@ kubectl apply --force-conflicts --server-side -f ./gateway-helm/crds/gatewayapi-
 kubectl apply --force-conflicts --server-side -f ./gateway-helm/crds/generated
 ```
 
-3. Install Envoy Gateway {{< yaml-version >}}:
+2. Install Envoy Gateway {{< yaml-version >}}:
 
 ```shell
 helm upgrade eg oci://docker.io/envoyproxy/gateway-helm --version {{< yaml-version >}} -n envoy-gateway-system
