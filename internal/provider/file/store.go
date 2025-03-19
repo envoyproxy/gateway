@@ -7,11 +7,13 @@ package file
 
 import (
 	"fmt"
+	"path/filepath"
 
 	"github.com/fsnotify/fsnotify"
 	"github.com/go-logr/logr"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
+	"k8s.io/apimachinery/pkg/util/sets"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
@@ -34,18 +36,33 @@ func newResourcesStore(name string, resources *message.ProviderResources, logger
 }
 
 // HandleEvent handles resources update according to the event type.
-func (r *resourcesStore) HandleEvent(event fsnotify.Event, files, dirs []string) {
+func (r *resourcesStore) HandleEvent(event fsnotify.Event, files, dirs sets.Set[string]) {
 	switch event.Op {
-	case fsnotify.Create, fsnotify.Write, fsnotify.Rename:
-		// For these events, update only the file that triggered this event.
-		if err := r.updateAndStore(event.Name, files, dirs); err != nil {
-			r.logger.Error(err, "failed to update and store resources", "file", event.Name)
-		}
+	case fsnotify.Write:
+		// For write event, update only the file that content is changed.
+		r.handleUpdate(event.Name, files.UnsortedList(), dirs.UnsortedList())
 	case fsnotify.Remove:
 		// For remove event, just simply reload all resources.
-		if err := r.reloadAndStore(files, dirs); err != nil {
-			r.logger.Error(err, "failed to reload and store resources")
+		r.handleReload(files.UnsortedList(), dirs.UnsortedList())
+	case fsnotify.Create, fsnotify.Rename:
+		// For create/rename event, check whether the file still be tracked, nor consider it has been removed.
+		if files.Has(event.Name) || dirs.Has(filepath.Dir(event.Name)) {
+			r.handleUpdate(event.Name, files.UnsortedList(), dirs.UnsortedList())
+		} else {
+			r.handleReload(files.UnsortedList(), dirs.UnsortedList())
 		}
+	}
+}
+
+func (r *resourcesStore) handleUpdate(target string, files, dirs []string) {
+	if err := r.updateAndStore(target, files, dirs); err != nil {
+		r.logger.Error(err, "failed to update and store resources", "file", target)
+	}
+}
+
+func (r *resourcesStore) handleReload(files, dirs []string) {
+	if err := r.reloadAndStore(files, dirs); err != nil {
+		r.logger.Error(err, "failed to reload and store resources")
 	}
 }
 
@@ -107,7 +124,7 @@ func (r *resourcesStore) updateAndStore(target string, files, dirs []string) err
 		opts := []cmp.Option{
 			cmpopts.IgnoreFields(resource.Resources{}, "serviceMap"),
 		}
-		if len(cmp.Diff(curr, targetResource, opts...)) > 0 {
+		if ret := cmp.Diff(curr, targetResource, opts...); len(ret) > 0 {
 			allResourcesList[i] = targetResource
 			diff = true
 		}

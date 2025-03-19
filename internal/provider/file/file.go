@@ -73,10 +73,7 @@ func (p *Provider) Start(ctx context.Context) error {
 
 	initDirs, initFiles := path.ListDirsAndFiles(p.paths)
 	// Initially load resources from paths by sending a dummy remove event.
-	p.resourcesStore.HandleEvent(
-		fsnotify.Event{Op: fsnotify.Remove},
-		initFiles.UnsortedList(), initDirs.UnsortedList(),
-	)
+	p.resourcesStore.HandleEvent(fsnotify.Event{Op: fsnotify.Remove}, initFiles, initDirs)
 
 	// Add paths to the watcher, and aggregate all path channels into one.
 	aggCh := make(chan fsnotify.Event)
@@ -157,7 +154,7 @@ func (p *Provider) Start(ctx context.Context) error {
 			}
 
 		handle:
-			p.resourcesStore.HandleEvent(event, curFiles.UnsortedList(), curDirs.UnsortedList())
+			p.resourcesStore.HandleEvent(event, curFiles, curDirs)
 		}
 	}
 }

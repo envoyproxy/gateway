@@ -112,15 +112,15 @@ func TestFileProvider(t *testing.T) {
 	})
 
 	t.Run("rename the watched file then rename it back", func(t *testing.T) {
-		// Rename it, won't cause any resources change and update
+		// Rename it first, the watched file is losed.
 		renameFilePath := filepath.Join(watchFileBase, "foobar.yaml")
 		err := os.Rename(watchFilePath, renameFilePath)
 		require.NoError(t, err)
 		require.Eventually(t, func() bool {
-			return pResources.GetResourcesByGatewayClass("eg") != nil
+			return pResources.GetResourcesByGatewayClass("eg") == nil
 		}, resourcesUpdateTimeout, resourcesUpdateTick)
 
-		// Rename it back, also won't cause any resources change and update
+		// Rename it back, the watched file is resumed.
 		err = os.Rename(renameFilePath, watchFilePath)
 		require.NoError(t, err)
 		require.Eventually(t, func() bool {
@@ -151,6 +151,34 @@ func TestFileProvider(t *testing.T) {
 		newFilePath := filepath.Join(watchDirPath, "test.yaml")
 		writeResourcesFile(t, "testdata/resources.tmpl", newFilePath, newDefaultResourcesParam())
 
+		require.Eventually(t, func() bool {
+			return pResources.GetResourcesByGatewayClass("eg") != nil
+		}, resourcesUpdateTimeout, resourcesUpdateTick)
+
+		resources := pResources.GetResourcesByGatewayClass("eg")
+		want := &resource.Resources{}
+		mustUnmarshal(t, "testdata/resources.all.yaml", want)
+
+		opts := []cmp.Option{
+			cmpopts.IgnoreFields(resource.Resources{}, "serviceMap"),
+			cmpopts.EquateEmpty(),
+		}
+		require.Empty(t, cmp.Diff(want, resources, opts...))
+	})
+
+	t.Run("rename the file then rename it back in watched dir", func(t *testing.T) {
+		// Rename it first, won't cause any resources change and update.
+		srcFilePath := filepath.Join(watchDirPath, "test.yaml")
+		dstFilePath := filepath.Join(watchDirPath, "foobar.yaml")
+		err := os.Rename(srcFilePath, dstFilePath)
+		require.NoError(t, err)
+		require.Eventually(t, func() bool {
+			return pResources.GetResourcesByGatewayClass("eg") != nil
+		}, resourcesUpdateTimeout, resourcesUpdateTick)
+
+		// Rename it back, also won't cause any resources change and update.
+		err = os.Rename(dstFilePath, srcFilePath)
+		require.NoError(t, err)
 		require.Eventually(t, func() bool {
 			return pResources.GetResourcesByGatewayClass("eg") != nil
 		}, resourcesUpdateTimeout, resourcesUpdateTick)
