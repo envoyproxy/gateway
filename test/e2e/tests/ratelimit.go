@@ -38,6 +38,96 @@ func init() {
 	ConformanceTests = append(ConformanceTests, RateLimitMultipleListenersTest)
 	ConformanceTests = append(ConformanceTests, RateLimitHeadersAndCIDRMatchTest)
 	ConformanceTests = append(ConformanceTests, UsageRateLimitTest)
+	ConformanceTests = append(ConformanceTests, RateLimitGlobalSharedCidrMatchTest)
+}
+
+var RateLimitGlobalSharedCidrMatchTest = suite.ConformanceTest{
+	ShortName:   "RateLimitGlobalSharedCidrMatch",
+	Description: "Limit all requests that match CIDR across multiple routes with a shared rate limit",
+	Manifests:   []string{"testdata/ratelimit-global-shared-cidr-match.yaml"},
+	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
+		if IPFamily == "ipv6" {
+			t.Skip("Skipping test as IP_FAMILY is IPv6")
+		}
+
+		t.Run("block all ips with shared rate limit across routes", func(t *testing.T) {
+			ns := "gateway-conformance-infra"
+			route1NN := types.NamespacedName{Name: "cidr-ratelimit-1", Namespace: ns}
+			route2NN := types.NamespacedName{Name: "cidr-ratelimit-2", Namespace: ns}
+			gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
+
+			// Get gateway address for the first route
+			gwAddr1 := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), route1NN)
+
+			// Get gateway address for the second route
+			gwAddr2 := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), route2NN)
+
+			ratelimitHeader := make(map[string]string)
+			expectOkResp := http.ExpectedResponse{
+				Request: http.Request{
+					Path: "/",
+				},
+				Response: http.Response{
+					StatusCode: 200,
+					Headers:    ratelimitHeader,
+				},
+				Namespace: ns,
+			}
+			expectOkResp.Response.Headers["X-Ratelimit-Limit"] = "3, 3;w=3600"
+
+			expectLimitResp := http.ExpectedResponse{
+				Request: http.Request{
+					Path: "/",
+				},
+				Response: http.Response{
+					StatusCode: 429,
+				},
+				Namespace: ns,
+			}
+
+			// Create requests for the first route
+			expectOkReq1 := http.MakeRequest(t, &expectOkResp, gwAddr1, "HTTP", "http")
+
+			// Create requests for the second route
+			expectOkReq2 := http.MakeRequest(t, &expectOkResp, gwAddr2, "HTTP", "http")
+			expectLimitReq2 := http.MakeRequest(t, &expectLimitResp, gwAddr2, "HTTP", "http")
+
+			// Ensure the first route is available
+			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr1, expectOkResp)
+
+			// Send 1 more request to the first route (total: 2 requests)
+			if err := GotExactExpectedResponse(t, 1, suite.RoundTripper, expectOkReq1, expectOkResp); err != nil {
+				t.Errorf("failed to get expected response for the request to first route: %v", err)
+			}
+
+			// Send a request to the second route (total: 3 requests)
+			if err := GotExactExpectedResponse(t, 1, suite.RoundTripper, expectOkReq2, expectOkResp); err != nil {
+				t.Errorf("failed to get expected response for the request to second route: %v", err)
+			}
+
+			// At this point, 3 requests have been sent in total (2 to route1, 1 to route2)
+			// Since the rate limit is shared and set to 3, the next request should be rate limited
+			if err := GotExactExpectedResponse(t, 1, suite.RoundTripper, expectLimitReq2, expectLimitResp); err != nil {
+				t.Errorf("failed to get expected rate limit response for the second request to route2: %v", err)
+			}
+
+			// Make sure that metric worked as expected.
+			if err := wait.PollUntilContextTimeout(context.TODO(), 3*time.Second, time.Minute, true, func(ctx context.Context) (done bool, err error) {
+				v, err := QueryPrometheus(suite.Client, `ratelimit_service_rate_limit_over_limit{key2="masked_remote_address_0_0_0_0/0"}`)
+				if err != nil {
+					tlog.Logf(t, "failed to query prometheus: %v", err)
+					return false, err
+				}
+				if v != nil {
+					tlog.Logf(t, "got expected value: %v", v)
+					return true, nil
+				}
+				return false, nil
+			}); err != nil {
+				t.Errorf("failed to get expected metric for rate limit: %v", err)
+			}
+		})
+	},
 }
 
 var RateLimitCIDRMatchTest = suite.ConformanceTest{
