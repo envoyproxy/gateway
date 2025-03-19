@@ -51,3 +51,8 @@ adopters:
     logo: "/logos/docker.png"
     url: "https://www.docker.com/"
     description: "Docker is using Envoy Gateway to route all internal traffic for Docker Hub."
+  - name: "SenseTime"
+    logo: "/logos/sensetime.png"
+    url: "https://www.sensetime.com/"
+    description: "SenseTime is using Envoy Gateway to route most traffic for SenseCore."
+
