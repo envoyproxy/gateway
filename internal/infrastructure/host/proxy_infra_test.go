@@ -8,11 +8,11 @@ package host
 import (
 	"bytes"
 	"context"
-	funcE "github.com/tetratelabs/func-e/api"
 	"path"
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	funcE "github.com/tetratelabs/func-e/api"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/crypto"
