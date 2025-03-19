@@ -14,6 +14,7 @@ import (
 	"strconv"
 
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/httpstream"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/portforward"
 	"k8s.io/client-go/transport/spdy"
@@ -113,6 +114,15 @@ func (f *localForwarder) buildKubernetesPortForwarder(readyCh chan struct{}) (*p
 	}
 
 	dialer := spdy.NewDialer(upgrader, &http.Client{Transport: roundTripper}, http.MethodPost, serverURL)
+	tunnelingDialer, err := portforward.NewSPDYOverWebsocketDialer(serverURL, f.RESTConfig())
+	if err != nil {
+		return nil, err
+	}
+	// Prefer Websocket dialer, fallback to SPDY dialer.
+	dialer = portforward.NewFallbackDialer(tunnelingDialer, dialer, func(err error) bool {
+		return httpstream.IsUpgradeFailure(err) || httpstream.IsHTTPSProxyError(err)
+	})
+
 	fw, err := portforward.NewOnAddresses(dialer,
 		[]string{netutil.DefaultLocalAddress},
 		[]string{fmt.Sprintf("%d:%d", f.localPort, f.podPort)},

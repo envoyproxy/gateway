@@ -61,7 +61,7 @@ func (r *Runner) Start(ctx context.Context) (err error) {
 
 	r.Logger.Info("Running provider", "type", p.Type())
 	go func() {
-		if err = p.Start(ctx); err != nil {
+		if err := p.Start(ctx); err != nil {
 			r.Logger.Error(err, "unable to start provider")
 		}
 	}()
