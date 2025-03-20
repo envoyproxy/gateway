@@ -294,6 +294,12 @@ func TestTranslate(t *testing.T) {
 			to:     "gateway-api",
 			expect: true,
 		},
+		{
+			name:   "add-missing-namespaces",
+			from:   "gateway-api",
+			to:     "gateway-api",
+			expect: true,
+		},
 	}
 
 	flag.Parse()
