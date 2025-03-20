@@ -572,7 +572,6 @@ _Appears in:_
 
 _Appears in:_
 - [BackendTrafficPolicySpec](#backendtrafficpolicyspec)
-- [ClusterSettings](#clustersettings)
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
