@@ -62,12 +62,14 @@ func server(ctx context.Context, logOut io.Writer) error {
 		return err
 	}
 
+	runnersDone := make(chan struct{})
 	hook := func(c context.Context, cfg *config.Server) error {
-		cfg.Logger.Info("Setup runners")
-		if err := setupRunners(c, cfg); err != nil {
+		cfg.Logger.Info("Start runners")
+		if err := startRunners(c, cfg); err != nil {
 			cfg.Logger.Error(err, "failed to setup runners")
 			return err
 		}
+		runnersDone <- struct{}{}
 		return nil
 	}
 	l := loader.New(cfgPath, cfg, hook)
@@ -84,10 +86,13 @@ func server(ctx context.Context, logOut io.Writer) error {
 		return err
 	}
 
-	// Wait exit signal
+	// Wait for the context to be done, which usually happens the process receives a SIGTERM or SIGINT.
 	<-ctx.Done()
 
 	cfg.Logger.Info("shutting down")
+
+	// Wait for runners to finish.
+	<-runnersDone
 
 	return nil
 }
@@ -132,9 +137,12 @@ func getConfigByPath(logOut io.Writer, cfgPath string) (*config.Server, error) {
 	return cfg, nil
 }
 
-// setupRunners starts all the runners required for the Envoy Gateway to
+// startRunners starts all the runners required for the Envoy Gateway to
 // fulfill its tasks.
-func setupRunners(ctx context.Context, cfg *config.Server) (err error) {
+//
+// This will block until the context is done, and returns after synchronously
+// closing all the runners.
+func startRunners(ctx context.Context, cfg *config.Server) (err error) {
 	channels := struct {
 		pResources *message.ProviderResources
 		xdsIR      *message.XdsIR
