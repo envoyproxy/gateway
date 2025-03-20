@@ -290,7 +290,7 @@ xdsIR:
           namespace: default
         name: grpcroute/default/grpcroute-1/rule/0/match/-1/*
         traffic:
-          name: policy-for-gateway/envoy-gateway
+          name: envoy-gateway/policy-for-gateway
           timeout:
             http:
               connectionIdleTimeout: 16s
@@ -346,7 +346,7 @@ xdsIR:
           prefix: /
         timeout: 1s
         traffic:
-          name: policy-for-route/default
+          name: default/policy-for-route
           timeout:
             http:
               connectionIdleTimeout: 21s

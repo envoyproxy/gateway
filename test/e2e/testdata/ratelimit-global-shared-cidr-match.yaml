@@ -36,7 +36,7 @@ spec:
     - matches:
         - path:
             type: PathPrefix
-            value: /
+            value: /foo
       backendRefs:
         - name: infra-backend-v1
           port: 8080
@@ -53,7 +53,7 @@ spec:
     - matches:
         - path:
             type: PathPrefix
-            value: /
+            value: /bar
       backendRefs:
         - name: infra-backend-v2
           port: 8080

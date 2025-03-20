@@ -190,7 +190,7 @@ xdsIR:
           name: ""
           prefix: /
         traffic:
-          name: policy-for-gateway/envoy-gateway
+          name: envoy-gateway/policy-for-gateway
           rateLimit:
             local:
               default:

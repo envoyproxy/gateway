@@ -164,7 +164,7 @@ xdsIR:
           name: ""
           prefix: /
         traffic:
-          name: policy-for-gateway/envoy-gateway
+          name: envoy-gateway/policy-for-gateway
         useClientProtocol: true
     readyListener:
       address: 0.0.0.0

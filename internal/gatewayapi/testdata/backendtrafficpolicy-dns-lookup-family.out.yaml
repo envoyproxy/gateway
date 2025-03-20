@@ -361,7 +361,6 @@ xdsIR:
           dns:
             dnsRefreshRate: 30s
             lookupFamily: IPv4AndIPv6
-          name: ""
       text:
       - format: |
           [%START_TIME%] "%REQ(:METHOD)% %PROTOCOL%" %RESPONSE_CODE% %RESPONSE_FLAGS% %BYTES_RECEIVED% %BYTES_SENT% %DURATION% %RESP(X-ENVOY-UPSTREAM-SERVICE-TIME)% "%REQ(X-FORWARDED-FOR)%" "%REQ(USER-AGENT)%" "%REQ(X-REQUEST-ID)%" "%REQ(:AUTHORITY)%" "%UPSTREAM_HOST%"\n
@@ -410,7 +409,6 @@ xdsIR:
               dns:
                 dnsRefreshRate: 5s
                 lookupFamily: IPv4AndIPv6
-              name: ""
         hostname: gateway.envoyproxy.io
         isHTTP2: false
         metadata:
@@ -445,13 +443,12 @@ xdsIR:
               dns:
                 dnsRefreshRate: 30s
                 lookupFamily: IPv4Preferred
-              name: ""
         traffic:
           dns:
             dnsRefreshRate: 5s
             lookupFamily: IPv6
             respectDnsTtl: false
-          name: backend-traffic-policy/default
+          name: default/backend-traffic-policy
       - destination:
           name: grpcroute/default/grpcroute-1/rule/0
           settings:
@@ -492,13 +489,12 @@ xdsIR:
               dns:
                 dnsRefreshRate: 30s
                 lookupFamily: IPv4Preferred
-              name: ""
         traffic:
           dns:
             dnsRefreshRate: 5s
             lookupFamily: IPv6
             respectDnsTtl: false
-          name: backend-traffic-policy/default
+          name: default/backend-traffic-policy
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4

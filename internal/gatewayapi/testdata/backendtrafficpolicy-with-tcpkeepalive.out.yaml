@@ -282,7 +282,7 @@ xdsIR:
           namespace: default
         name: grpcroute/default/grpcroute-1/rule/0/match/-1/*
         traffic:
-          name: policy-for-gateway/envoy-gateway
+          name: envoy-gateway/policy-for-gateway
           tcpKeepalive:
             idleTime: 1200
             interval: 60
@@ -334,7 +334,7 @@ xdsIR:
           name: ""
           prefix: /
         traffic:
-          name: policy-for-route/default
+          name: default/policy-for-route
           tcpKeepalive:
             idleTime: 10
             interval: 1800

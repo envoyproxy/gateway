@@ -270,7 +270,6 @@ xdsIR:
                       sni: foo.bar.com
                     weight: 1
                 traffic:
-                  name: ""
                   retry:
                     numRetries: 3
                     perRetry:

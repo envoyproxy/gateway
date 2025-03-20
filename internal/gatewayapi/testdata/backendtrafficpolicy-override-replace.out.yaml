@@ -312,7 +312,7 @@ xdsIR:
           loadBalancer:
             consistentHash:
               sourceIP: true
-          name: policy-for-route-1/default
+          name: default/policy-for-route-1
       - destination:
           name: httproute/default/httproute-2/rule/0
           settings:
@@ -337,7 +337,7 @@ xdsIR:
         traffic:
           loadBalancer:
             random: {}
-          name: policy-for-gateway-1/envoy-gateway
+          name: envoy-gateway/policy-for-gateway-1
           timeout:
             http:
               connectionIdleTimeout: 21s
@@ -366,7 +366,7 @@ xdsIR:
           name: ""
           prefix: /baz
         traffic:
-          name: policy-for-route-3/default
+          name: default/policy-for-route-3
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4

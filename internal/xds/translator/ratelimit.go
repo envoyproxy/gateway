@@ -103,6 +103,7 @@ func (t *Translator) buildRateLimitFilter(irListener *ir.HTTPListener) []*hcmv3.
 		}
 
 		var domain string
+		filterName := getRateLimitFilterName(route)
 		if isSharedRateLimit(route) {
 			// For shared rate limits, use the domain derived from the traffic policy
 			domain = getDomainName(route)
@@ -117,7 +118,7 @@ func (t *Translator) buildRateLimitFilter(irListener *ir.HTTPListener) []*hcmv3.
 		}
 
 		// Create a filter for this domain
-		filter := createRateLimitFilter(t, irListener, domain)
+		filter := createRateLimitFilter(t, irListener, domain, filterName)
 		if filter != nil {
 			filters = append(filters, filter)
 			domainMap[domain] = true
@@ -128,7 +129,7 @@ func (t *Translator) buildRateLimitFilter(irListener *ir.HTTPListener) []*hcmv3.
 }
 
 // createRateLimitFilter creates a single rate limit filter for the given domain
-func createRateLimitFilter(t *Translator, irListener *ir.HTTPListener, domain string) *hcmv3.HttpFilter {
+func createRateLimitFilter(t *Translator, irListener *ir.HTTPListener, domain string, filterName string) *hcmv3.HttpFilter {
 	// Create a new rate limit filter configuration
 	rateLimitFilterProto := &ratelimitfilterv3.RateLimit{
 		Domain: domain,
@@ -170,7 +171,7 @@ func createRateLimitFilter(t *Translator, irListener *ir.HTTPListener, domain st
 
 	// Create the HTTP filter with the rate limit configuration
 	return &hcmv3.HttpFilter{
-		Name: egv1a1.EnvoyFilterRateLimit.String(),
+		Name: filterName,
 		ConfigType: &hcmv3.HttpFilter_TypedConfig{
 			TypedConfig: rateLimitFilterAny,
 		},
@@ -185,18 +186,21 @@ func patchRouteWithRateLimit(route *routev3.Route, irRoute *ir.HTTPRoute) error 
 		return nil
 	}
 	rateLimits := buildRouteRateLimits(irRoute)
-	return patchRouteWithRateLimitOnTypedFilterConfig(route, rateLimits)
+	return patchRouteWithRateLimitOnTypedFilterConfig(route, rateLimits, irRoute)
 }
 
 // patchRouteWithRateLimitOnTypedFilterConfig builds rate limit actions and appends to the route via
 // the TypedPerFilterConfig field.
-func patchRouteWithRateLimitOnTypedFilterConfig(route *routev3.Route, rateLimits []*routev3.RateLimit) error { //nolint:unparam
+func patchRouteWithRateLimitOnTypedFilterConfig(route *routev3.Route, rateLimits []*routev3.RateLimit, irRoute *ir.HTTPRoute) error { //nolint:unparam
 	filterCfg := route.TypedPerFilterConfig
 	if filterCfg == nil {
 		filterCfg = make(map[string]*anypb.Any)
 		route.TypedPerFilterConfig = filterCfg
 	}
-	if _, ok := filterCfg[egv1a1.EnvoyFilterRateLimit.String()]; ok {
+
+	filterName := getRateLimitFilterName(irRoute)
+
+	if _, ok := filterCfg[filterName]; ok {
 		// This should not happen since this is the only place where the filter
 		// config is added in a route.
 		return fmt.Errorf(
@@ -207,7 +211,7 @@ func patchRouteWithRateLimitOnTypedFilterConfig(route *routev3.Route, rateLimits
 	if err != nil {
 		return fmt.Errorf("failed to marshal per-route ratelimit filter config: %w", err)
 	}
-	filterCfg[egv1a1.EnvoyFilterRateLimit.String()] = g
+	filterCfg[filterName] = g
 	return nil
 }
 
@@ -457,11 +461,8 @@ func addSharedRateLimitDescriptor(
 	sharedValue := getTrafficPolicyNamespace(route)
 
 	// Check if we already have a descriptor for this key/value pair
-	for i, desc := range domainDescriptors[domain] {
+	for _, desc := range domainDescriptors[domain] {
 		if desc.Key == sharedKey && desc.Value == sharedValue {
-			// Found existing shared descriptor, merge new descriptors into it
-			domainDescriptors[domain][i].Descriptors = mergeUniqueDescriptors(
-				desc.Descriptors, serviceDescriptors)
 			return
 		}
 	}
@@ -500,37 +501,6 @@ func addRouteSpecificDescriptor(
 		Descriptors: serviceDescriptors,
 	}
 	domainDescriptors[domain] = append(domainDescriptors[domain], routeDescriptor)
-}
-
-// mergeUniqueDescriptors merges two descriptor lists, avoiding duplicates
-func mergeUniqueDescriptors(
-	existing []*rlsconfv3.RateLimitDescriptor,
-	new []*rlsconfv3.RateLimitDescriptor,
-) []*rlsconfv3.RateLimitDescriptor {
-	if len(new) == 0 {
-		return existing
-	}
-
-	result := make([]*rlsconfv3.RateLimitDescriptor, len(existing))
-	copy(result, existing)
-
-	// Track descriptors by key/value for faster duplicate checking
-	existingMap := make(map[string]bool)
-	for _, desc := range existing {
-		key := desc.Key + ":" + desc.Value
-		existingMap[key] = true
-	}
-
-	// Add only non-duplicate descriptors
-	for _, desc := range new {
-		key := desc.Key + ":" + desc.Value
-		if !existingMap[key] {
-			result = append(result, desc)
-			existingMap[key] = true
-		}
-	}
-
-	return result
 }
 
 // createRateLimitConfigs creates rate limit configs from the domain descriptor map
@@ -783,4 +753,14 @@ func (t *Translator) getRateLimitServiceGrpcHostPort() (string, uint32) {
 		panic(err)
 	}
 	return u.Hostname(), uint32(p)
+}
+
+// For shared rate limits, it appends the traffic policy name to the base filter name.
+// For non-shared rate limits, it returns just the base filter name.
+func getRateLimitFilterName(route *ir.HTTPRoute) string {
+	filterName := egv1a1.EnvoyFilterRateLimit.String()
+	if isSharedRateLimit(route) {
+		filterName = fmt.Sprintf("%s/%s", filterName, route.Traffic.Name)
+	}
+	return filterName
 }

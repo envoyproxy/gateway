@@ -37,7 +37,7 @@
             requirementMap:
               first-route:
                 providerName: first-route/example
-        - name: envoy.filters.http.ratelimit
+        - name: envoy.filters.http.ratelimit/first-listener
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.ratelimit.v3.RateLimit
             domain: first-listener

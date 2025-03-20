@@ -758,7 +758,7 @@ var RateLimitGlobalSharedCidrMatchTest = suite.ConformanceTest{
 			t.Skip("Skipping test as IP_FAMILY is IPv6")
 		}
 
-		t.Run("block all ips with shared rate limit across routes", func(t *testing.T) {
+		t.Run("block all ips with shared rate limit across routes with different paths", func(t *testing.T) {
 			ns := "gateway-conformance-infra"
 			route1NN := types.NamespacedName{Name: "cidr-ratelimit-1", Namespace: ns}
 			route2NN := types.NamespacedName{Name: "cidr-ratelimit-2", Namespace: ns}
@@ -771,9 +771,9 @@ var RateLimitGlobalSharedCidrMatchTest = suite.ConformanceTest{
 			gwAddr2 := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), route2NN)
 
 			ratelimitHeader := make(map[string]string)
-			expectOkResp := http.ExpectedResponse{
+			expectOkResp1 := http.ExpectedResponse{
 				Request: http.Request{
-					Path: "/",
+					Path: "/foo", // First route path
 				},
 				Response: http.Response{
 					StatusCode: 200,
@@ -781,11 +781,23 @@ var RateLimitGlobalSharedCidrMatchTest = suite.ConformanceTest{
 				},
 				Namespace: ns,
 			}
-			expectOkResp.Response.Headers["X-Ratelimit-Limit"] = "3, 3;w=3600"
+			expectOkResp1.Response.Headers["X-Ratelimit-Limit"] = "3, 3;w=3600"
+
+			expectOkResp2 := http.ExpectedResponse{
+				Request: http.Request{
+					Path: "/bar", // Second route path
+				},
+				Response: http.Response{
+					StatusCode: 200,
+					Headers:    ratelimitHeader,
+				},
+				Namespace: ns,
+			}
+			expectOkResp2.Response.Headers["X-Ratelimit-Limit"] = "3, 3;w=3600"
 
 			expectLimitResp := http.ExpectedResponse{
 				Request: http.Request{
-					Path: "/",
+					Path: "/bar", // Path for testing the limit on the second route
 				},
 				Response: http.Response{
 					StatusCode: 429,
@@ -793,30 +805,31 @@ var RateLimitGlobalSharedCidrMatchTest = suite.ConformanceTest{
 				Namespace: ns,
 			}
 
-			// Create requests for the first route
-			expectOkReq1 := http.MakeRequest(t, &expectOkResp, gwAddr1, "HTTP", "http")
+			// Create requests for the first route (path: /foo)
+			expectOkReq1 := http.MakeRequest(t, &expectOkResp1, gwAddr1, "HTTP", "http")
 
-			// Create requests for the second route
-			expectOkReq2 := http.MakeRequest(t, &expectOkResp, gwAddr2, "HTTP", "http")
+			// Create requests for the second route (path: /bar)
+			expectOkReq2 := http.MakeRequest(t, &expectOkResp2, gwAddr2, "HTTP", "http")
 			expectLimitReq2 := http.MakeRequest(t, &expectLimitResp, gwAddr2, "HTTP", "http")
 
 			// Ensure the first route is available
-			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr1, expectOkResp)
+			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr1, expectOkResp1)
 
-			// Send 1 more request to the first route (total: 2 requests)
-			if err := GotExactExpectedResponse(t, 1, suite.RoundTripper, expectOkReq1, expectOkResp); err != nil {
-				t.Errorf("failed to get expected response for the request to first route: %v", err)
+			// Send 1 more request to the first route with /foo path (total: 2 requests)
+			if err := GotExactExpectedResponse(t, 1, suite.RoundTripper, expectOkReq1, expectOkResp1); err != nil {
+				t.Errorf("failed to get expected response for the request to first route (/foo): %v", err)
 			}
 
-			// Send a request to the second route (total: 3 requests)
-			if err := GotExactExpectedResponse(t, 1, suite.RoundTripper, expectOkReq2, expectOkResp); err != nil {
-				t.Errorf("failed to get expected response for the request to second route: %v", err)
+			// Send a request to the second route with /bar path (total: 3 requests)
+			if err := GotExactExpectedResponse(t, 1, suite.RoundTripper, expectOkReq2, expectOkResp2); err != nil {
+				t.Errorf("failed to get expected response for the request to second route (/bar): %v", err)
 			}
 
-			// At this point, 3 requests have been sent in total (2 to route1, 1 to route2)
+			// At this point, 3 requests have been sent in total (2 to /foo, 1 to /bar)
 			// Since the rate limit is shared and set to 3, the next request should be rate limited
+			// even though it's going to a different path
 			if err := GotExactExpectedResponse(t, 1, suite.RoundTripper, expectLimitReq2, expectLimitResp); err != nil {
-				t.Errorf("failed to get expected rate limit response for the second request to route2: %v", err)
+				t.Errorf("failed to get expected rate limit response for the second request to /bar: %v", err)
 			}
 
 			// Make sure that metric worked as expected.
@@ -843,7 +856,7 @@ var RateLimitGlobalSharedGatewayHeaderMatchTest = suite.ConformanceTest{
 	Description: "Limit all requests with matching headers across multiple routes with a shared rate limit",
 	Manifests:   []string{"testdata/ratelimit-global-shared-gateway-header-match.yaml"},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
-		t.Run("rate limit requests with shared header limit across routes", func(t *testing.T) {
+		t.Run("rate limit requests with shared header limit across routes with different paths", func(t *testing.T) {
 			ns := "gateway-conformance-infra"
 			route1NN := types.NamespacedName{Name: "header-ratelimit-1", Namespace: ns}
 			route2NN := types.NamespacedName{Name: "header-ratelimit-2", Namespace: ns}
@@ -861,9 +874,9 @@ var RateLimitGlobalSharedGatewayHeaderMatchTest = suite.ConformanceTest{
 			}
 
 			ratelimitHeader := make(map[string]string)
-			expectOkResp := http.ExpectedResponse{
+			expectOkResp1 := http.ExpectedResponse{
 				Request: http.Request{
-					Path:    "/",
+					Path:    "/foo", // First route path
 					Headers: requestHeaders,
 				},
 				Response: http.Response{
@@ -872,11 +885,24 @@ var RateLimitGlobalSharedGatewayHeaderMatchTest = suite.ConformanceTest{
 				},
 				Namespace: ns,
 			}
-			expectOkResp.Response.Headers["X-Ratelimit-Limit"] = "3, 3;w=3600"
+			expectOkResp1.Response.Headers["X-Ratelimit-Limit"] = "3, 3;w=3600"
+
+			expectOkResp2 := http.ExpectedResponse{
+				Request: http.Request{
+					Path:    "/bar", // Second route path
+					Headers: requestHeaders,
+				},
+				Response: http.Response{
+					StatusCode: 200,
+					Headers:    ratelimitHeader,
+				},
+				Namespace: ns,
+			}
+			expectOkResp2.Response.Headers["X-Ratelimit-Limit"] = "3, 3;w=3600"
 
 			expectLimitResp := http.ExpectedResponse{
 				Request: http.Request{
-					Path:    "/",
+					Path:    "/bar", // Path for testing the limit on the second route
 					Headers: requestHeaders,
 				},
 				Response: http.Response{
@@ -885,30 +911,31 @@ var RateLimitGlobalSharedGatewayHeaderMatchTest = suite.ConformanceTest{
 				Namespace: ns,
 			}
 
-			// Create requests for the first route
-			expectOkReq1 := http.MakeRequest(t, &expectOkResp, gwAddr1, "HTTP", "http")
+			// Create requests for the first route (path: /foo)
+			expectOkReq1 := http.MakeRequest(t, &expectOkResp1, gwAddr1, "HTTP", "http")
 
-			// Create requests for the second route
-			expectOkReq2 := http.MakeRequest(t, &expectOkResp, gwAddr2, "HTTP", "http")
+			// Create requests for the second route (path: /bar)
+			expectOkReq2 := http.MakeRequest(t, &expectOkResp2, gwAddr2, "HTTP", "http")
 			expectLimitReq2 := http.MakeRequest(t, &expectLimitResp, gwAddr2, "HTTP", "http")
 
 			// Ensure the first route is available
-			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr1, expectOkResp)
+			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr1, expectOkResp1)
 
-			// Send 1 more request to the first route (total: 2 requests)
-			if err := GotExactExpectedResponse(t, 1, suite.RoundTripper, expectOkReq1, expectOkResp); err != nil {
-				t.Errorf("failed to get expected response for the request to first route: %v", err)
+			// Send 1 more request to the first route with /foo path (total: 2 requests)
+			if err := GotExactExpectedResponse(t, 1, suite.RoundTripper, expectOkReq1, expectOkResp1); err != nil {
+				t.Errorf("failed to get expected response for the request to first route (/foo): %v", err)
 			}
 
-			// Send a request to the second route (total: 3 requests)
-			if err := GotExactExpectedResponse(t, 1, suite.RoundTripper, expectOkReq2, expectOkResp); err != nil {
-				t.Errorf("failed to get expected response for the request to second route: %v", err)
+			// Send a request to the second route with /bar path (total: 3 requests)
+			if err := GotExactExpectedResponse(t, 1, suite.RoundTripper, expectOkReq2, expectOkResp2); err != nil {
+				t.Errorf("failed to get expected response for the request to second route (/bar): %v", err)
 			}
 
-			// At this point, 3 requests have been sent in total (2 to route1, 1 to route2)
+			// At this point, 3 requests have been sent in total (2 to /foo, 1 to /bar)
 			// Since the rate limit is shared and set to 3, the next request should be rate limited
+			// even though it's going to a different path
 			if err := GotExactExpectedResponse(t, 1, suite.RoundTripper, expectLimitReq2, expectLimitResp); err != nil {
-				t.Errorf("failed to get expected rate limit response for the second request to route2: %v", err)
+				t.Errorf("failed to get expected rate limit response for the second request to /bar: %v", err)
 			}
 
 			// Make sure that metric worked as expected.

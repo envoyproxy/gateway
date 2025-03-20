@@ -358,7 +358,7 @@ xdsIR:
           dns:
             dnsRefreshRate: 10s
             respectDnsTtl: true
-          name: policy-for-all-routes-in-gateway-1/envoy-gateway
+          name: envoy-gateway/policy-for-all-routes-in-gateway-1
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4
@@ -409,7 +409,7 @@ xdsIR:
           dns:
             dnsRefreshRate: 5s
             respectDnsTtl: false
-          name: policy-for-route-2/default
+          name: default/policy-for-route-2
       - destination:
           name: httproute/default/httproute-1/rule/0
           settings:
@@ -435,7 +435,7 @@ xdsIR:
           dns:
             dnsRefreshRate: 1s
             respectDnsTtl: true
-          name: policy-for-route-1/default
+          name: default/policy-for-route-1
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4

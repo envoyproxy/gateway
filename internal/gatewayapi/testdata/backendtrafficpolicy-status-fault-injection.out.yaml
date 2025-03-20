@@ -369,7 +369,7 @@ xdsIR:
             delay:
               fixedDelay: 5.4s
               percentage: 80
-          name: policy-for-grpcroute/default
+          name: default/policy-for-grpcroute
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4
@@ -421,7 +421,7 @@ xdsIR:
             abort:
               httpStatus: 14
               percentage: 0.01
-          name: policy-for-gateway/envoy-gateway
+          name: envoy-gateway/policy-for-gateway
       - destination:
           name: httproute/default/httproute-1/rule/0
           settings:
@@ -451,7 +451,7 @@ xdsIR:
             delay:
               fixedDelay: 5.4s
               percentage: 80
-          name: policy-for-route/default
+          name: default/policy-for-route
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4
