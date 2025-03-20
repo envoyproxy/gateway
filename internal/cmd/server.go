@@ -31,6 +31,9 @@ import (
 type Runner interface {
 	Start(context.Context) error
 	Name() string
+	// Close closes the runner when the server is shutting down.
+	// This called after all the subscriptions are closed at the very end of the server shutdown.
+	Close() error
 }
 
 // cfgPath is the path to the EnvoyGateway configuration file.
@@ -248,6 +251,11 @@ func setupRunners(ctx context.Context, cfg *config.Server) (err error) {
 	}
 
 	cfg.Logger.Info("runners are shutting down")
+	for _, r := range runners {
+		if err := r.runner.Close(); err != nil {
+			cfg.Logger.Error(err, "failed to close runner", "name", r.runner.Name())
+		}
+	}
 
 	if extMgr != nil {
 		// Close connections to extension services
