@@ -13,13 +13,13 @@
         upgradeConfigs:
         - upgradeType: websocket
       typedPerFilterConfig:
-        envoy.filters.http.ratelimit:
+        envoy.filters.http.ratelimit/test-policy-1/test-namespace:
           '@type': type.googleapis.com/envoy.extensions.filters.http.ratelimit.v3.RateLimitPerRoute
           rateLimits:
           - actions:
             - genericKey:
-                descriptorKey: test-namespace
-                descriptorValue: test-policy-1
+                descriptorKey: test-policy-1
+                descriptorValue: test-namespace
             - headerValueMatch:
                 descriptorKey: rule-0-match-0
                 descriptorValue: rule-0-match-0
@@ -36,13 +36,13 @@
         upgradeConfigs:
         - upgradeType: websocket
       typedPerFilterConfig:
-        envoy.filters.http.ratelimit:
+        envoy.filters.http.ratelimit/test-policy-1/test-namespace:
           '@type': type.googleapis.com/envoy.extensions.filters.http.ratelimit.v3.RateLimitPerRoute
           rateLimits:
           - actions:
             - genericKey:
-                descriptorKey: test-namespace
-                descriptorValue: test-policy-1
+                descriptorKey: test-policy-1
+                descriptorValue: test-namespace
             - headerValueMatch:
                 descriptorKey: rule-0-match-0
                 descriptorValue: rule-0-match-0
@@ -59,13 +59,13 @@
         upgradeConfigs:
         - upgradeType: websocket
       typedPerFilterConfig:
-        envoy.filters.http.ratelimit:
+        envoy.filters.http.ratelimit/test-policy-2/test-namespace:
           '@type': type.googleapis.com/envoy.extensions.filters.http.ratelimit.v3.RateLimitPerRoute
           rateLimits:
           - actions:
             - genericKey:
-                descriptorKey: test-namespace
-                descriptorValue: test-policy-2
+                descriptorKey: test-policy-2
+                descriptorValue: test-namespace
             - headerValueMatch:
                 descriptorKey: rule-0-match-0
                 descriptorValue: rule-0-match-0
