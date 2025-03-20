@@ -47,6 +47,7 @@ func FileLogger(file string, name string, level egv1a1.LogLevel) Logger {
 	return Logger{
 		Logger:        zapr.NewLogger(logger).WithName(name),
 		logging:       logging,
+		out:           writer,
 		sugaredLogger: logger.Sugar(),
 	}
 }
@@ -75,6 +76,7 @@ func (l Logger) WithName(name string) Logger {
 	return Logger{
 		Logger:        zapr.NewLogger(logger).WithName(name),
 		logging:       l.logging,
+		out:           l.out,
 		sugaredLogger: logger.Sugar().Named(name),
 	}
 }
