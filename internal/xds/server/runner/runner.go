@@ -76,6 +76,9 @@ func (r *Runner) Name() string {
 	return string(egv1a1.LogComponentXdsServerRunner)
 }
 
+// Close implements Runner interface.
+func (r *Runner) Close() error { return nil }
+
 // Start starts the xds-server runner
 func (r *Runner) Start(ctx context.Context) (err error) {
 	r.Logger = r.Logger.WithName(r.Name()).WithValues("runner", r.Name())
