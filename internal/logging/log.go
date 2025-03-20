@@ -57,6 +57,7 @@ func DefaultLogger(out io.Writer, level egv1a1.LogLevel) Logger {
 
 	return Logger{
 		Logger:        zapr.NewLogger(logger),
+		out:           out,
 		logging:       logging,
 		sugaredLogger: logger.Sugar(),
 	}
