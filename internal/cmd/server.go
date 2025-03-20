@@ -66,7 +66,7 @@ func server(ctx context.Context, logOut io.Writer) error {
 	hook := func(c context.Context, cfg *config.Server) error {
 		cfg.Logger.Info("Start runners")
 		if err := startRunners(c, cfg); err != nil {
-			cfg.Logger.Error(err, "failed to setup runners")
+			cfg.Logger.Error(err, "failed to start runners")
 			return err
 		}
 		runnersDone <- struct{}{}
