@@ -358,7 +358,11 @@ func buildXdsAccessLog(al *ir.AccessLog, accessLogType ir.ProxyAccessLogType) ([
 		}
 
 		al.Attributes = convertToKeyValueList(attrs, true)
-		al.Formatters = accessLogOpenTelemetryFormatters(format, attrs)
+		formatters := accessLogOpenTelemetryFormatters(format, attrs)
+
+		if len(formatters) != 0 {
+			al.Formatters = formatters
+		}
 
 		accesslogAny, err := proto.ToAnyWithValidation(al)
 		if err != nil {
