@@ -574,22 +574,6 @@ type ClusterSettings struct {
 	// +optional
 	Timeout *Timeout `json:"timeout,omitempty"`
 
-	// BufferRequests allows the gateway to buffer and fully receive each request from a client before continuing to send the request
-	// upstream to the backends. This can be helpful to shield your backend servers from slow clients, and also to enforce a maximum size per request
-	// as any requests larger than the buffer size will be rejected.
-	//
-	// This can have a negative performance impact so should only be enabled when necessary.
-	//
-	// When enabling this option, you should also configure your connection buffer size to account for these request buffers. There will also be an
-	// increase in memory usage for Envoy that should be accounted for in your deployment settings.
-	//
-	// When the target of this policy is a gateway the buffer will be applied at a listener level. When the target of the policy is a HTTPRoute it
-	// will be applied for that particular route only.
-	//
-	// +notImplementedHide
-	// +optional
-	BufferRequests *BufferRequests `json:"bufferRequests,omitempty"`
-
 	// Connection includes backend connection settings.
 	//
 	// +optional
@@ -769,16 +753,4 @@ type CustomResponseBody struct {
 	//
 	// +optional
 	ValueRef *gwapiv1.LocalObjectReference `json:"valueRef,omitempty"`
-}
-
-type BufferRequests struct {
-	// MaxBufferSize specifies the maximum allowed size in bytes for each incoming request buffer.
-	// If exceeded, the request will be rejected with HTTP 413 Content Too Large.
-	//
-	// Accepts values in resource.Quantity format (e.g., "10Mi", "500Ki").
-	//
-	// +kubebuilder:validation:XIntOrString
-	// +kubebuilder:validation:Pattern="^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$"
-	// +notImplementedHide
-	MaxBufferSize resource.Quantity `json:"maxBufferSize,omitempty"`
 }
