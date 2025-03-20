@@ -23,8 +23,8 @@ type Logger struct {
 	sugaredLogger *zap.SugaredLogger
 }
 
-func NewLogger(logging *egv1a1.EnvoyGatewayLogging) Logger {
-	logger := initZapLogger(os.Stdout, logging, logging.Level[egv1a1.LogComponentGatewayDefault])
+func NewLogger(w io.Writer, logging *egv1a1.EnvoyGatewayLogging) Logger {
+	logger := initZapLogger(w, logging, logging.Level[egv1a1.LogComponentGatewayDefault])
 
 	return Logger{
 		Logger:        zapr.NewLogger(logger),

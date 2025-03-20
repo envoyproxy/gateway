@@ -1,0 +1,49 @@
+gateways:
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: Gateway
+    metadata:
+      namespace: envoy-gateway
+      name: gateway-1
+    spec:
+      gatewayClassName: envoy-gateway-class
+      listeners:
+        - name: http
+          protocol: HTTP
+          port: 80
+          allowedRoutes:
+            namespaces:
+              from: All
+backends:
+  - apiVersion: gateway.envoyproxy.io/v1alpha1
+    kind: Backend
+    metadata:
+      name: backend-fqdn
+      namespace: default
+    spec:
+      endpoints:
+        - fqdn:
+            hostname: 'primary.foo.com'
+            port: 3000
+httpRoutes:
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: HTTPRoute
+    metadata:
+      namespace: default
+      name: httproute-1
+    spec:
+      parentRefs:
+        - namespace: envoy-gateway
+          name: gateway-1
+      rules:
+        - matches:
+            - path:
+                type: Exact
+                value: "/exact"
+          backendRefs:
+            - name: service-1
+              kind: Service
+              port: 8080
+            - name: backend-fqdn
+              kind: Backend
+              group: gateway.envoyproxy.io
+              port: 3000

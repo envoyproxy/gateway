@@ -146,7 +146,18 @@ spec:
                   The overprovisioning factor is set to 1.4, meaning the fallback backends will only start receiving traffic when
                   the health of the active backends falls below 72%.
                 type: boolean
+              type:
+                default: Endpoints
+                description: Type defines the type of the backend. Defaults to "Endpoints"
+                enum:
+                - Endpoints
+                - DynamicResolver
+                type: string
             type: object
+            x-kubernetes-validations:
+            - message: DynamicResolver type cannot have endpoints and appProtocols
+                specified
+              rule: self.type != 'DynamicResolver' || !has(self.endpoints) && !has(self.appProtocols)
           status:
             description: Status defines the current status of Backend.
             properties:

@@ -43,6 +43,7 @@ var (
 	ErrTLSPrivateKey                            = errors.New("field PrivateKey must be specified")
 	ErrRouteNameEmpty                           = errors.New("field Name must be specified")
 	ErrHTTPRouteHostnameEmpty                   = errors.New("field Hostname must be specified")
+	ErrRouteDestinationsFQDNMixed               = errors.New("mixed endpoints address type for the same route destination is not supported")
 	ErrDestinationNameEmpty                     = errors.New("field Name must be specified")
 	ErrDestEndpointHostInvalid                  = errors.New("field Address must be a valid IP or FQDN address")
 	ErrDestEndpointPortInvalid                  = errors.New("field Port specified is invalid")
@@ -828,6 +829,8 @@ type TrafficFeatures struct {
 	ResponseOverride *ResponseOverride `json:"responseOverride,omitempty" yaml:"responseOverride,omitempty"`
 	// Compression settings for HTTP Response
 	Compression []*Compression `json:"compression,omitempty" yaml:"compression,omitempty"`
+	// HTTPUpgrade defines the schema for upgrading the HTTP protocol.
+	HTTPUpgrade []string `json:"httpUpgrade,omitempty" yaml:"httpUpgrade,omitempty"`
 }
 
 func (b *TrafficFeatures) Validate() error {
@@ -1427,10 +1430,17 @@ func (r *RouteDestination) Validate() error {
 	if len(r.Name) == 0 {
 		errs = errors.Join(errs, ErrDestinationNameEmpty)
 	}
+	routeHasAddressTypes := make(sets.Set[DestinationAddressType])
 	for _, s := range r.Settings {
 		if err := s.Validate(); err != nil {
 			errs = errors.Join(errs, err)
 		}
+		if s.AddressType != nil {
+			routeHasAddressTypes.Insert(*s.AddressType)
+		}
+	}
+	if routeHasAddressTypes.Len() > 1 || routeHasAddressTypes.Has(MIXED) {
+		errs = errors.Join(ErrRouteDestinationsFQDNMixed)
 	}
 
 	return errs
@@ -2403,6 +2413,16 @@ type CircuitBreaker struct {
 
 	// The maximum number of parallel retries that Envoy will make.
 	MaxParallelRetries *uint32 `json:"maxParallelRetries,omitempty" yaml:"maxParallelRetries,omitempty"`
+
+	// PerEndpoint defines per-endpoint Circuit Breakers
+	PerEndpoint *PerEndpointCircuitBreakers `json:"perEndpoint,omitempty"`
+}
+
+// PerEndpointCircuitBreakers defines the per-endpoint Circuit Breaker configuration.
+// +k8s:deepcopy-gen=true
+type PerEndpointCircuitBreakers struct {
+	// MaxConnections configures the maximum number of connections that Envoy will establish per-endpoint to the referenced backend defined within a xRoute rule.
+	MaxConnections *uint32 `json:"maxConnections,omitempty"`
 }
 
 // HealthCheck defines health check settings

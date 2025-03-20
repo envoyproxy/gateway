@@ -9,6 +9,7 @@ import (
 	"context"
 	"reflect"
 
+	"github.com/telepresenceio/watchable"
 	ktypes "k8s.io/apimachinery/pkg/types"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
@@ -36,6 +37,10 @@ func New(cfg *Config) *Runner {
 	return &Runner{Config: *cfg}
 }
 
+// Close implements Runner interface.
+func (r *Runner) Close() error { return nil }
+
+// Name implements Runner interface.
 func (r *Runner) Name() string {
 	return string(egv1a1.LogComponentXdsTranslatorRunner)
 }
@@ -43,14 +48,15 @@ func (r *Runner) Name() string {
 // Start starts the xds-translator runner
 func (r *Runner) Start(ctx context.Context) (err error) {
 	r.Logger = r.Logger.WithName(r.Name()).WithValues("runner", r.Name())
-	go r.subscribeAndTranslate(ctx)
+	sub := r.XdsIR.Subscribe(ctx)
+	go r.subscribeAndTranslate(sub)
 	r.Logger.Info("started")
 	return
 }
 
-func (r *Runner) subscribeAndTranslate(ctx context.Context) {
+func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *ir.Xds]) {
 	// Subscribe to resources
-	message.HandleSubscription(message.Metadata{Runner: string(egv1a1.LogComponentXdsTranslatorRunner), Message: "xds-ir"}, r.XdsIR.Subscribe(ctx),
+	message.HandleSubscription(message.Metadata{Runner: string(egv1a1.LogComponentXdsTranslatorRunner), Message: "xds-ir"}, sub,
 		func(update message.Update[string, *ir.Xds], errChan chan error) {
 			r.Logger.Info("received an update")
 			key := update.Key

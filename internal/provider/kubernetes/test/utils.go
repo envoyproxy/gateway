@@ -15,8 +15,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+	mcsapiv1a1 "sigs.k8s.io/mcs-api/pkg/apis/v1alpha1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/gatewayapi"
+	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 )
 
 type GroupKindNamespacedName struct {
@@ -107,8 +110,24 @@ func GetSecret(nsName types.NamespacedName) *corev1.Secret {
 	}
 }
 
+func GetServiceBackendRef(name types.NamespacedName, port int32) gwapiv1.BackendObjectReference {
+	return gwapiv1.BackendObjectReference{
+		Name: gwapiv1.ObjectName(name.Name),
+		Port: ptr.To(gwapiv1.PortNumber(port)),
+	}
+}
+
+func GetServiceImportBackendRef(name types.NamespacedName, port int32) gwapiv1.BackendObjectReference {
+	return gwapiv1.BackendObjectReference{
+		Name:  gwapiv1.ObjectName(name.Name),
+		Port:  ptr.To(gwapiv1.PortNumber(port)),
+		Kind:  gatewayapi.KindPtr(resource.KindServiceImport),
+		Group: gatewayapi.GroupPtr(mcsapiv1a1.GroupName),
+	}
+}
+
 // GetHTTPRoute returns a sample HTTPRoute with a parent reference.
-func GetHTTPRoute(nsName types.NamespacedName, parent string, serviceName types.NamespacedName, port int32, httpRouteFilterName string) *gwapiv1.HTTPRoute {
+func GetHTTPRoute(nsName types.NamespacedName, parent string, backendRef gwapiv1.BackendObjectReference, httpRouteFilterName string) *gwapiv1.HTTPRoute {
 	httpRoute := &gwapiv1.HTTPRoute{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: nsName.Namespace,
@@ -125,10 +144,7 @@ func GetHTTPRoute(nsName types.NamespacedName, parent string, serviceName types.
 					BackendRefs: []gwapiv1.HTTPBackendRef{
 						{
 							BackendRef: gwapiv1.BackendRef{
-								BackendObjectReference: gwapiv1.BackendObjectReference{
-									Name: gwapiv1.ObjectName(serviceName.Name),
-									Port: ptr.To(gwapiv1.PortNumber(port)),
-								},
+								BackendObjectReference: backendRef,
 							},
 						},
 					},
@@ -349,12 +365,19 @@ func GetService(nsName types.NamespacedName, labels map[string]string, ports map
 }
 
 // GetEndpointSlice returns a sample EndpointSlice.
-func GetEndpointSlice(nsName types.NamespacedName, svcName string) *discoveryv1.EndpointSlice {
+func GetEndpointSlice(nsName types.NamespacedName, svcName string, isServiceImport bool) *discoveryv1.EndpointSlice {
+	var labels map[string]string
+	if isServiceImport {
+		labels = map[string]string{mcsapiv1a1.LabelServiceName: svcName}
+	} else {
+		labels = map[string]string{discoveryv1.LabelServiceName: svcName}
+	}
+
 	return &discoveryv1.EndpointSlice{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      nsName.Name,
 			Namespace: nsName.Namespace,
-			Labels:    map[string]string{discoveryv1.LabelServiceName: svcName},
+			Labels:    labels,
 		},
 		Endpoints: []discoveryv1.Endpoint{
 			{

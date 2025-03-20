@@ -21,7 +21,7 @@ func loadFromFilesAndDirs(files, dirs []string) ([]*resource.Resources, error) {
 	for _, file := range files {
 		r, err := loadFromFile(file)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("failed to load resources from file %s: %w", file, err)
 		}
 		rs = append(rs, r)
 	}
@@ -67,10 +67,10 @@ func loadFromDir(path string) ([]*resource.Resources, error) {
 		if entry.IsDir() || strings.HasPrefix(entry.Name(), ".") {
 			continue
 		}
-
-		r, err := loadFromFile(filepath.Join(path, entry.Name()))
+		full := filepath.Join(path, entry.Name())
+		r, err := loadFromFile(full)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("failed to load resources from file %s: %w", full, err)
 		}
 
 		rs = append(rs, r)

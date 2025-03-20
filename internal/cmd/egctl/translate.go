@@ -239,14 +239,14 @@ func translate(w io.Writer, inFile, inType string, outTypes []string, output, re
 				}
 			}
 			if outType == xdsType {
-				res, err := translateGatewayAPIToXds(namespace, dnsDomain, resourceType, resources)
+				res, err := TranslateGatewayAPIToXds(namespace, dnsDomain, resourceType, resources)
 				if err != nil {
 					return err
 				}
 				result.Xds = res
 			}
 			if outType == irType {
-				res, err := TranslateGatewayAPIToIR(resources)
+				res, err := translateGatewayAPIToIR(resources)
 				if err != nil {
 					return err
 				}
@@ -265,7 +265,7 @@ func translate(w io.Writer, inFile, inType string, outTypes []string, output, re
 	return fmt.Errorf("unable to find translate from input type %s to output type %s", inType, outTypes)
 }
 
-func TranslateGatewayAPIToIR(resources *resource.Resources) (*gatewayapi.TranslateResult, error) {
+func translateGatewayAPIToIR(resources *resource.Resources) (*gatewayapi.TranslateResult, error) {
 	if resources.GatewayClass == nil {
 		return nil, fmt.Errorf("the GatewayClass resource is required")
 	}
@@ -331,7 +331,7 @@ func translateGatewayAPIToGatewayAPI(resources *resource.Resources) (resource.Re
 	return gRes.Resources, nil
 }
 
-func translateGatewayAPIToXds(namespace, dnsDomain string, resourceType string, resources *resource.Resources) (map[string]any, error) {
+func TranslateGatewayAPIToXds(namespace, dnsDomain, resourceType string, resources *resource.Resources) (map[string]any, error) {
 	if resources.GatewayClass == nil {
 		return nil, fmt.Errorf("the GatewayClass resource is required")
 	}

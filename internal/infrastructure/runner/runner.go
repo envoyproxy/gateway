@@ -8,6 +8,7 @@ package runner
 import (
 	"context"
 
+	"github.com/telepresenceio/watchable"
 	"k8s.io/utils/ptr"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
@@ -27,6 +28,12 @@ type Runner struct {
 	mgr infrastructure.Manager
 }
 
+// Close implements Runner interface.
+func (r *Runner) Close() error {
+	return r.mgr.Close()
+}
+
+// Name implements Runner interface.
 func (r *Runner) Name() string {
 	return string(egv1a1.LogComponentInfrastructureRunner)
 }
@@ -50,8 +57,9 @@ func (r *Runner) Start(ctx context.Context) (err error) {
 		return err
 	}
 
+	sub := r.InfraIR.Subscribe(ctx)
 	initInfra := func() {
-		go r.subscribeToProxyInfraIR(ctx)
+		go r.subscribeToProxyInfraIR(ctx, sub)
 
 		// Enable global ratelimit if it has been configured.
 		if r.EnvoyGateway.RateLimit != nil {
@@ -85,9 +93,9 @@ func (r *Runner) Start(ctx context.Context) (err error) {
 	return
 }
 
-func (r *Runner) subscribeToProxyInfraIR(ctx context.Context) {
+func (r *Runner) subscribeToProxyInfraIR(ctx context.Context, sub <-chan watchable.Snapshot[string, *ir.Infra]) {
 	// Subscribe to resources
-	message.HandleSubscription(message.Metadata{Runner: string(egv1a1.LogComponentInfrastructureRunner), Message: "infra-ir"}, r.InfraIR.Subscribe(ctx),
+	message.HandleSubscription(message.Metadata{Runner: string(egv1a1.LogComponentInfrastructureRunner), Message: "infra-ir"}, sub,
 		func(update message.Update[string, *ir.Infra], errChan chan error) {
 			r.Logger.Info("received an update")
 			val := update.Value

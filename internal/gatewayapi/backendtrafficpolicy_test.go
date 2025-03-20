@@ -132,3 +132,57 @@ func Test_translateRateLimitCost(t *testing.T) {
 		})
 	}
 }
+
+func TestBuildHTTPProtocolUpgradeConfig(t *testing.T) {
+	cases := []struct {
+		name     string
+		cfgs     []*egv1a1.ProtocolUpgradeConfig
+		expected []string
+	}{
+		{
+			name:     "empty",
+			cfgs:     nil,
+			expected: nil,
+		},
+		{
+			name: "spdy",
+			cfgs: []*egv1a1.ProtocolUpgradeConfig{
+				{
+					Type: "spdy/3.1",
+				},
+			},
+			expected: []string{"spdy/3.1"},
+		},
+		{
+			name: "websockets-spdy",
+			cfgs: []*egv1a1.ProtocolUpgradeConfig{
+				{
+					Type: "websockets",
+				},
+				{
+					Type: "spdy/3.1",
+				},
+			},
+			expected: []string{"websockets", "spdy/3.1"},
+		},
+		{
+			name: "spdy-websockets",
+			cfgs: []*egv1a1.ProtocolUpgradeConfig{
+				{
+					Type: "spdy/3.1",
+				},
+				{
+					Type: "websockets",
+				},
+			},
+			expected: []string{"spdy/3.1", "websockets"},
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			got := buildHTTPProtocolUpgradeConfig(tc.cfgs)
+			require.Equal(t, tc.expected, got)
+		})
+	}
+}
