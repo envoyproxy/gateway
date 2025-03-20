@@ -7,3 +7,7 @@ adopters:
     logo: "/logos/kuadrant.svg"
     url: "https://kuadrant.io"
     description: "Kuadrant extends gateways and routes managed by Envoy Gateway with additional policy capabilities to enhance application connectivity and security."
+  - name: "AIBrix"
+    logo: "/logos/aibrix.png"
+    url: "https://aibrix.readthedocs.io"
+    description: "AIBrix provides building blocks for scalable GenAI inference infrastructure and leverages Envoy Gateway to deploy advanced routing strategies for LLM requests sent to Inference engines"
