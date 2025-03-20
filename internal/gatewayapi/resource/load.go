@@ -124,7 +124,7 @@ func loadKubernetesYAMLToResources(input []byte, addMissingResources bool) (*Res
 				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name: name,
-					// It's werid for non-namespaced resource to have namespace.
+					// It's weird for non-namespaced resource to have namespace.
 				},
 				Spec: typedSpec.(gwapiv1.GatewayClassSpec),
 			}
