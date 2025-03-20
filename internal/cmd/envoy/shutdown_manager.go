@@ -21,7 +21,8 @@ import (
 	"github.com/envoyproxy/gateway/internal/xds/bootstrap"
 )
 
-var logger = logging.DefaultLogger(egv1a1.LogLevelInfo).WithName("shutdown-manager")
+// TODO: Remove the global logger and localize the scope of the logger.
+var logger = logging.DefaultLogger(os.Stdout, egv1a1.LogLevelInfo).WithName("shutdown-manager")
 
 const (
 	// ShutdownManagerPort is the port Envoy shutdown manager will listen on.

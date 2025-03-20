@@ -8,6 +8,7 @@ package runner
 import (
 	"context"
 	"fmt"
+	"os"
 	"testing"
 	"time"
 
@@ -209,7 +210,7 @@ func Test_subscribeAndTranslate(t *testing.T) {
 			defer cancel()
 			xdsIR := new(message.XdsIR)
 			defer xdsIR.Close()
-			cfg, err := config.New()
+			cfg, err := config.New(os.Stdout)
 			require.NoError(t, err)
 
 			r := New(&Config{

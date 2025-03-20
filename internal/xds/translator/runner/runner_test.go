@@ -8,6 +8,7 @@ package runner
 import (
 	"context"
 	"fmt"
+	"os"
 	"testing"
 	"time"
 
@@ -28,7 +29,7 @@ func TestRunner(t *testing.T) {
 	xdsIR := new(message.XdsIR)
 	xds := new(message.Xds)
 	pResource := new(message.ProviderResources)
-	cfg, err := config.New()
+	cfg, err := config.New(os.Stdout)
 	require.NoError(t, err)
 	r := New(&Config{
 		Server:            *cfg,
@@ -108,7 +109,7 @@ func TestRunner_withExtensionManager(t *testing.T) {
 	xds := new(message.Xds)
 	pResource := new(message.ProviderResources)
 
-	cfg, err := config.New()
+	cfg, err := config.New(os.Stdout)
 	require.NoError(t, err)
 	r := New(&Config{
 		Server:            *cfg,

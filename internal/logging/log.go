@@ -19,6 +19,7 @@ import (
 
 type Logger struct {
 	logr.Logger
+	out           io.Writer
 	logging       *egv1a1.EnvoyGatewayLogging
 	sugaredLogger *zap.SugaredLogger
 }
@@ -28,6 +29,7 @@ func NewLogger(w io.Writer, logging *egv1a1.EnvoyGatewayLogging) Logger {
 
 	return Logger{
 		Logger:        zapr.NewLogger(logger),
+		out:           w,
 		logging:       logging,
 		sugaredLogger: logger.Sugar(),
 	}
@@ -49,9 +51,9 @@ func FileLogger(file string, name string, level egv1a1.LogLevel) Logger {
 	}
 }
 
-func DefaultLogger(level egv1a1.LogLevel) Logger {
+func DefaultLogger(out io.Writer, level egv1a1.LogLevel) Logger {
 	logging := egv1a1.DefaultEnvoyGatewayLogging()
-	logger := initZapLogger(os.Stdout, logging, level)
+	logger := initZapLogger(out, logging, level)
 
 	return Logger{
 		Logger:        zapr.NewLogger(logger),
@@ -67,7 +69,7 @@ func DefaultLogger(level egv1a1.LogLevel) Logger {
 // more information).
 func (l Logger) WithName(name string) Logger {
 	logLevel := l.logging.Level[egv1a1.EnvoyGatewayLogComponent(name)]
-	logger := initZapLogger(os.Stdout, l.logging, logLevel)
+	logger := initZapLogger(l.out, l.logging, logLevel)
 
 	return Logger{
 		Logger:        zapr.NewLogger(logger).WithName(name),
