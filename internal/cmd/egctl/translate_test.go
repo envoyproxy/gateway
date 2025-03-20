@@ -295,7 +295,7 @@ func TestTranslate(t *testing.T) {
 			expect: true,
 		},
 		{
-			name:   "add-missing-namespaces",
+			name:   "default-namespace",
 			from:   "gateway-api",
 			to:     "gateway-api",
 			expect: true,
