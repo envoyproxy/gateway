@@ -13,6 +13,7 @@ bug fixes: |
   Added support for BackendTLSPolicy and EnvoyExtensionPolicy parsing in Standalone mode.
   Fixed updates of endpoints when mirrored backend Pod IPs are changed.
   Fix not logging an error and returning it in the K8s Reconcile method when a GatewayClass is not accepted.
+  Fixed validation of host header in RequestHeaderModifier filter.
 
 # Enhancements that improve performance.
 performance improvements: |
