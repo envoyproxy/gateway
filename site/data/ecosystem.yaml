@@ -11,3 +11,7 @@ adopters:
     logo: "/logos/aibrix.png"
     url: "https://aibrix.readthedocs.io"
     description: "AIBrix provides building blocks for scalable GenAI inference infrastructure and leverages Envoy Gateway to deploy advanced routing strategies for LLM requests sent to Inference engines"
+ - name: "Knative"
+    logo: "/logos/knative.png"
+    url: "https://knative.dev"
+    description: "Knative's net-gateway-api integrates with Envoy Gateway by implementing the Kubernetes Gateway API, enabling Knative services to utilize Envoy Gateway for ingress traffic management."
