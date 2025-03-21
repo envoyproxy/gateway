@@ -119,6 +119,16 @@ func (i *Infra) createOrUpdateDeployment(ctx context.Context, r ResourceRender) 
 	}
 
 	defer func() {
+		// custom Deployment name is enabled, and the deployment name is different from the resource name.
+		if deployment.Name != r.Name() {
+			_ = i.Client.DeleteIfExists(ctx, &appsv1.Deployment{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      r.Name(),
+					Namespace: i.Namespace,
+				},
+			})
+		}
+
 		if err == nil {
 			resourceApplyDurationSeconds.With(labels...).Record(time.Since(startTime).Seconds())
 			resourceApplyTotal.WithSuccess(labels...).Increment()
@@ -200,6 +210,16 @@ func (i *Infra) createOrUpdateDaemonSet(ctx context.Context, r ResourceRender) (
 	}
 
 	defer func() {
+		// custom DaemonSet name is enabled, and the deployment name is different from the resource name.
+		if daemonSet.Name != r.Name() {
+			_ = i.Client.DeleteIfExists(ctx, &appsv1.DaemonSet{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      r.Name(),
+					Namespace: i.Namespace,
+				},
+			})
+		}
+
 		if err == nil {
 			resourceApplyDurationSeconds.With(labels...).Record(time.Since(startTime).Seconds())
 			resourceApplyTotal.WithSuccess(labels...).Increment()
@@ -358,6 +378,16 @@ func (i *Infra) createOrUpdateService(ctx context.Context, r ResourceRender) (er
 	}
 
 	defer func() {
+		// custom DaemonSet name is enabled, and the deployment name is different from the resource name.
+		if svc.Name != r.Name() {
+			_ = i.Client.DeleteIfExists(ctx, &corev1.Service{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      r.Name(),
+					Namespace: i.Namespace,
+				},
+			})
+		}
+
 		if err == nil {
 			resourceApplyDurationSeconds.With(labels...).Record(time.Since(startTime).Seconds())
 			resourceApplyTotal.WithSuccess(labels...).Increment()

@@ -33,6 +33,15 @@ func (cli *InfraClient) ServerSideApply(ctx context.Context, obj client.Object) 
 	return nil
 }
 
+func (cli *InfraClient) DeleteIfExists(ctx context.Context, object client.Object) error {
+	if err := cli.Delete(ctx, object); err != nil {
+		if kerrors.IsNotFound(err) {
+			return nil
+		}
+	}
+	return nil
+}
+
 func (cli *InfraClient) Delete(ctx context.Context, object client.Object) error {
 	if err := cli.Client.Delete(ctx, object); err != nil {
 		if kerrors.IsNotFound(err) {
