@@ -73,8 +73,9 @@ httpRoutes:
     parents:
     - conditions:
       - lastTransitionTime: null
-        message: 'RequestHeaderModifier Filter cannot set headers with a ''/'' or
-          '':'' character in them, or the host header. Header: "example:1"'
+        message: 'Header: "example:1". The RequestHeaderModifier filter cannot set
+          the Host header or headers with a ''/'' or '':'' character in them. To modify
+          the Host header use the URLRewrite or the HTTPRouteFilter filter.'
         reason: UnsupportedValue
         status: "False"
         type: Accepted
@@ -120,8 +121,8 @@ httpRoutes:
     parents:
     - conditions:
       - lastTransitionTime: null
-        message: 'RequestHeaderModifier Filter cannot remove headers with a ''/''
-          or '':'' character in them, or the host header. Header: "example/2"'
+        message: 'Header: "example/2". The RequestHeaderModifier filter cannot remove
+          the Host header or headers with a ''/'' or '':'' character in them.'
         reason: UnsupportedValue
         status: "False"
         type: Accepted
@@ -167,8 +168,9 @@ httpRoutes:
     parents:
     - conditions:
       - lastTransitionTime: null
-        message: 'RequestHeaderModifier Filter cannot set headers with a ''/'' or
-          '':'' character in them, or the host header. Header: "host"'
+        message: 'Header: "host". The RequestHeaderModifier filter cannot set the
+          Host header or headers with a ''/'' or '':'' character in them. To modify
+          the Host header use the URLRewrite or the HTTPRouteFilter filter.'
         reason: UnsupportedValue
         status: "False"
         type: Accepted
