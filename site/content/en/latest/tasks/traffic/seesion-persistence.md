@@ -2,7 +2,7 @@
 title: "Session Persistence"
 ---
 
-Session Persistence allows client requests to be consistently routed to the same backend service instance. This is useful in many scenarios, such as when an application needs to maintain state across multiple requests. In Envoy Gateway, session persistence can be enabled by configuring Gateway API resources.
+Session Persistence allows client requests to be consistently routed to the same backend service instance. This is useful in many scenarios, such as when an application needs to maintain state across multiple requests. In Envoy Gateway, session persistence can be enabled by configuring [HTTPRoute][].
 
 Envoy Gateway supports following session persistence types:
 - **Cookie-based** Session Persistence: Session persistence is achieved based on specific cookie information in the request.
