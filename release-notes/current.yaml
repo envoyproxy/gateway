@@ -26,3 +26,5 @@ deprecations: |
 
 # Other notable changes not covered by the above sections.
 Other changes: |
+  Bumped envoy to v1.33.1.
+  Bumpled ratelimit to 0141a24f.
