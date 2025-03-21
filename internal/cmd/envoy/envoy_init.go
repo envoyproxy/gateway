@@ -1,0 +1,168 @@
+// Copyright Envoy Gateway Authors
+// SPDX-License-Identifier: Apache-2.0
+// The full text of the Apache license is available in the LICENSE file at
+// the root of the repo.
+
+package envoy
+
+import (
+	"context"
+	"fmt"
+	bootstrapv3 "github.com/envoyproxy/go-control-plane/envoy/config/bootstrap/v3"
+	clusterv3 "github.com/envoyproxy/go-control-plane/envoy/config/cluster/v3"
+	corev3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
+	endpointv3 "github.com/envoyproxy/go-control-plane/envoy/config/endpoint/v3"
+	"google.golang.org/protobuf/encoding/protojson"
+	"google.golang.org/protobuf/types/known/durationpb"
+	"google.golang.org/protobuf/types/known/wrapperspb"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/clientcmd"
+	"os"
+	"time"
+)
+
+const (
+	DefaultEnvoyInitConfigPath = "/envoyconfigs/config.json"
+)
+
+func EnvoyInit(configPath string, zoneDiscoveryDisabled bool, zoneOverride string) error {
+	if zoneOverride != "" {
+		return writeConfig(configPath, zoneOverride)
+	}
+
+	nodeName := os.Getenv("NODE_NAME")
+
+	if nodeName == "" {
+		return fmt.Errorf("NODE_NAME environment variable is required")
+	}
+
+	node, err := getNode(nodeName)
+	if err != nil {
+		return fmt.Errorf("error getting node %q: %w", nodeName, err)
+	}
+
+	zone, err := buildLocalityZone(node, zoneOverride, zoneDiscoveryDisabled)
+	if err != nil {
+		return fmt.Errorf("error getting node topology zone: %w", err)
+	}
+
+	// Write locality information to envoy config file
+	if err = writeConfig(configPath, zone); err != nil {
+		return fmt.Errorf("error writing config file: %w", err)
+	}
+
+	return nil
+}
+
+func getNode(nodeName string) (*corev1.Node, error) {
+	c, err := getClient(nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to build clientset: %w", err)
+	}
+	return c.CoreV1().Nodes().Get(context.Background(), nodeName, metav1.GetOptions{})
+}
+
+func getClient(kubeconfigPath *string) (kubernetes.Interface, error) {
+	var config *rest.Config
+	var err error
+	if kubeconfigPath != nil {
+		config, err = clientcmd.BuildConfigFromFlags("", *kubeconfigPath)
+	} else {
+		config, err = rest.InClusterConfig()
+	}
+	if err != nil {
+		return nil, err
+	}
+	return kubernetes.NewForConfig(config)
+}
+
+// buildLocalityZone configures the envoy locality zone using the Kubernetes node topology labels.
+func buildLocalityZone(node *corev1.Node, override string, discoveryDisabled bool) (string, error) {
+	if override != "" {
+		return override, nil
+	}
+	if discoveryDisabled {
+		return "", nil
+	}
+
+	zone, exists := node.Labels[corev1.LabelTopologyZone]
+	if !exists {
+		return "", fmt.Errorf("zone label %q not found on node %q", corev1.LabelTopologyZone, node.Name)
+	}
+	return zone, nil
+}
+
+// writeConfig writes the locality information to the config file used for Envoy bootstrapping.
+func writeConfig(configPath, zone string) error {
+	clusterName := "local_cluster"
+	// Construct JSON structure as a map
+	config := &bootstrapv3.Bootstrap{
+		Node: &corev3.Node{
+			Locality: &corev3.Locality{
+				Zone: zone,
+			},
+		},
+		ClusterManager: &bootstrapv3.ClusterManager{
+			LocalClusterName: clusterName,
+		},
+		StaticResources: &bootstrapv3.Bootstrap_StaticResources{
+			Clusters: []*clusterv3.Cluster{{
+				Name: clusterName,
+				ClusterDiscoveryType: &clusterv3.Cluster_Type{
+					Type: clusterv3.Cluster_STATIC,
+				},
+				CommonLbConfig: &clusterv3.Cluster_CommonLbConfig{LocalityConfigSpecifier: &clusterv3.Cluster_CommonLbConfig_ZoneAwareLbConfig_{ZoneAwareLbConfig: &clusterv3.Cluster_CommonLbConfig_ZoneAwareLbConfig{MinClusterSize: wrapperspb.UInt64(1)}}},
+				ConnectTimeout: durationpb.New(time.Second),
+				LoadAssignment: &endpointv3.ClusterLoadAssignment{
+					ClusterName: clusterName,
+					Endpoints: []*endpointv3.LocalityLbEndpoints{{
+						LbEndpoints: []*endpointv3.LbEndpoint{{
+							HostIdentifier: &endpointv3.LbEndpoint_Endpoint{
+								Endpoint: &endpointv3.Endpoint{
+									Address: &corev3.Address{
+										Address: &corev3.Address_SocketAddress{
+											SocketAddress: &corev3.SocketAddress{
+												Protocol: corev3.SocketAddress_TCP,
+												Address:  "0.0.0.0",
+												PortSpecifier: &corev3.SocketAddress_PortValue{
+													PortValue: 10080,
+												},
+											},
+										},
+									},
+								},
+							},
+							LoadBalancingWeight: wrapperspb.UInt32(1),
+						}},
+						LoadBalancingWeight: wrapperspb.UInt32(1),
+
+						Locality: &corev3.Locality{
+							Zone: zone,
+						},
+					}},
+				},
+			}},
+		},
+	}
+
+	mo := protojson.MarshalOptions{
+		Multiline:       true,
+		UseProtoNames:   true,  // use proto field names instead of camelCase
+		EmitUnpopulated: false, // omit zero-value fields (a.k.a. 'null' fields)
+	}
+	jsonData, err := mo.Marshal(config)
+	if err != nil {
+		return fmt.Errorf("error marshaling config: %w", err)
+	}
+
+	err = os.WriteFile(configPath, jsonData, 0o600)
+	if err != nil {
+		return fmt.Errorf("error writing config: %w", err)
+	}
+
+	fmt.Println("Successfully built service locality configuration.")
+	return nil
+}

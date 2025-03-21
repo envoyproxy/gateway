@@ -223,6 +223,7 @@ spec:
         - --cpuset-threads
         - --drain-strategy immediate
         - --drain-time-s 60
+        - -c /envoyconfigs/config.json
         command:
         - envoy
         env:
@@ -300,6 +301,8 @@ spec:
           readOnly: true
         - mountPath: /sds
           name: sds
+        - mountPath: /envoyconfigs
+          name: envoyconfigs
       - args:
         - envoy
         - shutdown-manager
@@ -369,6 +372,9 @@ spec:
       serviceAccountName: envoy-default-37a8eec1
       terminationGracePeriodSeconds: 360
       volumes:
+      - emptyDir:
+          sizeLimit: 1Mi
+        name: envoyconfigs
       - name: certs
         secret:
           defaultMode: 420
