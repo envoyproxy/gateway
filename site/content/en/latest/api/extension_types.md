@@ -3282,7 +3282,7 @@ _Appears in:_
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `disable` | _boolean_ |  true  |  | Disable disables access logging for managed proxies if set to true. |
+| `disable` | _boolean_ |  false  |  | Disable disables access logging for managed proxies if set to true. |
 | `settings` | _[ProxyAccessLogSetting](#proxyaccesslogsetting) array_ |  false  |  | Settings defines accesslog settings for managed proxies.<br />If unspecified, will send default format to stdout. |
 
 
