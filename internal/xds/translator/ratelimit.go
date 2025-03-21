@@ -88,13 +88,15 @@ func (t *Translator) isRateLimitPresent(irListener *ir.HTTPListener) bool {
 }
 
 // buildRateLimitFilter constructs a list of HTTP filters for rate limiting based on the provided HTTP listener configuration.
+// It creates at most one filter per domain to avoid duplicates.
 func (t *Translator) buildRateLimitFilter(irListener *ir.HTTPListener) []*hcmv3.HttpFilter {
 	if irListener == nil || irListener.Routes == nil {
 		return nil
 	}
 
 	var filters []*hcmv3.HttpFilter
-	domainMap := make(map[string]bool)
+	// Map to track which domains we've already created filters for, prevents creating duplicate filters for the same domain
+	processedDomains := make(map[string]bool)
 
 	// Iterate over each route in the listener to create rate limit filters for shared rate limits.
 	for _, route := range irListener.Routes {
@@ -113,15 +115,15 @@ func (t *Translator) buildRateLimitFilter(irListener *ir.HTTPListener) []*hcmv3.
 		}
 
 		// Skip if we've already created a filter for this domain
-		if _, exists := domainMap[domain]; exists {
+		if processedDomains[domain] {
 			continue
 		}
+		processedDomains[domain] = true
 
 		// Create a filter for this domain
 		filter := createRateLimitFilter(t, irListener, domain, filterName)
 		if filter != nil {
 			filters = append(filters, filter)
-			domainMap[domain] = true
 		}
 	}
 
@@ -231,8 +233,8 @@ func buildRouteRateLimits(route *ir.HTTPRoute) (rateLimits []*routev3.RateLimit)
 	var descriptorKey, descriptorValue string
 	if isShared {
 		// For shared rate limits, use BTP name as key and namespace as value
-		descriptorKey = getTrafficPolicyName(route)
-		descriptorValue = getTrafficPolicyNamespace(route)
+		descriptorKey = route.Traffic.Name
+		descriptorValue = route.Traffic.Name
 	} else {
 		// For non-shared rate limits, include the route name in the descriptor
 		descriptorKey = getRouteDescriptor(descriptorPrefix)
@@ -413,9 +415,12 @@ func GetRateLimitServiceConfigStr(pbCfg *rlsconfv3.RateLimitConfig) (string, err
 // BuildRateLimitServiceConfig builds the rate limit service configurations based on
 // https://github.com/envoyproxy/ratelimit#the-configuration-format
 // It returns a list of unique configurations, one for each domain needed across all listeners.
+// For shared rate limits, it ensures we only process each shared domain once to improve efficiency.
 func BuildRateLimitServiceConfig(irListeners []*ir.HTTPListener) []*rlsconfv3.RateLimitConfig {
 	// Map to store descriptors for each domain
 	domainDescriptors := make(map[string][]*rlsconfv3.RateLimitDescriptor)
+	// Map to track which domains we've already created filters for, prevents creating duplicate filters for the same domain
+	processedSharedDomains := make(map[string]bool)
 
 	// Process each listener
 	for _, irListener := range irListeners {
@@ -425,82 +430,30 @@ func BuildRateLimitServiceConfig(irListeners []*ir.HTTPListener) []*rlsconfv3.Ra
 				continue
 			}
 
+			domain := irListener.Name
+			if isSharedRateLimit(route) {
+				domain = getDomainName(route)
+
+				// Skip if we've already processed this shared domain
+				if processedSharedDomains[domain] {
+					continue
+				}
+				processedSharedDomains[domain] = true
+			}
+
 			// Get route rule descriptors within each route
 			serviceDescriptors := buildRateLimitServiceDescriptors(route)
 			if len(serviceDescriptors) == 0 {
 				continue
 			}
 
-			// Determine the domain for this route
-			domain := irListener.Name // Default domain
-			if isSharedRateLimit(route) {
-				domain = getDomainName(route)
-			}
-
-			// Handle shared and non-shared rate limits differently
-			if isSharedRateLimit(route) {
-				addSharedRateLimitDescriptor(route, serviceDescriptors, domain, domainDescriptors)
-			} else {
-				addRouteSpecificDescriptor(route, serviceDescriptors, domain, domainDescriptors)
-			}
+			// Add the rate limit descriptor (handles both shared and non-shared)
+			addRateLimitDescriptor(route, serviceDescriptors, domain, domainDescriptors)
 		}
 	}
 
 	configs := createRateLimitConfigs(domainDescriptors)
 	return configs
-}
-
-// addSharedRateLimitDescriptor adds shared rate limit descriptors to the domain descriptor map
-func addSharedRateLimitDescriptor(
-	route *ir.HTTPRoute,
-	serviceDescriptors []*rlsconfv3.RateLimitDescriptor,
-	domain string,
-	domainDescriptors map[string][]*rlsconfv3.RateLimitDescriptor,
-) {
-	sharedKey := getTrafficPolicyName(route)
-	sharedValue := getTrafficPolicyNamespace(route)
-
-	// Check if we already have a descriptor for this key/value pair
-	for _, desc := range domainDescriptors[domain] {
-		if desc.Key == sharedKey && desc.Value == sharedValue {
-			return
-		}
-	}
-
-	// No existing descriptor found, create a new one
-	globalDescriptor := &rlsconfv3.RateLimitDescriptor{
-		Key:         sharedKey,
-		Value:       sharedValue,
-		Descriptors: serviceDescriptors,
-	}
-	domainDescriptors[domain] = append(domainDescriptors[domain], globalDescriptor)
-}
-
-// addRouteSpecificDescriptor adds a route-specific descriptor to the domain descriptor map
-func addRouteSpecificDescriptor(
-	route *ir.HTTPRoute,
-	serviceDescriptors []*rlsconfv3.RateLimitDescriptor,
-	domain string,
-	domainDescriptors map[string][]*rlsconfv3.RateLimitDescriptor,
-) {
-	// Get route rule descriptors within each route.
-	//
-	// An example of route descriptor looks like this:
-	//
-	// descriptors:
-	//   - key:   ${RouteDescriptor}
-	//     value: ${RouteDescriptor}
-	//     descriptors:
-	//       - key:   ${RouteRuleDescriptor}
-	//         value: ${RouteRuleDescriptor}
-	//       - ...
-
-	routeDescriptor := &rlsconfv3.RateLimitDescriptor{
-		Key:         getRouteDescriptor(route.Name),
-		Value:       getRouteDescriptor(route.Name),
-		Descriptors: serviceDescriptors,
-	}
-	domainDescriptors[domain] = append(domainDescriptors[domain], routeDescriptor)
 }
 
 // createRateLimitConfigs creates rate limit configs from the domain descriptor map
@@ -518,6 +471,43 @@ func createRateLimitConfigs(
 		}
 	}
 	return configs
+}
+
+// addRateLimitDescriptor adds rate limit descriptors to the domain descriptor map.
+// Handles both shared and route-specific rate limits.
+//
+// An example of route descriptor looks like this:
+// descriptors:
+//   - key:   ${RouteDescriptor}
+//     value: ${RouteDescriptor}
+//     descriptors:
+//   - key:   ${RouteRuleDescriptor}
+//     value: ${RouteRuleDescriptor}
+//   - ...
+func addRateLimitDescriptor(
+	route *ir.HTTPRoute,
+	serviceDescriptors []*rlsconfv3.RateLimitDescriptor,
+	domain string,
+	domainDescriptors map[string][]*rlsconfv3.RateLimitDescriptor,
+) {
+	var key, value string
+
+	if isSharedRateLimit(route) {
+		// For shared rate limits, use traffic policy name key/value
+		key = route.Traffic.Name
+		value = route.Traffic.Name
+	} else {
+		// For non-shared rate limits, use route descriptor key/value
+		key = getRouteDescriptor(route.Name)
+		value = getRouteDescriptor(route.Name)
+	}
+
+	descriptor := &rlsconfv3.RateLimitDescriptor{
+		Key:         key,
+		Value:       value,
+		Descriptors: serviceDescriptors,
+	}
+	domainDescriptors[domain] = append(domainDescriptors[domain], descriptor)
 }
 
 // Helper function to check if a route has a shared rate limit
@@ -631,8 +621,8 @@ func buildRateLimitServiceDescriptors(route *ir.HTTPRoute) []*rlsconfv3.RateLimi
 			// Determine if we should use the shared rate limit key (BTP-based) or a generic route key
 			if isSharedRateLimit(route) && !usedSharedKey {
 				// For shared rate limits, use BTP name and namespace
-				pbDesc.Key = getTrafficPolicyName(route)
-				pbDesc.Value = getTrafficPolicyNamespace(route)
+				pbDesc.Key = route.Traffic.Name
+				pbDesc.Value = route.Traffic.Name
 				usedSharedKey = true
 			} else {
 				// Use generic key for non-shared rate limits
@@ -717,14 +707,6 @@ func (t *Translator) createRateLimitServiceCluster(tCtx *types.ResourceVersionTa
 		endpointType: EndpointTypeDNS,
 		metrics:      metrics,
 	})
-}
-
-func getTrafficPolicyName(route *ir.HTTPRoute) string {
-	return strings.Split(route.Traffic.Name, "/")[0]
-}
-
-func getTrafficPolicyNamespace(route *ir.HTTPRoute) string {
-	return strings.Split(route.Traffic.Name, "/")[1]
 }
 
 func getDomainName(route *ir.HTTPRoute) string {
