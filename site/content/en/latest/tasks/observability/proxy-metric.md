@@ -61,8 +61,8 @@ View the metrics:
 curl localhost:19001/stats/prometheus  | grep "default/backend/rule/0"
 ```
 
-To disable the Prometheus metric endpoint, set the `telemetry.metrics.prometheus.disable` to true in the 
-_EnvoyProxy CRD_ as shown in the following command.
+If you are only using the OpenTelemetry sink, you might want to set the `telemetry.metrics.prometheus.disable` to `true`
+in the _EnvoyProxy CRD_ as shown in the following command.
 
 ```yaml
 cat <<EOF | kubectl apply -f -
@@ -91,8 +91,7 @@ spec:
 EOF
 ```
 
-If you are only using the OpenTelemetry sink, you might want to remove the Prometheus resources from the 
-monitoring namespace. Set the `prometheus.enabled` Helm value to `false` to disable Prometheus components.
+To completely remove Prometheus resources from the cluster, set the `prometheus.enabled` Helm value to `false`.
 
 ```shell
 helm upgrade eg-addons oci://docker.io/envoyproxy/gateway-addons-helm --version v0.0.0-latest -n monitoring --set prometheus.enabled=false 
