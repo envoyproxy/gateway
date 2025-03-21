@@ -19,4 +19,3 @@ adopters:
     logo: "/logos/kserve.svg"
     url: "https://kserve.github.io"
     description: "KServe leverages Kubernetes Gateway API and Envoy Gateway to simplify routing, traffic management, and secure access to machine learning inference services in Kubernetes environments."
-         
