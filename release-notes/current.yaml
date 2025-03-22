@@ -35,6 +35,7 @@ bug fixes: |
   Added support for BackendTLSPolicy and EnvoyExtensionPolicy parsing in Standalone mode.
   Retrigger reconciliation when backendRef of type ServiceImport is updated or when EndpointSlice(s) for a ServiceImport are updated.
   Fix not logging an error and returning it in the K8s Reconcile method when a GatewayClass is not accepted.
+  Do not treat essential resource like namespace as the missing resource while loading from file.
 
 # Enhancements that improve performance.
 performance improvements: |

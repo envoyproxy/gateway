@@ -3,7 +3,6 @@
     "kind": "GatewayClass",
     "metadata": {
       "name": "eg",
-      "namespace": "envoy-gateway-system",
       "creationTimestamp": null
     },
     "spec": {
