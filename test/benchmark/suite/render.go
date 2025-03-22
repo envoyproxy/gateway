@@ -28,11 +28,12 @@ func RenderReport(writer io.Writer, name, description string, titleLevel int, re
 		return err
 	}
 
-	writeSection(writer, "Metrics", titleLevel+1, "")
+	writeSection(writer, "Metrics", titleLevel+1,
+		"The CPU usage statistics of both control-plane and data-plane are the CPU usage per second over the past 30 seconds.")
 	renderMetricsTable(writer, reports)
 
 	writeSection(writer, "Profiles", titleLevel+1, renderProfilesNote())
-	renderProfilesTable(writer, "Heap/Memory", "heap", titleLevel+2, reports)
+	renderProfilesTable(writer, "Heap", "heap", titleLevel+2, reports)
 
 	return nil
 }
@@ -88,10 +89,10 @@ func renderMetricsTable(writer io.Writer, reports []*BenchmarkReport) {
 	// write headers
 	headers := []string{
 		"Test Name",
-		"Envoy Gateway Memory (MiB)\nmin/max/means",
-		"Envoy Gateway CPU (%)\nmin/max/means",
-		"Averaged Envoy Proxy Memory (MiB)\nmin/max/means",
-		"Averaged Envoy Proxy CPU (%)\nmin/max/means",
+		"Envoy Gateway Memory (MiB) <br> min/max/means",
+		"Envoy Gateway CPU (%) <br> min/max/means",
+		"Averaged Envoy Proxy Memory (MiB) <br> min/max/means",
+		"Averaged Envoy Proxy CPU (%) <br> min/max/means",
 	}
 	writeTableHeader(table, headers)
 
