@@ -510,22 +510,25 @@ func (t *Translator) processTracing(gw *gwapiv1.Gateway, envoyproxy *egv1a1.Envo
 }
 
 func proxySamplingRate(tracing *egv1a1.ProxyTracing) float64 {
-	rate := 100.0
-	if tracing.SamplingRate != nil {
-		rate = float64(*tracing.SamplingRate)
-	} else if tracing.SamplingFraction != nil {
+	if tracing.SamplingFraction != nil {
 		numerator := float64(tracing.SamplingFraction.Numerator)
 		denominator := float64(100)
 		if tracing.SamplingFraction.Denominator != nil {
 			denominator = float64(*tracing.SamplingFraction.Denominator)
 		}
 
-		rate = numerator / denominator
+		rate := numerator / denominator
 		// Identifies a percentage, in the range [0.0, 100.0]
 		rate = math.Max(0, rate)
 		rate = math.Min(100, rate)
+		return rate
 	}
-	return rate
+
+	if tracing.SamplingRate != nil {
+		return float64(*tracing.SamplingRate)
+	}
+
+	return 100.0
 }
 
 func (t *Translator) processMetrics(envoyproxy *egv1a1.EnvoyProxy, resources *resource.Resources) (*ir.Metrics, error) {

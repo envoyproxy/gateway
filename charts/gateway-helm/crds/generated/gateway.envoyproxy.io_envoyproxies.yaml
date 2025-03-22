@@ -14614,8 +14614,7 @@ spec:
                           SamplingFraction represents the fraction of requests that should be
                           selected for tracing if no prior sampling decision has been made.
 
-                          Only one of SamplingRate or SamplingFraction may be specified.
-                          If neither field is specified, all requests will be sampled.
+                          if both SamplingRate and SamplingFraction are set, SamplingRate will be ignored.
                         properties:
                           denominator:
                             default: 100
@@ -14639,8 +14638,7 @@ spec:
                           selected for tracing if no prior sampling decision has been made.
                           Defaults to 100, valid values [0-100]. 100 indicates 100% sampling.
 
-                          Only one of SamplingRate or SamplingFraction may be specified.
-                          If neither field is specified, all requests will be sampled.
+                          if both SamplingRate and SamplingFraction are set, SamplingRate will be ignored.
                         format: int32
                         maximum: 100
                         minimum: 0
@@ -14648,10 +14646,6 @@ spec:
                     required:
                     - provider
                     type: object
-                    x-kubernetes-validations:
-                    - message: only one of SamplingRate or SamplingFraction can be
-                        specified
-                      rule: '!(has(self.samplingRate) && has(self.samplingFraction))'
                 type: object
             type: object
           status:
