@@ -89,9 +89,9 @@ func renderMetricsTable(writer io.Writer, reports []*BenchmarkReport) {
 	headers := []string{
 		"Test Name",
 		"Envoy Gateway Memory (MiB)\nmin/max/means",
-		"Envoy Gateway CPU (Seconds)\nmin/max/means",
+		"Envoy Gateway CPU (%)\nmin/max/means",
 		"Averaged Envoy Proxy Memory (MiB)\nmin/max/means",
-		"Averaged Envoy Proxy CPU (Seconds)\nmin/max/means",
+		"Averaged Envoy Proxy CPU (%)\nmin/max/means",
 	}
 	writeTableHeader(table, headers)
 
@@ -209,11 +209,18 @@ func getSamplesMinMaxMeans(samples []BenchmarkMetricSample) []string {
 }
 
 func getMetricsMinMaxMeans(metrics []float64) string {
-	var min, max, sum float64 = metrics[0], 0, 0
+	var min, max, avg float64 = math.MaxFloat64, 0, 0
 	for _, v := range metrics {
 		min = math.Min(v, min)
 		max = math.Max(v, max)
-		sum += v
+		avg += v
 	}
-	return fmt.Sprintf("%.2f / %.2f / %.2f", min, max, sum/float64(len(metrics)))
+	if min == math.MaxFloat64 {
+		min = 0
+	}
+	if len(metrics) > 0 {
+		avg /= float64(len(metrics))
+	}
+
+	return fmt.Sprintf("%.2f / %.2f / %.2f", min, max, avg)
 }

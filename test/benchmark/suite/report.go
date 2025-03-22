@@ -10,6 +10,7 @@ package suite
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"io"
 
@@ -24,9 +25,9 @@ import (
 
 const (
 	controlPlaneMemQL = `process_resident_memory_bytes{namespace="envoy-gateway-system", control_plane="envoy-gateway"}/1024/1024`
-	controlPlaneCPUQL = `rate(process_cpu_seconds_total{namespace="envoy-gateway-system", control_plane="envoy-gateway"}[1m])`
+	controlPlaneCPUQL = `rate(process_cpu_seconds_total{namespace="envoy-gateway-system", control_plane="envoy-gateway"}[1m])*100`
 	dataPlaneMemQL    = `container_memory_working_set_bytes{namespace="envoy-gateway-system",container="envoy"}/1024/1024`
-	dataPlaneCPUQL    = `rate(container_cpu_usage_seconds_total{namespace="envoy-gateway-system",container="envoy"}[1m])`
+	dataPlaneCPUQL    = `rate(container_cpu_usage_seconds_total{namespace="envoy-gateway-system",container="envoy"}[1m])*100`
 )
 
 // BenchmarkMetricSample contains sampled metrics and profiles data.
@@ -60,19 +61,19 @@ func NewBenchmarkReport(name, profilesOutputDir string, kubeClient kube.CLIClien
 	}
 }
 
-func (r *BenchmarkReport) Sample(ctx context.Context) error {
+func (r *BenchmarkReport) Sample(ctx context.Context) (err error) {
 	sample := BenchmarkMetricSample{}
 
-	if err := r.sampleProfiles(ctx, &sample); err != nil {
-		return err
+	if mErr := r.sampleMetrics(ctx, &sample); mErr != nil {
+		err = errors.Join(mErr)
 	}
 
-	if err := r.sampleMetrics(ctx, &sample); err != nil {
-		return err
+	if pErr := r.sampleProfiles(ctx, &sample); pErr != nil {
+		err = errors.Join(pErr)
 	}
 
 	r.Samples = append(r.Samples, sample)
-	return nil
+	return err
 }
 
 func (r *BenchmarkReport) GetResult(ctx context.Context, job *types.NamespacedName) error {
@@ -104,32 +105,31 @@ func (r *BenchmarkReport) GetResult(ctx context.Context, job *types.NamespacedNa
 	return nil
 }
 
-func (r *BenchmarkReport) sampleMetrics(ctx context.Context, sample *BenchmarkMetricSample) error {
+func (r *BenchmarkReport) sampleMetrics(ctx context.Context, sample *BenchmarkMetricSample) (err error) {
 	// Sample memory
-	cpMem, err := r.promClient.QuerySum(ctx, controlPlaneMemQL)
-	if err != nil {
-		return fmt.Errorf("failed to query control plane memory: %w", err)
+	cpMem, qErr := r.promClient.QuerySum(ctx, controlPlaneMemQL)
+	if qErr != nil {
+		err = errors.Join(fmt.Errorf("failed to query control plane memory: %w", err))
 	}
-	dpMem, err := r.promClient.QueryAvg(ctx, dataPlaneMemQL)
-	if err != nil {
-		return fmt.Errorf("failed to query data plane memory: %w", err)
+	dpMem, qErr := r.promClient.QueryAvg(ctx, dataPlaneMemQL)
+	if qErr != nil {
+		err = errors.Join(fmt.Errorf("failed to query data plane memory: %w", err))
 	}
-
 	// Sample cpu
-	cpCPU, err := r.promClient.QuerySum(ctx, controlPlaneCPUQL)
-	if err != nil {
-		return fmt.Errorf("failed to query control plane cpu: %w", err)
+	cpCPU, qErr := r.promClient.QuerySum(ctx, controlPlaneCPUQL)
+	if qErr != nil {
+		err = errors.Join(fmt.Errorf("failed to query control plane cpu: %w", err))
 	}
-	dpCPU, err := r.promClient.QueryAvg(ctx, dataPlaneCPUQL)
-	if err != nil {
-		return fmt.Errorf("failed to query data plane memory: %w", err)
+	dpCPU, qErr := r.promClient.QueryAvg(ctx, dataPlaneCPUQL)
+	if qErr != nil {
+		err = errors.Join(fmt.Errorf("failed to query data plane cpu: %w", err))
 	}
 
 	sample.ControlPlaneMem = cpMem
 	sample.ControlPlaneCPU = cpCPU
 	sample.DataPlaneMem = dpMem
 	sample.DataPlaneCPU = dpCPU
-	return nil
+	return err
 }
 
 func (r *BenchmarkReport) sampleProfiles(ctx context.Context, sample *BenchmarkMetricSample) error {
