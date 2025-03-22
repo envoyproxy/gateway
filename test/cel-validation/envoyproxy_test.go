@@ -20,7 +20,6 @@ import (
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
-	"github.com/envoyproxy/gateway/internal/gatewayapi"
 )
 
 func TestEnvoyProxyProvider(t *testing.T) {
@@ -1440,7 +1439,7 @@ func TestEnvoyProxyProvider(t *testing.T) {
 			},
 		},
 		{
-			desc: "cannot set samplingRate and samplingFraction at the same time",
+			desc: "allow to set samplingRate and samplingFraction at the same time",
 			mutate: func(envoy *egv1a1.EnvoyProxy) {
 				envoy.Spec = egv1a1.EnvoyProxySpec{
 					Telemetry: &egv1a1.ProxyTelemetry{
@@ -1452,10 +1451,9 @@ func TestEnvoyProxyProvider(t *testing.T) {
 									BackendRefs: []egv1a1.BackendRef{
 										{
 											BackendObjectReference: gwapiv1.BackendObjectReference{
-												Namespace: gatewayapi.NamespacePtr("ns-2"),
-												Name:      "test-backend",
-												Kind:      gatewayapi.KindPtr("Backend"),
-												Group:     gatewayapi.GroupPtr(egv1a1.GroupName),
+												Name: "fake-service",
+												Kind: ptr.To(gwapiv1.Kind("Service")),
+												Port: ptr.To(gwapiv1.PortNumber(8080)),
 											},
 										},
 									},
@@ -1467,9 +1465,7 @@ func TestEnvoyProxyProvider(t *testing.T) {
 					},
 				}
 			},
-			wantErrors: []string{
-				"only one of SamplingRate or SamplingFraction can be specified",
-			},
+			wantErrors: []string{},
 		},
 	}
 

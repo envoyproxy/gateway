@@ -71,6 +71,17 @@ func TestProxySamplingRate(t *testing.T) {
 			},
 			expected: 100,
 		},
+		{
+			name: "both",
+			tracing: &egv1a1.ProxyTracing{
+				SamplingRate: ptr.To[uint32](11),
+				SamplingFraction: &gwapiv1.Fraction{
+					Numerator:   1,
+					Denominator: ptr.To[int32](10),
+				},
+			},
+			expected: 0.1,
+		},
 	}
 
 	for _, tc := range cases {
