@@ -34,6 +34,7 @@ func (cli *InfraClient) ServerSideApply(ctx context.Context, obj client.Object) 
 	return nil
 }
 
+// DeleteAllExcept delete all resources filter by ListOption except the one specified by key.
 func (cli *InfraClient) DeleteAllExcept(ctx context.Context, objList client.ObjectList, key client.ObjectKey, listOpts ...client.ListOption) error {
 	if err := cli.List(ctx, objList, listOpts...); err != nil {
 		if kerrors.IsNotFound(err) {
@@ -45,6 +46,8 @@ func (cli *InfraClient) DeleteAllExcept(ctx context.Context, objList client.Obje
 	v := reflect.ValueOf(objList).Elem()
 	items := v.FieldByName("Items")
 
+	// If there is only one item, we don't need to delete it,
+	// because it normally means custom resource name is not enabled.
 	if items.Len() <= 1 {
 		return nil
 	}
