@@ -89,9 +89,6 @@ type BackendTrafficPolicySpec struct {
 	// When enabling this option, you should also configure your connection buffer size to account for these request buffers. There will also be an
 	// increase in memory usage for Envoy that should be accounted for in your deployment settings.
 	//
-	// When the target of this policy is a gateway the buffer will be applied at a listener level. When the target of the policy is a HTTPRoute it
-	// will be applied for that particular route only.
-	//
 	// +notImplementedHide
 	// +optional
 	BufferRequests *BufferRequests `json:"bufferRequests,omitempty"`
@@ -108,7 +105,7 @@ type ProtocolUpgradeConfig struct {
 }
 
 type BufferRequests struct {
-	// MaxBufferSize specifies the maximum allowed size in bytes for each incoming request buffer.
+	// Limit specifies the maximum allowed size in bytes for each incoming request buffer.
 	// If exceeded, the request will be rejected with HTTP 413 Content Too Large.
 	//
 	// Accepts values in resource.Quantity format (e.g., "10Mi", "500Ki").
@@ -116,7 +113,7 @@ type BufferRequests struct {
 	// +kubebuilder:validation:XIntOrString
 	// +kubebuilder:validation:Pattern="^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$"
 	// +notImplementedHide
-	MaxBufferSize resource.Quantity `json:"maxBufferSize,omitempty"`
+	Limit resource.Quantity `json:"limit,omitempty"`
 }
 
 // BackendTrafficPolicyList contains a list of BackendTrafficPolicy resources.
