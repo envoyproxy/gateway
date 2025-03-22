@@ -11,58 +11,17 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"math"
 	"os"
-	"strconv"
+	"path"
+	"sort"
 	"strings"
 	"text/tabwriter"
 )
 
 const (
-	omitEmptyValue     = "-"
 	benchmarkEnvPrefix = "BENCHMARK_"
-
-	querySum = "Sum"
-	queryAvg = "Avg"
-	queryMin = "Min"
-	queryMax = "Max"
 )
-
-type tableHeader struct {
-	name      string
-	unit      string
-	promQL    string // only valid for metrics table
-	queryType string
-}
-
-var metricsTableHeader = []tableHeader{
-	{
-		name: "Test Name",
-	},
-	{
-		name:      "Envoy Gateway Memory",
-		unit:      "MiB",
-		promQL:    `process_resident_memory_bytes{namespace="envoy-gateway-system", control_plane="envoy-gateway"}/1024/1024`,
-		queryType: querySum,
-	},
-	{
-		name:      "Envoy Gateway CPU",
-		unit:      "s",
-		promQL:    `process_cpu_seconds_total{namespace="envoy-gateway-system", control_plane="envoy-gateway"}`,
-		queryType: querySum,
-	},
-	{
-		name:      "Envoy Proxy Memory (Avg)",
-		unit:      "MiB",
-		promQL:    `container_memory_working_set_bytes{namespace="envoy-gateway-system",container="envoy"}/1024/1024`,
-		queryType: queryAvg,
-	},
-	{
-		name:      "Envoy Proxy CPU (Avg)",
-		unit:      "s",
-		promQL:    `container_cpu_usage_seconds_total{namespace="envoy-gateway-system",container="envoy"}`,
-		queryType: queryAvg,
-	},
-}
 
 // RenderReport renders a report out of given list of benchmark report in Markdown format.
 func RenderReport(writer io.Writer, name, description string, titleLevel int, reports []*BenchmarkReport) error {
@@ -77,7 +36,7 @@ func RenderReport(writer io.Writer, name, description string, titleLevel int, re
 	renderMetricsTable(writer, reports)
 
 	writeSection(writer, "Profiles", titleLevel+1, renderProfilesNote())
-	renderProfilesTable(writer, "Memory", "heap", titleLevel+2, reports)
+	renderProfilesTable(writer, "Heap/Memory", "heap", titleLevel+2, reports)
 
 	return nil
 }
@@ -90,22 +49,15 @@ func newMarkdownStyleTableWriter(writer io.Writer) *tabwriter.Writer {
 func renderEnvSettingsTable(writer io.Writer) {
 	table := newMarkdownStyleTableWriter(writer)
 
-	headers := []tableHeader{
-		{name: "RPS"},
-		{name: "Connections"},
-		{name: "Duration", unit: "s"},
-		{name: "CPU Limits", unit: "m"},
-		{name: "Memory Limits", unit: "MiB"},
+	headers := []string{
+		"RPS",
+		"Connections",
+		"Duration (Seconds)",
+		"CPU Limits (m)",
+		"Memory Limits (MiB)",
 	}
 	writeTableHeader(table, headers)
-
-	writeTableRow(table, headers, func(_ int, h tableHeader) string {
-		env := strings.ReplaceAll(strings.ToUpper(h.name), " ", "_")
-		if v, ok := os.LookupEnv(benchmarkEnvPrefix + env); ok {
-			return v
-		}
-		return omitEmptyValue
-	})
+	writeTableRow(table, headers)
 
 	_ = table.Flush()
 }
@@ -129,20 +81,20 @@ func renderResultsTable(writer io.Writer, reports []*BenchmarkReport) error {
 func renderMetricsTable(writer io.Writer, reports []*BenchmarkReport) {
 	table := newMarkdownStyleTableWriter(writer)
 
-	writeTableHeader(table, metricsTableHeader)
+	// write headers
+	headers := []string{
+		"Test Name",
+		"Envoy Gateway Memory (MiB)\nmin/max/means",
+		"Envoy Gateway CPU (Seconds)\nmin/max/means",
+		"Averaged Envoy Proxy Memory (MiB)\nmin/max/means",
+		"Averaged Envoy Proxy CPU (Seconds)\nmin/max/means",
+	}
+	writeTableHeader(table, headers)
 
 	for _, report := range reports {
-		writeTableRow(table, metricsTableHeader, func(_ int, h tableHeader) string {
-			if len(h.promQL) == 0 {
-				return report.Name
-			}
-
-			if v, ok := report.Metrics[h.name]; ok {
-				return strconv.FormatFloat(v, 'f', -1, 64)
-			}
-
-			return omitEmptyValue
-		})
+		data := []string{report.Name}
+		data = append(data, getSamplesMinMaxMeans(report.Samples)...)
+		writeTableRow(table, data)
 	}
 
 	_ = table.Flush()
@@ -156,19 +108,32 @@ You can visualize them in a web page by running:
 %s
 
 Currently, the supported profile types are:
-- heap
+- heap (memory)
 `, "`/profiles`", "`{ProfileType}.{TestCase}.pprof`", "```shell\ngo tool pprof -http=: path/to/your.pprof\n```")
 }
 
 func renderProfilesTable(writer io.Writer, target, key string, titleLevel int, reports []*BenchmarkReport) {
-	writeSection(writer, target, titleLevel, "")
+	writeSection(writer, target, titleLevel,
+		"The profiles were sampled when Envoy Gateway Memory is at its maximum.")
 
 	for _, report := range reports {
+		// Get the heap profile when control plane memory is at its maximum.
+		sortedSamples := make([]BenchmarkMetricSample, len(report.Samples))
+		copy(sortedSamples, report.Samples)
+		sort.Slice(sortedSamples, func(i, j int) bool {
+			return sortedSamples[i].ControlPlaneMem > sortedSamples[j].ControlPlaneMem
+		})
+
+		heapPprof := sortedSamples[0].HeapProfile
+		heapPprofPath := path.Join(report.ProfilesOutputDir, fmt.Sprintf("heap.%s.pprof", report.Name))
+		_ = os.WriteFile(heapPprofPath, heapPprof, 0o600)
+
 		// The image is not be rendered yet, so it is a placeholder for the path.
 		// The image will be rendered after the test has finished.
+		rootDir := strings.SplitN(heapPprofPath, "/", 2)[0]
+		heapPprofPath = strings.TrimPrefix(heapPprofPath, rootDir+"/")
 		writeSection(writer, report.Name, titleLevel+1,
-			fmt.Sprintf("![%s-%s](%s.png)", key, report.Name,
-				strings.TrimSuffix(report.ProfilesPath[key], ".pprof")))
+			fmt.Sprintf("![%s-%s](%s.png)", key, report.Name, strings.TrimSuffix(heapPprofPath, ".pprof")))
 	}
 }
 
@@ -194,21 +159,16 @@ func writeCollapsibleSection(writer io.Writer, title string, content []byte) {
 `, title, summary)
 }
 
-func writeTableHeader(table *tabwriter.Writer, headers []tableHeader) {
-	writeTableRow(table, headers, func(_ int, h tableHeader) string {
-		if len(h.unit) > 0 {
-			return fmt.Sprintf("%s (%s)", h.name, h.unit)
-		}
-		return h.name
-	})
+func writeTableHeader(table *tabwriter.Writer, headers []string) {
+	writeTableRow(table, headers)
 	writeTableDelimiter(table, len(headers))
 }
 
-// writeTableRow writes one row in Markdown table style according to headers.
-func writeTableRow(table *tabwriter.Writer, headers []tableHeader, on func(int, tableHeader) string) {
+// writeTableRow writes one row in Markdown table style.
+func writeTableRow(table *tabwriter.Writer, data []string) {
 	row := "|"
-	for i, v := range headers {
-		row += on(i, v) + "\t"
+	for _, v := range data {
+		row += v + "\t"
 	}
 
 	_, _ = fmt.Fprintln(table, row)
@@ -222,4 +182,34 @@ func writeTableDelimiter(table *tabwriter.Writer, n int) {
 	}
 
 	_, _ = fmt.Fprintln(table, sep)
+}
+
+func getSamplesMinMaxMeans(samples []BenchmarkMetricSample) []string {
+	cpMem := make([]float64, 0, len(samples))
+	cpCpu := make([]float64, 0, len(samples))
+	dpMem := make([]float64, 0, len(samples))
+	dpCpu := make([]float64, 0, len(samples))
+	for _, sample := range samples {
+		cpMem = append(cpMem, sample.ControlPlaneMem)
+		cpCpu = append(cpCpu, sample.ControlPlaneCpu)
+		dpMem = append(dpMem, sample.DataPlaneMem)
+		dpCpu = append(dpCpu, sample.DataPlaneCpu)
+	}
+
+	return []string{
+		getMetricsMinMaxMeans(cpMem),
+		getMetricsMinMaxMeans(cpCpu),
+		getMetricsMinMaxMeans(dpMem),
+		getMetricsMinMaxMeans(dpCpu),
+	}
+}
+
+func getMetricsMinMaxMeans(metrics []float64) string {
+	var min, max, sum float64 = metrics[0], 0, 0
+	for _, v := range metrics {
+		min = math.Min(v, min)
+		max = math.Max(v, max)
+		sum += v
+	}
+	return fmt.Sprintf("%.2f / %.2f / %.2f", min, max, sum/float64(len(metrics)))
 }

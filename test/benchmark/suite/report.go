@@ -12,10 +12,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"os"
-	"path"
-	"strconv"
-	"strings"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -26,45 +22,56 @@ import (
 	prom "github.com/envoyproxy/gateway/test/utils/prometheus"
 )
 
+const (
+	controlPlaneMemQL = `process_resident_memory_bytes{namespace="envoy-gateway-system", control_plane="envoy-gateway"}/1024/1024`
+	controlPlaneCpuQL = `rate(process_cpu_seconds_total{namespace="envoy-gateway-system", control_plane="envoy-gateway"}[3s])`
+	dataPlaneMemQL    = `container_memory_working_set_bytes{namespace="envoy-gateway-system",container="envoy"}/1024/1024`
+	dataPlaneCpuQL    = `rate(container_cpu_usage_seconds_total{namespace="envoy-gateway-system",container="envoy"}[3s])`
+)
+
+// BenchmarkMetricSample contains sampled metrics and profiles data.
+type BenchmarkMetricSample struct {
+	ControlPlaneMem float64
+	ControlPlaneCpu float64
+	DataPlaneMem    float64
+	DataPlaneCpu    float64
+
+	HeapProfile []byte
+}
+
 type BenchmarkReport struct {
 	Name              string
-	Result            []byte
-	Metrics           map[string]float64 // metricTableHeaderName:metricValue
-	ProfilesPath      map[string]string  // profileKey:profileFilepath
 	ProfilesOutputDir string
+	// Nighthawk benchmark result
+	Result []byte
+	// Prometheus metrics and pprof profiles sampled data
+	Samples []BenchmarkMetricSample
 
 	kubeClient kube.CLIClient
 	promClient *prom.Client
 }
 
-func NewBenchmarkReport(name, profilesOutputDir string, kubeClient kube.CLIClient, promClient *prom.Client) (*BenchmarkReport, error) {
-	if err := createDirIfNotExist(profilesOutputDir); err != nil {
-		return nil, err
-	}
-
+func NewBenchmarkReport(name, profilesOutputDir string, kubeClient kube.CLIClient, promClient *prom.Client) *BenchmarkReport {
 	return &BenchmarkReport{
 		Name:              name,
-		Metrics:           make(map[string]float64),
-		ProfilesPath:      make(map[string]string),
 		ProfilesOutputDir: profilesOutputDir,
 		kubeClient:        kubeClient,
 		promClient:        promClient,
-	}, nil
+	}
 }
 
-func (r *BenchmarkReport) Collect(ctx context.Context, job *types.NamespacedName) error {
-	if err := r.GetProfiles(ctx); err != nil {
+func (r *BenchmarkReport) Sample(ctx context.Context) error {
+	sample := BenchmarkMetricSample{}
+
+	if err := r.sampleProfiles(ctx, &sample); err != nil {
 		return err
 	}
 
-	if err := r.GetMetrics(ctx); err != nil {
+	if err := r.sampleMetrics(ctx, &sample); err != nil {
 		return err
 	}
 
-	if err := r.GetResult(ctx, job); err != nil {
-		return err
-	}
-
+	r.Samples = append(r.Samples, sample)
 	return nil
 }
 
@@ -97,34 +104,35 @@ func (r *BenchmarkReport) GetResult(ctx context.Context, job *types.NamespacedNa
 	return nil
 }
 
-func (r *BenchmarkReport) GetMetrics(ctx context.Context) error {
-	for _, h := range metricsTableHeader {
-		if len(h.promQL) == 0 {
-			continue
-		}
-
-		var (
-			v   float64
-			err error
-		)
-		switch h.queryType {
-		case querySum:
-			v, err = r.promClient.QuerySum(ctx, h.promQL)
-		case queryAvg:
-			v, err = r.promClient.QueryAvg(ctx, h.promQL)
-		default:
-			return fmt.Errorf("unsupported query type: %s", h.queryType)
-		}
-
-		if err == nil {
-			r.Metrics[h.name], _ = strconv.ParseFloat(fmt.Sprintf("%.2f", v), 64)
-		}
+func (r *BenchmarkReport) sampleMetrics(ctx context.Context, sample *BenchmarkMetricSample) error {
+	// Sample memory
+	cpMem, err := r.promClient.QuerySum(ctx, controlPlaneMemQL)
+	if err != nil {
+		return fmt.Errorf("failed to query control plane memory: %w", err)
+	}
+	dpMem, err := r.promClient.QueryAvg(ctx, dataPlaneMemQL)
+	if err != nil {
+		return fmt.Errorf("failed to query data plane memory: %w", err)
 	}
 
+	// Sample cpu
+	cpCpu, err := r.promClient.QuerySum(ctx, controlPlaneCpuQL)
+	if err != nil {
+		return fmt.Errorf("failed to query control plane cpu: %w", err)
+	}
+	dpCpu, err := r.promClient.QueryAvg(ctx, dataPlaneCpuQL)
+	if err != nil {
+		return fmt.Errorf("failed to query data plane memory: %w", err)
+	}
+
+	sample.ControlPlaneMem = cpMem
+	sample.ControlPlaneCpu = cpCpu
+	sample.DataPlaneMem = dpMem
+	sample.DataPlaneCpu = dpCpu
 	return nil
 }
 
-func (r *BenchmarkReport) GetProfiles(ctx context.Context) error {
+func (r *BenchmarkReport) sampleProfiles(ctx context.Context, sample *BenchmarkMetricSample) error {
 	egPod, err := r.fetchEnvoyGatewayPod(ctx)
 	if err != nil {
 		return err
@@ -138,16 +146,7 @@ func (r *BenchmarkReport) GetProfiles(ctx context.Context) error {
 		return err
 	}
 
-	heapProfPath := path.Join(r.ProfilesOutputDir, fmt.Sprintf("heap.%s.pprof", r.Name))
-	if err = os.WriteFile(heapProfPath, heapProf, 0o600); err != nil {
-		return fmt.Errorf("failed to write profiles %s: %w", heapProfPath, err)
-	}
-
-	// Remove parent output report dir.
-	splits := strings.SplitN(heapProfPath, "/", 2)[0]
-	heapProfPath = strings.TrimPrefix(heapProfPath, splits+"/")
-	r.ProfilesPath["heap"] = heapProfPath
-
+	sample.HeapProfile = heapProf
 	return nil
 }
 
