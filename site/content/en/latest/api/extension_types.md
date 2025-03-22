@@ -564,6 +564,19 @@ _Appears in:_
 
 
 
+#### BufferRequests
+
+
+
+
+
+_Appears in:_
+- [BackendTrafficPolicySpec](#backendtrafficpolicyspec)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+
+
 #### CIDR
 
 _Underlying type:_ _string_
