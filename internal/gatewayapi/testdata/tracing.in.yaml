@@ -8,7 +8,8 @@ envoyProxyForGatewayClass:
     mergeGateways: true
     telemetry:
       tracing:
-        samplingRate: 100 # this will be overwritten by samplingFraction
+        # this will be overwritten by samplingFraction
+        samplingRate: 100
         samplingFraction:
           numerator: 1
           denominator: 100
