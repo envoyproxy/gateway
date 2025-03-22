@@ -15,3 +15,7 @@ adopters:
     logo: "/logos/knative.png"
     url: "https://knative.dev"
     description: "Knative's net-gateway-api integrates with Envoy Gateway by implementing the Kubernetes Gateway API, enabling Knative services to utilize Envoy Gateway for ingress traffic management."
+  - name: "GIE"
+    logo: "/logos/gie.png"
+    url: "https://gateway-api-inference-extension.sigs.k8s.io/"
+    description: "Gateway API Inference Extension uses Envoy Gateway to support inference platform teams self-hosting large language models on Kubernetes."
