@@ -6,7 +6,9 @@
 package file
 
 import (
+	"bytes"
 	"context"
+	"fmt"
 	"html/template"
 	"io"
 	"net/http"
@@ -27,8 +29,9 @@ import (
 )
 
 const (
-	resourcesUpdateTimeout = 1 * time.Minute
-	resourcesUpdateTick    = 1 * time.Second
+	resourcesUpdateTimeout   = 1 * time.Minute
+	resourcesUpdateTick      = 1 * time.Second
+	providerHealthServerPort = 8082
 )
 
 type resourcesParam struct {
@@ -82,6 +85,8 @@ func TestFileProvider(t *testing.T) {
 	require.NoError(t, err)
 	pResources := new(message.ProviderResources)
 	fp, err := New(cfg, pResources)
+	// Set different health server port, in case of conflicts with other tests.
+	fp.healthServerPort = providerHealthServerPort
 	require.NoError(t, err)
 	// Start file provider.
 	go func() {
@@ -111,7 +116,7 @@ func TestFileProvider(t *testing.T) {
 	})
 
 	t.Run("rename the watched file then rename it back", func(t *testing.T) {
-		// Rename it
+		// Rename it first, the watched file is losed.
 		renameFilePath := filepath.Join(watchFileBase, "foobar.yaml")
 		err := os.Rename(watchFilePath, renameFilePath)
 		require.NoError(t, err)
@@ -119,7 +124,7 @@ func TestFileProvider(t *testing.T) {
 			return pResources.GetResourcesByGatewayClass("eg") == nil
 		}, resourcesUpdateTimeout, resourcesUpdateTick)
 
-		// Rename it back
+		// Rename it back, the watched file is resumed.
 		err = os.Rename(renameFilePath, watchFilePath)
 		require.NoError(t, err)
 		require.Eventually(t, func() bool {
@@ -141,11 +146,11 @@ func TestFileProvider(t *testing.T) {
 		err := os.Remove(watchFilePath)
 		require.NoError(t, err)
 		require.Eventually(t, func() bool {
-			return pResources.GetResourcesByGatewayClass("eg") == nil
+			return len(pResources.GetResources()) == 0
 		}, resourcesUpdateTimeout, resourcesUpdateTick)
 	})
 
-	t.Run("add a file in watched dir", func(t *testing.T) {
+	t.Run("add one new file in watched dir", func(t *testing.T) {
 		// Write a new file under watched directory.
 		newFilePath := filepath.Join(watchDirPath, "test.yaml")
 		writeResourcesFile(t, "testdata/resources.tmpl", newFilePath, newDefaultResourcesParam())
@@ -165,12 +170,74 @@ func TestFileProvider(t *testing.T) {
 		require.Empty(t, cmp.Diff(want, resources, opts...))
 	})
 
+	t.Run("rename the file then rename it back in watched dir", func(t *testing.T) {
+		// Rename it first, won't cause any resources change and update.
+		srcFilePath := filepath.Join(watchDirPath, "test.yaml")
+		dstFilePath := filepath.Join(watchDirPath, "foobar.yaml")
+		err := os.Rename(srcFilePath, dstFilePath)
+		require.NoError(t, err)
+		require.Eventually(t, func() bool {
+			return pResources.GetResourcesByGatewayClass("eg") != nil
+		}, resourcesUpdateTimeout, resourcesUpdateTick)
+
+		// Rename it back, also won't cause any resources change and update.
+		err = os.Rename(dstFilePath, srcFilePath)
+		require.NoError(t, err)
+		require.Eventually(t, func() bool {
+			return pResources.GetResourcesByGatewayClass("eg") != nil
+		}, resourcesUpdateTimeout, resourcesUpdateTick)
+
+		resources := pResources.GetResourcesByGatewayClass("eg")
+		want := &resource.Resources{}
+		mustUnmarshal(t, "testdata/resources.all.yaml", want)
+
+		opts := []cmp.Option{
+			cmpopts.IgnoreFields(resource.Resources{}, "serviceMap"),
+			cmpopts.EquateEmpty(),
+		}
+		require.Empty(t, cmp.Diff(want, resources, opts...))
+	})
+
+	t.Run("update file content without changing gateway class name in watched dir", func(t *testing.T) {
+		// Rewrite the file under watched directory.
+		newFilePath := filepath.Join(watchDirPath, "test.yaml")
+		writeResourcesFile(t, "testdata/resources.tmpl", newFilePath, &resourcesParam{
+			GatewayClassName:    "eg",
+			GatewayName:         "eg-1",
+			GatewayListenerPort: "8889",
+			HTTPRouteName:       "backend-1",
+			BackendName:         "backend-1",
+		})
+
+		require.Eventually(t, func() bool {
+			return pResources.GetResourcesByGatewayClass("eg") != nil &&
+				pResources.GetResourcesByGatewayClass("eg-1") == nil
+		}, resourcesUpdateTimeout, resourcesUpdateTick)
+	})
+
+	t.Run("update file content with changing gateway class name in watched dir", func(t *testing.T) {
+		// Rewrite the file under watched directory.
+		newFilePath := filepath.Join(watchDirPath, "test.yaml")
+		writeResourcesFile(t, "testdata/resources.tmpl", newFilePath, &resourcesParam{
+			GatewayClassName:    "eg-1",
+			GatewayName:         "eg-1",
+			GatewayListenerPort: "8889",
+			HTTPRouteName:       "backend-1",
+			BackendName:         "backend-1",
+		})
+
+		require.Eventually(t, func() bool {
+			return pResources.GetResourcesByGatewayClass("eg") == nil &&
+				pResources.GetResourcesByGatewayClass("eg-1") != nil
+		}, resourcesUpdateTimeout, resourcesUpdateTick)
+	})
+
 	t.Run("remove a file in watched dir", func(t *testing.T) {
 		newFilePath := filepath.Join(watchDirPath, "test.yaml")
 		err := os.Remove(newFilePath)
 		require.NoError(t, err)
 		require.Eventually(t, func() bool {
-			return pResources.GetResourcesByGatewayClass("eg") == nil
+			return len(pResources.GetResources()) == 0
 		}, resourcesUpdateTimeout, resourcesUpdateTick)
 	})
 
@@ -180,22 +247,21 @@ func TestFileProvider(t *testing.T) {
 	})
 }
 
-func writeResourcesFile(t *testing.T, tmpl, dst string, params *resourcesParam) {
-	dstFile, err := os.Create(dst)
-	require.NoError(t, err)
+func writeResourcesFile(t *testing.T, tmpl, dst string, params *resourcesParam) { // nolint:unparam
+	var buf bytes.Buffer
 
 	// Write parameters into target file.
 	tmplFile, err := template.ParseFiles(tmpl)
 	require.NoError(t, err)
 
-	err = tmplFile.Execute(dstFile, params)
+	err = tmplFile.Execute(&buf, params)
 	require.NoError(t, err)
-	require.NoError(t, dstFile.Close())
+	require.NoError(t, os.WriteFile(dst, buf.Bytes(), 0o600))
 }
 
 func waitFileProviderReady(t *testing.T) {
 	require.Eventually(t, func() bool {
-		resp, err := http.Get("http://localhost:8081/readyz")
+		resp, err := http.Get(fmt.Sprintf("http://localhost:%d/readyz", providerHealthServerPort))
 		if err != nil {
 			t.Logf("failed to get from heathlz server")
 			return false
@@ -216,7 +282,7 @@ func waitFileProviderReady(t *testing.T) {
 	}, 3*resourcesUpdateTimeout, resourcesUpdateTick)
 }
 
-func mustUnmarshal(t *testing.T, path string, out interface{}) {
+func mustUnmarshal(t *testing.T, path string, out interface{}) { // nolint:unparam
 	t.Helper()
 
 	content, err := os.ReadFile(path)
