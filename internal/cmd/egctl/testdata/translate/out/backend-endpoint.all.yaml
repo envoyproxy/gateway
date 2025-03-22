@@ -15,8 +15,6 @@ backendTLSPolicies:
   status:
     ancestors:
     - ancestorRef:
-        group: gateway.networking.k8s.io
-        kind: Gateway
         name: eg
       conditions:
       - lastTransitionTime: null
