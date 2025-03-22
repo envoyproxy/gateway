@@ -24,17 +24,17 @@ import (
 
 const (
 	controlPlaneMemQL = `process_resident_memory_bytes{namespace="envoy-gateway-system", control_plane="envoy-gateway"}/1024/1024`
-	controlPlaneCpuQL = `rate(process_cpu_seconds_total{namespace="envoy-gateway-system", control_plane="envoy-gateway"}[3s])`
+	controlPlaneCPUQL = `rate(process_cpu_seconds_total{namespace="envoy-gateway-system", control_plane="envoy-gateway"}[1m])`
 	dataPlaneMemQL    = `container_memory_working_set_bytes{namespace="envoy-gateway-system",container="envoy"}/1024/1024`
-	dataPlaneCpuQL    = `rate(container_cpu_usage_seconds_total{namespace="envoy-gateway-system",container="envoy"}[3s])`
+	dataPlaneCPUQL    = `rate(container_cpu_usage_seconds_total{namespace="envoy-gateway-system",container="envoy"}[1m])`
 )
 
 // BenchmarkMetricSample contains sampled metrics and profiles data.
 type BenchmarkMetricSample struct {
 	ControlPlaneMem float64
-	ControlPlaneCpu float64
+	ControlPlaneCPU float64
 	DataPlaneMem    float64
-	DataPlaneCpu    float64
+	DataPlaneCPU    float64
 
 	HeapProfile []byte
 }
@@ -116,19 +116,19 @@ func (r *BenchmarkReport) sampleMetrics(ctx context.Context, sample *BenchmarkMe
 	}
 
 	// Sample cpu
-	cpCpu, err := r.promClient.QuerySum(ctx, controlPlaneCpuQL)
+	cpCPU, err := r.promClient.QuerySum(ctx, controlPlaneCPUQL)
 	if err != nil {
 		return fmt.Errorf("failed to query control plane cpu: %w", err)
 	}
-	dpCpu, err := r.promClient.QueryAvg(ctx, dataPlaneCpuQL)
+	dpCPU, err := r.promClient.QueryAvg(ctx, dataPlaneCPUQL)
 	if err != nil {
 		return fmt.Errorf("failed to query data plane memory: %w", err)
 	}
 
 	sample.ControlPlaneMem = cpMem
-	sample.ControlPlaneCpu = cpCpu
+	sample.ControlPlaneCPU = cpCPU
 	sample.DataPlaneMem = dpMem
-	sample.DataPlaneCpu = dpCpu
+	sample.DataPlaneCPU = dpCPU
 	return nil
 }
 

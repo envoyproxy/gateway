@@ -19,10 +19,6 @@ import (
 	"text/tabwriter"
 )
 
-const (
-	benchmarkEnvPrefix = "BENCHMARK_"
-)
-
 // RenderReport renders a report out of given list of benchmark report in Markdown format.
 func RenderReport(writer io.Writer, name, description string, titleLevel int, reports []*BenchmarkReport) error {
 	writeSection(writer, "Test: "+name, titleLevel, description)
@@ -57,7 +53,15 @@ func renderEnvSettingsTable(writer io.Writer) {
 		"Memory Limits (MiB)",
 	}
 	writeTableHeader(table, headers)
-	writeTableRow(table, headers)
+
+	data := []string{
+		os.Getenv("BENCHMARK_RPS"),
+		os.Getenv("BENCHMARK_CONNECTIONS"),
+		os.Getenv("BENCHMARK_DURATION"),
+		os.Getenv("BENCHMARK_CPU_LIMITS"),
+		os.Getenv("BENCHMARK_MEMORY_LIMITS"),
+	}
+	writeTableRow(table, data)
 
 	_ = table.Flush()
 }
@@ -186,21 +190,21 @@ func writeTableDelimiter(table *tabwriter.Writer, n int) {
 
 func getSamplesMinMaxMeans(samples []BenchmarkMetricSample) []string {
 	cpMem := make([]float64, 0, len(samples))
-	cpCpu := make([]float64, 0, len(samples))
+	cpCPU := make([]float64, 0, len(samples))
 	dpMem := make([]float64, 0, len(samples))
-	dpCpu := make([]float64, 0, len(samples))
+	dpCPU := make([]float64, 0, len(samples))
 	for _, sample := range samples {
 		cpMem = append(cpMem, sample.ControlPlaneMem)
-		cpCpu = append(cpCpu, sample.ControlPlaneCpu)
+		cpCPU = append(cpCPU, sample.ControlPlaneCPU)
 		dpMem = append(dpMem, sample.DataPlaneMem)
-		dpCpu = append(dpCpu, sample.DataPlaneCpu)
+		dpCPU = append(dpCPU, sample.DataPlaneCPU)
 	}
 
 	return []string{
 		getMetricsMinMaxMeans(cpMem),
-		getMetricsMinMaxMeans(cpCpu),
+		getMetricsMinMaxMeans(cpCPU),
 		getMetricsMinMaxMeans(dpMem),
-		getMetricsMinMaxMeans(dpCpu),
+		getMetricsMinMaxMeans(dpCPU),
 	}
 }
 

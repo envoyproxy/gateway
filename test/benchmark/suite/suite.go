@@ -230,7 +230,7 @@ func (b *BenchmarkTestSuite) Benchmark(t *testing.T, ctx context.Context, jobNam
 
 		// Sample the metrics and profiles at runtime.
 		if err := report.Sample(ctx); err != nil {
-			t.Errorf("Failed to sample metrics and profiles: %v", err)
+			t.Errorf("Failed to sample metrics or profiles: %v", err)
 		}
 
 		return false, nil
