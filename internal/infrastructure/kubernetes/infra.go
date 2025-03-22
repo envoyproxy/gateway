@@ -70,6 +70,9 @@ func NewInfra(cli client.Client, cfg *config.Server) *Infra {
 	}
 }
 
+// Close implements Manager interface.
+func (i *Infra) Close() error { return nil }
+
 // createOrUpdate creates a ServiceAccount/ConfigMap/Deployment/Service in the kube api server based on the
 // provided ResourceRender, if it doesn't exist and updates it if it does.
 func (i *Infra) createOrUpdate(ctx context.Context, r ResourceRender) error {

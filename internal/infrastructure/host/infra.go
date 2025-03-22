@@ -73,24 +73,7 @@ func NewInfra(runnerCtx context.Context, cfg *config.Server, logger logging.Logg
 		proxyContextMap: make(map[string]*proxyContext),
 		sdsConfigPath:   defaultLocalCertPathDir,
 	}
-	go infra.cleanProxy(runnerCtx)
-
 	return infra, nil
-}
-
-// cleanProxy stops all the running proxies when infra provider is closing.
-func (i *Infra) cleanProxy(ctx context.Context) {
-	<-ctx.Done()
-	if len(i.proxyContextMap) < 1 {
-		return
-	}
-
-	i.Logger.Info("start cleaning up proxies")
-	for name, proxyCtx := range i.proxyContextMap {
-		proxyCtx.cancel()
-		i.Logger.Info("proxy closed", "name", name)
-	}
-	i.Logger.Info("all proxies has been cleaned up")
 }
 
 // createSdsConfig creates the needing SDS config under certain directory.

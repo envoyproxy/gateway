@@ -37,6 +37,10 @@ func New(cfg *Config) *Runner {
 	return &Runner{Config: *cfg}
 }
 
+// Close implements Runner interface.
+func (r *Runner) Close() error { return nil }
+
+// Name implements Runner interface.
 func (r *Runner) Name() string {
 	return string(egv1a1.LogComponentXdsTranslatorRunner)
 }
