@@ -89,6 +89,10 @@ type EnvoyGatewaySpec struct {
 	//
 	// +optional
 	ExtensionAPIs *ExtensionAPISettings `json:"extensionApis,omitempty"`
+
+	// XDS defines the configuration for the XDS translator component.
+	// +optional
+	XDS *XDS `json:"xds,omitempty"`
 }
 
 // LeaderElection defines the desired leader election settings.
@@ -606,6 +610,14 @@ type EnvoyGatewayAdminAddress struct {
 type ShutdownManager struct {
 	// Image specifies the ShutdownManager container image to be used, instead of the default image.
 	Image *string `json:"image,omitempty"`
+}
+
+// XDS defines the configuration for the XDS translator component.
+type XDS struct {
+	// UpdateSnapshotOnError defines in XDS translator errors, e.g. errors related to extension manager, envoy patch policies
+	// and xds resource validation, would pause XDS snapshot updates. By default, Envoy Gateway would not update the snapshot
+	// if an error is encountered by the xds-translator.
+	UpdateSnapshotOnError bool `json:"updateSnapshotOnError,omitempty"`
 }
 
 func init() {

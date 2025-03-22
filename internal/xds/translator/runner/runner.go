@@ -125,7 +125,11 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *ir
 				result.EnvoyPatchPolicyStatuses = nil
 
 				// Publish
-				r.Xds.Store(key, result)
+				if err == nil || r.Config.EnvoyGateway.XDS.UpdateSnapshotOnError {
+					r.Xds.Store(key, result)
+				} else {
+					r.Logger.Error(err, "xds resources are not published due to error in xds translator")
+				}
 
 				// Delete all the deletable status keys
 				for key := range statusesToDelete {

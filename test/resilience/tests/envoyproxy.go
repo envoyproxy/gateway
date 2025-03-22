@@ -77,7 +77,7 @@ var EPResilience = suite.ResilienceTest{
 			}
 
 			req := http.MakeRequest(t, &expectedResponse, gwAddr, "http", "http")
-			http.AwaitConvergence(t, trashHold, timeout, func(elapsed time.Duration) bool {
+			http.AwaitConvergence(t, threshold, timeout, func(elapsed time.Duration) bool {
 				cReq, cRes, err := suite.RoundTripper.CaptureRoundTrip(req)
 				if err != nil {
 					tlog.Logf(t, "Request failed, not ready yet: %v (after %v)", err.Error(), elapsed)

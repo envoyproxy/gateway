@@ -27,6 +27,7 @@ import (
 
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
+	"github.com/envoyproxy/gateway/test/utils/prometheus"
 )
 
 func init() {
@@ -95,7 +96,7 @@ var RateLimitCIDRMatchTest = suite.ConformanceTest{
 			}
 			// make sure that metric worked as expected.
 			if err := wait.PollUntilContextTimeout(context.TODO(), 3*time.Second, time.Minute, true, func(ctx context.Context) (done bool, err error) {
-				v, err := QueryPrometheus(suite.Client, `ratelimit_service_rate_limit_over_limit{key2="masked_remote_address_0_0_0_0/0"}`)
+				v, err := prometheus.QueryPrometheus(suite.Client, `ratelimit_service_rate_limit_over_limit{key2="masked_remote_address_0_0_0_0/0"}`)
 				if err != nil {
 					tlog.Logf(t, "failed to query prometheus: %v", err)
 					return false, err

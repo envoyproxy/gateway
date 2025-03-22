@@ -1128,6 +1128,7 @@ EnvoyGateway is the schema for the envoygateways API.
 | `rateLimit` | _[RateLimit](#ratelimit)_ |  false  |  | RateLimit defines the configuration associated with the Rate Limit service<br />deployed by Envoy Gateway required to implement the Global Rate limiting<br />functionality. The specific rate limit service used here is the reference<br />implementation in Envoy. For more details visit https://github.com/envoyproxy/ratelimit.<br />This configuration is unneeded for "Local" rate limiting. |
 | `extensionManager` | _[ExtensionManager](#extensionmanager)_ |  false  |  | ExtensionManager defines an extension manager to register for the Envoy Gateway Control Plane. |
 | `extensionApis` | _[ExtensionAPISettings](#extensionapisettings)_ |  false  |  | ExtensionAPIs defines the settings related to specific Gateway API Extensions<br />implemented by Envoy Gateway |
+| `xds` | _[XDS](#xds)_ |  false  |  | XDS defines the configuration for the XDS translator component. |
 
 
 #### EnvoyGatewayAdmin
@@ -1384,6 +1385,7 @@ _Appears in:_
 | `rateLimit` | _[RateLimit](#ratelimit)_ |  false  |  | RateLimit defines the configuration associated with the Rate Limit service<br />deployed by Envoy Gateway required to implement the Global Rate limiting<br />functionality. The specific rate limit service used here is the reference<br />implementation in Envoy. For more details visit https://github.com/envoyproxy/ratelimit.<br />This configuration is unneeded for "Local" rate limiting. |
 | `extensionManager` | _[ExtensionManager](#extensionmanager)_ |  false  |  | ExtensionManager defines an extension manager to register for the Envoy Gateway Control Plane. |
 | `extensionApis` | _[ExtensionAPISettings](#extensionapisettings)_ |  false  |  | ExtensionAPIs defines the settings related to specific Gateway API Extensions<br />implemented by Envoy Gateway |
+| `xds` | _[XDS](#xds)_ |  false  |  | XDS defines the configuration for the XDS translator component. |
 
 
 #### EnvoyGatewayTelemetry
@@ -4634,6 +4636,21 @@ _Appears in:_
 | `Allow` | WithUnderscoresActionAllow allows headers with underscores to be passed through.<br /> | 
 | `RejectRequest` | WithUnderscoresActionRejectRequest rejects the client request. HTTP/1 requests are rejected with<br />the 400 status. HTTP/2 requests end with the stream reset.<br /> | 
 | `DropHeader` | WithUnderscoresActionDropHeader drops the client header with name containing underscores. The header<br />is dropped before the filter chain is invoked and as such filters will not see<br />dropped headers.<br /> | 
+
+
+#### XDS
+
+
+
+XDS defines the configuration for the XDS translator component.
+
+_Appears in:_
+- [EnvoyGateway](#envoygateway)
+- [EnvoyGatewaySpec](#envoygatewayspec)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `updateSnapshotOnError` | _boolean_ |  true  |  | UpdateSnapshotOnError defines in XDS translator errors, e.g. errors related to extension manager, envoy patch policies<br />and xds resource validation, would pause XDS snapshot updates. By default, Envoy Gateway would not update the snapshot<br />if an error is encountered by the xds-translator. |
 
 
 #### XDSTranslatorHook
