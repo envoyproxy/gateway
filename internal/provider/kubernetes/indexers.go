@@ -120,6 +120,22 @@ func backendHTTPRouteIndexFunc(rawObj client.Object) []string {
 				)
 			}
 		}
+
+		// Check for a RequestMirror filter to also include the backendRef from that filter
+		for _, filter := range rule.Filters {
+			if filter.Type != gwapiv1.HTTPRouteFilterRequestMirror {
+				continue
+			}
+
+			mirrorBackendRef := filter.RequestMirror.BackendRef
+
+			backendRefs = append(backendRefs,
+				types.NamespacedName{
+					Namespace: gatewayapi.NamespaceDerefOr(mirrorBackendRef.Namespace, httproute.Namespace),
+					Name:      string(mirrorBackendRef.Name),
+				}.String(),
+			)
+		}
 	}
 	return backendRefs
 }

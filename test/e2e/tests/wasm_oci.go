@@ -197,7 +197,7 @@ var OCIWasmTest = suite.ConformanceTest{
 				t, suite.Client,
 				types.NamespacedName{Name: testEEP, Namespace: testNS},
 				suite.ControllerName,
-				ancestorRef, "failed to login to private registry")
+				ancestorRef, "UNAUTHORIZED: authentication required")
 		})
 
 		// Verify that the wasm module can't be loaded if the password is incorrect
@@ -232,7 +232,7 @@ var OCIWasmTest = suite.ConformanceTest{
 				t, suite.Client,
 				types.NamespacedName{Name: testEEP, Namespace: testNS},
 				suite.ControllerName,
-				ancestorRef, "failed to login to private registry")
+				ancestorRef, "UNAUTHORIZED: authentication required")
 		})
 	},
 }

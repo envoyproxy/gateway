@@ -7,8 +7,10 @@ replace github.com/imdario/mergo => github.com/imdario/mergo v0.3.16
 require (
 	fortio.org/fortio v1.67.1
 	fortio.org/log v1.17.1
-	github.com/Masterminds/semver/v3 v3.3.0
-	github.com/cncf/xds/go v0.0.0-20240723142845-024c85f92f20
+	github.com/Masterminds/semver/v3 v3.3.1
+	github.com/avast/retry-go v3.0.0+incompatible
+	github.com/cenkalti/backoff/v4 v4.3.0
+	github.com/cncf/xds/go v0.0.0-20240905190251-b4127c9b8d78
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc
 	github.com/docker/cli v27.3.1+incompatible
 	github.com/dominikbraun/graph v0.23.0
@@ -223,7 +225,6 @@ require (
 	github.com/Azure/go-ansiterm v0.0.0-20230124172434-306776ec8161 // indirect
 	github.com/MakeNowJust/heredoc v1.0.0 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
-	github.com/cenkalti/backoff/v4 v4.3.0
 	github.com/census-instrumentation/opencensus-proto v0.4.1 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/chai2010/gettext-go v1.0.3 // indirect
