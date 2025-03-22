@@ -119,15 +119,15 @@ func (i *Infra) createOrUpdateDeployment(ctx context.Context, r ResourceRender) 
 	}
 
 	defer func() {
-		err = i.Client.DeleteAllExcept(ctx, &appsv1.DeploymentList{}, client.ObjectKey{
+		deleteErr := i.Client.DeleteAllExcept(ctx, &appsv1.DeploymentList{}, client.ObjectKey{
 			Namespace: deployment.Namespace,
 			Name:      deployment.Name,
 		}, &client.ListOptions{
 			Namespace:     deployment.Namespace,
 			LabelSelector: r.LabelSelector(),
 		})
-		if err != nil {
-			i.logger.Error(err, "failed to delete all except deployment", "name", r.Name())
+		if deleteErr != nil {
+			i.logger.Error(deleteErr, "failed to delete all except deployment", "name", r.Name())
 		}
 
 		if err == nil {
@@ -211,15 +211,15 @@ func (i *Infra) createOrUpdateDaemonSet(ctx context.Context, r ResourceRender) (
 	}
 
 	defer func() {
-		err = i.Client.DeleteAllExcept(ctx, &appsv1.DaemonSetList{}, client.ObjectKey{
+		deleteErr := i.Client.DeleteAllExcept(ctx, &appsv1.DaemonSetList{}, client.ObjectKey{
 			Namespace: daemonSet.Namespace,
 			Name:      daemonSet.Name,
 		}, &client.ListOptions{
 			Namespace:     daemonSet.Namespace,
 			LabelSelector: r.LabelSelector(),
 		})
-		if err != nil {
-			i.logger.Error(err, "failed to delete all except deployment", "name", r.Name())
+		if deleteErr != nil {
+			i.logger.Error(deleteErr, "failed to delete all except deployment", "name", r.Name())
 		}
 
 		if err == nil {
@@ -380,15 +380,15 @@ func (i *Infra) createOrUpdateService(ctx context.Context, r ResourceRender) (er
 	}
 
 	defer func() {
-		err = i.Client.DeleteAllExcept(ctx, &corev1.ServiceList{}, client.ObjectKey{
+		deleteErr := i.Client.DeleteAllExcept(ctx, &corev1.ServiceList{}, client.ObjectKey{
 			Namespace: svc.Namespace,
 			Name:      svc.Name,
 		}, &client.ListOptions{
 			Namespace:     svc.Namespace,
 			LabelSelector: r.LabelSelector(),
 		})
-		if err != nil {
-			i.logger.Error(err, "failed to delete all except deployment", "name", r.Name())
+		if deleteErr != nil {
+			i.logger.Error(deleteErr, "failed to delete all except deployment", "name", r.Name())
 		}
 
 		if err == nil {
