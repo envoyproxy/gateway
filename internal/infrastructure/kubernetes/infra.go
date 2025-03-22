@@ -20,6 +20,7 @@ import (
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/infrastructure/kubernetes/proxy"
 	"github.com/envoyproxy/gateway/internal/infrastructure/kubernetes/ratelimit"
+	"github.com/envoyproxy/gateway/internal/logging"
 )
 
 var _ ResourceRender = &proxy.ResourceRender{}
@@ -58,6 +59,8 @@ type Infra struct {
 
 	// Client wrap k8s client.
 	Client *InfraClient
+
+	logger logging.Logger
 }
 
 // NewInfra returns a new Infra.
@@ -67,6 +70,7 @@ func NewInfra(cli client.Client, cfg *config.Server) *Infra {
 		DNSDomain:    cfg.DNSDomain,
 		EnvoyGateway: cfg.EnvoyGateway,
 		Client:       New(cli),
+		logger:       cfg.Logger.WithName("infra-kubernetes"),
 	}
 }
 

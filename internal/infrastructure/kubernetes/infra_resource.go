@@ -119,14 +119,15 @@ func (i *Infra) createOrUpdateDeployment(ctx context.Context, r ResourceRender) 
 	}
 
 	defer func() {
-		// custom Deployment name is enabled, and the deployment name is different from the resource name.
-		if deployment.Name != r.Name() {
-			_ = i.Client.DeleteIfExists(ctx, &appsv1.Deployment{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      r.Name(),
-					Namespace: i.Namespace,
-				},
-			})
+		err = i.Client.DeleteAllExcept(ctx, &appsv1.DeploymentList{}, client.ObjectKey{
+			Namespace: deployment.Namespace,
+			Name:      deployment.Name,
+		}, &client.ListOptions{
+			Namespace:     deployment.Namespace,
+			LabelSelector: r.LabelSelector(),
+		})
+		if err != nil {
+			i.logger.Error(err, "failed to delete all except deployment", "name", r.Name())
 		}
 
 		if err == nil {
@@ -202,7 +203,7 @@ func (i *Infra) createOrUpdateDaemonSet(ctx context.Context, r ResourceRender) (
 		return err
 	}
 
-	// delete the daemonset and return early
+	// delete the DaemonSet and return early
 	// this handles the case where a deployment has been
 	// configured.
 	if daemonSet == nil {
@@ -210,14 +211,15 @@ func (i *Infra) createOrUpdateDaemonSet(ctx context.Context, r ResourceRender) (
 	}
 
 	defer func() {
-		// custom DaemonSet name is enabled, and the deployment name is different from the resource name.
-		if daemonSet.Name != r.Name() {
-			_ = i.Client.DeleteIfExists(ctx, &appsv1.DaemonSet{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      r.Name(),
-					Namespace: i.Namespace,
-				},
-			})
+		err = i.Client.DeleteAllExcept(ctx, &appsv1.DaemonSetList{}, client.ObjectKey{
+			Namespace: daemonSet.Namespace,
+			Name:      daemonSet.Name,
+		}, &client.ListOptions{
+			Namespace:     daemonSet.Namespace,
+			LabelSelector: r.LabelSelector(),
+		})
+		if err != nil {
+			i.logger.Error(err, "failed to delete all except deployment", "name", r.Name())
 		}
 
 		if err == nil {
@@ -378,14 +380,15 @@ func (i *Infra) createOrUpdateService(ctx context.Context, r ResourceRender) (er
 	}
 
 	defer func() {
-		// custom DaemonSet name is enabled, and the deployment name is different from the resource name.
-		if svc.Name != r.Name() {
-			_ = i.Client.DeleteIfExists(ctx, &corev1.Service{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      r.Name(),
-					Namespace: i.Namespace,
-				},
-			})
+		err = i.Client.DeleteAllExcept(ctx, &corev1.ServiceList{}, client.ObjectKey{
+			Namespace: svc.Namespace,
+			Name:      svc.Name,
+		}, &client.ListOptions{
+			Namespace:     svc.Namespace,
+			LabelSelector: r.LabelSelector(),
+		})
+		if err != nil {
+			i.logger.Error(err, "failed to delete all except deployment", "name", r.Name())
 		}
 
 		if err == nil {

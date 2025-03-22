@@ -40,7 +40,6 @@ var EnvoyProxyCustomNameTest = suite.ConformanceTest{
 			ns := "gateway-conformance-infra"
 			routeNN := types.NamespacedName{Name: "deploy-route", Namespace: ns}
 			gwNN := types.NamespacedName{Name: "deploy-custom-name", Namespace: ns}
-			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
 			OkResp := http.ExpectedResponse{
 				Request: http.Request{
 					Path: "/deploy",
@@ -60,6 +59,7 @@ var EnvoyProxyCustomNameTest = suite.ConformanceTest{
 			if err != nil {
 				t.Fatalf("Failed to check EnvoyProxy service: %v", err)
 			}
+			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
 			// Send a request to a valid path and expect a successful response
 			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, OkResp)
 
@@ -92,13 +92,37 @@ var EnvoyProxyCustomNameTest = suite.ConformanceTest{
 			gwAddr = kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
 			// Send a request to a valid path and expect a successful response
 			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, OkResp)
+
+			// Rollback the Gateway to without custom name
+			gw = &gwapiv1.Gateway{}
+			err = suite.Client.Get(context.Background(), gwNN, gw)
+			if err != nil {
+				t.Fatalf("Failed to get Gateway: %v", err)
+			}
+			gw.Spec.Infrastructure = &gwapiv1.GatewayInfrastructure{}
+			err = suite.Client.Update(context.Background(), gw)
+			if err != nil {
+				t.Fatalf("Failed to update Gateway: %v", err)
+			}
+
+			// Make sure there's deployment for the gateway
+			err = checkEnvoyProxyDeployment(t, suite, gwNN, fmt.Sprintf("envoy-%s-%s", gwNN.Namespace, gwNN.Name))
+			if err != nil {
+				t.Fatalf("Failed to check EnvoyProxy deployment: %v", err)
+			}
+			err = checkEnvoyProxyService(t, suite, gwNN, fmt.Sprintf("envoy-%s-%s", gwNN.Namespace, gwNN.Name))
+			if err != nil {
+				t.Fatalf("Failed to check EnvoyProxy service: %v", err)
+			}
+			gwAddr = kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
+			// Send a request to a valid path and expect a successful response
+			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, OkResp)
 		})
 
 		t.Run("DaemonSet", func(t *testing.T) {
 			ns := "gateway-conformance-infra"
 			routeNN := types.NamespacedName{Name: "ds-route", Namespace: ns}
 			gwNN := types.NamespacedName{Name: "ds-custom-name", Namespace: ns}
-			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
 			OkResp := http.ExpectedResponse{
 				Request: http.Request{
 					Path: "/daemonset",
@@ -118,6 +142,7 @@ var EnvoyProxyCustomNameTest = suite.ConformanceTest{
 			if err != nil {
 				t.Fatalf("Failed to check EnvoyProxy service: %v", err)
 			}
+			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
 			// Send a request to a valid path and expect a successful response
 			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, OkResp)
 
@@ -144,6 +169,37 @@ var EnvoyProxyCustomNameTest = suite.ConformanceTest{
 				t.Fatalf("Failed to delete Gateway: %v", err)
 			}
 			err = checkEnvoyProxyService(t, suite, gwNN, "ds-custom-name")
+			if err != nil {
+				t.Fatalf("Failed to check EnvoyProxy service: %v", err)
+			}
+			gwAddr = kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
+			// Send a request to a valid path and expect a successful response
+			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, OkResp)
+
+			// Rollback the Gateway to without custom name
+			gw = &gwapiv1.Gateway{}
+			err = suite.Client.Get(context.Background(), gwNN, gw)
+			if err != nil {
+				t.Fatalf("Failed to get Gateway: %v", err)
+			}
+			gw.Spec.Infrastructure = &gwapiv1.GatewayInfrastructure{
+				ParametersRef: &gwapiv1.LocalParametersReference{
+					Name:  "eg-daemonset",
+					Kind:  "EnvoyProxy",
+					Group: "gateway.envoyproxy.io",
+				},
+			}
+			err = suite.Client.Update(context.Background(), gw)
+			if err != nil {
+				t.Fatalf("Failed to update Gateway: %v", err)
+			}
+
+			// Make sure there's DaemonSet for the gateway
+			err = checkEnvoyProxyDaemonSet(t, suite, gwNN, fmt.Sprintf("envoy-%s-%s", gwNN.Namespace, gwNN.Name))
+			if err != nil {
+				t.Fatalf("Failed to check EnvoyProxy deployment: %v", err)
+			}
+			err = checkEnvoyProxyService(t, suite, gwNN, fmt.Sprintf("envoy-%s-%s", gwNN.Namespace, gwNN.Name))
 			if err != nil {
 				t.Fatalf("Failed to check EnvoyProxy service: %v", err)
 			}
@@ -181,7 +237,12 @@ func checkEnvoyProxyDeployment(t *testing.T, suite *suite.ConformanceTestSuite, 
 			return false, nil
 		}
 
-		return dp.Status.ReadyReplicas > 0, nil
+		if dp.Status.ReadyReplicas <= 0 {
+			tlog.Logf(t, "Expected Deployment %s ready", dp.Name)
+		}
+
+		tlog.Logf(t, "Check Envoy proxy deployment pass, name: %s", dp.Name)
+		return true, nil
 	})
 }
 
@@ -206,11 +267,13 @@ func checkEnvoyProxyService(t *testing.T, suite *suite.ConformanceTestSuite, gwN
 			return false, nil
 		}
 
-		if !strings.HasPrefix(svcList.Items[0].Name, exceptName) {
-			tlog.Logf(t, "Expected Service name has prefix '%s', got %s", exceptName, svcList.Items[0].Name)
+		svc := svcList.Items[0]
+		if !strings.HasPrefix(svc.Name, exceptName) {
+			tlog.Logf(t, "Expected Service name has prefix '%s', got %s", exceptName, svc.Name)
 			return false, nil
 		}
 
+		tlog.Logf(t, "Check envoy proxy service pass, name: %s", svc.Name)
 		return true, nil
 	})
 }
@@ -242,6 +305,11 @@ func checkEnvoyProxyDaemonSet(t *testing.T, suite *suite.ConformanceTestSuite, g
 			return false, nil
 		}
 
-		return ds.Status.NumberReady > 0, nil
+		if ds.Status.NumberReady <= 0 {
+			tlog.Logf(t, "Expected DaemonSet %s ready", ds.Name)
+		}
+
+		tlog.Logf(t, "Check envoy proxy DaemonSet pass, name: %s", ds.Name)
+		return true, nil
 	})
 }
