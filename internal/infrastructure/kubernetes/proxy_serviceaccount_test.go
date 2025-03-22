@@ -7,6 +7,7 @@ package kubernetes
 
 import (
 	"context"
+	"os"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -167,7 +168,7 @@ func TestCreateOrUpdateProxyServiceAccount(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			cfg, err := config.New()
+			cfg, err := config.New(os.Stdout)
 			require.NoError(t, err)
 			cfg.Namespace = tc.ns
 

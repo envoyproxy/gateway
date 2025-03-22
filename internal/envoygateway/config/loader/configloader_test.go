@@ -32,7 +32,7 @@ func TestConfigLoader(t *testing.T) {
 
 	cfgPath := tmpDir + "/config.yaml"
 	require.NoError(t, os.WriteFile(cfgPath, []byte(defaultConfig), 0o600))
-	s, err := config.New()
+	s, err := config.New(os.Stdout)
 	require.NoError(t, err)
 
 	ctx, cancel := context.WithCancel(context.TODO())

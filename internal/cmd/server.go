@@ -105,7 +105,7 @@ func getConfig(logOut io.Writer) (*config.Server, error) {
 // make `cfgPath` an argument to test it without polluting the global var
 func getConfigByPath(logOut io.Writer, cfgPath string) (*config.Server, error) {
 	// Initialize with default config parameters.
-	cfg, err := config.New()
+	cfg, err := config.New(logOut)
 	if err != nil {
 		return nil, err
 	}

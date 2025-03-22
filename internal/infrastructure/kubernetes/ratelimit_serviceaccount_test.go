@@ -7,6 +7,7 @@ package kubernetes
 
 import (
 	"context"
+	"os"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -103,7 +104,7 @@ func TestCreateOrUpdateRateLimitServiceAccount(t *testing.T) {
 					Build()
 			}
 
-			cfg, err := config.New()
+			cfg, err := config.New(os.Stdout)
 			require.NoError(t, err)
 			cfg.Namespace = tc.ns
 
