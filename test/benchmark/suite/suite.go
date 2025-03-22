@@ -229,8 +229,9 @@ func (b *BenchmarkTestSuite) Benchmark(t *testing.T, ctx context.Context, jobNam
 		t.Logf("Job %s still not complete", jobName)
 
 		// Sample the metrics and profiles at runtime.
+		// Do not consider it as an error, fail sampling should not affect test running.
 		if err := report.Sample(ctx); err != nil {
-			t.Errorf("Failed to sample metrics or profiles: %v", err)
+			t.Logf("Error occurs while sampling metrics or profiles: %v", err)
 		}
 
 		return false, nil
