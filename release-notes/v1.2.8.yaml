@@ -1,4 +1,8 @@
-date: March 23, 2025
+date: March 22, 2025
+
+security updates: |
+  Fixed vulnerability CVE-2025-30157, where local replies were incorrectly sent to the ext_proc server.
+  Included ratelimit security fixes related to the golang net/http package.
 
 bug fixes: |
   Added support for BackendTLSPolicy and EnvoyExtensionPolicy parsing in Standalone mode.
