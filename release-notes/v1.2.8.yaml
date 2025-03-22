@@ -9,7 +9,7 @@ bug fixes: |
   Fixed endpoint updates when mirrored backend Pod IPs change.
   Fix not logging an error and returning it in the K8s Reconcile method when a GatewayClass is not accepted.
   Fixed validation of host header in RequestHeaderModifier filter.
-
+  Fixed an OpenTelemetry access log sink failure caused by an 'otel.Text is nil' error.
 # Enhancements that improve performance.
 performance improvements: |
   Added a cache for the Wasm OCI image permission checks and check the pullSecrets against the OCI image registry in
