@@ -594,6 +594,11 @@ func (in *BackendTrafficPolicySpec) DeepCopyInto(out *BackendTrafficPolicySpec) 
 	*out = *in
 	in.PolicyTargetReferences.DeepCopyInto(&out.PolicyTargetReferences)
 	in.ClusterSettings.DeepCopyInto(&out.ClusterSettings)
+	if in.PatchType != nil {
+		in, out := &in.PatchType, &out.PatchType
+		*out = new(MergeType)
+		**out = **in
+	}
 	if in.RateLimit != nil {
 		in, out := &in.RateLimit, &out.RateLimit
 		*out = new(RateLimitSpec)
