@@ -13,13 +13,16 @@ import (
 	"math"
 	"net"
 	"strconv"
+	"strings"
 
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/security/advancedtls"
 	"google.golang.org/grpc/test/bufconn"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/utils/ptr"
 	k8scli "sigs.k8s.io/controller-runtime/pkg/client"
 	k8sclicfg "sigs.k8s.io/controller-runtime/pkg/client/config"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
@@ -32,16 +35,16 @@ import (
 	"github.com/envoyproxy/gateway/proto/extension"
 )
 
-const grpcServiceConfig = `{
+const grpcServiceConfigTemplate = `{
 "methodConfig": [{
 	"name": [{"service": "envoygateway.extension.EnvoyGatewayExtension"}],
 	"waitForReady": true,
 	"retryPolicy": {
-		"MaxAttempts": 4,
-		"InitialBackoff": "0.1s",
-		"MaxBackoff": "1s",
-		"BackoffMultiplier": 2.0,
-		"RetryableStatusCodes": [ "UNAVAILABLE" ]
+		"MaxAttempts": %d,
+		"InitialBackoff": "%fs",
+		"MaxBackoff": "%fs",
+		"BackoffMultiplier": %f,
+		"RetryableStatusCodes": [ %s ]
 	}
 }]}`
 
@@ -91,10 +94,23 @@ func NewInMemoryManager(cfg egv1a1.ExtensionManager, server extension.EnvoyGatew
 	go func() {
 		_ = baseServer.Serve(lis)
 	}()
-	conn, err := grpc.DialContext(context.Background(), "",
+
+	inMemoryManagerOpts := []grpc.DialOption{
 		grpc.WithContextDialer(func(context.Context, string) (net.Conn, error) {
 			return lis.Dial()
-		}), grpc.WithTransportCredentials(insecure.NewCredentials()))
+		}),
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+	}
+
+	if cfg.Service != nil {
+		opts, err := setupGRPCOpts(context.Background(), nil, &cfg, "")
+		if err != nil {
+			return nil, nil, err
+		}
+		inMemoryManagerOpts = append(inMemoryManagerOpts, opts...)
+	}
+
+	conn, err := grpc.DialContext(context.Background(), "", inMemoryManagerOpts...)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -270,7 +286,18 @@ func setupGRPCOpts(ctx context.Context, client k8scli.Client, ext *egv1a1.Extens
 	} else {
 		opts = append(opts, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	}
-	opts = append(opts, grpc.WithDefaultServiceConfig(grpcServiceConfig))
+
+	serviceConfig, err := buildServiceConfig(ext)
+	if err != nil {
+		return nil, err
+	}
+	opts = append(opts, grpc.WithDefaultServiceConfig(serviceConfig))
+
+	if ext.Service.RetryPolicy != nil {
+		maxAttempts := ptr.Deref(ext.Service.RetryPolicy.MaxAttempts, 4)
+		opts = append(opts, grpc.WithMaxCallAttempts(maxAttempts))
+	}
+
 	if ext.MaxMessageSize != nil {
 		maxMessageSize, ok := ext.MaxMessageSize.AsInt64()
 		if !ok {
@@ -323,4 +350,82 @@ func getCertPoolFromSecret(ctx context.Context, client k8scli.Client, ext *egv1a
 		return nil, errors.New("failed to append certificates from CA secret")
 	}
 	return cp, nil
+}
+
+func fractionOrDefault(fraction *gwapiv1.Fraction, defaultValue float64) float64 {
+	if fraction != nil {
+		numerator := float64(fraction.Numerator)
+		denominator := float64(100)
+		if fraction.Denominator != nil {
+			denominator = float64(*fraction.Denominator)
+		}
+		return numerator / denominator
+	}
+	return defaultValue
+}
+
+var retryStrToCode = map[string]codes.Code{
+	`"CANCELLED"`:           codes.Canceled,
+	`"UNKNOWN"`:             codes.Unknown,
+	`"INVALID_ARGUMENT"`:    codes.InvalidArgument,
+	`"DEADLINE_EXCEEDED"`:   codes.DeadlineExceeded,
+	`"NOT_FOUND"`:           codes.NotFound,
+	`"ALREADY_EXISTS"`:      codes.AlreadyExists,
+	`"PERMISSION_DENIED"`:   codes.PermissionDenied,
+	`"RESOURCE_EXHAUSTED"`:  codes.ResourceExhausted,
+	`"FAILED_PRECONDITION"`: codes.FailedPrecondition,
+	`"ABORTED"`:             codes.Aborted,
+	`"OUT_OF_RANGE"`:        codes.OutOfRange,
+	`"UNIMPLEMENTED"`:       codes.Unimplemented,
+	`"INTERNAL"`:            codes.Internal,
+	`"UNAVAILABLE"`:         codes.Unavailable,
+	`"DATA_LOSS"`:           codes.DataLoss,
+	`"UNAUTHENTICATED"`:     codes.Unauthenticated,
+}
+
+func getRetryableGRPCCode(retryableCodes []egv1a1.RetryableGRPCStatusCode) (string, error) {
+	var quotedCodes []string
+	for _, statusCode := range retryableCodes {
+		quotedCode := strconv.Quote(string(statusCode))
+		_, found := retryStrToCode[quotedCode]
+		if !found {
+			return "", fmt.Errorf("invalid Extension Manager GRPC Retry Status code value %s", statusCode)
+		} else {
+			quotedCodes = append(quotedCodes, quotedCode)
+		}
+	}
+
+	return strings.Join(quotedCodes, ","), nil
+}
+
+func buildServiceConfig(ext *egv1a1.ExtensionManager) (string, error) {
+	const defaultMaxAttempts = 4
+	const defaultInitialBackoff = 0.1
+	const defaultMaxBackoff = 1.0
+	const defaultBackoffMultiplier = 2.0
+	const defaultRetryableCodes = "UNAVAILABLE"
+
+	maxAttempts := defaultMaxAttempts
+	initialBackoff := defaultInitialBackoff
+	maxBackoff := defaultMaxBackoff
+	backoffMultiplier := defaultBackoffMultiplier
+	grpcRetryableStatusCodes := strconv.Quote(defaultRetryableCodes)
+
+	if ext.Service.RetryPolicy != nil {
+		maxAttempts = ptr.Deref(ext.Service.RetryPolicy.MaxAttempts, defaultMaxAttempts)
+		initialBackoff = fractionOrDefault(ext.Service.RetryPolicy.InitialBackoff, defaultInitialBackoff)
+		maxBackoff = fractionOrDefault(ext.Service.RetryPolicy.MaxBackoff, defaultMaxBackoff)
+		backoffMultiplier = fractionOrDefault(ext.Service.RetryPolicy.BackoffMultiplier, defaultBackoffMultiplier)
+
+		if len(ext.Service.RetryPolicy.RetryableStatusCodes) > 0 {
+			var err error
+			grpcRetryableStatusCodes, err = getRetryableGRPCCode(ext.Service.RetryPolicy.RetryableStatusCodes)
+			if err != nil {
+				return "", err
+			}
+		}
+	}
+
+	return fmt.Sprintf(grpcServiceConfigTemplate, maxAttempts, initialBackoff, maxBackoff,
+		backoffMultiplier, grpcRetryableStatusCodes), nil
 }
