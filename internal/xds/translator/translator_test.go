@@ -9,6 +9,7 @@ import (
 	"embed"
 	"flag"
 	"path/filepath"
+	"runtime"
 	"sort"
 	"strings"
 	"testing"
@@ -49,6 +50,28 @@ type testFileConfig struct {
 }
 
 func TestTranslateXds(t *testing.T) {
+	// this is a hack to make sure EG render same output on macos and linux
+	defaultCertificateName = "/etc/ssl/certs/ca-certificates.crt"
+	defer func() {
+		defaultCertificateName = func() string {
+			switch runtime.GOOS {
+			case "darwin":
+				// TODO: maybe automatically get the keychain cert? That might be macOS version dependent.
+				// For now, we'll just use the root cert installed by Homebrew: brew install ca-certificates.
+				//
+				// See:
+				// * https://apple.stackexchange.com/questions/226375/where-are-the-root-cas-stored-on-os-x
+				// * https://superuser.com/questions/992167/where-are-digital-certificates-physically-stored-on-a-mac-os-x-machine
+				return "/opt/homebrew/etc/ca-certificates/cert.pem"
+			default:
+				// This is the default location for the system trust store
+				// on Debian derivatives like the envoy-proxy image being used by the infrastructure
+				// controller.
+				// See https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/security/ssl
+				return "/etc/ssl/certs/ca-certificates.crt"
+			}
+		}()
+	}()
 	testConfigs := map[string]testFileConfig{
 		"ratelimit-custom-domain": {
 			dnsDomain: "example-cluster.local",
