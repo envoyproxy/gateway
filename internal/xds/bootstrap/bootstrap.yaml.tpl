@@ -232,7 +232,7 @@ static_resources:
               path_config_source:
                 path: {{ .SdsTrustedCAPath }}
               resource_api_version: V3
-{{- if .GatewayNamespacedMode }}
+{{- if .GatewayNamespaceMode }}
     filter_chains:
     - filters:
       - name: envoy.filters.network.http_connection_manager
@@ -326,7 +326,7 @@ overload_manager:
       threshold:
         value: 0.98
   {{- end }}
-{{- if .GatewayNamespacedMode }}
+{{- if .GatewayNamespaceMode }}
 secrets:
   - name: jwt-sa-bearer
     generic_secret:

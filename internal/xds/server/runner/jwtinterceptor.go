@@ -1,3 +1,8 @@
+// Copyright Envoy Gateway Authors
+// SPDX-License-Identifier: Apache-2.0
+// The full text of the Apache license is available in the LICENSE file at
+// the root of the repo.
+
 package runner
 
 import (
@@ -5,10 +10,9 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/golang-jwt/jwt/v4"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
-
-	"github.com/golang-jwt/jwt/v4"
 )
 
 // JWTClaims defines the expected claims in the JWT token.
