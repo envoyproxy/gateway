@@ -163,7 +163,8 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /
-        traffic: {}
+        traffic:
+          name: envoy-gateway/policy-for-gateway
         useClientProtocol: true
     readyListener:
       address: 0.0.0.0

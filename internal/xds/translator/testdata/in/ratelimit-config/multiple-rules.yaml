@@ -1,34 +1,37 @@
-name: "first-listener"
-address: "0.0.0.0"
-port: 10080
-hostnames:
-- "*"
-path:
-  mergeSlashes: true
-  escapedSlashesAction: UnescapeAndRedirect
-routes:
-- name: "first-route"
-  traffic:
-    rateLimit:
-      global:
-        rules:
-        - headerMatches:
-          - name: "x-user-id"
-            exact: "one"
-          limit:
-            requests: 5
-            unit: second
-        - headerMatches:
-          - name: "x-user-id"
-            exact: "two"
-          limit:
-            requests: 10
-            unit: second
-  pathMatch:
-    exact: "foo/bar"
-  destination:
-    name: "first-route-dest"
-    settings:
-    - endpoints:
-      - host: "1.2.3.4"
-        port: 50000
+http:
+- name: "first-listener"
+  address: "0.0.0.0"
+  port: 10080
+  hostnames:
+  - "*"
+  path:
+    mergeSlashes: true
+    escapedSlashesAction: UnescapeAndRedirect
+  routes:
+  - name: "first-route"
+    traffic:
+      name: "test-policy-1/test-namespace"
+      rateLimit:
+        global:
+          shared: false
+          rules:
+          - headerMatches:
+            - name: "x-user-id"
+              exact: "one"
+            limit:
+              requests: 5
+              unit: second
+          - headerMatches:
+            - name: "x-user-id"
+              exact: "two"
+            limit:
+              requests: 10
+              unit: second
+    pathMatch:
+      exact: "foo/bar"
+    destination:
+      name: "first-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
