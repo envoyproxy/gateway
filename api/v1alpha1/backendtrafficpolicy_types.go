@@ -80,7 +80,7 @@ type BackendTrafficPolicySpec struct {
 	// +optional
 	HTTPUpgrade []*ProtocolUpgradeConfig `json:"httpUpgrade,omitempty"`
 
-	// BufferRequests allows the gateway to buffer and fully receive each request from a client before continuing to send the request
+	// RequestBuffer allows the gateway to buffer and fully receive each request from a client before continuing to send the request
 	// upstream to the backends. This can be helpful to shield your backend servers from slow clients, and also to enforce a maximum size per request
 	// as any requests larger than the buffer size will be rejected.
 	//
@@ -91,7 +91,7 @@ type BackendTrafficPolicySpec struct {
 	//
 	// +notImplementedHide
 	// +optional
-	BufferRequests *BufferRequests `json:"bufferRequests,omitempty"`
+	RequestBuffer *RequestBuffer `json:"requestBuffer,omitempty"`
 }
 
 type ProtocolUpgradeConfig struct {
@@ -104,7 +104,7 @@ type ProtocolUpgradeConfig struct {
 	// TODO: support more options for CONNECT
 }
 
-type BufferRequests struct {
+type RequestBuffer struct {
 	// Limit specifies the maximum allowed size in bytes for each incoming request buffer.
 	// If exceeded, the request will be rejected with HTTP 413 Content Too Large.
 	//

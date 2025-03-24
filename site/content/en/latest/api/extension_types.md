@@ -564,19 +564,6 @@ _Appears in:_
 
 
 
-#### BufferRequests
-
-
-
-
-
-_Appears in:_
-- [BackendTrafficPolicySpec](#backendtrafficpolicyspec)
-
-| Field | Type | Required | Default | Description |
-| ---   | ---  | ---      | ---     | ---         |
-
-
 #### CIDR
 
 _Underlying type:_ _string_
@@ -3935,6 +3922,19 @@ _Appears in:_
 | ---   | ---  | ---      | ---     | ---         |
 | `pattern` | _string_ |  true  |  | Pattern matches a regular expression against the value of the HTTP Path.The regex string must<br />adhere to the syntax documented in https://github.com/google/re2/wiki/Syntax. |
 | `substitution` | _string_ |  true  |  | Substitution is an expression that replaces the matched portion.The expression may include numbered<br />capture groups that adhere to syntax documented in https://github.com/google/re2/wiki/Syntax. |
+
+
+#### RequestBuffer
+
+
+
+
+
+_Appears in:_
+- [BackendTrafficPolicySpec](#backendtrafficpolicyspec)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
 
 
 #### RequestHeaderCustomTag
