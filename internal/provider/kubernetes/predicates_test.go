@@ -7,6 +7,7 @@ package kubernetes
 
 import (
 	"fmt"
+	"os"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -52,7 +53,7 @@ func TestGatewayClassHasMatchingController(t *testing.T) {
 	}
 
 	// Create the reconciler.
-	logger := logging.DefaultLogger(egv1a1.LogLevelInfo)
+	logger := logging.DefaultLogger(os.Stdout, egv1a1.LogLevelInfo)
 
 	r := gatewayAPIReconciler{
 		classController: egv1a1.GatewayControllerName,
@@ -104,7 +105,7 @@ func TestGatewayClassHasMatchingNamespaceLabels(t *testing.T) {
 		},
 	}
 
-	logger := logging.DefaultLogger(egv1a1.LogLevelInfo)
+	logger := logging.DefaultLogger(os.Stdout, egv1a1.LogLevelInfo)
 
 	for _, tc := range testCases {
 		r := gatewayAPIReconciler{
@@ -158,7 +159,7 @@ func TestValidateGatewayForReconcile(t *testing.T) {
 	}
 
 	// Create the reconciler.
-	logger := logging.DefaultLogger(egv1a1.LogLevelInfo)
+	logger := logging.DefaultLogger(os.Stdout, egv1a1.LogLevelInfo)
 
 	r := gatewayAPIReconciler{
 		classController: egv1a1.GatewayControllerName,
@@ -384,7 +385,7 @@ func TestValidateSecretForReconcile(t *testing.T) {
 	}
 
 	// Create the reconciler.
-	logger := logging.DefaultLogger(egv1a1.LogLevelInfo)
+	logger := logging.DefaultLogger(os.Stdout, egv1a1.LogLevelInfo)
 
 	r := gatewayAPIReconciler{
 		classController: egv1a1.GatewayControllerName,
@@ -512,7 +513,7 @@ func TestValidateEndpointSliceForReconcile(t *testing.T) {
 	}
 
 	// Create the reconciler.
-	logger := logging.DefaultLogger(egv1a1.LogLevelInfo)
+	logger := logging.DefaultLogger(os.Stdout, egv1a1.LogLevelInfo)
 
 	r := gatewayAPIReconciler{
 		classController: egv1a1.GatewayControllerName,
@@ -941,7 +942,7 @@ func TestValidateServiceForReconcile(t *testing.T) {
 	}
 
 	// Create the reconciler.
-	logger := logging.DefaultLogger(egv1a1.LogLevelInfo)
+	logger := logging.DefaultLogger(os.Stdout, egv1a1.LogLevelInfo)
 
 	r := gatewayAPIReconciler{
 		classController:    egv1a1.GatewayControllerName,
@@ -1060,7 +1061,7 @@ func TestValidateObjectForReconcile(t *testing.T) {
 	}
 
 	// Create the reconciler.
-	logger := logging.DefaultLogger(egv1a1.LogLevelInfo)
+	logger := logging.DefaultLogger(os.Stdout, egv1a1.LogLevelInfo)
 
 	r := gatewayAPIReconciler{
 		classController: egv1a1.GatewayControllerName,
@@ -1167,7 +1168,7 @@ func TestCheckObjectNamespaceLabels(t *testing.T) {
 	}
 
 	// Create the reconciler.
-	logger := logging.DefaultLogger(egv1a1.LogLevelInfo)
+	logger := logging.DefaultLogger(os.Stdout, egv1a1.LogLevelInfo)
 
 	r := gatewayAPIReconciler{
 		classController: egv1a1.GatewayControllerName,
@@ -1320,7 +1321,7 @@ func TestValidateHTTPRouteFilerForReconcile(t *testing.T) {
 	}
 
 	// Create the reconciler.
-	logger := logging.DefaultLogger(egv1a1.LogLevelInfo)
+	logger := logging.DefaultLogger(os.Stdout, egv1a1.LogLevelInfo)
 
 	r := gatewayAPIReconciler{
 		classController: egv1a1.GatewayControllerName,
