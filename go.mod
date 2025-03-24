@@ -12,7 +12,7 @@ require (
 	github.com/cenkalti/backoff/v4 v4.3.0
 	github.com/cncf/xds/go v0.0.0-20241223141626-cff3c89139a3
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc
-	github.com/docker/cli v28.0.1+incompatible
+	github.com/docker/cli v28.0.2+incompatible
 	github.com/docker/docker v27.5.1+incompatible
 	github.com/dominikbraun/graph v0.23.0
 	github.com/envoyproxy/go-control-plane v0.13.5-0.20250303232259-0c5cb90447bb
@@ -35,7 +35,7 @@ require (
 	github.com/google/go-cmp v0.7.0
 	github.com/google/go-containerregistry v0.20.3
 	github.com/hashicorp/go-multierror v1.1.1
-	github.com/miekg/dns v1.1.63
+	github.com/miekg/dns v1.1.64
 	github.com/ohler55/ojg v1.26.2
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.21.1
