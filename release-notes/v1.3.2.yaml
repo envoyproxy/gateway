@@ -1,13 +1,4 @@
-date: Pending
-
-# Changes that are expected to cause an incompatibility with previous versions, such as deletions or modifications to existing APIs.
-breaking changes: |
-
-# Updates addressing vulnerabilities, security flaws, or compliance requirements.
-security updates: |
-
-# New features or capabilities added in this release.
-new features: |
+date: March 24, 2025
 
 bug fixes: |
   Added support for BackendTLSPolicy and EnvoyExtensionPolicy parsing in Standalone mode.
@@ -22,10 +13,7 @@ performance improvements: |
   Added a cache for the Wasm OCI image permission checks and check the pullSecrets against the OCI image registry in
   a background goroutine.
 
-# Deprecated features or APIs.
-deprecations: |
-
 # Other notable changes not covered by the above sections.
 Other changes: |
   Bumped envoy to v1.33.1.
-  Bumpled ratelimit to 0141a24f.
+  Bumped ratelimit to 0141a24f.
