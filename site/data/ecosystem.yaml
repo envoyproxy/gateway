@@ -19,3 +19,8 @@ adopters:
     logo: "/logos/kserve.svg"
     url: "https://kserve.github.io"
     description: "KServe leverages Kubernetes Gateway API and Envoy Gateway to simplify routing, traffic management, and secure access to machine learning inference services in Kubernetes environments."
+  - name: "k0rdent"
+    url: "https://k0rdent.io/"
+    logo: /logos/k0rdent.svg
+    description: "k0rdent integrates with Envoy to offer advanced, high-performance traffic management within Kubernetes. k0rdent simplifies Envoy configuration, enabling users to easily define routing, security, and observability policies. This integration provides a robust, scalable, and secure ingress solution for applications deployed within the k0rdent-managed cluster."
+    
