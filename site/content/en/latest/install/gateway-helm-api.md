@@ -75,4 +75,5 @@ The Helm chart for Envoy Gateway
 | kubernetesClusterDomain | string | `"cluster.local"` |  |
 | podDisruptionBudget.minAvailable | int | `0` |  |
 | service.annotations | object | `{}` |  |
+| service.trafficDistribution | string | `""` |  |
 
