@@ -270,14 +270,14 @@ secrets:
     namespace: default
   stringData:
     secret: literal value
-- kind: Secret
+- data:
+    .secret-file: dmFsdWUtMg0KDQo=
+  kind: Secret
   metadata:
     creationTimestamp: null
     name: secret-with-type
     namespace: default
-  type: "type value"
-  data:
-    .secret-file: dmFsdWUtMg0KDQo=
+  type: type value
 securityPolicies:
 - kind: SecurityPolicy
   metadata:
