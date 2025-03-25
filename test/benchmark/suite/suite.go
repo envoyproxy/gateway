@@ -243,7 +243,7 @@ func (b *BenchmarkTestSuite) Benchmark(t *testing.T, ctx context.Context, jobNam
 
 	t.Logf("Running benchmark test: %s successfully", resultTitle)
 
-	// Get nighthaw result from this benchmark test run.
+	// Get nighthawk result from this benchmark test run.
 	if err = report.GetResult(ctx, jobNN); err != nil {
 		return nil, err
 	}
