@@ -6,6 +6,7 @@
 package config
 
 import (
+	"os"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -21,7 +22,7 @@ var (
 )
 
 func TestValidate(t *testing.T) {
-	cfg, err := New()
+	cfg, err := New(os.Stdout)
 	require.NoError(t, err)
 
 	testCases := []struct {
@@ -56,7 +57,7 @@ func TestValidate(t *testing.T) {
 			name: "unspecified envoy gateway",
 			cfg: &Server{
 				Namespace: "test-ns",
-				Logger:    logging.DefaultLogger(egv1a1.LogLevelInfo),
+				Logger:    logging.DefaultLogger(os.Stdout, egv1a1.LogLevelInfo),
 			},
 			expect: false,
 		},

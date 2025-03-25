@@ -9,6 +9,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"path"
 
 	"github.com/spf13/cobra"
@@ -36,7 +37,7 @@ func GetCertGenCommand() *cobra.Command {
 		Use:   "certgen",
 		Short: "Generate Control Plane Certificates",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return certGen(cmd.Context(), local)
+			return certGen(cmd.Context(), cmd.OutOrStdout(), local)
 		},
 	}
 
@@ -48,8 +49,8 @@ func GetCertGenCommand() *cobra.Command {
 }
 
 // certGen generates control plane certificates.
-func certGen(ctx context.Context, local bool) error {
-	cfg, err := config.New()
+func certGen(ctx context.Context, logOut io.Writer, local bool) error {
+	cfg, err := config.New(logOut)
 	if err != nil {
 		return err
 	}
