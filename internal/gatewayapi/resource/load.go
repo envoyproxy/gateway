@@ -315,8 +315,7 @@ func loadKubernetesYAMLToResources(input []byte, addMissingResources bool) (*Res
 		case KindSecret:
 			typedData := data.Interface()
 			typedStringData := stringData.Interface()
-			secretType := kobjVal.FieldByName("Type")
-			typedSecretType := secretType.Interface()
+			typedSecretType := kobjVal.FieldByName("Type").Interface()
 
 			secret := &corev1.Secret{
 				TypeMeta: metav1.TypeMeta{
