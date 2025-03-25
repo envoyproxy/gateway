@@ -50,7 +50,7 @@ func (*credentialInjector) patchHCM(mgr *hcmv3.HttpConnectionManager, irListener
 			continue
 		}
 
-		filter, err := buildHCMCredentialInjectorFilter(route.CredentialInjection, route.Name)
+		filter, err := buildHCMCredentialInjectorFilterForRoute(route.CredentialInjection, route.Name)
 		if err != nil {
 			errs = errors.Join(errs, err)
 			continue
@@ -62,10 +62,22 @@ func (*credentialInjector) patchHCM(mgr *hcmv3.HttpConnectionManager, irListener
 }
 
 // buildHCMCredentialInjectorFilter returns a credentialInjector HTTP filter from the provided IR HTTPRoute.
-func buildHCMCredentialInjectorFilter(credentialInjection *ir.CredentialInjection, route string) (*hcmv3.HttpFilter, error) {
+func buildHCMCredentialInjectorFilterForRoute(credentialInjection *ir.CredentialInjection, route string) (*hcmv3.HttpFilter, error) {
+	filter, err := buildHCMCredentialInjectorFilter(
+		credentialInjection,
+		credentialSecretName(route),
+		credentialInjectorFilterName(route))
+	if err != nil {
+		return nil, err
+	}
+	filter.Disabled = true
+	return filter, nil
+}
+
+func buildHCMCredentialInjectorFilter(credentialInjection *ir.CredentialInjection, filterName, credentialName string) (*hcmv3.HttpFilter, error) {
 	genericCredential := &genericv3.Generic{
 		Credential: &tlsv3.SdsSecretConfig{
-			Name:      credentialSecretName(route),
+			Name:      credentialName,
 			SdsConfig: makeConfigSource(),
 		},
 	}
@@ -93,11 +105,10 @@ func buildHCMCredentialInjectorFilter(credentialInjection *ir.CredentialInjectio
 	}
 
 	return &hcmv3.HttpFilter{
-		Name: credentialInjectorFilterName(route),
+		Name: filterName,
 		ConfigType: &hcmv3.HttpFilter_TypedConfig{
 			TypedConfig: credentialInjectorAny,
 		},
-		Disabled: true,
 	}, nil
 }
 
