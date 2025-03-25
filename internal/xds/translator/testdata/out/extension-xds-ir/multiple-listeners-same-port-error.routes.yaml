@@ -3,26 +3,22 @@
   virtualHosts:
   - domains:
     - '*'
-    name: first-listener-error/*
+    name: error_vhost
     routes:
-    - match:
+    - directResponse:
+        status: 500
+      match:
         prefix: /
-      name: first-route
-      route:
-        cluster: first-route-dest
-        upgradeConfigs:
-        - upgradeType: websocket
+      name: error_route
 - ignorePortInHostMatching: true
   name: second-listener
   virtualHosts:
   - domains:
     - '*'
-    name: second-listener/*
+    name: error_vhost
     routes:
-    - match:
+    - directResponse:
+        status: 500
+      match:
         prefix: /
-      name: second-route
-      route:
-        cluster: second-route-dest
-        upgradeConfigs:
-        - upgradeType: websocket
+      name: error_route

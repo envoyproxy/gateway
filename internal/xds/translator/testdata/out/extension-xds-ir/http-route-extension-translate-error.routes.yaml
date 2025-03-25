@@ -3,12 +3,10 @@
   virtualHosts:
   - domains:
     - '*'
-    name: extension-post-xdstranslate-hook-error/*
+    name: error_vhost
     routes:
-    - match:
+    - directResponse:
+        status: 500
+      match:
         prefix: /
-      name: first-route
-      route:
-        cluster: fail-close-error
-        upgradeConfigs:
-        - upgradeType: websocket
+      name: error_route

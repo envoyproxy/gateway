@@ -37,6 +37,7 @@ bug fixes: |
   Retrigger reconciliation when backendRef of type ServiceImport is updated or when EndpointSlice(s) for a ServiceImport are updated.
   Fix not logging an error and returning it in the K8s Reconcile method when a GatewayClass is not accepted.
   Fix allowing empty text field for opentelemetry sink when using JSON format.
+  Fix updating all route configs when recovering from extension server failure in fail closed mode.
 
 # Enhancements that improve performance.
 performance improvements: |

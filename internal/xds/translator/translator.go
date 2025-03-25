@@ -131,7 +131,7 @@ func (t *Translator) Translate(xdsIR *ir.Xds) (*types.ResourceVersionTable, erro
 		// as they were before the extension server was called.
 		if t.ExtensionManager != nil && !(*t.ExtensionManager).FailOpen() {
 			for _, listener := range tCtx.XdsResources[resourcev3.ListenerType] {
-				errs = errors.Join(errs, clearListenerRoutes(listener.(*listenerv3.Listener)))
+				errs = errors.Join(errs, clearListenerRoutes(tCtx, listener.(*listenerv3.Listener)))
 			}
 		}
 	}
@@ -204,21 +204,21 @@ func (t *Translator) notifyExtensionServerAboutListeners(
 			// Setting the configuration to fail open will mean that Envoy Gateway ignores the error and keeps the routes
 			// as they were before the extension server was called.
 			if !(*t.ExtensionManager).FailOpen() {
-				errs = errors.Join(errs, clearListenerRoutes(listener))
+				errs = errors.Join(errs, clearListenerRoutes(tCtx, listener))
 			}
 		}
 	}
 	return errs
 }
 
-func clearListenerRoutes(listener *listenerv3.Listener) error {
+func clearListenerRoutes(tCtx *types.ResourceVersionTable, listener *listenerv3.Listener) error {
 	var errs error
 	if listener.DefaultFilterChain != nil {
 		hcm, err := findHCMinFilterChain(listener.DefaultFilterChain)
 		if err != nil {
 			// no HCM found, skip
 		} else {
-			clearAllRoutes(hcm)
+			clearAllRoutes(tCtx, hcm)
 			if err := replaceHCMInFilterChain(hcm, listener.DefaultFilterChain); err != nil {
 				errs = errors.Join(errs, err)
 			}
@@ -230,7 +230,7 @@ func clearListenerRoutes(listener *listenerv3.Listener) error {
 			// no HCM found, skip
 			continue
 		}
-		clearAllRoutes(hcm)
+		clearAllRoutes(tCtx, hcm)
 		if err := replaceHCMInFilterChain(hcm, filter); err != nil {
 			errs = errors.Join(errs, err)
 		}
@@ -239,34 +239,39 @@ func clearListenerRoutes(listener *listenerv3.Listener) error {
 	return errs
 }
 
-func clearAllRoutes(hcm *hcmv3.HttpConnectionManager) {
-	// Discard all of the routes configured on this HCM and replace them
-	// with a single route that returns an InternalServerError result.
-	hcm.RouteSpecifier = &hcmv3.HttpConnectionManager_RouteConfig{
-		RouteConfig: &routev3.RouteConfiguration{
-			Name: "error_route_configuration",
-			VirtualHosts: []*routev3.VirtualHost{
-				{
-					Name:    "error_vhost",
-					Domains: []string{"*"},
-					Routes: []*routev3.Route{
-						{
-							Name: "error_route",
-							Match: &routev3.RouteMatch{
-								PathSpecifier: &routev3.RouteMatch_Prefix{
-									Prefix: "/",
+func clearAllRoutes(tCtx *types.ResourceVersionTable, hcm *hcmv3.HttpConnectionManager) {
+	if tCtx == nil || tCtx.XdsResources == nil || tCtx.XdsResources[resourcev3.RouteType] == nil {
+		return
+	}
+
+	rds := hcm.GetRds()
+	if rds != nil {
+		for _, r := range tCtx.XdsResources[resourcev3.RouteType] {
+			route := r.(*routev3.RouteConfiguration)
+			if route.Name == rds.RouteConfigName {
+				route.VirtualHosts = []*routev3.VirtualHost{
+					{
+						Name:    "error_vhost",
+						Domains: []string{"*"},
+						Routes: []*routev3.Route{
+							{
+								Name: "error_route",
+								Match: &routev3.RouteMatch{
+									PathSpecifier: &routev3.RouteMatch_Prefix{
+										Prefix: "/",
+									},
 								},
-							},
-							Action: &routev3.Route_DirectResponse{
-								DirectResponse: buildXdsDirectResponseAction(&ir.CustomResponse{
-									StatusCode: ptr.To(uint32(http.StatusInternalServerError)),
-								}),
+								Action: &routev3.Route_DirectResponse{
+									DirectResponse: buildXdsDirectResponseAction(&ir.CustomResponse{
+										StatusCode: ptr.To(uint32(http.StatusInternalServerError)),
+									}),
+								},
 							},
 						},
 					},
-				},
-			},
-		},
+				}
+			}
+		}
 	}
 }
 

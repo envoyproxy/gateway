@@ -3,12 +3,10 @@
   virtualHosts:
   - domains:
     - '*'
-    name: extension-post-xdslistener-hook-error/*
+    name: error_vhost
     routes:
-    - match:
+    - directResponse:
+        status: 500
+      match:
         prefix: /
-      name: first-route
-      route:
-        cluster: first-route-dest
-        upgradeConfigs:
-        - upgradeType: websocket
+      name: error_route
