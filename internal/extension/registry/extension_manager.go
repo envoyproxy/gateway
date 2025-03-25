@@ -286,20 +286,16 @@ func setupGRPCOpts(ctx context.Context, client k8scli.Client, ext *egv1a1.Extens
 	return opts, nil
 }
 
-// getGRPCCredentials retrieves gRPC transport credentials with TLS settings
 func getGRPCCredentials(ctx context.Context, client k8scli.Client, ext *egv1a1.ExtensionManager, namespace string) (credentials.TransportCredentials, error) {
 	return advancedtls.NewClientCreds(&advancedtls.Options{
-		// use GetRootCertificates
 		RootOptions: advancedtls.RootCertificateOptions{
-			// write a new function that retrieved the secret and returns the root certificates
+			// A callback function that dynamically loads root CA certificates from secret
 			GetRootCertificates: createGetRootCertificatesHandler(ctx, client, ext, namespace),
 		},
 	})
 }
 
-// Creates the GRPC handler that dynamically loads root CA certificates from secret for gRPC TLS verification
 func createGetRootCertificatesHandler(ctx context.Context, client k8scli.Client, ext *egv1a1.ExtensionManager, namespace string) func(*advancedtls.ConnectionInfo) (*advancedtls.RootCertificates, error) {
-	// Read the latest root CA cert from file for Stork Server's cert verification.
 	return func(params *advancedtls.ConnectionInfo) (*advancedtls.RootCertificates, error) {
 		cp, err := getCertPoolFromSecret(ctx, client, ext, namespace)
 		if err != nil {
@@ -310,21 +306,20 @@ func createGetRootCertificatesHandler(ctx context.Context, client k8scli.Client,
 	}
 }
 
-// getCertPoolFromSecret retrieves the root CA certificates from a secret
 func getCertPoolFromSecret(ctx context.Context, client k8scli.Client, ext *egv1a1.ExtensionManager, namespace string) (*x509.CertPool, error) {
 	certRef := ext.Service.TLS.CertificateRef
 	secret, _, err := kubernetes.ValidateSecretObjectReference(ctx, client, &certRef, namespace)
 	if err != nil {
-		return nil, fmt.Errorf("failed to validate secret reference: %w", err)
+		return nil, fmt.Errorf("failed to validate TLS certificate reference: %w", err)
 	}
 
 	caCertPEMBytes, ok := secret.Data[corev1.TLSCertKey]
 	if !ok {
-		return nil, errors.New("no cert found in CA secret")
+		return nil, errors.New("no TLS certificate found in CA secret")
 	}
 	cp := x509.NewCertPool()
 	if ok := cp.AppendCertsFromPEM(caCertPEMBytes); !ok {
-		return nil, errors.New("failed to append certificates")
+		return nil, errors.New("failed to append certificates from CA secret")
 	}
 	return cp, nil
 }
