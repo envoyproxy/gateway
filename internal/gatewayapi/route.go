@@ -16,6 +16,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/utils/ptr"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
@@ -203,13 +204,13 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 			return nil, err
 		}
 
-		dstAddrTypeMap := make(map[ir.DestinationAddressType]int)
+		dstAddrTypeSet := make(sets.Set[ir.DestinationAddressType])
 		destName := irRouteDestinationName(httpRoute, ruleIdx)
 		for i, backendRef := range rule.BackendRefs {
 			settingName := irDestinationSettingName(destName, i)
 			ds, err := t.processDestination(settingName, backendRef, parentRef, httpRoute, resources)
 			if !t.IsEnvoyServiceRouting(envoyProxy) && ds != nil && len(ds.Endpoints) > 0 && ds.AddressType != nil {
-				dstAddrTypeMap[*ds.AddressType]++
+				dstAddrTypeSet.Insert(*ds.AddressType)
 			}
 
 			for _, route := range ruleRoutes {
@@ -240,7 +241,7 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 		}
 
 		// TODO: support mixed endpointslice address type between backendRefs
-		if !t.IsEnvoyServiceRouting(envoyProxy) && len(dstAddrTypeMap) > 1 {
+		if !t.IsEnvoyServiceRouting(envoyProxy) && (dstAddrTypeSet.Len() > 1 || dstAddrTypeSet.Has(ir.MIXED)) {
 			routeStatus := GetRouteStatus(httpRoute)
 			status.SetRouteStatusCondition(routeStatus,
 				parentRef.routeParentStatusIdx,

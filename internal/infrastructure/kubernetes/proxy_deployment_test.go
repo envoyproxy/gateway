@@ -7,6 +7,7 @@ package kubernetes
 
 import (
 	"context"
+	"os"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -52,7 +53,7 @@ func deploymentWithSelectorAndLabel(deploy *appsv1.Deployment, selector *metav1.
 }
 
 func TestCreateOrUpdateProxyDeployment(t *testing.T) {
-	cfg, err := config.New()
+	cfg, err := config.New(os.Stdout)
 	require.NoError(t, err)
 
 	infra := ir.NewInfra()
@@ -264,7 +265,7 @@ func TestDeleteProxyDeployment(t *testing.T) {
 		WithObjects().
 		WithInterceptorFuncs(interceptorFunc).
 		Build()
-	cfg, err := config.New()
+	cfg, err := config.New(os.Stdout)
 	require.NoError(t, err)
 
 	testCases := []struct {

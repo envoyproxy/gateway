@@ -7,6 +7,7 @@ package kubernetes
 
 import (
 	"context"
+	"os"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -23,7 +24,7 @@ import (
 )
 
 func TestCreateOrUpdateRateLimitDeployment(t *testing.T) {
-	cfg, err := config.New()
+	cfg, err := config.New(os.Stdout)
 	require.NoError(t, err)
 
 	cfg.EnvoyGateway.RateLimit = &egv1a1.RateLimit{

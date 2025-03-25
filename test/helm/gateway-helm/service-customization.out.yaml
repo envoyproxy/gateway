@@ -355,6 +355,7 @@ spec:
   - name: metrics
     port: 19001
     targetPort: 19001
+  trafficDistribution: PreferClose
 ---
 # Source: gateway-helm/templates/envoy-gateway-deployment.yaml
 apiVersion: apps/v1

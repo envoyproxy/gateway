@@ -7,6 +7,7 @@ package kubernetes
 
 import (
 	"context"
+	"os"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -206,7 +207,7 @@ func TestProcessExtensionPolicies(t *testing.T) {
 			objs := []client.Object{}
 
 			// Create the reconciler.
-			logger := logging.DefaultLogger(egv1a1.LogLevelInfo)
+			logger := logging.DefaultLogger(os.Stdout, egv1a1.LogLevelInfo)
 
 			ctx := context.Background()
 

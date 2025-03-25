@@ -62,6 +62,10 @@ type Runner struct {
 	Config
 }
 
+// Close implements Runner interface.
+func (r *Runner) Close() error { return nil }
+
+// Name implements Runner interface.
 func (r *Runner) Name() string {
 	return string(egv1a1.LogComponentGlobalRateLimitRunner)
 }
@@ -163,15 +167,19 @@ func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 func (r *Runner) translate(xdsIR *ir.Xds) (*types.ResourceVersionTable, error) {
 	resourceVT := new(types.ResourceVersionTable)
 
-	for _, listener := range xdsIR.HTTP {
-		cfg := translator.BuildRateLimitServiceConfig(listener)
+	// Generate rate limit configurations for all listeners at once
+	configs := translator.BuildRateLimitServiceConfig(xdsIR.HTTP)
+
+	// Add each configuration to the resource version table
+	for _, cfg := range configs {
+		// If the config is not nil, add it to the xDS Config resources
 		if cfg != nil {
-			// Add to xDS Config resources.
 			if err := resourceVT.AddXdsResource(resourcev3.RateLimitConfigType, cfg); err != nil {
 				return nil, err
 			}
 		}
 	}
+
 	return resourceVT, nil
 }
 

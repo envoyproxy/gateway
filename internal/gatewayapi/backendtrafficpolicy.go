@@ -428,6 +428,8 @@ func (t *Translator) translateBackendTrafficPolicyForRoute(
 						HTTPUpgrade:       httpUpgrade,
 					}
 
+					r.Traffic.Name = irTrafficName(policy)
+
 					// Update the Host field in HealthCheck, now that we have access to the Route Hostname.
 					r.Traffic.HealthCheck.SetHTTPHostIfAbsent(r.Hostname)
 
@@ -596,6 +598,8 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(
 				HTTPUpgrade:      httpUpgrade,
 			}
 
+			r.Traffic.Name = irTrafficName(policy)
+
 			// Update the Host field in HealthCheck, now that we have access to the Route Hostname.
 			r.Traffic.HealthCheck.SetHTTPHostIfAbsent(r.Hostname)
 
@@ -696,7 +700,6 @@ func (t *Translator) buildGlobalRateLimit(policy *egv1a1.BackendTrafficPolicy) (
 	if policy.Spec.RateLimit.Global == nil {
 		return nil, fmt.Errorf("global configuration empty for rateLimit")
 	}
-
 	if !t.GlobalRateLimitEnabled {
 		return nil, fmt.Errorf("enable Ratelimit in the EnvoyGateway config to configure global rateLimit")
 	}
@@ -704,7 +707,8 @@ func (t *Translator) buildGlobalRateLimit(policy *egv1a1.BackendTrafficPolicy) (
 	global := policy.Spec.RateLimit.Global
 	rateLimit := &ir.RateLimit{
 		Global: &ir.GlobalRateLimit{
-			Rules: make([]*ir.RateLimitRule, len(global.Rules)),
+			Rules:  make([]*ir.RateLimitRule, len(global.Rules)),
+			Shared: global.Shared,
 		},
 	}
 

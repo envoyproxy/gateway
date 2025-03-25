@@ -60,7 +60,7 @@ func TestProvider(t *testing.T) {
 	require.NoError(t, err)
 
 	// Setup and start the kube provider.
-	svr, err := config.New()
+	svr, err := config.New(os.Stdout)
 	require.NoError(t, err)
 	resources := new(message.ProviderResources)
 	provider, err := New(context.Background(), cliCfg, svr, resources)
@@ -1263,7 +1263,7 @@ func TestNamespacedProvider(t *testing.T) {
 	require.NoError(t, err)
 
 	// Setup and start the kube provider.
-	svr, err := config.New()
+	svr, err := config.New(os.Stdout)
 	require.NoError(t, err)
 	// config to watch a subset of namespaces
 	svr.EnvoyGateway.Provider.Kubernetes = &egv1a1.EnvoyGatewayKubernetesProvider{
@@ -1323,7 +1323,7 @@ func TestNamespaceSelectorProvider(t *testing.T) {
 	require.NoError(t, err)
 
 	// Setup and start the kube provider.
-	svr, err := config.New()
+	svr, err := config.New(os.Stdout)
 	require.NoError(t, err)
 	// config to watch a subset of namespaces
 	svr.EnvoyGateway.Provider.Kubernetes = &egv1a1.EnvoyGatewayKubernetesProvider{

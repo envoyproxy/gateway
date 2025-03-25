@@ -10,6 +10,7 @@ import (
 	"encoding/base64"
 	"encoding/pem"
 	"fmt"
+	"os"
 	"testing"
 	"time"
 
@@ -25,7 +26,7 @@ func TestGenerateCerts(t *testing.T) {
 		wantEnvoyDNSName        string
 	}
 
-	cfg, err := config.New()
+	cfg, err := config.New(os.Stdout)
 	require.NoError(t, err)
 
 	run := func(t *testing.T, name string, tc testcase) {

@@ -28,6 +28,8 @@ var (
 
 // Manager provides the scaffolding for managing infrastructure.
 type Manager interface {
+	// Close is called when Envoy Gateway is shutting down, it can be used to block until all resources are cleaned up.
+	Close() error
 	// CreateOrUpdateProxyInfra creates or updates infra.
 	CreateOrUpdateProxyInfra(ctx context.Context, infra *ir.Infra) error
 	// DeleteProxyInfra deletes infra.

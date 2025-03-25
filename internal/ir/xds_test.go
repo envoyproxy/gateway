@@ -1172,6 +1172,53 @@ func TestValidateRouteDestination(t *testing.T) {
 			},
 			want: ErrDestinationNameEmpty,
 		},
+		{
+			name: "mixed address types with MIXED in destinations",
+			input: RouteDestination{
+				Settings: []*DestinationSetting{
+					{
+						Endpoints: []*DestinationEndpoint{
+							{
+								Host: "10.11.12.13",
+								Port: 8080,
+							},
+							{
+								Host: "example.com",
+								Port: 8080,
+							},
+						},
+						AddressType: ptr.To(MIXED),
+					},
+				},
+			},
+			want: ErrRouteDestinationsFQDNMixed,
+		},
+		{
+			name: "mixed address types with FQDN in destinations",
+			input: RouteDestination{
+				Settings: []*DestinationSetting{
+					{
+						Endpoints: []*DestinationEndpoint{
+							{
+								Host: "10.11.12.13",
+								Port: 8080,
+							},
+						},
+						AddressType: ptr.To(IP),
+					},
+					{
+						Endpoints: []*DestinationEndpoint{
+							{
+								Host: "example.com",
+								Port: 8080,
+							},
+						},
+						AddressType: ptr.To(FQDN),
+					},
+				},
+			},
+			want: ErrRouteDestinationsFQDNMixed,
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
