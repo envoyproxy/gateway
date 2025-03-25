@@ -51,6 +51,7 @@ func TestMain(m *testing.M) {
 	skipNameValidation = func() *bool {
 		return ptr.To(true)
 	}
+	healthProbeBindAddress = "" // Disable health probe listener to avoid "address already in use" error.
 	os.Exit(m.Run())
 }
 
