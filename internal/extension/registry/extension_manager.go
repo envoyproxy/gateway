@@ -258,13 +258,13 @@ func setupGRPCOpts(ctx context.Context, client k8scli.Client, ext *egv1a1.Extens
 	var opts []grpc.DialOption
 	if ext.Service.TLS != nil {
 		// Sanity check to ensure that the extension manager has a valid certificate reference
-		_, _, err := kubernetes.ValidateSecretObjectReference(ctx, client, &ext.Service.TLS.CertificateRef, namespace)
+		_, err := getCertPoolFromSecret(ctx, client, ext, namespace)
 		if err != nil {
-			return nil, fmt.Errorf("failed to validate secret reference: %w", err)
+			return nil, fmt.Errorf("failed to get root CA certificates: %w", err)
 		}
 		creds, err := getGRPCCredentials(ctx, client, ext, namespace)
 		if err != nil {
-			return nil, fmt.Errorf("failed to get gRPC TLS options: %w", err)
+			return nil, fmt.Errorf("failed to get gRPC TLS credentials: %w", err)
 		}
 		opts = append(opts, grpc.WithTransportCredentials(creds))
 	} else {
@@ -301,21 +301,30 @@ func getGRPCCredentials(ctx context.Context, client k8scli.Client, ext *egv1a1.E
 func createGetRootCertificatesHandler(ctx context.Context, client k8scli.Client, ext *egv1a1.ExtensionManager, namespace string) func(*advancedtls.ConnectionInfo) (*advancedtls.RootCertificates, error) {
 	// Read the latest root CA cert from file for Stork Server's cert verification.
 	return func(params *advancedtls.ConnectionInfo) (*advancedtls.RootCertificates, error) {
-		certRef := ext.Service.TLS.CertificateRef
-		secret, _, err := kubernetes.ValidateSecretObjectReference(ctx, client, &certRef, namespace)
+		cp, err := getCertPoolFromSecret(ctx, client, ext, namespace)
 		if err != nil {
-			return nil, fmt.Errorf("failed to validate secret reference: %w", err)
-		}
-
-		caCertPEMBytes, ok := secret.Data[corev1.TLSCertKey]
-		if !ok {
-			return nil, errors.New("no cert found in CA secret")
-		}
-		cp := x509.NewCertPool()
-		if ok := cp.AppendCertsFromPEM(caCertPEMBytes); !ok {
-			return nil, errors.New("failed to append certificates")
+			return nil, err
 		}
 
 		return &advancedtls.RootCertificates{TrustCerts: cp}, nil
 	}
+}
+
+// getCertPoolFromSecret retrieves the root CA certificates from a secret
+func getCertPoolFromSecret(ctx context.Context, client k8scli.Client, ext *egv1a1.ExtensionManager, namespace string) (*x509.CertPool, error) {
+	certRef := ext.Service.TLS.CertificateRef
+	secret, _, err := kubernetes.ValidateSecretObjectReference(ctx, client, &certRef, namespace)
+	if err != nil {
+		return nil, fmt.Errorf("failed to validate secret reference: %w", err)
+	}
+
+	caCertPEMBytes, ok := secret.Data[corev1.TLSCertKey]
+	if !ok {
+		return nil, errors.New("no cert found in CA secret")
+	}
+	cp := x509.NewCertPool()
+	if ok := cp.AppendCertsFromPEM(caCertPEMBytes); !ok {
+		return nil, errors.New("failed to append certificates")
+	}
+	return cp, nil
 }
