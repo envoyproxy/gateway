@@ -2,11 +2,11 @@ name: Experimental Conformance Test
 on:
   push:
     paths:
-    - 'charts/gateway-helm/crds/gatewayapi-crds.yaml'
+    - 'gatewayapi-crds.yaml'
     - 'test/conformance/experimental_conformance_test.go'
   pull_request:
     paths:
-    - 'charts/gateway-helm/crds/gatewayapi-crds.yaml'
+    - 'gatewayapi-crds.yaml'
     - 'test/conformance/experimental_conformance_test.go'
   # Add workflow_dispatch to trigger this workflow manually by maintainers.
   workflow_dispatch:

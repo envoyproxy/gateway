@@ -72,6 +72,11 @@ jobs:
       - name: Generate Release Artifacts
         run: IMAGE_PULL_POLICY=IfNotPresent make generate-artifacts IMAGE=envoyproxy/gateway TAG=${{ env.release_tag }} OUTPUT_DIR=release-artifacts
 
+      - name: Generate and Package CRDs
+        run: |
+          make manifests
+          cd charts/gateway-helm/crds/ && zip -r envoy-gateway-crds.zip generated/
+
       - name: Build and Push EG Release Helm Chart
         run: |
           IMAGE_PULL_POLICY=IfNotPresent OCI_REGISTRY=oci://docker.io/envoyproxy CHART_VERSION=${{ env.release_tag }} IMAGE=docker.io/envoyproxy/gateway TAG=${{ env.release_tag }} make helm-package helm-push
@@ -103,6 +108,7 @@ jobs:
           files: |
             release-artifacts/install.yaml
             release-artifacts/quickstart.yaml
+            release-artifacts/envoy-gateway-crds.yaml
             release-artifacts/release-notes.yaml
             release-artifacts/benchmark_report.zip
             envoy-gateway_${{ env.release_tag }}_linux_amd64.tar.gz

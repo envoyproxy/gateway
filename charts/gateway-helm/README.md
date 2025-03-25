@@ -22,6 +22,14 @@ The Helm chart for Envoy Gateway
 [Helm](https://helm.sh) must be installed to use the charts.
 Please refer to Helm's [documentation](https://helm.sh/docs) to get started.
 
+### Pre-requisites
+
+Install Kubernetes Gateway API CRDs before installing this chart. You can install the CRDs using the following command:
+
+``` shell
+kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.2.1/experimental-install.yaml
+```
+
 ### Install from DockerHub
 
 Once Helm has been set up correctly, install the chart from dockerhub:

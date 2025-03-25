@@ -71,7 +71,7 @@ generate-gwapi-manifests: ## Generate GWAPI manifests and make it consistent wit
 	@$(LOG_TARGET)
 	@mkdir -p $(OUTPUT_DIR)/
 	curl -sLo $(OUTPUT_DIR)/gatewayapi-crds.yaml ${GATEWAY_RELEASE_URL}
-	mv $(OUTPUT_DIR)/gatewayapi-crds.yaml charts/gateway-helm/crds/gatewayapi-crds.yaml
+	mv $(OUTPUT_DIR)/gatewayapi-crds.yaml gatewayapi-crds.yaml
 
 .PHONY: kube-generate
 kube-generate: ## Generate code containing DeepCopy, DeepCopyInto, and DeepCopyObject method implementations.

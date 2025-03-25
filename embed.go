@@ -11,7 +11,7 @@ import (
 )
 
 var (
-	//go:embed charts/gateway-helm/crds/gatewayapi-crds.yaml
+	//go:embed gatewayapi-crds.yaml
 	gatewayAPICRDs []byte
 
 	//go:embed charts/gateway-helm/crds/generated/gateway.envoyproxy.io_backends.yaml
