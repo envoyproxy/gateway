@@ -107,11 +107,11 @@ archived_version = false
 # The version number for the version of the docs represented in this doc set.
 # Used in the "version-banner" partial to display a version number for the
 # current doc set.
-version = "latest"
+version = "v1.3"
 
 # A link to latest version of the docs. Used in the "version-banner" partial to
 # point people to the main doc site.
-url_latest_version = "https://gateway.envoyproxy.io"
+url_latest_version = "/docs"
 
 # Repository configuration (URLs for in-page links to opening issues and suggesting changes)
 github_repo = "https://github.com/envoyproxy/gateway"
@@ -227,39 +227,49 @@ enable = true
 [[params.versions]]
   version = "latest"
   url = "/latest"
+  eol = "2099-12-31"
 
 [[params.versions]]
   version = "v1.3"
   url = "/v1.3"
+  eol = "2025-07-30"
 
 [[params.versions]]
   version = "v1.2"
-  url = "/docs"
+  url = "/v1.2"
+  eol = "2025-05-06"
 
 [[params.versions]]
   version = "v1.1"
   url = "/v1.1"
+  eol = "2025-01-22"
 
 [[params.versions]]
   version = "v1.0"
   url = "/v1.0"
+  eol = "2024-09-13"
 
 [[params.versions]]
   version = "v0.6"
   url = "/v0.6"
+  eol = "2024-05-02"
 
 [[params.versions]]
   version = "v0.5"
   url = "/v0.5"
+  eol = "2024-01-02"
 
 [[params.versions]]
   version = "v0.4"
   url = "/v0.4"
+  eol = "2023-10-24"
 
 [[params.versions]]
   version = "v0.3"
   url = "/v0.3"
+  eol = "2023-08-09"
 
 [[params.versions]]
   version = "v0.2"
   url = "/v0.2"
+  eol = "2023-04-20"

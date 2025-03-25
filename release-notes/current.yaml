@@ -22,7 +22,10 @@ new features: |
   Added support for forwarding the authenticated username to the backend via a configurable header in BasicAuth
   Added support for HTTP Methods and Headers based authorization in SecurityPolicy
   Added support for zone aware routing
+  Added support for BackendTLSPolicy to target ServiceImport
   Added support for per-host circuit breaker thresholds
+  Added support for egctl Websocket in addation to SPDY
+  Added a configuration option in the Helm chart to set the TrafficDistribution field in the Envoy Gateway Service
 
 bug fixes: |
   Fix traffic splitting when filters are attached to the backendRef.
@@ -32,6 +35,8 @@ bug fixes: |
   Fix an issue that stats compressor was not working.
   Added support for BackendTLSPolicy and EnvoyExtensionPolicy parsing in Standalone mode.
   Retrigger reconciliation when backendRef of type ServiceImport is updated or when EndpointSlice(s) for a ServiceImport are updated.
+  Fix not logging an error and returning it in the K8s Reconcile method when a GatewayClass is not accepted.
+  Fix allowing empty text field for opentelemetry sink when using JSON format.
 
 # Enhancements that improve performance.
 performance improvements: |

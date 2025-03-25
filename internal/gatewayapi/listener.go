@@ -266,7 +266,7 @@ func (t *Translator) processAccessLog(envoyproxy *egv1a1.EnvoyProxy, resources *
 	if envoyproxy == nil ||
 		envoyproxy.Spec.Telemetry == nil ||
 		envoyproxy.Spec.Telemetry.AccessLog == nil ||
-		(!envoyproxy.Spec.Telemetry.AccessLog.Disable && len(envoyproxy.Spec.Telemetry.AccessLog.Settings) == 0) {
+		(!ptr.Deref(envoyproxy.Spec.Telemetry.AccessLog.Disable, false) && len(envoyproxy.Spec.Telemetry.AccessLog.Settings) == 0) {
 		// use the default access log
 		return &ir.AccessLog{
 			JSON: []*ir.JSONAccessLog{
@@ -276,7 +276,7 @@ func (t *Translator) processAccessLog(envoyproxy *egv1a1.EnvoyProxy, resources *
 			},
 		}, nil
 	}
-	if envoyproxy.Spec.Telemetry.AccessLog.Disable {
+	if ptr.Deref(envoyproxy.Spec.Telemetry.AccessLog.Disable, false) {
 		return nil, nil
 	}
 

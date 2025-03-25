@@ -7,6 +7,7 @@ package kubernetes
 
 import (
 	"context"
+	"os"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -256,7 +257,7 @@ func TestProcessGatewayClassParamsRef(t *testing.T) {
 		tc := testCases[i]
 
 		// Create the reconciler.
-		logger := logging.DefaultLogger(egv1a1.LogLevelInfo)
+		logger := logging.DefaultLogger(os.Stdout, egv1a1.LogLevelInfo)
 
 		r := &gatewayAPIReconciler{
 			log:             logger,
@@ -421,7 +422,7 @@ func TestProcessEnvoyExtensionPolicyObjectRefs(t *testing.T) {
 			objs := []client.Object{tc.envoyExtensionPolicy, tc.backend, tc.referenceGrant}
 
 			// Create the reconciler.
-			logger := logging.DefaultLogger(egv1a1.LogLevelInfo)
+			logger := logging.DefaultLogger(os.Stdout, egv1a1.LogLevelInfo)
 
 			ctx := context.Background()
 

@@ -195,7 +195,7 @@ func TestServeXdsServerListenFailed(t *testing.T) {
 	require.NoError(t, err)
 	defer l.Close()
 
-	cfg, _ := config.New()
+	cfg, _ := config.New(os.Stdout)
 	r := New(&Config{
 		Server: *cfg,
 	})

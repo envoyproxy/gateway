@@ -7,7 +7,9 @@ package v1alpha1
 
 type ProxyAccessLog struct {
 	// Disable disables access logging for managed proxies if set to true.
-	Disable bool `json:"disable,omitempty"`
+	//
+	// +optional
+	Disable *bool `json:"disable,omitempty"`
 	// Settings defines accesslog settings for managed proxies.
 	// If unspecified, will send default format to stdout.
 	// +optional
