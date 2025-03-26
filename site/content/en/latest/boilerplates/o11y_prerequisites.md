@@ -1,9 +1,7 @@
 ---
 ---
 
-{{< readfile "./prerequisites.md" >}}
-
----
+{{< boilerplate prerequisites >}}
 
 Envoy Gateway provides an add-ons Helm Chart, which includes all the needing components for observability.
 By default, the [OpenTelemetry Collector](https://opentelemetry.io/docs/collector/) is disabled.
