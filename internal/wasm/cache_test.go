@@ -691,7 +691,7 @@ func TestWasmCache(t *testing.T) {
 			if c.wasmModuleExpiry != 0 {
 				options.ModuleExpiry = c.wasmModuleExpiry
 			}
-			cache := newLocalFileCache(options, logging.DefaultLogger(egv1a1.LogLevelInfo))
+			cache := newLocalFileCache(options, logging.DefaultLogger(os.Stdout, egv1a1.LogLevelInfo))
 			cache.httpFetcher.initialBackoff = time.Microsecond
 			ctx, cancel := context.WithTimeout(context.Background(), time.Second*60)
 			cache.Start(ctx)
@@ -878,7 +878,7 @@ func TestWasmCachePolicyChangesUsingHTTP(t *testing.T) {
 	tmpDir := t.TempDir()
 	options := defaultCacheOptions()
 	options.CacheDir = tmpDir
-	cache := newLocalFileCache(options, logging.DefaultLogger(egv1a1.LogLevelInfo))
+	cache := newLocalFileCache(options, logging.DefaultLogger(os.Stdout, egv1a1.LogLevelInfo))
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*60)
 	cache.Start(ctx)
 	defer cancel()
@@ -944,7 +944,7 @@ func TestAllInsecureServer(t *testing.T) {
 	options := defaultCacheOptions()
 	options.CacheDir = tmpDir
 	options.InsecureRegistries = sets.New[string]("*")
-	cache := newLocalFileCache(options, logging.DefaultLogger(egv1a1.LogLevelInfo))
+	cache := newLocalFileCache(options, logging.DefaultLogger(os.Stdout, egv1a1.LogLevelInfo))
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*60)
 	cache.Start(ctx)
 	defer cancel()

@@ -7,6 +7,7 @@ package kubernetes
 
 import (
 	"context"
+	"os"
 	"testing"
 	"time"
 
@@ -596,7 +597,7 @@ func TestProcessHTTPRoutes(t *testing.T) {
 			objs := []client.Object{gc, gw}
 
 			// Create the reconciler.
-			logger := logging.DefaultLogger(egv1a1.LogLevelInfo)
+			logger := logging.DefaultLogger(os.Stdout, egv1a1.LogLevelInfo)
 
 			ctx := context.Background()
 
@@ -756,7 +757,7 @@ func TestProcessGRPCRoutes(t *testing.T) {
 			objs := []client.Object{gc, gw}
 
 			// Create the reconciler.
-			logger := logging.DefaultLogger(egv1a1.LogLevelInfo)
+			logger := logging.DefaultLogger(os.Stdout, egv1a1.LogLevelInfo)
 
 			ctx := context.Background()
 
