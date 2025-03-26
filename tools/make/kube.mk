@@ -63,15 +63,25 @@ endif
 .PHONY: manifests
 manifests: generate-gwapi-manifests ## Generate WebhookConfiguration and CustomResourceDefinition objects.
 	@$(LOG_TARGET)
-	@go tool controller-gen crd:allowDangerousTypes=true paths="./api/..." output:crd:artifacts:config=charts/gateway-helm/crds/generated
+	@echo "Generating CRDs for Envoy Gateway"
+	@mkdir -p charts/gateway-helm/templates/generated
+	@go tool controller-gen crd:allowDangerousTypes=true paths="./api/..." output:crd:artifacts:config=charts/gateway-helm/templates/generated
+	@for file in charts/gateway-helm/templates/generated/*.yaml; do \
+		sed -i.bak '1s/^/{{- if .Values.crd.envoyGateway.enabled }}\n/' $$file && \
+		echo '{{- end }}' >> $$file && \
+		rm -f $$file.bak; \
+	done
 
 .PHONY: generate-gwapi-manifests
-generate-gwapi-manifests:
 generate-gwapi-manifests: ## Generate GWAPI manifests and make it consistent with the go mod version.
 	@$(LOG_TARGET)
+	@echo "Generating Gateway API CRDs"
 	@mkdir -p $(OUTPUT_DIR)/
-	curl -sLo $(OUTPUT_DIR)/gatewayapi-crds.yaml ${GATEWAY_RELEASE_URL}
-	mv $(OUTPUT_DIR)/gatewayapi-crds.yaml charts/gateway-helm/crds/gatewayapi-crds.yaml
+	@curl -sLo $(OUTPUT_DIR)/gatewayapi-crds.yaml ${GATEWAY_RELEASE_URL}
+	@sed -i.bak '1s/^/{{- if .Values.crd.apiGateway.enabled }}\n/' $(OUTPUT_DIR)/gatewayapi-crds.yaml && \
+	echo '{{- end }}' >> $(OUTPUT_DIR)/gatewayapi-crds.yaml && \
+	rm -f $(OUTPUT_DIR)/gatewayapi-crds.yaml.bak
+	@mv $(OUTPUT_DIR)/gatewayapi-crds.yaml charts/gateway-helm/templates/gatewayapi-crds.yaml
 
 .PHONY: kube-generate
 kube-generate: ## Generate code containing DeepCopy, DeepCopyInto, and DeepCopyObject method implementations.

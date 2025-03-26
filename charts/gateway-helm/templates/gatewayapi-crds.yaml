@@ -1,3 +1,4 @@
+{{- if .Values.crd.apiGateway.enabled }}
 # Copyright 2024 The Kubernetes Authors.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -14972,3 +14973,4 @@ status:
     plural: ""
   conditions: null
   storedVersions: null
+{{- end }}
