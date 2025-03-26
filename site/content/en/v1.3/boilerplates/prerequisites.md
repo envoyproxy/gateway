@@ -65,5 +65,3 @@ proceeding, you should be able to query the example backend using HTTP.
    {{< /tabpane >}}
 
 </details>
-
----
