@@ -21,18 +21,11 @@
         mergeSlashes: true
         normalizePath: true
         pathWithEscapedSlashesAction: UNESCAPE_AND_REDIRECT
-        routeConfig:
-          name: error_route_configuration
-          virtualHosts:
-          - domains:
-            - '*'
-            name: error_vhost
-            routes:
-            - directResponse:
-                status: 500
-              match:
-                prefix: /
-              name: error_route
+        rds:
+          configSource:
+            ads: {}
+            resourceApiVersion: V3
+          routeConfigName: extension-post-xdslistener-hook-error
         serverHeaderTransformation: PASS_THROUGH
         statPrefix: http-10080
         useRemoteAddress: true
