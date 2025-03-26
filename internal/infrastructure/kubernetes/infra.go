@@ -35,13 +35,9 @@ type ResourceRender interface {
 	Service() (*corev1.Service, error)
 	ConfigMap() (*corev1.ConfigMap, error)
 	Deployment() (*appsv1.Deployment, error)
-	DeploymentSpec() (*egv1a1.KubernetesDeploymentSpec, error)
 	DaemonSet() (*appsv1.DaemonSet, error)
-	DaemonSetSpec() (*egv1a1.KubernetesDaemonSetSpec, error)
 	HorizontalPodAutoscaler() (*autoscalingv2.HorizontalPodAutoscaler, error)
-	HorizontalPodAutoscalerSpec() (*egv1a1.KubernetesHorizontalPodAutoscalerSpec, error)
 	PodDisruptionBudget() (*policyv1.PodDisruptionBudget, error)
-	PodDisruptionBudgetSpec() (*egv1a1.KubernetesPodDisruptionBudgetSpec, error)
 }
 
 // Infra manages the creation and deletion of Kubernetes infrastructure
