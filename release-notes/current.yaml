@@ -4,7 +4,8 @@ date: Pending
 breaking changes: |
   Use a dedicated listener port(19003) for envoy proxy readiness
   Uses the envoy JSON formatter for the default access log instead of text formatter.
-  Envoy Gateway would pause XDS snapshot updates in case of errors detected in the XDS translation. To revert to previous behavior, set the `xds.updateSnapshotOnError` EnvoyGateway option to true.
+  Envoy Gateway would pause XDS snapshot updates in case of errors during XDS translation.
+  When Extension Manager is configured to Fail Close, translation errors are no longer returned.
 
 # Updates addressing vulnerabilities, security flaws, or compliance requirements.
 security updates: |

@@ -112,13 +112,6 @@ func TestRunner_withExtensionManager(t *testing.T) {
 	cfg, err := config.New(os.Stdout)
 	require.NoError(t, err)
 	require.NotNil(t, cfg)
-	cfg.EnvoyGateway = &egv1a1.EnvoyGateway{
-		EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
-			XDS: &egv1a1.XDS{
-				UpdateSnapshotOnError: true,
-			},
-		},
-	}
 	r := New(&Config{
 		Server:            *cfg,
 		ProviderResources: pResource,

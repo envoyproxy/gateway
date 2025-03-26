@@ -32,6 +32,7 @@ import (
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	extensionTypes "github.com/envoyproxy/gateway/internal/extension/types"
 	"github.com/envoyproxy/gateway/internal/ir"
+	"github.com/envoyproxy/gateway/internal/logging"
 	"github.com/envoyproxy/gateway/internal/utils"
 	"github.com/envoyproxy/gateway/internal/utils/proto"
 	"github.com/envoyproxy/gateway/internal/xds/types"
@@ -55,6 +56,7 @@ type Translator struct {
 
 	// FilterOrder holds the custom order of the HTTP filters
 	FilterOrder []egv1a1.FilterPosition
+	Logger      logging.Logger
 }
 
 type GlobalRateLimitSettings struct {
@@ -126,13 +128,18 @@ func (t *Translator) Translate(xdsIR *ir.Xds) (*types.ResourceVersionTable, erro
 	// Check if an extension want to inject any clusters/secrets
 	// If no extension exists (or it doesn't subscribe to this hook) then this is a quick no-op
 	if err := processExtensionPostTranslationHook(tCtx, t.ExtensionManager); err != nil {
-		errs = errors.Join(errs, err)
-		// Setting the configuration to fail open will mean that Envoy Gateway ignores the error and keeps the resources
-		// as they were before the extension server was called.
-		if t.ExtensionManager != nil && !(*t.ExtensionManager).FailOpen() {
+		// If the extension server returns an error, and the extension server is not configured to fail open,
+		// then replace all of the routes in the virtual host with a single route that returns an InternalServerError result.
+		// The original extension server error is suppressed.
+		if !(*t.ExtensionManager).FailOpen() {
+			t.Logger.Error(err, "Clearing Listeners due to Extension Manager PostTranslation failure")
 			for _, listener := range tCtx.XdsResources[resourcev3.ListenerType] {
 				errs = errors.Join(errs, clearListenerRoutes(listener.(*listenerv3.Listener)))
 			}
+		} else {
+			// Setting the configuration to fail open will mean that Envoy Gateway propagates the error and keeps the routes
+			// as they were before the extension server was called.
+			errs = errors.Join(errs, err)
 		}
 	}
 
@@ -198,13 +205,16 @@ func (t *Translator) notifyExtensionServerAboutListeners(
 			}
 		}
 		if err := processExtensionPostListenerHook(tCtx, listener, policies, t.ExtensionManager); err != nil {
-			errs = errors.Join(errs, err)
 			// If the extension server returns an error, and the extension server is not configured to fail open,
 			// then replace all of the routes in the virtual host with a single route that returns an InternalServerError result.
-			// Setting the configuration to fail open will mean that Envoy Gateway ignores the error and keeps the routes
-			// as they were before the extension server was called.
+			// The original extension server error is suppressed.
 			if !(*t.ExtensionManager).FailOpen() {
+				t.Logger.Error(err, "Clearing Listener Routes due to Extension Manager PostListener failure")
 				errs = errors.Join(errs, clearListenerRoutes(listener))
+			} else {
+				// Setting the configuration to fail open will mean that Envoy Gateway propagates the error and keeps the routes
+				// as they were before the extension server was called.
+				errs = errors.Join(errs, err)
 			}
 		}
 	}
@@ -551,15 +561,18 @@ func (t *Translator) addRouteToRouteConfig(
 		// Check if an extension want to modify the route we just generated
 		// If no extension exists (or it doesn't subscribe to this hook) then this is a quick no-op.
 		if err = processExtensionPostRouteHook(xdsRoute, vHost, httpRoute, t.ExtensionManager); err != nil {
-			errs = errors.Join(errs, err)
 			// If the extension server returns an error, and the extension server is not configured to fail open,
-			// then replace the route with one that returns an InternalServerError result.
-			// Setting the configuration to fail open will mean that Envoy Gateway ignores the error and keeps the route
-			// as it was before the extension server was called.
-			if t.ExtensionManager != nil && !(*t.ExtensionManager).FailOpen() {
+			// then replace all of the routes in the virtual host with a single route that returns an InternalServerError result.
+			// The original extension server error is suppressed.
+			if !(*t.ExtensionManager).FailOpen() {
+				t.Logger.Error(err, "Clearing Route due to Extension Manager PostRoute failure")
 				xdsRoute.Action = &routev3.Route_DirectResponse{DirectResponse: buildXdsDirectResponseAction(&ir.CustomResponse{
 					StatusCode: ptr.To(uint32(http.StatusInternalServerError)),
 				})}
+			} else {
+				// Setting the configuration to fail open will mean that Envoy Gateway propagates the error and keeps the routes
+				// as they were before the extension server was called.
+				errs = errors.Join(errs, err)
 			}
 		}
 
@@ -640,12 +653,11 @@ func (t *Translator) addRouteToRouteConfig(
 		// Check if an extension want to modify the Virtual Host we just generated
 		// If no extension exists (or it doesn't subscribe to this hook) then this is a quick no-op.
 		if err = processExtensionPostVHostHook(vHost, t.ExtensionManager); err != nil {
-			errs = errors.Join(errs, err)
 			// If the extension server returns an error, and the extension server is not configured to fail open,
-			// then replace all of the virtual hosts such that accessing them returns an InternalServerError result.
-			// Setting the configuration to fail open will mean that Envoy Gateway ignores the error and keeps the routes
-			// as they were before the extension server was called.
-			if t.ExtensionManager != nil && !(*t.ExtensionManager).FailOpen() {
+			// then replace all of the routes in the virtual host with a single route that returns an InternalServerError result.
+			// The original extension server error is suppressed.
+			if !(*t.ExtensionManager).FailOpen() {
+				t.Logger.Error(err, "Clearing Virtual Host due to Extension Manager PostVHost failure")
 				vHost.Routes = []*routev3.Route{
 					{
 						Name: "error_route",
@@ -659,6 +671,10 @@ func (t *Translator) addRouteToRouteConfig(
 						},
 					},
 				}
+			} else {
+				// Setting the configuration to fail open will mean that Envoy Gateway propagates the error and keeps the routes
+				// as they were before the extension server was called.
+				errs = errors.Join(errs, err)
 			}
 		}
 	}

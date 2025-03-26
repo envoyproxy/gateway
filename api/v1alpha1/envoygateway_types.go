@@ -89,10 +89,6 @@ type EnvoyGatewaySpec struct {
 	//
 	// +optional
 	ExtensionAPIs *ExtensionAPISettings `json:"extensionApis,omitempty"`
-
-	// XDS defines the configuration for the XDS translator component.
-	// +optional
-	XDS *XDS `json:"xds,omitempty"`
 }
 
 // LeaderElection defines the desired leader election settings.
@@ -508,10 +504,12 @@ type ExtensionManager struct {
 	// The default is false, which means Envoy Gateway will fail closed if the Extension Service returns an error.
 	//
 	// Fail-close means that if the Extension Service hooks return an error, the relevant route/listener/resource
-	// will be replaced with a default configuration returning Internal Server Error (HTTP 500).
+	// will be replaced with a default configuration returning Internal Server Error (HTTP 500), and the modified
+	// resources would be used to configure the proxy.
 	//
 	// Fail-open means that if the Extension Service hooks return an error, no changes will be applied to the
-	// source of the configuration which was sent to the extension server.
+	// source of the configuration which was sent to the extension server. The error is propagated and resulting
+	// configuration would not be used to configure the proxies.
 	//
 	// +optional
 	FailOpen bool `json:"failOpen,omitempty"`
@@ -610,14 +608,6 @@ type EnvoyGatewayAdminAddress struct {
 type ShutdownManager struct {
 	// Image specifies the ShutdownManager container image to be used, instead of the default image.
 	Image *string `json:"image,omitempty"`
-}
-
-// XDS defines the configuration for the XDS translator component.
-type XDS struct {
-	// UpdateSnapshotOnError defines in XDS translator errors, e.g. errors related to extension manager, envoy patch policies
-	// and xds resource validation, would pause XDS snapshot updates. By default, Envoy Gateway would not update the snapshot
-	// if an error is encountered by the xds-translator.
-	UpdateSnapshotOnError bool `json:"updateSnapshotOnError,omitempty"`
 }
 
 func init() {

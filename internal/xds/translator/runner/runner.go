@@ -68,6 +68,7 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *ir
 				// Translate to xds resources
 				t := &translator.Translator{
 					FilterOrder: val.FilterOrder,
+					Logger:      r.Logger,
 				}
 
 				// Set the extension manager if an extension is loaded
@@ -125,7 +126,7 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *ir
 				result.EnvoyPatchPolicyStatuses = nil
 
 				// Publish
-				if err == nil || r.Config.EnvoyGateway.XDS.UpdateSnapshotOnError {
+				if err == nil {
 					r.Xds.Store(key, result)
 				} else {
 					r.Logger.Error(err, "xds resources are not published due to error in xds translator")
