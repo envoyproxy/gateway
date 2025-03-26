@@ -27,7 +27,7 @@ By default, the [OpenTelemetry Collector](https://opentelemetry.io/docs/collecto
 To install add-ons with OpenTelemetry Collector enabled, use the following command.
 
 ```shell
-helm install eg-addons oci://docker.io/envoyproxy/gateway-addons-helm --version {{< helm-version >}} --set opentelemetry-collector.enabled=true -n monitoring --create-namespace
+helm install eg-addons oci://docker.io/envoyproxy/gateway-addons-helm --version {{< helm-version >}} --set opentelemetry-collector.enabled=true --set opentelemetry-collector.config.service.pipelines.metrics.exporters='{debug,prometheus}' -n monitoring --create-namespace
 ```
 
 ## Metrics
@@ -94,7 +94,7 @@ EOF
 To completely remove Prometheus resources from the cluster, set the `prometheus.enabled` Helm value to `false`.
 
 ```shell
-helm upgrade eg-addons oci://docker.io/envoyproxy/gateway-addons-helm --version v0.0.0-latest -n monitoring --set prometheus.enabled=false 
+helm upgrade eg-addons oci://docker.io/envoyproxy/gateway-addons-helm --version {{< helm-version >}} -n monitoring --set prometheus.enabled=false 
 ```
 
 ### OpenTelemetry Metrics
@@ -133,12 +133,18 @@ spec:
 EOF
 ```
 
-Verify OTel-Collector metrics:
+Temporarily enable the debug exporter in the OpenTelemetry Collector 
+to view metrics in the pod logs using the following commands:
+
+```shell
+helm upgrade eg-addons oci://docker.io/envoyproxy/gateway-addons-helm --version {{< helm-version >}} -n monitoring --reuse-values --set opentelemetry-collector.config.service.pipelines.metrics.exporters='{debug,prometheus}'
+
+```
+
+To view the logs of the OpenTelemetry Collector, use the following command:
 
 ```shell
 export OTEL_POD_NAME=$(kubectl get pod -n monitoring --selector=app.kubernetes.io/name=opentelemetry-collector -o jsonpath='{.items[0].metadata.name}')
-kubectl port-forward pod/$OTEL_POD_NAME -n monitoring 19001:19001
+kubectl logs -n monitoring -f $OTEL_POD_NAME --tail=100
 
-# check metrics 
-curl localhost:19001/metrics  | grep "default/backend/rule/0"
 ```
