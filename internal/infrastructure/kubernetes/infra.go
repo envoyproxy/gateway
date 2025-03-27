@@ -70,7 +70,7 @@ func NewInfra(cli client.Client, cfg *config.Server) *Infra {
 		DNSDomain:    cfg.DNSDomain,
 		EnvoyGateway: cfg.EnvoyGateway,
 		Client:       New(cli),
-		logger:       cfg.Logger.WithName("infra-kubernetes"),
+		logger:       cfg.Logger.WithName(string(egv1a1.LogComponentInfrastructureRunner)),
 	}
 }
 
