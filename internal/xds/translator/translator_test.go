@@ -278,7 +278,6 @@ func TestTranslateXdsWithExtension(t *testing.T) {
 				},
 			}
 			ext := egv1a1.ExtensionManager{
-				FailOpen: true,
 				Resources: []egv1a1.GroupVersionKind{
 					{
 						Group:   "foo.example.io",

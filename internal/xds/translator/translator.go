@@ -8,7 +8,6 @@ package translator
 import (
 	"errors"
 	"fmt"
-	"net/http"
 	"runtime"
 	"strings"
 	"time"
@@ -27,7 +26,6 @@ import (
 	"google.golang.org/protobuf/types/known/anypb"
 	"google.golang.org/protobuf/types/known/wrapperspb"
 	"k8s.io/apimachinery/pkg/util/sets"
-	"k8s.io/utils/ptr"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	extensionTypes "github.com/envoyproxy/gateway/internal/extension/types"
@@ -129,17 +127,11 @@ func (t *Translator) Translate(xdsIR *ir.Xds) (*types.ResourceVersionTable, erro
 	// If no extension exists (or it doesn't subscribe to this hook) then this is a quick no-op
 	if err := processExtensionPostTranslationHook(tCtx, t.ExtensionManager); err != nil {
 		// If the extension server returns an error, and the extension server is not configured to fail open,
-		// then replace all of the routes in the virtual host with a single route that returns an InternalServerError result.
-		// The original extension server error is suppressed.
+		// then propagate the error
 		if !(*t.ExtensionManager).FailOpen() {
-			t.Logger.Error(err, "Clearing Listeners due to Extension Manager PostTranslation failure")
-			for _, listener := range tCtx.XdsResources[resourcev3.ListenerType] {
-				errs = errors.Join(errs, clearListenerRoutes(listener.(*listenerv3.Listener)))
-			}
-		} else {
-			// Setting the configuration to fail open will mean that Envoy Gateway propagates the error and keeps the routes
-			// as they were before the extension server was called.
 			errs = errors.Join(errs, err)
+		} else {
+			t.Logger.Error(err, "Extension Manager PostTranslation failure")
 		}
 	}
 
@@ -206,78 +198,15 @@ func (t *Translator) notifyExtensionServerAboutListeners(
 		}
 		if err := processExtensionPostListenerHook(tCtx, listener, policies, t.ExtensionManager); err != nil {
 			// If the extension server returns an error, and the extension server is not configured to fail open,
-			// then replace all of the routes in the virtual host with a single route that returns an InternalServerError result.
-			// The original extension server error is suppressed.
+			// then propagate the error
 			if !(*t.ExtensionManager).FailOpen() {
-				t.Logger.Error(err, "Clearing Listener Routes due to Extension Manager PostListener failure")
-				errs = errors.Join(errs, clearListenerRoutes(listener))
+				errs = errors.Join(errs, err)
 			} else {
-				// Setting the configuration to fail open will mean that Envoy Gateway propagates the error and keeps the routes
-				// as they were before the extension server was called.
-				errs = errors.Join(errs, err)
+				t.Logger.Error(err, "Extension Manager PostListener failure")
 			}
 		}
 	}
 	return errs
-}
-
-func clearListenerRoutes(listener *listenerv3.Listener) error {
-	var errs error
-	if listener.DefaultFilterChain != nil {
-		hcm, err := findHCMinFilterChain(listener.DefaultFilterChain)
-		if err != nil {
-			// no HCM found, skip
-		} else {
-			clearAllRoutes(hcm)
-			if err := replaceHCMInFilterChain(hcm, listener.DefaultFilterChain); err != nil {
-				errs = errors.Join(errs, err)
-			}
-		}
-	}
-	for _, filter := range listener.FilterChains {
-		hcm, err := findHCMinFilterChain(filter)
-		if err != nil {
-			// no HCM found, skip
-			continue
-		}
-		clearAllRoutes(hcm)
-		if err := replaceHCMInFilterChain(hcm, filter); err != nil {
-			errs = errors.Join(errs, err)
-		}
-	}
-
-	return errs
-}
-
-func clearAllRoutes(hcm *hcmv3.HttpConnectionManager) {
-	// Discard all of the routes configured on this HCM and replace them
-	// with a single route that returns an InternalServerError result.
-	hcm.RouteSpecifier = &hcmv3.HttpConnectionManager_RouteConfig{
-		RouteConfig: &routev3.RouteConfiguration{
-			Name: "error_route_configuration",
-			VirtualHosts: []*routev3.VirtualHost{
-				{
-					Name:    "error_vhost",
-					Domains: []string{"*"},
-					Routes: []*routev3.Route{
-						{
-							Name: "error_route",
-							Match: &routev3.RouteMatch{
-								PathSpecifier: &routev3.RouteMatch_Prefix{
-									Prefix: "/",
-								},
-							},
-							Action: &routev3.Route_DirectResponse{
-								DirectResponse: buildXdsDirectResponseAction(&ir.CustomResponse{
-									StatusCode: ptr.To(uint32(http.StatusInternalServerError)),
-								}),
-							},
-						},
-					},
-				},
-			},
-		},
-	}
 }
 
 func (t *Translator) processHTTPReadyListenerXdsTranslation(tCtx *types.ResourceVersionTable, ready *ir.ReadyListener) error {
@@ -562,17 +491,11 @@ func (t *Translator) addRouteToRouteConfig(
 		// If no extension exists (or it doesn't subscribe to this hook) then this is a quick no-op.
 		if err = processExtensionPostRouteHook(xdsRoute, vHost, httpRoute, t.ExtensionManager); err != nil {
 			// If the extension server returns an error, and the extension server is not configured to fail open,
-			// then replace all of the routes in the virtual host with a single route that returns an InternalServerError result.
-			// The original extension server error is suppressed.
+			// then propagate the error
 			if !(*t.ExtensionManager).FailOpen() {
-				t.Logger.Error(err, "Clearing Route due to Extension Manager PostRoute failure")
-				xdsRoute.Action = &routev3.Route_DirectResponse{DirectResponse: buildXdsDirectResponseAction(&ir.CustomResponse{
-					StatusCode: ptr.To(uint32(http.StatusInternalServerError)),
-				})}
-			} else {
-				// Setting the configuration to fail open will mean that Envoy Gateway propagates the error and keeps the routes
-				// as they were before the extension server was called.
 				errs = errors.Join(errs, err)
+			} else {
+				t.Logger.Error(err, "Extension Manager PostRoute failure")
 			}
 		}
 
@@ -654,27 +577,11 @@ func (t *Translator) addRouteToRouteConfig(
 		// If no extension exists (or it doesn't subscribe to this hook) then this is a quick no-op.
 		if err = processExtensionPostVHostHook(vHost, t.ExtensionManager); err != nil {
 			// If the extension server returns an error, and the extension server is not configured to fail open,
-			// then replace all of the routes in the virtual host with a single route that returns an InternalServerError result.
-			// The original extension server error is suppressed.
+			// then propagate the error
 			if !(*t.ExtensionManager).FailOpen() {
-				t.Logger.Error(err, "Clearing Virtual Host due to Extension Manager PostVHost failure")
-				vHost.Routes = []*routev3.Route{
-					{
-						Name: "error_route",
-						Match: &routev3.RouteMatch{
-							PathSpecifier: &routev3.RouteMatch_Prefix{
-								Prefix: "/",
-							},
-						},
-						Action: &routev3.Route_DirectResponse{
-							DirectResponse: buildXdsDirectResponseAction(&ir.CustomResponse{StatusCode: ptr.To(uint32(http.StatusInternalServerError))}),
-						},
-					},
-				}
-			} else {
-				// Setting the configuration to fail open will mean that Envoy Gateway propagates the error and keeps the routes
-				// as they were before the extension server was called.
 				errs = errors.Join(errs, err)
+			} else {
+				t.Logger.Error(err, "Extension Manager PostVHost failure")
 			}
 		}
 	}

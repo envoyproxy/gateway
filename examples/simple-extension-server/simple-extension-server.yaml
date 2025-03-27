@@ -15,7 +15,6 @@ data:
       enableEnvoyPatchPolicy: true
       enableBackend: true
     extensionManager:
-      failOpen: true
       maxMessageSize: 1000M
       hooks:
         xdsTranslator:
