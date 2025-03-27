@@ -43,7 +43,9 @@ curl localhost:19001/stats/prometheus  | grep "default/backend/rule/0"
 If you are only using the OpenTelemetry sink, you might want to set the `telemetry.metrics.prometheus.disable` to `true`
 in the _EnvoyProxy CRD_ as shown in the following command.
 
-```yaml
+{{< tabpane text=true >}}
+{{% tab header="Apply from stdin" %}}
+```shell
 cat <<EOF | kubectl apply -f -
 apiVersion: gateway.networking.k8s.io/v1
 kind: GatewayClass
@@ -69,6 +71,35 @@ spec:
         disable: true
 EOF
 ```
+{{% /tab %}}
+{{% tab header="Apply from file" %}}
+```yaml
+apiVersion: gateway.networking.k8s.io/v1
+kind: GatewayClass
+metadata:
+  name: eg
+spec:
+  controllerName: gateway.envoyproxy.io/gatewayclass-controller
+  parametersRef:
+    group: gateway.envoyproxy.io
+    kind: EnvoyProxy
+    name: prometheus
+    namespace: envoy-gateway-system
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyProxy
+metadata:
+  name: prometheus
+  namespace: envoy-gateway-system
+spec:
+  telemetry:
+    metrics:
+      prometheus:
+        disable: true
+```
+{{% /tab %}}
+{{< /tabpane >}}
+
 
 To completely remove Prometheus resources from the cluster, set the `prometheus.enabled` Helm value to `false`.
 
@@ -82,7 +113,9 @@ Envoy Gateway can export metrics to an OpenTelemetry sink. Use the following com
 OpenTelemetry Collector. Ensure that the OpenTelemetry components are enabled, 
 as mentioned in the [Prerequisites](#prerequisites).
 
-```yaml
+{{< tabpane text=true >}}
+{{% tab header="Apply from stdin" %}}
+```shell
 cat <<EOF | kubectl apply -f -
 apiVersion: gateway.networking.k8s.io/v1
 kind: GatewayClass
@@ -111,6 +144,38 @@ spec:
             port: 4317
 EOF
 ```
+{{% /tab %}}
+{{% tab header="Apply from file" %}}
+```yaml
+apiVersion: gateway.networking.k8s.io/v1
+kind: GatewayClass
+metadata:
+  name: eg
+spec:
+  controllerName: gateway.envoyproxy.io/gatewayclass-controller
+  parametersRef:
+    group: gateway.envoyproxy.io
+    kind: EnvoyProxy
+    name: otel-sink
+    namespace: envoy-gateway-system
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyProxy
+metadata:
+  name: otel-sink
+  namespace: envoy-gateway-system
+spec:
+  telemetry:
+    metrics:
+      sinks:
+        - type: OpenTelemetry
+          openTelemetry:
+            host: otel-collector.monitoring.svc.cluster.local
+            port: 4317
+```
+{{% /tab %}}
+{{< /tabpane >}}
+
 
 Temporarily enable the `debug` exporter in the OpenTelemetry Collector 
 to view metrics in the pod logs using the following command. Debug exporter is enabled for demonstration purposes and
