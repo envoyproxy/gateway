@@ -128,3 +128,7 @@ export OTEL_POD_NAME=$(kubectl get pod -n monitoring --selector=app.kubernetes.i
 kubectl logs -n monitoring -f $OTEL_POD_NAME --tail=100
 
 ```
+
+## Next Steps
+
+Checkout [Visualising metrics using Grafana](./grafana-integration.md) to visualise the metrics.
