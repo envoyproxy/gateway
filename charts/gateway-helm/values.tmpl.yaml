@@ -123,9 +123,3 @@ certgen:
   rbac:
     annotations: {}
     labels: {}
-
-crd:
-  envoyGateway:
-    enabled: true
-  apiGateway:
-    enabled: true
