@@ -216,4 +216,4 @@ kubectl logs -n monitoring -f $OTEL_POD_NAME --tail=100
 
 ## Next Steps
 
-Checkout [Visualising metrics using Grafana](./grafana-integration.md) to visualise the metrics.
+Check out the [Visualising metrics using Grafana](./grafana-integration.md) section to learn more about how you can observe all the metrics in one place.
