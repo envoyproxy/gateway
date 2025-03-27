@@ -48,16 +48,21 @@ in the _EnvoyProxy CRD_ as shown in the following command.
 ```shell
 cat <<EOF | kubectl apply -f -
 apiVersion: gateway.networking.k8s.io/v1
-kind: GatewayClass
+kind: Gateway
 metadata:
   name: eg
+  namespace: envoy-gateway-system
 spec:
-  controllerName: gateway.envoyproxy.io/gatewayclass-controller
-  parametersRef:
-    group: gateway.envoyproxy.io
-    kind: EnvoyProxy
-    name: prometheus
-    namespace: envoy-gateway-system
+  gatewayClassName: eg
+  infrastructure:
+    parametersRef:
+      group: gateway.envoyproxy.io
+      kind: EnvoyProxy
+      name: prometheus
+  listeners:
+    - name: http
+      protocol: HTTP
+      port: 80
 ---
 apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: EnvoyProxy
@@ -75,16 +80,21 @@ EOF
 {{% tab header="Apply from file" %}}
 ```yaml
 apiVersion: gateway.networking.k8s.io/v1
-kind: GatewayClass
+kind: Gateway
 metadata:
   name: eg
+  namespace: envoy-gateway-system
 spec:
-  controllerName: gateway.envoyproxy.io/gatewayclass-controller
-  parametersRef:
-    group: gateway.envoyproxy.io
-    kind: EnvoyProxy
-    name: prometheus
-    namespace: envoy-gateway-system
+  gatewayClassName: eg
+  infrastructure:
+    parametersRef:
+      group: gateway.envoyproxy.io
+      kind: EnvoyProxy
+      name: prometheus
+  listeners:
+    - name: http
+      protocol: HTTP
+      port: 80
 ---
 apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: EnvoyProxy
@@ -104,7 +114,7 @@ spec:
 To completely remove Prometheus resources from the cluster, set the `prometheus.enabled` Helm value to `false`.
 
 ```shell
-helm upgrade eg-addons oci://docker.io/envoyproxy/gateway-addons-helm --version {{< helm-version >}} -n monitoring --set prometheus.enabled=false 
+helm upgrade eg-addons oci://docker.io/envoyproxy/gateway-addons-helm --version {{< helm-version >}} -n monitoring --reuse-values --set prometheus.enabled=false 
 ```
 
 ### OpenTelemetry Metrics
@@ -118,16 +128,21 @@ as mentioned in the [Prerequisites](#prerequisites).
 ```shell
 cat <<EOF | kubectl apply -f -
 apiVersion: gateway.networking.k8s.io/v1
-kind: GatewayClass
+kind: Gateway
 metadata:
   name: eg
+  namespace: envoy-gateway-system
 spec:
-  controllerName: gateway.envoyproxy.io/gatewayclass-controller
-  parametersRef:
-    group: gateway.envoyproxy.io
-    kind: EnvoyProxy
-    name: otel-sink
-    namespace: envoy-gateway-system
+  gatewayClassName: eg
+  infrastructure:
+    parametersRef:
+      group: gateway.envoyproxy.io
+      kind: EnvoyProxy
+      name: otel-sink
+  listeners:
+    - name: http
+      protocol: HTTP
+      port: 80
 ---
 apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: EnvoyProxy
@@ -148,16 +163,21 @@ EOF
 {{% tab header="Apply from file" %}}
 ```yaml
 apiVersion: gateway.networking.k8s.io/v1
-kind: GatewayClass
+kind: Gateway
 metadata:
   name: eg
+  namespace: envoy-gateway-system
 spec:
-  controllerName: gateway.envoyproxy.io/gatewayclass-controller
-  parametersRef:
-    group: gateway.envoyproxy.io
-    kind: EnvoyProxy
-    name: otel-sink
-    namespace: envoy-gateway-system
+  gatewayClassName: eg
+  infrastructure:
+    parametersRef:
+      group: gateway.envoyproxy.io
+      kind: EnvoyProxy
+      name: otel-sink
+  listeners:
+    - name: http
+      protocol: HTTP
+      port: 80
 ---
 apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: EnvoyProxy
