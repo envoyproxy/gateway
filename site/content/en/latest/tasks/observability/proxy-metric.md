@@ -113,7 +113,8 @@ EOF
 ```
 
 Temporarily enable the `debug` exporter in the OpenTelemetry Collector 
-to view metrics in the pod logs using the following commands:
+to view metrics in the pod logs using the following command. Debug exporter is enabled for demonstration purposes and
+should not be used in production.
 
 ```shell
 helm upgrade eg-addons oci://docker.io/envoyproxy/gateway-addons-helm --version {{< helm-version >}} -n monitoring --reuse-values --set opentelemetry-collector.config.service.pipelines.metrics.exporters='{debug,prometheus}'

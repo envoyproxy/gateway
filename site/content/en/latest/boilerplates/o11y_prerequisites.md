@@ -21,5 +21,5 @@ By default, the [OpenTelemetry Collector](https://opentelemetry.io/docs/collecto
 To install add-ons with OpenTelemetry Collector enabled, use the following command.
 
 ```shell
-helm install eg-addons oci://docker.io/envoyproxy/gateway-addons-helm --version {{< helm-version >}} --set opentelemetry-collector.enabled=true --set opentelemetry-collector.config.service.pipelines.metrics.exporters='{debug,prometheus}' -n monitoring --create-namespace
+helm install eg-addons oci://docker.io/envoyproxy/gateway-addons-helm --version {{< helm-version >}} --set opentelemetry-collector.enabled=true -n monitoring --create-namespace
 ```
