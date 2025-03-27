@@ -182,7 +182,7 @@ func TestRunner_withExtensionManager_FailClosed(t *testing.T) {
 	xds := new(message.Xds)
 	pResource := new(message.ProviderResources)
 
-	cfg, err := config.New()
+	cfg, err := config.New(os.Stdout)
 	require.NoError(t, err)
 	require.NotNil(t, cfg)
 
