@@ -2,56 +2,80 @@
 title: "Gateway API Metrics"
 ---
 
-Resource metrics for Gateway API objects are available using the [Gateway API State Metrics][gasm] project.
-The project also provides example dashboard for visualising the metrics using Grafana, and example alerts using Prometheus & Alertmanager.
+Resource metrics for **Kubernetes Gateway API** objects are available through the [Gateway API State Metrics][gasm] project. The project also includes an example dashboard for visualizing the metrics with Grafana, along with sample alerts using Prometheus and Alertmanager.
 
 ## Prerequisites
 
+### Install Envoy Gateway
+
 {{< boilerplate prerequisites >}}
 
-Run the following commands to install the metrics stack, with the Gateway API State Metrics configuration, on your kubernetes cluster:
+### Install Metrics Stack
+
+Run the following commands to install the metrics stack, with the _Gateway API State Metrics_ configuration, 
+on your kubernetes cluster:
 
 ```shell
 kubectl apply --server-side -f https://raw.githubusercontent.com/Kuadrant/gateway-api-state-metrics/main/config/examples/kube-prometheus/bundle_crd.yaml
 kubectl apply -f https://raw.githubusercontent.com/Kuadrant/gateway-api-state-metrics/main/config/examples/kube-prometheus/bundle.yaml
 ```
 
-## Metrics and Alerts
+## Metrics
 
-To access the Prometheus UI, wait for the statefulset to be ready, then use the port-forward command:
+To query metrics using Prometheus API, follow the steps below. Make sure to wait for the statefulset to be ready before port-forwarding.
 
 ```shell
-# This first command may fail if the statefulset has not been created yet.
-# In that case, try again until you get a message like 'Waiting for 2 pods to be ready...'
-# or 'statefulset rolling update complete 2 pods...'
-kubectl -n monitoring rollout status --watch --timeout=5m statefulset/prometheus-k8s
-kubectl -n monitoring port-forward service/prometheus-k8s 9090:9090 > /dev/null &
+export PROMETHEUS_PORT=$(kubectl get service prometheus-k8s -n monitoring -o jsonpath='{.spec.ports[0].port}')
+kubectl port-forward service/prometheus-k8s -n monitoring 9090:$PROMETHEUS_PORT
 ```
 
-Navigate to `http://localhost:9090`.
-Metrics can be queried from the 'Graph' tab e.g. `gatewayapi_gateway_created`
-See the [Gateway API State Metrics README][gasm-readme] for the full list of Gateway API metrics available.
+The example query below fetches the `gatewayapi_gateway_created` metric.
+Alternatively, access the Prometheus UI at `http://localhost:9090`.
 
-Alerts can be seen in the 'Alerts' tab.
-Gateway API specific alerts will be grouped under the 'gateway-api.rules' heading.
+```shell
+curl -s 'http://localhost:9090/api/v1/query?query=gatewayapi_gateway_created' | jq . 
+```
 
-***Note:*** Alerts are defined in a PrometheusRules custom resource in the 'monitoring' namespace. You can modify the alert rules by updating this resource.
+
+Refer to the [Gateway API State Metrics README][gasm-readme] for the complete list of available Gateway API metrics.
+
+## Alerts
+To view the alerts, navigate to the **Alerts** tab at `http://localhost:9090/alerts`. Gateway API-specific alerts will be grouped under the `gateway-api.rules` heading.  
+Alternatively, you can use the following command to view the alerts via the Prometheus API:
+
+```shell
+curl -s http://localhost:9090/api/v1/alerts | jq '.data.alerts[] | select(.labels.rule_group and (.labels.rule_group | test("gateway-api.rules")))'
+```
+
+***Note:*** Alerts are defined in a _PrometheusRules_ custom resource within the **monitoring** namespace. You can modify the alert rules by updating this resource.
 
 ## Dashboards
 
-To view the dashboards in Grafana, wait for the deployment to be ready, then use the port-forward command:
+To access the Grafana dashboards, follow these steps:
 
-```shell
-kubectl -n monitoring wait --timeout=5m deployment/grafana --for=condition=Available
-kubectl -n monitoring port-forward service/grafana 3000:3000 > /dev/null &
-```
+1. Wait for the deployment to complete, then set up port forwarding using the following commands:
 
-Navigate to `http://localhost:3000` and sign in with admin/admin.
-The Gateway API State dashboards will be available in the 'Default' folder and tagged with 'gateway-api'.
-See the [Gateway API State Metrics README][gasm-dashboards] for further information on available dashboards.
+    ```shell
+    export GRAFANA_PORT=$(kubectl get service grafana -n monitoring -o jsonpath='{.spec.ports[0].port}')
+    kubectl port-forward service/grafana -n monitoring 3000:$GRAFANA_PORT
+    ```
 
-***Note:*** Dashboards are loaded from configmaps. You can modify the dashboards in the Grafana UI, however you will need to export them from the UI and update the json in the configmaps to persist changes.
+2. Access Grafana by navigating to `http://localhost:3000` in your web browser
+3. Log in using the default credentials:
+   - Username: `admin`
+   - Password: `admin`
 
+The Gateway API State dashboards are located in the 'Default' folder and are tagged with `gateway-api`.
+For detailed information about available dashboards, refer to the [Gateway API State Metrics README][gasm-dashboards].
+
+**Note:**  
+Dashboards are loaded from ConfigMaps. While you can modify dashboards directly in the Grafana UI, to persist these changes you must:
+1. Export the modified dashboards from the UI
+2. Update the corresponding JSON in the ConfigMaps
+
+## Next Steps
+
+Check out the [Gateway Exported Metrics](./grafana-integration.md) section to learn more about the metrics exported by the Envoy Gateway.
 
 [gasm]: https://github.com/Kuadrant/gateway-api-state-metrics
 [gasm-readme]: https://github.com/Kuadrant/gateway-api-state-metrics/tree/main#metrics
