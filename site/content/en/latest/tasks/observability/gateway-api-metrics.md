@@ -73,6 +73,10 @@ Dashboards are loaded from ConfigMaps. While you can modify dashboards directly 
 1. Export the modified dashboards from the UI
 2. Update the corresponding JSON in the ConfigMaps
 
+## Next Steps
+
+Check out the [Gateway Exported Metrics](./grafana-integration.md) section to learn more about the metrics exported by the Envoy Gateway.
+
 [gasm]: https://github.com/Kuadrant/gateway-api-state-metrics
 [gasm-readme]: https://github.com/Kuadrant/gateway-api-state-metrics/tree/main#metrics
 [gasm-dashboards]: https://github.com/Kuadrant/gateway-api-state-metrics/tree/main#dashboards
