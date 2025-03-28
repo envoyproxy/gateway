@@ -292,6 +292,8 @@ generate-manifests: helm-generate.gateway-helm ## Generate Kubernetes release ma
 	@$(call log, "Added: $(OUTPUT_DIR)/install.yaml")
 	cp examples/kubernetes/quickstart.yaml $(OUTPUT_DIR)/quickstart.yaml
 	@$(call log, "Added: $(OUTPUT_DIR)/quickstart.yaml")
+	cat charts/gateway-helm/crds/generated/* >> $(OUTPUT_DIR)/envoy-gateway-crds.yaml
+	@$(call log, "Added: $(OUTPUT_DIR)/envoy-gateway-crds.yaml")
 
 .PHONY: generate-artifacts
 generate-artifacts: generate-manifests ## Generate release artifacts.
