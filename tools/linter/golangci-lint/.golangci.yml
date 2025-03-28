@@ -132,6 +132,9 @@ issues:
     - path: test/e2e
       linters:
         - bodyclose
+    - path: api/v1alpha1/envoyproxy_types.go
+      linters:
+        - gosec     # EnvoyFilterCredentialInjector EnvoyFilter = "envoy.filters.http.credential_injector"
   # Show the complete output
   max-issues-per-linter: 0
   max-same-issues: 0

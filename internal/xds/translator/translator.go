@@ -1001,7 +1001,10 @@ func addXdsCluster(tCtx *types.ResourceVersionTable, args *xdsClusterArgs) error
 		return nil
 	}
 
-	xdsCluster := buildXdsCluster(args)
+	xdsCluster, err := buildXdsCluster(args)
+	if err != nil {
+		return err
+	}
 	xdsEndpoints := buildXdsClusterLoadAssignment(args.name, args.settings)
 	for _, ds := range args.settings {
 		if ds.TLS != nil {
