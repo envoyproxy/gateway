@@ -75,7 +75,8 @@ jobs:
       - name: Generate and Package CRDs
         run: |
           make manifests
-          cd charts/gateway-helm/crds/ && zip -r envoy-gateway-crds.zip generated/
+          mkdir -p release-artifacts/
+          cat charts/gateway-helm/crds/generated/* >> release-artifacts/envoy-gateway-crds.yaml
 
       - name: Build and Push EG Release Helm Chart
         run: |
