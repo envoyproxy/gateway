@@ -39,6 +39,15 @@ go.build: $(addprefix go.build., $(addprefix $(PLATFORM)., $(BINS)))
 .PHONY: go.build.multiarch
 go.build.multiarch: $(foreach p,$(PLATFORMS),$(addprefix go.build., $(addprefix $(p)., $(BINS))))
 
+.PHONY: go.test.fuzz
+go.test.fuzz: ## Run all fuzzers in the test/fuzz folder one by one
+	@$(LOG_TARGET)
+	@for dir in $$(go list -f '{{.Dir}}' ./test/fuzz/...); do \
+		for test in $$(go test -list=Fuzz.* $$dir | grep ^Fuzz); do \
+			echo "go test -fuzz=$$test -fuzztime=$(FUZZ_TIME)"; \
+			(cd $$dir && go test -fuzz=$$test -fuzztime=$(FUZZ_TIME)) || exit 1; \
+		done; \
+	done
 
 .PHONY: go.test.unit
 go.test.unit: ## Run go unit tests
@@ -53,20 +62,21 @@ go.testdata.complete: ## Override test ouputdata
 	go test -timeout 30s github.com/envoyproxy/gateway/internal/infrastructure/kubernetes/proxy --override-testdata=true
 	go test -timeout 30s github.com/envoyproxy/gateway/internal/xds/bootstrap --override-testdata=true
 	go test -timeout 60s github.com/envoyproxy/gateway/internal/gatewayapi --override-testdata=true
+	go test -timeout 60s github.com/envoyproxy/gateway/internal/gatewayapi/resource --override-testdata=true
 
 .PHONY: go.test.coverage
 go.test.coverage: go.test.cel ## Run go unit and integration tests in GitHub Actions
 	@$(LOG_TARGET)
-	KUBEBUILDER_ASSETS="$(shell $(tools/setup-envtest) use $(ENVTEST_K8S_VERSION) -p path)" \
+	KUBEBUILDER_ASSETS="$(shell go tool setup-envtest use $(ENVTEST_K8S_VERSION) -p path)" \
 		go test ./... --tags=integration -race -coverprofile=coverage.xml -covermode=atomic
 
 .PHONY: go.test.cel
-go.test.cel: manifests $(tools/setup-envtest) # Run the CEL validation tests
+go.test.cel: manifests # Run the CEL validation tests
 	@$(LOG_TARGET)
 	@for ver in $(ENVTEST_K8S_VERSIONS); do \
   		echo "Run CEL Validation on k8s $$ver"; \
         go clean -testcache; \
-        KUBEBUILDER_ASSETS="$$($(tools/setup-envtest) use $$ver -p path)" \
+        KUBEBUILDER_ASSETS="$$(go tool setup-envtest use $$ver -p path)" \
          go test ./test/cel-validation --tags celvalidation -race; \
     done
 
@@ -79,8 +89,6 @@ go.clean: ## Clean the building output files
 go.mod.tidy: ## Update and check dependences with go mod tidy.
 	@$(LOG_TARGET)
 	go mod tidy -compat=$(GO_VERSION)
-	# run go mod tidy in examples/extension-server directory
-	cd examples/extension-server && go mod tidy -compat=$(GO_VERSION)
 
 .PHONY: go.mod.lint
 lint: go.mod.lint

@@ -9,10 +9,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"path"
 
 	"github.com/spf13/cobra"
-	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	clicfg "sigs.k8s.io/controller-runtime/pkg/client/config"
 
@@ -23,30 +23,34 @@ import (
 	"github.com/envoyproxy/gateway/internal/utils/file"
 )
 
+// cfgPath is the path to the EnvoyGateway configuration file.
+var overwriteControlPlaneCerts bool
+
 // TODO: make this path configurable or use server config directly.
 const defaultLocalCertPath = "/tmp/envoy-gateway/certs"
 
-// getCertGenCommand returns the certGen cobra command to be executed.
-func getCertGenCommand() *cobra.Command {
+// GetCertGenCommand returns the certGen cobra command to be executed.
+func GetCertGenCommand() *cobra.Command {
 	var local bool
 
 	cmd := &cobra.Command{
 		Use:   "certgen",
 		Short: "Generate Control Plane Certificates",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return certGen(local)
+			return certGen(cmd.Context(), cmd.OutOrStdout(), local)
 		},
 	}
 
 	cmd.PersistentFlags().BoolVarP(&local, "local", "l", false,
 		"Generate all the certificates locally.")
-
+	cmd.PersistentFlags().BoolVarP(&overwriteControlPlaneCerts, "overwrite", "o", false,
+		"Updates the secrets containing the control plane certs.")
 	return cmd
 }
 
 // certGen generates control plane certificates.
-func certGen(local bool) error {
-	cfg, err := getConfig()
+func certGen(ctx context.Context, logOut io.Writer, local bool) error {
+	cfg, err := config.New(logOut)
 	if err != nil {
 		return err
 	}
@@ -64,7 +68,7 @@ func certGen(local bool) error {
 			return fmt.Errorf("failed to create controller-runtime client: %w", err)
 		}
 
-		if err = outputCertsForKubernetes(ctrl.SetupSignalHandler(), cli, cfg, certs); err != nil {
+		if err = outputCertsForKubernetes(ctx, cli, cfg, overwriteControlPlaneCerts, certs); err != nil {
 			return fmt.Errorf("failed to output certificates: %w", err)
 		}
 	} else {
@@ -78,15 +82,9 @@ func certGen(local bool) error {
 }
 
 // outputCertsForKubernetes outputs the provided certs to a secret in namespace ns.
-func outputCertsForKubernetes(ctx context.Context, cli client.Client, cfg *config.Server, certs *crypto.Certificates) error {
-	var updateSecrets bool
-	if cfg.EnvoyGateway != nil &&
-		cfg.EnvoyGateway.Provider != nil &&
-		cfg.EnvoyGateway.Provider.Kubernetes != nil &&
-		cfg.EnvoyGateway.Provider.Kubernetes.OverwriteControlPlaneCerts != nil &&
-		*cfg.EnvoyGateway.Provider.Kubernetes.OverwriteControlPlaneCerts {
-		updateSecrets = true
-	}
+func outputCertsForKubernetes(ctx context.Context, cli client.Client, cfg *config.Server,
+	updateSecrets bool, certs *crypto.Certificates,
+) error {
 	secrets, err := kubernetes.CreateOrUpdateSecrets(ctx, cli, kubernetes.CertsToSecret(cfg.Namespace, certs), updateSecrets)
 	log := cfg.Logger
 

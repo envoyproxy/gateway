@@ -11,9 +11,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"path"
 	"reflect"
 
 	"github.com/docker/docker/pkg/fileutils"
+	"github.com/telepresenceio/watchable"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -36,8 +38,6 @@ import (
 )
 
 const (
-	wasmCacheDir = "/var/lib/eg/wasm"
-
 	// Default certificates path for envoy-gateway with Kubernetes provider.
 	serveTLSCertFilepath = "/certs/tls.crt"
 	serveTLSKeyFilepath  = "/certs/tls.key"
@@ -73,6 +73,10 @@ func New(cfg *Config) *Runner {
 	}
 }
 
+// Close implements Runner interface.
+func (r *Runner) Close() error { return nil }
+
+// Name implements Runner interface.
 func (r *Runner) Name() string {
 	return string(egv1a1.LogComponentGatewayAPIRunner)
 }
@@ -82,7 +86,8 @@ func (r *Runner) Start(ctx context.Context) (err error) {
 	r.Logger = r.Logger.WithName(r.Name()).WithValues("runner", r.Name())
 
 	go r.startWasmCache(ctx)
-	go r.subscribeAndTranslate(ctx)
+	c := r.ProviderResources.GatewayAPIResources.Subscribe(ctx)
+	go r.subscribeAndTranslate(c)
 	r.Logger.Info("started")
 	return
 }
@@ -96,9 +101,15 @@ func (r *Runner) startWasmCache(ctx context.Context) {
 		r.Logger.Error(err, "failed to start wasm cache")
 		return
 	}
-
+	cacheOption := wasm.CacheOptions{}
+	if r.Config.EnvoyGateway.Provider.Type == egv1a1.ProviderTypeKubernetes {
+		cacheOption.CacheDir = "/var/lib/eg/wasm"
+	} else {
+		h, _ := os.UserHomeDir() // Assume we always get the home directory.
+		cacheOption.CacheDir = path.Join(h, ".eg", "wasm")
+	}
 	// Create the file directory if it does not exist.
-	if err = fileutils.CreateIfNotExists(wasmCacheDir, true); err != nil {
+	if err = fileutils.CreateIfNotExists(cacheOption.CacheDir, true); err != nil {
 		r.Logger.Error(err, "Failed to create Wasm cache directory")
 		return
 	}
@@ -108,15 +119,12 @@ func (r *Runner) startWasmCache(ctx context.Context) {
 			Salt:      salt,
 			TLSConfig: tlsConfig,
 		},
-		// Wasm cache options
-		wasm.CacheOptions{
-			CacheDir: wasmCacheDir,
-		}, r.Logger)
+		cacheOption, r.Logger)
 	r.wasmCache.Start(ctx)
 }
 
-func (r *Runner) subscribeAndTranslate(ctx context.Context) {
-	message.HandleSubscription(message.Metadata{Runner: string(egv1a1.LogComponentGatewayAPIRunner), Message: "provider-resources"}, r.ProviderResources.GatewayAPIResources.Subscribe(ctx),
+func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *resource.ControllerResources]) {
+	message.HandleSubscription(message.Metadata{Runner: string(egv1a1.LogComponentGatewayAPIRunner), Message: "provider-resources"}, sub,
 		func(update message.Update[string, *resource.ControllerResources], errChan chan error) {
 			r.Logger.Info("received an update")
 			val := update.Value
@@ -144,14 +152,15 @@ func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 			for _, resources := range *val {
 				// Translate and publish IRs.
 				t := &gatewayapi.Translator{
-					GatewayControllerName:   r.Server.EnvoyGateway.Gateway.ControllerName,
-					GatewayClassName:        gwapiv1.ObjectName(resources.GatewayClass.Name),
-					GlobalRateLimitEnabled:  r.EnvoyGateway.RateLimit != nil,
-					EnvoyPatchPolicyEnabled: r.EnvoyGateway.ExtensionAPIs != nil && r.EnvoyGateway.ExtensionAPIs.EnableEnvoyPatchPolicy,
-					BackendEnabled:          r.EnvoyGateway.ExtensionAPIs != nil && r.EnvoyGateway.ExtensionAPIs.EnableBackend,
-					Namespace:               r.Namespace,
-					MergeGateways:           gatewayapi.IsMergeGatewaysEnabled(resources),
-					WasmCache:               r.wasmCache,
+					GatewayControllerName:     r.Server.EnvoyGateway.Gateway.ControllerName,
+					GatewayClassName:          gwapiv1.ObjectName(resources.GatewayClass.Name),
+					GlobalRateLimitEnabled:    r.EnvoyGateway.RateLimit != nil,
+					EnvoyPatchPolicyEnabled:   r.EnvoyGateway.ExtensionAPIs != nil && r.EnvoyGateway.ExtensionAPIs.EnableEnvoyPatchPolicy,
+					BackendEnabled:            r.EnvoyGateway.ExtensionAPIs != nil && r.EnvoyGateway.ExtensionAPIs.EnableBackend,
+					Namespace:                 r.Namespace,
+					MergeGateways:             gatewayapi.IsMergeGatewaysEnabled(resources),
+					WasmCache:                 r.wasmCache,
+					ListenerPortShiftDisabled: r.EnvoyGateway.Provider != nil && r.EnvoyGateway.Provider.IsRunningOnHost(),
 				}
 
 				// If an extension is loaded, pass its supported groups/kinds to the translator

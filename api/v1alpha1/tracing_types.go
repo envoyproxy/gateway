@@ -5,15 +5,30 @@
 
 package v1alpha1
 
+import gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
+
+// ProxyTracing defines the tracing configuration for a proxy.
+// +kubebuilder:validation:XValidation:message="only one of SamplingRate or SamplingFraction can be specified",rule="!(has(self.samplingRate) && has(self.samplingFraction))"
 type ProxyTracing struct {
 	// SamplingRate controls the rate at which traffic will be
 	// selected for tracing if no prior sampling decision has been made.
 	// Defaults to 100, valid values [0-100]. 100 indicates 100% sampling.
+	//
+	// Only one of SamplingRate or SamplingFraction may be specified.
+	// If neither field is specified, all requests will be sampled.
+	//
 	// +kubebuilder:validation:Minimum=0
 	// +kubebuilder:validation:Maximum=100
-	// +kubebuilder:default=100
 	// +optional
 	SamplingRate *uint32 `json:"samplingRate,omitempty"`
+	// SamplingFraction represents the fraction of requests that should be
+	// selected for tracing if no prior sampling decision has been made.
+	//
+	// Only one of SamplingRate or SamplingFraction may be specified.
+	// If neither field is specified, all requests will be sampled.
+	//
+	// +optional
+	SamplingFraction *gwapiv1.Fraction `json:"samplingFraction,omitempty"`
 	// CustomTags defines the custom tags to add to each span.
 	// If provider is kubernetes, pod name and namespace are added by default.
 	CustomTags map[string]CustomTag `json:"customTags,omitempty"`

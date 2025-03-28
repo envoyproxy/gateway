@@ -38,7 +38,7 @@ endif
 REV=$(shell git rev-parse --short HEAD)
 
 # Supported Platforms for building multiarch binaries.
-PLATFORMS ?= darwin_amd64 darwin_arm64 linux_amd64 linux_arm64
+PLATFORMS ?= darwin_amd64 darwin_arm64 linux_amd64 linux_arm64 windows_amd64 windows_arm64
 
 # Set a specific PLATFORM
 ifeq ($(origin PLATFORM), undefined)
@@ -120,7 +120,7 @@ export USAGE_OPTIONS
 
 .PHONY: generate
 generate: ## Generate go code from templates and tags
-generate: kube-generate docs-api helm-generate go.generate copy-current-release-docs
+generate: kube-generate docs-api helm-generate go.generate kube-generate-examples
 
 ## help: Show this help info.
 .PHONY: help

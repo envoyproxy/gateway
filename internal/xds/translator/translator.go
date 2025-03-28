@@ -8,6 +8,8 @@ package translator
 import (
 	"errors"
 	"fmt"
+	"net/http"
+	"runtime"
 	"strings"
 	"time"
 
@@ -21,16 +23,17 @@ import (
 	matcherv3 "github.com/envoyproxy/go-control-plane/envoy/type/matcher/v3"
 	resourcev3 "github.com/envoyproxy/go-control-plane/pkg/resource/v3"
 	"github.com/envoyproxy/go-control-plane/pkg/wellknown"
-	"google.golang.org/protobuf/proto"
+	protobuf "google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/anypb"
 	"google.golang.org/protobuf/types/known/wrapperspb"
 	"k8s.io/apimachinery/pkg/util/sets"
+	"k8s.io/utils/ptr"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	extensionTypes "github.com/envoyproxy/gateway/internal/extension/types"
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/utils"
-	"github.com/envoyproxy/gateway/internal/utils/protocov"
+	"github.com/envoyproxy/gateway/internal/utils/proto"
 	"github.com/envoyproxy/gateway/internal/xds/types"
 )
 
@@ -87,6 +90,10 @@ func (t *Translator) Translate(xdsIR *ir.Xds) (*types.ResourceVersionTable, erro
 	// to collect all errors and reflect them in the status of the CRDs.
 	var errs error
 
+	if err := t.processHTTPReadyListenerXdsTranslation(tCtx, xdsIR.ReadyListener); err != nil {
+		errs = errors.Join(errs, err)
+	}
+
 	if err := t.processHTTPListenerXdsTranslation(
 		tCtx, xdsIR.HTTP, xdsIR.AccessLog, xdsIR.Tracing, xdsIR.Metrics); err != nil {
 		errs = errors.Join(errs, err)
@@ -119,6 +126,19 @@ func (t *Translator) Translate(xdsIR *ir.Xds) (*types.ResourceVersionTable, erro
 	// Check if an extension want to inject any clusters/secrets
 	// If no extension exists (or it doesn't subscribe to this hook) then this is a quick no-op
 	if err := processExtensionPostTranslationHook(tCtx, t.ExtensionManager); err != nil {
+		errs = errors.Join(errs, err)
+		// Setting the configuration to fail open will mean that Envoy Gateway ignores the error and keeps the resources
+		// as they were before the extension server was called.
+		if t.ExtensionManager != nil && !(*t.ExtensionManager).FailOpen() {
+			for _, listener := range tCtx.XdsResources[resourcev3.ListenerType] {
+				errs = errors.Join(errs, clearListenerRoutes(listener.(*listenerv3.Listener)))
+			}
+		}
+	}
+
+	// Validate all the xds resources in the table before returning
+	// This is necessary to catch any misconfigurations that might have been missed during translation
+	if err := tCtx.ValidateAll(); err != nil {
 		errs = errors.Join(errs, err)
 	}
 
@@ -159,7 +179,7 @@ func (t *Translator) notifyExtensionServerAboutListeners(
 	if t.ExtensionManager == nil {
 		return nil
 	}
-	if (*t.ExtensionManager).GetPostXDSHookClient(egv1a1.XDSHTTPListener) == nil {
+	if postHookClient, err := (*t.ExtensionManager).GetPostXDSHookClient(egv1a1.XDSHTTPListener); postHookClient == nil && err == nil {
 		return nil
 	}
 
@@ -179,9 +199,92 @@ func (t *Translator) notifyExtensionServerAboutListeners(
 		}
 		if err := processExtensionPostListenerHook(tCtx, listener, policies, t.ExtensionManager); err != nil {
 			errs = errors.Join(errs, err)
+			// If the extension server returns an error, and the extension server is not configured to fail open,
+			// then replace all of the routes in the virtual host with a single route that returns an InternalServerError result.
+			// Setting the configuration to fail open will mean that Envoy Gateway ignores the error and keeps the routes
+			// as they were before the extension server was called.
+			if !(*t.ExtensionManager).FailOpen() {
+				errs = errors.Join(errs, clearListenerRoutes(listener))
+			}
 		}
 	}
 	return errs
+}
+
+func clearListenerRoutes(listener *listenerv3.Listener) error {
+	var errs error
+	if listener.DefaultFilterChain != nil {
+		hcm, err := findHCMinFilterChain(listener.DefaultFilterChain)
+		if err != nil {
+			// no HCM found, skip
+		} else {
+			clearAllRoutes(hcm)
+			if err := replaceHCMInFilterChain(hcm, listener.DefaultFilterChain); err != nil {
+				errs = errors.Join(errs, err)
+			}
+		}
+	}
+	for _, filter := range listener.FilterChains {
+		hcm, err := findHCMinFilterChain(filter)
+		if err != nil {
+			// no HCM found, skip
+			continue
+		}
+		clearAllRoutes(hcm)
+		if err := replaceHCMInFilterChain(hcm, filter); err != nil {
+			errs = errors.Join(errs, err)
+		}
+	}
+
+	return errs
+}
+
+func clearAllRoutes(hcm *hcmv3.HttpConnectionManager) {
+	// Discard all of the routes configured on this HCM and replace them
+	// with a single route that returns an InternalServerError result.
+	hcm.RouteSpecifier = &hcmv3.HttpConnectionManager_RouteConfig{
+		RouteConfig: &routev3.RouteConfiguration{
+			Name: "error_route_configuration",
+			VirtualHosts: []*routev3.VirtualHost{
+				{
+					Name:    "error_vhost",
+					Domains: []string{"*"},
+					Routes: []*routev3.Route{
+						{
+							Name: "error_route",
+							Match: &routev3.RouteMatch{
+								PathSpecifier: &routev3.RouteMatch_Prefix{
+									Prefix: "/",
+								},
+							},
+							Action: &routev3.Route_DirectResponse{
+								DirectResponse: buildXdsDirectResponseAction(&ir.CustomResponse{
+									StatusCode: ptr.To(uint32(http.StatusInternalServerError)),
+								}),
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+}
+
+func (t *Translator) processHTTPReadyListenerXdsTranslation(tCtx *types.ResourceVersionTable, ready *ir.ReadyListener) error {
+	// If there is no ready listener, return early.
+	// TODO: update all testcases to use the new ReadyListener field
+	if ready == nil {
+		return nil
+	}
+	l, err := buildReadyListener(ready)
+	if err != nil {
+		return err
+	}
+	err = tCtx.AddXdsResource(resourcev3.ListenerType, l)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func (t *Translator) processHTTPListenerXdsTranslation(
@@ -449,6 +552,15 @@ func (t *Translator) addRouteToRouteConfig(
 		// If no extension exists (or it doesn't subscribe to this hook) then this is a quick no-op.
 		if err = processExtensionPostRouteHook(xdsRoute, vHost, httpRoute, t.ExtensionManager); err != nil {
 			errs = errors.Join(errs, err)
+			// If the extension server returns an error, and the extension server is not configured to fail open,
+			// then replace the route with one that returns an InternalServerError result.
+			// Setting the configuration to fail open will mean that Envoy Gateway ignores the error and keeps the route
+			// as it was before the extension server was called.
+			if t.ExtensionManager != nil && !(*t.ExtensionManager).FailOpen() {
+				xdsRoute.Action = &routev3.Route_DirectResponse{DirectResponse: buildXdsDirectResponseAction(&ir.CustomResponse{
+					StatusCode: ptr.To(uint32(http.StatusInternalServerError)),
+				})}
+			}
 		}
 
 		if http3Enabled {
@@ -471,25 +583,54 @@ func (t *Translator) addRouteToRouteConfig(
 				ea.http2Settings = httpRoute.Traffic.HTTP2
 			}
 
-			if err = processXdsCluster(
-				tCtx,
-				&HTTPRouteTranslator{httpRoute},
-				ea,
-			); err != nil {
+			var err error
+			// If there are no filters in the destination settings we create
+			// a regular xds Cluster
+			if !needsClusterPerSetting(httpRoute.Destination.Settings) {
+				err = processXdsCluster(
+					tCtx,
+					httpRoute.Destination.Name,
+					httpRoute.Destination.Settings,
+					&HTTPRouteTranslator{httpRoute},
+					ea,
+				)
+				if err != nil {
+					errs = errors.Join(errs, err)
+				}
+			} else {
+				// If a filter does exist, we create a weighted cluster that's
+				// attached to the route, and create a xds Cluster per setting
+				for _, setting := range httpRoute.Destination.Settings {
+					tSettings := []*ir.DestinationSetting{setting}
+					err = processXdsCluster(
+						tCtx,
+						setting.Name,
+						tSettings,
+						&HTTPRouteTranslator{httpRoute},
+						ea)
+					if err != nil {
+						errs = errors.Join(errs, err)
+					}
+				}
+			}
+
+			if err != nil {
 				errs = errors.Join(errs, err)
 			}
 		}
 
 		if httpRoute.Mirrors != nil {
-			for _, mirrorDest := range httpRoute.Mirrors {
-				if err = addXdsCluster(tCtx, &xdsClusterArgs{
-					name:         mirrorDest.Name,
-					settings:     mirrorDest.Settings,
-					tSocket:      nil,
-					endpointType: EndpointTypeStatic,
-					metrics:      metrics,
-				}); err != nil {
-					errs = errors.Join(errs, err)
+			for _, mrr := range httpRoute.Mirrors {
+				if mrr.Destination != nil {
+					if err = addXdsCluster(tCtx, &xdsClusterArgs{
+						name:         mrr.Destination.Name,
+						settings:     mrr.Destination.Settings,
+						tSocket:      nil,
+						endpointType: EndpointTypeStatic,
+						metrics:      metrics,
+					}); err != nil {
+						errs = errors.Join(errs, err)
+					}
 				}
 			}
 		}
@@ -500,6 +641,25 @@ func (t *Translator) addRouteToRouteConfig(
 		// If no extension exists (or it doesn't subscribe to this hook) then this is a quick no-op.
 		if err = processExtensionPostVHostHook(vHost, t.ExtensionManager); err != nil {
 			errs = errors.Join(errs, err)
+			// If the extension server returns an error, and the extension server is not configured to fail open,
+			// then replace all of the virtual hosts such that accessing them returns an InternalServerError result.
+			// Setting the configuration to fail open will mean that Envoy Gateway ignores the error and keeps the routes
+			// as they were before the extension server was called.
+			if t.ExtensionManager != nil && !(*t.ExtensionManager).FailOpen() {
+				vHost.Routes = []*routev3.Route{
+					{
+						Name: "error_route",
+						Match: &routev3.RouteMatch{
+							PathSpecifier: &routev3.RouteMatch_Prefix{
+								Prefix: "/",
+							},
+						},
+						Action: &routev3.Route_DirectResponse{
+							DirectResponse: buildXdsDirectResponseAction(&ir.CustomResponse{StatusCode: ptr.To(uint32(http.StatusInternalServerError))}),
+						},
+					},
+				}
+			}
 		}
 	}
 	xdsRouteCfg.VirtualHosts = append(xdsRouteCfg.VirtualHosts, vHostList...)
@@ -521,11 +681,15 @@ func (t *Translator) addHTTPFiltersToHCM(filterChain *listenerv3.FilterChain, ht
 	if err = t.patchHCMWithFilters(hcm, httpListener); err != nil {
 		return err
 	}
+	return replaceHCMInFilterChain(hcm, filterChain)
+}
 
+func replaceHCMInFilterChain(hcm *hcmv3.HttpConnectionManager, filterChain *listenerv3.FilterChain) error {
+	var err error
 	for i, filter := range filterChain.Filters {
 		if filter.Name == wellknown.HTTPConnectionManager {
 			var mgrAny *anypb.Any
-			if mgrAny, err = protocov.ToAnyWithValidation(hcm); err != nil {
+			if mgrAny, err = proto.ToAnyWithValidation(hcm); err != nil {
 				return err
 			}
 
@@ -544,7 +708,7 @@ func findHCMinFilterChain(filterChain *listenerv3.FilterChain) (*hcmv3.HttpConne
 	for _, filter := range filterChain.Filters {
 		if filter.Name == wellknown.HTTPConnectionManager {
 			hcm := &hcmv3.HttpConnectionManager{}
-			if err := anypb.UnmarshalTo(filter.GetTypedConfig(), hcm, proto.UnmarshalOptions{}); err != nil {
+			if err := anypb.UnmarshalTo(filter.GetTypedConfig(), hcm, protobuf.UnmarshalOptions{}); err != nil {
 				return nil, err
 			}
 			return hcm, nil
@@ -599,7 +763,11 @@ func (t *Translator) processTCPListenerXdsTranslation(
 		patchProxyProtocolFilter(xdsListener, tcpListener.EnableProxyProtocol)
 
 		for _, route := range tcpListener.Routes {
-			if err := processXdsCluster(tCtx, &TCPRouteTranslator{route}, &ExtraArgs{metrics: metrics}); err != nil {
+			if err := processXdsCluster(tCtx,
+				route.Destination.Name,
+				route.Destination.Settings,
+				&TCPRouteTranslator{route},
+				&ExtraArgs{metrics: metrics}); err != nil {
 				errs = errors.Join(errs, err)
 			}
 			if route.TLS != nil && route.TLS.Terminate != nil {
@@ -686,7 +854,11 @@ func processUDPListenerXdsTranslation(
 			}
 
 			// 1:1 between IR UDPRoute and xDS Cluster
-			if err := processXdsCluster(tCtx, &UDPRouteTranslator{route}, &ExtraArgs{metrics: metrics}); err != nil {
+			if err := processXdsCluster(tCtx,
+				route.Destination.Name,
+				route.Destination.Settings,
+				&UDPRouteTranslator{route},
+				&ExtraArgs{metrics: metrics}); err != nil {
 				errs = errors.Join(errs, err)
 			}
 		}
@@ -779,8 +951,13 @@ func findXdsEndpoint(tCtx *types.ResourceVersionTable, name string) *endpointv3.
 }
 
 // processXdsCluster processes xds cluster with args per route.
-func processXdsCluster(tCtx *types.ResourceVersionTable, route clusterArgs, extras *ExtraArgs) error {
-	return addXdsCluster(tCtx, route.asClusterArgs(extras))
+func processXdsCluster(tCtx *types.ResourceVersionTable,
+	name string,
+	settings []*ir.DestinationSetting,
+	route clusterArgs,
+	extras *ExtraArgs,
+) error {
+	return addXdsCluster(tCtx, route.asClusterArgs(name, settings, extras))
 }
 
 // findXdsSecret finds a xds secret with the same name, and returns nil if there is no match.
@@ -828,12 +1005,10 @@ func addXdsCluster(tCtx *types.ResourceVersionTable, args *xdsClusterArgs) error
 	xdsEndpoints := buildXdsClusterLoadAssignment(args.name, args.settings)
 	for _, ds := range args.settings {
 		if ds.TLS != nil {
-			// Create a secret for the CA certificate only if it's not using the system trust store
-			if !ds.TLS.UseSystemTrustStore {
-				secret := buildXdsUpstreamTLSCASecret(ds.TLS)
-				if err := tCtx.AddXdsResource(resourcev3.SecretType, secret); err != nil {
-					return err
-				}
+			// Create an SDS secret for the CA certificate - either with inline bytes or with a filesystem ref
+			secret := buildXdsUpstreamTLSCASecret(ds.TLS)
+			if err := tCtx.AddXdsResource(resourcev3.SecretType, secret); err != nil {
+				return err
 			}
 		}
 	}
@@ -857,11 +1032,44 @@ const (
 	EDS
 )
 
+// defaultCertificateName is the default location of the system trust store, initialized at runtime once.
+//
+// This assumes the Envoy running in a very specific environment. For example, the default location of the system
+// trust store on Debian derivatives like the envoy-proxy image being used by the infrastructure controller.
+//
+// TODO: this might be configurable by an env var or EnvoyGateway configuration.
+var defaultCertificateName = func() string {
+	switch runtime.GOOS {
+	case "darwin":
+		// TODO: maybe automatically get the keychain cert? That might be macOS version dependent.
+		// For now, we'll just use the root cert installed by Homebrew: brew install ca-certificates.
+		//
+		// See:
+		// * https://apple.stackexchange.com/questions/226375/where-are-the-root-cas-stored-on-os-x
+		// * https://superuser.com/questions/992167/where-are-digital-certificates-physically-stored-on-a-mac-os-x-machine
+		return "/opt/homebrew/etc/ca-certificates/cert.pem"
+	default:
+		// This is the default location for the system trust store
+		// on Debian derivatives like the envoy-proxy image being used by the infrastructure
+		// controller.
+		// See https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/security/ssl
+		return "/etc/ssl/certs/ca-certificates.crt"
+	}
+}()
+
 func buildXdsUpstreamTLSCASecret(tlsConfig *ir.TLSUpstreamConfig) *tlsv3.Secret {
 	// Build the tls secret
-	// It's just a sanity check, we shouldn't call this function if the system trust store is used
 	if tlsConfig.UseSystemTrustStore {
-		return nil
+		return &tlsv3.Secret{
+			Name: tlsConfig.CACertificate.Name,
+			Type: &tlsv3.Secret_ValidationContext{
+				ValidationContext: &tlsv3.CertificateValidationContext{
+					TrustedCa: &corev3.DataSource{
+						Specifier: &corev3.DataSource_Filename{Filename: defaultCertificateName},
+					},
+				},
+			},
+		}
 	}
 	return &tlsv3.Secret{
 		Name: tlsConfig.CACertificate.Name,
@@ -876,24 +1084,16 @@ func buildXdsUpstreamTLSCASecret(tlsConfig *ir.TLSUpstreamConfig) *tlsv3.Secret 
 }
 
 func buildXdsUpstreamTLSSocketWthCert(tlsConfig *ir.TLSUpstreamConfig) (*corev3.TransportSocket, error) {
-	var tlsCtx *tlsv3.UpstreamTlsContext
-	if tlsConfig.UseSystemTrustStore {
-		tlsCtx = &tlsv3.UpstreamTlsContext{
-			CommonTlsContext: &tlsv3.CommonTlsContext{
-				TlsCertificates: nil,
-				ValidationContextType: &tlsv3.CommonTlsContext_ValidationContext{
-					ValidationContext: &tlsv3.CertificateValidationContext{
-						TrustedCa: &corev3.DataSource{
-							Specifier: &corev3.DataSource_Filename{
-								// This is the default location for the system trust store
-								// on Debian derivatives like the envoy-proxy image being used by the infrastructure
-								// controller.
-								// See https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/security/ssl
-								// TODO: allow customizing this value via EnvoyGateway so that if a non-standard
-								// envoy image is being used, this can be modified to match
-								Filename: "/etc/ssl/certs/ca-certificates.crt",
-							},
-						},
+	tlsCtx := &tlsv3.UpstreamTlsContext{
+		CommonTlsContext: &tlsv3.CommonTlsContext{
+			TlsCertificateSdsSecretConfigs: nil,
+			ValidationContextType: &tlsv3.CommonTlsContext_CombinedValidationContext{
+				CombinedValidationContext: &tlsv3.CommonTlsContext_CombinedCertificateValidationContext{
+					ValidationContextSdsSecretConfig: &tlsv3.SdsSecretConfig{
+						Name:      tlsConfig.CACertificate.Name,
+						SdsConfig: makeConfigSource(),
+					},
+					DefaultValidationContext: &tlsv3.CertificateValidationContext{
 						MatchTypedSubjectAltNames: []*tlsv3.SubjectAltNameMatcher{
 							{
 								SanType: tlsv3.SubjectAltNameMatcher_DNS,
@@ -907,35 +1107,8 @@ func buildXdsUpstreamTLSSocketWthCert(tlsConfig *ir.TLSUpstreamConfig) (*corev3.
 					},
 				},
 			},
-			Sni: tlsConfig.SNI,
-		}
-	} else {
-		tlsCtx = &tlsv3.UpstreamTlsContext{
-			CommonTlsContext: &tlsv3.CommonTlsContext{
-				TlsCertificateSdsSecretConfigs: nil,
-				ValidationContextType: &tlsv3.CommonTlsContext_CombinedValidationContext{
-					CombinedValidationContext: &tlsv3.CommonTlsContext_CombinedCertificateValidationContext{
-						ValidationContextSdsSecretConfig: &tlsv3.SdsSecretConfig{
-							Name:      tlsConfig.CACertificate.Name,
-							SdsConfig: makeConfigSource(),
-						},
-						DefaultValidationContext: &tlsv3.CertificateValidationContext{
-							MatchTypedSubjectAltNames: []*tlsv3.SubjectAltNameMatcher{
-								{
-									SanType: tlsv3.SubjectAltNameMatcher_DNS,
-									Matcher: &matcherv3.StringMatcher{
-										MatchPattern: &matcherv3.StringMatcher_Exact{
-											Exact: tlsConfig.SNI,
-										},
-									},
-								},
-							},
-						},
-					},
-				},
-			},
-			Sni: tlsConfig.SNI,
-		}
+		},
+		Sni: tlsConfig.SNI,
 	}
 
 	tlsParams := buildTLSParams(&tlsConfig.TLSConfig)
@@ -958,7 +1131,7 @@ func buildXdsUpstreamTLSSocketWthCert(tlsConfig *ir.TLSUpstreamConfig) (*corev3.
 		}
 	}
 
-	tlsCtxAny, err := protocov.ToAnyWithValidation(tlsCtx)
+	tlsCtxAny, err := proto.ToAnyWithValidation(tlsCtx)
 	if err != nil {
 		return nil, err
 	}

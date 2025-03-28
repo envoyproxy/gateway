@@ -179,5 +179,79 @@ var BasicAuthTest = suite.ConformanceTest{
 
 			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
 		})
+
+		// This test is to ensure that the BasicAuth filter is not applied to routes that under the same gateway but
+		// do not have the BasicAuth policy applied.
+		t.Run("request to an HTTP route without BasicAuth", func(t *testing.T) {
+			ns := "gateway-conformance-infra"
+			routeNN := types.NamespacedName{Name: "http-no-basic-auth", Namespace: ns}
+			gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
+			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
+
+			ancestorRef := gwapiv1a2.ParentReference{
+				Group:     gatewayapi.GroupPtr(gwapiv1.GroupName),
+				Kind:      gatewayapi.KindPtr(resource.KindGateway),
+				Namespace: gatewayapi.NamespacePtr(gwNN.Namespace),
+				Name:      gwapiv1.ObjectName(gwNN.Name),
+			}
+			SecurityPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "basic-auth-1", Namespace: ns}, suite.ControllerName, ancestorRef)
+			SecurityPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "basic-auth-2", Namespace: ns}, suite.ControllerName, ancestorRef)
+
+			expectedResponse := http.ExpectedResponse{
+				Request: http.Request{
+					Path: "/no-basic-auth",
+				},
+				Response: http.Response{
+					StatusCode: 200,
+				},
+				Namespace: ns,
+			}
+
+			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
+		})
+
+		// This test verifies that when a user successfully authenticates using BasicAuth,
+		// their username is forwarded to the backend as a request header.
+		// The SecurityPolicy "basic-auth-3" is configured with the field "forwardUsernameHeader" set to "X-Authenticated-User".
+		// The request uses valid credentials, and the test ensures that the response contains
+		// the expected status code (200) and includes the "X-Authenticated-User" header with the correct username.
+		t.Run("username forwarded as header", func(t *testing.T) {
+			ns := "gateway-conformance-infra"
+			routeNN := types.NamespacedName{Name: "http-with-basic-auth-3", Namespace: ns}
+			gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
+			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
+
+			ancestorRef := gwapiv1a2.ParentReference{
+				Group:     gatewayapi.GroupPtr(gwapiv1.GroupName),
+				Kind:      gatewayapi.KindPtr(resource.KindGateway),
+				Namespace: gatewayapi.NamespacePtr(gwNN.Namespace),
+				Name:      gwapiv1.ObjectName(gwNN.Name),
+			}
+			SecurityPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "basic-auth-3", Namespace: ns}, suite.ControllerName, ancestorRef)
+
+			expectedResponse := http.ExpectedResponse{
+				Request: http.Request{
+					Path: "/basic-auth-3",
+					Headers: map[string]string{
+						"Authorization": "Basic dXNlcjQ6dGVzdDQ=", // user4:test4
+					},
+				},
+				// Verify that the http header X-Authenticated-User added before sending it to the backend
+				ExpectedRequest: &http.ExpectedRequest{
+					Request: http.Request{
+						Path: "/basic-auth-3",
+						Headers: map[string]string{
+							"X-Authenticated-User": "user4",
+						},
+					},
+				},
+				Response: http.Response{
+					StatusCode: 200,
+				},
+				Namespace: ns,
+			}
+
+			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
+		})
 	},
 }

@@ -15,6 +15,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	appsv1 "k8s.io/api/apps/v1"
+	autoscalingv2 "k8s.io/api/autoscaling/v2"
 	corev1 "k8s.io/api/core/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -88,7 +89,7 @@ func TestRateLimitLabels(t *testing.T) {
 }
 
 func TestServiceAccount(t *testing.T) {
-	cfg, err := config.New()
+	cfg, err := config.New(os.Stdout)
 	require.NoError(t, err)
 
 	cfg.EnvoyGateway.RateLimit = &egv1a1.RateLimit{
@@ -121,7 +122,7 @@ func loadServiceAccount() (*corev1.ServiceAccount, error) {
 }
 
 func TestService(t *testing.T) {
-	cfg, err := config.New()
+	cfg, err := config.New(os.Stdout)
 	require.NoError(t, err)
 
 	cases := []struct {
@@ -184,7 +185,7 @@ func loadService(caseName string) (*corev1.Service, error) {
 }
 
 func TestConfigmap(t *testing.T) {
-	cfg, err := config.New()
+	cfg, err := config.New(os.Stdout)
 	require.NoError(t, err)
 
 	cfg.EnvoyGateway.RateLimit = &egv1a1.RateLimit{
@@ -225,7 +226,7 @@ func loadConfigmap() (*corev1.ConfigMap, error) {
 }
 
 func TestDeployment(t *testing.T) {
-	cfg, err := config.New()
+	cfg, err := config.New(os.Stdout)
 	require.NoError(t, err)
 	rateLimit := &egv1a1.RateLimit{
 		Backend: egv1a1.RateLimitDatabaseBackend{
@@ -271,7 +272,38 @@ func TestDeployment(t *testing.T) {
 				Patch: &egv1a1.KubernetesPatchSpec{
 					Type: ptr.To(egv1a1.StrategicMerge),
 					Value: apiextensionsv1.JSON{
-						Raw: []byte("{\"spec\":{\"template\":{\"spec\":{\"hostNetwork\":true,\"dnsPolicy\":\"ClusterFirstWithHostNet\"}}}}"),
+						Raw: []byte(`{"spec":{"template":{"spec":{"hostNetwork":true,"dnsPolicy":"ClusterFirstWithHostNet"}}}}`),
+					},
+				},
+			},
+		},
+		{
+			caseName:  "patch-deployment-containers",
+			rateLimit: rateLimit,
+			deploy: &egv1a1.KubernetesDeploymentSpec{
+				Patch: &egv1a1.KubernetesPatchSpec{
+					Type: ptr.To(egv1a1.StrategicMerge),
+					Value: apiextensionsv1.JSON{
+						Raw: []byte(`{
+    "spec": {
+        "template": {
+            "spec": {
+                "containers": [
+                    {
+                        "name": "envoy-ratelimit",
+                        "imagePullPolicy": "Always",
+                        "env": [
+                            {
+                                "name": "REDIS_TYPE",
+                                "value": "sentinel"
+                            }
+                        ]
+                    }
+                ]
+            }
+        }
+    }
+}`),
 					},
 				},
 			},
@@ -763,6 +795,123 @@ func loadDeployment(caseName string) (*appsv1.Deployment, error) {
 	deployment := &appsv1.Deployment{}
 	_ = yaml.Unmarshal(deploymentYAML, deployment)
 	return deployment, nil
+}
+
+func TestHorizontalPodAutoscaler(t *testing.T) {
+	cfg, err := config.New(os.Stdout)
+	require.NoError(t, err)
+	cases := []struct {
+		caseName            string
+		rateLimit           *egv1a1.RateLimit
+		rateLimitHpa        *egv1a1.KubernetesHorizontalPodAutoscalerSpec
+		rateLimitDeployment *egv1a1.KubernetesDeploymentSpec
+	}{
+		{
+			caseName: "default",
+			rateLimit: &egv1a1.RateLimit{
+				Backend: egv1a1.RateLimitDatabaseBackend{
+					Type: egv1a1.RedisBackendType,
+					Redis: &egv1a1.RateLimitRedisSettings{
+						URL: "redis.redis.svc:6379",
+					},
+				},
+			},
+			rateLimitHpa: &egv1a1.KubernetesHorizontalPodAutoscalerSpec{},
+		},
+		{
+			caseName: "custom",
+			rateLimit: &egv1a1.RateLimit{
+				Backend: egv1a1.RateLimitDatabaseBackend{
+					Type: egv1a1.RedisBackendType,
+					Redis: &egv1a1.RateLimitRedisSettings{
+						URL: "redis.redis.svc:6379",
+					},
+				},
+			},
+			rateLimitHpa: &egv1a1.KubernetesHorizontalPodAutoscalerSpec{
+				MinReplicas: ptr.To[int32](5),
+				MaxReplicas: ptr.To[int32](10),
+				Metrics: []autoscalingv2.MetricSpec{
+					{
+						Resource: &autoscalingv2.ResourceMetricSource{
+							Name: corev1.ResourceCPU,
+							Target: autoscalingv2.MetricTarget{
+								Type:               autoscalingv2.UtilizationMetricType,
+								AverageUtilization: ptr.To[int32](60),
+							},
+						},
+						Type: autoscalingv2.ResourceMetricSourceType,
+					},
+					{
+						Resource: &autoscalingv2.ResourceMetricSource{
+							Name: corev1.ResourceMemory,
+							Target: autoscalingv2.MetricTarget{
+								Type:               autoscalingv2.UtilizationMetricType,
+								AverageUtilization: ptr.To[int32](70),
+							},
+						},
+						Type: autoscalingv2.ResourceMetricSourceType,
+					},
+				},
+			},
+		},
+		{
+			caseName: "with-deployment-name",
+			rateLimit: &egv1a1.RateLimit{
+				Backend: egv1a1.RateLimitDatabaseBackend{
+					Type: egv1a1.RedisBackendType,
+					Redis: &egv1a1.RateLimitRedisSettings{
+						URL: "redis.redis.svc:6379",
+					},
+				},
+			},
+			rateLimitHpa: &egv1a1.KubernetesHorizontalPodAutoscalerSpec{},
+			rateLimitDeployment: &egv1a1.KubernetesDeploymentSpec{
+				Name: ptr.To("foo"),
+			},
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.caseName, func(t *testing.T) {
+			cfg.EnvoyGateway.RateLimit = tc.rateLimit
+
+			cfg.EnvoyGateway.Provider = &egv1a1.EnvoyGatewayProvider{
+				Type: egv1a1.ProviderTypeKubernetes,
+				Kubernetes: &egv1a1.EnvoyGatewayKubernetesProvider{
+					RateLimitHpa:        tc.rateLimitHpa,
+					RateLimitDeployment: tc.rateLimitDeployment,
+				},
+			}
+			r := NewResourceRender(cfg.Namespace, cfg.EnvoyGateway, ownerReferenceUID)
+			hpa, err := r.HorizontalPodAutoscaler()
+			require.NoError(t, err)
+
+			if *overrideTestData {
+				hpaYAML, err := yaml.Marshal(hpa)
+				require.NoError(t, err)
+				// nolint:gosec
+				err = os.WriteFile(fmt.Sprintf("testdata/hpa/%s.yaml", tc.caseName), hpaYAML, 0o644)
+				require.NoError(t, err)
+				return
+			}
+
+			expected, err := loadHpa(tc.caseName)
+			require.NoError(t, err)
+
+			assert.Equal(t, expected, hpa)
+		})
+	}
+}
+
+func loadHpa(caseName string) (*autoscalingv2.HorizontalPodAutoscaler, error) {
+	hpaYAML, err := os.ReadFile(fmt.Sprintf("testdata/hpa/%s.yaml", caseName))
+	if err != nil {
+		return nil, err
+	}
+
+	hpa := &autoscalingv2.HorizontalPodAutoscaler{}
+	_ = yaml.Unmarshal(hpaYAML, hpa)
+	return hpa, nil
 }
 
 func TestGetServiceURL(t *testing.T) {

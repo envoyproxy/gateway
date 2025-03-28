@@ -51,6 +51,15 @@ type GlobalRateLimit struct {
 	//
 	// +kubebuilder:validation:MaxItems=64
 	Rules []RateLimitRule `json:"rules"`
+
+	// Shared determines whether the rate limit rules apply across all the policy targets.
+	// If set to true, the rule is treated as a common bucket and is shared across all policy targets (xRoutes).
+	// Default: false.
+	//
+	// +optional
+	// +notImplementedHide
+	// +kubebuilder:default=false
+	Shared *bool `json:"shared,omitempty"`
 }
 
 // LocalRateLimit defines local rate limit configuration.
@@ -62,6 +71,7 @@ type LocalRateLimit struct {
 	//
 	// +optional
 	// +kubebuilder:validation:MaxItems=16
+	// +kubebuilder:validation:XValidation:rule="self.all(foo, !has(foo.cost) || !has(foo.cost.response))", message="response cost is not supported for Local Rate Limits"
 	Rules []RateLimitRule `json:"rules"`
 }
 
@@ -91,6 +101,86 @@ type RateLimitRule struct {
 	// 429 HTTP status code is sent back to the client when
 	// the selected requests have reached the limit.
 	Limit RateLimitValue `json:"limit"`
+	// Cost specifies the cost of requests and responses for the rule.
+	//
+	// This is optional and if not specified, the default behavior is to reduce the rate limit counters by 1 on
+	// the request path and do not reduce the rate limit counters on the response path.
+	//
+	// +optional
+	Cost *RateLimitCost `json:"cost,omitempty"`
+}
+
+type RateLimitCost struct {
+	// Request specifies the number to reduce the rate limit counters
+	// on the request path. If this is not specified, the default behavior
+	// is to reduce the rate limit counters by 1.
+	//
+	// When Envoy receives a request that matches the rule, it tries to reduce the
+	// rate limit counters by the specified number. If the counter doesn't have
+	// enough capacity, the request is rate limited.
+	//
+	// +optional
+	Request *RateLimitCostSpecifier `json:"request,omitempty"`
+	// Response specifies the number to reduce the rate limit counters
+	// after the response is sent back to the client or the request stream is closed.
+	//
+	// The cost is used to reduce the rate limit counters for the matching requests.
+	// Since the reduction happens after the request stream is complete, the rate limit
+	// won't be enforced for the current request, but for the subsequent matching requests.
+	//
+	// This is optional and if not specified, the rate limit counters are not reduced
+	// on the response path.
+	//
+	// Currently, this is only supported for HTTP Global Rate Limits.
+	//
+	// +optional
+	Response *RateLimitCostSpecifier `json:"response,omitempty"`
+}
+
+// RateLimitCostSpecifier specifies where the Envoy retrieves the number to reduce the rate limit counters.
+//
+// +kubebuilder:validation:XValidation:rule="!(has(self.number) && has(self.metadata))",message="only one of number or metadata can be specified"
+type RateLimitCostSpecifier struct {
+	// From specifies where to get the rate limit cost. Currently, only "Number" and "Metadata" are supported.
+	//
+	// +kubebuilder:validation:Required
+	From RateLimitCostFrom `json:"from"`
+	// Number specifies the fixed usage number to reduce the rate limit counters.
+	// Using zero can be used to only check the rate limit counters without reducing them.
+	//
+	// +optional
+	Number *uint64 `json:"number,omitempty"`
+	// Metadata specifies the per-request metadata to retrieve the usage number from.
+	//
+	// +optional
+	Metadata *RateLimitCostMetadata `json:"metadata,omitempty"`
+}
+
+// RateLimitCostFrom specifies the source of the rate limit cost.
+// Valid RateLimitCostType values are "Number" and "Metadata".
+//
+// +kubebuilder:validation:Enum=Number;Metadata
+type RateLimitCostFrom string
+
+const (
+	// RateLimitCostFromNumber specifies the rate limit cost to be a fixed number.
+	RateLimitCostFromNumber RateLimitCostFrom = "Number"
+	// RateLimitCostFromMetadata specifies the rate limit cost to be retrieved from the per-request dynamic metadata.
+	RateLimitCostFromMetadata RateLimitCostFrom = "Metadata"
+	// TODO: add headers, etc. Anything that can be represented in "Format" can be added here.
+	// 	https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#config-access-log-format
+)
+
+// RateLimitCostMetadata specifies the filter metadata to retrieve the usage number from.
+type RateLimitCostMetadata struct {
+	// Namespace is the namespace of the dynamic metadata.
+	//
+	// +kubebuilder:validation:Required
+	Namespace string `json:"namespace"`
+	// Key is the key to retrieve the usage number from the filter metadata.
+	//
+	// +kubebuilder:validation:Required
+	Key string `json:"key"`
 }
 
 // RateLimitSelectCondition specifies the attributes within the traffic flow that can
@@ -121,7 +211,6 @@ const (
 	SourceMatchExact SourceMatchType = "Exact"
 	// SourceMatchDistinct Each IP Address within the specified Source IP CIDR is treated as a distinct client selector
 	// and uses a separate rate limit bucket/counter.
-	// Note: This is only supported for Global Rate Limits.
 	SourceMatchDistinct SourceMatchType = "Distinct"
 )
 
@@ -139,7 +228,7 @@ type SourceMatch struct {
 }
 
 // HeaderMatch defines the match attributes within the HTTP Headers of the request.
-type HeaderMatch struct { // TODO: zhaohuabing this type could be replaced with a general purpose StringMatch type.
+type HeaderMatch struct {
 	// Type specifies how to match against the value of the header.
 	//
 	// +optional
@@ -147,12 +236,14 @@ type HeaderMatch struct { // TODO: zhaohuabing this type could be replaced with 
 	Type *HeaderMatchType `json:"type,omitempty"`
 
 	// Name of the HTTP header.
+	// The header name is case-insensitive unless PreserveHeaderCase is set to true.
+	// For example, "Foo" and "foo" are considered the same header.
+	//
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=256
 	Name string `json:"name"`
 
-	// Value within the HTTP header. Due to the
-	// case-insensitivity of header names, "foo" and "Foo" are considered equivalent.
+	// Value within the HTTP header.
 	// Do not set this field when Type="Distinct", implying matching on any/all unique
 	// values within the header.
 	//
@@ -187,7 +278,6 @@ const (
 	// HeaderMatchDistinct matches any and all possible unique values encountered in the
 	// specified HTTP Header. Note that each unique value will receive its own rate limit
 	// bucket.
-	// Note: This is only supported for Global Rate Limits.
 	HeaderMatchDistinct HeaderMatchType = "Distinct"
 )
 

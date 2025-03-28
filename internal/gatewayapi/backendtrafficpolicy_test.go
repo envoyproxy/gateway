@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"k8s.io/utils/ptr"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/ir"
@@ -104,6 +105,84 @@ func TestMakeIrTriggerSet(t *testing.T) {
 			if got := makeIrTriggerSet(tt.in); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("makeIrTriggerSet() = %v, want %v", got, tt.want)
 			}
+		})
+	}
+}
+
+func Test_translateRateLimitCost(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		cost *egv1a1.RateLimitCostSpecifier
+		exp  *ir.RateLimitCost
+	}{
+		{
+			name: "number",
+			cost: &egv1a1.RateLimitCostSpecifier{Number: ptr.To[uint64](1)},
+			exp:  &ir.RateLimitCost{Number: ptr.To[uint64](1)},
+		},
+		{
+			name: "metadata",
+			cost: &egv1a1.RateLimitCostSpecifier{Metadata: &egv1a1.RateLimitCostMetadata{Namespace: "something.com", Key: "name"}},
+			exp:  &ir.RateLimitCost{Format: ptr.To(`%DYNAMIC_METADATA(something.com:name)%`)},
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			act := translateRateLimitCost(tc.cost)
+			require.Equal(t, tc.exp, act)
+		})
+	}
+}
+
+func TestBuildHTTPProtocolUpgradeConfig(t *testing.T) {
+	cases := []struct {
+		name     string
+		cfgs     []*egv1a1.ProtocolUpgradeConfig
+		expected []string
+	}{
+		{
+			name:     "empty",
+			cfgs:     nil,
+			expected: nil,
+		},
+		{
+			name: "spdy",
+			cfgs: []*egv1a1.ProtocolUpgradeConfig{
+				{
+					Type: "spdy/3.1",
+				},
+			},
+			expected: []string{"spdy/3.1"},
+		},
+		{
+			name: "websockets-spdy",
+			cfgs: []*egv1a1.ProtocolUpgradeConfig{
+				{
+					Type: "websockets",
+				},
+				{
+					Type: "spdy/3.1",
+				},
+			},
+			expected: []string{"websockets", "spdy/3.1"},
+		},
+		{
+			name: "spdy-websockets",
+			cfgs: []*egv1a1.ProtocolUpgradeConfig{
+				{
+					Type: "spdy/3.1",
+				},
+				{
+					Type: "websockets",
+				},
+			},
+			expected: []string{"spdy/3.1", "websockets"},
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			got := buildHTTPProtocolUpgradeConfig(tc.cfgs)
+			require.Equal(t, tc.expected, got)
 		})
 	}
 }

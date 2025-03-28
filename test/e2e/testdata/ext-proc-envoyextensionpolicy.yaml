@@ -16,6 +16,12 @@ spec:
     backendRefs:
     - name: infra-backend-v1
       port: 8080
+    filters:
+    - type: RequestHeaderModifier
+      requestHeaderModifier:
+        add:
+        - name: "x-request-from-ext-proc-metadata"
+          value: '%DYNAMIC_METADATA(io.envoyproxy.gateway.e2e:ext-proc-emitted-metadata)%'
 ---
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
@@ -57,6 +63,25 @@ spec:
       response:
         attributes:
         - xds.route_name
+    metadata:
+      accessibleNamespaces:
+      - io.envoyproxy.gateway.e2e
+      - envoy.filters.http.rbac
+      writableNamespaces:
+      - io.envoyproxy.gateway.e2e
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: SecurityPolicy
+metadata:
+  name: authorization-client-ip
+  namespace: gateway-conformance-infra
+spec:
+  targetRefs:
+  - group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: http-with-ext-proc
+  authorization:
+    defaultAction: Allow
 ---
 apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: EnvoyExtensionPolicy

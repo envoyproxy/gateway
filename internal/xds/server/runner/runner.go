@@ -21,6 +21,7 @@ import (
 	runtimev3 "github.com/envoyproxy/go-control-plane/envoy/service/runtime/v3"
 	secretv3 "github.com/envoyproxy/go-control-plane/envoy/service/secret/v3"
 	serverv3 "github.com/envoyproxy/go-control-plane/pkg/server/v3"
+	"github.com/telepresenceio/watchable"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/keepalive"
@@ -75,6 +76,9 @@ func (r *Runner) Name() string {
 	return string(egv1a1.LogComponentXdsServerRunner)
 }
 
+// Close implements Runner interface.
+func (r *Runner) Close() error { return nil }
+
 // Start starts the xds-server runner
 func (r *Runner) Start(ctx context.Context) (err error) {
 	r.Logger = r.Logger.WithName(r.Name()).WithValues("runner", r.Name())
@@ -100,7 +104,10 @@ func (r *Runner) Start(ctx context.Context) (err error) {
 	go r.serveXdsServer(ctx)
 
 	// Start message Subscription.
-	go r.subscribeAndTranslate(ctx)
+	// Do not call .Subscribe() inside Goroutine since it is supposed to be called from the same
+	// Goroutine where Close() is called.
+	xdsSubCh := r.Xds.Subscribe(ctx)
+	go r.subscribeAndTranslate(xdsSubCh)
 	r.Logger.Info("started")
 	return
 }
@@ -141,9 +148,8 @@ func registerServer(srv serverv3.Server, g *grpc.Server) {
 	runtimev3.RegisterRuntimeDiscoveryServiceServer(g, srv)
 }
 
-func (r *Runner) subscribeAndTranslate(ctx context.Context) {
-	// Subscribe to resources
-	message.HandleSubscription(message.Metadata{Runner: string(egv1a1.LogComponentXdsServerRunner), Message: "xds"}, r.Xds.Subscribe(ctx),
+func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *xdstypes.ResourceVersionTable]) {
+	message.HandleSubscription(message.Metadata{Runner: string(egv1a1.LogComponentXdsServerRunner), Message: "xds"}, sub,
 		func(update message.Update[string, *xdstypes.ResourceVersionTable], errChan chan error) {
 			key := update.Key
 			val := update.Value

@@ -92,16 +92,14 @@ tcpRoutes:
     parents:
     - conditions:
       - lastTransitionTime: null
-        message: 'backend reference validation failed: backend is not supported for
-          route kind: TCPRoute'
-        reason: Failed to process the settings associated with the TCP route.
-        status: "False"
+        message: Route is accepted
+        reason: Accepted
+        status: "True"
         type: Accepted
       - lastTransitionTime: null
-        message: Resource default/backend-ip of type Backend is not supported for
-          TCPRoute routes
-        reason: UnsupportedValue
-        status: "False"
+        message: Resolved all the Object references for the Route
+        reason: ResolvedRefs
+        status: "True"
         type: ResolvedRefs
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
@@ -110,9 +108,26 @@ tcpRoutes:
 xdsIR:
   envoy-gateway/gateway-1:
     accessLog:
-      text:
+      json:
       - path: /dev/stdout
+    readyListener:
+      address: 0.0.0.0
+      ipFamily: IPv4
+      path: /ready
+      port: 19003
     tcp:
     - address: 0.0.0.0
       name: envoy-gateway/gateway-1/tcp
       port: 10090
+      routes:
+      - destination:
+          name: tcproute/default/tcproute-1/rule/-1
+          settings:
+          - addressType: IP
+            endpoints:
+            - host: 1.1.1.1
+              port: 3001
+            name: tcproute/default/tcproute-1/rule/-1/backend/0
+            protocol: TCP
+            weight: 1
+        name: tcproute/default/tcproute-1

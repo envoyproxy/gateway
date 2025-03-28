@@ -35,11 +35,12 @@ metadata:
   name: otel-collector
   namespace: monitoring
   labels:
-    helm.sh/chart: opentelemetry-collector-0.108.0
+    helm.sh/chart: opentelemetry-collector-0.117.3
     app.kubernetes.io/name: opentelemetry-collector
     app.kubernetes.io/instance: gateway-addons-helm
-    app.kubernetes.io/version: "0.111.0"
+    app.kubernetes.io/version: "0.120.0"
     app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/component: standalone-collector
 ---
 # Source: gateway-addons-helm/charts/prometheus/templates/serviceaccount.yaml
 apiVersion: v1
@@ -266,12 +267,12 @@ metadata:
   name: otel-collector
   namespace: monitoring
   labels:
-    helm.sh/chart: opentelemetry-collector-0.108.0
+    helm.sh/chart: opentelemetry-collector-0.117.3
     app.kubernetes.io/name: opentelemetry-collector
     app.kubernetes.io/instance: gateway-addons-helm
-    app.kubernetes.io/version: "0.111.0"
+    app.kubernetes.io/version: "0.120.0"
     app.kubernetes.io/managed-by: Helm
-    
+    app.kubernetes.io/component: standalone-collector
 data:
   relay: |
     exporters:
@@ -302,6 +303,8 @@ data:
     receivers:
       datadog:
         endpoint: '[${env:MY_POD_IP}]:8126'
+      envoyals:
+        endpoint: '[${env:MY_POD_IP}]:9000'
       jaeger:
         protocols:
           grpc:
@@ -337,6 +340,7 @@ data:
           - attributes
           receivers:
           - otlp
+          - envoyals
         metrics:
           exporters:
           - prometheus
@@ -358,7 +362,13 @@ data:
           - zipkin
       telemetry:
         metrics:
-          address: '[${env:MY_POD_IP}]:8888'
+          level: none
+          readers:
+          - pull:
+              exporter:
+                prometheus:
+                  host: localhost
+                  port: 8888
 ---
 # Source: gateway-addons-helm/charts/prometheus/templates/cm.yaml
 apiVersion: v1
@@ -2848,6 +2858,81 @@ data:
             "panels": [],
             "title": "Status Updater",
             "type": "row"
+          },
+          {
+            "datasource": {
+              "type": "prometheus",
+              "uid": "$datasource"
+            },
+            "description": "Total number of panics recovered in the system.",
+            "fieldConfig": {
+              "defaults": {
+                "color": {
+                  "mode": "palette-classic"
+                },
+                "mappings": [],
+                "thresholds": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "green",
+                      "value": null
+                    },
+                    {
+                      "color": "red",
+                      "value": 80
+                    }
+                  ]
+                },
+                "unit": "none"
+              },
+              "overrides": []
+            },
+            "gridPos": {
+              "h": 7,
+              "w": 7,
+              "x": 0,
+              "y": 8
+            },
+            "id": 25,
+            "options": {
+              "colorMode": "value",
+              "graphMode": "none",
+              "justifyMode": "auto",
+              "orientation": "auto",
+              "reduceOptions": {
+                "calcs": [
+                  "lastNotNull"
+                ],
+                "fields": "",
+                "values": false
+              },
+              "showPercentChange": false,
+              "textMode": "value_and_name",
+              "wideLayout": false
+            },
+            "pluginVersion": "11.0.0",
+            "repeatDirection": "v",
+            "targets": [
+              {
+                "datasource": {
+                  "type": "prometheus",
+                  "uid": "$datasource"
+                },
+                "disableTextWrap": false,
+                "editorMode": "builder",
+                "expr": "sum(watchable_panics_recovered_total{namespace=\"$Namespace\"})",
+                "fullMetaSearch": false,
+                "includeNullMetadata": true,
+                "instant": false,
+                "legendFormat": "Recovered Panics",
+                "range": true,
+                "refId": "A",
+                "useBackend": false
+              }
+            ],
+            "title": "Recovered Panics",
+            "type": "stat"
           },
           {
             "datasource": {
@@ -9651,17 +9736,22 @@ metadata:
   name: otel-collector
   namespace: monitoring
   labels:
-    helm.sh/chart: opentelemetry-collector-0.108.0
+    helm.sh/chart: opentelemetry-collector-0.117.3
     app.kubernetes.io/name: opentelemetry-collector
     app.kubernetes.io/instance: gateway-addons-helm
-    app.kubernetes.io/version: "0.111.0"
+    app.kubernetes.io/version: "0.120.0"
     app.kubernetes.io/managed-by: Helm
-    
+    app.kubernetes.io/component: standalone-collector
     component: standalone-collector
 spec:
   type: ClusterIP
   ports:
     
+    - name: envoy-als
+      port: 9000
+      targetPort: 9000
+      protocol: TCP
+      appProtocol: grpc
     - name: jaeger-compact
       port: 6831
       targetPort: 6831
@@ -9866,12 +9956,12 @@ metadata:
   name: otel-collector
   namespace: monitoring
   labels:
-    helm.sh/chart: opentelemetry-collector-0.108.0
+    helm.sh/chart: opentelemetry-collector-0.117.3
     app.kubernetes.io/name: opentelemetry-collector
     app.kubernetes.io/instance: gateway-addons-helm
-    app.kubernetes.io/version: "0.111.0"
+    app.kubernetes.io/version: "0.120.0"
     app.kubernetes.io/managed-by: Helm
-    
+    app.kubernetes.io/component: standalone-collector
 spec:
   replicas: 1
   revisionHistoryLimit: 10
@@ -9885,7 +9975,7 @@ spec:
   template:
     metadata:
       annotations:
-        checksum/config: 77c11cf41a890ec6a75a644880450d53887eca3e37511c3139cf0b3e8ebbe1ee
+        checksum/config: 53f3948607b26e83438039b1f256f0aece7134365837af7b12fc6e34b0844dc1
         
       labels:
         app.kubernetes.io/name: opentelemetry-collector
@@ -9903,10 +9993,13 @@ spec:
             - --config=/conf/relay.yaml
           securityContext:
             {}
-          image: "otel/opentelemetry-collector-contrib:0.111.0"
+          image: "otel/opentelemetry-collector-contrib:0.121.0"
           imagePullPolicy: IfNotPresent
           ports:
             
+            - name: envoy-als
+              containerPort: 9000
+              protocol: TCP
             - name: jaeger-compact
               containerPort: 6831
               protocol: UDP

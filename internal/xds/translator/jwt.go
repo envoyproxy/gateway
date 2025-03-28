@@ -22,7 +22,7 @@ import (
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/ir"
-	"github.com/envoyproxy/gateway/internal/utils/protocov"
+	"github.com/envoyproxy/gateway/internal/utils/proto"
 	"github.com/envoyproxy/gateway/internal/xds/types"
 )
 
@@ -77,7 +77,7 @@ func buildHCMJWTFilter(irListener *ir.HTTPListener) (*hcmv3.HttpFilter, error) {
 		return nil, err
 	}
 
-	jwtAuthnAny, err := protocov.ToAnyWithValidation(jwtAuthnProto)
+	jwtAuthnAny, err := proto.ToAnyWithValidation(jwtAuthnProto)
 	if err != nil {
 		return nil, err
 	}
@@ -102,11 +102,21 @@ func buildJWTAuthn(irListener *ir.HTTPListener) (*jwtauthnv3.JwtAuthentication, 
 
 		var reqs []*jwtauthnv3.JwtRequirement
 		for i := range route.Security.JWT.Providers {
-			irProvider := route.Security.JWT.Providers[i]
-			// Create the cluster for the remote jwks, if it doesn't exist.
-			jwksCluster, err := url2Cluster(irProvider.RemoteJWKS.URI)
-			if err != nil {
-				return nil, err
+			var (
+				irProvider  = route.Security.JWT.Providers[i]
+				jwks        = irProvider.RemoteJWKS
+				jwksCluster string
+				err         error
+			)
+
+			if jwks.Destination != nil && len(jwks.Destination.Settings) > 0 {
+				jwksCluster = jwks.Destination.Name
+			} else {
+				var cluster *urlCluster
+				if cluster, err = url2Cluster(jwks.URI); err != nil {
+					return nil, err
+				}
+				jwksCluster = cluster.name
 			}
 
 			remote := &jwtauthnv3.JwtProvider_RemoteJwks{
@@ -114,13 +124,22 @@ func buildJWTAuthn(irListener *ir.HTTPListener) (*jwtauthnv3.JwtAuthentication, 
 					HttpUri: &corev3.HttpUri{
 						Uri: irProvider.RemoteJWKS.URI,
 						HttpUpstreamType: &corev3.HttpUri_Cluster{
-							Cluster: jwksCluster.name,
+							Cluster: jwksCluster,
 						},
 						Timeout: &durationpb.Duration{Seconds: defaultExtServiceRequestTimeout},
 					},
 					CacheDuration: &durationpb.Duration{Seconds: 5 * 60},
 					AsyncFetch:    &jwtauthnv3.JwksAsyncFetch{},
 				},
+			}
+
+			// Set the retry policy if it exists.
+			if jwks.Traffic != nil && jwks.Traffic.Retry != nil {
+				var rp *corev3.RetryPolicy
+				if rp, err = buildNonRouteRetryPolicy(jwks.Traffic.Retry); err != nil {
+					return nil, err
+				}
+				remote.RemoteJwks.RetryPolicy = rp
 			}
 
 			claimToHeaders := []*jwtauthnv3.JwtClaimToHeader{}
@@ -210,7 +229,7 @@ func buildXdsUpstreamTLSSocket(sni string) (*corev3.TransportSocket, error) {
 		},
 	}
 
-	tlsCtxAny, err := protocov.ToAnyWithValidation(tlsCtxProto)
+	tlsCtxAny, err := proto.ToAnyWithValidation(tlsCtxProto)
 	if err != nil {
 		return nil, err
 	}
@@ -243,7 +262,7 @@ func (*jwt) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute) error {
 			RequirementSpecifier: &jwtauthnv3.PerRouteConfig_RequirementName{RequirementName: irRoute.Name},
 		}
 
-		routeCfgAny, err := protocov.ToAnyWithValidation(routeCfgProto)
+		routeCfgAny, err := proto.ToAnyWithValidation(routeCfgProto)
 		if err != nil {
 			return err
 		}
@@ -264,17 +283,26 @@ func (*jwt) patchResources(tCtx *types.ResourceVersionTable, routes []*ir.HTTPRo
 		return errors.New("xds resource table is nil")
 	}
 
-	var err, errs error
+	var errs error
 	for _, route := range routes {
 		if !routeContainsJWTAuthn(route) {
 			continue
 		}
 
 		for i := range route.Security.JWT.Providers {
-			provider := route.Security.JWT.Providers[i]
+			jwks := route.Security.JWT.Providers[i].RemoteJWKS
 
-			if err = addClusterFromURL(provider.RemoteJWKS.URI, tCtx); err != nil {
-				errs = errors.Join(errs, err)
+			// If the rmote JWKS has a destination, use it.
+			if jwks.Destination != nil && len(jwks.Destination.Settings) > 0 {
+				if err := createExtServiceXDSCluster(
+					jwks.Destination, jwks.Traffic, tCtx); err != nil {
+					errs = errors.Join(errs, err)
+				}
+			} else {
+				// Create a cluster with the token endpoint url.
+				if err := addClusterFromURL(jwks.URI, tCtx); err != nil {
+					errs = errors.Join(errs, err)
+				}
 			}
 		}
 	}

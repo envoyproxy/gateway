@@ -19,17 +19,23 @@ Kubernetes-based application gateway.
 * [Goals](GOALS.md)
 * [Quickstart](https://gateway.envoyproxy.io/latest/tasks/quickstart/) to use Envoy Gateway in a few simple steps.
 * [Roadmap](https://gateway.envoyproxy.io/contributions/roadmap/)
+* [Compatibility Matrix](https://gateway.envoyproxy.io/news/releases/matrix/)
 
 ## Contact
 
+* [envoy-gateway-announce](https://groups.google.com/g/envoy-gateway-announce): Join our mailing list to receive important announcements.
 * Slack: Join the [Envoy Slack workspace][] if you're not already a member. Otherwise, use the
   [Envoy Gateway channel][] to start collaborating with the community.
 
 ## Contributing
 
-* [Code of conduct](/CODE_OF_CONDUCT)
+* [Code of conduct](/CODE_OF_CONDUCT.md)
 * [Contributing guide](https://gateway.envoyproxy.io/contributions/contributing/)
 * [Developer guide](https://gateway.envoyproxy.io/contributions/develop/)
+
+## Security Reporting
+
+If you've found a security vulnerability or a process crash, please follow the instructions in [SECURITY.md](./SECURITY.md) to submit a report.
 
 ## Community Meeting
 

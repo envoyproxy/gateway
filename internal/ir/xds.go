@@ -7,6 +7,8 @@ package ir
 
 import (
 	"cmp"
+	"crypto/tls"
+	"crypto/x509"
 	"encoding"
 	"encoding/json"
 	"errors"
@@ -25,7 +27,6 @@ import (
 	"sigs.k8s.io/yaml"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
-	egv1a1validation "github.com/envoyproxy/gateway/api/v1alpha1/validation"
 )
 
 const (
@@ -33,47 +34,51 @@ const (
 )
 
 var (
-	ErrListenerNameEmpty                       = errors.New("field Name must be specified")
-	ErrListenerAddressInvalid                  = errors.New("field Address must be a valid IP address")
-	ErrListenerPortInvalid                     = errors.New("field Port specified is invalid")
-	ErrHTTPListenerHostnamesEmpty              = errors.New("field Hostnames must be specified with at least a single hostname entry")
-	ErrTCPRouteSNIsEmpty                       = errors.New("field SNIs must be specified with at least a single server name entry")
-	ErrTLSServerCertEmpty                      = errors.New("field ServerCertificate must be specified")
-	ErrTLSPrivateKey                           = errors.New("field PrivateKey must be specified")
-	ErrRouteNameEmpty                          = errors.New("field Name must be specified")
-	ErrHTTPRouteHostnameEmpty                  = errors.New("field Hostname must be specified")
-	ErrDestinationNameEmpty                    = errors.New("field Name must be specified")
-	ErrDestEndpointHostInvalid                 = errors.New("field Address must be a valid IP or FQDN address")
-	ErrDestEndpointPortInvalid                 = errors.New("field Port specified is invalid")
-	ErrDestEndpointUDSPortInvalid              = errors.New("field Port must not be specified for Unix Domain Socket address")
-	ErrDestEndpointUDSHostInvalid              = errors.New("field Host must not be specified for Unix Domain Socket address")
-	ErrStringMatchConditionInvalid             = errors.New("only one of the Exact, Prefix, SafeRegex or Distinct fields must be set")
-	ErrStringMatchInvertDistinctInvalid        = errors.New("only one of the Invert or Distinct fields can be set")
-	ErrStringMatchNameIsEmpty                  = errors.New("field Name must be specified")
-	ErrDirectResponseStatusInvalid             = errors.New("only HTTP status codes 100 - 599 are supported for DirectResponse")
-	ErrRedirectUnsupportedStatus               = errors.New("only HTTP status codes 301 and 302 are supported for redirect filters")
-	ErrRedirectUnsupportedScheme               = errors.New("only http and https are supported for the scheme in redirect filters")
-	ErrHTTPPathModifierDoubleReplace           = errors.New("redirect filter cannot have a path modifier that supplies more than one of fullPathReplace, prefixMatchReplace and regexMatchReplace")
-	ErrHTTPPathModifierNoReplace               = errors.New("redirect filter cannot have a path modifier that does not supply either fullPathReplace, prefixMatchReplace or regexMatchReplace")
-	ErrHTTPPathRegexModifierNoSetting          = errors.New("redirect filter cannot have a path modifier that does not supply either fullPathReplace, prefixMatchReplace or regexMatchReplace")
-	ErrHTTPHostModifierDoubleReplace           = errors.New("redirect filter cannot have a host modifier that supplies more than one of Hostname, Header and Backend")
-	ErrAddHeaderEmptyName                      = errors.New("header modifier filter cannot configure a header without a name to be added")
-	ErrAddHeaderDuplicate                      = errors.New("header modifier filter attempts to add the same header more than once (case insensitive)")
-	ErrRemoveHeaderDuplicate                   = errors.New("header modifier filter attempts to remove the same header more than once (case insensitive)")
-	ErrLoadBalancerInvalid                     = errors.New("loadBalancer setting is invalid, only one setting can be set")
-	ErrHealthCheckTimeoutInvalid               = errors.New("field HealthCheck.Timeout must be specified")
-	ErrHealthCheckIntervalInvalid              = errors.New("field HealthCheck.Interval must be specified")
-	ErrHealthCheckUnhealthyThresholdInvalid    = errors.New("field HealthCheck.UnhealthyThreshold should be greater than 0")
-	ErrHealthCheckHealthyThresholdInvalid      = errors.New("field HealthCheck.HealthyThreshold should be greater than 0")
-	ErrHealthCheckerInvalid                    = errors.New("health checker setting is invalid, only one health checker can be set")
-	ErrHCHTTPHostInvalid                       = errors.New("field HTTPHealthChecker.Host should be specified")
-	ErrHCHTTPPathInvalid                       = errors.New("field HTTPHealthChecker.Path should be specified")
-	ErrHCHTTPMethodInvalid                     = errors.New("only one of the GET, HEAD, POST, DELETE, OPTIONS, TRACE, PATCH of HTTPHealthChecker.Method could be set")
-	ErrHCHTTPExpectedStatusesInvalid           = errors.New("field HTTPHealthChecker.ExpectedStatuses should be specified")
-	ErrHealthCheckPayloadInvalid               = errors.New("one of Text, Binary fields must be set in payload")
-	ErrHTTPStatusInvalid                       = errors.New("HTTPStatus should be in [200,600)")
-	ErrOutlierDetectionBaseEjectionTimeInvalid = errors.New("field OutlierDetection.BaseEjectionTime must be specified")
-	ErrOutlierDetectionIntervalInvalid         = errors.New("field OutlierDetection.Interval must be specified")
+	ErrListenerNameEmpty                        = errors.New("field Name must be specified")
+	ErrListenerAddressInvalid                   = errors.New("field Address must be a valid IP address")
+	ErrListenerPortInvalid                      = errors.New("field Port specified is invalid")
+	ErrHTTPListenerHostnamesEmpty               = errors.New("field Hostnames must be specified with at least a single hostname entry")
+	ErrTCPRouteSNIsEmpty                        = errors.New("field SNIs must be specified with at least a single server name entry")
+	ErrTLSServerCertEmpty                       = errors.New("field ServerCertificate must be specified")
+	ErrTLSPrivateKey                            = errors.New("field PrivateKey must be specified")
+	ErrRouteNameEmpty                           = errors.New("field Name must be specified")
+	ErrHTTPRouteHostnameEmpty                   = errors.New("field Hostname must be specified")
+	ErrRouteDestinationsFQDNMixed               = errors.New("mixed endpoints address type for the same route destination is not supported")
+	ErrDestinationNameEmpty                     = errors.New("field Name must be specified")
+	ErrDestEndpointHostInvalid                  = errors.New("field Address must be a valid IP or FQDN address")
+	ErrDestEndpointPortInvalid                  = errors.New("field Port specified is invalid")
+	ErrDestEndpointUDSPortInvalid               = errors.New("field Port must not be specified for Unix Domain Socket address")
+	ErrDestEndpointUDSHostInvalid               = errors.New("field Host must not be specified for Unix Domain Socket address")
+	ErrStringMatchConditionInvalid              = errors.New("only one of the Exact, Prefix, SafeRegex or Distinct fields must be set")
+	ErrStringMatchInvertDistinctInvalid         = errors.New("only one of the Invert or Distinct fields can be set")
+	ErrStringMatchNameIsEmpty                   = errors.New("field Name must be specified")
+	ErrDirectResponseStatusInvalid              = errors.New("only HTTP status codes 100 - 599 are supported for DirectResponse")
+	ErrRedirectUnsupportedStatus                = errors.New("only HTTP status codes 301 and 302 are supported for redirect filters")
+	ErrRedirectUnsupportedScheme                = errors.New("only http and https are supported for the scheme in redirect filters")
+	ErrHTTPPathModifierDoubleReplace            = errors.New("redirect filter cannot have a path modifier that supplies more than one of fullPathReplace, prefixMatchReplace and regexMatchReplace")
+	ErrHTTPPathModifierNoReplace                = errors.New("redirect filter cannot have a path modifier that does not supply either fullPathReplace, prefixMatchReplace or regexMatchReplace")
+	ErrHTTPPathRegexModifierNoSetting           = errors.New("redirect filter cannot have a path modifier that does not supply either fullPathReplace, prefixMatchReplace or regexMatchReplace")
+	ErrHTTPHostModifierDoubleReplace            = errors.New("redirect filter cannot have a host modifier that supplies more than one of Hostname, Header and Backend")
+	ErrAddHeaderEmptyName                       = errors.New("header modifier filter cannot configure a header without a name to be added")
+	ErrAddHeaderDuplicate                       = errors.New("header modifier filter attempts to add the same header more than once (case insensitive)")
+	ErrRemoveHeaderDuplicate                    = errors.New("header modifier filter attempts to remove the same header more than once (case insensitive)")
+	ErrLoadBalancerInvalid                      = errors.New("loadBalancer setting is invalid, only one setting can be set")
+	ErrHealthCheckTimeoutInvalid                = errors.New("field HealthCheck.Timeout must be specified")
+	ErrHealthCheckIntervalInvalid               = errors.New("field HealthCheck.Interval must be specified")
+	ErrHealthCheckUnhealthyThresholdInvalid     = errors.New("field HealthCheck.UnhealthyThreshold should be greater than 0")
+	ErrHealthCheckHealthyThresholdInvalid       = errors.New("field HealthCheck.HealthyThreshold should be greater than 0")
+	ErrHealthCheckerInvalid                     = errors.New("health checker setting is invalid, only one health checker can be set")
+	ErrHCHTTPHostInvalid                        = errors.New("field HTTPHealthChecker.Host should be specified")
+	ErrHCHTTPPathInvalid                        = errors.New("field HTTPHealthChecker.Path should be specified")
+	ErrHCHTTPMethodInvalid                      = errors.New("only one of the GET, HEAD, POST, DELETE, OPTIONS, TRACE, PATCH of HTTPHealthChecker.Method could be set")
+	ErrHCHTTPExpectedStatusesInvalid            = errors.New("field HTTPHealthChecker.ExpectedStatuses should be specified")
+	ErrHealthCheckPayloadInvalid                = errors.New("one of Text, Binary fields must be set in payload")
+	ErrHTTPStatusInvalid                        = errors.New("HTTPStatus should be in [200,600)")
+	ErrOutlierDetectionBaseEjectionTimeInvalid  = errors.New("field OutlierDetection.BaseEjectionTime must be specified")
+	ErrOutlierDetectionIntervalInvalid          = errors.New("field OutlierDetection.Interval must be specified")
+	ErrBothXForwardedForAndCustomHeaderInvalid  = errors.New("only one of ClientIPDetection.XForwardedFor and ClientIPDetection.CustomHeader must be set")
+	ErrBothNumTrustedHopsAndTrustedCIDRsInvalid = errors.New("only one of ClientIPDetection.XForwardedFor.NumTrustedHops and ClientIPDetection.XForwardedFor.TrustedCIDRs must be set")
+	ErrPanicThresholdInvalid                    = errors.New("PanicThreshold value is outside of 0-100 range")
 
 	redacted = []byte("[redacted]")
 )
@@ -127,6 +132,8 @@ func (p *PrivateBytes) UnmarshalJSON(data []byte) error {
 // used by the xDS Translator to convert it into xDS resources.
 // +k8s:deepcopy-gen=true
 type Xds struct {
+	// ReadyListener is the listener that is ready to accept traffic.
+	ReadyListener *ReadyListener `json:"readyListener,omitempty" yaml:"readyListener,omitempty"`
 	// AccessLog configuration for the gateway.
 	AccessLog *AccessLog `json:"accessLog,omitempty" yaml:"accessLog,omitempty"`
 	// Tracing configuration for the gateway.
@@ -251,11 +258,8 @@ type CoreListenerDetails struct {
 	// Metadata is used to enrich envoy resource metadata with user and provider-specific information
 	Metadata *ResourceMetadata `json:"metadata,omitempty" yaml:"metadata,omitempty"`
 	// IPFamily specifies the IP address family used by the Gateway for its listening ports.
-	IPFamily *IPFamily `json:"ipFamily,omitempty" yaml:"ipFamily,omitempty"`
+	IPFamily *egv1a1.IPFamily `json:"ipFamily,omitempty" yaml:"ipFamily,omitempty"`
 }
-
-// IPFamily specifies the IP address family used by the Gateway for its listening ports.
-type IPFamily = egv1a1.IPFamily
 
 func (l CoreListenerDetails) GetName() string {
 	return l.Name
@@ -314,6 +318,8 @@ type HTTPListener struct {
 	Timeout *ClientTimeout `json:"timeout,omitempty" yaml:"clientTimeout,omitempty"`
 	// Connection settings
 	Connection *ClientConnection `json:"connection,omitempty" yaml:"connection,omitempty"`
+	// PreserveRouteOrder determines if routes should be sorted according to GW-API specs
+	PreserveRouteOrder bool `json:"preserveRouteOrder,omitempty" yaml:"preserveRouteOrder,omitempty"`
 }
 
 // Validate the fields within the HTTPListener structure
@@ -341,6 +347,15 @@ func (h HTTPListener) Validate() error {
 			errs = errors.Join(errs, err)
 		}
 	}
+	if h.ClientIPDetection != nil {
+		if h.ClientIPDetection.XForwardedFor != nil && h.ClientIPDetection.CustomHeader != nil {
+			errs = errors.Join(errs, ErrBothXForwardedForAndCustomHeaderInvalid)
+		} else if h.ClientIPDetection.XForwardedFor != nil {
+			if h.ClientIPDetection.XForwardedFor.NumTrustedHops != nil && h.ClientIPDetection.XForwardedFor.TrustedCIDRs != nil {
+				errs = errors.Join(errs, ErrBothNumTrustedHopsAndTrustedCIDRsInvalid)
+			}
+		}
+	}
 	return errs
 }
 
@@ -358,6 +373,23 @@ const (
 	// TLSv13 specifies TLS version 1.3
 	TLSv13 = TLSVersion(egv1a1.TLSv13)
 )
+
+func (t TLSVersion) Int() uint16 {
+	switch t {
+	case TLSAuto:
+		return tls.VersionTLS13
+	case TLSv10:
+		return tls.VersionTLS10
+	case TLSv11:
+		return tls.VersionTLS11
+	case TLSv12:
+		return tls.VersionTLS12
+	case TLSv13:
+		return tls.VersionTLS13
+	default:
+		return tls.VersionTLS13
+	}
+}
 
 // TLSConfig holds the configuration for downstream TLS context.
 // +k8s:deepcopy-gen=true
@@ -457,6 +489,15 @@ const (
 	WithUnderscoresActionAllow         = WithUnderscoresAction(egv1a1.WithUnderscoresActionAllow)
 	WithUnderscoresActionRejectRequest = WithUnderscoresAction(egv1a1.WithUnderscoresActionRejectRequest)
 	WithUnderscoresActionDropHeader    = WithUnderscoresAction(egv1a1.WithUnderscoresActionDropHeader)
+)
+
+type RequestIDAction egv1a1.RequestIDAction
+
+const (
+	RequestIDActionPreserveOrGenerate = RequestIDAction(egv1a1.RequestIDActionPreserveOrGenerate)
+	RequestIDActionPreserve           = RequestIDAction(egv1a1.RequestIDActionPreserve)
+	RequestIDActionGenerate           = RequestIDAction(egv1a1.RequestIDActionGenerate)
+	RequestIDActionDisable            = RequestIDAction(egv1a1.RequestIDActionDisable)
 )
 
 // Configure Envoy proxy how to handle the x-forwarded-client-cert (XFCC) HTTP header.
@@ -604,10 +645,10 @@ type HeaderSettings struct {
 	// Refer to https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/core/v3/protocol.proto#envoy-v3-api-enum-config-core-v3-httpprotocoloptions-headerswithunderscoresaction
 	WithUnderscoresAction WithUnderscoresAction `json:"withUnderscoresAction,omitempty" yaml:"withUnderscoresAction,omitempty"`
 
-	// PreserveXRequestID configures whether Envoy will keep the x-request-id header if passed for a request that is edge
-	// (Edge request is the request from external clients to front Envoy) and not reset it, which is the current Envoy behaviour.
-	// It defaults to false.
-	PreserveXRequestID bool `json:"preserveXRequestID,omitempty" yaml:"preserveXRequestID,omitempty"`
+	// RequestID configures Envoy's behavior for handling the `X-Request-ID` header.
+	// Defaults to `Generate` and builds the `X-Request-ID` for every request and ignores pre-existing values from the edge.
+	// (An "edge request" refers to a request from an external client to the Envoy entrypoint.)
+	RequestID *RequestIDAction `json:"requestID,omitempty" yaml:"requestID,omitempty"`
 
 	// EarlyAddRequestHeaders defines headers that would be added before envoy request processing.
 	EarlyAddRequestHeaders []AddHeader `json:"earlyAddRequestHeaders,omitempty" yaml:"earlyAddRequestHeaders,omitempty"`
@@ -672,7 +713,7 @@ type HTTPRoute struct {
 	// Redirections to be returned for this route. Takes precedence over Destinations.
 	Redirect *Redirect `json:"redirect,omitempty" yaml:"redirect,omitempty"`
 	// Destination that requests to this HTTPRoute will be mirrored to
-	Mirrors []*RouteDestination `json:"mirrors,omitempty" yaml:"mirrors,omitempty"`
+	Mirrors []*MirrorPolicy `json:"mirrors,omitempty" yaml:"mirrors,omitempty"`
 	// Destination associated with this matched route.
 	Destination *RouteDestination `json:"destination,omitempty" yaml:"destination,omitempty"`
 	// Rewrite to be changed for this route.
@@ -693,6 +734,21 @@ type HTTPRoute struct {
 	SessionPersistence *SessionPersistence `json:"sessionPersistence,omitempty" yaml:"sessionPersistence,omitempty"`
 	// Timeout is the time until which entire response is received from the upstream.
 	Timeout *metav1.Duration `json:"timeout,omitempty" yaml:"timeout,omitempty"`
+	// Retry defines the retry policy for the route.
+	// This is derived from the core Gateway API, and should take precedence over Traffic.Retry.
+	Retry *Retry `json:"retry,omitempty" yaml:"retry,omitempty"`
+}
+
+func (h *HTTPRoute) GetRetry() *Retry {
+	if h.Retry != nil {
+		return h.Retry
+	}
+
+	if h.Traffic != nil {
+		return h.Traffic.Retry
+	}
+
+	return nil
 }
 
 // DNS contains configuration options for DNS resolution.
@@ -702,6 +758,8 @@ type DNS struct {
 	DNSRefreshRate *metav1.Duration `json:"dnsRefreshRate,omitempty"`
 	// RespectDNSTTL indicates whether the DNS Time-To-Live (TTL) should be respected.
 	RespectDNSTTL *bool `json:"respectDnsTtl,omitempty"`
+	// LookupFamily allows to configure the dns lookup policy
+	LookupFamily *egv1a1.DNSLookupFamily `json:"lookupFamily,omitempty"`
 }
 
 // SessionPersistence defines the desired state of SessionPersistence.
@@ -731,9 +789,18 @@ type HeaderBasedSessionPersistence struct {
 	Name string `json:"name"`
 }
 
+// Compression holds the configuration for HTTP compression.
+// +k8s:deepcopy-gen=true
+type Compression struct {
+	// Type of compression to be used.
+	Type egv1a1.CompressorType `json:"type" yaml:"type"`
+}
+
 // TrafficFeatures holds the information associated with the Backend Traffic Policy.
 // +k8s:deepcopy-gen=true
 type TrafficFeatures struct {
+	// Name of the backend traffic policy and namespace
+	Name string `json:"name,omitempty"`
 	// RateLimit defines the more specific match conditions as well as limits for ratelimiting
 	// the requests on this route.
 	RateLimit *RateLimit `json:"rateLimit,omitempty" yaml:"rateLimit,omitempty"`
@@ -762,6 +829,10 @@ type TrafficFeatures struct {
 	DNS *DNS `json:"dns,omitempty" yaml:"dns,omitempty"`
 	// ResponseOverride defines the schema for overriding the response.
 	ResponseOverride *ResponseOverride `json:"responseOverride,omitempty" yaml:"responseOverride,omitempty"`
+	// Compression settings for HTTP Response
+	Compression []*Compression `json:"compression,omitempty" yaml:"compression,omitempty"`
+	// HTTPUpgrade defines the schema for upgrading the HTTP protocol.
+	HTTPUpgrade []string `json:"httpUpgrade,omitempty" yaml:"httpUpgrade,omitempty"`
 }
 
 func (b *TrafficFeatures) Validate() error {
@@ -790,24 +861,14 @@ type SecurityFeatures struct {
 	JWT *JWT `json:"jwt,omitempty" yaml:"jwt,omitempty"`
 	// OIDC defines the schema for authenticating HTTP requests using OpenID Connect (OIDC).
 	OIDC *OIDC `json:"oidc,omitempty" yaml:"oidc,omitempty"`
+	// APIKeyAuth defines the schema for the API Key Authentication.
+	APIKeyAuth *APIKeyAuth `json:"apiKeyAuth,omitempty" yaml:"apiKeyAuth,omitempty"`
 	// BasicAuth defines the schema for the HTTP Basic Authentication.
 	BasicAuth *BasicAuth `json:"basicAuth,omitempty" yaml:"basicAuth,omitempty"`
 	// ExtAuth defines the schema for the external authorization.
 	ExtAuth *ExtAuth `json:"extAuth,omitempty" yaml:"extAuth,omitempty"`
 	// Authorization defines the schema for the authorization.
 	Authorization *Authorization `json:"authorization,omitempty" yaml:"authorization,omitempty"`
-}
-
-func (s *SecurityFeatures) Validate() error {
-	var errs error
-
-	if s.JWT != nil {
-		if err := s.JWT.Validate(); err != nil {
-			errs = errors.Join(errs, err)
-		}
-	}
-
-	return errs
 }
 
 // EnvoyExtensionFeatures holds the information associated with the Envoy Extension Policy.
@@ -817,6 +878,8 @@ type EnvoyExtensionFeatures struct {
 	ExtProcs []ExtProc `json:"extProcs,omitempty" yaml:"extProcs,omitempty"`
 	// Wasm extensions
 	Wasms []Wasm `json:"wasms,omitempty" yaml:"wasms,omitempty"`
+	// Lua extensions
+	Luas []Lua `json:"luas,omitempty" yaml:"luas,omitempty"`
 }
 
 // UnstructuredRef holds unstructured data for an arbitrary k8s resource introduced by an extension
@@ -864,11 +927,62 @@ type CORS struct {
 // +k8s:deepcopy-gen=true
 type JWT struct {
 	// AllowMissing determines whether a missing JWT is acceptable.
-	//
 	AllowMissing bool `json:"allowMissing,omitempty" yaml:"allowMissing,omitempty"`
 
 	// Providers defines a list of JSON Web Token (JWT) authentication providers.
-	Providers []egv1a1.JWTProvider `json:"providers,omitempty" yaml:"providers,omitempty"`
+	Providers []JWTProvider `json:"providers,omitempty" yaml:"providers,omitempty"`
+}
+
+// JWTProvider defines the schema for the JWT Provider.
+//
+// +k8s:deepcopy-gen=true
+type JWTProvider struct {
+	// Name defines a unique name for the JWT provider. A name can have a variety of forms,
+	// including RFC1123 subdomains, RFC 1123 labels, or RFC 1035 labels.
+	Name string `json:"name"`
+
+	// Issuer is the principal that issued the JWT and takes the form of a URL or email address.
+	Issuer string `json:"issuer,omitempty"`
+
+	// Audiences is a list of JWT audiences allowed access. For additional details, see
+	// https://tools.ietf.org/html/rfc7519#section-4.1.3. If not provided, JWT audiences
+	// are not checked.
+	Audiences []string `json:"audiences,omitempty"`
+
+	// RemoteJWKS defines how to fetch and cache JSON Web Key Sets (JWKS) from a remote
+	// HTTP/HTTPS endpoint.
+	RemoteJWKS RemoteJWKS `json:"remoteJWKS"`
+
+	// ClaimToHeaders is a list of JWT claims that must be extracted into HTTP request headers
+	// For examples, following config:
+	// The claim must be of type; string, int, double, bool. Array type claims are not supported
+	ClaimToHeaders []egv1a1.ClaimToHeader `json:"claimToHeaders,omitempty"`
+
+	// RecomputeRoute clears the route cache and recalculates the routing decision.
+	// This field must be enabled if the headers generated from the claim are used for
+	// route matching decisions. If the recomputation selects a new route, features targeting
+	// the new matched route will be applied.
+	RecomputeRoute *bool `json:"recomputeRoute,omitempty"`
+
+	// ExtractFrom defines different ways to extract the JWT token from HTTP request.
+	// If empty, it defaults to extract JWT token from the Authorization HTTP request header using Bearer schema
+	// or access_token from query parameters.
+	ExtractFrom *egv1a1.JWTExtractor `json:"extractFrom,omitempty"`
+}
+
+// RemoteJWKSBackend holds the configuration for a remote JWKS backend.
+//
+// +k8s:deepcopy-gen=true
+type RemoteJWKS struct {
+	// Destination defines the destination for the OIDC Provider.
+	Destination *RouteDestination `json:"destination,omitempty"`
+
+	// Traffic contains configuration for traffic features for the OIDC Provider
+	Traffic *TrafficFeatures `json:"traffic,omitempty"`
+
+	// URI is the HTTPS URI to fetch the JWKS. Envoy's system trust bundle is used to validate the server certificate.
+	// If a custom trust bundle is needed, it can be specified in a BackendTLSConfig resource and target the BackendRefs.
+	URI string `json:"uri"`
 }
 
 // OIDC defines the schema for authenticating HTTP requests using
@@ -968,6 +1082,49 @@ type BasicAuth struct {
 
 	// The username-password pairs in htpasswd format.
 	Users PrivateBytes `json:"users,omitempty" yaml:"users,omitempty"`
+
+	// This field specifies the header name to forward a successfully authenticated user to
+	// the backend. The header will be added to the request with the username as the value.
+	//
+	// If it is not specified, the username will not be forwarded.
+	ForwardUsernameHeader *string `json:"forwardUsernameHeader,omitempty" yaml:"forwardUsernameHeader,omitempty"`
+}
+
+// APIKeyAuth defines the schema for the API Key Authentication.
+//
+// +k8s:deepcopy-gen=true
+type APIKeyAuth struct {
+	// The API key to be used for authentication.
+	// Key is the client id and the value is the API key to be used for authentication.
+	Credentials map[string]PrivateBytes `json:"credentials,omitempty" yaml:"credentials,omitempty"`
+
+	// ExtractFrom is where to fetch the key from the coming request.
+	// The value from the first source that has a key will be used.
+	ExtractFrom []*ExtractFrom `json:"extractFrom"`
+}
+
+// ExtractFrom defines the source of the key.
+//
+// +k8s:deepcopy-gen=true
+type ExtractFrom struct {
+	// Headers is the names of the header to fetch the key from.
+	// If multiple headers are specified, envoy will look for the api key in the order of the list.
+	// This field is optional, but only one of headers, params or cookies is supposed to be specified.
+	//
+	// +optional
+	Headers []string `json:"headers,omitempty"`
+	// Params is the names of the query parameter to fetch the key from.
+	// If multiple params are specified, envoy will look for the api key in the order of the list.
+	// This field is optional, but only one of headers, params or cookies is supposed to be specified.
+	//
+	// +optional
+	Params []string `json:"params,omitempty"`
+	// Cookies is the names of the cookie to fetch the key from.
+	// If multiple cookies are specified, envoy will look for the api key in the order of the list.
+	// This field is optional, but only one of headers, params or cookies is supposed to be specified.
+	//
+	// +optional
+	Cookies []string `json:"cookies,omitempty"`
 }
 
 // ExtAuth defines the schema for the external authorization.
@@ -1089,6 +1246,9 @@ type AuthorizationRule struct {
 	// Action defines the action to be taken if the rule matches.
 	Action egv1a1.AuthorizationAction `json:"action"`
 
+	// Operation specifies the operation of a request, such as HTTP methods.
+	Operation *egv1a1.Operation `json:"operation,omitempty"`
+
 	// Principal defines the principal to be matched.
 	Principal Principal `json:"principal"`
 }
@@ -1101,6 +1261,8 @@ type Principal struct {
 	ClientCIDRs []*CIDRMatch `json:"clientCIDRs,omitempty"`
 	// JWT defines the JWT principal to be matched.
 	JWT *egv1a1.JWTPrincipal `json:"jwt,omitempty"`
+	// Headers defines the headers to be matched.
+	Headers []egv1a1.AuthorizationHeaderMatch `json:"headers,omitempty"`
 }
 
 // FaultInjection defines the schema for injecting faults into requests.
@@ -1135,8 +1297,21 @@ type FaultInjectionAbort struct {
 	Percentage *float32 `json:"percentage,omitempty" yaml:"percentage,omitempty"`
 }
 
+// MirrorPolicy specifies a destination to mirror traffic in addition
+// to the original destination
+//
+// +kubebuilder:object:generate=true
+type MirrorPolicy struct {
+	// Destination defines the target where the request will be mirrored.
+	Destination *RouteDestination `json:"destination" yaml:"destination"`
+	// Percentage of the traffic to be mirrored by the `destination` field.
+	// When absent, all the traffic (100%) will be mirrored.
+	// Values are in the range of [0.0, 100.0].
+	Percentage *float32 `json:"percentage,omitempty" yaml:"percentage,omitempty"`
+}
+
 // Validate the fields within the HTTPRoute structure
-func (h HTTPRoute) Validate() error {
+func (h *HTTPRoute) Validate() error {
 	var errs error
 	if h.Name == "" {
 		errs = errors.Join(errs, ErrRouteNameEmpty)
@@ -1181,7 +1356,7 @@ func (h HTTPRoute) Validate() error {
 	}
 	if h.Mirrors != nil {
 		for _, mirror := range h.Mirrors {
-			if err := mirror.Validate(); err != nil {
+			if err := mirror.Destination.Validate(); err != nil {
 				errs = errors.Join(errs, err)
 			}
 		}
@@ -1237,21 +1412,6 @@ func (h HTTPRoute) Validate() error {
 			errs = errors.Join(errs, err)
 		}
 	}
-	if h.Security != nil {
-		if err := h.Security.Validate(); err != nil {
-			errs = errors.Join(errs, err)
-		}
-	}
-
-	return errs
-}
-
-func (j *JWT) Validate() error {
-	var errs error
-
-	if err := egv1a1validation.ValidateJWTProvider(j.Providers); err != nil {
-		errs = errors.Join(errs, err)
-	}
 
 	return errs
 }
@@ -1272,10 +1432,17 @@ func (r *RouteDestination) Validate() error {
 	if len(r.Name) == 0 {
 		errs = errors.Join(errs, ErrDestinationNameEmpty)
 	}
+	routeHasAddressTypes := make(sets.Set[DestinationAddressType])
 	for _, s := range r.Settings {
 		if err := s.Validate(); err != nil {
 			errs = errors.Join(errs, err)
 		}
+		if s.AddressType != nil {
+			routeHasAddressTypes.Insert(*s.AddressType)
+		}
+	}
+	if routeHasAddressTypes.Len() > 1 || routeHasAddressTypes.Has(MIXED) {
+		errs = errors.Join(ErrRouteDestinationsFQDNMixed)
 	}
 
 	return errs
@@ -1304,6 +1471,8 @@ func (r *RouteDestination) ToBackendWeights() *BackendWeights {
 // DestinationSetting holds the settings associated with the destination
 // +kubebuilder:object:generate=true
 type DestinationSetting struct {
+	// Name of the setting
+	Name string `json:"name" yaml:"name"`
 	// Weight associated with this destination,
 	// invalid endpoints are represents with a
 	// non-zero weight with an empty endpoints list
@@ -1319,12 +1488,15 @@ type DestinationSetting struct {
 	AddressType *DestinationAddressType `json:"addressType,omitempty" yaml:"addressType,omitempty"`
 	// IPFamily specifies the IP family (IPv4 or IPv6) to use for this destination's endpoints.
 	// This is derived from the backend service and endpoint slice information.
-	IPFamily *IPFamily           `json:"ipFamily,omitempty" yaml:"ipFamily,omitempty"`
+	IPFamily *egv1a1.IPFamily    `json:"ipFamily,omitempty" yaml:"ipFamily,omitempty"`
 	TLS      *TLSUpstreamConfig  `json:"tls,omitempty" yaml:"tls,omitempty"`
 	Filters  *DestinationFilters `json:"filters,omitempty" yaml:"filters,omitempty"`
+	// ZoneAwareRoutingEnabled specifies whether to enable Zone Aware Routing for this destination's endpoints.
+	// This is derived from the backend service and depends on having Kubernetes Topology Aware Routing or Traffic Distribution enabled.
+	ZoneAwareRoutingEnabled bool `json:"zoneAwareRoutingEnabled,omitempty" yaml:"zoneAwareRoutingEnabled,omitempty"`
 }
 
-// Validate the fields within the RouteDestination structure
+// Validate the fields within the DestinationSetting structure
 func (d *DestinationSetting) Validate() error {
 	var errs error
 	for _, ep := range d.Endpoints {
@@ -1354,6 +1526,10 @@ type DestinationEndpoint struct {
 	Port uint32 `json:"port" yaml:"port"`
 	// Path refers to the Unix Domain Socket
 	Path *string `json:"path,omitempty" yaml:"path,omitempty"`
+	// Draining is true if this endpoint should be drained
+	Draining bool `json:"draining,omitempty" yaml:"draining,omitempty"`
+	// Zone refers to the topology zone the Endpoint resides in
+	Zone *string `json:"zone,omitempty" yaml:"zone,omitempty"`
 }
 
 // Validate the fields within the DestinationEndpoint structure
@@ -1385,10 +1561,12 @@ func (d DestinationEndpoint) Validate() error {
 }
 
 // NewDestEndpoint creates a new DestinationEndpoint.
-func NewDestEndpoint(host string, port uint32) *DestinationEndpoint {
+func NewDestEndpoint(host string, port uint32, draining bool, zone *string) *DestinationEndpoint {
 	return &DestinationEndpoint{
-		Host: host,
-		Port: port,
+		Host:     host,
+		Port:     port,
+		Draining: draining,
+		Zone:     zone,
 	}
 }
 
@@ -1829,6 +2007,15 @@ type GlobalRateLimit struct {
 
 	// Rules for rate limiting.
 	Rules []*RateLimitRule `json:"rules,omitempty" yaml:"rules,omitempty"`
+
+	// Shared determines whether this rate limit rule applies globally across the gateway, or xRoute(s).
+	// If set to true, the rule is treated as a common bucket and is shared across all routes under the backend traffic policy.
+	// Must have targetRef set to Gateway or xRoute(s).
+	// Default: false.
+	//
+	// +optional
+	// +kubebuilder:default=false
+	Shared *bool `json:"shared,omitempty" yaml:"shared,omitempty"`
 }
 
 // LocalRateLimit holds the local rate limiting configuration.
@@ -1851,6 +2038,17 @@ type RateLimitRule struct {
 	CIDRMatch *CIDRMatch `json:"cidrMatch,omitempty" yaml:"cidrMatch,omitempty"`
 	// Limit holds the rate limit values.
 	Limit RateLimitValue `json:"limit,omitempty" yaml:"limit,omitempty"`
+	// RequestCost specifies the cost of the request.
+	RequestCost *RateLimitCost `json:"requestCost,omitempty" yaml:"requestCost,omitempty"`
+	// ResponseCost specifies the cost of the response.
+	ResponseCost *RateLimitCost `json:"responseCost,omitempty" yaml:"responseCost,omitempty"`
+}
+
+// RateLimitCost specifies the cost of the request or response.
+// +k8s:deepcopy-gen=true
+type RateLimitCost struct {
+	Number *uint64 `json:"number,omitempty" yaml:"number,omitempty"`
+	Format *string `json:"format,omitempty" yaml:"format,omitempty"`
 }
 
 type CIDRMatch struct {
@@ -1885,6 +2083,15 @@ const (
 	ProxyAccessLogTypeRoute    = ProxyAccessLogType(egv1a1.ProxyAccessLogTypeRoute)
 	ProxyAccessLogTypeListener = ProxyAccessLogType(egv1a1.ProxyAccessLogTypeListener)
 )
+
+// ReadyListener holds the configuration for ready listener.
+// +k8s:deepcopy-gen=true
+type ReadyListener struct {
+	IPFamily egv1a1.IPFamily `json:"ipFamily" yaml:"ipFamily"`
+	Address  string          `json:"address" yaml:"address"`
+	Port     uint32          `json:"port" yaml:"port"`
+	Path     string          `json:"path" yaml:"path"`
+}
 
 // AccessLog holds the access logging configuration.
 // +k8s:deepcopy-gen=true
@@ -2217,6 +2424,16 @@ type CircuitBreaker struct {
 
 	// The maximum number of parallel retries that Envoy will make.
 	MaxParallelRetries *uint32 `json:"maxParallelRetries,omitempty" yaml:"maxParallelRetries,omitempty"`
+
+	// PerEndpoint defines per-endpoint Circuit Breakers
+	PerEndpoint *PerEndpointCircuitBreakers `json:"perEndpoint,omitempty"`
+}
+
+// PerEndpointCircuitBreakers defines the per-endpoint Circuit Breaker configuration.
+// +k8s:deepcopy-gen=true
+type PerEndpointCircuitBreakers struct {
+	// MaxConnections configures the maximum number of connections that Envoy will establish per-endpoint to the referenced backend defined within a xRoute rule.
+	MaxConnections *uint32 `json:"maxConnections,omitempty"`
 }
 
 // HealthCheck defines health check settings
@@ -2225,6 +2442,8 @@ type HealthCheck struct {
 	Active *ActiveHealthCheck `json:"active,omitempty" yaml:"active,omitempty"`
 
 	Passive *OutlierDetection `json:"passive,omitempty" yaml:"passive,omitempty"`
+
+	PanicThreshold *uint32 `json:"panicThreshold,omitempty" yaml:"panicThreshold,omitempty"`
 }
 
 // OutlierDetection defines passive health check settings
@@ -2321,6 +2540,12 @@ func (h *HealthCheck) Validate() error {
 
 		if h.Passive.Interval != nil && h.Passive.Interval.Duration == 0 {
 			errs = errors.Join(errs, ErrOutlierDetectionIntervalInvalid)
+		}
+	}
+
+	if h.PanicThreshold != nil {
+		if *h.PanicThreshold > 100 {
+			errs = errors.Join(errs, ErrPanicThresholdInvalid)
 		}
 	}
 
@@ -2507,6 +2732,7 @@ const (
 	Unavailable          = TriggerEnum(egv1a1.Unavailable)
 )
 
+// RetryOn specifies the retry policy.
 // +k8s:deepcopy-gen=true
 type RetryOn struct {
 	// Triggers specifies the retry trigger condition(Http/Grpc).
@@ -2539,6 +2765,32 @@ type TLSUpstreamConfig struct {
 	UseSystemTrustStore bool              `json:"useSystemTrustStore,omitempty" yaml:"useSystemTrustStore,omitempty"`
 	CACertificate       *TLSCACertificate `json:"caCertificate,omitempty" yaml:"caCertificate,omitempty"`
 	TLSConfig           `json:",inline"`
+}
+
+func (t *TLSUpstreamConfig) ToTLSConfig() (*tls.Config, error) {
+	// nolint:gosec
+	tlsConfig := &tls.Config{
+		ServerName: t.SNI,
+	}
+	if t.MinVersion != nil {
+		tlsConfig.MinVersion = t.MinVersion.Int()
+	}
+	if t.MaxVersion != nil {
+		tlsConfig.MaxVersion = t.MaxVersion.Int()
+	}
+	if t.CACertificate != nil {
+		caCertPool := x509.NewCertPool()
+		caCertPool.AppendCertsFromPEM(t.CACertificate.Certificate)
+		tlsConfig.RootCAs = caCertPool
+	}
+	for _, cert := range t.ClientCertificates {
+		cert, err := tls.X509KeyPair(cert.Certificate, cert.PrivateKey)
+		if err != nil {
+			return nil, err
+		}
+		tlsConfig.Certificates = append(tlsConfig.Certificates, cert)
+	}
+	return tlsConfig, nil
 }
 
 // BackendConnection settings for upstream connections
@@ -2578,6 +2830,8 @@ const (
 	ExtProcBodyBuffered = ExtProcBodyProcessingMode(egv1a1.BufferedExtProcBodyProcessingMode)
 	// ExtProcBodyBufferedPartial sets the partial buffered body processing mode
 	ExtProcBodyBufferedPartial = ExtProcBodyProcessingMode(egv1a1.BufferedPartialExtBodyHeaderProcessingMode)
+	// ExtProcBodyFullDuplexStreamed sets the full duplex streamed processing mode
+	ExtProcBodyFullDuplexStreamed = ExtProcBodyProcessingMode(egv1a1.FullDuplexStreamedExtBodyProcessingMode)
 )
 
 // ExtProc holds the information associated with the ExtProc extensions.
@@ -2622,6 +2876,25 @@ type ExtProc struct {
 	// ResponseAttributes defines which envoy attributes are provided as context to external processor
 	// when processing responses
 	ResponseAttributes []string `json:"responseAttributes,omitempty" yaml:"responseAttributes,omitempty"`
+
+	// ForwardingMetadataNamespaces are metadata namespaces forwarded to external processor
+	ForwardingMetadataNamespaces []string `json:"forwardingMetadataNamespaces,omitempty" yaml:"forwardingMetadataNamespaces,omitempty"`
+
+	// ReceivingMetadataNamespaces are metadata namespaces updatable by external processor
+	ReceivingMetadataNamespaces []string `json:"receivingMetadataNamespaces,omitempty" yaml:"receivingMetadataNamespaces,omitempty"`
+
+	// AllowModeOverride allows the external processor to modify the processing mode.
+	AllowModeOverride bool `json:"allowModeOverride,omitempty" yaml:"allowModeOverride,omitempty"`
+}
+
+// Lua holds the information associated with Lua extensions
+// +k8s:deepcopy-gen=true
+type Lua struct {
+	// Name is a unique name for the LUa configuration.
+	// The xds translator only generates one Lua filter for each unique name
+	Name string
+	// Code is the Lua source code
+	Code *string
 }
 
 // Wasm holds the information associated with the Wasm extensions.

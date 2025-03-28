@@ -6,18 +6,15 @@
 package types
 
 import (
+	"errors"
 	"fmt"
 
-	clusterv3 "github.com/envoyproxy/go-control-plane/envoy/config/cluster/v3"
-	endpointv3 "github.com/envoyproxy/go-control-plane/envoy/config/endpoint/v3"
-	listenerv3 "github.com/envoyproxy/go-control-plane/envoy/config/listener/v3"
-	routev3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
-	tlsv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/transport_sockets/tls/v3"
 	"github.com/envoyproxy/go-control-plane/pkg/cache/types"
 	resourcev3 "github.com/envoyproxy/go-control-plane/pkg/resource/v3"
-	"google.golang.org/protobuf/proto"
+	protobuf "google.golang.org/protobuf/proto"
 
 	"github.com/envoyproxy/gateway/internal/ir"
+	"github.com/envoyproxy/gateway/internal/utils/proto"
 )
 
 // XdsResources represents all the xds resources
@@ -39,7 +36,7 @@ func (t *ResourceVersionTable) DeepCopyInto(out *ResourceVersionTable) {
 	*out = *t
 	if t.XdsResources != nil {
 		in, out := &t.XdsResources, &out.XdsResources
-		*out = make(map[string][]types.Resource, len(*in))
+		*out = make(map[resourcev3.Type][]types.Resource, len(*in))
 		for key, val := range *in {
 			var outVal []types.Resource
 			if val == nil {
@@ -50,7 +47,7 @@ func (t *ResourceVersionTable) DeepCopyInto(out *ResourceVersionTable) {
 				in, out := &val, &outVal //nolint:gosec,scopelint
 				*out = make([]types.Resource, len(*in))
 				for i := range *in {
-					(*out)[i] = proto.Clone((*in)[i])
+					(*out)[i] = protobuf.Clone((*in)[i])
 				}
 			}
 			(*out)[key] = outVal
@@ -81,62 +78,8 @@ func (t *ResourceVersionTable) AddXdsResource(rType resourcev3.Type, xdsResource
 		return fmt.Errorf("xds resource is nil")
 	}
 
-	// Perform type switch to handle different types of xdsResource
-	switch rType {
-	case resourcev3.ListenerType:
-		// Handle Type specific operations
-		if resourceOfType, ok := xdsResource.(*listenerv3.Listener); ok {
-			if err := resourceOfType.ValidateAll(); err != nil {
-				return fmt.Errorf("validation failed for xds resource %+v, err: %w", xdsResource, err)
-			}
-		} else {
-			return fmt.Errorf("failed to cast xds resource %+v to Listener type", xdsResource)
-		}
-	case resourcev3.RouteType:
-		// Handle Type specific operations
-		if resourceOfType, ok := xdsResource.(*routev3.RouteConfiguration); ok {
-			if err := resourceOfType.ValidateAll(); err != nil {
-				return fmt.Errorf("validation failed for xds resource %+v, err: %w", xdsResource, err)
-			}
-		} else {
-			return fmt.Errorf("failed to cast xds resource %+v to RouteConfiguration type", xdsResource)
-		}
-
-	case resourcev3.SecretType:
-		// Handle specific operations
-		if resourceOfType, ok := xdsResource.(*tlsv3.Secret); ok {
-			if err := resourceOfType.ValidateAll(); err != nil {
-				return fmt.Errorf("validation failed for xds resource %+v, err: %w", xdsResource, err)
-			}
-		} else {
-			return fmt.Errorf("failed to cast xds resource %+v to Secret type", xdsResource)
-		}
-
-	case resourcev3.EndpointType:
-		if resourceOfType, ok := xdsResource.(*endpointv3.ClusterLoadAssignment); ok {
-			if err := resourceOfType.ValidateAll(); err != nil {
-				return fmt.Errorf("validation failed for xds resource %+v, err: %w", xdsResource, err)
-			}
-		} else {
-			return fmt.Errorf("failed to cast xds resource %+v to ClusterLoadAssignment type", xdsResource)
-		}
-
-	case resourcev3.ClusterType:
-		// Handle specific operations
-		if resourceOfType, ok := xdsResource.(*clusterv3.Cluster); ok {
-			if err := resourceOfType.ValidateAll(); err != nil {
-				return fmt.Errorf("validation failed for xds resource %+v, err: %w", xdsResource, err)
-			}
-		} else {
-			return fmt.Errorf("failed to cast xds resource %+v to Cluster type", xdsResource)
-		}
-	case resourcev3.RateLimitConfigType:
-		// Handle specific operations
-		// cfg resource from runner.go is the RateLimitConfig type from "github.com/envoyproxy/go-control-plane/ratelimit/config/ratelimit/v3", which does have validate function.
-
-		// Add more cases for other types as needed
-	default:
-		// Handle the case when the type is not recognized or supported
+	if err := proto.Validate(xdsResource); err != nil {
+		return fmt.Errorf("validation failed for xds resource %+v, err: %w", xdsResource, err)
 	}
 
 	if t.XdsResources == nil {
@@ -148,6 +91,20 @@ func (t *ResourceVersionTable) AddXdsResource(rType resourcev3.Type, xdsResource
 
 	t.XdsResources[rType] = append(t.XdsResources[rType], xdsResource)
 	return nil
+}
+
+// ValidateAll validates all the xds resources in the ResourceVersionTable
+func (t *ResourceVersionTable) ValidateAll() error {
+	var errs error
+
+	for _, xdsResource := range t.XdsResources {
+		for _, resource := range xdsResource {
+			if err := proto.Validate(resource); err != nil {
+				errs = errors.Join(errs, err)
+			}
+		}
+	}
+	return errs
 }
 
 // AddOrReplaceXdsResource will update an existing resource of rType according to matchFunc or add as a new resource

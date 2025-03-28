@@ -142,3 +142,7 @@ securityPolicies:
       group: gateway.networking.k8s.io
       kind: HTTPRoute
       name: httproute-3
+    cors:
+      allowOrigins:
+      - "http://*.example.com"
+      maxAge: 1000s

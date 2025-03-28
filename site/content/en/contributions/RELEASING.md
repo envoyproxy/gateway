@@ -9,7 +9,10 @@ This document guides maintainers through the process of creating an Envoy Gatewa
   - [Prerequisites](#prerequisites)
 - [Minor Release](#minor-release)
   - [Prerequisites](#prerequisites-1)
-- [Announce the Release](#announce-the-release)
+  - [Announce the Release](#announce-the-release)
+- [Patch Release](#patch-release)
+  - [Prerequisites](#prerequisites-2)
+  - [Announce the Release](#announce-the-release-1)
 
 ## Release Candidate
 
@@ -109,7 +112,7 @@ export GITHUB_REMOTE=origin
    1. Generate the versioned release docs:
 
       ``` shell
-         make docs-release TAG=v${MAJOR_VERSION}.${MINOR_VERSION}.0
+      make docs-release TAG=v${MAJOR_VERSION}.${MINOR_VERSION}.0
       ```
 
    1. Update `site/layouts/shortcodes/helm-version.html`, add the latest version of the minor release, and update the short code for `{{- with (strings.HasPrefix $pagePrefix "doc") -}}` to the latest minor version.
@@ -125,7 +128,7 @@ export GITHUB_REMOTE=origin
       {{- with (strings.HasPrefix $pagePrefix "v1.2") -}}
       {{- "v1.2.0" -}}
       {{- end -}}
-      {{- with (strings.HasPrefix $pagePrefix "doc") -}}
+      {{- with (strings.HasPrefix $pagePrefix "docs") -}}
       {{- "v1.2.0" -}}
       {{- end -}}
       ```
@@ -143,10 +146,19 @@ export GITHUB_REMOTE=origin
       {{- with (strings.HasPrefix $pagePrefix "v1.2") -}}
       {{- "v1.2.0" -}}
       {{- end -}}
-      {{- with (strings.HasPrefix $pagePrefix "doc") -}}
+      {{- with (strings.HasPrefix $pagePrefix "docs") -}}
       {{- "v1.2.0" -}}
       {{- end -}}
       ```
+      
+   1. Update `site/hugo.toml`, change the version to current major version.
+
+      ```console
+      # The version number for the version of the docs represented in this doc set.
+      # Used in the "version-banner" partial to display a version number for the
+      # current doc set.
+      version = "v1.3"
+      ```  
 
 3. Sign, commit, and push your changes to your fork.
 4. Submit a [Pull Request][] to merge the changes into the `main` branch. Do not proceed until all your PRs have merged

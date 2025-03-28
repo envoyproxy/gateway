@@ -19,14 +19,24 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/envoyproxy/gateway/internal/ir"
-	"github.com/envoyproxy/gateway/internal/utils/protocov"
+	"github.com/envoyproxy/gateway/internal/utils/proto"
 )
 
 const (
 	retryDefaultRetryOn             = "connect-failure,refused-stream,unavailable,cancelled,retriable-status-codes"
 	retryDefaultRetriableStatusCode = 503
 	retryDefaultNumRetries          = 2
+
+	websocketUpgradeType = "websocket"
 )
+
+// Allow websocket upgrades for HTTP 1.1
+// Reference: https://developer.mozilla.org/en-US/docs/Web/HTTP/Protocol_upgrade_mechanism
+var defaultUpgradeConfig = []*routev3.RouteAction_UpgradeConfig{
+	{
+		UpgradeType: websocketUpgradeType,
+	},
+}
 
 func buildXdsRoute(httpRoute *ir.HTTPRoute) (*routev3.Route, error) {
 	router := &routev3.Route{
@@ -61,13 +71,7 @@ func buildXdsRoute(httpRoute *ir.HTTPRoute) (*routev3.Route, error) {
 		}
 
 		if !httpRoute.IsHTTP2 {
-			// Allow websocket upgrades for HTTP 1.1
-			// Reference: https://developer.mozilla.org/en-US/docs/Web/HTTP/Protocol_upgrade_mechanism
-			routeAction.UpgradeConfigs = []*routev3.RouteAction_UpgradeConfig{
-				{
-					UpgradeType: "websocket",
-				},
-			}
+			routeAction.UpgradeConfigs = buildUpgradeConfig(httpRoute.Traffic)
 		}
 
 		router.Action = &routev3.Route_Route{Route: routeAction}
@@ -80,13 +84,7 @@ func buildXdsRoute(httpRoute *ir.HTTPRoute) (*routev3.Route, error) {
 			routeAction.RequestMirrorPolicies = buildXdsRequestMirrorPolicies(httpRoute.Mirrors)
 		}
 		if !httpRoute.IsHTTP2 {
-			// Allow websocket upgrades for HTTP 1.1
-			// Reference: https://developer.mozilla.org/en-US/docs/Web/HTTP/Protocol_upgrade_mechanism
-			routeAction.UpgradeConfigs = []*routev3.RouteAction_UpgradeConfig{
-				{
-					UpgradeType: "websocket",
-				},
-			}
+			routeAction.UpgradeConfigs = buildUpgradeConfig(httpRoute.Traffic)
 		}
 		router.Action = &routev3.Route_Route{Route: routeAction}
 	}
@@ -106,8 +104,7 @@ func buildXdsRoute(httpRoute *ir.HTTPRoute) (*routev3.Route, error) {
 
 	// Retries
 	if router.GetRoute() != nil &&
-		httpRoute.Traffic != nil &&
-		httpRoute.Traffic.Retry != nil {
+		httpRoute.GetRetry() != nil {
 		if rp, err := buildRetryPolicy(httpRoute); err == nil {
 			router.GetRoute().RetryPolicy = rp
 		} else {
@@ -121,6 +118,21 @@ func buildXdsRoute(httpRoute *ir.HTTPRoute) (*routev3.Route, error) {
 	}
 
 	return router, nil
+}
+
+func buildUpgradeConfig(trafficFeatures *ir.TrafficFeatures) []*routev3.RouteAction_UpgradeConfig {
+	if trafficFeatures == nil || trafficFeatures.HTTPUpgrade == nil {
+		return defaultUpgradeConfig
+	}
+
+	upgradeConfigs := make([]*routev3.RouteAction_UpgradeConfig, 0, len(trafficFeatures.HTTPUpgrade))
+	for _, protocol := range trafficFeatures.HTTPUpgrade {
+		upgradeConfigs = append(upgradeConfigs, &routev3.RouteAction_UpgradeConfig{
+			UpgradeType: protocol,
+		})
+	}
+
+	return upgradeConfigs
 }
 
 func buildXdsRouteMatch(pathMatch *ir.StringMatch, headerMatches []*ir.StringMatch, queryParamMatches []*ir.StringMatch) *routev3.RouteMatch {
@@ -225,7 +237,7 @@ func buildXdsStringMatcher(irMatch *ir.StringMatch) *matcherv3.StringMatcher {
 
 func buildXdsRouteAction(backendWeights *ir.BackendWeights, settings []*ir.DestinationSetting) *routev3.RouteAction {
 	// only use weighted cluster when there are invalid weights
-	if hasFiltersInSettings(settings) || backendWeights.Invalid != 0 {
+	if needsClusterPerSetting(settings) || backendWeights.Invalid != 0 {
 		return buildXdsWeightedRouteAction(backendWeights, settings)
 	}
 
@@ -237,7 +249,7 @@ func buildXdsRouteAction(backendWeights *ir.BackendWeights, settings []*ir.Desti
 }
 
 func buildXdsWeightedRouteAction(backendWeights *ir.BackendWeights, settings []*ir.DestinationSetting) *routev3.RouteAction {
-	weightedClusters := []*routev3.WeightedCluster_ClusterWeight{}
+	weightedClusters := make([]*routev3.WeightedCluster_ClusterWeight, 0, len(settings))
 	if backendWeights.Invalid > 0 {
 		invalidCluster := &routev3.WeightedCluster_ClusterWeight{
 			Name:   "invalid-backend-cluster",
@@ -249,7 +261,7 @@ func buildXdsWeightedRouteAction(backendWeights *ir.BackendWeights, settings []*
 	for _, destinationSetting := range settings {
 		if len(destinationSetting.Endpoints) > 0 {
 			validCluster := &routev3.WeightedCluster_ClusterWeight{
-				Name:   backendWeights.Name,
+				Name:   destinationSetting.Name,
 				Weight: &wrapperspb.UInt32Value{Value: *destinationSetting.Weight},
 			}
 
@@ -463,16 +475,38 @@ func buildXdsDirectResponseAction(res *ir.CustomResponse) *routev3.DirectRespons
 	return routeAction
 }
 
-func buildXdsRequestMirrorPolicies(mirrorDestinations []*ir.RouteDestination) []*routev3.RouteAction_RequestMirrorPolicy {
-	var mirrorPolicies []*routev3.RouteAction_RequestMirrorPolicy
+func buildXdsRequestMirrorPolicies(mirrorPolicies []*ir.MirrorPolicy) []*routev3.RouteAction_RequestMirrorPolicy {
+	var xdsMirrorPolicies []*routev3.RouteAction_RequestMirrorPolicy
 
-	for _, mirrorDest := range mirrorDestinations {
-		mirrorPolicies = append(mirrorPolicies, &routev3.RouteAction_RequestMirrorPolicy{
-			Cluster: mirrorDest.Name,
-		})
+	for _, policy := range mirrorPolicies {
+		if mp := mirrorPercentByPolicy(policy); mp != nil && policy.Destination != nil {
+			xdsMirrorPolicies = append(xdsMirrorPolicies, &routev3.RouteAction_RequestMirrorPolicy{
+				Cluster:         policy.Destination.Name,
+				RuntimeFraction: mp,
+			})
+		}
 	}
 
-	return mirrorPolicies
+	return xdsMirrorPolicies
+}
+
+// mirrorPercentByPolicy computes the mirror percent to be used based on ir.MirrorPolicy.
+func mirrorPercentByPolicy(mirror *ir.MirrorPolicy) *corev3.RuntimeFractionalPercent {
+	switch {
+	case mirror.Percentage != nil:
+		if *mirror.Percentage > 0 {
+			return &corev3.RuntimeFractionalPercent{
+				DefaultValue: translatePercentToFractionalPercent(mirror.Percentage),
+			}
+		}
+		// If zero percent is provided explicitly, we should not mirror.
+		return nil
+	default:
+		// Default to 100 percent if percent is not given.
+		return &corev3.RuntimeFractionalPercent{
+			DefaultValue: translateIntegerToFractionalPercent(100),
+		}
+	}
 }
 
 func buildXdsAddedHeaders(headersToAdd []ir.AddHeader) []*corev3.HeaderValueOption {
@@ -573,7 +607,11 @@ func buildHashPolicy(httpRoute *ir.HTTPRoute) []*routev3.RouteAction_HashPolicy 
 }
 
 func buildRetryPolicy(route *ir.HTTPRoute) (*routev3.RetryPolicy, error) {
-	rr := route.Traffic.Retry
+	rr := route.GetRetry()
+	anyCfg, err := proto.ToAnyWithValidation(&previoushost.PreviousHostsPredicate{})
+	if err != nil {
+		return nil, err
+	}
 	rp := &routev3.RetryPolicy{
 		RetryOn:              retryDefaultRetryOn,
 		RetriableStatusCodes: []uint32{retryDefaultRetriableStatusCode},
@@ -582,7 +620,7 @@ func buildRetryPolicy(route *ir.HTTPRoute) (*routev3.RetryPolicy, error) {
 			{
 				Name: "envoy.retry_host_predicates.previous_hosts",
 				ConfigType: &routev3.RetryPolicy_RetryHostPredicate_TypedConfig{
-					TypedConfig: protocov.ToAny(&previoushost.PreviousHostsPredicate{}),
+					TypedConfig: anyCfg,
 				},
 			},
 		},
@@ -683,10 +721,30 @@ func buildRetryOn(triggers []ir.TriggerEnum) (string, error) {
 	return b.String(), nil
 }
 
+func needsClusterPerSetting(settings []*ir.DestinationSetting) bool {
+	if hasFiltersInSettings(settings) || hasZoneAwareRouting(settings) {
+		return true
+	}
+	return false
+}
+
 func hasFiltersInSettings(settings []*ir.DestinationSetting) bool {
 	for _, setting := range settings {
 		filters := setting.Filters
 		if filters != nil {
+			return true
+		}
+	}
+	return false
+}
+
+func hasZoneAwareRouting(settings []*ir.DestinationSetting) bool {
+	// Only use weighted clusters if more than one setting
+	if len(settings) < 2 {
+		return false
+	}
+	for _, setting := range settings {
+		if setting.ZoneAwareRoutingEnabled {
 			return true
 		}
 	}

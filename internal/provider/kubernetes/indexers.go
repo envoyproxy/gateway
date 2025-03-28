@@ -111,7 +111,7 @@ func backendHTTPRouteIndexFunc(rawObj client.Object) []string {
 	var backendRefs []string
 	for _, rule := range httproute.Spec.Rules {
 		for _, backend := range rule.BackendRefs {
-			if backend.Kind == nil || string(*backend.Kind) == resource.KindService || string(*backend.Kind) == egv1a1.KindBackend {
+			if backend.Kind == nil || string(*backend.Kind) == resource.KindService || string(*backend.Kind) == resource.KindServiceImport || string(*backend.Kind) == egv1a1.KindBackend {
 				backendRefs = append(backendRefs,
 					types.NamespacedName{
 						Namespace: gatewayapi.NamespaceDerefOr(backend.Namespace, httproute.Namespace),
@@ -119,6 +119,22 @@ func backendHTTPRouteIndexFunc(rawObj client.Object) []string {
 					}.String(),
 				)
 			}
+		}
+
+		// Check for a RequestMirror filter to also include the backendRef from that filter
+		for _, filter := range rule.Filters {
+			if filter.Type != gwapiv1.HTTPRouteFilterRequestMirror {
+				continue
+			}
+
+			mirrorBackendRef := filter.RequestMirror.BackendRef
+
+			backendRefs = append(backendRefs,
+				types.NamespacedName{
+					Namespace: gatewayapi.NamespaceDerefOr(mirrorBackendRef.Namespace, httproute.Namespace),
+					Name:      string(mirrorBackendRef.Name),
+				}.String(),
+			)
 		}
 	}
 	return backendRefs
@@ -545,6 +561,9 @@ func secretSecurityPolicyIndexFunc(rawObj client.Object) []string {
 	if securityPolicy.Spec.OIDC != nil {
 		secretReferences = append(secretReferences, securityPolicy.Spec.OIDC.ClientSecret)
 	}
+	if securityPolicy.Spec.APIKeyAuth != nil {
+		secretReferences = append(secretReferences, securityPolicy.Spec.APIKeyAuth.CredentialRefs...)
+	}
 	if securityPolicy.Spec.BasicAuth != nil {
 		secretReferences = append(secretReferences, securityPolicy.Spec.BasicAuth.Users)
 	}
@@ -664,7 +683,7 @@ func configMapBtpIndexFunc(rawObj client.Object) []string {
 	var configMapReferences []string
 
 	for _, ro := range btp.Spec.ResponseOverride {
-		if ro.Response.Body.ValueRef != nil {
+		if ro.Response.Body != nil && ro.Response.Body.ValueRef != nil {
 			if string(ro.Response.Body.ValueRef.Kind) == resource.KindConfigMap {
 				configMapReferences = append(configMapReferences,
 					types.NamespacedName{

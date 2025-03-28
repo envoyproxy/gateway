@@ -7,6 +7,7 @@ package loader
 
 import (
 	"context"
+	"io"
 	"time"
 
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
@@ -36,7 +37,7 @@ func New(cfgPath string, cfg *config.Server, f HookFunc) *Loader {
 	}
 }
 
-func (r *Loader) Start(ctx context.Context) error {
+func (r *Loader) Start(ctx context.Context, logOut io.Writer) error {
 	r.runHook()
 
 	if r.cfgPath == "" {
@@ -71,7 +72,7 @@ func (r *Loader) Start(ctx context.Context) error {
 				r.cfg.EnvoyGateway = eg
 				// update cfg logger
 				eg.Logging.SetEnvoyGatewayLoggingDefaults()
-				r.cfg.Logger = logging.NewLogger(eg.Logging)
+				r.cfg.Logger = logging.NewLogger(logOut, eg.Logging)
 
 				// cancel last
 				if r.cancel != nil {

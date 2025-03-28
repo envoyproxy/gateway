@@ -31,3 +31,21 @@
         envoy.filters.http.custom_response/backendtrafficpolicy/default/policy-for-gateway:
           '@type': type.googleapis.com/envoy.config.route.v3.FilterConfig
           config: {}
+    - match:
+        prefix: /
+      metadata:
+        filterMetadata:
+          envoy-gateway:
+            resources:
+            - kind: HTTPRoute
+              name: httproute-2
+              namespace: default
+      name: httproute/default/httproute-2/rule/0/match/-1/*
+      route:
+        cluster: httproute/default/httproute-2/rule/0
+        upgradeConfigs:
+        - upgradeType: websocket
+      typedPerFilterConfig:
+        envoy.filters.http.custom_response/backendtrafficpolicy/default/policy-for-route:
+          '@type': type.googleapis.com/envoy.config.route.v3.FilterConfig
+          config: {}

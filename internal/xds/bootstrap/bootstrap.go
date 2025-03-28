@@ -42,10 +42,9 @@ const (
 	// DefaultWasmServerPort is the default listening port of the wasm HTTP server.
 	wasmServerPort = 18002
 
-	envoyReadinessAddressv4 = "0.0.0.0"
-	envoyReadinessAddressv6 = "::"
+	EnvoyStatsPort = 19001
 
-	EnvoyReadinessPort = 19001
+	EnvoyReadinessPort = 19003
 	EnvoyReadinessPath = "/ready"
 
 	defaultSdsTrustedCAPath   = "/sds/xds-trusted-ca.json"
@@ -73,9 +72,8 @@ type bootstrapParameters struct {
 	WasmServer serverParameters
 	// AdminServer defines the configuration of the Envoy admin interface.
 	AdminServer adminServerParameters
-	// ReadyServer defines the configuration for health check ready listener
-	ReadyServer readyServerParameters
-
+	// StatsServer defines the configuration for stats listener
+	StatsServer serverParameters
 	// SdsCertificatePath defines the path to SDS certificate config.
 	SdsCertificatePath string
 	// SdsTrustedCAPath defines the path to SDS trusted CA config.
@@ -86,6 +84,7 @@ type bootstrapParameters struct {
 	// EnablePrometheusCompression defines whether to enable HTTP compression on metrics endpoint for prometheus.
 	EnablePrometheusCompression bool
 	// PrometheusCompressionLibrary defines the HTTP compression library for metrics endpoint for prometheus.
+	// TODO: remove this field because it is not used.
 	PrometheusCompressionLibrary string
 
 	// OtelMetricSinks defines the configuration of the OpenTelemetry sinks.
@@ -125,15 +124,6 @@ type adminServerParameters struct {
 	AccessLogPath string
 }
 
-type readyServerParameters struct {
-	// Address is the address of the Envoy readiness probe
-	Address string
-	// Port is the port of envoy readiness probe
-	Port int32
-	// ReadinessPath is the path for the envoy readiness probe
-	ReadinessPath string
-}
-
 type StatsMatcherParameters struct {
 	Exacts             []string
 	Prefixes           []string
@@ -153,7 +143,7 @@ type RenderBootstrapConfigOptions struct {
 	XdsServerPort    *int32
 	WasmServerPort   *int32
 	AdminServerPort  *int32
-	ReadyServerPort  *int32
+	StatsServerPort  *int32
 	MaxHeapSizeBytes uint64
 }
 
@@ -178,7 +168,7 @@ func GetRenderedBootstrapConfig(opts *RenderBootstrapConfigOptions) (string, err
 	var (
 		enablePrometheus             = true
 		enablePrometheusCompression  = false
-		PrometheusCompressionLibrary = "gzip"
+		prometheusCompressionLibrary = "Gzip"
 		metricSinks                  []metricSink
 		StatsMatcher                 StatsMatcherParameters
 	)
@@ -191,7 +181,7 @@ func GetRenderedBootstrapConfig(opts *RenderBootstrapConfigOptions) (string, err
 
 			if proxyMetrics.Prometheus.Compression != nil {
 				enablePrometheusCompression = true
-				PrometheusCompressionLibrary = string(proxyMetrics.Prometheus.Compression.Type)
+				prometheusCompressionLibrary = string(proxyMetrics.Prometheus.Compression.Type)
 			}
 		}
 
@@ -262,16 +252,15 @@ func GetRenderedBootstrapConfig(opts *RenderBootstrapConfigOptions) (string, err
 				Port:          EnvoyAdminPort,
 				AccessLogPath: envoyAdminAccessLogPath,
 			},
-			ReadyServer: readyServerParameters{
-				Address:       envoyReadinessAddressv4,
-				Port:          EnvoyReadinessPort,
-				ReadinessPath: EnvoyReadinessPath,
+			StatsServer: serverParameters{
+				Address: netutils.IPv4ListenerAddress,
+				Port:    EnvoyStatsPort,
 			},
 			SdsCertificatePath:           defaultSdsCertificatePath,
 			SdsTrustedCAPath:             defaultSdsTrustedCAPath,
 			EnablePrometheus:             enablePrometheus,
 			EnablePrometheusCompression:  enablePrometheusCompression,
-			PrometheusCompressionLibrary: PrometheusCompressionLibrary,
+			PrometheusCompressionLibrary: prometheusCompressionLibrary,
 			OtelMetricSinks:              metricSinks,
 		},
 	}
@@ -301,8 +290,8 @@ func GetRenderedBootstrapConfig(opts *RenderBootstrapConfigOptions) (string, err
 		if opts.AdminServerPort != nil {
 			cfg.parameters.AdminServer.Port = *opts.AdminServerPort
 		}
-		if opts.ReadyServerPort != nil {
-			cfg.parameters.ReadyServer.Port = *opts.ReadyServerPort
+		if opts.StatsServerPort != nil {
+			cfg.parameters.StatsServer.Port = *opts.StatsServerPort
 		}
 		if opts.WasmServerPort != nil {
 			cfg.parameters.WasmServer.Port = *opts.WasmServerPort
@@ -312,9 +301,9 @@ func GetRenderedBootstrapConfig(opts *RenderBootstrapConfigOptions) (string, err
 			cfg.parameters.IPFamily = string(*opts.IPFamily)
 			if *opts.IPFamily == egv1a1.IPv6 {
 				cfg.parameters.AdminServer.Address = EnvoyAdminAddressV6
-				cfg.parameters.ReadyServer.Address = envoyReadinessAddressv6
+				cfg.parameters.StatsServer.Address = netutils.IPv6ListenerAddress
 			} else if *opts.IPFamily == egv1a1.DualStack {
-				cfg.parameters.ReadyServer.Address = envoyReadinessAddressv6
+				cfg.parameters.StatsServer.Address = netutils.IPv6ListenerAddress
 			}
 		}
 

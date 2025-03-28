@@ -3,7 +3,7 @@ backendTrafficPolicies:
   kind: BackendTrafficPolicy
   metadata:
     creationTimestamp: null
-    name: policy-for-route
+    name: policy-for-route-1
     namespace: default
   spec:
     responseOverride:
@@ -36,6 +36,39 @@ backendTrafficPolicies:
       group: gateway.networking.k8s.io
       kind: HTTPRoute
       name: httproute-1
+  status:
+    ancestors:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: gateway-2
+        namespace: default
+        sectionName: http
+      conditions:
+      - lastTransitionTime: null
+        message: Policy has been accepted.
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: BackendTrafficPolicy
+  metadata:
+    creationTimestamp: null
+    name: policy-for-route-2
+    namespace: default
+  spec:
+    responseOverride:
+    - match:
+        statusCodes:
+        - type: null
+          value: 403
+      response:
+        statusCode: 401
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: httproute-2
   status:
     ancestors:
     - ancestorRef:
@@ -160,7 +193,7 @@ gateways:
       protocol: HTTP
   status:
     listeners:
-    - attachedRoutes: 1
+    - attachedRoutes: 2
       conditions:
       - lastTransitionTime: null
         message: Sending translated listener configuration to the data plane
@@ -226,7 +259,45 @@ httpRoutes:
     namespace: default
   spec:
     hostnames:
-    - gateway.envoyproxy.io
+    - foo.envoyproxy.io
+    parentRefs:
+    - name: gateway-2
+      namespace: default
+      sectionName: http
+    rules:
+    - backendRefs:
+      - name: service-1
+        port: 8080
+      matches:
+      - path:
+          value: /
+  status:
+    parents:
+    - conditions:
+      - lastTransitionTime: null
+        message: Route is accepted
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Resolved all the Object references for the Route
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+      parentRef:
+        name: gateway-2
+        namespace: default
+        sectionName: http
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    creationTimestamp: null
+    name: httproute-2
+    namespace: default
+  spec:
+    hostnames:
+    - bar.envoyproxy.io
     parentRefs:
     - name: gateway-2
       namespace: default
@@ -290,7 +361,7 @@ infraIR:
 xdsIR:
   default/gateway-1:
     accessLog:
-      text:
+      json:
       - path: /dev/stdout
     http:
     - address: 0.0.0.0
@@ -315,6 +386,7 @@ xdsIR:
             endpoints:
             - host: 7.7.7.7
               port: 8080
+            name: grpcroute/default/grpcroute-1/rule/0/backend/0
             protocol: GRPC
             weight: 1
         hostname: '*'
@@ -325,6 +397,7 @@ xdsIR:
           namespace: default
         name: grpcroute/default/grpcroute-1/rule/0/match/-1/*
         traffic:
+          name: default/policy-for-gateway
           responseOverride:
             name: backendtrafficpolicy/default/policy-for-gateway
             rules:
@@ -348,9 +421,14 @@ xdsIR:
                     "error": "Internal Server Error"
                   }
                 contentType: application/json
+    readyListener:
+      address: 0.0.0.0
+      ipFamily: IPv4
+      path: /ready
+      port: 19003
   default/gateway-2:
     accessLog:
-      text:
+      json:
       - path: /dev/stdout
     http:
     - address: 0.0.0.0
@@ -375,27 +453,29 @@ xdsIR:
             endpoints:
             - host: 7.7.7.7
               port: 8080
+            name: httproute/default/httproute-1/rule/0/backend/0
             protocol: HTTP
             weight: 1
-        hostname: gateway.envoyproxy.io
+        hostname: foo.envoyproxy.io
         isHTTP2: false
         metadata:
           kind: HTTPRoute
           name: httproute-1
           namespace: default
-        name: httproute/default/httproute-1/rule/0/match/0/gateway_envoyproxy_io
+        name: httproute/default/httproute-1/rule/0/match/0/foo_envoyproxy_io
         pathMatch:
           distinct: false
           name: ""
           prefix: /
         traffic:
+          name: default/policy-for-route-1
           responseOverride:
-            name: backendtrafficpolicy/default/policy-for-route
+            name: backendtrafficpolicy/default/policy-for-route-1
             rules:
             - match:
                 statusCodes:
                 - value: 404
-              name: backendtrafficpolicy/default/policy-for-route/responseoverride/rule/0
+              name: backendtrafficpolicy/default/policy-for-route-1/responseoverride/rule/0
               response:
                 body: httproute-1 Not Found
                 contentType: text/plain
@@ -405,10 +485,47 @@ xdsIR:
                 - range:
                     end: 511
                     start: 501
-              name: backendtrafficpolicy/default/policy-for-route/responseoverride/rule/1
+              name: backendtrafficpolicy/default/policy-for-route-1/responseoverride/rule/1
               response:
                 body: |
                   {
                     "error": "Internal Server Error"
                   }
                 contentType: application/json
+      - destination:
+          name: httproute/default/httproute-2/rule/0
+          settings:
+          - addressType: IP
+            endpoints:
+            - host: 7.7.7.7
+              port: 8080
+            name: httproute/default/httproute-2/rule/0/backend/0
+            protocol: HTTP
+            weight: 1
+        hostname: bar.envoyproxy.io
+        isHTTP2: false
+        metadata:
+          kind: HTTPRoute
+          name: httproute-2
+          namespace: default
+        name: httproute/default/httproute-2/rule/0/match/0/bar_envoyproxy_io
+        pathMatch:
+          distinct: false
+          name: ""
+          prefix: /
+        traffic:
+          name: default/policy-for-route-2
+          responseOverride:
+            name: backendtrafficpolicy/default/policy-for-route-2
+            rules:
+            - match:
+                statusCodes:
+                - value: 403
+              name: backendtrafficpolicy/default/policy-for-route-2/responseoverride/rule/0
+              response:
+                statusCode: 401
+    readyListener:
+      address: 0.0.0.0
+      ipFamily: IPv4
+      path: /ready
+      port: 19003

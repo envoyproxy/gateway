@@ -55,7 +55,7 @@ jobs:
     - name: Run Coverage Tests
       run: make go.test.coverage
     - name: Upload coverage to Codecov
-      uses: codecov/codecov-action@7f8b4b4bde536c465e797be725718b88c5d95e0e  # v5.1.1
+      uses: codecov/codecov-action@0565863a31f2c772f9f0395002a31e3f06189574  # v5.4.0
       with:
         fail_ci_if_error: true
         files: ./coverage.xml
@@ -74,7 +74,7 @@ jobs:
       run: make build-multiarch PLATFORMS="linux_amd64 linux_arm64"
 
     - name: Upload EG Binaries
-      uses: actions/upload-artifact@b4b15b8c7c6ac21ea08fcf65892d2ee8f75cf882  # v4.4.3
+      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4.6.2
       with:
         name: envoy-gateway
         path: bin/
@@ -91,7 +91,7 @@ jobs:
     - uses: ./tools/github-actions/setup-deps
 
     - name: Download EG Binaries
-      uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16  # v4.1.8
+      uses: actions/download-artifact@95815c38cf2ff2164869cbab79da8d1f422bc89e  # v4.2.1
       with:
         name: envoy-gateway
         path: bin/
@@ -129,7 +129,7 @@ jobs:
     - uses: ./tools/github-actions/setup-deps
 
     - name: Download EG Binaries
-      uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16  # v4.1.8
+      uses: actions/download-artifact@95815c38cf2ff2164869cbab79da8d1f422bc89e  # v4.2.1
       with:
         name: envoy-gateway
         path: bin/
@@ -198,7 +198,7 @@ jobs:
     - uses: ./tools/github-actions/setup-deps
 
     - name: Download EG Binaries
-      uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16  # v4.1.8
+      uses: actions/download-artifact@95815c38cf2ff2164869cbab79da8d1f422bc89e  # v4.2.1
       with:
         name: envoy-gateway
         path: bin/
@@ -211,9 +211,9 @@ jobs:
     # build and push image
     - name: Login to DockerHub
       if: github.event_name == 'push'
-      uses: docker/login-action@9780b0c442fbb1117ed29e0efdff1e18412f7567  # v3.3.0
+      uses: docker/login-action@74a5d142397b4f367a81961eba4e8cd7edddf772  # v3.4.0
       with:
-        username: ${{ secrets.DOCKERHUB_USERNAME }}
+        username: ${{ vars.DOCKERHUB_USERNAME }}
         password: ${{ secrets.DOCKERHUB_PASSWORD }}
 
     - name: Setup Multiarch Environment

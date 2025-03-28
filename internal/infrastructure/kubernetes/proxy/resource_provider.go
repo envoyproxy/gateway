@@ -169,6 +169,20 @@ func (r *ResourceRender) Service() (*corev1.Service, error) {
 		serviceSpec.ExternalIPs = r.infra.Addresses
 	}
 
+	// Set IP family policy and families based on proxy config request
+	ipFamily := r.infra.GetProxyConfig().Spec.IPFamily
+	if ipFamily != nil {
+		// SingleStack+IPv4 is default behavior from K8s and so is omitted
+		switch *ipFamily {
+		case egv1a1.IPv6:
+			serviceSpec.IPFamilies = []corev1.IPFamily{corev1.IPv6Protocol}
+			serviceSpec.IPFamilyPolicy = ptr.To(corev1.IPFamilyPolicySingleStack)
+		case egv1a1.DualStack:
+			serviceSpec.IPFamilies = []corev1.IPFamily{corev1.IPv4Protocol, corev1.IPv6Protocol}
+			serviceSpec.IPFamilyPolicy = ptr.To(corev1.IPFamilyPolicyRequireDualStack)
+		}
+	}
+
 	svc := &corev1.Service{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "v1",
@@ -326,13 +340,6 @@ func (r *ResourceRender) Deployment() (*appsv1.Deployment, error) {
 		deployment.ObjectMeta.Name = r.Name()
 	}
 
-	provider := proxyConfig.GetEnvoyProxyProvider()
-
-	// omit the deployment replicas if HPA is being set
-	if provider.GetEnvoyProxyKubeProvider().EnvoyHpa != nil {
-		deployment.Spec.Replicas = nil
-	}
-
 	// apply merge patch to deployment
 	if deployment, err = deploymentConfig.ApplyMergePatch(deployment); err != nil {
 		return nil, err
@@ -425,7 +432,7 @@ func (r *ResourceRender) PodDisruptionBudgetSpec() (*egv1a1.KubernetesPodDisrupt
 	}
 
 	podDisruptionBudget := provider.GetEnvoyProxyKubeProvider().EnvoyPDB
-	if podDisruptionBudget == nil || podDisruptionBudget.MinAvailable == nil {
+	if podDisruptionBudget == nil || podDisruptionBudget.MinAvailable == nil && podDisruptionBudget.MaxUnavailable == nil && podDisruptionBudget.Patch == nil {
 		return nil, nil
 	}
 
@@ -434,9 +441,21 @@ func (r *ResourceRender) PodDisruptionBudgetSpec() (*egv1a1.KubernetesPodDisrupt
 
 func (r *ResourceRender) PodDisruptionBudget() (*policyv1.PodDisruptionBudget, error) {
 	podDisruptionBudgetConfig, err := r.PodDisruptionBudgetSpec()
-	// If podDisruptionBudget config is nil or MinAvailable is nil, ignore PodDisruptionBudget.
+	// If podDisruptionBudget config is nil, ignore PodDisruptionBudget.
 	if podDisruptionBudgetConfig == nil {
 		return nil, err
+	}
+
+	pdbSpec := policyv1.PodDisruptionBudgetSpec{
+		Selector: r.stableSelector(),
+	}
+	switch {
+	case podDisruptionBudgetConfig.MinAvailable != nil:
+		pdbSpec.MinAvailable = podDisruptionBudgetConfig.MinAvailable
+	case podDisruptionBudgetConfig.MaxUnavailable != nil:
+		pdbSpec.MaxUnavailable = podDisruptionBudgetConfig.MaxUnavailable
+	default:
+		pdbSpec.MinAvailable = &intstr.IntOrString{Type: intstr.Int, IntVal: 0}
 	}
 
 	podDisruptionBudget := &policyv1.PodDisruptionBudget{
@@ -448,10 +467,7 @@ func (r *ResourceRender) PodDisruptionBudget() (*policyv1.PodDisruptionBudget, e
 			APIVersion: "policy/v1",
 			Kind:       "PodDisruptionBudget",
 		},
-		Spec: policyv1.PodDisruptionBudgetSpec{
-			MinAvailable: &intstr.IntOrString{IntVal: ptr.Deref(podDisruptionBudgetConfig.MinAvailable, 0)},
-			Selector:     r.stableSelector(),
-		},
+		Spec: pdbSpec,
 	}
 
 	// apply merge patch to PodDisruptionBudget
@@ -560,7 +576,7 @@ func (r *ResourceRender) getPodAnnotations(resourceAnnotation map[string]string,
 	if enablePrometheus(r.infra) {
 		podAnnotations["prometheus.io/path"] = "/stats/prometheus" // TODO: make this configurable
 		podAnnotations["prometheus.io/scrape"] = "true"
-		podAnnotations["prometheus.io/port"] = strconv.Itoa(bootstrap.EnvoyReadinessPort)
+		podAnnotations["prometheus.io/port"] = strconv.Itoa(bootstrap.EnvoyStatsPort)
 	}
 
 	if len(podAnnotations) == 0 {

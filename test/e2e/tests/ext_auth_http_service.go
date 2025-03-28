@@ -31,15 +31,17 @@ func init() {
 // The ExtAuth service is an HTTP service.
 var HTTPExtAuthTest = suite.ConformanceTest{
 	ShortName:   "HTTPExtAuth",
-	Description: "Test ExtAuth authentication",
-	Manifests:   []string{"testdata/ext-auth-http-service.yaml", "testdata/ext-auth-http-securitypolicy.yaml"},
+	Description: "Test HTTP ExtAuth authentication",
+	Manifests:   []string{"testdata/ext-auth-service.yaml", "testdata/ext-auth-http-securitypolicy.yaml"},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
-		t.Run("http route with ext auth authentication", func(t *testing.T) {
-			ns := "gateway-conformance-infra"
-			routeNN := types.NamespacedName{Name: "http-with-ext-auth", Namespace: ns}
-			gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
-			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
+		ns := "gateway-conformance-infra"
+		routeNN := types.NamespacedName{Name: "http-with-ext-auth", Namespace: ns}
+		gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
+		gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
+		// Wait for the http ext auth service pod to be ready
+		WaitForPods(t, suite.Client, ns, map[string]string{"app": "envoy-ext-auth"}, corev1.PodRunning, PodReady)
 
+		t.Run("http route with ext auth authentication", func(t *testing.T) {
 			ancestorRef := gwapiv1a2.ParentReference{
 				Group:     gatewayapi.GroupPtr(gwapiv1.GroupName),
 				Kind:      gatewayapi.KindPtr(resource.KindGateway),
@@ -47,11 +49,6 @@ var HTTPExtAuthTest = suite.ConformanceTest{
 				Name:      gwapiv1.ObjectName(gwNN.Name),
 			}
 			SecurityPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "ext-auth-test", Namespace: ns}, suite.ControllerName, ancestorRef)
-
-			podReady := corev1.PodCondition{Type: corev1.PodReady, Status: corev1.ConditionTrue}
-
-			// Wait for the http ext auth service pod to be ready
-			WaitForPods(t, suite.Client, ns, map[string]string{"app": "http-ext-auth"}, corev1.PodRunning, podReady)
 
 			expectedResponse := http.ExpectedResponse{
 				Request: http.Request{
@@ -82,11 +79,6 @@ var HTTPExtAuthTest = suite.ConformanceTest{
 		})
 
 		t.Run("without Authorization header", func(t *testing.T) {
-			ns := "gateway-conformance-infra"
-			routeNN := types.NamespacedName{Name: "http-with-ext-auth", Namespace: ns}
-			gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
-			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
-
 			ancestorRef := gwapiv1a2.ParentReference{
 				Group:     gatewayapi.GroupPtr(gwapiv1.GroupName),
 				Kind:      gatewayapi.KindPtr(resource.KindGateway),
@@ -94,11 +86,6 @@ var HTTPExtAuthTest = suite.ConformanceTest{
 				Name:      gwapiv1.ObjectName(gwNN.Name),
 			}
 			SecurityPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "ext-auth-test", Namespace: ns}, suite.ControllerName, ancestorRef)
-
-			podReady := corev1.PodCondition{Type: corev1.PodReady, Status: corev1.ConditionTrue}
-
-			// Wait for the http ext auth service pod to be ready
-			WaitForPods(t, suite.Client, ns, map[string]string{"app": "http-ext-auth"}, corev1.PodRunning, podReady)
 
 			expectedResponse := http.ExpectedResponse{
 				Request: http.Request{
@@ -123,11 +110,6 @@ var HTTPExtAuthTest = suite.ConformanceTest{
 		})
 
 		t.Run("invalid credential", func(t *testing.T) {
-			ns := "gateway-conformance-infra"
-			routeNN := types.NamespacedName{Name: "http-with-ext-auth", Namespace: ns}
-			gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
-			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
-
 			ancestorRef := gwapiv1a2.ParentReference{
 				Group:     gatewayapi.GroupPtr(gwapiv1.GroupName),
 				Kind:      gatewayapi.KindPtr(resource.KindGateway),
@@ -135,11 +117,6 @@ var HTTPExtAuthTest = suite.ConformanceTest{
 				Name:      gwapiv1.ObjectName(gwNN.Name),
 			}
 			SecurityPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "ext-auth-test", Namespace: ns}, suite.ControllerName, ancestorRef)
-
-			podReady := corev1.PodCondition{Type: corev1.PodReady, Status: corev1.ConditionTrue}
-
-			// Wait for the http ext auth service pod to be ready
-			WaitForPods(t, suite.Client, ns, map[string]string{"app": "http-ext-auth"}, corev1.PodRunning, podReady)
 
 			expectedResponse := http.ExpectedResponse{
 				Request: http.Request{
@@ -167,11 +144,6 @@ var HTTPExtAuthTest = suite.ConformanceTest{
 		})
 
 		t.Run("http route without ext auth authentication", func(t *testing.T) {
-			ns := "gateway-conformance-infra"
-			routeNN := types.NamespacedName{Name: "http-with-ext-auth", Namespace: ns}
-			gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
-			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
-
 			ancestorRef := gwapiv1a2.ParentReference{
 				Group:     gatewayapi.GroupPtr(gwapiv1.GroupName),
 				Kind:      gatewayapi.KindPtr(resource.KindGateway),
@@ -179,11 +151,6 @@ var HTTPExtAuthTest = suite.ConformanceTest{
 				Name:      gwapiv1.ObjectName(gwNN.Name),
 			}
 			SecurityPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "ext-auth-test", Namespace: ns}, suite.ControllerName, ancestorRef)
-
-			podReady := corev1.PodCondition{Type: corev1.PodReady, Status: corev1.ConditionTrue}
-
-			// Wait for the http ext auth service pod to be ready
-			WaitForPods(t, suite.Client, ns, map[string]string{"app": "http-ext-auth"}, corev1.PodRunning, podReady)
 
 			expectedResponse := http.ExpectedResponse{
 				Request: http.Request{

@@ -51,6 +51,7 @@ func TestMain(m *testing.M) {
 	skipNameValidation = func() *bool {
 		return ptr.To(true)
 	}
+	healthProbeBindAddress = "" // Disable health probe listener to avoid "address already in use" error.
 	os.Exit(m.Run())
 }
 
@@ -60,10 +61,10 @@ func TestProvider(t *testing.T) {
 	require.NoError(t, err)
 
 	// Setup and start the kube provider.
-	svr, err := config.New()
+	svr, err := config.New(os.Stdout)
 	require.NoError(t, err)
 	resources := new(message.ProviderResources)
-	provider, err := New(cliCfg, svr, resources)
+	provider, err := New(context.Background(), cliCfg, svr, resources)
 	require.NoError(t, err)
 	ctx, cancel := context.WithCancel(ctrl.SetupSignalHandler())
 	go func() {
@@ -1263,7 +1264,7 @@ func TestNamespacedProvider(t *testing.T) {
 	require.NoError(t, err)
 
 	// Setup and start the kube provider.
-	svr, err := config.New()
+	svr, err := config.New(os.Stdout)
 	require.NoError(t, err)
 	// config to watch a subset of namespaces
 	svr.EnvoyGateway.Provider.Kubernetes = &egv1a1.EnvoyGatewayKubernetesProvider{
@@ -1274,7 +1275,7 @@ func TestNamespacedProvider(t *testing.T) {
 		LeaderElection: egv1a1.DefaultLeaderElection(),
 	}
 	resources := new(message.ProviderResources)
-	provider, err := New(cliCfg, svr, resources)
+	provider, err := New(context.Background(), cliCfg, svr, resources)
 	require.NoError(t, err)
 	ctx, cancel := context.WithCancel(context.Background())
 	go func() {
@@ -1323,7 +1324,7 @@ func TestNamespaceSelectorProvider(t *testing.T) {
 	require.NoError(t, err)
 
 	// Setup and start the kube provider.
-	svr, err := config.New()
+	svr, err := config.New(os.Stdout)
 	require.NoError(t, err)
 	// config to watch a subset of namespaces
 	svr.EnvoyGateway.Provider.Kubernetes = &egv1a1.EnvoyGatewayKubernetesProvider{
@@ -1334,7 +1335,7 @@ func TestNamespaceSelectorProvider(t *testing.T) {
 		LeaderElection: egv1a1.DefaultLeaderElection(),
 	}
 	resources := new(message.ProviderResources)
-	provider, err := New(cliCfg, svr, resources)
+	provider, err := New(context.Background(), cliCfg, svr, resources)
 	require.NoError(t, err)
 	ctx, cancel := context.WithCancel(context.Background())
 	go func() {
@@ -1429,20 +1430,22 @@ func TestNamespaceSelectorProvider(t *testing.T) {
 		require.NoError(t, cli.Delete(ctx, nonWatchedSvc))
 	}()
 
+	watchedServiceBackendRef := test.GetServiceBackendRef(types.NamespacedName{Name: watchedSvc.Name}, 80)
 	watchedHTTPRoute := test.GetHTTPRoute(types.NamespacedName{
 		Namespace: watchedNS.Name,
 		Name:      "watched-http-route",
-	}, watchedGateway.Name, types.NamespacedName{Name: watchedSvc.Name}, 80, "")
+	}, watchedGateway.Name, watchedServiceBackendRef, "")
 
 	require.NoError(t, cli.Create(ctx, watchedHTTPRoute))
 	defer func() {
 		require.NoError(t, cli.Delete(ctx, watchedHTTPRoute))
 	}()
 
+	nonWatchedServiceBackendRef := test.GetServiceBackendRef(types.NamespacedName{Name: nonWatchedSvc.Name}, 8001)
 	nonWatchedHTTPRoute := test.GetHTTPRoute(types.NamespacedName{
 		Namespace: nonWatchedNS.Name,
 		Name:      "non-watched-http-route",
-	}, nonWatchedGateway.Name, types.NamespacedName{Name: nonWatchedSvc.Name}, 8001, "")
+	}, nonWatchedGateway.Name, nonWatchedServiceBackendRef, "")
 	require.NoError(t, cli.Create(ctx, nonWatchedHTTPRoute))
 	defer func() {
 		require.NoError(t, cli.Delete(ctx, nonWatchedHTTPRoute))

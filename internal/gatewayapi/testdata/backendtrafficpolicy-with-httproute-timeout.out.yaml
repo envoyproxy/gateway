@@ -205,7 +205,7 @@ infraIR:
 xdsIR:
   envoy-gateway/gateway-1:
     accessLog:
-      text:
+      json:
       - path: /dev/stdout
     http:
     - address: 0.0.0.0
@@ -230,6 +230,7 @@ xdsIR:
             endpoints:
             - host: 7.7.7.7
               port: 8080
+            name: httproute/default/httproute-1/rule/0/backend/0
             protocol: HTTP
             weight: 1
         hostname: gateway.envoyproxy.io
@@ -244,7 +245,8 @@ xdsIR:
           name: ""
           prefix: /
         timeout: 2m10s
-        traffic: {}
+        traffic:
+          name: default/policy-for-http-route-1
         useClientProtocol: true
       - destination:
           name: httproute/default/httproute-2/rule/0
@@ -253,6 +255,7 @@ xdsIR:
             endpoints:
             - host: 7.7.7.7
               port: 8080
+            name: httproute/default/httproute-2/rule/0/backend/0
             protocol: HTTP
             weight: 1
         hostname: gateway.envoyproxy.io
@@ -272,4 +275,10 @@ xdsIR:
             consistentHash:
               cookie:
                 name: test
+          name: envoy-gateway/policy-for-gateway
         useClientProtocol: true
+    readyListener:
+      address: 0.0.0.0
+      ipFamily: IPv4
+      path: /ready
+      port: 19003

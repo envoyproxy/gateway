@@ -1,0 +1,111 @@
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  namespace: gateway-conformance-infra
+  name: api-key-auth-users-secret-1
+data:
+  # key1
+  client1: "a2V5MQ=="
+  # key2
+  client2: "a2V5Mg=="
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: http-with-api-key-auth-header
+  namespace: gateway-conformance-infra
+spec:
+  parentRefs:
+    - name: same-namespace
+  rules:
+    - matches:
+        - path:
+            type: Exact
+            value: /api-key-auth-header
+      backendRefs:
+        - name: infra-backend-v1
+          port: 8080
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: http-with-api-key-auth-cookie
+  namespace: gateway-conformance-infra
+spec:
+  parentRefs:
+    - name: same-namespace
+  rules:
+    - matches:
+        - path:
+            type: Exact
+            value: /api-key-auth-cookie
+      backendRefs:
+        - name: infra-backend-v1
+          port: 8080
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: http-with-api-key-auth-query
+  namespace: gateway-conformance-infra
+spec:
+  parentRefs:
+    - name: same-namespace
+  rules:
+    - matches:
+        - path:
+            type: Exact
+            value: /api-key-auth-query
+      backendRefs:
+        - name: infra-backend-v1
+          port: 8080
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: SecurityPolicy
+metadata:
+  name: api-key-auth-header
+  namespace: gateway-conformance-infra
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: http-with-api-key-auth-header
+  apiKeyAuth:
+    extractFrom:
+      - headers: ["X-API-KEY"]
+    credentialRefs:
+      - name: "api-key-auth-users-secret-1"
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: SecurityPolicy
+metadata:
+  name: api-key-auth-cookie
+  namespace: gateway-conformance-infra
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: http-with-api-key-auth-cookie
+  apiKeyAuth:
+    extractFrom:
+      - cookies: ["X-API-KEY"]
+    credentialRefs:
+      - name: "api-key-auth-users-secret-1"
+
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: SecurityPolicy
+metadata:
+  name: api-key-auth-query
+  namespace: gateway-conformance-infra
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: http-with-api-key-auth-query
+  apiKeyAuth:
+    extractFrom:
+      - params: ["X-API-KEY"]
+    credentialRefs:
+      - name: "api-key-auth-users-secret-1"

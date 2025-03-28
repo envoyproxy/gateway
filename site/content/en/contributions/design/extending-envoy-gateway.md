@@ -53,7 +53,7 @@ An example configuration:
 apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: EnvoyGateway
 extensionManager:
-  poliyResources:
+  policyResources:
   - group: example.myextension.io
     version: v1alpha1
     kind: ListenerPolicyKind
@@ -69,7 +69,7 @@ extensionManager:
       - HTTPListener
       - Translation
   service:
-    fqdn: 
+    fqdn:
       hostname: my-extension.example
       port: 443
     tls:
@@ -309,7 +309,7 @@ service EnvoyGatewayExtension {
 ## Design Decisions
 
 - Envoy Gateway watches new custom resources introduced by a loaded extension and passes the resources back to the extension when they are used.
-  - This decision was made to solve the problem about how resources introduced by an extension get watched. If an extension server watches its own resources then it would need some way to trigger an Envoy Gateway reconfigure when a resource that Envoy Gateway is not watching gets updated. Having Envoy Gateway watch all resources removes any concern about creating race confitions or reconcile loops that would result from Envoy Gateway and the extension server both having so much separate state that needs to be synchronized.
+  - This decision was made to solve the problem about how resources introduced by an extension get watched. If an extension server watches its own resources then it would need some way to trigger an Envoy Gateway reconfigure when a resource that Envoy Gateway is not watching gets updated. Having Envoy Gateway watch all resources removes any concern about creating race conditions or reconcile loops that would result from Envoy Gateway and the extension server both having so much separate state that needs to be synchronized.
 - The Extension Server takes ownership of producing the correct xDS configuration in the hook responses
 - The Extension Server will be responsible for ensuring the performance of the hook processing time
 - The Post xDS level gRPC hooks all currently send a context field even though it contains nothing for several hooks. These fields exist so that they can be updated in the future to pass

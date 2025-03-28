@@ -8,6 +8,7 @@ package runner
 import (
 	"context"
 	"fmt"
+	"os"
 	"testing"
 	"time"
 
@@ -28,7 +29,7 @@ func TestRunner(t *testing.T) {
 	xdsIR := new(message.XdsIR)
 	xds := new(message.Xds)
 	pResource := new(message.ProviderResources)
-	cfg, err := config.New()
+	cfg, err := config.New(os.Stdout)
 	require.NoError(t, err)
 	r := New(&Config{
 		Server:            *cfg,
@@ -108,7 +109,7 @@ func TestRunner_withExtensionManager(t *testing.T) {
 	xds := new(message.Xds)
 	pResource := new(message.ProviderResources)
 
-	cfg, err := config.New()
+	cfg, err := config.New(os.Stdout)
 	require.NoError(t, err)
 	r := New(&Config{
 		Server:            *cfg,
@@ -174,12 +175,16 @@ type extManagerMock struct {
 	types.Manager
 }
 
-func (m *extManagerMock) GetPostXDSHookClient(xdsHookType egv1a1.XDSTranslatorHook) types.XDSHookClient {
+func (m *extManagerMock) GetPostXDSHookClient(xdsHookType egv1a1.XDSTranslatorHook) (types.XDSHookClient, error) {
 	if xdsHookType == egv1a1.XDSHTTPListener {
-		return &xdsHookClientMock{}
+		return &xdsHookClientMock{}, nil
 	}
 
-	return nil
+	return nil, nil
+}
+
+func (m *extManagerMock) FailOpen() bool {
+	return false
 }
 
 type xdsHookClientMock struct {

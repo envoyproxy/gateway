@@ -21,10 +21,11 @@ import (
 	envoymatcherv3 "github.com/envoyproxy/go-control-plane/envoy/type/matcher/v3"
 	expr "google.golang.org/genproto/googleapis/api/expr/v1alpha1"
 	"google.golang.org/protobuf/types/known/anypb"
+	"google.golang.org/protobuf/types/known/wrapperspb"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/ir"
-	"github.com/envoyproxy/gateway/internal/utils/protocov"
+	"github.com/envoyproxy/gateway/internal/utils/proto"
 	"github.com/envoyproxy/gateway/internal/xds/types"
 )
 
@@ -77,16 +78,11 @@ func (c *customResponse) patchHCM(mgr *hcmv3.HttpConnectionManager, irListener *
 
 // buildHCMCustomResponseFilter returns an OAuth2 HTTP filter from the provided IR HTTPRoute.
 func (c *customResponse) buildHCMCustomResponseFilter(ro *ir.ResponseOverride) (*hcmv3.HttpFilter, error) {
-	proto, err := c.customResponseConfig(ro)
+	config, err := c.customResponseConfig(ro)
 	if err != nil {
 		return nil, err
 	}
-
-	if err := proto.ValidateAll(); err != nil {
-		return nil, err
-	}
-
-	any, err := protocov.ToAnyWithValidation(proto)
+	any, err := proto.ToAnyWithValidation(config)
 	if err != nil {
 		return nil, err
 	}
@@ -238,7 +234,7 @@ func (c *customResponse) buildHTTPAttributeCELInput() (*cncfv3.TypedExtensionCon
 		err error
 	)
 
-	if pb, err = protocov.ToAnyWithValidation(&matcherv3.HttpAttributesCelMatchInput{}); err != nil {
+	if pb, err = proto.ToAnyWithValidation(&matcherv3.HttpAttributesCelMatchInput{}); err != nil {
 		return nil, err
 	}
 
@@ -254,7 +250,7 @@ func (c *customResponse) buildStatusCodeInput() (*cncfv3.TypedExtensionConfig, e
 		err error
 	)
 
-	if pb, err = protocov.ToAnyWithValidation(&envoymatcherv3.HttpResponseStatusCodeMatchInput{}); err != nil {
+	if pb, err = proto.ToAnyWithValidation(&envoymatcherv3.HttpResponseStatusCodeMatchInput{}); err != nil {
 		return nil, err
 	}
 
@@ -361,11 +357,7 @@ func (c *customResponse) buildStatusCodeCELMatcher(codeRange ir.StatusCodeRange)
 			},
 		},
 	}
-	if err := matcher.ValidateAll(); err != nil {
-		return nil, err
-	}
-
-	if pb, err = protocov.ToAnyWithValidation(matcher); err != nil {
+	if pb, err = proto.ToAnyWithValidation(matcher); err != nil {
 		return nil, err
 	}
 
@@ -395,16 +387,16 @@ func (c *customResponse) buildAction(r ir.ResponseOverrideRule) (*matcherv3.Matc
 		})
 	}
 
+	if r.Response.StatusCode != nil {
+		response.StatusCode = &wrapperspb.UInt32Value{Value: *r.Response.StatusCode}
+	}
+
 	var (
 		pb  *anypb.Any
 		err error
 	)
 
-	if err := response.ValidateAll(); err != nil {
-		return nil, err
-	}
-
-	if pb, err = protocov.ToAnyWithValidation(response); err != nil {
+	if pb, err = proto.ToAnyWithValidation(response); err != nil {
 		return nil, err
 	}
 

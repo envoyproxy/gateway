@@ -94,7 +94,7 @@ type FQDNEndpoint struct {
 	//
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=253
-	// +kubebuilder:validation:Pattern=`^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9]))*$`
+	// +kubebuilder:validation:Pattern=`^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$`
 	Hostname string `json:"hostname"`
 
 	// Port defines the port of the backend endpoint.
@@ -112,7 +112,15 @@ type UnixSocket struct {
 }
 
 // BackendSpec describes the desired state of BackendSpec.
+// +kubebuilder:validation:XValidation:rule="self.type != 'DynamicResolver' || !has(self.endpoints) && !has(self.appProtocols)",message="DynamicResolver type cannot have endpoints and appProtocols specified"
 type BackendSpec struct {
+	// Type defines the type of the backend. Defaults to "Endpoints"
+	//
+	// +kubebuilder:validation:Enum=Endpoints;DynamicResolver
+	// +kubebuilder:default=Endpoints
+	// +optional
+	Type *BackendType `json:"type,omitempty"`
+
 	// Endpoints defines the endpoints to be used when connecting to the backend.
 	//
 	// +kubebuilder:validation:MinItems=1
@@ -134,6 +142,22 @@ type BackendSpec struct {
 	// +optional
 	Fallback *bool `json:"fallback,omitempty"`
 }
+
+// BackendType defines the type of the Backend.
+type BackendType string
+
+const (
+	// BackendTypeEndpoints defines the type of the backend as Endpoints.
+	BackendTypeEndpoints BackendType = "Endpoints"
+	// BackendTypeDynamicResolver defines the type of the backend as DynamicResolver.
+	//
+	// When a backend is of type DynamicResolver, the Envoy will resolve the upstream
+	// ip address and port from the host header of the incoming request. If the ip address
+	// is directly set in the host header, the Envoy will use the ip address and port as the
+	// upstream address. If the hostname is set in the host header, the Envoy will resolve the
+	// ip address and port from the hostname using the DNS resolver.
+	BackendTypeDynamicResolver BackendType = "DynamicResolver"
+)
 
 // BackendConditionType is a type of condition for a backend. This type should be
 // used with a Backend resource Status.Conditions field.

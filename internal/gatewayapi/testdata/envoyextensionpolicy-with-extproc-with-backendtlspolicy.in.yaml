@@ -201,6 +201,7 @@ envoyExtensionPolicies:
         Namespace: envoy-gateway
         Port: 8000
       processingMode:
+        allowModeOverride: true
         request:
           body: Buffered
           attributes:
@@ -210,6 +211,11 @@ envoyExtensionPolicies:
           attributes:
           - xds.route_metadata
           - connection.requested_server_name
+      metadata:
+        accessibleNamespaces:
+        - envoy.filters.http.ext_authz
+        writableNamespaces:
+        - envoy.filters.http.my_custom
       messageTimeout: 5s
       failOpen: true
 - apiVersion: gateway.envoyproxy.io/v1alpha1

@@ -22,6 +22,7 @@ http:
       - endpoints:
         - host: "1.2.3.4"
           port: 50000
+        name: "regex-route-dest/backend/0"
   - name: "cookie-based-session-persistence-route-regex"
     hostname: "*"
     pathMatch:
@@ -36,6 +37,7 @@ http:
       - endpoints:
         - host: "1.2.3.4"
           port: 50000
+        name: "regex-route-dest/backend/0"
   - name: "cookie-based-session-persistence-route-prefix"
     hostname: "*"
     pathMatch:
@@ -43,13 +45,13 @@ http:
     sessionPersistence:
       cookie:
         name: "session-header"
-        ttl: "1h"
     destination:
       name: "regex-route-dest"
       settings:
       - endpoints:
         - host: "1.2.3.4"
           port: 50000
+        name: "regex-route-dest/backend/0"
   - name: "cookie-based-session-persistence-route-exact"
     hostname: "*"
     pathMatch:
@@ -64,3 +66,4 @@ http:
       - endpoints:
         - host: "1.2.3.4"
           port: 50000
+        name: "regex-route-dest/backend/0"

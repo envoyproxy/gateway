@@ -6,6 +6,7 @@
 package v1alpha1
 
 import (
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 )
@@ -15,13 +16,13 @@ const (
 	KindBackendTrafficPolicy = "BackendTrafficPolicy"
 )
 
+// BackendTrafficPolicy allows the user to configure the behavior of the connection
+// between the Envoy Proxy listener and the backend service.
+//
 // +kubebuilder:object:root=true
 // +kubebuilder:resource:categories=envoy-gateway,shortName=btp
 // +kubebuilder:subresource:status
 // +kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`
-
-// BackendTrafficPolicy allows the user to configure the behavior of the connection
-// between the Envoy Proxy listener and the backend service.
 type BackendTrafficPolicy struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
@@ -33,16 +34,15 @@ type BackendTrafficPolicy struct {
 	Status gwapiv1a2.PolicyStatus `json:"status,omitempty"`
 }
 
-// +kubebuilder:validation:XValidation:rule="(has(self.targetRef) && !has(self.targetRefs)) || (!has(self.targetRef) && has(self.targetRefs)) || (has(self.targetSelectors) && self.targetSelectors.size() > 0) ", message="either targetRef or targetRefs must be used"
+// BackendTrafficPolicySpec defines the desired state of BackendTrafficPolicy.
 //
+// +kubebuilder:validation:XValidation:rule="(has(self.targetRef) && !has(self.targetRefs)) || (!has(self.targetRef) && has(self.targetRefs)) || (has(self.targetSelectors) && self.targetSelectors.size() > 0) ", message="either targetRef or targetRefs must be used"
 // +kubebuilder:validation:XValidation:rule="has(self.targetRef) ? self.targetRef.group == 'gateway.networking.k8s.io' : true ", message="this policy can only have a targetRef.group of gateway.networking.k8s.io"
 // +kubebuilder:validation:XValidation:rule="has(self.targetRef) ? self.targetRef.kind in ['Gateway', 'HTTPRoute', 'GRPCRoute', 'UDPRoute', 'TCPRoute', 'TLSRoute'] : true", message="this policy can only have a targetRef.kind of Gateway/HTTPRoute/GRPCRoute/TCPRoute/UDPRoute/TLSRoute"
 // +kubebuilder:validation:XValidation:rule="has(self.targetRef) ? !has(self.targetRef.sectionName) : true",message="this policy does not yet support the sectionName field"
 // +kubebuilder:validation:XValidation:rule="has(self.targetRefs) ? self.targetRefs.all(ref, ref.group == 'gateway.networking.k8s.io') : true ", message="this policy can only have a targetRefs[*].group of gateway.networking.k8s.io"
 // +kubebuilder:validation:XValidation:rule="has(self.targetRefs) ? self.targetRefs.all(ref, ref.kind in ['Gateway', 'HTTPRoute', 'GRPCRoute', 'UDPRoute', 'TCPRoute', 'TLSRoute']) : true ", message="this policy can only have a targetRefs[*].kind of Gateway/HTTPRoute/GRPCRoute/TCPRoute/UDPRoute/TLSRoute"
 // +kubebuilder:validation:XValidation:rule="has(self.targetRefs) ? self.targetRefs.all(ref, !has(ref.sectionName)) : true",message="this policy does not yet support the sectionName field"
-//
-// BackendTrafficPolicySpec defines the desired state of BackendTrafficPolicy.
 type BackendTrafficPolicySpec struct {
 	PolicyTargetReferences `json:",inline"`
 	ClusterSettings        `json:",inline"`
@@ -67,7 +67,6 @@ type BackendTrafficPolicySpec struct {
 	// The compression config for the http streams.
 	//
 	// +optional
-	// +notImplementedHide
 	Compression []*Compression `json:"compression,omitempty"`
 
 	// ResponseOverride defines the configuration to override specific responses with a custom one.
@@ -75,11 +74,51 @@ type BackendTrafficPolicySpec struct {
 	//
 	// +optional
 	ResponseOverride []*ResponseOverride `json:"responseOverride,omitempty"`
+	// HTTPUpgrade defines the configuration for HTTP protocol upgrades.
+	// If not specified, the default upgrade configuration(websocket) will be used.
+	//
+	// +optional
+	HTTPUpgrade []*ProtocolUpgradeConfig `json:"httpUpgrade,omitempty"`
+
+	// RequestBuffer allows the gateway to buffer and fully receive each request from a client before continuing to send the request
+	// upstream to the backends. This can be helpful to shield your backend servers from slow clients, and also to enforce a maximum size per request
+	// as any requests larger than the buffer size will be rejected.
+	//
+	// This can have a negative performance impact so should only be enabled when necessary.
+	//
+	// When enabling this option, you should also configure your connection buffer size to account for these request buffers. There will also be an
+	// increase in memory usage for Envoy that should be accounted for in your deployment settings.
+	//
+	// +notImplementedHide
+	// +optional
+	RequestBuffer *RequestBuffer `json:"requestBuffer,omitempty"`
 }
 
-// +kubebuilder:object:root=true
+type ProtocolUpgradeConfig struct {
+	// Type is the case-insensitive type of protocol upgrade.
+	// e.g. `websocket`, `CONNECT`, `spdy/3.1` etc.
+	//
+	// +kubebuilder:validation:Required
+	Type string `json:"type"`
+
+	// TODO: support more options for CONNECT
+}
+
+type RequestBuffer struct {
+	// Limit specifies the maximum allowed size in bytes for each incoming request buffer.
+	// If exceeded, the request will be rejected with HTTP 413 Content Too Large.
+	//
+	// Accepts values in resource.Quantity format (e.g., "10Mi", "500Ki").
+	//
+	// +kubebuilder:validation:XIntOrString
+	// +kubebuilder:validation:Pattern="^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$"
+	// +notImplementedHide
+	Limit resource.Quantity `json:"limit,omitempty"`
+}
 
 // BackendTrafficPolicyList contains a list of BackendTrafficPolicy resources.
+//
+// +kubebuilder:object:root=true
 type BackendTrafficPolicyList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`

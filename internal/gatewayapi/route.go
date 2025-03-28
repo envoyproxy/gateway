@@ -8,6 +8,7 @@ package gatewayapi
 import (
 	"fmt"
 	"net"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -15,6 +16,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/utils/ptr"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
@@ -52,6 +54,12 @@ type RoutesTranslator interface {
 
 func (t *Translator) ProcessHTTPRoutes(httpRoutes []*gwapiv1.HTTPRoute, gateways []*GatewayContext, resources *resource.Resources, xdsIR resource.XdsIRMap) []*HTTPRouteContext {
 	var relevantHTTPRoutes []*HTTPRouteContext
+
+	// always sort initially by creation time stamp. Later on, additional sorting based on matcher type and
+	// match length may occur.
+	sort.Slice(httpRoutes, func(i, j int) bool {
+		return httpRoutes[i].CreationTimestamp.Before(&(httpRoutes[j].CreationTimestamp))
+	})
 
 	for _, h := range httpRoutes {
 		if h == nil {
@@ -196,12 +204,13 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 			return nil, err
 		}
 
-		dstAddrTypeMap := make(map[ir.DestinationAddressType]int)
-
-		for _, backendRef := range rule.BackendRefs {
-			ds, err := t.processDestination(backendRef, parentRef, httpRoute, resources)
+		dstAddrTypeSet := make(sets.Set[ir.DestinationAddressType])
+		destName := irRouteDestinationName(httpRoute, ruleIdx)
+		for i, backendRef := range rule.BackendRefs {
+			settingName := irDestinationSettingName(destName, i)
+			ds, err := t.processDestination(settingName, backendRef, parentRef, httpRoute, resources)
 			if !t.IsEnvoyServiceRouting(envoyProxy) && ds != nil && len(ds.Endpoints) > 0 && ds.AddressType != nil {
-				dstAddrTypeMap[*ds.AddressType]++
+				dstAddrTypeSet.Insert(*ds.AddressType)
 			}
 
 			for _, route := range ruleRoutes {
@@ -224,7 +233,7 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 
 				if route.Destination == nil {
 					route.Destination = &ir.RouteDestination{
-						Name: irRouteDestinationName(httpRoute, ruleIdx),
+						Name: destName,
 					}
 				}
 				route.Destination.Settings = append(route.Destination.Settings, ds)
@@ -232,7 +241,7 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 		}
 
 		// TODO: support mixed endpointslice address type between backendRefs
-		if !t.IsEnvoyServiceRouting(envoyProxy) && len(dstAddrTypeMap) > 1 {
+		if !t.IsEnvoyServiceRouting(envoyProxy) && (dstAddrTypeSet.Len() > 1 || dstAddrTypeSet.Has(ir.MIXED)) {
 			routeStatus := GetRouteStatus(httpRoute)
 			status.SetRouteStatusCondition(routeStatus,
 				parentRef.routeParentStatusIdx,
@@ -264,6 +273,11 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 	return routeRoutes, nil
 }
 
+func processRouteTrafficFeatures(irRoute *ir.HTTPRoute, rule gwapiv1.HTTPRouteRule) {
+	processRouteTimeout(irRoute, rule)
+	processRouteRetry(irRoute, rule)
+}
+
 func processRouteTimeout(irRoute *ir.HTTPRoute, rule gwapiv1.HTTPRouteRule) {
 	if rule.Timeouts != nil {
 		if rule.Timeouts.Request != nil {
@@ -286,6 +300,45 @@ func processRouteTimeout(irRoute *ir.HTTPRoute, rule gwapiv1.HTTPRouteRule) {
 	}
 }
 
+func processRouteRetry(irRoute *ir.HTTPRoute, rule gwapiv1.HTTPRouteRule) {
+	if rule.Retry == nil {
+		return
+	}
+
+	retry := rule.Retry
+	res := &ir.Retry{}
+	if retry.Attempts != nil {
+		res.NumRetries = ptr.To(uint32(*retry.Attempts))
+	}
+	if retry.Backoff != nil {
+		backoff, err := time.ParseDuration(string(*retry.Backoff))
+		if err == nil {
+			res.PerRetry = &ir.PerRetryPolicy{
+				BackOff: &ir.BackOffPolicy{
+					BaseInterval: ptr.To(metav1.Duration{Duration: backoff}),
+				},
+			}
+			// xref: https://gateway-api.sigs.k8s.io/geps/gep-1742/#timeout-values
+			if rule.Timeouts != nil && rule.Timeouts.BackendRequest != nil {
+				backendRequestTimeout, err := time.ParseDuration(string(*rule.Timeouts.BackendRequest))
+				if err == nil {
+					res.PerRetry.Timeout = &metav1.Duration{Duration: backendRequestTimeout}
+				}
+			}
+		}
+	}
+	if len(retry.Codes) > 0 {
+		codes := make([]ir.HTTPStatus, 0, len(retry.Codes))
+		for _, code := range retry.Codes {
+			codes = append(codes, ir.HTTPStatus(code))
+		}
+		res.RetryOn = &ir.RetryOn{
+			HTTPStatusCodes: codes,
+		}
+	}
+	irRoute.Retry = res
+}
+
 func (t *Translator) processHTTPRouteRule(httpRoute *HTTPRouteContext, ruleIdx int, httpFiltersContext *HTTPFiltersContext, rule gwapiv1.HTTPRouteRule) ([]*ir.HTTPRoute, error) {
 	var ruleRoutes []*ir.HTTPRoute
 
@@ -295,7 +348,7 @@ func (t *Translator) processHTTPRouteRule(httpRoute *HTTPRouteContext, ruleIdx i
 			Name: irRouteName(httpRoute, ruleIdx, -1),
 		}
 		irRoute.Metadata = buildRouteMetadata(httpRoute, rule.Name)
-		processRouteTimeout(irRoute, rule)
+		processRouteTrafficFeatures(irRoute, rule)
 		applyHTTPFiltersContextToIRRoute(httpFiltersContext, irRoute)
 		ruleRoutes = append(ruleRoutes, irRoute)
 	}
@@ -356,7 +409,7 @@ func (t *Translator) processHTTPRouteRule(httpRoute *HTTPRouteContext, ruleIdx i
 			SessionPersistence: sessionPersistence,
 		}
 		irRoute.Metadata = buildRouteMetadata(httpRoute, rule.Name)
-		processRouteTimeout(irRoute, rule)
+		processRouteTrafficFeatures(irRoute, rule)
 
 		if match.Path != nil {
 			switch PathMatchTypeDerefOr(match.Path.Type, gwapiv1.PathMatchPathPrefix) {
@@ -540,8 +593,10 @@ func (t *Translator) processGRPCRouteRules(grpcRoute *GRPCRouteContext, parentRe
 			return nil, err
 		}
 
-		for _, backendRef := range rule.BackendRefs {
-			ds, err := t.processDestination(backendRef, parentRef, grpcRoute, resources)
+		destName := irRouteDestinationName(grpcRoute, ruleIdx)
+		for i, backendRef := range rule.BackendRefs {
+			settingName := irDestinationSettingName(destName, i)
+			ds, err := t.processDestination(settingName, backendRef, parentRef, grpcRoute, resources)
 			if ds == nil {
 				continue
 			}
@@ -562,7 +617,7 @@ func (t *Translator) processGRPCRouteRules(grpcRoute *GRPCRouteContext, parentRe
 
 				if route.Destination == nil {
 					route.Destination = &ir.RouteDestination{
-						Name: irRouteDestinationName(grpcRoute, ruleIdx),
+						Name: destName,
 					}
 				}
 				route.Destination.Settings = append(route.Destination.Settings, ds)
@@ -744,11 +799,7 @@ func (t *Translator) processHTTPRouteParentRefListener(route RouteContext, route
 					IsHTTP2:               routeRoute.IsHTTP2,
 					SessionPersistence:    routeRoute.SessionPersistence,
 					Timeout:               routeRoute.Timeout,
-				}
-				if routeRoute.Traffic != nil {
-					hostRoute.Traffic = &ir.TrafficFeatures{
-						Retry: routeRoute.Traffic.Retry,
-					}
+					Retry:                 routeRoute.Retry,
 				}
 				perHostRoutes = append(perHostRoutes, hostRoute)
 			}
@@ -829,11 +880,13 @@ func (t *Translator) processTLSRouteParentRefs(tlsRoute *TLSRouteContext, resour
 		// not on the Route as a whole.
 		var destSettings []*ir.DestinationSetting
 
+		destName := irRouteDestinationName(tlsRoute, -1 /*rule index*/)
 		// compute backends
 		for _, rule := range tlsRoute.Spec.Rules {
-			for _, backendRef := range rule.BackendRefs {
+			for i, backendRef := range rule.BackendRefs {
+				settingName := irDestinationSettingName(destName, i)
 				// not yet handled, requires to align with the conformance test - TLSRouteInvalidReferenceGrant.
-				ds, _ := t.processDestination(backendRef, parentRef, tlsRoute, resources)
+				ds, _ := t.processDestination(settingName, backendRef, parentRef, tlsRoute, resources)
 				if ds != nil {
 					destSettings = append(destSettings, ds)
 				}
@@ -884,7 +937,7 @@ func (t *Translator) processTLSRouteParentRefs(tlsRoute *TLSRouteContext, resour
 						SNIs: hosts,
 					}},
 					Destination: &ir.RouteDestination{
-						Name:     irRouteDestinationName(tlsRoute, -1 /*rule index*/),
+						Name:     destName,
 						Settings: destSettings,
 					},
 				}
@@ -972,8 +1025,10 @@ func (t *Translator) processUDPRouteParentRefs(udpRoute *UDPRouteContext, resour
 			continue
 		}
 
-		for _, backendRef := range udpRoute.Spec.Rules[0].BackendRefs {
-			ds, err := t.processDestination(backendRef, parentRef, udpRoute, resources)
+		destName := irRouteDestinationName(udpRoute, -1 /*rule index*/)
+		for i, backendRef := range udpRoute.Spec.Rules[0].BackendRefs {
+			settingName := irDestinationSettingName(destName, i)
+			ds, err := t.processDestination(settingName, backendRef, parentRef, udpRoute, resources)
 			// skip adding the route and provide the reason via route status.
 			if err != nil {
 				routeStatus := GetRouteStatus(udpRoute)
@@ -987,7 +1042,11 @@ func (t *Translator) processUDPRouteParentRefs(udpRoute *UDPRouteContext, resour
 				)
 				continue
 			}
-			destSettings = append(destSettings, ds)
+
+			// Skip nil destination settings
+			if ds != nil {
+				destSettings = append(destSettings, ds)
+			}
 		}
 
 		// If no negative condition has been set for ResolvedRefs, set "ResolvedRefs=True"
@@ -1027,7 +1086,7 @@ func (t *Translator) processUDPRouteParentRefs(udpRoute *UDPRouteContext, resour
 				irRoute := &ir.UDPRoute{
 					Name: irUDPRouteName(udpRoute),
 					Destination: &ir.RouteDestination{
-						Name:     irRouteDestinationName(udpRoute, -1 /*rule index*/),
+						Name:     destName,
 						Settings: destSettings,
 					},
 				}
@@ -1114,8 +1173,10 @@ func (t *Translator) processTCPRouteParentRefs(tcpRoute *TCPRouteContext, resour
 			continue
 		}
 
-		for _, backendRef := range tcpRoute.Spec.Rules[0].BackendRefs {
-			ds, err := t.processDestination(backendRef, parentRef, tcpRoute, resources)
+		destName := irRouteDestinationName(tcpRoute, -1 /*rule index*/)
+		for i, backendRef := range tcpRoute.Spec.Rules[0].BackendRefs {
+			settingName := irDestinationSettingName(destName, i)
+			ds, err := t.processDestination(settingName, backendRef, parentRef, tcpRoute, resources)
 			// skip adding the route and provide the reason via route status.
 			if err != nil {
 				routeStatus := GetRouteStatus(tcpRoute)
@@ -1129,7 +1190,10 @@ func (t *Translator) processTCPRouteParentRefs(tcpRoute *TCPRouteContext, resour
 				)
 				continue
 			}
-			destSettings = append(destSettings, ds)
+			// Skip nil destination settings
+			if ds != nil {
+				destSettings = append(destSettings, ds)
+			}
 		}
 
 		// If no negative condition has been set for ResolvedRefs, set "ResolvedRefs=True"
@@ -1168,7 +1232,7 @@ func (t *Translator) processTCPRouteParentRefs(tcpRoute *TCPRouteContext, resour
 				irRoute := &ir.TCPRoute{
 					Name: irTCPRouteName(tcpRoute),
 					Destination: &ir.RouteDestination{
-						Name:     irRouteDestinationName(tcpRoute, -1 /*rule index*/),
+						Name:     destName,
 						Settings: destSettings,
 					},
 				}
@@ -1220,7 +1284,7 @@ func (t *Translator) processTCPRouteParentRefs(tcpRoute *TCPRouteContext, resour
 // processDestination translates a backendRef into a destination settings.
 // If an error occurs during this conversion, an error is returned, and the associated routes are expected to become inactive.
 // This will result in a direct 500 response for HTTP-based requests.
-func (t *Translator) processDestination(backendRefContext BackendRefContext,
+func (t *Translator) processDestination(name string, backendRefContext BackendRefContext,
 	parentRef *RouteParentContext, route RouteContext, resources *resource.Resources,
 ) (ds *ir.DestinationSetting, err error) {
 	routeType := GetRouteType(route)
@@ -1250,90 +1314,43 @@ func (t *Translator) processDestination(backendRefContext BackendRefContext,
 		envoyProxy = gatewayCtx.envoyProxy
 	}
 
-	var (
-		endpoints []*ir.DestinationEndpoint
-		addrType  *ir.DestinationAddressType
-	)
 	protocol := inspectAppProtocolByRouteKind(routeType)
 
 	switch KindDerefOr(backendRef.Kind, resource.KindService) {
 	case resource.KindServiceImport:
-		serviceImport := resources.GetServiceImport(backendNamespace, string(backendRef.Name))
-		var servicePort mcsapiv1a1.ServicePort
-		for _, port := range serviceImport.Spec.Ports {
-			if port.Port == int32(*backendRef.Port) {
-				servicePort = port
-				break
-			}
-		}
-
-		if !t.IsEnvoyServiceRouting(envoyProxy) {
-			endpointSlices := resources.GetEndpointSlicesForBackend(backendNamespace, string(backendRef.Name), KindDerefOr(backendRef.Kind, resource.KindService))
-			endpoints, addrType = getIREndpointsFromEndpointSlices(endpointSlices, servicePort.Name, servicePort.Protocol)
-		} else {
-			backendIps := resources.GetServiceImport(backendNamespace, string(backendRef.Name)).Spec.IPs
-			for _, ip := range backendIps {
-				ep := ir.NewDestEndpoint(
-					ip,
-					uint32(*backendRef.Port))
-				endpoints = append(endpoints, ep)
-			}
-		}
-
-		ds = &ir.DestinationSetting{
-			Weight:      &weight,
-			Protocol:    protocol,
-			Endpoints:   endpoints,
-			AddressType: addrType,
-		}
+		ds = t.processServiceImportDestinationSetting(name, backendRef.BackendObjectReference, backendNamespace, protocol, resources, envoyProxy)
 
 	case resource.KindService:
-		ds = t.processServiceDestinationSetting(backendRef.BackendObjectReference, backendNamespace, protocol, resources, envoyProxy)
-		ds.TLS, err = t.applyBackendTLSSetting(
-			backendRef.BackendObjectReference,
-			backendNamespace,
-			gwapiv1a2.ParentReference{
-				Group:       parentRef.Group,
-				Kind:        parentRef.Kind,
-				Namespace:   parentRef.Namespace,
-				Name:        parentRef.Name,
-				SectionName: parentRef.SectionName,
-				Port:        parentRef.Port,
-			},
-			resources,
-			envoyProxy,
-		)
-		if err != nil {
-			return nil, err
-		}
-		ds.Filters, err = t.processDestinationFilters(routeType, backendRefContext, parentRef, route, resources)
-		if err != nil {
-			return nil, err
-		}
-		ds.IPFamily = getServiceIPFamily(resources.GetService(backendNamespace, string(backendRef.Name)))
+		ds = t.processServiceDestinationSetting(name, backendRef.BackendObjectReference, backendNamespace, protocol, resources, envoyProxy)
+		svc := resources.GetService(backendNamespace, string(backendRef.Name))
+		ds.IPFamily = getServiceIPFamily(svc)
+		ds.ZoneAwareRoutingEnabled = isZoneAwareRoutingEnabled(svc)
+
 	case egv1a1.KindBackend:
-		ds = t.processBackendDestinationSetting(backendRef.BackendObjectReference, backendNamespace, resources)
-		ds.TLS, err = t.applyBackendTLSSetting(
-			backendRef.BackendObjectReference,
-			backendNamespace,
-			gwapiv1a2.ParentReference{
-				Group:       parentRef.Group,
-				Kind:        parentRef.Kind,
-				Namespace:   parentRef.Namespace,
-				Name:        parentRef.Name,
-				SectionName: parentRef.SectionName,
-				Port:        parentRef.Port,
-			},
-			resources,
-			envoyProxy,
-		)
-		if err != nil {
-			return nil, err
-		}
-		ds.Filters, err = t.processDestinationFilters(routeType, backendRefContext, parentRef, route, resources)
-		if err != nil {
-			return nil, err
-		}
+		ds = t.processBackendDestinationSetting(name, backendRef.BackendObjectReference, backendNamespace, protocol, resources)
+	}
+
+	ds.TLS, err = t.applyBackendTLSSetting(
+		backendRef.BackendObjectReference,
+		backendNamespace,
+		gwapiv1a2.ParentReference{
+			Group:       parentRef.Group,
+			Kind:        parentRef.Kind,
+			Namespace:   parentRef.Namespace,
+			Name:        parentRef.Name,
+			SectionName: parentRef.SectionName,
+			Port:        parentRef.Port,
+		},
+		resources,
+		envoyProxy,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	ds.Filters, err = t.processDestinationFilters(routeType, backendRefContext, parentRef, route, resources)
+	if err != nil {
+		return nil, err
 	}
 
 	if err := validateDestinationSettings(ds, t.IsEnvoyServiceRouting(envoyProxy), backendRef.Kind); err != nil {
@@ -1368,7 +1385,57 @@ func validateDestinationSettings(destinationSettings *ir.DestinationSetting, end
 	return nil
 }
 
+func (t *Translator) processServiceImportDestinationSetting(
+	name string,
+	backendRef gwapiv1.BackendObjectReference,
+	backendNamespace string,
+	protocol ir.AppProtocol,
+	resources *resource.Resources,
+	envoyProxy *egv1a1.EnvoyProxy,
+) *ir.DestinationSetting {
+	var (
+		endpoints []*ir.DestinationEndpoint
+		addrType  *ir.DestinationAddressType
+	)
+
+	serviceImport := resources.GetServiceImport(backendNamespace, string(backendRef.Name))
+	var servicePort mcsapiv1a1.ServicePort
+	for _, port := range serviceImport.Spec.Ports {
+		if port.Port == int32(*backendRef.Port) {
+			servicePort = port
+			break
+		}
+	}
+
+	// TODO(#5485): Should these protocols be supported for ServiceImport?
+	//
+	// if servicePort.AppProtocol != nil {
+	// 	protocol = serviceAppProtocolToIRAppProtocol(*servicePort.AppProtocol)
+	// }
+
+	// Route to endpoints by default
+	if !t.IsEnvoyServiceRouting(envoyProxy) {
+		endpointSlices := resources.GetEndpointSlicesForBackend(backendNamespace, string(backendRef.Name), resource.KindServiceImport)
+		endpoints, addrType = getIREndpointsFromEndpointSlices(endpointSlices, servicePort.Name, servicePort.Protocol)
+	} else {
+		// Fall back to Service ClusterIP routing
+		backendIps := resources.GetServiceImport(backendNamespace, string(backendRef.Name)).Spec.IPs
+		for _, ip := range backendIps {
+			ep := ir.NewDestEndpoint(ip, uint32(*backendRef.Port), false, nil)
+			endpoints = append(endpoints, ep)
+		}
+	}
+
+	return &ir.DestinationSetting{
+		Name:        name,
+		Protocol:    protocol,
+		Endpoints:   endpoints,
+		AddressType: addrType,
+	}
+}
+
 func (t *Translator) processServiceDestinationSetting(
+	name string,
 	backendRef gwapiv1.BackendObjectReference,
 	backendNamespace string,
 	protocol ir.AppProtocol,
@@ -1391,12 +1458,7 @@ func (t *Translator) processServiceDestinationSetting(
 
 	// support HTTPRouteBackendProtocolH2C/GRPC
 	if servicePort.AppProtocol != nil {
-		switch *servicePort.AppProtocol {
-		case "kubernetes.io/h2c":
-			protocol = ir.HTTP2
-		case "grpc":
-			protocol = ir.GRPC
-		}
+		protocol = serviceAppProtocolToIRAppProtocol(*servicePort.AppProtocol, protocol)
 	}
 
 	// Route to endpoints by default
@@ -1405,16 +1467,16 @@ func (t *Translator) processServiceDestinationSetting(
 		endpoints, addrType = getIREndpointsFromEndpointSlices(endpointSlices, servicePort.Name, servicePort.Protocol)
 	} else {
 		// Fall back to Service ClusterIP routing
-		ep := ir.NewDestEndpoint(
-			service.Spec.ClusterIP,
-			uint32(*backendRef.Port))
+		ep := ir.NewDestEndpoint(service.Spec.ClusterIP, uint32(*backendRef.Port), false, nil)
 		endpoints = append(endpoints, ep)
 	}
 
 	return &ir.DestinationSetting{
-		Protocol:    protocol,
-		Endpoints:   endpoints,
-		AddressType: addrType,
+		Name:                    name,
+		Protocol:                protocol,
+		Endpoints:               endpoints,
+		AddressType:             addrType,
+		ZoneAwareRoutingEnabled: isZoneAwareRoutingEnabled(service),
 	}
 }
 
@@ -1432,6 +1494,22 @@ func getBackendFilters(routeType gwapiv1.Kind, backendRefContext BackendRefConte
 	}
 
 	return nil
+}
+
+func isZoneAwareRoutingEnabled(svc *corev1.Service) bool {
+	if trafficDist := svc.Spec.TrafficDistribution; trafficDist != nil {
+		return *trafficDist == corev1.ServiceTrafficDistributionPreferClose
+	}
+
+	// Allows annotation values that align with Kubernetes defaults.
+	// Ref:
+	// https://kubernetes.io/docs/concepts/services-networking/topology-aware-routing/#enabling-topology-aware-routing
+	// https://github.com/kubernetes/kubernetes/blob/9d9e1afdf78bce0a517cc22557457f942040ca19/staging/src/k8s.io/endpointslice/utils.go#L355-L368
+	if val, ok := svc.Annotations[corev1.AnnotationTopologyMode]; ok {
+		return val == "Auto" || val == "auto"
+	}
+
+	return false
 }
 
 func (t *Translator) processDestinationFilters(routeType gwapiv1.Kind, backendRefContext BackendRefContext, parentRef *RouteParentContext, route RouteContext, resources *resource.Resources) (*ir.DestinationFilters, error) {
@@ -1618,15 +1696,25 @@ func getIREndpointsFromEndpointSlice(endpointSlice *discoveryv1.EndpointSlice, p
 	for _, endpoint := range endpointSlice.Endpoints {
 		for _, endpointPort := range endpointSlice.Ports {
 			// Check if the endpoint port matches the service port
-			// and if endpoint is Ready
-			if *endpointPort.Name == portName &&
-				*endpointPort.Protocol == portProtocol &&
-				// Unknown state (nil) should be interpreted as Ready, see https://pkg.go.dev/k8s.io/api/discovery/v1#EndpointConditions
-				(endpoint.Conditions.Ready == nil || *endpoint.Conditions.Ready) {
+			if *endpointPort.Name != portName || *endpointPort.Protocol != portProtocol {
+				continue
+			}
+			conditions := endpoint.Conditions
+			// Unknown Serving/Terminating (nil) should fall-back to Ready, see https://pkg.go.dev/k8s.io/api/discovery/v1#EndpointConditions
+			if conditions.Serving != nil && conditions.Terminating != nil {
+				// Check if the endpoint is serving
+				if !*conditions.Serving {
+					continue
+				}
+				// Drain the endpoint if it is being terminated
+				draining := *conditions.Terminating
 				for _, address := range endpoint.Addresses {
-					ep := ir.NewDestEndpoint(
-						address,
-						uint32(*endpointPort.Port))
+					ep := ir.NewDestEndpoint(address, uint32(*endpointPort.Port), draining, endpoint.Zone)
+					endpoints = append(endpoints, ep)
+				}
+			} else if conditions.Ready == nil || *conditions.Ready {
+				for _, address := range endpoint.Addresses {
+					ep := ir.NewDestEndpoint(address, uint32(*endpointPort.Port), false, endpoint.Zone)
 					endpoints = append(endpoints, ep)
 				}
 			}
@@ -1658,8 +1746,8 @@ func getTargetBackendReference(backendRef gwapiv1a2.BackendObjectReference, back
 		return ref
 	}
 
-	// Set the section name to the port name if the backend is a Kubernetes Service
-	if backendRef.Kind == nil || *backendRef.Kind == resource.KindService {
+	switch {
+	case backendRef.Kind == nil || *backendRef.Kind == resource.KindService:
 		if service := resources.GetService(backendNamespace, string(backendRef.Name)); service != nil {
 			for _, port := range service.Spec.Ports {
 				if port.Port == int32(*backendRef.Port) {
@@ -1670,7 +1758,20 @@ func getTargetBackendReference(backendRef gwapiv1a2.BackendObjectReference, back
 				}
 			}
 		}
-	} else {
+
+	case *backendRef.Kind == resource.KindServiceImport:
+		if si := resources.GetServiceImport(backendNamespace, string(backendRef.Name)); si != nil {
+			for _, port := range si.Spec.Ports {
+				if port.Port == int32(*backendRef.Port) {
+					if port.Name != "" {
+						ref.SectionName = SectionNamePtr(port.Name)
+						break
+					}
+				}
+			}
+		}
+
+	default:
 		// Set the section name to the port number if the backend is a EG Backend
 		ref.SectionName = SectionNamePtr(strconv.Itoa(int(*backendRef.Port)))
 	}
@@ -1678,11 +1779,10 @@ func getTargetBackendReference(backendRef gwapiv1a2.BackendObjectReference, back
 	return ref
 }
 
-func (t *Translator) processBackendDestinationSetting(backendRef gwapiv1.BackendObjectReference, backendNamespace string, resources *resource.Resources) *ir.DestinationSetting {
+func (t *Translator) processBackendDestinationSetting(name string, backendRef gwapiv1.BackendObjectReference, backendNamespace string, protocol ir.AppProtocol, resources *resource.Resources) *ir.DestinationSetting {
 	var (
 		dstEndpoints []*ir.DestinationEndpoint
 		dstAddrType  *ir.DestinationAddressType
-		dstProtocol  ir.AppProtocol
 	)
 
 	addrTypeMap := make(map[ir.DestinationAddressType]int)
@@ -1728,14 +1828,12 @@ func (t *Translator) processBackendDestinationSetting(backendRef gwapiv1.Backend
 	}
 
 	for _, ap := range backend.Spec.AppProtocols {
-		if ap == egv1a1.AppProtocolTypeH2C {
-			dstProtocol = ir.HTTP2
-			break
-		}
+		protocol = backendAppProtocolToIRAppProtocol(ap, protocol)
 	}
 
 	ds := &ir.DestinationSetting{
-		Protocol:    dstProtocol,
+		Name:        name,
+		Protocol:    protocol,
 		Endpoints:   dstEndpoints,
 		AddressType: dstAddrType,
 	}
@@ -1748,4 +1846,26 @@ func (t *Translator) processBackendDestinationSetting(backendRef gwapiv1.Backend
 	}
 
 	return ds
+}
+
+func serviceAppProtocolToIRAppProtocol(ap string, defaultProtocol ir.AppProtocol) ir.AppProtocol {
+	switch ap {
+	case "kubernetes.io/h2c":
+		return ir.HTTP2
+	case "grpc":
+		return ir.GRPC
+	default:
+		return defaultProtocol
+	}
+}
+
+func backendAppProtocolToIRAppProtocol(ap egv1a1.AppProtocolType, defaultProtocol ir.AppProtocol) ir.AppProtocol {
+	switch ap {
+	case egv1a1.AppProtocolTypeH2C:
+		return ir.HTTP2
+	case "grpc":
+		return ir.GRPC
+	default:
+		return defaultProtocol
+	}
 }

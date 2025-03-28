@@ -85,8 +85,10 @@ func (x XdsIRRoutes) Less(i, j int) bool {
 func sortXdsIRMap(xdsIR resource.XdsIRMap) {
 	for _, irItem := range xdsIR {
 		for _, http := range irItem.HTTP {
-			// descending order
-			sort.Sort(sort.Reverse(XdsIRRoutes(http.Routes)))
+			if !http.PreserveRouteOrder {
+				// descending order
+				sort.Sort(sort.Reverse(XdsIRRoutes(http.Routes)))
+			}
 		}
 	}
 }

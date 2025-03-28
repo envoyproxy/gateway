@@ -7,6 +7,7 @@ package kubernetes
 
 import (
 	"context"
+	"os"
 	"testing"
 	"time"
 
@@ -75,6 +76,7 @@ func TestProcessHTTPRoutes(t *testing.T) {
 		routes             []*gwapiv1.HTTPRoute
 		extensionFilters   []*unstructured.Unstructured
 		extensionAPIGroups []schema.GroupVersionKind
+		httpRouteFilters   []*egv1a1.HTTPRouteFilter
 		expected           bool
 	}{
 		{
@@ -338,6 +340,253 @@ func TestProcessHTTPRoutes(t *testing.T) {
 			},
 			expected: true,
 		},
+		{
+			name: "multiple httproute with same extension filter",
+			routes: []*gwapiv1.HTTPRoute{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: httpRouteNS,
+						Name:      "test",
+					},
+					Spec: gwapiv1.HTTPRouteSpec{
+						CommonRouteSpec: gwapiv1.CommonRouteSpec{
+							ParentRefs: []gwapiv1.ParentReference{
+								{
+									Name: "test",
+								},
+							},
+						},
+						Rules: []gwapiv1.HTTPRouteRule{
+							{
+								Matches: []gwapiv1.HTTPRouteMatch{
+									{
+										Path: &gwapiv1.HTTPPathMatch{
+											Type:  ptr.To(gwapiv1.PathMatchPathPrefix),
+											Value: ptr.To("/1"),
+										},
+									},
+								},
+								Filters: []gwapiv1.HTTPRouteFilter{
+									{
+										Type: gwapiv1.HTTPRouteFilterExtensionRef,
+										ExtensionRef: &gwapiv1.LocalObjectReference{
+											Group: gwapiv1.Group("gateway.example.io"),
+											Kind:  gwapiv1.Kind("Bar"),
+											Name:  gwapiv1.ObjectName("test"),
+										},
+									},
+								},
+								BackendRefs: []gwapiv1.HTTPBackendRef{
+									{
+										BackendRef: gwapiv1.BackendRef{
+											BackendObjectReference: gwapiv1.BackendObjectReference{
+												Group: gatewayapi.GroupPtr(corev1.GroupName),
+												Kind:  gatewayapi.KindPtr(resource.KindService),
+												Name:  "test",
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: httpRouteNS,
+						Name:      "test-2",
+					},
+					Spec: gwapiv1.HTTPRouteSpec{
+						CommonRouteSpec: gwapiv1.CommonRouteSpec{
+							ParentRefs: []gwapiv1.ParentReference{
+								{
+									Name: "test",
+								},
+							},
+						},
+						Rules: []gwapiv1.HTTPRouteRule{
+							{
+								Matches: []gwapiv1.HTTPRouteMatch{
+									{
+										Path: &gwapiv1.HTTPPathMatch{
+											Type:  ptr.To(gwapiv1.PathMatchPathPrefix),
+											Value: ptr.To("/2"),
+										},
+									},
+								},
+								Filters: []gwapiv1.HTTPRouteFilter{
+									{
+										Type: gwapiv1.HTTPRouteFilterExtensionRef,
+										ExtensionRef: &gwapiv1.LocalObjectReference{
+											Group: gwapiv1.Group("gateway.example.io"),
+											Kind:  gwapiv1.Kind("Bar"),
+											Name:  gwapiv1.ObjectName("test"),
+										},
+									},
+								},
+								BackendRefs: []gwapiv1.HTTPBackendRef{
+									{
+										BackendRef: gwapiv1.BackendRef{
+											BackendObjectReference: gwapiv1.BackendObjectReference{
+												Group: gatewayapi.GroupPtr(corev1.GroupName),
+												Kind:  gatewayapi.KindPtr(resource.KindService),
+												Name:  "test",
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			extensionFilters: []*unstructured.Unstructured{
+				{
+					Object: map[string]interface{}{
+						"apiVersion": "gateway.example.io/v1alpha1",
+						"kind":       "Bar",
+						"metadata": map[string]interface{}{
+							"name":      "test",
+							"namespace": httpRouteNS,
+						},
+					},
+				},
+			},
+			extensionAPIGroups: []schema.GroupVersionKind{
+				{
+					Group:   "gateway.example.io",
+					Version: "v1alpha1",
+					Kind:    "Bar",
+				},
+				{
+					Group:   "gateway.example.io",
+					Version: "v1alpha1",
+					Kind:    "Foo",
+				},
+			},
+			expected: true,
+		},
+		{
+			name: "multiple httproute with same extension filter: Envoy Gateway HTTPRouteFilter",
+			routes: []*gwapiv1.HTTPRoute{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: httpRouteNS,
+						Name:      "test",
+					},
+					Spec: gwapiv1.HTTPRouteSpec{
+						CommonRouteSpec: gwapiv1.CommonRouteSpec{
+							ParentRefs: []gwapiv1.ParentReference{
+								{
+									Name: "test",
+								},
+							},
+						},
+						Rules: []gwapiv1.HTTPRouteRule{
+							{
+								Matches: []gwapiv1.HTTPRouteMatch{
+									{
+										Path: &gwapiv1.HTTPPathMatch{
+											Type:  ptr.To(gwapiv1.PathMatchPathPrefix),
+											Value: ptr.To("/1"),
+										},
+									},
+								},
+								Filters: []gwapiv1.HTTPRouteFilter{
+									{
+										Type: gwapiv1.HTTPRouteFilterExtensionRef,
+										ExtensionRef: &gwapiv1.LocalObjectReference{
+											Group: gwapiv1.Group(egv1a1.GroupName),
+											Kind:  gwapiv1.Kind(egv1a1.KindHTTPRouteFilter),
+											Name:  gwapiv1.ObjectName("test"),
+										},
+									},
+								},
+								BackendRefs: []gwapiv1.HTTPBackendRef{
+									{
+										BackendRef: gwapiv1.BackendRef{
+											BackendObjectReference: gwapiv1.BackendObjectReference{
+												Group: gatewayapi.GroupPtr(corev1.GroupName),
+												Kind:  gatewayapi.KindPtr(resource.KindService),
+												Name:  "test",
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: httpRouteNS,
+						Name:      "test-2",
+					},
+					Spec: gwapiv1.HTTPRouteSpec{
+						CommonRouteSpec: gwapiv1.CommonRouteSpec{
+							ParentRefs: []gwapiv1.ParentReference{
+								{
+									Name: "test",
+								},
+							},
+						},
+						Rules: []gwapiv1.HTTPRouteRule{
+							{
+								Matches: []gwapiv1.HTTPRouteMatch{
+									{
+										Path: &gwapiv1.HTTPPathMatch{
+											Type:  ptr.To(gwapiv1.PathMatchPathPrefix),
+											Value: ptr.To("/2"),
+										},
+									},
+								},
+								Filters: []gwapiv1.HTTPRouteFilter{
+									{
+										Type: gwapiv1.HTTPRouteFilterExtensionRef,
+										ExtensionRef: &gwapiv1.LocalObjectReference{
+											Group: gwapiv1.Group(egv1a1.GroupName),
+											Kind:  gwapiv1.Kind(egv1a1.KindHTTPRouteFilter),
+											Name:  gwapiv1.ObjectName("test"),
+										},
+									},
+								},
+								BackendRefs: []gwapiv1.HTTPBackendRef{
+									{
+										BackendRef: gwapiv1.BackendRef{
+											BackendObjectReference: gwapiv1.BackendObjectReference{
+												Group: gatewayapi.GroupPtr(corev1.GroupName),
+												Kind:  gatewayapi.KindPtr(resource.KindService),
+												Name:  "test",
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			httpRouteFilters: []*egv1a1.HTTPRouteFilter{
+				{
+					TypeMeta: metav1.TypeMeta{
+						Kind:       egv1a1.KindHTTPRouteFilter,
+						APIVersion: egv1a1.GroupVersion.String(),
+					},
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: httpRouteNS,
+						Name:      "test",
+					},
+					Spec: egv1a1.HTTPRouteFilterSpec{
+						URLRewrite: &egv1a1.HTTPURLRewriteFilter{
+							Hostname: &egv1a1.HTTPHostnameModifier{
+								Type: egv1a1.BackendHTTPHostnameModifier,
+							},
+						},
+					},
+				},
+			},
+			expected: true,
+		},
 	}
 
 	for i := range testCases {
@@ -348,13 +597,14 @@ func TestProcessHTTPRoutes(t *testing.T) {
 			objs := []client.Object{gc, gw}
 
 			// Create the reconciler.
-			logger := logging.DefaultLogger(egv1a1.LogLevelInfo)
+			logger := logging.DefaultLogger(os.Stdout, egv1a1.LogLevelInfo)
 
 			ctx := context.Background()
 
 			r := &gatewayAPIReconciler{
 				log:             logger,
 				classController: gcCtrlName,
+				hrfCRDExists:    true,
 			}
 
 			// Add the test case objects to the reconciler client.
@@ -366,6 +616,9 @@ func TestProcessHTTPRoutes(t *testing.T) {
 			}
 			if len(tc.extensionAPIGroups) > 0 {
 				r.extGVKs = append(r.extGVKs, tc.extensionAPIGroups...)
+			}
+			for _, filter := range tc.httpRouteFilters {
+				objs = append(objs, filter)
 			}
 			r.client = fakeclient.NewClientBuilder().
 				WithScheme(envoygateway.GetScheme()).
@@ -390,6 +643,8 @@ func TestProcessHTTPRoutes(t *testing.T) {
 				require.NoError(t, err)
 				// Ensure the resource tree and map are as expected.
 				require.Equal(t, tc.routes, resourceTree.HTTPRoutes)
+				require.Equal(t, len(tc.extensionFilters), len(resourceTree.ExtensionRefFilters))
+				require.Equal(t, len(tc.httpRouteFilters), len(resourceTree.HTTPRouteFilters))
 				if tc.extensionFilters != nil {
 					for _, filter := range tc.extensionFilters {
 						key := utils.NamespacedNameWithGroupKind{
@@ -502,7 +757,7 @@ func TestProcessGRPCRoutes(t *testing.T) {
 			objs := []client.Object{gc, gw}
 
 			// Create the reconciler.
-			logger := logging.DefaultLogger(egv1a1.LogLevelInfo)
+			logger := logging.DefaultLogger(os.Stdout, egv1a1.LogLevelInfo)
 
 			ctx := context.Background()
 

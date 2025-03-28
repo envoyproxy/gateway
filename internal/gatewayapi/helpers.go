@@ -249,25 +249,6 @@ func OwnerLabels(gateway *gwapiv1.Gateway, mergeGateways bool) map[string]string
 	return GatewayOwnerLabels(gateway.Namespace, gateway.Name)
 }
 
-// servicePortToContainerPort translates a service port into an ephemeral
-// container port.
-func servicePortToContainerPort(servicePort int32, envoyProxy *egv1a1.EnvoyProxy) int32 {
-	if envoyProxy != nil {
-		if !envoyProxy.NeedToSwitchPorts() {
-			return servicePort
-		}
-	}
-
-	// If the service port is a privileged port (1-1023)
-	// add a constant to the value converting it into an ephemeral port.
-	// This allows the container to bind to the port without needing a
-	// CAP_NET_BIND_SERVICE capability.
-	if servicePort < minEphemeralPort {
-		return servicePort + wellKnownPortShift
-	}
-	return servicePort
-}
-
 // computeHosts returns a list of intersecting listener hostnames and route hostnames
 // that don't intersect with other listener hostnames.
 func computeHosts(routeHostnames []string, listenerContext *ListenerContext) []string {
@@ -422,6 +403,10 @@ func irRouteDestinationName(route RouteContext, ruleIdx int) string {
 	return fmt.Sprintf("%srule/%d", irRoutePrefix(route), ruleIdx)
 }
 
+func irDestinationSettingName(destName string, backendIdx int) string {
+	return fmt.Sprintf("%s/backend/%d", destName, backendIdx)
+}
+
 // irTLSConfigs produces a defaulted IR TLSConfig
 func irTLSConfigs(tlsSecrets ...*corev1.Secret) *ir.TLSConfig {
 	if len(tlsSecrets) == 0 {
@@ -462,6 +447,11 @@ func irTLSListenerConfigName(secret *corev1.Secret) string {
 
 func irTLSCACertName(namespace, name string) string {
 	return fmt.Sprintf("%s/%s/%s", namespace, name, caCertKey)
+}
+
+// Helper function to format the policy name and namespace
+func irTrafficName(policy *egv1a1.BackendTrafficPolicy) string {
+	return fmt.Sprintf("%s/%s", policy.Namespace, policy.Name)
 }
 
 func IsMergeGatewaysEnabled(resources *resource.Resources) bool {
@@ -552,10 +542,22 @@ type targetRefWithTimestamp struct {
 	CreationTimestamp metav1.Time
 }
 
+func selectorFromTargetSelector(selector egv1a1.TargetSelector) labels.Selector {
+	l, err := metav1.LabelSelectorAsSelector(&metav1.LabelSelector{
+		MatchLabels:      selector.MatchLabels,
+		MatchExpressions: selector.MatchExpressions,
+	})
+	if err != nil {
+		// TODO - how do we we bubble this up
+		return labels.Nothing()
+	}
+	return l
+}
+
 func getPolicyTargetRefs[T client.Object](policy egv1a1.PolicyTargetReferences, potentialTargets []T) []gwapiv1a2.LocalPolicyTargetReferenceWithSectionName {
 	dedup := sets.New[targetRefWithTimestamp]()
 	for _, currSelector := range policy.TargetSelectors {
-		labelSelector := labels.SelectorFromSet(currSelector.MatchLabels)
+		labelSelector := selectorFromTargetSelector(currSelector)
 		for _, obj := range potentialTargets {
 			gvk := obj.GetObjectKind().GroupVersionKind()
 			if gvk.Kind != string(currSelector.Kind) ||
@@ -662,4 +664,12 @@ func getEnvoyIPFamily(envoyProxy *egv1a1.EnvoyProxy) *egv1a1.IPFamily {
 	default:
 		return nil
 	}
+}
+
+// getPreserveRouteOrder returns true if route order should be preserved according to EnvoyProxy spec
+func getPreserveRouteOrder(envoyProxy *egv1a1.EnvoyProxy) bool {
+	if envoyProxy != nil && envoyProxy.Spec.PreserveRouteOrder != nil && *envoyProxy.Spec.PreserveRouteOrder {
+		return true
+	}
+	return false
 }

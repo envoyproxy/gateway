@@ -72,9 +72,19 @@ deployment:
     nodeSelector: {}
 
 service:
+  # If set to PreferClose, the Envoy fleet will prioritize connecting to the Envoy Gateway pods that are topologically closest to them.
+  trafficDistribution: ""
   annotations: {}
 
+hpa:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 1
+  metrics: []
+  behavior: {}
+
 config:
+# -- EnvoyGateway configuration. Visit https://gateway.envoyproxy.io/docs/api/extension_types/#envoygateway to view all options.
   envoyGateway:
     gateway:
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
@@ -92,6 +102,7 @@ kubernetesClusterDomain: cluster.local
 certgen:
   job:
     annotations: {}
+    args: []
     resources: {}
     affinity: {}
     tolerations: []

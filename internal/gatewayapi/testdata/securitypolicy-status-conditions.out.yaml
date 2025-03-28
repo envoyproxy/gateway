@@ -248,6 +248,10 @@ securityPolicies:
     name: target-httproute-in-gateway-1
     namespace: envoy-gateway
   spec:
+    cors:
+      allowOrigins:
+      - http://*.example.com
+      maxAge: 16m40s
     targetRef:
       group: gateway.networking.k8s.io
       kind: HTTPRoute
@@ -299,6 +303,10 @@ securityPolicies:
     name: target-grpcroute-in-gateway-2
     namespace: envoy-gateway
   spec:
+    cors:
+      allowOrigins:
+      - http://*.example.com
+      maxAge: 16m40s
     targetRef:
       group: gateway.networking.k8s.io
       kind: GRPCRoute
@@ -403,7 +411,7 @@ securityPolicies:
 xdsIR:
   envoy-gateway/gateway-1:
     accessLog:
-      text:
+      json:
       - path: /dev/stdout
     http:
     - address: 0.0.0.0
@@ -434,10 +442,21 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /
-        security: {}
+        security:
+          cors:
+            allowOrigins:
+            - distinct: false
+              name: ""
+              safeRegex: http://.*\.example\.com
+            maxAge: 16m40s
+    readyListener:
+      address: 0.0.0.0
+      ipFamily: IPv4
+      path: /ready
+      port: 19003
   envoy-gateway/gateway-2:
     accessLog:
-      text:
+      json:
       - path: /dev/stdout
     http:
     - address: 0.0.0.0
@@ -468,7 +487,18 @@ xdsIR:
           name: grpcroute-1
           namespace: envoy-gateway
         name: grpcroute/envoy-gateway/grpcroute-1/rule/0/match/0/*
-        security: {}
+        security:
+          cors:
+            allowOrigins:
+            - distinct: false
+              name: ""
+              safeRegex: http://.*\.example\.com
+            maxAge: 16m40s
+    readyListener:
+      address: 0.0.0.0
+      ipFamily: IPv4
+      path: /ready
+      port: 19003
     tcp:
     - address: 0.0.0.0
       name: envoy-gateway/gateway-2/tcp

@@ -8,7 +8,7 @@ defaultContentLanguageInSubdir = false
 # Useful when translating.
 enableMissingTranslationPlaceholders = true
 
-enableRobotsTXT = true
+enableRobotsTXT = false
 
 # Will give values to .Lastmod etc.
 enableGitInfo = true
@@ -67,21 +67,15 @@ id = "G-DXJEH1ZRXX"
     title = "Envoy Gateway"
     description = "Manages Envoy Proxy as a Standalone or Kubernetes-based API Gateway"
 
-  [languages.zh]
-    contentDir = "content/zh"
-    languageName = "中文"
-    # Weight used for sorting.
-    weight = 2
-  [languages.zh.params]
-    title = "Envoy Gateway"
-    description = "将 Envoy 代理作为独立或基于 Kubernetes 的 API 网关进行管理"
-
 [markup]
   [markup.goldmark]
     [markup.goldmark.parser.attribute]
       block = true
     [markup.goldmark.renderer]
       unsafe = true
+    [markup.goldmark.renderHooks]
+      [markup.goldmark.renderHooks.image]
+        enableDefault = true
   [markup.highlight]
     # See a complete list of available styles at https://xyproto.github.io/splash/docs/all.html
     style = "tango"
@@ -113,11 +107,11 @@ archived_version = false
 # The version number for the version of the docs represented in this doc set.
 # Used in the "version-banner" partial to display a version number for the
 # current doc set.
-version = "latest"
+version = "v1.3"
 
 # A link to latest version of the docs. Used in the "version-banner" partial to
 # point people to the main doc site.
-url_latest_version = "https://gateway.envoyproxy.io"
+url_latest_version = "/docs"
 
 # Repository configuration (URLs for in-page links to opening issues and suggesting changes)
 github_repo = "https://github.com/envoyproxy/gateway"
@@ -149,7 +143,7 @@ footer_about_enable = true
 # Set to false if you don't want to display a logo (/assets/icons/logo.svg) in the top navbar
 navbar_logo = true
 # Set to true if you don't want the top navbar to be translucent when over a `block/cover`, like on the homepage.
-navbar_translucent_over_cover_disable = false
+navbar_translucent_over_cover_disable = true
 # Enable to show the side bar menu in its compact state.
 sidebar_menu_compact = true
 # Set to true to hide the sidebar search box (the top nav search box will still be displayed if search is enabled)
@@ -212,28 +206,6 @@ enable = true
     icon = "fab fa-slack"
     desc = "Chat with other project developers"
 
-  # i18n for Chinese
-  [[languages.zh.params.links.user]]
-    name = "邮件列表"
-    url = "mailto:envoy-users@googlegroups.com"
-    icon = "fa fa-envelope"
-    desc = "来自其他用户的讨论和帮助"
-  [[languages.zh.params.links.user]]
-    name ="推特"
-    url = "https://twitter.com/EnvoyProxy"
-    icon = "fab fa-twitter"
-    desc = "在 Twitter 上关注我们以获取最新消息！"
-  [[languages.zh.params.links.developer]]
-    name = "GitHub"
-    url = "https://github.com/envoyproxy/gateway"
-    icon = "fab fa-github"
-    desc = "在这里进行开发！"
-  [[languages.zh.params.links.developer]]
-    name = "Slack"
-    url = "https://envoyproxy.slack.com/archives/C03E6NHLESV"
-    icon = "fab fa-slack"
-    desc = "与其他项目开发人员沟通"
-
 [menu]
   [[menu.main]]
     name = "Contributions"
@@ -252,57 +224,52 @@ enable = true
     weight = -102
     url = "/docs"
 
-  # i18n for Chinese
-  [[languages.zh.menu.main]]
-    name = "贡献"
-    weight = -98
-    url = "/contributions"
-  [[languages.zh.menu.main]]
-    name = "关于"
-    weight = -100
-    url = "/about"
-  [[languages.zh.menu.main]]
-    name = "新闻"
-    weight = -101
-    url = "/news"
-  [[languages.zh.menu.main]]
-    name = "文档"
-    weight = -102
-    url = "/latest"
-
 [[params.versions]]
   version = "latest"
   url = "/latest"
+  eol = "2099-12-31"
+
+[[params.versions]]
+  version = "v1.3"
+  url = "/v1.3"
+  eol = "2025-07-30"
 
 [[params.versions]]
   version = "v1.2"
-  url = "/docs"
+  url = "/v1.2"
+  eol = "2025-05-06"
 
 [[params.versions]]
   version = "v1.1"
   url = "/v1.1"
+  eol = "2025-01-22"
 
 [[params.versions]]
   version = "v1.0"
   url = "/v1.0"
+  eol = "2024-09-13"
 
 [[params.versions]]
   version = "v0.6"
   url = "/v0.6"
+  eol = "2024-05-02"
 
 [[params.versions]]
   version = "v0.5"
   url = "/v0.5"
+  eol = "2024-01-02"
 
 [[params.versions]]
   version = "v0.4"
   url = "/v0.4"
+  eol = "2023-10-24"
 
 [[params.versions]]
   version = "v0.3"
   url = "/v0.3"
+  eol = "2023-08-09"
 
 [[params.versions]]
   version = "v0.2"
   url = "/v0.2"
-
+  eol = "2023-04-20"

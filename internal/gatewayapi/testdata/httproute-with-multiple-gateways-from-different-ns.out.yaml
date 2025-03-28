@@ -175,7 +175,7 @@ infraIR:
 xdsIR:
   default/gateway-a:
     accessLog:
-      text:
+      json:
       - path: /dev/stdout
     http:
     - address: 0.0.0.0
@@ -210,9 +210,14 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /toy
+    readyListener:
+      address: 0.0.0.0
+      ipFamily: IPv4
+      path: /ready
+      port: 19003
   envoy-gateway/gateway-b:
     accessLog:
-      text:
+      json:
       - path: /dev/stdout
     http:
     - address: 0.0.0.0
@@ -247,3 +252,8 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /toy
+    readyListener:
+      address: 0.0.0.0
+      ipFamily: IPv4
+      path: /ready
+      port: 19003

@@ -61,70 +61,75 @@ stats_sinks:
 {{- end }}
 {{- end }}
 static_resources:
+  {{- if .EnablePrometheus }}
   listeners:
-  - name: envoy-gateway-proxy-ready-{{ .ReadyServer.Address }}-{{ .ReadyServer.Port }}
+  - name: envoy-gateway-proxy-stats-{{ .StatsServer.Address }}-{{ .StatsServer.Port }}
     address:
       socket_address:
-        address: '{{ .ReadyServer.Address }}'
-        port_value: {{ .ReadyServer.Port }}
+        address: '{{ .StatsServer.Address }}'
+        port_value: {{ .StatsServer.Port }}
         protocol: TCP
-        {{- if eq .IPFamily "DualStack"}}
+        {{- if eq .IPFamily "DualStack" "IPv6" }}
         ipv4_compat: true
         {{- end }}
+    bypass_overload_manager: true
     filter_chains:
     - filters:
       - name: envoy.filters.network.http_connection_manager
         typed_config:
           "@type": type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
-          stat_prefix: eg-ready-http
+          stat_prefix: eg-stats-http
+          normalize_path: true
           route_config:
             name: local_route
-            {{- if .EnablePrometheus }}
             virtual_hosts:
             - name: prometheus_stats
               domains:
               - "*"
+              {{- if .EnablePrometheusCompression }}
+              typed_per_filter_config:
+                envoy.filters.http.compression:
+                  "@type": type.googleapis.com/envoy.extensions.filters.http.compressor.v3.CompressorPerRoute
+                  disabled: true
+              {{- end }}
               routes:
               - match:
-                  prefix: /stats/prometheus
+                  path: /stats/prometheus
+                  headers:
+                  - name: ":method"
+                    string_match:
+                      exact: GET
                 route:
                   cluster: prometheus_stats
                 {{- if .EnablePrometheusCompression }}
                 typed_per_filter_config:
                   envoy.filters.http.compression:
                     "@type": type.googleapis.com/envoy.extensions.filters.http.compressor.v3.CompressorPerRoute
-                    {{- if eq .PrometheusCompressionLibrary "gzip"}}
-                    compressor_library:
-                      name: text_optimized
-                      typed_config:
-                        "@type": type.googleapis.com/envoy.extensions.compression.gzip.compressor.v3.Gzip
-                    {{- end }}
-                    {{- if eq .PrometheusCompressionLibrary "brotli"}}
-                    compressor_library:
-                      name: text_optimized
-                      typed_config:
-                        "@type": type.googleapis.com/envoy.extensions.compression.brotli.compressor.v3.Brotli
-                    {{- end }}
-                    {{- if eq .PrometheusCompressionLibrary "zstd"}}
-                    compressor_library:
-                      name: text_optimized
-                      typed_config:
-                        "@type": type.googleapis.com/envoy.extensions.compression.zstd.compressor.v3.Zstd
-                    {{- end }}
+                    overrides:
+                      response_direction_config:
                 {{- end }}
-            {{- end }}
           http_filters:
-          - name: envoy.filters.http.health_check
+          {{- if .EnablePrometheusCompression }}
+          - name: envoy.filters.http.compressor
             typed_config:
-              "@type": type.googleapis.com/envoy.extensions.filters.http.health_check.v3.HealthCheck
-              pass_through_mode: false
-              headers:
-              - name: ":path"
-                string_match:
-                  exact: {{ .ReadyServer.ReadinessPath }}
+              "@type": type.googleapis.com/envoy.extensions.filters.http.compressor.v3.Compressor
+              {{- if eq .PrometheusCompressionLibrary "Gzip"}}
+              compressor_library:
+                name: text_optimized
+                typed_config:
+                  "@type": type.googleapis.com/envoy.extensions.compression.gzip.compressor.v3.Gzip
+              {{- end }}
+              {{- if eq .PrometheusCompressionLibrary "Brotli"}}
+              compressor_library:
+                name: text_optimized
+                typed_config:
+                  "@type": type.googleapis.com/envoy.extensions.compression.brotli.compressor.v3.Brotli
+              {{- end }}
+          {{- end }}
           - name: envoy.filters.http.router
             typed_config:
               "@type": type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+  {{- end }}
   clusters:
   {{- if .EnablePrometheus }}
   - name: prometheus_stats

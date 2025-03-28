@@ -32,13 +32,13 @@ func TestZapLogLevel(t *testing.T) {
 }
 
 func TestLogger(t *testing.T) {
-	logger := NewLogger(egv1a1.DefaultEnvoyGatewayLogging())
+	logger := NewLogger(os.Stdout, egv1a1.DefaultEnvoyGatewayLogging())
 	logger.Info("kv msg", "key", "value")
 	logger.Sugar().Infof("template %s %d", "string", 123)
 
 	logger.WithName(string(egv1a1.LogComponentGlobalRateLimitRunner)).WithValues("runner", egv1a1.LogComponentGlobalRateLimitRunner).Info("msg", "k", "v")
 
-	defaultLogger := DefaultLogger(egv1a1.LogLevelInfo)
+	defaultLogger := DefaultLogger(os.Stdout, egv1a1.LogLevelInfo)
 	assert.NotNil(t, defaultLogger.logging)
 	assert.NotNil(t, defaultLogger.sugaredLogger)
 
@@ -62,7 +62,7 @@ func TestLoggerWithName(t *testing.T) {
 	config := egv1a1.DefaultEnvoyGatewayLogging()
 	config.Level[egv1a1.LogComponentInfrastructureRunner] = egv1a1.LogLevelDebug
 
-	logger := NewLogger(config).WithName(string(egv1a1.LogComponentInfrastructureRunner))
+	logger := NewLogger(os.Stdout, config).WithName(string(egv1a1.LogComponentInfrastructureRunner))
 	logger.Info("info message")
 	logger.Sugar().Debugf("debug message")
 
@@ -93,7 +93,7 @@ func TestLoggerSugarName(t *testing.T) {
 	config := egv1a1.DefaultEnvoyGatewayLogging()
 	config.Level[logName] = egv1a1.LogLevelDebug
 
-	logger := NewLogger(config).WithName(logName)
+	logger := NewLogger(os.Stdout, config).WithName(logName)
 
 	logger.Sugar().Debugf("debugging message")
 

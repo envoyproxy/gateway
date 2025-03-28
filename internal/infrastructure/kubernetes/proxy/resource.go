@@ -81,21 +81,23 @@ func enablePrometheus(infra *ir.ProxyInfra) bool {
 // expectedProxyContainers returns expected proxy containers.
 func expectedProxyContainers(infra *ir.ProxyInfra,
 	containerSpec *egv1a1.KubernetesContainerSpec,
-	shutdownConfig *egv1a1.ShutdownConfig,
-	shutdownManager *egv1a1.ShutdownManager,
-	namespace string,
-	dnsDomain string,
+	shutdownConfig *egv1a1.ShutdownConfig, shutdownManager *egv1a1.ShutdownManager,
+	namespace string, dnsDomain string,
 ) ([]corev1.Container, error) {
-	// Define slice to hold container ports
-	var ports []corev1.ContainerPort
-
+	ports := make([]corev1.ContainerPort, 0, 2)
 	if enablePrometheus(infra) {
 		ports = append(ports, corev1.ContainerPort{
 			Name:          "metrics",
-			ContainerPort: bootstrap.EnvoyReadinessPort, // TODO: make this configurable
+			ContainerPort: bootstrap.EnvoyStatsPort, // TODO: make this configurable
 			Protocol:      corev1.ProtocolTCP,
 		})
 	}
+
+	ports = append(ports, corev1.ContainerPort{
+		Name:          "readiness",
+		ContainerPort: bootstrap.EnvoyReadinessPort, // TODO: make this configurable
+		Protocol:      corev1.ProtocolTCP,
+	})
 
 	var proxyMetrics *egv1a1.ProxyMetrics
 	if infra.Config != nil &&
@@ -160,6 +162,19 @@ func expectedProxyContainers(infra *ir.ProxyInfra,
 				PeriodSeconds:    5,
 				SuccessThreshold: 1,
 				FailureThreshold: 1,
+			},
+			LivenessProbe: &corev1.Probe{
+				ProbeHandler: corev1.ProbeHandler{
+					HTTPGet: &corev1.HTTPGetAction{
+						Path:   bootstrap.EnvoyReadinessPath,
+						Port:   intstr.IntOrString{Type: intstr.Int, IntVal: bootstrap.EnvoyReadinessPort},
+						Scheme: corev1.URISchemeHTTP,
+					},
+				},
+				TimeoutSeconds:   1,
+				PeriodSeconds:    10,
+				SuccessThreshold: 1,
+				FailureThreshold: 3,
 			},
 			Lifecycle: &corev1.Lifecycle{
 				PreStop: &corev1.LifecycleHandler{
@@ -227,7 +242,7 @@ func expectedProxyContainers(infra *ir.ProxyInfra,
 					},
 				},
 			},
-			SecurityContext: expectedShutdownManagerSecurityContext(),
+			SecurityContext: expectedShutdownManagerSecurityContext(containerSpec),
 		},
 	}
 
@@ -384,7 +399,11 @@ func expectedEnvoySecurityContext(containerSpec *egv1a1.KubernetesContainerSpec)
 	return sc
 }
 
-func expectedShutdownManagerSecurityContext() *corev1.SecurityContext {
+func expectedShutdownManagerSecurityContext(containerSpec *egv1a1.KubernetesContainerSpec) *corev1.SecurityContext {
+	if containerSpec != nil && containerSpec.SecurityContext != nil {
+		return containerSpec.SecurityContext
+	}
+
 	sc := resource.DefaultSecurityContext()
 
 	// run as non-root user

@@ -1,0 +1,14 @@
+{{ $adopters := .Site.Data.ecosystem.adopters }}
+<section class="adopters-section">
+  <h2 class="text-center mb-5">Open Source Ecosystem</h2>
+  <div class="adopters-list">
+    {{ range $adopters }}
+    <a class="adopter" href="{{ .url }}" target="_blank" rel="noopener noreferrer">
+      <img src="{{ .logo | relURL }}" alt="{{ .name }} logo" loading="lazy">
+      <div class="adopter-info">
+        <p>{{ .description }}</p>
+      </div>
+    </a>
+    {{ end }}
+  </div>
+</section>

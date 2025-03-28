@@ -1,7 +1,7 @@
 apiVersion: gateway.networking.k8s.io/v1
 kind: Gateway
 metadata:
-  name: eg-special-case
+  name: tracing-zipkin
   namespace: gateway-conformance-infra
 spec:
   gatewayClassName: "{GATEWAY_CLASS_NAME}"
@@ -16,14 +16,12 @@ spec:
     parametersRef:
       group: gateway.envoyproxy.io
       kind: EnvoyProxy
-      name: zipkin-tracing
+      name: tracing-zipkin
 ---
-#  This is a EnvoyProxy used for Zipkin tracing and will
-#  target to the eg-special-case Gateway
 apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: EnvoyProxy
 metadata:
-  name: zipkin-tracing
+  name: tracing-zipkin
   namespace: gateway-conformance-infra
 spec:
   ipFamily: IPv4
@@ -33,6 +31,9 @@ spec:
   telemetry:
     tracing:
       provider:
+        samplingFraction:
+          number: 100
+          denominator: 100
         type: Zipkin
         backendRefs:
           - name: otel-collector
@@ -70,7 +71,7 @@ metadata:
   namespace: gateway-conformance-infra
 spec:
   parentRefs:
-    - name: eg-special-case
+    - name: tracing-zipkin
   rules:
     - matches:
         - path:

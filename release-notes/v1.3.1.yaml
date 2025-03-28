@@ -1,0 +1,29 @@
+date: March 4, 2025
+
+# Changes that are expected to cause an incompatibility with previous versions, such as deletions or modifications to existing APIs.
+breaking changes: |
+  Use the envoy JSON formatter for the default access log instead of text formatter.
+
+# Updates addressing vulnerabilities, security flaws, or compliance requirements.
+security updates: |
+  Fixed CVE-2025-25294: log injection vulnerability in Envoy Gateway when using default access log.
+
+# New features or capabilities added in this release.
+new features: |
+  Add defaulter for gateway-api resources loading from file to be able to set default values.
+
+bug fixes: |
+  Added support for Secret and ConfigMap parsing in Standalone mode.
+  Fix translating backendSettings for extAuth.
+  Fix allowing weights to be zero on endpoints for backendRefs in TCPRoute and UDPRoute.
+  Fix validation of all xDS resources.
+  Fix support for empty values in fields with default values in Standalone.
+
+# Other notable changes not covered by the above sections.
+Other changes: |
+  Bump golang to 1.23.6.
+  Bump k8s-io to 1.32.1.
+  Bump ratelimit to ae4cee11.
+  Bump golang.org/x/oauth2 to v0.27.0.
+  Bump golang.org/x/crypto to v0.35.0.
+  Added Ecosystem section to docs

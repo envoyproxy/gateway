@@ -1015,7 +1015,7 @@ func TestSecurityPolicyTarget(t *testing.T) {
 					},
 				}
 			},
-			wantErrors: []string{"at least one of clientCIDRs or jwt must be specified"},
+			wantErrors: []string{"at least one of clientCIDRs, jwt, or headers must be specified"},
 		},
 		{
 			desc: "authorization-jwt-claims-without-jwt-authn",

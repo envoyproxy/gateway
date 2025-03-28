@@ -116,6 +116,7 @@ type OIDCProvider struct {
 	// TLS configuration can be specified in a BackendTLSConfig resource and target the BackendRefs.
 	//
 	// Other settings for the connection to the OIDC Provider can be specified in the BackendSettings resource.
+	// Currently, only the retry policy is supported.
 	//
 	// +optional
 	BackendCluster `json:",inline"`

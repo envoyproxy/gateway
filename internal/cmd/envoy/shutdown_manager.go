@@ -16,14 +16,13 @@ import (
 	"syscall"
 	"time"
 
-	"golang.org/x/sys/unix"
-
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/logging"
 	"github.com/envoyproxy/gateway/internal/xds/bootstrap"
 )
 
-var logger = logging.DefaultLogger(egv1a1.LogLevelInfo).WithName("shutdown-manager")
+// TODO: Remove the global logger and localize the scope of the logger.
+var logger = logging.DefaultLogger(os.Stdout, egv1a1.LogLevelInfo).WithName("shutdown-manager")
 
 const (
 	// ShutdownManagerPort is the port Envoy shutdown manager will listen on.
@@ -62,7 +61,7 @@ func ShutdownManager(readyTimeout time.Duration) error {
 		signal.Notify(s, os.Interrupt, syscall.SIGTERM)
 
 		r := <-s
-		logger.Info(fmt.Sprintf("received %s", unix.SignalName(r.(syscall.Signal))))
+		logger.Info(fmt.Sprintf("received %s", (r.(syscall.Signal)).String()))
 
 		// Shutdown HTTP server without interrupting active connections
 		if err := srv.Shutdown(context.Background()); err != nil {

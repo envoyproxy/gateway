@@ -290,7 +290,7 @@ securityPolicies:
 xdsIR:
   envoy-gateway-class:
     accessLog:
-      text:
+      json:
       - path: /dev/stdout
     http:
     - address: 0.0.0.0
@@ -315,6 +315,7 @@ xdsIR:
             endpoints:
             - host: 7.7.7.7
               port: 8080
+            name: httproute/default/httproute-1/rule/0/backend/0
             protocol: HTTP
             weight: 1
         hostname: gateway.envoyproxy.io
@@ -345,6 +346,7 @@ xdsIR:
             - x-header-8
             maxAge: 33m20s
         traffic:
+          name: default/policy-for-gateway
           tcpKeepalive:
             idleTime: 1200
             interval: 60
@@ -371,6 +373,7 @@ xdsIR:
             endpoints:
             - host: 7.7.7.7
               port: 8080
+            name: httproute/default/httproute-2/rule/0/backend/0
             protocol: HTTP
             weight: 1
         hostname: gateway.envoyproxy.io
@@ -387,3 +390,8 @@ xdsIR:
       timeout:
         http:
           requestReceivedTimeout: 5s
+    readyListener:
+      address: 0.0.0.0
+      ipFamily: IPv4
+      path: /ready
+      port: 19003

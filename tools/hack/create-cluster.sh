@@ -22,6 +22,8 @@ apiVersion: kind.x-k8s.io/v1alpha4
 networking:
   ${CNI_CONFIG}
   ipFamily: ${IP_FAMILY}
+  # uncomment following line when use IPv6 on macos or windows
+  # apiServerAddress: 127.0.0.1
   # it's to prevent inherit search domains from the host which slows down DNS resolution
   # and cause problems to IPv6 only clusters running on IPv4 host.
   dnsSearch: []
@@ -38,16 +40,16 @@ done
 fi
 
 ## Check if kind cluster already exists.
-if tools/bin/kind get clusters | grep -q "${CLUSTER_NAME}"; then
+if go tool kind get clusters | grep -q "${CLUSTER_NAME}"; then
   echo "Cluster ${CLUSTER_NAME} already exists."
 else
 ## Create kind cluster.
 if [[ -z "${KIND_NODE_TAG}" ]]; then
-  cat << EOF | tools/bin/kind create cluster --name "${CLUSTER_NAME}" --config -
+  cat << EOF | go tool kind create cluster --name "${CLUSTER_NAME}" --config -
 ${KIND_CFG}
 EOF
 else
-  cat << EOF | tools/bin/kind create cluster --image "kindest/node:${KIND_NODE_TAG}" --name "${CLUSTER_NAME}" --config -
+  cat << EOF | go tool kind create cluster --image "kindest/node:${KIND_NODE_TAG}" --name "${CLUSTER_NAME}" --config -
 ${KIND_CFG}
 EOF
 fi

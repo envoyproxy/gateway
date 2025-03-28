@@ -763,9 +763,10 @@ func TestIsValidCrossNamespaceRef(t *testing.T) {
 
 func TestServicePortToContainerPort(t *testing.T) {
 	testCases := []struct {
-		servicePort   int32
-		containerPort int32
-		envoyProxy    *egv1a1.EnvoyProxy
+		servicePort               int32
+		containerPort             int32
+		envoyProxy                *egv1a1.EnvoyProxy
+		listenerPortShiftDisabled bool
 	}{
 		{
 			servicePort:   99,
@@ -826,10 +827,15 @@ func TestServicePortToContainerPort(t *testing.T) {
 				},
 			},
 		},
+		{
+			servicePort:               99,
+			containerPort:             99,
+			listenerPortShiftDisabled: true,
+		},
 	}
-
 	for _, tc := range testCases {
-		got := servicePortToContainerPort(tc.servicePort, tc.envoyProxy)
+		translator := &Translator{ListenerPortShiftDisabled: tc.listenerPortShiftDisabled}
+		got := translator.servicePortToContainerPort(tc.servicePort, tc.envoyProxy)
 		assert.Equal(t, tc.containerPort, got)
 	}
 }
@@ -862,6 +868,7 @@ func (m *mockWasmCache) Cleanup() {}
 // This allows us to use cmp.Diff to compare the types with field-level cmpopts.
 func xdsWithoutEqual(a *ir.Xds) any {
 	ret := struct {
+		ReadyListener      *ir.ReadyListener
 		AccessLog          *ir.AccessLog
 		Tracing            *ir.Tracing
 		Metrics            *ir.Metrics
@@ -871,6 +878,7 @@ func xdsWithoutEqual(a *ir.Xds) any {
 		EnvoyPatchPolicies []*ir.EnvoyPatchPolicy
 		FilterOrder        []egv1a1.FilterPosition
 	}{
+		ReadyListener:      a.ReadyListener,
 		AccessLog:          a.AccessLog,
 		Tracing:            a.Tracing,
 		Metrics:            a.Metrics,

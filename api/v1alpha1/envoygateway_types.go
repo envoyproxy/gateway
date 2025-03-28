@@ -6,6 +6,7 @@
 package v1alpha1
 
 import (
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 )
@@ -202,16 +203,20 @@ type EnvoyGatewayKubernetesProvider struct {
 	// +optional
 	RateLimitDeployment *KubernetesDeploymentSpec `json:"rateLimitDeployment,omitempty"`
 
+	// RateLimitHpa defines the Horizontal Pod Autoscaler settings for Envoy ratelimit Deployment.
+	// If the HPA is set, Replicas field from RateLimitDeployment will be ignored.
+	//
+	// +optional
+	RateLimitHpa *KubernetesHorizontalPodAutoscalerSpec `json:"rateLimitHpa,omitempty"`
+
 	// Watch holds configuration of which input resources should be watched and reconciled.
 	// +optional
 	Watch *KubernetesWatchMode `json:"watch,omitempty"`
 	// Deploy holds configuration of how output managed resources such as the Envoy Proxy data plane
 	// should be deployed
 	// +optional
+	// +notImplementedHide
 	Deploy *KubernetesDeployMode `json:"deploy,omitempty"`
-	// OverwriteControlPlaneCerts updates the secrets containing the control plane certs, when set.
-	// +optional
-	OverwriteControlPlaneCerts *bool `json:"overwriteControlPlaneCerts,omitempty"`
 	// LeaderElection specifies the configuration for leader election.
 	// If it's not set up, leader election will be active by default, using Kubernetes' standard settings.
 	// +optional
@@ -254,10 +259,27 @@ type KubernetesWatchMode struct {
 	NamespaceSelector *metav1.LabelSelector `json:"namespaceSelector,omitempty"`
 }
 
+const (
+	// KubernetesDeployModeTypeControllerNamespace indicates that the controller namespace is used for the infra proxy deployments.
+	KubernetesDeployModeTypeControllerNamespace = "ControllerNamespace"
+
+	// KubernetesDeployModeTypeGatewayNamespace indicates that the gateway namespace is used for the infra proxy deployments.
+	KubernetesDeployModeTypeGatewayNamespace = "GatewayNamespace"
+)
+
+// KubernetesDeployModeType defines the type of KubernetesDeployMode
+type KubernetesDeployModeType string
+
 // KubernetesDeployMode holds configuration for how to deploy managed resources such as the Envoy Proxy
 // data plane fleet.
 type KubernetesDeployMode struct {
-	// TODO
+	// Type indicates what deployment mode to use. "ControllerNamespace" and
+	// "GatewayNamespace" are currently supported.
+	// By default, when this field is unset or empty, Envoy Gateway will deploy Envoy Proxy fleet in the Controller namespace.
+	// +optional
+	// +kubebuilder:default=ControllerNamespace
+	// +kubebuilder:validation:Enum=ControllerNamespace;GatewayNamespace
+	Type *KubernetesDeployModeType `json:"type,omitempty"`
 }
 
 // EnvoyGatewayCustomProvider defines configuration for the Custom provider.
@@ -477,6 +499,27 @@ type ExtensionManager struct {
 	//
 	// +kubebuilder:validation:Required
 	Service *ExtensionService `json:"service,omitempty"`
+
+	// FailOpen defines if Envoy Gateway should ignore errors returned from the Extension Service hooks.
+	// The default is false, which means Envoy Gateway will fail closed if the Extension Service returns an error.
+	//
+	// Fail-close means that if the Extension Service hooks return an error, the relevant route/listener/resource
+	// will be replaced with a default configuration returning Internal Server Error (HTTP 500).
+	//
+	// Fail-open means that if the Extension Service hooks return an error, no changes will be applied to the
+	// source of the configuration which was sent to the extension server.
+	//
+	// +optional
+	FailOpen bool `json:"failOpen,omitempty"`
+
+	// MaxMessageSize defines the maximum message size in bytes that can be
+	// sent to or received from the Extension Service.
+	// Default: 4M
+	//
+	// +kubebuilder:validation:XIntOrString
+	// +kubebuilder:validation:Pattern="^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$"
+	// +optional
+	MaxMessageSize *resource.Quantity `json:"maxMessageSize,omitempty"`
 }
 
 // ExtensionHooks defines extension hooks across all supported runners
@@ -517,13 +560,12 @@ type ExtensionService struct {
 	TLS *ExtensionTLS `json:"tls,omitempty"`
 }
 
-// ExtensionTLS defines the TLS configuration when connecting to an extension service
+// ExtensionTLS defines the TLS configuration when connecting to an extension service.
 type ExtensionTLS struct {
-	// CertificateRef contains a references to objects (Kubernetes objects or otherwise) that
-	// contains a TLS certificate and private keys. These certificates are used to
-	// establish a TLS handshake to the extension server.
+	// CertificateRef is a reference to a Kubernetes Secret with a CA certificate in a key named "tls.crt".
 	//
-	// CertificateRef can only reference a Kubernetes Secret at this time.
+	// The CA certificate is used by Envoy Gateway the verify the server certificate presented by the extension server.
+	// At this time, Envoy Gateway does not support Client Certificate authentication of Envoy Gateway towards the extension server (mTLS).
 	//
 	// +kubebuilder:validation:Required
 	CertificateRef gwapiv1.SecretObjectReference `json:"certificateRef"`

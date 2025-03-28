@@ -19,6 +19,12 @@
             '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
             suppressEnvoyHeaders: true
         normalizePath: true
+        originalIpDetectionExtensions:
+        - name: envoy.extensions.http.original_ip_detection.xff
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.http.original_ip_detection.xff.v3.XffConfig
+            skipXffAppend: false
+            xffNumTrustedHops: 1
         rds:
           configSource:
             ads: {}
@@ -26,8 +32,7 @@
           routeConfigName: first-listener
         serverHeaderTransformation: PASS_THROUGH
         statPrefix: http-8081
-        useRemoteAddress: true
-        xffNumTrustedHops: 2
+        useRemoteAddress: false
     name: first-listener
   name: first-listener
   perConnectionBufferLimitBytes: 32768
@@ -108,4 +113,49 @@
         useRemoteAddress: false
     name: third-listener
   name: third-listener
+  perConnectionBufferLimitBytes: 32768
+- address:
+    socketAddress:
+      address: '::'
+      portValue: 8084
+  defaultFilterChain:
+    filters:
+    - name: envoy.filters.network.http_connection_manager
+      typedConfig:
+        '@type': type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
+        commonHttpProtocolOptions:
+          headersWithUnderscoresAction: REJECT_REQUEST
+        http2ProtocolOptions:
+          initialConnectionWindowSize: 1048576
+          initialStreamWindowSize: 65536
+          maxConcurrentStreams: 100
+        httpFilters:
+        - name: envoy.filters.http.router
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+            suppressEnvoyHeaders: true
+        normalizePath: true
+        originalIpDetectionExtensions:
+        - name: envoy.extensions.http.original_ip_detection.xff
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.http.original_ip_detection.xff.v3.XffConfig
+            skipXffAppend: false
+            xffTrustedCidrs:
+              cidrs:
+              - addressPrefix: 192.168.1.0
+                prefixLen: 24
+              - addressPrefix: 10.0.0.0
+                prefixLen: 16
+              - addressPrefix: 172.16.0.0
+                prefixLen: 12
+        rds:
+          configSource:
+            ads: {}
+            resourceApiVersion: V3
+          routeConfigName: fourth-listener
+        serverHeaderTransformation: PASS_THROUGH
+        statPrefix: http-8084
+        useRemoteAddress: false
+    name: fourth-listener
+  name: fourth-listener
   perConnectionBufferLimitBytes: 32768

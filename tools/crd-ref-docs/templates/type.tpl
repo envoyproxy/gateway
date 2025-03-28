@@ -16,8 +16,8 @@ _Appears in:_
 {{- end }}
 
 {{ if $type.Members -}}
-| Field | Type | Required | Description |
-| ---   | ---  | ---      | ---         |
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
 {{ if $type.GVK -}}
 | `apiVersion` | _string_ | |`{{ $type.GVK.Group }}/{{ $type.GVK.Version }}`
 | `kind` | _string_ | |`{{ $type.GVK.Kind }}`
@@ -26,7 +26,7 @@ _Appears in:_
 {{ range $type.Members -}}
 {{- with .Markers.notImplementedHide -}}
 {{- else -}}
-| `{{ .Name  }}` | _{{ markdownRenderType .Type }}_ | {{ with .Markers.optional }} {{ "false" }} {{ else }} {{ "true" }} {{end}} | {{ template "type_members" . }} |
+| `{{ .Name  }}` | _{{ markdownRenderType .Type }}_ | {{ with .Markers.optional }} {{ "false" }} {{ else }} {{ "true" }} {{end}} | {{ markdownRenderDefault .Default }} | {{ template "type_members" . }} |
 {{ end -}}
 {{- end -}}
 {{- end -}}

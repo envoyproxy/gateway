@@ -40,7 +40,7 @@ var UDPRouteTest = suite.ConformanceTest{
 	Manifests:   []string{"testdata/udproute.yaml"},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
 		t.Run("Simple UDP request matching UDPRoute should reach coredns backend", func(t *testing.T) {
-			namespace := "gateway-conformance-udp"
+			namespace := "gateway-conformance-infra"
 			domain := "foo.bar.com."
 			routeNN := types.NamespacedName{Name: "udp-coredns", Namespace: namespace}
 			gwNN := types.NamespacedName{Name: "udp-gateway", Namespace: namespace}

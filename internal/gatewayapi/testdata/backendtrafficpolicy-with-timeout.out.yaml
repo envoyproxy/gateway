@@ -254,7 +254,7 @@ infraIR:
 xdsIR:
   envoy-gateway/gateway-1:
     accessLog:
-      text:
+      json:
       - path: /dev/stdout
     http:
     - address: 0.0.0.0
@@ -279,6 +279,7 @@ xdsIR:
             endpoints:
             - host: 7.7.7.7
               port: 8080
+            name: grpcroute/default/grpcroute-1/rule/0/backend/0
             protocol: GRPC
             weight: 1
         hostname: '*'
@@ -289,6 +290,7 @@ xdsIR:
           namespace: default
         name: grpcroute/default/grpcroute-1/rule/0/match/-1/*
         traffic:
+          name: envoy-gateway/policy-for-gateway
           timeout:
             http:
               connectionIdleTimeout: 16s
@@ -296,9 +298,14 @@ xdsIR:
               requestTimeout: 18s
             tcp:
               connectTimeout: 15s
+    readyListener:
+      address: 0.0.0.0
+      ipFamily: IPv4
+      path: /ready
+      port: 19003
   envoy-gateway/gateway-2:
     accessLog:
-      text:
+      json:
       - path: /dev/stdout
     http:
     - address: 0.0.0.0
@@ -323,6 +330,7 @@ xdsIR:
             endpoints:
             - host: 7.7.7.7
               port: 8080
+            name: httproute/default/httproute-1/rule/0/backend/0
             protocol: HTTP
             weight: 1
         hostname: gateway.envoyproxy.io
@@ -338,6 +346,7 @@ xdsIR:
           prefix: /
         timeout: 1s
         traffic:
+          name: default/policy-for-route
           timeout:
             http:
               connectionIdleTimeout: 21s
@@ -345,3 +354,8 @@ xdsIR:
               requestTimeout: 23s
             tcp:
               connectTimeout: 20s
+    readyListener:
+      address: 0.0.0.0
+      ipFamily: IPv4
+      path: /ready
+      port: 19003

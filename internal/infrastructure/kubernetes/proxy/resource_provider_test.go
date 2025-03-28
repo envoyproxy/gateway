@@ -22,6 +22,7 @@ import (
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/yaml"
 
@@ -42,6 +43,16 @@ const (
 
 func newTestInfra() *ir.Infra {
 	return newTestInfraWithAnnotations(nil)
+}
+
+func newTestInfraWithIPFamily(family *egv1a1.IPFamily) *ir.Infra {
+	i := newTestInfra()
+	i.Proxy.Config = &egv1a1.EnvoyProxy{
+		Spec: egv1a1.EnvoyProxySpec{
+			IPFamily: family,
+		},
+	}
+	return i
 }
 
 func newTestIPv6Infra() *ir.Infra {
@@ -105,7 +116,7 @@ func newTestInfraWithAnnotationsAndLabels(annotations, labels map[string]string)
 }
 
 func TestDeployment(t *testing.T) {
-	cfg, err := config.New()
+	cfg, err := config.New(os.Stdout)
 	require.NoError(t, err)
 
 	cases := []struct {
@@ -634,7 +645,7 @@ func loadDeployment(caseName string) (*appsv1.Deployment, error) {
 }
 
 func TestDaemonSet(t *testing.T) {
-	cfg, err := config.New()
+	cfg, err := config.New(os.Stdout)
 	require.NoError(t, err)
 
 	cases := []struct {
@@ -1063,7 +1074,7 @@ func loadDaemonSet(caseName string) (*appsv1.DaemonSet, error) {
 }
 
 func TestService(t *testing.T) {
-	cfg, err := config.New()
+	cfg, err := config.New(os.Stdout)
 	require.NoError(t, err)
 
 	svcType := egv1a1.ServiceTypeClusterIP
@@ -1165,6 +1176,21 @@ func TestService(t *testing.T) {
 				Name: ptr.To("custom-service-name"),
 			},
 		},
+		{
+			caseName: "dualstack",
+			infra:    newTestInfraWithIPFamily(ptr.To(egv1a1.DualStack)),
+			service:  nil,
+		},
+		{
+			caseName: "ipv4-singlestack",
+			infra:    newTestInfraWithIPFamily(ptr.To(egv1a1.IPv4)),
+			service:  nil,
+		},
+		{
+			caseName: "ipv6-singlestack",
+			infra:    newTestInfraWithIPFamily(ptr.To(egv1a1.IPv6)),
+			service:  nil,
+		},
 	}
 	for _, tc := range cases {
 		t.Run(tc.caseName, func(t *testing.T) {
@@ -1196,7 +1222,7 @@ func loadService(caseName string) (*corev1.Service, error) {
 }
 
 func TestConfigMap(t *testing.T) {
-	cfg, err := config.New()
+	cfg, err := config.New(os.Stdout)
 	require.NoError(t, err)
 	cases := []struct {
 		name  string
@@ -1239,7 +1265,7 @@ func loadConfigmap(tc string) (*corev1.ConfigMap, error) {
 }
 
 func TestServiceAccount(t *testing.T) {
-	cfg, err := config.New()
+	cfg, err := config.New(os.Stdout)
 	require.NoError(t, err)
 	cases := []struct {
 		name  string
@@ -1282,7 +1308,7 @@ func loadServiceAccount(tc string) (*corev1.ServiceAccount, error) {
 }
 
 func TestPDB(t *testing.T) {
-	cfg, err := config.New()
+	cfg, err := config.New(os.Stdout)
 	require.NoError(t, err)
 
 	cases := []struct {
@@ -1295,14 +1321,14 @@ func TestPDB(t *testing.T) {
 			caseName: "default",
 			infra:    newTestInfra(),
 			pdb: &egv1a1.KubernetesPodDisruptionBudgetSpec{
-				MinAvailable: ptr.To(int32(1)),
+				MinAvailable: ptr.To(intstr.IntOrString{Type: intstr.Int, IntVal: 1}),
 			},
 		},
 		{
 			caseName: "patch-json-pdb",
 			infra:    newTestInfra(),
 			pdb: &egv1a1.KubernetesPodDisruptionBudgetSpec{
-				MinAvailable: ptr.To(int32(1)),
+				MinAvailable: ptr.To(intstr.IntOrString{Type: intstr.Int, IntVal: 1}),
 				Patch: &egv1a1.KubernetesPatchSpec{
 					Type: ptr.To(egv1a1.JSONMerge),
 					Value: apiextensionsv1.JSON{
@@ -1315,11 +1341,44 @@ func TestPDB(t *testing.T) {
 			caseName: "patch-strategic-pdb",
 			infra:    newTestInfra(),
 			pdb: &egv1a1.KubernetesPodDisruptionBudgetSpec{
-				MinAvailable: ptr.To(int32(1)),
+				MinAvailable: ptr.To(intstr.IntOrString{Type: intstr.Int, IntVal: 1}),
 				Patch: &egv1a1.KubernetesPatchSpec{
 					Type: ptr.To(egv1a1.StrategicMerge),
 					Value: apiextensionsv1.JSON{
 						Raw: []byte("{\"metadata\":{\"name\":\"foo\"}, \"spec\": {\"selector\": {\"matchLabels\": {\"app\": \"bar\"}}}}"),
+					},
+				},
+			},
+		},
+		{
+			caseName: "max-unavailable",
+			infra:    newTestInfra(),
+			pdb: &egv1a1.KubernetesPodDisruptionBudgetSpec{
+				MaxUnavailable: ptr.To(intstr.IntOrString{Type: intstr.Int, IntVal: 1}),
+			},
+		},
+		{
+			caseName: "max-unavailable-percent",
+			infra:    newTestInfra(),
+			pdb: &egv1a1.KubernetesPodDisruptionBudgetSpec{
+				MaxUnavailable: ptr.To(intstr.IntOrString{Type: intstr.String, StrVal: "20%"}),
+			},
+		},
+		{
+			caseName: "min-available-percent",
+			infra:    newTestInfra(),
+			pdb: &egv1a1.KubernetesPodDisruptionBudgetSpec{
+				MinAvailable: ptr.To(intstr.IntOrString{Type: intstr.String, StrVal: "20%"}),
+			},
+		},
+		{
+			caseName: "patch-pdb-no-minmax",
+			infra:    newTestInfra(),
+			pdb: &egv1a1.KubernetesPodDisruptionBudgetSpec{
+				Patch: &egv1a1.KubernetesPatchSpec{
+					Type: ptr.To(egv1a1.StrategicMerge),
+					Value: apiextensionsv1.JSON{
+						Raw: []byte("{\"metadata\":{\"name\":\"foo\"}, \"spec\": {\"minAvailable\": 1, \"selector\": {\"matchLabels\": {\"app\": \"bar\"}}}}"),
 					},
 				},
 			},
@@ -1355,7 +1414,7 @@ func TestPDB(t *testing.T) {
 }
 
 func TestHorizontalPodAutoscaler(t *testing.T) {
-	cfg, err := config.New()
+	cfg, err := config.New(os.Stdout)
 	require.NoError(t, err)
 
 	cases := []struct {
@@ -1533,6 +1592,51 @@ func TestOwningGatewayLabelsAbsent(t *testing.T) {
 		t.Run(tc.caseName, func(t *testing.T) {
 			actual := OwningGatewayLabelsAbsent(tc.labels)
 			require.Equal(t, tc.expect, actual)
+		})
+	}
+}
+
+func TestIPFamilyPresentInSpec(t *testing.T) {
+	cases := []struct {
+		name             string
+		requestedFamily  *egv1a1.IPFamily
+		expectedFamilies []corev1.IPFamily
+		expectedPolicy   *corev1.IPFamilyPolicy
+	}{
+		{
+			"no family specified",
+			nil,
+			nil,
+			nil,
+		},
+		{
+			"ipv4 specified",
+			ptr.To(egv1a1.IPv4),
+			nil,
+			nil,
+		},
+		{
+			"ipv6 specified",
+			ptr.To(egv1a1.IPv6),
+			[]corev1.IPFamily{corev1.IPv6Protocol},
+			ptr.To(corev1.IPFamilyPolicySingleStack),
+		},
+		{
+			"dual stack",
+			ptr.To(egv1a1.DualStack),
+			[]corev1.IPFamily{corev1.IPv4Protocol, corev1.IPv6Protocol},
+			ptr.To(corev1.IPFamilyPolicyRequireDualStack),
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			r := ResourceRender{infra: newTestInfraWithIPFamily(tc.requestedFamily).Proxy}
+			svc, err := r.Service()
+			require.NoError(t, err, "service render func")
+
+			assert.ElementsMatch(t, tc.expectedFamilies, svc.Spec.IPFamilies, "families slice")
+			assert.Equal(t, tc.expectedPolicy, svc.Spec.IPFamilyPolicy, "policy")
 		})
 	}
 }

@@ -42,6 +42,7 @@ type ResourceRender struct {
 
 	rateLimit           *egv1a1.RateLimit
 	rateLimitDeployment *egv1a1.KubernetesDeploymentSpec
+	rateLimitHpa        *egv1a1.KubernetesHorizontalPodAutoscalerSpec
 
 	// ownerReferenceUID store the uid of its owner reference.
 	ownerReferenceUID map[string]types.UID
@@ -53,6 +54,7 @@ func NewResourceRender(ns string, gateway *egv1a1.EnvoyGateway, ownerReferenceUI
 		Namespace:           ns,
 		rateLimit:           gateway.RateLimit,
 		rateLimitDeployment: gateway.GetEnvoyGatewayProvider().GetEnvoyGatewayKubeProvider().RateLimitDeployment,
+		rateLimitHpa:        gateway.GetEnvoyGatewayProvider().GetEnvoyGatewayKubeProvider().RateLimitHpa,
 		ownerReferenceUID:   ownerReferenceUID,
 	}
 }
@@ -309,11 +311,50 @@ func (r *ResourceRender) DaemonSet() (*appsv1.DaemonSet, error) {
 
 // HorizontalPodAutoscalerSpec returns the `HorizontalPodAutoscaler` sets spec.
 func (r *ResourceRender) HorizontalPodAutoscalerSpec() (*egv1a1.KubernetesHorizontalPodAutoscalerSpec, error) {
-	return nil, nil
+	return r.rateLimitHpa, nil
 }
 
 func (r *ResourceRender) HorizontalPodAutoscaler() (*autoscalingv2.HorizontalPodAutoscaler, error) {
-	return nil, nil
+	hpaConfig, err := r.HorizontalPodAutoscalerSpec()
+	if hpaConfig == nil {
+		return nil, err
+	}
+
+	hpa := &autoscalingv2.HorizontalPodAutoscaler{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "autoscaling/v2",
+			Kind:       "HorizontalPodAutoscaler",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: r.Namespace,
+			Name:      r.Name(),
+			Labels:    rateLimitLabels(),
+		},
+		Spec: autoscalingv2.HorizontalPodAutoscalerSpec{
+			ScaleTargetRef: autoscalingv2.CrossVersionObjectReference{
+				APIVersion: "apps/v1",
+				Kind:       "Deployment",
+			},
+			MinReplicas: hpaConfig.MinReplicas,
+			MaxReplicas: ptr.Deref(hpaConfig.MaxReplicas, 1),
+			Metrics:     hpaConfig.Metrics,
+			Behavior:    hpaConfig.Behavior,
+		},
+	}
+
+	// set deployment target ref name
+	deploymentConfig := r.rateLimitDeployment
+	if deploymentConfig.Name != nil {
+		hpa.Spec.ScaleTargetRef.Name = *deploymentConfig.Name
+	} else {
+		hpa.Spec.ScaleTargetRef.Name = r.Name()
+	}
+
+	if hpa, err = hpaConfig.ApplyMergePatch(hpa); err != nil {
+		return nil, err
+	}
+
+	return hpa, nil
 }
 
 // PodDisruptionBudgetSpec returns the `PodDisruptionBudget` sets spec.

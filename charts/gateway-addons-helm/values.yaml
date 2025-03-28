@@ -1,3 +1,6 @@
+dashboard:
+  labels: {}
+
 # Values for Grafana dependency
 grafana:
   enabled: true
@@ -18,9 +21,9 @@ grafana:
     dashboardproviders.yaml:
       apiVersion: 1
       providers:
-        - name: 'envoy-gateway'
+        - name: "envoy-gateway"
           orgId: 1
-          folder: 'envoy-gateway'
+          folder: "envoy-gateway"
           type: file
           disableDeletion: false
           editable: true
@@ -28,7 +31,6 @@ grafana:
             path: /var/lib/grafana/dashboards/envoy-gateway
   dashboardsConfigMaps:
     envoy-gateway: "grafana-dashboards"
-
 
 # Values for Prometheus dependency
 prometheus:
@@ -57,7 +59,6 @@ prometheus:
     image:
       repository: prom/prometheus
     securityContext: {}
-
 
 # Values for Fluent-bit dependency
 # TODO: remove fluent-bit dependency
@@ -106,12 +107,12 @@ fluent-bit:
           Keep_Log Off
           K8S-Logging.Parser On
           K8S-Logging.Exclude On
-  
+
       [FILTER]
           Name grep
           Match kube.*
           Regex $kubernetes['container_name'] ^envoy$
-  
+
       [FILTER]
           Name parser
           Match kube.*
@@ -128,7 +129,6 @@ fluent-bit:
           Port                   3100
           Labels                 job=fluentbit, app=$kubernetes['labels']['app'], k8s_namespace_name=$kubernetes['namespace_name'], k8s_pod_name=$kubernetes['pod_name'], k8s_container_name=$kubernetes['container_name']
 
-
 # Values for Loki dependency
 loki:
   enabled: true
@@ -143,7 +143,7 @@ loki:
     commonConfig:
       replication_factor: 1
     storage:
-      type: 'filesystem'
+      type: "filesystem"
     rulerConfig:
       storage:
         type: "local"
@@ -190,40 +190,40 @@ alloy:
         discovery.kubernetes "pod" {
           role = "pod"
         }
-  
+
         // discovery.relabel rewrites the label set of the input targets by applying one or more relabeling rules.
         // If no rules are defined, then the input targets are exported as-is.
         discovery.relabel "pod_logs" {
           targets = discovery.kubernetes.pod.targets
-  
+
           // Label creation - "namespace" field from "__meta_kubernetes_namespace"
           rule {
             source_labels = ["__meta_kubernetes_namespace"]
             action = "replace"
             target_label = "namespace"
           }
-  
+
           // Label creation - "pod" field from "__meta_kubernetes_pod_name"
           rule {
             source_labels = ["__meta_kubernetes_pod_name"]
             action = "replace"
             target_label = "pod"
           }
-  
+
           // Label creation - "container" field from "__meta_kubernetes_pod_container_name"
           rule {
             source_labels = ["__meta_kubernetes_pod_container_name"]
             action = "replace"
             target_label = "container"
           }
-  
+
           // Label creation -  "app" field from "__meta_kubernetes_pod_label_app_kubernetes_io_name"
           rule {
             source_labels = ["__meta_kubernetes_pod_label_app_kubernetes_io_name"]
             action = "replace"
             target_label = "app"
           }
-  
+
           // Label creation -  "job" field from "__meta_kubernetes_namespace" and "__meta_kubernetes_pod_container_name"
           // Concatenate values __meta_kubernetes_namespace/__meta_kubernetes_pod_container_name
           rule {
@@ -233,7 +233,7 @@ alloy:
             separator = "/"
             replacement = "$1"
           }
-  
+
           // Label creation - "container" field from "__meta_kubernetes_pod_uid" and "__meta_kubernetes_pod_container_name"
           // Concatenate values __meta_kubernetes_pod_uid/__meta_kubernetes_pod_container_name.log
           rule {
@@ -243,7 +243,7 @@ alloy:
             separator = "/"
             replacement = "/var/log/pods/*$1/*.log"
           }
-  
+
           // Label creation -  "container_runtime" field from "__meta_kubernetes_pod_container_id"
           rule {
             source_labels = ["__meta_kubernetes_pod_container_id"]
@@ -253,7 +253,7 @@ alloy:
             replacement = "$1"
           }
         }
-  
+
         // loki.source.kubernetes tails logs from Kubernetes containers using the Kubernetes API.
         loki.source.kubernetes "pod_logs" {
           targets    = discovery.relabel.pod_logs.output
@@ -270,7 +270,6 @@ alloy:
 
           forward_to = [loki.write.alloy.receiver]
         }
-        
 
 # Values for Tempo dependency
 tempo:
@@ -279,14 +278,22 @@ tempo:
   service:
     type: LoadBalancer
 
-
 # Values for OpenTelemetry-Collector dependency
 opentelemetry-collector:
   enabled: false
+  ports:
+    envoy-als:
+      enabled: true
+      containerPort: 9000
+      servicePort: 9000
+      hostPort: 9000
+      protocol: TCP
+      appProtocol: grpc
   fullnameOverride: otel-collector
   mode: deployment
   image:
     repository: "otel/opentelemetry-collector-contrib"
+    tag: "0.121.0"
   config:
     exporters:
       prometheus:
@@ -311,6 +318,8 @@ opentelemetry-collector:
             # Loki will convert this to k8s_pod_name label.
             value: k8s.pod.name, k8s.namespace.name
     receivers:
+      envoyals:
+        endpoint: "[${env:MY_POD_IP}]:9000"
       jaeger:
         protocols:
           grpc:
@@ -332,15 +341,22 @@ opentelemetry-collector:
       prometheus:
         config:
           scrape_configs:
-          - job_name: opentelemetry-collector
-            scrape_interval: 10s
-            static_configs:
-            - targets:
-              - "[${env:MY_POD_IP}]:8888"
+            - job_name: opentelemetry-collector
+              scrape_interval: 10s
+              static_configs:
+                - targets:
+                    - "[${env:MY_POD_IP}]:8888"
     service:
       telemetry:
         metrics:
-          address: "[${env:MY_POD_IP}]:8888"
+          level: none
+          address: null # Disable the deprecated setting
+          readers:
+            - pull:
+                exporter:
+                  prometheus:
+                    host: "localhost"
+                    port: 8888
       extensions:
         - health_check
       pipelines:
@@ -357,6 +373,7 @@ opentelemetry-collector:
             - attributes
           receivers:
             - otlp
+            - envoyals
         traces:
           exporters:
             - otlp

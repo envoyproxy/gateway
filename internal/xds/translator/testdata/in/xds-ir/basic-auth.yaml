@@ -28,6 +28,7 @@ http:
           port: 8080
         protocol: HTTP
         weight: 1
+        name: httproute/default/httproute-1/rule/0/backend/0
     security:
       basicAuth:
         name: securitypolicy/default/policy-for-http-route-1
@@ -51,6 +52,7 @@ http:
           port: 8080
         protocol: HTTP
         weight: 1
+        name: httproute/default/httproute-1/rule/1/backend/0
     security:
       basicAuth:
         name: securitypolicy/default/policy-for-http-route-1
@@ -74,6 +76,7 @@ http:
           port: 8080
         protocol: HTTP
         weight: 1
+        name: httproute/default/httproute-2/rule/0/backend/0
     security:
       basicAuth:
         name: securitypolicy/default/policy-for-gateway-1

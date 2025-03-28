@@ -13,6 +13,7 @@ http:
       - endpoints:
         - host: "1.1.1.1"
           port: 8081
+        name: "first-route-dest/backend/0"
   clientIPDetection:
     xForwardedFor:
       numTrustedHops: 2
@@ -30,6 +31,7 @@ http:
       - endpoints:
         - host: "2.2.2.2"
           port: 8082
+        name: "second-route-dest/backend/0"
   clientIPDetection:
     customHeader:
       name: "x-my-custom-header"
@@ -48,7 +50,29 @@ http:
       - endpoints:
         - host: "3.3.3.3"
           port: 8083
+        name: "third-route-dest/backend/0"
   clientIPDetection:
     customHeader:
       name: "x-my-custom-header"
       failClosed: true
+- name: "fourth-listener"
+  address: "::"
+  port: 8084
+  hostnames:
+  - "*"
+  routes:
+  - name: "fourth-route"
+    hostname: "*"
+    destination:
+      name: "fourth-route-dest"
+      settings:
+      - endpoints:
+        - host: "4.4.4.4"
+          port: 8084
+        name: "fourth-route-dest/backend/0"
+  clientIPDetection:
+    xForwardedFor:
+      trustedCidrs:
+      - "192.168.1.0/24"
+      - "10.0.0.0/16"
+      - "172.16.0.0/12"

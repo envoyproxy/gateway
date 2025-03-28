@@ -1,0 +1,90 @@
+envoyProxyForGatewayClass:
+  apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: EnvoyProxy
+  metadata:
+    namespace: envoy-gateway-system
+    name: test
+  spec:
+    preserveRouteOrder: true
+gateways:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: Gateway
+  metadata:
+    namespace: envoy-gateway
+    name: gateway-1
+  spec:
+    gatewayClassName: envoy-gateway-class
+    listeners:
+    - name: http-preserve-order
+      protocol: HTTP
+      port: 80
+      allowedRoutes:
+        namespaces:
+          from: All
+httpRoutes:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    namespace: default
+    name: httproute-1
+  spec:
+    parentRefs:
+    - namespace: envoy-gateway
+      name: gateway-1
+    rules:
+    - matches:
+      - path:
+          type: PathPrefix
+          value: "/"
+      backendRefs:
+      - name: service-1
+        port: 8080
+    - matches:
+      - path:
+          type: RegularExpression
+          value: "/regex/between/prefixes/*"
+      backendRefs:
+      - name: service-1
+        port: 8080
+    - matches:
+      - path:
+          type: PathPrefix
+          value: "/specific/prefix/after/less/specific"
+      backendRefs:
+      - name: service-1
+        port: 8080
+    - matches:
+      - path:
+          type: Exact
+          value: "/exact"
+      backendRefs:
+      - name: service-1
+        port: 8080
+    - matches:
+      - path:
+          type: RegularExpression
+          value: "/regex/between/exacts/*"
+      backendRefs:
+      - name: service-1
+        port: 8080
+    - matches:
+      - path:
+          type: Exact
+          value: "/specific/exact/after/less/specific"
+      backendRefs:
+      - name: service-1
+        port: 8080
+    - matches:
+      - path:
+          type: RegularExpression
+          value: "/short/regex/*"
+      backendRefs:
+      - name: service-1
+        port: 8080
+    - matches:
+      - path:
+          type: RegularExpression
+          value: "/longer/regex/after/shorter/regex/*"
+      backendRefs:
+      - name: service-1
+        port: 8080

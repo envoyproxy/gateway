@@ -83,11 +83,9 @@ type gatewayAPIReconciler struct {
 }
 
 // newGatewayAPIController
-func newGatewayAPIController(mgr manager.Manager, cfg *config.Server, su Updater,
+func newGatewayAPIController(ctx context.Context, mgr manager.Manager, cfg *config.Server, su Updater,
 	resources *message.ProviderResources,
 ) error {
-	ctx := context.Background()
-
 	// Gather additional resources to watch from registered extensions
 	var extServerPoliciesGVKs []schema.GroupVersionKind
 	var extGVKs []schema.GroupVersionKind
@@ -138,8 +136,12 @@ func newGatewayAPIController(mgr manager.Manager, cfg *config.Server, su Updater
 	if cfg.EnvoyGateway.Provider.Type == egv1a1.ProviderTypeKubernetes &&
 		!ptr.Deref(cfg.EnvoyGateway.Provider.Kubernetes.LeaderElection.Disable, false) {
 		go func() {
-			cfg.Elected.Wait()
-			r.subscribeAndUpdateStatus(ctx, cfg.EnvoyGateway.EnvoyGatewaySpec.ExtensionManager != nil)
+			select {
+			case <-ctx.Done():
+				return
+			case <-cfg.Elected:
+				r.subscribeAndUpdateStatus(ctx, cfg.EnvoyGateway.EnvoyGatewaySpec.ExtensionManager != nil)
+			}
 		}()
 	} else {
 		r.subscribeAndUpdateStatus(ctx, cfg.EnvoyGateway.EnvoyGatewaySpec.ExtensionManager != nil)
@@ -213,8 +215,7 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 					string(gwapiv1.GatewayClassReasonInvalidParameters),
 					msg)
 				r.resources.GatewayClassStatuses.Store(utils.NamespacedName(gc), &gc.Status)
-				r.log.Error(err, "failed to process parametersRef for gatewayclass", "name", managedGC.Name)
-				return reconcile.Result{}, err
+				return reconcile.Result{}, nil
 			}
 		}
 
@@ -512,6 +513,25 @@ func (r *gatewayAPIReconciler) processSecurityPolicyObjectRefs(
 			}
 		}
 
+		// Add the referenced Secretes in APIKeyAuth to the resourceTree.
+		apiKeyAuth := policy.Spec.APIKeyAuth
+		if apiKeyAuth != nil {
+			for _, credRef := range apiKeyAuth.CredentialRefs {
+				if err := r.processSecretRef(
+					ctx,
+					resourceMap,
+					resourceTree,
+					resource.KindSecurityPolicy,
+					policy.Namespace,
+					policy.Name,
+					credRef); err != nil {
+					r.log.Error(err,
+						"failed to process APIKeyAuth SecretRef for SecurityPolicy",
+						"policy", policy, "secretRef", apiKeyAuth.CredentialRefs)
+				}
+			}
+		}
+
 		// Add the referenced Secrets in BasicAuth to the resourceTree
 		basicAuth := policy.Spec.BasicAuth
 		if basicAuth != nil {
@@ -796,7 +816,7 @@ func (r *gatewayAPIReconciler) processBtpConfigMapRefs(
 ) {
 	for _, policy := range resourceTree.BackendTrafficPolicies {
 		for _, ro := range policy.Spec.ResponseOverride {
-			if ro.Response.Body.ValueRef != nil && string(ro.Response.Body.ValueRef.Kind) == resource.KindConfigMap {
+			if ro.Response.Body != nil && ro.Response.Body.ValueRef != nil && string(ro.Response.Body.ValueRef.Kind) == resource.KindConfigMap {
 				configMap := new(corev1.ConfigMap)
 				err := r.client.Get(ctx,
 					types.NamespacedName{Namespace: policy.Namespace, Name: string(ro.Response.Body.ValueRef.Name)},
@@ -917,10 +937,6 @@ func (r *gatewayAPIReconciler) processGateways(ctx context.Context, managedGC *g
 		r.log.Info("processing Gateway", "namespace", gtw.Namespace, "name", gtw.Name)
 		resourceMap.allAssociatedNamespaces.Insert(gtw.Namespace)
 
-		if err := r.processGatewayParamsRef(ctx, &gtw, resourceMap, resourceTree); err != nil {
-			r.log.Error(err, "failed to process infrastructure.parametersRef for gateway", "namespace", gtw.Namespace, "name", gtw.Name)
-		}
-
 		for _, listener := range gtw.Spec.Listeners {
 			// Get Secret for gateway if it exists.
 			if terminatesTLS(&listener) {
@@ -978,9 +994,20 @@ func (r *gatewayAPIReconciler) processGateways(ctx context.Context, managedGC *g
 				return err
 			}
 		}
+
 		// Discard Status to reduce memory consumption in watchable
 		// It will be recomputed by the gateway-api layer
 		gtw.Status = gwapiv1.GatewayStatus{}
+
+		if err := r.processGatewayParamsRef(ctx, &gtw, resourceMap, resourceTree); err != nil {
+			// Update the Gateway status to not accepted if there is an error processing the parametersRef.
+			// These not-accepted gateways will not be processed by the gateway-api layer, but their status will be
+			// updated in the gateway-api layer along with other gateways. This is to avoid the potential race condition
+			// of updating the status in both the controller and the gateway-api layer.
+			status.UpdateGatewayStatusNotAccepted(&gtw, gwapiv1.GatewayReasonInvalidParameters, err.Error())
+			r.log.Error(err, "failed to process infrastructure.parametersRef for gateway", "namespace", gtw.Namespace, "name", gtw.Name)
+		}
+
 		if !resourceMap.allAssociatedGateways.Has(gtwNamespacedName) {
 			resourceMap.allAssociatedGateways.Insert(gtwNamespacedName)
 			resourceTree.Gateways = append(resourceTree.Gateways, &gtw)
@@ -2074,6 +2101,7 @@ func (r *gatewayAPIReconciler) processExtensionServerPolicies(
 // to the resourceTree
 // - BackendRefs for ExtProcs
 // - SecretRefs for Wasms
+// - ValueRefs for Luas
 func (r *gatewayAPIReconciler) processEnvoyExtensionPolicyObjectRefs(
 	ctx context.Context, resourceTree *resource.Resources, resourceMap *resourceMappings,
 ) {
@@ -2142,6 +2170,31 @@ func (r *gatewayAPIReconciler) processEnvoyExtensionPolicyObjectRefs(
 					r.log.Error(err,
 						"failed to process Wasm Image PullSecretRef for EnvoyExtensionPolicy",
 						"policy", policy, "secretRef", wasm.Code.Image.PullSecretRef)
+				}
+			}
+		}
+
+		// Add referenced ConfigMaps in Lua EnvoyExtensionPolicies to the resource tree
+		for _, lua := range policy.Spec.Lua {
+			if lua.Type == egv1a1.LuaValueTypeValueRef {
+				if lua.ValueRef != nil && string(lua.ValueRef.Kind) == resource.KindConfigMap {
+					configMap := new(corev1.ConfigMap)
+					err := r.client.Get(ctx,
+						types.NamespacedName{Namespace: policy.Namespace, Name: string(lua.ValueRef.Name)},
+						configMap,
+					)
+					if err != nil {
+						r.log.Error(err,
+							"failed to process Lua ValueRef for EnvoyExtensionPolicy",
+							"policy", policy, "ValueRef", lua.ValueRef.Name)
+					}
+
+					resourceMap.allAssociatedNamespaces.Insert(policy.Namespace)
+					if !resourceMap.allAssociatedConfigMaps.Has(utils.NamespacedName(configMap).String()) {
+						resourceMap.allAssociatedConfigMaps.Insert(utils.NamespacedName(configMap).String())
+						resourceTree.ConfigMaps = append(resourceTree.ConfigMaps, configMap)
+						r.log.Info("processing ConfigMap", "namespace", policy.Namespace, "name", string(lua.ValueRef.Name))
+					}
 				}
 			}
 		}

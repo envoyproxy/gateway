@@ -169,9 +169,6 @@ securityPolicies:
       failOpen: true
       grpc:
         backendRefs:
-        - kind: Service
-          name: service-2
-          port: 8080
         - group: gateway.envoyproxy.io
           kind: Backend
           name: backend-fqdn
@@ -202,7 +199,7 @@ securityPolicies:
 xdsIR:
   default/gateway-1:
     accessLog:
-      text:
+      json:
       - path: /dev/stdout
     http:
     - address: 0.0.0.0
@@ -227,6 +224,7 @@ xdsIR:
             endpoints:
             - host: 7.7.7.7
               port: 8080
+            name: httproute/default/httproute-1/rule/0/backend/0
             protocol: HTTP
             weight: 1
         hostname: www.foo.com
@@ -244,20 +242,15 @@ xdsIR:
           extAuth:
             failOpen: true
             grpc:
-              authority: service-2.default:8080
+              authority: primary.foo.com:3000
               destination:
                 name: securitypolicy/default/policy-for-http-route-1/extauth/0
                 settings:
-                - addressType: IP
-                  endpoints:
-                  - host: 7.7.7.7
-                    port: 8080
-                  protocol: GRPC
-                  weight: 1
                 - addressType: FQDN
                   endpoints:
                   - host: primary.foo.com
                     port: 3000
+                  name: securitypolicy/default/policy-for-http-route-1/extauth/0/backend/0
                   protocol: GRPC
                   weight: 1
             headersToExtAuth:
@@ -272,6 +265,7 @@ xdsIR:
             endpoints:
             - host: 7.7.7.7
               port: 8080
+            name: httproute/default/httproute-1/rule/1/backend/0
             protocol: HTTP
             weight: 1
         hostname: www.foo.com
@@ -289,20 +283,15 @@ xdsIR:
           extAuth:
             failOpen: true
             grpc:
-              authority: service-2.default:8080
+              authority: primary.foo.com:3000
               destination:
                 name: securitypolicy/default/policy-for-http-route-1/extauth/0
                 settings:
-                - addressType: IP
-                  endpoints:
-                  - host: 7.7.7.7
-                    port: 8080
-                  protocol: GRPC
-                  weight: 1
                 - addressType: FQDN
                   endpoints:
                   - host: primary.foo.com
                     port: 3000
+                  name: securitypolicy/default/policy-for-http-route-1/extauth/0/backend/0
                   protocol: GRPC
                   weight: 1
             headersToExtAuth:
@@ -317,6 +306,7 @@ xdsIR:
             endpoints:
             - host: 7.7.7.7
               port: 8080
+            name: httproute/default/httproute-2/rule/0/backend/0
             protocol: HTTP
             weight: 1
         hostname: www.bar.com
@@ -330,3 +320,8 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /bar
+    readyListener:
+      address: 0.0.0.0
+      ipFamily: IPv4
+      path: /ready
+      port: 19003

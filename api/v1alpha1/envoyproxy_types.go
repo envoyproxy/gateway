@@ -114,6 +114,8 @@ type EnvoyProxySpec struct {
 	//
 	// - envoy.filters.http.stateful_session
 	//
+	// - envoy.filters.http.lua
+	//
 	// - envoy.filters.http.ext_proc
 	//
 	// - envoy.filters.http.wasm
@@ -147,6 +149,14 @@ type EnvoyProxySpec struct {
 	// +kubebuilder:validation:Enum=IPv4;IPv6;DualStack
 	// +optional
 	IPFamily *IPFamily `json:"ipFamily,omitempty"`
+
+	// PreserveRouteOrder determines if the order of matching for HTTPRoutes is determined by Gateway-API
+	// specification (https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.HTTPRouteRule)
+	// or preserves the order defined by users in the HTTPRoute's HTTPRouteRule list.
+	// Default: False
+	//
+	// +optional
+	PreserveRouteOrder *bool `json:"preserveRouteOrder,omitempty"`
 }
 
 // RoutingType defines the type of routing of this Envoy proxy.
@@ -187,7 +197,7 @@ type FilterPosition struct {
 }
 
 // EnvoyFilter defines the type of Envoy HTTP filter.
-// +kubebuilder:validation:Enum=envoy.filters.http.health_check;envoy.filters.http.fault;envoy.filters.http.cors;envoy.filters.http.ext_authz;envoy.filters.http.basic_auth;envoy.filters.http.oauth2;envoy.filters.http.jwt_authn;envoy.filters.http.stateful_session;envoy.filters.http.ext_proc;envoy.filters.http.wasm;envoy.filters.http.rbac;envoy.filters.http.local_ratelimit;envoy.filters.http.ratelimit;envoy.filters.http.custom_response
+// +kubebuilder:validation:Enum=envoy.filters.http.health_check;envoy.filters.http.fault;envoy.filters.http.cors;envoy.filters.http.ext_authz;envoy.filters.http.api_key_auth;envoy.filters.http.basic_auth;envoy.filters.http.oauth2;envoy.filters.http.jwt_authn;envoy.filters.http.stateful_session;envoy.filters.http.lua;envoy.filters.http.ext_proc;envoy.filters.http.wasm;envoy.filters.http.rbac;envoy.filters.http.local_ratelimit;envoy.filters.http.ratelimit;envoy.filters.http.custom_response;envoy.filters.http.compressor
 type EnvoyFilter string
 
 const (
@@ -202,6 +212,10 @@ const (
 
 	// EnvoyFilterExtAuthz defines the Envoy HTTP external authorization filter.
 	EnvoyFilterExtAuthz EnvoyFilter = "envoy.filters.http.ext_authz"
+
+	// EnvoyFilterAPIKeyAuth defines the Envoy HTTP api key authentication filter.
+	//nolint:gosec // this is not an API key credential.
+	EnvoyFilterAPIKeyAuth EnvoyFilter = "envoy.filters.http.api_key_auth"
 
 	// EnvoyFilterBasicAuth defines the Envoy HTTP basic authentication filter.
 	EnvoyFilterBasicAuth EnvoyFilter = "envoy.filters.http.basic_auth"
@@ -221,6 +235,9 @@ const (
 	// EnvoyFilterWasm defines the Envoy HTTP WebAssembly filter.
 	EnvoyFilterWasm EnvoyFilter = "envoy.filters.http.wasm"
 
+	// EnvoyFilterLua defines the Envoy HTTP Lua filter.
+	EnvoyFilterLua EnvoyFilter = "envoy.filters.http.lua"
+
 	// EnvoyFilterRBAC defines the Envoy RBAC filter.
 	EnvoyFilterRBAC EnvoyFilter = "envoy.filters.http.rbac"
 
@@ -232,6 +249,9 @@ const (
 
 	// EnvoyFilterCustomResponse defines the Envoy HTTP custom response filter.
 	EnvoyFilterCustomResponse EnvoyFilter = "envoy.filters.http.custom_response"
+
+	// EnvoyFilterCompressor defines the Envoy HTTP compressor filter.
+	EnvoyFilterCompressor EnvoyFilter = "envoy.filters.http.compressor"
 
 	// EnvoyFilterRouter defines the Envoy HTTP router filter.
 	EnvoyFilterRouter EnvoyFilter = "envoy.filters.http.router"
@@ -377,7 +397,7 @@ const (
 // +union
 // +kubebuilder:validation:XValidation:rule="self.type == 'JSONPatch' ? self.jsonPatches.size() > 0 : has(self.value)", message="provided bootstrap patch doesn't match the configured patch type"
 type ProxyBootstrap struct {
-	// Type is the type of the bootstrap configuration, it should be either Replace,  Merge, or JSONPatch.
+	// Type is the type of the bootstrap configuration, it should be either **Replace**,  **Merge**, or **JSONPatch**.
 	// If unspecified, it defaults to Replace.
 	// +optional
 	// +kubebuilder:default=Replace

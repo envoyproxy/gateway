@@ -3,7 +3,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.16.1
+    controller-gen.kubebuilder.io/version: v0.17.1
   name: backends.gateway.envoyproxy.io
 spec:
   group: gateway.envoyproxy.io
@@ -80,7 +80,7 @@ spec:
                             endpoint.
                           maxLength: 253
                           minLength: 1
-                          pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9]))*$
+                          pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
                           type: string
                         port:
                           description: Port defines the port of the backend endpoint.
@@ -146,7 +146,18 @@ spec:
                   The overprovisioning factor is set to 1.4, meaning the fallback backends will only start receiving traffic when
                   the health of the active backends falls below 72%.
                 type: boolean
+              type:
+                default: Endpoints
+                description: Type defines the type of the backend. Defaults to "Endpoints"
+                enum:
+                - Endpoints
+                - DynamicResolver
+                type: string
             type: object
+            x-kubernetes-validations:
+            - message: DynamicResolver type cannot have endpoints and appProtocols
+                specified
+              rule: self.type != 'DynamicResolver' || !has(self.endpoints) && !has(self.appProtocols)
           status:
             description: Status defines the current status of Backend.
             properties:

@@ -1,0 +1,94 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: coredns
+  namespace: gateway-conformance-infra
+  labels:
+    app: udp
+spec:
+  ports:
+    - name: udp-dns
+      port: 53
+      protocol: UDP
+      targetPort: 53
+  selector:
+    app: udp
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: coredns
+  namespace: gateway-conformance-infra
+  labels:
+    app: udp
+spec:
+  selector:
+    matchLabels:
+      app: udp
+  template:
+    metadata:
+      labels:
+        app: udp
+    spec:
+      containers:
+        - args:
+            - -conf
+            - /root/Corefile
+          image: coredns/coredns
+          name: coredns
+          volumeMounts:
+            - mountPath: /root
+              name: conf
+      volumes:
+        - configMap:
+            defaultMode: 420
+            name: coredns
+          name: conf
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: coredns
+  namespace: gateway-conformance-infra
+data:
+  Corefile: |
+    .:53 {
+        forward . 8.8.8.8 9.9.9.9
+        log
+        errors
+    }
+
+    foo.bar.com:53 {
+      whoami
+    }
+---
+apiVersion: gateway.networking.k8s.io/v1beta1
+kind: Gateway
+metadata:
+  name: udp-gateway
+  namespace: gateway-conformance-infra
+spec:
+  gatewayClassName: "{GATEWAY_CLASS_NAME}"
+  listeners:
+    - name: coredns
+      protocol: UDP
+      port: 5300
+      allowedRoutes:
+        kinds:
+          - kind: UDPRoute
+---
+apiVersion: gateway.networking.k8s.io/v1alpha2
+kind: UDPRoute
+metadata:
+  name: udp-coredns
+  namespace: gateway-conformance-infra
+spec:
+  parentRefs:
+    - name: udp-gateway
+      sectionName: coredns
+  rules:
+    - backendRefs:
+        - group: gateway.envoyproxy.io
+          kind: Backend
+          name: backend-ip
+          port: 53

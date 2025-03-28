@@ -32,18 +32,22 @@ func New(cfg *Config) *Runner {
 	return &Runner{Config: *cfg}
 }
 
+// Close implements Runner interface.
+func (r *Runner) Close() error { return nil }
+
+// Name implements Runner interface.
 func (r *Runner) Name() string {
 	return string(egv1a1.LogComponentProviderRunner)
 }
 
-// Start the provider runner
+// Start implements Runner interface.
 func (r *Runner) Start(ctx context.Context) (err error) {
 	r.Logger = r.Logger.WithName(r.Name()).WithValues("runner", r.Name())
 
 	var p provider.Provider
 	switch r.EnvoyGateway.Provider.Type {
 	case egv1a1.ProviderTypeKubernetes:
-		p, err = r.createKubernetesProvider()
+		p, err = r.createKubernetesProvider(ctx)
 		if err != nil {
 			return fmt.Errorf("failed to create kubernetes provider: %w", err)
 		}
@@ -61,7 +65,7 @@ func (r *Runner) Start(ctx context.Context) (err error) {
 
 	r.Logger.Info("Running provider", "type", p.Type())
 	go func() {
-		if err = p.Start(ctx); err != nil {
+		if err := p.Start(ctx); err != nil {
 			r.Logger.Error(err, "unable to start provider")
 		}
 	}()
@@ -69,13 +73,13 @@ func (r *Runner) Start(ctx context.Context) (err error) {
 	return nil
 }
 
-func (r *Runner) createKubernetesProvider() (*kubernetes.Provider, error) {
+func (r *Runner) createKubernetesProvider(ctx context.Context) (*kubernetes.Provider, error) {
 	cfg, err := ctrl.GetConfig()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get kubeconfig: %w", err)
 	}
 
-	p, err := kubernetes.New(cfg, &r.Config.Server, r.ProviderResources)
+	p, err := kubernetes.New(ctx, cfg, &r.Config.Server, r.ProviderResources)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create provider %s: %w", egv1a1.ProviderTypeKubernetes, err)
 	}

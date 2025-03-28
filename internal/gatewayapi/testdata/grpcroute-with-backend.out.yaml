@@ -92,10 +92,9 @@ grpcRoutes:
         status: "True"
         type: Accepted
       - lastTransitionTime: null
-        message: Resource default/backend-ip of type Backend is not supported for
-          GRPCRoute routes
-        reason: UnsupportedValue
-        status: "False"
+        message: Resolved all the Object references for the Route
+        reason: ResolvedRefs
+        status: "True"
         type: ResolvedRefs
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
@@ -121,7 +120,7 @@ infraIR:
 xdsIR:
   envoy-gateway/gateway-1:
     accessLog:
-      text:
+      json:
       - path: /dev/stdout
     http:
     - address: 0.0.0.0
@@ -139,8 +138,16 @@ xdsIR:
         mergeSlashes: true
       port: 10080
       routes:
-      - directResponse:
-          statusCode: 500
+      - destination:
+          name: grpcroute/default/grpcroute-1/rule/0
+          settings:
+          - addressType: IP
+            endpoints:
+            - host: 1.1.1.1
+              port: 3001
+            name: grpcroute/default/grpcroute-1/rule/0/backend/0
+            protocol: GRPC
+            weight: 1
         hostname: '*'
         isHTTP2: true
         metadata:
@@ -153,8 +160,16 @@ xdsIR:
           distinct: false
           name: ""
           safeRegex: /com.[A-Z]+/[A-Za-z_][A-Za-z_0-9]*
-      - directResponse:
-          statusCode: 500
+      - destination:
+          name: grpcroute/default/grpcroute-1/rule/0
+          settings:
+          - addressType: IP
+            endpoints:
+            - host: 1.1.1.1
+              port: 3001
+            name: grpcroute/default/grpcroute-1/rule/0/backend/0
+            protocol: GRPC
+            weight: 1
         hostname: '*'
         isHTTP2: true
         metadata:
@@ -167,3 +182,8 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /com.ExampleExact
+    readyListener:
+      address: 0.0.0.0
+      ipFamily: IPv4
+      path: /ready
+      port: 19003

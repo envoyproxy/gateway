@@ -135,7 +135,7 @@ infraIR:
 xdsIR:
   envoy-gateway/gateway-1:
     accessLog:
-      text:
+      json:
       - path: /dev/stdout
     http:
     - address: 0.0.0.0
@@ -160,12 +160,16 @@ xdsIR:
             endpoints:
             - host: 1.1.1.1
               port: 3001
+            name: httproute/default/httproute-1/rule/0/backend/0
+            protocol: HTTP
             weight: 1
           - addressType: IP
             endpoints:
             - host: 2.2.2.2
               port: 3001
+            name: httproute/default/httproute-1/rule/0/backend/1
             priority: 1
+            protocol: HTTP
             weight: 1
         hostname: '*'
         isHTTP2: false
@@ -178,3 +182,8 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /
+    readyListener:
+      address: 0.0.0.0
+      ipFamily: IPv4
+      path: /ready
+      port: 19003
