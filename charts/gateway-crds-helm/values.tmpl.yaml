@@ -1,0 +1,5 @@
+crd:
+  apiGateway:
+    enabled: false
+  envoyGateway:
+    enabled: true
