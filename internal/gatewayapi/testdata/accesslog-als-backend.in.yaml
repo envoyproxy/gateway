@@ -63,6 +63,8 @@ backends:
       name: backend-fqdn
       namespace: envoy-gateway
     spec:
+      appProtocols:
+        - gateway.envoyproxy.io/h2c
       endpoints:
         - fqdn:
             hostname: primary.foo.com

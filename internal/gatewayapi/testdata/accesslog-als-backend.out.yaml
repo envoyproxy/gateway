@@ -23,6 +23,8 @@ backends:
     name: backend-fqdn
     namespace: envoy-gateway
   spec:
+    appProtocols:
+    - gateway.envoyproxy.io/h2c
     endpoints:
     - fqdn:
         hostname: primary.foo.com
@@ -165,7 +167,7 @@ xdsIR:
             - host: primary.foo.com
               port: 3000
             name: accesslog_otel_0_0/backend/-1
-            protocol: TCP
+            protocol: HTTP2
           - addressType: IP
             endpoints:
             - host: 1.1.1.1
