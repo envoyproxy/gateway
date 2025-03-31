@@ -191,18 +191,8 @@ func (r *ResourceRender) ServiceAccount() (*corev1.ServiceAccount, error) {
 	return sa, nil
 }
 
-// DeploymentSpec returns the `Deployment` sets spec.
-func (r *ResourceRender) DeploymentSpec() (*egv1a1.KubernetesDeploymentSpec, error) {
-	return r.rateLimitDeployment, nil
-}
-
 // Deployment returns the expected rate limit Deployment based on the provided infra.
 func (r *ResourceRender) Deployment() (*appsv1.Deployment, error) {
-	// If deployment config is nil,ignore Deployment.
-	if deploymentConfig, er := r.DeploymentSpec(); deploymentConfig == nil {
-		return nil, er
-	}
-
 	containers := expectedRateLimitContainers(r.rateLimit, r.rateLimitDeployment, r.Namespace)
 	selector := resource.GetSelector(rateLimitLabels())
 
@@ -299,21 +289,19 @@ func (r *ResourceRender) Deployment() (*appsv1.Deployment, error) {
 	return deployment, nil
 }
 
-// DaemonSetSpec returns the `DaemonSet` sets spec.
-func (r *ResourceRender) DaemonSetSpec() (*egv1a1.KubernetesDaemonSetSpec, error) {
-	return nil, nil
-}
-
 // TODO: implement this method
 func (r *ResourceRender) DaemonSet() (*appsv1.DaemonSet, error) {
 	return nil, nil
 }
 
+<<<<<<< HEAD
 // HorizontalPodAutoscalerSpec returns the `HorizontalPodAutoscaler` sets spec.
 func (r *ResourceRender) HorizontalPodAutoscalerSpec() (*egv1a1.KubernetesHorizontalPodAutoscalerSpec, error) {
 	return r.rateLimitHpa, nil
 }
 
+=======
+>>>>>>> parent of fe1e8bd4... bugfix: ignore some unnecessary requests to apiserver. (#4362)
 func (r *ResourceRender) HorizontalPodAutoscaler() (*autoscalingv2.HorizontalPodAutoscaler, error) {
 	hpaConfig, err := r.HorizontalPodAutoscalerSpec()
 	if hpaConfig == nil {
@@ -355,11 +343,6 @@ func (r *ResourceRender) HorizontalPodAutoscaler() (*autoscalingv2.HorizontalPod
 	}
 
 	return hpa, nil
-}
-
-// PodDisruptionBudgetSpec returns the `PodDisruptionBudget` sets spec.
-func (r *ResourceRender) PodDisruptionBudgetSpec() (*egv1a1.KubernetesPodDisruptionBudgetSpec, error) {
-	return nil, nil
 }
 
 func (r *ResourceRender) PodDisruptionBudget() (*policyv1.PodDisruptionBudget, error) {
