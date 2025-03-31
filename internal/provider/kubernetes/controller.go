@@ -1903,13 +1903,13 @@ func (r *gatewayAPIReconciler) processEnvoyProxy(ep *egv1a1.EnvoyProxy, resource
 		return nil
 	}
 
-	r.log.Info("processing envoyproxy", "namespace", ep.Namespace, "name", ep.Name)
+	r.log.Info("processing EnvoyProxy", "namespace", ep.Namespace, "name", ep.Name)
 
 	if err := validation.ValidateEnvoyProxy(ep); err != nil {
-		return fmt.Errorf("invalid envoyproxy: %w", err)
+		return fmt.Errorf("invalid EnvoyProxy: %w", err)
 	}
 	if err := bootstrap.Validate(ep.Spec.Bootstrap); err != nil {
-		return fmt.Errorf("invalid envoyproxy: %w", err)
+		return fmt.Errorf("invalid EnvoyProxy: %w", err)
 	}
 
 	if ep.Spec.Telemetry != nil {

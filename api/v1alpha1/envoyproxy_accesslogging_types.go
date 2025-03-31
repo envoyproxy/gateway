@@ -186,8 +186,8 @@ type FileEnvoyProxyAccessLog struct {
 //
 // +kubebuilder:validation:XValidation:message="host or backendRefs needs to be set",rule="has(self.host) || self.backendRefs.size() > 0"
 // +kubebuilder:validation:XValidation:message="BackendRefs must be used, backendRef is not supported.",rule="!has(self.backendRef)"
-// +kubebuilder:validation:XValidation:message="BackendRefs only supports Service kind.",rule="has(self.backendRefs) ? self.backendRefs.all(f, f.kind == 'Service') : true"
-// +kubebuilder:validation:XValidation:message="BackendRefs only supports Core group.",rule="has(self.backendRefs) ? (self.backendRefs.all(f, f.group == \"\")) : true"
+// +kubebuilder:validation:XValidation:message="BackendRefs only support Service and Backend kind.",rule="has(self.backendRefs) ? self.backendRefs.all(f, f.kind == 'Service' || f.kind == 'Backend') : true"
+// +kubebuilder:validation:XValidation:message="BackendRefs only support Core and gateway.envoyproxy.io group.",rule="has(self.backendRefs) ? (self.backendRefs.all(f, f.group == \"\" || f.group == 'gateway.envoyproxy.io')) : true"
 type OpenTelemetryEnvoyProxyAccessLog struct {
 	BackendCluster `json:",inline"`
 	// Host define the extension service hostname.
