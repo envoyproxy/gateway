@@ -15,7 +15,7 @@ IMAGE_PLATFORMS ?= linux_amd64 linux_arm64
 
 BUILDX_CONTEXT = gateway-build-tools-builder
 # Convert to linux/arm64,linux/amd64
-$(eval BUILDX_PLATFORMS = $(shell echo "${IMAGE_PLATFORMS}" | sed "s# #,#;s#_#/#g"))
+$(eval BUILDX_PLATFORMS = $(shell echo "${IMAGE_PLATFORMS}" | sed "s# #,#g;s#_#/#g"))
 EMULATE_PLATFORMS = amd64 arm64
 EMULATE_TARGETS = $(addprefix image.multiarch.emulate.,$(EMULATE_PLATFORMS))
 
