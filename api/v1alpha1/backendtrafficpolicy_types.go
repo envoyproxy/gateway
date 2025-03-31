@@ -6,6 +6,7 @@
 package v1alpha1
 
 import (
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 )
@@ -78,6 +79,19 @@ type BackendTrafficPolicySpec struct {
 	//
 	// +optional
 	HTTPUpgrade []*ProtocolUpgradeConfig `json:"httpUpgrade,omitempty"`
+
+	// RequestBuffer allows the gateway to buffer and fully receive each request from a client before continuing to send the request
+	// upstream to the backends. This can be helpful to shield your backend servers from slow clients, and also to enforce a maximum size per request
+	// as any requests larger than the buffer size will be rejected.
+	//
+	// This can have a negative performance impact so should only be enabled when necessary.
+	//
+	// When enabling this option, you should also configure your connection buffer size to account for these request buffers. There will also be an
+	// increase in memory usage for Envoy that should be accounted for in your deployment settings.
+	//
+	// +notImplementedHide
+	// +optional
+	RequestBuffer *RequestBuffer `json:"requestBuffer,omitempty"`
 }
 
 type ProtocolUpgradeConfig struct {
@@ -88,6 +102,18 @@ type ProtocolUpgradeConfig struct {
 	Type string `json:"type"`
 
 	// TODO: support more options for CONNECT
+}
+
+type RequestBuffer struct {
+	// Limit specifies the maximum allowed size in bytes for each incoming request buffer.
+	// If exceeded, the request will be rejected with HTTP 413 Content Too Large.
+	//
+	// Accepts values in resource.Quantity format (e.g., "10Mi", "500Ki").
+	//
+	// +kubebuilder:validation:XIntOrString
+	// +kubebuilder:validation:Pattern="^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$"
+	// +notImplementedHide
+	Limit resource.Quantity `json:"limit,omitempty"`
 }
 
 // BackendTrafficPolicyList contains a list of BackendTrafficPolicy resources.

@@ -40,6 +40,8 @@ bug fixes: |
   Retrigger reconciliation when backendRef of type ServiceImport is updated or when EndpointSlice(s) for a ServiceImport are updated.
   Fix not logging an error and returning it in the K8s Reconcile method when a GatewayClass is not accepted.
   Fix allowing empty text field for opentelemetry sink when using JSON format.
+  Fix an issue that SamplingFraction was not working.
+  Fix kubernetes resources not being deleted when the customized name used.
 
 # Enhancements that improve performance.
 performance improvements: |
