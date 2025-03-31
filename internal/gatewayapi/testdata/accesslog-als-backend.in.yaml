@@ -1,0 +1,79 @@
+envoyProxyForGatewayClass:
+  apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: EnvoyProxy
+  metadata:
+    namespace: envoy-gateway-system
+    name: als-backend
+  spec:
+    telemetry:
+      accessLog:
+        settings:
+          - format:
+              type: Text
+              text: |
+                [%START_TIME%] "%REQ(:METHOD)% %PROTOCOL%" %RESPONSE_CODE% %RESPONSE_FLAGS% %BYTES_RECEIVED% %BYTES_SENT% %DURATION% %RESP(X-ENVOY-UPSTREAM-SERVICE-TIME)% "%REQ(X-FORWARDED-FOR)%" "%REQ(USER-AGENT)%" "%REQ(X-REQUEST-ID)%" "%REQ(:AUTHORITY)%" "%UPSTREAM_HOST%"\n
+            sinks:
+              - type: OpenTelemetry
+                openTelemetry:
+                  backendRefs:
+                    - Name: backend-uds
+                      Namespace: envoy-gateway
+                      Kind: Backend
+                      Group: gateway.envoyproxy.io
+                    - Name: backend-fqdn
+                      Namespace: envoy-gateway
+                      Kind: Backend
+                      Group: gateway.envoyproxy.io
+                      port: 3000
+                    - Name: backend-ip
+                      Namespace: envoy-gateway
+                      Kind: Backend
+                      Group: gateway.envoyproxy.io
+                      port: 3001
+                  resources:
+                    k8s.cluster.name: "cluster-1"
+gateways:
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: Gateway
+    metadata:
+      namespace: envoy-gateway
+      name: gateway-1
+    spec:
+      gatewayClassName: envoy-gateway-class
+      listeners:
+        - name: http
+          protocol: HTTP
+          port: 80
+          allowedRoutes:
+            namespaces:
+              from: Same
+backends:
+  - apiVersion: gateway.envoyproxy.io/v1alpha1
+    kind: Backend
+    metadata:
+      name: backend-uds
+      namespace: envoy-gateway
+    spec:
+      endpoints:
+        - unix:
+            path: /var/run/backend.sock
+  - apiVersion: gateway.envoyproxy.io/v1alpha1
+    kind: Backend
+    metadata:
+      name: backend-fqdn
+      namespace: envoy-gateway
+    spec:
+      endpoints:
+        - fqdn:
+            hostname: primary.foo.com
+            port: 3000
+  - apiVersion: gateway.envoyproxy.io/v1alpha1
+    kind: Backend
+    metadata:
+      name: backend-ip
+      namespace: envoy-gateway
+    spec:
+      endpoints:
+        - ip:
+            address: 1.1.1.1
+            port: 3001

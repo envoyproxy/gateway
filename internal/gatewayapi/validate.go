@@ -79,7 +79,7 @@ func (t *Translator) validateBackendRef(backendRefContext BackendRefContext, par
 			return fmt.Errorf("backend ServiceImport validation failed: %w", err)
 		}
 	case egv1a1.KindBackend:
-		if reason, err := t.validateBackendRefBackend(backendRef.BackendObjectReference, resources, backendNamespace); err != nil {
+		if reason, err := t.validateBackendRefBackend(backendRef.BackendObjectReference, resources, backendNamespace, false); err != nil {
 			routeStatus := GetRouteStatus(route)
 			status.SetRouteStatusCondition(routeStatus,
 				parentRef.routeParentStatusIdx,
@@ -284,6 +284,7 @@ func (t *Translator) validateBackendServiceImport(backendRef gwapiv1a2.BackendOb
 }
 
 func (t *Translator) validateBackendRefBackend(backendRef gwapiv1a2.BackendObjectReference, resources *resource.Resources, backendNamespace string,
+	allowUDS bool,
 ) (gwapiv1.RouteConditionReason, error) {
 
 	if !t.BackendEnabled {
@@ -300,7 +301,7 @@ func (t *Translator) validateBackendRefBackend(backendRef gwapiv1a2.BackendObjec
 	}
 
 	for _, bep := range backend.Spec.Endpoints {
-		if bep.Unix != nil {
+		if bep.Unix != nil && !allowUDS {
 			return "UnsupportedRefAddressFound", errors.New("unix domain sockets are not supported in backend references")
 		}
 	}
