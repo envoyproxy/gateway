@@ -9,7 +9,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"os"
 	"reflect"
 	"strconv"
 	"strings"
@@ -93,27 +92,27 @@ func newStatusCommand() *cobra.Command {
 			switch strings.ToLower(resourceType) {
 			case "all":
 				for _, rt := range supportedAllTypes {
-					if err = runStatus(ctx, k8sClient, rt, namespace, quiet, verbose, allNamespaces, true, true); err != nil {
+					if err = runStatus(ctx, cmd.OutOrStdout(), k8sClient, rt, namespace, quiet, verbose, allNamespaces, true, true); err != nil {
 						return err
 					}
 				}
 				return nil
 			case "xroute":
 				for _, rt := range supportedXRouteTypes {
-					if err = runStatus(ctx, k8sClient, rt, namespace, quiet, verbose, allNamespaces, true, true); err != nil {
+					if err = runStatus(ctx, cmd.OutOrStdout(), k8sClient, rt, namespace, quiet, verbose, allNamespaces, true, true); err != nil {
 						return err
 					}
 				}
 				return nil
 			case "xpolicy":
 				for _, rt := range supportedXPolicyTypes {
-					if err = runStatus(ctx, k8sClient, rt, namespace, quiet, verbose, allNamespaces, true, true); err != nil {
+					if err = runStatus(ctx, cmd.OutOrStdout(), k8sClient, rt, namespace, quiet, verbose, allNamespaces, true, true); err != nil {
 						return err
 					}
 				}
 				return nil
 			default:
-				return runStatus(ctx, k8sClient, resourceType, namespace, quiet, verbose, allNamespaces, false, false)
+				return runStatus(ctx, cmd.OutOrStdout(), k8sClient, resourceType, namespace, quiet, verbose, allNamespaces, false, false)
 			}
 		},
 	}
@@ -138,11 +137,11 @@ func writeStatusTable(table *tabwriter.Writer, header []string, body [][]string)
 }
 
 // runStatus find and write the summary table of status for a specific resource type.
-func runStatus(ctx context.Context, cli client.Client, inputResourceType, namespace string, quiet, verbose, allNamespaces, ignoreEmpty, typedName bool) error {
+func runStatus(ctx context.Context, logOut io.Writer, cli client.Client, inputResourceType, namespace string, quiet, verbose, allNamespaces, ignoreEmpty, typedName bool) error {
 	var (
 		resourcesList client.ObjectList
 		resourceKind  string
-		table         = newStatusTableWriter(os.Stdout)
+		table         = newStatusTableWriter(logOut)
 	)
 
 	if allNamespaces {

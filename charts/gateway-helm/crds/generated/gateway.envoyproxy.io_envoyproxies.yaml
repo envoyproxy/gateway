@@ -14633,7 +14633,6 @@ spec:
                         - message: numerator must be less than or equal to denominator
                           rule: self.numerator <= self.denominator
                       samplingRate:
-                        default: 100
                         description: |-
                           SamplingRate controls the rate at which traffic will be
                           selected for tracing if no prior sampling decision has been made.

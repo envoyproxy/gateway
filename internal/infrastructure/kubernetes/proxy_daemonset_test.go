@@ -7,6 +7,7 @@ package kubernetes
 
 import (
 	"context"
+	"os"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -47,7 +48,7 @@ func daemonsetWithSelectorAndLabel(ds *appsv1.DaemonSet, selector *metav1.LabelS
 }
 
 func TestCreateOrUpdateProxyDaemonSet(t *testing.T) {
-	cfg, err := config.New()
+	cfg, err := config.New(os.Stdout)
 	require.NoError(t, err)
 
 	infra := ir.NewInfra()

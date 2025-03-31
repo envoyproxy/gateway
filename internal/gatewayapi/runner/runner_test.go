@@ -7,6 +7,7 @@ package runner
 
 import (
 	"context"
+	"os"
 	"reflect"
 	"testing"
 	"time"
@@ -30,7 +31,7 @@ func TestRunner(t *testing.T) {
 	pResources := new(message.ProviderResources)
 	xdsIR := new(message.XdsIR)
 	infraIR := new(message.InfraIR)
-	cfg, err := config.New()
+	cfg, err := config.New(os.Stdout)
 	require.NoError(t, err)
 	extMgr, closeFunc, err := registry.NewInMemoryManager(egv1a1.ExtensionManager{}, &pb.UnimplementedEnvoyGatewayExtensionServer{})
 	require.NoError(t, err)
@@ -116,7 +117,7 @@ func TestDeleteStatusKeys(t *testing.T) {
 	pResources := new(message.ProviderResources)
 	xdsIR := new(message.XdsIR)
 	infraIR := new(message.InfraIR)
-	cfg, err := config.New()
+	cfg, err := config.New(os.Stdout)
 	require.NoError(t, err)
 	extMgr, closeFunc, err := registry.NewInMemoryManager(egv1a1.ExtensionManager{}, &pb.UnimplementedEnvoyGatewayExtensionServer{})
 	require.NoError(t, err)
@@ -217,7 +218,7 @@ func TestDeleteAllStatusKeys(t *testing.T) {
 	pResources := new(message.ProviderResources)
 	xdsIR := new(message.XdsIR)
 	infraIR := new(message.InfraIR)
-	cfg, err := config.New()
+	cfg, err := config.New(os.Stdout)
 	require.NoError(t, err)
 	extMgr, closeFunc, err := registry.NewInMemoryManager(egv1a1.ExtensionManager{}, &pb.UnimplementedEnvoyGatewayExtensionServer{})
 	require.NoError(t, err)

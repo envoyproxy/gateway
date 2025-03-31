@@ -257,6 +257,15 @@ stringData:
   secret: "literal value"
 ---
 apiVersion: v1
+kind: Secret
+metadata:
+  name: secret-with-type
+  namespace: default
+type: "type value"
+data:
+  .secret-file: dmFsdWUtMg0KDQo=
+---
+apiVersion: v1
 kind: ConfigMap
 metadata:
   name: configmap

@@ -8,6 +8,7 @@ package host
 import (
 	"bytes"
 	"context"
+	"os"
 	"path"
 	"testing"
 
@@ -42,7 +43,7 @@ func newMockInfra(t *testing.T, cfg *config.Server) *Infra {
 
 	infra := &Infra{
 		HomeDir:         homeDir,
-		Logger:          logging.DefaultLogger(egv1a1.LogLevelInfo),
+		Logger:          logging.DefaultLogger(os.Stdout, egv1a1.LogLevelInfo),
 		EnvoyGateway:    cfg.EnvoyGateway,
 		proxyContextMap: make(map[string]*proxyContext),
 		sdsConfigPath:   proxyDir,
@@ -51,7 +52,7 @@ func newMockInfra(t *testing.T, cfg *config.Server) *Infra {
 }
 
 func TestInfraCreateProxy(t *testing.T) {
-	cfg, err := config.New()
+	cfg, err := config.New(os.Stdout)
 	require.NoError(t, err)
 	infra := newMockInfra(t, cfg)
 

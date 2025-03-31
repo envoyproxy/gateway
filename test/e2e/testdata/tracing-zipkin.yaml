@@ -31,6 +31,9 @@ spec:
   telemetry:
     tracing:
       provider:
+        samplingFraction:
+          number: 100
+          denominator: 100
         type: Zipkin
         backendRefs:
           - name: otel-collector

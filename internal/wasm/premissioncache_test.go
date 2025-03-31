@@ -25,6 +25,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"os"
 	"sync"
 	"testing"
 	"time"
@@ -256,7 +257,7 @@ func setupTestPermissionCache(options permissionCacheOptions, image, latestImage
 	// Setup the permission cache.
 	cache := newPermissionCache(
 		options,
-		logging.DefaultLogger(egv1a1.LogLevelInfo))
+		logging.DefaultLogger(os.Stdout, egv1a1.LogLevelInfo))
 
 	entry := &permissionCacheEntry{
 		image: image,

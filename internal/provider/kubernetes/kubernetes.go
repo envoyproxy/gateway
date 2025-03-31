@@ -35,6 +35,9 @@ type Provider struct {
 	manager manager.Manager
 }
 
+// Exposed to allow disabling health probe listener in tests.
+var healthProbeBindAddress = ":8081"
+
 // New creates a new Provider from the provided EnvoyGateway.
 func New(ctx context.Context, restCfg *rest.Config, svrCfg *ec.Server, resources *message.ProviderResources) (*Provider, error) {
 	// TODO: Decide which mgr opts should be exposed through envoygateway.provider.kubernetes API.
@@ -42,7 +45,7 @@ func New(ctx context.Context, restCfg *rest.Config, svrCfg *ec.Server, resources
 	mgrOpts := manager.Options{
 		Scheme:                  envoygateway.GetScheme(),
 		Logger:                  svrCfg.Logger.Logger,
-		HealthProbeBindAddress:  ":8081",
+		HealthProbeBindAddress:  healthProbeBindAddress,
 		LeaderElectionID:        "5b9825d2.gateway.envoyproxy.io",
 		LeaderElectionNamespace: svrCfg.Namespace,
 	}

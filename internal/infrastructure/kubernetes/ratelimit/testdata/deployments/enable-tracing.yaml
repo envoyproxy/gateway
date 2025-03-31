@@ -103,6 +103,15 @@ spec:
           value: http://trace-collector.envoy-gateway-system.svc.cluster.local:4318
         image: docker.io/envoyproxy/ratelimit:master
         imagePullPolicy: IfNotPresent
+        livenessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /healthcheck
+            port: 8080
+            scheme: HTTP
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 1
         name: envoy-ratelimit
         ports:
         - containerPort: 8081

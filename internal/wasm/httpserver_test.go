@@ -12,6 +12,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"os"
 	"strings"
 	"testing"
 	"time"
@@ -327,7 +328,7 @@ func setupFakeRegistry(host string) error {
 }
 
 func startLocalHTTPServer(ctx context.Context, cacheDir string, maxFailedAttempts int, failedAttemptResetDelay, failedAttemptsResetInterval time.Duration) (*HTTPServer, error) {
-	logger := logging.DefaultLogger(egv1a1.LogLevelInfo)
+	logger := logging.DefaultLogger(os.Stdout, egv1a1.LogLevelInfo)
 	s := NewHTTPServerWithFileCache(
 		SeverOptions{
 			Salt:                        []byte("salt"),

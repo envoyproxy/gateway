@@ -38,7 +38,7 @@ func TestLogger(t *testing.T) {
 
 	logger.WithName(string(egv1a1.LogComponentGlobalRateLimitRunner)).WithValues("runner", egv1a1.LogComponentGlobalRateLimitRunner).Info("msg", "k", "v")
 
-	defaultLogger := DefaultLogger(egv1a1.LogLevelInfo)
+	defaultLogger := DefaultLogger(os.Stdout, egv1a1.LogLevelInfo)
 	assert.NotNil(t, defaultLogger.logging)
 	assert.NotNil(t, defaultLogger.sugaredLogger)
 

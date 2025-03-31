@@ -1,15 +1,19 @@
 {{ $color := "primary" }}
 {{ $latest_version := .Site.Params.url_latest_version }}
-{{ $path := strings.TrimPrefix (add hugo.WorkingDir "/") $.File.Filename -}}
-{{ $current_version := .Site.Params.version }}
-{{ if not (strings.Contains $path "docs") }}
-{{ if not (strings.Contains $path "latest") }}
-{{ if not (strings.Contains $path $current_version) }}
+{{ $path := strings.TrimPrefix (add hugo.WorkingDir "/content/en/") $.File.Filename -}}
+{{ range .Site.Params.versions -}}
+
+{{ $eol_time := time.AsTime .eol }}
+{{ if gt (time.Now.Sub $eol_time) 0 }}
+
+{{ if strings.HasPrefix $path .version }}
 <div class="alert alert-warning">
     Notice: You're viewing documentation for an older version of Envoy Gateway that has reached End of Life (EOL).
     <br />
     Please refer to the <a href="{{ $latest_version | safeURL }}" target="_blank">/docs</a> documentation for the most current information.
 </div>
 {{ end }}
+
 {{ end }}
+
 {{ end }}

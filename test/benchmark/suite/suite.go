@@ -32,9 +32,10 @@ import (
 )
 
 const (
-	BenchmarkTestScaledKey = "benchmark-test/scaled"
-	BenchmarkTestClientKey = "benchmark-test/client"
-	DefaultControllerName  = "gateway.envoyproxy.io/gatewayclass-controller"
+	BenchmarkTestScaledKey     = "benchmark-test/scaled"
+	BenchmarkTestClientKey     = "benchmark-test/client"
+	BenchmarkMetricsSampleTick = 3 * time.Second
+	DefaultControllerName      = "gateway.envoyproxy.io/gatewayclass-controller"
 )
 
 type BenchmarkTest struct {
@@ -200,8 +201,14 @@ func (b *BenchmarkTestSuite) Benchmark(t *testing.T, ctx context.Context, jobNam
 		return nil, err
 	}
 
+	profilesOutputDir := path.Join(b.ReportSaveDir, "profiles")
+	if err := createDirIfNotExist(profilesOutputDir); err != nil {
+		return nil, err
+	}
+
 	// Wait from benchmark test job to complete.
-	if err = wait.PollUntilContextTimeout(ctx, 6*time.Second, time.Duration(duration*10)*time.Second, true, func(ctx context.Context) (bool, error) {
+	report := NewBenchmarkReport(resultTitle, profilesOutputDir, b.kubeClient, b.promClient)
+	if err = wait.PollUntilContextTimeout(ctx, BenchmarkMetricsSampleTick, time.Duration(duration*10)*time.Second, true, func(ctx context.Context) (bool, error) {
 		job := new(batchv1.Job)
 		if err = b.Client.Get(ctx, *jobNN, job); err != nil {
 			return false, err
@@ -221,6 +228,12 @@ func (b *BenchmarkTestSuite) Benchmark(t *testing.T, ctx context.Context, jobNam
 
 		t.Logf("Job %s still not complete", jobName)
 
+		// Sample the metrics and profiles at runtime.
+		// Do not consider it as an error, fail sampling should not affect test running.
+		if err := report.Sample(ctx); err != nil {
+			t.Logf("Error occurs while sampling metrics or profiles: %v", err)
+		}
+
 		return false, nil
 	}); err != nil {
 		t.Errorf("Failed to run benchmark test: %v", err)
@@ -230,13 +243,8 @@ func (b *BenchmarkTestSuite) Benchmark(t *testing.T, ctx context.Context, jobNam
 
 	t.Logf("Running benchmark test: %s successfully", resultTitle)
 
-	report, err := NewBenchmarkReport(resultTitle, path.Join(b.ReportSaveDir, "profiles"), b.kubeClient, b.promClient)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create benchmark report: %w", err)
-	}
-
-	// Get all the reports from this benchmark test run.
-	if err = report.Collect(ctx, jobNN); err != nil {
+	// Get nighthawk result from this benchmark test run.
+	if err = report.GetResult(ctx, jobNN); err != nil {
 		return nil, err
 	}
 

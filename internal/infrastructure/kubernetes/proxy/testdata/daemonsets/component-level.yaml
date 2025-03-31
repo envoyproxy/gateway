@@ -64,6 +64,15 @@ spec:
               path: /shutdown/ready
               port: 19002
               scheme: HTTP
+        livenessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /ready
+            port: 19003
+            scheme: HTTP
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 1
         name: envoy
         ports:
         - containerPort: 19001

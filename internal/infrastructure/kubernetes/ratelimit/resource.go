@@ -190,6 +190,19 @@ func expectedRateLimitContainers(rateLimit *egv1a1.RateLimit, rateLimitDeploymen
 				SuccessThreshold: 1,
 				FailureThreshold: 1,
 			},
+			LivenessProbe: &corev1.Probe{
+				ProbeHandler: corev1.ProbeHandler{
+					HTTPGet: &corev1.HTTPGetAction{
+						Path:   ReadinessPath,
+						Port:   intstr.IntOrString{Type: intstr.Int, IntVal: ReadinessPort},
+						Scheme: corev1.URISchemeHTTP,
+					},
+				},
+				TimeoutSeconds:   1,
+				PeriodSeconds:    10,
+				SuccessThreshold: 1,
+				FailureThreshold: 3,
+			},
 		},
 	}
 

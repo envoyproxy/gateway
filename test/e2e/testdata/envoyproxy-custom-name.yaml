@@ -1,0 +1,120 @@
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: deploy-custom-name
+  namespace: gateway-conformance-infra
+spec:
+  gatewayClassName: "{GATEWAY_CLASS_NAME}"
+  listeners:
+    - name: http
+      port: 80
+      protocol: HTTP
+      allowedRoutes:
+        namespaces:
+          from: All
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyProxy
+metadata:
+  name: deploy-custom-name
+  namespace: gateway-conformance-infra
+spec:
+  ipFamily: IPv4
+  provider:
+    type: Kubernetes
+    kubernetes:
+      envoyDeployment:
+        name: deploy-custom-name
+      envoyService:
+        name: deploy-custom-name
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: deploy-route
+  namespace: gateway-conformance-infra
+spec:
+  parentRefs:
+    - name: deploy-custom-name
+  rules:
+    - backendRefs:
+        - name: infra-backend-v1
+          port: 8080
+      matches:
+        - path:
+            type: PathPrefix
+            value: /deploy
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: ds-custom-name
+  namespace: gateway-conformance-infra
+spec:
+  gatewayClassName: "{GATEWAY_CLASS_NAME}"
+  listeners:
+    - name: http
+      port: 80
+      protocol: HTTP
+      allowedRoutes:
+        namespaces:
+          from: All
+  infrastructure:
+    parametersRef:
+      group: gateway.envoyproxy.io
+      kind: EnvoyProxy
+      name: eg-daemonset
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyProxy
+metadata:
+  name: eg-daemonset
+  namespace: gateway-conformance-infra
+spec:
+  ipFamily: IPv4
+  provider:
+    type: Kubernetes
+    kubernetes:
+      envoyDaemonSet:
+        patch:
+          type: StrategicMerge
+          value:
+            spec:
+              template:
+                spec:
+                  containers:
+                    - name: envoy
+                      readinessProbe:
+                        initialDelaySeconds: 5
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyProxy
+metadata:
+  name: ds-custom-name
+  namespace: gateway-conformance-infra
+spec:
+  ipFamily: IPv4
+  provider:
+    type: Kubernetes
+    kubernetes:
+      envoyDaemonSet:
+        name: ds-custom-name
+      envoyService:
+        name: ds-custom-name
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: ds-route
+  namespace: gateway-conformance-infra
+spec:
+  parentRefs:
+    - name: ds-custom-name
+  rules:
+    - backendRefs:
+        - name: infra-backend-v1
+          port: 8080
+      matches:
+        - path:
+            type: PathPrefix
+            value: /daemonset

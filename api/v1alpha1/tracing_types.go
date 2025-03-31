@@ -19,7 +19,6 @@ type ProxyTracing struct {
 	//
 	// +kubebuilder:validation:Minimum=0
 	// +kubebuilder:validation:Maximum=100
-	// +kubebuilder:default=100
 	// +optional
 	SamplingRate *uint32 `json:"samplingRate,omitempty"`
 	// SamplingFraction represents the fraction of requests that should be

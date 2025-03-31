@@ -36,7 +36,7 @@ func (t *ResourceVersionTable) DeepCopyInto(out *ResourceVersionTable) {
 	*out = *t
 	if t.XdsResources != nil {
 		in, out := &t.XdsResources, &out.XdsResources
-		*out = make(map[string][]types.Resource, len(*in))
+		*out = make(map[resourcev3.Type][]types.Resource, len(*in))
 		for key, val := range *in {
 			var outVal []types.Resource
 			if val == nil {

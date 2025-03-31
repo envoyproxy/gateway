@@ -289,6 +289,7 @@ xdsIR:
             initialStreamWindowSize: 1073741824
             maxConcurrentStreams: 500
             resetStreamOnError: false
+          name: envoy-gateway/policy-for-gateway
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4
@@ -341,6 +342,7 @@ xdsIR:
             initialStreamWindowSize: 524288000
             maxConcurrentStreams: 200
             resetStreamOnError: true
+          name: default/policy-for-route
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4
