@@ -11501,12 +11501,16 @@ spec:
                                     - message: must have at least one backend in backendRefs
                                       rule: has(self.backendRefs) && self.backendRefs.size()
                                         > 0
-                                    - message: BackendRefs only supports Service kind.
+                                    - message: BackendRefs only support Service and
+                                        Backend kind.
                                       rule: 'has(self.backendRefs) ? self.backendRefs.all(f,
-                                        f.kind == ''Service'') : true'
-                                    - message: BackendRefs only supports Core group.
+                                        f.kind == ''Service'' || f.kind == ''Backend'')
+                                        : true'
+                                    - message: BackendRefs only support Core and gateway.envoyproxy.io
+                                        group.
                                       rule: 'has(self.backendRefs) ? (self.backendRefs.all(f,
-                                        f.group == "")) : true'
+                                        f.group == "" || f.group == ''gateway.envoyproxy.io''))
+                                        : true'
                                   file:
                                     description: File defines the file accesslog sink.
                                     properties:
