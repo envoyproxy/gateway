@@ -704,6 +704,12 @@ spec:
                   http:
                     description: Timeout settings for HTTP.
                     properties:
+                      drainTimeout:
+                        description: |-
+                          Duration is a string value representing a duration in time. The format is as specified
+                          in GEP-2257, a strict subset of the syntax parsed by Golang time.ParseDuration.
+                        pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                        type: string
                       idleTimeout:
                         description: |-
                           IdleTimeout for an HTTP connection. Idle time is defined as a period in which there are no active requests in the connection.

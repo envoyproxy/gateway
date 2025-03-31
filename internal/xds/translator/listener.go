@@ -369,6 +369,9 @@ func (t *Translator) addHCMToXDSListener(xdsListener *listenerv3.Listener, irLis
 		if irListener.Timeout.HTTP.IdleTimeout != nil {
 			mgr.CommonHttpProtocolOptions.IdleTimeout = durationpb.New(irListener.Timeout.HTTP.IdleTimeout.Duration)
 		}
+		if irListener.Timeout.HTTP.DrainTimeout != nil {
+			mgr.DrainTimeout = durationpb.New(irListener.Timeout.HTTP.DrainTimeout.Duration)
+		}
 	}
 
 	// Add the proxy protocol filter if needed
