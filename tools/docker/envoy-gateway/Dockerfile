@@ -6,7 +6,7 @@ RUN mkdir -p /var/lib/eg
 # Refer to https://github.com/GoogleContainerTools/distroless for more details
 FROM gcr.io/distroless/base-nossl:nonroot@sha256:d1fc914c43cea489c26c896721344a49a1761b9bb678bcba1758772d22913302
 ARG TARGETPLATFORM
-COPY $TARGETPLATFORM/envoy-gateway /usr/local/bin/
+COPY --chown=65532:65532 $TARGETPLATFORM/envoy-gateway /usr/local/bin/
 COPY --from=source --chown=65532:65532 /var/lib /var/lib
 
 USER 65532:65532
