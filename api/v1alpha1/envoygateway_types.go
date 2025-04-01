@@ -558,6 +558,12 @@ type ExtensionService struct {
 	//
 	// +optional
 	TLS *ExtensionTLS `json:"tls,omitempty"`
+
+	// RetryPolicy defines the retry policy for to use when errors are encountered in communication with
+	// the extension service.
+	//
+	// +optional
+	RetryPolicy *RetryPolicy `json:"retryPolicy,omitempty"`
 }
 
 // ExtensionTLS defines the TLS configuration when connecting to an extension service.
@@ -569,6 +575,43 @@ type ExtensionTLS struct {
 	//
 	// +kubebuilder:validation:Required
 	CertificateRef gwapiv1.SecretObjectReference `json:"certificateRef"`
+}
+
+// GRPCStatus defines grpc status codes as defined in https://github.com/grpc/grpc/blob/master/doc/statuscodes.md.
+// +kubebuilder:validation:Enum=CANCELLED;UNKNOWN;INVALID_ARGUMENT;DEADLINE_EXCEEDED;NOT_FOUND;ALREADY_EXISTS;PERMISSION_DENIED;RESOURCE_EXHAUSTED;FAILED_PRECONDITION;ABORTED;OUT_OF_RANGE;UNIMPLEMENTED;INTERNAL;UNAVAILABLE;DATA_LOSS;UNAUTHENTICATED
+type RetryableGRPCStatusCode string
+
+// RetryPolicy defines the retry policy for to use when errors are encountered in communication with the extension service.
+type RetryPolicy struct {
+	// MaxAttempts defines the maximum number of retry attempts.
+	// Default: 4
+	//
+	// +optional
+	MaxAttempts *int `json:"maxAttempts,omitempty"`
+
+	// InitialBackoff defines the initial backoff in seconds for retries, details: https://github.com/grpc/proposal/blob/master/A6-client-retries.md#integration-with-service-config.
+	// Default: 0.1s
+	//
+	// +optional
+	InitialBackoff *gwapiv1.Fraction `json:"initialBackoff,omitempty"`
+
+	// MaxBackoff defines the maximum backoff in seconds for retries.
+	// Default: 1s
+	//
+	// +optional
+	MaxBackoff *gwapiv1.Fraction `json:"maxBackoff,omitempty"`
+
+	// BackoffMultiplier defines the multiplier to use for exponential backoff for retries.
+	// Default: 2.0
+	//
+	// +optional
+	BackoffMultiplier *gwapiv1.Fraction `json:"backoffMultiplier,omitempty"`
+
+	// RetryableStatusCodes defines the grpc status code for which retries will be attempted.
+	// Default: [ "UNAVAILABLE" ]
+	//
+	// +optional
+	RetryableStatusCodes []RetryableGRPCStatusCode `json:"RetryableStatusCodes,omitempty"`
 }
 
 // EnvoyGatewayAdmin defines the Envoy Gateway Admin configuration.

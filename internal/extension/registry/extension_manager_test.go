@@ -9,16 +9,23 @@ import (
 	"context"
 	"fmt"
 	"math"
+	"reflect"
+	"sync"
 	"testing"
 
+	v3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/utils/ptr"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/envoygateway"
+	"github.com/envoyproxy/gateway/proto/extension"
 )
 
 func TestGetExtensionServerAddress(t *testing.T) {
@@ -133,6 +140,37 @@ func Test_setupGRPCOpts(t *testing.T) {
 								Port:     44344,
 							},
 						},
+						RetryPolicy: &egv1a1.RetryPolicy{
+							MaxAttempts: ptr.To(20),
+							InitialBackoff: &gwapiv1.Fraction{
+								Numerator:   1,
+								Denominator: ptr.To(int32(2)),
+							},
+							MaxBackoff: &gwapiv1.Fraction{
+								Numerator: 500,
+							},
+							BackoffMultiplier: &gwapiv1.Fraction{
+								Numerator: 50,
+							},
+							RetryableStatusCodes: []egv1a1.RetryableGRPCStatusCode{
+								"CANCELLED",
+								"UNKNOWN",
+								"INVALID_ARGUMENT",
+								"DEADLINE_EXCEEDED",
+								"NOT_FOUND",
+								"ALREADY_EXISTS",
+								"PERMISSION_DENIED",
+								"RESOURCE_EXHAUSTED",
+								"FAILED_PRECONDITION",
+								"ABORTED",
+								"OUT_OF_RANGE",
+								"UNIMPLEMENTED",
+								"INTERNAL",
+								"UNAVAILABLE",
+								"DATA_LOSS",
+								"UNAUTHENTICATED",
+							},
+						},
 					},
 				},
 			},
@@ -150,3 +188,284 @@ func Test_setupGRPCOpts(t *testing.T) {
 		})
 	}
 }
+
+func Test_buildServiceConfig(t *testing.T) {
+	type args struct {
+		ext *egv1a1.ExtensionManager
+	}
+	tests := []struct {
+		name    string
+		args    args
+		want    string
+		wantErr bool
+	}{
+		// TODO: Add test cases.
+		{
+			name: "default",
+			args: args{
+				ext: &egv1a1.ExtensionManager{
+					Service: &egv1a1.ExtensionService{
+						BackendEndpoint: egv1a1.BackendEndpoint{
+							FQDN: &egv1a1.FQDNEndpoint{
+								Hostname: "foo.bar",
+								Port:     44344,
+							},
+						},
+					},
+				},
+			},
+			want: `{
+"methodConfig": [{
+	"name": [{"service": "envoygateway.extension.EnvoyGatewayExtension"}],
+	"waitForReady": true,
+	"retryPolicy": {
+		"MaxAttempts": 4,
+		"InitialBackoff": "0.100000s",
+		"MaxBackoff": "1.000000s",
+		"BackoffMultiplier": 2.000000,
+		"RetryableStatusCodes": [ "UNAVAILABLE" ]
+	}
+}]}`,
+		},
+		{
+			name: "valid",
+			args: args{
+				ext: &egv1a1.ExtensionManager{
+					Service: &egv1a1.ExtensionService{
+						BackendEndpoint: egv1a1.BackendEndpoint{
+							FQDN: &egv1a1.FQDNEndpoint{
+								Hostname: "foo.bar",
+								Port:     44344,
+							},
+						},
+						RetryPolicy: &egv1a1.RetryPolicy{
+							MaxAttempts: ptr.To(20),
+							InitialBackoff: &gwapiv1.Fraction{
+								Numerator:   1,
+								Denominator: ptr.To(int32(2)),
+							},
+							MaxBackoff: &gwapiv1.Fraction{
+								Numerator: 500,
+							},
+							BackoffMultiplier: &gwapiv1.Fraction{
+								Numerator: 50,
+							},
+							RetryableStatusCodes: []egv1a1.RetryableGRPCStatusCode{
+								"CANCELLED",
+								"UNKNOWN",
+								"INVALID_ARGUMENT",
+								"DEADLINE_EXCEEDED",
+								"NOT_FOUND",
+								"ALREADY_EXISTS",
+								"PERMISSION_DENIED",
+								"RESOURCE_EXHAUSTED",
+								"FAILED_PRECONDITION",
+								"ABORTED",
+								"OUT_OF_RANGE",
+								"UNIMPLEMENTED",
+								"INTERNAL",
+								"UNAVAILABLE",
+								"DATA_LOSS",
+								"UNAUTHENTICATED",
+							},
+						},
+					},
+				},
+			},
+			want: `{
+"methodConfig": [{
+	"name": [{"service": "envoygateway.extension.EnvoyGatewayExtension"}],
+	"waitForReady": true,
+	"retryPolicy": {
+		"MaxAttempts": 20,
+		"InitialBackoff": "0.500000s",
+		"MaxBackoff": "5.000000s",
+		"BackoffMultiplier": 0.500000,
+		"RetryableStatusCodes": [ "CANCELLED","UNKNOWN","INVALID_ARGUMENT","DEADLINE_EXCEEDED","NOT_FOUND","ALREADY_EXISTS","PERMISSION_DENIED","RESOURCE_EXHAUSTED","FAILED_PRECONDITION","ABORTED","OUT_OF_RANGE","UNIMPLEMENTED","INTERNAL","UNAVAILABLE","DATA_LOSS","UNAUTHENTICATED" ]
+	}
+}]}`,
+		},
+		{
+			name: "invalid-code",
+			args: args{
+				ext: &egv1a1.ExtensionManager{
+					Service: &egv1a1.ExtensionService{
+						BackendEndpoint: egv1a1.BackendEndpoint{
+							FQDN: &egv1a1.FQDNEndpoint{
+								Hostname: "foo.bar",
+								Port:     44344,
+							},
+						},
+						RetryPolicy: &egv1a1.RetryPolicy{
+							RetryableStatusCodes: []egv1a1.RetryableGRPCStatusCode{
+								"CANCELLED",
+								"NOTACODE",
+							},
+						},
+					},
+				},
+			},
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := buildServiceConfig(tt.args.ext)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("buildServiceConfig() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("buildServiceConfig() got = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+type retryTestServer struct {
+	extension.UnimplementedEnvoyGatewayExtensionServer
+	attempts int
+	mu       sync.Mutex
+}
+
+func (s *retryTestServer) PostRouteModify(ctx context.Context, req *extension.PostRouteModifyRequest) (*extension.PostRouteModifyResponse, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.attempts++
+	if s.attempts == 10 {
+		return &extension.PostRouteModifyResponse{
+			Route: req.Route,
+		}, nil
+	} else {
+		return nil, status.Error(codes.Unavailable, "Service is currently unavailable")
+	}
+}
+
+func Test_Integration_RetryPolicy_MaxAttempts(t *testing.T) {
+	type args struct {
+		retryPolicy *egv1a1.RetryPolicy
+	}
+	tests := []struct {
+		name    string
+		args    args
+		wantErr bool
+	}{
+		{
+			name: "sufficient retries",
+			args: args{
+				retryPolicy: &egv1a1.RetryPolicy{
+					MaxAttempts: ptr.To(10),
+					RetryableStatusCodes: []egv1a1.RetryableGRPCStatusCode{
+						"UNAVAILABLE",
+					},
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "insufficient retries",
+			args: args{
+				retryPolicy: &egv1a1.RetryPolicy{
+					MaxAttempts: ptr.To(5),
+					RetryableStatusCodes: []egv1a1.RetryableGRPCStatusCode{
+						"UNAVAILABLE",
+					},
+				},
+			},
+			wantErr: true,
+		},
+		{
+			name: "wrong retry code",
+			args: args{
+				retryPolicy: &egv1a1.RetryPolicy{
+					MaxAttempts: ptr.To(5),
+					RetryableStatusCodes: []egv1a1.RetryableGRPCStatusCode{
+						"CANCELLED",
+					},
+				},
+			},
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			extManager := egv1a1.ExtensionManager{
+				Hooks: &egv1a1.ExtensionHooks{
+					XDSTranslator: &egv1a1.XDSTranslatorHooks{
+						Post: []egv1a1.XDSTranslatorHook{
+							egv1a1.XDSRoute,
+						},
+					},
+				},
+				Service: &egv1a1.ExtensionService{
+					BackendEndpoint: egv1a1.BackendEndpoint{
+						FQDN: &egv1a1.FQDNEndpoint{
+							Hostname: "foo.bar",
+							Port:     44344,
+						},
+					},
+					RetryPolicy: tt.args.retryPolicy,
+				},
+			}
+
+			mgr, _, err := NewInMemoryManager(extManager, &retryTestServer{})
+			require.NoError(t, err)
+
+			hook, err := mgr.GetPostXDSHookClient(egv1a1.XDSRoute)
+			require.NoError(t, err)
+			require.NotNil(t, hook)
+
+			_, err = hook.PostRouteModifyHook(
+				&v3.Route{
+					Name: "test-route",
+				}, nil, nil)
+
+			if (err != nil) != tt.wantErr {
+				t.Errorf("PostRouteModifyHook() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+		})
+	}
+}
+
+// func Test_Integration_RetryPolicy_MaxAttempts(t *testing.T) {
+//	extManager := egv1a1.ExtensionManager{
+//		Hooks: &egv1a1.ExtensionHooks{
+//			XDSTranslator: &egv1a1.XDSTranslatorHooks{
+//				Post: []egv1a1.XDSTranslatorHook{
+//					egv1a1.XDSRoute,
+//				},
+//			},
+//		},
+//		Service: &egv1a1.ExtensionService{
+//			BackendEndpoint: egv1a1.BackendEndpoint{
+//				FQDN: &egv1a1.FQDNEndpoint{
+//					Hostname: "foo.bar",
+//					Port:     44344,
+//				},
+//			},
+//			RetryPolicy: &egv1a1.RetryPolicy{
+//				MaxAttempts: ptr.To(10),
+//				RetryableStatusCodes: []egv1a1.RetryableGRPCStatusCode{
+//					"UNAVAILABLE",
+//				},
+//			},
+//		},
+//	}
+//
+//	mgr, _, err := NewInMemoryManager(extManager, &retryTestServer{})
+//	require.NoError(t, err)
+//
+//	hook, err := mgr.GetPostXDSHookClient(egv1a1.XDSRoute)
+//	require.NoError(t, err)
+//	require.NotNil(t, hook)
+//
+//	res, err := hook.PostRouteModifyHook(
+//		&v3.Route{
+//			Name: "test-route",
+//		}, nil, nil)
+//	require.NoError(t, err)
+//	require.NotNil(t, res)
+//}
