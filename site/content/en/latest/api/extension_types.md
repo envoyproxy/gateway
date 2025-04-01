@@ -924,7 +924,7 @@ _Appears in:_
 | ---   | ---  | ---      | ---     | ---         |
 | `contentType` | _string_ |  false  |  | Content Type of the response. This will be set in the Content-Type header. |
 | `body` | _[CustomResponseBody](#customresponsebody)_ |  false  |  | Body of the Custom Response |
-| `statusCode` | _integer_ |  false  |  | Status Code of the Custom Response<br />If unset, does not override the status of response. |
+| `statusCode` | _integer_ |  false  |  | Status Code of the Custom Response<br />If unset, does not override the status of response.<br />If RedirectParameters are set, default response status is MOVED_PERMANENTLY (301) |
 
 
 #### CustomResponseBody
@@ -2313,6 +2313,22 @@ _Appears in:_
 | `preserveXRequestID` | _boolean_ |  false  |  | PreserveXRequestID configures Envoy to keep the X-Request-ID header if passed for a request that is edge<br />(Edge request is the request from external clients to front Envoy) and not reset it, which is the current Envoy behaviour.<br />Defaults to false and cannot be combined with RequestID.<br />Deprecated: use RequestID=Preserve instead |
 | `requestID` | _[RequestIDAction](#requestidaction)_ |  false  |  | RequestID configures Envoy's behavior for handling the `X-Request-ID` header.<br />Defaults to `Generate` and builds the `X-Request-ID` for every request and ignores pre-existing values from the edge.<br />(An "edge request" refers to a request from an external client to the Envoy entrypoint.) |
 | `earlyRequestHeaders` | _[HTTPHeaderFilter](#httpheaderfilter)_ |  false  |  | EarlyRequestHeaders defines settings for early request header modification, before envoy performs<br />routing, tracing and built-in header manipulation. |
+
+
+#### HeaderValue
+
+
+
+HeaderValue represents a header key-value pair
+
+_Appears in:_
+- [CustomResponse](#customresponse)
+- [RedirectParameters](#redirectparameters)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `key` | _string_ |  true  |  | Key of the header |
+| `value` | _string_ |  true  |  | Value of the header |
 
 
 #### HealthCheck
@@ -3876,6 +3892,25 @@ _Appears in:_
 | ---   | ---  | ---      | ---     | ---         |
 | `requests` | _integer_ |  true  |  |  |
 | `unit` | _[RateLimitUnit](#ratelimitunit)_ |  true  |  |  |
+
+
+#### RedirectParameters
+
+
+
+RedirectParameters contains parameters of the redirect response
+
+_Appears in:_
+- [CustomResponse](#customresponse)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `scheme` | _string_ |  false  |  | Replaces the scheme portion of the original URL |
+| `host` | _string_ |  false  |  | Replaces the host portion of the original URL |
+| `port` | _integer_ |  false  |  | Replaces the port value in the original URL |
+| `path` | _string_ |  false  |  | Replaces the path portion of the original URL |
+| `stripQuery` | _boolean_ |  false  |  | Removes the query portion of the original URL |
+| `requestHeaders` | _[HeaderValue](#headervalue) array_ |  false  |  | RequestHeaders are the headers to add to the request before redirecting it |
 
 
 #### RedisTLSSettings
