@@ -22,7 +22,6 @@ jobs:
       continue-on-error: true  # remove this after https://github.com/google/deps.dev/issues/146 has been resolved
       with:
         scan-args: |-
-          --skip-git
-          --experimental-licenses=Apache-2.0,BSD-2-Clause,BSD-2-Clause-FreeBSD,BSD-3-Clause,MIT,ISC,Python-2.0,PostgreSQL,X11,Zlib
+          --licenses=Apache-2.0,BSD-2-Clause,BSD-2-Clause-FreeBSD,BSD-3-Clause,MIT,ISC,Python-2.0,PostgreSQL,X11,Zlib
           --config tools/osv-scanner/license-scan-config.toml
           ./

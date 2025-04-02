@@ -22,7 +22,6 @@ jobs:
     uses: "google/osv-scanner-action/.github/workflows/osv-scanner-reusable.yml@98b584ee2ed2da3935ccce10e06739d54cdcd20b"  # v2.0.0
     with:
       scan-args: |-
-        --skip-git
         --recursive
         ./
     permissions:
@@ -36,7 +35,6 @@ jobs:
     uses: "google/osv-scanner-action/.github/workflows/osv-scanner-reusable-pr.yml@98b584ee2ed2da3935ccce10e06739d54cdcd20b"  # v2.0.0
     with:
       scan-args: |-
-        --skip-git
         --recursive
         ./
     permissions:
