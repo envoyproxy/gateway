@@ -51,7 +51,7 @@ spec:
           - name: backend-fqdn
             kind: Backend
             group: gateway.envoyproxy.io
-            port: 4317
+            port: 8126
       customTags:
         "provider":
           type: Literal
@@ -86,7 +86,7 @@ spec:
   endpoints:
     - fqdn:
         hostname: datadog-agent.monitoring.svc.cluster.local
-        port: 4317
+        port: 8126
 ---
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
