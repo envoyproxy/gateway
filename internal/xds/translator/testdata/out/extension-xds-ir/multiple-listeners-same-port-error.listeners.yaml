@@ -24,18 +24,11 @@
         mergeSlashes: true
         normalizePath: true
         pathWithEscapedSlashesAction: UNESCAPE_AND_REDIRECT
-        routeConfig:
-          name: error_route_configuration
-          virtualHosts:
-          - domains:
-            - '*'
-            name: error_vhost
-            routes:
-            - directResponse:
-                status: 500
-              match:
-                prefix: /
-              name: error_route
+        rds:
+          configSource:
+            ads: {}
+            resourceApiVersion: V3
+          routeConfigName: first-listener-error
         serverHeaderTransformation: PASS_THROUGH
         statPrefix: https-10080
         useRemoteAddress: true
@@ -76,18 +69,11 @@
         mergeSlashes: true
         normalizePath: true
         pathWithEscapedSlashesAction: UNESCAPE_AND_REDIRECT
-        routeConfig:
-          name: error_route_configuration
-          virtualHosts:
-          - domains:
-            - '*'
-            name: error_vhost
-            routes:
-            - directResponse:
-                status: 500
-              match:
-                prefix: /
-              name: error_route
+        rds:
+          configSource:
+            ads: {}
+            resourceApiVersion: V3
+          routeConfigName: second-listener
         serverHeaderTransformation: PASS_THROUGH
         statPrefix: https-10080
         useRemoteAddress: true
