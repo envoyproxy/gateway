@@ -114,4 +114,3 @@ Check out the [Gateway Exported Metrics](./grafana-integration.md) section to le
 
 [gasm]: https://github.com/Kuadrant/gateway-api-state-metrics
 [gasm-readme]: https://github.com/Kuadrant/gateway-api-state-metrics/tree/main#metrics
-[gasm-dashboards]: https://github.com/Kuadrant/gateway-api-state-metrics/tree/main#dashboards
