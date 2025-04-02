@@ -3527,6 +3527,27 @@ spec:
                           [Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest).
                           If not specified, defaults to "IdToken-(randomly generated uid)"
                         type: string
+                      oauthExpires:
+                        description: |-
+                          The name of the cookie used to store the expiry time of the OAuth tokens.
+                          If not specified, defaults to "OauthExpires-(randomly generated uid)"
+                        type: string
+                      oauthHMAC:
+                        description: |-
+                          The name of the cookie used to store the HMAC of OAuth tokens.
+                          If not specified, defaults to "OauthHMAC-(randomly generated uid)"
+                        type: string
+                      oauthNonce:
+                        description: |-
+                          The name of the cookie used to store the nonce value used to generate OAuth tokens.
+                          If not specified, defaults to "OauthNonce-(randomly generated uid)"
+                        type: string
+                      refreshToken:
+                        description: |-
+                          The name of the cookie used to store the RefreshToken in the
+                          [Refresh Request](https://openid.net/specs/openid-connect-core-1_0.html#RefreshTokens).
+                          If not specified, defaults to "RefreshToken-(randomly generated uid)"
+                        type: string
                     type: object
                   defaultRefreshTokenTTL:
                     description: |-
