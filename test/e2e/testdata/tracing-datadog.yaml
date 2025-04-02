@@ -81,8 +81,6 @@ metadata:
   name: backend-fqdn
   namespace: gateway-conformance-infra
 spec:
-  appProtocols:
-    - gateway.envoyproxy.io/h2c
   endpoints:
     - fqdn:
         hostname: datadog-agent.monitoring.svc.cluster.local
