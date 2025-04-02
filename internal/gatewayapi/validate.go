@@ -101,7 +101,7 @@ func errorToMessage(err error) string {
 	}
 	msg := err.Error()
 
-	// Convert first charactor to upper
+	// Convert first character to upper
 	return strings.ToUpper(msg[0:1]) + msg[1:]
 }
 
@@ -283,10 +283,9 @@ func (t *Translator) validateBackendServiceImport(backendRef gwapiv1a2.BackendOb
 	return "", nil
 }
 
-func (t *Translator) validateBackendRefBackend(backendRef gwapiv1a2.BackendObjectReference, resources *resource.Resources, backendNamespace string,
-	allowUDS bool,
+func (t *Translator) validateBackendRefBackend(backendRef gwapiv1a2.BackendObjectReference, resources *resource.Resources,
+	backendNamespace string, allowUDS bool,
 ) (gwapiv1.RouteConditionReason, error) {
-
 	if !t.BackendEnabled {
 		return gwapiv1.RouteReasonUnsupportedValue, errors.New("backend is disabled in Envoy Gateway configuration")
 	}
