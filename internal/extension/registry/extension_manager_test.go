@@ -7,18 +7,28 @@ package registry
 
 import (
 	"context"
+	"crypto/tls"
+	"crypto/x509"
 	"fmt"
 	"math"
+	"net"
+	"os"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/envoygateway"
+	"github.com/envoyproxy/gateway/proto/extension"
+	v3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
 )
 
 func TestGetExtensionServerAddress(t *testing.T) {
@@ -149,4 +159,104 @@ func Test_setupGRPCOpts(t *testing.T) {
 			}
 		})
 	}
+}
+
+type testServer struct {
+	extension.UnimplementedEnvoyGatewayExtensionServer
+}
+
+func (s *testServer) PostRouteModify(ctx context.Context, req *extension.PostRouteModifyRequest) (*extension.PostRouteModifyResponse, error) {
+	return &extension.PostRouteModifyResponse{
+		Route: req.Route,
+	}, nil
+}
+
+func Test_TLS(t *testing.T) {
+	testDir := "testdata"
+	caFile := testDir + "/ca.pem"
+	certFile := testDir + "/cert.pem"
+	keyFile := testDir + "/key.pem"
+
+	cert, err := tls.LoadX509KeyPair(certFile, keyFile)
+	require.NoError(t, err)
+
+	caCert, err := os.ReadFile(caFile)
+	require.NoError(t, err)
+	caPool := x509.NewCertPool()
+	ok := caPool.AppendCertsFromPEM(caCert)
+	require.True(t, ok)
+
+	lis, err := net.Listen("tcp", "localhost:0")
+	require.NoError(t, err)
+	defer lis.Close()
+
+	port := lis.Addr().(*net.TCPAddr).Port
+	server := grpc.NewServer(grpc.Creds(credentials.NewTLS(&tls.Config{
+		Certificates: []tls.Certificate{cert},
+		ClientAuth:   tls.NoClientCert,
+	})))
+	extension.RegisterEnvoyGatewayExtensionServer(server, &testServer{})
+	go func() {
+		_ = server.Serve(lis)
+		defer server.GracefulStop()
+	}()
+
+	extManager := &egv1a1.ExtensionManager{
+		Service: &egv1a1.ExtensionService{
+			BackendEndpoint: egv1a1.BackendEndpoint{
+				IP: &egv1a1.IPEndpoint{
+					Address: "localhost",
+					Port:    int32(port),
+				},
+			},
+			TLS: &egv1a1.ExtensionTLS{
+				CertificateRef: gwapiv1.SecretObjectReference{
+					Name:      "cert",
+					Namespace: ptr.To(gwapiv1.Namespace("default")),
+				},
+			},
+		},
+	}
+
+	certData, err := os.ReadFile(certFile)
+	require.NoError(t, err)
+	keyData, err := os.ReadFile(keyFile)
+	require.NoError(t, err)
+
+	secret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "cert",
+			Namespace: "default",
+		},
+		Type: corev1.SecretTypeTLS,
+		Data: map[string][]byte{
+			corev1.TLSCertKey:       certData,
+			corev1.TLSPrivateKeyKey: keyData,
+			"ca.crt":                caCert,
+		},
+	}
+
+	fakeClient := fakeclient.NewClientBuilder().WithScheme(envoygateway.GetScheme()).WithObjects(secret).Build()
+
+	opts, err := setupGRPCOpts(context.Background(), fakeClient, extManager, "test-ns")
+	require.NoError(t, err)
+	require.NotEmpty(t, opts)
+
+	conn, err := grpc.DialContext(context.Background(), fmt.Sprintf("localhost:%d", port),
+		opts...,
+	)
+	require.NoError(t, err)
+	defer conn.Close()
+
+	client := extension.NewEnvoyGatewayExtensionClient(conn)
+	require.NotNil(t, client)
+
+	response, err := client.PostRouteModify(context.Background(), &extension.PostRouteModifyRequest{
+		Route: &v3.Route{
+			Name: "test-route",
+		},
+	})
+	require.NoError(t, err)
+	require.Equal(t, response.Route.Name, "test-route")
+
 }
