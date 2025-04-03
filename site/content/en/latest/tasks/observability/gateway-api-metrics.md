@@ -19,7 +19,12 @@ The documentation for the add-ons chart can be found
 Follow the instructions below to install the add-ons Helm chart.
 
 ```shell
-helm install eg-addons oci://docker.io/envoyproxy/gateway-addons-helm --version {{< helm-version >}} --set prometheus.kube-state-metrics.enabled=true -n monitoring --create-namespace
+helm install eg-addons oci://docker.io/envoyproxy/gateway-addons-helm \
+  --version {{< helm-version >}} \
+  --set prometheus.alertmanager.enabled=true \
+  --set prometheus.kube-state-metrics.enabled=true \
+  -n monitoring \
+  --create-namespace
 ```
 
 ### Install CRDs
@@ -47,22 +52,49 @@ curl -s 'http://localhost:9090/api/v1/query?query=gatewayapi_gateway_created' | 
 
 Refer to the [Gateway API State Metrics README][gasm-readme] for the complete list of available Gateway API metrics.
 
-[//]: # (TDOD: Alerts)
-[//]: # (## Alerts)
+## Alerts
 
-[//]: # (To view the alerts, navigate to the **Alerts** tab at `http://localhost:9090/alerts`. Gateway API-specific alerts will be grouped under the `gateway-api.rules` heading.  )
+A set of example alert rules are available in
+[config/examples/rules](https://github.com/Kuadrant/gateway-api-state-metrics/tree/main/config/examples/rules). To create alert use the following command:
 
-[//]: # (Alternatively, you can use the following command to view the alerts via the Prometheus API:)
+```shell
+cat <<EOF | helm upgrade eg-addons oci://docker.io/envoyproxy/gateway-addons-helm \
+  --version v0.0.0-latest \
+  -n monitoring --reuse-values -f -
+prometheus:
+  serverFiles:
+    alerting_rules.yml:
+      groups:
+        - name: gateway-api.rules
+          rules:
+            - alert: UnhealthyGateway
+              expr: (gatewayapi_gateway_status{type="Accepted"} == 0) or (gatewayapi_gateway_status{type="Programmed"} == 0)
+              for: 10m
+              labels:
+                severity: critical
+              annotations:
+                summary: "Either the Accepted or Programmed status is not True"
+                description: "Gateway {{ \$labels.namespace }}/{{ \$labels.name }} has an unhealthy status"
+            - alert: InsecureHTTPListener
+              expr: gatewayapi_gateway_listener_info{protocol="HTTP"}
+              for: 10m
+              labels:
+                severity: critical
+              annotations:
+                summary: "Listeners must use HTTPS"
+                description: "Gateway {{ \$labels.namespace }}/{{ \$labels.name }} has an insecure listener {{ \$labels.protocol }}/{{ \$labels.port }}"
+EOF
+```
 
-[//]: # ()
-[//]: # (```shell)
+To view the alerts, navigate to the **Alerts** tab at `http://localhost:9090/alerts`.
 
-[//]: # (curl -s http://localhost:9090/api/v1/alerts | jq '.data.alerts[] | select&#40;.labels.rule_group and &#40;.labels.rule_group | test&#40;"gateway-api.rules"&#41;&#41;&#41;')
+Alternatively, you can use the following command to view the alerts via the Prometheus API:
 
-[//]: # (```)
 
-[//]: # ()
-[//]: # (***Note:*** Alerts are defined in a _PrometheusRules_ custom resource within the **monitoring** namespace. You can modify the alert rules by updating this resource.)
+```shell
+curl -s http://localhost:9090/api/v1/alerts | jq '.data.alerts[]'
+
+```
 
 ## Dashboards
 
