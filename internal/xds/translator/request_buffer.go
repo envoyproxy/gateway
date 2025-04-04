@@ -50,6 +50,10 @@ func (r *requestBuffer) patchHCM(mgr *hcmv3.HttpConnectionManager, irListener *i
 			continue
 		}
 
+		if !route.Traffic.RequestBuffer.TargetGateway {
+			continue
+		}
+
 		requestBufferFilter, err := buildHCMRequestBufferFilter(route.Traffic.RequestBuffer)
 		if err != nil {
 			return err
@@ -97,6 +101,12 @@ func (r *requestBuffer) patchResources(tCtx *types.ResourceVersionTable, routes 
 
 func (r *requestBuffer) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute) error {
 	if !routeContainsRequestBuffer(irRoute) {
+		return nil
+	}
+
+	// If the BTP was targeting a Gateway, we don't want to use BufferPerRoute filter
+	// We want only the Buffer filter on Listener instead
+	if irRoute.Traffic.RequestBuffer.TargetGateway {
 		return nil
 	}
 

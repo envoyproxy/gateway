@@ -2983,5 +2983,7 @@ type ResourceMetadata struct {
 // +k8s:deepcopy-gen=true
 type RequestBuffer struct {
 	// Limit defines the maximum buffer size for requests
-	Limit resource.Quantity `json:"limit,omitempty" yaml:"limit,omitempty"`
+	Limit resource.Quantity `json:"limit" yaml:"limit"`
+	// TargetGateway defines whether the BTP was targeting a Gateway
+	TargetGateway bool `json:"targetGateway" yaml:"targetGateway"`
 }
