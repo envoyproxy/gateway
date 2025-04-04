@@ -6,28 +6,22 @@ Resource metrics for **Kubernetes Gateway API** objects are available through th
 
 ## Prerequisites
 
-### Install Envoy Gateway
+{{< boilerplate o11y_prerequisites >}}
 
-{{< boilerplate prerequisites >}}
+### Enable kube-state-metrics
 
-### Install Add-ons
-
-Envoy Gateway provides an add-ons Helm chart to simplify the installation of observability components.  
-The documentation for the add-ons chart can be found
-[here](https://gateway.envoyproxy.io/docs/install/gateway-addons-helm-api/).
-
-Follow the instructions below to install the add-ons Helm chart.
+The `kube-state-metrics` service is required to collect metrics from the Kubernetes API server. Use the following command to enable it:
 
 ```shell
-helm install eg-addons oci://docker.io/envoyproxy/gateway-addons-helm \
-  --version {{< helm-version >}} \
-  --set prometheus.alertmanager.enabled=true \
-  --set prometheus.kube-state-metrics.enabled=true \
-  -n monitoring \
-  --create-namespace
+helm upgrade eg-addons oci://docker.io/envoyproxy/gateway-addons-helm \
+--version {{< helm-version >}} \
+--reuse-values \
+--set prometheus.alertmanager.enabled=true \
+--set prometheus.kube-state-metrics.enabled=true \
+-n monitoring
 ```
 
-### Install CRDs
+Install CRDs from [Gateway API State Metrics][gasm]:
 
 ```shell
 kubectl apply --server-side -f https://raw.githubusercontent.com/Kuadrant/gateway-api-state-metrics/main/config/examples/kube-prometheus/bundle_crd.yaml
