@@ -39,6 +39,7 @@ REV=$(shell git rev-parse --short HEAD)
 
 # Supported Platforms for building multiarch binaries.
 PLATFORMS ?= darwin_amd64 darwin_arm64 linux_amd64 linux_arm64 windows_amd64 windows_arm64
+IMAGE_PLATFORMS ?= ${PLATFORMS}
 
 # Set a specific PLATFORM
 ifeq ($(origin PLATFORM), undefined)
