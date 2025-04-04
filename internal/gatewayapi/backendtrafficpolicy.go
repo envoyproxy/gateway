@@ -361,7 +361,7 @@ func (t *Translator) translateBackendTrafficPolicyForRoute(
 		errs = errors.Join(errs, err)
 	}
 
-	if rb, err = buildRequestBuffer(policy.Spec.RequestBuffer); err != nil {
+	if rb, err = buildRequestBuffer(policy.Spec.RequestBuffer, false); err != nil {
 		err = perr.WithMessage(err, "RequestBuffer")
 		errs = errors.Join(errs, err)
 	}
@@ -517,7 +517,7 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(
 		err = perr.WithMessage(err, "ResponseOverride")
 		errs = errors.Join(errs, err)
 	}
-	if rb, err = buildRequestBuffer(policy.Spec.RequestBuffer); err != nil {
+	if rb, err = buildRequestBuffer(policy.Spec.RequestBuffer, true); err != nil {
 		err = perr.WithMessage(err, "RequestBuffer")
 		errs = errors.Join(errs, err)
 	}
@@ -892,7 +892,7 @@ func makeIrTriggerSet(in []egv1a1.TriggerEnum) []ir.TriggerEnum {
 	return irTriggers
 }
 
-func buildRequestBuffer(spec *egv1a1.RequestBuffer) (*ir.RequestBuffer, error) {
+func buildRequestBuffer(spec *egv1a1.RequestBuffer, targetGateway bool) (*ir.RequestBuffer, error) {
 	if spec == nil {
 		return nil, nil
 	}
@@ -902,7 +902,8 @@ func buildRequestBuffer(spec *egv1a1.RequestBuffer) (*ir.RequestBuffer, error) {
 	}
 
 	return &ir.RequestBuffer{
-		Limit: spec.Limit,
+		Limit:         spec.Limit,
+		TargetGateway: targetGateway,
 	}, nil
 }
 
