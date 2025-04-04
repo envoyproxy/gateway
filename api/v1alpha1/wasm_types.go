@@ -182,5 +182,6 @@ type WasmCodeSourceTLSConfig struct {
 	// as a trust anchor to validate the certificates presented by the Wasm code source.
 	//
 	// Kubernetes ConfigMap and Kubernetes Secret are supported.
+	// Note: The ConfigMap or Secret must be in the same namespace as the EnvoyExtensionPolicy.
 	CACertificateRef gwapiv1.SecretObjectReference `json:"caCertificateRef"`
 }
