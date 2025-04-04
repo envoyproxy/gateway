@@ -897,6 +897,10 @@ func buildRequestBuffer(spec *egv1a1.RequestBuffer) (*ir.RequestBuffer, error) {
 		return nil, nil
 	}
 
+	if _, ok := spec.Limit.AsInt64(); !ok {
+		return nil, fmt.Errorf("limit must be convertible to an int64")
+	}
+
 	return &ir.RequestBuffer{
 		Limit: spec.Limit,
 	}, nil

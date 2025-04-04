@@ -10,15 +10,16 @@ import (
 	"fmt"
 	"math"
 
-	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
-	"github.com/envoyproxy/gateway/internal/ir"
-	"github.com/envoyproxy/gateway/internal/utils/proto"
-	"github.com/envoyproxy/gateway/internal/xds/types"
 	routev3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
 	xdsbufferhttpv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/buffer/v3"
 	hcmv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/http_connection_manager/v3"
 	"google.golang.org/protobuf/types/known/anypb"
 	"google.golang.org/protobuf/types/known/wrapperspb"
+
+	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/ir"
+	"github.com/envoyproxy/gateway/internal/utils/proto"
+	"github.com/envoyproxy/gateway/internal/xds/types"
 )
 
 func init() {
@@ -69,7 +70,7 @@ func buildHCMRequestBufferFilter(spec *ir.RequestBuffer) (*hcmv3.HttpFilter, err
 	}
 
 	if maxBytes < 0 || maxBytes > math.MaxUint32 {
-		return nil, fmt.Errorf("Limit value %s is out of range, must be between 0 and %d",
+		return nil, fmt.Errorf("limit value %s is out of range, must be between 0 and %d",
 			spec.Limit.String(), math.MaxUint32)
 	}
 
@@ -120,7 +121,7 @@ func buildRequestBufferPerRouteProto(spec *ir.RequestBuffer) (*anypb.Any, error)
 	}
 
 	if maxBytes < 0 || maxBytes > math.MaxUint32 {
-		return nil, fmt.Errorf("Limit value %s is out of range, must be between 0 and %d",
+		return nil, fmt.Errorf("limit value %s is out of range, must be between 0 and %d",
 			spec.Limit.String(), math.MaxUint32)
 	}
 
