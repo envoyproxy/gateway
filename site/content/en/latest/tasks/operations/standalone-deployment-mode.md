@@ -31,14 +31,14 @@ Create a local directory just for testing:
 mkdir -p /tmp/envoy-gateway-test
 ```
 
-As we do not provide the Envoy Gateway binary in latest release,
-you can compile this binary on your own from project by using command:
+You can download the Envoy Gateway binary from [Github release](https://github.com/envoyproxy/gateway/releases/tag/{{< yaml-version >}}),
+or compile the binary on your own from project by using command:
 
 ```shell
 make build
 ```
 
-The compiled binary lies in `bin/{os}/{arch}/envoy-gateway`.
+The compiled binary lies in `{project-home}/bin/{os}/{arch}/envoy-gateway`.
 
 ### Create Certificates
 
