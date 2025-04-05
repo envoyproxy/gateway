@@ -1302,6 +1302,62 @@ spec:
                                 If not specified, Envoy Gateway will not verify the downloaded Wasm code.
                                 kubebuilder:validation:Pattern=`^[a-f0-9]{64}$`
                               type: string
+                            tls:
+                              description: TLS configuration when connecting to the
+                                Wasm code source.
+                              properties:
+                                caCertificateRef:
+                                  description: |-
+                                    CACertificateRef contains a references to
+                                    Kubernetes objects that contain TLS certificates of
+                                    the Certificate Authorities that can be used
+                                    as a trust anchor to validate the certificates presented by the Wasm code source.
+
+                                    Kubernetes ConfigMap and Kubernetes Secret are supported.
+                                    Note: The ConfigMap or Secret must be in the same namespace as the EnvoyExtensionPolicy.
+                                  properties:
+                                    group:
+                                      default: ""
+                                      description: |-
+                                        Group is the group of the referent. For example, "gateway.networking.k8s.io".
+                                        When unspecified or empty string, core API group is inferred.
+                                      maxLength: 253
+                                      pattern: ^$|^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                                      type: string
+                                    kind:
+                                      default: Secret
+                                      description: Kind is kind of the referent. For
+                                        example "Secret".
+                                      maxLength: 63
+                                      minLength: 1
+                                      pattern: ^[a-zA-Z]([-a-zA-Z0-9]*[a-zA-Z0-9])?$
+                                      type: string
+                                    name:
+                                      description: Name is the name of the referent.
+                                      maxLength: 253
+                                      minLength: 1
+                                      type: string
+                                    namespace:
+                                      description: |-
+                                        Namespace is the namespace of the referenced object. When unspecified, the local
+                                        namespace is inferred.
+
+                                        Note that when a namespace different than the local namespace is specified,
+                                        a ReferenceGrant object is required in the referent namespace to allow that
+                                        namespace's owner to accept the reference. See the ReferenceGrant
+                                        documentation for details.
+
+                                        Support: Core
+                                      maxLength: 63
+                                      minLength: 1
+                                      pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
+                                      type: string
+                                  required:
+                                  - name
+                                  type: object
+                              required:
+                              - caCertificateRef
+                              type: object
                             url:
                               description: URL is the URL containing the Wasm code.
                               pattern: ^((https?:)(\/\/\/?)([\w]*(?::[\w]*)?@)?([\d\w\.-]+)(?::(\d+))?)?([\/\\\w\.()-]*)?(?:([?][^#]*)?(#.*)?)*
@@ -1371,6 +1427,62 @@ spec:
                                 If not specified, Envoy Gateway will not verify the downloaded OCI image.
                                 kubebuilder:validation:Pattern=`^[a-f0-9]{64}$`
                               type: string
+                            tls:
+                              description: TLS configuration when connecting to the
+                                Wasm code source.
+                              properties:
+                                caCertificateRef:
+                                  description: |-
+                                    CACertificateRef contains a references to
+                                    Kubernetes objects that contain TLS certificates of
+                                    the Certificate Authorities that can be used
+                                    as a trust anchor to validate the certificates presented by the Wasm code source.
+
+                                    Kubernetes ConfigMap and Kubernetes Secret are supported.
+                                    Note: The ConfigMap or Secret must be in the same namespace as the EnvoyExtensionPolicy.
+                                  properties:
+                                    group:
+                                      default: ""
+                                      description: |-
+                                        Group is the group of the referent. For example, "gateway.networking.k8s.io".
+                                        When unspecified or empty string, core API group is inferred.
+                                      maxLength: 253
+                                      pattern: ^$|^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                                      type: string
+                                    kind:
+                                      default: Secret
+                                      description: Kind is kind of the referent. For
+                                        example "Secret".
+                                      maxLength: 63
+                                      minLength: 1
+                                      pattern: ^[a-zA-Z]([-a-zA-Z0-9]*[a-zA-Z0-9])?$
+                                      type: string
+                                    name:
+                                      description: Name is the name of the referent.
+                                      maxLength: 253
+                                      minLength: 1
+                                      type: string
+                                    namespace:
+                                      description: |-
+                                        Namespace is the namespace of the referenced object. When unspecified, the local
+                                        namespace is inferred.
+
+                                        Note that when a namespace different than the local namespace is specified,
+                                        a ReferenceGrant object is required in the referent namespace to allow that
+                                        namespace's owner to accept the reference. See the ReferenceGrant
+                                        documentation for details.
+
+                                        Support: Core
+                                      maxLength: 63
+                                      minLength: 1
+                                      pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
+                                      type: string
+                                  required:
+                                  - name
+                                  type: object
+                              required:
+                              - caCertificateRef
+                              type: object
                             url:
                               description: |-
                                 URL is the URL of the OCI image.

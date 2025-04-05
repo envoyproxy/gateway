@@ -127,6 +127,11 @@ type HTTPWasmCodeSource struct {
 	// kubebuilder:validation:Pattern=`^[a-f0-9]{64}$`
 	// +optional
 	SHA256 *string `json:"sha256"`
+
+	// TLS configuration when connecting to the Wasm code source.
+	// +optional
+	// +notImplementedHide
+	TLS *WasmCodeSourceTLSConfig `json:"tls,omitempty"`
 }
 
 // ImageWasmCodeSource defines the OCI image containing the Wasm code.
@@ -149,6 +154,11 @@ type ImageWasmCodeSource struct {
 	// +kubebuilder:validation:XValidation:message="only support Secret kind.",rule="self.kind == 'Secret'"
 	// +optional
 	PullSecretRef *gwapiv1.SecretObjectReference `json:"pullSecretRef,omitempty"`
+
+	// TLS configuration when connecting to the Wasm code source.
+	// +optional
+	// +notImplementedHide
+	TLS *WasmCodeSourceTLSConfig `json:"tls,omitempty"`
 }
 
 // ImagePullPolicy defines the policy to use when pulling an OIC image.
@@ -163,3 +173,15 @@ const (
 	// Note: EG does not update the Wasm module every time an Envoy proxy requests the Wasm module.
 	ImagePullPolicyAlways ImagePullPolicy = "Always"
 )
+
+// WasmCodeSourceTLSConfig defines the TLS configuration when connecting to the Wasm code source.
+type WasmCodeSourceTLSConfig struct {
+	// CACertificateRef contains a references to
+	// Kubernetes objects that contain TLS certificates of
+	// the Certificate Authorities that can be used
+	// as a trust anchor to validate the certificates presented by the Wasm code source.
+	//
+	// Kubernetes ConfigMap and Kubernetes Secret are supported.
+	// Note: The ConfigMap or Secret must be in the same namespace as the EnvoyExtensionPolicy.
+	CACertificateRef gwapiv1.SecretObjectReference `json:"caCertificateRef"`
+}
