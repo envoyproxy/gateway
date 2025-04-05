@@ -42,6 +42,7 @@ func Test_sortHTTPFilters(t *testing.T) {
 				httpFilterForTest(egv1a1.EnvoyFilterWasm + "/envoyextensionpolicy/default/policy-for-http-route-1/1"),
 				httpFilterForTest(egv1a1.EnvoyFilterRBAC + "/securitypolicy/default/policy-for-http-route-1"),
 				httpFilterForTest(wellknown.HealthCheck),
+				httpFilterForTest(egv1a1.EnvoyFilterBuffer),
 			},
 			want: []*hcmv3.HttpFilter{
 				httpFilterForTest(wellknown.HealthCheck),
@@ -51,6 +52,7 @@ func Test_sortHTTPFilters(t *testing.T) {
 				httpFilterForTest(egv1a1.EnvoyFilterBasicAuth),
 				httpFilterForTest(egv1a1.EnvoyFilterOAuth2 + "/securitypolicy/default/policy-for-http-route-1"),
 				httpFilterForTest(egv1a1.EnvoyFilterJWTAuthn),
+				httpFilterForTest(egv1a1.EnvoyFilterBuffer),
 				httpFilterForTest(egv1a1.EnvoyFilterExtProc + "/envoyextensionpolicy/default/policy-for-http-route-1/0"),
 				httpFilterForTest(egv1a1.EnvoyFilterExtProc + "/envoyextensionpolicy/default/policy-for-http-route-1/1"),
 				httpFilterForTest(egv1a1.EnvoyFilterWasm + "/envoyextensionpolicy/default/policy-for-http-route-1/0"),
