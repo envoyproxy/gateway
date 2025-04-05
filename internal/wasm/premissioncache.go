@@ -71,6 +71,9 @@ type permissionCache struct {
 
 	cache  map[string]*permissionCacheEntry
 	logger logging.Logger
+
+	// For tests
+	triggerChan chan struct{}
 }
 
 // permissionCacheEntry is an entry in the permission cache.
@@ -125,6 +128,7 @@ func newPermissionCache(options permissionCacheOptions, logger logging.Logger) *
 		cache:                  make(map[string]*permissionCacheEntry),
 		permissionCacheOptions: options,
 		logger:                 logger,
+		triggerChan:            make(chan struct{}),
 	}
 }
 
@@ -144,53 +148,58 @@ func (p *permissionCache) Start(ctx context.Context) {
 		defer ticker.Stop()
 		for {
 			select {
+			// explicitly trigger a check for tests
+			case <-p.triggerChan:
+				p.checkPermissions(ctx)
 			case <-ticker.C:
-				func() {
-					p.Lock()
-					defer p.Unlock()
-					for _, e := range p.cache {
-						if e.isCacheExpired(p.cacheExpiry) {
-							p.logger.Info("removing permission cache entry", "image", e.image.String())
-							delete(p.cache, e.key())
-							continue
-						}
-						if e.isPermissionExpired(p.permissionExpiry) {
-							const retryAttempts = 3
-							const retryDelay = 1 * time.Second
-							p.logger.Info("rechecking permission for image", "image", e.image.String())
-							err := retry.Do(
-								func() error {
-									err := p.checkAndUpdatePermission(ctx, e)
-									if err != nil && isRetriableError(err) {
-										p.logger.Error(
-											err,
-											"failed to check permission for image, will retry again",
-											"image",
-											e.image.String())
-										return err
-									}
-									return nil
-								},
-								retry.Attempts(retryAttempts),
-								retry.DelayType(retry.BackOffDelay),
-								retry.Delay(retryDelay),
-								retry.Context(ctx),
-							)
-							if err != nil {
-								p.logger.Error(
-									err,
-									fmt.Sprintf("failed to recheck permission for image after %d attempts", retryAttempts),
-									"image",
-									e.image.String())
-							}
-						}
-					}
-				}()
+				p.checkPermissions(ctx)
 			case <-ctx.Done():
 				return
 			}
 		}
 	}()
+}
+
+func (p *permissionCache) checkPermissions(ctx context.Context) {
+	p.Lock()
+	defer p.Unlock()
+	for _, e := range p.cache {
+		if e.isCacheExpired(p.cacheExpiry) {
+			p.logger.Info("removing permission cache entry", "image", e.image.String())
+			delete(p.cache, e.key())
+			continue
+		}
+		if e.isPermissionExpired(p.permissionExpiry) {
+			const retryAttempts = 3
+			const retryDelay = 1 * time.Second
+			p.logger.Info("rechecking permission for image", "image", e.image.String())
+			err := retry.Do(
+				func() error {
+					err := p.checkAndUpdatePermission(ctx, e)
+					if err != nil && isRetriableError(err) {
+						p.logger.Error(
+							err,
+							"failed to check permission for image, will retry again",
+							"image",
+							e.image.String())
+						return err
+					}
+					return nil
+				},
+				retry.Attempts(retryAttempts),
+				retry.DelayType(retry.BackOffDelay),
+				retry.Delay(retryDelay),
+				retry.Context(ctx),
+			)
+			if err != nil {
+				p.logger.Error(
+					err,
+					fmt.Sprintf("failed to recheck permission for image after %d attempts", retryAttempts),
+					"image",
+					e.image.String())
+			}
+		}
+	}
 }
 
 // isRetriableError checks if the error is retriable.
