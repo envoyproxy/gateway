@@ -47,6 +47,14 @@ type BackendTrafficPolicySpec struct {
 	PolicyTargetReferences `json:",inline"`
 	ClusterSettings        `json:",inline"`
 
+	// PatchType determines how this configuration is merged with existing BackendTrafficPolicy
+	// configurations targeting a parent resource. When set, this configuration will be merged
+	// into a parent BackendTrafficPolicy (i.e. the one targeting a Gateway or Listener).
+	// This field cannot be set when targeting a parent resource (Gateway).
+	// If unset, no patching occurs, and only the most specific configuration takes effect.
+	// +optional
+	PatchType *MergeType `json:"patchType,omitempty"`
+
 	// RateLimit allows the user to limit the number of incoming requests
 	// to a predefined value based on attributes within the traffic flow.
 	// +optional
