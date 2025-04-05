@@ -46,8 +46,9 @@ type HTTPFiltersContext struct {
 
 // HTTPFilterIR contains the ir processing results.
 type HTTPFilterIR struct {
-	DirectResponse   *ir.CustomResponse
-	RedirectResponse *ir.Redirect
+	DirectResponse      *ir.CustomResponse
+	RedirectResponse    *ir.Redirect
+	CredentialInjection *ir.CredentialInjection
 
 	URLRewrite *ir.URLRewrite
 
@@ -796,6 +797,38 @@ func (t *Translator) processExtensionRefHTTPFilter(extFilter *gwapiv1.LocalObjec
 					}
 
 					filterContext.HTTPFilterIR.DirectResponse = dr
+				}
+
+				if hrf.Spec.CredentialInjection != nil {
+					secret, err := t.validateSecretRef(
+						false,
+						crossNamespaceFrom{
+							group:     egv1a1.GroupName,
+							kind:      resource.KindHTTPRouteFilter,
+							namespace: filterNs,
+						},
+						hrf.Spec.CredentialInjection.Credential.ValueRef, resources)
+					if err != nil {
+						t.processInvalidHTTPFilter(string(extFilter.Kind), filterContext, err)
+						return
+					}
+
+					secretBytes, ok := secret.Data[egv1a1.InjectedCredentialKey]
+					if !ok || len(secretBytes) == 0 {
+						err := fmt.Errorf(
+							"credential key %s not found in secret %s/%s",
+							egv1a1.InjectedCredentialKey, secret.Namespace,
+							secret.Name)
+						t.processInvalidHTTPFilter(string(extFilter.Kind), filterContext, err)
+						return
+					}
+
+					injection := &ir.CredentialInjection{
+						Header:     hrf.Spec.CredentialInjection.Header,
+						Overwrite:  hrf.Spec.CredentialInjection.Overwrite,
+						Credential: secretBytes,
+					}
+					filterContext.HTTPFilterIR.CredentialInjection = injection
 				}
 			}
 		}
