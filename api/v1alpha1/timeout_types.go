@@ -81,4 +81,7 @@ type HTTPClientTimeout struct {
 	//
 	// +optional
 	IdleTimeout *gwapiv1.Duration `json:"idleTimeout,omitempty"`
+
+	// +optional
+	DrainTimeout *gwapiv1.Duration `json:"drainTimeout,omitempty"`
 }
