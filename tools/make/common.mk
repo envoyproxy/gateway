@@ -49,12 +49,9 @@ ifeq ($(origin PLATFORM), undefined)
 		GOARCH := $(shell go env GOARCH)
 	endif
 	PLATFORM := $(GOOS)_$(GOARCH)
-	# Use linux as the default OS when building images
-	IMAGE_PLAT := linux_$(GOARCH)
 else
 	GOOS := $(word 1, $(subst _, ,$(PLATFORM)))
 	GOARCH := $(word 2, $(subst _, ,$(PLATFORM)))
-	IMAGE_PLAT := $(PLATFORM)
 endif
 
 # List commands in cmd directory for building targets
