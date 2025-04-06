@@ -10,8 +10,10 @@ import (
 	"path/filepath"
 
 	corev1 "k8s.io/api/core/v1"
+	resource2 "k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/utils/ptr"
+	v1 "sigs.k8s.io/gateway-api/conformance/apis/v1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/cmd/envoy"
@@ -78,9 +80,89 @@ func enablePrometheus(infra *ir.ProxyInfra) bool {
 	return true
 }
 
+// expectedProxyInitContainers returns expected proxy init containers.
+func expectedProxyInitContainers(
+	containerSpec *egv1a1.KubernetesContainerSpec,
+	initConfig *egv1a1.InitConfig,
+	initManager *egv1a1.InitManager,
+	extraContainers []corev1.Container,
+) []corev1.Container {
+	containers := append([]corev1.Container{
+		{
+			Name:            "init",
+			Image:           expectedInitManagerImage(initManager),
+			ImagePullPolicy: corev1.PullAlways,
+			Command:         []string{"envoy-gateway"},
+			Args:            expectedInitManagerArgs(initConfig),
+			Env: []corev1.EnvVar{{
+				Name: "NODE_NAME",
+				ValueFrom: &corev1.EnvVarSource{
+					FieldRef: &corev1.ObjectFieldSelector{
+						APIVersion: v1.Version,
+						FieldPath:  "spec.nodeName",
+					},
+				},
+			}},
+			Resources:       egv1a1.DefaultInitManagerContainerResourceRequirements(),
+			SecurityContext: expectedInitManagerSecurityContext(containerSpec),
+			VolumeMounts: []corev1.VolumeMount{
+				{
+					Name:      "envoyconfigs",
+					ReadOnly:  false,
+					MountPath: "/envoyconfigs",
+				},
+			},
+		},
+	}, extraContainers...)
+	return containers
+}
+
+func expectedInitManagerImage(initManager *egv1a1.InitManager) string {
+	if initManager != nil && initManager.Image != nil {
+		return *initManager.Image
+	}
+	return egv1a1.DefaultInitManagerImage
+}
+
+func expectedInitManagerArgs(cfg *egv1a1.InitConfig) []string {
+	args := []string{"envoy", "init"}
+	if cfg == nil {
+		return args
+	}
+
+	if cfg.ConfigPath != nil {
+		args = append(args, fmt.Sprintf("--config-path=%s", *cfg.ConfigPath))
+	}
+	if cfg.ZoneDiscoveryDisabled != nil {
+		args = append(args, fmt.Sprintf("--disable-zone-discovery=%t", *cfg.ZoneDiscoveryDisabled))
+	}
+	if cfg.ZoneOverride != nil {
+		args = append(args, fmt.Sprintf("--override-zone=%s", *cfg.ZoneOverride))
+	}
+
+	return args
+}
+
+func expectedInitManagerSecurityContext(containerSpec *egv1a1.KubernetesContainerSpec) *corev1.SecurityContext {
+	if containerSpec != nil && containerSpec.SecurityContext != nil {
+		return containerSpec.SecurityContext
+	}
+
+	sc := resource.DefaultSecurityContext()
+
+	// run as non-root user
+	sc.RunAsGroup = ptr.To(int64(65532))
+	sc.RunAsUser = ptr.To(int64(65532))
+
+	// InitManager creates a file to initialize Envoy locality so it needs file write permission.
+	sc.ReadOnlyRootFilesystem = nil
+	return sc
+}
+
 // expectedProxyContainers returns expected proxy containers.
 func expectedProxyContainers(infra *ir.ProxyInfra,
 	containerSpec *egv1a1.KubernetesContainerSpec,
+	initConfig *egv1a1.InitConfig,
 	shutdownConfig *egv1a1.ShutdownConfig, shutdownManager *egv1a1.ShutdownManager,
 	namespace string, dnsDomain string,
 ) ([]corev1.Container, error) {
@@ -118,7 +200,7 @@ func expectedProxyContainers(infra *ir.ProxyInfra,
 		XdsServerHost:    ptr.To(fmt.Sprintf("%s.%s.svc.%s", config.EnvoyGatewayServiceName, namespace, dnsDomain)),
 	}
 
-	args, err := common.BuildProxyArgs(infra, shutdownConfig, bootstrapConfigOptions, fmt.Sprintf("$(%s)", envoyPodEnvVar))
+	args, err := common.BuildProxyArgs(infra, initConfig, shutdownConfig, bootstrapConfigOptions, fmt.Sprintf("$(%s)", envoyPodEnvVar))
 	if err != nil {
 		return nil, err
 	}
@@ -294,6 +376,10 @@ func expectedContainerVolumeMounts(containerSpec *egv1a1.KubernetesContainerSpec
 			Name:      "sds",
 			MountPath: "/sds",
 		},
+		{
+			Name:      "envoyconfigs",
+			MountPath: envoy.DefaultEnvoyInitConfigDir,
+		},
 	}
 
 	return resource.ExpectedContainerVolumeMounts(containerSpec, volumeMounts)
@@ -302,6 +388,14 @@ func expectedContainerVolumeMounts(containerSpec *egv1a1.KubernetesContainerSpec
 // expectedVolumes returns expected proxy deployment volumes.
 func expectedVolumes(name string, pod *egv1a1.KubernetesPodSpec) []corev1.Volume {
 	volumes := []corev1.Volume{
+		{
+			Name: "envoyconfigs",
+			VolumeSource: corev1.VolumeSource{
+				EmptyDir: &corev1.EmptyDirVolumeSource{
+					SizeLimit: ptr.To(resource2.MustParse("1Mi")),
+				},
+			},
+		},
 		{
 			Name: "certs",
 			VolumeSource: corev1.VolumeSource{

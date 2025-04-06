@@ -1,8 +1,7 @@
 - circuitBreakers:
     thresholds:
     - maxRetries: 1024
-  commonLbConfig:
-    localityWeightedLbConfig: {}
+  commonLbConfig: {}
   connectTimeout: 10s
   dnsLookupFamily: V4_PREFERRED
   edsClusterConfig:
@@ -11,15 +10,21 @@
       resourceApiVersion: V3
     serviceName: direct-route-dest
   ignoreHealthOnHostRemoval: true
-  lbPolicy: LEAST_REQUEST
+  loadBalancingPolicy:
+    policies:
+    - typedExtensionConfig:
+        name: envoy.load_balancing_policies.least_request
+        typedConfig:
+          '@type': type.googleapis.com/envoy.extensions.load_balancing_policies.least_request.v3.LeastRequest
+          localityLbConfig:
+            localityWeightedLbConfig: {}
   name: direct-route-dest
   perConnectionBufferLimitBytes: 32768
   type: EDS
 - circuitBreakers:
     thresholds:
     - maxRetries: 1024
-  commonLbConfig:
-    localityWeightedLbConfig: {}
+  commonLbConfig: {}
   connectTimeout: 10s
   dnsLookupFamily: V4_PREFERRED
   edsClusterConfig:
@@ -28,7 +33,14 @@
       resourceApiVersion: V3
     serviceName: accesslog_als_0_1
   ignoreHealthOnHostRemoval: true
-  lbPolicy: LEAST_REQUEST
+  loadBalancingPolicy:
+    policies:
+    - typedExtensionConfig:
+        name: envoy.load_balancing_policies.least_request
+        typedConfig:
+          '@type': type.googleapis.com/envoy.extensions.load_balancing_policies.least_request.v3.LeastRequest
+          localityLbConfig:
+            localityWeightedLbConfig: {}
   name: accesslog_als_0_1
   perConnectionBufferLimitBytes: 32768
   type: EDS
@@ -42,8 +54,7 @@
 - circuitBreakers:
     thresholds:
     - maxRetries: 1024
-  commonLbConfig:
-    localityWeightedLbConfig: {}
+  commonLbConfig: {}
   connectTimeout: 10s
   dnsLookupFamily: V4_PREFERRED
   edsClusterConfig:
@@ -52,7 +63,14 @@
       resourceApiVersion: V3
     serviceName: accesslog_als_0_2
   ignoreHealthOnHostRemoval: true
-  lbPolicy: LEAST_REQUEST
+  loadBalancingPolicy:
+    policies:
+    - typedExtensionConfig:
+        name: envoy.load_balancing_policies.least_request
+        typedConfig:
+          '@type': type.googleapis.com/envoy.extensions.load_balancing_policies.least_request.v3.LeastRequest
+          localityLbConfig:
+            localityWeightedLbConfig: {}
   name: accesslog_als_0_2
   perConnectionBufferLimitBytes: 32768
   type: EDS
@@ -66,8 +84,7 @@
 - circuitBreakers:
     thresholds:
     - maxRetries: 1024
-  commonLbConfig:
-    localityWeightedLbConfig: {}
+  commonLbConfig: {}
   connectTimeout: 10s
   dnsLookupFamily: V4_PREFERRED
   edsClusterConfig:
@@ -76,7 +93,14 @@
       resourceApiVersion: V3
     serviceName: accesslog_als_1_1
   ignoreHealthOnHostRemoval: true
-  lbPolicy: LEAST_REQUEST
+  loadBalancingPolicy:
+    policies:
+    - typedExtensionConfig:
+        name: envoy.load_balancing_policies.least_request
+        typedConfig:
+          '@type': type.googleapis.com/envoy.extensions.load_balancing_policies.least_request.v3.LeastRequest
+          localityLbConfig:
+            localityWeightedLbConfig: {}
   name: accesslog_als_1_1
   perConnectionBufferLimitBytes: 32768
   type: EDS
@@ -90,8 +114,7 @@
 - circuitBreakers:
     thresholds:
     - maxRetries: 1024
-  commonLbConfig:
-    localityWeightedLbConfig: {}
+  commonLbConfig: {}
   connectTimeout: 10s
   dnsLookupFamily: V4_PREFERRED
   edsClusterConfig:
@@ -100,7 +123,14 @@
       resourceApiVersion: V3
     serviceName: accesslog_als_1_2
   ignoreHealthOnHostRemoval: true
-  lbPolicy: LEAST_REQUEST
+  loadBalancingPolicy:
+    policies:
+    - typedExtensionConfig:
+        name: envoy.load_balancing_policies.least_request
+        typedConfig:
+          '@type': type.googleapis.com/envoy.extensions.load_balancing_policies.least_request.v3.LeastRequest
+          localityLbConfig:
+            localityWeightedLbConfig: {}
   name: accesslog_als_1_2
   perConnectionBufferLimitBytes: 32768
   type: EDS
@@ -114,8 +144,7 @@
 - circuitBreakers:
     thresholds:
     - maxRetries: 1024
-  commonLbConfig:
-    localityWeightedLbConfig: {}
+  commonLbConfig: {}
   connectTimeout: 10s
   dnsLookupFamily: V4_PREFERRED
   edsClusterConfig:
@@ -124,7 +153,14 @@
       resourceApiVersion: V3
     serviceName: accesslog_als_2_1
   ignoreHealthOnHostRemoval: true
-  lbPolicy: LEAST_REQUEST
+  loadBalancingPolicy:
+    policies:
+    - typedExtensionConfig:
+        name: envoy.load_balancing_policies.least_request
+        typedConfig:
+          '@type': type.googleapis.com/envoy.extensions.load_balancing_policies.least_request.v3.LeastRequest
+          localityLbConfig:
+            localityWeightedLbConfig: {}
   name: accesslog_als_2_1
   perConnectionBufferLimitBytes: 32768
   type: EDS
@@ -138,8 +174,7 @@
 - circuitBreakers:
     thresholds:
     - maxRetries: 1024
-  commonLbConfig:
-    localityWeightedLbConfig: {}
+  commonLbConfig: {}
   connectTimeout: 10s
   dnsLookupFamily: V4_PREFERRED
   edsClusterConfig:
@@ -148,7 +183,14 @@
       resourceApiVersion: V3
     serviceName: accesslog_als_2_2
   ignoreHealthOnHostRemoval: true
-  lbPolicy: LEAST_REQUEST
+  loadBalancingPolicy:
+    policies:
+    - typedExtensionConfig:
+        name: envoy.load_balancing_policies.least_request
+        typedConfig:
+          '@type': type.googleapis.com/envoy.extensions.load_balancing_policies.least_request.v3.LeastRequest
+          localityLbConfig:
+            localityWeightedLbConfig: {}
   name: accesslog_als_2_2
   perConnectionBufferLimitBytes: 32768
   type: EDS
@@ -162,12 +204,10 @@
 - circuitBreakers:
     thresholds:
     - maxRetries: 1024
-  commonLbConfig:
-    localityWeightedLbConfig: {}
+  commonLbConfig: {}
   connectTimeout: 10s
   dnsLookupFamily: V4_PREFERRED
   dnsRefreshRate: 30s
-  lbPolicy: LEAST_REQUEST
   loadAssignment:
     clusterName: accesslog_otel_0_3
     endpoints:
@@ -181,6 +221,14 @@
       loadBalancingWeight: 1
       locality:
         region: accesslog_otel_0_3/backend/0
+  loadBalancingPolicy:
+    policies:
+    - typedExtensionConfig:
+        name: envoy.load_balancing_policies.least_request
+        typedConfig:
+          '@type': type.googleapis.com/envoy.extensions.load_balancing_policies.least_request.v3.LeastRequest
+          localityLbConfig:
+            localityWeightedLbConfig: {}
   name: accesslog_otel_0_3
   perConnectionBufferLimitBytes: 32768
   respectDnsTtl: true
@@ -195,12 +243,10 @@
 - circuitBreakers:
     thresholds:
     - maxRetries: 1024
-  commonLbConfig:
-    localityWeightedLbConfig: {}
+  commonLbConfig: {}
   connectTimeout: 10s
   dnsLookupFamily: V4_PREFERRED
   dnsRefreshRate: 30s
-  lbPolicy: LEAST_REQUEST
   loadAssignment:
     clusterName: accesslog_otel_1_3
     endpoints:
@@ -214,6 +260,14 @@
       loadBalancingWeight: 1
       locality:
         region: accesslog_otel_1_3/backend/0
+  loadBalancingPolicy:
+    policies:
+    - typedExtensionConfig:
+        name: envoy.load_balancing_policies.least_request
+        typedConfig:
+          '@type': type.googleapis.com/envoy.extensions.load_balancing_policies.least_request.v3.LeastRequest
+          localityLbConfig:
+            localityWeightedLbConfig: {}
   name: accesslog_otel_1_3
   perConnectionBufferLimitBytes: 32768
   respectDnsTtl: true
@@ -228,12 +282,10 @@
 - circuitBreakers:
     thresholds:
     - maxRetries: 1024
-  commonLbConfig:
-    localityWeightedLbConfig: {}
+  commonLbConfig: {}
   connectTimeout: 10s
   dnsLookupFamily: V4_PREFERRED
   dnsRefreshRate: 30s
-  lbPolicy: LEAST_REQUEST
   loadAssignment:
     clusterName: accesslog_otel_2_3
     endpoints:
@@ -247,6 +299,14 @@
       loadBalancingWeight: 1
       locality:
         region: accesslog_otel_2_3/backend/0
+  loadBalancingPolicy:
+    policies:
+    - typedExtensionConfig:
+        name: envoy.load_balancing_policies.least_request
+        typedConfig:
+          '@type': type.googleapis.com/envoy.extensions.load_balancing_policies.least_request.v3.LeastRequest
+          localityLbConfig:
+            localityWeightedLbConfig: {}
   name: accesslog_otel_2_3
   perConnectionBufferLimitBytes: 32768
   respectDnsTtl: true

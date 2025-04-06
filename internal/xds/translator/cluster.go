@@ -15,6 +15,11 @@ import (
 	corev3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	endpointv3 "github.com/envoyproxy/go-control-plane/envoy/config/endpoint/v3"
 	preservecasev3 "github.com/envoyproxy/go-control-plane/envoy/extensions/http/header_formatters/preserve_case/v3"
+	commonv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/load_balancing_policies/common/v3"
+	least_requestv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/load_balancing_policies/least_request/v3"
+	maglevv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/load_balancing_policies/maglev/v3"
+	randomv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/load_balancing_policies/random/v3"
+	round_robinv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/load_balancing_policies/round_robin/v3"
 	proxyprotocolv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/transport_sockets/proxy_protocol/v3"
 	rawbufferv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/transport_sockets/raw_buffer/v3"
 	httpv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/upstreams/http/v3"
@@ -116,13 +121,9 @@ func buildXdsCluster(args *xdsClusterArgs) *clusterv3.Cluster {
 	}
 
 	cluster := &clusterv3.Cluster{
-		Name:            args.name,
-		DnsLookupFamily: dnsLookupFamily,
-		CommonLbConfig: &clusterv3.Cluster_CommonLbConfig{
-			LocalityConfigSpecifier: &clusterv3.Cluster_CommonLbConfig_LocalityWeightedLbConfig_{
-				LocalityWeightedLbConfig: &clusterv3.Cluster_CommonLbConfig_LocalityWeightedLbConfig{},
-			},
-		},
+		Name:                          args.name,
+		DnsLookupFamily:               dnsLookupFamily,
+		CommonLbConfig:                &clusterv3.Cluster_CommonLbConfig{},
 		PerConnectionBufferLimitBytes: buildBackandConnectionBufferLimitBytes(args.backendConnection),
 	}
 
@@ -157,11 +158,23 @@ func buildXdsCluster(args *xdsClusterArgs) *clusterv3.Cluster {
 		cluster.TransportSocket = args.tSocket
 	}
 
+	// Default to localityWeightedLbConfig
+	localityLbConfig := &commonv3.LocalityLbConfig{LocalityConfigSpecifier: &commonv3.LocalityLbConfig_LocalityWeightedLbConfig_{
+		LocalityWeightedLbConfig: &commonv3.LocalityLbConfig_LocalityWeightedLbConfig{},
+	}}
 	for i, ds := range args.settings {
 
-		// If zone aware routing is enabled we update the cluster lb config
+		// If zone aware routing is enabled we update localityLbConfig
 		if ds.ZoneAwareRoutingEnabled {
-			cluster.CommonLbConfig.LocalityConfigSpecifier = &clusterv3.Cluster_CommonLbConfig_ZoneAwareLbConfig_{ZoneAwareLbConfig: &clusterv3.Cluster_CommonLbConfig_ZoneAwareLbConfig{}}
+			localityLbConfig.LocalityConfigSpecifier = &commonv3.LocalityLbConfig_ZoneAwareLbConfig_{
+				ZoneAwareLbConfig: &commonv3.LocalityLbConfig_ZoneAwareLbConfig{
+					// Potential future enhancement: differentiate between
+					// kubernetes topology-aware-routing and trafficDistribution
+					MinClusterSize: wrapperspb.UInt64(1),
+					// Pending https://github.com/envoyproxy/envoy/pull/38756
+					// ForceLocalityDirectRouting: wrapperspb.Bool(true),
+				},
+			}
 		}
 
 		if ds.TLS != nil {
@@ -225,42 +238,80 @@ func buildXdsCluster(args *xdsClusterArgs) *clusterv3.Cluster {
 	// Set Load Balancer policy
 	//nolint:gocritic
 	if args.loadBalancer == nil {
-		cluster.LbPolicy = clusterv3.Cluster_LEAST_REQUEST
+		leastRequest := &least_requestv3.LeastRequest{
+			LocalityLbConfig: localityLbConfig,
+		}
+		typedLeastRequest, _ := anypb.New(leastRequest)
+		cluster.LoadBalancingPolicy = &clusterv3.LoadBalancingPolicy{
+			Policies: []*clusterv3.LoadBalancingPolicy_Policy{{
+				TypedExtensionConfig: &corev3.TypedExtensionConfig{
+					Name:        "envoy.load_balancing_policies.least_request",
+					TypedConfig: typedLeastRequest,
+				},
+			}},
+		}
 	} else if args.loadBalancer.LeastRequest != nil {
-		cluster.LbPolicy = clusterv3.Cluster_LEAST_REQUEST
-		if args.loadBalancer.LeastRequest.SlowStart != nil {
-			if args.loadBalancer.LeastRequest.SlowStart.Window != nil {
-				cluster.LbConfig = &clusterv3.Cluster_LeastRequestLbConfig_{
-					LeastRequestLbConfig: &clusterv3.Cluster_LeastRequestLbConfig{
-						SlowStartConfig: &clusterv3.Cluster_SlowStartConfig{
-							SlowStartWindow: durationpb.New(args.loadBalancer.LeastRequest.SlowStart.Window.Duration),
-						},
-					},
-				}
+		leastRequest := &least_requestv3.LeastRequest{
+			LocalityLbConfig: localityLbConfig,
+		}
+		typedLeastRequest, _ := anypb.New(leastRequest)
+		cluster.LoadBalancingPolicy = &clusterv3.LoadBalancingPolicy{
+			Policies: []*clusterv3.LoadBalancingPolicy_Policy{{
+				TypedExtensionConfig: &corev3.TypedExtensionConfig{
+					Name:        "envoy.load_balancing_policies.least_request",
+					TypedConfig: typedLeastRequest,
+				},
+			}},
+		}
+		if args.loadBalancer.LeastRequest.SlowStart != nil && args.loadBalancer.LeastRequest.SlowStart.Window != nil {
+			leastRequest.SlowStartConfig = &commonv3.SlowStartConfig{
+				SlowStartWindow: durationpb.New(args.loadBalancer.LeastRequest.SlowStart.Window.Duration),
 			}
 		}
 	} else if args.loadBalancer.RoundRobin != nil {
-		cluster.LbPolicy = clusterv3.Cluster_ROUND_ROBIN
-		if args.loadBalancer.RoundRobin.SlowStart != nil && args.loadBalancer.RoundRobin.SlowStart.Window != nil {
-			cluster.LbConfig = &clusterv3.Cluster_RoundRobinLbConfig_{
-				RoundRobinLbConfig: &clusterv3.Cluster_RoundRobinLbConfig{
-					SlowStartConfig: &clusterv3.Cluster_SlowStartConfig{
-						SlowStartWindow: durationpb.New(args.loadBalancer.RoundRobin.SlowStart.Window.Duration),
-					},
+		roundRobin := &round_robinv3.RoundRobin{
+			LocalityLbConfig: localityLbConfig,
+		}
+		typedRoundRobin, _ := anypb.New(roundRobin)
+		cluster.LoadBalancingPolicy = &clusterv3.LoadBalancingPolicy{
+			Policies: []*clusterv3.LoadBalancingPolicy_Policy{{
+				TypedExtensionConfig: &corev3.TypedExtensionConfig{
+					Name:        "envoy.load_balancing_policies.round_robin",
+					TypedConfig: typedRoundRobin,
 				},
+			}},
+		}
+		if args.loadBalancer.RoundRobin.SlowStart != nil && args.loadBalancer.RoundRobin.SlowStart.Window != nil {
+			roundRobin.SlowStartConfig = &commonv3.SlowStartConfig{
+				SlowStartWindow: durationpb.New(args.loadBalancer.RoundRobin.SlowStart.Window.Duration),
 			}
 		}
 	} else if args.loadBalancer.Random != nil {
-		cluster.LbPolicy = clusterv3.Cluster_RANDOM
-	} else if args.loadBalancer.ConsistentHash != nil {
-		cluster.LbPolicy = clusterv3.Cluster_MAGLEV
-
-		if args.loadBalancer.ConsistentHash.TableSize != nil {
-			cluster.LbConfig = &clusterv3.Cluster_MaglevLbConfig_{
-				MaglevLbConfig: &clusterv3.Cluster_MaglevLbConfig{
-					TableSize: &wrapperspb.UInt64Value{Value: *args.loadBalancer.ConsistentHash.TableSize},
+		random := &randomv3.Random{
+			LocalityLbConfig: localityLbConfig,
+		}
+		typeRandom, _ := anypb.New(random)
+		cluster.LoadBalancingPolicy = &clusterv3.LoadBalancingPolicy{
+			Policies: []*clusterv3.LoadBalancingPolicy_Policy{{
+				TypedExtensionConfig: &corev3.TypedExtensionConfig{
+					Name:        "envoy.load_balancing_policies.random",
+					TypedConfig: typeRandom,
 				},
-			}
+			}},
+		}
+	} else if args.loadBalancer.ConsistentHash != nil {
+		consistentHash := &maglevv3.Maglev{}
+		typedConsistentHash, _ := anypb.New(consistentHash)
+		cluster.LoadBalancingPolicy = &clusterv3.LoadBalancingPolicy{
+			Policies: []*clusterv3.LoadBalancingPolicy_Policy{{
+				TypedExtensionConfig: &corev3.TypedExtensionConfig{
+					Name:        "envoy.load_balancing_policies.maglev",
+					TypedConfig: typedConsistentHash,
+				},
+			}},
+		}
+		if args.loadBalancer.ConsistentHash.TableSize != nil {
+			consistentHash.TableSize = wrapperspb.UInt64(*args.loadBalancer.ConsistentHash.TableSize)
 		}
 	}
 

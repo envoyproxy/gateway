@@ -246,8 +246,7 @@ xds:
           circuitBreakers:
             thresholds:
             - maxRetries: 1024
-          commonLbConfig:
-            localityWeightedLbConfig: {}
+          commonLbConfig: {}
           connectTimeout: 10s
           dnsLookupFamily: V4_PREFERRED
           edsClusterConfig:
@@ -256,7 +255,14 @@ xds:
               resourceApiVersion: V3
             serviceName: httproute/default/backend/rule/0
           ignoreHealthOnHostRemoval: true
-          lbPolicy: LEAST_REQUEST
+          loadBalancingPolicy:
+            policies:
+            - typedExtensionConfig:
+                name: envoy.load_balancing_policies.least_request
+                typedConfig:
+                  '@type': type.googleapis.com/envoy.extensions.load_balancing_policies.least_request.v3.LeastRequest
+                  localityLbConfig:
+                    localityWeightedLbConfig: {}
           name: httproute/default/backend/rule/0
           perConnectionBufferLimitBytes: 32768
           type: EDS
@@ -265,8 +271,7 @@ xds:
           circuitBreakers:
             thresholds:
             - maxRetries: 1024
-          commonLbConfig:
-            localityWeightedLbConfig: {}
+          commonLbConfig: {}
           connectTimeout: 10s
           dnsLookupFamily: V4_PREFERRED
           edsClusterConfig:
@@ -275,7 +280,14 @@ xds:
               resourceApiVersion: V3
             serviceName: grpcroute/default/backend/rule/0
           ignoreHealthOnHostRemoval: true
-          lbPolicy: LEAST_REQUEST
+          loadBalancingPolicy:
+            policies:
+            - typedExtensionConfig:
+                name: envoy.load_balancing_policies.least_request
+                typedConfig:
+                  '@type': type.googleapis.com/envoy.extensions.load_balancing_policies.least_request.v3.LeastRequest
+                  localityLbConfig:
+                    localityWeightedLbConfig: {}
           name: grpcroute/default/backend/rule/0
           perConnectionBufferLimitBytes: 32768
           type: EDS
@@ -291,8 +303,7 @@ xds:
           circuitBreakers:
             thresholds:
             - maxRetries: 1024
-          commonLbConfig:
-            localityWeightedLbConfig: {}
+          commonLbConfig: {}
           connectTimeout: 10s
           dnsLookupFamily: V4_PREFERRED
           edsClusterConfig:
@@ -301,7 +312,14 @@ xds:
               resourceApiVersion: V3
             serviceName: tcproute/default/backend/rule/-1
           ignoreHealthOnHostRemoval: true
-          lbPolicy: LEAST_REQUEST
+          loadBalancingPolicy:
+            policies:
+            - typedExtensionConfig:
+                name: envoy.load_balancing_policies.least_request
+                typedConfig:
+                  '@type': type.googleapis.com/envoy.extensions.load_balancing_policies.least_request.v3.LeastRequest
+                  localityLbConfig:
+                    localityWeightedLbConfig: {}
           name: tcproute/default/backend/rule/-1
           perConnectionBufferLimitBytes: 32768
           type: EDS
@@ -310,8 +328,7 @@ xds:
           circuitBreakers:
             thresholds:
             - maxRetries: 1024
-          commonLbConfig:
-            localityWeightedLbConfig: {}
+          commonLbConfig: {}
           connectTimeout: 10s
           dnsLookupFamily: V4_PREFERRED
           edsClusterConfig:
@@ -320,7 +337,14 @@ xds:
               resourceApiVersion: V3
             serviceName: tlsroute/default/backend/rule/-1
           ignoreHealthOnHostRemoval: true
-          lbPolicy: LEAST_REQUEST
+          loadBalancingPolicy:
+            policies:
+            - typedExtensionConfig:
+                name: envoy.load_balancing_policies.least_request
+                typedConfig:
+                  '@type': type.googleapis.com/envoy.extensions.load_balancing_policies.least_request.v3.LeastRequest
+                  localityLbConfig:
+                    localityWeightedLbConfig: {}
           name: tlsroute/default/backend/rule/-1
           perConnectionBufferLimitBytes: 32768
           type: EDS
@@ -329,8 +353,7 @@ xds:
           circuitBreakers:
             thresholds:
             - maxRetries: 1024
-          commonLbConfig:
-            localityWeightedLbConfig: {}
+          commonLbConfig: {}
           connectTimeout: 10s
           dnsLookupFamily: V4_PREFERRED
           edsClusterConfig:
@@ -339,7 +362,14 @@ xds:
               resourceApiVersion: V3
             serviceName: udproute/default/backend/rule/-1
           ignoreHealthOnHostRemoval: true
-          lbPolicy: LEAST_REQUEST
+          loadBalancingPolicy:
+            policies:
+            - typedExtensionConfig:
+                name: envoy.load_balancing_policies.least_request
+                typedConfig:
+                  '@type': type.googleapis.com/envoy.extensions.load_balancing_policies.least_request.v3.LeastRequest
+                  localityLbConfig:
+                    localityWeightedLbConfig: {}
           name: udproute/default/backend/rule/-1
           perConnectionBufferLimitBytes: 32768
           type: EDS
