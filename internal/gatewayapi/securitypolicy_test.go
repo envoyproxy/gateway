@@ -11,6 +11,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"k8s.io/utils/ptr"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 )
@@ -166,7 +167,7 @@ func Test_JWTProvider(t *testing.T) {
 					Name:      "test",
 					Issuer:    "https://www.test.local",
 					Audiences: []string{"test.local"},
-					RemoteJWKS: egv1a1.RemoteJWKS{
+					RemoteJWKS: &egv1a1.RemoteJWKS{
 						URI: "https://test.local/jwt/public-key/jwks.json",
 					},
 				},
@@ -179,7 +180,7 @@ func Test_JWTProvider(t *testing.T) {
 					Name:      "test",
 					Issuer:    "test@test.local",
 					Audiences: []string{"test.local"},
-					RemoteJWKS: egv1a1.RemoteJWKS{
+					RemoteJWKS: &egv1a1.RemoteJWKS{
 						URI: "https://test.local/jwt/public-key/jwks.json",
 					},
 				},
@@ -192,7 +193,7 @@ func Test_JWTProvider(t *testing.T) {
 					Name:      "test",
 					Issuer:    "foo.bar.local",
 					Audiences: []string{"foo.bar.local"},
-					RemoteJWKS: egv1a1.RemoteJWKS{
+					RemoteJWKS: &egv1a1.RemoteJWKS{
 						URI: "https://test.local/jwt/public-key/jwks.json",
 					},
 				},
@@ -205,7 +206,7 @@ func Test_JWTProvider(t *testing.T) {
 					Name:      "test",
 					Issuer:    "test@test.local",
 					Audiences: []string{"test.local"},
-					RemoteJWKS: egv1a1.RemoteJWKS{
+					RemoteJWKS: &egv1a1.RemoteJWKS{
 						URI: "https://test.local/jwt/public-key/jwks.json",
 					},
 					ClaimToHeaders: []egv1a1.ClaimToHeader{
@@ -225,7 +226,7 @@ func Test_JWTProvider(t *testing.T) {
 					Name:      "unqualified_...",
 					Issuer:    "https://www.test.local",
 					Audiences: []string{"test.local"},
-					RemoteJWKS: egv1a1.RemoteJWKS{
+					RemoteJWKS: &egv1a1.RemoteJWKS{
 						URI: "https://test.local/jwt/public-key/jwks.json",
 					},
 				},
@@ -239,7 +240,7 @@ func Test_JWTProvider(t *testing.T) {
 					Name:      "",
 					Issuer:    "https://www.test.local",
 					Audiences: []string{"test.local"},
-					RemoteJWKS: egv1a1.RemoteJWKS{
+					RemoteJWKS: &egv1a1.RemoteJWKS{
 						URI: "https://test.local/jwt/public-key/jwks.json",
 					},
 				},
@@ -254,7 +255,7 @@ func Test_JWTProvider(t *testing.T) {
 					Name:      "unique",
 					Issuer:    "https://www.test.local",
 					Audiences: []string{"test.local"},
-					RemoteJWKS: egv1a1.RemoteJWKS{
+					RemoteJWKS: &egv1a1.RemoteJWKS{
 						URI: "https://test.local/jwt/public-key/jwks.json",
 					},
 				},
@@ -262,7 +263,7 @@ func Test_JWTProvider(t *testing.T) {
 					Name:      "non-unique",
 					Issuer:    "https://www.test.local",
 					Audiences: []string{"test.local"},
-					RemoteJWKS: egv1a1.RemoteJWKS{
+					RemoteJWKS: &egv1a1.RemoteJWKS{
 						URI: "https://test.local/jwt/public-key/jwks.json",
 					},
 				},
@@ -270,7 +271,7 @@ func Test_JWTProvider(t *testing.T) {
 					Name:      "non-unique",
 					Issuer:    "https://www.test.local",
 					Audiences: []string{"test.local"},
-					RemoteJWKS: egv1a1.RemoteJWKS{
+					RemoteJWKS: &egv1a1.RemoteJWKS{
 						URI: "https://test.local/jwt/public-key/jwks.json",
 					},
 				},
@@ -285,7 +286,7 @@ func Test_JWTProvider(t *testing.T) {
 					Name:      "test",
 					Issuer:    "http://invalid url.local",
 					Audiences: []string{"test.local"},
-					RemoteJWKS: egv1a1.RemoteJWKS{
+					RemoteJWKS: &egv1a1.RemoteJWKS{
 						URI: "http://www.test.local",
 					},
 				},
@@ -299,7 +300,7 @@ func Test_JWTProvider(t *testing.T) {
 					Name:      "test",
 					Issuer:    "test@!123...",
 					Audiences: []string{"test.local"},
-					RemoteJWKS: egv1a1.RemoteJWKS{
+					RemoteJWKS: &egv1a1.RemoteJWKS{
 						URI: "https://test.local/jwt/public-key/jwks.json",
 					},
 				},
@@ -313,7 +314,7 @@ func Test_JWTProvider(t *testing.T) {
 					Name:      "test",
 					Issuer:    "http://www.test.local",
 					Audiences: []string{"test.local"},
-					RemoteJWKS: egv1a1.RemoteJWKS{
+					RemoteJWKS: &egv1a1.RemoteJWKS{
 						URI: "invalid/local",
 					},
 				},
@@ -326,7 +327,7 @@ func Test_JWTProvider(t *testing.T) {
 				{
 					Name:      "test",
 					Audiences: []string{"test.local"},
-					RemoteJWKS: egv1a1.RemoteJWKS{
+					RemoteJWKS: &egv1a1.RemoteJWKS{
 						URI: "",
 					},
 				},
@@ -340,7 +341,7 @@ func Test_JWTProvider(t *testing.T) {
 					Name:      "test",
 					Issuer:    "test@test.local",
 					Audiences: []string{"test.local"},
-					RemoteJWKS: egv1a1.RemoteJWKS{
+					RemoteJWKS: &egv1a1.RemoteJWKS{
 						URI: "https://test.local/jwt/public-key/jwks.json",
 					},
 					ClaimToHeaders: []egv1a1.ClaimToHeader{
@@ -360,7 +361,7 @@ func Test_JWTProvider(t *testing.T) {
 					Name:      "test",
 					Issuer:    "test@test.local",
 					Audiences: []string{"test.local"},
-					RemoteJWKS: egv1a1.RemoteJWKS{
+					RemoteJWKS: &egv1a1.RemoteJWKS{
 						URI: "https://test.local/jwt/public-key/jwks.json",
 					},
 					ClaimToHeaders: []egv1a1.ClaimToHeader{
@@ -379,7 +380,7 @@ func Test_JWTProvider(t *testing.T) {
 				{
 					Name:      "test",
 					Audiences: []string{"test.local"},
-					RemoteJWKS: egv1a1.RemoteJWKS{
+					RemoteJWKS: &egv1a1.RemoteJWKS{
 						URI: "https://test.local/jwt/public-key/jwks.json",
 					},
 				},
@@ -392,12 +393,55 @@ func Test_JWTProvider(t *testing.T) {
 				{
 					Name:   "test",
 					Issuer: "https://www.test.local",
-					RemoteJWKS: egv1a1.RemoteJWKS{
+					RemoteJWKS: &egv1a1.RemoteJWKS{
 						URI: "https://test.local/jwt/public-key/jwks.json",
 					},
 				},
 			},
 			wantError: false,
+		},
+		{
+			name: "with both remoteJWKS and localJWKS",
+			Providers: []egv1a1.JWTProvider{
+				{
+					Name:      "test",
+					Issuer:    "https://www.test.local",
+					Audiences: []string{"test.local"},
+					RemoteJWKS: &egv1a1.RemoteJWKS{
+						URI: "https://test.local/jwt/public-key/jwks.json",
+					},
+					LocalJWKS: &egv1a1.LocalJWKS{
+						Inline: ptr.To("{}"),
+					},
+				},
+			},
+			wantError: true,
+		},
+		{
+			name: "without remoteJWKS or localJWKS",
+			Providers: []egv1a1.JWTProvider{
+				{
+					Name:      "test",
+					Issuer:    "https://www.test.local",
+					Audiences: []string{"test.local"},
+				},
+			},
+			wantError: true,
+		},
+		{
+			name: "localJWKS type without correct value",
+			Providers: []egv1a1.JWTProvider{
+				{
+					Name:      "test",
+					Issuer:    "https://www.test.local",
+					Audiences: []string{"test.local"},
+					LocalJWKS: &egv1a1.LocalJWKS{
+						Type:   ptr.To(egv1a1.LocalJWKSTypeValueRef),
+						Inline: ptr.To("{}"),
+					},
+				},
+			},
+			wantError: true,
 		},
 	}
 

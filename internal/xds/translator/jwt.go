@@ -103,44 +103,9 @@ func buildJWTAuthn(irListener *ir.HTTPListener) (*jwtauthnv3.JwtAuthentication, 
 		var reqs []*jwtauthnv3.JwtRequirement
 		for i := range route.Security.JWT.Providers {
 			var (
-				irProvider  = route.Security.JWT.Providers[i]
-				jwks        = irProvider.RemoteJWKS
-				jwksCluster string
-				err         error
+				irProvider = route.Security.JWT.Providers[i]
+				err        error
 			)
-
-			if jwks.Destination != nil && len(jwks.Destination.Settings) > 0 {
-				jwksCluster = jwks.Destination.Name
-			} else {
-				var cluster *urlCluster
-				if cluster, err = url2Cluster(jwks.URI); err != nil {
-					return nil, err
-				}
-				jwksCluster = cluster.name
-			}
-
-			remote := &jwtauthnv3.JwtProvider_RemoteJwks{
-				RemoteJwks: &jwtauthnv3.RemoteJwks{
-					HttpUri: &corev3.HttpUri{
-						Uri: irProvider.RemoteJWKS.URI,
-						HttpUpstreamType: &corev3.HttpUri_Cluster{
-							Cluster: jwksCluster,
-						},
-						Timeout: &durationpb.Duration{Seconds: defaultExtServiceRequestTimeout},
-					},
-					CacheDuration: &durationpb.Duration{Seconds: 5 * 60},
-					AsyncFetch:    &jwtauthnv3.JwksAsyncFetch{},
-				},
-			}
-
-			// Set the retry policy if it exists.
-			if jwks.Traffic != nil && jwks.Traffic.Retry != nil {
-				var rp *corev3.RetryPolicy
-				if rp, err = buildNonRouteRetryPolicy(jwks.Traffic.Retry); err != nil {
-					return nil, err
-				}
-				remote.RemoteJwks.RetryPolicy = rp
-			}
 
 			claimToHeaders := []*jwtauthnv3.JwtClaimToHeader{}
 			for _, claimToHeader := range irProvider.ClaimToHeaders {
@@ -151,16 +116,62 @@ func buildJWTAuthn(irListener *ir.HTTPListener) (*jwtauthnv3.JwtAuthentication, 
 				claimToHeaders = append(claimToHeaders, claimToHeader)
 			}
 			jwtProvider := &jwtauthnv3.JwtProvider{
-				Issuer:              irProvider.Issuer,
-				Audiences:           irProvider.Audiences,
-				JwksSourceSpecifier: remote,
-				PayloadInMetadata:   irProvider.Name,
-				ClaimToHeaders:      claimToHeaders,
-				Forward:             true,
+				Issuer:            irProvider.Issuer,
+				Audiences:         irProvider.Audiences,
+				PayloadInMetadata: irProvider.Name,
+				ClaimToHeaders:    claimToHeaders,
+				Forward:           true,
 				NormalizePayloadInMetadata: &jwtauthnv3.JwtProvider_NormalizePayload{
 					// Normalize the scopes to facilitate matching in Authorization.
 					SpaceDelimitedClaims: []string{"scope"},
 				},
+			}
+			if irProvider.LocalJWKS != nil {
+				local := &jwtauthnv3.JwtProvider_LocalJwks{
+					LocalJwks: &corev3.DataSource{
+						Specifier: &corev3.DataSource_InlineString{
+							InlineString: *irProvider.LocalJWKS,
+						},
+					},
+				}
+				jwtProvider.JwksSourceSpecifier = local
+			} else {
+				var jwksCluster string
+
+				jwks := irProvider.RemoteJWKS
+				if jwks.Destination != nil && len(jwks.Destination.Settings) > 0 {
+					jwksCluster = jwks.Destination.Name
+				} else {
+					var cluster *urlCluster
+					if cluster, err = url2Cluster(jwks.URI); err != nil {
+						return nil, err
+					}
+					jwksCluster = cluster.name
+				}
+
+				remote := &jwtauthnv3.JwtProvider_RemoteJwks{
+					RemoteJwks: &jwtauthnv3.RemoteJwks{
+						HttpUri: &corev3.HttpUri{
+							Uri: jwks.URI,
+							HttpUpstreamType: &corev3.HttpUri_Cluster{
+								Cluster: jwksCluster,
+							},
+							Timeout: &durationpb.Duration{Seconds: defaultExtServiceRequestTimeout},
+						},
+						CacheDuration: &durationpb.Duration{Seconds: 5 * 60},
+						AsyncFetch:    &jwtauthnv3.JwksAsyncFetch{},
+					},
+				}
+
+				// Set the retry policy if it exists.
+				if jwks.Traffic != nil && jwks.Traffic.Retry != nil {
+					var rp *corev3.RetryPolicy
+					if rp, err = buildNonRouteRetryPolicy(jwks.Traffic.Retry); err != nil {
+						return nil, err
+					}
+					remote.RemoteJwks.RetryPolicy = rp
+				}
+				jwtProvider.JwksSourceSpecifier = remote
 			}
 
 			if irProvider.RecomputeRoute != nil {
@@ -291,6 +302,9 @@ func (*jwt) patchResources(tCtx *types.ResourceVersionTable, routes []*ir.HTTPRo
 
 		for i := range route.Security.JWT.Providers {
 			jwks := route.Security.JWT.Providers[i].RemoteJWKS
+			if jwks == nil {
+				continue
+			}
 
 			// If the rmote JWKS has a destination, use it.
 			if jwks.Destination != nil && len(jwks.Destination.Settings) > 0 {
