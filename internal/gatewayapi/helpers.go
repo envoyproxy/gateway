@@ -86,7 +86,7 @@ var (
 	QueryParamMatchTypeDerefOr = ptr.Deref[gwapiv1.QueryParamMatchType]
 )
 
-// Deprecated: use k8s.io/utils/ptr ptr.Deref instead
+// NamespaceDerefOr returns the dereferenced value of the provided Namespace in string
 func NamespaceDerefOr(namespace *gwapiv1.Namespace, defaultNamespace string) string {
 	if namespace != nil && *namespace != "" {
 		return string(*namespace)
