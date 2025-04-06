@@ -262,7 +262,7 @@ func setupGRPCOpts(ctx context.Context, client k8scli.Client, ext *egv1a1.Extens
 		if err != nil {
 			return nil, fmt.Errorf("failed to get root CA certificates: %w", err)
 		}
-		creds, err := getGRPCCredentials(ctx, client, ext, namespace)
+		creds, err := getGRPCCredentials(client, ext, namespace)
 		if err != nil {
 			return nil, fmt.Errorf("failed to get gRPC TLS credentials: %w", err)
 		}
@@ -286,17 +286,18 @@ func setupGRPCOpts(ctx context.Context, client k8scli.Client, ext *egv1a1.Extens
 	return opts, nil
 }
 
-func getGRPCCredentials(ctx context.Context, client k8scli.Client, ext *egv1a1.ExtensionManager, namespace string) (credentials.TransportCredentials, error) {
+func getGRPCCredentials(client k8scli.Client, ext *egv1a1.ExtensionManager, namespace string) (credentials.TransportCredentials, error) {
 	return advancedtls.NewClientCreds(&advancedtls.Options{
 		RootOptions: advancedtls.RootCertificateOptions{
 			// A callback function that dynamically loads root CA certificates from secret
-			GetRootCertificates: createGetRootCertificatesHandler(ctx, client, ext, namespace),
+			GetRootCertificates: createGetRootCertificatesHandler(client, ext, namespace),
 		},
 	})
 }
 
-func createGetRootCertificatesHandler(ctx context.Context, client k8scli.Client, ext *egv1a1.ExtensionManager, namespace string) func(*advancedtls.ConnectionInfo) (*advancedtls.RootCertificates, error) {
+func createGetRootCertificatesHandler(client k8scli.Client, ext *egv1a1.ExtensionManager, namespace string) func(*advancedtls.ConnectionInfo) (*advancedtls.RootCertificates, error) {
 	return func(params *advancedtls.ConnectionInfo) (*advancedtls.RootCertificates, error) {
+		ctx := context.Background()
 		cp, err := getCertPoolFromSecret(ctx, client, ext, namespace)
 		if err != nil {
 			return nil, err
@@ -315,7 +316,7 @@ func getCertPoolFromSecret(ctx context.Context, client k8scli.Client, ext *egv1a
 
 	caCertPEMBytes, ok := secret.Data[corev1.TLSCertKey]
 	if !ok {
-		return nil, errors.New("no TLS certificate found in CA secret")
+		return nil, fmt.Errorf("no CA certificate found in Kubernetes Secret %s in namespace %s", secret.GetName(), secret.GetNamespace())
 	}
 	cp := x509.NewCertPool()
 	if ok := cp.AppendCertsFromPEM(caCertPEMBytes); !ok {
