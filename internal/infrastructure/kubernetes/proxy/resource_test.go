@@ -6,7 +6,6 @@
 package proxy
 
 import (
-	"github.com/envoyproxy/gateway/internal/cmd/envoy"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -14,6 +13,7 @@ import (
 	"k8s.io/utils/ptr"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/cmd/envoy"
 	"github.com/envoyproxy/gateway/internal/infrastructure/kubernetes/resource"
 )
 

@@ -284,13 +284,6 @@ func (r *ResourceRender) Deployment() (*appsv1.Deployment, error) {
 		return nil, err
 	}
 
-	/*initContainers, err := expectedProxyInitContainers(r.infra, deploymentConfig)
-	if err != nil {
-		return nil, err
-	}
-
-	*/
-
 	initContainers := expectedProxyInitContainers(deploymentConfig.Container, proxyConfig.Spec.Init, r.InitManager, deploymentConfig.InitContainers)
 
 	dpAnnotations := r.infra.GetProxyMetadata().Annotations

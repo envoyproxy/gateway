@@ -7,9 +7,9 @@ package common
 
 import (
 	"fmt"
-	"github.com/envoyproxy/gateway/internal/cmd/envoy"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/cmd/envoy"
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/xds/bootstrap"
 )
