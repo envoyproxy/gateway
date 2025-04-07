@@ -31,6 +31,8 @@ type ProxyTracing struct {
 	SamplingFraction *gwapiv1.Fraction `json:"samplingFraction,omitempty"`
 	// CustomTags defines the custom tags to add to each span.
 	// If provider is kubernetes, pod name and namespace are added by default.
+	//
+	// +optional
 	CustomTags map[string]CustomTag `json:"customTags,omitempty"`
 	// Provider defines the tracing provider.
 	Provider TracingProvider `json:"provider"`
