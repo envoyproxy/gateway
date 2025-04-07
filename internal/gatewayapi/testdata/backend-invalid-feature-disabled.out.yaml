@@ -121,8 +121,7 @@ httpRoutes:
         status: "True"
         type: Accepted
       - lastTransitionTime: null
-        message: Resource default/backend-ip of type Backend cannot be used since
-          Backend is disabled in Envoy Gateway configuration
+        message: Backend is disabled in Envoy Gateway configuration
         reason: UnsupportedValue
         status: "False"
         type: ResolvedRefs

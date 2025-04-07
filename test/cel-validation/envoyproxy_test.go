@@ -610,7 +610,7 @@ func TestEnvoyProxyProvider(t *testing.T) {
 					},
 				}
 			},
-			wantErrors: []string{"BackendRefs only supports Service Kind."},
+			wantErrors: []string{"Invalid value: \"object\": BackendRefs only support Service and Backend kind."},
 		},
 		{
 			desc: "invalid-accesslog-ALS-backendrefs-group",
@@ -644,7 +644,7 @@ func TestEnvoyProxyProvider(t *testing.T) {
 					},
 				}
 			},
-			wantErrors: []string{"BackendRefs only supports Core group."},
+			wantErrors: []string{"BackendRefs only support Core and gateway.envoyproxy.io group."},
 		},
 		{
 			desc: "invalid-accesslog-ALS-no-backendrefs",
@@ -760,7 +760,7 @@ func TestEnvoyProxyProvider(t *testing.T) {
 					},
 				}
 			},
-			wantErrors: []string{"Invalid value: \"object\": BackendRefs only supports Service kind."},
+			wantErrors: []string{"Invalid value: \"object\": BackendRefs only support Service and Backend kind."},
 		},
 		{
 			desc: "invalid-accesslog-backendref-group",
@@ -797,7 +797,7 @@ func TestEnvoyProxyProvider(t *testing.T) {
 					},
 				}
 			},
-			wantErrors: []string{"BackendRefs only supports Core group."},
+			wantErrors: []string{"BackendRefs only support Core and gateway.envoyproxy.io group."},
 		},
 		{
 			desc: "accesslog-backendref",
@@ -1040,7 +1040,7 @@ func TestEnvoyProxyProvider(t *testing.T) {
 					},
 				}
 			},
-			wantErrors: []string{"only supports Service Kind."},
+			wantErrors: []string{"BackendRefs only support Service and Backend kind."},
 		},
 		{
 			desc: "ProxyMetrics-sinks-invalid-backendref-group",
@@ -1070,7 +1070,7 @@ func TestEnvoyProxyProvider(t *testing.T) {
 					},
 				}
 			},
-			wantErrors: []string{"BackendRefs only supports Core group."},
+			wantErrors: []string{"BackendRefs only support Core and gateway.envoyproxy.io group."},
 		},
 		{
 			desc: "invalid-tracing-backendref-invalid-kind",
@@ -1095,7 +1095,7 @@ func TestEnvoyProxyProvider(t *testing.T) {
 					},
 				}
 			},
-			wantErrors: []string{"only supports Service Kind."},
+			wantErrors: []string{"BackendRefs only support Service and Backend kind."},
 		},
 		{
 			desc: "tracing-backendref-empty-kind",
@@ -1469,6 +1469,79 @@ func TestEnvoyProxyProvider(t *testing.T) {
 			},
 			wantErrors: []string{
 				"only one of SamplingRate or SamplingFraction can be specified",
+			},
+		},
+		{
+			desc: "backendRefs-backend",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					Telemetry: &egv1a1.ProxyTelemetry{
+						Tracing: &egv1a1.ProxyTracing{
+							Provider: egv1a1.TracingProvider{
+								Type: egv1a1.TracingProviderTypeOpenTelemetry,
+								BackendCluster: egv1a1.BackendCluster{
+									BackendRefs: []egv1a1.BackendRef{
+										{
+											BackendObjectReference: gwapiv1.BackendObjectReference{
+												Name:  "fake-service",
+												Kind:  ptr.To(gwapiv1.Kind("Backend")),
+												Group: ptr.To(gwapiv1.Group("gateway.envoyproxy.io")),
+												Port:  ptr.To(gwapiv1.PortNumber(8080)),
+											},
+										},
+									},
+								},
+							},
+						},
+						AccessLog: &egv1a1.ProxyAccessLog{
+							Settings: []egv1a1.ProxyAccessLogSetting{
+								{
+									Sinks: []egv1a1.ProxyAccessLogSink{
+										{
+											Type: egv1a1.ProxyAccessLogSinkTypeALS,
+											ALS: &egv1a1.ALSEnvoyProxyAccessLog{
+												BackendCluster: egv1a1.BackendCluster{
+													BackendRefs: []egv1a1.BackendRef{
+														{
+															BackendObjectReference: gwapiv1.BackendObjectReference{
+																Name:  "fake-service",
+																Kind:  ptr.To(gwapiv1.Kind("Backend")),
+																Group: ptr.To(gwapiv1.Group("gateway.envoyproxy.io")),
+																Port:  ptr.To(gwapiv1.PortNumber(9000)),
+															},
+														},
+													},
+												},
+												Type: egv1a1.ALSEnvoyProxyAccessLogTypeHTTP,
+											},
+										},
+									},
+								},
+							},
+						},
+						Metrics: &egv1a1.ProxyMetrics{
+							Sinks: []egv1a1.ProxyMetricSink{
+								{
+									Type: egv1a1.MetricSinkTypeOpenTelemetry,
+									OpenTelemetry: &egv1a1.ProxyOpenTelemetrySink{
+										BackendCluster: egv1a1.BackendCluster{
+											BackendRefs: []egv1a1.BackendRef{
+												{
+													BackendObjectReference: gwapiv1.BackendObjectReference{
+														Name:  "fake-service",
+														Kind:  ptr.To(gwapiv1.Kind("Backend")),
+														Group: ptr.To(gwapiv1.Group("gateway.envoyproxy.io")),
+														Port:  ptr.To(gwapiv1.PortNumber(8080)),
+													},
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				}
 			},
 		},
 	}

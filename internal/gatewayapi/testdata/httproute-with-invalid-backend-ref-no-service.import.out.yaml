@@ -69,7 +69,7 @@ httpRoutes:
         status: "True"
         type: Accepted
       - lastTransitionTime: null
-        message: ServiceImport default/service-import-that-doesnt-exist not found
+        message: Service import default/service-import-that-doesnt-exist not found
         reason: BackendNotFound
         status: "False"
         type: ResolvedRefs

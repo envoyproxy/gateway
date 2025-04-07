@@ -78,7 +78,13 @@ type HTTPExtAuthService struct {
 
 	// Path is the path of the HTTP External Authorization service.
 	// If path is specified, the authorization request will be sent to that path,
-	// or else the authorization request will be sent to the root path.
+	// or else the authorization request will use the path of the original request.
+	//
+	// Please note that the original request path will be appended to the path specified here.
+	// For example, if the original request path is "/hello", and the path specified here is "/auth",
+	// then the path of the authorization request will be "/auth/hello". If the path is not specified,
+	// the path of the authorization request will be "/hello".
+	// +optional
 	Path *string `json:"path,omitempty"`
 
 	// HeadersToBackend are the authorization response headers that will be added

@@ -17,7 +17,7 @@ gateways:
   status:
     conditions:
     - lastTransitionTime: null
-      message: 'Invalid tracing backendRefs in the referenced EnvoyProxy: Service
+      message: 'Invalid tracing backendRefs in the referenced EnvoyProxy: service
         monitoring/service-not-found not found'
       reason: InvalidParameters
       status: "False"

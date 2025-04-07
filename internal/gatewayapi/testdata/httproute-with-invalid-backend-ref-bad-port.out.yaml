@@ -67,8 +67,8 @@ httpRoutes:
         status: "True"
         type: Accepted
       - lastTransitionTime: null
-        message: TCP Port 8888 not found on service default/service-1
-        reason: BackendNotFound
+        message: TCP Port 8888 not found on Service default/service-1
+        reason: PortNotFound
         status: "False"
         type: ResolvedRefs
       controllerName: gateway.envoyproxy.io/gatewayclass-controller

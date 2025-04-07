@@ -178,8 +178,7 @@ httpRoutes:
         status: "True"
         type: Accepted
       - lastTransitionTime: null
-        message: Unix domain socket found in Backend default/backend-uds2 is not supported
-          for xRoute backendRefs
+        message: Unix domain sockets are not supported in backend references
         reason: UnsupportedRefAddressFound
         status: "False"
         type: ResolvedRefs
