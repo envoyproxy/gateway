@@ -69,11 +69,11 @@ serviceImports:
         - port: 8080
           name: http
           protocol: TCP
-          appProtocol: kubernetes.io/h2c # This takes effect.
+          appProtocol: kubernetes.io/h2c  # This takes effect.
         - port: 9000
           name: grpc
           protocol: TCP
-          appProtocol: grpc # This is NOOP.
+          appProtocol: grpc  # This is NOOP.
 
 endpointSlices:
   - apiVersion: discovery.k8s.io/v1
