@@ -600,7 +600,7 @@ func (t *Translator) buildCORS(cors *egv1a1.CORS) *ir.CORS {
 	var allowOrigins []*ir.StringMatch
 
 	for _, origin := range cors.AllowOrigins {
-		if isWildcard(string(origin)) {
+		if containsWildcard(string(origin)) {
 			regexStr := wildcard2regex(string(origin))
 			allowOrigins = append(allowOrigins, &ir.StringMatch{
 				SafeRegex: &regexStr,
@@ -622,7 +622,7 @@ func (t *Translator) buildCORS(cors *egv1a1.CORS) *ir.CORS {
 	}
 }
 
-func isWildcard(s string) bool {
+func containsWildcard(s string) bool {
 	return strings.ContainsAny(s, "*")
 }
 
