@@ -20,17 +20,13 @@ spec:
         app: certgen
     spec:
       containers:
-      {{- if .Values.certgen.job.args }}
+      {{- with .Values.certgen.job.args }}
       - args:
-        {{- toYaml .Values.certgen.job.args | nindent 8 -}}
+        {{- toYaml . | nindent 8 }} 
+      {{- end }}
         command:
         - envoy-gateway
         - certgen
-        {{- else }}
-      - command:
-        - envoy-gateway
-        - certgen
-        {{- end }}
         env:
         - name: ENVOY_GATEWAY_NAMESPACE
           valueFrom:
