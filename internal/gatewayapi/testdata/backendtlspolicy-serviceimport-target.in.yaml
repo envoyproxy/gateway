@@ -71,7 +71,7 @@ serviceImports:
           protocol: TCP
           appProtocol: kubernetes.io/h2c # This takes effect.
         - port: 9000
-          name: http
+          name: grpc
           protocol: TCP
           appProtocol: grpc # This is NOOP.
 
@@ -108,6 +108,10 @@ backendTLSPolicies:
           kind: ServiceImport
           name: service-import-1
           sectionName: http
+        - group: multicluster.x-k8s.io
+          kind: ServiceImport
+          name: service-import-1
+          sectionName: grpc
       validation:
         wellKnownCACertificates: System
         hostname: example.com

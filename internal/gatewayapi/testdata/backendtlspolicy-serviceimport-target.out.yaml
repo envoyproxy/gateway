@@ -11,6 +11,10 @@ backendTLSPolicies:
       kind: ServiceImport
       name: service-import-1
       sectionName: http
+    - group: multicluster.x-k8s.io
+      kind: ServiceImport
+      name: service-import-1
+      sectionName: grpc
     validation:
       hostname: example.com
       wellKnownCACertificates: System
