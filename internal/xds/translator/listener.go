@@ -517,8 +517,11 @@ func addServerNamesMatch(xdsListener *listenerv3.Listener, filterChain *listener
 			ServerNames: hostnames,
 		}
 
-		if err := addXdsTLSInspectorFilter(xdsListener); err != nil {
-			return err
+		// Only add TLS inspector filter if the listener is not nil and is a TCP listener
+		if xdsListener != nil && xdsListener.GetAddress().GetSocketAddress().GetProtocol() == corev3.SocketAddress_TCP {
+			if err := addXdsTLSInspectorFilter(xdsListener); err != nil {
+				return err
+			}
 		}
 	}
 
@@ -651,6 +654,11 @@ func buildConnectionLimitFilter(statPrefix string, connection *ir.ClientConnecti
 
 // addXdsTLSInspectorFilter adds a Tls Inspector filter if it does not yet exist.
 func addXdsTLSInspectorFilter(xdsListener *listenerv3.Listener) error {
+	// Return early if listener is nil
+	if xdsListener == nil {
+		return errors.New("cannot add TLS inspector filter to nil listener")
+	}
+
 	// Return early if it exists
 	for _, filter := range xdsListener.ListenerFilters {
 		if filter.Name == wellknown.TlsInspector {

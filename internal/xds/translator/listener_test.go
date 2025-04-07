@@ -10,9 +10,12 @@ import (
 	"reflect"
 	"testing"
 
+	corev3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
+	listenerv3 "github.com/envoyproxy/go-control-plane/envoy/config/listener/v3"
 	routev3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
 	hcmv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/http_connection_manager/v3"
 	typev3 "github.com/envoyproxy/go-control-plane/envoy/type/v3"
+	"github.com/envoyproxy/go-control-plane/pkg/wellknown"
 	"github.com/stretchr/testify/assert"
 	"google.golang.org/protobuf/proto"
 
@@ -97,6 +100,144 @@ func Test_buildTCPProxyHashPolicy(t *testing.T) {
 			got := buildTCPProxyHashPolicy(tt.lb)
 			if !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("buildTCPProxyHashPolicy() got = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func Test_addXdsTLSInspectorFilter(t *testing.T) {
+	tests := []struct {
+		name        string
+		xdsListener *listenerv3.Listener
+		wantErr     bool
+	}{
+		{
+			name:        "nil listener",
+			xdsListener: nil,
+			wantErr:     true,
+		},
+		{
+			name: "valid listener",
+			xdsListener: &listenerv3.Listener{
+				Name:            "test-listener",
+				ListenerFilters: []*listenerv3.ListenerFilter{},
+			},
+			wantErr: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := addXdsTLSInspectorFilter(tt.xdsListener)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("addXdsTLSInspectorFilter() error = %v, wantErr %v", err, tt.wantErr)
+			}
+
+			// If we didn't expect an error, verify the filter was added
+			if !tt.wantErr && tt.xdsListener != nil {
+				found := false
+				for _, filter := range tt.xdsListener.ListenerFilters {
+					if filter.Name == wellknown.TlsInspector {
+						found = true
+						break
+					}
+				}
+				assert.True(t, found, "TLS inspector filter was not added to the listener")
+			}
+		})
+	}
+}
+
+func Test_addServerNamesMatch(t *testing.T) {
+	tests := []struct {
+		name        string
+		xdsListener *listenerv3.Listener
+		filterChain *listenerv3.FilterChain
+		hostnames   []string
+		wantErr     bool
+	}{
+		{
+			name:        "nil listener",
+			xdsListener: nil,
+			filterChain: &listenerv3.FilterChain{},
+			hostnames:   []string{"example.com"},
+			wantErr:     false, // Should not error with nil listener
+		},
+		{
+			name: "UDP listener",
+			xdsListener: &listenerv3.Listener{
+				Name: "udp-listener",
+				Address: &corev3.Address{
+					Address: &corev3.Address_SocketAddress{
+						SocketAddress: &corev3.SocketAddress{
+							Protocol: corev3.SocketAddress_UDP,
+						},
+					},
+				},
+			},
+			filterChain: &listenerv3.FilterChain{},
+			hostnames:   []string{"example.com"},
+			wantErr:     false, // Should not error with UDP listener
+		},
+		{
+			name: "TCP listener",
+			xdsListener: &listenerv3.Listener{
+				Name: "tcp-listener",
+				Address: &corev3.Address{
+					Address: &corev3.Address_SocketAddress{
+						SocketAddress: &corev3.SocketAddress{
+							Protocol: corev3.SocketAddress_TCP,
+						},
+					},
+				},
+				ListenerFilters: []*listenerv3.ListenerFilter{},
+			},
+			filterChain: &listenerv3.FilterChain{},
+			hostnames:   []string{"example.com"},
+			wantErr:     false,
+		},
+		{
+			name: "wildcard hostname",
+			xdsListener: &listenerv3.Listener{
+				Name: "tcp-listener",
+				Address: &corev3.Address{
+					Address: &corev3.Address_SocketAddress{
+						SocketAddress: &corev3.SocketAddress{
+							Protocol: corev3.SocketAddress_TCP,
+						},
+					},
+				},
+				ListenerFilters: []*listenerv3.ListenerFilter{},
+			},
+			filterChain: &listenerv3.FilterChain{},
+			hostnames:   []string{"*"},
+			wantErr:     false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := addServerNamesMatch(tt.xdsListener, tt.filterChain, tt.hostnames)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("addServerNamesMatch() error = %v, wantErr %v", err, tt.wantErr)
+			}
+
+			// Check if filter chain match was set correctly for non-wildcard hostnames
+			if len(tt.hostnames) > 0 && tt.hostnames[0] != "*" {
+				assert.NotNil(t, tt.filterChain.FilterChainMatch, "FilterChainMatch should be set for non-wildcard hostnames")
+				assert.Equal(t, tt.hostnames, tt.filterChain.FilterChainMatch.ServerNames, "ServerNames should match hostnames")
+			}
+
+			// Check if TLS inspector filter was added for TCP listeners with non-wildcard hostnames
+			if tt.xdsListener != nil && len(tt.hostnames) > 0 && tt.hostnames[0] != "*" &&
+				tt.xdsListener.GetAddress() != nil && tt.xdsListener.GetAddress().GetSocketAddress() != nil &&
+				tt.xdsListener.GetAddress().GetSocketAddress().GetProtocol() == corev3.SocketAddress_TCP {
+				found := false
+				for _, filter := range tt.xdsListener.ListenerFilters {
+					if filter.Name == wellknown.TlsInspector {
+						found = true
+						break
+					}
+				}
+				assert.True(t, found, "TLS inspector filter should be added for TCP listeners with non-wildcard hostnames")
 			}
 		})
 	}
