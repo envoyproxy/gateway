@@ -18,11 +18,10 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
     - name: Run scanner
-      uses: google/osv-scanner-action/osv-scanner-action@764c91816374ff2d8fc2095dab36eecd42d61638  # v1.9.2
+      uses: google/osv-scanner-action/osv-scanner-action@98b584ee2ed2da3935ccce10e06739d54cdcd20b  # v2.0.0
       continue-on-error: true  # remove this after https://github.com/google/deps.dev/issues/146 has been resolved
       with:
         scan-args: |-
-          --skip-git
-          --experimental-licenses=Apache-2.0,BSD-2-Clause,BSD-2-Clause-FreeBSD,BSD-3-Clause,MIT,ISC,Python-2.0,PostgreSQL,X11,Zlib
+          --licenses=Apache-2.0,BSD-2-Clause,BSD-2-Clause-FreeBSD,BSD-3-Clause,MIT,ISC,Python-2.0,PostgreSQL,X11,Zlib
           --config tools/osv-scanner/license-scan-config.toml
           ./
