@@ -542,7 +542,7 @@ spec:
         app: certgen
     spec:
       containers:
-      - command:
+        command:
         - envoy-gateway
         - certgen
         env:
