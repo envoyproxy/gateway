@@ -1407,11 +1407,9 @@ func (t *Translator) processServiceImportDestinationSetting(
 		}
 	}
 
-	// TODO(#5485): Should these protocols be supported for ServiceImport?
-	//
-	// if servicePort.AppProtocol != nil {
-	// 	protocol = serviceAppProtocolToIRAppProtocol(*servicePort.AppProtocol)
-	// }
+	if servicePort.AppProtocol != nil {
+		protocol = serviceAppProtocolToIRAppProtocol(*servicePort.AppProtocol, protocol, false)
+	}
 
 	// Route to endpoints by default
 	if !t.IsEnvoyServiceRouting(envoyProxy) {
@@ -1458,7 +1456,7 @@ func (t *Translator) processServiceDestinationSetting(
 
 	// support HTTPRouteBackendProtocolH2C/GRPC
 	if servicePort.AppProtocol != nil {
-		protocol = serviceAppProtocolToIRAppProtocol(*servicePort.AppProtocol, protocol /*supportLegacy=*/, true)
+		protocol = serviceAppProtocolToIRAppProtocol(*servicePort.AppProtocol, protocol, true)
 	}
 
 	// Route to endpoints by default
