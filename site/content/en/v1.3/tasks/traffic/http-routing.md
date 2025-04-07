@@ -280,7 +280,6 @@ curl -sS -H "Host: foo.example.com" -H "Authorization: Bearer $TOKEN" "http://${
 ```
 The request should return the pod name, for example `foo-backend-6df8cc6b9f-fmwcg`
 
-
 Get another JWT used for testing request authentication:
 
 ```shell
