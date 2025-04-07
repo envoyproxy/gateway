@@ -218,11 +218,6 @@ func Test_TLS(t *testing.T) {
 		},
 	}
 
-	certData, err := os.ReadFile(certFile)
-	require.NoError(t, err)
-	keyData, err := os.ReadFile(keyFile)
-	require.NoError(t, err)
-
 	secret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "cert",
@@ -230,9 +225,7 @@ func Test_TLS(t *testing.T) {
 		},
 		Type: corev1.SecretTypeTLS,
 		Data: map[string][]byte{
-			corev1.TLSCertKey:       certData,
-			corev1.TLSPrivateKeyKey: keyData,
-			"ca.crt":                caCert,
+			corev1.TLSCertKey: caCert,
 		},
 	}
 
