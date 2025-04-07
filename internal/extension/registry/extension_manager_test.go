@@ -15,6 +15,7 @@ import (
 	"os"
 	"testing"
 
+	v3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
@@ -28,7 +29,6 @@ import (
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/envoygateway"
 	"github.com/envoyproxy/gateway/proto/extension"
-	v3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
 )
 
 func TestGetExtensionServerAddress(t *testing.T) {
@@ -194,6 +194,7 @@ func Test_TLS(t *testing.T) {
 	server := grpc.NewServer(grpc.Creds(credentials.NewTLS(&tls.Config{
 		Certificates: []tls.Certificate{cert},
 		ClientAuth:   tls.NoClientCert,
+		MinVersion:   tls.VersionTLS12,
 	})))
 	extension.RegisterEnvoyGatewayExtensionServer(server, &testServer{})
 	go func() {
@@ -250,6 +251,5 @@ func Test_TLS(t *testing.T) {
 		},
 	})
 	require.NoError(t, err)
-	require.Equal(t, response.Route.Name, "test-route")
-
+	require.Equal(t, "test-route", response.Route.Name)
 }
