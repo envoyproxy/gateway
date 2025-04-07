@@ -491,6 +491,27 @@ nav.foldable-nav {
   }
 }
 
+// Mobile responsiveness improvements
+@include media-breakpoint-down(md) {
+  .td-sidebar {
+    padding: 1rem;
+    background-color: $white;
+    border-bottom: 1px solid $gray-200;
+
+    .td-sidebar-nav {
+      padding-right: 0;
+    }
+  }
+
+  .td-main {
+    padding: 2rem 0rem;
+  }
+
+  .td-toc {
+    padding-left: 1rem;
+  }
+}
+
 // Buttons
 .btn {
   border-radius: 6px;
