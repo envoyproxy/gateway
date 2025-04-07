@@ -242,7 +242,11 @@ nav.foldable-nav {
   background-color: transparent;
   border-right: none;
   padding: 3rem 0;
- 
+  position: sticky;
+  top: 4rem;
+  height: calc(100vh - 4rem);
+  overflow-y: auto;
+  overflow-x: hidden;
 
   .td-sidebar__inner {
     padding-top: 0;
