@@ -241,7 +241,8 @@ nav.foldable-nav {
 .td-sidebar {
   background-color: transparent;
   border-right: none;
-  padding: 1.5rem 0;
+  padding: 3rem 0;
+ 
 
   .td-sidebar__inner {
     padding-top: 0;
@@ -482,27 +483,6 @@ nav.foldable-nav {
       box-shadow: 0 0 0 3px rgba($primary, 0.1);
       outline: none;
     }
-  }
-}
-
-// Mobile responsiveness improvements
-@include media-breakpoint-down(md) {
-  .td-sidebar {
-    padding: 1rem;
-    background-color: $white;
-    border-bottom: 1px solid $gray-200;
-
-    .td-sidebar-nav {
-      padding-right: 0;
-    }
-  }
-
-  .td-main {
-    padding: 2rem 0rem;
-  }
-
-  .td-toc {
-    padding-left: 1rem;
   }
 }
 
