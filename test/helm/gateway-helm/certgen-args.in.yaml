@@ -1,3 +1,8 @@
+global:
+  images:
+    envoyGateway:
+      image: "docker.io/envoyproxy/gateway-dev:latest"
+      pullPolicy: Always
 certgen:
   job:
     args:
