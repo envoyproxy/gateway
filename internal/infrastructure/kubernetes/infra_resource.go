@@ -119,6 +119,17 @@ func (i *Infra) createOrUpdateDeployment(ctx context.Context, r ResourceRender) 
 	}
 
 	defer func() {
+		deleteErr := i.Client.DeleteAllExcept(ctx, &appsv1.DeploymentList{}, client.ObjectKey{
+			Namespace: deployment.Namespace,
+			Name:      deployment.Name,
+		}, &client.ListOptions{
+			Namespace:     deployment.Namespace,
+			LabelSelector: r.LabelSelector(),
+		})
+		if deleteErr != nil {
+			i.logger.Error(deleteErr, "failed to delete all except deployment", "name", r.Name())
+		}
+
 		if err == nil {
 			resourceApplyDurationSeconds.With(labels...).Record(time.Since(startTime).Seconds())
 			resourceApplyTotal.WithSuccess(labels...).Increment()
@@ -192,7 +203,7 @@ func (i *Infra) createOrUpdateDaemonSet(ctx context.Context, r ResourceRender) (
 		return err
 	}
 
-	// delete the daemonset and return early
+	// delete the DaemonSet and return early
 	// this handles the case where a deployment has been
 	// configured.
 	if daemonSet == nil {
@@ -200,6 +211,17 @@ func (i *Infra) createOrUpdateDaemonSet(ctx context.Context, r ResourceRender) (
 	}
 
 	defer func() {
+		deleteErr := i.Client.DeleteAllExcept(ctx, &appsv1.DaemonSetList{}, client.ObjectKey{
+			Namespace: daemonSet.Namespace,
+			Name:      daemonSet.Name,
+		}, &client.ListOptions{
+			Namespace:     daemonSet.Namespace,
+			LabelSelector: r.LabelSelector(),
+		})
+		if deleteErr != nil {
+			i.logger.Error(deleteErr, "failed to delete all except deployment", "name", r.Name())
+		}
+
 		if err == nil {
 			resourceApplyDurationSeconds.With(labels...).Record(time.Since(startTime).Seconds())
 			resourceApplyTotal.WithSuccess(labels...).Increment()
@@ -358,6 +380,17 @@ func (i *Infra) createOrUpdateService(ctx context.Context, r ResourceRender) (er
 	}
 
 	defer func() {
+		deleteErr := i.Client.DeleteAllExcept(ctx, &corev1.ServiceList{}, client.ObjectKey{
+			Namespace: svc.Namespace,
+			Name:      svc.Name,
+		}, &client.ListOptions{
+			Namespace:     svc.Namespace,
+			LabelSelector: r.LabelSelector(),
+		})
+		if deleteErr != nil {
+			i.logger.Error(deleteErr, "failed to delete all except deployment", "name", r.Name())
+		}
+
 		if err == nil {
 			resourceApplyDurationSeconds.With(labels...).Record(time.Since(startTime).Seconds())
 			resourceApplyTotal.WithSuccess(labels...).Increment()
