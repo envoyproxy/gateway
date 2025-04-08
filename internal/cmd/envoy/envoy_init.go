@@ -29,8 +29,8 @@ const (
 	DefaultEnvoyInitConfigFilename = "config.json"
 )
 
-func EnvoyInit(configPath string, zoneDiscoveryDisabled bool, zoneOverride string) error {
-	if zoneOverride != "" || zoneDiscoveryDisabled {
+func EnvoyInit(configPath string, zoneOverride string) error {
+	if zoneOverride != "" {
 		return writeConfig(configPath, zoneOverride)
 	}
 
@@ -45,7 +45,7 @@ func EnvoyInit(configPath string, zoneDiscoveryDisabled bool, zoneOverride strin
 		return fmt.Errorf("error getting node %q: %w", nodeName, err)
 	}
 
-	zone, err := buildLocalityZone(node, zoneOverride, zoneDiscoveryDisabled)
+	zone, err := buildLocalityZone(node, zoneOverride)
 	if err != nil {
 		return fmt.Errorf("error getting node topology zone: %w", err)
 	}
@@ -75,12 +75,9 @@ func getClient() (kubernetes.Interface, error) {
 }
 
 // buildLocalityZone configures the envoy locality zone using the Kubernetes node topology labels.
-func buildLocalityZone(node *corev1.Node, override string, discoveryDisabled bool) (string, error) {
+func buildLocalityZone(node *corev1.Node, override string) (string, error) {
 	if override != "" {
 		return override, nil
-	}
-	if discoveryDisabled {
-		return "", nil
 	}
 
 	zone, exists := node.Labels[corev1.LabelTopologyZone]

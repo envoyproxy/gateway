@@ -407,12 +407,6 @@ spec:
                       ConfigPath defines the file path to write the discovered zone information.
                       Default: /envoyconfigs/config.json
                     type: string
-                  zoneDiscoveryDisabled:
-                    description: |-
-                      ZoneDiscoveryDisabled defines whether to enable service zone discovery via
-                      topology.kubernetes.io/zone label on the underlying node
-                      Default: false
-                    type: boolean
                   zoneOverride:
                     description: ZoneOverride allows for manual configuration of  service
                       zone

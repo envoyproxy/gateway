@@ -170,9 +170,8 @@ func buildXdsCluster(args *xdsClusterArgs) *clusterv3.Cluster {
 				ZoneAwareLbConfig: &commonv3.LocalityLbConfig_ZoneAwareLbConfig{
 					// Potential future enhancement: differentiate between
 					// kubernetes topology-aware-routing and trafficDistribution
-					MinClusterSize: wrapperspb.UInt64(1),
-					// Pending https://github.com/envoyproxy/envoy/pull/38756
-					// ForceLocalityDirectRouting: wrapperspb.Bool(true),
+					MinClusterSize:             wrapperspb.UInt64(1),
+					ForceLocalityDirectRouting: true,
 				},
 			}
 		}

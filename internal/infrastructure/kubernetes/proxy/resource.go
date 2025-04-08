@@ -87,33 +87,37 @@ func expectedProxyInitContainers(
 	initManager *egv1a1.InitManager,
 	extraContainers []corev1.Container,
 ) []corev1.Container {
-	containers := append([]corev1.Container{
-		{
-			Name:            "init",
-			Image:           expectedInitManagerImage(initManager),
-			ImagePullPolicy: corev1.PullAlways,
-			Command:         []string{"envoy-gateway"},
-			Args:            expectedInitManagerArgs(initConfig),
-			Env: []corev1.EnvVar{{
-				Name: "NODE_NAME",
-				ValueFrom: &corev1.EnvVarSource{
-					FieldRef: &corev1.ObjectFieldSelector{
-						APIVersion: v1.Version,
-						FieldPath:  "spec.nodeName",
+	containers := []corev1.Container{}
+	if initConfig != nil && initConfig.EnableZoneDiscovery != nil && *initConfig.EnableZoneDiscovery {
+		containers = []corev1.Container{
+			{
+				Name:            "init",
+				Image:           expectedInitManagerImage(initManager),
+				ImagePullPolicy: corev1.PullAlways,
+				Command:         []string{"envoy-gateway"},
+				Args:            expectedInitManagerArgs(initConfig),
+				Env: []corev1.EnvVar{{
+					Name: "NODE_NAME",
+					ValueFrom: &corev1.EnvVarSource{
+						FieldRef: &corev1.ObjectFieldSelector{
+							APIVersion: v1.Version,
+							FieldPath:  "spec.nodeName",
+						},
+					},
+				}},
+				Resources:       egv1a1.DefaultInitManagerContainerResourceRequirements(),
+				SecurityContext: expectedInitManagerSecurityContext(containerSpec),
+				VolumeMounts: []corev1.VolumeMount{
+					{
+						Name:      "envoyconfigs",
+						ReadOnly:  false,
+						MountPath: "/envoyconfigs",
 					},
 				},
-			}},
-			Resources:       egv1a1.DefaultInitManagerContainerResourceRequirements(),
-			SecurityContext: expectedInitManagerSecurityContext(containerSpec),
-			VolumeMounts: []corev1.VolumeMount{
-				{
-					Name:      "envoyconfigs",
-					ReadOnly:  false,
-					MountPath: "/envoyconfigs",
-				},
 			},
-		},
-	}, extraContainers...)
+		}
+	}
+	containers = append(containers, extraContainers...)
 	return containers
 }
 
@@ -132,9 +136,6 @@ func expectedInitManagerArgs(cfg *egv1a1.InitConfig) []string {
 
 	if cfg.ConfigPath != nil {
 		args = append(args, fmt.Sprintf("--config-path=%s", *cfg.ConfigPath))
-	}
-	if cfg.ZoneDiscoveryDisabled != nil {
-		args = append(args, fmt.Sprintf("--disable-zone-discovery=%t", *cfg.ZoneDiscoveryDisabled))
 	}
 	if cfg.ZoneOverride != nil {
 		args = append(args, fmt.Sprintf("--override-zone=%s", *cfg.ZoneOverride))

@@ -102,10 +102,20 @@ func Test_expectedProxyInitContainers(t *testing.T) {
 		want []corev1.Container
 	}{
 		{
-			name: "testing",
+			name: "default",
 			args: args{
 				containerSpec:   &egv1a1.KubernetesContainerSpec{},
 				initConfig:      &egv1a1.InitConfig{},
+				initManager:     &egv1a1.InitManager{},
+				extraContainers: []corev1.Container{},
+			},
+			want: []corev1.Container{},
+		},
+		{
+			name: "zone-discovery-enabled",
+			args: args{
+				containerSpec:   &egv1a1.KubernetesContainerSpec{},
+				initConfig:      &egv1a1.InitConfig{EnableZoneDiscovery: ptr.To(true)},
 				initManager:     &egv1a1.InitManager{},
 				extraContainers: []corev1.Container{},
 			},

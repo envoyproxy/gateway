@@ -371,29 +371,6 @@ spec:
       dnsPolicy: ClusterFirst
       initContainers:
       - args:
-        - envoy
-        - init
-        command:
-        - envoy-gateway
-        env:
-        - name: NODE_NAME
-          valueFrom:
-            fieldRef:
-              apiVersion: v1
-              fieldPath: spec.nodeName
-        image: docker.io/envoyproxy/gateway-dev:latest
-        imagePullPolicy: Always
-        name: init
-        resources:
-          requests:
-            cpu: 50m
-            memory: 32Mi
-        securityContext:
-          privileged: true
-        volumeMounts:
-        - mountPath: /envoyconfigs
-          name: envoyconfigs
-      - args:
         - echo "Installing filter-foo"; wget -q https://example.com/download/filter_foo_v1.0.0.tgz
           -O - | tar -xz --directory=/lib filter_foo.so; echo "Done";
         command:

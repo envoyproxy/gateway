@@ -75,20 +75,19 @@ func getShutdownManagerCommand() *cobra.Command {
 // getEnvoyInitCommand returns the envoy init cobra command to be executed.
 func getEnvoyInitCommand() *cobra.Command {
 	var configPath string
-	var discoverZone bool
 	var overrideZone string
 
 	cmd := &cobra.Command{
 		Use:   "init",
 		Short: "Provides HTTP endpoint used in preStop hook to block until ready for pod shutdown.",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return envoy.EnvoyInit(configPath, discoverZone, overrideZone)
+			return envoy.EnvoyInit(configPath, overrideZone)
 		},
 	}
 	defaultConfigPath := fmt.Sprintf("%s/%s", envoy.DefaultEnvoyInitConfigDir, envoy.DefaultEnvoyInitConfigFilename)
 	cmd.PersistentFlags().StringVar(&configPath, "config-path", defaultConfigPath,
 		fmt.Sprintf("File path to write discovered zone information. Defaults to %s", defaultConfigPath))
-	cmd.PersistentFlags().BoolVar(&discoverZone, "disable-zone-discovery", false,
+	cmd.PersistentFlags().BoolVar(&discoverZone, "disable-zone-discovery", true,
 		"Whether to enable service zone discovery via topology.kubernetes.io/zone label on the underlying node.")
 	cmd.PersistentFlags().StringVar(&overrideZone, "override-zone", "",
 		"Override discovered region with custom string")

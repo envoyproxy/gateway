@@ -310,17 +310,17 @@ type ShutdownConfig struct {
 
 // InitConfig defines configuration for envoy init process.
 type InitConfig struct {
+	// EnableZoneDiscovery defines whether to enable service zone discovery via
+	// topology.kubernetes.io/zone label on the underlying node
+	// Default: false
+	//
+	// +optional
+	EnableZoneDiscovery *bool
 	// ConfigPath defines the file path to write the discovered zone information.
 	// Default: /envoyconfigs/config.json
 	//
 	// +optional
 	ConfigPath *string `json:"configPath,omitempty"`
-	// ZoneDiscoveryDisabled defines whether to enable service zone discovery via
-	// topology.kubernetes.io/zone label on the underlying node
-	// Default: false
-	//
-	// +optional
-	ZoneDiscoveryDisabled *bool `json:"zoneDiscoveryDisabled,omitempty"`
 	// ZoneOverride allows for manual configuration of  service zone
 	//
 	// +optional
