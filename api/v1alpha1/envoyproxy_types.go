@@ -315,7 +315,7 @@ type InitConfig struct {
 	// Default: false
 	//
 	// +optional
-	EnableZoneDiscovery *bool
+	EnableZoneDiscovery *bool `json:"enableZoneDiscovery,omitempty"`
 	// ConfigPath defines the file path to write the discovered zone information.
 	// Default: /envoyconfigs/config.json
 	//

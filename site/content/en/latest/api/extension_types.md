@@ -2438,7 +2438,7 @@ _Appears in:_
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `EnableZoneDiscovery` | _boolean_ |  false  |  | EnableZoneDiscovery defines whether to enable service zone discovery via<br />topology.kubernetes.io/zone label on the underlying node<br />Default: false |
+| `enableZoneDiscovery` | _boolean_ |  false  |  | EnableZoneDiscovery defines whether to enable service zone discovery via<br />topology.kubernetes.io/zone label on the underlying node<br />Default: false |
 | `configPath` | _string_ |  false  |  | ConfigPath defines the file path to write the discovered zone information.<br />Default: /envoyconfigs/config.json |
 | `zoneOverride` | _string_ |  false  |  | ZoneOverride allows for manual configuration of  service zone |
 
