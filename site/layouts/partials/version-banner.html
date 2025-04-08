@@ -1,6 +1,15 @@
 {{ $color := "primary" }}
 {{ $latest_version := .Site.Params.url_latest_version }}
 {{ $path := strings.TrimPrefix (add hugo.WorkingDir "/content/en/") $.File.Filename -}}
+
+{{ if strings.HasPrefix $path "latest" }}
+<div class="alert alert-warning">
+    Notice: This is pre-release documentation.
+    <br />
+    Please refer to the <a href="{{ $latest_version | safeURL }}" target="_blank">/docs</a> documentation for the most current information.
+</div>
+{{ end }}
+
 {{ range .Site.Params.versions -}}
 
 {{ $eol_time := time.AsTime .eol }}
