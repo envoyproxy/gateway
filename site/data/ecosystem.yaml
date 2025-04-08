@@ -23,4 +23,3 @@ adopters:
     url: "https://k0rdent.io/"
     logo: /logos/k0rdent.svg
     description: "k0rdent integrates with Envoy Gateway to offer advanced, high-performance traffic management within Kubernetes. k0rdent simplifies Envoy configuration, enabling users to easily define routing, security, and observability policies. This integration provides a robust, scalable, and secure ingress solution for applications deployed within the k0rdent-managed cluster."
-    
