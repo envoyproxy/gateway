@@ -501,12 +501,34 @@ func (r *gatewayAPIReconciler) subscribeAndUpdateStatus(ctx context.Context, ext
 
 // mergeRouteParentStatus merges the old and new RouteParentStatus.
 // This is needed because the RouteParentStatus doesn't support strategic merge patch yet.
+// It also removes any status.parents entries that are no longer referenced in the route's spec.parentRefs.
 func mergeRouteParentStatus(ns string, old, new []gwapiv1.RouteParentStatus) []gwapiv1.RouteParentStatus {
-	merged := make([]gwapiv1.RouteParentStatus, len(old))
-	_ = copy(merged, old)
+	// First, create a map of all parentRefs in the new status
+	// These represent the current valid parentRefs from spec.parentRefs
+	newParentRefs := make(map[string]bool)
+	for _, parent := range new {
+		// Create a unique key for each parentRef
+		key := parentRefToString(parent.ParentRef, ns)
+		newParentRefs[key] = true
+	}
+
+	// Filter out old entries that are no longer referenced in spec.parentRefs
+	var filteredOld []gwapiv1.RouteParentStatus
+	for _, existing := range old {
+		key := parentRefToString(existing.ParentRef, ns)
+		if newParentRefs[key] {
+			// Keep this entry as it's still referenced
+			filteredOld = append(filteredOld, existing)
+		}
+		// Skip entries that are no longer referenced
+	}
+
+	// Now merge the filtered old entries with the new ones
+	merged := make([]gwapiv1.RouteParentStatus, len(filteredOld))
+	_ = copy(merged, filteredOld)
 	for _, parent := range new {
 		found := -1
-		for i, existing := range old {
+		for i, existing := range filteredOld {
 			if isParentRefEqual(parent.ParentRef, existing.ParentRef, ns) {
 				found = i
 				break
@@ -519,6 +541,30 @@ func mergeRouteParentStatus(ns string, old, new []gwapiv1.RouteParentStatus) []g
 		}
 	}
 	return merged
+}
+
+// parentRefToString creates a unique string representation of a ParentReference
+func parentRefToString(ref gwapiv1.ParentReference, routeNS string) string {
+	defaultGroup := (*gwapiv1.Group)(&gwapiv1.GroupVersion.Group)
+	group := defaultGroup
+	if ref.Group != nil {
+		group = ref.Group
+	}
+
+	defaultKind := gwapiv1.Kind(resource.KindGateway)
+	kind := &defaultKind
+	if ref.Kind != nil {
+		kind = ref.Kind
+	}
+
+	// If the parent's namespace is not set, default to the namespace of the Route.
+	defaultNS := gwapiv1.Namespace(routeNS)
+	namespace := &defaultNS
+	if ref.Namespace != nil {
+		namespace = ref.Namespace
+	}
+
+	return fmt.Sprintf("%s/%s/%s/%s", *group, *kind, *namespace, ref.Name)
 }
 
 func isParentRefEqual(ref1, ref2 gwapiv1.ParentReference, routeNS string) bool {
