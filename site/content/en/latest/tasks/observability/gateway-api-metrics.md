@@ -99,7 +99,7 @@ To access the Grafana dashboards, follow these steps:
    - Username: `admin`
    - Password: `admin`
 
-A set of Grafana dashboards is provided by [Gateway API State Metrics][gasm]. These dashboards are available
+A set of Grafana dashboards is provided by [Gateway API State Metrics](https://github.com/Kuadrant/gateway-api-state-metrics/tree/main/src/dashboards). These dashboards are available
 in [./config/examples/dashboards](https://github.com/Kuadrant/gateway-api-state-metrics/tree/main/config/examples/dashboards)
 and on [grafana.com](https://grafana.com/grafana/dashboards/?search=Gateway+API+State).
 To import them manually navigate to the Grafana UI and select **Dashboards** > **New** > **Import**.
