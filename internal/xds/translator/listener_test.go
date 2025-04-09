@@ -179,6 +179,25 @@ func Test_addServerNamesMatch(t *testing.T) {
 			wantErr:     false, // Should not error with UDP listener
 		},
 		{
+			name: "HTTP3 UDP listener",
+			xdsListener: &listenerv3.Listener{
+				Name: "http3-listener",
+				Address: &corev3.Address{
+					Address: &corev3.Address_SocketAddress{
+						SocketAddress: &corev3.SocketAddress{
+							Protocol: corev3.SocketAddress_UDP,
+						},
+					},
+				},
+				UdpListenerConfig: &listenerv3.UdpListenerConfig{
+					QuicOptions: &listenerv3.QuicProtocolOptions{},
+				},
+			},
+			filterChain: &listenerv3.FilterChain{},
+			hostnames:   []string{"example.com"},
+			wantErr:     false, // Should not error with HTTP3 UDP listener
+		},
+		{
 			name: "TCP listener",
 			xdsListener: &listenerv3.Listener{
 				Name: "tcp-listener",
@@ -222,8 +241,15 @@ func Test_addServerNamesMatch(t *testing.T) {
 
 			// Check if filter chain match was set correctly for non-wildcard hostnames
 			if len(tt.hostnames) > 0 && tt.hostnames[0] != "*" {
-				assert.NotNil(t, tt.filterChain.FilterChainMatch, "FilterChainMatch should be set for non-wildcard hostnames")
-				assert.Equal(t, tt.hostnames, tt.filterChain.FilterChainMatch.ServerNames, "ServerNames should match hostnames")
+				// For UDP listeners, FilterChainMatch should not be set
+				if tt.xdsListener != nil && tt.xdsListener.GetAddress() != nil &&
+					tt.xdsListener.GetAddress().GetSocketAddress() != nil &&
+					tt.xdsListener.GetAddress().GetSocketAddress().GetProtocol() == corev3.SocketAddress_UDP {
+					assert.Nil(t, tt.filterChain.FilterChainMatch, "FilterChainMatch should not be set for UDP listeners")
+				} else {
+					assert.NotNil(t, tt.filterChain.FilterChainMatch, "FilterChainMatch should be set for non-wildcard hostnames on TCP listeners")
+					assert.Equal(t, tt.hostnames, tt.filterChain.FilterChainMatch.ServerNames, "ServerNames should match hostnames")
+				}
 			}
 
 			// Check if TLS inspector filter was added for TCP listeners with non-wildcard hostnames

@@ -511,16 +511,19 @@ func buildEarlyHeaderMutation(headers *ir.HeaderSettings) []*corev3.TypedExtensi
 }
 
 func addServerNamesMatch(xdsListener *listenerv3.Listener, filterChain *listenerv3.FilterChain, hostnames []string) error {
-	// Dont add a filter chain match if the hostname is a wildcard character.
+	// Don't add a filter chain match if the hostname is a wildcard character or if the listener is UDP (HTTP3)
 	if len(hostnames) > 0 && hostnames[0] != "*" {
-		filterChain.FilterChainMatch = &listenerv3.FilterChainMatch{
-			ServerNames: hostnames,
-		}
+		// Only add ServerNameMatch for TCP listeners, not for UDP (HTTP3) listeners
+		if xdsListener == nil || xdsListener.GetAddress().GetSocketAddress().GetProtocol() != corev3.SocketAddress_UDP {
+			filterChain.FilterChainMatch = &listenerv3.FilterChainMatch{
+				ServerNames: hostnames,
+			}
 
-		// Only add TLS inspector filter if the listener is not nil and is a TCP listener
-		if xdsListener != nil && xdsListener.GetAddress().GetSocketAddress().GetProtocol() == corev3.SocketAddress_TCP {
-			if err := addXdsTLSInspectorFilter(xdsListener); err != nil {
-				return err
+			// Only add TLS inspector filter if the listener is not nil and is a TCP listener
+			if xdsListener != nil && xdsListener.GetAddress().GetSocketAddress().GetProtocol() == corev3.SocketAddress_TCP {
+				if err := addXdsTLSInspectorFilter(xdsListener); err != nil {
+					return err
+				}
 			}
 		}
 	}
