@@ -1,33 +1,37 @@
-# The global settings for the Envoy Gateway Helm chart.
-# These values will be used if the values are not overridden in the other sections.
+# Global settings
+# If set, these override image-specific values: useful when installing the chart in a private registry environment.
+# Override image-specific values directly if a global override is not desired.
 global:
-  images:
-    envoyGateway:
-      # This is the full image name including the hub, repo, and tag.
-      image: ${GatewayImage}
-      # Specify image pull policy if default behavior isn't desired.
-      # Default behavior: latest images will be Always else IfNotPresent.
-      pullPolicy: ${GatewayImagePullPolicy}
-      # List of secrets in the same namespace of the component that can be used to pull images from private repositories.
-      pullSecrets: []
-    ratelimit:
-      # This is the full image name including the hub, repo, and tag.
-      image: "docker.io/envoyproxy/ratelimit:master"
-      # Specify image pull policy if default behavior isn't desired.
-      # Default behavior: latest images will be Always else IfNotPresent.
-      pullPolicy: IfNotPresent
-      # List of secrets in the same namespace of the component that can be used to pull images from private repositories.
-      pullSecrets: []
+  imageRegistry: ""
+  imagePullSecrets: []
+
 podDisruptionBudget:
   minAvailable: 0
   # maxUnavailable: 1
 
+ratelimit:
+  image:
+    # -- Default set via REGISTRY environment variable during chart build
+    registry: "${Registry}"
+    # -- Default set via RATELIMIT_REPOSITORY environment variable during chart build
+    repository: "${RatelimitRepository}"
+    # -- Default set via RATELIMIT_TAG environment variable during chart build
+    tag: "${RatelimitTag}"
+  imagePullSecrets: []
+  imagePullPolicy: "IfNotPresent"
+
+
 deployment:
   envoyGateway:
     image:
-      repository: ""
-      tag: ""
-    imagePullPolicy: ""
+      # -- Default set via REGISTRY environment variable during chart build
+      registry: "${Registry}"
+      # -- Default set via REPOSITORY environment variable during chart build
+      repository: "${GatewayRepository}"
+      # -- Default set via TAG environment variable during chart build
+      tag: "${GatewayTag}"
+    # -- Default set via IMAGE_PULL_POLICY environment variable during chart build
+    imagePullPolicy: "${GatewayImagePullPolicy}"
     imagePullSecrets: []
     resources:
       limits:

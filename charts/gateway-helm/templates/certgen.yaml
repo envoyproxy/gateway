@@ -48,7 +48,7 @@ spec:
         {{- end }}
         securityContext:
           {{- toYaml .Values.certgen.job.securityContext | nindent 10 }}
-      {{- include "eg.image.pullSecrets" . | nindent 6 }}
+      imagePullSecrets: {{- include "eg.image.pullSecrets" . | nindent 8 }}
       {{- with .Values.certgen.job.affinity }}
       affinity:
         {{- toYaml . | nindent 8 }}

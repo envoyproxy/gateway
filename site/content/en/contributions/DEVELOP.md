@@ -60,14 +60,14 @@ __Note:__ The `golangci-lint` configuration resides [here](https://github.com/en
 
 ### Building and Pushing the Image
 
-* Run `IMAGE=docker.io/you/gateway-dev make image` to build the docker image.
-* Run `IMAGE=docker.io/you/gateway-dev make push-multiarch` to build and push the multi-arch docker image.
+* Run `REGISTRY=docker.io REPOSITORY=you/gateway-dev make image` to build the docker image.
+* Run `REGISTRY=docker.io REPOSITORY=you/gateway-dev make push-multiarch` to build and push the multi-arch docker image.
 
-__Note:__  Replace `IMAGE` with your registry's image name.
+__Note:__  Replace `REPOSITORY` with your registry's image name.
 
 ### Raising a PR
 
-* Run `make generate` and push the generated files along with your commit, if your PR contains any **API** changes (changes in `/api` folder), you've added some unit tests or you've updated the modules used in the project. 
+* Run `make generate` and push the generated files along with your commit, if your PR contains any **API** changes (changes in `/api` folder), you've added some unit tests or you've updated the modules used in the project.
 
 ### Deploying Envoy Gateway for Test/Dev
 
@@ -86,7 +86,7 @@ __Note:__  Replace `IMAGE` with your registry's image name.
 ### Deploying Envoy Gateway in Kubernetes
 
 * Run `TAG=latest make kube-deploy` to deploy Envoy Gateway using the latest image into a Kubernetes cluster (linked to
-  the current kube context). Preface the command with `IMAGE` or replace `TAG` to use a different Envoy Gateway image or
+  the current kube context). Preface the command with `REGISTRY` and `REPOSITORY` or replace `TAG` to use a different Envoy Gateway image or
   tag.
 * Run `make kube-undeploy` to uninstall Envoy Gateway from the cluster.
 
@@ -120,7 +120,7 @@ workarounds to run conformance tests:
   uninstall Envoy Gateway.
 * Install and run [Docker Mac Net Connect][mac_connect] and then run `TAG=latest make conformance`.
 
-__Note:__  Preface commands with `IMAGE` or replace `TAG` to use a different Envoy Gateway image or tag. If `TAG`
+__Note:__  Preface commands with `REGISTRY` and `REPOSITORY` or replace `TAG` to use a different Envoy Gateway image or tag. If `TAG`
 is unspecified, the short SHA of your current branch is used.
 
 ### Debugging the Envoy Config
@@ -162,13 +162,13 @@ The performance and scalability concerns come from several aspects for control-p
 - The consumption of memory and CPU.
 - The rate of configuration changes.
 
-The benchmark test is running on a [Kind][Kind] cluster, you can start a Kind cluster and 
+The benchmark test is running on a [Kind][Kind] cluster, you can start a Kind cluster and
 run benchmark test on it by executing `make benchmark`.
 
 The benchmark report will be included in the release artifacts, you can learn more by downloading
 the detailed benchmark report, namely `benchmark_report.zip`.
 
-Here are some brief benchmark reports about Envoy Gateway: 
+Here are some brief benchmark reports about Envoy Gateway:
 
 - It will take up nearly 550MiB memory and 11s total CPU time for (1 GatewayClass + 1 Gateway + 500 HTTRoutes) settings
 

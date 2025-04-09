@@ -129,7 +129,12 @@ helm-readme-gen.%:
 	$(eval CHART_NAME := $(COMMAND))
 	# use production ENV to generate helm api doc
 	@if test -f "charts/${CHART_NAME}/values.tmpl.yaml"; then \
-		ImageRepository=docker.io/envoyproxy/gateway ImageTag=latest ImagePullPolicy=IfNotPresent \
+  		Registry=docker.io\
+			GatewayRepository=envoyproxy/gateway\
+			GatewayTag=latest\
+			GatewayImagePullPolicy=IfNotPresent\
+			RatelimitRepository=envoyproxy/ratelimit\
+			RatelimitTag=master\
 		envsubst < charts/${CHART_NAME}/values.tmpl.yaml > ./charts/${CHART_NAME}/values.yaml; \
 	fi
 

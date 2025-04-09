@@ -1,14 +1,17 @@
 global:
-  images:
-    envoyGateway:
-      image: "private-hub/envoyproxy/gateway:abcdef12"
-      pullPolicy: Always
-      pullSecrets:
-        - name: "secret1"
-        - name: "secret2"
-    ratelimit:
-      image: "private-hub/envoyproxy/ratelimit:test"
-      pullPolicy: Always
-      pullSecrets:
-        - name: "secret3"
-        - name: "secret4"
+  imageRegistry: private-hub
+  imagePullSecrets:
+    - name: "secret1"
+    - name: "secret2"
+
+deployment:
+  envoyGateway:
+    image:
+      repository: "envoyproxy/gateway"
+      tag: "abcdef12"
+    imagePullPolicy: Always
+ratelimit:
+  image:
+    repository: "envoyproxy/ratelimit"
+    tag: "test"
+  imagePullPolicy: Always

@@ -3,7 +3,8 @@
 deployment:
   envoyGateway:
     image:
-      repository: private-hub/envoyproxy/gateway
+      registry: private-hub
+      repository: envoyproxy/gateway
       tag: abcdef12
     imagePullPolicy: IfNotPresent
     imagePullSecrets:

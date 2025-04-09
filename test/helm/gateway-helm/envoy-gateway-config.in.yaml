@@ -1,8 +1,21 @@
 global:
-  images:
-    envoyGateway:
-      image: "docker.io/envoyproxy/gateway-dev:latest"
-      pullPolicy: Always
+  imageRegistry: "docker.io"
+
+deployment:
+  envoyGateway:
+    image:
+      repository: "envoyproxy/gateway-dev"
+      tag: "latest"
+    imagePullPolicy: Always
+
+# maybe nuke this
+ratelimit:
+  image:
+    registry: "private-hub"
+    repository: "envoyproxy/ratelimit"
+    tag: "master"
+  imagePullPolicy: Always
+
 config:
   envoyGateway:
     gateway:

@@ -62,9 +62,10 @@ To uninstall the chart:
 | certgen | object | `{"job":{"affinity":{},"annotations":{},"args":[],"nodeSelector":{},"resources":{},"securityContext":{"allowPrivilegeEscalation":false,"capabilities":{"drop":["ALL"]},"privileged":false,"readOnlyRootFilesystem":true,"runAsGroup":65534,"runAsNonRoot":true,"runAsUser":65534,"seccompProfile":{"type":"RuntimeDefault"}},"tolerations":[],"ttlSecondsAfterFinished":30},"rbac":{"annotations":{},"labels":{}}}` | Certgen is used to generate the certificates required by EnvoyGateway. If you want to construct a custom certificate, you can generate a custom certificate through Cert-Manager before installing EnvoyGateway. Certgen will not overwrite the custom certificate. Please do not manually modify `values.yaml` to disable certgen, it may cause EnvoyGateway OIDC,OAuth2,etc. to not work as expected. |
 | config.envoyGateway | object | `{"gateway":{"controllerName":"gateway.envoyproxy.io/gatewayclass-controller"},"logging":{"level":{"default":"info"}},"provider":{"type":"Kubernetes"}}` | EnvoyGateway configuration. Visit https://gateway.envoyproxy.io/docs/api/extension_types/#envoygateway to view all options. |
 | createNamespace | bool | `false` |  |
-| deployment.envoyGateway.image.repository | string | `""` |  |
-| deployment.envoyGateway.image.tag | string | `""` |  |
-| deployment.envoyGateway.imagePullPolicy | string | `""` |  |
+| deployment.envoyGateway.image.registry | string | `"docker.io"` | Default set via REGISTRY environment variable during chart build |
+| deployment.envoyGateway.image.repository | string | `"envoyproxy/gateway"` | Default set via REPOSITORY environment variable during chart build |
+| deployment.envoyGateway.image.tag | string | `"latest"` | Default set via TAG environment variable during chart build |
+| deployment.envoyGateway.imagePullPolicy | string | `"IfNotPresent"` | Default set via IMAGE_PULL_POLICY environment variable during chart build |
 | deployment.envoyGateway.imagePullSecrets | list | `[]` |  |
 | deployment.envoyGateway.resources.limits.memory | string | `"1024Mi"` |  |
 | deployment.envoyGateway.resources.requests.cpu | string | `"100m"` |  |
@@ -97,12 +98,8 @@ To uninstall the chart:
 | deployment.ports[3].targetPort | int | `19001` |  |
 | deployment.priorityClassName | string | `nil` |  |
 | deployment.replicas | int | `1` |  |
-| global.images.envoyGateway.image | string | `nil` |  |
-| global.images.envoyGateway.pullPolicy | string | `nil` |  |
-| global.images.envoyGateway.pullSecrets | list | `[]` |  |
-| global.images.ratelimit.image | string | `"docker.io/envoyproxy/ratelimit:master"` |  |
-| global.images.ratelimit.pullPolicy | string | `"IfNotPresent"` |  |
-| global.images.ratelimit.pullSecrets | list | `[]` |  |
+| global.imagePullSecrets | list | `[]` |  |
+| global.imageRegistry | string | `""` |  |
 | hpa.behavior | object | `{}` |  |
 | hpa.enabled | bool | `false` |  |
 | hpa.maxReplicas | int | `1` |  |
@@ -110,6 +107,11 @@ To uninstall the chart:
 | hpa.minReplicas | int | `1` |  |
 | kubernetesClusterDomain | string | `"cluster.local"` |  |
 | podDisruptionBudget.minAvailable | int | `0` |  |
+| ratelimit.image.registry | string | `"docker.io"` | Default set via REGISTRY environment variable during chart build |
+| ratelimit.image.repository | string | `"envoyproxy/ratelimit"` | Default set via RATELIMIT_REPOSITORY environment variable during chart build |
+| ratelimit.image.tag | string | `"master"` | Default set via RATELIMIT_TAG environment variable during chart build |
+| ratelimit.imagePullPolicy | string | `"IfNotPresent"` |  |
+| ratelimit.imagePullSecrets | list | `[]` |  |
 | service.annotations | object | `{}` |  |
 | service.trafficDistribution | string | `""` |  |
 

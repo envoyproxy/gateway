@@ -52,7 +52,12 @@ helm-generate.%:
 	$(eval COMMAND := $(word 1,$(subst ., ,$*)))
 	$(eval CHART_NAME := $(COMMAND))
 	@if test -f "charts/${CHART_NAME}/values.tmpl.yaml"; then \
-  		GatewayImage=${IMAGE}:${TAG} GatewayImagePullPolicy=${IMAGE_PULL_POLICY} \
+  		Registry=${REGISTRY}\
+			GatewayRepository=${REPOSITORY}\
+			GatewayTag=${TAG}\
+			GatewayImagePullPolicy=${IMAGE_PULL_POLICY}\
+			RatelimitRepository=${RATELIMIT_REPOSITORY}\
+			RatelimitTag=${RATELIMIT_TAG}\
   		envsubst < charts/${CHART_NAME}/values.tmpl.yaml > ./charts/${CHART_NAME}/values.yaml; \
   	fi
 	helm dependency update charts/${CHART_NAME}
@@ -62,7 +67,7 @@ helm-generate.%:
 	@if [ ${CHART_NAME} == "gateway-addons-helm" ]; then \
   		$(call log, "Run jsonnet generate for dashboards in chart: ${CHART_NAME}!"); \
   		workDir="charts/${CHART_NAME}/dashboards"; \
-  		cd $$workDir && ../../../go tool jb install && cd ../../..; \
+  		cd $$workDir && go tool jb install && cd ../../..; \
   		for file in $$(find $${workDir} -maxdepth 1 -name '*.libsonnet'); do \
   		    name=$$(basename $$file .libsonnet); \
   		    go tool jsonnet -J $${workDir}/vendor $${workDir}/$${name}.libsonnet > $${workDir}/$${name}.gen.json; \
@@ -76,6 +81,6 @@ helm-generate.%:
   	  	if [ ${CHART_NAME} == "gateway-addons-helm" ]; then \
   	  		helm template ${CHART_NAME} charts/${CHART_NAME} -f $${file} > test/helm/${CHART_NAME}/$$output --namespace=monitoring; \
   	  	else \
-			helm template ${CHART_NAME} charts/${CHART_NAME} -f $${file} > test/helm/${CHART_NAME}/$$output --namespace=envoy-gateway-system; \
+				helm template ${CHART_NAME} charts/${CHART_NAME} -f $${file} > test/helm/${CHART_NAME}/$$output --namespace=envoy-gateway-system; \
   	  	fi; \
 	done
