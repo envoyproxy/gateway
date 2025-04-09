@@ -49,6 +49,8 @@ type ResourceRender struct {
 	DNSDomain string
 
 	ShutdownManager *egv1a1.ShutdownManager
+
+	InitManager *egv1a1.InitManager
 }
 
 func NewResourceRender(ns string, dnsDomain string, infra *ir.ProxyInfra, gateway *egv1a1.EnvoyGateway) *ResourceRender {
@@ -57,6 +59,7 @@ func NewResourceRender(ns string, dnsDomain string, infra *ir.ProxyInfra, gatewa
 		DNSDomain:       dnsDomain,
 		infra:           infra,
 		ShutdownManager: gateway.GetEnvoyGatewayProvider().GetEnvoyGatewayKubeProvider().ShutdownManager,
+		InitManager:     gateway.GetEnvoyGatewayProvider().GetEnvoyGatewayKubeProvider().InitManager,
 	}
 }
 
@@ -276,10 +279,12 @@ func (r *ResourceRender) Deployment() (*appsv1.Deployment, error) {
 
 	proxyConfig := r.infra.GetProxyConfig()
 	// Get expected bootstrap configurations rendered ProxyContainers
-	containers, err := expectedProxyContainers(r.infra, deploymentConfig.Container, proxyConfig.Spec.Shutdown, r.ShutdownManager, r.Namespace, r.DNSDomain)
+	containers, err := expectedProxyContainers(r.infra, deploymentConfig.Container, proxyConfig.Spec.Init, proxyConfig.Spec.Shutdown, r.ShutdownManager, r.Namespace, r.DNSDomain)
 	if err != nil {
 		return nil, err
 	}
+
+	initContainers := expectedProxyInitContainers(deploymentConfig.Container, proxyConfig.Spec.Init, r.InitManager, deploymentConfig.InitContainers)
 
 	dpAnnotations := r.infra.GetProxyMetadata().Annotations
 	podAnnotations := r.getPodAnnotations(dpAnnotations, deploymentConfig.Pod)
@@ -312,9 +317,9 @@ func (r *ResourceRender) Deployment() (*appsv1.Deployment, error) {
 				},
 				Spec: corev1.PodSpec{
 					Containers:                    containers,
-					InitContainers:                deploymentConfig.InitContainers,
+					InitContainers:                initContainers,
 					ServiceAccountName:            r.Name(),
-					AutomountServiceAccountToken:  ptr.To(false),
+					AutomountServiceAccountToken:  ptr.To(true),
 					TerminationGracePeriodSeconds: expectedTerminationGracePeriodSeconds(proxyConfig.Spec.Shutdown),
 					DNSPolicy:                     corev1.DNSClusterFirst,
 					RestartPolicy:                 corev1.RestartPolicyAlways,
@@ -371,7 +376,7 @@ func (r *ResourceRender) DaemonSet() (*appsv1.DaemonSet, error) {
 	proxyConfig := r.infra.GetProxyConfig()
 
 	// Get expected bootstrap configurations rendered ProxyContainers
-	containers, err := expectedProxyContainers(r.infra, daemonSetConfig.Container, proxyConfig.Spec.Shutdown, r.ShutdownManager, r.Namespace, r.DNSDomain)
+	containers, err := expectedProxyContainers(r.infra, daemonSetConfig.Container, proxyConfig.Spec.Init, proxyConfig.Spec.Shutdown, r.ShutdownManager, r.Namespace, r.DNSDomain)
 	if err != nil {
 		return nil, err
 	}

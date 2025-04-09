@@ -398,6 +398,26 @@ spec:
                     rule: (has(self.before) && !has(self.after)) || (!has(self.before)
                       && has(self.after))
                 type: array
+              init:
+                description: Init defines configuration for the envoy initialization
+                  process.
+                properties:
+                  configPath:
+                    description: |-
+                      ConfigPath defines the file path to write the discovered zone information.
+                      Default: /envoyconfigs/config.json
+                    type: string
+                  enableZoneDiscovery:
+                    description: |-
+                      EnableZoneDiscovery defines whether to enable service zone discovery via
+                      topology.kubernetes.io/zone label on the underlying node
+                      Default: false
+                    type: boolean
+                  zoneOverride:
+                    description: ZoneOverride allows for manual configuration of  service
+                      zone
+                    type: string
+                type: object
               ipFamily:
                 description: |-
                   IPFamily specifies the IP family for the EnvoyProxy fleet.

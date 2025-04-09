@@ -1,12 +1,10 @@
 - circuitBreakers:
     thresholds:
     - maxRetries: 1024
-  commonLbConfig:
-    localityWeightedLbConfig: {}
+  commonLbConfig: {}
   connectTimeout: 10s
   dnsLookupFamily: V4_PREFERRED
   dnsRefreshRate: 30s
-  lbPolicy: LEAST_REQUEST
   loadAssignment:
     clusterName: one_example_com_443
     endpoints:
@@ -20,6 +18,14 @@
       loadBalancingWeight: 1
       locality:
         region: one_example_com_443/backend/-1
+  loadBalancingPolicy:
+    policies:
+    - typedExtensionConfig:
+        name: envoy.load_balancing_policies.least_request
+        typedConfig:
+          '@type': type.googleapis.com/envoy.extensions.load_balancing_policies.least_request.v3.LeastRequest
+          localityLbConfig:
+            localityWeightedLbConfig: {}
   name: one_example_com_443
   perConnectionBufferLimitBytes: 32768
   respectDnsTtl: true
@@ -36,12 +42,10 @@
 - circuitBreakers:
     thresholds:
     - maxRetries: 1024
-  commonLbConfig:
-    localityWeightedLbConfig: {}
+  commonLbConfig: {}
   connectTimeout: 10s
   dnsLookupFamily: V4_PREFERRED
   dnsRefreshRate: 30s
-  lbPolicy: LEAST_REQUEST
   loadAssignment:
     clusterName: two_example_com_80
     endpoints:
@@ -55,6 +59,14 @@
       loadBalancingWeight: 1
       locality:
         region: two_example_com_80/backend/-1
+  loadBalancingPolicy:
+    policies:
+    - typedExtensionConfig:
+        name: envoy.load_balancing_policies.least_request
+        typedConfig:
+          '@type': type.googleapis.com/envoy.extensions.load_balancing_policies.least_request.v3.LeastRequest
+          localityLbConfig:
+            localityWeightedLbConfig: {}
   name: two_example_com_80
   perConnectionBufferLimitBytes: 32768
   respectDnsTtl: true
