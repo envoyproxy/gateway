@@ -1848,13 +1848,13 @@ func (t *Translator) processBackendDestinationSetting(name string, backendRef gw
 
 // serviceAppProtocolToIRAppProtocol translates the appProtocol string into an ir.AppProtocol.
 //
-// When supportLegacy is enabled, `grpc` will be parsed as a valid option for HTTP2.
+// When grpcCompatibility is enabled, `grpc` will be parsed as a valid option for HTTP2.
 // See https://github.com/envoyproxy/gateway/issues/5485#issuecomment-2731322578.
-func serviceAppProtocolToIRAppProtocol(ap string, defaultProtocol ir.AppProtocol, supportLegacy bool) ir.AppProtocol {
+func serviceAppProtocolToIRAppProtocol(ap string, defaultProtocol ir.AppProtocol, grpcCompatibility bool) ir.AppProtocol {
 	switch {
 	case ap == "kubernetes.io/h2c":
 		return ir.HTTP2
-	case ap == "grpc" && supportLegacy:
+	case ap == "grpc" && grpcCompatibility:
 		return ir.GRPC
 	default:
 		return defaultProtocol
