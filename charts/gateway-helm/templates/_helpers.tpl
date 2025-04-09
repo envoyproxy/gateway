@@ -65,36 +65,84 @@ Create the name of the service account to use
 The name of the Envoy Gateway image.
 */}}
 {{- define "eg.image" -}}
-{{- if .Values.deployment.envoyGateway.image.repository }}
-{{- .Values.deployment.envoyGateway.image.repository }}:{{ .Values.deployment.envoyGateway.image.tag | default .Values.global.images.envoyGateway.tag | default .Chart.AppVersion }}
-{{- else if .Values.global.images.envoyGateway.image }}
-{{- .Values.global.images.envoyGateway.image }}
-{{- else }}
+{{/* if deployment-specific repository is defined, it takes precedence */}}
+{{- if .Values.deployment.envoyGateway.image.repository -}}
+{{/*  if global.imageRegistry is defined, it takes precedence always */}}
+{{-   if .Values.global.imageRegistry -}}
+{{-     $repositoryParts := splitn "/" 2 .Values.deployment.envoyGateway.image.repository -}}
+{{-     $registryName := .Values.global.imageRegistry -}}
+{{-     $repositoryName := $repositoryParts._1 -}}
+{{-     $imageTag := default .Chart.AppVersion .Values.deployment.envoyGateway.image.tag -}}
+{{-     printf "%s/%s:%s" $registryName $repositoryName $imageTag -}}
+{{/*  if global.imageRegistry is undefined, take repository as is */}}
+{{-   else -}}
+{{-     $imageTag := default .Chart.AppVersion .Values.deployment.envoyGateway.image.tag -}}
+{{-     printf "%s:%s" .Values.deployment.envoyGateway.image.repository $imageTag -}}
+{{-   end -}}
+{{/* else, global image is used if defined */}}
+{{- else if .Values.global.images.envoyGateway.image -}}
+{{-   $imageParts := splitn "/" 2 .Values.global.images.envoyGateway.image -}}
+{{/*    if global.imageRegistry is defined, it takes precedence always */}}
+{{-   $registryName := default $imageParts._0 .Values.global.imageRegistry -}}
+{{-   $repositoryTag := $imageParts._1 -}}
+{{-   $repositoryParts := splitn ":" 2 $repositoryTag -}}
+{{-   $repositoryName := $repositoryParts._0 -}}
+{{-   $imageTag := $repositoryParts._1 -}}
+{{-   printf "%s/%s:%s" $registryName $repositoryName $imageTag -}}
+{{- else -}}
 docker.io/envoyproxy/gateway:{{ .Chart.Version }}
-{{- end }}
-{{- end }}
+{{- end -}}
+{{- end -}}
 
 {{/*
 Pull policy for the Envoy Gateway image.
 */}}
 {{- define "eg.image.pullPolicy" -}}
-{{ .Values.deployment.envoyGateway.imagePullPolicy | default .Values.global.images.envoyGateway.pullPolicy | default "IfNotPresent" }}
+{{- default .Values.deployment.envoyGateway.imagePullPolicy .Values.global.images.envoyGateway.pullPolicy -}}
 {{- end }}
 
 {{/*
 Pull secrets for the Envoy Gateway image.
 */}}
 {{- define "eg.image.pullSecrets" -}}
-{{- if .Values.deployment.envoyGateway.imagePullSecrets -}}
-imagePullSecrets:
+{{- if .Values.global.imagePullSecrets -}}
+{{ toYaml .Values.global.imagePullSecrets }}
+{{- else if .Values.deployment.envoyGateway.imagePullSecrets -}}
 {{ toYaml .Values.deployment.envoyGateway.imagePullSecrets }}
 {{- else if .Values.global.images.envoyGateway.pullSecrets -}}
-imagePullSecrets:
 {{ toYaml .Values.global.images.envoyGateway.pullSecrets }}
 {{- else -}}
-imagePullSecrets: []
+{{ toYaml list }}
 {{- end }}
 {{- end }}
+
+{{/*
+The name of the Envoy Ratelimit image.
+*/}}
+{{- define "eg.ratelimit.image" -}}
+{{-   $imageParts := splitn "/" 2 .Values.global.images.ratelimit.image -}}
+{{/*    if global.imageRegistry is defined, it takes precedence always */}}
+{{-   $registryName := default $imageParts._0 .Values.global.imageRegistry -}}
+{{-   $repositoryTag := $imageParts._1 -}}
+{{-   $repositoryParts := splitn ":" 2 $repositoryTag -}}
+{{-   $repositoryName := $repositoryParts._0 -}}
+{{-   $imageTag := default .Chart.AppVersion $repositoryParts._1 -}}
+{{-   printf "%s/%s:%s" $registryName $repositoryName $imageTag -}}
+{{- end -}}
+
+{{/*
+Pull secrets for the Envoy Ratelimit image.
+*/}}
+{{- define "eg.ratelimit.image.pullSecrets" -}}
+{{- if .Values.global.imagePullSecrets }}
+{{ toYaml .Values.global.imagePullSecrets }}
+{{- else if .Values.global.images.ratelimit.pullSecrets -}}
+{{ toYaml .Values.global.images.ratelimit.pullSecrets }}
+{{- else -}}
+{{ toYaml list }}
+{{- end }}
+{{- end }}
+
 
 {{/*
 The default Envoy Gateway configuration.
@@ -105,16 +153,9 @@ provider:
   kubernetes:
     rateLimitDeployment:
       container:
-        {{- if .Values.global.images.ratelimit.image }}
-        image: {{ .Values.global.images.ratelimit.image }}
-        {{- else }}
-        image: "docker.io/envoyproxy/ratelimit:master"
-        {{- end }}
-      {{- with .Values.global.images.ratelimit.pullSecrets }}
+        image: {{ include "eg.ratelimit.image" . }}
       pod:
-        imagePullSecrets:
-        {{- toYaml . | nindent 10 }}
-      {{- end }}
+        imagePullSecrets: {{- include "eg.ratelimit.image.pullSecrets" . | nindent 10 }}
       {{- with .Values.global.images.ratelimit.pullPolicy }}
       patch:
         type: StrategicMerge

@@ -37,7 +37,7 @@ data:
       kubernetes:
         rateLimitDeployment:
           container:
-            image: private-hub/envoyproxy/ratelimit:test
+            image: private.registry/envoyproxy/ratelimit:master
           patch:
             type: StrategicMerge
             value:
@@ -45,14 +45,12 @@ data:
                 template:
                   spec:
                     containers:
-                    - imagePullPolicy: Always
+                    - imagePullPolicy: IfNotPresent
                       name: envoy-ratelimit
           pod:
-            imagePullSecrets:
-            - name: secret3
-            - name: secret4
+            imagePullSecrets: []
         shutdownManager:
-          image: private-hub/envoyproxy/gateway:abcdef12
+          image: private.registry/envoy/gateway:abcdef
       type: Kubernetes
 ---
 # Source: gateway-helm/templates/envoy-gateway-rbac.yaml
@@ -400,7 +398,7 @@ spec:
               fieldPath: metadata.namespace
         - name: KUBERNETES_CLUSTER_DOMAIN
           value: cluster.local
-        image: private-hub/envoyproxy/gateway:abcdef12
+        image: private.registry/envoy/gateway:abcdef
         imagePullPolicy: Always
         livenessProbe:
           httpGet:
@@ -449,8 +447,7 @@ spec:
           name: certs
           readOnly: true
       imagePullSecrets:
-        - name: secret1
-        - name: secret2
+        []
       serviceAccountName: envoy-gateway
       terminationGracePeriodSeconds: 10
       volumes:
@@ -559,7 +556,7 @@ spec:
               fieldPath: metadata.namespace
         - name: KUBERNETES_CLUSTER_DOMAIN
           value: cluster.local
-        image: private-hub/envoyproxy/gateway:abcdef12
+        image: private.registry/envoy/gateway:abcdef
         imagePullPolicy: Always
         name: envoy-gateway-certgen
         securityContext:
@@ -575,8 +572,7 @@ spec:
           seccompProfile:
             type: RuntimeDefault
       imagePullSecrets:
-        - name: secret1
-        - name: secret2
+        []
       restartPolicy: Never
       serviceAccountName: gateway-helm-certgen
   ttlSecondsAfterFinished: 30

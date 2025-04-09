@@ -47,6 +47,8 @@ data:
                     containers:
                     - imagePullPolicy: IfNotPresent
                       name: envoy-ratelimit
+          pod:
+            imagePullSecrets: []
         shutdownManager:
           image: docker.io/envoyproxy/gateway-dev:latest
       type: Kubernetes
@@ -444,7 +446,8 @@ spec:
         - mountPath: /certs
           name: certs
           readOnly: true
-      imagePullSecrets: []
+      imagePullSecrets:
+        []
       serviceAccountName: envoy-gateway
       terminationGracePeriodSeconds: 10
       volumes:
@@ -568,7 +571,8 @@ spec:
           runAsUser: 1000
           seccompProfile:
             type: RuntimeDefault
-      imagePullSecrets: []
+      imagePullSecrets:
+        []
       restartPolicy: Never
       serviceAccountName: gateway-helm-certgen
   ttlSecondsAfterFinished: 30

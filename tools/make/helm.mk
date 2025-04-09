@@ -16,8 +16,8 @@ CHART_VERSION ?= ${RELEASE_VERSION}
 helm-package: ## Package envoy gateway relevant helm charts.
 helm-package:
 	@for chart in $(CHARTS); do \
-    	$(LOG_TARGET); \
-      	$(MAKE) $(addprefix helm-package., $$(basename $${chart})); \
+		$(LOG_TARGET); \
+		$(MAKE) $(addprefix helm-package., $$(basename $${chart})); \
 	done
 
 .PHONY: helm-package.%
@@ -43,39 +43,41 @@ helm-push.%: helm-package.%
 .PHONY: helm-generate
 helm-generate:
 	@for chart in $(CHARTS); do \
-  		$(LOG_TARGET); \
-  		$(MAKE) $(addprefix helm-generate., $$(basename $${chart})); \
-  	done
+		$(LOG_TARGET); \
+		$(MAKE) $(addprefix helm-generate., $$(basename $${chart})); \
+	done
 
 .PHONY: helm-generate.%
 helm-generate.%:
 	$(eval COMMAND := $(word 1,$(subst ., ,$*)))
 	$(eval CHART_NAME := $(COMMAND))
 	@if test -f "charts/${CHART_NAME}/values.tmpl.yaml"; then \
-  		GatewayImage=${IMAGE}:${TAG} GatewayImagePullPolicy=${IMAGE_PULL_POLICY} \
-  		envsubst < charts/${CHART_NAME}/values.tmpl.yaml > ./charts/${CHART_NAME}/values.yaml; \
-  	fi
+			GatewayImage="${REGISTRY}/${REPOSITORY}:${TAG}"\
+			GatewayImagePullPolicy=${IMAGE_PULL_POLICY}\
+			RatelimitImage="${REGISTRY}/${RATELIMIT_REPOSITORY}:${RATELIMIT_TAG}"\
+			envsubst < charts/${CHART_NAME}/values.tmpl.yaml > ./charts/${CHART_NAME}/values.yaml; \
+		fi
 	helm dependency update charts/${CHART_NAME}
 	helm lint charts/${CHART_NAME}
 
-	# The jb does not support self-assigned jsonnetfile, so entering working dir before executing jb.
+  # The jb does not support self-assigned jsonnetfile, so entering working dir before executing jb.
 	@if [ ${CHART_NAME} == "gateway-addons-helm" ]; then \
-  		$(call log, "Run jsonnet generate for dashboards in chart: ${CHART_NAME}!"); \
-  		workDir="charts/${CHART_NAME}/dashboards"; \
-  		cd $$workDir && ../../../go tool jb install && cd ../../..; \
-  		for file in $$(find $${workDir} -maxdepth 1 -name '*.libsonnet'); do \
-  		    name=$$(basename $$file .libsonnet); \
-  		    go tool jsonnet -J $${workDir}/vendor $${workDir}/$${name}.libsonnet > $${workDir}/$${name}.gen.json; \
-  		done \
-  	fi
+			$(call log, "Run jsonnet generate for dashboards in chart: ${CHART_NAME}!"); \
+			workDir="charts/${CHART_NAME}/dashboards"; \
+			cd $$workDir && go tool jb install && cd ../../..; \
+			for file in $$(find $${workDir} -maxdepth 1 -name '*.libsonnet'); do \
+				name=$$(basename $$file .libsonnet); \
+				go tool jsonnet -J $${workDir}/vendor $${workDir}/$${name}.libsonnet > $${workDir}/$${name}.gen.json; \
+		done \
+	fi
 
 	$(call log, "Run helm template for chart: ${CHART_NAME}!");
 	@for file in $(wildcard test/helm/${CHART_NAME}/*.in.yaml); do \
-  		filename=$$(basename $${file}); \
-  		output="$${filename%.in.*}.out.yaml"; \
-  	  	if [ ${CHART_NAME} == "gateway-addons-helm" ]; then \
-  	  		helm template ${CHART_NAME} charts/${CHART_NAME} -f $${file} > test/helm/${CHART_NAME}/$$output --namespace=monitoring; \
-  	  	else \
-			helm template ${CHART_NAME} charts/${CHART_NAME} -f $${file} > test/helm/${CHART_NAME}/$$output --namespace=envoy-gateway-system; \
-  	  	fi; \
+			filename=$$(basename $${file}); \
+			output="$${filename%.in.*}.out.yaml"; \
+			if [ ${CHART_NAME} == "gateway-addons-helm" ]; then \
+				helm template ${CHART_NAME} charts/${CHART_NAME} -f $${file} > test/helm/${CHART_NAME}/$$output --namespace=monitoring; \
+			else \
+				helm template ${CHART_NAME} charts/${CHART_NAME} -f $${file} > test/helm/${CHART_NAME}/$$output --namespace=envoy-gateway-system; \
+			fi; \
 	done
