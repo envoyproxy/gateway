@@ -1225,8 +1225,7 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 
 	// Watch Gateway CRUDs and reconcile affected GatewayClass.
 	gPredicates := []predicate.TypedPredicate[*gwapiv1.Gateway]{
-		predicate.Or(predicate.TypedGenerationChangedPredicate[*gwapiv1.Gateway]{},
-			predicate.TypedLabelChangedPredicate[*gwapiv1.Gateway]{}),
+		metadataPredicate[*gwapiv1.Gateway](),
 		predicate.NewTypedPredicateFuncs(func(gtw *gwapiv1.Gateway) bool {
 			return r.validateGatewayForReconcile(gtw)
 		}),
@@ -1249,10 +1248,7 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 	}
 
 	// Watch HTTPRoute CRUDs and process affected Gateways.
-	httprPredicates := []predicate.TypedPredicate[*gwapiv1.HTTPRoute]{
-		predicate.Or(predicate.TypedGenerationChangedPredicate[*gwapiv1.HTTPRoute]{},
-			predicate.TypedLabelChangedPredicate[*gwapiv1.HTTPRoute]{}),
-	}
+	httprPredicates := commonPredicates[*gwapiv1.HTTPRoute]()
 	if r.namespaceLabel != nil {
 		httprPredicates = append(httprPredicates, predicate.NewTypedPredicateFuncs(func(hr *gwapiv1.HTTPRoute) bool {
 			return r.hasMatchingNamespaceLabels(hr)
@@ -1276,10 +1272,7 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 		r.log.Info("GRPCRoute CRD not found, skipping GRPCRoute watch")
 	} else {
 		// Watch GRPCRoute CRUDs and process affected Gateways.
-		grpcrPredicates := []predicate.TypedPredicate[*gwapiv1.GRPCRoute]{
-			predicate.Or(predicate.TypedGenerationChangedPredicate[*gwapiv1.GRPCRoute]{},
-				predicate.TypedLabelChangedPredicate[*gwapiv1.GRPCRoute]{}),
-		}
+		grpcrPredicates := commonPredicates[*gwapiv1.GRPCRoute]()
 		if r.namespaceLabel != nil {
 			grpcrPredicates = append(grpcrPredicates, predicate.NewTypedPredicateFuncs[*gwapiv1.GRPCRoute](func(grpc *gwapiv1.GRPCRoute) bool {
 				return r.hasMatchingNamespaceLabels(grpc)
@@ -1303,10 +1296,7 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 		r.log.Info("TLSRoute CRD not found, skipping TLSRoute watch")
 	} else {
 		// Watch TLSRoute CRUDs and process affected Gateways.
-		tlsrPredicates := []predicate.TypedPredicate[*gwapiv1a2.TLSRoute]{
-			predicate.Or(predicate.TypedGenerationChangedPredicate[*gwapiv1a2.TLSRoute]{},
-				predicate.TypedLabelChangedPredicate[*gwapiv1a2.TLSRoute]{}),
-		}
+		tlsrPredicates := commonPredicates[*gwapiv1a2.TLSRoute]()
 		if r.namespaceLabel != nil {
 			tlsrPredicates = append(tlsrPredicates, predicate.NewTypedPredicateFuncs[*gwapiv1a2.TLSRoute](func(route *gwapiv1a2.TLSRoute) bool {
 				return r.hasMatchingNamespaceLabels(route)
@@ -1330,10 +1320,7 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 		r.log.Info("UDPRoute CRD not found, skipping UDPRoute watch")
 	} else {
 		// Watch UDPRoute CRUDs and process affected Gateways.
-		udprPredicates := []predicate.TypedPredicate[*gwapiv1a2.UDPRoute]{
-			predicate.Or(predicate.TypedGenerationChangedPredicate[*gwapiv1a2.UDPRoute]{},
-				predicate.TypedLabelChangedPredicate[*gwapiv1a2.UDPRoute]{}),
-		}
+		udprPredicates := commonPredicates[*gwapiv1a2.UDPRoute]()
 		if r.namespaceLabel != nil {
 			udprPredicates = append(udprPredicates, predicate.NewTypedPredicateFuncs[*gwapiv1a2.UDPRoute](func(route *gwapiv1a2.UDPRoute) bool {
 				return r.hasMatchingNamespaceLabels(route)
@@ -1357,10 +1344,7 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 		r.log.Info("TCPRoute CRD not found, skipping TCPRoute watch")
 	} else {
 		// Watch TCPRoute CRUDs and process affected Gateways.
-		tcprPredicates := []predicate.TypedPredicate[*gwapiv1a2.TCPRoute]{
-			predicate.Or(predicate.TypedGenerationChangedPredicate[*gwapiv1a2.TCPRoute]{},
-				predicate.TypedLabelChangedPredicate[*gwapiv1a2.TCPRoute]{}),
-		}
+		tcprPredicates := commonPredicates[*gwapiv1a2.TCPRoute]()
 		if r.namespaceLabel != nil {
 			tcprPredicates = append(tcprPredicates, predicate.NewTypedPredicateFuncs[*gwapiv1a2.TCPRoute](func(route *gwapiv1a2.TCPRoute) bool {
 				return r.hasMatchingNamespaceLabels(route)
