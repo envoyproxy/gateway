@@ -58,7 +58,7 @@ type JWTProvider struct {
 	// +optional
 	RemoteJWKS *RemoteJWKS `json:"remoteJWKS,omitempty"`
 
-	// LocalJWKS defines how to get the  JSON Web Key Sets (JWKS) from a local source.
+	// LocalJWKS defines how to get the JSON Web Key Sets (JWKS) from a local source.
 	//
 	// +optional
 	LocalJWKS *LocalJWKS `json:"localJWKS,omitempty"`
