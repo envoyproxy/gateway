@@ -1,7 +1,5 @@
 ---
 title: "{{ replace .Name "-" " " | title }}"
-description: "This task provides instructions for configuring {{ replace .Name "-" " " | lower }} in Envoy Gateway."
-weight: 10
 ---
 
 This task provides instructions for configuring {{ replace .Name "-" " " | lower }}.
@@ -12,39 +10,24 @@ This task provides instructions for configuring {{ replace .Name "-" " " | lower
 
 {{< boilerplate prerequisites >}}
 
-## Installation
+<!-- 
+Use specific, action-oriented titles when writing conceptual docs. Focus on what the reader will learn or what the concept enables them to do. Use verbs and be descriptive!
+Examples:
+-"Applying Multiple BackendRefs"
+-"Mirroring Traffic to Another Service"
+-->
+## [Replace Title] Configuration 
 
-Install the necessary resources for {{ replace .Name "-" " " | lower }}:
-
-```shell
-kubectl apply -f https://raw.githubusercontent.com/envoyproxy/gateway/latest/examples/kubernetes/[example-file].yaml
-```
-
-Alternatively, you can create the resources directly:
+<!-- 
+Briefly explain what is being configured.
+-->
+By applying the file below...
 
 {{< tabpane text=true >}}
 {{% tab header="Apply from stdin" %}}
 
 ```shell
-cat <<EOF | kubectl apply -f -
-apiVersion: gateway.networking.k8s.io/v1
-kind: HTTPRoute
-metadata:
-  name: {{ replace .Name "-" " " | lower | replace " " "-" }}
-spec:
-  parentRefs:
-  - name: eg
-  hostnames:
-  - "www.example.com"
-  rules:
-  - matches:
-    - path:
-        type: PathPrefix
-        value: /example
-    backendRefs:
-    - name: backend
-      port: 3000
-EOF
+#insert stdin yaml
 ```
 
 {{% /tab %}}
@@ -52,23 +35,7 @@ EOF
 Save and apply the following resource to your cluster:
 
 ```yaml
-apiVersion: gateway.networking.k8s.io/v1
-kind: HTTPRoute
-metadata:
-  name: {{ replace .Name "-" " " | lower | replace " " "-" }}
-spec:
-  parentRefs:
-  - name: eg
-  hostnames:
-  - "www.example.com"
-  rules:
-  - matches:
-    - path:
-        type: PathPrefix
-        value: /example
-    backendRefs:
-    - name: backend
-      port: 3000
+#Insert config file
 ```
 
 {{% /tab %}}
@@ -79,10 +46,14 @@ spec:
 Verify the configuration:
 
 ```shell
-kubectl get httproute/{{ replace .Name "-" " " | lower | replace " " "-" }} -o yaml
+#Insert command to verify installation
 ```
 
-The output should include a status section indicating that the HTTPRoute has been accepted by the Gateway.
+<!-- 
+What is the expected output after running the command above?
+-->
+The output should include ...
+
 
 ## Testing
 
@@ -101,41 +72,31 @@ curl -v -H "Host: www.example.com" "http://${GATEWAY_HOST}/example"
 
 You should see a successful response, confirming that your configuration is working correctly.
 
+<!-- 
+Include an example output below
+-->
+
 Expected output:
 ```
-< HTTP/1.1 200 OK
-< content-type: application/json
+Insert output
 ...
 ```
-
-## Troubleshooting
-
-If you encounter issues, check the following:
-
-1. Verify the Gateway status:
-   ```shell
-   kubectl get gateway/eg -o yaml
-   ```
-
-2. Look for errors in the resource status:
-   ```shell
-   kubectl get httproute/{{ replace .Name "-" " " | lower | replace " " "-" }} -o jsonpath='{.status}'
-   ```
-
-3. Check the Envoy Gateway logs:
-   ```shell
-   kubectl logs -n envoy-gateway-system deployment/envoy-gateway
-   ```
 
 ## Clean-Up
 
 Remove the resources created in this task:
 
 ```shell
-kubectl delete httproute/{{ replace .Name "-" " " | lower | replace " " "-" }}
-# Add other resources that need to be cleaned up
+# Add commands to remove resources created in configuration step
 ```
 
 ## Next Steps
-
-Checkout the [Developer Guide](../../../contributions/develop) to get involved in the project.
+<!-- 
+Link any related pages from Envoy Gateway Docs
+Example:
+- [HTTPRoute Resource Reference](...)
+- [Configuring a Gateway](...)
+-->
+Checkout the following guides:
+- [INSERT PAGE NAME](INSERT_PATH_TO_FILE)
+- ...
