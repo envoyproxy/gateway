@@ -277,8 +277,8 @@ Test routing to the `foo-svc` backend by specifying a JWT Token with a claim `na
 
 ```shell
 curl -sS -H "Host: foo.example.com" -H "Authorization: Bearer $TOKEN" "http://${GATEWAY_HOST}/login" | jq .pod
-"foo-backend-6df8cc6b9f-fmwcg"
 ```
+The request should return the pod name, for example `foo-backend-6df8cc6b9f-fmwcg`
 
 Get another JWT used for testing request authentication:
 
@@ -290,8 +290,8 @@ Test HTTP routing to the `bar-svc` backend by specifying a JWT Token with a clai
 
 ```shell
 curl -sS -H "Host: bar.example.com" -H "Authorization: Bearer $TOKEN" "http://${GATEWAY_HOST}/" | jq .pod
-"bar-backend-6688b8944c-s8htr"
 ```
+The request should return the pod name, for example `bar-backend-6688b8944c-s8htr`
 
 [HTTPRoute]: https://gateway-api.sigs.k8s.io/api-types/httproute/
 [Gateway API documentation]: https://gateway-api.sigs.k8s.io/

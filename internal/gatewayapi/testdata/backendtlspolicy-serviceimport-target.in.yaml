@@ -35,6 +35,11 @@ httpRoutes:
               name: service-import-1
               namespace: default
               port: 8080
+            - group: multicluster.x-k8s.io
+              kind: ServiceImport
+              name: service-import-1
+              namespace: default
+              port: 9000
 
 referenceGrants:
   - apiVersion: gateway.networking.k8s.io/v1alpha2
@@ -64,6 +69,11 @@ serviceImports:
         - port: 8080
           name: http
           protocol: TCP
+          appProtocol: kubernetes.io/h2c  # This takes effect.
+        - port: 9000
+          name: grpc
+          protocol: TCP
+          appProtocol: grpc  # This is NOOP.
 
 endpointSlices:
   - apiVersion: discovery.k8s.io/v1
@@ -78,6 +88,9 @@ endpointSlices:
       - name: http
         protocol: TCP
         port: 8080
+      - name: grpc
+        protocol: TCP
+        port: 9000
     endpoints:
       - addresses:
           - "10.244.0.11"
@@ -95,6 +108,10 @@ backendTLSPolicies:
           kind: ServiceImport
           name: service-import-1
           sectionName: http
+        - group: multicluster.x-k8s.io
+          kind: ServiceImport
+          name: service-import-1
+          sectionName: grpc
       validation:
         wellKnownCACertificates: System
         hostname: example.com

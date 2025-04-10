@@ -1407,11 +1407,9 @@ func (t *Translator) processServiceImportDestinationSetting(
 		}
 	}
 
-	// TODO(#5485): Should these protocols be supported for ServiceImport?
-	//
-	// if servicePort.AppProtocol != nil {
-	// 	protocol = serviceAppProtocolToIRAppProtocol(*servicePort.AppProtocol)
-	// }
+	if servicePort.AppProtocol != nil {
+		protocol = serviceAppProtocolToIRAppProtocol(*servicePort.AppProtocol, protocol, false)
+	}
 
 	// Route to endpoints by default
 	if !t.IsEnvoyServiceRouting(envoyProxy) {
@@ -1458,7 +1456,7 @@ func (t *Translator) processServiceDestinationSetting(
 
 	// support HTTPRouteBackendProtocolH2C/GRPC
 	if servicePort.AppProtocol != nil {
-		protocol = serviceAppProtocolToIRAppProtocol(*servicePort.AppProtocol, protocol)
+		protocol = serviceAppProtocolToIRAppProtocol(*servicePort.AppProtocol, protocol, true)
 	}
 
 	// Route to endpoints by default
@@ -1848,11 +1846,15 @@ func (t *Translator) processBackendDestinationSetting(name string, backendRef gw
 	return ds
 }
 
-func serviceAppProtocolToIRAppProtocol(ap string, defaultProtocol ir.AppProtocol) ir.AppProtocol {
-	switch ap {
-	case "kubernetes.io/h2c":
+// serviceAppProtocolToIRAppProtocol translates the appProtocol string into an ir.AppProtocol.
+//
+// When grpcCompatibility is enabled, `grpc` will be parsed as a valid option for HTTP2.
+// See https://github.com/envoyproxy/gateway/issues/5485#issuecomment-2731322578.
+func serviceAppProtocolToIRAppProtocol(ap string, defaultProtocol ir.AppProtocol, grpcCompatibility bool) ir.AppProtocol {
+	switch {
+	case ap == "kubernetes.io/h2c":
 		return ir.HTTP2
-	case "grpc":
+	case ap == "grpc" && grpcCompatibility:
 		return ir.GRPC
 	default:
 		return defaultProtocol
