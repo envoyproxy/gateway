@@ -25,7 +25,7 @@ and you can access the website which contains the latest version changes in
 
 ## Documentation Workflow
 
-If you are creating procedural or conceptual documentation, please use our provided templates. You can generate these templates by running the following commands:
+If you are creating procedural or conceptual documentation, please use our provided templates. You can generate these templates by running the following commands in the site directory:
 
 ### New Task Documentation
 
