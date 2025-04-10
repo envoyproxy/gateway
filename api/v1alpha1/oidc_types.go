@@ -155,4 +155,25 @@ type OIDCCookieNames struct {
 	// If not specified, defaults to "IdToken-(randomly generated uid)"
 	// +optional
 	IDToken *string `json:"idToken,omitempty"`
+	// The name of the cookie used to store the RefreshToken in the
+	// [Refresh Request](https://openid.net/specs/openid-connect-core-1_0.html#RefreshTokens).
+	// If not specified, defaults to "RefreshToken-(randomly generated uid)"
+	// +optional
+	// +notImplementedHide
+	RefreshToken *string `json:"refreshToken,omitempty"`
+	// The name of the cookie used to store the expiry time of the OAuth tokens.
+	// If not specified, defaults to "OauthExpires-(randomly generated uid)"
+	// +optional
+	// +notImplementedHide
+	OauthExpires *string `json:"oauthExpires,omitempty"`
+	// The name of the cookie used to store the nonce value used to generate OAuth tokens.
+	// If not specified, defaults to "OauthNonce-(randomly generated uid)"
+	// +optional
+	// +notImplementedHide
+	OauthNonce *string `json:"oauthNonce,omitempty"`
+	// The name of the cookie used to store the HMAC of OAuth tokens.
+	// If not specified, defaults to "OauthHMAC-(randomly generated uid)"
+	// +optional
+	// +notImplementedHide
+	OauthHMAC *string `json:"oauthHMAC,omitempty"`
 }
