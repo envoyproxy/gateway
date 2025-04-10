@@ -943,7 +943,6 @@ func checkResponseBodySize(b *string) error {
 }
 
 func getCustomResponseBody(body *egv1a1.CustomResponseBody, resources *resource.Resources, policyNs string) (*string, error) {
-
 	if body != nil && body.Type != nil && *body.Type == egv1a1.ResponseValueTypeValueRef {
 		cm := resources.GetConfigMap(policyNs, string(body.ValueRef.Name))
 		if cm != nil {
