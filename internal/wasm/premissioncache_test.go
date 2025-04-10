@@ -74,7 +74,7 @@ func TestPermissionCache(t *testing.T) {
 		defer ctx.Done()
 		cache, entry := setupTestPermissionCache(
 			permissionCacheOptions{
-				checkInterval:    10 * time.Nanosecond,
+				checkInterval:    1 * time.Nanosecond,
 				permissionExpiry: 10 * time.Nanosecond,
 			},
 			image,
@@ -85,7 +85,7 @@ func TestPermissionCache(t *testing.T) {
 		lastAccessTime := entry.lastAccess
 		lastCheckTime := entry.lastCheck
 
-		time.Sleep(1 * time.Millisecond)
+		time.Sleep(10 * time.Millisecond)
 		allowed, err := cache.IsAllowed(context.Background(), image, secret, true)
 		require.True(
 			t,
@@ -111,7 +111,7 @@ func TestPermissionCache(t *testing.T) {
 		defer ctx.Done()
 		cache, entry := setupTestPermissionCache(
 			permissionCacheOptions{
-				checkInterval:    10 * time.Nanosecond,
+				checkInterval:    1 * time.Nanosecond,
 				permissionExpiry: 10 * time.Nanosecond,
 			},
 			image,
@@ -122,7 +122,7 @@ func TestPermissionCache(t *testing.T) {
 		lastAccessTime := entry.lastAccess
 		lastCheckTime := entry.lastCheck
 
-		time.Sleep(1 * time.Millisecond)
+		time.Sleep(10 * time.Millisecond)
 		allowed, err := cache.IsAllowed(context.Background(), image, secret, true)
 		require.False(t, isRetriableError(err), "permission check error should not be retriable")
 		require.False(
@@ -149,7 +149,7 @@ func TestPermissionCache(t *testing.T) {
 		defer ctx.Done()
 		cache, entry := setupTestPermissionCache(
 			permissionCacheOptions{
-				checkInterval: 10 * time.Nanosecond,
+				checkInterval: 1 * time.Nanosecond,
 				cacheExpiry:   10 * time.Nanosecond,
 			},
 			image,
@@ -160,7 +160,7 @@ func TestPermissionCache(t *testing.T) {
 		lastAccessTime := entry.lastAccess
 		lastCheckTime := entry.lastCheck
 
-		time.Sleep(1 * time.Millisecond)
+		time.Sleep(10 * time.Millisecond)
 		key := entry.key()
 		entry, ok := cache.getForTest(key)
 		require.False(t, ok, "cache entry should be removed after expiry")
@@ -186,7 +186,7 @@ func TestPermissionCache(t *testing.T) {
 		defer ctx.Done()
 		cache, entry := setupTestPermissionCache(
 			permissionCacheOptions{
-				checkInterval: 10 * time.Nanosecond,
+				checkInterval: 1 * time.Nanosecond,
 			},
 			image,
 			latestImage,
@@ -223,7 +223,7 @@ func TestPermissionCache(t *testing.T) {
 		defer ctx.Done()
 		cache, entry := setupTestPermissionCache(
 			permissionCacheOptions{
-				checkInterval: 10 * time.Nanosecond,
+				checkInterval: 1 * time.Nanosecond,
 			},
 			image,
 			latestImage,
