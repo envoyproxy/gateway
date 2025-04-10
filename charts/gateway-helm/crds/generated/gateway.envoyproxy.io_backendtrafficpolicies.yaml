@@ -1659,7 +1659,9 @@ spec:
                     type: integer
                 type: object
               telemetry:
-                description: Telemetry configures the telemetry settings for the backend.
+                description: |-
+                  Telemetry configures the telemetry settings for the backend or backend.
+                  This will override the telemetry settings in the EnvoyProxy resource.
                 properties:
                   tracing:
                     description: Tracing configures the tracing settings for the backend.

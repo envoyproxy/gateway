@@ -8,7 +8,6 @@ package v1alpha1
 import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 )
 
@@ -93,7 +92,8 @@ type BackendTrafficPolicySpec struct {
 	// +notImplementedHide
 	// +optional
 	RequestBuffer *RequestBuffer `json:"requestBuffer,omitempty"`
-	// Telemetry configures the telemetry settings for the backend.
+	// Telemetry configures the telemetry settings for the backend or backend.
+	// This will override the telemetry settings in the EnvoyProxy resource.
 	//
 	// +notImplementedHide
 	// +optional
@@ -104,22 +104,7 @@ type BackendTelemetry struct {
 	// Tracing configures the tracing settings for the backend.
 	//
 	// +optional
-	Tracing *BackendTracing `json:"tracing,omitempty"`
-}
-
-type BackendTracing struct {
-	// SamplingFraction represents the fraction of requests that should be
-	// selected for tracing if no prior sampling decision has been made.
-	//
-	// This will take precedence over sampling fraction on EnvoyProxy if set.
-	//
-	// +optional
-	SamplingFraction *gwapiv1.Fraction `json:"samplingFraction,omitempty"`
-	// CustomTags defines the custom tags to add to each span.
-	// If provider is kubernetes, pod name and namespace are added by default.
-	//
-	// +optional
-	CustomTags map[string]CustomTag `json:"customTags,omitempty"`
+	Tracing *Tracing `json:"tracing,omitempty"`
 }
 
 type ProtocolUpgradeConfig struct {

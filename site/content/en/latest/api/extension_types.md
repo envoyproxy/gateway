@@ -452,22 +452,7 @@ _Appears in:_
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `tracing` | _[BackendTracing](#backendtracing)_ |  false  |  | Tracing configures the tracing settings for the backend. |
-
-
-#### BackendTracing
-
-
-
-
-
-_Appears in:_
-- [BackendTelemetry](#backendtelemetry)
-
-| Field | Type | Required | Default | Description |
-| ---   | ---  | ---      | ---     | ---         |
-| `samplingFraction` | _[Fraction](https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.Fraction)_ |  false  |  | SamplingFraction represents the fraction of requests that should be<br />selected for tracing if no prior sampling decision has been made.<br />This will take precedence over sampling fraction on EnvoyProxy if set. |
-| `customTags` | _object (keys:string, values:[CustomTag](#customtag))_ |  false  |  | CustomTags defines the custom tags to add to each span.<br />If provider is kubernetes, pod name and namespace are added by default. |
+| `tracing` | _[Tracing](#tracing)_ |  false  |  | Tracing configures the tracing settings for the backend. |
 
 
 #### BackendTrafficPolicy
@@ -994,8 +979,8 @@ _Appears in:_
 
 
 _Appears in:_
-- [BackendTracing](#backendtracing)
 - [ProxyTracing](#proxytracing)
+- [Tracing](#tracing)
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
@@ -4516,6 +4501,21 @@ _Appears in:_
 | ---   | ---  | ---      | ---     | ---         |
 | `tcp` | _[TCPTimeout](#tcptimeout)_ |  false  |  | Timeout settings for TCP. |
 | `http` | _[HTTPTimeout](#httptimeout)_ |  false  |  | Timeout settings for HTTP. |
+
+
+#### Tracing
+
+
+
+Tracing defines the configuration for tracing.
+
+_Appears in:_
+- [BackendTelemetry](#backendtelemetry)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `samplingFraction` | _[Fraction](https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.Fraction)_ |  false  |  | SamplingFraction represents the fraction of requests that should be<br />selected for tracing if no prior sampling decision has been made.<br />This will take precedence over sampling fraction on EnvoyProxy if set. |
+| `customTags` | _object (keys:string, values:[CustomTag](#customtag))_ |  false  |  | CustomTags defines the custom tags to add to each span.<br />If provider is kubernetes, pod name and namespace are added by default. |
 
 
 #### TracingProvider
