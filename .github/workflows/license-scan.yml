@@ -18,7 +18,7 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
     - name: Run scanner
-      uses: google/osv-scanner-action/osv-scanner-action@98b584ee2ed2da3935ccce10e06739d54cdcd20b  # v2.0.0
+      uses: google/osv-scanner-action/osv-scanner-action@6fc714450122bda9d00e4ad5d639ad6a39eedb1f  # v2.0.1
       continue-on-error: true  # remove this after https://github.com/google/deps.dev/issues/146 has been resolved
       with:
         scan-args: |-
