@@ -374,7 +374,7 @@ func TestDeployment(t *testing.T) {
 			infra:    newTestInfra(),
 			deploy:   nil,
 			proxyLogging: map[egv1a1.ProxyLogComponent]egv1a1.LogLevel{
-				egv1a1.LogComponentDefault: egv1a1.LogLevelError,
+				egv1a1.LogComponentDefault: egv1a1.LogLevelTrace,
 				egv1a1.LogComponentFilter:  egv1a1.LogLevelInfo,
 			},
 			bootstrap: `test bootstrap config`,
