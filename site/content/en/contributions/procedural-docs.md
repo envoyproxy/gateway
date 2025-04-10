@@ -34,9 +34,6 @@ This task provides instructions for configuring your new task.
 
 Your New Task allows you to [briefly explain what this feature does and its benefits].
 
-## Prerequisites
-
-{{< boilerplate prerequisites >}}
 
 ## Installation
 
@@ -80,10 +77,7 @@ Our task documents typically follow these patterns:
 
 The archetype includes several useful shortcodes:
 
-1. **Boilerplate** - For standardized content blocks:
-   ```
-   {{< boilerplate prerequisites >}}
-   ```
+
 
 2. **Tabpane** - For showing alternative approaches:
    ```
