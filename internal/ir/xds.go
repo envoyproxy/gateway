@@ -623,6 +623,10 @@ func (r *CustomResponse) Validate() error {
 // CredentialInjection defines the configuration for injecting credentials into the request.
 // +k8s:deepcopy-gen=true
 type CredentialInjection struct {
+	// Name is a unique name for a CredentialInjection configuration.
+	// The xds translator only generates one CredentialInjecor filter for each unique name.
+	Name string `json:"name" yaml:"name"`
+
 	// Header is the name of the header where the credentials are injected.
 	// If not specified, the credentials are injected into the Authorization header.
 	Header *string `json:"header,omitempty"`

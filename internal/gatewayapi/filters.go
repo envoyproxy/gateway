@@ -824,6 +824,7 @@ func (t *Translator) processExtensionRefHTTPFilter(extFilter *gwapiv1.LocalObjec
 					}
 
 					injection := &ir.CredentialInjection{
+						Name:             irConfigName(hrf),
 						Header:     hrf.Spec.CredentialInjection.Header,
 						Overwrite:  hrf.Spec.CredentialInjection.Overwrite,
 						Credential: secretBytes,

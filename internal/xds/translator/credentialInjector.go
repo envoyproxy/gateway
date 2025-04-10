@@ -46,11 +46,11 @@ func (*credentialInjector) patchHCM(mgr *hcmv3.HttpConnectionManager, irListener
 			continue
 		}
 
-		if hcmContainsFilter(mgr, credentialInjectorFilterName(route.Name)) {
+		if hcmContainsFilter(mgr, credentialInjectorFilterName(route.CredentialInjection)) {
 			continue
 		}
 
-		filter, err := buildHCMCredentialInjectorFilter(route.CredentialInjection, route.Name)
+		filter, err := buildHCMCredentialInjectorFilter(route.CredentialInjection)
 		if err != nil {
 			errs = errors.Join(errs, err)
 			continue
@@ -61,11 +61,15 @@ func (*credentialInjector) patchHCM(mgr *hcmv3.HttpConnectionManager, irListener
 	return errs
 }
 
+func credentialInjectorFilterName(credentialInjection *ir.CredentialInjection) string {
+	return perRouteFilterName(egv1a1.EnvoyFilterCredentialInjector, credentialInjection.Name)
+}
+
 // buildHCMCredentialInjectorFilter returns a credentialInjector HTTP filter from the provided IR HTTPRoute.
-func buildHCMCredentialInjectorFilter(credentialInjection *ir.CredentialInjection, route string) (*hcmv3.HttpFilter, error) {
+func buildHCMCredentialInjectorFilter(credentialInjection *ir.CredentialInjection) (*hcmv3.HttpFilter, error) {
 	genericCredential := &genericv3.Generic{
 		Credential: &tlsv3.SdsSecretConfig{
-			Name:      credentialSecretName(route),
+			Name:      credentialSecretName(credentialInjection),
 			SdsConfig: makeConfigSource(),
 		},
 	}
@@ -93,7 +97,7 @@ func buildHCMCredentialInjectorFilter(credentialInjection *ir.CredentialInjectio
 	}
 
 	return &hcmv3.HttpFilter{
-		Name: credentialInjectorFilterName(route),
+		Name: credentialInjectorFilterName(credentialInjection),
 		ConfigType: &hcmv3.HttpFilter_TypedConfig{
 			TypedConfig: credentialInjectorAny,
 		},
@@ -101,21 +105,17 @@ func buildHCMCredentialInjectorFilter(credentialInjection *ir.CredentialInjectio
 	}, nil
 }
 
-func credentialInjectorFilterName(route string) string {
-	// Use the route name as the config name to ensure uniqueness.
-	return perRouteFilterName(egv1a1.EnvoyFilterCredentialInjector, route)
+func credentialSecretName(credentialInjection *ir.CredentialInjection) string {
+	return fmt.Sprintf("credential_injector/credential/%s", credentialInjection.Name)
 }
 
-func credentialSecretName(route string) string {
-	return fmt.Sprintf("credential_injector/credential/%s", route)
-}
 
 func (*credentialInjector) patchResources(resource *types.ResourceVersionTable, routes []*ir.HTTPRoute) error {
 	var errs error
 
 	for _, route := range routes {
 		if route.CredentialInjection != nil {
-			secret := buildCredentialSecret(route.CredentialInjection, route.Name)
+			secret := buildCredentialSecret(route.CredentialInjection)
 			if err := addXdsSecret(resource, secret); err != nil {
 				errs = errors.Join(errs, err)
 			}
@@ -125,9 +125,9 @@ func (*credentialInjector) patchResources(resource *types.ResourceVersionTable, 
 	return errs
 }
 
-func buildCredentialSecret(credentialInjection *ir.CredentialInjection, route string) *tlsv3.Secret {
+func buildCredentialSecret(credentialInjection *ir.CredentialInjection) *tlsv3.Secret {
 	return &tlsv3.Secret{
-		Name: credentialSecretName(route),
+		Name: credentialSecretName(credentialInjection),
 		Type: &tlsv3.Secret_GenericSecret{
 			GenericSecret: &tlsv3.GenericSecret{
 				Secret: &corev3.DataSource{
@@ -152,7 +152,7 @@ func (*credentialInjector) patchRoute(route *routev3.Route, irRoute *ir.HTTPRout
 	if irRoute.CredentialInjection == nil {
 		return nil
 	}
-	filterName := credentialInjectorFilterName(irRoute.Name)
+	filterName := credentialInjectorFilterName(irRoute.CredentialInjection)
 	if err := enableFilterOnRoute(route, filterName); err != nil {
 		return err
 	}
