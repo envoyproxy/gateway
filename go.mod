@@ -4,7 +4,7 @@ go 1.24.2
 
 require (
 	fortio.org/fortio v1.68.1
-	fortio.org/log v1.17.1
+	fortio.org/log v1.17.2
 	github.com/AdaLogics/go-fuzz-headers v0.0.0-20230811130428-ced1acdcaa24
 	github.com/Masterminds/semver/v3 v3.3.1
 	github.com/andybalholm/brotli v1.1.1
@@ -104,7 +104,7 @@ require (
 	fortio.org/safecast v1.0.0 // indirect
 	fortio.org/scli v1.15.3 // indirect
 	fortio.org/sets v1.2.0 // indirect
-	fortio.org/struct2env v0.4.1 // indirect
+	fortio.org/struct2env v0.4.2 // indirect
 	fortio.org/version v1.0.4 // indirect
 	github.com/4meepo/tagalign v1.4.2 // indirect
 	github.com/Abirdcfly/dupword v0.1.3 // indirect
