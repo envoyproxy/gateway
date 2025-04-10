@@ -26,12 +26,13 @@ import (
 const (
 	namespace    = "envoy-gateway-system"
 	envoygateway = "envoy-gateway"
+	envoyproxy   = "envoy-gateway-resilience-all-namespaces"
 	targetString = "successfully acquired lease"
 	apiServerIP  = "10.96.0.1"
 	timeout      = 2 * time.Minute
 	policyName   = "egress-rules"
 	leaseName    = "5b9825d2.gateway.envoyproxy.io"
-	trashHold    = 2
+	threshold    = 2
 )
 
 func init() {
@@ -106,7 +107,7 @@ var EGResilience = suite.ResilienceTest{
 			}
 
 			req := http.MakeRequest(t, &expectedResponse, gwAddr, "http", "http")
-			http.AwaitConvergence(t, trashHold, timeout, func(elapsed time.Duration) bool {
+			http.AwaitConvergence(t, threshold, timeout, func(elapsed time.Duration) bool {
 				cReq, cRes, err := suite.RoundTripper.CaptureRoundTrip(req)
 				if err != nil {
 					tlog.Logf(t, "Request failed, not ready yet: %v (after %v)", err.Error(), elapsed)
@@ -165,7 +166,7 @@ var EGResilience = suite.ResilienceTest{
 			}
 
 			req := http.MakeRequest(t, &expectedResponse, gwAddr, "http", "http")
-			http.AwaitConvergence(t, trashHold, time.Minute, func(elapsed time.Duration) bool {
+			http.AwaitConvergence(t, threshold, time.Minute, func(elapsed time.Duration) bool {
 				cReq, cRes, err := suite.RoundTripper.CaptureRoundTrip(req)
 				if err != nil {
 					tlog.Logf(t, "Request failed, not ready yet: %v (after %v)", err.Error(), elapsed)
@@ -237,7 +238,7 @@ var EGResilience = suite.ResilienceTest{
 
 			req := http.MakeRequest(t, &expectedResponse, gwAddr, "http", "http")
 
-			http.AwaitConvergence(t, trashHold, timeout, func(elapsed time.Duration) bool {
+			http.AwaitConvergence(t, threshold, timeout, func(elapsed time.Duration) bool {
 				cReq, cRes, err := suite.RoundTripper.CaptureRoundTrip(req)
 				if err != nil {
 					tlog.Logf(t, "Request failed, not ready yet: %v (after %v)", err.Error(), elapsed)
