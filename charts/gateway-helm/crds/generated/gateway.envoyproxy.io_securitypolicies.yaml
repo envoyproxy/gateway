@@ -2496,8 +2496,8 @@ spec:
                           maxLength: 253
                           type: string
                         localJWKS:
-                          description: LocalJWKS defines how to get the  JSON Web
-                            Key Sets (JWKS) from a local source.
+                          description: LocalJWKS defines how to get the JSON Web Key
+                            Sets (JWKS) from a local source.
                           properties:
                             inline:
                               description: Inline contains the value as an inline
