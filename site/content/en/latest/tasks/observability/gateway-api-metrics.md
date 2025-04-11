@@ -1,11 +1,6 @@
 ---
 title: "Gateway API Metrics"
 ---
-
-Resource metrics for **Kubernetes Gateway API** objects are available through the [Kube State Metrics](https://github.com/kubernetes/kube-state-metrics) project.
-
-The example Grafana dashboards, along with the sample alerts configured in this task, can be found in the [gateway-api-state-metrics](https://github.com/Kuadrant/gateway-api-state-metrics) repository.
-
 ## Prerequisites
 
 {{< boilerplate o11y_prerequisites >}}
