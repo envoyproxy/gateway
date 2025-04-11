@@ -305,6 +305,7 @@ func (t *Translator) translateBackendTrafficPolicyForRoute(
 		ds          *ir.DNS
 		h2          *ir.HTTP2Settings
 		ro          *ir.ResponseOverride
+		rb          *ir.RequestBuffer
 		cp          []*ir.Compression
 		httpUpgrade []string
 		err, errs   error
@@ -359,6 +360,12 @@ func (t *Translator) translateBackendTrafficPolicyForRoute(
 		err = perr.WithMessage(err, "ResponseOverride")
 		errs = errors.Join(errs, err)
 	}
+
+	if rb, err = buildRequestBuffer(policy.Spec.RequestBuffer, false); err != nil {
+		err = perr.WithMessage(err, "RequestBuffer")
+		errs = errors.Join(errs, err)
+	}
+
 	cp = buildCompression(policy.Spec.Compression)
 	httpUpgrade = buildHTTPProtocolUpgradeConfig(policy.Spec.HTTPUpgrade)
 
@@ -425,6 +432,7 @@ func (t *Translator) translateBackendTrafficPolicyForRoute(
 						Timeout:           to,
 						ResponseOverride:  ro,
 						Compression:       cp,
+						RequestBuffer:     rb,
 						HTTPUpgrade:       httpUpgrade,
 					}
 
@@ -461,6 +469,7 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(
 		ds          *ir.DNS
 		h2          *ir.HTTP2Settings
 		ro          *ir.ResponseOverride
+		rb          *ir.RequestBuffer
 		cp          []*ir.Compression
 		httpUpgrade []string
 		err, errs   error
@@ -506,6 +515,10 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(
 	}
 	if ro, err = buildResponseOverride(policy, resources); err != nil {
 		err = perr.WithMessage(err, "ResponseOverride")
+		errs = errors.Join(errs, err)
+	}
+	if rb, err = buildRequestBuffer(policy.Spec.RequestBuffer, true); err != nil {
+		err = perr.WithMessage(err, "RequestBuffer")
 		errs = errors.Join(errs, err)
 	}
 	cp = buildCompression(policy.Spec.Compression)
@@ -595,6 +608,7 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(
 				DNS:              ds,
 				ResponseOverride: ro,
 				Compression:      cp,
+				RequestBuffer:    rb,
 				HTTPUpgrade:      httpUpgrade,
 			}
 
@@ -876,6 +890,21 @@ func makeIrTriggerSet(in []egv1a1.TriggerEnum) []ir.TriggerEnum {
 		irTriggers = append(irTriggers, ir.TriggerEnum(r))
 	}
 	return irTriggers
+}
+
+func buildRequestBuffer(spec *egv1a1.RequestBuffer, targetGateway bool) (*ir.RequestBuffer, error) {
+	if spec == nil {
+		return nil, nil
+	}
+
+	if _, ok := spec.Limit.AsInt64(); !ok {
+		return nil, fmt.Errorf("limit must be convertible to an int64")
+	}
+
+	return &ir.RequestBuffer{
+		Limit:         spec.Limit,
+		TargetGateway: targetGateway,
+	}, nil
 }
 
 func buildResponseOverride(policy *egv1a1.BackendTrafficPolicy, resources *resource.Resources) (*ir.ResponseOverride, error) {
