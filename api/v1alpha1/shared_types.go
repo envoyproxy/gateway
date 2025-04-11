@@ -757,3 +757,20 @@ type CustomResponseBody struct {
 	// +optional
 	ValueRef *gwapiv1.LocalObjectReference `json:"valueRef,omitempty"`
 }
+
+// Tracing defines the configuration for tracing.
+// TODO: we'd better deprecate SamplingRate in the EnvoyProxy spec, so that we can reuse the struct.
+type Tracing struct {
+	// SamplingFraction represents the fraction of requests that should be
+	// selected for tracing if no prior sampling decision has been made.
+	//
+	// This will take precedence over sampling fraction on EnvoyProxy if set.
+	//
+	// +optional
+	SamplingFraction *gwapiv1.Fraction `json:"samplingFraction,omitempty"`
+	// CustomTags defines the custom tags to add to each span.
+	// If provider is kubernetes, pod name and namespace are added by default.
+	//
+	// +optional
+	CustomTags map[string]CustomTag `json:"customTags,omitempty"`
+}
