@@ -81,4 +81,13 @@ type HTTPClientTimeout struct {
 	//
 	// +optional
 	IdleTimeout *gwapiv1.Duration `json:"idleTimeout,omitempty"`
+
+	// The delayed close timeout is for downstream connections managed by the HTTP connection manager.
+	// It is defined as a grace period after connection close processing has been locally initiated
+	// during which Envoy will wait for the peer to close (i.e., a TCP FIN/RST is received by Envoy
+	// from the downstream connection) prior to Envoy closing the socket associated with that
+	// connection.
+	//The default timeout is 1000 ms if this option is not specified.
+	// +optional
+	DelayedCloseTimeout *gwapiv1.Duration `json:"delayedCloseTimeout,omitempty" yaml:"delayedCloseTimeout,omitempty"`
 }
