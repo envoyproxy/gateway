@@ -1,0 +1,5 @@
+crds:
+  gatewayApi:
+    enabled: true
+  envoyGateway:
+    enabled: true
