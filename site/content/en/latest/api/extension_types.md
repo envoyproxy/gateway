@@ -2092,7 +2092,7 @@ _Appears in:_
 | `backendRef` | _[BackendObjectReference](https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1.BackendObjectReference)_ |  false  |  | BackendRef references a Kubernetes object that represents the<br />backend server to which the authorization request will be sent.<br />Deprecated: Use BackendRefs instead. |
 | `backendRefs` | _[BackendRef](#backendref) array_ |  false  |  | BackendRefs references a Kubernetes object that represents the<br />backend server to which the authorization request will be sent. |
 | `backendSettings` | _[ClusterSettings](#clustersettings)_ |  false  |  | BackendSettings holds configuration for managing the connection<br />to the backend. |
-| `path` | _string_ |  true  |  | Path is the path of the HTTP External Authorization service.<br />If path is specified, the authorization request will be sent to that path,<br />or else the authorization request will be sent to the root path. |
+| `path` | _string_ |  false  |  | Path is the path of the HTTP External Authorization service.<br />If path is specified, the authorization request will be sent to that path,<br />or else the authorization request will use the path of the original request.<br />Please note that the original request path will be appended to the path specified here.<br />For example, if the original request path is "/hello", and the path specified here is "/auth",<br />then the path of the authorization request will be "/auth/hello". If the path is not specified,<br />the path of the authorization request will be "/hello". |
 | `headersToBackend` | _string array_ |  false  |  | HeadersToBackend are the authorization response headers that will be added<br />to the original client request before sending it to the backend server.<br />Note that coexisting headers will be overridden.<br />If not specified, no authorization response headers will be added to the<br />original client request. |
 
 
@@ -3562,7 +3562,7 @@ _Appears in:_
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `samplingRate` | _integer_ |  false  | 100 | SamplingRate controls the rate at which traffic will be<br />selected for tracing if no prior sampling decision has been made.<br />Defaults to 100, valid values [0-100]. 100 indicates 100% sampling.<br />Only one of SamplingRate or SamplingFraction may be specified.<br />If neither field is specified, all requests will be sampled. |
+| `samplingRate` | _integer_ |  false  |  | SamplingRate controls the rate at which traffic will be<br />selected for tracing if no prior sampling decision has been made.<br />Defaults to 100, valid values [0-100]. 100 indicates 100% sampling.<br />Only one of SamplingRate or SamplingFraction may be specified.<br />If neither field is specified, all requests will be sampled. |
 | `samplingFraction` | _[Fraction](https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.Fraction)_ |  false  |  | SamplingFraction represents the fraction of requests that should be<br />selected for tracing if no prior sampling decision has been made.<br />Only one of SamplingRate or SamplingFraction may be specified.<br />If neither field is specified, all requests will be sampled. |
 | `customTags` | _object (keys:string, values:[CustomTag](#customtag))_ |  true  |  | CustomTags defines the custom tags to add to each span.<br />If provider is kubernetes, pod name and namespace are added by default. |
 | `provider` | _[TracingProvider](#tracingprovider)_ |  true  |  | Provider defines the tracing provider. |
@@ -3922,6 +3922,19 @@ _Appears in:_
 | ---   | ---  | ---      | ---     | ---         |
 | `pattern` | _string_ |  true  |  | Pattern matches a regular expression against the value of the HTTP Path.The regex string must<br />adhere to the syntax documented in https://github.com/google/re2/wiki/Syntax. |
 | `substitution` | _string_ |  true  |  | Substitution is an expression that replaces the matched portion.The expression may include numbered<br />capture groups that adhere to syntax documented in https://github.com/google/re2/wiki/Syntax. |
+
+
+#### RequestBuffer
+
+
+
+
+
+_Appears in:_
+- [BackendTrafficPolicySpec](#backendtrafficpolicyspec)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
 
 
 #### RequestHeaderCustomTag
@@ -4588,6 +4601,21 @@ _Appears in:_
 | `http` | _[HTTPWasmCodeSource](#httpwasmcodesource)_ |  false  |  | HTTP is the HTTP URL containing the Wasm code.<br />Note that the HTTP server must be accessible from the Envoy proxy. |
 | `image` | _[ImageWasmCodeSource](#imagewasmcodesource)_ |  false  |  | Image is the OCI image containing the Wasm code.<br />Note that the image must be accessible from the Envoy Gateway. |
 | `pullPolicy` | _[ImagePullPolicy](#imagepullpolicy)_ |  false  |  | PullPolicy is the policy to use when pulling the Wasm module by either the HTTP or Image source.<br />This field is only applicable when the SHA256 field is not set.<br />If not specified, the default policy is IfNotPresent except for OCI images whose tag is latest.<br />Note: EG does not update the Wasm module every time an Envoy proxy requests<br />the Wasm module even if the pull policy is set to Always.<br />It only updates the Wasm module when the EnvoyExtension resource version changes. |
+
+
+#### WasmCodeSourceTLSConfig
+
+
+
+WasmCodeSourceTLSConfig defines the TLS configuration when connecting to the Wasm code source.
+
+_Appears in:_
+- [HTTPWasmCodeSource](#httpwasmcodesource)
+- [ImageWasmCodeSource](#imagewasmcodesource)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `caCertificateRef` | _[SecretObjectReference](https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1.SecretObjectReference)_ |  true  |  | CACertificateRef contains a references to<br />Kubernetes objects that contain TLS certificates of<br />the Certificate Authorities that can be used<br />as a trust anchor to validate the certificates presented by the Wasm code source.<br />Kubernetes ConfigMap and Kubernetes Secret are supported.<br />Note: The ConfigMap or Secret must be in the same namespace as the EnvoyExtensionPolicy. |
 
 
 #### WasmCodeSourceType

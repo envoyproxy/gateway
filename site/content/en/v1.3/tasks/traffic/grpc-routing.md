@@ -99,7 +99,7 @@ as well as a match for all services with a method name `Ping` which matches `yag
 
 ```shell
 cat <<EOF | kubectl apply -f -
-apiVersion: gateway.networking.k8s.io/v1alpha2
+apiVersion: gateway.networking.k8s.io/v1
 kind: GRPCRoute
 metadata:
   name: yages
@@ -132,7 +132,7 @@ Save and apply the following resource to your cluster:
 
 ```yaml
 ---
-apiVersion: gateway.networking.k8s.io/v1alpha2
+apiVersion: gateway.networking.k8s.io/v1
 kind: GRPCRoute
 metadata:
   name: yages
@@ -184,7 +184,7 @@ with match type `RegularExpression`. It matches all the services and methods wit
 
 ```shell
 cat <<EOF | kubectl apply -f -
-apiVersion: gateway.networking.k8s.io/v1alpha2
+apiVersion: gateway.networking.k8s.io/v1
 kind: GRPCRoute
 metadata:
   name: yages
@@ -219,7 +219,7 @@ Save and apply the following resource to your cluster:
 
 ```yaml
 ---
-apiVersion: gateway.networking.k8s.io/v1alpha2
+apiVersion: gateway.networking.k8s.io/v1
 kind: GRPCRoute
 metadata:
   name: yages

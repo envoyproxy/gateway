@@ -1,3 +1,59 @@
+backends:
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: Backend
+  metadata:
+    creationTimestamp: null
+    name: backend-uds
+    namespace: envoy-gateway
+  spec:
+    endpoints:
+    - unix:
+        path: /var/run/backend.sock
+  status:
+    conditions:
+    - lastTransitionTime: null
+      message: The Backend was accepted
+      reason: Accepted
+      status: "True"
+      type: Accepted
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: Backend
+  metadata:
+    creationTimestamp: null
+    name: backend-fqdn
+    namespace: envoy-gateway
+  spec:
+    appProtocols:
+    - gateway.envoyproxy.io/h2c
+    endpoints:
+    - fqdn:
+        hostname: primary.foo.com
+        port: 3000
+  status:
+    conditions:
+    - lastTransitionTime: null
+      message: The Backend was accepted
+      reason: Accepted
+      status: "True"
+      type: Accepted
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: Backend
+  metadata:
+    creationTimestamp: null
+    name: backend-ip
+    namespace: envoy-gateway
+  spec:
+    endpoints:
+    - ip:
+        address: 1.1.1.1
+        port: 3001
+  status:
+    conditions:
+    - lastTransitionTime: null
+      message: The Backend was accepted
+      reason: Accepted
+      status: "True"
+      type: Accepted
 gateways:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: Gateway
@@ -15,13 +71,6 @@ gateways:
       port: 80
       protocol: HTTP
   status:
-    conditions:
-    - lastTransitionTime: null
-      message: 'Invalid access log backendRefs in the referenced EnvoyProxy: service
-        monitoring/service-not-found not found'
-      reason: InvalidParameters
-      status: "False"
-      type: Accepted
     listeners:
     - attachedRoutes: 0
       conditions:
@@ -54,58 +103,10 @@ infraIR:
         kind: EnvoyProxy
         metadata:
           creationTimestamp: null
-          name: test
+          name: als-backend
           namespace: envoy-gateway-system
         spec:
           logging: {}
-          provider:
-            kubernetes:
-              envoyDeployment:
-                container:
-                  env:
-                  - name: env_a
-                    value: env_a_value
-                  - name: env_b
-                    value: env_b_name
-                  image: envoyproxy/envoy:distroless-dev
-                  resources:
-                    requests:
-                      cpu: 100m
-                      memory: 512Mi
-                  securityContext:
-                    allowPrivilegeEscalation: false
-                    runAsUser: 2000
-                pod:
-                  affinity:
-                    nodeAffinity:
-                      requiredDuringSchedulingIgnoredDuringExecution:
-                        nodeSelectorTerms:
-                        - matchExpressions:
-                          - key: cloud.google.com/gke-nodepool
-                            operator: In
-                            values:
-                            - router-node
-                  annotations:
-                    key1: val1
-                    key2: val2
-                  securityContext:
-                    fsGroup: 2000
-                    fsGroupChangePolicy: OnRootMismatch
-                    runAsGroup: 3000
-                    runAsUser: 1000
-                  tolerations:
-                  - effect: NoSchedule
-                    key: node-type
-                    operator: Exists
-                    value: router
-                  volumes:
-                  - name: certs
-                    secret:
-                      secretName: envoy-cert
-                replicas: 2
-              envoyService:
-                type: LoadBalancer
-            type: Kubernetes
           telemetry:
             accessLog:
               settings:
@@ -114,14 +115,22 @@ infraIR:
                     [%START_TIME%] "%REQ(:METHOD)% %PROTOCOL%" %RESPONSE_CODE% %RESPONSE_FLAGS% %BYTES_RECEIVED% %BYTES_SENT% %DURATION% %RESP(X-ENVOY-UPSTREAM-SERVICE-TIME)% "%REQ(X-FORWARDED-FOR)%" "%REQ(USER-AGENT)%" "%REQ(X-REQUEST-ID)%" "%REQ(:AUTHORITY)%" "%UPSTREAM_HOST%"\n
                   type: Text
                 sinks:
-                - file:
-                    path: /dev/stdout
-                  type: File
                 - openTelemetry:
                     backendRefs:
-                    - name: service-not-found
-                      namespace: monitoring
-                      port: 4317
+                    - group: gateway.envoyproxy.io
+                      kind: Backend
+                      name: backend-uds
+                      namespace: envoy-gateway
+                    - group: gateway.envoyproxy.io
+                      kind: Backend
+                      name: backend-fqdn
+                      namespace: envoy-gateway
+                      port: 3000
+                    - group: gateway.envoyproxy.io
+                      kind: Backend
+                      name: backend-ip
+                      namespace: envoy-gateway
+                      port: 3001
                     resources:
                       k8s.cluster.name: cluster-1
                   type: OpenTelemetry
@@ -141,6 +150,34 @@ infraIR:
       name: envoy-gateway/gateway-1
 xdsIR:
   envoy-gateway/gateway-1:
+    accessLog:
+      openTelemetry:
+      - destination:
+          name: accesslog_otel_0_0
+          settings:
+          - addressType: IP
+            endpoints:
+            - host: ""
+              path: /var/run/backend.sock
+              port: 0
+            name: accesslog_otel_0_0/backend/-1
+            protocol: TCP
+          - addressType: FQDN
+            endpoints:
+            - host: primary.foo.com
+              port: 3000
+            name: accesslog_otel_0_0/backend/-1
+            protocol: HTTP2
+          - addressType: IP
+            endpoints:
+            - host: 1.1.1.1
+              port: 3001
+            name: accesslog_otel_0_0/backend/-1
+            protocol: TCP
+        resources:
+          k8s.cluster.name: cluster-1
+        text: |
+          [%START_TIME%] "%REQ(:METHOD)% %PROTOCOL%" %RESPONSE_CODE% %RESPONSE_FLAGS% %BYTES_RECEIVED% %BYTES_SENT% %DURATION% %RESP(X-ENVOY-UPSTREAM-SERVICE-TIME)% "%REQ(X-FORWARDED-FOR)%" "%REQ(USER-AGENT)%" "%REQ(X-REQUEST-ID)%" "%REQ(:AUTHORITY)%" "%UPSTREAM_HOST%"\n
     http:
     - address: 0.0.0.0
       hostnames:
