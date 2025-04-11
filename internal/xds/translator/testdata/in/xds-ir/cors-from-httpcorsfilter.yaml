@@ -1,0 +1,46 @@
+http:
+- name: "first-listener"
+  address: "::"
+  port: 10080
+  hostnames:
+  - "*"
+  path:
+    mergeSlashes: true
+    escapedSlashesAction: UnescapeAndRedirect
+  routes:
+  - name: "first-route"
+    hostname: "*"
+    pathMatch:
+      exact: "foo/bar"
+    destination:
+      name: "first-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
+        name: "first-route-dest/backend/0"
+    security:
+      cors:
+        allowOrigins:
+        - stringMatch:
+          safeRegex: http://.*\.example\.com
+        - stringMatch:
+          exact: https://foo.bar.com
+        allowMethods:
+        - GET
+        - POST
+        - "*"
+        allowHeaders:
+        - "x-header-1"
+        - "x-header-2"
+        exposeHeaders:
+        - "x-header-3"
+        - "x-header-4"
+        allowCredentials: true
+        maxAge: 1000s
+    cors:   # The CORS settings from the Gateway API HTTPCORSFilter take precedence over the CORS settings from the SecurityPolicy.
+      allowOrigins:
+      - stringMatch:
+        exact: https://gateway.envoyproxy.io
+      allowMethods:
+      - GET
