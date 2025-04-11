@@ -2920,6 +2920,7 @@ _Appears in:_
 
 | Value | Description |
 | ----- | ----------- |
+| `trace` | LogLevelTrace defines the "Trace" logging level.<br /> | 
 | `debug` | LogLevelDebug defines the "debug" logging level.<br /> | 
 | `info` | LogLevelInfo defines the "Info" logging level.<br /> | 
 | `warn` | LogLevelWarn defines the "Warn" logging level.<br /> | 
