@@ -11,6 +11,10 @@ backendTLSPolicies:
       kind: ServiceImport
       name: service-import-1
       sectionName: http
+    - group: multicluster.x-k8s.io
+      kind: ServiceImport
+      name: service-import-1
+      sectionName: grpc
     validation:
       hostname: example.com
       wellKnownCACertificates: System
@@ -87,6 +91,11 @@ httpRoutes:
         name: service-import-1
         namespace: default
         port: 8080
+      - group: multicluster.x-k8s.io
+        kind: ServiceImport
+        name: service-import-1
+        namespace: default
+        port: 9000
       matches:
       - path:
           type: Exact
@@ -150,6 +159,15 @@ xdsIR:
           name: httproute/envoy-gateway/httproute-btls/rule/0
           settings:
           - name: httproute/envoy-gateway/httproute-btls/rule/0/backend/0
+            protocol: HTTP2
+            tls:
+              alpnProtocols: null
+              caCertificate:
+                name: policy-btls/default-ca
+              sni: example.com
+              useSystemTrustStore: true
+            weight: 1
+          - name: httproute/envoy-gateway/httproute-btls/rule/0/backend/1
             protocol: HTTP
             tls:
               alpnProtocols: null

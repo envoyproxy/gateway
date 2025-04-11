@@ -19,6 +19,7 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gwapiv1a3 "sigs.k8s.io/gateway-api/apis/v1alpha3"
@@ -825,4 +826,17 @@ func (r *gatewayAPIReconciler) validateHTTPRouteFilterForReconcile(obj client.Ob
 
 	nsName := utils.NamespacedName(hrf)
 	return r.isRouteReferencingHTTPRouteFilter(&nsName)
+}
+
+func commonPredicates[T client.Object]() []predicate.TypedPredicate[T] {
+	return []predicate.TypedPredicate[T]{
+		metadataPredicate[T](),
+	}
+}
+
+func metadataPredicate[T client.Object]() predicate.TypedPredicate[T] {
+	return predicate.Or(predicate.TypedGenerationChangedPredicate[T]{},
+		predicate.TypedLabelChangedPredicate[T]{},
+		predicate.TypedAnnotationChangedPredicate[T]{},
+	)
 }
