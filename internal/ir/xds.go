@@ -43,7 +43,6 @@ var (
 	ErrTLSPrivateKey                            = errors.New("field PrivateKey must be specified")
 	ErrRouteNameEmpty                           = errors.New("field Name must be specified")
 	ErrHTTPRouteHostnameEmpty                   = errors.New("field Hostname must be specified")
-	ErrRouteDestinationsFQDNMixed               = errors.New("mixed endpoints address type for the same route destination is not supported")
 	ErrDestinationNameEmpty                     = errors.New("field Name must be specified")
 	ErrDestEndpointHostInvalid                  = errors.New("field Address must be a valid IP or FQDN address")
 	ErrDestEndpointPortInvalid                  = errors.New("field Port specified is invalid")
@@ -1432,20 +1431,24 @@ func (r *RouteDestination) Validate() error {
 	if len(r.Name) == 0 {
 		errs = errors.Join(errs, ErrDestinationNameEmpty)
 	}
-	routeHasAddressTypes := make(sets.Set[DestinationAddressType])
 	for _, s := range r.Settings {
 		if err := s.Validate(); err != nil {
 			errs = errors.Join(errs, err)
 		}
-		if s.AddressType != nil {
-			routeHasAddressTypes.Insert(*s.AddressType)
-		}
-	}
-	if routeHasAddressTypes.Len() > 1 || routeHasAddressTypes.Has(MIXED) {
-		errs = errors.Join(ErrRouteDestinationsFQDNMixed)
 	}
 
 	return errs
+}
+
+// HasMixedEndpoints returns true if the RouteDestination has endpoints of multiple types
+func (r *RouteDestination) HasMixedEndpoints() bool {
+	destinationAddressTypes := sets.Set[DestinationAddressType]{}
+	for _, s := range r.Settings {
+		if s.AddressType != nil {
+			destinationAddressTypes.Insert(*s.AddressType)
+		}
+	}
+	return destinationAddressTypes.Len() > 1 || destinationAddressTypes.Has(MIXED)
 }
 
 func (r *RouteDestination) ToBackendWeights() *BackendWeights {
