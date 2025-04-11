@@ -949,6 +949,9 @@ func getCustomResponseBody(body *egv1a1.CustomResponseBody, resources *resource.
 			b, dataOk := cm.Data["response.body"]
 			switch {
 			case dataOk:
+				if err := checkResponseBodySize(&b); err != nil {
+					return nil, err
+				}
 				return &b, nil
 			case len(cm.Data) > 0: // Fallback to the first key if response.body is not found
 				for _, value := range cm.Data {
