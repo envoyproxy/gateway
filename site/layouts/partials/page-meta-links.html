@@ -54,5 +54,6 @@
 {{ with .CurrentSection.AlternativeOutputFormats.Get "print" -}}
   <a id="print" href="{{ .RelPermalink | safeURL }}"><i class="fa-solid fa-print fa-fw"></i> {{ T "print_entire_section" }}</a>
 {{ end }}
+<a href="https://github.com/envoyproxy/gateway/discussions/new?category=q-a" class="td-page-meta--ask td-page-meta__ask" target="_blank" rel="noopener"><i class="fa-solid fa-question-circle fa-fw"></i> Ask a Question</a>
 </div>
 {{ end -}}
