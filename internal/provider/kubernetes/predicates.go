@@ -179,7 +179,29 @@ func (r *gatewayAPIReconciler) validateSecretForReconcile(obj client.Object) boo
 		}
 	}
 
+	if r.hrfCRDExists {
+		if r.isHTTPRouteFilterReferencingSecret(&nsName) {
+			return true
+		}
+	}
+
 	return false
+}
+
+func (r *gatewayAPIReconciler) isHTTPRouteFilterReferencingSecret(nsName *types.NamespacedName) bool {
+	routeFilterList := &egv1a1.HTTPRouteFilterList{}
+	if err := r.client.List(context.Background(), routeFilterList, &client.ListOptions{
+		FieldSelector: fields.OneTermEqualSelector(secretHTTPRouteFilterIndex, nsName.String()),
+	}); err != nil {
+		r.log.Error(err, "unable to find associated HTTPRouteFilter")
+		return false
+	}
+
+	if len(routeFilterList.Items) > 0 {
+		return true
+	}
+
+	return true
 }
 
 func (r *gatewayAPIReconciler) isBackendTLSPolicyReferencingSecret(nsName *types.NamespacedName) bool {
