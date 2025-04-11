@@ -933,6 +933,18 @@ func buildResponseOverride(policy *egv1a1.BackendTrafficPolicy, resources *resou
 	}, nil
 }
 
+func checkResponseBodySize(b *string) error {
+	// Make this configurable in the future
+	// https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/route/v3/route.proto.html#max_direct_response_body_size_bytes
+	maxDirectResponseSize := 4096
+	lenB := len(*b)
+	if lenB > maxDirectResponseSize {
+		return fmt.Errorf("response.body size %d greater than the max size %d", lenB, maxDirectResponseSize)
+	}
+
+	return nil
+}
+
 func getCustomResponseBody(body *egv1a1.CustomResponseBody, resources *resource.Resources, policyNs string) (*string, error) {
 	if body != nil && body.Type != nil && *body.Type == egv1a1.ResponseValueTypeValueRef {
 		cm := resources.GetConfigMap(policyNs, string(body.ValueRef.Name))
@@ -940,11 +952,17 @@ func getCustomResponseBody(body *egv1a1.CustomResponseBody, resources *resource.
 			b, dataOk := cm.Data["response.body"]
 			switch {
 			case dataOk:
+				if err := checkResponseBodySize(&b); err != nil {
+					return nil, err
+				}
 				return &b, nil
 			case len(cm.Data) > 0: // Fallback to the first key if response.body is not found
 				for _, value := range cm.Data {
 					b = value
 					break
+				}
+				if err := checkResponseBodySize(&b); err != nil {
+					return nil, err
 				}
 				return &b, nil
 			default:
@@ -955,6 +973,9 @@ func getCustomResponseBody(body *egv1a1.CustomResponseBody, resources *resource.
 			return nil, fmt.Errorf("can't find the referenced configmap %s", body.ValueRef.Name)
 		}
 	} else if body != nil && body.Inline != nil {
+		if err := checkResponseBodySize(body.Inline); err != nil {
+			return nil, err
+		}
 		return body.Inline, nil
 	}
 
