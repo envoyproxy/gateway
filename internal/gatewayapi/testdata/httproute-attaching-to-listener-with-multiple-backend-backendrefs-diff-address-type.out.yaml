@@ -128,8 +128,8 @@ httpRoutes:
         status: "True"
         type: Accepted
       - lastTransitionTime: null
-        message: Mixed endpointslice address type between backendRefs is not supported
-        reason: ResolvedRefs
+        message: Unix domain sockets are not supported in backend references
+        reason: UnsupportedRefAddressFound
         status: "False"
         type: ResolvedRefs
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
@@ -208,9 +208,9 @@ httpRoutes:
         status: "True"
         type: Accepted
       - lastTransitionTime: null
-        message: Mixed endpointslice address type between backendRefs is not supported
+        message: Resolved all the Object references for the Route
         reason: ResolvedRefs
-        status: "False"
+        status: "True"
         type: ResolvedRefs
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
