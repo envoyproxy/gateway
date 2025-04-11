@@ -139,7 +139,7 @@ An Add-ons Helm chart for Envoy Gateway
 | prometheus.kube-state-metrics.customResourceState.config.kind | string | `"CustomResourceStateMetrics"` |  |
 | prometheus.kube-state-metrics.customResourceState.config.spec.resources[0].groupVersionKind.group | string | `"gateway.networking.k8s.io"` |  |
 | prometheus.kube-state-metrics.customResourceState.config.spec.resources[0].groupVersionKind.kind | string | `"Gateway"` |  |
-| prometheus.kube-state-metrics.customResourceState.config.spec.resources[0].groupVersionKind.version | string | `"v1beta1"` |  |
+| prometheus.kube-state-metrics.customResourceState.config.spec.resources[0].groupVersionKind.version | string | `"v1"` |  |
 | prometheus.kube-state-metrics.customResourceState.config.spec.resources[0].labelsFromPath.name[0] | string | `"metadata"` |  |
 | prometheus.kube-state-metrics.customResourceState.config.spec.resources[0].labelsFromPath.name[1] | string | `"name"` |  |
 | prometheus.kube-state-metrics.customResourceState.config.spec.resources[0].labelsFromPath.namespace[0] | string | `"metadata"` |  |
@@ -202,7 +202,7 @@ An Add-ons Helm chart for Envoy Gateway
 | prometheus.kube-state-metrics.customResourceState.config.spec.resources[0].metrics[7].name | string | `"status_address_info"` |  |
 | prometheus.kube-state-metrics.customResourceState.config.spec.resources[1].groupVersionKind.group | string | `"gateway.networking.k8s.io"` |  |
 | prometheus.kube-state-metrics.customResourceState.config.spec.resources[1].groupVersionKind.kind | string | `"GatewayClass"` |  |
-| prometheus.kube-state-metrics.customResourceState.config.spec.resources[1].groupVersionKind.version | string | `"v1beta1"` |  |
+| prometheus.kube-state-metrics.customResourceState.config.spec.resources[1].groupVersionKind.version | string | `"v1"` |  |
 | prometheus.kube-state-metrics.customResourceState.config.spec.resources[1].labelsFromPath.name[0] | string | `"metadata"` |  |
 | prometheus.kube-state-metrics.customResourceState.config.spec.resources[1].labelsFromPath.name[1] | string | `"name"` |  |
 | prometheus.kube-state-metrics.customResourceState.config.spec.resources[1].metricNamePrefix | string | `"gatewayapi_gatewayclass"` |  |
@@ -241,7 +241,7 @@ An Add-ons Helm chart for Envoy Gateway
 | prometheus.kube-state-metrics.customResourceState.config.spec.resources[1].metrics[5].name | string | `"status_supported_features"` |  |
 | prometheus.kube-state-metrics.customResourceState.config.spec.resources[2].groupVersionKind.group | string | `"gateway.networking.k8s.io"` |  |
 | prometheus.kube-state-metrics.customResourceState.config.spec.resources[2].groupVersionKind.kind | string | `"HTTPRoute"` |  |
-| prometheus.kube-state-metrics.customResourceState.config.spec.resources[2].groupVersionKind.version | string | `"v1beta1"` |  |
+| prometheus.kube-state-metrics.customResourceState.config.spec.resources[2].groupVersionKind.version | string | `"v1"` |  |
 | prometheus.kube-state-metrics.customResourceState.config.spec.resources[2].labelsFromPath.name[0] | string | `"metadata"` |  |
 | prometheus.kube-state-metrics.customResourceState.config.spec.resources[2].labelsFromPath.name[1] | string | `"name"` |  |
 | prometheus.kube-state-metrics.customResourceState.config.spec.resources[2].labelsFromPath.namespace[0] | string | `"metadata"` |  |
@@ -299,7 +299,7 @@ An Add-ons Helm chart for Envoy Gateway
 | prometheus.kube-state-metrics.customResourceState.config.spec.resources[2].metrics[5].name | string | `"status_parent_info"` |  |
 | prometheus.kube-state-metrics.customResourceState.config.spec.resources[3].groupVersionKind.group | string | `"gateway.networking.k8s.io"` |  |
 | prometheus.kube-state-metrics.customResourceState.config.spec.resources[3].groupVersionKind.kind | string | `"GRPCRoute"` |  |
-| prometheus.kube-state-metrics.customResourceState.config.spec.resources[3].groupVersionKind.version | string | `"v1alpha2"` |  |
+| prometheus.kube-state-metrics.customResourceState.config.spec.resources[3].groupVersionKind.version | string | `"v1"` |  |
 | prometheus.kube-state-metrics.customResourceState.config.spec.resources[3].labelsFromPath.name[0] | string | `"metadata"` |  |
 | prometheus.kube-state-metrics.customResourceState.config.spec.resources[3].labelsFromPath.name[1] | string | `"name"` |  |
 | prometheus.kube-state-metrics.customResourceState.config.spec.resources[3].labelsFromPath.namespace[0] | string | `"metadata"` |  |
@@ -519,7 +519,7 @@ An Add-ons Helm chart for Envoy Gateway
 | prometheus.kube-state-metrics.customResourceState.config.spec.resources[6].metrics[4].name | string | `"status_parent_info"` |  |
 | prometheus.kube-state-metrics.customResourceState.config.spec.resources[7].groupVersionKind.group | string | `"gateway.networking.k8s.io"` |  |
 | prometheus.kube-state-metrics.customResourceState.config.spec.resources[7].groupVersionKind.kind | string | `"BackendTLSPolicy"` |  |
-| prometheus.kube-state-metrics.customResourceState.config.spec.resources[7].groupVersionKind.version | string | `"v1alpha2"` |  |
+| prometheus.kube-state-metrics.customResourceState.config.spec.resources[7].groupVersionKind.version | string | `"v1alpha3"` |  |
 | prometheus.kube-state-metrics.customResourceState.config.spec.resources[7].labelsFromPath.name[0] | string | `"metadata"` |  |
 | prometheus.kube-state-metrics.customResourceState.config.spec.resources[7].labelsFromPath.name[1] | string | `"name"` |  |
 | prometheus.kube-state-metrics.customResourceState.config.spec.resources[7].labelsFromPath.namespace[0] | string | `"metadata"` |  |
