@@ -1,0 +1,216 @@
+gateways:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: Gateway
+  metadata:
+    namespace: envoy-gateway
+    name: gateway-1
+  spec:
+    gatewayClassName: envoy-gateway-class
+    listeners:
+    - name: http
+      protocol: HTTP
+      port: 80
+      allowedRoutes:
+        namespaces:
+          from: All
+httpRoutes:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    namespace: default
+    name: httproute-1
+  spec:
+    hostnames:
+    - gateway.envoyproxy.io
+    parentRefs:
+    - namespace: envoy-gateway
+      name: gateway-1
+      sectionName: http
+    rules:
+    - matches:
+      - path:
+          value: "/foo"
+      backendRefs:
+      - name: service-1
+        port: 8080
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    namespace: default
+    name: httproute-2
+  spec:
+    hostnames:
+    - gateway.envoyproxy.io
+    parentRefs:
+    - namespace: envoy-gateway
+      name: gateway-1
+      sectionName: http
+    rules:
+    - matches:
+      - path:
+          value: "/bar"
+      backendRefs:
+      - name: service-1
+        port: 8080
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    namespace: default
+    name: httproute-3
+  spec:
+    hostnames:
+    - gateway.envoyproxy.io
+    parentRefs:
+    - namespace: envoy-gateway
+      name: gateway-1
+      sectionName: http
+    rules:
+    - matches:
+      - path:
+          value: "/baz"
+      backendRefs:
+      - name: service-1
+        port: 8080
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    namespace: default
+    name: httproute-4
+  spec:
+    hostnames:
+    - gateway.envoyproxy.io
+    parentRefs:
+    - namespace: envoy-gateway
+      name: gateway-1
+      sectionName: http
+    rules:
+    - matches:
+      - path:
+          value: "/qux"
+      backendRefs:
+      - name: service-1
+        port: 8080
+securityPolicies:
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: SecurityPolicy
+  metadata:
+    namespace: default
+    name: securitypolicy-with-jwt-local-jwks-inline
+  spec:
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: httproute-1
+    jwt:
+      providers:
+      - name: example1
+        issuer: https://one.example.com
+        localJWKS:
+          type: Inline
+          inline: |
+            {
+              "keys": [
+                {
+                  "kty": "RSA",
+                  "n": "some-modulus",
+                  "e": "AQAB",
+                  "kid": "example1-key"
+                }
+              ]
+            }
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: SecurityPolicy
+  metadata:
+    namespace: default
+    name: securitypolicy-with-jwt-local-jwks-valueref
+  spec:
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: httproute-2
+    jwt:
+      providers:
+      - name: example1
+        issuer: https://one.example.com
+        localJWKS:
+          type: ValueRef
+          valueRef:
+            group: ""
+            name: example1-jwks
+            kind: ConfigMap
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: SecurityPolicy
+  metadata:
+    namespace: default
+    name: securitypolicy-with-jwt-local-jwks-valueref-missing-key
+  spec:
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: httproute-3
+    jwt:
+      providers:
+      - name: example2
+        issuer: https://one.example.com
+        localJWKS:
+          type: ValueRef
+          valueRef:
+            group: ""
+            name: example2-jwks
+            kind: ConfigMap
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: SecurityPolicy
+  metadata:
+    namespace: default
+    name: securitypolicy-with-jwt-local-jwks-valueref-missing-configmap
+  spec:
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: httproute-4
+    jwt:
+      providers:
+      - name: example2
+        issuer: https://one.example.com
+        localJWKS:
+          type: ValueRef
+          valueRef:
+            group: ""
+            name: example3-jwks
+            kind: ConfigMap
+
+configMaps:
+- apiVersion: v1
+  kind: ConfigMap
+  metadata:
+    name: example1-jwks
+    namespace: default
+  data:
+    jwks: |
+      {
+        "keys": [
+          {
+            "kty": "RSA",
+            "n": "some-modulus",
+            "e": "AQAB",
+            "kid": "example1-key"
+          }
+        ]
+      }
+- apiVersion: v1
+  kind: ConfigMap
+  metadata:
+    name: example2-jwks
+    namespace: default
+  data:
+    some-key: |
+      {
+        "keys": [
+          {
+            "kty": "RSA",
+            "n": "some-modulus",
+            "e": "AQAB",
+            "kid": "example1-key"
+          }
+        ]
+      }

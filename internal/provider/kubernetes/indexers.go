@@ -38,6 +38,7 @@ const (
 	backendUDPRouteIndex             = "backendUDPRouteIndex"
 	secretSecurityPolicyIndex        = "secretSecurityPolicyIndex"
 	backendSecurityPolicyIndex       = "backendSecurityPolicyIndex"
+	configMapSecurityPolicyIndex     = "configMapSecurityPolicyIndex"
 	configMapCtpIndex                = "configMapCtpIndex"
 	secretCtpIndex                   = "secretCtpIndex"
 	secretBtlsIndex                  = "secretBtlsIndex"
@@ -547,6 +548,12 @@ func addSecurityPolicyIndexers(ctx context.Context, mgr manager.Manager) error {
 		return err
 	}
 
+	if err = mgr.GetFieldIndexer().IndexField(
+		ctx, &egv1a1.SecurityPolicy{}, configMapSecurityPolicyIndex,
+		configMapSecurityPolicyIndexFunc); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -610,6 +617,27 @@ func backendSecurityPolicyIndexFunc(rawObj client.Object) []string {
 	}
 
 	// This should not happen because the CEL validation should catch it.
+	return []string{}
+}
+
+func configMapSecurityPolicyIndexFunc(rawObj client.Object) []string {
+	securityPolicy := rawObj.(*egv1a1.SecurityPolicy)
+
+	if securityPolicy.Spec.JWT != nil {
+		for _, provider := range securityPolicy.Spec.JWT.Providers {
+			if provider.LocalJWKS != nil &&
+				provider.LocalJWKS.Type != nil &&
+				*provider.LocalJWKS.Type == egv1a1.LocalJWKSTypeValueRef {
+				return []string{
+					types.NamespacedName{
+						Namespace: securityPolicy.Namespace,
+						Name:      string(provider.LocalJWKS.ValueRef.Name),
+					}.String(),
+				}
+			}
+		}
+	}
+
 	return []string{}
 }
 

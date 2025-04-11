@@ -49,17 +49,20 @@
                 clearRouteCache: true
                 forward: true
                 issuer: https://www.two.example.com
+                localJwks:
+                  inlineString: |
+                    {
+                      "keys": [
+                        {
+                          "kty": "oct",
+                          "k": "1234567890"
+                        }
+                      ]
+                    }
                 normalizePayloadInMetadata:
                   spaceDelimitedClaims:
                   - scope
                 payloadInMetadata: example2
-                remoteJwks:
-                  asyncFetch: {}
-                  cacheDuration: 300s
-                  httpUri:
-                    cluster: "192_168_1_250_8080"
-                    timeout: 10s
-                    uri: https://192.168.1.250:8080/jwt/public-key/jwks.json
               second-route-www.test.com/example:
                 audiences:
                 - foo.com
