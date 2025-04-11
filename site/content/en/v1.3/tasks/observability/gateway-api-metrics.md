@@ -1,58 +1,127 @@
 ---
 title: "Gateway API Metrics"
 ---
-
-Resource metrics for Gateway API objects are available using the [Gateway API State Metrics][gasm] project.
-The project also provides example dashboard for visualising the metrics using Grafana, and example alerts using Prometheus & Alertmanager.
-
 ## Prerequisites
 
-{{< boilerplate prerequisites >}}
+{{< boilerplate o11y_prerequisites >}}
 
-Run the following commands to install the metrics stack, with the Gateway API State Metrics configuration, on your kubernetes cluster:
+### Enable kube-state-metrics
 
-```shell
-kubectl apply --server-side -f https://raw.githubusercontent.com/Kuadrant/gateway-api-state-metrics/main/config/examples/kube-prometheus/bundle_crd.yaml
-kubectl apply -f https://raw.githubusercontent.com/Kuadrant/gateway-api-state-metrics/main/config/examples/kube-prometheus/bundle.yaml
-```
-
-## Metrics and Alerts
-
-To access the Prometheus UI, wait for the statefulset to be ready, then use the port-forward command:
+The `kube-state-metrics` service is required to collect metrics from the Kubernetes API server. Use the following command to enable it:
 
 ```shell
-# This first command may fail if the statefulset has not been created yet.
-# In that case, try again until you get a message like 'Waiting for 2 pods to be ready...'
-# or 'statefulset rolling update complete 2 pods...'
-kubectl -n monitoring rollout status --watch --timeout=5m statefulset/prometheus-k8s
-kubectl -n monitoring port-forward service/prometheus-k8s 9090:9090 > /dev/null &
+helm upgrade eg-addons oci://docker.io/envoyproxy/gateway-addons-helm \
+--version {{< helm-version >}} \
+--reuse-values \
+--set prometheus.kube-state-metrics.enabled=true \
+-n monitoring
 ```
 
-Navigate to `http://localhost:9090`.
-Metrics can be queried from the 'Graph' tab e.g. `gatewayapi_gateway_created`
-See the [Gateway API State Metrics README][gasm-readme] for the full list of Gateway API metrics available.
+## Metrics
 
-Alerts can be seen in the 'Alerts' tab.
-Gateway API specific alerts will be grouped under the 'gateway-api.rules' heading.
+To query metrics using Prometheus API, follow the steps below. Make sure to wait for the statefulset to be ready before port-forwarding.
 
-***Note:*** Alerts are defined in a PrometheusRules custom resource in the 'monitoring' namespace. You can modify the alert rules by updating this resource.
+```shell
+export PROMETHEUS_PORT=$(kubectl get service prometheus -n monitoring -o jsonpath='{.spec.ports[0].port}')
+kubectl port-forward service/prometheus -n monitoring 9090:$PROMETHEUS_PORT
+```
+
+The example query below fetches the `gatewayapi_gateway_created` metric.
+Alternatively, access the Prometheus UI at `http://localhost:9090`.
+
+```shell
+curl -s 'http://localhost:9090/api/v1/query?query=gatewayapi_gateway_created' | jq . 
+```
+
+
+## Alerts
+
+A set of example alert rules are available in
+[config/examples/rules](https://github.com/Kuadrant/gateway-api-state-metrics/tree/main/config/examples/rules). To create alert use the following command:
+
+```shell
+cat <<EOF | helm upgrade eg-addons oci://docker.io/envoyproxy/gateway-addons-helm \
+  --version v0.0.0-latest \
+  -n monitoring --reuse-values -f -
+prometheus:
+  serverFiles:
+    alerting_rules.yml:
+      groups:
+        - name: gateway-api.rules
+          rules:
+            - alert: UnhealthyGateway
+              expr: (gatewayapi_gateway_status{type="Accepted"} == 0) or (gatewayapi_gateway_status{type="Programmed"} == 0)
+              for: 10m
+              labels:
+                severity: critical
+              annotations:
+                summary: "Either the Accepted or Programmed status is not True"
+                description: "Gateway {{ \$labels.namespace }}/{{ \$labels.name }} has an unhealthy status"
+            - alert: InsecureHTTPListener
+              expr: gatewayapi_gateway_listener_info{protocol="HTTP"}
+              for: 10m
+              labels:
+                severity: critical
+              annotations:
+                summary: "Listeners must use HTTPS"
+                description: "Gateway {{ \$labels.namespace }}/{{ \$labels.name }} has an insecure listener {{ \$labels.protocol }}/{{ \$labels.port }}"
+EOF
+```
+
+To view the alerts, navigate to the **Alerts** tab at `http://localhost:9090/alerts`.
+
+Alternatively, you can use the following command to view the alerts via the Prometheus API:
+
+
+```shell
+curl -s http://localhost:9090/api/v1/alerts | jq '.data.alerts[]'
+
+```
 
 ## Dashboards
 
-To view the dashboards in Grafana, wait for the deployment to be ready, then use the port-forward command:
+To access the Grafana dashboards, follow these steps:
+
+1. Wait for the deployment to complete, then set up port forwarding using the following commands:
+
+    ```shell
+    export GRAFANA_PORT=$(kubectl get service grafana -n monitoring -o jsonpath='{.spec.ports[0].port}')
+    kubectl port-forward service/grafana -n monitoring 3000:$GRAFANA_PORT
+    ```
+
+2. Access Grafana by navigating to `http://localhost:3000` in your web browser
+3. Log in using the default credentials:
+   - Username: `admin`
+   - Password: `admin`
+
+A set of Grafana dashboards is provided by [Gateway API State Metrics](https://github.com/Kuadrant/gateway-api-state-metrics/tree/main/src/dashboards). These dashboards are available
+in [./config/examples/dashboards](https://github.com/Kuadrant/gateway-api-state-metrics/tree/main/config/examples/dashboards)
+and on [grafana.com](https://grafana.com/grafana/dashboards/?search=Gateway+API+State).
+To import them manually navigate to the Grafana UI and select **Dashboards** > **New** > **Import**.
+
+Alternatively, use the following command to import dashboards using the Grafana API:
+
 
 ```shell
-kubectl -n monitoring wait --timeout=5m deployment/grafana --for=condition=Available
-kubectl -n monitoring port-forward service/grafana 3000:3000 > /dev/null &
+export GRAFANA_API_KEY="your-api-key"
+
+urls=(
+  "https://grafana.com/api/dashboards/19433/revisions/1/download"
+  "https://grafana.com/api/dashboards/19432/revisions/1/download"
+  "https://grafana.com/api/dashboards/19434/revisions/1/download"
+  "https://grafana.com/api/dashboards/19570/revisions/1/download"
+)
+
+for url in "${urls[@]}"; do
+  dashboard_data=$(curl -s "$url")
+  curl -X POST \
+    -H "Authorization: Bearer $GRAFANA_API_KEY" \
+    -H "Content-Type: application/json" \
+    -d "{\"dashboard\": $dashboard_data, \"overwrite\": true}" \
+    "http://localhost:3000/api/dashboards/db"
+done
 ```
 
-Navigate to `http://localhost:3000` and sign in with admin/admin.
-The Gateway API State dashboards will be available in the 'Default' folder and tagged with 'gateway-api'.
-See the [Gateway API State Metrics README][gasm-dashboards] for further information on available dashboards.
+## Next Steps
 
-***Note:*** Dashboards are loaded from configmaps. You can modify the dashboards in the Grafana UI, however you will need to export them from the UI and update the json in the configmaps to persist changes.
-
-
-[gasm]: https://github.com/Kuadrant/gateway-api-state-metrics
-[gasm-readme]: https://github.com/Kuadrant/gateway-api-state-metrics/tree/main#metrics
-[gasm-dashboards]: https://github.com/Kuadrant/gateway-api-state-metrics/tree/main#dashboards
+Check out the [Gateway Exported Metrics](./grafana-integration.md) section to learn more about the metrics exported by the Envoy Gateway.
