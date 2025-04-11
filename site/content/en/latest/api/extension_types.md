@@ -3029,6 +3029,21 @@ _Appears in:_
 | `idToken` | _string_ |  false  |  | The name of the cookie used to store the IdToken in the<br />[Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest).<br />If not specified, defaults to "IdToken-(randomly generated uid)" |
 
 
+#### OIDCDenyRedirectMatcher
+
+
+
+OIDCDenyRedirectMatcher defines the matcher to deny redirect to the OIDC Provider.
+
+_Appears in:_
+- [OIDC](#oidc)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `name` | _string_ |  true  |  | Specifies the name of the header in the request.<br />The pseudo-headers ``:path`` and ``:method`` can be used to match the request path and method, respectively |
+| `stringMatch` | _[StringMatch](#stringmatch)_ |  true  |  | If specified, header match will be performed based on the string match of the header value.<br />Specifies how the header match will be performed to route the request. |
+
+
 #### OIDCProvider
 
 
@@ -4322,6 +4337,7 @@ This is a general purpose match condition that can be used by other EG APIs
 that need to match against a string.
 
 _Appears in:_
+- [OIDCDenyRedirectMatcher](#oidcdenyredirectmatcher)
 - [ProxyMetrics](#proxymetrics)
 
 | Field | Type | Required | Default | Description |
