@@ -17,7 +17,7 @@ gateways:
       protocol: HTTP
   status:
     listeners:
-    - attachedRoutes: 2
+    - attachedRoutes: 3
       conditions:
       - lastTransitionTime: null
         message: Sending translated listener configuration to the data plane
@@ -95,7 +95,7 @@ httpRoutes:
   kind: HTTPRoute
   metadata:
     creationTimestamp: null
-    name: direct-response-with-errors
+    name: direct-response-with-value-not-found
     namespace: default
   spec:
     parentRefs:
@@ -125,6 +125,47 @@ httpRoutes:
         message: 'Unable to translate HTTPRouteFilter: default/direct-response-value-ref-not-found'
         reason: BackendNotFound
         status: "False"
+        type: ResolvedRefs
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+      parentRef:
+        name: gateway-1
+        namespace: envoy-gateway
+        sectionName: http
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    creationTimestamp: null
+    name: direct-response-too-long
+    namespace: default
+  spec:
+    parentRefs:
+    - name: gateway-1
+      namespace: envoy-gateway
+      sectionName: http
+    rules:
+    - filters:
+      - extensionRef:
+          group: gateway.envoyproxy.io
+          kind: HTTPRouteFilter
+          name: direct-response-too-long
+        type: ExtensionRef
+      matches:
+      - path:
+          type: PathPrefix
+          value: /too-long
+  status:
+    parents:
+    - conditions:
+      - lastTransitionTime: null
+        message: 'Invalid filter HTTPRouteFilter: response.body size 4097 greater
+          than the max size 4096'
+        reason: UnsupportedValue
+        status: "False"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Resolved all the Object references for the Route
+        reason: ResolvedRefs
+        status: "True"
         type: ResolvedRefs
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:

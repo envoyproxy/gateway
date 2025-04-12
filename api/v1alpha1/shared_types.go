@@ -330,10 +330,13 @@ type KubernetesServiceSpec struct {
 }
 
 // LogLevel defines a log level for Envoy Gateway and EnvoyProxy system logs.
-// +kubebuilder:validation:Enum=debug;info;error;warn
+// +kubebuilder:validation:Enum=trace;debug;info;warn;error
 type LogLevel string
 
 const (
+	// LogLevelTrace defines the "Trace" logging level.
+	LogLevelTrace LogLevel = "trace"
+
 	// LogLevelDebug defines the "debug" logging level.
 	LogLevelDebug LogLevel = "debug"
 

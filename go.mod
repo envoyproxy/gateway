@@ -3,7 +3,7 @@ module github.com/envoyproxy/gateway
 go 1.24.2
 
 require (
-	fortio.org/fortio v1.68.1
+	fortio.org/fortio v1.69.1
 	fortio.org/log v1.17.2
 	github.com/AdaLogics/go-fuzz-headers v0.0.0-20230811130428-ced1acdcaa24
 	github.com/Masterminds/semver/v3 v3.3.1
@@ -23,7 +23,7 @@ require (
 	github.com/evanphx/json-patch v5.9.11+incompatible
 	github.com/evanphx/json-patch/v5 v5.9.11
 	github.com/fatih/color v1.18.0
-	github.com/fsnotify/fsnotify v1.8.0
+	github.com/fsnotify/fsnotify v1.9.0
 	github.com/go-logfmt/logfmt v0.6.0
 	github.com/go-logr/logr v1.4.2
 	github.com/go-logr/zapr v1.3.0
@@ -35,10 +35,10 @@ require (
 	github.com/google/go-cmp v0.7.0
 	github.com/google/go-containerregistry v0.20.3
 	github.com/hashicorp/go-multierror v1.1.1
-	github.com/miekg/dns v1.1.64
-	github.com/ohler55/ojg v1.26.2
+	github.com/miekg/dns v1.1.65
+	github.com/ohler55/ojg v1.26.3
 	github.com/pkg/errors v0.9.1
-	github.com/prometheus/client_golang v1.21.1
+	github.com/prometheus/client_golang v1.22.0
 	github.com/prometheus/client_model v0.6.1
 	github.com/prometheus/common v0.63.0
 	github.com/replicatedhq/troubleshoot v0.118.0
@@ -65,7 +65,7 @@ require (
 	google.golang.org/grpc v1.71.1
 	google.golang.org/protobuf v1.36.6
 	gopkg.in/yaml.v3 v3.0.1
-	helm.sh/helm/v3 v3.17.2
+	helm.sh/helm/v3 v3.17.3
 	k8s.io/api v0.32.3
 	k8s.io/apiextensions-apiserver v0.32.3
 	k8s.io/apimachinery v0.33.0-beta.0
@@ -99,11 +99,11 @@ require (
 	connectrpc.com/otelconnect v0.7.1 // indirect
 	dario.cat/mergo v1.0.1 // indirect
 	filippo.io/edwards25519 v1.1.0 // indirect
-	fortio.org/cli v1.9.2 // indirect
-	fortio.org/dflag v1.7.3 // indirect
+	fortio.org/cli v1.10.0 // indirect
+	fortio.org/dflag v1.8.1 // indirect
 	fortio.org/safecast v1.0.0 // indirect
-	fortio.org/scli v1.15.3 // indirect
-	fortio.org/sets v1.2.0 // indirect
+	fortio.org/scli v1.16.1 // indirect
+	fortio.org/sets v1.3.0 // indirect
 	fortio.org/struct2env v0.4.2 // indirect
 	fortio.org/version v1.0.4 // indirect
 	github.com/4meepo/tagalign v1.4.2 // indirect
@@ -298,7 +298,7 @@ require (
 	github.com/kelseyhightower/envconfig v1.4.0 // indirect
 	github.com/kisielk/errcheck v1.9.0 // indirect
 	github.com/kkHAIKE/contextcheck v1.1.6 // indirect
-	github.com/klauspost/compress v1.17.11 // indirect
+	github.com/klauspost/compress v1.18.0 // indirect
 	github.com/klauspost/pgzip v1.2.6 // indirect
 	github.com/kortschak/goroutine v1.1.2 // indirect
 	github.com/kulti/thelper v0.6.3 // indirect
@@ -477,7 +477,7 @@ require (
 	go.uber.org/multierr v1.11.0 // indirect
 	go.uber.org/zap/exp v0.3.0 // indirect
 	golang.org/x/crypto v0.37.0 // indirect
-	golang.org/x/crypto/x509roots/fallback v0.0.0-20240904212608-c9da6b9a4008 // indirect
+	golang.org/x/crypto/x509roots/fallback v0.0.0-20250406160420-959f8f3db0fb // indirect
 	golang.org/x/exp/typeparams v0.0.0-20250210185358-939b2ce775ac // indirect
 	golang.org/x/mod v0.24.0 // indirect
 	golang.org/x/oauth2 v0.27.0 // indirect
