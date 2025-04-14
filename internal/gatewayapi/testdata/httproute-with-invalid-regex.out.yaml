@@ -102,11 +102,16 @@ httpRoutes:
     parents:
     - conditions:
       - lastTransitionTime: null
-        message: 'Regex "*.foo.bar.com" is invalid: error parsing regexp: missing
-          argument to repetition operator: `*`.'
+        message: Route is accepted
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: 'Failed to process route rule 0: regex "*.foo.bar.com" is invalid:
+          error parsing regexp: missing argument to repetition operator: `*`.'
         reason: UnsupportedValue
         status: "False"
-        type: Accepted
+        type: ResolvedRefs
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
         name: gateway-1

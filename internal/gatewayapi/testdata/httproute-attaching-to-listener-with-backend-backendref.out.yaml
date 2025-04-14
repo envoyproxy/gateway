@@ -160,8 +160,9 @@ httpRoutes:
         status: "True"
         type: Accepted
       - lastTransitionTime: null
-        message: Unix domain sockets are not supported in backend references
-        reason: UnsupportedRefAddressFound
+        message: 'Failed to process route rule 0 backendRef 0: unix domain sockets
+          are not supported in backend references.'
+        reason: InvalidAddressType
         status: "False"
         type: ResolvedRefs
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
@@ -271,9 +272,9 @@ httpRoutes:
         status: "True"
         type: Accepted
       - lastTransitionTime: null
-        message: 'Invalid backend reference: IP address 127.0.0.1 in the loopback
-          range is not supported'
-        reason: UnsupportedRefAddressFound
+        message: 'Failed to process route rule 0 backendRef 0: invalid backend reference:
+          IP address 127.0.0.1 in the loopback range is not supported.'
+        reason: InvalidBackendRef
         status: "False"
         type: ResolvedRefs
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
@@ -309,9 +310,10 @@ httpRoutes:
         status: "True"
         type: Accepted
       - lastTransitionTime: null
-        message: 'Invalid backend reference: hostname localhost should be a domain
-          with at least two segments separated by dots'
-        reason: UnsupportedRefAddressFound
+        message: 'Failed to process route rule 0 backendRef 0: invalid backend reference:
+          hostname localhost should be a domain with at least two segments separated
+          by dots.'
+        reason: InvalidBackendRef
         status: "False"
         type: ResolvedRefs
       controllerName: gateway.envoyproxy.io/gatewayclass-controller

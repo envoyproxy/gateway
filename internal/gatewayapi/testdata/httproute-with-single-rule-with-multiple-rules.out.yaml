@@ -92,11 +92,16 @@ httpRoutes:
     parents:
     - conditions:
       - lastTransitionTime: null
-        message: 'Regex "*regex*" is invalid: error parsing regexp: missing argument
-          to repetition operator: `*`.'
+        message: Route is accepted
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: 'Failed to process route rule 2: regex "*regex*" is invalid: error
+          parsing regexp: missing argument to repetition operator: `*`.'
         reason: UnsupportedValue
         status: "False"
-        type: Accepted
+        type: ResolvedRefs
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
         name: gateway-1
@@ -137,6 +142,57 @@ xdsIR:
         escapedSlashesAction: UnescapeAndRedirect
         mergeSlashes: true
       port: 10080
+      routes:
+      - destination:
+          name: httproute/default/httproute-1/rule/0
+          settings:
+          - addressType: IP
+            endpoints:
+            - host: 7.7.7.7
+              port: 8080
+            name: httproute/default/httproute-1/rule/0/backend/0
+            protocol: HTTP
+            weight: 1
+        headerMatches:
+        - distinct: false
+          exact: exact
+          name: Header-1
+        hostname: '*'
+        isHTTP2: false
+        metadata:
+          kind: HTTPRoute
+          name: httproute-1
+          namespace: default
+        name: httproute/default/httproute-1/rule/0/match/0/*
+        pathMatch:
+          distinct: false
+          exact: /exact
+          name: ""
+        queryParamMatches:
+        - distinct: false
+          exact: exact
+          name: QueryParam-1
+      - destination:
+          name: httproute/default/httproute-1/rule/1
+          settings:
+          - addressType: IP
+            endpoints:
+            - host: 7.7.7.7
+              port: 8080
+            name: httproute/default/httproute-1/rule/1/backend/0
+            protocol: HTTP
+            weight: 1
+        hostname: '*'
+        isHTTP2: false
+        metadata:
+          kind: HTTPRoute
+          name: httproute-1
+          namespace: default
+        name: httproute/default/httproute-1/rule/1/match/0/*
+        pathMatch:
+          distinct: false
+          name: ""
+          prefix: /prefix
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4
