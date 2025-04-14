@@ -47,18 +47,35 @@ httpRoutes:
     name: httproute-1
     namespace: default
   spec:
+    hostnames:
+    - gateway.envoyproxy.io
     parentRefs:
     - name: gateway-1
       namespace: envoy-gateway
+      sectionName: http
     rules:
     - backendRefs:
-      - name: service-1
-        namespace: backends
+      - group: gateway.envoyproxy.io
+        kind: Backend
+        name: backend-not-found
+    - backendRefs:
+      - name: service-not-found-1
+        port: 8080
+      - name: service-not-found-2
         port: 8080
       matches:
       - path:
-          type: Exact
-          value: /exact
+          value: /foo
+    - backendRefs:
+      - kind: ServiceImport
+        name: serviceimport-not-found-1
+        port: 8080
+      - kind: ServiceImport
+        name: serviceimport-not-found-2
+        port: 8080
+      matches:
+      - path:
+          value: /bar
   status:
     parents:
     - conditions:
@@ -68,15 +85,20 @@ httpRoutes:
         status: "True"
         type: Accepted
       - lastTransitionTime: null
-        message: 'Failed to process route rule 0 backendRef 0: Backend ref to Service
-          backends/service-1 not permitted by any ReferenceGrant.'
-        reason: RefNotPermitted
+        message: |-
+          Failed to process route rule 0 backendRef 0: Backend default/backend-not-found not found.
+          Failed to process route rule 1 backendRef 0: service default/service-not-found-1 not found.
+          Failed to process route rule 1 backendRef 1: service default/service-not-found-2 not found.
+          Failed to process route rule 2 backendRef 0: service import default/serviceimport-not-found-1 not found.
+          Failed to process route rule 2 backendRef 1: service import default/serviceimport-not-found-2 not found.
+        reason: BackendNotFound
         status: "False"
         type: ResolvedRefs
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
         name: gateway-1
         namespace: envoy-gateway
+        sectionName: http
 infraIR:
   envoy-gateway/gateway-1:
     proxy:
@@ -116,17 +138,39 @@ xdsIR:
       routes:
       - directResponse:
           statusCode: 500
-        hostname: '*'
+        hostname: gateway.envoyproxy.io
         isHTTP2: false
         metadata:
           kind: HTTPRoute
           name: httproute-1
           namespace: default
-        name: httproute/default/httproute-1/rule/0/match/0/*
+        name: httproute/default/httproute-1/rule/1/match/0/gateway_envoyproxy_io
         pathMatch:
           distinct: false
-          exact: /exact
           name: ""
+          prefix: /foo
+      - directResponse:
+          statusCode: 500
+        hostname: gateway.envoyproxy.io
+        isHTTP2: false
+        metadata:
+          kind: HTTPRoute
+          name: httproute-1
+          namespace: default
+        name: httproute/default/httproute-1/rule/2/match/0/gateway_envoyproxy_io
+        pathMatch:
+          distinct: false
+          name: ""
+          prefix: /bar
+      - directResponse:
+          statusCode: 500
+        hostname: gateway.envoyproxy.io
+        isHTTP2: false
+        metadata:
+          kind: HTTPRoute
+          name: httproute-1
+          namespace: default
+        name: httproute/default/httproute-1/rule/0/match/-1/gateway_envoyproxy_io
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4
