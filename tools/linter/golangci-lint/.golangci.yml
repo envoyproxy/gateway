@@ -59,6 +59,9 @@ linters:
       - linters:
           - bodyclose
         path: test/e2e
+      - linters:
+          - gosec
+        path: api/v1alpha1/envoyproxy_types.go  # EnvoyFilterCredentialInjector EnvoyFilter = "envoy.filters.http.credential_injector"
   settings:
     copyloopvar:
       check-alias: true
