@@ -2919,6 +2919,9 @@ type ExtProc struct {
 
 	// AllowModeOverride allows the external processor to modify the processing mode.
 	AllowModeOverride bool `json:"allowModeOverride,omitempty" yaml:"allowModeOverride,omitempty"`
+
+	// HeaderMutation defines which headers are mutated by the external processor.
+	HeaderMutationRules *egv1a1.ExtProcHeaderMutationRules `json:"headerMutationRules,omitempty" yaml:"headerMutation,omitempty"`
 }
 
 // Lua holds the information associated with Lua extensions

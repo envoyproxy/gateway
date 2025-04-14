@@ -1614,6 +1614,7 @@ _Appears in:_
 | `failOpen` | _boolean_ |  false  |  | FailOpen defines if requests or responses that cannot be processed due to connectivity to the<br />external processor are terminated or passed-through.<br />Default: false |
 | `processingMode` | _[ExtProcProcessingMode](#extprocprocessingmode)_ |  false  |  | ProcessingMode defines how request and response body is processed<br />Default: header and body are not sent to the external processor |
 | `metadata` | _[ExtProcMetadata](#extprocmetadata)_ |  false  |  | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `headerMutationRules` | _[ExtProcHeaderMutationRules](#extprocheadermutationrules)_ |  true  |  | HeaderMutationRules defines which headers are allowed to be mutated by the external processor.<br />By default, If not set, all headers may be modified except for “host”, “:authority”, “:scheme”, “:method”,<br />and headers that start with the prefix "x-envoy-". |
 
 
 #### ExtProcBodyProcessingMode
@@ -1631,6 +1632,23 @@ _Appears in:_
 | `Buffered` | BufferedExtProcBodyProcessingMode will buffer the message body in memory and send the entire body at once. If the body exceeds the configured buffer limit, then the downstream system will receive an error.<br /> | 
 | `FullDuplexStreamed` | FullDuplexStreamedExtBodyProcessingMode will send the body in pieces, to be read in a stream. Full details here: https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/http/ext_proc/v3/processing_mode.proto.html#enum-extensions-filters-http-ext-proc-v3-processingmode-bodysendmode<br /> | 
 | `BufferedPartial` | BufferedPartialExtBodyHeaderProcessingMode will buffer the message body in memory and send the entire body in one chunk. If the body exceeds the configured buffer limit, then the body contents up to the buffer limit will be sent.<br /> | 
+
+
+#### ExtProcHeaderMutationRules
+
+
+
+ExtProcHeaderMutationRules defines which headers are allowed to be mutated by the external processor.
+
+This corresponds to the `header_mutation_rules` field in the Envoy External Processor filter.
+https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/common/mutation_rules/v3/mutation_rules.proto#envoy-v3-api-msg-config-common-mutation-rules-v3-headermutationrules
+
+_Appears in:_
+- [ExtProc](#extproc)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `allowAllRouting` | _boolean_ |  true  |  | AllowAllHeaders defines if all headers are allowed to be mutated by the external processor.<br />These headers are host, :authority, :scheme, and :method. |
 
 
 #### ExtProcMetadata
