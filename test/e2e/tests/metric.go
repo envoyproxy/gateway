@@ -15,6 +15,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
 	httputils "sigs.k8s.io/gateway-api/conformance/utils/http"
@@ -23,10 +24,11 @@ import (
 	"sigs.k8s.io/gateway-api/conformance/utils/tlog"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/test/utils/prometheus"
 )
 
 func init() {
-	ConformanceTests = append(ConformanceTests, MetricTest, MetricCompressorTest)
+	ConformanceTests = append(ConformanceTests, MetricTest, MetricWorkqueueAndRestclientTest, MetricCompressorTest)
 }
 
 var MetricTest = suite.ConformanceTest{
@@ -95,6 +97,43 @@ var MetricTest = suite.ConformanceTest{
 				}); err != nil {
 				t.Errorf("failed to scrape metrics: %v", err)
 			}
+		})
+	},
+}
+
+var MetricWorkqueueAndRestclientTest = suite.ConformanceTest{
+	ShortName:   "MetricWorkqueueAndRestclientTest",
+	Description: "Ensure workqueue and restclient metrics are exposed",
+	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
+		ctx := context.Background()
+		promClient, err := prometheus.NewClient(suite.Client,
+			types.NamespacedName{Name: "prometheus", Namespace: "monitoring"},
+		)
+		require.NoError(t, err)
+
+		verifyMetrics := func(t *testing.T, metricQuery string, metricName string) {
+			httputils.AwaitConvergence(
+				t,
+				suite.TimeoutConfig.RequiredConsecutiveSuccesses,
+				suite.TimeoutConfig.MaxTimeToConsistency,
+				func(_ time.Duration) bool {
+					v, err := promClient.QuerySum(ctx, metricQuery)
+					if err != nil {
+						tlog.Logf(t, "failed to get %s metrics: %v", metricName, err)
+						return false
+					}
+					tlog.Logf(t, "%s metrics query count: %v", metricName, v)
+					return true
+				},
+			)
+		}
+
+		t.Run("verify workqueue metrics", func(t *testing.T) {
+			verifyMetrics(t, `workqueue_adds_total{namespace="envoy-gateway-system"}`, "workqueue")
+		})
+
+		t.Run("verify restclient metrics", func(t *testing.T) {
+			verifyMetrics(t, `rest_client_request_duration_seconds_sum{namespace="envoy-gateway-system"}`, "restclient")
 		})
 	},
 }

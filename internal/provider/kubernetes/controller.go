@@ -21,6 +21,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/client-go/discovery"
+	"k8s.io/client-go/util/workqueue"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
@@ -43,6 +44,7 @@ import (
 	"github.com/envoyproxy/gateway/internal/gatewayapi/status"
 	"github.com/envoyproxy/gateway/internal/logging"
 	"github.com/envoyproxy/gateway/internal/message"
+	workqueuemetrics "github.com/envoyproxy/gateway/internal/metrics/workqueue"
 	"github.com/envoyproxy/gateway/internal/utils"
 	"github.com/envoyproxy/gateway/internal/utils/slice"
 	"github.com/envoyproxy/gateway/internal/xds/bootstrap"
@@ -121,7 +123,16 @@ func newGatewayAPIController(ctx context.Context, mgr manager.Manager, cfg *conf
 	// controller-runtime doesn't allow run controller with same name for more than once
 	// see https://github.com/kubernetes-sigs/controller-runtime/blob/2b941650bce159006c88bd3ca0d132c7bc40e947/pkg/controller/name.go#L29
 	name := fmt.Sprintf("gatewayapi-%d", time.Now().Unix())
-	c, err := controller.New(name, mgr, controller.Options{Reconciler: r, SkipNameValidation: skipNameValidation()})
+	c, err := controller.New(name, mgr, controller.Options{
+		Reconciler:         r,
+		SkipNameValidation: skipNameValidation(),
+		NewQueue: func(controllerName string, rateLimiter workqueue.TypedRateLimiter[reconcile.Request]) workqueue.TypedRateLimitingInterface[reconcile.Request] {
+			return workqueue.NewTypedRateLimitingQueueWithConfig(rateLimiter, workqueue.TypedRateLimitingQueueConfig[reconcile.Request]{
+				Name:            controllerName,
+				MetricsProvider: workqueuemetrics.WorkqueueMetricsProvider{},
+			})
+		},
+	})
 	if err != nil {
 		return fmt.Errorf("error creating controller: %w", err)
 	}
