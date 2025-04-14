@@ -423,10 +423,11 @@ spec:
                       description: LogLevel defines a log level for Envoy Gateway
                         and EnvoyProxy system logs.
                       enum:
+                      - trace
                       - debug
                       - info
-                      - error
                       - warn
+                      - error
                       type: string
                     default:
                       default: warn

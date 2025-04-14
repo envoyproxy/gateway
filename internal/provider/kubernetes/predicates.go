@@ -19,6 +19,7 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gwapiv1a3 "sigs.k8s.io/gateway-api/apis/v1alpha3"
@@ -178,7 +179,29 @@ func (r *gatewayAPIReconciler) validateSecretForReconcile(obj client.Object) boo
 		}
 	}
 
+	if r.hrfCRDExists {
+		if r.isHTTPRouteFilterReferencingSecret(&nsName) {
+			return true
+		}
+	}
+
 	return false
+}
+
+func (r *gatewayAPIReconciler) isHTTPRouteFilterReferencingSecret(nsName *types.NamespacedName) bool {
+	routeFilterList := &egv1a1.HTTPRouteFilterList{}
+	if err := r.client.List(context.Background(), routeFilterList, &client.ListOptions{
+		FieldSelector: fields.OneTermEqualSelector(secretHTTPRouteFilterIndex, nsName.String()),
+	}); err != nil {
+		r.log.Error(err, "unable to find associated HTTPRouteFilter")
+		return false
+	}
+
+	if len(routeFilterList.Items) > 0 {
+		return true
+	}
+
+	return true
 }
 
 func (r *gatewayAPIReconciler) isBackendTLSPolicyReferencingSecret(nsName *types.NamespacedName) bool {
@@ -811,4 +834,17 @@ func (r *gatewayAPIReconciler) validateHTTPRouteFilterForReconcile(obj client.Ob
 
 	nsName := utils.NamespacedName(hrf)
 	return r.isRouteReferencingHTTPRouteFilter(&nsName)
+}
+
+func commonPredicates[T client.Object]() []predicate.TypedPredicate[T] {
+	return []predicate.TypedPredicate[T]{
+		metadataPredicate[T](),
+	}
+}
+
+func metadataPredicate[T client.Object]() predicate.TypedPredicate[T] {
+	return predicate.Or(predicate.TypedGenerationChangedPredicate[T]{},
+		predicate.TypedLabelChangedPredicate[T]{},
+		predicate.TypedAnnotationChangedPredicate[T]{},
+	)
 }

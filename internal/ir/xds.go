@@ -79,6 +79,7 @@ var (
 	ErrBothXForwardedForAndCustomHeaderInvalid  = errors.New("only one of ClientIPDetection.XForwardedFor and ClientIPDetection.CustomHeader must be set")
 	ErrBothNumTrustedHopsAndTrustedCIDRsInvalid = errors.New("only one of ClientIPDetection.XForwardedFor.NumTrustedHops and ClientIPDetection.XForwardedFor.TrustedCIDRs must be set")
 	ErrPanicThresholdInvalid                    = errors.New("PanicThreshold value is outside of 0-100 range")
+	ErrCredentialInjectionCredentialEmpty       = errors.New("field CredentialInjection.Credential must be specified")
 
 	redacted = []byte("[redacted]")
 )
@@ -619,6 +620,32 @@ func (r *CustomResponse) Validate() error {
 	return errs
 }
 
+// CredentialInjection defines the configuration for injecting credentials into the request.
+// +k8s:deepcopy-gen=true
+type CredentialInjection struct {
+	// Name is a unique name for a CredentialInjection configuration.
+	// The xds translator only generates one CredentialInjecor filter for each unique name.
+	Name string `json:"name" yaml:"name"`
+
+	// Header is the name of the header where the credentials are injected.
+	// If not specified, the credentials are injected into the Authorization header.
+	Header *string `json:"header,omitempty"`
+
+	// Whether to overwrite the value or not if the injected headers already exist.
+	// If not specified, the default value is false.
+	Overwrite *bool `json:"overwrite,omitempty"`
+
+	// Credential is the credential to be injected.
+	Credential PrivateBytes `json:"credential"`
+}
+
+func (c *CredentialInjection) Validate() error {
+	if len(c.Credential) == 0 {
+		return ErrCredentialInjectionCredentialEmpty
+	}
+	return nil
+}
+
 // HealthCheckSettings provides HealthCheck configuration on the HTTP/HTTPS listener.
 // +k8s:deepcopy-gen=true
 type HealthCheckSettings egv1a1.HealthCheckSettings
@@ -718,6 +745,8 @@ type HTTPRoute struct {
 	Destination *RouteDestination `json:"destination,omitempty" yaml:"destination,omitempty"`
 	// Rewrite to be changed for this route.
 	URLRewrite *URLRewrite `json:"urlRewrite,omitempty" yaml:"urlRewrite,omitempty"`
+	// Credentials to be injected into the request.
+	CredentialInjection *CredentialInjection `json:"credentialInjection,omitempty" yaml:"credentialInjection,omitempty"`
 	// ExtensionRefs holds unstructured resources that were introduced by an extension and used on the HTTPRoute as extensionRef filters
 	ExtensionRefs []*UnstructuredRef `json:"extensionRefs,omitempty" yaml:"extensionRefs,omitempty"`
 	// Traffic holds the features associated with BackendTrafficPolicy
@@ -1346,6 +1375,11 @@ func (h *HTTPRoute) Validate() error {
 	}
 	if h.DirectResponse != nil {
 		if err := h.DirectResponse.Validate(); err != nil {
+			errs = errors.Join(errs, err)
+		}
+	}
+	if h.CredentialInjection != nil {
+		if err := h.CredentialInjection.Validate(); err != nil {
 			errs = errors.Join(errs, err)
 		}
 	}
