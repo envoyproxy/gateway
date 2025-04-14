@@ -59,4 +59,7 @@ adopters:
     logo: "/logos/sensetime.png"
     url: "https://www.sensetime.com/"
     description: "SenseTime is using Envoy Gateway to route most traffic for SenseCore."
-
+  - name: "nemlig"
+    logo: "/logos/nemlig.svg"
+    url: "https://www.nemlig.com/"
+    description: "nemlig.com is using Envoy Gateway to route traffic for internal and externally exposed services, including many of our customer facing APIs. We use Envoy Gateway to enforce security policies, such as JWT authentication as a service on our self-built kubernetes platform."
