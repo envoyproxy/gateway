@@ -14,6 +14,8 @@ import (
 	clusterv3 "github.com/envoyproxy/go-control-plane/envoy/config/cluster/v3"
 	corev3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	endpointv3 "github.com/envoyproxy/go-control-plane/envoy/config/endpoint/v3"
+	dfpv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/clusters/dynamic_forward_proxy/v3"
+	commondfpv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/common/dynamic_forward_proxy/v3"
 	codecv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/upstream_codec/v3"
 	hcmv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/http_connection_manager/v3"
 	preservecasev3 "github.com/envoyproxy/go-control-plane/envoy/extensions/http/header_formatters/preserve_case/v3"
@@ -68,6 +70,7 @@ type EndpointType int
 const (
 	EndpointTypeDNS EndpointType = iota
 	EndpointTypeStatic
+	EndpointTypeDynamicResolver
 )
 
 func buildEndpointType(settings []*ir.DestinationSetting) EndpointType {
@@ -75,6 +78,10 @@ func buildEndpointType(settings []*ir.DestinationSetting) EndpointType {
 	// since there's no Mixed AddressType among all the DestinationSettings.
 	if settings == nil {
 		return EndpointTypeStatic
+	}
+
+	if settings[0].IsDynamicResolver {
+		return EndpointTypeDynamicResolver
 	}
 
 	addrType := settings[0].AddressType
@@ -166,7 +173,6 @@ func buildXdsCluster(args *xdsClusterArgs) (*buildClusterResult, error) {
 	}
 
 	for i, ds := range args.settings {
-
 		// If zone aware routing is enabled we update the cluster lb config
 		if ds.ZoneAwareRoutingEnabled {
 			cluster.CommonLbConfig.LocalityConfigSpecifier = &clusterv3.Cluster_CommonLbConfig_ZoneAwareLbConfig_{ZoneAwareLbConfig: &clusterv3.Cluster_CommonLbConfig_ZoneAwareLbConfig{}}
@@ -194,36 +200,6 @@ func buildXdsCluster(args *xdsClusterArgs) (*buildClusterResult, error) {
 		}
 	}
 
-	if args.endpointType == EndpointTypeStatic {
-		cluster.ClusterDiscoveryType = &clusterv3.Cluster_Type{Type: clusterv3.Cluster_EDS}
-		cluster.EdsClusterConfig = &clusterv3.Cluster_EdsClusterConfig{
-			ServiceName: args.name,
-			EdsConfig: &corev3.ConfigSource{
-				ResourceApiVersion: resource.DefaultAPIVersion,
-				ConfigSourceSpecifier: &corev3.ConfigSource_Ads{
-					Ads: &corev3.AggregatedConfigSource{},
-				},
-			},
-		}
-		// Dont wait for a health check to determine health and remove these endpoints
-		// if the endpoint has been removed via EDS by the control plane
-		cluster.IgnoreHealthOnHostRemoval = true
-	} else {
-		cluster.ClusterDiscoveryType = &clusterv3.Cluster_Type{Type: clusterv3.Cluster_STRICT_DNS}
-		cluster.DnsRefreshRate = durationpb.New(30 * time.Second)
-		cluster.RespectDnsTtl = true
-		if args.dns != nil {
-			if args.dns.DNSRefreshRate != nil {
-				if args.dns.DNSRefreshRate.Duration > 0 {
-					cluster.DnsRefreshRate = durationpb.New(args.dns.DNSRefreshRate.Duration)
-				}
-			}
-			if args.dns.RespectDNSTTL != nil {
-				cluster.RespectDnsTtl = ptr.Deref(args.dns.RespectDNSTTL, true)
-			}
-		}
-	}
-
 	// build common, HTTP/1 and HTTP/2  protocol options for cluster
 	epo, secrets, err := buildTypedExtensionProtocolOptions(args)
 	if err != nil {
@@ -235,9 +211,10 @@ func buildXdsCluster(args *xdsClusterArgs) (*buildClusterResult, error) {
 
 	// Set Load Balancer policy
 	//nolint:gocritic
-	if args.loadBalancer == nil {
+	switch {
+	case args.loadBalancer == nil:
 		cluster.LbPolicy = clusterv3.Cluster_LEAST_REQUEST
-	} else if args.loadBalancer.LeastRequest != nil {
+	case args.loadBalancer.LeastRequest != nil:
 		cluster.LbPolicy = clusterv3.Cluster_LEAST_REQUEST
 		if args.loadBalancer.LeastRequest.SlowStart != nil {
 			if args.loadBalancer.LeastRequest.SlowStart.Window != nil {
@@ -250,7 +227,7 @@ func buildXdsCluster(args *xdsClusterArgs) (*buildClusterResult, error) {
 				}
 			}
 		}
-	} else if args.loadBalancer.RoundRobin != nil {
+	case args.loadBalancer.RoundRobin != nil:
 		cluster.LbPolicy = clusterv3.Cluster_ROUND_ROBIN
 		if args.loadBalancer.RoundRobin.SlowStart != nil && args.loadBalancer.RoundRobin.SlowStart.Window != nil {
 			cluster.LbConfig = &clusterv3.Cluster_RoundRobinLbConfig_{
@@ -261,11 +238,10 @@ func buildXdsCluster(args *xdsClusterArgs) (*buildClusterResult, error) {
 				},
 			}
 		}
-	} else if args.loadBalancer.Random != nil {
+	case args.loadBalancer.Random != nil:
 		cluster.LbPolicy = clusterv3.Cluster_RANDOM
-	} else if args.loadBalancer.ConsistentHash != nil {
+	case args.loadBalancer.ConsistentHash != nil:
 		cluster.LbPolicy = clusterv3.Cluster_MAGLEV
-
 		if args.loadBalancer.ConsistentHash.TableSize != nil {
 			cluster.LbConfig = &clusterv3.Cluster_MaglevLbConfig_{
 				MaglevLbConfig: &clusterv3.Cluster_MaglevLbConfig{
@@ -287,6 +263,65 @@ func buildXdsCluster(args *xdsClusterArgs) (*buildClusterResult, error) {
 
 	if args.tcpkeepalive != nil {
 		cluster.UpstreamConnectionOptions = buildXdsClusterUpstreamOptions(args.tcpkeepalive)
+	}
+
+	switch args.endpointType {
+	case EndpointTypeDynamicResolver:
+		dnsCacheConfig := &commondfpv3.DnsCacheConfig{
+			Name:            args.name,
+			DnsLookupFamily: dnsLookupFamily,
+		}
+		dnsCacheConfig.DnsRefreshRate = durationpb.New(30 * time.Second)
+		if args.dns != nil {
+			if args.dns.DNSRefreshRate != nil {
+				if args.dns.DNSRefreshRate.Duration > 0 {
+					dnsCacheConfig.DnsRefreshRate = durationpb.New(args.dns.DNSRefreshRate.Duration)
+				}
+			}
+		}
+
+		dfp := &dfpv3.ClusterConfig{
+			ClusterImplementationSpecifier: &dfpv3.ClusterConfig_DnsCacheConfig{
+				DnsCacheConfig: dnsCacheConfig,
+			},
+		}
+		dfpAny, err := proto.ToAnyWithValidation(dfp)
+		if err != nil {
+			return nil, err
+		}
+		cluster.ClusterDiscoveryType = &clusterv3.Cluster_ClusterType{ClusterType: &clusterv3.Cluster_CustomClusterType{
+			Name:        args.name,
+			TypedConfig: dfpAny,
+		}}
+		cluster.LbPolicy = clusterv3.Cluster_CLUSTER_PROVIDED
+	case EndpointTypeStatic:
+		cluster.ClusterDiscoveryType = &clusterv3.Cluster_Type{Type: clusterv3.Cluster_EDS}
+		cluster.EdsClusterConfig = &clusterv3.Cluster_EdsClusterConfig{
+			ServiceName: args.name,
+			EdsConfig: &corev3.ConfigSource{
+				ResourceApiVersion: resource.DefaultAPIVersion,
+				ConfigSourceSpecifier: &corev3.ConfigSource_Ads{
+					Ads: &corev3.AggregatedConfigSource{},
+				},
+			},
+		}
+		// Dont wait for a health check to determine health and remove these endpoints
+		// if the endpoint has been removed via EDS by the control plane
+		cluster.IgnoreHealthOnHostRemoval = true
+	default:
+		cluster.ClusterDiscoveryType = &clusterv3.Cluster_Type{Type: clusterv3.Cluster_STRICT_DNS}
+		cluster.DnsRefreshRate = durationpb.New(30 * time.Second)
+		cluster.RespectDnsTtl = true
+		if args.dns != nil {
+			if args.dns.DNSRefreshRate != nil {
+				if args.dns.DNSRefreshRate.Duration > 0 {
+					cluster.DnsRefreshRate = durationpb.New(args.dns.DNSRefreshRate.Duration)
+				}
+			}
+			if args.dns.RespectDNSTTL != nil {
+				cluster.RespectDnsTtl = ptr.Deref(args.dns.RespectDNSTTL, true)
+			}
+		}
 	}
 	return &buildClusterResult{
 		cluster: cluster,
