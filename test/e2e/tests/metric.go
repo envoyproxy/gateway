@@ -23,10 +23,11 @@ import (
 	"sigs.k8s.io/gateway-api/conformance/utils/tlog"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	kube "github.com/envoyproxy/gateway/internal/kubernetes"
 )
 
 func init() {
-	ConformanceTests = append(ConformanceTests, MetricTest, MetricCompressorTest)
+	ConformanceTests = append(ConformanceTests, MetricTest, MetricWorkqueueAndRestclientTest, MetricCompressorTest)
 }
 
 var MetricTest = suite.ConformanceTest{
@@ -94,6 +95,71 @@ var MetricTest = suite.ConformanceTest{
 					return true, nil
 				}); err != nil {
 				t.Errorf("failed to scrape metrics: %v", err)
+			}
+		})
+	},
+}
+
+var MetricWorkqueueAndRestclientTest = suite.ConformanceTest{
+	ShortName:   "MetricWorkqueueAndRestclientTest",
+	Description: "Ensure workqueue and restclient metrics are exposed",
+	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
+		t.Run("verify workqueue and restclient metrics", func(t *testing.T) {
+			err := wait.PollUntilContextTimeout(context.TODO(), time.Second, time.Minute, true, func(_ context.Context) (done bool, err error) {
+				cli, err := kube.NewForRestConfig(suite.RestConfig)
+				if err != nil {
+					tlog.Logf(t, "failed to create rest client: %v", err)
+					return false, nil
+				}
+
+				pods, err := cli.PodsForSelector("envoy-gateway-system", "control-plane=envoy-gateway")
+				if err != nil {
+					tlog.Logf(t, "failed to get envoy-gateway control-plane pod: %v", err)
+					return false, nil
+				}
+
+				if len(pods.Items) == 0 {
+					tlog.Logf(t, "no envoy-gateway control-plane pod found")
+					return false, nil
+				}
+
+				fwd, err := kube.NewLocalPortForwarder(cli, types.NamespacedName{
+					Namespace: "envoy-gateway-system",
+					Name:      pods.Items[0].Name,
+				}, 0, 19001)
+				if err != nil {
+					tlog.Logf(t, "failed to create port-forward to envoy-gateway control-plane pod: %v", err)
+					return false, nil
+				}
+				defer fwd.Stop()
+
+				if err := fwd.Start(); err != nil {
+					tlog.Logf(t, "failed to start port-forward to envoy-gateway control-plane pod: %v", err)
+					return false, nil
+				}
+
+				url := fmt.Sprintf("http://%s/metrics", fwd.Address())
+				tlog.Logf(t, "scraping metrics from %s", url)
+				metrics, err := RetrieveMetrics(url, time.Second)
+				if err != nil {
+					tlog.Logf(t, "failed to retrieve metrics: %v", err)
+					return false, nil
+				}
+
+				if _, ok := metrics["workqueue_depth"]; !ok {
+					tlog.Logf(t, "workqueue metrics not found")
+					return false, nil
+				}
+
+				if _, ok := metrics["rest_client_request_duration_seconds"]; !ok {
+					tlog.Logf(t, "restclient metrics not found")
+					return false, nil
+				}
+
+				return true, nil
+			})
+			if err != nil {
+				t.Errorf("failed to verify workqueue and restclient metrics: %v", err)
 			}
 		})
 	},
