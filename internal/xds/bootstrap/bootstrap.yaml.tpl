@@ -253,12 +253,12 @@ static_resources:
               timeout: 5s
     name: xds_cluster
     type: STRICT_DNS
-{{- if not .GatewayNamespaceMode }}
     transport_socket:
       name: envoy.transport_sockets.tls
       typed_config:
         "@type": type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.UpstreamTlsContext
         common_tls_context:
+{{- if not .GatewayNamespaceMode }}
           tls_params:
             tls_maximum_protocol_version: TLSv1_3
           tls_certificate_sds_secret_configs:
@@ -267,13 +267,13 @@ static_resources:
               path_config_source:
                 path: {{ .SdsCertificatePath }}
               resource_api_version: V3
+{{- end }}
           validation_context_sds_secret_config:
             name: xds_trusted_ca
             sds_config:
               path_config_source:
                 path: {{ .SdsTrustedCAPath }}
               resource_api_version: V3
-{{- end }}
   - name: wasm_cluster
     type: STRICT_DNS
     connect_timeout: 10s
@@ -293,12 +293,12 @@ static_resources:
         "@type": "type.googleapis.com/envoy.extensions.upstreams.http.v3.HttpProtocolOptions"
         explicit_http_config:
           http2_protocol_options: {}
-{{- if not .GatewayNamespaceMode }}
     transport_socket:
       name: envoy.transport_sockets.tls
       typed_config:
         "@type": type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.UpstreamTlsContext
         common_tls_context:
+{{- if not .GatewayNamespaceMode }}
           tls_params:
             tls_maximum_protocol_version: TLSv1_3
           tls_certificate_sds_secret_configs:
@@ -307,13 +307,13 @@ static_resources:
               path_config_source:
                 path: {{ .SdsCertificatePath }}
               resource_api_version: V3
+{{- end }}
           validation_context_sds_secret_config:
             name: xds_trusted_ca
             sds_config:
               path_config_source:
                 path: {{ .SdsTrustedCAPath }}
               resource_api_version: V3
-{{- end }}
 overload_manager:
   refresh_interval: 0.25s
   resource_monitors:

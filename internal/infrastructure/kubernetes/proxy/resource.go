@@ -135,11 +135,11 @@ func expectedProxyContainers(infra *ir.ProxyInfra,
 			ImagePullPolicy:          corev1.PullIfNotPresent,
 			Command:                  []string{"envoy"},
 			Args:                     args,
-			Env:                      expectedContainerEnv(containerSpec, egNamespace),
+			Env:                      expectedContainerEnv(containerSpec, gatewayNamespaceMode),
 			Resources:                *containerSpec.Resources,
 			SecurityContext:          expectedEnvoySecurityContext(containerSpec),
 			Ports:                    ports,
-			VolumeMounts:             expectedContainerVolumeMounts(gatewayNamespaceMode, containerSpec),
+			VolumeMounts:             expectedContainerVolumeMounts(containerSpec),
 			TerminationMessagePolicy: corev1.TerminationMessageReadFile,
 			TerminationMessagePath:   "/dev/termination-log",
 			StartupProbe: &corev1.Probe{
@@ -197,7 +197,7 @@ func expectedProxyContainers(infra *ir.ProxyInfra,
 			ImagePullPolicy:          corev1.PullIfNotPresent,
 			Command:                  []string{"envoy-gateway"},
 			Args:                     expectedShutdownManagerArgs(shutdownConfig),
-			Env:                      expectedContainerEnv(nil, egNamespace),
+			Env:                      expectedContainerEnv(nil, gatewayNamespaceMode),
 			Resources:                *egv1a1.DefaultShutdownManagerContainerResourceRequirements(),
 			TerminationMessagePolicy: corev1.TerminationMessageReadFile,
 			TerminationMessagePath:   "/dev/termination-log",
@@ -288,7 +288,7 @@ func expectedShutdownPreStopCommand(cfg *egv1a1.ShutdownConfig) []string {
 }
 
 // expectedContainerVolumeMounts returns expected proxy container volume mounts.
-func expectedContainerVolumeMounts(gatewayNamespacedMode bool, containerSpec *egv1a1.KubernetesContainerSpec) []corev1.VolumeMount {
+func expectedContainerVolumeMounts(containerSpec *egv1a1.KubernetesContainerSpec) []corev1.VolumeMount {
 	var volumeMounts []corev1.VolumeMount
 
 	certsMount := corev1.VolumeMount{
@@ -390,18 +390,14 @@ func expectedVolumes(name string, gatewayNamespacedMode bool, pod *egv1a1.Kubern
 }
 
 // expectedContainerEnv returns expected proxy container envs.
-func expectedContainerEnv(containerSpec *egv1a1.KubernetesContainerSpec, egNamespace string) []corev1.EnvVar {
+func expectedContainerEnv(containerSpec *egv1a1.KubernetesContainerSpec, gatewayNamespaceMode bool) []corev1.EnvVar {
 	env := []corev1.EnvVar{
 		{
-			Name:  envoyNsEnvVar,
-			Value: egNamespace,
-		},
-		{
-			Name: envoyPodEnvVar,
+			Name: envoyNsEnvVar,
 			ValueFrom: &corev1.EnvVarSource{
 				FieldRef: &corev1.ObjectFieldSelector{
 					APIVersion: "v1",
-					FieldPath:  "metadata.name",
+					FieldPath:  "metadata.namespace",
 				},
 			},
 		},
@@ -415,6 +411,24 @@ func expectedContainerEnv(containerSpec *egv1a1.KubernetesContainerSpec, egNames
 			},
 		},
 	}
+	if gatewayNamespaceMode {
+		env = []corev1.EnvVar{
+			{
+				Name:  envoyNsEnvVar,
+				Value: config.DefaultNamespace,
+			},
+		}
+	}
+
+	env = append(env, corev1.EnvVar{
+		Name: envoyPodEnvVar,
+		ValueFrom: &corev1.EnvVarSource{
+			FieldRef: &corev1.ObjectFieldSelector{
+				APIVersion: "v1",
+				FieldPath:  "metadata.name",
+			},
+		},
+	})
 
 	if containerSpec != nil {
 		return resource.ExpectedContainerEnv(containerSpec, env)
