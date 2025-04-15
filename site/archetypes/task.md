@@ -2,6 +2,9 @@
 title: "{{ replace .Name "-" " " | title }}"
 ---
 
+## Overview
+
+<!-- Provide a high-level introduction to the task, keeping it simple and user-friendly. What does this task accomplish? When should a user use this task, and how does it help them? -->
 This task provides instructions for configuring {{ replace .Name "-" " " | lower }}.
 
 {{ replace .Name "-" " " | title }} allows you to [briefly explain what this feature does and its benefits].
@@ -41,7 +44,7 @@ Save and apply the following resource to your cluster:
 {{% /tab %}}
 {{< /tabpane >}}
 
-## Verification
+## Testing
 
 Verify the configuration:
 
@@ -53,9 +56,6 @@ Verify the configuration:
 What is the expected output after running the command above?
 -->
 The output should include ...
-
-
-## Testing
 
 Ensure the `GATEWAY_HOST` environment variable from the [Quickstart](../../quickstart) is set. If not, follow the
 Quickstart instructions to set the variable.
@@ -78,7 +78,7 @@ Include an example output below
 
 Expected output:
 ```
-Insert output
+[TODO: Insert Output]
 ...
 ```
 
@@ -90,7 +90,7 @@ Remove the resources created in this task:
 # Add commands to remove resources created in configuration step
 ```
 
-## Next Steps
+## [Optional] Next Steps
 <!-- 
 Link any related pages from Envoy Gateway Docs
 Example:
