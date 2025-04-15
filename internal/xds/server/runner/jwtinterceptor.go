@@ -1,3 +1,8 @@
+// Copyright Envoy Gateway Authors
+// SPDX-License-Identifier: Apache-2.0
+// The full text of the Apache license is available in the LICENSE file at
+// the root of the repo.
+
 package runner
 
 import (
@@ -63,7 +68,6 @@ func (i *JWTAuthInterceptor) authorize(ctx context.Context) error {
 		}
 		return i.publicKey, nil
 	})
-
 	if err != nil {
 		return fmt.Errorf("failed to parse token: %w", err)
 	}
