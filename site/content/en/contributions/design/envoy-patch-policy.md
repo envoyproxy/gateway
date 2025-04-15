@@ -148,7 +148,7 @@ semantics.
 ## Design Decisions
 * This API will only support a single `targetRef` and can bind to only a `Gateway` or `GatewayClass` resource. This simplifies reasoning of how
 patches will work.
-* This API will always be an experimental API and cannot be graduated into a stable API because Envoy Gateway cannot garuntee
+* This API will always be an experimental API and cannot be graduated into a stable API because Envoy Gateway cannot guarantee
   * that the naming scheme for the generated resources names will not change across releases
   * that the underlying Envoy Proxy API will not change across releases
 * This API needs to be explicitly enabled using the [EnvoyGateway][] API
