@@ -34,7 +34,7 @@ type ResourceRender interface {
 	LabelSelector() labels.Selector
 	ServiceAccount() (*corev1.ServiceAccount, error)
 	Service() (*corev1.Service, error)
-	ConfigMap() (*corev1.ConfigMap, error)
+	ConfigMap(cert string) (*corev1.ConfigMap, error)
 	Deployment() (*appsv1.Deployment, error)
 	DeploymentSpec() (*egv1a1.KubernetesDeploymentSpec, error)
 	DaemonSet() (*appsv1.DaemonSet, error)
@@ -65,8 +65,12 @@ type Infra struct {
 
 // NewInfra returns a new Infra.
 func NewInfra(cli client.Client, cfg *config.Server) *Infra {
+	var ns string
+	if !cfg.EnvoyGateway.GatewayNamespaceMode() {
+		ns = cfg.Namespace
+	}
 	return &Infra{
-		Namespace:    cfg.Namespace,
+		Namespace:    ns,
 		DNSDomain:    cfg.DNSDomain,
 		EnvoyGateway: cfg.EnvoyGateway,
 		Client:       New(cli),
@@ -80,11 +84,15 @@ func (i *Infra) Close() error { return nil }
 // createOrUpdate creates a ServiceAccount/ConfigMap/Deployment/Service in the kube api server based on the
 // provided ResourceRender, if it doesn't exist and updates it if it does.
 func (i *Infra) createOrUpdate(ctx context.Context, r ResourceRender) error {
+	cert, err := i.getEnvoyCA(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to fetch ca certificate for namespaced infra %s/%s: %w", i.Namespace, r.Name(), err)
+	}
 	if err := i.createOrUpdateServiceAccount(ctx, r); err != nil {
 		return fmt.Errorf("failed to create or update serviceaccount %s/%s: %w", i.Namespace, r.Name(), err)
 	}
 
-	if err := i.createOrUpdateConfigMap(ctx, r); err != nil {
+	if err := i.createOrUpdateConfigMap(ctx, r, cert); err != nil {
 		return fmt.Errorf("failed to create or update configmap %s/%s: %w", i.Namespace, r.Name(), err)
 	}
 

@@ -79,7 +79,7 @@ func enablePrometheus(rl *egv1a1.RateLimit) bool {
 }
 
 // ConfigMap returns the expected rate limit ConfigMap based on the provided infra.
-func (r *ResourceRender) ConfigMap() (*corev1.ConfigMap, error) {
+func (r *ResourceRender) ConfigMap(cert string) (*corev1.ConfigMap, error) {
 	if !enablePrometheus(r.rateLimit) {
 		return nil, nil
 	}

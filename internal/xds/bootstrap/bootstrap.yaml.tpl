@@ -130,6 +130,48 @@ static_resources:
             typed_config:
               "@type": type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
   {{- end }}
+  {{- if .GatewayNamespaceMode }}
+  - name: xds_listener
+    address:
+      socket_address:
+        address: 0.0.0.0
+        port_value: {{ .XdsServer.Port }}
+    filter_chains:
+    - filters:
+        - name: envoy.filters.network.http_connection_manager
+          typed_config:
+            "@type": type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
+            stat_prefix: ingress_http
+            route_config:
+              virtual_hosts:
+                - name: local_xds
+                  domains: ["*"]
+                  routes:
+                    - match:
+                        prefix: "/"
+                      route:
+                        cluster: xds_cluster
+            http_filters:
+              - name: envoy.filters.http.credential_injector
+                typed_config:
+                  "@type": type.googleapis.com/envoy.extensions.filters.http.credential_injector.v3.CredentialInjector
+                  allow_request_without_credential: false
+                  overwrite: true
+                  credential:
+                    name: envoy.http.injected_credentials.generic
+                    typed_config:
+                      "@type": type.googleapis.com/envoy.extensions.http.injected_credentials.generic.v3.Generic
+                      credential:
+                        name: jwt-sa-bearer
+              - name: envoy.filters.http.router
+                typed_config:
+                  "@type": type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+  secrets:
+  - name: jwt-sa-bearer
+    generic_secret:
+      secret:
+        filename: "/var/run/secrets/kubernetes.io/serviceaccount/token"
+  {{- end }}
   clusters:
   {{- if .EnablePrometheus }}
   - name: prometheus_stats
@@ -193,6 +235,7 @@ static_resources:
       typed_config:
         "@type": type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.UpstreamTlsContext
         common_tls_context:
+{{- if not .GatewayNamespaceMode }}
           tls_params:
             tls_maximum_protocol_version: TLSv1_3
           tls_certificate_sds_secret_configs:
@@ -201,6 +244,7 @@ static_resources:
               path_config_source:
                 path: {{ .SdsCertificatePath }}
               resource_api_version: V3
+{{- end }}
           validation_context_sds_secret_config:
             name: xds_trusted_ca
             sds_config:
@@ -231,6 +275,7 @@ static_resources:
       typed_config:
         "@type": type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.UpstreamTlsContext
         common_tls_context:
+{{- if not .GatewayNamespaceMode }}
           tls_params:
             tls_maximum_protocol_version: TLSv1_3
           tls_certificate_sds_secret_configs:
@@ -239,6 +284,7 @@ static_resources:
               path_config_source:
                 path: {{ .SdsCertificatePath }}
               resource_api_version: V3
+{{- end }}
           validation_context_sds_secret_config:
             name: xds_trusted_ca
             sds_config:
