@@ -64,9 +64,9 @@ The Helm chart for Envoy Gateway
 | global.imagePullSecrets | list | `[]` | Global override for image pull secrets |
 | global.imageRegistry | string | `""` | Global override for image registry |
 | global.images.envoyGateway.image | string | `nil` |  |
-| global.images.envoyGateway.pullPolicy | string | `"IfNotPresent"` |  |
+| global.images.envoyGateway.pullPolicy | string | `nil` |  |
 | global.images.envoyGateway.pullSecrets | list | `[]` |  |
-| global.images.ratelimit.image | string | `""` |  |
+| global.images.ratelimit.image | string | `"docker.io/envoyproxy/ratelimit:master"` |  |
 | global.images.ratelimit.pullPolicy | string | `"IfNotPresent"` |  |
 | global.images.ratelimit.pullSecrets | list | `[]` |  |
 | hpa.behavior | object | `{}` |  |

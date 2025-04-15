@@ -43,12 +43,8 @@ image.build.%: image.verify go.build.linux_$(GOARCH).%
 	$(eval COMMAND := $(word 1,$(subst ., ,$*)))
 	$(eval IMAGES := $(COMMAND))
 	@$(call log, "Building image $(IMAGES):$(TAG) in linux/$(GOARCH)")
-	$(eval BUILD_SUFFIX := --pull --load -t $(REGISTRY)/$(REPOSITORY):$(TAG) -f $(ROOT_DIR)/tools/docker/$(IMAGES)/Dockerfile bin)
-	$(eval __SECOND_TO_LAST_WORD_INDEX := $(shell expr $(words $(subst /, ,$(REPOSITORY))) - 1))
-	$(eval __REPOSITORY_WORDS := $(subst /, ,$(REPOSITORY)))
-	$(eval __REPOSITORY_ALL_BUT_LAST := $(wordlist 1,$(__SECOND_TO_LAST_WORD_INDEX),$(__REPOSITORY_WORDS)))
-	$(eval NAMESPACE := $(subst $() ,/,$(__REPOSITORY_ALL_BUT_LAST)))
-	@$(call log, "Creating image tag $(REGISTRY)/$(NAMESPACE)/$(IMAGES):$(TAG) in linux/$(GOARCH)")
+	$(eval BUILD_SUFFIX := --pull --load -t $(IMAGE):$(TAG) -f $(ROOT_DIR)/tools/docker/$(IMAGES)/Dockerfile bin)
+	@$(call log, "Creating image tag $(REGISTRY)/$(IMAGES):$(TAG) in linux/$(GOARCH)")
 	$(DOCKER) buildx build --platform linux/$(GOARCH) $(BUILD_SUFFIX)
 
 .PHONY: image.push
@@ -60,8 +56,8 @@ image.push.%: image.build.%
 	$(eval COMMAND := $(word 1,$(subst ., ,$*)))
 	$(eval IMAGES := $(COMMAND))
 	@$(call log, "Pushing image $(IMAGES) $(TAG) to $(REGISTRY)")
-	@$(call log, "Pushing docker image tag $(REGISTRY)/$(REPOSITORY):$(TAG) in linux/$(GOARCH)")
-	$(DOCKER) push $(REGISTRY)/$(REPOSITORY):$(TAG)
+	@$(call log, "Pushing docker image tag $(IMAGE):$(TAG) in linux/$(GOARCH)")
+	$(DOCKER) push $(IMAGE):$(TAG)
 
 .PHONY: image.multiarch.verify
 image.multiarch.verify:
@@ -88,12 +84,12 @@ image.multiarch.setup: image.verify image.multiarch.verify image.multiarch.emula
 .PHONY: image.build.multiarch
 image.build.multiarch:
 	@$(LOG_TARGET)
-	docker buildx build bin -f "$(ROOT_DIR)/tools/docker/$(IMAGES)/Dockerfile" -t "${REGISTRY}/${REPOSITORY}:${TAG}" --platform "${BUILDX_PLATFORMS}"
+	docker buildx build bin -f "$(ROOT_DIR)/tools/docker/$(IMAGES)/Dockerfile" -t "${IMAGE}:${TAG}" --platform "${BUILDX_PLATFORMS}"
 
 .PHONY: image.push.multiarch
 image.push.multiarch:
 	@$(LOG_TARGET)
-	docker buildx build bin -f "$(ROOT_DIR)/tools/docker/$(IMAGES)/Dockerfile" -t "${REGISTRY}/${REPOSITORY}:${TAG}" --platform "${BUILDX_PLATFORMS}" --sbom=false --provenance=false --push
+	docker buildx build bin -f "$(ROOT_DIR)/tools/docker/$(IMAGES)/Dockerfile" -t "${IMAGE}:${TAG}" --platform "${BUILDX_PLATFORMS}" --sbom=false --provenance=false --push
 
 ##@ Image
 

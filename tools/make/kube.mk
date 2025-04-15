@@ -247,9 +247,9 @@ create-cluster: ## Create a kind cluster suitable for running Gateway API confor
 	tools/hack/create-cluster.sh
 
 .PHONY: kube-install-image
-kube-install-image: image.build ## Install the EG image to a kind cluster using the provided $REGISTRY, $REPOSITORY and $TAG.
+kube-install-image: image.build ## Install the EG image to a kind cluster using the provided $IMAGE and $TAG.
 	@$(LOG_TARGET)
-	tools/hack/kind-load-image.sh $(REGISTRY)/$(REPOSITORY) $(TAG)
+	tools/hack/kind-load-image.sh $(IMAGE) $(TAG)
 
 .PHONY: run-conformance
 run-conformance: prepare-ip-family ## Run Gateway API conformance.

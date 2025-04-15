@@ -2,28 +2,19 @@
 #
 # This file does not contain any specific make targets.
 
-# Docker global variables
+
+# Docker variables
 
 # REGISTRY is the image registry to use for build and push image targets.
-REGISTRY ?= docker.io
-
-# Docker Envoy Gateway variables
-
-# REPOSITORY is the image repository
-# Use envoyproxy/gateway-dev when developing
-# Use envoyproxy/gateway when releasing an image.
-REPOSITORY ?= envoyproxy/gateway
-# REPOSITORY ?= envoyproxy/gateway-dev
-
-# TAG is the image tag, defaults to current revision
+REGISTRY ?= docker.io/envoyproxy
+# IMAGE_NAME is the name of EG image
+# Use gateway-dev in default when developing
+# Use gateway when releasing an image.
+IMAGE_NAME ?= gateway-dev
+# IMAGE is the image URL for build and push image targets.
+IMAGE ?= ${REGISTRY}/${IMAGE_NAME}
+# Tag is the tag to use for build and push image targets.
 TAG ?= $(REV)
-
-# Docker Envoy Ratelimit variables
-
-# RATELIMIT_REPOSITORY is the ratelimit repository
-RATELIMIT_REPOSITORY ?= envoyproxy/ratelimit
-# RATELIMIT_TAG is the ratelimit image tag
-RATELIMIT_TAG ?= master
 
 # Fuzzing variables
 
