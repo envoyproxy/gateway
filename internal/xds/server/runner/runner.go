@@ -229,7 +229,6 @@ func (r *Runner) loadTLSConfig() (tlsConfig *tls.Config, err error) {
 
 // loadKubernetesPublicKey loads the Kubernetes API server's public key for validating Service Account tokens.
 func (r *Runner) loadKubernetesPublicKey() (*rsa.PublicKey, error) {
-	// Replace this with the actual path to the public key file
 	const publicKeyPath = "/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"
 
 	pemData, err := os.ReadFile(publicKeyPath)

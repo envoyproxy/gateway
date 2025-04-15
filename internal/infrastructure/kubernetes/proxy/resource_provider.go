@@ -226,6 +226,14 @@ func (r *ResourceRender) ConfigMap(cert string) (*corev1.ConfigMap, error) {
 		return nil, fmt.Errorf("missing owning gateway labels")
 	}
 
+	data := map[string]string{
+		common.SdsCAFilename:   common.GetSdsCAConfigMapData(XdsTLSCaFilepath),
+		common.SdsCertFilename: common.GetSdsCertConfigMapData(XdsTLSCertFilepath, XdsTLSKeyFilepath),
+	}
+	if cert != "" {
+		data[XdsTLSCaFileName] = cert
+	}
+
 	return &corev1.ConfigMap{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "ConfigMap",
@@ -237,11 +245,7 @@ func (r *ResourceRender) ConfigMap(cert string) (*corev1.ConfigMap, error) {
 			Labels:      labels,
 			Annotations: r.infra.GetProxyMetadata().Annotations,
 		},
-		Data: map[string]string{
-			common.SdsCAFilename:   common.GetSdsCAConfigMapData(XdsTLSCaFilepath),
-			common.SdsCertFilename: common.GetSdsCertConfigMapData(XdsTLSCertFilepath, XdsTLSKeyFilepath),
-			XdsTLSCaFileName:       cert,
-		},
+		Data: data,
 	}, nil
 }
 
