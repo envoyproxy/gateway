@@ -197,7 +197,7 @@ func TestConfigmap(t *testing.T) {
 		},
 	}
 	r := NewResourceRender(cfg.Namespace, cfg.EnvoyGateway, ownerReferenceUID)
-	cm, err := r.ConfigMap()
+	cm, err := r.ConfigMap("")
 	require.NoError(t, err)
 
 	if *overrideTestData {

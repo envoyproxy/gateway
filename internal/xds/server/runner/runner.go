@@ -7,9 +7,13 @@ package runner
 
 import (
 	"context"
+	"crypto/rsa"
 	"crypto/tls"
+	"crypto/x509"
+	"encoding/pem"
 	"fmt"
 	"net"
+	"os"
 	"strconv"
 	"time"
 
@@ -92,15 +96,37 @@ func (r *Runner) Start(ctx context.Context) (err error) {
 	}
 	r.Logger.Info("loaded TLS certificate and key")
 
-	r.grpc = grpc.NewServer(
+	grpcOpts := []grpc.ServerOption{
 		grpc.Creds(credentials.NewTLS(tlsConfig)),
 		grpc.KeepaliveEnforcementPolicy(keepalive.EnforcementPolicy{
 			MinTime:             15 * time.Second,
 			PermitWithoutStream: true,
 		}),
-		grpc.UnaryInterceptor(NewJWTAuthInterceptor().Unary()),
-	)
+	}
 
+	// When GatewayNamespaceMode is enabled, we will use Service Account JWT tokens to authenticate envoy proxy infra and xds server.
+	if r.EnvoyGateway.GatewayNamespaceMode() {
+		r.Logger.Info("gatewayNamespaceMode is enabled, setting up JWTAuthInterceptor")
+
+		publicKey, err := r.loadKubernetesPublicKey()
+		if err != nil {
+			return fmt.Errorf("failed to load Kubernetes public key: %w", err)
+		}
+
+		jwtInterceptor := NewJWTAuthInterceptor(
+			publicKey,
+			"https://kubernetes.default.svc",
+		)
+		grpcOpts = []grpc.ServerOption{
+			grpc.KeepaliveEnforcementPolicy(keepalive.EnforcementPolicy{
+				MinTime:             15 * time.Second,
+				PermitWithoutStream: true,
+			}),
+			grpc.StreamInterceptor(jwtInterceptor.Stream()),
+		}
+	}
+
+	r.grpc = grpc.NewServer(grpcOpts...)
 	r.cache = cache.NewSnapshotCache(true, r.Logger)
 	registerServer(serverv3.NewServer(ctx, r.cache, r.cache), r.grpc)
 
@@ -199,4 +225,32 @@ func (r *Runner) loadTLSConfig() (tlsConfig *tls.Config, err error) {
 		return nil, fmt.Errorf("no valid tls certificates")
 	}
 	return
+}
+
+// loadKubernetesPublicKey loads the Kubernetes API server's public key for validating Service Account tokens.
+func (r *Runner) loadKubernetesPublicKey() (*rsa.PublicKey, error) {
+	// Replace this with the actual path to the public key file
+	const publicKeyPath = "/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"
+
+	pemData, err := os.ReadFile(publicKeyPath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read public key file: %w", err)
+	}
+
+	block, _ := pem.Decode(pemData)
+	if block == nil || block.Type != "CERTIFICATE" {
+		return nil, fmt.Errorf("failed to decode PEM block containing public key")
+	}
+
+	cert, err := x509.ParseCertificate(block.Bytes)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse certificate: %w", err)
+	}
+
+	rsaPubKey, ok := cert.PublicKey.(*rsa.PublicKey)
+	if !ok {
+		return nil, fmt.Errorf("not an RSA public key")
+	}
+
+	return rsaPubKey, nil
 }
