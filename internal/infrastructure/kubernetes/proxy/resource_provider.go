@@ -37,6 +37,9 @@ const (
 	// XdsTLSCaFilepath is the fully qualified path of the file containing Envoy's
 	// trusted CA certificate.
 	XdsTLSCaFilepath = "/certs/ca.crt"
+
+	// XdsTLSCertFileName is the file name of the xDS server TLS certificate.
+	XdsTLSCaFileName = "ca.crt"
 )
 
 type ResourceRender struct {
@@ -216,7 +219,7 @@ func (r *ResourceRender) Service() (*corev1.Service, error) {
 }
 
 // ConfigMap returns the expected ConfigMap based on the provided infra.
-func (r *ResourceRender) ConfigMap() (*corev1.ConfigMap, error) {
+func (r *ResourceRender) ConfigMap(cert string) (*corev1.ConfigMap, error) {
 	// Set the labels based on the owning gateway name.
 	labels := envoyLabels(r.infra.GetProxyMetadata().Labels)
 	if OwningGatewayLabelsAbsent(labels) {
@@ -237,6 +240,7 @@ func (r *ResourceRender) ConfigMap() (*corev1.ConfigMap, error) {
 		Data: map[string]string{
 			common.SdsCAFilename:   common.GetSdsCAConfigMapData(XdsTLSCaFilepath),
 			common.SdsCertFilename: common.GetSdsCertConfigMapData(XdsTLSCertFilepath, XdsTLSKeyFilepath),
+			XdsTLSCaFileName:       cert,
 		},
 	}, nil
 }

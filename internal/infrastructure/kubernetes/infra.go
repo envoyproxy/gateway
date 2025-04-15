@@ -34,7 +34,7 @@ type ResourceRender interface {
 	LabelSelector() labels.Selector
 	ServiceAccount() (*corev1.ServiceAccount, error)
 	Service() (*corev1.Service, error)
-	ConfigMap() (*corev1.ConfigMap, error)
+	ConfigMap(cert string) (*corev1.ConfigMap, error)
 	Deployment() (*appsv1.Deployment, error)
 	DaemonSet() (*appsv1.DaemonSet, error)
 	HorizontalPodAutoscaler() (*autoscalingv2.HorizontalPodAutoscaler, error)
@@ -80,11 +80,15 @@ func (i *Infra) Close() error { return nil }
 // createOrUpdate creates a ServiceAccount/ConfigMap/Deployment/Service in the kube api server based on the
 // provided ResourceRender, if it doesn't exist and updates it if it does.
 func (i *Infra) createOrUpdate(ctx context.Context, r ResourceRender) error {
+	cert, err := i.getEnvoyCA(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to fetch ca certificate for namespaced infra %s/%s: %w", i.Namespace, r.Name(), err)
+	}
 	if err := i.createOrUpdateServiceAccount(ctx, r); err != nil {
 		return fmt.Errorf("failed to create or update serviceaccount %s/%s: %w", i.Namespace, r.Name(), err)
 	}
 
-	if err := i.createOrUpdateConfigMap(ctx, r); err != nil {
+	if err := i.createOrUpdateConfigMap(ctx, r, cert); err != nil {
 		return fmt.Errorf("failed to create or update configmap %s/%s: %w", i.Namespace, r.Name(), err)
 	}
 

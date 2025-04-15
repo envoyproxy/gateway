@@ -1243,7 +1243,7 @@ func TestConfigMap(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			r := NewResourceRender(cfg.Namespace, cfg.DNSDomain, tc.infra.GetProxyInfra(), cfg.EnvoyGateway)
-			cm, err := r.ConfigMap()
+			cm, err := r.ConfigMap("")
 			require.NoError(t, err)
 
 			expected, err := loadConfigmap(tc.name)

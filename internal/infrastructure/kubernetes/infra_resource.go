@@ -24,6 +24,18 @@ import (
 	"github.com/envoyproxy/gateway/internal/metrics"
 )
 
+func (i *Infra) getEnvoyCA(ctx context.Context) (string, error) {
+	secret := &corev1.Secret{}
+	err := i.Client.Get(ctx, types.NamespacedName{
+		Name:      "envoy",
+		Namespace: "envoy-gateway-system",
+	}, secret)
+	if err != nil {
+		return "", err
+	}
+	return string(secret.Data["ca.crt"]), nil
+}
+
 // createOrUpdateServiceAccount creates a ServiceAccount in the kube api server based on the
 // provided ResourceRender, if it doesn't exist and updates it if it does.
 func (i *Infra) createOrUpdateServiceAccount(ctx context.Context, r ResourceRender) (err error) {
@@ -56,7 +68,7 @@ func (i *Infra) createOrUpdateServiceAccount(ctx context.Context, r ResourceRend
 
 // createOrUpdateConfigMap creates a ConfigMap in the Kube api server based on the provided
 // ResourceRender, if it doesn't exist and updates it if it does.
-func (i *Infra) createOrUpdateConfigMap(ctx context.Context, r ResourceRender) (err error) {
+func (i *Infra) createOrUpdateConfigMap(ctx context.Context, r ResourceRender, cert string) (err error) {
 	var (
 		cm        *corev1.ConfigMap
 		startTime = time.Now()
@@ -67,7 +79,7 @@ func (i *Infra) createOrUpdateConfigMap(ctx context.Context, r ResourceRender) (
 		}
 	)
 
-	if cm, err = r.ConfigMap(); err != nil {
+	if cm, err = r.ConfigMap(cert); err != nil {
 		resourceApplyTotal.WithFailure(metrics.StatusFailure, labels...).Increment()
 		return err
 	}
