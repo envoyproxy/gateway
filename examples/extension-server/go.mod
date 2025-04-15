@@ -9,7 +9,7 @@ require (
 	github.com/urfave/cli/v2 v2.27.6
 	google.golang.org/grpc v1.71.1
 	google.golang.org/protobuf v1.36.6
-	k8s.io/apimachinery v0.33.0-beta.0
+	k8s.io/apimachinery v0.34.0-alpha.0
 	sigs.k8s.io/controller-runtime v0.20.4
 	sigs.k8s.io/gateway-api v1.2.1
 )
