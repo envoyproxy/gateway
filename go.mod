@@ -39,7 +39,7 @@ require (
 	github.com/ohler55/ojg v1.26.3
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.22.0
-	github.com/prometheus/client_model v0.6.1
+	github.com/prometheus/client_model v0.6.2
 	github.com/prometheus/common v0.63.0
 	github.com/replicatedhq/troubleshoot v0.118.0
 	github.com/spf13/cobra v1.9.1
