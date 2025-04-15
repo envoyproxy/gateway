@@ -1,5 +1,6 @@
 +++
 title = "Envoy Gateway Resources"
+weight = 10
 +++
 
 There are several resources that play a part in enabling you to meet your Kubernetes ingress traffic handling needs. This page provides a brief overview of the resources you’ll be working with.
