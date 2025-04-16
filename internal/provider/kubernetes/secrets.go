@@ -29,7 +29,7 @@ const (
 	hmacSecretKey    = "hmac-secret"
 )
 
-func newSecret(secretType corev1.SecretType, name string, namespace string, data map[string][]byte) corev1.Secret {
+func newSecret(secretType corev1.SecretType, name, namespace string, data map[string][]byte) corev1.Secret {
 	return corev1.Secret{
 		Type: secretType,
 		TypeMeta: metav1.TypeMeta{

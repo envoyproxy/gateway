@@ -121,7 +121,7 @@ func processExtensionPostListenerHook(tCtx *types.ResourceVersionTable, xdsListe
 		} else if modifiedListener != nil {
 			// Use the resource table to update the listener with the modified version returned by the extension
 			// We're assuming that Listener names are unique.
-			if err := tCtx.AddOrReplaceXdsResource(resourcev3.ListenerType, modifiedListener, func(existing resourceTypes.Resource, new resourceTypes.Resource) bool {
+			if err := tCtx.AddOrReplaceXdsResource(resourcev3.ListenerType, modifiedListener, func(existing, new resourceTypes.Resource) bool {
 				oldListener := existing.(*listenerv3.Listener)
 				newListener := new.(*listenerv3.Listener)
 				if newListener == nil || oldListener == nil {
@@ -190,7 +190,7 @@ func processExtensionPostTranslationHook(tCtx *types.ResourceVersionTable, em *e
 	return nil
 }
 
-func deepCopyPtr(src interface{}, dest interface{}) error {
+func deepCopyPtr(src, dest interface{}) error {
 	if src == nil || dest == nil {
 		return errors.New("cannot deep copy nil pointer")
 	}
