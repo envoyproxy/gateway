@@ -135,7 +135,7 @@ func newEnvoyStatsCmd() *cobra.Command {
 	return statsConfigCmd
 }
 
-func setupEnvoyServerStatsConfig(kubeClient kubernetes.CLIClient, podName, podNamespace string, outputFormat string) (string, error) {
+func setupEnvoyServerStatsConfig(kubeClient kubernetes.CLIClient, podName, podNamespace, outputFormat string) (string, error) {
 	path := "stats"
 	if outputFormat == jsonOutput || outputFormat == yamlOutput {
 		// for yaml output we will convert the json to yaml when printed
@@ -161,7 +161,7 @@ func setupEnvoyServerStatsConfig(kubeClient kubernetes.CLIClient, podName, podNa
 	return string(result), nil
 }
 
-func setupEnvoyClusterStatsConfig(kubeClient kubernetes.CLIClient, podName, podNamespace string, outputFormat string) (string, error) {
+func setupEnvoyClusterStatsConfig(kubeClient kubernetes.CLIClient, podName, podNamespace, outputFormat string) (string, error) {
 	path := "clusters"
 	if outputFormat == jsonOutput || outputFormat == yamlOutput {
 		// for yaml output we will convert the json to yaml when printed
@@ -184,7 +184,7 @@ func setupEnvoyClusterStatsConfig(kubeClient kubernetes.CLIClient, podName, podN
 	return string(result), nil
 }
 
-func statsRequest(address string, path string) ([]byte, error) {
+func statsRequest(address, path string) ([]byte, error) {
 	url := fmt.Sprintf("http://%s/%s", address, path)
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
