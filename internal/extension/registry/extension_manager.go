@@ -17,6 +17,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc/security/advancedtls"
 	"google.golang.org/grpc/test/bufconn"
 	corev1 "k8s.io/api/core/v1"
 	k8scli "sigs.k8s.io/controller-runtime/pkg/client"
@@ -245,18 +246,6 @@ func (m *Manager) CleanupHookConns() {
 	}
 }
 
-func parseCA(caSecret *corev1.Secret) (*x509.CertPool, error) {
-	caCertPEMBytes, ok := caSecret.Data[corev1.TLSCertKey]
-	if !ok {
-		return nil, errors.New("no cert found in CA secret")
-	}
-	cp := x509.NewCertPool()
-	if ok := cp.AppendCertsFromPEM(caCertPEMBytes); !ok {
-		return nil, errors.New("failed to append certificates")
-	}
-	return cp, nil
-}
-
 func setupGRPCOpts(ctx context.Context, client k8scli.Client, ext *egv1a1.ExtensionManager, namespace string) ([]grpc.DialOption, error) {
 	// These two errors shouldn't happen since we check these conditions when loading the extension
 	if ext == nil {
@@ -267,20 +256,16 @@ func setupGRPCOpts(ctx context.Context, client k8scli.Client, ext *egv1a1.Extens
 	}
 
 	var opts []grpc.DialOption
-	var creds credentials.TransportCredentials
 	if ext.Service.TLS != nil {
-		certRef := ext.Service.TLS.CertificateRef
-		secret, secretNamespace, err := kubernetes.ValidateSecretObjectReference(ctx, client, &certRef, namespace)
+		// Sanity check to ensure that the extension manager has a valid certificate reference
+		_, err := getCertPoolFromSecret(ctx, client, ext, namespace)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("failed to get root CA certificates: %w", err)
 		}
-
-		cp, err := parseCA(secret)
+		creds, err := getGRPCCredentials(client, ext, namespace)
 		if err != nil {
-			return nil, fmt.Errorf("error parsing cert in Secret %s in namespace %s", string(certRef.Name), secretNamespace)
+			return nil, fmt.Errorf("failed to get gRPC TLS credentials: %w", err)
 		}
-
-		creds = credentials.NewClientTLSFromCert(cp, "")
 		opts = append(opts, grpc.WithTransportCredentials(creds))
 	} else {
 		opts = append(opts, grpc.WithTransportCredentials(insecure.NewCredentials()))
@@ -299,4 +284,43 @@ func setupGRPCOpts(ctx context.Context, client k8scli.Client, ext *egv1a1.Extens
 	}
 
 	return opts, nil
+}
+
+func getGRPCCredentials(client k8scli.Client, ext *egv1a1.ExtensionManager, namespace string) (credentials.TransportCredentials, error) {
+	return advancedtls.NewClientCreds(&advancedtls.Options{
+		RootOptions: advancedtls.RootCertificateOptions{
+			// A callback function that dynamically loads root CA certificates from secret
+			GetRootCertificates: createGetRootCertificatesHandler(client, ext, namespace),
+		},
+	})
+}
+
+func createGetRootCertificatesHandler(client k8scli.Client, ext *egv1a1.ExtensionManager, namespace string) func(*advancedtls.ConnectionInfo) (*advancedtls.RootCertificates, error) {
+	return func(params *advancedtls.ConnectionInfo) (*advancedtls.RootCertificates, error) {
+		ctx := context.Background()
+		cp, err := getCertPoolFromSecret(ctx, client, ext, namespace)
+		if err != nil {
+			return nil, err
+		}
+
+		return &advancedtls.RootCertificates{TrustCerts: cp}, nil
+	}
+}
+
+func getCertPoolFromSecret(ctx context.Context, client k8scli.Client, ext *egv1a1.ExtensionManager, namespace string) (*x509.CertPool, error) {
+	certRef := ext.Service.TLS.CertificateRef
+	secret, _, err := kubernetes.ValidateSecretObjectReference(ctx, client, &certRef, namespace)
+	if err != nil {
+		return nil, fmt.Errorf("failed to validate TLS certificate reference: %w", err)
+	}
+
+	caCertPEMBytes, ok := secret.Data[corev1.TLSCertKey]
+	if !ok {
+		return nil, fmt.Errorf("no CA certificate found in Kubernetes Secret %s in namespace %s", secret.GetName(), secret.GetNamespace())
+	}
+	cp := x509.NewCertPool()
+	if ok := cp.AppendCertsFromPEM(caCertPEMBytes); !ok {
+		return nil, errors.New("failed to append certificates from CA secret")
+	}
+	return cp, nil
 }
