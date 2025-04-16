@@ -905,7 +905,7 @@ func TestWasmCachePolicyChangesUsingHTTP(t *testing.T) {
 	wantFilePath2 := generateModulePath(t, tmpDir, url2, fmt.Sprintf("%x.wasm", sha256.Sum256(binary2)))
 	var defaultPullPolicy PullPolicy
 
-	testWasmGet := func(downloadURL string, policy PullPolicy, resourceVersion string, wantFilePath string, wantNumRequest int) {
+	testWasmGet := func(downloadURL string, policy PullPolicy, resourceVersion, wantFilePath string, wantNumRequest int) {
 		t.Helper()
 		gotFilePath, _, err := cache.Get(downloadURL, GetOptions{
 			ResourceName:    "namespace.resource",

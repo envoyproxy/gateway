@@ -115,7 +115,7 @@ func shutdownReadyHandler(w http.ResponseWriter, readyTimeout time.Duration, rea
 // Shutdown is called from a preStop hook on the shutdown-manager container where
 // it will initiate a drain sequence on the Envoy proxy and block until
 // connections are drained or a timeout is exceeded.
-func Shutdown(drainTimeout time.Duration, minDrainDuration time.Duration, exitAtConnections int) error {
+func Shutdown(drainTimeout, minDrainDuration time.Duration, exitAtConnections int) error {
 	startTime := time.Now()
 	allowedToExit := false
 

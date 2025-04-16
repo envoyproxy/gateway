@@ -150,7 +150,7 @@ func (t *Translator) processExtServiceDestination(
 	return ds, nil
 }
 
-func irIndexedExtServiceDestinationName(policyNamespacedName types.NamespacedName, policyKind string, configType string, idx int) string {
+func irIndexedExtServiceDestinationName(policyNamespacedName types.NamespacedName, policyKind, configType string, idx int) string {
 	return strings.ToLower(fmt.Sprintf(
 		"%s/%s/%s/%s/%d",
 		policyKind,

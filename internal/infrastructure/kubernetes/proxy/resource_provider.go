@@ -51,7 +51,7 @@ type ResourceRender struct {
 	ShutdownManager *egv1a1.ShutdownManager
 }
 
-func NewResourceRender(ns string, dnsDomain string, infra *ir.ProxyInfra, gateway *egv1a1.EnvoyGateway) *ResourceRender {
+func NewResourceRender(ns, dnsDomain string, infra *ir.ProxyInfra, gateway *egv1a1.EnvoyGateway) *ResourceRender {
 	return &ResourceRender{
 		Namespace:       ns,
 		DNSDomain:       dnsDomain,

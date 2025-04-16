@@ -88,7 +88,7 @@ func TestApplyBootstrapConfig(t *testing.T) {
 	}
 }
 
-func loadData(caseName string, inOrOut string) (string, error) {
+func loadData(caseName, inOrOut string) (string, error) {
 	filename := path.Join("testdata", "merge", fmt.Sprintf("%s.%s.yaml", caseName, inOrOut))
 	b, err := os.ReadFile(filename)
 	if err != nil {

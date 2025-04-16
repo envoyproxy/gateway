@@ -111,7 +111,7 @@ const (
 )
 
 // GetServiceURL returns the URL for the rate limit service.
-func GetServiceURL(namespace string, dnsDomain string) string {
+func GetServiceURL(namespace, dnsDomain string) string {
 	return fmt.Sprintf("grpc://%s.%s.svc.%s:%d", InfraName, namespace, dnsDomain, InfraGRPCPort)
 }
 

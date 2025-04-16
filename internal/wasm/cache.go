@@ -48,7 +48,7 @@ const (
 
 // Cache models a Wasm module cache.
 type Cache interface {
-	Get(downloadURL string, opts GetOptions) (url string, checksum string, err error)
+	Get(downloadURL string, opts GetOptions) (url, checksum string, err error)
 	Start(ctx context.Context)
 }
 
@@ -171,7 +171,7 @@ func getModulePath(baseDir string, mkey moduleKey) (string, error) {
 }
 
 // Get returns path the local Wasm module file and its checksum.
-func (c *localFileCache) Get(downloadURL string, opts GetOptions) (localFile string, checksum string, err error) {
+func (c *localFileCache) Get(downloadURL string, opts GetOptions) (localFile, checksum string, err error) {
 	// If the checksum is not provided, try to extract it from the OCI image URL.
 	originalChecksum := opts.Checksum
 	if len(opts.Checksum) == 0 && strings.HasPrefix(downloadURL, ociURLPrefix) {

@@ -352,7 +352,7 @@ func printDockerCLIResponse(rd io.Reader) error {
 	return nil
 }
 
-func createPullSecretForWasmTest(t *testing.T, suite *suite.ConformanceTestSuite, registryAddr string, password string) *corev1.Secret {
+func createPullSecretForWasmTest(t *testing.T, suite *suite.ConformanceTestSuite, registryAddr, password string) *corev1.Secret {
 	// Create Docker config JSON
 	dockerConfigJSON := fmt.Sprintf(`{"auths":{"%s":{"username":"%s","password":"%s","email":"%s","auth":"%s"}}}`,
 		registryAddr, dockerUsername, password, dockerEmail,
@@ -380,7 +380,7 @@ func createPullSecretForWasmTest(t *testing.T, suite *suite.ConformanceTestSuite
 
 func createEEPForWasmTest(
 	t *testing.T, suite *suite.ConformanceTestSuite,
-	registryAddr string, digest string, withPullSecret bool,
+	registryAddr, digest string, withPullSecret bool,
 ) *egv1a1.EnvoyExtensionPolicy {
 	eep := &egv1a1.EnvoyExtensionPolicy{
 		ObjectMeta: metav1.ObjectMeta{

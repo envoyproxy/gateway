@@ -37,7 +37,7 @@ type CLIClient interface {
 	PodsForSelector(namespace string, labelSelectors ...string) (*corev1.PodList, error)
 
 	// PodExec takes a command and the pod data to run the command in the specified pod.
-	PodExec(namespacedName types.NamespacedName, container string, command string) (stdout string, stderr string, err error)
+	PodExec(namespacedName types.NamespacedName, container, command string) (stdout, stderr string, err error)
 
 	// Kube returns kube client.
 	Kube() kubernetes.Interface
@@ -131,7 +131,7 @@ func (c *client) Pod(namespacedName types.NamespacedName) (*corev1.Pod, error) {
 	return c.kube.CoreV1().Pods(namespacedName.Namespace).Get(context.TODO(), namespacedName.Name, metav1.GetOptions{})
 }
 
-func (c *client) PodExec(namespacedName types.NamespacedName, container string, command string) (stdout string, stderr string, err error) {
+func (c *client) PodExec(namespacedName types.NamespacedName, container, command string) (stdout, stderr string, err error) {
 	defer func() {
 		if err != nil {
 			if len(stderr) > 0 {

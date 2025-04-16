@@ -528,7 +528,7 @@ func TestTranslateWithExtensionKinds(t *testing.T) {
 	}
 }
 
-func overrideOutputConfig(t *testing.T, data string, filepath string) {
+func overrideOutputConfig(t *testing.T, data, filepath string) {
 	t.Helper()
 	file, err := os.OpenFile(filepath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0o644)
 	require.NoError(t, err)
@@ -846,7 +846,7 @@ type mockWasmCache struct{}
 
 func (m *mockWasmCache) Start(_ context.Context) {}
 
-func (m *mockWasmCache) Get(downloadURL string, options wasm.GetOptions) (url string, checksum string, err error) {
+func (m *mockWasmCache) Get(downloadURL string, options wasm.GetOptions) (url, checksum string, err error) {
 	// This is a mock implementation of the wasm.Cache.Get method.
 	sha := sha256.Sum256([]byte(downloadURL))
 	hashedName := hex.EncodeToString(sha[:])

@@ -1941,7 +1941,7 @@ func (r *gatewayAPIReconciler) processEnvoyProxy(ep *egv1a1.EnvoyProxy, resource
 }
 
 // crdExists checks for the existence of the CRD in k8s APIServer before watching it
-func (r *gatewayAPIReconciler) crdExists(mgr manager.Manager, kind string, groupVersion string) bool {
+func (r *gatewayAPIReconciler) crdExists(mgr manager.Manager, kind, groupVersion string) bool {
 	discoveryClient, err := discovery.NewDiscoveryClientForConfig(mgr.GetConfig())
 	if err != nil {
 		r.log.Error(err, "failed to create discovery client")

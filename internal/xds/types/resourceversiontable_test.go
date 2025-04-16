@@ -270,7 +270,7 @@ func TestAddOrReplaceXdsResource(t *testing.T) {
 		tableIn    *ResourceVersionTable
 		typeIn     resourcev3.Type
 		resourceIn types.Resource
-		funcIn     func(existing types.Resource, new types.Resource) bool
+		funcIn     func(existing, new types.Resource) bool
 		tableOut   *ResourceVersionTable
 	}{
 		{
@@ -282,7 +282,7 @@ func TestAddOrReplaceXdsResource(t *testing.T) {
 			},
 			typeIn:     resourcev3.ClusterType,
 			resourceIn: testCluster,
-			funcIn: func(existing types.Resource, new types.Resource) bool {
+			funcIn: func(existing, new types.Resource) bool {
 				oldCluster := existing.(*clusterv3.Cluster)
 				newCluster := new.(*clusterv3.Cluster)
 				if newCluster == nil || oldCluster == nil {
@@ -308,7 +308,7 @@ func TestAddOrReplaceXdsResource(t *testing.T) {
 			},
 			typeIn:     resourcev3.ClusterType,
 			resourceIn: updatedCluster,
-			funcIn: func(existing types.Resource, new types.Resource) bool {
+			funcIn: func(existing, new types.Resource) bool {
 				oldCluster := existing.(*clusterv3.Cluster)
 				newCluster := new.(*clusterv3.Cluster)
 				if newCluster == nil || oldCluster == nil {
@@ -334,7 +334,7 @@ func TestAddOrReplaceXdsResource(t *testing.T) {
 			},
 			typeIn:     resourcev3.EndpointType,
 			resourceIn: testEndpoint,
-			funcIn: func(existing types.Resource, new types.Resource) bool {
+			funcIn: func(existing, new types.Resource) bool {
 				oldEndpoint := existing.(*endpointv3.ClusterLoadAssignment)
 				newEndpoint := new.(*endpointv3.ClusterLoadAssignment)
 				if newEndpoint == nil || oldEndpoint == nil {
@@ -360,7 +360,7 @@ func TestAddOrReplaceXdsResource(t *testing.T) {
 			},
 			typeIn:     resourcev3.EndpointType,
 			resourceIn: updatedEndpoint,
-			funcIn: func(existing types.Resource, new types.Resource) bool {
+			funcIn: func(existing, new types.Resource) bool {
 				oldEndpoint := existing.(*endpointv3.ClusterLoadAssignment)
 				newEndpoint := new.(*endpointv3.ClusterLoadAssignment)
 				if newEndpoint == nil || oldEndpoint == nil {
@@ -386,7 +386,7 @@ func TestAddOrReplaceXdsResource(t *testing.T) {
 			},
 			typeIn:     resourcev3.ListenerType,
 			resourceIn: testListener,
-			funcIn: func(existing types.Resource, new types.Resource) bool {
+			funcIn: func(existing, new types.Resource) bool {
 				oldListener := existing.(*listenerv3.Listener)
 				newListener := new.(*listenerv3.Listener)
 				if newListener == nil || oldListener == nil {
@@ -412,7 +412,7 @@ func TestAddOrReplaceXdsResource(t *testing.T) {
 			},
 			typeIn:     resourcev3.ListenerType,
 			resourceIn: updatedListener,
-			funcIn: func(existing types.Resource, new types.Resource) bool {
+			funcIn: func(existing, new types.Resource) bool {
 				oldListener := existing.(*listenerv3.Listener)
 				newListener := new.(*listenerv3.Listener)
 				if newListener == nil || oldListener == nil {
@@ -436,7 +436,7 @@ func TestAddOrReplaceXdsResource(t *testing.T) {
 			},
 			typeIn:     resourcev3.ClusterType,
 			resourceIn: testCluster,
-			funcIn: func(existing types.Resource, new types.Resource) bool {
+			funcIn: func(existing, new types.Resource) bool {
 				oldCluster := existing.(*clusterv3.Cluster)
 				newCluster := new.(*clusterv3.Cluster)
 				if newCluster == nil || oldCluster == nil {
@@ -458,7 +458,7 @@ func TestAddOrReplaceXdsResource(t *testing.T) {
 			tableIn:    &ResourceVersionTable{},
 			typeIn:     resourcev3.ClusterType,
 			resourceIn: testCluster,
-			funcIn: func(existing types.Resource, new types.Resource) bool {
+			funcIn: func(existing, new types.Resource) bool {
 				oldCluster := existing.(*clusterv3.Cluster)
 				newCluster := new.(*clusterv3.Cluster)
 				if newCluster == nil || oldCluster == nil {
@@ -484,7 +484,7 @@ func TestAddOrReplaceXdsResource(t *testing.T) {
 			},
 			typeIn:     resourcev3.RouteType,
 			resourceIn: testRouteConfig,
-			funcIn: func(existing types.Resource, new types.Resource) bool {
+			funcIn: func(existing, new types.Resource) bool {
 				oldListener := existing.(*listenerv3.Listener)
 				newListener := new.(*listenerv3.Listener)
 				if newListener == nil || oldListener == nil {
@@ -510,7 +510,7 @@ func TestAddOrReplaceXdsResource(t *testing.T) {
 			},
 			typeIn:     resourcev3.SecretType,
 			resourceIn: testSecret,
-			funcIn: func(existing types.Resource, new types.Resource) bool {
+			funcIn: func(existing, new types.Resource) bool {
 				oldListener := existing.(*listenerv3.Listener)
 				newListener := new.(*listenerv3.Listener)
 				if newListener == nil || oldListener == nil {
@@ -656,7 +656,7 @@ func TestInvalidAddXdsResource(t *testing.T) {
 		tableIn    *ResourceVersionTable
 		typeIn     resourcev3.Type
 		resourceIn types.Resource
-		funcIn     func(existing types.Resource, new types.Resource) bool
+		funcIn     func(existing, new types.Resource) bool
 		tableOut   *ResourceVersionTable
 	}{
 		{
@@ -668,7 +668,7 @@ func TestInvalidAddXdsResource(t *testing.T) {
 			},
 			typeIn:     resourcev3.ListenerType,
 			resourceIn: invalidListener,
-			funcIn: func(existing types.Resource, new types.Resource) bool {
+			funcIn: func(existing, new types.Resource) bool {
 				oldListener := existing.(*listenerv3.Listener)
 				newListener := new.(*listenerv3.Listener)
 				if newListener == nil || oldListener == nil {
@@ -694,7 +694,7 @@ func TestInvalidAddXdsResource(t *testing.T) {
 			},
 			typeIn:     resourcev3.RouteType,
 			resourceIn: invalidRouteConfig,
-			funcIn: func(existing types.Resource, new types.Resource) bool {
+			funcIn: func(existing, new types.Resource) bool {
 				oldListener := existing.(*listenerv3.Listener)
 				newListener := new.(*listenerv3.Listener)
 				if newListener == nil || oldListener == nil {
@@ -716,7 +716,7 @@ func TestInvalidAddXdsResource(t *testing.T) {
 			},
 			typeIn:     resourcev3.ClusterType,
 			resourceIn: invalidCluster,
-			funcIn: func(existing types.Resource, new types.Resource) bool {
+			funcIn: func(existing, new types.Resource) bool {
 				oldCluster := existing.(*clusterv3.Cluster)
 				newCluster := new.(*clusterv3.Cluster)
 				if newCluster == nil || oldCluster == nil {
@@ -738,7 +738,7 @@ func TestInvalidAddXdsResource(t *testing.T) {
 			},
 			typeIn:     resourcev3.ClusterType,
 			resourceIn: invalidListener,
-			funcIn: func(existing types.Resource, new types.Resource) bool {
+			funcIn: func(existing, new types.Resource) bool {
 				oldCluster := existing.(*clusterv3.Cluster)
 				newCluster := new.(*clusterv3.Cluster)
 				if newCluster == nil || oldCluster == nil {
@@ -760,7 +760,7 @@ func TestInvalidAddXdsResource(t *testing.T) {
 			},
 			typeIn:     resourcev3.ListenerType,
 			resourceIn: invalidCluster,
-			funcIn: func(existing types.Resource, new types.Resource) bool {
+			funcIn: func(existing, new types.Resource) bool {
 				oldListener := existing.(*listenerv3.Listener)
 				newListener := new.(*listenerv3.Listener)
 				if newListener == nil || oldListener == nil {
@@ -782,7 +782,7 @@ func TestInvalidAddXdsResource(t *testing.T) {
 			},
 			typeIn:     resourcev3.RouteType,
 			resourceIn: invalidCluster,
-			funcIn: func(existing types.Resource, new types.Resource) bool {
+			funcIn: func(existing, new types.Resource) bool {
 				oldListener := existing.(*listenerv3.Listener)
 				newListener := new.(*listenerv3.Listener)
 				if newListener == nil || oldListener == nil {
@@ -804,7 +804,7 @@ func TestInvalidAddXdsResource(t *testing.T) {
 			},
 			typeIn:     resourcev3.SecretType,
 			resourceIn: invalidRouteConfig,
-			funcIn: func(existing types.Resource, new types.Resource) bool {
+			funcIn: func(existing, new types.Resource) bool {
 				oldListener := existing.(*listenerv3.Listener)
 				newListener := new.(*listenerv3.Listener)
 				if newListener == nil || oldListener == nil {
@@ -826,7 +826,7 @@ func TestInvalidAddXdsResource(t *testing.T) {
 			},
 			typeIn:     resourcev3.SecretType,
 			resourceIn: invalidSecret,
-			funcIn: func(existing types.Resource, new types.Resource) bool {
+			funcIn: func(existing, new types.Resource) bool {
 				oldListener := existing.(*listenerv3.Listener)
 				newListener := new.(*listenerv3.Listener)
 				if newListener == nil || oldListener == nil {
@@ -848,7 +848,7 @@ func TestInvalidAddXdsResource(t *testing.T) {
 			},
 			typeIn:     resourcev3.EndpointType,
 			resourceIn: invalidEndpoint,
-			funcIn: func(existing types.Resource, new types.Resource) bool {
+			funcIn: func(existing, new types.Resource) bool {
 				oldEndpoint := existing.(*endpointv3.ClusterLoadAssignment)
 				newEndpoint := new.(*endpointv3.ClusterLoadAssignment)
 				if newEndpoint == nil || oldEndpoint == nil {
@@ -870,7 +870,7 @@ func TestInvalidAddXdsResource(t *testing.T) {
 			},
 			typeIn:     resourcev3.EndpointType,
 			resourceIn: invalidListener,
-			funcIn: func(existing types.Resource, new types.Resource) bool {
+			funcIn: func(existing, new types.Resource) bool {
 				oldEndpoint := existing.(*endpointv3.ClusterLoadAssignment)
 				newEndpoint := new.(*endpointv3.ClusterLoadAssignment)
 				if newEndpoint == nil || oldEndpoint == nil {
