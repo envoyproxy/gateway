@@ -4,7 +4,7 @@ title: "API Gateway"
 
 ## Before You Begin
 You may want to be familiar with:
-- [What is Envoy Proxy?](https://www.envoyproxy.io/docs/envoy/latest/)
+- [What is Envoy Proxy?](../envoy_proxy)
 
 ## Overview
 
@@ -32,5 +32,5 @@ Behind the scenes, Envoy Gateway watches the resources you create and translates
 
 ## Related Resources
 
-- [Getting Started with Envoy Gateway](https://gateway.envoyproxy.io/docs/latest/getting-started/)
+- [Getting Started with Envoy Gateway](../../tasks/quickstart)
 - [Kubernetes Gateway API](https://gateway-api.sigs.k8s.io/)
