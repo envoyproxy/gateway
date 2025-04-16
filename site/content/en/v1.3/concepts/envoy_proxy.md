@@ -8,11 +8,13 @@ You may want to be familiar with:
 
 ## Overview
 
-Envoy Proxy is a high-performance, open source edge and service proxy designed for cloud-native applications. Originally developed at Lyft, Envoy is now part of the CNCF and widely used as a data plane component in service meshes, API gateways, and ingress solutions.
+A proxy server acts as an intermediary between a client (like a web browser) and another server (such as a website). When the client makes a request, the proxy forwards it to the destination server, receives the response, and then sends it back to the client.
 
-Envoy functions as a powerful intermediary for service-to-service and edge traffic—managing, routing, and observing requests with built-in support for features like load balancing, retries, circuit breaking, traffic shifting, and comprehensive observability.
+Proxies are commonly used to enhance security, manage traffic, anonymize user activity, or optimize performance through features like caching and load balancing. In modern cloud environments, proxies often handle critical tasks such as request routing, TLS termination, authentication, and traffic shaping.
 
-Because of its rich feature set and extensibility, Envoy is often embedded in larger systems (like Istio, Consul, or Envoy Gateway) where it takes care of the heavy lifting for traffic management and security.
+Envoy Proxy is a high-performance, open source edge and service proxy built for cloud-native applications. Originally developed at Lyft and now part of the Cloud Native Computing Foundation (CNCF), Envoy is widely adopted as a data plane component in service meshes, API gateways, and ingress solutions.
+
+Thanks to its powerful features and extensibility, Envoy is often embedded in larger platforms—like Istio, Consul, and Envoy Gateway—where it takes care of the complex traffic management and security tasks behind the scenes.
 
 ## Use Cases
 

@@ -1,10 +1,10 @@
 ---
-title: "API Gateway"
+title: "API Gateways"
 ---
 
 ## Before You Begin
 You may want to be familiar with:
-- [What is Envoy Proxy?](https://www.envoyproxy.io/docs/envoy/latest/)
+- [What is Envoy Proxy?](envoy_proxy)
 
 ## Overview
 
@@ -23,11 +23,9 @@ Use an API Gateway when:
 
 ## How API Gateways fit into Envoy Gateway
 
-Envoy Gateway makes it easier to use Envoy Proxy as an API Gateway by combining the Kubernetes Gateway API with its own set of custom resources. This approach allows users to manage routing, security, and traffic control using familiar Kubernetes tools—without needing to learn Envoy's low-level configuration model.
+Under the hood, Envoy Proxy is a powerful, production-grade proxy that supports many of the capabilities you'd expect from an API Gateway — like traffic routing, retries, TLS termination, observability, and more. But configuring Envoy directly can be complex and verbose.
 
-The Kubernetes Gateway API offers a standard, Kubernetes-native way to define how external traffic is handled within your cluster. Resources like Gateway and HTTPRoute let you describe how requests should be routed. Envoy Gateway builds on top of this API by adding its own enhancements, making it easier to access Envoy’s powerful capabilities in a more user-friendly and declarative way.
-
-Behind the scenes, Envoy Gateway watches the resources you create and translates them into configuration for Envoy Proxy. Envoy Proxy then handles the actual traffic based on that config—routing requests, enforcing policies, and collecting metrics.
+Envoy Gateway solves this by providing a Kubernetes-native interface, using the standard Gateway API and its own custom resources, to make configuring Envoy Proxy simpler and more approachable. You define high-level traffic rules using resources like Gateway, HTTPRoute, or TLSRoute, and Envoy Gateway automatically translates them into detailed Envoy Proxy configurations.
 
 
 ## Related Resources
