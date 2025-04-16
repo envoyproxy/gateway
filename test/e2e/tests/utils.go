@@ -435,7 +435,7 @@ func RetrieveMetrics(url string, timeout time.Duration) (map[string]*dto.MetricF
 	return metricParser.TextToMetricFamilies(res.Body)
 }
 
-func RetrieveMetric(url string, name string, timeout time.Duration) (*dto.MetricFamily, error) {
+func RetrieveMetric(url, name string, timeout time.Duration) (*dto.MetricFamily, error) {
 	metrics, err := RetrieveMetrics(url, timeout)
 	if err != nil {
 		return nil, err

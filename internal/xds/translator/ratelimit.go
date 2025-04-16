@@ -131,7 +131,7 @@ func (t *Translator) buildRateLimitFilter(irListener *ir.HTTPListener) []*hcmv3.
 }
 
 // createRateLimitFilter creates a single rate limit filter for the given domain
-func createRateLimitFilter(t *Translator, irListener *ir.HTTPListener, domain string, filterName string) *hcmv3.HttpFilter {
+func createRateLimitFilter(t *Translator, irListener *ir.HTTPListener, domain, filterName string) *hcmv3.HttpFilter {
 	// Create a new rate limit filter configuration
 	rateLimitFilterProto := &ratelimitfilterv3.RateLimit{
 		Domain: domain,
