@@ -297,7 +297,7 @@ func TestDeleteProxyClusterRole(t *testing.T) {
 		},
 		{
 			name:  "delete cluster role - zone discovery enabled",
-			infra: newTestInfraWithZoneDiscovery(),
+			infra: newTestInfraWithZoneDiscovery(nil),
 		},
 	}
 	for _, tc := range testCases {

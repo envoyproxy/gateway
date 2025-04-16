@@ -118,8 +118,7 @@ func TestCreateProxyInfra(t *testing.T) {
 	infraWithLabels := ir.NewInfra()
 	infraWithLabels.GetProxyInfra().GetProxyMetadata().Labels = labels
 
-	infraWithZoneDiscovery := newTestInfraWithZoneDiscovery()
-	infraWithZoneDiscovery.GetProxyInfra().GetProxyMetadata().Labels = labels
+	infraWithZoneDiscovery := newTestInfraWithZoneDiscovery(labels)
 
 	fmt.Fprintf(os.Stderr, "zone-discovery: %v", ptr.Deref(infraWithLabels.Proxy.GetProxyConfig().Spec.EnableZoneDiscovery, false))
 	testCases := []struct {
@@ -228,13 +227,14 @@ func TestCreateProxyInfra(t *testing.T) {
 	}
 }
 
-func newTestInfraWithZoneDiscovery() *ir.Infra {
+func newTestInfraWithZoneDiscovery(labels map[string]string) *ir.Infra {
 	i := ir.NewInfra()
 	i.Proxy.Config = &egv1a1.EnvoyProxy{
 		Spec: egv1a1.EnvoyProxySpec{
 			EnableZoneDiscovery: ptr.To(true),
 		},
 	}
+	i.Proxy.GetProxyMetadata().Labels = labels
 	return i
 }
 
@@ -256,7 +256,7 @@ func TestDeleteProxyInfra(t *testing.T) {
 		},
 		{
 			name:   "infra with zone discovery",
-			in:     newTestInfraWithZoneDiscovery(),
+			in:     newTestInfraWithZoneDiscovery(nil),
 			expect: true,
 		},
 	}

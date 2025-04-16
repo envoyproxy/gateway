@@ -158,7 +158,7 @@ func DefaultShutdownManagerContainerResourceRequirements() *corev1.ResourceRequi
 	}
 }
 
-// DefaultShutdownManagerContainerResourceRequirements returns a new ResourceRequirements with default settings.
+// DefaultInitManagerContainerResourceRequirements returns a new ResourceRequirements with default settings.
 func DefaultInitManagerContainerResourceRequirements() corev1.ResourceRequirements {
 	return corev1.ResourceRequirements{
 		Requests: corev1.ResourceList{

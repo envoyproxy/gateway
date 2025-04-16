@@ -94,6 +94,29 @@ func TestCheckZoneAwareRouting(t *testing.T) {
 			},
 		},
 		{
+			name:               "zone-routing with random",
+			zoneRoutingEnabled: true,
+			loadBalancerCfg:    &ir.LoadBalancer{Random: &ir.Random{}},
+		},
+		{
+			name:               "zone-routing with maglev",
+			zoneRoutingEnabled: true,
+			loadBalancerCfg: &ir.LoadBalancer{
+				ConsistentHash: &ir.ConsistentHash{
+					TableSize: proto.Uint64(65537),
+				},
+			},
+		},
+		{
+			name:               "zone-routing with round robin",
+			zoneRoutingEnabled: true,
+			loadBalancerCfg: &ir.LoadBalancer{
+				RoundRobin: &ir.RoundRobin{
+					SlowStart: &ir.SlowStart{Window: &metav1.Duration{Duration: 1 * time.Second}},
+				},
+			},
+		},
+		{
 			name:               "zone-routing disabled",
 			zoneRoutingEnabled: false,
 			loadBalancerCfg: &ir.LoadBalancer{
