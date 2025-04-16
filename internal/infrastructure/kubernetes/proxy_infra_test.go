@@ -256,7 +256,7 @@ func TestDeleteProxyInfra(t *testing.T) {
 		},
 		{
 			name:   "infra with zone discovery",
-			in:     newTestInfraWithZoneDiscovery(nil),
+			in:     newTestInfraWithZoneDiscovery(map[string]string{}),
 			expect: true,
 		},
 	}
