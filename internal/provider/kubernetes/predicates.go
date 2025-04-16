@@ -771,6 +771,20 @@ func (r *gatewayAPIReconciler) validateConfigMapForReconcile(obj client.Object) 
 		}
 	}
 
+	if r.spCRDExists {
+		spList := &egv1a1.SecurityPolicyList{}
+		if err := r.client.List(context.Background(), spList, &client.ListOptions{
+			FieldSelector: fields.OneTermEqualSelector(configMapSecurityPolicyIndex, utils.NamespacedName(configMap).String()),
+		}); err != nil {
+			r.log.Error(err, "unable to find associated SecurityPolicy")
+			return false
+		}
+
+		if len(spList.Items) > 0 {
+			return true
+		}
+	}
+
 	return false
 }
 
