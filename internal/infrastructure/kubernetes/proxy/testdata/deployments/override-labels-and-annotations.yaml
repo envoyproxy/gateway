@@ -45,7 +45,7 @@ spec:
         label1: value1-override
         label2: value2
     spec:
-      automountServiceAccountToken: true
+      automountServiceAccountToken: false
       containers:
       - args:
         - --service-cluster default
