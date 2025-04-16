@@ -22,6 +22,10 @@ const (
 	DefaultDeploymentCPUResourceRequests = "100m"
 	// DefaultDeploymentMemoryResourceRequests for deployment memory resource
 	DefaultDeploymentMemoryResourceRequests = "512Mi"
+	// DefaultInitContainerCPUResourceRequests for deployment cpu resource
+	DefaultInitContainerCPUResourceRequests = "50m"
+	// DefaultInitContainerMemoryResourceRequests for deployment memory resource
+	DefaultInitContainerMemoryResourceRequests = "32Mi"
 	// DefaultEnvoyProxyImage is the default image used by envoyproxy
 	DefaultEnvoyProxyImage = "docker.io/envoyproxy/envoy:distroless-dev"
 	// DefaultShutdownManagerCPUResourceRequests for shutdown manager cpu resource
@@ -30,6 +34,8 @@ const (
 	DefaultShutdownManagerMemoryResourceRequests = "32Mi"
 	// DefaultShutdownManagerImage is the default image used for the shutdown manager.
 	DefaultShutdownManagerImage = "docker.io/envoyproxy/gateway-dev:latest"
+	// DefaultInitManagerImage is the default image used for the init manager container.
+	DefaultInitManagerImage = "docker.io/envoyproxy/gateway-dev:latest"
 	// DefaultRateLimitImage is the default image used by ratelimit.
 	DefaultRateLimitImage = "docker.io/envoyproxy/ratelimit:master"
 	// HTTPProtocol is the common-used http protocol.

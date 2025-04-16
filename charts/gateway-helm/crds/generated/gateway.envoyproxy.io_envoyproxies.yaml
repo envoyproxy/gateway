@@ -269,6 +269,12 @@ spec:
                   the number of cpuset threads on the platform.
                 format: int32
                 type: integer
+              enableZoneDiscovery:
+                description: |-
+                  EnableZoneDiscovery defines whether to enable service zone discovery via
+                  topology.kubernetes.io/zone label on the underlying node
+                  Default: false
+                type: boolean
               extraArgs:
                 description: |-
                   ExtraArgs defines additional command line options that are provided to Envoy.

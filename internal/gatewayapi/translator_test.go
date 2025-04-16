@@ -132,6 +132,7 @@ func TestTranslate(t *testing.T) {
 									Protocol:   corev1.ProtocolUDP,
 								},
 							},
+							TrafficDistribution: ptr.To("PreferClose"),
 						},
 					},
 				)
@@ -175,6 +176,7 @@ func TestTranslate(t *testing.T) {
 								Conditions: discoveryv1.EndpointConditions{
 									Ready: ptr.To(true),
 								},
+								Zone: ptr.To("us-west-2a"),
 							},
 						},
 					},

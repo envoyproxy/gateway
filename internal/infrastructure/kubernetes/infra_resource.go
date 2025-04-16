@@ -14,6 +14,7 @@ import (
 	autoscalingv2 "k8s.io/api/autoscaling/v2"
 	corev1 "k8s.io/api/core/v1"
 	policyv1 "k8s.io/api/policy/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -52,6 +53,76 @@ func (i *Infra) createOrUpdateServiceAccount(ctx context.Context, r ResourceRend
 	}()
 
 	return i.Client.ServerSideApply(ctx, sa)
+}
+
+// createOrUpdateClusterRole creates a ServiceAccount in the kube api server based on the
+// provided ResourceRender, if it doesn't exist and updates it if it does.
+func (i *Infra) createOrUpdateClusterRole(ctx context.Context, r ResourceRender) (err error) {
+	var (
+		cr        *rbacv1.ClusterRole
+		startTime = time.Now()
+		labels    = []metrics.LabelValue{
+			kindLabel.Value("ServiceAccount"),
+			nameLabel.Value(r.Name()),
+			namespaceLabel.Value(i.Namespace),
+		}
+	)
+
+	if cr, err = r.ClusterRole(); err != nil {
+		resourceApplyTotal.WithFailure(metrics.ReasonError, labels...).Increment()
+		return err
+	}
+
+	// Handle EnableZoneDiscovery=false or unimplemented interface (ratelimit)
+	if cr == nil {
+		return nil
+	}
+
+	defer func() {
+		if err == nil {
+			resourceApplyDurationSeconds.With(labels...).Record(time.Since(startTime).Seconds())
+			resourceApplyTotal.WithSuccess(labels...).Increment()
+		} else {
+			resourceApplyTotal.WithFailure(metrics.ReasonError, labels...).Increment()
+		}
+	}()
+
+	return i.Client.ServerSideApply(ctx, cr)
+}
+
+// createOrUpdateClusterRole creates a ServiceAccount in the kube api server based on the
+// provided ResourceRender, if it doesn't exist and updates it if it does.
+func (i *Infra) createOrUpdateClusterRoleBinding(ctx context.Context, r ResourceRender) (err error) {
+	var (
+		crb       *rbacv1.ClusterRoleBinding
+		startTime = time.Now()
+		labels    = []metrics.LabelValue{
+			kindLabel.Value("ServiceAccount"),
+			nameLabel.Value(r.Name()),
+			namespaceLabel.Value(i.Namespace),
+		}
+	)
+
+	if crb, err = r.ClusterRoleBinding(); err != nil {
+		resourceApplyTotal.WithFailure(metrics.ReasonError, labels...).Increment()
+		return err
+	}
+
+	// Handle EnableZoneDiscovery=false or unimplemented interface (ratelimit)
+	if crb == nil {
+		return nil
+	}
+
+	defer func() {
+		if err == nil {
+			resourceApplyDurationSeconds.With(labels...).Record(time.Since(startTime).Seconds())
+			resourceApplyTotal.WithSuccess(labels...).Increment()
+		} else {
+			resourceApplyTotal.WithFailure(metrics.ReasonError, labels...).Increment()
+		}
+	}()
+
+	return i.Client.ServerSideApply(ctx, crb)
 }
 
 // createOrUpdateConfigMap creates a ConfigMap in the Kube api server based on the provided
@@ -435,6 +506,84 @@ func (i *Infra) deleteServiceAccount(ctx context.Context, r ResourceRender) (err
 			LabelSelector: r.LabelSelector(),
 		},
 	})
+}
+
+// deleteClusterRole deletes the ClusterRole in the kube api server, if it exists.
+func (i *Infra) deleteClusterRole(ctx context.Context, r ResourceRender) (err error) {
+	var (
+		name, ns = r.Name(), i.Namespace
+		cr       = &rbacv1.ClusterRole{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: ns,
+				Name:      name,
+			},
+		}
+		startTime = time.Now()
+		labels    = []metrics.LabelValue{
+			kindLabel.Value("ClusterRole"),
+			nameLabel.Value(name),
+			namespaceLabel.Value(ns),
+		}
+	)
+
+	defer func() {
+		if err == nil {
+			resourceDeleteDurationSeconds.With(labels...).Record(time.Since(startTime).Seconds())
+			resourceDeleteTotal.WithSuccess(labels...).Increment()
+		} else {
+			resourceDeleteTotal.WithFailure(metrics.ReasonError, labels...).Increment()
+		}
+	}()
+
+	err = i.Client.DeleteAllOf(ctx, cr, &client.DeleteAllOfOptions{
+		ListOptions: client.ListOptions{
+			Namespace:     ns,
+			LabelSelector: r.LabelSelector(),
+		},
+	})
+	if apierrors.IsNotFound(err) {
+		err = nil
+	}
+	return err
+}
+
+// deleteClusterRoleBinding deletes the ClusterRoleBinding in the kube api server, if it exists.
+func (i *Infra) deleteClusterRoleBinding(ctx context.Context, r ResourceRender) (err error) {
+	var (
+		name, ns = r.Name(), i.Namespace
+		crb      = &rbacv1.ClusterRoleBinding{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: ns,
+				Name:      name,
+			},
+		}
+		startTime = time.Now()
+		labels    = []metrics.LabelValue{
+			kindLabel.Value("ClusterRoleBinding"),
+			nameLabel.Value(name),
+			namespaceLabel.Value(ns),
+		}
+	)
+
+	defer func() {
+		if err == nil {
+			resourceDeleteDurationSeconds.With(labels...).Record(time.Since(startTime).Seconds())
+			resourceDeleteTotal.WithSuccess(labels...).Increment()
+		} else {
+			resourceDeleteTotal.WithFailure(metrics.ReasonError, labels...).Increment()
+		}
+	}()
+
+	err = i.Client.DeleteAllOf(ctx, crb, &client.DeleteAllOfOptions{
+		ListOptions: client.ListOptions{
+			Namespace:     ns,
+			LabelSelector: r.LabelSelector(),
+		},
+	})
+	if apierrors.IsNotFound(err) {
+		err = nil
+	}
+	return err
 }
 
 // deleteDeployment deletes the Envoy Deployment in the kube api server, if it exists.

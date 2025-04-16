@@ -302,6 +302,7 @@ xdsIR:
             endpoints:
             - host: 7.7.7.7
               port: 8080
+              zone: us-west-2a
             name: grpcroute/default/grpcroute-1/rule/0/backend/0
             protocol: GRPC
             weight: 1
@@ -365,6 +366,7 @@ xdsIR:
             endpoints:
             - host: 7.7.7.7
               port: 8080
+              zone: us-west-2a
             name: httproute/default/httproute-1/rule/0/backend/0
             protocol: HTTP
             weight: 1

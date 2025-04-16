@@ -22,6 +22,7 @@ func GetEnvoyCommand() *cobra.Command {
 
 	cmd.AddCommand(getShutdownCommand())
 	cmd.AddCommand(getShutdownManagerCommand())
+	cmd.AddCommand(getEnvoyInitCommand())
 
 	return cmd
 }
@@ -67,5 +68,17 @@ func getShutdownManagerCommand() *cobra.Command {
 	cmd.PersistentFlags().DurationVar(&readyTimeout, "ready-timeout", 610*time.Second,
 		"Shutdown ready timeout. This should be greater than shutdown's drain-timeout and less than the pod's terminationGracePeriodSeconds.")
 
+	return cmd
+}
+
+// getEnvoyInitCommand returns the envoy init cobra command to be executed.
+func getEnvoyInitCommand() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "init",
+		Short: "Provides HTTP endpoint used in preStop hook to block until ready for pod shutdown.",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return envoy.EnvoyInit()
+		},
+	}
 	return cmd
 }

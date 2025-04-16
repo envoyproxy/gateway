@@ -38,7 +38,7 @@ spec:
         gateway.envoyproxy.io/owning-gateway-name: default
         gateway.envoyproxy.io/owning-gateway-namespace: default
     spec:
-      automountServiceAccountToken: false
+      automountServiceAccountToken: true
       containers:
       - args:
         - --service-cluster default

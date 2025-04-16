@@ -13,6 +13,7 @@ import (
 	"k8s.io/utils/ptr"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/cmd/envoy"
 	"github.com/envoyproxy/gateway/internal/infrastructure/kubernetes/resource"
 )
 
@@ -84,6 +85,76 @@ func TestExpectedShutdownManagerSecurityContext(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			got := expectedShutdownManagerSecurityContext(tc.in)
 			require.Equal(t, tc.expected, got)
+		})
+	}
+}
+
+func Test_expectedProxyInitContainers(t *testing.T) {
+	type args struct {
+		containerSpec       *egv1a1.KubernetesContainerSpec
+		enableZoneDiscovery *bool
+		initManager         *egv1a1.InitManager
+		extraContainers     []corev1.Container
+	}
+	tests := []struct {
+		name string
+		args args
+		want []corev1.Container
+	}{
+		{
+			name: "default",
+			args: args{
+				containerSpec:       &egv1a1.KubernetesContainerSpec{},
+				enableZoneDiscovery: nil,
+				initManager:         &egv1a1.InitManager{},
+				extraContainers:     []corev1.Container{},
+			},
+			want: nil,
+		},
+		{
+			name: "zone-discovery-enabled",
+			args: args{
+				containerSpec:       &egv1a1.KubernetesContainerSpec{},
+				enableZoneDiscovery: ptr.To(true),
+				initManager:         &egv1a1.InitManager{},
+				extraContainers:     []corev1.Container{},
+			},
+			want: []corev1.Container{{
+				Args: []string{
+					"envoy",
+					"init",
+				},
+				Command: []string{"envoy-gateway"},
+				Env: []corev1.EnvVar{{
+					Name:      "NODE_NAME",
+					ValueFrom: &corev1.EnvVarSource{FieldRef: &corev1.ObjectFieldSelector{APIVersion: "v1", FieldPath: "spec.nodeName"}},
+				}},
+				Image:           egv1a1.DefaultInitManagerImage,
+				ImagePullPolicy: "",
+				Name:            "init",
+				Resources:       egv1a1.DefaultInitManagerContainerResourceRequirements(),
+				SecurityContext: &corev1.SecurityContext{
+					AllowPrivilegeEscalation: ptr.To(false),
+					Capabilities: &corev1.Capabilities{
+						Drop: []corev1.Capability{corev1.Capability("ALL")},
+					},
+					Privileged:     ptr.To(false),
+					RunAsGroup:     ptr.To(int64(65532)),
+					RunAsNonRoot:   ptr.To(true),
+					RunAsUser:      ptr.To(int64(65532)),
+					SeccompProfile: &corev1.SeccompProfile{Type: "RuntimeDefault"},
+				},
+				VolumeMounts: []corev1.VolumeMount{{
+					MountPath: envoy.DefaultEnvoyInitConfigDir,
+					Name:      "envoyconfigs",
+				}},
+			}},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := expectedProxyInitContainers(tt.args.containerSpec, tt.args.enableZoneDiscovery, tt.args.initManager, tt.args.extraContainers)
+			require.Equal(t, tt.want, got)
 		})
 	}
 }
