@@ -8,8 +8,10 @@ package envoy
 import (
 	"testing"
 
-	"github.com/google/go-cmp/cmp"
+	bootstrapv3 "github.com/envoyproxy/go-control-plane/envoy/config/bootstrap/v3"
 	"github.com/stretchr/testify/require"
+	"google.golang.org/protobuf/encoding/protojson"
+	"google.golang.org/protobuf/proto"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -118,7 +120,11 @@ func Test_buildBootstrapCfg(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			got, err := buildBootstrapCfg(tt.zone)
 			require.NoError(t, err)
-			require.Equal(t, tt.want, got, "Expected resources to be equal\n%s", cmp.Diff(tt.want, got))
+			gotCfg := &bootstrapv3.Bootstrap{}
+			require.NoError(t, protojson.Unmarshal(got, gotCfg))
+			wantCfg := &bootstrapv3.Bootstrap{}
+			require.NoError(t, protojson.Unmarshal(tt.want, wantCfg))
+			require.True(t, proto.Equal(wantCfg, gotCfg))
 		})
 	}
 }

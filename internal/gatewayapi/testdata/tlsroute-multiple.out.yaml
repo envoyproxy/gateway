@@ -144,7 +144,6 @@ xdsIR:
             endpoints:
             - host: 7.7.7.7
               port: 8080
-              zone: us-west-2a
             name: tlsroute/default/tlsroute-1/rule/-1/backend/0
             protocol: HTTPS
             weight: 1
@@ -160,7 +159,6 @@ xdsIR:
             endpoints:
             - host: 7.7.7.7
               port: 8080
-              zone: us-west-2a
             name: tlsroute/default/tlsroute-2/rule/-1/backend/0
             protocol: HTTPS
             weight: 1

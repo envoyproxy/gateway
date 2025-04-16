@@ -131,7 +131,6 @@ xdsIR:
             endpoints:
             - host: 7.7.7.7
               port: 8163
-              zone: us-west-2a
             name: tcproute/default/tcproute-1/rule/-1/backend/0
             protocol: TCP
             weight: 1
