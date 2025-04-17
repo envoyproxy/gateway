@@ -424,10 +424,11 @@ spec:
                       description: LogLevel defines a log level for Envoy Gateway
                         and EnvoyProxy system logs.
                       enum:
+                      - trace
                       - debug
                       - info
-                      - error
                       - warn
+                      - error
                       type: string
                     default:
                       default: warn
@@ -11502,12 +11503,16 @@ spec:
                                     - message: must have at least one backend in backendRefs
                                       rule: has(self.backendRefs) && self.backendRefs.size()
                                         > 0
-                                    - message: BackendRefs only supports Service kind.
+                                    - message: BackendRefs only support Service and
+                                        Backend kind.
                                       rule: 'has(self.backendRefs) ? self.backendRefs.all(f,
-                                        f.kind == ''Service'') : true'
-                                    - message: BackendRefs only supports Core group.
+                                        f.kind == ''Service'' || f.kind == ''Backend'')
+                                        : true'
+                                    - message: BackendRefs only support Core and gateway.envoyproxy.io
+                                        group.
                                       rule: 'has(self.backendRefs) ? (self.backendRefs.all(f,
-                                        f.group == "")) : true'
+                                        f.group == "" || f.group == ''gateway.envoyproxy.io''))
+                                        : true'
                                   file:
                                     description: File defines the file accesslog sink.
                                     properties:
@@ -12492,12 +12497,16 @@ spec:
                                     - message: BackendRefs must be used, backendRef
                                         is not supported.
                                       rule: '!has(self.backendRef)'
-                                    - message: BackendRefs only supports Service kind.
+                                    - message: BackendRefs only support Service and
+                                        Backend kind.
                                       rule: 'has(self.backendRefs) ? self.backendRefs.all(f,
-                                        f.kind == ''Service'') : true'
-                                    - message: BackendRefs only supports Core group.
+                                        f.kind == ''Service'' || f.kind == ''Backend'')
+                                        : true'
+                                    - message: BackendRefs only support Core and gateway.envoyproxy.io
+                                        group.
                                       rule: 'has(self.backendRefs) ? (self.backendRefs.all(f,
-                                        f.group == "")) : true'
+                                        f.group == "" || f.group == ''gateway.envoyproxy.io''))
+                                        : true'
                                   type:
                                     description: Type defines the type of accesslog
                                       sink.
@@ -13563,12 +13572,16 @@ spec:
                               - message: BackendRefs must be used, backendRef is not
                                   supported.
                                 rule: '!has(self.backendRef)'
-                              - message: only supports Service kind.
+                              - message: BackendRefs only support Service and Backend
+                                  kind.
                                 rule: 'has(self.backendRefs) ? self.backendRefs.all(f,
-                                  f.kind == ''Service'') : true'
-                              - message: BackendRefs only supports Core group.
+                                  f.kind == ''Service'' || f.kind == ''Backend'')
+                                  : true'
+                              - message: BackendRefs only support Core and gateway.envoyproxy.io
+                                  group.
                                 rule: 'has(self.backendRefs) ? (self.backendRefs.all(f,
-                                  f.group == "")) : true'
+                                  f.group == "" || f.group == ''gateway.envoyproxy.io''))
+                                  : true'
                             type:
                               default: OpenTelemetry
                               description: |-
@@ -14604,12 +14617,14 @@ spec:
                           rule: has(self.host) || self.backendRefs.size() > 0
                         - message: BackendRefs must be used, backendRef is not supported.
                           rule: '!has(self.backendRef)'
-                        - message: only supports Service kind.
+                        - message: BackendRefs only support Service and Backend kind.
                           rule: 'has(self.backendRefs) ? self.backendRefs.all(f, f.kind
-                            == ''Service'') : true'
-                        - message: BackendRefs only supports Core group.
+                            == ''Service'' || f.kind == ''Backend'') : true'
+                        - message: BackendRefs only support Core and gateway.envoyproxy.io
+                            group.
                           rule: 'has(self.backendRefs) ? (self.backendRefs.all(f,
-                            f.group == "")) : true'
+                            f.group == "" || f.group == ''gateway.envoyproxy.io''))
+                            : true'
                       samplingFraction:
                         description: |-
                           SamplingFraction represents the fraction of requests that should be
@@ -14634,7 +14649,6 @@ spec:
                         - message: numerator must be less than or equal to denominator
                           rule: self.numerator <= self.denominator
                       samplingRate:
-                        default: 100
                         description: |-
                           SamplingRate controls the rate at which traffic will be
                           selected for tracing if no prior sampling decision has been made.
