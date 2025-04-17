@@ -980,7 +980,10 @@ type JWTProvider struct {
 
 	// RemoteJWKS defines how to fetch and cache JSON Web Key Sets (JWKS) from a remote
 	// HTTP/HTTPS endpoint.
-	RemoteJWKS RemoteJWKS `json:"remoteJWKS"`
+	RemoteJWKS *RemoteJWKS `json:"remoteJWKS,omitempty"`
+
+	// LocalJWKS defines a JSON Web Key Set (JWKS) that is stored in a string.
+	LocalJWKS *string `json:"localJWKS,omitempty"`
 
 	// ClaimToHeaders is a list of JWT claims that must be extracted into HTTP request headers
 	// For examples, following config:

@@ -170,7 +170,7 @@ func (r *Resources) GetConfigMap(namespace, name string) *corev1.ConfigMap {
 	return nil
 }
 
-func (r *Resources) GetEndpointSlicesForBackend(svcNamespace, svcName string, backendKind string) []*discoveryv1.EndpointSlice {
+func (r *Resources) GetEndpointSlicesForBackend(svcNamespace, svcName, backendKind string) []*discoveryv1.EndpointSlice {
 	var endpointSlices []*discoveryv1.EndpointSlice
 	for _, endpointSlice := range r.EndpointSlices {
 		var backendSelectorLabel string

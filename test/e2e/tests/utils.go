@@ -28,6 +28,8 @@ import (
 	dto "github.com/prometheus/client_model/go"
 	"github.com/prometheus/common/expfmt"
 	"github.com/stretchr/testify/require"
+	appsv1 "k8s.io/api/apps/v1"
+	autoscalingv2 "k8s.io/api/autoscaling/v2"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
@@ -435,7 +437,7 @@ func RetrieveMetrics(url string, timeout time.Duration) (map[string]*dto.MetricF
 	return metricParser.TextToMetricFamilies(res.Body)
 }
 
-func RetrieveMetric(url string, name string, timeout time.Duration) (*dto.MetricFamily, error) {
+func RetrieveMetric(url, name string, timeout time.Duration) (*dto.MetricFamily, error) {
 	metrics, err := RetrieveMetrics(url, timeout)
 	if err != nil {
 		return nil, err
@@ -725,4 +727,48 @@ func ContentEncoding(compressorType egv1a1.CompressorType) string {
 	}
 
 	return encoding
+}
+
+func ExpectEnvoyProxyDeploymentCount(t *testing.T, suite *suite.ConformanceTestSuite, gwNN types.NamespacedName, expectedCount int) {
+	err := wait.PollUntilContextTimeout(context.TODO(), time.Second, suite.TimeoutConfig.DeleteTimeout, true, func(ctx context.Context) (bool, error) {
+		deploys := &appsv1.DeploymentList{}
+		err := suite.Client.List(ctx, deploys, &client.ListOptions{
+			Namespace: "envoy-gateway-system",
+			LabelSelector: labels.SelectorFromSet(map[string]string{
+				"app.kubernetes.io/managed-by":                   "envoy-gateway",
+				"app.kubernetes.io/name":                         "envoy",
+				"gateway.envoyproxy.io/owning-gateway-name":      gwNN.Name,
+				"gateway.envoyproxy.io/owning-gateway-namespace": gwNN.Namespace,
+			}),
+		})
+		if err != nil {
+			return false, err
+		}
+
+		return len(deploys.Items) == expectedCount, err
+	})
+	if err != nil {
+		t.Fatalf("Failed to check Deployment count(%d) for the Gateway: %v", expectedCount, err)
+	}
+}
+
+func ExpectEnvoyProxyHPACount(t *testing.T, suite *suite.ConformanceTestSuite, gwNN types.NamespacedName, expectedCount int) {
+	err := wait.PollUntilContextTimeout(context.TODO(), time.Second, suite.TimeoutConfig.DeleteTimeout, true, func(ctx context.Context) (bool, error) {
+		hpa := &autoscalingv2.HorizontalPodAutoscalerList{}
+		err := suite.Client.List(ctx, hpa, &client.ListOptions{
+			Namespace: "envoy-gateway-system",
+			LabelSelector: labels.SelectorFromSet(map[string]string{
+				"gateway.envoyproxy.io/owning-gateway-name":      gwNN.Name,
+				"gateway.envoyproxy.io/owning-gateway-namespace": gwNN.Namespace,
+			}),
+		})
+		if err != nil {
+			return false, err
+		}
+
+		return len(hpa.Items) == 1, err
+	})
+	if err != nil {
+		t.Fatalf("Failed to check HPA count(%d) for the Gateway: %v", expectedCount, err)
+	}
 }
