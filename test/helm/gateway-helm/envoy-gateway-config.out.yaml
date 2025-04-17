@@ -49,8 +49,6 @@ data:
                     containers:
                     - imagePullPolicy: IfNotPresent
                       name: envoy-ratelimit
-          pod:
-            imagePullSecrets: []
         shutdownManager:
           image: docker.io/envoyproxy/gateway-dev:latest
       type: Kubernetes

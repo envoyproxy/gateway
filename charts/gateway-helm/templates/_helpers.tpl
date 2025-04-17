@@ -159,8 +159,10 @@ provider:
     rateLimitDeployment:
       container:
         image: {{ include "eg.ratelimit.image" . }}
+      {{- if (or .Values.global.imagePullSecrets .Values.global.images.ratelimit.pullSecrets) }}
       pod:
         {{- include "eg.ratelimit.image.pullSecrets" . | nindent 8 }}
+      {{- end }}
       {{- with .Values.global.images.ratelimit.pullPolicy }}
       patch:
         type: StrategicMerge
