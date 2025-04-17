@@ -21,7 +21,7 @@ Use an API Gateway when:
 - You need protocol support for HTTP, gRPC, or TLS.
 - You want to enforce policy and see traffic metrics at the edge.
 
-## How API Gateways fit into Envoy Gateway
+## Configuration in Envoy Gateway
 
 Under the hood, Envoy Proxy is a powerful, production-grade proxy that supports many of the capabilities you'd expect from an API Gateway — like traffic routing, retries, TLS termination, observability, and more. But configuring Envoy directly can be complex and verbose.
 

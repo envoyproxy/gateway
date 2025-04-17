@@ -8,10 +8,11 @@ You may want to be familiar with:
 
 ## Overview
 
-The Envoy Gateway API is a set of Kubernetes Custom Resource Definitions (CRDs) created by the Envoy Gateway project to enhance and simplify the use of Envoy Proxy as an API Gateway. These APIs build on top of the Kubernetes Gateway API, adding functionality that is essential for real-world production traffic management—but without exposing users to the full complexity of raw Envoy configuration.
+The **Kubernetes Gateway API** is a set of standard APIs designed to provide a unified way to manage traffic into and within a Kubernetes cluster. It defines resources like `GatewayClass`, `Gateway`, and various route types (e.g., `HTTPRoute`, `TLSRoute`) that allow users to configure how traffic is routed and managed. This API is designed to be extensible, allowing projects like Envoy Gateway to build on top of it to provide additional functionality.
 
-While the Kubernetes Gateway API provides the standard foundation for routing traffic into your cluster using resources like Gateway, HTTPRoute, and TLSRoute, it intentionally leaves many advanced features out of scope. Envoy Gateway fills these gaps.
+The **Envoy Gateway API** is a set of Kubernetes Custom Resource Definitions (CRDs) created by the Envoy Gateway project. It enhances the Kubernetes Gateway API by adding features that are essential for real-world production traffic management, such as security policies, rate limits, and traffic shaping. 
 
+Gateway APIs are useful because they provide a standardized, Kubernetes-native way to manage traffic. They allow users to define their desired behavior using familiar Kubernetes manifests, making it easier to configure and manage traffic routing and policies. In the context of the Envoy Gateway project, the Gateway API enables users to take advantage of Envoy Proxy's advanced features in a user-friendly way, without needing to write complex Envoy configurations.
 
 ## Use Cases
 
@@ -23,7 +24,7 @@ Use the Envoy Gateway API when:
 - Customize request/response behavior with filters, retries, mirroring, etc.
 - Extend your routing logic without writing raw Envoy config
 
-## How the Gateway API fits into Envoy Gateway
+## Configuration in Envoy Gateway
 
 Envoy Gateway uses the **Kubernetes Gateway API** as its foundation and layers its own **CRDs** on top to expose advanced features in a user-friendly way.
 

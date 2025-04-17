@@ -2,19 +2,15 @@
 title: "Envoy Proxy"
 ---
 
-## Before You Begin
-You may want to be familiar with:
-- [What is a Proxy?](https://developer.mozilla.org/en-US/docs/Glossary/Proxy_server)
-
 ## Overview
 
 A proxy server acts as an intermediary between a client (like a web browser) and another server (such as a website). When the client makes a request, the proxy forwards it to the destination server, receives the response, and then sends it back to the client.
 
-Proxies are commonly used to enhance security, manage traffic, anonymize user activity, or optimize performance through features like caching and load balancing. In modern cloud environments, proxies often handle critical tasks such as request routing, TLS termination, authentication, and traffic shaping.
+Proxies are commonly used to enhance security, manage traffic, anonymize user activity, or optimize performance through features like caching and load balancing. In modern cloud environments, they often handle critical tasks such as request routing, TLS termination, authentication, and traffic shaping.
 
-Envoy Proxy is a high-performance, open source edge and service proxy built for cloud-native applications. Originally developed at Lyft and now part of the Cloud Native Computing Foundation (CNCF), Envoy is widely adopted as a data plane component in service meshes, API gateways, and ingress solutions.
+Envoy Proxy is a high-performance, open source proxy built for cloud-native applications. Originally developed at Lyft and now a graduated project in the Cloud Native Computing Foundation (CNCF), Envoy supports both edge proxy and service proxy use cases—routing traffic at the boundary of a system or between internal services.
 
-Thanks to its powerful features and extensibility, Envoy is often embedded in larger platforms—like Istio, Consul, and Envoy Gateway—where it takes care of the complex traffic management and security tasks behind the scenes.
+Because of its rich feature set and extensibility, Envoy is widely used as a data plane component in platforms like Istio, Consul, and Envoy Gateway, where it handles complex networking and security operations behind the scenes.
 
 ## Use Cases
 
@@ -25,7 +21,7 @@ Use Envoy Proxy when you need:
 - Smart load balancing and failover strategies
 - A proxy that integrates with service meshes or API gateways
 
-## How Envoy Proxy fits into Envoy Gateway
+## Configuration in Envoy Gateway
 
 Envoy Gateway uses Envoy Proxy as its data plane. That means Envoy Proxy is the component actually handling traffic—terminating TLS, routing requests, and applying policies.
 
@@ -42,5 +38,5 @@ This separation of concerns allows users to configure traffic behavior declarati
 
 ## Related Resources
 
-- [Getting Started with Envoy Gateway](../../tasks/quickstart)
-- [API Gateway](../api_gateway)
+- [Getting Started with Envoy Gateway](../tasks/quickstart.md)
+- [API Gateway](api_gateways.md)
