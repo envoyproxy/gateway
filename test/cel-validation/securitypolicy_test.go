@@ -787,7 +787,7 @@ func TestSecurityPolicyTarget(t *testing.T) {
 						Providers: []egv1a1.JWTProvider{
 							{
 								Name: "example",
-								RemoteJWKS: egv1a1.RemoteJWKS{
+								RemoteJWKS: &egv1a1.RemoteJWKS{
 									URI: "https://example.com/jwt/jwks.json",
 								},
 							},
@@ -814,7 +814,7 @@ func TestSecurityPolicyTarget(t *testing.T) {
 						Providers: []egv1a1.JWTProvider{
 							{
 								Name: "example",
-								RemoteJWKS: egv1a1.RemoteJWKS{
+								RemoteJWKS: &egv1a1.RemoteJWKS{
 									URI: "https://example.com/jwt/jwks.json",
 								},
 								ClaimToHeaders: []egv1a1.ClaimToHeader{
@@ -847,7 +847,7 @@ func TestSecurityPolicyTarget(t *testing.T) {
 						Providers: []egv1a1.JWTProvider{
 							{
 								Name: "example",
-								RemoteJWKS: egv1a1.RemoteJWKS{
+								RemoteJWKS: &egv1a1.RemoteJWKS{
 									URI: "https://example.com/jwt/jwks.json",
 								},
 								RecomputeRoute: ptr.To(true),
@@ -875,7 +875,7 @@ func TestSecurityPolicyTarget(t *testing.T) {
 						Providers: []egv1a1.JWTProvider{
 							{
 								Name: "example",
-								RemoteJWKS: egv1a1.RemoteJWKS{
+								RemoteJWKS: &egv1a1.RemoteJWKS{
 									URI: "https://example.com/jwt/jwks.json",
 								},
 								ClaimToHeaders: []egv1a1.ClaimToHeader{
@@ -900,6 +900,116 @@ func TestSecurityPolicyTarget(t *testing.T) {
 				}
 			},
 			wantErrors: []string{},
+		},
+		{
+			desc: "jwt with both remote and local JWKS",
+			mutate: func(sp *egv1a1.SecurityPolicy) {
+				sp.Spec = egv1a1.SecurityPolicySpec{
+					JWT: &egv1a1.JWT{
+						Providers: []egv1a1.JWTProvider{
+							{
+								Name: "example",
+								RemoteJWKS: &egv1a1.RemoteJWKS{
+									URI: "https://example.com/jwt/jwks.json",
+								},
+								LocalJWKS: &egv1a1.LocalJWKS{
+									Inline: ptr.To(`{
+  "keys": [
+    {
+      "kid": "1234567890",
+      "kty": "RSA",
+      "alg": "RS256",
+      "n": "n",
+      "e": "e"
+    }
+  ]
+}
+									`),
+								},
+							},
+						},
+					},
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
+								Group: "gateway.networking.k8s.io",
+								Kind:  "Gateway",
+								Name:  "eg",
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{
+				"remoteJWKS and localJWKS cannot both be specified.",
+			},
+		},
+		{
+			desc: "jwt without remote or local JWKS",
+			mutate: func(sp *egv1a1.SecurityPolicy) {
+				sp.Spec = egv1a1.SecurityPolicySpec{
+					JWT: &egv1a1.JWT{
+						Providers: []egv1a1.JWTProvider{
+							{
+								Name: "example",
+							},
+						},
+					},
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
+								Group: "gateway.networking.k8s.io",
+								Kind:  "Gateway",
+								Name:  "eg",
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{
+				"either remoteJWKS or localJWKS must be specified.",
+			},
+		},
+		{
+			desc: "valueRef type of localJWKS without valueRef",
+			mutate: func(sp *egv1a1.SecurityPolicy) {
+				sp.Spec = egv1a1.SecurityPolicySpec{
+					JWT: &egv1a1.JWT{
+						Providers: []egv1a1.JWTProvider{
+							{
+								Name: "example",
+								LocalJWKS: &egv1a1.LocalJWKS{
+									Type: ptr.To(egv1a1.LocalJWKSTypeValueRef),
+									Inline: ptr.To(`{
+  "keys": [
+    {
+      "kid": "1234567890",
+      "kty": "RSA",
+      "alg": "RS256",
+      "n": "n",
+      "e": "e"
+    }
+  ]
+}
+									`),
+								},
+							},
+						},
+					},
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
+								Group: "gateway.networking.k8s.io",
+								Kind:  "Gateway",
+								Name:  "eg",
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{
+				"Exactly one of inline or valueRef must be set with correct type.",
+			},
 		},
 		{
 			desc: "target selectors without targetRefs or targetRef",

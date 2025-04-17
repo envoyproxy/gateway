@@ -29,6 +29,7 @@ new features: |
   Added support for egctl Websocket in addation to SPDY
   Added a configuration option in the Helm chart to set the TrafficDistribution field in the Envoy Gateway Service
   Added support for setting the log level to trace for the Envoy Proxy
+  Added support for using a local JWKS in an inline string or in a ConfigMap to validate JWT tokens in SecurityPolicy
 
 bug fixes: |
   Fix traffic splitting when filters are attached to the backendRef.

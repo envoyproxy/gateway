@@ -605,6 +605,29 @@ func (r *gatewayAPIReconciler) processSecurityPolicyObjectRefs(
 				}
 			}
 		}
+
+		if policy.Spec.JWT != nil {
+			for _, provider := range policy.Spec.JWT.Providers {
+				if provider.LocalJWKS != nil &&
+					provider.LocalJWKS.Type != nil &&
+					*provider.LocalJWKS.Type == egv1a1.LocalJWKSTypeValueRef {
+					if err := r.processConfigMapRef(
+						ctx,
+						resourceMap,
+						resourceTree,
+						resource.KindClientTrafficPolicy,
+						policy.Namespace,
+						policy.Name,
+						gwapiv1.SecretObjectReference{
+							Group: &provider.LocalJWKS.ValueRef.Group,
+							Kind:  &provider.LocalJWKS.ValueRef.Kind,
+							Name:  provider.LocalJWKS.ValueRef.Name,
+						}); err != nil {
+						r.log.Error(err, "failed to process LocalJWKS ConfigMap", "policy", policy, "localJWKS", provider.LocalJWKS)
+					}
+				}
+			}
+		}
 	}
 }
 

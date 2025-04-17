@@ -504,7 +504,7 @@ var (
 				Providers: []JWTProvider{
 					{
 						Name: "test1",
-						RemoteJWKS: RemoteJWKS{
+						RemoteJWKS: &RemoteJWKS{
 							URI: "https://test1.local",
 						},
 					},
