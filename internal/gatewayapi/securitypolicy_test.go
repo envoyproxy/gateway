@@ -6,6 +6,7 @@
 package gatewayapi
 
 import (
+	"fmt"
 	"regexp"
 	"testing"
 
@@ -14,6 +15,7 @@ import (
 	"k8s.io/utils/ptr"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/ir"
 )
 
 func Test_wildcard2regex(t *testing.T) {
@@ -533,4 +535,35 @@ func Test_APIKeyAuth(t *testing.T) {
 			}
 		})
 	}
+}
+
+// TestSetDirectResponseForFailingFeatures tests the setDirectResponseForFailingFeatures function
+func TestSetDirectResponseForFailingFeatures(t *testing.T) {
+	// Create a test route
+	route := &ir.HTTPRoute{}
+
+	// Create test security features
+	basicAuth := &ir.BasicAuth{}
+
+	// Create a test error
+	err := fmt.Errorf("BasicAuth error")
+
+	// Call the function
+	setDirectResponseForFailingFeatures(route, err, basicAuth, nil, nil, nil, nil, nil)
+
+	// Verify that the route has a direct response with status code 500
+	assert.NotNil(t, route.DirectResponse, "Route should have a direct response")
+	assert.Equal(t, uint32(500), *route.DirectResponse.StatusCode, "Route should have a 500 status code")
+
+	// Create a new route
+	route = &ir.HTTPRoute{}
+
+	// Create a test error for a different feature
+	err = fmt.Errorf("JWT error")
+
+	// Call the function with a different feature
+	setDirectResponseForFailingFeatures(route, err, basicAuth, nil, nil, nil, nil, nil)
+
+	// Verify that the route does not have a direct response
+	assert.Nil(t, route.DirectResponse, "Route should not have a direct response")
 }

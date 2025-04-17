@@ -1,0 +1,95 @@
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  namespace: gateway-conformance-infra
+  name: valid-basicauth-users
+data:
+  .htpasswd: "dXNlcjE6e1NIQX10RVNzQm1FL3lOWTNsYjZhMEw2dlZRRVpOcXc9CnVzZXIyOntTSEF9RUo5TFBGRFhzTjl5blNtYnh2anA3NUJtbHg4PQo="
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  namespace: gateway-conformance-infra
+  name: invalid-basicauth-users
+data:
+  .htpasswd: "dXNlcjE6e1NIQTU5Mn1pbnZhbGlkLWhhc2g="  # Invalid hash format
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: route-with-invalid-basicauth
+  namespace: gateway-conformance-infra
+spec:
+  parentRefs:
+  - name: same-namespace
+  rules:
+  - matches:
+    - path:
+        type: Exact
+        value: /route-with-invalid-basicauth
+    backendRefs:
+    - name: infra-backend-v1
+      port: 8080
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: route-without-security
+  namespace: gateway-conformance-infra
+spec:
+  parentRefs:
+  - name: same-namespace
+  rules:
+  - matches:
+    - path:
+        type: Exact
+        value: /route-without-security
+    backendRefs:
+    - name: infra-backend-v1
+      port: 8080
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: route-with-valid-basicauth
+  namespace: gateway-conformance-infra
+spec:
+  parentRefs:
+  - name: same-namespace
+  rules:
+  - matches:
+    - path:
+        type: Exact
+        value: /route-with-valid-basicauth
+    backendRefs:
+    - name: infra-backend-v1
+      port: 8080
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: SecurityPolicy
+metadata:
+  name: invalid-basicauth
+  namespace: gateway-conformance-infra
+spec:
+  targetRefs:
+  - group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: route-with-invalid-basicauth
+  basicAuth:
+    users:
+      name: invalid-basicauth-users
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: SecurityPolicy
+metadata:
+  name: valid-basicauth
+  namespace: gateway-conformance-infra
+spec:
+  targetRefs:
+  - group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: route-with-valid-basicauth
+  basicAuth:
+    users:
+      name: valid-basicauth-users

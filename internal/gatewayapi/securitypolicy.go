@@ -452,6 +452,8 @@ func (t *Translator) translateSecurityPolicyForRoute(
 			if irListener != nil {
 				for _, r := range irListener.Routes {
 					if strings.HasPrefix(r.Name, prefix) {
+						// Only apply the security features to this specific route
+						// and only set DirectResponse for this route if there are errors
 						r.Security = &ir.SecurityFeatures{
 							CORS:          cors,
 							JWT:           jwt,
@@ -461,11 +463,11 @@ func (t *Translator) translateSecurityPolicyForRoute(
 							ExtAuth:       extAuth,
 							Authorization: authorization,
 						}
+
+						// If there are errors with this specific security policy,
+						// only apply the direct response to routes that use the failing features
 						if errs != nil {
-							// Return a 500 direct response to avoid unauthorized access
-							r.DirectResponse = &ir.CustomResponse{
-								StatusCode: ptr.To(uint32(500)),
-							}
+							setDirectResponseForFailingFeatures(r, errs, basicAuth, apiKeyAuth, jwt, oidc, extAuth, authorization)
 						}
 					}
 				}
@@ -576,6 +578,8 @@ func (t *Translator) translateSecurityPolicyForGateway(
 			if r.Security != nil {
 				continue
 			}
+
+			// Apply security features to each route individually
 			r.Security = &ir.SecurityFeatures{
 				CORS:          cors,
 				JWT:           jwt,
@@ -585,11 +589,11 @@ func (t *Translator) translateSecurityPolicyForGateway(
 				ExtAuth:       extAuth,
 				Authorization: authorization,
 			}
+
+			// If there are errors with this specific security policy,
+			// only apply the direct response to routes that use the failing features
 			if errs != nil {
-				// Return a 500 direct response to avoid unauthorized access
-				r.DirectResponse = &ir.CustomResponse{
-					StatusCode: ptr.To(uint32(500)),
-				}
+				setDirectResponseForFailingFeatures(r, errs, basicAuth, apiKeyAuth, jwt, oidc, extAuth, authorization)
 			}
 		}
 	}
@@ -1376,4 +1380,53 @@ func defaultAuthorizationRuleName(policy *egv1a1.SecurityPolicy, index int) stri
 		"%s/authorization/rule/%s",
 		irConfigName(policy),
 		strconv.Itoa(index))
+}
+
+// setDirectResponseForFailingFeatures sets a direct response with status code 500
+// on a route if it uses a security feature that has failed to translate.
+// This ensures that only routes using the failing features are affected.
+func setDirectResponseForFailingFeatures(
+	route *ir.HTTPRoute,
+	errs error,
+	basicAuth *ir.BasicAuth,
+	apiKeyAuth *ir.APIKeyAuth,
+	jwt *ir.JWT,
+	oidc *ir.OIDC,
+	extAuth *ir.ExtAuth,
+	authorization *ir.Authorization,
+) {
+	errMsg := errs.Error()
+
+	// Check if the error is related to BasicAuth and if this route uses BasicAuth
+	if basicAuth != nil && strings.Contains(errMsg, "BasicAuth") {
+		// Return a 500 direct response only for routes using BasicAuth
+		route.DirectResponse = &ir.CustomResponse{
+			StatusCode: ptr.To(uint32(500)),
+		}
+	} else if apiKeyAuth != nil && strings.Contains(errMsg, "APIKeyAuth") {
+		// Return a 500 direct response only for routes using APIKeyAuth
+		route.DirectResponse = &ir.CustomResponse{
+			StatusCode: ptr.To(uint32(500)),
+		}
+	} else if jwt != nil && strings.Contains(errMsg, "JWT") {
+		// Return a 500 direct response only for routes using JWT
+		route.DirectResponse = &ir.CustomResponse{
+			StatusCode: ptr.To(uint32(500)),
+		}
+	} else if oidc != nil && strings.Contains(errMsg, "OIDC") {
+		// Return a 500 direct response only for routes using OIDC
+		route.DirectResponse = &ir.CustomResponse{
+			StatusCode: ptr.To(uint32(500)),
+		}
+	} else if extAuth != nil && strings.Contains(errMsg, "ExtAuth") {
+		// Return a 500 direct response only for routes using ExtAuth
+		route.DirectResponse = &ir.CustomResponse{
+			StatusCode: ptr.To(uint32(500)),
+		}
+	} else if authorization != nil && strings.Contains(errMsg, "Authorization") {
+		// Return a 500 direct response only for routes using Authorization
+		route.DirectResponse = &ir.CustomResponse{
+			StatusCode: ptr.To(uint32(500)),
+		}
+	}
 }
