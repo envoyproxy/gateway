@@ -1001,7 +1001,11 @@ func addXdsCluster(tCtx *types.ResourceVersionTable, args *xdsClusterArgs) error
 		return nil
 	}
 
-	xdsCluster := buildXdsCluster(args)
+	result, err := buildXdsCluster(args)
+	if err != nil {
+		return err
+	}
+	xdsCluster := result.cluster
 	xdsEndpoints := buildXdsClusterLoadAssignment(args.name, args.settings)
 	for _, ds := range args.settings {
 		if ds.TLS != nil {
@@ -1022,6 +1026,13 @@ func addXdsCluster(tCtx *types.ResourceVersionTable, args *xdsClusterArgs) error
 	}
 	if err := tCtx.AddXdsResource(resourcev3.ClusterType, xdsCluster); err != nil {
 		return err
+	}
+
+	// Add the secrets used in the cluster filters. (Currently only used for Credential Injector filter)
+	for _, secret := range result.secrets {
+		if err := tCtx.AddXdsResource(resourcev3.SecretType, secret); err != nil {
+			return err
+		}
 	}
 	return nil
 }

@@ -7,6 +7,7 @@ package kubernetes
 
 import (
 	"context"
+	"fmt"
 
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
@@ -144,22 +145,33 @@ func backendHTTPRouteIndexFunc(rawObj client.Object) []string {
 
 func httpRouteFilterHTTPRouteIndexFunc(rawObj client.Object) []string {
 	httproute := rawObj.(*gwapiv1.HTTPRoute)
-	var httpRouteFilterRefs []string
+	httpRouteFilterRefs := make(map[string]struct{})
 	for _, rule := range httproute.Spec.Rules {
 		for _, filter := range rule.Filters {
 			if filter.ExtensionRef != nil && string(filter.ExtensionRef.Kind) == resource.KindHTTPRouteFilter {
-				// If an explicit Backend namespace is not provided, use the HTTPRoute namespace to
-				// lookup the provided Gateway Name.
-				httpRouteFilterRefs = append(httpRouteFilterRefs,
-					types.NamespacedName{
-						Namespace: httproute.Namespace,
-						Name:      string(filter.ExtensionRef.Name),
-					}.String(),
-				)
+				httpRouteFilterRefs[types.NamespacedName{
+					Namespace: httproute.Namespace,
+					Name:      string(filter.ExtensionRef.Name),
+				}.String()] = struct{}{}
+			}
+			for _, backendRef := range rule.BackendRefs {
+				for _, filter := range backendRef.Filters {
+					if filter.ExtensionRef != nil && string(filter.ExtensionRef.Kind) == resource.KindHTTPRouteFilter {
+						httpRouteFilterRefs[types.NamespacedName{
+							Namespace: httproute.Namespace,
+							Name:      string(filter.ExtensionRef.Name),
+						}.String()] = struct{}{}
+						fmt.Println("xxxxxbackendRef: ", backendRef.Name, "filter: ", filter.ExtensionRef.Name)
+					}
+				}
 			}
 		}
 	}
-	return httpRouteFilterRefs
+	refs := make([]string, 0, len(httpRouteFilterRefs))
+	for ref := range httpRouteFilterRefs {
+		refs = append(refs, ref)
+	}
+	return refs
 }
 
 func secretEnvoyProxyIndexFunc(rawObj client.Object) []string {
