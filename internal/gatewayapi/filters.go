@@ -31,7 +31,7 @@ type HTTPFiltersTranslator interface {
 	processRedirectFilter(redirect *gwapiv1.HTTPRequestRedirectFilter, filterContext *HTTPFiltersContext)
 	processRequestHeaderModifierFilter(headerModifier *gwapiv1.HTTPHeaderFilter, filterContext *HTTPFiltersContext)
 	processResponseHeaderModifierFilter(headerModifier *gwapiv1.HTTPHeaderFilter, filterContext *HTTPFiltersContext)
-	processRequestMirrorFilter(filterIdx int, mirror *gwapiv1.HTTPRequestMirrorFilter, filterContext *HTTPFiltersContext, resources *resource.Resources) StatusError
+	processRequestMirrorFilter(filterIdx int, mirror *gwapiv1.HTTPRequestMirrorFilter, filterContext *HTTPFiltersContext, resources *resource.Resources) status.Error
 	processUnsupportedHTTPFilter(filterType string, filterContext *HTTPFiltersContext)
 }
 
@@ -69,14 +69,14 @@ func (t *Translator) ProcessHTTPFilters(parentRef *RouteParentContext,
 	filters []gwapiv1.HTTPRouteFilter,
 	ruleIdx int,
 	resources *resource.Resources,
-) (*HTTPFiltersContext, StatusError) {
+) (*HTTPFiltersContext, status.Error) {
 	httpFiltersContext := &HTTPFiltersContext{
 		ParentRef:    parentRef,
 		Route:        route,
 		RuleIdx:      ruleIdx,
 		HTTPFilterIR: &HTTPFilterIR{},
 	}
-	var err StatusError
+	var err status.Error
 	for i := range filters {
 		filter := filters[i]
 		// If an invalid filter type has been configured then skip processing any more filters
@@ -876,7 +876,7 @@ func (t *Translator) processRequestMirrorFilter(
 	mirrorFilter *gwapiv1.HTTPRequestMirrorFilter,
 	filterContext *HTTPFiltersContext,
 	resources *resource.Resources,
-) (err StatusError) {
+) (err status.Error) {
 	// Make sure the config actually exists
 	if mirrorFilter == nil {
 		return nil

@@ -3,14 +3,12 @@
 // The full text of the Apache license is available in the LICENSE file at
 // the root of the repo.
 
-package gatewayapi
+package status
 
 import (
 	"strings"
 
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
-
-	"github.com/envoyproxy/gateway/internal/gatewayapi/status"
 )
 
 // Route condition reasons for various error scenarios
@@ -25,15 +23,16 @@ const (
 	RouteReasonInvalidBackendFilters gwapiv1.RouteConditionReason = "InvalidBackendFilters"
 
 	// Network configuration related reasons
-	RouteReasonInvalidPortNotFound gwapiv1.RouteConditionReason = "PortNotFound"
-	RouteReasonPortNotSpecified    gwapiv1.RouteConditionReason = "PortNotSpecified"
-	RouteReasonInvalidAddressType  gwapiv1.RouteConditionReason = "InvalidAddressType"
+	RouteReasonPortNotFound       gwapiv1.RouteConditionReason = "PortNotFound"
+	RouteReasonPortNotSpecified   gwapiv1.RouteConditionReason = "PortNotSpecified"
+	RouteReasonInvalidAddressType gwapiv1.RouteConditionReason = "InvalidAddressType"
+	RouteReasonInvalidAddress     gwapiv1.RouteConditionReason = "InvalidAddress"
 )
 
-// StatusError is an error interface that represents errors that need to be reflected
+// Error is an error interface that represents errors that need to be reflected
 // in the status of a Kubernetes resource. It extends the standard error interface
 // with a Reason method that returns the specific condition reason.
-type StatusError interface {
+type Error interface {
 	error
 	Reason() gwapiv1.RouteConditionReason
 }
@@ -43,6 +42,14 @@ type StatusError interface {
 type RouteStatusError struct {
 	Wrapped              error
 	RouteConditionReason gwapiv1.RouteConditionReason
+}
+
+// NewRouteStatusError creates a new RouteStatusError with the given wrapped error and route condition reason.
+func NewRouteStatusError(wrapped error, reason gwapiv1.RouteConditionReason) *RouteStatusError {
+	return &RouteStatusError{
+		Wrapped:              wrapped,
+		RouteConditionReason: reason,
+	}
 }
 
 // Error returns the string representation of the error.
@@ -68,7 +75,7 @@ func (s *RouteStatusError) Reason() gwapiv1.RouteConditionReason {
 // MultiStatusError represents a collection of status errors that occurred during processing.
 // It implements the StatusError interface and provides methods to manage multiple errors.
 type MultiStatusError struct {
-	errs []StatusError
+	errs []Error
 }
 
 // Empty returns true if there are no errors in the collection.
@@ -78,7 +85,7 @@ func (m *MultiStatusError) Empty() bool {
 
 // Add appends a new status error to the collection.
 // If the error is nil, it is ignored.
-func (m *MultiStatusError) Add(err StatusError) {
+func (m *MultiStatusError) Add(err Error) {
 	if err == nil {
 		return
 	}
@@ -99,10 +106,10 @@ func (m *MultiStatusError) Error() string {
 	}
 
 	var b strings.Builder
-	b.WriteString(status.Error2ConditionMsg(m.errs[0]))
+	b.WriteString(Error2ConditionMsg(m.errs[0]))
 	for _, err := range m.errs[1:] {
 		b.WriteByte('\n')
-		b.WriteString(status.Error2ConditionMsg(err))
+		b.WriteString(Error2ConditionMsg(err))
 	}
 	return b.String()
 }

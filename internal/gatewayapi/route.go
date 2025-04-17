@@ -182,11 +182,11 @@ func (t *Translator) processHTTPRouteParentRefs(httpRoute *HTTPRouteContext, res
 	}
 }
 
-func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRef *RouteParentContext, resources *resource.Resources) ([]*ir.HTTPRoute, StatusError) {
+func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRef *RouteParentContext, resources *resource.Resources) ([]*ir.HTTPRoute, status.Error) {
 	var (
 		irRoutes   []*ir.HTTPRoute
 		envoyProxy *egv1a1.EnvoyProxy
-		errs       = &MultiStatusError{}
+		errs       = &status.MultiStatusError{}
 	)
 
 	gatewayCtx := httpRoute.ParentRefs[*parentRef.ParentReference].GetGateway()
@@ -198,10 +198,11 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 	for ruleIdx, rule := range httpRoute.Spec.Rules {
 		httpFiltersContext, err := t.ProcessHTTPFilters(parentRef, httpRoute, rule.Filters, ruleIdx, resources)
 		if err != nil {
-			errs.Add(&RouteStatusError{
-				Wrapped:              fmt.Errorf("failed to process route rule %d: %w", ruleIdx, err),
-				RouteConditionReason: err.Reason(),
-			})
+			// TODO: zhaohuabing should we set Accepted condition instead of Resolved for failed HTTPFilters?
+			errs.Add(status.NewRouteStatusError(
+				fmt.Errorf("failed to process route rule %d: %w", ruleIdx, err),
+				err.Reason(),
+			))
 			continue
 		}
 
@@ -209,10 +210,10 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 		// so generate a unique Xds IR HTTPRoute per match.
 		ruleRoutes, err := t.processHTTPRouteRule(httpRoute, ruleIdx, httpFiltersContext, rule)
 		if err != nil {
-			errs.Add(&RouteStatusError{
-				Wrapped:              fmt.Errorf("failed to process route rule %d: %w", ruleIdx, err),
-				RouteConditionReason: err.Reason(),
-			})
+			errs.Add(status.NewRouteStatusError(
+				fmt.Errorf("failed to process route rule %d: %w", ruleIdx, err),
+				err.Reason(),
+			))
 			continue
 		}
 
@@ -226,10 +227,10 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 			settingName := irDestinationSettingName(destName, i)
 			ds, err := t.processDestination(settingName, backendRef, parentRef, httpRoute, resources)
 			if err != nil {
-				errs.Add(&RouteStatusError{
-					Wrapped:              fmt.Errorf("failed to process route rule %d backendRef %d: %w", ruleIdx, i, err),
-					RouteConditionReason: err.Reason(),
-				})
+				errs.Add(status.NewRouteStatusError(
+					fmt.Errorf("failed to process route rule %d backendRef %d: %w", ruleIdx, i, err),
+					err.Reason(),
+				))
 				failedProcessDestination = true
 				continue
 			}
@@ -275,10 +276,12 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 
 		// TODO: support mixed endpointslice address type between backendRefs
 		if !t.IsEnvoyServiceRouting(envoyProxy) && (dstAddrTypeSet.Len() > 1 || dstAddrTypeSet.Has(ir.MIXED)) {
-			errs.Add(&RouteStatusError{
-				Wrapped:              fmt.Errorf("failed to process route rule %d: mixed endpointslice address type between backendRefs is not supported", ruleIdx),
-				RouteConditionReason: RouteReasonInvalidBackendRef,
-			})
+			errs.Add(status.NewRouteStatusError(
+				fmt.Errorf(
+					"failed to process route rule %d: mixed endpointslice address type between backendRefs is not supported",
+					ruleIdx),
+				status.RouteReasonInvalidBackendRef,
+			))
 		}
 
 		// TODO handle:
@@ -359,7 +362,11 @@ func processRouteRetry(irRoute *ir.HTTPRoute, rule gwapiv1.HTTPRouteRule) {
 	irRoute.Retry = res
 }
 
-func (t *Translator) processHTTPRouteRule(httpRoute *HTTPRouteContext, ruleIdx int, httpFiltersContext *HTTPFiltersContext, rule gwapiv1.HTTPRouteRule) ([]*ir.HTTPRoute, StatusError) {
+func (t *Translator) processHTTPRouteRule(
+	httpRoute *HTTPRouteContext,
+	ruleIdx int,
+	httpFiltersContext *HTTPFiltersContext,
+	rule gwapiv1.HTTPRouteRule) ([]*ir.HTTPRoute, status.Error) {
 	var ruleRoutes []*ir.HTTPRoute
 
 	// If no matches are specified, the implementation MUST match every HTTP request.
@@ -376,11 +383,10 @@ func (t *Translator) processHTTPRouteRule(httpRoute *HTTPRouteContext, ruleIdx i
 	var sessionPersistence *ir.SessionPersistence
 	if rule.SessionPersistence != nil {
 		if rule.SessionPersistence.IdleTimeout != nil {
-			return nil,
-				&RouteStatusError{
-					Wrapped:              fmt.Errorf("idle timeout is not supported in envoy gateway"),
-					RouteConditionReason: RouteReasonUnsupportedSetting,
-				}
+			return nil, status.NewRouteStatusError(
+				fmt.Errorf("idle timeout is not supported in envoy gateway"),
+				status.RouteReasonUnsupportedSetting,
+			)
 		}
 
 		var sessionName string
@@ -408,10 +414,7 @@ func (t *Translator) processHTTPRouteRule(httpRoute *HTTPRouteContext, ruleIdx i
 				*rule.SessionPersistence.CookieConfig.LifetimeType == gwapiv1.PermanentCookieLifetimeType {
 				ttl, err := time.ParseDuration(string(*rule.SessionPersistence.AbsoluteTimeout))
 				if err != nil {
-					return nil, &RouteStatusError{
-						Wrapped:              err,
-						RouteConditionReason: gwapiv1.RouteReasonUnsupportedValue,
-					}
+					return nil, status.NewRouteStatusError(err,gwapiv1.RouteReasonUnsupportedValue)
 				}
 				sessionPersistence.Cookie.TTL = &metav1.Duration{Duration: ttl}
 			}
@@ -423,10 +426,10 @@ func (t *Translator) processHTTPRouteRule(httpRoute *HTTPRouteContext, ruleIdx i
 			}
 		default:
 			// Unknown session persistence type is specified.
-			return nil, &RouteStatusError{
-				Wrapped:              fmt.Errorf("unknown session persistence type %s", *rule.SessionPersistence.Type),
-				RouteConditionReason: gwapiv1.RouteReasonUnsupportedValue,
-			}
+			return nil, status.NewRouteStatusError(
+				fmt.Errorf("unknown session persistence type %s", *rule.SessionPersistence.Type),
+				gwapiv1.RouteReasonUnsupportedValue,
+			)
 		}
 	}
 
@@ -453,10 +456,7 @@ func (t *Translator) processHTTPRouteRule(httpRoute *HTTPRouteContext, ruleIdx i
 				}
 			case gwapiv1.PathMatchRegularExpression:
 				if err := regex.Validate(*match.Path.Value); err != nil {
-					return nil, &RouteStatusError{
-						Wrapped:              err,
-						RouteConditionReason: gwapiv1.RouteReasonUnsupportedValue,
-					}
+					return nil, status.NewRouteStatusError(err,gwapiv1.RouteReasonUnsupportedValue)
 				}
 				irRoute.PathMatch = &ir.StringMatch{
 					SafeRegex: match.Path.Value,
@@ -472,10 +472,7 @@ func (t *Translator) processHTTPRouteRule(httpRoute *HTTPRouteContext, ruleIdx i
 				})
 			case gwapiv1.HeaderMatchRegularExpression:
 				if err := regex.Validate(headerMatch.Value); err != nil {
-					return nil, &RouteStatusError{
-						Wrapped:              err,
-						RouteConditionReason: gwapiv1.RouteReasonUnsupportedValue,
-					}
+					return nil, status.NewRouteStatusError(err,gwapiv1.RouteReasonUnsupportedValue)
 				}
 				irRoute.HeaderMatches = append(irRoute.HeaderMatches, &ir.StringMatch{
 					Name:      string(headerMatch.Name),
@@ -492,10 +489,7 @@ func (t *Translator) processHTTPRouteRule(httpRoute *HTTPRouteContext, ruleIdx i
 				})
 			case gwapiv1.QueryParamMatchRegularExpression:
 				if err := regex.Validate(queryParamMatch.Value); err != nil {
-					return nil, &RouteStatusError{
-						Wrapped:              err,
-						RouteConditionReason: gwapiv1.RouteReasonUnsupportedValue,
-					}
+					return nil, status.NewRouteStatusError(err,gwapiv1.RouteReasonUnsupportedValue)
 				}
 				irRoute.QueryParamMatches = append(irRoute.QueryParamMatches, &ir.StringMatch{
 					Name:      string(queryParamMatch.Name),
@@ -1329,7 +1323,7 @@ func (t *Translator) processTCPRouteParentRefs(tcpRoute *TCPRouteContext, resour
 // This will result in a direct 500 response for HTTP-based requests.
 func (t *Translator) processDestination(name string, backendRefContext BackendRefContext,
 	parentRef *RouteParentContext, route RouteContext, resources *resource.Resources,
-) (ds *ir.DestinationSetting, err StatusError) {
+) (ds *ir.DestinationSetting, err status.Error) {
 	routeType := GetRouteType(route)
 	weight := uint32(1)
 	backendRef := GetBackendRef(backendRefContext)
@@ -1389,19 +1383,13 @@ func (t *Translator) processDestination(name string, backendRefContext BackendRe
 		envoyProxy,
 	)
 	if tlsErr != nil {
-		return nil, &RouteStatusError{
-			Wrapped:              tlsErr,
-			RouteConditionReason: RouteReasonInvalidBackendTLS,
-		}
+		return nil, status.NewRouteStatusError(tlsErr,status.RouteReasonInvalidBackendTLS)
 	}
 
 	var filtersErr error
 	ds.Filters, filtersErr = t.processDestinationFilters(routeType, backendRefContext, parentRef, route, resources)
 	if filtersErr != nil {
-		return nil, &RouteStatusError{
-			Wrapped:              filtersErr,
-			RouteConditionReason: RouteReasonInvalidBackendFilters,
-		}
+		return nil, status.NewRouteStatusError(filtersErr,status.RouteReasonInvalidBackendFilters)
 	}
 
 	if err := validateDestinationSettings(ds, t.IsEnvoyServiceRouting(envoyProxy), backendRef.Kind); err != nil {
@@ -1420,22 +1408,20 @@ func (t *Translator) processDestination(name string, backendRefContext BackendRe
 	return ds, nil
 }
 
-func validateDestinationSettings(destinationSettings *ir.DestinationSetting, endpointRoutingDisabled bool, kind *gwapiv1.Kind) StatusError {
+func validateDestinationSettings(destinationSettings *ir.DestinationSetting, endpointRoutingDisabled bool, kind *gwapiv1.Kind) status.Error {
 	// TODO: support mixed endpointslice address type for the same backendRef
 	switch KindDerefOr(kind, resource.KindService) {
 	case egv1a1.KindBackend:
 		if destinationSettings.AddressType != nil && *destinationSettings.AddressType == ir.MIXED {
-			return &RouteStatusError{
-				Wrapped:              fmt.Errorf("mixed FQDN and IP or Unix address type for the same backendRef is not supported"),
-				RouteConditionReason: RouteReasonInvalidAddressType,
-			}
+			return status.NewRouteStatusError(
+				fmt.Errorf("mixed FQDN and IP or Unix address type for the same backendRef is not supported"),
+				status.RouteReasonInvalidAddressType)
 		}
 	case resource.KindService, resource.KindServiceImport:
 		if !endpointRoutingDisabled && destinationSettings.AddressType != nil && *destinationSettings.AddressType == ir.MIXED {
-			return &RouteStatusError{
-				Wrapped:              fmt.Errorf("mixed endpointslice address type for the same backendRef is not supported"),
-				RouteConditionReason: RouteReasonInvalidAddressType,
-			}
+			return status.NewRouteStatusError(
+				fmt.Errorf("mixed endpointslice address type for the same backendRef is not supported"),
+				status.RouteReasonInvalidAddressType)
 		}
 	}
 
