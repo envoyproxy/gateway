@@ -1503,6 +1503,161 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 			},
 		},
 		{
+			desc: "custom response is only status",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
+								Group: gwapiv1a2.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1a2.Kind("Gateway"),
+								Name:  gwapiv1a2.ObjectName("eg"),
+							},
+						},
+					},
+					ResponseOverride: []*egv1a1.ResponseOverride{
+						{
+							Match: egv1a1.CustomResponseMatch{
+								StatusCodes: []egv1a1.StatusCodeMatch{
+									{
+										Value: ptr.To(100),
+									},
+								},
+							},
+							Response: egv1a1.CustomResponse{
+								StatusCode: ptr.To(200),
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "both redirect params and body specified in custom response",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
+								Group: gwapiv1a2.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1a2.Kind("Gateway"),
+								Name:  gwapiv1a2.ObjectName("eg"),
+							},
+						},
+					},
+					ResponseOverride: []*egv1a1.ResponseOverride{
+						{
+							Match: egv1a1.CustomResponseMatch{
+								StatusCodes: []egv1a1.StatusCodeMatch{
+									{
+										Value: ptr.To(100),
+									},
+								},
+							},
+							Response: egv1a1.CustomResponse{
+								RedirectParameters: &egv1a1.RedirectParameters{
+									Host: ptr.To("redirect.com"),
+								},
+								Body: &egv1a1.CustomResponseBody{
+									Type: ptr.To(egv1a1.ResponseValueTypeValueRef),
+									ValueRef: &gwapiv1a2.LocalObjectReference{
+										Kind: gwapiv1a2.Kind("ConfigMap"),
+										Name: gwapiv1a2.ObjectName("eg"),
+									},
+								},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{
+				"body or contentType cannot be set when redirectParameters are specified",
+			},
+		},
+		{
+			desc: "both redirect params and content type specified in custom response",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
+								Group: gwapiv1a2.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1a2.Kind("Gateway"),
+								Name:  gwapiv1a2.ObjectName("eg"),
+							},
+						},
+					},
+					ResponseOverride: []*egv1a1.ResponseOverride{
+						{
+							Match: egv1a1.CustomResponseMatch{
+								StatusCodes: []egv1a1.StatusCodeMatch{
+									{
+										Value: ptr.To(100),
+									},
+								},
+							},
+							Response: egv1a1.CustomResponse{
+								RedirectParameters: &egv1a1.RedirectParameters{
+									Host: ptr.To("redirect.com"),
+								},
+								ContentType: ptr.To("application/json"),
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{
+				"body or contentType cannot be set when redirectParameters are specified",
+			},
+		},
+		{
+			desc: "both redirect params and status code are specified in custom response",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
+								Group: gwapiv1a2.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1a2.Kind("Gateway"),
+								Name:  gwapiv1a2.ObjectName("eg"),
+							},
+						},
+					},
+					ResponseOverride: []*egv1a1.ResponseOverride{
+						{
+							Match: egv1a1.CustomResponseMatch{
+								StatusCodes: []egv1a1.StatusCodeMatch{
+									{
+										Value: ptr.To(100),
+									},
+								},
+							},
+							Response: egv1a1.CustomResponse{
+								RedirectParameters: &egv1a1.RedirectParameters{
+									Host: ptr.To("redirect.com"),
+									RequestHeaders: []egv1a1.HeaderValue{
+										{
+											Key:   "req_header",
+											Value: "req_value",
+										},
+									},
+								},
+								ResponseHeaders: []egv1a1.HeaderValue{
+									{
+										Key:   "resp_header",
+										Value: "resp_value",
+									},
+								},
+								StatusCode: ptr.To(302),
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
 			desc: "valid Global rate limit rules with request and response hit addends",
 			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
 				rules := []egv1a1.RateLimitRule{

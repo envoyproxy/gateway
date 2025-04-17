@@ -699,6 +699,7 @@ type StatusCodeRange struct {
 }
 
 // CustomResponse defines the configuration for returning a custom response.
+// +kubebuilder:validation:XValidation:rule="has(self.redirectParameters) ? (!has(self.body) && !has(self.contentType)) : true",message="body or contentType cannot be set when redirectParameters are specified"
 type CustomResponse struct {
 	// Content Type of the response. This will be set in the Content-Type header.
 	//
@@ -710,11 +711,42 @@ type CustomResponse struct {
 	// +optional
 	Body *CustomResponseBody `json:"body,omitempty"`
 
+	// Parameters of the Redirect response to return
+	//
+	// +optional
+	// +notImplementedHide
+	RedirectParameters *RedirectParameters `json:"redirectParameters,omitempty"`
+
 	// Status Code of the Custom Response
 	// If unset, does not override the status of response.
+	// If RedirectParameters are set, default response status is MOVED_PERMANENTLY (301)
 	//
 	// +optional
 	StatusCode *int `json:"statusCode,omitempty"`
+
+	// ResponseHeaders are the headers to add to the custom response
+	//
+	// +kubebuilder:validation:MaxItems=16
+	// +optional
+	// +notImplementedHide
+	ResponseHeaders []HeaderValue `json:"responseHeaders,omitempty"`
+}
+
+// HeaderValue represents a header key-value pair
+type HeaderValue struct {
+	// Key of the header
+	//
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=1024
+	// +required
+	Key string `json:"key"`
+
+	// Value of the header
+	//
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=1024
+	// +required
+	Value string `json:"value"`
 }
 
 // ResponseValueType defines the types of values for the response body supported by Envoy Gateway.
@@ -756,4 +788,38 @@ type CustomResponseBody struct {
 	//
 	// +optional
 	ValueRef *gwapiv1.LocalObjectReference `json:"valueRef,omitempty"`
+}
+
+// RedirectParameters contains parameters of the redirect response
+type RedirectParameters struct {
+	// Replaces the scheme portion of the original URL
+	//
+	// +optional
+	Scheme *string `json:"scheme,omitempty"`
+
+	// Replaces the host portion of the original URL
+	//
+	// +optional
+	Host *string `json:"host,omitempty"`
+
+	// Replaces the port value in the original URL
+	//
+	// +optional
+	Port *int `json:"port,omitempty"`
+
+	// Replaces the path portion of the original URL
+	//
+	// +optional
+	Path *string `json:"path,omitempty"`
+
+	// Removes the query portion of the original URL
+	//
+	// +optional
+	StripQuery *bool `json:"stripQuery,omitempty"`
+
+	// RequestHeaders are the headers to add to the request before redirecting it
+	//
+	// +kubebuilder:validation:MaxItems=16
+	// +optional
+	RequestHeaders []HeaderValue `json:"requestHeaders,omitempty"`
 }

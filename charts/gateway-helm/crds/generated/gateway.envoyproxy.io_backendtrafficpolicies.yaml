@@ -1384,12 +1384,88 @@ spec:
                           description: Content Type of the response. This will be
                             set in the Content-Type header.
                           type: string
+                        redirectParameters:
+                          description: Parameters of the Redirect response to return
+                          properties:
+                            host:
+                              description: Replaces the host portion of the original
+                                URL
+                              type: string
+                            path:
+                              description: Replaces the path portion of the original
+                                URL
+                              type: string
+                            port:
+                              description: Replaces the port value in the original
+                                URL
+                              type: integer
+                            requestHeaders:
+                              description: RequestHeaders are the headers to add to
+                                the request before redirecting it
+                              items:
+                                description: HeaderValue represents a header key-value
+                                  pair
+                                properties:
+                                  key:
+                                    description: Key of the header
+                                    maxLength: 1024
+                                    minLength: 1
+                                    type: string
+                                  value:
+                                    description: Value of the header
+                                    maxLength: 1024
+                                    minLength: 1
+                                    type: string
+                                required:
+                                - key
+                                - value
+                                type: object
+                              maxItems: 16
+                              type: array
+                            scheme:
+                              description: Replaces the scheme portion of the original
+                                URL
+                              type: string
+                            stripQuery:
+                              description: Removes the query portion of the original
+                                URL
+                              type: boolean
+                          type: object
+                        responseHeaders:
+                          description: ResponseHeaders are the headers to add to the
+                            custom response
+                          items:
+                            description: HeaderValue represents a header key-value
+                              pair
+                            properties:
+                              key:
+                                description: Key of the header
+                                maxLength: 1024
+                                minLength: 1
+                                type: string
+                              value:
+                                description: Value of the header
+                                maxLength: 1024
+                                minLength: 1
+                                type: string
+                            required:
+                            - key
+                            - value
+                            type: object
+                          maxItems: 16
+                          type: array
                         statusCode:
                           description: |-
                             Status Code of the Custom Response
                             If unset, does not override the status of response.
+                            If RedirectParameters are set, default response status is MOVED_PERMANENTLY (301)
                           type: integer
                       type: object
+                      x-kubernetes-validations:
+                      - message: body or contentType cannot be set when redirectParameters
+                          are specified
+                        rule: 'has(self.redirectParameters) ? (!has(self.body) &&
+                          !has(self.contentType)) : true'
                   required:
                   - match
                   - response
