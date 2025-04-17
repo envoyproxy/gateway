@@ -73,8 +73,8 @@ httpRoutes:
         status: "True"
         type: Accepted
       - lastTransitionTime: null
-        message: Specific filter is not supported within BackendRef, only RequestHeaderModifier
-          and ResponseHeaderModifier are supported
+        message: Specific filter is not supported within BackendRef, only RequestHeaderModifier,
+          ResponseHeaderModifier and gateway.envoyproxy.io/HTTPRouteFilter are supported
         reason: UnsupportedRefValue
         status: "False"
         type: ResolvedRefs

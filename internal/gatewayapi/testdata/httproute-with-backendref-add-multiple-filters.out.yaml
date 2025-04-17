@@ -70,12 +70,20 @@ httpRoutes:
       - path:
           value: /
     - backendRefs:
+      - name: service-2
+        port: 8080
+        weight: 2
       - filters:
         - requestHeaderModifier:
             set:
             - name: add-header-3
               value: some-value
           type: RequestHeaderModifier
+        - extensionRef:
+            group: gateway.envoyproxy.io
+            kind: HTTPRouteFilter
+            name: credential-injection
+          type: ExtensionRef
         name: service-3
         port: 8080
         weight: 1
@@ -143,13 +151,23 @@ xdsIR:
             endpoints:
             - host: 7.7.7.7
               port: 8080
+            name: httproute/default/httproute-1/rule/1/backend/0
+            protocol: HTTP
+            weight: 2
+          - addressType: IP
+            endpoints:
+            - host: 7.7.7.7
+              port: 8080
             filters:
               addRequestHeaders:
               - append: false
                 name: add-header-3
                 value:
                 - some-value
-            name: httproute/default/httproute-1/rule/1/backend/0
+              credentialInjection:
+                credential: '[redacted]'
+                name: httproutefilter/default/credential-injection
+            name: httproute/default/httproute-1/rule/1/backend/1
             protocol: HTTP
             weight: 1
         hostname: '*'

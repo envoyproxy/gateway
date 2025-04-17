@@ -37,8 +37,9 @@ func TestBuildXdsCluster(t *testing.T) {
 			PanicThreshold: ptr.To[uint32](66),
 		},
 	}
-	dynamicXdsCluster := buildXdsCluster(args)
-
+	result, err := buildXdsCluster(args)
+	require.NoError(t, err)
+	dynamicXdsCluster := result.cluster
 	require.Equal(t, bootstrapXdsCluster.Name, dynamicXdsCluster.Name)
 	require.Equal(t, bootstrapXdsCluster.ClusterDiscoveryType, dynamicXdsCluster.ClusterDiscoveryType)
 	require.Equal(t, bootstrapXdsCluster.TransportSocket, dynamicXdsCluster.TransportSocket)
