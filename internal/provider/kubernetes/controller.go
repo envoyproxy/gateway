@@ -605,6 +605,29 @@ func (r *gatewayAPIReconciler) processSecurityPolicyObjectRefs(
 				}
 			}
 		}
+
+		if policy.Spec.JWT != nil {
+			for _, provider := range policy.Spec.JWT.Providers {
+				if provider.LocalJWKS != nil &&
+					provider.LocalJWKS.Type != nil &&
+					*provider.LocalJWKS.Type == egv1a1.LocalJWKSTypeValueRef {
+					if err := r.processConfigMapRef(
+						ctx,
+						resourceMap,
+						resourceTree,
+						resource.KindClientTrafficPolicy,
+						policy.Namespace,
+						policy.Name,
+						gwapiv1.SecretObjectReference{
+							Group: &provider.LocalJWKS.ValueRef.Group,
+							Kind:  &provider.LocalJWKS.ValueRef.Kind,
+							Name:  provider.LocalJWKS.ValueRef.Name,
+						}); err != nil {
+						r.log.Error(err, "failed to process LocalJWKS ConfigMap", "policy", policy, "localJWKS", provider.LocalJWKS)
+					}
+				}
+			}
+		}
 	}
 }
 
@@ -1941,7 +1964,7 @@ func (r *gatewayAPIReconciler) processEnvoyProxy(ep *egv1a1.EnvoyProxy, resource
 }
 
 // crdExists checks for the existence of the CRD in k8s APIServer before watching it
-func (r *gatewayAPIReconciler) crdExists(mgr manager.Manager, kind string, groupVersion string) bool {
+func (r *gatewayAPIReconciler) crdExists(mgr manager.Manager, kind, groupVersion string) bool {
 	discoveryClient, err := discovery.NewDiscoveryClientForConfig(mgr.GetConfig())
 	if err != nil {
 		r.log.Error(err, "failed to create discovery client")

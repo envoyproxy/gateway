@@ -135,7 +135,7 @@ func buildUpgradeConfig(trafficFeatures *ir.TrafficFeatures) []*routev3.RouteAct
 	return upgradeConfigs
 }
 
-func buildXdsRouteMatch(pathMatch *ir.StringMatch, headerMatches []*ir.StringMatch, queryParamMatches []*ir.StringMatch) *routev3.RouteMatch {
+func buildXdsRouteMatch(pathMatch *ir.StringMatch, headerMatches, queryParamMatches []*ir.StringMatch) *routev3.RouteMatch {
 	outMatch := &routev3.RouteMatch{}
 
 	// Add a prefix match to '/' if no matches are specified

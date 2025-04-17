@@ -678,6 +678,14 @@ spec:
                     LeastRequest load balancers.
                   rule: 'self.type in [''Random'', ''ConsistentHash''] ? !has(self.slowStart)
                     : true '
+              mergeType:
+                description: |-
+                  MergeType determines how this configuration is merged with existing BackendTrafficPolicy
+                  configurations targeting a parent resource. When set, this configuration will be merged
+                  into a parent BackendTrafficPolicy (i.e. the one targeting a Gateway or Listener).
+                  This field cannot be set when targeting a parent resource (Gateway).
+                  If unset, no merging occurs, and only the most specific configuration takes effect.
+                type: string
               proxyProtocol:
                 description: ProxyProtocol enables the Proxy Protocol when communicating
                   with the backend.

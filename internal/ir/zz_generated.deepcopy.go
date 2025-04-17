@@ -2089,7 +2089,16 @@ func (in *JWTProvider) DeepCopyInto(out *JWTProvider) {
 		*out = make([]string, len(*in))
 		copy(*out, *in)
 	}
-	in.RemoteJWKS.DeepCopyInto(&out.RemoteJWKS)
+	if in.RemoteJWKS != nil {
+		in, out := &in.RemoteJWKS, &out.RemoteJWKS
+		*out = new(RemoteJWKS)
+		(*in).DeepCopyInto(*out)
+	}
+	if in.LocalJWKS != nil {
+		in, out := &in.LocalJWKS, &out.LocalJWKS
+		*out = new(string)
+		**out = **in
+	}
 	if in.ClaimToHeaders != nil {
 		in, out := &in.ClaimToHeaders, &out.ClaimToHeaders
 		*out = make([]v1alpha1.ClaimToHeader, len(*in))
