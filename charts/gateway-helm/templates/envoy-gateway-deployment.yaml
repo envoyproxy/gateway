@@ -84,7 +84,7 @@ spec:
         - mountPath: /certs
           name: certs
           readOnly: true
-      imagePullSecrets: {{- include "eg.image.pullSecrets" . | nindent 8 }}
+      {{- include "eg.image.pullSecrets" . | nindent 6 }}
       {{- with .Values.deployment.priorityClassName }}
       priorityClassName: {{ . | quote }}
       {{- end }}

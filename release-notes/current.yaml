@@ -4,7 +4,6 @@ date: Pending
 breaking changes: |
   Use a dedicated listener port(19003) for envoy proxy readiness
   Uses the envoy JSON formatter for the default access log instead of text formatter.
-  Removed environment variables IMAGE, IMAGE_NAME used for building the image; use REGISTRY and REPOSITORY instead
 
 # Updates addressing vulnerabilities, security flaws, or compliance requirements.
 security updates: |

@@ -106,13 +106,16 @@ Pull secrets for the Envoy Gateway image.
 */}}
 {{- define "eg.image.pullSecrets" -}}
 {{- if .Values.global.imagePullSecrets -}}
+imagePullSecrets:
 {{ toYaml .Values.global.imagePullSecrets }}
 {{- else if .Values.deployment.envoyGateway.imagePullSecrets -}}
+imagePullSecrets:
 {{ toYaml .Values.deployment.envoyGateway.imagePullSecrets }}
 {{- else if .Values.global.images.envoyGateway.pullSecrets -}}
+imagePullSecrets:
 {{ toYaml .Values.global.images.envoyGateway.pullSecrets }}
 {{- else -}}
-{{ toYaml list }}
+imagePullSecrets: {{ toYaml list }}
 {{- end }}
 {{- end }}
 
@@ -126,7 +129,7 @@ The name of the Envoy Ratelimit image.
 {{-   $repositoryTag := $imageParts._1 -}}
 {{-   $repositoryParts := splitn ":" 2 $repositoryTag -}}
 {{-   $repositoryName := $repositoryParts._0 -}}
-{{-   $imageTag := default .Chart.AppVersion $repositoryParts._1 -}}
+{{-   $imageTag := default "master" $repositoryParts._1 -}}
 {{-   printf "%s/%s:%s" $registryName $repositoryName $imageTag -}}
 {{- end -}}
 
@@ -135,11 +138,13 @@ Pull secrets for the Envoy Ratelimit image.
 */}}
 {{- define "eg.ratelimit.image.pullSecrets" -}}
 {{- if .Values.global.imagePullSecrets }}
+imagePullSecrets:
 {{ toYaml .Values.global.imagePullSecrets }}
 {{- else if .Values.global.images.ratelimit.pullSecrets -}}
+imagePullSecrets:
 {{ toYaml .Values.global.images.ratelimit.pullSecrets }}
-{{- else -}}
-{{ toYaml list }}
+{{- else }}
+imagePullSecrets: {{ toYaml list }}
 {{- end }}
 {{- end }}
 
@@ -155,7 +160,7 @@ provider:
       container:
         image: {{ include "eg.ratelimit.image" . }}
       pod:
-        imagePullSecrets: {{- include "eg.ratelimit.image.pullSecrets" . | nindent 10 }}
+        {{- include "eg.ratelimit.image.pullSecrets" . | nindent 8 }}
       {{- with .Values.global.images.ratelimit.pullPolicy }}
       patch:
         type: StrategicMerge
