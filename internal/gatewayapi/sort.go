@@ -63,8 +63,7 @@ func (x XdsIRRoutes) Less(i, j int) bool {
 	// Equal case
 
 	// 3. Sort based on the number of Header matches.
-	// When the number is the same, it follows.
-	// Exact > RegularExpression
+	// When the number is same, sort based on sum of characters in exact header matches.
 	hCountI := len(x[i].HeaderMatches)
 	hCountJ := len(x[j].HeaderMatches)
 	if hCountI < hCountJ {
@@ -74,8 +73,8 @@ func (x XdsIRRoutes) Less(i, j int) bool {
 		return false
 	}
 
-	hExtCountI := matchExactCount(x[i].HeaderMatches)
-	hExtCountJ := matchExactCount(x[j].HeaderMatches)
+	hExtCountI := stringMatchesExactCount(x[i].HeaderMatches)
+	hExtCountJ := stringMatchesExactCount(x[j].HeaderMatches)
 	if hExtCountI < hExtCountJ {
 		return true
 	}
@@ -85,8 +84,7 @@ func (x XdsIRRoutes) Less(i, j int) bool {
 	// Equal case
 
 	// 4. Sort based on the number of Query param matches.
-	// When the number is the same, it follows.
-	// Exact > RegularExpression
+	// When the number is same, sort based on sum of characters in exact query param matches.
 	qCountI := len(x[i].QueryParamMatches)
 	qCountJ := len(x[j].QueryParamMatches)
 	if qCountI < qCountJ {
@@ -96,8 +94,8 @@ func (x XdsIRRoutes) Less(i, j int) bool {
 		return false
 	}
 
-	qExtCountI := matchExactCount(x[i].QueryParamMatches)
-	qExtCountJ := matchExactCount(x[j].QueryParamMatches)
+	qExtCountI := stringMatchesExactCount(x[i].QueryParamMatches)
+	qExtCountJ := stringMatchesExactCount(x[j].QueryParamMatches)
 	return qExtCountI < qExtCountJ
 }
 
@@ -130,12 +128,12 @@ func pathMatchCount(pathMatch *ir.StringMatch) int {
 	return 0
 }
 
-func matchExactCount(pathMatches []*ir.StringMatch) int {
-	var excnt int
-	for _, pathMatch := range pathMatches {
-		if pathMatch != nil && pathMatch.Exact != nil {
-			excnt++
+func stringMatchesExactCount(stringMatches []*ir.StringMatch) int {
+	var cnt int
+	for _, stringMatch := range stringMatches {
+		if stringMatch != nil && stringMatch.Exact != nil {
+			cnt += len(*stringMatch.Exact)
 		}
 	}
-	return excnt
+	return cnt
 }
