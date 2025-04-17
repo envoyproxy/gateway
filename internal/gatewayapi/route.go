@@ -366,7 +366,8 @@ func (t *Translator) processHTTPRouteRule(
 	httpRoute *HTTPRouteContext,
 	ruleIdx int,
 	httpFiltersContext *HTTPFiltersContext,
-	rule gwapiv1.HTTPRouteRule) ([]*ir.HTTPRoute, status.Error) {
+	rule gwapiv1.HTTPRouteRule,
+) ([]*ir.HTTPRoute, status.Error) {
 	var ruleRoutes []*ir.HTTPRoute
 
 	// If no matches are specified, the implementation MUST match every HTTP request.
@@ -414,7 +415,7 @@ func (t *Translator) processHTTPRouteRule(
 				*rule.SessionPersistence.CookieConfig.LifetimeType == gwapiv1.PermanentCookieLifetimeType {
 				ttl, err := time.ParseDuration(string(*rule.SessionPersistence.AbsoluteTimeout))
 				if err != nil {
-					return nil, status.NewRouteStatusError(err,gwapiv1.RouteReasonUnsupportedValue)
+					return nil, status.NewRouteStatusError(err, gwapiv1.RouteReasonUnsupportedValue)
 				}
 				sessionPersistence.Cookie.TTL = &metav1.Duration{Duration: ttl}
 			}
@@ -456,7 +457,7 @@ func (t *Translator) processHTTPRouteRule(
 				}
 			case gwapiv1.PathMatchRegularExpression:
 				if err := regex.Validate(*match.Path.Value); err != nil {
-					return nil, status.NewRouteStatusError(err,gwapiv1.RouteReasonUnsupportedValue)
+					return nil, status.NewRouteStatusError(err, gwapiv1.RouteReasonUnsupportedValue)
 				}
 				irRoute.PathMatch = &ir.StringMatch{
 					SafeRegex: match.Path.Value,
@@ -472,7 +473,7 @@ func (t *Translator) processHTTPRouteRule(
 				})
 			case gwapiv1.HeaderMatchRegularExpression:
 				if err := regex.Validate(headerMatch.Value); err != nil {
-					return nil, status.NewRouteStatusError(err,gwapiv1.RouteReasonUnsupportedValue)
+					return nil, status.NewRouteStatusError(err, gwapiv1.RouteReasonUnsupportedValue)
 				}
 				irRoute.HeaderMatches = append(irRoute.HeaderMatches, &ir.StringMatch{
 					Name:      string(headerMatch.Name),
@@ -489,7 +490,7 @@ func (t *Translator) processHTTPRouteRule(
 				})
 			case gwapiv1.QueryParamMatchRegularExpression:
 				if err := regex.Validate(queryParamMatch.Value); err != nil {
-					return nil, status.NewRouteStatusError(err,gwapiv1.RouteReasonUnsupportedValue)
+					return nil, status.NewRouteStatusError(err, gwapiv1.RouteReasonUnsupportedValue)
 				}
 				irRoute.QueryParamMatches = append(irRoute.QueryParamMatches, &ir.StringMatch{
 					Name:      string(queryParamMatch.Name),
@@ -1383,13 +1384,13 @@ func (t *Translator) processDestination(name string, backendRefContext BackendRe
 		envoyProxy,
 	)
 	if tlsErr != nil {
-		return nil, status.NewRouteStatusError(tlsErr,status.RouteReasonInvalidBackendTLS)
+		return nil, status.NewRouteStatusError(tlsErr, status.RouteReasonInvalidBackendTLS)
 	}
 
 	var filtersErr error
 	ds.Filters, filtersErr = t.processDestinationFilters(routeType, backendRefContext, parentRef, route, resources)
 	if filtersErr != nil {
-		return nil, status.NewRouteStatusError(filtersErr,status.RouteReasonInvalidBackendFilters)
+		return nil, status.NewRouteStatusError(filtersErr, status.RouteReasonInvalidBackendFilters)
 	}
 
 	if err := validateDestinationSettings(ds, t.IsEnvoyServiceRouting(envoyProxy), backendRef.Kind); err != nil {
