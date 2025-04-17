@@ -91,11 +91,6 @@ func (i *Infra) createOrUpdateConfigMap(ctx context.Context, r ResourceRender) (
 // createOrUpdateDeployment creates a Deployment in the kube api server based on the provided
 // ResourceRender, if it doesn't exist and updates it if it does.
 func (i *Infra) createOrUpdateDeployment(ctx context.Context, r ResourceRender) (err error) {
-	// If deployment config is nil,ignore Deployment.
-	if deploymentConfig, er := r.DeploymentSpec(); deploymentConfig == nil {
-		return er
-	}
-
 	var (
 		deployment *appsv1.Deployment
 		startTime  = time.Now()
@@ -183,11 +178,6 @@ func (i *Infra) createOrUpdateDeployment(ctx context.Context, r ResourceRender) 
 // createOrUpdateDaemonSet creates a DaemonSet in the kube api server based on the provided
 // ResourceRender, if it doesn't exist and updates it if it does.
 func (i *Infra) createOrUpdateDaemonSet(ctx context.Context, r ResourceRender) (err error) {
-	// If daemonset config is nil, ignore DaemonSet.
-	if daemonSetConfig, er := r.DaemonSetSpec(); daemonSetConfig == nil {
-		return er
-	}
-
 	var (
 		daemonSet *appsv1.DaemonSet
 		startTime = time.Now()
@@ -281,11 +271,6 @@ func isSelectorMatch(labelselector *metav1.LabelSelector, l map[string]string) (
 }
 
 func (i *Infra) createOrUpdatePodDisruptionBudget(ctx context.Context, r ResourceRender) (err error) {
-	// If podDisruptionBudget config is nil or MinAvailable is nil, ignore PodDisruptionBudget.
-	if podDisruptionBudget, er := r.PodDisruptionBudgetSpec(); podDisruptionBudget == nil {
-		return er
-	}
-
 	var (
 		pdb       *policyv1.PodDisruptionBudget
 		startTime = time.Now()
@@ -323,11 +308,6 @@ func (i *Infra) createOrUpdatePodDisruptionBudget(ctx context.Context, r Resourc
 // the provided ResourceRender, if it doesn't exist and updates it if it does,
 // and delete hpa if not set.
 func (i *Infra) createOrUpdateHPA(ctx context.Context, r ResourceRender) (err error) {
-	// If hpa config is nil, ignore HorizontalPodAutoscaler.
-	if hpaConfig, er := r.HorizontalPodAutoscalerSpec(); hpaConfig == nil {
-		return er
-	}
-
 	var (
 		hpa       *autoscalingv2.HorizontalPodAutoscaler
 		startTime = time.Now()
@@ -439,11 +419,6 @@ func (i *Infra) deleteServiceAccount(ctx context.Context, r ResourceRender) (err
 
 // deleteDeployment deletes the Envoy Deployment in the kube api server, if it exists.
 func (i *Infra) deleteDeployment(ctx context.Context, r ResourceRender) (err error) {
-	// If deployment config is nil,ignore Deployment.
-	if deploymentConfig, er := r.DeploymentSpec(); deploymentConfig == nil {
-		return er
-	}
-
 	var (
 		name, ns   = r.Name(), i.Namespace
 		deployment = &appsv1.Deployment{
@@ -479,11 +454,6 @@ func (i *Infra) deleteDeployment(ctx context.Context, r ResourceRender) (err err
 
 // deleteDaemonSet deletes the Envoy DaemonSet in the kube api server, if it exists.
 func (i *Infra) deleteDaemonSet(ctx context.Context, r ResourceRender) (err error) {
-	// If daemonset config is nil, ignore DaemonSet.
-	if daemonSetConfig, er := r.DaemonSetSpec(); daemonSetConfig == nil {
-		return er
-	}
-
 	var (
 		name, ns  = r.Name(), i.Namespace
 		daemonSet = &appsv1.DaemonSet{
@@ -589,11 +559,6 @@ func (i *Infra) deleteService(ctx context.Context, r ResourceRender) (err error)
 
 // deleteHpa deletes the Horizontal Pod Autoscaler associated to its renderer, if it exists.
 func (i *Infra) deleteHPA(ctx context.Context, r ResourceRender) (err error) {
-	// If hpa config is nil, ignore HorizontalPodAutoscaler.
-	if hpaConfig, er := r.HorizontalPodAutoscalerSpec(); hpaConfig == nil {
-		return er
-	}
-
 	var (
 		name, ns = r.Name(), i.Namespace
 		hpa      = &autoscalingv2.HorizontalPodAutoscaler{
@@ -629,11 +594,6 @@ func (i *Infra) deleteHPA(ctx context.Context, r ResourceRender) (err error) {
 
 // deletePDB deletes the PodDistribution budget associated to its renderer, if it exists.
 func (i *Infra) deletePDB(ctx context.Context, r ResourceRender) (err error) {
-	// If podDisruptionBudget config is nil or MinAvailable is nil, ignore PodDisruptionBudget.
-	if podDisruptionBudget, er := r.PodDisruptionBudgetSpec(); podDisruptionBudget == nil {
-		return er
-	}
-
 	var (
 		name, ns = r.Name(), i.Namespace
 		pdb      = &policyv1.PodDisruptionBudget{

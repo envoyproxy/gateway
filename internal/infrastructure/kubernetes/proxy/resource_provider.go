@@ -251,8 +251,8 @@ func (r *ResourceRender) stableSelector() *metav1.LabelSelector {
 	return resource.GetSelector(envoyLabels(labels))
 }
 
-// DeploymentSpec returns the `Deployment` sets spec.
-func (r *ResourceRender) DeploymentSpec() (*egv1a1.KubernetesDeploymentSpec, error) {
+// Deployment returns the expected Deployment based on the provided infra.
+func (r *ResourceRender) Deployment() (*appsv1.Deployment, error) {
 	proxyConfig := r.infra.GetProxyConfig()
 
 	// Get the EnvoyProxy config to configure the deployment.
@@ -260,21 +260,13 @@ func (r *ResourceRender) DeploymentSpec() (*egv1a1.KubernetesDeploymentSpec, err
 	if provider.Type != egv1a1.ProviderTypeKubernetes {
 		return nil, fmt.Errorf("invalid provider type %v for Kubernetes infra manager", provider.Type)
 	}
-
 	deploymentConfig := provider.GetEnvoyProxyKubeProvider().EnvoyDeployment
 
-	return deploymentConfig, nil
-}
-
-// Deployment returns the expected Deployment based on the provided infra.
-func (r *ResourceRender) Deployment() (*appsv1.Deployment, error) {
-	deploymentConfig, er := r.DeploymentSpec()
-	// If deployment config is nil,ignore Deployment.
+	// If deployment config is nil, it's not Deployment installation.
 	if deploymentConfig == nil {
-		return nil, er
+		return nil, nil
 	}
 
-	proxyConfig := r.infra.GetProxyConfig()
 	// Get expected bootstrap configurations rendered ProxyContainers
 	containers, err := expectedProxyContainers(r.infra, deploymentConfig.Container, proxyConfig.Spec.Shutdown, r.ShutdownManager, r.Namespace, r.DNSDomain)
 	if err != nil {
@@ -348,8 +340,7 @@ func (r *ResourceRender) Deployment() (*appsv1.Deployment, error) {
 	return deployment, nil
 }
 
-// DaemonSetSpec returns the `DaemonSet` sets spec.
-func (r *ResourceRender) DaemonSetSpec() (*egv1a1.KubernetesDaemonSetSpec, error) {
+func (r *ResourceRender) DaemonSet() (*appsv1.DaemonSet, error) {
 	proxyConfig := r.infra.GetProxyConfig()
 
 	// Get the EnvoyProxy config to configure the daemonset.
@@ -358,17 +349,12 @@ func (r *ResourceRender) DaemonSetSpec() (*egv1a1.KubernetesDaemonSetSpec, error
 		return nil, fmt.Errorf("invalid provider type %v for Kubernetes infra manager", provider.Type)
 	}
 
-	return provider.GetEnvoyProxyKubeProvider().EnvoyDaemonSet, nil
-}
+	daemonSetConfig := provider.GetEnvoyProxyKubeProvider().EnvoyDaemonSet
 
-func (r *ResourceRender) DaemonSet() (*appsv1.DaemonSet, error) {
-	daemonSetConfig, err := r.DaemonSetSpec()
-	// If daemonset config is nil, ignore DaemonSet.
+	// If daemonset config is nil, it's not DaemonSet installation.
 	if daemonSetConfig == nil {
-		return nil, err
+		return nil, nil
 	}
-
-	proxyConfig := r.infra.GetProxyConfig()
 
 	// Get expected bootstrap configurations rendered ProxyContainers
 	containers, err := expectedProxyContainers(r.infra, daemonSetConfig.Container, proxyConfig.Spec.Shutdown, r.ShutdownManager, r.Namespace, r.DNSDomain)
@@ -424,8 +410,7 @@ func (r *ResourceRender) DaemonSet() (*appsv1.DaemonSet, error) {
 	return daemonSet, nil
 }
 
-// PodDisruptionBudgetSpec returns the `PodDisruptionBudget` sets spec.
-func (r *ResourceRender) PodDisruptionBudgetSpec() (*egv1a1.KubernetesPodDisruptionBudgetSpec, error) {
+func (r *ResourceRender) pdbConfig() (*egv1a1.KubernetesPodDisruptionBudgetSpec, error) {
 	provider := r.infra.GetProxyConfig().GetEnvoyProxyProvider()
 	if provider.Type != egv1a1.ProviderTypeKubernetes {
 		return nil, fmt.Errorf("invalid provider type %v for Kubernetes infra manager", provider.Type)
@@ -440,9 +425,9 @@ func (r *ResourceRender) PodDisruptionBudgetSpec() (*egv1a1.KubernetesPodDisrupt
 }
 
 func (r *ResourceRender) PodDisruptionBudget() (*policyv1.PodDisruptionBudget, error) {
-	podDisruptionBudgetConfig, err := r.PodDisruptionBudgetSpec()
+	pdb, err := r.pdbConfig()
 	// If podDisruptionBudget config is nil, ignore PodDisruptionBudget.
-	if podDisruptionBudgetConfig == nil {
+	if pdb == nil {
 		return nil, err
 	}
 
@@ -450,10 +435,10 @@ func (r *ResourceRender) PodDisruptionBudget() (*policyv1.PodDisruptionBudget, e
 		Selector: r.stableSelector(),
 	}
 	switch {
-	case podDisruptionBudgetConfig.MinAvailable != nil:
-		pdbSpec.MinAvailable = podDisruptionBudgetConfig.MinAvailable
-	case podDisruptionBudgetConfig.MaxUnavailable != nil:
-		pdbSpec.MaxUnavailable = podDisruptionBudgetConfig.MaxUnavailable
+	case pdb.MinAvailable != nil:
+		pdbSpec.MinAvailable = pdb.MinAvailable
+	case pdb.MaxUnavailable != nil:
+		pdbSpec.MaxUnavailable = pdb.MaxUnavailable
 	default:
 		pdbSpec.MinAvailable = &intstr.IntOrString{Type: intstr.Int, IntVal: 0}
 	}
@@ -471,29 +456,22 @@ func (r *ResourceRender) PodDisruptionBudget() (*policyv1.PodDisruptionBudget, e
 	}
 
 	// apply merge patch to PodDisruptionBudget
-	if podDisruptionBudget, err = podDisruptionBudgetConfig.ApplyMergePatch(podDisruptionBudget); err != nil {
+	if podDisruptionBudget, err = pdb.ApplyMergePatch(podDisruptionBudget); err != nil {
 		return nil, err
 	}
 
 	return podDisruptionBudget, nil
 }
 
-// HorizontalPodAutoscalerSpec returns the `HorizontalPodAutoscaler` sets spec.
-func (r *ResourceRender) HorizontalPodAutoscalerSpec() (*egv1a1.KubernetesHorizontalPodAutoscalerSpec, error) {
+func (r *ResourceRender) HorizontalPodAutoscaler() (*autoscalingv2.HorizontalPodAutoscaler, error) {
 	provider := r.infra.GetProxyConfig().GetEnvoyProxyProvider()
 	if provider.Type != egv1a1.ProviderTypeKubernetes {
 		return nil, fmt.Errorf("invalid provider type %v for Kubernetes infra manager", provider.Type)
 	}
 
 	hpaConfig := provider.GetEnvoyProxyKubeProvider().EnvoyHpa
-	return hpaConfig, nil
-}
-
-func (r *ResourceRender) HorizontalPodAutoscaler() (*autoscalingv2.HorizontalPodAutoscaler, error) {
-	hpaConfig, err := r.HorizontalPodAutoscalerSpec()
-	// If hpa config is nil, ignore HorizontalPodAutoscaler.
 	if hpaConfig == nil {
-		return nil, err
+		return nil, nil
 	}
 
 	hpa := &autoscalingv2.HorizontalPodAutoscaler{
@@ -519,8 +497,6 @@ func (r *ResourceRender) HorizontalPodAutoscaler() (*autoscalingv2.HorizontalPod
 		},
 	}
 
-	provider := r.infra.GetProxyConfig().GetEnvoyProxyProvider()
-
 	// set deployment target ref name
 	deploymentConfig := provider.GetEnvoyProxyKubeProvider().EnvoyDeployment
 	if deploymentConfig.Name != nil {
@@ -529,7 +505,8 @@ func (r *ResourceRender) HorizontalPodAutoscaler() (*autoscalingv2.HorizontalPod
 		hpa.Spec.ScaleTargetRef.Name = r.Name()
 	}
 
-	if hpa, err = hpaConfig.ApplyMergePatch(hpa); err != nil {
+	hpa, err := hpaConfig.ApplyMergePatch(hpa)
+	if err != nil {
 		return nil, err
 	}
 
