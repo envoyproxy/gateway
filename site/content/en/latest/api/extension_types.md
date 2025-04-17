@@ -483,6 +483,7 @@ _Appears in:_
 | `connection` | _[BackendConnection](#backendconnection)_ |  false  |  | Connection includes backend connection settings. |
 | `dns` | _[DNS](#dns)_ |  false  |  | DNS includes dns resolution settings. |
 | `http2` | _[HTTP2Settings](#http2settings)_ |  false  |  | HTTP2 provides HTTP/2 configuration for backend connections. |
+| `mergeType` | _[MergeType](#mergetype)_ |  false  |  | MergeType determines how this configuration is merged with existing BackendTrafficPolicy<br />configurations targeting a parent resource. When set, this configuration will be merged<br />into a parent BackendTrafficPolicy (i.e. the one targeting a Gateway or Listener).<br />This field cannot be set when targeting a parent resource (Gateway).<br />If unset, no merging occurs, and only the most specific configuration takes effect. |
 | `rateLimit` | _[RateLimitSpec](#ratelimitspec)_ |  false  |  | RateLimit allows the user to limit the number of incoming requests<br />to a predefined value based on attributes within the traffic flow. |
 | `faultInjection` | _[FaultInjection](#faultinjection)_ |  false  |  | FaultInjection defines the fault injection policy to be applied. This configuration can be used to<br />inject delays and abort requests to mimic failure scenarios such as service failures and overloads |
 | `useClientProtocol` | _boolean_ |  false  |  | UseClientProtocol configures Envoy to prefer sending requests to backends using<br />the same HTTP protocol that the incoming request used. Defaults to false, which means<br />that Envoy will use the protocol indicated by the attached BackendRef. |
@@ -2999,6 +3000,7 @@ _Underlying type:_ _string_
 MergeType defines the type of merge operation
 
 _Appears in:_
+- [BackendTrafficPolicySpec](#backendtrafficpolicyspec)
 - [KubernetesPatchSpec](#kubernetespatchspec)
 
 | Value | Description |
