@@ -10,11 +10,13 @@ import (
 	"encoding/json"
 	"testing"
 
+	"github.com/stretchr/testify/require"
 	admissionv1 "k8s.io/api/admission/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
@@ -23,13 +25,7 @@ import (
 )
 
 func TestPodBindingMutator_Handle_UpdateAddsTopologyLabels(t *testing.T) {
-	scheme := runtime.NewScheme()
-	if err := corev1.AddToScheme(scheme); err != nil {
-		t.Fatal(err)
-	}
-	decoder := admission.NewDecoder(scheme)
-
-	pod := &corev1.Pod{
+	defaultPod := &corev1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "foo",
 			Namespace: "bar",
@@ -40,60 +36,122 @@ func TestPodBindingMutator_Handle_UpdateAddsTopologyLabels(t *testing.T) {
 		},
 		Spec: corev1.PodSpec{},
 	}
-	node := &corev1.Node{
+	defaultNode := &corev1.Node{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:            "node-A",
 			Labels:          map[string]string{corev1.LabelTopologyZone: "zone1"},
 			ResourceVersion: "",
 		},
 	}
-	fakeClient := fake.NewClientBuilder().
-		WithScheme(scheme).
-		WithRuntimeObjects(node, pod).
-		Build()
 
-	mutator := &envoy.ProxyTopologyMutator{
-		Client:  fakeClient,
-		Decoder: decoder,
-	}
-
-	bindObj := &corev1.Binding{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      pod.Name,
-			Namespace: pod.Namespace,
+	cases := []struct {
+		caseName string
+		obj      client.Object
+		node     *corev1.Node
+		pod      *corev1.Pod
+		wantErr  bool
+	}{
+		{
+			caseName: "valid binding",
+			obj: &corev1.Binding{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      defaultPod.Name,
+					Namespace: defaultPod.Namespace,
+				},
+				Target: corev1.ObjectReference{Name: defaultNode.Name},
+			},
+			node:    defaultNode,
+			pod:     defaultPod,
+			wantErr: false,
 		},
-		Target: corev1.ObjectReference{Name: node.Name},
-	}
-
-	oldBytes, err := json.Marshal(bindObj)
-	if err != nil {
-		t.Fatalf("marshal oldPod: %v", err)
-	}
-
-	req := admission.Request{
-		AdmissionRequest: admissionv1.AdmissionRequest{
-			UID:         types.UID("1234"),
-			Kind:        metav1.GroupVersionKind{Group: "", Version: "v1", Kind: "Pod"},
-			Resource:    metav1.GroupVersionResource{Group: "", Version: "v1", Resource: "pods"},
-			SubResource: "binding",
-			Name:        bindObj.Name,
-			Namespace:   bindObj.Namespace,
-			Operation:   admissionv1.Update,
-			Object:      runtime.RawExtension{Raw: oldBytes},
+		{
+			caseName: "empty target",
+			obj: &corev1.Binding{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      defaultPod.Name,
+					Namespace: defaultPod.Namespace,
+				},
+			},
+			node:    defaultNode,
+			pod:     defaultPod,
+			wantErr: true,
+		},
+		{
+			caseName: "skip binding - no label",
+			obj: &corev1.Binding{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "baz",
+					Namespace: "bar",
+				},
+			},
+			node:    defaultNode,
+			pod:     &corev1.Pod{ObjectMeta: metav1.ObjectMeta{Namespace: "bar", Name: "baz"}},
+			wantErr: true,
+		},
+		{
+			caseName: "no matching pod",
+			obj: &corev1.Binding{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "baz",
+					Namespace: "bar",
+				},
+			},
+			node:    defaultNode,
+			pod:     defaultPod,
+			wantErr: true,
 		},
 	}
+	for _, tc := range cases {
+		t.Run(tc.caseName, func(t *testing.T) {
+			scheme := runtime.NewScheme()
+			if err := corev1.AddToScheme(scheme); err != nil {
+				t.Fatal(err)
+			}
+			decoder := admission.NewDecoder(scheme)
 
-	resp := mutator.Handle(context.Background(), req)
-	if !resp.Allowed {
-		t.Fatalf("expected Allowed response, got: %v", resp.Result)
-	}
+			fakeClient := fake.NewClientBuilder().
+				WithScheme(scheme).
+				WithRuntimeObjects(tc.node, tc.pod).
+				Build()
 
-	updatedPod := &corev1.Pod{}
-	if err = fakeClient.Get(context.Background(), types.NamespacedName{Name: pod.Name, Namespace: pod.Namespace}, updatedPod); err != nil {
-		t.Fatalf("get pod: %v", err)
-	}
+			mutator := &envoy.ProxyTopologyMutator{
+				Client:  fakeClient,
+				Decoder: decoder,
+			}
 
-	if zone, ok := updatedPod.Labels[corev1.LabelTopologyZone]; !ok || zone != "zone1" {
-		t.Fatalf("expected zone1, got: %v", zone)
+			objBytes, err := json.Marshal(tc.obj)
+			if err != nil {
+				t.Fatalf("failed to marshal object: %v", err)
+			}
+
+			req := admission.Request{
+				AdmissionRequest: admissionv1.AdmissionRequest{
+					UID:       types.UID("1234"),
+					Name:      tc.obj.GetName(),
+					Namespace: tc.obj.GetNamespace(),
+					Operation: admissionv1.Update,
+					Object:    runtime.RawExtension{Raw: objBytes},
+				},
+			}
+
+			resp := mutator.Handle(context.Background(), req)
+
+			if !resp.Allowed && tc.wantErr {
+				t.Fatalf("expected Allowed response, got: %v", resp.Result)
+			}
+
+			updatedPod := &corev1.Pod{}
+			if err = fakeClient.Get(context.Background(), types.NamespacedName{Name: tc.pod.Name, Namespace: tc.pod.Namespace}, updatedPod); err != nil {
+				t.Fatalf("get pod: %v", err)
+			}
+
+			zone, ok := updatedPod.Labels[corev1.LabelTopologyZone]
+			if tc.wantErr {
+				require.False(t, ok, "pod has unexpected topology label: %v", updatedPod)
+			} else {
+				require.True(t, ok, "pod does not have expected topology label: %v", updatedPod)
+				require.Equal(t, zone, tc.node.Labels[corev1.LabelTopologyZone])
+			}
+		})
 	}
 }
