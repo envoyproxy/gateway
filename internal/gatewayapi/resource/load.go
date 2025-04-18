@@ -123,8 +123,8 @@ func loadKubernetesYAMLToResources(input []byte, addMissingResources bool) (*Res
 					Kind: KindGatewayClass,
 				},
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      name,
-					Namespace: namespace,
+					Name: name,
+					// It's weird for non-namespaced resource to have namespace.
 				},
 				Spec: typedSpec.(gwapiv1.GatewayClassSpec),
 			}
@@ -376,6 +376,10 @@ func loadKubernetesYAMLToResources(input []byte, addMissingResources bool) (*Res
 		return nil, err
 	}
 
+	// The namespace will not be treated as the missing resources in order to improve the user experience
+	// when using the file provider, since namespaces are crucial but easily overlooked.
+
+	// Add user provided and resource required namespaces.
 	if useDefaultNamespace {
 		if !providedNamespaceMap.Has(config.DefaultNamespace) {
 			namespace := &corev1.Namespace{
@@ -387,22 +391,21 @@ func loadKubernetesYAMLToResources(input []byte, addMissingResources bool) (*Res
 			providedNamespaceMap.Insert(config.DefaultNamespace)
 		}
 	}
+	// Sort the required namespace in order to keep the consistency for test.
+	sortedRequiredNamespace := requiredNamespaceMap.UnsortedList()
+	sort.Strings(sortedRequiredNamespace)
+	for _, ns := range sortedRequiredNamespace {
+		if !providedNamespaceMap.Has(ns) {
+			namespace := &corev1.Namespace{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: ns,
+				},
+			}
+			resources.Namespaces = append(resources.Namespaces, namespace)
+		}
+	}
 
 	if addMissingResources {
-		// Sort the required namespace in order to keep the consistency for test.
-		sortedRequiredNamespace := requiredNamespaceMap.UnsortedList()
-		sort.Strings(sortedRequiredNamespace)
-		for _, ns := range sortedRequiredNamespace {
-			if !providedNamespaceMap.Has(ns) {
-				namespace := &corev1.Namespace{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: ns,
-					},
-				}
-				resources.Namespaces = append(resources.Namespaces, namespace)
-			}
-		}
-
 		requiredServiceMap := map[string]*corev1.Service{}
 		for _, route := range resources.TCPRoutes {
 			addMissingServices(requiredServiceMap, route)
@@ -458,7 +461,7 @@ func loadKubernetesYAMLToResources(input []byte, addMissingResources bool) (*Res
 
 		// Add EnvoyProxy if it does not exist.
 		if resources.EnvoyProxyForGatewayClass == nil {
-			if err := addDefaultEnvoyProxy(resources); err != nil {
+			if err := addDefaultEnvoyProxy(resources, config.DefaultNamespace); err != nil {
 				return nil, err
 			}
 		}
@@ -552,13 +555,12 @@ func addMissingServices(requiredServices map[string]*corev1.Service, obj interfa
 	}
 }
 
-func addDefaultEnvoyProxy(resources *Resources) error {
+func addDefaultEnvoyProxy(resources *Resources, namespace string) error {
 	if resources.GatewayClass == nil {
 		return fmt.Errorf("the GatewayClass resource is required")
 	}
 
 	defaultEnvoyProxyName := "default-envoy-proxy"
-	namespace := resources.GatewayClass.Namespace
 	defaultBootstrapStr, err := bootstrap.GetRenderedBootstrapConfig(nil)
 	if err != nil {
 		return err
