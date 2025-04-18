@@ -29,8 +29,15 @@ http:
           audiences:
           - one.foo.com
           - two.foo.com
-          remoteJWKS:
-            uri: https://192.168.1.250:8080/jwt/public-key/jwks.json
+          localJWKS: |
+              {
+                "keys": [
+                  {
+                    "kty": "oct",
+                    "k": "1234567890"
+                  }
+                ]
+              }
           recomputeRoute: true
           claimToHeaders:
           - header: one-route-example2-key1

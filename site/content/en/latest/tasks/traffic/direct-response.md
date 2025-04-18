@@ -13,6 +13,8 @@ Before proceeding, you should be able to query the example backend using HTTP.
 
 ## Testing Direct Response 
 
+Note: the size of the response body (whether provided in-line or via a reference) cannot exceed 4096 bytes.
+
 {{< tabpane text=true >}}
 {{% tab header="Apply from stdin" %}}
 

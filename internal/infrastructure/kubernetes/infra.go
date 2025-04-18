@@ -20,6 +20,7 @@ import (
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/infrastructure/kubernetes/proxy"
 	"github.com/envoyproxy/gateway/internal/infrastructure/kubernetes/ratelimit"
+	"github.com/envoyproxy/gateway/internal/logging"
 )
 
 var _ ResourceRender = &proxy.ResourceRender{}
@@ -35,13 +36,9 @@ type ResourceRender interface {
 	Service() (*corev1.Service, error)
 	ConfigMap() (*corev1.ConfigMap, error)
 	Deployment() (*appsv1.Deployment, error)
-	DeploymentSpec() (*egv1a1.KubernetesDeploymentSpec, error)
 	DaemonSet() (*appsv1.DaemonSet, error)
-	DaemonSetSpec() (*egv1a1.KubernetesDaemonSetSpec, error)
 	HorizontalPodAutoscaler() (*autoscalingv2.HorizontalPodAutoscaler, error)
-	HorizontalPodAutoscalerSpec() (*egv1a1.KubernetesHorizontalPodAutoscalerSpec, error)
 	PodDisruptionBudget() (*policyv1.PodDisruptionBudget, error)
-	PodDisruptionBudgetSpec() (*egv1a1.KubernetesPodDisruptionBudgetSpec, error)
 }
 
 // Infra manages the creation and deletion of Kubernetes infrastructure
@@ -58,6 +55,8 @@ type Infra struct {
 
 	// Client wrap k8s client.
 	Client *InfraClient
+
+	logger logging.Logger
 }
 
 // NewInfra returns a new Infra.
@@ -67,6 +66,7 @@ func NewInfra(cli client.Client, cfg *config.Server) *Infra {
 		DNSDomain:    cfg.DNSDomain,
 		EnvoyGateway: cfg.EnvoyGateway,
 		Client:       New(cli),
+		logger:       cfg.Logger.WithName(string(egv1a1.LogComponentInfrastructureRunner)),
 	}
 }
 

@@ -10,83 +10,71 @@
       name: first-route
       route:
         cluster: first-route-dest
+        rateLimits:
+        - actions:
+          - genericKey:
+              descriptorKey: first-route
+              descriptorValue: first-route
+          - headerValueMatch:
+              descriptorKey: rule-0-match-0
+              descriptorValue: rule-0-match-0
+              expectMatch: true
+              headers:
+              - name: x-user-id
+                stringMatch:
+                  exact: one
         upgradeConfigs:
         - upgradeType: websocket
-      typedPerFilterConfig:
-        envoy.filters.http.ratelimit:
-          '@type': type.googleapis.com/envoy.extensions.filters.http.ratelimit.v3.RateLimitPerRoute
-          rateLimits:
-          - actions:
-            - genericKey:
-                descriptorKey: first-route
-                descriptorValue: first-route
-            - headerValueMatch:
-                descriptorKey: rule-0-match-0
-                descriptorValue: rule-0-match-0
-                expectMatch: true
-                headers:
-                - name: x-user-id
-                  stringMatch:
-                    exact: one
     - match:
         path: example
       name: second-route
       route:
         cluster: second-route-dest
+        rateLimits:
+        - actions:
+          - genericKey:
+              descriptorKey: second-route
+              descriptorValue: second-route
+          - requestHeaders:
+              descriptorKey: rule-0-match-0
+              headerName: x-user-id
         upgradeConfigs:
         - upgradeType: websocket
-      typedPerFilterConfig:
-        envoy.filters.http.ratelimit:
-          '@type': type.googleapis.com/envoy.extensions.filters.http.ratelimit.v3.RateLimitPerRoute
-          rateLimits:
-          - actions:
-            - genericKey:
-                descriptorKey: second-route
-                descriptorValue: second-route
-            - requestHeaders:
-                descriptorKey: rule-0-match-0
-                headerName: x-user-id
     - match:
         path: test
       name: third-route
       route:
         cluster: third-route-dest
+        rateLimits:
+        - actions:
+          - genericKey:
+              descriptorKey: third-route
+              descriptorValue: third-route
+          - genericKey:
+              descriptorKey: rule-0-match--1
+              descriptorValue: rule-0-match--1
         upgradeConfigs:
         - upgradeType: websocket
-      typedPerFilterConfig:
-        envoy.filters.http.ratelimit:
-          '@type': type.googleapis.com/envoy.extensions.filters.http.ratelimit.v3.RateLimitPerRoute
-          rateLimits:
-          - actions:
-            - genericKey:
-                descriptorKey: third-route
-                descriptorValue: third-route
-            - genericKey:
-                descriptorKey: rule-0-match--1
-                descriptorValue: rule-0-match--1
     - match:
         path: foo/bar/login
       name: fourth-route
       route:
         cluster: fourth-route-dest
+        rateLimits:
+        - actions:
+          - genericKey:
+              descriptorKey: fourth-route
+              descriptorValue: fourth-route
+          - headerValueMatch:
+              descriptorKey: rule-0-match-0
+              descriptorValue: rule-0-match-0
+              expectMatch: false
+              headers:
+              - name: x-org-id
+                stringMatch:
+                  exact: admin
         upgradeConfigs:
         - upgradeType: websocket
-      typedPerFilterConfig:
-        envoy.filters.http.ratelimit:
-          '@type': type.googleapis.com/envoy.extensions.filters.http.ratelimit.v3.RateLimitPerRoute
-          rateLimits:
-          - actions:
-            - genericKey:
-                descriptorKey: fourth-route
-                descriptorValue: fourth-route
-            - headerValueMatch:
-                descriptorKey: rule-0-match-0
-                descriptorValue: rule-0-match-0
-                expectMatch: false
-                headers:
-                - name: x-org-id
-                  stringMatch:
-                    exact: admin
     - match:
         path: foo/bar
       name: req-and-resp-cost

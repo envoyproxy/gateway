@@ -412,6 +412,7 @@ func (r *gatewayAPIReconciler) processHTTPRoutes(ctx context.Context, gatewayNam
 							}
 							if !resourceMap.allAssociatedHTTPRouteExtensionFilters.Has(key) {
 								r.processRouteFilterConfigMapRef(ctx, httpFilter, resourceMap, resourceTree)
+								r.processRouteFilterSecretRef(ctx, httpFilter, resourceMap, resourceTree)
 								resourceMap.allAssociatedHTTPRouteExtensionFilters.Insert(key)
 								resourceTree.HTTPRouteFilters = append(resourceTree.HTTPRouteFilters, httpFilter)
 							}

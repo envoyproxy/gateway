@@ -160,8 +160,7 @@ httpRoutes:
         status: "True"
         type: Accepted
       - lastTransitionTime: null
-        message: Unix domain socket found in Backend default/backend-uds is not supported
-          for xRoute backendRefs
+        message: Unix domain sockets are not supported in backend references
         reason: UnsupportedRefAddressFound
         status: "False"
         type: ResolvedRefs
@@ -272,8 +271,8 @@ httpRoutes:
         status: "True"
         type: Accepted
       - lastTransitionTime: null
-        message: Invalid Backend reference to Backend default/backend-ip-localhost
-          found
+        message: 'Invalid backend reference: IP address 127.0.0.1 in the loopback
+          range is not supported'
         reason: UnsupportedRefAddressFound
         status: "False"
         type: ResolvedRefs
@@ -310,8 +309,8 @@ httpRoutes:
         status: "True"
         type: Accepted
       - lastTransitionTime: null
-        message: Invalid Backend reference to Backend default/backend-fqdn-localhost
-          found
+        message: 'Invalid backend reference: hostname localhost should be a domain
+          with at least two segments separated by dots'
         reason: UnsupportedRefAddressFound
         status: "False"
         type: ResolvedRefs

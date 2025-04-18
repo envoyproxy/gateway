@@ -605,6 +605,29 @@ func (r *gatewayAPIReconciler) processSecurityPolicyObjectRefs(
 				}
 			}
 		}
+
+		if policy.Spec.JWT != nil {
+			for _, provider := range policy.Spec.JWT.Providers {
+				if provider.LocalJWKS != nil &&
+					provider.LocalJWKS.Type != nil &&
+					*provider.LocalJWKS.Type == egv1a1.LocalJWKSTypeValueRef {
+					if err := r.processConfigMapRef(
+						ctx,
+						resourceMap,
+						resourceTree,
+						resource.KindClientTrafficPolicy,
+						policy.Namespace,
+						policy.Name,
+						gwapiv1.SecretObjectReference{
+							Group: &provider.LocalJWKS.ValueRef.Group,
+							Kind:  &provider.LocalJWKS.ValueRef.Kind,
+							Name:  provider.LocalJWKS.ValueRef.Name,
+						}); err != nil {
+						r.log.Error(err, "failed to process LocalJWKS ConfigMap", "policy", policy, "localJWKS", provider.LocalJWKS)
+					}
+				}
+			}
+		}
 	}
 }
 
@@ -1225,8 +1248,7 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 
 	// Watch Gateway CRUDs and reconcile affected GatewayClass.
 	gPredicates := []predicate.TypedPredicate[*gwapiv1.Gateway]{
-		predicate.Or(predicate.TypedGenerationChangedPredicate[*gwapiv1.Gateway]{},
-			predicate.TypedLabelChangedPredicate[*gwapiv1.Gateway]{}),
+		metadataPredicate[*gwapiv1.Gateway](),
 		predicate.NewTypedPredicateFuncs(func(gtw *gwapiv1.Gateway) bool {
 			return r.validateGatewayForReconcile(gtw)
 		}),
@@ -1249,10 +1271,7 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 	}
 
 	// Watch HTTPRoute CRUDs and process affected Gateways.
-	httprPredicates := []predicate.TypedPredicate[*gwapiv1.HTTPRoute]{
-		predicate.Or(predicate.TypedGenerationChangedPredicate[*gwapiv1.HTTPRoute]{},
-			predicate.TypedLabelChangedPredicate[*gwapiv1.HTTPRoute]{}),
-	}
+	httprPredicates := commonPredicates[*gwapiv1.HTTPRoute]()
 	if r.namespaceLabel != nil {
 		httprPredicates = append(httprPredicates, predicate.NewTypedPredicateFuncs(func(hr *gwapiv1.HTTPRoute) bool {
 			return r.hasMatchingNamespaceLabels(hr)
@@ -1276,10 +1295,7 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 		r.log.Info("GRPCRoute CRD not found, skipping GRPCRoute watch")
 	} else {
 		// Watch GRPCRoute CRUDs and process affected Gateways.
-		grpcrPredicates := []predicate.TypedPredicate[*gwapiv1.GRPCRoute]{
-			predicate.Or(predicate.TypedGenerationChangedPredicate[*gwapiv1.GRPCRoute]{},
-				predicate.TypedLabelChangedPredicate[*gwapiv1.GRPCRoute]{}),
-		}
+		grpcrPredicates := commonPredicates[*gwapiv1.GRPCRoute]()
 		if r.namespaceLabel != nil {
 			grpcrPredicates = append(grpcrPredicates, predicate.NewTypedPredicateFuncs[*gwapiv1.GRPCRoute](func(grpc *gwapiv1.GRPCRoute) bool {
 				return r.hasMatchingNamespaceLabels(grpc)
@@ -1303,10 +1319,7 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 		r.log.Info("TLSRoute CRD not found, skipping TLSRoute watch")
 	} else {
 		// Watch TLSRoute CRUDs and process affected Gateways.
-		tlsrPredicates := []predicate.TypedPredicate[*gwapiv1a2.TLSRoute]{
-			predicate.Or(predicate.TypedGenerationChangedPredicate[*gwapiv1a2.TLSRoute]{},
-				predicate.TypedLabelChangedPredicate[*gwapiv1a2.TLSRoute]{}),
-		}
+		tlsrPredicates := commonPredicates[*gwapiv1a2.TLSRoute]()
 		if r.namespaceLabel != nil {
 			tlsrPredicates = append(tlsrPredicates, predicate.NewTypedPredicateFuncs[*gwapiv1a2.TLSRoute](func(route *gwapiv1a2.TLSRoute) bool {
 				return r.hasMatchingNamespaceLabels(route)
@@ -1330,10 +1343,7 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 		r.log.Info("UDPRoute CRD not found, skipping UDPRoute watch")
 	} else {
 		// Watch UDPRoute CRUDs and process affected Gateways.
-		udprPredicates := []predicate.TypedPredicate[*gwapiv1a2.UDPRoute]{
-			predicate.Or(predicate.TypedGenerationChangedPredicate[*gwapiv1a2.UDPRoute]{},
-				predicate.TypedLabelChangedPredicate[*gwapiv1a2.UDPRoute]{}),
-		}
+		udprPredicates := commonPredicates[*gwapiv1a2.UDPRoute]()
 		if r.namespaceLabel != nil {
 			udprPredicates = append(udprPredicates, predicate.NewTypedPredicateFuncs[*gwapiv1a2.UDPRoute](func(route *gwapiv1a2.UDPRoute) bool {
 				return r.hasMatchingNamespaceLabels(route)
@@ -1357,10 +1367,7 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 		r.log.Info("TCPRoute CRD not found, skipping TCPRoute watch")
 	} else {
 		// Watch TCPRoute CRUDs and process affected Gateways.
-		tcprPredicates := []predicate.TypedPredicate[*gwapiv1a2.TCPRoute]{
-			predicate.Or(predicate.TypedGenerationChangedPredicate[*gwapiv1a2.TCPRoute]{},
-				predicate.TypedLabelChangedPredicate[*gwapiv1a2.TCPRoute]{}),
-		}
+		tcprPredicates := commonPredicates[*gwapiv1a2.TCPRoute]()
 		if r.namespaceLabel != nil {
 			tcprPredicates = append(tcprPredicates, predicate.NewTypedPredicateFuncs[*gwapiv1a2.TCPRoute](func(route *gwapiv1a2.TCPRoute) bool {
 				return r.hasMatchingNamespaceLabels(route)
@@ -1903,13 +1910,13 @@ func (r *gatewayAPIReconciler) processEnvoyProxy(ep *egv1a1.EnvoyProxy, resource
 		return nil
 	}
 
-	r.log.Info("processing envoyproxy", "namespace", ep.Namespace, "name", ep.Name)
+	r.log.Info("processing EnvoyProxy", "namespace", ep.Namespace, "name", ep.Name)
 
 	if err := validation.ValidateEnvoyProxy(ep); err != nil {
-		return fmt.Errorf("invalid envoyproxy: %w", err)
+		return fmt.Errorf("invalid EnvoyProxy: %w", err)
 	}
 	if err := bootstrap.Validate(ep.Spec.Bootstrap); err != nil {
-		return fmt.Errorf("invalid envoyproxy: %w", err)
+		return fmt.Errorf("invalid EnvoyProxy: %w", err)
 	}
 
 	if ep.Spec.Telemetry != nil {
@@ -1957,7 +1964,7 @@ func (r *gatewayAPIReconciler) processEnvoyProxy(ep *egv1a1.EnvoyProxy, resource
 }
 
 // crdExists checks for the existence of the CRD in k8s APIServer before watching it
-func (r *gatewayAPIReconciler) crdExists(mgr manager.Manager, kind string, groupVersion string) bool {
+func (r *gatewayAPIReconciler) crdExists(mgr manager.Manager, kind, groupVersion string) bool {
 	discoveryClient, err := discovery.NewDiscoveryClientForConfig(mgr.GetConfig())
 	if err != nil {
 		r.log.Error(err, "failed to create discovery client")

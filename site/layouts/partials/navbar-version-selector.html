@@ -14,11 +14,16 @@
         {{ if eq .version $current_version }}
         {{ $url = "/docs" }}
         {{ end -}}
+        {{ $text := .version }}
+        {{ $eol_time := time.AsTime .eol }}
+        {{ if gt (time.Now.Sub $eol_time) 0 }}
+        {{ $text = printf "%s (EOL)" .version }}
+        {{ end -}}
+        {{ $href := printf "%s%s" $url $path -}}
         {{ if ne $baseURL "/" }}
-        <li><a class="dropdown-item" href="{{ $baseURL }}{{ $url }}{{ $path }}">{{ .version }}</a></li>
-        {{ else }}
-        <li><a class="dropdown-item" href="{{ $url }}{{ $path }}">{{ .version }}</a></li>
+        {{ $href := printf "%s%s%s" $baseURL $url $path -}}
         {{ end }}
+        <li><a class="dropdown-item" href="{{ $href }}">{{ $text }}</a></li>
         {{ end -}}
     </ul>
 </div>

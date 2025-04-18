@@ -7,6 +7,7 @@ package message
 
 import (
 	"fmt"
+	"os"
 	"runtime/debug"
 	"time"
 
@@ -19,7 +20,8 @@ import (
 
 type Update[K comparable, V any] watchable.Update[K, V]
 
-var logger = logging.DefaultLogger(egv1a1.LogLevelInfo).WithName("watchable")
+// TODO: Remove the global logger and localize the scope of the logger.
+var logger = logging.DefaultLogger(os.Stdout, egv1a1.LogLevelInfo).WithName("watchable")
 
 type Metadata struct {
 	Runner  string

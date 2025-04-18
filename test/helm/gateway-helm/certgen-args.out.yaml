@@ -328,8 +328,6 @@ kind: Service
 metadata:
   name: envoy-gateway
   namespace: 'envoy-gateway-system'
-  annotations:
-    this: that
   labels:
     control-plane: envoy-gateway
     helm.sh/chart: gateway-helm-v0.0.0-latest
@@ -544,7 +542,9 @@ spec:
         app: certgen
     spec:
       containers:
-      - command:
+      - args:
+        - --overwrite
+        command:
         - envoy-gateway
         - certgen
         env:

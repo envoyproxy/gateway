@@ -17,7 +17,7 @@ import (
 )
 
 func init() {
-	ConformanceTests = append(ConformanceTests, JWTTest, OptionalJWTTest)
+	ConformanceTests = append(ConformanceTests, JWTTest, OptionalJWTTest, LocalJWKSInlineTest, LocalJWKSValueRefTest)
 }
 
 const (
@@ -174,4 +174,79 @@ var OptionalJWTTest = suite.ConformanceTest{
 			})
 		}
 	},
+}
+
+var LocalJWKSInlineTest = suite.ConformanceTest{
+	ShortName:   "LocalJWKSInline",
+	Description: "Test local JWKS inline",
+	Manifests:   []string{"testdata/jwt-local-jwks-inline.yaml"},
+	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
+		testLocalJWKS(t, suite)
+	},
+}
+
+var LocalJWKSValueRefTest = suite.ConformanceTest{
+	ShortName:   "LocalJWKSValueRef",
+	Description: "Test local JWKS valueRef",
+	Manifests:   []string{"testdata/jwt-local-jwks-valueRef.yaml"},
+	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
+		testLocalJWKS(t, suite)
+	},
+}
+
+func testLocalJWKS(t *testing.T, suite *suite.ConformanceTestSuite) {
+	ns := "gateway-conformance-infra"
+	routeNN := types.NamespacedName{Name: "jwt-local-jwks", Namespace: ns}
+	gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
+	gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
+
+	testCases := []http.ExpectedResponse{
+		{
+			TestCaseName: "with a valid JWT",
+			Request: http.Request{
+				Path: "/public",
+				Headers: map[string]string{
+					"Authorization": "Bearer " + v1Token,
+				},
+			},
+			Backend: "infra-backend-v1",
+			Response: http.Response{
+				StatusCode: 200,
+			},
+			Namespace: ns,
+		},
+		{
+			TestCaseName: "with an invalid JWT",
+			Request: http.Request{
+				Path: "/public",
+				Headers: map[string]string{
+					"Authorization": "Bearer " + invalidToken,
+				},
+			},
+			Backend: "infra-backend-v1",
+			Response: http.Response{
+				StatusCode: 401,
+			},
+			Namespace: ns,
+		},
+		{
+			TestCaseName: "omitting JWT",
+			Request: http.Request{
+				Path: "/public",
+			},
+			Backend: "infra-backend-v1",
+			Response: http.Response{
+				StatusCode: 401,
+			},
+			Namespace: ns,
+		},
+	}
+
+	for i := range testCases {
+		tc := testCases[i]
+		t.Run(tc.GetTestCaseName(i), func(t *testing.T) {
+			t.Parallel()
+			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, tc)
+		})
+	}
 }

@@ -111,4 +111,5 @@ To uninstall the chart:
 | kubernetesClusterDomain | string | `"cluster.local"` |  |
 | podDisruptionBudget.minAvailable | int | `0` |  |
 | service.annotations | object | `{}` |  |
+| service.trafficDistribution | string | `""` |  |
 

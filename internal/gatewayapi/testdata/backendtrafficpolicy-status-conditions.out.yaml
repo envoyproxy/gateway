@@ -573,7 +573,8 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /
-        traffic: {}
+        traffic:
+          name: envoy-gateway/target-httproute-in-gateway-1
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4
@@ -612,7 +613,8 @@ xdsIR:
           name: grpcroute-1
           namespace: envoy-gateway
         name: grpcroute/envoy-gateway/grpcroute-1/rule/0/match/0/*
-        traffic: {}
+        traffic:
+          name: envoy-gateway/target-grpcroute-in-gateway-2
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4

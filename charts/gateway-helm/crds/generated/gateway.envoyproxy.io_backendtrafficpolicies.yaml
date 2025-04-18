@@ -678,6 +678,14 @@ spec:
                     LeastRequest load balancers.
                   rule: 'self.type in [''Random'', ''ConsistentHash''] ? !has(self.slowStart)
                     : true '
+              mergeType:
+                description: |-
+                  MergeType determines how this configuration is merged with existing BackendTrafficPolicy
+                  configurations targeting a parent resource. When set, this configuration will be merged
+                  into a parent BackendTrafficPolicy (i.e. the one targeting a Gateway or Listener).
+                  This field cannot be set when targeting a parent resource (Gateway).
+                  If unset, no merging occurs, and only the most specific configuration takes effect.
+                type: string
               proxyProtocol:
                 description: ProxyProtocol enables the Proxy Protocol when communicating
                   with the backend.
@@ -949,7 +957,6 @@ spec:
                         description: |-
                           Shared determines whether the rate limit rules apply across all the policy targets.
                           If set to true, the rule is treated as a common bucket and is shared across all policy targets (xRoutes).
-                          Must have targetRef set to Gateway
                           Default: false.
                         type: boolean
                     required:
@@ -1209,6 +1216,31 @@ spec:
                     type: string
                 required:
                 - type
+                type: object
+              requestBuffer:
+                description: |-
+                  RequestBuffer allows the gateway to buffer and fully receive each request from a client before continuing to send the request
+                  upstream to the backends. This can be helpful to shield your backend servers from slow clients, and also to enforce a maximum size per request
+                  as any requests larger than the buffer size will be rejected.
+
+                  This can have a negative performance impact so should only be enabled when necessary.
+
+                  When enabling this option, you should also configure your connection buffer size to account for these request buffers. There will also be an
+                  increase in memory usage for Envoy that should be accounted for in your deployment settings.
+                properties:
+                  limit:
+                    allOf:
+                    - pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                    - pattern: ^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$
+                    anyOf:
+                    - type: integer
+                    - type: string
+                    description: |-
+                      Limit specifies the maximum allowed size in bytes for each incoming request buffer.
+                      If exceeded, the request will be rejected with HTTP 413 Content Too Large.
+
+                      Accepts values in resource.Quantity format (e.g., "10Mi", "500Ki").
+                    x-kubernetes-int-or-string: true
                 type: object
               responseOverride:
                 description: |-

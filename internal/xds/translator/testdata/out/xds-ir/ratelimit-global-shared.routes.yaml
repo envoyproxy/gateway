@@ -1,0 +1,87 @@
+- ignorePortInHostMatching: true
+  name: first-listener
+  virtualHosts:
+  - domains:
+    - '*'
+    name: first-listener/*
+    routes:
+    - match:
+        path: foo/bar
+      name: first-route
+      route:
+        cluster: first-route-dest
+        rateLimits:
+        - actions:
+          - genericKey:
+              descriptorKey: test-policy-1/test-namespace
+              descriptorValue: test-policy-1/test-namespace
+          - headerValueMatch:
+              descriptorKey: rule-0-match-0
+              descriptorValue: rule-0-match-0
+              expectMatch: true
+              headers:
+              - name: x-user-id
+                stringMatch:
+                  exact: one
+        upgradeConfigs:
+        - upgradeType: websocket
+    - match:
+        path: foo/baz
+      name: second-route
+      route:
+        cluster: second-route-dest
+        rateLimits:
+        - actions:
+          - genericKey:
+              descriptorKey: test-policy-1/test-namespace
+              descriptorValue: test-policy-1/test-namespace
+          - headerValueMatch:
+              descriptorKey: rule-0-match-0
+              descriptorValue: rule-0-match-0
+              expectMatch: true
+              headers:
+              - name: x-user-id
+                stringMatch:
+                  exact: one
+        upgradeConfigs:
+        - upgradeType: websocket
+    - match:
+        path: test
+      name: third-route
+      route:
+        cluster: third-route-dest
+        rateLimits:
+        - actions:
+          - genericKey:
+              descriptorKey: test-policy-2/test-namespace
+              descriptorValue: test-policy-2/test-namespace
+          - headerValueMatch:
+              descriptorKey: rule-0-match-0
+              descriptorValue: rule-0-match-0
+              expectMatch: true
+              headers:
+              - name: x-user-id
+                stringMatch:
+                  exact: two
+        upgradeConfigs:
+        - upgradeType: websocket
+    - match:
+        path: foo/bar
+      name: fourth-route
+      route:
+        cluster: fourth-route-dest
+        rateLimits:
+        - actions:
+          - genericKey:
+              descriptorKey: fourth-route
+              descriptorValue: fourth-route
+          - headerValueMatch:
+              descriptorKey: rule-0-match-0
+              descriptorValue: rule-0-match-0
+              expectMatch: true
+              headers:
+              - name: x-user-id
+                stringMatch:
+                  exact: two
+        upgradeConfigs:
+        - upgradeType: websocket
