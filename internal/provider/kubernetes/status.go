@@ -462,7 +462,7 @@ func (r *gatewayAPIReconciler) subscribeAndUpdateStatus(ctx context.Context, ext
 	}()
 
 	if extensionManagerEnabled {
-		// EnvoyExtensionPolicy object status updater
+		// ExtensionServerPolicy object status updater
 		go func() {
 			message.HandleSubscription(
 				message.Metadata{Runner: string(egv1a1.LogComponentProviderRunner), Message: "extensionserverpolicies-status"},
