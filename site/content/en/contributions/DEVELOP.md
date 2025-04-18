@@ -123,27 +123,6 @@ workarounds to run conformance tests:
 __Note:__  Preface commands with `IMAGE` or replace `TAG` to use a different Envoy Gateway image or tag. If `TAG`
 is unspecified, the short SHA of your current branch is used.
 
-### Debugging the Envoy Config
-
-An easy way to view the envoy config that Envoy Gateway is using is to port-forward to the admin interface port
-(currently `19000`) on the Envoy deployment that corresponds to a Gateway so that it can be accessed locally.
-
-Get the name of the Envoy deployment. The following example is for Gateway `eg` in the `default` namespace:
-
-```shell
-export ENVOY_DEPLOYMENT=$(kubectl get deploy -n envoy-gateway-system --selector=gateway.envoyproxy.io/owning-gateway-namespace=default,gateway.envoyproxy.io/owning-gateway-name=eg -o jsonpath='{.items[0].metadata.name}')
-```
-
-Port forward the admin interface port:
-
-```shell
-kubectl port-forward deploy/${ENVOY_DEPLOYMENT} -n envoy-gateway-system 19000:19000
-```
-
-Now you are able to view the running Envoy configuration by navigating to `127.0.0.1:19000/config_dump`.
-
-There are many other endpoints on the [Envoy admin interface][] that may be helpful when debugging.
-
 ### JWT Testing
 
 An example [JSON Web Token (JWT)][jwt] and [JSON Web Key Set (JWKS)][jwks] are used for the [request authentication][]
@@ -183,7 +162,6 @@ Here are some brief benchmark reports about Envoy Gateway:
 [Kubernetes support]: https://docs.docker.com/desktop/kubernetes/
 [gateway-dev]: https://hub.docker.com/r/envoyproxy/gateway-dev/tags
 [mac_connect]: https://github.com/chipmk/docker-mac-net-connect
-[Envoy admin interface]: https://www.envoyproxy.io/docs/envoy/latest/operations/admin#operations-admin-interface
 [jwt]: https://tools.ietf.org/html/rfc7519
 [jwks]: https://tools.ietf.org/html/rfc7517
 [request authentication]: ../latest/tasks/security/jwt-authentication
