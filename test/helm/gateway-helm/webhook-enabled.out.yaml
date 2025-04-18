@@ -49,7 +49,7 @@ data:
                     - imagePullPolicy: IfNotPresent
                       name: envoy-ratelimit
         shutdownManager:
-          image: docker.io/envoyproxy/gateway-dev:ec2956b6
+          image: docker.io/envoyproxy/gateway-dev:latest
       type: Kubernetes
 ---
 # Source: gateway-helm/templates/envoy-gateway-rbac.yaml
@@ -355,6 +355,30 @@ spec:
     port: 19001
     targetPort: 19001
 ---
+# Source: gateway-helm/templates/envoy-proxy-topology-mutator-service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: gateway-helm-webhook-service
+  namespace: 'envoy-gateway-system'
+  labels:
+    app.kubernetes.io/component: topology-webhook
+    helm.sh/chart: gateway-helm-v0.0.0-latest
+    app.kubernetes.io/name: gateway-helm
+    app.kubernetes.io/instance: gateway-helm
+    app.kubernetes.io/version: "latest"
+    app.kubernetes.io/managed-by: Helm
+spec:
+  ports:
+    - port: 443
+      targetPort: webhook
+      protocol: TCP
+      name: https
+  selector:
+    app.kubernetes.io/component: topology-webhook
+    app.kubernetes.io/name: gateway-helm
+    app.kubernetes.io/instance: gateway-helm
+---
 # Source: gateway-helm/templates/envoy-gateway-deployment.yaml
 apiVersion: apps/v1
 kind: Deployment
@@ -397,8 +421,8 @@ spec:
               fieldPath: metadata.namespace
         - name: KUBERNETES_CLUSTER_DOMAIN
           value: cluster.local
-        image: docker.io/envoyproxy/gateway-dev:ec2956b6
-        imagePullPolicy: IfNotPresent
+        image: docker.io/envoyproxy/gateway-dev:latest
+        imagePullPolicy: Always
         livenessProbe:
           httpGet:
             path: /healthz
@@ -456,6 +480,123 @@ spec:
       - name: certs
         secret:
           secretName: envoy-gateway
+---
+# Source: gateway-helm/templates/envoy-proxy-topology-mutator-deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: topology-webhook
+  namespace: 'envoy-gateway-system'
+  labels:
+    app.kubernetes.io/component: topology-webhook
+    helm.sh/chart: gateway-helm-v0.0.0-latest
+    app.kubernetes.io/name: gateway-helm
+    app.kubernetes.io/instance: gateway-helm
+    app.kubernetes.io/version: "latest"
+    app.kubernetes.io/managed-by: Helm
+spec:
+  replicas: 
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: topology-webhook
+      app.kubernetes.io/name: gateway-helm
+      app.kubernetes.io/instance: gateway-helm
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/component: topology-webhook
+        app.kubernetes.io/name: gateway-helm
+        app.kubernetes.io/instance: gateway-helm
+    spec:
+      automountServiceAccountToken: true
+      containers:
+      - args: ["envoy","topology-webhook"]
+        env:
+          - name: ENVOY_GATEWAY_NAMESPACE
+            valueFrom:
+              fieldRef:
+                apiVersion: v1
+                fieldPath: metadata.namespace
+          - name: KUBERNETES_CLUSTER_DOMAIN
+            value: cluster.local
+        image: docker.io/envoyproxy/gateway-dev:latest
+        imagePullPolicy: Always
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 8081
+          initialDelaySeconds: 15
+          periodSeconds: 20
+        name: envoy-topology-webhook
+        ports:
+          - containerPort: 8443
+            name: webhook
+        readinessProbe:
+          httpGet:
+            path: /readyz
+            port: 8081
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        resources:
+          requests: {}
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+          privileged: false
+          readOnlyRootFilesystem: true
+          runAsGroup: 65534
+          runAsNonRoot: true
+          runAsUser: 65534
+          seccompProfile:
+            type: RuntimeDefault
+        volumeMounts:
+          - mountPath: /certs
+            name: certs
+            readOnly: true
+      imagePullSecrets: []
+      serviceAccountName: envoy-topology-mutator-webhook
+      volumes:
+        - name: certs
+          secret:
+            secretName: envoy-gateway
+---
+# Source: gateway-helm/templates/envoy-proxy-topology-mutator-webhook.yaml
+apiVersion: admissionregistration.k8s.io/v1
+kind: MutatingWebhookConfiguration
+metadata:
+  name: envoy-gateway-topology-webhook
+  labels:
+    app.kubernetes.io/component: topology-webhook
+    helm.sh/chart: gateway-helm-v0.0.0-latest
+    app.kubernetes.io/name: gateway-helm
+    app.kubernetes.io/instance: gateway-helm
+    app.kubernetes.io/version: "latest"
+    app.kubernetes.io/managed-by: Helm
+webhooks:
+  - name: topology.webhook.envoyproxy.io
+    admissionReviewVersions: ["v1"]
+    sideEffects: NoneOnDryRun
+    timeoutSeconds: 5
+    clientConfig:
+      caBundle: 
+      service:
+        name: gateway-helm-webhook-service
+        namespace: 'envoy-gateway-system'
+        path: "/mutate-pod-topology"
+        port: 443
+    rules:
+      - operations: ["CREATE"]
+        apiGroups: [""]
+        apiVersions: ["v1"]
+        resources: ["pods/binding"]
+    namespaceSelector:
+      matchExpressions:
+        - key: webhook.envoyproxy.io/topology-zone-inject
+          operator: In
+          values:
+            - enabled
 ---
 # Source: gateway-helm/templates/certgen-rbac.yaml
 apiVersion: v1
@@ -554,8 +695,8 @@ spec:
               fieldPath: metadata.namespace
         - name: KUBERNETES_CLUSTER_DOMAIN
           value: cluster.local
-        image: docker.io/envoyproxy/gateway-dev:ec2956b6
-        imagePullPolicy: IfNotPresent
+        image: docker.io/envoyproxy/gateway-dev:latest
+        imagePullPolicy: Always
         name: envoy-gateway-certgen
         securityContext:
           allowPrivilegeEscalation: false

@@ -1,5 +1,5 @@
 {{- if .Values.topologyWebhook.enabled }}
-{{ $tls := (lookup "v1" "Secret" .Release.Namespace "envoy-gateway") }}
+{{- $secret := default (dict "data" (dict)) (lookup "v1" "Secret" .Release.Namespace "envoy-gateway") }}
 apiVersion: admissionregistration.k8s.io/v1
 kind: MutatingWebhookConfiguration
 metadata:
@@ -17,7 +17,7 @@ webhooks:
     sideEffects: NoneOnDryRun
     timeoutSeconds: 5
     clientConfig:
-      caBundle: {{ index $tls.data "ca.crt" }}
+      caBundle: {{ default "" (index $secret.data "ca.crt" ) | b64dec }}
       service:
         name: {{ include "eg.webhookService" . }}
         namespace: '{{ .Release.Namespace }}'
