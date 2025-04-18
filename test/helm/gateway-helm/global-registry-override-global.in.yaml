@@ -1,9 +1,8 @@
 global:
+  imageRegistry: "private.registry"
   images:
     envoyGateway:
       image: "docker.io/envoyproxy/gateway-dev:latest"
       pullPolicy: Always
-
-podDisruptionBudget:
-  minAvailable: 1
-  maxUnavailable: 1
+    ratelimit:
+      image: "docker.io/envoyproxy/ratelimit:master"
