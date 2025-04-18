@@ -4,6 +4,9 @@ date: Pending
 breaking changes: |
   Use a dedicated listener port(19003) for envoy proxy readiness
   Uses the envoy JSON formatter for the default access log instead of text formatter.
+  Envoy Gateway would skip xDS snapshot updates in case of errors during xDS translation.
+  When Extension Manager is configured to Fail Open, translation errors are logged and suppressed.
+  When Extension Manager is configured to not Fail Open, EG will no longer replace affected resources. Instead, xDS snapshot update would be skipped.
 
 # Updates addressing vulnerabilities, security flaws, or compliance requirements.
 security updates: |
