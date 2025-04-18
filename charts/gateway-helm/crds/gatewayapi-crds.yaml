@@ -24,7 +24,7 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     api-approved.kubernetes.io: https://github.com/kubernetes-sigs/gateway-api/pull/3328
-    gateway.networking.k8s.io/bundle-version: v1.3.0-rc.1
+    gateway.networking.k8s.io/bundle-version: v1.3.0-rc.2
     gateway.networking.k8s.io/channel: experimental
   creationTimestamp: null
   labels:
@@ -675,7 +675,7 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     api-approved.kubernetes.io: https://github.com/kubernetes-sigs/gateway-api/pull/3328
-    gateway.networking.k8s.io/bundle-version: v1.3.0-rc.1
+    gateway.networking.k8s.io/bundle-version: v1.3.0-rc.2
     gateway.networking.k8s.io/channel: experimental
   creationTimestamp: null
   name: gatewayclasses.gateway.networking.k8s.io
@@ -1195,7 +1195,7 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     api-approved.kubernetes.io: https://github.com/kubernetes-sigs/gateway-api/pull/3328
-    gateway.networking.k8s.io/bundle-version: v1.3.0-rc.1
+    gateway.networking.k8s.io/bundle-version: v1.3.0-rc.2
     gateway.networking.k8s.io/channel: experimental
   creationTimestamp: null
   name: gateways.gateway.networking.k8s.io
@@ -1850,7 +1850,6 @@ spec:
                               - All
                               - Selector
                               - Same
-                              - None
                               type: string
                             selector:
                               description: |-
@@ -3189,7 +3188,6 @@ spec:
                               - All
                               - Selector
                               - Same
-                              - None
                               type: string
                             selector:
                               description: |-
@@ -3905,7 +3903,7 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     api-approved.kubernetes.io: https://github.com/kubernetes-sigs/gateway-api/pull/3328
-    gateway.networking.k8s.io/bundle-version: v1.3.0-rc.1
+    gateway.networking.k8s.io/bundle-version: v1.3.0-rc.2
     gateway.networking.k8s.io/channel: experimental
   creationTimestamp: null
   name: grpcroutes.gateway.networking.k8s.io
@@ -6126,7 +6124,7 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     api-approved.kubernetes.io: https://github.com/kubernetes-sigs/gateway-api/pull/3328
-    gateway.networking.k8s.io/bundle-version: v1.3.0-rc.1
+    gateway.networking.k8s.io/bundle-version: v1.3.0-rc.2
     gateway.networking.k8s.io/channel: experimental
   creationTimestamp: null
   name: httproutes.gateway.networking.k8s.io
@@ -13408,7 +13406,7 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     api-approved.kubernetes.io: https://github.com/kubernetes-sigs/gateway-api/pull/3328
-    gateway.networking.k8s.io/bundle-version: v1.3.0-rc.1
+    gateway.networking.k8s.io/bundle-version: v1.3.0-rc.2
     gateway.networking.k8s.io/channel: experimental
   creationTimestamp: null
   name: referencegrants.gateway.networking.k8s.io
@@ -13601,7 +13599,7 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     api-approved.kubernetes.io: https://github.com/kubernetes-sigs/gateway-api/pull/3328
-    gateway.networking.k8s.io/bundle-version: v1.3.0-rc.1
+    gateway.networking.k8s.io/bundle-version: v1.3.0-rc.2
     gateway.networking.k8s.io/channel: experimental
   creationTimestamp: null
   name: tcproutes.gateway.networking.k8s.io
@@ -14337,7 +14335,7 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     api-approved.kubernetes.io: https://github.com/kubernetes-sigs/gateway-api/pull/3328
-    gateway.networking.k8s.io/bundle-version: v1.3.0-rc.1
+    gateway.networking.k8s.io/bundle-version: v1.3.0-rc.2
     gateway.networking.k8s.io/channel: experimental
   creationTimestamp: null
   name: tlsroutes.gateway.networking.k8s.io
@@ -15136,7 +15134,7 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     api-approved.kubernetes.io: https://github.com/kubernetes-sigs/gateway-api/pull/3328
-    gateway.networking.k8s.io/bundle-version: v1.3.0-rc.1
+    gateway.networking.k8s.io/bundle-version: v1.3.0-rc.2
     gateway.networking.k8s.io/channel: experimental
   creationTimestamp: null
   name: udproutes.gateway.networking.k8s.io
@@ -15872,7 +15870,7 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     api-approved.kubernetes.io: https://github.com/kubernetes-sigs/gateway-api/pull/3328
-    gateway.networking.k8s.io/bundle-version: v1.3.0-rc.1
+    gateway.networking.k8s.io/bundle-version: v1.3.0-rc.2
     gateway.networking.k8s.io/channel: experimental
   creationTimestamp: null
   labels:
@@ -16481,7 +16479,7 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     api-approved.kubernetes.io: https://github.com/kubernetes-sigs/gateway-api/pull/3328
-    gateway.networking.k8s.io/bundle-version: v1.3.0-rc.1
+    gateway.networking.k8s.io/bundle-version: v1.3.0-rc.2
     gateway.networking.k8s.io/channel: experimental
   creationTimestamp: null
   name: xlistenersets.gateway.networking.x-k8s.io
@@ -16652,7 +16650,6 @@ spec:
                               - All
                               - Selector
                               - Same
-                              - None
                               type: string
                             selector:
                               description: |-
@@ -16993,6 +16990,7 @@ spec:
                           > 0 || size(self.options) > 0 : true'
                   required:
                   - name
+                  - port
                   - protocol
                   type: object
                 maxItems: 64
