@@ -74,7 +74,7 @@ httpRoutes:
         message: 'Failed to process route rule 0: failed to validate the RequestMirror
           filter: A valid port number corresponding to a port on the Service must
           be specified.'
-        reason: PortNotSpecified
+        reason: UnsupportedValue
         status: "False"
         type: Accepted
       - lastTransitionTime: null

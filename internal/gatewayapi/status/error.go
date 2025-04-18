@@ -169,20 +169,22 @@ func (m *MultiStatusError) Type() gwapiv1.RouteConditionType {
 	return gwapiv1.RouteConditionResolvedRefs
 }
 
-func isResolvedRefsReason(reason gwapiv1.RouteConditionReason) bool {
-	return reason == gwapiv1.RouteReasonRefNotPermitted ||
-		reason == gwapiv1.RouteReasonInvalidKind ||
-		reason == gwapiv1.RouteReasonBackendNotFound ||
-		reason == gwapiv1.RouteReasonUnsupportedProtocol
+func isAcceptedReason(reason gwapiv1.RouteConditionReason) bool {
+	return reason == gwapiv1.RouteReasonNotAllowedByListeners ||
+		reason == gwapiv1.RouteReasonNoMatchingListenerHostname ||
+		reason == gwapiv1.RouteReasonNoMatchingParent ||
+		reason == gwapiv1.RouteReasonUnsupportedValue
 }
 
 // ConvertToAcceptedReason converts ResolvedRefs reasons to Accepted condition reasons
 // This is used to make the reasons compatible with the Gateway API spec.
 // For example, the BackendRefs validation may return a InvalidBackendRef reason for a Mirror filter validation,
-// but the Mirror filter failure is reflected in the Accepted condition as UnsupportedValue.
+// but this erros should be reflected in the Accepted condition as UnsupportedValue.
 func ConvertToAcceptedReason(reason gwapiv1.RouteConditionReason) gwapiv1.RouteConditionReason {
-	if isResolvedRefsReason(reason) {
-		return gwapiv1.RouteReasonUnsupportedValue
+	if isAcceptedReason(reason) {
+		return reason
 	}
-	return reason
+	// Return UnsupportedValue as the default reason for ResolvedRefs reasons, which is kind of vague and can be used for
+	// any other reasons.
+	return gwapiv1.RouteReasonUnsupportedValue
 }
