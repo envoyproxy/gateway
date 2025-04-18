@@ -24,10 +24,10 @@ const (
 	RouteReasonInvalidBackendFilters gwapiv1.RouteConditionReason = "InvalidBackendFilters"
 
 	// Network configuration related reasons
-	RouteReasonPortNotFound       gwapiv1.RouteConditionReason = "PortNotFound"
-	RouteReasonPortNotSpecified   gwapiv1.RouteConditionReason = "PortNotSpecified"
+	RouteReasonPortNotFound           gwapiv1.RouteConditionReason = "PortNotFound"
+	RouteReasonPortNotSpecified       gwapiv1.RouteConditionReason = "PortNotSpecified"
 	RouteReasonUnsupportedAddressType gwapiv1.RouteConditionReason = "UnsupportedAddressType"
-	RouteReasonInvalidAddress     gwapiv1.RouteConditionReason = "InvalidAddress"
+	RouteReasonInvalidAddress         gwapiv1.RouteConditionReason = "InvalidAddress"
 )
 
 // Error is an error interface that represents errors that need to be reflected
