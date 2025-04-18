@@ -179,7 +179,7 @@ func isAcceptedReason(reason gwapiv1.RouteConditionReason) bool {
 // ConvertToAcceptedReason converts ResolvedRefs reasons to Accepted condition reasons
 // This is used to make the reasons compatible with the Gateway API spec.
 // For example, the BackendRefs validation may return a InvalidBackendRef reason for a Mirror filter validation,
-// but this erros should be reflected in the Accepted condition as UnsupportedValue.
+// but this error should be reflected in the Accepted condition as UnsupportedValue.
 func ConvertToAcceptedReason(reason gwapiv1.RouteConditionReason) gwapiv1.RouteConditionReason {
 	if isAcceptedReason(reason) {
 		return reason
