@@ -123,3 +123,27 @@ certgen:
   rbac:
     annotations: {}
     labels: {}
+
+topologyWebhook:
+  enabled: false
+  annotations: {}
+  tls: {}
+  clusterDnsDomain: cluster.local
+  keepTLSSecret: false
+  service:
+    annotations: {}
+  pod:
+    resources:
+      requests: {}
+    securityContext:
+      allowPrivilegeEscalation: false
+      capabilities:
+        drop:
+          - ALL
+      privileged: false
+      readOnlyRootFilesystem: true
+      runAsNonRoot: true
+      runAsGroup: 65534
+      runAsUser: 65534
+      seccompProfile:
+        type: RuntimeDefault

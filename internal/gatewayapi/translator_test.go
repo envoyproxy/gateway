@@ -132,7 +132,6 @@ func TestTranslate(t *testing.T) {
 								Protocol:   corev1.ProtocolUDP,
 							},
 						},
-						TrafficDistribution: ptr.To("PreferClose"),
 					},
 				}
 				if strings.Contains(inputFile, "enable-zone-discovery") {

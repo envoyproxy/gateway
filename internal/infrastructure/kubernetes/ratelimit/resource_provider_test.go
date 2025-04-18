@@ -121,44 +121,6 @@ func loadServiceAccount() (*corev1.ServiceAccount, error) {
 	return sa, nil
 }
 
-func TestClusterRole(t *testing.T) {
-	cfg, err := config.New(os.Stdout)
-	require.NoError(t, err)
-
-	cfg.EnvoyGateway.RateLimit = &egv1a1.RateLimit{
-		Backend: egv1a1.RateLimitDatabaseBackend{
-			Type: egv1a1.RedisBackendType,
-			Redis: &egv1a1.RateLimitRedisSettings{
-				URL: "redis.redis.svc:6379",
-			},
-		},
-	}
-	r := NewResourceRender(cfg.Namespace, cfg.EnvoyGateway, ownerReferenceUID)
-
-	cr, err := r.ClusterRole()
-	require.NoError(t, err)
-	require.Nil(t, cr)
-}
-
-func TestClusterRoleBinding(t *testing.T) {
-	cfg, err := config.New(os.Stdout)
-	require.NoError(t, err)
-
-	cfg.EnvoyGateway.RateLimit = &egv1a1.RateLimit{
-		Backend: egv1a1.RateLimitDatabaseBackend{
-			Type: egv1a1.RedisBackendType,
-			Redis: &egv1a1.RateLimitRedisSettings{
-				URL: "redis.redis.svc:6379",
-			},
-		},
-	}
-	r := NewResourceRender(cfg.Namespace, cfg.EnvoyGateway, ownerReferenceUID)
-
-	cr, err := r.ClusterRoleBinding()
-	require.NoError(t, err)
-	require.Nil(t, cr)
-}
-
 func TestService(t *testing.T) {
 	cfg, err := config.New(os.Stdout)
 	require.NoError(t, err)

@@ -1328,7 +1328,7 @@ func (t *Translator) processDestination(name string, backendRefContext BackendRe
 		ds = t.processServiceDestinationSetting(name, backendRef.BackendObjectReference, backendNamespace, protocol, resources, envoyProxy)
 		svc := resources.GetService(backendNamespace, string(backendRef.Name))
 		ds.IPFamily = getServiceIPFamily(svc)
-		ds.ZoneAwareRoutingEnabled = isZoneAwareRoutingEnabled(svc, envoyProxy)
+		ds.ZoneAwareRoutingEnabled = isZoneAwareRoutingEnabled(svc)
 
 	case egv1a1.KindBackend:
 		ds = t.processBackendDestinationSetting(name, backendRef.BackendObjectReference, backendNamespace, protocol, resources)
@@ -1478,7 +1478,7 @@ func (t *Translator) processServiceDestinationSetting(
 		Protocol:                protocol,
 		Endpoints:               endpoints,
 		AddressType:             addrType,
-		ZoneAwareRoutingEnabled: isZoneAwareRoutingEnabled(service, envoyProxy),
+		ZoneAwareRoutingEnabled: isZoneAwareRoutingEnabled(service),
 	}
 }
 
@@ -1498,8 +1498,8 @@ func getBackendFilters(routeType gwapiv1.Kind, backendRefContext BackendRefConte
 	return nil
 }
 
-func isZoneAwareRoutingEnabled(svc *corev1.Service, r *egv1a1.EnvoyProxy) bool {
-	if r == nil || !ptr.Deref(r.Spec.EnableZoneDiscovery, false) || svc == nil {
+func isZoneAwareRoutingEnabled(svc *corev1.Service) bool {
+	if svc == nil {
 		return false
 	}
 

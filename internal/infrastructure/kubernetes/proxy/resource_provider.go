@@ -14,7 +14,6 @@ import (
 	autoscalingv2 "k8s.io/api/autoscaling/v2"
 	corev1 "k8s.io/api/core/v1"
 	policyv1 "k8s.io/api/policy/v1"
-	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -50,8 +49,6 @@ type ResourceRender struct {
 	DNSDomain string
 
 	ShutdownManager *egv1a1.ShutdownManager
-
-	InitManager *egv1a1.InitManager
 }
 
 func NewResourceRender(ns, dnsDomain string, infra *ir.ProxyInfra, gateway *egv1a1.EnvoyGateway) *ResourceRender {
@@ -60,7 +57,6 @@ func NewResourceRender(ns, dnsDomain string, infra *ir.ProxyInfra, gateway *egv1
 		DNSDomain:       dnsDomain,
 		infra:           infra,
 		ShutdownManager: gateway.GetEnvoyGatewayProvider().GetEnvoyGatewayKubeProvider().ShutdownManager,
-		InitManager:     gateway.GetEnvoyGatewayProvider().GetEnvoyGatewayKubeProvider().InitManager,
 	}
 }
 
@@ -70,83 +66,6 @@ func (r *ResourceRender) Name() string {
 
 func (r *ResourceRender) LabelSelector() labels.Selector {
 	return labels.SelectorFromSet(r.stableSelector().MatchLabels)
-}
-
-// ClusterRole returns the expected proxy ClusterRole.
-func (r *ResourceRender) ClusterRole() (*rbacv1.ClusterRole, error) {
-	// Only trigger creation when EnableZoneDiscovery is enabled
-	if !ptr.Deref(r.infra.GetProxyConfig().Spec.EnableZoneDiscovery, false) {
-		return nil, nil
-	}
-	// Set the labels based on the owning gateway name.
-	labels := envoyLabels(r.infra.GetProxyMetadata().Labels)
-	if OwningGatewayLabelsAbsent(labels) {
-		return nil, fmt.Errorf("missing owning gateway labels")
-	}
-
-	return &rbacv1.ClusterRole{
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "ClusterRole",
-			APIVersion: "rbac.authorization.k8s.io/v1",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:        r.Name(),
-			Labels:      labels,
-			Annotations: r.infra.GetProxyMetadata().Annotations,
-		},
-		Rules: []rbacv1.PolicyRule{{
-			APIGroups: []string{""},
-			Resources: []string{"nodes"},
-			Verbs:     []string{"get", "list", "watch"},
-		}},
-	}, nil
-}
-
-// ClusterRoleBinding returns the expected proxy ClusterRoleBinding.
-func (r *ResourceRender) ClusterRoleBinding() (*rbacv1.ClusterRoleBinding, error) {
-	// Only trigger creation when EnableZoneDiscovery is enabled
-	if !ptr.Deref(r.infra.GetProxyConfig().Spec.EnableZoneDiscovery, false) {
-		return nil, nil
-	}
-
-	// Set the labels based on the owning gateway name.
-	labels := envoyLabels(r.infra.GetProxyMetadata().Labels)
-	if OwningGatewayLabelsAbsent(labels) {
-		return nil, fmt.Errorf("missing owning gateway labels")
-	}
-
-	clusterRole, err := r.ClusterRole()
-	if err != nil {
-		return nil, err
-	}
-	sa, err := r.ServiceAccount()
-	if err != nil {
-		return nil, err
-	}
-
-	return &rbacv1.ClusterRoleBinding{
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "ClusterRoleBinding",
-			APIVersion: "rbac.authorization.k8s.io/v1",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:        r.Name(),
-			Labels:      labels,
-			Annotations: r.infra.GetProxyMetadata().Annotations,
-		},
-		RoleRef: rbacv1.RoleRef{
-			APIGroup: clusterRole.GroupVersionKind().Group,
-			Kind:     clusterRole.GroupVersionKind().Kind,
-			Name:     clusterRole.Name,
-		},
-		Subjects: []rbacv1.Subject{
-			{
-				Kind:      sa.GroupVersionKind().Kind,
-				Name:      sa.Name,
-				Namespace: sa.Namespace,
-			},
-		},
-	}, nil
 }
 
 // ServiceAccount returns the expected proxy serviceAccount.
@@ -357,12 +276,12 @@ func (r *ResourceRender) Deployment() (*appsv1.Deployment, error) {
 
 	proxyConfig := r.infra.GetProxyConfig()
 	// Get expected bootstrap configurations rendered ProxyContainers
-	containers, err := expectedProxyContainers(r.infra, deploymentConfig.Container, proxyConfig.Spec.EnableZoneDiscovery, proxyConfig.Spec.Shutdown, r.ShutdownManager, r.Namespace, r.DNSDomain)
+	containers, err := expectedProxyContainers(r.infra, deploymentConfig.Container, proxyConfig.Spec.Shutdown, r.ShutdownManager, r.Namespace, r.DNSDomain)
 	if err != nil {
 		return nil, err
 	}
 
-	initContainers := expectedProxyInitContainers(deploymentConfig.Container, proxyConfig.Spec.EnableZoneDiscovery, r.InitManager, deploymentConfig.InitContainers)
+	initContainers := expectedProxyInitContainers(deploymentConfig.InitContainers)
 
 	dpAnnotations := r.infra.GetProxyMetadata().Annotations
 	podAnnotations := r.getPodAnnotations(dpAnnotations, deploymentConfig.Pod)
@@ -397,7 +316,7 @@ func (r *ResourceRender) Deployment() (*appsv1.Deployment, error) {
 					Containers:                    containers,
 					InitContainers:                initContainers,
 					ServiceAccountName:            r.Name(),
-					AutomountServiceAccountToken:  ptr.To(ptr.Deref(proxyConfig.Spec.EnableZoneDiscovery, false)),
+					AutomountServiceAccountToken:  ptr.To(false),
 					TerminationGracePeriodSeconds: expectedTerminationGracePeriodSeconds(proxyConfig.Spec.Shutdown),
 					DNSPolicy:                     corev1.DNSClusterFirst,
 					RestartPolicy:                 corev1.RestartPolicyAlways,
@@ -405,7 +324,7 @@ func (r *ResourceRender) Deployment() (*appsv1.Deployment, error) {
 					SecurityContext:               deploymentConfig.Pod.SecurityContext,
 					Affinity:                      deploymentConfig.Pod.Affinity,
 					Tolerations:                   deploymentConfig.Pod.Tolerations,
-					Volumes:                       expectedVolumes(r.infra.Name, deploymentConfig.Pod, proxyConfig.Spec.EnableZoneDiscovery),
+					Volumes:                       expectedVolumes(r.infra.Name, deploymentConfig.Pod),
 					ImagePullSecrets:              deploymentConfig.Pod.ImagePullSecrets,
 					NodeSelector:                  deploymentConfig.Pod.NodeSelector,
 					TopologySpreadConstraints:     deploymentConfig.Pod.TopologySpreadConstraints,
@@ -454,7 +373,7 @@ func (r *ResourceRender) DaemonSet() (*appsv1.DaemonSet, error) {
 	proxyConfig := r.infra.GetProxyConfig()
 
 	// Get expected bootstrap configurations rendered ProxyContainers
-	containers, err := expectedProxyContainers(r.infra, daemonSetConfig.Container, proxyConfig.Spec.EnableZoneDiscovery, proxyConfig.Spec.Shutdown, r.ShutdownManager, r.Namespace, r.DNSDomain)
+	containers, err := expectedProxyContainers(r.infra, daemonSetConfig.Container, proxyConfig.Spec.Shutdown, r.ShutdownManager, r.Namespace, r.DNSDomain)
 	if err != nil {
 		return nil, err
 	}
@@ -467,9 +386,7 @@ func (r *ResourceRender) DaemonSet() (*appsv1.DaemonSet, error) {
 	if err != nil {
 		return nil, err
 	}
-
-	initContainers := expectedProxyInitContainers(daemonSetConfig.Container, proxyConfig.Spec.EnableZoneDiscovery, r.InitManager, nil)
-
+	
 	daemonSet := &appsv1.DaemonSet{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "DaemonSet",
@@ -489,7 +406,7 @@ func (r *ResourceRender) DaemonSet() (*appsv1.DaemonSet, error) {
 					Labels:      r.getPodLabels(daemonSetConfig.Pod),
 					Annotations: podAnnotations,
 				},
-				Spec: r.getPodSpec(containers, initContainers, daemonSetConfig.Pod, proxyConfig),
+				Spec: r.getPodSpec(containers, nil, daemonSetConfig.Pod, proxyConfig),
 			},
 		},
 	}
@@ -638,7 +555,7 @@ func (r *ResourceRender) getPodSpec(
 		Containers:                    containers,
 		InitContainers:                initContainers,
 		ServiceAccountName:            ExpectedResourceHashedName(r.infra.Name),
-		AutomountServiceAccountToken:  ptr.To(ptr.Deref(proxyConfig.Spec.EnableZoneDiscovery, false)),
+		AutomountServiceAccountToken:  ptr.To(false),
 		TerminationGracePeriodSeconds: expectedTerminationGracePeriodSeconds(proxyConfig.Spec.Shutdown),
 		DNSPolicy:                     corev1.DNSClusterFirst,
 		RestartPolicy:                 corev1.RestartPolicyAlways,
@@ -646,7 +563,7 @@ func (r *ResourceRender) getPodSpec(
 		SecurityContext:               pod.SecurityContext,
 		Affinity:                      pod.Affinity,
 		Tolerations:                   pod.Tolerations,
-		Volumes:                       expectedVolumes(r.infra.Name, pod, proxyConfig.Spec.EnableZoneDiscovery),
+		Volumes:                       expectedVolumes(r.infra.Name, pod),
 		ImagePullSecrets:              pod.ImagePullSecrets,
 		NodeSelector:                  pod.NodeSelector,
 		TopologySpreadConstraints:     pod.TopologySpreadConstraints,

@@ -19,7 +19,6 @@ import (
 	autoscalingv2 "k8s.io/api/autoscaling/v2"
 	corev1 "k8s.io/api/core/v1"
 	policyv1 "k8s.io/api/policy/v1"
-	rbacv1 "k8s.io/api/rbac/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -113,16 +112,6 @@ func newTestInfraWithAnnotationsAndLabels(annotations, labels map[string]string)
 		},
 	}
 
-	return i
-}
-
-func newTestInfraWithZoneDiscovery(enabled bool) *ir.Infra {
-	i := newTestInfra()
-	i.Proxy.Config = &egv1a1.EnvoyProxy{
-		Spec: egv1a1.EnvoyProxySpec{
-			EnableZoneDiscovery: ptr.To(enabled),
-		},
-	}
 	return i
 }
 
@@ -1316,97 +1305,6 @@ func loadServiceAccount(tc string) (*corev1.ServiceAccount, error) {
 	sa := &corev1.ServiceAccount{}
 	_ = yaml.Unmarshal(saYAML, sa)
 	return sa, nil
-}
-
-func TestClusterRole(t *testing.T) {
-	cfg, err := config.New(os.Stdout)
-	require.NoError(t, err)
-	cases := []struct {
-		name  string
-		infra *ir.Infra
-		want  *rbacv1.ClusterRole
-	}{
-		{
-			name:  "default",
-			infra: newTestInfraWithZoneDiscovery(false),
-			want:  nil,
-		}, {
-			name:  "with-zone-discovery",
-			infra: newTestInfraWithZoneDiscovery(true),
-			want: &rbacv1.ClusterRole{
-				TypeMeta: metav1.TypeMeta{
-					APIVersion: "rbac.authorization.k8s.io/v1",
-					Kind:       "ClusterRole",
-				},
-				ObjectMeta: metav1.ObjectMeta{
-					Labels: envoyLabels(newTestInfra().GetProxyInfra().GetProxyMetadata().Labels),
-					Name:   ExpectedResourceHashedName(newTestInfra().GetProxyInfra().Name),
-				},
-				Rules: []rbacv1.PolicyRule{{
-					APIGroups: []string{""},
-					Resources: []string{"nodes"},
-					Verbs:     []string{"get", "list", "watch"},
-				}},
-			},
-		},
-	}
-
-	for _, tc := range cases {
-		t.Run(tc.name, func(t *testing.T) {
-			r := NewResourceRender(cfg.Namespace, cfg.DNSDomain, tc.infra.GetProxyInfra(), cfg.EnvoyGateway)
-			cr, err := r.ClusterRole()
-			require.NoError(t, err)
-			assert.Equal(t, tc.want, cr)
-		})
-	}
-}
-
-func TestClusterRoleBinding(t *testing.T) {
-	cfg, err := config.New(os.Stdout)
-	require.NoError(t, err)
-	cases := []struct {
-		name  string
-		infra *ir.Infra
-		want  *rbacv1.ClusterRoleBinding
-	}{
-		{
-			name:  "default",
-			infra: newTestInfraWithZoneDiscovery(false),
-			want:  nil,
-		}, {
-			name:  "with-zone-discovery",
-			infra: newTestInfraWithZoneDiscovery(true),
-			want: &rbacv1.ClusterRoleBinding{
-				TypeMeta: metav1.TypeMeta{
-					APIVersion: "rbac.authorization.k8s.io/v1",
-					Kind:       "ClusterRoleBinding",
-				},
-				ObjectMeta: metav1.ObjectMeta{
-					Labels: envoyLabels(newTestInfra().GetProxyInfra().GetProxyMetadata().Labels),
-					Name:   ExpectedResourceHashedName(newTestInfra().GetProxyInfra().Name),
-				},
-				RoleRef: rbacv1.RoleRef{
-					APIGroup: "rbac.authorization.k8s.io",
-					Kind:     "ClusterRole",
-					Name:     ExpectedResourceHashedName(newTestInfra().GetProxyInfra().Name),
-				},
-				Subjects: []rbacv1.Subject{{
-					Kind:      rbacv1.ServiceAccountKind,
-					Name:      ExpectedResourceHashedName(newTestInfra().GetProxyInfra().Name),
-					Namespace: cfg.Namespace,
-				}},
-			},
-		},
-	}
-
-	for _, tc := range cases {
-		t.Run(tc.name, func(t *testing.T) {
-			r := NewResourceRender(cfg.Namespace, cfg.DNSDomain, tc.infra.GetProxyInfra(), cfg.EnvoyGateway)
-			cr, err := r.ClusterRoleBinding()
-			require.NoError(t, err)
-			assert.Equal(t, tc.want, cr)
-		})
-	}
 }
 
 func TestPDB(t *testing.T) {

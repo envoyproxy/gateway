@@ -158,16 +158,6 @@ func DefaultShutdownManagerContainerResourceRequirements() *corev1.ResourceRequi
 	}
 }
 
-// DefaultInitManagerContainerResourceRequirements returns a new ResourceRequirements with default settings.
-func DefaultInitManagerContainerResourceRequirements() corev1.ResourceRequirements {
-	return corev1.ResourceRequirements{
-		Requests: corev1.ResourceList{
-			corev1.ResourceCPU:    resource.MustParse(DefaultInitContainerCPUResourceRequests),
-			corev1.ResourceMemory: resource.MustParse(DefaultInitContainerMemoryResourceRequests),
-		},
-	}
-}
-
 // String returns the string representation of the EnvoyFilter type.
 func (f EnvoyFilter) String() string {
 	return string(f)

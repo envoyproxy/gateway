@@ -34,8 +34,6 @@ const (
 	DefaultShutdownManagerMemoryResourceRequests = "32Mi"
 	// DefaultShutdownManagerImage is the default image used for the shutdown manager.
 	DefaultShutdownManagerImage = "docker.io/envoyproxy/gateway-dev:latest"
-	// DefaultInitManagerImage is the default image used for the init manager container.
-	DefaultInitManagerImage = "docker.io/envoyproxy/gateway-dev:latest"
 	// DefaultRateLimitImage is the default image used by ratelimit.
 	DefaultRateLimitImage = "docker.io/envoyproxy/ratelimit:master"
 	// HTTPProtocol is the common-used http protocol.

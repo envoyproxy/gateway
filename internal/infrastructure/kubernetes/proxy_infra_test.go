@@ -17,11 +17,9 @@ import (
 	"github.com/stretchr/testify/require"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	rbacv1 "k8s.io/api/rbac/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
@@ -118,9 +116,6 @@ func TestCreateProxyInfra(t *testing.T) {
 	infraWithLabels := ir.NewInfra()
 	infraWithLabels.GetProxyInfra().GetProxyMetadata().Labels = labels
 
-	infraWithZoneDiscovery := newTestInfraWithZoneDiscovery(labels)
-
-	fmt.Fprintf(os.Stderr, "zone-discovery: %v", ptr.Deref(infraWithLabels.Proxy.GetProxyConfig().Spec.EnableZoneDiscovery, false))
 	testCases := []struct {
 		name   string
 		in     *ir.Infra
@@ -148,11 +143,6 @@ func TestCreateProxyInfra(t *testing.T) {
 			},
 			expect: false,
 		},
-		{
-			name:   "infra-with-zone-discovery",
-			in:     infraWithZoneDiscovery,
-			expect: true,
-		},
 	}
 
 	for _, tc := range testCases {
@@ -174,30 +164,6 @@ func TestCreateProxyInfra(t *testing.T) {
 					},
 				}
 				require.NoError(t, kube.Client.Get(context.Background(), client.ObjectKeyFromObject(sa), sa))
-
-				cr := &rbacv1.ClusterRole{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: proxy.ExpectedResourceHashedName(tc.in.Proxy.Name),
-					},
-				}
-				err = kube.Client.Get(context.Background(), client.ObjectKeyFromObject(cr), cr)
-				if ptr.Deref(tc.in.Proxy.GetProxyConfig().Spec.EnableZoneDiscovery, false) {
-					require.NoError(t, err)
-				} else {
-					require.True(t, kerrors.IsNotFound(err))
-				}
-
-				crb := &rbacv1.ClusterRoleBinding{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: proxy.ExpectedResourceHashedName(tc.in.Proxy.Name),
-					},
-				}
-				err = kube.Client.Get(context.Background(), client.ObjectKeyFromObject(crb), crb)
-				if ptr.Deref(tc.in.Proxy.GetProxyConfig().Spec.EnableZoneDiscovery, false) {
-					require.NoError(t, err)
-				} else {
-					require.True(t, kerrors.IsNotFound(err))
-				}
 
 				cm := &corev1.ConfigMap{
 					ObjectMeta: metav1.ObjectMeta{
@@ -227,17 +193,6 @@ func TestCreateProxyInfra(t *testing.T) {
 	}
 }
 
-func newTestInfraWithZoneDiscovery(labels map[string]string) *ir.Infra {
-	i := ir.NewInfra()
-	i.Proxy.Config = &egv1a1.EnvoyProxy{
-		Spec: egv1a1.EnvoyProxySpec{
-			EnableZoneDiscovery: ptr.To(true),
-		},
-	}
-	i.Proxy.GetProxyMetadata().Labels = labels
-	return i
-}
-
 func TestDeleteProxyInfra(t *testing.T) {
 	testCases := []struct {
 		name   string
@@ -252,11 +207,6 @@ func TestDeleteProxyInfra(t *testing.T) {
 		{
 			name:   "default infra",
 			in:     ir.NewInfra(),
-			expect: true,
-		},
-		{
-			name:   "infra with zone discovery",
-			in:     newTestInfraWithZoneDiscovery(map[string]string{}),
 			expect: true,
 		},
 	}

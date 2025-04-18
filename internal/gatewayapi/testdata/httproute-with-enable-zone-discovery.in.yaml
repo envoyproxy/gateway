@@ -4,8 +4,6 @@ envoyProxyForGatewayClass:
   metadata:
     namespace: envoy-gateway-system
     name: test
-  spec:
-    enableZoneDiscovery: true
 gateways:
   - apiVersion: gateway.networking.k8s.io/v1
     kind: Gateway

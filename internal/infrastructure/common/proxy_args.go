@@ -8,10 +8,7 @@ package common
 import (
 	"fmt"
 
-	"k8s.io/utils/ptr"
-
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
-	"github.com/envoyproxy/gateway/internal/cmd/envoy"
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/xds/bootstrap"
 )
@@ -27,7 +24,6 @@ func getIPFamily(infra *ir.ProxyInfra) *egv1a1.IPFamily {
 // BuildProxyArgs builds command arguments for proxy infrastructure.
 func BuildProxyArgs(
 	infra *ir.ProxyInfra,
-	enableZoneDiscovery *bool,
 	shutdownConfig *egv1a1.ShutdownConfig,
 	bootstrapConfigOptions *bootstrap.RenderBootstrapConfigOptions,
 	serviceNode string,
@@ -77,11 +73,6 @@ func BuildProxyArgs(
 		drainTimeout = shutdownConfig.DrainTimeout.Seconds()
 	}
 	args = append(args, fmt.Sprintf("--drain-time-s %.0f", drainTimeout))
-
-	if ptr.Deref(enableZoneDiscovery, false) {
-		configPath := fmt.Sprintf("%s/%s", envoy.DefaultEnvoyInitConfigDir, envoy.DefaultEnvoyInitConfigFilename)
-		args = append(args, fmt.Sprintf("-c %s", configPath))
-	}
 
 	if infra.Config != nil {
 		args = append(args, infra.Config.Spec.ExtraArgs...)

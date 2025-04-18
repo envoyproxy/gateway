@@ -187,30 +187,6 @@ rules:
   verbs:
   - update
 ---
-# Source: gateway-helm/templates/infra-manager-rbac.yaml
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRole
-metadata:
-  name: gateway-helm-infra-manager
-  labels:
-    helm.sh/chart: gateway-helm-v0.0.0-latest
-    app.kubernetes.io/name: gateway-helm
-    app.kubernetes.io/instance: gateway-helm
-    app.kubernetes.io/version: "latest"
-    app.kubernetes.io/managed-by: Helm
-rules:
-  - apiGroups:
-      - rbac.authorization.k8s.io
-    resources:
-      - clusterroles
-      - clusterrolebindings
-    verbs:
-      - create
-      - get
-      - delete
-      - deletecollection
-      - patch
----
 # Source: gateway-helm/templates/envoy-gateway-rbac.yaml
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
@@ -224,26 +200,6 @@ subjects:
 - kind: ServiceAccount
   name: 'envoy-gateway'
   namespace: 'envoy-gateway-system'
----
-# Source: gateway-helm/templates/infra-manager-rbac.yaml
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRoleBinding
-metadata:
-  name: gateway-helm-infra-manager
-  labels:
-    helm.sh/chart: gateway-helm-v0.0.0-latest
-    app.kubernetes.io/name: gateway-helm
-    app.kubernetes.io/instance: gateway-helm
-    app.kubernetes.io/version: "latest"
-    app.kubernetes.io/managed-by: Helm
-roleRef:
-  apiGroup: rbac.authorization.k8s.io
-  kind: ClusterRole
-  name: 'gateway-helm-infra-manager'
-subjects:
-  - kind: ServiceAccount
-    name: 'envoy-gateway'
-    namespace: 'envoy-gateway-system'
 ---
 # Source: gateway-helm/templates/infra-manager-rbac.yaml
 apiVersion: rbac.authorization.k8s.io/v1

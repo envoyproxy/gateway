@@ -10,10 +10,8 @@ import (
 	"path/filepath"
 
 	corev1 "k8s.io/api/core/v1"
-	resource2 "k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/utils/ptr"
-	v1 "sigs.k8s.io/gateway-api/conformance/apis/v1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/cmd/envoy"
@@ -31,7 +29,8 @@ const (
 	// envoyNsEnvVar is the name of the Envoy Gateway namespace environment variable.
 	envoyNsEnvVar = "ENVOY_GATEWAY_NAMESPACE"
 	// envoyPodEnvVar is the name of the Envoy pod name environment variable.
-	envoyPodEnvVar = "ENVOY_POD_NAME"
+	envoyPodEnvVar  = "ENVOY_POD_NAME"
+	envoyZoneEnvVar = "ENVOY_SERVICE_ZONE"
 )
 
 // ExpectedResourceHashedName returns expected resource hashed name including up to the 48 characters of the original name.
@@ -82,72 +81,16 @@ func enablePrometheus(infra *ir.ProxyInfra) bool {
 
 // expectedProxyInitContainers returns expected proxy init containers.
 func expectedProxyInitContainers(
-	containerSpec *egv1a1.KubernetesContainerSpec,
-	enableZoneDiscovery *bool,
-	initManager *egv1a1.InitManager,
 	extraContainers []corev1.Container,
 ) []corev1.Container {
 	var containers []corev1.Container
-	if ptr.Deref(enableZoneDiscovery, false) {
-		containers = []corev1.Container{
-			{
-				Name:            "init",
-				Image:           expectedInitManagerImage(initManager),
-				ImagePullPolicy: ptr.Deref(initManager, egv1a1.InitManager{}).ImagePullPolicy,
-				Command:         []string{"envoy-gateway"},
-				Args:            []string{"envoy", "init"},
-				Env: []corev1.EnvVar{{
-					Name: "NODE_NAME",
-					ValueFrom: &corev1.EnvVarSource{
-						FieldRef: &corev1.ObjectFieldSelector{
-							APIVersion: v1.Version,
-							FieldPath:  "spec.nodeName",
-						},
-					},
-				}},
-				Resources:       egv1a1.DefaultInitManagerContainerResourceRequirements(),
-				SecurityContext: expectedInitManagerSecurityContext(containerSpec),
-				VolumeMounts: []corev1.VolumeMount{
-					{
-						Name:      envoy.DefaultEnvoyInitVolumeName,
-						ReadOnly:  false,
-						MountPath: envoy.DefaultEnvoyInitConfigDir,
-					},
-				},
-			},
-		}
-	}
 	containers = append(containers, extraContainers...)
 	return containers
-}
-
-func expectedInitManagerImage(initManager *egv1a1.InitManager) string {
-	if initManager != nil && initManager.Image != nil {
-		return *initManager.Image
-	}
-	return egv1a1.DefaultInitManagerImage
-}
-
-func expectedInitManagerSecurityContext(containerSpec *egv1a1.KubernetesContainerSpec) *corev1.SecurityContext {
-	if containerSpec != nil && containerSpec.SecurityContext != nil {
-		return containerSpec.SecurityContext
-	}
-
-	sc := resource.DefaultSecurityContext()
-
-	// run as non-root user
-	sc.RunAsGroup = ptr.To(int64(65532))
-	sc.RunAsUser = ptr.To(int64(65532))
-
-	// InitManager creates a file to initialize Envoy locality so it needs file write permission.
-	sc.ReadOnlyRootFilesystem = nil
-	return sc
 }
 
 // expectedProxyContainers returns expected proxy containers.
 func expectedProxyContainers(infra *ir.ProxyInfra,
 	containerSpec *egv1a1.KubernetesContainerSpec,
-	enableZoneDiscovery *bool,
 	shutdownConfig *egv1a1.ShutdownConfig, shutdownManager *egv1a1.ShutdownManager,
 	namespace, dnsDomain string,
 ) ([]corev1.Container, error) {
@@ -185,7 +128,7 @@ func expectedProxyContainers(infra *ir.ProxyInfra,
 		XdsServerHost:    ptr.To(fmt.Sprintf("%s.%s.svc.%s", config.EnvoyGatewayServiceName, namespace, dnsDomain)),
 	}
 
-	args, err := common.BuildProxyArgs(infra, enableZoneDiscovery, shutdownConfig, bootstrapConfigOptions, fmt.Sprintf("$(%s)", envoyPodEnvVar))
+	args, err := common.BuildProxyArgs(infra, shutdownConfig, bootstrapConfigOptions, fmt.Sprintf("$(%s)", envoyPodEnvVar))
 	if err != nil {
 		return nil, err
 	}
@@ -201,7 +144,7 @@ func expectedProxyContainers(infra *ir.ProxyInfra,
 			Resources:                *containerSpec.Resources,
 			SecurityContext:          expectedEnvoySecurityContext(containerSpec),
 			Ports:                    ports,
-			VolumeMounts:             expectedContainerVolumeMounts(containerSpec, enableZoneDiscovery),
+			VolumeMounts:             expectedContainerVolumeMounts(containerSpec),
 			TerminationMessagePolicy: corev1.TerminationMessageReadFile,
 			TerminationMessagePath:   "/dev/termination-log",
 			StartupProbe: &corev1.Probe{
@@ -350,7 +293,7 @@ func expectedShutdownPreStopCommand(cfg *egv1a1.ShutdownConfig) []string {
 }
 
 // expectedContainerVolumeMounts returns expected proxy container volume mounts.
-func expectedContainerVolumeMounts(containerSpec *egv1a1.KubernetesContainerSpec, enableZoneDiscovery *bool) []corev1.VolumeMount {
+func expectedContainerVolumeMounts(containerSpec *egv1a1.KubernetesContainerSpec) []corev1.VolumeMount {
 	volumeMounts := []corev1.VolumeMount{
 		{
 			Name:      "certs",
@@ -362,18 +305,12 @@ func expectedContainerVolumeMounts(containerSpec *egv1a1.KubernetesContainerSpec
 			MountPath: "/sds",
 		},
 	}
-	if ptr.Deref(enableZoneDiscovery, false) {
-		volumeMounts = append(volumeMounts, corev1.VolumeMount{
-			Name:      envoy.DefaultEnvoyInitVolumeName,
-			MountPath: envoy.DefaultEnvoyInitConfigDir,
-		})
-	}
 
 	return resource.ExpectedContainerVolumeMounts(containerSpec, volumeMounts)
 }
 
 // expectedVolumes returns expected proxy deployment volumes.
-func expectedVolumes(name string, pod *egv1a1.KubernetesPodSpec, enableZoneDiscovery *bool) []corev1.Volume {
+func expectedVolumes(name string, pod *egv1a1.KubernetesPodSpec) []corev1.Volume {
 	volumes := []corev1.Volume{
 		{
 			Name: "certs",
@@ -408,17 +345,6 @@ func expectedVolumes(name string, pod *egv1a1.KubernetesPodSpec, enableZoneDisco
 		},
 	}
 
-	if ptr.Deref(enableZoneDiscovery, false) {
-		volumes = append(volumes, corev1.Volume{
-			Name: envoy.DefaultEnvoyInitVolumeName,
-			VolumeSource: corev1.VolumeSource{
-				EmptyDir: &corev1.EmptyDirVolumeSource{
-					SizeLimit: ptr.To(resource2.MustParse("1Mi")),
-				},
-			},
-		})
-	}
-
 	return resource.ExpectedVolumes(pod, volumes)
 }
 
@@ -440,6 +366,15 @@ func expectedContainerEnv(containerSpec *egv1a1.KubernetesContainerSpec) []corev
 				FieldRef: &corev1.ObjectFieldSelector{
 					APIVersion: "v1",
 					FieldPath:  "metadata.name",
+				},
+			},
+		},
+		{
+			Name: envoyZoneEnvVar,
+			ValueFrom: &corev1.EnvVarSource{
+				FieldRef: &corev1.ObjectFieldSelector{
+					APIVersion: "v1",
+					FieldPath:  fmt.Sprintf("metadata.labels['%s']", corev1.LabelTopologyZone),
 				},
 			},
 		},

@@ -52,16 +52,6 @@ func deploymentWithSelectorAndLabel(deploy *appsv1.Deployment, selector *metav1.
 	return dCopy
 }
 
-func deploymentWithZoneDiscovery(cfg *config.Server, labels map[string]string) *appsv1.Deployment {
-	infra := newTestInfraWithZoneDiscovery(labels)
-	r := proxy.NewResourceRender(cfg.Namespace, cfg.DNSDomain, infra.GetProxyInfra(), cfg.EnvoyGateway)
-	dep, err := r.Deployment()
-	if err != nil {
-		panic(err)
-	}
-	return dep
-}
-
 func TestCreateOrUpdateProxyDeployment(t *testing.T) {
 	cfg, err := config.New(os.Stdout)
 	require.NoError(t, err)
@@ -94,12 +84,6 @@ func TestCreateOrUpdateProxyDeployment(t *testing.T) {
 			in:      infra,
 			current: deploy,
 			want:    deploy,
-		},
-		{
-			name:    "zone discovery enabled",
-			in:      newTestInfraWithZoneDiscovery(labels),
-			current: deploy,
-			want:    deploymentWithZoneDiscovery(cfg, labels),
 		},
 		{
 			name: "update deployment image",

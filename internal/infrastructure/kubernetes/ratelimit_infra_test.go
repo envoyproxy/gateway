@@ -12,8 +12,6 @@ import (
 	"github.com/stretchr/testify/require"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	rbacv1 "k8s.io/api/rbac/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -161,22 +159,6 @@ func TestCreateRateLimitInfra(t *testing.T) {
 					},
 				}
 				require.NoError(t, kube.Client.Get(context.Background(), client.ObjectKeyFromObject(sa), sa))
-
-				cr := &rbacv1.ClusterRole{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: ratelimit.InfraName,
-					},
-				}
-				err = kube.Client.Get(context.Background(), client.ObjectKeyFromObject(cr), cr)
-				require.True(t, errors.IsNotFound(err))
-
-				crb := &rbacv1.ClusterRole{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: ratelimit.InfraName,
-					},
-				}
-				err = kube.Client.Get(context.Background(), client.ObjectKeyFromObject(crb), crb)
-				require.True(t, errors.IsNotFound(err))
 
 				deploy := &appsv1.Deployment{
 					ObjectMeta: metav1.ObjectMeta{

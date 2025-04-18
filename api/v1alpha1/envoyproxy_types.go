@@ -93,13 +93,6 @@ type EnvoyProxySpec struct {
 	// +optional
 	Shutdown *ShutdownConfig `json:"shutdown,omitempty"`
 
-	// EnableZoneDiscovery defines whether to enable service zone discovery via
-	// topology.kubernetes.io/zone label on the underlying node
-	// Default: false
-	//
-	// +optional
-	EnableZoneDiscovery *bool `json:"enableZoneDiscovery,omitempty"`
-
 	// FilterOrder defines the order of filters in the Envoy proxy's HTTP filter chain.
 	// The FilterPosition in the list will be applied in the order they are defined.
 	// If unspecified, the default filter order is applied.

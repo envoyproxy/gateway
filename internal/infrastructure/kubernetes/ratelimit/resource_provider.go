@@ -14,7 +14,6 @@ import (
 	autoscalingv2 "k8s.io/api/autoscaling/v2"
 	corev1 "k8s.io/api/core/v1"
 	policyv1 "k8s.io/api/policy/v1"
-	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
@@ -190,18 +189,6 @@ func (r *ResourceRender) ServiceAccount() (*corev1.ServiceAccount, error) {
 	}
 
 	return sa, nil
-}
-
-// ClusterRole returns the expected rate limit ClusterRole.
-// not implemented
-func (r *ResourceRender) ClusterRole() (*rbacv1.ClusterRole, error) {
-	return nil, nil
-}
-
-// ClusterRoleBinding returns the expected rate limit ClusterRoleBinding.
-// not implemented
-func (r *ResourceRender) ClusterRoleBinding() (*rbacv1.ClusterRoleBinding, error) {
-	return nil, nil
 }
 
 // DeploymentSpec returns the `Deployment` sets spec.

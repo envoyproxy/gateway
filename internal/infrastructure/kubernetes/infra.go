@@ -13,7 +13,6 @@ import (
 	autoscalingv2 "k8s.io/api/autoscaling/v2"
 	corev1 "k8s.io/api/core/v1"
 	policyv1 "k8s.io/api/policy/v1"
-	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -33,8 +32,6 @@ var _ ResourceRender = &ratelimit.ResourceRender{}
 type ResourceRender interface {
 	Name() string
 	LabelSelector() labels.Selector
-	ClusterRole() (*rbacv1.ClusterRole, error)
-	ClusterRoleBinding() (*rbacv1.ClusterRoleBinding, error)
 	ServiceAccount() (*corev1.ServiceAccount, error)
 	Service() (*corev1.Service, error)
 	ConfigMap() (*corev1.ConfigMap, error)
@@ -87,14 +84,6 @@ func (i *Infra) createOrUpdate(ctx context.Context, r ResourceRender) error {
 		return fmt.Errorf("failed to create or update serviceaccount %s/%s: %w", i.Namespace, r.Name(), err)
 	}
 
-	if err := i.createOrUpdateClusterRole(ctx, r); err != nil {
-		return fmt.Errorf("failed to create or update clusterrole %s/%s: %w", i.Namespace, r.Name(), err)
-	}
-
-	if err := i.createOrUpdateClusterRoleBinding(ctx, r); err != nil {
-		return fmt.Errorf("failed to create or update clusterrolebinding %s/%s: %w", i.Namespace, r.Name(), err)
-	}
-
 	if err := i.createOrUpdateConfigMap(ctx, r); err != nil {
 		return fmt.Errorf("failed to create or update configmap %s/%s: %w", i.Namespace, r.Name(), err)
 	}
@@ -126,14 +115,6 @@ func (i *Infra) createOrUpdate(ctx context.Context, r ResourceRender) error {
 func (i *Infra) delete(ctx context.Context, r ResourceRender) error {
 	if err := i.deleteServiceAccount(ctx, r); err != nil {
 		return fmt.Errorf("failed to delete serviceaccount %s/%s: %w", i.Namespace, r.Name(), err)
-	}
-
-	if err := i.deleteClusterRole(ctx, r); err != nil {
-		return fmt.Errorf("failed to delete clusterrole %s/%s: %w", i.Namespace, r.Name(), err)
-	}
-
-	if err := i.deleteClusterRoleBinding(ctx, r); err != nil {
-		return fmt.Errorf("failed to delete clusterrolebinding %s/%s: %w", i.Namespace, r.Name(), err)
 	}
 
 	if err := i.deleteConfigMap(ctx, r); err != nil {

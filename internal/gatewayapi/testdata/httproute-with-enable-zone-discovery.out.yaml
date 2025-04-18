@@ -97,7 +97,6 @@ infraIR:
           name: test
           namespace: envoy-gateway-system
         spec:
-          enableZoneDiscovery: true
           logging: {}
         status: {}
       listeners:
