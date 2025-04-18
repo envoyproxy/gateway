@@ -48,7 +48,7 @@ var ESResilience = suite.ResilienceTest{
 
 		ap.MustApplyWithCleanup(t, suite.Client, suite.TimeoutConfig, "testdata/route_for_extension_manager.yaml", true)
 
-		t.Run("Verify Snapshot Preservation after XDS translation error when using failOpen mode", func(t *testing.T) {
+		t.Run("Verify Snapshot Preservation after XDS translation error", func(t *testing.T) {
 			ctx := context.Background()
 
 			ns := "gateway-resilience"
