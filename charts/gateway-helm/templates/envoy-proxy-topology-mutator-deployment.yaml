@@ -32,41 +32,41 @@ spec:
       {{- end }}
       automountServiceAccountToken: true
       containers:
-        - args: ["envoy","topology-webhook"]
-          env:
-            - name: ENVOY_GATEWAY_NAMESPACE
-              valueFrom:
-                fieldRef:
-                  apiVersion: v1
-                  fieldPath: metadata.namespace
-            - name: KUBERNETES_CLUSTER_DOMAIN
-              value: {{ .Values.kubernetesClusterDomain }}
-          image: {{ include "eg.image" . }}
-          imagePullPolicy: {{ include "eg.image.pullPolicy" . }}
-          livenessProbe:
-            httpGet:
-              path: /healthz
-              port: 8081
-            initialDelaySeconds: 15
-            periodSeconds: 20
-          name: envoy-topology-webhook
-          ports:
-            - containerPort: 8443
-              name: webhook
-          readinessProbe:
-            httpGet:
-              path: /readyz
-              port: 8081
-            initialDelaySeconds: 5
-            periodSeconds: 10
-          resources:
-            {{- toYaml .Values.topologyWebhook.pod.resources | nindent 10 }}
-          securityContext:
-            {{- toYaml .Values.topologyWebhook.pod.securityContext | nindent 10 }}
-          volumeMounts:
-            - mountPath: /certs
-              name: certs
-              readOnly: true
+      - args: ["envoy","topology-webhook"]
+        env:
+          - name: ENVOY_GATEWAY_NAMESPACE
+            valueFrom:
+              fieldRef:
+                apiVersion: v1
+                fieldPath: metadata.namespace
+          - name: KUBERNETES_CLUSTER_DOMAIN
+            value: {{ .Values.kubernetesClusterDomain }}
+        image: {{ include "eg.image" . }}
+        imagePullPolicy: {{ include "eg.image.pullPolicy" . }}
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 8081
+          initialDelaySeconds: 15
+          periodSeconds: 20
+        name: envoy-topology-webhook
+        ports:
+          - containerPort: 8443
+            name: webhook
+        readinessProbe:
+          httpGet:
+            path: /readyz
+            port: 8081
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        resources:
+          {{- toYaml .Values.topologyWebhook.pod.resources | nindent 10 }}
+        securityContext:
+          {{- toYaml .Values.topologyWebhook.pod.securityContext | nindent 10 }}
+        volumeMounts:
+          - mountPath: /certs
+            name: certs
+            readOnly: true
       {{- include "eg.image.pullSecrets" . | nindent 6 }}
       {{- with .Values.topologyWebhook.pod.nodeSelector }}
       nodeSelector:
@@ -87,5 +87,5 @@ spec:
       volumes:
         - name: certs
           secret:
-            secretName: {{- include "eg.webhookCertSecret" . }}
+            secretName: envoy-gateway
 {{- end }}
