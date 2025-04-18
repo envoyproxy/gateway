@@ -239,12 +239,12 @@ func (t *Translator) validateBackendPort(backendRef *gwapiv1a2.BackendRef, paren
 			route.GetGeneration(),
 			gwapiv1.RouteConditionResolvedRefs,
 			metav1.ConditionFalse,
-			gwapiv1.RouteReasonUnsupportedValue,
+			status.RouteReasonPortNotSpecified,
 			"A valid port number corresponding to a port on the Service must be specified",
 		)
 		return status.NewRouteStatusError(
 			errors.New("A valid port number corresponding to a port on the Service must be specified"),
-			gwapiv1.RouteReasonUnsupportedValue)
+			status.RouteReasonPortNotSpecified)
 	}
 	return nil
 }

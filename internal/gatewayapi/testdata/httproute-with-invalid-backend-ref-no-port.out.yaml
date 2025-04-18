@@ -68,7 +68,7 @@ httpRoutes:
       - lastTransitionTime: null
         message: 'Failed to process route rule 0 backendRef 0: A valid port number
           corresponding to a port on the Service must be specified.'
-        reason: UnsupportedValue
+        reason: PortNotSpecified
         status: "False"
         type: ResolvedRefs
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
