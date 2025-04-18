@@ -529,4 +529,3 @@ func Test_Integration_RetryPolicy_MaxAttempts(t *testing.T) {
 		})
 	}
 }
-
