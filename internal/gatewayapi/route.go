@@ -127,7 +127,7 @@ func (t *Translator) processHTTPRouteParentRefs(httpRoute *HTTPRouteContext, res
 			status.SetRouteStatusCondition(routeStatus,
 				parentRef.routeParentStatusIdx,
 				httpRoute.GetGeneration(),
-				gwapiv1.RouteConditionResolvedRefs,
+				err.Type(),
 				metav1.ConditionFalse,
 				err.Reason(),
 				status.Error2ConditionMsg(err),
@@ -198,11 +198,10 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 	for ruleIdx, rule := range httpRoute.Spec.Rules {
 		httpFiltersContext, err := t.ProcessHTTPFilters(parentRef, httpRoute, rule.Filters, ruleIdx, resources)
 		if err != nil {
-			// TODO: zhaohuabing should we set Accepted condition instead of Resolved for failed HTTPFilters?
 			errs.Add(status.NewRouteStatusError(
 				fmt.Errorf("failed to process route rule %d: %w", ruleIdx, err),
 				err.Reason(),
-			))
+			).WithType(gwapiv1.RouteConditionAccepted))
 			continue
 		}
 
@@ -213,7 +212,7 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 			errs.Add(status.NewRouteStatusError(
 				fmt.Errorf("failed to process route rule %d: %w", ruleIdx, err),
 				err.Reason(),
-			))
+			).WithType(gwapiv1.RouteConditionAccepted))
 			continue
 		}
 

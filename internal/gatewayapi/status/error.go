@@ -35,6 +35,7 @@ const (
 type Error interface {
 	error
 	Reason() gwapiv1.RouteConditionReason
+	Type() gwapiv1.RouteConditionType
 }
 
 // RouteStatusError represents an error that needs to be reflected in the status of an xRoute.
@@ -42,6 +43,7 @@ type Error interface {
 type RouteStatusError struct {
 	Wrapped              error
 	RouteConditionReason gwapiv1.RouteConditionReason
+	RouteConditionType   gwapiv1.RouteConditionType
 }
 
 // NewRouteStatusError creates a new RouteStatusError with the given wrapped error and route condition reason.
@@ -50,6 +52,11 @@ func NewRouteStatusError(wrapped error, reason gwapiv1.RouteConditionReason) *Ro
 		Wrapped:              wrapped,
 		RouteConditionReason: reason,
 	}
+}
+
+func (s *RouteStatusError) WithType(t gwapiv1.RouteConditionType) *RouteStatusError {
+	s.RouteConditionType = t
+	return s
 }
 
 // Error returns the string representation of the error.
@@ -70,6 +77,15 @@ func (s *RouteStatusError) Reason() gwapiv1.RouteConditionReason {
 		return ""
 	}
 	return s.RouteConditionReason
+}
+
+// Type returns the route condition type associated with this error.
+func (s *RouteStatusError) Type() gwapiv1.RouteConditionType {
+	// Default to ResolvedRefs because it's the most common type.
+	if s == nil {
+		return gwapiv1.RouteConditionResolvedRefs
+	}
+	return s.RouteConditionType
 }
 
 // MultiStatusError represents a collection of status errors that occurred during processing.
@@ -137,4 +153,16 @@ func (m *MultiStatusError) Reason() gwapiv1.RouteConditionReason {
 		reasonList = append(reasonList, reason)
 	}
 	return gwapiv1.RouteConditionReason(strings.Join(reasonList, ", "))
+}
+
+func (m *MultiStatusError) Type() gwapiv1.RouteConditionType {
+	if m == nil || len(m.errs) == 0 {
+		return gwapiv1.RouteConditionResolvedRefs
+	}
+	for _, err := range m.errs {
+		if err.Type() == gwapiv1.RouteConditionAccepted {
+			return gwapiv1.RouteConditionAccepted
+		}
+	}
+	return gwapiv1.RouteConditionResolvedRefs
 }

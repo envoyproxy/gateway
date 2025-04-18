@@ -899,7 +899,8 @@ func (t *Translator) processRequestMirrorFilter(
 	err = t.validateBackendRef(mirrorBackendRef, filterContext.ParentRef, filterContext.Route,
 		resources, serviceNamespace, resource.KindHTTPRoute)
 	if err != nil {
-		return err
+		return status.NewRouteStatusError(
+			fmt.Errorf("failed to validate the RequestMirror filter: %w", err), err.Reason())
 	}
 
 	destName := fmt.Sprintf("%s-mirror-%d", irRouteDestinationName(filterContext.Route, filterContext.RuleIdx), filterIdx)
