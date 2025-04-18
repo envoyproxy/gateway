@@ -6,6 +6,7 @@
 package status
 
 import (
+	"sort"
 	"strings"
 
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
@@ -25,7 +26,7 @@ const (
 	// Network configuration related reasons
 	RouteReasonPortNotFound       gwapiv1.RouteConditionReason = "PortNotFound"
 	RouteReasonPortNotSpecified   gwapiv1.RouteConditionReason = "PortNotSpecified"
-	RouteReasonInvalidAddressType gwapiv1.RouteConditionReason = "InvalidAddressType"
+	RouteReasonUnsupportedAddressType gwapiv1.RouteConditionReason = "UnsupportedAddressType"
 	RouteReasonInvalidAddress     gwapiv1.RouteConditionReason = "InvalidAddress"
 )
 
@@ -152,6 +153,7 @@ func (m *MultiStatusError) Reason() gwapiv1.RouteConditionReason {
 	for reason := range reasons {
 		reasonList = append(reasonList, reason)
 	}
+	sort.Strings(reasonList)
 	return gwapiv1.RouteConditionReason(strings.Join(reasonList, ", "))
 }
 
@@ -165,4 +167,22 @@ func (m *MultiStatusError) Type() gwapiv1.RouteConditionType {
 		}
 	}
 	return gwapiv1.RouteConditionResolvedRefs
+}
+
+func isResolvedRefsReason(reason gwapiv1.RouteConditionReason) bool {
+	return reason == gwapiv1.RouteReasonRefNotPermitted ||
+		reason == gwapiv1.RouteReasonInvalidKind ||
+		reason == gwapiv1.RouteReasonBackendNotFound ||
+		reason == gwapiv1.RouteReasonUnsupportedProtocol
+}
+
+// ConvertToAcceptedReason converts ResolvedRefs reasons to Accepted condition reasons
+// This is used to make the reasons compatible with the Gateway API spec.
+// For example, the BackendRefs validation may return a InvalidBackendRef reason for a Mirror filter validation,
+// but the Mirror filter failure is reflected in the Accepted condition as UnsupportedValue.
+func ConvertToAcceptedReason(reason gwapiv1.RouteConditionReason) gwapiv1.RouteConditionReason {
+	if isResolvedRefsReason(reason) {
+		return gwapiv1.RouteReasonUnsupportedValue
+	}
+	return reason
 }

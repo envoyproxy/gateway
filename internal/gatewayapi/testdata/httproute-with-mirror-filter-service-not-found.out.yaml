@@ -74,7 +74,7 @@ httpRoutes:
       - lastTransitionTime: null
         message: 'Failed to process route rule 0: failed to validate the RequestMirror
           filter: service default/service-unknown not found.'
-        reason: BackendNotFound
+        reason: UnsupportedValue
         status: "False"
         type: Accepted
       - lastTransitionTime: null

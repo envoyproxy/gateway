@@ -239,12 +239,12 @@ func (t *Translator) validateBackendPort(backendRef *gwapiv1a2.BackendRef, paren
 			route.GetGeneration(),
 			gwapiv1.RouteConditionResolvedRefs,
 			metav1.ConditionFalse,
-			status.RouteReasonPortNotSpecified,
+			gwapiv1.RouteReasonUnsupportedValue,
 			"A valid port number corresponding to a port on the Service must be specified",
 		)
 		return status.NewRouteStatusError(
 			errors.New("A valid port number corresponding to a port on the Service must be specified"),
-			status.RouteReasonPortNotSpecified)
+			gwapiv1.RouteReasonUnsupportedValue)
 	}
 	return nil
 }
@@ -335,7 +335,7 @@ func (t *Translator) validateBackendRefBackend(backendRef gwapiv1a2.BackendObjec
 		if bep.Unix != nil && !allowUDS {
 			return status.NewRouteStatusError(
 				errors.New("unix domain sockets are not supported in backend references"),
-				status.RouteReasonInvalidAddressType,
+				status.RouteReasonUnsupportedAddressType,
 			)
 		}
 	}

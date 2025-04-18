@@ -153,7 +153,7 @@ httpRoutes:
       - lastTransitionTime: null
         message: 'Failed to process route rule 0 backendRef 0: unix domain sockets
           are not supported in backend references.'
-        reason: InvalidAddressType
+        reason: UnsupportedAddressType
         status: "False"
         type: ResolvedRefs
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
@@ -191,7 +191,7 @@ httpRoutes:
       - lastTransitionTime: null
         message: 'Failed to process route rule 0 backendRef 0: mixed FQDN and IP or
           Unix address type for the same backendRef is not supported.'
-        reason: InvalidAddressType
+        reason: UnsupportedAddressType
         status: "False"
         type: ResolvedRefs
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
@@ -229,7 +229,7 @@ httpRoutes:
       - lastTransitionTime: null
         message: 'Failed to process route rule 0 backendRef 0: mixed FQDN and IP or
           Unix address type for the same backendRef is not supported.'
-        reason: InvalidAddressType
+        reason: UnsupportedAddressType
         status: "False"
         type: ResolvedRefs
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
