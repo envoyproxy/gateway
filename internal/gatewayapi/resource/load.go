@@ -376,6 +376,9 @@ func loadKubernetesYAMLToResources(input []byte, addMissingResources bool) (*Res
 		return nil, err
 	}
 
+	// The namespace will not be treated as the missing resources in order to improve the user experience
+	// when using the file provider, since namespaces are crucial but easily overlooked.
+
 	// Add user provided and resource required namespaces.
 	if useDefaultNamespace {
 		if !providedNamespaceMap.Has(config.DefaultNamespace) {
