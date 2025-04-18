@@ -49,6 +49,7 @@ bug fixes: |
   Fix allowing empty text field for opentelemetry sink when using JSON format.
   Fix an issue that SamplingFraction was not working.
   Fix kubernetes resources not being deleted when the customized name used.
+  Do not treat essential resource like namespace as the missing resource while loading from file.
 
 # Enhancements that improve performance.
 performance improvements: |
