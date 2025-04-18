@@ -98,6 +98,12 @@ type ExtProc struct {
 	//
 	// +optional
 	Metadata *ExtProcMetadata `json:"metadata,omitempty"`
+
+	// HeaderMutationRules defines which headers are allowed to be mutated by the external processor.
+	//
+	// By default, If not set, all headers may be modified except for “host”, “:authority”, “:scheme”, “:method”,
+	// and headers that start with the prefix "x-envoy-".
+	HeaderMutationRules *ExtProcHeaderMutationRules `json:"headerMutationRules,omitempty"`
 }
 
 // ExtProcMetadata defines options related to the sending and receiving of dynamic metadata to and from the
@@ -114,4 +120,15 @@ type ExtProcMetadata struct {
 	// +kubebuilder:validation:MaxItems=8
 	// +optional
 	WritableNamespaces []string `json:"writableNamespaces,omitempty"`
+}
+
+// ExtProcHeaderMutationRules defines which headers are allowed to be mutated by the external processor.
+//
+// This corresponds to the `header_mutation_rules` field in the Envoy External Processor filter.
+// https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/common/mutation_rules/v3/mutation_rules.proto#envoy-v3-api-msg-config-common-mutation-rules-v3-headermutationrules
+type ExtProcHeaderMutationRules struct {
+	// AllowAllHeaders defines if all headers are allowed to be mutated by the external processor.
+	// These headers are host, :authority, :scheme, and :method.
+	AllowAllRouting bool `json:"allowAllRouting,omitempty"`
+	// TODO: add support for more complex rules.
 }

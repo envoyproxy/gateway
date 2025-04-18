@@ -218,6 +218,8 @@ envoyExtensionPolicies:
         - envoy.filters.http.my_custom
       messageTimeout: 5s
       failOpen: true
+      headerMutationRules:
+        allowAllRouting: true
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: EnvoyExtensionPolicy
   metadata:

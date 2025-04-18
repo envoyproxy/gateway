@@ -33,6 +33,8 @@ http:
                 - request.path
               responseBodyProcessingMode: Streamed
               allowModeOverride: true
+              headerMutationRules:
+                allowAllRouting: true
               authority: grpc-backend-4.default:4000
               forwardingMetadataNamespaces:
                 - envoy.filters.http.ext_authz

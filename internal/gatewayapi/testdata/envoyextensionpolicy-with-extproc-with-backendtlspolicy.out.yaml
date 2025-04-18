@@ -110,6 +110,8 @@ envoyExtensionPolicies:
         namespace: envoy-gateway
         port: 8000
       failOpen: true
+      headerMutationRules:
+        allowAllRouting: true
       messageTimeout: 5s
       metadata:
         accessibleNamespaces:

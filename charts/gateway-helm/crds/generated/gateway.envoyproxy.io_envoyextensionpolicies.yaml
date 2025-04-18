@@ -938,6 +938,19 @@ spec:
                         external processor are terminated or passed-through.
                         Default: false
                       type: boolean
+                    headerMutationRules:
+                      description: |-
+                        HeaderMutationRules defines which headers are allowed to be mutated by the external processor.
+
+                        By default, If not set, all headers may be modified except for “host”, “:authority”, “:scheme”, “:method”,
+                        and headers that start with the prefix "x-envoy-".
+                      properties:
+                        allowAllRouting:
+                          description: |-
+                            AllowAllHeaders defines if all headers are allowed to be mutated by the external processor.
+                            These headers are host, :authority, :scheme, and :method.
+                          type: boolean
+                      type: object
                     messageTimeout:
                       description: |-
                         MessageTimeout is the timeout for a response to be returned from the external processor
