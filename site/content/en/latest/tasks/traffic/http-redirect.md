@@ -312,6 +312,35 @@ curl -v -H 'Host:www.example.com' --resolve "www.example.com:443:$GATEWAY_HOST" 
 
 All HTTP requests are forcibly redirected to HTTPS. Application Developers can't override this in their HTTPRoute resources.
 
+Assume Cluster Operators use the `eg` namespace to deploy the Gateway resource:
+
+{{< tabpane text=true >}}
+{{% tab header="Apply from stdin" %}}
+
+```shell
+cat <<EOF | kubectl apply -f -
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: eg
+EOF
+```
+
+{{% /tab %}}
+{{% tab header="Apply from file" %}}
+Save and apply the following resource to your cluster:
+
+```yaml
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: eg
+```
+
+{{% /tab %}}
+{{< /tabpane >}}
+
 Define the gateway with both http and https listeners, but configure http listener to only accept routes from the same namespace:
 
 {{< tabpane text=true >}}
