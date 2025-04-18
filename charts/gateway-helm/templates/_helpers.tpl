@@ -176,4 +176,8 @@ provider:
       {{- end }}
     shutdownManager:
       image: {{ include "eg.image" . }}
+{{- with .Values.config.envoyGateway.extensionApis }}
+extensionApis:
+  {{- toYaml . | nindent 2 }}
+{{- end }}
 {{- end }}
