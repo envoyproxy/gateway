@@ -501,15 +501,15 @@ type ExtensionManager struct {
 	Service *ExtensionService `json:"service,omitempty"`
 
 	// FailOpen defines if Envoy Gateway should ignore errors returned from the Extension Service hooks.
-	// The default is false, which means Envoy Gateway will fail closed if the Extension Service returns an error.
 	//
-	// Fail-close means that if the Extension Service hooks return an error, the error is propagated to the
-	// xds-translator. As a result, the xds configuration produced by the translator for that IR key is not
-	// updated in the xds snapshot.
+	// When set to false, Envoy Gateway does not ignore extension Service hook errors. As a result,
+	// xDS updates are skipped for the specific the envoy proxy fleet, the previous state is preserved.
 	//
-	// Fail-open means that if the Extension Service hooks return an error, no changes will be applied to the
+	// When set to true, if the Extension Service hooks return an error, no changes will be applied to the
 	// source of the configuration which was sent to the extension server. The errors are ignored and the resulting
-	// xds configuration is updated in the xds snapshot.
+	// xDS configuration is updated in the xDS snapshot.
+	//
+	// Default: false
 	//
 	// +optional
 	FailOpen bool `json:"failOpen,omitempty"`

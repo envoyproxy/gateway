@@ -129,7 +129,7 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *ir
 				if err == nil {
 					r.Xds.Store(key, result)
 				} else {
-					r.Logger.Error(err, "xds resources are not published due to error in xds translator")
+					r.Logger.Error(err, "skipped publishing xds resources")
 				}
 
 				// Delete all the deletable status keys
