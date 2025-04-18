@@ -79,15 +79,6 @@ func enablePrometheus(infra *ir.ProxyInfra) bool {
 	return true
 }
 
-// expectedProxyInitContainers returns expected proxy init containers.
-func expectedProxyInitContainers(
-	extraContainers []corev1.Container,
-) []corev1.Container {
-	var containers []corev1.Container
-	containers = append(containers, extraContainers...)
-	return containers
-}
-
 // expectedProxyContainers returns expected proxy containers.
 func expectedProxyContainers(infra *ir.ProxyInfra,
 	containerSpec *egv1a1.KubernetesContainerSpec,

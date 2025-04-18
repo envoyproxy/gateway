@@ -71,7 +71,7 @@ func getShutdownManagerCommand() *cobra.Command {
 	return cmd
 }
 
-// getShutdownManagerCommand returns the shutdown manager cobra command to be executed.
+// getTopologyWebhookCommand returns the topology webhook cobra command to be executed.
 func getTopologyWebhookCommand() *cobra.Command {
 	var (
 		certDir                string

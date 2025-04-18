@@ -87,30 +87,3 @@ func TestExpectedShutdownManagerSecurityContext(t *testing.T) {
 		})
 	}
 }
-
-func Test_expectedProxyInitContainers(t *testing.T) {
-	type args struct {
-		containerSpec   *egv1a1.KubernetesContainerSpec
-		extraContainers []corev1.Container
-	}
-	tests := []struct {
-		name string
-		args args
-		want []corev1.Container
-	}{
-		{
-			name: "default",
-			args: args{
-				containerSpec:   &egv1a1.KubernetesContainerSpec{},
-				extraContainers: []corev1.Container{},
-			},
-			want: nil,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got := expectedProxyInitContainers(tt.args.extraContainers)
-			require.Equal(t, tt.want, got)
-		})
-	}
-}

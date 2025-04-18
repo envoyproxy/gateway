@@ -281,8 +281,6 @@ func (r *ResourceRender) Deployment() (*appsv1.Deployment, error) {
 		return nil, err
 	}
 
-	initContainers := expectedProxyInitContainers(deploymentConfig.InitContainers)
-
 	dpAnnotations := r.infra.GetProxyMetadata().Annotations
 	podAnnotations := r.getPodAnnotations(dpAnnotations, deploymentConfig.Pod)
 
@@ -314,7 +312,7 @@ func (r *ResourceRender) Deployment() (*appsv1.Deployment, error) {
 				},
 				Spec: corev1.PodSpec{
 					Containers:                    containers,
-					InitContainers:                initContainers,
+					InitContainers:                deploymentConfig.InitContainers,
 					ServiceAccountName:            r.Name(),
 					AutomountServiceAccountToken:  ptr.To(false),
 					TerminationGracePeriodSeconds: expectedTerminationGracePeriodSeconds(proxyConfig.Spec.Shutdown),
@@ -386,7 +384,7 @@ func (r *ResourceRender) DaemonSet() (*appsv1.DaemonSet, error) {
 	if err != nil {
 		return nil, err
 	}
-	
+
 	daemonSet := &appsv1.DaemonSet{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "DaemonSet",

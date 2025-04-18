@@ -19,6 +19,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	"github.com/envoyproxy/gateway/internal/cmd/envoy"
+	"github.com/envoyproxy/gateway/internal/gatewayapi"
 )
 
 func TestPodBindingMutator_Handle_UpdateAddsTopologyLabels(t *testing.T) {
@@ -32,7 +33,10 @@ func TestPodBindingMutator_Handle_UpdateAddsTopologyLabels(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "foo",
 			Namespace: "bar",
-			Labels:    map[string]string{"this": "that"},
+			Labels: map[string]string{
+				"app.kubernetes.io/component":      "proxy",
+				gatewayapi.OwningGatewayClassLabel: "eg",
+			},
 		},
 		Spec: corev1.PodSpec{},
 	}
@@ -91,8 +95,5 @@ func TestPodBindingMutator_Handle_UpdateAddsTopologyLabels(t *testing.T) {
 
 	if zone, ok := updatedPod.Labels[corev1.LabelTopologyZone]; !ok || zone != "zone1" {
 		t.Fatalf("expected zone1, got: %v", zone)
-	}
-	if that, ok := updatedPod.Labels["this"]; !ok || that != "that" {
-		t.Fatalf("expected this, got: %v", that)
 	}
 }

@@ -22,10 +22,6 @@ const (
 	DefaultDeploymentCPUResourceRequests = "100m"
 	// DefaultDeploymentMemoryResourceRequests for deployment memory resource
 	DefaultDeploymentMemoryResourceRequests = "512Mi"
-	// DefaultInitContainerCPUResourceRequests for deployment cpu resource
-	DefaultInitContainerCPUResourceRequests = "50m"
-	// DefaultInitContainerMemoryResourceRequests for deployment memory resource
-	DefaultInitContainerMemoryResourceRequests = "32Mi"
 	// DefaultEnvoyProxyImage is the default image used by envoyproxy
 	DefaultEnvoyProxyImage = "docker.io/envoyproxy/envoy:distroless-dev"
 	// DefaultShutdownManagerCPUResourceRequests for shutdown manager cpu resource
