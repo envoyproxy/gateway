@@ -38,6 +38,7 @@ const (
 	backendUDPRouteIndex             = "backendUDPRouteIndex"
 	secretSecurityPolicyIndex        = "secretSecurityPolicyIndex"
 	backendSecurityPolicyIndex       = "backendSecurityPolicyIndex"
+	configMapSecurityPolicyIndex     = "configMapSecurityPolicyIndex"
 	configMapCtpIndex                = "configMapCtpIndex"
 	secretCtpIndex                   = "secretCtpIndex"
 	secretBtlsIndex                  = "secretBtlsIndex"
@@ -49,6 +50,7 @@ const (
 	httpRouteFilterHTTPRouteIndex    = "httpRouteFilterHTTPRouteIndex"
 	configMapBtpIndex                = "configMapBtpIndex"
 	configMapHTTPRouteFilterIndex    = "configMapHTTPRouteFilterIndex"
+	secretHTTPRouteFilterIndex       = "secretHTTPRouteFilterIndex"
 )
 
 func addReferenceGrantIndexers(ctx context.Context, mgr manager.Manager) error {
@@ -547,6 +549,12 @@ func addSecurityPolicyIndexers(ctx context.Context, mgr manager.Manager) error {
 		return err
 	}
 
+	if err = mgr.GetFieldIndexer().IndexField(
+		ctx, &egv1a1.SecurityPolicy{}, configMapSecurityPolicyIndex,
+		configMapSecurityPolicyIndexFunc); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -610,6 +618,27 @@ func backendSecurityPolicyIndexFunc(rawObj client.Object) []string {
 	}
 
 	// This should not happen because the CEL validation should catch it.
+	return []string{}
+}
+
+func configMapSecurityPolicyIndexFunc(rawObj client.Object) []string {
+	securityPolicy := rawObj.(*egv1a1.SecurityPolicy)
+
+	if securityPolicy.Spec.JWT != nil {
+		for _, provider := range securityPolicy.Spec.JWT.Providers {
+			if provider.LocalJWKS != nil &&
+				provider.LocalJWKS.Type != nil &&
+				*provider.LocalJWKS.Type == egv1a1.LocalJWKSTypeValueRef {
+				return []string{
+					types.NamespacedName{
+						Namespace: securityPolicy.Namespace,
+						Name:      string(provider.LocalJWKS.ValueRef.Name),
+					}.String(),
+				}
+			}
+		}
+	}
+
 	return []string{}
 }
 
@@ -705,6 +734,12 @@ func addRouteFilterIndexers(ctx context.Context, mgr manager.Manager) error {
 		configMapHTTPRouteFilterIndex, configMapRouteFilterIndexFunc); err != nil {
 		return err
 	}
+
+	if err := mgr.GetFieldIndexer().IndexField(ctx, &egv1a1.HTTPRouteFilter{},
+		secretHTTPRouteFilterIndex, secretRouteFilterIndexFunc); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -724,6 +759,21 @@ func configMapRouteFilterIndexFunc(rawObj client.Object) []string {
 		}
 	}
 	return configMapReferences
+}
+
+func secretRouteFilterIndexFunc(rawObj client.Object) []string {
+	filter := rawObj.(*egv1a1.HTTPRouteFilter)
+	var secretReferences []string
+	if filter.Spec.CredentialInjection != nil {
+		secretReferences = append(secretReferences,
+			types.NamespacedName{
+				Namespace: filter.Namespace,
+				Name:      string(filter.Spec.CredentialInjection.Credential.ValueRef.Name),
+			}.String(),
+		)
+	}
+
+	return secretReferences
 }
 
 // addBtlsIndexers adds indexing on BackendTLSPolicy, for ConfigMap and Secret objects that are

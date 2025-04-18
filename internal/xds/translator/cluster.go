@@ -361,7 +361,7 @@ func buildHTTPStatusRange(irStatuses []ir.HTTPStatus) []*xdstype.Int64Range {
 		return nil
 	}
 	ranges := []*xdstype.Int64Range{}
-	sort.Slice(irStatuses, func(i int, j int) bool {
+	sort.Slice(irStatuses, func(i, j int) bool {
 		return irStatuses[i] < irStatuses[j]
 	})
 	var start, end int64

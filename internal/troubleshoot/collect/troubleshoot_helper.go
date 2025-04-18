@@ -87,7 +87,7 @@ func getAllNamespaces(ctx context.Context, client *kubernetes.Clientset) ([]byte
 	return b, namespaces, nil
 }
 
-func crs(ctx context.Context, dyn dynamic.Interface, client *kubernetes.Clientset, config *rest.Config, namespaces []string, includeGroups []string) (map[string][]byte, map[string]string) {
+func crs(ctx context.Context, dyn dynamic.Interface, client *kubernetes.Clientset, config *rest.Config, namespaces, includeGroups []string) (map[string][]byte, map[string]string) {
 	includeGroupSet := sets.New[string](includeGroups...)
 	errorList := make(map[string]string)
 	ok, err := discovery.HasResource(client, "apiextensions.k8s.io/v1", "CustomResourceDefinition")

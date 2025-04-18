@@ -483,6 +483,7 @@ _Appears in:_
 | `connection` | _[BackendConnection](#backendconnection)_ |  false  |  | Connection includes backend connection settings. |
 | `dns` | _[DNS](#dns)_ |  false  |  | DNS includes dns resolution settings. |
 | `http2` | _[HTTP2Settings](#http2settings)_ |  false  |  | HTTP2 provides HTTP/2 configuration for backend connections. |
+| `mergeType` | _[MergeType](#mergetype)_ |  false  |  | MergeType determines how this configuration is merged with existing BackendTrafficPolicy<br />configurations targeting a parent resource. When set, this configuration will be merged<br />into a parent BackendTrafficPolicy (i.e. the one targeting a Gateway or Listener).<br />This field cannot be set when targeting a parent resource (Gateway).<br />If unset, no merging occurs, and only the most specific configuration takes effect. |
 | `rateLimit` | _[RateLimitSpec](#ratelimitspec)_ |  false  |  | RateLimit allows the user to limit the number of incoming requests<br />to a predefined value based on attributes within the traffic flow. |
 | `faultInjection` | _[FaultInjection](#faultinjection)_ |  false  |  | FaultInjection defines the fault injection policy to be applied. This configuration can be used to<br />inject delays and abort requests to mimic failure scenarios such as service failures and overloads |
 | `useClientProtocol` | _boolean_ |  false  |  | UseClientProtocol configures Envoy to prefer sending requests to backends using<br />the same HTTP protocol that the incoming request used. Defaults to false, which means<br />that Envoy will use the protocol indicated by the attached BackendRef. |
@@ -1104,6 +1105,7 @@ _Appears in:_
 | `envoy.filters.http.local_ratelimit` | EnvoyFilterLocalRateLimit defines the Envoy HTTP local rate limit filter.<br /> | 
 | `envoy.filters.http.ratelimit` | EnvoyFilterRateLimit defines the Envoy HTTP rate limit filter.<br /> | 
 | `envoy.filters.http.custom_response` | EnvoyFilterCustomResponse defines the Envoy HTTP custom response filter.<br /> | 
+| `envoy.filters.http.credential_injector` | EnvoyFilterCredentialInjector defines the Envoy HTTP credential injector filter.<br /> | 
 | `envoy.filters.http.compressor` | EnvoyFilterCompressor defines the Envoy HTTP compressor filter.<br /> | 
 | `envoy.filters.http.router` | EnvoyFilterRouter defines the Envoy HTTP router filter.<br /> | 
 
@@ -2092,7 +2094,7 @@ _Appears in:_
 | `backendRef` | _[BackendObjectReference](https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1.BackendObjectReference)_ |  false  |  | BackendRef references a Kubernetes object that represents the<br />backend server to which the authorization request will be sent.<br />Deprecated: Use BackendRefs instead. |
 | `backendRefs` | _[BackendRef](#backendref) array_ |  false  |  | BackendRefs references a Kubernetes object that represents the<br />backend server to which the authorization request will be sent. |
 | `backendSettings` | _[ClusterSettings](#clustersettings)_ |  false  |  | BackendSettings holds configuration for managing the connection<br />to the backend. |
-| `path` | _string_ |  true  |  | Path is the path of the HTTP External Authorization service.<br />If path is specified, the authorization request will be sent to that path,<br />or else the authorization request will be sent to the root path. |
+| `path` | _string_ |  false  |  | Path is the path of the HTTP External Authorization service.<br />If path is specified, the authorization request will be sent to that path,<br />or else the authorization request will use the path of the original request.<br />Please note that the original request path will be appended to the path specified here.<br />For example, if the original request path is "/hello", and the path specified here is "/auth",<br />then the path of the authorization request will be "/auth/hello". If the path is not specified,<br />the path of the authorization request will be "/hello". |
 | `headersToBackend` | _string array_ |  false  |  | HeadersToBackend are the authorization response headers that will be added<br />to the original client request before sending it to the backend server.<br />Note that coexisting headers will be overridden.<br />If not specified, no authorization response headers will be added to the<br />original client request. |
 
 
@@ -2596,7 +2598,8 @@ _Appears in:_
 | `name` | _string_ |  true  |  | Name defines a unique name for the JWT provider. A name can have a variety of forms,<br />including RFC1123 subdomains, RFC 1123 labels, or RFC 1035 labels. |
 | `issuer` | _string_ |  false  |  | Issuer is the principal that issued the JWT and takes the form of a URL or email address.<br />For additional details, see https://tools.ietf.org/html/rfc7519#section-4.1.1 for<br />URL format and https://rfc-editor.org/rfc/rfc5322.html for email format. If not provided,<br />the JWT issuer is not checked. |
 | `audiences` | _string array_ |  false  |  | Audiences is a list of JWT audiences allowed access. For additional details, see<br />https://tools.ietf.org/html/rfc7519#section-4.1.3. If not provided, JWT audiences<br />are not checked. |
-| `remoteJWKS` | _[RemoteJWKS](#remotejwks)_ |  true  |  | RemoteJWKS defines how to fetch and cache JSON Web Key Sets (JWKS) from a remote<br />HTTP/HTTPS endpoint. |
+| `remoteJWKS` | _[RemoteJWKS](#remotejwks)_ |  false  |  | RemoteJWKS defines how to fetch and cache JSON Web Key Sets (JWKS) from a remote<br />HTTP/HTTPS endpoint. |
+| `localJWKS` | _[LocalJWKS](#localjwks)_ |  false  |  | LocalJWKS defines how to get the JSON Web Key Sets (JWKS) from a local source. |
 | `claimToHeaders` | _[ClaimToHeader](#claimtoheader) array_ |  false  |  | ClaimToHeaders is a list of JWT claims that must be extracted into HTTP request headers<br />For examples, following config:<br />The claim must be of type; string, int, double, bool. Array type claims are not supported |
 | `recomputeRoute` | _boolean_ |  false  |  | RecomputeRoute clears the route cache and recalculates the routing decision.<br />This field must be enabled if the headers generated from the claim are used for<br />route matching decisions. If the recomputation selects a new route, features targeting<br />the new matched route will be applied. |
 | `extractFrom` | _[JWTExtractor](#jwtextractor)_ |  false  |  | ExtractFrom defines different ways to extract the JWT token from HTTP request.<br />If empty, it defaults to extract JWT token from the Authorization HTTP request header using Bearer schema<br />or access_token from query parameters. |
@@ -2894,6 +2897,37 @@ _Appears in:_
 | `RoundRobin` | RoundRobinLoadBalancerType load balancer policy.<br /> | 
 
 
+#### LocalJWKS
+
+
+
+LocalJWKS defines how to load a JSON Web Key Sets (JWKS) from a local source, either inline or from a reference to a ConfigMap.
+
+_Appears in:_
+- [JWTProvider](#jwtprovider)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `type` | _[LocalJWKSType](#localjwkstype)_ |  true  | Inline | Type is the type of method to use to read the body value.<br />Valid values are Inline and ValueRef, default is Inline. |
+| `inline` | _string_ |  false  |  | Inline contains the value as an inline string. |
+| `valueRef` | _[LocalObjectReference](#localobjectreference)_ |  false  |  | ValueRef is a reference to a local ConfigMap that contains the JSON Web Key Sets (JWKS).<br />The value of key `jwks` in the ConfigMap will be used.<br />If the key is not found, the first value in the ConfigMap will be used. |
+
+
+#### LocalJWKSType
+
+_Underlying type:_ _string_
+
+LocalJWKSType defines the types of values for Local JWKS.
+
+_Appears in:_
+- [LocalJWKS](#localjwks)
+
+| Value | Description |
+| ----- | ----------- |
+| `Inline` | LocalJWKSTypeInline defines the "Inline" LocalJWKS type.<br /> | 
+| `ValueRef` | LocalJWKSTypeValueRef defines the "ValueRef" LocalJWKS type.<br /> | 
+
+
 #### LocalRateLimit
 
 
@@ -2920,6 +2954,7 @@ _Appears in:_
 
 | Value | Description |
 | ----- | ----------- |
+| `trace` | LogLevelTrace defines the "Trace" logging level.<br /> | 
 | `debug` | LogLevelDebug defines the "debug" logging level.<br /> | 
 | `info` | LogLevelInfo defines the "Info" logging level.<br /> | 
 | `warn` | LogLevelWarn defines the "Warn" logging level.<br /> | 
@@ -2965,6 +3000,7 @@ _Underlying type:_ _string_
 MergeType defines the type of merge operation
 
 _Appears in:_
+- [BackendTrafficPolicySpec](#backendtrafficpolicyspec)
 - [KubernetesPatchSpec](#kubernetespatchspec)
 
 | Value | Description |
@@ -4601,6 +4637,21 @@ _Appears in:_
 | `http` | _[HTTPWasmCodeSource](#httpwasmcodesource)_ |  false  |  | HTTP is the HTTP URL containing the Wasm code.<br />Note that the HTTP server must be accessible from the Envoy proxy. |
 | `image` | _[ImageWasmCodeSource](#imagewasmcodesource)_ |  false  |  | Image is the OCI image containing the Wasm code.<br />Note that the image must be accessible from the Envoy Gateway. |
 | `pullPolicy` | _[ImagePullPolicy](#imagepullpolicy)_ |  false  |  | PullPolicy is the policy to use when pulling the Wasm module by either the HTTP or Image source.<br />This field is only applicable when the SHA256 field is not set.<br />If not specified, the default policy is IfNotPresent except for OCI images whose tag is latest.<br />Note: EG does not update the Wasm module every time an Envoy proxy requests<br />the Wasm module even if the pull policy is set to Always.<br />It only updates the Wasm module when the EnvoyExtension resource version changes. |
+
+
+#### WasmCodeSourceTLSConfig
+
+
+
+WasmCodeSourceTLSConfig defines the TLS configuration when connecting to the Wasm code source.
+
+_Appears in:_
+- [HTTPWasmCodeSource](#httpwasmcodesource)
+- [ImageWasmCodeSource](#imagewasmcodesource)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `caCertificateRef` | _[SecretObjectReference](https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1.SecretObjectReference)_ |  true  |  | CACertificateRef contains a references to<br />Kubernetes objects that contain TLS certificates of<br />the Certificate Authorities that can be used<br />as a trust anchor to validate the certificates presented by the Wasm code source.<br />Kubernetes ConfigMap and Kubernetes Secret are supported.<br />Note: The ConfigMap or Secret must be in the same namespace as the EnvoyExtensionPolicy. |
 
 
 #### WasmCodeSourceType
