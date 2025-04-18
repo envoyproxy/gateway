@@ -308,6 +308,188 @@ curl -v -H 'Host:www.example.com' --resolve "www.example.com:443:$GATEWAY_HOST" 
 ```
 
 
+## Force HTTP --> HTTPS redirect
+
+All HTTP requests are forcibly redirected to HTTPS. Application Developers can't override this in their HTTPRoute resources.
+
+Define the gateway with both http and https listeners, but configure http listener to only accept routes from the same namespace:
+
+{{< tabpane text=true >}}
+{{% tab header="Apply from stdin" %}}
+
+```shell
+cat <<EOF | kubectl apply -f -
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: eg
+  namespace: eg
+spec:
+  gatewayClassName: eg
+  listeners:
+  - name: http
+    port: 80
+    protocol: HTTP
+    allowedRouters:
+      namespaces:
+        from: Same
+  - name: https
+    port: 443
+    protocol: HTTPS
+    # hostname: "*.example.com"
+    tls:
+      mode: Terminate
+      certificateRefs:
+      - kind: Secret
+        name: example-com
+    allowedRouters:
+      namespaces:
+        from: All
+EOF
+```
+
+{{% /tab %}}
+{{% tab header="Apply from file" %}}
+Save and apply the following resource to your cluster:
+
+```yaml
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: eg
+  namespace: eg
+spec:
+  gatewayClassName: eg
+  listeners:
+  - name: http
+    port: 80
+    protocol: HTTP
+    allowedRouters:
+      namespaces:
+        from: Same
+  - name: https
+    port: 443
+    protocol: HTTPS
+    # hostname: "*.example.com"
+    tls:
+      mode: Terminate
+      certificateRefs:
+      - kind: Secret
+        name: example-com
+    allowedRouters:
+      namespaces:
+        from: All
+```
+
+{{% /tab %}}
+{{< /tabpane >}}
+
+Create the HTTPRoute to reirect requests to HTTPS and attach it to the HTTP listener using the [sectionName][] field. The HTTPRoute has to be in the same namespace as the Gateway to be accepted.
+Do not set hostnames field in the HTTPRoute - it will accept any http request to any hostname and redirect it to the same hostname over https.
+
+{{< tabpane text=true >}}
+{{% tab header="Apply from stdin" %}}
+
+```shell
+cat <<EOF | kubectl apply -f -
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: tls-redirect
+  namespace: eg
+spec:
+  parentRefs:
+    - name: eg
+      sectionName: http
+  rules:
+    - filters:
+        - type: RequestRedirect
+          requestRedirect:
+            scheme: https
+            statusCode: 301
+EOF
+```
+
+{{% /tab %}}
+{{% tab header="Apply from file" %}}
+Save and apply the following resources to your cluster:
+
+```yaml
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: tls-redirect
+  namespace: eg
+spec:
+  parentRefs:
+    - name: eg
+      sectionName: http
+  rules:
+    - filters:
+        - type: RequestRedirect
+          requestRedirect:
+            scheme: https
+            statusCode: 301
+```
+
+{{% /tab %}}
+{{< /tabpane >}}
+
+Any other HTTPRoute resources deployed by Application Developers in any other namespace will automatically attach to the https section only, no need to set sectionName for them.
+
+{{< tabpane text=true >}}
+{{% tab header="Apply from stdin" %}}
+
+```shell
+cat <<EOF | kubectl apply -f -
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: backend
+  namespace: default
+spec:
+  parentRefs:
+    - name: eg
+      namespace: eg
+  hostnames:
+    - "www.example.com"
+  rules:
+    - backendRefs:
+        - name: backend
+          port: 3000
+EOF
+```
+
+{{% /tab %}}
+{{% tab header="Apply from file" %}}
+Save and apply the following resources to your cluster:
+
+```yaml
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: backend
+  namespace: default
+spec:
+  parentRefs:
+    - name: eg
+      namespace: default
+  hostnames:
+    - "www.example.com"
+  rules:
+    - backendRefs:
+        - name: backend
+          port: 3000
+```
+
+{{% /tab %}}
+{{< /tabpane >}}
+
+
+
 ## Path Redirects
 
 Path redirects use an HTTP Path Modifier to replace either entire paths or path prefixes. For example, the HTTPRoute
