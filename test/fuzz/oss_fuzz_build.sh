@@ -35,5 +35,3 @@ go mod tidy
 # compile native-format fuzzers
 compile_native_go_fuzzer github.com/envoyproxy/gateway/test/fuzz FuzzGatewayAPIToXDS FuzzGatewayAPIToXDS
 compile_native_go_fuzzer github.com/envoyproxy/gateway/test/fuzz FuzzGatewayClassToXDS FuzzGatewayClassToXDS
-compile_native_go_fuzzer github.com/envoyproxy/gateway/test/fuzz FuzzReverseStringBugSimulator FuzzReverseStringBugSimulator
-
