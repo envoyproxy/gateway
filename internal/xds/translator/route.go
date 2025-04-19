@@ -7,6 +7,7 @@ package translator
 
 import (
 	"errors"
+	"fmt"
 	"strings"
 	"time"
 
@@ -14,7 +15,6 @@ import (
 	routev3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
 	previoushost "github.com/envoyproxy/go-control-plane/envoy/extensions/retry/host/previous_hosts/v3"
 	matcherv3 "github.com/envoyproxy/go-control-plane/envoy/type/matcher/v3"
-	tracingv3 "github.com/envoyproxy/go-control-plane/envoy/type/tracing/v3"
 	"google.golang.org/protobuf/types/known/durationpb"
 	"google.golang.org/protobuf/types/known/wrapperspb"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -116,7 +116,7 @@ func buildXdsRoute(httpRoute *ir.HTTPRoute) (*routev3.Route, error) {
 
 	// Telemetry
 	if httpRoute.Traffic != nil && httpRoute.Traffic.Telemetry != nil {
-		if tracingCfg, err := buildTracingForRoute(httpRoute); err == nil {
+		if tracingCfg, err := buildRouteTracing(httpRoute); err == nil {
 			router.Tracing = tracingCfg
 		} else {
 			return nil, err
@@ -682,7 +682,7 @@ func buildRetryPolicy(route *ir.HTTPRoute) (*routev3.RetryPolicy, error) {
 	return rp, nil
 }
 
-func buildTracingForRoute(httpRoute *ir.HTTPRoute) (*routev3.Tracing, error) {
+func buildRouteTracing(httpRoute *ir.HTTPRoute) (*routev3.Tracing, error) {
 	if httpRoute == nil || httpRoute.Traffic == nil ||
 		httpRoute.Traffic.Telemetry == nil ||
 		httpRoute.Traffic.Telemetry.Tracing == nil {
@@ -690,12 +690,15 @@ func buildTracingForRoute(httpRoute *ir.HTTPRoute) (*routev3.Tracing, error) {
 	}
 
 	tracing := httpRoute.Traffic.Telemetry.Tracing
-	cfg := &routev3.Tracing{
-		RandomSampling: fractionalpercent.FromFraction(tracing.SamplingFraction),
-		CustomTags:     []*tracingv3.CustomTag{},
+	tags, err := buildTracingTags(tracing.CustomTags)
+	if err != nil {
+		return nil, fmt.Errorf("failed to build route tracing tags:%w", err)
 	}
 
-	return cfg, nil
+	return &routev3.Tracing{
+		RandomSampling: fractionalpercent.FromFraction(tracing.SamplingFraction),
+		CustomTags:     tags,
+	}, nil
 }
 
 func buildRetryStatusCodes(codes []ir.HTTPStatus) []uint32 {
