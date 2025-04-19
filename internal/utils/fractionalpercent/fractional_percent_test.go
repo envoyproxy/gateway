@@ -7,11 +7,11 @@ package fractionalpercent
 
 import (
 	"fmt"
-	"k8s.io/utils/ptr"
-	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	"testing"
 
 	xdstype "github.com/envoyproxy/go-control-plane/envoy/type/v3"
+	"k8s.io/utils/ptr"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 )
 
 func TestFromIn32(t *testing.T) {
