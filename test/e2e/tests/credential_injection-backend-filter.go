@@ -17,13 +17,13 @@ import (
 )
 
 func init() {
-	ConformanceTests = append(ConformanceTests, CredentialInjectionTest)
+	ConformanceTests = append(ConformanceTests, CredentialInjectionBackendFilterTest)
 }
 
-var CredentialInjectionTest = suite.ConformanceTest{
-	ShortName:   "CredentialInjection",
-	Description: "HTTPRoute Filter with CredentialInjection",
-	Manifests:   []string{"testdata/credential-injection.yaml"},
+var CredentialInjectionBackendFilterTest = suite.ConformanceTest{
+	ShortName:   "CredentialInjectionBackendFilter",
+	Description: "Backend filter with CredentialInjection",
+	Manifests:   []string{"testdata/credential-injection-backend-filter.yaml"},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
 		t.Run("inject credential to the default Authorization header", func(t *testing.T) {
 			ns := "gateway-conformance-infra"

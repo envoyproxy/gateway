@@ -144,13 +144,21 @@ func (t *Translator) validateBackendRefFilters(backendRef BackendRefContext, par
 	switch routeKind {
 	case resource.KindHTTPRoute:
 		for _, filter := range filters.([]gwapiv1.HTTPRouteFilter) {
-			if filter.Type != gwapiv1.HTTPRouteFilterRequestHeaderModifier && filter.Type != gwapiv1.HTTPRouteFilterResponseHeaderModifier {
+			// Reuse the same validation logic as HTTPRoute to validate the ExtensionRef
+			if err := ValidateHTTPRouteFilter(&filter, t.ExtensionGroupKinds...); err != nil {
+				unsupportedFilters = true
+				continue
+			}
+			if filter.Type != gwapiv1.HTTPRouteFilterRequestHeaderModifier &&
+				filter.Type != gwapiv1.HTTPRouteFilterResponseHeaderModifier &&
+				filter.Type != gwapiv1.HTTPRouteFilterExtensionRef {
 				unsupportedFilters = true
 			}
 		}
 	case resource.KindGRPCRoute:
 		for _, filter := range filters.([]gwapiv1.GRPCRouteFilter) {
-			if filter.Type != gwapiv1.GRPCRouteFilterRequestHeaderModifier && filter.Type != gwapiv1.GRPCRouteFilterResponseHeaderModifier {
+			if filter.Type != gwapiv1.GRPCRouteFilterRequestHeaderModifier &&
+				filter.Type != gwapiv1.GRPCRouteFilterResponseHeaderModifier {
 				unsupportedFilters = true
 			}
 		}
@@ -159,6 +167,10 @@ func (t *Translator) validateBackendRefFilters(backendRef BackendRefContext, par
 	}
 
 	if unsupportedFilters {
+		message := "Specific filter is not supported within BackendRef, only RequestHeaderModifier, ResponseHeaderModifier and gateway.envoyproxy.io/HTTPRouteFilter are supported"
+		if routeKind == resource.KindGRPCRoute {
+			message = "Specific filter is not supported within BackendRef, only RequestHeaderModifier and ResponseHeaderModifier are supported"
+		}
 		routeStatus := GetRouteStatus(route)
 		status.SetRouteStatusCondition(routeStatus,
 			parentRef.routeParentStatusIdx,
@@ -166,7 +178,7 @@ func (t *Translator) validateBackendRefFilters(backendRef BackendRefContext, par
 			gwapiv1.RouteConditionResolvedRefs,
 			metav1.ConditionFalse,
 			"UnsupportedRefValue",
-			"Specific filter is not supported within BackendRef, only RequestHeaderModifier and ResponseHeaderModifier are supported",
+			message,
 		)
 		return errors.New("unsupported filter type in backend reference")
 	}
