@@ -79,7 +79,7 @@ generate-gwapi-manifests: ## Generate GWAPI manifests and make it consistent wit
 	@mkdir -p $(OUTPUT_DIR)/
 	@curl -sLo $(OUTPUT_DIR)/gatewayapi-crds.yaml ${GATEWAY_RELEASE_URL}
 	cp $(OUTPUT_DIR)/gatewayapi-crds.yaml charts/gateway-helm/crds/gatewayapi-crds.yaml
-	@sed -i.bak '1s/^/{{- if .Values.crds.gatewayApi.enabled }}\n/' $(OUTPUT_DIR)/gatewayapi-crds.yaml && \
+	@sed -i.bak '1s/^/{{- if .Values.crds.gatewayAPI.enabled }}\n/' $(OUTPUT_DIR)/gatewayapi-crds.yaml && \
 	echo '{{- end }}' >> $(OUTPUT_DIR)/gatewayapi-crds.yaml && \
 	rm -f $(OUTPUT_DIR)/gatewayapi-crds.yaml.bak
 	@mv $(OUTPUT_DIR)/gatewayapi-crds.yaml charts/gateway-crds-helm/templates/gatewayapi-crds.yaml

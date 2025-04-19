@@ -11,5 +11,5 @@ A Helm chart for Kubernetes
 | Key | Type | Default | Description |
 |-----|------|---------|-------------|
 | crds.envoyGateway.enabled | bool | `true` |  |
-| crds.gatewayApi.enabled | bool | `true` |  |
+| crds.gatewayAPI.enabled | bool | `true` |  |
 
