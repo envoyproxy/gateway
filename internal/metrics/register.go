@@ -24,6 +24,8 @@ import (
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	log "github.com/envoyproxy/gateway/internal/logging"
+	"github.com/envoyproxy/gateway/internal/metrics/restclient"
+	"github.com/envoyproxy/gateway/internal/metrics/workqueue"
 )
 
 const (
@@ -89,8 +91,14 @@ func newOptions(svr *config.Server) (registerOptions, error) {
 		newOpts.pullOptions.disable = true
 	} else {
 		newOpts.pullOptions.disable = false
+		restclient.RegisterClientMetricsWithoutRequestTotal(metricsserver.Registry)
+		// Workqueue metrics are already registered in controller-runtime. Use another registry.
+		reg := prometheus.NewRegistry()
+		workqueue.RegisterMetrics(reg)
 		newOpts.pullOptions.registry = metricsserver.Registry
-		newOpts.pullOptions.gatherer = metricsserver.Registry
+		newOpts.pullOptions.gatherer = prometheus.Gatherers{
+			metricsserver.Registry, reg,
+		}
 	}
 
 	for _, config := range svr.EnvoyGateway.GetEnvoyGatewayTelemetry().Metrics.Sinks {
