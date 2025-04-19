@@ -225,7 +225,8 @@ httpRoutes:
         status: "True"
         type: Accepted
       - lastTransitionTime: null
-        message: Service default/service-5 not found
+        message: 'Failed to process route rule 0 backendRef 0: service default/service-5
+          not found.'
         reason: BackendNotFound
         status: "False"
         type: ResolvedRefs

@@ -71,8 +71,9 @@ httpRoutes:
     parents:
     - conditions:
       - lastTransitionTime: null
-        message: 'Error validating backend port: port number not specified for backend
-          reference.'
+        message: 'Failed to process route rule 0: failed to validate the RequestMirror
+          filter: A valid port number corresponding to a port on the Service must
+          be specified.'
         reason: UnsupportedValue
         status: "False"
         type: Accepted

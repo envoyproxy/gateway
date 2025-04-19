@@ -341,9 +341,9 @@ httpRoutes:
         status: "True"
         type: Accepted
       - lastTransitionTime: null
-        message: Service envoy-gateway/service-1 not found
-        reason: BackendNotFound
-        status: "False"
+        message: Resolved all the Object references for the Route
+        reason: ResolvedRefs
+        status: "True"
         type: ResolvedRefs
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
@@ -357,9 +357,9 @@ httpRoutes:
         status: "True"
         type: Accepted
       - lastTransitionTime: null
-        message: Service envoy-gateway/service-1 not found
-        reason: BackendNotFound
-        status: "False"
+        message: Resolved all the Object references for the Route
+        reason: ResolvedRefs
+        status: "True"
         type: ResolvedRefs
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
@@ -395,9 +395,9 @@ httpRoutes:
         status: "True"
         type: Accepted
       - lastTransitionTime: null
-        message: Service envoy-gateway/service-1 not found
-        reason: BackendNotFound
-        status: "False"
+        message: Resolved all the Object references for the Route
+        reason: ResolvedRefs
+        status: "True"
         type: ResolvedRefs
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
@@ -520,8 +520,16 @@ xdsIR:
         mergeSlashes: true
       port: 8082
       routes:
-      - directResponse:
-          statusCode: 500
+      - destination:
+          name: httproute/envoy-gateway/httproute-1/rule/0
+          settings:
+          - addressType: IP
+            endpoints:
+            - host: 7.7.7.7
+              port: 8080
+            name: httproute/envoy-gateway/httproute-1/rule/0/backend/0
+            protocol: HTTP
+            weight: 1
         hostname: route.example.com
         isHTTP2: false
         metadata:
@@ -549,7 +557,17 @@ xdsIR:
         mergeSlashes: true
       port: 8083
       routes:
-      - directResponse:
+      - destination:
+          name: httproute/envoy-gateway/httproute-1/rule/0
+          settings:
+          - addressType: IP
+            endpoints:
+            - host: 7.7.7.7
+              port: 8080
+            name: httproute/envoy-gateway/httproute-1/rule/0/backend/0
+            protocol: HTTP
+            weight: 1
+        directResponse:
           statusCode: 500
         hostname: route.example.com
         isHTTP2: false
@@ -562,7 +580,17 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /
-      - directResponse:
+      - destination:
+          name: httproute/envoy-gateway/httproute-2/rule/0
+          settings:
+          - addressType: IP
+            endpoints:
+            - host: 7.7.7.7
+              port: 8080
+            name: httproute/envoy-gateway/httproute-2/rule/0/backend/0
+            protocol: HTTP
+            weight: 1
+        directResponse:
           statusCode: 500
         hostname: route2.example.com
         isHTTP2: false
