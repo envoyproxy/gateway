@@ -29,10 +29,11 @@ import (
 )
 
 type Provider struct {
-	paths          []string
-	logger         logr.Logger
-	watcher        filewatcher.FileWatcher
-	resourcesStore *resourcesStore
+	paths                   []string
+	logger                  logr.Logger
+	watcher                 filewatcher.FileWatcher
+	resourcesStore          *resourcesStore
+	extensionManagerEnabled bool
 
 	// ready indicates whether the provider can start watching filesystem events.
 	ready atomic.Bool
@@ -46,10 +47,11 @@ func New(svr *config.Server, resources *message.ProviderResources) (*Provider, e
 	}
 
 	return &Provider{
-		paths:          paths.UnsortedList(),
-		logger:         logger,
-		watcher:        filewatcher.NewWatcher(),
-		resourcesStore: newResourcesStore(svr.EnvoyGateway.Gateway.ControllerName, resources, logger),
+		paths:                   paths.UnsortedList(),
+		logger:                  logger,
+		watcher:                 filewatcher.NewWatcher(),
+		resourcesStore:          newResourcesStore(svr.EnvoyGateway.Gateway.ControllerName, resources, logger),
+		extensionManagerEnabled: svr.EnvoyGateway.EnvoyGatewaySpec.ExtensionManager != nil,
 	}, nil
 }
 
@@ -70,6 +72,9 @@ func (p *Provider) Start(ctx context.Context) error {
 		return nil
 	}
 	go p.startHealthProbeServer(ctx, readyzChecker)
+
+	// Subscribe resources status.
+	p.subscribeAndUpdateStatus(ctx)
 
 	initDirs, initFiles := path.ListDirsAndFiles(p.paths)
 	// Initially load resources from paths on host.

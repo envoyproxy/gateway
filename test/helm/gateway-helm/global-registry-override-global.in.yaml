@@ -1,0 +1,8 @@
+global:
+  imageRegistry: "private.registry"
+  images:
+    envoyGateway:
+      image: "docker.io/envoyproxy/gateway-dev:latest"
+      pullPolicy: Always
+    ratelimit:
+      image: "docker.io/envoyproxy/ratelimit:master"
