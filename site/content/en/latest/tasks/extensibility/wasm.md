@@ -147,20 +147,9 @@ Verify the EnvoyExtensionPolicy status:
 kubectl get envoyextensionpolicy/http-wasm-source-test -o yaml
 ```
 
-### Testing
+## Testing
 
-Ensure the `GATEWAY_HOST` environment variable from the [Quickstart](../../quickstart) is set. If not, follow the
-Quickstart instructions to set the variable.
-
-```shell
-echo $GATEWAY_HOST
-```
-
-Send a request to the backend service:
-
-```shell
-curl -i -H "Host: www.example.com" "http://${GATEWAY_HOST}"
-```
+{{< boilerplate testing-the-configuration >}}
 
 You should see that the wasm extension has added this header to the response:
 
