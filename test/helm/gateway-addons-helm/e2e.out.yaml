@@ -362,7 +362,6 @@ data:
           - zipkin
       telemetry:
         metrics:
-          address: ${env:MY_POD_IP}:8888
           level: none
           readers:
           - pull:
@@ -9976,7 +9975,7 @@ spec:
   template:
     metadata:
       annotations:
-        checksum/config: a2dd0ac84c63ae6276c09ced7ebaadc1fa9c2a6abe2931018ec824ba8b4fe800
+        checksum/config: 53f3948607b26e83438039b1f256f0aece7134365837af7b12fc6e34b0844dc1
         
       labels:
         app.kubernetes.io/name: opentelemetry-collector
