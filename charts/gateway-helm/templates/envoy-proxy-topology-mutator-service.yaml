@@ -1,0 +1,23 @@
+{{- if .Values.topologyWebhook.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "eg.webhookService" . }}
+  namespace: '{{ .Release.Namespace }}'
+  {{- with .Values.topologyWebhook.service.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  labels:
+    app.kubernetes.io/component: topology-webhook
+  {{- include "eg.labels" . | nindent 4 }}
+spec:
+  ports:
+    - port: 443
+      targetPort: webhook
+      protocol: TCP
+      name: https
+  selector:
+    app.kubernetes.io/component: topology-webhook
+  {{- include "eg.selectorLabels" . | nindent 4 }}
+{{- end }}

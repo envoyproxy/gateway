@@ -52,6 +52,11 @@ spec:
               socket_address:
                 address: 127.0.0.1
                 port_value: 19000
+          cluster_manager:
+            local_cluster_name: local_cluster
+          node:
+            locality:
+              zone: $(ENVOY_SERVICE_ZONE)
           layered_runtime:
             layers:
             - name: global_config
@@ -122,6 +127,23 @@ spec:
                         socket_address:
                           address: 127.0.0.1
                           port_value: 19000
+            - connect_timeout: 10s
+              lb_policy: ROUND_ROBIN
+              load_assignment:
+                cluster_name: local_cluster
+                endpoints:
+                - lb_endpoints:
+                  - endpoint:
+                      address:
+                        socket_address:
+                          address: 127.0.0.1
+                          port_value: 10080
+                    load_balancing_weight: 1
+                  load_balancing_weight: 1
+                  locality:
+                    zone: $(ENVOY_SERVICE_ZONE)
+              name: local_cluster
+              type: STATIC
             - connect_timeout: 10s
               load_assignment:
                 cluster_name: xds_cluster
@@ -225,6 +247,11 @@ spec:
             fieldRef:
               apiVersion: v1
               fieldPath: metadata.name
+        - name: ENVOY_SERVICE_ZONE
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: metadata.labels['topology.kubernetes.io/zone']
         image: docker.io/envoyproxy/envoy:distroless-dev
         imagePullPolicy: IfNotPresent
         lifecycle:
@@ -306,6 +333,11 @@ spec:
             fieldRef:
               apiVersion: v1
               fieldPath: metadata.name
+        - name: ENVOY_SERVICE_ZONE
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: metadata.labels['topology.kubernetes.io/zone']
         image: docker.io/envoyproxy/gateway-dev:latest
         imagePullPolicy: IfNotPresent
         lifecycle:

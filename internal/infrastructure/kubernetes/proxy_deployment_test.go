@@ -57,8 +57,11 @@ func TestCreateOrUpdateProxyDeployment(t *testing.T) {
 	require.NoError(t, err)
 
 	infra := ir.NewInfra()
-	infra.Proxy.GetProxyMetadata().Labels[gatewayapi.OwningGatewayNamespaceLabel] = "default"
-	infra.Proxy.GetProxyMetadata().Labels[gatewayapi.OwningGatewayNameLabel] = infra.Proxy.Name
+	labels := map[string]string{
+		gatewayapi.OwningGatewayNamespaceLabel: "default",
+		gatewayapi.OwningGatewayNameLabel:      infra.Proxy.Name,
+	}
+	infra.Proxy.GetProxyMetadata().Labels = labels
 
 	r := proxy.NewResourceRender(cfg.Namespace, cfg.DNSDomain, infra.GetProxyInfra(), cfg.EnvoyGateway)
 	deploy, err := r.Deployment()
