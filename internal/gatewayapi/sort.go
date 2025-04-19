@@ -63,6 +63,7 @@ func (x XdsIRRoutes) Less(i, j int) bool {
 	// Equal case
 
 	// 3. Sort based on the number of Header matches.
+	// When the number is same, sort based on number of Exact Header matches.
 	hCountI := len(x[i].HeaderMatches)
 	hCountJ := len(x[j].HeaderMatches)
 	if hCountI < hCountJ {
@@ -71,12 +72,31 @@ func (x XdsIRRoutes) Less(i, j int) bool {
 	if hCountI > hCountJ {
 		return false
 	}
+
+	hExtNumberI := numberOfExactMatches(x[i].HeaderMatches)
+	hExtNumberJ := numberOfExactMatches(x[j].HeaderMatches)
+	if hExtNumberI < hExtNumberJ {
+		return true
+	}
+	if hExtNumberI > hExtNumberJ {
+		return false
+	}
 	// Equal case
 
 	// 4. Sort based on the number of Query param matches.
+	// When the number is same, sort based on number of Exact Query param matches.
 	qCountI := len(x[i].QueryParamMatches)
 	qCountJ := len(x[j].QueryParamMatches)
-	return qCountI < qCountJ
+	if qCountI < qCountJ {
+		return true
+	}
+	if qCountI > qCountJ {
+		return false
+	}
+
+	qExtNumberI := numberOfExactMatches(x[i].QueryParamMatches)
+	qExtNumberJ := numberOfExactMatches(x[j].QueryParamMatches)
+	return qExtNumberI < qExtNumberJ
 }
 
 // sortXdsIR sorts the xdsIR based on the match precedence
@@ -106,4 +126,14 @@ func pathMatchCount(pathMatch *ir.StringMatch) int {
 		}
 	}
 	return 0
+}
+
+func numberOfExactMatches(stringMatches []*ir.StringMatch) int {
+	var cnt int
+	for _, stringMatch := range stringMatches {
+		if stringMatch != nil && stringMatch.Exact != nil {
+			cnt++
+		}
+	}
+	return cnt
 }
