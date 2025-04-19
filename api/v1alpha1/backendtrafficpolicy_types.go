@@ -103,7 +103,6 @@ type BackendTrafficPolicySpec struct {
 	// Telemetry configures the telemetry settings for the backend or backend.
 	// This will override the telemetry settings in the EnvoyProxy resource.
 	//
-	// +notImplementedHide
 	// +optional
 	Telemetry *BackendTelemetry `json:"telemetry,omitempty"`
 }
