@@ -865,6 +865,8 @@ type TrafficFeatures struct {
 	Compression []*Compression `json:"compression,omitempty" yaml:"compression,omitempty"`
 	// HTTPUpgrade defines the schema for upgrading the HTTP protocol.
 	HTTPUpgrade []string `json:"httpUpgrade,omitempty" yaml:"httpUpgrade,omitempty"`
+	// Telemetry defines the schema for telemetry configuration.
+	Telemetry *egv1a1.BackendTelemetry `json:"telemetry,omitempty" yaml:"telemetry,omitempty"`
 }
 
 func (b *TrafficFeatures) Validate() error {
