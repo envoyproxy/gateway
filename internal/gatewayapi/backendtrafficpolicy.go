@@ -448,6 +448,7 @@ func (t *Translator) buildTrafficFeatures(policy *egv1a1.BackendTrafficPolicy, r
 		ResponseOverride:  ro,
 		Compression:       cp,
 		HTTPUpgrade:       httpUpgrade,
+		Telemetry:         policy.Spec.Telemetry,
 	}, errs
 }
 
