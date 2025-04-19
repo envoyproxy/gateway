@@ -69,8 +69,9 @@ httpRoutes:
         status: "True"
         type: Accepted
       - lastTransitionTime: null
-        message: mixed endpointslice address type for the same backendRef is not supported
-        reason: ResolvedRefs
+        message: 'Failed to process route rule 0 backendRef 0: mixed endpointslice
+          address type for the same backendRef is not supported.'
+        reason: InvalidAddressType
         status: "False"
         type: ResolvedRefs
       controllerName: gateway.envoyproxy.io/gatewayclass-controller

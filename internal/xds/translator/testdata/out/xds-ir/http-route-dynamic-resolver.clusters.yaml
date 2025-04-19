@@ -1,0 +1,18 @@
+- circuitBreakers:
+    thresholds:
+    - maxRetries: 1024
+  clusterType:
+    name: httproute/default/httproute-1/rule/0
+    typedConfig:
+      '@type': type.googleapis.com/envoy.extensions.clusters.dynamic_forward_proxy.v3.ClusterConfig
+      dnsCacheConfig:
+        dnsLookupFamily: V4_PREFERRED
+        dnsRefreshRate: 30s
+        name: httproute/default/httproute-1/rule/0
+  commonLbConfig:
+    localityWeightedLbConfig: {}
+  connectTimeout: 10s
+  dnsLookupFamily: V4_PREFERRED
+  lbPolicy: CLUSTER_PROVIDED
+  name: httproute/default/httproute-1/rule/0
+  perConnectionBufferLimitBytes: 32768

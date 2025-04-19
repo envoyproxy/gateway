@@ -1,3 +1,19 @@
+backends:
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: Backend
+  metadata:
+    creationTimestamp: null
+    name: backend-1
+    namespace: default
+  spec:
+    type: DynamicResolver
+  status:
+    conditions:
+    - lastTransitionTime: null
+      message: The Backend was accepted
+      reason: Accepted
+      status: "True"
+      type: Accepted
 gateways:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: Gateway
@@ -47,18 +63,17 @@ httpRoutes:
     name: httproute-1
     namespace: default
   spec:
+    hostnames:
+    - gateway.envoyproxy.io
     parentRefs:
     - name: gateway-1
       namespace: envoy-gateway
+      sectionName: http
     rules:
     - backendRefs:
-      - name: service-1
-        namespace: backends
-        port: 8080
-      matches:
-      - path:
-          type: Exact
-          value: /exact
+      - group: gateway.envoyproxy.io
+        kind: Backend
+        name: backend-1
   status:
     parents:
     - conditions:
@@ -68,15 +83,15 @@ httpRoutes:
         status: "True"
         type: Accepted
       - lastTransitionTime: null
-        message: 'Failed to process route rule 0 backendRef 0: Backend ref to Service
-          backends/service-1 not permitted by any ReferenceGrant.'
-        reason: RefNotPermitted
-        status: "False"
+        message: Resolved all the Object references for the Route
+        reason: ResolvedRefs
+        status: "True"
         type: ResolvedRefs
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
         name: gateway-1
         namespace: envoy-gateway
+        sectionName: http
 infraIR:
   envoy-gateway/gateway-1:
     proxy:
@@ -114,19 +129,19 @@ xdsIR:
         mergeSlashes: true
       port: 10080
       routes:
-      - directResponse:
-          statusCode: 500
-        hostname: '*'
+      - destination:
+          name: httproute/default/httproute-1/rule/0
+          settings:
+          - isDynamicResolver: true
+            name: httproute/default/httproute-1/rule/0/backend/0
+            weight: 1
+        hostname: gateway.envoyproxy.io
         isHTTP2: false
         metadata:
           kind: HTTPRoute
           name: httproute-1
           namespace: default
-        name: httproute/default/httproute-1/rule/0/match/0/*
-        pathMatch:
-          distinct: false
-          exact: /exact
-          name: ""
+        name: httproute/default/httproute-1/rule/0/match/-1/gateway_envoyproxy_io
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4
