@@ -19,6 +19,7 @@ import (
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/ir"
+	"github.com/envoyproxy/gateway/internal/utils/fractionalpercent"
 	"github.com/envoyproxy/gateway/internal/utils/proto"
 	"github.com/envoyproxy/gateway/internal/xds/types"
 )
@@ -129,7 +130,7 @@ func (*fault) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute) error {
 	if delay != nil {
 		routeCfgProto.Delay = &xdsfault.FaultDelay{}
 		if delay.Percentage != nil {
-			routeCfgProto.Delay.Percentage = translatePercentToFractionalPercent(delay.Percentage)
+			routeCfgProto.Delay.Percentage = fractionalpercent.FromFloat32(*delay.Percentage)
 		}
 		if delay.FixedDelay != nil {
 			routeCfgProto.Delay.FaultDelaySecifier = &xdsfault.FaultDelay_FixedDelay{
@@ -142,7 +143,7 @@ func (*fault) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute) error {
 	if abort != nil {
 		routeCfgProto.Abort = &xdshttpfaultv3.FaultAbort{}
 		if abort.Percentage != nil {
-			routeCfgProto.Abort.Percentage = translatePercentToFractionalPercent(abort.Percentage)
+			routeCfgProto.Abort.Percentage = fractionalpercent.FromFloat32(*abort.Percentage)
 		}
 		if abort.HTTPStatus != nil {
 			routeCfgProto.Abort.ErrorType = &xdshttpfaultv3.FaultAbort_HttpStatus{

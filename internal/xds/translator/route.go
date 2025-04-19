@@ -14,11 +14,13 @@ import (
 	routev3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
 	previoushost "github.com/envoyproxy/go-control-plane/envoy/extensions/retry/host/previous_hosts/v3"
 	matcherv3 "github.com/envoyproxy/go-control-plane/envoy/type/matcher/v3"
+	tracingv3 "github.com/envoyproxy/go-control-plane/envoy/type/tracing/v3"
 	"google.golang.org/protobuf/types/known/durationpb"
 	"google.golang.org/protobuf/types/known/wrapperspb"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/envoyproxy/gateway/internal/ir"
+	"github.com/envoyproxy/gateway/internal/utils/fractionalpercent"
 	"github.com/envoyproxy/gateway/internal/utils/proto"
 )
 
@@ -107,6 +109,15 @@ func buildXdsRoute(httpRoute *ir.HTTPRoute) (*routev3.Route, error) {
 		httpRoute.GetRetry() != nil {
 		if rp, err := buildRetryPolicy(httpRoute); err == nil {
 			router.GetRoute().RetryPolicy = rp
+		} else {
+			return nil, err
+		}
+	}
+
+	// Telemetry
+	if httpRoute.Traffic != nil && httpRoute.Traffic.Telemetry != nil {
+		if tracingCfg, err := buildTracingForRoute(httpRoute); err == nil {
+			router.Tracing = tracingCfg
 		} else {
 			return nil, err
 		}
@@ -494,9 +505,9 @@ func buildXdsRequestMirrorPolicies(mirrorPolicies []*ir.MirrorPolicy) []*routev3
 func mirrorPercentByPolicy(mirror *ir.MirrorPolicy) *corev3.RuntimeFractionalPercent {
 	switch {
 	case mirror.Percentage != nil:
-		if *mirror.Percentage > 0 {
+		if p := *mirror.Percentage; p > 0 {
 			return &corev3.RuntimeFractionalPercent{
-				DefaultValue: translatePercentToFractionalPercent(mirror.Percentage),
+				DefaultValue: fractionalpercent.FromFloat32(p),
 			}
 		}
 		// If zero percent is provided explicitly, we should not mirror.
@@ -504,7 +515,7 @@ func mirrorPercentByPolicy(mirror *ir.MirrorPolicy) *corev3.RuntimeFractionalPer
 	default:
 		// Default to 100 percent if percent is not given.
 		return &corev3.RuntimeFractionalPercent{
-			DefaultValue: translateIntegerToFractionalPercent(100),
+			DefaultValue: fractionalpercent.FromIn32(100),
 		}
 	}
 }
@@ -669,6 +680,22 @@ func buildRetryPolicy(route *ir.HTTPRoute) (*routev3.RetryPolicy, error) {
 		}
 	}
 	return rp, nil
+}
+
+func buildTracingForRoute(httpRoute *ir.HTTPRoute) (*routev3.Tracing, error) {
+	if httpRoute == nil || httpRoute.Traffic == nil ||
+		httpRoute.Traffic.Telemetry == nil ||
+		httpRoute.Traffic.Telemetry.Tracing == nil {
+		return nil, nil
+	}
+
+	tracing := httpRoute.Traffic.Telemetry.Tracing
+	cfg := &routev3.Tracing{
+		RandomSampling: fractionalpercent.FromFraction(tracing.SamplingFraction),
+		CustomTags:     []*tracingv3.CustomTag{},
+	}
+
+	return cfg, nil
 }
 
 func buildRetryStatusCodes(codes []ir.HTTPStatus) []uint32 {
