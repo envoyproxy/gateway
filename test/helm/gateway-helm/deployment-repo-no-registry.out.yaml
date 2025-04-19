@@ -28,7 +28,6 @@ data:
   envoy-gateway.yaml: |
     apiVersion: gateway.envoyproxy.io/v1alpha1
     kind: EnvoyGateway
-    extensionApis: {}
     gateway:
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
     logging:
@@ -49,7 +48,7 @@ data:
                     - imagePullPolicy: IfNotPresent
                       name: envoy-ratelimit
         shutdownManager:
-          image: docker.io/envoyproxy/gateway-dev:latest
+          image: envoy/gateway:abcdef
       type: Kubernetes
 ---
 # Source: gateway-helm/templates/envoy-gateway-rbac.yaml
@@ -397,8 +396,8 @@ spec:
               fieldPath: metadata.namespace
         - name: KUBERNETES_CLUSTER_DOMAIN
           value: cluster.local
-        image: docker.io/envoyproxy/gateway-dev:latest
-        imagePullPolicy: Always
+        image: envoy/gateway:abcdef
+        imagePullPolicy: IfNotPresent
         livenessProbe:
           httpGet:
             path: /healthz
@@ -543,9 +542,7 @@ spec:
         app: certgen
     spec:
       containers:
-      - args:
-        - --overwrite
-        command:
+      - command:
         - envoy-gateway
         - certgen
         env:
@@ -556,8 +553,8 @@ spec:
               fieldPath: metadata.namespace
         - name: KUBERNETES_CLUSTER_DOMAIN
           value: cluster.local
-        image: docker.io/envoyproxy/gateway-dev:latest
-        imagePullPolicy: Always
+        image: envoy/gateway:abcdef
+        imagePullPolicy: IfNotPresent
         name: envoy-gateway-certgen
         securityContext:
           allowPrivilegeEscalation: false
