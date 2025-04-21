@@ -153,11 +153,11 @@ func newGatewayAPIController(ctx context.Context, mgr manager.Manager, cfg *conf
 			case <-ctx.Done():
 				return
 			case <-cfg.Elected:
-				r.subscribeAndUpdateStatus(ctx, cfg.EnvoyGateway.EnvoyGatewaySpec.ExtensionManager != nil)
+				r.subscribeAndUpdateStatus(ctx, cfg.EnvoyGateway.ExtensionManager != nil)
 			}
 		}()
 	} else {
-		r.subscribeAndUpdateStatus(ctx, cfg.EnvoyGateway.EnvoyGatewaySpec.ExtensionManager != nil)
+		r.subscribeAndUpdateStatus(ctx, cfg.EnvoyGateway.ExtensionManager != nil)
 	}
 	return nil
 }
@@ -1964,8 +1964,8 @@ func (r *gatewayAPIReconciler) processEnvoyProxy(ep *egv1a1.EnvoyProxy, resource
 		for _, backendRef := range backendRefs {
 			backendNamespace := gatewayapi.NamespaceDerefOr(backendRef.Namespace, ep.Namespace)
 			resourceMap.allAssociatedBackendRefs.Insert(gwapiv1.BackendObjectReference{
-				Group:     backendRef.BackendObjectReference.Group,
-				Kind:      backendRef.BackendObjectReference.Kind,
+				Group:     backendRef.Group,
+				Kind:      backendRef.Kind,
 				Namespace: gatewayapi.NamespacePtr(backendNamespace),
 				Name:      backendRef.Name,
 			})

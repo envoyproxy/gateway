@@ -64,8 +64,8 @@ func (r *gatewayAPIReconciler) processTLSRoutes(ctx context.Context, gatewayName
 
 				backendNamespace := gatewayapi.NamespaceDerefOr(backendRef.Namespace, tlsRoute.Namespace)
 				resourceMap.allAssociatedBackendRefs.Insert(gwapiv1.BackendObjectReference{
-					Group:     backendRef.BackendObjectReference.Group,
-					Kind:      backendRef.BackendObjectReference.Kind,
+					Group:     backendRef.Group,
+					Kind:      backendRef.Kind,
 					Namespace: gatewayapi.NamespacePtr(backendNamespace),
 					Name:      backendRef.Name,
 				})
@@ -146,8 +146,8 @@ func (r *gatewayAPIReconciler) processGRPCRoutes(ctx context.Context, gatewayNam
 
 				backendNamespace := gatewayapi.NamespaceDerefOr(backendRef.Namespace, grpcRoute.Namespace)
 				resourceMap.allAssociatedBackendRefs.Insert(gwapiv1.BackendObjectReference{
-					Group:     backendRef.BackendObjectReference.Group,
-					Kind:      backendRef.BackendObjectReference.Kind,
+					Group:     backendRef.Group,
+					Kind:      backendRef.Kind,
 					Namespace: gatewayapi.NamespacePtr(backendNamespace),
 					Name:      backendRef.Name,
 				})
@@ -284,8 +284,8 @@ func (r *gatewayAPIReconciler) processHTTPRoutes(ctx context.Context, gatewayNam
 
 				backendNamespace := gatewayapi.NamespaceDerefOr(backendRef.Namespace, httpRoute.Namespace)
 				resourceMap.allAssociatedBackendRefs.Insert(gwapiv1.BackendObjectReference{
-					Group:     backendRef.BackendObjectReference.Group,
-					Kind:      backendRef.BackendObjectReference.Kind,
+					Group:     backendRef.Group,
+					Kind:      backendRef.Kind,
 					Namespace: gatewayapi.NamespacePtr(backendNamespace),
 					Name:      backendRef.Name,
 				})
@@ -384,8 +384,8 @@ func (r *gatewayAPIReconciler) processHTTPRouteFilter(
 
 		backendNamespace := gatewayapi.NamespaceDerefOr(mirrorBackendRef.Namespace, httpRoute.Namespace)
 		resourceMap.allAssociatedBackendRefs.Insert(gwapiv1.BackendObjectReference{
-			Group:     mirrorBackendRef.BackendObjectReference.Group,
-			Kind:      mirrorBackendRef.BackendObjectReference.Kind,
+			Group:     mirrorBackendRef.Group,
+			Kind:      mirrorBackendRef.Kind,
 			Namespace: gatewayapi.NamespacePtr(backendNamespace),
 			Name:      mirrorBackendRef.Name,
 		})
@@ -502,8 +502,8 @@ func (r *gatewayAPIReconciler) processTCPRoutes(ctx context.Context, gatewayName
 
 				backendNamespace := gatewayapi.NamespaceDerefOr(backendRef.Namespace, tcpRoute.Namespace)
 				resourceMap.allAssociatedBackendRefs.Insert(gwapiv1.BackendObjectReference{
-					Group:     backendRef.BackendObjectReference.Group,
-					Kind:      backendRef.BackendObjectReference.Kind,
+					Group:     backendRef.Group,
+					Kind:      backendRef.Kind,
 					Namespace: gatewayapi.NamespacePtr(backendNamespace),
 					Name:      backendRef.Name,
 				})
@@ -583,8 +583,8 @@ func (r *gatewayAPIReconciler) processUDPRoutes(ctx context.Context, gatewayName
 
 				backendNamespace := gatewayapi.NamespaceDerefOr(backendRef.Namespace, udpRoute.Namespace)
 				resourceMap.allAssociatedBackendRefs.Insert(gwapiv1.BackendObjectReference{
-					Group:     backendRef.BackendObjectReference.Group,
-					Kind:      backendRef.BackendObjectReference.Kind,
+					Group:     backendRef.Group,
+					Kind:      backendRef.Kind,
 					Namespace: gatewayapi.NamespacePtr(backendNamespace),
 					Name:      backendRef.Name,
 				})
