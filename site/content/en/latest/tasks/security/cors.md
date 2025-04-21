@@ -92,12 +92,7 @@ kubectl get securitypolicy/cors-example -o yaml
 
 ## Testing
 
-Ensure the `GATEWAY_HOST` environment variable from the [Quickstart](../../quickstart) is set. If not, follow the
-Quickstart instructions to set the variable.
-
-```shell
-echo $GATEWAY_HOST
-```
+{{< boilerplate testing-the-configuration >}}
 
 Verify that the CORS headers are present in the response of the OPTIONS request from `http://www.foo.com`:
 

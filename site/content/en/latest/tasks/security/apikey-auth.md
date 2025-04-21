@@ -122,12 +122,7 @@ kubectl get securitypolicy/apikey-auth-example -o yaml
 
 ## Testing
 
-Ensure the `GATEWAY_HOST` environment variable from the [Quickstart](../../quickstart) is set. If not, follow the
-Quickstart instructions to set the variable.
-
-```shell
-echo $GATEWAY_HOST
-```
+{{< boilerplate testing-the-configuration >}}
 
 Send a request to the backend service without `x-api-key` header:
 

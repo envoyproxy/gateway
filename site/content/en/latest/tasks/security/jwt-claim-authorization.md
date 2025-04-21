@@ -110,12 +110,7 @@ kubectl get securitypolicy/authorization-jwt-claim -o yaml
 
 ## Testing
 
-Ensure the `GATEWAY_HOST` environment variable from the [Quickstart](../../quickstart) is set. If not, follow the
-Quickstart instructions to set the variable.
-
-```shell
-echo $GATEWAY_HOST
-```
+{{< boilerplate testing-the-configuration >}}
 
 Define a JWT token with the required claims.
 
