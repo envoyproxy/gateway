@@ -116,6 +116,7 @@ jobs:
         files: |
           release-artifacts/install.yaml
           release-artifacts/quickstart.yaml
+          release-artifacts/envoy-gateway-crds.yaml
           release-artifacts/benchmark_report.zip
           envoy-gateway_latest_linux_amd64.tar.gz
           envoy-gateway_latest_linux_arm64.tar.gz

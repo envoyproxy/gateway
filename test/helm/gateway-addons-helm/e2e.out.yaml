@@ -1722,7 +1722,7 @@ data:
                   "uid": "$datasource"
                 },
                 "editorMode": "builder",
-                "expr": "sum(irate(envoy_http_downstream_cx_rx_bytes_total{envoy_http_conn_manager_prefix=~\"http\"}[5m]))",
+                "expr": "sum(irate(envoy_http_downstream_cx_rx_bytes_total{envoy_http_conn_manager_prefix=~\"http.*\"}[5m]))",
                 "format": "time_series",
                 "intervalFactor": 1,
                 "legendFormat": "{{service}} - in",
@@ -1734,7 +1734,7 @@ data:
                   "uid": "$datasource"
                 },
                 "editorMode": "builder",
-                "expr": "sum(irate(envoy_http_downstream_cx_tx_bytes_total{envoy_http_conn_manager_prefix=~\"http\"}[5m]))",
+                "expr": "sum(irate(envoy_http_downstream_cx_tx_bytes_total{envoy_http_conn_manager_prefix=~\"http.*\"}[5m]))",
                 "format": "time_series",
                 "intervalFactor": 1,
                 "legendFormat": "{{service}} - out",

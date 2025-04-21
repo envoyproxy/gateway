@@ -61,3 +61,4 @@ deprecations: |
 
 # Other notable changes not covered by the above sections.
 Other changes: |
+  Updated gateway-api to v1.3.0-rc.1

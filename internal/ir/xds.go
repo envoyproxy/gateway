@@ -766,6 +766,9 @@ type HTTPRoute struct {
 	// Retry defines the retry policy for the route.
 	// This is derived from the core Gateway API, and should take precedence over Traffic.Retry.
 	Retry *Retry `json:"retry,omitempty" yaml:"retry,omitempty"`
+	// CORS defines the CORS policy for the route.
+	// This is derived from the core Gateway API, and should take precedence over Security.CORS.
+	CORS *CORS `json:"cors,omitempty" yaml:"cors,omitempty"`
 }
 
 func (h *HTTPRoute) GetRetry() *Retry {

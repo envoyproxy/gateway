@@ -333,7 +333,6 @@ type EnvoyProxyKubernetesProvider struct {
 	EnvoyService *KubernetesServiceSpec `json:"envoyService,omitempty"`
 
 	// EnvoyHpa defines the Horizontal Pod Autoscaler settings for Envoy Proxy Deployment.
-	// Once the HPA is being set, Replicas field from EnvoyDeployment will be ignored.
 	//
 	// +optional
 	EnvoyHpa *KubernetesHorizontalPodAutoscalerSpec `json:"envoyHpa,omitempty"`

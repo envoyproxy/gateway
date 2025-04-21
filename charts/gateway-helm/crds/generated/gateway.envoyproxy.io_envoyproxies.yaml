@@ -3,7 +3,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.17.1
+    controller-gen.kubebuilder.io/version: v0.17.3
   name: envoyproxies.gateway.envoyproxy.io
 spec:
   group: gateway.envoyproxy.io
@@ -9584,9 +9584,8 @@ spec:
                             type: object
                         type: object
                       envoyHpa:
-                        description: |-
-                          EnvoyHpa defines the Horizontal Pod Autoscaler settings for Envoy Proxy Deployment.
-                          Once the HPA is being set, Replicas field from EnvoyDeployment will be ignored.
+                        description: EnvoyHpa defines the Horizontal Pod Autoscaler
+                          settings for Envoy Proxy Deployment.
                         properties:
                           behavior:
                             description: |-
