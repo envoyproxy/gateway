@@ -100,7 +100,7 @@ type BackendTrafficPolicySpec struct {
 	// +notImplementedHide
 	// +optional
 	RequestBuffer *RequestBuffer `json:"requestBuffer,omitempty"`
-	// Telemetry configures the telemetry settings for the backend or HTTPRoute.
+	// Telemetry configures the telemetry settings for the policy target (Gateway or xRoute).
 	// This will override the telemetry settings in the EnvoyProxy resource.
 	//
 	// +optional
