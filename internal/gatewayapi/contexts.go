@@ -6,6 +6,7 @@
 package gatewayapi
 
 import (
+	"crypto/x509"
 	"reflect"
 
 	corev1 "k8s.io/api/core/v1"
@@ -17,6 +18,7 @@ import (
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
+	"github.com/envoyproxy/gateway/internal/ir"
 )
 
 // GatewayContext wraps a Gateway and provides helper methods for
@@ -73,6 +75,9 @@ type ListenerContext struct {
 	listenerStatusIdx int
 	namespaceSelector labels.Selector
 	tlsSecrets        []*corev1.Secret
+	tlsCertificates   []*x509.Certificate
+
+	httpIR *ir.HTTPListener
 }
 
 func (l *ListenerContext) SetSupportedKinds(kinds ...gwapiv1.RouteGroupKind) {
@@ -138,6 +143,10 @@ func (l *ListenerContext) GetConditions() []metav1.Condition {
 
 func (l *ListenerContext) SetTLSSecrets(tlsSecrets []*corev1.Secret) {
 	l.tlsSecrets = tlsSecrets
+}
+
+func (l *ListenerContext) SetTLSCertificates(certs []*x509.Certificate) {
+	l.tlsCertificates = certs
 }
 
 // RouteContext represents a generic Route object (HTTPRoute, TLSRoute, etc.)

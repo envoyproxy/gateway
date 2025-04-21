@@ -17,8 +17,9 @@ import (
 
 // validateTLSSecretData ensures the cert and key provided in a secret
 // is not malformed and can be properly parsed
-func validateTLSSecretsData(secrets []*corev1.Secret, host *gwapiv1.Hostname) error {
+func validateTLSSecretsData(secrets []*corev1.Secret, host *gwapiv1.Hostname) ([]*x509.Certificate, error) {
 	var publicKeyAlgorithm string
+	var certs []*x509.Certificate
 	var parseErr error
 
 	pkaSecretSet := make(map[string][]string)
@@ -26,17 +27,17 @@ func validateTLSSecretsData(secrets []*corev1.Secret, host *gwapiv1.Hostname) er
 		certData := secret.Data[corev1.TLSCertKey]
 
 		if err := validateCertificate(certData); err != nil {
-			return fmt.Errorf("%s/%s must contain valid %s and %s, unable to validate certificate in %s: %w", secret.Namespace, secret.Name, corev1.TLSCertKey, corev1.TLSPrivateKeyKey, corev1.TLSCertKey, err)
+			return nil, fmt.Errorf("%s/%s must contain valid %s and %s, unable to validate certificate in %s: %w", secret.Namespace, secret.Name, corev1.TLSCertKey, corev1.TLSPrivateKeyKey, corev1.TLSCertKey, err)
 		}
 
 		certBlock, _ := pem.Decode(certData)
 		if certBlock == nil {
-			return fmt.Errorf("%s/%s must contain valid %s and %s, unable to decode pem data in %s", secret.Namespace, secret.Name, corev1.TLSCertKey, corev1.TLSPrivateKeyKey, corev1.TLSCertKey)
+			return nil, fmt.Errorf("%s/%s must contain valid %s and %s, unable to decode pem data in %s", secret.Namespace, secret.Name, corev1.TLSCertKey, corev1.TLSPrivateKeyKey, corev1.TLSCertKey)
 		}
 
 		cert, err := x509.ParseCertificate(certBlock.Bytes)
 		if err != nil {
-			return fmt.Errorf("%s/%s must contain valid %s and %s, unable to parse certificate in %s: %w", secret.Namespace, secret.Name, corev1.TLSCertKey, corev1.TLSPrivateKeyKey, corev1.TLSCertKey, err)
+			return nil, fmt.Errorf("%s/%s must contain valid %s and %s, unable to parse certificate in %s: %w", secret.Namespace, secret.Name, corev1.TLSCertKey, corev1.TLSPrivateKeyKey, corev1.TLSCertKey, err)
 		}
 		publicKeyAlgorithm = cert.PublicKeyAlgorithm.String()
 
@@ -44,18 +45,18 @@ func validateTLSSecretsData(secrets []*corev1.Secret, host *gwapiv1.Hostname) er
 
 		keyBlock, _ := pem.Decode(keyData)
 		if keyBlock == nil {
-			return fmt.Errorf("%s/%s must contain valid %s and %s, unable to decode pem data in %s", secret.Namespace, secret.Name, corev1.TLSCertKey, corev1.TLSPrivateKeyKey, corev1.TLSPrivateKeyKey)
+			return nil, fmt.Errorf("%s/%s must contain valid %s and %s, unable to decode pem data in %s", secret.Namespace, secret.Name, corev1.TLSCertKey, corev1.TLSPrivateKeyKey, corev1.TLSPrivateKeyKey)
 		}
 
 		matchedFQDN, err := verifyHostname(cert, host)
 		if err != nil {
-			return fmt.Errorf("%s/%s must contain valid %s and %s, hostname %s does not match Common Name or DNS Names in the certificate %s", secret.Namespace, secret.Name, corev1.TLSCertKey, corev1.TLSPrivateKeyKey, string(*host), corev1.TLSCertKey)
+			return nil, fmt.Errorf("%s/%s must contain valid %s and %s, hostname %s does not match Common Name or DNS Names in the certificate %s", secret.Namespace, secret.Name, corev1.TLSCertKey, corev1.TLSPrivateKeyKey, string(*host), corev1.TLSCertKey)
 		}
 		pkaSecretKey := fmt.Sprintf("%s/%s", publicKeyAlgorithm, matchedFQDN)
 
 		// Check whether the public key algorithm and matched certificate FQDN in the referenced secrets are unique.
 		if matchedFQDN, ok := pkaSecretSet[pkaSecretKey]; ok {
-			return fmt.Errorf("%s/%s public key algorithm must be unique, matched certificate FQDN %s has a conflicting algorithm [%s]",
+			return nil, fmt.Errorf("%s/%s public key algorithm must be unique, matched certificate FQDN %s has a conflicting algorithm [%s]",
 				secret.Namespace, secret.Name, matchedFQDN, publicKeyAlgorithm)
 		}
 		pkaSecretSet[pkaSecretKey] = matchedFQDN
@@ -77,11 +78,12 @@ func validateTLSSecretsData(secrets []*corev1.Secret, host *gwapiv1.Hostname) er
 				parseErr = fmt.Errorf("%s/%s must contain valid %s and %s, unable to parse EC formatted private key in %s", secret.Namespace, secret.Name, corev1.TLSCertKey, corev1.TLSPrivateKeyKey, corev1.TLSPrivateKeyKey)
 			}
 		default:
-			return fmt.Errorf("%s/%s must contain valid %s and %s, %s key format found in %s, supported formats are PKCS1, PKCS8 or EC", secret.Namespace, secret.Name, corev1.TLSCertKey, corev1.TLSPrivateKeyKey, keyBlock.Type, corev1.TLSPrivateKeyKey)
+			return nil, fmt.Errorf("%s/%s must contain valid %s and %s, %s key format found in %s, supported formats are PKCS1, PKCS8 or EC", secret.Namespace, secret.Name, corev1.TLSCertKey, corev1.TLSPrivateKeyKey, keyBlock.Type, corev1.TLSPrivateKeyKey)
 		}
+		certs = append(certs, cert)
 	}
 
-	return parseErr
+	return certs, parseErr
 }
 
 // verifyHostname checks if the listener Hostname matches any domain in the certificate, returns a list of matched hosts.

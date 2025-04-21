@@ -32,7 +32,7 @@ new features: |
   Added support for global imageRegistry and imagePullSecrets to the Helm chart
   Added support for using a local JWKS in an inline string or in a ConfigMap to validate JWT tokens in SecurityPolicy
   Added support for logging the status of resources in standalone mode.
-
+  Added support for `OverlappingTLSConfig` condition in Gateway status. This condition is set if there are overlapping hostnames or certificates between listeners. The ALPN protocol is set to HTTP/1.1 for the overlapping listeners to avoid HTTP/2 Connection Coalescing.
 
 bug fixes: |
   Fix traffic splitting when filters are attached to the backendRef.

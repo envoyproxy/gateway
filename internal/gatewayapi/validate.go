@@ -6,6 +6,7 @@
 package gatewayapi
 
 import (
+	"crypto/x509"
 	"errors"
 	"fmt"
 	"net/netip"
@@ -403,7 +404,7 @@ func (t *Translator) validateAllowedNamespaces(listener *ListenerContext) {
 	}
 }
 
-func (t *Translator) validateTerminateModeAndGetTLSSecrets(listener *ListenerContext, resources *resource.Resources) []*corev1.Secret {
+func (t *Translator) validateTerminateModeAndGetTLSSecrets(listener *ListenerContext, resources *resource.Resources) ([]*corev1.Secret, []*x509.Certificate) {
 	if len(listener.TLS.CertificateRefs) == 0 {
 		status.SetGatewayListenerStatusCondition(listener.gateway.Gateway,
 			listener.listenerStatusIdx,
@@ -412,7 +413,7 @@ func (t *Translator) validateTerminateModeAndGetTLSSecrets(listener *ListenerCon
 			gwapiv1.ListenerReasonInvalid,
 			"Listener must have at least 1 TLS certificate ref",
 		)
-		return nil
+		return nil, nil
 	}
 
 	secrets := make([]*corev1.Secret, 0)
@@ -508,7 +509,7 @@ func (t *Translator) validateTerminateModeAndGetTLSSecrets(listener *ListenerCon
 		secrets = append(secrets, secret)
 	}
 
-	err := validateTLSSecretsData(secrets, listener.Hostname)
+	certs, err := validateTLSSecretsData(secrets, listener.Hostname)
 	if err != nil {
 		status.SetGatewayListenerStatusCondition(listener.gateway.Gateway,
 			listener.listenerStatusIdx,
@@ -519,7 +520,7 @@ func (t *Translator) validateTerminateModeAndGetTLSSecrets(listener *ListenerCon
 		)
 	}
 
-	return secrets
+	return secrets, certs
 }
 
 func (t *Translator) validateTLSConfiguration(listener *ListenerContext, resources *resource.Resources) {
@@ -557,8 +558,9 @@ func (t *Translator) validateTLSConfiguration(listener *ListenerContext, resourc
 			break
 		}
 
-		secrets := t.validateTerminateModeAndGetTLSSecrets(listener, resources)
+		secrets, certs := t.validateTerminateModeAndGetTLSSecrets(listener, resources)
 		listener.SetTLSSecrets(secrets)
+		listener.SetTLSCertificates(certs)
 
 	case gwapiv1.TLSProtocolType:
 		if listener.TLS == nil {
@@ -596,7 +598,7 @@ func (t *Translator) validateTLSConfiguration(listener *ListenerContext, resourc
 				)
 				break
 			}
-			secrets := t.validateTerminateModeAndGetTLSSecrets(listener, resources)
+			secrets, _ := t.validateTerminateModeAndGetTLSSecrets(listener, resources)
 			listener.SetTLSSecrets(secrets)
 		}
 	}
