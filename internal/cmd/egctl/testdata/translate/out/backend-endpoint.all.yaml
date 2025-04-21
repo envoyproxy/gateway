@@ -86,7 +86,6 @@ gatewayClass:
   metadata:
     creationTimestamp: null
     name: eg
-    namespace: envoy-gateway-system
   spec:
     controllerName: gateway.envoyproxy.io/gatewayclass-controller
   status:
