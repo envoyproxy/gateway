@@ -140,10 +140,8 @@ linters:
         - -ST1005
     testifylint:
       disable:
-        - equal-values  # fixme
         - float-compare
         - go-require
-        - len  # fixme
       enable-all: true
     unparam:
       check-exported: false
