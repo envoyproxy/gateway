@@ -34,7 +34,6 @@ require (
 	github.com/google/cel-go v0.22.1
 	github.com/google/go-cmp v0.7.0
 	github.com/google/go-containerregistry v0.20.3
-	github.com/hashicorp/go-multierror v1.1.1
 	github.com/miekg/dns v1.1.65
 	github.com/ohler55/ojg v1.26.3
 	github.com/pkg/errors v0.9.1
@@ -277,6 +276,7 @@ require (
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.26.1 // indirect
 	github.com/hashicorp/errwrap v1.1.0 // indirect
 	github.com/hashicorp/go-immutable-radix/v2 v2.1.0 // indirect
+	github.com/hashicorp/go-multierror v1.1.1 // indirect
 	github.com/hashicorp/go-version v1.7.0 // indirect
 	github.com/hashicorp/golang-lru/v2 v2.0.7 // indirect
 	github.com/hashicorp/hcl v1.0.0 // indirect
