@@ -19,9 +19,9 @@ import (
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/ir"
-	"github.com/envoyproxy/gateway/internal/utils/fractionalpercent"
 	"github.com/envoyproxy/gateway/internal/utils/proto"
 	"github.com/envoyproxy/gateway/internal/xds/types"
+	"github.com/envoyproxy/gateway/internal/xds/utils/fractionalpercent"
 )
 
 func init() {
