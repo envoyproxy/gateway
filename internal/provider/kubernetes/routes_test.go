@@ -643,8 +643,8 @@ func TestProcessHTTPRoutes(t *testing.T) {
 				require.NoError(t, err)
 				// Ensure the resource tree and map are as expected.
 				require.Equal(t, tc.routes, resourceTree.HTTPRoutes)
-				require.Equal(t, len(tc.extensionFilters), len(resourceTree.ExtensionRefFilters))
-				require.Equal(t, len(tc.httpRouteFilters), len(resourceTree.HTTPRouteFilters))
+				require.Len(t, resourceTree.ExtensionRefFilters, len(tc.extensionFilters))
+				require.Len(t, resourceTree.HTTPRouteFilters, len(tc.httpRouteFilters))
 				if tc.extensionFilters != nil {
 					for _, filter := range tc.extensionFilters {
 						key := utils.NamespacedNameWithGroupKind{
