@@ -1396,7 +1396,8 @@ func (t *Translator) processDestination(name string, backendRefContext BackendRe
 
 	protocol := inspectAppProtocolByRouteKind(routeType)
 
-	switch KindDerefOr(backendRef.Kind, resource.KindService) {
+	backendKind := KindDerefOr(backendRef.Kind, resource.KindService)
+	switch backendKind {
 	case resource.KindServiceImport:
 		ds = t.processServiceImportDestinationSetting(name, backendRef.BackendObjectReference, backendNamespace, protocol, resources, envoyProxy)
 
@@ -1429,6 +1430,13 @@ func (t *Translator) processDestination(name string, backendRefContext BackendRe
 	if tlsErr != nil {
 		return nil, status.NewRouteStatusError(tlsErr, status.RouteReasonInvalidBackendTLS)
 	}
+
+	ds.RetryBudget = t.applyXBackendTrafficPolicy(&gwapiv1a2.NamespacedPolicyTargetReference{
+		Name:      backendRef.Name,
+		Namespace: ptr.To(gwapiv1.Namespace(backendNamespace)),
+		Kind:      gwapiv1.Kind(backendKind),
+		Group:     gwapiv1.Group(GroupDerefOr(backendRef.Group, "")),
+	}, resources)
 
 	var filtersErr error
 	ds.Filters, filtersErr = t.processDestinationFilters(routeType, backendRefContext, parentRef, route, resources)

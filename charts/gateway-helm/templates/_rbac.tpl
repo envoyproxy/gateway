@@ -12,6 +12,8 @@ All namespaced resources for Envoy Gateway RBAC.
 {{- if .Values.topologyInjector.enabled }}
 - {{ include "eg.rbac.namespaced.topologyinjector" . | nindent 2 | trim }}
 {{- end }}
+- {{ include "eg.rbac.namespaced.gateway.networkingx" . | nindent 2 | trim }}
+- {{ include "eg.rbac.namespaced.gateway.networkingx.status" . | nindent 2 | trim }}
 {{- end }}
 
 {{/*
@@ -139,6 +141,26 @@ resources:
 - tlsroutes/status
 - udproutes/status
 - backendtlspolicies/status
+verbs:
+- update
+{{- end }}
+
+{{- define "eg.rbac.namespaced.gateway.networkingx" -}}
+apiGroups:
+- gateway.networking.x-k8s.io
+resources:
+- xbackendtrafficpolicies
+verbs:
+- get
+- list
+- watch
+{{- end }}
+
+{{- define "eg.rbac.namespaced.gateway.networkingx.status" -}}
+apiGroups:
+- gateway.networking.x-k8s.io
+resources:
+- xbackendtrafficpolicies/status
 verbs:
 - update
 {{- end }}

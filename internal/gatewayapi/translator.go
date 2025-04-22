@@ -16,6 +16,7 @@ import (
 	"k8s.io/utils/ptr"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a3 "sigs.k8s.io/gateway-api/apis/v1alpha3"
+	gwapixv1a1 "sigs.k8s.io/gateway-api/apisx/v1alpha1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
@@ -87,6 +88,9 @@ type Translator struct {
 	// BackendEnabled when the Backend feature is enabled.
 	BackendEnabled bool
 
+	// BackendTLSPolicyEnabled when the BackendTLS feature is enabled.
+	XBackendTrafficPolicyEnabled bool
+
 	// ExtensionGroupKinds stores the group/kind for all resources
 	// introduced by an Extension so that the translator can
 	// store referenced resources in the IR for later use.
@@ -123,6 +127,7 @@ func newTranslateResult(gateways []*GatewayContext,
 	envoyExtensionPolicies []*egv1a1.EnvoyExtensionPolicy,
 	extPolicies []unstructured.Unstructured,
 	backends []*egv1a1.Backend,
+	xBtpList []*gwapixv1a1.XBackendTrafficPolicy,
 	xdsIR resource.XdsIRMap, infraIR resource.InfraIRMap,
 ) *TranslateResult {
 	translateResult := &TranslateResult{
@@ -157,6 +162,7 @@ func newTranslateResult(gateways []*GatewayContext,
 	translateResult.ExtensionServerPolicies = append(translateResult.ExtensionServerPolicies, extPolicies...)
 
 	translateResult.Backends = append(translateResult.Backends, backends...)
+	translateResult.XBackendTrafficPolicies = append(translateResult.XBackendTrafficPolicies, xBtpList...)
 	return translateResult
 }
 
@@ -222,6 +228,8 @@ func (t *Translator) Translate(resources *resource.Resources) (*TranslateResult,
 		routes = append(routes, u)
 	}
 
+	xBtpList := t.ProcessXBackendTrafficPolicy(resources)
+
 	// Process BackendTrafficPolicies
 	backendTrafficPolicies := t.ProcessBackendTrafficPolicies(
 		resources, acceptedGateways, routes, xdsIR)
@@ -264,7 +272,7 @@ func (t *Translator) Translate(resources *resource.Resources) (*TranslateResult,
 	return newTranslateResult(allGateways, httpRoutes, grpcRoutes, tlsRoutes,
 		tcpRoutes, udpRoutes, clientTrafficPolicies, backendTrafficPolicies,
 		securityPolicies, resources.BackendTLSPolicies, envoyExtensionPolicies,
-		extServerPolicies, backends, xdsIR, infraIR), errs
+		extServerPolicies, backends, xBtpList, xdsIR, infraIR), errs
 }
 
 // GetRelevantGateways returns GatewayContexts, containing a copy of the original

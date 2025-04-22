@@ -13,6 +13,7 @@ new features: |
   Added support for configuring Subject Alternative Names (SANs) for upstream TLS validation via `BackendTLSPolicy.validation.subjectAltNames`.
   Added support for local rate limit header.
   Added XDS metadata for clusters and endpoints from xRoutes and referenced backend resources (Backend, Service, ServiceImport).
+  Added support for GEP-3388 (Retry Budget)
 
 bug fixes: |
 

@@ -24,6 +24,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/validation"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	"sigs.k8s.io/yaml"
 
@@ -1607,6 +1608,8 @@ type DestinationSetting struct {
 	// Metadata is used to enrich envoy route metadata with user and provider-specific information
 	// The primary metadata for DestinationSettings comes from the Backend resource reference in BackendRef
 	Metadata *ResourceMetadata `json:"metadata,omitempty" yaml:"metadata,omitempty"`
+
+	RetryBudget *RetryBudget `json:"retryBudget,omitempty" yaml:"retryBudget,omitempty"`
 }
 
 // Validate the fields within the DestinationSetting structure
@@ -1619,6 +1622,13 @@ func (d *DestinationSetting) Validate() error {
 	}
 
 	return errs
+}
+
+// RetryBudget holds the retry budget configuration for a destination
+// +k8s:deepcopy-gen=true
+type RetryBudget struct {
+	Percent             *gwapiv1.Fraction `json:"percent,omitempty" yaml:"percent,omitempty"`
+	MinRetryConcurrency *uint32           `json:"minRetryConcurrency,omitempty" yaml:"minRetryConcurrency,omitempty"`
 }
 
 // DestinationAddressType describes the address type state for a group of DestinationEndpoint

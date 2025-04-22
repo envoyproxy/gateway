@@ -41,6 +41,7 @@ import (
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/utils/proto"
+	"github.com/envoyproxy/gateway/internal/xds/utils"
 )
 
 const (
@@ -179,6 +180,7 @@ func buildXdsCluster(args *xdsClusterArgs) (*buildClusterResult, error) {
 		cluster.TransportSocket = args.tSocket
 	}
 
+	var retryBudget *ir.RetryBudget
 	for i, ds := range args.settings {
 		// If zone aware routing is enabled we update the cluster lb config
 		if ds.ZoneAwareRoutingEnabled {
@@ -210,6 +212,9 @@ func buildXdsCluster(args *xdsClusterArgs) (*buildClusterResult, error) {
 					TransportSocket: socket,
 				})
 			}
+		}
+		if ds.RetryBudget != nil {
+			retryBudget = ds.RetryBudget
 		}
 	}
 
@@ -272,7 +277,7 @@ func buildXdsCluster(args *xdsClusterArgs) (*buildClusterResult, error) {
 		cluster.OutlierDetection = buildXdsOutlierDetection(args.healthCheck.Passive)
 	}
 
-	cluster.CircuitBreakers = buildXdsClusterCircuitBreaker(args.circuitBreaker)
+	cluster.CircuitBreakers = buildXdsClusterCircuitBreaker(args.circuitBreaker, retryBudget)
 
 	if args.tcpkeepalive != nil {
 		cluster.UpstreamConnectionOptions = buildXdsClusterUpstreamOptions(args.tcpkeepalive)
@@ -570,17 +575,24 @@ func buildHealthCheckPayload(irLoad *ir.HealthCheckPayload) *corev3.HealthCheck_
 	return &hcp
 }
 
-func buildXdsClusterCircuitBreaker(circuitBreaker *ir.CircuitBreaker) *clusterv3.CircuitBreakers {
+func buildXdsClusterCircuitBreaker(circuitBreaker *ir.CircuitBreaker, retryBudget *ir.RetryBudget) *clusterv3.CircuitBreakers {
 	// Always allow the same amount of retries as regular requests to handle surges in retries
 	// related to pod restarts
+	var clusterRetryBudget *clusterv3.CircuitBreakers_Thresholds_RetryBudget
+	if retryBudget != nil {
+		clusterRetryBudget = &clusterv3.CircuitBreakers_Thresholds_RetryBudget{
+			BudgetPercent:       utils.FromFraction(retryBudget.Percent),
+			MinRetryConcurrency: utils.FromUInt32(retryBudget.MinRetryConcurrency),
+		}
+	}
 	cbt := &clusterv3.CircuitBreakers_Thresholds{
 		Priority: corev3.RoutingPriority_DEFAULT,
 		MaxRetries: &wrapperspb.UInt32Value{
 			Value: uint32(1024),
 		},
+		RetryBudget: clusterRetryBudget,
 	}
-	cbtPerEndpoint := []*clusterv3.CircuitBreakers_Thresholds{}
-
+	var cbtPerEndpoint []*clusterv3.CircuitBreakers_Thresholds
 	if circuitBreaker != nil {
 		if circuitBreaker.MaxConnections != nil {
 			cbt.MaxConnections = &wrapperspb.UInt32Value{
@@ -613,6 +625,7 @@ func buildXdsClusterCircuitBreaker(circuitBreaker *ir.CircuitBreaker) *clusterv3
 						MaxConnections: &wrapperspb.UInt32Value{
 							Value: *circuitBreaker.PerEndpoint.MaxConnections,
 						},
+						RetryBudget: clusterRetryBudget,
 					},
 				}
 			}
