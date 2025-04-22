@@ -170,8 +170,8 @@ func TestRunner_withExtensionManager_FailOpen(t *testing.T) {
 	xdsIR.Store("test", &res)
 	require.Eventually(t, func() bool {
 		out := xds.LoadAll()
-		// xDS translation is done in a best-effort manner, so event the extension
-		// manager returns an error, the xDS resources should still be created.
+		// Since the extension manager is configured to fail open, in an event of an error
+		// from the extension manager hooks, xds update should be published.
 		return len(out) == 1
 	}, time.Second*5, time.Millisecond*50)
 }
@@ -242,8 +242,8 @@ func TestRunner_withExtensionManager_FailClosed(t *testing.T) {
 	xdsIR.Store("test", &res)
 	require.Never(t, func() bool {
 		out := xds.LoadAll()
-		// xDS translation is done in a best-effort manner, so event the extension
-		// manager returns an error, the xDS resources should still be created.
+		// Since the extension manager is configured to fail closed,  in an event of an error
+		// from the extension manager hooks, xds update should not be published.
 		return len(out) > 0
 	}, time.Second*5, time.Millisecond*50)
 }
