@@ -136,41 +136,6 @@ static_resources:
               "@type": type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
   {{- end }}
   {{- if .GatewayNamespaceMode }}
-  - name: xds_listener
-    address:
-      socket_address:
-        address: 0.0.0.0
-        port_value: {{ .XdsServer.Port }}
-    filter_chains:
-    - filters:
-        - name: envoy.filters.network.http_connection_manager
-          typed_config:
-            "@type": type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
-            stat_prefix: ingress_http
-            route_config:
-              virtual_hosts:
-                - name: local_xds
-                  domains: ["*"]
-                  routes:
-                    - match:
-                        prefix: "/"
-                      route:
-                        cluster: xds_cluster
-            http_filters:
-              - name: envoy.filters.http.credential_injector
-                typed_config:
-                  "@type": type.googleapis.com/envoy.extensions.filters.http.credential_injector.v3.CredentialInjector
-                  allow_request_without_credential: false
-                  overwrite: true
-                  credential:
-                    name: envoy.http.injected_credentials.generic
-                    typed_config:
-                      "@type": type.googleapis.com/envoy.extensions.http.injected_credentials.generic.v3.Generic
-                      credential:
-                        name: jwt-sa-bearer
-              - name: envoy.filters.http.router
-                typed_config:
-                  "@type": type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
   secrets:
   - name: jwt-sa-bearer
     generic_secret:
@@ -251,6 +216,23 @@ static_resources:
             connection_keepalive:
               interval: 30s
               timeout: 5s
+{{- if .GatewayNamespaceMode }}
+        http_filters:
+          - name: envoy.filters.http.credential_injector
+            typed_config:
+              "@type": type.googleapis.com/envoy.extensions.filters.http.credential_injector.v3.CredentialInjector
+              allow_request_without_credential: false
+              overwrite: true
+              credential:
+                name: envoy.http.injected_credentials.generic
+                typed_config:
+                  "@type": type.googleapis.com/envoy.extensions.http.injected_credentials.generic.v3.Generic
+                  credential:
+                    name: jwt-sa-bearer
+          - name: envoy.extensions.filters.http.upstream_codec.v3.UpstreamCodec
+            typed_config:
+              "@type": type.googleapis.com/envoy.extensions.filters.http.upstream_codec.v3.UpstreamCodec
+{{- end }}
     name: xds_cluster
     type: STRICT_DNS
     transport_socket:

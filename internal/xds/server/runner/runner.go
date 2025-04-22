@@ -118,27 +118,17 @@ func (r *Runner) Start(ctx context.Context) (err error) {
 			"https://kubernetes.default.svc",
 		)
 
-		ca, err := os.ReadFile(xdsTLSCaFilepath)
+		creds, err := credentials.NewServerTLSFromFile(xdsTLSCertFilepath, xdsTLSKeyFilepath)
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to create TLS credentials: %w", err)
 		}
-		certPool := x509.NewCertPool()
-		if !certPool.AppendCertsFromPEM(ca) {
-			return err
-		}
-
-		tlsCreds := credentials.NewTLS(&tls.Config{
-			MinVersion: tls.VersionTLS13,
-			RootCAs:    certPool,
-			NextProtos: []string{"h2"},
-		})
 
 		grpcOpts = []grpc.ServerOption{
 			grpc.KeepaliveEnforcementPolicy(keepalive.EnforcementPolicy{
 				MinTime:             15 * time.Second,
 				PermitWithoutStream: true,
 			}),
-			grpc.Creds(tlsCreds),
+			grpc.Creds(creds),
 			grpc.StreamInterceptor(jwtInterceptor.Stream()),
 		}
 	}
