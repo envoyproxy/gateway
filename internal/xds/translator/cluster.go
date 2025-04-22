@@ -14,9 +14,12 @@ import (
 	clusterv3 "github.com/envoyproxy/go-control-plane/envoy/config/cluster/v3"
 	corev3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	endpointv3 "github.com/envoyproxy/go-control-plane/envoy/config/endpoint/v3"
+	codecv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/upstream_codec/v3"
+	hcmv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/http_connection_manager/v3"
 	preservecasev3 "github.com/envoyproxy/go-control-plane/envoy/extensions/http/header_formatters/preserve_case/v3"
 	proxyprotocolv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/transport_sockets/proxy_protocol/v3"
 	rawbufferv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/transport_sockets/raw_buffer/v3"
+	tlsv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/transport_sockets/tls/v3"
 	httpv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/upstreams/http/v3"
 	xdstype "github.com/envoyproxy/go-control-plane/envoy/type/v3"
 	"github.com/envoyproxy/go-control-plane/pkg/resource/v3"
@@ -83,7 +86,12 @@ func buildEndpointType(settings []*ir.DestinationSetting) EndpointType {
 	return EndpointTypeStatic
 }
 
-func buildXdsCluster(args *xdsClusterArgs) *clusterv3.Cluster {
+type buildClusterResult struct {
+	cluster *clusterv3.Cluster
+	secrets []*tlsv3.Secret // Secrets used in the cluster filters, we may need to add other types of resources in the future.
+}
+
+func buildXdsCluster(args *xdsClusterArgs) (*buildClusterResult, error) {
 	dnsLookupFamily := clusterv3.Cluster_V4_PREFERRED
 	customDNSPolicy := args.dns != nil && args.dns.LookupFamily != nil
 	// apply DNS lookup family if custom DNS traffic policy is set
@@ -168,7 +176,7 @@ func buildXdsCluster(args *xdsClusterArgs) *clusterv3.Cluster {
 			socket, err := buildXdsUpstreamTLSSocketWthCert(ds.TLS)
 			if err != nil {
 				// TODO: Log something here
-				return nil
+				return nil, err
 			}
 			if args.proxyProtocol != nil {
 				socket = buildProxyProtocolSocket(args.proxyProtocol, socket)
@@ -217,7 +225,10 @@ func buildXdsCluster(args *xdsClusterArgs) *clusterv3.Cluster {
 	}
 
 	// build common, HTTP/1 and HTTP/2  protocol options for cluster
-	epo := buildTypedExtensionProtocolOptions(args)
+	epo, secrets, err := buildTypedExtensionProtocolOptions(args)
+	if err != nil {
+		return nil, err
+	}
 	if epo != nil {
 		cluster.TypedExtensionProtocolOptions = epo
 	}
@@ -277,7 +288,10 @@ func buildXdsCluster(args *xdsClusterArgs) *clusterv3.Cluster {
 	if args.tcpkeepalive != nil {
 		cluster.UpstreamConnectionOptions = buildXdsClusterUpstreamOptions(args.tcpkeepalive)
 	}
-	return cluster
+	return &buildClusterResult{
+		cluster: cluster,
+		secrets: secrets,
+	}, nil
 }
 
 func buildXdsHealthCheck(healthcheck *ir.ActiveHealthCheck) []*corev3.HealthCheck {
@@ -576,7 +590,7 @@ func buildWeightedLocalities(metadata *corev3.Metadata, ds *ir.DestinationSettin
 	return locality
 }
 
-func buildTypedExtensionProtocolOptions(args *xdsClusterArgs) map[string]*anypb.Any {
+func buildTypedExtensionProtocolOptions(args *xdsClusterArgs) (map[string]*anypb.Any, []*tlsv3.Secret, error) {
 	requiresHTTP2Options := false
 	for _, ds := range args.settings {
 		if ds.Protocol == ir.GRPC ||
@@ -590,10 +604,13 @@ func buildTypedExtensionProtocolOptions(args *xdsClusterArgs) map[string]*anypb.
 		(args.timeout.HTTP.MaxConnectionDuration != nil || args.timeout.HTTP.ConnectionIdleTimeout != nil)) ||
 		(args.circuitBreaker != nil && args.circuitBreaker.MaxRequestsPerConnection != nil)
 
-	requiresHTTP1Options := args.http1Settings != nil && (args.http1Settings.EnableTrailers || args.http1Settings.PreserveHeaderCase || args.http1Settings.HTTP10 != nil)
+	requiresHTTP1Options := args.http1Settings != nil &&
+		(args.http1Settings.EnableTrailers || args.http1Settings.PreserveHeaderCase || args.http1Settings.HTTP10 != nil)
 
-	if !(requiresCommonHTTPOptions || requiresHTTP1Options || requiresHTTP2Options || args.useClientProtocol) {
-		return nil
+	requiresHTTPFilters := len(args.settings) > 0 && args.settings[0].Filters != nil && args.settings[0].Filters.CredentialInjection != nil
+
+	if !(requiresCommonHTTPOptions || requiresHTTP1Options || requiresHTTP2Options || args.useClientProtocol || requiresHTTPFilters) {
+		return nil, nil, nil
 	}
 
 	protocolOptions := httpv3.HttpProtocolOptions{}
@@ -675,13 +692,74 @@ func buildTypedExtensionProtocolOptions(args *xdsClusterArgs) map[string]*anypb.
 		}
 	}
 
+	var (
+		filters []*hcmv3.HttpFilter
+		secrets []*tlsv3.Secret
+		err     error
+	)
+	if requiresHTTPFilters {
+		filters, secrets, err = buildClusterHTTPFilters(args)
+		if err != nil {
+			return nil, nil, err
+		}
+		if len(filters) > 0 {
+			protocolOptions.HttpFilters = filters
+		}
+	}
+
 	anyProtocolOptions, _ := proto.ToAnyWithValidation(&protocolOptions)
 
 	extensionOptions := map[string]*anypb.Any{
 		extensionOptionsKey: anyProtocolOptions,
 	}
 
-	return extensionOptions
+	return extensionOptions, secrets, nil
+}
+
+// buildClusterHTTPFilters builds the HTTP filters for the cluster.
+// EG only supports credential injector filter for now, more filters can be added in the future.
+func buildClusterHTTPFilters(args *xdsClusterArgs) ([]*hcmv3.HttpFilter, []*tlsv3.Secret, error) {
+	filters := make([]*hcmv3.HttpFilter, 0)
+	secrets := make([]*tlsv3.Secret, 0)
+	if len(args.settings) > 0 {
+		// There is only one setting in the settings slice because EG creates one cluster per backendRef
+		// if there are backend filters.
+		if args.settings[0].Filters != nil && args.settings[0].Filters.CredentialInjection != nil {
+			filter, err := buildHCMCredentialInjectorFilter(args.settings[0].Filters.CredentialInjection)
+			filter.Disabled = false
+			if err != nil {
+				return nil, nil, err
+			}
+			secret := buildCredentialSecret(args.settings[0].Filters.CredentialInjection)
+			filters = append(filters, filter)
+			secrets = append(secrets, secret)
+		}
+	}
+
+	// UpstreamCodec filter is required as the terminal filter for the upstream HTTP filters.
+	if len(filters) > 0 {
+		upstreamCodec, err := buildUpstreamCodecFilter()
+		if err != nil {
+			return nil, nil, err
+		}
+		filters = append(filters, upstreamCodec)
+	}
+	// We may need to add more Cluster filters in the future, so we return a slice of filters.
+	return filters, secrets, nil
+}
+
+func buildUpstreamCodecFilter() (*hcmv3.HttpFilter, error) {
+	codec := &codecv3.UpstreamCodec{}
+	codecAny, err := proto.ToAnyWithValidation(codec)
+	if err != nil {
+		return nil, err
+	}
+	return &hcmv3.HttpFilter{
+		Name: "envoy.extensions.filters.http.upstream_codec.v3.UpstreamCodec",
+		ConfigType: &hcmv3.HttpFilter_TypedConfig{
+			TypedConfig: codecAny,
+		},
+	}, nil
 }
 
 // buildProxyProtocolSocket builds the ProxyProtocol transport socket.
