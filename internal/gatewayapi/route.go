@@ -1535,6 +1535,9 @@ func applyHTTPFiltersContextToDestinationFilters(httpFiltersContext *HTTPFilters
 	if len(httpFiltersContext.RemoveResponseHeaders) > 0 {
 		destFilters.RemoveResponseHeaders = httpFiltersContext.RemoveResponseHeaders
 	}
+	if httpFiltersContext.CredentialInjection != nil {
+		destFilters.CredentialInjection = httpFiltersContext.CredentialInjection
+	}
 }
 
 func inspectAppProtocolByRouteKind(kind gwapiv1.Kind) ir.AppProtocol {
