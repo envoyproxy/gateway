@@ -128,6 +128,7 @@ func (r *Runner) Start(ctx context.Context) (err error) {
 		}
 
 		tlsCreds := credentials.NewTLS(&tls.Config{
+			MinVersion: tls.VersionTLS13,
 			RootCAs:    certPool,
 			NextProtos: []string{"h2"},
 		})

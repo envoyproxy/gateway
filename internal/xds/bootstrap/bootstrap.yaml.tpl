@@ -258,9 +258,9 @@ static_resources:
       typed_config:
         "@type": type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.UpstreamTlsContext
         common_tls_context:
-{{- if not .GatewayNamespaceMode }}
           tls_params:
             tls_maximum_protocol_version: TLSv1_3
+{{- if not .GatewayNamespaceMode }}
           tls_certificate_sds_secret_configs:
           - name: xds_certificate
             sds_config:
@@ -298,9 +298,9 @@ static_resources:
       typed_config:
         "@type": type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.UpstreamTlsContext
         common_tls_context:
-{{- if not .GatewayNamespaceMode }}
           tls_params:
             tls_maximum_protocol_version: TLSv1_3
+{{- if not .GatewayNamespaceMode }}
           tls_certificate_sds_secret_configs:
           - name: xds_certificate
             sds_config:
