@@ -1,3 +1,50 @@
+backendTrafficPolicies:
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: BackendTrafficPolicy
+  metadata:
+    creationTimestamp: null
+    name: policy-for-route
+    namespace: default
+  spec:
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: httproute-1
+    telemetry:
+      tracing:
+        customTags:
+          env1:
+            environment:
+              defaultValue: '-'
+              name: env1
+            type: Environment
+          literal1:
+            literal:
+              value: value1
+            type: Literal
+          req1:
+            requestHeader:
+              defaultValue: '-'
+              name: X-Request-Id
+            type: RequestHeader
+        samplingFraction:
+          denominator: 100
+          numerator: 1
+  status:
+    ancestors:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: gateway-1
+        namespace: envoy-gateway
+        sectionName: http
+      conditions:
+      - lastTransitionTime: null
+        message: Policy has been accepted.
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
 gateways:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: Gateway
@@ -47,49 +94,19 @@ httpRoutes:
     name: httproute-1
     namespace: default
   spec:
+    hostnames:
+    - gateway.envoyproxy.io
     parentRefs:
     - name: gateway-1
       namespace: envoy-gateway
+      sectionName: http
     rules:
     - backendRefs:
-      - filters:
-        - requestHeaderModifier:
-            add:
-            - name: add-header-1
-              value: some-value
-            - name: add-header-2
-              value: some-value
-          type: RequestHeaderModifier
-        name: service-1
+      - name: service-1
         port: 8080
-        weight: 8
-      - name: service-2
-        port: 8080
-        weight: 2
       matches:
       - path:
           value: /
-    - backendRefs:
-      - name: service-2
-        port: 8080
-        weight: 2
-      - filters:
-        - requestHeaderModifier:
-            set:
-            - name: add-header-3
-              value: some-value
-          type: RequestHeaderModifier
-        - extensionRef:
-            group: gateway.envoyproxy.io
-            kind: HTTPRouteFilter
-            name: credential-injection
-          type: ExtensionRef
-        name: service-3
-        port: 8080
-        weight: 1
-      matches:
-      - path:
-          value: /foo
   status:
     parents:
     - conditions:
@@ -107,6 +124,7 @@ httpRoutes:
       parentRef:
         name: gateway-1
         namespace: envoy-gateway
+        sectionName: http
 infraIR:
   envoy-gateway/gateway-1:
     proxy:
@@ -145,80 +163,48 @@ xdsIR:
       port: 10080
       routes:
       - destination:
-          name: httproute/default/httproute-1/rule/1
-          settings:
-          - addressType: IP
-            endpoints:
-            - host: 7.7.7.7
-              port: 8080
-            name: httproute/default/httproute-1/rule/1/backend/0
-            protocol: HTTP
-            weight: 2
-          - addressType: IP
-            endpoints:
-            - host: 7.7.7.7
-              port: 8080
-            filters:
-              addRequestHeaders:
-              - append: false
-                name: add-header-3
-                value:
-                - some-value
-              credentialInjection:
-                credential: '[redacted]'
-                name: httproutefilter/default/credential-injection
-            name: httproute/default/httproute-1/rule/1/backend/1
-            protocol: HTTP
-            weight: 1
-        hostname: '*'
-        isHTTP2: false
-        metadata:
-          kind: HTTPRoute
-          name: httproute-1
-          namespace: default
-        name: httproute/default/httproute-1/rule/1/match/0/*
-        pathMatch:
-          distinct: false
-          name: ""
-          prefix: /foo
-      - destination:
           name: httproute/default/httproute-1/rule/0
           settings:
           - addressType: IP
             endpoints:
             - host: 7.7.7.7
               port: 8080
-            filters:
-              addRequestHeaders:
-              - append: true
-                name: add-header-1
-                value:
-                - some-value
-              - append: true
-                name: add-header-2
-                value:
-                - some-value
             name: httproute/default/httproute-1/rule/0/backend/0
             protocol: HTTP
-            weight: 8
-          - addressType: IP
-            endpoints:
-            - host: 7.7.7.7
-              port: 8080
-            name: httproute/default/httproute-1/rule/0/backend/1
-            protocol: HTTP
-            weight: 2
-        hostname: '*'
+            weight: 1
+        hostname: gateway.envoyproxy.io
         isHTTP2: false
         metadata:
           kind: HTTPRoute
           name: httproute-1
           namespace: default
-        name: httproute/default/httproute-1/rule/0/match/0/*
+        name: httproute/default/httproute-1/rule/0/match/0/gateway_envoyproxy_io
         pathMatch:
           distinct: false
           name: ""
           prefix: /
+        traffic:
+          name: default/policy-for-route
+          telemetry:
+            tracing:
+              customTags:
+                env1:
+                  environment:
+                    defaultValue: '-'
+                    name: env1
+                  type: Environment
+                literal1:
+                  literal:
+                    value: value1
+                  type: Literal
+                req1:
+                  requestHeader:
+                    defaultValue: '-'
+                    name: X-Request-Id
+                  type: RequestHeader
+              samplingFraction:
+                denominator: 100
+                numerator: 1
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4
