@@ -8,6 +8,7 @@ security updates: |
 
 # New features or capabilities added in this release.
 new features: |
+  Added support for GEP-3388 (Retry Budget)
 
 bug fixes: |
 
