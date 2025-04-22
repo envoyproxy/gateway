@@ -47,6 +47,7 @@ bug fixes: |
   Fix an issue that SamplingFraction was not working.
   Fix kubernetes resources not being deleted when the customized name used.
   Do not treat essential resource like namespace as the missing resource while loading from file.
+  Do not set retriable status codes to 503 when RetryOn is configured in BackendTrafficPolicy.
 
 # Enhancements that improve performance.
 performance improvements: |
