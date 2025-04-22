@@ -55,9 +55,9 @@ func (i *JWTAuthInterceptor) authorize(ctx context.Context) error {
 		return fmt.Errorf("missing metadata")
 	}
 
-	authHeader, exists := md["Authorization"]
+	authHeader, exists := md["authorization"]
 	if !exists || len(authHeader) == 0 {
-		return fmt.Errorf("missing authorization token")
+		return fmt.Errorf("missing authorization token in metadata: %s", md)
 	}
 
 	tokenStr := strings.TrimPrefix(authHeader[0], "Bearer ")
