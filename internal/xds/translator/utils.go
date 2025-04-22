@@ -16,7 +16,6 @@ import (
 	corev3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	routev3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
 	hcmv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/http_connection_manager/v3"
-	xdstype "github.com/envoyproxy/go-control-plane/envoy/type/v3"
 	"google.golang.org/protobuf/types/known/anypb"
 	"k8s.io/utils/ptr"
 
@@ -242,22 +241,5 @@ func determineIPFamily(settings []*ir.DestinationSetting) *egv1a1.IPFamily {
 		return ptr.To(egv1a1.IPv6)
 	default:
 		return nil
-	}
-}
-
-// translatePercentToFractionalPercent translates a float to an envoy.type.FractionalPercent instance.
-func translatePercentToFractionalPercent(p *float32) *xdstype.FractionalPercent {
-	return &xdstype.FractionalPercent{
-		Numerator:   uint32(*p * 10000),
-		Denominator: xdstype.FractionalPercent_MILLION,
-	}
-}
-
-// translateIntegerToFractionalPercent translates an int32 instance to an
-// envoy.type.FractionalPercent instance.
-func translateIntegerToFractionalPercent(p int32) *xdstype.FractionalPercent {
-	return &xdstype.FractionalPercent{
-		Numerator:   uint32(p),
-		Denominator: xdstype.FractionalPercent_HUNDRED,
 	}
 }
