@@ -22,35 +22,36 @@ func Merge[T client.Object](original T, patch T, mergeType egv1a1.MergeType) (T,
 		originalJSON []byte
 		patchJSON    []byte
 		err          error
+		empty        T
 	)
 
 	originalJSON, err = json.Marshal(original)
 	if err != nil {
-		return original, fmt.Errorf("error marshaling original service: %w", err)
+		return empty, fmt.Errorf("error marshaling original service: %w", err)
 	}
 	patchJSON, err = json.Marshal(patch)
 	if err != nil {
-		return original, fmt.Errorf("error marshaling original service: %w", err)
+		return empty, fmt.Errorf("error marshaling original service: %w", err)
 	}
 	switch mergeType {
 	case egv1a1.StrategicMerge:
 		patchedJSON, err = strategicpatch.StrategicMergePatch(originalJSON, patchJSON, egv1a1.BackendTrafficPolicy{})
 		if err != nil {
-			return original, fmt.Errorf("error during strategic merge: %w", err)
+			return empty, fmt.Errorf("error during strategic merge: %w", err)
 		}
 	case egv1a1.JSONMerge:
 		patchedJSON, err = jsonpatch.MergePatch(originalJSON, patchJSON)
 		if err != nil {
-			return original, fmt.Errorf("error during JSON merge: %w", err)
+			return empty, fmt.Errorf("error during JSON merge: %w", err)
 		}
 	default:
-		return original, fmt.Errorf("unsupported merge type: %s", mergeType)
+		return empty, fmt.Errorf("unsupported merge type: %s", mergeType)
 	}
 
-	patchedBTP := new(T)
-	if err = json.Unmarshal(patchedJSON, patchedBTP); err != nil {
-		return original, fmt.Errorf("error unmarshaling patched service: %w", err)
+	res := new(T)
+	if err = json.Unmarshal(patchedJSON, res); err != nil {
+		return empty, fmt.Errorf("error unmarshaling patched service: %w", err)
 	}
 
-	return *patchedBTP, nil
+	return *res, nil
 }
