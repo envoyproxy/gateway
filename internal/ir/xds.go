@@ -766,6 +766,9 @@ type HTTPRoute struct {
 	// Retry defines the retry policy for the route.
 	// This is derived from the core Gateway API, and should take precedence over Traffic.Retry.
 	Retry *Retry `json:"retry,omitempty" yaml:"retry,omitempty"`
+	// CORS defines the CORS policy for the route.
+	// This is derived from the core Gateway API, and should take precedence over Security.CORS.
+	CORS *CORS `json:"cors,omitempty" yaml:"cors,omitempty"`
 }
 
 func (h *HTTPRoute) GetRetry() *Retry {
@@ -862,6 +865,8 @@ type TrafficFeatures struct {
 	Compression []*Compression `json:"compression,omitempty" yaml:"compression,omitempty"`
 	// HTTPUpgrade defines the schema for upgrading the HTTP protocol.
 	HTTPUpgrade []string `json:"httpUpgrade,omitempty" yaml:"httpUpgrade,omitempty"`
+	// Telemetry defines the schema for telemetry configuration.
+	Telemetry *egv1a1.BackendTelemetry `json:"telemetry,omitempty" yaml:"telemetry,omitempty"`
 }
 
 func (b *TrafficFeatures) Validate() error {
@@ -2996,6 +3001,8 @@ type DestinationFilters struct {
 	AddResponseHeaders []AddHeader `json:"addResponseHeaders,omitempty" yaml:"addResponseHeaders,omitempty"`
 	// RemoveResponseHeaders defines a list of headers to be removed from response.
 	RemoveResponseHeaders []string `json:"removeResponseHeaders,omitempty" yaml:"removeResponseHeaders,omitempty"`
+	// CredentialInjection defines the credential injection configuration.
+	CredentialInjection *CredentialInjection `json:"credentialInjection,omitempty" yaml:"credentialInjection,omitempty"`
 }
 
 // ResourceMetadata is metadata from the provider resource that is translated to an envoy resource

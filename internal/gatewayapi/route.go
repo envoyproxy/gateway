@@ -507,6 +507,9 @@ func applyHTTPFiltersContextToIRRoute(httpFiltersContext *HTTPFiltersContext, ir
 	if httpFiltersContext.Mirrors != nil {
 		irRoute.Mirrors = httpFiltersContext.Mirrors
 	}
+	if httpFiltersContext.CORS != nil {
+		irRoute.CORS = httpFiltersContext.CORS
+	}
 
 	if len(httpFiltersContext.ExtensionRefs) > 0 {
 		irRoute.ExtensionRefs = httpFiltersContext.ExtensionRefs
@@ -782,29 +785,9 @@ func (t *Translator) processHTTPRouteParentRefListener(route RouteContext, route
 				// Remove dots from the hostname before appending it to the IR Route name
 				// since dots are special chars used in stats tag extraction in Envoy
 				underscoredHost := strings.ReplaceAll(host, ".", "_")
-				hostRoute := &ir.HTTPRoute{
-					Name:                  fmt.Sprintf("%s/%s", routeRoute.Name, underscoredHost),
-					Metadata:              routeRoute.Metadata,
-					Hostname:              host,
-					PathMatch:             routeRoute.PathMatch,
-					HeaderMatches:         routeRoute.HeaderMatches,
-					QueryParamMatches:     routeRoute.QueryParamMatches,
-					AddRequestHeaders:     routeRoute.AddRequestHeaders,
-					RemoveRequestHeaders:  routeRoute.RemoveRequestHeaders,
-					AddResponseHeaders:    routeRoute.AddResponseHeaders,
-					RemoveResponseHeaders: routeRoute.RemoveResponseHeaders,
-					Destination:           routeRoute.Destination,
-					Redirect:              routeRoute.Redirect,
-					DirectResponse:        routeRoute.DirectResponse,
-					CredentialInjection:   routeRoute.CredentialInjection,
-					URLRewrite:            routeRoute.URLRewrite,
-					Mirrors:               routeRoute.Mirrors,
-					ExtensionRefs:         routeRoute.ExtensionRefs,
-					IsHTTP2:               routeRoute.IsHTTP2,
-					SessionPersistence:    routeRoute.SessionPersistence,
-					Timeout:               routeRoute.Timeout,
-					Retry:                 routeRoute.Retry,
-				}
+				hostRoute := routeRoute.DeepCopy()
+				hostRoute.Name = fmt.Sprintf("%s/%s", routeRoute.Name, underscoredHost)
+				hostRoute.Hostname = host
 				perHostRoutes = append(perHostRoutes, hostRoute)
 			}
 		}
@@ -1555,6 +1538,9 @@ func applyHTTPFiltersContextToDestinationFilters(httpFiltersContext *HTTPFilters
 	}
 	if len(httpFiltersContext.RemoveResponseHeaders) > 0 {
 		destFilters.RemoveResponseHeaders = httpFiltersContext.RemoveResponseHeaders
+	}
+	if httpFiltersContext.CredentialInjection != nil {
+		destFilters.CredentialInjection = httpFiltersContext.CredentialInjection
 	}
 }
 

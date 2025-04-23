@@ -45,3 +45,18 @@
           retryOn: connect-failure,refused-stream,unavailable,cancelled,retriable-status-codes
         upgradeConfigs:
         - upgradeType: websocket
+    - match:
+        prefix: /
+      name: third-route-only-triggers
+      route:
+        cluster: first-route-dest
+        retryPolicy:
+          hostSelectionRetryMaxAttempts: "5"
+          numRetries: 5
+          retryHostPredicate:
+          - name: envoy.retry_host_predicates.previous_hosts
+            typedConfig:
+              '@type': type.googleapis.com/envoy.extensions.retry.host.previous_hosts.v3.PreviousHostsPredicate
+          retryOn: reset,connect-failure
+        upgradeConfigs:
+        - upgradeType: websocket

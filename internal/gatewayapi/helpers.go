@@ -175,7 +175,8 @@ func ValidateHTTPRouteFilter(filter *gwapiv1.HTTPRouteFilter, extGKs ...schema.G
 		filter.Type == gwapiv1.HTTPRouteFilterURLRewrite ||
 		filter.Type == gwapiv1.HTTPRouteFilterRequestRedirect ||
 		filter.Type == gwapiv1.HTTPRouteFilterRequestHeaderModifier ||
-		filter.Type == gwapiv1.HTTPRouteFilterResponseHeaderModifier:
+		filter.Type == gwapiv1.HTTPRouteFilterResponseHeaderModifier ||
+		filter.Type == gwapiv1.HTTPRouteFilterCORS:
 		return nil
 	case filter.Type == gwapiv1.HTTPRouteFilterExtensionRef:
 		switch {
