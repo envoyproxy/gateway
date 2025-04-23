@@ -441,6 +441,22 @@ _Appears in:_
 | `alpnProtocols` | _[ALPNProtocol](#alpnprotocol) array_ |  false  |  | ALPNProtocols supplies the list of ALPN protocols that should be<br />exposed by the listener or used by the proxy to connect to the backend.<br />Defaults:<br />1. HTTPS Routes: h2 and http/1.1 are enabled in listener context.<br />2. Other Routes: ALPN is disabled.<br />3. Backends: proxy uses the appropriate ALPN options for the backend protocol.<br />When an empty list is provided, the ALPN TLS extension is disabled.<br />Supported values are:<br />- http/1.0<br />- http/1.1<br />- h2 |
 
 
+#### BackendTLSSettings
+
+
+
+BackendTLSSettings holds the TLS settings for the backend.
+Only used for DynamicResolver backends.
+
+_Appears in:_
+- [BackendSpec](#backendspec)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `caCertificateRefs` | _LocalObjectReference array_ |  false  |  | CACertificateRefs contains one or more references to Kubernetes objects that<br />contain TLS certificates of the Certificate Authorities that can be used<br />as a trust anchor to validate the certificates presented by the backend.<br />A single reference to a Kubernetes ConfigMap or a Kubernetes Secret,<br />with the CA certificate in a key named `ca.crt` is currently supported.<br />If CACertificateRefs is empty or unspecified, then WellKnownCACertificates must be<br />specified. Only one of CACertificateRefs or WellKnownCACertificates may be specified,<br />not both. |
+| `wellKnownCACertificates` | _[WellKnownCACertificatesType](#wellknowncacertificatestype)_ |  false  |  | WellKnownCACertificates specifies whether system CA certificates may be used in<br />the TLS handshake between the gateway and backend pod.<br />If WellKnownCACertificates is unspecified or empty (""), then CACertificateRefs<br />must be specified with at least one entry for a valid configuration. Only one of<br />CACertificateRefs or WellKnownCACertificates may be specified, not both. |
+
+
 #### BackendTelemetry
 
 
