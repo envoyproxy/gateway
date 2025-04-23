@@ -23,7 +23,7 @@ backendTrafficPolicies:
         sectionName: http
       conditions:
       - lastTransitionTime: null
-        message: Merge with policy envoy-gateway/policy-for-gateway
+        message: Merged with policy envoy-gateway/policy-for-gateway
         reason: Overridden
         status: "True"
         type: Overridden
