@@ -4,20 +4,10 @@
 {{< tabpane text=true >}}
 {{% tab header="With External LoadBalancer Support" %}}
 
-You can also test the same functionality by sending traffic to the External IP. To get the external IP of the
-Envoy service, run:
+Get the external address of the Envoy service:
 
 ```shell
 export GATEWAY_HOST=$(kubectl get gateway/eg -o jsonpath='{.status.addresses[0].value}')
-```
-
-In certain environments, the load balancer may be exposed using a hostname, instead of an IP address. If so, replace
-`ip` in the above command with `hostname`.
-
-Curl the example app through Envoy proxy:
-
-```shell
-curl --verbose --header "Host: www.example.com" http://$GATEWAY_HOST/get
 ```
 
 {{% /tab %}}
@@ -33,12 +23,6 @@ Port forward to the Envoy service:
 
 ```shell
 kubectl -n envoy-gateway-system port-forward service/${ENVOY_SERVICE} 8888:80 &
-```
-
-Curl the example app through Envoy proxy:
-
-```shell
-curl --verbose --header "Host: www.example.com" http://localhost:8888/get
 ```
 
 {{% /tab %}}
