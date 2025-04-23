@@ -55,32 +55,13 @@ Verify the configuration:
 <!-- 
 What is the expected output after running the command above?
 -->
-The output should include ...
-
-Ensure the `GATEWAY_HOST` environment variable from the [Quickstart](../../quickstart) is set. If not, follow the
-Quickstart instructions to set the variable.
-
-```shell
-echo $GATEWAY_HOST
-```
-
-Send a request to the endpoint:
-
-```shell
-curl -v -H "Host: www.example.com" "http://${GATEWAY_HOST}/example"
-```
-
-You should see a successful response, confirming that your configuration is working correctly.
 
 <!-- 
-Include an example output below
--->
+Use the shortcode below to test basic configurations. For more advanced configurations, you will need to write your own tests. Please make sure to include tests for cases with and without an external load balancer. 
 
-Expected output:
-```
-[TODO: Insert Output]
-...
-```
+Take a look at site/content/en/latest/boilerplates/testing.md for an example. 
+-->
+{{< tabpane-include testing >}}
 
 ## Clean-Up
 
