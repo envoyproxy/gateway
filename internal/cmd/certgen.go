@@ -121,7 +121,7 @@ func patchTopologyWebhook(ctx context.Context, cli client.Client, cfg *config.Se
 		return nil
 	}
 
-	webhookConfigName := fmt.Sprintf("%s:%s", topologyWebhookNamePrefix, cfg.Namespace)
+	webhookConfigName := fmt.Sprintf("%s.%s", topologyWebhookNamePrefix, cfg.Namespace)
 	webhookCfg := &admissionregistrationv1.MutatingWebhookConfiguration{}
 	if err := cli.Get(ctx, client.ObjectKey{Name: webhookConfigName}, webhookCfg); err != nil {
 		return fmt.Errorf("failed to get mutating webhook configuration: %w", err)

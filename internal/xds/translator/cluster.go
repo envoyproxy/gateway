@@ -287,9 +287,9 @@ func buildXdsCluster(args *xdsClusterArgs) (*buildClusterResult, error) {
 	if args.tcpkeepalive != nil {
 		cluster.UpstreamConnectionOptions = buildXdsClusterUpstreamOptions(args.tcpkeepalive)
 	}
-  
+
 	checkZoneAwareRouting(cluster, args)
-  
+
 	return &buildClusterResult{
 		cluster: cluster,
 		secrets: secrets,

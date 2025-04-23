@@ -51,6 +51,8 @@ data:
         shutdownManager:
           image: docker.io/envoyproxy/gateway-dev:latest
       type: Kubernetes
+    proxyTopologyInjector:
+      disabled: true
 ---
 # Source: gateway-helm/templates/envoy-gateway-rbac.yaml
 apiVersion: rbac.authorization.k8s.io/v1
@@ -491,7 +493,7 @@ rules:
     resources:
     - mutatingwebhookconfigurations
     resourceNames:
-    - 'envoy-gateway-topology-injector:envoy-gateway-system'
+    - 'envoy-gateway-topology-injector.envoy-gateway-system'
     verbs:
     - get
     - list

@@ -83,7 +83,7 @@ rules:
     resources:
     - mutatingwebhookconfigurations
     resourceNames:
-    - 'envoy-gateway-topology-injector:{{ .Release.Namespace }}'
+    - 'envoy-gateway-topology-injector.{{ .Release.Namespace }}'
     verbs:
     - get
     - list
