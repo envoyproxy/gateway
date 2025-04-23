@@ -4,7 +4,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.17.1
+    controller-gen.kubebuilder.io/version: v0.17.3
   name: backendtrafficpolicies.gateway.envoyproxy.io
 spec:
   group: gateway.envoyproxy.io
@@ -1669,11 +1669,12 @@ spec:
                 type: object
               telemetry:
                 description: |-
-                  Telemetry configures the telemetry settings for the backend or backend.
+                  Telemetry configures the telemetry settings for the policy target (Gateway or xRoute).
                   This will override the telemetry settings in the EnvoyProxy resource.
                 properties:
                   tracing:
-                    description: Tracing configures the tracing settings for the backend.
+                    description: Tracing configures the tracing settings for the backend
+                      or HTTPRoute.
                     properties:
                       customTags:
                         additionalProperties:

@@ -25,13 +25,14 @@ new features: |
   Added support for BackendTLSPolicy to target ServiceImport
   Added support for kubernetes.io/h2c application protocol in ServiceImport
   Added support for per-host circuit breaker thresholds
-  Added support for injecting a credential from a Kubernetes Secret into a request header
+  Added support for injecting a credential from a Kubernetes Secret into a request header. Credentials can be injected using either an HTTPRouteFilter or a BackendRef filter.
   Added support for egctl Websocket in addation to SPDY
   Added a configuration option in the Helm chart to set the TrafficDistribution field in the Envoy Gateway Service
   Added support for setting the log level to trace for the Envoy Proxy
   Added support for global imageRegistry and imagePullSecrets to the Helm chart
   Added support for using a local JWKS in an inline string or in a ConfigMap to validate JWT tokens in SecurityPolicy
   Added support for logging the status of resources in standalone mode.
+  Added support for per-route tracing in BackendTrafficPolicy
 
 
 bug fixes: |
@@ -47,6 +48,7 @@ bug fixes: |
   Fix an issue that SamplingFraction was not working.
   Fix kubernetes resources not being deleted when the customized name used.
   Do not treat essential resource like namespace as the missing resource while loading from file.
+  Do not set retriable status codes to 503 when RetryOn is configured in BackendTrafficPolicy.
 
 # Enhancements that improve performance.
 performance improvements: |
@@ -58,3 +60,4 @@ deprecations: |
 
 # Other notable changes not covered by the above sections.
 Other changes: |
+  Updated gateway-api to v1.3.0-rc.1

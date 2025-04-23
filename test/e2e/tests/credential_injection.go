@@ -22,7 +22,7 @@ func init() {
 
 var CredentialInjectionTest = suite.ConformanceTest{
 	ShortName:   "CredentialInjection",
-	Description: "Resource with CredentialInjection enabled",
+	Description: "HTTPRoute Filter with CredentialInjection",
 	Manifests:   []string{"testdata/credential-injection.yaml"},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
 		t.Run("inject credential to the default Authorization header", func(t *testing.T) {

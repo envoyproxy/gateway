@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
+	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
@@ -60,6 +61,8 @@ type HTTPFilterIR struct {
 
 	Mirrors []*ir.MirrorPolicy
 
+	CORS *ir.CORS
+
 	ExtensionRefs []*ir.UnstructuredRef
 }
 
@@ -99,6 +102,8 @@ func (t *Translator) ProcessHTTPFilters(parentRef *RouteParentContext,
 			t.processResponseHeaderModifierFilter(filter.ResponseHeaderModifier, httpFiltersContext)
 		case gwapiv1.HTTPRouteFilterRequestMirror:
 			err = t.processRequestMirrorFilter(i, filter.RequestMirror, httpFiltersContext, resources)
+		case gwapiv1.HTTPRouteFilterCORS:
+			t.processCORSFilter(filter.CORS, httpFiltersContext)
 		case gwapiv1.HTTPRouteFilterExtensionRef:
 			t.processExtensionRefHTTPFilter(filter.ExtensionRef, httpFiltersContext, resources)
 		default:
@@ -923,6 +928,54 @@ func (t *Translator) processRequestMirrorFilter(
 
 	filterContext.Mirrors = append(filterContext.Mirrors, &ir.MirrorPolicy{Destination: routeDst, Percentage: percent})
 	return nil
+}
+
+func (t *Translator) processCORSFilter(
+	corsFilter *gwapiv1.HTTPCORSFilter,
+	filterContext *HTTPFiltersContext,
+) {
+	// Make sure the config actually exists
+	if corsFilter == nil {
+		return
+	}
+
+	var allowOrigins []*ir.StringMatch
+	for _, origin := range corsFilter.AllowOrigins {
+		if containsWildcard(string(origin)) {
+			regexStr := wildcard2regex(string(origin))
+			allowOrigins = append(allowOrigins, &ir.StringMatch{
+				SafeRegex: &regexStr,
+			})
+		} else {
+			allowOrigins = append(allowOrigins, &ir.StringMatch{
+				Exact: (*string)(&origin),
+			})
+		}
+	}
+
+	var allowMethods []string
+	for _, method := range corsFilter.AllowMethods {
+		allowMethods = append(allowMethods, string(method))
+	}
+
+	var allowHeaders []string
+	for _, header := range corsFilter.AllowHeaders {
+		allowHeaders = append(allowHeaders, string(header))
+	}
+
+	var exposeHeaders []string
+	for _, header := range corsFilter.ExposeHeaders {
+		exposeHeaders = append(exposeHeaders, string(header))
+	}
+
+	filterContext.CORS = &ir.CORS{
+		AllowOrigins:     allowOrigins,
+		AllowMethods:     allowMethods,
+		AllowHeaders:     allowHeaders,
+		ExposeHeaders:    exposeHeaders,
+		MaxAge:           ptr.To(metav1.Duration{Duration: time.Duration(corsFilter.MaxAge) * time.Second}),
+		AllowCredentials: bool(corsFilter.AllowCredentials),
+	}
 }
 
 func (t *Translator) processUnresolvedHTTPFilter(errMsg string, filterContext *HTTPFiltersContext) {
