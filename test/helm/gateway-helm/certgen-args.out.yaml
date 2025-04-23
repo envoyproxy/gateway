@@ -354,6 +354,9 @@ spec:
   - name: metrics
     port: 19001
     targetPort: 19001
+  - name: webhook
+    port: 9443
+    targetPort: 9443
 ---
 # Source: gateway-helm/templates/envoy-gateway-deployment.yaml
 apiVersion: apps/v1
@@ -415,6 +418,8 @@ spec:
           name: wasm
         - containerPort: 19001
           name: metrics
+        - name: webhook
+          containerPort: 9443
         readinessProbe:
           httpGet:
             path: /readyz
@@ -471,6 +476,55 @@ metadata:
     app.kubernetes.io/managed-by: Helm
   annotations:
     "helm.sh/hook": pre-install
+---
+# Source: gateway-helm/templates/certgen-rbac.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: 'gateway-helm-certgen:envoy-gateway-system'
+  labels:
+    helm.sh/chart: gateway-helm-v0.0.0-latest
+    app.kubernetes.io/name: gateway-helm
+    app.kubernetes.io/instance: gateway-helm
+    app.kubernetes.io/version: "latest"
+    app.kubernetes.io/managed-by: Helm
+  annotations:
+    "helm.sh/hook": pre-install
+rules:
+  - apiGroups:
+    - admissionregistration.k8s.io
+    resources:
+    - mutatingwebhookconfigurations
+    resourceNames:
+    - 'envoy-gateway-topology-injector:envoy-gateway-system'
+    verbs:
+    - get
+    - list
+    - watch
+    - update
+    - patch
+---
+# Source: gateway-helm/templates/certgen-rbac.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: 'gateway-helm-certgen:envoy-gateway-system'
+  labels:
+    helm.sh/chart: gateway-helm-v0.0.0-latest
+    app.kubernetes.io/name: gateway-helm
+    app.kubernetes.io/instance: gateway-helm
+    app.kubernetes.io/version: "latest"
+    app.kubernetes.io/managed-by: Helm
+  annotations:
+    "helm.sh/hook": pre-install
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: 'gateway-helm-certgen:envoy-gateway-system'
+subjects:
+  - kind: ServiceAccount
+    name: 'gateway-helm-certgen'
+    namespace: 'envoy-gateway-system'
 ---
 # Source: gateway-helm/templates/certgen-rbac.yaml
 apiVersion: rbac.authorization.k8s.io/v1
@@ -575,3 +629,41 @@ spec:
       restartPolicy: Never
       serviceAccountName: gateway-helm-certgen
   ttlSecondsAfterFinished: 30
+---
+# Source: gateway-helm/templates/envoy-proxy-topology-injector-webhook.yaml
+apiVersion: admissionregistration.k8s.io/v1
+kind: MutatingWebhookConfiguration
+metadata:
+  name: 'envoy-gateway-topology-injector:envoy-gateway-system'
+  annotations:
+    "helm.sh/hook": pre-install, pre-upgrade
+    "helm.sh/hook-weight": "-1"
+  labels:
+    app.kubernetes.io/component: topology-injector
+    helm.sh/chart: gateway-helm-v0.0.0-latest
+    app.kubernetes.io/name: gateway-helm
+    app.kubernetes.io/instance: gateway-helm
+    app.kubernetes.io/version: "latest"
+    app.kubernetes.io/managed-by: Helm
+webhooks:
+  - name: topology.webhook.envoyproxy.io
+    admissionReviewVersions: ["v1"]
+    sideEffects: None
+    clientConfig:
+      service:
+        name: envoy-gateway
+        namespace: 'envoy-gateway-system'
+        path: "/inject-pod-topology"
+        port: 9443
+    failurePolicy: Ignore
+    rules:
+      - operations: ["CREATE"]
+        apiGroups: [""]
+        apiVersions: ["v1"]
+        resources: ["pods/binding"]
+    namespaceSelector:
+      matchExpressions:
+        - key: kubernetes.io/name
+          operator: In
+          values:
+            - envoy-gateway-system

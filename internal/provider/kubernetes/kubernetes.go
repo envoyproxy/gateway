@@ -20,6 +20,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+	"sigs.k8s.io/controller-runtime/pkg/webhook"
+	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/envoygateway"
@@ -36,7 +38,21 @@ type Provider struct {
 }
 
 // Exposed to allow disabling health probe listener in tests.
-var healthProbeBindAddress = ":8081"
+var (
+	healthProbeBindAddress = ":8081"
+
+	// webhookTLSCert is the filename within webhookTLSCertDir containing
+	// the webhook server TLS certificate.
+	webhookTLSCert = "tls.crt"
+	// webhookTLSKey is the filename within webhookTLSCertDir containing
+	// the webhook server TLS private key.
+	webhookTLSKey = "tls.key"
+	// webhookTLSCertDir is the directory container the webhook server
+	// TLS certificate files.
+	webhookTLSCertDir = "/certs"
+	// webhookTLSPort is the port for the webhook server to listen on.
+	webhookTLSPort = 9443
+)
 
 // New creates a new Provider from the provided EnvoyGateway.
 func New(ctx context.Context, restCfg *rest.Config, svrCfg *ec.Server, resources *message.ProviderResources) (*Provider, error) {
@@ -87,11 +103,27 @@ func New(ctx context.Context, restCfg *rest.Config, svrCfg *ec.Server, resources
 			mgrOpts.Cache.DefaultNamespaces[watchNS] = cache.Config{}
 		}
 	}
+	if !ptr.Deref(svrCfg.EnvoyGateway.TopologyInjector, egv1a1.EnvoyGatewayTopologyInjector{}).Disable {
+		mgrOpts.WebhookServer = webhook.NewServer(webhook.Options{
+			CertDir:  webhookTLSCertDir,
+			CertName: webhookTLSCert,
+			KeyName:  webhookTLSKey,
+			Port:     webhookTLSPort,
+		})
+	}
 	mgr, err := ctrl.NewManager(restCfg, mgrOpts)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create manager: %w", err)
 	}
 
+	if !ptr.Deref(svrCfg.EnvoyGateway.TopologyInjector, egv1a1.EnvoyGatewayTopologyInjector{}).Disable {
+		mgr.GetWebhookServer().Register("/inject-pod-topology", &webhook.Admission{
+			Handler: &ProxyTopologyInjector{
+				Client:  mgr.GetClient(),
+				Decoder: admission.NewDecoder(mgr.GetScheme()),
+			},
+		})
+	}
 	updateHandler := NewUpdateHandler(mgr.GetLogger(), mgr.GetClient())
 	if err := mgr.Add(updateHandler); err != nil {
 		return nil, fmt.Errorf("failed to add status update handler %w", err)

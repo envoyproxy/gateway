@@ -62,6 +62,10 @@ func TestProvider(t *testing.T) {
 
 	// Setup and start the kube provider.
 	svr, err := config.New(os.Stdout)
+
+	// Disable webhook server for provider test to avoid non-existent cert errors
+	svr.EnvoyGateway.TopologyInjector = egv1a1.EnvoyGatewayTopologyInjector{Disable: true}
+
 	require.NoError(t, err)
 	resources := new(message.ProviderResources)
 	provider, err := New(context.Background(), cliCfg, svr, resources)

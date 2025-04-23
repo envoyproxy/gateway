@@ -67,6 +67,10 @@ spec:
         - containerPort: {{ .port }}
           name: {{ .name }}
         {{- end}}
+        {{- if .Values.topologyWebhook.enabled }}
+        - name: webhook
+          containerPort: 9443
+        {{- end }}
         readinessProbe:
           httpGet:
             path: /readyz

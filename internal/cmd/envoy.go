@@ -22,7 +22,6 @@ func GetEnvoyCommand() *cobra.Command {
 
 	cmd.AddCommand(getShutdownCommand())
 	cmd.AddCommand(getShutdownManagerCommand())
-	cmd.AddCommand(getTopologyWebhookCommand())
 
 	return cmd
 }
@@ -68,35 +67,5 @@ func getShutdownManagerCommand() *cobra.Command {
 	cmd.PersistentFlags().DurationVar(&readyTimeout, "ready-timeout", 610*time.Second,
 		"Shutdown ready timeout. This should be greater than shutdown's drain-timeout and less than the pod's terminationGracePeriodSeconds.")
 
-	return cmd
-}
-
-// getTopologyWebhookCommand returns the topology webhook cobra command to be executed.
-func getTopologyWebhookCommand() *cobra.Command {
-	var (
-		certDir                string
-		certName               string
-		keyName                string
-		port                   int
-		healthProbeBindAddress string
-	)
-
-	cmd := &cobra.Command{
-		Use:   "topology-webhook",
-		Short: "Provides HTTP endpoint used in MutatingWebhookConfiguration to inject topology information to EnvoyProxy pods.",
-		RunE: func(cmd *cobra.Command, args []string) error {
-			return envoy.TopologyWebhook(certDir, certName, keyName, healthProbeBindAddress, port)
-		},
-	}
-	cmd.PersistentFlags().StringVar(&certDir, "tls-dir", "/certs",
-		"Directory with TLS certificates for the webhook server")
-	cmd.PersistentFlags().StringVar(&certName, "tls-crt", "tls.crt",
-		"Filename for server TLS certificate")
-	cmd.PersistentFlags().StringVar(&keyName, "tls-key", "tls.key",
-		"Filename for server TLS key")
-	cmd.PersistentFlags().IntVar(&port, "port", 8443,
-		"Listener port for webhook server")
-	cmd.PersistentFlags().StringVar(&healthProbeBindAddress, "health-probe-bind-address", ":8081",
-		"Bind address for health probes")
 	return cmd
 }

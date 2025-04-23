@@ -1,28 +1,28 @@
 {{- if .Values.topologyWebhook.enabled }}
-{{- $secret := default (dict "data" (dict)) (lookup "v1" "Secret" .Release.Namespace "envoy-gateway") }}
 apiVersion: admissionregistration.k8s.io/v1
 kind: MutatingWebhookConfiguration
 metadata:
-  name: envoy-gateway-topology-webhook
-  {{- with .Values.topologyWebhook.annotations }}
+  name: 'envoy-gateway-topology-injector:{{ .Release.Namespace }}'
   annotations:
-    {{- toYaml . | nindent 4 }}
+    "helm.sh/hook": pre-install, pre-upgrade
+    "helm.sh/hook-weight": "-1"
+  {{- if .Values.topologyWebhook.annotations }}
+    {{- toYaml .Values.topologyWebhook.annotations | nindent 4 -}}
   {{- end }}
   labels:
-    app.kubernetes.io/component: topology-webhook
+    app.kubernetes.io/component: topology-injector
   {{- include "eg.labels" . | nindent 4 }}
 webhooks:
   - name: topology.webhook.envoyproxy.io
     admissionReviewVersions: ["v1"]
-    sideEffects: NoneOnDryRun
-    timeoutSeconds: 5
+    sideEffects: None
     clientConfig:
-      caBundle: {{ default "" (index $secret.data "ca.crt" ) | b64dec }}
       service:
-        name: {{ include "eg.webhookService" . }}
+        name: envoy-gateway
         namespace: '{{ .Release.Namespace }}'
-        path: "/mutate-pod-topology"
-        port: 443
+        path: "/inject-pod-topology"
+        port: 9443
+    failurePolicy: Ignore
     rules:
       - operations: ["CREATE"]
         apiGroups: [""]
@@ -30,8 +30,8 @@ webhooks:
         resources: ["pods/binding"]
     namespaceSelector:
       matchExpressions:
-        - key: webhook.envoyproxy.io/topology-zone-inject
+        - key: kubernetes.io/name
           operator: In
           values:
-            - enabled
+            - {{ .Release.Namespace }}
 {{- end }}

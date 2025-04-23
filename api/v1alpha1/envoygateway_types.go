@@ -89,6 +89,9 @@ type EnvoyGatewaySpec struct {
 	//
 	// +optional
 	ExtensionAPIs *ExtensionAPISettings `json:"extensionApis,omitempty"`
+
+	// TopologyInjector defines the configuration for topology injector MutatatingWebhookConfiguration
+	TopologyInjector *EnvoyGatewayTopologyInjector `json:"proxyTopologyInjector,omitempty"`
 }
 
 // LeaderElection defines the desired leader election settings.
@@ -606,6 +609,11 @@ type EnvoyGatewayAdminAddress struct {
 type ShutdownManager struct {
 	// Image specifies the ShutdownManager container image to be used, instead of the default image.
 	Image *string `json:"image,omitempty"`
+}
+
+// EnvoyGatewayTopologyInjector defines the configuration for topology injector MutatatingWebhookConfiguration
+type EnvoyGatewayTopologyInjector struct {
+	Disable bool `json:"disabled,omitempty"`
 }
 
 func init() {

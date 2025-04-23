@@ -62,3 +62,54 @@ subjects:
 - kind: ServiceAccount
   name: '{{ include "eg.fullname" . }}-certgen'
   namespace: '{{ .Release.Namespace }}'
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: '{{ include "eg.fullname" . }}-certgen:{{ .Release.Namespace }}'
+  labels:
+  {{- include "eg.labels" . | nindent 4 }}
+  {{- if .Values.certgen.rbac.labels }}
+  {{- toYaml .Values.certgen.rbac.labels | nindent 4 }}
+  {{- end }}
+  annotations:
+    "helm.sh/hook": pre-install
+  {{- if .Values.certgen.rbac.annotations }}
+    {{- toYaml .Values.certgen.rbac.annotations | nindent 4 -}}
+  {{- end }}
+rules:
+  - apiGroups:
+    - admissionregistration.k8s.io
+    resources:
+    - mutatingwebhookconfigurations
+    resourceNames:
+    - 'envoy-gateway-topology-injector:{{ .Release.Namespace }}'
+    verbs:
+    - get
+    - list
+    - watch
+    - update
+    - patch
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: '{{ include "eg.fullname" . }}-certgen:{{ .Release.Namespace }}'
+  labels:
+  {{- include "eg.labels" . | nindent 4 }}
+  {{- if .Values.certgen.rbac.labels }}
+  {{- toYaml .Values.certgen.rbac.labels | nindent 4 }}
+  {{- end }}
+  annotations:
+    "helm.sh/hook": pre-install
+  {{- if .Values.certgen.rbac.annotations }}
+    {{- toYaml .Values.certgen.rbac.annotations | nindent 4 -}}
+  {{- end }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: '{{ include "eg.fullname" . }}-certgen:{{ .Release.Namespace }}'
+subjects:
+  - kind: ServiceAccount
+    name: '{{ include "eg.fullname" . }}-certgen'
+    namespace: '{{ .Release.Namespace }}'

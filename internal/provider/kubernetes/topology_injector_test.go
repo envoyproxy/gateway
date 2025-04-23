@@ -3,7 +3,7 @@
 // The full text of the Apache license is available in the LICENSE file at
 // the root of the repo.
 
-package envoy_test
+package kubernetes
 
 import (
 	"context"
@@ -20,11 +20,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
-	"github.com/envoyproxy/gateway/internal/cmd/envoy"
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
 )
 
-func TestPodBindingMutator_Handle_UpdateAddsTopologyLabels(t *testing.T) {
+func TestProxyTopologyInjector_Handle(t *testing.T) {
 	defaultPod := &corev1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "foo",
@@ -38,9 +37,8 @@ func TestPodBindingMutator_Handle_UpdateAddsTopologyLabels(t *testing.T) {
 	}
 	defaultNode := &corev1.Node{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:            "node-A",
-			Labels:          map[string]string{corev1.LabelTopologyZone: "zone1"},
-			ResourceVersion: "",
+			Name:   "node-A",
+			Labels: map[string]string{corev1.LabelTopologyZone: "zone1"},
 		},
 	}
 
@@ -114,7 +112,7 @@ func TestPodBindingMutator_Handle_UpdateAddsTopologyLabels(t *testing.T) {
 				WithRuntimeObjects(tc.node, tc.pod).
 				Build()
 
-			mutator := &envoy.ProxyTopologyMutator{
+			mutator := &ProxyTopologyInjector{
 				Client:  fakeClient,
 				Decoder: decoder,
 			}

@@ -23,6 +23,9 @@ spec:
       {{- if .Values.certgen.job.args }}
       - args:
         {{- toYaml .Values.certgen.job.args | nindent 8 }}
+        {{- if not .Values.topologyWebhook.enabled }}
+        - --disable-topology-injector
+        {{- end }}
         command:
         - envoy-gateway
         - certgen

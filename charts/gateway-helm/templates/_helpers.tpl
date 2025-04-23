@@ -181,11 +181,3 @@ extensionApis:
   {{- toYaml . | nindent 2 }}
 {{- end }}
 {{- end }}
-
-
-{{/*
-Create the name of the webhook service
-*/}}
-{{- define "eg.webhookService" -}}
-{{- printf "%s-webhook-service" (include "eg.name" .) -}}
-{{- end -}}
