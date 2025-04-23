@@ -64,14 +64,25 @@ endif
 manifests: generate-gwapi-manifests ## Generate WebhookConfiguration and CustomResourceDefinition objects.
 	@$(LOG_TARGET)
 	@go tool controller-gen crd:allowDangerousTypes=true paths="./api/..." output:crd:artifacts:config=charts/gateway-helm/crds/generated
+	@mkdir -p charts/gateway-helm/templates/generated
+	@go tool controller-gen crd:allowDangerousTypes=true paths="./api/..." output:crd:artifacts:config=charts/gateway-crds-helm/templates/generated
+	@for file in charts/gateway-crds-helm/templates/generated/*.yaml; do \
+		sed -i.bak '1s/^/{{- if .Values.crds.envoyGateway.enabled }}\n/' $$file && \
+		echo '{{- end }}' >> $$file && \
+		rm -f $$file.bak; \
+	done
 
 .PHONY: generate-gwapi-manifests
-generate-gwapi-manifests:
 generate-gwapi-manifests: ## Generate GWAPI manifests and make it consistent with the go mod version.
 	@$(LOG_TARGET)
+	@echo "Generating Gateway API CRDs"
 	@mkdir -p $(OUTPUT_DIR)/
-	curl -sLo $(OUTPUT_DIR)/gatewayapi-crds.yaml ${GATEWAY_RELEASE_URL}
-	mv $(OUTPUT_DIR)/gatewayapi-crds.yaml charts/gateway-helm/crds/gatewayapi-crds.yaml
+	@curl -sLo $(OUTPUT_DIR)/gatewayapi-crds.yaml ${GATEWAY_RELEASE_URL}
+	cp $(OUTPUT_DIR)/gatewayapi-crds.yaml charts/gateway-helm/crds/gatewayapi-crds.yaml
+	@sed -i.bak '1s/^/{{- if .Values.crds.gatewayAPI.enabled }}\n/' $(OUTPUT_DIR)/gatewayapi-crds.yaml && \
+	echo '{{- end }}' >> $(OUTPUT_DIR)/gatewayapi-crds.yaml && \
+	rm -f $(OUTPUT_DIR)/gatewayapi-crds.yaml.bak
+	@mv $(OUTPUT_DIR)/gatewayapi-crds.yaml charts/gateway-crds-helm/templates/gatewayapi-crds.yaml
 
 .PHONY: kube-generate
 kube-generate: ## Generate code containing DeepCopy, DeepCopyInto, and DeepCopyObject method implementations.
@@ -153,7 +164,7 @@ experimental-conformance: create-cluster kube-install-image kube-deploy run-expe
 benchmark: create-cluster kube-install-image kube-deploy-for-benchmark-test run-benchmark delete-cluster ## Create a kind cluster, deploy EG into it, run Envoy Gateway benchmark test, and clean up.
 
 .PHONY: resilience
-resilience: create-cluster kube-install-image kube-deploy run-resilience delete-cluster ## Create a kind cluster, deploy EG into it, run Envoy Gateway resilience test, and clean up.
+resilience: create-cluster kube-install-image kube-install-examples-image kube-deploy install-eg-addons enable-simple-extension-server run-resilience delete-cluster ## Create a kind cluster, deploy EG into it, run Envoy Gateway resilience test, and clean up.
 
 .PHONY: e2e
 e2e: create-cluster kube-install-image kube-deploy \
@@ -166,6 +177,14 @@ install-ratelimit:
 	kubectl apply -f examples/redis/redis.yaml
 	tools/hack/deployment-exists.sh "app.kubernetes.io/name=envoy-ratelimit" "envoy-gateway-system"
 	kubectl wait --timeout=5m -n envoy-gateway-system deployment/envoy-ratelimit --for=condition=Available
+
+.PHONY: enable-simple-extension-server
+enable-simple-extension-server:
+	@$(LOG_TARGET)
+	kubectl apply -f examples/simple-extension-server/simple-extension-server.yaml
+	tools/hack/deployment-exists.sh "app.kubernetes.io/name=gateway-simple-extension-server" "envoy-gateway-system"
+	kubectl rollout status --watch --timeout=5m -n envoy-gateway-system deployment/envoy-gateway
+	kubectl wait --timeout=5m -n envoy-gateway-system deployment/envoy-gateway --for=condition=Available
 
 .PHONY: e2e-prepare
 e2e-prepare: prepare-ip-family ## Prepare the environment for running e2e tests
@@ -281,6 +300,8 @@ generate-manifests: helm-generate.gateway-helm ## Generate Kubernetes release ma
 	@$(call log, "Added: $(OUTPUT_DIR)/install.yaml")
 	cp examples/kubernetes/quickstart.yaml $(OUTPUT_DIR)/quickstart.yaml
 	@$(call log, "Added: $(OUTPUT_DIR)/quickstart.yaml")
+	cat charts/gateway-helm/crds/generated/* >> $(OUTPUT_DIR)/envoy-gateway-crds.yaml
+	@$(call log, "Added: $(OUTPUT_DIR)/envoy-gateway-crds.yaml")
 
 .PHONY: generate-artifacts
 generate-artifacts: generate-manifests ## Generate release artifacts.

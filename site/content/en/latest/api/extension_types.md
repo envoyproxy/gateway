@@ -441,6 +441,36 @@ _Appears in:_
 | `alpnProtocols` | _[ALPNProtocol](#alpnprotocol) array_ |  false  |  | ALPNProtocols supplies the list of ALPN protocols that should be<br />exposed by the listener or used by the proxy to connect to the backend.<br />Defaults:<br />1. HTTPS Routes: h2 and http/1.1 are enabled in listener context.<br />2. Other Routes: ALPN is disabled.<br />3. Backends: proxy uses the appropriate ALPN options for the backend protocol.<br />When an empty list is provided, the ALPN TLS extension is disabled.<br />Supported values are:<br />- http/1.0<br />- http/1.1<br />- h2 |
 
 
+#### BackendTLSSettings
+
+
+
+BackendTLSSettings holds the TLS settings for the backend.
+Only used for DynamicResolver backends.
+
+_Appears in:_
+- [BackendSpec](#backendspec)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `caCertificateRefs` | _LocalObjectReference array_ |  false  |  | CACertificateRefs contains one or more references to Kubernetes objects that<br />contain TLS certificates of the Certificate Authorities that can be used<br />as a trust anchor to validate the certificates presented by the backend.<br />A single reference to a Kubernetes ConfigMap or a Kubernetes Secret,<br />with the CA certificate in a key named `ca.crt` is currently supported.<br />If CACertificateRefs is empty or unspecified, then WellKnownCACertificates must be<br />specified. Only one of CACertificateRefs or WellKnownCACertificates may be specified,<br />not both. |
+| `wellKnownCACertificates` | _[WellKnownCACertificatesType](#wellknowncacertificatestype)_ |  false  |  | WellKnownCACertificates specifies whether system CA certificates may be used in<br />the TLS handshake between the gateway and backend pod.<br />If WellKnownCACertificates is unspecified or empty (""), then CACertificateRefs<br />must be specified with at least one entry for a valid configuration. Only one of<br />CACertificateRefs or WellKnownCACertificates may be specified, not both. |
+
+
+#### BackendTelemetry
+
+
+
+
+
+_Appears in:_
+- [BackendTrafficPolicySpec](#backendtrafficpolicyspec)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `tracing` | _[Tracing](#tracing)_ |  false  |  | Tracing configures the tracing settings for the backend or HTTPRoute. |
+
+
 #### BackendTrafficPolicy
 
 
@@ -490,6 +520,7 @@ _Appears in:_
 | `compression` | _[Compression](#compression) array_ |  false  |  | The compression config for the http streams. |
 | `responseOverride` | _[ResponseOverride](#responseoverride) array_ |  false  |  | ResponseOverride defines the configuration to override specific responses with a custom one.<br />If multiple configurations are specified, the first one to match wins. |
 | `httpUpgrade` | _[ProtocolUpgradeConfig](#protocolupgradeconfig) array_ |  false  |  | HTTPUpgrade defines the configuration for HTTP protocol upgrades.<br />If not specified, the default upgrade configuration(websocket) will be used. |
+| `telemetry` | _[BackendTelemetry](#backendtelemetry)_ |  false  |  | Telemetry configures the telemetry settings for the policy target (Gateway or xRoute).<br />This will override the telemetry settings in the EnvoyProxy resource. |
 
 
 #### BackendType
@@ -967,6 +998,7 @@ _Appears in:_
 
 _Appears in:_
 - [ProxyTracing](#proxytracing)
+- [Tracing](#tracing)
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
@@ -1502,7 +1534,7 @@ _Appears in:_
 | `envoyDeployment` | _[KubernetesDeploymentSpec](#kubernetesdeploymentspec)_ |  false  |  | EnvoyDeployment defines the desired state of the Envoy deployment resource.<br />If unspecified, default settings for the managed Envoy deployment resource<br />are applied. |
 | `envoyDaemonSet` | _[KubernetesDaemonSetSpec](#kubernetesdaemonsetspec)_ |  false  |  | EnvoyDaemonSet defines the desired state of the Envoy daemonset resource.<br />Disabled by default, a deployment resource is used instead to provision the Envoy Proxy fleet |
 | `envoyService` | _[KubernetesServiceSpec](#kubernetesservicespec)_ |  false  |  | EnvoyService defines the desired state of the Envoy service resource.<br />If unspecified, default settings for the managed Envoy service resource<br />are applied. |
-| `envoyHpa` | _[KubernetesHorizontalPodAutoscalerSpec](#kuberneteshorizontalpodautoscalerspec)_ |  false  |  | EnvoyHpa defines the Horizontal Pod Autoscaler settings for Envoy Proxy Deployment.<br />Once the HPA is being set, Replicas field from EnvoyDeployment will be ignored. |
+| `envoyHpa` | _[KubernetesHorizontalPodAutoscalerSpec](#kuberneteshorizontalpodautoscalerspec)_ |  false  |  | EnvoyHpa defines the Horizontal Pod Autoscaler settings for Envoy Proxy Deployment. |
 | `useListenerPortAsContainerPort` | _boolean_ |  false  |  | UseListenerPortAsContainerPort disables the port shifting feature in the Envoy Proxy.<br />When set to false (default value), if the service port is a privileged port (1-1023), add a constant to the value converting it into an ephemeral port.<br />This allows the container to bind to the port without needing a CAP_NET_BIND_SERVICE capability. |
 | `envoyPDB` | _[KubernetesPodDisruptionBudgetSpec](#kubernetespoddisruptionbudgetspec)_ |  false  |  | EnvoyPDB allows to control the pod disruption budget of an Envoy Proxy. |
 
@@ -1714,7 +1746,7 @@ _Appears in:_
 | `policyResources` | _[GroupVersionKind](#groupversionkind) array_ |  false  |  | PolicyResources defines the set of K8S resources the extension server will handle<br />as directly attached GatewayAPI policies |
 | `hooks` | _[ExtensionHooks](#extensionhooks)_ |  true  |  | Hooks defines the set of hooks the extension supports |
 | `service` | _[ExtensionService](#extensionservice)_ |  true  |  | Service defines the configuration of the extension service that the Envoy<br />Gateway Control Plane will call through extension hooks. |
-| `failOpen` | _boolean_ |  false  |  | FailOpen defines if Envoy Gateway should ignore errors returned from the Extension Service hooks.<br />The default is false, which means Envoy Gateway will fail closed if the Extension Service returns an error.<br />Fail-close means that if the Extension Service hooks return an error, the relevant route/listener/resource<br />will be replaced with a default configuration returning Internal Server Error (HTTP 500).<br />Fail-open means that if the Extension Service hooks return an error, no changes will be applied to the<br />source of the configuration which was sent to the extension server. |
+| `failOpen` | _boolean_ |  false  |  | FailOpen defines if Envoy Gateway should ignore errors returned from the Extension Service hooks.<br />When set to false, Envoy Gateway does not ignore extension Service hook errors. As a result,<br />xDS updates are skipped for the relevant envoy proxy fleet and the previous state is preserved.<br />When set to true, if the Extension Service hooks return an error, no changes will be applied to the<br />source of the configuration which was sent to the extension server. The errors are ignored and the resulting<br />xDS configuration is updated in the xDS snapshot.<br />Default: false |
 | `maxMessageSize` | _[Quantity](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.29/#quantity-resource-api)_ |  false  |  | MaxMessageSize defines the maximum message size in bytes that can be<br />sent to or received from the Extension Service.<br />Default: 4M |
 
 
@@ -3600,7 +3632,7 @@ _Appears in:_
 | ---   | ---  | ---      | ---     | ---         |
 | `samplingRate` | _integer_ |  false  |  | SamplingRate controls the rate at which traffic will be<br />selected for tracing if no prior sampling decision has been made.<br />Defaults to 100, valid values [0-100]. 100 indicates 100% sampling.<br />Only one of SamplingRate or SamplingFraction may be specified.<br />If neither field is specified, all requests will be sampled. |
 | `samplingFraction` | _[Fraction](https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.Fraction)_ |  false  |  | SamplingFraction represents the fraction of requests that should be<br />selected for tracing if no prior sampling decision has been made.<br />Only one of SamplingRate or SamplingFraction may be specified.<br />If neither field is specified, all requests will be sampled. |
-| `customTags` | _object (keys:string, values:[CustomTag](#customtag))_ |  true  |  | CustomTags defines the custom tags to add to each span.<br />If provider is kubernetes, pod name and namespace are added by default. |
+| `customTags` | _object (keys:string, values:[CustomTag](#customtag))_ |  false  |  | CustomTags defines the custom tags to add to each span.<br />If provider is kubernetes, pod name and namespace are added by default. |
 | `provider` | _[TracingProvider](#tracingprovider)_ |  true  |  | Provider defines the tracing provider. |
 
 
@@ -4520,6 +4552,21 @@ _Appears in:_
 | ---   | ---  | ---      | ---     | ---         |
 | `tcp` | _[TCPTimeout](#tcptimeout)_ |  false  |  | Timeout settings for TCP. |
 | `http` | _[HTTPTimeout](#httptimeout)_ |  false  |  | Timeout settings for HTTP. |
+
+
+#### Tracing
+
+
+
+Tracing defines the configuration for tracing.
+
+_Appears in:_
+- [BackendTelemetry](#backendtelemetry)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `samplingFraction` | _[Fraction](https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.Fraction)_ |  false  |  | SamplingFraction represents the fraction of requests that should be<br />selected for tracing if no prior sampling decision has been made.<br />This will take precedence over sampling fraction on EnvoyProxy if set. |
+| `customTags` | _object (keys:string, values:[CustomTag](#customtag))_ |  false  |  | CustomTags defines the custom tags to add to each span.<br />If provider is kubernetes, pod name and namespace are added by default. |
 
 
 #### TracingProvider
