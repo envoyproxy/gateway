@@ -625,7 +625,7 @@ func (r *gatewayAPIReconciler) processSecurityPolicyObjectRefs(
 					}
 				}
 			}
-			if err := r.processBackendRef(
+			if err := r.processNonRouteBackendRef(
 				ctx,
 				resourceMap,
 				resourceTree,
@@ -660,7 +660,7 @@ func (r *gatewayAPIReconciler) processSecurityPolicyObjectRefs(
 					}
 				} else if provider.RemoteJWKS != nil {
 					for _, br := range provider.RemoteJWKS.BackendRefs {
-						if err := r.processBackendRef(
+						if err := r.processNonRouteBackendRef(
 							ctx,
 							resourceMap,
 							resourceTree,
@@ -679,9 +679,9 @@ func (r *gatewayAPIReconciler) processSecurityPolicyObjectRefs(
 	}
 }
 
-// processBackendRef adds the referenced BackendRef to the resourceMap for later processBackendRefs.
-// If it exists in a different namespace and there is a ReferenceGrant, adds ReferenceGrant to the resourceTree.
-func (r *gatewayAPIReconciler) processBackendRef(
+// processNonRouteBackendRef adds the referenced BackendRef to the resourceMap for later processBackendRefs.
+// If BackendRef exists in a different namespace and there is a ReferenceGrant, adds ReferenceGrant to the resourceTree.
+func (r *gatewayAPIReconciler) processNonRouteBackendRef(
 	ctx context.Context,
 	resourceMap *resourceMappings,
 	resourceTree *resource.Resources,
@@ -2226,7 +2226,7 @@ func (r *gatewayAPIReconciler) processEnvoyExtensionPolicyObjectRefs(
 		// Add the referenced BackendRefs and ReferenceGrants in ExtAuth to Maps for later processing
 		for _, ep := range policy.Spec.ExtProc {
 			for _, br := range ep.BackendRefs {
-				if err := r.processBackendRef(
+				if err := r.processNonRouteBackendRef(
 					ctx,
 					resourceMap,
 					resourceTree,
