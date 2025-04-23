@@ -142,8 +142,9 @@ func TestCheckZoneAwareRouting(t *testing.T) {
 				loadBalancer: tt.loadBalancerCfg,
 				settings:     []*ir.DestinationSetting{ds},
 			}
-			dynamicXdsCluster := buildXdsCluster(args)
-
+			clusterResult, err := buildXdsCluster(args)
+			dynamicXdsCluster := clusterResult.cluster
+			require.NoError(t, err)
 			checkZoneAwareRouting(dynamicXdsCluster, args)
 
 			if !tt.zoneRoutingEnabled {
