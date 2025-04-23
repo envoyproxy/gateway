@@ -1278,6 +1278,10 @@ func TestNamespacedProvider(t *testing.T) {
 		},
 		LeaderElection: egv1a1.DefaultLeaderElection(),
 	}
+
+	// Disable webhook server for provider test to avoid non-existent cert errors
+	svr.EnvoyGateway.TopologyInjector = &egv1a1.EnvoyGatewayTopologyInjector{Disable: true}
+
 	resources := new(message.ProviderResources)
 	provider, err := New(context.Background(), cliCfg, svr, resources)
 	require.NoError(t, err)
@@ -1338,6 +1342,10 @@ func TestNamespaceSelectorProvider(t *testing.T) {
 		},
 		LeaderElection: egv1a1.DefaultLeaderElection(),
 	}
+
+	// Disable webhook server for provider test to avoid non-existent cert errors
+	svr.EnvoyGateway.TopologyInjector = &egv1a1.EnvoyGatewayTopologyInjector{Disable: true}
+
 	resources := new(message.ProviderResources)
 	provider, err := New(context.Background(), cliCfg, svr, resources)
 	require.NoError(t, err)
