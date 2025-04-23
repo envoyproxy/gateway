@@ -53,7 +53,7 @@ func GetCertGenCommand() *cobra.Command {
 	cmd.PersistentFlags().BoolVarP(&overwriteControlPlaneCerts, "overwrite", "o", false,
 		"Updates the secrets containing the control plane certs.")
 	cmd.PersistentFlags().BoolVarP(&disableTopologyInjector, "disable-topology-injector", "dti", false,
-		"Disables pathcing caBundle for injector MutatingWebhookConfiguration.")
+		"Disables patching caBundle for injector MutatingWebhookConfiguration.")
 	return cmd
 }
 
