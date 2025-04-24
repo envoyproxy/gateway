@@ -8,16 +8,16 @@ package cmd
 import (
 	"context"
 	"fmt"
-	v1 "k8s.io/api/admissionregistration/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"os"
 	"path/filepath"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	"github.com/envoyproxy/gateway/internal/crypto"
 )
@@ -56,18 +56,18 @@ func TestPatchTopologyWebhook(t *testing.T) {
 
 	cases := []struct {
 		caseName  string
-		webhook   *v1.MutatingWebhookConfiguration
+		webhook   *admissionregistrationv1.MutatingWebhookConfiguration
 		caBundle  []byte
 		wantErr   error
 		wantPatch bool
 	}{
 		{
 			caseName: "Update caBundle",
-			webhook: &v1.MutatingWebhookConfiguration{
+			webhook: &admissionregistrationv1.MutatingWebhookConfiguration{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: fmt.Sprintf("%s.%s", topologyWebhookNamePrefix, cfg.Namespace),
 				},
-				Webhooks: []v1.MutatingWebhook{{ClientConfig: v1.WebhookClientConfig{}}},
+				Webhooks: []admissionregistrationv1.MutatingWebhook{{ClientConfig: admissionregistrationv1.WebhookClientConfig{}}},
 			},
 			caBundle:  []byte("foo"),
 			wantErr:   nil,
@@ -75,11 +75,11 @@ func TestPatchTopologyWebhook(t *testing.T) {
 		},
 		{
 			caseName: "No-op",
-			webhook: &v1.MutatingWebhookConfiguration{
+			webhook: &admissionregistrationv1.MutatingWebhookConfiguration{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: fmt.Sprintf("%s.%s", topologyWebhookNamePrefix, cfg.Namespace),
 				},
-				Webhooks: []v1.MutatingWebhook{{ClientConfig: v1.WebhookClientConfig{CABundle: []byte("foo")}}},
+				Webhooks: []admissionregistrationv1.MutatingWebhook{{ClientConfig: admissionregistrationv1.WebhookClientConfig{CABundle: []byte("foo")}}},
 			},
 			caBundle:  []byte("foo"),
 			wantPatch: false,
@@ -90,13 +90,13 @@ func TestPatchTopologyWebhook(t *testing.T) {
 			fakeClient := fake.NewClientBuilder().
 				WithRuntimeObjects(tc.webhook).
 				Build()
-			beforeWebhook := &v1.MutatingWebhookConfiguration{}
+			beforeWebhook := &admissionregistrationv1.MutatingWebhookConfiguration{}
 			require.NoError(t, fakeClient.Get(context.Background(), client.ObjectKey{Name: tc.webhook.Name}, beforeWebhook))
 			err = patchTopologyInjectorWebhook(context.Background(), fakeClient, cfg, tc.caBundle)
 
 			require.NoError(t, err)
 
-			afterWebhook := &v1.MutatingWebhookConfiguration{}
+			afterWebhook := &admissionregistrationv1.MutatingWebhookConfiguration{}
 			require.NoError(t, fakeClient.Get(context.Background(), client.ObjectKey{Name: tc.webhook.Name}, afterWebhook))
 
 			require.Equal(t, afterWebhook.Webhooks[0].ClientConfig.CABundle, tc.caBundle)
