@@ -32,7 +32,7 @@ type HTTPFiltersTranslator interface {
 	processRedirectFilter(redirect *gwapiv1.HTTPRequestRedirectFilter, filterContext *HTTPFiltersContext)
 	processRequestHeaderModifierFilter(headerModifier *gwapiv1.HTTPHeaderFilter, filterContext *HTTPFiltersContext)
 	processResponseHeaderModifierFilter(headerModifier *gwapiv1.HTTPHeaderFilter, filterContext *HTTPFiltersContext)
-	processRequestMirrorFilter(filterIdx int, mirror *gwapiv1.HTTPRequestMirrorFilter, filterContext *HTTPFiltersContext, resources *resource.Resources) error
+	processRequestMirrorFilter(filterIdx int, mirror *gwapiv1.HTTPRequestMirrorFilter, filterContext *HTTPFiltersContext, resources *resource.Resources) status.Error
 	processUnsupportedHTTPFilter(filterType string, filterContext *HTTPFiltersContext)
 }
 
@@ -72,14 +72,14 @@ func (t *Translator) ProcessHTTPFilters(parentRef *RouteParentContext,
 	filters []gwapiv1.HTTPRouteFilter,
 	ruleIdx int,
 	resources *resource.Resources,
-) (*HTTPFiltersContext, error) {
+) (*HTTPFiltersContext, status.Error) {
 	httpFiltersContext := &HTTPFiltersContext{
 		ParentRef:    parentRef,
 		Route:        route,
 		RuleIdx:      ruleIdx,
 		HTTPFilterIR: &HTTPFilterIR{},
 	}
-	var err error
+	var err status.Error
 	for i := range filters {
 		filter := filters[i]
 		// If an invalid filter type has been configured then skip processing any more filters
@@ -881,7 +881,7 @@ func (t *Translator) processRequestMirrorFilter(
 	mirrorFilter *gwapiv1.HTTPRequestMirrorFilter,
 	filterContext *HTTPFiltersContext,
 	resources *resource.Resources,
-) error {
+) (err status.Error) {
 	// Make sure the config actually exists
 	if mirrorFilter == nil {
 		return nil
@@ -901,10 +901,11 @@ func (t *Translator) processRequestMirrorFilter(
 	// This sets the status on the HTTPRoute, should the usage be changed so that the status message reflects that the backendRef is from the filter?
 	filterNs := filterContext.Route.GetNamespace()
 	serviceNamespace := NamespaceDerefOr(mirrorBackend.Namespace, filterNs)
-	err := t.validateBackendRef(mirrorBackendRef, filterContext.ParentRef, filterContext.Route,
+	err = t.validateBackendRef(mirrorBackendRef, filterContext.ParentRef, filterContext.Route,
 		resources, serviceNamespace, resource.KindHTTPRoute)
 	if err != nil {
-		return err
+		return status.NewRouteStatusError(
+			fmt.Errorf("failed to validate the RequestMirror filter: %w", err), err.Reason())
 	}
 
 	destName := fmt.Sprintf("%s-mirror-%d", irRouteDestinationName(filterContext.Route, filterContext.RuleIdx), filterIdx)

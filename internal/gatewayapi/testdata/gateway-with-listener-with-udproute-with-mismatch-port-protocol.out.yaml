@@ -72,8 +72,7 @@ udpRoutes:
     parents:
     - conditions:
       - lastTransitionTime: null
-        message: 'backend Service validation failed: UDP Port 8080 not found on Service
-          default/service-1'
+        message: UDP Port 8080 not found on Service default/service-1
         reason: Failed to process the settings associated with the UDP route.
         status: "False"
         type: Accepted
