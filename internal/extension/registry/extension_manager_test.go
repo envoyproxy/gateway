@@ -377,6 +377,33 @@ func Test_buildServiceConfig(t *testing.T) {
 }]}`,
 		},
 		{
+			name: "defaults",
+			args: args{
+				ext: &egv1a1.ExtensionManager{
+					Service: &egv1a1.ExtensionService{
+						BackendEndpoint: egv1a1.BackendEndpoint{
+							FQDN: &egv1a1.FQDNEndpoint{
+								Hostname: "foo.bar",
+								Port:     44344,
+							},
+						},
+					},
+				},
+			},
+			want: `{
+"methodConfig": [{
+	"name": [{"service": "envoygateway.extension.EnvoyGatewayExtension"}],
+	"waitForReady": true,
+	"retryPolicy": {
+		"MaxAttempts": 4,
+		"InitialBackoff": "0.100000s",
+		"MaxBackoff": "1.000000s",
+		"BackoffMultiplier": 2.000000,
+		"RetryableStatusCodes": [ "UNAVAILABLE" ]
+	}
+}]}`,
+		},
+		{
 			name: "invalid-code",
 			args: args{
 				ext: &egv1a1.ExtensionManager{
