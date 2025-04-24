@@ -32,6 +32,7 @@ new features: |
   Added support for global imageRegistry and imagePullSecrets to the Helm chart
   Added support for using a local JWKS in an inline string or in a ConfigMap to validate JWT tokens in SecurityPolicy
   Added support for logging the status of resources in standalone mode.
+  Added support for configuring retry settings for Extension Service hooks in EnvoyGateway config.
 
 
 bug fixes: |
