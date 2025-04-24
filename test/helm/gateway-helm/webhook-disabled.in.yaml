@@ -3,5 +3,5 @@ global:
     envoyGateway:
       image: "docker.io/envoyproxy/gateway-dev:latest"
       pullPolicy: Always
-topologyWebhook:
+topologyInjector:
   enabled: false

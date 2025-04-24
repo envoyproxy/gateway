@@ -23,7 +23,7 @@ spec:
       {{- if .Values.certgen.job.args }}
       - args:
         {{- toYaml .Values.certgen.job.args | nindent 8 }}
-        {{- if not .Values.topologyWebhook.enabled }}
+        {{- if not .Values.topologyInjector.enabled }}
         - --disable-topology-injector
         {{- end }}
         command:

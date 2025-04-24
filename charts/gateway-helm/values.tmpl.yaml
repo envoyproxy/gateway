@@ -134,6 +134,6 @@ certgen:
     annotations: {}
     labels: {}
 
-topologyWebhook:
+topologyInjector:
   enabled: true
   annotations: {}

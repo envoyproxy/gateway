@@ -63,7 +63,7 @@ subjects:
   name: '{{ include "eg.fullname" . }}-certgen'
   namespace: '{{ .Release.Namespace }}'
 ---
-{{- if .Values.topologyWebhook.enabled }}
+{{- if .Values.topologyInjector.enabled }}
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:

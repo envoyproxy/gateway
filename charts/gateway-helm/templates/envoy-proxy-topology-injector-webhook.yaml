@@ -1,4 +1,4 @@
-{{- if .Values.topologyWebhook.enabled }}
+{{- if .Values.topologyInjector.enabled }}
 apiVersion: admissionregistration.k8s.io/v1
 kind: MutatingWebhookConfiguration
 metadata:
@@ -6,8 +6,8 @@ metadata:
   annotations:
     "helm.sh/hook": pre-install, pre-upgrade
     "helm.sh/hook-weight": "-1"
-  {{- if .Values.topologyWebhook.annotations }}
-    {{- toYaml .Values.topologyWebhook.annotations | nindent 4 -}}
+  {{- if .Values.topologyInjector.annotations }}
+    {{- toYaml .Values.topologyInjector.annotations | nindent 4 -}}
   {{- end }}
   labels:
     app.kubernetes.io/component: topology-injector

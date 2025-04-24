@@ -67,7 +67,7 @@ spec:
         - containerPort: {{ .port }}
           name: {{ .name }}
         {{- end}}
-        {{- if .Values.topologyWebhook.enabled }}
+        {{- if .Values.topologyInjector.enabled }}
         - name: webhook
           containerPort: 9443
         {{- end }}

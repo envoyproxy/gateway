@@ -16,7 +16,7 @@ spec:
   {{- include "eg.selectorLabels" . | nindent 4 }}
   ports:
   {{- .Values.deployment.ports | toYaml | nindent 2 -}}
-  {{- if .Values.topologyWebhook.enabled }}
+  {{- if .Values.topologyInjector.enabled }}
   - name: webhook
     port: 9443
     targetPort: 9443

@@ -80,7 +80,7 @@ func certGen(ctx context.Context, logOut io.Writer, local bool) error {
 		if err = outputCertsForKubernetes(ctx, cli, cfg, overwriteControlPlaneCerts, certs); err != nil {
 			return fmt.Errorf("failed to output certificates: %w", err)
 		}
-		if err = patchTopologyWebhook(ctx, cli, cfg, certs.CACertificate); err != nil {
+		if err = patchTopologyInjectorWebhook(ctx, cli, cfg, certs.CACertificate); err != nil {
 			return fmt.Errorf("failed to patch webhook: %w", err)
 		}
 	} else {
@@ -116,7 +116,7 @@ func outputCertsForKubernetes(ctx context.Context, cli client.Client, cfg *confi
 	return nil
 }
 
-func patchTopologyWebhook(ctx context.Context, cli client.Client, cfg *config.Server, caBundle []byte) error {
+func patchTopologyInjectorWebhook(ctx context.Context, cli client.Client, cfg *config.Server, caBundle []byte) error {
 	if disableTopologyInjector {
 		return nil
 	}
