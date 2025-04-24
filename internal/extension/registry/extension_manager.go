@@ -23,7 +23,6 @@ import (
 	"google.golang.org/grpc/security/advancedtls"
 	"google.golang.org/grpc/test/bufconn"
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
 	k8scli "sigs.k8s.io/controller-runtime/pkg/client"
 	k8sclicfg "sigs.k8s.io/controller-runtime/pkg/client/config"
@@ -404,8 +403,9 @@ func buildServiceConfig(ext *egv1a1.ExtensionManager) (string, error) {
 	const defaultMaxAttempts = 4
 	const defaultBackoffMultiplier = 2.0
 	const defaultRetryableCodes = "UNAVAILABLE"
-	defaultInitialBackoff := metav1.Duration{Duration: 100 * time.Millisecond}
-	defaultMaxBackoff := metav1.Duration{Duration: 1 * time.Second}
+
+	defaultInitialBackoff := gwapiv1.Duration("100ms")
+	defaultMaxBackoff := gwapiv1.Duration("1s")
 
 	maxAttempts := defaultMaxAttempts
 	initialBackoff := defaultInitialBackoff
@@ -428,6 +428,16 @@ func buildServiceConfig(ext *egv1a1.ExtensionManager) (string, error) {
 		}
 	}
 
-	return fmt.Sprintf(grpcServiceConfigTemplate, maxAttempts, initialBackoff.Seconds(), maxBackoff.Seconds(),
+	initialBackoffDuration, err := time.ParseDuration(string(initialBackoff))
+	if err != nil {
+		return "", fmt.Errorf("invalid Extension Manager GRPC Retry Initial Backoff %s", initialBackoff)
+	}
+
+	maxBackoffDuration, err := time.ParseDuration(string(maxBackoff))
+	if err != nil {
+		return "", fmt.Errorf("invalid Extension Manager GRPC Retry Max Backoff %s", maxBackoff)
+	}
+
+	return fmt.Sprintf(grpcServiceConfigTemplate, maxAttempts, initialBackoffDuration.Seconds(), maxBackoffDuration.Seconds(),
 		backoffMultiplier, grpcRetryableStatusCodes), nil
 }

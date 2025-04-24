@@ -16,7 +16,6 @@ import (
 	"reflect"
 	"sync"
 	"testing"
-	"time"
 
 	v3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
 	"github.com/stretchr/testify/require"
@@ -150,8 +149,8 @@ func Test_setupGRPCOpts(t *testing.T) {
 						},
 						Retry: &egv1a1.ExtensionServiceRetry{
 							MaxAttempts:    ptr.To(20),
-							InitialBackoff: &metav1.Duration{Duration: 500 * time.Millisecond},
-							MaxBackoff:     &metav1.Duration{Duration: 5 * time.Second},
+							InitialBackoff: ptr.To(gwapiv1.Duration("500ms")),
+							MaxBackoff:     ptr.To(gwapiv1.Duration("5s")),
 							BackoffMultiplier: &gwapiv1.Fraction{
 								Numerator: 50,
 							},
@@ -336,8 +335,8 @@ func Test_buildServiceConfig(t *testing.T) {
 						},
 						Retry: &egv1a1.ExtensionServiceRetry{
 							MaxAttempts:    ptr.To(20),
-							InitialBackoff: &metav1.Duration{Duration: 500 * time.Millisecond},
-							MaxBackoff:     &metav1.Duration{Duration: 5 * time.Second},
+							InitialBackoff: ptr.To(gwapiv1.Duration("500ms")),
+							MaxBackoff:     ptr.To(gwapiv1.Duration("5s")),
 							BackoffMultiplier: &gwapiv1.Fraction{
 								Numerator: 50,
 							},

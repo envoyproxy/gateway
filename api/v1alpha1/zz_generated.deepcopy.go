@@ -2551,12 +2551,12 @@ func (in *ExtensionServiceRetry) DeepCopyInto(out *ExtensionServiceRetry) {
 	}
 	if in.InitialBackoff != nil {
 		in, out := &in.InitialBackoff, &out.InitialBackoff
-		*out = new(metav1.Duration)
+		*out = new(v1.Duration)
 		**out = **in
 	}
 	if in.MaxBackoff != nil {
 		in, out := &in.MaxBackoff, &out.MaxBackoff
-		*out = new(metav1.Duration)
+		*out = new(v1.Duration)
 		**out = **in
 	}
 	if in.BackoffMultiplier != nil {

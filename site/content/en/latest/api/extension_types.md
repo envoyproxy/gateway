@@ -1782,8 +1782,8 @@ _Appears in:_
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
 | `maxAttempts` | _integer_ |  false  |  | MaxAttempts defines the maximum number of retry attempts.<br />Default: 4 |
-| `initialBackoff` | _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.29/#duration-v1-meta)_ |  false  |  | InitialBackoff defines the initial backoff in seconds for retries, details: https://github.com/grpc/proposal/blob/master/A6-client-retries.md#integration-with-service-config.<br />Default: 0.1s |
-| `maxBackoff` | _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.29/#duration-v1-meta)_ |  false  |  | MaxBackoff defines the maximum backoff in seconds for retries.<br />Default: 1s |
+| `initialBackoff` | _[Duration](https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.Duration)_ |  false  |  | InitialBackoff defines the initial backoff in seconds for retries, details: https://github.com/grpc/proposal/blob/master/A6-client-retries.md#integration-with-service-config.<br />Default: 0.1s |
+| `maxBackoff` | _[Duration](https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.Duration)_ |  false  |  | MaxBackoff defines the maximum backoff in seconds for retries.<br />Default: 1s |
 | `backoffMultiplier` | _[Fraction](https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.Fraction)_ |  false  |  | BackoffMultiplier defines the multiplier to use for exponential backoff for retries.<br />Default: 2.0 |
 | `RetryableStatusCodes` | _[RetryableGRPCStatusCode](#retryablegrpcstatuscode) array_ |  false  |  | RetryableStatusCodes defines the grpc status code for which retries will be attempted.<br />Default: [ "UNAVAILABLE" ] |
 

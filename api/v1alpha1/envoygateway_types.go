@@ -595,13 +595,13 @@ type ExtensionServiceRetry struct {
 	// Default: 0.1s
 	//
 	// +optional
-	InitialBackoff *metav1.Duration `json:"initialBackoff,omitempty"`
+	InitialBackoff *gwapiv1.Duration `json:"initialBackoff,omitempty"`
 
 	// MaxBackoff defines the maximum backoff in seconds for retries.
 	// Default: 1s
 	//
 	// +optional
-	MaxBackoff *metav1.Duration `json:"maxBackoff,omitempty"`
+	MaxBackoff *gwapiv1.Duration `json:"maxBackoff,omitempty"`
 
 	// BackoffMultiplier defines the multiplier to use for exponential backoff for retries.
 	// Default: 2.0
