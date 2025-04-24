@@ -63,3 +63,7 @@ adopters:
     logo: "/logos/nemlig.svg"
     url: "https://www.nemlig.com/"
     description: "nemlig.com is using Envoy Gateway to route traffic for internal and externally exposed services, including many of our customer facing APIs. We use Envoy Gateway to enforce security policies, such as JWT authentication as a service on our self-built kubernetes platform."
+  - name: "Cortex"
+    logo: "/logos/cortex.png"
+    url: "https://cortex.io/"
+    description: "Cortex is using Envoy Gateway to manage all API traffic as a modern Kubernetes ingress replacement."

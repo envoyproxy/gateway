@@ -141,13 +141,13 @@ data:
          					OkResponse: &envoy_service_auth_v3.OkHttpResponse{
          						Headers: []*envoy_api_v3_core.HeaderValueOption{
          							{
-         								Append: &wrappers.BoolValue{Value: false},
          								Header: &envoy_api_v3_core.HeaderValue{
          									// For a successful request, the authorization server sets the
          									// x-current-user value.
          									Key:   "x-current-user",
          									Value: user,
          								},
+         								AppendAction: envoy_api_v3_core.HeaderValueOption_OVERWRITE_IF_EXISTS_OR_ADD,
          							},
          						},
          					},

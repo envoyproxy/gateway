@@ -239,23 +239,15 @@ func TestTranslateRateLimitConfig(t *testing.T) {
 	}
 }
 
-func TestTranslateXdsWithExtension(t *testing.T) {
+// Simulate various extension server hooks and ensure that the translator returns the original resources
+// when configured to failOpen
+func TestTranslateXdsWithExtensionErrorsWhenFailOpen(t *testing.T) {
 	testConfigs := map[string]testFileConfig{
-		"http-route-extension-route-error": {
-			errMsg: "rpc error: code = Unknown desc = route hook resource error",
-		},
-		"http-route-extension-virtualhost-error": {
-			errMsg: "rpc error: code = Unknown desc = extension post xds virtual host hook error",
-		},
-		"http-route-extension-listener-error": {
-			errMsg: "rpc error: code = Unknown desc = extension post xds listener hook error",
-		},
-		"http-route-extension-translate-error": {
-			errMsg: "rpc error: code = Unknown desc = cluster hook resource error: fail-close-error",
-		},
-		"multiple-listeners-same-port-error": {
-			errMsg: "rpc error: code = Unknown desc = simulate error when there is no default filter chain in the original resources",
-		},
+		"http-route-extension-route-error":       {},
+		"http-route-extension-virtualhost-error": {},
+		"http-route-extension-listener-error":    {},
+		"http-route-extension-translate-error":   {},
+		"multiple-listeners-same-port-error":     {},
 	}
 
 	inputFiles, err := filepath.Glob(filepath.Join("testdata", "in", "extension-xds-ir", "*.yaml"))
@@ -278,6 +270,7 @@ func TestTranslateXdsWithExtension(t *testing.T) {
 				},
 			}
 			ext := egv1a1.ExtensionManager{
+				FailOpen: true,
 				Resources: []egv1a1.GroupVersionKind{
 					{
 						Group:   "foo.example.io",
@@ -342,6 +335,90 @@ func TestTranslateXdsWithExtension(t *testing.T) {
 				}
 				require.Equal(t, requireTestDataOutFile(t, "extension-xds-ir", inputFileName+".secrets.yaml"), requireResourcesToYAMLString(t, secrets))
 			}
+		})
+	}
+}
+
+// Simulate various extension server hooks and ensure that the translator returns an error
+// when configured with to not fail open.
+func TestTranslateXdsWithExtensionErrorsWhenFailClosed(t *testing.T) {
+	testConfigs := map[string]testFileConfig{
+		"http-route-extension-route-error": {
+			errMsg: "rpc error: code = Unknown desc = route hook resource error",
+		},
+		"http-route-extension-virtualhost-error": {
+			errMsg: "rpc error: code = Unknown desc = extension post xds virtual host hook error",
+		},
+		"http-route-extension-listener-error": {
+			errMsg: "rpc error: code = Unknown desc = extension post xds listener hook error",
+		},
+		"http-route-extension-translate-error": {
+			errMsg: "rpc error: code = Unknown desc = cluster hook resource error: fail-close-error",
+		},
+		"multiple-listeners-same-port-error": {
+			errMsg: "rpc error: code = Unknown desc = simulate error when there is no default filter chain in the original resources",
+		},
+	}
+
+	inputFiles, err := filepath.Glob(filepath.Join("testdata", "in", "extension-xds-ir", "*-error.yaml"))
+	require.NoError(t, err)
+
+	for _, inputFile := range inputFiles {
+		inputFileName := testName(inputFile)
+		t.Run(inputFileName, func(t *testing.T) {
+			cfg, ok := testConfigs[inputFileName]
+			if !ok {
+				cfg = testFileConfig{}
+			}
+
+			// Testdata for the extension tests is similar to the ir test data
+			// New directory is just to keep them separate and easy to understand
+			x := requireXdsIRFromInputTestData(t, inputFile)
+			tr := &Translator{
+				GlobalRateLimit: &GlobalRateLimitSettings{
+					ServiceURL: ratelimit.GetServiceURL("envoy-gateway-system", "cluster.local"),
+				},
+			}
+			ext := egv1a1.ExtensionManager{
+				FailOpen: false,
+				Resources: []egv1a1.GroupVersionKind{
+					{
+						Group:   "foo.example.io",
+						Version: "v1alpha1",
+						Kind:    "examplefilter",
+					},
+				},
+				PolicyResources: []egv1a1.GroupVersionKind{
+					{
+						Group:   "bar.example.io",
+						Version: "v1alpha1",
+						Kind:    "ExtensionPolicy",
+					},
+					{
+						Group:   "foo.example.io",
+						Version: "v1alpha1",
+						Kind:    "Bar",
+					},
+				},
+				Hooks: &egv1a1.ExtensionHooks{
+					XDSTranslator: &egv1a1.XDSTranslatorHooks{
+						Post: []egv1a1.XDSTranslatorHook{
+							egv1a1.XDSRoute,
+							egv1a1.XDSVirtualHost,
+							egv1a1.XDSHTTPListener,
+							egv1a1.XDSTranslation,
+						},
+					},
+				},
+			}
+
+			extMgr, closeFunc, err := registry.NewInMemoryManager(ext, &testingExtensionServer{})
+			require.NoError(t, err)
+			defer closeFunc()
+			tr.ExtensionManager = &extMgr
+
+			_, err = tr.Translate(x)
+			require.EqualError(t, err, cfg.errMsg)
 		})
 	}
 }

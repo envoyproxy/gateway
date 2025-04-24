@@ -69,7 +69,7 @@ func (r *BenchmarkReport) Sample(ctx context.Context) (err error) {
 	}
 
 	if pErr := r.sampleProfiles(ctx, &sample); pErr != nil {
-		err = errors.Join(pErr)
+		err = errors.Join(err, pErr)
 	}
 
 	r.Samples = append(r.Samples, sample)
@@ -109,20 +109,20 @@ func (r *BenchmarkReport) sampleMetrics(ctx context.Context, sample *BenchmarkMe
 	// Sample memory
 	cpMem, qErr := r.promClient.QuerySum(ctx, controlPlaneMemQL)
 	if qErr != nil {
-		err = errors.Join(fmt.Errorf("failed to query control plane memory: %w", err))
+		err = errors.Join(fmt.Errorf("failed to query control plane memory: %w", qErr))
 	}
 	dpMem, qErr := r.promClient.QueryAvg(ctx, dataPlaneMemQL)
 	if qErr != nil {
-		err = errors.Join(fmt.Errorf("failed to query data plane memory: %w", err))
+		err = errors.Join(err, fmt.Errorf("failed to query data plane memory: %w", qErr))
 	}
 	// Sample cpu
 	cpCPU, qErr := r.promClient.QuerySum(ctx, controlPlaneCPUQL)
 	if qErr != nil {
-		err = errors.Join(fmt.Errorf("failed to query control plane cpu: %w", err))
+		err = errors.Join(err, fmt.Errorf("failed to query control plane cpu: %w", qErr))
 	}
 	dpCPU, qErr := r.promClient.QueryAvg(ctx, dataPlaneCPUQL)
 	if qErr != nil {
-		err = errors.Join(fmt.Errorf("failed to query data plane cpu: %w", err))
+		err = errors.Join(err, fmt.Errorf("failed to query data plane cpu: %w", qErr))
 	}
 
 	sample.ControlPlaneMem = cpMem
