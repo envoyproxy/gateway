@@ -164,7 +164,7 @@ experimental-conformance: create-cluster kube-install-image kube-deploy run-expe
 benchmark: create-cluster kube-install-image kube-deploy-for-benchmark-test run-benchmark delete-cluster ## Create a kind cluster, deploy EG into it, run Envoy Gateway benchmark test, and clean up.
 
 .PHONY: resilience
-resilience: create-cluster kube-install-image kube-deploy run-resilience delete-cluster ## Create a kind cluster, deploy EG into it, run Envoy Gateway resilience test, and clean up.
+resilience: create-cluster kube-install-image kube-install-examples-image kube-deploy install-eg-addons enable-simple-extension-server run-resilience delete-cluster ## Create a kind cluster, deploy EG into it, run Envoy Gateway resilience test, and clean up.
 
 .PHONY: e2e
 e2e: create-cluster kube-install-image kube-deploy \
@@ -177,6 +177,14 @@ install-ratelimit:
 	kubectl apply -f examples/redis/redis.yaml
 	tools/hack/deployment-exists.sh "app.kubernetes.io/name=envoy-ratelimit" "envoy-gateway-system"
 	kubectl wait --timeout=5m -n envoy-gateway-system deployment/envoy-ratelimit --for=condition=Available
+
+.PHONY: enable-simple-extension-server
+enable-simple-extension-server:
+	@$(LOG_TARGET)
+	kubectl apply -f examples/simple-extension-server/simple-extension-server.yaml
+	tools/hack/deployment-exists.sh "app.kubernetes.io/name=gateway-simple-extension-server" "envoy-gateway-system"
+	kubectl rollout status --watch --timeout=5m -n envoy-gateway-system deployment/envoy-gateway
+	kubectl wait --timeout=5m -n envoy-gateway-system deployment/envoy-gateway --for=condition=Available
 
 .PHONY: e2e-prepare
 e2e-prepare: prepare-ip-family ## Prepare the environment for running e2e tests

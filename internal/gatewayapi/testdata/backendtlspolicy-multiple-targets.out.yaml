@@ -192,7 +192,11 @@ xdsIR:
       - destination:
           name: httproute/envoy-gateway/httproute-btls-1/rule/0
           settings:
-          - name: httproute/envoy-gateway/httproute-btls-1/rule/0/backend/0
+          - addressType: IP
+            endpoints:
+            - host: 10.244.0.11
+              port: 8080
+            name: httproute/envoy-gateway/httproute-btls-1/rule/0/backend/0
             protocol: HTTP
             tls:
               alpnProtocols: null
@@ -201,8 +205,6 @@ xdsIR:
                 name: policy-btls/envoy-gateway-ca
               sni: example.com
             weight: 1
-        directResponse:
-          statusCode: 500
         hostname: '*'
         isHTTP2: false
         metadata:
@@ -217,7 +219,11 @@ xdsIR:
       - destination:
           name: httproute/envoy-gateway/httproute-btls-2/rule/0
           settings:
-          - name: httproute/envoy-gateway/httproute-btls-2/rule/0/backend/0
+          - addressType: IP
+            endpoints:
+            - host: 10.244.0.11
+              port: 8081
+            name: httproute/envoy-gateway/httproute-btls-2/rule/0/backend/0
             protocol: HTTP
             tls:
               alpnProtocols: null
@@ -226,8 +232,6 @@ xdsIR:
                 name: policy-btls/envoy-gateway-ca
               sni: example.com
             weight: 1
-        directResponse:
-          statusCode: 500
         hostname: '*'
         isHTTP2: false
         metadata:

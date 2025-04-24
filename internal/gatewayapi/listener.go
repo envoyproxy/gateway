@@ -732,13 +732,13 @@ func (t *Translator) processBackendRefs(name string, backendCluster egv1a1.Backe
 		kind := KindDerefOr(ref.Kind, resource.KindService)
 		switch kind {
 		case resource.KindService:
-			if _, err := validateBackendRefService(ref.BackendObjectReference, resources, ns, corev1.ProtocolTCP); err != nil {
+			if err := validateBackendRefService(ref.BackendObjectReference, resources, ns, corev1.ProtocolTCP); err != nil {
 				return nil, nil, err
 			}
 			ds := t.processServiceDestinationSetting(name, ref.BackendObjectReference, ns, ir.TCP, resources, envoyProxy)
 			result = append(result, ds)
 		case resource.KindBackend:
-			if _, err := t.validateBackendRefBackend(ref.BackendObjectReference, resources, ns, true); err != nil {
+			if err := t.validateBackendRefBackend(ref.BackendObjectReference, resources, ns, true); err != nil {
 				return nil, nil, err
 			}
 			ds := t.processBackendDestinationSetting(name, ref.BackendObjectReference, ns, ir.TCP, resources)

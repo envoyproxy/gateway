@@ -4,6 +4,9 @@ date: Pending
 breaking changes: |
   Use a dedicated listener port(19003) for envoy proxy readiness
   Uses the envoy JSON formatter for the default access log instead of text formatter.
+  Envoy Gateway would skip xDS snapshot updates in case of errors during xDS translation.
+  When Extension Manager is configured to Fail Open, translation errors are logged and suppressed.
+  When Extension Manager is configured to not Fail Open, EG will no longer replace affected resources. Instead, xDS snapshot update would be skipped.
 
 # Updates addressing vulnerabilities, security flaws, or compliance requirements.
 security updates: |
@@ -32,6 +35,7 @@ new features: |
   Added support for global imageRegistry and imagePullSecrets to the Helm chart
   Added support for using a local JWKS in an inline string or in a ConfigMap to validate JWT tokens in SecurityPolicy
   Added support for logging the status of resources in standalone mode.
+  Added support for per-route tracing in BackendTrafficPolicy
   Added support for `OverlappingTLSConfig` condition in Gateway status. This condition is set if there are overlapping hostnames or certificates between listeners. The ALPN protocol is set to HTTP/1.1 for the overlapping listeners to avoid HTTP/2 Connection Coalescing.
 
 bug fixes: |
@@ -47,6 +51,7 @@ bug fixes: |
   Fix an issue that SamplingFraction was not working.
   Fix kubernetes resources not being deleted when the customized name used.
   Do not treat essential resource like namespace as the missing resource while loading from file.
+  Do not set retriable status codes to 503 when RetryOn is configured in BackendTrafficPolicy.
 
 # Enhancements that improve performance.
 performance improvements: |
