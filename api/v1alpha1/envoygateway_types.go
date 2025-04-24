@@ -559,11 +559,11 @@ type ExtensionService struct {
 	// +optional
 	TLS *ExtensionTLS `json:"tls,omitempty"`
 
-	// RetryPolicy defines the retry policy for to use when errors are encountered in communication with
+	// Retry defines the retry policy for to use when errors are encountered in communication with
 	// the extension service.
 	//
 	// +optional
-	RetryPolicy *RetryPolicy `json:"retryPolicy,omitempty"`
+	Retry *ExtensionServiceRetry `json:"retry,omitempty"`
 }
 
 // ExtensionTLS defines the TLS configuration when connecting to an extension service.
@@ -581,8 +581,8 @@ type ExtensionTLS struct {
 // +kubebuilder:validation:Enum=CANCELLED;UNKNOWN;INVALID_ARGUMENT;DEADLINE_EXCEEDED;NOT_FOUND;ALREADY_EXISTS;PERMISSION_DENIED;RESOURCE_EXHAUSTED;FAILED_PRECONDITION;ABORTED;OUT_OF_RANGE;UNIMPLEMENTED;INTERNAL;UNAVAILABLE;DATA_LOSS;UNAUTHENTICATED
 type RetryableGRPCStatusCode string
 
-// RetryPolicy defines the retry policy for to use when errors are encountered in communication with the extension service.
-type RetryPolicy struct {
+// ExtensionServiceRetry defines the retry policy for to use when errors are encountered in communication with the extension service.
+type ExtensionServiceRetry struct {
 	// MaxAttempts defines the maximum number of retry attempts.
 	// Default: 4
 	//
@@ -593,13 +593,13 @@ type RetryPolicy struct {
 	// Default: 0.1s
 	//
 	// +optional
-	InitialBackoff *gwapiv1.Fraction `json:"initialBackoff,omitempty"`
+	InitialBackoff *metav1.Duration `json:"initialBackoff,omitempty"`
 
 	// MaxBackoff defines the maximum backoff in seconds for retries.
 	// Default: 1s
 	//
 	// +optional
-	MaxBackoff *gwapiv1.Fraction `json:"maxBackoff,omitempty"`
+	MaxBackoff *metav1.Duration `json:"maxBackoff,omitempty"`
 
 	// BackoffMultiplier defines the multiplier to use for exponential backoff for retries.
 	// Default: 2.0

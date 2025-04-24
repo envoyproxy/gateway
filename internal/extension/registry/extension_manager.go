@@ -14,6 +14,7 @@ import (
 	"net"
 	"strconv"
 	"strings"
+	"time"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -22,6 +23,7 @@ import (
 	"google.golang.org/grpc/security/advancedtls"
 	"google.golang.org/grpc/test/bufconn"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
 	k8scli "sigs.k8s.io/controller-runtime/pkg/client"
 	k8sclicfg "sigs.k8s.io/controller-runtime/pkg/client/config"
@@ -293,8 +295,8 @@ func setupGRPCOpts(ctx context.Context, client k8scli.Client, ext *egv1a1.Extens
 	}
 	opts = append(opts, grpc.WithDefaultServiceConfig(serviceConfig))
 
-	if ext.Service.RetryPolicy != nil {
-		maxAttempts := ptr.Deref(ext.Service.RetryPolicy.MaxAttempts, 4)
+	if ext.Service.Retry != nil {
+		maxAttempts := ptr.Deref(ext.Service.Retry.MaxAttempts, 4)
 		opts = append(opts, grpc.WithMaxCallAttempts(maxAttempts))
 	}
 
@@ -400,10 +402,10 @@ func getRetryableGRPCCode(retryableCodes []egv1a1.RetryableGRPCStatusCode) (stri
 
 func buildServiceConfig(ext *egv1a1.ExtensionManager) (string, error) {
 	const defaultMaxAttempts = 4
-	const defaultInitialBackoff = 0.1
-	const defaultMaxBackoff = 1.0
 	const defaultBackoffMultiplier = 2.0
 	const defaultRetryableCodes = "UNAVAILABLE"
+	defaultInitialBackoff := metav1.Duration{Duration: 100 * time.Millisecond}
+	defaultMaxBackoff := metav1.Duration{Duration: 1 * time.Second}
 
 	maxAttempts := defaultMaxAttempts
 	initialBackoff := defaultInitialBackoff
@@ -411,21 +413,21 @@ func buildServiceConfig(ext *egv1a1.ExtensionManager) (string, error) {
 	backoffMultiplier := defaultBackoffMultiplier
 	grpcRetryableStatusCodes := strconv.Quote(defaultRetryableCodes)
 
-	if ext.Service.RetryPolicy != nil {
-		maxAttempts = ptr.Deref(ext.Service.RetryPolicy.MaxAttempts, defaultMaxAttempts)
-		initialBackoff = fractionOrDefault(ext.Service.RetryPolicy.InitialBackoff, defaultInitialBackoff)
-		maxBackoff = fractionOrDefault(ext.Service.RetryPolicy.MaxBackoff, defaultMaxBackoff)
-		backoffMultiplier = fractionOrDefault(ext.Service.RetryPolicy.BackoffMultiplier, defaultBackoffMultiplier)
+	if ext.Service.Retry != nil {
+		maxAttempts = ptr.Deref(ext.Service.Retry.MaxAttempts, defaultMaxAttempts)
+		initialBackoff = ptr.Deref(ext.Service.Retry.InitialBackoff, defaultInitialBackoff)
+		maxBackoff = ptr.Deref(ext.Service.Retry.MaxBackoff, defaultMaxBackoff)
+		backoffMultiplier = fractionOrDefault(ext.Service.Retry.BackoffMultiplier, defaultBackoffMultiplier)
 
-		if len(ext.Service.RetryPolicy.RetryableStatusCodes) > 0 {
+		if len(ext.Service.Retry.RetryableStatusCodes) > 0 {
 			var err error
-			grpcRetryableStatusCodes, err = getRetryableGRPCCode(ext.Service.RetryPolicy.RetryableStatusCodes)
+			grpcRetryableStatusCodes, err = getRetryableGRPCCode(ext.Service.Retry.RetryableStatusCodes)
 			if err != nil {
 				return "", err
 			}
 		}
 	}
 
-	return fmt.Sprintf(grpcServiceConfigTemplate, maxAttempts, initialBackoff, maxBackoff,
+	return fmt.Sprintf(grpcServiceConfigTemplate, maxAttempts, initialBackoff.Seconds(), maxBackoff.Seconds(),
 		backoffMultiplier, grpcRetryableStatusCodes), nil
 }

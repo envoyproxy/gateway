@@ -16,6 +16,7 @@ import (
 	"reflect"
 	"sync"
 	"testing"
+	"time"
 
 	v3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
 	"github.com/stretchr/testify/require"
@@ -147,15 +148,10 @@ func Test_setupGRPCOpts(t *testing.T) {
 								Port:     44344,
 							},
 						},
-						RetryPolicy: &egv1a1.RetryPolicy{
-							MaxAttempts: ptr.To(20),
-							InitialBackoff: &gwapiv1.Fraction{
-								Numerator:   1,
-								Denominator: ptr.To(int32(2)),
-							},
-							MaxBackoff: &gwapiv1.Fraction{
-								Numerator: 500,
-							},
+						Retry: &egv1a1.ExtensionServiceRetry{
+							MaxAttempts:    ptr.To(20),
+							InitialBackoff: &metav1.Duration{Duration: 500 * time.Millisecond},
+							MaxBackoff:     &metav1.Duration{Duration: 5 * time.Second},
 							BackoffMultiplier: &gwapiv1.Fraction{
 								Numerator: 50,
 							},
@@ -338,15 +334,10 @@ func Test_buildServiceConfig(t *testing.T) {
 								Port:     44344,
 							},
 						},
-						RetryPolicy: &egv1a1.RetryPolicy{
-							MaxAttempts: ptr.To(20),
-							InitialBackoff: &gwapiv1.Fraction{
-								Numerator:   1,
-								Denominator: ptr.To(int32(2)),
-							},
-							MaxBackoff: &gwapiv1.Fraction{
-								Numerator: 500,
-							},
+						Retry: &egv1a1.ExtensionServiceRetry{
+							MaxAttempts:    ptr.To(20),
+							InitialBackoff: &metav1.Duration{Duration: 500 * time.Millisecond},
+							MaxBackoff:     &metav1.Duration{Duration: 5 * time.Second},
 							BackoffMultiplier: &gwapiv1.Fraction{
 								Numerator: 50,
 							},
@@ -396,7 +387,7 @@ func Test_buildServiceConfig(t *testing.T) {
 								Port:     44344,
 							},
 						},
-						RetryPolicy: &egv1a1.RetryPolicy{
+						Retry: &egv1a1.ExtensionServiceRetry{
 							RetryableStatusCodes: []egv1a1.RetryableGRPCStatusCode{
 								"CANCELLED",
 								"NOTACODE",
@@ -444,7 +435,7 @@ func (s *retryTestServer) PostRouteModify(ctx context.Context, req *extension.Po
 
 func Test_Integration_RetryPolicy_MaxAttempts(t *testing.T) {
 	type args struct {
-		retryPolicy *egv1a1.RetryPolicy
+		retryPolicy *egv1a1.ExtensionServiceRetry
 	}
 	tests := []struct {
 		name    string
@@ -454,7 +445,7 @@ func Test_Integration_RetryPolicy_MaxAttempts(t *testing.T) {
 		{
 			name: "sufficient retries",
 			args: args{
-				retryPolicy: &egv1a1.RetryPolicy{
+				retryPolicy: &egv1a1.ExtensionServiceRetry{
 					MaxAttempts: ptr.To(10),
 					RetryableStatusCodes: []egv1a1.RetryableGRPCStatusCode{
 						"UNAVAILABLE",
@@ -466,7 +457,7 @@ func Test_Integration_RetryPolicy_MaxAttempts(t *testing.T) {
 		{
 			name: "insufficient retries",
 			args: args{
-				retryPolicy: &egv1a1.RetryPolicy{
+				retryPolicy: &egv1a1.ExtensionServiceRetry{
 					MaxAttempts: ptr.To(5),
 					RetryableStatusCodes: []egv1a1.RetryableGRPCStatusCode{
 						"UNAVAILABLE",
@@ -478,7 +469,7 @@ func Test_Integration_RetryPolicy_MaxAttempts(t *testing.T) {
 		{
 			name: "wrong retry code",
 			args: args{
-				retryPolicy: &egv1a1.RetryPolicy{
+				retryPolicy: &egv1a1.ExtensionServiceRetry{
 					MaxAttempts: ptr.To(5),
 					RetryableStatusCodes: []egv1a1.RetryableGRPCStatusCode{
 						"CANCELLED",
@@ -506,7 +497,7 @@ func Test_Integration_RetryPolicy_MaxAttempts(t *testing.T) {
 							Port:     44344,
 						},
 					},
-					RetryPolicy: tt.args.retryPolicy,
+					Retry: tt.args.retryPolicy,
 				},
 			}
 
