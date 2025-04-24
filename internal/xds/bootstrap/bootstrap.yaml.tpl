@@ -135,13 +135,6 @@ static_resources:
             typed_config:
               "@type": type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
   {{- end }}
-  {{- if .GatewayNamespaceMode }}
-  secrets:
-  - name: jwt-sa-bearer
-    generic_secret:
-      secret:
-        filename: "/var/run/secrets/kubernetes.io/serviceaccount/token"
-  {{- end }}
   clusters:
   {{- if .EnablePrometheus }}
   - name: prometheus_stats
@@ -216,23 +209,22 @@ static_resources:
             connection_keepalive:
               interval: 30s
               timeout: 5s
-{{- if .GatewayNamespaceMode }}
+  {{- if .GatewayNamespaceMode }}
         http_filters:
-          - name: envoy.filters.http.credential_injector
-            typed_config:
-              "@type": type.googleapis.com/envoy.extensions.filters.http.credential_injector.v3.CredentialInjector
-              allow_request_without_credential: false
-              overwrite: true
-              credential:
-                name: envoy.http.injected_credentials.generic
-                typed_config:
-                  "@type": type.googleapis.com/envoy.extensions.http.injected_credentials.generic.v3.Generic
-                  credential:
-                    name: jwt-sa-bearer
-          - name: envoy.extensions.filters.http.upstream_codec.v3.UpstreamCodec
-            typed_config:
-              "@type": type.googleapis.com/envoy.extensions.filters.http.upstream_codec.v3.UpstreamCodec
-{{- end }}
+        - name: envoy.filters.http.credential_injector
+          typed_config:
+            "@type": type.googleapis.com/envoy.extensions.filters.http.credential_injector.v3.CredentialInjector
+            credential:
+              name: envoy.http.injected_credentials.generic
+              typed_config:
+                "@type": type.googleapis.com/envoy.extensions.http.injected_credentials.generic.v3.Generic
+                credential:
+                  name: jwt-sa-bearer
+            overwrite: true
+        - name: envoy.extensions.filters.http.upstream_codec.v3.UpstreamCodec
+          typed_config:
+            "@type": type.googleapis.com/envoy.extensions.filters.http.upstream_codec.v3.UpstreamCodec
+  {{- end }}
     name: xds_cluster
     type: STRICT_DNS
     transport_socket:
@@ -275,6 +267,22 @@ static_resources:
         "@type": "type.googleapis.com/envoy.extensions.upstreams.http.v3.HttpProtocolOptions"
         explicit_http_config:
           http2_protocol_options: {}
+  {{- if .GatewayNamespaceMode }}
+        http_filters:
+        - name: envoy.filters.http.credential_injector
+          typed_config:
+            "@type": type.googleapis.com/envoy.extensions.filters.http.credential_injector.v3.CredentialInjector
+            credential:
+              name: envoy.http.injected_credentials.generic
+              typed_config:
+                "@type": type.googleapis.com/envoy.extensions.http.injected_credentials.generic.v3.Generic
+                credential:
+                  name: jwt-sa-bearer
+            overwrite: true
+        - name: envoy.extensions.filters.http.upstream_codec.v3.UpstreamCodec
+          typed_config:
+            "@type": type.googleapis.com/envoy.extensions.filters.http.upstream_codec.v3.UpstreamCodec
+  {{- end }}
     transport_socket:
       name: envoy.transport_sockets.tls
       typed_config:
@@ -282,20 +290,27 @@ static_resources:
         common_tls_context:
           tls_params:
             tls_maximum_protocol_version: TLSv1_3
-{{- if not .GatewayNamespaceMode }}
+  {{- if not .GatewayNamespaceMode }}
           tls_certificate_sds_secret_configs:
           - name: xds_certificate
             sds_config:
               path_config_source:
                 path: {{ .SdsCertificatePath }}
               resource_api_version: V3
-{{- end }}
+  {{- end }}
           validation_context_sds_secret_config:
             name: xds_trusted_ca
             sds_config:
               path_config_source:
                 path: {{ .SdsTrustedCAPath }}
               resource_api_version: V3
+  {{- if .GatewayNamespaceMode }}
+  secrets:
+  - name: jwt-sa-bearer
+    generic_secret:
+      secret:
+        filename: "/var/run/secrets/kubernetes.io/serviceaccount/token"
+  {{- end }}
 overload_manager:
   refresh_interval: 0.25s
   resource_monitors:

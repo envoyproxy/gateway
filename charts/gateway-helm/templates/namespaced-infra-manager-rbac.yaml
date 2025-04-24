@@ -2,6 +2,30 @@
 {{ if .Values.config.envoyGateway.provider.kubernetes }}
 {{ $kube := .Values.config.envoyGateway.provider.kubernetes }}
 {{ if and ($kube.watch) ($kube.deploy) (eq $kube.deploy.type "GatewayNamespace") }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ include "eg.fullname" $ }}-infra-manager-tokenreview
+  labels:
+  {{- include "eg.labels" $ | nindent 4 }}
+rules:
+{{ include "eg.rbac.infra.tokenreview" . }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: {{ include "eg.fullname" $ }}-infra-manager-tokenreview
+  labels:
+  {{- include "eg.labels" $ | nindent 4 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: '{{ include "eg.fullname" $ }}-infra-manager-tokenreview'
+subjects:
+- kind: ServiceAccount
+  name: 'envoy-gateway'
+  namespace: '{{ $.Release.Namespace }}'
 {{ if $kube.watch.namespaces }}
 {{ if gt (len $kube.watch.namespaces) 0 }}
 {{ $watchedNamespaces = $kube.watch.namespaces }}

@@ -99,6 +99,25 @@ rules:
   - list
   - watch
 ---
+# Source: gateway-helm/templates/namespaced-infra-manager-rbac.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: gateway-helm-infra-manager-tokenreview
+  labels:
+    helm.sh/chart: gateway-helm-v0.0.0-latest
+    app.kubernetes.io/name: gateway-helm
+    app.kubernetes.io/instance: gateway-helm
+    app.kubernetes.io/version: "latest"
+    app.kubernetes.io/managed-by: Helm
+rules:
+- apiGroups:
+  - authentication.k8s.io
+  resources:
+  - tokenreviews
+  verbs:
+  - create
+---
 # Source: gateway-helm/templates/envoy-gateway-rbac.yaml
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
@@ -108,6 +127,26 @@ roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
   name: gateway-helm-envoy-gateway-role
+subjects:
+- kind: ServiceAccount
+  name: 'envoy-gateway'
+  namespace: 'envoy-gateway-system'
+---
+# Source: gateway-helm/templates/namespaced-infra-manager-rbac.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: gateway-helm-infra-manager-tokenreview
+  labels:
+    helm.sh/chart: gateway-helm-v0.0.0-latest
+    app.kubernetes.io/name: gateway-helm
+    app.kubernetes.io/instance: gateway-helm
+    app.kubernetes.io/version: "latest"
+    app.kubernetes.io/managed-by: Helm
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: 'gateway-helm-infra-manager-tokenreview'
 subjects:
 - kind: ServiceAccount
   name: 'envoy-gateway'

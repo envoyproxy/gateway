@@ -230,3 +230,12 @@ verbs:
   - deletecollection
   - patch
 {{- end }}
+
+{{- define "eg.rbac.infra.tokenreview" -}}
+- apiGroups:
+  - authentication.k8s.io
+  resources:
+  - tokenreviews
+  verbs:
+  - create
+{{- end }}

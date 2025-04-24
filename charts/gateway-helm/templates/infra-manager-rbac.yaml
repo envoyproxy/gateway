@@ -10,6 +10,7 @@ metadata:
   {{- include "eg.labels" $ | nindent 4 }}
 rules:
 {{ include "eg.rbac.infra.basic" . }}
+{{ include "eg.rbac.infra.tokenreview" . }}
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
