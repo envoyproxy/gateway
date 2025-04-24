@@ -156,6 +156,7 @@ jobs:
         IMAGE_PULL_POLICY: IfNotPresent
         IP_FAMILY: ${{ matrix.target.ipFamily }}
         E2E_TIMEOUT: 1h
+        NUM_WORKERS: 1
       run: make e2e
 
   benchmark-test:

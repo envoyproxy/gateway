@@ -29,13 +29,15 @@ networking:
   dnsSearch: []
 nodes:
 - role: control-plane
+  labels:
+    "topology.kubernetes.io/zone": "0"
 EOM
 )
 
 # https://kind.sigs.k8s.io/docs/user/quick-start/#multi-node-clusters
 if [[ -n "${NUM_WORKERS}" ]]; then
-for _ in $(seq 1 "${NUM_WORKERS}"); do
-  KIND_CFG+=$(printf "\n%s" "- role: worker")
+for i in $(seq 1 "${NUM_WORKERS}"); do
+  KIND_CFG+=$(printf "\n- role: worker\n  labels:\n    \"topology.kubernetes.io/zone\": \"%s\"" "$i")
 done
 fi
 

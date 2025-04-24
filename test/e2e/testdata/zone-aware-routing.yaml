@@ -1,0 +1,110 @@
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: zone-aware-gtw
+  namespace: gateway-conformance-infra
+spec:
+  gatewayClassName: "{GATEWAY_CLASS_NAME}"
+  listeners:
+    - name: http
+      port: 80
+      protocol: HTTP
+      allowedRoutes:
+        namespaces:
+          from: Same
+  infrastructure:
+    parametersRef:
+      group: gateway.envoyproxy.io
+      kind: EnvoyProxy
+      name: zone-aware
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyProxy
+metadata:
+  name: zone-aware
+  namespace: gateway-conformance-infra
+spec:
+  provider:
+    type: Kubernetes
+    kubernetes:
+      envoyDeployment:
+        pod:
+          nodeSelector:
+            topology.kubernetes.io/zone: "0"
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: zone-aware-http-route
+  namespace: gateway-conformance-infra
+spec:
+  parentRefs:
+    - name: zone-aware-gtw
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      backendRefs:
+        - name: zone-aware-backend
+          port: 3000
+          weight: 1
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: zone-aware-backend
+  namespace: gateway-conformance-infra
+  annotations:
+    service.kubernetes.io/topology-mode: Auto
+spec:
+  selector:
+    app: zone-aware-backend
+  ports:
+    - protocol: TCP
+      port: 3000
+      name: http11
+      targetPort: 3000
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: zone-aware-backend
+  namespace: gateway-conformance-infra
+  labels:
+    app: zone-aware-backend
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: zone-aware-backend
+  template:
+    metadata:
+      labels:
+        app: zone-aware-backend
+    spec:
+      containers:
+        - name: zone-aware-backend
+          # From https://github.com/kubernetes-sigs/gateway-api/blob/main/conformance/echo-basic/echo-basic.go
+          image: gcr.io/k8s-staging-gateway-api/echo-basic:v20231214-v1.0.0-140-gf544a46e
+          env:
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: SERVICE_NAME
+              value: zone-aware-backend
+          resources:
+            requests:
+              cpu: 10m
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: topology.kubernetes.io/zone
+          whenUnsatisfiable: DoNotSchedule
+          labelSelector:
+            matchLabels:
+              app: zone-aware-backend
