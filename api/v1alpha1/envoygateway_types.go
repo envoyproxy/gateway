@@ -89,9 +89,6 @@ type EnvoyGatewaySpec struct {
 	//
 	// +optional
 	ExtensionAPIs *ExtensionAPISettings `json:"extensionApis,omitempty"`
-
-	// TopologyInjector defines the configuration for topology injector MutatatingWebhookConfiguration
-	TopologyInjector *EnvoyGatewayTopologyInjector `json:"proxyTopologyInjector,omitempty"`
 }
 
 // LeaderElection defines the desired leader election settings.
@@ -228,6 +225,10 @@ type EnvoyGatewayKubernetesProvider struct {
 	// ShutdownManager defines the configuration for the shutdown manager.
 	// +optional
 	ShutdownManager *ShutdownManager `json:"shutdownManager,omitempty"`
+
+	// TopologyInjector defines the configuration for topology injector MutatatingWebhookConfiguration
+	// +optional
+	TopologyInjector *EnvoyGatewayTopologyInjector `json:"proxyTopologyInjector,omitempty"`
 }
 
 const (
@@ -615,7 +616,8 @@ type ShutdownManager struct {
 
 // EnvoyGatewayTopologyInjector defines the configuration for topology injector MutatatingWebhookConfiguration
 type EnvoyGatewayTopologyInjector struct {
-	Disable bool `json:"disabled,omitempty"`
+	// +optional
+	Disable *bool `json:"disabled,omitempty"`
 }
 
 func init() {

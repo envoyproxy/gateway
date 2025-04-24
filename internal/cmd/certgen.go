@@ -15,6 +15,7 @@ import (
 
 	"github.com/spf13/cobra"
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	clicfg "sigs.k8s.io/controller-runtime/pkg/client/config"
 
@@ -27,8 +28,6 @@ import (
 
 // cfgPath is the path to the EnvoyGateway configuration file.
 var overwriteControlPlaneCerts bool
-
-var disableTopologyInjector bool
 
 // TODO: make this path configurable or use server config directly.
 const (
@@ -52,8 +51,6 @@ func GetCertGenCommand() *cobra.Command {
 		"Generate all the certificates locally.")
 	cmd.PersistentFlags().BoolVarP(&overwriteControlPlaneCerts, "overwrite", "o", false,
 		"Updates the secrets containing the control plane certs.")
-	cmd.PersistentFlags().BoolVar(&disableTopologyInjector, "disable-topology-injector", false,
-		"Disables patching caBundle for injector MutatingWebhookConfiguration.")
 	return cmd
 }
 
@@ -117,7 +114,7 @@ func outputCertsForKubernetes(ctx context.Context, cli client.Client, cfg *confi
 }
 
 func patchTopologyInjectorWebhook(ctx context.Context, cli client.Client, cfg *config.Server, caBundle []byte) error {
-	if disableTopologyInjector {
+	if cfg.EnvoyGateway.Provider.Kubernetes.TopologyInjector != nil && !ptr.Deref(cfg.EnvoyGateway.Provider.Kubernetes.TopologyInjector.Disable, true) {
 		return nil
 	}
 

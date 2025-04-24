@@ -13,7 +13,7 @@ metadata:
     app.kubernetes.io/component: topology-injector
   {{- include "eg.labels" . | nindent 4 }}
 webhooks:
-  - name: topology.webhook.envoyproxy.io
+  - name: topology.webhook.gateway.envoyproxy.io
     admissionReviewVersions: ["v1"]
     sideEffects: None
     clientConfig:

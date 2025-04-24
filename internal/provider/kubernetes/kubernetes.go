@@ -103,7 +103,7 @@ func New(ctx context.Context, restCfg *rest.Config, svrCfg *ec.Server, resources
 			mgrOpts.Cache.DefaultNamespaces[watchNS] = cache.Config{}
 		}
 	}
-	if !ptr.Deref(svrCfg.EnvoyGateway.TopologyInjector, egv1a1.EnvoyGatewayTopologyInjector{}).Disable {
+	if svrCfg.EnvoyGateway.Provider.Kubernetes.TopologyInjector == nil || !ptr.Deref(svrCfg.EnvoyGateway.Provider.Kubernetes.TopologyInjector.Disable, false) {
 		mgrOpts.WebhookServer = webhook.NewServer(webhook.Options{
 			CertDir:  webhookTLSCertDir,
 			CertName: webhookTLSCert,
@@ -116,7 +116,7 @@ func New(ctx context.Context, restCfg *rest.Config, svrCfg *ec.Server, resources
 		return nil, fmt.Errorf("failed to create manager: %w", err)
 	}
 
-	if !ptr.Deref(svrCfg.EnvoyGateway.TopologyInjector, egv1a1.EnvoyGatewayTopologyInjector{}).Disable {
+	if svrCfg.EnvoyGateway.Provider.Kubernetes.TopologyInjector == nil || !ptr.Deref(svrCfg.EnvoyGateway.Provider.Kubernetes.TopologyInjector.Disable, false) {
 		mgr.GetWebhookServer().Register("/inject-pod-topology", &webhook.Admission{
 			Handler: &ProxyTopologyInjector{
 				Client:  mgr.GetClient(),

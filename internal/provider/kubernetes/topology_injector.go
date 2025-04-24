@@ -45,10 +45,7 @@ func (m *ProxyTopologyInjector) Handle(ctx context.Context, req admission.Reques
 	}
 
 	// Skip non-proxy pods
-	if v, ok := pod.Labels["app.kubernetes.io/component"]; !ok || v != "proxy" {
-		return admission.Allowed("skipped")
-	}
-	if pod.Labels[gatewayapi.OwningGatewayNameLabel] == "" && pod.Labels[gatewayapi.OwningGatewayClassLabel] == "" {
+	if !hasEnvoyProxyLabels(pod.Labels) {
 		return admission.Allowed("skipped")
 	}
 
@@ -70,4 +67,24 @@ func (m *ProxyTopologyInjector) Handle(ctx context.Context, req admission.Reques
 		return admission.Errored(http.StatusInternalServerError, err)
 	}
 	return admission.Allowed("pod patched")
+}
+
+func hasEnvoyProxyLabels(labels map[string]string) bool {
+	if labels["app.kubernetes.io/component"] != "proxy" {
+		return false
+	}
+
+	if labels[gatewayapi.OwningGatewayNameLabel] == "" && labels[gatewayapi.OwningGatewayClassLabel] == "" {
+		return false
+	}
+
+	if labels["app.kubernetes.io/managed-by"] != "envoy-gateway" {
+		return false
+	}
+
+	if labels["app.kubernetes.io/name"] != "envoy" {
+		return false
+	}
+
+	return true
 }

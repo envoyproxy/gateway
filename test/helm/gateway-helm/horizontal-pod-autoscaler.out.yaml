@@ -682,7 +682,7 @@ metadata:
     app.kubernetes.io/version: "latest"
     app.kubernetes.io/managed-by: Helm
 webhooks:
-  - name: topology.webhook.envoyproxy.io
+  - name: topology.webhook.gateway.envoyproxy.io
     admissionReviewVersions: ["v1"]
     sideEffects: None
     clientConfig:
