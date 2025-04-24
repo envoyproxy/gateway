@@ -82,7 +82,7 @@ endpointSlices:
       name: service-import-1
       namespace: default
       labels:
-        kubernetes.io/service-name: service-import-1
+        multicluster.kubernetes.io/service-name: service-import-1
     addressType: IPv4
     ports:
       - name: http
