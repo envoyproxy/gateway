@@ -28,6 +28,7 @@ data:
   envoy-gateway.yaml: |
     apiVersion: gateway.envoyproxy.io/v1alpha1
     kind: EnvoyGateway
+    extensionApis: {}
     gateway:
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
     logging:
@@ -37,7 +38,7 @@ data:
       kubernetes:
         rateLimitDeployment:
           container:
-            image: docker.io/envoyproxy/ratelimit:master
+            image: private.registry/envoyproxy/ratelimit:master
           patch:
             type: StrategicMerge
             value:
@@ -48,7 +49,7 @@ data:
                     - imagePullPolicy: IfNotPresent
                       name: envoy-ratelimit
         shutdownManager:
-          image: docker.io/envoyproxy/gateway-dev:latest
+          image: private.registry/envoyproxy/gateway-dev:latest
       type: Kubernetes
 ---
 # Source: gateway-helm/templates/envoy-gateway-rbac.yaml
@@ -328,8 +329,6 @@ kind: Service
 metadata:
   name: envoy-gateway
   namespace: 'envoy-gateway-system'
-  annotations:
-    this: that
   labels:
     control-plane: envoy-gateway
     helm.sh/chart: gateway-helm-v0.0.0-latest
@@ -398,7 +397,7 @@ spec:
               fieldPath: metadata.namespace
         - name: KUBERNETES_CLUSTER_DOMAIN
           value: cluster.local
-        image: docker.io/envoyproxy/gateway-dev:latest
+        image: private.registry/envoyproxy/gateway-dev:latest
         imagePullPolicy: Always
         livenessProbe:
           httpGet:
@@ -555,7 +554,7 @@ spec:
               fieldPath: metadata.namespace
         - name: KUBERNETES_CLUSTER_DOMAIN
           value: cluster.local
-        image: docker.io/envoyproxy/gateway-dev:latest
+        image: private.registry/envoyproxy/gateway-dev:latest
         imagePullPolicy: Always
         name: envoy-gateway-certgen
         securityContext:

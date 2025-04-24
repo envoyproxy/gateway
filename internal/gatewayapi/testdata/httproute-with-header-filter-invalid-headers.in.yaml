@@ -30,7 +30,7 @@ httpRoutes:
     rules:
     - matches:
       - path:
-          value: "/"
+          value: "/foo"
       backendRefs:
       - name: service-1
         port: 8080
@@ -42,7 +42,57 @@ httpRoutes:
             value: "some-value"
           - name: "good-header"
             value: "some-value"
-          add:
-          - name: "example/2"
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    namespace: default
+    name: httproute-2
+  spec:
+    hostnames:
+    - gateway.envoyproxy.io
+    parentRefs:
+    - namespace: envoy-gateway
+      name: gateway-1
+      sectionName: http
+    rules:
+    - matches:
+      - path:
+          value: "/bar"
+      backendRefs:
+      - name: service-1
+        port: 8080
+      filters:
+      - type: RequestHeaderModifier
+        requestHeaderModifier:
+          remove:
+          - "example/2"
+          set:
+          - name: "good-header"
             value: "some-value"
-
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    namespace: default
+    name: httproute-3
+  spec:
+    hostnames:
+    - gateway.envoyproxy.io
+    parentRefs:
+    - namespace: envoy-gateway
+      name: gateway-1
+      sectionName: http
+    rules:
+    - matches:
+      - path:
+          value: "/baz"
+      backendRefs:
+      - name: service-1
+        port: 8080
+      filters:
+      - type: RequestHeaderModifier
+        requestHeaderModifier:
+          set:
+          - name: "host"
+            value: "example.com"
+          - name: "good-header"
+            value: "some-value"

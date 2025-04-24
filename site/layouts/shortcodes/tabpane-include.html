@@ -1,0 +1,27 @@
+{{- $name := .Get 0 -}}
+{{- $position := .Position }}
+{{- $boilerplates_path := "/boilerplates" -}}
+
+{{- /* check if the page is under versioned path */ -}}
+{{- $url_prefix := (index (split $.Page.File.Dir "/") 0) -}}
+{{- if or (eq $url_prefix "docs") (eq $url_prefix "latest") (strings.HasPrefix $url_prefix "v1.") -}}
+    {{- $boilerplates_path = printf "/%s/boilerplates" $url_prefix -}}
+{{- end -}}
+
+{{- if $name -}}
+    {{- $bundle := .Page.GetPage $boilerplates_path -}}
+    {{- with $bundle -}}
+        {{- $name := printf "%s.md" $name -}}
+        {{- $pattern := printf "%s*" $name -}}
+        {{- $resource := $bundle.Resources.GetMatch $pattern -}}
+        {{- with $resource -}}
+            {{- .Content | safeHTML -}}
+        {{- else -}}
+            {{- errorf "Could not find tabpane content '%s' (%s)" $name $position -}}
+        {{- end -}}
+    {{- else -}}
+        {{- errorf "%s directory was not found (%s)" $boilerplates_path $position -}}
+    {{- end -}}
+{{- else -}}
+    {{- errorf "Missing name in tabpane include (%s)" $position -}}
+{{- end -}} 

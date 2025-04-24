@@ -86,7 +86,7 @@ var (
 	QueryParamMatchTypeDerefOr = ptr.Deref[gwapiv1.QueryParamMatchType]
 )
 
-// Deprecated: use k8s.io/utils/ptr ptr.Deref instead
+// NamespaceDerefOr returns the dereferenced value of the provided Namespace in string
 func NamespaceDerefOr(namespace *gwapiv1.Namespace, defaultNamespace string) string {
 	if namespace != nil && *namespace != "" {
 		return string(*namespace)
@@ -175,7 +175,8 @@ func ValidateHTTPRouteFilter(filter *gwapiv1.HTTPRouteFilter, extGKs ...schema.G
 		filter.Type == gwapiv1.HTTPRouteFilterURLRewrite ||
 		filter.Type == gwapiv1.HTTPRouteFilterRequestRedirect ||
 		filter.Type == gwapiv1.HTTPRouteFilterRequestHeaderModifier ||
-		filter.Type == gwapiv1.HTTPRouteFilterResponseHeaderModifier:
+		filter.Type == gwapiv1.HTTPRouteFilterResponseHeaderModifier ||
+		filter.Type == gwapiv1.HTTPRouteFilterCORS:
 		return nil
 	case filter.Type == gwapiv1.HTTPRouteFilterExtensionRef:
 		switch {
@@ -447,6 +448,11 @@ func irTLSListenerConfigName(secret *corev1.Secret) string {
 
 func irTLSCACertName(namespace, name string) string {
 	return fmt.Sprintf("%s/%s/%s", namespace, name, caCertKey)
+}
+
+// Helper function to format the policy name and namespace
+func irTrafficName(policy *egv1a1.BackendTrafficPolicy) string {
+	return fmt.Sprintf("%s/%s", policy.Namespace, policy.Name)
 }
 
 func IsMergeGatewaysEnabled(resources *resource.Resources) bool {

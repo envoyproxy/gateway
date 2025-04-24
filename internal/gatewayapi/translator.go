@@ -44,7 +44,7 @@ var _ TranslatorManager = (*Translator)(nil)
 
 type TranslatorManager interface {
 	Translate(resources *resource.Resources) (*TranslateResult, error)
-	GetRelevantGateways(resources *resource.Resources) (acceptedGateways []*GatewayContext, failedGateways []*GatewayContext)
+	GetRelevantGateways(resources *resource.Resources) (acceptedGateways, failedGateways []*GatewayContext)
 
 	RoutesTranslator
 	ListenersTranslator
@@ -258,7 +258,7 @@ func (t *Translator) Translate(resources *resource.Resources) (*TranslateResult,
 // GetRelevantGateways returns GatewayContexts, containing a copy of the original
 // Gateway with the Listener statuses reset.
 func (t *Translator) GetRelevantGateways(resources *resource.Resources) (
-	acceptedGateways []*GatewayContext, failedGateways []*GatewayContext,
+	acceptedGateways, failedGateways []*GatewayContext,
 ) {
 	for _, gateway := range resources.Gateways {
 		if gateway == nil {

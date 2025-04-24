@@ -79,6 +79,7 @@ var (
 	ErrBothXForwardedForAndCustomHeaderInvalid  = errors.New("only one of ClientIPDetection.XForwardedFor and ClientIPDetection.CustomHeader must be set")
 	ErrBothNumTrustedHopsAndTrustedCIDRsInvalid = errors.New("only one of ClientIPDetection.XForwardedFor.NumTrustedHops and ClientIPDetection.XForwardedFor.TrustedCIDRs must be set")
 	ErrPanicThresholdInvalid                    = errors.New("PanicThreshold value is outside of 0-100 range")
+	ErrCredentialInjectionCredentialEmpty       = errors.New("field CredentialInjection.Credential must be specified")
 
 	redacted = []byte("[redacted]")
 )
@@ -619,6 +620,32 @@ func (r *CustomResponse) Validate() error {
 	return errs
 }
 
+// CredentialInjection defines the configuration for injecting credentials into the request.
+// +k8s:deepcopy-gen=true
+type CredentialInjection struct {
+	// Name is a unique name for a CredentialInjection configuration.
+	// The xds translator only generates one CredentialInjecor filter for each unique name.
+	Name string `json:"name" yaml:"name"`
+
+	// Header is the name of the header where the credentials are injected.
+	// If not specified, the credentials are injected into the Authorization header.
+	Header *string `json:"header,omitempty"`
+
+	// Whether to overwrite the value or not if the injected headers already exist.
+	// If not specified, the default value is false.
+	Overwrite *bool `json:"overwrite,omitempty"`
+
+	// Credential is the credential to be injected.
+	Credential PrivateBytes `json:"credential"`
+}
+
+func (c *CredentialInjection) Validate() error {
+	if len(c.Credential) == 0 {
+		return ErrCredentialInjectionCredentialEmpty
+	}
+	return nil
+}
+
 // HealthCheckSettings provides HealthCheck configuration on the HTTP/HTTPS listener.
 // +k8s:deepcopy-gen=true
 type HealthCheckSettings egv1a1.HealthCheckSettings
@@ -718,6 +745,8 @@ type HTTPRoute struct {
 	Destination *RouteDestination `json:"destination,omitempty" yaml:"destination,omitempty"`
 	// Rewrite to be changed for this route.
 	URLRewrite *URLRewrite `json:"urlRewrite,omitempty" yaml:"urlRewrite,omitempty"`
+	// Credentials to be injected into the request.
+	CredentialInjection *CredentialInjection `json:"credentialInjection,omitempty" yaml:"credentialInjection,omitempty"`
 	// ExtensionRefs holds unstructured resources that were introduced by an extension and used on the HTTPRoute as extensionRef filters
 	ExtensionRefs []*UnstructuredRef `json:"extensionRefs,omitempty" yaml:"extensionRefs,omitempty"`
 	// Traffic holds the features associated with BackendTrafficPolicy
@@ -737,6 +766,9 @@ type HTTPRoute struct {
 	// Retry defines the retry policy for the route.
 	// This is derived from the core Gateway API, and should take precedence over Traffic.Retry.
 	Retry *Retry `json:"retry,omitempty" yaml:"retry,omitempty"`
+	// CORS defines the CORS policy for the route.
+	// This is derived from the core Gateway API, and should take precedence over Security.CORS.
+	CORS *CORS `json:"cors,omitempty" yaml:"cors,omitempty"`
 }
 
 func (h *HTTPRoute) GetRetry() *Retry {
@@ -799,6 +831,8 @@ type Compression struct {
 // TrafficFeatures holds the information associated with the Backend Traffic Policy.
 // +k8s:deepcopy-gen=true
 type TrafficFeatures struct {
+	// Name of the backend traffic policy and namespace
+	Name string `json:"name,omitempty"`
 	// RateLimit defines the more specific match conditions as well as limits for ratelimiting
 	// the requests on this route.
 	RateLimit *RateLimit `json:"rateLimit,omitempty" yaml:"rateLimit,omitempty"`
@@ -831,6 +865,8 @@ type TrafficFeatures struct {
 	Compression []*Compression `json:"compression,omitempty" yaml:"compression,omitempty"`
 	// HTTPUpgrade defines the schema for upgrading the HTTP protocol.
 	HTTPUpgrade []string `json:"httpUpgrade,omitempty" yaml:"httpUpgrade,omitempty"`
+	// Telemetry defines the schema for telemetry configuration.
+	Telemetry *egv1a1.BackendTelemetry `json:"telemetry,omitempty" yaml:"telemetry,omitempty"`
 }
 
 func (b *TrafficFeatures) Validate() error {
@@ -949,7 +985,10 @@ type JWTProvider struct {
 
 	// RemoteJWKS defines how to fetch and cache JSON Web Key Sets (JWKS) from a remote
 	// HTTP/HTTPS endpoint.
-	RemoteJWKS RemoteJWKS `json:"remoteJWKS"`
+	RemoteJWKS *RemoteJWKS `json:"remoteJWKS,omitempty"`
+
+	// LocalJWKS defines a JSON Web Key Set (JWKS) that is stored in a string.
+	LocalJWKS *string `json:"localJWKS,omitempty"`
 
 	// ClaimToHeaders is a list of JWT claims that must be extracted into HTTP request headers
 	// For examples, following config:
@@ -1344,6 +1383,11 @@ func (h *HTTPRoute) Validate() error {
 	}
 	if h.DirectResponse != nil {
 		if err := h.DirectResponse.Validate(); err != nil {
+			errs = errors.Join(errs, err)
+		}
+	}
+	if h.CredentialInjection != nil {
+		if err := h.CredentialInjection.Validate(); err != nil {
 			errs = errors.Join(errs, err)
 		}
 	}
@@ -2005,6 +2049,15 @@ type GlobalRateLimit struct {
 
 	// Rules for rate limiting.
 	Rules []*RateLimitRule `json:"rules,omitempty" yaml:"rules,omitempty"`
+
+	// Shared determines whether this rate limit rule applies globally across the gateway, or xRoute(s).
+	// If set to true, the rule is treated as a common bucket and is shared across all routes under the backend traffic policy.
+	// Must have targetRef set to Gateway or xRoute(s).
+	// Default: false.
+	//
+	// +optional
+	// +kubebuilder:default=false
+	Shared *bool `json:"shared,omitempty" yaml:"shared,omitempty"`
 }
 
 // LocalRateLimit holds the local rate limiting configuration.
@@ -2948,6 +3001,8 @@ type DestinationFilters struct {
 	AddResponseHeaders []AddHeader `json:"addResponseHeaders,omitempty" yaml:"addResponseHeaders,omitempty"`
 	// RemoveResponseHeaders defines a list of headers to be removed from response.
 	RemoveResponseHeaders []string `json:"removeResponseHeaders,omitempty" yaml:"removeResponseHeaders,omitempty"`
+	// CredentialInjection defines the credential injection configuration.
+	CredentialInjection *CredentialInjection `json:"credentialInjection,omitempty" yaml:"credentialInjection,omitempty"`
 }
 
 // ResourceMetadata is metadata from the provider resource that is translated to an envoy resource

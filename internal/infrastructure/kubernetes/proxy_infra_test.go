@@ -9,6 +9,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
 	"reflect"
 	"testing"
 
@@ -81,7 +82,7 @@ func TestCmpBytes(t *testing.T) {
 }
 
 func newTestInfraWithClient(t *testing.T, cli client.Client) *Infra {
-	cfg, err := config.New()
+	cfg, err := config.New(os.Stdout)
 	require.NoError(t, err)
 
 	cfg.EnvoyGateway = &egv1a1.EnvoyGateway{

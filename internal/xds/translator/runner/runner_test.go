@@ -8,6 +8,7 @@ package runner
 import (
 	"context"
 	"fmt"
+	"os"
 	"testing"
 	"time"
 
@@ -28,7 +29,7 @@ func TestRunner(t *testing.T) {
 	xdsIR := new(message.XdsIR)
 	xds := new(message.Xds)
 	pResource := new(message.ProviderResources)
-	cfg, err := config.New()
+	cfg, err := config.New(os.Stdout)
 	require.NoError(t, err)
 	r := New(&Config{
 		Server:            *cfg,
@@ -102,20 +103,25 @@ func TestRunner(t *testing.T) {
 	}, time.Second*5, time.Millisecond*50)
 }
 
-func TestRunner_withExtensionManager(t *testing.T) {
+func TestRunner_withExtensionManager_FailOpen(t *testing.T) {
 	// Setup
 	xdsIR := new(message.XdsIR)
 	xds := new(message.Xds)
 	pResource := new(message.ProviderResources)
 
-	cfg, err := config.New()
+	cfg, err := config.New(os.Stdout)
 	require.NoError(t, err)
+	require.NotNil(t, cfg)
+
+	extMgr := &extManagerMock{}
+	extMgr.ShouldFailOpen = true
+
 	r := New(&Config{
 		Server:            *cfg,
 		ProviderResources: pResource,
 		XdsIR:             xdsIR,
 		Xds:               xds,
-		ExtensionManager:  &extManagerMock{},
+		ExtensionManager:  extMgr,
 	})
 
 	ctx := context.Background()
@@ -164,14 +170,87 @@ func TestRunner_withExtensionManager(t *testing.T) {
 	xdsIR.Store("test", &res)
 	require.Eventually(t, func() bool {
 		out := xds.LoadAll()
-		// xDS translation is done in a best-effort manner, so event the extension
-		// manager returns an error, the xDS resources should still be created.
+		// Since the extension manager is configured to fail open, in an event of an error
+		// from the extension manager hooks, xds update should be published.
 		return len(out) == 1
+	}, time.Second*5, time.Millisecond*50)
+}
+
+func TestRunner_withExtensionManager_FailClosed(t *testing.T) {
+	// Setup
+	xdsIR := new(message.XdsIR)
+	xds := new(message.Xds)
+	pResource := new(message.ProviderResources)
+
+	cfg, err := config.New(os.Stdout)
+	require.NoError(t, err)
+	require.NotNil(t, cfg)
+
+	extMgr := &extManagerMock{}
+
+	r := New(&Config{
+		Server:            *cfg,
+		ProviderResources: pResource,
+		XdsIR:             xdsIR,
+		Xds:               xds,
+		ExtensionManager:  extMgr,
+	})
+
+	ctx := context.Background()
+	// Start
+	err = r.Start(ctx)
+	require.NoError(t, err)
+
+	// xDS is nil at start
+	require.Equal(t, map[string]*ir.Xds{}, xdsIR.LoadAll())
+
+	// test translation
+	path := "example"
+	res := ir.Xds{
+		HTTP: []*ir.HTTPListener{
+			{
+				CoreListenerDetails: ir.CoreListenerDetails{
+					Name:    "test",
+					Address: "0.0.0.0",
+					Port:    80,
+				},
+				Hostnames: []string{"example.com"},
+				Routes: []*ir.HTTPRoute{
+					{
+						Name: "test-route",
+						PathMatch: &ir.StringMatch{
+							Exact: &path,
+						},
+						Destination: &ir.RouteDestination{
+							Name: "test-dest",
+							Settings: []*ir.DestinationSetting{
+								{
+									Endpoints: []*ir.DestinationEndpoint{
+										{
+											Host: "10.11.12.13",
+											Port: 8080,
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+	xdsIR.Store("test", &res)
+	require.Never(t, func() bool {
+		out := xds.LoadAll()
+		// Since the extension manager is configured to fail closed,  in an event of an error
+		// from the extension manager hooks, xds update should not be published.
+		return len(out) > 0
 	}, time.Second*5, time.Millisecond*50)
 }
 
 type extManagerMock struct {
 	types.Manager
+	ShouldFailOpen bool
 }
 
 func (m *extManagerMock) GetPostXDSHookClient(xdsHookType egv1a1.XDSTranslatorHook) (types.XDSHookClient, error) {
@@ -183,7 +262,7 @@ func (m *extManagerMock) GetPostXDSHookClient(xdsHookType egv1a1.XDSTranslatorHo
 }
 
 func (m *extManagerMock) FailOpen() bool {
-	return false
+	return m.ShouldFailOpen
 }
 
 type xdsHookClientMock struct {

@@ -397,6 +397,7 @@ xdsIR:
           namespace: default
         name: grpcroute/default/grpcroute-1/rule/0/match/-1/*
         traffic:
+          name: default/policy-for-gateway
           responseOverride:
             name: backendtrafficpolicy/default/policy-for-gateway
             rules:
@@ -467,6 +468,7 @@ xdsIR:
           name: ""
           prefix: /
         traffic:
+          name: default/policy-for-route-1
           responseOverride:
             name: backendtrafficpolicy/default/policy-for-route-1
             rules:
@@ -512,6 +514,7 @@ xdsIR:
           name: ""
           prefix: /
         traffic:
+          name: default/policy-for-route-2
           responseOverride:
             name: backendtrafficpolicy/default/policy-for-route-2
             rules:

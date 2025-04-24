@@ -14,7 +14,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-func ConvertPathToPointers(jsonDoc []byte, jsonPath string, path string) ([]string, error) {
+func ConvertPathToPointers(jsonDoc []byte, jsonPath, path string) ([]string, error) {
 	var jsonPointers []string
 
 	jObj, err := oj.Parse(jsonDoc)
@@ -45,7 +45,7 @@ func ConvertPathToPointers(jsonDoc []byte, jsonPath string, path string) ([]stri
 	return jsonPointers, nil
 }
 
-func concat(jsonPointer string, path string) string {
+func concat(jsonPointer, path string) string {
 	if path == "" {
 		return jsonPointer
 	}

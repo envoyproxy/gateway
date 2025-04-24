@@ -139,7 +139,6 @@ gatewayClass:
   metadata:
     creationTimestamp: null
     name: eg
-    namespace: envoy-gateway-system
   spec:
     controllerName: gateway.envoyproxy.io/gatewayclass-controller
   status: {}
@@ -270,6 +269,14 @@ secrets:
     namespace: default
   stringData:
     secret: literal value
+- data:
+    .secret-file: dmFsdWUtMg0KDQo=
+  kind: Secret
+  metadata:
+    creationTimestamp: null
+    name: secret-with-type
+    namespace: default
+  type: type value
 securityPolicies:
 - kind: SecurityPolicy
   metadata:

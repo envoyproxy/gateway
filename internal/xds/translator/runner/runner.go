@@ -37,6 +37,10 @@ func New(cfg *Config) *Runner {
 	return &Runner{Config: *cfg}
 }
 
+// Close implements Runner interface.
+func (r *Runner) Close() error { return nil }
+
+// Name implements Runner interface.
 func (r *Runner) Name() string {
 	return string(egv1a1.LogComponentXdsTranslatorRunner)
 }
@@ -64,6 +68,7 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *ir
 				// Translate to xds resources
 				t := &translator.Translator{
 					FilterOrder: val.FilterOrder,
+					Logger:      r.Logger,
 				}
 
 				// Set the extension manager if an extension is loaded
@@ -121,7 +126,11 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *ir
 				result.EnvoyPatchPolicyStatuses = nil
 
 				// Publish
-				r.Xds.Store(key, result)
+				if err == nil {
+					r.Xds.Store(key, result)
+				} else {
+					r.Logger.Error(err, "skipped publishing xds resources")
+				}
 
 				// Delete all the deletable status keys
 				for key := range statusesToDelete {
