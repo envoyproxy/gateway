@@ -31,6 +31,8 @@ func TestProxyTopologyInjector_Handle(t *testing.T) {
 			Labels: map[string]string{
 				"app.kubernetes.io/component":      "proxy",
 				gatewayapi.OwningGatewayClassLabel: "eg",
+				"app.kubernetes.io/managed-by":     "envoy-gateway",
+				"app.kubernetes.io/name":           "envoy",
 			},
 		},
 		Spec: corev1.PodSpec{},
