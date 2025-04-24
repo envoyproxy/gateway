@@ -78,9 +78,9 @@ httpRoutes:
         status: "False"
         type: Accepted
       - lastTransitionTime: null
-        message: Service default/service-unknown not found
-        reason: BackendNotFound
-        status: "False"
+        message: Resolved all the Object references for the Route
+        reason: ResolvedRefs
+        status: "True"
         type: ResolvedRefs
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:

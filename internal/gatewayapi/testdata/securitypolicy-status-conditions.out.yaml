@@ -159,7 +159,8 @@ grpcRoutes:
         status: "True"
         type: Accepted
       - lastTransitionTime: null
-        message: Service envoy-gateway/service-1 not found
+        message: 'Failed to process route rule 0 backendRef 0: service envoy-gateway/service-1
+          not found.'
         reason: BackendNotFound
         status: "False"
         type: ResolvedRefs

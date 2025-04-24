@@ -78,10 +78,9 @@ httpRoutes:
         status: "False"
         type: Accepted
       - lastTransitionTime: null
-        message: A valid port number corresponding to a port on the Service must be
-          specified
-        reason: PortNotSpecified
-        status: "False"
+        message: Resolved all the Object references for the Route
+        reason: ResolvedRefs
+        status: "True"
         type: ResolvedRefs
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:

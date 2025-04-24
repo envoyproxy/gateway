@@ -72,9 +72,9 @@ tcpRoutes:
     parents:
     - conditions:
       - lastTransitionTime: null
-        message: TCP Port 8081 not found on Service default/service-1
-        reason: Failed to process the settings associated with the TCP route.
-        status: "False"
+        message: Route is accepted
+        reason: Accepted
+        status: "True"
         type: Accepted
       - lastTransitionTime: null
         message: TCP Port 8081 not found on Service default/service-1
@@ -99,3 +99,7 @@ xdsIR:
     - address: 0.0.0.0
       name: envoy-gateway/gateway-1/tcp
       port: 10162
+      routes:
+      - destination:
+          name: tcproute/default/tcproute-1/rule/-1
+        name: tcproute/default/tcproute-1
