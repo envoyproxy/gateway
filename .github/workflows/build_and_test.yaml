@@ -153,6 +153,7 @@ jobs:
     - name: Run E2E Tests
       env:
         KIND_NODE_TAG: ${{ matrix.target.version }}
+        NUM_WORKERS: "1"
         IMAGE_PULL_POLICY: IfNotPresent
         IP_FAMILY: ${{ matrix.target.ipFamily }}
         E2E_TIMEOUT: 1h

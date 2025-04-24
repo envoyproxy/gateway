@@ -29,22 +29,27 @@ networking:
   dnsSearch: []
 nodes:
 - role: control-plane
+  labels:
+    "topology.kubernetes.io/zone": "0"
 EOM
 )
 
 # https://kind.sigs.k8s.io/docs/user/quick-start/#multi-node-clusters
 if [[ -n "${NUM_WORKERS}" ]]; then
-for _ in $(seq 1 "${NUM_WORKERS}"); do
-  KIND_CFG+=$(printf "\n%s" "- role: worker")
-done
+  for i in $(seq 1 "${NUM_WORKERS}"); do
+    KIND_CFG+=$(
+      printf "\n- role: worker\n  labels:\n    \"topology.kubernetes.io/zone\": \"%s\"" "$i"
+    )
+  done
 fi
-
 ## Check if kind cluster already exists.
 if go tool kind get clusters | grep -q "${CLUSTER_NAME}"; then
   echo "Cluster ${CLUSTER_NAME} already exists."
 else
 ## Create kind cluster.
 if [[ -z "${KIND_NODE_TAG}" ]]; then
+  echo ${KIND_CFG}
+  echo "hello"
   cat << EOF | go tool kind create cluster --name "${CLUSTER_NAME}" --config -
 ${KIND_CFG}
 EOF
