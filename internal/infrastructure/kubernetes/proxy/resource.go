@@ -84,7 +84,7 @@ func enablePrometheus(infra *ir.ProxyInfra) bool {
 func expectedProxyContainers(infra *ir.ProxyInfra,
 	containerSpec *egv1a1.KubernetesContainerSpec,
 	shutdownConfig *egv1a1.ShutdownConfig, shutdownManager *egv1a1.ShutdownManager,
-	egNamespace string, dnsDomain string, gatewayNamespaceMode bool,
+	egNamespace, dnsDomain string, gatewayNamespaceMode bool,
 ) ([]corev1.Container, error) {
 	ports := make([]corev1.ContainerPort, 0, 2)
 	if enablePrometheus(infra) {

@@ -9,7 +9,7 @@ import (
 	"context"
 	"fmt"
 
-	v1 "k8s.io/api/authentication/v1"
+	authenticationv1 "k8s.io/api/authentication/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
@@ -31,8 +31,8 @@ func GetKubernetesClient() (*kubernetes.Clientset, error) {
 }
 
 func validateKubeJWT(ctx context.Context, clientset *kubernetes.Clientset, token string) (bool, error) {
-	tokenReview := &v1.TokenReview{
-		Spec: v1.TokenReviewSpec{
+	tokenReview := &authenticationv1.TokenReview{
+		Spec: authenticationv1.TokenReviewSpec{
 			Token: token,
 		},
 	}
