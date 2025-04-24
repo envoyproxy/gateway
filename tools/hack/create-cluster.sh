@@ -48,8 +48,6 @@ if go tool kind get clusters | grep -q "${CLUSTER_NAME}"; then
 else
 ## Create kind cluster.
 if [[ -z "${KIND_NODE_TAG}" ]]; then
-  echo ${KIND_CFG}
-  echo "hello"
   cat << EOF | go tool kind create cluster --name "${CLUSTER_NAME}" --config -
 ${KIND_CFG}
 EOF
