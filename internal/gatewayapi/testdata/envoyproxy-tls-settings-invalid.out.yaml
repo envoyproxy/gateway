@@ -127,9 +127,11 @@ httpRoutes:
         status: "True"
         type: Accepted
       - lastTransitionTime: null
-        message: Resolved all the Object references for the Route
-        reason: ResolvedRefs
-        status: "True"
+        message: 'Failed to process route rule 0 backendRef 0: failed to locate TLS
+          secret for client auth: envoy-gateway-system/client-auth-not-found specified
+          in EnvoyProxy envoy-gateway-system/test.'
+        reason: InvalidBackendTLS
+        status: "False"
         type: ResolvedRefs
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
