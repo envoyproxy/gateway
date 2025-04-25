@@ -4,8 +4,8 @@ set -euo pipefail
 
 # Setup default values
 CLUSTER_NAME=${CLUSTER_NAME:-"envoy-gateway"}
-METALLB_VERSION=${METALLB_VERSION:-"v0.13.10"}
-KIND_NODE_TAG=${KIND_NODE_TAG:-"v1.32.0"}
+METALLB_VERSION=${METALLB_VERSION:-"v0.14.9"}
+KIND_NODE_TAG=${KIND_NODE_TAG:-"v1.33.0"}
 NUM_WORKERS=${NUM_WORKERS:-""}
 IP_FAMILY=${IP_FAMILY:-"ipv4"}
 CUSTOM_CNI=${CUSTOM_CNI:-"false"}
@@ -165,4 +165,3 @@ echo "Applying configuration with retries..."
     sleep $RETRY_INTERVAL
     ELAPSED_TIME=$((ELAPSED_TIME + RETRY_INTERVAL))
   done
-
