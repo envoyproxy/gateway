@@ -35,6 +35,11 @@ type Provider struct {
 	manager manager.Manager
 }
 
+const (
+	QPS   = 50
+	BURST = 100
+)
+
 // Exposed to allow disabling health probe listener in tests.
 var healthProbeBindAddress = ":8081"
 
@@ -52,6 +57,15 @@ func New(ctx context.Context, restCfg *rest.Config, svrCfg *ec.Server, resources
 
 	log.SetLogger(mgrOpts.Logger)
 	klog.SetLogger(mgrOpts.Logger)
+
+	if rateLimit := svrCfg.EnvoyGateway.Provider.Kubernetes.ClientRateLimit; rateLimit != nil {
+		if rateLimit.QPS != 0 {
+			restCfg.QPS = rateLimit.QPS
+		}
+		if rateLimit.Burst != 0 {
+			restCfg.Burst = rateLimit.Burst
+		}
+	}
 
 	if !ptr.Deref(svrCfg.EnvoyGateway.Provider.Kubernetes.LeaderElection.Disable, false) {
 		mgrOpts.LeaderElection = true
@@ -87,6 +101,7 @@ func New(ctx context.Context, restCfg *rest.Config, svrCfg *ec.Server, resources
 			mgrOpts.Cache.DefaultNamespaces[watchNS] = cache.Config{}
 		}
 	}
+
 	mgr, err := ctrl.NewManager(restCfg, mgrOpts)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create manager: %w", err)

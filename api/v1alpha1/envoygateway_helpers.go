@@ -50,6 +50,11 @@ func (e *EnvoyGateway) SetEnvoyGatewayDefaults() {
 	if e.Provider.Kubernetes.LeaderElection == nil {
 		e.Provider.Kubernetes.LeaderElection = DefaultLeaderElection()
 	}
+
+	if e.Provider.Kubernetes.ClientRateLimit == nil {
+		e.Provider.Kubernetes.ClientRateLimit = DefaultLKubernetesClientRateLimit()
+	}
+
 	if e.Gateway == nil {
 		e.Gateway = DefaultGateway()
 	}
@@ -103,6 +108,14 @@ func DefaultLeaderElection() *LeaderElection {
 		RetryPeriod:   ptr.To(gwapiv1.Duration("2s")),
 		LeaseDuration: ptr.To(gwapiv1.Duration("15s")),
 		Disable:       ptr.To(false),
+	}
+}
+
+// DefaultLKubernetesClientRateLimit returns a new KubernetesClientRateLimit with default parameters.
+func DefaultLKubernetesClientRateLimit() *KubernetesClientRateLimit {
+	return &KubernetesClientRateLimit{
+		QPS:   50,
+		Burst: 100,
 	}
 }
 
@@ -221,6 +234,9 @@ func (r *EnvoyGatewayProvider) GetEnvoyGatewayKubeProvider() *EnvoyGatewayKubern
 		r.Kubernetes = DefaultEnvoyGatewayKubeProvider()
 		if r.Kubernetes.LeaderElection == nil {
 			r.Kubernetes.LeaderElection = DefaultLeaderElection()
+		}
+		if r.Kubernetes.RateLimitDeployment == nil {
+			r.Kubernetes.ClientRateLimit = DefaultLKubernetesClientRateLimit()
 		}
 		return r.Kubernetes
 	}
