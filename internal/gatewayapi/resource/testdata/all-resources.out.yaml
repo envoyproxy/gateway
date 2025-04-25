@@ -1,5 +1,6 @@
 backendTLSPolicies:
-- kind: BackendTLSPolicy
+- apiVersion: gateway.networking.k8s.io/v1alpha3
+  kind: BackendTLSPolicy
   metadata:
     creationTimestamp: null
     name: example-tls-policy
@@ -15,7 +16,8 @@ backendTLSPolicies:
   status:
     ancestors: null
 backendTrafficPolicies:
-- kind: BackendTrafficPolicy
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: BackendTrafficPolicy
   metadata:
     creationTimestamp: null
     name: cookie-lb-policy
@@ -60,7 +62,8 @@ backendTrafficPolicies:
   status:
     ancestors: null
 backends:
-- kind: Backend
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: Backend
   metadata:
     creationTimestamp: null
     name: backend
@@ -73,7 +76,8 @@ backends:
     type: Endpoints
   status: {}
 clientTrafficPolicies:
-- kind: ClientTrafficPolicy
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: ClientTrafficPolicy
   metadata:
     creationTimestamp: null
     name: client-timeout
@@ -89,7 +93,8 @@ clientTrafficPolicies:
   status:
     ancestors: null
 configMaps:
-- data:
+- apiVersion: v1
+  data:
     game.properties: |
       enemy.types=aliens,monsters
       player.maximum-lives=5
@@ -100,7 +105,8 @@ configMaps:
     name: configmap
     namespace: default
 envoyExtensionPolicies:
-- kind: EnvoyExtensionPolicy
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: EnvoyExtensionPolicy
   metadata:
     creationTimestamp: null
     name: ext-proc-example
@@ -123,7 +129,8 @@ envoyExtensionPolicies:
   status:
     ancestors: null
 envoyPatchPolicies:
-- kind: EnvoyPatchPolicy
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: EnvoyPatchPolicy
   metadata:
     creationTimestamp: null
     name: ratelimit-patch-policy
@@ -155,6 +162,7 @@ envoyPatchPolicies:
   status:
     ancestors: null
 envoyProxyForGatewayClass:
+  apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: EnvoyProxy
   metadata:
     creationTimestamp: null
@@ -174,6 +182,7 @@ envoyProxyForGatewayClass:
       type: Kubernetes
   status: {}
 gatewayClass:
+  apiVersion: gateway.networking.k8s.io/v1
   kind: GatewayClass
   metadata:
     creationTimestamp: null
@@ -182,7 +191,8 @@ gatewayClass:
     controllerName: gateway.envoyproxy.io/gatewayclass-controller
   status: {}
 gateways:
-- kind: Gateway
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: Gateway
   metadata:
     creationTimestamp: null
     name: eg
@@ -198,7 +208,8 @@ gateways:
       protocol: HTTP
   status: {}
 grpcRoutes:
-- kind: GRPCRoute
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: GRPCRoute
   metadata:
     creationTimestamp: null
     name: backend
@@ -243,7 +254,8 @@ httpFilters:
         type: Inline
       contentType: text/plain
 httpRoutes:
-- kind: HTTPRoute
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
   metadata:
     creationTimestamp: null
     name: backend
@@ -274,18 +286,23 @@ namespaces:
     name: envoy-gateway-system
   spec: {}
   status: {}
-- metadata:
+- apiVersion: v1
+  kind: Namespace
+  metadata:
     creationTimestamp: null
     name: default
   spec: {}
   status: {}
-- metadata:
+- apiVersion: v1
+  kind: Namespace
+  metadata:
     creationTimestamp: null
     name: gateway-conformance-infra
   spec: {}
   status: {}
 referenceGrants:
-- kind: ReferenceGrant
+- apiVersion: gateway.networking.k8s.io/v1beta1
+  kind: ReferenceGrant
   metadata:
     creationTimestamp: null
     name: refg-example
@@ -308,7 +325,8 @@ referenceGrants:
     - group: ""
       kind: Service
 secrets:
-- data:
+- apiVersion: v1
+  data:
     .secret-file: dmFsdWUtMg0KDQo=
   kind: Secret
   metadata:
@@ -317,21 +335,24 @@ secrets:
     namespace: default
   stringData:
     secret: literal value
-- data:
+- apiVersion: v1
+  data:
     .secret-file: dmFsdWUtMg0KDQo=
   kind: Secret
   metadata:
     creationTimestamp: null
     name: secret-with-data
     namespace: default
-- kind: Secret
+- apiVersion: v1
+  kind: Secret
   metadata:
     creationTimestamp: null
     name: secret-with-string-data
     namespace: default
   stringData:
     secret: literal value
-- data:
+- apiVersion: v1
+  data:
     .secret-file: dmFsdWUtMg0KDQo=
   kind: Secret
   metadata:
@@ -340,7 +361,8 @@ secrets:
     namespace: default
   type: type value
 securityPolicies:
-- kind: SecurityPolicy
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: SecurityPolicy
   metadata:
     creationTimestamp: null
     name: jwt-example
@@ -366,7 +388,9 @@ securityPolicies:
   status:
     ancestors: null
 services:
-- metadata:
+- apiVersion: v1
+  kind: Service
+  metadata:
     creationTimestamp: null
     name: backend
     namespace: default
@@ -383,7 +407,9 @@ services:
       targetPort: 0
   status:
     loadBalancer: {}
-- metadata:
+- apiVersion: v1
+  kind: Service
+  metadata:
     creationTimestamp: null
     name: providedBackend
     namespace: default
@@ -401,7 +427,8 @@ services:
   status:
     loadBalancer: {}
 tcpRoutes:
-- kind: TCPRoute
+- apiVersion: gateway.networking.k8s.io/v1alpha2
+  kind: TCPRoute
   metadata:
     creationTimestamp: null
     name: backend
@@ -422,7 +449,8 @@ tcpRoutes:
   status:
     parents: null
 tlsRoutes:
-- kind: TLSRoute
+- apiVersion: gateway.networking.k8s.io/v1alpha2
+  kind: TLSRoute
   metadata:
     creationTimestamp: null
     name: backend
@@ -443,7 +471,8 @@ tlsRoutes:
   status:
     parents: null
 udpRoutes:
-- kind: UDPRoute
+- apiVersion: gateway.networking.k8s.io/v1alpha2
+  kind: UDPRoute
   metadata:
     creationTimestamp: null
     name: backend

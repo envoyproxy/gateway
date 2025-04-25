@@ -46,8 +46,6 @@ func LoadResourcesFromYAMLBytes(yamlBytes []byte, addMissingResources bool) (*Re
 }
 
 // loadKubernetesYAMLToResources converts a Kubernetes YAML string into GatewayAPI Resources.
-// TODO: add support for kind:
-//   - BackendLPPolicy (gateway.networking.k8s.io/v1alpha2)
 func loadKubernetesYAMLToResources(input []byte, addMissingResources bool) (*Resources, error) {
 	resources := NewResources()
 	var useDefaultNamespace bool
@@ -92,6 +90,7 @@ func loadKubernetesYAMLToResources(input []byte, addMissingResources bool) (*Res
 			return err
 		}
 
+		gv := gvk.GroupVersion().String()
 		objType := reflect.TypeOf(kobj)
 		if objType.Kind() != reflect.Ptr {
 			return fmt.Errorf("expected pointer type, but got %s", objType.Kind().String())
@@ -106,7 +105,8 @@ func loadKubernetesYAMLToResources(input []byte, addMissingResources bool) (*Res
 			typedSpec := spec.Interface()
 			envoyProxy := &egv1a1.EnvoyProxy{
 				TypeMeta: metav1.TypeMeta{
-					Kind: KindEnvoyProxy,
+					Kind:       KindEnvoyProxy,
+					APIVersion: gv,
 				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      name,
@@ -120,7 +120,8 @@ func loadKubernetesYAMLToResources(input []byte, addMissingResources bool) (*Res
 			typedSpec := spec.Interface()
 			gatewayClass := &gwapiv1.GatewayClass{
 				TypeMeta: metav1.TypeMeta{
-					Kind: KindGatewayClass,
+					Kind:       KindGatewayClass,
+					APIVersion: gv,
 				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name: name,
@@ -137,7 +138,8 @@ func loadKubernetesYAMLToResources(input []byte, addMissingResources bool) (*Res
 			typedSpec := spec.Interface()
 			gateway := &gwapiv1.Gateway{
 				TypeMeta: metav1.TypeMeta{
-					Kind: KindGateway,
+					Kind:       KindGateway,
+					APIVersion: gv,
 				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      name,
@@ -150,7 +152,8 @@ func loadKubernetesYAMLToResources(input []byte, addMissingResources bool) (*Res
 			typedSpec := spec.Interface()
 			tcpRoute := &gwapiv1a2.TCPRoute{
 				TypeMeta: metav1.TypeMeta{
-					Kind: KindTCPRoute,
+					Kind:       KindTCPRoute,
+					APIVersion: gv,
 				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      name,
@@ -163,7 +166,8 @@ func loadKubernetesYAMLToResources(input []byte, addMissingResources bool) (*Res
 			typedSpec := spec.Interface()
 			udpRoute := &gwapiv1a2.UDPRoute{
 				TypeMeta: metav1.TypeMeta{
-					Kind: KindUDPRoute,
+					Kind:       KindUDPRoute,
+					APIVersion: gv,
 				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      name,
@@ -176,7 +180,8 @@ func loadKubernetesYAMLToResources(input []byte, addMissingResources bool) (*Res
 			typedSpec := spec.Interface()
 			tlsRoute := &gwapiv1a2.TLSRoute{
 				TypeMeta: metav1.TypeMeta{
-					Kind: KindTLSRoute,
+					Kind:       KindTLSRoute,
+					APIVersion: gv,
 				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      name,
@@ -189,7 +194,8 @@ func loadKubernetesYAMLToResources(input []byte, addMissingResources bool) (*Res
 			typedSpec := spec.Interface()
 			httpRoute := &gwapiv1.HTTPRoute{
 				TypeMeta: metav1.TypeMeta{
-					Kind: KindHTTPRoute,
+					Kind:       KindHTTPRoute,
+					APIVersion: gv,
 				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      name,
@@ -202,7 +208,8 @@ func loadKubernetesYAMLToResources(input []byte, addMissingResources bool) (*Res
 			typedSpec := spec.Interface()
 			grpcRoute := &gwapiv1.GRPCRoute{
 				TypeMeta: metav1.TypeMeta{
-					Kind: KindGRPCRoute,
+					Kind:       KindGRPCRoute,
+					APIVersion: gv,
 				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      name,
@@ -213,6 +220,10 @@ func loadKubernetesYAMLToResources(input []byte, addMissingResources bool) (*Res
 			resources.GRPCRoutes = append(resources.GRPCRoutes, grpcRoute)
 		case KindNamespace:
 			namespace := &corev1.Namespace{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       KindNamespace,
+					APIVersion: gv,
+				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name: name,
 				},
@@ -222,6 +233,10 @@ func loadKubernetesYAMLToResources(input []byte, addMissingResources bool) (*Res
 		case KindService:
 			typedSpec := spec.Interface()
 			service := &corev1.Service{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       KindService,
+					APIVersion: gv,
+				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      name,
 					Namespace: namespace,
@@ -237,7 +252,8 @@ func loadKubernetesYAMLToResources(input []byte, addMissingResources bool) (*Res
 			typedSpec := spec.Interface()
 			envoyPatchPolicy := &egv1a1.EnvoyPatchPolicy{
 				TypeMeta: metav1.TypeMeta{
-					Kind: egv1a1.KindEnvoyPatchPolicy,
+					Kind:       egv1a1.KindEnvoyPatchPolicy,
+					APIVersion: gv,
 				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      name,
@@ -250,7 +266,8 @@ func loadKubernetesYAMLToResources(input []byte, addMissingResources bool) (*Res
 			typedSpec := spec.Interface()
 			clientTrafficPolicy := &egv1a1.ClientTrafficPolicy{
 				TypeMeta: metav1.TypeMeta{
-					Kind: KindClientTrafficPolicy,
+					Kind:       KindClientTrafficPolicy,
+					APIVersion: gv,
 				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      name,
@@ -263,7 +280,8 @@ func loadKubernetesYAMLToResources(input []byte, addMissingResources bool) (*Res
 			typedSpec := spec.Interface()
 			backendTrafficPolicy := &egv1a1.BackendTrafficPolicy{
 				TypeMeta: metav1.TypeMeta{
-					Kind: KindBackendTrafficPolicy,
+					Kind:       KindBackendTrafficPolicy,
+					APIVersion: gv,
 				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      name,
@@ -276,7 +294,8 @@ func loadKubernetesYAMLToResources(input []byte, addMissingResources bool) (*Res
 			typedSpec := spec.Interface()
 			securityPolicy := &egv1a1.SecurityPolicy{
 				TypeMeta: metav1.TypeMeta{
-					Kind: KindSecurityPolicy,
+					Kind:       KindSecurityPolicy,
+					APIVersion: gv,
 				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      name,
@@ -290,7 +309,7 @@ func loadKubernetesYAMLToResources(input []byte, addMissingResources bool) (*Res
 			httpRouteFilter := &egv1a1.HTTPRouteFilter{
 				TypeMeta: metav1.TypeMeta{
 					Kind:       KindHTTPRouteFilter,
-					APIVersion: egv1a1.GroupVersion.String(),
+					APIVersion: gv,
 				},
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: namespace,
@@ -303,7 +322,8 @@ func loadKubernetesYAMLToResources(input []byte, addMissingResources bool) (*Res
 			typedSpec := spec.Interface()
 			backend := &egv1a1.Backend{
 				TypeMeta: metav1.TypeMeta{
-					Kind: KindBackend,
+					Kind:       KindBackend,
+					APIVersion: gv,
 				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      name,
@@ -319,7 +339,8 @@ func loadKubernetesYAMLToResources(input []byte, addMissingResources bool) (*Res
 
 			secret := &corev1.Secret{
 				TypeMeta: metav1.TypeMeta{
-					Kind: KindSecret,
+					Kind:       KindSecret,
+					APIVersion: gv,
 				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      name,
@@ -334,7 +355,8 @@ func loadKubernetesYAMLToResources(input []byte, addMissingResources bool) (*Res
 			typedData := data.Interface()
 			configMap := &corev1.ConfigMap{
 				TypeMeta: metav1.TypeMeta{
-					Kind: KindConfigMap,
+					Kind:       KindConfigMap,
+					APIVersion: gv,
 				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      name,
@@ -347,7 +369,8 @@ func loadKubernetesYAMLToResources(input []byte, addMissingResources bool) (*Res
 			typedSpec := spec.Interface()
 			backendTLSPolicy := &gwapiv1a3.BackendTLSPolicy{
 				TypeMeta: metav1.TypeMeta{
-					Kind: KindBackendTLSPolicy,
+					Kind:       KindBackendTLSPolicy,
+					APIVersion: gv,
 				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      name,
@@ -360,7 +383,8 @@ func loadKubernetesYAMLToResources(input []byte, addMissingResources bool) (*Res
 			typedSpec := spec.Interface()
 			envoyExtensionPolicy := &egv1a1.EnvoyExtensionPolicy{
 				TypeMeta: metav1.TypeMeta{
-					Kind: KindEnvoyExtensionPolicy,
+					Kind:       KindEnvoyExtensionPolicy,
+					APIVersion: gv,
 				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      name,
@@ -373,7 +397,8 @@ func loadKubernetesYAMLToResources(input []byte, addMissingResources bool) (*Res
 			typedSpec := spec.Interface()
 			referenceGrant := &gwapiv1b1.ReferenceGrant{
 				TypeMeta: metav1.TypeMeta{
-					Kind: KindReferenceGrant,
+					Kind:       KindReferenceGrant,
+					APIVersion: gv,
 				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      name,
@@ -410,6 +435,10 @@ func loadKubernetesYAMLToResources(input []byte, addMissingResources bool) (*Res
 	for _, ns := range sortedRequiredNamespace {
 		if !providedNamespaceMap.Has(ns) {
 			namespace := &corev1.Namespace{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       KindNamespace,
+					APIVersion: corev1.SchemeGroupVersion.String(),
+				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name: ns,
 				},
@@ -486,6 +515,7 @@ func loadKubernetesYAMLToResources(input []byte, addMissingResources bool) (*Res
 func addMissingServices(requiredServices map[string]*corev1.Service, obj interface{}) {
 	var objNamespace string
 	protocol := ir.TCPProtocolType
+	gv := corev1.SchemeGroupVersion.String()
 
 	var refs []gwapiv1.BackendRef
 	switch route := obj.(type) {
@@ -541,6 +571,10 @@ func addMissingServices(requiredServices map[string]*corev1.Service, obj interfa
 		}
 		if service, found := requiredServices[key]; !found {
 			service := &corev1.Service{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       KindService,
+					APIVersion: gv,
+				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      name,
 					Namespace: ns,
@@ -578,7 +612,12 @@ func addDefaultEnvoyProxy(resources *Resources, namespace string) error {
 	if err != nil {
 		return err
 	}
+	gv := egv1a1.GroupVersion
 	ep := &egv1a1.EnvoyProxy{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       KindEnvoyProxy,
+			APIVersion: gv.String(),
+		},
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: namespace,
 			Name:      defaultEnvoyProxyName,
@@ -592,7 +631,7 @@ func addDefaultEnvoyProxy(resources *Resources, namespace string) error {
 	resources.EnvoyProxyForGatewayClass = ep
 	ns := gwapiv1.Namespace(namespace)
 	resources.GatewayClass.Spec.ParametersRef = &gwapiv1.ParametersReference{
-		Group:     gwapiv1.Group(egv1a1.GroupVersion.Group),
+		Group:     gwapiv1.Group(gv.Group),
 		Kind:      KindEnvoyProxy,
 		Name:      defaultEnvoyProxyName,
 		Namespace: &ns,
