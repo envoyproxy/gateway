@@ -22,6 +22,7 @@ import (
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gwapiv1a3 "sigs.k8s.io/gateway-api/apis/v1alpha3"
+	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 	"sigs.k8s.io/yaml"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
@@ -47,7 +48,6 @@ func LoadResourcesFromYAMLBytes(yamlBytes []byte, addMissingResources bool) (*Re
 // loadKubernetesYAMLToResources converts a Kubernetes YAML string into GatewayAPI Resources.
 // TODO: add support for kind:
 //   - BackendLPPolicy (gateway.networking.k8s.io/v1alpha2)
-//   - ReferenceGrant (gateway.networking.k8s.io/v1alpha2)
 func loadKubernetesYAMLToResources(input []byte, addMissingResources bool) (*Resources, error) {
 	resources := NewResources()
 	var useDefaultNamespace bool
@@ -369,6 +369,19 @@ func loadKubernetesYAMLToResources(input []byte, addMissingResources bool) (*Res
 				Spec: typedSpec.(egv1a1.EnvoyExtensionPolicySpec),
 			}
 			resources.EnvoyExtensionPolicies = append(resources.EnvoyExtensionPolicies, envoyExtensionPolicy)
+		case KindReferenceGrant:
+			typedSpec := spec.Interface()
+			referenceGrant := &gwapiv1b1.ReferenceGrant{
+				TypeMeta: metav1.TypeMeta{
+					Kind: KindReferenceGrant,
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      name,
+					Namespace: namespace,
+				},
+				Spec: typedSpec.(gwapiv1b1.ReferenceGrantSpec),
+			}
+			resources.ReferenceGrants = append(resources.ReferenceGrants, referenceGrant)
 		}
 
 		return nil
