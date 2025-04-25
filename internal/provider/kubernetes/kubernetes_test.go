@@ -1272,7 +1272,8 @@ func TestNamespacedProvider(t *testing.T) {
 			Type:       egv1a1.KubernetesWatchModeTypeNamespaces,
 			Namespaces: []string{"ns1", "ns2"},
 		},
-		LeaderElection: egv1a1.DefaultLeaderElection(),
+		LeaderElection:  egv1a1.DefaultLeaderElection(),
+		ClientRateLimit: egv1a1.DefaultLKubernetesClientRateLimit(),
 	}
 	resources := new(message.ProviderResources)
 	provider, err := New(context.Background(), cliCfg, svr, resources)
@@ -1332,7 +1333,8 @@ func TestNamespaceSelectorProvider(t *testing.T) {
 			Type:              egv1a1.KubernetesWatchModeTypeNamespaceSelector,
 			NamespaceSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"label-1": "true", "label-2": "true"}},
 		},
-		LeaderElection: egv1a1.DefaultLeaderElection(),
+		LeaderElection:  egv1a1.DefaultLeaderElection(),
+		ClientRateLimit: egv1a1.DefaultLKubernetesClientRateLimit(),
 	}
 	resources := new(message.ProviderResources)
 	provider, err := New(context.Background(), cliCfg, svr, resources)

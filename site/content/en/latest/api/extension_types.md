@@ -1267,6 +1267,7 @@ _Appears in:_
 | `watch` | _[KubernetesWatchMode](#kuberneteswatchmode)_ |  false  |  | Watch holds configuration of which input resources should be watched and reconciled. |
 | `leaderElection` | _[LeaderElection](#leaderelection)_ |  false  |  | LeaderElection specifies the configuration for leader election.<br />If it's not set up, leader election will be active by default, using Kubernetes' standard settings. |
 | `shutdownManager` | _[ShutdownManager](#shutdownmanager)_ |  false  |  | ShutdownManager defines the configuration for the shutdown manager. |
+| `clientRateLimit` | _[KubernetesClientRateLimit](#kubernetesclientratelimit)_ |  false  |  | ClientRateLimit defines the rate limit for the Envoy Gateway Kubernetes client.<br />If it's not set, defaults to 50 QPS and 100 Burst. |
 
 
 #### EnvoyGatewayLogComponent
@@ -2646,6 +2647,21 @@ _Underlying type:_ _string_
 _Appears in:_
 - [JWTPrincipal](#jwtprincipal)
 
+
+
+#### KubernetesClientRateLimit
+
+
+
+KubernetesClientRateLimit defines the rate limit settings for the Kubernetes client.
+
+_Appears in:_
+- [EnvoyGatewayKubernetesProvider](#envoygatewaykubernetesprovider)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `qps` | _float_ |  false  |  | QPS defines the queries per second (QPS) limit for the Kubernetes client.<br />If unspecified, defaults to 50. Min value must be greater than or equal to 1. |
+| `burst` | _integer_ |  false  |  | Burst defines the burst limit for the Kubernetes client.<br />If unspecified, defaults to 100. Min value must be greater than or equal to 1. |
 
 
 #### KubernetesContainerSpec

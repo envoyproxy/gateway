@@ -344,6 +344,28 @@ func TestDecode(t *testing.T) {
 			},
 			expect: true,
 		},
+		{
+			in: inPath + "gateway-k8s-client-ratelimit.yaml",
+			out: &egv1a1.EnvoyGateway{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       egv1a1.KindEnvoyGateway,
+					APIVersion: egv1a1.GroupVersion.String(),
+				},
+				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
+					Gateway: egv1a1.DefaultGateway(),
+					Provider: &egv1a1.EnvoyGatewayProvider{
+						Type: egv1a1.ProviderTypeKubernetes,
+						Kubernetes: &egv1a1.EnvoyGatewayKubernetesProvider{
+							ClientRateLimit: &egv1a1.KubernetesClientRateLimit{
+								QPS:   500,
+								Burst: 1000,
+							},
+						},
+					},
+				},
+			},
+			expect: true,
+		},
 	}
 
 	for _, tc := range testCases {

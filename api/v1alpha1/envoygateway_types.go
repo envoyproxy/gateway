@@ -91,6 +91,23 @@ type EnvoyGatewaySpec struct {
 	ExtensionAPIs *ExtensionAPISettings `json:"extensionApis,omitempty"`
 }
 
+// KubernetesClientRateLimit defines the rate limit settings for the Kubernetes client.
+type KubernetesClientRateLimit struct {
+	// QPS defines the queries per second (QPS) limit for the Kubernetes client.
+	// If unspecified, defaults to 50. Min value must be greater than or equal to 1.
+	//
+	// +optional
+	// +kubebuilder:validation:Minimum=1
+	QPS float32 `json:"qps,omitempty"`
+
+	// Burst defines the burst limit for the Kubernetes client.
+	// If unspecified, defaults to 100. Min value must be greater than or equal to 1.
+	//
+	// +optional
+	// +kubebuilder:validation:Minimum=1
+	Burst int `json:"burst,omitempty"`
+}
+
 // LeaderElection defines the desired leader election settings.
 type LeaderElection struct {
 	// LeaseDuration defines the time non-leader contenders will wait before attempting to claim leadership.
@@ -225,6 +242,11 @@ type EnvoyGatewayKubernetesProvider struct {
 	// ShutdownManager defines the configuration for the shutdown manager.
 	// +optional
 	ShutdownManager *ShutdownManager `json:"shutdownManager,omitempty"`
+
+	// ClientRateLimit defines the rate limit for the Envoy Gateway Kubernetes client.
+	// If it's not set, defaults to 50 QPS and 100 Burst.
+	// +optional
+	ClientRateLimit *KubernetesClientRateLimit `json:"clientRateLimit,omitempty"`
 }
 
 const (
