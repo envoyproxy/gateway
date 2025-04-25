@@ -75,6 +75,7 @@ metadata:
   {{- end }}
   annotations:
     "helm.sh/hook": pre-install, pre-upgrade
+    "helm.sh/hook-weight": "-1"
   {{- if .Values.certgen.rbac.annotations }}
     {{- toYaml .Values.certgen.rbac.annotations | nindent 4 -}}
   {{- end }}
@@ -108,6 +109,7 @@ metadata:
   {{- end }}
   annotations:
     "helm.sh/hook": pre-install, pre-upgrade
+    "helm.sh/hook-weight": "-1"
   {{- if .Values.certgen.rbac.annotations }}
     {{- toYaml .Values.certgen.rbac.annotations | nindent 4 -}}
   {{- end }}
