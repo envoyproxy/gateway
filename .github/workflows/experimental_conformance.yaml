@@ -19,7 +19,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        version: [ v1.30.11, v1.31.8, v1.32.4, v1.33.0 ]
+        version: [ v1.30.12, v1.31.8, v1.32.4, v1.33.0 ]
     steps:
     - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
     - uses: ./tools/github-actions/setup-deps

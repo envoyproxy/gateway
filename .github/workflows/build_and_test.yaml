@@ -86,7 +86,7 @@ jobs:
       fail-fast: false
       matrix:
         target:
-        - version: v1.30.11
+        - version: v1.30.12
           ipFamily: ipv4
         - version: v1.31.8
           ipFamily: ipv4
@@ -125,7 +125,7 @@ jobs:
       fail-fast: false
       matrix:
         target:
-        - version: v1.30.11
+        - version: v1.30.12
           ipFamily: ipv4
         - version: v1.31.8
           ipFamily: ipv4
