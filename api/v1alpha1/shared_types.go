@@ -361,6 +361,7 @@ const (
 	XDSRoute        XDSTranslatorHook = "Route"
 	XDSHTTPListener XDSTranslatorHook = "HTTPListener"
 	XDSTranslation  XDSTranslatorHook = "Translation"
+	XDSCluster		XDSTranslatorHook = "Cluster"
 )
 
 // StringMatch defines how to match any strings.
