@@ -8,6 +8,7 @@ package kubejwt
 import (
 	"context"
 	"fmt"
+	"slices"
 
 	authenticationv1 "k8s.io/api/authentication/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -42,20 +43,12 @@ func validateKubeJWT(ctx context.Context, clientset *kubernetes.Clientset, token
 		return false, fmt.Errorf("failed to call TokenReview API to verify service account JWT: %w", err)
 	}
 
+	if !slices.Contains(tokenReview.Status.User.Groups, "system:serviceaccounts") {
+		return false, fmt.Errorf("the token is not a service account")
+	}
+
 	if !tokenReview.Status.Authenticated {
 		return false, fmt.Errorf("token is not authenticated")
-	}
-
-	inServiceAccountGroup := false
-	for _, group := range tokenReview.Status.User.Groups {
-		if group == "system:serviceaccounts" {
-			inServiceAccountGroup = true
-			break
-		}
-	}
-
-	if !inServiceAccountGroup {
-		return false, fmt.Errorf("the token is not a service account")
 	}
 
 	return true, nil
