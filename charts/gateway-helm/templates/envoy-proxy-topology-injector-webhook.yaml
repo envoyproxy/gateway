@@ -30,7 +30,7 @@ webhooks:
         resources: ["pods/binding"]
     namespaceSelector:
       matchExpressions:
-        - key: kubernetes.io/name
+        - key: kubernetes.io/metadata.name
           operator: In
           values:
             - {{ .Release.Namespace }}

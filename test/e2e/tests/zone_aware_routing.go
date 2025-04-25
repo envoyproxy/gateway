@@ -8,14 +8,11 @@
 package tests
 
 import (
-	"context"
+	"fmt"
+	"regexp"
 	"testing"
 
-	"github.com/google/go-cmp/cmp"
 	"github.com/stretchr/testify/require"
-	discoveryv1 "k8s.io/api/discovery/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/gateway-api/conformance/utils/http"
 	"sigs.k8s.io/gateway-api/conformance/utils/kubernetes"
@@ -36,7 +33,11 @@ var ZoneAwareRoutingTest = suite.ConformanceTest{
 
 			ns := "gateway-conformance-infra"
 			zoneAwareRoute := types.NamespacedName{Name: "zone-aware-http-route", Namespace: ns}
-			gwNN := types.NamespacedName{Name: "zone-aware-gtw", Namespace: ns}
+			gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
+			_, err := kubernetes.WaitForGatewayAddress(t, suite.Client, suite.TimeoutConfig, kubernetes.GatewayRef{
+				NamespacedName: gwNN,
+			})
+			require.NoError(t, err)
 			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig,
 				suite.ControllerName,
 				kubernetes.NewGatewayRef(gwNN), zoneAwareRoute)
@@ -52,24 +53,12 @@ var ZoneAwareRoutingTest = suite.ConformanceTest{
 			}
 			req := http.MakeRequest(t, &expectedResponse, gwAddr, "HTTP", "http")
 
-			// The EnvoyProxy pods have a nodeSelector targeting zone "0" so all requests
-			// should be routed to upstreams there.
 			expected := map[string]int{
-				"1": sendRequests,
+				"zone-aware-backend-nonlocal": 0,
+				"zone-aware-backend-local":    sendRequests,
 			}
-			endpointslice, err := suite.Clientset.DiscoveryV1().EndpointSlices(ns).List(context.Background(), metav1.ListOptions{LabelSelector: labels.SelectorFromSet(map[string]string{discoveryv1.LabelServiceName: "zone-aware-backend"}).String()})
-			require.NoError(t, err)
-			require.Len(t, endpointslice.Items, 1)
-			podZoneMap := make(map[string]string)
-			for _, sl := range endpointslice.Items {
-				for _, ep := range sl.Endpoints {
-					if ep.Zone == nil {
-						t.Fatalf("endpoint %s/%s has no zone", sl.Namespace, sl.Name)
-					}
-					podZoneMap[ep.TargetRef.Name] = *ep.Zone
-				}
-			}
-			reqMap := make(map[string]int)
+
+			weightMap := make(map[string]int)
 			for i := 0; i < sendRequests; i++ {
 				cReq, cResp, err := suite.RoundTripper.CaptureRoundTrip(req)
 				if err != nil {
@@ -85,19 +74,31 @@ var ZoneAwareRoutingTest = suite.ConformanceTest{
 					// it shouldn't be missing here
 					t.Errorf("failed to get pod header in response: %v", err)
 				} else {
-					podZone := podZoneMap[podName]
-					reqMap[podZone]++
+					// all we need is the pod Name prefix
+					podNamePrefix := ZoneRoutingExtractPodNamePrefix(podName)
+					weightMap[podNamePrefix]++
 				}
 			}
-
 			// We iterate over the actual traffic Map with podNamePrefix as the key to get the actual traffic.
 			// Given an offset of 3, we expect the expected traffic to be within the actual traffic [actual-3,actual+3] interval.
-			for prefix, actual := range reqMap {
+			for prefix, actual := range weightMap {
 				expect := expected[prefix]
 				if !AlmostEquals(actual, expect, 3) {
-					t.Errorf("The actual traffic distribution between zones is not consistent with the expected: %v", cmp.Diff(actual, expect))
+					t.Errorf("The actual traffic distribution between zones is not consistent with the expected: %v", weightMap)
 				}
 			}
 		})
 	},
+}
+
+// ExtractPodNamePrefix Extract the Pod Name prefix
+func ZoneRoutingExtractPodNamePrefix(podName string) string {
+	pattern := regexp.MustCompile(`zone-aware-backend-(.+?)-`)
+	match := pattern.FindStringSubmatch(podName)
+	if len(match) > 1 {
+		version := match[1]
+		return fmt.Sprintf("zone-aware-backend-%s", version)
+	}
+
+	return podName
 }

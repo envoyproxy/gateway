@@ -13,6 +13,7 @@ import (
 	"github.com/go-openapi/jsonpointer"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/klog/v2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
@@ -27,6 +28,7 @@ type ProxyTopologyInjector struct {
 func (m *ProxyTopologyInjector) Handle(ctx context.Context, req admission.Request) admission.Response {
 	binding := &corev1.Binding{}
 	if err := m.Decoder.Decode(req, binding); err != nil {
+		klog.Error(err, "decoding binding failed")
 		return admission.Errored(http.StatusInternalServerError, err)
 	}
 
@@ -41,11 +43,13 @@ func (m *ProxyTopologyInjector) Handle(ctx context.Context, req admission.Reques
 
 	pod := &corev1.Pod{}
 	if err := m.Get(ctx, podName, pod); err != nil {
+		klog.Error(err, "get pod failed")
 		return admission.Errored(http.StatusInternalServerError, err)
 	}
 
 	// Skip non-proxy pods
 	if !hasEnvoyProxyLabels(pod.Labels) {
+		klog.Info("skipping pod due to missing labels", "pod", podName)
 		return admission.Allowed("skipped")
 	}
 
@@ -54,6 +58,7 @@ func (m *ProxyTopologyInjector) Handle(ctx context.Context, req admission.Reques
 	}
 	node := &corev1.Node{}
 	if err := m.Get(ctx, nodeName, node); err != nil {
+		klog.Error(err, "get node failed")
 		return admission.Errored(http.StatusInternalServerError, err)
 	}
 
@@ -64,8 +69,10 @@ func (m *ProxyTopologyInjector) Handle(ctx context.Context, req admission.Reques
 
 	rawPatch := client.RawPatch(types.JSONPatchType, []byte(patch))
 	if err := m.Patch(ctx, pod, rawPatch); err != nil {
+		klog.Error(err, "patch pod failed")
 		return admission.Errored(http.StatusInternalServerError, err)
 	}
+	klog.Info("patch pod succeeded", "pod", podName)
 	return admission.Allowed("pod patched")
 }
 

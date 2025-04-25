@@ -172,6 +172,17 @@ rules:
   - backendtlspolicies/status
   verbs:
   - update
+- apiGroups:
+  - ""
+  resources:
+  - pods
+  - pods/binding
+  verbs:
+  - get
+  - list
+  - patch
+  - update
+  - watch
 ---
 # Source: gateway-helm/templates/envoy-gateway-rbac.yaml
 apiVersion: rbac.authorization.k8s.io/v1
@@ -699,7 +710,7 @@ webhooks:
         resources: ["pods/binding"]
     namespaceSelector:
       matchExpressions:
-        - key: kubernetes.io/name
+        - key: kubernetes.io/metadata.name
           operator: In
           values:
             - envoy-gateway-system
