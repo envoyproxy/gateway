@@ -80,15 +80,11 @@ func (i *Infra) Close() error { return nil }
 // createOrUpdate creates a ServiceAccount/ConfigMap/Deployment/Service in the kube api server based on the
 // provided ResourceRender, if it doesn't exist and updates it if it does.
 func (i *Infra) createOrUpdate(ctx context.Context, r ResourceRender) error {
-	cert, err := i.getEnvoyCA(ctx)
-	if err != nil {
-		return fmt.Errorf("failed to fetch ca certificate for namespaced infra %s/%s: %w", i.Namespace, r.Name(), err)
-	}
 	if err := i.createOrUpdateServiceAccount(ctx, r); err != nil {
 		return fmt.Errorf("failed to create or update serviceaccount %s/%s: %w", i.Namespace, r.Name(), err)
 	}
 
-	if err := i.createOrUpdateConfigMap(ctx, r, cert); err != nil {
+	if err := i.createOrUpdateConfigMap(ctx, r); err != nil {
 		return fmt.Errorf("failed to create or update configmap %s/%s: %w", i.Namespace, r.Name(), err)
 	}
 

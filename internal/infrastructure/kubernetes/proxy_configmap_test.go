@@ -113,7 +113,7 @@ func TestCreateOrUpdateProxyConfigMap(t *testing.T) {
 			}
 			kube := NewInfra(cli, cfg)
 			r := proxy.NewResourceRender(kube.Namespace, kube.DNSDomain, infra.GetProxyInfra(), kube.EnvoyGateway)
-			err := kube.createOrUpdateConfigMap(context.Background(), r, "")
+			err := kube.createOrUpdateConfigMap(context.Background(), r)
 			require.NoError(t, err)
 			actual := &corev1.ConfigMap{
 				ObjectMeta: metav1.ObjectMeta{
