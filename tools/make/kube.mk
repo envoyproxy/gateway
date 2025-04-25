@@ -1,9 +1,9 @@
 # ENVTEST_K8S_VERSION refers to the version of kubebuilder assets to be downloaded by envtest binary.
 # To know the available versions check:
 # - https://github.com/kubernetes-sigs/controller-tools/blob/main/envtest-releases.yaml
-ENVTEST_K8S_VERSION ?= v1.30.12
+ENVTEST_K8S_VERSION ?= 1.29.4
 # Need run cel validation across multiple versions of k8s
-ENVTEST_K8S_VERSIONS ?= v1.30.12, v1.31.8, v1.32.4, v1.33.0
+ENVTEST_K8S_VERSIONS ?= 1.29.4 1.30.3 1.31.0 1.32.0
 
 # GATEWAY_API_VERSION refers to the version of Gateway API CRDs.
 # For more details, see https://gateway-api.sigs.k8s.io/guides/getting-started/#installing-gateway-api
@@ -191,6 +191,7 @@ e2e-prepare: prepare-ip-family ## Prepare the environment for running e2e tests
 	@$(LOG_TARGET)
 	kubectl wait --timeout=5m -n envoy-gateway-system deployment/envoy-ratelimit --for=condition=Available
 	kubectl wait --timeout=5m -n envoy-gateway-system deployment/envoy-gateway --for=condition=Available
+	kubectl apply -f test/config/envoy-gateway-config.yaml
 	kubectl apply -f test/config/gatewayclass.yaml
 
 .PHONY: run-e2e
