@@ -20,13 +20,17 @@ spec:
         app: certgen
     spec:
       containers:
-      {{- if .Values.certgen.job.args }}
+      {{- $args := .Values.certgen.job.args }}
+      {{- if not .Values.topologyInjector.enabled }}
+        {{- $args = append $args "--disable-topology-injector" }}
+      {{- end }}
+      {{- if $args }}
       - args:
-        {{- toYaml .Values.certgen.job.args | nindent 8 }}
+        {{- toYaml $args | nindent 8 }}
         command:
         - envoy-gateway
         - certgen
-        {{- else }}
+      {{- else }}
       - command:
         - envoy-gateway
         - certgen

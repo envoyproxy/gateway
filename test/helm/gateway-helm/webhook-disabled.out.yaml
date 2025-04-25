@@ -545,7 +545,9 @@ spec:
         app: certgen
     spec:
       containers:
-      - command:
+      - args:
+        - --disable-topology-injector
+        command:
         - envoy-gateway
         - certgen
         env:
