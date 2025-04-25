@@ -9,9 +9,9 @@ package tests
 
 import (
 	"context"
-	"github.com/google/go-cmp/cmp"
 	"testing"
 
+	"github.com/google/go-cmp/cmp"
 	"github.com/stretchr/testify/require"
 	discoveryv1 "k8s.io/api/discovery/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
