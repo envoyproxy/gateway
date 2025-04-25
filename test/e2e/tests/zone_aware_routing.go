@@ -12,7 +12,7 @@ import (
 	"regexp"
 	"testing"
 
-	"github.com/stretchr/testify/require"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/gateway-api/conformance/utils/http"
 	"sigs.k8s.io/gateway-api/conformance/utils/kubernetes"
@@ -34,13 +34,12 @@ var ZoneAwareRoutingTest = suite.ConformanceTest{
 			ns := "gateway-conformance-infra"
 			zoneAwareRoute := types.NamespacedName{Name: "zone-aware-http-route", Namespace: ns}
 			gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
-			_, err := kubernetes.WaitForGatewayAddress(t, suite.Client, suite.TimeoutConfig, kubernetes.GatewayRef{
-				NamespacedName: gwNN,
-			})
-			require.NoError(t, err)
 			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig,
 				suite.ControllerName,
 				kubernetes.NewGatewayRef(gwNN), zoneAwareRoute)
+
+			podReady := corev1.PodCondition{Type: corev1.PodReady, Status: corev1.ConditionTrue}
+			WaitForPods(t, suite.Client, ns, map[string]string{"app": "zone-aware-backend"}, corev1.PodRunning, podReady)
 
 			expectedResponse := http.ExpectedResponse{
 				Request: http.Request{
@@ -53,12 +52,13 @@ var ZoneAwareRoutingTest = suite.ConformanceTest{
 			}
 			req := http.MakeRequest(t, &expectedResponse, gwAddr, "HTTP", "http")
 
+			// Pods from the backend-local deployment have affinity
+			// for the Envoy Proxy pods so should receive all requests.
 			expected := map[string]int{
-				"zone-aware-backend-nonlocal": 0,
 				"zone-aware-backend-local":    sendRequests,
+				"zone-aware-backend-nonlocal": 0,
 			}
-
-			weightMap := make(map[string]int)
+			reqMap := make(map[string]int)
 			for i := 0; i < sendRequests; i++ {
 				cReq, cResp, err := suite.RoundTripper.CaptureRoundTrip(req)
 				if err != nil {
@@ -75,24 +75,24 @@ var ZoneAwareRoutingTest = suite.ConformanceTest{
 					t.Errorf("failed to get pod header in response: %v", err)
 				} else {
 					// all we need is the pod Name prefix
-					podNamePrefix := ZoneRoutingExtractPodNamePrefix(podName)
-					weightMap[podNamePrefix]++
+					podNamePrefix := ZoneAwareRoutingExtractPodNamePrefix(podName)
+					reqMap[podNamePrefix]++
 				}
 			}
+
 			// We iterate over the actual traffic Map with podNamePrefix as the key to get the actual traffic.
-			// Given an offset of 3, we expect the expected traffic to be within the actual traffic [actual-3,actual+3] interval.
-			for prefix, actual := range weightMap {
+			for prefix, actual := range reqMap {
 				expect := expected[prefix]
-				if !AlmostEquals(actual, expect, 3) {
-					t.Errorf("The actual traffic distribution between zones is not consistent with the expected: %v", weightMap)
+				if actual != expect {
+					t.Errorf("The actual traffic distribution between zones is not consistent with the expected: %v", reqMap)
 				}
 			}
 		})
 	},
 }
 
-// ExtractPodNamePrefix Extract the Pod Name prefix
-func ZoneRoutingExtractPodNamePrefix(podName string) string {
+// ZoneAwareRoutingExtractPodNamePrefix extracts the Pod Name prefix
+func ZoneAwareRoutingExtractPodNamePrefix(podName string) string {
 	pattern := regexp.MustCompile(`zone-aware-backend-(.+?)-`)
 	match := pattern.FindStringSubmatch(podName)
 	if len(match) > 1 {
