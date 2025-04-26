@@ -186,6 +186,7 @@ func DefaultEnvoyGatewayProvider() *EnvoyGatewayProvider {
 		Type: ProviderTypeKubernetes,
 		Kubernetes: &EnvoyGatewayKubernetesProvider{
 			LeaderElection: DefaultLeaderElection(),
+			Client:         DefaultKubernetesClient(),
 		},
 	}
 }
@@ -245,6 +246,10 @@ func (r *EnvoyGatewayProvider) GetEnvoyGatewayKubeProvider() *EnvoyGatewayKubern
 
 	if r.Kubernetes.LeaderElection == nil {
 		r.Kubernetes.LeaderElection = DefaultLeaderElection()
+	}
+
+	if r.Kubernetes.Client == nil {
+		r.Kubernetes.Client = DefaultKubernetesClient()
 	}
 
 	if r.Kubernetes.RateLimitDeployment == nil {
