@@ -1401,6 +1401,11 @@ func validateDestinationSettings(destinationSettings *ir.DestinationSetting, end
 				status.RouteReasonUnsupportedAddressType)
 		}
 	case resource.KindService, resource.KindServiceImport:
+		if endpointRoutingDisabled && isHeadlessService(destinationSettings) {
+			return status.NewRouteStatusError(
+				fmt.Errorf("service %s is headless Service, please set routingType=Endpoint", destinationSettings.Name),
+				status.RouteReasonUnsupportedSetting)
+		}
 		if !endpointRoutingDisabled && destinationSettings.AddressType != nil && *destinationSettings.AddressType == ir.MIXED {
 			return status.NewRouteStatusError(
 				fmt.Errorf("mixed endpointslice address type for the same backendRef is not supported"),
@@ -1409,6 +1414,17 @@ func validateDestinationSettings(destinationSettings *ir.DestinationSetting, end
 	}
 
 	return nil
+}
+
+// isHeadlessService reports true when any DestinationEndpoint corresponds to
+// a headless Kubernetes Service (ClusterIP="None").
+func isHeadlessService(ds *ir.DestinationSetting) bool {
+	for _, ep := range ds.Endpoints {
+		if ep.Host == "None" {
+			return true
+		}
+	}
+	return false
 }
 
 func (t *Translator) processServiceImportDestinationSetting(
