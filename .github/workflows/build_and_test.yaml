@@ -86,11 +86,11 @@ jobs:
       fail-fast: false
       matrix:
         target:
-        - version: v1.30.12
+        - version: v1.30.10
           ipFamily: ipv4
-        - version: v1.31.8
+        - version: v1.31.6
           ipFamily: ipv4
-        - version: v1.32.4
+        - version: v1.32.3
           ipFamily: ipv6  # only run ipv6 test on this version to save time
         # TODO: this's IPv4 first, need a way to test IPv6 first.
         - version: v1.33.0
@@ -125,11 +125,11 @@ jobs:
       fail-fast: false
       matrix:
         target:
-        - version: v1.30.12
+        - version: v1.30.10
           ipFamily: ipv4
-        - version: v1.31.8
+        - version: v1.31.6
           ipFamily: ipv4
-        - version: v1.32.4
+        - version: v1.32.3
           ipFamily: ipv6  # only run ipv6 test on this version to save time
         # TODO: this's IPv4 first, need a way to test IPv6 first.
         - version: v1.33.0
