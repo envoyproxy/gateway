@@ -462,7 +462,7 @@ func (b *BenchmarkTestSuite) ScaleUpDeployments(ctx context.Context, scaleRange 
 			afterCreation(newDeployment, newService)
 		}
 
-		// Wait until deployement is available.
+		// Wait until deployment is available.
 		if err := wait.PollUntilContextTimeout(ctx, BenchmarkMetricsSampleTick, DefaultDeploymentAvailablePeriod, true, func(ctx context.Context) (bool, error) {
 			d := new(appsv1.Deployment)
 			if err := b.Client.Get(ctx, types.NamespacedName{Namespace: "benchmark-test", Name: deploymentName}, d); err != nil {
@@ -511,7 +511,7 @@ func (b *BenchmarkTestSuite) ScaleDownDeployments(ctx context.Context, scaleRang
 			afterDeletion(oldDeployment, oldService)
 		}
 
-		// Wait until deployement is removed.
+		// Wait until deployment is removed.
 		if err := wait.PollUntilContextTimeout(ctx, BenchmarkMetricsSampleTick, DefaultDeploymentAvailablePeriod, true, func(ctx context.Context) (bool, error) {
 			d := new(appsv1.Deployment)
 			if err := b.Client.Get(ctx, types.NamespacedName{Namespace: "benchmark-test", Name: deploymentName}, d); err != nil {
