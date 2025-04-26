@@ -3,7 +3,7 @@ title = "Install with Helm"
 weight = -100
 +++
 
-[Helm](https://helm.sh) is a package manager for Kubernetes that automates the release and management of software on Kubernetes. 
+[Helm](https://helm.sh) is a package manager for Kubernetes that automates the release and management of software on Kubernetes.
 
 Envoy Gateway can be installed via a Helm chart with a few simple steps, depending on if you are deploying for the first time, upgrading Envoy Gateway from an existing installation, or migrating from Envoy Gateway.
 
@@ -11,6 +11,13 @@ Envoy Gateway can be installed via a Helm chart with a few simple steps, dependi
 
 {{% alert title="Compatibility Matrix" color="warning" %}}
 Refer to the [Version Compatibility Matrix](/news/releases/matrix) to learn more.
+{{% /alert %}}
+
+Envoy Gateway is typically deployed in a Kubernetes cluster.
+If you don’t have one yet, you can use `kind` to create a local cluster for testing purposes.
+
+{{% alert title="Developer Guide" color="primary" %}}
+Refer to the [Developer Guide](../../contributions/develop) to learn more.
 {{% /alert %}}
 
 The Envoy Gateway Helm chart is hosted by DockerHub.
@@ -24,12 +31,6 @@ You can visit [Envoy Gateway Helm Chart](https://hub.docker.com/r/envoyproxy/gat
 {{% /alert %}}
 
 ## Install with Helm
-
-Envoy Gateway is typically deployed to Kubernetes from the command line. If you don't have Kubernetes, you should use `kind` to create one.
-
-{{% alert title="Developer Guide" color="primary" %}}
-Refer to the [Developer Guide](../../contributions/develop) to learn more.
-{{% /alert %}}
 
 Install the Gateway API CRDs and Envoy Gateway:
 
