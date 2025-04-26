@@ -385,10 +385,6 @@ func (b *BenchmarkTestSuite) ScaleDownHTTPRoutes(ctx context.Context, scaleRange
 		return fmt.Errorf("got wrong scale range, %d is not less than %d", end, begin)
 	}
 
-	if end == 0 {
-		return fmt.Errorf("cannot scale routes down to zero")
-	}
-
 	for i = begin; i > end; i-- {
 		routeName := fmt.Sprintf(routeNameFormat, i)
 		oldRoute := b.getExpectHTTPRoute(routeName, "", refGateway, "")
@@ -470,7 +466,7 @@ func (b *BenchmarkTestSuite) ScaleUpDeployments(ctx context.Context, scaleRange 
 }
 
 // ScaleDownDeployments scales down Deployments and Services according to
-// the scale range: [a, b], which scales down from a to b with a > b.
+// the scale range: [a, b), which scales down from a to b with a > b.
 //
 // The `afterDeletion` is a callback function that only runs every time after one
 // Deployment and Service has been deleted successfully.
@@ -536,12 +532,14 @@ func (b *BenchmarkTestSuite) DeleteScaledResources(ctx context.Context, object c
 }
 
 // RegisterCleanup registers cleanup functions for all benchmark test resources.
-func (b *BenchmarkTestSuite) RegisterCleanup(t *testing.T, ctx context.Context, object, scaledObject client.Object) {
+func (b *BenchmarkTestSuite) RegisterCleanup(t *testing.T, ctx context.Context, object client.Object, scaledObjects ...client.Object) {
 	t.Cleanup(func() {
 		t.Logf("Start to cleanup benchmark test resources")
 
 		_ = b.DeleteResource(ctx, object)
-		_ = b.DeleteScaledResources(ctx, scaledObject)
+		for _, so := range scaledObjects {
+			_ = b.DeleteScaledResources(ctx, so)
+		}
 
 		t.Logf("Clean up complete!")
 	})

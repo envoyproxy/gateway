@@ -5,7 +5,7 @@ metadata:
   name: "{DEPLOYMENT_NAME}"
   namespace: benchmark-test
 spec:
-  replicas: 1 # Can be updated at runtime
+  replicas: 1  # Can be updated at runtime
   selector:
     matchLabels:
       app: "{DEPLOYMENT_NAME}"

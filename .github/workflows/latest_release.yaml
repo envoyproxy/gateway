@@ -33,6 +33,7 @@ jobs:
       env:
         KIND_NODE_TAG: v1.29.10
         IMAGE_PULL_POLICY: IfNotPresent
+        NUM_WORKERS: 2
         # Args for benchmark test
         BENCHMARK_RPS: 10000
         BENCHMARK_CONNECTIONS: 100
