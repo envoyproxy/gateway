@@ -357,7 +357,7 @@ func TestDecode(t *testing.T) {
 						Type: egv1a1.ProviderTypeKubernetes,
 						Kubernetes: &egv1a1.EnvoyGatewayKubernetesProvider{
 							Client: &egv1a1.KubernetesClient{
-								&egv1a1.KubernetesClientRateLimit{
+								RateLimit: &egv1a1.KubernetesClientRateLimit{
 									QPS:   ptr.To[int32](500),
 									Burst: ptr.To[int32](1000),
 								},
