@@ -39,6 +39,7 @@ const (
 	BenchmarkTestServerDeploymentNameFormat = "nighthawk-test-server-%d"
 	BenchmarkTestServerServiceFormat        = BenchmarkTestServerDeploymentNameFormat
 	BenchmarkMetricsSampleTick              = 3 * time.Second
+	DefaultDeploymentAvailablePeriod        = 3 * time.Minute
 	DefaultControllerName                   = "gateway.envoyproxy.io/gatewayclass-controller"
 )
 
@@ -460,6 +461,20 @@ func (b *BenchmarkTestSuite) ScaleUpDeployments(ctx context.Context, scaleRange 
 		if afterCreation != nil {
 			afterCreation(newDeployment, newService)
 		}
+
+		// Wait until deployement is available.
+		if err := wait.PollUntilContextTimeout(ctx, BenchmarkMetricsSampleTick, DefaultDeploymentAvailablePeriod, true, func(ctx context.Context) (bool, error) {
+			d := new(appsv1.Deployment)
+			if err := b.Client.Get(ctx, types.NamespacedName{Namespace: "benchmark-test", Name: deploymentName}, d); err != nil {
+				return false, err
+			}
+			if d.Status.AvailableReplicas == replicas {
+				return true, nil
+			}
+			return false, nil
+		}); err != nil {
+			return err
+		}
 	}
 
 	return nil
@@ -494,6 +509,20 @@ func (b *BenchmarkTestSuite) ScaleDownDeployments(ctx context.Context, scaleRang
 
 		if afterDeletion != nil {
 			afterDeletion(oldDeployment, oldService)
+		}
+
+		// Wait until deployement is removed.
+		if err := wait.PollUntilContextTimeout(ctx, BenchmarkMetricsSampleTick, DefaultDeploymentAvailablePeriod, true, func(ctx context.Context) (bool, error) {
+			d := new(appsv1.Deployment)
+			if err := b.Client.Get(ctx, types.NamespacedName{Namespace: "benchmark-test", Name: deploymentName}, d); err != nil {
+				if kerrors.IsNotFound(err) {
+					return true, nil
+				}
+				return false, err
+			}
+			return false, nil
+		}); err != nil {
+			return err
 		}
 	}
 

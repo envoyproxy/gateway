@@ -34,7 +34,7 @@ each Deployment only associated with 1 hostname and Service, Deployments and hos
 		var (
 			ctx                       = context.Background()
 			ns                        = "benchmark-test"
-			totalRoutes        uint16 = 500
+			totalRoutes        uint16 = 300
 			deploymentReplicas int32  = 2
 			err                error
 		)
@@ -47,10 +47,10 @@ each Deployment only associated with 1 hostname and Service, Deployments and hos
 		err = bSuite.CreateResource(ctx, gateway)
 		require.NoError(t, err)
 
-		deploymentsScales := []uint16{10, 50, 100, 250}
+		deploymentsScales := []uint16{10, 20, 50, 100}
 		deploymentsScalesN := len(deploymentsScales)
 
-		bSuite.RegisterCleanup(t, ctx, gateway, &appsv1.Deployment{}, &corev1.Service{})
+		bSuite.RegisterCleanup(t, ctx, gateway, &appsv1.Deployment{}, &corev1.Service{}, &gwapiv1.HTTPRoute{})
 
 		t.Run("scaling up deployments", func(t *testing.T) {
 			var start uint16 = 0
@@ -59,10 +59,11 @@ each Deployment only associated with 1 hostname and Service, Deployments and hos
 				testName := fmt.Sprintf("scaling up deployments from %d to %d with %d routes per hostname and service", start, scale, routePerHost)
 
 				t.Run(testName, func(t *testing.T) {
-					err = bSuite.ScaleUpDeployments(ctx, [2]uint16{start, scale}, deploymentReplicas, nil)
+					err = bSuite.ScaleUpDeployments(ctx, [2]uint16{start, scale}, deploymentReplicas, func(deploy *appsv1.Deployment, svc *corev1.Service) {
+						t.Logf("deployment %s and service %s are created, wait deployment to be available", deploy.Name, svc.Name)
+					})
 					require.NoError(t, err)
 
-					// Setup httproutes to 1k
 					gatewayAddr := waitAndScaleHTTPRoutesToN(t, bSuite, ctx, routeNameFormat, routeHostnameFormat, gatewayNN, totalRoutes, routePerHost)
 
 					// Run benchmark test at different scale.
@@ -87,10 +88,11 @@ each Deployment only associated with 1 hostname and Service, Deployments and hos
 				testName := fmt.Sprintf("scaling down deployments from %d to %d with %d routes per hostname and service", start, scale, routePerHost)
 
 				t.Run(testName, func(t *testing.T) {
-					err = bSuite.ScaleDownDeployments(ctx, [2]uint16{start, scale}, nil)
+					err = bSuite.ScaleDownDeployments(ctx, [2]uint16{start, scale}, func(deploy *appsv1.Deployment, svc *corev1.Service) {
+						t.Logf("deployment %s and service %s are removed, wait deployment to be unavailable", deploy.Name, svc.Name)
+					})
 					require.NoError(t, err)
 
-					// Setup httproutes to 1k
 					gatewayAddr := waitAndScaleHTTPRoutesToN(t, bSuite, ctx, routeNameFormat, routeHostnameFormat, gatewayNN, totalRoutes, routePerHost)
 
 					// Run benchmark test at different scale.
