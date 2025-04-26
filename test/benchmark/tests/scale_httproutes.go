@@ -26,13 +26,14 @@ func init() {
 
 var ScaleHTTPRoutes = suite.BenchmarkTest{
 	ShortName:   "ScaleHTTPRoute",
-	Description: "Fixed one Gateway and different scales of HTTPRoutes with different portion of hostnames.",
+	Description: "Fixed 1 Gateway, 10 Deployments with 3 replicas and Services, and different scales of HTTPRoutes (range from 10 to 1000) with 1 hostname per Service evenly distrbuted by routes.",
 	Test: func(t *testing.T, bSuite *suite.BenchmarkTestSuite) (reports []*suite.BenchmarkReport) {
 		var (
-			ctx               = context.Background()
-			ns                = "benchmark-test"
-			totalHosts uint16 = 5
-			err        error
+			ctx                       = context.Background()
+			ns                        = "benchmark-test"
+			totalHosts         uint16 = 10
+			deploymentReplicas int32  = 3
+			err                error
 		)
 
 		gatewayNN := types.NamespacedName{Name: "benchmark", Namespace: ns}
@@ -49,18 +50,24 @@ var ScaleHTTPRoutes = suite.BenchmarkTest{
 
 		bSuite.RegisterCleanup(t, ctx, gateway, &gwapiv1.HTTPRoute{})
 
+		t.Run("initial deployments and services", func(t *testing.T) {
+			err := bSuite.ScaleUpDeployments(ctx, [2]uint16{0, totalHosts}, deploymentReplicas, nil)
+			require.NoError(t, err)
+		})
+
 		t.Run("scaling up httproutes", func(t *testing.T) {
 			var start, batch uint16 = 0, 0
 			for _, scale := range routeScales {
 				routePerHost := scale / totalHosts
-				testName := fmt.Sprintf("scaling up httproutes to %d with %d routes per hostname", scale, routePerHost)
+				testName := fmt.Sprintf("scaling up httproutes from %d to %d with %d routes per hostname and service", start, scale, routePerHost)
 
 				t.Run(testName, func(t *testing.T) {
 					err = bSuite.ScaleUpHTTPRoutes(ctx, [2]uint16{start, scale}, routeNameFormat, routeHostnameFormat, gatewayNN.Name, routePerHost-batch, func(route *gwapiv1.HTTPRoute) {
 						routeNN := types.NamespacedName{Name: route.Name, Namespace: route.Namespace}
 						routeNNs = append(routeNNs, routeNN)
 
-						t.Logf("Create HTTPRoute: %s with hostname %s", routeNN.String(), route.Spec.Hostnames[0])
+						t.Logf("Create HTTPRoute: %s with hostname %s and backendRef %s",
+							routeNN.String(), route.Spec.Hostnames[0], route.Spec.Rules[0].BackendRefs[0].Name)
 					})
 					require.NoError(t, err)
 					start = scale
@@ -84,7 +91,7 @@ var ScaleHTTPRoutes = suite.BenchmarkTest{
 			for i := routeScalesN - 2; i >= 0; i-- {
 				scale := routeScales[i]
 				routePerHost := scale / totalHosts
-				testName := fmt.Sprintf("scaling down httproutes to %d with %d routes per hostname", scale, routePerHost)
+				testName := fmt.Sprintf("scaling down httproutes from %d to %d with %d routes per hostname and service", start, scale, routePerHost)
 
 				t.Run(testName, func(t *testing.T) {
 					err = bSuite.ScaleDownHTTPRoutes(ctx, [2]uint16{start, scale}, routeNameFormat, gatewayNN.Name, func(route *gwapiv1.HTTPRoute) {
@@ -110,6 +117,11 @@ var ScaleHTTPRoutes = suite.BenchmarkTest{
 					reports = append(reports, report)
 				})
 			}
+		})
+
+		t.Run("cleanup deployments and services", func(t *testing.T) {
+			err := bSuite.ScaleDownDeployments(ctx, [2]uint16{totalHosts, 0}, nil)
+			require.NoError(t, err)
 		})
 
 		return

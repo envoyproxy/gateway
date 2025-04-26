@@ -12,7 +12,7 @@ spec:
     - backendRefs:
         - group: ""
           kind: Service
-          name: nighthawk-test-server
+          name: "{SERVICE_NAME}"
           namespace: benchmark-test
           port: 8080
           weight: 1

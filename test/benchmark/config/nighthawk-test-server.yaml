@@ -2,17 +2,17 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: nighthawk-test-server
+  name: "{DEPLOYMENT_NAME}"
   namespace: benchmark-test
 spec:
-  replicas: 1
+  replicas: 1 # Can be updated at runtime
   selector:
     matchLabels:
-      app: nighthawk-test-server
+      app: "{DEPLOYMENT_NAME}"
   template:
     metadata:
       labels:
-        app: nighthawk-test-server
+        app: "{DEPLOYMENT_NAME}"
     spec:
       serviceAccountName: default
       containers:
@@ -28,11 +28,6 @@ spec:
           env:
             - name: PORT
               value: "8080"
-          resources:
-            requests:
-              cpu: "2"
-            limits:
-              cpu: "2"
       volumes:
         - name: test-server-config
           configMap:
@@ -41,12 +36,12 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: nighthawk-test-server
+  name: "{SERVICE_NAME}"
   namespace: benchmark-test
 spec:
   type: ClusterIP
   selector:
-    app: nighthawk-test-server
+    app: "{DEPLOYMENT_NAME}"
   ports:
     - name: http
       port: 8080
