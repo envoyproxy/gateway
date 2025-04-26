@@ -11,7 +11,7 @@ This task uses a self-signed CA, so it should be used for testing and demonstrat
 
 ## Installation
 
-{{< boilerplate prerequisites >}}
+{{< boilerplate prerequisites >}}  
 
 ## TLS Certificates
 
@@ -317,26 +317,88 @@ This section gives a walkthrough to generate RSA and ECDSA derived certificates 
 
 ## Prerequisites
 
-Follow the steps from the [Quickstart](../quickstart) to install Envoy Gateway and the example manifest.
-Before proceeding, you should be able to query the example backend using HTTP.
+{{< boilerplate prerequisites >}}  
 
 Follow the steps in the [TLS Certificates](#tls-certificates) section to generate self-signed RSA derived Server certificate and private key, and configure those in the Gateway listener configuration to terminate HTTPS traffic.
 
 ## Pre-checks
 
-While testing in [Cluster without External LoadBalancer Support](#clusters-without-external-loadbalancer-support), we can query the example app through Envoy proxy while enforcing an RSA cipher, as shown below:
+{{< tabpane text=true >}}
+{{% tab header="With External LoadBalancer Support" %}}
 
+Get the External IP of the Gateway:
+
+```shell
+export GATEWAY_HOST=$(kubectl get gateway/eg -o jsonpath='{.status.addresses[0].value}')
+```
+
+Query the example app through Envoy Proxy while enforcing an RSA cipher:
+
+```shell
+curl -v -HHost:www.example.com --resolve "www.example.com:443:${GATEWAY_HOST}" \
+--cacert example.com.crt https://www.example.com/get  -Isv --ciphers ECDHE-RSA-CHACHA20-POLY1305 --tlsv1.2 --tls-max 1.2
+```
+
+The call should succeed with the following message:
+```
+...
+* TLSv1.2 (IN), TLS change cipher, Change cipher spec (1):
+* TLSv1.2 (IN), TLS handshake, Finished (20):
+* SSL connection using TLSv1.2 / ECDHE-RSA-CHACHA20-POLY1305
+...
+...
+```
+
+Since the Secret configured at this point is an RSA based Secret, if we enforce the usage of an ECDSA cipher, the call should fail:
+
+```shell
+ curl -v -HHost:www.example.com --resolve "www.example.com:443:${GATEWAY_HOST}" \
+--cacert example.com.crt https://www.example.com/get  -Isv --ciphers ECDHE-ECDSA-CHACHA20-POLY1305 --tlsv1.2 --tls-max 1.2
+```
+
+The call above fails with the following message:
+```
+* Added www.example.com:443:127.0.0.1 to DNS cache
+* Hostname www.example.com was found in DNS cache
+*   Trying 127.0.0.1:443...
+* Connected to www.example.com (127.0.0.1) port 443
+* ALPN: curl offers h2,http/1.1
+* Cipher selection: ECDHE-ECDSA-CHACHA20-POLY1305
+* TLSv1.2 (OUT), TLS handshake, Client hello (1):
+*  CAfile: example.com.crt
+*  CApath: none
+* TLSv1.2 (IN), TLS alert, handshake failure (552):
+* OpenSSL/3.0.14: error:0A000410:SSL routines::sslv3 alert handshake failure
+* Closing connection
+```
+
+{{% /tab %}}
+{{% tab header="Without LoadBalancer Support" %}}
+
+Query the example app through Envoy proxy while enforcing an RSA cipher:
 ```shell
 curl -v -HHost:www.example.com --resolve "www.example.com:8443:127.0.0.1" \
 --cacert example.com.crt https://www.example.com:8443/get  -Isv --ciphers ECDHE-RSA-CHACHA20-POLY1305 --tlsv1.2 --tls-max 1.2
 ```
 
-Since the Secret configured at this point is an RSA based Secret, if we enforce the usage of an ECDSA cipher, the call should fail as follows
+The command should succeed with the following message:
+```
+...
+* TLSv1.2 (IN), TLS change cipher, Change cipher spec (1):
+* TLSv1.2 (IN), TLS handshake, Finished (20):
+* SSL connection using TLSv1.2 / ECDHE-RSA-CHACHA20-POLY1305
+...
+```
+
+Since the Secret configured at this point is an RSA based Secret, if we enforce the usage of an ECDSA cipher, the call should fail:
 
 ```shell
-$ curl -v -HHost:www.example.com --resolve "www.example.com:8443:127.0.0.1" \
---cacert example.com.crt https://www.example.com:8443/get  -Isv --ciphers ECDHE-ECDSA-CHACHA20-POLY1305 --tlsv1.2 --tls-max 1.2
+ curl -v -HHost:www.example.com --resolve "www.example.com:443:${GATEWAY_HOST}" \
+--cacert example.com.crt https://www.example.com/get  -Isv --ciphers ECDHE-ECDSA-CHACHA20-POLY1305 --tlsv1.2 --tls-max 1.2
+```
 
+The command above fails with the following message:
+```
 * Added www.example.com:8443:127.0.0.1 to DNS cache
 * Hostname www.example.com was found in DNS cache
 *   Trying 127.0.0.1:8443...
@@ -350,6 +412,9 @@ $ curl -v -HHost:www.example.com --resolve "www.example.com:8443:127.0.0.1" \
 * error:1404B410:SSL routines:ST_CONNECT:sslv3 alert handshake failure
 * Closing connection 0
 ```
+
+{{% /tab %}}
+{{< /tabpane >}}
 
 Moving forward in the doc, we will be configuring the existing Gateway listener to accept both kinds of ciphers.
 
@@ -392,14 +457,59 @@ kubectl get gateway/eg -o yaml
 
 ## Testing
 
-Again, while testing in Cluster without External LoadBalancer Support, we can query the example app through Envoy proxy while enforcing an RSA cipher, which should work as it did before:
+{{< tabpane text=true >}}
+{{% tab header="With External LoadBalancer Support" %}}
 
+Get the External IP of the Gateway:
+
+```shell
+export GATEWAY_HOST=$(kubectl get gateway/eg -o jsonpath='{.status.addresses[0].value}')
+```
+
+Query the example app through Envoy Proxy while enforcing an RSA cipher:
+
+```shell
+curl -v -HHost:www.example.com --resolve "www.example.com:443:${GATEWAY_HOST}" \
+--cacert example.com.crt https://www.example.com/get  -Isv --ciphers ECDHE-RSA-CHACHA20-POLY1305 --tlsv1.2 --tls-max 1.2
+```
+
+The call should succeed with the following message:
+```
+...
+* TLSv1.2 (IN), TLS change cipher, Change cipher spec (1):
+* TLSv1.2 (IN), TLS handshake, Finished (20):
+* SSL connection using TLSv1.2 / ECDHE-RSA-CHACHA20-POLY1305
+...
+...
+```
+
+Additionally, querying the example app while enforcing an ECDSA cipher should also work now:
+
+```shell
+ curl -v -HHost:www.example.com --resolve "www.example.com:443:${GATEWAY_HOST}" \
+--cacert example.com.crt https://www.example.com/get  -Isv --ciphers ECDHE-ECDSA-CHACHA20-POLY1305 --tlsv1.2 --tls-max 1.2
+```
+
+The call above succeeds with the following message:
+```
+...
+* TLSv1.2 (IN), TLS change cipher, Change cipher spec (1):
+* TLSv1.2 (IN), TLS handshake, Finished (20):
+* SSL connection using TLSv1.2 / ECDHE-ECDSA-CHACHA20-POLY1305
+...
+```
+
+{{% /tab %}}
+{{% tab header="Without LoadBalancer Support" %}}
+
+Query the example app through Envoy proxy while enforcing an RSA cipher:
 ```shell
 curl -v -HHost:www.example.com --resolve "www.example.com:8443:127.0.0.1" \
 --cacert example.com.crt https://www.example.com:8443/get  -Isv --ciphers ECDHE-RSA-CHACHA20-POLY1305 --tlsv1.2 --tls-max 1.2
 ```
 
-```shell
+The command should succeed with the following message:
+```
 ...
 * TLSv1.2 (IN), TLS change cipher, Change cipher spec (1):
 * TLSv1.2 (IN), TLS handshake, Finished (20):
@@ -414,7 +524,8 @@ curl -v -HHost:www.example.com --resolve "www.example.com:8443:127.0.0.1" \
 --cacert example.com.crt https://www.example.com:8443/get  -Isv --ciphers ECDHE-ECDSA-CHACHA20-POLY1305 --tlsv1.2 --tls-max 1.2
 ```
 
-```shell
+The command above succeeds with the following message:
+```
 ...
 * TLSv1.2 (IN), TLS change cipher, Change cipher spec (1):
 * TLSv1.2 (IN), TLS handshake, Finished (20):
@@ -422,14 +533,16 @@ curl -v -HHost:www.example.com --resolve "www.example.com:8443:127.0.0.1" \
 ...
 ```
 
+{{% /tab %}}
+{{< /tabpane >}}
+
 # SNI based Certificate selection
 
 This sections gives a walkthrough to generate multiple certificates corresponding to different FQDNs. The same Gateway listener can then be configured to terminate TLS traffic for multiple FQDNs based on the SNI matching.
 
 ## Prerequisites
 
-Follow the steps from the [Quickstart](../quickstart) to install Envoy Gateway and the example manifest.
-Before proceeding, you should be able to query the example backend using HTTP.
+{{< boilerplate prerequisites >}}  
 
 Follow the steps in the [TLS Certificates](#tls-certificates) section to generate self-signed RSA derived Server certificate and private key, and configure those in the Gateway listener configuration to terminate HTTPS traffic.
 
@@ -475,8 +588,25 @@ kubectl patch httproute backend --type=json --patch '
 {{< tabpane text=true >}}
 {{% tab header="With External LoadBalancer Support" %}}
 
-Refer to the steps mentioned earlier under [Testing in clusters with External LoadBalancer Support](#testing)
+Get the External IP of the Gateway:
 
+```shell
+export GATEWAY_HOST=$(kubectl get gateway/eg -o jsonpath='{.status.addresses[0].value}')
+```
+
+Query the example app through Envoy Proxy:
+
+```shell
+curl -v -HHost:www.example.com --resolve "www.example.com:443:${GATEWAY_HOST}" \
+--cacert example.com.crt https://www.example.com/get -I
+```
+
+Similarly, query the sample app through the same Envoy proxy:
+
+```shell
+curl -v -HHost:www.sample.com --resolve "www.sample.com:443:${GATEWAY_HOST}" \
+--cacert sample.com.crt https://www.sample.com/get -I
+```
 
 {{% /tab %}}
 {{% tab header="Without LoadBalancer Support" %}}
@@ -507,10 +637,10 @@ curl -v -HHost:www.sample.com --resolve "www.sample.com:8443:127.0.0.1" \
 --cacert sample.com.crt https://www.sample.com:8443/get -I
 ```
 
-Since the multiple certificates are configured on the same Gateway listener, Envoy was able to provide the client with appropriate certificate based on the SNI in the client request.
-
 {{% /tab %}}
 {{< /tabpane >}}
+
+Since the multiple certificates are configured on the same Gateway listener, Envoy was able to provide the client with appropriate certificate based on the SNI in the client request.
 
 ## Customize Gateway TLS Parameters
 
@@ -564,12 +694,53 @@ spec:
 
 ## Testing TLS Parameters
 
+{{< tabpane text=true >}}
+{{% tab header="With External LoadBalancer Support" %}}
+
+Attempt to connect using an unsupported TLS version:
+
+```shell
+curl -v -HHost:www.sample.com --resolve "www.sample.com:443:${GATEWAY_HOST}" \
+--cacert sample.com.crt --tlsv1.2 --tls-max 1.2 https://www.sample.com/get -I
+```
+
+You should receive the following error:
+```
+[...]
+
+* ALPN: curl offers h2,http/1.1
+* (304) (OUT), TLS handshake, Client hello (1):
+* LibreSSL/3.3.6: error:1404B42E:SSL routines:ST_CONNECT:tlsv1 alert protocol version
+* Closing connection
+curl: (35) LibreSSL/3.3.6: error:1404B42E:SSL routines:ST_CONNECT:tlsv1 alert protocol version
+```
+
+The output shows that the connection fails due to an unsupported TLS protocol version used by the client. Now, connect to the Gateway without specifying a client version, and note that the connection is established with TLSv1.3.
+
+```shell
+curl -v -HHost:www.sample.com --resolve "www.sample.com:443:${GATEWAY_HOST}" \
+--cacert sample.com.crt https://www.sample.com/get -I
+```
+
+The command above should succeed and output the following:
+```
+[...]
+* SSL connection using TLSv1.3 / AEAD-CHACHA20-POLY1305-SHA256 / [blank] / UNDEF
+```
+
+
+{{% /tab %}}
+{{% tab header="Without LoadBalancer Support" %}}
+
 Attempt to connecting using an unsupported TLS version:
 
 ```shell
 curl -v -HHost:www.sample.com --resolve "www.sample.com:8443:127.0.0.1" \
 --cacert sample.com.crt --tlsv1.2 --tls-max 1.2 https://www.sample.com:8443/get -I
+```
 
+You should receive the following error:
+```
 [...]
 
 * ALPN: curl offers h2,http/1.1
@@ -585,11 +756,16 @@ to the Gateway without specifying a client version, and note that the connection
 ```shell
 curl -v -HHost:www.sample.com --resolve "www.sample.com:8443:127.0.0.1" \
 --cacert sample.com.crt https://www.sample.com:8443/get -I
+```
 
+The command above should succeed and output the following:
+```
 [...]
-
 * SSL connection using TLSv1.3 / AEAD-CHACHA20-POLY1305-SHA256 / [blank] / UNDEF
 ```
+
+{{% /tab %}}
+{{< /tabpane >}}
 
 ## Next Steps
 
