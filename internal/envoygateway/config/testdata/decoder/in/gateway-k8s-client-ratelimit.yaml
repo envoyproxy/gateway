@@ -6,6 +6,6 @@ provider:
   type: Kubernetes
   kubernetes:
     client:
-     rateLimit:
-      qps: 500
-      burst: 1000
+      rateLimit:
+        qps: 500
+        burst: 1000
