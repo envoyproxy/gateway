@@ -25,8 +25,8 @@ func init() {
 }
 
 var ScaleHTTPRoutes = suite.BenchmarkTest{
-	ShortName:   "ScaleHTTPRoute",
-	Description: "Fixed 1 Gateway, 10 Deployments with 3 replicas and Services, and different scales of HTTPRoutes (range from 10 to 1000) with 1 hostname per Service evenly distrbuted by routes.",
+	ShortName:   "ScaleHTTPRoutes",
+	Description: "Fixed 1 Gateway, 10 Deployments with 3 replicas and Services, and different scales of HTTPRoutes (range from 10 to 1000) with 1 hostname per Service evenly distributed by routes.",
 	Test: func(t *testing.T, bSuite *suite.BenchmarkTestSuite) (reports []*suite.BenchmarkReport) {
 		var (
 			ctx                       = context.Background()
