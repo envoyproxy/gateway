@@ -416,11 +416,16 @@ func loadKubernetesYAMLToResources(input []byte, addMissingResources bool) (*Res
 
 	// The namespace will not be treated as the missing resources in order to improve the user experience
 	// when using the file provider, since namespaces are crucial but easily overlooked.
+	corev1gv := corev1.SchemeGroupVersion.String()
 
 	// Add user provided and resource required namespaces.
 	if useDefaultNamespace {
 		if !providedNamespaceMap.Has(config.DefaultNamespace) {
 			namespace := &corev1.Namespace{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       KindNamespace,
+					APIVersion: corev1gv,
+				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name: config.DefaultNamespace,
 				},
@@ -437,7 +442,7 @@ func loadKubernetesYAMLToResources(input []byte, addMissingResources bool) (*Res
 			namespace := &corev1.Namespace{
 				TypeMeta: metav1.TypeMeta{
 					Kind:       KindNamespace,
-					APIVersion: corev1.SchemeGroupVersion.String(),
+					APIVersion: corev1gv,
 				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name: ns,

@@ -281,7 +281,9 @@ httpRoutes:
   status:
     parents: null
 namespaces:
-- metadata:
+- apiVersion: v1
+  kind: Namespace
+  metadata:
     creationTimestamp: null
     name: envoy-gateway-system
   spec: {}
