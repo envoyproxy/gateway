@@ -9,8 +9,6 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
-	"github.com/envoyproxy/gateway/internal/gatewayapi/status"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
@@ -18,6 +16,8 @@ import (
 	"k8s.io/utils/ptr"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
+	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
+	"github.com/envoyproxy/gateway/internal/gatewayapi/status"
 	"github.com/envoyproxy/gateway/internal/ir"
 )
 
@@ -288,6 +288,7 @@ func TestValidateDestinationSettings(t *testing.T) {
 		})
 	}
 }
+
 func TestIsHeadlessService(t *testing.T) {
 	tests := []struct {
 		name      string
