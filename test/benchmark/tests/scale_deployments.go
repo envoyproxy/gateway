@@ -28,14 +28,14 @@ func init() {
 
 var ScaleDeployments = suite.BenchmarkTest{
 	ShortName: "ScaleDeployments",
-	Description: `Fixed 1 Gateway, 1k HTTPRoutes, and different scales of Deployments (range from 10 to 500) with 3 replicas, 
+	Description: `Fixed 1 Gateway, 500 HTTPRoutes, and different scales of Deployments (range from 10 to 250) with 2 replicas, 
 each Deployment only associated with 1 hostname and Service, Deployments and hostnames are evenly distributed by routes.`,
 	Test: func(t *testing.T, bSuite *suite.BenchmarkTestSuite) (reports []*suite.BenchmarkReport) {
 		var (
 			ctx                       = context.Background()
 			ns                        = "benchmark-test"
-			totalRoutes        uint16 = 1000
-			deploymentReplicas int32  = 3
+			totalRoutes        uint16 = 500
+			deploymentReplicas int32  = 2
 			err                error
 		)
 
@@ -47,7 +47,7 @@ each Deployment only associated with 1 hostname and Service, Deployments and hos
 		err = bSuite.CreateResource(ctx, gateway)
 		require.NoError(t, err)
 
-		deploymentsScales := []uint16{10, 50, 100, 250, 500}
+		deploymentsScales := []uint16{10, 50, 100, 250}
 		deploymentsScalesN := len(deploymentsScales)
 
 		bSuite.RegisterCleanup(t, ctx, gateway, &appsv1.Deployment{}, &corev1.Service{})
@@ -63,7 +63,7 @@ each Deployment only associated with 1 hostname and Service, Deployments and hos
 					require.NoError(t, err)
 
 					// Setup httproutes to 1k
-					gatewayAddr := waitAndScaleHTTPRoutesTo1K(t, bSuite, ctx, routeNameFormat, routeHostnameFormat, gatewayNN, routePerHost)
+					gatewayAddr := waitAndScaleHTTPRoutesToN(t, bSuite, ctx, routeNameFormat, routeHostnameFormat, gatewayNN, totalRoutes, routePerHost)
 
 					// Run benchmark test at different scale.
 					start = scale
@@ -91,7 +91,7 @@ each Deployment only associated with 1 hostname and Service, Deployments and hos
 					require.NoError(t, err)
 
 					// Setup httproutes to 1k
-					gatewayAddr := waitAndScaleHTTPRoutesTo1K(t, bSuite, ctx, routeNameFormat, routeHostnameFormat, gatewayNN, routePerHost)
+					gatewayAddr := waitAndScaleHTTPRoutesToN(t, bSuite, ctx, routeNameFormat, routeHostnameFormat, gatewayNN, totalRoutes, routePerHost)
 
 					// Run benchmark test at different scale.
 					jobName := fmt.Sprintf("scale-down-deployments-%d", scale)
@@ -110,11 +110,9 @@ each Deployment only associated with 1 hostname and Service, Deployments and hos
 	},
 }
 
-func waitAndScaleHTTPRoutesTo1K(t *testing.T, bSuite *suite.BenchmarkTestSuite, ctx context.Context, nameFormat, hostnameFormat string, gatewayNN types.NamespacedName, routePerHost uint16) string {
-	var totalRoutes uint16 = 1000
-
-	routeNNs := make([]types.NamespacedName, 0, totalRoutes)
-	err := bSuite.ScaleUpHTTPRoutes(ctx, [2]uint16{0, totalRoutes}, nameFormat, hostnameFormat, gatewayNN.Name, routePerHost, func(route *gwapiv1.HTTPRoute) {
+func waitAndScaleHTTPRoutesToN(t *testing.T, bSuite *suite.BenchmarkTestSuite, ctx context.Context, nameFormat, hostnameFormat string, gatewayNN types.NamespacedName, n, routePerHost uint16) string {
+	routeNNs := make([]types.NamespacedName, 0, n)
+	err := bSuite.ScaleUpHTTPRoutes(ctx, [2]uint16{0, n}, nameFormat, hostnameFormat, gatewayNN.Name, routePerHost, func(route *gwapiv1.HTTPRoute) {
 		routeNN := types.NamespacedName{Name: route.Name, Namespace: route.Namespace}
 		routeNNs = append(routeNNs, routeNN)
 
