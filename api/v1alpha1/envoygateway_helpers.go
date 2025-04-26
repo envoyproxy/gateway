@@ -51,8 +51,8 @@ func (e *EnvoyGateway) SetEnvoyGatewayDefaults() {
 		e.Provider.Kubernetes.LeaderElection = DefaultLeaderElection()
 	}
 
-	if e.Provider.Kubernetes.ClientRateLimit == nil {
-		e.Provider.Kubernetes.ClientRateLimit = DefaultLKubernetesClientRateLimit()
+	if e.Provider.Kubernetes.Client == nil {
+		e.Provider.Kubernetes.Client = DefaultKubernetesClient()
 	}
 
 	if e.Gateway == nil {
@@ -111,11 +111,13 @@ func DefaultLeaderElection() *LeaderElection {
 	}
 }
 
-// DefaultLKubernetesClientRateLimit returns a new KubernetesClientRateLimit with default parameters.
-func DefaultLKubernetesClientRateLimit() *KubernetesClientRateLimit {
-	return &KubernetesClientRateLimit{
-		QPS:   50,
-		Burst: 100,
+// DefaultKubernetesClient returns a new DefaultKubernetesClient with default parameters.
+func DefaultKubernetesClient() *KubernetesClient {
+	return &KubernetesClient{
+		RateLimit: &KubernetesClientRateLimit{
+			QPS:   ptr.To(int32(50)),
+			Burst: ptr.To(int32(100)),
+		},
 	}
 }
 
@@ -235,8 +237,8 @@ func (r *EnvoyGatewayProvider) GetEnvoyGatewayKubeProvider() *EnvoyGatewayKubern
 		if r.Kubernetes.LeaderElection == nil {
 			r.Kubernetes.LeaderElection = DefaultLeaderElection()
 		}
-		if r.Kubernetes.RateLimitDeployment == nil {
-			r.Kubernetes.ClientRateLimit = DefaultLKubernetesClientRateLimit()
+		if r.Kubernetes.Client == nil {
+			r.Kubernetes.Client = DefaultKubernetesClient()
 		}
 		return r.Kubernetes
 	}
