@@ -52,6 +52,21 @@ spec:
       labels:
         app: grpc-ext-proc
     spec:
+      affinity:
+        podAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            - labelSelector:
+                matchExpressions:
+                  - key: "gateway.envoyproxy.io/owning-gateway-name"
+                    operator: In
+                    values:
+                      - same-namespace
+                  - key: "app.kubernetes.io/component"
+                    operator: In
+                    values:
+                      - proxy
+              topologyKey: kubernetes.io/hostname
+              namespaceSelector: {}
       containers:
         - name: golang-app-container
           image: envoyproxy/gateway-grpc-ext-proc:latest
