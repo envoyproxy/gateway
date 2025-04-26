@@ -24,7 +24,7 @@ If you haven’t set it up yet, you can follow the [official installation guide]
 
 ## Install with Argo CD
 
-Create a new Argo CD application:
+Create a new Argo CD Application that pulls the Envoy Gateway Helm chart as its source.
 
 ```shell
 cat <<EOF | kubectl apply -f -
@@ -38,7 +38,7 @@ spec:
   source:
     chart: gateway-helm
     repoURL: docker.io/envoyproxy
-    targetRevision: v0.0.0-latest
+    targetRevision: {{< helm-version >}}
     helm:
       valuesObject:
         certgen:
@@ -58,6 +58,7 @@ EOF
 **Note**:
 
 * Set `ServerSideApply` to `true` to enable Kubernetes [server-side apply](https://kubernetes.io/docs/reference/using-api/server-side-apply/). This helps avoid the 262,144-byte annotation size limit.
+* Ensure RBAC resources are created before certgen job by setting the `annotations` to `argocd.argoproj.io/sync-wave: "-1"`. This is a workaround for the [known certgen issue with Argo CD](https://github.com/envoyproxy/gateway/issues/5223).
 * For simplicity, we apply the Application resource directly to the cluster.
 In a production environment, it’s recommended to store this configuration in a Git repository and manage it using another Argo CD Application that uses Git as its source — following a GitOps workflow.
 
@@ -124,7 +125,7 @@ spec:
     chart: gateway-helm
     path: gateway-helm
     repoURL: docker.io/envoyproxy
-    targetRevision: v0.0.0-latest
+    targetRevision: {{< helm-version >}} 
   destination:
     namespace: envoy-gateway-system
     server: https://kubernetes.default.svc
