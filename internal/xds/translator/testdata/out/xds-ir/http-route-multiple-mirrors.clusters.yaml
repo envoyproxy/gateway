@@ -1,8 +1,7 @@
 - circuitBreakers:
     thresholds:
     - maxRetries: 1024
-  commonLbConfig:
-    localityWeightedLbConfig: {}
+  commonLbConfig: {}
   connectTimeout: 10s
   dnsLookupFamily: V4_PREFERRED
   edsClusterConfig:
@@ -12,14 +11,21 @@
     serviceName: route-dest
   ignoreHealthOnHostRemoval: true
   lbPolicy: LEAST_REQUEST
+  loadBalancingPolicy:
+    policies:
+    - typedExtensionConfig:
+        name: envoy.load_balancing_policies.least_request
+        typedConfig:
+          '@type': type.googleapis.com/envoy.extensions.load_balancing_policies.least_request.v3.LeastRequest
+          localityLbConfig:
+            localityWeightedLbConfig: {}
   name: route-dest
   perConnectionBufferLimitBytes: 32768
   type: EDS
 - circuitBreakers:
     thresholds:
     - maxRetries: 1024
-  commonLbConfig:
-    localityWeightedLbConfig: {}
+  commonLbConfig: {}
   connectTimeout: 10s
   dnsLookupFamily: V4_PREFERRED
   edsClusterConfig:
@@ -29,14 +35,21 @@
     serviceName: mirror-route-dest
   ignoreHealthOnHostRemoval: true
   lbPolicy: LEAST_REQUEST
+  loadBalancingPolicy:
+    policies:
+    - typedExtensionConfig:
+        name: envoy.load_balancing_policies.least_request
+        typedConfig:
+          '@type': type.googleapis.com/envoy.extensions.load_balancing_policies.least_request.v3.LeastRequest
+          localityLbConfig:
+            localityWeightedLbConfig: {}
   name: mirror-route-dest
   perConnectionBufferLimitBytes: 32768
   type: EDS
 - circuitBreakers:
     thresholds:
     - maxRetries: 1024
-  commonLbConfig:
-    localityWeightedLbConfig: {}
+  commonLbConfig: {}
   connectTimeout: 10s
   dnsLookupFamily: V4_PREFERRED
   edsClusterConfig:
@@ -46,6 +59,14 @@
     serviceName: mirror-route-dest1
   ignoreHealthOnHostRemoval: true
   lbPolicy: LEAST_REQUEST
+  loadBalancingPolicy:
+    policies:
+    - typedExtensionConfig:
+        name: envoy.load_balancing_policies.least_request
+        typedConfig:
+          '@type': type.googleapis.com/envoy.extensions.load_balancing_policies.least_request.v3.LeastRequest
+          localityLbConfig:
+            localityWeightedLbConfig: {}
   name: mirror-route-dest1
   perConnectionBufferLimitBytes: 32768
   type: EDS
