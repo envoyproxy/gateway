@@ -20,6 +20,11 @@ var (
 	)
 
 	kindLabel = metrics.NewLabel("kind")
+
+	topologyInjectorEventsTotal = metrics.NewCounter(
+		"topology_injector_webhook_events_total",
+		"Total number of topology injector webhook events.",
+	)
 )
 
 const (
