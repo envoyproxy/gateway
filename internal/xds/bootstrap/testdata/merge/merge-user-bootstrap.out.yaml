@@ -8,6 +8,8 @@ admin:
     socketAddress:
       address: 127.0.0.1
       portValue: 8080
+clusterManager:
+  localClusterName: local_cluster
 dynamicResources:
   adsConfig:
     apiType: DELTA_GRPC
@@ -29,6 +31,9 @@ layeredRuntime:
       envoy.restart_features.use_eds_cache_for_ads: true
       re2.max_program_size.error_level: 4294967295
       re2.max_program_size.warn_level: 1000
+node:
+  locality:
+    zone: $(ENVOY_SERVICE_ZONE)
 overloadManager:
   refreshInterval: 0.250s
   resourceMonitors:
@@ -49,6 +54,22 @@ staticResources:
                 address: 127.0.0.1
                 portValue: 19000
     name: prometheus_stats
+    type: STATIC
+  - connectTimeout: 10s
+    loadAssignment:
+      clusterName: local_cluster
+      endpoints:
+      - lbEndpoints:
+        - endpoint:
+            address:
+              socketAddress:
+                address: 127.0.0.1
+                portValue: 10080
+          loadBalancingWeight: 1
+        loadBalancingWeight: 1
+        locality:
+          zone: $(ENVOY_SERVICE_ZONE)
+    name: local_cluster
     type: STATIC
   - connectTimeout: 10s
     loadAssignment:

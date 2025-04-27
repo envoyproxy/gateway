@@ -114,4 +114,6 @@ To uninstall the chart:
 | podDisruptionBudget.minAvailable | int | `0` |  |
 | service.annotations | object | `{}` |  |
 | service.trafficDistribution | string | `""` |  |
+| topologyInjector.annotations | object | `{}` |  |
+| topologyInjector.enabled | bool | `true` |  |
 
