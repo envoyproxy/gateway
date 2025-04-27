@@ -180,6 +180,7 @@ static_resources:
         - endpoint:
             address:
               socket_address:
+                {{- /* fake lb_endpoint to satisfy zone aware routing requirements */}}
                 address: 127.0.0.1
                 port_value: 10080
           load_balancing_weight: 1
