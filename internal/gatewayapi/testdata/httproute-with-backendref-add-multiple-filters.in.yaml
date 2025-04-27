@@ -46,6 +46,9 @@ httpRoutes:
             - path:
                 value: "/foo"
           backendRefs:
+            - name: service-2
+              port: 8080
+              weight: 2
             - name: service-3
               port: 8080
               weight: 1
@@ -55,3 +58,27 @@ httpRoutes:
                     set:
                       - name: "add-header-3"
                         value: "some-value"
+                - type: ExtensionRef
+                  extensionRef:
+                    group: gateway.envoyproxy.io
+                    kind: HTTPRouteFilter
+                    name: credential-injection
+httpFilters:
+  - apiVersion: gateway.envoyproxy.io/v1alpha1
+    kind: HTTPRouteFilter
+    metadata:
+      name: credential-injection
+      namespace: default
+    spec:
+      credentialInjection:
+        credential:
+          valueRef:
+            name: credential-1
+secrets:
+  - apiVersion: v1
+    kind: Secret
+    metadata:
+      name: credential-1
+      namespace: default
+    data:
+      credential: c2VjcmV0

@@ -7,6 +7,8 @@ package v1alpha1
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
+	gwapiv1a3 "sigs.k8s.io/gateway-api/apis/v1alpha3"
 )
 
 const (
@@ -141,6 +143,42 @@ type BackendSpec struct {
 	//
 	// +optional
 	Fallback *bool `json:"fallback,omitempty"`
+
+	// TLS defines the TLS settings for the backend.
+	// Only supported for DynamicResolver backends.
+	//
+	// +optional
+	// +notImplementedHide
+	TLS *BackendTLSSettings `json:"tls,omitempty"`
+}
+
+// BackendTLSSettings holds the TLS settings for the backend.
+// Only used for DynamicResolver backends.
+type BackendTLSSettings struct {
+	// CACertificateRefs contains one or more references to Kubernetes objects that
+	// contain TLS certificates of the Certificate Authorities that can be used
+	// as a trust anchor to validate the certificates presented by the backend.
+	//
+	// A single reference to a Kubernetes ConfigMap or a Kubernetes Secret,
+	// with the CA certificate in a key named `ca.crt` is currently supported.
+	//
+	// If CACertificateRefs is empty or unspecified, then WellKnownCACertificates must be
+	// specified. Only one of CACertificateRefs or WellKnownCACertificates may be specified,
+	// not both.
+	//
+	// +kubebuilder:validation:MaxItems=8
+	// +optional
+	CACertificateRefs []gwapiv1.LocalObjectReference `json:"caCertificateRefs,omitempty"`
+
+	// WellKnownCACertificates specifies whether system CA certificates may be used in
+	// the TLS handshake between the gateway and backend pod.
+	//
+	// If WellKnownCACertificates is unspecified or empty (""), then CACertificateRefs
+	// must be specified with at least one entry for a valid configuration. Only one of
+	// CACertificateRefs or WellKnownCACertificates may be specified, not both.
+	//
+	// +optional
+	WellKnownCACertificates *gwapiv1a3.WellKnownCACertificatesType `json:"wellKnownCACertificates,omitempty"`
 }
 
 // BackendType defines the type of the Backend.

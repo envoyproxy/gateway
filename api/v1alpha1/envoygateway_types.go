@@ -501,13 +501,15 @@ type ExtensionManager struct {
 	Service *ExtensionService `json:"service,omitempty"`
 
 	// FailOpen defines if Envoy Gateway should ignore errors returned from the Extension Service hooks.
-	// The default is false, which means Envoy Gateway will fail closed if the Extension Service returns an error.
 	//
-	// Fail-close means that if the Extension Service hooks return an error, the relevant route/listener/resource
-	// will be replaced with a default configuration returning Internal Server Error (HTTP 500).
+	// When set to false, Envoy Gateway does not ignore extension Service hook errors. As a result,
+	// xDS updates are skipped for the relevant envoy proxy fleet and the previous state is preserved.
 	//
-	// Fail-open means that if the Extension Service hooks return an error, no changes will be applied to the
-	// source of the configuration which was sent to the extension server.
+	// When set to true, if the Extension Service hooks return an error, no changes will be applied to the
+	// source of the configuration which was sent to the extension server. The errors are ignored and the resulting
+	// xDS configuration is updated in the xDS snapshot.
+	//
+	// Default: false
 	//
 	// +optional
 	FailOpen bool `json:"failOpen,omitempty"`
@@ -558,6 +560,12 @@ type ExtensionService struct {
 	//
 	// +optional
 	TLS *ExtensionTLS `json:"tls,omitempty"`
+
+	// Retry defines the retry policy for to use when errors are encountered in communication with
+	// the extension service.
+	//
+	// +optional
+	Retry *ExtensionServiceRetry `json:"retry,omitempty"`
 }
 
 // ExtensionTLS defines the TLS configuration when connecting to an extension service.
@@ -569,6 +577,43 @@ type ExtensionTLS struct {
 	//
 	// +kubebuilder:validation:Required
 	CertificateRef gwapiv1.SecretObjectReference `json:"certificateRef"`
+}
+
+// GRPCStatus defines grpc status codes as defined in https://github.com/grpc/grpc/blob/master/doc/statuscodes.md.
+// +kubebuilder:validation:Enum=CANCELLED;UNKNOWN;INVALID_ARGUMENT;DEADLINE_EXCEEDED;NOT_FOUND;ALREADY_EXISTS;PERMISSION_DENIED;RESOURCE_EXHAUSTED;FAILED_PRECONDITION;ABORTED;OUT_OF_RANGE;UNIMPLEMENTED;INTERNAL;UNAVAILABLE;DATA_LOSS;UNAUTHENTICATED
+type RetryableGRPCStatusCode string
+
+// ExtensionServiceRetry defines the retry policy for to use when errors are encountered in communication with the extension service.
+type ExtensionServiceRetry struct {
+	// MaxAttempts defines the maximum number of retry attempts.
+	// Default: 4
+	//
+	// +optional
+	MaxAttempts *int `json:"maxAttempts,omitempty"`
+
+	// InitialBackoff defines the initial backoff in seconds for retries, details: https://github.com/grpc/proposal/blob/master/A6-client-retries.md#integration-with-service-config.
+	// Default: 0.1s
+	//
+	// +optional
+	InitialBackoff *gwapiv1.Duration `json:"initialBackoff,omitempty"`
+
+	// MaxBackoff defines the maximum backoff in seconds for retries.
+	// Default: 1s
+	//
+	// +optional
+	MaxBackoff *gwapiv1.Duration `json:"maxBackoff,omitempty"`
+
+	// BackoffMultiplier defines the multiplier to use for exponential backoff for retries.
+	// Default: 2.0
+	//
+	// +optional
+	BackoffMultiplier *gwapiv1.Fraction `json:"backoffMultiplier,omitempty"`
+
+	// RetryableStatusCodes defines the grpc status code for which retries will be attempted.
+	// Default: [ "UNAVAILABLE" ]
+	//
+	// +optional
+	RetryableStatusCodes []RetryableGRPCStatusCode `json:"RetryableStatusCodes,omitempty"`
 }
 
 // EnvoyGatewayAdmin defines the Envoy Gateway Admin configuration.

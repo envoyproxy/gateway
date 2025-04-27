@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
+	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
@@ -31,7 +32,7 @@ type HTTPFiltersTranslator interface {
 	processRedirectFilter(redirect *gwapiv1.HTTPRequestRedirectFilter, filterContext *HTTPFiltersContext)
 	processRequestHeaderModifierFilter(headerModifier *gwapiv1.HTTPHeaderFilter, filterContext *HTTPFiltersContext)
 	processResponseHeaderModifierFilter(headerModifier *gwapiv1.HTTPHeaderFilter, filterContext *HTTPFiltersContext)
-	processRequestMirrorFilter(filterIdx int, mirror *gwapiv1.HTTPRequestMirrorFilter, filterContext *HTTPFiltersContext, resources *resource.Resources) error
+	processRequestMirrorFilter(filterIdx int, mirror *gwapiv1.HTTPRequestMirrorFilter, filterContext *HTTPFiltersContext, resources *resource.Resources) status.Error
 	processUnsupportedHTTPFilter(filterType string, filterContext *HTTPFiltersContext)
 }
 
@@ -60,6 +61,8 @@ type HTTPFilterIR struct {
 
 	Mirrors []*ir.MirrorPolicy
 
+	CORS *ir.CORS
+
 	ExtensionRefs []*ir.UnstructuredRef
 }
 
@@ -69,14 +72,14 @@ func (t *Translator) ProcessHTTPFilters(parentRef *RouteParentContext,
 	filters []gwapiv1.HTTPRouteFilter,
 	ruleIdx int,
 	resources *resource.Resources,
-) (*HTTPFiltersContext, error) {
+) (*HTTPFiltersContext, status.Error) {
 	httpFiltersContext := &HTTPFiltersContext{
 		ParentRef:    parentRef,
 		Route:        route,
 		RuleIdx:      ruleIdx,
 		HTTPFilterIR: &HTTPFilterIR{},
 	}
-	var err error
+	var err status.Error
 	for i := range filters {
 		filter := filters[i]
 		// If an invalid filter type has been configured then skip processing any more filters
@@ -99,6 +102,8 @@ func (t *Translator) ProcessHTTPFilters(parentRef *RouteParentContext,
 			t.processResponseHeaderModifierFilter(filter.ResponseHeaderModifier, httpFiltersContext)
 		case gwapiv1.HTTPRouteFilterRequestMirror:
 			err = t.processRequestMirrorFilter(i, filter.RequestMirror, httpFiltersContext, resources)
+		case gwapiv1.HTTPRouteFilterCORS:
+			t.processCORSFilter(filter.CORS, httpFiltersContext)
 		case gwapiv1.HTTPRouteFilterExtensionRef:
 			t.processExtensionRefHTTPFilter(filter.ExtensionRef, httpFiltersContext, resources)
 		default:
@@ -876,7 +881,7 @@ func (t *Translator) processRequestMirrorFilter(
 	mirrorFilter *gwapiv1.HTTPRequestMirrorFilter,
 	filterContext *HTTPFiltersContext,
 	resources *resource.Resources,
-) error {
+) (err status.Error) {
 	// Make sure the config actually exists
 	if mirrorFilter == nil {
 		return nil
@@ -896,10 +901,11 @@ func (t *Translator) processRequestMirrorFilter(
 	// This sets the status on the HTTPRoute, should the usage be changed so that the status message reflects that the backendRef is from the filter?
 	filterNs := filterContext.Route.GetNamespace()
 	serviceNamespace := NamespaceDerefOr(mirrorBackend.Namespace, filterNs)
-	err := t.validateBackendRef(mirrorBackendRef, filterContext.ParentRef, filterContext.Route,
+	err = t.validateBackendRef(mirrorBackendRef, filterContext.ParentRef, filterContext.Route,
 		resources, serviceNamespace, resource.KindHTTPRoute)
 	if err != nil {
-		return err
+		return status.NewRouteStatusError(
+			fmt.Errorf("failed to validate the RequestMirror filter: %w", err), err.Reason())
 	}
 
 	destName := fmt.Sprintf("%s-mirror-%d", irRouteDestinationName(filterContext.Route, filterContext.RuleIdx), filterIdx)
@@ -923,6 +929,54 @@ func (t *Translator) processRequestMirrorFilter(
 
 	filterContext.Mirrors = append(filterContext.Mirrors, &ir.MirrorPolicy{Destination: routeDst, Percentage: percent})
 	return nil
+}
+
+func (t *Translator) processCORSFilter(
+	corsFilter *gwapiv1.HTTPCORSFilter,
+	filterContext *HTTPFiltersContext,
+) {
+	// Make sure the config actually exists
+	if corsFilter == nil {
+		return
+	}
+
+	var allowOrigins []*ir.StringMatch
+	for _, origin := range corsFilter.AllowOrigins {
+		if containsWildcard(string(origin)) {
+			regexStr := wildcard2regex(string(origin))
+			allowOrigins = append(allowOrigins, &ir.StringMatch{
+				SafeRegex: &regexStr,
+			})
+		} else {
+			allowOrigins = append(allowOrigins, &ir.StringMatch{
+				Exact: (*string)(&origin),
+			})
+		}
+	}
+
+	var allowMethods []string
+	for _, method := range corsFilter.AllowMethods {
+		allowMethods = append(allowMethods, string(method))
+	}
+
+	var allowHeaders []string
+	for _, header := range corsFilter.AllowHeaders {
+		allowHeaders = append(allowHeaders, string(header))
+	}
+
+	var exposeHeaders []string
+	for _, header := range corsFilter.ExposeHeaders {
+		exposeHeaders = append(exposeHeaders, string(header))
+	}
+
+	filterContext.CORS = &ir.CORS{
+		AllowOrigins:     allowOrigins,
+		AllowMethods:     allowMethods,
+		AllowHeaders:     allowHeaders,
+		ExposeHeaders:    exposeHeaders,
+		MaxAge:           ptr.To(metav1.Duration{Duration: time.Duration(corsFilter.MaxAge) * time.Second}),
+		AllowCredentials: bool(corsFilter.AllowCredentials),
+	}
 }
 
 func (t *Translator) processUnresolvedHTTPFilter(errMsg string, filterContext *HTTPFiltersContext) {

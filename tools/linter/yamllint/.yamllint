@@ -7,6 +7,7 @@ ignore: |
   # the Install YAML in bin/
   charts/gateway-helm/
   charts/gateway-addons-helm/
+  charts/gateway-crds-helm
   bin/install.yaml
   test/helm/
   examples/extension-server/charts/extension-server

@@ -1,4 +1,6 @@
 envoyProxyForGatewayClass:
+  apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: EnvoyProxy
   metadata:
     creationTimestamp: null
     name: default-envoy-proxy
@@ -176,6 +178,7 @@ envoyProxyForGatewayClass:
     logging: {}
   status: {}
 gatewayClass:
+  apiVersion: gateway.networking.k8s.io/v1
   kind: GatewayClass
   metadata:
     creationTimestamp: null
@@ -195,7 +198,8 @@ gatewayClass:
       status: "True"
       type: Accepted
 gateways:
-- kind: Gateway
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: Gateway
   metadata:
     creationTimestamp: null
     name: eg
@@ -350,7 +354,8 @@ gateways:
       - group: gateway.networking.k8s.io
         kind: GRPCRoute
 grpcRoutes:
-- kind: GRPCRoute
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: GRPCRoute
   metadata:
     creationTimestamp: null
     name: backend
@@ -395,7 +400,8 @@ grpcRoutes:
         name: eg
         sectionName: grpc
 httpRoutes:
-- kind: HTTPRoute
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
   metadata:
     creationTimestamp: null
     name: backend
@@ -437,7 +443,8 @@ httpRoutes:
         kind: Gateway
         name: eg
 tcpRoutes:
-- kind: TCPRoute
+- apiVersion: gateway.networking.k8s.io/v1alpha2
+  kind: TCPRoute
   metadata:
     creationTimestamp: null
     name: backend
@@ -475,7 +482,8 @@ tcpRoutes:
         name: eg
         sectionName: tcp
 tlsRoutes:
-- kind: TLSRoute
+- apiVersion: gateway.networking.k8s.io/v1alpha2
+  kind: TLSRoute
   metadata:
     creationTimestamp: null
     name: backend
@@ -513,7 +521,8 @@ tlsRoutes:
         name: eg
         sectionName: tls-passthrough
 udpRoutes:
-- kind: UDPRoute
+- apiVersion: gateway.networking.k8s.io/v1alpha2
+  kind: UDPRoute
   metadata:
     creationTimestamp: null
     name: backend
