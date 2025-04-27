@@ -1241,13 +1241,6 @@ spec:
 
                       Accepts values in resource.Quantity format (e.g., "10Mi", "500Ki").
                     x-kubernetes-int-or-string: true
-                  shared:
-                    default: false
-                    description: |-
-                      Shared determines whether the request buffer applies across all the policy targets.
-                      If set to true, the request buffer is enabled across all policy targets (xRoutes).
-                      Default: false.
-                    type: boolean
                 type: object
               responseOverride:
                 description: |-
