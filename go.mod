@@ -2,6 +2,8 @@ module github.com/envoyproxy/gateway
 
 go 1.24.2
 
+exclude github.com/go-jose/go-jose/v4 v4.0.4
+
 require (
 	fortio.org/fortio v1.69.1
 	fortio.org/log v1.17.2
@@ -216,7 +218,7 @@ require (
 	github.com/go-critic/go-critic v0.13.0 // indirect
 	github.com/go-errors/errors v1.4.2 // indirect
 	github.com/go-gorp/gorp/v3 v3.1.0 // indirect
-	github.com/go-jose/go-jose/v4 v4.0.4 // indirect
+	github.com/go-jose/go-jose/v4 v4.0.2 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/go-ole/go-ole v1.3.0 // indirect
 	github.com/go-openapi/analysis v0.23.0 // indirect
