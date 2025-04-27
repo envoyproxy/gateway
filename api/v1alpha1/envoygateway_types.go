@@ -247,9 +247,11 @@ type EnvoyGatewayKubernetesProvider struct {
 	// ShutdownManager defines the configuration for the shutdown manager.
 	// +optional
 	ShutdownManager *ShutdownManager `json:"shutdownManager,omitempty"`
-
 	// Client holds the configuration for the Kubernetes client.
 	Client *KubernetesClient `json:"client,omitempty"`
+	// TopologyInjector defines the configuration for topology injector MutatatingWebhookConfiguration
+	// +optional
+	TopologyInjector *EnvoyGatewayTopologyInjector `json:"proxyTopologyInjector,omitempty"`
 }
 
 const (
@@ -676,6 +678,12 @@ type EnvoyGatewayAdminAddress struct {
 type ShutdownManager struct {
 	// Image specifies the ShutdownManager container image to be used, instead of the default image.
 	Image *string `json:"image,omitempty"`
+}
+
+// EnvoyGatewayTopologyInjector defines the configuration for topology injector MutatatingWebhookConfiguration
+type EnvoyGatewayTopologyInjector struct {
+	// +optional
+	Disable *bool `json:"disabled,omitempty"`
 }
 
 func init() {
