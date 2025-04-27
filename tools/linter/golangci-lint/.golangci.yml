@@ -79,6 +79,8 @@ linters:
               desc: "use k8s.io/utils/ptr instead"
             - pkg: github.com/tetratelabs/multierror
               desc: "use errors instead"
+            - pkg: github.com/hashicorp/go-multierror
+              desc: "use errors instead"
     goheader:
       # Note that because the format is different (this needs no comment markers),
       # updating this text means also updating /tools/boilerplate.txt so that
