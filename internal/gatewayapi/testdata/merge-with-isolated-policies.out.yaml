@@ -346,6 +346,7 @@ xdsIR:
             - x-header-8
             maxAge: 33m20s
         traffic:
+          name: default/policy-for-gateway
           tcpKeepalive:
             idleTime: 1200
             interval: 60

@@ -9,6 +9,8 @@ import (
 	"embed"
 	"flag"
 	"path/filepath"
+	"runtime"
+	"sort"
 	"strings"
 	"testing"
 	"time"
@@ -48,6 +50,28 @@ type testFileConfig struct {
 }
 
 func TestTranslateXds(t *testing.T) {
+	// this is a hack to make sure EG render same output on macos and linux
+	defaultCertificateName = "/etc/ssl/certs/ca-certificates.crt"
+	defer func() {
+		defaultCertificateName = func() string {
+			switch runtime.GOOS {
+			case "darwin":
+				// TODO: maybe automatically get the keychain cert? That might be macOS version dependent.
+				// For now, we'll just use the root cert installed by Homebrew: brew install ca-certificates.
+				//
+				// See:
+				// * https://apple.stackexchange.com/questions/226375/where-are-the-root-cas-stored-on-os-x
+				// * https://superuser.com/questions/992167/where-are-digital-certificates-physically-stored-on-a-mac-os-x-machine
+				return "/opt/homebrew/etc/ca-certificates/cert.pem"
+			default:
+				// This is the default location for the system trust store
+				// on Debian derivatives like the envoy-proxy image being used by the infrastructure
+				// controller.
+				// See https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/security/ssl
+				return "/etc/ssl/certs/ca-certificates.crt"
+			}
+		}()
+	}()
 	testConfigs := map[string]testFileConfig{
 		"ratelimit-custom-domain": {
 			dnsDomain: "example-cluster.local",
@@ -201,33 +225,29 @@ func TestTranslateRateLimitConfig(t *testing.T) {
 	for _, inputFile := range inputFiles {
 		inputFileName := testName(inputFile)
 		t.Run(inputFileName, func(t *testing.T) {
-			in := requireXdsIRListenerFromInputTestData(t, inputFile)
-			out := BuildRateLimitServiceConfig(in)
+			// Get listeners from the test data
+			listeners := requireXdsIRListenersFromInputTestData(t, inputFile)
+
+			// Call BuildRateLimitServiceConfig with the list of listeners
+			configs := BuildRateLimitServiceConfig(listeners)
+
 			if *overrideTestData {
-				require.NoError(t, file.Write(requireYamlRootToYAMLString(t, out), filepath.Join("testdata", "out", "ratelimit-config", inputFileName+".yaml")))
+				require.NoError(t, file.Write(requireRateLimitConfigsToYAMLString(t, configs), filepath.Join("testdata", "out", "ratelimit-config", inputFileName+".yaml")))
 			}
-			require.Equal(t, requireTestDataOutFile(t, "ratelimit-config", inputFileName+".yaml"), requireYamlRootToYAMLString(t, out))
+			require.Equal(t, requireTestDataOutFile(t, "ratelimit-config", inputFileName+".yaml"), requireRateLimitConfigsToYAMLString(t, configs))
 		})
 	}
 }
 
-func TestTranslateXdsWithExtension(t *testing.T) {
+// Simulate various extension server hooks and ensure that the translator returns the original resources
+// when configured to failOpen
+func TestTranslateXdsWithExtensionErrorsWhenFailOpen(t *testing.T) {
 	testConfigs := map[string]testFileConfig{
-		"http-route-extension-route-error": {
-			errMsg: "rpc error: code = Unknown desc = route hook resource error",
-		},
-		"http-route-extension-virtualhost-error": {
-			errMsg: "rpc error: code = Unknown desc = extension post xds virtual host hook error",
-		},
-		"http-route-extension-listener-error": {
-			errMsg: "rpc error: code = Unknown desc = extension post xds listener hook error",
-		},
-		"http-route-extension-translate-error": {
-			errMsg: "rpc error: code = Unknown desc = cluster hook resource error: fail-close-error",
-		},
-		"multiple-listeners-same-port-error": {
-			errMsg: "rpc error: code = Unknown desc = simulate error when there is no default filter chain in the original resources",
-		},
+		"http-route-extension-route-error":       {},
+		"http-route-extension-virtualhost-error": {},
+		"http-route-extension-listener-error":    {},
+		"http-route-extension-translate-error":   {},
+		"multiple-listeners-same-port-error":     {},
 	}
 
 	inputFiles, err := filepath.Glob(filepath.Join("testdata", "in", "extension-xds-ir", "*.yaml"))
@@ -250,6 +270,7 @@ func TestTranslateXdsWithExtension(t *testing.T) {
 				},
 			}
 			ext := egv1a1.ExtensionManager{
+				FailOpen: true,
 				Resources: []egv1a1.GroupVersionKind{
 					{
 						Group:   "foo.example.io",
@@ -318,6 +339,90 @@ func TestTranslateXdsWithExtension(t *testing.T) {
 	}
 }
 
+// Simulate various extension server hooks and ensure that the translator returns an error
+// when configured with to not fail open.
+func TestTranslateXdsWithExtensionErrorsWhenFailClosed(t *testing.T) {
+	testConfigs := map[string]testFileConfig{
+		"http-route-extension-route-error": {
+			errMsg: "rpc error: code = Unknown desc = route hook resource error",
+		},
+		"http-route-extension-virtualhost-error": {
+			errMsg: "rpc error: code = Unknown desc = extension post xds virtual host hook error",
+		},
+		"http-route-extension-listener-error": {
+			errMsg: "rpc error: code = Unknown desc = extension post xds listener hook error",
+		},
+		"http-route-extension-translate-error": {
+			errMsg: "rpc error: code = Unknown desc = cluster hook resource error: fail-close-error",
+		},
+		"multiple-listeners-same-port-error": {
+			errMsg: "rpc error: code = Unknown desc = simulate error when there is no default filter chain in the original resources",
+		},
+	}
+
+	inputFiles, err := filepath.Glob(filepath.Join("testdata", "in", "extension-xds-ir", "*-error.yaml"))
+	require.NoError(t, err)
+
+	for _, inputFile := range inputFiles {
+		inputFileName := testName(inputFile)
+		t.Run(inputFileName, func(t *testing.T) {
+			cfg, ok := testConfigs[inputFileName]
+			if !ok {
+				cfg = testFileConfig{}
+			}
+
+			// Testdata for the extension tests is similar to the ir test data
+			// New directory is just to keep them separate and easy to understand
+			x := requireXdsIRFromInputTestData(t, inputFile)
+			tr := &Translator{
+				GlobalRateLimit: &GlobalRateLimitSettings{
+					ServiceURL: ratelimit.GetServiceURL("envoy-gateway-system", "cluster.local"),
+				},
+			}
+			ext := egv1a1.ExtensionManager{
+				FailOpen: false,
+				Resources: []egv1a1.GroupVersionKind{
+					{
+						Group:   "foo.example.io",
+						Version: "v1alpha1",
+						Kind:    "examplefilter",
+					},
+				},
+				PolicyResources: []egv1a1.GroupVersionKind{
+					{
+						Group:   "bar.example.io",
+						Version: "v1alpha1",
+						Kind:    "ExtensionPolicy",
+					},
+					{
+						Group:   "foo.example.io",
+						Version: "v1alpha1",
+						Kind:    "Bar",
+					},
+				},
+				Hooks: &egv1a1.ExtensionHooks{
+					XDSTranslator: &egv1a1.XDSTranslatorHooks{
+						Post: []egv1a1.XDSTranslatorHook{
+							egv1a1.XDSRoute,
+							egv1a1.XDSVirtualHost,
+							egv1a1.XDSHTTPListener,
+							egv1a1.XDSTranslation,
+						},
+					},
+				},
+			}
+
+			extMgr, closeFunc, err := registry.NewInMemoryManager(ext, &testingExtensionServer{})
+			require.NoError(t, err)
+			defer closeFunc()
+			tr.ExtensionManager = &extMgr
+
+			_, err = tr.Translate(x)
+			require.EqualError(t, err, cfg.errMsg)
+		})
+	}
+}
+
 func testName(inputFile string) string {
 	_, fileName := filepath.Split(inputFile)
 	return strings.TrimSuffix(fileName, ".yaml")
@@ -333,14 +438,27 @@ func requireXdsIRFromInputTestData(t *testing.T, name string) *ir.Xds {
 	return x
 }
 
-func requireXdsIRListenerFromInputTestData(t *testing.T, name string) *ir.HTTPListener {
+func requireXdsIRListenersFromInputTestData(t *testing.T, name string) []*ir.HTTPListener {
 	t.Helper()
 	content, err := inFiles.ReadFile(name)
 	require.NoError(t, err)
+
+	// Try to unmarshal as a list of listeners first (new format)
+	xdsIR := struct {
+		HTTP []*ir.HTTPListener `yaml:"http"`
+	}{}
+
+	err = yaml.Unmarshal(content, &xdsIR)
+	if err == nil && len(xdsIR.HTTP) > 0 {
+		// Return the list of listeners
+		return xdsIR.HTTP
+	}
+
+	// Fall back to the old format (single listener)
 	listener := &ir.HTTPListener{}
 	err = yaml.Unmarshal(content, listener)
 	require.NoError(t, err)
-	return listener
+	return []*ir.HTTPListener{listener}
 }
 
 func requireTestDataOutFile(t *testing.T, name ...string) string {
@@ -351,10 +469,27 @@ func requireTestDataOutFile(t *testing.T, name ...string) string {
 	return string(content)
 }
 
-func requireYamlRootToYAMLString(t *testing.T, pbRoot *ratelimitv3.RateLimitConfig) string {
-	str, err := GetRateLimitServiceConfigStr(pbRoot)
-	require.NoError(t, err)
-	return str
+func requireRateLimitConfigsToYAMLString(t *testing.T, configs []*ratelimitv3.RateLimitConfig) string {
+	if len(configs) == 0 {
+		return ""
+	}
+
+	// Sort configs by domain to ensure consistent output regardless of map iteration order
+	sort.Slice(configs, func(i, j int) bool {
+		return configs[i].Domain < configs[j].Domain
+	})
+
+	var result string
+	for i, config := range configs {
+		str, err := GetRateLimitServiceConfigStr(config)
+		require.NoError(t, err)
+
+		if i > 0 {
+			result += "---\n"
+		}
+		result += str
+	}
+	return result
 }
 
 func requireResourcesToYAMLString(t *testing.T, resources []types.Resource) string {

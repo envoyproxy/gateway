@@ -91,11 +91,6 @@ func (i *Infra) createOrUpdateConfigMap(ctx context.Context, r ResourceRender) (
 // createOrUpdateDeployment creates a Deployment in the kube api server based on the provided
 // ResourceRender, if it doesn't exist and updates it if it does.
 func (i *Infra) createOrUpdateDeployment(ctx context.Context, r ResourceRender) (err error) {
-	// If deployment config is nil,ignore Deployment.
-	if deploymentConfig, er := r.DeploymentSpec(); deploymentConfig == nil {
-		return er
-	}
-
 	var (
 		deployment *appsv1.Deployment
 		startTime  = time.Now()
@@ -119,6 +114,17 @@ func (i *Infra) createOrUpdateDeployment(ctx context.Context, r ResourceRender) 
 	}
 
 	defer func() {
+		deleteErr := i.Client.DeleteAllExcept(ctx, &appsv1.DeploymentList{}, client.ObjectKey{
+			Namespace: deployment.Namespace,
+			Name:      deployment.Name,
+		}, &client.ListOptions{
+			Namespace:     deployment.Namespace,
+			LabelSelector: r.LabelSelector(),
+		})
+		if deleteErr != nil {
+			i.logger.Error(deleteErr, "failed to delete all except deployment", "name", r.Name())
+		}
+
 		if err == nil {
 			resourceApplyDurationSeconds.With(labels...).Record(time.Since(startTime).Seconds())
 			resourceApplyTotal.WithSuccess(labels...).Increment()
@@ -172,11 +178,6 @@ func (i *Infra) createOrUpdateDeployment(ctx context.Context, r ResourceRender) 
 // createOrUpdateDaemonSet creates a DaemonSet in the kube api server based on the provided
 // ResourceRender, if it doesn't exist and updates it if it does.
 func (i *Infra) createOrUpdateDaemonSet(ctx context.Context, r ResourceRender) (err error) {
-	// If daemonset config is nil, ignore DaemonSet.
-	if daemonSetConfig, er := r.DaemonSetSpec(); daemonSetConfig == nil {
-		return er
-	}
-
 	var (
 		daemonSet *appsv1.DaemonSet
 		startTime = time.Now()
@@ -192,7 +193,7 @@ func (i *Infra) createOrUpdateDaemonSet(ctx context.Context, r ResourceRender) (
 		return err
 	}
 
-	// delete the daemonset and return early
+	// delete the DaemonSet and return early
 	// this handles the case where a deployment has been
 	// configured.
 	if daemonSet == nil {
@@ -200,6 +201,17 @@ func (i *Infra) createOrUpdateDaemonSet(ctx context.Context, r ResourceRender) (
 	}
 
 	defer func() {
+		deleteErr := i.Client.DeleteAllExcept(ctx, &appsv1.DaemonSetList{}, client.ObjectKey{
+			Namespace: daemonSet.Namespace,
+			Name:      daemonSet.Name,
+		}, &client.ListOptions{
+			Namespace:     daemonSet.Namespace,
+			LabelSelector: r.LabelSelector(),
+		})
+		if deleteErr != nil {
+			i.logger.Error(deleteErr, "failed to delete all except deployment", "name", r.Name())
+		}
+
 		if err == nil {
 			resourceApplyDurationSeconds.With(labels...).Record(time.Since(startTime).Seconds())
 			resourceApplyTotal.WithSuccess(labels...).Increment()
@@ -259,11 +271,6 @@ func isSelectorMatch(labelselector *metav1.LabelSelector, l map[string]string) (
 }
 
 func (i *Infra) createOrUpdatePodDisruptionBudget(ctx context.Context, r ResourceRender) (err error) {
-	// If podDisruptionBudget config is nil or MinAvailable is nil, ignore PodDisruptionBudget.
-	if podDisruptionBudget, er := r.PodDisruptionBudgetSpec(); podDisruptionBudget == nil {
-		return er
-	}
-
 	var (
 		pdb       *policyv1.PodDisruptionBudget
 		startTime = time.Now()
@@ -301,11 +308,6 @@ func (i *Infra) createOrUpdatePodDisruptionBudget(ctx context.Context, r Resourc
 // the provided ResourceRender, if it doesn't exist and updates it if it does,
 // and delete hpa if not set.
 func (i *Infra) createOrUpdateHPA(ctx context.Context, r ResourceRender) (err error) {
-	// If hpa config is nil, ignore HorizontalPodAutoscaler.
-	if hpaConfig, er := r.HorizontalPodAutoscalerSpec(); hpaConfig == nil {
-		return er
-	}
-
 	var (
 		hpa       *autoscalingv2.HorizontalPodAutoscaler
 		startTime = time.Now()
@@ -358,6 +360,17 @@ func (i *Infra) createOrUpdateService(ctx context.Context, r ResourceRender) (er
 	}
 
 	defer func() {
+		deleteErr := i.Client.DeleteAllExcept(ctx, &corev1.ServiceList{}, client.ObjectKey{
+			Namespace: svc.Namespace,
+			Name:      svc.Name,
+		}, &client.ListOptions{
+			Namespace:     svc.Namespace,
+			LabelSelector: r.LabelSelector(),
+		})
+		if deleteErr != nil {
+			i.logger.Error(deleteErr, "failed to delete all except deployment", "name", r.Name())
+		}
+
 		if err == nil {
 			resourceApplyDurationSeconds.With(labels...).Record(time.Since(startTime).Seconds())
 			resourceApplyTotal.WithSuccess(labels...).Increment()
@@ -406,11 +419,6 @@ func (i *Infra) deleteServiceAccount(ctx context.Context, r ResourceRender) (err
 
 // deleteDeployment deletes the Envoy Deployment in the kube api server, if it exists.
 func (i *Infra) deleteDeployment(ctx context.Context, r ResourceRender) (err error) {
-	// If deployment config is nil,ignore Deployment.
-	if deploymentConfig, er := r.DeploymentSpec(); deploymentConfig == nil {
-		return er
-	}
-
 	var (
 		name, ns   = r.Name(), i.Namespace
 		deployment = &appsv1.Deployment{
@@ -446,11 +454,6 @@ func (i *Infra) deleteDeployment(ctx context.Context, r ResourceRender) (err err
 
 // deleteDaemonSet deletes the Envoy DaemonSet in the kube api server, if it exists.
 func (i *Infra) deleteDaemonSet(ctx context.Context, r ResourceRender) (err error) {
-	// If daemonset config is nil, ignore DaemonSet.
-	if daemonSetConfig, er := r.DaemonSetSpec(); daemonSetConfig == nil {
-		return er
-	}
-
 	var (
 		name, ns  = r.Name(), i.Namespace
 		daemonSet = &appsv1.DaemonSet{
@@ -556,11 +559,6 @@ func (i *Infra) deleteService(ctx context.Context, r ResourceRender) (err error)
 
 // deleteHpa deletes the Horizontal Pod Autoscaler associated to its renderer, if it exists.
 func (i *Infra) deleteHPA(ctx context.Context, r ResourceRender) (err error) {
-	// If hpa config is nil, ignore HorizontalPodAutoscaler.
-	if hpaConfig, er := r.HorizontalPodAutoscalerSpec(); hpaConfig == nil {
-		return er
-	}
-
 	var (
 		name, ns = r.Name(), i.Namespace
 		hpa      = &autoscalingv2.HorizontalPodAutoscaler{
@@ -596,11 +594,6 @@ func (i *Infra) deleteHPA(ctx context.Context, r ResourceRender) (err error) {
 
 // deletePDB deletes the PodDistribution budget associated to its renderer, if it exists.
 func (i *Infra) deletePDB(ctx context.Context, r ResourceRender) (err error) {
-	// If podDisruptionBudget config is nil or MinAvailable is nil, ignore PodDisruptionBudget.
-	if podDisruptionBudget, er := r.PodDisruptionBudgetSpec(); podDisruptionBudget == nil {
-		return er
-	}
-
 	var (
 		name, ns = r.Name(), i.Namespace
 		pdb      = &policyv1.PodDisruptionBudget{

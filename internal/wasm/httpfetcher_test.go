@@ -27,6 +27,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"regexp"
 	"strings"
 	"testing"
@@ -97,7 +98,7 @@ func TestWasmHTTPFetch(t *testing.T) {
 				gotNumRequest++
 			}))
 			defer ts.Close()
-			fetcher := NewHTTPFetcher(DefaultHTTPRequestTimeout, DefaultHTTPRequestMaxRetries, logging.DefaultLogger(egv1a1.LogLevelInfo))
+			fetcher := NewHTTPFetcher(DefaultHTTPRequestTimeout, DefaultHTTPRequestMaxRetries, logging.DefaultLogger(os.Stdout, egv1a1.LogLevelInfo))
 			fetcher.initialBackoff = time.Microsecond
 			ctx, cancel := context.WithTimeout(context.Background(), c.timeout)
 			defer cancel()
@@ -156,7 +157,7 @@ func TestWasmHTTPInsecureServer(t *testing.T) {
 				gotNumRequest++
 			}))
 			defer ts.Close()
-			fetcher := NewHTTPFetcher(DefaultHTTPRequestTimeout, DefaultHTTPRequestMaxRetries, logging.DefaultLogger(egv1a1.LogLevelInfo))
+			fetcher := NewHTTPFetcher(DefaultHTTPRequestTimeout, DefaultHTTPRequestMaxRetries, logging.DefaultLogger(os.Stdout, egv1a1.LogLevelInfo))
 			fetcher.initialBackoff = time.Microsecond
 			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 			defer cancel()
@@ -257,7 +258,7 @@ func TestWasmHTTPFetchCompressedOrTarFile(t *testing.T) {
 				gotNumRequest++
 			}))
 			defer ts.Close()
-			fetcher := NewHTTPFetcher(DefaultHTTPRequestTimeout, DefaultHTTPRequestMaxRetries, logging.DefaultLogger(egv1a1.LogLevelInfo))
+			fetcher := NewHTTPFetcher(DefaultHTTPRequestTimeout, DefaultHTTPRequestMaxRetries, logging.DefaultLogger(os.Stdout, egv1a1.LogLevelInfo))
 			fetcher.initialBackoff = time.Microsecond
 			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 			defer cancel()

@@ -3,7 +3,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.17.1
+    controller-gen.kubebuilder.io/version: v0.17.3
   name: backendtrafficpolicies.gateway.envoyproxy.io
 spec:
   group: gateway.envoyproxy.io
@@ -678,6 +678,14 @@ spec:
                     LeastRequest load balancers.
                   rule: 'self.type in [''Random'', ''ConsistentHash''] ? !has(self.slowStart)
                     : true '
+              mergeType:
+                description: |-
+                  MergeType determines how this configuration is merged with existing BackendTrafficPolicy
+                  configurations targeting a parent resource. When set, this configuration will be merged
+                  into a parent BackendTrafficPolicy (i.e. the one targeting a Gateway or Listener).
+                  This field cannot be set when targeting a parent resource (Gateway).
+                  If unset, no merging occurs, and only the most specific configuration takes effect.
+                type: string
               proxyProtocol:
                 description: ProxyProtocol enables the Proxy Protocol when communicating
                   with the backend.
@@ -949,7 +957,6 @@ spec:
                         description: |-
                           Shared determines whether the rate limit rules apply across all the policy targets.
                           If set to true, the rule is treated as a common bucket and is shared across all policy targets (xRoutes).
-                          Must have targetRef set to Gateway
                           Default: false.
                         type: boolean
                     required:
@@ -1209,6 +1216,31 @@ spec:
                     type: string
                 required:
                 - type
+                type: object
+              requestBuffer:
+                description: |-
+                  RequestBuffer allows the gateway to buffer and fully receive each request from a client before continuing to send the request
+                  upstream to the backends. This can be helpful to shield your backend servers from slow clients, and also to enforce a maximum size per request
+                  as any requests larger than the buffer size will be rejected.
+
+                  This can have a negative performance impact so should only be enabled when necessary.
+
+                  When enabling this option, you should also configure your connection buffer size to account for these request buffers. There will also be an
+                  increase in memory usage for Envoy that should be accounted for in your deployment settings.
+                properties:
+                  limit:
+                    allOf:
+                    - pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                    - pattern: ^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$
+                    anyOf:
+                    - type: integer
+                    - type: string
+                    description: |-
+                      Limit specifies the maximum allowed size in bytes for each incoming request buffer.
+                      If exceeded, the request will be rejected with HTTP 413 Content Too Large.
+
+                      Accepts values in resource.Quantity format (e.g., "10Mi", "500Ki").
+                    x-kubernetes-int-or-string: true
                 type: object
               responseOverride:
                 description: |-
@@ -1633,6 +1665,101 @@ spec:
                       Defaults to 9.
                     format: int32
                     type: integer
+                type: object
+              telemetry:
+                description: |-
+                  Telemetry configures the telemetry settings for the policy target (Gateway or xRoute).
+                  This will override the telemetry settings in the EnvoyProxy resource.
+                properties:
+                  tracing:
+                    description: Tracing configures the tracing settings for the backend
+                      or HTTPRoute.
+                    properties:
+                      customTags:
+                        additionalProperties:
+                          properties:
+                            environment:
+                              description: |-
+                                Environment adds value from environment variable to each span.
+                                It's required when the type is "Environment".
+                              properties:
+                                defaultValue:
+                                  description: DefaultValue defines the default value
+                                    to use if the environment variable is not set.
+                                  type: string
+                                name:
+                                  description: Name defines the name of the environment
+                                    variable which to extract the value from.
+                                  type: string
+                              required:
+                              - name
+                              type: object
+                            literal:
+                              description: |-
+                                Literal adds hard-coded value to each span.
+                                It's required when the type is "Literal".
+                              properties:
+                                value:
+                                  description: Value defines the hard-coded value
+                                    to add to each span.
+                                  type: string
+                              required:
+                              - value
+                              type: object
+                            requestHeader:
+                              description: |-
+                                RequestHeader adds value from request header to each span.
+                                It's required when the type is "RequestHeader".
+                              properties:
+                                defaultValue:
+                                  description: DefaultValue defines the default value
+                                    to use if the request header is not set.
+                                  type: string
+                                name:
+                                  description: Name defines the name of the request
+                                    header which to extract the value from.
+                                  type: string
+                              required:
+                              - name
+                              type: object
+                            type:
+                              default: Literal
+                              description: Type defines the type of custom tag.
+                              enum:
+                              - Literal
+                              - Environment
+                              - RequestHeader
+                              type: string
+                          required:
+                          - type
+                          type: object
+                        description: |-
+                          CustomTags defines the custom tags to add to each span.
+                          If provider is kubernetes, pod name and namespace are added by default.
+                        type: object
+                      samplingFraction:
+                        description: |-
+                          SamplingFraction represents the fraction of requests that should be
+                          selected for tracing if no prior sampling decision has been made.
+
+                          This will take precedence over sampling fraction on EnvoyProxy if set.
+                        properties:
+                          denominator:
+                            default: 100
+                            format: int32
+                            minimum: 1
+                            type: integer
+                          numerator:
+                            format: int32
+                            minimum: 0
+                            type: integer
+                        required:
+                        - numerator
+                        type: object
+                        x-kubernetes-validations:
+                        - message: numerator must be less than or equal to denominator
+                          rule: self.numerator <= self.denominator
+                    type: object
                 type: object
               timeout:
                 description: Timeout settings for the backend connections.

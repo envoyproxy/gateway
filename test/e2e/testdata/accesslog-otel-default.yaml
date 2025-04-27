@@ -1,0 +1,75 @@
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: accesslog-gtw
+  namespace: gateway-conformance-infra
+spec:
+  gatewayClassName: {GATEWAY_CLASS_NAME}
+  listeners:
+    - name: http
+      port: 80
+      protocol: HTTP
+      allowedRoutes:
+        namespaces:
+          from: Same
+  infrastructure:
+    parametersRef:
+      group: gateway.envoyproxy.io
+      kind: EnvoyProxy
+      name: accesslog-otel
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyProxy
+metadata:
+  name: accesslog-otel
+  namespace: gateway-conformance-infra
+spec:
+  ipFamily: IPv4
+  telemetry:
+    accessLog:
+      settings:
+        - matches:
+            - "'x-envoy-logged' in request.headers"
+          sinks:
+            - type: OpenTelemetry
+              openTelemetry:
+                backendRefs:
+                  - name: backend-fqdn
+                    kind: Backend
+                    group: gateway.envoyproxy.io
+                    port: 4317
+                resources:
+                  k8s.cluster.name: "envoy-gateway"
+  shutdown:
+    drainTimeout: 5s
+    minDrainDuration: 1s
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: Backend
+metadata:
+  name: backend-fqdn
+  namespace: gateway-conformance-infra
+spec:
+  appProtocols:
+    - gateway.envoyproxy.io/h2c
+  endpoints:
+    - fqdn:
+        hostname: otel-collector.monitoring.svc.cluster.local
+        port: 4317
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: accesslog-otel
+  namespace: gateway-conformance-infra
+spec:
+  parentRefs:
+    - name: accesslog-gtw
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /otel
+      backendRefs:
+        - name: infra-backend-v2
+          port: 8080

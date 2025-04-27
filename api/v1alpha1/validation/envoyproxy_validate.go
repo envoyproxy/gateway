@@ -13,6 +13,7 @@ import (
 
 	"github.com/dominikbraun/graph"
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
+	"k8s.io/utils/ptr"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 )
@@ -209,7 +210,7 @@ func validateProxyTelemetry(spec *egv1a1.EnvoyProxySpec) []error {
 }
 
 func validateProxyAccessLog(accessLog *egv1a1.ProxyAccessLog) []error {
-	if accessLog.Disable {
+	if ptr.Deref(accessLog.Disable, false) {
 		return nil
 	}
 

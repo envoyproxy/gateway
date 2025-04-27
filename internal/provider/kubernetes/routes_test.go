@@ -7,6 +7,7 @@ package kubernetes
 
 import (
 	"context"
+	"os"
 	"testing"
 	"time"
 
@@ -596,7 +597,7 @@ func TestProcessHTTPRoutes(t *testing.T) {
 			objs := []client.Object{gc, gw}
 
 			// Create the reconciler.
-			logger := logging.DefaultLogger(egv1a1.LogLevelInfo)
+			logger := logging.DefaultLogger(os.Stdout, egv1a1.LogLevelInfo)
 
 			ctx := context.Background()
 
@@ -642,8 +643,8 @@ func TestProcessHTTPRoutes(t *testing.T) {
 				require.NoError(t, err)
 				// Ensure the resource tree and map are as expected.
 				require.Equal(t, tc.routes, resourceTree.HTTPRoutes)
-				require.Equal(t, len(tc.extensionFilters), len(resourceTree.ExtensionRefFilters))
-				require.Equal(t, len(tc.httpRouteFilters), len(resourceTree.HTTPRouteFilters))
+				require.Len(t, resourceTree.ExtensionRefFilters, len(tc.extensionFilters))
+				require.Len(t, resourceTree.HTTPRouteFilters, len(tc.httpRouteFilters))
 				if tc.extensionFilters != nil {
 					for _, filter := range tc.extensionFilters {
 						key := utils.NamespacedNameWithGroupKind{
@@ -756,7 +757,7 @@ func TestProcessGRPCRoutes(t *testing.T) {
 			objs := []client.Object{gc, gw}
 
 			// Create the reconciler.
-			logger := logging.DefaultLogger(egv1a1.LogLevelInfo)
+			logger := logging.DefaultLogger(os.Stdout, egv1a1.LogLevelInfo)
 
 			ctx := context.Background()
 

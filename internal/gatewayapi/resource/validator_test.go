@@ -22,10 +22,11 @@ func TestNewOpenAPIClient(t *testing.T) {
 		groups = append(groups, g)
 	}
 	require.ElementsMatch(t, groups, []string{
-		"apis/gateway.envoyproxy.io/v1alpha1",
-		"apis/gateway.networking.k8s.io/v1",
 		"apis/gateway.networking.k8s.io/v1alpha2",
+		"apis/gateway.networking.x-k8s.io/v1alpha1",
+		"apis/gateway.envoyproxy.io/v1alpha1",
 		"apis/gateway.networking.k8s.io/v1alpha3",
+		"apis/gateway.networking.k8s.io/v1",
 		"apis/gateway.networking.k8s.io/v1beta1",
 	})
 }

@@ -23,11 +23,12 @@ import (
 	"fortio.org/fortio/fhttp"
 	"fortio.org/fortio/periodic"
 	flog "fortio.org/log"
-	"github.com/go-logfmt/logfmt"
 	"github.com/google/go-cmp/cmp"
 	dto "github.com/prometheus/client_model/go"
 	"github.com/prometheus/common/expfmt"
 	"github.com/stretchr/testify/require"
+	appsv1 "k8s.io/api/apps/v1"
+	autoscalingv2 "k8s.io/api/autoscaling/v2"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
@@ -435,7 +436,7 @@ func RetrieveMetrics(url string, timeout time.Duration) (map[string]*dto.MetricF
 	return metricParser.TextToMetricFamilies(res.Body)
 }
 
-func RetrieveMetric(url string, name string, timeout time.Duration) (*dto.MetricFamily, error) {
+func RetrieveMetric(url, name string, timeout time.Duration) (*dto.MetricFamily, error) {
 	metrics, err := RetrieveMetrics(url, timeout)
 	if err != nil {
 		return nil, err
@@ -586,89 +587,6 @@ type LokiQueryResponse struct {
 	}
 }
 
-// QueryTraceFromTempo queries span count from tempo
-func QueryTraceFromTempo(t *testing.T, c client.Client, tags map[string]string) (int, error) {
-	svc := corev1.Service{}
-	if err := c.Get(context.Background(), types.NamespacedName{
-		Namespace: "monitoring",
-		Name:      "tempo",
-	}, &svc); err != nil {
-		return -1, err
-	}
-	host := ""
-	for _, ing := range svc.Status.LoadBalancer.Ingress {
-		if ing.IP != "" {
-			host = ing.IP
-			break
-		}
-	}
-
-	tagsQueryParam, err := createTagsQueryParam(tags)
-	if err != nil {
-		return -1, err
-	}
-
-	tempoURL := url.URL{
-		Scheme: "http",
-		Host:   net.JoinHostPort(host, "3100"),
-		Path:   "/api/search",
-	}
-	query := tempoURL.Query()
-	query.Add("start", fmt.Sprintf("%d", time.Now().Add(-10*time.Minute).Unix())) // query traces from last 10 minutes
-	query.Add("end", fmt.Sprintf("%d", time.Now().Unix()))
-	query.Add("tags", tagsQueryParam)
-	tempoURL.RawQuery = query.Encode()
-
-	req, err := http.NewRequest("GET", tempoURL.String(), nil)
-	if err != nil {
-		return -1, err
-	}
-
-	tlog.Logf(t, "send request to %s", tempoURL.String())
-	res, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return -1, err
-	}
-	defer func() {
-		_ = res.Body.Close()
-	}()
-
-	if res.StatusCode != http.StatusOK {
-		return -1, fmt.Errorf("failed to query tempo, url=%s, status=%s", tempoURL.String(), res.Status)
-	}
-
-	resp := &tempoResponse{}
-	data, err := io.ReadAll(res.Body)
-	if err != nil {
-		return -1, err
-	}
-	if err := json.Unmarshal(data, &resp); err != nil {
-		t.Logf("Failed to unmarshall response: %s", string(data))
-		return -1, err
-	}
-
-	total := len(resp.Traces)
-	tlog.Logf(t, "get response from tempo, url=%s, response=%v, total=%d", tempoURL.String(), string(data), total)
-	return total, nil
-}
-
-type tempoResponse struct {
-	Traces []map[string]interface{} `json:"traces,omitempty"`
-}
-
-// copy from https://github.com/grafana/tempo/blob/c0127c78c368319433c7c67ca8967adbfed2259e/cmd/tempo-query/tempo/plugin.go#L361
-func createTagsQueryParam(tags map[string]string) (string, error) {
-	tagsBuilder := &strings.Builder{}
-	tagsEncoder := logfmt.NewEncoder(tagsBuilder)
-	for k, v := range tags {
-		err := tagsEncoder.EncodeKeyval(k, v)
-		if err != nil {
-			return "", err
-		}
-	}
-	return tagsBuilder.String(), nil
-}
-
 // CollectAndDump collects and dumps the cluster data for troubleshooting and log.
 // This function should be call within t.Cleanup.
 func CollectAndDump(t *testing.T, rest *rest.Config) {
@@ -725,4 +643,48 @@ func ContentEncoding(compressorType egv1a1.CompressorType) string {
 	}
 
 	return encoding
+}
+
+func ExpectEnvoyProxyDeploymentCount(t *testing.T, suite *suite.ConformanceTestSuite, gwNN types.NamespacedName, expectedCount int) {
+	err := wait.PollUntilContextTimeout(context.TODO(), time.Second, suite.TimeoutConfig.DeleteTimeout, true, func(ctx context.Context) (bool, error) {
+		deploys := &appsv1.DeploymentList{}
+		err := suite.Client.List(ctx, deploys, &client.ListOptions{
+			Namespace: "envoy-gateway-system",
+			LabelSelector: labels.SelectorFromSet(map[string]string{
+				"app.kubernetes.io/managed-by":                   "envoy-gateway",
+				"app.kubernetes.io/name":                         "envoy",
+				"gateway.envoyproxy.io/owning-gateway-name":      gwNN.Name,
+				"gateway.envoyproxy.io/owning-gateway-namespace": gwNN.Namespace,
+			}),
+		})
+		if err != nil {
+			return false, err
+		}
+
+		return len(deploys.Items) == expectedCount, err
+	})
+	if err != nil {
+		t.Fatalf("Failed to check Deployment count(%d) for the Gateway: %v", expectedCount, err)
+	}
+}
+
+func ExpectEnvoyProxyHPACount(t *testing.T, suite *suite.ConformanceTestSuite, gwNN types.NamespacedName, expectedCount int) {
+	err := wait.PollUntilContextTimeout(context.TODO(), time.Second, suite.TimeoutConfig.DeleteTimeout, true, func(ctx context.Context) (bool, error) {
+		hpa := &autoscalingv2.HorizontalPodAutoscalerList{}
+		err := suite.Client.List(ctx, hpa, &client.ListOptions{
+			Namespace: "envoy-gateway-system",
+			LabelSelector: labels.SelectorFromSet(map[string]string{
+				"gateway.envoyproxy.io/owning-gateway-name":      gwNN.Name,
+				"gateway.envoyproxy.io/owning-gateway-namespace": gwNN.Namespace,
+			}),
+		})
+		if err != nil {
+			return false, err
+		}
+
+		return len(hpa.Items) == 1, err
+	})
+	if err != nil {
+		t.Fatalf("Failed to check HPA count(%d) for the Gateway: %v", expectedCount, err)
+	}
 }

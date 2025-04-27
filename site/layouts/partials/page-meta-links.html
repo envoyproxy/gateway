@@ -1,6 +1,8 @@
 {{/* cSpell:ignore querify subdir */ -}}
 {{/* Class names ending with `--KIND` are deprecated in favor of `__KIND`, but we're keeping them for a few releases after 0.9.0 */ -}}
 
+{{ $current_version := .Site.Params.version }}
+
 {{ if .File -}}
 {{ $path := strings.TrimPrefix (add hugo.WorkingDir "/") $.File.Filename -}}
 {{ $gh_repo := $.Param "github_repo" -}}
@@ -26,7 +28,7 @@
   {{ end -}}
   {{/* Adjust the alias path for current version */ -}}
   {{ with (strings.Contains $path "docs") -}}
-    {{ $path = replaceRE "docs" "v1.3" $path -}}
+    {{ $path = replaceRE "docs" $current_version $path -}}
   {{ end -}}
 
   {{ $gh_repo_path := printf "%s/%s/%s" $gh_branch $gh_subdir $path -}}
@@ -52,5 +54,6 @@
 {{ with .CurrentSection.AlternativeOutputFormats.Get "print" -}}
   <a id="print" href="{{ .RelPermalink | safeURL }}"><i class="fa-solid fa-print fa-fw"></i> {{ T "print_entire_section" }}</a>
 {{ end }}
+<a href="https://github.com/envoyproxy/gateway/discussions/new?category=q-a" class="td-page-meta--ask td-page-meta__ask" target="_blank" rel="noopener"><i class="fa-solid fa-question-circle fa-fw"></i> Ask a Question</a>
 </div>
 {{ end -}}

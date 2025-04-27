@@ -32,11 +32,15 @@ func New(cfg *Config) *Runner {
 	return &Runner{Config: *cfg}
 }
 
+// Close implements Runner interface.
+func (r *Runner) Close() error { return nil }
+
+// Name implements Runner interface.
 func (r *Runner) Name() string {
 	return string(egv1a1.LogComponentProviderRunner)
 }
 
-// Start the provider runner
+// Start implements Runner interface.
 func (r *Runner) Start(ctx context.Context) (err error) {
 	r.Logger = r.Logger.WithName(r.Name()).WithValues("runner", r.Name())
 

@@ -256,7 +256,7 @@ func (ka *KubeActions) CheckDeploymentReplicas(ctx context.Context, prefix, name
 	return errors.New("deployment was not found")
 }
 
-func (ka *KubeActions) getDepByPrefix(ctx context.Context, prefix string, namespace string) (*appsv1.Deployment, error) {
+func (ka *KubeActions) getDepByPrefix(ctx context.Context, prefix, namespace string) (*appsv1.Deployment, error) {
 	deployments, err := ka.Kube().AppsV1().Deployments(namespace).List(ctx, metav1.ListOptions{})
 	if err != nil {
 		return nil, fmt.Errorf("failed to list deployments: %w", err)
