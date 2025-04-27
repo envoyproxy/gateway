@@ -205,7 +205,8 @@ func buildXdsCluster(args *xdsClusterArgs) (*buildClusterResult, error) {
 		},
 	}
 
-	// Override LocalityWeightedLbConfig if zone aware routing is enabled
+	// Override LocalityWeightedLbConfig if zone aware routing is enabled.
+	// Zone aware enabled backendRefs always have a single DestinationSetting per-cluster.
 	if len(args.settings) == 1 && args.settings[0].ZoneAwareRoutingEnabled {
 		localityLbConfig.LocalityConfigSpecifier = &commonv3.LocalityLbConfig_ZoneAwareLbConfig_{
 			ZoneAwareLbConfig: &commonv3.LocalityLbConfig_ZoneAwareLbConfig{
