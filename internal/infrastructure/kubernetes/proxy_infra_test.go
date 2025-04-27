@@ -109,12 +109,10 @@ func newTestInfraWithClient(t *testing.T, cli client.Client) *Infra {
 
 func TestCreateProxyInfra(t *testing.T) {
 	// Infra with Gateway owner labels.
-	labels := proxy.EnvoyAppLabel()
-	labels[gatewayapi.OwningGatewayNamespaceLabel] = "default"
-	labels[gatewayapi.OwningGatewayNameLabel] = "test-gw"
-
 	infraWithLabels := ir.NewInfra()
-	infraWithLabels.GetProxyInfra().GetProxyMetadata().Labels = labels
+	infraWithLabels.GetProxyInfra().GetProxyMetadata().Labels = proxy.EnvoyAppLabel()
+	infraWithLabels.GetProxyInfra().GetProxyMetadata().Labels[gatewayapi.OwningGatewayNamespaceLabel] = "default"
+	infraWithLabels.GetProxyInfra().GetProxyMetadata().Labels[gatewayapi.OwningGatewayNameLabel] = "test-gw"
 
 	testCases := []struct {
 		name   string

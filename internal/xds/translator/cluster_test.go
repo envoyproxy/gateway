@@ -145,7 +145,7 @@ func TestCheckZoneAwareRouting(t *testing.T) {
 			clusterResult, err := buildXdsCluster(args)
 			dynamicXdsCluster := clusterResult.cluster
 			require.NoError(t, err)
-			checkZoneAwareRouting(dynamicXdsCluster, args)
+			buildZoneAwareRoutingCluster(tt.zoneRoutingEnabled, dynamicXdsCluster, args.loadBalancer)
 
 			if !tt.zoneRoutingEnabled {
 				require.Nil(t, dynamicXdsCluster.LoadBalancingPolicy)

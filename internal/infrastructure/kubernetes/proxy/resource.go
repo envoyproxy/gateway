@@ -29,7 +29,8 @@ const (
 	// envoyNsEnvVar is the name of the Envoy Gateway namespace environment variable.
 	envoyNsEnvVar = "ENVOY_GATEWAY_NAMESPACE"
 	// envoyPodEnvVar is the name of the Envoy pod name environment variable.
-	envoyPodEnvVar  = "ENVOY_POD_NAME"
+	envoyPodEnvVar = "ENVOY_POD_NAME"
+	// envoyZoneEnvVar is the Envoy pod locality zone name
 	envoyZoneEnvVar = "ENVOY_SERVICE_ZONE"
 )
 

@@ -163,36 +163,6 @@ func buildXdsCluster(args *xdsClusterArgs) (*buildClusterResult, error) {
 		}
 	}
 
-	// Set Proxy Protocol
-	if args.proxyProtocol != nil {
-		cluster.TransportSocket = buildProxyProtocolSocket(args.proxyProtocol, args.tSocket)
-	} else if args.tSocket != nil {
-		cluster.TransportSocket = args.tSocket
-	}
-
-	for i, ds := range args.settings {
-		if ds.TLS != nil {
-			socket, err := buildXdsUpstreamTLSSocketWthCert(ds.TLS)
-			if err != nil {
-				// TODO: Log something here
-				return nil, err
-			}
-			if args.proxyProtocol != nil {
-				socket = buildProxyProtocolSocket(args.proxyProtocol, socket)
-			}
-			matchName := fmt.Sprintf("%s/tls/%d", args.name, i)
-			cluster.TransportSocketMatches = append(cluster.TransportSocketMatches, &clusterv3.Cluster_TransportSocketMatch{
-				Name: matchName,
-				Match: &structpb.Struct{
-					Fields: map[string]*structpb.Value{
-						"name": structpb.NewStringValue(matchName),
-					},
-				},
-				TransportSocket: socket,
-			})
-		}
-	}
-
 	if args.endpointType == EndpointTypeStatic {
 		cluster.ClusterDiscoveryType = &clusterv3.Cluster_Type{Type: clusterv3.Cluster_EDS}
 		cluster.EdsClusterConfig = &clusterv3.Cluster_EdsClusterConfig{
@@ -288,7 +258,36 @@ func buildXdsCluster(args *xdsClusterArgs) (*buildClusterResult, error) {
 		cluster.UpstreamConnectionOptions = buildXdsClusterUpstreamOptions(args.tcpkeepalive)
 	}
 
-	checkZoneAwareRouting(cluster, args)
+	// Set Proxy Protocol
+	if args.proxyProtocol != nil {
+		cluster.TransportSocket = buildProxyProtocolSocket(args.proxyProtocol, args.tSocket)
+	} else if args.tSocket != nil {
+		cluster.TransportSocket = args.tSocket
+	}
+
+	for i, ds := range args.settings {
+		if ds.TLS != nil {
+			socket, err := buildXdsUpstreamTLSSocketWthCert(ds.TLS)
+			if err != nil {
+				// TODO: Log something here
+				return nil, err
+			}
+			if args.proxyProtocol != nil {
+				socket = buildProxyProtocolSocket(args.proxyProtocol, socket)
+			}
+			matchName := fmt.Sprintf("%s/tls/%d", args.name, i)
+			cluster.TransportSocketMatches = append(cluster.TransportSocketMatches, &clusterv3.Cluster_TransportSocketMatch{
+				Name: matchName,
+				Match: &structpb.Struct{
+					Fields: map[string]*structpb.Value{
+						"name": structpb.NewStringValue(matchName),
+					},
+				},
+				TransportSocket: socket,
+			})
+		}
+		buildZoneAwareRoutingCluster(ds.ZoneAwareRoutingEnabled, cluster, args.loadBalancer)
+	}
 
 	return &buildClusterResult{
 		cluster: cluster,
@@ -296,102 +295,99 @@ func buildXdsCluster(args *xdsClusterArgs) (*buildClusterResult, error) {
 	}, nil
 }
 
-// checkZoneAwareRouting
-// TODO: Remove cluster.LbPolicy along with clustercommongLbConfig and switch to cluster.LoadBalancingPolicy everywhere.
-func checkZoneAwareRouting(cluster *clusterv3.Cluster, args *xdsClusterArgs) {
-	for _, ds := range args.settings {
-		// If zone aware routing is enabled we update the cluster lb config
-		if !ds.ZoneAwareRoutingEnabled {
-			cluster.CommonLbConfig.LocalityConfigSpecifier = &clusterv3.Cluster_CommonLbConfig_LocalityWeightedLbConfig_{
-				LocalityWeightedLbConfig: &clusterv3.Cluster_CommonLbConfig_LocalityWeightedLbConfig{},
-			}
-			return
-		}
-		cluster.CommonLbConfig.LocalityConfigSpecifier = nil
+// buildZoneAwareRoutingCluster configures an xds cluster with Zone Aware Routing configuration. It overrides
+// cluster.LbPolicy and cluster.CommonLbConfig with cluster.LoadBalancingPolicy.
+// TODO: Remove cluster.LbPolicy along with clustercommongLbConfig and switch to cluster.LoadBalancingPolicy
+// everywhere as the preferred and more feature-rich configuration field.
+func buildZoneAwareRoutingCluster(enabled bool, cluster *clusterv3.Cluster, lb *ir.LoadBalancer) {
+	if !enabled {
+		return
+	}
 
-		localityLbConfig := &commonv3.LocalityLbConfig{
-			LocalityConfigSpecifier: &commonv3.LocalityLbConfig_ZoneAwareLbConfig_{
-				ZoneAwareLbConfig: &commonv3.LocalityLbConfig_ZoneAwareLbConfig{
-					// Future enhancement: differentiate between topology-aware-routing and trafficDistribution
-					// once https://github.com/envoyproxy/envoy/pull/39058 is merged
-					MinClusterSize:             wrapperspb.UInt64(1),
-					ForceLocalityDirectRouting: true,
-				},
+	// Remove CommonLbConfig.LocalityConfigSpecifier and instead configure via cluster.LoadBalancingPolicy
+	cluster.CommonLbConfig.LocalityConfigSpecifier = nil
+
+	localityLbConfig := &commonv3.LocalityLbConfig{
+		LocalityConfigSpecifier: &commonv3.LocalityLbConfig_ZoneAwareLbConfig_{
+			ZoneAwareLbConfig: &commonv3.LocalityLbConfig_ZoneAwareLbConfig{
+				// Future enhancement: differentiate between topology-aware-routing and trafficDistribution
+				// once https://github.com/envoyproxy/envoy/pull/39058 is merged
+				MinClusterSize:             wrapperspb.UInt64(1),
+				ForceLocalityDirectRouting: true,
 			},
-		}
+		},
+	}
 
-		// Default least request
-		leastRequest := &least_requestv3.LeastRequest{
-			LocalityLbConfig: localityLbConfig,
-		}
-		typedLeastRequest, _ := anypb.New(leastRequest)
-		cluster.LoadBalancingPolicy = &clusterv3.LoadBalancingPolicy{
-			Policies: []*clusterv3.LoadBalancingPolicy_Policy{{
-				TypedExtensionConfig: &corev3.TypedExtensionConfig{
-					Name:        "envoy.load_balancing_policies.least_request",
-					TypedConfig: typedLeastRequest,
-				},
-			}},
-		}
+	// Default to least request LoadBalancingPolicy
+	leastRequest := &least_requestv3.LeastRequest{
+		LocalityLbConfig: localityLbConfig,
+	}
+	typedLeastRequest, _ := anypb.New(leastRequest)
+	cluster.LoadBalancingPolicy = &clusterv3.LoadBalancingPolicy{
+		Policies: []*clusterv3.LoadBalancingPolicy_Policy{{
+			TypedExtensionConfig: &corev3.TypedExtensionConfig{
+				Name:        "envoy.load_balancing_policies.least_request",
+				TypedConfig: typedLeastRequest,
+			},
+		}},
+	}
 
-		if args.loadBalancer != nil {
-			switch cluster.LbPolicy {
-			case clusterv3.Cluster_LEAST_REQUEST:
-				if args.loadBalancer.LeastRequest != nil && args.loadBalancer.LeastRequest.SlowStart != nil && args.loadBalancer.LeastRequest.SlowStart.Window != nil {
-					leastRequest.SlowStartConfig = &commonv3.SlowStartConfig{
-						SlowStartWindow: durationpb.New(args.loadBalancer.LeastRequest.SlowStart.Window.Duration),
-					}
-				}
-				cluster.LoadBalancingPolicy.Policies[0].TypedExtensionConfig.TypedConfig, _ = anypb.New(leastRequest)
-			case clusterv3.Cluster_ROUND_ROBIN:
-				roundRobin := &round_robinv3.RoundRobin{
-					LocalityLbConfig: localityLbConfig,
-				}
-				if args.loadBalancer.RoundRobin.SlowStart != nil && args.loadBalancer.RoundRobin.SlowStart.Window != nil {
-					roundRobin.SlowStartConfig = &commonv3.SlowStartConfig{
-						SlowStartWindow: durationpb.New(args.loadBalancer.RoundRobin.SlowStart.Window.Duration),
-					}
-				}
-				typedRoundRobin, _ := anypb.New(roundRobin)
-				cluster.LoadBalancingPolicy = &clusterv3.LoadBalancingPolicy{
-					Policies: []*clusterv3.LoadBalancingPolicy_Policy{{
-						TypedExtensionConfig: &corev3.TypedExtensionConfig{
-							Name:        "envoy.load_balancing_policies.round_robin",
-							TypedConfig: typedRoundRobin,
-						},
-					}},
-				}
-
-			case clusterv3.Cluster_RANDOM:
-				random := &randomv3.Random{
-					LocalityLbConfig: localityLbConfig,
-				}
-				typeRandom, _ := anypb.New(random)
-				cluster.LoadBalancingPolicy = &clusterv3.LoadBalancingPolicy{
-					Policies: []*clusterv3.LoadBalancingPolicy_Policy{{
-						TypedExtensionConfig: &corev3.TypedExtensionConfig{
-							Name:        "envoy.load_balancing_policies.random",
-							TypedConfig: typeRandom,
-						},
-					}},
-				}
-			case clusterv3.Cluster_MAGLEV:
-				consistentHash := &maglevv3.Maglev{}
-				if args.loadBalancer.ConsistentHash.TableSize != nil {
-					consistentHash.TableSize = wrapperspb.UInt64(*args.loadBalancer.ConsistentHash.TableSize)
-				}
-				typedConsistentHash, _ := anypb.New(consistentHash)
-				cluster.LoadBalancingPolicy = &clusterv3.LoadBalancingPolicy{
-					Policies: []*clusterv3.LoadBalancingPolicy_Policy{{
-						TypedExtensionConfig: &corev3.TypedExtensionConfig{
-							Name:        "envoy.load_balancing_policies.maglev",
-							TypedConfig: typedConsistentHash,
-						},
-					}},
+	if lb != nil {
+		switch cluster.LbPolicy {
+		case clusterv3.Cluster_LEAST_REQUEST:
+			if lb.LeastRequest != nil && lb.LeastRequest.SlowStart != nil && lb.LeastRequest.SlowStart.Window != nil {
+				leastRequest.SlowStartConfig = &commonv3.SlowStartConfig{
+					SlowStartWindow: durationpb.New(lb.LeastRequest.SlowStart.Window.Duration),
 				}
 			}
-		}
+			cluster.LoadBalancingPolicy.Policies[0].TypedExtensionConfig.TypedConfig, _ = anypb.New(leastRequest)
+		case clusterv3.Cluster_ROUND_ROBIN:
+			roundRobin := &round_robinv3.RoundRobin{
+				LocalityLbConfig: localityLbConfig,
+			}
+			if lb.RoundRobin.SlowStart != nil && lb.RoundRobin.SlowStart.Window != nil {
+				roundRobin.SlowStartConfig = &commonv3.SlowStartConfig{
+					SlowStartWindow: durationpb.New(lb.RoundRobin.SlowStart.Window.Duration),
+				}
+			}
+			typedRoundRobin, _ := anypb.New(roundRobin)
+			cluster.LoadBalancingPolicy = &clusterv3.LoadBalancingPolicy{
+				Policies: []*clusterv3.LoadBalancingPolicy_Policy{{
+					TypedExtensionConfig: &corev3.TypedExtensionConfig{
+						Name:        "envoy.load_balancing_policies.round_robin",
+						TypedConfig: typedRoundRobin,
+					},
+				}},
+			}
 
+		case clusterv3.Cluster_RANDOM:
+			random := &randomv3.Random{
+				LocalityLbConfig: localityLbConfig,
+			}
+			typeRandom, _ := anypb.New(random)
+			cluster.LoadBalancingPolicy = &clusterv3.LoadBalancingPolicy{
+				Policies: []*clusterv3.LoadBalancingPolicy_Policy{{
+					TypedExtensionConfig: &corev3.TypedExtensionConfig{
+						Name:        "envoy.load_balancing_policies.random",
+						TypedConfig: typeRandom,
+					},
+				}},
+			}
+		case clusterv3.Cluster_MAGLEV:
+			consistentHash := &maglevv3.Maglev{}
+			if lb.ConsistentHash.TableSize != nil {
+				consistentHash.TableSize = wrapperspb.UInt64(*lb.ConsistentHash.TableSize)
+			}
+			typedConsistentHash, _ := anypb.New(consistentHash)
+			cluster.LoadBalancingPolicy = &clusterv3.LoadBalancingPolicy{
+				Policies: []*clusterv3.LoadBalancingPolicy_Policy{{
+					TypedExtensionConfig: &corev3.TypedExtensionConfig{
+						Name:        "envoy.load_balancing_policies.maglev",
+						TypedConfig: typedConsistentHash,
+					},
+				}},
+			}
+		}
 	}
 }
 
