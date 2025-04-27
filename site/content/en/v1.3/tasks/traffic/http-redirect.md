@@ -359,7 +359,7 @@ spec:
   - name: http
     port: 80
     protocol: HTTP
-    allowedRouters:
+    allowedRoutes:
       namespaces:
         from: Same
   - name: https
@@ -371,7 +371,7 @@ spec:
       certificateRefs:
       - kind: Secret
         name: example-com
-    allowedRouters:
+    allowedRoutes:
       namespaces:
         from: All
 EOF
@@ -394,7 +394,7 @@ spec:
   - name: http
     port: 80
     protocol: HTTP
-    allowedRouters:
+    allowedRoutes:
       namespaces:
         from: Same
   - name: https
@@ -406,7 +406,7 @@ spec:
       certificateRefs:
       - kind: Secret
         name: example-com
-    allowedRouters:
+    allowedRoutes:
       namespaces:
         from: All
 ```
@@ -414,7 +414,7 @@ spec:
 {{% /tab %}}
 {{< /tabpane >}}
 
-Create the HTTPRoute to reirect requests to HTTPS and attach it to the HTTP listener using the [sectionName][] field. The HTTPRoute has to be in the same namespace as the Gateway to be accepted.
+Create the HTTPRoute to redirect requests to HTTPS and attach it to the HTTP listener using the [sectionName][] field. The HTTPRoute has to be in the same namespace as the Gateway to be accepted.
 Do not set hostnames field in the HTTPRoute - it will accept any http request to any hostname and redirect it to the same hostname over https.
 
 {{< tabpane text=true >}}
