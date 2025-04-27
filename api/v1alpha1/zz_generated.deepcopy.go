@@ -1756,7 +1756,8 @@ func (in *EnvoyGatewayKubernetesProvider) DeepCopyInto(out *EnvoyGatewayKubernet
 	if in.Client != nil {
 		in, out := &in.Client, &out.Client
 		*out = new(KubernetesClient)
-
+		(*in).DeepCopyInto(*out)
+	}
 	if in.TopologyInjector != nil {
 		in, out := &in.TopologyInjector, &out.TopologyInjector
 		*out = new(EnvoyGatewayTopologyInjector)
