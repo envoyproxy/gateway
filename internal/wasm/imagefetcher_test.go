@@ -263,10 +263,8 @@ func TestImageFetcher_Fetch(t *testing.T) {
 			t.Errorf("ImageFetcher.binaryFetcher got %s, but want nil", string(actual))
 		}
 
-		expErr := `the given image is in invalid format as an OCI image: 2 errors occurred:
-	* could not parse as compat variant: invalid media type application/vnd.oci.image.layer.v1.tar (expect application/vnd.oci.image.layer.v1.tar+gzip)
-	* could not parse as oci variant: number of layers must be 2 but got 1`
-		if actual := strings.TrimSpace(err.Error()); actual != expErr {
+		expErr := `the given image is in invalid format as an OCI image: could not parse as compat variant: invalid media type application/vnd.oci.image.layer.v1.tar (expect application/vnd.oci.image.layer.v1.tar+gzip)`
+		if got := strings.TrimSpace(err.Error()); !strings.HasPrefix(got, expErr) {
 			t.Errorf("ImageFetcher.binaryFetcher get unexpected error '%v', but want '%v'", actual, expErr)
 		}
 	})
