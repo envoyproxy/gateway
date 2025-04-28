@@ -609,19 +609,23 @@ func (r *gatewayAPIReconciler) processSecurityPolicyObjectRefs(
 		// Add the referenced BackendRefs and ReferenceGrants in ExtAuth to Maps for later processing
 		extAuth := policy.Spec.ExtAuth
 		if extAuth != nil {
-			var backendRef *gwapiv1.BackendObjectReference
+			var backendRef gwapiv1.BackendObjectReference
 			if extAuth.GRPC != nil {
-				backendRef = extAuth.GRPC.BackendRef
+				if extAuth.GRPC.BackendRef != nil {
+					backendRef = *extAuth.GRPC.BackendRef
+				}
 				if len(extAuth.GRPC.BackendRefs) > 0 {
 					if len(extAuth.GRPC.BackendRefs) != 0 {
-						backendRef = egv1a1.ToBackendObjectReference(extAuth.GRPC.BackendRefs[0])
+						backendRef = extAuth.GRPC.BackendRefs[0].BackendObjectReference
 					}
 				}
-			} else {
-				backendRef = extAuth.HTTP.BackendRef
+			} else if extAuth.HTTP != nil {
+				if extAuth.HTTP.BackendRef != nil {
+					backendRef = *extAuth.HTTP.BackendRef
+				}
 				if len(extAuth.HTTP.BackendRefs) > 0 {
 					if len(extAuth.HTTP.BackendRefs) != 0 {
-						backendRef = egv1a1.ToBackendObjectReference(extAuth.HTTP.BackendRefs[0])
+						backendRef = extAuth.HTTP.BackendRefs[0].BackendObjectReference
 					}
 				}
 			}
@@ -632,10 +636,10 @@ func (r *gatewayAPIReconciler) processSecurityPolicyObjectRefs(
 				resource.KindSecurityPolicy,
 				policy.Namespace,
 				policy.Name,
-				*backendRef); err != nil {
+				backendRef); err != nil {
 				r.log.Error(err,
 					"failed to process ExtAuth BackendRef for SecurityPolicy",
-					"policy", policy, "backendRef", *backendRef)
+					"policy", policy, "backendRef", backendRef)
 			}
 		}
 
