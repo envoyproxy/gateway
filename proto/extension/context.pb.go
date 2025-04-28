@@ -12,12 +12,11 @@
 package extension
 
 import (
+	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
+	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	reflect "reflect"
 	sync "sync"
 	unsafe "unsafe"
-
-	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
-	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 )
 
 const (
@@ -307,17 +306,14 @@ func file_proto_extension_context_proto_rawDescGZIP() []byte {
 	return file_proto_extension_context_proto_rawDescData
 }
 
-var (
-	file_proto_extension_context_proto_msgTypes = make([]protoimpl.MessageInfo, 5)
-	file_proto_extension_context_proto_goTypes  = []any{
-		(*PostRouteExtensionContext)(nil),        // 0: envoygateway.extension.PostRouteExtensionContext
-		(*PostVirtualHostExtensionContext)(nil),  // 1: envoygateway.extension.PostVirtualHostExtensionContext
-		(*PostHTTPListenerExtensionContext)(nil), // 2: envoygateway.extension.PostHTTPListenerExtensionContext
-		(*PostTranslateExtensionContext)(nil),    // 3: envoygateway.extension.PostTranslateExtensionContext
-		(*ExtensionResource)(nil),                // 4: envoygateway.extension.ExtensionResource
-	}
-)
-
+var file_proto_extension_context_proto_msgTypes = make([]protoimpl.MessageInfo, 5)
+var file_proto_extension_context_proto_goTypes = []any{
+	(*PostRouteExtensionContext)(nil),        // 0: envoygateway.extension.PostRouteExtensionContext
+	(*PostVirtualHostExtensionContext)(nil),  // 1: envoygateway.extension.PostVirtualHostExtensionContext
+	(*PostHTTPListenerExtensionContext)(nil), // 2: envoygateway.extension.PostHTTPListenerExtensionContext
+	(*PostTranslateExtensionContext)(nil),    // 3: envoygateway.extension.PostTranslateExtensionContext
+	(*ExtensionResource)(nil),                // 4: envoygateway.extension.ExtensionResource
+}
 var file_proto_extension_context_proto_depIdxs = []int32{
 	4, // 0: envoygateway.extension.PostRouteExtensionContext.extension_resources:type_name -> envoygateway.extension.ExtensionResource
 	4, // 1: envoygateway.extension.PostHTTPListenerExtensionContext.extension_resources:type_name -> envoygateway.extension.ExtensionResource
