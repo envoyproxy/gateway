@@ -98,18 +98,16 @@ type KubernetesClient struct {
 
 // KubernetesClientRateLimit defines the rate limit settings for the Kubernetes client.
 type KubernetesClientRateLimit struct {
-	// QPS defines the queries per second (QPS) limit for the Kubernetes client.
-	// If unspecified, defaults to 50. Min value must be greater than or equal to 1.
-	//
+	// QPS defines the queries per second limit for the Kubernetes client.
 	// +optional
 	// +kubebuilder:validation:Minimum=1
+	// +kubebuilder:default=50
 	QPS *int32 `json:"qps,omitempty"`
 
-	// Burst defines the burst limit for the Kubernetes client.
-	// If unspecified, defaults to 100. Min value must be greater than or equal to 1.
-	//
+	// Burst defines the maximum burst of requests allowed when tokens have accumulated.
 	// +optional
 	// +kubebuilder:validation:Minimum=1
+	// +kubebuilder:default=100
 	Burst *int32 `json:"burst,omitempty"`
 }
 

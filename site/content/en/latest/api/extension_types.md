@@ -2708,8 +2708,8 @@ _Appears in:_
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `qps` | _integer_ |  false  |  | QPS defines the queries per second (QPS) limit for the Kubernetes client.<br />If unspecified, defaults to 50. Min value must be greater than or equal to 1. |
-| `burst` | _integer_ |  false  |  | Burst defines the burst limit for the Kubernetes client.<br />If unspecified, defaults to 100. Min value must be greater than or equal to 1. |
+| `qps` | _integer_ |  false  | 50 | QPS defines the queries per second limit for the Kubernetes client. |
+| `burst` | _integer_ |  false  | 100 | Burst defines the maximum burst of requests allowed when tokens have accumulated. |
 
 
 #### KubernetesContainerSpec
