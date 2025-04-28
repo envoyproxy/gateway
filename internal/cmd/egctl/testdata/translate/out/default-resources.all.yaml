@@ -19,6 +19,11 @@ envoyProxyForGatewayClass:
             socket_address:
               address: 127.0.0.1
               port_value: 19000
+        cluster_manager:
+          local_cluster_name: local_cluster
+        node:
+          locality:
+            zone: "$(ENVOY_SERVICE_ZONE)"
         layered_runtime:
           layers:
           - name: global_config
@@ -89,6 +94,23 @@ envoyProxyForGatewayClass:
                       socket_address:
                         address: 127.0.0.1
                         port_value: 19000
+          - connect_timeout: 10s
+            lb_policy: ROUND_ROBIN
+            load_assignment:
+              cluster_name: local_cluster
+              endpoints:
+              - lb_endpoints:
+                - endpoint:
+                    address:
+                      socket_address:
+                        address: 127.0.0.1
+                        port_value: 10080
+                  load_balancing_weight: 1
+                load_balancing_weight: 1
+                locality:
+                  zone: "$(ENVOY_SERVICE_ZONE)"
+            name: local_cluster
+            type: STATIC
           - connect_timeout: 10s
             load_assignment:
               cluster_name: xds_cluster
@@ -574,6 +596,8 @@ xds:
             socketAddress:
               address: 127.0.0.1
               portValue: 19000
+        clusterManager:
+          localClusterName: local_cluster
         dynamicResources:
           adsConfig:
             apiType: DELTA_GRPC
@@ -595,6 +619,9 @@ xds:
               envoy.restart_features.use_eds_cache_for_ads: true
               re2.max_program_size.error_level: 4294967295
               re2.max_program_size.warn_level: 1000
+        node:
+          locality:
+            zone: $(ENVOY_SERVICE_ZONE)
         overloadManager:
           refreshInterval: 0.250s
           resourceMonitors:
@@ -615,6 +642,22 @@ xds:
                         address: 127.0.0.1
                         portValue: 19000
             name: prometheus_stats
+            type: STATIC
+          - connectTimeout: 10s
+            loadAssignment:
+              clusterName: local_cluster
+              endpoints:
+              - lbEndpoints:
+                - endpoint:
+                    address:
+                      socketAddress:
+                        address: 127.0.0.1
+                        portValue: 10080
+                  loadBalancingWeight: 1
+                loadBalancingWeight: 1
+                locality:
+                  zone: $(ENVOY_SERVICE_ZONE)
+            name: local_cluster
             type: STATIC
           - connectTimeout: 10s
             loadAssignment:

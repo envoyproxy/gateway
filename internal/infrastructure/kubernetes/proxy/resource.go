@@ -30,6 +30,8 @@ const (
 	envoyNsEnvVar = "ENVOY_GATEWAY_NAMESPACE"
 	// envoyPodEnvVar is the name of the Envoy pod name environment variable.
 	envoyPodEnvVar = "ENVOY_POD_NAME"
+	// envoyZoneEnvVar is the Envoy pod locality zone name
+	envoyZoneEnvVar = "ENVOY_SERVICE_ZONE"
 )
 
 // ExpectedResourceHashedName returns expected resource hashed name including up to the 48 characters of the original name.
@@ -356,6 +358,15 @@ func expectedContainerEnv(containerSpec *egv1a1.KubernetesContainerSpec) []corev
 				FieldRef: &corev1.ObjectFieldSelector{
 					APIVersion: "v1",
 					FieldPath:  "metadata.name",
+				},
+			},
+		},
+		{
+			Name: envoyZoneEnvVar,
+			ValueFrom: &corev1.EnvVarSource{
+				FieldRef: &corev1.ObjectFieldSelector{
+					APIVersion: "v1",
+					FieldPath:  fmt.Sprintf("metadata.labels['%s']", corev1.LabelTopologyZone),
 				},
 			},
 		},
