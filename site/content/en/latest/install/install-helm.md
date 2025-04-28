@@ -13,12 +13,7 @@ Envoy Gateway can be installed via a Helm chart with a few simple steps, dependi
 Refer to the [Version Compatibility Matrix](/news/releases/matrix) to learn more.
 {{% /alert %}}
 
-Envoy Gateway is typically deployed in a Kubernetes cluster.
-If you don’t have one yet, you can use `kind` to create a local cluster for testing purposes.
-
-{{% alert title="Developer Guide" color="primary" %}}
-Refer to the [Developer Guide](../../contributions/develop) to learn more.
-{{% /alert %}}
+{{< boilerplate kind-cluster >}}
 
 The Envoy Gateway Helm chart is hosted by DockerHub.
 
@@ -64,7 +59,7 @@ consideration when debugging.
 
 [Helm](https://helm.sh/docs/chart_best_practices/custom_resource_definitions/#some-caveats-and-explanations) does not update CRDs
 that live in the `/crds` folder in the Helm Chart. So you will manually need to update the CRDs.
-Follow the steps outlined in [this](./install-yaml/#upgrading-from-v1.2) section if you're upgrading from a previous version.
+Follow the steps outlined in [this](./install-yaml/#upgrading-from-a-previous-version) section if you're upgrading from a previous version.
 
 ## Helm chart customizations
 
@@ -125,28 +120,7 @@ You can use the below command to install the envoy gateway using values.yaml fil
 helm install eg oci://docker.io/envoyproxy/gateway-helm --version {{< helm-version >}} -n envoy-gateway-system --create-namespace -f values.yaml
 ```
 
-## Open Ports
-
-These are the ports used by Envoy Gateway and the managed Envoy Proxy.
-
-### Envoy Gateway
-
-|     Envoy Gateway     |  Address  | Port  | Configurable |
-| :-------------------: | :-------: | :---: | :----------: |
-| Xds EnvoyProxy Server |  0.0.0.0  | 18000 |      No      |
-| Xds RateLimit Server  |  0.0.0.0  | 18001 |      No      |
-|     Admin Server      | 127.0.0.1 | 19000 |     Yes      |
-|    Metrics Server     |  0.0.0.0  | 19001 |      No      |
-|     Health Check      | 127.0.0.1 | 8081  |      No      |
-
-### EnvoyProxy
-
-|   Envoy Proxy    |  Address  | Port  |
-| :--------------: | :-------: | :---: |
-|   Admin Server   | 127.0.0.1 | 19000 |
-|      Stats       |  0.0.0.0  | 19001 |
-| Shutdown Manager |  0.0.0.0  | 19002 |
-|    Readiness     |  0.0.0.0  | 19003 |
+{{< boilerplate open-ports >}}
 
 {{% alert title="Next Steps" color="warning" %}}
 Envoy Gateway should now be successfully installed and running.  To experience more abilities of Envoy Gateway, refer to [Tasks](../tasks).
