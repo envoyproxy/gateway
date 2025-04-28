@@ -74,15 +74,8 @@ func New(ctx context.Context, restCfg *rest.Config, svrCfg *ec.Server, resources
 	log.SetLogger(mgrOpts.Logger)
 	klog.SetLogger(mgrOpts.Logger)
 
-	if rateLimit := svrCfg.EnvoyGateway.Provider.Kubernetes.Client.RateLimit; rateLimit != nil {
-		if qps := ptr.Deref[int32](rateLimit.QPS, 0); qps > 0 {
-			restCfg.QPS = float32(qps)
-		}
-		if burst := ptr.Deref[int32](rateLimit.Burst, 0); burst > 0 {
-			restCfg.Burst = int(burst)
-		}
-	}
-
+	restCfg.QPS, restCfg.Burst = svrCfg.EnvoyGateway.Provider.Kubernetes.Client.RateLimit.GetQPSAndBurst()
+	
 	if !ptr.Deref(svrCfg.EnvoyGateway.Provider.Kubernetes.LeaderElection.Disable, false) {
 		mgrOpts.LeaderElection = true
 		if svrCfg.EnvoyGateway.Provider.Kubernetes.LeaderElection.LeaseDuration != nil {

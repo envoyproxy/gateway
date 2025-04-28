@@ -115,8 +115,8 @@ func DefaultLeaderElection() *LeaderElection {
 func DefaultKubernetesClient() *KubernetesClient {
 	return &KubernetesClient{
 		RateLimit: &KubernetesClientRateLimit{
-			QPS:   ptr.To(int32(50)),
-			Burst: ptr.To(int32(100)),
+			QPS:   ptr.To(DefaultKubernetesClientQPS),
+			Burst: ptr.To(DefaultKubernetesClientBurst),
 		},
 	}
 }
@@ -298,4 +298,13 @@ func (logging *EnvoyGatewayLogging) SetEnvoyGatewayLoggingDefaults() {
 	if logging != nil && logging.Level != nil && logging.Level[LogComponentGatewayDefault] == "" {
 		logging.Level[LogComponentGatewayDefault] = LogLevelInfo
 	}
+}
+
+func (kcr *KubernetesClientRateLimit) GetQPSAndBurst() (float32, int) {
+	if kcr == nil {
+		return float32(DefaultKubernetesClientQPS), int(DefaultKubernetesClientBurst)
+	}
+	qps := ptr.Deref(kcr.QPS, DefaultKubernetesClientQPS)
+	burst := ptr.Deref(kcr.Burst, DefaultKubernetesClientBurst)
+	return float32(qps), int(burst)
 }

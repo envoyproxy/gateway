@@ -8,7 +8,6 @@ package infrastructure
 import (
 	"context"
 	"fmt"
-
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	clicfg "sigs.k8s.io/controller-runtime/pkg/client/config"
 
@@ -56,7 +55,9 @@ func NewManager(ctx context.Context, cfg *config.Server, logger logging.Logger) 
 }
 
 func newManagerForKubernetes(cfg *config.Server) (Manager, error) {
-	cli, err := client.New(clicfg.GetConfigOrDie(), client.Options{Scheme: envoygateway.GetScheme()})
+	clientConfig := clicfg.GetConfigOrDie()
+	clientConfig.QPS, clientConfig.Burst = cfg.EnvoyGateway.Provider.Kubernetes.Client.RateLimit.GetQPSAndBurst()
+	cli, err := client.New(clientConfig, client.Options{Scheme: envoygateway.GetScheme()})
 	if err != nil {
 		return nil, err
 	}

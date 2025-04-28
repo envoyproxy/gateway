@@ -24,6 +24,10 @@ const (
 	GatewayMetricsPort = 19001
 	// GatewayMetricsHost is the host of envoy gateway metrics server.
 	GatewayMetricsHost = "0.0.0.0"
+	// DefaultKubernetesClientQPS defines the default QPS limit for the Kubernetes client.
+	DefaultKubernetesClientQPS int32 = 50
+	// DefaultKubernetesClientBurst defines the default Burst limit for the Kubernetes client.
+	DefaultKubernetesClientBurst int32 = 100
 )
 
 // +kubebuilder:object:root=true
