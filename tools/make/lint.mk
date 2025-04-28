@@ -8,12 +8,13 @@ GITHUB_ACTION ?=
 LINT_BUILD_TAGS ?= e2e,celvalidation,conformance,experimental,benchmark,resilience
 
 .PHONY: lint
-lint: ## Run all linter of code sources, including golint, yamllint, whitenoise lint and codespell.
+lint: lint.gofumpt lint.golint lint.yamllint ## Run the linters.
 
 # lint-deps is run separately in CI to separate the tooling install logs from the actual output logs generated
 # by the lint tooling.
 .PHONY: lint-deps
 lint-deps: ## Everything necessary to lint
+	@go install mvdan.cc/gofumpt@latest
 
 GOLANGCI_LINT_FLAGS ?=
 .PHONY: lint.golint
@@ -27,7 +28,7 @@ lint: lint.yamllint
 lint-deps: $(tools/yamllint)
 lint.yamllint: $(tools/yamllint)
 	@$(LOG_TARGET)
-	$(tools/yamllint) --config-file=tools/linter/yamllint/.yamllint $$(git ls-files :*.yml :*.yaml | xargs -L1 dirname | sort -u) 
+	$(tools/yamllint) --config-file=tools/linter/yamllint/.yamllint $$(git ls-files :*.yml :*.yaml | xargs -L1 dirname | sort -u)
 
 CODESPELL_FLAGS ?= $(if $(GITHUB_ACTION),--disable-colors)
 .PHONY: lint.codespell
@@ -100,3 +101,9 @@ lint.markdown:
 lint: lint.dependabot
 lint.dependabot: ## Check if dependabot configuration is valid
 	@npx @bugron/validate-dependabot-yaml .github/dependabot.yml
+
+.PHONY: lint.gofumpt
+lint: lint.gofumpt
+lint.gofumpt:
+	@$(LOG_TARGET)
+	@find . -name "*.go" | xargs gofumpt -l -w

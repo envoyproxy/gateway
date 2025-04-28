@@ -13,6 +13,7 @@ package extension
 
 import (
 	context "context"
+
 	grpc "google.golang.org/grpc"
 	codes "google.golang.org/grpc/codes"
 	status "google.golang.org/grpc/status"
@@ -151,12 +152,15 @@ type UnimplementedEnvoyGatewayExtensionServer struct{}
 func (UnimplementedEnvoyGatewayExtensionServer) PostRouteModify(context.Context, *PostRouteModifyRequest) (*PostRouteModifyResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method PostRouteModify not implemented")
 }
+
 func (UnimplementedEnvoyGatewayExtensionServer) PostVirtualHostModify(context.Context, *PostVirtualHostModifyRequest) (*PostVirtualHostModifyResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method PostVirtualHostModify not implemented")
 }
+
 func (UnimplementedEnvoyGatewayExtensionServer) PostHTTPListenerModify(context.Context, *PostHTTPListenerModifyRequest) (*PostHTTPListenerModifyResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method PostHTTPListenerModify not implemented")
 }
+
 func (UnimplementedEnvoyGatewayExtensionServer) PostTranslateModify(context.Context, *PostTranslateModifyRequest) (*PostTranslateModifyResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method PostTranslateModify not implemented")
 }

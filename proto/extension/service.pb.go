@@ -12,15 +12,16 @@
 package extension
 
 import (
+	reflect "reflect"
+	sync "sync"
+	unsafe "unsafe"
+
 	v32 "github.com/envoyproxy/go-control-plane/envoy/config/cluster/v3"
 	v31 "github.com/envoyproxy/go-control-plane/envoy/config/listener/v3"
 	v3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
 	v33 "github.com/envoyproxy/go-control-plane/envoy/extensions/transport_sockets/tls/v3"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
-	reflect "reflect"
-	sync "sync"
-	unsafe "unsafe"
 )
 
 const (
@@ -597,26 +598,29 @@ func file_proto_extension_service_proto_rawDescGZIP() []byte {
 	return file_proto_extension_service_proto_rawDescData
 }
 
-var file_proto_extension_service_proto_msgTypes = make([]protoimpl.MessageInfo, 8)
-var file_proto_extension_service_proto_goTypes = []any{
-	(*PostRouteModifyRequest)(nil),           // 0: envoygateway.extension.PostRouteModifyRequest
-	(*PostRouteModifyResponse)(nil),          // 1: envoygateway.extension.PostRouteModifyResponse
-	(*PostVirtualHostModifyRequest)(nil),     // 2: envoygateway.extension.PostVirtualHostModifyRequest
-	(*PostVirtualHostModifyResponse)(nil),    // 3: envoygateway.extension.PostVirtualHostModifyResponse
-	(*PostHTTPListenerModifyRequest)(nil),    // 4: envoygateway.extension.PostHTTPListenerModifyRequest
-	(*PostHTTPListenerModifyResponse)(nil),   // 5: envoygateway.extension.PostHTTPListenerModifyResponse
-	(*PostTranslateModifyRequest)(nil),       // 6: envoygateway.extension.PostTranslateModifyRequest
-	(*PostTranslateModifyResponse)(nil),      // 7: envoygateway.extension.PostTranslateModifyResponse
-	(*v3.Route)(nil),                         // 8: envoy.config.route.v3.Route
-	(*PostRouteExtensionContext)(nil),        // 9: envoygateway.extension.PostRouteExtensionContext
-	(*v3.VirtualHost)(nil),                   // 10: envoy.config.route.v3.VirtualHost
-	(*PostVirtualHostExtensionContext)(nil),  // 11: envoygateway.extension.PostVirtualHostExtensionContext
-	(*v31.Listener)(nil),                     // 12: envoy.config.listener.v3.Listener
-	(*PostHTTPListenerExtensionContext)(nil), // 13: envoygateway.extension.PostHTTPListenerExtensionContext
-	(*PostTranslateExtensionContext)(nil),    // 14: envoygateway.extension.PostTranslateExtensionContext
-	(*v32.Cluster)(nil),                      // 15: envoy.config.cluster.v3.Cluster
-	(*v33.Secret)(nil),                       // 16: envoy.extensions.transport_sockets.tls.v3.Secret
-}
+var (
+	file_proto_extension_service_proto_msgTypes = make([]protoimpl.MessageInfo, 8)
+	file_proto_extension_service_proto_goTypes  = []any{
+		(*PostRouteModifyRequest)(nil),           // 0: envoygateway.extension.PostRouteModifyRequest
+		(*PostRouteModifyResponse)(nil),          // 1: envoygateway.extension.PostRouteModifyResponse
+		(*PostVirtualHostModifyRequest)(nil),     // 2: envoygateway.extension.PostVirtualHostModifyRequest
+		(*PostVirtualHostModifyResponse)(nil),    // 3: envoygateway.extension.PostVirtualHostModifyResponse
+		(*PostHTTPListenerModifyRequest)(nil),    // 4: envoygateway.extension.PostHTTPListenerModifyRequest
+		(*PostHTTPListenerModifyResponse)(nil),   // 5: envoygateway.extension.PostHTTPListenerModifyResponse
+		(*PostTranslateModifyRequest)(nil),       // 6: envoygateway.extension.PostTranslateModifyRequest
+		(*PostTranslateModifyResponse)(nil),      // 7: envoygateway.extension.PostTranslateModifyResponse
+		(*v3.Route)(nil),                         // 8: envoy.config.route.v3.Route
+		(*PostRouteExtensionContext)(nil),        // 9: envoygateway.extension.PostRouteExtensionContext
+		(*v3.VirtualHost)(nil),                   // 10: envoy.config.route.v3.VirtualHost
+		(*PostVirtualHostExtensionContext)(nil),  // 11: envoygateway.extension.PostVirtualHostExtensionContext
+		(*v31.Listener)(nil),                     // 12: envoy.config.listener.v3.Listener
+		(*PostHTTPListenerExtensionContext)(nil), // 13: envoygateway.extension.PostHTTPListenerExtensionContext
+		(*PostTranslateExtensionContext)(nil),    // 14: envoygateway.extension.PostTranslateExtensionContext
+		(*v32.Cluster)(nil),                      // 15: envoy.config.cluster.v3.Cluster
+		(*v33.Secret)(nil),                       // 16: envoy.extensions.transport_sockets.tls.v3.Secret
+	}
+)
+
 var file_proto_extension_service_proto_depIdxs = []int32{
 	8,  // 0: envoygateway.extension.PostRouteModifyRequest.route:type_name -> envoy.config.route.v3.Route
 	9,  // 1: envoygateway.extension.PostRouteModifyRequest.post_route_context:type_name -> envoygateway.extension.PostRouteExtensionContext
