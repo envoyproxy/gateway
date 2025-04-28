@@ -75,7 +75,7 @@ func New(ctx context.Context, restCfg *rest.Config, svrCfg *ec.Server, resources
 	klog.SetLogger(mgrOpts.Logger)
 
 	restCfg.QPS, restCfg.Burst = svrCfg.EnvoyGateway.Provider.Kubernetes.Client.RateLimit.GetQPSAndBurst()
-	
+
 	if !ptr.Deref(svrCfg.EnvoyGateway.Provider.Kubernetes.LeaderElection.Disable, false) {
 		mgrOpts.LeaderElection = true
 		if svrCfg.EnvoyGateway.Provider.Kubernetes.LeaderElection.LeaseDuration != nil {
