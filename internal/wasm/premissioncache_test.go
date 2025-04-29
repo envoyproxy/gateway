@@ -85,7 +85,8 @@ func TestPermissionCache(t *testing.T) {
 		lastAccessTime := entry.lastAccess
 		lastCheckTime := entry.lastCheck
 
-		time.Sleep(10 * time.Millisecond)
+		cache.triggerChan <- struct{}{}
+		time.Sleep(1 * time.Millisecond)
 		allowed, err := cache.IsAllowed(context.Background(), image, secret, true)
 		require.True(
 			t,
@@ -122,7 +123,8 @@ func TestPermissionCache(t *testing.T) {
 		lastAccessTime := entry.lastAccess
 		lastCheckTime := entry.lastCheck
 
-		time.Sleep(10 * time.Millisecond)
+		cache.triggerChan <- struct{}{}
+		time.Sleep(1 * time.Millisecond)
 		allowed, err := cache.IsAllowed(context.Background(), image, secret, true)
 		require.False(t, isRetriableError(err), "permission check error should not be retriable")
 		require.False(
@@ -160,7 +162,8 @@ func TestPermissionCache(t *testing.T) {
 		lastAccessTime := entry.lastAccess
 		lastCheckTime := entry.lastCheck
 
-		time.Sleep(10 * time.Millisecond)
+		cache.triggerChan <- struct{}{}
+		time.Sleep(1 * time.Millisecond)
 		key := entry.key()
 		entry, ok := cache.getForTest(key)
 		require.False(t, ok, "cache entry should be removed after expiry")

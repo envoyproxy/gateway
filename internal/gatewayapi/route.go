@@ -1537,6 +1537,10 @@ func getBackendFilters(routeType gwapiv1.Kind, backendRefContext BackendRefConte
 }
 
 func isZoneAwareRoutingEnabled(svc *corev1.Service) bool {
+	if svc == nil {
+		return false
+	}
+
 	if trafficDist := svc.Spec.TrafficDistribution; trafficDist != nil {
 		return *trafficDist == corev1.ServiceTrafficDistributionPreferClose
 	}
