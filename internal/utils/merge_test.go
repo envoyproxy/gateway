@@ -34,6 +34,14 @@ func TestMergeBackendTrafficPolicy(t *testing.T) {
 						Connection: &egv1a1.BackendConnection{
 							BufferLimit: &r,
 						},
+						Retry: &egv1a1.Retry{
+							NumRetries: ptr.To[int32](2),
+						},
+					},
+					HTTPUpgrade: []*egv1a1.ProtocolUpgradeConfig{
+						{
+							Type: "original",
+						},
 					},
 				},
 			},
@@ -42,6 +50,11 @@ func TestMergeBackendTrafficPolicy(t *testing.T) {
 					ClusterSettings: egv1a1.ClusterSettings{
 						Retry: &egv1a1.Retry{
 							NumRetries: ptr.To[int32](3),
+						},
+					},
+					HTTPUpgrade: []*egv1a1.ProtocolUpgradeConfig{
+						{
+							Type: "patched",
 						},
 					},
 				},
@@ -54,6 +67,11 @@ func TestMergeBackendTrafficPolicy(t *testing.T) {
 						},
 						Retry: &egv1a1.Retry{
 							NumRetries: ptr.To[int32](3),
+						},
+					},
+					HTTPUpgrade: []*egv1a1.ProtocolUpgradeConfig{
+						{
+							Type: "patched",
 						},
 					},
 				},

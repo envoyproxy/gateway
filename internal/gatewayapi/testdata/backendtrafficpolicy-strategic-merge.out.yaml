@@ -8,11 +8,16 @@ backendTrafficPolicies:
   spec:
     connection:
       bufferLimit: 100M
+    httpUpgrade:
+    - type: spdy/3.1
     mergeType: StrategicMerge
     targetRef:
       group: gateway.networking.k8s.io
       kind: HTTPRoute
       name: httproute-1
+    timeout:
+      tcp:
+        connectTimeout: 10s
   status:
     ancestors:
     - ancestorRef:
@@ -68,6 +73,8 @@ backendTrafficPolicies:
     name: policy-for-gateway
     namespace: envoy-gateway
   spec:
+    httpUpgrade:
+    - type: websocket
     targetRef:
       group: gateway.networking.k8s.io
       kind: Gateway
@@ -279,13 +286,15 @@ xdsIR:
         traffic:
           backendConnection:
             bufferLimit: 100000000
+          httpUpgrade:
+          - spdy/3.1
           name: default/merged-policy-for-route
           timeout:
             http:
               connectionIdleTimeout: 16s
               maxConnectionDuration: 17s
             tcp:
-              connectTimeout: 15s
+              connectTimeout: 10s
       - destination:
           name: grpcroute/default/grpcroute-1/rule/0
           settings:

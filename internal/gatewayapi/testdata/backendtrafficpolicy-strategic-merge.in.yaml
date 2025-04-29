@@ -65,6 +65,8 @@ backendTrafficPolicies:
         http:
           connectionIdleTimeout: 16s
           maxConnectionDuration: 17s
+      httpUpgrade:
+        - type: websocket
   - apiVersion: gateway.envoyproxy.io/v1alpha1
     kind: BackendTrafficPolicy
     metadata:
@@ -76,8 +78,13 @@ backendTrafficPolicies:
         kind: HTTPRoute
         name: httproute-1
       mergeType: StrategicMerge
+      timeout:
+        tcp:
+          connectTimeout: 10s
       connection:
         bufferLimit: 100M
+      httpUpgrade:
+        - type: "spdy/3.1"
   - apiVersion: gateway.envoyproxy.io/v1alpha1
     kind: BackendTrafficPolicy
     metadata:
