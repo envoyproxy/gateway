@@ -517,7 +517,7 @@ metadata:
     app.kubernetes.io/version: "latest"
     app.kubernetes.io/managed-by: Helm
   annotations:
-    "helm.sh/hook": pre-install
+    "helm.sh/hook": pre-install, pre-upgrade
     "helm.sh/hook-weight": "-1"   # Ensure rbac is created before the certgen job when using ArgoCD.
 ---
 # Source: gateway-helm/templates/certgen-rbac.yaml
@@ -589,7 +589,7 @@ metadata:
     app.kubernetes.io/version: "latest"
     app.kubernetes.io/managed-by: Helm
   annotations:
-    "helm.sh/hook": pre-install
+    "helm.sh/hook": pre-install, pre-upgrade
     "helm.sh/hook-weight": "-1"   # Ensure rbac is created before the certgen job when using ArgoCD.
 rules:
 - apiGroups:
@@ -614,7 +614,7 @@ metadata:
     app.kubernetes.io/version: "latest"
     app.kubernetes.io/managed-by: Helm
   annotations:
-    "helm.sh/hook": pre-install
+    "helm.sh/hook": pre-install, pre-upgrade
     "helm.sh/hook-weight": "-1"   # Ensure rbac is created before the certgen job when using ArgoCD.
 roleRef:
   apiGroup: rbac.authorization.k8s.io
