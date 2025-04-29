@@ -35,33 +35,8 @@ services:
     name: headless-service
   spec:
     clusterIP: None
-    selector:
-      app: myapp
     ports:
     - port: 80
-      targetPort: 8080
-endpointSlices:
-- apiVersion: discovery.k8s.io/v1
-  kind: EndpointSlice
-  metadata:
-    name: headless-service-slice
-    namespace: default
-    labels:
-      kubernetes.io/service-name: headless-service
-  addressType: IPv4
-  ports:
-  - name: http
-    protocol: TCP
-    port: 80
-  endpoints:
-  - addresses:
-    - "192.168.1.1"
-    conditions:
-      ready: true
-  - addresses:
-    - "192.168.1.2"
-    conditions:
-      ready: true
 envoyProxyForGatewayClass:
   apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: EnvoyProxy
