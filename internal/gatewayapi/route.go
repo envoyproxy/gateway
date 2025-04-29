@@ -1403,7 +1403,7 @@ func validateDestinationSettings(destinationSettings *ir.DestinationSetting, end
 	case resource.KindService, resource.KindServiceImport:
 		if endpointRoutingDisabled && isHeadlessService(destinationSettings) {
 			return status.NewRouteStatusError(
-				fmt.Errorf("service %s is headless Service, please set routingType=Endpoint", destinationSettings.Name),
+				fmt.Errorf("service %s is a headless Service, please set routingType=Endpoint", destinationSettings.Name),
 				status.RouteReasonUnsupportedSetting)
 		}
 		if !endpointRoutingDisabled && destinationSettings.AddressType != nil && *destinationSettings.AddressType == ir.MIXED {

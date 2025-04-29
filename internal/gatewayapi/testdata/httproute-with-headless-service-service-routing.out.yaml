@@ -64,7 +64,7 @@ httpRoutes:
         type: Accepted
       - lastTransitionTime: null
         message: 'Failed to process route rule 0 backendRef 0: service httproute/default/httproute-headless/rule/0/backend/0
-          is headless Service, please set routingType=Endpoint.'
+          is a headless Service, please set routingType=Endpoint.'
         reason: UnsupportedValue
         status: "False"
         type: ResolvedRefs
