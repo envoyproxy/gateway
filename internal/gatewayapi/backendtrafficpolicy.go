@@ -69,12 +69,13 @@ func (t *Translator) ProcessBackendTrafficPolicies(resources *resource.Resources
 	handledPolicies := make(map[types.NamespacedName]*egv1a1.BackendTrafficPolicy)
 
 	gatewayPolicyMap := make(map[types.NamespacedName]*egv1a1.BackendTrafficPolicy)
+	gatewayPolicyMerged := sets.New[types.NamespacedName]()
 
 	// Translate
 	// 1. First translate Policies targeting xRoutes
 	// 2. Finally, the policies targeting Gateways
 
-	// Build gateway policy map
+	// Build gateway policy map, which is needed when processing the policies targeting xRoutes.
 	for _, currPolicy := range backendTrafficPolicies {
 		targetRefs := getPolicyTargetRefs(currPolicy.Spec.PolicyTargetReferences, gateways)
 		for _, currTarget := range targetRefs {
@@ -124,7 +125,7 @@ func (t *Translator) ProcessBackendTrafficPolicies(resources *resource.Resources
 				// policy overrides and populate its ancestor status.
 				parentRefs := GetParentReferences(route)
 				ancestorRefs := make([]gwapiv1a2.ParentReference, 0, len(parentRefs))
-				routeGateways := sets.New[types.NamespacedName]()
+				routeParents := sets.New[types.NamespacedName]()
 				for _, p := range parentRefs {
 					if p.Kind == nil || *p.Kind == resource.KindGateway {
 						namespace := route.GetNamespace()
@@ -135,7 +136,7 @@ func (t *Translator) ProcessBackendTrafficPolicies(resources *resource.Resources
 							Namespace: namespace,
 							Name:      string(p.Name),
 						}
-						routeGateways.Insert(gwNN)
+						routeParents.Insert(gwNN)
 
 						key := gwNN.String()
 						if _, ok := gatewayRouteMap[key]; !ok {
@@ -172,7 +173,7 @@ func (t *Translator) ProcessBackendTrafficPolicies(resources *resource.Resources
 					}
 				} else {
 					// merge with parent target policy if exists
-					for _, gwNN := range routeGateways.UnsortedList() {
+					for _, gwNN := range routeParents.UnsortedList() {
 						// find policy for Gateway
 						gwPolicy := gatewayPolicyMap[gwNN]
 						if gwPolicy == nil {
@@ -199,6 +200,7 @@ func (t *Translator) ProcessBackendTrafficPolicies(resources *resource.Resources
 							continue
 						}
 
+						gatewayPolicyMerged.Insert(gwNN)
 						status.SetConditionForPolicyAncestors(&policy.Status,
 							ancestorRefs,
 							t.GatewayControllerName,
@@ -270,11 +272,16 @@ func (t *Translator) ProcessBackendTrafficPolicies(resources *resource.Resources
 
 				// Check if this policy is overridden by other policies targeting at
 				// route level
+				if gatewayPolicyMerged.Has(gatewayNN) {
+					// if merge happened, skip the overridden check
+					continue
+				}
+
 				if r, ok := gatewayRouteMap[gatewayNN.String()]; ok {
 					// Maintain order here to ensure status/string does not change with the same data
-					routes := r.UnsortedList()
-					sort.Strings(routes)
-					message := fmt.Sprintf("This policy is being overridden by other backendTrafficPolicies for these routes: %v", routes)
+					gatewayRoutes := r.UnsortedList()
+					sort.Strings(gatewayRoutes)
+					message := fmt.Sprintf("This policy is being overridden by other backendTrafficPolicies for these routes: %v", gatewayRoutes)
 
 					status.SetConditionForPolicyAncestors(&policy.Status,
 						ancestorRefs,

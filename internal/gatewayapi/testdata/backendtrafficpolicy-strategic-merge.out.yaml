@@ -63,12 +63,6 @@ backendTrafficPolicies:
         reason: Accepted
         status: "True"
         type: Accepted
-      - lastTransitionTime: null
-        message: 'This policy is being overridden by other backendTrafficPolicies
-          for these routes: [default/httproute-1]'
-        reason: Overridden
-        status: "True"
-        type: Overridden
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
 gateways:
 - apiVersion: gateway.networking.k8s.io/v1
