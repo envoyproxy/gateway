@@ -78,10 +78,13 @@ infraIR:
         apiVersion: gateway.envoyproxy.io/v1alpha1
         kind: EnvoyProxy
         metadata:
+          creationTimestamp: null
           name: default
           namespace: default
         spec:
+          logging: {}
           routingType: Endpoint
+        status: {}
       listeners:
       - address: null
         name: envoy-gateway/gateway-1/http
@@ -116,8 +119,7 @@ xdsIR:
         mergeSlashes: true
       port: 10080
       routes:
-      - destination: null
-        directResponse:
+      - directResponse:
           statusCode: 500
         hostname: '*'
         isHTTP2: false
