@@ -5,8 +5,10 @@
     - '*'
     name: first-listener/*
     routes:
-    - directResponse:
-        status: 500
-      match:
+    - match:
         prefix: /
       name: extension-post-xdsroute-hook-error
+      route:
+        cluster: extension-post-xdsroute-hook-error-dest
+        upgradeConfigs:
+        - upgradeType: websocket

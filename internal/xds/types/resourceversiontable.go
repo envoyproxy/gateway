@@ -36,7 +36,7 @@ func (t *ResourceVersionTable) DeepCopyInto(out *ResourceVersionTable) {
 	*out = *t
 	if t.XdsResources != nil {
 		in, out := &t.XdsResources, &out.XdsResources
-		*out = make(map[string][]types.Resource, len(*in))
+		*out = make(map[resourcev3.Type][]types.Resource, len(*in))
 		for key, val := range *in {
 			var outVal []types.Resource
 			if val == nil {
@@ -110,7 +110,7 @@ func (t *ResourceVersionTable) ValidateAll() error {
 // AddOrReplaceXdsResource will update an existing resource of rType according to matchFunc or add as a new resource
 // if none satisfy the match criteria. It will only update the first match it finds, regardless
 // if multiple resources satisfy the match criteria.
-func (t *ResourceVersionTable) AddOrReplaceXdsResource(rType resourcev3.Type, resource types.Resource, matchFunc func(existing types.Resource, new types.Resource) bool) error {
+func (t *ResourceVersionTable) AddOrReplaceXdsResource(rType resourcev3.Type, resource types.Resource, matchFunc func(existing, new types.Resource) bool) error {
 	if t.XdsResources == nil || t.XdsResources[rType] == nil {
 		if err := t.AddXdsResource(rType, resource); err != nil {
 			return err

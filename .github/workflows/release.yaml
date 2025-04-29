@@ -39,7 +39,7 @@ jobs:
         run: cd test/benchmark && zip -r benchmark_report.zip benchmark_report
 
       - name: Upload Benchmark Report
-        uses: actions/upload-artifact@4cec3d8aa04e39d1a68397de0c4cd6fb9dce8ec1  # v4.6.1
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4.6.2
         with:
           name: benchmark_report
           path: test/benchmark/benchmark_report.zip
@@ -61,7 +61,7 @@ jobs:
           echo "sha_short=$(git rev-parse --short HEAD)" >> $GITHUB_ENV
 
       - name: Login to DockerHub
-        uses: docker/login-action@9780b0c442fbb1117ed29e0efdff1e18412f7567  # v3.3.0
+        uses: docker/login-action@74a5d142397b4f367a81961eba4e8cd7edddf772  # v3.4.0
         with:
           username: ${{ vars.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_PASSWORD }}
@@ -78,7 +78,7 @@ jobs:
           IMAGE_PULL_POLICY=IfNotPresent OCI_REGISTRY=oci://docker.io/envoyproxy CHART_VERSION=${{ env.without_v_release_tag }} IMAGE=docker.io/envoyproxy/gateway TAG=${{ env.release_tag }} make helm-package helm-push
 
       - name: Download Benchmark Report
-        uses: actions/download-artifact@cc203385981b70ca67e1cc392babf9cc229d5806  # v4.1.9
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093  # v4.3.0
         with:
           name: benchmark_report
           path: release-artifacts
@@ -98,11 +98,12 @@ jobs:
           zip -r egctl_${{ env.release_tag }}_windows_arm64.zip bin/windows/arm64/egctl
 
       - name: Upload Release Manifests
-        uses: softprops/action-gh-release@c95fe1489396fe8a9eb87c0abf8aa5b2ef267fda  # v2.2.1
+        uses: softprops/action-gh-release@da05d552573ad5aba039eaac05058a918a7bf631  # v2.2.2
         with:
           files: |
             release-artifacts/install.yaml
             release-artifacts/quickstart.yaml
+            release-artifacts/envoy-gateway-crds.yaml
             release-artifacts/release-notes.yaml
             release-artifacts/benchmark_report.zip
             envoy-gateway_${{ env.release_tag }}_linux_amd64.tar.gz

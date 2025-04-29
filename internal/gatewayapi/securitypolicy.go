@@ -600,7 +600,7 @@ func (t *Translator) buildCORS(cors *egv1a1.CORS) *ir.CORS {
 	var allowOrigins []*ir.StringMatch
 
 	for _, origin := range cors.AllowOrigins {
-		if isWildcard(string(origin)) {
+		if containsWildcard(string(origin)) {
 			regexStr := wildcard2regex(string(origin))
 			allowOrigins = append(allowOrigins, &ir.StringMatch{
 				SafeRegex: &regexStr,
@@ -622,7 +622,7 @@ func (t *Translator) buildCORS(cors *egv1a1.CORS) *ir.CORS {
 	}
 }
 
-func isWildcard(s string) bool {
+func containsWildcard(s string) bool {
 	return strings.ContainsAny(s, "*")
 }
 
@@ -651,12 +651,19 @@ func (t *Translator) buildJWT(
 			RecomputeRoute: p.RecomputeRoute,
 			ExtractFrom:    p.ExtractFrom,
 		}
-
-		remoteJWKS, err := t.buildRemoteJWKS(policy, &p.RemoteJWKS, i, resources, envoyProxy)
-		if err != nil {
-			return nil, err
+		if p.RemoteJWKS != nil {
+			remoteJWKS, err := t.buildRemoteJWKS(policy, p.RemoteJWKS, i, resources, envoyProxy)
+			if err != nil {
+				return nil, err
+			}
+			provider.RemoteJWKS = remoteJWKS
+		} else {
+			localJWKS, err := t.buildLocalJWKS(policy, p.LocalJWKS, resources)
+			if err != nil {
+				return nil, err
+			}
+			provider.LocalJWKS = &localJWKS
 		}
-		provider.RemoteJWKS = *remoteJWKS
 		providers = append(providers, provider)
 	}
 
@@ -671,10 +678,11 @@ func validateJWTProvider(providers []egv1a1.JWTProvider) error {
 
 	var names []string
 	for _, provider := range providers {
-		switch {
-		case len(provider.Name) == 0:
+		if len(provider.Name) == 0 {
 			errs = append(errs, errors.New("jwt provider cannot be an empty string"))
-		case len(provider.Issuer) != 0:
+		}
+
+		if len(provider.Issuer) != 0 {
 			switch {
 			// Issuer follows StringOrURI format based on https://datatracker.ietf.org/doc/html/rfc7519#section-4.1.1.
 			// Hence, when it contains ':', it MUST be a valid URI.
@@ -689,12 +697,31 @@ func validateJWTProvider(providers []egv1a1.JWTProvider) error {
 					errs = append(errs, fmt.Errorf("invalid issuer; when issuer contains '@' character, it MUST be a valid Email Address format: %w", err))
 				}
 			}
-
-		case len(provider.RemoteJWKS.URI) == 0:
-			errs = append(errs, fmt.Errorf("uri must be set for remote JWKS provider: %s", provider.Name))
 		}
-		if _, err := url.ParseRequestURI(provider.RemoteJWKS.URI); err != nil {
-			errs = append(errs, fmt.Errorf("invalid remote JWKS URI: %w", err))
+
+		if (provider.RemoteJWKS == nil && provider.LocalJWKS == nil) ||
+			(provider.RemoteJWKS != nil && provider.LocalJWKS != nil) {
+			errs = append(errs, fmt.Errorf(
+				"either remoteJWKS or localJWKS must be specified for jwt provider: %s", provider.Name))
+		}
+
+		if provider.RemoteJWKS != nil {
+			if len(provider.RemoteJWKS.URI) == 0 {
+				errs = append(errs, fmt.Errorf("uri must be set for remote JWKS provider: %s", provider.Name))
+			} else if _, err := url.ParseRequestURI(provider.RemoteJWKS.URI); err != nil {
+				errs = append(errs, fmt.Errorf("invalid remote JWKS URI: %w", err))
+			}
+		}
+
+		if provider.LocalJWKS != nil {
+			localJWKS := provider.LocalJWKS
+			if localJWKS.Type == nil || *localJWKS.Type == egv1a1.LocalJWKSTypeInline {
+				if localJWKS.Inline == nil {
+					errs = append(errs, fmt.Errorf("inline JWKS must be set for local JWKS provider: %s if type is Inline", provider.Name))
+				}
+			} else if localJWKS.ValueRef == nil {
+				errs = append(errs, fmt.Errorf("valueRef must be set for local JWKS provider: %s if type is ValueRef", provider.Name))
+			}
 		}
 
 		if len(errs) == 0 {
@@ -773,6 +800,41 @@ func (t *Translator) buildRemoteJWKS(
 		Traffic:     traffic,
 		URI:         remoteJWKS.URI,
 	}, nil
+}
+
+func (t *Translator) buildLocalJWKS(
+	policy *egv1a1.SecurityPolicy,
+	localJWKS *egv1a1.LocalJWKS,
+	resources *resource.Resources,
+) (string, error) {
+	jwksType := egv1a1.LocalJWKSTypeInline
+	if localJWKS.Type != nil {
+		jwksType = *localJWKS.Type
+	}
+
+	if jwksType == egv1a1.LocalJWKSTypeValueRef {
+		cm := resources.GetConfigMap(policy.Namespace, string(localJWKS.ValueRef.Name))
+		if cm == nil {
+			return "", fmt.Errorf("local JWKS ConfigMap %s/%s not found", policy.Namespace, localJWKS.ValueRef.Name)
+		}
+
+		jwksBytes, ok := cm.Data["jwks"]
+		if ok {
+			return jwksBytes, nil
+		}
+		if len(cm.Data) > 0 {
+			// Fallback to the first entry in the ConfigMap data if "jwks" key is not present
+			for _, v := range cm.Data {
+				return v, nil
+			}
+		}
+
+		return "", fmt.Errorf(
+			"JWKS data not found in ConfigMap %s/%s, no 'jwks' key and no other data found",
+			cm.Namespace, cm.Name)
+	}
+
+	return *localJWKS.Inline, nil
 }
 
 func (t *Translator) buildOIDC(

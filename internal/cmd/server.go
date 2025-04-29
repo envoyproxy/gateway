@@ -28,6 +28,14 @@ import (
 	xdstranslatorrunner "github.com/envoyproxy/gateway/internal/xds/translator/runner"
 )
 
+type Runner interface {
+	Start(context.Context) error
+	Name() string
+	// Close closes the runner when the server is shutting down.
+	// This called after all the subscriptions are closed at the very end of the server shutdown.
+	Close() error
+}
+
 // cfgPath is the path to the EnvoyGateway configuration file.
 var cfgPath string
 
@@ -54,12 +62,14 @@ func server(ctx context.Context, logOut io.Writer) error {
 		return err
 	}
 
+	runnersDone := make(chan struct{})
 	hook := func(c context.Context, cfg *config.Server) error {
-		cfg.Logger.Info("Setup runners")
-		if err := setupRunners(c, cfg); err != nil {
-			cfg.Logger.Error(err, "failed to setup runners")
+		cfg.Logger.Info("Start runners")
+		if err := startRunners(c, cfg); err != nil {
+			cfg.Logger.Error(err, "failed to start runners")
 			return err
 		}
+		runnersDone <- struct{}{}
 		return nil
 	}
 	l := loader.New(cfgPath, cfg, hook)
@@ -76,10 +86,13 @@ func server(ctx context.Context, logOut io.Writer) error {
 		return err
 	}
 
-	// Wait exit signal
+	// Wait for the context to be done, which usually happens the process receives a SIGTERM or SIGINT.
 	<-ctx.Done()
 
 	cfg.Logger.Info("shutting down")
+
+	// Wait for runners to finish.
+	<-runnersDone
 
 	return nil
 }
@@ -92,7 +105,7 @@ func getConfig(logOut io.Writer) (*config.Server, error) {
 // make `cfgPath` an argument to test it without polluting the global var
 func getConfigByPath(logOut io.Writer, cfgPath string) (*config.Server, error) {
 	// Initialize with default config parameters.
-	cfg, err := config.New()
+	cfg, err := config.New(logOut)
 	if err != nil {
 		return nil, err
 	}
@@ -124,9 +137,24 @@ func getConfigByPath(logOut io.Writer, cfgPath string) (*config.Server, error) {
 	return cfg, nil
 }
 
-// setupRunners starts all the runners required for the Envoy Gateway to
+// startRunners starts all the runners required for the Envoy Gateway to
 // fulfill its tasks.
-func setupRunners(ctx context.Context, cfg *config.Server) (err error) {
+//
+// This will block until the context is done, and returns after synchronously
+// closing all the runners.
+func startRunners(ctx context.Context, cfg *config.Server) (err error) {
+	channels := struct {
+		pResources *message.ProviderResources
+		xdsIR      *message.XdsIR
+		infraIR    *message.InfraIR
+		xds        *message.Xds
+	}{
+		pResources: new(message.ProviderResources),
+		xdsIR:      new(message.XdsIR),
+		infraIR:    new(message.InfraIR),
+		xds:        new(message.Xds),
+	}
+
 	// The Elected channel is used to block the tasks that are waiting for the leader to be elected.
 	// It will be closed once the leader is elected in the controller manager.
 	cfg.Elected = make(chan struct{})
@@ -134,101 +162,108 @@ func setupRunners(ctx context.Context, cfg *config.Server) (err error) {
 	// Setup the Extension Manager
 	var extMgr types.Manager
 	if cfg.EnvoyGateway.Provider.Type == egv1a1.ProviderTypeKubernetes {
-		extMgr, err = extensionregistry.NewManager(cfg)
-		if err != nil {
+		if extMgr, err = extensionregistry.NewManager(cfg); err != nil {
 			return err
 		}
 	}
 
-	pResources := new(message.ProviderResources)
-	// Start the Provider Service
-	// It fetches the resources from the configured provider type
-	// and publishes it.
-	// It also subscribes to status resources and once it receives
-	// a status resource back, it writes it out.
-	providerRunner := providerrunner.New(&providerrunner.Config{
-		Server:            *cfg,
-		ProviderResources: pResources,
-	})
-	if err = providerRunner.Start(ctx); err != nil {
-		return err
+	runners := []struct {
+		runner Runner
+	}{
+		{
+			// Start the Provider Service
+			// It fetches the resources from the configured provider type
+			// and publishes it.
+			// It also subscribes to status resources and once it receives
+			// a status resource back, it writes it out.
+			runner: providerrunner.New(&providerrunner.Config{
+				Server:            *cfg,
+				ProviderResources: channels.pResources,
+			}),
+		},
+		{
+			// Start the GatewayAPI Translator Runner
+			// It subscribes to the provider resources, translates it to xDS IR
+			// and infra IR resources and publishes them.
+			runner: gatewayapirunner.New(&gatewayapirunner.Config{
+				Server:            *cfg,
+				ProviderResources: channels.pResources,
+				XdsIR:             channels.xdsIR,
+				InfraIR:           channels.infraIR,
+				ExtensionManager:  extMgr,
+			}),
+		},
+		{
+			// Start the Xds Translator Service
+			// It subscribes to the xdsIR, translates it into xds Resources and publishes it.
+			// It also computes the EnvoyPatchPolicy statuses and publishes it.
+			runner: xdstranslatorrunner.New(&xdstranslatorrunner.Config{
+				Server:            *cfg,
+				XdsIR:             channels.xdsIR,
+				Xds:               channels.xds,
+				ExtensionManager:  extMgr,
+				ProviderResources: channels.pResources,
+			}),
+		},
+		{
+			// Start the Infra Manager Runner
+			// It subscribes to the infraIR, translates it into Envoy Proxy infrastructure
+			// resources such as K8s deployment and services.
+			runner: infrarunner.New(&infrarunner.Config{
+				Server:  *cfg,
+				InfraIR: channels.infraIR,
+			}),
+		},
+		{
+			// Start the xDS Server
+			// It subscribes to the xds Resources and configures the remote Envoy Proxy
+			// via the xDS Protocol.
+			runner: xdsserverrunner.New(&xdsserverrunner.Config{
+				Server: *cfg,
+				Xds:    channels.xds,
+			}),
+		},
 	}
 
-	xdsIR := new(message.XdsIR)
-	infraIR := new(message.InfraIR)
-	// Start the GatewayAPI Translator Runner
-	// It subscribes to the provider resources, translates it to xDS IR
-	// and infra IR resources and publishes them.
-	gwRunner := gatewayapirunner.New(&gatewayapirunner.Config{
-		Server:            *cfg,
-		ProviderResources: pResources,
-		XdsIR:             xdsIR,
-		InfraIR:           infraIR,
-		ExtensionManager:  extMgr,
-	})
-	if err = gwRunner.Start(ctx); err != nil {
-		return err
+	// Start all runners
+	for _, r := range runners {
+		if err = startRunner(ctx, cfg, r.runner); err != nil {
+			return err
+		}
 	}
-
-	xds := new(message.Xds)
-	// Start the Xds Translator Service
-	// It subscribes to the xdsIR, translates it into xds Resources and publishes it.
-	// It also computes the EnvoyPatchPolicy statuses and publishes it.
-	xdsTranslatorRunner := xdstranslatorrunner.New(&xdstranslatorrunner.Config{
-		Server:            *cfg,
-		XdsIR:             xdsIR,
-		Xds:               xds,
-		ExtensionManager:  extMgr,
-		ProviderResources: pResources,
-	})
-	if err = xdsTranslatorRunner.Start(ctx); err != nil {
-		return err
-	}
-
-	// Start the Infra Manager Runner
-	// It subscribes to the infraIR, translates it into Envoy Proxy infrastructure
-	// resources such as K8s deployment and services.
-	infraRunner := infrarunner.New(&infrarunner.Config{
-		Server:  *cfg,
-		InfraIR: infraIR,
-	})
-	if err = infraRunner.Start(ctx); err != nil {
-		return err
-	}
-
-	// Start the xDS Server
-	// It subscribes to the xds Resources and configures the remote Envoy Proxy
-	// via the xDS Protocol.
-	xdsServerRunner := xdsserverrunner.New(&xdsserverrunner.Config{
-		Server: *cfg,
-		Xds:    xds,
-	})
-	if err = xdsServerRunner.Start(ctx); err != nil {
-		return err
-	}
-
 	// Start the global rateLimit if it has been enabled through the config
 	if cfg.EnvoyGateway.RateLimit != nil {
 		// Start the Global RateLimit xDS Server
 		// It subscribes to the xds Resources and translates it to Envoy Ratelimit configuration.
 		rateLimitRunner := ratelimitrunner.New(&ratelimitrunner.Config{
 			Server: *cfg,
-			XdsIR:  xdsIR,
+			XdsIR:  channels.xdsIR,
 		})
-		if err = rateLimitRunner.Start(ctx); err != nil {
+		if err = startRunner(ctx, cfg, rateLimitRunner); err != nil {
 			return err
 		}
 	}
 
 	// Wait until done
 	<-ctx.Done()
+
 	// Close messages
-	pResources.Close()
-	xdsIR.Close()
-	infraIR.Close()
-	xds.Close()
+	closeChannels := []interface{ Close() }{
+		channels.pResources,
+		channels.xdsIR,
+		channels.infraIR,
+		channels.xds,
+	}
+	for _, ch := range closeChannels {
+		ch.Close()
+	}
 
 	cfg.Logger.Info("runners are shutting down")
+	for _, r := range runners {
+		if err := r.runner.Close(); err != nil {
+			cfg.Logger.Error(err, "failed to close runner", "name", r.runner.Name())
+		}
+	}
 
 	if extMgr != nil {
 		// Close connections to extension services
@@ -237,5 +272,14 @@ func setupRunners(ctx context.Context, cfg *config.Server) (err error) {
 		}
 	}
 
+	return nil
+}
+
+func startRunner(ctx context.Context, cfg *config.Server, runner Runner) error {
+	cfg.Logger.Info("Starting runner", "name", runner.Name())
+	if err := runner.Start(ctx); err != nil {
+		cfg.Logger.Error(err, "Failed to start runner", "name", runner.Name())
+		return err
+	}
 	return nil
 }

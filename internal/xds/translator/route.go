@@ -7,6 +7,7 @@ package translator
 
 import (
 	"errors"
+	"fmt"
 	"strings"
 	"time"
 
@@ -20,6 +21,7 @@ import (
 
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/utils/proto"
+	"github.com/envoyproxy/gateway/internal/xds/utils/fractionalpercent"
 )
 
 const (
@@ -112,6 +114,15 @@ func buildXdsRoute(httpRoute *ir.HTTPRoute) (*routev3.Route, error) {
 		}
 	}
 
+	// Telemetry
+	if httpRoute.Traffic != nil && httpRoute.Traffic.Telemetry != nil {
+		if tracingCfg, err := buildRouteTracing(httpRoute); err == nil {
+			router.Tracing = tracingCfg
+		} else {
+			return nil, err
+		}
+	}
+
 	// Add per route filter configs to the route, if needed.
 	if err := patchRouteWithPerRouteConfig(router, httpRoute); err != nil {
 		return nil, err
@@ -135,7 +146,7 @@ func buildUpgradeConfig(trafficFeatures *ir.TrafficFeatures) []*routev3.RouteAct
 	return upgradeConfigs
 }
 
-func buildXdsRouteMatch(pathMatch *ir.StringMatch, headerMatches []*ir.StringMatch, queryParamMatches []*ir.StringMatch) *routev3.RouteMatch {
+func buildXdsRouteMatch(pathMatch *ir.StringMatch, headerMatches, queryParamMatches []*ir.StringMatch) *routev3.RouteMatch {
 	outMatch := &routev3.RouteMatch{}
 
 	// Add a prefix match to '/' if no matches are specified
@@ -494,9 +505,9 @@ func buildXdsRequestMirrorPolicies(mirrorPolicies []*ir.MirrorPolicy) []*routev3
 func mirrorPercentByPolicy(mirror *ir.MirrorPolicy) *corev3.RuntimeFractionalPercent {
 	switch {
 	case mirror.Percentage != nil:
-		if *mirror.Percentage > 0 {
+		if p := *mirror.Percentage; p > 0 {
 			return &corev3.RuntimeFractionalPercent{
-				DefaultValue: translatePercentToFractionalPercent(mirror.Percentage),
+				DefaultValue: fractionalpercent.FromFloat32(p),
 			}
 		}
 		// If zero percent is provided explicitly, we should not mirror.
@@ -504,7 +515,7 @@ func mirrorPercentByPolicy(mirror *ir.MirrorPolicy) *corev3.RuntimeFractionalPer
 	default:
 		// Default to 100 percent if percent is not given.
 		return &corev3.RuntimeFractionalPercent{
-			DefaultValue: translateIntegerToFractionalPercent(100),
+			DefaultValue: fractionalpercent.FromIn32(100),
 		}
 	}
 }
@@ -640,9 +651,7 @@ func buildRetryPolicy(route *ir.HTTPRoute) (*routev3.RetryPolicy, error) {
 			}
 		}
 
-		if len(rr.RetryOn.HTTPStatusCodes) > 0 {
-			rp.RetriableStatusCodes = buildRetryStatusCodes(rr.RetryOn.HTTPStatusCodes)
-		}
+		rp.RetriableStatusCodes = buildRetryStatusCodes(rr.RetryOn.HTTPStatusCodes)
 	}
 
 	if rr.PerRetry != nil {
@@ -669,6 +678,25 @@ func buildRetryPolicy(route *ir.HTTPRoute) (*routev3.RetryPolicy, error) {
 		}
 	}
 	return rp, nil
+}
+
+func buildRouteTracing(httpRoute *ir.HTTPRoute) (*routev3.Tracing, error) {
+	if httpRoute == nil || httpRoute.Traffic == nil ||
+		httpRoute.Traffic.Telemetry == nil ||
+		httpRoute.Traffic.Telemetry.Tracing == nil {
+		return nil, nil
+	}
+
+	tracing := httpRoute.Traffic.Telemetry.Tracing
+	tags, err := buildTracingTags(tracing.CustomTags)
+	if err != nil {
+		return nil, fmt.Errorf("failed to build route tracing tags:%w", err)
+	}
+
+	return &routev3.Tracing{
+		RandomSampling: fractionalpercent.FromFraction(tracing.SamplingFraction),
+		CustomTags:     tags,
+	}, nil
 }
 
 func buildRetryStatusCodes(codes []ir.HTTPStatus) []uint32 {

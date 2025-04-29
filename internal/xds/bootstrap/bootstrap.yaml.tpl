@@ -8,6 +8,11 @@ admin:
     socket_address:
       address: {{ .AdminServer.Address }}
       port_value: {{ .AdminServer.Port }}
+cluster_manager:
+  local_cluster_name: local_cluster
+node:
+  locality:
+    zone: "$(ENVOY_SERVICE_ZONE)"
 {{- if .StatsMatcher  }}
 stats_config:
   stats_matcher:
@@ -166,6 +171,24 @@ static_resources:
                 address: {{ $sink.Address }}
                 port_value: {{ $sink.Port }}
   {{- end }}
+  - connect_timeout: 10s
+    lb_policy: ROUND_ROBIN
+    load_assignment:
+      cluster_name: local_cluster
+      endpoints:
+      - lb_endpoints:
+        - endpoint:
+            address:
+              socket_address:
+                {{- /* fake lb_endpoint to satisfy zone aware routing requirements */}}
+                address: 127.0.0.1
+                port_value: 10080
+          load_balancing_weight: 1
+        load_balancing_weight: 1
+        locality:
+          zone: "$(ENVOY_SERVICE_ZONE)"
+    name: local_cluster
+    type: STATIC
   - connect_timeout: 10s
     load_assignment:
       cluster_name: xds_cluster

@@ -16,6 +16,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/httpstream"
 	"k8s.io/client-go/kubernetes"
 	kubescheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
@@ -36,7 +37,7 @@ type CLIClient interface {
 	PodsForSelector(namespace string, labelSelectors ...string) (*corev1.PodList, error)
 
 	// PodExec takes a command and the pod data to run the command in the specified pod.
-	PodExec(namespacedName types.NamespacedName, container string, command string) (stdout string, stderr string, err error)
+	PodExec(namespacedName types.NamespacedName, container, command string) (stdout, stderr string, err error)
 
 	// Kube returns kube client.
 	Kube() kubernetes.Interface
@@ -130,7 +131,7 @@ func (c *client) Pod(namespacedName types.NamespacedName) (*corev1.Pod, error) {
 	return c.kube.CoreV1().Pods(namespacedName.Namespace).Get(context.TODO(), namespacedName.Name, metav1.GetOptions{})
 }
 
-func (c *client) PodExec(namespacedName types.NamespacedName, container string, command string) (stdout string, stderr string, err error) {
+func (c *client) PodExec(namespacedName types.NamespacedName, container, command string) (stdout, stderr string, err error) {
 	defer func() {
 		if err != nil {
 			if len(stderr) > 0 {
@@ -159,6 +160,20 @@ func (c *client) PodExec(namespacedName types.NamespacedName, container string, 
 		}, kubescheme.ParameterCodec)
 
 	exec, err := remotecommand.NewSPDYExecutor(c.config, "POST", req.URL())
+	if err != nil {
+		return "", "", err
+	}
+
+	// WebSocketExecutor must be "GET" method as described in RFC 6455 Sec. 4.1 (page 17).
+	websocketExec, err := remotecommand.NewWebSocketExecutor(c.config, "GET", req.URL().String())
+	if err != nil {
+		return "", "", err
+	}
+
+	// Prefer to Websocket, fallback to SPDY
+	exec, err = remotecommand.NewFallbackExecutor(websocketExec, exec, func(err error) bool {
+		return httpstream.IsUpgradeFailure(err) || httpstream.IsHTTPSProxyError(err)
+	})
 	if err != nil {
 		return "", "", err
 	}

@@ -7,6 +7,7 @@ package kubernetes
 
 import (
 	"context"
+	"fmt"
 
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
@@ -38,6 +39,7 @@ const (
 	backendUDPRouteIndex             = "backendUDPRouteIndex"
 	secretSecurityPolicyIndex        = "secretSecurityPolicyIndex"
 	backendSecurityPolicyIndex       = "backendSecurityPolicyIndex"
+	configMapSecurityPolicyIndex     = "configMapSecurityPolicyIndex"
 	configMapCtpIndex                = "configMapCtpIndex"
 	secretCtpIndex                   = "secretCtpIndex"
 	secretBtlsIndex                  = "secretBtlsIndex"
@@ -49,6 +51,7 @@ const (
 	httpRouteFilterHTTPRouteIndex    = "httpRouteFilterHTTPRouteIndex"
 	configMapBtpIndex                = "configMapBtpIndex"
 	configMapHTTPRouteFilterIndex    = "configMapHTTPRouteFilterIndex"
+	secretHTTPRouteFilterIndex       = "secretHTTPRouteFilterIndex"
 )
 
 func addReferenceGrantIndexers(ctx context.Context, mgr manager.Manager) error {
@@ -120,28 +123,55 @@ func backendHTTPRouteIndexFunc(rawObj client.Object) []string {
 				)
 			}
 		}
+
+		// Check for a RequestMirror filter to also include the backendRef from that filter
+		for _, filter := range rule.Filters {
+			if filter.Type != gwapiv1.HTTPRouteFilterRequestMirror {
+				continue
+			}
+
+			mirrorBackendRef := filter.RequestMirror.BackendRef
+
+			backendRefs = append(backendRefs,
+				types.NamespacedName{
+					Namespace: gatewayapi.NamespaceDerefOr(mirrorBackendRef.Namespace, httproute.Namespace),
+					Name:      string(mirrorBackendRef.Name),
+				}.String(),
+			)
+		}
 	}
 	return backendRefs
 }
 
 func httpRouteFilterHTTPRouteIndexFunc(rawObj client.Object) []string {
 	httproute := rawObj.(*gwapiv1.HTTPRoute)
-	var httpRouteFilterRefs []string
+	httpRouteFilterRefs := make(map[string]struct{})
 	for _, rule := range httproute.Spec.Rules {
 		for _, filter := range rule.Filters {
 			if filter.ExtensionRef != nil && string(filter.ExtensionRef.Kind) == resource.KindHTTPRouteFilter {
-				// If an explicit Backend namespace is not provided, use the HTTPRoute namespace to
-				// lookup the provided Gateway Name.
-				httpRouteFilterRefs = append(httpRouteFilterRefs,
-					types.NamespacedName{
-						Namespace: httproute.Namespace,
-						Name:      string(filter.ExtensionRef.Name),
-					}.String(),
-				)
+				httpRouteFilterRefs[types.NamespacedName{
+					Namespace: httproute.Namespace,
+					Name:      string(filter.ExtensionRef.Name),
+				}.String()] = struct{}{}
+			}
+			for _, backendRef := range rule.BackendRefs {
+				for _, filter := range backendRef.Filters {
+					if filter.ExtensionRef != nil && string(filter.ExtensionRef.Kind) == resource.KindHTTPRouteFilter {
+						httpRouteFilterRefs[types.NamespacedName{
+							Namespace: httproute.Namespace,
+							Name:      string(filter.ExtensionRef.Name),
+						}.String()] = struct{}{}
+						fmt.Println("xxxxxbackendRef: ", backendRef.Name, "filter: ", filter.ExtensionRef.Name)
+					}
+				}
 			}
 		}
 	}
-	return httpRouteFilterRefs
+	refs := make([]string, 0, len(httpRouteFilterRefs))
+	for ref := range httpRouteFilterRefs {
+		refs = append(refs, ref)
+	}
+	return refs
 }
 
 func secretEnvoyProxyIndexFunc(rawObj client.Object) []string {
@@ -531,6 +561,12 @@ func addSecurityPolicyIndexers(ctx context.Context, mgr manager.Manager) error {
 		return err
 	}
 
+	if err = mgr.GetFieldIndexer().IndexField(
+		ctx, &egv1a1.SecurityPolicy{}, configMapSecurityPolicyIndex,
+		configMapSecurityPolicyIndexFunc); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -594,6 +630,27 @@ func backendSecurityPolicyIndexFunc(rawObj client.Object) []string {
 	}
 
 	// This should not happen because the CEL validation should catch it.
+	return []string{}
+}
+
+func configMapSecurityPolicyIndexFunc(rawObj client.Object) []string {
+	securityPolicy := rawObj.(*egv1a1.SecurityPolicy)
+
+	if securityPolicy.Spec.JWT != nil {
+		for _, provider := range securityPolicy.Spec.JWT.Providers {
+			if provider.LocalJWKS != nil &&
+				provider.LocalJWKS.Type != nil &&
+				*provider.LocalJWKS.Type == egv1a1.LocalJWKSTypeValueRef {
+				return []string{
+					types.NamespacedName{
+						Namespace: securityPolicy.Namespace,
+						Name:      string(provider.LocalJWKS.ValueRef.Name),
+					}.String(),
+				}
+			}
+		}
+	}
+
 	return []string{}
 }
 
@@ -689,6 +746,12 @@ func addRouteFilterIndexers(ctx context.Context, mgr manager.Manager) error {
 		configMapHTTPRouteFilterIndex, configMapRouteFilterIndexFunc); err != nil {
 		return err
 	}
+
+	if err := mgr.GetFieldIndexer().IndexField(ctx, &egv1a1.HTTPRouteFilter{},
+		secretHTTPRouteFilterIndex, secretRouteFilterIndexFunc); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -708,6 +771,21 @@ func configMapRouteFilterIndexFunc(rawObj client.Object) []string {
 		}
 	}
 	return configMapReferences
+}
+
+func secretRouteFilterIndexFunc(rawObj client.Object) []string {
+	filter := rawObj.(*egv1a1.HTTPRouteFilter)
+	var secretReferences []string
+	if filter.Spec.CredentialInjection != nil {
+		secretReferences = append(secretReferences,
+			types.NamespacedName{
+				Namespace: filter.Namespace,
+				Name:      string(filter.Spec.CredentialInjection.Credential.ValueRef.Name),
+			}.String(),
+		)
+	}
+
+	return secretReferences
 }
 
 // addBtlsIndexers adds indexing on BackendTLSPolicy, for ConfigMap and Secret objects that are

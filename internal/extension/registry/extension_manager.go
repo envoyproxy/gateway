@@ -13,12 +13,17 @@ import (
 	"math"
 	"net"
 	"strconv"
+	"strings"
+	"time"
 
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc/security/advancedtls"
 	"google.golang.org/grpc/test/bufconn"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/utils/ptr"
 	k8scli "sigs.k8s.io/controller-runtime/pkg/client"
 	k8sclicfg "sigs.k8s.io/controller-runtime/pkg/client/config"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
@@ -31,16 +36,16 @@ import (
 	"github.com/envoyproxy/gateway/proto/extension"
 )
 
-const grpcServiceConfig = `{
+const grpcServiceConfigTemplate = `{
 "methodConfig": [{
 	"name": [{"service": "envoygateway.extension.EnvoyGatewayExtension"}],
 	"waitForReady": true,
 	"retryPolicy": {
-		"MaxAttempts": 4,
-		"InitialBackoff": "0.1s",
-		"MaxBackoff": "1s",
-		"BackoffMultiplier": 2.0,
-		"RetryableStatusCodes": [ "UNAVAILABLE" ]
+		"MaxAttempts": %d,
+		"InitialBackoff": "%fs",
+		"MaxBackoff": "%fs",
+		"BackoffMultiplier": %f,
+		"RetryableStatusCodes": [ %s ]
 	}
 }]}`
 
@@ -90,10 +95,23 @@ func NewInMemoryManager(cfg egv1a1.ExtensionManager, server extension.EnvoyGatew
 	go func() {
 		_ = baseServer.Serve(lis)
 	}()
-	conn, err := grpc.DialContext(context.Background(), "",
+
+	inMemoryManagerOpts := []grpc.DialOption{
 		grpc.WithContextDialer(func(context.Context, string) (net.Conn, error) {
 			return lis.Dial()
-		}), grpc.WithTransportCredentials(insecure.NewCredentials()))
+		}),
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+	}
+
+	if cfg.Service != nil {
+		opts, err := setupGRPCOpts(context.Background(), nil, &cfg, "")
+		if err != nil {
+			return nil, nil, err
+		}
+		inMemoryManagerOpts = append(inMemoryManagerOpts, opts...)
+	}
+
+	conn, err := grpc.DialContext(context.Background(), "", inMemoryManagerOpts...)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -245,18 +263,6 @@ func (m *Manager) CleanupHookConns() {
 	}
 }
 
-func parseCA(caSecret *corev1.Secret) (*x509.CertPool, error) {
-	caCertPEMBytes, ok := caSecret.Data[corev1.TLSCertKey]
-	if !ok {
-		return nil, errors.New("no cert found in CA secret")
-	}
-	cp := x509.NewCertPool()
-	if ok := cp.AppendCertsFromPEM(caCertPEMBytes); !ok {
-		return nil, errors.New("failed to append certificates")
-	}
-	return cp, nil
-}
-
 func setupGRPCOpts(ctx context.Context, client k8scli.Client, ext *egv1a1.ExtensionManager, namespace string) ([]grpc.DialOption, error) {
 	// These two errors shouldn't happen since we check these conditions when loading the extension
 	if ext == nil {
@@ -267,25 +273,32 @@ func setupGRPCOpts(ctx context.Context, client k8scli.Client, ext *egv1a1.Extens
 	}
 
 	var opts []grpc.DialOption
-	var creds credentials.TransportCredentials
 	if ext.Service.TLS != nil {
-		certRef := ext.Service.TLS.CertificateRef
-		secret, secretNamespace, err := kubernetes.ValidateSecretObjectReference(ctx, client, &certRef, namespace)
+		// Sanity check to ensure that the extension manager has a valid certificate reference
+		_, err := getCertPoolFromSecret(ctx, client, ext, namespace)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("failed to get root CA certificates: %w", err)
 		}
-
-		cp, err := parseCA(secret)
+		creds, err := getGRPCCredentials(client, ext, namespace)
 		if err != nil {
-			return nil, fmt.Errorf("error parsing cert in Secret %s in namespace %s", string(certRef.Name), secretNamespace)
+			return nil, fmt.Errorf("failed to get gRPC TLS credentials: %w", err)
 		}
-
-		creds = credentials.NewClientTLSFromCert(cp, "")
 		opts = append(opts, grpc.WithTransportCredentials(creds))
 	} else {
 		opts = append(opts, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	}
-	opts = append(opts, grpc.WithDefaultServiceConfig(grpcServiceConfig))
+
+	serviceConfig, err := buildServiceConfig(ext)
+	if err != nil {
+		return nil, err
+	}
+	opts = append(opts, grpc.WithDefaultServiceConfig(serviceConfig))
+
+	if ext.Service.Retry != nil {
+		maxAttempts := ptr.Deref(ext.Service.Retry.MaxAttempts, 4)
+		opts = append(opts, grpc.WithMaxCallAttempts(maxAttempts))
+	}
+
 	if ext.MaxMessageSize != nil {
 		maxMessageSize, ok := ext.MaxMessageSize.AsInt64()
 		if !ok {
@@ -299,4 +312,132 @@ func setupGRPCOpts(ctx context.Context, client k8scli.Client, ext *egv1a1.Extens
 	}
 
 	return opts, nil
+}
+
+func getGRPCCredentials(client k8scli.Client, ext *egv1a1.ExtensionManager, namespace string) (credentials.TransportCredentials, error) {
+	return advancedtls.NewClientCreds(&advancedtls.Options{
+		RootOptions: advancedtls.RootCertificateOptions{
+			// A callback function that dynamically loads root CA certificates from secret
+			GetRootCertificates: createGetRootCertificatesHandler(client, ext, namespace),
+		},
+	})
+}
+
+func createGetRootCertificatesHandler(client k8scli.Client, ext *egv1a1.ExtensionManager, namespace string) func(*advancedtls.ConnectionInfo) (*advancedtls.RootCertificates, error) {
+	return func(params *advancedtls.ConnectionInfo) (*advancedtls.RootCertificates, error) {
+		ctx := context.Background()
+		cp, err := getCertPoolFromSecret(ctx, client, ext, namespace)
+		if err != nil {
+			return nil, err
+		}
+
+		return &advancedtls.RootCertificates{TrustCerts: cp}, nil
+	}
+}
+
+func getCertPoolFromSecret(ctx context.Context, client k8scli.Client, ext *egv1a1.ExtensionManager, namespace string) (*x509.CertPool, error) {
+	certRef := ext.Service.TLS.CertificateRef
+	secret, _, err := kubernetes.ValidateSecretObjectReference(ctx, client, &certRef, namespace)
+	if err != nil {
+		return nil, fmt.Errorf("failed to validate TLS certificate reference: %w", err)
+	}
+
+	caCertPEMBytes, ok := secret.Data[corev1.TLSCertKey]
+	if !ok {
+		return nil, fmt.Errorf("no CA certificate found in Kubernetes Secret %s in namespace %s", secret.GetName(), secret.GetNamespace())
+	}
+	cp := x509.NewCertPool()
+	if ok := cp.AppendCertsFromPEM(caCertPEMBytes); !ok {
+		return nil, errors.New("failed to append certificates from CA secret")
+	}
+	return cp, nil
+}
+
+func fractionOrDefault(fraction *gwapiv1.Fraction, defaultValue float64) float64 {
+	if fraction != nil {
+		numerator := float64(fraction.Numerator)
+		denominator := float64(100)
+		if fraction.Denominator != nil {
+			denominator = float64(*fraction.Denominator)
+		}
+		return numerator / denominator
+	}
+	return defaultValue
+}
+
+var retryStrToCode = map[string]codes.Code{
+	`"CANCELLED"`:           codes.Canceled,
+	`"UNKNOWN"`:             codes.Unknown,
+	`"INVALID_ARGUMENT"`:    codes.InvalidArgument,
+	`"DEADLINE_EXCEEDED"`:   codes.DeadlineExceeded,
+	`"NOT_FOUND"`:           codes.NotFound,
+	`"ALREADY_EXISTS"`:      codes.AlreadyExists,
+	`"PERMISSION_DENIED"`:   codes.PermissionDenied,
+	`"RESOURCE_EXHAUSTED"`:  codes.ResourceExhausted,
+	`"FAILED_PRECONDITION"`: codes.FailedPrecondition,
+	`"ABORTED"`:             codes.Aborted,
+	`"OUT_OF_RANGE"`:        codes.OutOfRange,
+	`"UNIMPLEMENTED"`:       codes.Unimplemented,
+	`"INTERNAL"`:            codes.Internal,
+	`"UNAVAILABLE"`:         codes.Unavailable,
+	`"DATA_LOSS"`:           codes.DataLoss,
+	`"UNAUTHENTICATED"`:     codes.Unauthenticated,
+}
+
+func getRetryableGRPCCode(retryableCodes []egv1a1.RetryableGRPCStatusCode) (string, error) {
+	var quotedCodes []string
+	for _, statusCode := range retryableCodes {
+		quotedCode := strconv.Quote(string(statusCode))
+		_, found := retryStrToCode[quotedCode]
+		if !found {
+			return "", fmt.Errorf("invalid Extension Manager GRPC Retry Status code value %s", statusCode)
+		} else {
+			quotedCodes = append(quotedCodes, quotedCode)
+		}
+	}
+
+	return strings.Join(quotedCodes, ","), nil
+}
+
+func buildServiceConfig(ext *egv1a1.ExtensionManager) (string, error) {
+	const defaultMaxAttempts = 4
+	const defaultBackoffMultiplier = 2.0
+	const defaultRetryableCodes = "UNAVAILABLE"
+
+	defaultInitialBackoff := gwapiv1.Duration("100ms")
+	defaultMaxBackoff := gwapiv1.Duration("1s")
+
+	maxAttempts := defaultMaxAttempts
+	initialBackoff := defaultInitialBackoff
+	maxBackoff := defaultMaxBackoff
+	backoffMultiplier := defaultBackoffMultiplier
+	grpcRetryableStatusCodes := strconv.Quote(defaultRetryableCodes)
+
+	if ext.Service.Retry != nil {
+		maxAttempts = ptr.Deref(ext.Service.Retry.MaxAttempts, defaultMaxAttempts)
+		initialBackoff = ptr.Deref(ext.Service.Retry.InitialBackoff, defaultInitialBackoff)
+		maxBackoff = ptr.Deref(ext.Service.Retry.MaxBackoff, defaultMaxBackoff)
+		backoffMultiplier = fractionOrDefault(ext.Service.Retry.BackoffMultiplier, defaultBackoffMultiplier)
+
+		if len(ext.Service.Retry.RetryableStatusCodes) > 0 {
+			var err error
+			grpcRetryableStatusCodes, err = getRetryableGRPCCode(ext.Service.Retry.RetryableStatusCodes)
+			if err != nil {
+				return "", err
+			}
+		}
+	}
+
+	initialBackoffDuration, err := time.ParseDuration(string(initialBackoff))
+	if err != nil {
+		return "", fmt.Errorf("invalid Extension Manager GRPC Retry Initial Backoff %s", initialBackoff)
+	}
+
+	maxBackoffDuration, err := time.ParseDuration(string(maxBackoff))
+	if err != nil {
+		return "", fmt.Errorf("invalid Extension Manager GRPC Retry Max Backoff %s", maxBackoff)
+	}
+
+	return fmt.Sprintf(grpcServiceConfigTemplate, maxAttempts, initialBackoffDuration.Seconds(), maxBackoffDuration.Seconds(),
+		backoffMultiplier, grpcRetryableStatusCodes), nil
 }

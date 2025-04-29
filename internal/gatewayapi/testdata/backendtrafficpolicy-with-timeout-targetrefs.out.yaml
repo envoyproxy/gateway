@@ -152,9 +152,9 @@ grpcRoutes:
         status: "True"
         type: Accepted
       - lastTransitionTime: null
-        message: Service envoy-gateway/service-1 not found
-        reason: BackendNotFound
-        status: "False"
+        message: Resolved all the Object references for the Route
+        reason: ResolvedRefs
+        status: "True"
         type: ResolvedRefs
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
@@ -191,9 +191,9 @@ httpRoutes:
         status: "True"
         type: Accepted
       - lastTransitionTime: null
-        message: Service envoy-gateway/service-1 not found
-        reason: BackendNotFound
-        status: "False"
+        message: Resolved all the Object references for the Route
+        reason: ResolvedRefs
+        status: "True"
         type: ResolvedRefs
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
@@ -252,8 +252,16 @@ xdsIR:
         mergeSlashes: true
       port: 10080
       routes:
-      - directResponse:
-          statusCode: 500
+      - destination:
+          name: grpcroute/envoy-gateway/grpcroute-1/rule/0
+          settings:
+          - addressType: IP
+            endpoints:
+            - host: 7.7.7.7
+              port: 8080
+            name: grpcroute/envoy-gateway/grpcroute-1/rule/0/backend/0
+            protocol: GRPC
+            weight: 1
         hostname: '*'
         isHTTP2: true
         metadata:
@@ -262,6 +270,7 @@ xdsIR:
           namespace: envoy-gateway
         name: grpcroute/envoy-gateway/grpcroute-1/rule/0/match/-1/*
         traffic:
+          name: envoy-gateway/policy-for-gateway
           timeout:
             http:
               connectionIdleTimeout: 16s
@@ -293,8 +302,16 @@ xdsIR:
         mergeSlashes: true
       port: 10080
       routes:
-      - directResponse:
-          statusCode: 500
+      - destination:
+          name: httproute/envoy-gateway/httproute-1/rule/0
+          settings:
+          - addressType: IP
+            endpoints:
+            - host: 7.7.7.7
+              port: 8080
+            name: httproute/envoy-gateway/httproute-1/rule/0/backend/0
+            protocol: HTTP
+            weight: 1
         hostname: gateway.envoyproxy.io
         isHTTP2: false
         metadata:
@@ -307,6 +324,7 @@ xdsIR:
           name: ""
           prefix: /
         traffic:
+          name: envoy-gateway/policy-for-gateway
           timeout:
             http:
               connectionIdleTimeout: 16s

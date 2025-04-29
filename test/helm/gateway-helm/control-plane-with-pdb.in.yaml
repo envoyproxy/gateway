@@ -3,6 +3,7 @@ global:
     envoyGateway:
       image: "docker.io/envoyproxy/gateway-dev:latest"
       pullPolicy: Always
+
 podDisruptionBudget:
   minAvailable: 1
   maxUnavailable: 1

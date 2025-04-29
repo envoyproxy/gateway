@@ -16,7 +16,7 @@ import (
 	"github.com/envoyproxy/gateway/internal/troubleshoot/collect"
 )
 
-func CollectResult(ctx context.Context, restConfig *rest.Config, bundlePath string, egNamespace string) tbcollect.CollectorResult {
+func CollectResult(ctx context.Context, restConfig *rest.Config, bundlePath, egNamespace string) tbcollect.CollectorResult {
 	var result tbcollect.CollectorResult
 
 	progressChan := make(chan interface{})

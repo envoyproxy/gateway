@@ -7,6 +7,7 @@ package kubernetes
 
 import (
 	"context"
+	"os"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -26,7 +27,7 @@ import (
 )
 
 func TestCreateOrUpdateProxyConfigMap(t *testing.T) {
-	cfg, err := config.New()
+	cfg, err := config.New(os.Stdout)
 	require.NoError(t, err)
 
 	infra := ir.NewInfra()
@@ -128,7 +129,7 @@ func TestCreateOrUpdateProxyConfigMap(t *testing.T) {
 }
 
 func TestDeleteConfigProxyMap(t *testing.T) {
-	cfg, err := config.New()
+	cfg, err := config.New(os.Stdout)
 	require.NoError(t, err)
 
 	infra := ir.NewInfra()

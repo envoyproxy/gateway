@@ -169,9 +169,6 @@ securityPolicies:
       failOpen: true
       grpc:
         backendRefs:
-        - kind: Service
-          name: service-2
-          port: 8080
         - group: gateway.envoyproxy.io
           kind: Backend
           name: backend-fqdn
@@ -245,22 +242,15 @@ xdsIR:
           extAuth:
             failOpen: true
             grpc:
-              authority: service-2.default:8080
+              authority: primary.foo.com:3000
               destination:
                 name: securitypolicy/default/policy-for-http-route-1/extauth/0
                 settings:
-                - addressType: IP
-                  endpoints:
-                  - host: 7.7.7.7
-                    port: 8080
-                  name: securitypolicy/default/policy-for-http-route-1/extauth/0/backend/0
-                  protocol: GRPC
-                  weight: 1
                 - addressType: FQDN
                   endpoints:
                   - host: primary.foo.com
                     port: 3000
-                  name: securitypolicy/default/policy-for-http-route-1/extauth/0/backend/1
+                  name: securitypolicy/default/policy-for-http-route-1/extauth/0/backend/0
                   protocol: GRPC
                   weight: 1
             headersToExtAuth:
@@ -293,22 +283,15 @@ xdsIR:
           extAuth:
             failOpen: true
             grpc:
-              authority: service-2.default:8080
+              authority: primary.foo.com:3000
               destination:
                 name: securitypolicy/default/policy-for-http-route-1/extauth/0
                 settings:
-                - addressType: IP
-                  endpoints:
-                  - host: 7.7.7.7
-                    port: 8080
-                  name: securitypolicy/default/policy-for-http-route-1/extauth/0/backend/0
-                  protocol: GRPC
-                  weight: 1
                 - addressType: FQDN
                   endpoints:
                   - host: primary.foo.com
                     port: 3000
-                  name: securitypolicy/default/policy-for-http-route-1/extauth/0/backend/1
+                  name: securitypolicy/default/policy-for-http-route-1/extauth/0/backend/0
                   protocol: GRPC
                   weight: 1
             headersToExtAuth:

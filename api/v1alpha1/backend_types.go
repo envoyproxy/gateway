@@ -7,6 +7,8 @@ package v1alpha1
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
+	gwapiv1a3 "sigs.k8s.io/gateway-api/apis/v1alpha3"
 )
 
 const (
@@ -112,7 +114,15 @@ type UnixSocket struct {
 }
 
 // BackendSpec describes the desired state of BackendSpec.
+// +kubebuilder:validation:XValidation:rule="self.type != 'DynamicResolver' || !has(self.endpoints) && !has(self.appProtocols)",message="DynamicResolver type cannot have endpoints and appProtocols specified"
 type BackendSpec struct {
+	// Type defines the type of the backend. Defaults to "Endpoints"
+	//
+	// +kubebuilder:validation:Enum=Endpoints;DynamicResolver
+	// +kubebuilder:default=Endpoints
+	// +optional
+	Type *BackendType `json:"type,omitempty"`
+
 	// Endpoints defines the endpoints to be used when connecting to the backend.
 	//
 	// +kubebuilder:validation:MinItems=1
@@ -133,7 +143,59 @@ type BackendSpec struct {
 	//
 	// +optional
 	Fallback *bool `json:"fallback,omitempty"`
+
+	// TLS defines the TLS settings for the backend.
+	// Only supported for DynamicResolver backends.
+	//
+	// +optional
+	// +notImplementedHide
+	TLS *BackendTLSSettings `json:"tls,omitempty"`
 }
+
+// BackendTLSSettings holds the TLS settings for the backend.
+// Only used for DynamicResolver backends.
+type BackendTLSSettings struct {
+	// CACertificateRefs contains one or more references to Kubernetes objects that
+	// contain TLS certificates of the Certificate Authorities that can be used
+	// as a trust anchor to validate the certificates presented by the backend.
+	//
+	// A single reference to a Kubernetes ConfigMap or a Kubernetes Secret,
+	// with the CA certificate in a key named `ca.crt` is currently supported.
+	//
+	// If CACertificateRefs is empty or unspecified, then WellKnownCACertificates must be
+	// specified. Only one of CACertificateRefs or WellKnownCACertificates may be specified,
+	// not both.
+	//
+	// +kubebuilder:validation:MaxItems=8
+	// +optional
+	CACertificateRefs []gwapiv1.LocalObjectReference `json:"caCertificateRefs,omitempty"`
+
+	// WellKnownCACertificates specifies whether system CA certificates may be used in
+	// the TLS handshake between the gateway and backend pod.
+	//
+	// If WellKnownCACertificates is unspecified or empty (""), then CACertificateRefs
+	// must be specified with at least one entry for a valid configuration. Only one of
+	// CACertificateRefs or WellKnownCACertificates may be specified, not both.
+	//
+	// +optional
+	WellKnownCACertificates *gwapiv1a3.WellKnownCACertificatesType `json:"wellKnownCACertificates,omitempty"`
+}
+
+// BackendType defines the type of the Backend.
+type BackendType string
+
+const (
+	// BackendTypeEndpoints defines the type of the backend as Endpoints.
+	BackendTypeEndpoints BackendType = "Endpoints"
+	// BackendTypeDynamicResolver defines the type of the backend as DynamicResolver.
+	//
+	// When a backend is of type DynamicResolver, the Envoy will resolve the upstream
+	// ip address and port from the host header of the incoming request. If the ip address
+	// is directly set in the host header, the Envoy will use the ip address and port as the
+	// upstream address. If the hostname is set in the host header, the Envoy will resolve the
+	// ip address and port from the hostname using the DNS resolver.
+	BackendTypeDynamicResolver BackendType = "DynamicResolver"
+)
 
 // BackendConditionType is a type of condition for a backend. This type should be
 // used with a Backend resource Status.Conditions field.

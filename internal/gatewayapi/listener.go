@@ -6,7 +6,6 @@
 package gatewayapi
 
 import (
-	"errors"
 	"fmt"
 	"math"
 
@@ -266,7 +265,7 @@ func (t *Translator) processAccessLog(envoyproxy *egv1a1.EnvoyProxy, resources *
 	if envoyproxy == nil ||
 		envoyproxy.Spec.Telemetry == nil ||
 		envoyproxy.Spec.Telemetry.AccessLog == nil ||
-		(!envoyproxy.Spec.Telemetry.AccessLog.Disable && len(envoyproxy.Spec.Telemetry.AccessLog.Settings) == 0) {
+		(!ptr.Deref(envoyproxy.Spec.Telemetry.AccessLog.Disable, false) && len(envoyproxy.Spec.Telemetry.AccessLog.Settings) == 0) {
 		// use the default access log
 		return &ir.AccessLog{
 			JSON: []*ir.JSONAccessLog{
@@ -276,7 +275,7 @@ func (t *Translator) processAccessLog(envoyproxy *egv1a1.EnvoyProxy, resources *
 			},
 		}, nil
 	}
-	if envoyproxy.Spec.Telemetry.AccessLog.Disable {
+	if ptr.Deref(envoyproxy.Spec.Telemetry.AccessLog.Disable, false) {
 		return nil, nil
 	}
 
@@ -564,15 +563,22 @@ func (t *Translator) processBackendRefs(name string, backendCluster egv1a1.Backe
 	for _, ref := range backendCluster.BackendRefs {
 		ns := NamespaceDerefOr(ref.Namespace, namespace)
 		kind := KindDerefOr(ref.Kind, resource.KindService)
-		if kind != resource.KindService {
-			return nil, nil, errors.New("only service kind is supported for backendRefs")
+		switch kind {
+		case resource.KindService:
+			if err := validateBackendRefService(ref.BackendObjectReference, resources, ns, corev1.ProtocolTCP); err != nil {
+				return nil, nil, err
+			}
+			ds := t.processServiceDestinationSetting(name, ref.BackendObjectReference, ns, ir.TCP, resources, envoyProxy)
+			result = append(result, ds)
+		case resource.KindBackend:
+			if err := t.validateBackendRefBackend(ref.BackendObjectReference, resources, ns, true); err != nil {
+				return nil, nil, err
+			}
+			ds := t.processBackendDestinationSetting(name, ref.BackendObjectReference, ns, ir.TCP, resources)
+			result = append(result, ds)
+		default:
+			return nil, nil, fmt.Errorf("unsupported kind for backendRefs: %s", kind)
 		}
-		if err := validateBackendService(ref.BackendObjectReference, resources, ns, corev1.ProtocolTCP); err != nil {
-			return nil, nil, err
-		}
-
-		ds := t.processServiceDestinationSetting(name, ref.BackendObjectReference, ns, ir.TCP, resources, envoyProxy)
-		result = append(result, ds)
 	}
 	if len(result) == 0 {
 		return nil, traffic, nil

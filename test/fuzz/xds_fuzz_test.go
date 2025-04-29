@@ -9,6 +9,8 @@ import (
 	"testing"
 
 	fuzz "github.com/AdaLogics/go-fuzz-headers"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	"sigs.k8s.io/yaml"
 
 	"github.com/envoyproxy/gateway/internal/cmd/egctl"
@@ -50,5 +52,23 @@ func FuzzGatewayAPIToXDS(f *testing.F) {
 		}
 
 		_, _ = egctl.TranslateGatewayAPIToXds(namespace, dnsDomain, resourceType, rs)
+	})
+}
+
+func FuzzGatewayClassToXDS(f *testing.F) {
+	f.Fuzz(func(t *testing.T, name, controllerName, namespace, dnsDomain, resourceType string) {
+		resources := &resource.Resources{
+			GatewayClass: &gwapiv1.GatewayClass{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      name,
+					Namespace: namespace,
+				},
+				Spec: gwapiv1.GatewayClassSpec{
+					ControllerName: gwapiv1.GatewayController(controllerName),
+				},
+			},
+		}
+
+		_, _ = egctl.TranslateGatewayAPIToXds(namespace, dnsDomain, resourceType, resources)
 	})
 }

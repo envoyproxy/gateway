@@ -7,6 +7,7 @@ package kubernetes
 
 import (
 	"fmt"
+	"os"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -52,7 +53,7 @@ func TestGatewayClassHasMatchingController(t *testing.T) {
 	}
 
 	// Create the reconciler.
-	logger := logging.DefaultLogger(egv1a1.LogLevelInfo)
+	logger := logging.DefaultLogger(os.Stdout, egv1a1.LogLevelInfo)
 
 	r := gatewayAPIReconciler{
 		classController: egv1a1.GatewayControllerName,
@@ -104,7 +105,7 @@ func TestGatewayClassHasMatchingNamespaceLabels(t *testing.T) {
 		},
 	}
 
-	logger := logging.DefaultLogger(egv1a1.LogLevelInfo)
+	logger := logging.DefaultLogger(os.Stdout, egv1a1.LogLevelInfo)
 
 	for _, tc := range testCases {
 		r := gatewayAPIReconciler{
@@ -158,7 +159,7 @@ func TestValidateGatewayForReconcile(t *testing.T) {
 	}
 
 	// Create the reconciler.
-	logger := logging.DefaultLogger(egv1a1.LogLevelInfo)
+	logger := logging.DefaultLogger(os.Stdout, egv1a1.LogLevelInfo)
 
 	r := gatewayAPIReconciler{
 		classController: egv1a1.GatewayControllerName,
@@ -384,7 +385,7 @@ func TestValidateSecretForReconcile(t *testing.T) {
 	}
 
 	// Create the reconciler.
-	logger := logging.DefaultLogger(egv1a1.LogLevelInfo)
+	logger := logging.DefaultLogger(os.Stdout, egv1a1.LogLevelInfo)
 
 	r := gatewayAPIReconciler{
 		classController: egv1a1.GatewayControllerName,
@@ -463,10 +464,56 @@ func TestValidateEndpointSliceForReconcile(t *testing.T) {
 			endpointSlice: test.GetEndpointSlice(types.NamespacedName{Name: "endpointslice"}, "imported-service", true),
 			expect:        true,
 		},
+		{
+			name: "mirrored backend route exists",
+			configs: []client.Object{
+				test.GetGatewayClass("test-gc", egv1a1.GatewayControllerName, nil),
+				sampleGateway,
+				&gwapiv1.HTTPRoute{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "httproute-test",
+					},
+					Spec: gwapiv1.HTTPRouteSpec{
+						CommonRouteSpec: gwapiv1.CommonRouteSpec{
+							ParentRefs: []gwapiv1.ParentReference{
+								{Name: gwapiv1.ObjectName("scheduled-status-test")},
+							},
+						},
+						Rules: []gwapiv1.HTTPRouteRule{
+							{
+								BackendRefs: []gwapiv1.HTTPBackendRef{
+									{
+										BackendRef: gwapiv1.BackendRef{
+											BackendObjectReference: gwapiv1.BackendObjectReference{
+												Name: gwapiv1.ObjectName("service"),
+												Port: ptr.To(gwapiv1.PortNumber(80)),
+											},
+										},
+									},
+								},
+								Filters: []gwapiv1.HTTPRouteFilter{
+									{
+										Type: gwapiv1.HTTPRouteFilterRequestMirror,
+										RequestMirror: &gwapiv1.HTTPRequestMirrorFilter{
+											BackendRef: gwapiv1.BackendObjectReference{
+												Name: "mirror-service",
+												Port: ptr.To(gwapiv1.PortNumber(80)),
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			endpointSlice: test.GetEndpointSlice(types.NamespacedName{Name: "endpointslice"}, "mirror-service", false),
+			expect:        true,
+		},
 	}
 
 	// Create the reconciler.
-	logger := logging.DefaultLogger(egv1a1.LogLevelInfo)
+	logger := logging.DefaultLogger(os.Stdout, egv1a1.LogLevelInfo)
 
 	r := gatewayAPIReconciler{
 		classController: egv1a1.GatewayControllerName,
@@ -895,7 +942,7 @@ func TestValidateServiceForReconcile(t *testing.T) {
 	}
 
 	// Create the reconciler.
-	logger := logging.DefaultLogger(egv1a1.LogLevelInfo)
+	logger := logging.DefaultLogger(os.Stdout, egv1a1.LogLevelInfo)
 
 	r := gatewayAPIReconciler{
 		classController:    egv1a1.GatewayControllerName,
@@ -1014,7 +1061,7 @@ func TestValidateObjectForReconcile(t *testing.T) {
 	}
 
 	// Create the reconciler.
-	logger := logging.DefaultLogger(egv1a1.LogLevelInfo)
+	logger := logging.DefaultLogger(os.Stdout, egv1a1.LogLevelInfo)
 
 	r := gatewayAPIReconciler{
 		classController: egv1a1.GatewayControllerName,
@@ -1121,7 +1168,7 @@ func TestCheckObjectNamespaceLabels(t *testing.T) {
 	}
 
 	// Create the reconciler.
-	logger := logging.DefaultLogger(egv1a1.LogLevelInfo)
+	logger := logging.DefaultLogger(os.Stdout, egv1a1.LogLevelInfo)
 
 	r := gatewayAPIReconciler{
 		classController: egv1a1.GatewayControllerName,
@@ -1274,7 +1321,7 @@ func TestValidateHTTPRouteFilerForReconcile(t *testing.T) {
 	}
 
 	// Create the reconciler.
-	logger := logging.DefaultLogger(egv1a1.LogLevelInfo)
+	logger := logging.DefaultLogger(os.Stdout, egv1a1.LogLevelInfo)
 
 	r := gatewayAPIReconciler{
 		classController: egv1a1.GatewayControllerName,

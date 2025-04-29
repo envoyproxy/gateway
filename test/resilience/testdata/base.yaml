@@ -107,4 +107,3 @@ spec:
   provider:
     type: Kubernetes
     kubernetes:
-

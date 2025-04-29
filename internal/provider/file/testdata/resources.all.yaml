@@ -1,10 +1,12 @@
 backends:
 - kind: Backend
+  apiVersion: gateway.envoyproxy.io/v1alpha1
   metadata:
     creationTimestamp: null
     name: backend
     namespace: envoy-gateway-system
   spec:
+    type: Endpoints
     endpoints:
     - ip:
         address: 0.0.0.0
@@ -12,15 +14,16 @@ backends:
   status: {}
 gatewayClass:
   kind: GatewayClass
+  apiVersion: gateway.networking.k8s.io/v1
   metadata:
     creationTimestamp: null
     name: eg
-    namespace: envoy-gateway-system
   spec:
     controllerName: gateway.envoyproxy.io/gatewayclass-controller
   status: {}
 gateways:
 - kind: Gateway
+  apiVersion: gateway.networking.k8s.io/v1
   metadata:
     creationTimestamp: null
     name: eg
@@ -37,6 +40,7 @@ gateways:
   status: {}
 httpRoutes:
 - kind: HTTPRoute
+  apiVersion: gateway.networking.k8s.io/v1
   metadata:
     creationTimestamp: null
     name: backend
@@ -61,7 +65,9 @@ httpRoutes:
   status:
     parents: null
 namespaces:
-- metadata:
+- kind: Namespace
+  apiVersion: v1
+  metadata:
     creationTimestamp: null
     name: envoy-gateway-system
   spec: {}

@@ -101,7 +101,10 @@ httpRoutes:
       kind: Gateway
       name: gateway-b
     rules:
-    - matches:
+    - backendRefs:
+      - name: service-1
+        port: 8080
+      matches:
       - method: GET
         path:
           type: PathPrefix
@@ -193,8 +196,16 @@ xdsIR:
         mergeSlashes: true
       port: 10080
       routes:
-      - directResponse:
-          statusCode: 500
+      - destination:
+          name: httproute/envoy-gateway/targeted-route/rule/0
+          settings:
+          - addressType: IP
+            endpoints:
+            - host: 7.7.7.7
+              port: 8080
+            name: httproute/envoy-gateway/targeted-route/rule/0/backend/0
+            protocol: HTTP
+            weight: 1
         headerMatches:
         - distinct: false
           exact: GET
@@ -235,8 +246,16 @@ xdsIR:
         mergeSlashes: true
       port: 10080
       routes:
-      - directResponse:
-          statusCode: 500
+      - destination:
+          name: httproute/envoy-gateway/targeted-route/rule/0
+          settings:
+          - addressType: IP
+            endpoints:
+            - host: 7.7.7.7
+              port: 8080
+            name: httproute/envoy-gateway/targeted-route/rule/0/backend/0
+            protocol: HTTP
+            weight: 1
         headerMatches:
         - distinct: false
           exact: GET

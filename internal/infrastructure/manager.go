@@ -28,6 +28,8 @@ var (
 
 // Manager provides the scaffolding for managing infrastructure.
 type Manager interface {
+	// Close is called when Envoy Gateway is shutting down, it can be used to block until all resources are cleaned up.
+	Close() error
 	// CreateOrUpdateProxyInfra creates or updates infra.
 	CreateOrUpdateProxyInfra(ctx context.Context, infra *ir.Infra) error
 	// DeleteProxyInfra deletes infra.
@@ -54,7 +56,9 @@ func NewManager(ctx context.Context, cfg *config.Server, logger logging.Logger) 
 }
 
 func newManagerForKubernetes(cfg *config.Server) (Manager, error) {
-	cli, err := client.New(clicfg.GetConfigOrDie(), client.Options{Scheme: envoygateway.GetScheme()})
+	clientConfig := clicfg.GetConfigOrDie()
+	clientConfig.QPS, clientConfig.Burst = cfg.EnvoyGateway.Provider.Kubernetes.Client.RateLimit.GetQPSAndBurst()
+	cli, err := client.New(clientConfig, client.Options{Scheme: envoygateway.GetScheme()})
 	if err != nil {
 		return nil, err
 	}

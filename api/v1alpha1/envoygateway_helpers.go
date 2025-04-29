@@ -50,6 +50,11 @@ func (e *EnvoyGateway) SetEnvoyGatewayDefaults() {
 	if e.Provider.Kubernetes.LeaderElection == nil {
 		e.Provider.Kubernetes.LeaderElection = DefaultLeaderElection()
 	}
+
+	if e.Provider.Kubernetes.Client == nil {
+		e.Provider.Kubernetes.Client = DefaultKubernetesClient()
+	}
+
 	if e.Gateway == nil {
 		e.Gateway = DefaultGateway()
 	}
@@ -103,6 +108,16 @@ func DefaultLeaderElection() *LeaderElection {
 		RetryPeriod:   ptr.To(gwapiv1.Duration("2s")),
 		LeaseDuration: ptr.To(gwapiv1.Duration("15s")),
 		Disable:       ptr.To(false),
+	}
+}
+
+// DefaultKubernetesClient returns a new DefaultKubernetesClient with default parameters.
+func DefaultKubernetesClient() *KubernetesClient {
+	return &KubernetesClient{
+		RateLimit: &KubernetesClientRateLimit{
+			QPS:   ptr.To(DefaultKubernetesClientQPS),
+			Burst: ptr.To(DefaultKubernetesClientBurst),
+		},
 	}
 }
 
@@ -171,6 +186,7 @@ func DefaultEnvoyGatewayProvider() *EnvoyGatewayProvider {
 		Type: ProviderTypeKubernetes,
 		Kubernetes: &EnvoyGatewayKubernetesProvider{
 			LeaderElection: DefaultLeaderElection(),
+			Client:         DefaultKubernetesClient(),
 		},
 	}
 }
@@ -222,11 +238,18 @@ func (r *EnvoyGatewayProvider) GetEnvoyGatewayKubeProvider() *EnvoyGatewayKubern
 		if r.Kubernetes.LeaderElection == nil {
 			r.Kubernetes.LeaderElection = DefaultLeaderElection()
 		}
+		if r.Kubernetes.Client == nil {
+			r.Kubernetes.Client = DefaultKubernetesClient()
+		}
 		return r.Kubernetes
 	}
 
 	if r.Kubernetes.LeaderElection == nil {
 		r.Kubernetes.LeaderElection = DefaultLeaderElection()
+	}
+
+	if r.Kubernetes.Client == nil {
+		r.Kubernetes.Client = DefaultKubernetesClient()
 	}
 
 	if r.Kubernetes.RateLimitDeployment == nil {
@@ -275,4 +298,13 @@ func (logging *EnvoyGatewayLogging) SetEnvoyGatewayLoggingDefaults() {
 	if logging != nil && logging.Level != nil && logging.Level[LogComponentGatewayDefault] == "" {
 		logging.Level[LogComponentGatewayDefault] = LogLevelInfo
 	}
+}
+
+func (kcr *KubernetesClientRateLimit) GetQPSAndBurst() (float32, int) {
+	if kcr == nil {
+		return float32(DefaultKubernetesClientQPS), int(DefaultKubernetesClientBurst)
+	}
+	qps := ptr.Deref(kcr.QPS, DefaultKubernetesClientQPS)
+	burst := ptr.Deref(kcr.Burst, DefaultKubernetesClientBurst)
+	return float32(qps), int(burst)
 }

@@ -7,6 +7,7 @@ package config
 
 import (
 	"errors"
+	"io"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/api/v1alpha1/validation"
@@ -41,12 +42,12 @@ type Server struct {
 }
 
 // New returns a Server with default parameters.
-func New() (*Server, error) {
+func New(logOut io.Writer) (*Server, error) {
 	return &Server{
 		EnvoyGateway: egv1a1.DefaultEnvoyGateway(),
 		Namespace:    env.Lookup("ENVOY_GATEWAY_NAMESPACE", DefaultNamespace),
 		DNSDomain:    env.Lookup("KUBERNETES_CLUSTER_DOMAIN", DefaultDNSDomain),
-		Logger:       logging.DefaultLogger(egv1a1.LogLevelInfo),
+		Logger:       logging.DefaultLogger(logOut, egv1a1.LogLevelInfo),
 		Elected:      make(chan struct{}),
 	}, nil
 }

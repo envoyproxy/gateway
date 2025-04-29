@@ -51,6 +51,7 @@ func TestMain(m *testing.M) {
 	skipNameValidation = func() *bool {
 		return ptr.To(true)
 	}
+	healthProbeBindAddress = "" // Disable health probe listener to avoid "address already in use" error.
 	os.Exit(m.Run())
 }
 
@@ -60,7 +61,10 @@ func TestProvider(t *testing.T) {
 	require.NoError(t, err)
 
 	// Setup and start the kube provider.
-	svr, err := config.New()
+	svr, err := config.New(os.Stdout)
+
+	// Disable webhook server for provider test to avoid non-existent cert errors
+	svr.EnvoyGateway.Provider.Kubernetes.TopologyInjector = &egv1a1.EnvoyGatewayTopologyInjector{Disable: ptr.To(true)}
 	require.NoError(t, err)
 	resources := new(message.ProviderResources)
 	provider, err := New(context.Background(), cliCfg, svr, resources)
@@ -1263,7 +1267,7 @@ func TestNamespacedProvider(t *testing.T) {
 	require.NoError(t, err)
 
 	// Setup and start the kube provider.
-	svr, err := config.New()
+	svr, err := config.New(os.Stdout)
 	require.NoError(t, err)
 	// config to watch a subset of namespaces
 	svr.EnvoyGateway.Provider.Kubernetes = &egv1a1.EnvoyGatewayKubernetesProvider{
@@ -1272,7 +1276,12 @@ func TestNamespacedProvider(t *testing.T) {
 			Namespaces: []string{"ns1", "ns2"},
 		},
 		LeaderElection: egv1a1.DefaultLeaderElection(),
+		Client:         egv1a1.DefaultKubernetesClient(),
 	}
+
+	// Disable webhook server for provider test to avoid non-existent cert errors
+	svr.EnvoyGateway.Provider.Kubernetes.TopologyInjector = &egv1a1.EnvoyGatewayTopologyInjector{Disable: ptr.To(true)}
+
 	resources := new(message.ProviderResources)
 	provider, err := New(context.Background(), cliCfg, svr, resources)
 	require.NoError(t, err)
@@ -1323,7 +1332,7 @@ func TestNamespaceSelectorProvider(t *testing.T) {
 	require.NoError(t, err)
 
 	// Setup and start the kube provider.
-	svr, err := config.New()
+	svr, err := config.New(os.Stdout)
 	require.NoError(t, err)
 	// config to watch a subset of namespaces
 	svr.EnvoyGateway.Provider.Kubernetes = &egv1a1.EnvoyGatewayKubernetesProvider{
@@ -1332,7 +1341,12 @@ func TestNamespaceSelectorProvider(t *testing.T) {
 			NamespaceSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"label-1": "true", "label-2": "true"}},
 		},
 		LeaderElection: egv1a1.DefaultLeaderElection(),
+		Client:         egv1a1.DefaultKubernetesClient(),
 	}
+
+	// Disable webhook server for provider test to avoid non-existent cert errors
+	svr.EnvoyGateway.Provider.Kubernetes.TopologyInjector = &egv1a1.EnvoyGatewayTopologyInjector{Disable: ptr.To(true)}
+
 	resources := new(message.ProviderResources)
 	provider, err := New(context.Background(), cliCfg, svr, resources)
 	require.NoError(t, err)

@@ -98,89 +98,99 @@ func TestTranslate(t *testing.T) {
 			for i := 1; i <= 4; i++ {
 				svcName := "service-" + strconv.Itoa(i)
 				epSliceName := "endpointslice-" + strconv.Itoa(i)
-				resources.Services = append(resources.Services,
-					&corev1.Service{
-						ObjectMeta: metav1.ObjectMeta{
-							Namespace: "default",
-							Name:      svcName,
-						},
-						Spec: corev1.ServiceSpec{
-							ClusterIP: "1.1.1.1",
-							Ports: []corev1.ServicePort{
-								{
-									Name:       "http",
-									Port:       8080,
-									TargetPort: intstr.IntOrString{IntVal: 8080},
-									Protocol:   corev1.ProtocolTCP,
-								},
-								{
-									Name:       "https",
-									Port:       8443,
-									TargetPort: intstr.IntOrString{IntVal: 8443},
-									Protocol:   corev1.ProtocolTCP,
-								},
-								{
-									Name:       "tcp",
-									Port:       8163,
-									TargetPort: intstr.IntOrString{IntVal: 8163},
-									Protocol:   corev1.ProtocolTCP,
-								},
-								{
-									Name:       "udp",
-									Port:       8162,
-									TargetPort: intstr.IntOrString{IntVal: 8162},
-									Protocol:   corev1.ProtocolUDP,
-								},
-							},
-						},
-					},
-				)
-				resources.EndpointSlices = append(resources.EndpointSlices,
-					&discoveryv1.EndpointSlice{
-						ObjectMeta: metav1.ObjectMeta{
-							Name:      epSliceName,
-							Namespace: "default",
-							Labels: map[string]string{
-								discoveryv1.LabelServiceName: svcName,
-							},
-						},
-						AddressType: discoveryv1.AddressTypeIPv4,
-						Ports: []discoveryv1.EndpointPort{
-							{
-								Name:     ptr.To("http"),
-								Port:     ptr.To[int32](8080),
-								Protocol: ptr.To(corev1.ProtocolTCP),
-							},
-							{
-								Name:     ptr.To("https"),
-								Port:     ptr.To[int32](8443),
-								Protocol: ptr.To(corev1.ProtocolTCP),
-							},
-							{
-								Name:     ptr.To("tcp"),
-								Port:     ptr.To[int32](8163),
-								Protocol: ptr.To(corev1.ProtocolTCP),
-							},
-							{
-								Name:     ptr.To("udp"),
-								Port:     ptr.To[int32](8162),
-								Protocol: ptr.To(corev1.ProtocolUDP),
-							},
-						},
-						Endpoints: []discoveryv1.Endpoint{
-							{
-								Addresses: []string{
-									"7.7.7.7",
-								},
-								Conditions: discoveryv1.EndpointConditions{
-									Ready: ptr.To(true),
-								},
-							},
-						},
-					},
-				)
-			}
 
+				svc := &corev1.Service{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "default",
+						Name:      svcName,
+					},
+					Spec: corev1.ServiceSpec{
+						ClusterIP: "1.1.1.1",
+						Ports: []corev1.ServicePort{
+							{
+								Name:       "http",
+								Port:       8080,
+								TargetPort: intstr.IntOrString{IntVal: 8080},
+								Protocol:   corev1.ProtocolTCP,
+							},
+							{
+								Name:       "https",
+								Port:       8443,
+								TargetPort: intstr.IntOrString{IntVal: 8443},
+								Protocol:   corev1.ProtocolTCP,
+							},
+							{
+								Name:       "tcp",
+								Port:       8163,
+								TargetPort: intstr.IntOrString{IntVal: 8163},
+								Protocol:   corev1.ProtocolTCP,
+							},
+							{
+								Name:       "udp",
+								Port:       8162,
+								TargetPort: intstr.IntOrString{IntVal: 8162},
+								Protocol:   corev1.ProtocolUDP,
+							},
+						},
+					},
+				}
+				if strings.Contains(inputFile, "enable-zone-discovery") {
+					svc.Spec.TrafficDistribution = ptr.To("PreferClose")
+				}
+				resources.Services = append(resources.Services, svc)
+
+				endptSlice := &discoveryv1.EndpointSlice{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      epSliceName,
+						Namespace: "default",
+						Labels: map[string]string{
+							discoveryv1.LabelServiceName: svcName,
+						},
+					},
+					AddressType: discoveryv1.AddressTypeIPv4,
+					Ports: []discoveryv1.EndpointPort{
+						{
+							Name:     ptr.To("http"),
+							Port:     ptr.To[int32](8080),
+							Protocol: ptr.To(corev1.ProtocolTCP),
+						},
+						{
+							Name:     ptr.To("https"),
+							Port:     ptr.To[int32](8443),
+							Protocol: ptr.To(corev1.ProtocolTCP),
+						},
+						{
+							Name:     ptr.To("tcp"),
+							Port:     ptr.To[int32](8163),
+							Protocol: ptr.To(corev1.ProtocolTCP),
+						},
+						{
+							Name:     ptr.To("udp"),
+							Port:     ptr.To[int32](8162),
+							Protocol: ptr.To(corev1.ProtocolUDP),
+						},
+					},
+					Endpoints: []discoveryv1.Endpoint{
+						{
+							Addresses: []string{
+								"7.7.7.7",
+							},
+							Conditions: discoveryv1.EndpointConditions{
+								Ready: ptr.To(true),
+							},
+						},
+					},
+				}
+
+				// TODO: Add zone information by default
+				if strings.Contains(inputFile, "enable-zone-discovery") {
+					svc.Spec.TrafficDistribution = ptr.To("PreferClose")
+					zoneIdx := rune('a' + i)
+					zone := fmt.Sprintf("%s%c", "antarctica-east1", zoneIdx)
+					endptSlice.Endpoints[0].Zone = ptr.To(zone)
+				}
+				resources.EndpointSlices = append(resources.EndpointSlices, endptSlice)
+			}
 			resources.Services = append(resources.Services,
 				&corev1.Service{
 					ObjectMeta: metav1.ObjectMeta{
@@ -528,7 +538,7 @@ func TestTranslateWithExtensionKinds(t *testing.T) {
 	}
 }
 
-func overrideOutputConfig(t *testing.T, data string, filepath string) {
+func overrideOutputConfig(t *testing.T, data, filepath string) {
 	t.Helper()
 	file, err := os.OpenFile(filepath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0o644)
 	require.NoError(t, err)
@@ -846,7 +856,7 @@ type mockWasmCache struct{}
 
 func (m *mockWasmCache) Start(_ context.Context) {}
 
-func (m *mockWasmCache) Get(downloadURL string, options wasm.GetOptions) (url string, checksum string, err error) {
+func (m *mockWasmCache) Get(downloadURL string, options wasm.GetOptions) (url, checksum string, err error) {
 	// This is a mock implementation of the wasm.Cache.Get method.
 	sha := sha256.Sum256([]byte(downloadURL))
 	hashedName := hex.EncodeToString(sha[:])
