@@ -905,7 +905,7 @@ func (t *Translator) processRequestMirrorFilter(
 		resources, serviceNamespace, resource.KindHTTPRoute)
 	if err != nil {
 		return status.NewRouteStatusError(
-			fmt.Errorf("failed to validate the RequestMirror filter: %w", err), err.Reason())
+			fmt.Errorf("failed to validate the RequestMirror filter: %w", err), err.Reason()).WithType(gwapiv1.RouteConditionResolvedRefs)
 	}
 
 	destName := fmt.Sprintf("%s-mirror-%d", irRouteDestinationName(filterContext.Route, filterContext.RuleIdx), filterIdx)
