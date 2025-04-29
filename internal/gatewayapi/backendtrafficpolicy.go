@@ -69,7 +69,7 @@ func (t *Translator) ProcessBackendTrafficPolicies(resources *resource.Resources
 	handledPolicies := make(map[types.NamespacedName]*egv1a1.BackendTrafficPolicy)
 
 	gatewayPolicyMap := make(map[types.NamespacedName]*egv1a1.BackendTrafficPolicy)
-	gatewayPolicyMerged := sets.New[types.NamespacedName]()
+	gatewayPolicyMerged := make(map[types.NamespacedName]sets.Set[string])
 
 	// Translate
 	// 1. First translate Policies targeting xRoutes
@@ -202,13 +202,17 @@ func (t *Translator) ProcessBackendTrafficPolicies(resources *resource.Resources
 							continue
 						}
 
-						gatewayPolicyMerged.Insert(gwNN)
+						if _, ok := gatewayPolicyMerged[gwNN]; !ok {
+							gatewayPolicyMerged[gwNN] = make(sets.Set[string])
+						}
+						gatewayPolicyMerged[gwNN].Insert(utils.NamespacedName(route).String())
+
 						status.SetConditionForPolicyAncestors(&policy.Status,
 							ancestorRefs,
 							t.GatewayControllerName,
-							egv1a1.PolicyConditionOverridden,
+							egv1a1.PolicyConditionMerged,
 							metav1.ConditionTrue,
-							egv1a1.PolicyReasonOverridden,
+							egv1a1.PolicyReasonMerged,
 							fmt.Sprintf("Merged with policy %s/%s", gwPolicy.Namespace, gwPolicy.Name),
 							policy.Generation,
 						)
@@ -274,16 +278,35 @@ func (t *Translator) ProcessBackendTrafficPolicies(resources *resource.Resources
 
 				// Check if this policy is overridden by other policies targeting at
 				// route level
-				if gatewayPolicyMerged.Has(gatewayNN) {
+				mergedRoutes, routeMerged := gatewayPolicyMerged[gatewayNN]
+				if routeMerged && len(mergedRoutes) > 0 {
 					// if merge happened, skip the overridden check
-					continue
+					gatewayMergedRoutes := mergedRoutes.UnsortedList()
+					sort.Strings(gatewayMergedRoutes)
+
+					status.SetConditionForPolicyAncestors(&policy.Status,
+						ancestorRefs,
+						t.GatewayControllerName,
+						egv1a1.PolicyConditionMerged,
+						metav1.ConditionTrue,
+						egv1a1.PolicyReasonMerged,
+						fmt.Sprintf("This policy is being merged by other backendTrafficPolicies for these routes: %v", gatewayMergedRoutes),
+						policy.Generation,
+					)
 				}
 
 				if r, ok := gatewayRouteMap[gatewayNN.String()]; ok {
 					// Maintain order here to ensure status/string does not change with the same data
-					gatewayRoutes := r.UnsortedList()
+					var gatewayRoutes []string
+					if len(mergedRoutes) > 0 {
+						gatewayRoutes = r.Difference(mergedRoutes).UnsortedList()
+					} else {
+						gatewayRoutes = r.UnsortedList()
+					}
 					sort.Strings(gatewayRoutes)
-					message := fmt.Sprintf("This policy is being overridden by other backendTrafficPolicies for these routes: %v", gatewayRoutes)
+					if len(gatewayRoutes) == 0 {
+						continue
+					}
 
 					status.SetConditionForPolicyAncestors(&policy.Status,
 						ancestorRefs,
@@ -291,7 +314,7 @@ func (t *Translator) ProcessBackendTrafficPolicies(resources *resource.Resources
 						egv1a1.PolicyConditionOverridden,
 						metav1.ConditionTrue,
 						egv1a1.PolicyReasonOverridden,
-						message,
+						fmt.Sprintf("This policy is being overridden by other backendTrafficPolicies for these routes: %v", gatewayRoutes),
 						policy.Generation,
 					)
 				}

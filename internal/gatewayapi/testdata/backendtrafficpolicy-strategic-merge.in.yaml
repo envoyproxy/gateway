@@ -69,12 +69,24 @@ backendTrafficPolicies:
     kind: BackendTrafficPolicy
     metadata:
       namespace: default
-      name: policy-for-route
+      name: merged-policy-for-route
     spec:
       targetRef:
         group: gateway.networking.k8s.io
         kind: HTTPRoute
         name: httproute-1
       mergeType: StrategicMerge
+      connection:
+        bufferLimit: 100M
+  - apiVersion: gateway.envoyproxy.io/v1alpha1
+    kind: BackendTrafficPolicy
+    metadata:
+      namespace: default
+      name: policy-for-route
+    spec:
+      targetRef:
+        group: gateway.networking.k8s.io
+        kind: GRPCRoute
+        name: grpcroute-1
       connection:
         bufferLimit: 100M
