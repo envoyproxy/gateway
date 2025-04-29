@@ -24,6 +24,10 @@ const (
 	GatewayMetricsPort = 19001
 	// GatewayMetricsHost is the host of envoy gateway metrics server.
 	GatewayMetricsHost = "0.0.0.0"
+	// DefaultKubernetesClientQPS defines the default QPS limit for the Kubernetes client.
+	DefaultKubernetesClientQPS int32 = 50
+	// DefaultKubernetesClientBurst defines the default Burst limit for the Kubernetes client.
+	DefaultKubernetesClientBurst int32 = 100
 )
 
 // +kubebuilder:object:root=true
@@ -89,6 +93,26 @@ type EnvoyGatewaySpec struct {
 	//
 	// +optional
 	ExtensionAPIs *ExtensionAPISettings `json:"extensionApis,omitempty"`
+}
+
+type KubernetesClient struct {
+	// RateLimit defines the rate limit settings for the Kubernetes client.
+	RateLimit *KubernetesClientRateLimit `json:"rateLimit,omitempty"`
+}
+
+// KubernetesClientRateLimit defines the rate limit settings for the Kubernetes client.
+type KubernetesClientRateLimit struct {
+	// QPS defines the queries per second limit for the Kubernetes client.
+	// +optional
+	// +kubebuilder:validation:Minimum=1
+	// +kubebuilder:default=50
+	QPS *int32 `json:"qps,omitempty"`
+
+	// Burst defines the maximum burst of requests allowed when tokens have accumulated.
+	// +optional
+	// +kubebuilder:validation:Minimum=1
+	// +kubebuilder:default=100
+	Burst *int32 `json:"burst,omitempty"`
 }
 
 // LeaderElection defines the desired leader election settings.
@@ -225,7 +249,8 @@ type EnvoyGatewayKubernetesProvider struct {
 	// ShutdownManager defines the configuration for the shutdown manager.
 	// +optional
 	ShutdownManager *ShutdownManager `json:"shutdownManager,omitempty"`
-
+	// Client holds the configuration for the Kubernetes client.
+	Client *KubernetesClient `json:"client,omitempty"`
 	// TopologyInjector defines the configuration for topology injector MutatatingWebhookConfiguration
 	// +optional
 	TopologyInjector *EnvoyGatewayTopologyInjector `json:"proxyTopologyInjector,omitempty"`
