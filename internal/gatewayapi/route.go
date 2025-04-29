@@ -191,15 +191,15 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 	for ruleIdx, rule := range httpRoute.Spec.Rules {
 		httpFiltersContext, err := t.ProcessHTTPFilters(parentRef, httpRoute, rule.Filters, ruleIdx, resources)
 		if err != nil {
-			// Some errors should be treated as ResolvedRefs condtion type,
+			// Some errors should be treated as ResolvedRefs condition type,
 			// e.g. Failed to resolve the BackendRef in the RequestMirror filter.
-			// Other errors should be treated as Accepted condtion type.
+			// Other errors should be treated as Accepted condition type.
 			if err.Type() != gwapiv1.RouteConditionResolvedRefs {
 				errs.Add(status.NewRouteStatusError(
 					fmt.Errorf("failed to process route rule %d: %w", ruleIdx, err),
 					status.ConvertToAcceptedReason(err.Reason()),
 				).WithType(gwapiv1.RouteConditionAccepted))
-			}else{
+			} else {
 				errs.Add(err)
 			}
 			continue
