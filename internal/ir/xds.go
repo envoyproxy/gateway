@@ -19,6 +19,7 @@ import (
 
 	"golang.org/x/exp/slices"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/util/sets"
@@ -867,6 +868,8 @@ type TrafficFeatures struct {
 	HTTPUpgrade []string `json:"httpUpgrade,omitempty" yaml:"httpUpgrade,omitempty"`
 	// Telemetry defines the schema for telemetry configuration.
 	Telemetry *egv1a1.BackendTelemetry `json:"telemetry,omitempty" yaml:"telemetry,omitempty"`
+	// RequestBuffer defines the schema for enabling buffered requests
+	RequestBuffer *RequestBuffer `json:"requestBuffer,omitempty" yaml:"requestBuffer,omitempty"`
 }
 
 func (b *TrafficFeatures) Validate() error {
@@ -3018,4 +3021,11 @@ type ResourceMetadata struct {
 	Annotations map[string]string `json:"annotations,omitempty" yaml:"annotations,omitempty"`
 	// SectionName is the name of a section of a resource
 	SectionName string `json:"sectionName,omitempty" yaml:"sectionName,omitempty"`
+}
+
+// RequestBuffer holds the information for the Buffer filter
+// +k8s:deepcopy-gen=true
+type RequestBuffer struct {
+	// Limit defines the maximum buffer size for requests
+	Limit resource.Quantity `json:"limit" yaml:"limit"`
 }
