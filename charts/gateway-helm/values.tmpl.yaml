@@ -79,6 +79,18 @@ deployment:
     topologySpreadConstraints: []
     tolerations: []
     nodeSelector: {}
+    # Additional volumeMounts on the deployment definition.
+    extraVolumeMounts: []
+    # - name: example-dir
+    #   mountPath: "/etc/example"
+    #   readOnly: true
+
+    # Additional volumes on the deployment definition.
+    extraVolumes: []
+    # - name: example-dir
+    #   secret:
+    #     secretName: mysecret
+    #     optional: false
 
 service:
   # If set to PreferClose, the Envoy fleet will prioritize connecting to the Envoy Gateway pods that are topologically closest to them.
