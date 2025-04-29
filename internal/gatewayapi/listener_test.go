@@ -6,7 +6,6 @@
 package gatewayapi
 
 import (
-	"crypto/x509"
 	"strings"
 	"testing"
 
@@ -435,11 +434,7 @@ func TestCheckOverlappingCertificates(t *testing.T) {
 						Port:     443,
 					},
 					listenerStatusIdx: 0,
-					tlsCertificates: []*x509.Certificate{
-						{
-							DNSNames: []string{"foo.example.com"},
-						},
-					},
+					certDNSNames:      []string{"foo.example.com"},
 				},
 				{
 					Listener: &gwapiv1.Listener{
@@ -448,11 +443,7 @@ func TestCheckOverlappingCertificates(t *testing.T) {
 						Port:     443,
 					},
 					listenerStatusIdx: 1,
-					tlsCertificates: []*x509.Certificate{
-						{
-							DNSNames: []string{"bar.example.com"},
-						},
-					},
+					certDNSNames:      []string{"bar.example.com"},
 				},
 			},
 			expectedStatus: []expectedListenerStatus{},
@@ -467,11 +458,7 @@ func TestCheckOverlappingCertificates(t *testing.T) {
 						Port:     443,
 					},
 					listenerStatusIdx: 0,
-					tlsCertificates: []*x509.Certificate{
-						{
-							DNSNames: []string{"foo.example.com"},
-						},
-					},
+					certDNSNames:      []string{"foo.example.com"},
 				},
 				{
 					Listener: &gwapiv1.Listener{
@@ -480,11 +467,7 @@ func TestCheckOverlappingCertificates(t *testing.T) {
 						Port:     443,
 					},
 					listenerStatusIdx: 1,
-					tlsCertificates: []*x509.Certificate{
-						{
-							DNSNames: []string{"foo.example.com"},
-						},
-					},
+					certDNSNames:      []string{"foo.example.com"},
 				},
 			},
 			expectedStatus: []expectedListenerStatus{
@@ -514,11 +497,7 @@ func TestCheckOverlappingCertificates(t *testing.T) {
 						Port:     443,
 					},
 					listenerStatusIdx: 0,
-					tlsCertificates: []*x509.Certificate{
-						{
-							DNSNames: []string{"foo.example.com"},
-						},
-					},
+					certDNSNames:      []string{"foo.example.com"},
 				},
 				{
 					Listener: &gwapiv1.Listener{
@@ -527,11 +506,7 @@ func TestCheckOverlappingCertificates(t *testing.T) {
 						Port:     8443,
 					},
 					listenerStatusIdx: 1,
-					tlsCertificates: []*x509.Certificate{
-						{
-							DNSNames: []string{"foo.example.com"},
-						},
-					},
+					certDNSNames:      []string{"foo.example.com"},
 				},
 			},
 			expectedStatus: []expectedListenerStatus{},
@@ -546,11 +521,7 @@ func TestCheckOverlappingCertificates(t *testing.T) {
 						Port:     443,
 					},
 					listenerStatusIdx: 0,
-					tlsCertificates: []*x509.Certificate{
-						{
-							DNSNames: []string{"*.example.com"},
-						},
-					},
+					certDNSNames:      []string{"*.example.com"},
 				},
 				{
 					Listener: &gwapiv1.Listener{
@@ -559,11 +530,7 @@ func TestCheckOverlappingCertificates(t *testing.T) {
 						Port:     443,
 					},
 					listenerStatusIdx: 1,
-					tlsCertificates: []*x509.Certificate{
-						{
-							DNSNames: []string{"foo.example.com"},
-						},
-					},
+					certDNSNames:      []string{"foo.example.com"},
 				},
 			},
 			expectedStatus: []expectedListenerStatus{
@@ -593,11 +560,7 @@ func TestCheckOverlappingCertificates(t *testing.T) {
 						Port:     443,
 					},
 					listenerStatusIdx: 0,
-					tlsCertificates: []*x509.Certificate{
-						{
-							DNSNames: []string{"foo.example.com", "bar.example.org"},
-						},
-					},
+					certDNSNames:      []string{"foo.example.com", "bar.example.org"},
 				},
 				{
 					Listener: &gwapiv1.Listener{
@@ -606,11 +569,7 @@ func TestCheckOverlappingCertificates(t *testing.T) {
 						Port:     443,
 					},
 					listenerStatusIdx: 1,
-					tlsCertificates: []*x509.Certificate{
-						{
-							DNSNames: []string{"bar.example.com", "*.example.org", "bar.example.com"},
-						},
-					},
+					certDNSNames:      []string{"bar.example.com", "*.example.org", "bar.example.com"},
 				},
 			},
 			expectedStatus: []expectedListenerStatus{

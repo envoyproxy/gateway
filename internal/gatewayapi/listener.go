@@ -6,7 +6,6 @@
 package gatewayapi
 
 import (
-	"crypto/x509"
 	"fmt"
 	"math"
 	"strings"
@@ -134,7 +133,7 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR resource
 					irListener.Hostnames = append(irListener.Hostnames, string(*listener.Hostname))
 				} else {
 					// Hostname specifies the virtual hostname to match for protocol types that define this concept.
-					// When unspecified, all hostnames are matched. This field is ignored for protocols that don’t require hostname based matching.
+					// When unspecified, all hostnames are matched. This field is ignored for protocols that don't require hostname based matching.
 					// see more https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/gwapiv1.Listener.
 					irListener.Hostnames = append(irListener.Hostnames, "*")
 				}
@@ -199,64 +198,13 @@ func checkOverlappingHostnames(gateway *GatewayContext) {
 		}
 	}
 
-	overlappingListeners := make([][2]string, len(httpsListeners)) // The listener name and hostname of the overlapping listener.
-	for i := range httpsListeners {
-		if overlappingListeners[i][0] != "" {
-			continue
-		}
-		for j := i + 1; j < len(httpsListeners); j++ {
-			if overlappingListeners[j][0] != "" {
-				continue
-			}
-			if httpsListeners[i].Port != httpsListeners[j].Port {
-				continue
-			}
-			if isOverlappingHostname(httpsListeners[i].Hostname, httpsListeners[j].Hostname) {
-				// Overlapping listeners can be more than two, we only report the first two for simplicity.
-				overlappingListeners[i][0] = string(httpsListeners[j].Name)
-				overlappingListeners[i][1] = string(ptr.Deref(httpsListeners[j].Hostname, ""))
-				overlappingListeners[j][0] = string(httpsListeners[i].Name)
-				overlappingListeners[j][1] = string(ptr.Deref(httpsListeners[i].Hostname, ""))
-			}
-		}
+	type overlappingListener struct {
+		listener1 string
+		listener2 string
+		hostname1 string
+		hostname2 string
 	}
-
-	for i, listener := range httpsListeners {
-		if overlappingListeners[i][0] != "" {
-			status.SetGatewayListenerStatusCondition(gateway.Gateway,
-				listener.listenerStatusIdx,
-				gwapiv1.ListenerConditionOverlappingTLSConfig,
-				metav1.ConditionTrue,
-				gwapiv1.ListenerReasonOverlappingHostnames,
-				fmt.Sprintf(
-					"The hostname %s overlaps with the hostname %s in listener %s",
-					ptr.Deref(listener.Hostname, ""),
-					overlappingListeners[i][1],
-					overlappingListeners[i][0]),
-			)
-			if listener.httpIR != nil {
-				listener.httpIR.TLSOverlaps = true
-			}
-		}
-	}
-}
-
-type overlappingListener struct {
-	listener1 string
-	listener2 string
-	san1      string
-	san2      string
-}
-
-func checkOverlappingCertificates(gateway *GatewayContext) {
-	httpsListeners := []*ListenerContext{}
-	for _, listener := range gateway.listeners {
-		if listener.Protocol == gwapiv1.HTTPSProtocolType {
-			httpsListeners = append(httpsListeners, listener)
-		}
-	}
-
-	overlappingListeners := make([]*overlappingListener, len(httpsListeners)) // The listener name and san of the overlapping listener.
+	overlappingListeners := make([]*overlappingListener, len(httpsListeners))
 	for i := range httpsListeners {
 		if overlappingListeners[i] != nil {
 			continue
@@ -268,24 +216,87 @@ func checkOverlappingCertificates(gateway *GatewayContext) {
 			if httpsListeners[i].Port != httpsListeners[j].Port {
 				continue
 			}
-			for _, cert1 := range httpsListeners[i].tlsCertificates {
-				for _, cert2 := range httpsListeners[j].tlsCertificates {
-					overlappingCertificate := isOverlappingCertificate(cert1, cert2)
-					if overlappingCertificate != nil {
-						// Overlapping listeners can be more than two, we only report the first two for simplicity.
-						overlappingListeners[i] = &overlappingListener{
-							listener1: string(httpsListeners[i].Name),
-							listener2: string(httpsListeners[j].Name),
-							san1:      overlappingCertificate.san1,
-							san2:      overlappingCertificate.san2,
-						}
-						overlappingListeners[j] = &overlappingListener{
-							listener1: string(httpsListeners[j].Name),
-							listener2: string(httpsListeners[i].Name),
-							san1:      overlappingCertificate.san2,
-							san2:      overlappingCertificate.san1,
-						}
-					}
+			if isOverlappingHostname(httpsListeners[i].Hostname, httpsListeners[j].Hostname) {
+				// Overlapping listeners can be more than two, we only report the first two for simplicity.
+				overlappingListeners[i] = &overlappingListener{
+					listener1: string(httpsListeners[i].Name),
+					listener2: string(httpsListeners[j].Name),
+					hostname1: string(ptr.Deref(httpsListeners[i].Hostname, "")),
+					hostname2: string(ptr.Deref(httpsListeners[j].Hostname, "")),
+				}
+				overlappingListeners[j] = &overlappingListener{
+					listener1: string(httpsListeners[j].Name),
+					listener2: string(httpsListeners[i].Name),
+					hostname1: string(ptr.Deref(httpsListeners[j].Hostname, "")),
+					hostname2: string(ptr.Deref(httpsListeners[i].Hostname, "")),
+				}
+			}
+		}
+	}
+
+	for i, listener := range httpsListeners {
+		if overlappingListeners[i] != nil {
+			status.SetGatewayListenerStatusCondition(gateway.Gateway,
+				listener.listenerStatusIdx,
+				gwapiv1.ListenerConditionOverlappingTLSConfig,
+				metav1.ConditionTrue,
+				gwapiv1.ListenerReasonOverlappingHostnames,
+				fmt.Sprintf(
+					"The hostname %s overlaps with the hostname %s in listener %s",
+					overlappingListeners[i].hostname1,
+					overlappingListeners[i].hostname2,
+					overlappingListeners[i].listener2,
+				),
+			)
+			if listener.httpIR != nil {
+				listener.httpIR.TLSOverlaps = true
+			}
+		}
+	}
+}
+
+func checkOverlappingCertificates(gateway *GatewayContext) {
+	httpsListeners := []*ListenerContext{}
+	for _, listener := range gateway.listeners {
+		if listener.Protocol == gwapiv1.HTTPSProtocolType {
+			httpsListeners = append(httpsListeners, listener)
+		}
+	}
+
+	type overlappingListener struct {
+		listener1 string
+		listener2 string
+		san1      string
+		san2      string
+	}
+
+	overlappingListeners := make([]*overlappingListener, len(httpsListeners))
+	for i := range httpsListeners {
+		if overlappingListeners[i] != nil {
+			continue
+		}
+		for j := i + 1; j < len(httpsListeners); j++ {
+			if overlappingListeners[j] != nil {
+				continue
+			}
+			if httpsListeners[i].Port != httpsListeners[j].Port {
+				continue
+			}
+
+			overlappingCertificate := isOverlappingCertificate(httpsListeners[i].certDNSNames, httpsListeners[j].certDNSNames)
+			if overlappingCertificate != nil {
+				// Overlapping listeners can be more than two, we only report the first two for simplicity.
+				overlappingListeners[i] = &overlappingListener{
+					listener1: string(httpsListeners[i].Name),
+					listener2: string(httpsListeners[j].Name),
+					san1:      overlappingCertificate.san1,
+					san2:      overlappingCertificate.san2,
+				}
+				overlappingListeners[j] = &overlappingListener{
+					listener1: string(httpsListeners[j].Name),
+					listener2: string(httpsListeners[i].Name),
+					san1:      overlappingCertificate.san2,
+					san2:      overlappingCertificate.san1,
 				}
 			}
 		}
@@ -317,9 +328,9 @@ type overlappingCertificate struct {
 	san2 string
 }
 
-func isOverlappingCertificate(cert1, cert2 *x509.Certificate) *overlappingCertificate {
-	for _, dns1 := range cert1.DNSNames {
-		for _, dns2 := range cert2.DNSNames {
+func isOverlappingCertificate(cert1DNSNames, cert2DNSNames []string) *overlappingCertificate {
+	for _, dns1 := range cert1DNSNames {
+		for _, dns2 := range cert2DNSNames {
 			if isOverlappingHostname(ptr.To(gwapiv1.Hostname(dns1)), ptr.To(gwapiv1.Hostname(dns2))) {
 				return &overlappingCertificate{
 					san1: dns1,
