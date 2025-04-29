@@ -66,7 +66,7 @@ type OIDC struct {
 	// This behavior can be useful for AJAX or machine requests.
 	// +optional
 	// +notImplementedHide
-	DenyRedirectMatcher []OIDCDenyRedirectMatcher `json:"denyRedirectMatcher,omitempty"`
+	OIDCDenyRedirect []OIDCDenyRedirect `json:"denyRedirect,omitempty"`
 
 	// The path to log a user out, clearing their credential cookies.
 	//
@@ -149,9 +149,16 @@ type OIDCProvider struct {
 	TokenEndpoint *string `json:"tokenEndpoint,omitempty"`
 }
 
-// OIDCDenyRedirectMatcher defines the matcher to deny redirect to the OIDC Provider.
+// OIDCDenyRedirect defines headers to match against the request to deny redirect to the OIDC Provider.
 // +notImplementedHide
-type OIDCDenyRedirectMatcher struct {
+type OIDCDenyRedirect struct {
+	// Defines the headers to match against the request to deny redirect to the OIDC Provider.
+	Headers []OIDCDenyRedirectHeader `json:"headers,omitempty"`
+}
+
+// OIDCDenyRedirectHeader defines how a header is matched
+// +notImplementedHide
+type OIDCDenyRedirectHeader struct {
 	// Specifies the name of the header in the request.
 	// The pseudo-headers ``:path`` and ``:method`` can be used to match the request path and method, respectively
 	// +kubebuilder:validation:MinLength=1
