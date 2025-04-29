@@ -25,33 +25,42 @@ import (
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/filewatcher"
 	"github.com/envoyproxy/gateway/internal/message"
+	"github.com/envoyproxy/gateway/internal/provider/kubernetes"
 	"github.com/envoyproxy/gateway/internal/utils/path"
 )
 
 type Provider struct {
-	paths                   []string
-	logger                  logr.Logger
-	watcher                 filewatcher.FileWatcher
-	resourcesStore          *resourcesStore
-	extensionManagerEnabled bool
+	paths      []string
+	logger     logr.Logger
+	watcher    filewatcher.FileWatcher
+	resources  *message.ProviderResources
+	reconciler *kubernetes.OfflineGatewayAPIReconciler
+	store      *resourcesStore
 
 	// ready indicates whether the provider can start watching filesystem events.
 	ready atomic.Bool
 }
 
-func New(svr *config.Server, resources *message.ProviderResources) (*Provider, error) {
+func New(ctx context.Context, svr *config.Server, resources *message.ProviderResources) (*Provider, error) {
 	logger := svr.Logger.Logger
 	paths := sets.New[string]()
 	if svr.EnvoyGateway.Provider.Custom.Resource.File != nil {
 		paths.Insert(svr.EnvoyGateway.Provider.Custom.Resource.File.Paths...)
 	}
 
+	// Create gateway-api offline reconciler.
+	reconciler, err := kubernetes.NewOfflineGatewayAPIController(ctx, svr, nil, resources)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create offline gateway-api controller")
+	}
+
 	return &Provider{
-		paths:                   paths.UnsortedList(),
-		logger:                  logger,
-		watcher:                 filewatcher.NewWatcher(),
-		resourcesStore:          newResourcesStore(svr.EnvoyGateway.Gateway.ControllerName, resources, logger),
-		extensionManagerEnabled: svr.EnvoyGateway.EnvoyGatewaySpec.ExtensionManager != nil,
+		paths:      paths.UnsortedList(),
+		logger:     logger,
+		watcher:    filewatcher.NewWatcher(),
+		resources:  resources,
+		reconciler: reconciler,
+		store:      newResourcesStore(svr.EnvoyGateway.Gateway.ControllerName, reconciler.Client, resources, logger),
 	}, nil
 }
 
@@ -72,14 +81,12 @@ func (p *Provider) Start(ctx context.Context) error {
 		return nil
 	}
 	go p.startHealthProbeServer(ctx, readyzChecker)
-
-	// Subscribe resources status.
-	p.subscribeAndUpdateStatus(ctx)
+	go p.startReconciling(ctx)
 
 	initDirs, initFiles := path.ListDirsAndFiles(p.paths)
-	// Initially load resources from paths on host.
-	if err := p.resourcesStore.LoadAndStore(initFiles.UnsortedList(), initDirs.UnsortedList()); err != nil {
-		return fmt.Errorf("failed to load resources into store: %w", err)
+	// Initially load resources.
+	if err := p.store.ReloadAll(ctx, initFiles.UnsortedList(), initDirs.UnsortedList()); err != nil {
+		p.logger.Error(err, "failed to reload resources initially")
 	}
 
 	// Add paths to the watcher, and aggregate all path channels into one.
@@ -150,18 +157,27 @@ func (p *Provider) Start(ctx context.Context) error {
 			}
 			p.logger.Info("file changed", "op", event.Op, "name", event.Name, "dir", filepath.Dir(event.Name))
 
-			switch event.Op {
-			case fsnotify.Create, fsnotify.Write, fsnotify.Remove:
-				// Since we do not watch any events in the subdirectories, any events involving files
-				// modifications in current directory will trigger the event handling.
-				goto handle
-			default:
-				// do nothing
-				continue
-			}
-
 		handle:
-			p.resourcesStore.HandleEvent(curFiles.UnsortedList(), curDirs.UnsortedList())
+			if err := p.store.ReloadAll(ctx, curFiles.UnsortedList(), curDirs.UnsortedList()); err != nil {
+				p.logger.Error(err, "error when reload resources", "op", event.Op, "name", event.Name)
+			}
+		}
+	}
+}
+
+// startReconciling starts reconcile on offline controller when receiving signal from resources store.
+func (p *Provider) startReconciling(ctx context.Context) {
+	for {
+		select {
+		case rid := <-p.store.reconcile:
+			p.logger.Info("start reconcile", "id", rid, "time", time.Now())
+			if err := p.reconciler.Reconcile(ctx); err != nil {
+				p.logger.Error(err, "failed to reconcile", "id", rid)
+			}
+			p.logger.Info("reconcile finished", "id", rid, "time", time.Now())
+
+		case <-ctx.Done():
+			return
 		}
 	}
 }

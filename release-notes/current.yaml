@@ -37,6 +37,7 @@ new features: |
   Added support for logging the status of resources in standalone mode.
   Added support for per-route tracing in BackendTrafficPolicy
   Added support for configuring retry settings for Extension Service hooks in EnvoyGateway config.
+  Added offline controller support for file provider in standalone mode.
 
 
 bug fixes: |

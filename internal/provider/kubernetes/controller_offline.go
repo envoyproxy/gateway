@@ -8,7 +8,6 @@ package kubernetes
 import (
 	"context"
 	"fmt"
-	"time"
 
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/sets"
@@ -37,6 +36,10 @@ type OfflineGatewayAPIReconciler struct {
 func NewOfflineGatewayAPIController(
 	ctx context.Context, cfg *config.Server, su Updater, resources *message.ProviderResources,
 ) (*OfflineGatewayAPIReconciler, error) {
+	if cfg == nil || resources == nil {
+		return nil, fmt.Errorf("missing config or resources that offline controller requires")
+	}
+
 	// Check provider type.
 	if cfg.EnvoyGateway.Provider.Type == egv1a1.ProviderTypeKubernetes {
 		return nil, fmt.Errorf("offline controller cannot work with kubernetes provider")
@@ -88,8 +91,6 @@ func NewOfflineGatewayAPIController(
 // Reconcile calls reconcile method in gateway-api controller, this method
 // should be called manually.
 func (r *OfflineGatewayAPIReconciler) Reconcile(ctx context.Context) error {
-	r.log.Info("reconcile once", "time", time.Now().String())
-
 	_, err := r.gatewayAPIReconciler.Reconcile(ctx, reconcile.Request{})
 	return err
 }
