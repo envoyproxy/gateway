@@ -1,0 +1,47 @@
+gateways:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: Gateway
+  metadata:
+    namespace: envoy-gateway
+    name: gateway-1
+  spec:
+    gatewayClassName: envoy-gateway-class
+    listeners:
+    - name: http
+      protocol: HTTP
+      port: 80
+      allowedRoutes:
+        namespaces:
+          from: All
+httpRoutes:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    namespace: default
+    name: httproute-headless
+  spec:
+    parentRefs:
+    - name: gateway-1
+      namespace: envoy-gateway
+    rules:
+    - backendRefs:
+      - name: headless-service
+        port: 80
+services:
+- apiVersion: v1
+  kind: Service
+  metadata:
+    namespace: default
+    name: headless-service
+  spec:
+    clusterIP: None
+    ports:
+    - port: 80
+envoyProxyForGatewayClass:
+  apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: EnvoyProxy
+  metadata:
+    name: default
+    namespace: default
+  spec:
+    routingType: Service
