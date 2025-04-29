@@ -253,16 +253,16 @@ spec:
             fieldRef:
               apiVersion: v1
               fieldPath: metadata.namespace
-        - name: ENVOY_POD_NAME
-          valueFrom:
-            fieldRef:
-              apiVersion: v1
-              fieldPath: metadata.name
         - name: ENVOY_SERVICE_ZONE
           valueFrom:
             fieldRef:
               apiVersion: v1
               fieldPath: metadata.labels['topology.kubernetes.io/zone']
+        - name: ENVOY_POD_NAME
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: metadata.name
         - name: env_a
           value: env_a_value
         - name: env_b
@@ -338,16 +338,16 @@ spec:
             fieldRef:
               apiVersion: v1
               fieldPath: metadata.namespace
-        - name: ENVOY_POD_NAME
-          valueFrom:
-            fieldRef:
-              apiVersion: v1
-              fieldPath: metadata.name
         - name: ENVOY_SERVICE_ZONE
           valueFrom:
             fieldRef:
               apiVersion: v1
               fieldPath: metadata.labels['topology.kubernetes.io/zone']
+        - name: ENVOY_POD_NAME
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: metadata.name
         image: docker.io/envoyproxy/gateway-dev:latest
         imagePullPolicy: IfNotPresent
         lifecycle:
