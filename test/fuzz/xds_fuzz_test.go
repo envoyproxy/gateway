@@ -9,10 +9,11 @@ import (
 	"testing"
 
 	fuzz "github.com/AdaLogics/go-fuzz-headers"
-	"github.com/envoyproxy/gateway/internal/cmd/egctl"
-	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
+
+	"github.com/envoyproxy/gateway/internal/cmd/egctl"
+	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 )
 
 func FuzzGatewayAPIToXDS(f *testing.F) {
