@@ -76,6 +76,8 @@ func (t *Translator) ProcessBackendTrafficPolicies(resources *resource.Resources
 	// 2. Finally, the policies targeting Gateways
 
 	// Build gateway policy map, which is needed when processing the policies targeting xRoutes.
+	// TODO: This loop is similar to the one 'Process the policies targeting Gateways', we may want to
+	// merge them into one if possible.
 	for _, currPolicy := range backendTrafficPolicies {
 		targetRefs := getPolicyTargetRefs(currPolicy.Spec.PolicyTargetReferences, gateways)
 		for _, currTarget := range targetRefs {
