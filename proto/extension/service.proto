@@ -123,5 +123,5 @@ message PostClusterModifyRequest {
 // PostClusterModifyResponse is the expected response from an extension and contains a modified version of the Cluster that was sent
 // If an extension returns a nil Cluster then it will not be modified
 message PostClusterModifyResponse {
-    envoy.config.route.v3.Route route = 1;
+    envoy.config.cluster.v3.Cluster cluster = 1;
 }
