@@ -65,7 +65,7 @@ func TestPatchTopologyWebhook(t *testing.T) {
 			caseName: "Update caBundle",
 			webhook: &admissionregistrationv1.MutatingWebhookConfiguration{
 				ObjectMeta: metav1.ObjectMeta{
-					Name: fmt.Sprintf("%s.%s", topologyWebhookNamePrefix, cfg.Namespace),
+					Name: fmt.Sprintf("%s.%s", topologyWebhookNamePrefix, cfg.ControllerNamespace),
 				},
 				Webhooks: []admissionregistrationv1.MutatingWebhook{{ClientConfig: admissionregistrationv1.WebhookClientConfig{}}},
 			},
@@ -77,7 +77,7 @@ func TestPatchTopologyWebhook(t *testing.T) {
 			caseName: "No-op",
 			webhook: &admissionregistrationv1.MutatingWebhookConfiguration{
 				ObjectMeta: metav1.ObjectMeta{
-					Name: fmt.Sprintf("%s.%s", topologyWebhookNamePrefix, cfg.Namespace),
+					Name: fmt.Sprintf("%s.%s", topologyWebhookNamePrefix, cfg.ControllerNamespace),
 				},
 				Webhooks: []admissionregistrationv1.MutatingWebhook{{ClientConfig: admissionregistrationv1.WebhookClientConfig{CABundle: []byte("foo")}}},
 			},

@@ -9,11 +9,16 @@ import (
 	"context"
 	"fmt"
 	"slices"
+	"strings"
 
 	authenticationv1 "k8s.io/api/authentication/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
+)
+
+const (
+	authPodNameKey = "authentication.kubernetes.io/pod-name"
 )
 
 // GetKubernetesClient creates a Kubernetes client using in-cluster configuration.
@@ -31,25 +36,39 @@ func GetKubernetesClient() (*kubernetes.Clientset, error) {
 	return clientset, nil
 }
 
-func validateKubeJWT(ctx context.Context, clientset *kubernetes.Clientset, token string) (bool, error) {
+func (i *JWTAuthInterceptor) validateKubeJWT(ctx context.Context, token string) error {
 	tokenReview := &authenticationv1.TokenReview{
 		Spec: authenticationv1.TokenReviewSpec{
 			Token: token,
 		},
 	}
 
-	tokenReview, err := clientset.AuthenticationV1().TokenReviews().Create(ctx, tokenReview, metav1.CreateOptions{})
+	tokenReview, err := i.clientset.AuthenticationV1().TokenReviews().Create(ctx, tokenReview, metav1.CreateOptions{})
 	if err != nil {
-		return false, fmt.Errorf("failed to call TokenReview API to verify service account JWT: %w", err)
+		return fmt.Errorf("failed to call TokenReview API to verify service account JWT: %w", err)
 	}
 
 	if !slices.Contains(tokenReview.Status.User.Groups, "system:serviceaccounts") {
-		return false, fmt.Errorf("the token is not a service account")
+		return fmt.Errorf("the token is not a service account")
 	}
 
 	if !tokenReview.Status.Authenticated {
-		return false, fmt.Errorf("token is not authenticated")
+		return fmt.Errorf("token is not authenticated")
 	}
 
-	return true, nil
+	// TODO: (cnvergence) define a better way to check if the token is coming from the correct node
+	if tokenReview.Status.User.Extra != nil {
+		podName := tokenReview.Status.User.Extra[authPodNameKey]
+		if podName[0] == "" {
+			return fmt.Errorf("pod name not found in token review response")
+		}
+		parts := strings.Split(podName[0], "-")
+		irKey := fmt.Sprintf("%s/%s", parts[1], parts[2])
+
+		if !i.cache.SnapshotHasIrKey(irKey) {
+			return fmt.Errorf("pod %s not found in cache", podName)
+		}
+	}
+
+	return nil
 }

@@ -108,8 +108,8 @@ func GenerateCerts(cfg *config.Server) (*Certificates, error) {
 		egProvider := cfg.EnvoyGateway.GetEnvoyGatewayProvider().Type
 		switch egProvider {
 		case egv1a1.ProviderTypeKubernetes:
-			egDNSNames = kubeServiceNames(DefaultEnvoyGatewayDNSPrefix, cfg.Namespace, cfg.DNSDomain)
-			envoyDNSNames = append(envoyDNSNames, fmt.Sprintf("*.%s", cfg.Namespace))
+			egDNSNames = kubeServiceNames(DefaultEnvoyGatewayDNSPrefix, cfg.ControllerNamespace, cfg.DNSDomain)
+			envoyDNSNames = append(envoyDNSNames, fmt.Sprintf("*.%s", cfg.ControllerNamespace))
 		default:
 			// Kubernetes is the only supported Envoy Gateway provider.
 			return nil, fmt.Errorf("unsupported provider type %v", egProvider)

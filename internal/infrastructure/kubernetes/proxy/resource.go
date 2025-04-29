@@ -289,21 +289,17 @@ func expectedShutdownPreStopCommand(cfg *egv1a1.ShutdownConfig) []string {
 
 // expectedContainerVolumeMounts returns expected proxy container volume mounts.
 func expectedContainerVolumeMounts(containerSpec *egv1a1.KubernetesContainerSpec) []corev1.VolumeMount {
-	var volumeMounts []corev1.VolumeMount
-
-	certsMount := corev1.VolumeMount{
-		Name:      "certs",
-		MountPath: "/certs",
-		ReadOnly:  true,
+	volumeMounts := []corev1.VolumeMount{
+		{
+			Name:      "certs",
+			MountPath: "/certs",
+			ReadOnly:  true,
+		},
+		{
+			Name:      "sds",
+			MountPath: "/sds",
+		},
 	}
-	volumeMounts = append(volumeMounts, certsMount)
-
-	sdsMount := corev1.VolumeMount{
-		Name:      "sds",
-		MountPath: "/sds",
-	}
-	volumeMounts = append(volumeMounts, sdsMount)
-
 	return resource.ExpectedContainerVolumeMounts(containerSpec, volumeMounts)
 }
 

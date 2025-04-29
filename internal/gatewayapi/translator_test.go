@@ -96,7 +96,7 @@ func TestTranslate(t *testing.T) {
 				GlobalRateLimitEnabled:  true,
 				EnvoyPatchPolicyEnabled: envoyPatchPolicyEnabled,
 				BackendEnabled:          backendEnabled,
-				Namespace:               "envoy-gateway-system",
+				ControllerNamespace:     "envoy-gateway-system",
 				MergeGateways:           IsMergeGatewaysEnabled(resources),
 				GatewayNamespaceMode:    gatewayNamespaceMode,
 				WasmCache:               &mockWasmCache{},

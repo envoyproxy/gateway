@@ -223,8 +223,6 @@ func TestExtractSubResourcesConfigDump(t *testing.T) {
 }
 
 func TestLabelSelectorBadInput(t *testing.T) {
-	podNamespace = "default"
-
 	cases := []struct {
 		name   string
 		args   []string

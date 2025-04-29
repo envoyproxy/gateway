@@ -63,7 +63,7 @@ type Infra struct {
 func NewInfra(cli client.Client, cfg *config.Server) *Infra {
 	var ns string
 	if !cfg.EnvoyGateway.GatewayNamespaceMode() {
-		ns = cfg.Namespace
+		ns = cfg.ControllerNamespace
 	}
 	return &Infra{
 		Namespace:    ns,

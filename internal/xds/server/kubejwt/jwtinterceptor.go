@@ -10,6 +10,9 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/envoyproxy/gateway/internal/message"
+	"github.com/envoyproxy/gateway/internal/xds/cache"
+
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
 	"k8s.io/client-go/kubernetes"
@@ -19,13 +22,17 @@ import (
 type JWTAuthInterceptor struct {
 	clientset *kubernetes.Clientset
 	issuer    string
+	cache     cache.SnapshotCacheWithCallbacks
+	xds       *message.Xds
 }
 
 // NewJWTAuthInterceptor initializes a new JWTAuthInterceptor.
-func NewJWTAuthInterceptor(clientset *kubernetes.Clientset, issuer string) *JWTAuthInterceptor {
+func NewJWTAuthInterceptor(clientset *kubernetes.Clientset, issuer string, cache cache.SnapshotCacheWithCallbacks, xds *message.Xds) *JWTAuthInterceptor {
 	return &JWTAuthInterceptor{
 		clientset: clientset,
 		issuer:    issuer,
+		cache:     cache,
+		xds:       xds,
 	}
 }
 
@@ -52,12 +59,9 @@ func (i *JWTAuthInterceptor) authorize(ctx context.Context) error {
 	}
 
 	tokenStr := strings.TrimPrefix(authHeader[0], "Bearer ")
-	jwtValid, err := validateKubeJWT(ctx, i.clientset, tokenStr)
+	err := i.validateKubeJWT(ctx, tokenStr)
 	if err != nil {
 		return fmt.Errorf("failed to validate token: %w", err)
-	}
-	if !jwtValid {
-		return fmt.Errorf("token is invalid or not authenticated")
 	}
 
 	return nil

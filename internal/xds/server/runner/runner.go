@@ -86,6 +86,7 @@ func (r *Runner) Close() error { return nil }
 // Start starts the xds-server runner
 func (r *Runner) Start(ctx context.Context) (err error) {
 	r.Logger = r.Logger.WithName(r.Name()).WithValues("runner", r.Name())
+	r.cache = cache.NewSnapshotCache(true, r.Logger)
 
 	// Set up the gRPC server and register the xDS handler.
 	// Create SnapshotCache before start subscribeAndTranslate,
@@ -114,6 +115,8 @@ func (r *Runner) Start(ctx context.Context) (err error) {
 		jwtInterceptor := kubejwt.NewJWTAuthInterceptor(
 			clientset,
 			defaultKubernetesIssuer,
+			r.cache,
+			r.Xds,
 		)
 
 		creds, err := credentials.NewServerTLSFromFile(xdsTLSCertFilepath, xdsTLSKeyFilepath)
@@ -132,7 +135,6 @@ func (r *Runner) Start(ctx context.Context) (err error) {
 	}
 
 	r.grpc = grpc.NewServer(grpcOpts...)
-	r.cache = cache.NewSnapshotCache(true, r.Logger)
 	registerServer(serverv3.NewServer(ctx, r.cache, r.cache), r.grpc)
 
 	// Start and listen xDS gRPC Server.

@@ -107,7 +107,7 @@ func newGatewayAPIController(ctx context.Context, mgr manager.Manager, cfg *conf
 		client:               mgr.GetClient(),
 		log:                  cfg.Logger,
 		classController:      gwapiv1.GatewayController(cfg.EnvoyGateway.Gateway.ControllerName),
-		namespace:            cfg.Namespace,
+		namespace:            cfg.ControllerNamespace,
 		statusUpdater:        su,
 		resources:            resources,
 		extGVKs:              extGVKs,
