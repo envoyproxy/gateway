@@ -34,12 +34,6 @@ spec:
     chart: gateway-helm
     repoURL: docker.io/envoyproxy
     targetRevision: {{< helm-version >}}
-    helm:
-      valuesObject:
-        certgen:
-          rbac:
-            annotations:
-              argocd.argoproj.io/sync-wave: "-1"  # Ensure rbac is created before the certgen job.
   destination:
     namespace: envoy-gateway-system
     server: https://kubernetes.default.svc
@@ -53,7 +47,6 @@ EOF
 **Note**:
 
 * Set `ServerSideApply` to `true` to enable Kubernetes [server-side apply](https://kubernetes.io/docs/reference/using-api/server-side-apply/). This helps avoid the 262,144-byte annotation size limit.
-* Ensure RBAC resources are created before certgen job by setting the `annotations` to `argocd.argoproj.io/sync-wave: "-1"`. This is a workaround for the [known certgen issue with Argo CD](https://github.com/envoyproxy/gateway/issues/5223).
 * For simplicity, we apply the Application resource directly to the cluster.
 In a production environment, it’s recommended to store this configuration in a Git repository and manage it using another Argo CD Application that uses Git as its source — following a GitOps workflow.
 
@@ -107,10 +100,6 @@ spec:
   source:
     helm:
       valuesObject:
-        certgen:
-          rbac:
-            annotations:
-              argocd.argoproj.io/sync-wave: "-1"  # Ensure rbac is created before the certgen job. This is a workaround for
         deployment:
           envoyGateway:
             resources:
