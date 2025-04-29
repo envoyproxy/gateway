@@ -172,6 +172,17 @@ rules:
   - backendtlspolicies/status
   verbs:
   - update
+- apiGroups:
+  - ""
+  resources:
+  - pods
+  - pods/binding
+  verbs:
+  - get
+  - list
+  - patch
+  - update
+  - watch
 ---
 # Source: gateway-helm/templates/envoy-gateway-rbac.yaml
 apiVersion: rbac.authorization.k8s.io/v1
@@ -356,6 +367,9 @@ spec:
   - name: metrics
     port: 19001
     targetPort: 19001
+  - name: webhook
+    port: 9443
+    targetPort: 9443
   trafficDistribution: PreferClose
 ---
 # Source: gateway-helm/templates/envoy-gateway-deployment.yaml
@@ -418,6 +432,8 @@ spec:
           name: wasm
         - containerPort: 19001
           name: metrics
+        - name: webhook
+          containerPort: 9443
         readinessProbe:
           httpGet:
             path: /readyz
@@ -474,6 +490,62 @@ metadata:
     app.kubernetes.io/managed-by: Helm
   annotations:
     "helm.sh/hook": pre-install
+---
+# Source: gateway-helm/templates/certgen-rbac.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: 'gateway-helm-certgen:envoy-gateway-system'
+  labels:
+    helm.sh/chart: gateway-helm-v0.0.0-latest
+    app.kubernetes.io/name: gateway-helm
+    app.kubernetes.io/instance: gateway-helm
+    app.kubernetes.io/version: "latest"
+    app.kubernetes.io/managed-by: Helm
+  annotations:
+    "helm.sh/hook": pre-install, pre-upgrade
+    "helm.sh/hook-weight": "-1"
+rules:
+  - apiGroups:
+    - admissionregistration.k8s.io
+    resources:
+    - mutatingwebhookconfigurations
+    verbs:
+    - get
+    - list
+    - watch
+  - apiGroups:
+      - admissionregistration.k8s.io
+    resources:
+      - mutatingwebhookconfigurations
+    resourceNames:
+      - 'envoy-gateway-topology-injector.envoy-gateway-system'
+    verbs:
+      - update
+      - patch
+---
+# Source: gateway-helm/templates/certgen-rbac.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: 'gateway-helm-certgen:envoy-gateway-system'
+  labels:
+    helm.sh/chart: gateway-helm-v0.0.0-latest
+    app.kubernetes.io/name: gateway-helm
+    app.kubernetes.io/instance: gateway-helm
+    app.kubernetes.io/version: "latest"
+    app.kubernetes.io/managed-by: Helm
+  annotations:
+    "helm.sh/hook": pre-install, pre-upgrade
+    "helm.sh/hook-weight": "-1"
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: 'gateway-helm-certgen:envoy-gateway-system'
+subjects:
+  - kind: ServiceAccount
+    name: 'gateway-helm-certgen'
+    namespace: 'envoy-gateway-system'
 ---
 # Source: gateway-helm/templates/certgen-rbac.yaml
 apiVersion: rbac.authorization.k8s.io/v1
@@ -567,12 +639,50 @@ spec:
             - ALL
           privileged: false
           readOnlyRootFilesystem: true
-          runAsGroup: 65534
+          runAsGroup: 65532
           runAsNonRoot: true
-          runAsUser: 65534
+          runAsUser: 65532
           seccompProfile:
             type: RuntimeDefault
       imagePullSecrets: []
       restartPolicy: Never
       serviceAccountName: gateway-helm-certgen
   ttlSecondsAfterFinished: 30
+---
+# Source: gateway-helm/templates/envoy-proxy-topology-injector-webhook.yaml
+apiVersion: admissionregistration.k8s.io/v1
+kind: MutatingWebhookConfiguration
+metadata:
+  name: 'envoy-gateway-topology-injector.envoy-gateway-system'
+  annotations:
+    "helm.sh/hook": pre-install, pre-upgrade
+    "helm.sh/hook-weight": "-1"
+  labels:
+    app.kubernetes.io/component: topology-injector
+    helm.sh/chart: gateway-helm-v0.0.0-latest
+    app.kubernetes.io/name: gateway-helm
+    app.kubernetes.io/instance: gateway-helm
+    app.kubernetes.io/version: "latest"
+    app.kubernetes.io/managed-by: Helm
+webhooks:
+  - name: topology.webhook.gateway.envoyproxy.io
+    admissionReviewVersions: ["v1"]
+    sideEffects: None
+    clientConfig:
+      service:
+        name: envoy-gateway
+        namespace: 'envoy-gateway-system'
+        path: "/inject-pod-topology"
+        port: 9443
+    failurePolicy: Ignore
+    rules:
+      - operations: ["CREATE"]
+        apiGroups: [""]
+        apiVersions: ["v1"]
+        resources: ["pods/binding"]
+    namespaceSelector:
+      matchExpressions:
+        - key: kubernetes.io/metadata.name
+          operator: In
+          values:
+            - envoy-gateway-system

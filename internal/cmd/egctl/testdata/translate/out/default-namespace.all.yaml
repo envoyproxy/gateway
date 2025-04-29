@@ -1,5 +1,6 @@
 backends:
-- kind: Backend
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: Backend
   metadata:
     creationTimestamp: null
     name: backend
@@ -18,6 +19,7 @@ backends:
       status: "True"
       type: Accepted
 gatewayClass:
+  apiVersion: gateway.networking.k8s.io/v1
   kind: GatewayClass
   metadata:
     creationTimestamp: null
@@ -32,7 +34,8 @@ gatewayClass:
       status: "True"
       type: Accepted
 gateways:
-- kind: Gateway
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: Gateway
   metadata:
     creationTimestamp: null
     name: eg
@@ -72,7 +75,8 @@ gateways:
       - group: gateway.networking.k8s.io
         kind: GRPCRoute
 httpRoutes:
-- kind: HTTPRoute
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
   metadata:
     creationTimestamp: null
     name: backend
