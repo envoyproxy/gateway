@@ -7,6 +7,7 @@
 GITHUB_ACTION ?=
 LINT_BUILD_TAGS ?= e2e,celvalidation,conformance,experimental,benchmark,resilience
 
+.PHONY: lint
 lint: ## Run all linter of code sources, including golint, yamllint, whitenoise lint and codespell.
 
 # lint-deps is run separately in CI to separate the tooling install logs from the actual output logs generated
@@ -99,9 +100,3 @@ lint.markdown:
 lint: lint.dependabot
 lint.dependabot: ## Check if dependabot configuration is valid
 	@npx @bugron/validate-dependabot-yaml .github/dependabot.yml
-
-.PHONY: lint.gofumpt
-lint: lint.gofumpt
-lint.gofumpt:
-	@$(LOG_TARGET)
-	@go tool golangci-lint run --fix --build-tags=$(LINT_BUILD_TAGS) --config=tools/linter/golangci-lint/.golangci.yml
