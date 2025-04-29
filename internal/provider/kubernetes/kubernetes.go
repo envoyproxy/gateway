@@ -37,6 +37,11 @@ type Provider struct {
 	manager manager.Manager
 }
 
+const (
+	QPS   = 50
+	BURST = 100
+)
+
 // Exposed to allow disabling health probe listener in tests.
 var (
 	healthProbeBindAddress = ":8081"
@@ -68,6 +73,8 @@ func New(ctx context.Context, restCfg *rest.Config, svrCfg *ec.Server, resources
 
 	log.SetLogger(mgrOpts.Logger)
 	klog.SetLogger(mgrOpts.Logger)
+
+	restCfg.QPS, restCfg.Burst = svrCfg.EnvoyGateway.Provider.Kubernetes.Client.RateLimit.GetQPSAndBurst()
 
 	if !ptr.Deref(svrCfg.EnvoyGateway.Provider.Kubernetes.LeaderElection.Disable, false) {
 		mgrOpts.LeaderElection = true

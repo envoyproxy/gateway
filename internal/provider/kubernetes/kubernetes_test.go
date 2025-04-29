@@ -1276,6 +1276,7 @@ func TestNamespacedProvider(t *testing.T) {
 			Namespaces: []string{"ns1", "ns2"},
 		},
 		LeaderElection: egv1a1.DefaultLeaderElection(),
+		Client:         egv1a1.DefaultKubernetesClient(),
 	}
 
 	// Disable webhook server for provider test to avoid non-existent cert errors
@@ -1340,6 +1341,7 @@ func TestNamespaceSelectorProvider(t *testing.T) {
 			NamespaceSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"label-1": "true", "label-2": "true"}},
 		},
 		LeaderElection: egv1a1.DefaultLeaderElection(),
+		Client:         egv1a1.DefaultKubernetesClient(),
 	}
 
 	// Disable webhook server for provider test to avoid non-existent cert errors

@@ -374,6 +374,7 @@ func (t *Translator) buildTrafficFeatures(policy *egv1a1.BackendTrafficPolicy, r
 		ds          *ir.DNS
 		h2          *ir.HTTP2Settings
 		ro          *ir.ResponseOverride
+		rb          *ir.RequestBuffer
 		cp          []*ir.Compression
 		httpUpgrade []string
 		err, errs   error
@@ -427,6 +428,12 @@ func (t *Translator) buildTrafficFeatures(policy *egv1a1.BackendTrafficPolicy, r
 		err = perr.WithMessage(err, "ResponseOverride")
 		errs = errors.Join(errs, err)
 	}
+
+	if rb, err = buildRequestBuffer(policy.Spec.RequestBuffer); err != nil {
+		err = perr.WithMessage(err, "RequestBuffer")
+		errs = errors.Join(errs, err)
+	}
+
 	cp = buildCompression(policy.Spec.Compression)
 	httpUpgrade = buildHTTPProtocolUpgradeConfig(policy.Spec.HTTPUpgrade)
 
@@ -446,6 +453,7 @@ func (t *Translator) buildTrafficFeatures(policy *egv1a1.BackendTrafficPolicy, r
 		DNS:               ds,
 		Timeout:           to,
 		ResponseOverride:  ro,
+		RequestBuffer:     rb,
 		Compression:       cp,
 		HTTPUpgrade:       httpUpgrade,
 		Telemetry:         policy.Spec.Telemetry,
@@ -810,6 +818,20 @@ func makeIrTriggerSet(in []egv1a1.TriggerEnum) []ir.TriggerEnum {
 		irTriggers = append(irTriggers, ir.TriggerEnum(r))
 	}
 	return irTriggers
+}
+
+func buildRequestBuffer(spec *egv1a1.RequestBuffer) (*ir.RequestBuffer, error) {
+	if spec == nil {
+		return nil, nil
+	}
+
+	if _, ok := spec.Limit.AsInt64(); !ok {
+		return nil, fmt.Errorf("limit must be convertible to an int64")
+	}
+
+	return &ir.RequestBuffer{
+		Limit: spec.Limit,
+	}, nil
 }
 
 func buildResponseOverride(policy *egv1a1.BackendTrafficPolicy, resources *resource.Resources) (*ir.ResponseOverride, error) {
