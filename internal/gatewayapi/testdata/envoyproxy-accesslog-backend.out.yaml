@@ -138,6 +138,10 @@ xdsIR:
     accessLog:
       openTelemetry:
       - destination:
+          metadata:
+            kind: EnvoyProxy
+            name: test
+            namespace: envoy-gateway-system
           name: accesslog_otel_0_1
           settings:
           - addressType: IP

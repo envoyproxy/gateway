@@ -140,6 +140,11 @@ xdsIR:
       port: 10080
       routes:
       - destination:
+          metadata:
+            kind: GRPCRoute
+            name: grpcroute-1
+            namespace: default
+            sectionName: grpcrule-1
           name: grpcroute/default/grpcroute-1/rule/0
           settings:
           - addressType: IP
@@ -166,6 +171,11 @@ xdsIR:
           name: ""
           safeRegex: /com.[A-Z]+/[A-Za-z_][A-Za-z_0-9]*
       - destination:
+          metadata:
+            kind: GRPCRoute
+            name: grpcroute-1
+            namespace: default
+            sectionName: grpcrule-1
           name: grpcroute/default/grpcroute-1/rule/0
           settings:
           - addressType: IP

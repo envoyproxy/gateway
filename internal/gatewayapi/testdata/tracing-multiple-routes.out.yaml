@@ -273,6 +273,10 @@ xdsIR:
       port: 10080
       routes:
       - destination:
+          metadata:
+            kind: HTTPRoute
+            name: httproute-1
+            namespace: default
           name: httproute/default/httproute-1/rule/0
           settings:
           - addressType: IP
@@ -305,6 +309,10 @@ xdsIR:
     tracing:
       authority: otel-collector.monitoring.svc.cluster.local
       destination:
+        metadata:
+          kind: EnvoyProxy
+          name: test
+          namespace: envoy-gateway
         name: tracing
         settings:
         - endpoints:
@@ -354,6 +362,10 @@ xdsIR:
       port: 8888
       routes:
       - destination:
+          metadata:
+            kind: HTTPRoute
+            name: httproute-2
+            namespace: default
           name: httproute/default/httproute-2/rule/0
           settings:
           - addressType: IP
@@ -386,6 +398,10 @@ xdsIR:
     tracing:
       authority: otel-collector.monitoring.svc.cluster.local
       destination:
+        metadata:
+          kind: EnvoyProxy
+          name: test
+          namespace: envoy-gateway
         name: tracing
         settings:
         - endpoints:

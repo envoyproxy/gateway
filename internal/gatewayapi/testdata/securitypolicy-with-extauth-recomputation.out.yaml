@@ -219,6 +219,10 @@ xdsIR:
       port: 10080
       routes:
       - destination:
+          metadata:
+            kind: HTTPRoute
+            name: httproute-1
+            namespace: default
           name: httproute/default/httproute-1/rule/0
           settings:
           - addressType: IP
@@ -249,6 +253,10 @@ xdsIR:
             grpc:
               authority: primary.foo.com:3000
               destination:
+                metadata:
+                  kind: SecurityPolicy
+                  name: policy-for-http-route-1
+                  namespace: default
                 name: securitypolicy/default/policy-for-http-route-1/extauth/0
                 settings:
                 - addressType: FQDN
@@ -268,6 +276,10 @@ xdsIR:
             name: securitypolicy/default/policy-for-http-route-1
             recomputeRoute: true
       - destination:
+          metadata:
+            kind: HTTPRoute
+            name: httproute-1
+            namespace: default
           name: httproute/default/httproute-1/rule/1
           settings:
           - addressType: IP
@@ -298,6 +310,10 @@ xdsIR:
             grpc:
               authority: primary.foo.com:3000
               destination:
+                metadata:
+                  kind: SecurityPolicy
+                  name: policy-for-http-route-1
+                  namespace: default
                 name: securitypolicy/default/policy-for-http-route-1/extauth/0
                 settings:
                 - addressType: FQDN
@@ -317,6 +333,10 @@ xdsIR:
             name: securitypolicy/default/policy-for-http-route-1
             recomputeRoute: true
       - destination:
+          metadata:
+            kind: HTTPRoute
+            name: httproute-2
+            namespace: default
           name: httproute/default/httproute-2/rule/0
           settings:
           - addressType: IP

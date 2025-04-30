@@ -112,6 +112,10 @@ xdsIR:
       port: 10090
       route:
         destination:
+          metadata:
+            kind: UDPRoute
+            name: udproute-1
+            namespace: default
           name: udproute/default/udproute-1/rule/-1
           settings:
           - addressType: IP

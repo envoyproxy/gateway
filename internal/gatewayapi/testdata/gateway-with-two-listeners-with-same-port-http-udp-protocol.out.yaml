@@ -180,6 +180,10 @@ xdsIR:
       port: 10080
       routes:
       - destination:
+          metadata:
+            kind: HTTPRoute
+            name: httproute-1
+            namespace: default
           name: httproute/default/httproute-1/rule/0
           settings:
           - addressType: IP
@@ -215,6 +219,10 @@ xdsIR:
       port: 10080
       route:
         destination:
+          metadata:
+            kind: UDPRoute
+            name: udproute-1
+            namespace: default
           name: udproute/default/udproute-1/rule/-1
           settings:
           - addressType: IP

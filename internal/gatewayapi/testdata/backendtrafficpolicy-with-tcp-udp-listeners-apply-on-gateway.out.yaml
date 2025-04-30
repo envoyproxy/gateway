@@ -250,6 +250,10 @@ xdsIR:
           maxPendingRequests: 1
           maxRequestsPerConnection: 1
         destination:
+          metadata:
+            kind: TCPRoute
+            name: tls-app-1
+            namespace: default
           name: tcproute/default/tls-app-1/rule/-1
           settings:
           - addressType: IP
@@ -308,6 +312,10 @@ xdsIR:
       port: 8162
       route:
         destination:
+          metadata:
+            kind: UDPRoute
+            name: udp-app-1
+            namespace: default
           name: udproute/default/udp-app-1/rule/-1
           settings:
           - addressType: IP

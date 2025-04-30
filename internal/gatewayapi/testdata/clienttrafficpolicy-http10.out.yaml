@@ -522,6 +522,10 @@ xdsIR:
       port: 8082
       routes:
       - destination:
+          metadata:
+            kind: HTTPRoute
+            name: httproute-1
+            namespace: envoy-gateway
           name: httproute/envoy-gateway/httproute-1/rule/0
           settings:
           - addressType: IP
@@ -564,6 +568,10 @@ xdsIR:
       port: 8083
       routes:
       - destination:
+          metadata:
+            kind: HTTPRoute
+            name: httproute-1
+            namespace: envoy-gateway
           name: httproute/envoy-gateway/httproute-1/rule/0
           settings:
           - addressType: IP
@@ -592,6 +600,10 @@ xdsIR:
           name: ""
           prefix: /
       - destination:
+          metadata:
+            kind: HTTPRoute
+            name: httproute-2
+            namespace: envoy-gateway
           name: httproute/envoy-gateway/httproute-2/rule/0
           settings:
           - addressType: IP

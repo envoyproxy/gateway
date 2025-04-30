@@ -298,6 +298,10 @@ xdsIR:
       port: 10080
       routes:
       - destination:
+          metadata:
+            kind: HTTPRoute
+            name: httproute-1
+            namespace: default
           name: httproute/default/httproute-1/rule/0
           settings:
           - addressType: IP
@@ -328,6 +332,10 @@ xdsIR:
             grpc:
               authority: grpc-backend.default:9000
               destination:
+                metadata:
+                  kind: SecurityPolicy
+                  name: policy-for-http-route
+                  namespace: default
                 name: securitypolicy/default/policy-for-http-route/extauth/0
                 settings:
                 - addressType: IP
@@ -353,6 +361,10 @@ xdsIR:
             - header2
             name: securitypolicy/default/policy-for-http-route
       - destination:
+          metadata:
+            kind: HTTPRoute
+            name: httproute-2
+            namespace: default
           name: httproute/default/httproute-2/rule/0
           settings:
           - addressType: IP
@@ -383,6 +395,10 @@ xdsIR:
             http:
               authority: http-backend.envoy-gateway:80
               destination:
+                metadata:
+                  kind: SecurityPolicy
+                  name: policy-for-gateway
+                  namespace: default
                 name: securitypolicy/default/policy-for-gateway/extauth/0
                 settings:
                 - addressType: IP

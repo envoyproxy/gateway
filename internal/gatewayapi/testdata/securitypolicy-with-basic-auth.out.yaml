@@ -229,6 +229,10 @@ xdsIR:
       port: 10080
       routes:
       - destination:
+          metadata:
+            kind: HTTPRoute
+            name: httproute-1
+            namespace: default
           name: httproute/default/httproute-1/rule/0
           settings:
           - addressType: IP
@@ -258,6 +262,10 @@ xdsIR:
             name: securitypolicy/default/policy-for-http-route-1
             users: '[redacted]'
       - destination:
+          metadata:
+            kind: HTTPRoute
+            name: httproute-1
+            namespace: default
           name: httproute/default/httproute-1/rule/1
           settings:
           - addressType: IP
@@ -287,6 +295,10 @@ xdsIR:
             name: securitypolicy/default/policy-for-http-route-1
             users: '[redacted]'
       - destination:
+          metadata:
+            kind: HTTPRoute
+            name: httproute-2
+            namespace: default
           name: httproute/default/httproute-2/rule/0
           settings:
           - addressType: IP

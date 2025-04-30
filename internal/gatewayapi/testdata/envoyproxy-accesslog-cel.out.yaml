@@ -146,6 +146,10 @@ xdsIR:
     accessLog:
       als:
       - destination:
+          metadata:
+            kind: EnvoyProxy
+            name: test
+            namespace: envoy-gateway-system
           name: accesslog_als_1_0
           settings:
           - addressType: IP
@@ -166,6 +170,10 @@ xdsIR:
         celMatches:
         - response.code >= 400
         destination:
+          metadata:
+            kind: EnvoyProxy
+            name: test
+            namespace: envoy-gateway-system
           name: accesslog_otel_0_1
           settings:
           - endpoints:

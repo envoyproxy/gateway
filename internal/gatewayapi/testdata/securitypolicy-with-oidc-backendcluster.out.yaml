@@ -228,6 +228,10 @@ xdsIR:
       port: 10080
       routes:
       - destination:
+          metadata:
+            kind: HTTPRoute
+            name: httproute-1
+            namespace: default
           name: httproute/default/httproute-1/rule/0
           settings:
           - addressType: IP
@@ -266,6 +270,10 @@ xdsIR:
             provider:
               authorizationEndpoint: https://oauth.foo.com/oauth2/v2/auth
               destination:
+                metadata:
+                  kind: SecurityPolicy
+                  name: policy-for-gateway
+                  namespace: envoy-gateway
                 name: securitypolicy/envoy-gateway/policy-for-gateway/oidc/0
                 settings:
                 - addressType: FQDN

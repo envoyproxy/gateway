@@ -223,6 +223,10 @@ xdsIR:
       port: 10080
       routes:
       - destination:
+          metadata:
+            kind: HTTPRoute
+            name: httproute-1
+            namespace: default
           name: httproute/default/httproute-1/rule/0
           settings:
           - addressType: IP
@@ -259,6 +263,10 @@ xdsIR:
               name: foobar
               remoteJWKS:
                 destination:
+                  metadata:
+                    kind: SecurityPolicy
+                    name: policy-for-route
+                    namespace: default
                   name: securitypolicy/default/policy-for-route/jwt/0
                   settings:
                   - addressType: FQDN

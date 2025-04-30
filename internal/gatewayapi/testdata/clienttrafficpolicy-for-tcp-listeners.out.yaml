@@ -201,6 +201,10 @@ xdsIR:
       port: 10443
       routes:
       - destination:
+          metadata:
+            kind: TCPRoute
+            name: tcproute-1
+            namespace: default
           name: tcproute/default/tcproute-1/rule/-1
           settings:
           - addressType: IP
@@ -268,6 +272,10 @@ xdsIR:
       port: 8080
       routes:
       - destination:
+          metadata:
+            kind: TCPRoute
+            name: tcproute-1
+            namespace: default
           name: tcproute/default/tcproute-1/rule/-1
           settings:
           - addressType: IP
