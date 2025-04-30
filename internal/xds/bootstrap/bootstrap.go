@@ -106,7 +106,7 @@ type bootstrapParameters struct {
 	IPFamily string
 	// GatewayNamespaceMode defines whether to use the Envoy Gateway namespace mode.
 	GatewayNamespaceMode bool
-	// Metadata is used to pass the metadata used for gateway namespace mode to the xds-server.
+	// Metadata is used to pass the metadata to the xds-server for gateway namespace mode.
 	Metadata Metadata
 }
 
