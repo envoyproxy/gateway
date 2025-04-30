@@ -135,6 +135,13 @@ xdsIR:
       port: 10080
       routes:
       - destination:
+          metadata:
+            annotations:
+              foo: bar
+            kind: HTTPRoute
+            name: httproute-1
+            namespace: default
+            sectionName: rule-2
           name: httproute/default/httproute-1/rule/1
           settings:
           - addressType: IP
@@ -165,6 +172,13 @@ xdsIR:
           sectionName: rule-2
         name: httproute/default/httproute-1/rule/1/match/0/*
       - destination:
+          metadata:
+            annotations:
+              foo: bar
+            kind: HTTPRoute
+            name: httproute-1
+            namespace: default
+            sectionName: rule-1
           name: httproute/default/httproute-1/rule/0
           settings:
           - addressType: IP

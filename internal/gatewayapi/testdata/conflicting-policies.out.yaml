@@ -282,6 +282,10 @@ xdsIR:
       port: 10080
       routes:
       - destination:
+          metadata:
+            kind: HTTPRoute
+            name: bdkzlmibsivuiqav
+            namespace: default
           name: httproute/default/bdkzlmibsivuiqav/rule/0
           settings:
           - addressType: IP
@@ -322,6 +326,10 @@ xdsIR:
       port: 10080
       routes:
       - destination:
+          metadata:
+            kind: HTTPRoute
+            name: mfqjpuycbgjrtdww
+            namespace: default
           name: httproute/default/mfqjpuycbgjrtdww/rule/0
           settings:
           - addressType: IP

@@ -784,6 +784,14 @@ xds:
                     address: 1.1.1.1
                     portValue: 8000
               loadBalancingWeight: 1
+              metadata:
+                filterMetadata:
+                  envoy-gateway:
+                    resources:
+                    - kind: Service
+                      name: providedBackend
+                      namespace: default
+                      sectionName: "8000"
             loadBalancingWeight: 1
             locality:
               region: httproute/default/backend/rule/0/backend/0
@@ -798,6 +806,14 @@ xds:
                     address: 1.1.1.1
                     portValue: 9000
               loadBalancingWeight: 1
+              metadata:
+                filterMetadata:
+                  envoy-gateway:
+                    resources:
+                    - kind: Service
+                      name: providedBackend
+                      namespace: default
+                      sectionName: "9000"
             loadBalancingWeight: 1
             locality:
               region: grpcroute/default/backend/rule/0/backend/0
@@ -812,6 +828,14 @@ xds:
                     address: 1.2.3.4
                     portValue: 3000
               loadBalancingWeight: 1
+              metadata:
+                filterMetadata:
+                  envoy-gateway:
+                    resources:
+                    - kind: Service
+                      name: backend
+                      namespace: default
+                      sectionName: "3000"
             loadBalancingWeight: 1
             locality:
               region: tcproute/default/backend/rule/-1/backend/0
@@ -826,6 +850,14 @@ xds:
                     address: 1.2.3.4
                     portValue: 3000
               loadBalancingWeight: 1
+              metadata:
+                filterMetadata:
+                  envoy-gateway:
+                    resources:
+                    - kind: Service
+                      name: backend
+                      namespace: default
+                      sectionName: "3000"
             loadBalancingWeight: 1
             locality:
               region: tlsroute/default/backend/rule/-1/backend/0
@@ -840,6 +872,14 @@ xds:
                     address: 1.2.3.4
                     portValue: 3000
               loadBalancingWeight: 1
+              metadata:
+                filterMetadata:
+                  envoy-gateway:
+                    resources:
+                    - kind: Service
+                      name: backend
+                      namespace: default
+                      sectionName: "3000"
             loadBalancingWeight: 1
             locality:
               region: udproute/default/backend/rule/-1/backend/0
@@ -861,6 +901,13 @@ xds:
             serviceName: httproute/default/backend/rule/0
           ignoreHealthOnHostRemoval: true
           lbPolicy: LEAST_REQUEST
+          metadata:
+            filterMetadata:
+              envoy-gateway:
+                resources:
+                - kind: HTTPRoute
+                  name: backend
+                  namespace: default
           name: httproute/default/backend/rule/0
           perConnectionBufferLimitBytes: 32768
           type: EDS
@@ -880,6 +927,13 @@ xds:
             serviceName: grpcroute/default/backend/rule/0
           ignoreHealthOnHostRemoval: true
           lbPolicy: LEAST_REQUEST
+          metadata:
+            filterMetadata:
+              envoy-gateway:
+                resources:
+                - kind: GRPCRoute
+                  name: backend
+                  namespace: default
           name: grpcroute/default/backend/rule/0
           perConnectionBufferLimitBytes: 32768
           type: EDS
@@ -906,6 +960,13 @@ xds:
             serviceName: tcproute/default/backend/rule/-1
           ignoreHealthOnHostRemoval: true
           lbPolicy: LEAST_REQUEST
+          metadata:
+            filterMetadata:
+              envoy-gateway:
+                resources:
+                - kind: TCPRoute
+                  name: backend
+                  namespace: default
           name: tcproute/default/backend/rule/-1
           perConnectionBufferLimitBytes: 32768
           type: EDS
@@ -925,6 +986,13 @@ xds:
             serviceName: tlsroute/default/backend/rule/-1
           ignoreHealthOnHostRemoval: true
           lbPolicy: LEAST_REQUEST
+          metadata:
+            filterMetadata:
+              envoy-gateway:
+                resources:
+                - kind: TLSRoute
+                  name: backend
+                  namespace: default
           name: tlsroute/default/backend/rule/-1
           perConnectionBufferLimitBytes: 32768
           type: EDS
@@ -944,6 +1012,13 @@ xds:
             serviceName: udproute/default/backend/rule/-1
           ignoreHealthOnHostRemoval: true
           lbPolicy: LEAST_REQUEST
+          metadata:
+            filterMetadata:
+              envoy-gateway:
+                resources:
+                - kind: UDPRoute
+                  name: backend
+                  namespace: default
           name: udproute/default/backend/rule/-1
           perConnectionBufferLimitBytes: 32768
           type: EDS

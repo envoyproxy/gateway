@@ -300,6 +300,10 @@ xdsIR:
       port: 10080
       routes:
       - destination:
+          metadata:
+            kind: HTTPRoute
+            name: httproute-1
+            namespace: default
           name: httproute/default/httproute-1/rule/0
           settings:
           - addressType: IP
@@ -317,6 +321,10 @@ xdsIR:
           extProcs:
           - authority: grpc-backend.envoy-gateway:8000
             destination:
+              metadata:
+                kind: EnvoyExtensionPolicy
+                name: policy-for-http-route
+                namespace: default
               name: envoyextensionpolicy/default/policy-for-http-route/extproc/0
               settings:
               - addressType: IP
@@ -390,6 +398,10 @@ xdsIR:
           name: ""
           prefix: /foo
       - destination:
+          metadata:
+            kind: HTTPRoute
+            name: httproute-2
+            namespace: default
           name: httproute/default/httproute-2/rule/0
           settings:
           - addressType: IP

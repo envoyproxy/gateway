@@ -212,6 +212,10 @@ xdsIR:
     accessLog:
       als:
       - destination:
+          metadata:
+            kind: EnvoyProxy
+            name: test
+            namespace: envoy-gateway-system
           name: accesslog_als_0_1
           settings:
           - addressType: IP
@@ -262,6 +266,10 @@ xdsIR:
               connectTimeout: 15s
         type: HTTP
       - destination:
+          metadata:
+            kind: EnvoyProxy
+            name: test
+            namespace: envoy-gateway-system
           name: accesslog_als_0_2
           settings:
           - addressType: IP
@@ -282,6 +290,10 @@ xdsIR:
       openTelemetry:
       - authority: otel-collector.monitoring.svc.cluster.local
         destination:
+          metadata:
+            kind: EnvoyProxy
+            name: test
+            namespace: envoy-gateway-system
           name: accesslog_otel_0_3
           settings:
           - endpoints:

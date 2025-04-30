@@ -153,6 +153,10 @@ xdsIR:
           attr1: val1
           attr2: val2
         destination:
+          metadata:
+            kind: EnvoyProxy
+            name: test
+            namespace: envoy-gateway-system
           name: accesslog_als_0_0
           settings:
           - addressType: IP
@@ -179,6 +183,10 @@ xdsIR:
           attr1: val1
           attr2: val2
         destination:
+          metadata:
+            kind: EnvoyProxy
+            name: test
+            namespace: envoy-gateway-system
           name: accesslog_als_0_1
           settings:
           - addressType: IP

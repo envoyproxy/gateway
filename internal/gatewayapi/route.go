@@ -251,6 +251,7 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 		for _, irRoute := range ruleRoutes {
 			destination := &ir.RouteDestination{
 				Settings: allDs,
+				Metadata: buildResourceMetadata(httpRoute, rule.Name),
 			}
 
 			switch {
@@ -676,6 +677,7 @@ func (t *Translator) processGRPCRouteRules(grpcRoute *GRPCRouteContext, parentRe
 			irRoute.IsHTTP2 = true
 			destination := &ir.RouteDestination{
 				Settings: allDs,
+				Metadata: buildResourceMetadata(grpcRoute, rule.Name),
 			}
 
 			switch {
@@ -1001,6 +1003,7 @@ func (t *Translator) processTLSRouteParentRefs(tlsRoute *TLSRouteContext, resour
 					Destination: &ir.RouteDestination{
 						Name:     destName,
 						Settings: destSettings,
+						Metadata: buildResourceMetadata(tlsRoute, nil),
 					},
 				}
 				irListener.Routes = append(irListener.Routes, irRoute)
@@ -1161,6 +1164,7 @@ func (t *Translator) processUDPRouteParentRefs(udpRoute *UDPRouteContext, resour
 					Destination: &ir.RouteDestination{
 						Name:     destName,
 						Settings: destSettings,
+						Metadata: buildResourceMetadata(udpRoute, nil),
 					},
 				}
 				irListener.Route = irRoute
@@ -1309,6 +1313,7 @@ func (t *Translator) processTCPRouteParentRefs(tcpRoute *TCPRouteContext, resour
 					Destination: &ir.RouteDestination{
 						Name:     destName,
 						Settings: destSettings,
+						Metadata: buildResourceMetadata(tcpRoute, nil),
 					},
 				}
 

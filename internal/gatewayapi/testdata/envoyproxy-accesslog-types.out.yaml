@@ -272,6 +272,10 @@ xdsIR:
     accessLog:
       als:
       - destination:
+          metadata:
+            kind: EnvoyProxy
+            name: test
+            namespace: envoy-gateway-system
           name: accesslog_als_2_1
           settings:
           - addressType: IP
@@ -298,6 +302,10 @@ xdsIR:
           this is a route log
         type: HTTP
       - destination:
+          metadata:
+            kind: EnvoyProxy
+            name: test
+            namespace: envoy-gateway-system
           name: accesslog_als_2_2
           settings:
           - addressType: IP
@@ -317,6 +325,10 @@ xdsIR:
           this is a route log
         type: TCP
       - destination:
+          metadata:
+            kind: EnvoyProxy
+            name: test
+            namespace: envoy-gateway-system
           name: accesslog_als_3_1
           settings:
           - addressType: IP
@@ -343,6 +355,10 @@ xdsIR:
           this is a listener log
         type: HTTP
       - destination:
+          metadata:
+            kind: EnvoyProxy
+            name: test
+            namespace: envoy-gateway-system
           name: accesslog_als_3_2
           settings:
           - addressType: IP
@@ -362,6 +378,10 @@ xdsIR:
           this is a listener log
         type: TCP
       - destination:
+          metadata:
+            kind: EnvoyProxy
+            name: test
+            namespace: envoy-gateway-system
           name: accesslog_als_4_1
           settings:
           - addressType: IP
@@ -387,6 +407,10 @@ xdsIR:
           this is a Global log
         type: HTTP
       - destination:
+          metadata:
+            kind: EnvoyProxy
+            name: test
+            namespace: envoy-gateway-system
           name: accesslog_als_4_2
           settings:
           - addressType: IP
@@ -412,6 +436,10 @@ xdsIR:
       openTelemetry:
       - authority: otel-collector.monitoring.svc.cluster.local
         destination:
+          metadata:
+            kind: EnvoyProxy
+            name: test
+            namespace: envoy-gateway-system
           name: accesslog_otel_2_3
           settings:
           - endpoints:
@@ -427,6 +455,10 @@ xdsIR:
           this is a route log
       - authority: otel-collector.monitoring.svc.cluster.local
         destination:
+          metadata:
+            kind: EnvoyProxy
+            name: test
+            namespace: envoy-gateway-system
           name: accesslog_otel_3_3
           settings:
           - endpoints:
@@ -442,6 +474,10 @@ xdsIR:
           this is a listener log
       - authority: otel-collector.monitoring.svc.cluster.local
         destination:
+          metadata:
+            kind: EnvoyProxy
+            name: test
+            namespace: envoy-gateway-system
           name: accesslog_otel_4_3
           settings:
           - endpoints:
@@ -483,6 +519,10 @@ xdsIR:
       port: 10080
       routes:
       - destination:
+          metadata:
+            kind: HTTPRoute
+            name: httproute-1
+            namespace: envoy-gateway
           name: httproute/envoy-gateway/httproute-1/rule/0
           settings:
           - addressType: IP

@@ -104,6 +104,10 @@ xdsIR:
       port: 10091
       routes:
       - destination:
+          metadata:
+            kind: TLSRoute
+            name: tlsroute-1
+            namespace: default
           name: tlsroute/default/tlsroute-1/rule/-1
           settings:
           - addressType: IP

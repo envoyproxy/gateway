@@ -352,7 +352,21 @@
                             }
                           }
                         },
-                        "loadBalancingWeight": 1
+                        "loadBalancingWeight": 1,
+                        "metadata": {
+                          "filterMetadata": {
+                            "envoy-gateway": {
+                              "resources": [
+                                {
+                                  "kind": "Service",
+                                  "name": "backend",
+                                  "namespace": "default",
+                                  "sectionName": "3000"
+                                }
+                              ]
+                            }
+                          }
+                        }
                       }
                     ],
                     "loadBalancingWeight": 1,
@@ -379,7 +393,21 @@
                             }
                           }
                         },
-                        "loadBalancingWeight": 1
+                        "loadBalancingWeight": 1,
+                        "metadata": {
+                          "filterMetadata": {
+                            "envoy-gateway": {
+                              "resources": [
+                                {
+                                  "kind": "Service",
+                                  "name": "backend",
+                                  "namespace": "default",
+                                  "sectionName": "9000"
+                                }
+                              ]
+                            }
+                          }
+                        }
                       }
                     ],
                     "loadBalancingWeight": 1,
@@ -406,7 +434,21 @@
                             }
                           }
                         },
-                        "loadBalancingWeight": 1
+                        "loadBalancingWeight": 1,
+                        "metadata": {
+                          "filterMetadata": {
+                            "envoy-gateway": {
+                              "resources": [
+                                {
+                                  "kind": "Service",
+                                  "name": "backend",
+                                  "namespace": "default",
+                                  "sectionName": "3000"
+                                }
+                              ]
+                            }
+                          }
+                        }
                       }
                     ],
                     "loadBalancingWeight": 1,
@@ -433,7 +475,21 @@
                             }
                           }
                         },
-                        "loadBalancingWeight": 1
+                        "loadBalancingWeight": 1,
+                        "metadata": {
+                          "filterMetadata": {
+                            "envoy-gateway": {
+                              "resources": [
+                                {
+                                  "kind": "Service",
+                                  "name": "backend",
+                                  "namespace": "default",
+                                  "sectionName": "3000"
+                                }
+                              ]
+                            }
+                          }
+                        }
                       }
                     ],
                     "loadBalancingWeight": 1,
@@ -460,7 +516,21 @@
                             }
                           }
                         },
-                        "loadBalancingWeight": 1
+                        "loadBalancingWeight": 1,
+                        "metadata": {
+                          "filterMetadata": {
+                            "envoy-gateway": {
+                              "resources": [
+                                {
+                                  "kind": "Service",
+                                  "name": "backend",
+                                  "namespace": "default",
+                                  "sectionName": "3000"
+                                }
+                              ]
+                            }
+                          }
+                        }
                       }
                     ],
                     "loadBalancingWeight": 1,
@@ -500,6 +570,19 @@
                 },
                 "ignoreHealthOnHostRemoval": true,
                 "lbPolicy": "LEAST_REQUEST",
+                "metadata": {
+                  "filterMetadata": {
+                    "envoy-gateway": {
+                      "resources": [
+                        {
+                          "kind": "HTTPRoute",
+                          "name": "backend",
+                          "namespace": "default"
+                        }
+                      ]
+                    }
+                  }
+                },
                 "name": "httproute/default/backend/rule/0",
                 "perConnectionBufferLimitBytes": 32768,
                 "type": "EDS"
@@ -529,6 +612,19 @@
                 },
                 "ignoreHealthOnHostRemoval": true,
                 "lbPolicy": "LEAST_REQUEST",
+                "metadata": {
+                  "filterMetadata": {
+                    "envoy-gateway": {
+                      "resources": [
+                        {
+                          "kind": "GRPCRoute",
+                          "name": "backend",
+                          "namespace": "default"
+                        }
+                      ]
+                    }
+                  }
+                },
                 "name": "grpcroute/default/backend/rule/0",
                 "perConnectionBufferLimitBytes": 32768,
                 "type": "EDS",
@@ -569,6 +665,19 @@
                 },
                 "ignoreHealthOnHostRemoval": true,
                 "lbPolicy": "LEAST_REQUEST",
+                "metadata": {
+                  "filterMetadata": {
+                    "envoy-gateway": {
+                      "resources": [
+                        {
+                          "kind": "TCPRoute",
+                          "name": "backend",
+                          "namespace": "default"
+                        }
+                      ]
+                    }
+                  }
+                },
                 "name": "tcproute/default/backend/rule/-1",
                 "perConnectionBufferLimitBytes": 32768,
                 "type": "EDS"
@@ -598,6 +707,19 @@
                 },
                 "ignoreHealthOnHostRemoval": true,
                 "lbPolicy": "LEAST_REQUEST",
+                "metadata": {
+                  "filterMetadata": {
+                    "envoy-gateway": {
+                      "resources": [
+                        {
+                          "kind": "TLSRoute",
+                          "name": "backend",
+                          "namespace": "default"
+                        }
+                      ]
+                    }
+                  }
+                },
                 "name": "tlsroute/default/backend/rule/-1",
                 "perConnectionBufferLimitBytes": 32768,
                 "type": "EDS"
@@ -627,6 +749,19 @@
                 },
                 "ignoreHealthOnHostRemoval": true,
                 "lbPolicy": "LEAST_REQUEST",
+                "metadata": {
+                  "filterMetadata": {
+                    "envoy-gateway": {
+                      "resources": [
+                        {
+                          "kind": "UDPRoute",
+                          "name": "backend",
+                          "namespace": "default"
+                        }
+                      ]
+                    }
+                  }
+                },
                 "name": "udproute/default/backend/rule/-1",
                 "perConnectionBufferLimitBytes": 32768,
                 "type": "EDS"

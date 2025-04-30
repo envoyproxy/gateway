@@ -177,6 +177,10 @@ xdsIR:
       port: 19003
     tracing:
       destination:
+        metadata:
+          kind: EnvoyProxy
+          name: test
+          namespace: envoy-gateway-system
         name: tracing
         settings:
         - addressType: IP

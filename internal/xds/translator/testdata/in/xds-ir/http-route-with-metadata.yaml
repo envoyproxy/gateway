@@ -17,6 +17,14 @@ http:
     escapedSlashesAction: UnescapeAndRedirect
   routes:
   - destination:
+      metadata:
+        groupVersion: "gateway.networking.k8s.io/v1"
+        kind: "HTTPRoute"
+        name: "first-route-name"
+        namespace: "first-route-ns"
+        sectionName: "first-route-rule"
+        annotations:
+          foo: bar
       name: "first-route-dest"
       settings:
       - endpoints:
@@ -44,6 +52,14 @@ http:
     - exact: "yes"
       name: debug
   - destination:
+      metadata:
+        groupVersion: "gateway.networking.k8s.io/v1"
+        kind: "HTTPRoute"
+        name: "second-route-name"
+        namespace: "second-route-ns"
+        sectionName: "second-route-rule"
+        annotations:
+          foo: bar
       name: "second-route-dest"
       settings:
       - endpoints:

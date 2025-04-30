@@ -121,6 +121,10 @@ xdsIR:
       port: 10080
       routes:
       - destination:
+          metadata:
+            kind: HTTPRoute
+            name: backend
+            namespace: envoy-gateway-system
           name: httproute/envoy-gateway-system/backend/rule/0
           settings:
           - endpoints:

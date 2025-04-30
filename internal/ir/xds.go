@@ -1471,6 +1471,8 @@ type RouteDestination struct {
 	Name     string                `json:"name" yaml:"name"`
 	Settings []*DestinationSetting `json:"settings,omitempty" yaml:"settings,omitempty"`
 	// Metadata is used to enrich envoy route metadata with user and provider-specific information
+	// RouteDestination metadata is primarily derived from the xRoute resources. In some cases,
+	// the primary resource is a Policy or Envoy Proxy, when non-xRoute backendRefs are used.
 	Metadata *ResourceMetadata `json:"metadata,omitempty" yaml:"metadata,omitempty"`
 }
 

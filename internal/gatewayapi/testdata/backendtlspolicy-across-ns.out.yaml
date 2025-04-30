@@ -138,6 +138,10 @@ xdsIR:
       port: 10080
       routes:
       - destination:
+          metadata:
+            kind: HTTPRoute
+            name: httproute-btls
+            namespace: envoy-gateway
           name: httproute/envoy-gateway/httproute-btls/rule/0
           settings:
           - addressType: IP

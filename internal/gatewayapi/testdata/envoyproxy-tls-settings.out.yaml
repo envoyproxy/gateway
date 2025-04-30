@@ -242,6 +242,10 @@ xdsIR:
       port: 10443
       routes:
       - destination:
+          metadata:
+            kind: HTTPRoute
+            name: httproute-tls
+            namespace: envoy-gateway
           name: httproute/envoy-gateway/httproute-tls/rule/0
           settings:
           - addressType: IP
@@ -303,6 +307,10 @@ xdsIR:
       port: 10445
       routes:
       - destination:
+          metadata:
+            kind: TCPRoute
+            name: envoy-gateway
+            namespace: envoy-gateway
           name: tcproute/envoy-gateway/envoy-gateway/rule/-1
           settings:
           - addressType: IP

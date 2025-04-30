@@ -219,6 +219,10 @@ xdsIR:
       port: 10080
       routes:
       - destination:
+          metadata:
+            kind: HTTPRoute
+            name: httproute-static
+            namespace: default
           name: httproute/default/httproute-static/rule/0
           settings:
           - addressType: IP
@@ -268,6 +272,10 @@ xdsIR:
           name: ""
           prefix: /1
       - destination:
+          metadata:
+            kind: HTTPRoute
+            name: httproute-fqdn
+            namespace: default
           name: httproute/default/httproute-fqdn/rule/0
           settings:
           - addressType: FQDN

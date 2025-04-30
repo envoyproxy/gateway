@@ -171,6 +171,10 @@ xdsIR:
       port: 10162
       route:
         destination:
+          metadata:
+            kind: UDPRoute
+            name: udproute-1
+            namespace: default
           name: udproute/default/udproute-1/rule/-1
           settings:
           - addressType: IP
@@ -190,6 +194,10 @@ xdsIR:
       port: 10163
       route:
         destination:
+          metadata:
+            kind: UDPRoute
+            name: udproute-2
+            namespace: default
           name: udproute/default/udproute-2/rule/-1
           settings:
           - addressType: IP

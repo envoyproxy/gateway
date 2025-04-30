@@ -380,6 +380,10 @@ xdsIR:
       port: 10080
       routes:
       - destination:
+          metadata:
+            kind: HTTPRoute
+            name: httproute-1
+            namespace: default
           name: httproute/default/httproute-1/rule/0
           settings:
           - addressType: IP
@@ -410,6 +414,10 @@ xdsIR:
             grpc:
               authority: primary.foo.com:3000
               destination:
+                metadata:
+                  kind: SecurityPolicy
+                  name: policy-for-http-route-1
+                  namespace: default
                 name: securitypolicy/default/policy-for-http-route-1/extauth/0
                 settings:
                 - addressType: FQDN
@@ -428,6 +436,10 @@ xdsIR:
             - header2
             name: securitypolicy/default/policy-for-http-route-1
       - destination:
+          metadata:
+            kind: HTTPRoute
+            name: httproute-1
+            namespace: default
           name: httproute/default/httproute-1/rule/1
           settings:
           - addressType: IP
@@ -458,6 +470,10 @@ xdsIR:
             grpc:
               authority: primary.foo.com:3000
               destination:
+                metadata:
+                  kind: SecurityPolicy
+                  name: policy-for-http-route-1
+                  namespace: default
                 name: securitypolicy/default/policy-for-http-route-1/extauth/0
                 settings:
                 - addressType: FQDN
@@ -476,6 +492,10 @@ xdsIR:
             - header2
             name: securitypolicy/default/policy-for-http-route-1
       - destination:
+          metadata:
+            kind: HTTPRoute
+            name: httproute-2
+            namespace: default
           name: httproute/default/httproute-2/rule/0
           settings:
           - addressType: IP
@@ -501,6 +521,10 @@ xdsIR:
           name: ""
           prefix: /bar
       - destination:
+          metadata:
+            kind: HTTPRoute
+            name: httproute-3
+            namespace: default
           name: httproute/default/httproute-3/rule/0
           settings:
           - addressType: IP
@@ -531,6 +555,10 @@ xdsIR:
             grpc:
               authority: service-2.default:8080
               destination:
+                metadata:
+                  kind: SecurityPolicy
+                  name: policy-for-http-route-3--grpc-backendref
+                  namespace: default
                 name: securitypolicy/default/policy-for-http-route-3--grpc-backendref/extauth/0
                 settings:
                 - addressType: IP
@@ -566,6 +594,10 @@ xdsIR:
             http:
               authority: backend-uds.default
               destination:
+                metadata:
+                  kind: SecurityPolicy
+                  name: policy-for-http-route-3-http-backendref
+                  namespace: default
                 name: securitypolicy/default/policy-for-http-route-3-http-backendref/extauth/0
                 settings:
                 - addressType: IP

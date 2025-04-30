@@ -202,6 +202,10 @@ xdsIR:
           - header4
           maxAge: 16m40s
         destination:
+          metadata:
+            kind: HTTPRoute
+            name: httproute-cors-exact
+            namespace: default
           name: httproute/default/httproute-cors-exact/rule/0
           settings:
           - addressType: IP
@@ -238,6 +242,10 @@ xdsIR:
             safeRegex: https://.*\.envoyproxy\.io
           maxAge: 0s
         destination:
+          metadata:
+            kind: HTTPRoute
+            name: httproute-cors-wildcard
+            namespace: default
           name: httproute/default/httproute-cors-wildcard/rule/0
           settings:
           - addressType: IP

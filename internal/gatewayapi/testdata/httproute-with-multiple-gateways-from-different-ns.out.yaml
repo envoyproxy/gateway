@@ -199,6 +199,10 @@ xdsIR:
       port: 10080
       routes:
       - destination:
+          metadata:
+            kind: HTTPRoute
+            name: targeted-route
+            namespace: envoy-gateway
           name: httproute/envoy-gateway/targeted-route/rule/0
           settings:
           - addressType: IP
@@ -254,6 +258,10 @@ xdsIR:
       port: 10080
       routes:
       - destination:
+          metadata:
+            kind: HTTPRoute
+            name: targeted-route
+            namespace: envoy-gateway
           name: httproute/envoy-gateway/targeted-route/rule/0
           settings:
           - addressType: IP

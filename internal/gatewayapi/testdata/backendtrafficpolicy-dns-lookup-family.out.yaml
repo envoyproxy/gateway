@@ -350,6 +350,10 @@ xdsIR:
     accessLog:
       openTelemetry:
       - destination:
+          metadata:
+            kind: EnvoyProxy
+            name: config-for-gateway-class
+            namespace: envoy-gateway
           name: accesslog_otel_0_1
           settings:
           - metadata:
@@ -388,6 +392,10 @@ xdsIR:
       port: 10080
       routes:
       - destination:
+          metadata:
+            kind: HTTPRoute
+            name: httproute-1
+            namespace: default
           name: httproute/default/httproute-1/rule/0
           settings:
           - addressType: FQDN
@@ -405,6 +413,10 @@ xdsIR:
           extProcs:
           - authority: backend-fqdn2.default:9090
             destination:
+              metadata:
+                kind: EnvoyExtensionPolicy
+                name: policy-for-httproute
+                namespace: default
               name: envoyextensionpolicy/default/policy-for-httproute/extproc/0
               settings:
               - addressType: FQDN
@@ -442,6 +454,10 @@ xdsIR:
             http:
               authority: backend-v3.gateway-conformance-infra.svc.cluster.local:8080
               destination:
+                metadata:
+                  kind: SecurityPolicy
+                  name: policy-for-gateway-1
+                  namespace: envoy-gateway
                 name: securitypolicy/envoy-gateway/policy-for-gateway-1/extauth/0
                 settings:
                 - addressType: FQDN
@@ -467,6 +483,10 @@ xdsIR:
             lookupFamily: IPv6
             respectDnsTtl: false
       - destination:
+          metadata:
+            kind: GRPCRoute
+            name: grpcroute-1
+            namespace: default
           name: grpcroute/default/grpcroute-1/rule/0
           settings:
           - addressType: FQDN
@@ -495,6 +515,10 @@ xdsIR:
             http:
               authority: backend-v3.gateway-conformance-infra.svc.cluster.local:8080
               destination:
+                metadata:
+                  kind: SecurityPolicy
+                  name: policy-for-gateway-1
+                  namespace: envoy-gateway
                 name: securitypolicy/envoy-gateway/policy-for-gateway-1/extauth/0
                 settings:
                 - addressType: FQDN
