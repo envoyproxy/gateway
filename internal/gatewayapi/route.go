@@ -8,6 +8,7 @@ package gatewayapi
 import (
 	"fmt"
 	"net"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sort"
 	"strconv"
 	"strings"
@@ -380,7 +381,7 @@ func (t *Translator) processHTTPRouteRule(
 		irRoute := &ir.HTTPRoute{
 			Name: irRouteName(httpRoute, ruleIdx, -1),
 		}
-		irRoute.Metadata = buildRouteMetadata(httpRoute, rule.Name)
+		irRoute.Metadata = buildResourceMetadata(httpRoute, rule.Name)
 		processRouteTrafficFeatures(irRoute, rule)
 		applyHTTPFiltersContextToIRRoute(httpFiltersContext, irRoute)
 		ruleRoutes = append(ruleRoutes, irRoute)
@@ -447,7 +448,7 @@ func (t *Translator) processHTTPRouteRule(
 			Name:               irRouteName(httpRoute, ruleIdx, matchIdx),
 			SessionPersistence: sessionPersistence,
 		}
-		irRoute.Metadata = buildRouteMetadata(httpRoute, rule.Name)
+		irRoute.Metadata = buildResourceMetadata(httpRoute, rule.Name)
 		processRouteTrafficFeatures(irRoute, rule)
 
 		if match.Path != nil {
@@ -720,7 +721,7 @@ func (t *Translator) processGRPCRouteRule(grpcRoute *GRPCRouteContext, ruleIdx i
 		irRoute := &ir.HTTPRoute{
 			Name: irRouteName(grpcRoute, ruleIdx, -1),
 		}
-		irRoute.Metadata = buildRouteMetadata(grpcRoute, rule.Name)
+		irRoute.Metadata = buildResourceMetadata(grpcRoute, rule.Name)
 		applyHTTPFiltersContextToIRRoute(httpFiltersContext, irRoute)
 		ruleRoutes = append(ruleRoutes, irRoute)
 	}
@@ -732,7 +733,7 @@ func (t *Translator) processGRPCRouteRule(grpcRoute *GRPCRouteContext, ruleIdx i
 		irRoute := &ir.HTTPRoute{
 			Name: irRouteName(grpcRoute, ruleIdx, matchIdx),
 		}
-		irRoute.Metadata = buildRouteMetadata(grpcRoute, rule.Name)
+		irRoute.Metadata = buildResourceMetadata(grpcRoute, rule.Name)
 		for _, headerMatch := range match.Headers {
 			switch GRPCHeaderMatchTypeDerefOr(headerMatch.Type, gwapiv1.GRPCHeaderMatchExact) {
 			case gwapiv1.GRPCHeaderMatchExact:
@@ -866,12 +867,12 @@ func (t *Translator) processHTTPRouteParentRefListener(route RouteContext, route
 	return hasHostnameIntersection
 }
 
-func buildRouteMetadata(route RouteContext, sectionName *gwapiv1.SectionName) *ir.ResourceMetadata {
+func buildResourceMetadata(resource client.Object, sectionName *gwapiv1.SectionName) *ir.ResourceMetadata {
 	metadata := &ir.ResourceMetadata{
-		Kind:        route.GetObjectKind().GroupVersionKind().Kind,
-		Name:        route.GetName(),
-		Namespace:   route.GetNamespace(),
-		Annotations: filterEGPrefix(route.GetAnnotations()),
+		Kind:        resource.GetObjectKind().GroupVersionKind().Kind,
+		Name:        resource.GetName(),
+		Namespace:   resource.GetNamespace(),
+		Annotations: filterEGPrefix(resource.GetAnnotations()),
 	}
 	if sectionName != nil {
 		metadata.SectionName = string(*sectionName)
@@ -1518,6 +1519,7 @@ func (t *Translator) processServiceImportDestinationSetting(
 		Protocol:    protocol,
 		Endpoints:   endpoints,
 		AddressType: addrType,
+		Metadata: buildResourceMetadata(serviceImport, ptr.To(gwapiv1.SectionName(strconv.Itoa(int(*backendRef.Port))))),
 	}
 }
 
@@ -1564,6 +1566,7 @@ func (t *Translator) processServiceDestinationSetting(
 		Endpoints:               endpoints,
 		AddressType:             addrType,
 		ZoneAwareRoutingEnabled: isZoneAwareRoutingEnabled(service),
+		Metadata: buildResourceMetadata(service, ptr.To(gwapiv1.SectionName(strconv.Itoa(int(*backendRef.Port))))),
 	}
 }
 
@@ -1948,6 +1951,8 @@ func (t *Translator) processBackendDestinationSetting(
 			ds.Priority = ptr.To(uint32(1))
 		}
 	}
+
+	ds.Metadata = buildResourceMetadata(backend, nil)
 
 	return ds
 }

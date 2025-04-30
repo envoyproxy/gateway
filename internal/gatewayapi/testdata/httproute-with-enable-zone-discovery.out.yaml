@@ -142,6 +142,10 @@ xdsIR:
             - host: 7.7.7.7
               port: 8080
               zone: antarctica-east1b
+            metadata:
+              name: service-1
+              namespace: default
+              sectionName: "8080"
             name: httproute/default/httproute-1/rule/1/backend/0
             protocol: HTTP
             weight: 1
@@ -168,6 +172,10 @@ xdsIR:
             - host: 7.7.7.7
               port: 8080
               zone: antarctica-east1b
+            metadata:
+              name: service-1
+              namespace: default
+              sectionName: "8080"
             name: httproute/default/httproute-1/rule/0/backend/0
             protocol: HTTP
             weight: 1

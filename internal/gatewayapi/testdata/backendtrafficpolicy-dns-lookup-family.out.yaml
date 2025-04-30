@@ -352,7 +352,12 @@ xdsIR:
       - destination:
           name: accesslog_otel_0_1
           settings:
-          - name: accesslog_otel_0_1/backend/-1
+          - metadata:
+              kind: Service
+              name: logs
+              namespace: default
+              sectionName: "8080"
+            name: accesslog_otel_0_1/backend/-1
             protocol: TCP
         resources:
           k8s.cluster.name: cluster-1
@@ -389,6 +394,10 @@ xdsIR:
             endpoints:
             - host: grpc-infra-backend.gateway-conformance-infra.svc.cluster.local
               port: 8080
+            metadata:
+              kind: Backend
+              name: backend-fqdn
+              namespace: default
             name: httproute/default/httproute-1/rule/0/backend/0
             protocol: HTTP
             weight: 1
@@ -402,6 +411,10 @@ xdsIR:
                 endpoints:
                 - host: backend-v2.gateway-conformance-infra.svc.cluster.local
                   port: 9090
+                metadata:
+                  kind: Backend
+                  name: backend-fqdn2
+                  namespace: default
                 name: envoyextensionpolicy/default/policy-for-httproute/extproc/0/backend/0
                 protocol: GRPC
                 weight: 1
@@ -435,6 +448,10 @@ xdsIR:
                   endpoints:
                   - host: backend-v3.gateway-conformance-infra.svc.cluster.local
                     port: 8080
+                  metadata:
+                    kind: Backend
+                    name: backend-fqdn3
+                    namespace: default
                   name: securitypolicy/envoy-gateway/policy-for-gateway-1/extauth/0/backend/0
                   protocol: HTTP
                   weight: 1
@@ -456,6 +473,10 @@ xdsIR:
             endpoints:
             - host: grpc-infra-backend.gateway-conformance-infra.svc.cluster.local
               port: 8080
+            metadata:
+              kind: Backend
+              name: backend-fqdn
+              namespace: default
             name: grpcroute/default/grpcroute-1/rule/0/backend/0
             protocol: GRPC
             weight: 1
@@ -480,6 +501,10 @@ xdsIR:
                   endpoints:
                   - host: backend-v3.gateway-conformance-infra.svc.cluster.local
                     port: 8080
+                  metadata:
+                    kind: Backend
+                    name: backend-fqdn3
+                    namespace: default
                   name: securitypolicy/envoy-gateway/policy-for-gateway-1/extauth/0/backend/0
                   protocol: HTTP
                   weight: 1

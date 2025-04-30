@@ -183,6 +183,10 @@ xdsIR:
           endpoints:
           - host: 8.7.6.5
             port: 4317
+          metadata:
+            name: otel-collector
+            namespace: monitoring
+            sectionName: "4317"
           name: tracing/backend/-1
           protocol: GRPC
       provider:

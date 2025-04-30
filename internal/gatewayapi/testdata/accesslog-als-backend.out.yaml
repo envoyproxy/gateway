@@ -161,18 +161,30 @@ xdsIR:
             - host: ""
               path: /var/run/backend.sock
               port: 0
+            metadata:
+              kind: Backend
+              name: backend-uds
+              namespace: envoy-gateway
             name: accesslog_otel_0_0/backend/-1
             protocol: TCP
           - addressType: FQDN
             endpoints:
             - host: primary.foo.com
               port: 3000
+            metadata:
+              kind: Backend
+              name: backend-fqdn
+              namespace: envoy-gateway
             name: accesslog_otel_0_0/backend/-1
             protocol: HTTP2
           - addressType: IP
             endpoints:
             - host: 1.1.1.1
               port: 3001
+            metadata:
+              kind: Backend
+              name: backend-ip
+              namespace: envoy-gateway
             name: accesslog_otel_0_0/backend/-1
             protocol: TCP
         resources:

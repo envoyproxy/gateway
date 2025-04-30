@@ -1470,6 +1470,8 @@ type RouteDestination struct {
 	// reused
 	Name     string                `json:"name" yaml:"name"`
 	Settings []*DestinationSetting `json:"settings,omitempty" yaml:"settings,omitempty"`
+	// Metadata is used to enrich envoy route metadata with user and provider-specific information
+	Metadata *ResourceMetadata `json:"metadata,omitempty" yaml:"metadata,omitempty"`
 }
 
 // Validate the fields within the RouteDestination structure
@@ -1579,6 +1581,9 @@ type DestinationSetting struct {
 	// ZoneAwareRoutingEnabled specifies whether to enable Zone Aware Routing for this destination's endpoints.
 	// This is derived from the backend service and depends on having Kubernetes Topology Aware Routing or Traffic Distribution enabled.
 	ZoneAwareRoutingEnabled bool `json:"zoneAwareRoutingEnabled,omitempty" yaml:"zoneAwareRoutingEnabled,omitempty"`
+	// Metadata is used to enrich envoy route metadata with user and provider-specific information
+	// The primary metadata for DestinationSettings comes from the Backend resource reference in BackendRef
+	Metadata *ResourceMetadata `json:"metadata,omitempty" yaml:"metadata,omitempty"`
 }
 
 // Validate the fields within the DestinationSetting structure

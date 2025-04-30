@@ -123,6 +123,11 @@ xdsIR:
             endpoints:
             - host: 8.8.8.8
               port: 8080
+            metadata:
+              kind: ServiceImport
+              name: service-import-1
+              namespace: backends
+              sectionName: "8080"
             name: httproute/default/httproute-1/rule/0/backend/0
             protocol: HTTP
             weight: 1

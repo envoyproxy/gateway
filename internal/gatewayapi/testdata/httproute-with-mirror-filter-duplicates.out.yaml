@@ -137,6 +137,10 @@ xdsIR:
             endpoints:
             - host: 7.7.7.7
               port: 8080
+            metadata:
+              name: service-1
+              namespace: default
+              sectionName: "8080"
             name: httproute/default/httproute-1/rule/0/backend/0
             protocol: HTTP
             weight: 1
@@ -154,6 +158,10 @@ xdsIR:
               endpoints:
               - host: 7.7.7.7
                 port: 8080
+              metadata:
+                name: service-1
+                namespace: default
+                sectionName: "8080"
               name: httproute/default/httproute-1/rule/0-mirror-0/backend/-1
               protocol: HTTP
               weight: 1
@@ -164,6 +172,10 @@ xdsIR:
               endpoints:
               - host: 7.7.7.7
                 port: 8080
+              metadata:
+                name: service-1
+                namespace: default
+                sectionName: "8080"
               name: httproute/default/httproute-1/rule/0-mirror-1/backend/-1
               protocol: HTTP
               weight: 1

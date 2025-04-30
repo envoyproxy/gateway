@@ -152,6 +152,10 @@ xdsIR:
             endpoints:
             - host: 7.7.7.7
               port: 8080
+            metadata:
+              name: service-2
+              namespace: default
+              sectionName: "8080"
             name: httproute/default/httproute-1/rule/1/backend/0
             protocol: HTTP
             weight: 2
@@ -168,6 +172,10 @@ xdsIR:
               credentialInjection:
                 credential: '[redacted]'
                 name: httproutefilter/default/credential-injection
+            metadata:
+              name: service-3
+              namespace: default
+              sectionName: "8080"
             name: httproute/default/httproute-1/rule/1/backend/1
             protocol: HTTP
             weight: 1
@@ -199,6 +207,10 @@ xdsIR:
                 name: add-header-2
                 value:
                 - some-value
+            metadata:
+              name: service-1
+              namespace: default
+              sectionName: "8080"
             name: httproute/default/httproute-1/rule/0/backend/0
             protocol: HTTP
             weight: 8
@@ -206,6 +218,10 @@ xdsIR:
             endpoints:
             - host: 7.7.7.7
               port: 8080
+            metadata:
+              name: service-2
+              namespace: default
+              sectionName: "8080"
             name: httproute/default/httproute-1/rule/0/backend/1
             protocol: HTTP
             weight: 2
