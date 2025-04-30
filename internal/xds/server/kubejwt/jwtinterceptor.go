@@ -66,7 +66,7 @@ func (i *JWTAuthInterceptor) authorize(ctx context.Context) error {
 
 type proxyMetadata struct {
 	token  string
-	nodeId string
+	nodeID string
 	irKey  string
 }
 
@@ -89,7 +89,7 @@ func processProxyMetadata(md metadata.MD) (*proxyMetadata, error) {
 
 	return &proxyMetadata{
 		token:  tokenStr,
-		nodeId: nodeID[0],
+		nodeID: nodeID[0],
 		irKey:  irKey[0],
 	}, nil
 }

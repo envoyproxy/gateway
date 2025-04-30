@@ -61,8 +61,8 @@ func (i *JWTAuthInterceptor) validateKubeJWT(ctx context.Context, proxyMetadata 
 			return fmt.Errorf("pod name not found in token review response")
 		}
 
-		if podName[0] != proxyMetadata.nodeId {
-			return fmt.Errorf("pod name mismatch: expected %s, got %s", proxyMetadata.nodeId, podName[0])
+		if podName[0] != proxyMetadata.nodeID {
+			return fmt.Errorf("pod name mismatch: expected %s, got %s", proxyMetadata.nodeID, podName[0])
 		}
 
 		if !i.cache.SnapshotHasIrKey(proxyMetadata.irKey) {
