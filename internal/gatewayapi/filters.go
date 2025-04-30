@@ -119,7 +119,7 @@ func (t *Translator) ProcessGRPCFilters(parentRef *RouteParentContext,
 	route RouteContext,
 	filters []gwapiv1.GRPCRouteFilter,
 	resources *resource.Resources,
-) (*HTTPFiltersContext, error) {
+) (*HTTPFiltersContext, status.Error) {
 	httpFiltersContext := &HTTPFiltersContext{
 		ParentRef: parentRef,
 		Route:     route,
@@ -901,11 +901,11 @@ func (t *Translator) processRequestMirrorFilter(
 	// This sets the status on the HTTPRoute, should the usage be changed so that the status message reflects that the backendRef is from the filter?
 	filterNs := filterContext.Route.GetNamespace()
 	serviceNamespace := NamespaceDerefOr(mirrorBackend.Namespace, filterNs)
-	err = t.validateBackendRef(mirrorBackendRef, filterContext.ParentRef, filterContext.Route,
+	err = t.validateBackendRef(mirrorBackendRef, filterContext.Route,
 		resources, serviceNamespace, resource.KindHTTPRoute)
 	if err != nil {
 		return status.NewRouteStatusError(
-			fmt.Errorf("failed to validate the RequestMirror filter: %w", err), err.Reason())
+			fmt.Errorf("failed to validate the RequestMirror filter: %w", err), err.Reason()).WithType(gwapiv1.RouteConditionResolvedRefs)
 	}
 
 	destName := fmt.Sprintf("%s-mirror-%d", irRouteDestinationName(filterContext.Route, filterContext.RuleIdx), filterIdx)

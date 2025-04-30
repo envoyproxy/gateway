@@ -24,24 +24,24 @@ import (
 	"github.com/envoyproxy/gateway/internal/gatewayapi/status"
 )
 
-func (t *Translator) validateBackendRef(backendRefContext BackendRefContext, parentRef *RouteParentContext, route RouteContext,
+func (t *Translator) validateBackendRef(backendRefContext BackendRefContext, route RouteContext,
 	resources *resource.Resources, backendNamespace string, routeKind gwapiv1.Kind,
 ) status.Error {
 	backendRef := GetBackendRef(backendRefContext)
 
-	if err := t.validateBackendRefFilters(backendRefContext, parentRef, route, routeKind); err != nil {
+	if err := t.validateBackendRefFilters(backendRefContext, routeKind); err != nil {
 		return err
 	}
-	if err := t.validateBackendRefGroup(backendRef, parentRef, route); err != nil {
+	if err := t.validateBackendRefGroup(backendRef); err != nil {
 		return err
 	}
-	if err := t.validateBackendRefKind(backendRef, parentRef, route); err != nil {
+	if err := t.validateBackendRefKind(backendRef); err != nil {
 		return err
 	}
-	if err := t.validateBackendNamespace(backendRef, parentRef, route, resources, routeKind); err != nil {
+	if err := t.validateBackendNamespace(backendRef, route, resources, routeKind); err != nil {
 		return err
 	}
-	if err := t.validateBackendPort(backendRef, parentRef, route); err != nil {
+	if err := t.validateBackendPort(backendRef); err != nil {
 		return err
 	}
 
@@ -50,73 +50,26 @@ func (t *Translator) validateBackendRef(backendRefContext BackendRefContext, par
 		protocol = corev1.ProtocolUDP
 	}
 
-	// TODO: zhaohuabing remove this and handle status in the out layer
 	backendRefKind := KindDerefOr(backendRef.Kind, resource.KindService)
 	switch backendRefKind {
 	case resource.KindService:
 		if err := validateBackendRefService(backendRef.BackendObjectReference, resources, backendNamespace, protocol); err != nil {
-			routeStatus := GetRouteStatus(route)
-			status.SetRouteStatusCondition(routeStatus,
-				parentRef.routeParentStatusIdx,
-				route.GetGeneration(),
-				gwapiv1.RouteConditionResolvedRefs,
-				metav1.ConditionFalse,
-				err.Reason(),
-				errorToMessage(err),
-			)
 			return err
 		}
 	case resource.KindServiceImport:
 		if err := t.validateBackendServiceImport(backendRef.BackendObjectReference, resources, backendNamespace, protocol); err != nil {
-			routeStatus := GetRouteStatus(route)
-			status.SetRouteStatusCondition(routeStatus,
-				parentRef.routeParentStatusIdx,
-				route.GetGeneration(),
-				gwapiv1.RouteConditionResolvedRefs,
-				metav1.ConditionFalse,
-				err.Reason(),
-				errorToMessage(err),
-			)
 			return err
 		}
 	case egv1a1.KindBackend:
 		if err := t.validateBackendRefBackend(backendRef.BackendObjectReference, resources, backendNamespace, false); err != nil {
-			routeStatus := GetRouteStatus(route)
-			status.SetRouteStatusCondition(routeStatus,
-				parentRef.routeParentStatusIdx,
-				route.GetGeneration(),
-				gwapiv1.RouteConditionResolvedRefs,
-				metav1.ConditionFalse,
-				err.Reason(),
-				errorToMessage(err),
-			)
 			return err
 		}
 	}
 	return nil
 }
 
-func errorToMessage(err error) string {
-	if err == nil {
-		return ""
-	}
-	msg := err.Error()
-
-	// Convert first character to upper
-	return strings.ToUpper(msg[0:1]) + msg[1:]
-}
-
-func (t *Translator) validateBackendRefGroup(backendRef *gwapiv1a2.BackendRef, parentRef *RouteParentContext, route RouteContext) status.Error {
+func (t *Translator) validateBackendRefGroup(backendRef *gwapiv1a2.BackendRef) status.Error {
 	if backendRef.Group != nil && *backendRef.Group != "" && *backendRef.Group != GroupMultiClusterService && *backendRef.Group != egv1a1.GroupName {
-		routeStatus := GetRouteStatus(route)
-		status.SetRouteStatusCondition(routeStatus, // TODO: zhaohuabing remove this and handle status in the out layer
-			parentRef.routeParentStatusIdx,
-			route.GetGeneration(),
-			gwapiv1.RouteConditionResolvedRefs,
-			metav1.ConditionFalse,
-			gwapiv1.RouteReasonInvalidKind,
-			fmt.Sprintf("Group is invalid, only the core API group (specified by omitting the group field or setting it to an empty string), %s and %s are supported", GroupMultiClusterService, egv1a1.GroupName),
-		)
 		return status.NewRouteStatusError(
 			fmt.Errorf("Group is invalid, only the core API group (specified by omitting the group field or setting it to an empty string), %s and %s are supported",
 				GroupMultiClusterService,
@@ -126,17 +79,8 @@ func (t *Translator) validateBackendRefGroup(backendRef *gwapiv1a2.BackendRef, p
 	return nil
 }
 
-func (t *Translator) validateBackendRefKind(backendRef *gwapiv1a2.BackendRef, parentRef *RouteParentContext, route RouteContext) status.Error {
+func (t *Translator) validateBackendRefKind(backendRef *gwapiv1a2.BackendRef) status.Error {
 	if backendRef.Kind != nil && *backendRef.Kind != resource.KindService && *backendRef.Kind != resource.KindServiceImport && *backendRef.Kind != egv1a1.KindBackend {
-		routeStatus := GetRouteStatus(route)
-		status.SetRouteStatusCondition(routeStatus, // TODO: zhaohuabing remove this and handle status in the out layer
-			parentRef.routeParentStatusIdx,
-			route.GetGeneration(),
-			gwapiv1.RouteConditionResolvedRefs,
-			metav1.ConditionFalse,
-			gwapiv1.RouteReasonInvalidKind,
-			"Kind is invalid, only Service, MCS ServiceImport and Envoy Gateway Backend are supported",
-		)
 		return status.NewRouteStatusError(
 			fmt.Errorf("Kind is invalid, only Service, MCS ServiceImport and Envoy Gateway Backend are supported"),
 			gwapiv1.RouteReasonInvalidKind)
@@ -144,7 +88,7 @@ func (t *Translator) validateBackendRefKind(backendRef *gwapiv1a2.BackendRef, pa
 	return nil
 }
 
-func (t *Translator) validateBackendRefFilters(backendRef BackendRefContext, parentRef *RouteParentContext, route RouteContext, routeKind gwapiv1.Kind) status.Error {
+func (t *Translator) validateBackendRefFilters(backendRef BackendRefContext, routeKind gwapiv1.Kind) status.Error {
 	filters := GetFilters(backendRef)
 	var unsupportedFilters bool
 
@@ -173,30 +117,20 @@ func (t *Translator) validateBackendRefFilters(backendRef BackendRefContext, par
 		return nil
 	}
 
-	// TODO: zhaohuabing remove this and handle status in the out layer
 	if unsupportedFilters {
 		message := "Specific filter is not supported within BackendRef, only RequestHeaderModifier, ResponseHeaderModifier and gateway.envoyproxy.io/HTTPRouteFilter are supported"
 		if routeKind == resource.KindGRPCRoute {
 			message = "Specific filter is not supported within BackendRef, only RequestHeaderModifier and ResponseHeaderModifier are supported"
 		}
-		routeStatus := GetRouteStatus(route)
-		status.SetRouteStatusCondition(routeStatus,
-			parentRef.routeParentStatusIdx,
-			route.GetGeneration(),
-			gwapiv1.RouteConditionResolvedRefs,
-			metav1.ConditionFalse,
-			status.RouteReasonUnsupportedRefValue,
-			message,
-		)
 		return status.NewRouteStatusError(
-			errors.New("specific filter is not supported within BackendRef, only RequestHeaderModifier and ResponseHeaderModifier are supported"),
+			errors.New(message),
 			status.RouteReasonUnsupportedRefValue)
 	}
 
 	return nil
 }
 
-func (t *Translator) validateBackendNamespace(backendRef *gwapiv1a2.BackendRef, parentRef *RouteParentContext, route RouteContext,
+func (t *Translator) validateBackendNamespace(backendRef *gwapiv1a2.BackendRef, route RouteContext,
 	resources *resource.Resources, routeKind gwapiv1.Kind,
 ) status.Error {
 	if backendRef.Namespace != nil && string(*backendRef.Namespace) != "" && string(*backendRef.Namespace) != route.GetNamespace() {
@@ -214,15 +148,6 @@ func (t *Translator) validateBackendNamespace(backendRef *gwapiv1a2.BackendRef, 
 			},
 			resources.ReferenceGrants,
 		) {
-			routeStatus := GetRouteStatus(route)
-			status.SetRouteStatusCondition(routeStatus, // TODO: zhaohuabing remove this and handle status in the out layer
-				parentRef.routeParentStatusIdx,
-				route.GetGeneration(),
-				gwapiv1.RouteConditionResolvedRefs,
-				metav1.ConditionFalse,
-				gwapiv1.RouteReasonRefNotPermitted,
-				fmt.Sprintf("Backend ref to %s %s/%s not permitted by any ReferenceGrant.", KindDerefOr(backendRef.Kind, resource.KindService), *backendRef.Namespace, backendRef.Name),
-			)
 			return status.NewRouteStatusError(
 				fmt.Errorf("Backend ref to %s %s/%s not permitted by any ReferenceGrant.",
 					KindDerefOr(backendRef.Kind, resource.KindService),
@@ -234,7 +159,7 @@ func (t *Translator) validateBackendNamespace(backendRef *gwapiv1a2.BackendRef, 
 	return nil
 }
 
-func (t *Translator) validateBackendPort(backendRef *gwapiv1a2.BackendRef, parentRef *RouteParentContext, route RouteContext) status.Error {
+func (t *Translator) validateBackendPort(backendRef *gwapiv1a2.BackendRef) status.Error {
 	if backendRef == nil {
 		return nil
 	}
@@ -244,16 +169,6 @@ func (t *Translator) validateBackendPort(backendRef *gwapiv1a2.BackendRef, paren
 	}
 
 	if backendRef.Port == nil {
-		// TODO: zhaohuabing remove this and handle status in the out layer
-		routeStatus := GetRouteStatus(route)
-		status.SetRouteStatusCondition(routeStatus,
-			parentRef.routeParentStatusIdx,
-			route.GetGeneration(),
-			gwapiv1.RouteConditionResolvedRefs,
-			metav1.ConditionFalse,
-			status.RouteReasonPortNotSpecified,
-			"A valid port number corresponding to a port on the Service must be specified",
-		)
 		return status.NewRouteStatusError(
 			errors.New("A valid port number corresponding to a port on the Service must be specified"),
 			status.RouteReasonPortNotSpecified)

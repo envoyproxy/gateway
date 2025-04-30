@@ -71,15 +71,13 @@ httpRoutes:
     parents:
     - conditions:
       - lastTransitionTime: null
-        message: 'Failed to process route rule 0: failed to validate the RequestMirror
-          filter: A valid port number corresponding to a port on the Service must
-          be specified.'
-        reason: UnsupportedValue
-        status: "False"
+        message: Route is accepted
+        reason: Accepted
+        status: "True"
         type: Accepted
       - lastTransitionTime: null
-        message: A valid port number corresponding to a port on the Service must be
-          specified
+        message: 'Failed to validate the RequestMirror filter: A valid port number
+          corresponding to a port on the Service must be specified.'
         reason: PortNotSpecified
         status: "False"
         type: ResolvedRefs

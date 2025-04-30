@@ -77,15 +77,10 @@ udpRoutes:
     parents:
     - conditions:
       - lastTransitionTime: null
-        message: Route is accepted
-        reason: Accepted
-        status: "True"
-        type: Accepted
-      - lastTransitionTime: null
         message: One and only one rule is supported
         reason: InvalidRule
         status: "False"
-        type: ResolvedRefs
+        type: Accepted
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
         name: gateway-1
