@@ -50,7 +50,7 @@ type GlobalRateLimit struct {
 	// to rate limit the request.
 	//
 	// +kubebuilder:validation:MaxItems=64
-	Rules []RateLimitRule `json:"rules" patchStrategy:"merge" patchMergeKey:"name"`
+	Rules []RateLimitRule `json:"rules"`
 
 	// Shared determines whether the rate limit rules apply across all the policy targets.
 	// If set to true, the rule is treated as a common bucket and is shared across all policy targets (xRoutes).
@@ -72,13 +72,12 @@ type LocalRateLimit struct {
 	// +optional
 	// +kubebuilder:validation:MaxItems=16
 	// +kubebuilder:validation:XValidation:rule="self.all(foo, !has(foo.cost) || !has(foo.cost.response))", message="response cost is not supported for Local Rate Limits"
-	Rules []RateLimitRule `json:"rules" patchStrategy:"merge" patchMergeKey:"name"`
+	Rules []RateLimitRule `json:"rules"`
 }
 
 // RateLimitRule defines the semantics for matching attributes
 // from the incoming requests, and setting limits for them.
 type RateLimitRule struct {
-	Name *string `json:"name"`
 	// ClientSelectors holds the list of select conditions to select
 	// specific clients using attributes from the traffic flow.
 	// All individual select conditions must hold True for this rule
