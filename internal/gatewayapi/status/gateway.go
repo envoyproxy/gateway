@@ -182,3 +182,11 @@ func updateGatewayProgrammedCondition(gw *gwapiv1.Gateway, envoyObj client.Objec
 		newCondition(string(gwapiv1.GatewayConditionProgrammed), metav1.ConditionFalse, string(gwapiv1.GatewayReasonNoResources),
 			messageNoResources, time.Now(), gw.Generation))
 }
+
+// GetGatewayListenerStatusConditions returns the status conditions for a specific listener in the gateway status.
+func GetGatewayListenerStatusConditions(gateway *gwapiv1.Gateway, listenerStatusIdx int) []metav1.Condition {
+	if gateway == nil || listenerStatusIdx < 0 || listenerStatusIdx >= len(gateway.Status.Listeners) {
+		return nil
+	}
+	return gateway.Status.Listeners[listenerStatusIdx].Conditions
+}
