@@ -413,6 +413,15 @@ func expectedContainerEnv(containerSpec *egv1a1.KubernetesContainerSpec, gateway
 				Name:  envoyNsEnvVar,
 				Value: config.DefaultNamespace,
 			},
+			{
+				Name: envoyZoneEnvVar,
+				ValueFrom: &corev1.EnvVarSource{
+					FieldRef: &corev1.ObjectFieldSelector{
+						APIVersion: "v1",
+						FieldPath:  fmt.Sprintf("metadata.labels['%s']", corev1.LabelTopologyZone),
+					},
+				},
+			},
 		}
 	}
 

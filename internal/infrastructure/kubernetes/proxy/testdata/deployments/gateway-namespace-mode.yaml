@@ -260,6 +260,11 @@ spec:
         env:
         - name: ENVOY_GATEWAY_NAMESPACE
           value: envoy-gateway-system
+        - name: ENVOY_SERVICE_ZONE
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: metadata.labels['topology.kubernetes.io/zone']
         - name: ENVOY_POD_NAME
           valueFrom:
             fieldRef:
@@ -339,6 +344,11 @@ spec:
         env:
         - name: ENVOY_GATEWAY_NAMESPACE
           value: envoy-gateway-system
+        - name: ENVOY_SERVICE_ZONE
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: metadata.labels['topology.kubernetes.io/zone']
         - name: ENVOY_POD_NAME
           valueFrom:
             fieldRef:
