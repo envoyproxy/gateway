@@ -118,6 +118,10 @@ xdsIR:
             endpoints:
             - host: 7.7.7.7
               port: 8162
+            metadata:
+              name: service-1
+              namespace: default
+              sectionName: "8162"
             name: udproute/default/udproute-1/rule/-1/backend/0
             protocol: UDP
             weight: 1
@@ -125,6 +129,10 @@ xdsIR:
             endpoints:
             - host: 7.7.7.7
               port: 8162
+            metadata:
+              name: service-2
+              namespace: default
+              sectionName: "8162"
             name: udproute/default/udproute-1/rule/-1/backend/1
             protocol: UDP
             weight: 2
@@ -132,6 +140,10 @@ xdsIR:
             endpoints:
             - host: 7.7.7.7
               port: 8162
+            metadata:
+              name: service-3
+              namespace: default
+              sectionName: "8162"
             name: udproute/default/udproute-1/rule/-1/backend/2
             protocol: UDP
             weight: 3

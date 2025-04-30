@@ -112,6 +112,10 @@ xdsIR:
             endpoints:
             - host: 7.7.7.7
               port: 8080
+            metadata:
+              name: service-1
+              namespace: default
+              sectionName: "8080"
             name: tcproute/default/tcproute-1/rule/-1/backend/0
             protocol: TCP
             weight: 50
@@ -119,6 +123,10 @@ xdsIR:
             endpoints:
             - host: 7.7.7.7
               port: 8080
+            metadata:
+              name: service-2
+              namespace: default
+              sectionName: "8080"
             name: tcproute/default/tcproute-1/rule/-1/backend/1
             protocol: TCP
             weight: 50

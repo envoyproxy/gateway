@@ -290,6 +290,11 @@ xdsIR:
             endpoints:
             - host: 10.244.0.11
               port: 8080
+            metadata:
+              kind: Service
+              name: http-backend
+              namespace: default
+              sectionName: "8080"
             name: httproute/envoy-gateway/httproute-btls/rule/0/backend/0
             protocol: HTTP
             tls:
@@ -303,6 +308,10 @@ xdsIR:
             endpoints:
             - host: 2.2.2.2
               port: 3443
+            metadata:
+              kind: Backend
+              name: backend-ip-tls
+              namespace: default
             name: httproute/envoy-gateway/httproute-btls/rule/0/backend/1
             protocol: HTTP
             tls:
@@ -355,6 +364,11 @@ xdsIR:
             endpoints:
             - host: 10.244.0.11
               port: 8080
+            metadata:
+              kind: Service
+              name: http-backend
+              namespace: default
+              sectionName: "8080"
             name: httproute/envoy-gateway/httproute-btls2/rule/0/backend/0
             protocol: HTTP
             tls:
@@ -368,6 +382,10 @@ xdsIR:
             endpoints:
             - host: 2.2.2.2
               port: 3443
+            metadata:
+              kind: Backend
+              name: backend-ip-tls
+              namespace: default
             name: httproute/envoy-gateway/httproute-btls2/rule/0/backend/1
             protocol: HTTP
             tls:

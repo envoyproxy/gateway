@@ -112,6 +112,11 @@ xdsIR:
             endpoints:
             - host: 7.7.7.7
               port: 8080
+            metadata:
+              kind: Service
+              name: service-1
+              namespace: test-service-namespace
+              sectionName: "8080"
             name: tlsroute/default/tlsroute-1/rule/-1/backend/0
             protocol: HTTPS
             weight: 1

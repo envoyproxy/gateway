@@ -278,6 +278,11 @@ xdsIR:
             endpoints:
             - host: 10.240.0.10
               port: 9090
+            metadata:
+              kind: Service
+              name: envoy-als
+              namespace: monitoring
+              sectionName: "9000"
             name: accesslog_als_2_1/backend/-1
             protocol: GRPC
         http:
@@ -299,6 +304,11 @@ xdsIR:
             endpoints:
             - host: 10.240.0.10
               port: 9090
+            metadata:
+              kind: Service
+              name: envoy-als
+              namespace: monitoring
+              sectionName: "9000"
             name: accesslog_als_2_2/backend/-1
             protocol: GRPC
         logType: Route
@@ -313,6 +323,11 @@ xdsIR:
             endpoints:
             - host: 10.240.0.10
               port: 9090
+            metadata:
+              kind: Service
+              name: envoy-als
+              namespace: monitoring
+              sectionName: "9000"
             name: accesslog_als_3_1/backend/-1
             protocol: GRPC
         http:
@@ -334,6 +349,11 @@ xdsIR:
             endpoints:
             - host: 10.240.0.10
               port: 9090
+            metadata:
+              kind: Service
+              name: envoy-als
+              namespace: monitoring
+              sectionName: "9000"
             name: accesslog_als_3_2/backend/-1
             protocol: GRPC
         logType: Listener
@@ -348,6 +368,11 @@ xdsIR:
             endpoints:
             - host: 10.240.0.10
               port: 9090
+            metadata:
+              kind: Service
+              name: envoy-als
+              namespace: monitoring
+              sectionName: "9000"
             name: accesslog_als_4_1/backend/-1
             protocol: GRPC
         http:
@@ -368,6 +393,11 @@ xdsIR:
             endpoints:
             - host: 10.240.0.10
               port: 9090
+            metadata:
+              kind: Service
+              name: envoy-als
+              namespace: monitoring
+              sectionName: "9000"
             name: accesslog_als_4_2/backend/-1
             protocol: GRPC
         name: envoy-gateway-system/test
@@ -459,6 +489,11 @@ xdsIR:
             endpoints:
             - host: 7.7.7.7
               port: 8080
+            metadata:
+              kind: Service
+              name: service-1
+              namespace: envoy-gateway
+              sectionName: "8080"
             name: httproute/envoy-gateway/httproute-1/rule/0/backend/0
             protocol: HTTP
             weight: 1

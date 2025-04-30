@@ -218,6 +218,11 @@ xdsIR:
             endpoints:
             - host: 10.240.0.10
               port: 9090
+            metadata:
+              kind: Service
+              name: envoy-als
+              namespace: monitoring
+              sectionName: "9000"
             name: accesslog_als_0_1/backend/-1
             protocol: GRPC
         http:
@@ -263,6 +268,11 @@ xdsIR:
             endpoints:
             - host: 10.240.0.10
               port: 9090
+            metadata:
+              kind: Service
+              name: envoy-als
+              namespace: monitoring
+              sectionName: "9000"
             name: accesslog_als_0_2/backend/-1
             protocol: GRPC
         name: envoy-gateway-system/test
