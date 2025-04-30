@@ -148,7 +148,6 @@ type BackendSpec struct {
 	// Only supported for DynamicResolver backends.
 	//
 	// +optional
-	// +notImplementedHide
 	TLS *BackendTLSSettings `json:"tls,omitempty"`
 }
 
