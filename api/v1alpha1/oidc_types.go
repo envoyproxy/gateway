@@ -66,7 +66,7 @@ type OIDC struct {
 	// This behavior can be useful for AJAX or machine requests.
 	// +optional
 	// +notImplementedHide
-	OIDCDenyRedirect []OIDCDenyRedirect `json:"denyRedirect,omitempty"`
+	OIDCDenyRedirect *OIDCDenyRedirect `json:"denyRedirect,omitempty"`
 
 	// The path to log a user out, clearing their credential cookies.
 	//
