@@ -108,10 +108,6 @@ func expectedProxyContainers(infra *ir.ProxyInfra,
 	}
 
 	maxHeapSizeBytes := calculateMaxHeapSizeBytes(containerSpec.Resources)
-
-	if gatewayNamespaceMode {
-		egNamespace = config.DefaultNamespace
-	}
 	// Get the default Bootstrap
 	bootstrapConfigOptions := &bootstrap.RenderBootstrapConfigOptions{
 		ProxyMetrics: proxyMetrics,
@@ -135,7 +131,7 @@ func expectedProxyContainers(infra *ir.ProxyInfra,
 			ImagePullPolicy:          corev1.PullIfNotPresent,
 			Command:                  []string{"envoy"},
 			Args:                     args,
-			Env:                      expectedContainerEnv(containerSpec, gatewayNamespaceMode),
+			Env:                      expectedContainerEnv(containerSpec, egNamespace),
 			Resources:                *containerSpec.Resources,
 			SecurityContext:          expectedEnvoySecurityContext(containerSpec),
 			Ports:                    ports,
@@ -197,7 +193,7 @@ func expectedProxyContainers(infra *ir.ProxyInfra,
 			ImagePullPolicy:          corev1.PullIfNotPresent,
 			Command:                  []string{"envoy-gateway"},
 			Args:                     expectedShutdownManagerArgs(shutdownConfig),
-			Env:                      expectedContainerEnv(nil, gatewayNamespaceMode),
+			Env:                      expectedContainerEnv(nil, egNamespace),
 			Resources:                *egv1a1.DefaultShutdownManagerContainerResourceRequirements(),
 			TerminationMessagePolicy: corev1.TerminationMessageReadFile,
 			TerminationMessagePath:   "/dev/termination-log",
@@ -413,16 +409,11 @@ func expectedVolumes(name string, gatewayNamespacedMode bool, pod *egv1a1.Kubern
 }
 
 // expectedContainerEnv returns expected proxy container envs.
-func expectedContainerEnv(containerSpec *egv1a1.KubernetesContainerSpec, gatewayNamespaceMode bool) []corev1.EnvVar {
+func expectedContainerEnv(containerSpec *egv1a1.KubernetesContainerSpec, controllerNamespace string) []corev1.EnvVar {
 	env := []corev1.EnvVar{
 		{
-			Name: envoyNsEnvVar,
-			ValueFrom: &corev1.EnvVarSource{
-				FieldRef: &corev1.ObjectFieldSelector{
-					APIVersion: "v1",
-					FieldPath:  "metadata.namespace",
-				},
-			},
+			Name:  envoyNsEnvVar,
+			Value: controllerNamespace,
 		},
 		{
 			Name: envoyZoneEnvVar,
@@ -433,23 +424,6 @@ func expectedContainerEnv(containerSpec *egv1a1.KubernetesContainerSpec, gateway
 				},
 			},
 		},
-	}
-	if gatewayNamespaceMode {
-		env = []corev1.EnvVar{
-			{
-				Name:  envoyNsEnvVar,
-				Value: config.DefaultNamespace,
-			},
-			{
-				Name: envoyZoneEnvVar,
-				ValueFrom: &corev1.EnvVarSource{
-					FieldRef: &corev1.ObjectFieldSelector{
-						APIVersion: "v1",
-						FieldPath:  fmt.Sprintf("metadata.labels['%s']", corev1.LabelTopologyZone),
-					},
-				},
-			},
-		}
 	}
 
 	env = append(env, corev1.EnvVar{
