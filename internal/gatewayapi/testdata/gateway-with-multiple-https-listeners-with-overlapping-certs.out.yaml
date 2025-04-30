@@ -68,7 +68,8 @@ gateways:
         type: ResolvedRefs
       - lastTransitionTime: null
         message: The certificate san *.example.com overlaps with the certificate san
-          bar.example.com in listener https-2
+          bar.example.com in listener https-2. ALPN is set to HTTP/1.1 to prevent
+          HTTP/2 connection coalescing
         reason: OverlappingCertificates
         status: "True"
         type: OverlappingTLSConfig
@@ -97,7 +98,8 @@ gateways:
         type: ResolvedRefs
       - lastTransitionTime: null
         message: The certificate san bar.example.com overlaps with the certificate
-          san *.example.com in listener https-1
+          san *.example.com in listener https-1. ALPN is set to HTTP/1.1 to prevent
+          HTTP/2 connection coalescing
         reason: OverlappingCertificates
         status: "True"
         type: OverlappingTLSConfig

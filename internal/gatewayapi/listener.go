@@ -242,7 +242,7 @@ func checkOverlappingHostnames(gateway *GatewayContext) {
 				metav1.ConditionTrue,
 				gwapiv1.ListenerReasonOverlappingHostnames,
 				fmt.Sprintf(
-					"The hostname %s overlaps with the hostname %s in listener %s",
+					"The hostname %s overlaps with the hostname %s in listener %s. ALPN is set to HTTP/1.1 to prevent HTTP/2 connection coalescing",
 					overlappingListeners[i].hostname1,
 					overlappingListeners[i].hostname2,
 					overlappingListeners[i].listener2,
@@ -310,7 +310,7 @@ func checkOverlappingCertificates(gateway *GatewayContext) {
 				metav1.ConditionTrue,
 				gwapiv1.ListenerReasonOverlappingCertificates,
 				fmt.Sprintf(
-					"The certificate san %s overlaps with the certificate san %s in listener %s",
+					"The certificate san %s overlaps with the certificate san %s in listener %s. ALPN is set to HTTP/1.1 to prevent HTTP/2 connection coalescing",
 					overlappingListeners[i].san1,
 					overlappingListeners[i].san2,
 					overlappingListeners[i].listener2,
