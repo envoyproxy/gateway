@@ -307,30 +307,6 @@ func TestCheckOverlappingHostnames(t *testing.T) {
 			},
 		},
 		{
-			name: "non-HTTPS listeners",
-			gateway: &GatewayContext{
-				listeners: []*ListenerContext{
-					{
-						Listener: &gwapiv1.Listener{
-							Name:     "listener-1",
-							Protocol: gwapiv1.HTTPProtocolType,
-							Port:     80,
-							Hostname: ptr.To(gwapiv1.Hostname("example.com")),
-						},
-					},
-					{
-						Listener: &gwapiv1.Listener{
-							Name:     "listener-2",
-							Protocol: gwapiv1.HTTPProtocolType,
-							Port:     80,
-							Hostname: ptr.To(gwapiv1.Hostname("example.com")),
-						},
-					},
-				},
-			},
-			expected: map[int]string{},
-		},
-		{
 			name: "nil hostnames",
 			gateway: &GatewayContext{
 				listeners: []*ListenerContext{
@@ -369,13 +345,14 @@ func TestCheckOverlappingHostnames(t *testing.T) {
 			}
 			for i := range tt.gateway.listeners {
 				tt.gateway.listeners[i].listenerStatusIdx = i
-				tt.gateway.Status.Listeners[i] = gwapiv1.ListenerStatus{
-					Name:       tt.gateway.listeners[i].Name,
+				tt.gateway.listeners[i].gateway = tt.gateway
+				tt.gateway.Gateway.Status.Listeners[i] = gwapiv1.ListenerStatus{
+					Name:       tt.gateway.listeners[i].Listener.Name,
 					Conditions: []metav1.Condition{},
 				}
 			}
 
-			checkOverlappingHostnames(tt.gateway)
+			checkOverlappingHostnames(tt.gateway.listeners)
 
 			// Verify the status conditions
 			for idx, expectedHostname := range tt.expected {
@@ -603,16 +580,18 @@ func TestCheckOverlappingCertificates(t *testing.T) {
 				listeners: tt.listeners,
 			}
 
-			// Initialize listener status indices
-			for i := range gateway.Status.Listeners {
-				gateway.Status.Listeners[i] = gwapiv1.ListenerStatus{
-					Name:       tt.listeners[i].Name,
+			// Initialize listener
+			for i := range gateway.Gateway.Status.Listeners {
+				gateway.Gateway.Status.Listeners[i] = gwapiv1.ListenerStatus{
+					Name:       tt.listeners[i].Listener.Name,
 					Conditions: []metav1.Condition{},
 				}
+				gateway.listeners[i].listenerStatusIdx = i
+				gateway.listeners[i].gateway = gateway
 			}
 
 			// Process overlapping certificates
-			checkOverlappingCertificates(gateway)
+			checkOverlappingCertificates(tt.listeners)
 
 			// Verify the status conditions
 			for _, expected := range tt.expectedStatus {
