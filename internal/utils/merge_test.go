@@ -24,7 +24,8 @@ func TestMergeBackendTrafficPolicy(t *testing.T) {
 		original *egv1a1.BackendTrafficPolicy
 		patch    *egv1a1.BackendTrafficPolicy
 
-		expected *egv1a1.BackendTrafficPolicy
+		expected          *egv1a1.BackendTrafficPolicy
+		jsonMergeExpected *egv1a1.BackendTrafficPolicy
 	}{
 		{
 			name: "merge",
@@ -60,6 +61,26 @@ func TestMergeBackendTrafficPolicy(t *testing.T) {
 				},
 			},
 			expected: &egv1a1.BackendTrafficPolicy{
+				Spec: egv1a1.BackendTrafficPolicySpec{
+					ClusterSettings: egv1a1.ClusterSettings{
+						Connection: &egv1a1.BackendConnection{
+							BufferLimit: &r,
+						},
+						Retry: &egv1a1.Retry{
+							NumRetries: ptr.To[int32](3),
+						},
+					},
+					HTTPUpgrade: []*egv1a1.ProtocolUpgradeConfig{
+						{
+							Type: "patched",
+						},
+						{
+							Type: "original",
+						},
+					},
+				},
+			},
+			jsonMergeExpected: &egv1a1.BackendTrafficPolicy{
 				Spec: egv1a1.BackendTrafficPolicySpec{
 					ClusterSettings: egv1a1.ClusterSettings{
 						Connection: &egv1a1.BackendConnection{
@@ -113,7 +134,17 @@ func TestMergeBackendTrafficPolicy(t *testing.T) {
 			t.Run(fmt.Sprintf("%s/%s", mergeType, tc.name), func(t *testing.T) {
 				got, err := Merge[*egv1a1.BackendTrafficPolicy](tc.original, tc.patch, mergeType)
 				require.NoError(t, err)
-				require.Equal(t, tc.expected, got)
+
+				switch mergeType {
+				case egv1a1.StrategicMerge:
+					require.Equal(t, tc.expected, got)
+				case egv1a1.JSONMerge:
+					if tc.jsonMergeExpected != nil {
+						require.Equal(t, tc.jsonMergeExpected, got)
+					} else {
+						require.Equal(t, tc.expected, got)
+					}
+				}
 			})
 		}
 	}
