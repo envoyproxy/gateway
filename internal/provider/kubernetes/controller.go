@@ -55,18 +55,19 @@ var skipNameValidation = func() *bool {
 }
 
 type gatewayAPIReconciler struct {
-	client            client.Client
-	log               logging.Logger
-	statusUpdater     Updater
-	classController   gwapiv1.GatewayController
-	store             *kubernetesProviderStore
-	namespace         string
-	namespaceLabel    *metav1.LabelSelector
-	envoyGateway      *egv1a1.EnvoyGateway
-	mergeGateways     sets.Set[string]
-	resources         *message.ProviderResources
-	extGVKs           []schema.GroupVersionKind
-	extServerPolicies []schema.GroupVersionKind
+	client               client.Client
+	log                  logging.Logger
+	statusUpdater        Updater
+	classController      gwapiv1.GatewayController
+	store                *kubernetesProviderStore
+	namespace            string
+	namespaceLabel       *metav1.LabelSelector
+	envoyGateway         *egv1a1.EnvoyGateway
+	mergeGateways        sets.Set[string]
+	resources            *message.ProviderResources
+	extGVKs              []schema.GroupVersionKind
+	extServerPolicies    []schema.GroupVersionKind
+	gatewayNamespaceMode bool
 
 	backendCRDExists       bool
 	bTLSPolicyCRDExists    bool
@@ -103,17 +104,18 @@ func newGatewayAPIController(ctx context.Context, mgr manager.Manager, cfg *conf
 	}
 
 	r := &gatewayAPIReconciler{
-		client:            mgr.GetClient(),
-		log:               cfg.Logger,
-		classController:   gwapiv1.GatewayController(cfg.EnvoyGateway.Gateway.ControllerName),
-		namespace:         cfg.Namespace,
-		statusUpdater:     su,
-		resources:         resources,
-		extGVKs:           extGVKs,
-		store:             newProviderStore(),
-		envoyGateway:      cfg.EnvoyGateway,
-		mergeGateways:     sets.New[string](),
-		extServerPolicies: extServerPoliciesGVKs,
+		client:               mgr.GetClient(),
+		log:                  cfg.Logger,
+		classController:      gwapiv1.GatewayController(cfg.EnvoyGateway.Gateway.ControllerName),
+		namespace:            cfg.ControllerNamespace,
+		statusUpdater:        su,
+		resources:            resources,
+		extGVKs:              extGVKs,
+		store:                newProviderStore(),
+		envoyGateway:         cfg.EnvoyGateway,
+		mergeGateways:        sets.New[string](),
+		extServerPolicies:    extServerPoliciesGVKs,
+		gatewayNamespaceMode: cfg.EnvoyGateway.GatewayNamespaceMode(),
 	}
 
 	if byNamespaceSelectorEnabled(cfg.EnvoyGateway) {

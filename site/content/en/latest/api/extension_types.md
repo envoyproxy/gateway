@@ -1140,6 +1140,7 @@ _Appears in:_
 | `envoy.filters.http.credential_injector` | EnvoyFilterCredentialInjector defines the Envoy HTTP credential injector filter.<br /> | 
 | `envoy.filters.http.compressor` | EnvoyFilterCompressor defines the Envoy HTTP compressor filter.<br /> | 
 | `envoy.filters.http.router` | EnvoyFilterRouter defines the Envoy HTTP router filter.<br /> | 
+| `envoy.filters.http.buffer` | EnvoyFilterBuffer defines the Envoy HTTP buffer filter<br /> | 
 
 
 #### EnvoyGateway
@@ -1267,6 +1268,8 @@ _Appears in:_
 | `watch` | _[KubernetesWatchMode](#kuberneteswatchmode)_ |  false  |  | Watch holds configuration of which input resources should be watched and reconciled. |
 | `leaderElection` | _[LeaderElection](#leaderelection)_ |  false  |  | LeaderElection specifies the configuration for leader election.<br />If it's not set up, leader election will be active by default, using Kubernetes' standard settings. |
 | `shutdownManager` | _[ShutdownManager](#shutdownmanager)_ |  false  |  | ShutdownManager defines the configuration for the shutdown manager. |
+| `client` | _[KubernetesClient](#kubernetesclient)_ |  true  |  | Client holds the configuration for the Kubernetes client. |
+| `proxyTopologyInjector` | _[EnvoyGatewayTopologyInjector](#envoygatewaytopologyinjector)_ |  false  |  | TopologyInjector defines the configuration for topology injector MutatatingWebhookConfiguration |
 
 
 #### EnvoyGatewayLogComponent
@@ -1434,6 +1437,20 @@ _Appears in:_
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
 | `metrics` | _[EnvoyGatewayMetrics](#envoygatewaymetrics)_ |  true  |  | Metrics defines metrics configuration for envoy gateway. |
+
+
+#### EnvoyGatewayTopologyInjector
+
+
+
+EnvoyGatewayTopologyInjector defines the configuration for topology injector MutatatingWebhookConfiguration
+
+_Appears in:_
+- [EnvoyGatewayKubernetesProvider](#envoygatewaykubernetesprovider)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `disabled` | _boolean_ |  false  |  |  |
 
 
 #### EnvoyJSONPatchConfig
@@ -2665,6 +2682,35 @@ _Underlying type:_ _string_
 _Appears in:_
 - [JWTPrincipal](#jwtprincipal)
 
+
+
+#### KubernetesClient
+
+
+
+
+
+_Appears in:_
+- [EnvoyGatewayKubernetesProvider](#envoygatewaykubernetesprovider)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `rateLimit` | _[KubernetesClientRateLimit](#kubernetesclientratelimit)_ |  true  |  | RateLimit defines the rate limit settings for the Kubernetes client. |
+
+
+#### KubernetesClientRateLimit
+
+
+
+KubernetesClientRateLimit defines the rate limit settings for the Kubernetes client.
+
+_Appears in:_
+- [KubernetesClient](#kubernetesclient)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `qps` | _integer_ |  false  | 50 | QPS defines the queries per second limit for the Kubernetes client. |
+| `burst` | _integer_ |  false  | 100 | Burst defines the maximum burst of requests allowed when tokens have accumulated. |
 
 
 #### KubernetesContainerSpec

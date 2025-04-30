@@ -44,7 +44,7 @@ func TestCreateOrUpdateProxyConfigMap(t *testing.T) {
 			name: "create configmap",
 			expect: &corev1.ConfigMap{
 				ObjectMeta: metav1.ObjectMeta{
-					Namespace: cfg.Namespace,
+					Namespace: cfg.ControllerNamespace,
 					Name:      "envoy-test-9f86d081",
 					Labels: map[string]string{
 						"app.kubernetes.io/name":               "envoy",
@@ -64,7 +64,7 @@ func TestCreateOrUpdateProxyConfigMap(t *testing.T) {
 			name: "update configmap",
 			current: &corev1.ConfigMap{
 				ObjectMeta: metav1.ObjectMeta{
-					Namespace: cfg.Namespace,
+					Namespace: cfg.ControllerNamespace,
 					Name:      "envoy-test",
 					Labels: map[string]string{
 						"app.kubernetes.io/name":               "envoy",
@@ -78,7 +78,7 @@ func TestCreateOrUpdateProxyConfigMap(t *testing.T) {
 			},
 			expect: &corev1.ConfigMap{
 				ObjectMeta: metav1.ObjectMeta{
-					Namespace: cfg.Namespace,
+					Namespace: cfg.ControllerNamespace,
 					Name:      "envoy-test-9f86d081",
 					Labels: map[string]string{
 						"app.kubernetes.io/name":               "envoy",
@@ -144,7 +144,7 @@ func TestDeleteConfigProxyMap(t *testing.T) {
 			name: "delete configmap",
 			current: &corev1.ConfigMap{
 				ObjectMeta: metav1.ObjectMeta{
-					Namespace: cfg.Namespace,
+					Namespace: cfg.ControllerNamespace,
 					Name:      "envoy-test",
 				},
 			},
@@ -154,7 +154,7 @@ func TestDeleteConfigProxyMap(t *testing.T) {
 			name: "configmap not found",
 			current: &corev1.ConfigMap{
 				ObjectMeta: metav1.ObjectMeta{
-					Namespace: cfg.Namespace,
+					Namespace: cfg.ControllerNamespace,
 					Name:      "foo",
 				},
 			},

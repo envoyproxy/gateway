@@ -180,4 +180,8 @@ provider:
 extensionApis:
   {{- toYaml . | nindent 2 }}
 {{- end }}
+{{- if not .Values.topologyInjector.enabled }}
+proxyTopologyInjector:
+  disabled: true
+{{- end }}
 {{- end }}

@@ -31,8 +31,8 @@ const (
 type Server struct {
 	// EnvoyGateway is the configuration used to startup Envoy Gateway.
 	EnvoyGateway *egv1a1.EnvoyGateway
-	// Namespace is the namespace that Envoy Gateway runs in.
-	Namespace string
+	// ControllerNamespace is the namespace that Envoy Gateway runs in.
+	ControllerNamespace string
 	// DNSDomain is the dns domain used by k8s services. Defaults to "cluster.local".
 	DNSDomain string
 	// Logger is the logr implementation used by Envoy Gateway.
@@ -44,11 +44,11 @@ type Server struct {
 // New returns a Server with default parameters.
 func New(logOut io.Writer) (*Server, error) {
 	return &Server{
-		EnvoyGateway: egv1a1.DefaultEnvoyGateway(),
-		Namespace:    env.Lookup("ENVOY_GATEWAY_NAMESPACE", DefaultNamespace),
-		DNSDomain:    env.Lookup("KUBERNETES_CLUSTER_DOMAIN", DefaultDNSDomain),
-		Logger:       logging.DefaultLogger(logOut, egv1a1.LogLevelInfo),
-		Elected:      make(chan struct{}),
+		EnvoyGateway:        egv1a1.DefaultEnvoyGateway(),
+		ControllerNamespace: env.Lookup("ENVOY_GATEWAY_NAMESPACE", DefaultNamespace),
+		DNSDomain:           env.Lookup("KUBERNETES_CLUSTER_DOMAIN", DefaultDNSDomain),
+		Logger:              logging.DefaultLogger(logOut, egv1a1.LogLevelInfo),
+		Elected:             make(chan struct{}),
 	}, nil
 }
 
@@ -57,7 +57,7 @@ func (s *Server) Validate() error {
 	switch {
 	case s == nil:
 		return errors.New("server config is unspecified")
-	case len(s.Namespace) == 0:
+	case len(s.ControllerNamespace) == 0:
 		return errors.New("namespace is empty string")
 	}
 	if err := validation.ValidateEnvoyGateway(s.EnvoyGateway); err != nil {

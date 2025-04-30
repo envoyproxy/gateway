@@ -17,6 +17,7 @@ import (
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
+	"github.com/envoyproxy/gateway/internal/ir"
 )
 
 // GatewayContext wraps a Gateway and provides helper methods for
@@ -73,6 +74,9 @@ type ListenerContext struct {
 	listenerStatusIdx int
 	namespaceSelector labels.Selector
 	tlsSecrets        []*corev1.Secret
+	certDNSNames      []string
+
+	httpIR *ir.HTTPListener
 }
 
 func (l *ListenerContext) SetSupportedKinds(kinds ...gwapiv1.RouteGroupKind) {

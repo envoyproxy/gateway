@@ -106,7 +106,7 @@ func TestCreateOrUpdateRateLimitServiceAccount(t *testing.T) {
 
 			cfg, err := config.New(os.Stdout)
 			require.NoError(t, err)
-			cfg.Namespace = tc.ns
+			cfg.ControllerNamespace = tc.ns
 
 			kube := NewInfra(cli, cfg)
 			kube.EnvoyGateway.RateLimit = rl

@@ -157,7 +157,8 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *re
 					GlobalRateLimitEnabled:    r.EnvoyGateway.RateLimit != nil,
 					EnvoyPatchPolicyEnabled:   r.EnvoyGateway.ExtensionAPIs != nil && r.EnvoyGateway.ExtensionAPIs.EnableEnvoyPatchPolicy,
 					BackendEnabled:            r.EnvoyGateway.ExtensionAPIs != nil && r.EnvoyGateway.ExtensionAPIs.EnableBackend,
-					Namespace:                 r.Namespace,
+					ControllerNamespace:       r.ControllerNamespace,
+					GatewayNamespaceMode:      r.EnvoyGateway.GatewayNamespaceMode(),
 					MergeGateways:             gatewayapi.IsMergeGatewaysEnabled(resources),
 					WasmCache:                 r.wasmCache,
 					ListenerPortShiftDisabled: r.EnvoyGateway.Provider != nil && r.EnvoyGateway.Provider.IsRunningOnHost(),
@@ -312,7 +313,7 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *re
 func (r *Runner) loadTLSConfig(ctx context.Context) (tlsConfig *tls.Config, salt []byte, err error) {
 	switch {
 	case r.EnvoyGateway.Provider.IsRunningOnKubernetes():
-		salt, err = hmac(ctx, r.Namespace)
+		salt, err = hmac(ctx, r.ControllerNamespace)
 		if err != nil {
 			return nil, nil, fmt.Errorf("failed to get hmac secret: %w", err)
 		}

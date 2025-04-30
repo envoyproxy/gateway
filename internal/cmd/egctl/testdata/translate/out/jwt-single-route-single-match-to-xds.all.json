@@ -22,6 +22,9 @@
                 }
               }
             },
+            "clusterManager": {
+              "localClusterName": "local_cluster"
+            },
             "dynamicResources": {
               "adsConfig": {
                 "apiType": "DELTA_GRPC",
@@ -55,6 +58,11 @@
                   }
                 }
               ]
+            },
+            "node": {
+              "locality": {
+                "zone": "$(ENVOY_SERVICE_ZONE)"
+              }
             },
             "overloadManager": {
               "refreshInterval": "0.250s",
@@ -92,6 +100,35 @@
                     ]
                   },
                   "name": "prometheus_stats",
+                  "type": "STATIC"
+                },
+                {
+                  "connectTimeout": "10s",
+                  "loadAssignment": {
+                    "clusterName": "local_cluster",
+                    "endpoints": [
+                      {
+                        "lbEndpoints": [
+                          {
+                            "endpoint": {
+                              "address": {
+                                "socketAddress": {
+                                  "address": "127.0.0.1",
+                                  "portValue": 10080
+                                }
+                              }
+                            },
+                            "loadBalancingWeight": 1
+                          }
+                        ],
+                        "loadBalancingWeight": 1,
+                        "locality": {
+                          "zone": "$(ENVOY_SERVICE_ZONE)"
+                        }
+                      }
+                    ]
+                  },
+                  "name": "local_cluster",
                   "type": "STATIC"
                 },
                 {

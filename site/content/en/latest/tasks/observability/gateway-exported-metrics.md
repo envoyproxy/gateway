@@ -94,5 +94,14 @@ Envoy Gateway monitors the status of Wasm remote fetch cache.
 
 For metric `wasm_cache_lookup_total`, we are using `hit` label (boolean) to indicate whether the Wasm cache has been hit.
 
+## Topology Injector MutatingWebhookConfiguration
+
+Envoy Gateway monitors the status of the TopologyInjector webhook which injects node topology information to EnvoyProxy pods.
+
+| Name                                     | Description                                       |
+|------------------------------------------|---------------------------------------------------|
+| `topology_injector_webhook_events_total` | Total number of topology injector webhook events. |
+
+This metrics provides information on whether a webhook request was successful, failed, or a no-op.
 
 [prom-format]: https://prometheus.io/docs/instrumenting/exposition_formats/#text-based-format
