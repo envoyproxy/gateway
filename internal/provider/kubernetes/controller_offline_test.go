@@ -35,7 +35,7 @@ func TestNewOfflineGatewayAPIController(t *testing.T) {
 		require.Error(t, err)
 	})
 
-	t.Run("offline controller creation succeess", func(t *testing.T) {
+	t.Run("offline controller creation success", func(t *testing.T) {
 		cfg, err := config.New(os.Stdout)
 		require.NoError(t, err)
 

@@ -60,7 +60,7 @@ func (u *StatusHandler) Start(ctx context.Context, ready *sync.WaitGroup) {
 func (u *StatusHandler) logStatus(update kubernetes.Update) {
 	obj := update.Resource
 	newObj := update.Mutator.Mutate(obj)
-	log := u.logger.WithValues("key", update.NamespacedName)
+	log := u.logger.WithValues("key", update.NamespacedName.String())
 
 	// Log the resource status.
 	raw, err := runtime.DefaultUnstructuredConverter.ToUnstructured(newObj)
@@ -81,7 +81,7 @@ func (u *StatusHandler) logStatus(update kubernetes.Update) {
 		return
 	}
 
-	log.Info(fmt.Sprintf("Got new status\n%s", string(byteStatus)))
+	log.Info(fmt.Sprintf("Got new status for %s\n%s", kubernetes.KindOf(obj), string(byteStatus)))
 }
 
 // Writer retrieves the interface that should be used to write to the StatusHandler.

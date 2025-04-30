@@ -178,6 +178,8 @@ func (p *Provider) Start(ctx context.Context) error {
 
 // startReconciling starts reconcile on offline controller when receiving signal from resources store.
 func (p *Provider) startReconciling(ctx context.Context, ready *sync.WaitGroup) {
+	p.logger.Info("start reconciling")
+	defer p.logger.Info("stop reconciling")
 	ready.Done()
 
 	for {
