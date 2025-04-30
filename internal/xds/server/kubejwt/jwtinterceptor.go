@@ -14,7 +14,6 @@ import (
 	"google.golang.org/grpc/metadata"
 	"k8s.io/client-go/kubernetes"
 
-	"github.com/envoyproxy/gateway/internal/message"
 	"github.com/envoyproxy/gateway/internal/xds/cache"
 )
 
@@ -23,16 +22,14 @@ type JWTAuthInterceptor struct {
 	clientset *kubernetes.Clientset
 	issuer    string
 	cache     cache.SnapshotCacheWithCallbacks
-	xds       *message.Xds
 }
 
 // NewJWTAuthInterceptor initializes a new JWTAuthInterceptor.
-func NewJWTAuthInterceptor(clientset *kubernetes.Clientset, issuer string, cache cache.SnapshotCacheWithCallbacks, xds *message.Xds) *JWTAuthInterceptor {
+func NewJWTAuthInterceptor(clientset *kubernetes.Clientset, issuer string, cache cache.SnapshotCacheWithCallbacks) *JWTAuthInterceptor {
 	return &JWTAuthInterceptor{
 		clientset: clientset,
 		issuer:    issuer,
 		cache:     cache,
-		xds:       xds,
 	}
 }
 
@@ -53,16 +50,45 @@ func (i *JWTAuthInterceptor) authorize(ctx context.Context) error {
 		return fmt.Errorf("missing metadata")
 	}
 
-	authHeader, exists := md["authorization"]
-	if !exists || len(authHeader) == 0 {
-		return fmt.Errorf("missing authorization token in metadata: %s", md)
+	proxyMetadata, err := processProxyMetadata(md)
+	if err != nil {
+		return fmt.Errorf("failed to extract node info: %w", err)
 	}
 
-	tokenStr := strings.TrimPrefix(authHeader[0], "Bearer ")
-	err := i.validateKubeJWT(ctx, tokenStr)
+	err = i.validateKubeJWT(ctx, proxyMetadata)
 	if err != nil {
 		return fmt.Errorf("failed to validate token: %w", err)
 	}
 
 	return nil
+}
+
+type proxyMetadata struct {
+	token  string
+	nodeId string
+	irKey  string
+}
+
+func processProxyMetadata(md metadata.MD) (*proxyMetadata, error) {
+	authHeader, exists := md["authorization"]
+	if !exists || len(authHeader) == 0 {
+		return nil, fmt.Errorf("missing authorization token in metadata: %s", md)
+	}
+	tokenStr := strings.TrimPrefix(authHeader[0], "Bearer ")
+
+	irKey, exists := md[envoyIrKeyHeader]
+	if !exists || len(irKey) == 0 {
+		return nil, fmt.Errorf("missing ir key in metadata: %s", md)
+	}
+
+	nodeID, exists := md[envoyNodeIDHeader]
+	if !exists || len(nodeID) == 0 {
+		return nil, fmt.Errorf("missing node ID in metadata: %s", md)
+	}
+
+	return &proxyMetadata{
+		token:  tokenStr,
+		nodeId: nodeID[0],
+		irKey:  irKey[0],
+	}, nil
 }

@@ -100,6 +100,8 @@ type bootstrapParameters struct {
 	// IPFamily of the Listener
 	IPFamily             string
 	GatewayNamespaceMode bool
+
+	IRKey string
 }
 
 type serverParameters struct {
@@ -147,6 +149,7 @@ type RenderBootstrapConfigOptions struct {
 	StatsServerPort      *int32
 	MaxHeapSizeBytes     uint64
 	GatewayNamespaceMode bool
+	IRKey                string
 }
 
 type SdsConfigPath struct {
@@ -310,6 +313,7 @@ func GetRenderedBootstrapConfig(opts *RenderBootstrapConfigOptions) (string, err
 			}
 		}
 		cfg.parameters.GatewayNamespaceMode = opts.GatewayNamespaceMode
+		cfg.parameters.IRKey = opts.IRKey
 		cfg.parameters.OverloadManager.MaxHeapSizeBytes = opts.MaxHeapSizeBytes
 	}
 

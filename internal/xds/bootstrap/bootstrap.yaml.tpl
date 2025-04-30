@@ -47,6 +47,13 @@ dynamic_resources:
     grpc_services:
     - envoy_grpc:
         cluster_name: xds_cluster
+{{- if .GatewayNamespaceMode }}
+      initial_metadata:
+      - key: "x-envoy-gateway-ir-key"
+        value: "{{ .IRKey }}"
+      - key: "x-envoy-node-id"
+        value: "$(ENVOY_POD_NAME)"
+{{- end }}
     set_node_on_first_message_only: true
   lds_config:
     ads: {}

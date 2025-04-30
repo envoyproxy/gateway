@@ -9,6 +9,7 @@ import (
 	"fmt"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/gatewayapi"
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/xds/bootstrap"
 )
@@ -33,6 +34,15 @@ func BuildProxyArgs(
 	if bootstrapConfigOptions != nil && bootstrapConfigOptions.IPFamily == nil {
 		bootstrapConfigOptions.IPFamily = getIPFamily(infra)
 	}
+	podLabels := infra.GetProxyMetadata().Labels
+	if podLabels != nil {
+		if gcName, ok := podLabels[gatewayapi.OwningGatewayClassLabel]; ok {
+			bootstrapConfigOptions.IRKey = gcName
+		} else {
+			bootstrapConfigOptions.IRKey = fmt.Sprintf("%s/%s", podLabels[gatewayapi.OwningGatewayNamespaceLabel], podLabels[gatewayapi.OwningGatewayNameLabel])
+		}
+	}
+
 	bootstrapConfigOptions.GatewayNamespaceMode = gatewayNamespaceMode
 	bootstrapConfigurations, err := bootstrap.GetRenderedBootstrapConfig(bootstrapConfigOptions)
 	if err != nil {

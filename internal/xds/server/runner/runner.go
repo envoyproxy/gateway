@@ -116,7 +116,6 @@ func (r *Runner) Start(ctx context.Context) (err error) {
 			clientset,
 			defaultKubernetesIssuer,
 			r.cache,
-			r.Xds,
 		)
 
 		creds, err := credentials.NewServerTLSFromFile(xdsTLSCertFilepath, xdsTLSKeyFilepath)

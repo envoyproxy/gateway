@@ -9,7 +9,6 @@ import (
 	"context"
 	"fmt"
 	"slices"
-	"strings"
 
 	authenticationv1 "k8s.io/api/authentication/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -18,7 +17,9 @@ import (
 )
 
 const (
-	authPodNameKey = "authentication.kubernetes.io/pod-name"
+	authPodNameKey    = "authentication.kubernetes.io/pod-name"
+	envoyIrKeyHeader  = "x-envoy-gateway-ir-key"
+	envoyNodeIDHeader = "x-envoy-node-id"
 )
 
 // GetKubernetesClient creates a Kubernetes client using in-cluster configuration.
@@ -36,10 +37,10 @@ func GetKubernetesClient() (*kubernetes.Clientset, error) {
 	return clientset, nil
 }
 
-func (i *JWTAuthInterceptor) validateKubeJWT(ctx context.Context, token string) error {
+func (i *JWTAuthInterceptor) validateKubeJWT(ctx context.Context, proxyMetadata *proxyMetadata) error {
 	tokenReview := &authenticationv1.TokenReview{
 		Spec: authenticationv1.TokenReviewSpec{
-			Token: token,
+			Token: proxyMetadata.token,
 		},
 	}
 
@@ -56,17 +57,18 @@ func (i *JWTAuthInterceptor) validateKubeJWT(ctx context.Context, token string) 
 		return fmt.Errorf("token is not authenticated")
 	}
 
-	// TODO: (cnvergence) define a better way to check if the token is coming from the correct node
 	if tokenReview.Status.User.Extra != nil {
 		podName := tokenReview.Status.User.Extra[authPodNameKey]
 		if podName[0] == "" {
 			return fmt.Errorf("pod name not found in token review response")
 		}
-		parts := strings.Split(podName[0], "-")
-		irKey := fmt.Sprintf("%s/%s", parts[1], parts[2])
 
-		if !i.cache.SnapshotHasIrKey(irKey) {
-			return fmt.Errorf("pod %s not found in cache", podName)
+		if podName[0] != proxyMetadata.nodeId {
+			return fmt.Errorf("pod name mismatch: expected %s, got %s", proxyMetadata.nodeId, podName[0])
+		}
+
+		if !i.cache.SnapshotHasIrKey(proxyMetadata.irKey) {
+			return fmt.Errorf("ir key not found in cache: %s", proxyMetadata.irKey)
 		}
 	}
 
