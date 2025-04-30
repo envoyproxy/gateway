@@ -25,6 +25,7 @@ import (
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/ir"
 )
 
 func TestValidateGRPCFilterRef(t *testing.T) {
@@ -713,6 +714,89 @@ func TestGetServiceIPFamily(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			result := getServiceIPFamily(tc.service)
+			require.Equal(t, tc.expected, result)
+		})
+	}
+}
+
+func TestIrStringMatch(t *testing.T) {
+	const stringMatchUnknown egv1a1.StringMatchType = "Unknown"
+	matchName := "Name"
+	matchValue := "Value"
+
+	testCases := []struct {
+		name     string
+		match    egv1a1.StringMatch
+		expected *ir.StringMatch
+	}{
+		{
+			name: "Exact by default",
+			match: egv1a1.StringMatch{
+				Type:  nil,
+				Value: matchValue,
+			},
+			expected: &ir.StringMatch{
+				Name:  matchName,
+				Exact: &matchValue,
+			},
+		},
+		{
+			name: "Exact",
+			match: egv1a1.StringMatch{
+				Type:  ptr.To(egv1a1.StringMatchExact),
+				Value: matchValue,
+			},
+			expected: &ir.StringMatch{
+				Name:  matchName,
+				Exact: &matchValue,
+			},
+		},
+		{
+			name: "Prefix",
+			match: egv1a1.StringMatch{
+				Type:  ptr.To(egv1a1.StringMatchPrefix),
+				Value: matchValue,
+			},
+			expected: &ir.StringMatch{
+				Name:   matchName,
+				Prefix: &matchValue,
+			},
+		},
+		{
+			name: "Suffix",
+			match: egv1a1.StringMatch{
+				Type:  ptr.To(egv1a1.StringMatchSuffix),
+				Value: matchValue,
+			},
+			expected: &ir.StringMatch{
+				Name:   matchName,
+				Suffix: &matchValue,
+			},
+		},
+		{
+			name: "RegularExpression",
+			match: egv1a1.StringMatch{
+				Type:  ptr.To(egv1a1.StringMatchRegularExpression),
+				Value: matchValue,
+			},
+			expected: &ir.StringMatch{
+				Name:      matchName,
+				SafeRegex: &matchValue,
+			},
+		},
+		{
+			name: "Unknown",
+			match: egv1a1.StringMatch{
+				Type:  ptr.To(stringMatchUnknown),
+				Value: matchValue,
+			},
+			expected: nil,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			result := irStringMatch(matchName, tc.match)
 			require.Equal(t, tc.expected, result)
 		})
 	}
