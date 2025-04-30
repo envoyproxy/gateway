@@ -49,6 +49,9 @@ type ResourceRender struct {
 	// namespace is the Namespace used for managed infra.
 	namespace string
 
+	// ControllerNamespace is the Namespace used for Envoy Gateway controller.
+	ControllerNamespace string
+
 	// DNSDomain is the dns domain used by k8s services. Defaults to "cluster.local".
 	DNSDomain string
 
@@ -57,9 +60,14 @@ type ResourceRender struct {
 	GatewayNamespaceMode bool
 }
 
-func NewResourceRender(ns, dnsDomain string, infra *ir.ProxyInfra, gateway *egv1a1.EnvoyGateway) *ResourceRender {
+func NewResourceRender(infraNamespace, controllerNamespace, dnsDomain string, infra *ir.ProxyInfra, gateway *egv1a1.EnvoyGateway) *ResourceRender {
 	return &ResourceRender{
+<<<<<<< HEAD
 		namespace:            ns,
+=======
+		Namespace:            infraNamespace,
+		ControllerNamespace:  controllerNamespace,
+>>>>>>> 5aa72e72 (Add controller namespace to infra)
 		DNSDomain:            dnsDomain,
 		infra:                infra,
 		ShutdownManager:      gateway.GetEnvoyGatewayProvider().GetEnvoyGatewayKubeProvider().ShutdownManager,
@@ -284,7 +292,11 @@ func (r *ResourceRender) Deployment() (*appsv1.Deployment, error) {
 	}
 
 	// Get expected bootstrap configurations rendered ProxyContainers
+<<<<<<< HEAD
 	containers, err := expectedProxyContainers(r.infra, deploymentConfig.Container, proxyConfig.Spec.Shutdown, r.ShutdownManager, r.Namespace(), r.DNSDomain, r.GatewayNamespaceMode)
+=======
+	containers, err := expectedProxyContainers(r.infra, deploymentConfig.Container, proxyConfig.Spec.Shutdown, r.ShutdownManager, r.ControllerNamespace, r.DNSDomain, r.GatewayNamespaceMode)
+>>>>>>> 5aa72e72 (Add controller namespace to infra)
 	if err != nil {
 		return nil, err
 	}
@@ -373,7 +385,11 @@ func (r *ResourceRender) DaemonSet() (*appsv1.DaemonSet, error) {
 	}
 
 	// Get expected bootstrap configurations rendered ProxyContainers
+<<<<<<< HEAD
 	containers, err := expectedProxyContainers(r.infra, daemonSetConfig.Container, proxyConfig.Spec.Shutdown, r.ShutdownManager, r.Namespace(), r.DNSDomain, r.GatewayNamespaceMode)
+=======
+	containers, err := expectedProxyContainers(r.infra, daemonSetConfig.Container, proxyConfig.Spec.Shutdown, r.ShutdownManager, r.ControllerNamespace, r.DNSDomain, r.GatewayNamespaceMode)
+>>>>>>> 5aa72e72 (Add controller namespace to infra)
 	if err != nil {
 		return nil, err
 	}
