@@ -17,9 +17,7 @@ import (
 )
 
 const (
-	authPodNameKey    = "authentication.kubernetes.io/pod-name"
-	envoyIrKeyHeader  = "x-envoy-gateway-ir-key"
-	envoyNodeIDHeader = "x-envoy-node-id"
+	authPodNameKey = "authentication.kubernetes.io/pod-name"
 )
 
 // GetKubernetesClient creates a Kubernetes client using in-cluster configuration.

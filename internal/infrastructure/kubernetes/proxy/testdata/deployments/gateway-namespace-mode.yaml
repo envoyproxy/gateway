@@ -72,9 +72,9 @@ spec:
               - envoy_grpc:
                   cluster_name: xds_cluster
                 initial_metadata:
-                - key: "x-envoy-gateway-ir-key"
+                - key: x-envoy-gateway-ir-key
                   value: "default/default"
-                - key: "x-envoy-node-id"
+                - key: x-envoy-node-id
                   value: "$(ENVOY_POD_NAME)"
               set_node_on_first_message_only: true
             lds_config:

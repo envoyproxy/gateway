@@ -14,6 +14,7 @@ import (
 	"google.golang.org/grpc/metadata"
 	"k8s.io/client-go/kubernetes"
 
+	"github.com/envoyproxy/gateway/internal/xds/bootstrap"
 	"github.com/envoyproxy/gateway/internal/xds/cache"
 )
 
@@ -76,12 +77,12 @@ func processProxyMetadata(md metadata.MD) (*proxyMetadata, error) {
 	}
 	tokenStr := strings.TrimPrefix(authHeader[0], "Bearer ")
 
-	irKey, exists := md[envoyIrKeyHeader]
+	irKey, exists := md[bootstrap.EnvoyIrKeyHeader]
 	if !exists || len(irKey) == 0 {
 		return nil, fmt.Errorf("missing ir key in metadata: %s", md)
 	}
 
-	nodeID, exists := md[envoyNodeIDHeader]
+	nodeID, exists := md[bootstrap.EnvoyNodeIDHeader]
 	if !exists || len(nodeID) == 0 {
 		return nil, fmt.Errorf("missing node ID in metadata: %s", md)
 	}
