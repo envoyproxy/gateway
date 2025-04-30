@@ -13,6 +13,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"time"
 
@@ -36,6 +37,7 @@ type Provider struct {
 	resources  *message.ProviderResources
 	reconciler *kubernetes.OfflineGatewayAPIReconciler
 	store      *resourcesStore
+	status     *StatusHandler
 
 	// ready indicates whether the provider can start watching filesystem events.
 	ready atomic.Bool
@@ -49,7 +51,8 @@ func New(ctx context.Context, svr *config.Server, resources *message.ProviderRes
 	}
 
 	// Create gateway-api offline reconciler.
-	reconciler, err := kubernetes.NewOfflineGatewayAPIController(ctx, svr, nil, resources)
+	statusHandler := NewStatusHandler(logger)
+	reconciler, err := kubernetes.NewOfflineGatewayAPIController(ctx, svr, statusHandler.Writer(), resources)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create offline gateway-api controller")
 	}
@@ -61,6 +64,7 @@ func New(ctx context.Context, svr *config.Server, resources *message.ProviderRes
 		resources:  resources,
 		reconciler: reconciler,
 		store:      newResourcesStore(svr.EnvoyGateway.Gateway.ControllerName, reconciler.Client, resources, logger),
+		status:     statusHandler,
 	}, nil
 }
 
@@ -81,7 +85,14 @@ func (p *Provider) Start(ctx context.Context) error {
 		return nil
 	}
 	go p.startHealthProbeServer(ctx, readyzChecker)
-	go p.startReconciling(ctx)
+
+	// Offline controller should be started before initial resources load.
+	// Nor we may lose some messages from controller.
+	wg := new(sync.WaitGroup)
+	wg.Add(2)
+	go p.startReconciling(ctx, wg)
+	go p.status.Start(ctx, wg)
+	wg.Wait()
 
 	initDirs, initFiles := path.ListDirsAndFiles(p.paths)
 	// Initially load resources.
@@ -166,7 +177,9 @@ func (p *Provider) Start(ctx context.Context) error {
 }
 
 // startReconciling starts reconcile on offline controller when receiving signal from resources store.
-func (p *Provider) startReconciling(ctx context.Context) {
+func (p *Provider) startReconciling(ctx context.Context, ready *sync.WaitGroup) {
+	ready.Done()
+
 	for {
 		select {
 		case rid := <-p.store.reconcile:
