@@ -1533,9 +1533,12 @@ func (r *RouteDestination) ToBackendWeights() *BackendWeights {
 			continue
 		}
 
-		if len(s.Endpoints) > 0 {
+		switch {
+		case s.IsDynamicResolver: // Dynamic resolver has no endpoints
 			w.Valid += *s.Weight
-		} else {
+		case len(s.Endpoints) > 0:
+			w.Valid += *s.Weight
+		default:
 			w.Invalid += *s.Weight
 		}
 	}
@@ -1548,6 +1551,11 @@ func (r *RouteDestination) ToBackendWeights() *BackendWeights {
 type DestinationSetting struct {
 	// Name of the setting
 	Name string `json:"name" yaml:"name"`
+
+	// IsDynamicResolver specifies whether the destination is a dynamic resolver.
+	// A dynamic resolver is a destination that is resolved dynamically using the request's host header.
+	IsDynamicResolver bool `json:"isDynamicResolver,omitempty" yaml:"isDynamicResolver,omitempty"`
+
 	// Weight associated with this destination,
 	// invalid endpoints are represents with a
 	// non-zero weight with an empty endpoints list

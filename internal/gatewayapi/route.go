@@ -219,6 +219,7 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 		destName := irRouteDestinationName(httpRoute, ruleIdx)
 		allDs := []*ir.DestinationSetting{}
 		failedProcessDestination := false
+		hasDynamicResolver := false
 
 		// process each backendRef, and calculate the destination settings for this rule
 		for i, backendRef := range rule.BackendRefs {
@@ -238,6 +239,11 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 				continue
 			}
 			allDs = append(allDs, ds)
+
+			// check if there is a dynamic resolver in the backendRefs
+			if ds.IsDynamicResolver {
+				hasDynamicResolver = true
+			}
 		}
 
 		// process each ir route
@@ -261,11 +267,26 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 				irRoute.DirectResponse = &ir.CustomResponse{
 					StatusCode: ptr.To(uint32(500)),
 				}
+				// A route can only have one destination if this destination is a dynamic resolver, because the behavior of
+				// multiple destinations with one being a dynamic resolver just doesn't make sense.
+			case hasDynamicResolver && len(rule.BackendRefs) > 1:
+				irRoute.DirectResponse = &ir.CustomResponse{
+					StatusCode: ptr.To(uint32(500)),
+				}
 			default:
 				destination.Name = destName
 				destination.Settings = allDs
 				irRoute.Destination = destination
 			}
+		}
+
+		if hasDynamicResolver && len(rule.BackendRefs) > 1 {
+			errs.Add(status.NewRouteStatusError(
+				fmt.Errorf(
+					"failed to process route rule %d: dynamic resolver is not supported for multiple backendRefs",
+					ruleIdx),
+				status.RouteReasonInvalidBackendRef,
+			))
 		}
 
 		// TODO handle:
@@ -1867,6 +1888,12 @@ func (t *Translator) processBackendDestinationSetting(
 
 	backend := resources.GetBackend(backendNamespace, string(backendRef.Name))
 	ds := &ir.DestinationSetting{Name: name}
+
+	// There is only one backend if it is a dynamic resolver
+	if backend.Spec.Type != nil && *backend.Spec.Type == egv1a1.BackendTypeDynamicResolver {
+		ds.IsDynamicResolver = true
+		return ds
+	}
 
 	for _, bep := range backend.Spec.Endpoints {
 		var irde *ir.DestinationEndpoint
