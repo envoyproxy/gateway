@@ -143,7 +143,7 @@ func processClusterForTracing(tCtx *types.ResourceVersionTable, tracing *ir.Trac
 		backendConnection: traffic.BackendConnection,
 		dns:               traffic.DNS,
 		http2Settings:     traffic.HTTP2,
-		metadata: 		   tracing.Destination.Metadata,
+		metadata:          tracing.Destination.Metadata,
 	})
 }
 
