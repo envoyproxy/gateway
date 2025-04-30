@@ -52,6 +52,7 @@ func TestTranslate(t *testing.T) {
 		name                    string
 		EnvoyPatchPolicyEnabled bool
 		BackendEnabled          bool
+		GatewayNamespaceMode    bool
 	}{
 		{
 			name:                    "envoypatchpolicy-invalid-feature-disabled",
@@ -60,6 +61,10 @@ func TestTranslate(t *testing.T) {
 		{
 			name:                    "backend-invalid-feature-disabled",
 			EnvoyPatchPolicyEnabled: false,
+		},
+		{
+			name:                 "gateway-namespace-mode-infra-httproute",
+			GatewayNamespaceMode: true,
 		},
 	}
 
@@ -75,11 +80,13 @@ func TestTranslate(t *testing.T) {
 			mustUnmarshal(t, input, resources)
 			envoyPatchPolicyEnabled := true
 			backendEnabled := true
+			gatewayNamespaceMode := false
 
 			for _, config := range testCasesConfig {
 				if config.name == strings.Split(filepath.Base(inputFile), ".")[0] {
 					envoyPatchPolicyEnabled = config.EnvoyPatchPolicyEnabled
 					backendEnabled = config.BackendEnabled
+					gatewayNamespaceMode = config.GatewayNamespaceMode
 				}
 			}
 
@@ -89,8 +96,9 @@ func TestTranslate(t *testing.T) {
 				GlobalRateLimitEnabled:  true,
 				EnvoyPatchPolicyEnabled: envoyPatchPolicyEnabled,
 				BackendEnabled:          backendEnabled,
-				Namespace:               "envoy-gateway-system",
+				ControllerNamespace:     "envoy-gateway-system",
 				MergeGateways:           IsMergeGatewaysEnabled(resources),
+				GatewayNamespaceMode:    gatewayNamespaceMode,
 				WasmCache:               &mockWasmCache{},
 			}
 

@@ -100,7 +100,7 @@ func TestServiceAccount(t *testing.T) {
 			},
 		},
 	}
-	r := NewResourceRender(cfg.Namespace, cfg.EnvoyGateway, ownerReferenceUID)
+	r := NewResourceRender(cfg.ControllerNamespace, cfg.EnvoyGateway, ownerReferenceUID)
 
 	sa, err := r.ServiceAccount()
 	require.NoError(t, err)
@@ -162,7 +162,7 @@ func TestService(t *testing.T) {
 
 	for _, tc := range cases {
 		cfg.EnvoyGateway.RateLimit = tc.rateLimit
-		r := NewResourceRender(cfg.Namespace, cfg.EnvoyGateway, ownerReferenceUID)
+		r := NewResourceRender(cfg.ControllerNamespace, cfg.EnvoyGateway, ownerReferenceUID)
 
 		svc, err := r.Service()
 		require.NoError(t, err)
@@ -196,8 +196,8 @@ func TestConfigmap(t *testing.T) {
 			},
 		},
 	}
-	r := NewResourceRender(cfg.Namespace, cfg.EnvoyGateway, ownerReferenceUID)
-	cm, err := r.ConfigMap()
+	r := NewResourceRender(cfg.ControllerNamespace, cfg.EnvoyGateway, ownerReferenceUID)
+	cm, err := r.ConfigMap("")
 	require.NoError(t, err)
 
 	if *overrideTestData {
@@ -766,7 +766,7 @@ func TestDeployment(t *testing.T) {
 					RateLimitDeployment: tc.deploy,
 				},
 			}
-			r := NewResourceRender(cfg.Namespace, cfg.EnvoyGateway, ownerReferenceUID)
+			r := NewResourceRender(cfg.ControllerNamespace, cfg.EnvoyGateway, ownerReferenceUID)
 			dp, err := r.Deployment()
 			require.NoError(t, err)
 
@@ -882,7 +882,7 @@ func TestHorizontalPodAutoscaler(t *testing.T) {
 					RateLimitDeployment: tc.rateLimitDeployment,
 				},
 			}
-			r := NewResourceRender(cfg.Namespace, cfg.EnvoyGateway, ownerReferenceUID)
+			r := NewResourceRender(cfg.ControllerNamespace, cfg.EnvoyGateway, ownerReferenceUID)
 			hpa, err := r.HorizontalPodAutoscaler()
 			require.NoError(t, err)
 

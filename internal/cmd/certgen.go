@@ -97,7 +97,7 @@ func certGen(ctx context.Context, logOut io.Writer, local bool) error {
 func outputCertsForKubernetes(ctx context.Context, cli client.Client, cfg *config.Server,
 	updateSecrets bool, certs *crypto.Certificates,
 ) error {
-	secrets, err := kubernetes.CreateOrUpdateSecrets(ctx, cli, kubernetes.CertsToSecret(cfg.Namespace, certs), updateSecrets)
+	secrets, err := kubernetes.CreateOrUpdateSecrets(ctx, cli, kubernetes.CertsToSecret(cfg.ControllerNamespace, certs), updateSecrets)
 	log := cfg.Logger
 
 	if err != nil {
@@ -121,7 +121,7 @@ func patchTopologyInjectorWebhook(ctx context.Context, cli client.Client, cfg *c
 		return nil
 	}
 
-	webhookConfigName := fmt.Sprintf("%s.%s", topologyWebhookNamePrefix, cfg.Namespace)
+	webhookConfigName := fmt.Sprintf("%s.%s", topologyWebhookNamePrefix, cfg.ControllerNamespace)
 	webhookCfg := &admissionregistrationv1.MutatingWebhookConfiguration{}
 	if err := cli.Get(ctx, client.ObjectKey{Name: webhookConfigName}, webhookCfg); err != nil {
 		return fmt.Errorf("failed to get mutating webhook configuration: %w", err)
