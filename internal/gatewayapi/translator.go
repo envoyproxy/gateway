@@ -11,6 +11,7 @@ import (
 	"golang.org/x/exp/maps"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/ptr"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a3 "sigs.k8s.io/gateway-api/apis/v1alpha3"
@@ -284,7 +285,6 @@ func (t *Translator) InitIRs(gateways []*GatewayContext) (map[string]*ir.Xds, ma
 	xdsIR := make(resource.XdsIRMap)
 	infraIR := make(resource.InfraIRMap)
 
-	var irKey string
 	for _, gateway := range gateways {
 		gwXdsIR := &ir.Xds{}
 		gwInfraIR := ir.NewInfra()
@@ -292,14 +292,11 @@ func (t *Translator) InitIRs(gateways []*GatewayContext) (map[string]*ir.Xds, ma
 		annotations := infrastructureAnnotations(gateway.Gateway)
 		gwInfraIR.Proxy.GetProxyMetadata().Annotations = annotations
 
+		irKey := t.IRKey(types.NamespacedName{Namespace: gateway.Namespace, Name: gateway.Name})
 		if t.MergeGateways {
-			irKey = string(t.GatewayClassName)
-
 			maps.Copy(labels, GatewayClassOwnerLabel(string(t.GatewayClassName)))
 			gwInfraIR.Proxy.GetProxyMetadata().Labels = labels
 		} else {
-			irKey = irStringKey(gateway.Gateway.Namespace, gateway.Gateway.Name)
-
 			maps.Copy(labels, GatewayOwnerLabels(gateway.Namespace, gateway.Name))
 			gwInfraIR.Proxy.GetProxyMetadata().Labels = labels
 		}
@@ -311,6 +308,13 @@ func (t *Translator) InitIRs(gateways []*GatewayContext) (map[string]*ir.Xds, ma
 	}
 
 	return xdsIR, infraIR
+}
+
+func (t *Translator) IRKey(gatewayNN types.NamespacedName) string {
+	if t.MergeGateways {
+		return string(t.GatewayClassName)
+	}
+	return irStringKey(gatewayNN.Namespace, gatewayNN.Name)
 }
 
 // IsEnvoyServiceRouting returns true if EnvoyProxy.Spec.RoutingType == ServiceRoutingType

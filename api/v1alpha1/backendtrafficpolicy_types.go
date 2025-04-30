@@ -85,8 +85,11 @@ type BackendTrafficPolicySpec struct {
 	// HTTPUpgrade defines the configuration for HTTP protocol upgrades.
 	// If not specified, the default upgrade configuration(websocket) will be used.
 	//
+	// +patchMergeKey=type
+	// +patchStrategy=merge
+	//
 	// +optional
-	HTTPUpgrade []*ProtocolUpgradeConfig `json:"httpUpgrade,omitempty"`
+	HTTPUpgrade []*ProtocolUpgradeConfig `json:"httpUpgrade,omitempty" patchMergeKey:"type" patchStrategy:"merge"`
 
 	// RequestBuffer allows the gateway to buffer and fully receive each request from a client before continuing to send the request
 	// upstream to the backends. This can be helpful to shield your backend servers from slow clients, and also to enforce a maximum size per request

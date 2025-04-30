@@ -13,6 +13,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
+	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 )
 
 const (
@@ -36,6 +37,28 @@ const (
 	HTTPProtocol = "http"
 	// GRPCProtocol is the common-used grpc protocol.
 	GRPCProtocol = "grpc"
+)
+
+const (
+	// PolicyConditionOverridden indicates whether the policy has
+	// completely attached to all the sections within the target or not.
+	//
+	// Possible reasons for this condition to be True are:
+	//
+	// * "Overridden"
+	//
+	PolicyConditionOverridden gwapiv1a2.PolicyConditionType = "Overridden"
+
+	// PolicyReasonOverridden is used with the "Overridden" condition when the policy
+	// has been overridden by another policy targeting a section within the same target.
+	PolicyReasonOverridden gwapiv1a2.PolicyConditionReason = "Overridden"
+
+	// PolicyConditionMerged indicates whether the policy has
+	// been merged with another policy targeting the parent(e.g. Gateway).
+	PolicyConditionMerged gwapiv1a2.PolicyConditionType = "Merged"
+	// PolicyReasonMerged is used with the "Merged" condition when the policy
+	// has been merged with another policy targeting the parent(e.g. Gateway).
+	PolicyReasonMerged gwapiv1a2.PolicyConditionReason = "Merged"
 )
 
 // GroupVersionKind unambiguously identifies a Kind.
