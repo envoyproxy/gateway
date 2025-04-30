@@ -8,7 +8,6 @@ package gatewayapi
 import (
 	"fmt"
 	"net"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sort"
 	"strconv"
 	"strings"
@@ -18,6 +17,7 @@ import (
 	discoveryv1 "k8s.io/api/discovery/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	mcsapiv1a1 "sigs.k8s.io/mcs-api/pkg/apis/v1alpha1"
@@ -1524,7 +1524,7 @@ func (t *Translator) processServiceImportDestinationSetting(
 		Protocol:    protocol,
 		Endpoints:   endpoints,
 		AddressType: addrType,
-		Metadata: buildResourceMetadata(serviceImport, ptr.To(gwapiv1.SectionName(strconv.Itoa(int(*backendRef.Port))))),
+		Metadata:    buildResourceMetadata(serviceImport, ptr.To(gwapiv1.SectionName(strconv.Itoa(int(*backendRef.Port))))),
 	}
 }
 
@@ -1571,7 +1571,7 @@ func (t *Translator) processServiceDestinationSetting(
 		Endpoints:               endpoints,
 		AddressType:             addrType,
 		ZoneAwareRoutingEnabled: isZoneAwareRoutingEnabled(service),
-		Metadata: buildResourceMetadata(service, ptr.To(gwapiv1.SectionName(strconv.Itoa(int(*backendRef.Port))))),
+		Metadata:                buildResourceMetadata(service, ptr.To(gwapiv1.SectionName(strconv.Itoa(int(*backendRef.Port))))),
 	}
 }
 

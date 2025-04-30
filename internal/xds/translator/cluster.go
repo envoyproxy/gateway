@@ -145,7 +145,7 @@ func buildXdsCluster(args *xdsClusterArgs) (*buildClusterResult, error) {
 			},
 		},
 		PerConnectionBufferLimitBytes: buildBackandConnectionBufferLimitBytes(args.backendConnection),
-		Metadata: buildXdsMetadata(args.metadata),
+		Metadata:                      buildXdsMetadata(args.metadata),
 	}
 
 	// 50% is the Envoy default value for panic threshold. No need to explicitly set it in this case.
@@ -1060,7 +1060,7 @@ func (route *UDPRouteTranslator) asClusterArgs(name string,
 		metrics:      extra.metrics,
 		dns:          route.DNS,
 		ipFamily:     extra.ipFamily,
-		metadata:	  metadata,
+		metadata:     metadata,
 	}
 }
 
@@ -1087,7 +1087,7 @@ func (route *TCPRouteTranslator) asClusterArgs(name string,
 		backendConnection: route.BackendConnection,
 		dns:               route.DNS,
 		ipFamily:          extra.ipFamily,
-		metadata:	 	   metadata,
+		metadata:          metadata,
 	}
 }
 
@@ -1110,7 +1110,7 @@ func (httpRoute *HTTPRouteTranslator) asClusterArgs(name string,
 		http2Settings:     extra.http2Settings,
 		useClientProtocol: ptr.Deref(httpRoute.UseClientProtocol, false),
 		ipFamily:          extra.ipFamily,
-		metadata: 		   metadata,
+		metadata:          metadata,
 	}
 
 	// Populate traffic features.

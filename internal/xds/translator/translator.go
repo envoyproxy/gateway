@@ -566,7 +566,7 @@ func (t *Translator) addRouteToRouteConfig(
 						tSocket:      nil,
 						endpointType: EndpointTypeStatic,
 						metrics:      metrics,
-						metadata: 	  mrr.Destination.Metadata,
+						metadata:     mrr.Destination.Metadata,
 					}); err != nil {
 						errs = errors.Join(errs, err)
 					}
