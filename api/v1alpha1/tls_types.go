@@ -141,6 +141,52 @@ type ClientValidationContext struct {
 	// +kubebuilder:validation:MaxItems=8
 	// +optional
 	CACertificateRefs []gwapiv1.SecretObjectReference `json:"caCertificateRefs,omitempty"`
+
+	// An optional list of base64-encoded SHA-256 hashes. If specified, Envoy will
+	// verify that the SHA-256 of the DER-encoded Subject Public Key Information
+	// (SPKI) of the presented certificate matches one of the specified values.
+	// +optional
+	PublicKeyPins []string `json:"publicKeyPins,omitempty"`
+
+	// An optional list of hex-encoded SHA-256 hashes. If specified, Envoy will
+	// verify that the SHA-256 of the DER-encoded presented certificate matches
+	// one of the specified values.
+	// +optional
+	CertificateHashes []string `json:"certificateHashes,omitempty"`
+
+	// An optional list of Subject Alternative name matchers. If specified, Envoy
+	// will verify that the Subject Alternative Name of the presented certificate
+	// matches one of the specified matchers
+	// +optional
+	SubjectAltNames *SubjectAltNames `json:"subjectAltNames,omitempty"`
+}
+
+type SubjectAltNames struct {
+	// DNS names matchers
+	// +optional
+	DNSNames []StringMatch `json:"dnsNames,omitempty"`
+
+	// Email addresses matchers
+	// +optional
+	EmailAddresses []StringMatch `json:"emailAddresses,omitempty"`
+
+	// IP addresses matchers
+	// +optional
+	IPAddresses []StringMatch `json:"ipAddresses,omitempty"`
+
+	// URIs matchers
+	// +optional
+	URIs []StringMatch `json:"uris,omitempty"`
+
+	// Other names matchers
+	// +optional
+	OtherNames []OtherNameMatch `json:"otherNames,omitempty"`
+}
+
+type OtherNameMatch struct {
+	// OID Value
+	Oid   string      `json:"oid"`
+	Match StringMatch `json:",inline"`
 }
 
 // Session defines settings related to TLS session management.
