@@ -522,7 +522,7 @@ func (t *Translator) addRouteToRouteConfig(
 			var err error
 			// If there are no filters in the destination settings we create
 			// a regular xds Cluster
-			if !needsClusterPerSetting(httpRoute.Destination.Settings) {
+			if !httpRoute.Destination.NeedsClusterPerSetting() {
 				err = processXdsCluster(
 					tCtx,
 					httpRoute.Destination.Name,

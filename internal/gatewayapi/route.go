@@ -16,7 +16,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/utils/ptr"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
@@ -184,15 +183,9 @@ func (t *Translator) processHTTPRouteParentRefs(httpRoute *HTTPRouteContext, res
 
 func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRef *RouteParentContext, resources *resource.Resources) ([]*ir.HTTPRoute, status.Error) {
 	var (
-		irRoutes   []*ir.HTTPRoute
-		envoyProxy *egv1a1.EnvoyProxy
-		errs       = &status.MultiStatusError{}
+		irRoutes []*ir.HTTPRoute
+		errs     = &status.MultiStatusError{}
 	)
-
-	gatewayCtx := httpRoute.ParentRefs[*parentRef.ParentReference].GetGateway()
-	if gatewayCtx != nil {
-		envoyProxy = gatewayCtx.envoyProxy
-	}
 
 	// process each HTTPRouteRule, generate a unique Xds IR HTTPRoute per match of the rule
 	for ruleIdx, rule := range httpRoute.Spec.Rules {
@@ -216,7 +209,6 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 			continue
 		}
 
-		dstAddrTypeSet := make(sets.Set[ir.DestinationAddressType])
 		destName := irRouteDestinationName(httpRoute, ruleIdx)
 		allDs := []*ir.DestinationSetting{}
 		failedProcessDestination := false
@@ -239,10 +231,6 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 				continue
 			}
 			allDs = append(allDs, ds)
-
-			if !t.IsEnvoyServiceRouting(envoyProxy) && len(ds.Endpoints) > 0 && ds.AddressType != nil {
-				dstAddrTypeSet.Insert(*ds.AddressType)
-			}
 		}
 
 		// process each ir route
@@ -271,16 +259,6 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 				destination.Settings = allDs
 				irRoute.Destination = destination
 			}
-		}
-
-		// TODO: support mixed endpointslice address type between backendRefs
-		if !t.IsEnvoyServiceRouting(envoyProxy) && (dstAddrTypeSet.Len() > 1 || dstAddrTypeSet.Has(ir.MIXED)) {
-			errs.Add(status.NewRouteStatusError(
-				fmt.Errorf(
-					"failed to process route rule %d: mixed endpointslice address type between backendRefs is not supported",
-					ruleIdx),
-				status.RouteReasonInvalidBackendRef,
-			))
 		}
 
 		// TODO handle:
@@ -1401,6 +1379,11 @@ func validateDestinationSettings(destinationSettings *ir.DestinationSetting, end
 				status.RouteReasonUnsupportedAddressType)
 		}
 	case resource.KindService, resource.KindServiceImport:
+		if endpointRoutingDisabled && isHeadlessService(destinationSettings) {
+			return status.NewRouteStatusError(
+				fmt.Errorf("service %s is a headless Service, please set routingType=Endpoint", destinationSettings.Name),
+				status.RouteReasonUnsupportedSetting)
+		}
 		if !endpointRoutingDisabled && destinationSettings.AddressType != nil && *destinationSettings.AddressType == ir.MIXED {
 			return status.NewRouteStatusError(
 				fmt.Errorf("mixed endpointslice address type for the same backendRef is not supported"),
@@ -1409,6 +1392,17 @@ func validateDestinationSettings(destinationSettings *ir.DestinationSetting, end
 	}
 
 	return nil
+}
+
+// isHeadlessService reports true when any DestinationEndpoint corresponds to
+// a headless Kubernetes Service (ClusterIP="None").
+func isHeadlessService(ds *ir.DestinationSetting) bool {
+	for _, ep := range ds.Endpoints {
+		if ep.Host == "None" {
+			return true
+		}
+	}
+	return false
 }
 
 func (t *Translator) processServiceImportDestinationSetting(

@@ -44,26 +44,16 @@ httpRoutes:
   kind: HTTPRoute
   metadata:
     creationTimestamp: null
-    name: httproute-1
+    name: httproute-headless
     namespace: default
   spec:
     parentRefs:
     - name: gateway-1
       namespace: envoy-gateway
-      sectionName: http
     rules:
     - backendRefs:
-      - group: multicluster.x-k8s.io
-        kind: ServiceImport
-        name: service-import-1
-        port: 8080
-      - group: multicluster.x-k8s.io
-        kind: ServiceImport
-        name: service-import-2
-        port: 8081
-      matches:
-      - path:
-          value: /
+      - name: headless-service
+        port: 80
   status:
     parents:
     - conditions:
@@ -81,10 +71,20 @@ httpRoutes:
       parentRef:
         name: gateway-1
         namespace: envoy-gateway
-        sectionName: http
 infraIR:
   envoy-gateway/gateway-1:
     proxy:
+      config:
+        apiVersion: gateway.envoyproxy.io/v1alpha1
+        kind: EnvoyProxy
+        metadata:
+          creationTimestamp: null
+          name: default
+          namespace: default
+        spec:
+          logging: {}
+          routingType: Endpoint
+        status: {}
       listeners:
       - address: null
         name: envoy-gateway/gateway-1/http
@@ -119,34 +119,15 @@ xdsIR:
         mergeSlashes: true
       port: 10080
       routes:
-      - destination:
-          name: httproute/default/httproute-1/rule/0
-          settings:
-          - addressType: FQDN
-            endpoints:
-            - host: foo.bar
-              port: 8080
-            name: httproute/default/httproute-1/rule/0/backend/0
-            protocol: HTTP
-            weight: 1
-          - addressType: IP
-            endpoints:
-            - host: 1.2.3.4
-              port: 8081
-            name: httproute/default/httproute-1/rule/0/backend/1
-            protocol: HTTP
-            weight: 1
+      - directResponse:
+          statusCode: 500
         hostname: '*'
         isHTTP2: false
         metadata:
           kind: HTTPRoute
-          name: httproute-1
+          name: httproute-headless
           namespace: default
-        name: httproute/default/httproute-1/rule/0/match/0/*
-        pathMatch:
-          distinct: false
-          name: ""
-          prefix: /
+        name: httproute/default/httproute-headless/rule/0/match/-1/*
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4
