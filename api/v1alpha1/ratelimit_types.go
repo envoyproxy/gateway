@@ -194,7 +194,7 @@ type RateLimitSelectCondition struct {
 	//
 	// +optional
 	// +kubebuilder:validation:MaxItems=16
-	Headers []HeaderMatch `json:"headers,omitempty" patchStrategy:"merge" patchStrategy:"name"`
+	Headers []HeaderMatch `json:"headers,omitempty"`
 
 	// SourceCIDR is the client IP Address range to match on.
 	// At least one of headers or sourceCIDR condition must be specified.

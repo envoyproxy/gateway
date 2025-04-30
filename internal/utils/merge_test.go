@@ -6,23 +6,21 @@
 package utils
 
 import (
-	"flag"
 	"fmt"
 	"os"
 	"path/filepath"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/yaml"
 	"strings"
 	"testing"
 
-	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/stretchr/testify/require"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/yaml"
+
+	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/utils/test"
 )
 
-var overrideTestData = flag.Bool("override-testdata", false, "if override the test output data.")
-
 func TestMergeBackendTrafficPolicy(t *testing.T) {
-
 	baseDir := "testdata/merge/backendtrafficpolicy"
 	caseFiles, err := filepath.Glob(filepath.Join(baseDir, "*.in.yaml"))
 	require.NoError(t, err)
@@ -44,13 +42,13 @@ func TestMergeBackendTrafficPolicy(t *testing.T) {
 				original := readObject[*egv1a1.BackendTrafficPolicy](t, caseFile)
 				patch := readObject[*egv1a1.BackendTrafficPolicy](t, patchedInput)
 
-				got, err := Merge[*egv1a1.BackendTrafficPolicy](original, patch, mergeType)
+				got, err := Merge(original, patch, mergeType)
 				require.NoError(t, err)
 
-				if *overrideTestData {
+				if test.OverrideTestData() {
 					b, err := yaml.Marshal(got)
 					require.NoError(t, err)
-					require.NoError(t, os.WriteFile(output, b, 0644))
+					require.NoError(t, os.WriteFile(output, b, 0o600))
 					return
 				}
 
