@@ -36,7 +36,8 @@ new features: |
   Added support for using a local JWKS in an inline string or in a ConfigMap to validate JWT tokens in SecurityPolicy
   Added support for logging the status of resources in standalone mode.
   Added support for per-route tracing in BackendTrafficPolicy
-
+  Added support for configuring retry settings for Extension Service hooks in EnvoyGateway config.
+  Added support for request buffering using the Envoy Buffer filter
 
 bug fixes: |
   Fix traffic splitting when filters are attached to the backendRef.
@@ -63,4 +64,4 @@ deprecations: |
 
 # Other notable changes not covered by the above sections.
 Other changes: |
-  Updated gateway-api to v1.3.0-rc.1
+  Updated gateway-api to v1.3.0

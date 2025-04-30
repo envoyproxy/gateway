@@ -79,7 +79,7 @@ func buildXdsRoute(httpRoute *ir.HTTPRoute) (*routev3.Route, error) {
 		router.Action = &routev3.Route_Route{Route: routeAction}
 	default:
 		backendWeights := httpRoute.Destination.ToBackendWeights()
-		routeAction := buildXdsRouteAction(backendWeights, httpRoute.Destination.Settings)
+		routeAction := buildXdsRouteAction(backendWeights, httpRoute.Destination)
 		routeAction.IdleTimeout = idleTimeout(httpRoute)
 
 		if httpRoute.Mirrors != nil {
@@ -246,10 +246,10 @@ func buildXdsStringMatcher(irMatch *ir.StringMatch) *matcherv3.StringMatcher {
 	return stringMatcher
 }
 
-func buildXdsRouteAction(backendWeights *ir.BackendWeights, settings []*ir.DestinationSetting) *routev3.RouteAction {
+func buildXdsRouteAction(backendWeights *ir.BackendWeights, dest *ir.RouteDestination) *routev3.RouteAction {
 	// only use weighted cluster when there are invalid weights
-	if needsClusterPerSetting(settings) || backendWeights.Invalid != 0 {
-		return buildXdsWeightedRouteAction(backendWeights, settings)
+	if dest.NeedsClusterPerSetting() || backendWeights.Invalid != 0 {
+		return buildXdsWeightedRouteAction(backendWeights, dest.Settings)
 	}
 
 	return &routev3.RouteAction{
@@ -747,34 +747,4 @@ func buildRetryOn(triggers []ir.TriggerEnum) (string, error) {
 	}
 
 	return b.String(), nil
-}
-
-func needsClusterPerSetting(settings []*ir.DestinationSetting) bool {
-	if hasFiltersInSettings(settings) || hasZoneAwareRouting(settings) {
-		return true
-	}
-	return false
-}
-
-func hasFiltersInSettings(settings []*ir.DestinationSetting) bool {
-	for _, setting := range settings {
-		filters := setting.Filters
-		if filters != nil {
-			return true
-		}
-	}
-	return false
-}
-
-func hasZoneAwareRouting(settings []*ir.DestinationSetting) bool {
-	// Only use weighted clusters if more than one setting
-	if len(settings) < 2 {
-		return false
-	}
-	for _, setting := range settings {
-		if setting.ZoneAwareRoutingEnabled {
-			return true
-		}
-	}
-	return false
 }

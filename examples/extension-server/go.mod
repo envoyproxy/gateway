@@ -4,19 +4,19 @@ go 1.24.2
 
 require (
 	github.com/envoyproxy/gateway v1.3.1
-	github.com/envoyproxy/go-control-plane v0.13.5-0.20250303232259-0c5cb90447bb
-	github.com/envoyproxy/go-control-plane/envoy v1.32.5-0.20250303232259-0c5cb90447bb
+	github.com/envoyproxy/go-control-plane v0.13.5-0.20250408134212-157c26b62099
+	github.com/envoyproxy/go-control-plane/envoy v1.32.5-0.20250408134212-157c26b62099
 	github.com/urfave/cli/v2 v2.27.6
-	google.golang.org/grpc v1.71.1
+	google.golang.org/grpc v1.72.0
 	google.golang.org/protobuf v1.36.6
 	k8s.io/apimachinery v0.34.0-alpha.0
 	sigs.k8s.io/controller-runtime v0.20.4
-	sigs.k8s.io/gateway-api v1.3.0-rc.2
+	sigs.k8s.io/gateway-api v1.3.0
 )
 
 require (
-	cel.dev/expr v0.19.1 // indirect
-	github.com/cncf/xds/go v0.0.0-20241223141626-cff3c89139a3 // indirect
+	cel.dev/expr v0.20.0 // indirect
+	github.com/cncf/xds/go v0.0.0-20250121191232-2f005788dc42 // indirect
 	github.com/cpuguy83/go-md2man/v2 v2.0.6 // indirect
 	github.com/envoyproxy/protoc-gen-validate v1.2.1 // indirect
 	github.com/fatih/color v1.18.0 // indirect

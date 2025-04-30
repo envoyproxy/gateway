@@ -39,7 +39,6 @@ import (
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/google/go-containerregistry/pkg/v1/types"
-	"github.com/hashicorp/go-multierror"
 
 	"github.com/envoyproxy/gateway/internal/logging"
 )
@@ -163,7 +162,7 @@ func (o *ImageFetcher) PrepareFetch(url string) (binaryFetcher func() ([]byte, e
 
 		// We failed to parse the image in any format, so wrap the errors and return.
 		return nil, fmt.Errorf("the given image is in invalid format as an OCI image: %w",
-			multierror.Append(err,
+			errors.Join(err,
 				fmt.Errorf("could not parse as compat variant: %w", errCompat),
 				fmt.Errorf("could not parse as oci variant: %w", errOCI),
 			),

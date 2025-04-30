@@ -1062,6 +1062,131 @@ func TestValidateTCPRoute(t *testing.T) {
 	}
 }
 
+func TestRouteDestination_NeedsClusterPerSetting(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    RouteDestination
+		expected bool
+	}{
+		{
+			name: "single cluster",
+			input: RouteDestination{
+				Name: "valid hostname",
+				Settings: []*DestinationSetting{
+					{
+						Endpoints: []*DestinationEndpoint{
+							{
+								Host: "example.com",
+								Port: 8080,
+							},
+						},
+					},
+				},
+			},
+			expected: false,
+		},
+		{
+			name: "cluster per setting mixed endpoints",
+			input: RouteDestination{
+				Name: "valid hostname",
+				Settings: []*DestinationSetting{
+					{
+						Endpoints: []*DestinationEndpoint{
+							{
+								Host: "example.com",
+								Port: 8080,
+							},
+						},
+						AddressType: ptr.To(FQDN),
+					},
+					{
+						Endpoints: []*DestinationEndpoint{
+							{
+								Host: "10.0.1.2",
+								Port: 8080,
+							},
+						},
+						AddressType: ptr.To(IP),
+					},
+				},
+			},
+			expected: true,
+		},
+		{
+			name: "cluster per setting has zone aware routing more than one setting",
+			input: RouteDestination{
+				Name: "valid hostname",
+				Settings: []*DestinationSetting{
+					{
+						Endpoints: []*DestinationEndpoint{
+							{
+								Host: "example.com",
+								Port: 8080,
+							},
+						},
+						AddressType:             ptr.To(FQDN),
+						ZoneAwareRoutingEnabled: true,
+					},
+					{
+						Endpoints: []*DestinationEndpoint{
+							{
+								Host: "example1.com",
+								Port: 8082,
+							},
+						},
+						AddressType: ptr.To(FQDN),
+					},
+				},
+			},
+			expected: true,
+		},
+		{
+			name: "cluster per setting has zone aware routing one setting",
+			input: RouteDestination{
+				Name: "valid hostname",
+				Settings: []*DestinationSetting{
+					{
+						Endpoints: []*DestinationEndpoint{
+							{
+								Host: "example.com",
+								Port: 8080,
+							},
+						},
+						AddressType:             ptr.To(FQDN),
+						ZoneAwareRoutingEnabled: true,
+					},
+				},
+			},
+			expected: false,
+		},
+		{
+			name: "cluster per setting has filters",
+			input: RouteDestination{
+				Name: "valid hostname",
+				Settings: []*DestinationSetting{
+					{
+						Endpoints: []*DestinationEndpoint{
+							{
+								Host: "example.com",
+								Port: 8080,
+							},
+						},
+						AddressType: ptr.To(FQDN),
+						Filters:     &DestinationFilters{},
+					},
+				},
+			},
+			expected: true,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			assert.Equal(t, test.expected, test.input.NeedsClusterPerSetting())
+		})
+	}
+}
+
 func TestValidateRouteDestination(t *testing.T) {
 	tests := []struct {
 		name  string
@@ -1171,53 +1296,6 @@ func TestValidateRouteDestination(t *testing.T) {
 				},
 			},
 			want: ErrDestinationNameEmpty,
-		},
-		{
-			name: "mixed address types with MIXED in destinations",
-			input: RouteDestination{
-				Settings: []*DestinationSetting{
-					{
-						Endpoints: []*DestinationEndpoint{
-							{
-								Host: "10.11.12.13",
-								Port: 8080,
-							},
-							{
-								Host: "example.com",
-								Port: 8080,
-							},
-						},
-						AddressType: ptr.To(MIXED),
-					},
-				},
-			},
-			want: ErrRouteDestinationsFQDNMixed,
-		},
-		{
-			name: "mixed address types with FQDN in destinations",
-			input: RouteDestination{
-				Settings: []*DestinationSetting{
-					{
-						Endpoints: []*DestinationEndpoint{
-							{
-								Host: "10.11.12.13",
-								Port: 8080,
-							},
-						},
-						AddressType: ptr.To(IP),
-					},
-					{
-						Endpoints: []*DestinationEndpoint{
-							{
-								Host: "example.com",
-								Port: 8080,
-							},
-						},
-						AddressType: ptr.To(FQDN),
-					},
-				},
-			},
-			want: ErrRouteDestinationsFQDNMixed,
 		},
 	}
 	for _, test := range tests {
