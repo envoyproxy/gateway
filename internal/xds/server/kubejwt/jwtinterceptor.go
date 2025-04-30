@@ -10,12 +10,12 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/envoyproxy/gateway/internal/message"
-	"github.com/envoyproxy/gateway/internal/xds/cache"
-
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
 	"k8s.io/client-go/kubernetes"
+
+	"github.com/envoyproxy/gateway/internal/message"
+	"github.com/envoyproxy/gateway/internal/xds/cache"
 )
 
 // JWTAuthInterceptor verifies Kubernetes Service Account JWT tokens in gRPC requests.

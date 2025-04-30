@@ -373,7 +373,6 @@ func (s *snapshotCache) SnapshotHasIrKey(irKey string) bool {
 		if snapshot != nil && key == irKey {
 			return true
 		}
-
 	}
 
 	return false
