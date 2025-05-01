@@ -748,7 +748,8 @@ func (t *Translator) processExtensionRefHTTPFilter(extFilter *gwapiv1.LocalObjec
 
 					if hrf.Spec.URLRewrite.Hostname != nil {
 						var hm *ir.HTTPHostModifier
-						if hrf.Spec.URLRewrite.Hostname.Type == egv1a1.HeaderHTTPHostnameModifier {
+						switch hrf.Spec.URLRewrite.Hostname.Type {
+						case egv1a1.HeaderHTTPHostnameModifier:
 							if hrf.Spec.URLRewrite.Hostname.Header == nil {
 								updateRouteStatusForFilter(
 									filterContext,
@@ -758,7 +759,7 @@ func (t *Translator) processExtensionRefHTTPFilter(extFilter *gwapiv1.LocalObjec
 							hm = &ir.HTTPHostModifier{
 								Header: hrf.Spec.URLRewrite.Hostname.Header,
 							}
-						} else if hrf.Spec.URLRewrite.Hostname.Type == egv1a1.BackendHTTPHostnameModifier {
+						case egv1a1.BackendHTTPHostnameModifier:
 							hm = &ir.HTTPHostModifier{
 								Backend: ptr.To(true),
 							}

@@ -363,7 +363,8 @@ func (r *gatewayAPIReconciler) processHTTPRouteFilter(
 	}
 
 	// Load in the backendRefs from any requestMirrorFilters on the HTTPRoute
-	if filter.Type == gwapiv1.HTTPRouteFilterRequestMirror {
+	switch filter.Type {
+	case gwapiv1.HTTPRouteFilterRequestMirror:
 		// Make sure the config actually exists
 		mirrorFilter := filter.RequestMirror
 		if mirrorFilter == nil {
@@ -418,7 +419,7 @@ func (r *gatewayAPIReconciler) processHTTPRouteFilter(
 				}
 			}
 		}
-	} else if filter.Type == gwapiv1.HTTPRouteFilterExtensionRef {
+	case gwapiv1.HTTPRouteFilterExtensionRef:
 		// NOTE: filters must be in the same namespace as the HTTPRoute
 		// Check if it's a Kind managed by an extension and add to resourceTree
 		key := utils.NamespacedNameWithGroupKind{
