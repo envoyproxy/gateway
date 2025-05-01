@@ -31,7 +31,7 @@ func (m *ProxyTopologyInjector) Handle(ctx context.Context, req admission.Reques
 	if err := m.Decoder.Decode(req, binding); err != nil {
 		klog.Error(err, "decoding binding failed", "request.ObjectKind", req.Object.Object.GetObjectKind())
 		topologyInjectorEventsTotal.WithFailure(metrics.ReasonError).Increment()
-		return admission.Errored(http.StatusInternalServerError, err)
+		return admission.Allowed("internal error, skipped")
 	}
 
 	if binding.Target.Name == "" {
@@ -48,7 +48,7 @@ func (m *ProxyTopologyInjector) Handle(ctx context.Context, req admission.Reques
 	if err := m.Get(ctx, podName, pod); err != nil {
 		klog.Error(err, "get pod failed", "pod", podName.String())
 		topologyInjectorEventsTotal.WithFailure(metrics.ReasonError).Increment()
-		return admission.Errored(http.StatusInternalServerError, err)
+		return admission.Allowed("internal error, skipped")
 	}
 
 	// Skip non-proxy pods
@@ -65,7 +65,7 @@ func (m *ProxyTopologyInjector) Handle(ctx context.Context, req admission.Reques
 	if err := m.Get(ctx, nodeName, node); err != nil {
 		klog.Error(err, "get node failed", "node", node.Name)
 		topologyInjectorEventsTotal.WithFailure(metrics.ReasonError).Increment()
-		return admission.Errored(http.StatusInternalServerError, err)
+		return admission.Allowed("internal error, skipped")
 	}
 
 	var patch string
@@ -77,7 +77,7 @@ func (m *ProxyTopologyInjector) Handle(ctx context.Context, req admission.Reques
 	if err := m.Patch(ctx, pod, rawPatch); err != nil {
 		klog.Error(err, "patch pod failed", "pod", podName.String())
 		topologyInjectorEventsTotal.WithFailure(metrics.ReasonError).Increment()
-		return admission.Errored(http.StatusInternalServerError, err)
+		return admission.Allowed("internal error, skipped")
 	}
 	klog.V(1).Info("patch pod succeeded", "pod", podName.String())
 	topologyInjectorEventsTotal.WithSuccess().Increment()
