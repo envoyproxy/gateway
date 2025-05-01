@@ -355,7 +355,7 @@ spec:
               - envoy
               - shutdown
         livenessProbe:
-          failureThreshold: 10
+          failureThreshold: 3
           httpGet:
             path: /healthz
             port: 19002
