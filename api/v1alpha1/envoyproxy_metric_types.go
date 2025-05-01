@@ -41,6 +41,18 @@ type ProxyMetrics struct {
 	//
 	// +optional
 	EnableRequestResponseSizesStats *bool `json:"enableRequestResponseSizesStats,omitempty"`
+
+	// ClusterStatName defines the value of cluster alt_stat_name, determining how cluster stats are named.
+	// The supported operators for this pattern are:
+	// * %ROUTE%: name of Gateway API xRoute resource in <NAMESPACE>/<NAME> format
+	// * %ROUTE_RULE%: name of the Gateway API xRoute section
+	// * %ROUTE_RULE_NUMBER%: name of the Gateway API xRoute section
+	// * %BACKEND_REFS%: names of all backends referenced in <NAMESPACE>/<NAME>,<NAMESPACE>/<NAME>,... format
+	// Only HTTPRoute and GRPCRoute clusters are currently supported.
+	// Default: %ROUTE_KIND%/%ROUTE_NAME%/rule/%ROUTE_RULE_NUMBER%
+	//
+	// +optional
+	ClusterStatName *string `json:"clusterStatName,omitempty"`
 }
 
 // ProxyMetricSink defines the sink of metrics.

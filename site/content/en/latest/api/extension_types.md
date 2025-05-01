@@ -3660,6 +3660,7 @@ _Appears in:_
 | `enableVirtualHostStats` | _boolean_ |  false  |  | EnableVirtualHostStats enables envoy stat metrics for virtual hosts. |
 | `enablePerEndpointStats` | _boolean_ |  false  |  | EnablePerEndpointStats enables per endpoint envoy stats metrics.<br />Please use with caution. |
 | `enableRequestResponseSizesStats` | _boolean_ |  false  |  | EnableRequestResponseSizesStats enables publishing of histograms tracking header and body sizes of requests and responses. |
+| `clusterStatName` | _string_ |  false  |  | ClusterStatName defines the value of cluster alt_stat_name, determining how cluster stats are named.<br />The supported operators for this pattern are:<br />* %ROUTE%: name of Gateway API xRoute resource in <NAMESPACE>/<NAME> format<br />* %ROUTE_RULE%: name of teh Gateway API xRoute section<br />* %ROUTE_RULE_NUMBER%: name of teh Gateway API xRoute section<br />* %BACKEND_REFS%: names of all backends referenced in <NAMESPACE>/<NAME>,<NAMESPACE>/<NAME>,... format<br />Only HTTPRoute and GRPCRoute clusters are currently supported.<br />Default: %ROUTE_KIND%/%ROUTE_NAME%/rule/%ROUTE_RULE_NUMBER% |
 
 
 #### ProxyOpenTelemetrySink
