@@ -1857,9 +1857,9 @@ func (r *gatewayAPIReconciler) processGatewayParamsRef(ctx context.Context, gtw 
 	}
 
 	ref := gtw.Spec.Infrastructure.ParametersRef
-	if !(string(ref.Group) == egv1a1.GroupVersion.Group &&
-		ref.Kind == egv1a1.KindEnvoyProxy &&
-		len(ref.Name) > 0) {
+	if string(ref.Group) != egv1a1.GroupVersion.Group ||
+		ref.Kind != egv1a1.KindEnvoyProxy ||
+		len(ref.Name) == 0 {
 		return fmt.Errorf("unsupported parametersRef for gateway %s/%s", gtw.Namespace, gtw.Name)
 	}
 
@@ -2104,7 +2104,7 @@ func (r *gatewayAPIReconciler) processExtensionServerPolicies(
 			}
 			_, foundTargetRef := policySpec["targetRef"]
 			_, foundTargetRefs := policySpec["targetRefs"]
-			if !(foundTargetRef || foundTargetRefs) {
+			if !foundTargetRef && !foundTargetRefs {
 				return fmt.Errorf("not a policy object - no targetRef or targetRefs found in %s.%s %s",
 					policy.GetAPIVersion(), policy.GetKind(), policy.GetName())
 			}

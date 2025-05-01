@@ -129,7 +129,7 @@ func buildXdsAccessLog(al *ir.AccessLog, accessLogType ir.ProxyAccessLogType) ([
 	// handle text file access logs
 	for _, text := range al.Text {
 		// Filter out logs that are not Global or match the desired access log type
-		if !(text.LogType == nil || *text.LogType == accessLogType) {
+		if text.LogType != nil && *text.LogType != accessLogType {
 			continue
 		}
 
@@ -182,7 +182,7 @@ func buildXdsAccessLog(al *ir.AccessLog, accessLogType ir.ProxyAccessLogType) ([
 	// handle json file access logs
 	for _, json := range al.JSON {
 		// Filter out logs that are not Global or match the desired access log type
-		if !(json.LogType == nil || *json.LogType == accessLogType) {
+		if json.LogType != nil && *json.LogType != accessLogType {
 			continue
 		}
 
@@ -242,7 +242,7 @@ func buildXdsAccessLog(al *ir.AccessLog, accessLogType ir.ProxyAccessLogType) ([
 	// handle ALS access logs
 	for _, als := range al.ALS {
 		// Filter out logs that are not Global or match the desired access log type
-		if !(als.LogType == nil || *als.LogType == accessLogType) {
+		if als.LogType != nil && *als.LogType != accessLogType {
 			continue
 		}
 
@@ -313,7 +313,7 @@ func buildXdsAccessLog(al *ir.AccessLog, accessLogType ir.ProxyAccessLogType) ([
 	// handle open telemetry access logs
 	for _, otel := range al.OpenTelemetry {
 		// Filter out logs that are not Global or match the desired access log type
-		if !(otel.LogType == nil || *otel.LogType == accessLogType) {
+		if otel.LogType != nil && *otel.LogType != accessLogType {
 			continue
 		}
 
