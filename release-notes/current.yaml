@@ -13,7 +13,7 @@ bug fixes: |
 
 # Enhancements that improve performance.
 performance improvements: |
-  Added ScaleDeployments benchmark test.
+  Add ScaleDeployments benchmark test.
 
 # Deprecated features or APIs.
 deprecations: |
