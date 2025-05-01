@@ -8,7 +8,6 @@ package kubernetes
 import (
 	"context"
 	"fmt"
-	"net/http"
 
 	"github.com/go-openapi/jsonpointer"
 	corev1 "k8s.io/api/core/v1"
