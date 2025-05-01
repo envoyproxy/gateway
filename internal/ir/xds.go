@@ -24,6 +24,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/validation"
+	"k8s.io/utils/ptr"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	"sigs.k8s.io/yaml"
 
@@ -1520,7 +1521,7 @@ func (r *RouteDestination) HasFiltersInSettings() bool {
 // HasZoneAwareRouting returns true if any setting in the destination has ZoneAwareRoutingEnabled set
 func (r *RouteDestination) HasZoneAwareRouting() bool {
 	for _, setting := range r.Settings {
-		if setting.ZoneAwareRoutingEnabled {
+		if ptr.Deref(setting.ZoneAwareRouting, ZoneAwareRouting{}).Enabled {
 			return true
 		}
 	}
@@ -1578,9 +1579,9 @@ type DestinationSetting struct {
 	IPFamily *egv1a1.IPFamily    `json:"ipFamily,omitempty" yaml:"ipFamily,omitempty"`
 	TLS      *TLSUpstreamConfig  `json:"tls,omitempty" yaml:"tls,omitempty"`
 	Filters  *DestinationFilters `json:"filters,omitempty" yaml:"filters,omitempty"`
-	// ZoneAwareRoutingEnabled specifies whether to enable Zone Aware Routing for this destination's endpoints.
+	// ZoneAwareRouting specifies whether to enable Zone Aware Routing for this destination's endpoints.
 	// This is derived from the backend service and depends on having Kubernetes Topology Aware Routing or Traffic Distribution enabled.
-	ZoneAwareRoutingEnabled bool `json:"zoneAwareRoutingEnabled,omitempty" yaml:"zoneAwareRoutingEnabled,omitempty"`
+	ZoneAwareRouting *ZoneAwareRouting `json:"zoneAwareRouting,omitempty" yaml:"zoneAwareRouting,omitempty"`
 }
 
 // Validate the fields within the DestinationSetting structure
@@ -3070,4 +3071,11 @@ type ResourceMetadata struct {
 type RequestBuffer struct {
 	// Limit defines the maximum buffer size for requests
 	Limit resource.Quantity `json:"limit" yaml:"limit"`
+}
+
+// ZoneAwareRouting holds the zone aware routing configuration
+// +k8s:deepcopy-gen=true
+type ZoneAwareRouting struct {
+	Enabled bool `json:"enabled" yaml:"enabled"`
+	MinSize int  `json:"minSize" yaml:"minSize"`
 }

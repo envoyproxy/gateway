@@ -1398,7 +1398,7 @@ func (t *Translator) processDestination(name string, backendRefContext BackendRe
 		ds = t.processServiceDestinationSetting(name, backendRef.BackendObjectReference, backendNamespace, protocol, resources, envoyProxy)
 		svc := resources.GetService(backendNamespace, string(backendRef.Name))
 		ds.IPFamily = getServiceIPFamily(svc)
-		ds.ZoneAwareRoutingEnabled = isZoneAwareRoutingEnabled(svc)
+		ds.ZoneAwareRouting = processZoneAwareRouting(svc)
 
 	case egv1a1.KindBackend:
 		ds = t.processBackendDestinationSetting(name, backendRef.BackendObjectReference, backendNamespace, protocol, resources)
@@ -1558,11 +1558,11 @@ func (t *Translator) processServiceDestinationSetting(
 	}
 
 	return &ir.DestinationSetting{
-		Name:                    name,
-		Protocol:                protocol,
-		Endpoints:               endpoints,
-		AddressType:             addrType,
-		ZoneAwareRoutingEnabled: isZoneAwareRoutingEnabled(service),
+		Name:             name,
+		Protocol:         protocol,
+		Endpoints:        endpoints,
+		AddressType:      addrType,
+		ZoneAwareRouting: processZoneAwareRouting(service),
 	}
 }
 
@@ -1582,13 +1582,16 @@ func getBackendFilters(routeType gwapiv1.Kind, backendRefContext BackendRefConte
 	return nil
 }
 
-func isZoneAwareRoutingEnabled(svc *corev1.Service) bool {
+func processZoneAwareRouting(svc *corev1.Service) *ir.ZoneAwareRouting {
 	if svc == nil {
-		return false
+		return nil
 	}
 
 	if trafficDist := svc.Spec.TrafficDistribution; trafficDist != nil {
-		return *trafficDist == corev1.ServiceTrafficDistributionPreferClose
+		return &ir.ZoneAwareRouting{
+			Enabled: *trafficDist == corev1.ServiceTrafficDistributionPreferClose,
+			MinSize: 1,
+		}
 	}
 
 	// Allows annotation values that align with Kubernetes defaults.
@@ -1596,10 +1599,13 @@ func isZoneAwareRoutingEnabled(svc *corev1.Service) bool {
 	// https://kubernetes.io/docs/concepts/services-networking/topology-aware-routing/#enabling-topology-aware-routing
 	// https://github.com/kubernetes/kubernetes/blob/9d9e1afdf78bce0a517cc22557457f942040ca19/staging/src/k8s.io/endpointslice/utils.go#L355-L368
 	if val, ok := svc.Annotations[corev1.AnnotationTopologyMode]; ok {
-		return val == "Auto" || val == "auto"
+		return &ir.ZoneAwareRouting{
+			Enabled: val == "Auto" || val == "auto",
+			MinSize: 3,
+		}
 	}
 
-	return false
+	return nil
 }
 
 func (t *Translator) processDestinationFilters(routeType gwapiv1.Kind, backendRefContext BackendRefContext, parentRef *RouteParentContext, route RouteContext, resources *resource.Resources) (*ir.DestinationFilters, error) {

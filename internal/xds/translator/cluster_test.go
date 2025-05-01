@@ -60,25 +60,32 @@ func TestBuildXdsCluster(t *testing.T) {
 
 func TestCheckZoneAwareRouting(t *testing.T) {
 	tests := []struct {
-		name               string
-		zoneRoutingEnabled bool
-		loadBalancerCfg    *ir.LoadBalancer
+		name            string
+		zoneRouting     *ir.ZoneAwareRouting
+		loadBalancerCfg *ir.LoadBalancer
 	}{
 		{
-			name:               "zone-routing with default lb",
-			zoneRoutingEnabled: true,
+			name:        "zone-routing with default lb",
+			zoneRouting: &ir.ZoneAwareRouting{Enabled: true, MinSize: 1},
 			loadBalancerCfg: &ir.LoadBalancer{
 				LeastRequest: &ir.LeastRequest{},
 			},
 		},
 		{
-			name:               "zone-routing with nil lb",
-			zoneRoutingEnabled: true,
-			loadBalancerCfg:    nil,
+			name:        "zone-routing with default lb and topology aware routing",
+			zoneRouting: &ir.ZoneAwareRouting{Enabled: true, MinSize: 3},
+			loadBalancerCfg: &ir.LoadBalancer{
+				LeastRequest: &ir.LeastRequest{},
+			},
 		},
 		{
-			name:               "zone-routing with least request",
-			zoneRoutingEnabled: true,
+			name:            "zone-routing with nil lb",
+			zoneRouting:     &ir.ZoneAwareRouting{Enabled: true, MinSize: 1},
+			loadBalancerCfg: nil,
+		},
+		{
+			name:        "zone-routing with least request",
+			zoneRouting: &ir.ZoneAwareRouting{Enabled: true, MinSize: 1},
 			loadBalancerCfg: &ir.LoadBalancer{
 				LeastRequest: &ir.LeastRequest{
 					SlowStart: &ir.SlowStart{Window: &metav1.Duration{Duration: 1 * time.Second}},
@@ -86,8 +93,8 @@ func TestCheckZoneAwareRouting(t *testing.T) {
 			},
 		},
 		{
-			name:               "zone-routing with round robin",
-			zoneRoutingEnabled: true,
+			name:        "zone-routing with round robin",
+			zoneRouting: &ir.ZoneAwareRouting{Enabled: true, MinSize: 1},
 			loadBalancerCfg: &ir.LoadBalancer{
 				RoundRobin: &ir.RoundRobin{
 					SlowStart: &ir.SlowStart{Window: &metav1.Duration{Duration: 1 * time.Second}},
@@ -95,13 +102,13 @@ func TestCheckZoneAwareRouting(t *testing.T) {
 			},
 		},
 		{
-			name:               "zone-routing with random",
-			zoneRoutingEnabled: true,
-			loadBalancerCfg:    &ir.LoadBalancer{Random: &ir.Random{}},
+			name:            "zone-routing with random",
+			zoneRouting:     &ir.ZoneAwareRouting{Enabled: true, MinSize: 1},
+			loadBalancerCfg: &ir.LoadBalancer{Random: &ir.Random{}},
 		},
 		{
-			name:               "zone-routing with maglev",
-			zoneRoutingEnabled: true,
+			name:        "zone-routing with maglev",
+			zoneRouting: &ir.ZoneAwareRouting{Enabled: true, MinSize: 1},
 			loadBalancerCfg: &ir.LoadBalancer{
 				ConsistentHash: &ir.ConsistentHash{
 					TableSize: proto.Uint64(65537),
@@ -109,8 +116,8 @@ func TestCheckZoneAwareRouting(t *testing.T) {
 			},
 		},
 		{
-			name:               "zone-routing with round robin",
-			zoneRoutingEnabled: true,
+			name:        "zone-routing with round robin",
+			zoneRouting: &ir.ZoneAwareRouting{Enabled: true, MinSize: 1},
 			loadBalancerCfg: &ir.LoadBalancer{
 				RoundRobin: &ir.RoundRobin{
 					SlowStart: &ir.SlowStart{Window: &metav1.Duration{Duration: 1 * time.Second}},
@@ -118,8 +125,8 @@ func TestCheckZoneAwareRouting(t *testing.T) {
 			},
 		},
 		{
-			name:               "zone-routing disabled",
-			zoneRoutingEnabled: false,
+			name:        "zone-routing disabled",
+			zoneRouting: nil,
 			loadBalancerCfg: &ir.LoadBalancer{
 				LeastRequest: &ir.LeastRequest{},
 			},
@@ -129,8 +136,8 @@ func TestCheckZoneAwareRouting(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			bootstrapXdsCluster := getXdsClusterObjFromBootstrap(t)
 			ds := &ir.DestinationSetting{
-				Endpoints:               []*ir.DestinationEndpoint{{Host: envoyGatewayXdsServerHost, Port: bootstrap.DefaultXdsServerPort}},
-				ZoneAwareRoutingEnabled: tt.zoneRoutingEnabled,
+				Endpoints:        []*ir.DestinationEndpoint{{Host: envoyGatewayXdsServerHost, Port: bootstrap.DefaultXdsServerPort}},
+				ZoneAwareRouting: tt.zoneRouting,
 			}
 			args := &xdsClusterArgs{
 				name:         bootstrapXdsCluster.Name,
@@ -145,14 +152,13 @@ func TestCheckZoneAwareRouting(t *testing.T) {
 			clusterResult, err := buildXdsCluster(args)
 			dynamicXdsCluster := clusterResult.cluster
 			require.NoError(t, err)
-			buildZoneAwareRoutingCluster(tt.zoneRoutingEnabled, dynamicXdsCluster, args.loadBalancer)
 
-			if !tt.zoneRoutingEnabled {
+			if !ptr.Deref(tt.zoneRouting, ir.ZoneAwareRouting{}).Enabled {
 				require.Nil(t, dynamicXdsCluster.LoadBalancingPolicy)
 				require.Equal(t, &clusterv3.Cluster_CommonLbConfig_LocalityWeightedLbConfig_{LocalityWeightedLbConfig: &clusterv3.Cluster_CommonLbConfig_LocalityWeightedLbConfig{}}, dynamicXdsCluster.CommonLbConfig.LocalityConfigSpecifier)
 			} else {
 				require.Nil(t, dynamicXdsCluster.CommonLbConfig.LocalityConfigSpecifier)
-				expectedLoadBalancingPolicy := getExpectedClusterLbPolicies(dynamicXdsCluster.LbPolicy, args.loadBalancer)
+				expectedLoadBalancingPolicy := getExpectedClusterLbPolicies(tt.zoneRouting, dynamicXdsCluster.LbPolicy, args.loadBalancer)
 				require.Equal(t, expectedLoadBalancingPolicy.Policies[0].TypedExtensionConfig.Name, dynamicXdsCluster.LoadBalancingPolicy.Policies[0].TypedExtensionConfig.Name)
 				require.Equal(t, expectedLoadBalancingPolicy.Policies[0].GetTypedExtensionConfig().GetTypedConfig().String(), dynamicXdsCluster.LoadBalancingPolicy.Policies[0].GetTypedExtensionConfig().GetTypedConfig().String())
 			}
@@ -160,12 +166,14 @@ func TestCheckZoneAwareRouting(t *testing.T) {
 	}
 }
 
-func getExpectedClusterLbPolicies(policy clusterv3.Cluster_LbPolicy, lb *ir.LoadBalancer) *clusterv3.LoadBalancingPolicy {
+func getExpectedClusterLbPolicies(zoneRouting *ir.ZoneAwareRouting, policy clusterv3.Cluster_LbPolicy, lb *ir.LoadBalancer) *clusterv3.LoadBalancingPolicy {
 	localityLbConfig := &commonv3.LocalityLbConfig{
 		LocalityConfigSpecifier: &commonv3.LocalityLbConfig_ZoneAwareLbConfig_{
 			ZoneAwareLbConfig: &commonv3.LocalityLbConfig_ZoneAwareLbConfig{
-				MinClusterSize:             wrapperspb.UInt64(1),
-				ForceLocalityDirectRouting: true,
+				MinClusterSize: wrapperspb.UInt64(1),
+				ForceLocalZone: &commonv3.LocalityLbConfig_ZoneAwareLbConfig_ForceLocalZone{
+					MinSize: wrapperspb.UInt32(uint32(zoneRouting.MinSize)),
+				},
 			},
 		},
 	}
