@@ -22,9 +22,11 @@ Describe common use cases. When would someone need this concept?
 List scenarios where understanding this will help the user make better architectural or operational decisions.
 -->
 
-## Configuration in Envoy Gateway
+## {Title} in Envoy Gateway
 
 <!-- 
+Replace Title with the name of the concept. 
+
 Explain the inner workings of the concept. 
 Use diagrams, code snippets, or flow explanations as needed.
 Example: Describe how Envoy Gateway interacts with Kubernetes Gateway API resources.

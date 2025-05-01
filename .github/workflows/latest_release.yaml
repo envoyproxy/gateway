@@ -81,7 +81,6 @@ jobs:
         tar -zcvf egctl_latest_darwin_amd64.tar.gz bin/darwin/amd64/egctl
         tar -zcvf egctl_latest_darwin_arm64.tar.gz bin/darwin/arm64/egctl
         zip -r egctl_latest_windows_amd64.zip bin/windows/amd64/egctl
-        zip -r egctl_latest_windows_arm64.zip bin/windows/arm64/egctl
 
     # Ignore the error when we delete the latest release, it might not exist.
 
@@ -127,7 +126,6 @@ jobs:
           egctl_latest_darwin_amd64.tar.gz
           egctl_latest_darwin_arm64.tar.gz
           egctl_latest_windows_amd64.zip
-          egctl_latest_windows_arm64.zip
         body: |
           This is the "latest" release of **Envoy Gateway**, which contains the most recent commits from the main branch.
 
