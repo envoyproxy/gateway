@@ -32,6 +32,7 @@ import (
 	"github.com/envoyproxy/gateway/internal/message"
 	"github.com/envoyproxy/gateway/internal/xds/bootstrap"
 	"github.com/envoyproxy/gateway/internal/xds/cache"
+	"github.com/envoyproxy/gateway/internal/xds/server/kubejwt"
 	xdstypes "github.com/envoyproxy/gateway/internal/xds/types"
 )
 
@@ -55,6 +56,9 @@ const (
 	localTLSCertFilepath = "/tmp/envoy-gateway/certs/envoy-gateway/tls.crt"
 	localTLSKeyFilepath  = "/tmp/envoy-gateway/certs/envoy-gateway/tls.key"
 	localTLSCaFilepath   = "/tmp/envoy-gateway/certs/envoy-gateway/ca.crt"
+	// defaultKubernetesIssuer is the default issuer URL for Kubernetes.
+	// This is used for validating Service Account JWT tokens.
+	defaultKubernetesIssuer = "https://kubernetes.default.svc.cluster.local"
 )
 
 type Config struct {
@@ -82,6 +86,7 @@ func (r *Runner) Close() error { return nil }
 // Start starts the xds-server runner
 func (r *Runner) Start(ctx context.Context) (err error) {
 	r.Logger = r.Logger.WithName(r.Name()).WithValues("runner", r.Name())
+	r.cache = cache.NewSnapshotCache(true, r.Logger)
 
 	// Set up the gRPC server and register the xDS handler.
 	// Create SnapshotCache before start subscribeAndTranslate,
@@ -92,12 +97,44 @@ func (r *Runner) Start(ctx context.Context) (err error) {
 	}
 	r.Logger.Info("loaded TLS certificate and key")
 
-	r.grpc = grpc.NewServer(grpc.Creds(credentials.NewTLS(tlsConfig)), grpc.KeepaliveEnforcementPolicy(keepalive.EnforcementPolicy{
-		MinTime:             15 * time.Second,
-		PermitWithoutStream: true,
-	}))
+	grpcOpts := []grpc.ServerOption{
+		grpc.Creds(credentials.NewTLS(tlsConfig)),
+		grpc.KeepaliveEnforcementPolicy(keepalive.EnforcementPolicy{
+			MinTime:             15 * time.Second,
+			PermitWithoutStream: true,
+		}),
+	}
 
-	r.cache = cache.NewSnapshotCache(true, r.Logger)
+	// When GatewayNamespaceMode is enabled, we will use sTLS and Service Account JWT tokens to authenticate envoy proxy infra and xds server.
+	if r.EnvoyGateway.GatewayNamespaceMode() {
+		r.Logger.Info("gatewayNamespaceMode is enabled, setting up JWTAuthInterceptor and sTLS server")
+		clientset, err := kubejwt.GetKubernetesClient()
+		if err != nil {
+			return fmt.Errorf("failed to create Kubernetes client: %w", err)
+		}
+		jwtInterceptor := kubejwt.NewJWTAuthInterceptor(
+			clientset,
+			defaultKubernetesIssuer,
+			r.cache,
+			r.Xds,
+		)
+
+		creds, err := credentials.NewServerTLSFromFile(xdsTLSCertFilepath, xdsTLSKeyFilepath)
+		if err != nil {
+			return fmt.Errorf("failed to create TLS credentials: %w", err)
+		}
+
+		grpcOpts = []grpc.ServerOption{
+			grpc.KeepaliveEnforcementPolicy(keepalive.EnforcementPolicy{
+				MinTime:             15 * time.Second,
+				PermitWithoutStream: true,
+			}),
+			grpc.Creds(creds),
+			grpc.StreamInterceptor(jwtInterceptor.Stream()),
+		}
+	}
+
+	r.grpc = grpc.NewServer(grpcOpts...)
 	registerServer(serverv3.NewServer(ctx, r.cache, r.cache), r.grpc)
 
 	// Start and listen xDS gRPC Server.

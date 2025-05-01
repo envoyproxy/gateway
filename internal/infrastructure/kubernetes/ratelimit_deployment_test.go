@@ -39,7 +39,7 @@ func TestCreateOrUpdateRateLimitDeployment(t *testing.T) {
 	ownerReferenceUID := map[string]types.UID{
 		ratelimit.ResourceKindDeployment: "foo.bar",
 	}
-	r := ratelimit.NewResourceRender(cfg.Namespace, cfg.EnvoyGateway, ownerReferenceUID)
+	r := ratelimit.NewResourceRender(cfg.ControllerNamespace, cfg.EnvoyGateway, ownerReferenceUID)
 	deployment, err := r.Deployment()
 	require.NoError(t, err)
 
