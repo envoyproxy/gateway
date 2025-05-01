@@ -6,7 +6,6 @@
 package utils
 
 import (
-	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -21,16 +20,15 @@ import (
 )
 
 func TestMergeBackendTrafficPolicy(t *testing.T) {
-	baseDir := "testdata/merge/backendtrafficpolicy"
-	caseFiles, err := filepath.Glob(filepath.Join(baseDir, "*.in.yaml"))
+	baseDir := "testdata"
+	caseFiles, err := filepath.Glob(filepath.Join(baseDir, "backendtrafficpolicy_*.in.yaml"))
 	require.NoError(t, err)
 
 	for _, caseFile := range caseFiles {
 		// get case name from path
-		caseName := strings.TrimPrefix(strings.TrimSuffix(caseFile, ".in.yaml"), baseDir+"/")
-
-		for _, mergeType := range []egv1a1.MergeType{egv1a1.StrategicMerge, egv1a1.JSONMerge} {
-			t.Run(fmt.Sprintf("%s/%s", mergeType, caseName), func(t *testing.T) {
+		caseName := strings.TrimPrefix(strings.TrimSuffix(caseFile, ".in.yaml"), baseDir+"/backendtrafficpolicy_")
+		t.Run(caseName, func(t *testing.T) {
+			for _, mergeType := range []egv1a1.MergeType{egv1a1.StrategicMerge, egv1a1.JSONMerge} {
 				patchedInput := strings.Replace(caseFile, ".in.yaml", ".patch.yaml", 1)
 				var output string
 				if mergeType == egv1a1.StrategicMerge {
@@ -49,14 +47,13 @@ func TestMergeBackendTrafficPolicy(t *testing.T) {
 					b, err := yaml.Marshal(got)
 					require.NoError(t, err)
 					require.NoError(t, os.WriteFile(output, b, 0o600))
-					return
+					continue
 				}
 
 				expected := readObject[*egv1a1.BackendTrafficPolicy](t, output)
 				require.Equal(t, expected, got)
-			})
-		}
-
+			}
+		})
 	}
 }
 
