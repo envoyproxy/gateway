@@ -21,6 +21,7 @@ import (
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -475,6 +476,38 @@ func (b *BenchmarkTestSuite) ScaleUpDeployments(ctx context.Context, scaleRange 
 		}); err != nil {
 			return err
 		}
+
+		// Wait until all pods are ready.
+		if err := wait.PollUntilContextTimeout(ctx, BenchmarkMetricsSampleTick, DefaultDeploymentAvailablePeriod, true, func(ctx context.Context) (bool, error) {
+			pods := &corev1.PodList{}
+			err := b.Client.List(ctx, pods, &client.ListOptions{
+				Namespace:     "benchmark-test",
+				LabelSelector: labels.SelectorFromSet(map[string]string{"app": deploymentName}),
+			})
+			if err != nil || len(pods.Items) == 0 {
+				return false, fmt.Errorf("no available pods for %s", deploymentName)
+			}
+
+		checkPods:
+			for _, p := range pods.Items {
+				if p.Status.Phase != corev1.PodRunning {
+					return false, nil
+				}
+				if len(p.Status.Conditions) == 0 {
+					return false, nil
+				}
+				for _, c := range p.Status.Conditions {
+					if c.Type == corev1.PodReady && c.Status == corev1.ConditionTrue {
+						continue checkPods
+					}
+				}
+				return false, nil
+			}
+
+			return true, nil
+		}); err != nil {
+			return err
+		}
 	}
 
 	return nil
@@ -521,6 +554,21 @@ func (b *BenchmarkTestSuite) ScaleDownDeployments(ctx context.Context, scaleRang
 				return false, err
 			}
 			return false, nil
+		}); err != nil {
+			return err
+		}
+
+		// Wait until all pods are removed.
+		if err := wait.PollUntilContextTimeout(ctx, BenchmarkMetricsSampleTick, DefaultDeploymentAvailablePeriod, true, func(ctx context.Context) (bool, error) {
+			pods := &corev1.PodList{}
+			err := b.Client.List(ctx, pods, &client.ListOptions{
+				Namespace:     "benchmark-test",
+				LabelSelector: labels.SelectorFromSet(map[string]string{"app": deploymentName}),
+			})
+			if err == nil && len(pods.Items) == 0 {
+				return true, nil
+			}
+			return false, err
 		}); err != nil {
 			return err
 		}

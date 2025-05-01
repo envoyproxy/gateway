@@ -106,24 +106,20 @@ func (r *BenchmarkReport) GetResult(ctx context.Context, job *types.NamespacedNa
 }
 
 func (r *BenchmarkReport) sampleMetrics(ctx context.Context, sample *BenchmarkMetricSample) (err error) {
-	// Sample memory
+	// Sample memory and cpu.
 	cpMem, qErr := r.promClient.QuerySum(ctx, controlPlaneMemQL)
 	if qErr != nil {
 		err = errors.Join(fmt.Errorf("failed to query control plane memory: %w", qErr))
 	}
-	dpMem, qErr := r.promClient.QueryAvg(ctx, dataPlaneMemQL)
-	if qErr != nil {
-		err = errors.Join(err, fmt.Errorf("failed to query data plane memory: %w", qErr))
-	}
-	// Sample cpu
 	cpCPU, qErr := r.promClient.QuerySum(ctx, controlPlaneCPUQL)
 	if qErr != nil {
 		err = errors.Join(err, fmt.Errorf("failed to query control plane cpu: %w", qErr))
 	}
-	dpCPU, qErr := r.promClient.QueryAvg(ctx, dataPlaneCPUQL)
-	if qErr != nil {
-		err = errors.Join(err, fmt.Errorf("failed to query data plane cpu: %w", qErr))
-	}
+
+	// Silence the error here since the time range is too short so that this QL may not be able to
+	// obtain any value, preventing logs from being messed.
+	dpMem, _ := r.promClient.QueryAvg(ctx, dataPlaneMemQL)
+	dpCPU, _ := r.promClient.QueryAvg(ctx, dataPlaneCPUQL)
 
 	sample.ControlPlaneMem = cpMem
 	sample.ControlPlaneCPU = cpCPU
