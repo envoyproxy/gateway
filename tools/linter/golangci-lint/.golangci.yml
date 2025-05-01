@@ -133,7 +133,6 @@ linters:
       checks:
         - all
         - -QF1006
-        - -QF1009
         - -ST1005
     testifylint:
       disable:
