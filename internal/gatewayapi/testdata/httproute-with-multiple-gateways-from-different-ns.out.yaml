@@ -199,12 +199,21 @@ xdsIR:
       port: 10080
       routes:
       - destination:
+          metadata:
+            kind: HTTPRoute
+            name: targeted-route
+            namespace: envoy-gateway
           name: httproute/envoy-gateway/targeted-route/rule/0
           settings:
           - addressType: IP
             endpoints:
             - host: 7.7.7.7
               port: 8080
+            metadata:
+              kind: Service
+              name: service-1
+              namespace: envoy-gateway
+              sectionName: "8080"
             name: httproute/envoy-gateway/targeted-route/rule/0/backend/0
             protocol: HTTP
             weight: 1
@@ -249,12 +258,21 @@ xdsIR:
       port: 10080
       routes:
       - destination:
+          metadata:
+            kind: HTTPRoute
+            name: targeted-route
+            namespace: envoy-gateway
           name: httproute/envoy-gateway/targeted-route/rule/0
           settings:
           - addressType: IP
             endpoints:
             - host: 7.7.7.7
               port: 8080
+            metadata:
+              kind: Service
+              name: service-1
+              namespace: envoy-gateway
+              sectionName: "8080"
             name: httproute/envoy-gateway/targeted-route/rule/0/backend/0
             protocol: HTTP
             weight: 1
