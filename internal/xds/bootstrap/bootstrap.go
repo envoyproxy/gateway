@@ -98,7 +98,8 @@ type bootstrapParameters struct {
 	OverloadManager overloadManagerParameters
 
 	// IPFamily of the Listener
-	IPFamily string
+	IPFamily             string
+	GatewayNamespaceMode bool
 }
 
 type serverParameters struct {
@@ -136,15 +137,16 @@ type overloadManagerParameters struct {
 }
 
 type RenderBootstrapConfigOptions struct {
-	IPFamily         *egv1a1.IPFamily
-	ProxyMetrics     *egv1a1.ProxyMetrics
-	SdsConfig        SdsConfigPath
-	XdsServerHost    *string
-	XdsServerPort    *int32
-	WasmServerPort   *int32
-	AdminServerPort  *int32
-	StatsServerPort  *int32
-	MaxHeapSizeBytes uint64
+	IPFamily             *egv1a1.IPFamily
+	ProxyMetrics         *egv1a1.ProxyMetrics
+	SdsConfig            SdsConfigPath
+	XdsServerHost        *string
+	XdsServerPort        *int32
+	WasmServerPort       *int32
+	AdminServerPort      *int32
+	StatsServerPort      *int32
+	MaxHeapSizeBytes     uint64
+	GatewayNamespaceMode bool
 }
 
 type SdsConfigPath struct {
@@ -306,7 +308,7 @@ func GetRenderedBootstrapConfig(opts *RenderBootstrapConfigOptions) (string, err
 				cfg.parameters.StatsServer.Address = netutils.IPv6ListenerAddress
 			}
 		}
-
+		cfg.parameters.GatewayNamespaceMode = opts.GatewayNamespaceMode
 		cfg.parameters.OverloadManager.MaxHeapSizeBytes = opts.MaxHeapSizeBytes
 	}
 

@@ -67,7 +67,7 @@ func TestCreateOrUpdateProxyDaemonSet(t *testing.T) {
 		},
 	}
 
-	r := proxy.NewResourceRender(cfg.Namespace, cfg.DNSDomain, infra.GetProxyInfra(), cfg.EnvoyGateway)
+	r := proxy.NewResourceRender(cfg.ControllerNamespace, cfg.DNSDomain, infra.GetProxyInfra(), cfg.EnvoyGateway)
 	ds, err := r.DaemonSet()
 	require.NoError(t, err)
 

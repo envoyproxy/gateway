@@ -226,6 +226,7 @@ infraIR:
         labels:
           gateway.envoyproxy.io/owning-gatewayclass: envoy-gateway-class
       name: envoy-gateway-class
+      namespace: envoy-gateway-system
 xdsIR:
   envoy-gateway-class:
     accessLog:

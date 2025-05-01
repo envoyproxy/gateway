@@ -54,6 +54,11 @@ spec:
             fieldRef:
               apiVersion: v1
               fieldPath: metadata.namespace
+        - name: ENVOY_SERVICE_ZONE
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: metadata.labels['topology.kubernetes.io/zone']
         - name: ENVOY_POD_NAME
           valueFrom:
             fieldRef:
@@ -136,6 +141,11 @@ spec:
             fieldRef:
               apiVersion: v1
               fieldPath: metadata.namespace
+        - name: ENVOY_SERVICE_ZONE
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: metadata.labels['topology.kubernetes.io/zone']
         - name: ENVOY_POD_NAME
           valueFrom:
             fieldRef:

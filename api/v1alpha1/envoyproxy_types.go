@@ -258,6 +258,9 @@ const (
 
 	// EnvoyFilterRouter defines the Envoy HTTP router filter.
 	EnvoyFilterRouter EnvoyFilter = "envoy.filters.http.router"
+
+	// EnvoyFilterBuffer defines the Envoy HTTP buffer filter
+	EnvoyFilterBuffer EnvoyFilter = "envoy.filters.http.buffer"
 )
 
 type ProxyTelemetry struct {

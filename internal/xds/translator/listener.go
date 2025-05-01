@@ -420,7 +420,13 @@ func (t *Translator) addHCMToXDSListener(xdsListener *listenerv3.Listener, irLis
 				return err
 			}
 		} else {
-			tSocket, err = buildXdsDownstreamTLSSocket(irListener.TLS)
+			config := irListener.TLS.DeepCopy()
+			// If the listener has overlapping TLS config with other listeners, we need to disable HTTP/2
+			// to avoid the HTTP/2 Connection Coalescing issue (see https://gateway-api.sigs.k8s.io/geps/gep-3567/)
+			if irListener.TLSOverlaps {
+				config.ALPNProtocols = []string{"http/1.1"}
+			}
+			tSocket, err = buildXdsDownstreamTLSSocket(config)
 			if err != nil {
 				return err
 			}

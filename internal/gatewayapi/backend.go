@@ -40,6 +40,16 @@ func (t *Translator) ProcessBackends(backends []*egv1a1.Backend) []*egv1a1.Backe
 }
 
 func validateBackend(backend *egv1a1.Backend) status.Error {
+	if backend.Spec.Type != nil &&
+		*backend.Spec.Type == egv1a1.BackendTypeDynamicResolver {
+		if len(backend.Spec.Endpoints) > 0 || len(backend.Spec.AppProtocols) > 0 {
+			return status.NewRouteStatusError(
+				fmt.Errorf("DynamicResolver type cannot have endpoints or appProtocols specified"),
+				status.RouteReasonInvalidBackendRef,
+			)
+		}
+	}
+
 	for _, ep := range backend.Spec.Endpoints {
 		if ep.FQDN != nil {
 			hostname := ep.FQDN.Hostname

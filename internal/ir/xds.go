@@ -19,6 +19,7 @@ import (
 
 	"golang.org/x/exp/slices"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/util/sets"
@@ -43,7 +44,6 @@ var (
 	ErrTLSPrivateKey                            = errors.New("field PrivateKey must be specified")
 	ErrRouteNameEmpty                           = errors.New("field Name must be specified")
 	ErrHTTPRouteHostnameEmpty                   = errors.New("field Hostname must be specified")
-	ErrRouteDestinationsFQDNMixed               = errors.New("mixed endpoints address type for the same route destination is not supported")
 	ErrDestinationNameEmpty                     = errors.New("field Name must be specified")
 	ErrDestEndpointHostInvalid                  = errors.New("field Address must be a valid IP or FQDN address")
 	ErrDestEndpointPortInvalid                  = errors.New("field Port specified is invalid")
@@ -289,6 +289,10 @@ type HTTPListener struct {
 	Hostnames []string `json:"hostnames" yaml:"hostnames"`
 	// Tls configuration. If omitted, the gateway will expose a plain text HTTP server.
 	TLS *TLSConfig `json:"tls,omitempty" yaml:"tls,omitempty"`
+	// TLSOverlaps indicates if the listener has TLS configuration that overlaps with other listeners.
+	// HTTP2 should be disabled if this is true to avoid the HTTP/2 Connection Coalescing issue (see https://gateway-api.sigs.k8s.io/geps/gep-3567/)
+	// We use a standalone field to avoid messing with the ClientTrafficPolicy ALPN config.
+	TLSOverlaps bool `json:"tlsOverlaps,omitempty" yaml:"tlsOverlaps,omitempty"`
 	// Routes associated with HTTP traffic to the service.
 	Routes []*HTTPRoute `json:"routes,omitempty" yaml:"routes,omitempty"`
 	// IsHTTP2 is set if the listener is configured to serve HTTP2 traffic,
@@ -867,6 +871,8 @@ type TrafficFeatures struct {
 	HTTPUpgrade []string `json:"httpUpgrade,omitempty" yaml:"httpUpgrade,omitempty"`
 	// Telemetry defines the schema for telemetry configuration.
 	Telemetry *egv1a1.BackendTelemetry `json:"telemetry,omitempty" yaml:"telemetry,omitempty"`
+	// RequestBuffer defines the schema for enabling buffered requests
+	RequestBuffer *RequestBuffer `json:"requestBuffer,omitempty" yaml:"requestBuffer,omitempty"`
 }
 
 func (b *TrafficFeatures) Validate() error {
@@ -1474,20 +1480,51 @@ func (r *RouteDestination) Validate() error {
 	if len(r.Name) == 0 {
 		errs = errors.Join(errs, ErrDestinationNameEmpty)
 	}
-	routeHasAddressTypes := make(sets.Set[DestinationAddressType])
 	for _, s := range r.Settings {
 		if err := s.Validate(); err != nil {
 			errs = errors.Join(errs, err)
 		}
-		if s.AddressType != nil {
-			routeHasAddressTypes.Insert(*s.AddressType)
-		}
-	}
-	if routeHasAddressTypes.Len() > 1 || routeHasAddressTypes.Has(MIXED) {
-		errs = errors.Join(ErrRouteDestinationsFQDNMixed)
 	}
 
 	return errs
+}
+
+func (r *RouteDestination) NeedsClusterPerSetting() bool {
+	return r.HasMixedEndpoints() ||
+		r.HasFiltersInSettings() ||
+		(len(r.Settings) > 1 && r.HasZoneAwareRouting())
+}
+
+// HasMixedEndpoints returns true if the RouteDestination has endpoints of multiple types
+func (r *RouteDestination) HasMixedEndpoints() bool {
+	destinationAddressTypes := sets.Set[DestinationAddressType]{}
+	for _, s := range r.Settings {
+		if s.AddressType != nil {
+			destinationAddressTypes.Insert(*s.AddressType)
+		}
+	}
+	return destinationAddressTypes.Len() > 1 || destinationAddressTypes.Has(MIXED)
+}
+
+// HasFiltersInSettings returns true if any setting in the destination has a filter
+func (r *RouteDestination) HasFiltersInSettings() bool {
+	for _, setting := range r.Settings {
+		filters := setting.Filters
+		if filters != nil {
+			return true
+		}
+	}
+	return false
+}
+
+// HasZoneAwareRouting returns true if any setting in the destination has ZoneAwareRoutingEnabled set
+func (r *RouteDestination) HasZoneAwareRouting() bool {
+	for _, setting := range r.Settings {
+		if setting.ZoneAwareRoutingEnabled {
+			return true
+		}
+	}
+	return false
 }
 
 func (r *RouteDestination) ToBackendWeights() *BackendWeights {
@@ -1500,9 +1537,12 @@ func (r *RouteDestination) ToBackendWeights() *BackendWeights {
 			continue
 		}
 
-		if len(s.Endpoints) > 0 {
+		switch {
+		case s.IsDynamicResolver: // Dynamic resolver has no endpoints
 			w.Valid += *s.Weight
-		} else {
+		case len(s.Endpoints) > 0:
+			w.Valid += *s.Weight
+		default:
 			w.Invalid += *s.Weight
 		}
 	}
@@ -1515,6 +1555,11 @@ func (r *RouteDestination) ToBackendWeights() *BackendWeights {
 type DestinationSetting struct {
 	// Name of the setting
 	Name string `json:"name" yaml:"name"`
+
+	// IsDynamicResolver specifies whether the destination is a dynamic resolver.
+	// A dynamic resolver is a destination that is resolved dynamically using the request's host header.
+	IsDynamicResolver bool `json:"isDynamicResolver,omitempty" yaml:"isDynamicResolver,omitempty"`
+
 	// Weight associated with this destination,
 	// invalid endpoints are represents with a
 	// non-zero weight with an empty endpoints list
@@ -3018,4 +3063,11 @@ type ResourceMetadata struct {
 	Annotations map[string]string `json:"annotations,omitempty" yaml:"annotations,omitempty"`
 	// SectionName is the name of a section of a resource
 	SectionName string `json:"sectionName,omitempty" yaml:"sectionName,omitempty"`
+}
+
+// RequestBuffer holds the information for the Buffer filter
+// +k8s:deepcopy-gen=true
+type RequestBuffer struct {
+	// Limit defines the maximum buffer size for requests
+	Limit resource.Quantity `json:"limit" yaml:"limit"`
 }

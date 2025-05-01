@@ -522,7 +522,7 @@ func (t *Translator) addRouteToRouteConfig(
 			var err error
 			// If there are no filters in the destination settings we create
 			// a regular xds Cluster
-			if !needsClusterPerSetting(httpRoute.Destination.Settings) {
+			if !httpRoute.Destination.NeedsClusterPerSetting() {
 				err = processXdsCluster(
 					tCtx,
 					httpRoute.Destination.Name,
@@ -940,13 +940,19 @@ func addXdsCluster(tCtx *types.ResourceVersionTable, args *xdsClusterArgs) error
 		}
 	}
 	// Use EDS for static endpoints
-	if args.endpointType == EndpointTypeStatic {
+	switch args.endpointType {
+	case EndpointTypeStatic:
 		if err := tCtx.AddXdsResource(resourcev3.EndpointType, xdsEndpoints); err != nil {
 			return err
 		}
-	} else {
+	case EndpointTypeDNS:
 		xdsCluster.LoadAssignment = xdsEndpoints
+	case EndpointTypeDynamicResolver:
+		// Dynamic resolver has no endpoints
+		// This assignment is not necessary, but it is added for clarity.
+		xdsCluster.LoadAssignment = nil
 	}
+
 	if err := tCtx.AddXdsResource(resourcev3.ClusterType, xdsCluster); err != nil {
 		return err
 	}

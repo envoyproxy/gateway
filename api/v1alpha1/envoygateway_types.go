@@ -24,6 +24,10 @@ const (
 	GatewayMetricsPort = 19001
 	// GatewayMetricsHost is the host of envoy gateway metrics server.
 	GatewayMetricsHost = "0.0.0.0"
+	// DefaultKubernetesClientQPS defines the default QPS limit for the Kubernetes client.
+	DefaultKubernetesClientQPS int32 = 50
+	// DefaultKubernetesClientBurst defines the default Burst limit for the Kubernetes client.
+	DefaultKubernetesClientBurst int32 = 100
 )
 
 // +kubebuilder:object:root=true
@@ -89,6 +93,26 @@ type EnvoyGatewaySpec struct {
 	//
 	// +optional
 	ExtensionAPIs *ExtensionAPISettings `json:"extensionApis,omitempty"`
+}
+
+type KubernetesClient struct {
+	// RateLimit defines the rate limit settings for the Kubernetes client.
+	RateLimit *KubernetesClientRateLimit `json:"rateLimit,omitempty"`
+}
+
+// KubernetesClientRateLimit defines the rate limit settings for the Kubernetes client.
+type KubernetesClientRateLimit struct {
+	// QPS defines the queries per second limit for the Kubernetes client.
+	// +optional
+	// +kubebuilder:validation:Minimum=1
+	// +kubebuilder:default=50
+	QPS *int32 `json:"qps,omitempty"`
+
+	// Burst defines the maximum burst of requests allowed when tokens have accumulated.
+	// +optional
+	// +kubebuilder:validation:Minimum=1
+	// +kubebuilder:default=100
+	Burst *int32 `json:"burst,omitempty"`
 }
 
 // LeaderElection defines the desired leader election settings.
@@ -225,6 +249,11 @@ type EnvoyGatewayKubernetesProvider struct {
 	// ShutdownManager defines the configuration for the shutdown manager.
 	// +optional
 	ShutdownManager *ShutdownManager `json:"shutdownManager,omitempty"`
+	// Client holds the configuration for the Kubernetes client.
+	Client *KubernetesClient `json:"client,omitempty"`
+	// TopologyInjector defines the configuration for topology injector MutatatingWebhookConfiguration
+	// +optional
+	TopologyInjector *EnvoyGatewayTopologyInjector `json:"proxyTopologyInjector,omitempty"`
 }
 
 const (
@@ -560,6 +589,12 @@ type ExtensionService struct {
 	//
 	// +optional
 	TLS *ExtensionTLS `json:"tls,omitempty"`
+
+	// Retry defines the retry policy for to use when errors are encountered in communication with
+	// the extension service.
+	//
+	// +optional
+	Retry *ExtensionServiceRetry `json:"retry,omitempty"`
 }
 
 // ExtensionTLS defines the TLS configuration when connecting to an extension service.
@@ -571,6 +606,43 @@ type ExtensionTLS struct {
 	//
 	// +kubebuilder:validation:Required
 	CertificateRef gwapiv1.SecretObjectReference `json:"certificateRef"`
+}
+
+// GRPCStatus defines grpc status codes as defined in https://github.com/grpc/grpc/blob/master/doc/statuscodes.md.
+// +kubebuilder:validation:Enum=CANCELLED;UNKNOWN;INVALID_ARGUMENT;DEADLINE_EXCEEDED;NOT_FOUND;ALREADY_EXISTS;PERMISSION_DENIED;RESOURCE_EXHAUSTED;FAILED_PRECONDITION;ABORTED;OUT_OF_RANGE;UNIMPLEMENTED;INTERNAL;UNAVAILABLE;DATA_LOSS;UNAUTHENTICATED
+type RetryableGRPCStatusCode string
+
+// ExtensionServiceRetry defines the retry policy for to use when errors are encountered in communication with the extension service.
+type ExtensionServiceRetry struct {
+	// MaxAttempts defines the maximum number of retry attempts.
+	// Default: 4
+	//
+	// +optional
+	MaxAttempts *int `json:"maxAttempts,omitempty"`
+
+	// InitialBackoff defines the initial backoff in seconds for retries, details: https://github.com/grpc/proposal/blob/master/A6-client-retries.md#integration-with-service-config.
+	// Default: 0.1s
+	//
+	// +optional
+	InitialBackoff *gwapiv1.Duration `json:"initialBackoff,omitempty"`
+
+	// MaxBackoff defines the maximum backoff in seconds for retries.
+	// Default: 1s
+	//
+	// +optional
+	MaxBackoff *gwapiv1.Duration `json:"maxBackoff,omitempty"`
+
+	// BackoffMultiplier defines the multiplier to use for exponential backoff for retries.
+	// Default: 2.0
+	//
+	// +optional
+	BackoffMultiplier *gwapiv1.Fraction `json:"backoffMultiplier,omitempty"`
+
+	// RetryableStatusCodes defines the grpc status code for which retries will be attempted.
+	// Default: [ "UNAVAILABLE" ]
+	//
+	// +optional
+	RetryableStatusCodes []RetryableGRPCStatusCode `json:"RetryableStatusCodes,omitempty"`
 }
 
 // EnvoyGatewayAdmin defines the Envoy Gateway Admin configuration.
@@ -608,6 +680,12 @@ type EnvoyGatewayAdminAddress struct {
 type ShutdownManager struct {
 	// Image specifies the ShutdownManager container image to be used, instead of the default image.
 	Image *string `json:"image,omitempty"`
+}
+
+// EnvoyGatewayTopologyInjector defines the configuration for topology injector MutatatingWebhookConfiguration
+type EnvoyGatewayTopologyInjector struct {
+	// +optional
+	Disable *bool `json:"disabled,omitempty"`
 }
 
 func init() {

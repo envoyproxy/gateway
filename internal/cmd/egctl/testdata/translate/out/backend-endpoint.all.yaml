@@ -1,5 +1,6 @@
 backendTLSPolicies:
-- kind: BackendTLSPolicy
+- apiVersion: gateway.networking.k8s.io/v1alpha3
+  kind: BackendTLSPolicy
   metadata:
     creationTimestamp: null
     name: example-com-tls-policy
@@ -26,7 +27,8 @@ backendTLSPolicies:
         type: Accepted
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
 backends:
-- kind: Backend
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: Backend
   metadata:
     creationTimestamp: null
     name: backend
@@ -45,7 +47,8 @@ backends:
       status: "True"
       type: Accepted
 envoyExtensionPolicies:
-- kind: EnvoyExtensionPolicy
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: EnvoyExtensionPolicy
   metadata:
     creationTimestamp: null
     name: ext-proc-example
@@ -82,6 +85,7 @@ envoyExtensionPolicies:
         type: Accepted
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
 gatewayClass:
+  apiVersion: gateway.networking.k8s.io/v1
   kind: GatewayClass
   metadata:
     creationTimestamp: null
@@ -96,7 +100,8 @@ gatewayClass:
       status: "True"
       type: Accepted
 gateways:
-- kind: Gateway
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: Gateway
   metadata:
     creationTimestamp: null
     name: eg
@@ -136,7 +141,8 @@ gateways:
       - group: gateway.networking.k8s.io
         kind: GRPCRoute
 httpRoutes:
-- kind: HTTPRoute
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
   metadata:
     creationTimestamp: null
     name: backend

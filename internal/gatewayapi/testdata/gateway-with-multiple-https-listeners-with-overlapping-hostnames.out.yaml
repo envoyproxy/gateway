@@ -1,0 +1,325 @@
+gateways:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: Gateway
+  metadata:
+    creationTimestamp: null
+    name: gateway-1
+    namespace: envoy-gateway
+  spec:
+    gatewayClassName: envoy-gateway-class
+    listeners:
+    - allowedRoutes:
+        namespaces:
+          from: All
+      hostname: foo.example.com
+      name: https-1
+      port: 443
+      protocol: HTTPS
+      tls:
+        certificateRefs:
+        - group: null
+          kind: null
+          name: tls-secret-example-com
+        mode: Terminate
+    - allowedRoutes:
+        namespaces:
+          from: All
+      hostname: '*.example.com'
+      name: https-2
+      port: 443
+      protocol: HTTPS
+      tls:
+        certificateRefs:
+        - group: null
+          kind: null
+          name: tls-secret-example-com
+        mode: Terminate
+    - allowedRoutes:
+        namespaces:
+          from: All
+      hostname: foo.bar.com
+      name: https-3
+      port: 443
+      protocol: HTTPS
+      tls:
+        certificateRefs:
+        - group: null
+          kind: null
+          name: tls-secret-foo-bar-com
+        mode: Terminate
+  status:
+    listeners:
+    - attachedRoutes: 1
+      conditions:
+      - lastTransitionTime: null
+        message: Sending translated listener configuration to the data plane
+        reason: Programmed
+        status: "True"
+        type: Programmed
+      - lastTransitionTime: null
+        message: Listener has been successfully translated
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Listener references have been resolved
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      - lastTransitionTime: null
+        message: The hostname foo.example.com overlaps with the hostname *.example.com
+          in listener https-2. ALPN is set to HTTP/1.1 to prevent HTTP/2 connection
+          coalescing
+        reason: OverlappingHostnames
+        status: "True"
+        type: OverlappingTLSConfig
+      name: https-1
+      supportedKinds:
+      - group: gateway.networking.k8s.io
+        kind: HTTPRoute
+      - group: gateway.networking.k8s.io
+        kind: GRPCRoute
+    - attachedRoutes: 1
+      conditions:
+      - lastTransitionTime: null
+        message: Sending translated listener configuration to the data plane
+        reason: Programmed
+        status: "True"
+        type: Programmed
+      - lastTransitionTime: null
+        message: Listener has been successfully translated
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Listener references have been resolved
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      - lastTransitionTime: null
+        message: The hostname *.example.com overlaps with the hostname foo.example.com
+          in listener https-1. ALPN is set to HTTP/1.1 to prevent HTTP/2 connection
+          coalescing
+        reason: OverlappingHostnames
+        status: "True"
+        type: OverlappingTLSConfig
+      name: https-2
+      supportedKinds:
+      - group: gateway.networking.k8s.io
+        kind: HTTPRoute
+      - group: gateway.networking.k8s.io
+        kind: GRPCRoute
+    - attachedRoutes: 1
+      conditions:
+      - lastTransitionTime: null
+        message: Sending translated listener configuration to the data plane
+        reason: Programmed
+        status: "True"
+        type: Programmed
+      - lastTransitionTime: null
+        message: Listener has been successfully translated
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Listener references have been resolved
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      name: https-3
+      supportedKinds:
+      - group: gateway.networking.k8s.io
+        kind: HTTPRoute
+      - group: gateway.networking.k8s.io
+        kind: GRPCRoute
+httpRoutes:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    creationTimestamp: null
+    name: httproute-1
+    namespace: envoy-gateway
+  spec:
+    parentRefs:
+    - name: gateway-1
+      namespace: envoy-gateway
+    rules:
+    - backendRefs:
+      - name: service-1
+        port: 8080
+      matches:
+      - path:
+          value: /
+  status:
+    parents:
+    - conditions:
+      - lastTransitionTime: null
+        message: Route is accepted
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Resolved all the Object references for the Route
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+      parentRef:
+        name: gateway-1
+        namespace: envoy-gateway
+infraIR:
+  envoy-gateway/gateway-1:
+    proxy:
+      listeners:
+      - address: null
+        name: envoy-gateway/gateway-1/https-1
+        ports:
+        - containerPort: 10443
+          name: https-443
+          protocol: HTTPS
+          servicePort: 443
+      metadata:
+        labels:
+          gateway.envoyproxy.io/owning-gateway-name: gateway-1
+          gateway.envoyproxy.io/owning-gateway-namespace: envoy-gateway
+      name: envoy-gateway/gateway-1
+      namespace: envoy-gateway-system
+xdsIR:
+  envoy-gateway/gateway-1:
+    accessLog:
+      json:
+      - path: /dev/stdout
+    http:
+    - address: 0.0.0.0
+      hostnames:
+      - foo.example.com
+      isHTTP2: false
+      metadata:
+        kind: Gateway
+        name: gateway-1
+        namespace: envoy-gateway
+        sectionName: https-1
+      name: envoy-gateway/gateway-1/https-1
+      path:
+        escapedSlashesAction: UnescapeAndRedirect
+        mergeSlashes: true
+      port: 10443
+      routes:
+      - destination:
+          name: httproute/envoy-gateway/httproute-1/rule/0
+          settings:
+          - addressType: IP
+            endpoints:
+            - host: 7.7.7.7
+              port: 8080
+            name: httproute/envoy-gateway/httproute-1/rule/0/backend/0
+            protocol: HTTP
+            weight: 1
+        hostname: foo.example.com
+        isHTTP2: false
+        metadata:
+          kind: HTTPRoute
+          name: httproute-1
+          namespace: envoy-gateway
+        name: httproute/envoy-gateway/httproute-1/rule/0/match/0/foo_example_com
+        pathMatch:
+          distinct: false
+          name: ""
+          prefix: /
+      tls:
+        alpnProtocols: null
+        certificates:
+        - name: envoy-gateway/tls-secret-example-com
+          privateKey: '[redacted]'
+          serverCertificate: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUMyRENDQWNBQ0FRQXdEUVlKS29aSWh2Y05BUUVMQlFBd0xURVZNQk1HQTFVRUNnd01aWGhoYlhCc1pTQkoKYm1NdU1SUXdFZ1lEVlFRRERBdGxlR0Z0Y0d4bExtTnZiVEFlRncweU5UQTBNakV3T1RFd05ETmFGdzB6TlRBMApNVGt3T1RFd05ETmFNRGN4RmpBVUJnTlZCQU1NRFNvdVpYaGhiWEJzWlM1amIyMHhIVEFiQmdOVkJBb01GR1Y0CllXMXdiR1VnYjNKbllXNXBlbUYwYVc5dU1JSUJJakFOQmdrcWhraUc5dzBCQVFFRkFBT0NBUThBTUlJQkNnS0MKQVFFQXY0anl4TUh1YzQzMHdvWkk4M1JSMXVxU2gvbm9MVWVPdDZnMkNKaFVFYXNaeUNOMzN3bFRRRDE0SEhkSwpOb1k4SThWd1pOZFZCNGpjRzlnb3dDVmVQY3lqRzZPaGl1aUZNWnU2NzV6dWZEWnRlRTNEY3lTbFgrY2lSbVZZCkNuSmk3QkV3NlJMUUJ0bVV6WGxtYmRpVXE5djJwalVBL2R3ZnRLRHRZTHFrVytvTSt5MWg3cjRJV0JVK2RVcU0KcGtTem5VSCtKN1JoRkFsdytmRWlVSFRLemlCMkVtdjc3Mi91bS96NHdMWnJIeWNGbmc4L1FCM0JIUktXVTV4eQp3bWNTQ2xrVlMvWWNpMFVXcnR2eGhwck9wTUhQUGR2QkZ2M2NaWGNpUUJjb0ZNcGxsQzV0UURvdWJ0dEV1d3JpCi8rVktKWkUrSVl4ei9YeUd3Y3dJRnIzWG13SURBUUFCTUEwR0NTcUdTSWIzRFFFQkN3VUFBNElCQVFBU3VLaE8KcGtwL1VSclphbEU0OUlnc0xkN3hSTlBhREVkQ1RWZ3Qvc3praUhnSDB1NDBVaVV6KzVzaDRpdlJOazRqTm1zRwprb3FwQlBVS3pvVmtrSTcxUWQ4bHh1VzF2dkxZMXVvM0RIS2svdDFpUWVZWWpERlk3YzUxVG1BT015WUdKTlhxCi9EbW84UWgzaFB1RnI3a29kUjBLSkJyc0RsMEhoWVBjUnpWOW1sQ2lrU1B4THJGTUNwZGx0QUw2UEprSVpucUgKc1g5dEtVZk1uYW5jMkpHZTZVTDE1ODBEV2xQTUcrMU1qRElCVXdxWWYzaWNKb0NYclAwbzNmckRKcTE2VnpidApkalRtVGswakx1bGkvQ2JCZzh4dWp4emo4bmRPcVNkd05kd091OWoxSmZ2Q0I1RjZ4S0VTenowOVo5TzlOZUM5CjMrd1pLTlRSOXVEdDRKNksKLS0tLS1FTkQgQ0VSVElGSUNBVEUtLS0tLQo=
+      tlsOverlaps: true
+    - address: 0.0.0.0
+      hostnames:
+      - '*.example.com'
+      isHTTP2: false
+      metadata:
+        kind: Gateway
+        name: gateway-1
+        namespace: envoy-gateway
+        sectionName: https-2
+      name: envoy-gateway/gateway-1/https-2
+      path:
+        escapedSlashesAction: UnescapeAndRedirect
+        mergeSlashes: true
+      port: 10443
+      routes:
+      - destination:
+          name: httproute/envoy-gateway/httproute-1/rule/0
+          settings:
+          - addressType: IP
+            endpoints:
+            - host: 7.7.7.7
+              port: 8080
+            name: httproute/envoy-gateway/httproute-1/rule/0/backend/0
+            protocol: HTTP
+            weight: 1
+        hostname: '*.example.com'
+        isHTTP2: false
+        metadata:
+          kind: HTTPRoute
+          name: httproute-1
+          namespace: envoy-gateway
+        name: httproute/envoy-gateway/httproute-1/rule/0/match/0/*_example_com
+        pathMatch:
+          distinct: false
+          name: ""
+          prefix: /
+      tls:
+        alpnProtocols: null
+        certificates:
+        - name: envoy-gateway/tls-secret-example-com
+          privateKey: '[redacted]'
+          serverCertificate: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUMyRENDQWNBQ0FRQXdEUVlKS29aSWh2Y05BUUVMQlFBd0xURVZNQk1HQTFVRUNnd01aWGhoYlhCc1pTQkoKYm1NdU1SUXdFZ1lEVlFRRERBdGxlR0Z0Y0d4bExtTnZiVEFlRncweU5UQTBNakV3T1RFd05ETmFGdzB6TlRBMApNVGt3T1RFd05ETmFNRGN4RmpBVUJnTlZCQU1NRFNvdVpYaGhiWEJzWlM1amIyMHhIVEFiQmdOVkJBb01GR1Y0CllXMXdiR1VnYjNKbllXNXBlbUYwYVc5dU1JSUJJakFOQmdrcWhraUc5dzBCQVFFRkFBT0NBUThBTUlJQkNnS0MKQVFFQXY0anl4TUh1YzQzMHdvWkk4M1JSMXVxU2gvbm9MVWVPdDZnMkNKaFVFYXNaeUNOMzN3bFRRRDE0SEhkSwpOb1k4SThWd1pOZFZCNGpjRzlnb3dDVmVQY3lqRzZPaGl1aUZNWnU2NzV6dWZEWnRlRTNEY3lTbFgrY2lSbVZZCkNuSmk3QkV3NlJMUUJ0bVV6WGxtYmRpVXE5djJwalVBL2R3ZnRLRHRZTHFrVytvTSt5MWg3cjRJV0JVK2RVcU0KcGtTem5VSCtKN1JoRkFsdytmRWlVSFRLemlCMkVtdjc3Mi91bS96NHdMWnJIeWNGbmc4L1FCM0JIUktXVTV4eQp3bWNTQ2xrVlMvWWNpMFVXcnR2eGhwck9wTUhQUGR2QkZ2M2NaWGNpUUJjb0ZNcGxsQzV0UURvdWJ0dEV1d3JpCi8rVktKWkUrSVl4ei9YeUd3Y3dJRnIzWG13SURBUUFCTUEwR0NTcUdTSWIzRFFFQkN3VUFBNElCQVFBU3VLaE8KcGtwL1VSclphbEU0OUlnc0xkN3hSTlBhREVkQ1RWZ3Qvc3praUhnSDB1NDBVaVV6KzVzaDRpdlJOazRqTm1zRwprb3FwQlBVS3pvVmtrSTcxUWQ4bHh1VzF2dkxZMXVvM0RIS2svdDFpUWVZWWpERlk3YzUxVG1BT015WUdKTlhxCi9EbW84UWgzaFB1RnI3a29kUjBLSkJyc0RsMEhoWVBjUnpWOW1sQ2lrU1B4THJGTUNwZGx0QUw2UEprSVpucUgKc1g5dEtVZk1uYW5jMkpHZTZVTDE1ODBEV2xQTUcrMU1qRElCVXdxWWYzaWNKb0NYclAwbzNmckRKcTE2VnpidApkalRtVGswakx1bGkvQ2JCZzh4dWp4emo4bmRPcVNkd05kd091OWoxSmZ2Q0I1RjZ4S0VTenowOVo5TzlOZUM5CjMrd1pLTlRSOXVEdDRKNksKLS0tLS1FTkQgQ0VSVElGSUNBVEUtLS0tLQo=
+      tlsOverlaps: true
+    - address: 0.0.0.0
+      hostnames:
+      - foo.bar.com
+      isHTTP2: false
+      metadata:
+        kind: Gateway
+        name: gateway-1
+        namespace: envoy-gateway
+        sectionName: https-3
+      name: envoy-gateway/gateway-1/https-3
+      path:
+        escapedSlashesAction: UnescapeAndRedirect
+        mergeSlashes: true
+      port: 10443
+      routes:
+      - destination:
+          name: httproute/envoy-gateway/httproute-1/rule/0
+          settings:
+          - addressType: IP
+            endpoints:
+            - host: 7.7.7.7
+              port: 8080
+            name: httproute/envoy-gateway/httproute-1/rule/0/backend/0
+            protocol: HTTP
+            weight: 1
+        hostname: foo.bar.com
+        isHTTP2: false
+        metadata:
+          kind: HTTPRoute
+          name: httproute-1
+          namespace: envoy-gateway
+        name: httproute/envoy-gateway/httproute-1/rule/0/match/0/foo_bar_com
+        pathMatch:
+          distinct: false
+          name: ""
+          prefix: /
+      tls:
+        alpnProtocols: null
+        certificates:
+        - name: envoy-gateway/tls-secret-foo-bar-com
+          privateKey: '[redacted]'
+          serverCertificate: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUMxakNDQWI0Q0FRQXdEUVlKS29aSWh2Y05BUUVMQlFBd0xURVZNQk1HQTFVRUNnd01aWGhoYlhCc1pTQkoKYm1NdU1SUXdFZ1lEVlFRRERBdGxlR0Z0Y0d4bExtTnZiVEFlRncweU5UQTBNakV3T1RFNU1qWmFGdzB6TlRBMApNVGt3T1RFNU1qWmFNRFV4RkRBU0JnTlZCQU1NQzJadmJ5NWlZWEl1WTI5dE1SMHdHd1lEVlFRS0RCUmxlR0Z0CmNHeGxJRzl5WjJGdWFYcGhkR2x2YmpDQ0FTSXdEUVlKS29aSWh2Y05BUUVCQlFBRGdnRVBBRENDQVFvQ2dnRUIKQU5JZzRNWUMvVlV6ZVRMN3Z1ai9pSXNwYTVrd0dyZTFvVGVCd2JYTFk1dmlxRXlicjRraWRQbTVXaFdPdm9GTwpuK0t6QlIzdjRaT20vdzNzMllwTEJjdWtsa3FlQnYzN2kxZFpOOTBrRzR5YitDV01tT3Z3UXFPbkNDV1BvZHBTCitNL0JPbHk2VDRGQ09hT3MwRVFBeDIzb2hxU2h3U0hvVlNLVWdIWTBPTlpLaS8xTjZnVHExb252ajNSM1Z3WHoKb1N0VGl4ODFVUzN0RkZBcnUwaHlOSmJWV3dhMjhMczBLRDJUQlhDMWZTblV3U0VVUzBIQWlIRDFHeE9HT011Twp0SG96ZDkzUGlxNkFJQUIyZEZhdmI5Ujh3azdnU2ZrekV5SFlUT2NaVkFMdFd5Tmx6TnVDQ09uSDFkcWtISUpsClhMcTg5VVNDRDlLeFBoeVN2ODNFN0VrQ0F3RUFBVEFOQmdrcWhraUc5dzBCQVFzRkFBT0NBUUVBWGJ1Z29EenYKVWYwQS91bTNJd1dKUksxWHZFN01jaVUxU08xUHhnOXZ0SXJPclFqZVQ3dGZzajAzQnJObjQxbWVPQkhESzNrdwp0ZHB6SUxoNjJEL1JwM0tPM2UxNDRtZGw4V1BmelBtdmJOdCtlWThNdEo0UlZMT0R4ZVEvTVhGVUQ3aFlXMklWCnJOVnY5aFJrZCt6QmpjSlppRmV0NTlzU2VxR3NZNFdQSnlQVk5sMHBDSlBSM3AwVEZhTm4rclRSUjVhdmVzY3cKRlhqTUpYUHpYRU5ZYXM3TVJxSitVaTZ6Sm9UdVVaTHBPTEtlOFNkeGtoU3IrdkdqYnNPT25yb1I0bXYrRmdvcwo4T1d4RHA4UnpRRUZyeDhBa0tkMzJrRGJCMS9ZWDA0Z3Z0dklzemUwdWx1SEIvY0NSd1ZGZG45WHdOZXVpRmFvCmVUK3BZNVZ1S1Nubkx3PT0KLS0tLS1FTkQgQ0VSVElGSUNBVEUtLS0tLQo=
+    readyListener:
+      address: 0.0.0.0
+      ipFamily: IPv4
+      path: /ready
+      port: 19003

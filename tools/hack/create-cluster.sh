@@ -5,7 +5,7 @@ set -euo pipefail
 # Setup default values
 CLUSTER_NAME=${CLUSTER_NAME:-"envoy-gateway"}
 METALLB_VERSION=${METALLB_VERSION:-"v0.13.10"}
-KIND_NODE_TAG=${KIND_NODE_TAG:-"v1.32.0"}
+KIND_NODE_TAG=${KIND_NODE_TAG:-"v1.33.0"}
 NUM_WORKERS=${NUM_WORKERS:-""}
 IP_FAMILY=${IP_FAMILY:-"ipv4"}
 CUSTOM_CNI=${CUSTOM_CNI:-"false"}
@@ -29,13 +29,15 @@ networking:
   dnsSearch: []
 nodes:
 - role: control-plane
+  labels:
+    "topology.kubernetes.io/zone": "0"
 EOM
 )
 
 # https://kind.sigs.k8s.io/docs/user/quick-start/#multi-node-clusters
 if [[ -n "${NUM_WORKERS}" ]]; then
-for _ in $(seq 1 "${NUM_WORKERS}"); do
-  KIND_CFG+=$(printf "\n%s" "- role: worker")
+for i in $(seq 1 "${NUM_WORKERS}"); do
+  KIND_CFG+=$(printf "\n- role: worker\n  labels:\n    \"topology.kubernetes.io/zone\": \"%s\"" "$i")
 done
 fi
 
@@ -165,4 +167,3 @@ echo "Applying configuration with retries..."
     sleep $RETRY_INTERVAL
     ELAPSED_TIME=$((ELAPSED_TIME + RETRY_INTERVAL))
   done
-

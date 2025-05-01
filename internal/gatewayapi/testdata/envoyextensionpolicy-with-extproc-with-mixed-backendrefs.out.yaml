@@ -66,8 +66,8 @@ envoyExtensionPolicies:
         sectionName: http
       conditions:
       - lastTransitionTime: null
-        message: 'ExtProc: mixed endpoints address type for the same route destination
-          is not supported.'
+        message: 'ExtProc: external service destinations having multiple endpoint
+          types are not supported.'
         reason: Invalid
         status: "False"
         type: Accepted
@@ -168,6 +168,7 @@ infraIR:
           gateway.envoyproxy.io/owning-gateway-name: gateway-1
           gateway.envoyproxy.io/owning-gateway-namespace: default
       name: default/gateway-1
+      namespace: envoy-gateway-system
 xdsIR:
   default/gateway-1:
     accessLog:
