@@ -660,6 +660,17 @@ func (t *Translator) processTCPListenerXdsTranslation(
 	// errors and return them at the end.
 	var errs, err error
 	for _, tcpListener := range tcpListeners {
+		// Skip the fake hbone port 15008.
+		// This is just a temporary workaround to allow EG work with Istio Ambient mode as waypoint proxy.
+		// TODO: zhaohuabing remove this once Istio ztunnel fix the 15008 port issue.
+		// The error message is like:
+		// ERROR xds-server cache/snapshotcache.go:344 Envoy rejected the last update with code 13 and message Error
+		// adding/updating listener(s) default/eg-waypoint/fake-hbone: cannot bind '0.0.0.0:15008': Address already in use
+		// https://github.com/istio/istio/blob/9104ca90df74067c7cc9a2bfe4a9ea0190ec6a43/tests/integration/ambient/waypoint_test.go#L273-L277
+		if len(tcpListener.Routes) == 0 && tcpListener.Port == 15008 {
+			continue
+		}
+
 		// Search for an existing listener, if it does not exist, create one.
 		xdsListener := findXdsListenerByHostPort(tCtx, tcpListener.Address, tcpListener.Port, corev3.SocketAddress_TCP)
 		if xdsListener == nil {
