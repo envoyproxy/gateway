@@ -186,6 +186,7 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 		irRoutes []*ir.HTTPRoute
 		errs     = &status.MultiStatusError{}
 	)
+	pattern := getStatPattern(httpRoute, parentRef)
 
 	// process each HTTPRouteRule, generate a unique Xds IR HTTPRoute per match of the rule
 	for ruleIdx, rule := range httpRoute.Spec.Rules {
@@ -220,7 +221,7 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 		allDs := []*ir.DestinationSetting{}
 		failedProcessDestination := false
 		hasDynamicResolver := false
-
+		backendRefNames := make([]string, len(rule.BackendRefs))
 		// process each backendRef, and calculate the destination settings for this rule
 		for i, backendRef := range rule.BackendRefs {
 			settingName := irDestinationSettingName(destName, i)
@@ -244,6 +245,8 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 			if ds.IsDynamicResolver {
 				hasDynamicResolver = true
 			}
+			backendNamespace := NamespaceDerefOr(backendRef.Namespace, httpRoute.GetNamespace())
+			backendRefNames[i] = fmt.Sprintf("%s/%s", backendNamespace, backendRef.Name)
 		}
 
 		// process each ir route
@@ -277,6 +280,10 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 				destination.Name = destName
 				destination.Settings = allDs
 				irRoute.Destination = destination
+			}
+
+			if pattern != "" {
+				destination.StatName = ptr.To(buildStatName(pattern, httpRoute, rule.Name, ruleIdx, backendRefNames))
 			}
 		}
 
@@ -625,6 +632,7 @@ func (t *Translator) processGRPCRouteRules(grpcRoute *GRPCRouteContext, parentRe
 		irRoutes []*ir.HTTPRoute
 		errs     = &status.MultiStatusError{}
 	)
+	pattern := getStatPattern(grpcRoute, parentRef)
 
 	// compute matches, filters, backends
 	for ruleIdx, rule := range grpcRoute.Spec.Rules {
@@ -652,6 +660,7 @@ func (t *Translator) processGRPCRouteRules(grpcRoute *GRPCRouteContext, parentRe
 		allDs := []*ir.DestinationSetting{}
 		failedProcessDestination := false
 
+		backendRefNames := make([]string, len(rule.BackendRefs))
 		for i, backendRef := range rule.BackendRefs {
 			settingName := irDestinationSettingName(destName, i)
 			ds, err := t.processDestination(settingName, backendRef, parentRef, grpcRoute, resources)
@@ -668,6 +677,8 @@ func (t *Translator) processGRPCRouteRules(grpcRoute *GRPCRouteContext, parentRe
 				continue
 			}
 			allDs = append(allDs, ds)
+			backendNamespace := NamespaceDerefOr(backendRef.Namespace, grpcRoute.GetNamespace())
+			backendRefNames[i] = fmt.Sprintf("%s/%s", backendNamespace, backendRef.Name)
 		}
 
 		// process each ir route
@@ -696,6 +707,10 @@ func (t *Translator) processGRPCRouteRules(grpcRoute *GRPCRouteContext, parentRe
 				destination.Name = destName
 				destination.Settings = allDs
 				irRoute.Destination = destination
+			}
+
+			if pattern != "" {
+				destination.StatName = ptr.To(buildStatName(pattern, grpcRoute, rule.Name, ruleIdx, backendRefNames))
 			}
 		}
 
@@ -1975,4 +1990,31 @@ func backendAppProtocolToIRAppProtocol(ap egv1a1.AppProtocolType, defaultProtoco
 	default:
 		return defaultProtocol
 	}
+}
+
+func getStatPattern(routeContext RouteContext, parentRef *RouteParentContext) string {
+	var pattern string
+	var envoyProxy *egv1a1.EnvoyProxy
+	gatewayCtx := GetRouteParentContext(routeContext, *parentRef.ParentReference).GetGateway()
+	if gatewayCtx != nil {
+		envoyProxy = gatewayCtx.envoyProxy
+	}
+	if envoyProxy != nil && envoyProxy.Spec.Telemetry != nil && envoyProxy.Spec.Telemetry.Metrics != nil &&
+		envoyProxy.Spec.Telemetry.Metrics.ClusterStatName != nil {
+		pattern = *envoyProxy.Spec.Telemetry.Metrics.ClusterStatName
+	}
+	return pattern
+}
+
+func buildStatName(pattern string, route RouteContext, ruleName *gwapiv1.SectionName, idx int, refs []string) string {
+	statName := strings.ReplaceAll(pattern, "%ROUTE%", fmt.Sprintf("%s/%s", route.GetNamespace(), route.GetName()))
+	statName = strings.ReplaceAll(statName, "%ROUTE_KIND%", route.GetObjectKind().GroupVersionKind().Kind)
+	if ruleName == nil {
+		statName = strings.ReplaceAll(statName, "%ROUTE_RULE%", "-")
+	} else {
+		statName = strings.ReplaceAll(statName, "%ROUTE_RULE%", string(*ruleName))
+	}
+	statName = strings.ReplaceAll(statName, "%ROUTE_RULE_NUMBER%", fmt.Sprintf("%d", idx))
+	statName = strings.ReplaceAll(statName, "%BACKEND_REFS%", strings.Join(refs, ","))
+	return statName
 }
