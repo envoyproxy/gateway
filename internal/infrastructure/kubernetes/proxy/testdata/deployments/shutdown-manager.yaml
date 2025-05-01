@@ -356,7 +356,7 @@ spec:
               - --drain-timeout=30s
               - --min-drain-duration=15s
         livenessProbe:
-          failureThreshold: 3
+          failureThreshold: 10
           httpGet:
             path: /healthz
             port: 19002
