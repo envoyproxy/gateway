@@ -4401,10 +4401,8 @@ func (in *OIDC) DeepCopyInto(out *OIDC) {
 	}
 	if in.OIDCDenyRedirect != nil {
 		in, out := &in.OIDCDenyRedirect, &out.OIDCDenyRedirect
-		*out = make([]OIDCDenyRedirect, len(*in))
-		for i := range *in {
-			(*in)[i].DeepCopyInto(&(*out)[i])
-		}
+		*out = new(OIDCDenyRedirect)
+		(*in).DeepCopyInto(*out)
 	}
 	if in.LogoutPath != nil {
 		in, out := &in.LogoutPath, &out.LogoutPath
