@@ -9,7 +9,9 @@ ignore: |
   charts/gateway-addons-helm/
   charts/gateway-crds-helm/
   bin/install.yaml
-  test/helm/
+  test/helm/gateway-helm/
+  test/helm/gateway-addons-helm/
+  test/helm/gateway-crds-helm/
   examples/extension-server/charts/extension-server
   site/node_modules/
 
