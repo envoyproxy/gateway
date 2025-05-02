@@ -1,5 +1,5 @@
 crds:
   gatewayAPI:
-    enabled: true
+    enabled: false
   envoyGateway:
-    enabled: true
+    enabled: false
