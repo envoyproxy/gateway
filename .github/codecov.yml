@@ -15,3 +15,4 @@ ignore:
   - "test"
   - "**/*.pb.go"
   - "**/zz_generated.*.go"
+  - "api/**/*_types.go"
