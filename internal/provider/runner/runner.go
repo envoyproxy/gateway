@@ -79,7 +79,7 @@ func (r *Runner) createKubernetesProvider(ctx context.Context) (*kubernetes.Prov
 		return nil, fmt.Errorf("failed to get kubeconfig: %w", err)
 	}
 
-	p, err := kubernetes.New(ctx, cfg, &r.Config.Server, r.ProviderResources)
+	p, err := kubernetes.New(ctx, cfg, &r.Server, r.ProviderResources)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create provider %s: %w", egv1a1.ProviderTypeKubernetes, err)
 	}
@@ -90,7 +90,7 @@ func (r *Runner) createKubernetesProvider(ctx context.Context) (*kubernetes.Prov
 func (r *Runner) createCustomResourceProvider() (p provider.Provider, err error) {
 	switch r.EnvoyGateway.Provider.Custom.Resource.Type {
 	case egv1a1.ResourceProviderTypeFile:
-		p, err = file.New(&r.Config.Server, r.ProviderResources)
+		p, err = file.New(&r.Server, r.ProviderResources)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create provider %s: %w", egv1a1.ProviderTypeCustom, err)
 		}

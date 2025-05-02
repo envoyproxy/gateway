@@ -153,11 +153,11 @@ func newGatewayAPIController(ctx context.Context, mgr manager.Manager, cfg *conf
 			case <-ctx.Done():
 				return
 			case <-cfg.Elected:
-				r.subscribeAndUpdateStatus(ctx, cfg.EnvoyGateway.EnvoyGatewaySpec.ExtensionManager != nil)
+				r.subscribeAndUpdateStatus(ctx, cfg.EnvoyGateway.ExtensionManager != nil)
 			}
 		}()
 	} else {
-		r.subscribeAndUpdateStatus(ctx, cfg.EnvoyGateway.EnvoyGatewaySpec.ExtensionManager != nil)
+		r.subscribeAndUpdateStatus(ctx, cfg.EnvoyGateway.ExtensionManager != nil)
 	}
 	return nil
 }
@@ -1857,9 +1857,9 @@ func (r *gatewayAPIReconciler) processGatewayParamsRef(ctx context.Context, gtw 
 	}
 
 	ref := gtw.Spec.Infrastructure.ParametersRef
-	if !(string(ref.Group) == egv1a1.GroupVersion.Group &&
-		ref.Kind == egv1a1.KindEnvoyProxy &&
-		len(ref.Name) > 0) {
+	if string(ref.Group) != egv1a1.GroupVersion.Group ||
+		ref.Kind != egv1a1.KindEnvoyProxy ||
+		len(ref.Name) == 0 {
 		return fmt.Errorf("unsupported parametersRef for gateway %s/%s", gtw.Namespace, gtw.Name)
 	}
 
@@ -1964,8 +1964,8 @@ func (r *gatewayAPIReconciler) processEnvoyProxy(ep *egv1a1.EnvoyProxy, resource
 		for _, backendRef := range backendRefs {
 			backendNamespace := gatewayapi.NamespaceDerefOr(backendRef.Namespace, ep.Namespace)
 			resourceMap.allAssociatedBackendRefs.Insert(gwapiv1.BackendObjectReference{
-				Group:     backendRef.BackendObjectReference.Group,
-				Kind:      backendRef.BackendObjectReference.Kind,
+				Group:     backendRef.Group,
+				Kind:      backendRef.Kind,
 				Namespace: gatewayapi.NamespacePtr(backendNamespace),
 				Name:      backendRef.Name,
 			})
@@ -2104,7 +2104,7 @@ func (r *gatewayAPIReconciler) processExtensionServerPolicies(
 			}
 			_, foundTargetRef := policySpec["targetRef"]
 			_, foundTargetRefs := policySpec["targetRefs"]
-			if !(foundTargetRef || foundTargetRefs) {
+			if !foundTargetRef && !foundTargetRefs {
 				return fmt.Errorf("not a policy object - no targetRef or targetRefs found in %s.%s %s",
 					policy.GetAPIVersion(), policy.GetKind(), policy.GetName())
 			}

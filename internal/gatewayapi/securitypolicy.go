@@ -1218,7 +1218,7 @@ func (t *Translator) buildExtAuth(
 		backendSettings = http.BackendSettings
 		switch {
 		case len(http.BackendRefs) > 0:
-			backendRefs = http.BackendCluster.BackendRefs
+			backendRefs = http.BackendRefs
 		case http.BackendRef != nil:
 			backendRefs = []egv1a1.BackendRef{
 				{
@@ -1233,7 +1233,7 @@ func (t *Translator) buildExtAuth(
 		protocol = ir.GRPC
 		backendSettings = grpc.BackendSettings
 		switch {
-		case len(grpc.BackendCluster.BackendRefs) > 0:
+		case len(grpc.BackendRefs) > 0:
 			backendRefs = grpc.BackendRefs
 		case grpc.BackendRef != nil:
 			backendRefs = []egv1a1.BackendRef{

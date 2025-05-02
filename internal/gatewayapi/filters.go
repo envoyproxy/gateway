@@ -730,14 +730,14 @@ func (t *Translator) processExtensionRefHTTPFilter(extFilter *gwapiv1.LocalObjec
 								Substitution: hrf.Spec.URLRewrite.Path.ReplaceRegexMatch.Substitution,
 							}
 
-							if filterContext.HTTPFilterIR.URLRewrite != nil {
-								if filterContext.HTTPFilterIR.URLRewrite.Path == nil {
-									filterContext.HTTPFilterIR.URLRewrite.Path = &ir.ExtendedHTTPPathModifier{
+							if filterContext.URLRewrite != nil {
+								if filterContext.URLRewrite.Path == nil {
+									filterContext.URLRewrite.Path = &ir.ExtendedHTTPPathModifier{
 										RegexMatchReplace: rmr,
 									}
 								}
 							} else { // no url rewrite
-								filterContext.HTTPFilterIR.URLRewrite = &ir.URLRewrite{
+								filterContext.URLRewrite = &ir.URLRewrite{
 									Path: &ir.ExtendedHTTPPathModifier{
 										RegexMatchReplace: rmr,
 									},
@@ -748,7 +748,8 @@ func (t *Translator) processExtensionRefHTTPFilter(extFilter *gwapiv1.LocalObjec
 
 					if hrf.Spec.URLRewrite.Hostname != nil {
 						var hm *ir.HTTPHostModifier
-						if hrf.Spec.URLRewrite.Hostname.Type == egv1a1.HeaderHTTPHostnameModifier {
+						switch hrf.Spec.URLRewrite.Hostname.Type {
+						case egv1a1.HeaderHTTPHostnameModifier:
 							if hrf.Spec.URLRewrite.Hostname.Header == nil {
 								updateRouteStatusForFilter(
 									filterContext,
@@ -758,18 +759,18 @@ func (t *Translator) processExtensionRefHTTPFilter(extFilter *gwapiv1.LocalObjec
 							hm = &ir.HTTPHostModifier{
 								Header: hrf.Spec.URLRewrite.Hostname.Header,
 							}
-						} else if hrf.Spec.URLRewrite.Hostname.Type == egv1a1.BackendHTTPHostnameModifier {
+						case egv1a1.BackendHTTPHostnameModifier:
 							hm = &ir.HTTPHostModifier{
 								Backend: ptr.To(true),
 							}
 						}
 
-						if filterContext.HTTPFilterIR.URLRewrite != nil {
-							if filterContext.HTTPFilterIR.URLRewrite.Host == nil {
-								filterContext.HTTPFilterIR.URLRewrite.Host = hm
+						if filterContext.URLRewrite != nil {
+							if filterContext.URLRewrite.Host == nil {
+								filterContext.URLRewrite.Host = hm
 							}
 						} else { // no url rewrite
-							filterContext.HTTPFilterIR.URLRewrite = &ir.URLRewrite{
+							filterContext.URLRewrite = &ir.URLRewrite{
 								Host: hm,
 							}
 						}
@@ -801,7 +802,7 @@ func (t *Translator) processExtensionRefHTTPFilter(extFilter *gwapiv1.LocalObjec
 						filterContext.AddResponseHeaders = append(filterContext.AddResponseHeaders, newHeader)
 					}
 
-					filterContext.HTTPFilterIR.DirectResponse = dr
+					filterContext.DirectResponse = dr
 				}
 
 				if hrf.Spec.CredentialInjection != nil {
@@ -834,7 +835,7 @@ func (t *Translator) processExtensionRefHTTPFilter(extFilter *gwapiv1.LocalObjec
 						Overwrite:  hrf.Spec.CredentialInjection.Overwrite,
 						Credential: secretBytes,
 					}
-					filterContext.HTTPFilterIR.CredentialInjection = injection
+					filterContext.CredentialInjection = injection
 				}
 			}
 		}

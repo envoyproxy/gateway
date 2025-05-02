@@ -33,11 +33,11 @@ func DefaultEnvoyGateway() *EnvoyGateway {
 
 // SetEnvoyGatewayDefaults sets default EnvoyGateway configuration parameters.
 func (e *EnvoyGateway) SetEnvoyGatewayDefaults() {
-	if e.TypeMeta.Kind == "" {
-		e.TypeMeta.Kind = KindEnvoyGateway
+	if e.Kind == "" {
+		e.Kind = KindEnvoyGateway
 	}
-	if e.TypeMeta.APIVersion == "" {
-		e.TypeMeta.APIVersion = GroupVersion.String()
+	if e.APIVersion == "" {
+		e.APIVersion = GroupVersion.String()
 	}
 	if e.Provider == nil {
 		e.Provider = DefaultEnvoyGatewayProvider()
