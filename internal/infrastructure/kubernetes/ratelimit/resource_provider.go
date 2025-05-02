@@ -262,9 +262,9 @@ func (r *ResourceRender) Deployment() (*appsv1.Deployment, error) {
 
 	// set name
 	if r.rateLimitDeployment.Name != nil {
-		deployment.ObjectMeta.Name = *r.rateLimitDeployment.Name
+		deployment.Name = *r.rateLimitDeployment.Name
 	} else {
-		deployment.ObjectMeta.Name = r.Name()
+		deployment.Name = r.Name()
 	}
 
 	if r.ownerReferenceUID != nil {

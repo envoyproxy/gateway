@@ -51,7 +51,7 @@ func New(svr *config.Server, resources *message.ProviderResources) (*Provider, e
 		logger:                  logger,
 		watcher:                 filewatcher.NewWatcher(),
 		resourcesStore:          newResourcesStore(svr.EnvoyGateway.Gateway.ControllerName, resources, logger),
-		extensionManagerEnabled: svr.EnvoyGateway.EnvoyGatewaySpec.ExtensionManager != nil,
+		extensionManagerEnabled: svr.EnvoyGateway.ExtensionManager != nil,
 	}, nil
 }
 

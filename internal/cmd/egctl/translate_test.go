@@ -320,9 +320,10 @@ func TestTranslate(t *testing.T) {
 				"testdata/translate/in/" + tc.name + ".yaml",
 			}
 
-			if tc.output == yamlOutput {
+			switch tc.output {
+			case yamlOutput:
 				args = append(args, "--output", yamlOutput)
-			} else if tc.output == jsonOutput {
+			case jsonOutput:
 				args = append(args, "--output", jsonOutput)
 			}
 
