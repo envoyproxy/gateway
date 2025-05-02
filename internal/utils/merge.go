@@ -16,7 +16,7 @@ import (
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 )
 
-func Merge[T client.Object](original T, patch T, mergeType egv1a1.MergeType) (T, error) {
+func Merge[T client.Object](original, patch T, mergeType egv1a1.MergeType) (T, error) {
 	var (
 		patchedJSON  []byte
 		originalJSON []byte
