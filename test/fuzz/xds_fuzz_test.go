@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	fuzz "github.com/AdaLogics/go-fuzz-headers"
+
 	"github.com/envoyproxy/gateway/internal/cmd/egctl"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 )
