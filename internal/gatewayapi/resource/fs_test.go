@@ -11,7 +11,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/envoyproxy/gateway" // nolint:goimports
+	envoygateway "github.com/envoyproxy/gateway"
 )
 
 func TestOpenAndReadGatewayCRDsFS(t *testing.T) {
