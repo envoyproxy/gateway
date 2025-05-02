@@ -20,6 +20,8 @@ formatters:
         - prefix(github.com/envoyproxy/gateway)
     gofmt:
       simplify: true
+    gofumpt:
+      extra-rules: true
     goimports:
       # put imports beginning with prefix after 3rd-party packages;
       # it's a comma-separated list of prefixes
