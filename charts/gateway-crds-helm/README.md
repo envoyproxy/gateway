@@ -32,6 +32,6 @@ To uninstall the chart:
 
 | Key | Type | Default | Description |
 |-----|------|---------|-------------|
-| crds.envoyGateway.enabled | bool | `true` |  |
-| crds.gatewayAPI.enabled | bool | `true` |  |
+| crds.envoyGateway.enabled | bool | `false` |  |
+| crds.gatewayAPI.enabled | bool | `false` |  |
 
