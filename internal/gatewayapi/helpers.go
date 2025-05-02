@@ -209,8 +209,8 @@ func ValidateGRPCRouteFilter(filter *gwapiv1.GRPCRouteFilter, extGKs ...schema.G
 		filter.Type == gwapiv1.GRPCRouteFilterResponseHeaderModifier:
 		return nil
 	case filter.Type == gwapiv1.GRPCRouteFilterExtensionRef:
-		switch {
-		case filter.ExtensionRef == nil:
+		switch filter.ExtensionRef {
+		case nil:
 			return errors.New("extensionRef field must be specified for an extended filter")
 		default:
 			for _, gk := range extGKs {

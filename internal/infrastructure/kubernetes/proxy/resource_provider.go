@@ -204,9 +204,9 @@ func (r *ResourceRender) Service() (*corev1.Service, error) {
 
 	// set name
 	if envoyServiceConfig.Name != nil {
-		svc.ObjectMeta.Name = *envoyServiceConfig.Name
+		svc.Name = *envoyServiceConfig.Name
 	} else {
-		svc.ObjectMeta.Name = r.Name()
+		svc.Name = r.Name()
 	}
 
 	// apply merge patch to service
@@ -338,9 +338,9 @@ func (r *ResourceRender) Deployment() (*appsv1.Deployment, error) {
 
 	// set name
 	if deploymentConfig.Name != nil {
-		deployment.ObjectMeta.Name = *deploymentConfig.Name
+		deployment.Name = *deploymentConfig.Name
 	} else {
-		deployment.ObjectMeta.Name = r.Name()
+		deployment.Name = r.Name()
 	}
 
 	// apply merge patch to deployment
@@ -408,9 +408,9 @@ func (r *ResourceRender) DaemonSet() (*appsv1.DaemonSet, error) {
 
 	// set name
 	if daemonSetConfig.Name != nil {
-		daemonSet.ObjectMeta.Name = *daemonSetConfig.Name
+		daemonSet.Name = *daemonSetConfig.Name
 	} else {
-		daemonSet.ObjectMeta.Name = r.Name()
+		daemonSet.Name = r.Name()
 	}
 
 	// apply merge patch to daemonset

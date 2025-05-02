@@ -763,7 +763,7 @@ func TestWasmCache(t *testing.T) {
 
 			cache.mux.Lock()
 			if cacheHitKey != nil {
-				if entry, ok := cache.modules[*cacheHitKey]; ok && entry.last == initTime {
+				if entry, ok := cache.modules[*cacheHitKey]; ok && initTime.Equal(entry.last) {
 					t.Errorf("Wasm module cache entry's last access time not updated after get operation, key: %v", *cacheHitKey)
 				}
 			}
