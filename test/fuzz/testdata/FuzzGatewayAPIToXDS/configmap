@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: configmap
+  namespace: default
+data:
+  player_initial_lives: "3"
+  game.properties: |
+    enemy.types=aliens,monsters
+    player.maximum-lives=5
