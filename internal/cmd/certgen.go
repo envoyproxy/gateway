@@ -11,6 +11,8 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"path"
 
 	"github.com/spf13/cobra"
@@ -127,10 +129,16 @@ func patchTopologyInjectorWebhook(ctx context.Context, cli client.Client, cfg *c
 		return fmt.Errorf("failed to get mutating webhook configuration: %w", err)
 	}
 
+	secretName := types.NamespacedName{Name: "envoy-gateway", Namespace: cfg.ControllerNamespace}
+	current := &corev1.Secret{}
+	if err := cli.Get(ctx, secretName, current); err != nil {
+		return fmt.Errorf("failed to get secret %s/%s: %w", current.Namespace, current.Name, err)
+	}
+
 	var updated bool
 	for i, webhook := range webhookCfg.Webhooks {
-		if !bytes.Equal(caBundle, webhook.ClientConfig.CABundle) {
-			webhookCfg.Webhooks[i].ClientConfig.CABundle = caBundle
+		if !bytes.Equal(current.Data["ca.crt"], webhook.ClientConfig.CABundle) {
+			webhookCfg.Webhooks[i].ClientConfig.CABundle = current.Data["ca.crt"]
 			updated = true
 		}
 	}
