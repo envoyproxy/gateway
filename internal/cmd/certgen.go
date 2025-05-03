@@ -11,12 +11,12 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/types"
 	"path"
 
 	"github.com/spf13/cobra"
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	clicfg "sigs.k8s.io/controller-runtime/pkg/client/config"
 
@@ -82,7 +82,7 @@ func certGen(ctx context.Context, logOut io.Writer, local bool) error {
 		if err = outputCertsForKubernetes(ctx, cli, cfg, overwriteControlPlaneCerts, certs); err != nil {
 			return fmt.Errorf("failed to output certificates: %w", err)
 		}
-		if err = patchTopologyInjectorWebhook(ctx, cli, cfg, certs.CACertificate); err != nil {
+		if err = patchTopologyInjectorWebhook(ctx, cli, cfg); err != nil {
 			return fmt.Errorf("failed to patch webhook: %w", err)
 		}
 	} else {
@@ -118,7 +118,7 @@ func outputCertsForKubernetes(ctx context.Context, cli client.Client, cfg *confi
 	return nil
 }
 
-func patchTopologyInjectorWebhook(ctx context.Context, cli client.Client, cfg *config.Server, caBundle []byte) error {
+func patchTopologyInjectorWebhook(ctx context.Context, cli client.Client, cfg *config.Server) error {
 	if disableTopologyInjector {
 		return nil
 	}
@@ -136,9 +136,10 @@ func patchTopologyInjectorWebhook(ctx context.Context, cli client.Client, cfg *c
 	}
 
 	var updated bool
+	desiredBundle := current.Data["ca.crt"]
 	for i, webhook := range webhookCfg.Webhooks {
-		if !bytes.Equal(current.Data["ca.crt"], webhook.ClientConfig.CABundle) {
-			webhookCfg.Webhooks[i].ClientConfig.CABundle = current.Data["ca.crt"]
+		if !bytes.Equal(desiredBundle, webhook.ClientConfig.CABundle) {
+			webhookCfg.Webhooks[i].ClientConfig.CABundle = desiredBundle
 			updated = true
 		}
 	}
