@@ -139,7 +139,7 @@ func processExtensionPostListenerHook(tCtx *types.ResourceVersionTable, xdsListe
 	return nil
 }
 
-func processExtensionPostTranslationHook(tCtx *types.ResourceVersionTable, em *extensionTypes.Manager) error {
+func processExtensionPostTranslationHook(tCtx *types.ResourceVersionTable, em *extensionTypes.Manager, policies []unstructured.Unstructured) error {
 	// Do nothing unless there is an extension manager
 	if em == nil {
 		return nil
@@ -169,7 +169,11 @@ func processExtensionPostTranslationHook(tCtx *types.ResourceVersionTable, em *e
 		oldSecrets[idx] = secret.(*tlsv3.Secret)
 	}
 
-	newClusters, newSecrets, err := extensionInsertHookClient.PostTranslateModifyHook(oldClusters, oldSecrets)
+	unstructuredExtensionPolicies := make([]*unstructured.Unstructured, len(policies))
+	for id, policy := range policies {
+		unstructuredExtensionPolicies[id] = policy.DeepCopy()
+	}
+	newClusters, newSecrets, err := extensionInsertHookClient.PostTranslateModifyHook(oldClusters, oldSecrets, unstructuredExtensionPolicies)
 	if err != nil {
 		return err
 	}
