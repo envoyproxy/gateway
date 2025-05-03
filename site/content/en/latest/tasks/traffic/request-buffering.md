@@ -36,7 +36,7 @@ spec:
     kind: HTTPRoute
     name: foo
   requestBuffer:
-    limit: 4Ki
+    limit: 4 # Supports SI units e.g. 4Ki, 1Mi
 ---
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
