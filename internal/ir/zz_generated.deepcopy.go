@@ -13,6 +13,7 @@ import (
 	"github.com/envoyproxy/gateway/api/v1alpha1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/gateway-api/apis/v1alpha2"
 )
 
@@ -4005,6 +4006,13 @@ func (in *Xds) DeepCopyInto(out *Xds) {
 	if in.FilterOrder != nil {
 		in, out := &in.FilterOrder, &out.FilterOrder
 		*out = make([]v1alpha1.FilterPosition, len(*in))
+		for i := range *in {
+			(*in)[i].DeepCopyInto(&(*out)[i])
+		}
+	}
+	if in.ExtensionServerPolicies != nil {
+		in, out := &in.ExtensionServerPolicies, &out.ExtensionServerPolicies
+		*out = make([]unstructured.Unstructured, len(*in))
 		for i := range *in {
 			(*in)[i].DeepCopyInto(&(*out)[i])
 		}
