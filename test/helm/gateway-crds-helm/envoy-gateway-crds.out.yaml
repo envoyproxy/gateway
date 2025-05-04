@@ -1247,8 +1247,11 @@ spec:
                               - requests
                               - unit
                               type: object
+                            name:
+                              type: string
                           required:
                           - limit
+                          - name
                           type: object
                         maxItems: 64
                         type: array
@@ -1497,8 +1500,11 @@ spec:
                               - requests
                               - unit
                               type: object
+                            name:
+                              type: string
                           required:
                           - limit
+                          - name
                           type: object
                         maxItems: 16
                         type: array

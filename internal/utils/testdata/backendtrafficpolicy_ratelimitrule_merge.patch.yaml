@@ -1,0 +1,27 @@
+kind: BackendTrafficPolicy
+metadata:
+  name: original
+spec:
+  rateLimit:
+    type: Global
+    global:
+      rules:
+        - name: two
+          clientSelectors:
+            - headers:
+                - name: x-user-id
+                  type: Exact
+                  value: two
+          limit:
+            # 21 instead of 20 to test the zero request cost.
+            requests: 21
+            unit: Hour
+          cost:
+            request:
+              from: Number
+              number: 0
+            response:
+              from: Metadata
+              metadata:
+                namespace: io.envoyproxy.gateway.e2e
+                key: request_cost_set_by_ext_proc
