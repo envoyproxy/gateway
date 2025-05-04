@@ -6,7 +6,6 @@
 package proxy
 
 import (
-	"flag"
 	"fmt"
 	"os"
 	"sort"
@@ -30,9 +29,8 @@ import (
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
 	"github.com/envoyproxy/gateway/internal/ir"
+	"github.com/envoyproxy/gateway/internal/utils/test"
 )
-
-var overrideTestData = flag.Bool("override-testdata", false, "if override the test output data.")
 
 const (
 	// envoyHTTPPort is the container port number of Envoy's HTTP endpoint.
@@ -634,7 +632,7 @@ func TestDeployment(t *testing.T) {
 			dp, err := r.Deployment()
 			require.NoError(t, err)
 
-			if *overrideTestData {
+			if test.OverrideTestData() {
 				deploymentYAML, err := yaml.Marshal(dp)
 				require.NoError(t, err)
 				// nolint: gosec
@@ -1072,7 +1070,7 @@ func TestDaemonSet(t *testing.T) {
 				})
 			}
 
-			if *overrideTestData {
+			if test.OverrideTestData() {
 				deploymentYAML, err := yaml.Marshal(ds)
 				require.NoError(t, err)
 				// nolint: gosec
