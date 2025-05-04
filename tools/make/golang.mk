@@ -56,6 +56,7 @@ go.test.unit: ## Run go unit tests
 .PHONY: go.testdata.complete
 go.testdata.complete: ## Override test ouputdata
 	@$(LOG_TARGET)
+	go test -timeout 30s github.com/envoyproxy/gateway/internal/utils --override-testdata=true
 	go test -timeout 30s github.com/envoyproxy/gateway/internal/xds/translator --override-testdata=true
 	go test -timeout 30s github.com/envoyproxy/gateway/internal/cmd/egctl --override-testdata=true
 	go test -timeout 30s github.com/envoyproxy/gateway/internal/infrastructure/kubernetes/ratelimit --override-testdata=true
