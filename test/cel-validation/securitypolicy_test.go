@@ -156,8 +156,8 @@ func TestSecurityPolicyTarget(t *testing.T) {
 						TargetRef: &gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
 							LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
 								Group: gwapiv1a2.Group("gateway.networking.k8s.io"),
-								Kind:  gwapiv1a2.Kind("Gateway"),
-								Name:  gwapiv1a2.ObjectName("eg"),
+								Kind:  gwapiv1a2.Kind("HTTPRoute"),
+								Name:  gwapiv1a2.ObjectName("backend"),
 							},
 							SectionName: &sectionName,
 						},
@@ -165,7 +165,7 @@ func TestSecurityPolicyTarget(t *testing.T) {
 				}
 			},
 			wantErrors: []string{
-				"spec: Invalid value: \"object\": this policy does not yet support the sectionName field",
+				"spec: Invalid value: \"object\": this policy supports the sectionName field only for gateways",
 			},
 		},
 		{
@@ -177,8 +177,8 @@ func TestSecurityPolicyTarget(t *testing.T) {
 							{
 								LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
 									Group: gwapiv1a2.Group("gateway.networking.k8s.io"),
-									Kind:  gwapiv1a2.Kind("Gateway"),
-									Name:  gwapiv1a2.ObjectName("eg"),
+									Kind:  gwapiv1a2.Kind("HTTPRoute"),
+									Name:  gwapiv1a2.ObjectName("backend"),
 								},
 								SectionName: &sectionName,
 							},
@@ -187,7 +187,7 @@ func TestSecurityPolicyTarget(t *testing.T) {
 				}
 			},
 			wantErrors: []string{
-				"spec: Invalid value: \"object\": this policy does not yet support the sectionName field",
+				"spec: Invalid value: \"object\": this policy supports the sectionName field only for gateways",
 			},
 		},
 

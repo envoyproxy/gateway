@@ -590,6 +590,9 @@ func (t *Translator) translateSecurityPolicyForGateway(
 		if t.MergeGateways && gatewayName != policyTarget {
 			continue
 		}
+		if target.SectionName != nil && string(*target.SectionName) != h.Name[strings.LastIndex(h.Name, "/")+1:] {
+			continue
+		}
 		// A Policy targeting the most specific scope(xRoute) wins over a policy
 		// targeting a lesser specific scope(Gateway).
 		for _, r := range h.Routes {
