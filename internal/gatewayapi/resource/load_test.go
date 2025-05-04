@@ -6,7 +6,6 @@
 package resource
 
 import (
-	"flag"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -18,9 +17,8 @@ import (
 	"sigs.k8s.io/yaml"
 
 	"github.com/envoyproxy/gateway/internal/utils/file"
+	"github.com/envoyproxy/gateway/internal/utils/test"
 )
-
-var overrideTestData = flag.Bool("override-testdata", false, "if override the test output data.")
 
 func TestIterYAMLBytes(t *testing.T) {
 	inputs := `test: foo1
@@ -53,7 +51,7 @@ func TestLoadAllSupportedResourcesFromYAMLBytes(t *testing.T) {
 	got, err := LoadResourcesFromYAMLBytes(inFile, true)
 	require.NoError(t, err)
 
-	if *overrideTestData {
+	if test.OverrideTestData() {
 		out, err := yaml.Marshal(got)
 		require.NoError(t, err)
 		require.NoError(t, file.Write(string(out), filepath.Join("testdata", "all-resources.out.yaml")))
