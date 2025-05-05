@@ -6,7 +6,6 @@
 package kubejwt
 
 import (
-	"context"
 	"fmt"
 	"strings"
 
@@ -22,14 +21,16 @@ import (
 type JWTAuthInterceptor struct {
 	clientset *kubernetes.Clientset
 	issuer    string
+	audience  string
 	cache     cache.SnapshotCacheWithCallbacks
 }
 
 // NewJWTAuthInterceptor initializes a new JWTAuthInterceptor.
-func NewJWTAuthInterceptor(clientset *kubernetes.Clientset, issuer string, cache cache.SnapshotCacheWithCallbacks) *JWTAuthInterceptor {
+func NewJWTAuthInterceptor(clientset *kubernetes.Clientset, issuer string, audience string, cache cache.SnapshotCacheWithCallbacks) *JWTAuthInterceptor {
 	return &JWTAuthInterceptor{
 		clientset: clientset,
 		issuer:    issuer,
+		audience:  audience,
 		cache:     cache,
 	}
 }
@@ -37,7 +38,7 @@ func NewJWTAuthInterceptor(clientset *kubernetes.Clientset, issuer string, cache
 // Stream intercepts streaming gRPC calls for authentication.
 func (i *JWTAuthInterceptor) Stream() grpc.StreamServerInterceptor {
 	return func(srv interface{}, ss grpc.ServerStream, info *grpc.StreamServerInfo, handler grpc.StreamHandler) error {
-		if err := i.authorize(ss.Context()); err != nil {
+		if err := i.authorize(ss); err != nil {
 			return err
 		}
 		return handler(srv, ss)
@@ -45,18 +46,18 @@ func (i *JWTAuthInterceptor) Stream() grpc.StreamServerInterceptor {
 }
 
 // authorize validates the Kubernetes Service Account JWT token from the metadata.
-func (i *JWTAuthInterceptor) authorize(ctx context.Context) error {
-	md, ok := metadata.FromIncomingContext(ctx)
+func (i *JWTAuthInterceptor) authorize(ss grpc.ServerStream) error {
+	md, ok := metadata.FromIncomingContext(ss.Context())
 	if !ok {
 		return fmt.Errorf("missing metadata")
 	}
 
-	proxyMetadata, err := processProxyMetadata(md)
+	proxyMetadata, err := i.processProxyMetadata(md, ss)
 	if err != nil {
 		return fmt.Errorf("failed to extract node info: %w", err)
 	}
 
-	err = i.validateKubeJWT(ctx, proxyMetadata)
+	err = i.validateKubeJWT(ss.Context(), proxyMetadata)
 	if err != nil {
 		return fmt.Errorf("failed to validate token: %w", err)
 	}
@@ -70,7 +71,7 @@ type proxyMetadata struct {
 	irKey  string
 }
 
-func processProxyMetadata(md metadata.MD) (*proxyMetadata, error) {
+func (i *JWTAuthInterceptor) processProxyMetadata(md metadata.MD, ss grpc.ServerStream) (*proxyMetadata, error) {
 	authHeader, exists := md["authorization"]
 	if !exists || len(authHeader) == 0 {
 		return nil, fmt.Errorf("missing authorization token in metadata: %s", md)

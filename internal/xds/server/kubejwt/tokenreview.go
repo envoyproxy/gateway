@@ -38,7 +38,8 @@ func GetKubernetesClient() (*kubernetes.Clientset, error) {
 func (i *JWTAuthInterceptor) validateKubeJWT(ctx context.Context, proxyMetadata *proxyMetadata) error {
 	tokenReview := &authenticationv1.TokenReview{
 		Spec: authenticationv1.TokenReviewSpec{
-			Token: proxyMetadata.token,
+			Token:     proxyMetadata.token,
+			Audiences: []string{i.audience},
 		},
 	}
 
