@@ -24,6 +24,7 @@ import (
 	"github.com/envoyproxy/gateway/internal/infrastructure/common"
 	"github.com/envoyproxy/gateway/internal/infrastructure/kubernetes/resource"
 	"github.com/envoyproxy/gateway/internal/ir"
+	"github.com/envoyproxy/gateway/internal/utils"
 	"github.com/envoyproxy/gateway/internal/xds/bootstrap"
 )
 
@@ -38,7 +39,7 @@ const (
 	// trusted CA certificate.
 	XdsTLSCaFilepath = "/certs/ca.crt"
 
-	// XdsTLSCertFileName is the file name of the xDS server TLS certificate.
+	// XdsTLSCaFileName is the file name of the xDS server TLS certificate.
 	XdsTLSCaFileName = "ca.crt"
 )
 
@@ -211,7 +212,7 @@ func (r *ResourceRender) Service() (*corev1.Service, error) {
 
 	// apply merge patch to service
 	var err error
-	if svc, err = envoyServiceConfig.ApplyMergePatch(svc); err != nil {
+	if svc, err = utils.MergeWithPatch(svc, envoyServiceConfig.Patch); err != nil {
 		return nil, err
 	}
 
@@ -344,7 +345,7 @@ func (r *ResourceRender) Deployment() (*appsv1.Deployment, error) {
 	}
 
 	// apply merge patch to deployment
-	if deployment, err = deploymentConfig.ApplyMergePatch(deployment); err != nil {
+	if deployment, err = utils.MergeWithPatch(deployment, deploymentConfig.Patch); err != nil {
 		return nil, err
 	}
 
@@ -413,8 +414,8 @@ func (r *ResourceRender) DaemonSet() (*appsv1.DaemonSet, error) {
 		daemonSet.Name = r.Name()
 	}
 
-	// apply merge patch to daemonset
-	if daemonSet, err = daemonSetConfig.ApplyMergePatch(daemonSet); err != nil {
+	// apply merge patch to DaemonSet
+	if daemonSet, err = utils.MergeWithPatch(daemonSet, daemonSetConfig.Patch); err != nil {
 		return nil, err
 	}
 
@@ -516,8 +517,8 @@ func (r *ResourceRender) HorizontalPodAutoscaler() (*autoscalingv2.HorizontalPod
 		hpa.Spec.ScaleTargetRef.Name = r.Name()
 	}
 
-	hpa, err := hpaConfig.ApplyMergePatch(hpa)
-	if err != nil {
+	var err error
+	if hpa, err = utils.MergeWithPatch(hpa, hpaConfig.Patch); err != nil {
 		return nil, err
 	}
 

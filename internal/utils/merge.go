@@ -16,11 +16,23 @@ import (
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 )
 
-func Merge[T client.Object](original, patch T, mergeType egv1a1.MergeType) (T, error) {
+func MergeWithPatch[T client.Object](original T, patch *egv1a1.KubernetesPatchSpec) (T, error) {
+	if patch == nil {
+		return original, nil
+	}
+
+	mergeType := egv1a1.StrategicMerge
+	if patch.Type != nil {
+		mergeType = *patch.Type
+	}
+
+	return mergeInternal(original, patch.Value.Raw, mergeType)
+}
+
+func mergeInternal[T client.Object](original T, patchJSON []byte, mergeType egv1a1.MergeType) (T, error) {
 	var (
 		patchedJSON  []byte
 		originalJSON []byte
-		patchJSON    []byte
 		err          error
 		empty        T
 	)
@@ -29,13 +41,9 @@ func Merge[T client.Object](original, patch T, mergeType egv1a1.MergeType) (T, e
 	if err != nil {
 		return empty, fmt.Errorf("error marshaling original service: %w", err)
 	}
-	patchJSON, err = json.Marshal(patch)
-	if err != nil {
-		return empty, fmt.Errorf("error marshaling original service: %w", err)
-	}
 	switch mergeType {
 	case egv1a1.StrategicMerge:
-		patchedJSON, err = strategicpatch.StrategicMergePatch(originalJSON, patchJSON, egv1a1.BackendTrafficPolicy{})
+		patchedJSON, err = strategicpatch.StrategicMergePatch(originalJSON, patchJSON, empty)
 		if err != nil {
 			return empty, fmt.Errorf("error during strategic merge: %w", err)
 		}
@@ -45,7 +53,7 @@ func Merge[T client.Object](original, patch T, mergeType egv1a1.MergeType) (T, e
 			return empty, fmt.Errorf("error during JSON merge: %w", err)
 		}
 	default:
-		return empty, fmt.Errorf("unsupported merge type: %s", mergeType)
+		return empty, fmt.Errorf("unsupported merge type: %v", mergeType)
 	}
 
 	res := new(T)
@@ -54,4 +62,18 @@ func Merge[T client.Object](original, patch T, mergeType egv1a1.MergeType) (T, e
 	}
 
 	return *res, nil
+}
+
+func Merge[T client.Object](original, patch T, mergeType egv1a1.MergeType) (T, error) {
+	var (
+		patchJSON []byte
+		err       error
+		empty     T
+	)
+
+	patchJSON, err = json.Marshal(patch)
+	if err != nil {
+		return empty, fmt.Errorf("error marshaling original service: %w", err)
+	}
+	return mergeInternal(original, patchJSON, mergeType)
 }
