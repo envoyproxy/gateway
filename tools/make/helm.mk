@@ -73,11 +73,11 @@ helm-generate.%:
 	@for file in $(wildcard test/helm/${CHART_NAME}/*.in.yaml); do \
   		filename=$$(basename $${file}); \
   		output="$${filename%.in.*}.out.yaml"; \
-                if [ ${CHART_NAME} == "gateway-addons-helm" ]; then \
-                        helm template ${CHART_NAME} charts/${CHART_NAME} -f $${file} > test/helm/${CHART_NAME}/$$output --namespace=monitoring; \
-                elif [ ${CHART_NAME} == "gateway-crds-helm" ]; then \
-                        helm template ${CHART_NAME} charts/${CHART_NAME} -f $${file} > test/helm/${CHART_NAME}/$$output; \
-                else \
-			helm template ${CHART_NAME} charts/${CHART_NAME} -f $${file} > test/helm/${CHART_NAME}/$$output --namespace=envoy-gateway-system; \
+        if [ ${CHART_NAME} == "gateway-addons-helm" ]; then \
+			helm template ${CHART_NAME} charts/${CHART_NAME} -f $${file} > test/helm/${CHART_NAME}/$$output --namespace=monitoring || exit 1; \
+        elif [ ${CHART_NAME} == "gateway-crds-helm" ]; then \
+			helm template ${CHART_NAME} charts/${CHART_NAME} -f $${file} > test/helm/${CHART_NAME}/$$output || exit 1; \
+        else \
+			helm template ${CHART_NAME} charts/${CHART_NAME} -f $${file} > test/helm/${CHART_NAME}/$$output --namespace=envoy-gateway-system || exit 1; \
   	  	fi; \
 	done
