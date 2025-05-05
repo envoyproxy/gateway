@@ -37,7 +37,7 @@ func NewJWTAuthInterceptor(clientset *kubernetes.Clientset, issuer string, audie
 
 // Stream intercepts streaming gRPC calls for authentication.
 func (i *JWTAuthInterceptor) Stream() grpc.StreamServerInterceptor {
-	return func(srv interface{}, ss grpc.ServerStream, info *grpc.StreamServerInfo, handler grpc.StreamHandler) error {
+	return func(srv any, ss grpc.ServerStream, info *grpc.StreamServerInfo, handler grpc.StreamHandler) error {
 		if err := i.authorize(ss); err != nil {
 			return err
 		}
@@ -52,7 +52,7 @@ func (i *JWTAuthInterceptor) authorize(ss grpc.ServerStream) error {
 		return fmt.Errorf("missing metadata")
 	}
 
-	proxyMetadata, err := i.processProxyMetadata(md, ss)
+	proxyMetadata, err := i.processProxyMetadata(md)
 	if err != nil {
 		return fmt.Errorf("failed to extract node info: %w", err)
 	}
@@ -71,7 +71,7 @@ type proxyMetadata struct {
 	irKey  string
 }
 
-func (i *JWTAuthInterceptor) processProxyMetadata(md metadata.MD, ss grpc.ServerStream) (*proxyMetadata, error) {
+func (i *JWTAuthInterceptor) processProxyMetadata(md metadata.MD) (*proxyMetadata, error) {
 	authHeader, exists := md["authorization"]
 	if !exists || len(authHeader) == 0 {
 		return nil, fmt.Errorf("missing authorization token in metadata: %s", md)
