@@ -17525,6 +17525,15 @@ spec:
                     - System
                     type: string
                 type: object
+                x-kubernetes-validations:
+                - message: must not contain both CACertificateRefs and WellKnownCACertificates
+                  rule: '!(has(self.caCertificateRefs) && size(self.caCertificateRefs)
+                    > 0 && has(self.wellKnownCACertificates) && self.wellKnownCACertificates
+                    != "")'
+                - message: must specify either CACertificateRefs or WellKnownCACertificates
+                  rule: (has(self.caCertificateRefs) && size(self.caCertificateRefs)
+                    > 0 || has(self.wellKnownCACertificates) && self.wellKnownCACertificates
+                    != "")
               type:
                 default: Endpoints
                 description: Type defines the type of the backend. Defaults to "Endpoints"
@@ -17537,6 +17546,8 @@ spec:
             - message: DynamicResolver type cannot have endpoints and appProtocols
                 specified
               rule: self.type != 'DynamicResolver' || !has(self.endpoints) && !has(self.appProtocols)
+            - message: TLS settings can only be specified for DynamicResolver backends
+              rule: 'has(self.tls) ? self.type == ''DynamicResolver'' : true'
           status:
             description: Status defines the current status of Backend.
             properties:
