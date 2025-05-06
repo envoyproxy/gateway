@@ -71,7 +71,7 @@ func (t *Translator) processBackendTLSConfig(
 	if backend == nil {
 		return nil, fmt.Errorf("backend %s not found", backendRef.Name)
 	}
-	if backend.Spec.TLS == nil || len(backend.Spec.TLS.CACertificateRefs) == 0 {
+	if backend.Spec.TLS == nil {
 		return nil, nil
 	}
 
