@@ -1886,13 +1886,17 @@ func (t *Translator) processBackendDestinationSetting(
 	)
 
 	addrTypeMap := make(map[ir.DestinationAddressType]int)
-
 	backend := resources.GetBackend(backendNamespace, string(backendRef.Name))
+	for _, ap := range backend.Spec.AppProtocols {
+		protocol = backendAppProtocolToIRAppProtocol(ap, protocol)
+	}
+
 	ds := &ir.DestinationSetting{Name: name}
 
 	// There is only one backend if it is a dynamic resolver
 	if backend.Spec.Type != nil && *backend.Spec.Type == egv1a1.BackendTypeDynamicResolver {
 		ds.IsDynamicResolver = true
+		ds.Protocol = protocol
 		return ds
 	}
 
@@ -1935,9 +1939,6 @@ func (t *Translator) processBackendDestinationSetting(
 		dstAddrType = ptr.To(ir.MIXED)
 	}
 
-	for _, ap := range backend.Spec.AppProtocols {
-		protocol = backendAppProtocolToIRAppProtocol(ap, protocol)
-	}
 	ds.Endpoints = dstEndpoints
 	ds.AddressType = dstAddrType
 	ds.Protocol = protocol
