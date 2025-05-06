@@ -67,6 +67,20 @@ backendTrafficPolicies:
           maxConnectionDuration: 17s
       httpUpgrade:
         - type: websocket
+      rateLimit:
+        type: Global
+        global:
+          rules:
+          - clientSelectors:
+            - headers:
+              - name: x-user-id
+                type: Exact
+                value: one
+            limit:
+              requests: 5
+              unit: Hour
+            name: global-rate-limit
+            shared: true
   - apiVersion: gateway.envoyproxy.io/v1alpha1
     kind: BackendTrafficPolicy
     metadata:
@@ -97,3 +111,17 @@ backendTrafficPolicies:
         name: grpcroute-1
       connection:
         bufferLimit: 100M
+      rateLimit:
+        type: Global
+        global:
+          rules:
+          - clientSelectors:
+            - headers:
+              - name: x-user-id
+                type: Exact
+                value: two
+            limit:
+              requests: 5
+              unit: Hour
+            name: route-rate-limit
+            shared: false

@@ -16,6 +16,7 @@ backendTrafficPolicies:
           limit:
             requests: 20
             unit: Hour
+          shared: true
         - clientSelectors:
           - sourceCIDR:
               type: Distinct
@@ -23,7 +24,7 @@ backendTrafficPolicies:
           limit:
             requests: 20
             unit: Hour
-        shared: true
+          shared: true
       type: Global
     targetRef:
       group: gateway.networking.k8s.io
@@ -66,7 +67,7 @@ backendTrafficPolicies:
           limit:
             requests: 10
             unit: Hour
-        shared: true
+          shared: true
       type: Global
     targetRef:
       group: gateway.networking.k8s.io
@@ -329,7 +330,7 @@ xdsIR:
                 limit:
                   requests: 10
                   unit: Hour
-              shared: true
+                shared: true
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4
@@ -391,6 +392,7 @@ xdsIR:
                 limit:
                   requests: 20
                   unit: Hour
+                shared: true
               - cidrMatch:
                   cidr: ::/64
                   distinct: true
@@ -401,7 +403,7 @@ xdsIR:
                 limit:
                   requests: 20
                   unit: Hour
-              shared: true
+                shared: true
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4

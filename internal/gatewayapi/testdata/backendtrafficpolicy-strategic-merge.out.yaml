@@ -3,50 +3,25 @@ backendTrafficPolicies:
   kind: BackendTrafficPolicy
   metadata:
     creationTimestamp: null
-    name: merged-policy-for-route
-    namespace: default
-  spec:
-    connection:
-      bufferLimit: 100M
-    httpUpgrade:
-    - type: spdy/3.1
-    mergeType: StrategicMerge
-    targetRef:
-      group: gateway.networking.k8s.io
-      kind: HTTPRoute
-      name: httproute-1
-    timeout:
-      tcp:
-        connectTimeout: 10s
-  status:
-    ancestors:
-    - ancestorRef:
-        group: gateway.networking.k8s.io
-        kind: Gateway
-        name: gateway-1
-        namespace: envoy-gateway
-        sectionName: http
-      conditions:
-      - lastTransitionTime: null
-        message: Merged with policy envoy-gateway/policy-for-gateway
-        reason: Merged
-        status: "True"
-        type: Merged
-      - lastTransitionTime: null
-        message: Policy has been accepted.
-        reason: Accepted
-        status: "True"
-        type: Accepted
-      controllerName: gateway.envoyproxy.io/gatewayclass-controller
-- apiVersion: gateway.envoyproxy.io/v1alpha1
-  kind: BackendTrafficPolicy
-  metadata:
-    creationTimestamp: null
     name: policy-for-route
     namespace: default
   spec:
     connection:
       bufferLimit: 100M
+    rateLimit:
+      global:
+        rules:
+        - clientSelectors:
+          - headers:
+            - name: x-user-id
+              type: Exact
+              value: two
+          limit:
+            requests: 5
+            unit: Hour
+          name: route-rate-limit
+          shared: false
+      type: Global
     targetRef:
       group: gateway.networking.k8s.io
       kind: GRPCRoute
@@ -75,6 +50,20 @@ backendTrafficPolicies:
   spec:
     httpUpgrade:
     - type: websocket
+    rateLimit:
+      global:
+        rules:
+        - clientSelectors:
+          - headers:
+            - name: x-user-id
+              type: Exact
+              value: one
+          limit:
+            requests: 5
+            unit: Hour
+          name: global-rate-limit
+          shared: true
+      type: Global
     targetRef:
       group: gateway.networking.k8s.io
       kind: Gateway
@@ -98,12 +87,6 @@ backendTrafficPolicies:
         reason: Accepted
         status: "True"
         type: Accepted
-      - lastTransitionTime: null
-        message: 'This policy is being merged by other backendTrafficPolicies for
-          these routes: [default/httproute-1]'
-        reason: Merged
-        status: "True"
-        type: Merged
       - lastTransitionTime: null
         message: 'This policy is being overridden by other backendTrafficPolicies
           for these routes: [default/grpcroute-1]'
@@ -285,18 +268,26 @@ xdsIR:
           name: ""
           prefix: /
         traffic:
-          backendConnection:
-            bufferLimit: 100000000
           httpUpgrade:
-          - spdy/3.1
           - websocket
-          name: default/merged-policy-for-route
+          name: envoy-gateway/policy-for-gateway
+          rateLimit:
+            global:
+              rules:
+              - headerMatches:
+                - distinct: false
+                  exact: one
+                  name: x-user-id
+                limit:
+                  requests: 5
+                  unit: Hour
+                shared: true
           timeout:
             http:
               connectionIdleTimeout: 16s
               maxConnectionDuration: 17s
             tcp:
-              connectTimeout: 10s
+              connectTimeout: 15s
       - destination:
           name: grpcroute/default/grpcroute-1/rule/0
           settings:
@@ -318,6 +309,17 @@ xdsIR:
           backendConnection:
             bufferLimit: 100000000
           name: default/policy-for-route
+          rateLimit:
+            global:
+              rules:
+              - headerMatches:
+                - distinct: false
+                  exact: two
+                  name: x-user-id
+                limit:
+                  requests: 5
+                  unit: Hour
+                shared: false
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4

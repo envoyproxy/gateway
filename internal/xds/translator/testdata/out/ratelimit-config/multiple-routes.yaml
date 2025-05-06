@@ -5,15 +5,21 @@ descriptors:
     value: first-route
     rate_limit: null
     descriptors:
-      - key: rule-0-match-0
-        value: rule-0-match-0
-        rate_limit:
-          requests_per_unit: 5
-          unit: SECOND
-          unlimited: false
-          name: ""
-          replaces: []
-        descriptors: []
+      - key: rule-0-match--1
+        value: rule-0-match--1
+        rate_limit: null
+        descriptors:
+          - key: rule-0-match-0
+            value: rule-0-match-0
+            rate_limit:
+              requests_per_unit: 5
+              unit: SECOND
+              unlimited: false
+              name: ""
+              replaces: []
+            descriptors: []
+            shadow_mode: false
+            detailed_metric: false
         shadow_mode: false
         detailed_metric: false
     shadow_mode: false
@@ -22,15 +28,21 @@ descriptors:
     value: second-route
     rate_limit: null
     descriptors:
-      - key: rule-0-match-0
-        value: rule-0-match-0
-        rate_limit:
-          requests_per_unit: 10
-          unit: SECOND
-          unlimited: false
-          name: ""
-          replaces: []
-        descriptors: []
+      - key: rule-0-match--1
+        value: rule-0-match--1
+        rate_limit: null
+        descriptors:
+          - key: rule-0-match-0
+            value: rule-0-match-0
+            rate_limit:
+              requests_per_unit: 10
+              unit: SECOND
+              unlimited: false
+              name: ""
+              replaces: []
+            descriptors: []
+            shadow_mode: false
+            detailed_metric: false
         shadow_mode: false
         detailed_metric: false
     shadow_mode: false

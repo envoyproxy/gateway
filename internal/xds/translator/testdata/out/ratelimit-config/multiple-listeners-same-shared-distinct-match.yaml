@@ -1,19 +1,52 @@
-name: test-policy-1-test-namespace
-domain: test-policy-1-test-namespace
+name: first-listener
+domain: first-listener
 descriptors:
-  - key: test-policy-1/test-namespace
-    value: test-policy-1/test-namespace
+  - key: first-route
+    value: first-route
     rate_limit: null
     descriptors:
-      - key: rule-0-match-0
-        value: ""
-        rate_limit:
-          requests_per_unit: 5
-          unit: SECOND
-          unlimited: false
-          name: ""
-          replaces: []
-        descriptors: []
+      - key: rule-0-match--1
+        value: rule-0-match--1
+        rate_limit: null
+        descriptors:
+          - key: rule-0-match-0
+            value: ""
+            rate_limit:
+              requests_per_unit: 5
+              unit: SECOND
+              unlimited: false
+              name: ""
+              replaces: []
+            descriptors: []
+            shadow_mode: false
+            detailed_metric: false
+        shadow_mode: false
+        detailed_metric: false
+    shadow_mode: false
+    detailed_metric: false
+---
+name: second-listener
+domain: second-listener
+descriptors:
+  - key: first-route
+    value: first-route
+    rate_limit: null
+    descriptors:
+      - key: rule-0-match--1
+        value: rule-0-match--1
+        rate_limit: null
+        descriptors:
+          - key: rule-0-match-0
+            value: ""
+            rate_limit:
+              requests_per_unit: 5
+              unit: SECOND
+              unlimited: false
+              name: ""
+              replaces: []
+            descriptors: []
+            shadow_mode: false
+            detailed_metric: false
         shadow_mode: false
         detailed_metric: false
     shadow_mode: false

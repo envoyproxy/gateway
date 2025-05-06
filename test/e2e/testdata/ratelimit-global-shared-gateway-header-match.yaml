@@ -47,23 +47,25 @@ spec:
 apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: BackendTrafficPolicy
 metadata:
-  name: ratelimit-header-match-gateway
+  name: ratelimit-headers
   namespace: gateway-conformance-infra
 spec:
   targetRefs:
     - group: gateway.networking.k8s.io
-      kind: Gateway
-      name: eg-rate-limit
+      kind: HTTPRoute
+      name: header-ratelimit-1
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: header-ratelimit-2
   rateLimit:
     type: Global
     global:
-      shared: true
       rules:
         - clientSelectors:
             - headers:
-                - name: x-user-id
-                  type: Exact
-                  value: one
+                - name: x-test-header
+                  value: limit-me
           limit:
             requests: 3
             unit: Hour
+          shared: true

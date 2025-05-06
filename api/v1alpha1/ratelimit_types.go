@@ -53,15 +53,6 @@ type GlobalRateLimit struct {
 	// +patchStrategy:"merge"
 	// +kubebuilder:validation:MaxItems=64
 	Rules []RateLimitRule `json:"rules" patchMergeKey:"name" patchStrategy:"merge"`
-
-	// Shared determines whether the rate limit rules apply across all the policy targets.
-	// If set to true, the rule is treated as a common bucket and is shared across all policy targets (xRoutes).
-	// Default: false.
-	//
-	// +optional
-	// +notImplementedHide
-	// +kubebuilder:default=false
-	Shared *bool `json:"shared,omitempty"`
 }
 
 // LocalRateLimit defines local rate limit configuration.
@@ -118,6 +109,13 @@ type RateLimitRule struct {
 	//
 	// +optional
 	Cost *RateLimitCost `json:"cost,omitempty"`
+	// Shared determines whether this rate limit rule applies across all the policy targets.
+	// If set to true, the rule is treated as a common bucket and is shared across all policy targets (xRoutes).
+	// Default: false.
+	//
+	// +optional
+	// +kubebuilder:default=false
+	Shared *bool `json:"shared,omitempty"`
 }
 
 type RateLimitCost struct {

@@ -792,8 +792,7 @@ func (t *Translator) buildGlobalRateLimit(policy *egv1a1.BackendTrafficPolicy) (
 	global := policy.Spec.RateLimit.Global
 	rateLimit := &ir.RateLimit{
 		Global: &ir.GlobalRateLimit{
-			Rules:  make([]*ir.RateLimitRule, len(global.Rules)),
-			Shared: global.Shared,
+			Rules: make([]*ir.RateLimitRule, len(global.Rules)),
 		},
 	}
 
@@ -816,6 +815,7 @@ func buildRateLimitRule(rule egv1a1.RateLimitRule) (*ir.RateLimitRule, error) {
 			Unit:     ir.RateLimitUnit(rule.Limit.Unit),
 		},
 		HeaderMatches: make([]*ir.StringMatch, 0),
+		Shared:        rule.Shared,
 	}
 
 	for _, match := range rule.ClientSelectors {

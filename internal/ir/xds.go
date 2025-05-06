@@ -2094,15 +2094,6 @@ type GlobalRateLimit struct {
 
 	// Rules for rate limiting.
 	Rules []*RateLimitRule `json:"rules,omitempty" yaml:"rules,omitempty"`
-
-	// Shared determines whether this rate limit rule applies globally across the gateway, or xRoute(s).
-	// If set to true, the rule is treated as a common bucket and is shared across all routes under the backend traffic policy.
-	// Must have targetRef set to Gateway or xRoute(s).
-	// Default: false.
-	//
-	// +optional
-	// +kubebuilder:default=false
-	Shared *bool `json:"shared,omitempty" yaml:"shared,omitempty"`
 }
 
 // LocalRateLimit holds the local rate limiting configuration.
@@ -2129,6 +2120,14 @@ type RateLimitRule struct {
 	RequestCost *RateLimitCost `json:"requestCost,omitempty" yaml:"requestCost,omitempty"`
 	// ResponseCost specifies the cost of the response.
 	ResponseCost *RateLimitCost `json:"responseCost,omitempty" yaml:"responseCost,omitempty"`
+	// Shared determines whether this rate limit rule applies globally across the gateway, or xRoute(s).
+	// If set to true, the rule is treated as a common bucket and is shared across all routes under the backend traffic policy.
+	// Must have targetRef set to Gateway or xRoute(s).
+	// Default: false.
+	//
+	// +optional
+	// +kubebuilder:default=false
+	Shared *bool `json:"shared,omitempty" yaml:"shared,omitempty"`
 }
 
 // RateLimitCost specifies the cost of the request or response.

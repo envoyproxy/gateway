@@ -1,7 +1,7 @@
 kind: BackendTrafficPolicy
 metadata:
   creationTimestamp: null
-  name: original
+  name: original-2
 spec:
   rateLimit:
     global:
@@ -24,11 +24,12 @@ spec:
           requests: 21
           unit: Hour
         name: two
+        shared: false
       - clientSelectors:
         - headers:
           - name: x-user-id
             type: Exact
-            value: one
+            value: fasdfas
         cost:
           request:
             from: Number
@@ -42,6 +43,7 @@ spec:
           requests: 21
           unit: Hour
         name: one
+        shared: true
     type: Global
 status:
   ancestors: null

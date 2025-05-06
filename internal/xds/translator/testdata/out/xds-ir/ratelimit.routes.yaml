@@ -50,9 +50,6 @@
           - genericKey:
               descriptorKey: third-route
               descriptorValue: third-route
-          - genericKey:
-              descriptorKey: rule-0-match--1
-              descriptorValue: rule-0-match--1
         upgradeConfigs:
         - upgradeType: websocket
     - match:
@@ -130,9 +127,6 @@
             - genericKey:
                 descriptorKey: req-cost
                 descriptorValue: req-cost
-            - genericKey:
-                descriptorKey: rule-0-match--1
-                descriptorValue: rule-0-match--1
             hitsAddend:
               number: "12345"
     - match:

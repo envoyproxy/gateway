@@ -14,26 +14,6 @@
           initialStreamWindowSize: 65536
           maxConcurrentStreams: 100
         httpFilters:
-        - name: envoy.filters.http.ratelimit/test-policy-1/test-namespace
-          typedConfig:
-            '@type': type.googleapis.com/envoy.extensions.filters.http.ratelimit.v3.RateLimit
-            domain: test-policy-1-test-namespace
-            enableXRatelimitHeaders: DRAFT_VERSION_03
-            rateLimitService:
-              grpcService:
-                envoyGrpc:
-                  clusterName: ratelimit_cluster
-              transportApiVersion: V3
-        - name: envoy.filters.http.ratelimit/test-policy-2/test-namespace
-          typedConfig:
-            '@type': type.googleapis.com/envoy.extensions.filters.http.ratelimit.v3.RateLimit
-            domain: test-policy-2-test-namespace
-            enableXRatelimitHeaders: DRAFT_VERSION_03
-            rateLimitService:
-              grpcService:
-                envoyGrpc:
-                  clusterName: ratelimit_cluster
-              transportApiVersion: V3
         - name: envoy.filters.http.ratelimit
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.ratelimit.v3.RateLimit
