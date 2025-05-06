@@ -4399,8 +4399,8 @@ func (in *OIDC) DeepCopyInto(out *OIDC) {
 		*out = new(string)
 		**out = **in
 	}
-	if in.OIDCDenyRedirect != nil {
-		in, out := &in.OIDCDenyRedirect, &out.OIDCDenyRedirect
+	if in.DenyRedirect != nil {
+		in, out := &in.DenyRedirect, &out.DenyRedirect
 		*out = new(OIDCDenyRedirect)
 		(*in).DeepCopyInto(*out)
 	}

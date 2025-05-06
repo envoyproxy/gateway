@@ -66,7 +66,7 @@ type OIDC struct {
 	// This behavior can be useful for AJAX or machine requests.
 	// +optional
 	// +notImplementedHide
-	OIDCDenyRedirect *OIDCDenyRedirect `json:"denyRedirect,omitempty"`
+	DenyRedirect *OIDCDenyRedirect `json:"denyRedirect,omitempty"`
 
 	// The path to log a user out, clearing their credential cookies.
 	//
@@ -160,7 +160,6 @@ type OIDCDenyRedirect struct {
 // +notImplementedHide
 type OIDCDenyRedirectHeader struct {
 	// Specifies the name of the header in the request.
-	// The pseudo-headers ``:path`` and ``:method`` can be used to match the request path and method, respectively
 	// +kubebuilder:validation:MinLength=1
 	Name string `json:"name"`
 	// If specified, header match will be performed based on the string match of the header value.
