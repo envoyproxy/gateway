@@ -68,7 +68,7 @@ var ClientMTLSTest = suite.ConformanceTest{
 
 			// This test uses the same key/cert pair as both a client cert and server cert
 			// Both backend and client treat the self-signed cert as a trusted CA
-			cPem, keyPem, err := GetTLSSecret(suite.Client, certNN)
+			cPem, keyPem, _, err := GetTLSSecret(suite.Client, certNN)
 			if err != nil {
 				t.Fatalf("unexpected error finding TLS secret: %v", err)
 			}
@@ -107,7 +107,7 @@ var ClientMTLSTest = suite.ConformanceTest{
 			req := http.MakeRequest(t, &expected, gwAddr, "HTTPS", "https")
 
 			// added but not used, as these are required by test utils when for SNI to be added
-			cPem, keyPem, err := GetTLSSecret(suite.Client, certNN)
+			cPem, keyPem, _, err := GetTLSSecret(suite.Client, certNN)
 			if err != nil {
 				t.Fatalf("unexpected error finding TLS secret: %v", err)
 			}
@@ -172,8 +172,8 @@ func WaitForConsistentMTLSResponse(t *testing.T, r roundtripper.RoundTripper, re
 }
 
 // GetTLSSecret fetches the named Secret and converts both cert and key to []byte
-func GetTLSSecret(client client.Client, secretName types.NamespacedName) ([]byte, []byte, error) {
-	var cert, key []byte
+func GetTLSSecret(client client.Client, secretName types.NamespacedName) ([]byte, []byte, []byte, error) {
+	var cert, key, ca []byte
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
@@ -181,12 +181,16 @@ func GetTLSSecret(client client.Client, secretName types.NamespacedName) ([]byte
 	secret := &corev1.Secret{}
 	err := client.Get(ctx, secretName, secret)
 	if err != nil {
-		return cert, key, fmt.Errorf("error fetching TLS Secret: %w", err)
+		return cert, key, nil, fmt.Errorf("error fetching TLS Secret: %w", err)
 	}
 	cert = secret.Data["tls.crt"]
 	key = secret.Data["tls.key"]
 
-	return cert, key, nil
+	if secret.Data["ca.crt"] != nil {
+		ca = secret.Data["ca.crt"]
+	}
+
+	return cert, key, ca, nil
 }
 
 func dialWithTLSVersion(t *testing.T, gwAddr string, baseTLSConfig *tls.Config, version uint16, expectedError bool) {
