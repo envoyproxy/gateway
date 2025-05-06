@@ -41,6 +41,9 @@ spec:
     syncOptions:
     - CreateNamespace=true
     - ServerSideApply=true
+    automated:
+      prune: true
+      selfHeal: true
 EOF
 ```
 
@@ -49,12 +52,6 @@ EOF
 * Set `ServerSideApply` to `true` to enable Kubernetes [server-side apply](https://kubernetes.io/docs/reference/using-api/server-side-apply/). This helps avoid the 262,144-byte annotation size limit.
 * For simplicity, we apply the Application resource directly to the cluster.
 In a production environment, it’s recommended to store this configuration in a Git repository and manage it using another Argo CD Application that uses Git as its source — following a GitOps workflow.
-
-Sync the application:
-
-```shell
-argocd app sync envoy-gateway
-```
 
 Wait for Envoy Gateway to become available:
 
@@ -117,6 +114,9 @@ spec:
     syncOptions:
     - CreateNamespace=true
     - ServerSideApply=true
+    automated:
+      prune: true
+      selfHeal: true
 ```
 
 Argo CD supports multiple ways of specifying Helm chart values, you can find more details in the [Argo CD documentation](https://argo-cd.readthedocs.io/en/stable/user-guide/helm/#helm).

@@ -29,7 +29,7 @@ Refer to the [Version Compatibility Matrix](/news/releases/matrix) to learn more
 
    Envoy Gateway should now be successfully installed and running, but in order to experience more abilities of Envoy Gateway, you can refer to [Tasks](/latest/tasks).
 
-## Upgrading from a previous version
+## Upgrading from the previous version
 
 Some manual migration steps are required to upgrade Envoy Gateway.
 
