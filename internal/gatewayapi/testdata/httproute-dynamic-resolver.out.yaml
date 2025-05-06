@@ -19,6 +19,23 @@ backends:
       reason: Accepted
       status: "True"
       type: Accepted
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: Backend
+  metadata:
+    creationTimestamp: null
+    name: backend-2
+    namespace: default
+  spec:
+    tls:
+      wellKnownCACertificates: System
+    type: DynamicResolver
+  status:
+    conditions:
+    - lastTransitionTime: null
+      message: The Backend was accepted
+      reason: Accepted
+      status: "True"
+      type: Accepted
 gateways:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: Gateway
@@ -37,7 +54,7 @@ gateways:
       protocol: HTTP
   status:
     listeners:
-    - attachedRoutes: 1
+    - attachedRoutes: 2
       conditions:
       - lastTransitionTime: null
         message: Sending translated listener configuration to the data plane
@@ -79,6 +96,42 @@ httpRoutes:
       - group: gateway.envoyproxy.io
         kind: Backend
         name: backend-1
+  status:
+    parents:
+    - conditions:
+      - lastTransitionTime: null
+        message: Route is accepted
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Resolved all the Object references for the Route
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+      parentRef:
+        name: gateway-1
+        namespace: envoy-gateway
+        sectionName: http
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    creationTimestamp: null
+    name: httproute-2
+    namespace: default
+  spec:
+    hostnames:
+    - gateway.envoyproxy.io
+    parentRefs:
+    - name: gateway-1
+      namespace: envoy-gateway
+      sectionName: http
+    rules:
+    - backendRefs:
+      - group: gateway.envoyproxy.io
+        kind: Backend
+        name: backend-2
   status:
     parents:
     - conditions:
@@ -152,6 +205,24 @@ xdsIR:
           name: httproute-1
           namespace: default
         name: httproute/default/httproute-1/rule/0/match/-1/gateway_envoyproxy_io
+      - destination:
+          name: httproute/default/httproute-2/rule/0
+          settings:
+          - isDynamicResolver: true
+            name: httproute/default/httproute-2/rule/0/backend/0
+            tls:
+              alpnProtocols: null
+              caCertificate:
+                name: backend-2/default-ca
+              useSystemTrustStore: true
+            weight: 1
+        hostname: gateway.envoyproxy.io
+        isHTTP2: false
+        metadata:
+          kind: HTTPRoute
+          name: httproute-2
+          namespace: default
+        name: httproute/default/httproute-2/rule/0/match/-1/gateway_envoyproxy_io
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4
