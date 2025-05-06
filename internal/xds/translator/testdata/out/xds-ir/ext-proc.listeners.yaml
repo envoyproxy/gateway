@@ -33,6 +33,8 @@
               receivingNamespaces:
                 untyped:
                 - envoy.filters.http.my_custom
+            mutationRules:
+              allowAllRouting: true
             processingMode:
               requestBodyMode: BUFFERED
               requestHeaderMode: SEND

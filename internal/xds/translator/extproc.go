@@ -8,12 +8,14 @@ package translator
 import (
 	"errors"
 
+	mutation_rulesv3 "github.com/envoyproxy/go-control-plane/envoy/config/common/mutation_rules/v3"
 	corev3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	routev3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
 	extprocv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/ext_proc/v3"
 	hcmv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/http_connection_manager/v3"
 	"google.golang.org/protobuf/types/known/anypb"
 	"google.golang.org/protobuf/types/known/durationpb"
+	"google.golang.org/protobuf/types/known/wrapperspb"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/ir"
@@ -165,6 +167,12 @@ func extProcConfig(extProc ir.ExtProc) *extprocv3.ExternalProcessor {
 		}
 	}
 	config.AllowModeOverride = extProc.AllowModeOverride
+
+	if hmr := extProc.HeaderMutationRules; hmr != nil {
+		config.MutationRules = &mutation_rulesv3.HeaderMutationRules{
+			AllowAllRouting: wrapperspb.Bool(hmr.AllowAllRouting),
+		}
+	}
 	return config
 }
 
