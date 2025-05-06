@@ -3626,9 +3626,8 @@ spec:
                             is matched
                           properties:
                             name:
-                              description: |-
-                                Specifies the name of the header in the request.
-                                The pseudo-headers ``:path`` and ``:method`` can be used to match the request path and method, respectively
+                              description: Specifies the name of the header in the
+                                request.
                               minLength: 1
                               type: string
                             stringMatch:
