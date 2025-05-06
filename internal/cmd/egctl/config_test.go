@@ -29,6 +29,7 @@ import (
 	kube "github.com/envoyproxy/gateway/internal/kubernetes"
 	"github.com/envoyproxy/gateway/internal/utils/file"
 	netutil "github.com/envoyproxy/gateway/internal/utils/net"
+	"github.com/envoyproxy/gateway/internal/utils/test"
 )
 
 const (
@@ -118,7 +119,7 @@ func TestExtractAllConfigDump(t *testing.T) {
 			aggregated := sampleAggregatedConfigDump(configDump)
 			got, err := marshalEnvoyProxyConfig(aggregated, tc.output)
 			require.NoError(t, err)
-			if *overrideTestData {
+			if test.OverrideTestData() {
 				require.NoError(t, file.Write(string(got), filepath.Join("testdata", "config", "out", tc.expected)))
 			}
 			out, err := readOutputConfig(tc.expected)
@@ -206,7 +207,7 @@ func TestExtractSubResourcesConfigDump(t *testing.T) {
 			aggregated := sampleAggregatedConfigDump(configDump)
 			got, err := marshalEnvoyProxyConfig(aggregated, tc.output)
 			require.NoError(t, err)
-			if *overrideTestData {
+			if test.OverrideTestData() {
 				require.NoError(t, file.Write(string(got), filepath.Join("testdata", "config", "out", tc.expected)))
 			}
 			out, err := readOutputConfig(tc.expected)
@@ -223,8 +224,6 @@ func TestExtractSubResourcesConfigDump(t *testing.T) {
 }
 
 func TestLabelSelectorBadInput(t *testing.T) {
-	podNamespace = "default"
-
 	cases := []struct {
 		name   string
 		args   []string

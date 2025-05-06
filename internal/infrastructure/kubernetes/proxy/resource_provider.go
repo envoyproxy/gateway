@@ -24,6 +24,7 @@ import (
 	"github.com/envoyproxy/gateway/internal/infrastructure/common"
 	"github.com/envoyproxy/gateway/internal/infrastructure/kubernetes/resource"
 	"github.com/envoyproxy/gateway/internal/ir"
+	"github.com/envoyproxy/gateway/internal/utils"
 	"github.com/envoyproxy/gateway/internal/xds/bootstrap"
 )
 
@@ -37,6 +38,9 @@ const (
 	// XdsTLSCaFilepath is the fully qualified path of the file containing Envoy's
 	// trusted CA certificate.
 	XdsTLSCaFilepath = "/certs/ca.crt"
+
+	// XdsTLSCaFileName is the file name of the xDS server TLS certificate.
+	XdsTLSCaFileName = "ca.crt"
 )
 
 type ResourceRender struct {
@@ -49,14 +53,17 @@ type ResourceRender struct {
 	DNSDomain string
 
 	ShutdownManager *egv1a1.ShutdownManager
+
+	GatewayNamespaceMode bool
 }
 
 func NewResourceRender(ns, dnsDomain string, infra *ir.ProxyInfra, gateway *egv1a1.EnvoyGateway) *ResourceRender {
 	return &ResourceRender{
-		Namespace:       ns,
-		DNSDomain:       dnsDomain,
-		infra:           infra,
-		ShutdownManager: gateway.GetEnvoyGatewayProvider().GetEnvoyGatewayKubeProvider().ShutdownManager,
+		Namespace:            ns,
+		DNSDomain:            dnsDomain,
+		infra:                infra,
+		ShutdownManager:      gateway.GetEnvoyGatewayProvider().GetEnvoyGatewayKubeProvider().ShutdownManager,
+		GatewayNamespaceMode: gateway.GatewayNamespaceMode(),
 	}
 }
 
@@ -198,14 +205,14 @@ func (r *ResourceRender) Service() (*corev1.Service, error) {
 
 	// set name
 	if envoyServiceConfig.Name != nil {
-		svc.ObjectMeta.Name = *envoyServiceConfig.Name
+		svc.Name = *envoyServiceConfig.Name
 	} else {
-		svc.ObjectMeta.Name = r.Name()
+		svc.Name = r.Name()
 	}
 
 	// apply merge patch to service
 	var err error
-	if svc, err = envoyServiceConfig.ApplyMergePatch(svc); err != nil {
+	if svc, err = utils.MergeWithPatch(svc, envoyServiceConfig.Patch); err != nil {
 		return nil, err
 	}
 
@@ -213,11 +220,19 @@ func (r *ResourceRender) Service() (*corev1.Service, error) {
 }
 
 // ConfigMap returns the expected ConfigMap based on the provided infra.
-func (r *ResourceRender) ConfigMap() (*corev1.ConfigMap, error) {
+func (r *ResourceRender) ConfigMap(cert string) (*corev1.ConfigMap, error) {
 	// Set the labels based on the owning gateway name.
 	labels := envoyLabels(r.infra.GetProxyMetadata().Labels)
 	if OwningGatewayLabelsAbsent(labels) {
 		return nil, fmt.Errorf("missing owning gateway labels")
+	}
+
+	data := map[string]string{
+		common.SdsCAFilename:   common.GetSdsCAConfigMapData(XdsTLSCaFilepath),
+		common.SdsCertFilename: common.GetSdsCertConfigMapData(XdsTLSCertFilepath, XdsTLSKeyFilepath),
+	}
+	if cert != "" {
+		data[XdsTLSCaFileName] = cert
 	}
 
 	return &corev1.ConfigMap{
@@ -231,10 +246,7 @@ func (r *ResourceRender) ConfigMap() (*corev1.ConfigMap, error) {
 			Labels:      labels,
 			Annotations: r.infra.GetProxyMetadata().Annotations,
 		},
-		Data: map[string]string{
-			common.SdsCAFilename:   common.GetSdsCAConfigMapData(XdsTLSCaFilepath),
-			common.SdsCertFilename: common.GetSdsCertConfigMapData(XdsTLSCertFilepath, XdsTLSKeyFilepath),
-		},
+		Data: data,
 	}, nil
 }
 
@@ -268,7 +280,7 @@ func (r *ResourceRender) Deployment() (*appsv1.Deployment, error) {
 	}
 
 	// Get expected bootstrap configurations rendered ProxyContainers
-	containers, err := expectedProxyContainers(r.infra, deploymentConfig.Container, proxyConfig.Spec.Shutdown, r.ShutdownManager, r.Namespace, r.DNSDomain)
+	containers, err := expectedProxyContainers(r.infra, deploymentConfig.Container, proxyConfig.Spec.Shutdown, r.ShutdownManager, r.Namespace, r.DNSDomain, r.GatewayNamespaceMode)
 	if err != nil {
 		return nil, err
 	}
@@ -306,7 +318,7 @@ func (r *ResourceRender) Deployment() (*appsv1.Deployment, error) {
 					Containers:                    containers,
 					InitContainers:                deploymentConfig.InitContainers,
 					ServiceAccountName:            r.Name(),
-					AutomountServiceAccountToken:  ptr.To(false),
+					AutomountServiceAccountToken:  expectedAutoMountServiceAccountToken(r.GatewayNamespaceMode),
 					TerminationGracePeriodSeconds: expectedTerminationGracePeriodSeconds(proxyConfig.Spec.Shutdown),
 					DNSPolicy:                     corev1.DNSClusterFirst,
 					RestartPolicy:                 corev1.RestartPolicyAlways,
@@ -314,7 +326,7 @@ func (r *ResourceRender) Deployment() (*appsv1.Deployment, error) {
 					SecurityContext:               deploymentConfig.Pod.SecurityContext,
 					Affinity:                      deploymentConfig.Pod.Affinity,
 					Tolerations:                   deploymentConfig.Pod.Tolerations,
-					Volumes:                       expectedVolumes(r.infra.Name, deploymentConfig.Pod),
+					Volumes:                       expectedVolumes(r.infra.Name, r.GatewayNamespaceMode, deploymentConfig.Pod),
 					ImagePullSecrets:              deploymentConfig.Pod.ImagePullSecrets,
 					NodeSelector:                  deploymentConfig.Pod.NodeSelector,
 					TopologySpreadConstraints:     deploymentConfig.Pod.TopologySpreadConstraints,
@@ -327,13 +339,13 @@ func (r *ResourceRender) Deployment() (*appsv1.Deployment, error) {
 
 	// set name
 	if deploymentConfig.Name != nil {
-		deployment.ObjectMeta.Name = *deploymentConfig.Name
+		deployment.Name = *deploymentConfig.Name
 	} else {
-		deployment.ObjectMeta.Name = r.Name()
+		deployment.Name = r.Name()
 	}
 
 	// apply merge patch to deployment
-	if deployment, err = deploymentConfig.ApplyMergePatch(deployment); err != nil {
+	if deployment, err = utils.MergeWithPatch(deployment, deploymentConfig.Patch); err != nil {
 		return nil, err
 	}
 
@@ -357,7 +369,7 @@ func (r *ResourceRender) DaemonSet() (*appsv1.DaemonSet, error) {
 	}
 
 	// Get expected bootstrap configurations rendered ProxyContainers
-	containers, err := expectedProxyContainers(r.infra, daemonSetConfig.Container, proxyConfig.Spec.Shutdown, r.ShutdownManager, r.Namespace, r.DNSDomain)
+	containers, err := expectedProxyContainers(r.infra, daemonSetConfig.Container, proxyConfig.Spec.Shutdown, r.ShutdownManager, r.Namespace, r.DNSDomain, r.GatewayNamespaceMode)
 	if err != nil {
 		return nil, err
 	}
@@ -397,13 +409,13 @@ func (r *ResourceRender) DaemonSet() (*appsv1.DaemonSet, error) {
 
 	// set name
 	if daemonSetConfig.Name != nil {
-		daemonSet.ObjectMeta.Name = *daemonSetConfig.Name
+		daemonSet.Name = *daemonSetConfig.Name
 	} else {
-		daemonSet.ObjectMeta.Name = r.Name()
+		daemonSet.Name = r.Name()
 	}
 
-	// apply merge patch to daemonset
-	if daemonSet, err = daemonSetConfig.ApplyMergePatch(daemonSet); err != nil {
+	// apply merge patch to DaemonSet
+	if daemonSet, err = utils.MergeWithPatch(daemonSet, daemonSetConfig.Patch); err != nil {
 		return nil, err
 	}
 
@@ -505,8 +517,8 @@ func (r *ResourceRender) HorizontalPodAutoscaler() (*autoscalingv2.HorizontalPod
 		hpa.Spec.ScaleTargetRef.Name = r.Name()
 	}
 
-	hpa, err := hpaConfig.ApplyMergePatch(hpa)
-	if err != nil {
+	var err error
+	if hpa, err = utils.MergeWithPatch(hpa, hpaConfig.Patch); err != nil {
 		return nil, err
 	}
 
@@ -521,6 +533,10 @@ func expectedTerminationGracePeriodSeconds(cfg *egv1a1.ShutdownConfig) *int64 {
 	return ptr.To(int64(s))
 }
 
+func expectedAutoMountServiceAccountToken(gatewayNamespacedMode bool) *bool {
+	return ptr.To(gatewayNamespacedMode)
+}
+
 func (r *ResourceRender) getPodSpec(
 	containers, initContainers []corev1.Container,
 	pod *egv1a1.KubernetesPodSpec,
@@ -530,7 +546,7 @@ func (r *ResourceRender) getPodSpec(
 		Containers:                    containers,
 		InitContainers:                initContainers,
 		ServiceAccountName:            ExpectedResourceHashedName(r.infra.Name),
-		AutomountServiceAccountToken:  ptr.To(false),
+		AutomountServiceAccountToken:  expectedAutoMountServiceAccountToken(r.GatewayNamespaceMode),
 		TerminationGracePeriodSeconds: expectedTerminationGracePeriodSeconds(proxyConfig.Spec.Shutdown),
 		DNSPolicy:                     corev1.DNSClusterFirst,
 		RestartPolicy:                 corev1.RestartPolicyAlways,
@@ -538,7 +554,7 @@ func (r *ResourceRender) getPodSpec(
 		SecurityContext:               pod.SecurityContext,
 		Affinity:                      pod.Affinity,
 		Tolerations:                   pod.Tolerations,
-		Volumes:                       expectedVolumes(r.infra.Name, pod),
+		Volumes:                       expectedVolumes(r.infra.Name, r.GatewayNamespaceMode, pod),
 		ImagePullSecrets:              pod.ImagePullSecrets,
 		NodeSelector:                  pod.NodeSelector,
 		TopologySpreadConstraints:     pod.TopologySpreadConstraints,

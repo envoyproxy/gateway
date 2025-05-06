@@ -49,15 +49,15 @@ func TestValidate(t *testing.T) {
 						Provider: egv1a1.DefaultEnvoyGatewayProvider(),
 					},
 				},
-				Namespace: "",
+				ControllerNamespace: "",
 			},
 			expect: false,
 		},
 		{
 			name: "unspecified envoy gateway",
 			cfg: &Server{
-				Namespace: "test-ns",
-				Logger:    logging.DefaultLogger(os.Stdout, egv1a1.LogLevelInfo),
+				ControllerNamespace: "test-ns",
+				Logger:              logging.DefaultLogger(os.Stdout, egv1a1.LogLevelInfo),
 			},
 			expect: false,
 		},

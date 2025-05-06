@@ -77,7 +77,7 @@ func NewManager(cfg *config.Server) (extTypes.Manager, error) {
 
 	return &Manager{
 		k8sClient: cli,
-		namespace: cfg.Namespace,
+		namespace: cfg.ControllerNamespace,
 		extension: *extension,
 	}, nil
 }

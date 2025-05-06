@@ -170,7 +170,7 @@ func TestCreateOrUpdateProxyServiceAccount(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			cfg, err := config.New(os.Stdout)
 			require.NoError(t, err)
-			cfg.Namespace = tc.ns
+			cfg.ControllerNamespace = tc.ns
 
 			var cli client.Client
 			if tc.current != nil {

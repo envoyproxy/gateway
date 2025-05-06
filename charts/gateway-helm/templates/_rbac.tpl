@@ -192,3 +192,50 @@ resources:
 verbs:
 - update
 {{- end }}
+
+{{- define "eg.rbac.infra.basic" -}}
+- apiGroups:
+  - ""
+  resources:
+  - serviceaccounts
+  - services
+  - configmaps
+  verbs:
+  - create
+  - get
+  - delete
+  - deletecollection
+  - patch
+- apiGroups:
+  - apps
+  resources:
+  - deployments
+  - daemonsets
+  verbs:
+  - create
+  - get
+  - delete
+  - deletecollection
+  - patch
+- apiGroups:
+  - autoscaling
+  - policy
+  resources:
+  - horizontalpodautoscalers
+  - poddisruptionbudgets
+  verbs:
+  - create
+  - get
+  - delete
+  - deletecollection
+  - patch
+{{- end }}
+
+{{- define "eg.rbac.infra.tokenreview" -}}
+- apiGroups:
+  - authentication.k8s.io
+  resources:
+  - tokenreviews
+  verbs:
+  - create
+{{- end }}
