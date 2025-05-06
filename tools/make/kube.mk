@@ -15,7 +15,7 @@ GATEWAY_RELEASE_URL ?= https://github.com/kubernetes-sigs/gateway-api/releases/d
 WAIT_TIMEOUT ?= 15m
 
 IP_FAMILY ?= ipv4
-BENCHMARK_TIMEOUT ?= 60m
+BENCHMARK_TIMEOUT ?= 100m
 BENCHMARK_CPU_LIMITS ?= 1000m
 BENCHMARK_MEMORY_LIMITS ?= 1024Mi
 BENCHMARK_RPS ?= 10000
@@ -220,7 +220,6 @@ run-resilience: ## Run resilience tests
 run-benchmark: install-benchmark-server prepare-ip-family ## Run benchmark tests
 	@$(LOG_TARGET)
 	mkdir -p $(OUTPUT_DIR)/benchmark
-	kubectl wait --timeout=$(WAIT_TIMEOUT) -n benchmark-test deployment/nighthawk-test-server --for=condition=Available
 	kubectl wait --timeout=$(WAIT_TIMEOUT) -n envoy-gateway-system deployment/envoy-gateway --for=condition=Available
 	kubectl apply -f test/benchmark/config/gatewayclass.yaml
 	go test -v -tags benchmark -timeout $(BENCHMARK_TIMEOUT) ./test/benchmark --rps=$(BENCHMARK_RPS) --connections=$(BENCHMARK_CONNECTIONS) --duration=$(BENCHMARK_DURATION) --report-save-dir=$(BENCHMARK_REPORT_DIR)
@@ -233,13 +232,11 @@ install-benchmark-server: ## Install nighthawk server for benchmark test
 	@$(LOG_TARGET)
 	kubectl create namespace benchmark-test
 	kubectl -n benchmark-test create configmap test-server-config --from-file=test/benchmark/config/nighthawk-test-server-config.yaml -o yaml
-	kubectl apply -f test/benchmark/config/nighthawk-test-server.yaml
 
 .PHONY: uninstall-benchmark-server
 uninstall-benchmark-server: ## Uninstall nighthawk server for benchmark test
 	@$(LOG_TARGET)
 	kubectl delete job -n benchmark-test -l benchmark-test/client=true
-	kubectl delete -f test/benchmark/config/nighthawk-test-server.yaml
 	kubectl delete configmap test-server-config -n benchmark-test
 	kubectl delete namespace benchmark-test
 

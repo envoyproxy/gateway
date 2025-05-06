@@ -34,6 +34,7 @@ func TestBenchmark(t *testing.T) {
 		"config/gateway.yaml",
 		"config/httproute.yaml",
 		"config/nighthawk-client.yaml",
+		"config/nighthawk-test-server.yaml",
 		*suite.ReportSaveDir,
 	)
 	if err != nil {
