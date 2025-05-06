@@ -2848,7 +2848,7 @@ type BackOffPolicy struct {
 // TLSUpstreamConfig contains sni and ca file in []byte format.
 // +k8s:deepcopy-gen=true
 type TLSUpstreamConfig struct {
-	SNI                 string            `json:"sni,omitempty" yaml:"sni,omitempty"`
+	SNI                 *string           `json:"sni,omitempty" yaml:"sni,omitempty"`
 	UseSystemTrustStore bool              `json:"useSystemTrustStore,omitempty" yaml:"useSystemTrustStore,omitempty"`
 	CACertificate       *TLSCACertificate `json:"caCertificate,omitempty" yaml:"caCertificate,omitempty"`
 	TLSConfig           `json:",inline"`
@@ -2856,8 +2856,9 @@ type TLSUpstreamConfig struct {
 
 func (t *TLSUpstreamConfig) ToTLSConfig() (*tls.Config, error) {
 	// nolint:gosec
-	tlsConfig := &tls.Config{
-		ServerName: t.SNI,
+	tlsConfig := &tls.Config{}
+	if t.SNI != nil {
+		tlsConfig.ServerName = *t.SNI
 	}
 	if t.MinVersion != nil {
 		tlsConfig.MinVersion = t.MinVersion.Int()

@@ -407,6 +407,7 @@ func (r *gatewayAPIReconciler) managedGatewayClasses(ctx context.Context) ([]*gw
 // - ServiceImports
 // - EndpointSlices
 // - Backends
+// - CACertificateRefs in the Backends
 func (r *gatewayAPIReconciler) processBackendRefs(ctx context.Context, gwcResource *resource.Resources, resourceMappings *resourceMappings) {
 	for backendRef := range resourceMappings.allAssociatedBackendRefs {
 		backendRefKind := gatewayapi.KindDerefOr(backendRef.Kind, resource.KindService)
@@ -461,6 +462,49 @@ func (r *gatewayAPIReconciler) processBackendRefs(ctx context.Context, gwcResour
 					gwcResource.Backends = append(gwcResource.Backends, backend)
 					r.log.Info("added Backend to resource tree", "namespace", string(*backendRef.Namespace),
 						"name", string(backendRef.Name))
+				}
+			}
+
+			if backend.Spec.TLS != nil && backend.Spec.TLS.CACertificateRefs != nil {
+				for _, caCertRef := range backend.Spec.TLS.CACertificateRefs {
+					// if kind is not Secret or ConfigMap, we skip early to avoid further calculation overhead
+					if string(caCertRef.Kind) == resource.KindConfigMap ||
+						string(caCertRef.Kind) == resource.KindSecret {
+
+						var err error
+						caRefNew := gwapiv1.SecretObjectReference{
+							Group:     gatewayapi.GroupPtr(string(caCertRef.Group)),
+							Kind:      gatewayapi.KindPtr(string(caCertRef.Kind)),
+							Name:      caCertRef.Name,
+							Namespace: gatewayapi.NamespacePtr(backend.Namespace),
+						}
+						switch string(caCertRef.Kind) {
+						case resource.KindConfigMap:
+							err = r.processConfigMapRef(
+								ctx,
+								resourceMappings,
+								gwcResource,
+								resource.KindBackendTLSPolicy,
+								backend.Namespace,
+								backend.Name,
+								caRefNew)
+
+						case resource.KindSecret:
+							err = r.processSecretRef(
+								ctx,
+								resourceMappings,
+								gwcResource,
+								resource.KindBackendTLSPolicy,
+								backend.Namespace,
+								backend.Name,
+								caRefNew)
+						}
+						if err != nil {
+							r.log.Error(err,
+								"failed to process CACertificateRef for Backend",
+								"backend", backend, "caCertificateRef", caCertRef.Name)
+						}
+					}
 				}
 			}
 		}
@@ -776,7 +820,7 @@ func (r *gatewayAPIReconciler) processCtpConfigMapRefs(
 						policy.Name,
 						caCertRef); err != nil {
 						r.log.Error(err,
-							"failed to process CACertificateRef for SecurityPolicy",
+							"failed to process CACertificateRef for ClientTrafficPolicy",
 							"policy", policy, "caCertificateRef", caCertRef.Name)
 					}
 				}
@@ -1481,6 +1525,10 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 					return r.enqueueClass(ctx, be)
 				}),
 				backendPredicates...)); err != nil {
+			return err
+		}
+
+		if err := addBackendIndexers(ctx, mgr); err != nil {
 			return err
 		}
 	}
