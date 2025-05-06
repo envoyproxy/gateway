@@ -79,7 +79,7 @@ func NewOfflineGatewayAPIController(
 
 	r.log.Info("created offline gatewayapi controller")
 	if su != nil {
-		r.subscribeAndUpdateStatus(ctx, cfg.EnvoyGateway.EnvoyGatewaySpec.ExtensionManager != nil)
+		r.subscribeAndUpdateStatus(ctx, cfg.EnvoyGateway.ExtensionManager != nil)
 	}
 
 	return &OfflineGatewayAPIReconciler{
