@@ -26,7 +26,7 @@ type JWTAuthInterceptor struct {
 }
 
 // NewJWTAuthInterceptor initializes a new JWTAuthInterceptor.
-func NewJWTAuthInterceptor(clientset *kubernetes.Clientset, issuer string, audience string, cache cache.SnapshotCacheWithCallbacks) *JWTAuthInterceptor {
+func NewJWTAuthInterceptor(clientset *kubernetes.Clientset, issuer, audience string, cache cache.SnapshotCacheWithCallbacks) *JWTAuthInterceptor {
 	return &JWTAuthInterceptor{
 		clientset: clientset,
 		issuer:    issuer,

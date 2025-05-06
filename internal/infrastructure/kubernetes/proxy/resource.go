@@ -308,7 +308,7 @@ func expectedContainerVolumeMounts(containerSpec *egv1a1.KubernetesContainerSpec
 }
 
 // expectedVolumes returns expected proxy deployment volumes.
-func expectedVolumes(name string, gatewayNamespacedMode bool, pod *egv1a1.KubernetesPodSpec, controllerNamespace string, dnsDomain string) []corev1.Volume {
+func expectedVolumes(name string, gatewayNamespacedMode bool, pod *egv1a1.KubernetesPodSpec, controllerNamespace, dnsDomain string) []corev1.Volume {
 	var volumes []corev1.Volume
 	certsVolume := corev1.Volume{
 		Name: "certs",
