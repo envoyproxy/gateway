@@ -150,9 +150,12 @@ You should see the below response
 
 ## Connect to a remote JWKS with Self-Signed Certificate
 
-To connect to a remote JWKS with a self-signed certificate, you need to configure it using the [Backend] resource within the [SecurityPolicy]. Additionally, use the [BackendTLSPolicy] to specify the CA certificate required to authenticate the JWKS host.
+To connect to a remote JWKS with a self-signed certificate, you need to configure it using the [BackendTLSPolicy] to specify the CA certificate required to authenticate the JWKS host. Additionally, if the JWKS is outside of the cluster, you need to configure the [Backend] resource to specify the JWKS host.
 
 The following example demonstrates how to configure the remote JWKS with a self-signed certificate.
+
+Please note that the `Backend` resource is not required if the JWKS is hosted on the same cluster as the Envoy Gateway, since
+it can be accessed directly via the Kubernetes Service DNS name.
 
 {{< tabpane text=true >}}
 {{% tab header="Apply from stdin" %}}
@@ -288,6 +291,113 @@ As shown in the example above, the [SecurityPolicy] resource is configured with 
 Additional connection settings for the remote JWKS host can be configured in the [backendSettings]. Currently, only the retry policy is supported.
 
 For more information about [Backend] and [BackendTLSPolicy], refer to the [Backend Routing][backend-routing] and [Backend TLS: Gateway to Backend][backend-tls] tasks.
+
+## Use a local JWKS to authenticate requests
+
+Envoy Gateway also supports using a local JWKS stored in a Kubernetes ConfigMap to authenticate requests.
+
+The following example demonstrates how to configure a local JWKS within the [SecurityPolicy] resource.
+
+{{< tabpane text=true >}}
+{{% tab header="Apply from stdin" %}}
+
+```shell
+cat <<EOF | kubectl apply -f -
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: SecurityPolicy
+metadata:
+  name: jwt-example
+spec:
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: foo
+  jwt:
+    providers:
+    - name: example
+      localJWKS:
+        type: ValueRef
+        valueRef:
+          group: ""
+          kind: ConfigMap
+          name: jwt-local-jwks
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: jwt-local-jwks
+data:
+  jwks: |
+    {
+        "keys": [
+            {
+                "alg": "RS256",
+                "e": "AQAB",
+                "key_ops": [
+                    "verify"
+                ],
+                "kty": "RSA",
+                "n": "xOHb-i1WDfeAvsbXTSOtosl3hCUDHQ8fRDqX_Rt998-hZDJmAoPOu4J-wcwq5aZtSn_iWUYLcK2WmC_1n-p1eyc-Pl4CBnxF7LUjCk-WGhniaCzXC5I5RON6c5N-MdE0UfukK0PM0zD3iQonZq0fIsnOYyFdYdWvQ5XW-C2aLlq2FUKrjmhAav10jIC0KGd2dHRzauzfLMUmt_iMnpU84Xrur1zRYzBO4D90rN0ypC2HH7o_zI8Osx4o1L8BScW78545sWyVbaprhBV1I2Sa4SH3NAc25ej3RIh-f13Yu97FVfO0AIG4VfFiaMmsTqNTCiBkM20tXD2Z-cHJTKemXzFgInJoqFLAkHLzJ0lPvAkKOgAOufLHa7RA-C276OXd72IXPsL1UOLN4sjhGqTtaynVa00yuHdi3f4-aoy9F9SUJeWfPg--nZNLzuI0eyufsTFywnx1bTQ_kdYlEr0dRE5sujlMk3cZ7FmOQRvcjA9MxFzoVKMmlZc6LMCgqw-P",
+                "use": "sig",
+                "kid": "b520b3c2c4bd75a10e9cebc9576933dc"
+            }
+        ]
+    }
+EOF
+```
+
+{{% /tab %}}
+{{% tab header="Apply from file" %}}
+Save and apply the following resource to your cluster:
+
+```yaml
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: SecurityPolicy
+metadata:
+  name: jwt-example
+spec:
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: foo
+  jwt:
+    providers:
+    - name: example
+      localJWKS:
+        type: ValueRef
+        valueRef:
+          group: ""
+          kind: ConfigMap
+          name: jwt-local-jwks
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: jwt-local-jwks
+data:
+  jwks: |
+    {
+        "keys": [
+            {
+                "alg": "RS256",
+                "e": "AQAB",
+                "key_ops": [
+                    "verify"
+                ],
+                "kty": "RSA",
+                "n": "xOHb-i1WDfeAvsbXTSOtosl3hCUDHQ8fRDqX_Rt998-hZDJmAoPOu4J-wcwq5aZtSn_iWUYLcK2WmC_1n-p1eyc-Pl4CBnxF7LUjCk-WGhniaCzXC5I5RON6c5N-MdE0UfukK0PM0zD3iQonZq0fIsnOYyFdYdWvQ5XW-C2aLlq2FUKrjmhAav10jIC0KGd2dHRzauzfLMUmt_iMnpU84Xrur1zRYzBO4D90rN0ypC2HH7o_zI8Osx4o1L8BScW78545sWyVbaprhBV1I2Sa4SH3NAc25ej3RIh-f13Yu97FVfO0AIG4VfFiaMmsTqNTCiBkM20tXD2Z-cHJTKemXzFgInJoqFLAkHLzJ0lPvAkKOgAOufLHa7RA-C276OXd72IXPsL1UOLN4sjhGqTtaynVa00yuHdi3f4-aoy9F9SUJeWfPg--nZNLzuI0eyufsTFywnx1bTQ_kdYlEr0dRE5sujlMk3cZ7FmOQRvcjA9MxFzoVKMmlZc6LMCgqw-P",
+                "use": "sig",
+                "kid": "b520b3c2c4bd75a10e9cebc9576933dc"
+            }
+        ]
+    }
+```
+
+{{% /tab %}}
+{{< /tabpane >}}
+
+With the above configuration, the [SecurityPolicy] resource will use the JWKS stored in the `jwt-local-jwks` ConfigMap to authenticate requests for the `foo` HTTPRoute.
 
 ## Clean-Up
 

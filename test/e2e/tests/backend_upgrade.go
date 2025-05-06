@@ -90,11 +90,11 @@ func restartDeploymentAndWaitForNewPods(t *testing.T, timeoutConfig config.Timeo
 
 	ctx := context.Background()
 
-	if dp.Spec.Template.ObjectMeta.Annotations == nil {
-		dp.Spec.Template.ObjectMeta.Annotations = make(map[string]string)
+	if dp.Spec.Template.Annotations == nil {
+		dp.Spec.Template.Annotations = make(map[string]string)
 	}
 	restartTime := time.Now().Format(time.RFC3339)
-	dp.Spec.Template.ObjectMeta.Annotations[kubeRestartAnnotation] = restartTime
+	dp.Spec.Template.Annotations[kubeRestartAnnotation] = restartTime
 
 	if err := c.Update(ctx, dp); err != nil {
 		return err

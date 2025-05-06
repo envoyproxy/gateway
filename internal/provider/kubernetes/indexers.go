@@ -42,6 +42,8 @@ const (
 	configMapSecurityPolicyIndex     = "configMapSecurityPolicyIndex"
 	configMapCtpIndex                = "configMapCtpIndex"
 	secretCtpIndex                   = "secretCtpIndex"
+	configMapBackendIndex            = "configMapBackendIndex"
+	secretBackendIndex               = "secretBackendIndex"
 	secretBtlsIndex                  = "secretBtlsIndex"
 	configMapBtlsIndex               = "configMapBtlsIndex"
 	backendEnvoyExtensionPolicyIndex = "backendEnvoyExtensionPolicyIndex"
@@ -699,6 +701,55 @@ func secretCtpIndexFunc(rawObj client.Object) []string {
 				secretReferences = append(secretReferences,
 					types.NamespacedName{
 						Namespace: gatewayapi.NamespaceDerefOr(caCertRef.Namespace, ctp.Namespace),
+						Name:      string(caCertRef.Name),
+					}.String(),
+				)
+			}
+		}
+	}
+	return secretReferences
+}
+
+// addBackendIndexers adds indexing on Backend, for ConfigMap or Secret objects that are
+// referenced in Backend objects.
+func addBackendIndexers(ctx context.Context, mgr manager.Manager) error {
+	if err := mgr.GetFieldIndexer().IndexField(ctx, &egv1a1.Backend{}, configMapBackendIndex, configMapBackendIndexFunc); err != nil {
+		return err
+	}
+	if err := mgr.GetFieldIndexer().IndexField(ctx, &egv1a1.Backend{}, secretBackendIndex, secretBackendIndexFunc); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func configMapBackendIndexFunc(rawObj client.Object) []string {
+	backend := rawObj.(*egv1a1.Backend)
+	var configMapReferences []string
+	if backend.Spec.TLS != nil && backend.Spec.TLS.CACertificateRefs != nil {
+		for _, caCertRef := range backend.Spec.TLS.CACertificateRefs {
+			if caCertRef.Kind == resource.KindConfigMap {
+				configMapReferences = append(configMapReferences,
+					types.NamespacedName{
+						Namespace: backend.Namespace,
+						Name:      string(caCertRef.Name),
+					}.String(),
+				)
+			}
+		}
+	}
+	return configMapReferences
+}
+
+func secretBackendIndexFunc(rawObj client.Object) []string {
+	backend := rawObj.(*egv1a1.Backend)
+	var secretReferences []string
+	if backend.Spec.TLS != nil && backend.Spec.TLS.CACertificateRefs != nil {
+		for _, caCertRef := range backend.Spec.TLS.CACertificateRefs {
+			if caCertRef.Kind == resource.KindSecret {
+				secretReferences = append(secretReferences,
+					types.NamespacedName{
+						Namespace: backend.Namespace,
 						Name:      string(caCertRef.Name),
 					}.String(),
 				)
