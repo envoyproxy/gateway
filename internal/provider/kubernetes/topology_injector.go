@@ -7,9 +7,9 @@ package kubernetes
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 
-	"github.com/go-openapi/jsonpointer"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/klog/v2"
@@ -63,24 +63,26 @@ func (m *ProxyTopologyInjector) Handle(ctx context.Context, req admission.Reques
 	node := &corev1.Node{}
 	if err := m.Get(ctx, nodeName, node); err != nil {
 		klog.Error(err, "get node failed", "node", node.Name)
+
 		topologyInjectorEventsTotal.WithFailure(metrics.ReasonError).Increment()
 		return admission.Allowed("internal error, skipped")
 	}
 
-	var patch string
 	if zone, ok := node.Labels[corev1.LabelTopologyZone]; ok {
-		patch = fmt.Sprintf(`[{"op":"replace", "path":"/metadata/labels/%s", "value":"%s"}]`, jsonpointer.Escape(corev1.LabelTopologyZone), zone)
+		if binding.Annotations == nil {
+			binding.Annotations = map[string]string{}
+		}
+		binding.Annotations[corev1.LabelTopologyZone] = zone
+	} else {
+		return admission.Allowed("Skipping injection due to missing topology label on node")
 	}
 
-	rawPatch := client.RawPatch(types.JSONPatchType, []byte(patch))
-	if err := m.Patch(ctx, pod, rawPatch); err != nil {
-		klog.Error(err, "patch pod failed", "pod", podName.String())
-		topologyInjectorEventsTotal.WithFailure(metrics.ReasonError).Increment()
-		return admission.Allowed("internal error, skipped")
+	marshaledBinding, err := json.Marshal(binding)
+	if err != nil {
+		klog.Errorf("failed to marshal Pod Binding: %v", err)
+		return admission.Allowed(fmt.Sprintf("failed to marshal binding, skipped: %v", err))
 	}
-	klog.V(1).Info("patch pod succeeded", "pod", podName.String())
-	topologyInjectorEventsTotal.WithSuccess().Increment()
-	return admission.Allowed("pod patched")
+	return admission.PatchResponseFromRaw(req.Object.Raw, marshaledBinding)
 }
 
 func hasEnvoyProxyLabels(labels map[string]string) bool {
