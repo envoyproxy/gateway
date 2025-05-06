@@ -513,6 +513,7 @@ func (t *Translator) addRouteToRouteConfig(
 				metrics:       metrics,
 				http1Settings: httpListener.HTTP1,
 				ipFamily:      determineIPFamily(httpRoute.Destination.Settings),
+				statName:      httpRoute.Destination.StatName,
 			}
 
 			if httpRoute.Traffic != nil && httpRoute.Traffic.HTTP2 != nil {

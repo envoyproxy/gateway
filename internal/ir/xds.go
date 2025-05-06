@@ -1471,6 +1471,7 @@ type RouteDestination struct {
 	// to check if this route destination already exists and can be
 	// reused
 	Name     string                `json:"name" yaml:"name"`
+	StatName *string               `json:"statName,omitempty" yaml:"statName,omitempty"`
 	Settings []*DestinationSetting `json:"settings,omitempty" yaml:"settings,omitempty"`
 }
 
