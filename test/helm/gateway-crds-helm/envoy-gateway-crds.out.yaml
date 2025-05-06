@@ -947,6 +947,38 @@ spec:
                     - message: If consistent hash type is cookie, the cookie field
                         must be set.
                       rule: 'self.type == ''Cookie'' ? has(self.cookie) : !has(self.cookie)'
+                  requestDistribution:
+                    description: RequestDistribution...
+                    properties:
+                      preferLocalZoneConfig:
+                        properties:
+                          forceLocalZone:
+                            type: boolean
+                          minClusterSize:
+                            format: int64
+                            type: integer
+                          minZoneSize:
+                            format: int64
+                            type: integer
+                        type: object
+                      type:
+                        description: LoadBalancerType specifies the types of LoadBalancer.
+                        enum:
+                        - PreferLocalZone
+                        - WeightedZone
+                        type: string
+                      weightedZoneConfig:
+                        properties:
+                          weights:
+                            additionalProperties:
+                              type: integer
+                            type: object
+                        required:
+                        - weights
+                        type: object
+                    required:
+                    - type
+                    type: object
                   slowStart:
                     description: |-
                       SlowStart defines the configuration related to the slow start load balancer policy.
@@ -4427,6 +4459,39 @@ spec:
                                   field must be set.
                                 rule: 'self.type == ''Cookie'' ? has(self.cookie)
                                   : !has(self.cookie)'
+                            requestDistribution:
+                              description: RequestDistribution...
+                              properties:
+                                preferLocalZoneConfig:
+                                  properties:
+                                    forceLocalZone:
+                                      type: boolean
+                                    minClusterSize:
+                                      format: int64
+                                      type: integer
+                                    minZoneSize:
+                                      format: int64
+                                      type: integer
+                                  type: object
+                                type:
+                                  description: LoadBalancerType specifies the types
+                                    of LoadBalancer.
+                                  enum:
+                                  - PreferLocalZone
+                                  - WeightedZone
+                                  type: string
+                                weightedZoneConfig:
+                                  properties:
+                                    weights:
+                                      additionalProperties:
+                                        type: integer
+                                      type: object
+                                  required:
+                                  - weights
+                                  type: object
+                              required:
+                              - type
+                              type: object
                             slowStart:
                               description: |-
                                 SlowStart defines the configuration related to the slow start load balancer policy.
@@ -17336,6 +17401,39 @@ spec:
                                                     be set.
                                                   rule: 'self.type == ''Cookie'' ?
                                                     has(self.cookie) : !has(self.cookie)'
+                                              requestDistribution:
+                                                description: RequestDistribution...
+                                                properties:
+                                                  preferLocalZoneConfig:
+                                                    properties:
+                                                      forceLocalZone:
+                                                        type: boolean
+                                                      minClusterSize:
+                                                        format: int64
+                                                        type: integer
+                                                      minZoneSize:
+                                                        format: int64
+                                                        type: integer
+                                                    type: object
+                                                  type:
+                                                    description: LoadBalancerType
+                                                      specifies the types of LoadBalancer.
+                                                    enum:
+                                                    - PreferLocalZone
+                                                    - WeightedZone
+                                                    type: string
+                                                  weightedZoneConfig:
+                                                    properties:
+                                                      weights:
+                                                        additionalProperties:
+                                                          type: integer
+                                                        type: object
+                                                    required:
+                                                    - weights
+                                                    type: object
+                                                required:
+                                                - type
+                                                type: object
                                               slowStart:
                                                 description: |-
                                                   SlowStart defines the configuration related to the slow start load balancer policy.
@@ -18355,6 +18453,39 @@ spec:
                                                     be set.
                                                   rule: 'self.type == ''Cookie'' ?
                                                     has(self.cookie) : !has(self.cookie)'
+                                              requestDistribution:
+                                                description: RequestDistribution...
+                                                properties:
+                                                  preferLocalZoneConfig:
+                                                    properties:
+                                                      forceLocalZone:
+                                                        type: boolean
+                                                      minClusterSize:
+                                                        format: int64
+                                                        type: integer
+                                                      minZoneSize:
+                                                        format: int64
+                                                        type: integer
+                                                    type: object
+                                                  type:
+                                                    description: LoadBalancerType
+                                                      specifies the types of LoadBalancer.
+                                                    enum:
+                                                    - PreferLocalZone
+                                                    - WeightedZone
+                                                    type: string
+                                                  weightedZoneConfig:
+                                                    properties:
+                                                      weights:
+                                                        additionalProperties:
+                                                          type: integer
+                                                        type: object
+                                                    required:
+                                                    - weights
+                                                    type: object
+                                                required:
+                                                - type
+                                                type: object
                                               slowStart:
                                                 description: |-
                                                   SlowStart defines the configuration related to the slow start load balancer policy.
@@ -19444,6 +19575,39 @@ spec:
                                               the cookie field must be set.
                                             rule: 'self.type == ''Cookie'' ? has(self.cookie)
                                               : !has(self.cookie)'
+                                        requestDistribution:
+                                          description: RequestDistribution...
+                                          properties:
+                                            preferLocalZoneConfig:
+                                              properties:
+                                                forceLocalZone:
+                                                  type: boolean
+                                                minClusterSize:
+                                                  format: int64
+                                                  type: integer
+                                                minZoneSize:
+                                                  format: int64
+                                                  type: integer
+                                              type: object
+                                            type:
+                                              description: LoadBalancerType specifies
+                                                the types of LoadBalancer.
+                                              enum:
+                                              - PreferLocalZone
+                                              - WeightedZone
+                                              type: string
+                                            weightedZoneConfig:
+                                              properties:
+                                                weights:
+                                                  additionalProperties:
+                                                    type: integer
+                                                  type: object
+                                              required:
+                                              - weights
+                                              type: object
+                                          required:
+                                          - type
+                                          type: object
                                         slowStart:
                                           description: |-
                                             SlowStart defines the configuration related to the slow start load balancer policy.
@@ -20467,6 +20631,39 @@ spec:
                                         the cookie field must be set.
                                       rule: 'self.type == ''Cookie'' ? has(self.cookie)
                                         : !has(self.cookie)'
+                                  requestDistribution:
+                                    description: RequestDistribution...
+                                    properties:
+                                      preferLocalZoneConfig:
+                                        properties:
+                                          forceLocalZone:
+                                            type: boolean
+                                          minClusterSize:
+                                            format: int64
+                                            type: integer
+                                          minZoneSize:
+                                            format: int64
+                                            type: integer
+                                        type: object
+                                      type:
+                                        description: LoadBalancerType specifies the
+                                          types of LoadBalancer.
+                                        enum:
+                                        - PreferLocalZone
+                                        - WeightedZone
+                                        type: string
+                                      weightedZoneConfig:
+                                        properties:
+                                          weights:
+                                            additionalProperties:
+                                              type: integer
+                                            type: object
+                                        required:
+                                        - weights
+                                        type: object
+                                    required:
+                                    - type
+                                    type: object
                                   slowStart:
                                     description: |-
                                       SlowStart defines the configuration related to the slow start load balancer policy.
@@ -22303,6 +22500,39 @@ spec:
                                     cookie field must be set.
                                   rule: 'self.type == ''Cookie'' ? has(self.cookie)
                                     : !has(self.cookie)'
+                              requestDistribution:
+                                description: RequestDistribution...
+                                properties:
+                                  preferLocalZoneConfig:
+                                    properties:
+                                      forceLocalZone:
+                                        type: boolean
+                                      minClusterSize:
+                                        format: int64
+                                        type: integer
+                                      minZoneSize:
+                                        format: int64
+                                        type: integer
+                                    type: object
+                                  type:
+                                    description: LoadBalancerType specifies the types
+                                      of LoadBalancer.
+                                    enum:
+                                    - PreferLocalZone
+                                    - WeightedZone
+                                    type: string
+                                  weightedZoneConfig:
+                                    properties:
+                                      weights:
+                                        additionalProperties:
+                                          type: integer
+                                        type: object
+                                    required:
+                                    - weights
+                                    type: object
+                                required:
+                                - type
+                                type: object
                               slowStart:
                                 description: |-
                                   SlowStart defines the configuration related to the slow start load balancer policy.
@@ -23220,6 +23450,39 @@ spec:
                                     cookie field must be set.
                                   rule: 'self.type == ''Cookie'' ? has(self.cookie)
                                     : !has(self.cookie)'
+                              requestDistribution:
+                                description: RequestDistribution...
+                                properties:
+                                  preferLocalZoneConfig:
+                                    properties:
+                                      forceLocalZone:
+                                        type: boolean
+                                      minClusterSize:
+                                        format: int64
+                                        type: integer
+                                      minZoneSize:
+                                        format: int64
+                                        type: integer
+                                    type: object
+                                  type:
+                                    description: LoadBalancerType specifies the types
+                                      of LoadBalancer.
+                                    enum:
+                                    - PreferLocalZone
+                                    - WeightedZone
+                                    type: string
+                                  weightedZoneConfig:
+                                    properties:
+                                      weights:
+                                        additionalProperties:
+                                          type: integer
+                                        type: object
+                                    required:
+                                    - weights
+                                    type: object
+                                required:
+                                - type
+                                type: object
                               slowStart:
                                 description: |-
                                   SlowStart defines the configuration related to the slow start load balancer policy.
@@ -24343,6 +24606,39 @@ spec:
                                           the cookie field must be set.
                                         rule: 'self.type == ''Cookie'' ? has(self.cookie)
                                           : !has(self.cookie)'
+                                    requestDistribution:
+                                      description: RequestDistribution...
+                                      properties:
+                                        preferLocalZoneConfig:
+                                          properties:
+                                            forceLocalZone:
+                                              type: boolean
+                                            minClusterSize:
+                                              format: int64
+                                              type: integer
+                                            minZoneSize:
+                                              format: int64
+                                              type: integer
+                                          type: object
+                                        type:
+                                          description: LoadBalancerType specifies
+                                            the types of LoadBalancer.
+                                          enum:
+                                          - PreferLocalZone
+                                          - WeightedZone
+                                          type: string
+                                        weightedZoneConfig:
+                                          properties:
+                                            weights:
+                                              additionalProperties:
+                                                type: integer
+                                              type: object
+                                          required:
+                                          - weights
+                                          type: object
+                                      required:
+                                      - type
+                                      type: object
                                     slowStart:
                                       description: |-
                                         SlowStart defines the configuration related to the slow start load balancer policy.
@@ -25389,6 +25685,39 @@ spec:
                                     cookie field must be set.
                                   rule: 'self.type == ''Cookie'' ? has(self.cookie)
                                     : !has(self.cookie)'
+                              requestDistribution:
+                                description: RequestDistribution...
+                                properties:
+                                  preferLocalZoneConfig:
+                                    properties:
+                                      forceLocalZone:
+                                        type: boolean
+                                      minClusterSize:
+                                        format: int64
+                                        type: integer
+                                      minZoneSize:
+                                        format: int64
+                                        type: integer
+                                    type: object
+                                  type:
+                                    description: LoadBalancerType specifies the types
+                                      of LoadBalancer.
+                                    enum:
+                                    - PreferLocalZone
+                                    - WeightedZone
+                                    type: string
+                                  weightedZoneConfig:
+                                    properties:
+                                      weights:
+                                        additionalProperties:
+                                          type: integer
+                                        type: object
+                                    required:
+                                    - weights
+                                    type: object
+                                required:
+                                - type
+                                type: object
                               slowStart:
                                 description: |-
                                   SlowStart defines the configuration related to the slow start load balancer policy.

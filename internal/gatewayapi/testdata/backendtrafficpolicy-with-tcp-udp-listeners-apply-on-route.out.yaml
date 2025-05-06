@@ -306,6 +306,17 @@ xdsIR:
     accessLog:
       json:
       - path: /dev/stdout
+    envoyProxyCluster:
+      destination:
+        addressType: IP
+        endpoints:
+        - host: 7.6.5.4
+          port: 8080
+          zone: zone1
+        name: envoy-default-tcp-gateway-1ec60381
+        protocol: HTTP
+        zoneAwareRoutingEnabled: true
+      name: envoy-default-tcp-gateway-1ec60381
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4

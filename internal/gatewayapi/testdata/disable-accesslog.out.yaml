@@ -119,6 +119,17 @@ infraIR:
       namespace: envoy-gateway-system
 xdsIR:
   envoy-gateway/gateway-1:
+    envoyProxyCluster:
+      destination:
+        addressType: IP
+        endpoints:
+        - host: 7.6.5.4
+          port: 8080
+          zone: zone1
+        name: envoy-envoy-gateway-gateway-1-196ae069
+        protocol: HTTP
+        zoneAwareRoutingEnabled: true
+      name: envoy-envoy-gateway-gateway-1-196ae069
     http:
     - address: 0.0.0.0
       hostnames:

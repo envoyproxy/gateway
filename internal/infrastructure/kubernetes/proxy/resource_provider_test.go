@@ -573,6 +573,7 @@ func TestDeployment(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.caseName, func(t *testing.T) {
+			t.Log(fmt.Sprintf("infra name: %s", tc.infra.GetProxyInfra().Name))
 			kube := tc.infra.GetProxyInfra().GetProxyConfig().GetEnvoyProxyProvider().GetEnvoyProxyKubeProvider()
 			if tc.deploy != nil {
 				kube.EnvoyDeployment = tc.deploy

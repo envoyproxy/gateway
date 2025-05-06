@@ -8,6 +8,8 @@ package kubernetes
 import (
 	"context"
 	"fmt"
+	"github.com/envoyproxy/gateway/internal/infrastructure/kubernetes/proxy"
+	"k8s.io/apimachinery/pkg/labels"
 	"time"
 
 	appsv1 "k8s.io/api/apps/v1"
@@ -1004,6 +1006,14 @@ func (r *gatewayAPIReconciler) processGateways(ctx context.Context, managedGC *g
 		return err
 	}
 
+	mergedGateways := false
+	if resourceTree.EnvoyProxyForGatewayClass != nil && resourceTree.EnvoyProxyForGatewayClass.Spec.MergeGateways != nil && *resourceTree.EnvoyProxyForGatewayClass.Spec.MergeGateways {
+		mergedGateways = true
+		if err := r.processProxyInfra(ctx, managedGC.Name, resourceTree, resourceMap); err != nil {
+			return fmt.Errorf("failed to process proxy infra: %w", err)
+		}
+	}
+
 	for _, gtw := range gatewayList.Items {
 		gtw := gtw //nolint:copyloopvar
 		if r.namespaceLabel != nil {
@@ -1040,6 +1050,13 @@ func (r *gatewayAPIReconciler) processGateways(ctx context.Context, managedGC *g
 		}
 
 		gtwNamespacedName := utils.NamespacedName(&gtw).String()
+
+		if !mergedGateways {
+			if err := r.processProxyInfra(ctx, gtwNamespacedName, resourceTree, resourceMap); err != nil {
+				return err
+			}
+		}
+
 		// Route Processing
 
 		if r.tlsRouteCRDExists {
@@ -1094,6 +1111,44 @@ func (r *gatewayAPIReconciler) processGateways(ctx context.Context, managedGC *g
 		}
 	}
 
+	return nil
+}
+
+func (r *gatewayAPIReconciler) processProxyInfra(ctx context.Context, resourceName string, resourceTree *resource.Resources, resourceMap *resourceMappings) error {
+	proxySvcName := proxy.ExpectedResourceHashedName(resourceName)
+	proxySvc := &corev1.Service{}
+	if err := r.client.Get(ctx, types.NamespacedName{Name: proxySvcName, Namespace: r.namespace}, proxySvc); err != nil {
+		r.log.Info("no associated Services found for ProxyInfra", "name", resourceName, "hashedName", proxySvcName)
+		return err
+	}
+	resourceTree.Services = append(resourceTree.Services, proxySvc)
+	resourceMap.allAssociatedBackendRefs.Insert(gwapiv1.BackendObjectReference{
+		Kind:      ptr.To(gwapiv1.Kind("Service")),
+		Namespace: gatewayapi.NamespacePtr(proxySvc.Namespace),
+		Name:      gwapiv1.ObjectName(proxySvc.Name),
+	})
+	resourceMap.allAssociatedNamespaces.Insert(proxySvc.Namespace)
+
+	proxyEndPtSlices := &discoveryv1.EndpointSliceList{}
+	if err := r.client.List(ctx, proxyEndPtSlices, &client.ListOptions{
+		Namespace: r.namespace,
+		LabelSelector: labels.SelectorFromSet(map[string]string{
+			discoveryv1.LabelServiceName: proxySvcName,
+		}),
+	}); err != nil {
+		r.log.Info("no associated EndpointSlices found for ProxyInfra service", "name", resourceName, "hashedName", proxySvcName)
+		return err
+	}
+	for _, s := range proxyEndPtSlices.Items {
+		key := utils.NamespacedName(&s).String()
+		if !resourceMap.allAssociatedEndpointSlices.Has(key) {
+			resourceMap.allAssociatedEndpointSlices.Insert(key)
+			r.log.Info("added EndpointSlice to resource tree",
+				"namespace", s.Namespace,
+				"name", s.Name)
+			resourceTree.EndpointSlices = append(resourceTree.EndpointSlices, &s)
+		}
+	}
 	return nil
 }
 

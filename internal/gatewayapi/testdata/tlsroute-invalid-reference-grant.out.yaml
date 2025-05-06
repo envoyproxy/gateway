@@ -97,6 +97,17 @@ xdsIR:
     accessLog:
       json:
       - path: /dev/stdout
+    envoyProxyCluster:
+      destination:
+        addressType: IP
+        endpoints:
+        - host: 7.6.5.4
+          port: 8080
+          zone: zone1
+        name: envoy-gateway-conformance-infra-gateway-tlsroute-refer-1a02781b
+        protocol: HTTP
+        zoneAwareRoutingEnabled: true
+      name: envoy-gateway-conformance-infra-gateway-tlsroute-refer-1a02781b
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4

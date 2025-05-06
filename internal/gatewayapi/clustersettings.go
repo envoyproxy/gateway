@@ -297,9 +297,15 @@ func buildLoadBalancer(policy egv1a1.ClusterSettings) (*ir.LoadBalancer, error) 
 				Window: policy.LoadBalancer.SlowStart.Window,
 			}
 		}
+		if policy.LoadBalancer.RequestDistribution != nil {
+			lb.LeastRequest.RequestDistribution = policy.LoadBalancer.RequestDistribution
+		}
 	case egv1a1.RandomLoadBalancerType:
 		lb = &ir.LoadBalancer{
 			Random: &ir.Random{},
+		}
+		if policy.LoadBalancer.RequestDistribution != nil {
+			lb.Random.RequestDistribution = policy.LoadBalancer.RequestDistribution
 		}
 	case egv1a1.RoundRobinLoadBalancerType:
 		lb = &ir.LoadBalancer{
@@ -309,6 +315,9 @@ func buildLoadBalancer(policy egv1a1.ClusterSettings) (*ir.LoadBalancer, error) 
 			lb.RoundRobin.SlowStart = &ir.SlowStart{
 				Window: policy.LoadBalancer.SlowStart.Window,
 			}
+		}
+		if policy.LoadBalancer.RequestDistribution != nil {
+			lb.RoundRobin.RequestDistribution = policy.LoadBalancer.RequestDistribution
 		}
 	}
 
@@ -337,6 +346,10 @@ func buildConsistentHashLoadBalancer(policy egv1a1.LoadBalancer) (*ir.Consistent
 		}
 	case egv1a1.CookieConsistentHashType:
 		consistentHash.Cookie = policy.ConsistentHash.Cookie
+	}
+
+	if ptr.Deref(policy.RequestDistribution, egv1a1.RequestDistribution{}).WeightedZoneConfig != nil {
+		consistentHash.WeightedZoneConfig = policy.RequestDistribution.WeightedZoneConfig
 	}
 
 	return consistentHash, nil

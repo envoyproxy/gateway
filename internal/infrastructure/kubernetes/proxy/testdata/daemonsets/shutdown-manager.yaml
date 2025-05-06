@@ -49,7 +49,7 @@ spec:
                 address: 127.0.0.1
                 port_value: 19000
           cluster_manager:
-            local_cluster_name: local_cluster
+            local_cluster_name: "$(ENVOY_PROXY_INFRA_NAME)"
           node:
             locality:
               zone: "$(ENVOY_SERVICE_ZONE)"
@@ -123,23 +123,17 @@ spec:
                         socket_address:
                           address: 127.0.0.1
                           port_value: 19000
-            - connect_timeout: 10s
-              lb_policy: ROUND_ROBIN
-              load_assignment:
-                cluster_name: local_cluster
-                endpoints:
-                - lb_endpoints:
-                  - endpoint:
-                      address:
-                        socket_address:
-                          address: 127.0.0.1
-                          port_value: 10080
-                    load_balancing_weight: 1
-                  load_balancing_weight: 1
-                  locality:
-                    zone: "$(ENVOY_SERVICE_ZONE)"
-              name: local_cluster
-              type: STATIC
+            - commonLbConfig: {}
+              connectTimeout: 10s
+              dnsLookupFamily: V4_PREFERRED
+              edsClusterConfig:
+                edsConfig:
+                  ads: {}
+                  resourceApiVersion: V3
+                serviceName: "$(ENVOY_PROXY_INFRA_NAME)"
+              lbPolicy: LEAST_REQUEST
+              name: "$(ENVOY_PROXY_INFRA_NAME)"
+              type: EDS
             - connect_timeout: 10s
               load_assignment:
                 cluster_name: xds_cluster
@@ -243,6 +237,8 @@ spec:
             fieldRef:
               apiVersion: v1
               fieldPath: metadata.annotations['topology.kubernetes.io/zone']
+        - name: ENVOY_PROXY_INFRA_NAME
+          value: envoy-default-37a8eec1
         - name: ENVOY_POD_NAME
           valueFrom:
             fieldRef:
@@ -335,6 +331,8 @@ spec:
             fieldRef:
               apiVersion: v1
               fieldPath: metadata.annotations['topology.kubernetes.io/zone']
+        - name: ENVOY_PROXY_INFRA_NAME
+          value: envoy-default-37a8eec1
         - name: ENVOY_POD_NAME
           valueFrom:
             fieldRef:

@@ -13,7 +13,7 @@ xds:
             address: 127.0.0.1
             portValue: 19000
       clusterManager:
-        localClusterName: local_cluster
+        localClusterName: $(ENVOY_PROXY_INFRA_NAME)
       dynamicResources:
         adsConfig:
           apiType: DELTA_GRPC
@@ -59,22 +59,17 @@ xds:
                       portValue: 19000
           name: prometheus_stats
           type: STATIC
-        - connectTimeout: 10s
-          loadAssignment:
-            clusterName: local_cluster
-            endpoints:
-            - lbEndpoints:
-              - endpoint:
-                  address:
-                    socketAddress:
-                      address: 127.0.0.1
-                      portValue: 10080
-                loadBalancingWeight: 1
-              loadBalancingWeight: 1
-              locality:
-                zone: $(ENVOY_SERVICE_ZONE)
-          name: local_cluster
-          type: STATIC
+        - commonLbConfig: {}
+          connectTimeout: 10s
+          dnsLookupFamily: V4_PREFERRED
+          edsClusterConfig:
+            edsConfig:
+              ads: {}
+              resourceApiVersion: V3
+            serviceName: $(ENVOY_PROXY_INFRA_NAME)
+          lbPolicy: LEAST_REQUEST
+          name: $(ENVOY_PROXY_INFRA_NAME)
+          type: EDS
         - connectTimeout: 10s
           loadAssignment:
             clusterName: xds_cluster

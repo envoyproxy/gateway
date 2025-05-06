@@ -2976,6 +2976,7 @@ _Appears in:_
 | `type` | _[LoadBalancerType](#loadbalancertype)_ |  true  |  | Type decides the type of Load Balancer policy.<br />Valid LoadBalancerType values are<br />"ConsistentHash",<br />"LeastRequest",<br />"Random",<br />"RoundRobin". |
 | `consistentHash` | _[ConsistentHash](#consistenthash)_ |  false  |  | ConsistentHash defines the configuration when the load balancer type is<br />set to ConsistentHash |
 | `slowStart` | _[SlowStart](#slowstart)_ |  false  |  | SlowStart defines the configuration related to the slow start load balancer policy.<br />If set, during slow start window, traffic sent to the newly added hosts will gradually increase.<br />Currently this is only supported for RoundRobin and LeastRequest load balancers |
+| `requestDistribution` | _[RequestDistribution](#requestdistribution)_ |  false  |  | RequestDistribution... |
 
 
 #### LoadBalancerType
@@ -3338,6 +3339,22 @@ _Appears in:_
 | `targetRef` | _[LocalPolicyTargetReferenceWithSectionName](https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1alpha2.LocalPolicyTargetReferenceWithSectionName)_ |  true  |  | TargetRef is the name of the resource this policy is being attached to.<br />This policy and the TargetRef MUST be in the same namespace for this<br />Policy to have effect<br />Deprecated: use targetRefs/targetSelectors instead |
 | `targetRefs` | _[LocalPolicyTargetReferenceWithSectionName](https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1alpha2.LocalPolicyTargetReferenceWithSectionName) array_ |  true  |  | TargetRefs are the names of the Gateway resources this policy<br />is being attached to. |
 | `targetSelectors` | _[TargetSelector](#targetselector) array_ |  true  |  | TargetSelectors allow targeting resources for this policy based on labels |
+
+
+#### PreferLocalZoneConfig
+
+
+
+
+
+_Appears in:_
+- [RequestDistribution](#requestdistribution)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `forceLocalZone` | _boolean_ |  true  |  |  |
+| `minZoneSize` | _integer_ |  true  |  |  |
+| `minClusterSize` | _integer_ |  true  |  |  |
 
 
 #### Principal
@@ -4070,6 +4087,37 @@ _Appears in:_
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
+
+
+#### RequestDistribution
+
+
+
+RequestDistribution
+
+_Appears in:_
+- [LoadBalancer](#loadbalancer)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `type` | _[RequestDistributionType](#requestdistributiontype)_ |  true  |  |  |
+| `preferLocalZoneConfig` | _[PreferLocalZoneConfig](#preferlocalzoneconfig)_ |  true  |  |  |
+| `weightedZoneConfig` | _[WeightedZoneConfig](#weightedzoneconfig)_ |  true  |  |  |
+
+
+#### RequestDistributionType
+
+_Underlying type:_ _string_
+
+LoadBalancerType specifies the types of LoadBalancer.
+
+_Appears in:_
+- [RequestDistribution](#requestdistribution)
+
+| Value | Description |
+| ----- | ----------- |
+| `PreferLocalZone` | PreferLocalZone load balancer policy.<br /> | 
+| `WeightedZone` | WeightedZone load balancer policy.<br /> | 
 
 
 #### RequestHeaderCustomTag
@@ -4806,6 +4854,20 @@ _Appears in:_
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
 | `hostKeys` | _string array_ |  false  |  | HostKeys is a list of keys for environment variables from the host envoy process<br />that should be passed into the Wasm VM. This is useful for passing secrets to to Wasm extensions. |
+
+
+#### WeightedZoneConfig
+
+
+
+
+
+_Appears in:_
+- [RequestDistribution](#requestdistribution)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `weights` | _object (keys:string, values:integer)_ |  true  |  |  |
 
 
 #### WithUnderscoresAction

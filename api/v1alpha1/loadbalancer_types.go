@@ -34,6 +34,11 @@ type LoadBalancer struct {
 	//
 	// +optional
 	SlowStart *SlowStart `json:"slowStart,omitempty"`
+
+	// RequestDistribution...
+	//
+	// +optional
+	RequestDistribution *RequestDistribution `json:"requestDistribution,omitempty"`
 }
 
 // LoadBalancerType specifies the types of LoadBalancer.
@@ -134,4 +139,32 @@ type SlowStart struct {
 	// +kubebuilder:validation:Required
 	Window *metav1.Duration `json:"window"`
 	// TODO: Add support for non-linear traffic increases based on user usage.
+}
+
+// RequestDistribution
+type RequestDistribution struct {
+	Type                  RequestDistributionType `json:"type"`
+	PreferLocalZoneConfig *PreferLocalZoneConfig  `json:"preferLocalZoneConfig,omitempty"`
+	WeightedZoneConfig    *WeightedZoneConfig     `json:"weightedZoneConfig,omitempty"`
+}
+
+// LoadBalancerType specifies the types of LoadBalancer.
+// +kubebuilder:validation:Enum=PreferLocalZone;WeightedZone
+type RequestDistributionType string
+
+const (
+	// PreferLocalZone load balancer policy.
+	PreferLocalZone RequestDistributionType = "PreferLocalZone"
+	// WeightedZone load balancer policy.
+	WeightedZone RequestDistributionType = "WeightedZone"
+)
+
+type PreferLocalZoneConfig struct {
+	ForceLocal            *bool   `json:"forceLocalZone,omitempty"`
+	ForceLocalMinZoneSize *uint64 `json:"minZoneSize,omitempty"`
+	MinClusterSize        *uint64 `json:"minClusterSize,omitempty"`
+}
+
+type WeightedZoneConfig struct {
+	Weights map[string]int `json:"weights"`
 }
