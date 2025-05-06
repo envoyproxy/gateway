@@ -23,8 +23,16 @@ func (i *Infra) CreateOrUpdateProxyInfra(ctx context.Context, infra *ir.Infra) e
 		return errors.New("infra proxy ir is nil")
 	}
 
+<<<<<<< HEAD
 	ns := i.GetResourceNamespace(infra)
 	r := proxy.NewResourceRender(ns, i.DNSDomain, infra.GetProxyInfra(), i.EnvoyGateway)
+=======
+	if i.EnvoyGateway.GatewayNamespaceMode() && i.Namespace == "" {
+		i.Namespace = infra.Proxy.Namespace
+	}
+
+	r := proxy.NewResourceRender(i.Namespace, i.DNSDomain, infra.GetProxyInfra(), i.EnvoyGateway)
+>>>>>>> 445c3b09 (Revert "Add controller namespace to infra")
 	return i.createOrUpdate(ctx, r)
 }
 
@@ -34,8 +42,16 @@ func (i *Infra) DeleteProxyInfra(ctx context.Context, infra *ir.Infra) error {
 		return errors.New("infra ir is nil")
 	}
 
+<<<<<<< HEAD
 	ns := i.GetResourceNamespace(infra)
 	r := proxy.NewResourceRender(ns, i.DNSDomain, infra.GetProxyInfra(), i.EnvoyGateway)
+=======
+	if i.EnvoyGateway.GatewayNamespaceMode() && i.Namespace == "" {
+		i.Namespace = infra.Proxy.Namespace
+	}
+
+	r := proxy.NewResourceRender(i.Namespace, i.DNSDomain, infra.GetProxyInfra(), i.EnvoyGateway)
+>>>>>>> 445c3b09 (Revert "Add controller namespace to infra")
 	return i.delete(ctx, r)
 }
 

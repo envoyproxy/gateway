@@ -108,6 +108,10 @@ func expectedProxyContainers(infra *ir.ProxyInfra,
 	}
 
 	maxHeapSizeBytes := calculateMaxHeapSizeBytes(containerSpec.Resources)
+
+	if gatewayNamespaceMode {
+		egNamespace = config.DefaultNamespace
+	}
 	// Get the default Bootstrap
 	bootstrapConfigOptions := &bootstrap.RenderBootstrapConfigOptions{
 		ProxyMetrics: proxyMetrics,
@@ -131,7 +135,7 @@ func expectedProxyContainers(infra *ir.ProxyInfra,
 			ImagePullPolicy:          corev1.PullIfNotPresent,
 			Command:                  []string{"envoy"},
 			Args:                     args,
-			Env:                      expectedContainerEnv(containerSpec, egNamespace),
+			Env:                      expectedContainerEnv(containerSpec, gatewayNamespaceMode),
 			Resources:                *containerSpec.Resources,
 			SecurityContext:          expectedEnvoySecurityContext(containerSpec),
 			Ports:                    ports,
@@ -193,7 +197,7 @@ func expectedProxyContainers(infra *ir.ProxyInfra,
 			ImagePullPolicy:          corev1.PullIfNotPresent,
 			Command:                  []string{"envoy-gateway"},
 			Args:                     expectedShutdownManagerArgs(shutdownConfig),
-			Env:                      expectedContainerEnv(nil, egNamespace),
+			Env:                      expectedContainerEnv(nil, gatewayNamespaceMode),
 			Resources:                *egv1a1.DefaultShutdownManagerContainerResourceRequirements(),
 			TerminationMessagePolicy: corev1.TerminationMessageReadFile,
 			TerminationMessagePath:   "/dev/termination-log",
@@ -308,7 +312,7 @@ func expectedContainerVolumeMounts(containerSpec *egv1a1.KubernetesContainerSpec
 }
 
 // expectedVolumes returns expected proxy deployment volumes.
-func expectedVolumes(name string, gatewayNamespacedMode bool, pod *egv1a1.KubernetesPodSpec, controllerNamespace, dnsDomain string) []corev1.Volume {
+func expectedVolumes(name string, gatewayNamespacedMode bool, pod *egv1a1.KubernetesPodSpec, dnsDomain string) []corev1.Volume {
 	var volumes []corev1.Volume
 	certsVolume := corev1.Volume{
 		Name: "certs",
@@ -339,7 +343,7 @@ func expectedVolumes(name string, gatewayNamespacedMode bool, pod *egv1a1.Kubern
 				},
 			},
 		}
-		saAudience := fmt.Sprintf("%s.%s.svc.%s", config.EnvoyGatewayServiceName, controllerNamespace, dnsDomain)
+		saAudience := fmt.Sprintf("%s.%s.svc.%s", config.EnvoyGatewayServiceName, config.DefaultNamespace, dnsDomain)
 		saTokenProjectedVolume := corev1.Volume{
 			Name: "sa-token",
 			VolumeSource: corev1.VolumeSource{
@@ -409,11 +413,16 @@ func expectedVolumes(name string, gatewayNamespacedMode bool, pod *egv1a1.Kubern
 }
 
 // expectedContainerEnv returns expected proxy container envs.
-func expectedContainerEnv(containerSpec *egv1a1.KubernetesContainerSpec, controllerNamespace string) []corev1.EnvVar {
+func expectedContainerEnv(containerSpec *egv1a1.KubernetesContainerSpec, gatewayNamespaceMode bool) []corev1.EnvVar {
 	env := []corev1.EnvVar{
 		{
-			Name:  envoyNsEnvVar,
-			Value: controllerNamespace,
+			Name: envoyNsEnvVar,
+			ValueFrom: &corev1.EnvVarSource{
+				FieldRef: &corev1.ObjectFieldSelector{
+					APIVersion: "v1",
+					FieldPath:  "metadata.namespace",
+				},
+			},
 		},
 		{
 			Name: envoyZoneEnvVar,
@@ -424,6 +433,23 @@ func expectedContainerEnv(containerSpec *egv1a1.KubernetesContainerSpec, control
 				},
 			},
 		},
+	}
+	if gatewayNamespaceMode {
+		env = []corev1.EnvVar{
+			{
+				Name:  envoyNsEnvVar,
+				Value: config.DefaultNamespace,
+			},
+			{
+				Name: envoyZoneEnvVar,
+				ValueFrom: &corev1.EnvVarSource{
+					FieldRef: &corev1.ObjectFieldSelector{
+						APIVersion: "v1",
+						FieldPath:  fmt.Sprintf("metadata.labels['%s']", corev1.LabelTopologyZone),
+					},
+				},
+			},
+		}
 	}
 
 	env = append(env, corev1.EnvVar{

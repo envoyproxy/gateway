@@ -254,7 +254,10 @@ spec:
         - envoy
         env:
         - name: ENVOY_GATEWAY_NAMESPACE
-          value: envoy-gateway-system
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: metadata.namespace
         - name: ENVOY_SERVICE_ZONE
           valueFrom:
             fieldRef:
@@ -334,7 +337,10 @@ spec:
         - envoy-gateway
         env:
         - name: ENVOY_GATEWAY_NAMESPACE
-          value: envoy-gateway-system
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: metadata.namespace
         - name: ENVOY_SERVICE_ZONE
           valueFrom:
             fieldRef:
