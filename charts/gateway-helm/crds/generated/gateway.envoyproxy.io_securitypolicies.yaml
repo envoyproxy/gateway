@@ -3656,8 +3656,11 @@ spec:
                               type: object
                           required:
                           - name
+                          - stringMatch
                           type: object
                         type: array
+                    required:
+                    - headers
                     type: object
                   forwardAccessToken:
                     description: |-

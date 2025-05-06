@@ -153,7 +153,7 @@ type OIDCProvider struct {
 // +notImplementedHide
 type OIDCDenyRedirect struct {
 	// Defines the headers to match against the request to deny redirect to the OIDC Provider.
-	Headers []OIDCDenyRedirectHeader `json:"headers,omitempty"`
+	Headers []OIDCDenyRedirectHeader `json:"headers"`
 }
 
 // OIDCDenyRedirectHeader defines how a header is matched
@@ -164,7 +164,7 @@ type OIDCDenyRedirectHeader struct {
 	Name string `json:"name"`
 	// If specified, header match will be performed based on the string match of the header value.
 	// Specifies how the header match will be performed to route the request.
-	StringMatch StringMatch `json:"stringMatch,omitempty"`
+	StringMatch StringMatch `json:"stringMatch"`
 }
 
 // OIDCCookieNames defines the names of cookies to use in the Envoy OIDC filter.
