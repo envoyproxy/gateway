@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"gomodules.xyz/jsonpatch/v2"
 	admissionv1 "k8s.io/api/admission/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -45,11 +46,11 @@ func TestProxyTopologyInjector_Handle(t *testing.T) {
 	}
 
 	cases := []struct {
-		caseName string
-		obj      client.Object
-		node     *corev1.Node
-		pod      *corev1.Pod
-		wantErr  bool
+		caseName          string
+		obj               client.Object
+		node              *corev1.Node
+		pod               *corev1.Pod
+		expectedPatchResp []jsonpatch.JsonPatchOperation
 	}{
 		{
 			caseName: "valid binding",
@@ -60,9 +61,15 @@ func TestProxyTopologyInjector_Handle(t *testing.T) {
 				},
 				Target: corev1.ObjectReference{Name: defaultNode.Name},
 			},
-			node:    defaultNode,
-			pod:     defaultPod,
-			wantErr: false,
+			node: defaultNode,
+			pod:  defaultPod,
+			expectedPatchResp: []jsonpatch.JsonPatchOperation{{
+				Operation: "add",
+				Path:      "/metadata/annotations",
+				Value: map[string]interface{}{
+					"topology.kubernetes.io/zone": "zone1",
+				},
+			}},
 		},
 		{
 			caseName: "empty target",
@@ -72,9 +79,9 @@ func TestProxyTopologyInjector_Handle(t *testing.T) {
 					Namespace: defaultPod.Namespace,
 				},
 			},
-			node:    defaultNode,
-			pod:     defaultPod,
-			wantErr: true,
+			node:              defaultNode,
+			pod:               defaultPod,
+			expectedPatchResp: nil,
 		},
 		{
 			caseName: "skip binding - no label",
@@ -84,9 +91,9 @@ func TestProxyTopologyInjector_Handle(t *testing.T) {
 					Namespace: "bar",
 				},
 			},
-			node:    defaultNode,
-			pod:     &corev1.Pod{ObjectMeta: metav1.ObjectMeta{Namespace: "bar", Name: "baz"}},
-			wantErr: true,
+			node:              defaultNode,
+			pod:               &corev1.Pod{ObjectMeta: metav1.ObjectMeta{Namespace: "bar", Name: "baz"}},
+			expectedPatchResp: nil,
 		},
 		{
 			caseName: "no matching pod",
@@ -96,9 +103,9 @@ func TestProxyTopologyInjector_Handle(t *testing.T) {
 					Namespace: "bar",
 				},
 			},
-			node:    defaultNode,
-			pod:     defaultPod,
-			wantErr: true,
+			node:              defaultNode,
+			pod:               defaultPod,
+			expectedPatchResp: nil,
 		},
 	}
 	for _, tc := range cases {
@@ -120,9 +127,7 @@ func TestProxyTopologyInjector_Handle(t *testing.T) {
 			}
 
 			objBytes, err := json.Marshal(tc.obj)
-			if err != nil {
-				t.Fatalf("failed to marshal object: %v", err)
-			}
+			require.NoError(t, err)
 
 			req := admission.Request{
 				AdmissionRequest: admissionv1.AdmissionRequest{
@@ -135,23 +140,9 @@ func TestProxyTopologyInjector_Handle(t *testing.T) {
 			}
 
 			resp := mutator.Handle(context.Background(), req)
+			require.True(t, resp.Allowed)
 
-			if !resp.Allowed && tc.wantErr {
-				t.Fatalf("expected Allowed response, got: %v", resp.Result)
-			}
-
-			updatedPod := &corev1.Pod{}
-			if err = fakeClient.Get(context.Background(), types.NamespacedName{Name: tc.pod.Name, Namespace: tc.pod.Namespace}, updatedPod); err != nil {
-				t.Fatalf("get pod: %v", err)
-			}
-
-			zone, ok := updatedPod.Labels[corev1.LabelTopologyZone]
-			if tc.wantErr {
-				require.False(t, ok, "pod has unexpected topology label: %v", updatedPod)
-			} else {
-				require.True(t, ok, "pod does not have expected topology label: %v", updatedPod)
-				require.Equal(t, zone, tc.node.Labels[corev1.LabelTopologyZone])
-			}
+			require.Equal(t, tc.expectedPatchResp, resp.Patches)
 		})
 	}
 }
