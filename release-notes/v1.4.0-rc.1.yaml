@@ -1,0 +1,70 @@
+date: May 1, 2025
+
+# Changes that are expected to cause an incompatibility with previous versions, such as deletions or modifications to existing APIs.
+breaking changes: |
+  Use a dedicated listener port(19003) for envoy proxy readiness
+  Uses the envoy JSON formatter for the default access log instead of text formatter.
+  Envoy Gateway would skip xDS snapshot updates in case of errors during xDS translation.
+  When Extension Manager is configured to Fail Open, translation errors are logged and suppressed.
+  When Extension Manager is configured to not Fail Open, EG will no longer replace affected resources. Instead, xDS snapshot update would be skipped.
+
+# Updates addressing vulnerabilities, security flaws, or compliance requirements.
+security updates: |
+  Fixed CVE-2025-25294
+
+# New features or capabilities added in this release.
+new features: |
+  Added support for configuring maxUnavailable in KubernetesPodDisruptionBudgetSpec
+  Added support for percentage-based request mirroring
+  Allow matchExpressions in TargetSelector
+  Add defaulter for gateway-api resources loading from file to be able to set default values.
+  Added support for defining Lua EnvoyExtensionPolicies
+  Added RequestID field in ClientTrafficPolicy.HeaderSettings to configure Envoy X-Request-ID behavior.
+  Added support for HorizontalPodAutoscaler to helm chart
+  Added support for distinct header and distinct source CIDR based local rate limiting
+  Added support for forwarding the authenticated username to the backend via a configurable header in BasicAuth
+  Added support for HTTP Methods and Headers based authorization in SecurityPolicy
+  Added support for zone aware routing
+  Added support for BackendTLSPolicy to target ServiceImport
+  Added support for kubernetes.io/h2c application protocol in ServiceImport
+  Added support for per-host circuit breaker thresholds
+  Added support for injecting a credential from a Kubernetes Secret into a request header. Credentials can be injected using either an HTTPRouteFilter or a BackendRef filter.
+  Added support for egctl Websocket in addation to SPDY
+  Added a configuration option in the Helm chart to set the TrafficDistribution field in the Envoy Gateway Service
+  Added support for setting the log level to trace for the Envoy Proxy
+  Added support for global imageRegistry and imagePullSecrets to the Helm chart
+  Added support for using a local JWKS in an inline string or in a ConfigMap to validate JWT tokens in SecurityPolicy
+  Added support for logging the status of resources in standalone mode.
+  Added support for per-route tracing in BackendTrafficPolicy
+  Added support for configuring retry settings for Extension Service hooks in EnvoyGateway config.
+  Added support for request buffering using the Envoy Buffer filter
+  Added support for merge type in BackendTrafficPolicy
+  Added support for `OverlappingTLSConfig` condition in Gateway status. This condition is set if there are overlapping hostnames or certificates between listeners. The ALPN protocol is set to HTTP/1.1 for the overlapping listeners to avoid HTTP/2 Connection Coalescing.
+
+bug fixes: |
+  Fix traffic splitting when filters are attached to the backendRef.
+  Added support for Secret and ConfigMap parsing in Standalone mode.
+  Bypass overload manager for stats and ready listeners
+  Fix translating backendSettings for extAuth
+  Fix an issue that stats compressor was not working.
+  Added support for BackendTLSPolicy and EnvoyExtensionPolicy parsing in Standalone mode.
+  Retrigger reconciliation when backendRef of type ServiceImport is updated or when EndpointSlice(s) for a ServiceImport are updated.
+  Fix not logging an error and returning it in the K8s Reconcile method when a GatewayClass is not accepted.
+  Fix allowing empty text field for opentelemetry sink when using JSON format.
+  Fix an issue that SamplingFraction was not working.
+  Fix kubernetes resources not being deleted when the customized name used.
+  Do not treat essential resource like namespace as the missing resource while loading from file.
+  Do not set retriable status codes to 503 when RetryOn is configured in BackendTrafficPolicy.
+
+# Enhancements that improve performance.
+performance improvements: |
+  Added a cache for the Wasm OCI image permission checks and check the pullSecrets against the OCI image registry in
+  a background goroutine.
+
+# Deprecated features or APIs.
+deprecations: |
+  Deprecated the PreserveXRequestID field.
+
+# Other notable changes not covered by the above sections.
+Other changes: |
+  Updated gateway-api to v1.3.0

@@ -51,7 +51,7 @@ func (r *Runner) Start(ctx context.Context) (err error) {
 		return nil
 	}
 
-	r.mgr, err = infrastructure.NewManager(ctx, &r.Config.Server, r.Logger)
+	r.mgr, err = infrastructure.NewManager(ctx, &r.Server, r.Logger)
 	if err != nil {
 		r.Logger.Error(err, "failed to create new manager")
 		return err

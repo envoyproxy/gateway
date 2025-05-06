@@ -193,15 +193,21 @@ func buildXdsCluster(args *xdsClusterArgs) (*buildClusterResult, error) {
 				socket = buildProxyProtocolSocket(args.proxyProtocol, socket)
 			}
 			matchName := fmt.Sprintf("%s/tls/%d", args.name, i)
-			cluster.TransportSocketMatches = append(cluster.TransportSocketMatches, &clusterv3.Cluster_TransportSocketMatch{
-				Name: matchName,
-				Match: &structpb.Struct{
-					Fields: map[string]*structpb.Value{
-						"name": structpb.NewStringValue(matchName),
+
+			// Dynamic resolver clusters have no endpoints, so we need to set the transport socket directly.
+			if args.endpointType == EndpointTypeDynamicResolver {
+				cluster.TransportSocket = socket
+			} else {
+				cluster.TransportSocketMatches = append(cluster.TransportSocketMatches, &clusterv3.Cluster_TransportSocketMatch{
+					Name: matchName,
+					Match: &structpb.Struct{
+						Fields: map[string]*structpb.Value{
+							"name": structpb.NewStringValue(matchName),
+						},
 					},
-				},
-				TransportSocket: socket,
-			})
+					TransportSocket: socket,
+				})
+			}
 		}
 	}
 
@@ -752,7 +758,7 @@ func buildTypedExtensionProtocolOptions(args *xdsClusterArgs) (map[string]*anypb
 
 	requiresHTTPFilters := len(args.settings) > 0 && args.settings[0].Filters != nil && args.settings[0].Filters.CredentialInjection != nil
 
-	if !(requiresCommonHTTPOptions || requiresHTTP1Options || requiresHTTP2Options || args.useClientProtocol || requiresHTTPFilters) {
+	if !requiresCommonHTTPOptions && !requiresHTTP1Options && !requiresHTTP2Options && !args.useClientProtocol && !requiresHTTPFilters {
 		return nil, nil, nil
 	}
 

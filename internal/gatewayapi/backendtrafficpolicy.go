@@ -494,7 +494,7 @@ func applyTrafficFeatureToRoute(route RouteContext,
 	}
 }
 
-func mergeBackendTrafficPolicy(routePolicy *egv1a1.BackendTrafficPolicy, gwPolicy *egv1a1.BackendTrafficPolicy) (*egv1a1.BackendTrafficPolicy, error) {
+func mergeBackendTrafficPolicy(routePolicy, gwPolicy *egv1a1.BackendTrafficPolicy) (*egv1a1.BackendTrafficPolicy, error) {
 	if routePolicy.Spec.MergeType == nil || gwPolicy == nil {
 		return routePolicy.DeepCopy(), nil
 	}

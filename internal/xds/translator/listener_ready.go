@@ -22,10 +22,8 @@ import (
 )
 
 func buildReadyListener(ready *ir.ReadyListener) (*listenerv3.Listener, error) {
-	ipv4Compact := false
-	if ready.IPFamily == egv1a1.IPv6 || ready.IPFamily == egv1a1.DualStack {
-		ipv4Compact = true
-	}
+	ipv4Compact := ready.IPFamily == egv1a1.IPv6 || ready.IPFamily == egv1a1.DualStack
+
 	hcmFilters := make([]*hcmv3.HttpFilter, 0, 3)
 	healthcheckFilter, err := filters.GenerateHealthCheckFilter(bootstrap.EnvoyReadinessPath)
 	if err != nil {

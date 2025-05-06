@@ -1,0 +1,43 @@
+apiVersion: gateway.networking.k8s.io/v1
+kind: GatewayClass
+metadata:
+  name: eg
+spec:
+  controllerName: gateway.envoyproxy.io/gatewayclass-controller
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: eg
+  namespace: default
+spec:
+  gatewayClassName: eg
+  listeners:
+    - name: http
+      protocol: HTTP
+      port: 80
+---
+apiVersion: gateway.networking.k8s.io/v1alpha2
+kind: UDPRoute
+metadata:
+  name: backend
+  namespace: default
+spec:
+  parentRefs:
+    - name: eg
+      sectionName: udp
+  rules:
+    - backendRefs:
+        - name: backend
+          port: 3000
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: Backend
+metadata:
+  name: providedBackend
+  namespace: default
+spec:
+  endpoints:
+    - ip:
+        address: 0.0.0.0
+        port: 8000

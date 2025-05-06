@@ -25,9 +25,8 @@ import (
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 	"github.com/envoyproxy/gateway/internal/utils/field"
 	"github.com/envoyproxy/gateway/internal/utils/file"
+	"github.com/envoyproxy/gateway/internal/utils/test"
 )
-
-var overrideTestData = flag.Bool("override-testdata", false, "if override the test output data.")
 
 func TestTranslate(t *testing.T) {
 	testCases := []struct {
@@ -320,9 +319,10 @@ func TestTranslate(t *testing.T) {
 				"testdata/translate/in/" + tc.name + ".yaml",
 			}
 
-			if tc.output == yamlOutput {
+			switch tc.output {
+			case yamlOutput:
 				args = append(args, "--output", yamlOutput)
-			} else if tc.output == jsonOutput {
+			case jsonOutput:
 				args = append(args, "--output", jsonOutput)
 			}
 
@@ -362,7 +362,7 @@ func TestTranslate(t *testing.T) {
 				out, err = yaml.Marshal(got)
 				require.NoError(t, err)
 			}
-			if *overrideTestData {
+			if test.OverrideTestData() {
 				require.NoError(t, file.Write(string(out), filepath.Join("testdata", "translate", "out", fn)))
 			}
 			want := &TranslationResult{}

@@ -6,6 +6,7 @@
 package gatewayapi
 
 import (
+	"errors"
 	"fmt"
 	"math"
 	"strings"
@@ -753,6 +754,10 @@ func (t *Translator) processBackendRefs(name string, backendCluster egv1a1.Backe
 				return nil, nil, err
 			}
 			ds := t.processBackendDestinationSetting(name, ref.BackendObjectReference, ns, ir.TCP, resources)
+			// Dynamic resolver destinations are not supported for none-route destinations
+			if ds.IsDynamicResolver {
+				return nil, nil, errors.New("dynamic resolver destinations are not supported")
+			}
 			result = append(result, ds)
 		default:
 			return nil, nil, fmt.Errorf("unsupported kind for backendRefs: %s", kind)
