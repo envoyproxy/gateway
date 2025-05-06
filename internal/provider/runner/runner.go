@@ -90,7 +90,7 @@ func (r *Runner) createKubernetesProvider(ctx context.Context) (*kubernetes.Prov
 func (r *Runner) createCustomResourceProvider(ctx context.Context) (p provider.Provider, err error) {
 	switch r.EnvoyGateway.Provider.Custom.Resource.Type {
 	case egv1a1.ResourceProviderTypeFile:
-		p, err = file.New(ctx, &r.Config.Server, r.ProviderResources)
+		p, err = file.New(ctx, &r.Server, r.ProviderResources)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create provider %s: %w", egv1a1.ProviderTypeCustom, err)
 		}
