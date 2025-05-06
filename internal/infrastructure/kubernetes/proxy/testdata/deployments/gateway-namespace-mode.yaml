@@ -70,11 +70,6 @@ spec:
               grpc_services:
               - envoy_grpc:
                   cluster_name: xds_cluster
-                initial_metadata:
-                - key: "x-envoy-gateway-ir-key"
-                  value: "default/default"
-                - key: "x-envoy-node-id"
-                  value: "$(ENVOY_POD_NAME)"
               set_node_on_first_message_only: true
             lds_config:
               ads: {}
@@ -268,7 +263,7 @@ spec:
           valueFrom:
             fieldRef:
               apiVersion: v1
-              fieldPath: metadata.labels['topology.kubernetes.io/zone']
+              fieldPath: metadata.annotations['topology.kubernetes.io/zone']
         - name: ENVOY_POD_NAME
           valueFrom:
             fieldRef:
@@ -355,7 +350,7 @@ spec:
           valueFrom:
             fieldRef:
               apiVersion: v1
-              fieldPath: metadata.labels['topology.kubernetes.io/zone']
+              fieldPath: metadata.annotations['topology.kubernetes.io/zone']
         - name: ENVOY_POD_NAME
           valueFrom:
             fieldRef:
