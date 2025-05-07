@@ -5,21 +5,15 @@ descriptors:
     value: first-route
     rate_limit: null
     descriptors:
-      - key: rule-0-match--1
-        value: rule-0-match--1
-        rate_limit: null
-        descriptors:
-          - key: masked_remote_address
-            value: 192.168.0.0/16
-            rate_limit:
-              requests_per_unit: 5
-              unit: SECOND
-              unlimited: false
-              name: ""
-              replaces: []
-            descriptors: []
-            shadow_mode: false
-            detailed_metric: false
+      - key: masked_remote_address
+        value: 192.168.0.0/16
+        rate_limit:
+          requests_per_unit: 5
+          unit: SECOND
+          unlimited: false
+          name: ""
+          replaces: []
+        descriptors: []
         shadow_mode: false
         detailed_metric: false
     shadow_mode: false
