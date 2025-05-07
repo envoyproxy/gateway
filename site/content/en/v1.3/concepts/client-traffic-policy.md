@@ -68,3 +68,5 @@ When implementing Client Traffic Policy, consider the following best practices:
 - [Mutual TLS: External Clients to the Gateway](../tasks/traffic/mutual-tls-external-clients)
 - [Secure Gateways](../tasks/traffic/secure-gateways)
 - [Client Traffic Policy API Reference](../../api/extension_types#clienttrafficpolicy)
+- [Backend Traffic Policy](backend-traffic-policy.md)
+- [Gateway Extensions](gateway-extensions.md)
