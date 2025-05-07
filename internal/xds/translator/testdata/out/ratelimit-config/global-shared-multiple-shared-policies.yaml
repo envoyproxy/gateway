@@ -37,6 +37,17 @@ descriptors:
         descriptors: []
         shadow_mode: false
         detailed_metric: false
+      - key: rule-0-match-0
+        value: rule-0-match-0
+        rate_limit:
+          requests_per_unit: 5
+          unit: SECOND
+          unlimited: false
+          name: ""
+          replaces: []
+        descriptors: []
+        shadow_mode: false
+        detailed_metric: false
     shadow_mode: false
     detailed_metric: false
 ---

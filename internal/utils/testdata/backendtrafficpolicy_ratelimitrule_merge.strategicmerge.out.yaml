@@ -29,7 +29,7 @@ spec:
         - headers:
           - name: x-user-id
             type: Exact
-            value: fasdfas
+            value: one
         cost:
           request:
             from: Number

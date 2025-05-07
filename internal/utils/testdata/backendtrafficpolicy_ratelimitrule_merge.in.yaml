@@ -12,7 +12,7 @@ spec:
             - headers:
                 - name: x-user-id
                   type: Exact
-                  value: fasdfas
+                  value: one
           limit:
             # 21 instead of 20 to test the zero request cost.
             requests: 21

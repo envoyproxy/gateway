@@ -13,7 +13,6 @@ http:
       name: "test-policy-1/test-namespace"
       rateLimit:
         global:
-          shared: false
           rules:
           - cidrMatch:
               cidr: "192.168.0.10/32"
@@ -22,6 +21,7 @@ http:
             limit:
               requests: 15
               unit: Hour
+            shared: false
     pathMatch:
       exact: "foo/bar"
     destination:
@@ -35,7 +35,6 @@ http:
       name: "test-policy-2/test-namespace"
       rateLimit:
         global:
-          shared: false
           rules:
           - cidrMatch:
               cidr: "192.168.0.10/32"
@@ -44,6 +43,7 @@ http:
             limit:
               requests: 300
               unit: Hour
+            shared: false
     pathMatch:
       exact: "foo/bar"
     destination:
