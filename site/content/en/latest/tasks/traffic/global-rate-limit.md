@@ -493,6 +493,9 @@ spec:
         - headers:
           - type: Distinct
             name: x-user-id
+          - name: x-user-id
+            value: admin
+            invert: true
         limit:
           requests: 3
           unit: Hour

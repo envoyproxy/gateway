@@ -246,7 +246,7 @@ spec:
           valueFrom:
             fieldRef:
               apiVersion: v1
-              fieldPath: metadata.labels['topology.kubernetes.io/zone']
+              fieldPath: metadata.annotations['topology.kubernetes.io/zone']
         - name: ENVOY_POD_NAME
           valueFrom:
             fieldRef:
@@ -338,7 +338,7 @@ spec:
           valueFrom:
             fieldRef:
               apiVersion: v1
-              fieldPath: metadata.labels['topology.kubernetes.io/zone']
+              fieldPath: metadata.annotations['topology.kubernetes.io/zone']
         - name: ENVOY_POD_NAME
           valueFrom:
             fieldRef:
@@ -356,7 +356,7 @@ spec:
               - --drain-timeout=30s
               - --min-drain-duration=15s
         livenessProbe:
-          failureThreshold: 10
+          failureThreshold: 3
           httpGet:
             path: /healthz
             port: 19002

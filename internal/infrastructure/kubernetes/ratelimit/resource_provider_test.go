@@ -6,7 +6,6 @@
 package ratelimit
 
 import (
-	"flag"
 	"fmt"
 	"os"
 	"strconv"
@@ -27,9 +26,8 @@ import (
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
+	"github.com/envoyproxy/gateway/internal/utils/test"
 )
-
-var overrideTestData = flag.Bool("override-testdata", false, "if override the test output data.")
 
 const (
 	// RedisAuthEnvVar is the redis auth.
@@ -200,7 +198,7 @@ func TestConfigmap(t *testing.T) {
 	cm, err := r.ConfigMap("")
 	require.NoError(t, err)
 
-	if *overrideTestData {
+	if test.OverrideTestData() {
 		cmYAML, err := yaml.Marshal(cm)
 		require.NoError(t, err)
 		// nolint:gosec
@@ -770,7 +768,7 @@ func TestDeployment(t *testing.T) {
 			dp, err := r.Deployment()
 			require.NoError(t, err)
 
-			if *overrideTestData {
+			if test.OverrideTestData() {
 				deploymentYAML, err := yaml.Marshal(dp)
 				require.NoError(t, err)
 				// nolint:gosec
@@ -886,7 +884,7 @@ func TestHorizontalPodAutoscaler(t *testing.T) {
 			hpa, err := r.HorizontalPodAutoscaler()
 			require.NoError(t, err)
 
-			if *overrideTestData {
+			if test.OverrideTestData() {
 				hpaYAML, err := yaml.Marshal(hpa)
 				require.NoError(t, err)
 				// nolint:gosec

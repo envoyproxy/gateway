@@ -238,7 +238,7 @@ func expectedProxyContainers(infra *ir.ProxyInfra,
 				TimeoutSeconds:   1,
 				PeriodSeconds:    10,
 				SuccessThreshold: 1,
-				FailureThreshold: 10,
+				FailureThreshold: 3,
 			},
 			Lifecycle: &corev1.Lifecycle{
 				PreStop: &corev1.LifecycleHandler{
@@ -402,7 +402,7 @@ func expectedContainerEnv(containerSpec *egv1a1.KubernetesContainerSpec, gateway
 			ValueFrom: &corev1.EnvVarSource{
 				FieldRef: &corev1.ObjectFieldSelector{
 					APIVersion: "v1",
-					FieldPath:  fmt.Sprintf("metadata.labels['%s']", corev1.LabelTopologyZone),
+					FieldPath:  fmt.Sprintf("metadata.annotations['%s']", corev1.LabelTopologyZone),
 				},
 			},
 		},
