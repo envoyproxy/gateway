@@ -434,7 +434,7 @@ func TestProcessEnvoyExtensionPolicyObjectRefs(t *testing.T) {
 			r.client = fakeclient.NewClientBuilder().
 				WithScheme(envoygateway.GetScheme()).
 				WithObjects(objs...).
-				WithIndex(&gwapiv1b1.ReferenceGrant{}, targetRefGrantRouteIndex, getReferenceGrantIndexerFunc()).
+				WithIndex(&gwapiv1b1.ReferenceGrant{}, targetRefGrantRouteIndex, getReferenceGrantIndexerFunc).
 				Build()
 
 			resourceTree := resource.NewResources()
