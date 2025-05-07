@@ -1,8 +1,8 @@
 ---
-title: "Gateway Extensions"
+title: "Gateway API Extensions"
 ---
 ## Before you Begin
-- [Gateway API](https://gateway-api.sigs.k8s.io/)
+- [The Gateway API](https://gateway-api.sigs.k8s.io/)
 
 ## Overview
 
@@ -25,6 +25,7 @@ Envoy Gateway uses a policy attachment model, where custom policies are applied 
 These extensions are processed through Envoy Gateway’s control plane, which translates them into xDS configurations that are applied to Envoy Proxy instances. This layered architecture allows for consistent, scalable, and production-grade traffic control without needing to manage raw Envoy configuration directly.
 
 ## Best Practices
+- **Balance Core vs. Extended Features:** Use core Gateway API resources when possible, only relying on extensions for implementation-specific requirements
 - **Version Compatibility:** Be aware of the compatibility between Gateway API version and the implementation's extension versions
 - **Role Separation:** Maintain the Gateway API's role-oriented design when implementing extensions
 - **Documentation:** Clearly document which extensions are being used and their configurations
@@ -32,5 +33,6 @@ These extensions are processed through Envoy Gateway’s control plane, which tr
 - **Graceful Degradation:** Design applications to handle cases where extensions might not be available in different environments
 
 ## Related Resources
-- [Client Traffic Policy](client-traffic-policy.md)
-- [Backend Traffic Policy](backend-traffic-policy.md)
+- [ClientTrafficPolicy](client-traffic-policy.md)
+- [BackendTrafficPolicy](backend-traffic-policy.md)
+- [SecurityPolicy](security-policy.md)

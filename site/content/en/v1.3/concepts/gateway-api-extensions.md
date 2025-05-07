@@ -1,8 +1,8 @@
 ---
-title: "Gateway Extensions"
+title: "Gateway API Extensions"
 ---
 ## Before you Begin
-- [Gateway API](https://gateway-api.sigs.k8s.io/)
+- [The Gateway API](https://gateway-api.sigs.k8s.io/)
 
 ## Overview
 
@@ -33,5 +33,6 @@ These extensions are processed through Envoy Gateway’s control plane, which tr
 - **Graceful Degradation:** Design applications to handle cases where extensions might not be available in different environments
 
 ## Related Resources
-- [Client Traffic Policy](client-traffic-policy.md)
-- [Backend Traffic Policy](backend-traffic-policy.md)
+- [ClientTrafficPolicy](client-traffic-policy.md)
+- [BackendTrafficPolicy](backend-traffic-policy.md)
+- [SecurityPolicy](security-policy.md)
