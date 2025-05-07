@@ -1,0 +1,71 @@
+---
+kind: Namespace
+apiVersion: v1
+metadata:
+  name: redis-system
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: redis
+  namespace: redis-system
+  labels:
+    app: redis
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: redis
+  template:
+    metadata:
+      labels:
+        app: redis
+    spec:
+      containers:
+      - image: redis:6.0.6
+        imagePullPolicy: IfNotPresent
+        name: redis
+        resources:
+          limits:
+            cpu: 1500m
+            memory: 512Mi
+          requests:
+            cpu: 200m
+            memory: 256Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis
+  namespace: redis-system
+  labels:
+    app: redis
+  annotations:
+spec:
+  ports:
+  - name: redis
+    port: 6379
+    protocol: TCP
+    targetPort: 6379
+  selector:
+    app: redis
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: envoy-gateway-config
+  namespace: envoy-gateway-system
+data:
+  envoy-gateway.yaml: |
+    apiVersion: gateway.envoyproxy.io/v1alpha1
+    kind: EnvoyGateway
+    provider:
+      type: Kubernetes
+    gateway:
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+    rateLimit:
+      backend:
+        type: Redis
+        redis:
+          url: redis.redis-system.svc.cluster.local:6379
