@@ -111,7 +111,7 @@ var MetricWorkqueueAndRestclientTest = suite.ConformanceTest{
 		)
 		require.NoError(t, err)
 
-		verifyMetrics := func(t *testing.T, metricQuery string, metricName string) {
+		verifyMetrics := func(t *testing.T, metricQuery, metricName string) {
 			httputils.AwaitConvergence(
 				t,
 				suite.TimeoutConfig.RequiredConsecutiveSuccesses,

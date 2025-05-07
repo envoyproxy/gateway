@@ -547,7 +547,7 @@ func (r *gatewayAPIReconciler) validateObjectForReconcile(obj client.Object) boo
 	labels := obj.GetLabels()
 
 	// Only objects in the configured namespace should be reconciled.
-	if obj.GetNamespace() == r.namespace {
+	if obj.GetNamespace() == r.namespace || r.gatewayNamespaceMode {
 		// Check if the obj belongs to a Gateway, if so, update the Gateway status.
 		gtw := r.findOwningGateway(ctx, labels)
 		if gtw != nil {
@@ -570,13 +570,20 @@ func (r *gatewayAPIReconciler) validateObjectForReconcile(obj client.Object) boo
 	return false
 }
 
+func envoyObjectNamespace(r *gatewayAPIReconciler, gateway *gwapiv1.Gateway) string {
+	if r.gatewayNamespaceMode {
+		return gateway.Namespace
+	}
+	return r.namespace
+}
+
 // envoyObjectForGateway returns the Envoy Deployment or DaemonSet, returning nil if neither exists.
 func (r *gatewayAPIReconciler) envoyObjectForGateway(ctx context.Context, gateway *gwapiv1.Gateway) (client.Object, error) {
 	// Helper func to list and return the first object from results
 	listResource := func(list client.ObjectList) (client.Object, error) {
 		if err := r.client.List(ctx, list, &client.ListOptions{
 			LabelSelector: labels.SelectorFromSet(gatewayapi.OwnerLabels(gateway, r.mergeGateways.Has(string(gateway.Spec.GatewayClassName)))),
-			Namespace:     r.namespace,
+			Namespace:     envoyObjectNamespace(r, gateway),
 		}); err != nil {
 			if !kerrors.IsNotFound(err) {
 				return nil, err
@@ -610,7 +617,7 @@ func (r *gatewayAPIReconciler) envoyServiceForGateway(ctx context.Context, gatew
 	labelSelector := labels.SelectorFromSet(labels.Set(gatewayapi.OwnerLabels(gateway, r.mergeGateways.Has(string(gateway.Spec.GatewayClassName)))))
 	if err := r.client.List(ctx, &services, &client.ListOptions{
 		LabelSelector: labelSelector,
-		Namespace:     r.namespace,
+		Namespace:     envoyObjectNamespace(r, gateway),
 	}); err != nil {
 		if kerrors.IsNotFound(err) {
 			return nil, nil

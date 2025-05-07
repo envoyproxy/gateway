@@ -1,0 +1,47 @@
+kind: BackendTrafficPolicy
+metadata:
+  creationTimestamp: null
+  name: original
+spec:
+  rateLimit:
+    global:
+      rules:
+      - clientSelectors:
+        - headers:
+          - name: x-user-id
+            type: Exact
+            value: two
+        cost:
+          request:
+            from: Number
+            number: 0
+          response:
+            from: Metadata
+            metadata:
+              key: request_cost_set_by_ext_proc
+              namespace: io.envoyproxy.gateway.e2e
+        limit:
+          requests: 21
+          unit: Hour
+        name: two
+      - clientSelectors:
+        - headers:
+          - name: x-user-id
+            type: Exact
+            value: one
+        cost:
+          request:
+            from: Number
+            number: 0
+          response:
+            from: Metadata
+            metadata:
+              key: request_cost_set_by_ext_proc
+              namespace: io.envoyproxy.gateway.e2e
+        limit:
+          requests: 21
+          unit: Hour
+        name: one
+    type: Global
+status:
+  ancestors: null

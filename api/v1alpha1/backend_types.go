@@ -115,6 +115,7 @@ type UnixSocket struct {
 
 // BackendSpec describes the desired state of BackendSpec.
 // +kubebuilder:validation:XValidation:rule="self.type != 'DynamicResolver' || !has(self.endpoints) && !has(self.appProtocols)",message="DynamicResolver type cannot have endpoints and appProtocols specified"
+// +kubebuilder:validation:XValidation:rule="has(self.tls) ? self.type == 'DynamicResolver' : true",message="TLS settings can only be specified for DynamicResolver backends"
 type BackendSpec struct {
 	// Type defines the type of the backend. Defaults to "Endpoints"
 	//
@@ -148,12 +149,13 @@ type BackendSpec struct {
 	// Only supported for DynamicResolver backends.
 	//
 	// +optional
-	// +notImplementedHide
 	TLS *BackendTLSSettings `json:"tls,omitempty"`
 }
 
 // BackendTLSSettings holds the TLS settings for the backend.
 // Only used for DynamicResolver backends.
+// +kubebuilder:validation:XValidation:message="must not contain both CACertificateRefs and WellKnownCACertificates",rule="!(has(self.caCertificateRefs) && size(self.caCertificateRefs) > 0 && has(self.wellKnownCACertificates) && self.wellKnownCACertificates != \"\")"
+// +kubebuilder:validation:XValidation:message="must specify either CACertificateRefs or WellKnownCACertificates",rule="(has(self.caCertificateRefs) && size(self.caCertificateRefs) > 0 || has(self.wellKnownCACertificates) && self.wellKnownCACertificates != \"\")"
 type BackendTLSSettings struct {
 	// CACertificateRefs contains one or more references to Kubernetes objects that
 	// contain TLS certificates of the Certificate Authorities that can be used

@@ -10,7 +10,6 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
-	"flag"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -38,10 +37,9 @@ import (
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/utils/field"
 	"github.com/envoyproxy/gateway/internal/utils/file"
+	"github.com/envoyproxy/gateway/internal/utils/test"
 	"github.com/envoyproxy/gateway/internal/wasm"
 )
-
-var overrideTestData = flag.Bool("override-testdata", false, "if override the test output data.")
 
 func mustUnmarshal(t *testing.T, val []byte, out interface{}) {
 	require.NoError(t, yaml.UnmarshalStrict(val, out, yaml.DisallowUnknownFields))
@@ -52,6 +50,7 @@ func TestTranslate(t *testing.T) {
 		name                    string
 		EnvoyPatchPolicyEnabled bool
 		BackendEnabled          bool
+		GatewayNamespaceMode    bool
 	}{
 		{
 			name:                    "envoypatchpolicy-invalid-feature-disabled",
@@ -60,6 +59,10 @@ func TestTranslate(t *testing.T) {
 		{
 			name:                    "backend-invalid-feature-disabled",
 			EnvoyPatchPolicyEnabled: false,
+		},
+		{
+			name:                 "gateway-namespace-mode-infra-httproute",
+			GatewayNamespaceMode: true,
 		},
 	}
 
@@ -75,11 +78,13 @@ func TestTranslate(t *testing.T) {
 			mustUnmarshal(t, input, resources)
 			envoyPatchPolicyEnabled := true
 			backendEnabled := true
+			gatewayNamespaceMode := false
 
 			for _, config := range testCasesConfig {
 				if config.name == strings.Split(filepath.Base(inputFile), ".")[0] {
 					envoyPatchPolicyEnabled = config.EnvoyPatchPolicyEnabled
 					backendEnabled = config.BackendEnabled
+					gatewayNamespaceMode = config.GatewayNamespaceMode
 				}
 			}
 
@@ -89,8 +94,9 @@ func TestTranslate(t *testing.T) {
 				GlobalRateLimitEnabled:  true,
 				EnvoyPatchPolicyEnabled: envoyPatchPolicyEnabled,
 				BackendEnabled:          backendEnabled,
-				Namespace:               "envoy-gateway-system",
+				ControllerNamespace:     "envoy-gateway-system",
 				MergeGateways:           IsMergeGatewaysEnabled(resources),
+				GatewayNamespaceMode:    gatewayNamespaceMode,
 				WasmCache:               &mockWasmCache{},
 			}
 
@@ -318,7 +324,7 @@ func TestTranslate(t *testing.T) {
 			out, err := yaml.Marshal(got)
 			require.NoError(t, err)
 
-			if *overrideTestData {
+			if test.OverrideTestData() {
 				overrideOutputConfig(t, string(out), outputFilePath)
 			}
 
@@ -519,7 +525,7 @@ func TestTranslateWithExtensionKinds(t *testing.T) {
 			out, err := yaml.Marshal(got)
 			require.NoError(t, err)
 
-			if *overrideTestData {
+			if test.OverrideTestData() {
 				require.NoError(t, file.Write(string(out), outputFilePath))
 			}
 

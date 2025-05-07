@@ -6,8 +6,10 @@
 package gatewayapi
 
 import (
+	"errors"
 	"fmt"
 	"math"
+	"strings"
 
 	"github.com/google/cel-go/cel"
 	corev1 "k8s.io/api/core/v1"
@@ -132,12 +134,14 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR resource
 					irListener.Hostnames = append(irListener.Hostnames, string(*listener.Hostname))
 				} else {
 					// Hostname specifies the virtual hostname to match for protocol types that define this concept.
-					// When unspecified, all hostnames are matched. This field is ignored for protocols that don’t require hostname based matching.
+					// When unspecified, all hostnames are matched. This field is ignored for protocols that don't require hostname based matching.
 					// see more https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/gwapiv1.Listener.
 					irListener.Hostnames = append(irListener.Hostnames, "*")
 				}
 				irListener.PreserveRouteOrder = getPreserveRouteOrder(gateway.envoyProxy)
 				xdsIR[irKey].HTTP = append(xdsIR[irKey].HTTP, irListener)
+				// Store the HTTPListener IR in the listener context for use in the overlapping TLS config check.
+				listener.httpIR = irListener
 			case gwapiv1.TCPProtocolType, gwapiv1.TLSProtocolType:
 				irListener := &ir.TCPListener{
 					CoreListenerDetails: ir.CoreListenerDetails{
@@ -172,7 +176,182 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR resource
 				foundPorts[irKey] = append(foundPorts[irKey], servicePort)
 			}
 		}
+
+		checkOverlappingTLSConfig(gateway)
 	}
+}
+
+// checkOverlappingTLSConfig checks for overlapping hostnames and certificates between listeners and sets
+// the `OverlappingTLSConfig` condition if there are overlapping hostnames or certificates.
+func checkOverlappingTLSConfig(gateway *GatewayContext) {
+	// Note: order of processing matters here.
+	// According to the Gateway API spec, If both hostname and certificate overlap,
+	// the controller SHOULD set the "OverlappingCertificates" Reason.
+	checkOverlappingHostnames(gateway)
+	checkOverlappingCertificates(gateway)
+}
+
+func checkOverlappingHostnames(gateway *GatewayContext) {
+	httpsListeners := []*ListenerContext{}
+	for _, listener := range gateway.listeners {
+		if listener.Protocol == gwapiv1.HTTPSProtocolType {
+			httpsListeners = append(httpsListeners, listener)
+		}
+	}
+
+	type overlappingListener struct {
+		listener1 string
+		listener2 string
+		hostname1 string
+		hostname2 string
+	}
+	overlappingListeners := make([]*overlappingListener, len(httpsListeners))
+	for i := range httpsListeners {
+		if overlappingListeners[i] != nil {
+			continue
+		}
+		for j := i + 1; j < len(httpsListeners); j++ {
+			if overlappingListeners[j] != nil {
+				continue
+			}
+			if httpsListeners[i].Port != httpsListeners[j].Port {
+				continue
+			}
+			if isOverlappingHostname(httpsListeners[i].Hostname, httpsListeners[j].Hostname) {
+				// Overlapping listeners can be more than two, we only report the first two for simplicity.
+				overlappingListeners[i] = &overlappingListener{
+					listener1: string(httpsListeners[i].Name),
+					listener2: string(httpsListeners[j].Name),
+					hostname1: string(ptr.Deref(httpsListeners[i].Hostname, "")),
+					hostname2: string(ptr.Deref(httpsListeners[j].Hostname, "")),
+				}
+				overlappingListeners[j] = &overlappingListener{
+					listener1: string(httpsListeners[j].Name),
+					listener2: string(httpsListeners[i].Name),
+					hostname1: string(ptr.Deref(httpsListeners[j].Hostname, "")),
+					hostname2: string(ptr.Deref(httpsListeners[i].Hostname, "")),
+				}
+			}
+		}
+	}
+
+	for i, listener := range httpsListeners {
+		if overlappingListeners[i] != nil {
+			status.SetGatewayListenerStatusCondition(gateway.Gateway,
+				listener.listenerStatusIdx,
+				gwapiv1.ListenerConditionOverlappingTLSConfig,
+				metav1.ConditionTrue,
+				gwapiv1.ListenerReasonOverlappingHostnames,
+				fmt.Sprintf(
+					"The hostname %s overlaps with the hostname %s in listener %s. ALPN is set to HTTP/1.1 to prevent HTTP/2 connection coalescing",
+					overlappingListeners[i].hostname1,
+					overlappingListeners[i].hostname2,
+					overlappingListeners[i].listener2,
+				),
+			)
+			if listener.httpIR != nil {
+				listener.httpIR.TLSOverlaps = true
+			}
+		}
+	}
+}
+
+func checkOverlappingCertificates(gateway *GatewayContext) {
+	httpsListeners := []*ListenerContext{}
+	for _, listener := range gateway.listeners {
+		if listener.Protocol == gwapiv1.HTTPSProtocolType {
+			httpsListeners = append(httpsListeners, listener)
+		}
+	}
+
+	type overlappingListener struct {
+		listener1 string
+		listener2 string
+		san1      string
+		san2      string
+	}
+
+	overlappingListeners := make([]*overlappingListener, len(httpsListeners))
+	for i := range httpsListeners {
+		if overlappingListeners[i] != nil {
+			continue
+		}
+		for j := i + 1; j < len(httpsListeners); j++ {
+			if overlappingListeners[j] != nil {
+				continue
+			}
+			if httpsListeners[i].Port != httpsListeners[j].Port {
+				continue
+			}
+
+			overlappingCertificate := isOverlappingCertificate(httpsListeners[i].certDNSNames, httpsListeners[j].certDNSNames)
+			if overlappingCertificate != nil {
+				// Overlapping listeners can be more than two, we only report the first two for simplicity.
+				overlappingListeners[i] = &overlappingListener{
+					listener1: string(httpsListeners[i].Name),
+					listener2: string(httpsListeners[j].Name),
+					san1:      overlappingCertificate.san1,
+					san2:      overlappingCertificate.san2,
+				}
+				overlappingListeners[j] = &overlappingListener{
+					listener1: string(httpsListeners[j].Name),
+					listener2: string(httpsListeners[i].Name),
+					san1:      overlappingCertificate.san2,
+					san2:      overlappingCertificate.san1,
+				}
+			}
+		}
+	}
+
+	for i, listener := range httpsListeners {
+		if overlappingListeners[i] != nil {
+			status.SetGatewayListenerStatusCondition(gateway.Gateway,
+				listener.listenerStatusIdx,
+				gwapiv1.ListenerConditionOverlappingTLSConfig,
+				metav1.ConditionTrue,
+				gwapiv1.ListenerReasonOverlappingCertificates,
+				fmt.Sprintf(
+					"The certificate san %s overlaps with the certificate san %s in listener %s. ALPN is set to HTTP/1.1 to prevent HTTP/2 connection coalescing",
+					overlappingListeners[i].san1,
+					overlappingListeners[i].san2,
+					overlappingListeners[i].listener2,
+				),
+			)
+			if listener.httpIR != nil {
+				listener.httpIR.TLSOverlaps = true
+			}
+		}
+	}
+}
+
+type overlappingCertificate struct {
+	san1 string
+	san2 string
+}
+
+func isOverlappingCertificate(cert1DNSNames, cert2DNSNames []string) *overlappingCertificate {
+	for _, dns1 := range cert1DNSNames {
+		for _, dns2 := range cert2DNSNames {
+			if isOverlappingHostname(ptr.To(gwapiv1.Hostname(dns1)), ptr.To(gwapiv1.Hostname(dns2))) {
+				return &overlappingCertificate{
+					san1: dns1,
+					san2: dns2,
+				}
+			}
+		}
+	}
+	return nil
+}
+
+// isOverlappingHostname checks if two hostnames overlap.
+func isOverlappingHostname(hostname1, hostname2 *gwapiv1.Hostname) bool {
+	if hostname1 == nil || hostname2 == nil {
+		return true
+	}
+
+	h1 := strings.Replace(string(*hostname1), "*.", "", 1)
+	h2 := strings.Replace(string(*hostname2), "*.", "", 1)
+	return strings.HasSuffix(h1, h2) || strings.HasSuffix(h2, h1)
 }
 
 func buildListenerMetadata(listener *ListenerContext, gateway *GatewayContext) *ir.ResourceMetadata {
@@ -575,6 +754,10 @@ func (t *Translator) processBackendRefs(name string, backendCluster egv1a1.Backe
 				return nil, nil, err
 			}
 			ds := t.processBackendDestinationSetting(name, ref.BackendObjectReference, ns, ir.TCP, resources)
+			// Dynamic resolver destinations are not supported for none-route destinations
+			if ds.IsDynamicResolver {
+				return nil, nil, errors.New("dynamic resolver destinations are not supported")
+			}
 			result = append(result, ds)
 		default:
 			return nil, nil, fmt.Errorf("unsupported kind for backendRefs: %s", kind)

@@ -33,11 +33,11 @@ func DefaultEnvoyGateway() *EnvoyGateway {
 
 // SetEnvoyGatewayDefaults sets default EnvoyGateway configuration parameters.
 func (e *EnvoyGateway) SetEnvoyGatewayDefaults() {
-	if e.TypeMeta.Kind == "" {
-		e.TypeMeta.Kind = KindEnvoyGateway
+	if e.Kind == "" {
+		e.Kind = KindEnvoyGateway
 	}
-	if e.TypeMeta.APIVersion == "" {
-		e.TypeMeta.APIVersion = GroupVersion.String()
+	if e.APIVersion == "" {
+		e.APIVersion = GroupVersion.String()
 	}
 	if e.Provider == nil {
 		e.Provider = DefaultEnvoyGatewayProvider()
@@ -99,6 +99,14 @@ func (e *EnvoyGateway) NamespaceMode() bool {
 		e.Provider.Kubernetes.Watch != nil &&
 		e.Provider.Kubernetes.Watch.Type == KubernetesWatchModeTypeNamespaces &&
 		len(e.Provider.Kubernetes.Watch.Namespaces) > 0
+}
+
+// GatewayNamespaceMode returns true if controller uses gateway namespace mode for infra deployments.
+func (e *EnvoyGateway) GatewayNamespaceMode() bool {
+	return e.Provider != nil &&
+		e.Provider.Kubernetes != nil &&
+		e.Provider.Kubernetes.Deploy != nil &&
+		*e.Provider.Kubernetes.Deploy.Type == KubernetesDeployModeTypeGatewayNamespace
 }
 
 // DefaultLeaderElection returns a new LeaderElection with default configuration parameters.

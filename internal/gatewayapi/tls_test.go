@@ -162,7 +162,7 @@ func TestValidateTLSSecretsData(t *testing.T) {
 		t.Run(tc.Name, func(t *testing.T) {
 			secrets := createTestSecrets(t, tc.CertFile, tc.KeyFile)
 			require.NotNil(t, secrets)
-			err := validateTLSSecretsData(secrets, &tc.Domain)
+			_, err := validateTLSSecretsData(secrets, &tc.Domain)
 			if tc.ExpectedErr == nil {
 				require.NoError(t, err)
 			} else {

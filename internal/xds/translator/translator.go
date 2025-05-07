@@ -522,7 +522,7 @@ func (t *Translator) addRouteToRouteConfig(
 			var err error
 			// If there are no filters in the destination settings we create
 			// a regular xds Cluster
-			if !needsClusterPerSetting(httpRoute.Destination.Settings) {
+			if !httpRoute.Destination.NeedsClusterPerSetting() {
 				err = processXdsCluster(
 					tCtx,
 					httpRoute.Destination.Name,
@@ -940,13 +940,19 @@ func addXdsCluster(tCtx *types.ResourceVersionTable, args *xdsClusterArgs) error
 		}
 	}
 	// Use EDS for static endpoints
-	if args.endpointType == EndpointTypeStatic {
+	switch args.endpointType {
+	case EndpointTypeStatic:
 		if err := tCtx.AddXdsResource(resourcev3.EndpointType, xdsEndpoints); err != nil {
 			return err
 		}
-	} else {
+	case EndpointTypeDNS:
 		xdsCluster.LoadAssignment = xdsEndpoints
+	case EndpointTypeDynamicResolver:
+		// Dynamic resolver has no endpoints
+		// This assignment is not necessary, but it is added for clarity.
+		xdsCluster.LoadAssignment = nil
 	}
+
 	if err := tCtx.AddXdsResource(resourcev3.ClusterType, xdsCluster); err != nil {
 		return err
 	}
@@ -1018,31 +1024,38 @@ func buildXdsUpstreamTLSCASecret(tlsConfig *ir.TLSUpstreamConfig) *tlsv3.Secret 
 }
 
 func buildXdsUpstreamTLSSocketWthCert(tlsConfig *ir.TLSUpstreamConfig) (*corev3.TransportSocket, error) {
+	validationContext := &tlsv3.CommonTlsContext_CombinedCertificateValidationContext{
+		ValidationContextSdsSecretConfig: &tlsv3.SdsSecretConfig{
+			Name:      tlsConfig.CACertificate.Name,
+			SdsConfig: makeConfigSource(),
+		},
+		DefaultValidationContext: &tlsv3.CertificateValidationContext{},
+	}
+
+	if tlsConfig.SNI != nil {
+		validationContext.DefaultValidationContext.MatchTypedSubjectAltNames = []*tlsv3.SubjectAltNameMatcher{
+			{
+				SanType: tlsv3.SubjectAltNameMatcher_DNS,
+				Matcher: &matcherv3.StringMatcher{
+					MatchPattern: &matcherv3.StringMatcher_Exact{
+						Exact: *tlsConfig.SNI,
+					},
+				},
+			},
+		}
+	}
+
 	tlsCtx := &tlsv3.UpstreamTlsContext{
 		CommonTlsContext: &tlsv3.CommonTlsContext{
 			TlsCertificateSdsSecretConfigs: nil,
 			ValidationContextType: &tlsv3.CommonTlsContext_CombinedValidationContext{
-				CombinedValidationContext: &tlsv3.CommonTlsContext_CombinedCertificateValidationContext{
-					ValidationContextSdsSecretConfig: &tlsv3.SdsSecretConfig{
-						Name:      tlsConfig.CACertificate.Name,
-						SdsConfig: makeConfigSource(),
-					},
-					DefaultValidationContext: &tlsv3.CertificateValidationContext{
-						MatchTypedSubjectAltNames: []*tlsv3.SubjectAltNameMatcher{
-							{
-								SanType: tlsv3.SubjectAltNameMatcher_DNS,
-								Matcher: &matcherv3.StringMatcher{
-									MatchPattern: &matcherv3.StringMatcher_Exact{
-										Exact: tlsConfig.SNI,
-									},
-								},
-							},
-						},
-					},
-				},
+				CombinedValidationContext: validationContext,
 			},
 		},
-		Sni: tlsConfig.SNI,
+	}
+
+	if tlsConfig.SNI != nil {
+		tlsCtx.Sni = *tlsConfig.SNI
 	}
 
 	tlsParams := buildTLSParams(&tlsConfig.TLSConfig)

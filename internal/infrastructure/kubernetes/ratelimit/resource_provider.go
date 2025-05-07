@@ -22,6 +22,7 @@ import (
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/infrastructure/kubernetes/resource"
+	"github.com/envoyproxy/gateway/internal/utils"
 )
 
 // ResourceKind indicates the main resources of envoy-ratelimit,
@@ -79,7 +80,7 @@ func enablePrometheus(rl *egv1a1.RateLimit) bool {
 }
 
 // ConfigMap returns the expected rate limit ConfigMap based on the provided infra.
-func (r *ResourceRender) ConfigMap() (*corev1.ConfigMap, error) {
+func (r *ResourceRender) ConfigMap(cert string) (*corev1.ConfigMap, error) {
 	if !enablePrometheus(r.rateLimit) {
 		return nil, nil
 	}
@@ -262,9 +263,9 @@ func (r *ResourceRender) Deployment() (*appsv1.Deployment, error) {
 
 	// set name
 	if r.rateLimitDeployment.Name != nil {
-		deployment.ObjectMeta.Name = *r.rateLimitDeployment.Name
+		deployment.Name = *r.rateLimitDeployment.Name
 	} else {
-		deployment.ObjectMeta.Name = r.Name()
+		deployment.Name = r.Name()
 	}
 
 	if r.ownerReferenceUID != nil {
@@ -282,7 +283,8 @@ func (r *ResourceRender) Deployment() (*appsv1.Deployment, error) {
 
 	// apply merge patch to deployment
 	var err error
-	if deployment, err = r.rateLimitDeployment.ApplyMergePatch(deployment); err != nil {
+	deploymentConfig := r.rateLimitDeployment
+	if deployment, err = utils.MergeWithPatch(deployment, deploymentConfig.Patch); err != nil {
 		return nil, err
 	}
 
@@ -335,7 +337,7 @@ func (r *ResourceRender) HorizontalPodAutoscaler() (*autoscalingv2.HorizontalPod
 		hpa.Spec.ScaleTargetRef.Name = r.Name()
 	}
 
-	if hpa, err = hpaConfig.ApplyMergePatch(hpa); err != nil {
+	if hpa, err = utils.MergeWithPatch(hpa, hpaConfig.Patch); err != nil {
 		return nil, err
 	}
 

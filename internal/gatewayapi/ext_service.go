@@ -73,8 +73,13 @@ func (t *Translator) translateExtServiceBackendRefs(
 		Name:     destName,
 		Settings: ds,
 	}
+
 	if validationErr := rs.Validate(); validationErr != nil {
 		return nil, validationErr
+	}
+	// TODO: Support mixed destinations for ext service
+	if rs.HasMixedEndpoints() {
+		return nil, errors.New("external service destinations having multiple endpoint types are not supported")
 	}
 	return rs, nil
 }
@@ -103,6 +108,10 @@ func (t *Translator) processExtServiceDestination(
 			return nil, fmt.Errorf("resource %s of type Backend cannot be used since Backend is disabled in Envoy Gateway configuration", string(backendRef.Name))
 		}
 		ds = t.processBackendDestinationSetting(settingName, backendRef.BackendObjectReference, backendNamespace, protocol, resources)
+		// Dynamic resolver destinations are not supported for none-route destinations
+		if ds.IsDynamicResolver {
+			return nil, errors.New("dynamic resolver destinations are not supported")
+		}
 	}
 
 	if ds == nil {
@@ -132,6 +141,7 @@ func (t *Translator) processExtServiceDestination(
 		},
 		resources,
 		envoyProxy,
+		false,
 	)
 	if err != nil {
 		return nil, err

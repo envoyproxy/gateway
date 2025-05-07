@@ -68,7 +68,7 @@ func New(ctx context.Context, restCfg *rest.Config, svrCfg *ec.Server, resources
 		Logger:                  svrCfg.Logger.Logger,
 		HealthProbeBindAddress:  healthProbeBindAddress,
 		LeaderElectionID:        "5b9825d2.gateway.envoyproxy.io",
-		LeaderElectionNamespace: svrCfg.Namespace,
+		LeaderElectionNamespace: svrCfg.ControllerNamespace,
 	}
 
 	log.SetLogger(mgrOpts.Logger)

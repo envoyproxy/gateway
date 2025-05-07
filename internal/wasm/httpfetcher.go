@@ -152,9 +152,9 @@ func (f *HTTPFetcher) Fetch(ctx context.Context, url string, allowInsecure bool)
 
 func retryable(code int) bool {
 	return code >= 500 &&
-		!(code == http.StatusNotImplemented ||
-			code == http.StatusHTTPVersionNotSupported ||
-			code == http.StatusNetworkAuthenticationRequired)
+		(code != http.StatusNotImplemented &&
+			code != http.StatusHTTPVersionNotSupported &&
+			code != http.StatusNetworkAuthenticationRequired)
 }
 
 func isPosixTar(b []byte) bool {
