@@ -609,57 +609,37 @@ func (r *gatewayAPIReconciler) processSecurityPolicyObjectRefs(
 		// Add the referenced BackendRefs and ReferenceGrants in ExtAuth to Maps for later processing
 		extAuth := policy.Spec.ExtAuth
 		if extAuth != nil {
-			var backendRef *gwapiv1.BackendObjectReference
+			var backendRef gwapiv1.BackendObjectReference
 			if extAuth.GRPC != nil {
-				backendRef = extAuth.GRPC.BackendRef
+				if extAuth.GRPC.BackendRef != nil {
+					backendRef = *extAuth.GRPC.BackendRef
+				}
 				if len(extAuth.GRPC.BackendRefs) > 0 {
 					if len(extAuth.GRPC.BackendRefs) != 0 {
-						backendRef = egv1a1.ToBackendObjectReference(extAuth.GRPC.BackendRefs[0])
+						backendRef = extAuth.GRPC.BackendRefs[0].BackendObjectReference
 					}
 				}
-			} else {
-				backendRef = extAuth.HTTP.BackendRef
+			} else if extAuth.HTTP != nil {
+				if extAuth.HTTP.BackendRef != nil {
+					backendRef = *extAuth.HTTP.BackendRef
+				}
 				if len(extAuth.HTTP.BackendRefs) > 0 {
 					if len(extAuth.HTTP.BackendRefs) != 0 {
-						backendRef = egv1a1.ToBackendObjectReference(extAuth.HTTP.BackendRefs[0])
+						backendRef = extAuth.HTTP.BackendRefs[0].BackendObjectReference
 					}
 				}
 			}
-
-			backendNamespace := gatewayapi.NamespaceDerefOr(backendRef.Namespace, policy.Namespace)
-			resourceMap.allAssociatedBackendRefs.Insert(gwapiv1.BackendObjectReference{
-				Group:     backendRef.Group,
-				Kind:      backendRef.Kind,
-				Namespace: gatewayapi.NamespacePtr(backendNamespace),
-				Name:      backendRef.Name,
-			})
-
-			if backendNamespace != policy.Namespace {
-				from := ObjectKindNamespacedName{
-					kind:      resource.KindSecurityPolicy,
-					namespace: policy.Namespace,
-					name:      policy.Name,
-				}
-				to := ObjectKindNamespacedName{
-					kind:      gatewayapi.KindDerefOr(backendRef.Kind, resource.KindService),
-					namespace: backendNamespace,
-					name:      string(backendRef.Name),
-				}
-				refGrant, err := r.findReferenceGrant(ctx, from, to)
-				switch {
-				case err != nil:
-					r.log.Error(err, "failed to find ReferenceGrant")
-				case refGrant == nil:
-					r.log.Info("no matching ReferenceGrants found", "from", from.kind,
-						"from namespace", from.namespace, "target", to.kind, "target namespace", to.namespace)
-				default:
-					if !resourceMap.allAssociatedReferenceGrants.Has(utils.NamespacedName(refGrant).String()) {
-						resourceMap.allAssociatedReferenceGrants.Insert(utils.NamespacedName(refGrant).String())
-						resourceTree.ReferenceGrants = append(resourceTree.ReferenceGrants, refGrant)
-						r.log.Info("added ReferenceGrant to resource map", "namespace", refGrant.Namespace,
-							"name", refGrant.Name)
-					}
-				}
+			if err := r.processBackendRef(
+				ctx,
+				resourceMap,
+				resourceTree,
+				resource.KindSecurityPolicy,
+				policy.Namespace,
+				policy.Name,
+				backendRef); err != nil {
+				r.log.Error(err,
+					"failed to process ExtAuth BackendRef for SecurityPolicy",
+					"policy", policy, "backendRef", backendRef)
 			}
 		}
 
@@ -682,10 +662,76 @@ func (r *gatewayAPIReconciler) processSecurityPolicyObjectRefs(
 						}); err != nil {
 						r.log.Error(err, "failed to process LocalJWKS ConfigMap", "policy", policy, "localJWKS", provider.LocalJWKS)
 					}
+				} else if provider.RemoteJWKS != nil {
+					for _, br := range provider.RemoteJWKS.BackendRefs {
+						if err := r.processBackendRef(
+							ctx,
+							resourceMap,
+							resourceTree,
+							resource.KindSecurityPolicy,
+							policy.Namespace,
+							policy.Name,
+							br.BackendObjectReference); err != nil {
+							r.log.Error(err,
+								"failed to process RemoteJWKS BackendRef for SecurityPolicy",
+								"policy", policy, "backendRef", br.BackendObjectReference)
+						}
+					}
 				}
 			}
 		}
 	}
+}
+
+// processBackendRef adds the referenced BackendRef to the resourceMap for later processBackendRefs.
+// If BackendRef exists in a different namespace and there is a ReferenceGrant, adds ReferenceGrant to the resourceTree.
+func (r *gatewayAPIReconciler) processBackendRef(
+	ctx context.Context,
+	resourceMap *resourceMappings,
+	resourceTree *resource.Resources,
+	ownerKind string,
+	ownerNS string,
+	ownerName string,
+	backendRef gwapiv1.BackendObjectReference,
+) error {
+	backendNamespace := gatewayapi.NamespaceDerefOr(backendRef.Namespace, ownerNS)
+	resourceMap.allAssociatedBackendRefs.Insert(gwapiv1.BackendObjectReference{
+		Group:     backendRef.Group,
+		Kind:      backendRef.Kind,
+		Namespace: gatewayapi.NamespacePtr(backendNamespace),
+		Name:      backendRef.Name,
+	})
+
+	if backendNamespace != ownerNS {
+		from := ObjectKindNamespacedName{
+			kind:      ownerKind,
+			namespace: ownerNS,
+			name:      ownerName,
+		}
+		to := ObjectKindNamespacedName{
+			kind:      gatewayapi.KindDerefOr(backendRef.Kind, resource.KindService),
+			namespace: backendNamespace,
+			name:      string(backendRef.Name),
+		}
+		refGrant, err := r.findReferenceGrant(ctx, from, to)
+		switch {
+		case err != nil:
+			return fmt.Errorf("failed to find ReferenceGrant: %w", err)
+		case refGrant == nil:
+			return fmt.Errorf(
+				"no matching ReferenceGrants found: from %s/%s to %s/%s",
+				from.kind, from.namespace, to.kind, to.namespace)
+		default:
+			// RefGrant found
+			if !resourceMap.allAssociatedReferenceGrants.Has(utils.NamespacedName(refGrant).String()) {
+				resourceMap.allAssociatedReferenceGrants.Insert(utils.NamespacedName(refGrant).String())
+				resourceTree.ReferenceGrants = append(resourceTree.ReferenceGrants, refGrant)
+				r.log.Info("added ReferenceGrant to resource map", "namespace", refGrant.Namespace,
+					"name", refGrant.Name)
+			}
+		}
+	}
+	return nil
 }
 
 // processOIDCHMACSecret adds the OIDC HMAC Secret to the resourceTree.
@@ -2184,42 +2230,17 @@ func (r *gatewayAPIReconciler) processEnvoyExtensionPolicyObjectRefs(
 		// Add the referenced BackendRefs and ReferenceGrants in ExtAuth to Maps for later processing
 		for _, ep := range policy.Spec.ExtProc {
 			for _, br := range ep.BackendRefs {
-				backendRef := br.BackendObjectReference
-
-				backendNamespace := gatewayapi.NamespaceDerefOr(backendRef.Namespace, policy.Namespace)
-				resourceMap.allAssociatedBackendRefs.Insert(gwapiv1.BackendObjectReference{
-					Group:     backendRef.Group,
-					Kind:      backendRef.Kind,
-					Namespace: gatewayapi.NamespacePtr(backendNamespace),
-					Name:      backendRef.Name,
-				})
-
-				if backendNamespace != policy.Namespace {
-					from := ObjectKindNamespacedName{
-						kind:      resource.KindEnvoyExtensionPolicy,
-						namespace: policy.Namespace,
-						name:      policy.Name,
-					}
-					to := ObjectKindNamespacedName{
-						kind:      gatewayapi.KindDerefOr(backendRef.Kind, resource.KindService),
-						namespace: backendNamespace,
-						name:      string(backendRef.Name),
-					}
-					refGrant, err := r.findReferenceGrant(ctx, from, to)
-					switch {
-					case err != nil:
-						r.log.Error(err, "failed to find ReferenceGrant")
-					case refGrant == nil:
-						r.log.Info("no matching ReferenceGrants found", "from", from.kind,
-							"from namespace", from.namespace, "target", to.kind, "target namespace", to.namespace)
-					default:
-						if !resourceMap.allAssociatedReferenceGrants.Has(utils.NamespacedName(refGrant).String()) {
-							resourceMap.allAssociatedReferenceGrants.Insert(utils.NamespacedName(refGrant).String())
-							resourceTree.ReferenceGrants = append(resourceTree.ReferenceGrants, refGrant)
-							r.log.Info("added ReferenceGrant to resource map", "namespace", refGrant.Namespace,
-								"name", refGrant.Name)
-						}
-					}
+				if err := r.processBackendRef(
+					ctx,
+					resourceMap,
+					resourceTree,
+					resource.KindEnvoyExtensionPolicy,
+					policy.Namespace,
+					policy.Name,
+					br.BackendObjectReference); err != nil {
+					r.log.Error(err,
+						"failed to process ExtProc BackendRef for EnvoyExtensionPolicy",
+						"policy", policy, "backendRef", br.BackendObjectReference)
 				}
 			}
 		}
