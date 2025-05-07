@@ -6,12 +6,15 @@
 package fuzz
 
 import (
+	"context"
 	"testing"
 
 	fuzz "github.com/AdaLogics/go-fuzz-headers"
+	"github.com/stretchr/testify/require"
 
 	"github.com/envoyproxy/gateway/internal/cmd/egctl"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
+	"github.com/envoyproxy/gateway/internal/message"
 )
 
 func FuzzGatewayAPIToXDS(f *testing.F) {
@@ -25,6 +28,14 @@ func FuzzGatewayAPIToXDS(f *testing.F) {
 		dnsDomain, _ := fc.GetString()
 		resourceType, _ := fc.GetString()
 
-		_, _ = egctl.TranslateGatewayAPIToXds(namespace, dnsDomain, resourceType, rs)
+		pResources := new(message.ProviderResources)
+		loadAndReconcile := egctl.NewSimpleController(context.Background(), pResources, namespace)
+		err = loadAndReconcile(rs)
+		require.NoError(t, err)
+
+		resources := pResources.GetResources()
+		require.NotEmpty(t, resources)
+
+		_, _ = egctl.TranslateGatewayAPIToXds(namespace, dnsDomain, resourceType, resources[0])
 	})
 }

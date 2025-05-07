@@ -7,6 +7,7 @@ package egctl
 
 import (
 	"bufio"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -28,6 +29,7 @@ import (
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/status"
 	"github.com/envoyproxy/gateway/internal/infrastructure/kubernetes/ratelimit"
+	"github.com/envoyproxy/gateway/internal/message"
 	"github.com/envoyproxy/gateway/internal/xds/bootstrap"
 	"github.com/envoyproxy/gateway/internal/xds/translator"
 	xds_types "github.com/envoyproxy/gateway/internal/xds/types"
@@ -222,31 +224,44 @@ func translate(w io.Writer, inFile, inType string, outTypes []string, output, re
 		return fmt.Errorf("unable to read input file: %w", err)
 	}
 
+	pResources := new(message.ProviderResources)
+	loadAndReconcile := NewSimpleController(context.Background(), pResources, namespace)
+
 	if inType == gatewayAPIType {
 		// Unmarshal input
-		resources, err := resource.LoadResourcesFromYAMLBytes(inBytes, addMissingResources)
+		loadResources, err := resource.LoadResourcesFromYAMLBytes(inBytes, addMissingResources)
 		if err != nil {
 			return fmt.Errorf("unable to unmarshal input: %w", err)
 		}
 
+		if err = loadAndReconcile(loadResources); err != nil {
+			return fmt.Errorf("unable to load or reconcile resources: %w", err)
+		}
+
+		resources := pResources.GetResources()
+		if len(resources) < 1 {
+			return fmt.Errorf("unable to translate resources: no valid resources")
+		}
+
+		// TODO: add support for translating multiple gateway-class.
 		var result TranslationResult
 		for _, outType := range outTypes {
 			// Translate
 			if outType == gatewayAPIType {
-				result.Resources, err = translateGatewayAPIToGatewayAPI(resources)
+				result.Resources, err = translateGatewayAPIToGatewayAPI(resources[0])
 				if err != nil {
 					return err
 				}
 			}
 			if outType == xdsType {
-				res, err := TranslateGatewayAPIToXds(namespace, dnsDomain, resourceType, resources)
+				res, err := TranslateGatewayAPIToXds(namespace, dnsDomain, resourceType, resources[0])
 				if err != nil {
 					return err
 				}
 				result.Xds = res
 			}
 			if outType == irType {
-				res, err := translateGatewayAPIToIR(resources)
+				res, err := translateGatewayAPIToIR(resources[0])
 				if err != nil {
 					return err
 				}

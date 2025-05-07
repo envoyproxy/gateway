@@ -29,13 +29,27 @@ type (
 	InfraIRMap map[string]*ir.Infra
 )
 
+// LoadResources extends Resources to allow holding
+// multiple EnvoyProxies and GatewayClasses.
+//
+// This structure is only used for marshalling/unmarshalling
+// purposes and is not used by the translator.
+type LoadResources struct {
+	// Resources have some fields that will be reused, except:
+	// - EnvoyProxyForGatewayClass
+	// - EnvoyProxiesForGateways
+	// - GatewayClass
+	// - serviceMap
+	Resources
+
+	EnvoyProxies   []*egv1a1.EnvoyProxy    `json:"envoyProxies,omitempty" yaml:"envoyProxies,omitempty"`
+	GatewayClasses []*gwapiv1.GatewayClass `json:"gatewayClasses,omitempty" yaml:"gatewayClasses,omitempty"`
+}
+
 // Resources holds the Gateway API and related
 // resources that the translators needs as inputs.
 // +k8s:deepcopy-gen=true
 type Resources struct {
-	// This field is only used for marshalling/unmarshalling purposes and is not used by
-	// the translator
-
 	// EnvoyProxyForGatewayClass holds EnvoyProxy attached to GatewayClass
 	EnvoyProxyForGatewayClass *egv1a1.EnvoyProxy `json:"envoyProxyForGatewayClass,omitempty" yaml:"envoyProxyForGatewayClass,omitempty"`
 	// EnvoyProxiesForGateways holds EnvoyProxiesForGateways attached to Gateways
@@ -69,6 +83,14 @@ type Resources struct {
 	serviceMap map[types.NamespacedName]*corev1.Service
 }
 
+func NewLoadResources() *LoadResources {
+	return &LoadResources{
+		Resources:      *NewResources(),
+		EnvoyProxies:   []*egv1a1.EnvoyProxy{},
+		GatewayClasses: []*gwapiv1.GatewayClass{},
+	}
+}
+
 func NewResources() *Resources {
 	return &Resources{
 		Gateways:                []*gwapiv1.Gateway{},
@@ -92,6 +114,34 @@ func NewResources() *Resources {
 		Backends:                []*egv1a1.Backend{},
 		HTTPRouteFilters:        []*egv1a1.HTTPRouteFilter{},
 	}
+}
+
+// Merge merges input load resources into current load resources.
+func (l *LoadResources) Merge(r *LoadResources) {
+	l.EnvoyProxies = append(l.EnvoyProxies, r.EnvoyProxies...)
+	l.GatewayClasses = append(l.GatewayClasses, r.GatewayClasses...)
+	l.Gateways = append(l.Gateways, r.Gateways...)
+	l.HTTPRoutes = append(l.HTTPRoutes, r.HTTPRoutes...)
+	l.GRPCRoutes = append(l.GRPCRoutes, r.GRPCRoutes...)
+	l.TLSRoutes = append(l.TLSRoutes, r.TLSRoutes...)
+	l.TCPRoutes = append(l.TCPRoutes, r.TCPRoutes...)
+	l.UDPRoutes = append(l.UDPRoutes, r.UDPRoutes...)
+	l.ReferenceGrants = append(l.ReferenceGrants, r.ReferenceGrants...)
+	l.Namespaces = append(l.Namespaces, r.Namespaces...)
+	l.Services = append(l.Services, r.Services...)
+	l.ServiceImports = append(l.ServiceImports, r.ServiceImports...)
+	l.EndpointSlices = append(l.EndpointSlices, r.EndpointSlices...)
+	l.Secrets = append(l.Secrets, r.Secrets...)
+	l.ConfigMaps = append(l.ConfigMaps, r.ConfigMaps...)
+	l.ExtensionRefFilters = append(l.ExtensionRefFilters, r.ExtensionRefFilters...)
+	l.EnvoyPatchPolicies = append(l.EnvoyPatchPolicies, r.EnvoyPatchPolicies...)
+	l.ClientTrafficPolicies = append(l.ClientTrafficPolicies, r.ClientTrafficPolicies...)
+	l.BackendTrafficPolicies = append(l.BackendTrafficPolicies, r.BackendTrafficPolicies...)
+	l.SecurityPolicies = append(l.SecurityPolicies, r.SecurityPolicies...)
+	l.BackendTLSPolicies = append(l.BackendTLSPolicies, r.BackendTLSPolicies...)
+	l.EnvoyExtensionPolicies = append(l.EnvoyExtensionPolicies, r.EnvoyExtensionPolicies...)
+	l.Backends = append(l.Backends, r.Backends...)
+	l.HTTPRouteFilters = append(l.HTTPRouteFilters, r.HTTPRouteFilters...)
 }
 
 func (r *Resources) GetNamespace(name string) *corev1.Namespace {
