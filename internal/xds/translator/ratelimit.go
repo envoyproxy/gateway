@@ -458,9 +458,9 @@ func BuildRateLimitServiceConfig(irListeners []*ir.HTTPListener) []*rlsconfv3.Ra
 	domainDesc := make(map[string][]*rlsconfv3.RateLimitDescriptor)
 
 	// Process each listener
-	for _, l := range irListeners {
+	for _, irListener := range irListeners {
 		// Process each route to build descriptors
-		for _, r := range l.Routes {
+		for _, r := range irListener.Routes {
 			if !routeContainsGlobalRateLimit(r) {
 				continue
 			}
@@ -471,7 +471,7 @@ func BuildRateLimitServiceConfig(irListeners []*ir.HTTPListener) []*rlsconfv3.Ra
 			addRateLimitDescriptor(r, descs, getDomainName(r), domainDesc, true)
 
 			// non-shared rules → listener-scoped domain
-			addRateLimitDescriptor(r, descs, l.Name, domainDesc, false)
+			addRateLimitDescriptor(r, descs, irListener.Name, domainDesc, false)
 		}
 	}
 
