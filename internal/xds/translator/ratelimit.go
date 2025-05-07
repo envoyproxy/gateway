@@ -106,6 +106,7 @@ func (t *Translator) buildRateLimitFilter(irListener *ir.HTTPListener) []*hcmv3.
 
 		var domain string
 		filterName := getRateLimitFilterName(route)
+		// Use traffic policy domain if any rule is shared, otherwise use listener domain
 		if isSharedRateLimit(route) {
 			// For shared rate limits, use the domain derived from the traffic policy
 			domain = getDomainName(route)
@@ -238,7 +239,7 @@ func buildRouteRateLimits(route *ir.HTTPRoute) (rateLimits []*routev3.RateLimit,
 
 		// Create the route descriptor using the rule's shared attribute
 		var descriptorKey, descriptorValue string
-		if rule.Shared != nil && *rule.Shared {
+		if isRuleShared(rule) {
 			// For shared rule, use traffic policy name
 			descriptorKey = route.Traffic.Name
 			descriptorValue = route.Traffic.Name
@@ -438,6 +439,7 @@ func BuildRateLimitServiceConfig(irListeners []*ir.HTTPListener) []*rlsconfv3.Ra
 			}
 
 			domain := irListener.Name
+			// If any rule is shared, use the traffic policy domain
 			if isSharedRateLimit(route) {
 				domain = getDomainName(route)
 
@@ -499,6 +501,7 @@ func addRateLimitDescriptor(
 ) {
 	var key, value string
 
+	// If any rule in the route is shared, use traffic policy name for the descriptor
 	if isSharedRateLimit(route) {
 		// For shared rate limits, use traffic policy name key/value
 		key = route.Traffic.Name
@@ -517,7 +520,9 @@ func addRateLimitDescriptor(
 	domainDescriptors[domain] = append(domainDescriptors[domain], descriptor)
 }
 
-// Helper function to check if a route has a shared rate limit
+// isSharedRateLimit checks if a route has at least one shared rate limit rule.
+// It returns true if any rule in the global rate limit configuration is marked as shared.
+// If no rules are shared or there's no global rate limit configuration, it returns false.
 func isSharedRateLimit(route *ir.HTTPRoute) bool {
 	if route == nil || route.Traffic == nil || route.Traffic.RateLimit == nil || route.Traffic.RateLimit.Global == nil {
 		return false
@@ -530,12 +535,27 @@ func isSharedRateLimit(route *ir.HTTPRoute) bool {
 
 	// Check if any rule has shared=true
 	for _, rule := range global.Rules {
-		if rule.Shared != nil && *rule.Shared {
+		if isRuleShared(rule) {
 			return true
 		}
 	}
 
 	return false
+}
+
+// Helper function to check if a specific rule is shared
+func isRuleShared(rule *ir.RateLimitRule) bool {
+	return rule != nil && rule.Shared != nil && *rule.Shared
+}
+
+// Helper function to check if a specific rule in a route is shared
+func isRuleAtIndexShared(route *ir.HTTPRoute, ruleIndex int) bool {
+	if route == nil || route.Traffic == nil || route.Traffic.RateLimit == nil ||
+		route.Traffic.RateLimit.Global == nil || len(route.Traffic.RateLimit.Global.Rules) <= ruleIndex || ruleIndex < 0 {
+		return false
+	}
+
+	return isRuleShared(route.Traffic.RateLimit.Global.Rules[ruleIndex])
 }
 
 // buildRateLimitServiceDescriptors creates the rate limit service pb descriptors based on the global rate limit IR config.
@@ -639,7 +659,7 @@ func buildRateLimitServiceDescriptors(route *ir.HTTPRoute) []*rlsconfv3.RateLimi
 			pbDesc := new(rlsconfv3.RateLimitDescriptor)
 
 			// Determine if we should use the shared rate limit key (BTP-based) or a generic route key
-			if isSharedRateLimit(route) {
+			if isRuleAtIndexShared(route, rIdx) {
 				// For shared rate limits, use BTP name and namespace
 				pbDesc.Key = route.Traffic.Name
 				pbDesc.Value = route.Traffic.Name
@@ -756,10 +776,12 @@ func (t *Translator) getRateLimitServiceGrpcHostPort() (string, uint32) {
 	return u.Hostname(), uint32(p)
 }
 
-// For shared rate limits, it appends the traffic policy name to the base filter name.
+// getRateLimitFilterName gets the filter name for rate limits.
+// If any rule in the route is shared, it appends the traffic policy name to the base filter name.
 // For non-shared rate limits, it returns just the base filter name.
 func getRateLimitFilterName(route *ir.HTTPRoute) string {
 	filterName := egv1a1.EnvoyFilterRateLimit.String()
+	// If any rule is shared, include the traffic policy name in the filter name
 	if isSharedRateLimit(route) {
 		filterName = fmt.Sprintf("%s/%s", filterName, route.Traffic.Name)
 	}
