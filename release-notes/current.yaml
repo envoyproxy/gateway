@@ -10,6 +10,7 @@ security updates: |
 new features: |
 
 bug fixes: |
+  Fix reference grant from SecurityPolicy to referenced remoteJWKS backend not respected.
 
 # Enhancements that improve performance.
 performance improvements: |
