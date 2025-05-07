@@ -1,0 +1,134 @@
+// Copyright Envoy Gateway Authors
+// SPDX-License-Identifier: Apache-2.0
+// The full text of the Apache license is available in the LICENSE file at
+// the root of the repo.
+
+package translator
+
+import (
+	"testing"
+
+	corev3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
+	listenerv3 "github.com/envoyproxy/go-control-plane/envoy/config/listener/v3"
+	"github.com/envoyproxy/go-control-plane/pkg/wellknown"
+	"github.com/stretchr/testify/assert"
+)
+
+func TestAddServerNamesMatch(t *testing.T) {
+	tests := []struct {
+		name               string
+		xdsListener        *listenerv3.Listener
+		hostnames          []string
+		expectFilterChain  bool
+		expectTLSInspector bool
+		expectServerNames  []string
+	}{
+		{
+			name:               "nil listener",
+			xdsListener:        nil,
+			hostnames:          []string{"example.com"},
+			expectFilterChain:  false,
+			expectTLSInspector: false,
+			expectServerNames:  nil,
+		},
+		{
+			name: "UDP (QUIC) listener for HTTP3",
+			xdsListener: &listenerv3.Listener{
+				Address: &corev3.Address{
+					Address: &corev3.Address_SocketAddress{
+						SocketAddress: &corev3.SocketAddress{
+							Protocol: corev3.SocketAddress_UDP,
+							Address:  "0.0.0.0",
+							PortSpecifier: &corev3.SocketAddress_PortValue{
+								PortValue: 443,
+							},
+						},
+					},
+				},
+			},
+			hostnames:          []string{"example.com"},
+			expectFilterChain:  false,
+			expectTLSInspector: false,
+			expectServerNames:  nil,
+		},
+		{
+			name: "TCP listener with non-wildcard hostnames",
+			xdsListener: &listenerv3.Listener{
+				Address: &corev3.Address{
+					Address: &corev3.Address_SocketAddress{
+						SocketAddress: &corev3.SocketAddress{
+							Protocol: corev3.SocketAddress_TCP,
+							Address:  "0.0.0.0",
+							PortSpecifier: &corev3.SocketAddress_PortValue{
+								PortValue: 443,
+							},
+						},
+					},
+				},
+			},
+			hostnames:          []string{"example.com", "api.example.com"},
+			expectFilterChain:  true,
+			expectTLSInspector: true,
+			expectServerNames:  []string{"example.com", "api.example.com"},
+		},
+		{
+			name: "TCP listener with wildcard hostname",
+			xdsListener: &listenerv3.Listener{
+				Address: &corev3.Address{
+					Address: &corev3.Address_SocketAddress{
+						SocketAddress: &corev3.SocketAddress{
+							Protocol: corev3.SocketAddress_TCP,
+							Address:  "0.0.0.0",
+							PortSpecifier: &corev3.SocketAddress_PortValue{
+								PortValue: 443,
+							},
+						},
+					},
+				},
+			},
+			hostnames:          []string{"*"},
+			expectFilterChain:  false,
+			expectTLSInspector: false,
+			expectServerNames:  nil,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			filterChain := &listenerv3.FilterChain{}
+
+			err := addServerNamesMatch(tt.xdsListener, filterChain, tt.hostnames)
+			assert.NoError(t, err)
+
+			// Check if filter chain match was added
+			if tt.expectFilterChain {
+				assert.NotNil(t, filterChain.FilterChainMatch)
+				assert.Equal(t, tt.expectServerNames, filterChain.FilterChainMatch.ServerNames)
+			} else {
+				assert.Nil(t, filterChain.FilterChainMatch)
+			}
+
+			// Check if TLS inspector was added
+			if tt.xdsListener != nil && tt.expectTLSInspector {
+				hasTLSInspector := false
+				for _, filter := range tt.xdsListener.ListenerFilters {
+					if filter.Name == wellknown.TlsInspector {
+						hasTLSInspector = true
+						break
+					}
+				}
+				assert.True(t, hasTLSInspector, "TLS inspector filter should be added")
+			} else if tt.xdsListener != nil {
+				// For non-nil listeners that shouldn't have TLS inspector
+				hasTLSInspector := false
+				for _, filter := range tt.xdsListener.ListenerFilters {
+					if filter.Name == wellknown.TlsInspector {
+						hasTLSInspector = true
+						break
+					}
+				}
+				assert.False(t, hasTLSInspector, "TLS inspector filter should not be added")
+			}
+		})
+	}
+}
