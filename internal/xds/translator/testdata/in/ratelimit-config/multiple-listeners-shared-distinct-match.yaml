@@ -42,7 +42,6 @@ http:
       name: "test-policy-2/test-namespace"
       rateLimit:
         global:
-          shared: true
           rules:
           - headerMatches:
             - name: "x-user-id"
@@ -50,6 +49,7 @@ http:
             limit:
               requests: 5
               unit: second
+            shared: true
     pathMatch:
       exact: "foo/bar"
     destination:

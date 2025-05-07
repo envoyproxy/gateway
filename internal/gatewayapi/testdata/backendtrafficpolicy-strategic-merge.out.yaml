@@ -3,6 +3,45 @@ backendTrafficPolicies:
   kind: BackendTrafficPolicy
   metadata:
     creationTimestamp: null
+    name: merged-policy-for-route
+    namespace: default
+  spec:
+    connection:
+      bufferLimit: 100M
+    httpUpgrade:
+    - type: spdy/3.1
+    mergeType: StrategicMerge
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: httproute-1
+    timeout:
+      tcp:
+        connectTimeout: 10s
+  status:
+    ancestors:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: gateway-1
+        namespace: envoy-gateway
+        sectionName: http
+      conditions:
+      - lastTransitionTime: null
+        message: Merged with policy envoy-gateway/policy-for-gateway
+        reason: Merged
+        status: "True"
+        type: Merged
+      - lastTransitionTime: null
+        message: Policy has been accepted.
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: BackendTrafficPolicy
+  metadata:
+    creationTimestamp: null
     name: policy-for-route
     namespace: default
   spec:
@@ -87,6 +126,12 @@ backendTrafficPolicies:
         reason: Accepted
         status: "True"
         type: Accepted
+      - lastTransitionTime: null
+        message: 'This policy is being merged by other backendTrafficPolicies for
+          these routes: [default/httproute-1]'
+        reason: Merged
+        status: "True"
+        type: Merged
       - lastTransitionTime: null
         message: 'This policy is being overridden by other backendTrafficPolicies
           for these routes: [default/grpcroute-1]'
@@ -268,9 +313,12 @@ xdsIR:
           name: ""
           prefix: /
         traffic:
+          backendConnection:
+            bufferLimit: 100000000
           httpUpgrade:
+          - spdy/3.1
           - websocket
-          name: envoy-gateway/policy-for-gateway
+          name: default/merged-policy-for-route
           rateLimit:
             global:
               rules:
@@ -287,7 +335,7 @@ xdsIR:
               connectionIdleTimeout: 16s
               maxConnectionDuration: 17s
             tcp:
-              connectTimeout: 15s
+              connectTimeout: 10s
       - destination:
           name: grpcroute/default/grpcroute-1/rule/0
           settings:

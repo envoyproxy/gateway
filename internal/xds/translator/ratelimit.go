@@ -106,7 +106,7 @@ func (t *Translator) buildRateLimitFilter(irListener *ir.HTTPListener) []*hcmv3.
 
 		var domain string
 		filterName := getRateLimitFilterName(route)
-		// Use traffic policy domain if any rule is shared, otherwise use listener domain
+		// Build policy domain filter if any rule is shared, otherwise use listener domain
 		if isSharedRateLimit(route) {
 			// For shared rate limits, use the domain derived from the traffic policy
 			domain = getDomainName(route)

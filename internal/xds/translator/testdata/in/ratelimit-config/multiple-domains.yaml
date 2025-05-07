@@ -13,7 +13,6 @@ http:
       name: "test-policy-1/test-namespace"
       rateLimit:
         global:
-          shared: true
           rules:
           - headerMatches:
             - name: "x-user-id"
@@ -21,12 +20,12 @@ http:
             limit:
               requests: 5
               unit: second
+            shared: true
   - name: "second-route"
     traffic:
       name: "test-policy-2/test-namespace"
       rateLimit:
         global:
-          shared: false
           rules:
           - headerMatches:
             - name: "x-user-id"
@@ -34,3 +33,4 @@ http:
             limit:
               requests: 5
               unit: second
+            shared: false
