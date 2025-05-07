@@ -6,68 +6,349 @@
 package file
 
 import (
+	"context"
+	"crypto/rand"
+	"errors"
+	"fmt"
+	"math"
+	"math/big"
+	"reflect"
+	"sort"
+	"time"
+
 	"github.com/go-logr/logr"
+	kerrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/sets"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 	"github.com/envoyproxy/gateway/internal/message"
 )
 
+const (
+	GatewayDeletionOrder = 3
+)
+
 type resourcesStore struct {
 	name      string
+	keys      sets.Set[storeKey]
+	client    client.Client
 	resources *message.ProviderResources
+	reconcile chan int64
 
 	logger logr.Logger
 }
 
-func newResourcesStore(name string, resources *message.ProviderResources, logger logr.Logger) *resourcesStore {
+type storeKey struct {
+	schema.GroupVersionKind
+	types.NamespacedName
+
+	// deletionOrder is used to determine the order in which a resource is deleted.
+	// The larger the value, the earlier it is deleted.
+	deletionOrder int
+}
+
+func (s storeKey) String() string {
+	return fmt.Sprintf("%s/%s/%d",
+		s.GroupVersionKind.String(), s.NamespacedName.String(), s.deletionOrder)
+}
+
+func newResourcesStore(name string, client client.Client, resources *message.ProviderResources, logger logr.Logger) *resourcesStore {
 	return &resourcesStore{
 		name:      name,
+		keys:      sets.New[storeKey](),
+		client:    client,
 		resources: resources,
+		reconcile: make(chan int64),
 		logger:    logger,
 	}
 }
 
-// HandleEvent simply removes all the resources and triggers a resources reload from files
-// and directories despite of the event type.
-// TODO: Enhance this method by respecting the event type, and add support for multiple GatewayClass.
-func (r *resourcesStore) HandleEvent(files, dirs []string) {
-	r.logger.Info("reload all resources")
-
-	r.resources.GatewayAPIResources.Delete(r.name)
-	if err := r.LoadAndStore(files, dirs); err != nil {
-		r.logger.Error(err, "failed to load and store resources")
+func newStoreKey(obj client.Object) storeKey {
+	return storeKey{
+		GroupVersionKind: obj.GetObjectKind().GroupVersionKind(),
+		NamespacedName:   client.ObjectKeyFromObject(obj),
 	}
 }
 
-// LoadAndStore loads and stores all resources from files and directories.
-func (r *resourcesStore) LoadAndStore(files, dirs []string) error {
+// ReloadAll loads and stores all resources from all given files and directories.
+func (r *resourcesStore) ReloadAll(ctx context.Context, files, dirs []string) error {
+	// TODO(sh2): add arbitrary number of resources support for load function.
 	resources, err := loadFromFilesAndDirs(files, dirs)
 	if err != nil {
 		return err
 	}
 
-	// TODO(sh2): For now, we assume that one file only contains one GatewayClass and all its other
-	// related resources, like Gateway, HTTPRoute, etc. If we managed to extend Resources structure,
-	// we also need to process all the resources and its relationship, like what is done in
-	// Kubernetes provider. However, this will cause us to maintain two places of the same logic
-	// in each provider. The ideal case is two different providers share the same resources process logic.
-	//
-	// - This issue is tracked by https://github.com/envoyproxy/gateway/issues/3213
-
-	// We cannot make sure by the time the Write event was triggered, whether the GatewayClass exist,
-	// so here we just simply Store the first gatewayapi.Resources that has GatewayClass.
-	gwcResources := make(resource.ControllerResources, 0, 1)
+	var errList error
+	currentKeys := sets.New[storeKey]()
 	for _, res := range resources {
-		if res.GatewayClass != nil {
-			gwcResources = append(gwcResources, res)
+		collectKeys, err := r.storeResources(ctx, res)
+		if err != nil {
+			errList = errors.Join(errList, err)
+		}
+		currentKeys = currentKeys.Union(collectKeys)
+	}
+
+	// If no resources were created or updated, stop reconciling.
+	if errList != nil && len(currentKeys) == 0 {
+		return errList
+	}
+
+	// Remove the resources that no longer exist.
+	rn := 0
+	deletedKeys := r.keys.Difference(currentKeys)
+	for _, k := range deletionOrderKeyList(deletedKeys) {
+		delObj := makeUnstructuredObjectFromKey(k)
+		if err := r.client.Delete(ctx, delObj); err != nil {
+			errList = errors.Join(errList, err)
+			// Insert back if the object is not be removed.
+			currentKeys.Insert(k)
+		} else if k.deletionOrder <= GatewayDeletionOrder {
+			// Reconcile once if gateway got deleted, this may be able to
+			// remove the finalizer on gatewayclass.
+			r.reconcile <- generateReconcileID()
+			rn++
 		}
 	}
-	if len(gwcResources) == 0 {
-		return nil
+
+	r.keys = currentKeys
+	r.reconcile <- generateReconcileID()
+	rn++
+
+	r.logger.Info("reload resources finished",
+		"reload_resources_num", len(r.keys), "reconcile_times", rn, "time", time.Now())
+	return errList
+}
+
+// storeResources stores resources via offline gateway-api client.
+// For file provider, all gateway-api resources will be stored except:
+// - Service
+// - ServiceImport
+// - EndpointSlices
+// Becasues these resources has no effects on the host infra layer.
+func (r *resourcesStore) storeResources(ctx context.Context, re *resource.Resources) (sets.Set[storeKey], error) {
+	if re == nil {
+		return nil, nil
 	}
 
-	r.resources.GatewayAPIResources.Store(r.name, &gwcResources)
-	r.logger.Info("loaded and stored resources successfully")
+	var (
+		errs        error
+		collectKeys = sets.New[storeKey]()
+	)
+
+	if err := r.stroeObjectWithKeys(ctx, re.EnvoyProxyForGatewayClass, collectKeys); err != nil {
+		errs = errors.Join(errs, err)
+	}
+
+	if err := r.stroeObjectWithKeys(ctx, re.GatewayClass, collectKeys); err != nil {
+		errs = errors.Join(errs, err)
+	}
+
+	for _, obj := range re.EnvoyProxiesForGateways {
+		if err := r.stroeObjectWithKeys(ctx, obj, collectKeys); err != nil {
+			errs = errors.Join(errs, err)
+		}
+	}
+
+	for _, obj := range re.Gateways {
+		if err := r.stroeObjectWithKeys(ctx, obj, collectKeys); err != nil {
+			errs = errors.Join(errs, err)
+		}
+	}
+
+	for _, obj := range re.HTTPRoutes {
+		if err := r.stroeObjectWithKeys(ctx, obj, collectKeys); err != nil {
+			errs = errors.Join(errs, err)
+		}
+	}
+
+	for _, obj := range re.GRPCRoutes {
+		if err := r.stroeObjectWithKeys(ctx, obj, collectKeys); err != nil {
+			errs = errors.Join(errs, err)
+		}
+	}
+
+	for _, obj := range re.TLSRoutes {
+		if err := r.stroeObjectWithKeys(ctx, obj, collectKeys); err != nil {
+			errs = errors.Join(errs, err)
+		}
+	}
+
+	for _, obj := range re.TCPRoutes {
+		if err := r.stroeObjectWithKeys(ctx, obj, collectKeys); err != nil {
+			errs = errors.Join(errs, err)
+		}
+	}
+
+	for _, obj := range re.UDPRoutes {
+		if err := r.stroeObjectWithKeys(ctx, obj, collectKeys); err != nil {
+			errs = errors.Join(errs, err)
+		}
+	}
+
+	for _, obj := range re.ReferenceGrants {
+		if err := r.stroeObjectWithKeys(ctx, obj, collectKeys); err != nil {
+			errs = errors.Join(errs, err)
+		}
+	}
+
+	for _, obj := range re.Namespaces {
+		if err := r.stroeObjectWithKeys(ctx, obj, collectKeys); err != nil {
+			errs = errors.Join(errs, err)
+		}
+	}
+
+	for _, obj := range re.Secrets {
+		if err := r.stroeObjectWithKeys(ctx, obj, collectKeys); err != nil {
+			errs = errors.Join(errs, err)
+		}
+	}
+
+	for _, obj := range re.ConfigMaps {
+		if err := r.stroeObjectWithKeys(ctx, obj, collectKeys); err != nil {
+			errs = errors.Join(errs, err)
+		}
+	}
+
+	for _, obj := range re.EnvoyPatchPolicies {
+		if err := r.stroeObjectWithKeys(ctx, obj, collectKeys); err != nil {
+			errs = errors.Join(errs, err)
+		}
+	}
+
+	for _, obj := range re.ClientTrafficPolicies {
+		if err := r.stroeObjectWithKeys(ctx, obj, collectKeys); err != nil {
+			errs = errors.Join(errs, err)
+		}
+	}
+
+	for _, obj := range re.BackendTrafficPolicies {
+		if err := r.stroeObjectWithKeys(ctx, obj, collectKeys); err != nil {
+			errs = errors.Join(errs, err)
+		}
+	}
+
+	for _, obj := range re.SecurityPolicies {
+		if err := r.stroeObjectWithKeys(ctx, obj, collectKeys); err != nil {
+			errs = errors.Join(errs, err)
+		}
+	}
+
+	for _, obj := range re.BackendTLSPolicies {
+		if err := r.stroeObjectWithKeys(ctx, obj, collectKeys); err != nil {
+			errs = errors.Join(errs, err)
+		}
+	}
+
+	for _, obj := range re.EnvoyExtensionPolicies {
+		if err := r.stroeObjectWithKeys(ctx, obj, collectKeys); err != nil {
+			errs = errors.Join(errs, err)
+		}
+	}
+
+	for _, obj := range re.Backends {
+		if err := r.stroeObjectWithKeys(ctx, obj, collectKeys); err != nil {
+			errs = errors.Join(errs, err)
+		}
+	}
+
+	for _, obj := range re.HTTPRouteFilters {
+		if err := r.stroeObjectWithKeys(ctx, obj, collectKeys); err != nil {
+			errs = errors.Join(errs, err)
+		}
+	}
+
+	return collectKeys, errs
+}
+
+// stroeObjectWithKeys stores object while collecting its key.
+func (r *resourcesStore) stroeObjectWithKeys(ctx context.Context, obj client.Object, keys sets.Set[storeKey]) error {
+	key, err := r.storeObject(ctx, obj)
+	if err != nil && key != nil {
+		return fmt.Errorf("failed to store %s %s: %w", key.Kind, key.NamespacedName.String(), err)
+	} else if err != nil {
+		return fmt.Errorf("failed to store object: %w", err)
+	}
+
+	if key != nil {
+		keys.Insert(*key)
+	}
 
 	return nil
+}
+
+// storeObject will do create for non-exist object and update for existing object.
+func (r *resourcesStore) storeObject(ctx context.Context, obj client.Object) (*storeKey, error) {
+	if obj == nil || reflect.ValueOf(obj).IsNil() {
+		return nil, nil
+	}
+
+	var (
+		err    error
+		key    = newStoreKey(obj)
+		oldObj = makeUnstructuredObjectFromKey(key)
+	)
+
+	if err = r.client.Get(ctx, key.NamespacedName, oldObj); err == nil {
+		return &key, r.client.Patch(ctx, obj, client.Merge)
+	}
+	if kerrors.IsNotFound(err) {
+		return &key, r.client.Create(ctx, obj)
+	}
+
+	return nil, err
+}
+
+func makeUnstructuredObjectFromKey(key storeKey) *unstructured.Unstructured {
+	obj := &unstructured.Unstructured{}
+	obj.SetGroupVersionKind(key.GroupVersionKind)
+	obj.SetNamespace(key.Namespace)
+	obj.SetName(key.Name)
+	return obj
+}
+
+// deletionOrderKeyList returns a list sorted in descending order by deletionOrder in its key.
+func deletionOrderKeyList(keys sets.Set[storeKey]) []storeKey {
+	out := keys.UnsortedList()
+	for i, k := range out {
+		switch k.Kind {
+		case resource.KindNamespace, resource.KindReferenceGrant,
+			resource.KindConfigMap, resource.KindSecret:
+			out[i].deletionOrder = GatewayDeletionOrder - 3
+
+		case resource.KindEnvoyProxy:
+			out[i].deletionOrder = GatewayDeletionOrder - 2
+
+		case resource.KindGatewayClass:
+			out[i].deletionOrder = GatewayDeletionOrder - 1
+
+		case resource.KindGateway:
+			out[i].deletionOrder = GatewayDeletionOrder
+
+		case resource.KindHTTPRoute, resource.KindGRPCRoute,
+			resource.KindTLSRoute, resource.KindTCPRoute, resource.KindUDPRoute,
+			resource.KindSecurityPolicy, resource.KindClientTrafficPolicy, resource.KindBackendTrafficPolicy,
+			resource.KindEnvoyPatchPolicy, resource.KindEnvoyExtensionPolicy, resource.KindBackendTLSPolicy:
+			out[i].deletionOrder = GatewayDeletionOrder + 1
+
+		case resource.KindBackend, resource.KindHTTPRouteFilter:
+			out[i].deletionOrder = GatewayDeletionOrder + 2
+
+		default:
+			out[i].deletionOrder = GatewayDeletionOrder + 3
+		}
+	}
+
+	sort.Slice(out, func(i, j int) bool {
+		return out[i].deletionOrder > out[j].deletionOrder
+	})
+	return out
+}
+
+func generateReconcileID() int64 {
+	n, _ := rand.Int(rand.Reader, big.NewInt(math.MaxInt64))
+	return n.Int64()
 }

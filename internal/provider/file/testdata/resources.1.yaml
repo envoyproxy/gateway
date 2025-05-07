@@ -1,0 +1,76 @@
+backends:
+- kind: Backend
+  apiVersion: gateway.envoyproxy.io/v1alpha1
+  metadata:
+    creationTimestamp: null
+    name: backend-1
+    namespace: envoy-gateway-system
+  spec:
+    type: Endpoints
+    endpoints:
+    - ip:
+        address: 0.0.0.0
+        port: 3001
+  status: {}
+gatewayClass:
+  kind: GatewayClass
+  apiVersion: gateway.networking.k8s.io/v1
+  metadata:
+    creationTimestamp: null
+    name: eg-1
+    finalizers:
+    - gateway-exists-finalizer.gateway.networking.k8s.io
+  spec:
+    controllerName: gateway.envoyproxy.io/gatewayclass-controller
+  status: {}
+gateways:
+- kind: Gateway
+  apiVersion: gateway.networking.k8s.io/v1
+  metadata:
+    creationTimestamp: null
+    name: eg-1
+    namespace: envoy-gateway-system
+  spec:
+    gatewayClassName: eg-1
+    listeners:
+    - allowedRoutes:
+        namespaces:
+          from: Same
+      name: http
+      port: 8801
+      protocol: HTTP
+  status: {}
+httpRoutes:
+- kind: HTTPRoute
+  apiVersion: gateway.networking.k8s.io/v1
+  metadata:
+    creationTimestamp: null
+    name: backend-1
+    namespace: envoy-gateway-system
+  spec:
+    hostnames:
+    - www.test1.com
+    parentRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: eg-1
+    rules:
+    - backendRefs:
+      - group: gateway.envoyproxy.io
+        kind: Backend
+        name: backend-1
+        weight: 1
+      matches:
+      - path:
+          type: PathPrefix
+          value: /
+  status:
+    parents: null
+namespaces:
+- kind: Namespace
+  apiVersion: v1
+  metadata:
+    creationTimestamp: null
+    name: envoy-gateway-system
+  spec: {}
+  status: {}
