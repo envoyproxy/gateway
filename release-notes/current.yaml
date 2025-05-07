@@ -8,6 +8,7 @@ security updates: |
 
 # New features or capabilities added in this release.
 new features: |
+  Added support for client certificate validation (SPKI, hash, SAN) in ClientTrafficPolicy
 
 bug fixes: |
   Fix reference grant from SecurityPolicy to referenced remoteJWKS backend not respected.
