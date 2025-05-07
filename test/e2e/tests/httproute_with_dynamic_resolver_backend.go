@@ -26,6 +26,7 @@ var DynamicResolverBackendTest = suite.ConformanceTest{
 	Manifests: []string{
 		"testdata/httproute-with-dynamic-resolver-backend.yaml",
 		"testdata/httproute-with-dynamic-resolver-backend-with-tls.yaml",
+		"testdata/httproute-with-dynamic-resolver-backend-with-tls-system-ca.yaml",
 	},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
 		ns := "gateway-conformance-infra"
@@ -78,6 +79,27 @@ var DynamicResolverBackendTest = suite.ConformanceTest{
 				Namespace: ns,
 			}
 
+			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
+		})
+		t.Run("route to service with TLS using system CA", func(t *testing.T) {
+			routeNN := types.NamespacedName{Name: "httproute-with-dynamic-resolver-backend-tls-system-trust-store", Namespace: ns}
+			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
+			BackendMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "backend-dynamic-resolver-tls-system-trust-store", Namespace: ns})
+
+			expectedResponse := http.ExpectedResponse{
+				Request: http.Request{
+					Host: "gateway.envoyproxy.io:443",
+					Path: "/with-tls-system-trust-store",
+				},
+				ExpectedRequest: &http.ExpectedRequest{
+					Request: http.Request{
+						Host: "",
+					},
+				},
+				Response: http.Response{
+					StatusCode: 200,
+				},
+			}
 			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
 		})
 	},

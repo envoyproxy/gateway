@@ -44,19 +44,12 @@ func (t *Translator) applyBackendTLSSetting(
 		return t.applyEnvoyProxyBackendTLSSetting(tlsBundle, resources, envoyProxy)
 	}
 
-	upstreamConfig, policy, err := t.processBackendTLSPolicy(backendRef, backendNamespace, parent, resources)
+	upstreamConfig, err := t.processBackendTLSPolicy(backendRef, backendNamespace, parent, resources)
 	if err != nil {
 		return nil, err
 	}
-	// TODO: zhaohuabing is it correct to surface the EnvoyProxy TLS error to the policy?
-	// We probably should just remove this, the TLS error is already reported in the route status as "InvalidBackendTLS",
-	// and the BackendTLSPolicy is configured correctly.
+
 	if tlsBundle, err = t.applyEnvoyProxyBackendTLSSetting(upstreamConfig, resources, envoyProxy); err != nil {
-		status.SetTranslationErrorForPolicyAncestors(&policy.Status,
-			[]gwapiv1a2.ParentReference{parent},
-			t.GatewayControllerName,
-			policy.Generation,
-			status.Error2ConditionMsg(err))
 		return nil, err
 	}
 	return tlsBundle, nil
@@ -101,10 +94,10 @@ func (t *Translator) processBackendTLSPolicy(
 	backendNamespace string,
 	parent gwapiv1a2.ParentReference,
 	resources *resource.Resources,
-) (*ir.TLSUpstreamConfig, *gwapiv1a3.BackendTLSPolicy, error) {
+) (*ir.TLSUpstreamConfig, error) {
 	policy := getBackendTLSPolicy(resources.BackendTLSPolicies, backendRef, backendNamespace, resources)
 	if policy == nil {
-		return nil, nil, nil
+		return nil, nil
 	}
 
 	tlsBundle, err := getBackendTLSBundle(policy, resources)
@@ -118,11 +111,11 @@ func (t *Translator) processBackendTLSPolicy(
 			policy.Generation,
 			status.Error2ConditionMsg(err),
 		)
-		return nil, nil, err
+		return nil, err
 	}
 
 	status.SetAcceptedForPolicyAncestors(&policy.Status, ancestorRefs, t.GatewayControllerName)
-	return tlsBundle, policy, nil
+	return tlsBundle, nil
 }
 
 func (t *Translator) applyEnvoyProxyBackendTLSSetting(tlsConfig *ir.TLSUpstreamConfig, resources *resource.Resources, ep *egv1a1.EnvoyProxy) (*ir.TLSUpstreamConfig, error) {
