@@ -1,6 +1,6 @@
 +++
 title = "Install with Kubernetes YAML"
-weight = -99
+weight = -98
 +++
 
 This task walks you through installing Envoy Gateway in your Kubernetes cluster.
@@ -11,22 +11,13 @@ installation, it is recommended that you use helm.
 
 ## Before you begin
 
-Envoy Gateway is designed to run in Kubernetes for production. The most essential requirements are:
-
-* Kubernetes 1.28 or later
-* The `kubectl` command-line tool
-
 {{% alert title="Compatibility Matrix" color="warning" %}}
 Refer to the [Version Compatibility Matrix](/news/releases/matrix) to learn more.
 {{% /alert %}}
 
+{{< boilerplate kind-cluster >}}
+
 ## Install with YAML
-
-Envoy Gateway is typically deployed to Kubernetes from the command line. If you don't have Kubernetes, you should use `kind` to create one.
-
-{{% alert title="Developer Guide" color="primary" %}}
-Refer to the [Developer Guide](../../contributions/develop) to learn more.
-{{% /alert %}}
 
 1. In your terminal, run the following command:
 
@@ -38,9 +29,9 @@ Refer to the [Developer Guide](../../contributions/develop) to learn more.
 
    Envoy Gateway should now be successfully installed and running, but in order to experience more abilities of Envoy Gateway, you can refer to [Tasks](/latest/tasks).
 
-## Upgrading from v1.2
+## Upgrading from the previous version
 
-Some manual migration steps are required to upgrade Envoy Gateway to v1.3.
+Some manual migration steps are required to upgrade Envoy Gateway.
 
 1. Update Gateway-API and Envoy Gateway CRDs:
 
@@ -55,3 +46,9 @@ kubectl apply --force-conflicts --server-side -f ./gateway-helm/crds/generated
 ```shell
 helm upgrade eg oci://docker.io/envoyproxy/gateway-helm --version {{< yaml-version >}} -n envoy-gateway-system
 ```
+
+{{< boilerplate open-ports >}}
+
+{{% alert title="Next Steps" color="warning" %}}
+Envoy Gateway should now be successfully installed and running.  To experience more abilities of Envoy Gateway, refer to [Tasks](../tasks).
+{{% /alert %}}
