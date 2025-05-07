@@ -73,5 +73,5 @@ Lastly, it's important to note that even when you apply a policy to a Gateway, t
 - [Response Compression](../tasks/traffic/response-compression)
 - [Response Override](../tasks/traffic/response-override)
 - [gRPC Routing](../tasks/traffic/grpc-routing)
-- [BackendTrafficPolicy API Reference](../../api/extension_types#backendtrafficpolicy)
+- [BackendTrafficPolicy API Reference](../api/extension_types#backendtrafficpolicy)
 - [ClientTrafficPolicy](client-traffic-policy.md)
