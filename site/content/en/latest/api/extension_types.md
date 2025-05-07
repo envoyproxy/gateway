@@ -4841,6 +4841,7 @@ _Appears in:_
 | `Route` |  | 
 | `HTTPListener` |  | 
 | `Translation` |  | 
+| `Cluster` |  | 
 
 
 #### XDSTranslatorHooks
