@@ -53,7 +53,7 @@ func (r *Runner) Start(ctx context.Context) (err error) {
 		}
 
 	case egv1a1.ProviderTypeCustom:
-		p, err = r.createCustomResourceProvider()
+		p, err = r.createCustomResourceProvider(ctx)
 		if err != nil {
 			return fmt.Errorf("failed to create custom provider: %w", err)
 		}
@@ -87,10 +87,10 @@ func (r *Runner) createKubernetesProvider(ctx context.Context) (*kubernetes.Prov
 	return p, err
 }
 
-func (r *Runner) createCustomResourceProvider() (p provider.Provider, err error) {
+func (r *Runner) createCustomResourceProvider(ctx context.Context) (p provider.Provider, err error) {
 	switch r.EnvoyGateway.Provider.Custom.Resource.Type {
 	case egv1a1.ResourceProviderTypeFile:
-		p, err = file.New(&r.Server, r.ProviderResources)
+		p, err = file.New(ctx, &r.Server, r.ProviderResources)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create provider %s: %w", egv1a1.ProviderTypeCustom, err)
 		}
