@@ -457,7 +457,9 @@ func GetRateLimitServiceConfigStr(pbCfg *rlsconfv3.RateLimitConfig) (string, err
 func BuildRateLimitServiceConfig(irListeners []*ir.HTTPListener) []*rlsconfv3.RateLimitConfig {
 	domainDesc := make(map[string][]*rlsconfv3.RateLimitDescriptor)
 
+	// Process each listener
 	for _, l := range irListeners {
+		// Process each route to build descriptors
 		for _, r := range l.Routes {
 			if !routeContainsGlobalRateLimit(r) {
 				continue
