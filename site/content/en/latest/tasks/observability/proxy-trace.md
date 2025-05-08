@@ -347,5 +347,19 @@ spec:
 EOF
 ```
 
+### Tempo app protocol
+
+Sending traces to Tempo requires the receiving Service to have the `appProtocol` set to `grpc`. Envoy requires this to understand if GRPC or HTTP should used.
+
+Using the "tempo-distributed" Helm chart you can set the following Helm values:
+
+```yaml
+distributor:
+  appProtocol:
+    grpc: grpc
+```
+
+Without this configuration of Tempo, configuring Envoy with `spec.telemetry.tracing.provider.backendRefs` will result in Envoy talking HTTP to Tempo's GRPC endpoint.
+
 
 [envoy-proxy-crd]: ../../api/extension_types#envoyproxy
