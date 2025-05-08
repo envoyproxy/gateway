@@ -51,6 +51,13 @@ func TestE2E(t *testing.T) {
 		)
 	}
 
+	// Skip Dynamic Resolver test because DNS resolver doesn't work properly in IPV6 Github worker
+	if tests.IPFamily == "ipv6" {
+		skipTests = append(skipTests,
+			tests.DynamicResolverBackendTest.ShortName,
+		)
+	}
+
 	cSuite, err := suite.NewConformanceTestSuite(suite.ConformanceOptions{
 		Client:               c,
 		RestConfig:           cfg,
