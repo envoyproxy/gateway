@@ -1334,10 +1334,10 @@ func TestServiceAccount(t *testing.T) {
 			require.NoError(t, err)
 
 			if test.OverrideTestData() {
-				deploymentYAML, err := yaml.Marshal(sa)
+				saYAML, err := yaml.Marshal(sa)
 				require.NoError(t, err)
 				// nolint: gosec
-				err = os.WriteFile(fmt.Sprintf("testdata/serviceaccount/%s.yaml", tc.name), deploymentYAML, 0o644)
+				err = os.WriteFile(fmt.Sprintf("testdata/serviceaccount/%s.yaml", tc.name), saYAML, 0o644)
 				require.NoError(t, err)
 				return
 			}
