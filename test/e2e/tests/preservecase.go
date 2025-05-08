@@ -113,6 +113,20 @@ var PreserveCaseTest = suite.ConformanceTest{
 			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
 
 			WaitForPods(t, suite.Client, "gateway-preserve-case-backend", map[string]string{"app": "preserve-case"}, corev1.PodRunning, PodReady)
+			// Send a request to a valid path and expect a successful response
+			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, http.ExpectedResponse{
+				Request: http.Request{
+					Path: "/preserve?headers=ReSpOnSeHeAdEr",
+					Headers: map[string]string{
+						"SpEcIaL": "Header",
+					},
+				},
+				Response: http.Response{
+					StatusCode: 200,
+				},
+				Namespace: ns,
+			})
+
 			// Can't use the standard method for checking the response, since the remote side isn't the
 			// conformance echo server and it returns a differently formatted response.
 			expectedResponse := http.ExpectedResponse{
