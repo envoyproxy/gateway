@@ -1,0 +1,31 @@
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: SecurityPolicy
+metadata:
+  name: authorization-jwt-claim
+spec:
+  targetRefs:
+  - group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: backend
+  jwt:
+    providers:
+    - name: example
+      issuer: https://foo.bar.com
+      remoteJWKS:
+        uri: https://raw.githubusercontent.com/envoyproxy/gateway/refs/heads/main/examples/kubernetes/jwt/jwks.json
+  authorization:
+    defaultAction: Deny
+    rules:
+    - name: "allow"
+      action: Allow
+      principal:
+        jwt:
+          provider: example
+          scopes: ["read", "add", "modify"]
+          claims:
+          - name: user.name
+            values: ["John Doe"]
+          - name: user.roles
+            valueType: StringArray
+            values: ["admin"]

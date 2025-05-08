@@ -1,0 +1,201 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: active
+  labels:
+    app: active
+    service: active
+spec:
+  ports:
+    - name: http
+      port: 3000
+      targetPort: 3000
+  selector:
+    app: active
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: active
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: active
+      version: v1
+  template:
+    metadata:
+      labels:
+        app: active
+        version: v1
+    spec:
+      containers:
+        - image: gcr.io/k8s-staging-gateway-api/echo-basic:v20231214-v1.0.0-140-gf544a46e
+          imagePullPolicy: IfNotPresent
+          name: active
+          ports:
+            - containerPort: 3000
+          env:
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: passive
+  labels:
+    app: passive
+    service: passive
+spec:
+  ports:
+    - name: http
+      port: 3000
+      targetPort: 3000
+  selector:
+    app: passive
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: passive
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: passive
+      version: v1
+  template:
+    metadata:
+      labels:
+        app: passive
+        version: v1
+    spec:
+      containers:
+        - image: gcr.io/k8s-staging-gateway-api/echo-basic:v20231214-v1.0.0-140-gf544a46e
+          imagePullPolicy: IfNotPresent
+          name: passive
+          ports:
+            - containerPort: 3000
+          env:
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: Backend
+metadata:
+  name: passive
+spec:
+  fallback: true
+  endpoints:
+    - fqdn:
+        hostname: passive.default.svc.cluster.local
+        port: 3000
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: Backend
+metadata:
+  name: active
+spec:
+  endpoints:
+  - fqdn:
+      hostname: active.default.svc.cluster.local
+      port: 3000
+---
+
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: ha-example
+  namespace: default
+spec:
+  hostnames:
+  - www.example.com
+  parentRefs:
+  - group: gateway.networking.k8s.io
+    kind: Gateway
+    name: eg
+    namespace: default
+  rules:
+  - backendRefs:
+    - group: gateway.envoyproxy.io
+      kind: Backend
+      name: active
+      namespace: default
+      port: 3000
+    - group: gateway.envoyproxy.io
+      kind: Backend
+      name: passive
+      namespace: default
+      port: 3000
+    matches:
+    - path:
+        type: PathPrefix
+        value: /test
+
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: BackendTrafficPolicy
+metadata:
+  name: passive-health-check
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: ha-example
+  healthCheck:
+    passive:
+      baseEjectionTime: 10s
+      interval: 2s
+      maxEjectionPercent: 100
+      consecutive5XxErrors: 1
+      consecutiveGatewayErrors: 0
+      consecutiveLocalOriginFailures: 1
+      splitExternalLocalOriginErrors: false
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: active
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: active
+      version: v1
+  template:
+    metadata:
+      labels:
+        app: active
+        version: v1
+    spec:
+      containers:
+        - image: gcr.io/k8s-staging-gateway-api/echo-basic:v20231214-v1.0.0-140-gf544a46e
+          imagePullPolicy: IfNotPresent
+          name: active
+          ports:
+            - containerPort: 3000
+          env:
+            - name: HTTP_PORT
+              value: "5000"
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
