@@ -9,7 +9,7 @@ metadata:
     gateway.envoyproxy.io/owning-gateway-name: default
     gateway.envoyproxy.io/owning-gateway-namespace: default
   name: envoy-default-37a8eec1
-  namespace: default
+  namespace: ns1
 spec:
   progressDeadlineSeconds: 600
   revisionHistoryLimit: 10
