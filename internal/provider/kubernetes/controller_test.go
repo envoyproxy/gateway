@@ -421,15 +421,9 @@ func TestProcessEnvoyExtensionPolicyObjectRefs(t *testing.T) {
 			objs := []client.Object{tc.envoyExtensionPolicy, tc.backend, tc.referenceGrant}
 
 			// Create the reconciler.
-			logger := logging.DefaultLogger(egv1a1.LogLevelInfo)
 			r := setupReferenceGrantReconciler(objs)
 
 			ctx := context.Background()
-
-			r := &gatewayAPIReconciler{
-				log:             logger,
-				classController: "some-gateway-class",
-			}
 
 			r.client = fakeclient.NewClientBuilder().
 				WithScheme(envoygateway.GetScheme()).
@@ -823,7 +817,7 @@ func setupReferenceGrantReconciler(objs []client.Object) *gatewayAPIReconciler {
 	r.client = fakeclient.NewClientBuilder().
 		WithScheme(envoygateway.GetScheme()).
 		WithObjects(objs...).
-		WithIndex(&gwapiv1b1.ReferenceGrant{}, targetRefGrantRouteIndex, getReferenceGrantIndexerFunc).
+		WithIndex(&gwapiv1b1.ReferenceGrant{}, targetRefGrantRouteIndex, getReferenceGrantIndexerFunc()).
 		Build()
 	return r
 }

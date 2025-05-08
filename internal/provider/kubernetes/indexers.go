@@ -608,10 +608,8 @@ func backendSecurityPolicyIndexFunc(rawObj client.Object) []string {
 	}
 	if securityPolicy.Spec.JWT != nil {
 		for _, provider := range securityPolicy.Spec.JWT.Providers {
-			if provider.RemoteJWKS != nil {
-				for _, backendRef := range provider.RemoteJWKS.BackendRefs {
-					backendRefs = append(backendRefs, backendRef.BackendObjectReference)
-				}
+			for _, backendRef := range provider.RemoteJWKS.BackendRefs {
+				backendRefs = append(backendRefs, backendRef.BackendObjectReference)
 			}
 		}
 	}
