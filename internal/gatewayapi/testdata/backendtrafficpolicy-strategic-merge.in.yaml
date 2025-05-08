@@ -71,16 +71,16 @@ backendTrafficPolicies:
         type: Global
         global:
           rules:
-          - clientSelectors:
-            - headers:
-              - name: x-user-id
-                type: Exact
-                value: one
-            limit:
-              requests: 5
-              unit: Hour
-            name: global-rate-limit
-            shared: true
+            - clientSelectors:
+                - headers:
+                    - name: x-user-id
+                      type: Exact
+                      value: one
+              limit:
+                requests: 5
+                unit: Hour
+              name: global-rate-limit
+              shared: true
   - apiVersion: gateway.envoyproxy.io/v1alpha1
     kind: BackendTrafficPolicy
     metadata:
@@ -115,13 +115,13 @@ backendTrafficPolicies:
         type: Global
         global:
           rules:
-          - clientSelectors:
-            - headers:
-              - name: x-user-id
-                type: Exact
-                value: two
-            limit:
-              requests: 5
-              unit: Hour
-            name: route-rate-limit
-            shared: false
+            - clientSelectors:
+                - headers:
+                    - name: x-user-id
+                      type: Exact
+                      value: two
+              limit:
+                requests: 5
+                unit: Hour
+              name: route-rate-limit
+              shared: false
