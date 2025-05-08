@@ -47,7 +47,6 @@ type SnapshotCacheWithCallbacks interface {
 	cachev3.SnapshotCache
 	serverv3.Callbacks
 	GenerateNewSnapshot(string, types.XdsResources) error
-	SnapshotHasIrKey(string) bool
 	GetIrKeys() []string
 }
 
@@ -364,19 +363,6 @@ func (s *snapshotCache) OnFetchRequest(_ context.Context, _ *discoveryv3.Discove
 }
 
 func (s *snapshotCache) OnFetchResponse(_ *discoveryv3.DiscoveryRequest, _ *discoveryv3.DiscoveryResponse) {
-}
-
-func (s *snapshotCache) SnapshotHasIrKey(irKey string) bool {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	for key, snapshot := range s.lastSnapshot {
-		if snapshot != nil && key == irKey {
-			return true
-		}
-	}
-
-	return false
 }
 
 func (s *snapshotCache) GetIrKeys() []string {

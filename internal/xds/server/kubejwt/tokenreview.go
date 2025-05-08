@@ -11,13 +11,12 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/envoyproxy/gateway/internal/envoygateway/config"
-	"github.com/envoyproxy/gateway/internal/utils"
 	authenticationv1 "k8s.io/api/authentication/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apiserver/pkg/authentication/serviceaccount"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
+
+	"github.com/envoyproxy/gateway/internal/infrastructure/kubernetes/proxy"
 )
 
 // GetKubernetesClient creates a Kubernetes client using in-cluster configuration.
@@ -35,7 +34,7 @@ func GetKubernetesClient() (*kubernetes.Clientset, error) {
 	return clientset, nil
 }
 
-func (i *JWTAuthInterceptor) validateKubeJWT(ctx context.Context, token, nodeID string) error {
+func (i *JWTAuthInterceptor) validateKubeJWT(ctx context.Context, token string) error {
 	tokenReview := &authenticationv1.TokenReview{
 		Spec: authenticationv1.TokenReviewSpec{
 			Token:     token,
@@ -56,36 +55,21 @@ func (i *JWTAuthInterceptor) validateKubeJWT(ctx context.Context, token, nodeID 
 		return fmt.Errorf("token is not authenticated")
 	}
 
-	if tokenReview.Status.User.Extra != nil {
-		podName := tokenReview.Status.User.Extra[serviceaccount.PodNameKey]
-		if podName[0] == "" {
-			return fmt.Errorf("pod name not found in token review response")
-		}
-
-		if podName[0] != nodeID {
-			return fmt.Errorf("pod name mismatch: expected %s, got %s", nodeID, podName[0])
-		}
-	}
-
 	// Check if the service account name in the JWT token exists in the cache to verify that the token
 	// is valid for an Envoy proxy managed by Envoy Gateway.
 	// example: "system:serviceaccount:default:envoy-default-eg-e41e7b31"
-	parts:=strings.Split(tokenReview.Status.User.Username, ":")
+	parts := strings.Split(tokenReview.Status.User.Username, ":")
 	if len(parts) != 4 {
 		return fmt.Errorf("invalid username format: %s", tokenReview.Status.User.Username)
 	}
 	sa := parts[3]
 
-	irKeys:=i.cache.GetIrKeys()
+	irKeys := i.cache.GetIrKeys()
 	for _, irKey := range irKeys {
-		if irKey2ServiceAccountName(irKey) == sa {
+		if proxy.ExpectedResourceHashedName(irKey) == sa {
 			return nil
 		}
 	}
-	return fmt.Errorf("Envoy service account %s not found in the cache", sa)
-}
 
-func irKey2ServiceAccountName(irKey string) string {
-	hashedName := utils.GetHashedName(irKey, 48)
-	return fmt.Sprintf("%s-%s", config.EnvoyPrefix, hashedName)
+	return fmt.Errorf("envoy service account %s not found in the cache", sa)
 }
