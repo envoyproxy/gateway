@@ -28,7 +28,7 @@ E2E_CLEANUP ?= true
 E2E_TIMEOUT ?= 20m
 E2E_TEST_ARGS ?= -v -tags e2e -timeout $(E2E_TIMEOUT)
 
-KUBE_DEPLOY_VALUES_FILE ?= $(ROOT_DIR)/test/helm/gateway-helm/e2e.in.yaml
+KUBE_DEPLOY_VALUES_FILE ?= $(ROOT_DIR)/test/config/helm/default.yaml
 
 # Set Kubernetes Resources Directory Path
 ifeq ($(origin KUBE_PROVIDER_DIR),undefined)
