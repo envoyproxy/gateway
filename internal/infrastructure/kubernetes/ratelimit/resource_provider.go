@@ -38,8 +38,8 @@ const (
 var statsConf string
 
 type ResourceRender struct {
-	// ns is the Namespace used for managed infra.
-	ns string
+	// namespace is the Namespace used for managed infra.
+	namespace string
 
 	rateLimit           *egv1a1.RateLimit
 	rateLimitDeployment *egv1a1.KubernetesDeploymentSpec
@@ -52,7 +52,7 @@ type ResourceRender struct {
 // NewResourceRender returns a new ResourceRender.
 func NewResourceRender(ns string, gateway *egv1a1.EnvoyGateway, ownerReferenceUID map[string]types.UID) *ResourceRender {
 	return &ResourceRender{
-		ns:                  ns,
+		namespace:           ns,
 		rateLimit:           gateway.RateLimit,
 		rateLimitDeployment: gateway.GetEnvoyGatewayProvider().GetEnvoyGatewayKubeProvider().RateLimitDeployment,
 		rateLimitHpa:        gateway.GetEnvoyGatewayProvider().GetEnvoyGatewayKubeProvider().RateLimitHpa,
@@ -65,7 +65,7 @@ func (r *ResourceRender) Name() string {
 }
 
 func (r *ResourceRender) Namespace() string {
-	return r.ns
+	return r.namespace
 }
 
 func (r *ResourceRender) LabelSelector() labels.Selector {
