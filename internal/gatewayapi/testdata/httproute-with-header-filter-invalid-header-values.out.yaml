@@ -59,14 +59,15 @@ httpRoutes:
       - name: service-1
         port: 8080
       filters:
-      - responseHeaderModifier:
+      - requestHeaderModifier:
           add:
           - name: example-header-2
-            value: ""
+            value: dummy
           set:
           - name: example-header-1
-            value: dummy
-        type: ResponseHeaderModifier
+            value: |
+              multi-line-header-value
+        type: RequestHeaderModifier
       matches:
       - path:
           value: /
@@ -74,8 +75,8 @@ httpRoutes:
     parents:
     - conditions:
       - lastTransitionTime: null
-        message: 'Header: "example-header-2". ResponseHeaderModifier Filter cannot
-          add a header with an invalid value.'
+        message: 'Header: "example-header-1". RequestHeaderModifier Filter cannot
+          set a header with an invalid value.'
         reason: UnsupportedValue
         status: "False"
         type: Accepted

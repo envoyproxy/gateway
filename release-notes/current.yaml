@@ -12,6 +12,7 @@ new features: |
 
 bug fixes: |
   Fix reference grant from SecurityPolicy to referenced remoteJWKS backend not respected.
+  Added validation for header values.
 
 # Enhancements that improve performance.
 performance improvements: |
