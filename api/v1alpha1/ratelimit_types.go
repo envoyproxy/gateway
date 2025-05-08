@@ -49,10 +49,8 @@ type GlobalRateLimit struct {
 	// matches two rules, one rate limited and one not, the final decision will be
 	// to rate limit the request.
 	//
-	// +patchMergeKey:"name"
-	// +patchStrategy:"merge"
 	// +kubebuilder:validation:MaxItems=64
-	Rules []RateLimitRule `json:"rules" patchMergeKey:"name" patchStrategy:"merge"`
+	Rules []RateLimitRule `json:"rules"`
 }
 
 // LocalRateLimit defines local rate limit configuration.
@@ -62,23 +60,15 @@ type LocalRateLimit struct {
 	// matches two rules, one with 10rps and one with 20rps, the final limit will
 	// be based on the rule with 10rps.
 	//
-	// +patchMergeKey:"name"
-	// +patchStrategy:"merge"
-	//
 	// +optional
 	// +kubebuilder:validation:MaxItems=16
 	// +kubebuilder:validation:XValidation:rule="self.all(foo, !has(foo.cost) || !has(foo.cost.response))", message="response cost is not supported for Local Rate Limits"
-	Rules []RateLimitRule `json:"rules" patchMergeKey:"name" patchStrategy:"merge"`
+	Rules []RateLimitRule `json:"rules"`
 }
 
 // RateLimitRule defines the semantics for matching attributes
 // from the incoming requests, and setting limits for them.
 type RateLimitRule struct {
-	// Name is the name of the rule. This is used to identify the rule
-	// in the Envoy configuration and as a unique identifier for merging.
-	//
-	// +optional
-	Name string `json:"name,omitempty"`
 	// ClientSelectors holds the list of select conditions to select
 	// specific clients using attributes from the traffic flow.
 	// All individual select conditions must hold True for this rule

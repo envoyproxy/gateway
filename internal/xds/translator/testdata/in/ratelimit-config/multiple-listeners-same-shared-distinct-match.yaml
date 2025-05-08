@@ -10,11 +10,11 @@ http:
   routes:
   - name: "first-route"
     traffic:
-      name: "test-policy-1/test-namespace"
       rateLimit:
         global:
           rules:
-          - headerMatches:
+          - name: "test-namespace/test-policy-1/rule/0"
+            headerMatches:
             - name: "x-user-id"
               distinct: true
             limit:
@@ -40,11 +40,11 @@ http:
   routes:
   - name: "first-route"
     traffic:
-      name: "test-policy-1/test-namespace"
       rateLimit:
         global:
           rules:
-          - headerMatches:
+          - name: "test-namespace/test-policy-1/rule/0"
+            headerMatches:
             - name: "x-user-id"
               distinct: true
             limit:

@@ -835,8 +835,6 @@ type Compression struct {
 // TrafficFeatures holds the information associated with the Backend Traffic Policy.
 // +k8s:deepcopy-gen=true
 type TrafficFeatures struct {
-	// Name of the backend traffic policy and namespace
-	Name string `json:"name,omitempty"`
 	// RateLimit defines the more specific match conditions as well as limits for ratelimiting
 	// the requests on this route.
 	RateLimit *RateLimit `json:"rateLimit,omitempty" yaml:"rateLimit,omitempty"`
@@ -2093,7 +2091,7 @@ type GlobalRateLimit struct {
 	// TODO zhaohuabing: add default values for Global rate limiting.
 
 	// Rules for rate limiting.
-	Rules []*RateLimitRule `json:"rules,omitempty" yaml:"rules,omitempty"`
+	Rules []*RateLimitRule `json:"rules,omitempty" yaml:"rules,omitempty" patchStrategy:"merge" patchMergeKey:"name"`
 }
 
 // LocalRateLimit holds the local rate limiting configuration.
@@ -2128,6 +2126,8 @@ type RateLimitRule struct {
 	// +optional
 	// +kubebuilder:default=false
 	Shared *bool `json:"shared,omitempty" yaml:"shared,omitempty"`
+	// Name is a unique identifier for this rule, set as <policy-ns>/<policy-name>/rule/<rule-index>.
+	Name string `json:"name,omitempty" yaml:"name,omitempty"`
 }
 
 // RateLimitCost specifies the cost of the request or response.

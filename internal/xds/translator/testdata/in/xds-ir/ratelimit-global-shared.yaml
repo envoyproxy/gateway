@@ -17,7 +17,8 @@ http:
           rateLimit:
             global:
               rules:
-                - headerMatches:
+                - name: "test-policy-1/test-namespace/rule/0"
+                  headerMatches:
                     - name: "x-user-id"
                       exact: "one"
                   limit:
@@ -41,7 +42,8 @@ http:
           rateLimit:
             global:
               rules:
-                - headerMatches:
+                - name: "test-policy-1/test-namespace/rule/0"
+                  headerMatches:
                     - name: "x-user-id"
                       exact: "one"
                   limit:
@@ -65,7 +67,8 @@ http:
           rateLimit:
             global:
               rules:
-                - headerMatches:
+                - name: "test-policy-2/test-namespace/rule/0"
+                  headerMatches:
                     - name: "x-user-id"
                       exact: "two"
                   limit:
@@ -89,7 +92,8 @@ http:
           rateLimit:
             global:
               rules:
-                - headerMatches:
+                - name: "test-policy-3/test-namespace/rule/0"
+                  headerMatches:
                     - name: "x-user-id"
                       exact: "two"
                   limit:
