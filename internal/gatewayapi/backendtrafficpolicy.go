@@ -165,7 +165,7 @@ func (t *Translator) ProcessBackendTrafficPolicies(resources *resource.Resources
 
 				if policy.Spec.MergeType == nil {
 					// Set conditions for translation error if it got any
-					if err := t.translateBackendTrafficPolicyForRoute(policy, route, xdsIR, resources); err != nil {
+					if err := t.translateBackendTrafficPolicyForRoute(policy, route, xdsIR, resources, nil); err != nil {
 						status.SetTranslationErrorForPolicyAncestors(&policy.Status,
 							ancestorRefs,
 							t.GatewayControllerName,
@@ -176,28 +176,43 @@ func (t *Translator) ProcessBackendTrafficPolicies(resources *resource.Resources
 				} else {
 					// merge with parent target policy if exists
 					for _, gwNN := range routeParents.UnsortedList() {
+						ancestorRef := getAncestorRefForPolicy(gwNN, nil)
 						// find policy for Gateway
 						gwPolicy := gatewayPolicyMap[gwNN]
 						if gwPolicy == nil {
 							// not found, fall back to the current policy
-							if err := t.translateBackendTrafficPolicyForRoute(policy, route, xdsIR, resources); err != nil {
-								status.SetTranslationErrorForPolicyAncestors(&policy.Status,
-									ancestorRefs,
+							if err := t.translateBackendTrafficPolicyForRoute(policy, route, xdsIR, resources, &gwNN); err != nil {
+								status.SetConditionForPolicyAncestor(&policy.Status,
+									ancestorRef,
 									t.GatewayControllerName,
-									policy.Generation,
+									gwapiv1a2.PolicyConditionAccepted, metav1.ConditionFalse,
+									egv1a1.PolicyReasonInvalid,
 									status.Error2ConditionMsg(err),
+									policy.Generation,
 								)
 							}
+
+							status.SetConditionForPolicyAncestor(&policy.Status,
+								ancestorRef,
+								t.GatewayControllerName,
+								egv1a1.PolicyConditionMerged,
+								metav1.ConditionTrue,
+								egv1a1.PolicyReasonMerged,
+								"Merged with parent policy but not found.",
+								policy.Generation,
+							)
 							continue
 						}
 
 						// merge with parent policy
 						if err := t.translateBackendTrafficPolicyForRouteWithMerge(policy, gwNN, gwPolicy, route, xdsIR, resources); err != nil {
-							status.SetTranslationErrorForPolicyAncestors(&policy.Status,
-								ancestorRefs,
+							status.SetConditionForPolicyAncestor(&policy.Status,
+								ancestorRef,
 								t.GatewayControllerName,
-								policy.Generation,
+								gwapiv1a2.PolicyConditionAccepted, metav1.ConditionFalse,
+								egv1a1.PolicyReasonInvalid,
 								status.Error2ConditionMsg(err),
+								policy.Generation,
 							)
 							continue
 						}
@@ -207,8 +222,8 @@ func (t *Translator) ProcessBackendTrafficPolicies(resources *resource.Resources
 						}
 						gatewayPolicyMerged[gwNN].Insert(utils.NamespacedName(route).String())
 
-						status.SetConditionForPolicyAncestors(&policy.Status,
-							ancestorRefs,
+						status.SetConditionForPolicyAncestor(&policy.Status,
+							ancestorRef,
 							t.GatewayControllerName,
 							egv1a1.PolicyConditionMerged,
 							metav1.ConditionTrue,
@@ -393,6 +408,7 @@ func (t *Translator) translateBackendTrafficPolicyForRoute(
 	route RouteContext,
 	xdsIR resource.XdsIRMap,
 	resources *resource.Resources,
+	gatewayNN *types.NamespacedName,
 ) error {
 	tf, errs := t.buildTrafficFeatures(policy, resources)
 	if tf == nil {
@@ -401,7 +417,11 @@ func (t *Translator) translateBackendTrafficPolicyForRoute(
 	}
 
 	// Apply IR to all relevant routes
-	for _, x := range xdsIR {
+	for key, x := range xdsIR {
+		if gatewayNN != nil && key != t.IRKey(*gatewayNN) {
+			// Skip if not the gateway wanted
+			continue
+		}
 		applyTrafficFeatureToRoute(route, tf, errs, policy, x)
 	}
 
