@@ -46,7 +46,8 @@ const (
 type ResourceRender struct {
 	infra *ir.ProxyInfra
 
-	ns string
+	// namespace is the Namespace used for managed infra.
+	namespace string
 
 	// DNSDomain is the dns domain used by k8s services. Defaults to "cluster.local".
 	DNSDomain string
@@ -58,7 +59,7 @@ type ResourceRender struct {
 
 func NewResourceRender(ns, dnsDomain string, infra *ir.ProxyInfra, gateway *egv1a1.EnvoyGateway) *ResourceRender {
 	return &ResourceRender{
-		ns:                   ns,
+		namespace:            ns,
 		DNSDomain:            dnsDomain,
 		infra:                infra,
 		ShutdownManager:      gateway.GetEnvoyGatewayProvider().GetEnvoyGatewayKubeProvider().ShutdownManager,
@@ -71,7 +72,7 @@ func (r *ResourceRender) Name() string {
 }
 
 func (r *ResourceRender) Namespace() string {
-	return r.ns
+	return r.namespace
 }
 
 func (r *ResourceRender) LabelSelector() labels.Selector {
