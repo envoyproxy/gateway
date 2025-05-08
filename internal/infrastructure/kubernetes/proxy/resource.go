@@ -32,6 +32,8 @@ const (
 	envoyPodEnvVar = "ENVOY_POD_NAME"
 	// envoyZoneEnvVar is the Envoy pod locality zone name
 	envoyZoneEnvVar = "ENVOY_SERVICE_ZONE"
+	// envoyInfraNameEnvVar is the name of the envoy proxy infrastructure
+	envoyInfraNameEnvVar = "ENVOY_PROXY_INFRA_NAME"
 )
 
 // ExpectedResourceHashedName returns expected resource hashed name including up to the 48 characters of the original name.
@@ -135,7 +137,7 @@ func expectedProxyContainers(infra *ir.ProxyInfra,
 			ImagePullPolicy:          corev1.PullIfNotPresent,
 			Command:                  []string{"envoy"},
 			Args:                     args,
-			Env:                      expectedContainerEnv(containerSpec, gatewayNamespaceMode),
+			Env:                      expectedContainerEnv(infra, containerSpec, gatewayNamespaceMode),
 			Resources:                *containerSpec.Resources,
 			SecurityContext:          expectedEnvoySecurityContext(containerSpec),
 			Ports:                    ports,
@@ -197,7 +199,7 @@ func expectedProxyContainers(infra *ir.ProxyInfra,
 			ImagePullPolicy:          corev1.PullIfNotPresent,
 			Command:                  []string{"envoy-gateway"},
 			Args:                     expectedShutdownManagerArgs(shutdownConfig),
-			Env:                      expectedContainerEnv(nil, gatewayNamespaceMode),
+			Env:                      expectedContainerEnv(infra, nil, gatewayNamespaceMode),
 			Resources:                *egv1a1.DefaultShutdownManagerContainerResourceRequirements(),
 			TerminationMessagePolicy: corev1.TerminationMessageReadFile,
 			TerminationMessagePath:   "/dev/termination-log",
@@ -386,7 +388,7 @@ func expectedVolumes(name string, gatewayNamespacedMode bool, pod *egv1a1.Kubern
 }
 
 // expectedContainerEnv returns expected proxy container envs.
-func expectedContainerEnv(containerSpec *egv1a1.KubernetesContainerSpec, gatewayNamespaceMode bool) []corev1.EnvVar {
+func expectedContainerEnv(infra *ir.ProxyInfra, containerSpec *egv1a1.KubernetesContainerSpec, gatewayNamespaceMode bool) []corev1.EnvVar {
 	env := []corev1.EnvVar{
 		{
 			Name: envoyNsEnvVar,
@@ -406,7 +408,19 @@ func expectedContainerEnv(containerSpec *egv1a1.KubernetesContainerSpec, gateway
 				},
 			},
 		},
+		{
+			Name:  envoyInfraNameEnvVar,
+			Value: ExpectedResourceHashedName(infra.Name),
+		},
+		/*
+			{
+				Name:  "ENVOY_PROXY_INFRA_NAME_REAL", // just eg
+				Value: infra.Name,
+			},
+
+		*/
 	}
+
 	if gatewayNamespaceMode {
 		env = []corev1.EnvVar{
 			{

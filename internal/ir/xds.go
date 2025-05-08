@@ -151,6 +151,8 @@ type Xds struct {
 	EnvoyPatchPolicies []*EnvoyPatchPolicy `json:"envoyPatchPolicies,omitempty" yaml:"envoyPatchPolicies,omitempty"`
 	// FilterOrder holds the custom order of the HTTP filters
 	FilterOrder []egv1a1.FilterPosition `json:"filterOrder,omitempty" yaml:"filterOrder,omitempty"`
+	// ProxyInfraCluster holds cluster information for the ProxyInfra pods
+	ProxyInfraCluster *ProxyInfraCluster `json:"envoyProxyCluster,omitempty" yaml:"envoyProxyCluster,omitempty"`
 }
 
 // Equal implements the Comparable interface used by watchable.DeepEqual to skip unnecessary updates.
@@ -2441,7 +2443,8 @@ func (l *LoadBalancer) Validate() error {
 type RoundRobin struct {
 	// SlowStart defines the slow start configuration.
 	// If set, slow start mode is enabled for newly added hosts in the cluster.
-	SlowStart *SlowStart `json:"slowStart,omitempty" yaml:"slowStart,omitempty"`
+	SlowStart           *SlowStart                  `json:"slowStart,omitempty" yaml:"slowStart,omitempty"`
+	RequestDistribution *egv1a1.RequestDistribution `json:"requestDistribution,omitempty" yaml:"requestDistribution,omitempty"`
 }
 
 // LeastRequest load balancer settings
@@ -2449,21 +2452,25 @@ type RoundRobin struct {
 type LeastRequest struct {
 	// SlowStart defines the slow start configuration.
 	// If set, slow start mode is enabled for newly added hosts in the cluster.
-	SlowStart *SlowStart `json:"slowStart,omitempty" yaml:"slowStart,omitempty"`
+	SlowStart           *SlowStart                  `json:"slowStart,omitempty" yaml:"slowStart,omitempty"`
+	RequestDistribution *egv1a1.RequestDistribution `json:"requestDistribution,omitempty" yaml:"requestDistribution,omitempty"`
 }
 
 // Random load balancer settings
 // +k8s:deepcopy-gen=true
-type Random struct{}
+type Random struct {
+	RequestDistribution *egv1a1.RequestDistribution `json:"requestDistribution,omitempty" yaml:"requestDistribution,omitempty"`
+}
 
 // ConsistentHash load balancer settings
 // +k8s:deepcopy-gen=true
 type ConsistentHash struct {
 	// Hash based on the Source IP Address
-	SourceIP  *bool          `json:"sourceIP,omitempty" yaml:"sourceIP,omitempty"`
-	Header    *Header        `json:"header,omitempty" yaml:"header,omitempty"`
-	Cookie    *egv1a1.Cookie `json:"cookie,omitempty" yaml:"cookie,omitempty"`
-	TableSize *uint64        `json:"tableSize,omitempty" yaml:"tableSize,omitempty"`
+	SourceIP           *bool                      `json:"sourceIP,omitempty" yaml:"sourceIP,omitempty"`
+	Header             *Header                    `json:"header,omitempty" yaml:"header,omitempty"`
+	Cookie             *egv1a1.Cookie             `json:"cookie,omitempty" yaml:"cookie,omitempty"`
+	TableSize          *uint64                    `json:"tableSize,omitempty" yaml:"tableSize,omitempty"`
+	WeightedZoneConfig *egv1a1.WeightedZoneConfig `json:"weightedZoneConfig,omitempty" yaml:"weightedZoneConfig,omitempty"`
 }
 
 // Header consistent hash type settings
@@ -3071,4 +3078,11 @@ type ResourceMetadata struct {
 type RequestBuffer struct {
 	// Limit defines the maximum buffer size for requests
 	Limit resource.Quantity `json:"limit" yaml:"limit"`
+}
+
+// ProxyInfraCluster holds the local cluster of EnvoyProxy instances
+// +k8s:deepcopy-gen=true
+type ProxyInfraCluster struct {
+	Name        string              `json:"name" yaml:"name"`
+	Destination *DestinationSetting `json:"destination,omitempty" yaml:"destination,omitempty"`
 }

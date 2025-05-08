@@ -505,6 +505,12 @@ xdsIR:
     accessLog:
       json:
       - path: /dev/stdout
+    envoyProxyCluster:
+      destination:
+        name: envoy-envoy-gateway-gateway-1-196ae069
+        protocol: HTTP
+        zoneAwareRoutingEnabled: true
+      name: envoy-envoy-gateway-gateway-1-196ae069
     http:
     - address: 0.0.0.0
       hostnames:
@@ -529,6 +535,12 @@ xdsIR:
     accessLog:
       json:
       - path: /dev/stdout
+    envoyProxyCluster:
+      destination:
+        name: envoy-envoy-gateway-gateway-2-4a0e4eb9
+        protocol: HTTP
+        zoneAwareRoutingEnabled: true
+      name: envoy-envoy-gateway-gateway-2-4a0e4eb9
     http:
     - address: 0.0.0.0
       hostnames:
@@ -557,6 +569,12 @@ xdsIR:
     accessLog:
       json:
       - path: /dev/stdout
+    envoyProxyCluster:
+      destination:
+        name: envoy-envoy-gateway-gateway-3-32e857a6
+        protocol: HTTP
+        zoneAwareRoutingEnabled: true
+      name: envoy-envoy-gateway-gateway-3-32e857a6
     http:
     - address: 0.0.0.0
       hostnames:
@@ -581,6 +599,26 @@ xdsIR:
     accessLog:
       json:
       - path: /dev/stdout
+    envoyProxyCluster:
+      destination:
+        addressType: IP
+        endpoints:
+        - host: 7.6.5.4
+          port: 8080
+          zone: zone1
+        - host: 7.6.5.4
+          port: 8080
+          zone: zone1
+        - host: 7.6.5.4
+          port: 8080
+          zone: zone1
+        - host: 7.6.5.4
+          port: 8080
+          zone: zone1
+        name: envoy-not-same-namespace-not-same-namespace-gateway-f21c7840
+        protocol: HTTP
+        zoneAwareRoutingEnabled: true
+      name: envoy-not-same-namespace-not-same-namespace-gateway-f21c7840
     http:
     - address: 0.0.0.0
       hostnames:

@@ -123,6 +123,10 @@ func (t *Translator) Translate(xdsIR *ir.Xds) (*types.ResourceVersionTable, erro
 		errs = errors.Join(errs, err)
 	}
 
+	if err := t.createProxyInfraCluster(tCtx, xdsIR.ProxyInfraCluster); err != nil {
+		errs = errors.Join(errs, err)
+	}
+
 	// Check if an extension want to inject any clusters/secrets
 	// If no extension exists (or it doesn't subscribe to this hook) then this is a quick no-op
 	if err := processExtensionPostTranslationHook(tCtx, t.ExtensionManager); err != nil {
@@ -142,6 +146,20 @@ func (t *Translator) Translate(xdsIR *ir.Xds) (*types.ResourceVersionTable, erro
 	}
 
 	return tCtx, errs
+}
+
+func (t *Translator) createProxyInfraCluster(tCtx *types.ResourceVersionTable, proxyCluster *ir.ProxyInfraCluster) error {
+
+	if proxyCluster == nil {
+		t.Logger.Error(fmt.Errorf("failed to build ProxyInfraCluster"), "ProxyInfraCluster was nil")
+		return nil
+	}
+
+	return addXdsCluster(tCtx, &xdsClusterArgs{
+		name:         proxyCluster.Name,
+		settings:     []*ir.DestinationSetting{proxyCluster.Destination},
+		endpointType: EndpointTypeStatic,
+	})
 }
 
 func findIRListenersByXDSListener(xdsIR *ir.Xds, listener *listenerv3.Listener) []ir.Listener {

@@ -1,0 +1,34 @@
+http:
+- name: "first-listener"
+  address: "::"
+  port: 10080
+  hostnames:
+  - "*"
+  routes:
+  - name: "first-route"
+    hostname: "*"
+    destination:
+      name: "first-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 8080
+          zone: us-east-1a
+        - host: "2.3.4.5"
+          port: 8080
+          zone: us-east-1b
+        name: "first-route-dest/backend/0"
+        weight: 30
+        zoneAwareRoutingEnabled: true
+envoyProxyCluster:
+  destination:
+    addressType: IP
+    endpoints:
+      - host: 7.6.5.4
+        port: 8080
+        zone: zone1
+    name: envoy-envoy-gateway-gateway-1-196ae069
+    protocol: HTTP
+    zoneAwareRoutingEnabled: true
+  name: envoy-gateway-gateway-1-196ae069
+  

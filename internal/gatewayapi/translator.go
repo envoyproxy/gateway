@@ -234,6 +234,9 @@ func (t *Translator) Translate(resources *resource.Resources) (*TranslateResult,
 	extServerPolicies, translateErrs := t.ProcessExtensionServerPolicies(
 		resources.ExtensionServerPolicies, acceptedGateways, xdsIR)
 
+	// Process Cluster for EnvoyProxy service
+	t.ProcessProxyCluster(acceptedGateways, resources, xdsIR)
+
 	// Sort xdsIR based on the Gateway API spec
 	sortXdsIRMap(xdsIR)
 

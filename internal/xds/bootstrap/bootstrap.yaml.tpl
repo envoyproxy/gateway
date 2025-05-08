@@ -9,7 +9,7 @@ admin:
       address: {{ .AdminServer.Address }}
       port_value: {{ .AdminServer.Port }}
 cluster_manager:
-  local_cluster_name: local_cluster
+  local_cluster_name: "$(ENVOY_PROXY_INFRA_NAME)"
 node:
   locality:
     zone: "$(ENVOY_SERVICE_ZONE)"
@@ -171,24 +171,17 @@ static_resources:
                 address: {{ $sink.Address }}
                 port_value: {{ $sink.Port }}
   {{- end }}
-  - connect_timeout: 10s
-    lb_policy: ROUND_ROBIN
-    load_assignment:
-      cluster_name: local_cluster
-      endpoints:
-      - lb_endpoints:
-        - endpoint:
-            address:
-              socket_address:
-                {{- /* fake lb_endpoint to satisfy zone aware routing requirements */}}
-                address: 127.0.0.1
-                port_value: 10080
-          load_balancing_weight: 1
-        load_balancing_weight: 1
-        locality:
-          zone: "$(ENVOY_SERVICE_ZONE)"
-    name: local_cluster
-    type: STATIC
+  - commonLbConfig: {}
+    connectTimeout: 10s
+    dnsLookupFamily: V4_PREFERRED
+    edsClusterConfig:
+      edsConfig:
+        ads: {}
+        resourceApiVersion: V3
+      serviceName: "$(ENVOY_PROXY_INFRA_NAME)"
+    lbPolicy: LEAST_REQUEST
+    name: "$(ENVOY_PROXY_INFRA_NAME)"
+    type: EDS
   - connect_timeout: 10s
     load_assignment:
       cluster_name: xds_cluster

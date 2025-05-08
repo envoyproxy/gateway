@@ -59,6 +59,8 @@ spec:
             fieldRef:
               apiVersion: v1
               fieldPath: metadata.annotations['topology.kubernetes.io/zone']
+        - name: ENVOY_PROXY_INFRA_NAME
+          value: envoy-default-37a8eec1
         - name: ENVOY_POD_NAME
           valueFrom:
             fieldRef:
@@ -146,6 +148,8 @@ spec:
             fieldRef:
               apiVersion: v1
               fieldPath: metadata.annotations['topology.kubernetes.io/zone']
+        - name: ENVOY_PROXY_INFRA_NAME
+          value: envoy-default-37a8eec1
         - name: ENVOY_POD_NAME
           valueFrom:
             fieldRef:
