@@ -143,7 +143,6 @@ infraIR:
           gateway.envoyproxy.io/owning-gateway-name: gateway-1
           gateway.envoyproxy.io/owning-gateway-namespace: envoy-gateway
       name: envoy-gateway/gateway-1
-      namespace: envoy-gateway-system
 xdsIR:
   envoy-gateway/gateway-1:
     accessLog:
@@ -172,7 +171,6 @@ xdsIR:
             endpoints:
             - host: 7.7.7.7
               port: 8080
-            name: httproute/default/httproute-2/rule/0/backend/0
             protocol: HTTP
             weight: 1
         hostname: gateway.envoyproxy.io
@@ -197,7 +195,6 @@ xdsIR:
             endpoints:
             - host: 7.7.7.7
               port: 8080
-            name: httproute/default/httproute-1/rule/0/backend/0
             protocol: HTTP
             weight: 1
         hostname: gateway.envoyproxy.io
@@ -215,8 +212,3 @@ xdsIR:
         - distinct: false
           name: id
           safeRegex: .*
-    readyListener:
-      address: 0.0.0.0
-      ipFamily: IPv4
-      path: /ready
-      port: 19003
