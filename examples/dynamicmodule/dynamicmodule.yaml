@@ -1,0 +1,16 @@
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyExtensionPolicy
+metadata:
+  name: dynamicmodule-example
+spec:
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: example
+  dynamicModule:
+  - name: my-dynamic-module
+    module: my_module
+    config:
+      key: value
+    # Prevent the module from being unloaded
+    doNotClose: true

@@ -294,9 +294,10 @@ func (t *Translator) translateEnvoyExtensionPolicyForRoute(
 	resources *resource.Resources,
 ) error {
 	var (
-		wasms     []ir.Wasm
-		luas      []ir.Lua
-		err, errs error
+		wasms          []ir.Wasm
+		luas           []ir.Lua
+		dynamicModules []ir.DynamicModule
+		err, errs      error
 	)
 
 	if wasms, err = t.buildWasms(policy, resources); err != nil {
@@ -306,6 +307,11 @@ func (t *Translator) translateEnvoyExtensionPolicyForRoute(
 
 	if luas, err = t.buildLuas(policy, resources); err != nil {
 		err = perr.WithMessage(err, "Lua")
+		errs = errors.Join(errs, err)
+	}
+
+	if dynamicModules, err = t.buildDynamicModules(policy, resources); err != nil {
+		err = perr.WithMessage(err, "DynamicModule")
 		errs = errors.Join(errs, err)
 	}
 
@@ -338,9 +344,10 @@ func (t *Translator) translateEnvoyExtensionPolicyForRoute(
 							continue
 						}
 						r.EnvoyExtensions = &ir.EnvoyExtensionFeatures{
-							ExtProcs: extProcs,
-							Wasms:    wasms,
-							Luas:     luas,
+							ExtProcs:       extProcs,
+							Wasms:          wasms,
+							Luas:           luas,
+							DynamicModules: dynamicModules,
 						}
 					}
 				}
@@ -359,10 +366,11 @@ func (t *Translator) translateEnvoyExtensionPolicyForGateway(
 	resources *resource.Resources,
 ) error {
 	var (
-		extProcs  []ir.ExtProc
-		wasms     []ir.Wasm
-		luas      []ir.Lua
-		err, errs error
+		extProcs       []ir.ExtProc
+		wasms          []ir.Wasm
+		luas           []ir.Lua
+		dynamicModules []ir.DynamicModule
+		err, errs      error
 	)
 
 	if extProcs, err = t.buildExtProcs(policy, resources, gateway.envoyProxy); err != nil {
@@ -375,6 +383,10 @@ func (t *Translator) translateEnvoyExtensionPolicyForGateway(
 	}
 	if luas, err = t.buildLuas(policy, resources); err != nil {
 		err = perr.WithMessage(err, "Lua")
+		errs = errors.Join(errs, err)
+	}
+	if dynamicModules, err = t.buildDynamicModules(policy, resources); err != nil {
+		err = perr.WithMessage(err, "DynamicModule")
 		errs = errors.Join(errs, err)
 	}
 
@@ -407,9 +419,10 @@ func (t *Translator) translateEnvoyExtensionPolicyForGateway(
 			}
 
 			r.EnvoyExtensions = &ir.EnvoyExtensionFeatures{
-				ExtProcs: extProcs,
-				Wasms:    wasms,
-				Luas:     luas,
+				ExtProcs:       extProcs,
+				Wasms:          wasms,
+				Luas:           luas,
+				DynamicModules: dynamicModules,
 			}
 		}
 	}

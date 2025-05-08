@@ -1,0 +1,18 @@
+- ignorePortInHostMatching: true
+  name: envoy-gateway/gateway-1/http
+  virtualHosts:
+  - domains:
+    - www.example.com
+    name: envoy-gateway/gateway-1/http/www_example_com
+    routes:
+    - match:
+        pathSeparatedPrefix: /foo
+      name: httproute/default/httproute-1/rule/0/match/0/www_example_com
+      route:
+        cluster: httproute/default/httproute-1/rule/0
+        upgradeConfigs:
+        - upgradeType: websocket
+      typedPerFilterConfig:
+        envoy.filters.http.dynamic_modules/envoyextensionpolicy/default/policy-for-http-route/dynamicmodule/0:
+          '@type': type.googleapis.com/google.protobuf.Struct
+          value: {}
