@@ -9,7 +9,10 @@ import (
 	"context"
 	"fmt"
 	"slices"
+	"strings"
 
+	"github.com/envoyproxy/gateway/internal/envoygateway/config"
+	"github.com/envoyproxy/gateway/internal/utils"
 	authenticationv1 "k8s.io/api/authentication/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apiserver/pkg/authentication/serviceaccount"
@@ -64,5 +67,25 @@ func (i *JWTAuthInterceptor) validateKubeJWT(ctx context.Context, token, nodeID 
 		}
 	}
 
-	return nil
+	// Check if the service account name in the JWT token exists in the cache to verify that the token
+	// is valid for an Envoy proxy managed by Envoy Gateway.
+	// example: "system:serviceaccount:default:envoy-default-eg-e41e7b31"
+	parts:=strings.Split(tokenReview.Status.User.Username, ":")
+	if len(parts) != 4 {
+		return fmt.Errorf("invalid username format: %s", tokenReview.Status.User.Username)
+	}
+	sa := parts[3]
+
+	irKeys:=i.cache.GetIrKeys()
+	for _, irKey := range irKeys {
+		if irKey2ServiceAccountName(irKey) == sa {
+			return nil
+		}
+	}
+	return fmt.Errorf("Envoy service account %s not found in the cache", sa)
+}
+
+func irKey2ServiceAccountName(irKey string) string {
+	hashedName := utils.GetHashedName(irKey, 48)
+	return fmt.Sprintf("%s-%s", config.EnvoyPrefix, hashedName)
 }
