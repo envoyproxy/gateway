@@ -13,36 +13,59 @@ title: "SecurityPolicy"
 
 ## Use Cases
 
-- **JWT Authentication:** Require valid JSON Web Tokens to access specific routes or services.
-- **OIDC Integration:** Use OpenID Connect providers to authenticate clients at the gateway.
-- **CORS Configuration:** Allow or restrict cross-origin requests for APIs.
-- **API Key or Basic Auth:** Enforce simple forms of authentication for legacy systems.
-- **External Authorization:** Integrate with external authorization services to make policy decisions in real time.
+1. **Authentication Methods:**
+    - Authenticate clients using JWT, OIDC, API keys, or Basic Auth
 
-## `SecurityPolicy` in Envoy Gateway
-`SecurityPolicy` is implemented as a Kubernetes Custom Resource Definition (CRD) and follows the policy attachment model—meaning you attach it to Gateway API resources like Gateway, HTTPRoute, or GRPCRoute.
+2. **Authorization Controls:**
+    - Define and enforce authorization rules based on user roles and permissions
+    - Integrate with external authorization services for real-time policy decisions
 
-This model allows you to apply fine-grained security controls to specific traffic flows. You can:
+3. **Cross-Origin Security:**
+    - Configure CORS to allow or restrict cross-origin requests for APIs
 
-Attach a policy to a Gateway to apply authentication/authorization to all traffic entering the cluster.
+## SecurityPolicy in Envoy Gateway
 
-Attach a policy to an individual Route to control access to specific services or paths.
+`SecurityPolicy` is implemented as a Kubernetes Custom Resource Definition (CRD) and follows the policy attachment model. You can attach it to Gateway API resources in two ways:
 
-Envoy Gateway processes the attached policy and translates it into the appropriate Envoy configuration, enabling enforcement of the defined rules.
+1. Using `targetRefs` to directly reference specific Gateway resources
+2. Using `targetSelectors` to match Gateway resources based on labels
 
-## Best Practices
-1. Apply the Principle of Least Privilege
-    - Only expose the necessary routes or resources
-    - Restrict access based on roles or claims
+The policy applies to all resources that match either targeting method. When multiple policies target the same resource, the most specific configuration wins.
 
-2. Validate Your Identity Sources
-    - Use trusted JWT issuers
-    - Keep keys and token lifetimes in sync
-    - Monitor token expiration and failures
+For example, consider these policies targeting the same Gateway Listener:
 
-3. Test in Lower Environments
-    - Test authentication flows in staging
-    - Validate that protected routes behave as expected
+```yaml
+# Policy A: Applies to a specific listener
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: SecurityPolicy
+metadata:
+  name: listener-policy
+  namespace: default
+spec:
+  targetRefs:
+    - kind: Gateway
+      name: my-gateway
+      sectionName: https  # Applies only to "https" listener
+  cors:
+    allowOrigins:
+      - exact: https://example.com
+---
+# Policy B: Applies to the entire gateway
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: SecurityPolicy
+metadata:
+  name: gateway-policy
+  namespace: default
+spec:
+  targetRefs:
+    - kind: Gateway
+      name: my-gateway  # Applies to all listeners
+  cors:
+    allowOrigins:
+      - exact: https://default.com
+```
+
+In the example, policy A takes effect only on the https listener while policy B applies to the rest of the listeners in the gateway. The system will show Overridden=True for Policy B on the https listener, since Policy A is more specific.
 
 ## Related Resources
 - [API Key Authentication](../tasks/security/apikey-auth.md)
@@ -53,5 +76,4 @@ Envoy Gateway processes the attached policy and translates it into the appropria
 - [JWT Authentication](../tasks/security/jwt-authentication.md)
 - [JWT Claim Based Authorization](../tasks/security/jwt-claim-authorization.md)
 - [OIDC Authorization](../tasks/security/oidc.md)
-- [Threat Model](../tasks/security/threat-model.md)
 - [SecurityPolicy API Reference](../api/extension_types#securitypolicy)

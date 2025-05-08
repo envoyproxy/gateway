@@ -6,63 +6,81 @@ title: "ClientTrafficPolicy"
 
 ## Overview
 
-`ClientTrafficPolicy` is an extension to the Kubernetes Gateway API that controls how Envoy Gateway handles incoming traffic from clients. It can configure connection behavior, security settings, and protocol optimizations at the gateway level.
+`ClientTrafficPolicy` is an extension to the Kubernetes Gateway API that allows system administrators to configure how the Envoy Proxy server behaves with downstream clients. It is a policy attachment resource that can be applied to Gateway resources and holds settings for configuring the behavior of the connection between the downstream client and Envoy Proxy listener.
 
-It can act as a gatekeeper that manages how external clients connect to your services, helping you maintain security, performance, and stability.
+Think of `ClientTrafficPolicy` as a set of rules for your Gateway's entry points - it lets you configure specific behaviors for each listener in your Gateway, with more specific rules taking precedence over general ones.
 
 ## Use Cases
 
 `ClientTrafficPolicy` is particularly useful in scenarios where you need to:
 
-- **Strengthen security:** Implement IP allow/deny lists and authenticate clients with mutual TLS
-- **Optimize performance:** Enable HTTP/3 and fine-tune connection settings
-- **Protect resources:** Limit connections and implement rate limiting to prevent overload
-- **Preserve client identity:** Maintain original client IP addresses when behind load balancers
-- **Monitor and Control:** Track connection metrics, monitor client behavior and control access patterns
+1. **Enforce TLS Security**
+   Configure TLS termination, mutual TLS (mTLS), and certificate validation at the edge.
 
-## `ClientTrafficPolicy` in Envoy Gateway
+2. **Manage Client Connections**
+   Control TCP keepalive behavior and connection timeouts for optimal resource usage.
 
-`ClientTrafficPolicy` is part of the Envoy Gateway API suite, which extends the Kubernetes Gateway API with additional capabilities. It's implemented as a Custom Resource Definition (CRD) that you can use to configure how Envoy Gateway manages incoming client traffic.
+3. **Handle Client Identity**
+   Configure trusted proxy chains to correctly resolve client IPs for logging and access control.
 
-You can apply a `ClientTrafficPolicy` to a Gateway resource, and it will affect how that gateway handles client connections. The policy's effects are applied at the listener level, with some important distinctions:
+4. **Normalize Request Paths**
+   Sanitize incoming request paths to ensure compatibility with backend routing rules.
 
-- For HTTP listeners: All HTTP listeners in a Gateway share a common connection counter
-- For HTTPS/TLS listeners: Each listener maintains its own separate connection counter
+5. **Tune HTTP Protocols**
+   Configure HTTP/1, HTTP/2, and HTTP/3 settings for compatibility and performance.
 
-This separation ensures that different types of traffic can be managed independently while still maintaining overall control over gateway resources.
+6. **Monitor Listener Health**
+   Set up health checks for integration with load balancers and failover mechanisms.
 
-## Best Practices
-1. **Start Conservative**
-   - Begin with higher connection limits
-   - Monitor system behavior
-   - Adjust based on metrics
-   - Test in non-production first
+## ClientTrafficPolicy in Envoy Gateway
 
-2. **Monitor and Adjust**
-   - Track connection patterns
-   - Monitor resource usage
-   - Adjust limits based on usage
-   - Review and update regularly
+`ClientTrafficPolicy` is part of the Envoy Gateway API suite, which extends the Kubernetes Gateway API with additional capabilities. It's implemented as a Custom Resource Definition (CRD) that you can use to configure how Envoy Gateway manages incoming client traffic. You can attach it to Gateway API resources in two ways:
 
-3. **Security First**
-   - Implement appropriate connection limits
-   - Use mutual TLS where possible
-   - Configure IP allow/deny lists
-   - Monitor for suspicious activity
+1. Using `targetRefs` to directly reference specific Gateway resources
+2. Using `targetSelectors` to match Gateway resources based on labels
 
-4. **Performance Considerations**
-   - Configure appropriate keepalive settings
-   - Enable HTTP/3 for modern clients
-   - Optimize protocol settings
-   - Monitor connection metrics
+The policy applies to all Gateway resources that match either targeting method. When multiple policies target the same resource, the most specific configuration wins.
+
+For example, consider these policies targeting the same Gateway Listener:
+
+```yaml
+# Policy A: Targets a specific listener in the gateway
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: ClientTrafficPolicy
+metadata:
+  name: listener-specific-policy
+spec:
+  targetRefs:
+    - kind: Gateway
+      name: my-gateway
+      sectionName: https-listener  # Targets specific listener
+  timeout:
+    http:
+      idleTimeout: 30s
+
+---
+# Policy B: Targets the entire gateway
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: ClientTrafficPolicy
+metadata:
+  name: gateway-wide-policy
+spec:
+  targetRefs:
+    - kind: Gateway
+      name: my-gateway  # Targets all listeners
+  timeout:
+    http:
+      idleTimeout: 60s
+```
+
+In this case:
+- Policy A will be applied/attached to the specific Listener defined in the `targetRef.SectionName`
+- Policy B will be applied to the remaining Listeners within the Gateway. Policy B will have an additional status condition Overridden=True.
 
 ## Related Resources
 
 - [Connection Limit](../tasks/traffic/connection-limit)
 - [HTTP Request Headers](../tasks/traffic/http-request-headers)
 - [HTTP/3](../tasks/traffic/http3)
-- [IP Allowlist/Denylist](../tasks/security/restrict-ip-access.md)
-- [JWT Claim-Based Authorization](../tasks/security/jwt-claim-authorization.md)
 - [Mutual TLS: External Clients to the Gateway](../tasks/security/mutual-tls.md)
 - [ClientTrafficPolicy API Reference](../api/extension_types#clienttrafficpolicy)
-- [BackendTrafficPolicy](backend-traffic-policy.md)
