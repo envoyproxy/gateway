@@ -60,34 +60,17 @@ func (r *gatewayAPIReconciler) processTLSRoutes(ctx context.Context, gatewayName
 					r.log.Error(err, "invalid backendRef")
 					continue
 				}
-
-				backendNamespace := gatewayapi.NamespaceDerefOr(backendRef.Namespace, tlsRoute.Namespace)
-				resourceMap.allAssociatedBackendRefs.Insert(gwapiv1.BackendObjectReference{
-					Group:     backendRef.BackendObjectReference.Group,
-					Kind:      backendRef.BackendObjectReference.Kind,
-					Namespace: gatewayapi.NamespacePtr(backendNamespace),
-					Name:      backendRef.Name,
-				})
-
-				if backendNamespace != tlsRoute.Namespace {
-					from := ObjectKindNamespacedName{kind: resource.KindTLSRoute, namespace: tlsRoute.Namespace, name: tlsRoute.Name}
-					to := ObjectKindNamespacedName{kind: gatewayapi.KindDerefOr(backendRef.Kind, resource.KindService), namespace: backendNamespace, name: string(backendRef.Name)}
-					refGrant, err := r.findReferenceGrant(ctx, from, to)
-					switch {
-					case err != nil:
-						r.log.Error(err, "failed to find ReferenceGrant")
-					case refGrant == nil:
-						r.log.Info("no matching ReferenceGrants found", "from", from.kind,
-							"from namespace", from.namespace, "target", to.kind, "target namespace", to.namespace)
-					default:
-						refGrantNamespacedName := utils.NamespacedName(refGrant).String()
-						if !resourceMap.allAssociatedReferenceGrants.Has(refGrantNamespacedName) {
-							resourceMap.allAssociatedReferenceGrants.Insert(refGrantNamespacedName)
-							resourceTree.ReferenceGrants = append(resourceTree.ReferenceGrants, refGrant)
-							r.log.Info("added ReferenceGrant to resource map", "namespace", refGrant.Namespace,
-								"name", refGrant.Name)
-						}
-					}
+				if err := r.processBackendRef(
+					ctx,
+					resourceMap,
+					resourceTree,
+					resource.KindTLSRoute,
+					tlsRoute.Namespace,
+					tlsRoute.Name,
+					backendRef.BackendObjectReference); err != nil {
+					r.log.Error(err,
+						"failed to process BackendRef for TLSRoute",
+						"tlsRoute", tlsRoute, "backendRef", backendRef.BackendObjectReference)
 				}
 			}
 		}
@@ -142,42 +125,17 @@ func (r *gatewayAPIReconciler) processGRPCRoutes(ctx context.Context, gatewayNam
 					r.log.Error(err, "invalid backendRef")
 					continue
 				}
-
-				backendNamespace := gatewayapi.NamespaceDerefOr(backendRef.Namespace, grpcRoute.Namespace)
-				resourceMap.allAssociatedBackendRefs.Insert(gwapiv1.BackendObjectReference{
-					Group:     backendRef.BackendObjectReference.Group,
-					Kind:      backendRef.BackendObjectReference.Kind,
-					Namespace: gatewayapi.NamespacePtr(backendNamespace),
-					Name:      backendRef.Name,
-				})
-
-				if backendNamespace != grpcRoute.Namespace {
-					from := ObjectKindNamespacedName{
-						kind:      resource.KindGRPCRoute,
-						namespace: grpcRoute.Namespace,
-						name:      grpcRoute.Name,
-					}
-					to := ObjectKindNamespacedName{
-						kind:      gatewayapi.KindDerefOr(backendRef.Kind, resource.KindService),
-						namespace: backendNamespace,
-						name:      string(backendRef.Name),
-					}
-					refGrant, err := r.findReferenceGrant(ctx, from, to)
-					switch {
-					case err != nil:
-						r.log.Error(err, "failed to find ReferenceGrant")
-					case refGrant == nil:
-						r.log.Info("no matching ReferenceGrants found", "from", from.kind,
-							"from namespace", from.namespace, "target", to.kind, "target namespace", to.namespace)
-					default:
-						refGrantNamespacedName := utils.NamespacedName(refGrant).String()
-						if !resourceMap.allAssociatedReferenceGrants.Has(refGrantNamespacedName) {
-							resourceMap.allAssociatedReferenceGrants.Insert(refGrantNamespacedName)
-							resourceTree.ReferenceGrants = append(resourceTree.ReferenceGrants, refGrant)
-							r.log.Info("added ReferenceGrant to resource map", "namespace", refGrant.Namespace,
-								"name", refGrant.Name)
-						}
-					}
+				if err := r.processBackendRef(
+					ctx,
+					resourceMap,
+					resourceTree,
+					resource.KindGRPCRoute,
+					grpcRoute.Namespace,
+					grpcRoute.Name,
+					backendRef.BackendObjectReference); err != nil {
+					r.log.Error(err,
+						"failed to process BackendRef for GRPCRoute",
+						"grpcRoute", grpcRoute, "backendRef", backendRef.BackendObjectReference)
 				}
 			}
 
@@ -280,42 +238,17 @@ func (r *gatewayAPIReconciler) processHTTPRoutes(ctx context.Context, gatewayNam
 					r.log.Error(err, "invalid backendRef")
 					continue
 				}
-
-				backendNamespace := gatewayapi.NamespaceDerefOr(backendRef.Namespace, httpRoute.Namespace)
-				resourceMap.allAssociatedBackendRefs.Insert(gwapiv1.BackendObjectReference{
-					Group:     backendRef.BackendObjectReference.Group,
-					Kind:      backendRef.BackendObjectReference.Kind,
-					Namespace: gatewayapi.NamespacePtr(backendNamespace),
-					Name:      backendRef.Name,
-				})
-
-				if backendNamespace != httpRoute.Namespace {
-					from := ObjectKindNamespacedName{
-						kind:      resource.KindHTTPRoute,
-						namespace: httpRoute.Namespace,
-						name:      httpRoute.Name,
-					}
-					to := ObjectKindNamespacedName{
-						kind:      gatewayapi.KindDerefOr(backendRef.Kind, resource.KindService),
-						namespace: backendNamespace,
-						name:      string(backendRef.Name),
-					}
-					refGrant, err := r.findReferenceGrant(ctx, from, to)
-					switch {
-					case err != nil:
-						r.log.Error(err, "failed to find ReferenceGrant")
-					case refGrant == nil:
-						r.log.Info("no matching ReferenceGrants found", "from", from.kind,
-							"from namespace", from.namespace, "target", to.kind, "target namespace", to.namespace)
-					default:
-						refGrantNamespacedName := utils.NamespacedName(refGrant).String()
-						if !resourceMap.allAssociatedReferenceGrants.Has(refGrantNamespacedName) {
-							resourceMap.allAssociatedReferenceGrants.Insert(refGrantNamespacedName)
-							resourceTree.ReferenceGrants = append(resourceTree.ReferenceGrants, refGrant)
-							r.log.Info("added ReferenceGrant to resource map", "namespace", refGrant.Namespace,
-								"name", refGrant.Name)
-						}
-					}
+				if err := r.processBackendRef(
+					ctx,
+					resourceMap,
+					resourceTree,
+					resource.KindHTTPRoute,
+					httpRoute.Namespace,
+					httpRoute.Name,
+					backendRef.BackendObjectReference); err != nil {
+					r.log.Error(err,
+						"failed to process BackendRef for HTTPRoute",
+						"httpRoute", httpRoute, "backendRef", backendRef.BackendObjectReference)
 				}
 			}
 
@@ -351,42 +284,17 @@ func (r *gatewayAPIReconciler) processHTTPRoutes(ctx context.Context, gatewayNam
 						r.log.Error(err, "invalid backendRef")
 						continue
 					}
-
-					backendNamespace := gatewayapi.NamespaceDerefOr(mirrorBackendRef.Namespace, httpRoute.Namespace)
-					resourceMap.allAssociatedBackendRefs.Insert(gwapiv1.BackendObjectReference{
-						Group:     mirrorBackendRef.BackendObjectReference.Group,
-						Kind:      mirrorBackendRef.BackendObjectReference.Kind,
-						Namespace: gatewayapi.NamespacePtr(backendNamespace),
-						Name:      mirrorBackendRef.Name,
-					})
-
-					if backendNamespace != httpRoute.Namespace {
-						from := ObjectKindNamespacedName{
-							kind:      resource.KindHTTPRoute,
-							namespace: httpRoute.Namespace,
-							name:      httpRoute.Name,
-						}
-						to := ObjectKindNamespacedName{
-							kind:      gatewayapi.KindDerefOr(mirrorBackendRef.Kind, resource.KindService),
-							namespace: backendNamespace,
-							name:      string(mirrorBackendRef.Name),
-						}
-						refGrant, err := r.findReferenceGrant(ctx, from, to)
-						switch {
-						case err != nil:
-							r.log.Error(err, "failed to find ReferenceGrant")
-						case refGrant == nil:
-							r.log.Info("no matching ReferenceGrants found", "from", from.kind,
-								"from namespace", from.namespace, "target", to.kind, "target namespace", to.namespace)
-						default:
-							refGrantNamespacedName := utils.NamespacedName(refGrant).String()
-							if !resourceMap.allAssociatedReferenceGrants.Has(refGrantNamespacedName) {
-								resourceMap.allAssociatedReferenceGrants.Insert(refGrantNamespacedName)
-								resourceTree.ReferenceGrants = append(resourceTree.ReferenceGrants, refGrant)
-								r.log.Info("added ReferenceGrant to resource map", "namespace", refGrant.Namespace,
-									"name", refGrant.Name)
-							}
-						}
+					if err := r.processBackendRef(
+						ctx,
+						resourceMap,
+						resourceTree,
+						resource.KindHTTPRoute,
+						httpRoute.Namespace,
+						httpRoute.Name,
+						mirrorBackendRef.BackendObjectReference); err != nil {
+						r.log.Error(err,
+							"failed to process BackendRef for HTTPRouteFilter",
+							"httpRoute", httpRoute, "backendRef", mirrorBackendRef.BackendObjectReference)
 					}
 				} else if filter.Type == gwapiv1.HTTPRouteFilterExtensionRef {
 					// NOTE: filters must be in the same namespace as the HTTPRoute
@@ -485,34 +393,17 @@ func (r *gatewayAPIReconciler) processTCPRoutes(ctx context.Context, gatewayName
 					r.log.Error(err, "invalid backendRef")
 					continue
 				}
-
-				backendNamespace := gatewayapi.NamespaceDerefOr(backendRef.Namespace, tcpRoute.Namespace)
-				resourceMap.allAssociatedBackendRefs.Insert(gwapiv1.BackendObjectReference{
-					Group:     backendRef.BackendObjectReference.Group,
-					Kind:      backendRef.BackendObjectReference.Kind,
-					Namespace: gatewayapi.NamespacePtr(backendNamespace),
-					Name:      backendRef.Name,
-				})
-
-				if backendNamespace != tcpRoute.Namespace {
-					from := ObjectKindNamespacedName{kind: resource.KindTCPRoute, namespace: tcpRoute.Namespace, name: tcpRoute.Name}
-					to := ObjectKindNamespacedName{kind: gatewayapi.KindDerefOr(backendRef.Kind, resource.KindService), namespace: backendNamespace, name: string(backendRef.Name)}
-					refGrant, err := r.findReferenceGrant(ctx, from, to)
-					switch {
-					case err != nil:
-						r.log.Error(err, "failed to find ReferenceGrant")
-					case refGrant == nil:
-						r.log.Info("no matching ReferenceGrants found", "from", from.kind,
-							"from namespace", from.namespace, "target", to.kind, "target namespace", to.namespace)
-					default:
-						refGrantNamespacedName := utils.NamespacedName(refGrant).String()
-						if !resourceMap.allAssociatedReferenceGrants.Has(refGrantNamespacedName) {
-							resourceMap.allAssociatedReferenceGrants.Insert(refGrantNamespacedName)
-							resourceTree.ReferenceGrants = append(resourceTree.ReferenceGrants, refGrant)
-							r.log.Info("added ReferenceGrant to resource map", "namespace", refGrant.Namespace,
-								"name", refGrant.Name)
-						}
-					}
+				if err := r.processBackendRef(
+					ctx,
+					resourceMap,
+					resourceTree,
+					resource.KindTCPRoute,
+					tcpRoute.Namespace,
+					tcpRoute.Name,
+					backendRef.BackendObjectReference); err != nil {
+					r.log.Error(err,
+						"failed to process BackendRef for TCPRoute",
+						"tcpRoute", tcpRoute, "backendRef", backendRef.BackendObjectReference)
 				}
 			}
 		}
@@ -566,33 +457,17 @@ func (r *gatewayAPIReconciler) processUDPRoutes(ctx context.Context, gatewayName
 					r.log.Error(err, "invalid backendRef")
 					continue
 				}
-
-				backendNamespace := gatewayapi.NamespaceDerefOr(backendRef.Namespace, udpRoute.Namespace)
-				resourceMap.allAssociatedBackendRefs.Insert(gwapiv1.BackendObjectReference{
-					Group:     backendRef.BackendObjectReference.Group,
-					Kind:      backendRef.BackendObjectReference.Kind,
-					Namespace: gatewayapi.NamespacePtr(backendNamespace),
-					Name:      backendRef.Name,
-				})
-
-				if backendNamespace != udpRoute.Namespace {
-					from := ObjectKindNamespacedName{kind: resource.KindUDPRoute, namespace: udpRoute.Namespace, name: udpRoute.Name}
-					to := ObjectKindNamespacedName{kind: gatewayapi.KindDerefOr(backendRef.Kind, resource.KindService), namespace: backendNamespace, name: string(backendRef.Name)}
-					refGrant, err := r.findReferenceGrant(ctx, from, to)
-					switch {
-					case err != nil:
-						r.log.Error(err, "failed to find ReferenceGrant")
-					case refGrant == nil:
-						r.log.Info("no matching ReferenceGrants found", "from", from.kind,
-							"from namespace", from.namespace, "target", to.kind, "target namespace", to.namespace)
-					default:
-						if !resourceMap.allAssociatedReferenceGrants.Has(utils.NamespacedName(refGrant).String()) {
-							resourceMap.allAssociatedReferenceGrants.Insert(utils.NamespacedName(refGrant).String())
-							resourceTree.ReferenceGrants = append(resourceTree.ReferenceGrants, refGrant)
-							r.log.Info("added ReferenceGrant to resource map", "namespace", refGrant.Namespace,
-								"name", refGrant.Name)
-						}
-					}
+				if err := r.processBackendRef(
+					ctx,
+					resourceMap,
+					resourceTree,
+					resource.KindUDPRoute,
+					udpRoute.Namespace,
+					udpRoute.Name,
+					backendRef.BackendObjectReference); err != nil {
+					r.log.Error(err,
+						"failed to process BackendRef for UDPRoute",
+						"udpRoute", udpRoute, "backendRef", backendRef.BackendObjectReference)
 				}
 			}
 		}

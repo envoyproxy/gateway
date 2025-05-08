@@ -10,22 +10,18 @@ security updates: |
 new features: |
 
 bug fixes: |
-  Added support for BackendTLSPolicy and EnvoyExtensionPolicy parsing in Standalone mode.
-  Fixed updates of endpoints when mirrored backend Pod IPs are changed.
-  Fix not logging an error and returning it in the K8s Reconcile method when a GatewayClass is not accepted.
-  Fix allowing empty text field for opentelemetry sink when using JSON format.
-  Fixed validation of host header in RequestHeaderModifier filter.
-  Retrigger reconciliation when backendRef of type ServiceImport is updated or when EndpointSlice(s) for a ServiceImport are updated.
+  Fix reference grant from SecurityPolicy to referenced remoteJWKS backend not respected.
+  Fix httproute precedence by considering header/query match type.
+  Fix return err if direct response size exceeds limit.
+  Fix do not add tls inspector filter to quic listener.
+  Fix process remaining gatewayClasses after encountering an err.
+  Added validation for header values.
 
 # Enhancements that improve performance.
 performance improvements: |
-  Added a cache for the Wasm OCI image permission checks and check the pullSecrets against the OCI image registry in
-  a background goroutine.
 
 # Deprecated features or APIs.
 deprecations: |
 
 # Other notable changes not covered by the above sections.
 Other changes: |
-  Bumped envoy to v1.33.1.
-  Bumpled ratelimit to 0141a24f.

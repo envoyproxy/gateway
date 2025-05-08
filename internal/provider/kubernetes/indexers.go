@@ -582,35 +582,47 @@ func secretSecurityPolicyIndexFunc(rawObj client.Object) []string {
 func backendSecurityPolicyIndexFunc(rawObj client.Object) []string {
 	securityPolicy := rawObj.(*egv1a1.SecurityPolicy)
 
-	var backendRef *gwapiv1.BackendObjectReference
+	var (
+		backendRefs []gwapiv1.BackendObjectReference
+		values      []string
+	)
 
 	if securityPolicy.Spec.ExtAuth != nil {
 		if securityPolicy.Spec.ExtAuth.HTTP != nil {
 			http := securityPolicy.Spec.ExtAuth.HTTP
-			backendRef = http.BackendRef
+			if http.BackendRef != nil {
+				backendRefs = append(backendRefs, *http.BackendRef)
+			}
 			if len(http.BackendRefs) > 0 {
-				backendRef = egv1a1.ToBackendObjectReference(http.BackendRefs[0])
+				backendRefs = append(backendRefs, http.BackendRefs[0].BackendObjectReference)
 			}
 		} else if securityPolicy.Spec.ExtAuth.GRPC != nil {
 			grpc := securityPolicy.Spec.ExtAuth.GRPC
-			backendRef = grpc.BackendRef
+			if grpc.BackendRef != nil {
+				backendRefs = append(backendRefs, *grpc.BackendRef)
+			}
 			if len(grpc.BackendRefs) > 0 {
-				backendRef = egv1a1.ToBackendObjectReference(grpc.BackendRefs[0])
+				backendRefs = append(backendRefs, grpc.BackendRefs[0].BackendObjectReference)
+			}
+		}
+	}
+	if securityPolicy.Spec.JWT != nil {
+		for _, provider := range securityPolicy.Spec.JWT.Providers {
+			for _, backendRef := range provider.RemoteJWKS.BackendRefs {
+				backendRefs = append(backendRefs, backendRef.BackendObjectReference)
 			}
 		}
 	}
 
-	if backendRef != nil {
-		return []string{
+	for _, reference := range backendRefs {
+		values = append(values,
 			types.NamespacedName{
-				Namespace: gatewayapi.NamespaceDerefOr(backendRef.Namespace, securityPolicy.Namespace),
-				Name:      string(backendRef.Name),
+				Namespace: gatewayapi.NamespaceDerefOr(reference.Namespace, securityPolicy.Namespace),
+				Name:      string(reference.Name),
 			}.String(),
-		}
+		)
 	}
-
-	// This should not happen because the CEL validation should catch it.
-	return []string{}
+	return values
 }
 
 // addCtpIndexers adds indexing on ClientTrafficPolicy, for ConfigMap or Secret objects that are

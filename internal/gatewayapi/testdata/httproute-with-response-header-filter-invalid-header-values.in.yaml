@@ -35,12 +35,12 @@ httpRoutes:
       - name: service-1
         port: 8080
       filters:
-      - type: RequestHeaderModifier
-        requestHeaderModifier:
+      - type: ResponseHeaderModifier
+        responseHeaderModifier:
           set:
           - name: "example-header-1"
-            value: "dummy"
+            value: |
+              multi-line-header-value
           add:
           - name: "example-header-2"
-            value: ""
-
+            value: "dummy"

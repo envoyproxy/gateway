@@ -17,7 +17,7 @@ gateways:
       protocol: HTTP
   status:
     listeners:
-    - attachedRoutes: 1
+    - attachedRoutes: 2
       conditions:
       - lastTransitionTime: null
         message: Sending translated listener configuration to the data plane
@@ -58,26 +58,67 @@ httpRoutes:
     - backendRefs:
       - name: service-1
         port: 8080
-      filters:
-      - requestHeaderModifier:
-          add:
-          - name: example-header-2
-            value: ""
-          set:
-          - name: example-header-1
-            value: dummy
-        type: RequestHeaderModifier
       matches:
-      - path:
+      - headers:
+        - name: x-org-id
+          type: RegularExpression
+          value: .*
+        - name: hostname
+          type: RegularExpression
+          value: .*
+        path:
+          type: PathPrefix
           value: /
   status:
     parents:
     - conditions:
       - lastTransitionTime: null
-        message: 'Header: "example-header-2". RequestHeaderModifier Filter cannot
-          add a header with an invalid value.'
-        reason: UnsupportedValue
-        status: "False"
+        message: Route is accepted
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Resolved all the Object references for the Route
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+      parentRef:
+        name: gateway-1
+        namespace: envoy-gateway
+        sectionName: http
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    creationTimestamp: null
+    name: httproute-2
+    namespace: default
+  spec:
+    hostnames:
+    - gateway.envoyproxy.io
+    parentRefs:
+    - name: gateway-1
+      namespace: envoy-gateway
+      sectionName: http
+    rules:
+    - backendRefs:
+      - name: service-1
+        port: 8080
+      matches:
+      - headers:
+        - name: x-org-id
+          type: Exact
+          value: test-org
+        path:
+          type: PathPrefix
+          value: /
+  status:
+    parents:
+    - conditions:
+      - lastTransitionTime: null
+        message: Route is accepted
+        reason: Accepted
+        status: "True"
         type: Accepted
       - lastTransitionTime: null
         message: Resolved all the Object references for the Route
@@ -125,3 +166,55 @@ xdsIR:
         escapedSlashesAction: UnescapeAndRedirect
         mergeSlashes: true
       port: 10080
+      routes:
+      - destination:
+          name: httproute/default/httproute-1/rule/0
+          settings:
+          - addressType: IP
+            endpoints:
+            - host: 7.7.7.7
+              port: 8080
+            protocol: HTTP
+            weight: 1
+        headerMatches:
+        - distinct: false
+          name: x-org-id
+          safeRegex: .*
+        - distinct: false
+          name: hostname
+          safeRegex: .*
+        hostname: gateway.envoyproxy.io
+        isHTTP2: false
+        metadata:
+          kind: HTTPRoute
+          name: httproute-1
+          namespace: default
+        name: httproute/default/httproute-1/rule/0/match/0/gateway_envoyproxy_io
+        pathMatch:
+          distinct: false
+          name: ""
+          prefix: /
+      - destination:
+          name: httproute/default/httproute-2/rule/0
+          settings:
+          - addressType: IP
+            endpoints:
+            - host: 7.7.7.7
+              port: 8080
+            protocol: HTTP
+            weight: 1
+        headerMatches:
+        - distinct: false
+          exact: test-org
+          name: x-org-id
+        hostname: gateway.envoyproxy.io
+        isHTTP2: false
+        metadata:
+          kind: HTTPRoute
+          name: httproute-2
+          namespace: default
+        name: httproute/default/httproute-2/rule/0/match/0/gateway_envoyproxy_io
+        pathMatch:
+          distinct: false
+          name: ""
+          prefix: /

@@ -62,10 +62,11 @@ httpRoutes:
       - requestHeaderModifier:
           add:
           - name: example-header-2
-            value: ""
+            value: dummy
           set:
           - name: example-header-1
-            value: dummy
+            value: |
+              multi-line-header-value
         type: RequestHeaderModifier
       matches:
       - path:
@@ -74,8 +75,8 @@ httpRoutes:
     parents:
     - conditions:
       - lastTransitionTime: null
-        message: 'Header: "example-header-2". RequestHeaderModifier Filter cannot
-          add a header with an invalid value.'
+        message: 'Header: "example-header-1". RequestHeaderModifier Filter cannot
+          set a header with an invalid value.'
         reason: UnsupportedValue
         status: "False"
         type: Accepted
