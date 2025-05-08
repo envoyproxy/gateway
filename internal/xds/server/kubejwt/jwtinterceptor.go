@@ -6,14 +6,15 @@
 package kubejwt
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
+	discoveryv3 "github.com/envoyproxy/go-control-plane/envoy/service/discovery/v3"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
 	"k8s.io/client-go/kubernetes"
 
-	"github.com/envoyproxy/gateway/internal/xds/bootstrap"
 	"github.com/envoyproxy/gateway/internal/xds/cache"
 )
 
@@ -35,62 +36,56 @@ func NewJWTAuthInterceptor(clientset *kubernetes.Clientset, issuer, audience str
 	}
 }
 
-// Stream intercepts streaming gRPC calls for authentication.
-func (i *JWTAuthInterceptor) Stream() grpc.StreamServerInterceptor {
-	return func(srv any, ss grpc.ServerStream, info *grpc.StreamServerInfo, handler grpc.StreamHandler) error {
-		if err := i.authorize(ss); err != nil {
-			return err
-		}
-		return handler(srv, ss)
-	}
+type wrappedStream struct {
+	grpc.ServerStream
+	ctx         context.Context
+	interceptor *JWTAuthInterceptor
+	validated   bool
 }
 
-// authorize validates the Kubernetes Service Account JWT token from the metadata.
-func (i *JWTAuthInterceptor) authorize(ss grpc.ServerStream) error {
-	md, ok := metadata.FromIncomingContext(ss.Context())
-	if !ok {
-		return fmt.Errorf("missing metadata")
+func (w *wrappedStream) RecvMsg(m any) error {
+	err := w.ServerStream.RecvMsg(m)
+	if err != nil {
+		return err
 	}
 
-	proxyMetadata, err := i.processProxyMetadata(md)
-	if err != nil {
-		return fmt.Errorf("failed to extract node info: %w", err)
-	}
+	if !w.validated {
+		if req, ok := m.(*discoveryv3.DeltaDiscoveryRequest); ok {
+			if req.Node == nil || req.Node.Id == "" {
+				return fmt.Errorf("missing node ID in request")
+			}
+			nodeID := req.Node.Id
 
-	err = i.validateKubeJWT(ss.Context(), proxyMetadata)
-	if err != nil {
-		return fmt.Errorf("failed to validate token: %w", err)
+			md, ok := metadata.FromIncomingContext(w.ctx)
+			if !ok {
+				return fmt.Errorf("missing metadata")
+			}
+
+			authHeader := md.Get("authorization")
+			if len(authHeader) == 0 {
+				return fmt.Errorf("missing authorization token in metadata: %s", md)
+			}
+			token := strings.TrimPrefix(authHeader[0], "Bearer ")
+
+			if err := w.interceptor.validateKubeJWT(w.ctx, token, nodeID); err != nil {
+				return fmt.Errorf("failed to validate token: %w", err)
+			}
+
+			w.validated = true
+		}
 	}
 
 	return nil
 }
 
-type proxyMetadata struct {
-	token  string
-	nodeID string
-	irKey  string
+func newWrappedStream(s grpc.ServerStream, ctx context.Context, interceptor *JWTAuthInterceptor) grpc.ServerStream {
+	return &wrappedStream{s, ctx, interceptor, false}
 }
 
-func (i *JWTAuthInterceptor) processProxyMetadata(md metadata.MD) (*proxyMetadata, error) {
-	authHeader, exists := md["authorization"]
-	if !exists || len(authHeader) == 0 {
-		return nil, fmt.Errorf("missing authorization token in metadata: %s", md)
+// Stream intercepts streaming gRPC calls for authorization.
+func (i *JWTAuthInterceptor) Stream() grpc.StreamServerInterceptor {
+	return func(srv any, ss grpc.ServerStream, info *grpc.StreamServerInfo, handler grpc.StreamHandler) error {
+		wrapped := newWrappedStream(ss, ss.Context(), i)
+		return handler(srv, wrapped)
 	}
-	tokenStr := strings.TrimPrefix(authHeader[0], "Bearer ")
-
-	irKey, exists := md[bootstrap.EnvoyIrKeyHeader]
-	if !exists || len(irKey) == 0 {
-		return nil, fmt.Errorf("missing ir key in metadata: %s", md)
-	}
-
-	nodeID, exists := md[bootstrap.EnvoyNodeIDHeader]
-	if !exists || len(nodeID) == 0 {
-		return nil, fmt.Errorf("missing node ID in metadata: %s", md)
-	}
-
-	return &proxyMetadata{
-		token:  tokenStr,
-		nodeID: nodeID[0],
-		irKey:  irKey[0],
-	}, nil
 }

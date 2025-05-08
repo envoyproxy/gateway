@@ -12,12 +12,9 @@ import (
 
 	authenticationv1 "k8s.io/api/authentication/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apiserver/pkg/authentication/serviceaccount"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
-)
-
-const (
-	authPodNameKey = "authentication.kubernetes.io/pod-name"
 )
 
 // GetKubernetesClient creates a Kubernetes client using in-cluster configuration.
@@ -35,10 +32,10 @@ func GetKubernetesClient() (*kubernetes.Clientset, error) {
 	return clientset, nil
 }
 
-func (i *JWTAuthInterceptor) validateKubeJWT(ctx context.Context, proxyMetadata *proxyMetadata) error {
+func (i *JWTAuthInterceptor) validateKubeJWT(ctx context.Context, token, nodeID string) error {
 	tokenReview := &authenticationv1.TokenReview{
 		Spec: authenticationv1.TokenReviewSpec{
-			Token:     proxyMetadata.token,
+			Token:     token,
 			Audiences: []string{i.audience},
 		},
 	}
@@ -57,17 +54,13 @@ func (i *JWTAuthInterceptor) validateKubeJWT(ctx context.Context, proxyMetadata 
 	}
 
 	if tokenReview.Status.User.Extra != nil {
-		podName := tokenReview.Status.User.Extra[authPodNameKey]
+		podName := tokenReview.Status.User.Extra[serviceaccount.PodNameKey]
 		if podName[0] == "" {
 			return fmt.Errorf("pod name not found in token review response")
 		}
 
-		if podName[0] != proxyMetadata.nodeID {
-			return fmt.Errorf("pod name mismatch: expected %s, got %s", proxyMetadata.nodeID, podName[0])
-		}
-
-		if !i.cache.SnapshotHasIrKey(proxyMetadata.irKey) {
-			return fmt.Errorf("ir key not found in cache: %s", proxyMetadata.irKey)
+		if podName[0] != nodeID {
+			return fmt.Errorf("pod name mismatch: expected %s, got %s", nodeID, podName[0])
 		}
 	}
 

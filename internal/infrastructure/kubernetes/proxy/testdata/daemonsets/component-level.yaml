@@ -46,15 +46,12 @@ spec:
         - envoy
         env:
         - name: ENVOY_GATEWAY_NAMESPACE
-          valueFrom:
-            fieldRef:
-              apiVersion: v1
-              fieldPath: metadata.namespace
+          value: envoy-gateway-system
         - name: ENVOY_SERVICE_ZONE
           valueFrom:
             fieldRef:
               apiVersion: v1
-              fieldPath: metadata.annotations['topology.kubernetes.io/zone']
+              fieldPath: metadata.labels['topology.kubernetes.io/zone']
         - name: ENVOY_POD_NAME
           valueFrom:
             fieldRef:
@@ -126,6 +123,9 @@ spec:
           readOnly: true
         - mountPath: /sds
           name: sds
+        - mountPath: /var/run/secrets/token
+          name: sa-token
+          readOnly: true
       - args:
         - envoy
         - shutdown-manager
@@ -133,15 +133,12 @@ spec:
         - envoy-gateway
         env:
         - name: ENVOY_GATEWAY_NAMESPACE
-          valueFrom:
-            fieldRef:
-              apiVersion: v1
-              fieldPath: metadata.namespace
+          value: envoy-gateway-system
         - name: ENVOY_SERVICE_ZONE
           valueFrom:
             fieldRef:
               apiVersion: v1
-              fieldPath: metadata.annotations['topology.kubernetes.io/zone']
+              fieldPath: metadata.labels['topology.kubernetes.io/zone']
         - name: ENVOY_POD_NAME
           valueFrom:
             fieldRef:
@@ -207,17 +204,27 @@ spec:
       serviceAccountName: envoy-default-37a8eec1
       terminationGracePeriodSeconds: 360
       volumes:
-      - name: certs
-        secret:
+      - name: sa-token
+        projected:
           defaultMode: 420
-          secretName: envoy
+          sources:
+          - serviceAccountToken:
+              audience: envoy-gateway.envoy-gateway-system.svc.cluster.local
+              expirationSeconds: 3600
+              path: sa-token
+      - configMap:
+          defaultMode: 420
+          items:
+          - key: ca.crt
+            path: ca.crt
+          name: envoy-default-37a8eec1
+          optional: false
+        name: certs
       - configMap:
           defaultMode: 420
           items:
           - key: xds-trusted-ca.json
             path: xds-trusted-ca.json
-          - key: xds-certificate.json
-            path: xds-certificate.json
           name: envoy-default-37a8eec1
           optional: false
         name: sds

@@ -163,6 +163,20 @@ spec:
                       connection_keepalive:
                         interval: 30s
                         timeout: 5s
+                  http_filters:
+                  - name: envoy.filters.http.credential_injector
+                    typed_config:
+                      "@type": type.googleapis.com/envoy.extensions.filters.http.credential_injector.v3.CredentialInjector
+                      credential:
+                        name: envoy.http.injected_credentials.generic
+                        typed_config:
+                          "@type": type.googleapis.com/envoy.extensions.http.injected_credentials.generic.v3.Generic
+                          credential:
+                            name: jwt-sa-bearer
+                      overwrite: true
+                  - name: envoy.extensions.filters.http.upstream_codec.v3.UpstreamCodec
+                    typed_config:
+                      "@type": type.googleapis.com/envoy.extensions.filters.http.upstream_codec.v3.UpstreamCodec
               name: xds_cluster
               type: STRICT_DNS
               transport_socket:
@@ -172,12 +186,6 @@ spec:
                   common_tls_context:
                     tls_params:
                       tls_maximum_protocol_version: TLSv1_3
-                    tls_certificate_sds_secret_configs:
-                    - name: xds_certificate
-                      sds_config:
-                        path_config_source:
-                          path: /sds/xds-certificate.json
-                        resource_api_version: V3
                     validation_context_sds_secret_config:
                       name: xds_trusted_ca
                       sds_config:
@@ -203,6 +211,20 @@ spec:
                   "@type": "type.googleapis.com/envoy.extensions.upstreams.http.v3.HttpProtocolOptions"
                   explicit_http_config:
                     http2_protocol_options: {}
+                  http_filters:
+                  - name: envoy.filters.http.credential_injector
+                    typed_config:
+                      "@type": type.googleapis.com/envoy.extensions.filters.http.credential_injector.v3.CredentialInjector
+                      credential:
+                        name: envoy.http.injected_credentials.generic
+                        typed_config:
+                          "@type": type.googleapis.com/envoy.extensions.http.injected_credentials.generic.v3.Generic
+                          credential:
+                            name: jwt-sa-bearer
+                      overwrite: true
+                  - name: envoy.extensions.filters.http.upstream_codec.v3.UpstreamCodec
+                    typed_config:
+                      "@type": type.googleapis.com/envoy.extensions.filters.http.upstream_codec.v3.UpstreamCodec
               transport_socket:
                 name: envoy.transport_sockets.tls
                 typed_config:
@@ -210,18 +232,17 @@ spec:
                   common_tls_context:
                     tls_params:
                       tls_maximum_protocol_version: TLSv1_3
-                    tls_certificate_sds_secret_configs:
-                    - name: xds_certificate
-                      sds_config:
-                        path_config_source:
-                          path: /sds/xds-certificate.json
-                        resource_api_version: V3
                     validation_context_sds_secret_config:
                       name: xds_trusted_ca
                       sds_config:
                         path_config_source:
                           path: /sds/xds-trusted-ca.json
                         resource_api_version: V3
+            secrets:
+            - name: jwt-sa-bearer
+              generic_secret:
+                secret:
+                  filename: "/var/run/secrets/token/sa-token"
           overload_manager:
             refresh_interval: 0.25s
             resource_monitors:
@@ -237,15 +258,12 @@ spec:
         - envoy
         env:
         - name: ENVOY_GATEWAY_NAMESPACE
-          valueFrom:
-            fieldRef:
-              apiVersion: v1
-              fieldPath: metadata.namespace
+          value: envoy-gateway-system
         - name: ENVOY_SERVICE_ZONE
           valueFrom:
             fieldRef:
               apiVersion: v1
-              fieldPath: metadata.annotations['topology.kubernetes.io/zone']
+              fieldPath: metadata.labels['topology.kubernetes.io/zone']
         - name: ENVOY_POD_NAME
           valueFrom:
             fieldRef:
@@ -317,6 +335,9 @@ spec:
           readOnly: true
         - mountPath: /sds
           name: sds
+        - mountPath: /var/run/secrets/token
+          name: sa-token
+          readOnly: true
       - args:
         - envoy
         - shutdown-manager
@@ -324,15 +345,12 @@ spec:
         - envoy-gateway
         env:
         - name: ENVOY_GATEWAY_NAMESPACE
-          valueFrom:
-            fieldRef:
-              apiVersion: v1
-              fieldPath: metadata.namespace
+          value: envoy-gateway-system
         - name: ENVOY_SERVICE_ZONE
           valueFrom:
             fieldRef:
               apiVersion: v1
-              fieldPath: metadata.annotations['topology.kubernetes.io/zone']
+              fieldPath: metadata.labels['topology.kubernetes.io/zone']
         - name: ENVOY_POD_NAME
           valueFrom:
             fieldRef:
@@ -407,17 +425,27 @@ spec:
         topologyKey: kubernetes.io/hostname
         whenUnsatisfiable: DoNotSchedule
       volumes:
-      - name: certs
-        secret:
+      - name: sa-token
+        projected:
           defaultMode: 420
-          secretName: envoy
+          sources:
+          - serviceAccountToken:
+              audience: envoy-gateway.envoy-gateway-system.svc.cluster.local
+              expirationSeconds: 3600
+              path: sa-token
+      - configMap:
+          defaultMode: 420
+          items:
+          - key: ca.crt
+            path: ca.crt
+          name: envoy-default-37a8eec1
+          optional: false
+        name: certs
       - configMap:
           defaultMode: 420
           items:
           - key: xds-trusted-ca.json
             path: xds-trusted-ca.json
-          - key: xds-certificate.json
-            path: xds-certificate.json
           name: envoy-default-37a8eec1
           optional: false
         name: sds

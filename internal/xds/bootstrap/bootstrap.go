@@ -49,11 +49,6 @@ const (
 
 	defaultSdsTrustedCAPath   = "/sds/xds-trusted-ca.json"
 	defaultSdsCertificatePath = "/sds/xds-certificate.json"
-
-	// EnvoyIrKeyHeader is the metadata header used to pass the IR key to xds-server.
-	EnvoyIrKeyHeader = "x-envoy-gateway-ir-key"
-	// EnvoyNodeIDHeader is the metadata header used to pass the node ID to xds-server.
-	EnvoyNodeIDHeader = "x-envoy-node-id"
 )
 
 //go:embed bootstrap.yaml.tpl
@@ -106,8 +101,6 @@ type bootstrapParameters struct {
 	IPFamily string
 	// GatewayNamespaceMode defines whether to use the Envoy Gateway namespace mode.
 	GatewayNamespaceMode bool
-	// Metadata is used to pass the metadata to the xds-server for gateway namespace mode.
-	Metadata Metadata
 }
 
 type serverParameters struct {
@@ -155,22 +148,11 @@ type RenderBootstrapConfigOptions struct {
 	StatsServerPort      *int32
 	MaxHeapSizeBytes     uint64
 	GatewayNamespaceMode bool
-	IRKey                string
 }
 
 type SdsConfigPath struct {
 	Certificate string
 	TrustedCA   string
-}
-
-type Metadata struct {
-	// EnvoyIrKeyHeader is the IR key header of the Envoy proxy.
-	EnvoyIrKeyHeader string
-	// EnvoyIrKeyValue is the IR key value of the Envoy proxy.
-	EnvoyIrKeyValue string
-	// EnvoyNodeIDHeader is the node ID header of the Envoy proxy.
-	// Value is set to the name of infra Envoy proxy pod.
-	EnvoyNodeIDHeader string
 }
 
 // render the stringified bootstrap config in yaml format.
@@ -330,12 +312,6 @@ func GetRenderedBootstrapConfig(opts *RenderBootstrapConfigOptions) (string, err
 		}
 		cfg.parameters.GatewayNamespaceMode = opts.GatewayNamespaceMode
 		cfg.parameters.OverloadManager.MaxHeapSizeBytes = opts.MaxHeapSizeBytes
-
-		if opts.GatewayNamespaceMode && opts.IRKey != "" {
-			cfg.parameters.Metadata.EnvoyIrKeyHeader = EnvoyIrKeyHeader
-			cfg.parameters.Metadata.EnvoyIrKeyValue = opts.IRKey
-			cfg.parameters.Metadata.EnvoyNodeIDHeader = EnvoyNodeIDHeader
-		}
 	}
 
 	if err := cfg.render(); err != nil {
