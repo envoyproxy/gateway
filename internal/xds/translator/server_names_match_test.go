@@ -11,7 +11,7 @@ import (
 	corev3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	listenerv3 "github.com/envoyproxy/go-control-plane/envoy/config/listener/v3"
 	"github.com/envoyproxy/go-control-plane/pkg/wellknown"
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestAddServerNamesMatch(t *testing.T) {
@@ -98,14 +98,14 @@ func TestAddServerNamesMatch(t *testing.T) {
 			filterChain := &listenerv3.FilterChain{}
 
 			err := addServerNamesMatch(tt.xdsListener, filterChain, tt.hostnames)
-			assert.NoError(t, err)
+			require.NoError(t, err)
 
 			// Check if filter chain match was added
 			if tt.expectFilterChain {
-				assert.NotNil(t, filterChain.FilterChainMatch)
-				assert.Equal(t, tt.expectServerNames, filterChain.FilterChainMatch.ServerNames)
+				require.NotNil(t, filterChain.FilterChainMatch)
+				require.Equal(t, tt.expectServerNames, filterChain.FilterChainMatch.ServerNames)
 			} else {
-				assert.Nil(t, filterChain.FilterChainMatch)
+				require.Nil(t, filterChain.FilterChainMatch)
 			}
 
 			// Check if TLS inspector was added
@@ -117,7 +117,7 @@ func TestAddServerNamesMatch(t *testing.T) {
 						break
 					}
 				}
-				assert.True(t, hasTLSInspector, "TLS inspector filter should be added")
+				require.True(t, hasTLSInspector, "TLS inspector filter should be added")
 			} else if tt.xdsListener != nil {
 				// For non-nil listeners that shouldn't have TLS inspector
 				hasTLSInspector := false
@@ -127,7 +127,7 @@ func TestAddServerNamesMatch(t *testing.T) {
 						break
 					}
 				}
-				assert.False(t, hasTLSInspector, "TLS inspector filter should not be added")
+				require.False(t, hasTLSInspector, "TLS inspector filter should not be added")
 			}
 		})
 	}
