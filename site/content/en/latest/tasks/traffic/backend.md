@@ -202,6 +202,9 @@ Envoy Gateway can be configured as a dynamic forward proxy using the [Backend][]
 This allows Envoy Gateway to act as an HTTP proxy without needing prior knowledge of destination hostnames or IP addresses,
 while still maintaining its advanced routing and traffic management capabilities.
 
+Under the hood, Envoy Gateway uses the Envoy [Dynamic Forward Proxy](https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/http/http_proxy)
+to implement this feature.
+
 In the following example, we will create a `HTTPRoute` that references a `Backend` resource of type `DynamicResolver`.
 This setup allows Envoy Gateway to dynamically resolve the hostname in the request and forward the traffic to the original
 destination of the request.
