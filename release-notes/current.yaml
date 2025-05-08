@@ -11,6 +11,10 @@ new features: |
 
 bug fixes: |
   Fix reference grant from SecurityPolicy to referenced remoteJWKS backend not respected.
+  Fix httproute precedence by considering header/query match type.
+  Fix return err if direct response size exceeds limit.
+  Fix do not add tls inspector filter to quic listener.
+  Fix process remaining gatewayClasses after encountering an err.
   Added validation for header values.
 
 # Enhancements that improve performance.
