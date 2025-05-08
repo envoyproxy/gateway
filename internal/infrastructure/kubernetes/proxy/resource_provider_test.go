@@ -1315,8 +1315,6 @@ func TestServiceAccount(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-<<<<<<< HEAD
-<<<<<<< HEAD
 			ns := cfg.ControllerNamespace
 			if tc.gatewayNamespaceMode {
 				deployType := egv1a1.KubernetesDeployModeType(egv1a1.KubernetesDeployModeTypeGatewayNamespace)
@@ -1331,13 +1329,6 @@ func TestServiceAccount(t *testing.T) {
 				ns = tc.infra.GetProxyInfra().Namespace
 			}
 			r := NewResourceRender(ns, cfg.DNSDomain, tc.infra.GetProxyInfra(), cfg.EnvoyGateway)
-
-=======
-			r := NewResourceRender(cfg.ControllerNamespace, cfg.ControllerNamespace, cfg.DNSDomain, tc.infra.GetProxyInfra(), cfg.EnvoyGateway)
->>>>>>> 5aa72e72 (Add controller namespace to infra)
-=======
-			r := NewResourceRender(cfg.ControllerNamespace, cfg.DNSDomain, tc.infra.GetProxyInfra(), cfg.EnvoyGateway)
->>>>>>> 445c3b09 (Revert "Add controller namespace to infra")
 			sa, err := r.ServiceAccount()
 			require.NoError(t, err)
 

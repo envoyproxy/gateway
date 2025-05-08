@@ -16,7 +16,8 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 
-	"github.com/envoyproxy/gateway/internal/infrastructure/kubernetes/proxy"
+	"github.com/envoyproxy/gateway/internal/envoygateway/config"
+	"github.com/envoyproxy/gateway/internal/utils"
 )
 
 // GetKubernetesClient creates a Kubernetes client using in-cluster configuration.
@@ -66,10 +67,16 @@ func (i *JWTAuthInterceptor) validateKubeJWT(ctx context.Context, token string) 
 
 	irKeys := i.cache.GetIrKeys()
 	for _, irKey := range irKeys {
-		if proxy.ExpectedResourceHashedName(irKey) == sa {
+		if irKey2ServiceAccountName(irKey) == sa {
 			return nil
 		}
 	}
 
 	return fmt.Errorf("envoy service account %s not found in the cache", sa)
+}
+
+// this is the same logic used in infra pkg func ExpectedResourceHashedName to generate the resource name.
+func irKey2ServiceAccountName(irKey string) string {
+	hashedName := utils.GetHashedName(irKey, 48)
+	return fmt.Sprintf("%s-%s", config.EnvoyPrefix, hashedName)
 }

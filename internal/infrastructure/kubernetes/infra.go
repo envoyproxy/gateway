@@ -62,19 +62,10 @@ type Infra struct {
 
 // NewInfra returns a new Infra.
 func NewInfra(cli client.Client, cfg *config.Server) *Infra {
-<<<<<<< HEAD
 	return &Infra{
 		// Always set infra namespace to cfg.ControllerNamespace,
 		// Otherwise RateLimit resource provider will failed to create/delete.
 		Namespace:    cfg.ControllerNamespace,
-=======
-	var ns string
-	if !cfg.EnvoyGateway.GatewayNamespaceMode() {
-		ns = cfg.ControllerNamespace
-	}
-	return &Infra{
-		Namespace:    ns,
->>>>>>> 445c3b09 (Revert "Add controller namespace to infra")
 		DNSDomain:    cfg.DNSDomain,
 		EnvoyGateway: cfg.EnvoyGateway,
 		Client:       New(cli),

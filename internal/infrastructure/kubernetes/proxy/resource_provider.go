@@ -59,16 +59,7 @@ type ResourceRender struct {
 
 func NewResourceRender(ns, dnsDomain string, infra *ir.ProxyInfra, gateway *egv1a1.EnvoyGateway) *ResourceRender {
 	return &ResourceRender{
-<<<<<<< HEAD
-<<<<<<< HEAD
 		namespace:            ns,
-=======
-		Namespace:            infraNamespace,
-		ControllerNamespace:  controllerNamespace,
->>>>>>> 5aa72e72 (Add controller namespace to infra)
-=======
-		Namespace:            ns,
->>>>>>> 445c3b09 (Revert "Add controller namespace to infra")
 		DNSDomain:            dnsDomain,
 		infra:                infra,
 		ShutdownManager:      gateway.GetEnvoyGatewayProvider().GetEnvoyGatewayKubeProvider().ShutdownManager,
@@ -293,15 +284,7 @@ func (r *ResourceRender) Deployment() (*appsv1.Deployment, error) {
 	}
 
 	// Get expected bootstrap configurations rendered ProxyContainers
-<<<<<<< HEAD
-<<<<<<< HEAD
 	containers, err := expectedProxyContainers(r.infra, deploymentConfig.Container, proxyConfig.Spec.Shutdown, r.ShutdownManager, r.Namespace(), r.DNSDomain, r.GatewayNamespaceMode)
-=======
-	containers, err := expectedProxyContainers(r.infra, deploymentConfig.Container, proxyConfig.Spec.Shutdown, r.ShutdownManager, r.ControllerNamespace, r.DNSDomain, r.GatewayNamespaceMode)
->>>>>>> 5aa72e72 (Add controller namespace to infra)
-=======
-	containers, err := expectedProxyContainers(r.infra, deploymentConfig.Container, proxyConfig.Spec.Shutdown, r.ShutdownManager, r.Namespace, r.DNSDomain, r.GatewayNamespaceMode)
->>>>>>> 445c3b09 (Revert "Add controller namespace to infra")
 	if err != nil {
 		return nil, err
 	}
@@ -389,15 +372,7 @@ func (r *ResourceRender) DaemonSet() (*appsv1.DaemonSet, error) {
 	}
 
 	// Get expected bootstrap configurations rendered ProxyContainers
-<<<<<<< HEAD
-<<<<<<< HEAD
 	containers, err := expectedProxyContainers(r.infra, daemonSetConfig.Container, proxyConfig.Spec.Shutdown, r.ShutdownManager, r.Namespace(), r.DNSDomain, r.GatewayNamespaceMode)
-=======
-	containers, err := expectedProxyContainers(r.infra, daemonSetConfig.Container, proxyConfig.Spec.Shutdown, r.ShutdownManager, r.ControllerNamespace, r.DNSDomain, r.GatewayNamespaceMode)
->>>>>>> 5aa72e72 (Add controller namespace to infra)
-=======
-	containers, err := expectedProxyContainers(r.infra, daemonSetConfig.Container, proxyConfig.Spec.Shutdown, r.ShutdownManager, r.Namespace, r.DNSDomain, r.GatewayNamespaceMode)
->>>>>>> 445c3b09 (Revert "Add controller namespace to infra")
 	if err != nil {
 		return nil, err
 	}
