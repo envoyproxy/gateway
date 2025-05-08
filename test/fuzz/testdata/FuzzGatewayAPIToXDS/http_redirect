@@ -1,0 +1,99 @@
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: http-to-https-filter-redirect
+spec:
+  parentRefs:
+    - name: eg
+  hostnames:
+    - redirect.example
+  rules:
+    - filters:
+      - type: RequestRedirect
+        requestRedirect:
+          scheme: https
+          statusCode: 301
+          hostname: www.example.com
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: eg
+spec:
+  gatewayClassName: eg
+  listeners:
+  - name: http
+    port: 80
+    protocol: HTTP
+    # hostname: "*.example.com"
+  - name: https
+    port: 443
+    protocol: HTTPS
+    # hostname: "*.example.com"
+    tls:
+      mode: Terminate
+      certificateRefs:
+      - kind: Secret
+        name: example-com
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: tls-redirect
+spec:
+  parentRefs:
+    - name: eg
+      sectionName: http
+  hostnames:
+    # - "*.example.com" # catch all hostnames
+    - "www.example.com"
+  rules:
+    - filters:
+        - type: RequestRedirect
+          requestRedirect:
+            scheme: https
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: backend
+spec:
+  parentRefs:
+    - name: eg
+      sectionName: https
+  hostnames:
+    - "www.example.com"
+  rules:
+    - backendRefs:
+        - group: ""
+          kind: Service
+          name: backend
+          port: 3000
+          weight: 1
+      matches:
+        - path:
+            type: PathPrefix
+            value: /
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: http-filter-path-redirect
+spec:
+  parentRefs:
+    - name: eg
+  hostnames:
+    - path.redirect.example
+  rules:
+    - matches:
+      - path:
+          type: PathPrefix
+          value: /get
+      filters:
+      - type: RequestRedirect
+        requestRedirect:
+          path:
+            type: ReplaceFullPath
+            replaceFullPath: /status/200
+          statusCode: 302
