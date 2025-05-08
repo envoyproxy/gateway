@@ -46,8 +46,7 @@ const (
 type ResourceRender struct {
 	infra *ir.ProxyInfra
 
-	// Namespace is the Namespace used for managed infra.
-	Namespace string
+	ns string
 
 	// DNSDomain is the dns domain used by k8s services. Defaults to "cluster.local".
 	DNSDomain string
@@ -59,7 +58,7 @@ type ResourceRender struct {
 
 func NewResourceRender(ns, dnsDomain string, infra *ir.ProxyInfra, gateway *egv1a1.EnvoyGateway) *ResourceRender {
 	return &ResourceRender{
-		Namespace:            ns,
+		ns:                   ns,
 		DNSDomain:            dnsDomain,
 		infra:                infra,
 		ShutdownManager:      gateway.GetEnvoyGatewayProvider().GetEnvoyGatewayKubeProvider().ShutdownManager,
@@ -69,6 +68,10 @@ func NewResourceRender(ns, dnsDomain string, infra *ir.ProxyInfra, gateway *egv1
 
 func (r *ResourceRender) Name() string {
 	return ExpectedResourceHashedName(r.infra.Name)
+}
+
+func (r *ResourceRender) Namespace() string {
+	return r.ns
 }
 
 func (r *ResourceRender) LabelSelector() labels.Selector {
@@ -89,7 +92,7 @@ func (r *ResourceRender) ServiceAccount() (*corev1.ServiceAccount, error) {
 			APIVersion: "v1",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Namespace:   r.Namespace,
+			Namespace:   r.Namespace(),
 			Name:        r.Name(),
 			Labels:      labels,
 			Annotations: r.infra.GetProxyMetadata().Annotations,
@@ -196,7 +199,7 @@ func (r *ResourceRender) Service() (*corev1.Service, error) {
 			Kind:       "Service",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Namespace:   r.Namespace,
+			Namespace:   r.Namespace(),
 			Labels:      svcLabels,
 			Annotations: annotations,
 		},
@@ -241,7 +244,7 @@ func (r *ResourceRender) ConfigMap(cert string) (*corev1.ConfigMap, error) {
 			APIVersion: "v1",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Namespace:   r.Namespace,
+			Namespace:   r.Namespace(),
 			Name:        r.Name(),
 			Labels:      labels,
 			Annotations: r.infra.GetProxyMetadata().Annotations,
@@ -280,7 +283,7 @@ func (r *ResourceRender) Deployment() (*appsv1.Deployment, error) {
 	}
 
 	// Get expected bootstrap configurations rendered ProxyContainers
-	containers, err := expectedProxyContainers(r.infra, deploymentConfig.Container, proxyConfig.Spec.Shutdown, r.ShutdownManager, r.Namespace, r.DNSDomain, r.GatewayNamespaceMode)
+	containers, err := expectedProxyContainers(r.infra, deploymentConfig.Container, proxyConfig.Spec.Shutdown, r.ShutdownManager, r.Namespace(), r.DNSDomain, r.GatewayNamespaceMode)
 	if err != nil {
 		return nil, err
 	}
@@ -300,7 +303,7 @@ func (r *ResourceRender) Deployment() (*appsv1.Deployment, error) {
 			APIVersion: "apps/v1",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Namespace:   r.Namespace,
+			Namespace:   r.Namespace(),
 			Labels:      dpLabels,
 			Annotations: dpAnnotations,
 		},
@@ -369,7 +372,7 @@ func (r *ResourceRender) DaemonSet() (*appsv1.DaemonSet, error) {
 	}
 
 	// Get expected bootstrap configurations rendered ProxyContainers
-	containers, err := expectedProxyContainers(r.infra, daemonSetConfig.Container, proxyConfig.Spec.Shutdown, r.ShutdownManager, r.Namespace, r.DNSDomain, r.GatewayNamespaceMode)
+	containers, err := expectedProxyContainers(r.infra, daemonSetConfig.Container, proxyConfig.Spec.Shutdown, r.ShutdownManager, r.Namespace(), r.DNSDomain, r.GatewayNamespaceMode)
 	if err != nil {
 		return nil, err
 	}
@@ -389,7 +392,7 @@ func (r *ResourceRender) DaemonSet() (*appsv1.DaemonSet, error) {
 			APIVersion: "apps/v1",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Namespace:   r.Namespace,
+			Namespace:   r.Namespace(),
 			Labels:      dsLabels,
 			Annotations: dsAnnotations,
 		},
@@ -458,7 +461,7 @@ func (r *ResourceRender) PodDisruptionBudget() (*policyv1.PodDisruptionBudget, e
 	podDisruptionBudget := &policyv1.PodDisruptionBudget{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      r.Name(),
-			Namespace: r.Namespace,
+			Namespace: r.Namespace(),
 		},
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "policy/v1",
@@ -492,7 +495,7 @@ func (r *ResourceRender) HorizontalPodAutoscaler() (*autoscalingv2.HorizontalPod
 			Kind:       "HorizontalPodAutoscaler",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Namespace:   r.Namespace,
+			Namespace:   r.Namespace(),
 			Name:        r.Name(),
 			Annotations: r.infra.GetProxyMetadata().Annotations,
 			Labels:      r.infra.GetProxyMetadata().Labels,

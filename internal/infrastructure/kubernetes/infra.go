@@ -31,6 +31,7 @@ var _ ResourceRender = &ratelimit.ResourceRender{}
 // based on Infra IR resources.
 type ResourceRender interface {
 	Name() string
+	Namespace() string
 	LabelSelector() labels.Selector
 	ServiceAccount() (*corev1.ServiceAccount, error)
 	Service() (*corev1.Service, error)
@@ -61,12 +62,10 @@ type Infra struct {
 
 // NewInfra returns a new Infra.
 func NewInfra(cli client.Client, cfg *config.Server) *Infra {
-	var ns string
-	if !cfg.EnvoyGateway.GatewayNamespaceMode() {
-		ns = cfg.ControllerNamespace
-	}
 	return &Infra{
-		Namespace:    ns,
+		// Always set infra namespace to cfg.ControllerNamespace,
+		// Otherwise RateLimit resource provider will failed to create/delete.
+		Namespace:    cfg.ControllerNamespace,
 		DNSDomain:    cfg.DNSDomain,
 		EnvoyGateway: cfg.EnvoyGateway,
 		Client:       New(cli),
@@ -81,31 +80,31 @@ func (i *Infra) Close() error { return nil }
 // provided ResourceRender, if it doesn't exist and updates it if it does.
 func (i *Infra) createOrUpdate(ctx context.Context, r ResourceRender) error {
 	if err := i.createOrUpdateServiceAccount(ctx, r); err != nil {
-		return fmt.Errorf("failed to create or update serviceaccount %s/%s: %w", i.Namespace, r.Name(), err)
+		return fmt.Errorf("failed to create or update serviceaccount %s/%s: %w", r.Namespace(), r.Name(), err)
 	}
 
 	if err := i.createOrUpdateConfigMap(ctx, r); err != nil {
-		return fmt.Errorf("failed to create or update configmap %s/%s: %w", i.Namespace, r.Name(), err)
+		return fmt.Errorf("failed to create or update configmap %s/%s: %w", r.Namespace(), r.Name(), err)
 	}
 
 	if err := i.createOrUpdateDeployment(ctx, r); err != nil {
-		return fmt.Errorf("failed to create or update deployment %s/%s: %w", i.Namespace, r.Name(), err)
+		return fmt.Errorf("failed to create or update deployment %s/%s: %w", r.Namespace(), r.Name(), err)
 	}
 
 	if err := i.createOrUpdateDaemonSet(ctx, r); err != nil {
-		return fmt.Errorf("failed to create or update daemonset %s/%s: %w", i.Namespace, r.Name(), err)
+		return fmt.Errorf("failed to create or update daemonset %s/%s: %w", r.Namespace(), r.Name(), err)
 	}
 
 	if err := i.createOrUpdateService(ctx, r); err != nil {
-		return fmt.Errorf("failed to create or update service %s/%s: %w", i.Namespace, r.Name(), err)
+		return fmt.Errorf("failed to create or update service %s/%s: %w", r.Namespace(), r.Name(), err)
 	}
 
 	if err := i.createOrUpdateHPA(ctx, r); err != nil {
-		return fmt.Errorf("failed to create or update hpa %s/%s: %w", i.Namespace, r.Name(), err)
+		return fmt.Errorf("failed to create or update hpa %s/%s: %w", r.Namespace(), r.Name(), err)
 	}
 
 	if err := i.createOrUpdatePodDisruptionBudget(ctx, r); err != nil {
-		return fmt.Errorf("failed to create or update pdb %s/%s: %w", i.Namespace, r.Name(), err)
+		return fmt.Errorf("failed to create or update pdb %s/%s: %w", r.Namespace(), r.Name(), err)
 	}
 
 	return nil
@@ -114,31 +113,31 @@ func (i *Infra) createOrUpdate(ctx context.Context, r ResourceRender) error {
 // delete deletes the ServiceAccount/ConfigMap/Deployment/Service in the kube api server, if it exists.
 func (i *Infra) delete(ctx context.Context, r ResourceRender) error {
 	if err := i.deleteServiceAccount(ctx, r); err != nil {
-		return fmt.Errorf("failed to delete serviceaccount %s/%s: %w", i.Namespace, r.Name(), err)
+		return fmt.Errorf("failed to delete serviceaccount %s/%s: %w", r.Namespace(), r.Name(), err)
 	}
 
 	if err := i.deleteConfigMap(ctx, r); err != nil {
-		return fmt.Errorf("failed to delete configmap %s/%s: %w", i.Namespace, r.Name(), err)
+		return fmt.Errorf("failed to delete configmap %s/%s: %w", r.Namespace(), r.Name(), err)
 	}
 
 	if err := i.deleteDeployment(ctx, r); err != nil {
-		return fmt.Errorf("failed to delete deployment %s/%s: %w", i.Namespace, r.Name(), err)
+		return fmt.Errorf("failed to delete deployment %s/%s: %w", r.Namespace(), r.Name(), err)
 	}
 
 	if err := i.deleteDaemonSet(ctx, r); err != nil {
-		return fmt.Errorf("failed to delete daemonset %s/%s: %w", i.Namespace, r.Name(), err)
+		return fmt.Errorf("failed to delete daemonset %s/%s: %w", r.Namespace(), r.Name(), err)
 	}
 
 	if err := i.deleteService(ctx, r); err != nil {
-		return fmt.Errorf("failed to delete service %s/%s: %w", i.Namespace, r.Name(), err)
+		return fmt.Errorf("failed to delete service %s/%s: %w", r.Namespace(), r.Name(), err)
 	}
 
 	if err := i.deleteHPA(ctx, r); err != nil {
-		return fmt.Errorf("failed to delete hpa %s/%s: %w", i.Namespace, r.Name(), err)
+		return fmt.Errorf("failed to delete hpa %s/%s: %w", r.Namespace(), r.Name(), err)
 	}
 
 	if err := i.deletePDB(ctx, r); err != nil {
-		return fmt.Errorf("failed to delete pdb %s/%s: %w", i.Namespace, r.Name(), err)
+		return fmt.Errorf("failed to delete pdb %s/%s: %w", r.Namespace(), r.Name(), err)
 	}
 
 	return nil

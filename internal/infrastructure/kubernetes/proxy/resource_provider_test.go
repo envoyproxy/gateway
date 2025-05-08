@@ -567,7 +567,7 @@ func TestDeployment(t *testing.T) {
 		},
 		{
 			caseName:             "gateway-namespace-mode",
-			infra:                newTestInfraWithNamespace("default"),
+			infra:                newTestInfraWithNamespace("ns1"),
 			gatewayNamespaceMode: true,
 		},
 	}
@@ -1291,26 +1291,56 @@ func TestServiceAccount(t *testing.T) {
 	cfg, err := config.New(os.Stdout)
 	require.NoError(t, err)
 	cases := []struct {
-		name  string
-		infra *ir.Infra
+		name                 string
+		infra                *ir.Infra
+		gatewayNamespaceMode bool
 	}{
 		{
 			name:  "default",
 			infra: newTestInfra(),
-		}, {
+		},
+		{
 			name: "with-annotations",
 			infra: newTestInfraWithAnnotations(map[string]string{
 				"anno1": "value1",
 				"anno2": "value2",
 			}),
 		},
+		{
+			name:                 "gateway-namespace-mode",
+			infra:                newTestInfraWithNamespace("ns1"),
+			gatewayNamespaceMode: true,
+		},
 	}
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			r := NewResourceRender(cfg.ControllerNamespace, cfg.DNSDomain, tc.infra.GetProxyInfra(), cfg.EnvoyGateway)
+			ns := cfg.ControllerNamespace
+			if tc.gatewayNamespaceMode {
+				deployType := egv1a1.KubernetesDeployModeType(egv1a1.KubernetesDeployModeTypeGatewayNamespace)
+				cfg.EnvoyGateway.Provider = &egv1a1.EnvoyGatewayProvider{
+					Type: egv1a1.ProviderTypeKubernetes,
+					Kubernetes: &egv1a1.EnvoyGatewayKubernetesProvider{
+						Deploy: &egv1a1.KubernetesDeployMode{
+							Type: &deployType,
+						},
+					},
+				}
+				ns = tc.infra.GetProxyInfra().Namespace
+			}
+			r := NewResourceRender(ns, cfg.DNSDomain, tc.infra.GetProxyInfra(), cfg.EnvoyGateway)
+
 			sa, err := r.ServiceAccount()
 			require.NoError(t, err)
+
+			if test.OverrideTestData() {
+				deploymentYAML, err := yaml.Marshal(sa)
+				require.NoError(t, err)
+				// nolint: gosec
+				err = os.WriteFile(fmt.Sprintf("testdata/serviceaccount/%s.yaml", tc.name), deploymentYAML, 0o644)
+				require.NoError(t, err)
+				return
+			}
 
 			expected, err := loadServiceAccount(tc.name)
 			require.NoError(t, err)
