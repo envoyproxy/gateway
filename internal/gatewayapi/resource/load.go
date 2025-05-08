@@ -132,14 +132,8 @@ func loadKubernetesYAMLToResources(input []byte, addMissingResources bool) (*Loa
 				},
 				Spec: typedSpec.(gwapiv1.GatewayClassSpec),
 			}
-			if addMissingResources {
-				// fill controller name by default controller name when gatewayclass controller name empty.
-				if len(gatewayClass.Spec.ControllerName) == 0 {
-					gatewayClass.Spec.ControllerName = egv1a1.GatewayControllerName
-				}
-				if gatewayClass.Spec.ParametersRef == nil {
-					gatewayclassIndexes = append(gatewayclassIndexes, len(resources.GatewayClasses))
-				}
+			if addMissingResources && gatewayClass.Spec.ParametersRef == nil {
+				gatewayclassIndexes = append(gatewayclassIndexes, len(resources.GatewayClasses))
 			}
 			resources.GatewayClasses = append(resources.GatewayClasses, gatewayClass)
 		case KindGateway:
