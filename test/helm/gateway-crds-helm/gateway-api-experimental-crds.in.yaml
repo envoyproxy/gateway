@@ -1,6 +1,6 @@
 crds:
   gatewayAPI:
-    enabled: false
+    enabled: true
     channel: experimental
   envoyGateway:
     enabled: false
