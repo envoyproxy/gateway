@@ -60,7 +60,7 @@ spec:
             fieldRef:
               apiVersion: v1
               fieldPath: metadata.name
-        image: docker.io/envoyproxy/envoy:distroless-v1.33.1
+        image: docker.io/envoyproxy/envoy:distroless-v1.33.3
         imagePullPolicy: IfNotPresent
         lifecycle:
           preStop:
