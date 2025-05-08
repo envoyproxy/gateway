@@ -7,6 +7,6 @@ metadata:
     app.kubernetes.io/managed-by: envoy-gateway
     app.kubernetes.io/name: envoy
     gateway.envoyproxy.io/owning-gateway-name: default
-    gateway.envoyproxy.io/owning-gateway-namespace: default
+    gateway.envoyproxy.io/owning-gateway-namespace: ns1
   name: envoy-default-37a8eec1
   namespace: ns1

@@ -46,11 +46,11 @@ const (
 type ResourceRender struct {
 	infra *ir.ProxyInfra
 
-	// namespace is the Namespace used for managed infra.
-	namespace string
+	// envoyNamespace is the namespace used for managed infra.
+	envoyNamespace string
 
-	// ControllerNamespace is the Namespace used for Envoy Gateway controller.
-	ControllerNamespace string
+	// controllerNamespace is the namespace used for Envoy Gateway controller.
+	controllerNamespace string
 
 	// DNSDomain is the dns domain used by k8s services. Defaults to "cluster.local".
 	DNSDomain string
@@ -60,9 +60,10 @@ type ResourceRender struct {
 	GatewayNamespaceMode bool
 }
 
-func NewResourceRender(infraNamespace, controllerNamespace, dnsDomain string, infra *ir.ProxyInfra, gateway *egv1a1.EnvoyGateway) *ResourceRender {
+func NewResourceRender(envoyNamespace, controllerNamespace, dnsDomain string, infra *ir.ProxyInfra, gateway *egv1a1.EnvoyGateway) *ResourceRender {
 	return &ResourceRender{
-		namespace:            ns,
+		envoyNamespace:       envoyNamespace,
+		controllerNamespace:  controllerNamespace,
 		DNSDomain:            dnsDomain,
 		infra:                infra,
 		ShutdownManager:      gateway.GetEnvoyGatewayProvider().GetEnvoyGatewayKubeProvider().ShutdownManager,
@@ -75,7 +76,11 @@ func (r *ResourceRender) Name() string {
 }
 
 func (r *ResourceRender) Namespace() string {
-	return r.namespace
+	return r.envoyNamespace
+}
+
+func (r *ResourceRender) ControllerNamespace() string {
+	return r.controllerNamespace
 }
 
 func (r *ResourceRender) LabelSelector() labels.Selector {
@@ -287,7 +292,7 @@ func (r *ResourceRender) Deployment() (*appsv1.Deployment, error) {
 	}
 
 	// Get expected bootstrap configurations rendered ProxyContainers
-	containers, err := expectedProxyContainers(r.infra, deploymentConfig.Container, proxyConfig.Spec.Shutdown, r.ShutdownManager, r.Namespace(), r.DNSDomain, r.GatewayNamespaceMode)
+	containers, err := expectedProxyContainers(r.infra, deploymentConfig.Container, proxyConfig.Spec.Shutdown, r.ShutdownManager, r.ControllerNamespace(), r.DNSDomain, r.GatewayNamespaceMode)
 	if err != nil {
 		return nil, err
 	}
@@ -375,7 +380,7 @@ func (r *ResourceRender) DaemonSet() (*appsv1.DaemonSet, error) {
 	}
 
 	// Get expected bootstrap configurations rendered ProxyContainers
-	containers, err := expectedProxyContainers(r.infra, daemonSetConfig.Container, proxyConfig.Spec.Shutdown, r.ShutdownManager, r.Namespace(), r.DNSDomain, r.GatewayNamespaceMode)
+	containers, err := expectedProxyContainers(r.infra, daemonSetConfig.Container, proxyConfig.Spec.Shutdown, r.ShutdownManager, r.ControllerNamespace(), r.DNSDomain, r.GatewayNamespaceMode)
 	if err != nil {
 		return nil, err
 	}

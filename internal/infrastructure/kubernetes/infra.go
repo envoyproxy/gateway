@@ -48,9 +48,6 @@ type Infra struct {
 	// Namespace is the Namespace used for managed infra.
 	Namespace string
 
-	// ControllerNamespace is the Namespace used for Envoy Gateway controller.
-	ControllerNamespace string
-
 	// DNSDomain is the dns domain used by k8s services. Defaults to "cluster.local".
 	DNSDomain string
 

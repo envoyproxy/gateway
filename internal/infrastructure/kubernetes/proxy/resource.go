@@ -84,7 +84,7 @@ func enablePrometheus(infra *ir.ProxyInfra) bool {
 func expectedProxyContainers(infra *ir.ProxyInfra,
 	containerSpec *egv1a1.KubernetesContainerSpec,
 	shutdownConfig *egv1a1.ShutdownConfig, shutdownManager *egv1a1.ShutdownManager,
-	egNamespace, dnsDomain string, gatewayNamespaceMode bool,
+	controllerNamespace, dnsDomain string, gatewayNamespaceMode bool,
 ) ([]corev1.Container, error) {
 	ports := make([]corev1.ContainerPort, 0, 2)
 	if enablePrometheus(infra) {
@@ -116,7 +116,7 @@ func expectedProxyContainers(infra *ir.ProxyInfra,
 			TrustedCA:   filepath.Join("/sds", common.SdsCAFilename),
 		},
 		MaxHeapSizeBytes: maxHeapSizeBytes,
-		XdsServerHost:    ptr.To(fmt.Sprintf("%s.%s.svc.%s", config.EnvoyGatewayServiceName, egNamespace, dnsDomain)),
+		XdsServerHost:    ptr.To(fmt.Sprintf("%s.%s.svc.%s", config.EnvoyGatewayServiceName, controllerNamespace, dnsDomain)),
 	}
 
 	args, err := common.BuildProxyArgs(infra, shutdownConfig, bootstrapConfigOptions, fmt.Sprintf("$(%s)", envoyPodEnvVar), gatewayNamespaceMode)
@@ -131,7 +131,7 @@ func expectedProxyContainers(infra *ir.ProxyInfra,
 			ImagePullPolicy:          corev1.PullIfNotPresent,
 			Command:                  []string{"envoy"},
 			Args:                     args,
-			Env:                      expectedContainerEnv(containerSpec, egNamespace),
+			Env:                      expectedContainerEnv(containerSpec, controllerNamespace),
 			Resources:                *containerSpec.Resources,
 			SecurityContext:          expectedEnvoySecurityContext(containerSpec),
 			Ports:                    ports,
@@ -193,7 +193,7 @@ func expectedProxyContainers(infra *ir.ProxyInfra,
 			ImagePullPolicy:          corev1.PullIfNotPresent,
 			Command:                  []string{"envoy-gateway"},
 			Args:                     expectedShutdownManagerArgs(shutdownConfig),
-			Env:                      expectedContainerEnv(nil, egNamespace),
+			Env:                      expectedContainerEnv(nil, controllerNamespace),
 			Resources:                *egv1a1.DefaultShutdownManagerContainerResourceRequirements(),
 			TerminationMessagePolicy: corev1.TerminationMessageReadFile,
 			TerminationMessagePath:   "/dev/termination-log",

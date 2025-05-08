@@ -44,8 +44,11 @@ func newTestInfra() *ir.Infra {
 }
 
 func newTestInfraWithNamespace(namespace string) *ir.Infra {
-	i := newTestInfra()
+	i := ir.NewInfra()
 	i.Proxy.Namespace = namespace
+	i.Proxy.GetProxyMetadata().Labels[gatewayapi.OwningGatewayNamespaceLabel] = namespace
+	i.Proxy.GetProxyMetadata().Labels[gatewayapi.OwningGatewayNameLabel] = i.Proxy.Name
+
 	return i
 }
 
@@ -1328,7 +1331,12 @@ func TestServiceAccount(t *testing.T) {
 				}
 				ns = tc.infra.GetProxyInfra().Namespace
 			}
+<<<<<<< HEAD
 			r := NewResourceRender(ns, cfg.DNSDomain, tc.infra.GetProxyInfra(), cfg.EnvoyGateway)
+=======
+			r := NewResourceRender(ns, cfg.ControllerNamespace, cfg.DNSDomain, tc.infra.GetProxyInfra(), cfg.EnvoyGateway)
+
+>>>>>>> dac30cf0 (rebase code and add controller namespace helper)
 			sa, err := r.ServiceAccount()
 			require.NoError(t, err)
 
