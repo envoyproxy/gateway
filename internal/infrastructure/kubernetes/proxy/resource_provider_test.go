@@ -1331,12 +1331,7 @@ func TestServiceAccount(t *testing.T) {
 				}
 				ns = tc.infra.GetProxyInfra().Namespace
 			}
-<<<<<<< HEAD
-			r := NewResourceRender(ns, cfg.DNSDomain, tc.infra.GetProxyInfra(), cfg.EnvoyGateway)
-=======
 			r := NewResourceRender(ns, cfg.ControllerNamespace, cfg.DNSDomain, tc.infra.GetProxyInfra(), cfg.EnvoyGateway)
-
->>>>>>> dac30cf0 (rebase code and add controller namespace helper)
 			sa, err := r.ServiceAccount()
 			require.NoError(t, err)
 
