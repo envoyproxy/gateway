@@ -192,15 +192,6 @@ func (t *Translator) ProcessBackendTrafficPolicies(resources *resource.Resources
 								)
 							}
 
-							status.SetConditionForPolicyAncestor(&policy.Status,
-								ancestorRef,
-								t.GatewayControllerName,
-								egv1a1.PolicyConditionMerged,
-								metav1.ConditionTrue,
-								egv1a1.PolicyReasonMerged,
-								"Merged with parent policy but not found.",
-								policy.Generation,
-							)
 							continue
 						}
 

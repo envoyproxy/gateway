@@ -35,18 +35,6 @@ backendTrafficPolicies:
     - ancestorRef:
         group: gateway.networking.k8s.io
         kind: Gateway
-        name: gateway-2
-        namespace: envoy-gateway
-      conditions:
-      - lastTransitionTime: null
-        message: Merged with parent policy but not found.
-        reason: Merged
-        status: "True"
-        type: Merged
-      controllerName: gateway.envoyproxy.io/gatewayclass-controller
-    - ancestorRef:
-        group: gateway.networking.k8s.io
-        kind: Gateway
         name: gateway-1
         namespace: envoy-gateway
         sectionName: http
