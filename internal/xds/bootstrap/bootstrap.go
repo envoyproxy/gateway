@@ -98,7 +98,8 @@ type bootstrapParameters struct {
 	OverloadManager overloadManagerParameters
 
 	// IPFamily of the Listener
-	IPFamily             string
+	IPFamily string
+	// GatewayNamespaceMode defines whether to use the Envoy Gateway namespace mode.
 	GatewayNamespaceMode bool
 }
 
