@@ -76,7 +76,7 @@ spec:
           limit:
             requests: 3
             unit: Hour
-          shared: false    
+          shared: false
 ---
 apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: BackendTrafficPolicy
