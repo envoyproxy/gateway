@@ -7,7 +7,7 @@ metadata:
     app.kubernetes.io/managed-by: envoy-gateway
     app.kubernetes.io/name: envoy
     gateway.envoyproxy.io/owning-gateway-name: default
-    gateway.envoyproxy.io/owning-gateway-namespace: default
+    gateway.envoyproxy.io/owning-gateway-namespace: ns1
   name: envoy-default-37a8eec1
   namespace: ns1
 spec:
@@ -19,7 +19,7 @@ spec:
       app.kubernetes.io/managed-by: envoy-gateway
       app.kubernetes.io/name: envoy
       gateway.envoyproxy.io/owning-gateway-name: default
-      gateway.envoyproxy.io/owning-gateway-namespace: default
+      gateway.envoyproxy.io/owning-gateway-namespace: ns1
   strategy:
     type: RollingUpdate
   template:
@@ -34,9 +34,8 @@ spec:
         app.kubernetes.io/managed-by: envoy-gateway
         app.kubernetes.io/name: envoy
         gateway.envoyproxy.io/owning-gateway-name: default
-        gateway.envoyproxy.io/owning-gateway-namespace: default
+        gateway.envoyproxy.io/owning-gateway-namespace: ns1
     spec:
-      automountServiceAccountToken: true
       containers:
       - args:
         - --service-cluster default
@@ -243,7 +242,7 @@ spec:
             - name: jwt-sa-bearer
               generic_secret:
                 secret:
-                  filename: "/var/run/secrets/kubernetes.io/serviceaccount/token"
+                  filename: "/var/run/secrets/token/sa-token"
           overload_manager:
             refresh_interval: 0.25s
             resource_monitors:
@@ -264,7 +263,7 @@ spec:
           valueFrom:
             fieldRef:
               apiVersion: v1
-              fieldPath: metadata.labels['topology.kubernetes.io/zone']
+              fieldPath: metadata.annotations['topology.kubernetes.io/zone']
         - name: ENVOY_POD_NAME
           valueFrom:
             fieldRef:
@@ -336,6 +335,9 @@ spec:
           readOnly: true
         - mountPath: /sds
           name: sds
+        - mountPath: /var/run/secrets/token
+          name: sa-token
+          readOnly: true
       - args:
         - envoy
         - shutdown-manager
@@ -348,7 +350,7 @@ spec:
           valueFrom:
             fieldRef:
               apiVersion: v1
-              fieldPath: metadata.labels['topology.kubernetes.io/zone']
+              fieldPath: metadata.annotations['topology.kubernetes.io/zone']
         - name: ENVOY_POD_NAME
           valueFrom:
             fieldRef:
@@ -414,6 +416,14 @@ spec:
       serviceAccountName: envoy-default-37a8eec1
       terminationGracePeriodSeconds: 360
       volumes:
+      - name: sa-token
+        projected:
+          defaultMode: 420
+          sources:
+          - serviceAccountToken:
+              audience: envoy-gateway.envoy-gateway-system.svc.cluster.local
+              expirationSeconds: 3600
+              path: sa-token
       - configMap:
           defaultMode: 420
           items:
