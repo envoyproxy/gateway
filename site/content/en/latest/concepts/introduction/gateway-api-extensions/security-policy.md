@@ -15,7 +15,7 @@ title: "SecurityPolicy"
 
 1. **Authentication Methods:**
     - Authenticate client apps using mTLS, JWTs, API keys, or Basic Auth
-- Authenticate users with OIDC Provider integration
+    - Authenticate users with OIDC Provider integration
 
 2. **Authorization Controls:**
     - Define and enforce authorization rules based on user roles and permissions
