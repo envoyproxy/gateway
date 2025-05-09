@@ -8,6 +8,7 @@ security updates: |
 
 # New features or capabilities added in this release.
 new features: |
+  Added support for optionally installing the Gateway API standard channel CRDs through the gateway-crds-helm chart.
 
 bug fixes: |
   Fix reference grant from SecurityPolicy to referenced remoteJWKS backend not respected.
