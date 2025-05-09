@@ -14,7 +14,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
-
 	"github.com/envoyproxy/gateway/internal/ir"
 )
 

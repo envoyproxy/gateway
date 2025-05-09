@@ -494,14 +494,6 @@ func applyTrafficFeatureToRoute(route RouteContext,
 	}
 }
 
-func mergeBackendTrafficPolicy(routePolicy, gwPolicy *egv1a1.BackendTrafficPolicy) (*egv1a1.BackendTrafficPolicy, error) {
-	if routePolicy.Spec.MergeType == nil || gwPolicy == nil {
-		return routePolicy.DeepCopy(), nil
-	}
-
-	return utils.Merge[*egv1a1.BackendTrafficPolicy](gwPolicy, routePolicy, *routePolicy.Spec.MergeType)
-}
-
 func (t *Translator) buildTrafficFeatures(policy *egv1a1.BackendTrafficPolicy, resources *resource.Resources) (*ir.TrafficFeatures, error) {
 	var (
 		rl          *ir.RateLimit
