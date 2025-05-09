@@ -322,7 +322,6 @@ func (r *ResourceRender) Deployment() (*appsv1.Deployment, error) {
 					Containers:                    containers,
 					InitContainers:                deploymentConfig.InitContainers,
 					ServiceAccountName:            r.Name(),
-					AutomountServiceAccountToken:  expectedAutoMountServiceAccountToken(r.GatewayNamespaceMode),
 					TerminationGracePeriodSeconds: expectedTerminationGracePeriodSeconds(proxyConfig.Spec.Shutdown),
 					DNSPolicy:                     corev1.DNSClusterFirst,
 					RestartPolicy:                 corev1.RestartPolicyAlways,
@@ -330,7 +329,7 @@ func (r *ResourceRender) Deployment() (*appsv1.Deployment, error) {
 					SecurityContext:               deploymentConfig.Pod.SecurityContext,
 					Affinity:                      deploymentConfig.Pod.Affinity,
 					Tolerations:                   deploymentConfig.Pod.Tolerations,
-					Volumes:                       expectedVolumes(r.infra.Name, r.GatewayNamespaceMode, deploymentConfig.Pod),
+					Volumes:                       expectedVolumes(r.infra.Name, r.GatewayNamespaceMode, deploymentConfig.Pod, r.DNSDomain),
 					ImagePullSecrets:              deploymentConfig.Pod.ImagePullSecrets,
 					NodeSelector:                  deploymentConfig.Pod.NodeSelector,
 					TopologySpreadConstraints:     deploymentConfig.Pod.TopologySpreadConstraints,
@@ -537,10 +536,6 @@ func expectedTerminationGracePeriodSeconds(cfg *egv1a1.ShutdownConfig) *int64 {
 	return ptr.To(int64(s))
 }
 
-func expectedAutoMountServiceAccountToken(gatewayNamespacedMode bool) *bool {
-	return ptr.To(gatewayNamespacedMode)
-}
-
 func (r *ResourceRender) getPodSpec(
 	containers, initContainers []corev1.Container,
 	pod *egv1a1.KubernetesPodSpec,
@@ -550,7 +545,6 @@ func (r *ResourceRender) getPodSpec(
 		Containers:                    containers,
 		InitContainers:                initContainers,
 		ServiceAccountName:            ExpectedResourceHashedName(r.infra.Name),
-		AutomountServiceAccountToken:  expectedAutoMountServiceAccountToken(r.GatewayNamespaceMode),
 		TerminationGracePeriodSeconds: expectedTerminationGracePeriodSeconds(proxyConfig.Spec.Shutdown),
 		DNSPolicy:                     corev1.DNSClusterFirst,
 		RestartPolicy:                 corev1.RestartPolicyAlways,
@@ -558,7 +552,7 @@ func (r *ResourceRender) getPodSpec(
 		SecurityContext:               pod.SecurityContext,
 		Affinity:                      pod.Affinity,
 		Tolerations:                   pod.Tolerations,
-		Volumes:                       expectedVolumes(r.infra.Name, r.GatewayNamespaceMode, pod),
+		Volumes:                       expectedVolumes(r.infra.Name, r.GatewayNamespaceMode, pod, r.DNSDomain),
 		ImagePullSecrets:              pod.ImagePullSecrets,
 		NodeSelector:                  pod.NodeSelector,
 		TopologySpreadConstraints:     pod.TopologySpreadConstraints,
