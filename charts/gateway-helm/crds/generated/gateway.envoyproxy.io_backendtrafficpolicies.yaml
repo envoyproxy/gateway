@@ -947,11 +947,6 @@ spec:
                               - requests
                               - unit
                               type: object
-                            name:
-                              description: |-
-                                Name is the name of the rule. This is used to identify the rule
-                                in the Envoy configuration and as a unique identifier for merging.
-                              type: string
                             shared:
                               default: false
                               description: |-
@@ -1202,11 +1197,6 @@ spec:
                               - requests
                               - unit
                               type: object
-                            name:
-                              description: |-
-                                Name is the name of the rule. This is used to identify the rule
-                                in the Envoy configuration and as a unique identifier for merging.
-                              type: string
                             shared:
                               default: false
                               description: |-
