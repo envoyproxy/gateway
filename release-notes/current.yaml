@@ -8,6 +8,7 @@ security updates: |
 
 # New features or capabilities added in this release.
 new features: |
+  Add support for loading multiple gatewayclasses and envoyproxies resources.
 
 bug fixes: |
   Fix reference grant from SecurityPolicy to referenced remoteJWKS backend not respected.

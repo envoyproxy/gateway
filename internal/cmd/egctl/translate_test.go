@@ -266,7 +266,7 @@ func TestTranslate(t *testing.T) {
 			from:   "gateway-api",
 			to:     "gateway-api",
 			output: yamlOutput,
-			expect: true,
+			expect: false,
 		},
 		{
 			name:   "no-gateway-class-resources",
@@ -377,6 +377,7 @@ func TestTranslate(t *testing.T) {
 
 			opts := []cmp.Option{
 				cmpopts.IgnoreFields(metav1.Condition{}, "LastTransitionTime"),
+				cmpopts.IgnoreFields(metav1.ObjectMeta{}, "ResourceVersion"),
 				cmpopts.IgnoreFields(resource.Resources{}, "serviceMap"),
 			}
 

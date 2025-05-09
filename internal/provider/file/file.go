@@ -34,9 +34,8 @@ type Provider struct {
 	paths      []string
 	logger     logr.Logger
 	watcher    filewatcher.FileWatcher
-	resources  *message.ProviderResources
 	reconciler *kubernetes.OfflineGatewayAPIReconciler
-	store      *resourcesStore
+	store      *ResourcesStore
 	status     *StatusHandler
 
 	// ready indicates whether the provider can start watching filesystem events.
@@ -61,9 +60,8 @@ func New(ctx context.Context, svr *config.Server, resources *message.ProviderRes
 		paths:      paths.UnsortedList(),
 		logger:     logger,
 		watcher:    filewatcher.NewWatcher(),
-		resources:  resources,
 		reconciler: reconciler,
-		store:      newResourcesStore(svr.EnvoyGateway.Gateway.ControllerName, reconciler.Client, resources, logger),
+		store:      NewResourcesStore(svr.EnvoyGateway.Gateway.ControllerName, reconciler.Client, resources, logger),
 		status:     statusHandler,
 	}, nil
 }

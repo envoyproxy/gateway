@@ -52,7 +52,7 @@ spec:
 		require.NoError(t, err)
 		rs, err := loadFromFilesAndDirs([]string{tmpfile}, nil)
 		require.NoError(t, err)
-		require.Len(t, rs, 1)
+		require.Len(t, rs.GatewayClasses, 1)
 	})
 }
 
@@ -82,6 +82,6 @@ spec:
 		require.NoError(t, err)
 		rs, err := loadFromDir(tmpdir)
 		require.NoError(t, err)
-		require.Len(t, rs, 1)
+		require.Len(t, rs.GatewayClasses, 1)
 	})
 }

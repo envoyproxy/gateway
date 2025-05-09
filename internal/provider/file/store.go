@@ -32,7 +32,7 @@ const (
 	GatewayDeletionOrder = 3
 )
 
-type resourcesStore struct {
+type ResourcesStore struct {
 	name      string
 	keys      sets.Set[storeKey]
 	client    client.Client
@@ -56,8 +56,8 @@ func (s storeKey) String() string {
 		s.GroupVersionKind.String(), s.NamespacedName.String(), s.deletionOrder)
 }
 
-func newResourcesStore(name string, client client.Client, resources *message.ProviderResources, logger logr.Logger) *resourcesStore {
-	return &resourcesStore{
+func NewResourcesStore(name string, client client.Client, resources *message.ProviderResources, logger logr.Logger) *ResourcesStore {
+	return &ResourcesStore{
 		name:      name,
 		keys:      sets.New[storeKey](),
 		client:    client,
@@ -75,21 +75,16 @@ func newStoreKey(obj client.Object) storeKey {
 }
 
 // ReloadAll loads and stores all resources from all given files and directories.
-func (r *resourcesStore) ReloadAll(ctx context.Context, files, dirs []string) error {
-	// TODO(sh2): add arbitrary number of resources support for load function.
+func (r *ResourcesStore) ReloadAll(ctx context.Context, files, dirs []string) error {
 	resources, err := loadFromFilesAndDirs(files, dirs)
 	if err != nil {
 		return err
 	}
 
 	var errList error
-	currentKeys := sets.New[storeKey]()
-	for _, res := range resources {
-		collectKeys, err := r.storeResources(ctx, res)
-		if err != nil {
-			errList = errors.Join(errList, err)
-		}
-		currentKeys = currentKeys.Union(collectKeys)
+	currentKeys, err := r.Store(ctx, resources, false)
+	if err != nil {
+		errList = errors.Join(errList, err)
 	}
 
 	// If no resources were created or updated, stop reconciling.
@@ -123,13 +118,13 @@ func (r *resourcesStore) ReloadAll(ctx context.Context, files, dirs []string) er
 	return errList
 }
 
-// storeResources stores resources via offline gateway-api client.
-// For file provider, all gateway-api resources will be stored except:
+// Store stores resources via offline gateway-api client.
+// For file provider, storeService set to false, means all gateway-api resources will be stored except:
 // - Service
 // - ServiceImport
 // - EndpointSlices
 // Becasues these resources has no effects on the host infra layer.
-func (r *resourcesStore) storeResources(ctx context.Context, re *resource.Resources) (sets.Set[storeKey], error) {
+func (r *ResourcesStore) Store(ctx context.Context, re *resource.LoadResources, storeService bool) (sets.Set[storeKey], error) {
 	if re == nil {
 		return nil, nil
 	}
@@ -139,15 +134,13 @@ func (r *resourcesStore) storeResources(ctx context.Context, re *resource.Resour
 		collectKeys = sets.New[storeKey]()
 	)
 
-	if err := r.stroeObjectWithKeys(ctx, re.EnvoyProxyForGatewayClass, collectKeys); err != nil {
-		errs = errors.Join(errs, err)
+	for _, obj := range re.GatewayClasses {
+		if err := r.stroeObjectWithKeys(ctx, obj, collectKeys); err != nil {
+			errs = errors.Join(errs, err)
+		}
 	}
 
-	if err := r.stroeObjectWithKeys(ctx, re.GatewayClass, collectKeys); err != nil {
-		errs = errors.Join(errs, err)
-	}
-
-	for _, obj := range re.EnvoyProxiesForGateways {
+	for _, obj := range re.EnvoyProxies {
 		if err := r.stroeObjectWithKeys(ctx, obj, collectKeys); err != nil {
 			errs = errors.Join(errs, err)
 		}
@@ -261,11 +254,31 @@ func (r *resourcesStore) storeResources(ctx context.Context, re *resource.Resour
 		}
 	}
 
+	if storeService {
+		for _, obj := range re.Services {
+			if err := r.stroeObjectWithKeys(ctx, obj, collectKeys); err != nil {
+				errs = errors.Join(errs, err)
+			}
+		}
+
+		for _, obj := range re.ServiceImports {
+			if err := r.stroeObjectWithKeys(ctx, obj, collectKeys); err != nil {
+				errs = errors.Join(errs, err)
+			}
+		}
+
+		for _, obj := range re.EndpointSlices {
+			if err := r.stroeObjectWithKeys(ctx, obj, collectKeys); err != nil {
+				errs = errors.Join(errs, err)
+			}
+		}
+	}
+
 	return collectKeys, errs
 }
 
 // stroeObjectWithKeys stores object while collecting its key.
-func (r *resourcesStore) stroeObjectWithKeys(ctx context.Context, obj client.Object, keys sets.Set[storeKey]) error {
+func (r *ResourcesStore) stroeObjectWithKeys(ctx context.Context, obj client.Object, keys sets.Set[storeKey]) error {
 	key, err := r.storeObject(ctx, obj)
 	if err != nil && key != nil {
 		return fmt.Errorf("failed to store %s %s: %w", key.Kind, key.NamespacedName.String(), err)
@@ -281,7 +294,7 @@ func (r *resourcesStore) stroeObjectWithKeys(ctx context.Context, obj client.Obj
 }
 
 // storeObject will do create for non-exist object and update for existing object.
-func (r *resourcesStore) storeObject(ctx context.Context, obj client.Object) (*storeKey, error) {
+func (r *ResourcesStore) storeObject(ctx context.Context, obj client.Object) (*storeKey, error) {
 	if obj == nil || reflect.ValueOf(obj).IsNil() {
 		return nil, nil
 	}
