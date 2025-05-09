@@ -105,14 +105,22 @@ func (h *XDSHook) PostHTTPListenerModifyHook(l *listener.Listener, extensionReso
 	return resp.Listener, nil
 }
 
-func (h *XDSHook) PostTranslateModifyHook(clusters []*cluster.Cluster, secrets []*tls.Secret) ([]*cluster.Cluster, []*tls.Secret, error) {
+func (h *XDSHook) PostTranslateModifyHook(clusters []*cluster.Cluster, secrets []*tls.Secret, extensionPolicies []*unstructured.Unstructured) ([]*cluster.Cluster, []*tls.Secret, error) {
 	// Make the request to the extension server
+	// Take all of the unstructured resources for the extension and package them into bytes
+	extensionPoliciesBytes, err := translateUnstructuredToUnstructuredBytes(extensionPolicies)
+	if err != nil {
+		return clusters, secrets, err
+	}
+
 	ctx := context.Background()
 	resp, err := h.grpcClient.PostTranslateModify(ctx,
 		&extension.PostTranslateModifyRequest{
-			PostTranslateContext: &extension.PostTranslateExtensionContext{},
-			Clusters:             clusters,
-			Secrets:              secrets,
+			PostTranslateContext: &extension.PostTranslateExtensionContext{
+				ExtensionResources: extensionPoliciesBytes,
+			},
+			Clusters: clusters,
+			Secrets:  secrets,
 		})
 	if err != nil {
 		return nil, nil, err
