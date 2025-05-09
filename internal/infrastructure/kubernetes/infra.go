@@ -45,8 +45,8 @@ type ResourceRender interface {
 // Infra manages the creation and deletion of Kubernetes infrastructure
 // based on Infra IR resources.
 type Infra struct {
-	// Namespace is the Namespace used for managed infra.
-	Namespace string
+	// ControllerNamespace is the namespace where Envoy Gateway is deployed.
+	ControllerNamespace string
 
 	// DNSDomain is the dns domain used by k8s services. Defaults to "cluster.local".
 	DNSDomain string
@@ -65,11 +65,11 @@ func NewInfra(cli client.Client, cfg *config.Server) *Infra {
 	return &Infra{
 		// Always set infra namespace to cfg.ControllerNamespace,
 		// Otherwise RateLimit resource provider will failed to create/delete.
-		Namespace:    cfg.ControllerNamespace,
-		DNSDomain:    cfg.DNSDomain,
-		EnvoyGateway: cfg.EnvoyGateway,
-		Client:       New(cli),
-		logger:       cfg.Logger.WithName(string(egv1a1.LogComponentInfrastructureRunner)),
+		ControllerNamespace: cfg.ControllerNamespace,
+		DNSDomain:           cfg.DNSDomain,
+		EnvoyGateway:        cfg.EnvoyGateway,
+		Client:              New(cli),
+		logger:              cfg.Logger.WithName(string(egv1a1.LogComponentInfrastructureRunner)),
 	}
 }
 

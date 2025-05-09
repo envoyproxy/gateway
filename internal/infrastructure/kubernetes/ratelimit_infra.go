@@ -17,14 +17,14 @@ import (
 
 // CreateOrUpdateRateLimitInfra creates the managed kube rate limit infra, if it doesn't exist.
 func (i *Infra) CreateOrUpdateRateLimitInfra(ctx context.Context) error {
-	if err := ratelimit.Validate(ctx, i.Client.Client, i.EnvoyGateway, i.Namespace); err != nil {
+	if err := ratelimit.Validate(ctx, i.Client.Client, i.EnvoyGateway, i.ControllerNamespace); err != nil {
 		return err
 	}
 
 	// Create ratelimit infra requires the uid of owner reference.
 	ownerReferenceUID := make(map[string]types.UID)
 	key := types.NamespacedName{
-		Namespace: i.Namespace,
+		Namespace: i.ControllerNamespace,
 		Name:      "envoy-gateway",
 	}
 
@@ -46,13 +46,13 @@ func (i *Infra) CreateOrUpdateRateLimitInfra(ctx context.Context) error {
 	}
 	ownerReferenceUID[ratelimit.ResourceKindServiceAccount] = serviceAccountUID
 
-	r := ratelimit.NewResourceRender(i.Namespace, i.EnvoyGateway, ownerReferenceUID)
+	r := ratelimit.NewResourceRender(i.ControllerNamespace, i.EnvoyGateway, ownerReferenceUID)
 	return i.createOrUpdate(ctx, r)
 }
 
 // DeleteRateLimitInfra removes the managed kube infra, if it doesn't exist.
 func (i *Infra) DeleteRateLimitInfra(ctx context.Context) error {
 	// Delete ratelimit infra do not require the uid of owner reference.
-	r := ratelimit.NewResourceRender(i.Namespace, i.EnvoyGateway, nil)
+	r := ratelimit.NewResourceRender(i.ControllerNamespace, i.EnvoyGateway, nil)
 	return i.delete(ctx, r)
 }
