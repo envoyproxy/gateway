@@ -649,7 +649,7 @@ func buildRateLimitServiceDescriptors(route *ir.HTTPRoute) []*rlsconfv3.RateLimi
 }
 
 // buildRateLimitTLSocket builds the TLS socket for the rate limit service.
-func buildRateLimitTLSocket() (*corev3.TransportSocket, error) {
+func (t *Translator) buildRateLimitTLSocket() (*corev3.TransportSocket, error) {
 	tlsCtx := &tlsv3.UpstreamTlsContext{
 		CommonTlsContext: &tlsv3.CommonTlsContext{
 			TlsCertificates: []*tlsv3.TlsCertificate{},
@@ -663,15 +663,19 @@ func buildRateLimitTLSocket() (*corev3.TransportSocket, error) {
 		},
 	}
 
-	tlsCert := &tlsv3.TlsCertificate{
-		CertificateChain: &corev3.DataSource{
-			Specifier: &corev3.DataSource_Filename{Filename: rateLimitClientTLSCertFilename},
-		},
-		PrivateKey: &corev3.DataSource{
-			Specifier: &corev3.DataSource_Filename{Filename: rateLimitClientTLSKeyFilename},
-		},
+	// Add client certificates only when not in gateway namespace mode
+	// TODO: Add better support for gateway namespace mode
+	if !t.GatewayNamespaceMode {
+		tlsCert := &tlsv3.TlsCertificate{
+			CertificateChain: &corev3.DataSource{
+				Specifier: &corev3.DataSource_Filename{Filename: rateLimitClientTLSCertFilename},
+			},
+			PrivateKey: &corev3.DataSource{
+				Specifier: &corev3.DataSource_Filename{Filename: rateLimitClientTLSKeyFilename},
+			},
+		}
+		tlsCtx.CommonTlsContext.TlsCertificates = append(tlsCtx.CommonTlsContext.TlsCertificates, tlsCert)
 	}
-	tlsCtx.CommonTlsContext.TlsCertificates = append(tlsCtx.CommonTlsContext.TlsCertificates, tlsCert)
 
 	tlsCtxAny, err := anypb.New(tlsCtx)
 	if err != nil {
@@ -701,7 +705,7 @@ func (t *Translator) createRateLimitServiceCluster(tCtx *types.ResourceVersionTa
 		Name:      destinationSettingName(clusterName),
 	}
 
-	tSocket, err := buildRateLimitTLSocket()
+	tSocket, err := t.buildRateLimitTLSocket()
 	if err != nil {
 		return err
 	}

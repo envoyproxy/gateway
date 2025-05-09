@@ -44,6 +44,7 @@ const (
 
 // Translator translates the xDS IR into xDS resources.
 type Translator struct {
+	GatewayNamespaceMode bool
 	// GlobalRateLimit holds the global rate limit settings
 	// required during xds translation.
 	GlobalRateLimit *GlobalRateLimitSettings
