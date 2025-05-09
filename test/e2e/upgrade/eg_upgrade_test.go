@@ -57,17 +57,25 @@ func TestEGUpgrade(t *testing.T) {
 		ManifestFS:           []fs.FS{e2e.UpgradeManifests},
 		RunTest:              *flags.RunTest,
 		BaseManifests:        "upgrade/manifests.yaml",
-		SupportedFeatures:    sets.New[features.FeatureName](features.SupportGateway),
+		SupportedFeatures:    sets.New(features.SupportGateway),
 		SkipTests:            skipTests,
 	})
 	if err != nil {
 		t.Fatalf("Failed to create test suite: %v", err)
 	}
 
-	// upgrade tests should be executed in a specific order
-	tests.UpgradeTests = []suite.ConformanceTest{
-		tests.EnvoyShutdownTest,
-		tests.EGUpgradeTest,
+	if tests.IsGatewayNamespaceMode() {
+		tests.UpgradeTests = []suite.ConformanceTest{
+			tests.EnvoyShutdownTest,
+			// TODO: enable EGUpgradeTest in gateway namespace mode
+			// tests.EGUpgradeTest,
+		}
+	} else {
+		// upgrade tests should be executed in a specific order
+		tests.UpgradeTests = []suite.ConformanceTest{
+			tests.EnvoyShutdownTest,
+			tests.EGUpgradeTest,
+		}
 	}
 
 	tlog.Logf(t, "Running %d Upgrade tests", len(tests.UpgradeTests))
