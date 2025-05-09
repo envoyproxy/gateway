@@ -51,8 +51,7 @@ var EnvoyShutdownTest = suite.ConformanceTest{
 				t.Errorf("Failed to get proxy deployment")
 			}
 
-			// Wait for the grpc ext auth service pod to be ready
-			WaitForPods(t, suite.Client, "envoy-gateway-system", map[string]string{"gateway.envoyproxy.io/owning-gateway-name": name}, corev1.PodRunning, PodReady)
+			WaitForPods(t, suite.Client, dp.Namespace, map[string]string{"gateway.envoyproxy.io/owning-gateway-name": name}, corev1.PodRunning, PodReady)
 
 			// wait for route to be programmed on envoy
 			expectedResponse := http.ExpectedResponse{
@@ -103,8 +102,13 @@ func getDeploymentForGateway(namespace, name string, c client.Client) (*appsv1.D
 	}
 	ctx := context.Background()
 
+	gwNs := "envoy-gateway-system"
+	if IsGatewayNamespaceMode() {
+		// use the namespace of Gateway resource
+		gwNs = namespace
+	}
 	listOpts := []client.ListOption{
-		client.InNamespace("envoy-gateway-system"),
+		client.InNamespace(gwNs),
 		client.MatchingLabelsSelector{Selector: labels.SelectorFromSet(dpLabels)},
 	}
 

@@ -62,25 +62,6 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: same-namespace-gw-metrics
-  namespace: envoy-gateway-system
-spec:
-  selector:
-    app.kubernetes.io/component: proxy
-    app.kubernetes.io/managed-by: envoy-gateway
-    app.kubernetes.io/name: envoy
-    gateway.envoyproxy.io/owning-gateway-name: same-namespace
-    gateway.envoyproxy.io/owning-gateway-namespace: gateway-conformance-infra
-  ports:
-    - name: metrics
-      protocol: TCP
-      port: 19001
-      targetPort: 19001
-  type: LoadBalancer
----
-apiVersion: v1
-kind: Service
-metadata:
   name: otel-collecot-prometheus
   namespace: monitoring
 spec:

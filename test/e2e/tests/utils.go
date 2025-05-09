@@ -46,7 +46,10 @@ import (
 	tb "github.com/envoyproxy/gateway/internal/troubleshoot"
 )
 
-var IPFamily = os.Getenv("IP_FAMILY")
+var (
+	IPFamily      = os.Getenv("IP_FAMILY")
+	DeployProfile = os.Getenv("KUBE_DEPLOY_PROFILE")
+)
 
 const defaultServiceStartupTimeout = 5 * time.Minute
 
@@ -645,11 +648,11 @@ func ContentEncoding(compressorType egv1a1.CompressorType) string {
 	return encoding
 }
 
-func ExpectEnvoyProxyDeploymentCount(t *testing.T, suite *suite.ConformanceTestSuite, gwNN types.NamespacedName, expectedCount int) {
+func ExpectEnvoyProxyDeploymentCount(t *testing.T, suite *suite.ConformanceTestSuite, gwNN types.NamespacedName, expectedNs string, expectedCount int) {
 	err := wait.PollUntilContextTimeout(context.TODO(), time.Second, suite.TimeoutConfig.DeleteTimeout, true, func(ctx context.Context) (bool, error) {
 		deploys := &appsv1.DeploymentList{}
 		err := suite.Client.List(ctx, deploys, &client.ListOptions{
-			Namespace: "envoy-gateway-system",
+			Namespace: expectedNs,
 			LabelSelector: labels.SelectorFromSet(map[string]string{
 				"app.kubernetes.io/managed-by":                   "envoy-gateway",
 				"app.kubernetes.io/name":                         "envoy",
@@ -668,11 +671,11 @@ func ExpectEnvoyProxyDeploymentCount(t *testing.T, suite *suite.ConformanceTestS
 	}
 }
 
-func ExpectEnvoyProxyHPACount(t *testing.T, suite *suite.ConformanceTestSuite, gwNN types.NamespacedName, expectedCount int) {
+func ExpectEnvoyProxyHPACount(t *testing.T, suite *suite.ConformanceTestSuite, gwNN types.NamespacedName, expectedNs string, expectedCount int) {
 	err := wait.PollUntilContextTimeout(context.TODO(), time.Second, suite.TimeoutConfig.DeleteTimeout, true, func(ctx context.Context) (bool, error) {
 		hpa := &autoscalingv2.HorizontalPodAutoscalerList{}
 		err := suite.Client.List(ctx, hpa, &client.ListOptions{
-			Namespace: "envoy-gateway-system",
+			Namespace: expectedNs,
 			LabelSelector: labels.SelectorFromSet(map[string]string{
 				"gateway.envoyproxy.io/owning-gateway-name":      gwNN.Name,
 				"gateway.envoyproxy.io/owning-gateway-namespace": gwNN.Namespace,
@@ -687,4 +690,15 @@ func ExpectEnvoyProxyHPACount(t *testing.T, suite *suite.ConformanceTestSuite, g
 	if err != nil {
 		t.Fatalf("Failed to check HPA count(%d) for the Gateway: %v", expectedCount, err)
 	}
+}
+
+func IsGatewayNamespaceMode() bool {
+	return DeployProfile == "gateway-namespace-mode"
+}
+
+func GetGatewayResourceNamespace() string {
+	if IsGatewayNamespaceMode() {
+		return "gateway-conformance-infra"
+	}
+	return "envoy-gateway-system"
 }

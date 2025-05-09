@@ -48,10 +48,6 @@ var RateLimitCIDRMatchTest = suite.ConformanceTest{
 	Description: "Limit all requests that match CIDR",
 	Manifests:   []string{"testdata/ratelimit-cidr-match.yaml"},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
-		if IPFamily == "ipv6" {
-			t.Skip("Skipping test as IP_FAMILY is IPv6")
-		}
-
 		t.Run("block all ips", func(t *testing.T) {
 			ns := "gateway-conformance-infra"
 			routeNN := types.NamespacedName{Name: "cidr-ratelimit", Namespace: ns}
@@ -514,10 +510,6 @@ var RateLimitMultipleListenersTest = suite.ConformanceTest{
 	Description: "Limit requests on multiple listeners",
 	Manifests:   []string{"testdata/ratelimit-multiple-listeners.yaml"},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
-		if IPFamily == "ipv6" {
-			t.Skip("Skipping test as IP_FAMILY is IPv6")
-		}
-
 		t.Run("block all ips on listener 80 and 8080", func(t *testing.T) {
 			ns := "gateway-conformance-infra"
 			routeNN := types.NamespacedName{Name: "cidr-ratelimit", Namespace: ns}
@@ -755,10 +747,6 @@ var RateLimitGlobalSharedCidrMatchTest = suite.ConformanceTest{
 	Description: "Limit all requests that match CIDR across multiple routes with a shared rate limit",
 	Manifests:   []string{"testdata/ratelimit-global-shared-cidr-match.yaml"},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
-		if IPFamily == "ipv6" {
-			t.Skip("Skipping test as IP_FAMILY is IPv6")
-		}
-
 		t.Run("block all ips with shared rate limit across routes with different paths", func(t *testing.T) {
 			ns := "gateway-conformance-infra"
 			route1NN := types.NamespacedName{Name: "cidr-ratelimit-1", Namespace: ns}
