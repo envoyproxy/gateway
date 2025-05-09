@@ -346,8 +346,8 @@ func TestCheckOverlappingHostnames(t *testing.T) {
 			for i := range tt.gateway.listeners {
 				tt.gateway.listeners[i].listenerStatusIdx = i
 				tt.gateway.listeners[i].gateway = tt.gateway
-				tt.gateway.Gateway.Status.Listeners[i] = gwapiv1.ListenerStatus{
-					Name:       tt.gateway.listeners[i].Listener.Name,
+				tt.gateway.Status.Listeners[i] = gwapiv1.ListenerStatus{
+					Name:       tt.gateway.listeners[i].Name,
 					Conditions: []metav1.Condition{},
 				}
 			}
@@ -581,9 +581,9 @@ func TestCheckOverlappingCertificates(t *testing.T) {
 			}
 
 			// Initialize listener
-			for i := range gateway.Gateway.Status.Listeners {
-				gateway.Gateway.Status.Listeners[i] = gwapiv1.ListenerStatus{
-					Name:       tt.listeners[i].Listener.Name,
+			for i := range gateway.Status.Listeners {
+				gateway.Status.Listeners[i] = gwapiv1.ListenerStatus{
+					Name:       tt.listeners[i].Name,
 					Conditions: []metav1.Condition{},
 				}
 				gateway.listeners[i].listenerStatusIdx = i
