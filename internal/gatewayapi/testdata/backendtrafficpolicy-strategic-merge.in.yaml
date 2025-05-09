@@ -79,7 +79,6 @@ backendTrafficPolicies:
               limit:
                 requests: 5
                 unit: Hour
-              name: global-rate-limit
               shared: true
   - apiVersion: gateway.envoyproxy.io/v1alpha1
     kind: BackendTrafficPolicy
@@ -123,5 +122,4 @@ backendTrafficPolicies:
               limit:
                 requests: 5
                 unit: Hour
-              name: route-rate-limit
               shared: false

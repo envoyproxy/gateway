@@ -63,15 +63,6 @@ func (t *Translator) patchHCMWithRateLimit(mgr *hcmv3.HttpConnectionManager, irL
 	}
 }
 
-// routeContainsGlobalRateLimit checks if a route has global rate limit configuration.
-// Returns false if any required component is nil.
-func routeContainsGlobalRateLimit(irRoute *ir.HTTPRoute) bool {
-	return irRoute != nil &&
-		irRoute.Traffic != nil &&
-		irRoute.Traffic.RateLimit != nil &&
-		irRoute.Traffic.RateLimit.Global != nil
-}
-
 // isRateLimitPresent returns true if rate limit config exists for the listener.
 func (t *Translator) isRateLimitPresent(irListener *ir.HTTPListener) bool {
 	// Return false if global ratelimiting is disabled.
@@ -80,7 +71,7 @@ func (t *Translator) isRateLimitPresent(irListener *ir.HTTPListener) bool {
 	}
 	// Return true if rate limit config exists.
 	for _, route := range irListener.Routes {
-		if routeContainsGlobalRateLimit(route) {
+		if isValidGlobalRateLimit(route) {
 			return true
 		}
 	}
@@ -94,69 +85,50 @@ func (t *Translator) buildRateLimitFilter(irListener *ir.HTTPListener) []*hcmv3.
 		return nil
 	}
 
-	var filters []*hcmv3.HttpFilter
-	processedSharedDomains := make(map[string]bool)
-	processedNonSharedDomains := make(map[string]bool)
+	filters := []*hcmv3.HttpFilter{}
+	created := make(map[string]bool)
 
-	// Iterate over each route in the listener
 	for _, route := range irListener.Routes {
-		if !routeContainsGlobalRateLimit(route) || route.Traffic == nil ||
-			route.Traffic.RateLimit == nil || route.Traffic.RateLimit.Global == nil {
+		if !isValidGlobalRateLimit(route) {
 			continue
 		}
 
-		// Group rules by shared status
-		hasSharedRules := false
-		hasNonSharedRules := false
+		hasShared, hasNonShared := false, false
+		var sharedRuleName string
 
 		for _, rule := range route.Traffic.RateLimit.Global.Rules {
 			if isRuleShared(rule) {
-				hasSharedRules = true
+				hasShared = true
+				if sharedRuleName == "" {
+					sharedRuleName = stripRuleIndexSuffix(rule.Name)
+				}
 			} else {
-				hasNonSharedRules = true
+				hasNonShared = true
 			}
-
-			// Break early if we found both types
-			if hasSharedRules && hasNonSharedRules {
+			if hasShared && hasNonShared {
 				break
 			}
 		}
 
-		// Create filter for shared rules
-		if hasSharedRules {
+		if hasShared {
 			sharedDomain := getDomainSharedName(route)
-
-			// Skip if we've already created a filter for this shared domain
-			if !processedSharedDomains[sharedDomain] {
-				// Find first shared rule to use its name for the filter
-				var sharedRuleName string
-				for _, rule := range route.Traffic.RateLimit.Global.Rules {
-					if isRuleShared(rule) {
-						sharedRuleName = stripRuleIndexSuffix(rule.Name)
-						break
-					}
-				}
-				sharedFilterName := fmt.Sprintf("%s/%s", egv1a1.EnvoyFilterRateLimit.String(), sharedRuleName)
-				filter := createRateLimitFilter(t, irListener, sharedDomain, sharedFilterName)
-				if filter != nil {
+			if !created[sharedDomain] {
+				filterName := fmt.Sprintf("%s/%s", egv1a1.EnvoyFilterRateLimit.String(), sharedRuleName)
+				if filter := createRateLimitFilter(t, irListener, sharedDomain, filterName); filter != nil {
 					filters = append(filters, filter)
 				}
-				processedSharedDomains[sharedDomain] = true
+				created[sharedDomain] = true
 			}
 		}
 
-		// Create filter for non-shared rules
-		if hasNonSharedRules {
+		if hasNonShared {
 			nonSharedDomain := irListener.Name
-
-			// Skip if we've already created a filter for non-shared rules in this listener
-			if !processedNonSharedDomains[nonSharedDomain] {
-				nonSharedFilterName := egv1a1.EnvoyFilterRateLimit.String()
-				filter := createRateLimitFilter(t, irListener, nonSharedDomain, nonSharedFilterName)
-				if filter != nil {
+			if !created[nonSharedDomain] {
+				filterName := egv1a1.EnvoyFilterRateLimit.String()
+				if filter := createRateLimitFilter(t, irListener, nonSharedDomain, filterName); filter != nil {
 					filters = append(filters, filter)
 				}
-				processedNonSharedDomains[nonSharedDomain] = true
+				created[nonSharedDomain] = true
 			}
 		}
 	}
@@ -218,7 +190,7 @@ func createRateLimitFilter(t *Translator, irListener *ir.HTTPListener, domain, f
 func patchRouteWithRateLimit(route *routev3.Route, irRoute *ir.HTTPRoute) error { //nolint:unparam
 	// Return early if no rate limit config exists.
 	xdsRouteAction := route.GetRoute()
-	if !routeContainsGlobalRateLimit(irRoute) || xdsRouteAction == nil {
+	if !isValidGlobalRateLimit(irRoute) || xdsRouteAction == nil {
 		return nil
 	}
 	rateLimits, costSpecified := buildRouteRateLimits(irRoute)
@@ -258,7 +230,7 @@ func patchRouteWithRateLimitOnTypedFilterConfig(route *routev3.Route, rateLimits
 // buildRouteRateLimits constructs rate limit actions for a given route based on the global rate limit configuration.
 func buildRouteRateLimits(route *ir.HTTPRoute) (rateLimits []*routev3.RateLimit, costSpecified bool) {
 	// Ensure route has rate limit config
-	if !routeContainsGlobalRateLimit(route) {
+	if !isValidGlobalRateLimit(route) {
 		return nil, false
 	}
 
@@ -469,7 +441,7 @@ func BuildRateLimitServiceConfig(irListeners []*ir.HTTPListener) []*rlsconfv3.Ra
 	for _, irListener := range irListeners {
 		// Process each route to build descriptors
 		for _, r := range irListener.Routes {
-			if !routeContainsGlobalRateLimit(r) {
+			if !isValidGlobalRateLimit(r) {
 				continue
 			}
 
@@ -540,8 +512,7 @@ func addRateLimitDescriptor(
 	domainDescriptors map[string][]*rlsconfv3.RateLimitDescriptor,
 	includeShared bool,
 ) {
-	if route == nil || route.Traffic == nil || route.Traffic.RateLimit == nil ||
-		route.Traffic.RateLimit.Global == nil || len(serviceDescriptors) == 0 {
+	if !isValidGlobalRateLimit(route) || len(serviceDescriptors) == 0 {
 		return
 	}
 
@@ -568,7 +539,7 @@ func addRateLimitDescriptor(
 			parentKey = getRouteDescriptor(route.Name)
 		}
 		parent := getParent(parentKey)
-		// Deduplicate: only append if not already present (recursively)
+		// Deduplicate: only append if not already present
 		alreadyExists := false
 		for _, existing := range parent.Descriptors {
 			if descriptorsEqual(existing, serviceDescriptors[i]) {
@@ -586,7 +557,7 @@ func addRateLimitDescriptor(
 // It returns true if any rule in the global rate limit configuration is marked as shared.
 // If no rules are shared or there's no global rate limit configuration, it returns false.
 func isSharedRateLimit(route *ir.HTTPRoute) bool {
-	if route == nil || route.Traffic == nil || route.Traffic.RateLimit == nil || route.Traffic.RateLimit.Global == nil {
+	if !isValidGlobalRateLimit(route) {
 		return false
 	}
 
@@ -838,8 +809,7 @@ func (t *Translator) createRateLimitServiceCluster(tCtx *types.ResourceVersionTa
 // getDomainSharedName returns the shared domain (stripped policy name) if any shared rule exists,
 // otherwise returns the listener name.
 func getDomainSharedName(route *ir.HTTPRoute) string {
-	if route != nil && route.Traffic != nil && route.Traffic.RateLimit != nil &&
-		route.Traffic.RateLimit.Global != nil && len(route.Traffic.RateLimit.Global.Rules) > 0 {
+	if isValidGlobalRateLimit(route) && len(route.Traffic.RateLimit.Global.Rules) > 0 {
 		for _, rule := range route.Traffic.RateLimit.Global.Rules {
 			if isRuleShared(rule) {
 				return stripRuleIndexSuffix(rule.Name)
@@ -898,4 +868,12 @@ func stripRuleIndexSuffix(name string) string {
 		return name[:i]
 	}
 	return strings.Replace(name, "/", "-", 1)
+}
+
+// Helper to check if a route has a valid global rate limit config
+func isValidGlobalRateLimit(route *ir.HTTPRoute) bool {
+	return route != nil &&
+		route.Traffic != nil &&
+		route.Traffic.RateLimit != nil &&
+		route.Traffic.RateLimit.Global != nil
 }

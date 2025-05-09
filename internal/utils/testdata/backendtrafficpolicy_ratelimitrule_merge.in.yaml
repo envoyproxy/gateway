@@ -6,8 +6,7 @@ spec:
     type: Global
     global:
       rules:
-        - name: one
-          shared: true
+        - shared: true
           clientSelectors:
             - headers:
                 - name: x-user-id

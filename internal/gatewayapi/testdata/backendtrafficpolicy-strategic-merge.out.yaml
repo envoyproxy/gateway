@@ -58,7 +58,6 @@ backendTrafficPolicies:
           limit:
             requests: 5
             unit: Hour
-          name: route-rate-limit
           shared: false
       type: Global
     targetRef:
@@ -100,7 +99,6 @@ backendTrafficPolicies:
           limit:
             requests: 5
             unit: Hour
-          name: global-rate-limit
           shared: true
       type: Global
     targetRef:

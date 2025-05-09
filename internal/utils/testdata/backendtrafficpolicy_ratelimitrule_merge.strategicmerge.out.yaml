@@ -23,27 +23,7 @@ spec:
         limit:
           requests: 21
           unit: Hour
-        name: two
         shared: false
-      - clientSelectors:
-        - headers:
-          - name: x-user-id
-            type: Exact
-            value: one
-        cost:
-          request:
-            from: Number
-            number: 0
-          response:
-            from: Metadata
-            metadata:
-              key: request_cost_set_by_ext_proc
-              namespace: io.envoyproxy.gateway.e2e
-        limit:
-          requests: 21
-          unit: Hour
-        name: one
-        shared: true
     type: Global
 status:
   ancestors: null

@@ -21,41 +21,26 @@ http:
               requests: 5
               unit: second
             shared: true
-  - name: "second-route"
-    traffic:
-      rateLimit:
-        global:
-          rules:
           - name: "test-namespace/test-policy-1/rule/1"
             headerMatches:
             - name: "x-user-id"
-              exact: "one"
+              exact: "two"
             limit:
               requests: 5
               unit: second
             shared: false
-  - name: "first-route"
-    traffic:
-      rateLimit:
-        global:
-          rules:
           - name: "test-namespace/test-policy-1/rule/2"
             headerMatches:
             - name: "x-user-id"
-              exact: "one"
+              exact: "three"
             limit:
               requests: 5
               unit: second
             shared: true
-  - name: "second-route"
-    traffic:
-      rateLimit:
-        global:
-          rules:
           - name: "test-namespace/test-policy-1/rule/3"
             headerMatches:
             - name: "x-user-id"
-              exact: "one"
+              exact: "four"
             limit:
               requests: 5
               unit: second
