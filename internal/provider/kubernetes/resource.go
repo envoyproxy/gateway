@@ -63,6 +63,9 @@ type resourceMappings struct {
 	// Set for storing HTTPRouteExtensions (Envoy Gateway or Custom) NamespacedNames referenced by various
 	// route rules objects.
 	allAssociatedHTTPRouteExtensionFilters sets.Set[utils.NamespacedNameWithGroupKind]
+
+	// Set for storing BackendTrafficPolicies' NamespacedNames referred by various Backend objects.
+	allAssociatedXBackendTrafficPolicies sets.Set[string]
 }
 
 func newResourceMapping() *resourceMappings {

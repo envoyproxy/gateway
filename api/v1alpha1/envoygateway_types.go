@@ -194,6 +194,9 @@ type ExtensionAPISettings struct {
 	// EnableBackend enables Envoy Gateway to
 	// reconcile and implement the Backend resources.
 	EnableBackend bool `json:"enableBackend"`
+	// EnableBackendTrafficPolicy enables Envoy Gateway to
+	// reconcile and implement the Gateway API XBackendTrafficPolicy resources.
+	EnableXBackendTrafficPolicy bool `json:"enableXBackendTrafficPolicy"`
 }
 
 // EnvoyGatewayProvider defines the desired configuration of a provider.

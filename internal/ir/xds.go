@@ -24,6 +24,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/validation"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	"sigs.k8s.io/yaml"
 
@@ -1580,7 +1581,8 @@ type DestinationSetting struct {
 	Filters  *DestinationFilters `json:"filters,omitempty" yaml:"filters,omitempty"`
 	// ZoneAwareRoutingEnabled specifies whether to enable Zone Aware Routing for this destination's endpoints.
 	// This is derived from the backend service and depends on having Kubernetes Topology Aware Routing or Traffic Distribution enabled.
-	ZoneAwareRoutingEnabled bool `json:"zoneAwareRoutingEnabled,omitempty" yaml:"zoneAwareRoutingEnabled,omitempty"`
+	ZoneAwareRoutingEnabled bool         `json:"zoneAwareRoutingEnabled,omitempty" yaml:"zoneAwareRoutingEnabled,omitempty"`
+	RetryBudget             *RetryBudget `json:"retryBudget,omitempty" yaml:"retryBudget,omitempty"`
 }
 
 // Validate the fields within the DestinationSetting structure
@@ -1593,6 +1595,13 @@ func (d *DestinationSetting) Validate() error {
 	}
 
 	return errs
+}
+
+// RetryBudget holds the retry budget configuration for a destination
+// +k8s:deepcopy-gen=true
+type RetryBudget struct {
+	Percent             *gwapiv1.Fraction `json:"percent,omitempty" yaml:"percent,omitempty"`
+	MinRetryConcurrency *uint32           `json:"minRetryConcurrency,omitempty" yaml:"minRetryConcurrency,omitempty"`
 }
 
 // DestinationAddressType describes the address type state for a group of DestinationEndpoint
