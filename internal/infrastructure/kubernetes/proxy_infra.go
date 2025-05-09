@@ -24,7 +24,7 @@ func (i *Infra) CreateOrUpdateProxyInfra(ctx context.Context, infra *ir.Infra) e
 	}
 
 	envoyNamespace := i.GetResourceNamespace(infra)
-	r := proxy.NewResourceRender(envoyNamespace, i.Namespace, i.DNSDomain, infra.GetProxyInfra(), i.EnvoyGateway)
+	r := proxy.NewResourceRender(envoyNamespace, i.ControllerNamespace, i.DNSDomain, infra.GetProxyInfra(), i.EnvoyGateway)
 	return i.createOrUpdate(ctx, r)
 }
 
@@ -35,7 +35,7 @@ func (i *Infra) DeleteProxyInfra(ctx context.Context, infra *ir.Infra) error {
 	}
 
 	envoyNamespace := i.GetResourceNamespace(infra)
-	r := proxy.NewResourceRender(envoyNamespace, i.Namespace, i.DNSDomain, infra.GetProxyInfra(), i.EnvoyGateway)
+	r := proxy.NewResourceRender(envoyNamespace, i.ControllerNamespace, i.DNSDomain, infra.GetProxyInfra(), i.EnvoyGateway)
 	return i.delete(ctx, r)
 }
 
@@ -43,5 +43,5 @@ func (i *Infra) GetResourceNamespace(infra *ir.Infra) string {
 	if i.EnvoyGateway.GatewayNamespaceMode() {
 		return infra.Proxy.Namespace
 	}
-	return i.Namespace
+	return i.ControllerNamespace
 }
