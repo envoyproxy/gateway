@@ -139,7 +139,7 @@ func expectedProxyContainers(infra *ir.ProxyInfra,
 			Resources:                *containerSpec.Resources,
 			SecurityContext:          expectedEnvoySecurityContext(containerSpec),
 			Ports:                    ports,
-			VolumeMounts:             expectedContainerVolumeMounts(containerSpec),
+			VolumeMounts:             expectedContainerVolumeMounts(containerSpec, gatewayNamespaceMode),
 			TerminationMessagePolicy: corev1.TerminationMessageReadFile,
 			TerminationMessagePath:   "/dev/termination-log",
 			StartupProbe: &corev1.Probe{
@@ -288,7 +288,7 @@ func expectedShutdownPreStopCommand(cfg *egv1a1.ShutdownConfig) []string {
 }
 
 // expectedContainerVolumeMounts returns expected proxy container volume mounts.
-func expectedContainerVolumeMounts(containerSpec *egv1a1.KubernetesContainerSpec) []corev1.VolumeMount {
+func expectedContainerVolumeMounts(containerSpec *egv1a1.KubernetesContainerSpec, gatewayNamespaceMode bool) []corev1.VolumeMount {
 	volumeMounts := []corev1.VolumeMount{
 		{
 			Name:      "certs",
@@ -300,11 +300,19 @@ func expectedContainerVolumeMounts(containerSpec *egv1a1.KubernetesContainerSpec
 			MountPath: "/sds",
 		},
 	}
+	if gatewayNamespaceMode {
+		volumeMounts = append(volumeMounts, corev1.VolumeMount{
+			Name:      "sa-token",
+			MountPath: "/var/run/secrets/token",
+			ReadOnly:  true,
+		})
+	}
+
 	return resource.ExpectedContainerVolumeMounts(containerSpec, volumeMounts)
 }
 
 // expectedVolumes returns expected proxy deployment volumes.
-func expectedVolumes(name string, gatewayNamespacedMode bool, pod *egv1a1.KubernetesPodSpec) []corev1.Volume {
+func expectedVolumes(name string, gatewayNamespacedMode bool, pod *egv1a1.KubernetesPodSpec, dnsDomain string) []corev1.Volume {
 	var volumes []corev1.Volume
 	certsVolume := corev1.Volume{
 		Name: "certs",
@@ -335,6 +343,25 @@ func expectedVolumes(name string, gatewayNamespacedMode bool, pod *egv1a1.Kubern
 				},
 			},
 		}
+		saAudience := fmt.Sprintf("%s.%s.svc.%s", config.EnvoyGatewayServiceName, config.DefaultNamespace, dnsDomain)
+		saTokenProjectedVolume := corev1.Volume{
+			Name: "sa-token",
+			VolumeSource: corev1.VolumeSource{
+				Projected: &corev1.ProjectedVolumeSource{
+					Sources: []corev1.VolumeProjection{
+						{
+							ServiceAccountToken: &corev1.ServiceAccountTokenProjection{
+								Path:              "sa-token",
+								Audience:          saAudience,
+								ExpirationSeconds: ptr.To[int64](3600),
+							},
+						},
+					},
+					DefaultMode: ptr.To[int32](420),
+				},
+			},
+		}
+		volumes = append(volumes, saTokenProjectedVolume)
 	}
 
 	volumes = append(volumes, certsVolume)
