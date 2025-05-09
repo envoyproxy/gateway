@@ -435,26 +435,37 @@ func GetRateLimitServiceConfigStr(pbCfg *rlsconfv3.RateLimitConfig) (string, err
 // It returns a list of unique configurations, one for each domain needed across all listeners.
 // For shared rate limits, it ensures we only process each shared domain once to improve efficiency.
 func BuildRateLimitServiceConfig(irListeners []*ir.HTTPListener) []*rlsconfv3.RateLimitConfig {
+	// Map to store rate limit descriptors by domain name
 	domainDesc := make(map[string][]*rlsconfv3.RateLimitDescriptor)
 
 	// Process each listener
 	for _, irListener := range irListeners {
-		// Process each route to build descriptors
-		for _, r := range irListener.Routes {
-			if !isValidGlobalRateLimit(r) {
+		// Process each route in the listener
+		for _, route := range irListener.Routes {
+			// Skip routes without valid global rate limit configuration
+			if !isValidGlobalRateLimit(route) {
 				continue
 			}
 
-			descs := buildRateLimitServiceDescriptors(r) // one pass → indices frozen
+			// Build all descriptors for this route in a single pass to maintain consistent indices
+			descriptors := buildRateLimitServiceDescriptors(route)
 
-			// shared rules → traffic-policy (BTP) domain
-			addRateLimitDescriptor(r, descs, getDomainSharedName(r), domainDesc, true)
+			// Skip if no descriptors were created
+			if len(descriptors) == 0 {
+				continue
+			}
 
-			// non-shared rules → listener-scoped domain
-			addRateLimitDescriptor(r, descs, irListener.Name, domainDesc, false)
+			// Process shared rules - add to traffic policy domain
+			sharedDomain := getDomainSharedName(route)
+			addRateLimitDescriptor(route, descriptors, sharedDomain, domainDesc, true)
+
+			// Process non-shared rules - add to listener-specific domain
+			listenerDomain := irListener.Name
+			addRateLimitDescriptor(route, descriptors, listenerDomain, domainDesc, false)
 		}
 	}
 
+	// Convert domain descriptor map to list of rate limit configurations
 	return createRateLimitConfigs(domainDesc)
 }
 
