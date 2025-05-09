@@ -46,8 +46,11 @@ const (
 type ResourceRender struct {
 	infra *ir.ProxyInfra
 
-	// Namespace is the Namespace used for managed infra.
-	Namespace string
+	// envoyNamespace is the namespace used for managed infra.
+	envoyNamespace string
+
+	// controllerNamespace is the namespace used for Envoy Gateway controller.
+	controllerNamespace string
 
 	// DNSDomain is the dns domain used by k8s services. Defaults to "cluster.local".
 	DNSDomain string
@@ -57,9 +60,10 @@ type ResourceRender struct {
 	GatewayNamespaceMode bool
 }
 
-func NewResourceRender(ns, dnsDomain string, infra *ir.ProxyInfra, gateway *egv1a1.EnvoyGateway) *ResourceRender {
+func NewResourceRender(envoyNamespace, controllerNamespace, dnsDomain string, infra *ir.ProxyInfra, gateway *egv1a1.EnvoyGateway) *ResourceRender {
 	return &ResourceRender{
-		Namespace:            ns,
+		envoyNamespace:       envoyNamespace,
+		controllerNamespace:  controllerNamespace,
 		DNSDomain:            dnsDomain,
 		infra:                infra,
 		ShutdownManager:      gateway.GetEnvoyGatewayProvider().GetEnvoyGatewayKubeProvider().ShutdownManager,
@@ -69,6 +73,14 @@ func NewResourceRender(ns, dnsDomain string, infra *ir.ProxyInfra, gateway *egv1
 
 func (r *ResourceRender) Name() string {
 	return ExpectedResourceHashedName(r.infra.Name)
+}
+
+func (r *ResourceRender) Namespace() string {
+	return r.envoyNamespace
+}
+
+func (r *ResourceRender) ControllerNamespace() string {
+	return r.controllerNamespace
 }
 
 func (r *ResourceRender) LabelSelector() labels.Selector {
@@ -89,7 +101,7 @@ func (r *ResourceRender) ServiceAccount() (*corev1.ServiceAccount, error) {
 			APIVersion: "v1",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Namespace:   r.Namespace,
+			Namespace:   r.Namespace(),
 			Name:        r.Name(),
 			Labels:      labels,
 			Annotations: r.infra.GetProxyMetadata().Annotations,
@@ -196,7 +208,7 @@ func (r *ResourceRender) Service() (*corev1.Service, error) {
 			Kind:       "Service",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Namespace:   r.Namespace,
+			Namespace:   r.Namespace(),
 			Labels:      svcLabels,
 			Annotations: annotations,
 		},
@@ -241,7 +253,7 @@ func (r *ResourceRender) ConfigMap(cert string) (*corev1.ConfigMap, error) {
 			APIVersion: "v1",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Namespace:   r.Namespace,
+			Namespace:   r.Namespace(),
 			Name:        r.Name(),
 			Labels:      labels,
 			Annotations: r.infra.GetProxyMetadata().Annotations,
@@ -280,7 +292,7 @@ func (r *ResourceRender) Deployment() (*appsv1.Deployment, error) {
 	}
 
 	// Get expected bootstrap configurations rendered ProxyContainers
-	containers, err := expectedProxyContainers(r.infra, deploymentConfig.Container, proxyConfig.Spec.Shutdown, r.ShutdownManager, r.Namespace, r.DNSDomain, r.GatewayNamespaceMode)
+	containers, err := expectedProxyContainers(r.infra, deploymentConfig.Container, proxyConfig.Spec.Shutdown, r.ShutdownManager, r.ControllerNamespace(), r.DNSDomain, r.GatewayNamespaceMode)
 	if err != nil {
 		return nil, err
 	}
@@ -300,7 +312,7 @@ func (r *ResourceRender) Deployment() (*appsv1.Deployment, error) {
 			APIVersion: "apps/v1",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Namespace:   r.Namespace,
+			Namespace:   r.Namespace(),
 			Labels:      dpLabels,
 			Annotations: dpAnnotations,
 		},
@@ -318,7 +330,6 @@ func (r *ResourceRender) Deployment() (*appsv1.Deployment, error) {
 					Containers:                    containers,
 					InitContainers:                deploymentConfig.InitContainers,
 					ServiceAccountName:            r.Name(),
-					AutomountServiceAccountToken:  expectedAutoMountServiceAccountToken(r.GatewayNamespaceMode),
 					TerminationGracePeriodSeconds: expectedTerminationGracePeriodSeconds(proxyConfig.Spec.Shutdown),
 					DNSPolicy:                     corev1.DNSClusterFirst,
 					RestartPolicy:                 corev1.RestartPolicyAlways,
@@ -326,7 +337,7 @@ func (r *ResourceRender) Deployment() (*appsv1.Deployment, error) {
 					SecurityContext:               deploymentConfig.Pod.SecurityContext,
 					Affinity:                      deploymentConfig.Pod.Affinity,
 					Tolerations:                   deploymentConfig.Pod.Tolerations,
-					Volumes:                       expectedVolumes(r.infra.Name, r.GatewayNamespaceMode, deploymentConfig.Pod),
+					Volumes:                       expectedVolumes(r.infra.Name, r.GatewayNamespaceMode, deploymentConfig.Pod, r.DNSDomain),
 					ImagePullSecrets:              deploymentConfig.Pod.ImagePullSecrets,
 					NodeSelector:                  deploymentConfig.Pod.NodeSelector,
 					TopologySpreadConstraints:     deploymentConfig.Pod.TopologySpreadConstraints,
@@ -369,7 +380,7 @@ func (r *ResourceRender) DaemonSet() (*appsv1.DaemonSet, error) {
 	}
 
 	// Get expected bootstrap configurations rendered ProxyContainers
-	containers, err := expectedProxyContainers(r.infra, daemonSetConfig.Container, proxyConfig.Spec.Shutdown, r.ShutdownManager, r.Namespace, r.DNSDomain, r.GatewayNamespaceMode)
+	containers, err := expectedProxyContainers(r.infra, daemonSetConfig.Container, proxyConfig.Spec.Shutdown, r.ShutdownManager, r.ControllerNamespace(), r.DNSDomain, r.GatewayNamespaceMode)
 	if err != nil {
 		return nil, err
 	}
@@ -389,7 +400,7 @@ func (r *ResourceRender) DaemonSet() (*appsv1.DaemonSet, error) {
 			APIVersion: "apps/v1",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Namespace:   r.Namespace,
+			Namespace:   r.Namespace(),
 			Labels:      dsLabels,
 			Annotations: dsAnnotations,
 		},
@@ -458,7 +469,7 @@ func (r *ResourceRender) PodDisruptionBudget() (*policyv1.PodDisruptionBudget, e
 	podDisruptionBudget := &policyv1.PodDisruptionBudget{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      r.Name(),
-			Namespace: r.Namespace,
+			Namespace: r.Namespace(),
 		},
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "policy/v1",
@@ -492,7 +503,7 @@ func (r *ResourceRender) HorizontalPodAutoscaler() (*autoscalingv2.HorizontalPod
 			Kind:       "HorizontalPodAutoscaler",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Namespace:   r.Namespace,
+			Namespace:   r.Namespace(),
 			Name:        r.Name(),
 			Annotations: r.infra.GetProxyMetadata().Annotations,
 			Labels:      r.infra.GetProxyMetadata().Labels,
@@ -533,10 +544,6 @@ func expectedTerminationGracePeriodSeconds(cfg *egv1a1.ShutdownConfig) *int64 {
 	return ptr.To(int64(s))
 }
 
-func expectedAutoMountServiceAccountToken(gatewayNamespacedMode bool) *bool {
-	return ptr.To(gatewayNamespacedMode)
-}
-
 func (r *ResourceRender) getPodSpec(
 	containers, initContainers []corev1.Container,
 	pod *egv1a1.KubernetesPodSpec,
@@ -546,7 +553,6 @@ func (r *ResourceRender) getPodSpec(
 		Containers:                    containers,
 		InitContainers:                initContainers,
 		ServiceAccountName:            ExpectedResourceHashedName(r.infra.Name),
-		AutomountServiceAccountToken:  expectedAutoMountServiceAccountToken(r.GatewayNamespaceMode),
 		TerminationGracePeriodSeconds: expectedTerminationGracePeriodSeconds(proxyConfig.Spec.Shutdown),
 		DNSPolicy:                     corev1.DNSClusterFirst,
 		RestartPolicy:                 corev1.RestartPolicyAlways,
@@ -554,7 +560,7 @@ func (r *ResourceRender) getPodSpec(
 		SecurityContext:               pod.SecurityContext,
 		Affinity:                      pod.Affinity,
 		Tolerations:                   pod.Tolerations,
-		Volumes:                       expectedVolumes(r.infra.Name, r.GatewayNamespaceMode, pod),
+		Volumes:                       expectedVolumes(r.infra.Name, r.GatewayNamespaceMode, pod, r.DNSDomain),
 		ImagePullSecrets:              pod.ImagePullSecrets,
 		NodeSelector:                  pod.NodeSelector,
 		TopologySpreadConstraints:     pod.TopologySpreadConstraints,
