@@ -34,7 +34,7 @@ gateways:
     spec:
       gatewayClassName: envoy-gateway-class
       listeners:
-        - name: https-2
+        - name: https-1
           protocol: HTTPS
           port: 443
           hostname: "bar.example.com"

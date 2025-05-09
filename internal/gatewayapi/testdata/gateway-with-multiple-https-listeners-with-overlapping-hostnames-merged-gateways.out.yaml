@@ -42,7 +42,7 @@ gateways:
         type: ResolvedRefs
       - lastTransitionTime: null
         message: The hostname foo.example.com overlaps with the hostname *.example.com
-          in listener https-2 of gateway gateway-2. ALPN is set to HTTP/1.1 to prevent
+          in listener https-1 of gateway gateway-2. ALPN is set to HTTP/1.1 to prevent
           HTTP/2 connection coalescing
         reason: OverlappingHostnames
         status: "True"
@@ -66,7 +66,7 @@ gateways:
         namespaces:
           from: All
       hostname: '*.example.com'
-      name: https-2
+      name: https-1
       port: 443
       protocol: HTTPS
       tls:
@@ -79,7 +79,7 @@ gateways:
         namespaces:
           from: All
       hostname: foo.bar.com
-      name: https-3
+      name: https-2
       port: 443
       protocol: HTTPS
       tls:
@@ -114,7 +114,7 @@ gateways:
         reason: OverlappingHostnames
         status: "True"
         type: OverlappingTLSConfig
-      name: https-2
+      name: https-1
       supportedKinds:
       - group: gateway.networking.k8s.io
         kind: HTTPRoute
@@ -137,7 +137,7 @@ gateways:
         reason: ResolvedRefs
         status: "True"
         type: ResolvedRefs
-      name: https-3
+      name: https-2
       supportedKinds:
       - group: gateway.networking.k8s.io
         kind: HTTPRoute
@@ -262,8 +262,8 @@ xdsIR:
         kind: Gateway
         name: gateway-2
         namespace: envoy-gateway
-        sectionName: https-2
-      name: envoy-gateway/gateway-2/https-2
+        sectionName: https-1
+      name: envoy-gateway/gateway-2/https-1
       path:
         escapedSlashesAction: UnescapeAndRedirect
         mergeSlashes: true
@@ -283,8 +283,8 @@ xdsIR:
         kind: Gateway
         name: gateway-2
         namespace: envoy-gateway
-        sectionName: https-3
-      name: envoy-gateway/gateway-2/https-3
+        sectionName: https-2
+      name: envoy-gateway/gateway-2/https-2
       path:
         escapedSlashesAction: UnescapeAndRedirect
         mergeSlashes: true

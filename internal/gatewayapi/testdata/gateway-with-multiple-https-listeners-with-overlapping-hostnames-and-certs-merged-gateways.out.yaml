@@ -42,7 +42,7 @@ gateways:
         type: ResolvedRefs
       - lastTransitionTime: null
         message: The certificate san *.example.com overlaps with the certificate san
-          bar.example.com in listener https-2 of gateway gateway-2. ALPN is set to
+          bar.example.com in listener https-1 of gateway gateway-2. ALPN is set to
           HTTP/1.1 to prevent HTTP/2 connection coalescing
         reason: OverlappingCertificates
         status: "True"
@@ -66,7 +66,7 @@ gateways:
         namespaces:
           from: All
       hostname: bar.example.com
-      name: https-2
+      name: https-1
       port: 443
       protocol: HTTPS
       tls:
@@ -101,7 +101,7 @@ gateways:
         reason: OverlappingCertificates
         status: "True"
         type: OverlappingTLSConfig
-      name: https-2
+      name: https-1
       supportedKinds:
       - group: gateway.networking.k8s.io
         kind: HTTPRoute
@@ -226,8 +226,8 @@ xdsIR:
         kind: Gateway
         name: gateway-2
         namespace: envoy-gateway
-        sectionName: https-2
-      name: envoy-gateway/gateway-2/https-2
+        sectionName: https-1
+      name: envoy-gateway/gateway-2/https-1
       path:
         escapedSlashesAction: UnescapeAndRedirect
         mergeSlashes: true

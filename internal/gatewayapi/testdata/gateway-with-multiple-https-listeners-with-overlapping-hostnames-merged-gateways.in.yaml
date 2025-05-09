@@ -34,7 +34,7 @@ gateways:
     spec:
       gatewayClassName: envoy-gateway-class
       listeners:
-        - name: https-2
+        - name: https-1
           protocol: HTTPS
           port: 443
           hostname: "*.example.com"
@@ -45,7 +45,7 @@ gateways:
             mode: Terminate
             certificateRefs:
               - name: tls-secret-example-com
-        - name: https-3
+        - name: https-2
           protocol: HTTPS
           port: 443
           hostname: "foo.bar.com"
