@@ -1723,7 +1723,7 @@ func TestGatewayModeMultipleDeployments(t *testing.T) {
 			}
 			combinedYAML = append(combinedYAML, deploymentYAML...)
 		}
-		err := os.WriteFile("testdata/deployments/gateway-namespace-mode-multiple.yaml", combinedYAML, 0o644)
+		err := os.WriteFile("testdata/deployments/gateway-namespace-mode-multiple.yaml", combinedYAML, 0o600)
 		require.NoError(t, err)
 		return
 	}
