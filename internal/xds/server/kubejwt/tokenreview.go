@@ -13,6 +13,7 @@ import (
 
 	authenticationv1 "k8s.io/api/authentication/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apiserver/pkg/authentication/serviceaccount"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 
@@ -35,7 +36,7 @@ func GetKubernetesClient() (*kubernetes.Clientset, error) {
 	return clientset, nil
 }
 
-func (i *JWTAuthInterceptor) validateKubeJWT(ctx context.Context, token string) error {
+func (i *JWTAuthInterceptor) validateKubeJWT(ctx context.Context, token, nodeID string) error {
 	tokenReview := &authenticationv1.TokenReview{
 		Spec: authenticationv1.TokenReviewSpec{
 			Token:     token,
@@ -56,8 +57,21 @@ func (i *JWTAuthInterceptor) validateKubeJWT(ctx context.Context, token string) 
 		return fmt.Errorf("token is not authenticated")
 	}
 
-	// Check if the service account name in the JWT token exists in the cache to verify that the token
-	// is valid for an Envoy proxy managed by Envoy Gateway.
+	// Check if the node ID in the request matches the pod name in the token review response.
+	// This is used to prevent a client from accessing the xDS resource of another one.
+	if tokenReview.Status.User.Extra != nil {
+		podName := tokenReview.Status.User.Extra[serviceaccount.PodNameKey]
+		if podName[0] == "" {
+			return fmt.Errorf("pod name not found in token review response")
+		}
+
+		if podName[0] != nodeID {
+			return fmt.Errorf("pod name mismatch: expected %s, got %s", nodeID, podName[0])
+		}
+	}
+
+	// Check if the service account name in the JWT token exists in the cache.
+	// This is used to verify that the token belongs to a valid Enovy managed by Envoy Gateway.
 	// example: "system:serviceaccount:default:envoy-default-eg-e41e7b31"
 	parts := strings.Split(tokenReview.Status.User.Username, ":")
 	if len(parts) != 4 {
@@ -71,8 +85,7 @@ func (i *JWTAuthInterceptor) validateKubeJWT(ctx context.Context, token string) 
 			return nil
 		}
 	}
-
-	return fmt.Errorf("envoy service account %s not found in the cache", sa)
+	return fmt.Errorf("Envoy service account %s not found in the cache", sa)
 }
 
 // this is the same logic used in infra pkg func ExpectedResourceHashedName to generate the resource name.

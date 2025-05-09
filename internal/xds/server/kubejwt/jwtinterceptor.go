@@ -6,9 +6,11 @@
 package kubejwt
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
+	discoveryv3 "github.com/envoyproxy/go-control-plane/envoy/service/discovery/v3"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
 	"k8s.io/client-go/kubernetes"
@@ -34,33 +36,56 @@ func NewJWTAuthInterceptor(clientset *kubernetes.Clientset, issuer, audience str
 	}
 }
 
-// Stream intercepts streaming gRPC calls for authentication.
-func (i *JWTAuthInterceptor) Stream() grpc.StreamServerInterceptor {
-	return func(srv any, ss grpc.ServerStream, info *grpc.StreamServerInfo, handler grpc.StreamHandler) error {
-		if err := i.authorize(ss); err != nil {
-			return err
-		}
-		return handler(srv, ss)
-	}
+type wrappedStream struct {
+	grpc.ServerStream
+	ctx         context.Context
+	interceptor *JWTAuthInterceptor
+	validated   bool
 }
 
-// authorize validates the Kubernetes Service Account JWT token from the metadata.
-func (i *JWTAuthInterceptor) authorize(ss grpc.ServerStream) error {
-	md, ok := metadata.FromIncomingContext(ss.Context())
-	if !ok {
-		return fmt.Errorf("missing metadata")
-	}
-
-	authHeader, exists := md["authorization"]
-	if !exists || len(authHeader) == 0 {
-		return fmt.Errorf("missing authorization token in metadata: %s", md)
-	}
-	tokenStr := strings.TrimPrefix(authHeader[0], "Bearer ")
-
-	err := i.validateKubeJWT(ss.Context(), tokenStr)
+func (w *wrappedStream) RecvMsg(m any) error {
+	err := w.ServerStream.RecvMsg(m)
 	if err != nil {
-		return fmt.Errorf("failed to validate token: %w", err)
+		return err
+	}
+
+	if !w.validated {
+		if req, ok := m.(*discoveryv3.DeltaDiscoveryRequest); ok {
+			if req.Node == nil || req.Node.Id == "" {
+				return fmt.Errorf("missing node ID in request")
+			}
+			nodeID := req.Node.Id
+
+			md, ok := metadata.FromIncomingContext(w.ctx)
+			if !ok {
+				return fmt.Errorf("missing metadata")
+			}
+
+			authHeader := md.Get("authorization")
+			if len(authHeader) == 0 {
+				return fmt.Errorf("missing authorization token in metadata: %s", md)
+			}
+			token := strings.TrimPrefix(authHeader[0], "Bearer ")
+
+			if err := w.interceptor.validateKubeJWT(w.ctx, token, nodeID); err != nil {
+				return fmt.Errorf("failed to validate token: %w", err)
+			}
+
+			w.validated = true
+		}
 	}
 
 	return nil
+}
+
+func newWrappedStream(s grpc.ServerStream, ctx context.Context, interceptor *JWTAuthInterceptor) grpc.ServerStream {
+	return &wrappedStream{s, ctx, interceptor, false}
+}
+
+// Stream intercepts streaming gRPC calls for authorization.
+func (i *JWTAuthInterceptor) Stream() grpc.StreamServerInterceptor {
+	return func(srv any, ss grpc.ServerStream, info *grpc.StreamServerInfo, handler grpc.StreamHandler) error {
+		wrapped := newWrappedStream(ss, ss.Context(), i)
+		return handler(srv, wrapped)
+	}
 }
