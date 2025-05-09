@@ -42,9 +42,11 @@ var EnvoyProxyHPATest = suite.ConformanceTest{
 				Namespace: ns,
 			}
 
+			expectedNs := GetGatewayResourceNamespace()
+
 			// Make sure there's a deployment/HPA for the gateway
-			ExpectEnvoyProxyDeploymentCount(t, suite, gwNN, 1)
-			ExpectEnvoyProxyHPACount(t, suite, gwNN, 1)
+			ExpectEnvoyProxyDeploymentCount(t, suite, gwNN, expectedNs, 1)
+			ExpectEnvoyProxyHPACount(t, suite, gwNN, expectedNs, 1)
 
 			// Send a request to a valid path and expect a successful response
 			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, OkResp)
@@ -61,8 +63,8 @@ var EnvoyProxyHPATest = suite.ConformanceTest{
 				t.Fatalf("Failed to update Gateway: %v", err)
 			}
 
-			ExpectEnvoyProxyDeploymentCount(t, suite, gwNN, 1)
-			ExpectEnvoyProxyHPACount(t, suite, gwNN, 0)
+			ExpectEnvoyProxyDeploymentCount(t, suite, gwNN, expectedNs, 1)
+			ExpectEnvoyProxyHPACount(t, suite, gwNN, expectedNs, 0)
 		})
 	},
 }
