@@ -1,5 +1,5 @@
 ---
-# Source: gateway-crds-helm/templates/gatewayapi-crds.yaml
+# Source: gateway-crds-helm/templates/experimental-gatewayapi-crds.yaml
 #
 # config/crd/experimental/gateway.networking.k8s.io_backendtlspolicies.yaml
 #
@@ -651,7 +651,7 @@ status:
   conditions: null
   storedVersions: null
 ---
-# Source: gateway-crds-helm/templates/gatewayapi-crds.yaml
+# Source: gateway-crds-helm/templates/experimental-gatewayapi-crds.yaml
 #
 # config/crd/experimental/gateway.networking.k8s.io_gatewayclasses.yaml
 #
@@ -1172,7 +1172,7 @@ status:
   conditions: null
   storedVersions: null
 ---
-# Source: gateway-crds-helm/templates/gatewayapi-crds.yaml
+# Source: gateway-crds-helm/templates/experimental-gatewayapi-crds.yaml
 #
 # config/crd/experimental/gateway.networking.k8s.io_gateways.yaml
 #
@@ -3881,7 +3881,7 @@ status:
   conditions: null
   storedVersions: null
 ---
-# Source: gateway-crds-helm/templates/gatewayapi-crds.yaml
+# Source: gateway-crds-helm/templates/experimental-gatewayapi-crds.yaml
 #
 # config/crd/experimental/gateway.networking.k8s.io_grpcroutes.yaml
 #
@@ -6103,7 +6103,7 @@ status:
   conditions: null
   storedVersions: null
 ---
-# Source: gateway-crds-helm/templates/gatewayapi-crds.yaml
+# Source: gateway-crds-helm/templates/experimental-gatewayapi-crds.yaml
 #
 # config/crd/experimental/gateway.networking.k8s.io_httproutes.yaml
 #
@@ -13386,7 +13386,7 @@ status:
   conditions: null
   storedVersions: null
 ---
-# Source: gateway-crds-helm/templates/gatewayapi-crds.yaml
+# Source: gateway-crds-helm/templates/experimental-gatewayapi-crds.yaml
 #
 # config/crd/experimental/gateway.networking.k8s.io_referencegrants.yaml
 #
@@ -13580,7 +13580,7 @@ status:
   conditions: null
   storedVersions: null
 ---
-# Source: gateway-crds-helm/templates/gatewayapi-crds.yaml
+# Source: gateway-crds-helm/templates/experimental-gatewayapi-crds.yaml
 #
 # config/crd/experimental/gateway.networking.k8s.io_tcproutes.yaml
 #
@@ -14317,7 +14317,7 @@ status:
   conditions: null
   storedVersions: null
 ---
-# Source: gateway-crds-helm/templates/gatewayapi-crds.yaml
+# Source: gateway-crds-helm/templates/experimental-gatewayapi-crds.yaml
 #
 # config/crd/experimental/gateway.networking.k8s.io_tlsroutes.yaml
 #
@@ -15117,7 +15117,7 @@ status:
   conditions: null
   storedVersions: null
 ---
-# Source: gateway-crds-helm/templates/gatewayapi-crds.yaml
+# Source: gateway-crds-helm/templates/experimental-gatewayapi-crds.yaml
 #
 # config/crd/experimental/gateway.networking.k8s.io_udproutes.yaml
 #
@@ -15854,7 +15854,7 @@ status:
   conditions: null
   storedVersions: null
 ---
-# Source: gateway-crds-helm/templates/gatewayapi-crds.yaml
+# Source: gateway-crds-helm/templates/experimental-gatewayapi-crds.yaml
 #
 # config/crd/experimental/gateway.networking.x-k8s.io_xbackendtrafficpolicies.yaml
 #
@@ -16464,7 +16464,7 @@ status:
   conditions: null
   storedVersions: null
 ---
-# Source: gateway-crds-helm/templates/gatewayapi-crds.yaml
+# Source: gateway-crds-helm/templates/experimental-gatewayapi-crds.yaml
 #
 # config/crd/experimental/gateway.networking.x-k8s.io_xlistenersets.yaml
 #
@@ -43459,7 +43459,7 @@ spec:
     subresources:
       status: {}
 ---
-# Source: gateway-crds-helm/templates/gatewayapi-crds.yaml
+# Source: gateway-crds-helm/templates/experimental-gatewayapi-crds.yaml
 # Copyright 2025 The Kubernetes Authors.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");

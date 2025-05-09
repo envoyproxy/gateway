@@ -10,7 +10,9 @@ ENVTEST_K8S_VERSIONS ?= 1.29.4 1.30.3 1.31.0 1.32.0
 # For more details, see https://gateway-api.sigs.k8s.io/guides/getting-started/#installing-gateway-api
 GATEWAY_API_VERSION ?= $(shell go list -m -f '{{.Version}}' sigs.k8s.io/gateway-api)
 
-GATEWAY_RELEASE_URL ?= https://github.com/kubernetes-sigs/gateway-api/releases/download/${GATEWAY_API_VERSION}/experimental-install.yaml
+GATEWAY_API_RELEASE_URL ?= https://github.com/kubernetes-sigs/gateway-api/releases/download/${GATEWAY_API_VERSION}
+EXPERIMENTAL_GATEWAY_API_RELEASE_URL ?= ${GATEWAY_API_RELEASE_URL}/experimental-install.yaml
+STANDARD_GATEWAY_API_RELEASE_URL ?= ${GATEWAY_API_RELEASE_URL}/standard-install.yaml
 
 WAIT_TIMEOUT ?= 15m
 
@@ -82,12 +84,17 @@ generate-gwapi-manifests: ## Generate GWAPI manifests and make it consistent wit
 	@$(LOG_TARGET)
 	@echo "Generating Gateway API CRDs"
 	@mkdir -p $(OUTPUT_DIR)/
-	@curl -sLo $(OUTPUT_DIR)/gatewayapi-crds.yaml ${GATEWAY_RELEASE_URL}
-	cp $(OUTPUT_DIR)/gatewayapi-crds.yaml charts/gateway-helm/crds/gatewayapi-crds.yaml
-	@sed -i.bak '1s/^/{{- if .Values.crds.gatewayAPI.enabled }}\n/' $(OUTPUT_DIR)/gatewayapi-crds.yaml && \
-	echo '{{- end }}' >> $(OUTPUT_DIR)/gatewayapi-crds.yaml && \
-	rm -f $(OUTPUT_DIR)/gatewayapi-crds.yaml.bak
-	@mv $(OUTPUT_DIR)/gatewayapi-crds.yaml charts/gateway-crds-helm/templates/gatewayapi-crds.yaml
+	@curl -sLo $(OUTPUT_DIR)/experimental-gatewayapi-crds.yaml ${EXPERIMENTAL_GATEWAY_API_RELEASE_URL}
+	@curl -sLo $(OUTPUT_DIR)/standard-gatewayapi-crds.yaml ${STANDARD_GATEWAY_API_RELEASE_URL}
+	cp $(OUTPUT_DIR)/experimental-gatewayapi-crds.yaml charts/gateway-helm/crds/gatewayapi-crds.yaml
+	@sed -i.bak '1s/^/{{- if and .Values.crds.gatewayAPI.enabled (eq .Values.crds.gatewayAPI.channel "standard") }}\n/' $(OUTPUT_DIR)/standard-gatewayapi-crds.yaml && \
+	echo '{{- end }}' >> $(OUTPUT_DIR)/standard-gatewayapi-crds.yaml && \
+	sed -i.bak '1s/^/{{- if and .Values.crds.gatewayAPI.enabled (or (eq .Values.crds.gatewayAPI.channel "experimental") (eq .Values.crds.gatewayAPI.channel "")) }}\n/' $(OUTPUT_DIR)/experimental-gatewayapi-crds.yaml && \
+	echo '{{- end }}' >> $(OUTPUT_DIR)/experimental-gatewayapi-crds.yaml && \
+	rm -f $(OUTPUT_DIR)/standard-gatewayapi-crds.yaml.bak && \
+	rm -f $(OUTPUT_DIR)/experimental-gatewayapi-crds.yaml.bak
+	@mv $(OUTPUT_DIR)/experimental-gatewayapi-crds.yaml charts/gateway-crds-helm/templates/experimental-gatewayapi-crds.yaml
+	@mv $(OUTPUT_DIR)/standard-gatewayapi-crds.yaml charts/gateway-crds-helm/templates/standard-gatewayapi-crds.yaml
 
 .PHONY: kube-generate
 kube-generate: ## Generate code containing DeepCopy, DeepCopyInto, and DeepCopyObject method implementations.
