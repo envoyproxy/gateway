@@ -30,6 +30,10 @@ E2E_CLEANUP ?= true
 E2E_TIMEOUT ?= 20m
 E2E_TEST_ARGS ?= -v -tags e2e -timeout $(E2E_TIMEOUT)
 
+KUBE_DEPLOY_PROFILE ?= default
+KUBE_DEPLOY_HELM_VALUES_FILE = $(ROOT_DIR)/test/config/helm/$(KUBE_DEPLOY_PROFILE).yaml
+KUBE_DEPLOY_EG_CONFIG_FILE = $(ROOT_DIR)/test/config/envoy-gateaway-config/$(KUBE_DEPLOY_PROFILE).yaml
+
 # Set Kubernetes Resources Directory Path
 ifeq ($(origin KUBE_PROVIDER_DIR),undefined)
 KUBE_PROVIDER_DIR := $(ROOT_DIR)/internal/provider/kubernetes/config
@@ -112,7 +116,12 @@ endif
 .PHONY: kube-deploy
 kube-deploy: manifests helm-generate.gateway-helm ## Install Envoy Gateway into the Kubernetes cluster specified in ~/.kube/config.
 	@$(LOG_TARGET)
-	helm install eg charts/gateway-helm --set deployment.envoyGateway.imagePullPolicy=$(IMAGE_PULL_POLICY) -n envoy-gateway-system --create-namespace --debug --timeout='$(WAIT_TIMEOUT)' --wait --wait-for-jobs
+	helm install eg charts/gateway-helm \
+		--set deployment.envoyGateway.imagePullPolicy=$(IMAGE_PULL_POLICY) \
+		-n envoy-gateway-system --create-namespace \
+		--debug --timeout='$(WAIT_TIMEOUT)' \
+		--wait --wait-for-jobs \
+		-f $(KUBE_DEPLOY_HELM_VALUES_FILE)
 
 .PHONY: kube-deploy-for-benchmark-test
 kube-deploy-for-benchmark-test: manifests helm-generate ## Install Envoy Gateway and prometheus-server for benchmark test purpose only.
@@ -199,7 +208,7 @@ e2e-prepare: prepare-ip-family ## Prepare the environment for running e2e tests
 	@$(LOG_TARGET)
 	kubectl wait --timeout=5m -n envoy-gateway-system deployment/envoy-ratelimit --for=condition=Available
 	kubectl wait --timeout=5m -n envoy-gateway-system deployment/envoy-gateway --for=condition=Available
-	kubectl apply -f test/config/envoy-gateway-config.yaml
+	kubectl apply -f $(KUBE_DEPLOY_EG_CONFIG_FILE)
 	kubectl apply -f test/config/gatewayclass.yaml
 
 .PHONY: run-e2e
