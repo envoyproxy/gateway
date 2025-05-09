@@ -1,5 +1,6 @@
 ---
 title: "Gateway API Extensions"
+weight: 2
 ---
 ## Before You Begin
 - [The Gateway API](https://gateway-api.sigs.k8s.io/)

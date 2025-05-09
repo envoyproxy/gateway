@@ -1,5 +1,6 @@
 ---
 title: "The Gateway API"
+weight: 1
 ---
 
 ## Before You Begin

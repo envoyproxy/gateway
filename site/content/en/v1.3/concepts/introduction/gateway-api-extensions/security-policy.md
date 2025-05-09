@@ -79,4 +79,3 @@ In the example, policy A affects only the HTTPS listener, while policy B applies
 - [JWT Claim Based Authorization](../tasks/security/jwt-claim-authorization.md)
 - [OIDC Authorization](../tasks/security/oidc.md)
 - [SecurityPolicy API Reference](../api/extension_types#securitypolicy)
-

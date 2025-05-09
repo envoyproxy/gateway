@@ -1,5 +1,6 @@
 ---
 title: "The Gateway API"
+weight: 1
 ---
 
 ## Before You Begin
@@ -32,5 +33,3 @@ Envoy Gateway leverages this model by introducing a suite of Gateway API extensi
 - [Getting Started with Envoy Gateway](../../tasks/quickstart.md)
 - [Envoy Gateway API Reference](../../api/extension_types)
 - [Extensibility Tasks](../../tasks/extensibility/_index.md)
-
-

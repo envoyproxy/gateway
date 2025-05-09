@@ -1,5 +1,6 @@
 ---
 title: "API Gateways"
+weight: 3
 ---
 
 ## Overview
