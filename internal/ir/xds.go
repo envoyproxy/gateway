@@ -2124,7 +2124,6 @@ type RateLimitRule struct {
 	// Default: false.
 	//
 	// +optional
-	// +kubebuilder:default=false
 	Shared *bool `json:"shared,omitempty" yaml:"shared,omitempty"`
 	// Name is a unique identifier for this rule, set as <policy-ns>/<policy-name>/rule/<rule-index>.
 	Name string `json:"name,omitempty" yaml:"name,omitempty"`

@@ -949,7 +949,6 @@ spec:
                               - unit
                               type: object
                             shared:
-                              default: false
                               description: |-
                                 Shared determines whether this rate limit rule applies across all the policy targets.
                                 If set to true, the rule is treated as a common bucket and is shared across all policy targets (xRoutes).
@@ -1199,7 +1198,6 @@ spec:
                               - unit
                               type: object
                             shared:
-                              default: false
                               description: |-
                                 Shared determines whether this rate limit rule applies across all the policy targets.
                                 If set to true, the rule is treated as a common bucket and is shared across all policy targets (xRoutes).

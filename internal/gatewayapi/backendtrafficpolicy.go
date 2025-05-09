@@ -413,8 +413,14 @@ func (t *Translator) translateBackendTrafficPolicyForRouteWithMerge(
 	gatewayNN types.NamespacedName, gwPolicy *egv1a1.BackendTrafficPolicy,
 	route RouteContext, xdsIR resource.XdsIRMap, resources *resource.Resources,
 ) error {
-	tfGW, _ := t.buildTrafficFeatures(gwPolicy, resources)
-	tfRoute, _ := t.buildTrafficFeatures(policy, resources)
+	tfGW, errGW := t.buildTrafficFeatures(gwPolicy, resources)
+	if errGW != nil {
+		return errGW
+	}
+	tfRoute, errRoute := t.buildTrafficFeatures(policy, resources)
+	if errRoute != nil {
+		return errRoute
+	}
 	mergedTF, err := utils.MergeTF(tfGW, tfRoute, *policy.Spec.MergeType)
 	if err != nil {
 		return fmt.Errorf("error merging policies: %w", err)
@@ -795,7 +801,7 @@ func (t *Translator) buildGlobalRateLimit(policy *egv1a1.BackendTrafficPolicy) (
 			return nil, err
 		}
 		// Set the Name field as <policy-ns>/<policy-name>/rule/<rule-index>
-		irRules[i].Name = fmt.Sprintf("%s/%s/rule/%d", policy.Namespace, policy.Name, i)
+		irRules[i].Name = irRuleName(policy.Namespace, policy.Name, i)
 	}
 
 	return rateLimit, nil
