@@ -418,6 +418,7 @@ func (t *Translator) translateBackendTrafficPolicyForRoute(
 
 	// Apply IR to all relevant routes
 	for key, x := range xdsIR {
+		// if gatewayNN is not nil, only apply to the specific gateway
 		if gatewayNN != nil && key != t.IRKey(*gatewayNN) {
 			// Skip if not the gateway wanted
 			continue
