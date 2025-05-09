@@ -63,8 +63,8 @@ spec:
       rules:
         - clientSelectors:
             - headers:
-                - name: x-test-header
-                  value: limit-me
+                - name: x-user-id
+                  value: one
           limit:
             requests: 3
             unit: Hour
