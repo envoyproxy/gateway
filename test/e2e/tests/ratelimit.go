@@ -955,25 +955,31 @@ var RateLimitGlobalSharedUnsharedGatewayAndRoutePolicyMergeTest = suite.Conforma
 		t.Run("rate limit requests with shared header limit across routes with different paths", func(t *testing.T) {
 			ns := "infra-routing"
 			gwNN := types.NamespacedName{Name: "eg-rate-limit", Namespace: ns}
-			paths := []string{"/foo", "/bar"}
+			route1NN := types.NamespacedName{Name: "header-ratelimit-1", Namespace: ns}
+			route2NN := types.NamespacedName{Name: "header-ratelimit-2", Namespace: ns}
 			headersToTest := []string{"one", "two", "three", "four"}
+
+			// Get gateway addresses for the routes
+			gwAddr1 := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), route1NN)
+			gwAddr2 := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), route2NN)
 
 			for _, userID := range headersToTest {
 				t.Run("x-user-id="+userID, func(t *testing.T) {
-					for _, path := range paths {
-						routeNN := types.NamespacedName{}
-						if path == "/foo" {
-							routeNN = types.NamespacedName{Name: "header-ratelimit-1", Namespace: ns}
-						} else {
-							routeNN = types.NamespacedName{Name: "header-ratelimit-2", Namespace: ns}
-						}
-						gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
+					// Test each path (/foo and /bar)
+					paths := []struct {
+						path   string
+						gwAddr string
+					}{
+						{"/foo", gwAddr1},
+						{"/bar", gwAddr2},
+					}
 
+					for _, pathInfo := range paths {
 						requestHeaders := map[string]string{"x-user-id": userID}
 						ratelimitHeader := make(map[string]string)
 						expectOkResp := http.ExpectedResponse{
 							Request: http.Request{
-								Path:    path,
+								Path:    pathInfo.path,
 								Headers: requestHeaders,
 							},
 							Response: http.Response{
@@ -982,12 +988,11 @@ var RateLimitGlobalSharedUnsharedGatewayAndRoutePolicyMergeTest = suite.Conforma
 							},
 							Namespace: ns,
 						}
-						// Only set ratelimit header for userID == one, three, four (shared), two (unshared) if you want to check headers
-						expectOkReq := http.MakeRequest(t, &expectOkResp, gwAddr, "HTTP", "http")
+						expectOkReq := http.MakeRequest(t, &expectOkResp, pathInfo.gwAddr, "HTTP", "http")
 
 						expectLimitResp := http.ExpectedResponse{
 							Request: http.Request{
-								Path:    path,
+								Path:    pathInfo.path,
 								Headers: requestHeaders,
 							},
 							Response: http.Response{
@@ -995,28 +1000,19 @@ var RateLimitGlobalSharedUnsharedGatewayAndRoutePolicyMergeTest = suite.Conforma
 							},
 							Namespace: ns,
 						}
-						expectLimitReq := http.MakeRequest(t, &expectLimitResp, gwAddr, "HTTP", "http")
+						expectLimitReq := http.MakeRequest(t, &expectLimitResp, pathInfo.gwAddr, "HTTP", "http")
 
 						// Ensure the route is available
-						http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectOkResp)
+						http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, pathInfo.gwAddr, expectOkResp)
 
-						// Send 3 requests, expect 200, and compare each response
-						for i := 0; i < 3; i++ {
-							cReq, cResp, err := suite.RoundTripper.CaptureRoundTrip(expectOkReq)
-							if err != nil {
-								t.Errorf("failed to get expected 200 response for userID=%s, path=%s: %v", userID, path, err)
-								continue
-							}
-							if err := http.CompareRequest(t, &expectOkReq, cReq, cResp, expectOkResp); err != nil {
-								t.Errorf("failed to compare request and response for 200 for userID=%s, path=%s: %v", userID, path, err)
-							}
+						// Send 3 requests, expect 200 for all
+						if err := GotExactExpectedResponse(t, 3, suite.RoundTripper, expectOkReq, expectOkResp); err != nil {
+							t.Errorf("failed to get expected response for the first three requests (userID=%s, path=%s): %v", userID, pathInfo.path, err)
 						}
-						// 4th request, expect 429, and compare response
-						cReq, cResp, err := suite.RoundTripper.CaptureRoundTrip(expectLimitReq)
-						if err != nil {
-							t.Errorf("failed to get expected 429 response for userID=%s, path=%s: %v", userID, path, err)
-						} else if err := http.CompareRequest(t, &expectLimitReq, cReq, cResp, expectLimitResp); err != nil {
-							t.Errorf("failed to compare request and response for 429 for userID=%s, path=%s: %v", userID, path, err)
+
+						// 4th request, expect 429
+						if err := GotExactExpectedResponse(t, 1, suite.RoundTripper, expectLimitReq, expectLimitResp); err != nil {
+							t.Errorf("failed to get expected response for the fourth request (userID=%s, path=%s): %v", userID, pathInfo.path, err)
 						}
 					}
 				})
