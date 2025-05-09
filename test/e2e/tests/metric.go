@@ -178,25 +178,8 @@ func runMetricCompressorTest(t *testing.T, suite *suite.ConformanceTestSuite, ns
 	}
 	httputils.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
 
-	// make sure compression work as expected
-	statsNN := types.NamespacedName{Namespace: "envoy-gateway-system", Name: fmt.Sprintf("%s-gtw-metrics", compressor)}
-	var statsHost string
-	if err := wait.PollUntilContextTimeout(context.TODO(), time.Second, time.Minute, true, func(_ context.Context) (done bool, err error) {
-		addr, err := ServiceHost(suite.Client, statsNN, 19001)
-		if err != nil {
-			tlog.Logf(t, "failed to get service host %s: %v", statsNN, err)
-			return false, nil
-		}
-		if addr != "" {
-			statsHost = addr
-			return true, nil
-		}
-		return false, nil
-	}); err != nil {
-		t.Errorf("failed to get service host %s: %v", statsNN, err)
-		return
-	}
-
+	// stats exposed at port 19001
+	statsHost := strings.Replace(gwAddr, ":80", ":19001", 1)
 	statsAddr := fmt.Sprintf("http://%s/stats/prometheus", statsHost)
 	tlog.Logf(t, "check stats from %s", statsAddr)
 

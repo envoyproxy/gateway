@@ -64,7 +64,6 @@ func TestE2E(t *testing.T) {
 	// TODO: make these tests work in GatewayNamespaceMode
 	if tests.IsGatewayNamespaceMode() {
 		skipTests = append(skipTests,
-			tests.MetricCompressorTest.ShortName,
 			tests.HTTPWasmTest.ShortName,
 			tests.OCIWasmTest.ShortName,
 			tests.ZoneAwareRoutingTest.ShortName,
