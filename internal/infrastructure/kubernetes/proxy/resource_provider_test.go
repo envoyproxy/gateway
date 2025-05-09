@@ -1329,7 +1329,6 @@ func TestServiceAccount(t *testing.T) {
 				ns = tc.infra.GetProxyInfra().Namespace
 			}
 			r := NewResourceRender(ns, cfg.DNSDomain, tc.infra.GetProxyInfra(), cfg.EnvoyGateway)
-
 			sa, err := r.ServiceAccount()
 			require.NoError(t, err)
 
