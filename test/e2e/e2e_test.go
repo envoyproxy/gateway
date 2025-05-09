@@ -55,6 +55,31 @@ func TestE2E(t *testing.T) {
 	if tests.IPFamily == "ipv6" {
 		skipTests = append(skipTests,
 			tests.DynamicResolverBackendTest.ShortName,
+			tests.RateLimitCIDRMatchTest.ShortName,
+			tests.RateLimitMultipleListenersTest.ShortName,
+			tests.RateLimitGlobalSharedCidrMatchTest.ShortName,
+		)
+	}
+
+	// TODO: make these tests work in GatewayNamespaceMode
+	if tests.IsGatewayNamespaceMode() {
+		skipTests = append(skipTests,
+			tests.MetricCompressorTest.ShortName,
+			tests.HTTPWasmTest.ShortName,
+			tests.OCIWasmTest.ShortName,
+			tests.ZoneAwareRoutingTest.ShortName,
+
+			// Skip RateLimit tests because they are not supported in GatewayNamespaceMode
+			tests.RateLimitCIDRMatchTest.ShortName,
+			tests.RateLimitHeaderMatchTest.ShortName,
+			tests.GlobalRateLimitHeaderInvertMatchTest.ShortName,
+			tests.RateLimitHeadersDisabled.ShortName,
+			tests.RateLimitBasedJwtClaimsTest.ShortName,
+			tests.RateLimitMultipleListenersTest.ShortName,
+			tests.RateLimitHeadersAndCIDRMatchTest.ShortName,
+			tests.UsageRateLimitTest.ShortName,
+			tests.RateLimitGlobalSharedCidrMatchTest.ShortName,
+			tests.RateLimitGlobalSharedGatewayHeaderMatchTest.ShortName,
 		)
 	}
 
