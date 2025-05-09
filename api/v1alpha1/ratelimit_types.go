@@ -104,7 +104,6 @@ type RateLimitRule struct {
 	// Default: false.
 	//
 	// +optional
-	// +kubebuilder:default=false
 	Shared *bool `json:"shared,omitempty"`
 }
 
