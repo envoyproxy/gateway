@@ -57,12 +57,15 @@ var MetricTest = suite.ConformanceTest{
 			// let's check the metric
 			if err := wait.PollUntilContextTimeout(context.TODO(), time.Second, time.Minute, true,
 				func(_ context.Context) (done bool, err error) {
-					if err := ScrapeMetrics(t, suite.Client, types.NamespacedName{
-						Namespace: "envoy-gateway-system",
-						Name:      "same-namespace-gw-metrics",
-					}, 19001, "/stats/prometheus"); err != nil {
+					pql := fmt.Sprintf(`envoy_cluster_default_total_match_count{app_kubernetes_io_component="proxy", app_kubernetes_io_managed_by="envoy-gateway", app_kubernetes_io_name="envoy", envoy_cluster_name="xds_cluster", gateway_envoyproxy_io_owning_gateway_name="%s"}`, "same-namespace")
+					v, err := prometheus.QueryPrometheus(suite.Client, pql)
+					if err != nil {
 						tlog.Logf(t, "failed to get metric: %v", err)
 						return false, nil
+					}
+					if v != nil {
+						tlog.Logf(t, "got expected value: %v", v)
+						return true, nil
 					}
 					return true, nil
 				}); err != nil {
