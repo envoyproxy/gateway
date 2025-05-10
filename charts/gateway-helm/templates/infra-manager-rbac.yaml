@@ -1,6 +1,7 @@
-{{ if .Values.config.envoyGateway.provider.kubernetes }}
 {{ $kube := .Values.config.envoyGateway.provider.kubernetes }}
-{{ if and (not $kube.watch) ($kube.deploy) (eq $kube.deploy.type "GatewayNamespace") }}
+{{ $enabledInConfigmap := and (not $kube.watch) ($kube.deploy) (eq $kube.deploy.type "GatewayNamespace") }}
+{{ $enabledInConfig := eq .Values.config.deploy.type "GatewayNamespace" }}
+{{ if or $enabledInConfig $enabledInConfigmap }}
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
@@ -27,7 +28,6 @@ subjects:
   name: 'envoy-gateway'
   namespace: '{{ $.Release.Namespace }}'
 ---
-{{ end }}
 {{ end }}
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
