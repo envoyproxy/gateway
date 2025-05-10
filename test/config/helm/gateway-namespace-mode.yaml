@@ -1,9 +1,8 @@
 config:
+  deploy:
+    type: GatewayNamespace
   envoyGateway:
     gateway:
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
     provider:
       type: Kubernetes
-      kubernetes:
-        deploy:
-          type: GatewayNamespace
