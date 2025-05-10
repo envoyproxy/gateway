@@ -16,8 +16,6 @@ import (
 	cel "github.com/envoyproxy/go-control-plane/envoy/extensions/access_loggers/filters/cel/v3"
 	grpcaccesslog "github.com/envoyproxy/go-control-plane/envoy/extensions/access_loggers/grpc/v3"
 	otelaccesslog "github.com/envoyproxy/go-control-plane/envoy/extensions/access_loggers/open_telemetry/v3"
-	celformatter "github.com/envoyproxy/go-control-plane/envoy/extensions/formatter/cel/v3"
-	metadataformatter "github.com/envoyproxy/go-control-plane/envoy/extensions/formatter/metadata/v3"
 	reqwithoutqueryformatter "github.com/envoyproxy/go-control-plane/envoy/extensions/formatter/req_without_query/v3"
 	"github.com/envoyproxy/go-control-plane/pkg/wellknown"
 	otlpcommonv1 "go.opentelemetry.io/proto/otlp/common/v1"
@@ -35,8 +33,6 @@ const (
 	otelAccessLog = "envoy.access_loggers.open_telemetry"
 
 	reqWithoutQueryCommandOperator = "%REQ_WITHOUT_QUERY"
-	metadataCommandOperator        = "%METADATA"
-	celCommandOperator             = "%CEL"
 
 	tcpGRPCAccessLog = "envoy.access_loggers.tcp_grpc"
 	celFilter        = "envoy.access_loggers.extension_filters.cel"
@@ -79,43 +75,18 @@ var listenerAccessLogFilter = &accesslog.AccessLogFilter{
 var (
 	// reqWithoutQueryFormatter configures additional formatters needed for some of the format strings like "REQ_WITHOUT_QUERY"
 	reqWithoutQueryFormatter *cfgcore.TypedExtensionConfig
-
-	// metadataFormatter configures additional formatters needed for some of the format strings like "METADATA"
-	// for more information, see https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/formatter/metadata/v3/metadata.proto
-	metadataFormatter *cfgcore.TypedExtensionConfig
-
-	// celFormatter configures additional formatters needed for some of the format strings like "CEL"
-	// for more information, see https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/formatter/cel/v3/cel.proto
-	celFormatter *cfgcore.TypedExtensionConfig
 )
 
 func init() {
-	any, err := proto.ToAnyWithValidation(&reqwithoutqueryformatter.ReqWithoutQuery{})
+	anyCfg, err := proto.ToAnyWithValidation(&reqwithoutqueryformatter.ReqWithoutQuery{})
 	if err != nil {
 		panic(err)
 	}
 	reqWithoutQueryFormatter = &cfgcore.TypedExtensionConfig{
 		Name:        "envoy.formatter.req_without_query",
-		TypedConfig: any,
+		TypedConfig: anyCfg,
 	}
 
-	any, err = proto.ToAnyWithValidation(&metadataformatter.Metadata{})
-	if err != nil {
-		panic(err)
-	}
-	metadataFormatter = &cfgcore.TypedExtensionConfig{
-		Name:        "envoy.formatter.metadata",
-		TypedConfig: any,
-	}
-
-	any, err = proto.ToAnyWithValidation(&celformatter.Cel{})
-	if err != nil {
-		panic(err)
-	}
-	celFormatter = &cfgcore.TypedExtensionConfig{
-		Name:        "envoy.formatter.cel",
-		TypedConfig: any,
-	}
 }
 
 func buildXdsAccessLog(al *ir.AccessLog, accessLogType ir.ProxyAccessLogType) ([]*accesslog.AccessLog, error) {
@@ -388,7 +359,7 @@ func celAccessLogFilter(expr string) (*accesslog.AccessLogFilter, error) {
 	fl := &cel.ExpressionFilter{
 		Expression: expr,
 	}
-	any, err := proto.ToAnyWithValidation(fl)
+	anyCfg, err := proto.ToAnyWithValidation(fl)
 	if err != nil {
 		return nil, err
 	}
@@ -397,7 +368,7 @@ func celAccessLogFilter(expr string) (*accesslog.AccessLogFilter, error) {
 		FilterSpecifier: &accesslog.AccessLogFilter_ExtensionFilter{
 			ExtensionFilter: &accesslog.ExtensionFilter{
 				Name:       celFilter,
-				ConfigType: &accesslog.ExtensionFilter_TypedConfig{TypedConfig: any},
+				ConfigType: &accesslog.ExtensionFilter_TypedConfig{TypedConfig: anyCfg},
 			},
 		},
 	}, nil
@@ -441,85 +412,45 @@ func accessLogTextFormatters(text string) []*cfgcore.TypedExtensionConfig {
 		formatters = append(formatters, reqWithoutQueryFormatter)
 	}
 
-	if strings.Contains(text, metadataCommandOperator) {
-		formatters = append(formatters, metadataFormatter)
-	}
-
-	if strings.Contains(text, celCommandOperator) {
-		formatters = append(formatters, celFormatter)
-	}
-
 	return formatters
 }
 
 func accessLogJSONFormatters(json map[string]string) []*cfgcore.TypedExtensionConfig {
-	reqWithoutQuery, metadata, cel := false, false, false
+	reqWithoutQuery := false
 
 	for _, value := range json {
-		if reqWithoutQuery && metadata && cel {
+		if reqWithoutQuery {
 			break
 		}
 
 		if strings.Contains(value, reqWithoutQueryCommandOperator) {
 			reqWithoutQuery = true
 		}
-
-		if strings.Contains(value, metadataCommandOperator) {
-			metadata = true
-		}
-
-		if strings.Contains(value, celCommandOperator) {
-			cel = true
-		}
 	}
 
 	formatters := make([]*cfgcore.TypedExtensionConfig, 0, 3)
 
 	if reqWithoutQuery {
 		formatters = append(formatters, reqWithoutQueryFormatter)
-	}
-
-	if metadata {
-		formatters = append(formatters, metadataFormatter)
-	}
-
-	if cel {
-		formatters = append(formatters, celFormatter)
 	}
 
 	return formatters
 }
 
 func accessLogOpenTelemetryFormatters(body string, attributes map[string]string) []*cfgcore.TypedExtensionConfig {
-	reqWithoutQuery, metadata, cel := false, false, false
+	reqWithoutQuery := false
 
 	if strings.Contains(body, reqWithoutQueryCommandOperator) {
 		reqWithoutQuery = true
 	}
 
-	if strings.Contains(body, metadataCommandOperator) {
-		metadata = true
-	}
-
-	if strings.Contains(body, celCommandOperator) {
-		cel = true
-	}
-
 	for _, value := range attributes {
-		if reqWithoutQuery && metadata && cel {
+		if reqWithoutQuery {
 			break
 		}
 
-		if !reqWithoutQuery && strings.Contains(value, reqWithoutQueryCommandOperator) {
+		if strings.Contains(value, reqWithoutQueryCommandOperator) {
 			reqWithoutQuery = true
-		}
-
-		if !metadata && strings.Contains(value, metadataCommandOperator) {
-			metadata = true
-		}
-
-		if !cel && strings.Contains(value, celCommandOperator) {
-			cel = true
 		}
 	}
 
@@ -527,14 +458,6 @@ func accessLogOpenTelemetryFormatters(body string, attributes map[string]string)
 
 	if reqWithoutQuery {
 		formatters = append(formatters, reqWithoutQueryFormatter)
-	}
-
-	if metadata {
-		formatters = append(formatters, metadataFormatter)
-	}
-
-	if cel {
-		formatters = append(formatters, celFormatter)
 	}
 
 	return formatters
