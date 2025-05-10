@@ -176,6 +176,11 @@ benchmark: create-cluster kube-install-image kube-deploy-for-benchmark-test run-
 .PHONY: resilience
 resilience: create-cluster kube-install-image kube-install-examples-image kube-deploy install-eg-addons enable-simple-extension-server run-resilience delete-cluster ## Create a kind cluster, deploy EG into it, run Envoy Gateway resilience test, and clean up.
 
+.PHONY: standalone
+standalone: image.build
+	@$(LOG_TARGET)
+	test/standalone/run.sh $(IMAGE) $(TAG)
+
 .PHONY: e2e
 e2e: create-cluster kube-install-image kube-deploy \
 	install-ratelimit install-eg-addons kube-install-examples-image \
