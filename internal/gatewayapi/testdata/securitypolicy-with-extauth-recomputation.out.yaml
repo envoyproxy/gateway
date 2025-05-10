@@ -158,6 +158,7 @@ infraIR:
           gateway.envoyproxy.io/owning-gateway-namespace: default
       name: default/gateway-1
       namespace: envoy-gateway-system
+      resourceName: gateway-1
 securityPolicies:
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: SecurityPolicy

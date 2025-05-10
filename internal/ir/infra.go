@@ -46,7 +46,11 @@ type ProxyInfra struct {
 	// Metadata defines metadata for the managed proxy infrastructure.
 	Metadata *InfraMetadata `json:"metadata,omitempty" yaml:"metadata,omitempty"`
 	// Name is the name used for managed proxy infrastructure.
+	// It is actually the irKey.
 	Name string `json:"name" yaml:"name"`
+	// ResourceName is the name of the resource used for managed proxy infrastructure.
+	// It is the name of the Gateway or GatewayClass(in MergedGateway).
+	ResourceName string `json:"resourceName" yaml:"resourceName"`
 	// Namespace is the namespace used for managed proxy infrastructure.
 	Namespace string `json:"namespace" yaml:"namespace"`
 	// Config defines user-facing configuration of the managed proxy infrastructure.

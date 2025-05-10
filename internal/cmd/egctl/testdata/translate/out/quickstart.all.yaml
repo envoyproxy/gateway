@@ -99,6 +99,7 @@ infraIR:
           gateway.envoyproxy.io/owning-gateway-namespace: envoy-gateway-system
       name: envoy-gateway-system/eg
       namespace: ""
+      resourceName: eg
 xdsIR:
   envoy-gateway-system/eg:
     accessLog:

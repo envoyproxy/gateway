@@ -235,6 +235,7 @@ infraIR:
           gateway.envoyproxy.io/owning-gateway-namespace: default
       name: default/tcp-gateway
       namespace: envoy-gateway-system
+      resourceName: tcp-gateway
 tcpRoutes:
 - apiVersion: gateway.networking.k8s.io/v1alpha2
   kind: TCPRoute

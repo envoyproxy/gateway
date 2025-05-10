@@ -445,6 +445,7 @@ infraIR:
           gateway.envoyproxy.io/owning-gateway-namespace: envoy-gateway
       name: envoy-gateway/gateway-1
       namespace: envoy-gateway-system
+      resourceName: gateway-1
   envoy-gateway/gateway-2:
     proxy:
       listeners:
@@ -468,6 +469,7 @@ infraIR:
           gateway.envoyproxy.io/owning-gateway-namespace: envoy-gateway
       name: envoy-gateway/gateway-2
       namespace: envoy-gateway-system
+      resourceName: gateway-2
   envoy-gateway/gateway-3:
     proxy:
       listeners:
@@ -484,6 +486,7 @@ infraIR:
           gateway.envoyproxy.io/owning-gateway-namespace: envoy-gateway
       name: envoy-gateway/gateway-3
       namespace: envoy-gateway-system
+      resourceName: gateway-3
   not-same-namespace/not-same-namespace-gateway:
     proxy:
       listeners:
@@ -500,6 +503,7 @@ infraIR:
           gateway.envoyproxy.io/owning-gateway-namespace: not-same-namespace
       name: not-same-namespace/not-same-namespace-gateway
       namespace: envoy-gateway-system
+      resourceName: not-same-namespace-gateway
 xdsIR:
   envoy-gateway/gateway-1:
     accessLog:
