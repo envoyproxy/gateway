@@ -14,6 +14,7 @@ import (
 	"strings"
 
 	perr "github.com/pkg/errors"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
@@ -31,6 +32,8 @@ import (
 
 const (
 	MaxConsistentHashTableSize = 5000011 // https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/cluster/v3/cluster.proto#config-cluster-v3-cluster-maglevlbconfig
+	// nolint: gosec
+	envoyTLSSecretName = "envoy"
 )
 
 func (t *Translator) ProcessBackendTrafficPolicies(resources *resource.Resources,
@@ -536,7 +539,7 @@ func (t *Translator) buildTrafficFeatures(policy *egv1a1.BackendTrafficPolicy, r
 	)
 
 	if policy.Spec.RateLimit != nil {
-		if rl, err = t.buildRateLimit(policy); err != nil {
+		if rl, err = t.buildRateLimit(policy, resources); err != nil {
 			err = perr.WithMessage(err, "RateLimit")
 			errs = errors.Join(errs, err)
 		}
@@ -713,10 +716,10 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(
 	return errs
 }
 
-func (t *Translator) buildRateLimit(policy *egv1a1.BackendTrafficPolicy) (*ir.RateLimit, error) {
+func (t *Translator) buildRateLimit(policy *egv1a1.BackendTrafficPolicy, resources *resource.Resources) (*ir.RateLimit, error) {
 	switch policy.Spec.RateLimit.Type {
 	case egv1a1.GlobalRateLimitType:
-		return t.buildGlobalRateLimit(policy)
+		return t.buildGlobalRateLimit(policy, resources)
 	case egv1a1.LocalRateLimitType:
 		return t.buildLocalRateLimit(policy)
 	}
@@ -793,7 +796,7 @@ func (t *Translator) buildLocalRateLimit(policy *egv1a1.BackendTrafficPolicy) (*
 	return rateLimit, nil
 }
 
-func (t *Translator) buildGlobalRateLimit(policy *egv1a1.BackendTrafficPolicy) (*ir.RateLimit, error) {
+func (t *Translator) buildGlobalRateLimit(policy *egv1a1.BackendTrafficPolicy, resources *resource.Resources) (*ir.RateLimit, error) {
 	if policy.Spec.RateLimit.Global == nil {
 		return nil, fmt.Errorf("global configuration empty for rateLimit")
 	}
@@ -816,6 +819,18 @@ func (t *Translator) buildGlobalRateLimit(policy *egv1a1.BackendTrafficPolicy) (
 		if err != nil {
 			return nil, err
 		}
+	}
+
+	// Get the envoy client TLS secret. It is used to establish a TLS connection with the rate limit service.
+	envoyTLSSecret := resources.GetSecret(t.ControllerNamespace, envoyTLSSecretName)
+	if envoyTLSSecret == nil {
+		return nil, fmt.Errorf("envoy TLS secret %s/%s not found", t.ControllerNamespace, envoyTLSSecretName)
+	}
+
+	rateLimit.Global.ClientCertificate = ir.TLSCertificate{
+		Name:        irTLSListenerConfigName(envoyTLSSecret),
+		Certificate: envoyTLSSecret.Data[corev1.TLSCertKey],
+		PrivateKey:  envoyTLSSecret.Data[corev1.TLSPrivateKeyKey],
 	}
 
 	return rateLimit, nil

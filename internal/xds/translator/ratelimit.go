@@ -33,10 +33,6 @@ import (
 )
 
 const (
-	// rateLimitClientTLSCertFilename is the ratelimit tls cert file.
-	rateLimitClientTLSCertFilename = "/certs/tls.crt"
-	// rateLimitClientTLSKeyFilename is the ratelimit key file.
-	rateLimitClientTLSKeyFilename = "/certs/tls.key"
 	// rateLimitClientTLSCACertFilename is the ratelimit ca cert file.
 	rateLimitClientTLSCACertFilename = "/certs/ca.crt"
 )
@@ -649,7 +645,7 @@ func buildRateLimitServiceDescriptors(route *ir.HTTPRoute) []*rlsconfv3.RateLimi
 }
 
 // buildRateLimitTLSocket builds the TLS socket for the rate limit service.
-func buildRateLimitTLSocket() (*corev3.TransportSocket, error) {
+func buildRateLimitTLSocket(irListener *ir.HTTPListener) (*corev3.TransportSocket, error) {
 	tlsCtx := &tlsv3.UpstreamTlsContext{
 		CommonTlsContext: &tlsv3.CommonTlsContext{
 			TlsCertificates: []*tlsv3.TlsCertificate{},
@@ -663,15 +659,21 @@ func buildRateLimitTLSocket() (*corev3.TransportSocket, error) {
 		},
 	}
 
-	tlsCert := &tlsv3.TlsCertificate{
-		CertificateChain: &corev3.DataSource{
-			Specifier: &corev3.DataSource_Filename{Filename: rateLimitClientTLSCertFilename},
-		},
-		PrivateKey: &corev3.DataSource{
-			Specifier: &corev3.DataSource_Filename{Filename: rateLimitClientTLSKeyFilename},
-		},
+	secretName := ""
+	for _, route := range irListener.Routes {
+		if route.Traffic != nil && route.Traffic.RateLimit != nil && route.Traffic.RateLimit.Global != nil {
+			secretName = route.Traffic.RateLimit.Global.ClientCertificate.Name
+			break
+		}
 	}
-	tlsCtx.CommonTlsContext.TlsCertificates = append(tlsCtx.CommonTlsContext.TlsCertificates, tlsCert)
+	if secretName != "" {
+		tlsCtx.CommonTlsContext.TlsCertificateSdsSecretConfigs = []*tlsv3.SdsSecretConfig{
+			{
+				Name:      secretName,
+				SdsConfig: makeConfigSource(),
+			},
+		}
+	}
 
 	tlsCtxAny, err := anypb.New(tlsCtx)
 	if err != nil {
@@ -701,7 +703,7 @@ func (t *Translator) createRateLimitServiceCluster(tCtx *types.ResourceVersionTa
 		Name:      destinationSettingName(clusterName),
 	}
 
-	tSocket, err := buildRateLimitTLSocket()
+	tSocket, err := buildRateLimitTLSocket(irListener)
 	if err != nil {
 		return err
 	}

@@ -14,6 +14,7 @@ import (
 
 	routev3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
 	hcmv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/http_connection_manager/v3"
+	resourcev3 "github.com/envoyproxy/go-control-plane/pkg/resource/v3"
 	"k8s.io/utils/ptr"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
@@ -342,6 +343,27 @@ func patchResources(tCtx *types.ResourceVersionTable, routes []*ir.HTTPRoute) er
 	for _, filter := range httpFilters {
 		if err := filter.patchResources(tCtx, routes); err != nil {
 			return err
+		}
+	}
+
+	// create the envoy client TLS cert secret.
+	// it's only used for establishing TLS connections with the rate limit server for now.
+	return createRateLimitClientTLSCertSecret(tCtx, routes)
+}
+
+func createRateLimitClientTLSCertSecret(tCtx *types.ResourceVersionTable, routes []*ir.HTTPRoute) error {
+	for _, route := range routes {
+		if route.Traffic != nil && route.Traffic.RateLimit != nil && route.Traffic.RateLimit.Global != nil {
+			if findXdsSecret(tCtx, route.Traffic.RateLimit.Global.ClientCertificate.Name) != nil {
+				return nil
+			}
+
+			if err := tCtx.AddXdsResource(
+				resourcev3.SecretType,
+				buildXdsTLSCertSecret(route.Traffic.RateLimit.Global.ClientCertificate)); err != nil {
+				return err
+			}
+			break
 		}
 	}
 	return nil
