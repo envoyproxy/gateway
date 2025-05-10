@@ -118,7 +118,6 @@ kube-deploy: manifests helm-generate.gateway-helm ## Install Envoy Gateway into 
 	@$(LOG_TARGET)
 	helm install eg charts/gateway-helm \
 		--set deployment.envoyGateway.imagePullPolicy=$(IMAGE_PULL_POLICY) \
-		--set config.envoyGateway.provider.kubernetes.deploy.type=GatewayNamespace \
 		-n envoy-gateway-system --create-namespace \
 		--debug --timeout='$(WAIT_TIMEOUT)' \
 		--wait --wait-for-jobs \

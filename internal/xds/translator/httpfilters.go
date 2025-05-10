@@ -354,11 +354,16 @@ func patchResources(tCtx *types.ResourceVersionTable, routes []*ir.HTTPRoute) er
 func createRateLimitClientTLSCertSecret(tCtx *types.ResourceVersionTable, routes []*ir.HTTPRoute) error {
 	for _, route := range routes {
 		if route.Traffic != nil && route.Traffic.RateLimit != nil && route.Traffic.RateLimit.Global != nil {
+			if findXdsSecret(tCtx, route.Traffic.RateLimit.Global.ClientCertificate.Name) != nil {
+				return nil
+			}
+
 			if err := tCtx.AddXdsResource(
 				resourcev3.SecretType,
-				buildXdsTLSCertSecret(route.Traffic.RateLimit.Global.Certificate)); err != nil {
+				buildXdsTLSCertSecret(route.Traffic.RateLimit.Global.ClientCertificate)); err != nil {
 				return err
 			}
+			break
 		}
 	}
 	return nil

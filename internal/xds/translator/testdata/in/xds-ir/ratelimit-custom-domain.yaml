@@ -20,7 +20,7 @@ http:
             limit:
               requests: 5
               unit: second
-        certificate:
+        clientCertificate:
           name: envoy-gateway-system/envoy
           privateKey: [107, 101, 121, 45, 100, 97, 116, 97]
           serverCertificate: [99, 101, 114, 116, 45, 100, 97, 116, 97]
@@ -45,7 +45,7 @@ http:
             limit:
               requests: 5
               unit: second
-        certificate:
+        clientCertificateCertificate:
           name: envoy-gateway-system/envoy
           privateKey: [107, 101, 121, 45, 100, 97, 116, 97]
           serverCertificate: [99, 101, 114, 116, 45, 100, 97, 116, 97]
@@ -67,7 +67,7 @@ http:
           - limit:
               requests: 5
               unit: second
-        certificate:
+        clientCertificateCertificate:
           name: envoy-gateway-system/envoy
           privateKey: [107, 101, 121, 45, 100, 97, 116, 97]
           serverCertificate: [99, 101, 114, 116, 45, 100, 97, 116, 97]

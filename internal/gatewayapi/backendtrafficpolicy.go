@@ -815,7 +815,7 @@ func (t *Translator) buildGlobalRateLimit(policy *egv1a1.BackendTrafficPolicy, r
 		return nil, fmt.Errorf("envoy TLS secret %s/%s not found", t.ControllerNamespace, envoyTLSSecretName)
 	}
 
-	rateLimit.Global.Certificate = ir.TLSCertificate{
+	rateLimit.Global.ClientCertificate = ir.TLSCertificate{
 		Name:        irTLSListenerConfigName(envoyTLSSecret),
 		Certificate: envoyTLSSecret.Data[corev1.TLSCertKey],
 		PrivateKey:  envoyTLSSecret.Data[corev1.TLSPrivateKeyKey],

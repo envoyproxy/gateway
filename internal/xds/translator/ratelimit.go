@@ -662,7 +662,7 @@ func buildRateLimitTLSocket(irListener *ir.HTTPListener) (*corev3.TransportSocke
 	secretName := ""
 	for _, route := range irListener.Routes {
 		if route.Traffic != nil && route.Traffic.RateLimit != nil && route.Traffic.RateLimit.Global != nil {
-			secretName = route.Traffic.RateLimit.Global.Certificate.Name
+			secretName = route.Traffic.RateLimit.Global.ClientCertificate.Name
 			break
 		}
 	}
