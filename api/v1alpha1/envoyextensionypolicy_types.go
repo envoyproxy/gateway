@@ -65,6 +65,13 @@ type EnvoyExtensionPolicySpec struct {
 	// +kubebuilder:validation:MaxItems=16
 	// +optional
 	Lua []Lua `json:"lua,omitempty"`
+
+	// DynamicModule is an ordered list of Dynamic Module filters
+	// that should be added to the envoy filter chain
+	//
+	// +kubebuilder:validation:MaxItems=16
+	// +optional
+	DynamicModules []DynamicModule `json:"dynamicModules,omitempty"`
 }
 
 //+kubebuilder:object:root=true
