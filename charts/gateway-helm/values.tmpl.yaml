@@ -93,6 +93,10 @@ hpa:
   behavior: {}
 
 config:
+  deploy:
+    # Deploy type controls which namespace EnvoyGateway will povison into.
+    # Optional value: ControllerNamespace, GatewayNamespace
+    type: ControllerNamespace
 # -- EnvoyGateway configuration. Visit https://gateway.envoyproxy.io/docs/api/extension_types/#envoygateway to view all options.
   envoyGateway:
     gateway:
