@@ -24,6 +24,10 @@ http:
                   limit:
                     requests: 5
                     unit: second
+              certificate:
+                name: envoy-gateway-system/envoy
+                privateKey: [107, 101, 121, 45, 100, 97, 116, 97]
+                serverCertificate: [99, 101, 114, 116, 45, 100, 97, 116, 97]
         pathMatch:
           exact: "foo/bar"
         destination:
@@ -48,6 +52,10 @@ http:
                   limit:
                     requests: 5
                     unit: second
+              certificate:
+                name: envoy-gateway-system/envoy
+                privateKey: [107, 101, 121, 45, 100, 97, 116, 97]
+                serverCertificate: [99, 101, 114, 116, 45, 100, 97, 116, 97]
         pathMatch:
           exact: "foo/baz"
         destination:
@@ -72,6 +80,10 @@ http:
                   limit:
                     requests: 10
                     unit: second
+              certificate:
+                name: envoy-gateway-system/envoy
+                privateKey: [107, 101, 121, 45, 100, 97, 116, 97]
+                serverCertificate: [99, 101, 114, 116, 45, 100, 97, 116, 97]
         pathMatch:
           exact: "test"
         destination:

@@ -2103,6 +2103,9 @@ type GlobalRateLimit struct {
 	// +optional
 	// +kubebuilder:default=false
 	Shared *bool `json:"shared,omitempty" yaml:"shared,omitempty"`
+
+	// Certificate holds the client certificate secret for envoy to use when establishing a TLS connection to the rate limit service.
+	Certificate TLSCertificate `json:"certificate" yaml:"certificate"`
 }
 
 // LocalRateLimit holds the local rate limiting configuration.
