@@ -1,0 +1,54 @@
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  creationTimestamp: null
+  labels:
+    gateway.envoyproxy.io/owning-gateway-name: gateway-1
+    gateway.envoyproxy.io/owning-gateway-namespace: namespace-1
+  name: envoy-namespace-1-gateway-1-e2117e41
+  namespace: namespace-1
+spec:
+  maxReplicas: 3
+  metrics:
+  - resource:
+      name: cpu
+      target:
+        averageUtilization: 80
+        type: Utilization
+    type: Resource
+  minReplicas: 1
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: envoy-namespace-1-gateway-1-e2117e41
+status:
+  currentMetrics: null
+  desiredReplicas: 0
+
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  creationTimestamp: null
+  labels:
+    gateway.envoyproxy.io/owning-gateway-name: gateway-2
+    gateway.envoyproxy.io/owning-gateway-namespace: namespace-2
+  name: envoy-namespace-2-gateway-2-107e8cb2
+  namespace: namespace-2
+spec:
+  maxReplicas: 3
+  metrics:
+  - resource:
+      name: cpu
+      target:
+        averageUtilization: 80
+        type: Utilization
+    type: Resource
+  minReplicas: 1
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: envoy-namespace-2-gateway-2-107e8cb2
+status:
+  currentMetrics: null
+  desiredReplicas: 0
