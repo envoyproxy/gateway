@@ -10,58 +10,58 @@ http:
   routes:
   - name: "first-route"
     traffic:
-      name: "test-policy-1/test-namespace"
       rateLimit:
         global:
-          shared: true
           rules:
-          - headerMatches:
+          - name: "test-namespace/test-policy-1/rule/0"
+            headerMatches:
             - name: "x-user-id"
               exact: "one"
             limit:
               requests: 5
               unit: second
+            shared: true
   - name: "second-route"
     traffic:
-      name: "test-policy-1/test-namespace"
       rateLimit:
         global:
-          shared: true
           rules:
-          - headerMatches:
+          - name: "test-namespace/test-policy-1/rule/0"
+            headerMatches:
             - name: "x-user-id"
               exact: "one"
             limit:
               requests: 5
               unit: second
+            shared: true
     pathMatch:
       exact: "foo/baz"
   - name: "third-route"
     traffic:
-      name: "test-policy-2/test-namespace"
       rateLimit:
         global:
-          shared: true
           rules:
-          - headerMatches:
+          - name: "test-namespace/test-policy-2/rule/0"
+            headerMatches:
             - name: "x-user-id"
               exact: "two"
             limit:
               requests: 10
               unit: second
+            shared: true
   - name: "fourth-route"
     traffic:
-      name: "test-policy-3/test-namespace"
       rateLimit:
         global:
-          shared: false
           rules:
-          - headerMatches:
+          - name: "test-namespace/test-policy-3/rule/0"
+            headerMatches:
             - name: "x-user-id"
               exact: "three"
             limit:
               requests: 10
               unit: second
+            shared: false
     pathMatch:
       exact: "foo/bar"
     destination:

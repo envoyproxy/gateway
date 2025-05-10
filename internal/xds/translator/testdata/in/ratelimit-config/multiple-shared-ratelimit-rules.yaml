@@ -17,10 +17,24 @@ http:
             headerMatches:
             - name: "x-user-id"
               exact: "one"
+            limit:
+              requests: 1
+              unit: second
+            shared: true
+          - name: "test-namespace/test-policy-1/rule/1"
+            headerMatches:
             - name: "x-user-id"
               exact: "two"
             limit:
-              requests: 5
+              requests: 2
+              unit: second
+            shared: true
+          - name: "test-namespace/test-policy-1/rule/2"
+            headerMatches:
+            - name: "x-user-id"
+              exact: "three"
+            limit:
+              requests: 3
               unit: second
             shared: false
     pathMatch:

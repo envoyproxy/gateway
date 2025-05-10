@@ -18570,23 +18570,17 @@ spec:
                               - requests
                               - unit
                               type: object
-                            name:
+                            shared:
                               description: |-
-                                Name is the name of the rule. This is used to identify the rule
-                                in the Envoy configuration and as a unique identifier for merging.
-                              type: string
+                                Shared determines whether this rate limit rule applies across all the policy targets.
+                                If set to true, the rule is treated as a common bucket and is shared across all policy targets (xRoutes).
+                                Default: false.
+                              type: boolean
                           required:
                           - limit
                           type: object
                         maxItems: 64
                         type: array
-                      shared:
-                        default: false
-                        description: |-
-                          Shared determines whether the rate limit rules apply across all the policy targets.
-                          If set to true, the rule is treated as a common bucket and is shared across all policy targets (xRoutes).
-                          Default: false.
-                        type: boolean
                     required:
                     - rules
                     type: object
@@ -18825,11 +18819,12 @@ spec:
                               - requests
                               - unit
                               type: object
-                            name:
+                            shared:
                               description: |-
-                                Name is the name of the rule. This is used to identify the rule
-                                in the Envoy configuration and as a unique identifier for merging.
-                              type: string
+                                Shared determines whether this rate limit rule applies across all the policy targets.
+                                If set to true, the rule is treated as a common bucket and is shared across all policy targets (xRoutes).
+                                Default: false.
+                              type: boolean
                           required:
                           - limit
                           type: object

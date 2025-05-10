@@ -1,14 +1,14 @@
 name: first-listener
 domain: first-listener
 descriptors:
-  - key: fourth-route
-    value: fourth-route
+  - key: first-route
+    value: first-route
     rate_limit: null
     descriptors:
       - key: rule-0-match-0
         value: rule-0-match-0
         rate_limit:
-          requests_per_unit: 10
+          requests_per_unit: 3
           unit: SECOND
           unlimited: false
           name: ""
@@ -29,7 +29,7 @@ descriptors:
       - key: rule-0-match-0
         value: rule-0-match-0
         rate_limit:
-          requests_per_unit: 5
+          requests_per_unit: 1
           unit: SECOND
           unlimited: false
           name: ""
@@ -39,18 +39,14 @@ descriptors:
         detailed_metric: false
     shadow_mode: false
     detailed_metric: false
----
-name: test-namespace/test-policy-2
-domain: test-namespace/test-policy-2
-descriptors:
-  - key: test-namespace/test-policy-2/rule/0
-    value: test-namespace/test-policy-2/rule/0
+  - key: test-namespace/test-policy-1/rule/1
+    value: test-namespace/test-policy-1/rule/1
     rate_limit: null
     descriptors:
-      - key: rule-0-match-0
-        value: rule-0-match-0
+      - key: rule-1-match-0
+        value: rule-1-match-0
         rate_limit:
-          requests_per_unit: 10
+          requests_per_unit: 2
           unit: SECOND
           unlimited: false
           name: ""

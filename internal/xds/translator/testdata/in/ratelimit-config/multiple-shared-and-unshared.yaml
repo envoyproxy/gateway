@@ -20,20 +20,28 @@ http:
             limit:
               requests: 5
               unit: second
-            shared: false
+            shared: true
           - name: "test-namespace/test-policy-1/rule/1"
             headerMatches:
             - name: "x-user-id"
               exact: "two"
             limit:
-              requests: 10
+              requests: 5
               unit: second
             shared: false
-    pathMatch:
-      exact: "foo/bar"
-    destination:
-      name: "first-route-dest"
-      settings:
-      - endpoints:
-        - host: "1.2.3.4"
-          port: 50000
+          - name: "test-namespace/test-policy-1/rule/2"
+            headerMatches:
+            - name: "x-user-id"
+              exact: "three"
+            limit:
+              requests: 5
+              unit: second
+            shared: true
+          - name: "test-namespace/test-policy-1/rule/3"
+            headerMatches:
+            - name: "x-user-id"
+              exact: "four"
+            limit:
+              requests: 5
+              unit: second
+            shared: false

@@ -41,6 +41,7 @@ func init() {
 	ConformanceTests = append(ConformanceTests, UsageRateLimitTest)
 	ConformanceTests = append(ConformanceTests, RateLimitGlobalSharedCidrMatchTest)
 	ConformanceTests = append(ConformanceTests, RateLimitGlobalSharedGatewayHeaderMatchTest)
+	ConformanceTests = append(ConformanceTests, RateLimitGlobalSharedUnsharedGatewayAndRoutePolicyMergeTest)
 }
 
 var RateLimitCIDRMatchTest = suite.ConformanceTest{
@@ -941,6 +942,80 @@ var RateLimitGlobalSharedGatewayHeaderMatchTest = suite.ConformanceTest{
 				return false, nil
 			}); err != nil {
 				t.Errorf("failed to get expected metric for rate limit: %v", err)
+			}
+		})
+	},
+}
+
+var RateLimitGlobalSharedUnsharedGatewayAndRoutePolicyMergeTest = suite.ConformanceTest{
+	ShortName:   "RateLimitGlobalSharedUnsharedGatewayAndRoutePolicyMergeTest",
+	Description: "Limit all requests with matching headers across multiple routes with a shared rate limit",
+	Manifests:   []string{"testdata/ratelimit-global-shared-and-unshared-header-match.yaml"},
+	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
+		t.Run("rate limit requests with shared header limit across routes with different paths", func(t *testing.T) {
+			ns := "infra-routing"
+			gwNN := types.NamespacedName{Name: "eg-rate-limit", Namespace: ns}
+			route1NN := types.NamespacedName{Name: "header-ratelimit-1", Namespace: ns}
+			route2NN := types.NamespacedName{Name: "header-ratelimit-2", Namespace: ns}
+			headersToTest := []string{"one", "two", "three", "four"}
+
+			// Get gateway addresses for the routes
+			gwAddr1 := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), route1NN)
+			gwAddr2 := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), route2NN)
+
+			for _, userID := range headersToTest {
+				t.Run("x-user-id="+userID, func(t *testing.T) {
+					// Test each path (/foo and /bar)
+					paths := []struct {
+						path   string
+						gwAddr string
+					}{
+						{"/foo", gwAddr1},
+						{"/bar", gwAddr2},
+					}
+
+					for _, pathInfo := range paths {
+						requestHeaders := map[string]string{"x-user-id": userID}
+						ratelimitHeader := make(map[string]string)
+						expectOkResp := http.ExpectedResponse{
+							Request: http.Request{
+								Path:    pathInfo.path,
+								Headers: requestHeaders,
+							},
+							Response: http.Response{
+								StatusCode: 200,
+								Headers:    ratelimitHeader,
+							},
+							Namespace: ns,
+						}
+						expectOkReq := http.MakeRequest(t, &expectOkResp, pathInfo.gwAddr, "HTTP", "http")
+
+						expectLimitResp := http.ExpectedResponse{
+							Request: http.Request{
+								Path:    pathInfo.path,
+								Headers: requestHeaders,
+							},
+							Response: http.Response{
+								StatusCode: 429,
+							},
+							Namespace: ns,
+						}
+						expectLimitReq := http.MakeRequest(t, &expectLimitResp, pathInfo.gwAddr, "HTTP", "http")
+
+						// Ensure the route is available
+						http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, pathInfo.gwAddr, expectOkResp)
+
+						// Send 3 requests, expect 200 for all
+						if err := GotExactExpectedResponse(t, 3, suite.RoundTripper, expectOkReq, expectOkResp); err != nil {
+							t.Errorf("failed to get expected response for the first three requests (userID=%s, path=%s): %v", userID, pathInfo.path, err)
+						}
+
+						// 4th request, expect 429
+						if err := GotExactExpectedResponse(t, 1, suite.RoundTripper, expectLimitReq, expectLimitResp); err != nil {
+							t.Errorf("failed to get expected response for the fourth request (userID=%s, path=%s): %v", userID, pathInfo.path, err)
+						}
+					}
+				})
 			}
 		})
 	},

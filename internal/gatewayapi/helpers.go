@@ -408,6 +408,10 @@ func irDestinationSettingName(destName string, backendIdx int) string {
 	return fmt.Sprintf("%s/backend/%d", destName, backendIdx)
 }
 
+func irRuleName(policyNamespace, policyName string, ruleIndex int) string {
+	return fmt.Sprintf("%s/%s/rule/%d", policyNamespace, policyName, ruleIndex)
+}
+
 // irTLSConfigs produces a defaulted IR TLSConfig
 func irTLSConfigs(tlsSecrets ...*corev1.Secret) *ir.TLSConfig {
 	if len(tlsSecrets) == 0 {
@@ -448,11 +452,6 @@ func irTLSListenerConfigName(secret *corev1.Secret) string {
 
 func irTLSCACertName(namespace, name string) string {
 	return fmt.Sprintf("%s/%s/%s", namespace, name, caCertKey)
-}
-
-// Helper function to format the policy name and namespace
-func irTrafficName(policy *egv1a1.BackendTrafficPolicy) string {
-	return fmt.Sprintf("%s/%s", policy.Namespace, policy.Name)
 }
 
 func IsMergeGatewaysEnabled(resources *resource.Resources) bool {

@@ -185,7 +185,6 @@ xdsIR:
           name: ""
           prefix: /
         traffic:
-          name: default/policy-for-route
           telemetry:
             tracing:
               customTags:

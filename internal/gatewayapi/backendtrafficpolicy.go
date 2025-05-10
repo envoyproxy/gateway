@@ -413,12 +413,19 @@ func (t *Translator) translateBackendTrafficPolicyForRouteWithMerge(
 	gatewayNN types.NamespacedName, gwPolicy *egv1a1.BackendTrafficPolicy,
 	route RouteContext, xdsIR resource.XdsIRMap, resources *resource.Resources,
 ) error {
-	mergedPolicy, err := mergeBackendTrafficPolicy(policy, gwPolicy)
+	tfGW, errGW := t.buildTrafficFeatures(gwPolicy, resources)
+	if errGW != nil {
+		return errGW
+	}
+	tfRoute, errRoute := t.buildTrafficFeatures(policy, resources)
+	if errRoute != nil {
+		return errRoute
+	}
+	mergedTF, err := utils.MergeTF(tfGW, tfRoute, *policy.Spec.MergeType)
 	if err != nil {
 		return fmt.Errorf("error merging policies: %w", err)
 	}
-	tf, errs := t.buildTrafficFeatures(mergedPolicy, resources)
-	if tf == nil {
+	if mergedTF == nil {
 		// should not happen
 		return nil
 	}
@@ -429,7 +436,7 @@ func (t *Translator) translateBackendTrafficPolicyForRouteWithMerge(
 		// should not happen.
 		return nil
 	}
-	applyTrafficFeatureToRoute(route, tf, errs, mergedPolicy, x)
+	applyTrafficFeatureToRoute(route, mergedTF, nil, policy, x)
 
 	return nil
 }
@@ -477,7 +484,6 @@ func applyTrafficFeatureToRoute(route RouteContext,
 				}
 
 				r.Traffic = tf.DeepCopy()
-				r.Traffic.Name = irTrafficName(policy)
 
 				if localTo, err := buildClusterSettingsTimeout(policy.Spec.ClusterSettings); err == nil {
 					r.Traffic.Timeout = localTo
@@ -492,14 +498,6 @@ func applyTrafficFeatureToRoute(route RouteContext,
 			}
 		}
 	}
-}
-
-func mergeBackendTrafficPolicy(routePolicy, gwPolicy *egv1a1.BackendTrafficPolicy) (*egv1a1.BackendTrafficPolicy, error) {
-	if routePolicy.Spec.MergeType == nil || gwPolicy == nil {
-		return routePolicy.DeepCopy(), nil
-	}
-
-	return utils.Merge[*egv1a1.BackendTrafficPolicy](gwPolicy, routePolicy, *routePolicy.Spec.MergeType)
 }
 
 func (t *Translator) buildTrafficFeatures(policy *egv1a1.BackendTrafficPolicy, resources *resource.Resources) (*ir.TrafficFeatures, error) {
@@ -683,7 +681,6 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(
 			}
 
 			r.Traffic = tf.DeepCopy()
-			r.Traffic.Name = irTrafficName(policy)
 
 			// Update the Host field in HealthCheck, now that we have access to the Route Hostname.
 			r.Traffic.HealthCheck.SetHTTPHostIfAbsent(r.Hostname)
@@ -792,8 +789,7 @@ func (t *Translator) buildGlobalRateLimit(policy *egv1a1.BackendTrafficPolicy) (
 	global := policy.Spec.RateLimit.Global
 	rateLimit := &ir.RateLimit{
 		Global: &ir.GlobalRateLimit{
-			Rules:  make([]*ir.RateLimitRule, len(global.Rules)),
-			Shared: global.Shared,
+			Rules: make([]*ir.RateLimitRule, len(global.Rules)),
 		},
 	}
 
@@ -804,6 +800,8 @@ func (t *Translator) buildGlobalRateLimit(policy *egv1a1.BackendTrafficPolicy) (
 		if err != nil {
 			return nil, err
 		}
+		// Set the Name field as <policy-ns>/<policy-name>/rule/<rule-index>
+		irRules[i].Name = irRuleName(policy.Namespace, policy.Name, i)
 	}
 
 	return rateLimit, nil
@@ -816,6 +814,7 @@ func buildRateLimitRule(rule egv1a1.RateLimitRule) (*ir.RateLimitRule, error) {
 			Unit:     ir.RateLimitUnit(rule.Limit.Unit),
 		},
 		HeaderMatches: make([]*ir.StringMatch, 0),
+		Shared:        rule.Shared,
 	}
 
 	for _, match := range rule.ClientSelectors {

@@ -16,14 +16,15 @@ http:
           name: "test-policy-1/test-namespace"
           rateLimit:
             global:
-              shared: true
               rules:
-                - headerMatches:
+                - name: "test-policy-1/test-namespace/rule/0"
+                  headerMatches:
                     - name: "x-user-id"
                       exact: "one"
                   limit:
                     requests: 5
                     unit: second
+                  shared: true
         pathMatch:
           exact: "foo/bar"
         destination:
@@ -40,14 +41,15 @@ http:
           name: "test-policy-1/test-namespace"
           rateLimit:
             global:
-              shared: true
               rules:
-                - headerMatches:
+                - name: "test-policy-1/test-namespace/rule/0"
+                  headerMatches:
                     - name: "x-user-id"
                       exact: "one"
                   limit:
                     requests: 5
                     unit: second
+                  shared: true
         pathMatch:
           exact: "foo/baz"
         destination:
@@ -64,14 +66,15 @@ http:
           name: "test-policy-2/test-namespace"
           rateLimit:
             global:
-              shared: true
               rules:
-                - headerMatches:
+                - name: "test-policy-2/test-namespace/rule/0"
+                  headerMatches:
                     - name: "x-user-id"
                       exact: "two"
                   limit:
                     requests: 10
                     unit: second
+                  shared: true
         pathMatch:
           exact: "test"
         destination:
@@ -88,14 +91,15 @@ http:
           name: "test-policy-3/test-namespace"
           rateLimit:
             global:
-              shared: false
               rules:
-                - headerMatches:
+                - name: "test-policy-3/test-namespace/rule/0"
+                  headerMatches:
                     - name: "x-user-id"
                       exact: "two"
                   limit:
                     requests: 10
                     unit: second
+                  shared: false
         pathMatch:
           exact: "foo/bar"
         destination:
