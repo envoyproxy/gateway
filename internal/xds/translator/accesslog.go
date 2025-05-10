@@ -72,10 +72,8 @@ var listenerAccessLogFilter = &accesslog.AccessLogFilter{
 	},
 }
 
-var (
-	// reqWithoutQueryFormatter configures additional formatters needed for some of the format strings like "REQ_WITHOUT_QUERY"
-	reqWithoutQueryFormatter *cfgcore.TypedExtensionConfig
-)
+// reqWithoutQueryFormatter configures additional formatters needed for some of the format strings like "REQ_WITHOUT_QUERY"
+var reqWithoutQueryFormatter *cfgcore.TypedExtensionConfig
 
 func init() {
 	anyCfg, err := proto.ToAnyWithValidation(&reqwithoutqueryformatter.ReqWithoutQuery{})
@@ -86,7 +84,6 @@ func init() {
 		Name:        "envoy.formatter.req_without_query",
 		TypedConfig: anyCfg,
 	}
-
 }
 
 func buildXdsAccessLog(al *ir.AccessLog, accessLogType ir.ProxyAccessLogType) ([]*accesslog.AccessLog, error) {
@@ -438,24 +435,20 @@ func accessLogJSONFormatters(json map[string]string) []*cfgcore.TypedExtensionCo
 }
 
 func accessLogOpenTelemetryFormatters(body string, attributes map[string]string) []*cfgcore.TypedExtensionConfig {
-	reqWithoutQuery := false
+	var reqWithoutQuery bool
 
 	if strings.Contains(body, reqWithoutQueryCommandOperator) {
 		reqWithoutQuery = true
 	}
 
 	for _, value := range attributes {
-		if reqWithoutQuery {
-			break
-		}
-
 		if strings.Contains(value, reqWithoutQueryCommandOperator) {
 			reqWithoutQuery = true
+			break
 		}
 	}
 
 	formatters := make([]*cfgcore.TypedExtensionConfig, 0, 3)
-
 	if reqWithoutQuery {
 		formatters = append(formatters, reqWithoutQueryFormatter)
 	}
