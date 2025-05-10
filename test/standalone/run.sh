@@ -43,7 +43,6 @@ extensionApis:
 EOF
 
     # Pull the test image in advance.
-    docker pull ${EG_IMAGE_NAME}:${EG_IMAGE_TAG}
     docker pull python:3
 
     docker network create $DOCKER_NETWORK
