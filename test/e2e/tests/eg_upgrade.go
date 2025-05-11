@@ -162,6 +162,11 @@ var EGUpgradeTest = suite.ConformanceTest{
 				t.Errorf("failed to get expected response for the first three requests: %v", err)
 			}
 		})
+		t.Cleanup(func() {
+			if !t.Failed() {
+				CollectAndDump(t, suite.RestConfig)
+			}
+		})
 	},
 }
 
