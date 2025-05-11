@@ -22,18 +22,41 @@ import (
 )
 
 func init() {
-	ConformanceTests = append(ConformanceTests, LocalRateLimitSpecificUserTest)
-	ConformanceTests = append(ConformanceTests, LocalRateLimitAllTrafficTest)
-	ConformanceTests = append(ConformanceTests, LocalRateLimitNoLimitRouteTest)
-	ConformanceTests = append(ConformanceTests, LocalRateLimitHeaderInvertMatchTest)
+	ConformanceTests = append(ConformanceTests, LocalRateLimitTest)
 }
 
-var LocalRateLimitSpecificUserTest = suite.ConformanceTest{
-	ShortName:   "LocalRateLimitSpecificUser",
-	Description: "Limit a specific user",
+var LocalRateLimitTest = suite.ConformanceTest{
+	ShortName:   "LocalRateLimit",
+	Description: "Make sure local rate limit works",
 	Manifests:   []string{"testdata/local-ratelimit.yaml"},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
-		t.Run("limit a specific user", func(t *testing.T) {
+		// let make sure the gateway and http route are accepted
+		// and there's no rate limit on this route
+		ns := "gateway-conformance-infra"
+		routeNN := types.NamespacedName{Name: "http-no-ratelimit", Namespace: ns}
+		gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
+		gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
+
+		expectOkResp := http.ExpectedResponse{
+			Request: http.Request{
+				Path: "/no-ratelimit",
+			},
+			Response: http.Response{
+				StatusCode: 200,
+			},
+			Namespace: ns,
+		}
+		expectOkReq := http.MakeRequest(t, &expectOkResp, gwAddr, "HTTP", "http")
+
+		// keep sending requests till get 200 first, that will cost one 200
+		http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectOkResp)
+
+		// the requests should not be limited because there is no rate limit on this route
+		if err := GotExactExpectedResponse(t, 10, suite.RoundTripper, expectOkReq, expectOkResp); err != nil {
+			t.Errorf("fail to get expected response at last fourth request: %v", err)
+		}
+
+		t.Run("SpecificUser", func(t *testing.T) {
 			ns := "gateway-conformance-infra"
 			routeNN := types.NamespacedName{Name: "http-ratelimit-specific-user", Namespace: ns}
 			gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
@@ -59,9 +82,19 @@ var LocalRateLimitSpecificUserTest = suite.ConformanceTest{
 				},
 				Namespace: ns,
 			}
-
 			expectOkReq := http.MakeRequest(t, &expectOkResp, gwAddr, "HTTP", "http")
 
+			// should just send exactly 4 requests, and expect 429
+
+			// keep sending requests till get 200 first, that will cost one 200
+			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectOkResp)
+
+			// fire the rest request
+			if err := GotExactExpectedResponse(t, 2, suite.RoundTripper, expectOkReq, expectOkResp); err != nil {
+				t.Errorf("fail to get expected response at first three request: %v", err)
+			}
+
+			// this request should be limited because the user is john
 			expectLimitResp := http.ExpectedResponse{
 				Request: http.Request{
 					Path: "/ratelimit-specific-user",
@@ -74,24 +107,9 @@ var LocalRateLimitSpecificUserTest = suite.ConformanceTest{
 				},
 				Namespace: ns,
 			}
-			expectLimitReq := http.MakeRequest(t, &expectLimitResp, gwAddr, "HTTP", "http")
+			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectLimitResp)
 
-			// should just send exactly 4 requests, and expect 429
-
-			// keep sending requests till get 200 first, that will cost one 200
-			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectOkResp)
-
-			// fire the rest request
-			if err := GotExactExpectedResponse(t, 2, suite.RoundTripper, expectOkReq, expectOkResp); err != nil {
-				t.Errorf("fail to get expected response at first three request: %v", err)
-			}
-
-			// this request should be limited because the user is john and the limit is 3
-			if err := GotExactExpectedResponse(t, 1, suite.RoundTripper, expectLimitReq, expectLimitResp); err != nil {
-				t.Errorf("fail to get expected response at last fourth request: %v", err)
-			}
-
-			// test another user
+			// this request should not be limited because the user is not john
 			expectOkResp = http.ExpectedResponse{
 				Request: http.Request{
 					Path: "/ratelimit-specific-user",
@@ -110,15 +128,8 @@ var LocalRateLimitSpecificUserTest = suite.ConformanceTest{
 				t.Errorf("fail to get expected response at first three request: %v", err)
 			}
 		})
-	},
-}
 
-var LocalRateLimitAllTrafficTest = suite.ConformanceTest{
-	ShortName:   "LocalRateLimitAllTraffic",
-	Description: "Limit all traffic on a route",
-	Manifests:   []string{"testdata/local-ratelimit.yaml"},
-	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
-		t.Run("limit all traffic on a route", func(t *testing.T) {
+		t.Run("AllTraffic", func(t *testing.T) {
 			ns := "gateway-conformance-infra"
 			routeNN := types.NamespacedName{Name: "http-ratelimit-all-traffic", Namespace: ns}
 			gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
@@ -141,19 +152,7 @@ var LocalRateLimitAllTrafficTest = suite.ConformanceTest{
 				},
 				Namespace: ns,
 			}
-
 			expectOkReq := http.MakeRequest(t, &expectOkResp, gwAddr, "HTTP", "http")
-
-			expectLimitResp := http.ExpectedResponse{
-				Request: http.Request{
-					Path: "/ratelimit-all-traffic",
-				},
-				Response: http.Response{
-					StatusCode: 429,
-				},
-				Namespace: ns,
-			}
-			expectLimitReq := http.MakeRequest(t, &expectLimitResp, gwAddr, "HTTP", "http")
 
 			// should just send exactly 4 requests, and expect 429
 
@@ -165,58 +164,22 @@ var LocalRateLimitAllTrafficTest = suite.ConformanceTest{
 				t.Errorf("fail to get expected response at first three request: %v", err)
 			}
 
-			// this request should be limited because the limit is 3
-			if err := GotExactExpectedResponse(t, 1, suite.RoundTripper, expectLimitReq, expectLimitResp); err != nil {
-				t.Errorf("fail to get expected response at last fourth request: %v", err)
-			}
-		})
-	},
-}
-
-var LocalRateLimitNoLimitRouteTest = suite.ConformanceTest{
-	ShortName:   "LocalRateLimitNoLimitRoute",
-	Description: "No rate limit on this route",
-	Manifests:   []string{"testdata/local-ratelimit.yaml"},
-	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
-		t.Run("no rate limit on this route", func(t *testing.T) {
-			ns := "gateway-conformance-infra"
-			routeNN := types.NamespacedName{Name: "http-no-ratelimit", Namespace: ns}
-			gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
-			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
-
-			expectOkResp := http.ExpectedResponse{
+			// this request should be limited at the end
+			expectLimitResp := http.ExpectedResponse{
 				Request: http.Request{
-					Path: "/no-ratelimit",
+					Path: "/ratelimit-all-traffic",
 				},
 				Response: http.Response{
-					StatusCode: 200,
+					StatusCode: 429,
 				},
 				Namespace: ns,
 			}
-
-			expectOkReq := http.MakeRequest(t, &expectOkResp, gwAddr, "HTTP", "http")
-
-			// should just send exactly 4 requests, and expect 429
-
-			// keep sending requests till get 200 first, that will cost one 200
-			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectOkResp)
-
-			// the requests should not be limited because there is no rate limit on this route
-			if err := GotExactExpectedResponse(t, 3, suite.RoundTripper, expectOkReq, expectOkResp); err != nil {
-				t.Errorf("fail to get expected response at last fourth request: %v", err)
-			}
+			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectLimitResp)
 		})
-	},
-}
 
-var LocalRateLimitHeaderInvertMatchTest = suite.ConformanceTest{
-	ShortName:   "LocalRateLimitHeaderInvertMatch",
-	Description: "Limit a specific user unless in a specific org",
-	Manifests:   []string{"testdata/ratelimit-header-invert-match-local.yaml"},
-	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
-		t.Run("limit a specific user", func(t *testing.T) {
+		t.Run("HeaderInvertMatch", func(t *testing.T) {
 			ns := "gateway-conformance-infra"
-			routeNN := types.NamespacedName{Name: "http-ratelimit-specific-user", Namespace: ns}
+			routeNN := types.NamespacedName{Name: "http-ratelimit-invert-match", Namespace: ns}
 			gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
 			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
 
@@ -226,11 +189,11 @@ var LocalRateLimitHeaderInvertMatchTest = suite.ConformanceTest{
 				Namespace: gatewayapi.NamespacePtr(gwNN.Namespace),
 				Name:      gwapiv1.ObjectName(gwNN.Name),
 			}
-			BackendTrafficPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "ratelimit-specific-user", Namespace: ns}, suite.ControllerName, ancestorRef)
+			BackendTrafficPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "ratelimit-invert-match", Namespace: ns}, suite.ControllerName, ancestorRef)
 
 			expectOkResp := http.ExpectedResponse{
 				Request: http.Request{
-					Path: "/ratelimit-specific-user",
+					Path: "/ratelimit-invert-match",
 					Headers: map[string]string{
 						"x-user-id": "one",
 						"x-org-id":  "org1",
@@ -243,21 +206,6 @@ var LocalRateLimitHeaderInvertMatchTest = suite.ConformanceTest{
 			}
 
 			expectOkReq := http.MakeRequest(t, &expectOkResp, gwAddr, "HTTP", "http")
-
-			expectLimitResp := http.ExpectedResponse{
-				Request: http.Request{
-					Path: "/ratelimit-specific-user",
-					Headers: map[string]string{
-						"x-user-id": "one",
-						"x-org-id":  "org1",
-					},
-				},
-				Response: http.Response{
-					StatusCode: 429,
-				},
-				Namespace: ns,
-			}
-			expectLimitReq := http.MakeRequest(t, &expectLimitResp, gwAddr, "HTTP", "http")
 
 			// should just send exactly 4 requests, and expect 429
 
@@ -270,14 +218,25 @@ var LocalRateLimitHeaderInvertMatchTest = suite.ConformanceTest{
 			}
 
 			// this request should be limited because the user is one and org is not test and the limit is 3
-			if err := GotExactExpectedResponse(t, 1, suite.RoundTripper, expectLimitReq, expectLimitResp); err != nil {
-				t.Errorf("fail to get expected response at last fourth request: %v", err)
+			expectLimitResp := http.ExpectedResponse{
+				Request: http.Request{
+					Path: "/ratelimit-invert-match",
+					Headers: map[string]string{
+						"x-user-id": "one",
+						"x-org-id":  "org1",
+					},
+				},
+				Response: http.Response{
+					StatusCode: 429,
+				},
+				Namespace: ns,
 			}
+			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectLimitResp)
 
 			// with test org
 			expectOkResp = http.ExpectedResponse{
 				Request: http.Request{
-					Path: "/ratelimit-specific-user",
+					Path: "/ratelimit-invert-match",
 					Headers: map[string]string{
 						"x-user-id": "one",
 						"x-org-id":  "test",
