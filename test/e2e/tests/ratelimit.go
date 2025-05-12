@@ -949,75 +949,99 @@ var RateLimitGlobalSharedGatewayHeaderMatchTest = suite.ConformanceTest{
 
 var RateLimitGlobalSharedUnsharedGatewayAndRoutePolicyMergeTest = suite.ConformanceTest{
 	ShortName:   "RateLimitGlobalSharedUnsharedGatewayAndRoutePolicyMergeTest",
-	Description: "Limit all requests with matching headers across multiple routes with a shared rate limit",
+	Description: "Limit requests with matching headers across multiple routes, verifying both shared and unshared rate limit behaviors",
 	Manifests:   []string{"testdata/ratelimit-global-shared-and-unshared-header-match.yaml"},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
-		t.Run("rate limit requests with shared header limit across routes with different paths", func(t *testing.T) {
-			ns := "gateway-conformance-infra"
-			gwNN := types.NamespacedName{Name: "eg-rate-limit", Namespace: ns}
-			route1NN := types.NamespacedName{Name: "header-ratelimit-1", Namespace: ns}
-			route2NN := types.NamespacedName{Name: "header-ratelimit-2", Namespace: ns}
-			headersToTest := []string{"one", "two", "three", "four"}
+		ns := "gateway-conformance-infra"
+		gwNN := types.NamespacedName{Name: "eg-rate-limit", Namespace: ns}
+		route1NN := types.NamespacedName{Name: "header-ratelimit-1", Namespace: ns}
+		route2NN := types.NamespacedName{Name: "header-ratelimit-2", Namespace: ns}
 
-			// Get gateway addresses for the routes
-			gwAddr1 := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), route1NN)
-			gwAddr2 := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), route2NN)
+		// Get gateway addresses for the routes
+		gwAddr1 := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), route1NN)
+		gwAddr2 := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), route2NN)
 
-			for _, userID := range headersToTest {
-				t.Run("x-user-id="+userID, func(t *testing.T) {
-					// Test each path (/foo and /bar)
-					paths := []struct {
-						path   string
-						gwAddr string
-					}{
-						{"/foo", gwAddr1},
-						{"/bar", gwAddr2},
+		type testCase struct {
+			userID   string
+			shared   bool
+			expected map[string]int // path -> number of 200 responses before 429
+		}
+
+		cases := []testCase{
+			// shared: true => 3 total requests across /foo and /bar
+			{
+				userID: "one", shared: true,
+				expected: map[string]int{"/foo": 2, "/bar": 1}, // 4th should fail
+			},
+			{
+				userID: "three", shared: true,
+				expected: map[string]int{"/foo": 1, "/bar": 2},
+			},
+			{
+				userID: "four", shared: true,
+				expected: map[string]int{"/foo": 3, "/bar": 0},
+			},
+			// shared: false => 3 per route
+			{
+				userID: "two", shared: false,
+				expected: map[string]int{"/foo": 3, "/bar": 3},
+			},
+		}
+
+		for _, tc := range cases {
+			t.Run("x-user-id="+tc.userID, func(t *testing.T) {
+				for path, okCount := range tc.expected {
+					var gwAddr string
+					if path == "/foo" {
+						gwAddr = gwAddr1
+					} else {
+						gwAddr = gwAddr2
 					}
 
-					for _, pathInfo := range paths {
-						requestHeaders := map[string]string{"x-user-id": userID}
-						ratelimitHeader := make(map[string]string)
-						expectOkResp := http.ExpectedResponse{
-							Request: http.Request{
-								Path:    pathInfo.path,
-								Headers: requestHeaders,
-							},
-							Response: http.Response{
-								StatusCode: 200,
-								Headers:    ratelimitHeader,
-							},
-							Namespace: ns,
-						}
-						expectOkReq := http.MakeRequest(t, &expectOkResp, pathInfo.gwAddr, "HTTP", "http")
+					requestHeaders := map[string]string{"x-user-id": tc.userID}
+					ratelimitHeader := make(map[string]string)
 
-						expectLimitResp := http.ExpectedResponse{
-							Request: http.Request{
-								Path:    pathInfo.path,
-								Headers: requestHeaders,
-							},
-							Response: http.Response{
-								StatusCode: 429,
-							},
-							Namespace: ns,
-						}
-						expectLimitReq := http.MakeRequest(t, &expectLimitResp, pathInfo.gwAddr, "HTTP", "http")
+					expectOkResp := http.ExpectedResponse{
+						Request: http.Request{
+							Path:    path,
+							Headers: requestHeaders,
+						},
+						Response: http.Response{
+							StatusCode: 200,
+							Headers:    ratelimitHeader,
+						},
+						Namespace: ns,
+					}
+					expectOkReq := http.MakeRequest(t, &expectOkResp, gwAddr, "HTTP", "http")
 
-						// Ensure the route is available
-						http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, pathInfo.gwAddr, expectOkResp)
+					expectLimitResp := http.ExpectedResponse{
+						Request: http.Request{
+							Path:    path,
+							Headers: requestHeaders,
+						},
+						Response: http.Response{
+							StatusCode: 429,
+						},
+						Namespace: ns,
+					}
+					expectLimitReq := http.MakeRequest(t, &expectLimitResp, gwAddr, "HTTP", "http")
 
-						// Send 3 requests, expect 200 for all
-						if err := GotExactExpectedResponse(t, 3, suite.RoundTripper, expectOkReq, expectOkResp); err != nil {
-							t.Errorf("failed to get expected response for the first three requests (userID=%s, path=%s): %v", userID, pathInfo.path, err)
-						}
+					// Ensure the route is available
+					http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectOkResp)
 
-						// 4th request, expect 429
+					if err := GotExactExpectedResponse(t, okCount, suite.RoundTripper, expectOkReq, expectOkResp); err != nil {
+						t.Errorf("failed to get expected 200 responses (userID=%s, path=%s): %v", tc.userID, path, err)
+					}
+
+					// Only send a 4th request when expected
+					if okCount < 3 || !tc.shared {
 						if err := GotExactExpectedResponse(t, 1, suite.RoundTripper, expectLimitReq, expectLimitResp); err != nil {
-							t.Errorf("failed to get expected response for the fourth request (userID=%s, path=%s): %v", userID, pathInfo.path, err)
+							t.Errorf("failed to get expected 429 response (userID=%s, path=%s): %v", tc.userID, path, err)
 						}
 					}
-				})
-			}
-		})
+				}
+			})
+		}
 	},
 }
 
