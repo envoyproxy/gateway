@@ -163,7 +163,7 @@ var EGUpgradeTest = suite.ConformanceTest{
 			}
 		})
 		t.Cleanup(func() {
-			if !t.Failed() {
+			if t.Failed() {
 				CollectAndDump(t, suite.RestConfig)
 			}
 		})
