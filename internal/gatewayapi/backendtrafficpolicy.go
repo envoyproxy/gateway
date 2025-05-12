@@ -425,30 +425,42 @@ func (t *Translator) translateBackendTrafficPolicyForRouteWithMerge(
 	gatewayNN types.NamespacedName, gwPolicy *egv1a1.BackendTrafficPolicy,
 	route RouteContext, xdsIR resource.XdsIRMap, resources *resource.Resources,
 ) error {
-	tfGW, errGW := t.buildTrafficFeatures(gwPolicy, resources)
-	if errGW != nil {
-		return errGW
-	}
-	tfRoute, errRoute := t.buildTrafficFeatures(policy, resources)
-	if errRoute != nil {
-		return errRoute
-	}
-	mergedTF, err := utils.MergeTF(tfGW, tfRoute, *policy.Spec.MergeType)
+	mergedPolicy, err := mergeBackendTrafficPolicy(policy, gwPolicy)
 	if err != nil {
 		return fmt.Errorf("error merging policies: %w", err)
 	}
-	if mergedTF == nil {
-		// should not happen
-		return nil
+
+	tf, err := t.buildTrafficFeatures(mergedPolicy, resources)
+	if err != nil {
+		return err
 	}
 
-	// Apply IR to relevant gateway routes
+	// Since GlobalRateLimit merge relies on IR auto-generated key: (<policy-ns>/<policy-name>/rule/<rule-index>)
+	// We can't simply merge the BTP's using utils.Merge() we need to specifically merge the GlobalRateLimit.Rules using IR fields.
+	// Since ir.TrafficFeatures is not a built-in Kuberentes API object with defined merging strategies and it does not support a deep merge (for lists/maps).
+	tfGW, _ := t.buildTrafficFeatures(gwPolicy, resources)
+	tfRoute, _ := t.buildTrafficFeatures(policy, resources)
+
+	if tfGW != nil && tfRoute != nil &&
+		tfGW.RateLimit != nil && tfGW.RateLimit.Global != nil &&
+		tfRoute.RateLimit != nil && tfRoute.RateLimit.Global != nil {
+
+		mergedGlobal, err := utils.MergeGlobalRL(tfGW.RateLimit.Global, tfRoute.RateLimit.Global, *policy.Spec.MergeType)
+		if err != nil {
+			return fmt.Errorf("error merging global rate limits: %w", err)
+		}
+
+		// Overwrite just the GlobalRateLimit in the final merged TrafficFeatures
+		if mergedGlobal != nil {
+			tf.RateLimit.Global = mergedGlobal
+		}
+	}
+
 	x, ok := xdsIR[t.IRKey(gatewayNN)]
 	if !ok {
-		// should not happen.
 		return nil
 	}
-	applyTrafficFeatureToRoute(route, mergedTF, nil, policy, x)
+	applyTrafficFeatureToRoute(route, tf, nil, mergedPolicy, x)
 
 	return nil
 }
@@ -510,6 +522,14 @@ func applyTrafficFeatureToRoute(route RouteContext,
 			}
 		}
 	}
+}
+
+func mergeBackendTrafficPolicy(routePolicy, gwPolicy *egv1a1.BackendTrafficPolicy) (*egv1a1.BackendTrafficPolicy, error) {
+	if routePolicy.Spec.MergeType == nil || gwPolicy == nil {
+		return routePolicy.DeepCopy(), nil
+	}
+
+	return utils.Merge[*egv1a1.BackendTrafficPolicy](gwPolicy, routePolicy, *routePolicy.Spec.MergeType)
 }
 
 func (t *Translator) buildTrafficFeatures(policy *egv1a1.BackendTrafficPolicy, resources *resource.Resources) (*ir.TrafficFeatures, error) {

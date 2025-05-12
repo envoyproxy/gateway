@@ -317,7 +317,6 @@ xdsIR:
           httpUpgrade:
           - spdy/3.1
           - websocket
-          name: default/policy-for-route
           timeout:
             http:
               connectionIdleTimeout: 16s
@@ -375,7 +374,6 @@ xdsIR:
             bufferLimit: 100000000
           httpUpgrade:
           - spdy/3.1
-          name: default/policy-for-route
           timeout:
             tcp:
               connectTimeout: 10s

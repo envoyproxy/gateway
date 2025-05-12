@@ -322,6 +322,7 @@ xdsIR:
             bufferLimit: 100000000
           httpUpgrade:
           - spdy/3.1
+          - websocket
           rateLimit:
             global:
               rules:
@@ -332,9 +333,12 @@ xdsIR:
                 limit:
                   requests: 5
                   unit: Hour
-                name: envoy-gateway/policy-for-gateway/rule/0
+                name: default/merged-policy-for-route/rule/0
                 shared: true
           timeout:
+            http:
+              connectionIdleTimeout: 16s
+              maxConnectionDuration: 17s
             tcp:
               connectTimeout: 10s
       - destination:

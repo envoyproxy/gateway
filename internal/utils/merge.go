@@ -79,7 +79,7 @@ func Merge[T client.Object](original, patch T, mergeType egv1a1.MergeType) (T, e
 	return mergeInternal(original, patchJSON, mergeType)
 }
 
-func MergeTFInternal[T *ir.TrafficFeatures](original T, patchJSON []byte, mergeType egv1a1.MergeType) (T, error) {
+func MergeGlobalRLInternal[T *ir.GlobalRateLimit](original T, patchJSON []byte, mergeType egv1a1.MergeType) (T, error) {
 	var (
 		patchedJSON  []byte
 		originalJSON []byte
@@ -114,7 +114,7 @@ func MergeTFInternal[T *ir.TrafficFeatures](original T, patchJSON []byte, mergeT
 	return *res, nil
 }
 
-func MergeTF[T *ir.TrafficFeatures](original, patch T, mergeType egv1a1.MergeType) (T, error) {
+func MergeGlobalRL[T *ir.GlobalRateLimit](original, patch T, mergeType egv1a1.MergeType) (T, error) {
 	var (
 		patchJSON []byte
 		err       error
@@ -125,5 +125,5 @@ func MergeTF[T *ir.TrafficFeatures](original, patch T, mergeType egv1a1.MergeTyp
 	if err != nil {
 		return empty, fmt.Errorf("error marshaling original service: %w", err)
 	}
-	return MergeTFInternal(original, patchJSON, mergeType)
+	return MergeGlobalRLInternal(original, patchJSON, mergeType)
 }
