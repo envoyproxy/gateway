@@ -1326,12 +1326,9 @@ func (r *gatewayAPIReconciler) processBackends(ctx context.Context, resourceTree
 		// It will be recomputed by the gateway-api layer
 		backend.Status = egv1a1.BackendStatus{}
 		resourceMappings.allAssociatedNamespaces.Insert(backend.Namespace)
-		// Backend will be also added in processBackendRefs. Make sure that we don't add it twice.
-		key := utils.NamespacedName(&backend).String()
-		if !resourceMappings.allAssociatedBackends.Has(key) {
-			resourceMappings.allAssociatedBackends.Insert(key)
-			resourceTree.Backends = append(resourceTree.Backends, &backend)
-		}
+		resourceMappings.allAssociatedBackends.Insert(utils.NamespacedName(&backend).String())
+		// Backend might also be added in processBackendRefs. Make sure that we don't add it twice.
+		resourceTree.Backends = append(resourceTree.Backends, &backend)
 	}
 	return nil
 }
