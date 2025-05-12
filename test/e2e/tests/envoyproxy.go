@@ -36,7 +36,7 @@ var EnvoyProxyCustomNameTest = suite.ConformanceTest{
 	Description: "Test running Envoy with custom name",
 	Manifests:   []string{"testdata/envoyproxy-custom-name.yaml"},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
-		gatwayNS := GetGatewayResourceNamespace()
+		gatewayNS := GetGatewayResourceNamespace()
 
 		t.Run("Deployment", func(t *testing.T) {
 			ns := "gateway-conformance-infra"
@@ -53,17 +53,16 @@ var EnvoyProxyCustomNameTest = suite.ConformanceTest{
 			}
 
 			// Make sure there's deployment for the gateway
-			err := checkEnvoyProxyDeployment(t, suite, gwNN, gatwayNS, fmt.Sprintf("envoy-%s-%s", gwNN.Namespace, gwNN.Name))
+			err := checkEnvoyProxyDeployment(t, suite, gwNN, gatewayNS, fmt.Sprintf("envoy-%s-%s", gwNN.Namespace, gwNN.Name))
 			if err != nil {
 				t.Fatalf("Failed to check EnvoyProxy deployment: %v", err)
 			}
-			err = checkEnvoyProxyService(t, suite, gwNN, gatwayNS, fmt.Sprintf("envoy-%s-%s", gwNN.Namespace, gwNN.Name))
+			err = checkEnvoyProxyService(t, suite, gwNN, gatewayNS, fmt.Sprintf("envoy-%s-%s", gwNN.Namespace, gwNN.Name))
 			if err != nil {
 				t.Fatalf("Failed to check EnvoyProxy service: %v", err)
 			}
-			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
 			// Send a request to a valid path and expect a successful response
-			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, okResp)
+			ExpectEventuallyConsistentResponse(t, suite, gwNN, routeNN, okResp)
 
 			// Update the Gateway to use a custom name
 			gw := &gwapiv1.Gateway{}
@@ -83,17 +82,16 @@ var EnvoyProxyCustomNameTest = suite.ConformanceTest{
 				t.Fatalf("Failed to update Gateway: %v", err)
 			}
 
-			err = checkEnvoyProxyDeployment(t, suite, gwNN, gatwayNS, "deploy-custom-name")
+			err = checkEnvoyProxyDeployment(t, suite, gwNN, gatewayNS, "deploy-custom-name")
 			if err != nil {
 				t.Fatalf("Failed to delete Gateway: %v", err)
 			}
-			err = checkEnvoyProxyService(t, suite, gwNN, gatwayNS, "deploy-custom-name")
+			err = checkEnvoyProxyService(t, suite, gwNN, gatewayNS, "deploy-custom-name")
 			if err != nil {
 				t.Fatalf("Failed to check EnvoyProxy service: %v", err)
 			}
-			gwAddr = kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
 			// Send a request to a valid path and expect a successful response
-			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, okResp)
+			ExpectEventuallyConsistentResponse(t, suite, gwNN, routeNN, okResp)
 
 			// Rollback the Gateway to without custom name
 			gw = &gwapiv1.Gateway{}
@@ -108,24 +106,23 @@ var EnvoyProxyCustomNameTest = suite.ConformanceTest{
 			}
 
 			// Make sure there's deployment for the gateway
-			err = checkEnvoyProxyDeployment(t, suite, gwNN, gatwayNS, fmt.Sprintf("envoy-%s-%s", gwNN.Namespace, gwNN.Name))
+			err = checkEnvoyProxyDeployment(t, suite, gwNN, gatewayNS, fmt.Sprintf("envoy-%s-%s", gwNN.Namespace, gwNN.Name))
 			if err != nil {
 				t.Fatalf("Failed to check EnvoyProxy deployment: %v", err)
 			}
-			err = checkEnvoyProxyService(t, suite, gwNN, gatwayNS, fmt.Sprintf("envoy-%s-%s", gwNN.Namespace, gwNN.Name))
+			err = checkEnvoyProxyService(t, suite, gwNN, gatewayNS, fmt.Sprintf("envoy-%s-%s", gwNN.Namespace, gwNN.Name))
 			if err != nil {
 				t.Fatalf("Failed to check EnvoyProxy service: %v", err)
 			}
-			gwAddr = kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
 			// Send a request to a valid path and expect a successful response
-			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, okResp)
+			ExpectEventuallyConsistentResponse(t, suite, gwNN, routeNN, okResp)
 		})
 
 		t.Run("DaemonSet", func(t *testing.T) {
 			ns := "gateway-conformance-infra"
 			routeNN := types.NamespacedName{Name: "ds-route", Namespace: ns}
 			gwNN := types.NamespacedName{Name: "ds-custom-name", Namespace: ns}
-			OkResp := http.ExpectedResponse{
+			okResp := http.ExpectedResponse{
 				Request: http.Request{
 					Path: "/daemonset",
 				},
@@ -136,17 +133,16 @@ var EnvoyProxyCustomNameTest = suite.ConformanceTest{
 			}
 
 			// Make sure there's DaemonSet for the gateway
-			err := checkEnvoyProxyDaemonSet(t, suite, gwNN, gatwayNS, fmt.Sprintf("envoy-%s-%s", gwNN.Namespace, gwNN.Name))
+			err := checkEnvoyProxyDaemonSet(t, suite, gwNN, gatewayNS, fmt.Sprintf("envoy-%s-%s", gwNN.Namespace, gwNN.Name))
 			if err != nil {
 				t.Fatalf("Failed to check EnvoyProxy deployment: %v", err)
 			}
-			err = checkEnvoyProxyService(t, suite, gwNN, gatwayNS, fmt.Sprintf("envoy-%s-%s", gwNN.Namespace, gwNN.Name))
+			err = checkEnvoyProxyService(t, suite, gwNN, gatewayNS, fmt.Sprintf("envoy-%s-%s", gwNN.Namespace, gwNN.Name))
 			if err != nil {
 				t.Fatalf("Failed to check EnvoyProxy service: %v", err)
 			}
-			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
 			// Send a request to a valid path and expect a successful response
-			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, OkResp)
+			ExpectEventuallyConsistentResponse(t, suite, gwNN, routeNN, okResp)
 
 			// Update the Gateway to use a custom name
 			gw := &gwapiv1.Gateway{}
@@ -166,17 +162,16 @@ var EnvoyProxyCustomNameTest = suite.ConformanceTest{
 				t.Fatalf("Failed to update Gateway: %v", err)
 			}
 
-			err = checkEnvoyProxyDaemonSet(t, suite, gwNN, gatwayNS, "ds-custom-name")
+			err = checkEnvoyProxyDaemonSet(t, suite, gwNN, gatewayNS, "ds-custom-name")
 			if err != nil {
 				t.Fatalf("Failed to delete Gateway: %v", err)
 			}
-			err = checkEnvoyProxyService(t, suite, gwNN, gatwayNS, "ds-custom-name")
+			err = checkEnvoyProxyService(t, suite, gwNN, gatewayNS, "ds-custom-name")
 			if err != nil {
 				t.Fatalf("Failed to check EnvoyProxy service: %v", err)
 			}
-			gwAddr = kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
 			// Send a request to a valid path and expect a successful response
-			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, OkResp)
+			ExpectEventuallyConsistentResponse(t, suite, gwNN, routeNN, okResp)
 
 			// Rollback the Gateway to without custom name
 			gw = &gwapiv1.Gateway{}
@@ -197,19 +192,50 @@ var EnvoyProxyCustomNameTest = suite.ConformanceTest{
 			}
 
 			// Make sure there's DaemonSet for the gateway
-			err = checkEnvoyProxyDaemonSet(t, suite, gwNN, gatwayNS, fmt.Sprintf("envoy-%s-%s", gwNN.Namespace, gwNN.Name))
+			err = checkEnvoyProxyDaemonSet(t, suite, gwNN, gatewayNS, fmt.Sprintf("envoy-%s-%s", gwNN.Namespace, gwNN.Name))
 			if err != nil {
 				t.Fatalf("Failed to check EnvoyProxy deployment: %v", err)
 			}
-			err = checkEnvoyProxyService(t, suite, gwNN, gatwayNS, fmt.Sprintf("envoy-%s-%s", gwNN.Namespace, gwNN.Name))
+			err = checkEnvoyProxyService(t, suite, gwNN, gatewayNS, fmt.Sprintf("envoy-%s-%s", gwNN.Namespace, gwNN.Name))
 			if err != nil {
 				t.Fatalf("Failed to check EnvoyProxy service: %v", err)
 			}
-			gwAddr = kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
+
 			// Send a request to a valid path and expect a successful response
-			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, OkResp)
+			ExpectEventuallyConsistentResponse(t, suite, gwNN, routeNN, okResp)
 		})
 	},
+}
+
+// ExpectEventuallyConsistentResponse sends a request to the gateway and waits for an eventually consistent response.
+// This's different from because of the name may change, so we query the gateway address every time.
+func ExpectEventuallyConsistentResponse(t *testing.T, suite *suite.ConformanceTestSuite,
+	gwNN, routeNN types.NamespacedName, expected http.ExpectedResponse,
+) {
+	t.Helper()
+
+	err := wait.PollUntilContextTimeout(t.Context(), time.Second, suite.TimeoutConfig.CreateTimeout, true, func(ctx context.Context) (bool, error) {
+		gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
+		req := http.MakeRequest(t, &expected, gwAddr, "HTTP", "http")
+
+		cReq, cRes, err := suite.RoundTripper.CaptureRoundTrip(req)
+		if err != nil {
+			tlog.Logf(t, "Request failed: %v", err.Error())
+			return false, nil
+		}
+
+		if err := http.CompareRequest(t, &req, cReq, cRes, expected); err != nil {
+			tlog.Logf(t, "Response expectation failed for request: %+v  %v", req, err)
+			return false, nil
+		}
+
+		return true, nil
+	})
+	if err != nil {
+		t.Fatalf("Failed to get expected response: %v", err)
+		return
+	}
+	tlog.Logf(t, "Request passed")
 }
 
 func checkEnvoyProxyDeployment(t *testing.T, suite *suite.ConformanceTestSuite, gwNN types.NamespacedName, exceptNs, exceptName string) error {

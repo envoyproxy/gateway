@@ -30,10 +30,10 @@ var FileAccessLogTest = suite.ConformanceTest{
 	Description: "Make sure file access log is working",
 	Manifests:   []string{"testdata/accesslog-file.yaml"},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
-		gatwayNS := GetGatewayResourceNamespace()
+		gatewayNS := GetGatewayResourceNamespace()
 		labels := map[string]string{
-			"job":       fmt.Sprintf("%s/envoy", gatwayNS),
-			"namespace": gatwayNS,
+			"job":       fmt.Sprintf("%s/envoy", gatewayNS),
+			"namespace": gatewayNS,
 			"container": "envoy",
 		}
 		match := "test-annotation-value"
