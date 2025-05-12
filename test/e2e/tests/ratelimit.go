@@ -957,87 +957,86 @@ var RateLimitGlobalSharedUnsharedGatewayAndRoutePolicyMergeTest = suite.Conforma
 		route1NN := types.NamespacedName{Name: "header-ratelimit-1", Namespace: ns}
 		route2NN := types.NamespacedName{Name: "header-ratelimit-2", Namespace: ns}
 
-		// Get gateway addresses for the routes
+		// Get gateway addresses for each route
 		gwAddr1 := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), route1NN)
 		gwAddr2 := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), route2NN)
 
-		type testCase struct {
-			userID   string
-			shared   bool
-			expected map[string]int // path -> number of 200 responses before 429
+		// Define test scenarios
+		type req struct {
+			path       string
+			gwAddr     string
+			userID     string
+			statusCode int
 		}
 
-		cases := []testCase{
-			// shared: true => 3 total requests across /foo and /bar
+		tests := []struct {
+			name     string
+			requests []req
+		}{
 			{
-				userID: "one", shared: true,
-				expected: map[string]int{"/foo": 2, "/bar": 1}, // 4th should fail
+				name: "shared_route_policy_user_one",
+				requests: []req{
+					{"/bar", gwAddr2, "one", 200},
+					{"/foo", gwAddr1, "one", 200},
+					{"/bar", gwAddr2, "one", 200},
+					{"/foo", gwAddr1, "one", 429},
+				},
 			},
 			{
-				userID: "three", shared: true,
-				expected: map[string]int{"/foo": 1, "/bar": 2},
+				name: "unshared_route_policy_user_two",
+				requests: []req{
+					{"/foo", gwAddr1, "two", 200},
+					{"/foo", gwAddr1, "two", 200},
+					{"/foo", gwAddr1, "two", 200},
+					{"/foo", gwAddr1, "two", 429},
+					{"/bar", gwAddr2, "two", 200},
+					{"/bar", gwAddr2, "two", 200},
+					{"/bar", gwAddr2, "two", 200},
+					{"/bar", gwAddr2, "two", 429},
+				},
 			},
 			{
-				userID: "four", shared: true,
-				expected: map[string]int{"/foo": 3, "/bar": 0},
+				name: "shared_gateway_policy_user_three",
+				requests: []req{
+					{"/bar", gwAddr2, "three", 200},
+					{"/foo", gwAddr1, "three", 200},
+					{"/bar", gwAddr2, "three", 200},
+					{"/foo", gwAddr1, "three", 429},
+				},
 			},
-			// shared: false => 3 per route
 			{
-				userID: "two", shared: false,
-				expected: map[string]int{"/foo": 3, "/bar": 3},
+				name: "unshared_gateway_policy_user_four",
+				requests: []req{
+					{"/foo", gwAddr1, "four", 200},
+					{"/foo", gwAddr1, "four", 200},
+					{"/foo", gwAddr1, "four", 200},
+					{"/foo", gwAddr1, "four", 429},
+					{"/bar", gwAddr2, "four", 200},
+					{"/bar", gwAddr2, "four", 200},
+					{"/bar", gwAddr2, "four", 200},
+					{"/bar", gwAddr2, "four", 429},
+				},
 			},
 		}
 
-		for _, tc := range cases {
-			t.Run("x-user-id="+tc.userID, func(t *testing.T) {
-				for path, okCount := range tc.expected {
-					var gwAddr string
-					if path == "/foo" {
-						gwAddr = gwAddr1
-					} else {
-						gwAddr = gwAddr2
-					}
-
-					requestHeaders := map[string]string{"x-user-id": tc.userID}
-					ratelimitHeader := make(map[string]string)
-
-					expectOkResp := http.ExpectedResponse{
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				for _, r := range tt.requests {
+					headers := map[string]string{"x-user-id": r.userID}
+					expect := http.ExpectedResponse{
 						Request: http.Request{
-							Path:    path,
-							Headers: requestHeaders,
+							Path:    r.path,
+							Headers: headers,
 						},
 						Response: http.Response{
-							StatusCode: 200,
-							Headers:    ratelimitHeader,
+							StatusCode: r.statusCode,
 						},
 						Namespace: ns,
 					}
-					expectOkReq := http.MakeRequest(t, &expectOkResp, gwAddr, "HTTP", "http")
+					req := http.MakeRequest(t, &expect, r.gwAddr, "HTTP", "http")
 
-					expectLimitResp := http.ExpectedResponse{
-						Request: http.Request{
-							Path:    path,
-							Headers: requestHeaders,
-						},
-						Response: http.Response{
-							StatusCode: 429,
-						},
-						Namespace: ns,
-					}
-					expectLimitReq := http.MakeRequest(t, &expectLimitResp, gwAddr, "HTTP", "http")
-
-					// Ensure the route is available
-					http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectOkResp)
-
-					if err := GotExactExpectedResponse(t, okCount, suite.RoundTripper, expectOkReq, expectOkResp); err != nil {
-						t.Errorf("failed to get expected 200 responses (userID=%s, path=%s): %v", tc.userID, path, err)
-					}
-
-					// Only send a 4th request when expected
-					if okCount < 3 || !tc.shared {
-						if err := GotExactExpectedResponse(t, 1, suite.RoundTripper, expectLimitReq, expectLimitResp); err != nil {
-							t.Errorf("failed to get expected 429 response (userID=%s, path=%s): %v", tc.userID, path, err)
-						}
+					if err := GotExactExpectedResponse(t, 1, suite.RoundTripper, req, expect); err != nil {
+						t.Errorf("userID=%s path=%s expected=%d: %v", r.userID, r.path, r.statusCode, err)
 					}
 				}
 			})

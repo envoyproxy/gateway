@@ -106,7 +106,7 @@ func (t *Translator) buildRateLimitFilter(irListener *ir.HTTPListener) []*hcmv3.
 		}
 
 		if hasShared {
-			sharedDomain := getDomainSharedName(route)
+			sharedDomain := sharedRuleName
 			if !created[sharedDomain] {
 				filterName := fmt.Sprintf("%s/%s", egv1a1.EnvoyFilterRateLimit.String(), sharedRuleName)
 				if filter := createRateLimitFilter(t, irListener, sharedDomain, filterName); filter != nil {
@@ -522,39 +522,41 @@ func addRateLimitDescriptor(
 		return
 	}
 
-	getParent := func(key string) *rlsconfv3.RateLimitDescriptor {
-		for _, d := range domainDescriptors[domain] {
-			if d.Key == key {
-				return d
-			}
-		}
-		p := &rlsconfv3.RateLimitDescriptor{Key: key, Value: key}
-		domainDescriptors[domain] = append(domainDescriptors[domain], p)
-		return p
+	// Domain map for duplicate check
+	ruleDescriptorMap := make(map[string]*rlsconfv3.RateLimitDescriptor)
+	for _, d := range domainDescriptors[domain] {
+		ruleDescriptorMap[d.Key] = d
 	}
 
 	for i, rule := range route.Traffic.RateLimit.Global.Rules {
 		if i >= len(serviceDescriptors) || (includeShared != isRuleShared(rule)) {
-			continue // skip unwanted half or out-of-range
+			continue
 		}
 
-		var parentKey string
+		var descriptorKey string
 		if isRuleShared(rule) {
-			parentKey = rule.Name // shared: use full rule name for uniqueness
+			descriptorKey = rule.Name
 		} else {
-			parentKey = getRouteDescriptor(route.Name)
+			descriptorKey = getRouteDescriptor(route.Name)
 		}
-		parent := getParent(parentKey)
-		// Deduplicate: only append if not already present
+
+		descriptorRule, exists := ruleDescriptorMap[descriptorKey]
+		if !exists {
+			descriptorRule = &rlsconfv3.RateLimitDescriptor{Key: descriptorKey, Value: descriptorKey}
+			domainDescriptors[domain] = append(domainDescriptors[domain], descriptorRule)
+			ruleDescriptorMap[descriptorKey] = descriptorRule
+		}
+
+		// Ensure no duplicate descriptors
 		alreadyExists := false
-		for _, existing := range parent.Descriptors {
+		for _, existing := range descriptorRule.Descriptors {
 			if descriptorsEqual(existing, serviceDescriptors[i]) {
 				alreadyExists = true
 				break
 			}
 		}
 		if !alreadyExists {
-			parent.Descriptors = append(parent.Descriptors, serviceDescriptors[i])
+			descriptorRule.Descriptors = append(descriptorRule.Descriptors, serviceDescriptors[i])
 		}
 	}
 }
@@ -651,13 +653,11 @@ func buildRateLimitServiceDescriptors(route *ir.HTTPRoute) []*rlsconfv3.RateLimi
 			// Distinct vs HeaderValueMatch
 			if match.Distinct {
 				// RequestHeader case
-				descriptorKey := getRouteRuleDescriptor(domainRuleIdx, mIdx)
-				pbDesc.Key = descriptorKey
+				pbDesc.Key = getRouteRuleDescriptor(domainRuleIdx, mIdx)
 			} else {
 				// HeaderValueMatch case
-				descriptorKey := getRouteRuleDescriptor(domainRuleIdx, mIdx)
-				pbDesc.Key = descriptorKey
-				pbDesc.Value = descriptorKey
+				pbDesc.Key = getRouteRuleDescriptor(domainRuleIdx, mIdx)
+				pbDesc.Value = getRouteRuleDescriptor(domainRuleIdx, mIdx)
 			}
 
 			if mIdx == 0 {
@@ -682,14 +682,14 @@ func buildRateLimitServiceDescriptors(route *ir.HTTPRoute) []*rlsconfv3.RateLimi
 		//
 		// An example of rate limit server configuration looks like this:
 		//
-		//	descriptors:
-		//	  - key: masked_remote_address //catch all the source IPs inside a CIDR
-		//	    value: 192.168.0.0/16
-		//	    descriptors:
-		//	      - key: remote_address //set limit for individual IP
-		//	        rate_limit:
-		//	          unit: second
-		//	          requests_per_unit: 100
+		//  descriptors:
+		//    - key: masked_remote_address //catch all the source IPs inside a CIDR
+		//      value: 192.168.0.0/16
+		//      descriptors:
+		//        - key: remote_address //set limit for individual IP
+		//          rate_limit:
+		//            unit: second
+		//            requests_per_unit: 100
 		//
 		// Please refer to [Rate Limit Service Descriptor list definition](https://github.com/envoyproxy/ratelimit#descriptor-list-definition) for details.
 		// 2) CIDR Match
@@ -812,17 +812,9 @@ func (t *Translator) createRateLimitServiceCluster(tCtx *types.ResourceVersionTa
 	})
 }
 
-// getDomainSharedName returns the shared domain (stripped policy name) if any shared rule exists,
-// otherwise returns the listener name.
+// getDomainSharedName returns the shared domain (stripped policy name), stripRuleIndexSuffix is used to remove the rule index suffix.
 func getDomainSharedName(route *ir.HTTPRoute) string {
-	if isValidGlobalRateLimit(route) && len(route.Traffic.RateLimit.Global.Rules) > 0 {
-		for _, rule := range route.Traffic.RateLimit.Global.Rules {
-			if isRuleShared(rule) {
-				return stripRuleIndexSuffix(rule.Name)
-			}
-		}
-	}
-	return route.Name
+	return stripRuleIndexSuffix(route.Traffic.RateLimit.Global.Rules[0].Name)
 }
 
 func getRouteRuleDescriptor(ruleIndex, matchIndex int) string {

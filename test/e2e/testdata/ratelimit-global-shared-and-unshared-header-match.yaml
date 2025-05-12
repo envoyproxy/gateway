@@ -57,6 +57,7 @@ spec:
     - group: gateway.networking.k8s.io
       kind: HTTPRoute
       name: header-ratelimit-2
+  mergeType: StrategicMerge
   rateLimit:
     type: Global
     global:
