@@ -1678,7 +1678,7 @@ func TestIPFamilyPresentInSpec(t *testing.T) {
 	}
 }
 
-func TestGatewayModeMultipleResources(t *testing.T) {
+func TestGatewayNamespaceModeMultipleResources(t *testing.T) {
 	cfg, err := config.New(os.Stdout)
 	require.NoError(t, err)
 
@@ -1831,7 +1831,7 @@ func writeTestDataToFile(filename string, resources []any) error {
 			return err
 		}
 		if i > 0 {
-			combinedYAML = append(combinedYAML, []byte("\n---\n")...)
+			combinedYAML = append(combinedYAML, []byte("---\n")...)
 		}
 		combinedYAML = append(combinedYAML, resourceYAML...)
 	}

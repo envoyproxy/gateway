@@ -24,7 +24,6 @@ spec:
 status:
   currentMetrics: null
   desiredReplicas: 0
-
 ---
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler

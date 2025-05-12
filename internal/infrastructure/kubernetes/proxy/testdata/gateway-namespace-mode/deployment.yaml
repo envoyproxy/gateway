@@ -441,7 +441,6 @@ spec:
           optional: false
         name: sds
 status: {}
-
 ---
 apiVersion: apps/v1
 kind: Deployment
