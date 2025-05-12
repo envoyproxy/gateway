@@ -8,7 +8,7 @@ weight: 2
 ## Overview
 Gateway API Extensions let you configure extra features that aren’t part of the standard Kubernetes Gateway API. These extensions are built by the teams that create and maintain Gateway API implementations.
 The Gateway API was designed to be extensible safe, and reliable. In the old Ingress API, people had to use custom annotations to add new features, but those weren’t type-safe, making it hard to check if their configuration was correct.
-With Gateway API Extensions, implementors provide type-safe Custom Resource Definitions (CRDs). This means every configuration you write has a clear structure and strict rules, making it easier to catch mistakes early and be confident your setup is valid.
+With Gateway API Extensions, implementers provide type-safe Custom Resource Definitions (CRDs). This means every configuration you write has a clear structure and strict rules, making it easier to catch mistakes early and be confident your setup is valid.
 ## Use Cases
 
 Here are some examples of what kind of features extensions include:
@@ -44,7 +44,3 @@ Currently supported extensions include
 These extensions are processed through Envoy Gateway's control plane, translating them into xDS configurations applied to Envoy Proxy instances. This layered architecture allows for consistent, scalable, and production-grade traffic control without needing to manage raw Envoy configuration directly.
 
 ## Related Resources
-- [ClientTrafficPolicy](client-traffic-policy.md)
-- [BackendTrafficPolicy](backend-traffic-policy.md)
-- [SecurityPolicy](security-policy.md)
-
