@@ -291,7 +291,7 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 		}
 
 		if r.backendCRDExists {
-			if err = r.processBackends(ctx, gwcResource); err != nil {
+			if err = r.processBackends(ctx, gwcResource, resourceMappings); err != nil {
 				r.log.Error(err, fmt.Sprintf("failed processBackends for gatewayClass %s, skipping it", managedGC.Name))
 				continue
 			}
@@ -1305,7 +1305,7 @@ func (r *gatewayAPIReconciler) processBackendTLSPolicies(
 }
 
 // processBackends adds Backends to the resourceTree
-func (r *gatewayAPIReconciler) processBackends(ctx context.Context, resourceTree *resource.Resources) error {
+func (r *gatewayAPIReconciler) processBackends(ctx context.Context, resourceTree *resource.Resources, resourceMappings *resourceMappings) error {
 	backends := egv1a1.BackendList{}
 	if err := r.client.List(ctx, &backends); err != nil {
 		return fmt.Errorf("error listing Backends: %w", err)
@@ -1313,10 +1313,25 @@ func (r *gatewayAPIReconciler) processBackends(ctx context.Context, resourceTree
 
 	for _, backend := range backends.Items {
 		backend := backend //nolint:copyloopvar
+		// We only interested in Backends that are referenced by GatewayClass.
+		if !resourceMappings.allAssociatedBackendRefs.Has(gwapiv1.BackendObjectReference{
+			Group:     (*gwapiv1.Group)(&backend.APIVersion),
+			Kind:      (*gwapiv1.Kind)(&backend.Kind),
+			Name:      gwapiv1.ObjectName(backend.Name),
+			Namespace: gatewayapi.NamespacePtr(backend.Namespace),
+		}) {
+			continue
+		}
 		// Discard Status to reduce memory consumption in watchable
 		// It will be recomputed by the gateway-api layer
 		backend.Status = egv1a1.BackendStatus{}
-		resourceTree.Backends = append(resourceTree.Backends, &backend)
+		resourceMappings.allAssociatedNamespaces.Insert(backend.Namespace)
+		// Backend will be also added in processBackendRefs. Make sure that we don't add it twice.
+		key := utils.NamespacedName(&backend).String()
+		if !resourceMappings.allAssociatedBackends.Has(key) {
+			resourceMappings.allAssociatedBackends.Insert(key)
+			resourceTree.Backends = append(resourceTree.Backends, &backend)
+		}
 	}
 	return nil
 }
