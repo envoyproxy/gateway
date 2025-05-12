@@ -5,7 +5,7 @@ weight: 1
 
 ## Overview
 
-**Envoy Gateway** is a Kubernetes-native [API Gateway](api_gateways.md) and reverse proxy control plane. It simplifies deploying and operating [Envoy Proxy](envoy_proxy.md) as a data plane by using the standard [Gateway API](gateway_api.md) and its own extensible APIs.
+**Envoy Gateway** is a Kubernetes-native [API Gateway](api-gateways.md) and reverse proxy control plane. It simplifies deploying and operating [Envoy Proxy](proxy.md) as a data plane by using the standard [Gateway API](gateway-api.md) and its own extensible APIs.
 
 By combining Envoy's performance and flexibility with Kubernetes-native configuration, Envoy Gateway helps platform teams expose and manage secure, observable, and scalable APIs with minimal operational overhead.
 
