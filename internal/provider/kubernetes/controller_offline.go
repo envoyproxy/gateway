@@ -75,6 +75,21 @@ func NewOfflineGatewayAPIController(
 		envoyGateway:      cfg.EnvoyGateway,
 		mergeGateways:     sets.New[string](),
 		extServerPolicies: extServerPoliciesGVKs,
+		// We assume all CRDs are available in offline mode.
+		backendCRDExists:       true,
+		bTLSPolicyCRDExists:    true,
+		btpCRDExists:           true,
+		ctpCRDExists:           true,
+		eepCRDExists:           true,
+		epCRDExists:            true,
+		eppCRDExists:           true,
+		hrfCRDExists:           true,
+		grpcRouteCRDExists:     true,
+		serviceImportCRDExists: true,
+		spCRDExists:            true,
+		tcpRouteCRDExists:      true,
+		tlsRouteCRDExists:      true,
+		udpRouteCRDExists:      true,
 	}
 
 	r.log.Info("created offline gatewayapi controller")
