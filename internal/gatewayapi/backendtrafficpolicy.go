@@ -432,6 +432,10 @@ func (t *Translator) translateBackendTrafficPolicyForRouteWithMerge(
 
 	// Build traffic features from the merged policy
 	tf, errs := t.buildTrafficFeatures(mergedPolicy, resources)
+	if tf == nil {
+		// should not happen
+		return nil
+	}
 
 	// Since GlobalRateLimit merge relies on IR auto-generated key: (<policy-ns>/<policy-name>/rule/<rule-index>)
 	// We can't simply merge the BTP's using utils.Merge() we need to specifically merge the GlobalRateLimit.Rules using IR fields.
@@ -447,16 +451,14 @@ func (t *Translator) translateBackendTrafficPolicyForRouteWithMerge(
 			if err != nil {
 				return fmt.Errorf("error merging rate limits: %w", err)
 			}
-
 			// Replace the rate limit in the merged features if successful
-			if mergedRL != nil {
-				tf.RateLimit = mergedRL
-			}
+			tf.RateLimit = mergedRL
 		}
 	}
 
 	x, ok := xdsIR[t.IRKey(gatewayNN)]
 	if !ok {
+		// should not happen.
 		return nil
 	}
 	applyTrafficFeatureToRoute(route, tf, errs, mergedPolicy, x)

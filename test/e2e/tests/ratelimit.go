@@ -953,7 +953,7 @@ var RateLimitGlobalSharedUnsharedGatewayAndRoutePolicyMergeTest = suite.Conforma
 	Manifests:   []string{"testdata/ratelimit-global-shared-and-unshared-header-match.yaml"},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
 		t.Run("rate limit requests with shared header limit across routes with different paths", func(t *testing.T) {
-			ns := "infra-routing"
+			ns := "gateway-conformance-infra"
 			gwNN := types.NamespacedName{Name: "eg-rate-limit", Namespace: ns}
 			route1NN := types.NamespacedName{Name: "header-ratelimit-1", Namespace: ns}
 			route2NN := types.NamespacedName{Name: "header-ratelimit-2", Namespace: ns}
