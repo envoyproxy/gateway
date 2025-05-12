@@ -97,6 +97,7 @@ infraIR:
           gateway.envoyproxy.io/owning-gateway-namespace: default
       name: default/gateway-1
       namespace: envoy-gateway-system
+      resourceName: gateway-1
 xdsIR:
   default/gateway-1:
     accessLog:

@@ -90,10 +90,14 @@ func (r *ResourceRender) LabelSelector() labels.Selector {
 // ServiceAccount returns the expected proxy serviceAccount.
 func (r *ResourceRender) ServiceAccount() (*corev1.ServiceAccount, error) {
 	// Set the labels based on the owning gateway name.
-	labels := envoyLabels(r.infra.GetProxyMetadata().Labels)
-	if OwningGatewayLabelsAbsent(labels) {
+	saLabels := envoyLabels(r.infra.GetProxyMetadata().Labels)
+	if OwningGatewayLabelsAbsent(saLabels) {
 		return nil, fmt.Errorf("missing owning gateway labels")
 	}
+
+	// This's used for GatewayInfrastructure conformance test
+	// xref: https://github.com/kubernetes-sigs/gateway-api/pull/3192
+	saLabels["gateway.networking.k8s.io/gateway-name"] = r.infra.ResourceName
 
 	return &corev1.ServiceAccount{
 		TypeMeta: metav1.TypeMeta{
@@ -103,7 +107,7 @@ func (r *ResourceRender) ServiceAccount() (*corev1.ServiceAccount, error) {
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace:   r.Namespace(),
 			Name:        r.Name(),
-			Labels:      labels,
+			Labels:      saLabels,
 			Annotations: r.infra.GetProxyMetadata().Annotations,
 		},
 	}, nil

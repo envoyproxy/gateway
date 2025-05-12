@@ -274,6 +274,7 @@ infraIR:
           gateway.envoyproxy.io/owning-gateway-namespace: default
       name: default/gateway-1
       namespace: envoy-gateway-system
+      resourceName: gateway-1
   default/gateway-2:
     proxy:
       listeners:
@@ -290,6 +291,7 @@ infraIR:
           gateway.envoyproxy.io/owning-gateway-namespace: default
       name: default/gateway-2
       namespace: envoy-gateway-system
+      resourceName: gateway-2
 xdsIR:
   default/gateway-1:
     accessLog:

@@ -58,6 +58,7 @@ infraIR:
           gateway.envoyproxy.io/owning-gateway-namespace: gateway-conformance-infra
       name: gateway-conformance-infra/gateway-tlsroute-referencegrant
       namespace: envoy-gateway-system
+      resourceName: gateway-tlsroute-referencegrant
 tlsRoutes:
 - apiVersion: gateway.networking.k8s.io/v1alpha2
   kind: TLSRoute
