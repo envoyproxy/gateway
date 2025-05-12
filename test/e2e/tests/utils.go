@@ -38,6 +38,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	"sigs.k8s.io/gateway-api/conformance/utils/config"
+	httputils "sigs.k8s.io/gateway-api/conformance/utils/http"
+	k8sutils "sigs.k8s.io/gateway-api/conformance/utils/kubernetes"
 	"sigs.k8s.io/gateway-api/conformance/utils/suite"
 	"sigs.k8s.io/gateway-api/conformance/utils/tlog"
 
@@ -49,11 +51,18 @@ import (
 var (
 	IPFamily      = os.Getenv("IP_FAMILY")
 	DeployProfile = os.Getenv("KUBE_DEPLOY_PROFILE")
+
+	SameNamespaceGateway    = types.NamespacedName{Name: "same-namespace", Namespace: ConformanceInfraNamespace}
+	SameNamespaceGatewayRef = k8sutils.NewGatewayRef(SameNamespaceGateway)
+
+	PodReady = corev1.PodCondition{Type: corev1.PodReady, Status: corev1.ConditionTrue}
 )
 
-const defaultServiceStartupTimeout = 5 * time.Minute
+const (
+	ConformanceInfraNamespace = "gateway-conformance-infra"
 
-var PodReady = corev1.PodCondition{Type: corev1.PodReady, Status: corev1.ConditionTrue}
+	defaultServiceStartupTimeout = 5 * time.Minute
+)
 
 // WaitForPods waits for the pods in the given namespace and with the given selector
 // to be in the given phase and condition.
@@ -701,4 +710,35 @@ func GetGatewayResourceNamespace() string {
 		return "gateway-conformance-infra"
 	}
 	return "envoy-gateway-system"
+}
+
+func ExpectRequestTimeout(t *testing.T, suite *suite.ConformanceTestSuite, gwAddr, path, query string, exceptedStatusCode int) {
+	// Use raw http request to avoid chunked
+	req := &http.Request{
+		Method: "GET",
+		URL:    &url.URL{Scheme: "http", Host: gwAddr, Path: path, RawQuery: query},
+	}
+
+	client := &http.Client{
+		Timeout: 10 * time.Second,
+	}
+	httputils.AwaitConvergence(t, suite.TimeoutConfig.RequiredConsecutiveSuccesses, suite.TimeoutConfig.MaxTimeToConsistency,
+		func(elapsed time.Duration) bool {
+			resp, err := client.Do(req)
+			if err != nil {
+				panic(err)
+			}
+			defer func() {
+				_ = resp.Body.Close()
+			}()
+
+			// return 504 instead of 400 when request timeout.
+			// https://github.com/envoyproxy/envoy/blob/56021dbfb10b53c6d08ed6fc811e1ff4c9ac41fd/source/common/http/utility.cc#L1409
+			if exceptedStatusCode == resp.StatusCode {
+				return true
+			} else {
+				tlog.Logf(t, "%s%s response status code: %d after %v", gwAddr, path, resp.StatusCode, elapsed)
+				return false
+			}
+		})
 }

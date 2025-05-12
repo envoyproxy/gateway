@@ -1124,6 +1124,8 @@ func (t *Translator) buildAPIKeyAuth(
 	}
 
 	credentials := make(map[string]ir.PrivateBytes)
+	seenKeys := make(sets.Set[string])
+
 	for _, ref := range policy.Spec.APIKeyAuth.CredentialRefs {
 		credentialsSecret, err := t.validateSecretRef(
 			false, from, ref, resources)
@@ -1134,6 +1136,13 @@ func (t *Translator) buildAPIKeyAuth(
 			if _, ok := credentials[clientid]; ok {
 				continue
 			}
+
+			keyString := string(key)
+			if seenKeys.Has(keyString) {
+				return nil, errors.New("duplicated API key")
+			}
+
+			seenKeys.Insert(keyString)
 			credentials[clientid] = key
 		}
 	}

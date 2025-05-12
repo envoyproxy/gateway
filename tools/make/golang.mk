@@ -69,7 +69,7 @@ go.testdata.complete: ## Override test ouputdata
 go.test.coverage: go.test.cel ## Run go unit and integration tests in GitHub Actions
 	@$(LOG_TARGET)
 	KUBEBUILDER_ASSETS="$(shell go tool setup-envtest use $(ENVTEST_K8S_VERSION) -p path)" \
-		go test ./... --tags=integration -race -coverprofile=coverage.xml -covermode=atomic
+		go test ./... --tags=integration -race -coverprofile=coverage.xml -covermode=atomic -coverpkg=./...
 
 .PHONY: go.test.cel
 go.test.cel: manifests # Run the CEL validation tests
