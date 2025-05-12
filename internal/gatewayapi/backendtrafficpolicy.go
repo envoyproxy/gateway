@@ -431,14 +431,11 @@ func (t *Translator) translateBackendTrafficPolicyForRouteWithMerge(
 	}
 
 	// Build traffic features from the merged policy
-	tf, err := t.buildTrafficFeatures(mergedPolicy, resources)
-	if err != nil {
-		return err
-	}
+	tf, errs := t.buildTrafficFeatures(mergedPolicy, resources)
 
 	// Since GlobalRateLimit merge relies on IR auto-generated key: (<policy-ns>/<policy-name>/rule/<rule-index>)
 	// We can't simply merge the BTP's using utils.Merge() we need to specifically merge the GlobalRateLimit.Rules using IR fields.
-	// Since ir.TrafficFeatures is not a built-in Kuberentes API object with defined merging strategies and it does not support a deep merge (for lists/maps).
+	// Since ir.TrafficFeatures is not a built-in Kubernetes API object with defined merging strategies and it does not support a deep merge (for lists/maps).
 	if policy.Spec.RateLimit != nil && gwPolicy.Spec.RateLimit != nil {
 		tfGW, _ := t.buildTrafficFeatures(gwPolicy, resources)
 		tfRoute, _ := t.buildTrafficFeatures(policy, resources)
@@ -462,7 +459,7 @@ func (t *Translator) translateBackendTrafficPolicyForRouteWithMerge(
 	if !ok {
 		return nil
 	}
-	applyTrafficFeatureToRoute(route, tf, nil, mergedPolicy, x)
+	applyTrafficFeatureToRoute(route, tf, errs, mergedPolicy, x)
 
 	return nil
 }
