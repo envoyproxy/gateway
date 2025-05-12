@@ -73,14 +73,14 @@ backendTrafficPolicies:
         type: Local
         local:
           rules:
-            - clientSelectors:
-              - headers:
-                - name: x-user-id
-                  type: Exact
-                  value: two
-              limit:
-                requests: 5
-                unit: Hour
+          - clientSelectors:
+            - headers:
+              - name: x-user-id
+                type: Exact
+                value: two
+            limit:
+              requests: 5
+              unit: Hour
   - apiVersion: gateway.envoyproxy.io/v1alpha1
     kind: BackendTrafficPolicy
     metadata:
@@ -103,11 +103,11 @@ backendTrafficPolicies:
         type: Local
         local:
           rules:
-            - clientSelectors:
-              - headers:
-                - name: x-user-id
-                  type: Exact
-                  value: one
-              limit:
-                requests: 5
-                unit: Hour
+          - clientSelectors:
+            - headers:
+              - name: x-user-id
+                type: Exact
+                value: one
+            limit:
+              requests: 5
+              unit: Hour
