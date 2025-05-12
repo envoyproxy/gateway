@@ -108,4 +108,4 @@ spec:
           limit:
             requests: 3
             unit: Hour
-          shared: true
+          shared: false
