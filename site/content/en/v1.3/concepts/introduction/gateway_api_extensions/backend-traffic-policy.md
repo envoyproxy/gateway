@@ -2,7 +2,7 @@
 title: "BackendTrafficPolicy"
 ---
 ## Before you Begin
-- [Gateway API Extensions](gateway-api-extensions.md)
+- [Gateway API Extensions](_index.md)
 
 ## Overview
 `BackendTrafficPolicy` is an extension to the Kubernetes Gateway API that controls how Envoy Gateway communicates with your backend services. It can configure connection behavior, resilience mechanisms, and performance optimizations without requiring changes to your applications.
@@ -71,12 +71,12 @@ Lastly, it's important to note that even when you apply a policy to a Gateway, t
 
 ## Related Resources
 
-- [Circuit Breakers](../tasks/traffic/circuit-breaker)
-- [Failover](../tasks/traffic/failover)
-- [Fault Injection](../tasks/traffic/fault-injection)
-- [Global Rate Limit](../tasks/traffic/global-rate-limit)
-- [Local Rate Limit](../tasks/traffic/local-rate-limit)
-- [Load Balancing](../tasks/traffic/load-balancing)
-- [Response Compression](../tasks/traffic/response-compression)
-- [Response Override](../tasks/traffic/response-override)
-- [BackendTrafficPolicy API Reference](../api/extension_types#backendtrafficpolicy)
+- [Circuit Breakers](../../../tasks/traffic/circuit-breaker.md)
+- [Failover](../../../tasks/traffic/failover)
+- [Fault Injection](../../../tasks/traffic/fault-injection)
+- [Global Rate Limit](../../../tasks/traffic/global-rate-limit)
+- [Local Rate Limit](../../../tasks/traffic/local-rate-limit)
+- [Load Balancing](../../../tasks/traffic/load-balancing)
+- [Response Compression](../../../tasks/traffic/response-compression)
+- [Response Override](../../../tasks/traffic/response-override)
+- [BackendTrafficPolicy API Reference](../../../api/extension_types#backendtrafficpolicy)

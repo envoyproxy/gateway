@@ -3,7 +3,7 @@ title: "SecurityPolicy"
 ---
 
 ## Before you Begin
-- [Gateway API Extensions](gateway-api-extensions.md)
+- [Gateway API Extensions](_index.md)
 
 ## Overview
 
@@ -70,12 +70,12 @@ spec:
 In the example, policy A affects only the HTTPS listener, while policy B applies to the rest of the listeners in the gateway. Since Policy A is more specific, the system will show Overridden=True for Policy B on the https listener.
 
 ## Related Resources
-- [API Key Authentication](../tasks/security/apikey-auth.md)
-- [Basic Authentication](../tasks/security/basic-auth.md)
-- [CORS](../tasks/security/cors.md)
-- [External Authorization](../tasks/security/ext-auth.md)
-- [IP Allowlist/Denylist](../tasks/security/restrict-ip-access.md)
-- [JWT Authentication](../tasks/security/jwt-authentication.md)
-- [JWT Claim Based Authorization](../tasks/security/jwt-claim-authorization.md)
-- [OIDC Authorization](../tasks/security/oidc.md)
-- [SecurityPolicy API Reference](../api/extension_types#securitypolicy)
+- [API Key Authentication](../../../tasks/security/apikey-auth.md)
+- [Basic Authentication](../../../tasks/security/basic-auth.md)
+- [CORS](../../../tasks/security/cors.md)
+- [External Authorization](../../../tasks/security/ext-auth.md)
+- [IP Allowlist/Denylist](../../../tasks/security/restrict-ip-access.md)
+- [JWT Authentication](../../../tasks/security/jwt-authentication.md)
+- [JWT Claim Based Authorization](../../../tasks/security/jwt-claim-authorization.md)
+- [OIDC Authorization](../../../tasks/security/oidc.md)
+- [SecurityPolicy API Reference](../../../api/extension_types#securitypolicy)

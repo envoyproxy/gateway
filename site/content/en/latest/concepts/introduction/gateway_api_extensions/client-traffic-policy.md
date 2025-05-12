@@ -2,7 +2,7 @@
 title: "ClientTrafficPolicy"
 ---
 ## Before you Begin
-- [Gateway API Extensions](gateway-api-extensions.md)
+- [Gateway API Extensions](_index.md)
 
 ## Overview
 
@@ -81,8 +81,8 @@ In this case:
 
 ## Related Resources
 
-- [Connection Limit](../tasks/traffic/connection-limit)
-- [HTTP Request Headers](../tasks/traffic/http-request-headers)
-- [HTTP/3](../tasks/traffic/http3)
-- [Mutual TLS: External Clients to the Gateway](../tasks/security/mutual-tls.md)
-- [ClientTrafficPolicy API Reference](../api/extension_types#clienttrafficpolicy)
+- [Connection Limit](../../../tasks/traffic/connection-limit.md)
+- [HTTP Request Headers](../../../tasks/traffic/http-request-headers)
+- [HTTP/3](../../../tasks/traffic/http3)
+- [Mutual TLS: External Clients to the Gateway](../../../tasks/security/mutual-tls.md)
+- [ClientTrafficPolicy API Reference](../../../api/extension_types#clienttrafficpolicy)

@@ -30,15 +30,15 @@ The Envoy Gateway API introduces a set of Gateway API extensions that enable use
 
 {{% alert title="Current Extensions" color="info" %}}
 Currently supported extensions include 
-[`Backend`](../api/extension_types#backend), 
-[`BackendTrafficPolicy`](../api/extension_types#backendtrafficpolicy), 
-[`ClientTrafficPolicy`](../api/extension_types#clienttrafficpolicy), 
-[`EnvoyExtensionPolicy`](../api/extension_types#envoyextensionpolicy), 
-[`EnvoyGateway`](../api/extension_types#envoygateway), 
-[`EnvoyPatchPolicy`](../api/extension_types#envoypatchpolicy), 
-[`EnvoyProxy`](../api/extension_types#envoyproxy), 
-[`HTTPRouteFilter`](../api/extension_types#httproutefilter), and 
-[`SecurityPolicy`](../api/extension_types#securitypolicy), 
+[`Backend`](../../../api/extension_types#backend), 
+[`BackendTrafficPolicy`](../../../api/extension_types#backendtrafficpolicy), 
+[`ClientTrafficPolicy`](../../../api/extension_types#clienttrafficpolicy), 
+[`EnvoyExtensionPolicy`](../../../api/extension_types#envoyextensionpolicy), 
+[`EnvoyGateway`](../../../api/extension_types#envoygateway), 
+[`EnvoyPatchPolicy`](../../../api/extension_types#envoypatchpolicy), 
+[`EnvoyProxy`](../../../api/extension_types#envoyproxy), 
+[`HTTPRouteFilter`](../../../api/extension_types#httproutefilter), and 
+[`SecurityPolicy`](../../../api/extension_types#securitypolicy), 
 {{% /alert %}}
 
 These extensions are processed through Envoy Gateway's control plane, translating them into xDS configurations applied to Envoy Proxy instances. This layered architecture allows for consistent, scalable, and production-grade traffic control without needing to manage raw Envoy configuration directly.
