@@ -2102,7 +2102,7 @@ type LocalRateLimit struct {
 	Default RateLimitValue `json:"default,omitempty" yaml:"default,omitempty"`
 
 	// Rules for rate limiting.
-	Rules []*RateLimitRule `json:"rules,omitempty" yaml:"rules,omitempty"`
+	Rules []*RateLimitRule `json:"rules,omitempty" yaml:"rules,omitempty" patchStrategy:"merge" patchMergeKey:"name"`
 }
 
 // RateLimitRule holds the match and limit configuration for ratelimiting.

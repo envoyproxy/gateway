@@ -99,14 +99,9 @@ func (t *Translator) buildRateLimitFilter(irListener *ir.HTTPListener) []*hcmv3.
 		for _, rule := range route.Traffic.RateLimit.Global.Rules {
 			if isRuleShared(rule) {
 				hasShared = true
-				if sharedRuleName == "" {
-					sharedRuleName = stripRuleIndexSuffix(rule.Name)
-				}
+				sharedRuleName = stripRuleIndexSuffix(rule.Name)
 			} else {
 				hasNonShared = true
-			}
-			if hasShared && hasNonShared {
-				break
 			}
 		}
 
