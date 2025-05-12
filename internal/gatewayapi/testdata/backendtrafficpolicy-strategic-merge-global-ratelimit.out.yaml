@@ -22,7 +22,7 @@ backendTrafficPolicies:
           limit:
             requests: 5
             unit: Hour
-          shared: false
+          shared: true
       type: Global
     targetRef:
       group: gateway.networking.k8s.io
@@ -354,7 +354,7 @@ xdsIR:
                   requests: 5
                   unit: Hour
                 name: default/policy-for-route/rule/0
-                shared: false
+                shared: true
               - headerMatches:
                 - distinct: false
                   exact: two
@@ -432,7 +432,7 @@ xdsIR:
                   requests: 5
                   unit: Hour
                 name: default/policy-for-route/rule/0
-                shared: false
+                shared: true
           timeout:
             tcp:
               connectTimeout: 10s
