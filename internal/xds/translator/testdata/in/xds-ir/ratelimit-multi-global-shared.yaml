@@ -13,11 +13,11 @@ http:
       - name: "first-route"
         hostname: "*"
         traffic:
-          name: "test-policy-1/test-namespace"
+          name: "test-namespace/test-policy-1"
           rateLimit:
             global:
               rules:
-                - name: "test-policy-1/test-namespace/rule/0"
+                - name: "test-namespace/test-policy-1/rule/0"
                   headerMatches:
                     - name: "x-user-id"
                       exact: "one"
@@ -38,11 +38,11 @@ http:
       - name: "second-route"
         hostname: "*"
         traffic:
-          name: "test-policy-1/test-namespace"
+          name: "test-namespace/test-policy-1"
           rateLimit:
             global:
               rules:
-                - name: "test-policy-1/test-namespace/rule/0"
+                - name: "test-namespace/test-policy-1/rule/0"
                   headerMatches:
                     - name: "x-user-id"
                       exact: "one"
@@ -63,11 +63,11 @@ http:
       - name: "third-route"
         hostname: "*"
         traffic:
-          name: "test-policy-2/test-namespace"
+          name: "test-namespace/test-policy-2"
           rateLimit:
             global:
               rules:
-                - name: "test-policy-2/test-namespace/rule/0"
+                - name: "test-namespace/test-policy-2/rule/0"
                   headerMatches:
                     - name: "x-user-id"
                       exact: "two"
@@ -75,7 +75,7 @@ http:
                     requests: 10
                     unit: second
                   shared: true
-                - name: "test-policy-2/test-namespace/rule/1"
+                - name: "test-namespace/test-policy-2/rule/1"
                   headerMatches:
                     - name: "x-user-id"
                       exact: "two"

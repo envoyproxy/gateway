@@ -10,7 +10,7 @@ http:
   routes:
   - name: "first-route"
     traffic:
-      name: "test-policy-1/test-namespace"
+      name: "test-namespace/test-policy-1"
       rateLimit:
         global:
           rules:
