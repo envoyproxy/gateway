@@ -1,5 +1,33 @@
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: backend-namespaces
+  namespace: gateway-conformance-infra
+spec:
+  gatewayClassName: "{GATEWAY_CLASS_NAME}"
+  listeners:
+  - name: http
+    port: 80
+    protocol: HTTP
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: http-with-backend-tls
+  namespace: gateway-conformance-infra
+spec:
+  parentRefs:
+  - name: backend-namespaces
+  rules:
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /backend-tls
+    backendRefs:
+    - name: tls-backend
+      port: 443
+---
 # openssl req -x509 -sha256 -nodes -days 36500 -newkey rsa:2048 -subj '/O=example Inc./CN=example.com' -keyout ca.key -out ca.crt
-# We use the same CA cert for the Gateway and the backend to simplify the test.
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -27,62 +55,6 @@ data:
     7jD99R8PXZV5VDyP8qoHPYYyqkaQH4nQtVm288vFNQRF+/vUUQsNKl/JQcTG2UCc
     IwP0azf9fJ+Xxx19TOMO3FA=
     -----END CERTIFICATE-----
----
-# openssl req -out www.example.com.csr -newkey rsa:2048 -nodes -keyout www.example.com.key -subj "/CN=www.example.com/O=example organization"
-# openssl x509 -req -days 36500 -CA ca.crt -CAkey ca.key -set_serial 0 -in www.example.com.csr -out www.example.com.crt
-apiVersion: v1
-data:
-  tls.crt: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUMzRENDQWNRQ0FRQXdEUVlKS29aSWh2Y05BUUVMQlFBd0xURVZNQk1HQTFVRUNnd01aWGhoYlhCc1pTQkoKYm1NdU1SUXdFZ1lEVlFRRERBdGxlR0Z0Y0d4bExtTnZiVEFnRncweU5UQTFNVE13TWpVME1ETmFHQTh5TVRJMQpNRFF4T1RBeU5UUXdNMW93T1RFWU1CWUdBMVVFQXd3UGQzZDNMbVY0WVcxd2JHVXVZMjl0TVIwd0d3WURWUVFLCkRCUmxlR0Z0Y0d4bElHOXlaMkZ1YVhwaGRHbHZiakNDQVNJd0RRWUpLb1pJaHZjTkFRRUJCUUFEZ2dFUEFEQ0MKQVFvQ2dnRUJBTEFQbVJWZkxMakVjR0RMK2Y2UVVJU3FEMit1Q1o0ekJCeFFhZVJyNTBCdUxqU0RFbTlQTEtObApzM28xbDhSMGxqNnNDWWg0ak9oMVIyZVhaMDR2VzJpYWNUeDdxNjEyQTlpbjNicVNvNU1oZzhQZ1ZrODZCSkwrCnMxSHJPZkJwRm0wVnExbnA5YzM1WTlLeDlzRklZOU5nc0M4ZGIrbzZYZkVER25ZR0NIeGNISzhHQXFZeUZjelkKQ2h3MFhZa1ptcnYzUGtoSUZ6MDhkdkVEQ3VzaVVOZmJOSU14eWtUUUt5VmZDRHNQMUwwZUhUc3VkRk1nMVFnNgpsYnpzbWE2YkwyTlJJYk1iNVMyZXF4UnpYbXFpdHIzNG02N0R3RmJuYmhNaEZvOUMzS2NuRzB2a05jZ05TNkVKCmp6UkFoSFpwU29lUXZlODRzSHhtODBieW5ETWVKMDhDQXdFQUFUQU5CZ2txaGtpRzl3MEJBUXNGQUFPQ0FRRUEKQWFQalpsQ0tLZXdENmdjTUxFRGxmNlhqN2ljRFRjN3dldHQ0aWxVc3pVRWJUdzZ2cEowSVN0VU1IN1RVdXpOVApGYW1RNGozUmY1d3ZDZGlXUUdMMXpxMnZjbVJkMkZxa3NqR2VLYW8wNmRBZGdSMHVWZjV0c1ZrM0p1cGc3R0lVCkZ1UjVWbFJqc2pCa1MxNnRZTFVqaW1OM1hJTHh6L3pCV3g4cEl5YWRSaXhhakRoTXV4Q1FvVjN0azFoeEFlTFgKdXRseHpPa3FneEtrbCt5RDN5cFFMQ3NoMzZWRTM3UjRtTzdSaFpiNWpyTTBpbkQyeTl3emtXeThjQVozNjBSSgpBQlA4MHNXQ3Yra29wSW1xcjVYdlZPOXVBQ01KSDBTRENDSzduMStRS1ZEWmVkWUVXRCtLUzd2RHRsMUVYOVh5CmVIMGVIb3J6cU1YSWk1T1Irai9GYXc9PQotLS0tLUVORCBDRVJUSUZJQ0FURS0tLS0tCg==
-  tls.key: LS0tLS1CRUdJTiBQUklWQVRFIEtFWS0tLS0tCk1JSUV2UUlCQURBTkJna3Foa2lHOXcwQkFRRUZBQVNDQktjd2dnU2pBZ0VBQW9JQkFRQ3dENWtWWHl5NHhIQmcKeS9uK2tGQ0VxZzl2cmdtZU13UWNVR25rYStkQWJpNDBneEp2VHl5alpiTjZOWmZFZEpZK3JBbUllSXpvZFVkbgpsMmRPTDF0b21uRThlNnV0ZGdQWXA5MjZrcU9USVlQRDRGWlBPZ1NTL3JOUjZ6bndhUlp0RmF0WjZmWE4rV1BTCnNmYkJTR1BUWUxBdkhXL3FPbDN4QXhwMkJnaDhYQnl2QmdLbU1oWE0yQW9jTkYySkdacTc5ejVJU0JjOVBIYngKQXdycklsRFgyelNETWNwRTBDc2xYd2c3RDlTOUhoMDdMblJUSU5VSU9wVzg3Sm11bXk5alVTR3pHK1V0bnFzVQpjMTVxb3JhOStKdXV3OEJXNTI0VElSYVBRdHluSnh0TDVEWElEVXVoQ1k4MFFJUjJhVXFIa0wzdk9MQjhadk5HCjhwd3pIaWRQQWdNQkFBRUNnZ0VBTVJyNG9JeGVKZDZzVldNdkJBQnVaTUlsOGdsQnAzMGxMVnlFWEhCNEhIRmUKczhqSEVJS3R1Wms1R09IdnhaeWE5em4yb3JpMDNIVXhpRVFqVFJ4S1MzK2dDN1dXcVpmYjlNYkZRaTk2TGlSUAo0d2NrSzQ3TURjKzZaaVBNa2pCTlQvbVdSRXJNQXpvR3pKSlVkNDVnUVdtYldsakVpVGprVUwrRDF0MVI2cFV6CmlmcTcxYkxiNjRiZlIwSHRmR1A0ay9iaEEveXU4VlVrK1JYanZWcUh5UmpzT1BSQ2hWYy9rMzdDSlRxTGhnaE8KQTZRNzUvVmFkQW9iYlhHWHhKSWVDKytkVjR3Ky85SU41YjNQYkpDa0drVDArZHd1Vms0ZVFCN2FmTDA3RWJiNgpiODlrOThxYUN3eDB5TCs5cHpVSXVlbkU0d0lHMVlKRktFTE43VWxnd1FLQmdRRG4vbk15MlEwTlRxVERJQ0Y2CnU5SiszQlZhaEZxclFCN2JWWktQY0J4T2syaDk5cEhNZ2lxRHJKZk1uRXNLSDdTM3Rsb1Nvby9EM25aZ1VFM2kKaFhzcDEyNUxPM3RadmR3WHpOaFQ2MjJCQXFZWTVoWTNWVzFBeGVsc3F0NzRLeSs4TUN6QzMxd3YrQWpSM0dIMgo1RWg1QnA1OGtiQXdjWUVNL04rN2FIc2xyd0tCZ1FEQ1IzbWVlN0h1Sk5ZZUtHbENYbFl0eWJ2ZHMvYzlqQ1loCitDUXZUWjF4eTZobmdZcEcwUmJ4WlArUkRUN2d0UGlEczJFVlpxaHIvcmlGbUpUemI3MlpVRjUxRHlzbFdpWTkKWnkxa2RlOS9OOHlYRzZETlB2dEJLK3orWkJDbUROSWhOV0JhbnhZNlBRQ1M2elhKRUwwell1bVBtZWtjSDFTQQp1d290b3ZFZ1lRS0JnUUNxdzdFb0RIeCsveFJvVEk1WU9VaUgrSmYvT00xRW9MNFYxTGM4dmRrWVBZajhyekpDCnhzMWtmdlo5dGMzR2RmQWdDaW5pN2FYRkYwc3JPZkVhZkFaY2xpYXBXZTlCNzI3Q1ZoWW1MM1U3TVNmeHkrc3UKYjhNcm1vSm5hcDhWTFRURjRQQVJ3VGVxVjNpbWdRSGJLYzN1eCtDQThQd3ZyRnpCb3FGTTRXdEVJUUtCZ0cyUwpKak9PQytJR0FJVHR3Yi9ldUxnR1NPQlhPYUFLeFE3dmhtanZXMWJzeDhQb3VYWUxRdWRPVVIwYjNWU2FmSGE2CjJveFpZNi9VNzNqWmYxaDBzdmdlN2NjVGtQLzJBZzhyZTl4bTczWk9vQ0t4UUZYQnFhOHQrUEhZdWRNTTlBNHEKcm5jdHRqbU9ZaDU2YmRGQ2taTER2SHB6RVpmOHk0bjI4MXlkdzJUQkFvR0FVcytxSWM5MFI4dEpTN0hYZDhhUwpjeEZMT3R1dVZuaDdvRWFqWmVaTGI3QmI3MjdLbWtSWG5xVkFjVnFzYS9ic0EyalhVUGtRWXcvSnFEcFJ1aytOCjFhT1hIMCt2d0ZKSnlETWtxOFZqbFQ1UEpDdXN6WG51cnlYQ2J1VnRCZjFWcTZTREZCU0Q0UjZLOFhoTzRMOTkKRzNMM0lNZ1RCT3RKcFREb3NsL2gvSEU9Ci0tLS0tRU5EIFBSSVZBVEUgS0VZLS0tLS0K
-kind: Secret
-metadata:
-  name: gateway-tls-certificate
-  namespace: gateway-conformance-infra
-type: kubernetes.io/tls
----
-apiVersion: gateway.networking.k8s.io/v1
-kind: Gateway
-metadata:
-  name: backend-namespaces
-  namespace: gateway-conformance-infra
-spec:
-  gatewayClassName: "{GATEWAY_CLASS_NAME}"
-  listeners:
-  - name: https
-    port: 443
-    protocol: HTTPS
-    tls:
-      certificateRefs:
-      - group: ""
-        kind: Secret
-        name: gateway-tls-certificate
-      mode: Terminate
-  - name: http
-    port: 80
-    protocol: HTTP
-    allowedRoutes:
-      namespaces:
-        from: Selector
-        selector:
-          matchLabels:
-            gateway-conformance: backend
----
-apiVersion: gateway.networking.k8s.io/v1
-kind: HTTPRoute
-metadata:
-  name: http-with-backend-tls
-  namespace: gateway-conformance-infra
-spec:
-  parentRefs:
-  - name: backend-namespaces
-  rules:
-  - matches:
-    - path:
-        type: PathPrefix
-        value: /backend-tls
-    backendRefs:
-    - name: tls-backend
-      port: 443
 ---
 apiVersion: gateway.networking.k8s.io/v1alpha3
 kind: BackendTLSPolicy
