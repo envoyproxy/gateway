@@ -522,12 +522,6 @@ func addRateLimitDescriptor(
 		return
 	}
 
-	// Domain map for duplicate check
-	ruleDescriptorMap := make(map[string]*rlsconfv3.RateLimitDescriptor)
-	for _, d := range domainDescriptors[domain] {
-		ruleDescriptorMap[d.Key] = d
-	}
-
 	for i, rule := range route.Traffic.RateLimit.Global.Rules {
 		if i >= len(serviceDescriptors) || (includeShared != isRuleShared(rule)) {
 			continue
@@ -540,11 +534,19 @@ func addRateLimitDescriptor(
 			descriptorKey = getRouteDescriptor(route.Name)
 		}
 
-		descriptorRule, exists := ruleDescriptorMap[descriptorKey]
-		if !exists {
+		// Find or create descriptor in domainDescriptors[domain]
+		var descriptorRule *rlsconfv3.RateLimitDescriptor
+		found := false
+		for _, d := range domainDescriptors[domain] {
+			if d.Key == descriptorKey {
+				descriptorRule = d
+				found = true
+				break
+			}
+		}
+		if !found {
 			descriptorRule = &rlsconfv3.RateLimitDescriptor{Key: descriptorKey, Value: descriptorKey}
 			domainDescriptors[domain] = append(domainDescriptors[domain], descriptorRule)
-			ruleDescriptorMap[descriptorKey] = descriptorRule
 		}
 
 		// Ensure no duplicate descriptors
