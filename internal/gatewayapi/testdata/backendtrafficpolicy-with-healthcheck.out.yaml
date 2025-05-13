@@ -736,7 +736,6 @@ xdsIR:
               interval: 2s
               maxEjectionPercent: 100
               splitExternalLocalOriginErrors: false
-          name: envoy-gateway/policy-for-gateway
       - destination:
           name: grpcroute/default/grpcroute-3/rule/0
           settings:
@@ -763,7 +762,6 @@ xdsIR:
               interval: 3s
               timeout: 1s
               unhealthyThreshold: 3
-          name: default/policy-for-grpc-route-3
       - destination:
           name: grpcroute/default/grpcroute-2/rule/0
           settings:
@@ -789,7 +787,6 @@ xdsIR:
               interval: 3s
               timeout: 1s
               unhealthyThreshold: 3
-          name: default/policy-for-grpc-route
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4
@@ -856,7 +853,6 @@ xdsIR:
               interval: 10s
               maxEjectionPercent: 10
               splitExternalLocalOriginErrors: false
-          name: default/policy-for-route-2
       - destination:
           name: httproute/default/httproute-3/rule/0
           settings:
@@ -898,7 +894,6 @@ xdsIR:
               interval: 8ms
               maxEjectionPercent: 11
               splitExternalLocalOriginErrors: false
-          name: default/policy-for-route-3
       - destination:
           name: httproute/default/httproute-4/rule/0
           settings:
@@ -935,7 +930,6 @@ xdsIR:
               interval: 5s
               timeout: 1s
               unhealthyThreshold: 3
-          name: default/policy-for-route-4
       - destination:
           name: httproute/default/httproute-1/rule/0
           settings:
@@ -981,7 +975,6 @@ xdsIR:
               interval: 1s
               maxEjectionPercent: 100
               splitExternalLocalOriginErrors: false
-          name: default/policy-for-route-1
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4
