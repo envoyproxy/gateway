@@ -1,0 +1,38 @@
+date: May 13, 2025
+
+# Changes that are expected to cause an incompatibility with previous versions, such as deletions or modifications to existing APIs.
+breaking changes: |
+
+# Updates addressing vulnerabilities, security flaws, or compliance requirements.
+security updates: |
+
+# New features or capabilities added in this release.
+new features: |
+  Added support for the extension server in standalone mode.
+  Added support for the `DynamicResolver` backend type, which can route traffic to any backend service based on the request's hostname.
+  Added support for configuring TLS for the `DynamicResolver` backend.
+  Added support for optionally installing the Gateway API standard channel CRDs through the `gateway-crds-helm` chart.
+  Added support for deploying the Envoy fleet in the Gateway resource namespace. please note that this is currently an experimental feature and not recommended for production use.
+  Added support for the offline Kubernetes controller and enabled its use with the file provider.
+
+bug fixes: |
+  Allowed the offline Kubernetes controller to use non-default CRDs.
+  Fixed an issue when merging a route with multiple parentRefs.
+  Fixed the reconciliation logic to continue processing all GatewayClasses even after encountering an error with one.
+  Fixed the topology injector blocking the Envoy proxy from starting.
+  Increased the shutdown-manager's `failureThreshold` to 10 to ensure Envoy restarts before shutdown-manager in the event of transient network issues.
+  Fixed the issue where a `ReferenceGrant` from a `SecurityPolicy` to a referenced `remoteJWKS` backend was not respected.
+  Added validation for header values.
+  Added validation to prevent duplicated API keys in API Key Auth.
+  Fixed `HTTPRoute` precedence by correctly considering header and query match types.
+  Ensured the TLS inspector filter is only added to TCP listeners (not UDP/QUIC) when HTTP/3 is enabled via `ClientTrafficPolicy`, preventing nil pointer dereference.
+  
+# Enhancements that improve performance.
+performance improvements: |
+
+
+# Deprecated features or APIs.
+deprecations: |
+
+# Other notable changes not covered by the above sections.
+Other changes: |
