@@ -11,6 +11,9 @@ import (
 
 	"github.com/envoyproxy/gateway/internal/infrastructure/kubernetes/proxy"
 	"github.com/envoyproxy/gateway/internal/ir"
+	"github.com/envoyproxy/gateway/internal/utils"
+	"k8s.io/apimachinery/pkg/types"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 )
 
 // CreateOrUpdateProxyInfra creates the managed kube infra, if it doesn't exist.
@@ -24,7 +27,23 @@ func (i *Infra) CreateOrUpdateProxyInfra(ctx context.Context, infra *ir.Infra) e
 	}
 
 	envoyNamespace := i.GetResourceNamespace(infra)
-	r := proxy.NewResourceRender(envoyNamespace, i.ControllerNamespace, i.DNSDomain, infra.GetProxyInfra(), i.EnvoyGateway)
+
+	ownerReferenceUID := make(map[string]types.UID)
+	if i.EnvoyGateway.GatewayNamespaceMode() {
+		key := types.NamespacedName{
+			Namespace: envoyNamespace,
+			Name:      utils.GetKubernetesResourceName(infra.Proxy.Name),
+		}
+
+		gatewayUID, err := i.Client.GetUID(ctx, key, &gwapiv1.Gateway{})
+		if err != nil {
+			return err
+		}
+		ownerReferenceUID[proxy.ResourceKindGateway] = gatewayUID
+	}
+	// TODO: set GatewayClass UID when enable merged gateways
+
+	r := proxy.NewResourceRender(envoyNamespace, i.ControllerNamespace, i.DNSDomain, infra.GetProxyInfra(), i.EnvoyGateway, ownerReferenceUID)
 	return i.createOrUpdate(ctx, r)
 }
 
@@ -35,7 +54,7 @@ func (i *Infra) DeleteProxyInfra(ctx context.Context, infra *ir.Infra) error {
 	}
 
 	envoyNamespace := i.GetResourceNamespace(infra)
-	r := proxy.NewResourceRender(envoyNamespace, i.ControllerNamespace, i.DNSDomain, infra.GetProxyInfra(), i.EnvoyGateway)
+	r := proxy.NewResourceRender(envoyNamespace, i.ControllerNamespace, i.DNSDomain, infra.GetProxyInfra(), i.EnvoyGateway, nil)
 	return i.delete(ctx, r)
 }
 
