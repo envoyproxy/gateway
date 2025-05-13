@@ -1069,6 +1069,24 @@ func (r *gatewayAPIReconciler) processGateways(ctx context.Context, managedGC *g
 				continue
 			}
 		}
+		// Check for incompatible configuration: both MergeGateways and GatewayNamespaceMode enabled
+		if r.mergeGateways.Has(managedGC.Name) && r.gatewayNamespaceMode {
+			r.log.Info("gateway rejected: merged gateways and gateway namespace mode cannot be used together",
+				"namespace", gtw.Namespace, "name", gtw.Name)
+
+			status.UpdateGatewayStatusNotAccepted(&gtw,
+				gwapiv1.GatewayReasonInvalid,
+				"Gateway cannot be accepted: Merged Gateways and Gateway Namespace Mode are not supported together")
+
+			gtw.Status = gwapiv1.GatewayStatus{}
+			gtwNamespacedName := utils.NamespacedName(&gtw).String()
+			if !resourceMap.allAssociatedGateways.Has(gtwNamespacedName) {
+				resourceMap.allAssociatedGateways.Insert(gtwNamespacedName)
+				resourceTree.Gateways = append(resourceTree.Gateways, &gtw)
+			}
+			continue
+		}
+
 		r.log.Info("processing Gateway", "namespace", gtw.Namespace, "name", gtw.Name)
 		resourceMap.allAssociatedNamespaces.Insert(gtw.Namespace)
 
