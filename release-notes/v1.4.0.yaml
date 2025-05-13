@@ -1,0 +1,86 @@
+date: May 13, 2025
+
+# Changes that are expected to cause an incompatibility with previous versions, such as deletions or modifications to existing APIs.
+breaking changes: |
+  Use a dedicated listener port(19003) for envoy proxy readiness
+  Uses the envoy JSON formatter for the default access log instead of text formatter.
+  Envoy Gateway would skip xDS snapshot updates in case of errors during xDS translation.
+  When Extension Manager is configured to Fail Open, translation errors are logged and suppressed.
+  When Extension Manager is configured to not Fail Open, EG will no longer replace affected resources. Instead, xDS snapshot update would be skipped.
+
+# Updates addressing vulnerabilities, security flaws, or compliance requirements.
+security updates: |
+  Fixed CVE-2025-25294.
+
+# New features or capabilities added in this release.
+new features: |
+  Added support for the extension server in standalone mode.
+  Added support for the `DynamicResolver` backend type, which can route traffic to any backend service based on the request's hostname.
+  Added support for configuring TLS for the `DynamicResolver` backend.
+  Added support for optionally installing Gateway API standard channel CRDs through the `gateway-crds-helm` chart.
+  Added support for the offline Kubernetes controller and enabled its use with the file provider.
+  Added support for configuring `maxUnavailable` in `KubernetesPodDisruptionBudgetSpec`.
+  Added support for percentage-based request mirroring.
+  Allowed `matchExpressions` in `TargetSelector`.
+  Added a defaulter for Gateway API resources loaded from file to set default values.
+  Added support for defining Lua `EnvoyExtensionPolicies`.
+  Added `RequestID` field in `ClientTrafficPolicy.HeaderSettings` to configure Envoy `X-Request-ID` behavior.
+  Added support for `HorizontalPodAutoscaler` in the Helm chart.
+  Added support for distinct header and distinct source CIDR-based local rate limiting.
+  Added support for forwarding the authenticated username to the backend via a configurable header in `BasicAuth`.
+  Added support for HTTP method and header-based authorization in `SecurityPolicy`.
+  Added support for zone-aware routing.
+  Added support for `BackendTLSPolicy` targeting `ServiceImport`.
+  Added support for the `kubernetes.io/h2c` application protocol in `ServiceImport`.
+  Added support for per-host circuit breaker thresholds.
+  Added support for injecting a credential from a Kubernetes `Secret` into a request header. Credentials can be injected using either an `HTTPRouteFilter` or a `BackendRef` filter.
+  Added support for `egctl` WebSocket in addition to SPDY.
+  Added a configuration option in the Helm chart to set the `TrafficDistribution` field in the `Envoy Gateway` Service.
+  Added support for setting the log level to `trace` for the Envoy proxy.
+  Added support for global `imageRegistry` and `imagePullSecrets` in the Helm chart.
+  Added support for using a local JWKS in an inline string or in a `ConfigMap` to validate JWT tokens in `SecurityPolicy`.
+  Added support for logging the status of resources in standalone mode.
+  Added support for per-route tracing in `BackendTrafficPolicy`.
+  Added support for configuring retry settings for Extension Service hooks in the Envoy Gateway config.
+  Added support for request buffering using the Envoy Buffer filter.
+  Added support for merge type in `BackendTrafficPolicy`.
+  Added support for the `OverlappingTLSConfig` condition in Gateway status. This condition is set if there are overlapping hostnames or certificates between listeners. The ALPN protocol is set to HTTP/1.1 for overlapping listeners to avoid HTTP/2 connection coalescing.
+  Added support for running Envoy infrastructure proxies in the Gateway namespace. Please note that this is currently an experimental feature and not recommended for production use.
+
+bug fixes: |
+  Fixed traffic splitting when filters are attached to the `backendRef`.
+  Added support for `Secret` and `ConfigMap` parsing in standalone mode.
+  Bypassed overload manager for stats and ready listeners.
+  Fixed translation of `backendSettings` for external authorization.
+  Fixed an issue where the stats compressor was not working.
+  Added support for `BackendTLSPolicy` and `EnvoyExtensionPolicy` parsing in standalone mode.
+  Re-triggered reconciliation when a `backendRef` of type `ServiceImport` is updated or when `EndpointSlice` resources for a `ServiceImport` are updated.
+  Fixed missing error logs and returns in the Kubernetes Reconcile method when a `GatewayClass` is not accepted.
+  Allowed empty text field for OpenTelemetry sink when using JSON format.
+  Fixed an issue where `SamplingFraction` was not working.
+  Fixed Kubernetes resources not being deleted when a custom name was used.
+  Prevented essential resources like `Namespace` from being treated as missing when loading from file.
+  Avoided setting retriable status codes to 503 when `RetryOn` is configured in `BackendTrafficPolicy`.
+  Allowed the offline Kubernetes controller to use non-default CRDs.
+  Fixed an issue when merging a route with multiple `parentRefs`.
+  Fixed reconciliation logic to continue processing all `GatewayClasses` even after an error with one.
+  Fixed topology injector blocking the Envoy proxy from starting.
+  Increased the shutdown-manager's `failureThreshold` to 10 to ensure Envoy restarts before shutdown-manager in case of transient network issues.
+  Fixed an issue where a `ReferenceGrant` from a `SecurityPolicy` to a referenced `remoteJWKS` backend was not respected.
+  Added validation for header values.
+  Added validation to prevent duplicated API keys in API Key Auth.
+  Fixed `HTTPRoute` precedence by correctly considering header and query match types.
+  Ensured the TLS inspector filter is only added to TCP listeners (not UDP/QUIC) when HTTP/3 is enabled via `ClientTrafficPolicy`.
+
+# Enhancements that improve performance.
+performance improvements: |
+  Added a cache for the Wasm OCI image permission checks and check the pullSecrets against the OCI image registry in
+  a background goroutine.
+
+# Deprecated features or APIs.
+deprecations: |
+  Deprecated the PreserveXRequestID field.
+
+# Other notable changes not covered by the above sections.
+Other changes: |
+  Updated gateway-api to v1.3.0.
