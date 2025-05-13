@@ -63,13 +63,12 @@ var BackendTLSSettingsTest = suite.ConformanceTest{
 			if err != nil {
 				t.Error(err)
 			}
-			proxyNN := types.NamespacedName{Name: "proxy-config", Namespace: "envoy-gateway-system"}
-
+			proxyNN := types.NamespacedName{Name: "backend-namespaces-config", Namespace: ns}
 			config := &egv1a1.BackendTLSConfig{
 				ClientCertificateRef: &gwapiv1.SecretObjectReference{
 					Kind:      gatewayapi.KindPtr("Secret"),
 					Name:      "client-tls-certificate",
-					Namespace: gatewayapi.NamespacePtr(depNS),
+					Namespace: gatewayapi.NamespacePtr(ns),
 				},
 				TLSSettings: egv1a1.TLSSettings{
 					MinVersion: ptr.To(egv1a1.TLSv13),

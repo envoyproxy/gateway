@@ -22,7 +22,7 @@ func init() {
 }
 
 var TLSRouteBackendFQDNTest = suite.ConformanceTest{
-	ShortName:   "TLSRouteBackendFQDNTest",
+	ShortName:   "TLSRouteBackendFQDN",
 	Description: "TLSRoutes with a backend ref to a Backend",
 	Manifests: []string{
 		"testdata/tlsroute-to-backend-fqdn.yaml",
