@@ -41,7 +41,7 @@ func init() {
 	ConformanceTests = append(ConformanceTests, UsageRateLimitTest)
 	ConformanceTests = append(ConformanceTests, RateLimitGlobalSharedCidrMatchTest)
 	ConformanceTests = append(ConformanceTests, RateLimitGlobalSharedGatewayHeaderMatchTest)
-	ConformanceTests = append(ConformanceTests, RateLimitGlobalSharedUnsharedGatewayAndRoutePolicyMergeTest)
+	ConformanceTests = append(ConformanceTests, RateLimitGlobalMergeTest)
 }
 
 var RateLimitCIDRMatchTest = suite.ConformanceTest{
@@ -947,8 +947,8 @@ var RateLimitGlobalSharedGatewayHeaderMatchTest = suite.ConformanceTest{
 	},
 }
 
-var RateLimitGlobalSharedUnsharedGatewayAndRoutePolicyMergeTest = suite.ConformanceTest{
-	ShortName:   "RateLimitGlobalSharedUnsharedGatewayAndRoutePolicyMergeTest",
+var RateLimitGlobalMergeTest = suite.ConformanceTest{
+	ShortName:   "RateLimitGlobalMerge",
 	Description: "Limit requests with matching headers across multiple routes, verifying both shared and unshared rate limit behaviors",
 	Manifests:   []string{"testdata/ratelimit-global-shared-and-unshared-header-match.yaml"},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
@@ -974,7 +974,7 @@ var RateLimitGlobalSharedUnsharedGatewayAndRoutePolicyMergeTest = suite.Conforma
 			requests []req
 		}{
 			{
-				name: "shared_route_policy_user_one",
+				name: "shared_route_policy_x-user-id=one",
 				requests: []req{
 					{"/bar", gwAddr2, "one", 200},
 					{"/foo", gwAddr1, "one", 200},
@@ -983,7 +983,7 @@ var RateLimitGlobalSharedUnsharedGatewayAndRoutePolicyMergeTest = suite.Conforma
 				},
 			},
 			{
-				name: "unshared_route_policy_user_two",
+				name: "unshared_route_policy_x-user-id=two",
 				requests: []req{
 					{"/foo", gwAddr1, "two", 200},
 					{"/foo", gwAddr1, "two", 200},
@@ -996,7 +996,7 @@ var RateLimitGlobalSharedUnsharedGatewayAndRoutePolicyMergeTest = suite.Conforma
 				},
 			},
 			{
-				name: "shared_gateway_policy_user_three",
+				name: "shared_gateway_policy_x-user-id=three",
 				requests: []req{
 					{"/bar", gwAddr2, "three", 200},
 					{"/foo", gwAddr1, "three", 200},
@@ -1005,7 +1005,7 @@ var RateLimitGlobalSharedUnsharedGatewayAndRoutePolicyMergeTest = suite.Conforma
 				},
 			},
 			{
-				name: "unshared_gateway_policy_user_four",
+				name: "unshared_gateway_policy__x-user-id=four",
 				requests: []req{
 					{"/foo", gwAddr1, "four", 200},
 					{"/foo", gwAddr1, "four", 200},
@@ -1021,6 +1021,30 @@ var RateLimitGlobalSharedUnsharedGatewayAndRoutePolicyMergeTest = suite.Conforma
 
 		for _, tt := range tests {
 			t.Run(tt.name, func(t *testing.T) {
+				// Prepare and validate all gateway addresses used in this test
+				seen := map[string]bool{}
+				for _, r := range tt.requests {
+					if seen[r.gwAddr] {
+						continue
+					}
+					seen[r.gwAddr] = true
+
+					headers := map[string]string{"x-user-id": r.userID}
+					readinessCheck := http.ExpectedResponse{
+						Request: http.Request{
+							Path:    r.path,
+							Headers: headers,
+						},
+						Response: http.Response{
+							StatusCode: 200, // Assumes first request will be under limit
+						},
+						Namespace: ns,
+					}
+
+					http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, r.gwAddr, readinessCheck)
+				}
+
+				// Send requests and validate behavior
 				for _, r := range tt.requests {
 					headers := map[string]string{"x-user-id": r.userID}
 					expect := http.ExpectedResponse{
