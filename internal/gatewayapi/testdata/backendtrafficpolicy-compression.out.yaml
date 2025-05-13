@@ -171,7 +171,6 @@ xdsIR:
           compression:
           - type: Brotli
           - type: Gzip
-          name: default/policy-for-route
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4

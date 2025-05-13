@@ -14,7 +14,6 @@ spec:
   rateLimit:
     type: Global
     global:
-      shared: true
       rules:
         - clientSelectors:
             - sourceCIDR:
@@ -23,6 +22,7 @@ spec:
           limit:
             requests: 3
             unit: Hour
+          shared: true
 ---
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
