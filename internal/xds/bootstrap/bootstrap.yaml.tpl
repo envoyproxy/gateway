@@ -309,7 +309,7 @@ static_resources:
   - name: jwt-sa-bearer
     generic_secret:
       secret:
-        filename: "/var/run/secrets/kubernetes.io/serviceaccount/token"
+        filename: "/var/run/secrets/token/sa-token"
   {{- end }}
 overload_manager:
   refresh_interval: 0.25s

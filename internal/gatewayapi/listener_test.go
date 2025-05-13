@@ -369,8 +369,8 @@ func TestCheckOverlappingHostnames(t *testing.T) {
 			}
 			for i := range tt.gateway.listeners {
 				tt.gateway.listeners[i].listenerStatusIdx = i
-				tt.gateway.Gateway.Status.Listeners[i] = gwapiv1.ListenerStatus{
-					Name:       tt.gateway.listeners[i].Listener.Name,
+				tt.gateway.Status.Listeners[i] = gwapiv1.ListenerStatus{
+					Name:       tt.gateway.listeners[i].Name,
 					Conditions: []metav1.Condition{},
 				}
 			}
@@ -406,8 +406,8 @@ func TestCheckOverlappingHostnames(t *testing.T) {
 			}
 
 			if len(tt.expected) == 0 {
-				if len(tt.gateway.Gateway.Status.Listeners) != 0 {
-					for idx, listener := range tt.gateway.Gateway.Status.Listeners {
+				if len(tt.gateway.Status.Listeners) != 0 {
+					for idx, listener := range tt.gateway.Status.Listeners {
 						if len(listener.Conditions) != 0 {
 							t.Errorf("expected 0 conditions for listener %d, got %d", idx, len(listener.Conditions))
 						}
@@ -604,9 +604,9 @@ func TestCheckOverlappingCertificates(t *testing.T) {
 			}
 
 			// Initialize listener status indices
-			for i := range gateway.Gateway.Status.Listeners {
-				gateway.Gateway.Status.Listeners[i] = gwapiv1.ListenerStatus{
-					Name:       tt.listeners[i].Listener.Name,
+			for i := range gateway.Status.Listeners {
+				gateway.Status.Listeners[i] = gwapiv1.ListenerStatus{
+					Name:       tt.listeners[i].Name,
 					Conditions: []metav1.Condition{},
 				}
 			}
@@ -618,7 +618,7 @@ func TestCheckOverlappingCertificates(t *testing.T) {
 			for _, expected := range tt.expectedStatus {
 				found := false
 				for _, listener := range gateway.listeners {
-					if string(listener.Listener.Name) != expected.listenerName {
+					if string(listener.Name) != expected.listenerName {
 						continue
 					}
 
@@ -648,7 +648,7 @@ func TestCheckOverlappingCertificates(t *testing.T) {
 					if condition.Type == string(gwapiv1.ListenerConditionOverlappingTLSConfig) {
 						found := false
 						for _, expected := range tt.expectedStatus {
-							if string(listener.Listener.Name) == expected.listenerName &&
+							if string(listener.Name) == expected.listenerName &&
 								condition.Status == expected.status &&
 								condition.Reason == string(expected.reason) &&
 								condition.Message == expected.message {
@@ -657,7 +657,7 @@ func TestCheckOverlappingCertificates(t *testing.T) {
 							}
 						}
 						if !found {
-							t.Errorf("Unexpected status condition found for listener %s: %+v", listener.Listener.Name, condition)
+							t.Errorf("Unexpected status condition found for listener %s: %+v", listener.Name, condition)
 						}
 					}
 				}

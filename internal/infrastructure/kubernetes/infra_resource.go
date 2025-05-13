@@ -33,7 +33,7 @@ func (i *Infra) createOrUpdateServiceAccount(ctx context.Context, r ResourceRend
 		labels    = []metrics.LabelValue{
 			kindLabel.Value("ServiceAccount"),
 			nameLabel.Value(r.Name()),
-			namespaceLabel.Value(i.Namespace),
+			namespaceLabel.Value(r.Namespace()),
 		}
 	)
 
@@ -68,7 +68,7 @@ func (i *Infra) createOrUpdateConfigMap(ctx context.Context, r ResourceRender) (
 		labels    = []metrics.LabelValue{
 			kindLabel.Value("ConfigMap"),
 			nameLabel.Value(r.Name()),
-			namespaceLabel.Value(i.Namespace),
+			namespaceLabel.Value(r.Namespace()),
 		}
 	)
 
@@ -102,7 +102,7 @@ func (i *Infra) createOrUpdateDeployment(ctx context.Context, r ResourceRender) 
 		labels     = []metrics.LabelValue{
 			kindLabel.Value("Deployment"),
 			nameLabel.Value(r.Name()),
-			namespaceLabel.Value(i.Namespace),
+			namespaceLabel.Value(r.Namespace()),
 		}
 	)
 
@@ -189,7 +189,7 @@ func (i *Infra) createOrUpdateDaemonSet(ctx context.Context, r ResourceRender) (
 		labels    = []metrics.LabelValue{
 			kindLabel.Value("DaemonSet"),
 			nameLabel.Value(r.Name()),
-			namespaceLabel.Value(i.Namespace),
+			namespaceLabel.Value(r.Namespace()),
 		}
 	)
 
@@ -282,7 +282,7 @@ func (i *Infra) createOrUpdatePodDisruptionBudget(ctx context.Context, r Resourc
 		labels    = []metrics.LabelValue{
 			kindLabel.Value("PDB"),
 			nameLabel.Value(r.Name()),
-			namespaceLabel.Value(i.Namespace),
+			namespaceLabel.Value(r.Namespace()),
 		}
 	)
 
@@ -319,7 +319,7 @@ func (i *Infra) createOrUpdateHPA(ctx context.Context, r ResourceRender) (err er
 		labels    = []metrics.LabelValue{
 			kindLabel.Value("HPA"),
 			nameLabel.Value(r.Name()),
-			namespaceLabel.Value(i.Namespace),
+			namespaceLabel.Value(r.Namespace()),
 		}
 	)
 
@@ -355,7 +355,7 @@ func (i *Infra) createOrUpdateService(ctx context.Context, r ResourceRender) (er
 		labels    = []metrics.LabelValue{
 			kindLabel.Value("Service"),
 			nameLabel.Value(r.Name()),
-			namespaceLabel.Value(i.Namespace),
+			namespaceLabel.Value(r.Namespace()),
 		}
 	)
 
@@ -390,7 +390,7 @@ func (i *Infra) createOrUpdateService(ctx context.Context, r ResourceRender) (er
 // deleteServiceAccount deletes the ServiceAccount in the kube api server, if it exists.
 func (i *Infra) deleteServiceAccount(ctx context.Context, r ResourceRender) (err error) {
 	var (
-		name, ns = r.Name(), i.Namespace
+		name, ns = r.Name(), r.Namespace()
 		sa       = &corev1.ServiceAccount{
 			ObjectMeta: metav1.ObjectMeta{
 				Namespace: ns,
@@ -425,7 +425,7 @@ func (i *Infra) deleteServiceAccount(ctx context.Context, r ResourceRender) (err
 // deleteDeployment deletes the Envoy Deployment in the kube api server, if it exists.
 func (i *Infra) deleteDeployment(ctx context.Context, r ResourceRender) (err error) {
 	var (
-		name, ns   = r.Name(), i.Namespace
+		name, ns   = r.Name(), r.Namespace()
 		deployment = &appsv1.Deployment{
 			ObjectMeta: metav1.ObjectMeta{
 				Namespace: ns,
@@ -460,7 +460,7 @@ func (i *Infra) deleteDeployment(ctx context.Context, r ResourceRender) (err err
 // deleteDaemonSet deletes the Envoy DaemonSet in the kube api server, if it exists.
 func (i *Infra) deleteDaemonSet(ctx context.Context, r ResourceRender) (err error) {
 	var (
-		name, ns  = r.Name(), i.Namespace
+		name, ns  = r.Name(), r.Namespace()
 		daemonSet = &appsv1.DaemonSet{
 			ObjectMeta: metav1.ObjectMeta{
 				Namespace: ns,
@@ -495,7 +495,7 @@ func (i *Infra) deleteDaemonSet(ctx context.Context, r ResourceRender) (err erro
 // deleteConfigMap deletes the ConfigMap in the kube api server, if it exists.
 func (i *Infra) deleteConfigMap(ctx context.Context, r ResourceRender) (err error) {
 	var (
-		name, ns = r.Name(), i.Namespace
+		name, ns = r.Name(), r.Namespace()
 		cm       = &corev1.ConfigMap{
 			ObjectMeta: metav1.ObjectMeta{
 				Namespace: ns,
@@ -530,7 +530,7 @@ func (i *Infra) deleteConfigMap(ctx context.Context, r ResourceRender) (err erro
 // deleteService deletes the Service in the kube api server, if it exists.
 func (i *Infra) deleteService(ctx context.Context, r ResourceRender) (err error) {
 	var (
-		name, ns = r.Name(), i.Namespace
+		name, ns = r.Name(), r.Namespace()
 		svc      = &corev1.Service{
 			ObjectMeta: metav1.ObjectMeta{
 				Namespace: ns,
@@ -565,7 +565,7 @@ func (i *Infra) deleteService(ctx context.Context, r ResourceRender) (err error)
 // deleteHpa deletes the Horizontal Pod Autoscaler associated to its renderer, if it exists.
 func (i *Infra) deleteHPA(ctx context.Context, r ResourceRender) (err error) {
 	var (
-		name, ns = r.Name(), i.Namespace
+		name, ns = r.Name(), r.Namespace()
 		hpa      = &autoscalingv2.HorizontalPodAutoscaler{
 			ObjectMeta: metav1.ObjectMeta{
 				Namespace: ns,
@@ -600,7 +600,7 @@ func (i *Infra) deleteHPA(ctx context.Context, r ResourceRender) (err error) {
 // deletePDB deletes the PodDistribution budget associated to its renderer, if it exists.
 func (i *Infra) deletePDB(ctx context.Context, r ResourceRender) (err error) {
 	var (
-		name, ns = r.Name(), i.Namespace
+		name, ns = r.Name(), r.Namespace()
 		pdb      = &policyv1.PodDisruptionBudget{
 			ObjectMeta: metav1.ObjectMeta{
 				Namespace: ns,

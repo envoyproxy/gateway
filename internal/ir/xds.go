@@ -835,8 +835,6 @@ type Compression struct {
 // TrafficFeatures holds the information associated with the Backend Traffic Policy.
 // +k8s:deepcopy-gen=true
 type TrafficFeatures struct {
-	// Name of the backend traffic policy and namespace
-	Name string `json:"name,omitempty"`
 	// RateLimit defines the more specific match conditions as well as limits for ratelimiting
 	// the requests on this route.
 	RateLimit *RateLimit `json:"rateLimit,omitempty" yaml:"rateLimit,omitempty"`
@@ -2093,16 +2091,7 @@ type GlobalRateLimit struct {
 	// TODO zhaohuabing: add default values for Global rate limiting.
 
 	// Rules for rate limiting.
-	Rules []*RateLimitRule `json:"rules,omitempty" yaml:"rules,omitempty"`
-
-	// Shared determines whether this rate limit rule applies globally across the gateway, or xRoute(s).
-	// If set to true, the rule is treated as a common bucket and is shared across all routes under the backend traffic policy.
-	// Must have targetRef set to Gateway or xRoute(s).
-	// Default: false.
-	//
-	// +optional
-	// +kubebuilder:default=false
-	Shared *bool `json:"shared,omitempty" yaml:"shared,omitempty"`
+	Rules []*RateLimitRule `json:"rules,omitempty" yaml:"rules,omitempty" patchStrategy:"merge" patchMergeKey:"name"`
 }
 
 // LocalRateLimit holds the local rate limiting configuration.
@@ -2113,7 +2102,7 @@ type LocalRateLimit struct {
 	Default RateLimitValue `json:"default,omitempty" yaml:"default,omitempty"`
 
 	// Rules for rate limiting.
-	Rules []*RateLimitRule `json:"rules,omitempty" yaml:"rules,omitempty"`
+	Rules []*RateLimitRule `json:"rules,omitempty" yaml:"rules,omitempty" patchStrategy:"merge" patchMergeKey:"name"`
 }
 
 // RateLimitRule holds the match and limit configuration for ratelimiting.
@@ -2129,6 +2118,15 @@ type RateLimitRule struct {
 	RequestCost *RateLimitCost `json:"requestCost,omitempty" yaml:"requestCost,omitempty"`
 	// ResponseCost specifies the cost of the response.
 	ResponseCost *RateLimitCost `json:"responseCost,omitempty" yaml:"responseCost,omitempty"`
+	// Shared determines whether this rate limit rule applies globally across the gateway, or xRoute(s).
+	// If set to true, the rule is treated as a common bucket and is shared across all routes under the backend traffic policy.
+	// Must have targetRef set to Gateway or xRoute(s).
+	// Default: false.
+	//
+	// +optional
+	Shared *bool `json:"shared,omitempty" yaml:"shared,omitempty"`
+	// Name is a unique identifier for this rule, set as <policy-ns>/<policy-name>/rule/<rule-index>.
+	Name string `json:"name,omitempty" yaml:"name,omitempty"`
 }
 
 // RateLimitCost specifies the cost of the request or response.
@@ -2848,7 +2846,7 @@ type BackOffPolicy struct {
 // TLSUpstreamConfig contains sni and ca file in []byte format.
 // +k8s:deepcopy-gen=true
 type TLSUpstreamConfig struct {
-	SNI                 string            `json:"sni,omitempty" yaml:"sni,omitempty"`
+	SNI                 *string           `json:"sni,omitempty" yaml:"sni,omitempty"`
 	UseSystemTrustStore bool              `json:"useSystemTrustStore,omitempty" yaml:"useSystemTrustStore,omitempty"`
 	CACertificate       *TLSCACertificate `json:"caCertificate,omitempty" yaml:"caCertificate,omitempty"`
 	TLSConfig           `json:",inline"`
@@ -2856,8 +2854,9 @@ type TLSUpstreamConfig struct {
 
 func (t *TLSUpstreamConfig) ToTLSConfig() (*tls.Config, error) {
 	// nolint:gosec
-	tlsConfig := &tls.Config{
-		ServerName: t.SNI,
+	tlsConfig := &tls.Config{}
+	if t.SNI != nil {
+		tlsConfig.ServerName = *t.SNI
 	}
 	if t.MinVersion != nil {
 		tlsConfig.MinVersion = t.MinVersion.Int()

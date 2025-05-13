@@ -98,7 +98,8 @@ type bootstrapParameters struct {
 	OverloadManager overloadManagerParameters
 
 	// IPFamily of the Listener
-	IPFamily             string
+	IPFamily string
+	// GatewayNamespaceMode defines whether to use the Envoy Gateway namespace mode.
 	GatewayNamespaceMode bool
 }
 
@@ -301,10 +302,11 @@ func GetRenderedBootstrapConfig(opts *RenderBootstrapConfigOptions) (string, err
 
 		if opts.IPFamily != nil {
 			cfg.parameters.IPFamily = string(*opts.IPFamily)
-			if *opts.IPFamily == egv1a1.IPv6 {
+			switch *opts.IPFamily {
+			case egv1a1.IPv6:
 				cfg.parameters.AdminServer.Address = EnvoyAdminAddressV6
 				cfg.parameters.StatsServer.Address = netutils.IPv6ListenerAddress
-			} else if *opts.IPFamily == egv1a1.DualStack {
+			case egv1a1.DualStack:
 				cfg.parameters.StatsServer.Address = netutils.IPv6ListenerAddress
 			}
 		}

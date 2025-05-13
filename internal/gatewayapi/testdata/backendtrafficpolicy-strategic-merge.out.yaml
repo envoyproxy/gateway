@@ -25,13 +25,20 @@ backendTrafficPolicies:
         kind: Gateway
         name: gateway-1
         namespace: envoy-gateway
-        sectionName: http
       conditions:
       - lastTransitionTime: null
         message: Merged with policy envoy-gateway/policy-for-gateway
         reason: Merged
         status: "True"
         type: Merged
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: gateway-1
+        namespace: envoy-gateway
+        sectionName: http
+      conditions:
       - lastTransitionTime: null
         message: Policy has been accepted.
         reason: Accepted
@@ -290,7 +297,6 @@ xdsIR:
           httpUpgrade:
           - spdy/3.1
           - websocket
-          name: default/merged-policy-for-route
           timeout:
             http:
               connectionIdleTimeout: 16s
@@ -317,7 +323,6 @@ xdsIR:
         traffic:
           backendConnection:
             bufferLimit: 100000000
-          name: default/policy-for-route
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4

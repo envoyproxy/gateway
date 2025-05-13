@@ -16,3 +16,15 @@
   lbPolicy: CLUSTER_PROVIDED
   name: httproute/default/httproute-1/rule/0
   perConnectionBufferLimitBytes: 32768
+  transportSocket:
+    name: envoy.transport_sockets.tls
+    typedConfig:
+      '@type': type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.UpstreamTlsContext
+      commonTlsContext:
+        combinedValidationContext:
+          defaultValidationContext: {}
+          validationContextSdsSecretConfig:
+            name: backend-1/default-ca
+            sdsConfig:
+              ads: {}
+              resourceApiVersion: V3
