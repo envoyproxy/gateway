@@ -92,8 +92,8 @@ section = ["HTML", "print", "RSS"]
 copyright = "The Envoy Gateway Authors"
 
 
-# First one is picked as the Twitter card image if not set on page.
-# images = ["images/project-illustration.png"]
+# First one is picked as the Twitter card image if not set on page, as well as the open graph image.
+images = ["site/static/img/envoy-gateway-feature.png"]
 
 # Menu title if your navbar has a versions selector to access old versions of your site.
 # This menu appears only if you have at least one [params.versions] set.
