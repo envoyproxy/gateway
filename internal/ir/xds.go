@@ -1492,7 +1492,17 @@ func (r *RouteDestination) Validate() error {
 func (r *RouteDestination) NeedsClusterPerSetting() bool {
 	return r.HasMixedEndpoints() ||
 		r.HasFiltersInSettings() ||
-		(len(r.Settings) > 1 && r.HasZoneAwareRouting())
+		(len(r.Settings) > 1 && r.HasZoneAwareRouting()) ||
+		r.HasOverprovisioningFactor()
+}
+
+func (r *RouteDestination) HasOverprovisioningFactor() bool {
+	for _, s := range r.Settings {
+		if s.OverprovisioningFactor != nil {
+			return true
+		}
+	}
+	return false
 }
 
 // HasMixedEndpoints returns true if the RouteDestination has endpoints of multiple types
@@ -1581,6 +1591,7 @@ type DestinationSetting struct {
 	// ZoneAwareRoutingEnabled specifies whether to enable Zone Aware Routing for this destination's endpoints.
 	// This is derived from the backend service and depends on having Kubernetes Topology Aware Routing or Traffic Distribution enabled.
 	ZoneAwareRoutingEnabled bool `json:"zoneAwareRoutingEnabled,omitempty" yaml:"zoneAwareRoutingEnabled,omitempty"`
+	OverprovisioningFactor  *uint32
 }
 
 // Validate the fields within the DestinationSetting structure
@@ -1617,6 +1628,8 @@ type DestinationEndpoint struct {
 	Draining bool `json:"draining,omitempty" yaml:"draining,omitempty"`
 	// Zone refers to the topology zone the Endpoint resides in
 	Zone *string `json:"zone,omitempty" yaml:"zone,omitempty"`
+	// Priority of this endpoint
+	Priority *uint32 `json:"priority,omitempty" yaml:"priority,omitempty"`
 }
 
 // Validate the fields within the DestinationEndpoint structure

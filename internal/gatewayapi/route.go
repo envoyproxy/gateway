@@ -1920,7 +1920,7 @@ func (t *Translator) processBackendDestinationSetting(
 				Path: ptr.To(bep.Unix.Path),
 			}
 		}
-
+		irde.Priority = bep.Priority
 		dstEndpoints = append(dstEndpoints, irde)
 	}
 
@@ -1949,6 +1949,7 @@ func (t *Translator) processBackendDestinationSetting(
 		}
 	}
 
+	ds.OverprovisioningFactor = backend.Spec.OverprovisioningFactor
 	return ds
 }
 

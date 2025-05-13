@@ -627,8 +627,8 @@ func buildXdsClusterCircuitBreaker(circuitBreaker *ir.CircuitBreaker) *clusterv3
 
 func buildXdsClusterLoadAssignment(clusterName string, destSettings []*ir.DestinationSetting) *endpointv3.ClusterLoadAssignment {
 	localities := make([]*endpointv3.LocalityLbEndpoints, 0, len(destSettings))
+	var overprovisioningFactor *uint32 = nil
 	for i, ds := range destSettings {
-
 		var metadata *corev3.Metadata
 		if ds.TLS != nil {
 			metadata = &corev3.Metadata{
@@ -650,11 +650,22 @@ func buildXdsClusterLoadAssignment(clusterName string, destSettings []*ir.Destin
 		// For more details see https://github.com/envoyproxy/gateway/issues/5307#issuecomment-2688767482
 		if ds.ZoneAwareRoutingEnabled {
 			localities = append(localities, buildZonalLocalities(metadata, ds)...)
+		} else if len(destSettings) == 1 {
+			localities = append(localities, buildNormalLocalities(metadata, ds)...)
+			if ds.OverprovisioningFactor != nil {
+				overprovisioningFactor = ds.OverprovisioningFactor
+			}
 		} else {
 			localities = append(localities, buildWeightedLocalities(metadata, ds))
 		}
 	}
-	return &endpointv3.ClusterLoadAssignment{ClusterName: clusterName, Endpoints: localities}
+	policy := &endpointv3.ClusterLoadAssignment_Policy{}
+	if overprovisioningFactor != nil {
+		policy.OverprovisioningFactor = &wrapperspb.UInt32Value{
+			Value: *overprovisioningFactor,
+		}
+	}
+	return &endpointv3.ClusterLoadAssignment{ClusterName: clusterName, Endpoints: localities, Policy: policy}
 }
 
 func buildZonalLocalities(metadata *corev3.Metadata, ds *ir.DestinationSetting) []*endpointv3.LocalityLbEndpoints {
@@ -737,6 +748,36 @@ func buildWeightedLocalities(metadata *corev3.Metadata, ds *ir.DestinationSettin
 	locality.LoadBalancingWeight = &wrapperspb.UInt32Value{Value: weight}
 	locality.Priority = ptr.Deref(ds.Priority, 0)
 	return locality
+}
+
+func buildNormalLocalities(metadata *corev3.Metadata, ds *ir.DestinationSetting) []*endpointv3.LocalityLbEndpoints {
+	var localities []*endpointv3.LocalityLbEndpoints
+	for i, irEp := range ds.Endpoints {
+		healthStatus := corev3.HealthStatus_UNKNOWN
+		if irEp.Draining {
+			healthStatus = corev3.HealthStatus_DRAINING
+		}
+		lbEndpoint := &endpointv3.LbEndpoint{
+			Metadata: metadata,
+			HostIdentifier: &endpointv3.LbEndpoint_Endpoint{
+				Endpoint: &endpointv3.Endpoint{
+					Address: buildAddress(irEp),
+				},
+			},
+			HealthStatus: healthStatus,
+		}
+		// Set default weight of 1 for all endpoints.
+		lbEndpoint.LoadBalancingWeight = &wrapperspb.UInt32Value{Value: 1}
+		localities = append(localities, &endpointv3.LocalityLbEndpoints{
+			Locality: &corev3.Locality{
+				Region: fmt.Sprintf("%s/%d", ds.Name, i),
+			},
+			LbEndpoints: []*endpointv3.LbEndpoint{lbEndpoint},
+			Priority:    ptr.Deref(irEp.Priority, 0),
+		})
+	}
+
+	return localities
 }
 
 func buildTypedExtensionProtocolOptions(args *xdsClusterArgs) (map[string]*anypb.Any, []*tlsv3.Secret, error) {
