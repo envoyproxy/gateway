@@ -36,7 +36,7 @@ Gateway Namespace Mode is a deployment model for Envoy Gateway that creates Envo
 
 * Support for this deployment mode was added [here][issue2629].
 
-Please follow the example [Gateway Namespace Mode]().
+Please follow the example [Gateway Namespace Mode][].
 
 ### Supported Modes
 
