@@ -10,7 +10,6 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
-	"flag"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -38,10 +37,9 @@ import (
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/utils/field"
 	"github.com/envoyproxy/gateway/internal/utils/file"
+	"github.com/envoyproxy/gateway/internal/utils/test"
 	"github.com/envoyproxy/gateway/internal/wasm"
 )
-
-var overrideTestData = flag.Bool("override-testdata", false, "if override the test output data.")
 
 func mustUnmarshal(t *testing.T, val []byte, out interface{}) {
 	require.NoError(t, yaml.UnmarshalStrict(val, out, yaml.DisallowUnknownFields))
@@ -326,7 +324,7 @@ func TestTranslate(t *testing.T) {
 			out, err := yaml.Marshal(got)
 			require.NoError(t, err)
 
-			if *overrideTestData {
+			if test.OverrideTestData() {
 				overrideOutputConfig(t, string(out), outputFilePath)
 			}
 
@@ -527,7 +525,7 @@ func TestTranslateWithExtensionKinds(t *testing.T) {
 			out, err := yaml.Marshal(got)
 			require.NoError(t, err)
 
-			if *overrideTestData {
+			if test.OverrideTestData() {
 				require.NoError(t, file.Write(string(out), outputFilePath))
 			}
 

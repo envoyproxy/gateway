@@ -1,0 +1,47 @@
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: BackendTrafficPolicy
+metadata:
+  name: cookie-lb-policy
+  namespace: gateway-conformance-infra
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: cookie-lb-route
+  loadBalancer:
+    type: ConsistentHash
+    consistentHash:
+      type: Cookie
+      cookie:
+        name: "Lb-Test-Cookie"
+        ttl: 60s
+        attributes:
+          SameSite: Strict
+  retry:
+    retryOn:
+      httpStatusCodes:
+        - 200
+        - 404
+  healthCheck:
+    active:
+      type: HTTP
+      http:
+        path: "/"
+        method: GET
+  circuitBreaker:
+    maxRequestsPerConnection: 123
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: ClientTrafficPolicy
+metadata:
+  name: client-timeout
+  namespace: gateway-conformance-infra
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: same-namespace
+  timeout:
+    http:
+      requestReceivedTimeout: 50ms

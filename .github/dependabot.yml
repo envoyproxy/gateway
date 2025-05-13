@@ -36,19 +36,23 @@ updates:
       # Ignore github.com/docker/docker, since it should be updated alongside github.com/google/go-containerregistry
       - dependency-name: github.com/docker/docker
     groups:
-      github.com:
+      gomod:
         patterns:
           - "github.com*"
+          - "go.opentelemetry.io*"
+          - "golang*"
+          - "google*"
+          - "fortio.org*"
+          - "gopkg.in*"
+          - "helm.sh*"
+          - "gomodules.xyz"
+        exclude-patterns:
+          # Exclude envoyproxy/go-control-plane, since it needs more work to update
+          - "github.com/envoyproxy/go-control-plane*"
       k8s.io:
         patterns:
           - "k8s.io/*"
           - "sigs.k8s.io/*"
-      go.opentelemetry.io:
-        patterns:
-          - "go.opentelemetry.io*"
-          # Merge golang/google groups into group, since it should be updated alongside opentelemetry
-          - "golang*"
-          - "google*"
   - package-ecosystem: pip
     directories:
       - /tools/src/codespell

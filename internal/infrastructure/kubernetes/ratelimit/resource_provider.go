@@ -22,6 +22,7 @@ import (
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/infrastructure/kubernetes/resource"
+	"github.com/envoyproxy/gateway/internal/utils"
 )
 
 // ResourceKind indicates the main resources of envoy-ratelimit,
@@ -37,8 +38,8 @@ const (
 var statsConf string
 
 type ResourceRender struct {
-	// Namespace is the Namespace used for managed infra.
-	Namespace string
+	// namespace is the Namespace used for managed infra.
+	namespace string
 
 	rateLimit           *egv1a1.RateLimit
 	rateLimitDeployment *egv1a1.KubernetesDeploymentSpec
@@ -51,7 +52,7 @@ type ResourceRender struct {
 // NewResourceRender returns a new ResourceRender.
 func NewResourceRender(ns string, gateway *egv1a1.EnvoyGateway, ownerReferenceUID map[string]types.UID) *ResourceRender {
 	return &ResourceRender{
-		Namespace:           ns,
+		namespace:           ns,
 		rateLimit:           gateway.RateLimit,
 		rateLimitDeployment: gateway.GetEnvoyGatewayProvider().GetEnvoyGatewayKubeProvider().RateLimitDeployment,
 		rateLimitHpa:        gateway.GetEnvoyGatewayProvider().GetEnvoyGatewayKubeProvider().RateLimitHpa,
@@ -61,6 +62,10 @@ func NewResourceRender(ns string, gateway *egv1a1.EnvoyGateway, ownerReferenceUI
 
 func (r *ResourceRender) Name() string {
 	return InfraName
+}
+
+func (r *ResourceRender) Namespace() string {
+	return r.namespace
 }
 
 func (r *ResourceRender) LabelSelector() labels.Selector {
@@ -90,7 +95,7 @@ func (r *ResourceRender) ConfigMap(cert string) (*corev1.ConfigMap, error) {
 			APIVersion: "v1",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Namespace: r.Namespace,
+			Namespace: r.Namespace(),
 			Name:      "statsd-exporter-config",
 			Labels:    rateLimitLabels(),
 		},
@@ -137,7 +142,7 @@ func (r *ResourceRender) Service() (*corev1.Service, error) {
 			APIVersion: apiVersion,
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Namespace: r.Namespace,
+			Namespace: r.Namespace(),
 			Name:      InfraName,
 			Labels:    labels,
 		},
@@ -170,7 +175,7 @@ func (r *ResourceRender) ServiceAccount() (*corev1.ServiceAccount, error) {
 			APIVersion: apiVersion,
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Namespace: r.Namespace,
+			Namespace: r.Namespace(),
 			Name:      InfraName,
 		},
 	}
@@ -193,7 +198,7 @@ func (r *ResourceRender) ServiceAccount() (*corev1.ServiceAccount, error) {
 
 // Deployment returns the expected rate limit Deployment based on the provided infra.
 func (r *ResourceRender) Deployment() (*appsv1.Deployment, error) {
-	containers := expectedRateLimitContainers(r.rateLimit, r.rateLimitDeployment, r.Namespace)
+	containers := expectedRateLimitContainers(r.rateLimit, r.rateLimitDeployment, r.Namespace())
 	selector := resource.GetSelector(rateLimitLabels())
 
 	podLabels := rateLimitLabels()
@@ -226,7 +231,7 @@ func (r *ResourceRender) Deployment() (*appsv1.Deployment, error) {
 			APIVersion: appsAPIVersion,
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Namespace: r.Namespace,
+			Namespace: r.Namespace(),
 			Labels:    rateLimitLabels(),
 		},
 		Spec: appsv1.DeploymentSpec{
@@ -262,9 +267,9 @@ func (r *ResourceRender) Deployment() (*appsv1.Deployment, error) {
 
 	// set name
 	if r.rateLimitDeployment.Name != nil {
-		deployment.ObjectMeta.Name = *r.rateLimitDeployment.Name
+		deployment.Name = *r.rateLimitDeployment.Name
 	} else {
-		deployment.ObjectMeta.Name = r.Name()
+		deployment.Name = r.Name()
 	}
 
 	if r.ownerReferenceUID != nil {
@@ -282,7 +287,8 @@ func (r *ResourceRender) Deployment() (*appsv1.Deployment, error) {
 
 	// apply merge patch to deployment
 	var err error
-	if deployment, err = r.rateLimitDeployment.ApplyMergePatch(deployment); err != nil {
+	deploymentConfig := r.rateLimitDeployment
+	if deployment, err = utils.MergeWithPatch(deployment, deploymentConfig.Patch); err != nil {
 		return nil, err
 	}
 
@@ -311,7 +317,7 @@ func (r *ResourceRender) HorizontalPodAutoscaler() (*autoscalingv2.HorizontalPod
 			Kind:       "HorizontalPodAutoscaler",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Namespace: r.Namespace,
+			Namespace: r.Namespace(),
 			Name:      r.Name(),
 			Labels:    rateLimitLabels(),
 		},
@@ -335,7 +341,7 @@ func (r *ResourceRender) HorizontalPodAutoscaler() (*autoscalingv2.HorizontalPod
 		hpa.Spec.ScaleTargetRef.Name = r.Name()
 	}
 
-	if hpa, err = hpaConfig.ApplyMergePatch(hpa); err != nil {
+	if hpa, err = utils.MergeWithPatch(hpa, hpaConfig.Patch); err != nil {
 		return nil, err
 	}
 

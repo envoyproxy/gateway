@@ -95,11 +95,12 @@ func (t *testingExtensionServer) PostRouteModify(_ context.Context, req *pb.Post
 func (t *testingExtensionServer) PostVirtualHostModify(_ context.Context, req *pb.PostVirtualHostModifyRequest) (*pb.PostVirtualHostModifyResponse, error) {
 	// Only make the change when the VirtualHost's name matches the expected testdata
 	// This prevents us from having to update every single testfile.out
-	if req.VirtualHost.Name == "extension-post-xdsvirtualhost-hook-error/*" {
+	switch req.VirtualHost.Name {
+	case "extension-post-xdsvirtualhost-hook-error/*":
 		return &pb.PostVirtualHostModifyResponse{
 			VirtualHost: req.VirtualHost,
 		}, fmt.Errorf("extension post xds virtual host hook error")
-	} else if req.VirtualHost.Name == "extension-listener" {
+	case "extension-listener":
 		// Setup a new VirtualHost to avoid operating directly on the passed in pointer for better test coverage that the
 		// VirtualHost we are returning gets used properly
 		modifiedVH := proto.Clone(req.VirtualHost).(*routeV3.VirtualHost)

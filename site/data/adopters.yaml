@@ -67,3 +67,7 @@ adopters:
     logo: "/logos/cortex.png"
     url: "https://cortex.io/"
     description: "Cortex is using Envoy Gateway to manage all API traffic as a modern Kubernetes ingress replacement."
+  - name: "Bitnami"
+    logo: "/logos/bitnami.svg"
+    url: "https://bitnami.com/"
+    description: "Bitnami has added Envoy Gateway to its application catalog, making it easy for users to deploy and manage the gateway using trusted and up-to-date Helm charts across Kubernetes environments."

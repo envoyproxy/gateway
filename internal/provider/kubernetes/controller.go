@@ -153,11 +153,11 @@ func newGatewayAPIController(ctx context.Context, mgr manager.Manager, cfg *conf
 			case <-ctx.Done():
 				return
 			case <-cfg.Elected:
-				r.subscribeAndUpdateStatus(ctx, cfg.EnvoyGateway.EnvoyGatewaySpec.ExtensionManager != nil)
+				r.subscribeAndUpdateStatus(ctx, cfg.EnvoyGateway.ExtensionManager != nil)
 			}
 		}()
 	} else {
-		r.subscribeAndUpdateStatus(ctx, cfg.EnvoyGateway.EnvoyGatewaySpec.ExtensionManager != nil)
+		r.subscribeAndUpdateStatus(ctx, cfg.EnvoyGateway.ExtensionManager != nil)
 	}
 	return nil
 }
@@ -228,63 +228,72 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 					string(gwapiv1.GatewayClassReasonInvalidParameters),
 					msg)
 				r.resources.GatewayClassStatuses.Store(utils.NamespacedName(gc), &gc.Status)
-				return reconcile.Result{}, nil
+				continue
 			}
 		}
 
 		// Add all Gateways, their associated Routes, and referenced resources to the resourceTree
 		if err = r.processGateways(ctx, managedGC, resourceMappings, gwcResource); err != nil {
-			return reconcile.Result{}, err
+			r.log.Error(err, fmt.Sprintf("failed processGateways for gatewayClass %s, skipping it", managedGC.Name))
+			continue
 		}
 
 		if r.eppCRDExists {
 			// Add all EnvoyPatchPolicies to the resourceTree
 			if err = r.processEnvoyPatchPolicies(ctx, gwcResource, resourceMappings); err != nil {
-				return reconcile.Result{}, err
+				r.log.Error(err, fmt.Sprintf("failed processEnvoyPatchPolicies for gatewayClass %s, skipping it", managedGC.Name))
+				continue
 			}
 		}
 		if r.ctpCRDExists {
 			// Add all ClientTrafficPolicies and their referenced resources to the resourceTree
 			if err = r.processClientTrafficPolicies(ctx, gwcResource, resourceMappings); err != nil {
-				return reconcile.Result{}, err
+				r.log.Error(err, fmt.Sprintf("failed processClientTrafficPolicies for gatewayClass %s, skipping it", managedGC.Name))
+				continue
 			}
 		}
 
 		if r.btpCRDExists {
 			// Add all BackendTrafficPolicies to the resourceTree
 			if err = r.processBackendTrafficPolicies(ctx, gwcResource, resourceMappings); err != nil {
-				return reconcile.Result{}, err
+				r.log.Error(err, fmt.Sprintf("failed processBackendTrafficPolicies for gatewayClass %s, skipping it", managedGC.Name))
+				continue
 			}
 		}
 
 		if r.spCRDExists {
 			// Add all SecurityPolicies and their referenced resources to the resourceTree
 			if err = r.processSecurityPolicies(ctx, gwcResource, resourceMappings); err != nil {
-				return reconcile.Result{}, err
+				r.log.Error(err, fmt.Sprintf("failed processSecurityPolicies for gatewayClass %s, skipping it", managedGC.Name))
+				continue
 			}
 		}
 
 		if r.bTLSPolicyCRDExists {
 			// Add all BackendTLSPolies to the resourceTree
 			if err = r.processBackendTLSPolicies(ctx, gwcResource, resourceMappings); err != nil {
-				return reconcile.Result{}, err
+				r.log.Error(err, fmt.Sprintf("failed processBackendTLSPolicies for gatewayClass %s, skipping it", managedGC.Name))
+				continue
 			}
 		}
 
 		if r.eepCRDExists {
 			// Add all EnvoyExtensionPolicies and their referenced resources to the resourceTree
 			if err = r.processEnvoyExtensionPolicies(ctx, gwcResource, resourceMappings); err != nil {
-				return reconcile.Result{}, err
+				r.log.Error(err, fmt.Sprintf("failed processEnvoyExtensionPolicies for gatewayClass %s, skipping it", managedGC.Name))
+				continue
 			}
 		}
 
 		if err = r.processExtensionServerPolicies(ctx, gwcResource); err != nil {
-			return reconcile.Result{}, err
+			r.log.Error(err, fmt.Sprintf("failed processExtensionServerPolicies for gatewayClass %s, skipping it", managedGC.Name))
+			continue
 		}
 
 		if r.backendCRDExists {
 			if err = r.processBackends(ctx, gwcResource); err != nil {
-				return reconcile.Result{}, err
+				r.log.Error(err, fmt.Sprintf("failed processBackends for gatewayClass %s, skipping it", managedGC.Name))
+				continue
 			}
 		}
 
@@ -300,9 +309,9 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 			if err != nil {
 				r.log.Error(err, "unable to find the namespace")
 				if kerrors.IsNotFound(err) {
-					return reconcile.Result{}, nil
+					continue
 				}
-				return reconcile.Result{}, err
+				continue
 			}
 
 			gwcResource.Namespaces = append(gwcResource.Namespaces, namespace)
@@ -326,20 +335,20 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 		r.resources.GatewayClassStatuses.Store(utils.NamespacedName(gc), &gc.Status)
 
 		if len(gwcResource.Gateways) == 0 {
-			r.log.Info("No gateways found for accepted gatewayclass")
+			r.log.Info("No gateways found for accepted gatewayClass")
 
 			// If needed, remove the finalizer from the accepted GatewayClass.
 			if err := r.removeFinalizer(ctx, managedGC); err != nil {
-				r.log.Error(err, fmt.Sprintf("failed to remove finalizer from gatewayclass %s",
+				r.log.Error(err, fmt.Sprintf("failed to remove finalizer from gatewayClass %s",
 					managedGC.Name))
-				return reconcile.Result{}, err
+				continue
 			}
 		} else {
 			// finalize the accepted GatewayClass.
 			if err := r.addFinalizer(ctx, managedGC); err != nil {
-				r.log.Error(err, fmt.Sprintf("failed adding finalizer to gatewayclass %s",
+				r.log.Error(err, fmt.Sprintf("failed adding finalizer to gatewayClass %s",
 					managedGC.Name))
-				return reconcile.Result{}, err
+				continue
 			}
 		}
 	}
@@ -407,6 +416,7 @@ func (r *gatewayAPIReconciler) managedGatewayClasses(ctx context.Context) ([]*gw
 // - ServiceImports
 // - EndpointSlices
 // - Backends
+// - CACertificateRefs in the Backends
 func (r *gatewayAPIReconciler) processBackendRefs(ctx context.Context, gwcResource *resource.Resources, resourceMappings *resourceMappings) {
 	for backendRef := range resourceMappings.allAssociatedBackendRefs {
 		backendRefKind := gatewayapi.KindDerefOr(backendRef.Kind, resource.KindService)
@@ -461,6 +471,49 @@ func (r *gatewayAPIReconciler) processBackendRefs(ctx context.Context, gwcResour
 					gwcResource.Backends = append(gwcResource.Backends, backend)
 					r.log.Info("added Backend to resource tree", "namespace", string(*backendRef.Namespace),
 						"name", string(backendRef.Name))
+				}
+			}
+
+			if backend.Spec.TLS != nil && backend.Spec.TLS.CACertificateRefs != nil {
+				for _, caCertRef := range backend.Spec.TLS.CACertificateRefs {
+					// if kind is not Secret or ConfigMap, we skip early to avoid further calculation overhead
+					if string(caCertRef.Kind) == resource.KindConfigMap ||
+						string(caCertRef.Kind) == resource.KindSecret {
+
+						var err error
+						caRefNew := gwapiv1.SecretObjectReference{
+							Group:     gatewayapi.GroupPtr(string(caCertRef.Group)),
+							Kind:      gatewayapi.KindPtr(string(caCertRef.Kind)),
+							Name:      caCertRef.Name,
+							Namespace: gatewayapi.NamespacePtr(backend.Namespace),
+						}
+						switch string(caCertRef.Kind) {
+						case resource.KindConfigMap:
+							err = r.processConfigMapRef(
+								ctx,
+								resourceMappings,
+								gwcResource,
+								resource.KindBackendTLSPolicy,
+								backend.Namespace,
+								backend.Name,
+								caRefNew)
+
+						case resource.KindSecret:
+							err = r.processSecretRef(
+								ctx,
+								resourceMappings,
+								gwcResource,
+								resource.KindBackendTLSPolicy,
+								backend.Namespace,
+								backend.Name,
+								caRefNew)
+						}
+						if err != nil {
+							r.log.Error(err,
+								"failed to process CACertificateRef for Backend",
+								"backend", backend, "caCertificateRef", caCertRef.Name)
+						}
+					}
 				}
 			}
 		}
@@ -565,57 +618,37 @@ func (r *gatewayAPIReconciler) processSecurityPolicyObjectRefs(
 		// Add the referenced BackendRefs and ReferenceGrants in ExtAuth to Maps for later processing
 		extAuth := policy.Spec.ExtAuth
 		if extAuth != nil {
-			var backendRef *gwapiv1.BackendObjectReference
+			var backendRef gwapiv1.BackendObjectReference
 			if extAuth.GRPC != nil {
-				backendRef = extAuth.GRPC.BackendRef
+				if extAuth.GRPC.BackendRef != nil {
+					backendRef = *extAuth.GRPC.BackendRef
+				}
 				if len(extAuth.GRPC.BackendRefs) > 0 {
 					if len(extAuth.GRPC.BackendRefs) != 0 {
-						backendRef = egv1a1.ToBackendObjectReference(extAuth.GRPC.BackendRefs[0])
+						backendRef = extAuth.GRPC.BackendRefs[0].BackendObjectReference
 					}
 				}
-			} else {
-				backendRef = extAuth.HTTP.BackendRef
+			} else if extAuth.HTTP != nil {
+				if extAuth.HTTP.BackendRef != nil {
+					backendRef = *extAuth.HTTP.BackendRef
+				}
 				if len(extAuth.HTTP.BackendRefs) > 0 {
 					if len(extAuth.HTTP.BackendRefs) != 0 {
-						backendRef = egv1a1.ToBackendObjectReference(extAuth.HTTP.BackendRefs[0])
+						backendRef = extAuth.HTTP.BackendRefs[0].BackendObjectReference
 					}
 				}
 			}
-
-			backendNamespace := gatewayapi.NamespaceDerefOr(backendRef.Namespace, policy.Namespace)
-			resourceMap.allAssociatedBackendRefs.Insert(gwapiv1.BackendObjectReference{
-				Group:     backendRef.Group,
-				Kind:      backendRef.Kind,
-				Namespace: gatewayapi.NamespacePtr(backendNamespace),
-				Name:      backendRef.Name,
-			})
-
-			if backendNamespace != policy.Namespace {
-				from := ObjectKindNamespacedName{
-					kind:      resource.KindSecurityPolicy,
-					namespace: policy.Namespace,
-					name:      policy.Name,
-				}
-				to := ObjectKindNamespacedName{
-					kind:      gatewayapi.KindDerefOr(backendRef.Kind, resource.KindService),
-					namespace: backendNamespace,
-					name:      string(backendRef.Name),
-				}
-				refGrant, err := r.findReferenceGrant(ctx, from, to)
-				switch {
-				case err != nil:
-					r.log.Error(err, "failed to find ReferenceGrant")
-				case refGrant == nil:
-					r.log.Info("no matching ReferenceGrants found", "from", from.kind,
-						"from namespace", from.namespace, "target", to.kind, "target namespace", to.namespace)
-				default:
-					if !resourceMap.allAssociatedReferenceGrants.Has(utils.NamespacedName(refGrant).String()) {
-						resourceMap.allAssociatedReferenceGrants.Insert(utils.NamespacedName(refGrant).String())
-						resourceTree.ReferenceGrants = append(resourceTree.ReferenceGrants, refGrant)
-						r.log.Info("added ReferenceGrant to resource map", "namespace", refGrant.Namespace,
-							"name", refGrant.Name)
-					}
-				}
+			if err := r.processBackendRef(
+				ctx,
+				resourceMap,
+				resourceTree,
+				resource.KindSecurityPolicy,
+				policy.Namespace,
+				policy.Name,
+				backendRef); err != nil {
+				r.log.Error(err,
+					"failed to process ExtAuth BackendRef for SecurityPolicy",
+					"policy", policy, "backendRef", backendRef)
 			}
 		}
 
@@ -638,10 +671,76 @@ func (r *gatewayAPIReconciler) processSecurityPolicyObjectRefs(
 						}); err != nil {
 						r.log.Error(err, "failed to process LocalJWKS ConfigMap", "policy", policy, "localJWKS", provider.LocalJWKS)
 					}
+				} else if provider.RemoteJWKS != nil {
+					for _, br := range provider.RemoteJWKS.BackendRefs {
+						if err := r.processBackendRef(
+							ctx,
+							resourceMap,
+							resourceTree,
+							resource.KindSecurityPolicy,
+							policy.Namespace,
+							policy.Name,
+							br.BackendObjectReference); err != nil {
+							r.log.Error(err,
+								"failed to process RemoteJWKS BackendRef for SecurityPolicy",
+								"policy", policy, "backendRef", br.BackendObjectReference)
+						}
+					}
 				}
 			}
 		}
 	}
+}
+
+// processBackendRef adds the referenced BackendRef to the resourceMap for later processBackendRefs.
+// If BackendRef exists in a different namespace and there is a ReferenceGrant, adds ReferenceGrant to the resourceTree.
+func (r *gatewayAPIReconciler) processBackendRef(
+	ctx context.Context,
+	resourceMap *resourceMappings,
+	resourceTree *resource.Resources,
+	ownerKind string,
+	ownerNS string,
+	ownerName string,
+	backendRef gwapiv1.BackendObjectReference,
+) error {
+	backendNamespace := gatewayapi.NamespaceDerefOr(backendRef.Namespace, ownerNS)
+	resourceMap.allAssociatedBackendRefs.Insert(gwapiv1.BackendObjectReference{
+		Group:     backendRef.Group,
+		Kind:      backendRef.Kind,
+		Namespace: gatewayapi.NamespacePtr(backendNamespace),
+		Name:      backendRef.Name,
+	})
+
+	if backendNamespace != ownerNS {
+		from := ObjectKindNamespacedName{
+			kind:      ownerKind,
+			namespace: ownerNS,
+			name:      ownerName,
+		}
+		to := ObjectKindNamespacedName{
+			kind:      gatewayapi.KindDerefOr(backendRef.Kind, resource.KindService),
+			namespace: backendNamespace,
+			name:      string(backendRef.Name),
+		}
+		refGrant, err := r.findReferenceGrant(ctx, from, to)
+		switch {
+		case err != nil:
+			return fmt.Errorf("failed to find ReferenceGrant: %w", err)
+		case refGrant == nil:
+			return fmt.Errorf(
+				"no matching ReferenceGrants found: from %s/%s to %s/%s",
+				from.kind, from.namespace, to.kind, to.namespace)
+		default:
+			// RefGrant found
+			if !resourceMap.allAssociatedReferenceGrants.Has(utils.NamespacedName(refGrant).String()) {
+				resourceMap.allAssociatedReferenceGrants.Insert(utils.NamespacedName(refGrant).String())
+				resourceTree.ReferenceGrants = append(resourceTree.ReferenceGrants, refGrant)
+				r.log.Info("added ReferenceGrant to resource map", "namespace", refGrant.Namespace,
+					"name", refGrant.Name)
+			}
+		}
+	}
+	return nil
 }
 
 // processOIDCHMACSecret adds the OIDC HMAC Secret to the resourceTree.
@@ -776,7 +875,7 @@ func (r *gatewayAPIReconciler) processCtpConfigMapRefs(
 						policy.Name,
 						caCertRef); err != nil {
 						r.log.Error(err,
-							"failed to process CACertificateRef for SecurityPolicy",
+							"failed to process CACertificateRef for ClientTrafficPolicy",
 							"policy", policy, "caCertificateRef", caCertRef.Name)
 					}
 				}
@@ -956,7 +1055,7 @@ func (r *gatewayAPIReconciler) processGateways(ctx context.Context, managedGC *g
 	if err := r.client.List(ctx, gatewayList, &client.ListOptions{
 		FieldSelector: fields.OneTermEqualSelector(classGatewayIndex, managedGC.Name),
 	}); err != nil {
-		r.log.Info("no associated Gateways found for GatewayClass", "name", managedGC.Name)
+		r.log.Error(err, "failed to list gateways for gatewayClass %s", managedGC.Name)
 		return err
 	}
 
@@ -1483,6 +1582,10 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 				backendPredicates...)); err != nil {
 			return err
 		}
+
+		if err := addBackendIndexers(ctx, mgr); err != nil {
+			return err
+		}
 	}
 
 	// Watch Node CRUDs to update Gateway Address exposed by Service of type NodePort.
@@ -1857,9 +1960,9 @@ func (r *gatewayAPIReconciler) processGatewayParamsRef(ctx context.Context, gtw 
 	}
 
 	ref := gtw.Spec.Infrastructure.ParametersRef
-	if !(string(ref.Group) == egv1a1.GroupVersion.Group &&
-		ref.Kind == egv1a1.KindEnvoyProxy &&
-		len(ref.Name) > 0) {
+	if string(ref.Group) != egv1a1.GroupVersion.Group ||
+		ref.Kind != egv1a1.KindEnvoyProxy ||
+		len(ref.Name) == 0 {
 		return fmt.Errorf("unsupported parametersRef for gateway %s/%s", gtw.Namespace, gtw.Name)
 	}
 
@@ -1964,8 +2067,8 @@ func (r *gatewayAPIReconciler) processEnvoyProxy(ep *egv1a1.EnvoyProxy, resource
 		for _, backendRef := range backendRefs {
 			backendNamespace := gatewayapi.NamespaceDerefOr(backendRef.Namespace, ep.Namespace)
 			resourceMap.allAssociatedBackendRefs.Insert(gwapiv1.BackendObjectReference{
-				Group:     backendRef.BackendObjectReference.Group,
-				Kind:      backendRef.BackendObjectReference.Kind,
+				Group:     backendRef.Group,
+				Kind:      backendRef.Kind,
 				Namespace: gatewayapi.NamespacePtr(backendNamespace),
 				Name:      backendRef.Name,
 			})
@@ -2104,7 +2207,7 @@ func (r *gatewayAPIReconciler) processExtensionServerPolicies(
 			}
 			_, foundTargetRef := policySpec["targetRef"]
 			_, foundTargetRefs := policySpec["targetRefs"]
-			if !(foundTargetRef || foundTargetRefs) {
+			if !foundTargetRef && !foundTargetRefs {
 				return fmt.Errorf("not a policy object - no targetRef or targetRefs found in %s.%s %s",
 					policy.GetAPIVersion(), policy.GetKind(), policy.GetName())
 			}
@@ -2136,42 +2239,17 @@ func (r *gatewayAPIReconciler) processEnvoyExtensionPolicyObjectRefs(
 		// Add the referenced BackendRefs and ReferenceGrants in ExtAuth to Maps for later processing
 		for _, ep := range policy.Spec.ExtProc {
 			for _, br := range ep.BackendRefs {
-				backendRef := br.BackendObjectReference
-
-				backendNamespace := gatewayapi.NamespaceDerefOr(backendRef.Namespace, policy.Namespace)
-				resourceMap.allAssociatedBackendRefs.Insert(gwapiv1.BackendObjectReference{
-					Group:     backendRef.Group,
-					Kind:      backendRef.Kind,
-					Namespace: gatewayapi.NamespacePtr(backendNamespace),
-					Name:      backendRef.Name,
-				})
-
-				if backendNamespace != policy.Namespace {
-					from := ObjectKindNamespacedName{
-						kind:      resource.KindEnvoyExtensionPolicy,
-						namespace: policy.Namespace,
-						name:      policy.Name,
-					}
-					to := ObjectKindNamespacedName{
-						kind:      gatewayapi.KindDerefOr(backendRef.Kind, resource.KindService),
-						namespace: backendNamespace,
-						name:      string(backendRef.Name),
-					}
-					refGrant, err := r.findReferenceGrant(ctx, from, to)
-					switch {
-					case err != nil:
-						r.log.Error(err, "failed to find ReferenceGrant")
-					case refGrant == nil:
-						r.log.Info("no matching ReferenceGrants found", "from", from.kind,
-							"from namespace", from.namespace, "target", to.kind, "target namespace", to.namespace)
-					default:
-						if !resourceMap.allAssociatedReferenceGrants.Has(utils.NamespacedName(refGrant).String()) {
-							resourceMap.allAssociatedReferenceGrants.Insert(utils.NamespacedName(refGrant).String())
-							resourceTree.ReferenceGrants = append(resourceTree.ReferenceGrants, refGrant)
-							r.log.Info("added ReferenceGrant to resource map", "namespace", refGrant.Namespace,
-								"name", refGrant.Name)
-						}
-					}
+				if err := r.processBackendRef(
+					ctx,
+					resourceMap,
+					resourceTree,
+					resource.KindEnvoyExtensionPolicy,
+					policy.Namespace,
+					policy.Name,
+					br.BackendObjectReference); err != nil {
+					r.log.Error(err,
+						"failed to process ExtProc BackendRef for EnvoyExtensionPolicy",
+						"policy", policy, "backendRef", br.BackendObjectReference)
 				}
 			}
 		}

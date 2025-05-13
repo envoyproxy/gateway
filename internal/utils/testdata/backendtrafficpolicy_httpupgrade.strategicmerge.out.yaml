@@ -1,0 +1,18 @@
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: BackendTrafficPolicy
+metadata:
+  creationTimestamp: null
+  name: patched
+spec:
+  connection:
+    bufferLimit: 100M
+  httpUpgrade:
+  - type: websocket
+  timeout:
+    http:
+      connectionIdleTimeout: 16s
+      maxConnectionDuration: 17s
+    tcp:
+      connectTimeout: 15s
+status:
+  ancestors: null

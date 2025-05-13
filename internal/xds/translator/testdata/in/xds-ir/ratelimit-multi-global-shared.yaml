@@ -1,0 +1,94 @@
+metrics:
+  enablePerEndpointStats: true
+http:
+  - name: "first-listener"
+    address: "::"
+    port: 10080
+    hostnames:
+      - "*"
+    path:
+      mergeSlashes: true
+      escapedSlashesAction: UnescapeAndRedirect
+    routes:
+      - name: "first-route"
+        hostname: "*"
+        traffic:
+          name: "test-namespace/test-policy-1"
+          rateLimit:
+            global:
+              rules:
+                - name: "test-namespace/test-policy-1/rule/0"
+                  headerMatches:
+                    - name: "x-user-id"
+                      exact: "one"
+                  limit:
+                    requests: 5
+                    unit: second
+                  shared: true
+        pathMatch:
+          exact: "foo/bar"
+        destination:
+          name: "first-route-dest"
+          settings:
+            - endpoints:
+                - host: "1.2.3.4"
+                  port: 50000
+              name: "first-route-dest/backend/0"
+
+      - name: "second-route"
+        hostname: "*"
+        traffic:
+          name: "test-namespace/test-policy-1"
+          rateLimit:
+            global:
+              rules:
+                - name: "test-namespace/test-policy-1/rule/0"
+                  headerMatches:
+                    - name: "x-user-id"
+                      exact: "one"
+                  limit:
+                    requests: 5
+                    unit: second
+                  shared: true
+        pathMatch:
+          exact: "foo/baz"
+        destination:
+          name: "second-route-dest"
+          settings:
+            - endpoints:
+                - host: "1.2.3.4"
+                  port: 50000
+              name: "second-route-dest/backend/0"
+
+      - name: "third-route"
+        hostname: "*"
+        traffic:
+          name: "test-namespace/test-policy-2"
+          rateLimit:
+            global:
+              rules:
+                - name: "test-namespace/test-policy-2/rule/0"
+                  headerMatches:
+                    - name: "x-user-id"
+                      exact: "two"
+                  limit:
+                    requests: 10
+                    unit: second
+                  shared: true
+                - name: "test-namespace/test-policy-2/rule/1"
+                  headerMatches:
+                    - name: "x-user-id"
+                      exact: "two"
+                  limit:
+                    requests: 10
+                    unit: second
+                  shared: true
+        pathMatch:
+          exact: "test"
+        destination:
+          name: "third-route-dest"
+          settings:
+            - endpoints:
+                - host: "1.2.3.4"
+                  port: 50000
+              name: "third-route-dest/backend/0"

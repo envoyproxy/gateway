@@ -52,7 +52,7 @@ var EGUpgradeTest = suite.ConformanceTest{
 			chartPath := "../../../charts/gateway-helm"
 			relName := "eg"
 			depNS := "envoy-gateway-system"
-			lastVersionTag := "v1.2.3" //  the latest prior release
+			lastVersionTag := "v1.3.2" //  the latest prior release
 
 			t.Logf("Upgrading from version: %s", lastVersionTag)
 
@@ -160,6 +160,11 @@ var EGUpgradeTest = suite.ConformanceTest{
 			// fire the rest of requests
 			if err := GotExactExpectedResponse(t, 5, suite.RoundTripper, expectOkReq, expectOkResp); err != nil {
 				t.Errorf("failed to get expected response for the first three requests: %v", err)
+			}
+		})
+		t.Cleanup(func() {
+			if t.Failed() {
+				CollectAndDump(t, suite.RestConfig)
 			}
 		})
 	},

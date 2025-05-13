@@ -27,7 +27,7 @@ func New(cli client.Client) *InfraClient {
 
 func (cli *InfraClient) ServerSideApply(ctx context.Context, obj client.Object) error {
 	opts := []client.PatchOption{client.ForceOwnership, client.FieldOwner("envoy-gateway")}
-	if err := cli.Client.Patch(ctx, obj, client.Apply, opts...); err != nil {
+	if err := cli.Patch(ctx, obj, client.Apply, opts...); err != nil {
 		return fmt.Errorf("failed to create/update resource with server-side apply for obj %v: %w", obj, err)
 	}
 
@@ -82,7 +82,7 @@ func (cli *InfraClient) Delete(ctx context.Context, object client.Object) error 
 
 // GetUID retrieves the uid of one resource.
 func (cli *InfraClient) GetUID(ctx context.Context, key client.ObjectKey, current client.Object) (types.UID, error) {
-	if err := cli.Client.Get(ctx, key, current); err != nil {
+	if err := cli.Get(ctx, key, current); err != nil {
 		return "", err
 	}
 	return current.GetUID(), nil
