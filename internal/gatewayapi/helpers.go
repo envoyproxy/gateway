@@ -481,6 +481,7 @@ type policyTargetRouteKey struct {
 	Kind      string
 	Namespace string
 	Name      string
+	Protocol  ir.AppProtocol
 }
 
 type policyRouteTargetContext struct {

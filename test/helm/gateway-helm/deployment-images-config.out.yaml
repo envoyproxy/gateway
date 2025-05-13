@@ -33,7 +33,7 @@ data:
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
     logging:
       level:
-        default: info
+        default: debug
     provider:
       kubernetes:
         rateLimitDeployment:

@@ -1304,6 +1304,8 @@ type Principal struct {
 	JWT *egv1a1.JWTPrincipal `json:"jwt,omitempty"`
 	// Headers defines the headers to be matched.
 	Headers []egv1a1.AuthorizationHeaderMatch `json:"headers,omitempty"`
+	// USED DOWNSTREAM_SOURCE_IP is used to match the source IP of the downstream client.
+	UseDownstreamSourceIP bool
 }
 
 // FaultInjection defines the schema for injecting faults into requests.
@@ -1926,6 +1928,10 @@ type TCPRoute struct {
 	BackendConnection *BackendConnection `json:"backendConnection,omitempty" yaml:"backendConnection,omitempty"`
 	// DNS is used to configure how DNS resolution is handled for the route
 	DNS *DNS `json:"dns,omitempty" yaml:"dns,omitempty"`
+	// Security holds the features associated with SecurityPolicy
+	Security *SecurityFeatures `json:"security,omitempty" yaml:"security,omitempty"`
+	// Direct responses to be returned for this route. Takes precedence over Destinations and Redirect.
+	DirectResponse *CustomResponse `json:"directResponse,omitempty" yaml:"directResponse,omitempty"`
 }
 
 // TLS holds information for configuring TLS on a listener
@@ -1988,7 +1994,11 @@ func (t TCPRoute) Validate() error {
 			errs = errors.Join(errs, err)
 		}
 	}
-
+	if t.DirectResponse != nil {
+		if err := t.DirectResponse.Validate(); err != nil {
+			errs = errors.Join(errs, err)
+		}
+	}
 	if t.HealthCheck != nil {
 		if err := t.HealthCheck.Validate(); err != nil {
 			errs = errors.Join(errs, err)
@@ -2397,6 +2407,29 @@ type TCPKeepalive struct {
 	// Defaults to `75s`.
 	Interval *uint32 `json:"interval,omitempty" yaml:"interval,omitempty"`
 }
+
+// +k8s:deepcopy-gen=true
+type NetworkFilter struct {
+	Name   string      `json:"name" yaml:"name"`
+	Config *RBACConfig `json:"config,omitempty" yaml:"config,omitempty"`
+}
+
+// +k8s:deepcopy-gen=true
+type RBACConfig struct {
+	Rules               []*AuthorizationRule       `json:"rules,omitempty" yaml:"rules,omitempty"`
+	DefaultAction       egv1a1.AuthorizationAction `json:"defaultAction,omitempty" yaml:"defaultAction,omitempty"`
+	StatPrefix          string                     `json:"statPrefix,omitempty" yaml:"statPrefix,omitempty"`
+	SourceIPEnforcement bool                       `json:"sourceIPEnforcement,omitempty" yaml:"sourceIPEnforcement,omitempty"`
+}
+
+// +k8s:deepcopy-gen=true
+type AuthorizationAction string
+
+const (
+	// Define the possible actions
+	Allow AuthorizationAction = "Allow"
+	Deny  AuthorizationAction = "Deny"
+)
 
 // LoadBalancer defines the load balancer settings.
 // +k8s:deepcopy-gen=true
