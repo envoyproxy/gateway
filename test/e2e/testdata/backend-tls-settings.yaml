@@ -139,7 +139,7 @@ spec:
           name: ca-certificate
       - name: secret-volume
         secret:
-          secretName: backend-tls-certificate
+          secretName: backend-tls-certificate-tls-settings
           items:
           - key: tls.crt
             path: crt
@@ -177,7 +177,7 @@ data:
 apiVersion: v1
 kind: Secret
 metadata:
-  name: backend-tls-certificate
+  name: backend-tls-certificate-tls-settings
   namespace: gateway-conformance-infra
 type: kubernetes.io/tls
 data:
