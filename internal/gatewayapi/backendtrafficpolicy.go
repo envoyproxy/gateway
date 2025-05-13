@@ -429,13 +429,33 @@ func (t *Translator) translateBackendTrafficPolicyForRouteWithMerge(
 	if err != nil {
 		return fmt.Errorf("error merging policies: %w", err)
 	}
+
+	// Build traffic features from the merged policy
 	tf, errs := t.buildTrafficFeatures(mergedPolicy, resources)
 	if tf == nil {
 		// should not happen
 		return nil
 	}
 
-	// Apply IR to relevant gateway routes
+	// Since GlobalRateLimit merge relies on IR auto-generated key: (<policy-ns>/<policy-name>/rule/<rule-index>)
+	// We can't simply merge the BTP's using utils.Merge() we need to specifically merge the GlobalRateLimit.Rules using IR fields.
+	// Since ir.TrafficFeatures is not a built-in Kubernetes API object with defined merging strategies and it does not support a deep merge (for lists/maps).
+	if policy.Spec.RateLimit != nil && gwPolicy.Spec.RateLimit != nil {
+		tfGW, _ := t.buildTrafficFeatures(gwPolicy, resources)
+		tfRoute, _ := t.buildTrafficFeatures(policy, resources)
+
+		if tfGW != nil && tfRoute != nil &&
+			tfGW.RateLimit != nil && tfRoute.RateLimit != nil {
+
+			mergedRL, err := utils.MergeRL(tfGW.RateLimit, tfRoute.RateLimit, *policy.Spec.MergeType)
+			if err != nil {
+				return fmt.Errorf("error merging rate limits: %w", err)
+			}
+			// Replace the rate limit in the merged features if successful
+			tf.RateLimit = mergedRL
+		}
+	}
+
 	x, ok := xdsIR[t.IRKey(gatewayNN)]
 	if !ok {
 		// should not happen.
@@ -489,7 +509,6 @@ func applyTrafficFeatureToRoute(route RouteContext,
 				}
 
 				r.Traffic = tf.DeepCopy()
-				r.Traffic.Name = irTrafficName(policy)
 
 				if localTo, err := buildClusterSettingsTimeout(policy.Spec.ClusterSettings); err == nil {
 					r.Traffic.Timeout = localTo
@@ -695,7 +714,6 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(
 			}
 
 			r.Traffic = tf.DeepCopy()
-			r.Traffic.Name = irTrafficName(policy)
 
 			// Update the Host field in HealthCheck, now that we have access to the Route Hostname.
 			r.Traffic.HealthCheck.SetHTTPHostIfAbsent(r.Hostname)
@@ -769,7 +787,7 @@ func (t *Translator) buildLocalRateLimit(policy *egv1a1.BackendTrafficPolicy) (*
 	var err error
 	var irRule *ir.RateLimitRule
 	irRules := make([]*ir.RateLimitRule, 0)
-	for _, rule := range local.Rules {
+	for i, rule := range local.Rules {
 		// We don't process the rule without clientSelectors here because it's
 		// previously used as the default route-level limit.
 		if len(rule.ClientSelectors) == 0 {
@@ -780,6 +798,8 @@ func (t *Translator) buildLocalRateLimit(policy *egv1a1.BackendTrafficPolicy) (*
 		if err != nil {
 			return nil, err
 		}
+		// Set the Name field as <policy-ns>/<policy-name>/rule/<rule-index>
+		irRule.Name = irRuleName(policy.Namespace, policy.Name, i)
 		irRules = append(irRules, irRule)
 	}
 
@@ -804,8 +824,7 @@ func (t *Translator) buildGlobalRateLimit(policy *egv1a1.BackendTrafficPolicy) (
 	global := policy.Spec.RateLimit.Global
 	rateLimit := &ir.RateLimit{
 		Global: &ir.GlobalRateLimit{
-			Rules:  make([]*ir.RateLimitRule, len(global.Rules)),
-			Shared: global.Shared,
+			Rules: make([]*ir.RateLimitRule, len(global.Rules)),
 		},
 	}
 
@@ -816,6 +835,8 @@ func (t *Translator) buildGlobalRateLimit(policy *egv1a1.BackendTrafficPolicy) (
 		if err != nil {
 			return nil, err
 		}
+		// Set the Name field as <policy-ns>/<policy-name>/rule/<rule-index>
+		irRules[i].Name = irRuleName(policy.Namespace, policy.Name, i)
 	}
 
 	return rateLimit, nil
@@ -828,6 +849,7 @@ func buildRateLimitRule(rule egv1a1.RateLimitRule) (*ir.RateLimitRule, error) {
 			Unit:     ir.RateLimitUnit(rule.Limit.Unit),
 		},
 		HeaderMatches: make([]*ir.StringMatch, 0),
+		Shared:        rule.Shared,
 	}
 
 	for _, match := range rule.ClientSelectors {

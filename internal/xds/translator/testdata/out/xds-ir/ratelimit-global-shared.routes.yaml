@@ -13,8 +13,8 @@
         rateLimits:
         - actions:
           - genericKey:
-              descriptorKey: test-policy-1/test-namespace
-              descriptorValue: test-policy-1/test-namespace
+              descriptorKey: test-namespace/test-policy-1/rule/0
+              descriptorValue: test-namespace/test-policy-1/rule/0
           - headerValueMatch:
               descriptorKey: rule-0-match-0
               descriptorValue: rule-0-match-0
@@ -33,8 +33,8 @@
         rateLimits:
         - actions:
           - genericKey:
-              descriptorKey: test-policy-1/test-namespace
-              descriptorValue: test-policy-1/test-namespace
+              descriptorKey: test-namespace/test-policy-1/rule/0
+              descriptorValue: test-namespace/test-policy-1/rule/0
           - headerValueMatch:
               descriptorKey: rule-0-match-0
               descriptorValue: rule-0-match-0
@@ -53,8 +53,8 @@
         rateLimits:
         - actions:
           - genericKey:
-              descriptorKey: test-policy-2/test-namespace
-              descriptorValue: test-policy-2/test-namespace
+              descriptorKey: test-namespace/test-policy-2/rule/0
+              descriptorValue: test-namespace/test-policy-2/rule/0
           - headerValueMatch:
               descriptorKey: rule-0-match-0
               descriptorValue: rule-0-match-0
