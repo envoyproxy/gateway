@@ -294,7 +294,6 @@ xdsIR:
             maxParallelRetries: 1024
             maxPendingRequests: 1
             maxRequestsPerConnection: 1
-          name: envoy-gateway/policy-for-gateway
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4
@@ -348,7 +347,6 @@ xdsIR:
             maxParallelRetries: 24
             maxPendingRequests: 42
             maxRequestsPerConnection: 42
-          name: default/policy-for-route
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4
