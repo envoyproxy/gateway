@@ -65,22 +65,13 @@ var EnvoyProxyCustomNameTest = suite.ConformanceTest{
 			ExpectEventuallyConsistentResponse(t, suite, gwNN, routeNN, okResp)
 
 			// Update the Gateway to use a custom name
-			gw := &gwapiv1.Gateway{}
-			err = suite.Client.Get(context.Background(), gwNN, gw)
-			if err != nil {
-				t.Fatalf("Failed to get Gateway: %v", err)
-			}
-			gw.Spec.Infrastructure = &gwapiv1.GatewayInfrastructure{
+			updateGateway(t, suite, gwNN, &gwapiv1.GatewayInfrastructure{
 				ParametersRef: &gwapiv1.LocalParametersReference{
 					Name:  "deploy-custom-name",
 					Kind:  "EnvoyProxy",
 					Group: "gateway.envoyproxy.io",
 				},
-			}
-			err = suite.Client.Update(context.Background(), gw)
-			if err != nil {
-				t.Fatalf("Failed to update Gateway: %v", err)
-			}
+			})
 
 			err = checkEnvoyProxyDeployment(t, suite, gwNN, gatewayNS, "deploy-custom-name")
 			if err != nil {
@@ -94,16 +85,7 @@ var EnvoyProxyCustomNameTest = suite.ConformanceTest{
 			ExpectEventuallyConsistentResponse(t, suite, gwNN, routeNN, okResp)
 
 			// Rollback the Gateway to without custom name
-			gw = &gwapiv1.Gateway{}
-			err = suite.Client.Get(context.Background(), gwNN, gw)
-			if err != nil {
-				t.Fatalf("Failed to get Gateway: %v", err)
-			}
-			gw.Spec.Infrastructure = &gwapiv1.GatewayInfrastructure{}
-			err = suite.Client.Update(context.Background(), gw)
-			if err != nil {
-				t.Fatalf("Failed to update Gateway: %v", err)
-			}
+			updateGateway(t, suite, gwNN, &gwapiv1.GatewayInfrastructure{})
 
 			// Make sure there's deployment for the gateway
 			err = checkEnvoyProxyDeployment(t, suite, gwNN, gatewayNS, fmt.Sprintf("envoy-%s-%s", gwNN.Namespace, gwNN.Name))
@@ -145,22 +127,13 @@ var EnvoyProxyCustomNameTest = suite.ConformanceTest{
 			ExpectEventuallyConsistentResponse(t, suite, gwNN, routeNN, okResp)
 
 			// Update the Gateway to use a custom name
-			gw := &gwapiv1.Gateway{}
-			err = suite.Client.Get(context.Background(), gwNN, gw)
-			if err != nil {
-				t.Fatalf("Failed to get Gateway: %v", err)
-			}
-			gw.Spec.Infrastructure = &gwapiv1.GatewayInfrastructure{
+			updateGateway(t, suite, gwNN, &gwapiv1.GatewayInfrastructure{
 				ParametersRef: &gwapiv1.LocalParametersReference{
 					Name:  "ds-custom-name",
 					Kind:  "EnvoyProxy",
 					Group: "gateway.envoyproxy.io",
 				},
-			}
-			err = suite.Client.Update(context.Background(), gw)
-			if err != nil {
-				t.Fatalf("Failed to update Gateway: %v", err)
-			}
+			})
 
 			err = checkEnvoyProxyDaemonSet(t, suite, gwNN, gatewayNS, "ds-custom-name")
 			if err != nil {
@@ -174,22 +147,13 @@ var EnvoyProxyCustomNameTest = suite.ConformanceTest{
 			ExpectEventuallyConsistentResponse(t, suite, gwNN, routeNN, okResp)
 
 			// Rollback the Gateway to without custom name
-			gw = &gwapiv1.Gateway{}
-			err = suite.Client.Get(context.Background(), gwNN, gw)
-			if err != nil {
-				t.Fatalf("Failed to get Gateway: %v", err)
-			}
-			gw.Spec.Infrastructure = &gwapiv1.GatewayInfrastructure{
+			updateGateway(t, suite, gwNN, &gwapiv1.GatewayInfrastructure{
 				ParametersRef: &gwapiv1.LocalParametersReference{
 					Name:  "eg-daemonset",
 					Kind:  "EnvoyProxy",
 					Group: "gateway.envoyproxy.io",
 				},
-			}
-			err = suite.Client.Update(context.Background(), gw)
-			if err != nil {
-				t.Fatalf("Failed to update Gateway: %v", err)
-			}
+			})
 
 			// Make sure there's DaemonSet for the gateway
 			err = checkEnvoyProxyDaemonSet(t, suite, gwNN, gatewayNS, fmt.Sprintf("envoy-%s-%s", gwNN.Namespace, gwNN.Name))
@@ -205,6 +169,28 @@ var EnvoyProxyCustomNameTest = suite.ConformanceTest{
 			ExpectEventuallyConsistentResponse(t, suite, gwNN, routeNN, okResp)
 		})
 	},
+}
+
+func updateGateway(t *testing.T, suite *suite.ConformanceTestSuite, gwNN types.NamespacedName, paramRef *gwapiv1.GatewayInfrastructure) {
+	err := wait.PollUntilContextTimeout(t.Context(), time.Second, suite.TimeoutConfig.CreateTimeout, true,
+		func(ctx context.Context) (bool, error) {
+			gw := &gwapiv1.Gateway{}
+			err := suite.Client.Get(context.Background(), gwNN, gw)
+			if err != nil {
+				tlog.Logf(t, "Failed to get Gateway %s: %v", gwNN, err)
+				return false, err
+			}
+			gw.Spec.Infrastructure = paramRef
+			err = suite.Client.Update(context.Background(), gw)
+			if err != nil {
+				tlog.Logf(t, "Failed to update Gateway %s: %v", gwNN, err)
+				return false, err
+			}
+			return true, nil
+		})
+	if err != nil {
+		t.Fatalf("Failed to patch Gateway %s: %v", gwNN, err)
+	}
 }
 
 // ExpectEventuallyConsistentResponse sends a request to the gateway and waits for an eventually consistent response.
