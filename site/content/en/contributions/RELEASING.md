@@ -173,7 +173,7 @@ export GITHUB_REMOTE=origin
 6. If the tip of the release branch does not match the tip of `main`, perform the following:
 
    1. Create a topic branch from the release branch.
-   2. Cherry-pick the commits from `main` that differ from the release branch.
+   2. Cherry-pick the commits from `main` that differ from the release branch, e.g. `git cherry-pick <present commit in rc>..<latest commit on main> -s`
    3. Run tests locally, e.g. `make lint`.
    4. Sign, commit, and push your topic branch to your Envoy Gateway fork.
    5. Submit a PR to merge the topic from of your fork into the Envoy Gateway release branch.
