@@ -41,7 +41,7 @@ import (
 	"github.com/envoyproxy/gateway/internal/wasm"
 )
 
-func mustUnmarshal(t *testing.T, val []byte, out interface{}) {
+func mustUnmarshal(t *testing.T, val []byte, out any) {
 	require.NoError(t, yaml.UnmarshalStrict(val, out, yaml.DisallowUnknownFields))
 }
 
@@ -62,6 +62,10 @@ func TestTranslate(t *testing.T) {
 		},
 		{
 			name:                 "gateway-namespace-mode-infra-httproute",
+			GatewayNamespaceMode: true,
+		},
+		{
+			name:                 "gateway-namespace-mode-merged-gateways",
 			GatewayNamespaceMode: true,
 		},
 	}
