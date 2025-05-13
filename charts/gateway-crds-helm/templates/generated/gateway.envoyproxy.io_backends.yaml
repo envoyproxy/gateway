@@ -115,6 +115,12 @@ spec:
                       - address
                       - port
                       type: object
+                    priority:
+                      description: |-
+                        Priority defines the priority of the endpoint.
+                        If unspecified this will default to the highest priority (0).
+                      format: int32
+                      type: integer
                     unix:
                       description: Unix defines the unix domain socket endpoint
                       properties:
@@ -147,6 +153,12 @@ spec:
                   The overprovisioning factor is set to 1.4, meaning the fallback backends will only start receiving traffic when
                   the health of the active backends falls below 72%.
                 type: boolean
+              overprovisioningFactor:
+                description: |-
+                  OverprovisioningFactor defines the overprovisioning factor for the backend.
+                  Defaults to 140.
+                format: int32
+                type: integer
               tls:
                 description: |-
                   TLS defines the TLS settings for the backend.
