@@ -152,16 +152,17 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *re
 			for _, resources := range *val {
 				// Translate and publish IRs.
 				t := &gatewayapi.Translator{
-					GatewayControllerName:     r.EnvoyGateway.Gateway.ControllerName,
-					GatewayClassName:          gwapiv1.ObjectName(resources.GatewayClass.Name),
-					GlobalRateLimitEnabled:    r.EnvoyGateway.RateLimit != nil,
-					EnvoyPatchPolicyEnabled:   r.EnvoyGateway.ExtensionAPIs != nil && r.EnvoyGateway.ExtensionAPIs.EnableEnvoyPatchPolicy,
-					BackendEnabled:            r.EnvoyGateway.ExtensionAPIs != nil && r.EnvoyGateway.ExtensionAPIs.EnableBackend,
-					ControllerNamespace:       r.ControllerNamespace,
-					GatewayNamespaceMode:      r.EnvoyGateway.GatewayNamespaceMode(),
-					MergeGateways:             gatewayapi.IsMergeGatewaysEnabled(resources),
-					WasmCache:                 r.wasmCache,
-					ListenerPortShiftDisabled: r.EnvoyGateway.Provider != nil && r.EnvoyGateway.Provider.IsRunningOnHost(),
+					GatewayControllerName:        r.EnvoyGateway.Gateway.ControllerName,
+					GatewayClassName:             gwapiv1.ObjectName(resources.GatewayClass.Name),
+					GlobalRateLimitEnabled:       r.EnvoyGateway.RateLimit != nil,
+					EnvoyPatchPolicyEnabled:      r.EnvoyGateway.ExtensionAPIs != nil && r.EnvoyGateway.ExtensionAPIs.EnableEnvoyPatchPolicy,
+					BackendEnabled:               r.EnvoyGateway.ExtensionAPIs != nil && r.EnvoyGateway.ExtensionAPIs.EnableBackend,
+					XBackendTrafficPolicyEnabled: r.EnvoyGateway.ExtensionAPIs != nil && r.EnvoyGateway.ExtensionAPIs.EnableXBackendTrafficPolicy,
+					ControllerNamespace:          r.ControllerNamespace,
+					GatewayNamespaceMode:         r.EnvoyGateway.GatewayNamespaceMode(),
+					MergeGateways:                gatewayapi.IsMergeGatewaysEnabled(resources),
+					WasmCache:                    r.wasmCache,
+					ListenerPortShiftDisabled:    r.EnvoyGateway.Provider != nil && r.EnvoyGateway.Provider.IsRunningOnHost(),
 				}
 
 				// If an extension is loaded, pass its supported groups/kinds to the translator
@@ -233,6 +234,12 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *re
 					key := utils.NamespacedName(udpRoute)
 					r.ProviderResources.UDPRouteStatuses.Store(key, &udpRoute.Status)
 					delete(statusesToDelete.UDPRouteStatusKeys, key)
+				}
+				for _, xbtp := range result.XBackendTrafficPolicies {
+					key := utils.NamespacedName(xbtp)
+					r.ProviderResources.XBackendTrafficPolicyStatuses.Store(key, &xbtp.Status)
+					delete(statusesToDelete.XBackendTrafficPolicyStatusKeys, key)
+
 				}
 
 				// Skip updating status for policies with empty status
@@ -374,6 +381,8 @@ type StatusesToDelete struct {
 	ExtensionServerPolicyStatusKeys map[message.NamespacedNameAndGVK]bool
 
 	BackendStatusKeys map[types.NamespacedName]bool
+
+	XBackendTrafficPolicyStatusKeys map[types.NamespacedName]bool
 }
 
 func (r *Runner) getAllStatuses() *StatusesToDelete {
@@ -394,6 +403,8 @@ func (r *Runner) getAllStatuses() *StatusesToDelete {
 		ExtensionServerPolicyStatusKeys: make(map[message.NamespacedNameAndGVK]bool),
 
 		BackendStatusKeys: make(map[types.NamespacedName]bool),
+
+		XBackendTrafficPolicyStatusKeys: make(map[types.NamespacedName]bool),
 	}
 
 	// Get current status keys
@@ -433,6 +444,9 @@ func (r *Runner) getAllStatuses() *StatusesToDelete {
 	}
 	for key := range r.ProviderResources.BackendStatuses.LoadAll() {
 		ds.BackendStatusKeys[key] = true
+	}
+	for key := range r.ProviderResources.XBackendTrafficPolicyStatuses.LoadAll() {
+		ds.XBackendTrafficPolicyStatusKeys[key] = true
 	}
 	return ds
 }
@@ -490,6 +504,11 @@ func (r *Runner) deleteStatusKeys(ds *StatusesToDelete) {
 	for key := range ds.BackendStatusKeys {
 		r.ProviderResources.BackendStatuses.Delete(key)
 		delete(ds.BackendStatusKeys, key)
+	}
+
+	for key := range ds.XBackendTrafficPolicyStatusKeys {
+		r.ProviderResources.XBackendTrafficPolicyStatuses.Delete(key)
+		delete(ds.XBackendTrafficPolicyStatusKeys, key)
 	}
 }
 

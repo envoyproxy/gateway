@@ -9,6 +9,7 @@ security updates: |
 # New features or capabilities added in this release.
 new features: |
   Added support for optionally installing the Gateway API standard channel CRDs through the gateway-crds-helm chart.
+  Added support for GEP-3388 (Retry Budget)
 
 bug fixes: |
   Fix reference grant from SecurityPolicy to referenced remoteJWKS backend not respected.
