@@ -93,6 +93,10 @@ spec:
     type: Global
     global:
       rules:
+        - limit:
+            requests: 24
+            unit: Hour
+          shared: true
         - clientSelectors:
             - headers:
                 - name: x-user-id
