@@ -141,7 +141,7 @@ func buildCredentialSecret(credentialInjection *ir.CredentialInjection) *tlsv3.S
 
 // patchRoute patches the provided route with the credential injector filter if applicable.
 // Note: this method enables the corresponding credential injector filter for the provided route.
-func (*credentialInjector) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute) error {
+func (*credentialInjector) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute, _ *ir.HTTPListener) error {
 	if route == nil {
 		return errors.New("xds route is nil")
 	}

@@ -106,7 +106,7 @@ func (*fault) patchResources(*types.ResourceVersionTable, []*ir.HTTPRoute) error
 
 // patchRoute patches the provided route with the fault config if applicable.
 // Note: this method enables the corresponding fault filter for the provided route.
-func (*fault) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute) error {
+func (*fault) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute, _ *ir.HTTPListener) error {
 	if route == nil {
 		return errors.New("xds route is nil")
 	}
