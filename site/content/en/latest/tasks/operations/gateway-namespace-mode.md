@@ -100,7 +100,7 @@ Envoy Gateway also supports configuration to you only watch resources in the spe
 `EnvoyGateway.provider.kubernetes.watch.namespaces` or `EnvoyGateway.provider.kubernetes.watch.namespaceSelector`.
 In this case, when you specify this configuration with Gateway Namespace Mode,Envoy Gateway will only watch for Gateway API resources in the specified namespaces and create needed Roles for infrastructure management in the specified namespaces.
 
-# Using Gateway Namespace Mode
+# Testing
 
 The following example demonstrates deploying two Gateways in different namespaces `team-a` and `team-b`.
 
