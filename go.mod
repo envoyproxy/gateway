@@ -34,8 +34,8 @@ require (
 	github.com/google/cel-go v0.23.2
 	github.com/google/go-cmp v0.7.0
 	github.com/google/go-containerregistry v0.20.3
-	github.com/miekg/dns v1.1.65
-	github.com/ohler55/ojg v1.26.4
+	github.com/miekg/dns v1.1.66
+	github.com/ohler55/ojg v1.26.5
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.22.0
 	github.com/prometheus/client_model v0.6.2
@@ -57,12 +57,12 @@ require (
 	go.opentelemetry.io/otel/metric v1.35.0
 	go.opentelemetry.io/otel/sdk v1.35.0
 	go.opentelemetry.io/otel/sdk/metric v1.35.0
-	go.opentelemetry.io/proto/otlp v1.5.0
+	go.opentelemetry.io/proto/otlp v1.6.0
 	go.uber.org/zap v1.27.0
 	golang.org/x/exp v0.0.0-20250106191152-7588d65b2ba8
-	golang.org/x/net v0.39.0
-	gomodules.xyz/jsonpatch/v2 v2.4.0
-	google.golang.org/genproto/googleapis/api v0.0.0-20250218202821-56aae31c358a
+	golang.org/x/net v0.40.0
+	gomodules.xyz/jsonpatch/v2 v2.5.0
+	google.golang.org/genproto/googleapis/api v0.0.0-20250428153025-10db94c68c34
 	google.golang.org/grpc v1.72.0
 	google.golang.org/grpc/security/advancedtls v1.0.0
 	google.golang.org/protobuf v1.36.6
@@ -71,6 +71,7 @@ require (
 	k8s.io/api v0.33.0
 	k8s.io/apiextensions-apiserver v0.33.0
 	k8s.io/apimachinery v0.34.0-alpha.0
+	k8s.io/apiserver v0.33.0
 	k8s.io/cli-runtime v0.33.0
 	k8s.io/client-go v0.33.0
 	k8s.io/klog/v2 v2.130.1
@@ -275,7 +276,7 @@ require (
 	github.com/gosuri/uitable v0.0.4 // indirect
 	github.com/gregjones/httpcache v0.0.0-20190611155906-901d90724c79 // indirect
 	github.com/grpc-ecosystem/go-grpc-prometheus v1.2.0 // indirect
-	github.com/grpc-ecosystem/grpc-gateway/v2 v2.26.1 // indirect
+	github.com/grpc-ecosystem/grpc-gateway/v2 v2.26.3 // indirect
 	github.com/hashicorp/errwrap v1.1.0 // indirect
 	github.com/hashicorp/go-immutable-radix/v2 v2.1.0 // indirect
 	github.com/hashicorp/go-multierror v1.1.1 // indirect
@@ -478,26 +479,25 @@ require (
 	go.uber.org/mock v0.5.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	go.uber.org/zap/exp v0.3.0 // indirect
-	golang.org/x/crypto v0.37.0 // indirect
+	golang.org/x/crypto v0.38.0 // indirect
 	golang.org/x/crypto/x509roots/fallback v0.0.0-20250406160420-959f8f3db0fb // indirect
 	golang.org/x/exp/typeparams v0.0.0-20250210185358-939b2ce775ac // indirect
 	golang.org/x/mod v0.24.0 // indirect
 	golang.org/x/oauth2 v0.28.0 // indirect
-	golang.org/x/sync v0.13.0 // indirect
-	golang.org/x/sys v0.32.0 // indirect
-	golang.org/x/term v0.31.1-0.20250421193057-a809085bff59 // indirect
-	golang.org/x/text v0.24.0 // indirect
+	golang.org/x/sync v0.14.0 // indirect
+	golang.org/x/sys v0.33.0 // indirect
+	golang.org/x/term v0.32.0 // indirect
+	golang.org/x/text v0.25.0 // indirect
 	golang.org/x/time v0.10.0 // indirect
-	golang.org/x/tools v0.31.0 // indirect
+	golang.org/x/tools v0.32.0 // indirect
 	golang.org/x/xerrors v0.0.0-20231012003039-104605ab7028 // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20250219182151-9fdb1cabc7b2 // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20250428153025-10db94c68c34 // indirect
 	google.golang.org/grpc/cmd/protoc-gen-go-grpc v1.5.1 // indirect
 	gopkg.in/alecthomas/kingpin.v2 v2.2.6 // indirect
 	gopkg.in/evanphx/json-patch.v4 v4.12.0 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	honnef.co/go/tools v0.6.1 // indirect
-	k8s.io/apiserver v0.33.0 // indirect
 	k8s.io/component-base v0.33.0 // indirect
 	k8s.io/metrics v0.33.0 // indirect
 	mvdan.cc/gofumpt v0.7.0 // indirect

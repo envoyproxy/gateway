@@ -3899,10 +3899,10 @@ _Appears in:_
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `name` | _string_ |  false  |  | Name is the name of the rule. This is used to identify the rule<br />in the Envoy configuration and as a unique identifier for merging. |
 | `clientSelectors` | _[RateLimitSelectCondition](#ratelimitselectcondition) array_ |  false  |  | ClientSelectors holds the list of select conditions to select<br />specific clients using attributes from the traffic flow.<br />All individual select conditions must hold True for this rule<br />and its limit to be applied.<br />If no client selectors are specified, the rule applies to all traffic of<br />the targeted Route.<br />If the policy targets a Gateway, the rule applies to each Route of the Gateway.<br />Please note that each Route has its own rate limit counters. For example,<br />if a Gateway has two Routes, and the policy has a rule with limit 10rps,<br />each Route will have its own 10rps limit. |
 | `limit` | _[RateLimitValue](#ratelimitvalue)_ |  true  |  | Limit holds the rate limit values.<br />This limit is applied for traffic flows when the selectors<br />compute to True, causing the request to be counted towards the limit.<br />The limit is enforced and the request is ratelimited, i.e. a response with<br />429 HTTP status code is sent back to the client when<br />the selected requests have reached the limit. |
 | `cost` | _[RateLimitCost](#ratelimitcost)_ |  false  |  | Cost specifies the cost of requests and responses for the rule.<br />This is optional and if not specified, the default behavior is to reduce the rate limit counters by 1 on<br />the request path and do not reduce the rate limit counters on the response path. |
+| `shared` | _boolean_ |  false  |  | Shared determines whether this rate limit rule applies across all the policy targets.<br />If set to true, the rule is treated as a common bucket and is shared across all policy targets (xRoutes).<br />Default: false. |
 
 
 #### RateLimitSelectCondition

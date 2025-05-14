@@ -157,7 +157,7 @@ func TestCreateProxyInfra(t *testing.T) {
 				// Verify all resources were created via the fake kube client.
 				sa := &corev1.ServiceAccount{
 					ObjectMeta: metav1.ObjectMeta{
-						Namespace: kube.Namespace,
+						Namespace: kube.ControllerNamespace,
 						Name:      proxy.ExpectedResourceHashedName(tc.in.Proxy.Name),
 					},
 				}
@@ -165,7 +165,7 @@ func TestCreateProxyInfra(t *testing.T) {
 
 				cm := &corev1.ConfigMap{
 					ObjectMeta: metav1.ObjectMeta{
-						Namespace: kube.Namespace,
+						Namespace: kube.ControllerNamespace,
 						Name:      proxy.ExpectedResourceHashedName(tc.in.Proxy.Name),
 					},
 				}
@@ -173,7 +173,7 @@ func TestCreateProxyInfra(t *testing.T) {
 
 				deploy := &appsv1.Deployment{
 					ObjectMeta: metav1.ObjectMeta{
-						Namespace: kube.Namespace,
+						Namespace: kube.ControllerNamespace,
 						Name:      proxy.ExpectedResourceHashedName(tc.in.Proxy.Name),
 					},
 				}
@@ -181,7 +181,7 @@ func TestCreateProxyInfra(t *testing.T) {
 
 				svc := &corev1.Service{
 					ObjectMeta: metav1.ObjectMeta{
-						Namespace: kube.Namespace,
+						Namespace: kube.ControllerNamespace,
 						Name:      proxy.ExpectedResourceHashedName(tc.in.Proxy.Name),
 					},
 				}

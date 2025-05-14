@@ -9,8 +9,11 @@
 {{- "v1.2.6" -}}
 {{- end -}}
 {{- with (strings.HasPrefix $pagePrefix "v1.3") -}}
-{{- "v1.3.2" -}}
+{{- "v1.3.3" -}}
+{{- end -}}
+{{- with (strings.HasPrefix $pagePrefix "v1.4") -}}
+{{- "v1.4.0" -}}
 {{- end -}}
 {{- with (strings.HasPrefix $pagePrefix "docs") -}}
-{{- "v1.3.2" -}}
+{{- "v1.4.0" -}}
 {{- end -}}

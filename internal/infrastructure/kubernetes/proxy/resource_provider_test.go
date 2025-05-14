@@ -44,8 +44,11 @@ func newTestInfra() *ir.Infra {
 }
 
 func newTestInfraWithNamespace(namespace string) *ir.Infra {
-	i := newTestInfra()
+	i := ir.NewInfra()
 	i.Proxy.Namespace = namespace
+	i.Proxy.GetProxyMetadata().Labels[gatewayapi.OwningGatewayNamespaceLabel] = namespace
+	i.Proxy.GetProxyMetadata().Labels[gatewayapi.OwningGatewayNameLabel] = i.Proxy.Name
+
 	return i
 }
 
@@ -565,11 +568,6 @@ func TestDeployment(t *testing.T) {
 				Name: ptr.To("custom-deployment-name"),
 			},
 		},
-		{
-			caseName:             "gateway-namespace-mode",
-			infra:                newTestInfraWithNamespace("default"),
-			gatewayNamespaceMode: true,
-		},
 	}
 	for _, tc := range cases {
 		t.Run(tc.caseName, func(t *testing.T) {
@@ -614,21 +612,8 @@ func TestDeployment(t *testing.T) {
 			if len(tc.extraArgs) > 0 {
 				tc.infra.Proxy.Config.Spec.ExtraArgs = tc.extraArgs
 			}
-			namespace := cfg.ControllerNamespace
-			if tc.gatewayNamespaceMode {
-				deployType := egv1a1.KubernetesDeployModeType(egv1a1.KubernetesDeployModeTypeGatewayNamespace)
-				cfg.EnvoyGateway.Provider = &egv1a1.EnvoyGatewayProvider{
-					Type: egv1a1.ProviderTypeKubernetes,
-					Kubernetes: &egv1a1.EnvoyGatewayKubernetesProvider{
-						Deploy: &egv1a1.KubernetesDeployMode{
-							Type: &deployType,
-						},
-					},
-				}
-				namespace = tc.infra.GetProxyInfra().Namespace
-			}
-
-			r := NewResourceRender(namespace, cfg.DNSDomain, tc.infra.GetProxyInfra(), cfg.EnvoyGateway)
+			infraNamespace := cfg.ControllerNamespace
+			r := NewResourceRender(infraNamespace, cfg.ControllerNamespace, cfg.DNSDomain, tc.infra.GetProxyInfra(), cfg.EnvoyGateway)
 			dp, err := r.Deployment()
 			require.NoError(t, err)
 
@@ -1057,7 +1042,7 @@ func TestDaemonSet(t *testing.T) {
 				tc.infra.Proxy.Config.Spec.ExtraArgs = tc.extraArgs
 			}
 
-			r := NewResourceRender(cfg.ControllerNamespace, cfg.DNSDomain, tc.infra.GetProxyInfra(), cfg.EnvoyGateway)
+			r := NewResourceRender(cfg.ControllerNamespace, cfg.ControllerNamespace, cfg.DNSDomain, tc.infra.GetProxyInfra(), cfg.EnvoyGateway)
 			ds, err := r.DaemonSet()
 			require.NoError(t, err)
 
@@ -1222,7 +1207,7 @@ func TestService(t *testing.T) {
 				provider.EnvoyService = tc.service
 			}
 
-			r := NewResourceRender(cfg.ControllerNamespace, cfg.DNSDomain, tc.infra.GetProxyInfra(), cfg.EnvoyGateway)
+			r := NewResourceRender(cfg.ControllerNamespace, cfg.ControllerNamespace, cfg.DNSDomain, tc.infra.GetProxyInfra(), cfg.EnvoyGateway)
 			svc, err := r.Service()
 			require.NoError(t, err)
 
@@ -1265,7 +1250,7 @@ func TestConfigMap(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			r := NewResourceRender(cfg.ControllerNamespace, cfg.DNSDomain, tc.infra.GetProxyInfra(), cfg.EnvoyGateway)
+			r := NewResourceRender(cfg.ControllerNamespace, cfg.ControllerNamespace, cfg.DNSDomain, tc.infra.GetProxyInfra(), cfg.EnvoyGateway)
 			cm, err := r.ConfigMap("")
 			require.NoError(t, err)
 
@@ -1291,26 +1276,55 @@ func TestServiceAccount(t *testing.T) {
 	cfg, err := config.New(os.Stdout)
 	require.NoError(t, err)
 	cases := []struct {
-		name  string
-		infra *ir.Infra
+		name                 string
+		infra                *ir.Infra
+		gatewayNamespaceMode bool
 	}{
 		{
 			name:  "default",
 			infra: newTestInfra(),
-		}, {
+		},
+		{
 			name: "with-annotations",
 			infra: newTestInfraWithAnnotations(map[string]string{
 				"anno1": "value1",
 				"anno2": "value2",
 			}),
 		},
+		{
+			name:                 "gateway-namespace-mode",
+			infra:                newTestInfraWithNamespace("ns1"),
+			gatewayNamespaceMode: true,
+		},
 	}
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			r := NewResourceRender(cfg.ControllerNamespace, cfg.DNSDomain, tc.infra.GetProxyInfra(), cfg.EnvoyGateway)
+			ns := cfg.ControllerNamespace
+			if tc.gatewayNamespaceMode {
+				deployType := egv1a1.KubernetesDeployModeType(egv1a1.KubernetesDeployModeTypeGatewayNamespace)
+				cfg.EnvoyGateway.Provider = &egv1a1.EnvoyGatewayProvider{
+					Type: egv1a1.ProviderTypeKubernetes,
+					Kubernetes: &egv1a1.EnvoyGatewayKubernetesProvider{
+						Deploy: &egv1a1.KubernetesDeployMode{
+							Type: &deployType,
+						},
+					},
+				}
+				ns = tc.infra.GetProxyInfra().Namespace
+			}
+			r := NewResourceRender(ns, cfg.ControllerNamespace, cfg.DNSDomain, tc.infra.GetProxyInfra(), cfg.EnvoyGateway)
 			sa, err := r.ServiceAccount()
 			require.NoError(t, err)
+
+			if test.OverrideTestData() {
+				saYAML, err := yaml.Marshal(sa)
+				require.NoError(t, err)
+				// nolint: gosec
+				err = os.WriteFile(fmt.Sprintf("testdata/serviceaccount/%s.yaml", tc.name), saYAML, 0o644)
+				require.NoError(t, err)
+				return
+			}
 
 			expected, err := loadServiceAccount(tc.name)
 			require.NoError(t, err)
@@ -1423,7 +1437,7 @@ func TestPDB(t *testing.T) {
 
 			provider.GetEnvoyProxyKubeProvider()
 
-			r := NewResourceRender(cfg.ControllerNamespace, cfg.DNSDomain, tc.infra.GetProxyInfra(), cfg.EnvoyGateway)
+			r := NewResourceRender(cfg.ControllerNamespace, cfg.ControllerNamespace, cfg.DNSDomain, tc.infra.GetProxyInfra(), cfg.EnvoyGateway)
 
 			pdb, err := r.PodDisruptionBudget()
 			require.NoError(t, err)
@@ -1535,7 +1549,7 @@ func TestHorizontalPodAutoscaler(t *testing.T) {
 			}
 			provider.GetEnvoyProxyKubeProvider()
 
-			r := NewResourceRender(cfg.ControllerNamespace, cfg.DNSDomain, tc.infra.GetProxyInfra(), cfg.EnvoyGateway)
+			r := NewResourceRender(cfg.ControllerNamespace, cfg.ControllerNamespace, cfg.DNSDomain, tc.infra.GetProxyInfra(), cfg.EnvoyGateway)
 			hpa, err := r.HorizontalPodAutoscaler()
 			require.NoError(t, err)
 
@@ -1662,4 +1676,165 @@ func TestIPFamilyPresentInSpec(t *testing.T) {
 			assert.Equal(t, tc.expectedPolicy, svc.Spec.IPFamilyPolicy, "policy")
 		})
 	}
+}
+
+func TestGatewayNamespaceModeMultipleResources(t *testing.T) {
+	cfg, err := config.New(os.Stdout)
+	require.NoError(t, err)
+
+	// Configure gateway namespace mode
+	deployType := egv1a1.KubernetesDeployModeType(egv1a1.KubernetesDeployModeTypeGatewayNamespace)
+	cfg.EnvoyGateway.Provider = &egv1a1.EnvoyGatewayProvider{
+		Type: egv1a1.ProviderTypeKubernetes,
+		Kubernetes: &egv1a1.EnvoyGatewayKubernetesProvider{
+			Deploy: &egv1a1.KubernetesDeployMode{
+				Type: &deployType,
+			},
+		},
+	}
+
+	// Create test infra with multiple namespaces
+	var infraList []*ir.Infra
+	infra1 := newTestInfraWithNamespace("namespace-1")
+	infra1.Proxy.Name = "namespace-1/gateway-1"
+	infra1.Proxy.GetProxyMetadata().Labels[gatewayapi.OwningGatewayNameLabel] = "gateway-1"
+	// Add HPA config to first infra
+	if infra1.Proxy.Config == nil {
+		infra1.Proxy.Config = &egv1a1.EnvoyProxy{Spec: egv1a1.EnvoyProxySpec{}}
+	}
+	if infra1.Proxy.Config.Spec.Provider == nil {
+		infra1.Proxy.Config.Spec.Provider = &egv1a1.EnvoyProxyProvider{}
+	}
+	infra1.Proxy.Config.Spec.Provider.Type = egv1a1.ProviderTypeKubernetes
+	if infra1.Proxy.Config.Spec.Provider.Kubernetes == nil {
+		infra1.Proxy.Config.Spec.Provider.Kubernetes = &egv1a1.EnvoyProxyKubernetesProvider{}
+	}
+	infra1.Proxy.Config.Spec.Provider.Kubernetes.EnvoyHpa = &egv1a1.KubernetesHorizontalPodAutoscalerSpec{
+		MinReplicas: ptr.To[int32](1),
+		MaxReplicas: ptr.To[int32](3),
+	}
+
+	infra2 := newTestInfraWithNamespace("namespace-2")
+	infra2.Proxy.Name = "namespace-2/gateway-2"
+	infra2.Proxy.GetProxyMetadata().Labels[gatewayapi.OwningGatewayNameLabel] = "gateway-2"
+	// Add HPA config to second infra
+	if infra2.Proxy.Config == nil {
+		infra2.Proxy.Config = &egv1a1.EnvoyProxy{Spec: egv1a1.EnvoyProxySpec{}}
+	}
+	if infra2.Proxy.Config.Spec.Provider == nil {
+		infra2.Proxy.Config.Spec.Provider = &egv1a1.EnvoyProxyProvider{}
+	}
+	infra2.Proxy.Config.Spec.Provider.Type = egv1a1.ProviderTypeKubernetes
+	if infra2.Proxy.Config.Spec.Provider.Kubernetes == nil {
+		infra2.Proxy.Config.Spec.Provider.Kubernetes = &egv1a1.EnvoyProxyKubernetesProvider{}
+	}
+	infra2.Proxy.Config.Spec.Provider.Kubernetes.EnvoyHpa = &egv1a1.KubernetesHorizontalPodAutoscalerSpec{
+		MinReplicas: ptr.To[int32](1),
+		MaxReplicas: ptr.To[int32](3),
+	}
+
+	infraList = append(infraList, infra1, infra2)
+
+	deployments := make([]*appsv1.Deployment, 0, len(infraList))
+	services := make([]*corev1.Service, 0, len(infraList))
+	serviceAccounts := make([]*corev1.ServiceAccount, 0, len(infraList))
+	hpas := make([]*autoscalingv2.HorizontalPodAutoscaler, 0, len(infraList))
+
+	for _, infra := range infraList {
+		namespace := infra.GetProxyInfra().Namespace
+		r := NewResourceRender(namespace, cfg.ControllerNamespace, cfg.DNSDomain,
+			infra.GetProxyInfra(), cfg.EnvoyGateway)
+
+		dp, err := r.Deployment()
+		require.NoError(t, err)
+		deployments = append(deployments, dp)
+
+		svc, err := r.Service()
+		require.NoError(t, err)
+		services = append(services, svc)
+
+		sa, err := r.ServiceAccount()
+		require.NoError(t, err)
+		serviceAccounts = append(serviceAccounts, sa)
+
+		hpa, err := r.HorizontalPodAutoscaler()
+		require.NoError(t, err)
+		hpas = append(hpas, hpa)
+
+	}
+
+	// Verify correct number of resources
+	require.Len(t, deployments, len(infraList))
+	require.Len(t, services, len(infraList))
+	require.Len(t, serviceAccounts, len(infraList))
+	require.Len(t, hpas, len(infraList))
+
+	if test.OverrideTestData() {
+		deploymentInterfaces := make([]any, len(deployments))
+		for i, dp := range deployments {
+			deploymentInterfaces[i] = dp
+		}
+
+		err := writeTestDataToFile("testdata/gateway-namespace-mode/deployment.yaml", deploymentInterfaces)
+		require.NoError(t, err)
+
+		serviceInterfaces := make([]any, len(services))
+		for i, svc := range services {
+			serviceInterfaces[i] = svc
+		}
+		err = writeTestDataToFile("testdata/gateway-namespace-mode/service.yaml", serviceInterfaces)
+		require.NoError(t, err)
+
+		saInterfaces := make([]any, len(serviceAccounts))
+		for i, sa := range serviceAccounts {
+			saInterfaces[i] = sa
+		}
+		err = writeTestDataToFile("testdata/gateway-namespace-mode/serviceaccount.yaml", saInterfaces)
+		require.NoError(t, err)
+
+		hpaInterfaces := make([]any, len(hpas))
+		for i, hpa := range hpas {
+			hpaInterfaces[i] = hpa
+		}
+		err = writeTestDataToFile("testdata/gateway-namespace-mode/hpa.yaml", hpaInterfaces)
+		require.NoError(t, err)
+
+		return
+	}
+
+	for i, infra := range infraList {
+		expectedNamespace := infra.GetProxyInfra().Namespace
+		expectedName := ExpectedResourceHashedName(infra.GetProxyInfra().Name)
+
+		require.Equal(t, expectedNamespace, deployments[i].Namespace)
+		require.Equal(t, expectedName, deployments[i].Name)
+
+		require.Equal(t, expectedNamespace, services[i].Namespace)
+		require.Equal(t, expectedName, services[i].Name)
+
+		require.Equal(t, expectedNamespace, serviceAccounts[i].Namespace)
+		require.Equal(t, expectedName, serviceAccounts[i].Name)
+
+		if i < len(hpas) {
+			require.Equal(t, expectedNamespace, hpas[i].Namespace)
+			require.Equal(t, expectedName, hpas[i].Name)
+			require.Equal(t, expectedName, hpas[i].Spec.ScaleTargetRef.Name)
+		}
+	}
+}
+
+func writeTestDataToFile(filename string, resources []any) error {
+	var combinedYAML []byte
+	for i, resource := range resources {
+		resourceYAML, err := yaml.Marshal(resource)
+		if err != nil {
+			return err
+		}
+		if i > 0 {
+			combinedYAML = append(combinedYAML, []byte("---\n")...)
+		}
+		combinedYAML = append(combinedYAML, resourceYAML...)
+	}
+
+	return os.WriteFile(filename, combinedYAML, 0o600)
 }

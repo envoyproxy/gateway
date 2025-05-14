@@ -449,7 +449,6 @@ xdsIR:
             dnsRefreshRate: 5s
             lookupFamily: IPv6
             respectDnsTtl: false
-          name: default/backend-traffic-policy
       - destination:
           name: grpcroute/default/grpcroute-1/rule/0
           settings:
@@ -495,7 +494,6 @@ xdsIR:
             dnsRefreshRate: 5s
             lookupFamily: IPv6
             respectDnsTtl: false
-          name: default/backend-traffic-policy
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4

@@ -6,6 +6,7 @@
 package fuzz
 
 import (
+	"strings"
 	"testing"
 
 	fuzz "github.com/AdaLogics/go-fuzz-headers"
@@ -25,6 +26,9 @@ func FuzzGatewayAPIToXDS(f *testing.F) {
 		dnsDomain, _ := fc.GetString()
 		resourceType, _ := fc.GetString()
 
-		_, _ = egctl.TranslateGatewayAPIToXds(namespace, dnsDomain, resourceType, rs)
+		_, err = egctl.TranslateGatewayAPIToXds(namespace, dnsDomain, resourceType, rs)
+		if err != nil && strings.Contains(err.Error(), "failed to translate xds") {
+			t.Fatalf("%v", err)
+		}
 	})
 }
