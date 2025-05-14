@@ -16,8 +16,6 @@ In standard deployment mode, Envoy Gateway creates all data plane resources in t
 
 Gateway Namespace Mode changes this behavior by placing Envoy Proxy data plane resources like Deployments, Services and ServiceAccounts in each Gateway's namespace, providing stronger isolation and multi-tenancy.
 
-# Design
-
 Traditional deployment mode uses mTLS where both the client and server authenticate each other. However, in Gateway Namespace Mode, we've shifted to server-side TLS and JWT token validation between infra and control-plane.
 
 * Only the CA certificate is available in pods running in Gateway namespaces
@@ -28,7 +26,11 @@ Gateway Namespace Mode uses projected service account JWT tokens for authenticat
 * Use short-lived, audience-specific JWT tokens. These tokens are automatically mounted into pods via the projected volume mechanism
 * JWT validation ensures that only authorized proxies can connect to the xDS server
 
+{{% alert title="Note" color="warning" %}}
+
 Currently it is not supported to run Gateway Namespace Mode with Merged Gateways deployments.
+
+{{% /alert %}}
 
 # Configuration
 
