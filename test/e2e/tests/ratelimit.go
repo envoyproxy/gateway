@@ -964,50 +964,48 @@ var RateLimitGlobalMergeTest = suite.ConformanceTest{
 			headers := map[string]string{"x-user-id": "one"}
 
 			expectOk1 := http.ExpectedResponse{Request: http.Request{Path: "/bar", Headers: headers}, Response: http.Response{StatusCode: 200}, Namespace: ns}
-			expectOk2 := http.ExpectedResponse{Request: http.Request{Path: "/foo", Headers: headers}, Response: http.Response{StatusCode: 200}, Namespace: ns}
-			expectOk3 := http.ExpectedResponse{Request: http.Request{Path: "/bar", Headers: headers}, Response: http.Response{StatusCode: 200}, Namespace: ns}
+			expectOk2 := http.ExpectedResponse{Request: http.Request{Path: "/bar", Headers: headers}, Response: http.Response{StatusCode: 200}, Namespace: ns}
+			expectOk3 := http.ExpectedResponse{Request: http.Request{Path: "/foo", Headers: headers}, Response: http.Response{StatusCode: 200}, Namespace: ns}
 			expectLimit := http.ExpectedResponse{Request: http.Request{Path: "/foo", Headers: headers}, Response: http.Response{StatusCode: 429}, Namespace: ns}
 
 			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr2, expectOk1)
 
-			if err := GotExactExpectedResponse(t, 1, suite.RoundTripper, http.MakeRequest(t, &expectOk1, gwAddr2, "HTTP", "http"), expectOk1); err != nil {
-				t.Errorf("failed to get expected OK response for first /bar request: %v", err)
-			}
-			if err := GotExactExpectedResponse(t, 1, suite.RoundTripper, http.MakeRequest(t, &expectOk2, gwAddr1, "HTTP", "http"), expectOk2); err != nil {
-				t.Errorf("failed to get expected OK response for /foo request: %v", err)
-			}
-			if err := GotExactExpectedResponse(t, 1, suite.RoundTripper, http.MakeRequest(t, &expectOk3, gwAddr2, "HTTP", "http"), expectOk3); err != nil {
-				t.Errorf("failed to get expected OK response for second /bar request: %v", err)
+			for _, expect := range []http.ExpectedResponse{expectOk1, expectOk2, expectOk3} {
+				if err := GotExactExpectedResponse(t, 1, suite.RoundTripper, http.MakeRequest(t, &expect, gwAddr2, "HTTP", "http"), expect); err != nil {
+					t.Errorf("expected 200 response: %v", err)
+				}
 			}
 			if err := GotExactExpectedResponse(t, 1, suite.RoundTripper, http.MakeRequest(t, &expectLimit, gwAddr1, "HTTP", "http"), expectLimit); err != nil {
-				t.Errorf("failed to get expected rate limit (429) response for fourth request: %v", err)
+				t.Errorf("expected 429 response: %v", err)
 			}
 		})
 
 		t.Run("unshared_route_policy_x-user-id=two", func(t *testing.T) {
 			headers := map[string]string{"x-user-id": "two"}
 
-			// Route 1 (/foo)
-			ok1 := http.ExpectedResponse{Request: http.Request{Path: "/foo", Headers: headers}, Response: http.Response{StatusCode: 200}, Namespace: ns}
-			limit1 := http.ExpectedResponse{Request: http.Request{Path: "/foo", Headers: headers}, Response: http.Response{StatusCode: 429}, Namespace: ns}
-			// Route 2 (/bar)
-			ok2 := http.ExpectedResponse{Request: http.Request{Path: "/bar", Headers: headers}, Response: http.Response{StatusCode: 200}, Namespace: ns}
-			limit2 := http.ExpectedResponse{Request: http.Request{Path: "/bar", Headers: headers}, Response: http.Response{StatusCode: 429}, Namespace: ns}
+			okFoo := http.ExpectedResponse{Request: http.Request{Path: "/foo", Headers: headers}, Response: http.Response{StatusCode: 200}, Namespace: ns}
+			limitFoo := http.ExpectedResponse{Request: http.Request{Path: "/foo", Headers: headers}, Response: http.Response{StatusCode: 429}, Namespace: ns}
+			okBar := http.ExpectedResponse{Request: http.Request{Path: "/bar", Headers: headers}, Response: http.Response{StatusCode: 200}, Namespace: ns}
+			limitBar := http.ExpectedResponse{Request: http.Request{Path: "/bar", Headers: headers}, Response: http.Response{StatusCode: 429}, Namespace: ns}
 
-			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr1, ok1)
+			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr1, okFoo)
 
-			if err := GotExactExpectedResponse(t, 3, suite.RoundTripper, http.MakeRequest(t, &ok1, gwAddr1, "HTTP", "http"), ok1); err != nil {
-				t.Errorf("failed to get expected OK responses for first three /foo requests: %v", err)
+			for i := 0; i < 3; i++ {
+				if err := GotExactExpectedResponse(t, 1, suite.RoundTripper, http.MakeRequest(t, &okFoo, gwAddr1, "HTTP", "http"), okFoo); err != nil {
+					t.Errorf("foo request #%d failed: %v", i+1, err)
+				}
 			}
-			if err := GotExactExpectedResponse(t, 1, suite.RoundTripper, http.MakeRequest(t, &limit1, gwAddr1, "HTTP", "http"), limit1); err != nil {
-				t.Errorf("failed to get expected rate limit (429) response for fourth /foo request: %v", err)
+			if err := GotExactExpectedResponse(t, 1, suite.RoundTripper, http.MakeRequest(t, &limitFoo, gwAddr1, "HTTP", "http"), limitFoo); err != nil {
+				t.Errorf("expected 429 on 4th foo: %v", err)
 			}
 
-			if err := GotExactExpectedResponse(t, 3, suite.RoundTripper, http.MakeRequest(t, &ok2, gwAddr2, "HTTP", "http"), ok2); err != nil {
-				t.Errorf("failed to get expected OK responses for first three /bar requests: %v", err)
+			for i := 0; i < 3; i++ {
+				if err := GotExactExpectedResponse(t, 1, suite.RoundTripper, http.MakeRequest(t, &okBar, gwAddr2, "HTTP", "http"), okBar); err != nil {
+					t.Errorf("bar request #%d failed: %v", i+1, err)
+				}
 			}
-			if err := GotExactExpectedResponse(t, 1, suite.RoundTripper, http.MakeRequest(t, &limit2, gwAddr2, "HTTP", "http"), limit2); err != nil {
-				t.Errorf("failed to get expected rate limit (429) response for fourth /bar request: %v", err)
+			if err := GotExactExpectedResponse(t, 1, suite.RoundTripper, http.MakeRequest(t, &limitBar, gwAddr2, "HTTP", "http"), limitBar); err != nil {
+				t.Errorf("expected 429 on 4th bar: %v", err)
 			}
 		})
 
@@ -1015,59 +1013,66 @@ var RateLimitGlobalMergeTest = suite.ConformanceTest{
 			headers := map[string]string{"x-user-id": "three"}
 
 			ok1 := http.ExpectedResponse{Request: http.Request{Path: "/bar", Headers: headers}, Response: http.Response{StatusCode: 200}, Namespace: ns}
-			ok2 := http.ExpectedResponse{Request: http.Request{Path: "/foo", Headers: headers}, Response: http.Response{StatusCode: 200}, Namespace: ns}
-			ok3 := http.ExpectedResponse{Request: http.Request{Path: "/bar", Headers: headers}, Response: http.Response{StatusCode: 200}, Namespace: ns}
+			ok2 := http.ExpectedResponse{Request: http.Request{Path: "/bar", Headers: headers}, Response: http.Response{StatusCode: 200}, Namespace: ns}
+			ok3 := http.ExpectedResponse{Request: http.Request{Path: "/foo", Headers: headers}, Response: http.Response{StatusCode: 200}, Namespace: ns}
 			limit := http.ExpectedResponse{Request: http.Request{Path: "/foo", Headers: headers}, Response: http.Response{StatusCode: 429}, Namespace: ns}
 
 			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr2, ok1)
 
-			if err := GotExactExpectedResponse(t, 1, suite.RoundTripper, http.MakeRequest(t, &ok1, gwAddr2, "HTTP", "http"), ok1); err != nil {
-				t.Errorf("failed to get expected OK response for first /bar request: %v", err)
-			}
-			if err := GotExactExpectedResponse(t, 1, suite.RoundTripper, http.MakeRequest(t, &ok2, gwAddr1, "HTTP", "http"), ok2); err != nil {
-				t.Errorf("failed to get expected OK response for /foo request: %v", err)
-			}
-			if err := GotExactExpectedResponse(t, 1, suite.RoundTripper, http.MakeRequest(t, &ok3, gwAddr2, "HTTP", "http"), ok3); err != nil {
-				t.Errorf("failed to get expected OK response for second /bar request: %v", err)
+			for _, expect := range []http.ExpectedResponse{ok1, ok2, ok3} {
+				if err := GotExactExpectedResponse(t, 1, suite.RoundTripper, http.MakeRequest(t, &expect, gwAddr2, "HTTP", "http"), expect); err != nil {
+					t.Errorf("expected 200 response: %v", err)
+				}
 			}
 			if err := GotExactExpectedResponse(t, 1, suite.RoundTripper, http.MakeRequest(t, &limit, gwAddr1, "HTTP", "http"), limit); err != nil {
-				t.Errorf("failed to get expected rate limit (429) response for fourth request: %v", err)
+				t.Errorf("expected 429 response: %v", err)
 			}
 		})
 
 		t.Run("unshared_gateway_policy__x-user-id=four", func(t *testing.T) {
 			headers := map[string]string{"x-user-id": "four"}
 
-			ok1 := http.ExpectedResponse{Request: http.Request{Path: "/foo", Headers: headers}, Response: http.Response{StatusCode: 200}, Namespace: ns}
-			limit1 := http.ExpectedResponse{Request: http.Request{Path: "/foo", Headers: headers}, Response: http.Response{StatusCode: 429}, Namespace: ns}
-			ok2 := http.ExpectedResponse{Request: http.Request{Path: "/bar", Headers: headers}, Response: http.Response{StatusCode: 200}, Namespace: ns}
-			limit2 := http.ExpectedResponse{Request: http.Request{Path: "/bar", Headers: headers}, Response: http.Response{StatusCode: 429}, Namespace: ns}
+			okFoo := http.ExpectedResponse{Request: http.Request{Path: "/foo", Headers: headers}, Response: http.Response{StatusCode: 200}, Namespace: ns}
+			limitFoo := http.ExpectedResponse{Request: http.Request{Path: "/foo", Headers: headers}, Response: http.Response{StatusCode: 429}, Namespace: ns}
+			okBar := http.ExpectedResponse{Request: http.Request{Path: "/bar", Headers: headers}, Response: http.Response{StatusCode: 200}, Namespace: ns}
+			limitBar := http.ExpectedResponse{Request: http.Request{Path: "/bar", Headers: headers}, Response: http.Response{StatusCode: 429}, Namespace: ns}
 
-			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr1, ok1)
+			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr1, okFoo)
 
-			if err := GotExactExpectedResponse(t, 3, suite.RoundTripper, http.MakeRequest(t, &ok1, gwAddr1, "HTTP", "http"), ok1); err != nil {
-				t.Errorf("failed to get expected OK responses for first three /foo requests: %v", err)
+			for i := 0; i < 3; i++ {
+				if err := GotExactExpectedResponse(t, 1, suite.RoundTripper, http.MakeRequest(t, &okFoo, gwAddr1, "HTTP", "http"), okFoo); err != nil {
+					t.Errorf("foo request #%d failed: %v", i+1, err)
+				}
 			}
-			if err := GotExactExpectedResponse(t, 1, suite.RoundTripper, http.MakeRequest(t, &limit1, gwAddr1, "HTTP", "http"), limit1); err != nil {
-				t.Errorf("failed to get expected rate limit (429) response for fourth /foo request: %v", err)
+			if err := GotExactExpectedResponse(t, 1, suite.RoundTripper, http.MakeRequest(t, &limitFoo, gwAddr1, "HTTP", "http"), limitFoo); err != nil {
+				t.Errorf("expected 429 on 4th foo: %v", err)
 			}
 
-			if err := GotExactExpectedResponse(t, 3, suite.RoundTripper, http.MakeRequest(t, &ok2, gwAddr2, "HTTP", "http"), ok2); err != nil {
-				t.Errorf("failed to get expected OK responses for first three /bar requests: %v", err)
+			for i := 0; i < 3; i++ {
+				if err := GotExactExpectedResponse(t, 1, suite.RoundTripper, http.MakeRequest(t, &okBar, gwAddr2, "HTTP", "http"), okBar); err != nil {
+					t.Errorf("bar request #%d failed: %v", i+1, err)
+				}
 			}
-			if err := GotExactExpectedResponse(t, 1, suite.RoundTripper, http.MakeRequest(t, &limit2, gwAddr2, "HTTP", "http"), limit2); err != nil {
-				t.Errorf("failed to get expected rate limit (429) response for fourth /bar request: %v", err)
+			if err := GotExactExpectedResponse(t, 1, suite.RoundTripper, http.MakeRequest(t, &limitBar, gwAddr2, "HTTP", "http"), limitBar); err != nil {
+				t.Errorf("expected 429 on 4th bar: %v", err)
 			}
 		})
 
 		t.Run("shared_no_client_selectors", func(t *testing.T) {
 			ok1 := http.ExpectedResponse{Request: http.Request{Path: "/bar"}, Response: http.Response{StatusCode: 200}, Namespace: ns}
-			limit1 := http.ExpectedResponse{Request: http.Request{Path: "/bar"}, Response: http.Response{StatusCode: 429}, Namespace: ns}
+			ok2 := http.ExpectedResponse{Request: http.Request{Path: "/bar"}, Response: http.Response{StatusCode: 200}, Namespace: ns}
+			limit := http.ExpectedResponse{Request: http.Request{Path: "/bar"}, Response: http.Response{StatusCode: 429}, Namespace: ns}
 
 			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr1, ok1)
 
-			if err := GotExactExpectedResponse(t, 1, suite.RoundTripper, http.MakeRequest(t, &limit1, gwAddr2, "HTTP", "http"), limit1); err != nil {
-				t.Errorf("failed to get expected rate limit (429) response for fourth /bar request: %v", err)
+			if err := GotExactExpectedResponse(t, 1, suite.RoundTripper, http.MakeRequest(t, &ok1, gwAddr1, "HTTP", "http"), ok1); err != nil {
+				t.Errorf("expected 200 for first request: %v", err)
+			}
+			if err := GotExactExpectedResponse(t, 1, suite.RoundTripper, http.MakeRequest(t, &ok2, gwAddr2, "HTTP", "http"), ok2); err != nil {
+				t.Errorf("expected 200 for second request: %v", err)
+			}
+			if err := GotExactExpectedResponse(t, 1, suite.RoundTripper, http.MakeRequest(t, &limit, gwAddr1, "HTTP", "http"), limit); err != nil {
+				t.Errorf("expected 429 for third request: %v", err)
 			}
 		})
 	},

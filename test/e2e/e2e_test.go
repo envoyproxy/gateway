@@ -80,6 +80,7 @@ func TestE2E(t *testing.T) {
 			tests.UsageRateLimitTest.ShortName,
 			tests.RateLimitGlobalSharedCidrMatchTest.ShortName,
 			tests.RateLimitGlobalSharedGatewayHeaderMatchTest.ShortName,
+			tests.RateLimitGlobalMergeTest.ShortName,
 		)
 	}
 
