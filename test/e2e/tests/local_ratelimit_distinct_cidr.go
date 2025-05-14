@@ -93,7 +93,7 @@ var LocalRateLimitDistinctCIDRTest = suite.ConformanceTest{
 	},
 }
 
-func testRatelimit(t *testing.T, suite *suite.ConformanceTestSuite, headers map[string]string, ns string, gwAddr, path string) {
+func testRatelimit(t *testing.T, suite *suite.ConformanceTestSuite, headers map[string]string, ns, gwAddr, path string) {
 	utils.MakeRequestAndExpectEventuallyConsistentResponse(t, suite, gwAddr, http.ExpectedResponse{
 		Request: http.Request{
 			Path:    path,
