@@ -106,12 +106,16 @@ func compareRequest(t *testing.T, req *roundtripper.Request, cReq *roundtripper.
 				actualVal, ok := cRes.Headers[strings.ToLower(name)]
 				if !ok {
 					return fmt.Errorf("expected %s header to be set, actual headers: %v", name, cRes.Headers)
-				} else if expectedVal == "" {
+				}
+
+				if expectedVal == "" {
 					// If the expected value is empty, we don't care about the actual value.
 					// This is useful for headers that are set by the backend, and we don't
 					// care about their values.
 					continue
-				} else if strings.Join(actualVal, ",") != expectedVal {
+				}
+
+				if strings.Join(actualVal, ",") != expectedVal {
 					return fmt.Errorf("expected %s header to be set to %s, got %s", name, expectedVal, strings.Join(actualVal, ","))
 				}
 			}
