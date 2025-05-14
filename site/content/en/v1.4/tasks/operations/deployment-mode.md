@@ -4,18 +4,22 @@ title: "Deployment Mode"
 ## Deployment modes
 
 ### One GatewayClass per Envoy Gateway Controller
+
 * An Envoy Gateway is associated with a single [GatewayClass][] resource under one controller.
 This is the simplest deployment mode and is suitable for scenarios where each Gateway needs to have its own dedicated set of resources and configurations.
 
 ### Multiple GatewayClasses per Envoy Gateway Controller
+
 * An Envoy Gateway is associated with multiple [GatewayClass][] resources under one controller.
 * Support for accepting multiple GatewayClasses was added [here][issue1231].
 
 ### Separate Envoy Gateway Controllers
+
 If you've instantiated multiple GatewayClasses, you can also run separate Envoy Gateway controllers in different namespaces, linking a GatewayClass to each of them for multi-tenancy.
 Please follow the example [Multi-tenancy](#multi-tenancy).
 
 ### Merged Gateways onto a single EnvoyProxy fleet
+
 By default, each Gateway has its own dedicated set of Envoy Proxy and its configurations.
 However, for some deployments, it may be more convenient to merge listeners across multiple Gateways and deploy a single Envoy Proxy fleet.
 
@@ -26,6 +30,14 @@ Setting the `mergeGateways` field in the EnvoyProxy resource linked to GatewayCl
 
 Please follow the example [Merged gateways deployment](#merged-gateways-deployment).
 
+### Gateway Namespace Mode
+
+Gateway Namespace Mode is a deployment model for Envoy Gateway that creates Envoy Proxy infrastructure resources like Deployments, Services and ServiceAccounts in the namespace where each Gateway resource is defined, rather than in the Envoy Gateway controller namespace.
+
+* Support for this deployment mode was added [here][issue2629].
+
+Please follow the example [Gateway Namespace Mode][].
+
 ### Supported Modes
 
 #### Kubernetes
@@ -34,7 +46,6 @@ Please follow the example [Merged gateways deployment](#merged-gateways-deployme
 and **creates** managed data plane resources such as EnvoyProxy `Deployment` in the **namespace where Envoy Gateway is running**.
 * Envoy Gateway also supports [Namespaced deployment mode][], you can watch resources in the specific namespaces by assigning
 `EnvoyGateway.provider.kubernetes.watch.namespaces` or `EnvoyGateway.provider.kubernetes.watch.namespaceSelector` and **creates** managed data plane resources in the **namespace where Envoy Gateway is running**.
-* Support for alternate deployment modes is being tracked [here][issue1117].
 
 ### Multi-tenancy
 
@@ -1068,5 +1079,6 @@ curl --header "Host: www.merged3.com" http://$GATEWAY_HOST:8082/example3
 [EnvoyProxy]: ../../api/extension_types#envoyproxy
 [GatewayClass]: https://gateway-api.sigs.k8s.io/api-types/gatewayclass/
 [Namespaced deployment mode]: ../../api/extension_types#kuberneteswatchmode
+[Gateway Namespace Mode]: ./gateway-namespace-mode.md
 [issue1231]: https://github.com/envoyproxy/gateway/issues/1231
-[issue1117]: https://github.com/envoyproxy/gateway/issues/1117
+[issue2629]: https://github.com/envoyproxy/gateway/issues/2629
