@@ -364,6 +364,7 @@ func buildRouteRateLimits(route *ir.HTTPRoute) (rateLimits []*routev3.RateLimit,
 			action := &routev3.RateLimit_Action{
 				ActionSpecifier: &routev3.RateLimit_Action_GenericKey_{
 					GenericKey: &routev3.RateLimit_Action_GenericKey{
+						// TODO:
 						DescriptorKey:   getRouteRuleDescriptor(domainRuleIdx, -1),
 						DescriptorValue: getRouteRuleDescriptor(domainRuleIdx, -1),
 					},
@@ -723,6 +724,7 @@ func buildRateLimitServiceDescriptors(route *ir.HTTPRoute) []*rlsconfv3.RateLimi
 		if !rule.IsMatchSet() {
 			pbDesc := new(rlsconfv3.RateLimitDescriptor)
 
+			// TODO: Ryan
 			// Determine if we should use the shared rate limit key (rule-based) or a generic route key
 			if isRuleAtIndexShared(route, rIdx) {
 				// For shared rate limits, use rule name
