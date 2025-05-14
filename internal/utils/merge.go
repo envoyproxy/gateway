@@ -9,15 +9,12 @@ import (
 	"encoding/json"
 	"fmt"
 
+	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	jsonpatch "github.com/evanphx/json-patch"
 	"k8s.io/apimachinery/pkg/util/strategicpatch"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-
-	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
-	"github.com/envoyproxy/gateway/internal/ir"
 )
 
-func MergeWithPatch[T client.Object](original T, patch *egv1a1.KubernetesPatchSpec) (T, error) {
+func MergeWithPatch[T any](original T, patch *egv1a1.KubernetesPatchSpec) (T, error) {
 	if patch == nil {
 		return original, nil
 	}
@@ -30,7 +27,7 @@ func MergeWithPatch[T client.Object](original T, patch *egv1a1.KubernetesPatchSp
 	return mergeInternal(original, patch.Value.Raw, mergeType)
 }
 
-func mergeInternal[T client.Object](original T, patchJSON []byte, mergeType egv1a1.MergeType) (T, error) {
+func mergeInternal[T any](original T, patchJSON []byte, mergeType egv1a1.MergeType) (T, error) {
 	var (
 		patchedJSON  []byte
 		originalJSON []byte
@@ -65,7 +62,7 @@ func mergeInternal[T client.Object](original T, patchJSON []byte, mergeType egv1
 	return *res, nil
 }
 
-func Merge[T client.Object](original, patch T, mergeType egv1a1.MergeType) (T, error) {
+func Merge[T any](original, patch T, mergeType egv1a1.MergeType) (T, error) {
 	var (
 		patchJSON []byte
 		err       error
@@ -77,53 +74,4 @@ func Merge[T client.Object](original, patch T, mergeType egv1a1.MergeType) (T, e
 		return empty, fmt.Errorf("error marshaling original service: %w", err)
 	}
 	return mergeInternal(original, patchJSON, mergeType)
-}
-
-func mergeRLInternal[T *ir.RateLimit](original T, patchJSON []byte, mergeType egv1a1.MergeType) (T, error) {
-	var (
-		patchedJSON  []byte
-		originalJSON []byte
-		err          error
-		empty        T
-	)
-
-	originalJSON, err = json.Marshal(original)
-	if err != nil {
-		return empty, fmt.Errorf("error marshaling original service: %w", err)
-	}
-	switch mergeType {
-	case egv1a1.StrategicMerge:
-		patchedJSON, err = strategicpatch.StrategicMergePatch(originalJSON, patchJSON, empty)
-		if err != nil {
-			return empty, fmt.Errorf("error during strategic merge: %w", err)
-		}
-	case egv1a1.JSONMerge:
-		patchedJSON, err = jsonpatch.MergePatch(originalJSON, patchJSON)
-		if err != nil {
-			return empty, fmt.Errorf("error during JSON merge: %w", err)
-		}
-	default:
-		return empty, fmt.Errorf("unsupported merge type: %v", mergeType)
-	}
-
-	res := new(T)
-	if err = json.Unmarshal(patchedJSON, res); err != nil {
-		return empty, fmt.Errorf("error unmarshaling patched service: %w", err)
-	}
-
-	return *res, nil
-}
-
-func MergeRL[T *ir.RateLimit](original, patch T, mergeType egv1a1.MergeType) (T, error) {
-	var (
-		patchJSON []byte
-		err       error
-		empty     T
-	)
-
-	patchJSON, err = json.Marshal(patch)
-	if err != nil {
-		return empty, fmt.Errorf("error marshaling original service: %w", err)
-	}
-	return mergeRLInternal(original, patchJSON, mergeType)
 }
