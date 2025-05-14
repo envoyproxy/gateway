@@ -80,11 +80,17 @@ var LocalRateLimitDistinctCIDRTest = suite.ConformanceTest{
 						"x-org-id":        "bar",
 					},
 				},
+				ExpectedRequest: &http.ExpectedRequest{
+					Request: http.Request{
+						Path:    path,
+						Headers: nil, // don't check headers since Envoy will append the client IP to the X-Forwarded-For header
+					},
+				},
 				Response: http.Response{
-					StatusCode: 200,
+					StatusCode: 429,
 					Headers: map[string]string{
 						RatelimitLimitHeaderName:     "10", // this means it hit the default bucket
-						RatelimitRemainingHeaderName: "4",
+						RatelimitRemainingHeaderName: "0",
 					},
 				},
 				Namespace: ns,
