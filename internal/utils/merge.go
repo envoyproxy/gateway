@@ -9,9 +9,10 @@ import (
 	"encoding/json"
 	"fmt"
 
-	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	jsonpatch "github.com/evanphx/json-patch"
 	"k8s.io/apimachinery/pkg/util/strategicpatch"
+
+	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 )
 
 func MergeWithPatch[T any](original T, patch *egv1a1.KubernetesPatchSpec) (T, error) {
