@@ -56,7 +56,7 @@ type httpFilter interface {
 	patchHCM(mgr *hcmv3.HttpConnectionManager, irListener *ir.HTTPListener) error
 
 	// patchRoute patches the provide Route with a filter's Route level configuration.
-	patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute) error
+	patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute, httpListener *ir.HTTPListener) error
 
 	// patchResources adds all the other needed resources referenced by this
 	// filter to the resource version table.
@@ -296,12 +296,9 @@ func (t *Translator) patchHCMWithFilters(
 
 // patchRouteWithPerRouteConfig appends per-route filter configuration to the
 // provided route.
-func patchRouteWithPerRouteConfig(
-	route *routev3.Route,
-	irRoute *ir.HTTPRoute,
-) error {
+func patchRouteWithPerRouteConfig(route *routev3.Route, irRoute *ir.HTTPRoute, httpListener *ir.HTTPListener) error {
 	for _, filter := range httpFilters {
-		if err := filter.patchRoute(route, irRoute); err != nil {
+		if err := filter.patchRoute(route, irRoute, httpListener); err != nil {
 			return err
 		}
 	}
