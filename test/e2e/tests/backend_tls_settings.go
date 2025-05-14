@@ -171,7 +171,7 @@ func confirmEchoBackendRes(httpRes *http.ExpectedResponse, expectedResBody *Resp
 			InsecureSkipVerify: true, //nolint:gosec
 		},
 	}
-	req := http.MakeRequest(t, httpRes, gwAddr, "HTTPS", "https")
+	req := http.MakeRequest(t, httpRes, gwAddr, "HTTP", "http")
 	res, err := casePreservingRoundTrip(req, transport, suite)
 	if err != nil {
 		return err
