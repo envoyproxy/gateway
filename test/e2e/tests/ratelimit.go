@@ -1061,6 +1061,7 @@ var RateLimitGlobalMergeTest = suite.ConformanceTest{
 		})
 
 		t.Run("shared_no_client_selectors", func(t *testing.T) {
+			ok1 := http.ExpectedResponse{Request: http.Request{Path: "/bar"}, Response: http.Response{StatusCode: 200}, Namespace: ns}
 			limit1 := http.ExpectedResponse{Request: http.Request{Path: "/bar"}, Response: http.Response{StatusCode: 429}, Namespace: ns}
 
 			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr1, ok1)

@@ -9,6 +9,7 @@ import (
 	"bytes"
 	"fmt"
 	"net/url"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -84,7 +85,6 @@ func (t *Translator) buildRateLimitFilter(irListener *ir.HTTPListener) []*hcmv3.
 	if irListener == nil || irListener.Routes == nil {
 		return nil
 	}
-
 	domains := make(map[string]struct{})
 	for _, route := range irListener.Routes {
 		if !isValidGlobalRateLimit(route) {
@@ -96,11 +96,17 @@ func (t *Translator) buildRateLimitFilter(irListener *ir.HTTPListener) []*hcmv3.
 			}
 		}
 	}
-	// Always include the non-shared listener domain
 	domains[irListener.Name] = struct{}{}
 
+	// Deterministic order otherwise tests break
+	domainList := make([]string, 0, len(domains))
+	for d := range domains {
+		domainList = append(domainList, d)
+	}
+	sort.Strings(domainList)
+
 	var filters []*hcmv3.HttpFilter
-	for domain := range domains {
+	for _, domain := range domainList {
 		filterName := egv1a1.EnvoyFilterRateLimit.String()
 		if domain != irListener.Name {
 			filterName += "/" + domain
@@ -570,16 +576,6 @@ func isRuleShared(rule *ir.RateLimitRule) bool {
 	return rule != nil && rule.Shared != nil && *rule.Shared
 }
 
-// Helper function to check if a specific rule in a route is shared
-func isRuleAtIndexShared(route *ir.HTTPRoute, ruleIndex int) bool {
-	if route == nil || route.Traffic == nil || route.Traffic.RateLimit == nil ||
-		route.Traffic.RateLimit.Global == nil || len(route.Traffic.RateLimit.Global.Rules) <= ruleIndex || ruleIndex < 0 {
-		return false
-	}
-
-	return isRuleShared(route.Traffic.RateLimit.Global.Rules[ruleIndex])
-}
-
 // Helper function to map a global rule index to a domain-specific rule index
 // This ensures that both shared and non-shared rules have indices starting from 0 in their own domains.
 func getDomainRuleIndex(rules []*ir.RateLimitRule, globalRuleIdx int, ruleIsShared bool) int {
@@ -780,11 +776,6 @@ func (t *Translator) createRateLimitServiceCluster(tCtx *types.ResourceVersionTa
 		endpointType: EndpointTypeDNS,
 		metrics:      metrics,
 	})
-}
-
-// getDomainSharedName returns the shared domain (stripped policy name), stripRuleIndexSuffix is used to remove the rule index suffix.
-func getDomainSharedName(route *ir.HTTPRoute) string {
-	return stripRuleIndexSuffix(route.Traffic.RateLimit.Global.Rules[0].Name)
 }
 
 func getRouteRuleDescriptor(ruleIndex, matchIndex int) string {
