@@ -23,11 +23,11 @@ gateways:
               from: Same
     status:
       conditions:
-      - lastTransitionTime: null
-        message: "Gateway cannot be accepted: Merged Gateways and Gateway Namespace Mode are not supported together"
-        reason: Invalid
-        status: "False"
-        type: Accepted
+        - lastTransitionTime: null
+          message: "Gateway cannot be accepted: Merged Gateways and Gateway Namespace Mode are not supported together"
+          reason: Invalid
+          status: "False"
+          type: Accepted
   - apiVersion: gateway.networking.k8s.io/v1beta1
     kind: Gateway
     metadata:
@@ -48,11 +48,11 @@ gateways:
           protocol: HTTP
     status:
       conditions:
-      - lastTransitionTime: null
-        message: "Gateway cannot be accepted: Merged Gateways and Gateway Namespace Mode are not supported together"
-        reason: Invalid
-        status: "False"
-        type: Accepted
+        - lastTransitionTime: null
+          message: "Gateway cannot be accepted: Merged Gateways and Gateway Namespace Mode are not supported together"
+          reason: Invalid
+          status: "False"
+          type: Accepted
 httpRoutes:
   - apiVersion: gateway.networking.k8s.io/v1
     kind: HTTPRoute
