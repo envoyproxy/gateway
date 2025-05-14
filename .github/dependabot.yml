@@ -41,11 +41,13 @@ updates:
           - "github.com*"
           - "go.opentelemetry.io*"
           - "golang*"
+          - "golang.org*"
           - "google*"
+          - "google.golang.org*"
           - "fortio.org*"
           - "gopkg.in*"
           - "helm.sh*"
-          - "gomodules.xyz"
+          - "gomodules.xyz*"
         exclude-patterns:
           # Exclude envoyproxy/go-control-plane, since it needs more work to update
           - "github.com/envoyproxy/go-control-plane*"
