@@ -308,7 +308,7 @@ func expectedContainerVolumeMounts(containerSpec *egv1a1.KubernetesContainerSpec
 }
 
 // expectedVolumes returns expected proxy deployment volumes.
-func expectedVolumes(name string, gatewayNamespacedMode bool, pod *egv1a1.KubernetesPodSpec, dnsDomain string) []corev1.Volume {
+func expectedVolumes(name string, gatewayNamespacedMode bool, pod *egv1a1.KubernetesPodSpec, dnsDomain, controllerNamespace string) []corev1.Volume {
 	var volumes []corev1.Volume
 	certsVolume := corev1.Volume{
 		Name: "certs",
@@ -339,7 +339,7 @@ func expectedVolumes(name string, gatewayNamespacedMode bool, pod *egv1a1.Kubern
 				},
 			},
 		}
-		saAudience := fmt.Sprintf("%s.%s.svc.%s", config.EnvoyGatewayServiceName, config.DefaultNamespace, dnsDomain)
+		saAudience := fmt.Sprintf("%s.%s.svc.%s", config.EnvoyGatewayServiceName, controllerNamespace, dnsDomain)
 		saTokenProjectedVolume := corev1.Volume{
 			Name: "sa-token",
 			VolumeSource: corev1.VolumeSource{
