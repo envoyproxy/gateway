@@ -10,7 +10,7 @@ For status updates or to provide feedback, please follow our [GitHub issues](htt
 
 {{% /alert %}}
 
-# Overview
+## Overview
 
 In standard deployment mode, Envoy Gateway creates all data plane resources in the controller namespace (typically `envoy-gateway-system`).
 
@@ -32,11 +32,11 @@ Currently it is not supported to run Gateway Namespace Mode with Merged Gateways
 
 {{% /alert %}}
 
-# Configuration
+## Configuration
 
 To enable Gateway Namespace Mode, configure the `provider.kubernetes.deploy.type` field in your Envoy Gateway ConfigMap:
 
-```bash
+```yaml
 apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: EnvoyGateway
 metadata:
@@ -52,18 +52,18 @@ spec:
 
 To install Envoy Gateway with Gateway Namespace Mode using Helm:
 
-```bash
+```shell
 helm install \
   --set config.envoyGateway.provider.kubernetes.deploy.type=GatewayNamespace \
   eg oci://docker.io/envoyproxy/gateway-helm \
-  --version latest -n envoy-gateway-system --create-namespace
+  --version {{< helm-version >}} -n envoy-gateway-system --create-namespace
 ```
 
-## RBAC configuration
+### RBAC configuration
 
 When using Gateway Namespace Mode, Envoy Gateway needs additional RBAC permissions to create and manage resources across different namespaces. The following RBAC resources are automatically created when installing Envoy Gateway Helm Chart with Gateway Namespace Mode enabled.
 
-```bash
+```yaml
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
@@ -100,23 +100,23 @@ Envoy Gateway also supports configuration to you only watch resources in the spe
 `EnvoyGateway.provider.kubernetes.watch.namespaces` or `EnvoyGateway.provider.kubernetes.watch.namespaceSelector`.
 In this case, when you specify this configuration with Gateway Namespace Mode,Envoy Gateway will only watch for Gateway API resources in the specified namespaces and create needed Roles for infrastructure management in the specified namespaces.
 
-# Testing
+## Testing
 
 The following example demonstrates deploying two Gateways in different namespaces `team-a` and `team-b`.
 
-## Create test namespaces
+### Create test namespaces
 
 ```shell
 kubectl create namespace team-a
 kubectl create namespace team-b
 ```
 
-## Deploy Gateway Namespace Mode Example
+### Deploy Gateway Namespace Mode Example
 
 Deploy resources on your cluster from the example, it will create two sets of backend deployments, Gateways and their respective HTTPRoutes in the previously created namespaces `team-a` and `team-b`.
 
 ```shell
-kubectl apply -f https://raw.githubusercontent.com/envoyproxy/gateway/latest/examples/kubernetes/gateway-namespace-mode.yaml
+kubectl apply -f https://raw.githubusercontent.com/envoyproxy/gateway/{{< yaml-version >}}/examples/kubernetes/gateway-namespace-mode.yaml
 ```
 
 Verify that Gateways are deployed and programmed
@@ -185,7 +185,7 @@ envoy-team-b-gateway-b-0ac91f5a   LoadBalancer   10.96.144.13   172.18.0.201   8
 team-b-backend                    ClusterIP      10.96.26.162   <none>         3000/TCP         3m43s
 ```
 
-## Testing the Configuration
+### Testing the Configuration
 
 Fetch external IPs of the services:
 
