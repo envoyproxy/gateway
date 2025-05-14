@@ -113,7 +113,7 @@ kubectl create namespace team-b
 
 ## Deploy Gateway Namespace Mode Example
 
-Deploy resources on your cluster from the example.
+Deploy resources on your cluster from the example, it will create two sets of backend deployments, Gateways and their respective HTTPRoutes in the previously created namespaces `team-a` and `team-b`.
 
 ```shell
 kubectl apply -f https://raw.githubusercontent.com/envoyproxy/gateway/latest/examples/kubernetes/gateway-namespace-mode.yaml
