@@ -34,97 +34,67 @@ var LocalRateLimitDistinctHeaderTest = suite.ConformanceTest{
 		routeNN := types.NamespacedName{Name: "http-ratelimit-distinct-header", Namespace: ns}
 		gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
 		gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
+		ancestorRef := gwapiv1a2.ParentReference{
+			Group:     gatewayapi.GroupPtr(gwapiv1.GroupName),
+			Kind:      gatewayapi.KindPtr(resource.KindGateway),
+			Namespace: gatewayapi.NamespacePtr(gwNN.Namespace),
+			Name:      gwapiv1.ObjectName(gwNN.Name),
+		}
 
 		t.Run("requests with x-user-id header should be limited per user", func(t *testing.T) {
-			ancestorRef := gwapiv1a2.ParentReference{
-				Group:     gatewayapi.GroupPtr(gwapiv1.GroupName),
-				Kind:      gatewayapi.KindPtr(resource.KindGateway),
-				Namespace: gatewayapi.NamespacePtr(gwNN.Namespace),
-				Name:      gwapiv1.ObjectName(gwNN.Name),
-			}
 			BackendTrafficPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "ratelimit-distinct-header", Namespace: ns}, suite.ControllerName, ancestorRef)
 			path := "/ratelimit-distinct-header"
-			testDistinctHeaderRatelimit(t, "john", "", ns, gwAddr, path, true, suite)
-			testDistinctHeaderRatelimit(t, "alice", "", ns, gwAddr, path, true, suite)
+
+			testRatelimit(t, suite, map[string]string{
+				"x-user-id": "john",
+				"x-org-id":  "",
+			}, ns, gwAddr, path)
+			testRatelimit(t, suite, map[string]string{
+				"x-user-id": "alice",
+				"x-org-id":  "",
+			}, ns, gwAddr, path)
 		})
 
 		t.Run("requests with x-user-id header and matching x-org-id header should be limited per user", func(t *testing.T) {
-			ancestorRef := gwapiv1a2.ParentReference{
-				Group:     gatewayapi.GroupPtr(gwapiv1.GroupName),
-				Kind:      gatewayapi.KindPtr(resource.KindGateway),
-				Namespace: gatewayapi.NamespacePtr(gwNN.Namespace),
-				Name:      gwapiv1.ObjectName(gwNN.Name),
-			}
 			BackendTrafficPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "ratelimit-distinct-header-and-exact-header", Namespace: ns}, suite.ControllerName, ancestorRef)
 			path := "/ratelimit-distinct-header-and-exact-header"
-			testDistinctHeaderRatelimit(t, "john", "foo", ns, gwAddr, path, true, suite)
-			testDistinctHeaderRatelimit(t, "alice", "foo", ns, gwAddr, path, true, suite)
+
+			testRatelimit(t, suite, map[string]string{
+				"x-user-id": "john",
+				"x-org-id":  "foo",
+			}, ns, gwAddr, path)
+			testRatelimit(t, suite, map[string]string{
+				"x-user-id": "alice",
+				"x-org-id":  "foo",
+			}, ns, gwAddr, path)
 		})
 
-		t.Run("requests with x-user-id header but no matching x-org-id header should not be limited", func(t *testing.T) {
-			ancestorRef := gwapiv1a2.ParentReference{
-				Group:     gatewayapi.GroupPtr(gwapiv1.GroupName),
-				Kind:      gatewayapi.KindPtr(resource.KindGateway),
-				Namespace: gatewayapi.NamespacePtr(gwNN.Namespace),
-				Name:      gwapiv1.ObjectName(gwNN.Name),
-			}
+		t.Run("requests with x-user-id header but no matching x-org-id header will hit default bucket", func(t *testing.T) {
 			BackendTrafficPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "ratelimit-distinct-header-and-exact-header", Namespace: ns}, suite.ControllerName, ancestorRef)
 			path := "/ratelimit-distinct-header-and-exact-header"
-			testDistinctHeaderRatelimit(t, "john", "bar", ns, gwAddr, path, false, suite)
+			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, http.ExpectedResponse{
+				Request: http.Request{
+					Path: path,
+					Headers: map[string]string{
+						"x-user-id": "john",
+						"x-org-id":  "bar",
+					},
+				},
+				ExpectedRequest: &http.ExpectedRequest{
+					Request: http.Request{
+						Path:    path,
+						Headers: nil, // don't check headers since Envoy will append the client IP to the X-Forwarded-For header
+					},
+				},
+				Response: http.Response{
+					StatusCode: 200,
+					Headers: map[string]string{
+						RatelimitLimitHeaderName:     "10", // this means it hit the default bucket
+						RatelimitRemainingHeaderName: "4",
+					},
+				},
+				Namespace: ns,
+			})
 		})
 	},
-}
-
-func testDistinctHeaderRatelimit(t *testing.T, user, org, ns, gwAddr, path string, limited bool, suite *suite.ConformanceTestSuite) {
-	expectOkResp := http.ExpectedResponse{
-		Request: http.Request{
-			Path: path,
-			Headers: map[string]string{
-				"x-user-id": user,
-				"x-org-id":  org,
-			},
-		},
-		Response: http.Response{
-			StatusCode: 200,
-		},
-		Namespace: ns,
-	}
-
-	expectOkReq := http.MakeRequest(t, &expectOkResp, gwAddr, "HTTP", "http")
-
-	expectLimitResp := http.ExpectedResponse{
-		Request: http.Request{
-			Path: path,
-			Headers: map[string]string{
-				"x-user-id": user,
-				"x-org-id":  org,
-			},
-		},
-		Response: http.Response{
-			StatusCode: 429,
-		},
-		Namespace: ns,
-	}
-	expectLimitReq := http.MakeRequest(t, &expectLimitResp, gwAddr, "HTTP", "http")
-
-	// should just send exactly 4 requests, and expect 429
-
-	// keep sending requests till get 200 first, that will cost one 200
-	http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectOkResp)
-
-	// fire the rest request
-	if err := GotExactExpectedResponse(t, 2, suite.RoundTripper, expectOkReq, expectOkResp); err != nil {
-		t.Errorf("fail to get expected response at first three request: %v", err)
-	}
-
-	if limited {
-		// this request should be limited because the limit is 3
-		if err := GotExactExpectedResponse(t, 1, suite.RoundTripper, expectLimitReq, expectLimitResp); err != nil {
-			t.Errorf("fail to get expected response at the fourth request: %v", err)
-		}
-	} else {
-		if err := GotExactExpectedResponse(t, 1, suite.RoundTripper, expectLimitReq, expectOkResp); err != nil {
-			t.Errorf("fail to get expected response at the fourth request: %v", err)
-		}
-	}
 }
