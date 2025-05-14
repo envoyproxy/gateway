@@ -41,5 +41,5 @@ type XDSHookClient interface {
 	// An example of how this may be used is to inject a cluster that will be used by an ext_authz http filter created by the extension.
 	// The list of clusters and secrets returned by the extension are used as the final list of all clusters and secrets
 	// PostTranslateModifyHook is always executed when an extension is loaded
-	PostTranslateModifyHook([]*cluster.Cluster, []*tls.Secret) ([]*cluster.Cluster, []*tls.Secret, error)
+	PostTranslateModifyHook([]*cluster.Cluster, []*tls.Secret, []*unstructured.Unstructured) ([]*cluster.Cluster, []*tls.Secret, error)
 }

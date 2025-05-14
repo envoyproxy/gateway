@@ -151,6 +151,9 @@ type Xds struct {
 	EnvoyPatchPolicies []*EnvoyPatchPolicy `json:"envoyPatchPolicies,omitempty" yaml:"envoyPatchPolicies,omitempty"`
 	// FilterOrder holds the custom order of the HTTP filters
 	FilterOrder []egv1a1.FilterPosition `json:"filterOrder,omitempty" yaml:"filterOrder,omitempty"`
+
+	// extensionServerPolicies is the intermediate representation of the ExtensionServerPolicy resource
+	ExtensionServerPolicies []unstructured.Unstructured `json:"extensionServerPolicies,omitempty" yaml:"extensionServerPolicies,omitempty"`
 }
 
 // Equal implements the Comparable interface used by watchable.DeepEqual to skip unnecessary updates.

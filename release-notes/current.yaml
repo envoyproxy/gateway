@@ -1,4 +1,4 @@
-date: Pending
+date: May 4, 2025
 
 # Changes that are expected to cause an incompatibility with previous versions, such as deletions or modifications to existing APIs.
 breaking changes: |
@@ -8,6 +8,7 @@ security updates: |
 
 # New features or capabilities added in this release.
 new features: |
+  Added support for using externsion server policies to in PostTranslateModify hook.
 
 bug fixes: |
 
