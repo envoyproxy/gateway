@@ -151,129 +151,129 @@ var LocalRateLimitTest = suite.ConformanceTest{
 			})
 		})
 
-		// t.Run("AllTraffic", func(t *testing.T) {
-		// 	ns := "gateway-conformance-infra"
-		// 	routeNN := types.NamespacedName{Name: "http-ratelimit-all-traffic", Namespace: ns}
-		// 	gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
-		// 	gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
+		t.Run("AllTraffic", func(t *testing.T) {
+			ns := "gateway-conformance-infra"
+			routeNN := types.NamespacedName{Name: "http-ratelimit-all-traffic", Namespace: ns}
+			gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
+			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
 
-		// 	ancestorRef := gwapiv1a2.ParentReference{
-		// 		Group:     gatewayapi.GroupPtr(gwapiv1.GroupName),
-		// 		Kind:      gatewayapi.KindPtr(resource.KindGateway),
-		// 		Namespace: gatewayapi.NamespacePtr(gwNN.Namespace),
-		// 		Name:      gwapiv1.ObjectName(gwNN.Name),
-		// 	}
-		// 	BackendTrafficPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "ratelimit-all-traffic", Namespace: ns}, suite.ControllerName, ancestorRef)
+			ancestorRef := gwapiv1a2.ParentReference{
+				Group:     gatewayapi.GroupPtr(gwapiv1.GroupName),
+				Kind:      gatewayapi.KindPtr(resource.KindGateway),
+				Namespace: gatewayapi.NamespacePtr(gwNN.Namespace),
+				Name:      gwapiv1.ObjectName(gwNN.Name),
+			}
+			BackendTrafficPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "ratelimit-all-traffic", Namespace: ns}, suite.ControllerName, ancestorRef)
 
-		// 	expectOkResp := http.ExpectedResponse{
-		// 		Request: http.Request{
-		// 			Path: "/ratelimit-all-traffic",
-		// 		},
-		// 		Response: http.Response{
-		// 			Headers: map[string]string{
-		// 				RatelimitLimitHeaderName:     "3",
-		// 				RatelimitRemainingHeaderName: "", // empty string means we don't care about the value
-		// 			},
-		// 			StatusCode: 200,
-		// 		},
-		// 		Namespace: ns,
-		// 	}
+			expectOkResp := http.ExpectedResponse{
+				Request: http.Request{
+					Path: "/ratelimit-all-traffic",
+				},
+				Response: http.Response{
+					Headers: map[string]string{
+						RatelimitLimitHeaderName:     "3",
+						RatelimitRemainingHeaderName: "", // empty string means we don't care about the value
+					},
+					StatusCode: 200,
+				},
+				Namespace: ns,
+			}
 
-		// 	// keep sending requests till get 200 first, that will cost one 200
-		// 	utils.MakeRequestAndExpectEventuallyConsistentResponse(t, suite, gwAddr, expectOkResp)
+			// keep sending requests till get 200 first, that will cost one 200
+			utils.MakeRequestAndExpectEventuallyConsistentResponse(t, suite, gwAddr, expectOkResp)
 
-		// 	// this request should be limited at the end
-		// 	expectLimitResp := http.ExpectedResponse{
-		// 		Request: http.Request{
-		// 			Path: "/ratelimit-all-traffic",
-		// 		},
-		// 		Response: http.Response{
-		// 			Headers: map[string]string{
-		// 				RatelimitLimitHeaderName:     "3",
-		// 				RatelimitRemainingHeaderName: "0", // at the end the remaining should be 0
-		// 			},
-		// 			StatusCode: 429,
-		// 		},
-		// 		Namespace: ns,
-		// 	}
-		// 	http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectLimitResp)
-		// })
+			// this request should be limited at the end
+			expectLimitResp := http.ExpectedResponse{
+				Request: http.Request{
+					Path: "/ratelimit-all-traffic",
+				},
+				Response: http.Response{
+					Headers: map[string]string{
+						RatelimitLimitHeaderName:     "3",
+						RatelimitRemainingHeaderName: "0", // at the end the remaining should be 0
+					},
+					StatusCode: 429,
+				},
+				Namespace: ns,
+			}
+			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectLimitResp)
+		})
 
-		// t.Run("HeaderInvertMatch", func(t *testing.T) {
-		// 	ns := "gateway-conformance-infra"
-		// 	routeNN := types.NamespacedName{Name: "http-ratelimit-invert-match", Namespace: ns}
-		// 	gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
-		// 	gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
+		t.Run("HeaderInvertMatch", func(t *testing.T) {
+			ns := "gateway-conformance-infra"
+			routeNN := types.NamespacedName{Name: "http-ratelimit-invert-match", Namespace: ns}
+			gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
+			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
 
-		// 	ancestorRef := gwapiv1a2.ParentReference{
-		// 		Group:     gatewayapi.GroupPtr(gwapiv1.GroupName),
-		// 		Kind:      gatewayapi.KindPtr(resource.KindGateway),
-		// 		Namespace: gatewayapi.NamespacePtr(gwNN.Namespace),
-		// 		Name:      gwapiv1.ObjectName(gwNN.Name),
-		// 	}
-		// 	BackendTrafficPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "ratelimit-invert-match", Namespace: ns}, suite.ControllerName, ancestorRef)
+			ancestorRef := gwapiv1a2.ParentReference{
+				Group:     gatewayapi.GroupPtr(gwapiv1.GroupName),
+				Kind:      gatewayapi.KindPtr(resource.KindGateway),
+				Namespace: gatewayapi.NamespacePtr(gwNN.Namespace),
+				Name:      gwapiv1.ObjectName(gwNN.Name),
+			}
+			BackendTrafficPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "ratelimit-invert-match", Namespace: ns}, suite.ControllerName, ancestorRef)
 
-		// 	expectOkResp := http.ExpectedResponse{
-		// 		Request: http.Request{
-		// 			Path: "/ratelimit-invert-match",
-		// 			Headers: map[string]string{
-		// 				"x-user-id": "one",
-		// 				"x-org-id":  "org1",
-		// 			},
-		// 		},
-		// 		Response: http.Response{
-		// 			StatusCode: 200,
-		// 		},
-		// 		Namespace: ns,
-		// 	}
+			expectOkResp := http.ExpectedResponse{
+				Request: http.Request{
+					Path: "/ratelimit-invert-match",
+					Headers: map[string]string{
+						"x-user-id": "one",
+						"x-org-id":  "org1",
+					},
+				},
+				Response: http.Response{
+					StatusCode: 200,
+				},
+				Namespace: ns,
+			}
 
-		// 	expectOkReq := http.MakeRequest(t, &expectOkResp, gwAddr, "HTTP", "http")
+			expectOkReq := http.MakeRequest(t, &expectOkResp, gwAddr, "HTTP", "http")
 
-		// 	// should just send exactly 4 requests, and expect 429
+			// should just send exactly 4 requests, and expect 429
 
-		// 	// keep sending requests till get 200 first, that will cost one 200
-		// 	http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectOkResp)
+			// keep sending requests till get 200 first, that will cost one 200
+			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectOkResp)
 
-		// 	// fire the rest request
-		// 	if err := GotExactExpectedResponse(t, 2, suite.RoundTripper, expectOkReq, expectOkResp); err != nil {
-		// 		t.Errorf("fail to get expected response at first three request: %v", err)
-		// 	}
+			// fire the rest request
+			if err := GotExactExpectedResponse(t, 2, suite.RoundTripper, expectOkReq, expectOkResp); err != nil {
+				t.Errorf("fail to get expected response at first three request: %v", err)
+			}
 
-		// 	// this request should be limited because the user is one and org is not test and the limit is 3
-		// 	expectLimitResp := http.ExpectedResponse{
-		// 		Request: http.Request{
-		// 			Path: "/ratelimit-invert-match",
-		// 			Headers: map[string]string{
-		// 				"x-user-id": "one",
-		// 				"x-org-id":  "org1",
-		// 			},
-		// 		},
-		// 		Response: http.Response{
-		// 			StatusCode: 429,
-		// 		},
-		// 		Namespace: ns,
-		// 	}
-		// 	http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectLimitResp)
+			// this request should be limited because the user is one and org is not test and the limit is 3
+			expectLimitResp := http.ExpectedResponse{
+				Request: http.Request{
+					Path: "/ratelimit-invert-match",
+					Headers: map[string]string{
+						"x-user-id": "one",
+						"x-org-id":  "org1",
+					},
+				},
+				Response: http.Response{
+					StatusCode: 429,
+				},
+				Namespace: ns,
+			}
+			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectLimitResp)
 
-		// 	// with test org
-		// 	expectOkResp = http.ExpectedResponse{
-		// 		Request: http.Request{
-		// 			Path: "/ratelimit-invert-match",
-		// 			Headers: map[string]string{
-		// 				"x-user-id": "one",
-		// 				"x-org-id":  "test",
-		// 			},
-		// 		},
-		// 		Response: http.Response{
-		// 			StatusCode: 200,
-		// 		},
-		// 		Namespace: ns,
-		// 	}
-		// 	expectOkReq = http.MakeRequest(t, &expectOkResp, gwAddr, "HTTP", "http")
-		// 	// the requests should not be limited because the user is one but org is test
-		// 	if err := GotExactExpectedResponse(t, 4, suite.RoundTripper, expectOkReq, expectOkResp); err != nil {
-		// 		t.Errorf("fail to get expected response at first three request: %v", err)
-		// 	}
-		// })
+			// with test org
+			expectOkResp = http.ExpectedResponse{
+				Request: http.Request{
+					Path: "/ratelimit-invert-match",
+					Headers: map[string]string{
+						"x-user-id": "one",
+						"x-org-id":  "test",
+					},
+				},
+				Response: http.Response{
+					StatusCode: 200,
+				},
+				Namespace: ns,
+			}
+			expectOkReq = http.MakeRequest(t, &expectOkResp, gwAddr, "HTTP", "http")
+			// the requests should not be limited because the user is one but org is test
+			if err := GotExactExpectedResponse(t, 4, suite.RoundTripper, expectOkReq, expectOkResp); err != nil {
+				t.Errorf("fail to get expected response at first three request: %v", err)
+			}
+		})
 	},
 }
