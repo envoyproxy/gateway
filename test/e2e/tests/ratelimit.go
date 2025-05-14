@@ -964,13 +964,12 @@ var RateLimitGlobalMergeTest = suite.ConformanceTest{
 			headers := map[string]string{"x-user-id": "one"}
 
 			expectOk1 := http.ExpectedResponse{Request: http.Request{Path: "/bar", Headers: headers}, Response: http.Response{StatusCode: 200}, Namespace: ns}
-			expectOk2 := http.ExpectedResponse{Request: http.Request{Path: "/bar", Headers: headers}, Response: http.Response{StatusCode: 200}, Namespace: ns}
-			expectOk3 := http.ExpectedResponse{Request: http.Request{Path: "/foo", Headers: headers}, Response: http.Response{StatusCode: 200}, Namespace: ns}
+			expectOk2 := http.ExpectedResponse{Request: http.Request{Path: "/foo", Headers: headers}, Response: http.Response{StatusCode: 200}, Namespace: ns}
 			expectLimit := http.ExpectedResponse{Request: http.Request{Path: "/foo", Headers: headers}, Response: http.Response{StatusCode: 429}, Namespace: ns}
 
 			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr2, expectOk1)
 
-			for _, expect := range []http.ExpectedResponse{expectOk1, expectOk2, expectOk3} {
+			for _, expect := range []http.ExpectedResponse{expectOk1, expectOk2} {
 				if err := GotExactExpectedResponse(t, 1, suite.RoundTripper, http.MakeRequest(t, &expect, gwAddr2, "HTTP", "http"), expect); err != nil {
 					t.Errorf("expected 200 response: %v", err)
 				}
@@ -990,7 +989,7 @@ var RateLimitGlobalMergeTest = suite.ConformanceTest{
 
 			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr1, okFoo)
 
-			for i := 0; i < 3; i++ {
+			for i := 0; i < 2; i++ {
 				if err := GotExactExpectedResponse(t, 1, suite.RoundTripper, http.MakeRequest(t, &okFoo, gwAddr1, "HTTP", "http"), okFoo); err != nil {
 					t.Errorf("foo request #%d failed: %v", i+1, err)
 				}
@@ -1013,13 +1012,12 @@ var RateLimitGlobalMergeTest = suite.ConformanceTest{
 			headers := map[string]string{"x-user-id": "three"}
 
 			ok1 := http.ExpectedResponse{Request: http.Request{Path: "/bar", Headers: headers}, Response: http.Response{StatusCode: 200}, Namespace: ns}
-			ok2 := http.ExpectedResponse{Request: http.Request{Path: "/bar", Headers: headers}, Response: http.Response{StatusCode: 200}, Namespace: ns}
-			ok3 := http.ExpectedResponse{Request: http.Request{Path: "/foo", Headers: headers}, Response: http.Response{StatusCode: 200}, Namespace: ns}
+			ok2 := http.ExpectedResponse{Request: http.Request{Path: "/foo", Headers: headers}, Response: http.Response{StatusCode: 200}, Namespace: ns}
 			limit := http.ExpectedResponse{Request: http.Request{Path: "/foo", Headers: headers}, Response: http.Response{StatusCode: 429}, Namespace: ns}
 
 			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr2, ok1)
 
-			for _, expect := range []http.ExpectedResponse{ok1, ok2, ok3} {
+			for _, expect := range []http.ExpectedResponse{ok1, ok2} {
 				if err := GotExactExpectedResponse(t, 1, suite.RoundTripper, http.MakeRequest(t, &expect, gwAddr2, "HTTP", "http"), expect); err != nil {
 					t.Errorf("expected 200 response: %v", err)
 				}
@@ -1039,7 +1037,7 @@ var RateLimitGlobalMergeTest = suite.ConformanceTest{
 
 			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr1, okFoo)
 
-			for i := 0; i < 3; i++ {
+			for i := 0; i < 2; i++ {
 				if err := GotExactExpectedResponse(t, 1, suite.RoundTripper, http.MakeRequest(t, &okFoo, gwAddr1, "HTTP", "http"), okFoo); err != nil {
 					t.Errorf("foo request #%d failed: %v", i+1, err)
 				}
