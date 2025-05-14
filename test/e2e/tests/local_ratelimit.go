@@ -57,7 +57,7 @@ var LocalRateLimitTest = suite.ConformanceTest{
 
 // gatewayNN return the gateway namespace name when disabled header or not
 // All the HTTPRoute attached to the two gateways, the different is that we
-// disabled rate limit headers on all-namespace gatway
+// disabled rate limit headers on all-namespace gateway
 func gatewayNN(disableHeader bool) types.NamespacedName {
 	if disableHeader {
 		return types.NamespacedName{Name: "all-namespaces", Namespace: "gateway-conformance-infra"}
