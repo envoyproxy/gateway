@@ -18,11 +18,11 @@ how to connect to a backend pod that has its own certificate.
 
 While there are other API objects provided for TLS to be configured for **passthrough** and **edge** termination,
 this API object allows users to specifically configure **backend** TLS termination.  For more information on TLS
-configuration in Gateway API, see [TLS Configuration](../guides/tls/).
+configuration in Gateway API, see [TLS Configuration](https://gateway-api.sigs.k8s.io/guides/tls/).
 
-![Image showing three TLS Termination Types](../images/tls-termination-types.png)
+![Image showing three TLS Termination Types](https://gateway-api.sigs.k8s.io/images/tls-termination-types.png)
 
-BackendTLSPolicy is a Direct [PolicyAttachment](../reference/policy-attachment/) without defaults or overrides,
+BackendTLSPolicy is a Direct [PolicyAttachment](https://gateway-api.sigs.k8s.io/references/policy-attachment/) without defaults or overrides,
 applied to a Service that accesses a backend, where the BackendTLSPolicy resides in the same namespace as the
 Service to which it is applied. The BackendTLSPolicy and the Service must reside in the same namespace in order
 to prevent the complications involved with sharing trust across namespace boundaries.

@@ -90,7 +90,7 @@ While the API is simplistic in nature, it comes with a few notable decisions:
    other. This makes it impossible for them to conflict with each other.
 
 Please see the [API
-Specification](../reference/spec#gateway.networking.k8s.io/v1alpha2.ReferenceGrant)
+Specification](https://gateway-api.sigs.k8s.io/references/spec#gateway.networking.k8s.io/v1alpha2.ReferenceGrant)
 for more details on how specific ReferenceGrant fields are interpreted.
 
 ## Implementation Guidelines
@@ -110,7 +110,7 @@ No hints should be provided about whether or not the referenced resource exists.
 Cross namespace Route -> Gateway binding follows a slightly different pattern
 where the handshake mechanism is built into the Gateway resource. For more
 information on that approach, refer to the relevant [Security Model
-documentation](../concepts/security-model.md). Although conceptually similar to
+documentation](https://gateway-api.sigs.k8s.io/concepts/security-model). Although conceptually similar to
 ReferenceGrant, this configuration is built directly into Gateway Listeners,
 and allows for fine-grained per Listener configuration that would not be
 possible with ReferenceGrant.
