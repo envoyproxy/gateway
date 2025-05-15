@@ -447,7 +447,7 @@ func (t *Translator) translateBackendTrafficPolicyForRouteWithMerge(
 		if tfGW != nil && tfRoute != nil &&
 			tfGW.RateLimit != nil && tfRoute.RateLimit != nil {
 
-			mergedRL, err := utils.MergeRL(tfGW.RateLimit, tfRoute.RateLimit, *policy.Spec.MergeType)
+			mergedRL, err := utils.Merge(tfGW.RateLimit, tfRoute.RateLimit, *policy.Spec.MergeType)
 			if err != nil {
 				return fmt.Errorf("error merging rate limits: %w", err)
 			}
