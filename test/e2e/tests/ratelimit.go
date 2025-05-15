@@ -1078,12 +1078,12 @@ var RateLimitGlobalMergeTest = suite.ConformanceTest{
 
 func GotExactExpectedResponse(t *testing.T, n int, r roundtripper.RoundTripper, req roundtripper.Request, resp http.ExpectedResponse) error {
 	for i := 0; i < n; i++ {
-		_, cRes, err := r.CaptureRoundTrip(req)
+		cReq, cRes, err := r.CaptureRoundTrip(req)
 		if err != nil {
 			return err
 		}
 
-		if err = http.CompareRequest(t, &req, nil, cRes, resp); err != nil {
+		if err = http.CompareRequest(t, &req, cReq, cRes, resp); err != nil {
 			return err
 		}
 	}
