@@ -34,23 +34,19 @@ Currently it is not supported to run Gateway Namespace Mode with Merged Gateways
 
 ## Configuration
 
-To enable Gateway Namespace Mode, configure the `provider.kubernetes.deploy.type` field in your Envoy Gateway ConfigMap:
+To enable Gateway Namespace Mode, configure the `provider.kubernetes.deploy.type` field in your Envoy Gateway Helm chart values:
 
 ```yaml
-apiVersion: gateway.envoyproxy.io/v1alpha1
-kind: EnvoyGateway
-metadata:
-  name: envoy-gateway
-  namespace: envoy-gateway-system
-spec:
-  provider:
-    type: Kubernetes
-    kubernetes:
-      deploy:
-        type: GatewayNamespace
+config:
+  envoyGateway:
+    provider:
+      type: Kubernetes
+      kubernetes:
+        deploy:
+          type: GatewayNamespace
 ```
 
-To install Envoy Gateway with Gateway Namespace Mode using Helm:
+You can also use this command to install Envoy Gateway with Gateway Namespace Mode using Helm:
 
 ```shell
 helm install \
