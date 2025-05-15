@@ -67,4 +67,4 @@ In this setup, traffic matching /round is distributed evenly across all availabl
 
 ## Related Resources
 - [BackendTrafficPolicy](../introduction/gateway_api_extensions/backend-traffic-policy.md)
-- [Task: Load Balancing](../tasks/traffic/load-balancing.md)
+- [Task: Load Balancing](../../tasks/traffic/load-balancing.md)
