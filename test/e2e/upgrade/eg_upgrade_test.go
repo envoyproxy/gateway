@@ -64,18 +64,10 @@ func TestEGUpgrade(t *testing.T) {
 		t.Fatalf("Failed to create test suite: %v", err)
 	}
 
-	if tests.IsGatewayNamespaceMode() {
-		tests.UpgradeTests = []suite.ConformanceTest{
-			tests.EnvoyShutdownTest,
-			// TODO: enable EGUpgradeTest in gateway namespace mode
-			// tests.EGUpgradeTest,
-		}
-	} else {
-		// upgrade tests should be executed in a specific order
-		tests.UpgradeTests = []suite.ConformanceTest{
-			tests.EnvoyShutdownTest,
-			tests.EGUpgradeTest,
-		}
+	// upgrade tests should be executed in a specific order
+	tests.UpgradeTests = []suite.ConformanceTest{
+		tests.EnvoyShutdownTest,
+		tests.EGUpgradeTest,
 	}
 
 	tlog.Logf(t, "Running %d Upgrade tests", len(tests.UpgradeTests))
