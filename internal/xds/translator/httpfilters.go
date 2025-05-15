@@ -124,6 +124,8 @@ func newOrderedHTTPFilter(filter *hcmv3.HttpFilter) *OrderedHTTPFilter {
 		order = 100 + mustGetFilterIndex(filter.Name)
 	case isFilterType(filter, egv1a1.EnvoyFilterWasm):
 		order = 200 + mustGetFilterIndex(filter.Name)
+	case isFilterType(filter, egv1a1.EnvoyFilterDynamicModules):
+		order = 250 + mustGetFilterIndex(filter.Name)
 	case isFilterType(filter, egv1a1.EnvoyFilterRBAC):
 		order = 301
 	case isFilterType(filter, egv1a1.EnvoyFilterLocalRateLimit):
