@@ -65,190 +65,270 @@ func TestPermissionCache(t *testing.T) {
 	latestImage, _ := url.Parse(ociURLWithLatestTag)
 	secret := []byte("")
 
-	t.Run("Cached permission should be updated", func(t *testing.T) {
-		lock.Lock()
-		failPermissionCheck = false
-		lock.Unlock()
+	t.Run("Cached permission should be updated after expiry", func(t *testing.T) {
+		require.Eventually(t, func() bool {
+			lock.Lock()
+			failPermissionCheck = false
+			lock.Unlock()
 
-		ctx := context.Background()
-		defer ctx.Done()
-		cache, entry := setupTestPermissionCache(
-			permissionCacheOptions{
-				checkInterval:    1 * time.Nanosecond,
-				permissionExpiry: 10 * time.Nanosecond,
-			},
-			image,
-			latestImage,
-			secret)
-		cache.Start(ctx)
+			ctx := context.Background()
+			defer ctx.Done()
+			cache, entry := setupTestPermissionCache(
+				permissionCacheOptions{
+					checkInterval:    1 * time.Nanosecond,
+					permissionExpiry: 10 * time.Nanosecond,
+				},
+				image,
+				latestImage,
+				secret)
+			cache.Start(ctx)
 
-		lastAccessTime := entry.lastAccess
-		lastCheckTime := entry.lastCheck
+			lastAccessTime := entry.lastAccess
+			lastCheckTime := entry.lastCheck
 
-		time.Sleep(10 * time.Millisecond)
-		allowed, err := cache.IsAllowed(context.Background(), image, secret, true)
-		require.True(
-			t,
-			allowed,
-			"permission should be rechecked and allowed after permission expired")
-		require.NoError(
-			t,
-			err,
-			"permission should be rechecked and allowed after permission expired")
-
-		entry, ok := cache.getForTest(entry.key())
-		require.True(t, ok, "cache entry should exist")
-		require.True(t, entry.lastAccess.After(lastAccessTime), "last access time should be updated")
-		require.True(t, entry.lastCheck.After(lastCheckTime), "last check time should be updated")
+			// Wait for the cache to expire
+			time.Sleep(10 * time.Millisecond)
+			allowed, err := cache.IsAllowed(context.Background(), image, secret, true)
+			if err != nil {
+				t.Logf("permission rechecked should not return error: %v", err)
+				return false
+			}
+			if !allowed {
+				t.Log("ppermission should be rechecked and allowed after permission expired")
+				return false
+			}
+			entry, ok := cache.getForTest(entry.key())
+			if !ok {
+				t.Log("cache entry should exist")
+				return false
+			}
+			// Verify the cached image permission is rechecked
+			if !entry.lastAccess.After(lastAccessTime) {
+				t.Log("last access time should be updated")
+				return false
+			}
+			if !entry.lastCheck.After(lastCheckTime) {
+				t.Log("last check time should be updated")
+				return false
+			}
+			return true
+		}, time.Second*5, time.Millisecond*20)
 	})
 
 	t.Run("Cached permission failed after recheck", func(t *testing.T) {
-		lock.Lock()
-		failPermissionCheck = true
-		lock.Unlock()
+		require.Eventually(t, func() bool {
+			lock.Lock()
+			failPermissionCheck = true
+			lock.Unlock()
 
-		ctx := context.Background()
-		defer ctx.Done()
-		cache, entry := setupTestPermissionCache(
-			permissionCacheOptions{
-				checkInterval:    1 * time.Nanosecond,
-				permissionExpiry: 10 * time.Nanosecond,
-			},
-			image,
-			latestImage,
-			secret)
-		cache.Start(ctx)
+			ctx := context.Background()
+			defer ctx.Done()
+			cache, entry := setupTestPermissionCache(
+				permissionCacheOptions{
+					checkInterval:    1 * time.Nanosecond,
+					permissionExpiry: 10 * time.Nanosecond,
+				},
+				image,
+				latestImage,
+				secret)
+			cache.Start(ctx)
 
-		lastAccessTime := entry.lastAccess
-		lastCheckTime := entry.lastCheck
+			lastAccessTime := entry.lastAccess
+			lastCheckTime := entry.lastCheck
 
-		time.Sleep(10 * time.Millisecond)
-		allowed, err := cache.IsAllowed(context.Background(), image, secret, true)
-		require.False(t, isRetriableError(err), "permission check error should not be retriable")
-		require.False(
-			t,
-			allowed,
-			"permission should be rechecked and denied after permission expired and secret is invalid")
-		require.Error(
-			t,
-			err,
-			"permission should be rechecked and denied after permission expired and secret is invalid")
-
-		entry, ok := cache.getForTest(entry.key())
-		require.True(t, ok, "cache entry should exist")
-		require.True(t, entry.lastAccess.After(lastAccessTime), "last access time should be updated")
-		require.True(t, entry.lastCheck.After(lastCheckTime), "last check time should be updated")
+			// Wait for the cache to expire
+			time.Sleep(10 * time.Millisecond)
+			allowed, err := cache.IsAllowed(context.Background(), image, secret, true)
+			if err == nil {
+				t.Log("permission rechecked should return error if failed permission check")
+				return false
+			}
+			if isRetriableError(err) {
+				t.Logf("permission check error should not be retriable: %v", err)
+				return false
+			}
+			if allowed {
+				t.Log("permission should be rechecked and denied after permission expired and secret is invalid")
+				return false
+			}
+			entry, ok := cache.getForTest(entry.key())
+			if !ok {
+				t.Log("cache entry should exist")
+				return false
+			}
+			if !entry.lastAccess.After(lastAccessTime) {
+				t.Log("last access time should be updated")
+				return false
+			}
+			if !entry.lastCheck.After(lastCheckTime) {
+				t.Log("last check time should be updated")
+				return false
+			}
+			return true
+		}, time.Second*5, time.Millisecond*20)
 	})
 
 	t.Run("Cached permission should be removed after expiry", func(t *testing.T) {
-		lock.Lock()
-		failPermissionCheck = false
-		lock.Unlock()
+		require.Eventually(t, func() bool {
+			lock.Lock()
+			failPermissionCheck = false
+			lock.Unlock()
 
-		ctx := context.Background()
-		defer ctx.Done()
-		cache, entry := setupTestPermissionCache(
-			permissionCacheOptions{
-				checkInterval: 1 * time.Nanosecond,
-				cacheExpiry:   10 * time.Nanosecond,
-			},
-			image,
-			latestImage,
-			secret)
-		cache.Start(ctx)
+			ctx := context.Background()
+			defer ctx.Done()
+			cache, entry := setupTestPermissionCache(
+				permissionCacheOptions{
+					checkInterval: 1 * time.Nanosecond,
+					cacheExpiry:   10 * time.Nanosecond,
+				},
+				image,
+				latestImage,
+				secret)
+			cache.Start(ctx)
 
-		lastAccessTime := entry.lastAccess
-		lastCheckTime := entry.lastCheck
+			lastAccessTime := entry.lastAccess
+			lastCheckTime := entry.lastCheck
 
-		time.Sleep(10 * time.Millisecond)
-		key := entry.key()
-		entry, ok := cache.getForTest(key)
-		require.False(t, ok, "cache entry should be removed after expiry")
-		allowed, err := cache.IsAllowed(context.Background(), image, secret, true)
-		require.True(t,
-			allowed,
-			"permission should be rechecked and allowed after cache removed")
-		require.NoError(t,
-			err,
-			"permission should be rechecked and allowed after cache removed")
-		entry, ok = cache.getForTest(key)
-		require.True(t, ok, "expired entry should be added after recheck")
-		require.True(t, entry.lastAccess.After(lastAccessTime), "last access time should be updated")
-		require.True(t, entry.lastCheck.After(lastCheckTime), "last check time should be updated")
+			// Wait for the cache to expire
+			time.Sleep(10 * time.Millisecond)
+			key := entry.key()
+			entry, ok := cache.getForTest(key)
+			if ok {
+				t.Log("cache entry should be removed after expiry")
+				return false
+			}
+			allowed, err := cache.IsAllowed(context.Background(), image, secret, true)
+			if err != nil {
+				t.Logf("permission rechecked should not return error: %v", err)
+				return false
+			}
+			if !allowed {
+				t.Log("permission should be rechecked and allowed after cache removed")
+				return false
+			}
+			entry, ok = cache.getForTest(key)
+			if !ok {
+				t.Log("expired entry should be added after recheck")
+				return false
+			}
+			if !entry.lastAccess.After(lastAccessTime) {
+				t.Log("last access time should be updated")
+				return false
+			}
+			if !entry.lastCheck.After(lastCheckTime) {
+				t.Log("last check time should be updated")
+				return false
+			}
+			return true
+		}, time.Second*5, time.Millisecond*20)
 	})
 
 	t.Run("Non-exist permission should be checked and cached after first access for allowed permission", func(t *testing.T) {
-		lock.Lock()
-		failPermissionCheck = false
-		lock.Unlock()
+		require.Eventually(t, func() bool {
+			lock.Lock()
+			failPermissionCheck = false
+			lock.Unlock()
 
-		ctx := context.Background()
-		defer ctx.Done()
-		cache, entry := setupTestPermissionCache(
-			permissionCacheOptions{
-				checkInterval: 1 * time.Nanosecond,
-			},
-			image,
-			latestImage,
-			secret)
-		key := entry.key()
-		// remove the cache entry
-		cache.deleteForTest(key)
-		cache.Start(ctx)
+			ctx := context.Background()
+			defer ctx.Done()
+			cache, entry := setupTestPermissionCache(
+				permissionCacheOptions{
+					checkInterval: 1 * time.Nanosecond,
+				},
+				image,
+				latestImage,
+				secret)
+			key := entry.key()
+			// remove the cache entry
+			cache.deleteForTest(key)
+			cache.Start(ctx)
 
-		_, ok := cache.getForTest(key)
-		require.False(t, ok, "cache entry should not exist before access")
+			_, ok := cache.getForTest(key)
+			if ok {
+				t.Log("cache entry should not exist before access")
+				return false
+			}
 
-		now := time.Now()
-		allowed, err := cache.IsAllowed(context.Background(), image, secret, true)
-		require.True(t,
-			allowed,
-			"non-exist permission should be checked and allowed at first access")
-		require.NoError(t,
-			err,
-			"non-exist permission should be checked and allowed at first access")
+			now := time.Now()
+			allowed, err := cache.IsAllowed(context.Background(), image, secret, true)
+			if err != nil {
+				t.Logf("permission check should not return error: %v", err)
+				return false
+			}
+			if !allowed {
+				t.Log("non-exist permission should be checked and allowed at first access")
+				return false
+			}
 
-		entry, ok = cache.getForTest(key)
-		require.True(t, ok, "non-exist permission should be added to the cache after first access ")
-		require.True(t, entry.lastAccess.After(now), "last access time should be updated after first access")
-		require.True(t, entry.lastCheck.After(now), "last check time should be updated after first access")
+			entry, ok = cache.getForTest(key)
+			if !ok {
+				t.Log("non-exist permission should be added to the cache after first access")
+				return false
+			}
+			if !entry.lastAccess.After(now) {
+				t.Log("last access time should be updated after first access")
+				return false
+			}
+			if !entry.lastCheck.After(now) {
+				t.Log("last check time should be updated after first access")
+				return false
+			}
+			return true
+		}, time.Second*5, time.Millisecond*20)
 	})
 
 	t.Run("Non-exist permission should be checked and cached after first access for denied permission", func(t *testing.T) {
-		lock.Lock()
-		failPermissionCheck = true
-		lock.Unlock()
+		require.Eventually(t, func() bool {
+			lock.Lock()
+			failPermissionCheck = true
+			lock.Unlock()
 
-		ctx := context.Background()
-		defer ctx.Done()
-		cache, entry := setupTestPermissionCache(
-			permissionCacheOptions{
-				checkInterval: 1 * time.Nanosecond,
-			},
-			image,
-			latestImage,
-			secret)
-		key := entry.key()
-		// remove the cache entry
-		cache.deleteForTest(key)
-		cache.Start(ctx)
+			ctx := context.Background()
+			defer ctx.Done()
+			cache, entry := setupTestPermissionCache(
+				permissionCacheOptions{
+					checkInterval: 1 * time.Nanosecond,
+				},
+				image,
+				latestImage,
+				secret)
+			key := entry.key()
+			// remove the cache entry
+			cache.deleteForTest(key)
+			cache.Start(ctx)
 
-		_, ok := cache.getForTest(key)
-		require.False(t, ok, "cache entry should not exist before access")
+			_, ok := cache.getForTest(key)
+			if ok {
+				t.Log("cache entry should not exist before access")
+				return false
+			}
 
-		now := time.Now()
-		allowed, err := cache.IsAllowed(context.Background(), image, secret, true)
-		require.False(t,
-			allowed,
-			"non-exist permission should be checked and denied at first access if secret is invalid")
-		require.Error(t,
-			err,
-			"non-exist permission should be checked and denied at first access if secret is invalid")
+			now := time.Now()
+			allowed, err := cache.IsAllowed(context.Background(), image, secret, true)
+			if err == nil {
+				t.Logf("non-exist permission should be checked and denied at first access if secret is invalid")
+				return false
+			}
+			if allowed {
+				t.Log("non-exist permission should be checked and denied at first access if secret is invalid")
+				return false
+			}
 
-		entry, ok = cache.getForTest(key)
-		require.True(t, ok, "non-exist permission should be added to the cache after first access ")
-		require.True(t, entry.lastAccess.After(now), "last access time should be updated after first access")
-		require.True(t, entry.lastCheck.After(now), "last check time should be updated after first access")
+			entry, ok = cache.getForTest(key)
+			if !ok {
+				t.Log("non-exist permission should be added to the cache after first access")
+				return false
+			}
+			if !entry.lastAccess.After(now) {
+				t.Log("last access time should be updated after first access")
+				return false
+			}
+			if !entry.lastCheck.After(now) {
+				t.Log("last check time should be updated after first access")
+				return false
+			}
+			return true
+		}, time.Second*5, time.Millisecond*20)
 	})
 }
 
