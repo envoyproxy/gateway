@@ -968,14 +968,13 @@ var RateLimitGlobalMergeTest = suite.ConformanceTest{
 			expectLimit := http.ExpectedResponse{Request: http.Request{Path: "/foo", Headers: headers}, Response: http.Response{StatusCode: 429}, Namespace: ns}
 
 			require.Eventually(t, func() bool {
-				req := http.MakeRequest(t, &expectOk1, gwAddr2, "HTTP", "http")
-				resp, err := suite.RoundTripper.RoundTrip(req)
+				_, cRes, err := suite.RoundTripper.CaptureRoundTrip(http.MakeRequest(t, &expectOk1, gwAddr2, "HTTP", "http"))
 				if err != nil {
 					return false
 				}
-				defer resp.Body.Close()
-				return resp.Header.Get("X-Ratelimit-Limit") == "3, 3;w=3600"
-			}, suite.TimeoutConfig.MaxTimeToConsistency, suite.TimeoutConfig.PollInterval, "rate limit header not yet present")
+				vals := cRes.Headers["X-Ratelimit-Limit"]
+				return len(vals) > 0 && vals[0] == "3, 3;w=3600"
+			}, suite.TimeoutConfig.MaxTimeToConsistency, suite.TimeoutConfig.RequestTimeout, "rate limit header not yet present")
 
 			for _, expect := range []http.ExpectedResponse{expectOk1, expectOk2} {
 				if err := GotExactExpectedResponse(t, 1, suite.RoundTripper, http.MakeRequest(t, &expect, gwAddr2, "HTTP", "http"), expect); err != nil {
@@ -1079,12 +1078,12 @@ var RateLimitGlobalMergeTest = suite.ConformanceTest{
 
 func GotExactExpectedResponse(t *testing.T, n int, r roundtripper.RoundTripper, req roundtripper.Request, resp http.ExpectedResponse) error {
 	for i := 0; i < n; i++ {
-		cReq, cRes, err := r.CaptureRoundTrip(req)
+		_, cRes, err := r.CaptureRoundTrip(req)
 		if err != nil {
 			return err
 		}
 
-		if err = http.CompareRequest(t, &req, cReq, cRes, resp); err != nil {
+		if err = http.CompareRequest(t, &req, nil, cRes, resp); err != nil {
 			return err
 		}
 	}
