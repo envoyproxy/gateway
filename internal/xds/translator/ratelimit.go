@@ -440,13 +440,11 @@ func BuildRateLimitServiceConfig(irListeners []*ir.HTTPListener) []*rlsconfv3.Ra
 			// For each rule, add to the correct domain only
 			for rIdx, rule := range route.Traffic.RateLimit.Global.Rules {
 				descriptor := descriptors[rIdx]
+				domain := irListener.Name
 				if isRuleShared(rule) {
-					sharedDomain := stripRuleIndexSuffix(rule.Name)
-					addRateLimitDescriptor(route, rule, descriptor, sharedDomain, domainDesc)
-				} else {
-					listenerDomain := irListener.Name
-					addRateLimitDescriptor(route, rule, descriptor, listenerDomain, domainDesc)
+					domain = stripRuleIndexSuffix(rule.Name)
 				}
+				addRateLimitDescriptor(route, rule, descriptor, domain, domainDesc)
 			}
 		}
 	}

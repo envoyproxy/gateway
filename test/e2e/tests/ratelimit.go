@@ -967,7 +967,15 @@ var RateLimitGlobalMergeTest = suite.ConformanceTest{
 			expectOk2 := http.ExpectedResponse{Request: http.Request{Path: "/foo", Headers: headers}, Response: http.Response{StatusCode: 200}, Namespace: ns}
 			expectLimit := http.ExpectedResponse{Request: http.Request{Path: "/foo", Headers: headers}, Response: http.Response{StatusCode: 429}, Namespace: ns}
 
-			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr2, expectOk1)
+			require.Eventually(t, func() bool {
+				req := http.MakeRequest(t, &expectOk1, gwAddr2, "HTTP", "http")
+				resp, err := suite.RoundTripper.RoundTrip(req)
+				if err != nil {
+					return false
+				}
+				defer resp.Body.Close()
+				return resp.Header.Get("X-Ratelimit-Limit") == "3, 3;w=3600"
+			}, suite.TimeoutConfig.MaxTimeToConsistency, suite.TimeoutConfig.PollInterval, "rate limit header not yet present")
 
 			for _, expect := range []http.ExpectedResponse{expectOk1, expectOk2} {
 				if err := GotExactExpectedResponse(t, 1, suite.RoundTripper, http.MakeRequest(t, &expect, gwAddr2, "HTTP", "http"), expect); err != nil {
