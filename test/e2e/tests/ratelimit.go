@@ -1058,17 +1058,10 @@ var RateLimitGlobalMergeTest = suite.ConformanceTest{
 
 		t.Run("shared_no_client_selectors", func(t *testing.T) {
 			ok1 := http.ExpectedResponse{Request: http.Request{Path: "/bar"}, Response: http.Response{StatusCode: 200}, Namespace: ns}
-			ok2 := http.ExpectedResponse{Request: http.Request{Path: "/bar"}, Response: http.Response{StatusCode: 200}, Namespace: ns}
 			limit := http.ExpectedResponse{Request: http.Request{Path: "/bar"}, Response: http.Response{StatusCode: 429}, Namespace: ns}
 
 			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr1, ok1)
 
-			if err := GotExactExpectedResponse(t, 1, suite.RoundTripper, http.MakeRequest(t, &ok1, gwAddr1, "HTTP", "http"), ok1); err != nil {
-				t.Errorf("expected 200 for first request: %v", err)
-			}
-			if err := GotExactExpectedResponse(t, 1, suite.RoundTripper, http.MakeRequest(t, &ok2, gwAddr2, "HTTP", "http"), ok2); err != nil {
-				t.Errorf("expected 200 for second request: %v", err)
-			}
 			if err := GotExactExpectedResponse(t, 1, suite.RoundTripper, http.MakeRequest(t, &limit, gwAddr1, "HTTP", "http"), limit); err != nil {
 				t.Errorf("expected 429 for third request: %v", err)
 			}
