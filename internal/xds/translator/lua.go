@@ -107,7 +107,7 @@ func (*lua) patchResources(_ *types.ResourceVersionTable, _ []*ir.HTTPRoute) err
 }
 
 // patchRoute patches the provided route so Lua filters are enabled if applicable.
-func (*lua) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute) error {
+func (*lua) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute, _ *ir.HTTPListener) error {
 	if route == nil {
 		return errors.New("xds route is nil")
 	}

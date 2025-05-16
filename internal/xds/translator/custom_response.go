@@ -426,7 +426,7 @@ func (c *customResponse) patchResources(tCtx *types.ResourceVersionTable,
 
 // patchRoute patches the provided route with the customResponse config if applicable.
 // Note: this method enables the corresponding customResponse filter for the provided route.
-func (c *customResponse) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute) error {
+func (c *customResponse) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute, _ *ir.HTTPListener) error {
 	if route == nil {
 		return errors.New("xds route is nil")
 	}
