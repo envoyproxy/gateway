@@ -19,6 +19,11 @@ http:
               endpoints:
                 - host: 10.244.0.12
                   port: 8080
+              metadata:
+                kind: Service
+                name: http-backend
+                namespace: default
+                sectionName: "8080"
               name: httproute/envoy-gateway/httproute-btls/rule/0/backend/0
               protocol: HTTPS
               tls:
@@ -38,6 +43,11 @@ http:
                   name: policy-btls/policies-ca
                 sni: example.com
               weight: 1
+              metadata:
+                kind: Service
+                name: http-backend2
+                namespace: default
+                sectionName: "8080"
               name: httproute/envoy-gateway/httproute-btls/rule/0/backend/1
         hostname: '*'
         name: httproute/envoy-gateway/httproute-btls/rule/0/match/0/*

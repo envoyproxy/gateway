@@ -121,12 +121,21 @@ xdsIR:
       port: 10080
       routes:
       - destination:
+          metadata:
+            kind: HTTPRoute
+            name: httproute-1
+            namespace: default
           name: httproute/default/httproute-1/rule/0
           settings:
           - addressType: FQDN
             endpoints:
             - host: foo.bar
               port: 8080
+            metadata:
+              kind: ServiceImport
+              name: service-import-1
+              namespace: default
+              sectionName: "8080"
             name: httproute/default/httproute-1/rule/0/backend/0
             protocol: HTTP
             weight: 1
@@ -134,6 +143,11 @@ xdsIR:
             endpoints:
             - host: 1.2.3.4
               port: 8081
+            metadata:
+              kind: ServiceImport
+              name: service-import-2
+              namespace: default
+              sectionName: "8081"
             name: httproute/default/httproute-1/rule/0/backend/1
             protocol: HTTP
             weight: 1

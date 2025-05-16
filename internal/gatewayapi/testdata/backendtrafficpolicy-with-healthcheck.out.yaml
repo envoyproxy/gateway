@@ -696,12 +696,20 @@ xdsIR:
       port: 10080
       routes:
       - destination:
+          metadata:
+            kind: GRPCRoute
+            name: grpcroute-1
+            namespace: default
           name: grpcroute/default/grpcroute-1/rule/0
           settings:
           - addressType: IP
             endpoints:
             - host: 7.7.7.7
               port: 8080
+            metadata:
+              name: service-1
+              namespace: default
+              sectionName: "8080"
             name: grpcroute/default/grpcroute-1/rule/0/backend/0
             protocol: GRPC
             weight: 1
@@ -737,12 +745,20 @@ xdsIR:
               maxEjectionPercent: 100
               splitExternalLocalOriginErrors: false
       - destination:
+          metadata:
+            kind: GRPCRoute
+            name: grpcroute-3
+            namespace: default
           name: grpcroute/default/grpcroute-3/rule/0
           settings:
           - addressType: IP
             endpoints:
             - host: 7.7.7.7
               port: 8080
+            metadata:
+              name: service-3
+              namespace: default
+              sectionName: "8080"
             name: grpcroute/default/grpcroute-3/rule/0/backend/0
             protocol: GRPC
             weight: 1
@@ -763,12 +779,20 @@ xdsIR:
               timeout: 1s
               unhealthyThreshold: 3
       - destination:
+          metadata:
+            kind: GRPCRoute
+            name: grpcroute-2
+            namespace: default
           name: grpcroute/default/grpcroute-2/rule/0
           settings:
           - addressType: IP
             endpoints:
             - host: 7.7.7.7
               port: 8080
+            metadata:
+              name: service-2
+              namespace: default
+              sectionName: "8080"
             name: grpcroute/default/grpcroute-2/rule/0/backend/0
             protocol: GRPC
             weight: 1
@@ -813,12 +837,20 @@ xdsIR:
       port: 10080
       routes:
       - destination:
+          metadata:
+            kind: HTTPRoute
+            name: httproute-2
+            namespace: default
           name: httproute/default/httproute-2/rule/0
           settings:
           - addressType: IP
             endpoints:
             - host: 7.7.7.7
               port: 8080
+            metadata:
+              name: service-2
+              namespace: default
+              sectionName: "8080"
             name: httproute/default/httproute-2/rule/0/backend/0
             protocol: HTTP
             weight: 1
@@ -854,12 +886,20 @@ xdsIR:
               maxEjectionPercent: 10
               splitExternalLocalOriginErrors: false
       - destination:
+          metadata:
+            kind: HTTPRoute
+            name: httproute-3
+            namespace: default
           name: httproute/default/httproute-3/rule/0
           settings:
           - addressType: IP
             endpoints:
             - host: 7.7.7.7
               port: 8080
+            metadata:
+              name: service-3
+              namespace: default
+              sectionName: "8080"
             name: httproute/default/httproute-3/rule/0/backend/0
             protocol: HTTP
             weight: 1
@@ -895,12 +935,20 @@ xdsIR:
               maxEjectionPercent: 11
               splitExternalLocalOriginErrors: false
       - destination:
+          metadata:
+            kind: HTTPRoute
+            name: httproute-4
+            namespace: default
           name: httproute/default/httproute-4/rule/0
           settings:
           - addressType: IP
             endpoints:
             - host: 7.7.7.7
               port: 8080
+            metadata:
+              name: service-2
+              namespace: default
+              sectionName: "8080"
             name: httproute/default/httproute-4/rule/0/backend/0
             protocol: HTTP
             weight: 1
@@ -931,12 +979,20 @@ xdsIR:
               timeout: 1s
               unhealthyThreshold: 3
       - destination:
+          metadata:
+            kind: HTTPRoute
+            name: httproute-1
+            namespace: default
           name: httproute/default/httproute-1/rule/0
           settings:
           - addressType: IP
             endpoints:
             - host: 7.7.7.7
               port: 8080
+            metadata:
+              name: service-1
+              namespace: default
+              sectionName: "8080"
             name: httproute/default/httproute-1/rule/0/backend/0
             protocol: HTTP
             weight: 1

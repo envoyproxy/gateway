@@ -8,6 +8,7 @@ security updates: |
 
 # New features or capabilities added in this release.
 new features: |
+  - Added XDS metadata for clusters and endpoints from xRoute and
 
 bug fixes: |
 
