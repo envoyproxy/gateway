@@ -54,3 +54,11 @@ message PostTranslateExtensionContext {
 message ExtensionResource {
     bytes unstructured_bytes = 1;
 }
+
+
+// PostClusterExtensionContext provides resources introduced by an extension and watched by Envoy Gateway
+// additional context information can be added to this message as more use-cases are discovered
+message PostClusterExtensionContext {
+    // Resources introduced by the extension that were used as extensionRefs in an HTTPRoute/GRPCRoute BackendRefs
+    repeated ExtensionResource extension_resources = 1;
+}
