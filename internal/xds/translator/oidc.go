@@ -244,7 +244,7 @@ func buildHeaderMatchers(jwt *ir.JWT) []*routev3.HeaderMatcher {
 				HeaderMatchSpecifier: &routev3.HeaderMatcher_StringMatch{StringMatch: &stringMatcher},
 			}
 			passThroughMatchers = append(passThroughMatchers, &headerMatcher)
-		} else if provider.ExtractFrom.Headers != nil {
+		} else {
 			// Any matching header will be bypassed (JWT effectively OR's them).
 			for _, extractHeader := range provider.ExtractFrom.Headers {
 				if extractHeader.ValuePrefix == nil {
