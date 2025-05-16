@@ -1,69 +1,81 @@
 ---
-title: "Working on Envoy Gateway Docs"
-description: "This section tells the development of 
- Envoy Gateway Documents."
+title: Developer Guide
+weight: 10
 ---
 
-{{% alert title="Note" color="warning" %}}
-We migrated from ***Sphinx*** to ***Hugo*** for Envoy Gateway Documents.
+## Prerequisites
 
-Read blog: [Welcome to new website!](/news/blogs/new-website/new-website)
-{{% /alert %}}
+### Core Tools
+- **Go** (v1.24 or later)  
+  📌 [Installation Guide](https://go.dev/doc/install)  
+- **Make** (v4.0 or later)  
+  📌 [Installation Guide](https://www.gnu.org/software/make)  
+- **Python 3** (with `venv` module)  
+  ```bash
+  # For Debian/Ubuntu users:
+  sudo apt-get install python3-venv
 
-The documentation for the Envoy Gateway lives in the `site/content/en` directory. Any
-individual document can be written using [Markdown].
+Quick Start
+make help  # View all available commands
 
-## Documentation Structure
+Building Envoy Gateway
+# Build all binaries:
+make build
 
-We supported the versioned Docs now, the directory name under docs represents
-the version of docs. The root of the latest site is in `site/content/en/latest`.
-This is probably where to start if you're trying to understand how things fit together.
+# Build specific components:
+make build BINS="envoy-gateway"  # Control plane
+make build BINS="egctl"         # CLI tool
 
-Note that the new contents should be added to `site/content/en/latest` and will be cut off at
-the next release. The contents under `site/content/en/v0.5.0` are auto-generated,
-and usually do not need to make changes to them, unless if you find the current release pages have
-some incorrect contents. If so, you should send a PR to update contents both of `site/content/en/latest`
-and `site/content/en/v0.5.0`.
 
-You can access the website which represents the current release in default,
-and you can access the website which contains the latest version changes in
-[Here][latest-website] or at the footer of the pages.
+ Output Location: bin/<OS>/<ARCH>/ (e.g., bin/linux/amd64/)
 
-## Documentation Workflow
 
-To work with the docs, just edit Markdown files in `site/content/en/latest`,
-then run
+Testing
 
-```bash
-make docs
-```
+# Run unit tests:
+make test
 
-This will create `site/public` with the built HTML pages. You can preview it
-by running:
+# End-to-end tests:
+make e2e
 
-``` shell
-make docs-serve
-```
+# Generate test data:
+make testdata
 
-If you want to generate a new release version of the docs, like `v0.6.0`, then run
+Kubernetes Development
+Local Cluster (Kind)
 
-```bash
-make docs-release TAG=v0.6.0
-```
+# Create a test cluster:
+make create-cluster
 
-This will update the VERSION file at the project root, which records current release version,
-and it will be used in the pages version context and binary version output. Also, this will generate
-new dir `site/content/en/v0.6.0`, which contains docs at v0.6.0 and updates artifact links to `v0.6.0`
-in all files under `site/content/en/v0.6.0/user`, like `quickstart.md`, `http-routing.md` and etc.
+# Deploy with latest image:
+TAG=latest make kube-deploy
 
-## Publishing Docs
+# Deploy custom image:
+make kube-install-image
+IMAGE_PULL_POLICY=IfNotPresent make kube-deploy
 
-Whenever docs are pushed to `main`, CI will publish the built docs to GitHub
-Pages. For more details, see `.github/workflows/docs.yaml`.
 
-## Reference
 
-Go to [Hugo](https://gohugo.io) and [Docsy](https://www.docsy.dev/docs) to learn more.
 
-[Markdown]: https://daringfireball.net/projects/markdown/syntax
-[latest-website]: /latest
+Demo Setup
+
+# Deploy demo resources:
+make kube-demo
+
+# Clean up demo:
+make kube-demo-undeploy
+
+
+Platform-Specific Notes
+MacOS Users
+For conformance tests:
+
+Preferred: Use Docker Desktop with Kubernetes, or
+
+Alternative:
+
+brew install chipmk/tap/docker-mac-net-connect
+TAG=latest make conformance
+
+
+
