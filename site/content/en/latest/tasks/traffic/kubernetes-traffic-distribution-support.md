@@ -101,7 +101,7 @@ not receive requests.
 
 Follow the steps from the [Quickstart](../../quickstart) to uninstall Envoy Gateway and the example manifest.
 
-Delete the zone-routing example resources BackendTrafficPolicy and HTTPRoute:
+Delete the zone-routing example resources and HTTPRoute:
 
 ```shell
 kubectl delete service/zone-routing-backend 
