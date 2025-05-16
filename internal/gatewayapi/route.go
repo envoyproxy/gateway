@@ -1113,16 +1113,6 @@ func (t *Translator) processUDPRouteParentRefs(udpRoute *UDPRouteContext, resour
 				metav1.ConditionFalse,
 				resolveErrs.Reason(),
 				resolveErrs.Error())
-
-			// TODO: zhaohuabing should we set the accepted condition to false here?
-			status.SetRouteStatusCondition(routeStatus,
-				parentRef.routeParentStatusIdx,
-				udpRoute.GetGeneration(),
-				gwapiv1.RouteConditionAccepted,
-				metav1.ConditionFalse,
-				"Failed to process the settings associated with the UDP route.",
-				resolveErrs.Error(),
-			)
 		} else {
 			status.SetRouteStatusCondition(routeStatus,
 				parentRef.routeParentStatusIdx,
