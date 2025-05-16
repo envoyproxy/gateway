@@ -16,11 +16,150 @@ import (
 func FuzzGatewayAPIToXDS(f *testing.F) {
 	// Add seed corpus for golang native fuzzing. OSS-Fuzz will not take these corpus into consideration.
 	// grpc route
-	f.Add([]byte("apiVersion: gateway.networking.k8s.io/v1\nkind: GatewayClass\nmetadata:\n  name: eg\nspec:\n  controllerName: gateway.envoyproxy.io/gatewayclass-controller\n---\napiVersion: gateway.networking.k8s.io/v1\nkind: Gateway\nmetadata:\n  name: eg\n  namespace: default\nspec:\n  gatewayClassName: eg\n  listeners:\n    - name: http\n      protocol: HTTP\n      port: 80\n---\napiVersion: gateway.networking.k8s.io/v1\nkind: GRPCRoute\nmetadata:\n  name: backend\n  namespace: default\nspec:\n  parentRefs:\n    - name: eg\n      sectionName: grpc\n  hostnames:\n    - \"www.grpc-example.com\"\n  rules:\n    - matches:\n        - method:\n            service: com.example.Things\n            method: DoThing\n          headers:\n            - name: com.example.Header\n              value: foobar\n      backendRefs:\n        - name: provided-backend\n          port: 9000\n---\napiVersion: gateway.envoyproxy.io/v1alpha1\nkind: Backend\nmetadata:\n  name: provided-backend\n  namespace: default\nspec:\n  endpoints:\n    - ip:\n        address: 0.0.0.0\n        port: 8000\n"))
+	f.Add([]byte(`apiVersion: gateway.networking.k8s.io/v1
+kind: GatewayClass
+metadata:
+  name: eg
+spec:
+  controllerName: gateway.envoyproxy.io/gatewayclass-controller
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: eg
+  namespace: default
+spec:
+  gatewayClassName: eg
+  listeners:
+    - name: http
+      protocol: HTTP
+      port: 80
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: GRPCRoute
+metadata:
+  name: backend
+  namespace: default
+spec:
+  parentRefs:
+    - name: eg
+      sectionName: grpc
+  hostnames:
+    - "www.grpc-example.com"
+  rules:
+    - matches:
+        - method:
+            service: com.example.Things
+            method: DoThing
+          headers:
+            - name: com.example.Header
+              value: foobar
+      backendRefs:
+        - name: provided-backend
+          port: 9000
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: Backend
+metadata:
+  name: provided-backend
+  namespace: default
+spec:
+  endpoints:
+    - ip:
+        address: 0.0.0.0
+        port: 8000`))
+
 	// http route
-	f.Add([]byte("apiVersion: gateway.networking.k8s.io/v1\nkind: GatewayClass\nmetadata:\n  name: eg\nspec:\n  controllerName: gateway.envoyproxy.io/gatewayclass-controller\n---\napiVersion: gateway.networking.k8s.io/v1\nkind: Gateway\nmetadata:\n  name: eg\n  namespace: default\nspec:\n  gatewayClassName: eg\n  listeners:\n    - name: http\n      protocol: HTTP\n      port: 80\n---\napiVersion: gateway.networking.k8s.io/v1\nkind: HTTPRoute\nmetadata:\n  name: backend\n  namespace: default\nspec:\n  parentRefs:\n    - name: eg\n  hostnames:\n    - \"www.example.com\"\n  rules:\n    - backendRefs:\n        - name: provided-backend\n          port: 8000\n---\napiVersion: gateway.envoyproxy.io/v1alpha1\nkind: Backend\nmetadata:\n  name: provided-backend\n  namespace: default\nspec:\n  endpoints:\n    - ip:\n        address: 0.0.0.0\n        port: 8000\n"))
+	f.Add([]byte(`apiVersion: gateway.networking.k8s.io/v1
+kind: GatewayClass
+metadata:
+  name: eg
+spec:
+  controllerName: gateway.envoyproxy.io/gatewayclass-controller
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: eg
+  namespace: default
+spec:
+  gatewayClassName: eg
+  listeners:
+    - name: http
+      protocol: HTTP
+      port: 80
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: backend
+  namespace: default
+spec:
+  parentRefs:
+    - name: eg
+  hostnames:
+    - "www.example.com"
+  rules:
+    - backendRefs:
+        - name: provided-backend
+          port: 8000
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: Backend
+metadata:
+  name: provided-backend
+  namespace: default
+spec:
+  endpoints:
+    - ip:
+        address: 0.0.0.0
+        port: 8000`))
+
 	// udp route
-	f.Add([]byte("apiVersion: gateway.networking.k8s.io/v1\nkind: GatewayClass\nmetadata:\n  name: eg\nspec:\n  controllerName: gateway.envoyproxy.io/gatewayclass-controller\n---\napiVersion: gateway.networking.k8s.io/v1\nkind: Gateway\nmetadata:\n  name: eg\n  namespace: default\nspec:\n  gatewayClassName: eg\n  listeners:\n    - name: http\n      protocol: HTTP\n      port: 80\n---\napiVersion: gateway.networking.k8s.io/v1alpha2\nkind: UDPRoute\nmetadata:\n  name: backend\n  namespace: default\nspec:\n  parentRefs:\n    - name: eg\n      sectionName: udp\n  rules:\n    - backendRefs:\n        - name: backend\n          port: 3000\n---\napiVersion: gateway.envoyproxy.io/v1alpha1\nkind: Backend\nmetadata:\n  name: provided-backend\n  namespace: default\nspec:\n  endpoints:\n    - ip:\n        address: 0.0.0.0\n        port: 8000\n"))
+	f.Add([]byte(`apiVersion: gateway.networking.k8s.io/v1
+kind: GatewayClass
+metadata:
+  name: eg
+spec:
+  controllerName: gateway.envoyproxy.io/gatewayclass-controller
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: eg
+  namespace: default
+spec:
+  gatewayClassName: eg
+  listeners:
+    - name: http
+      protocol: HTTP
+      port: 80
+---
+apiVersion: gateway.networking.k8s.io/v1alpha2
+kind: UDPRoute
+metadata:
+  name: backend
+  namespace: default
+spec:
+  parentRefs:
+    - name: eg
+      sectionName: udp
+  rules:
+    - backendRefs:
+        - name: backend
+          port: 3000
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: Backend
+metadata:
+  name: provided-backend
+  namespace: default
+spec:
+  endpoints:
+    - ip:
+        address: 0.0.0.0
+        port: 8000`))
+
 	f.Fuzz(func(t *testing.T, b []byte) {
 		rs, err := resource.LoadResourcesFromYAMLBytes(b, true)
 		if err != nil {
