@@ -8,6 +8,7 @@ security updates: |
 
 # New features or capabilities added in this release.
 new features: |
+  Added support for setting ownerreference to infra resources when enable gateway namespace mode.
 
 bug fixes: |
 
