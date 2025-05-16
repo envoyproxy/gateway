@@ -64,10 +64,6 @@ func TestTranslate(t *testing.T) {
 			name:                 "gateway-namespace-mode-infra-httproute",
 			GatewayNamespaceMode: true,
 		},
-		{
-			name:                 "gateway-namespace-mode-merged-gateways",
-			GatewayNamespaceMode: true,
-		},
 	}
 
 	inputFiles, err := filepath.Glob(filepath.Join("testdata", "*.in.yaml"))

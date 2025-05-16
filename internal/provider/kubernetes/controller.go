@@ -1069,23 +1069,6 @@ func (r *gatewayAPIReconciler) processGateways(ctx context.Context, managedGC *g
 				continue
 			}
 		}
-		// Check for incompatible configuration: both MergeGateways and GatewayNamespaceMode enabled
-		if r.mergeGateways.Has(managedGC.Name) && r.gatewayNamespaceMode {
-			r.log.Info("gateway rejected: merged gateways and gateway namespace mode cannot be used together",
-				"namespace", gtw.Namespace, "name", gtw.Name)
-
-			status.UpdateGatewayStatusNotAccepted(&gtw,
-				gwapiv1.GatewayReasonInvalid,
-				"Gateway cannot be accepted: Merged Gateways and Gateway Namespace Mode are not supported together")
-
-			gtw.Status = gwapiv1.GatewayStatus{}
-			gtwNamespacedName := utils.NamespacedName(&gtw).String()
-			if !resourceMap.allAssociatedGateways.Has(gtwNamespacedName) {
-				resourceMap.allAssociatedGateways.Insert(gtwNamespacedName)
-				resourceTree.Gateways = append(resourceTree.Gateways, &gtw)
-			}
-			continue
-		}
 
 		r.log.Info("processing Gateway", "namespace", gtw.Namespace, "name", gtw.Name)
 		resourceMap.allAssociatedNamespaces.Insert(gtw.Namespace)
@@ -2027,6 +2010,11 @@ func (r *gatewayAPIReconciler) processGatewayClassParamsRef(ctx context.Context,
 			return fmt.Errorf("envoyproxy referenced by gatewayclass is not found: %w", err)
 		}
 		return fmt.Errorf("failed to find envoyproxy %s/%s: %w", r.namespace, gc.Spec.ParametersRef.Name, err)
+	}
+
+	// Check for incompatible configuration: both MergeGateways and GatewayNamespaceMode enabled
+	if r.gatewayNamespaceMode && ep.Spec.MergeGateways != nil && *ep.Spec.MergeGateways {
+		return fmt.Errorf("it is not supported to run Merged Gateways and Gateway Namespace Mode together")
 	}
 
 	if err := r.processEnvoyProxy(ep, resourceMap); err != nil {
