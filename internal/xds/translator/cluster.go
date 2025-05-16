@@ -305,6 +305,7 @@ func buildXdsCluster(args *xdsClusterArgs) (*buildClusterResult, error) {
 			TypedConfig: dfpAny,
 		}}
 		cluster.LbPolicy = clusterv3.Cluster_CLUSTER_PROVIDED
+
 	case EndpointTypeStatic:
 		cluster.ClusterDiscoveryType = &clusterv3.Cluster_Type{Type: clusterv3.Cluster_EDS}
 		cluster.EdsClusterConfig = &clusterv3.Cluster_EdsClusterConfig{
@@ -838,6 +839,14 @@ func buildTypedExtensionProtocolOptions(args *xdsClusterArgs) (map[string]*anypb
 			ExplicitHttpConfig: &httpv3.HttpProtocolOptions_ExplicitHttpConfig{
 				ProtocolConfig: &httpv3.HttpProtocolOptions_ExplicitHttpConfig_HttpProtocolOptions{},
 			},
+		}
+	}
+
+	// Envoy proxy requires AutoSNI and AutoSanValidation to be set to true for dynamic_forward_proxy clusters
+	if args.endpointType == EndpointTypeDynamicResolver {
+		protocolOptions.UpstreamHttpProtocolOptions = &corev3.UpstreamHttpProtocolOptions{
+			AutoSni:           true,
+			AutoSanValidation: true,
 		}
 	}
 

@@ -19,6 +19,7 @@ http:
       settings:
       - isDynamicResolver: true
         name: httproute/default/httproute-1/rule/0/backend/0
+        protocol: HTTP2
         tls:
           alpnProtocols: null
           caCertificate:
