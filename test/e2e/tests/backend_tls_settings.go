@@ -53,8 +53,8 @@ var BackendTLSSettingsTest = suite.ConformanceTest{
 		t.Run("Apply custom TLS settings when making backend requests.", func(t *testing.T) {
 			depNS := "envoy-gateway-system"
 			ns := "gateway-conformance-infra"
-			routeNN := types.NamespacedName{Name: "http-with-backend-tls", Namespace: ns}
-			gwNN := types.NamespacedName{Name: "backend-namespaces", Namespace: ns}
+			routeNN := types.NamespacedName{Name: "backend-tls-setting", Namespace: ns}
+			gwNN := types.NamespacedName{Name: "backend-tls-setting", Namespace: ns}
 			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
 			kubernetes.NamespacesMustBeReady(t, suite.Client, suite.TimeoutConfig, []string{depNS})
 			backendTLSPolicy := &gwapiv1a3.BackendTLSPolicy{}
