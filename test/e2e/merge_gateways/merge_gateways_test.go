@@ -25,6 +25,10 @@ import (
 )
 
 func TestMergeGateways(t *testing.T) {
+	// Skip the entire test suite if we're in Gateway Namespace Mode
+	if tests.IsGatewayNamespaceMode() {
+		t.Skip("MergeGateways tests are not supported in Gateway Namespace Mode")
+	}
 	flag.Parse()
 
 	c, cfg := kubetest.NewClient(t)
@@ -37,12 +41,6 @@ func TestMergeGateways(t *testing.T) {
 			*flags.GatewayClassName, *flags.CleanupBaseResources, *flags.ShowDebug)
 	}
 
-	var skipTests []string
-	if tests.IsGatewayNamespaceMode() {
-		// Skip MergeGateways test because it is not supported in GatewayNamespaceMode
-		skipTests = append(skipTests, tests.MergeGatewaysTest.ShortName)
-	}
-
 	cSuite, err := suite.NewConformanceTestSuite(suite.ConformanceOptions{
 		Client:               c,
 		RestConfig:           cfg,
@@ -53,7 +51,7 @@ func TestMergeGateways(t *testing.T) {
 		// SupportedFeatures cannot be empty, so we set it to SupportGateway
 		// All e2e tests should leave Features empty.
 		SupportedFeatures: sets.New(features.SupportGateway),
-		SkipTests:         skipTests,
+		SkipTests:         []string{},
 	})
 	if err != nil {
 		t.Fatalf("Failed to create ConformanceTestSuite: %v", err)
