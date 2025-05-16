@@ -94,6 +94,7 @@ infraIR:
           gateway.envoyproxy.io/owning-gateway-name: gateway-1
           gateway.envoyproxy.io/owning-gateway-namespace: envoy-gateway
       name: envoy-gateway/gateway-1
+      namespace: envoy-gateway-system
 securityPolicies:
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: SecurityPolicy
@@ -142,7 +143,7 @@ securityPolicies:
 xdsIR:
   envoy-gateway/gateway-1:
     accessLog:
-      text:
+      json:
       - path: /dev/stdout
     http:
     - address: 0.0.0.0
@@ -169,6 +170,7 @@ xdsIR:
               port: 8080
             protocol: HTTP
             weight: 1
+            name: httproute/default/httproute-1/rule/0/backend/0
         hostname: www.example.com
         isHTTP2: false
         metadata:
@@ -202,3 +204,8 @@ xdsIR:
             redirectURL: https://www.example.com/oauth2/callback
             scopes:
             - openid
+    readyListener:
+      address: 0.0.0.0
+      ipFamily: IPv4
+      path: /ready
+      port: 19003
