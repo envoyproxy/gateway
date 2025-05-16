@@ -33,6 +33,7 @@ func BuildProxyArgs(
 	if bootstrapConfigOptions != nil && bootstrapConfigOptions.IPFamily == nil {
 		bootstrapConfigOptions.IPFamily = getIPFamily(infra)
 	}
+
 	bootstrapConfigOptions.GatewayNamespaceMode = gatewayNamespaceMode
 	bootstrapConfigurations, err := bootstrap.GetRenderedBootstrapConfig(bootstrapConfigOptions)
 	if err != nil {

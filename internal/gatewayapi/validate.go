@@ -287,7 +287,7 @@ func (t *Translator) validateListenerConditions(listener *ListenerContext) (isRe
 	}
 
 	// Any condition on the listener apart from Programmed=true indicates an error.
-	if !(lConditions[0].Type == string(gwapiv1.ListenerConditionProgrammed) && lConditions[0].Status == metav1.ConditionTrue) {
+	if lConditions[0].Type != string(gwapiv1.ListenerConditionProgrammed) || lConditions[0].Status != metav1.ConditionTrue {
 		hasProgrammedCond := false
 		hasRefsCond := false
 		for _, existing := range lConditions {
@@ -969,7 +969,7 @@ func (t *Translator) validateExtServiceBackendReference(
 		return errors.New("kind is invalid, only Service (specified by omitting " +
 			"the kind field or setting it to 'Service') and Backend are supported")
 	}
-	if backendRef.Port == nil && !(backendRef.Kind != nil && *backendRef.Kind == egv1a1.KindBackend) {
+	if backendRef.Port == nil && (backendRef.Kind == nil || *backendRef.Kind != egv1a1.KindBackend) {
 		return errors.New("a valid port number corresponding to a port on the Service must be specified")
 	}
 

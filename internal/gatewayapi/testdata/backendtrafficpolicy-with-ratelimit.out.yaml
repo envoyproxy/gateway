@@ -312,7 +312,6 @@ xdsIR:
           namespace: default
         name: grpcroute/default/grpcroute-1/rule/0/match/-1/*
         traffic:
-          name: envoy-gateway/policy-for-gateway
           rateLimit:
             global:
               rules:
@@ -329,6 +328,7 @@ xdsIR:
                 limit:
                   requests: 10
                   unit: Hour
+                name: envoy-gateway/policy-for-gateway/rule/0
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4
@@ -376,7 +376,6 @@ xdsIR:
           name: ""
           prefix: /
         traffic:
-          name: default/policy-for-route
           rateLimit:
             global:
               rules:
@@ -390,6 +389,7 @@ xdsIR:
                 limit:
                   requests: 20
                   unit: Hour
+                name: default/policy-for-route/rule/0
                 requestCost:
                   number: 1
                 responseCost:

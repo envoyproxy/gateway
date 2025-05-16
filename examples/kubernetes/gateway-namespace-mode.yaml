@@ -1,0 +1,192 @@
+apiVersion: gateway.networking.k8s.io/v1
+kind: GatewayClass
+metadata:
+  name: eg
+spec:
+  controllerName: gateway.envoyproxy.io/gatewayclass-controller
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: team-a-backend
+  namespace: team-a
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: team-a-backend
+  namespace: team-a
+  labels:
+    app: team-a-backend
+    service: team-a-backend
+spec:
+  ports:
+    - name: http
+      port: 3000
+      targetPort: 3000
+  selector:
+    app: team-a-backend
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: team-a-backend
+  namespace: team-a
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: team-a-backend
+      version: v1
+  template:
+    metadata:
+      labels:
+        app: team-a-backend
+        version: v1
+    spec:
+      serviceAccountName: team-a-backend
+      containers:
+        - image: gcr.io/k8s-staging-gateway-api/echo-basic:v20231214-v1.0.0-140-gf544a46e
+          imagePullPolicy: IfNotPresent
+          name: team-a-backend
+          ports:
+            - containerPort: 3000
+          env:
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: team-b-backend
+  namespace: team-b
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: team-b-backend
+  namespace: team-b
+  labels:
+    app: team-b-backend
+    service: team-b-backend
+spec:
+  ports:
+    - name: http
+      port: 3000
+      targetPort: 3000
+  selector:
+    app: team-b-backend
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: team-b-backend
+  namespace: team-b
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: team-b-backend
+      version: v1
+  template:
+    metadata:
+      labels:
+        app: team-b-backend
+        version: v1
+    spec:
+      serviceAccountName: team-b-backend
+      containers:
+        - image: gcr.io/k8s-staging-gateway-api/echo-basic:v20231214-v1.0.0-140-gf544a46e
+          imagePullPolicy: IfNotPresent
+          name: team-b-backend
+          ports:
+            - containerPort: 3000
+          env:
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: gateway-a
+  namespace: team-a
+spec:
+  gatewayClassName: eg
+  listeners:
+    - allowedRoutes:
+        namespaces:
+          from: Same
+      name: http
+      port: 8080
+      protocol: HTTP
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: gateway-b
+  namespace: team-b
+spec:
+  gatewayClassName: eg
+  listeners:
+    - allowedRoutes:
+        namespaces:
+          from: Same
+      name: http
+      port: 8081
+      protocol: HTTP
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: team-a-route
+  namespace: team-a
+spec:
+  parentRefs:
+    - name: gateway-a
+  hostnames:
+    - "www.team-a.com"
+  rules:
+    - backendRefs:
+        - group: ""
+          kind: Service
+          name: team-a-backend
+          port: 3000
+          weight: 1
+      matches:
+        - path:
+            type: PathPrefix
+            value: /example
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: team-b-route
+  namespace: team-b
+spec:
+  parentRefs:
+    - name: gateway-b
+  hostnames:
+    - "www.team-b.com"
+  rules:
+    - backendRefs:
+        - group: ""
+          kind: Service
+          name: team-b-backend
+          port: 3000
+          weight: 1
+      matches:
+        - path:
+            type: PathPrefix
+            value: /example

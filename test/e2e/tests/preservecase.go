@@ -16,13 +16,16 @@ import (
 	"net/http/httputil"
 	"regexp"
 	"testing"
+	"time"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/wait"
 	"sigs.k8s.io/gateway-api/conformance/utils/http"
 	"sigs.k8s.io/gateway-api/conformance/utils/kubernetes"
 	"sigs.k8s.io/gateway-api/conformance/utils/roundtripper"
 	"sigs.k8s.io/gateway-api/conformance/utils/suite"
+	"sigs.k8s.io/gateway-api/conformance/utils/tlog"
 )
 
 func init() {
@@ -113,27 +116,37 @@ var PreserveCaseTest = suite.ConformanceTest{
 			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
 
 			WaitForPods(t, suite.Client, "gateway-preserve-case-backend", map[string]string{"app": "preserve-case"}, corev1.PodRunning, PodReady)
-			// Can't use the standard method for checking the response, since the remote side isn't the
-			// conformance echo server and it returns a differently formatted response.
-			expectedResponse := http.ExpectedResponse{
-				Request: http.Request{
-					Path: "/preserve?headers=ReSpOnSeHeAdEr",
-					Headers: map[string]string{
-						"SpEcIaL": "Header",
+
+			err := wait.PollUntilContextTimeout(context.TODO(), time.Second, suite.TimeoutConfig.DeleteTimeout, true, func(ctx context.Context) (bool, error) {
+				// Can't use the standard method for checking the response, since the remote side isn't the
+				// conformance echo server and it returns a differently formatted response.
+				expectedResponse := http.ExpectedResponse{
+					Request: http.Request{
+						Path: "/preserve?headers=ReSpOnSeHeAdEr",
+						Headers: map[string]string{
+							"SpEcIaL": "Header",
+						},
 					},
-				},
-				Namespace: ns,
-			}
+					Namespace: ns,
+				}
 
-			var rt nethttp.RoundTripper
-			req := http.MakeRequest(t, &expectedResponse, gwAddr, "HTTP", "http")
-			respBody, err := casePreservingRoundTrip(req, rt, suite)
+				var rt nethttp.RoundTripper
+				req := http.MakeRequest(t, &expectedResponse, gwAddr, "HTTP", "http")
+				respBody, err := casePreservingRoundTrip(req, rt, suite)
+				if err != nil {
+					tlog.Logf(t, "failed to get expected response: %v", err)
+					return false, nil
+				}
+
+				if _, found := respBody["SpEcIaL"]; !found {
+					tlog.Logf(t, "case was not preserved for test header: %+v", respBody)
+					return false, nil
+				}
+
+				return true, nil
+			})
 			if err != nil {
-				t.Errorf("failed to get expected response: %v", err)
-			}
-
-			if _, found := respBody["SpEcIaL"]; !found {
-				t.Errorf("case was not preserved for test header: %+v", respBody)
+				tlog.Errorf(t, "failed to get expected response: %v", err)
 			}
 		})
 	},

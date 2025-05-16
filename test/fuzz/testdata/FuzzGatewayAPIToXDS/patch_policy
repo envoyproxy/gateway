@@ -1,0 +1,29 @@
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyPatchPolicy
+metadata:
+  name: ratelimit-patch-policy
+  namespace: default
+spec:
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: Gateway
+    name: eg
+  type: JSONPatch
+  jsonPatches:
+    - type: "type.googleapis.com/envoy.config.listener.v3.Listener"
+      name: default/eg/http
+      operation:
+        op: add
+        path: "/default_filter_chain/filters/0/typed_config/http_filters/0"
+        value:
+          name: "envoy.filters.http.ratelimit"
+          typed_config:
+            "@type": "type.googleapis.com/envoy.extensions.filters.http.ratelimit.v3.RateLimit"
+            domain: "eag-ratelimit"
+            failure_mode_deny: true
+            timeout: 1s
+            rate_limit_service:
+              grpc_service:
+                envoy_grpc:
+                  cluster_name: rate-limit-cluster
+              transport_api_version: V3

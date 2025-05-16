@@ -368,12 +368,12 @@ Multiple GRPCRoutes can be attached to a single Gateway resource. Importantly,
 only one Route rule may match each request. For more information on how conflict
 resolution applies to merging, refer to the [API specification][grpcrouterule].
 
-[grpcroute]: https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.GRPCRoute
-[grpcrouterule]: https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.GRPCRouteRule
-[hostname]: https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.Hostname
+[grpcroute]: https://gateway-api.sigs.k8s.io/reference/spec#gateway.networking.k8s.io/v1.GRPCRoute
+[grpcrouterule]: https://gateway-api.sigs.k8s.io/reference/spec#gateway.networking.k8s.io/v1.GRPCRouteRule
+[hostname]: https://gateway-api.sigs.k8s.io/reference/spec#gateway.networking.k8s.io/v1.Hostname
 [rfc-3986]: https://tools.ietf.org/html/rfc3986
-[matches]: https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.GRPCRouteMatch
-[filters]: https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.GRPCRouteFilter
-[backendRef]: https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.GRPCBackendRef
-[parentRef]: https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.ParentRef
-[name]: https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.SectionName
+[matches]: https://gateway-api.sigs.k8s.io/reference/spec#gateway.networking.k8s.io/v1.GRPCRouteMatch
+[filters]: https://gateway-api.sigs.k8s.io/reference/spec#gateway.networking.k8s.io/v1.GRPCRouteFilter
+[backendRef]: https://gateway-api.sigs.k8s.io/reference/spec#gateway.networking.k8s.io/v1.GRPCBackendRef
+[parentRef]: https://gateway-api.sigs.k8s.io/reference/spec#gateway.networking.k8s.io/v1.ParentRef
+[name]: https://gateway-api.sigs.k8s.io/reference/spec#gateway.networking.k8s.io/v1.SectionName

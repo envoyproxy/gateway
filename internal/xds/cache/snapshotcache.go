@@ -48,6 +48,7 @@ type SnapshotCacheWithCallbacks interface {
 	serverv3.Callbacks
 	GenerateNewSnapshot(string, types.XdsResources) error
 	SnapshotHasIrKey(string) bool
+	GetIrKeys() []string
 }
 
 type snapshotMap map[string]*cachev3.Snapshot
@@ -376,4 +377,16 @@ func (s *snapshotCache) SnapshotHasIrKey(irKey string) bool {
 	}
 
 	return false
+}
+
+func (s *snapshotCache) GetIrKeys() []string {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	var irKeys []string
+	for key := range s.lastSnapshot {
+		irKeys = append(irKeys, key)
+	}
+
+	return irKeys
 }

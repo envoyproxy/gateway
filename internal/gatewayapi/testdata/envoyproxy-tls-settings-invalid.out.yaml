@@ -20,10 +20,9 @@ backendTLSPolicies:
         namespace: envoy-gateway
       conditions:
       - lastTransitionTime: null
-        message: 'Failed to locate TLS secret for client auth: envoy-gateway-system/client-auth-not-found
-          specified in EnvoyProxy envoy-gateway-system/test.'
-        reason: Invalid
-        status: "False"
+        message: Policy has been accepted.
+        reason: Accepted
+        status: "True"
         type: Accepted
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
 gateways:

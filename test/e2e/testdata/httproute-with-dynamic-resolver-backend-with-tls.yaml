@@ -1,0 +1,151 @@
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: httproute-with-dynamic-resolver-backend-tls
+  namespace: gateway-conformance-infra
+spec:
+  parentRefs:
+  - name: same-namespace
+  rules:
+  - backendRefs:
+    - group: gateway.envoyproxy.io
+      kind: Backend
+      name: backend-dynamic-resolver-tls
+    matches:
+    - path:
+        type: PathPrefix
+        value: /with-tls
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: Backend
+metadata:
+  name: backend-dynamic-resolver-tls
+  namespace: gateway-conformance-infra
+spec:
+  type: DynamicResolver
+  tls:
+    caCertificateRefs:
+    - name: backend-ca-certificate
+      group: ""
+      kind: ConfigMap
+---
+# req -x509 -sha256 -nodes -days 36500 -newkey rsa:2048 -subj '/O=example Inc./CN=example.com' -keyout ca.key -out ca.crt
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: backend-ca-certificate
+  namespace: gateway-conformance-infra
+data:
+  ca.crt: |
+    -----BEGIN CERTIFICATE-----
+    MIIDPTCCAiWgAwIBAgIUcpXGG2fJigPwvq46BxmVmgxlGxQwDQYJKoZIhvcNAQEL
+    BQAwLTEVMBMGA1UECgwMZXhhbXBsZSBJbmMuMRQwEgYDVQQDDAtleGFtcGxlLmNv
+    bTAgFw0yNTA1MDIwNzQwMTdaGA8yMTI1MDQwODA3NDAxN1owLTEVMBMGA1UECgwM
+    ZXhhbXBsZSBJbmMuMRQwEgYDVQQDDAtleGFtcGxlLmNvbTCCASIwDQYJKoZIhvcN
+    AQEBBQADggEPADCCAQoCggEBAKJufjXwrd+NYesqHU96eWDDTdTHzPTwIw7u3PVd
+    +lMY+aKHS4yJNOO9uA8mHilFlfXJOqBj8JU4zgWRrUWKmdd4sQuuoQczZzTScyjc
+    OKk/uIhvp0n5HTjR2q1gaCYS223fJ90e2WChZeokPXkTcKTAQm/5aizGQ5rzlZSk
+    CNTAgdKK80UXDkOHxx3gkmodGhcRW4BsmXEyCm1jkUYrkIQm9K9cZQKeeyIDbTA8
+    Y3Y9v5dubbrLOmEOeEIN2uJpru706zhTcCj142hlDwgh1I4z9et5BcdN0Mi2eQDs
+    R0wwE5/UKmQpA9i9rsurSN+vzKlh3v+YWjv/493AWOs/VFUCAwEAAaNTMFEwHQYD
+    VR0OBBYEFG6yHRlAqWAIyCj9YmiViR1z9vgnMB8GA1UdIwQYMBaAFG6yHRlAqWAI
+    yCj9YmiViR1z9vgnMA8GA1UdEwEB/wQFMAMBAf8wDQYJKoZIhvcNAQELBQADggEB
+    AHe6SKBHOK9Fv0UzxaX98JhI6kOr1pR08RAR/pr1t2oeHm0tdWOvdrukRAq9AOng
+    OVBQBcMKz+PRQQ6dA2Gzh3UE5lorQ+jkbon5DY6oTZnMCPo5b3Dy/sN6hl3/w2Yi
+    uTv8iMcU5VloeDRqUbKTtNX3o6LymkIJ+S3tLutQr8xzNt6SnJAnZ4PcgrZY5Xlq
+    Othq6aXaCOfvH/yoQoSIxVMhl1QbcI8EgjY7z9523nKlOvYc36Qe6z7zqqLvVfk7
+    iFlA2NThEl+N/7SOn37++sOhFvA85X7WQ92jWi2Cz5s1Z6AZRoWz703+GxyzEyk3
+    gFEPoFIv6ijfvPhUytPUBr4=
+    -----END CERTIFICATE-----
+---
+# cat > openssl.conf  <<EOF
+# [req]
+# req_extensions = v3_req
+# prompt = no
+#
+# [v3_req]
+# keyUsage = keyEncipherment, digitalSignature
+# extendedKeyUsage = serverAuth
+# subjectAltName = @alt_names
+# [alt_names]
+# DNS.1 = backend-dynamic-resolver-tls
+# DNS.2 = backend-dynamic-resolver-tls.gateway-conformance-infra
+# DNS.3 = backend-dynamic-resolver-tls.gateway-conformance-infra.svc.cluster.local
+# EOF
+#
+# openssl req -out backend-dynamic-resolver-tls.csr -newkey rsa:2048 -nodes -keyout backend-dynamic-resolver-tls.key -subj "/CN=backend-dynamic-resolver-tls/O=example organization"
+# openssl x509 -req -days 36500 -CA ca.crt -CAkey ca.key -set_serial 0 -in backend-dynamic-resolver-tls.csr -out backend-dynamic-resolver-tls.crt -extfile openssl.conf -extensions v3_req
+apiVersion: v1
+kind: Secret
+metadata:
+  name: backend-certificate
+  namespace: gateway-conformance-infra
+type: kubernetes.io/tls
+data:
+  tls.crt: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUVCakNDQXU2Z0F3SUJBZ0lCQURBTkJna3Foa2lHOXcwQkFRc0ZBREF0TVJVd0V3WURWUVFLREF4bGVHRnQKY0d4bElFbHVZeTR4RkRBU0JnTlZCQU1NQzJWNFlXMXdiR1V1WTI5dE1DQVhEVEkxTURVd01qQTRNakExTUZvWQpEekl4TWpVd05EQTRNRGd5TURVd1dqQkdNU1V3SXdZRFZRUUREQnhpWVdOclpXNWtMV1I1Ym1GdGFXTXRjbVZ6CmIyeDJaWEl0ZEd4ek1SMHdHd1lEVlFRS0RCUmxlR0Z0Y0d4bElHOXlaMkZ1YVhwaGRHbHZiakNDQVNJd0RRWUoKS29aSWh2Y05BUUVCQlFBRGdnRVBBRENDQVFvQ2dnRUJBSyt6WEZreW5TK0VXT1VPOVVnVlVGcGo1b1lnYklaTAoxVXBvWWhsbHZHVk1Fa3hFTC9UeWVncDVnYjhEdVN5R29MME9WZUJDQTRidlhpaWVybzFLWko2cUZ5WHRTdWdSCmVjNFhPY3NhZGF5R1dkMEM4L2hoTHVNZmVTL2MrNUtlZlI2SkljYm9NbG9aa3N6K0VjODhYanZLdlJqMGJOT1UKRnhEa0hmY0g1cmw3bGMvaDgraWNEOWIraTRYMS85cEtZWXYvTUZGazdrMmdUVmZPUXNIbERNc0dhOGE5RVR5RwpoQ3FtTEFtNmhVZVVBdUgrSmNOdHdGMEdHb2NFRHhsUEF2bjVKb0FSZU40ekJhbllUMDI4MTJscWg2SG5BMVIxCkx3QkNaOEZrRWxSMlNsWEhMS0dLcVZtYThuSFhmNS9sdmw3NW1hYXJLV3NEaHdvWEtZM0N6RXNDQXdFQUFhT0MKQVJRd2dnRVFNQXNHQTFVZER3UUVBd0lGb0RBVEJnTlZIU1VFRERBS0JnZ3JCZ0VGQlFjREFUQ0Jxd1lEVlIwUgpCSUdqTUlHZ2doeGlZV05yWlc1a0xXUjVibUZ0YVdNdGNtVnpiMngyWlhJdGRHeHpnalppWVdOclpXNWtMV1I1CmJtRnRhV010Y21WemIyeDJaWEl0ZEd4ekxtZGhkR1YzWVhrdFkyOXVabTl5YldGdVkyVXRhVzVtY21HQ1NHSmgKWTJ0bGJtUXRaSGx1WVcxcFl5MXlaWE52YkhabGNpMTBiSE11WjJGMFpYZGhlUzFqYjI1bWIzSnRZVzVqWlMxcApibVp5WVM1emRtTXVZMngxYzNSbGNpNXNiMk5oYkRBZEJnTlZIUTRFRmdRVTVaa00wVWNEdVpjUmNzOEROak92ClhyM2NBZW93SHdZRFZSMGpCQmd3Rm9BVWJySWRHVUNwWUFqSUtQMWlhSldKSFhQMitDY3dEUVlKS29aSWh2Y04KQVFFTEJRQURnZ0VCQUdFaTQxL2RYOXIyV1dUU1BUdlU2V1BjaElHSnJWOE1vWWcrMEtmQ0VpNDhLSzJuVGtPUQpiQXRQMWx6NWZvTWNaRjZXSlRNQmJLbmQ1UG5KenNuZ2k3NFp1Vzg3REFMN0tzano4ZG1ubDZPbWFaOTQ2Y0hXCnd1Z2tWVzgwKzZ4eHQwQ0JyQTl2S3BBdnpxV0J4TjJyZ3JZM0RqeStRczVlRGJRZVE0YTQwL2crdzhhVUtaYnkKT0IwY2V4eDRrOXlKekhaZ2FHdjFMdDR5Wk5QV2tXQmV2LzNyQVJQVCttR25ocU9ERHF4QnRNcGh2bmlnVnlrdwozdEorWUdjWTFka0lleWV5Umwrcm1Za0gwSnZnazRMZ2tKUmMyenB5cHdkRURQTFBoeFQvNFovdE5iZmxBQURmCnZXMUFkdUg4TlQzV3F3Zk9EM2FWWnJJdUwvZ1R2bmQzcklRPQotLS0tLUVORCBDRVJUSUZJQ0FURS0tLS0tCg==
+  tls.key: LS0tLS1CRUdJTiBQUklWQVRFIEtFWS0tLS0tCk1JSUV2Z0lCQURBTkJna3Foa2lHOXcwQkFRRUZBQVNDQktnd2dnU2tBZ0VBQW9JQkFRQ3ZzMXhaTXAwdmhGamwKRHZWSUZWQmFZK2FHSUd5R1M5VkthR0laWmJ4bFRCSk1SQy8wOG5vS2VZRy9BN2tzaHFDOURsWGdRZ09HNzE0bwpucTZOU21TZXFoY2w3VXJvRVhuT0Z6bkxHbldzaGxuZEF2UDRZUzdqSDNrdjNQdVNubjBlaVNIRzZESmFHWkxNCi9oSFBQRjQ3eXIwWTlHelRsQmNRNUIzM0IrYTVlNVhQNGZQb25BL1cvb3VGOWYvYVNtR0wvekJSWk81Tm9FMVgKemtMQjVRekxCbXZHdlJFOGhvUXFwaXdKdW9WSGxBTGgvaVhEYmNCZEJocUhCQThaVHdMNStTYUFFWGplTXdXcAoyRTlOdk5kcGFvZWg1d05VZFM4QVFtZkJaQkpVZGtwVnh5eWhpcWxabXZKeDEzK2Y1YjVlK1ptbXF5bHJBNGNLCkZ5bU53c3hMQWdNQkFBRUNnZ0VBVnIrYVVXbjFoTC8xK2dZMElZWndlV2lJcVdGNTQ2YXVaUUg3cVdsN0pwSjAKR0ZhMFRONnBWZUdmSjFYcHgrdWlraVZ4VGZ1WjdUWGpDZkFxNDVTKzhEMnZseWk5U3E1U011aHh2dTlOK1VRTwpPMXBaWmFGcCtuYVFLWXNVWk5RK2wyU0Nta2dMa0VPL0lOb3lwZHk2OUErSjVMZk53WHNGRm5CaXdSU1VITEJ3CkhGZlJRdjZKWUlCQ3R0aXBNWWh1ZjlyWHJBTXVGbG16UG00VjFQVFNmTjlBZGxKR3A5SnNhaHBjSGtPaVBLUUcKeVFCazMwQjJQN2VmMVgrUDJZVHZpQUcrTnYrZTFOZDVHZTFINU9zQWhuVGZaZWt1aUdTWll6QTBWVzdhMGROcwptY2NUWFhTN0dyZVJwcGtSVnZoWk1XNHRoOHI0djlId0U2dU1ZOHY4WFFLQmdRRFdDSzNvcFpvNEJZOWxiRzd4CmFMZ0VHQ3lDZm1SMzZSUzJrR3QvcmdXZDdhZTdDeE04TDhURzJpSkpVbkVaNUZKMEZqcTJOenQyV0ZvakxMOXIKbzVkemd0djlVK2c0TGcyY1hIcmdxdERXTll0akRNeWkydnZocE1aYmVJSjRDRGFiUXpnZjZBTmlBempJR3dYRgpLUmkxUC8xQTdMMG9wNEIzdVZuT3VDTzZYUUtCZ1FEU0pwQUIrNkJUVlhwWGtQUlB2NTVxQjVYZnhIWWdqQzBjCm1VcEdCTGlJT0V2UWgzMEhhUkdoRE5FNlQvYU5vWWE3eXdPczBXYVBwNlBkUkYyYTFPSXhGWXUxUWU5cGlEVzUKdklVbFc0UTJjN29pTHRkQ1ZxMXlCWDRWeGdtYkZXaFJpUzRlbExzVFZMTnNNckp5UkM5VkNPSzZwZ2NzWnVDYQpoUFNQdzYzR3h3S0JnUURSVWoreXpYS2I0MlF3VHZIWml3NmNnbi9WUjRNK2VtZFZmTHlGYkUzMS9CMFVJbXEzCmJBaElhY0VxY0VSSWpESFBjb1lNK3N0ZW5GM2JGTUpJcFA5VGF1RjNTWDVNbzAyUVpDbVFXNzVPSUtPblJUZEUKOW1Gc2RsZS8wWVhYbWtDOWErb1IyamlrdkgzbHhmZklzTDZIVklONzRZdkZuTHRaVzU1bk8xTkZ5UUtCZ1FDVgoyMlhwNUJPcUdWUkt5VlZPNFNnSUdDeXFDeURwaU14S2pvMUdiT3RpU0RMWUd5WHZlTjlYWnhwMGFMMDZ0aXFzCkU5TWxFNVg5YnVBTlUwa2t0aFl1Umx6Ly9tckphSlpYUXJYM3M5RU9PMnhLSC9qa2w0Ykx2bHJ4RCsyZHA2QmkKTkY2czlBYUxmR1VPRFFEdk51eEJ5VHBWT3p2MlQ4NXVvY3o4RCtBRjFRS0JnQ1hBZmU0WEw4UUVHZzNXYVBGVgpqSUwxSzl0L1N5U25qend3VUtaWnlMN2RWcGNlYlB3Uzh4WXJDSkludWF2SE1HaVlkQThEQ3FHQTF5R3ZhODVxCmR2ZmR3Wi9lZHNxQ3pDYmZnR3BxS0dTQ1h0ZGluT0tuaXZXNUVrZTZ4SkRENEsvT3hkV1N5MFlNeU9mdUllcHAKOTVOZW1HeHFrRzBhSzJNeGZ6OFRwTExECi0tLS0tRU5EIFBSSVZBVEUgS0VZLS0tLS0K
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: backend-dynamic-resolver-tls
+  namespace: gateway-conformance-infra
+spec:
+  selector:
+    app: backend-dynamic-resolver-tls
+  ports:
+  - name: https
+    protocol: TCP
+    port: 443
+    targetPort: 8443
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend-dynamic-resolver-tls
+  namespace: gateway-conformance-infra
+  labels:
+    app: backend-dynamic-resolver-tls
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: backend-dynamic-resolver-tls
+  template:
+    metadata:
+      labels:
+        app: backend-dynamic-resolver-tls
+    spec:
+      containers:
+      - name: tls-backend
+        image: gcr.io/k8s-staging-gateway-api/echo-basic:v20231214-v1.0.0-140-gf544a46e
+        volumeMounts:
+        - name: secret-volume
+          mountPath: /etc/secret-volume
+        env:
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        - name: NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        - name: SERVICE_NAME
+          value: tls-backend-2
+        - name: TLS_SERVER_CERT
+          value: /etc/secret-volume/crt
+        - name: TLS_SERVER_PRIVKEY
+          value: /etc/secret-volume/key
+        resources:
+          requests:
+            cpu: 10m
+      volumes:
+      - name: secret-volume
+        secret:
+          secretName: backend-certificate
+          items:
+          - key: tls.crt
+            path: crt
+          - key: tls.key
+            path: key

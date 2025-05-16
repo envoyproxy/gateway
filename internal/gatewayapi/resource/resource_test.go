@@ -177,9 +177,10 @@ func TestGetEndpointSlicesForBackendDualStack(t *testing.T) {
 
 		var ipv4Slice, ipv6Slice *discoveryv1.EndpointSlice
 		for _, slice := range result {
-			if slice.AddressType == discoveryv1.AddressTypeIPv4 {
+			switch slice.AddressType {
+			case discoveryv1.AddressTypeIPv4:
 				ipv4Slice = slice
-			} else if slice.AddressType == discoveryv1.AddressTypeIPv6 {
+			case discoveryv1.AddressTypeIPv6:
 				ipv6Slice = slice
 			}
 		}

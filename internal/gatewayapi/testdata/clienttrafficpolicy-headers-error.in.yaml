@@ -13,13 +13,18 @@ clientTrafficPolicies:
         add:
         - name: ""
           value: "empty"
-        - name: "invalid"
+        - name: "Example/Header/1"
           value: ":/"
+        - name: "example-header-2"
+          value: |
+            multi-line-header-value
         set:
         - name: ""
           value: "empty"
-        - name: "invalid"
+        - name: "Example:Header:3"
           value: ":/"
+        - name: "example-header-4"
+          value: "  invalid"
         remove:
         - ""
     targetRef:

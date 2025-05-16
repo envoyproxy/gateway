@@ -10,7 +10,9 @@ ENVTEST_K8S_VERSIONS ?= 1.29.4 1.30.3 1.31.0 1.32.0
 # For more details, see https://gateway-api.sigs.k8s.io/guides/getting-started/#installing-gateway-api
 GATEWAY_API_VERSION ?= $(shell go list -m -f '{{.Version}}' sigs.k8s.io/gateway-api)
 
-GATEWAY_RELEASE_URL ?= https://github.com/kubernetes-sigs/gateway-api/releases/download/${GATEWAY_API_VERSION}/experimental-install.yaml
+GATEWAY_API_RELEASE_URL ?= https://github.com/kubernetes-sigs/gateway-api/releases/download/${GATEWAY_API_VERSION}
+EXPERIMENTAL_GATEWAY_API_RELEASE_URL ?= ${GATEWAY_API_RELEASE_URL}/experimental-install.yaml
+STANDARD_GATEWAY_API_RELEASE_URL ?= ${GATEWAY_API_RELEASE_URL}/standard-install.yaml
 
 WAIT_TIMEOUT ?= 15m
 
@@ -27,6 +29,10 @@ E2E_RUN_TEST ?=
 E2E_CLEANUP ?= true
 E2E_TIMEOUT ?= 20m
 E2E_TEST_ARGS ?= -v -tags e2e -timeout $(E2E_TIMEOUT)
+
+KUBE_DEPLOY_PROFILE ?= default
+KUBE_DEPLOY_HELM_VALUES_FILE = $(ROOT_DIR)/test/config/helm/$(KUBE_DEPLOY_PROFILE).yaml
+KUBE_DEPLOY_EG_CONFIG_FILE = $(ROOT_DIR)/test/config/envoy-gateaway-config/$(KUBE_DEPLOY_PROFILE).yaml
 
 # Set Kubernetes Resources Directory Path
 ifeq ($(origin KUBE_PROVIDER_DIR),undefined)
@@ -78,12 +84,17 @@ generate-gwapi-manifests: ## Generate GWAPI manifests and make it consistent wit
 	@$(LOG_TARGET)
 	@echo "Generating Gateway API CRDs"
 	@mkdir -p $(OUTPUT_DIR)/
-	@curl -sLo $(OUTPUT_DIR)/gatewayapi-crds.yaml ${GATEWAY_RELEASE_URL}
-	cp $(OUTPUT_DIR)/gatewayapi-crds.yaml charts/gateway-helm/crds/gatewayapi-crds.yaml
-	@sed -i.bak '1s/^/{{- if .Values.crds.gatewayAPI.enabled }}\n/' $(OUTPUT_DIR)/gatewayapi-crds.yaml && \
-	echo '{{- end }}' >> $(OUTPUT_DIR)/gatewayapi-crds.yaml && \
-	rm -f $(OUTPUT_DIR)/gatewayapi-crds.yaml.bak
-	@mv $(OUTPUT_DIR)/gatewayapi-crds.yaml charts/gateway-crds-helm/templates/gatewayapi-crds.yaml
+	@curl -sLo $(OUTPUT_DIR)/experimental-gatewayapi-crds.yaml ${EXPERIMENTAL_GATEWAY_API_RELEASE_URL}
+	@curl -sLo $(OUTPUT_DIR)/standard-gatewayapi-crds.yaml ${STANDARD_GATEWAY_API_RELEASE_URL}
+	cp $(OUTPUT_DIR)/experimental-gatewayapi-crds.yaml charts/gateway-helm/crds/gatewayapi-crds.yaml
+	@sed -i.bak '1s/^/{{- if and .Values.crds.gatewayAPI.enabled (eq .Values.crds.gatewayAPI.channel "standard") }}\n/' $(OUTPUT_DIR)/standard-gatewayapi-crds.yaml && \
+	echo '{{- end }}' >> $(OUTPUT_DIR)/standard-gatewayapi-crds.yaml && \
+	sed -i.bak '1s/^/{{- if and .Values.crds.gatewayAPI.enabled (or (eq .Values.crds.gatewayAPI.channel "experimental") (eq .Values.crds.gatewayAPI.channel "")) }}\n/' $(OUTPUT_DIR)/experimental-gatewayapi-crds.yaml && \
+	echo '{{- end }}' >> $(OUTPUT_DIR)/experimental-gatewayapi-crds.yaml && \
+	rm -f $(OUTPUT_DIR)/standard-gatewayapi-crds.yaml.bak && \
+	rm -f $(OUTPUT_DIR)/experimental-gatewayapi-crds.yaml.bak
+	@mv $(OUTPUT_DIR)/experimental-gatewayapi-crds.yaml charts/gateway-crds-helm/templates/experimental-gatewayapi-crds.yaml
+	@mv $(OUTPUT_DIR)/standard-gatewayapi-crds.yaml charts/gateway-crds-helm/templates/standard-gatewayapi-crds.yaml
 
 .PHONY: kube-generate
 kube-generate: ## Generate code containing DeepCopy, DeepCopyInto, and DeepCopyObject method implementations.
@@ -105,7 +116,12 @@ endif
 .PHONY: kube-deploy
 kube-deploy: manifests helm-generate.gateway-helm ## Install Envoy Gateway into the Kubernetes cluster specified in ~/.kube/config.
 	@$(LOG_TARGET)
-	helm install eg charts/gateway-helm --set deployment.envoyGateway.imagePullPolicy=$(IMAGE_PULL_POLICY) -n envoy-gateway-system --create-namespace --debug --timeout='$(WAIT_TIMEOUT)' --wait --wait-for-jobs
+	helm install eg charts/gateway-helm \
+		--set deployment.envoyGateway.imagePullPolicy=$(IMAGE_PULL_POLICY) \
+		-n envoy-gateway-system --create-namespace \
+		--debug --timeout='$(WAIT_TIMEOUT)' \
+		--wait --wait-for-jobs \
+		-f $(KUBE_DEPLOY_HELM_VALUES_FILE)
 
 .PHONY: kube-deploy-for-benchmark-test
 kube-deploy-for-benchmark-test: manifests helm-generate ## Install Envoy Gateway and prometheus-server for benchmark test purpose only.
@@ -192,7 +208,7 @@ e2e-prepare: prepare-ip-family ## Prepare the environment for running e2e tests
 	@$(LOG_TARGET)
 	kubectl wait --timeout=5m -n envoy-gateway-system deployment/envoy-ratelimit --for=condition=Available
 	kubectl wait --timeout=5m -n envoy-gateway-system deployment/envoy-gateway --for=condition=Available
-	kubectl apply -f test/config/envoy-gateway-config.yaml
+	kubectl apply -f $(KUBE_DEPLOY_EG_CONFIG_FILE)
 	kubectl apply -f test/config/gatewayclass.yaml
 
 .PHONY: run-e2e

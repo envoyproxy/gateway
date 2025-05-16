@@ -14,7 +14,7 @@ of the connection from the Gateway to a backend pod/s via the Service API object
 
 `BackendTLSPolicy` specifically addresses the configuration of TLS in order to convey HTTPS from the Gateway
 dataplane to the backend.  This is referred to as "backend TLS termination" and enables the Gateway to know
-how to connect to a backend pod that has its own certificate.  
+how to connect to a backend pod that has its own certificate.
 
 While there are other API objects provided for TLS to be configured for **passthrough** and **edge** termination,
 this API object allows users to specifically configure **backend** TLS termination.  For more information on TLS
@@ -25,7 +25,7 @@ configuration in Gateway API, see [TLS Configuration](https://gateway-api.sigs.k
 BackendTLSPolicy is a Direct [PolicyAttachment](https://gateway-api.sigs.k8s.io/reference/policy-attachment/) without defaults or overrides,
 applied to a Service that accesses a backend, where the BackendTLSPolicy resides in the same namespace as the
 Service to which it is applied. The BackendTLSPolicy and the Service must reside in the same namespace in order
-to prevent the complications involved with sharing trust across namespace boundaries.  
+to prevent the complications involved with sharing trust across namespace boundaries.
 
 All Gateway API Routes that point to a referenced Service should respect a configured BackendTLSPolicy.
 
@@ -137,10 +137,10 @@ Status defines the observed state of the BackendTLSPolicy and is not user-config
 way you do for other Gateway API objects to verify correct operation.  Note that the status in BackendTLSPolicy
 uses `PolicyAncestorStatus` to allow you to know which parentReference set that particular status.
 
-[backendtlspolicy]: https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1alpha3.BackendTLSPolicy
-[validation]: https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1alpha3.BackendTLSPolicy.Validation
-[caCertificateRefs]: https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1alpha3.BackendTLSPolicyValidation.CACertificateRefs
-[wellKnownCACertificates]: https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1alpha3.BackendTLSPolicyValidation.WellKnownCACertificates
-[hostname]: https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1.PreciseHostname
+[backendtlspolicy]: https://gateway-api.sigs.k8s.io/references/spec#gateway.networking.k8s.io/v1alpha3.BackendTLSPolicy
+[validation]: https://gateway-api.sigs.k8s.io/references/spec#gateway.networking.k8s.io/v1alpha3.BackendTLSPolicy.Validation
+[caCertificateRefs]: https://gateway-api.sigs.k8s.io/references/spec#gateway.networking.k8s.io/v1alpha3.BackendTLSPolicyValidation.CACertificateRefs
+[wellKnownCACertificates]: https://gateway-api.sigs.k8s.io/references/spec#gateway.networking.k8s.io/v1alpha3.BackendTLSPolicyValidation.WellKnownCACertificates
+[hostname]: https://gateway-api.sigs.k8s.io/references/spec#gateway.networking.k8s.io/v1.PreciseHostname
 [rfc-3986]: https://tools.ietf.org/html/rfc3986
-[targetRefs]: https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1alpha2.PolicyTargetReference
+[targetRefs]: https://gateway-api.sigs.k8s.io/references/spec#gateway.networking.k8s.io/v1alpha2.PolicyTargetReference

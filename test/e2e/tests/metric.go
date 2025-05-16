@@ -57,12 +57,15 @@ var MetricTest = suite.ConformanceTest{
 			// let's check the metric
 			if err := wait.PollUntilContextTimeout(context.TODO(), time.Second, time.Minute, true,
 				func(_ context.Context) (done bool, err error) {
-					if err := ScrapeMetrics(t, suite.Client, types.NamespacedName{
-						Namespace: "envoy-gateway-system",
-						Name:      "same-namespace-gw-metrics",
-					}, 19001, "/stats/prometheus"); err != nil {
+					pql := fmt.Sprintf(`envoy_cluster_default_total_match_count{app_kubernetes_io_component="proxy", app_kubernetes_io_managed_by="envoy-gateway", app_kubernetes_io_name="envoy", envoy_cluster_name="xds_cluster", gateway_envoyproxy_io_owning_gateway_name="%s"}`, "same-namespace")
+					v, err := prometheus.QueryPrometheus(suite.Client, pql)
+					if err != nil {
 						tlog.Logf(t, "failed to get metric: %v", err)
 						return false, nil
+					}
+					if v != nil {
+						tlog.Logf(t, "got expected value: %v", v)
+						return true, nil
 					}
 					return true, nil
 				}); err != nil {
@@ -111,7 +114,7 @@ var MetricWorkqueueAndRestclientTest = suite.ConformanceTest{
 		)
 		require.NoError(t, err)
 
-		verifyMetrics := func(t *testing.T, metricQuery string, metricName string) {
+		verifyMetrics := func(t *testing.T, metricQuery, metricName string) {
 			httputils.AwaitConvergence(
 				t,
 				suite.TimeoutConfig.RequiredConsecutiveSuccesses,
@@ -175,25 +178,8 @@ func runMetricCompressorTest(t *testing.T, suite *suite.ConformanceTestSuite, ns
 	}
 	httputils.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
 
-	// make sure compression work as expected
-	statsNN := types.NamespacedName{Namespace: "envoy-gateway-system", Name: fmt.Sprintf("%s-gtw-metrics", compressor)}
-	var statsHost string
-	if err := wait.PollUntilContextTimeout(context.TODO(), time.Second, time.Minute, true, func(_ context.Context) (done bool, err error) {
-		addr, err := ServiceHost(suite.Client, statsNN, 19001)
-		if err != nil {
-			tlog.Logf(t, "failed to get service host %s: %v", statsNN, err)
-			return false, nil
-		}
-		if addr != "" {
-			statsHost = addr
-			return true, nil
-		}
-		return false, nil
-	}); err != nil {
-		t.Errorf("failed to get service host %s: %v", statsNN, err)
-		return
-	}
-
+	// stats exposed at port 19001
+	statsHost := strings.Replace(gwAddr, ":80", ":19001", 1)
 	statsAddr := fmt.Sprintf("http://%s/stats/prometheus", statsHost)
 	tlog.Logf(t, "check stats from %s", statsAddr)
 

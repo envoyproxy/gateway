@@ -39,7 +39,7 @@ httpRoutes:
         requestHeaderModifier:
           set:
           - name: "example-header-1"
-            value: ""
+            value: "dummy"
           add:
           - name: "example-header-2"
             value: ""

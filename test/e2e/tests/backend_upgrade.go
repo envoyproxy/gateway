@@ -40,6 +40,18 @@ var BackendUpgradeTest = suite.ConformanceTest{
 			routeNN := types.NamespacedName{Name: "http-backend-upgrade", Namespace: ns}
 			gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
 			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
+
+			// Make sure the backend is healthy before starting the test
+			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, http.ExpectedResponse{
+				Request: http.Request{
+					Path: "/backend-upgrade",
+				},
+				Response: http.Response{
+					StatusCode: 200,
+				},
+				Namespace: ns,
+			})
+
 			reqURL := url.URL{Scheme: "http", Host: http.CalculateHost(t, gwAddr, "http"), Path: "/backend-upgrade"}
 
 			// get deployment to restart
@@ -90,11 +102,11 @@ func restartDeploymentAndWaitForNewPods(t *testing.T, timeoutConfig config.Timeo
 
 	ctx := context.Background()
 
-	if dp.Spec.Template.ObjectMeta.Annotations == nil {
-		dp.Spec.Template.ObjectMeta.Annotations = make(map[string]string)
+	if dp.Spec.Template.Annotations == nil {
+		dp.Spec.Template.Annotations = make(map[string]string)
 	}
 	restartTime := time.Now().Format(time.RFC3339)
-	dp.Spec.Template.ObjectMeta.Annotations[kubeRestartAnnotation] = restartTime
+	dp.Spec.Template.Annotations[kubeRestartAnnotation] = restartTime
 
 	if err := c.Update(ctx, dp); err != nil {
 		return err

@@ -10,11 +10,11 @@ http:
   routes:
   - name: "first-route"
     traffic:
-      name: "test-policy-1/test-namespace"
       rateLimit:
         global:
           rules:
-          - cidrMatch:
+          - name: "test-namespace/test-policy-1/rule/0"
+            cidrMatch:
               cidr: "192.168.0.0/16"
               ipv6: false
               maskLen: 16

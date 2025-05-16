@@ -51,6 +51,37 @@ func TestE2E(t *testing.T) {
 		)
 	}
 
+	// Skip Dynamic Resolver test because DNS resolver doesn't work properly in IPV6 Github worker
+	if tests.IPFamily == "ipv6" {
+		skipTests = append(skipTests,
+			tests.DynamicResolverBackendTest.ShortName,
+			tests.RateLimitCIDRMatchTest.ShortName,
+			tests.RateLimitMultipleListenersTest.ShortName,
+			tests.RateLimitGlobalSharedCidrMatchTest.ShortName,
+		)
+	}
+
+	// TODO: make these tests work in GatewayNamespaceMode
+	if tests.IsGatewayNamespaceMode() {
+		skipTests = append(skipTests,
+			tests.HTTPWasmTest.ShortName,
+			tests.OCIWasmTest.ShortName,
+			tests.ZoneAwareRoutingTest.ShortName,
+
+			// Skip RateLimit tests because they are not supported in GatewayNamespaceMode
+			tests.RateLimitCIDRMatchTest.ShortName,
+			tests.RateLimitHeaderMatchTest.ShortName,
+			tests.GlobalRateLimitHeaderInvertMatchTest.ShortName,
+			tests.RateLimitHeadersDisabled.ShortName,
+			tests.RateLimitBasedJwtClaimsTest.ShortName,
+			tests.RateLimitMultipleListenersTest.ShortName,
+			tests.RateLimitHeadersAndCIDRMatchTest.ShortName,
+			tests.UsageRateLimitTest.ShortName,
+			tests.RateLimitGlobalSharedCidrMatchTest.ShortName,
+			tests.RateLimitGlobalSharedGatewayHeaderMatchTest.ShortName,
+		)
+	}
+
 	cSuite, err := suite.NewConformanceTestSuite(suite.ConformanceOptions{
 		Client:               c,
 		RestConfig:           cfg,
@@ -61,7 +92,7 @@ func TestE2E(t *testing.T) {
 		RunTest:              *flags.RunTest,
 		// SupportedFeatures cannot be empty, so we set it to SupportGateway
 		// All e2e tests should leave Features empty.
-		SupportedFeatures: sets.New[features.FeatureName](features.SupportGateway),
+		SupportedFeatures: sets.New(features.SupportGateway),
 		SkipTests:         skipTests,
 		AllowCRDsMismatch: *flags.AllowCRDsMismatch,
 	})

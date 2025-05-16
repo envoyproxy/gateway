@@ -310,7 +310,6 @@ xdsIR:
             - 500
         timeout: 3s
         traffic:
-          name: default/policy-for-route
           retry:
             numRetries: 5
             perRetry:

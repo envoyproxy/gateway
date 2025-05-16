@@ -112,11 +112,12 @@ func (r *Runner) Start(ctx context.Context) (err error) {
 		if err != nil {
 			return fmt.Errorf("failed to create Kubernetes client: %w", err)
 		}
+		saAudience := fmt.Sprintf("%s.%s.svc.%s", config.EnvoyGatewayServiceName, r.ControllerNamespace, r.DNSDomain)
 		jwtInterceptor := kubejwt.NewJWTAuthInterceptor(
 			clientset,
 			defaultKubernetesIssuer,
+			saAudience,
 			r.cache,
-			r.Xds,
 		)
 
 		creds, err := credentials.NewServerTLSFromFile(xdsTLSCertFilepath, xdsTLSKeyFilepath)

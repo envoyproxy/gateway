@@ -161,7 +161,7 @@ func TestContextsStaleListener(t *testing.T) {
 	// Ensure the listener status has been updated and the stale listener has been
 	// removed.
 	expectedListenerStatus := []gwapiv1.ListenerStatus{{Name: "https"}}
-	require.Equal(t, expectedListenerStatus, gCtx.Gateway.Status.Listeners)
+	require.Equal(t, expectedListenerStatus, gCtx.Status.Listeners)
 
 	// Ensure that the listeners within GatewayContext have been properly updated.
 	expectedGCtxListeners := []*ListenerContext{httpsListenerCtx}

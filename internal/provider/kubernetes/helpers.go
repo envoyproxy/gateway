@@ -158,7 +158,7 @@ func validateBackendRef(ref *gwapiv1.BackendRef) error {
 		return fmt.Errorf("invalid group; must be nil, empty string %q or %q", mcsapiv1a1.GroupName, egv1a1.GroupName)
 	case gatewayapi.KindDerefOr(ref.Kind, resource.KindService) != resource.KindService && gatewayapi.KindDerefOr(ref.Kind, resource.KindService) != resource.KindServiceImport && gatewayapi.KindDerefOr(ref.Kind, resource.KindService) != egv1a1.KindBackend:
 		return fmt.Errorf("invalid kind %q; must be %q, %q or %q",
-			*ref.BackendObjectReference.Kind, resource.KindService, resource.KindServiceImport, egv1a1.KindBackend)
+			*ref.Kind, resource.KindService, resource.KindServiceImport, egv1a1.KindBackend)
 	}
 
 	return nil

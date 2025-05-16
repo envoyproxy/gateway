@@ -1,0 +1,56 @@
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: SecurityPolicy
+metadata:
+  name: jwt-example
+spec:
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: foo
+  jwt:
+    providers:
+    - name: example
+      remoteJWKS:
+        backendRefs:
+          - group: gateway.envoyproxy.io
+            kind: Backend
+            name: remote-jwks
+            port: 443
+        backendSettings:
+          retry:
+            numRetries: 3
+            perRetry:
+              backOff:
+                baseInterval: 1s
+                maxInterval: 5s
+            retryOn:
+              triggers: ["5xx", "gateway-error", "reset"]
+        uri: https://foo.bar.com/jwks.json
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: Backend
+metadata:
+  name: remote-jwks
+spec:
+  endpoints:
+  - fqdn:
+      hostname: foo.bar.com
+      port: 443
+---
+apiVersion: gateway.networking.k8s.io/v1alpha3
+kind: BackendTLSPolicy
+metadata:
+  name: remote-jwks-btls
+spec:
+  targetRefs:
+  - group: gateway.envoyproxy.io
+    kind: Backend
+    name: remote-jwks
+    sectionName: "443"
+  validation:
+    caCertificateRefs:
+    - name: remote-jwks-server-ca
+      group: ""
+      kind: ConfigMap
+    hostname: foo.bar.com

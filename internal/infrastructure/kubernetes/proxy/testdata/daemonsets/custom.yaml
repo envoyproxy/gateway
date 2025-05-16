@@ -33,7 +33,6 @@ spec:
         gateway.envoyproxy.io/owning-gateway-name: default
         gateway.envoyproxy.io/owning-gateway-namespace: default
     spec:
-      automountServiceAccountToken: false
       containers:
       - args:
         - --service-cluster default
@@ -250,15 +249,12 @@ spec:
         - envoy
         env:
         - name: ENVOY_GATEWAY_NAMESPACE
-          valueFrom:
-            fieldRef:
-              apiVersion: v1
-              fieldPath: metadata.namespace
+          value: envoy-gateway-system
         - name: ENVOY_SERVICE_ZONE
           valueFrom:
             fieldRef:
               apiVersion: v1
-              fieldPath: metadata.labels['topology.kubernetes.io/zone']
+              fieldPath: metadata.annotations['topology.kubernetes.io/zone']
         - name: ENVOY_POD_NAME
           valueFrom:
             fieldRef:
@@ -331,15 +327,12 @@ spec:
         - envoy-gateway
         env:
         - name: ENVOY_GATEWAY_NAMESPACE
-          valueFrom:
-            fieldRef:
-              apiVersion: v1
-              fieldPath: metadata.namespace
+          value: envoy-gateway-system
         - name: ENVOY_SERVICE_ZONE
           valueFrom:
             fieldRef:
               apiVersion: v1
-              fieldPath: metadata.labels['topology.kubernetes.io/zone']
+              fieldPath: metadata.annotations['topology.kubernetes.io/zone']
         - name: ENVOY_POD_NAME
           valueFrom:
             fieldRef:

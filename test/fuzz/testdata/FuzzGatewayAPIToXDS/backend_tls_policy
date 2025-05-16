@@ -1,0 +1,12 @@
+apiVersion: gateway.networking.k8s.io/v1alpha3
+kind: BackendTLSPolicy
+metadata:
+  name: example-tls-policy
+spec:
+  targetRefs:
+    - group: 'gateway.envoyproxy.io'
+      kind: Backend
+      name: backend
+  validation:
+    wellKnownCACertificates: "System"
+    hostname: www.example.com

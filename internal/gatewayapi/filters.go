@@ -66,6 +66,9 @@ type HTTPFilterIR struct {
 	ExtensionRefs []*ir.UnstructuredRef
 }
 
+// Header value pattern according to RFC 7230
+var HeaderValueRegexp = regexp.MustCompile(`^[!-~]+([\t ]?[!-~]+)*$`)
+
 // ProcessHTTPFilters translates gateway api http filters to IRs.
 func (t *Translator) ProcessHTTPFilters(parentRef *RouteParentContext,
 	route RouteContext,
@@ -376,6 +379,7 @@ func (t *Translator) processRequestHeaderModifierFilter(
 			emptyFilterConfig = false
 		}
 		for _, addHeader := range headersToAdd {
+
 			emptyFilterConfig = false
 			if addHeader.Name == "" {
 				updateRouteStatusForFilter(
@@ -384,16 +388,27 @@ func (t *Translator) processRequestHeaderModifierFilter(
 				// try to process the rest of the headers and produce a valid config.
 				continue
 			}
+
 			if !isModifiableHeader(string(addHeader.Name)) {
 				updateRouteStatusForFilter(
 					filterContext,
 					fmt.Sprintf(
-						"Header: %q. The RequestHeaderModifier filter cannot set the Host header or headers with a '/' "+
+						"Header: %q. The RequestHeaderModifier filter cannot add the Host header or headers with a '/' "+
 							"or ':' character in them. To modify the Host header use the URLRewrite or the HTTPRouteFilter filter.",
 						string(addHeader.Name)),
 				)
 				continue
 			}
+
+			if !HeaderValueRegexp.MatchString(addHeader.Value) {
+				updateRouteStatusForFilter(
+					filterContext,
+					fmt.Sprintf(
+						"Header: %q. RequestHeaderModifier Filter cannot add a header with an invalid value.",
+						string(addHeader.Name)))
+				continue
+			}
+
 			// Check if the header is a duplicate
 			headerKey := string(addHeader.Name)
 			canAddHeader := true
@@ -440,6 +455,15 @@ func (t *Translator) processRequestHeaderModifierFilter(
 							"or ':' character in them. To modify the Host header use the URLRewrite or the HTTPRouteFilter filter.",
 						string(setHeader.Name)),
 				)
+				continue
+			}
+
+			if !HeaderValueRegexp.MatchString(setHeader.Value) {
+				updateRouteStatusForFilter(
+					filterContext,
+					fmt.Sprintf(
+						"Header: %q. RequestHeaderModifier Filter cannot set a header with an invalid value.",
+						string(setHeader.Name)))
 				continue
 			}
 
@@ -556,6 +580,7 @@ func (t *Translator) processResponseHeaderModifierFilter(
 				// try to process the rest of the headers and produce a valid config.
 				continue
 			}
+
 			if !isModifiableHeader(string(addHeader.Name)) {
 				updateRouteStatusForFilter(
 					filterContext,
@@ -565,6 +590,16 @@ func (t *Translator) processResponseHeaderModifierFilter(
 						string(addHeader.Name)))
 				continue
 			}
+
+			if !HeaderValueRegexp.MatchString(addHeader.Value) {
+				updateRouteStatusForFilter(
+					filterContext,
+					fmt.Sprintf(
+						"Header: %q. ResponseHeaderModifier Filter cannot add a header with an invalid value.",
+						string(addHeader.Name)))
+				continue
+			}
+
 			// Check if the header is a duplicate
 			headerKey := string(addHeader.Name)
 			canAddHeader := true
@@ -609,6 +644,15 @@ func (t *Translator) processResponseHeaderModifierFilter(
 					fmt.Sprintf(
 						"Header: %q. The ResponseHeaderModifier filter cannot set the Host header or headers with a '/' "+
 							"or ':' character in them.",
+						string(setHeader.Name)))
+				continue
+			}
+
+			if !HeaderValueRegexp.MatchString(setHeader.Value) {
+				updateRouteStatusForFilter(
+					filterContext,
+					fmt.Sprintf(
+						"Header: %q. ResponseHeaderModifier Filter cannot set a header with an invalid value.",
 						string(setHeader.Name)))
 				continue
 			}
@@ -730,14 +774,14 @@ func (t *Translator) processExtensionRefHTTPFilter(extFilter *gwapiv1.LocalObjec
 								Substitution: hrf.Spec.URLRewrite.Path.ReplaceRegexMatch.Substitution,
 							}
 
-							if filterContext.HTTPFilterIR.URLRewrite != nil {
-								if filterContext.HTTPFilterIR.URLRewrite.Path == nil {
-									filterContext.HTTPFilterIR.URLRewrite.Path = &ir.ExtendedHTTPPathModifier{
+							if filterContext.URLRewrite != nil {
+								if filterContext.URLRewrite.Path == nil {
+									filterContext.URLRewrite.Path = &ir.ExtendedHTTPPathModifier{
 										RegexMatchReplace: rmr,
 									}
 								}
 							} else { // no url rewrite
-								filterContext.HTTPFilterIR.URLRewrite = &ir.URLRewrite{
+								filterContext.URLRewrite = &ir.URLRewrite{
 									Path: &ir.ExtendedHTTPPathModifier{
 										RegexMatchReplace: rmr,
 									},
@@ -748,7 +792,8 @@ func (t *Translator) processExtensionRefHTTPFilter(extFilter *gwapiv1.LocalObjec
 
 					if hrf.Spec.URLRewrite.Hostname != nil {
 						var hm *ir.HTTPHostModifier
-						if hrf.Spec.URLRewrite.Hostname.Type == egv1a1.HeaderHTTPHostnameModifier {
+						switch hrf.Spec.URLRewrite.Hostname.Type {
+						case egv1a1.HeaderHTTPHostnameModifier:
 							if hrf.Spec.URLRewrite.Hostname.Header == nil {
 								updateRouteStatusForFilter(
 									filterContext,
@@ -758,18 +803,18 @@ func (t *Translator) processExtensionRefHTTPFilter(extFilter *gwapiv1.LocalObjec
 							hm = &ir.HTTPHostModifier{
 								Header: hrf.Spec.URLRewrite.Hostname.Header,
 							}
-						} else if hrf.Spec.URLRewrite.Hostname.Type == egv1a1.BackendHTTPHostnameModifier {
+						case egv1a1.BackendHTTPHostnameModifier:
 							hm = &ir.HTTPHostModifier{
 								Backend: ptr.To(true),
 							}
 						}
 
-						if filterContext.HTTPFilterIR.URLRewrite != nil {
-							if filterContext.HTTPFilterIR.URLRewrite.Host == nil {
-								filterContext.HTTPFilterIR.URLRewrite.Host = hm
+						if filterContext.URLRewrite != nil {
+							if filterContext.URLRewrite.Host == nil {
+								filterContext.URLRewrite.Host = hm
 							}
 						} else { // no url rewrite
-							filterContext.HTTPFilterIR.URLRewrite = &ir.URLRewrite{
+							filterContext.URLRewrite = &ir.URLRewrite{
 								Host: hm,
 							}
 						}
@@ -801,7 +846,7 @@ func (t *Translator) processExtensionRefHTTPFilter(extFilter *gwapiv1.LocalObjec
 						filterContext.AddResponseHeaders = append(filterContext.AddResponseHeaders, newHeader)
 					}
 
-					filterContext.HTTPFilterIR.DirectResponse = dr
+					filterContext.DirectResponse = dr
 				}
 
 				if hrf.Spec.CredentialInjection != nil {
@@ -834,7 +879,7 @@ func (t *Translator) processExtensionRefHTTPFilter(extFilter *gwapiv1.LocalObjec
 						Overwrite:  hrf.Spec.CredentialInjection.Overwrite,
 						Credential: secretBytes,
 					}
-					filterContext.HTTPFilterIR.CredentialInjection = injection
+					filterContext.CredentialInjection = injection
 				}
 			}
 		}

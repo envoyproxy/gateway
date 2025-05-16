@@ -119,13 +119,10 @@ func oauth2Config(oidc *ir.OIDC) (*oauth2v3.OAuth2, error) {
 	}
 
 	// Envoy OAuth2 filter deletes the HTTP authorization header by default, which surprises users.
-	preserveAuthorizationHeader := true
 
 	// If the user wants to forward the oauth2 access token to the upstream service,
 	// we should not preserve the original authorization header.
-	if oidc.ForwardAccessToken {
-		preserveAuthorizationHeader = false
-	}
+	preserveAuthorizationHeader := !oidc.ForwardAccessToken
 
 	oauth2 := &oauth2v3.OAuth2{
 		Config: &oauth2v3.OAuth2Config{

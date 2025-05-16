@@ -9,6 +9,7 @@ package tests
 
 import (
 	"context"
+	"fmt"
 	"testing"
 	"time"
 
@@ -29,9 +30,10 @@ var FileAccessLogTest = suite.ConformanceTest{
 	Description: "Make sure file access log is working",
 	Manifests:   []string{"testdata/accesslog-file.yaml"},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
+		gatewayNS := GetGatewayResourceNamespace()
 		labels := map[string]string{
-			"job":       "envoy-gateway-system/envoy",
-			"namespace": "envoy-gateway-system",
+			"job":       fmt.Sprintf("%s/envoy", gatewayNS),
+			"namespace": gatewayNS,
 			"container": "envoy",
 		}
 		match := "test-annotation-value"

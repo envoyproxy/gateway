@@ -17,14 +17,16 @@ import (
 )
 
 func init() {
-	ConformanceTests = append(ConformanceTests, EnvoyGatewayDynamicResolverBackendTest)
+	ConformanceTests = append(ConformanceTests, DynamicResolverBackendTest)
 }
 
-var EnvoyGatewayDynamicResolverBackendTest = suite.ConformanceTest{
-	ShortName:   "EnvoyGatewayDynamicResolverBackend",
+var DynamicResolverBackendTest = suite.ConformanceTest{
+	ShortName:   "DynamicResolverBackend",
 	Description: "Routes with a backend ref to a dynamic resolver backend",
 	Manifests: []string{
 		"testdata/httproute-with-dynamic-resolver-backend.yaml",
+		"testdata/httproute-with-dynamic-resolver-backend-with-tls.yaml",
+		"testdata/httproute-with-dynamic-resolver-backend-with-tls-system-ca.yaml",
 	},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
 		ns := "gateway-conformance-infra"
@@ -59,6 +61,45 @@ var EnvoyGatewayDynamicResolverBackendTest = suite.ConformanceTest{
 				Namespace: ns,
 			}
 
+			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
+		})
+		t.Run("route to service with TLS", func(t *testing.T) {
+			routeNN := types.NamespacedName{Name: "httproute-with-dynamic-resolver-backend-tls", Namespace: ns}
+			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
+			BackendMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "backend-dynamic-resolver-tls", Namespace: ns})
+
+			expectedResponse := http.ExpectedResponse{
+				Request: http.Request{
+					Host: "backend-dynamic-resolver-tls.gateway-conformance-infra.svc.cluster.local:443",
+					Path: "/with-tls",
+				},
+				Response: http.Response{
+					StatusCode: 200,
+				},
+				Namespace: ns,
+			}
+
+			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
+		})
+		t.Run("route to service with TLS using system CA", func(t *testing.T) {
+			routeNN := types.NamespacedName{Name: "httproute-with-dynamic-resolver-backend-tls-system-trust-store", Namespace: ns}
+			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
+			BackendMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "backend-dynamic-resolver-tls-system-trust-store", Namespace: ns})
+
+			expectedResponse := http.ExpectedResponse{
+				Request: http.Request{
+					Host: "gateway.envoyproxy.io:443",
+					Path: "/with-tls-system-trust-store",
+				},
+				ExpectedRequest: &http.ExpectedRequest{
+					Request: http.Request{
+						Host: "",
+					},
+				},
+				Response: http.Response{
+					StatusCode: 200,
+				},
+			}
 			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
 		})
 	},

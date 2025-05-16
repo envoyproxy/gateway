@@ -8,287 +8,99 @@ package file
 import (
 	"context"
 	"fmt"
+	"sync"
 
-	"k8s.io/apimachinery/pkg/types"
-	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
-	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+	"github.com/go-logr/logr"
+	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/yaml"
 
-	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
-	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
-	"github.com/envoyproxy/gateway/internal/gatewayapi/status"
-	"github.com/envoyproxy/gateway/internal/message"
+	"github.com/envoyproxy/gateway/internal/provider/kubernetes"
 )
 
-func (p *Provider) subscribeAndUpdateStatus(ctx context.Context) {
-	// TODO: trigger gatewayclass status update in file-provider
-	// GatewayClass object status updater
-	go func() {
-		message.HandleSubscription(
-			message.Metadata{Runner: string(egv1a1.LogComponentProviderRunner), Message: "gatewayclass-status"},
-			p.resourcesStore.resources.GatewayClassStatuses.Subscribe(ctx),
-			func(update message.Update[types.NamespacedName, *gwapiv1.GatewayClassStatus], errChan chan error) {
-				// skip delete updates.
-				if update.Delete {
-					return
-				}
+type StatusHandler struct {
+	logger        logr.Logger
+	updateChannel chan kubernetes.Update
+	wg            *sync.WaitGroup
+}
 
-				p.logStatus(*update.Value, resource.KindGateway)
-			},
-		)
-		p.logger.Info("gatewayClass status subscriber shutting down")
-	}()
+func NewStatusHandler(log logr.Logger) *StatusHandler {
+	u := &StatusHandler{
+		logger:        log,
+		updateChannel: make(chan kubernetes.Update, 1000),
+		wg:            new(sync.WaitGroup),
+	}
 
-	// Gateway object status updater
-	go func() {
-		message.HandleSubscription(
-			message.Metadata{Runner: string(egv1a1.LogComponentProviderRunner), Message: "gateway-status"},
-			p.resourcesStore.resources.GatewayStatuses.Subscribe(ctx),
-			func(update message.Update[types.NamespacedName, *gwapiv1.GatewayStatus], errChan chan error) {
-				// skip delete updates.
-				if update.Delete {
-					return
-				}
+	u.wg.Add(1)
 
-				// Update Gateway conditions, ignore addresses
-				gtw := new(gwapiv1.Gateway)
-				gtw.Status = *update.Value
-				status.UpdateGatewayStatusAccepted(gtw)
+	return u
+}
 
-				p.logStatus(gtw.Status, resource.KindGateway)
-			},
-		)
-		p.logger.Info("gateway status subscriber shutting down")
-	}()
+// Start runs the goroutine to perform status writes.
+func (u *StatusHandler) Start(ctx context.Context, ready *sync.WaitGroup) {
+	u.logger.Info("started status update handler")
+	defer u.logger.Info("stopped status update handler")
 
-	// HTTPRoute object status updater
-	go func() {
-		message.HandleSubscription(
-			message.Metadata{Runner: string(egv1a1.LogComponentProviderRunner), Message: "httproute-status"},
-			p.resourcesStore.resources.HTTPRouteStatuses.Subscribe(ctx),
-			func(update message.Update[types.NamespacedName, *gwapiv1.HTTPRouteStatus], errChan chan error) {
-				// skip delete updates.
-				if update.Delete {
-					return
-				}
+	// Enable Updaters to start sending updates to this handler.
+	u.wg.Done()
+	ready.Done()
 
-				p.logStatus(*update.Value, resource.KindHTTPRoute)
-			},
-		)
-		p.logger.Info("httpRoute status subscriber shutting down")
-	}()
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case update := <-u.updateChannel:
+			u.logger.Info("received a status update", "namespace", update.NamespacedName.Namespace,
+				"name", update.NamespacedName.Name)
 
-	// GRPCRoute object status updater
-	go func() {
-		message.HandleSubscription(
-			message.Metadata{Runner: string(egv1a1.LogComponentProviderRunner), Message: "grpcroute-status"},
-			p.resourcesStore.resources.GRPCRouteStatuses.Subscribe(ctx),
-			func(update message.Update[types.NamespacedName, *gwapiv1.GRPCRouteStatus], errChan chan error) {
-				// skip delete updates.
-				if update.Delete {
-					return
-				}
-
-				p.logStatus(*update.Value, resource.KindGRPCRoute)
-			},
-		)
-		p.logger.Info("grpcRoute status subscriber shutting down")
-	}()
-
-	// TLSRoute object status updater
-	go func() {
-		message.HandleSubscription(
-			message.Metadata{Runner: string(egv1a1.LogComponentProviderRunner), Message: "tlsroute-status"},
-			p.resourcesStore.resources.TLSRouteStatuses.Subscribe(ctx),
-			func(update message.Update[types.NamespacedName, *gwapiv1a2.TLSRouteStatus], errChan chan error) {
-				// skip delete updates.
-				if update.Delete {
-					return
-				}
-
-				p.logStatus(*update.Value, resource.KindTLSRoute)
-			},
-		)
-		p.logger.Info("tlsRoute status subscriber shutting down")
-	}()
-
-	// TCPRoute object status updater
-	go func() {
-		message.HandleSubscription(
-			message.Metadata{Runner: string(egv1a1.LogComponentProviderRunner), Message: "tcproute-status"},
-			p.resourcesStore.resources.TCPRouteStatuses.Subscribe(ctx),
-			func(update message.Update[types.NamespacedName, *gwapiv1a2.TCPRouteStatus], errChan chan error) {
-				// skip delete updates.
-				if update.Delete {
-					return
-				}
-
-				p.logStatus(*update.Value, resource.KindTCPRoute)
-			},
-		)
-		p.logger.Info("tcpRoute status subscriber shutting down")
-	}()
-
-	// UDPRoute object status updater
-	go func() {
-		message.HandleSubscription(
-			message.Metadata{Runner: string(egv1a1.LogComponentProviderRunner), Message: "udproute-status"},
-			p.resourcesStore.resources.UDPRouteStatuses.Subscribe(ctx),
-			func(update message.Update[types.NamespacedName, *gwapiv1a2.UDPRouteStatus], errChan chan error) {
-				// skip delete updates.
-				if update.Delete {
-					return
-				}
-
-				p.logStatus(*update.Value, resource.KindUDPRoute)
-			},
-		)
-		p.logger.Info("udpRoute status subscriber shutting down")
-	}()
-
-	// EnvoyPatchPolicy object status updater
-	go func() {
-		message.HandleSubscription(
-			message.Metadata{Runner: string(egv1a1.LogComponentProviderRunner), Message: "envoypatchpolicy-status"},
-			p.resourcesStore.resources.EnvoyPatchPolicyStatuses.Subscribe(ctx),
-			func(update message.Update[types.NamespacedName, *gwapiv1a2.PolicyStatus], errChan chan error) {
-				// skip delete updates.
-				if update.Delete {
-					return
-				}
-
-				p.logStatus(*update.Value, resource.KindEnvoyPatchPolicy)
-			},
-		)
-		p.logger.Info("envoyPatchPolicy status subscriber shutting down")
-	}()
-
-	// ClientTrafficPolicy object status updater
-	go func() {
-		message.HandleSubscription(
-			message.Metadata{Runner: string(egv1a1.LogComponentProviderRunner), Message: "clienttrafficpolicy-status"},
-			p.resourcesStore.resources.ClientTrafficPolicyStatuses.Subscribe(ctx),
-			func(update message.Update[types.NamespacedName, *gwapiv1a2.PolicyStatus], errChan chan error) {
-				// skip delete updates.
-				if update.Delete {
-					return
-				}
-
-				p.logStatus(*update.Value, resource.KindClientTrafficPolicy)
-			},
-		)
-		p.logger.Info("clientTrafficPolicy status subscriber shutting down")
-	}()
-
-	// BackendTrafficPolicy object status updater
-	go func() {
-		message.HandleSubscription(
-			message.Metadata{Runner: string(egv1a1.LogComponentProviderRunner), Message: "backendtrafficpolicy-status"},
-			p.resourcesStore.resources.BackendTrafficPolicyStatuses.Subscribe(ctx),
-			func(update message.Update[types.NamespacedName, *gwapiv1a2.PolicyStatus], errChan chan error) {
-				// skip delete updates.
-				if update.Delete {
-					return
-				}
-
-				p.logStatus(*update.Value, resource.KindBackendTrafficPolicy)
-			},
-		)
-		p.logger.Info("backendTrafficPolicy status subscriber shutting down")
-	}()
-
-	// SecurityPolicy object status updater
-	go func() {
-		message.HandleSubscription(
-			message.Metadata{Runner: string(egv1a1.LogComponentProviderRunner), Message: "securitypolicy-status"},
-			p.resourcesStore.resources.SecurityPolicyStatuses.Subscribe(ctx),
-			func(update message.Update[types.NamespacedName, *gwapiv1a2.PolicyStatus], errChan chan error) {
-				// skip delete updates.
-				if update.Delete {
-					return
-				}
-
-				p.logStatus(*update.Value, resource.KindSecurityPolicy)
-			},
-		)
-		p.logger.Info("securityPolicy status subscriber shutting down")
-	}()
-
-	// BackendTLSPolicy object status updater
-	go func() {
-		message.HandleSubscription(
-			message.Metadata{Runner: string(egv1a1.LogComponentProviderRunner), Message: "backendtlspolicy-status"},
-			p.resourcesStore.resources.BackendTLSPolicyStatuses.Subscribe(ctx),
-			func(update message.Update[types.NamespacedName, *gwapiv1a2.PolicyStatus], errChan chan error) {
-				// skip delete updates.
-				if update.Delete {
-					return
-				}
-
-				p.logStatus(*update.Value, resource.KindBackendTLSPolicy)
-			},
-		)
-		p.logger.Info("backendTLSPolicy status subscriber shutting down")
-	}()
-
-	// EnvoyExtensionPolicy object status updater
-	go func() {
-		message.HandleSubscription(
-			message.Metadata{Runner: string(egv1a1.LogComponentProviderRunner), Message: "envoyextensionpolicy-status"},
-			p.resourcesStore.resources.EnvoyExtensionPolicyStatuses.Subscribe(ctx),
-			func(update message.Update[types.NamespacedName, *gwapiv1a2.PolicyStatus], errChan chan error) {
-				// skip delete updates.
-				if update.Delete {
-					return
-				}
-
-				p.logStatus(*update.Value, resource.KindEnvoyExtensionPolicy)
-			},
-		)
-		p.logger.Info("envoyExtensionPolicy status subscriber shutting down")
-	}()
-
-	// Backend object status updater
-	go func() {
-		message.HandleSubscription(
-			message.Metadata{Runner: string(egv1a1.LogComponentProviderRunner), Message: "backend-status"},
-			p.resourcesStore.resources.BackendStatuses.Subscribe(ctx),
-			func(update message.Update[types.NamespacedName, *egv1a1.BackendStatus], errChan chan error) {
-				// skip delete updates.
-				if update.Delete {
-					return
-				}
-
-				p.logStatus(*update.Value, resource.KindBackend)
-			},
-		)
-		p.logger.Info("backend status subscriber shutting down")
-	}()
-
-	if p.extensionManagerEnabled {
-		// ExtensionServerPolicy object status updater
-		go func() {
-			message.HandleSubscription(
-				message.Metadata{Runner: string(egv1a1.LogComponentProviderRunner), Message: "extensionserverpolicies-status"},
-				p.resourcesStore.resources.ExtensionPolicyStatuses.Subscribe(ctx),
-				func(update message.Update[message.NamespacedNameAndGVK, *gwapiv1a2.PolicyStatus], errChan chan error) {
-					// skip delete updates.
-					if update.Delete {
-						return
-					}
-
-					p.logStatus(*update.Value, "ExtensionServerPolicy")
-				},
-			)
-			p.logger.Info("extensionServerPolicies status subscriber shutting down")
-		}()
+			u.logStatus(update)
+		}
 	}
 }
 
-func (p *Provider) logStatus(obj interface{}, statusType string) {
-	if status, err := yaml.Marshal(obj); err == nil {
-		p.logger.Info(fmt.Sprintf("Got new status for %s \n%s", statusType, string(status)))
-	} else {
-		p.logger.Error(err, "failed to log status", "type", statusType)
+func (u *StatusHandler) logStatus(update kubernetes.Update) {
+	obj := update.Resource
+	newObj := update.Mutator.Mutate(obj)
+	log := u.logger.WithValues("key", update.NamespacedName.String())
+
+	// Log the resource status.
+	raw, err := runtime.DefaultUnstructuredConverter.ToUnstructured(newObj)
+	if err != nil {
+		log.Error(err, "failed to convert object")
+		return
 	}
+
+	rawStatus, ok := raw["status"]
+	if !ok {
+		log.Error(fmt.Errorf("no status field"), "failed to log status")
+		return
+	}
+
+	byteStatus, err := yaml.Marshal(rawStatus)
+	if err != nil {
+		log.Error(err, "failed to marshal object")
+		return
+	}
+
+	log.Info(fmt.Sprintf("Got new status for %s\n%s", kubernetes.KindOf(obj), string(byteStatus)))
+}
+
+// Writer retrieves the interface that should be used to write to the StatusHandler.
+func (u *StatusHandler) Writer() kubernetes.Updater {
+	return &StatusWriter{
+		updateChannel: u.updateChannel,
+		wg:            u.wg,
+	}
+}
+
+// StatusWriter takes status updates and sends these to the StatusHandler via a channel.
+type StatusWriter struct {
+	updateChannel chan<- kubernetes.Update
+	wg            *sync.WaitGroup
+}
+
+// Send sends the given Update off to the update channel for writing by the StatusHandler.
+func (u *StatusWriter) Send(update kubernetes.Update) {
+	// Wait until updater is ready
+	u.wg.Wait()
+	u.updateChannel <- update
 }

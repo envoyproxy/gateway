@@ -188,7 +188,6 @@ xdsIR:
           name: ""
           prefix: /
         traffic:
-          name: envoy-gateway/policy-for-gateway
           rateLimit:
             local:
               default:
@@ -205,6 +204,7 @@ xdsIR:
                 limit:
                   requests: 10
                   unit: Hour
+                name: envoy-gateway/policy-for-gateway/rule/0
               - cidrMatch:
                   cidr: 192.168.0.0/16
                   distinct: false
@@ -221,6 +221,7 @@ xdsIR:
                 limit:
                   requests: 10
                   unit: Minute
+                name: envoy-gateway/policy-for-gateway/rule/1
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4

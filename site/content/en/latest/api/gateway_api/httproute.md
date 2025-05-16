@@ -232,9 +232,16 @@ unspecified, the rule performs no forwarding. If unspecified and no filters
 are specified that would result in a response being sent, a 404 error code
 is returned.
 
-The following example forwards HTTP requests for prefix `/bar` to service
-"my-service1" on port `8080` and HTTP requests for prefix `/some/thing` with
-header `magic: foo` to service "my-service2" on port `8080`:
+The following example forwards HTTP requests for path prefix `/bar` to service
+"my-service1" on port `8080`, and HTTP requests fulfilling _all_ four of the
+following criteria
+
+- header `magic: foo`
+- query param `great: example`
+- path prefix `/some/thing`
+- method `GET`
+
+to service "my-service2" on port `8080`:
 ```yaml
 #$ Used in:
 #$ - site-src/api-types/httproute.md
@@ -343,7 +350,7 @@ There are 2 kinds of timeouts that can be configured in an HTTPRoute Rule:
 
 Because the `request` timeout encompasses the `backendRequest` timeout, the value of `backendRequest` must not be greater than the value of `request` timeout.
 
-Timeouts are optional, and their fields are of type [Duration](https://gateway-api.sigs.k8s.io/geps/gep-2257/). A zero-valued timeout ("0s") MUST be interpreted as disabling the timeout. A valid non-zero-valued timeout MUST be >= 1ms.
+Timeouts are optional, and their fields are of type [Duration](https://gateway-api.sigs.k8s.io/geps/gep-2257). A zero-valued timeout ("0s") MUST be interpreted as disabling the timeout. A valid non-zero-valued timeout MUST be >= 1ms.
 
 The following example uses the `request` field which will cause a timeout if a client request is taking longer than 10 seconds to complete. The example also defines a 2s `backendRequest` which specifies a timeout for an individual request from the gateway to a backend service `timeout-svc`:
 
@@ -450,7 +457,7 @@ metadata:
 ...
 status:
   parents:
-  - parentRefs:
+  - parentRef:
       name: gw-example
       namespace: gw-example-ns
     conditions:
@@ -464,14 +471,14 @@ only one Route rule may match each request. For more information on how conflict
 resolution applies to merging, refer to the [API specification][httprouterule].
 
 
-[httproute]: https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.HTTPRoute
-[httprouterule]: https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.HTTPRouteRule
-[hostname]: https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.Hostname
+[httproute]: https://gateway-api.sigs.k8s.io/reference/spec#gateway.networking.k8s.io/v1.HTTPRoute
+[httprouterule]: https://gateway-api.sigs.k8s.io/reference/spec#gateway.networking.k8s.io/v1.HTTPRouteRule
+[hostname]: https://gateway-api.sigs.k8s.io/reference/spec#gateway.networking.k8s.io/v1.Hostname
 [rfc-3986]: https://tools.ietf.org/html/rfc3986
-[matches]: https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.HTTPRouteMatch
-[filters]: https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.HTTPRouteFilter
-[backendRef]: https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.HTTPBackendRef
-[parentRef]: https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.ParentRef
-[timeouts]: https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.HTTPRouteTimeouts
+[matches]: https://gateway-api.sigs.k8s.io/reference/spec#gateway.networking.k8s.io/v1.HTTPRouteMatch
+[filters]: https://gateway-api.sigs.k8s.io/reference/spec#gateway.networking.k8s.io/v1.HTTPRouteFilter
+[backendRef]: https://gateway-api.sigs.k8s.io/reference/spec#gateway.networking.k8s.io/v1.HTTPBackendRef
+[parentRef]: https://gateway-api.sigs.k8s.io/reference/spec#gateway.networking.k8s.io/v1.ParentRef
+[timeouts]: https://gateway-api.sigs.k8s.io/reference/spec#gateway.networking.k8s.io/v1.HTTPRouteTimeouts
 [appProtocol]: https://kubernetes.io/docs/concepts/services-networking/service/#application-protocol
-[sectionName]: https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.SectionName
+[sectionName]: https://gateway-api.sigs.k8s.io/reference/spec#gateway.networking.k8s.io/v1.SectionName

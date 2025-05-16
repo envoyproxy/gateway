@@ -1,0 +1,50 @@
+apiVersion: gateway.networking.k8s.io/v1
+kind: GatewayClass
+metadata:
+  name: eg
+spec:
+  controllerName: gateway.envoyproxy.io/gatewayclass-controller
+  parametersRef:
+    group: gateway.envoyproxy.io
+    kind: EnvoyProxy
+    name: otel
+    namespace: envoy-gateway-system
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyProxy
+metadata:
+  name: otel
+  namespace: envoy-gateway-system
+spec:
+  telemetry:
+    tracing:
+      # sample 1% of requests
+      samplingRate: 1
+      provider:
+        backendRefs:
+        - name: otel-collector
+          namespace: monitoring
+          port: 4317
+        type: OpenTelemetry
+      customTags:
+        # This is an example of using a literal as a tag value
+        provider:
+          type: Literal
+          literal:
+            value: "otel"
+        "k8s.pod.name":
+          type: Environment
+          environment:
+            name: ENVOY_POD_NAME
+            defaultValue: "-"
+        "k8s.namespace.name":
+          type: Environment
+          environment:
+            name: ENVOY_GATEWAY_NAMESPACE
+            defaultValue: "envoy-gateway-system"
+        # This is an example of using a header value as a tag value
+        header1:
+          type: RequestHeader
+          requestHeader:
+            name: X-Header-1
+            defaultValue: "-"
