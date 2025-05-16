@@ -14,9 +14,7 @@ import (
 )
 
 func FuzzGatewayAPIToXDS(f *testing.F) {
-	// Add seed corpus for golang native fuzzing. OSS-Fuzz will not take these corpus into consideration.
-	// grpc route
-	f.Add([]byte(`apiVersion: gateway.networking.k8s.io/v1
+	baseYAML := `apiVersion: gateway.networking.k8s.io/v1
 kind: GatewayClass
 metadata:
   name: eg
@@ -34,7 +32,22 @@ spec:
     - name: http
       protocol: HTTP
       port: 80
----
+`
+
+	backendYAML := `---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: Backend
+metadata:
+  name: provided-backend
+  namespace: default
+spec:
+  endpoints:
+    - ip:
+        address: 0.0.0.0
+        port: 8000
+`
+
+	grpcRoute := `---
 apiVersion: gateway.networking.k8s.io/v1
 kind: GRPCRoute
 metadata:
@@ -57,38 +70,9 @@ spec:
       backendRefs:
         - name: provided-backend
           port: 9000
----
-apiVersion: gateway.envoyproxy.io/v1alpha1
-kind: Backend
-metadata:
-  name: provided-backend
-  namespace: default
-spec:
-  endpoints:
-    - ip:
-        address: 0.0.0.0
-        port: 8000`))
+`
 
-	// http route
-	f.Add([]byte(`apiVersion: gateway.networking.k8s.io/v1
-kind: GatewayClass
-metadata:
-  name: eg
-spec:
-  controllerName: gateway.envoyproxy.io/gatewayclass-controller
----
-apiVersion: gateway.networking.k8s.io/v1
-kind: Gateway
-metadata:
-  name: eg
-  namespace: default
-spec:
-  gatewayClassName: eg
-  listeners:
-    - name: http
-      protocol: HTTP
-      port: 80
----
+	httpRoute := `---
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
@@ -103,38 +87,9 @@ spec:
     - backendRefs:
         - name: provided-backend
           port: 8000
----
-apiVersion: gateway.envoyproxy.io/v1alpha1
-kind: Backend
-metadata:
-  name: provided-backend
-  namespace: default
-spec:
-  endpoints:
-    - ip:
-        address: 0.0.0.0
-        port: 8000`))
+`
 
-	// udp route
-	f.Add([]byte(`apiVersion: gateway.networking.k8s.io/v1
-kind: GatewayClass
-metadata:
-  name: eg
-spec:
-  controllerName: gateway.envoyproxy.io/gatewayclass-controller
----
-apiVersion: gateway.networking.k8s.io/v1
-kind: Gateway
-metadata:
-  name: eg
-  namespace: default
-spec:
-  gatewayClassName: eg
-  listeners:
-    - name: http
-      protocol: HTTP
-      port: 80
----
+	udpRoute := `---
 apiVersion: gateway.networking.k8s.io/v1alpha2
 kind: UDPRoute
 metadata:
@@ -146,19 +101,14 @@ spec:
       sectionName: udp
   rules:
     - backendRefs:
-        - name: backend
+        - name: provided-backend
           port: 3000
----
-apiVersion: gateway.envoyproxy.io/v1alpha1
-kind: Backend
-metadata:
-  name: provided-backend
-  namespace: default
-spec:
-  endpoints:
-    - ip:
-        address: 0.0.0.0
-        port: 8000`))
+`
+
+	// Add seed corpus for golang native fuzzing. OSS-Fuzz will not take these corpus into consideration.
+	f.Add([]byte(baseYAML + grpcRoute + backendYAML))
+	f.Add([]byte(baseYAML + httpRoute + backendYAML))
+	f.Add([]byte(baseYAML + udpRoute + backendYAML))
 
 	f.Fuzz(func(t *testing.T, b []byte) {
 		rs, err := resource.LoadResourcesFromYAMLBytes(b, true)
