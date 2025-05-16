@@ -17,14 +17,14 @@ metadata:
 spec:
   externalTrafficPolicy: Local
   ports:
-    - name: EnvoyHTTPPort
-      port: 0
-      protocol: TCP
-      targetPort: 8080
-    - name: EnvoyHTTPSPort
-      port: 0
-      protocol: TCP
-      targetPort: 8443
+  - name: EnvoyHTTPPort
+    port: 0
+    protocol: TCP
+    targetPort: 8080
+  - name: EnvoyHTTPSPort
+    port: 0
+    protocol: TCP
+    targetPort: 8443
   selector:
     app.kubernetes.io/name: envoy
     app.kubernetes.io/component: proxy

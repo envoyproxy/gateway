@@ -8,13 +8,13 @@ metadata:
     app.kubernetes.io/name: envoy
     gateway.envoyproxy.io/owning-gateway-name: gateway-1
     gateway.envoyproxy.io/owning-gateway-namespace: ns1
+  name: envoy-ns1-gateway-1-02ae0474
+  namespace: ns1
   ownerReferences:
   - apiVersion: gateway.networking.k8s.io/v1
     kind: Gateway
     name: gateway-1
     uid: test-owner-reference-uid-for-gateway
-  name: envoy-ns1-gateway-1-02ae0474
-  namespace: ns1
 spec:
   selector:
     matchLabels:
