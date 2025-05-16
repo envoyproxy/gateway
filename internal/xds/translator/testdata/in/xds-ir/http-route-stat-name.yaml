@@ -1,0 +1,36 @@
+http:
+- name: "first-listener"
+  address: "::"
+  port: 10080
+  hostnames:
+  - "*"
+  path:
+    mergeSlashes: true
+    escapedSlashesAction: UnescapeAndRedirect
+  routes:
+  - name: "first-route"
+    hostname: "*"
+    destination:
+      statName: "custom-stat-name"
+      name: "first-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.1.1.1"
+          port: 50001
+        weight: 20
+        name: "first-route-dest/backend/0"
+      - endpoints:
+        - host: "2.2.2.2"
+          port: 50002
+        weight: 40
+        name: "first-route-dest/backend/1"
+      - endpoints:
+        - host: "3.3.3.3"
+          port: 50003
+        weight: 20
+        name: "first-route-dest/backend/2"
+      - endpoints:
+        - host: "4.4.4.4"
+          port: 50004
+        weight: 20
+        name: "first-route-dest/backend/3"

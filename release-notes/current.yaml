@@ -8,6 +8,7 @@ security updates: |
 
 # New features or capabilities added in this release.
 new features: |
+  Added support for configuring cluster stat name for HTTPRoute and GRPCRoute in EnvoyProxy CRD.
 
 bug fixes: |
 
