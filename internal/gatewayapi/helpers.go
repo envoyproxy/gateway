@@ -491,7 +491,8 @@ type policyRouteTargetContext struct {
 
 type policyGatewayTargetContext struct {
 	*GatewayContext
-	attached bool
+	attached            bool
+	attachedToListeners sets.Set[string]
 }
 
 // listenersWithSameHTTPPort returns a list of the names of all other HTTP listeners
