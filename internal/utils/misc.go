@@ -59,6 +59,17 @@ func GetHashedName(nsName string, length int) string {
 	return fmt.Sprintf("%s-%s", resourceName, hashedName[0:8])
 }
 
+// GetKubernetesResourceName returns a Kubernetes resource name.
+// Input `nsName` should be formatted as `{Namespace}/{ResourceName}` when Gateway Proxy.
+// Input `nsName` should be formatted as `{ResourceName}` when Merged Gateway Proxy.
+func GetKubernetesResourceName(nsName string) string {
+	nn := strings.Split(nsName, "/")
+	if len(nn) == 1 {
+		return nn[0]
+	}
+	return nn[1]
+}
+
 // Digest256 returns a sha256 hash of the input string.
 // The hash is represented as a hexadecimal string of length 64.
 func Digest256(str string) string {

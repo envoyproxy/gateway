@@ -16,9 +16,12 @@ import (
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
+	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/envoygateway"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
@@ -28,11 +31,12 @@ import (
 
 func TestCreateOrUpdateProxyServiceAccount(t *testing.T) {
 	testCases := []struct {
-		name    string
-		ns      string
-		in      *ir.Infra
-		current *corev1.ServiceAccount
-		want    *corev1.ServiceAccount
+		name                 string
+		ns                   string
+		in                   *ir.Infra
+		gatewayNamespaceMode bool
+		current              *corev1.ServiceAccount
+		want                 *corev1.ServiceAccount
 	}{
 		{
 			name: "create-sa",
@@ -164,6 +168,48 @@ func TestCreateOrUpdateProxyServiceAccount(t *testing.T) {
 				},
 			},
 		},
+		{
+			name: "create-sa-with-gateway-namespace-mode",
+			ns:   "test",
+			in: &ir.Infra{
+				Proxy: &ir.ProxyInfra{
+					Name:      "ns1/gateway-1",
+					Namespace: "ns1",
+					Metadata: &ir.InfraMetadata{
+						Labels: map[string]string{
+							gatewayapi.OwningGatewayNamespaceLabel: "ns1",
+							gatewayapi.OwningGatewayNameLabel:      "gateway-1",
+						},
+					},
+				},
+			},
+			gatewayNamespaceMode: true,
+			want: &corev1.ServiceAccount{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "ServiceAccount",
+					APIVersion: "v1",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "ns1",
+					Name:      "envoy-ns1-gateway-1-02ae0474",
+					Labels: map[string]string{
+						"app.kubernetes.io/name":               "envoy",
+						"app.kubernetes.io/component":          "proxy",
+						"app.kubernetes.io/managed-by":         "envoy-gateway",
+						gatewayapi.OwningGatewayNamespaceLabel: "ns1",
+						gatewayapi.OwningGatewayNameLabel:      "gateway-1",
+					},
+					OwnerReferences: []metav1.OwnerReference{
+						{
+							APIVersion: "gateway.networking.k8s.io/v1",
+							Kind:       "Gateway",
+							Name:       "gateway-1",
+							UID:        "foo.bar",
+						},
+					},
+				},
+			},
+		},
 	}
 
 	for _, tc := range testCases {
@@ -187,14 +233,23 @@ func TestCreateOrUpdateProxyServiceAccount(t *testing.T) {
 			}
 
 			kube := NewInfra(cli, cfg)
+			if tc.gatewayNamespaceMode {
+				kube.EnvoyGateway.Provider.Kubernetes.Deploy = &egv1a1.KubernetesDeployMode{
+					Type: ptr.To(egv1a1.KubernetesDeployModeType(egv1a1.KubernetesDeployModeTypeGatewayNamespace)),
+				}
+			}
+			envoyNamespace := kube.GetResourceNamespace(tc.in)
+			ownerReferenceUID := map[string]types.UID{
+				proxy.ResourceKindGateway: "foo.bar",
+			}
 
-			r := proxy.NewResourceRender(kube.ControllerNamespace, cfg.ControllerNamespace, kube.DNSDomain, tc.in.GetProxyInfra(), cfg.EnvoyGateway)
+			r := proxy.NewResourceRender(envoyNamespace, cfg.ControllerNamespace, kube.DNSDomain, tc.in.GetProxyInfra(), cfg.EnvoyGateway, ownerReferenceUID)
 			err = kube.createOrUpdateServiceAccount(context.Background(), r)
 			require.NoError(t, err)
 
 			actual := &corev1.ServiceAccount{
 				ObjectMeta: metav1.ObjectMeta{
-					Namespace: kube.ControllerNamespace,
+					Namespace: envoyNamespace,
 					Name:      proxy.ExpectedResourceHashedName(tc.in.Proxy.Name),
 				},
 			}
@@ -221,7 +276,7 @@ func TestDeleteProxyServiceAccount(t *testing.T) {
 			infra := ir.NewInfra()
 			infra.Proxy.GetProxyMetadata().Labels[gatewayapi.OwningGatewayNamespaceLabel] = "default"
 			infra.Proxy.GetProxyMetadata().Labels[gatewayapi.OwningGatewayNameLabel] = infra.Proxy.Name
-			r := proxy.NewResourceRender(kube.ControllerNamespace, kube.ControllerNamespace, kube.DNSDomain, infra.GetProxyInfra(), kube.EnvoyGateway)
+			r := proxy.NewResourceRender(kube.ControllerNamespace, kube.ControllerNamespace, kube.DNSDomain, infra.GetProxyInfra(), kube.EnvoyGateway, nil)
 
 			err := kube.createOrUpdateServiceAccount(context.Background(), r)
 			require.NoError(t, err)

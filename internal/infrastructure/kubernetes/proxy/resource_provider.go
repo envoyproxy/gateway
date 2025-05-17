@@ -16,6 +16,7 @@ import (
 	policyv1 "k8s.io/api/policy/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/utils/ptr"
 
@@ -41,6 +42,11 @@ const (
 
 	// XdsTLSCaFileName is the file name of the xDS server TLS certificate.
 	XdsTLSCaFileName = "ca.crt"
+
+	// ResourceKind indicates owner of infra proxy resources.
+	ResourceKindGateway = "Gateway"
+
+	gatewayAPIV1Version = "gateway.networking.k8s.io/v1"
 )
 
 type ResourceRender struct {
@@ -58,9 +64,14 @@ type ResourceRender struct {
 	ShutdownManager *egv1a1.ShutdownManager
 
 	GatewayNamespaceMode bool
+
+	// ownerReferenceUID store the uid of its owner reference. Key is the kind of owner resource.
+	// - Gateway when enabled GatewayNamespaceMode
+	// - TODO: GatewayClass when enabled merged gateways
+	ownerReferenceUID map[string]types.UID
 }
 
-func NewResourceRender(envoyNamespace, controllerNamespace, dnsDomain string, infra *ir.ProxyInfra, gateway *egv1a1.EnvoyGateway) *ResourceRender {
+func NewResourceRender(envoyNamespace, controllerNamespace, dnsDomain string, infra *ir.ProxyInfra, gateway *egv1a1.EnvoyGateway, ownerReferenceUID map[string]types.UID) *ResourceRender {
 	return &ResourceRender{
 		envoyNamespace:       envoyNamespace,
 		controllerNamespace:  controllerNamespace,
@@ -68,6 +79,7 @@ func NewResourceRender(envoyNamespace, controllerNamespace, dnsDomain string, in
 		infra:                infra,
 		ShutdownManager:      gateway.GetEnvoyGatewayProvider().GetEnvoyGatewayKubeProvider().ShutdownManager,
 		GatewayNamespaceMode: gateway.GatewayNamespaceMode(),
+		ownerReferenceUID:    ownerReferenceUID,
 	}
 }
 
@@ -87,6 +99,21 @@ func (r *ResourceRender) LabelSelector() labels.Selector {
 	return labels.SelectorFromSet(r.stableSelector().MatchLabels)
 }
 
+func (r *ResourceRender) OwnerReferences() []metav1.OwnerReference {
+	var ownerReferences []metav1.OwnerReference
+	if r.ownerReferenceUID != nil && r.GatewayNamespaceMode {
+		if uid, ok := r.ownerReferenceUID[ResourceKindGateway]; ok {
+			ownerReferences = append(ownerReferences, metav1.OwnerReference{
+				APIVersion: gatewayAPIV1Version,
+				Kind:       ResourceKindGateway,
+				Name:       utils.GetKubernetesResourceName(r.infra.Name),
+				UID:        uid,
+			})
+		}
+	}
+	return ownerReferences
+}
+
 // ServiceAccount returns the expected proxy serviceAccount.
 func (r *ResourceRender) ServiceAccount() (*corev1.ServiceAccount, error) {
 	// Set the labels based on the owning gateway name.
@@ -101,10 +128,11 @@ func (r *ResourceRender) ServiceAccount() (*corev1.ServiceAccount, error) {
 			APIVersion: "v1",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Namespace:   r.Namespace(),
-			Name:        r.Name(),
-			Labels:      labels,
-			Annotations: r.infra.GetProxyMetadata().Annotations,
+			Namespace:       r.Namespace(),
+			Name:            r.Name(),
+			Labels:          labels,
+			Annotations:     r.infra.GetProxyMetadata().Annotations,
+			OwnerReferences: r.OwnerReferences(),
 		},
 	}, nil
 }
@@ -208,9 +236,10 @@ func (r *ResourceRender) Service() (*corev1.Service, error) {
 			Kind:       "Service",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Namespace:   r.Namespace(),
-			Labels:      svcLabels,
-			Annotations: annotations,
+			Namespace:       r.Namespace(),
+			Labels:          svcLabels,
+			Annotations:     annotations,
+			OwnerReferences: r.OwnerReferences(),
 		},
 		Spec: serviceSpec,
 	}
@@ -253,10 +282,11 @@ func (r *ResourceRender) ConfigMap(cert string) (*corev1.ConfigMap, error) {
 			APIVersion: "v1",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Namespace:   r.Namespace(),
-			Name:        r.Name(),
-			Labels:      labels,
-			Annotations: r.infra.GetProxyMetadata().Annotations,
+			Namespace:       r.Namespace(),
+			Name:            r.Name(),
+			Labels:          labels,
+			Annotations:     r.infra.GetProxyMetadata().Annotations,
+			OwnerReferences: r.OwnerReferences(),
 		},
 		Data: data,
 	}, nil
@@ -312,9 +342,10 @@ func (r *ResourceRender) Deployment() (*appsv1.Deployment, error) {
 			APIVersion: "apps/v1",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Namespace:   r.Namespace(),
-			Labels:      dpLabels,
-			Annotations: dpAnnotations,
+			Namespace:       r.Namespace(),
+			Labels:          dpLabels,
+			Annotations:     dpAnnotations,
+			OwnerReferences: r.OwnerReferences(),
 		},
 		Spec: appsv1.DeploymentSpec{
 			Replicas: deploymentConfig.Replicas,
@@ -400,9 +431,10 @@ func (r *ResourceRender) DaemonSet() (*appsv1.DaemonSet, error) {
 			APIVersion: "apps/v1",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Namespace:   r.Namespace(),
-			Labels:      dsLabels,
-			Annotations: dsAnnotations,
+			Namespace:       r.Namespace(),
+			Labels:          dsLabels,
+			Annotations:     dsAnnotations,
+			OwnerReferences: r.OwnerReferences(),
 		},
 		Spec: appsv1.DaemonSetSpec{
 			// Daemonset's selector is immutable.
@@ -468,8 +500,9 @@ func (r *ResourceRender) PodDisruptionBudget() (*policyv1.PodDisruptionBudget, e
 
 	podDisruptionBudget := &policyv1.PodDisruptionBudget{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      r.Name(),
-			Namespace: r.Namespace(),
+			Name:            r.Name(),
+			Namespace:       r.Namespace(),
+			OwnerReferences: r.OwnerReferences(),
 		},
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "policy/v1",
@@ -503,10 +536,11 @@ func (r *ResourceRender) HorizontalPodAutoscaler() (*autoscalingv2.HorizontalPod
 			Kind:       "HorizontalPodAutoscaler",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Namespace:   r.Namespace(),
-			Name:        r.Name(),
-			Annotations: r.infra.GetProxyMetadata().Annotations,
-			Labels:      r.infra.GetProxyMetadata().Labels,
+			Namespace:       r.Namespace(),
+			Name:            r.Name(),
+			Annotations:     r.infra.GetProxyMetadata().Annotations,
+			Labels:          r.infra.GetProxyMetadata().Labels,
+			OwnerReferences: r.OwnerReferences(),
 		},
 		Spec: autoscalingv2.HorizontalPodAutoscalerSpec{
 			ScaleTargetRef: autoscalingv2.CrossVersionObjectReference{
