@@ -41,9 +41,20 @@ var HeaderBasedSessionPersistenceTest = suite.ConformanceTest{
 				},
 			}, gwAddr, "HTTP", "http")
 
+			// Make sure backend is ready
+			httputils.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, httputils.ExpectedResponse{
+				Request: httputils.Request{
+					Path: "/v2",
+				},
+				Response: httputils.Response{
+					StatusCode: http.StatusOK,
+				},
+				Namespace: ns,
+			})
+
 			pod := ""
 			// We make 10 requests to the gateway and expect them to be routed to the same pod.
-			for i := 0; i < 10; i++ {
+			for i := range 10 {
 				captReq, res, err := suite.RoundTripper.CaptureRoundTrip(req)
 				if err != nil {
 					t.Fatalf("failed to make request: %v", err)
@@ -83,6 +94,17 @@ var HeaderBasedSessionPersistenceTest = suite.ConformanceTest{
 				},
 			}, gwAddr, "HTTP", "http")
 
+			// Make sure backend is ready
+			httputils.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, httputils.ExpectedResponse{
+				Request: httputils.Request{
+					Path: "/v1",
+				},
+				Response: httputils.Response{
+					StatusCode: http.StatusOK,
+				},
+				Namespace: ns,
+			})
+
 			_, res, err := suite.RoundTripper.CaptureRoundTrip(req)
 			if err != nil {
 				t.Fatalf("failed to make request: %v", err)
@@ -105,15 +127,27 @@ var CookieBasedSessionPersistenceTest = suite.ConformanceTest{
 			routeNN := types.NamespacedName{Name: "cookie-based-session-persistence", Namespace: ns}
 			gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
 			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
+
 			req := httputils.MakeRequest(t, &httputils.ExpectedResponse{
 				Request: httputils.Request{
 					Path: "/v2",
 				},
 			}, gwAddr, "HTTP", "http")
 
+			// Make sure backend is ready
+			httputils.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, httputils.ExpectedResponse{
+				Request: httputils.Request{
+					Path: "/v2",
+				},
+				Response: httputils.Response{
+					StatusCode: http.StatusOK,
+				},
+				Namespace: ns,
+			})
+
 			pod := ""
 			// We make 10 requests to the gateway and expect them to be routed to the same pod.
-			for i := 0; i < 10; i++ {
+			for i := range 10 {
 				captReq, res, err := suite.RoundTripper.CaptureRoundTrip(req)
 				if err != nil {
 					t.Fatalf("failed to make request: %v", err)
@@ -165,6 +199,17 @@ var CookieBasedSessionPersistenceTest = suite.ConformanceTest{
 					Path: "/v1",
 				},
 			}, gwAddr, "HTTP", "http")
+
+			// Make sure backend is ready
+			httputils.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, httputils.ExpectedResponse{
+				Request: httputils.Request{
+					Path: "/v1",
+				},
+				Response: httputils.Response{
+					StatusCode: http.StatusOK,
+				},
+				Namespace: ns,
+			})
 
 			_, res, err := suite.RoundTripper.CaptureRoundTrip(req)
 			if err != nil {
