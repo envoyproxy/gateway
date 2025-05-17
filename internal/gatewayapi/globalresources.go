@@ -30,11 +30,14 @@ func (t *Translator) ProcessGlobalResources(resources *resource.Resources, gatew
 	for _, gw := range gateways {
 		key := utils.NamespacedName(gw).String()
 		if _, ok := xdsIR[key]; ok {
-			xdsIR[key].GlobalResources = ir.GlobalResources{}
-			xdsIR[key].GlobalResources.EnvoyClientCertificate = ir.TLSCertificate{
-				Name:        irGlobalConfigName(envoyTLSSecret),
-				Certificate: envoyTLSSecret.Data[corev1.TLSCertKey],
-				PrivateKey:  envoyTLSSecret.Data[corev1.TLSPrivateKeyKey],
+			// TODO zhaohuabing: this is also required by WASM
+			if containsGlobalRateLimit(xdsIR[key].HTTP) {
+				xdsIR[key].GlobalResources = &ir.GlobalResources{}
+				xdsIR[key].GlobalResources.EnvoyClientCertificate = &ir.TLSCertificate{
+					Name:        irGlobalConfigName(envoyTLSSecret),
+					Certificate: envoyTLSSecret.Data[corev1.TLSCertKey],
+					PrivateKey:  envoyTLSSecret.Data[corev1.TLSPrivateKeyKey],
+				}
 			}
 		}
 	}
@@ -44,4 +47,17 @@ func (t *Translator) ProcessGlobalResources(resources *resource.Resources, gatew
 
 func irGlobalConfigName(object metav1.Object) string {
 	return fmt.Sprintf("%s/%s", object.GetNamespace(), object.GetName())
+}
+
+func containsGlobalRateLimit(httpListeners []*ir.HTTPListener) bool {
+	for _, httpListener := range httpListeners {
+		for _, route := range httpListener.Routes {
+			if route.Traffic != nil &&
+				route.Traffic.RateLimit != nil &&
+				route.Traffic.RateLimit.Global != nil {
+				return true
+			}
+		}
+	}
+	return false
 }

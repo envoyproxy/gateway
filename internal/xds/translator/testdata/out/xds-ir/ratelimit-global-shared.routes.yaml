@@ -63,13 +63,21 @@
               - name: x-user-id
                 stringMatch:
                   exact: two
+        upgradeConfigs:
+        - upgradeType: websocket
+    - match:
+        path: foo/bar
+      name: fourth-route
+      route:
+        cluster: fourth-route-dest
+        rateLimits:
         - actions:
           - genericKey:
-              descriptorKey: test-namespace/test-policy-2/rule/1
-              descriptorValue: test-namespace/test-policy-2/rule/1
+              descriptorKey: fourth-route
+              descriptorValue: fourth-route
           - headerValueMatch:
-              descriptorKey: rule-1-match-0
-              descriptorValue: rule-1-match-0
+              descriptorKey: rule-0-match-0
+              descriptorValue: rule-0-match-0
               expectMatch: true
               headers:
               - name: x-user-id

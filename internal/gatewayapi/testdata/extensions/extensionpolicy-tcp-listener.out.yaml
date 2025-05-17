@@ -146,9 +146,6 @@ xdsIR:
     accessLog:
       json:
       - path: /dev/stdout
-    globalResources:
-      envoyClientCertificate:
-        name: ""
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4

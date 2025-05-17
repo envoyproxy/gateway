@@ -158,9 +158,6 @@ xdsIR:
     accessLog:
       json:
       - path: /dev/stdout
-    globalResources:
-      envoyClientCertificate:
-        name: ""
     http:
     - address: 0.0.0.0
       extensionRefs:
@@ -227,9 +224,6 @@ xdsIR:
     accessLog:
       json:
       - path: /dev/stdout
-    globalResources:
-      envoyClientCertificate:
-        name: ""
     http:
     - address: 0.0.0.0
       extensionRefs:

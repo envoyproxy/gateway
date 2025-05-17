@@ -428,12 +428,8 @@ func testName(inputFile string) string {
 
 func requireXdsIRFromInputTestData(t *testing.T, name string) *ir.Xds {
 	t.Helper()
-	base, err := inFiles.ReadFile("testdata/in/xds-ir/base/base.yaml")
-	require.NoError(t, err)
 	content, err := inFiles.ReadFile(name)
 	require.NoError(t, err)
-	// Merge the base and test data
-	content = append(base, content...)
 	x := &ir.Xds{}
 	err = yaml.Unmarshal(content, x)
 	require.NoError(t, err)

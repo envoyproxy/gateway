@@ -1452,8 +1452,8 @@ func TestRedaction(t *testing.T) {
 		{
 			name: "explicit string check",
 			input: Xds{
-				GlobalResources: GlobalResources{
-					EnvoyClientCertificate: TLSCertificate{
+				GlobalResources: &GlobalResources{
+					EnvoyClientCertificate: &TLSCertificate{
 						Name:        "test",
 						Certificate: []byte("Certificate"),
 						PrivateKey:  PrivateBytes([]byte("PrivateBytes")),

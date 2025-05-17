@@ -29,22 +29,22 @@ const (
 func (t *Translator) patchGlobalResources(tCtx *types.ResourceVersionTable, irXds *ir.Xds) error {
 	var errs error
 
-	// Create the cluster for the rate limit service if there are any global rate limit settings.
-	if isRateLimitServiceClusterRequired(irXds.HTTP) {
-		if err := t.createRateLimitServiceCluster(tCtx, &irXds.GlobalResources.EnvoyClientCertificate, irXds.Metrics); err != nil {
+	if irXds.GlobalResources != nil && irXds.GlobalResources.EnvoyClientCertificate != nil {
+		// Create the envoy client TLS secret. It is used for envoy to establish a TLS connection with control plane components.
+		if err := createEnvoyClientTLSCertSecret(tCtx, irXds.GlobalResources); err != nil {
 			errs = errors.Join(errs, err)
 		}
-	}
 
-	// Create the envoy client TLS secret. It is used for envoy to establish a TLS connection with control plane components,
-	if err := createEnvoyClientTLSCertSecret(tCtx, &irXds.GlobalResources); err != nil {
-		errs = errors.Join(errs, err)
+		if containsGlobalRateLimit(irXds.HTTP) {
+			if err := t.createRateLimitServiceCluster(tCtx, irXds.GlobalResources.EnvoyClientCertificate, irXds.Metrics); err != nil {
+				errs = errors.Join(errs, err)
+			}
+		}
 	}
-
 	return errs
 }
 
-func isRateLimitServiceClusterRequired(httpListeners []*ir.HTTPListener) bool {
+func containsGlobalRateLimit(httpListeners []*ir.HTTPListener) bool {
 	for _, httpListener := range httpListeners {
 		for _, route := range httpListener.Routes {
 			if route.Traffic != nil &&
@@ -60,7 +60,7 @@ func isRateLimitServiceClusterRequired(httpListeners []*ir.HTTPListener) bool {
 func createEnvoyClientTLSCertSecret(tCtx *types.ResourceVersionTable, globalResources *ir.GlobalResources) error {
 	if err := tCtx.AddXdsResource(
 		resourcev3.SecretType,
-		buildXdsTLSCertSecret(globalResources.EnvoyClientCertificate)); err != nil {
+		buildXdsTLSCertSecret(*globalResources.EnvoyClientCertificate)); err != nil {
 		return err
 	}
 	return nil

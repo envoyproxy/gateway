@@ -68,10 +68,10 @@ func TestTranslate(t *testing.T) {
 
 	inputFiles, err := filepath.Glob(filepath.Join("testdata", "*.in.yaml"))
 	require.NoError(t, err)
-	baseInput, err := os.ReadFile("testdata/base/base.yaml")
+	base, err := os.ReadFile("testdata/base/base.yaml")
 	require.NoError(t, err)
 	baseResources := &resource.Resources{}
-	mustUnmarshal(t, baseInput, baseResources)
+	mustUnmarshal(t, base, baseResources)
 
 	for _, inputFile := range inputFiles {
 		t.Run(testName(inputFile), func(t *testing.T) {
@@ -81,9 +81,8 @@ func TestTranslate(t *testing.T) {
 			resources := &resource.Resources{}
 			mustUnmarshal(t, input, resources)
 			// Merge base resources with test resources
-			// Currently, only secrets are included in the base resources, we may add more in the future
+			// Only secrets are in the base resources, we may have more in the future
 			resources.Secrets = append(resources.Secrets, baseResources.Secrets...)
-
 			envoyPatchPolicyEnabled := true
 			backendEnabled := true
 			gatewayNamespaceMode := false
@@ -901,7 +900,7 @@ func xdsWithoutEqual(a *ir.Xds) any {
 		UDP                []*ir.UDPListener
 		EnvoyPatchPolicies []*ir.EnvoyPatchPolicy
 		FilterOrder        []egv1a1.FilterPosition
-		GlobalResources    ir.GlobalResources
+		GlobalResources    *ir.GlobalResources
 	}{
 		ReadyListener:      a.ReadyListener,
 		AccessLog:          a.AccessLog,
