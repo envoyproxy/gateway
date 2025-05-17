@@ -18,6 +18,7 @@ import (
 
 const envoyTLSSecretName = "envoy"
 
+// ProcessGlobalResources processes global resources that are not tied to a specific listener or route
 func (t *Translator) ProcessGlobalResources(resources *resource.Resources, gateways []*GatewayContext, xdsIR resource.XdsIRMap) error {
 	// Get the envoy client TLS secret. It is used for envoy to establish a TLS connection with control plane components,
 	// including the rate limit server and the wasm HTTP server.

@@ -1,3 +1,4 @@
+# This file contains the xDS ir shared by all tests. So we don't need to repeat it in each test.
 globalResources:
   envoyClientCertificate:
     name: envoy-gateway-system/envoy
