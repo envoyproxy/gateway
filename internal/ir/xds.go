@@ -151,6 +151,8 @@ type Xds struct {
 	EnvoyPatchPolicies []*EnvoyPatchPolicy `json:"envoyPatchPolicies,omitempty" yaml:"envoyPatchPolicies,omitempty"`
 	// FilterOrder holds the custom order of the HTTP filters
 	FilterOrder []egv1a1.FilterPosition `json:"filterOrder,omitempty" yaml:"filterOrder,omitempty"`
+	// GlobalResources holds the global resources used by the Envoy, for example, the envoy client certificate and the OIDC HMAC secret
+	GlobalResources GlobalResources `json:"globalResources,omitempty" yaml:"globalResources,omitempty"`
 }
 
 // Equal implements the Comparable interface used by watchable.DeepEqual to skip unnecessary updates.
@@ -2093,10 +2095,19 @@ type RateLimit struct {
 // GlobalRateLimit holds the global rate limiting configuration.
 // +k8s:deepcopy-gen=true
 type GlobalRateLimit struct {
-	// TODO zhaohuabing: add default values for Global rate limiting.
-
 	// Rules for rate limiting.
 	Rules []*RateLimitRule `json:"rules,omitempty" yaml:"rules,omitempty" patchStrategy:"merge" patchMergeKey:"name"`
+}
+
+// GlobalResources holds the global resources used by the Envoy that are not specific to any listener or route.
+// +k8s:deepcopy-gen=true
+type GlobalResources struct {
+	// EnvoyClientCertificate holds the client certificate secret for envoy to use when establishing a TLS connection to
+	// control plane components. For example, the rate limit service, WASM HTTP server, etc.
+	EnvoyClientCertificate TLSCertificate `json:"envoyClientCertificate" yaml:"envoyClientCertificate"`
+	// HMACSecret holds the HMAC Secret used by the OIDC.
+	// TODO: zhaohuabing move HMACSecret here
+	// HMACSecret PrivateBytes
 }
 
 // LocalRateLimit holds the local rate limiting configuration.

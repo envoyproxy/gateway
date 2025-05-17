@@ -75,6 +75,14 @@ http:
                     requests: 10
                     unit: second
                   shared: true
+                - name: "test-namespace/test-policy-2/rule/1"
+                  headerMatches:
+                    - name: "x-user-id"
+                      exact: "two"
+                  limit:
+                    requests: 10
+                    unit: second
+                  shared: true
         pathMatch:
           exact: "test"
         destination:
@@ -84,28 +92,3 @@ http:
                 - host: "1.2.3.4"
                   port: 50000
               name: "third-route-dest/backend/0"
-
-      - name: "fourth-route"
-        hostname: "*"
-        traffic:
-          name: "test-namespace/test-policy-3"
-          rateLimit:
-            global:
-              rules:
-                - name: "test-namespace/test-policy-3/rule/0"
-                  headerMatches:
-                    - name: "x-user-id"
-                      exact: "two"
-                  limit:
-                    requests: 10
-                    unit: second
-                  shared: false
-        pathMatch:
-          exact: "foo/bar"
-        destination:
-          name: "fourth-route-dest"
-          settings:
-            - endpoints:
-                - host: "1.2.3.4"
-                  port: 50000
-              name: "fourth-route-dest/backend/0"

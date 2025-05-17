@@ -1,72 +1,84 @@
 metrics:
   enablePerEndpointStats: true
 http:
-  - name: "first-listener"
-    address: "::"
-    port: 10080
-    hostnames:
-      - "*"
-    path:
-      mergeSlashes: true
-      escapedSlashesAction: UnescapeAndRedirect
-    routes:
-      - name: "first-route"
-        hostname: "*"
-        traffic:
-          rateLimit:
-            global:
-              rules:
-                - headerMatches:
-                    - name: "x-user-id"
-                      exact: "one"
-                  limit:
-                    requests: 5
-                    unit: second
-        pathMatch:
-          exact: "foo/bar"
-        destination:
-          name: "first-route-dest"
-          settings:
-            - endpoints:
-                - host: "1.2.3.4"
-                  port: 50000
-              name: "first-route-dest/backend/0"
-      - name: "second-route"
-        hostname: "*"
-        traffic:
-          rateLimit:
-            global:
-              rules:
-                - headerMatches:
-                    - name: "x-user-id"
-                      distinct: true
-                  limit:
-                    requests: 5
-                    unit: second
-        pathMatch:
-          exact: "example"
-        destination:
-          name: "second-route-dest"
-          settings:
-            - endpoints:
-                - host: "1.2.3.4"
-                  port: 50000
-              name: "second-route-dest/backend/0"
-      - name: "third-route"
-        hostname: "*"
-        traffic:
-          rateLimit:
-            global:
-              rules:
-                - limit:
-                    requests: 5
-                    unit: second
-        pathMatch:
-          exact: "test"
-        destination:
-          name: "third-route-dest"
-          settings:
-            - endpoints:
-                - host: "1.2.3.4"
-                  port: 50000
-              name: "third-route-dest/backend/0"
+- name: "first-listener"
+  address: "::"
+  port: 10080
+  hostnames:
+  - "*"
+  path:
+    mergeSlashes: true
+    escapedSlashesAction: UnescapeAndRedirect
+  routes:
+  - name: "first-route"
+    hostname: "*"
+    traffic:
+      rateLimit:
+        global:
+          rules:
+          - headerMatches:
+            - name: "x-user-id"
+              exact: "one"
+            limit:
+              requests: 5
+              unit: second
+          clientCertificate:
+            name: envoy-gateway-system/envoy
+            privateKey: [ 107, 101, 121, 45, 100, 97, 116, 97 ]
+            serverCertificate: [ 99, 101, 114, 116, 45, 100, 97, 116, 97 ]
+    pathMatch:
+      exact: "foo/bar"
+    destination:
+      name: "first-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
+        name: "first-route-dest/backend/0"
+  - name: "second-route"
+    hostname: "*"
+    traffic:
+      rateLimit:
+        global:
+          rules:
+          - headerMatches:
+            - name: "x-user-id"
+              distinct: true
+            limit:
+              requests: 5
+              unit: second
+          clientCertificate:
+            name: envoy-gateway-system/envoy
+            privateKey: [ 107, 101, 121, 45, 100, 97, 116, 97 ]
+            serverCertificate: [ 99, 101, 114, 116, 45, 100, 97, 116, 97 ]
+    pathMatch:
+      exact: "example"
+    destination:
+      name: "second-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
+        name: "second-route-dest/backend/0"
+  - name: "third-route"
+    hostname: "*"
+    traffic:
+      rateLimit:
+        global:
+          rules:
+          - limit:
+              requests: 5
+              unit: second
+          clientCertificate:
+            name: envoy-gateway-system/envoy
+            privateKey: [ 107, 101, 121, 45, 100, 97, 116, 97 ]
+            serverCertificate: [ 99, 101, 114, 116, 45, 100, 97, 116, 97 ]
+    pathMatch:
+      exact: "test"
+    destination:
+      name: "third-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
+        name: "third-route-dest/backend/0"

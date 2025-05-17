@@ -34,16 +34,6 @@
                 envoyGrpc:
                   clusterName: ratelimit_cluster
               transportApiVersion: V3
-        - name: envoy.filters.http.ratelimit
-          typedConfig:
-            '@type': type.googleapis.com/envoy.extensions.filters.http.ratelimit.v3.RateLimit
-            domain: first-listener
-            enableXRatelimitHeaders: DRAFT_VERSION_03
-            rateLimitService:
-              grpcService:
-                envoyGrpc:
-                  clusterName: ratelimit_cluster
-              transportApiVersion: V3
         - name: envoy.filters.http.router
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router

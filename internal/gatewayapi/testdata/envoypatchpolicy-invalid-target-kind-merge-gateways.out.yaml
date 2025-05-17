@@ -89,6 +89,9 @@ xdsIR:
             status: "False"
             type: Accepted
           controllerName: gateway.envoyproxy.io/gatewayclass-controller
+    globalResources:
+      envoyClientCertificate:
+        name: ""
     http:
     - address: 0.0.0.0
       hostnames:

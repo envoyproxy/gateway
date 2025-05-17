@@ -71,3 +71,49 @@
         http2ProtocolOptions:
           initialConnectionWindowSize: 1048576
           initialStreamWindowSize: 65536
+- circuitBreakers:
+    thresholds:
+    - maxRetries: 1024
+  commonLbConfig:
+    localityWeightedLbConfig: {}
+  connectTimeout: 10s
+  dnsLookupFamily: V4_PREFERRED
+  dnsRefreshRate: 30s
+  lbPolicy: LEAST_REQUEST
+  loadAssignment:
+    clusterName: ratelimit_cluster
+    endpoints:
+    - lbEndpoints:
+      - endpoint:
+          address:
+            socketAddress:
+              address: envoy-ratelimit.envoy-gateway-system.svc.cluster.local
+              portValue: 8081
+        loadBalancingWeight: 1
+      loadBalancingWeight: 1
+      locality:
+        region: ratelimit_cluster/backend/-1
+  name: ratelimit_cluster
+  perConnectionBufferLimitBytes: 32768
+  respectDnsTtl: true
+  transportSocket:
+    name: envoy.transport_sockets.tls
+    typedConfig:
+      '@type': type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.UpstreamTlsContext
+      commonTlsContext:
+        tlsCertificateSdsSecretConfigs:
+        - name: envoy-gateway-system/envoy
+          sdsConfig:
+            ads: {}
+            resourceApiVersion: V3
+        validationContext:
+          trustedCa:
+            filename: /certs/ca.crt
+  type: STRICT_DNS
+  typedExtensionProtocolOptions:
+    envoy.extensions.upstreams.http.v3.HttpProtocolOptions:
+      '@type': type.googleapis.com/envoy.extensions.upstreams.http.v3.HttpProtocolOptions
+      explicitHttpConfig:
+        http2ProtocolOptions:
+          initialConnectionWindowSize: 1048576
+          initialStreamWindowSize: 65536
