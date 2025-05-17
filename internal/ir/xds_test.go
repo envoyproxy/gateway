@@ -1452,6 +1452,13 @@ func TestRedaction(t *testing.T) {
 		{
 			name: "explicit string check",
 			input: Xds{
+				GlobalResources: GlobalResources{
+					EnvoyClientCertificate: TLSCertificate{
+						Name:        "test",
+						Certificate: []byte("Certificate"),
+						PrivateKey:  PrivateBytes([]byte("PrivateBytes")),
+					},
+				},
 				HTTP: []*HTTPListener{{
 					TLS: &TLSConfig{
 						Certificates: []TLSCertificate{{
@@ -1492,7 +1499,8 @@ func TestRedaction(t *testing.T) {
 				`"apiKeyAuth":{"credentials":{"client-id":"[redacted]"},"extractFrom":null},` +
 				`"basicAuth":{"name":"","users":"[redacted]"}` +
 				`}}],` +
-				`"isHTTP2":false,"path":{"mergeSlashes":false,"escapedSlashesAction":""}}]}`,
+				`"isHTTP2":false,"path":{"mergeSlashes":false,"escapedSlashesAction":""}}],` +
+				`"globalResources":{"envoyClientCertificate":{"name":"test","serverCertificate":"Q2VydGlmaWNhdGU=","privateKey":"[redacted]"}}}`,
 		},
 	}
 	for _, test := range tests {
