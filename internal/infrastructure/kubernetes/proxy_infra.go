@@ -9,11 +9,12 @@ import (
 	"context"
 	"errors"
 
+	"k8s.io/apimachinery/pkg/types"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
+
 	"github.com/envoyproxy/gateway/internal/infrastructure/kubernetes/proxy"
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/utils"
-	"k8s.io/apimachinery/pkg/types"
-	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 )
 
 // CreateOrUpdateProxyInfra creates the managed kube infra, if it doesn't exist.
