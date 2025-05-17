@@ -124,8 +124,10 @@ func (t *Translator) Translate(xdsIR *ir.Xds) (*types.ResourceVersionTable, erro
 	}
 
 	// Patch global resources that are shared across listeners and routes.
-	// for example, the envoy client certificate and the OIDC HMAC secret.
-	if err := t.patchGlobalResources(tCtx, &xdsIR.GlobalResources, xdsIR.Metrics); err != nil {
+	// - the envoy client certificate
+	// - the OIDC HMAC secret
+	// - the rate limit server cluster
+	if err := t.patchGlobalResources(tCtx, xdsIR); err != nil {
 		errs = errors.Join(errs, err)
 	}
 

@@ -26,17 +26,35 @@ const (
 
 // patchGlobalResources builds and appends the global resources that are shared across listeners and routes.
 // for example, the envoy client certificate and the OIDC HMAC secret.
-func (t *Translator) patchGlobalResources(tCtx *types.ResourceVersionTable, globalResources *ir.GlobalResources, metrics *ir.Metrics) error {
+func (t *Translator) patchGlobalResources(tCtx *types.ResourceVersionTable, irXds *ir.Xds) error {
 	var errs error
 
-	if err := t.createRateLimitServiceCluster(tCtx, &globalResources.EnvoyClientCertificate, metrics); err != nil {
-		errs = errors.Join(errs, err)
+	// Create the cluster for the rate limit service if there are any global rate limit settings.
+	if isRateLimitServiceClusterRequired(irXds.HTTP) {
+		if err := t.createRateLimitServiceCluster(tCtx, &irXds.GlobalResources.EnvoyClientCertificate, irXds.Metrics); err != nil {
+			errs = errors.Join(errs, err)
+		}
 	}
-	if err := createEnvoyClientTLSCertSecret(tCtx, globalResources); err != nil {
+
+	// Create the envoy client TLS secret. It is used for envoy to establish a TLS connection with control plane components,
+	if err := createEnvoyClientTLSCertSecret(tCtx, &irXds.GlobalResources); err != nil {
 		errs = errors.Join(errs, err)
 	}
 
 	return errs
+}
+
+func isRateLimitServiceClusterRequired(httpListeners []*ir.HTTPListener) bool {
+	for _, httpListener := range httpListeners {
+		for _, route := range httpListener.Routes {
+			if route.Traffic != nil &&
+				route.Traffic.RateLimit != nil &&
+				route.Traffic.RateLimit.Global != nil {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 func createEnvoyClientTLSCertSecret(tCtx *types.ResourceVersionTable, globalResources *ir.GlobalResources) error {
