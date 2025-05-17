@@ -102,6 +102,16 @@ type OIDC struct {
 	// Note: this field is only applicable when the "refreshToken" field is set to true.
 	// +optional
 	DefaultRefreshTokenTTL *metav1.Duration `json:"defaultRefreshTokenTTL,omitempty"`
+
+	// Skips OIDC authentication when the request contains a header that will be extracted by the JWT filter. Unless
+	// explicitly stated otherwise in the extractFrom field, this will be the "Authorization: Bearer ..." header.
+	//
+	// The passThroughAuthHeader option is typically used for non-browser clients that may not be able to handle OIDC
+	// redirects and wish to directly supply a token instead.
+	//
+	// If not specified, defaults to false.
+	// +optional
+	PassThroughAuthHeader *bool `json:"passThroughAuthHeader,omitempty"`
 }
 
 // OIDCProvider defines the OIDC Provider configuration.
