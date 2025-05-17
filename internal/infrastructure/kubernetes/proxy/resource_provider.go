@@ -122,7 +122,7 @@ func (r *ResourceRender) ServiceAccount() (*corev1.ServiceAccount, error) {
 		return nil, fmt.Errorf("missing owning gateway labels")
 	}
 
-	sa := &corev1.ServiceAccount{
+	return &corev1.ServiceAccount{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "ServiceAccount",
 			APIVersion: "v1",
@@ -134,9 +134,7 @@ func (r *ResourceRender) ServiceAccount() (*corev1.ServiceAccount, error) {
 			Annotations:     r.infra.GetProxyMetadata().Annotations,
 			OwnerReferences: r.OwnerReferences(),
 		},
-	}
-
-	return sa, nil
+	}, nil
 }
 
 // Service returns the expected Service based on the provided infra.
@@ -278,7 +276,7 @@ func (r *ResourceRender) ConfigMap(cert string) (*corev1.ConfigMap, error) {
 		data[XdsTLSCaFileName] = cert
 	}
 
-	cm := &corev1.ConfigMap{
+	return &corev1.ConfigMap{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "ConfigMap",
 			APIVersion: "v1",
@@ -291,9 +289,7 @@ func (r *ResourceRender) ConfigMap(cert string) (*corev1.ConfigMap, error) {
 			OwnerReferences: r.OwnerReferences(),
 		},
 		Data: data,
-	}
-
-	return cm, nil
+	}, nil
 }
 
 // stableSelector returns a stable selector based on the owning gateway labels.
