@@ -99,6 +99,21 @@ func (r *ResourceRender) LabelSelector() labels.Selector {
 	return labels.SelectorFromSet(r.stableSelector().MatchLabels)
 }
 
+func (r *ResourceRender) OwnerReferences() []metav1.OwnerReference {
+	var ownerReferences []metav1.OwnerReference
+	if r.ownerReferenceUID != nil && r.GatewayNamespaceMode {
+		if uid, ok := r.ownerReferenceUID[ResourceKindGateway]; ok {
+			ownerReferences = append(ownerReferences, metav1.OwnerReference{
+				APIVersion: gatewayAPIV1Version,
+				Kind:       ResourceKindGateway,
+				Name:       utils.GetKubernetesResourceName(r.infra.Name),
+				UID:        uid,
+			})
+		}
+	}
+	return ownerReferences
+}
+
 // ServiceAccount returns the expected proxy serviceAccount.
 func (r *ResourceRender) ServiceAccount() (*corev1.ServiceAccount, error) {
 	// Set the labels based on the owning gateway name.
@@ -113,27 +128,12 @@ func (r *ResourceRender) ServiceAccount() (*corev1.ServiceAccount, error) {
 			APIVersion: "v1",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Namespace:   r.Namespace(),
-			Name:        r.Name(),
-			Labels:      labels,
-			Annotations: r.infra.GetProxyMetadata().Annotations,
+			Namespace:       r.Namespace(),
+			Name:            r.Name(),
+			Labels:          labels,
+			Annotations:     r.infra.GetProxyMetadata().Annotations,
+			OwnerReferences: r.OwnerReferences(),
 		},
-	}
-
-	// set owner reference
-	if r.ownerReferenceUID != nil {
-		if r.GatewayNamespaceMode {
-			if uid, ok := r.ownerReferenceUID[ResourceKindGateway]; ok {
-				sa.OwnerReferences = []metav1.OwnerReference{
-					{
-						APIVersion: gatewayAPIV1Version,
-						Kind:       ResourceKindGateway,
-						Name:       utils.GetKubernetesResourceName(r.infra.Name),
-						UID:        uid,
-					},
-				}
-			}
-		}
 	}
 
 	return sa, nil
@@ -238,9 +238,10 @@ func (r *ResourceRender) Service() (*corev1.Service, error) {
 			Kind:       "Service",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Namespace:   r.Namespace(),
-			Labels:      svcLabels,
-			Annotations: annotations,
+			Namespace:       r.Namespace(),
+			Labels:          svcLabels,
+			Annotations:     annotations,
+			OwnerReferences: r.OwnerReferences(),
 		},
 		Spec: serviceSpec,
 	}
@@ -250,22 +251,6 @@ func (r *ResourceRender) Service() (*corev1.Service, error) {
 		svc.Name = *envoyServiceConfig.Name
 	} else {
 		svc.Name = r.Name()
-	}
-
-	// set owner reference
-	if r.ownerReferenceUID != nil {
-		if r.GatewayNamespaceMode {
-			if uid, ok := r.ownerReferenceUID[ResourceKindGateway]; ok {
-				svc.OwnerReferences = []metav1.OwnerReference{
-					{
-						APIVersion: gatewayAPIV1Version,
-						Kind:       ResourceKindGateway,
-						Name:       utils.GetKubernetesResourceName(r.infra.Name),
-						UID:        uid,
-					},
-				}
-			}
-		}
 	}
 
 	// apply merge patch to service
@@ -299,28 +284,13 @@ func (r *ResourceRender) ConfigMap(cert string) (*corev1.ConfigMap, error) {
 			APIVersion: "v1",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Namespace:   r.Namespace(),
-			Name:        r.Name(),
-			Labels:      labels,
-			Annotations: r.infra.GetProxyMetadata().Annotations,
+			Namespace:       r.Namespace(),
+			Name:            r.Name(),
+			Labels:          labels,
+			Annotations:     r.infra.GetProxyMetadata().Annotations,
+			OwnerReferences: r.OwnerReferences(),
 		},
 		Data: data,
-	}
-
-	// set owner reference
-	if r.ownerReferenceUID != nil {
-		if r.GatewayNamespaceMode {
-			if uid, ok := r.ownerReferenceUID[ResourceKindGateway]; ok {
-				cm.OwnerReferences = []metav1.OwnerReference{
-					{
-						APIVersion: gatewayAPIV1Version,
-						Kind:       ResourceKindGateway,
-						Name:       utils.GetKubernetesResourceName(r.infra.Name),
-						UID:        uid,
-					},
-				}
-			}
-		}
 	}
 
 	return cm, nil
@@ -376,9 +346,10 @@ func (r *ResourceRender) Deployment() (*appsv1.Deployment, error) {
 			APIVersion: "apps/v1",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Namespace:   r.Namespace(),
-			Labels:      dpLabels,
-			Annotations: dpAnnotations,
+			Namespace:       r.Namespace(),
+			Labels:          dpLabels,
+			Annotations:     dpAnnotations,
+			OwnerReferences: r.OwnerReferences(),
 		},
 		Spec: appsv1.DeploymentSpec{
 			Replicas: deploymentConfig.Replicas,
@@ -417,22 +388,6 @@ func (r *ResourceRender) Deployment() (*appsv1.Deployment, error) {
 		deployment.Name = *deploymentConfig.Name
 	} else {
 		deployment.Name = r.Name()
-	}
-
-	// set owner reference
-	if r.ownerReferenceUID != nil {
-		if r.GatewayNamespaceMode {
-			if uid, ok := r.ownerReferenceUID[ResourceKindGateway]; ok {
-				deployment.OwnerReferences = []metav1.OwnerReference{
-					{
-						APIVersion: gatewayAPIV1Version,
-						Kind:       ResourceKindGateway,
-						Name:       utils.GetKubernetesResourceName(r.infra.Name),
-						UID:        uid,
-					},
-				}
-			}
-		}
 	}
 
 	// apply merge patch to deployment
@@ -480,9 +435,10 @@ func (r *ResourceRender) DaemonSet() (*appsv1.DaemonSet, error) {
 			APIVersion: "apps/v1",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Namespace:   r.Namespace(),
-			Labels:      dsLabels,
-			Annotations: dsAnnotations,
+			Namespace:       r.Namespace(),
+			Labels:          dsLabels,
+			Annotations:     dsAnnotations,
+			OwnerReferences: r.OwnerReferences(),
 		},
 		Spec: appsv1.DaemonSetSpec{
 			// Daemonset's selector is immutable.
@@ -503,22 +459,6 @@ func (r *ResourceRender) DaemonSet() (*appsv1.DaemonSet, error) {
 		daemonSet.Name = *daemonSetConfig.Name
 	} else {
 		daemonSet.Name = r.Name()
-	}
-
-	// set owner reference
-	if r.ownerReferenceUID != nil {
-		if r.GatewayNamespaceMode {
-			if uid, ok := r.ownerReferenceUID[ResourceKindGateway]; ok {
-				daemonSet.OwnerReferences = []metav1.OwnerReference{
-					{
-						APIVersion: gatewayAPIV1Version,
-						Kind:       ResourceKindGateway,
-						Name:       utils.GetKubernetesResourceName(r.infra.Name),
-						UID:        uid,
-					},
-				}
-			}
-		}
 	}
 
 	// apply merge patch to DaemonSet
@@ -564,30 +504,15 @@ func (r *ResourceRender) PodDisruptionBudget() (*policyv1.PodDisruptionBudget, e
 
 	podDisruptionBudget := &policyv1.PodDisruptionBudget{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      r.Name(),
-			Namespace: r.Namespace(),
+			Name:            r.Name(),
+			Namespace:       r.Namespace(),
+			OwnerReferences: r.OwnerReferences(),
 		},
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "policy/v1",
 			Kind:       "PodDisruptionBudget",
 		},
 		Spec: pdbSpec,
-	}
-
-	// set owner reference
-	if r.ownerReferenceUID != nil {
-		if r.GatewayNamespaceMode {
-			if uid, ok := r.ownerReferenceUID[ResourceKindGateway]; ok {
-				podDisruptionBudget.OwnerReferences = []metav1.OwnerReference{
-					{
-						APIVersion: gatewayAPIV1Version,
-						Kind:       ResourceKindGateway,
-						Name:       utils.GetKubernetesResourceName(r.infra.Name),
-						UID:        uid,
-					},
-				}
-			}
-		}
 	}
 
 	// apply merge patch to PodDisruptionBudget
@@ -615,10 +540,11 @@ func (r *ResourceRender) HorizontalPodAutoscaler() (*autoscalingv2.HorizontalPod
 			Kind:       "HorizontalPodAutoscaler",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Namespace:   r.Namespace(),
-			Name:        r.Name(),
-			Annotations: r.infra.GetProxyMetadata().Annotations,
-			Labels:      r.infra.GetProxyMetadata().Labels,
+			Namespace:       r.Namespace(),
+			Name:            r.Name(),
+			Annotations:     r.infra.GetProxyMetadata().Annotations,
+			Labels:          r.infra.GetProxyMetadata().Labels,
+			OwnerReferences: r.OwnerReferences(),
 		},
 		Spec: autoscalingv2.HorizontalPodAutoscalerSpec{
 			ScaleTargetRef: autoscalingv2.CrossVersionObjectReference{
@@ -638,22 +564,6 @@ func (r *ResourceRender) HorizontalPodAutoscaler() (*autoscalingv2.HorizontalPod
 		hpa.Spec.ScaleTargetRef.Name = *deploymentConfig.Name
 	} else {
 		hpa.Spec.ScaleTargetRef.Name = r.Name()
-	}
-
-	// set owner reference
-	if r.ownerReferenceUID != nil {
-		if r.GatewayNamespaceMode {
-			if uid, ok := r.ownerReferenceUID[ResourceKindGateway]; ok {
-				hpa.OwnerReferences = []metav1.OwnerReference{
-					{
-						APIVersion: gatewayAPIV1Version,
-						Kind:       ResourceKindGateway,
-						Name:       utils.GetKubernetesResourceName(r.infra.Name),
-						UID:        uid,
-					},
-				}
-			}
-		}
 	}
 
 	var err error
