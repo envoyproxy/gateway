@@ -29,7 +29,7 @@ type ProxyTopologyInjector struct {
 
 func (m *ProxyTopologyInjector) Handle(ctx context.Context, req admission.Request) admission.Response {
 	logger := m.Logger
-	logger.Info("receive injector request", "request", req)
+	logger.V(1).Info("receive injector request", "request", req)
 
 	binding := &corev1.Binding{}
 	if err := m.Decoder.Decode(req, binding); err != nil {
