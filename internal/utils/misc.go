@@ -64,10 +64,7 @@ func GetHashedName(nsName string, length int) string {
 // Input `nsName` should be formatted as `{ResourceName}` when Merged Gateway Proxy.
 func GetKubernetesResourceName(nsName string) string {
 	nn := strings.Split(nsName, "/")
-	if len(nn) == 1 {
-		return nn[0]
-	}
-	return nn[1]
+	return nn[len(nn)-1]
 }
 
 // Digest256 returns a sha256 hash of the input string.
