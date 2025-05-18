@@ -21,10 +21,10 @@ import (
 const sendRequests = 50
 
 func init() {
-	ConformanceTests = append(ConformanceTests, WeightedRouteTest)
+	ConformanceTests = append(ConformanceTests, WeightedBackendTest)
 }
 
-var WeightedRouteTest = suite.ConformanceTest{
+var WeightedBackendTest = suite.ConformanceTest{
 	ShortName:   "WeightedRoute",
 	Description: "Resource with Weight Backend enabled, and worked as expected.",
 	Manifests: []string{
@@ -39,7 +39,7 @@ var WeightedRouteTest = suite.ConformanceTest{
 				"infra-backend-v1": sendRequests * .5,
 				"infra-backend-v2": sendRequests * .5,
 			}
-			runWeightRouteTest(t, suite, "weight-equal-http-route", "/same-weight", expected)
+			runWeightedBackendTest(t, suite, "weight-equal-http-route", "/same-weight", "infra-backend", expected)
 		})
 		t.Run("BlueGreen", func(t *testing.T) {
 			// The received request is approximately 9:1
@@ -47,7 +47,7 @@ var WeightedRouteTest = suite.ConformanceTest{
 				"infra-backend-v1": sendRequests * .9,
 				"infra-backend-v2": sendRequests * .1,
 			}
-			runWeightRouteTest(t, suite, "weight-bluegreen-http-route", "/blue-green", expected)
+			runWeightedBackendTest(t, suite, "weight-bluegreen-http-route", "/blue-green", "infra-backend", expected)
 		})
 		t.Run("CompleteRollout", func(t *testing.T) {
 			// All the requests should be proxied to v1
@@ -55,12 +55,12 @@ var WeightedRouteTest = suite.ConformanceTest{
 				"infra-backend-v1": sendRequests * 1,
 				"infra-backend-v2": sendRequests * 0,
 			}
-			runWeightRouteTest(t, suite, "weight-complete-rollout-http-route", "/complete-rollout", expected)
+			runWeightedBackendTest(t, suite, "weight-complete-rollout-http-route", "/complete-rollout", "infra-backend", expected)
 		})
 	},
 }
 
-func runWeightRouteTest(t *testing.T, suite *suite.ConformanceTestSuite, routeName, path string, expectedOutput map[string]int) {
+func runWeightedBackendTest(t *testing.T, suite *suite.ConformanceTestSuite, routeName, path, backendName string, expectedOutput map[string]int) {
 	weightEqualRoute := types.NamespacedName{Name: routeName, Namespace: ConformanceInfraNamespace}
 	gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig,
 		suite.ControllerName,
@@ -97,7 +97,7 @@ func runWeightRouteTest(t *testing.T, suite *suite.ConformanceTestSuite, routeNa
 			t.Errorf("failed to get pod header in response: %v", err)
 		} else {
 			// all we need is the pod Name prefix
-			podNamePrefix := ExtractPodNamePrefix(podName)
+			podNamePrefix := extractPodNamePrefix(podName, backendName)
 			weightMap[podNamePrefix]++
 		}
 	}
@@ -107,18 +107,17 @@ func runWeightRouteTest(t *testing.T, suite *suite.ConformanceTestSuite, routeNa
 	for prefix, actual := range weightMap {
 		expect := expectedOutput[prefix]
 		if !AlmostEquals(actual, expect, 3) {
-			t.Errorf("The actual traffic weights are not consistent with the expected routing weights")
+			t.Errorf("The actual traffic weights are not consistent with the expected routing weights, actual %s %d, expected %s %d", prefix, actual, prefix, expect)
 		}
 	}
 }
 
-// ExtractPodNamePrefix Extract the Pod Name prefix
-func ExtractPodNamePrefix(podName string) string {
-	pattern := regexp.MustCompile(`infra-backend-(.+?)-`)
+func extractPodNamePrefix(podName, prefix string) string {
+	pattern := regexp.MustCompile(prefix + `-(.+?)-`)
 	match := pattern.FindStringSubmatch(podName)
 	if len(match) > 1 {
 		version := match[1]
-		return fmt.Sprintf("infra-backend-%s", version)
+		return fmt.Sprintf("%s-%s", prefix, version)
 	}
 
 	return podName
