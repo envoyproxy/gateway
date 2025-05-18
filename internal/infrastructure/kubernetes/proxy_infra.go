@@ -28,21 +28,10 @@ func (i *Infra) CreateOrUpdateProxyInfra(ctx context.Context, infra *ir.Infra) e
 	}
 
 	envoyNamespace := i.GetResourceNamespace(infra)
-
-	ownerReferenceUID := make(map[string]types.UID)
-	if i.EnvoyGateway.GatewayNamespaceMode() {
-		key := types.NamespacedName{
-			Namespace: envoyNamespace,
-			Name:      utils.GetKubernetesResourceName(infra.Proxy.Name),
-		}
-
-		gatewayUID, err := i.Client.GetUID(ctx, key, &gwapiv1.Gateway{})
-		if err != nil {
-			return err
-		}
-		ownerReferenceUID[proxy.ResourceKindGateway] = gatewayUID
+	ownerReferenceUID, err := i.GetOwnerReferenceUID(ctx, infra)
+	if err != nil {
+		return err
 	}
-	// TODO: set GatewayClass UID when enable merged gateways
 
 	r := proxy.NewResourceRender(envoyNamespace, i.ControllerNamespace, i.DNSDomain, infra.GetProxyInfra(), i.EnvoyGateway, ownerReferenceUID)
 	return i.createOrUpdate(ctx, r)
@@ -64,4 +53,23 @@ func (i *Infra) GetResourceNamespace(infra *ir.Infra) string {
 		return infra.Proxy.Namespace
 	}
 	return i.ControllerNamespace
+}
+
+func (i *Infra) GetOwnerReferenceUID(ctx context.Context, infra *ir.Infra) (map[string]types.UID, error) {
+	ownerReferenceUID := make(map[string]types.UID)
+
+	if i.EnvoyGateway.GatewayNamespaceMode() {
+		key := types.NamespacedName{
+			Namespace: i.GetResourceNamespace(infra),
+			Name:      utils.GetKubernetesResourceName(infra.Proxy.Name),
+		}
+		gatewayUID, err := i.Client.GetUID(ctx, key, &gwapiv1.Gateway{})
+		if err != nil {
+			return nil, err
+		}
+		ownerReferenceUID[proxy.ResourceKindGateway] = gatewayUID
+	}
+	// TODO: set GatewayClass UID when enable merged gateways
+
+	return ownerReferenceUID, nil
 }
