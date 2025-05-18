@@ -1011,3 +1011,5 @@ webhooks:
           operator: In
           values:
             - envoy-gateway-system
+            - "default"
+            - "app-ns"
