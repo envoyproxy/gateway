@@ -131,7 +131,7 @@ backendTLSPolicies:
             kind: ConfigMap
         hostname: example.com
         subjectAltNames:
-        - type: URI
-          uri: spiffe://cluster.local/ns/istio-demo/sa/echo-v1
-        - type: DNS
-          hostname: subdomain.secondexample.com
+          - type: URI
+            uri: spiffe://cluster.local/ns/istio-demo/sa/echo-v1
+          - type: DNS
+            hostname: subdomain.secondexample.com

@@ -27,8 +27,8 @@ http:
                   name: policy-btls/policies-ca
                 SNI: example.com
                 subjectAltNames:
-                - uri: spiffe://cluster.local/ns/istio-demo/sa/echo-v1
-                - hostname: subdomain.secondexample.com
+                  - uri: spiffe://cluster.local/ns/istio-demo/sa/echo-v1
+                  - hostname: subdomain.secondexample.com
               weight: 1
         hostname: '*'
         name: httproute/envoy-gateway/httproute-btls/rule/0/match/0/*
