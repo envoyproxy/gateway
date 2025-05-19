@@ -6,7 +6,7 @@ require (
 	github.com/envoyproxy/go-control-plane/envoy v1.32.4
 	github.com/golang/protobuf v1.5.4
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20250218202821-56aae31c358a
-	google.golang.org/grpc v1.72.0
+	google.golang.org/grpc v1.72.1
 )
 
 require (
