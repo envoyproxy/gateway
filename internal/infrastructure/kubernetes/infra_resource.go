@@ -21,6 +21,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/envoyproxy/gateway/internal/infrastructure/kubernetes/proxy"
 	"github.com/envoyproxy/gateway/internal/metrics"
 )
 
@@ -636,10 +637,10 @@ func (i *Infra) getEnvoyGatewayCA(ctx context.Context) string {
 	secret := &corev1.Secret{}
 	err := i.Client.Get(ctx, types.NamespacedName{
 		Name:      "envoy",
-		Namespace: "envoy-gateway-system",
+		Namespace: i.ControllerNamespace,
 	}, secret)
 	if err != nil {
 		return ""
 	}
-	return string(secret.Data["ca.crt"])
+	return string(secret.Data[proxy.XdsTLSCaFileName])
 }

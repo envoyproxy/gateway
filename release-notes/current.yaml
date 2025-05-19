@@ -8,6 +8,8 @@ security updates: |
 
 # New features or capabilities added in this release.
 new features: |
+  Added support for percentage-based request mirroring
+  Add an option to OIDC authentication to bypass it and defer to JWT when the request contains an "Authorization: Bearer ..." header.
 
 bug fixes: |
 
