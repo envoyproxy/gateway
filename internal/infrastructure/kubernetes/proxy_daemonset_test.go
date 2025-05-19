@@ -75,8 +75,7 @@ func setupCreateOrUpdateProxyDaemonSet(gatewayNamespaceMode bool) (*appsv1.Daemo
 		},
 	}
 
-	var cli client.Client
-	cli = fakeclient.NewClientBuilder().
+	cli := fakeclient.NewClientBuilder().
 		WithScheme(envoygateway.GetScheme()).
 		Build()
 	kube := NewInfra(cli, cfg)
