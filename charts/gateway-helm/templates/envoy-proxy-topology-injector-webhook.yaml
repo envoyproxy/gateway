@@ -56,7 +56,6 @@ webhooks:
         - key: kubernetes.io/metadata.name
           operator: In
           values:
-            - {{ .Release.Namespace }}
           {{- range $watchedNamespaces }}
             - {{ . | quote }}
           {{- end }}
