@@ -17945,6 +17945,14 @@ spec:
                               minimum: 100
                               type: integer
                             type: array
+                          hostname:
+                            description: |-
+                              Hostname defines the HTTP host that will be requested during health checking.
+                              Default: HTTPRoute or GRPCRoute hostname.
+                            maxLength: 253
+                            minLength: 1
+                            pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                            type: string
                           method:
                             description: |-
                               Method defines the HTTP method used for health checking.
@@ -21424,6 +21432,14 @@ spec:
                                         minimum: 100
                                         type: integer
                                       type: array
+                                    hostname:
+                                      description: |-
+                                        Hostname defines the HTTP host that will be requested during health checking.
+                                        Default: HTTPRoute or GRPCRoute hostname.
+                                      maxLength: 253
+                                      minLength: 1
+                                      pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                                      type: string
                                     method:
                                       description: |-
                                         Method defines the HTTP method used for health checking.
@@ -34298,6 +34314,14 @@ spec:
                                                           minimum: 100
                                                           type: integer
                                                         type: array
+                                                      hostname:
+                                                        description: |-
+                                                          Hostname defines the HTTP host that will be requested during health checking.
+                                                          Default: HTTPRoute or GRPCRoute hostname.
+                                                        maxLength: 253
+                                                        minLength: 1
+                                                        pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                                                        type: string
                                                       method:
                                                         description: |-
                                                           Method defines the HTTP method used for health checking.
@@ -35317,6 +35341,14 @@ spec:
                                                           minimum: 100
                                                           type: integer
                                                         type: array
+                                                      hostname:
+                                                        description: |-
+                                                          Hostname defines the HTTP host that will be requested during health checking.
+                                                          Default: HTTPRoute or GRPCRoute hostname.
+                                                        maxLength: 253
+                                                        minLength: 1
+                                                        pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                                                        type: string
                                                       method:
                                                         description: |-
                                                           Method defines the HTTP method used for health checking.
@@ -36425,6 +36457,14 @@ spec:
                                                     minimum: 100
                                                     type: integer
                                                   type: array
+                                                hostname:
+                                                  description: |-
+                                                    Hostname defines the HTTP host that will be requested during health checking.
+                                                    Default: HTTPRoute or GRPCRoute hostname.
+                                                  maxLength: 253
+                                                  minLength: 1
+                                                  pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                                                  type: string
                                                 method:
                                                   description: |-
                                                     Method defines the HTTP method used for health checking.
@@ -37450,6 +37490,14 @@ spec:
                                               minimum: 100
                                               type: integer
                                             type: array
+                                          hostname:
+                                            description: |-
+                                              Hostname defines the HTTP host that will be requested during health checking.
+                                              Default: HTTPRoute or GRPCRoute hostname.
+                                            maxLength: 253
+                                            minLength: 1
+                                            pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                                            type: string
                                           method:
                                             description: |-
                                               Method defines the HTTP method used for health checking.
@@ -39296,6 +39344,14 @@ spec:
                                           minimum: 100
                                           type: integer
                                         type: array
+                                      hostname:
+                                        description: |-
+                                          Hostname defines the HTTP host that will be requested during health checking.
+                                          Default: HTTPRoute or GRPCRoute hostname.
+                                        maxLength: 253
+                                        minLength: 1
+                                        pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                                        type: string
                                       method:
                                         description: |-
                                           Method defines the HTTP method used for health checking.
@@ -40213,6 +40269,14 @@ spec:
                                           minimum: 100
                                           type: integer
                                         type: array
+                                      hostname:
+                                        description: |-
+                                          Hostname defines the HTTP host that will be requested during health checking.
+                                          Default: HTTPRoute or GRPCRoute hostname.
+                                        maxLength: 253
+                                        minLength: 1
+                                        pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                                        type: string
                                       method:
                                         description: |-
                                           Method defines the HTTP method used for health checking.
@@ -41325,6 +41389,14 @@ spec:
                                                 minimum: 100
                                                 type: integer
                                               type: array
+                                            hostname:
+                                              description: |-
+                                                Hostname defines the HTTP host that will be requested during health checking.
+                                                Default: HTTPRoute or GRPCRoute hostname.
+                                              maxLength: 253
+                                              minLength: 1
+                                              pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                                              type: string
                                             method:
                                               description: |-
                                                 Method defines the HTTP method used for health checking.
@@ -42392,6 +42464,14 @@ spec:
                                           minimum: 100
                                           type: integer
                                         type: array
+                                      hostname:
+                                        description: |-
+                                          Hostname defines the HTTP host that will be requested during health checking.
+                                          Default: HTTPRoute or GRPCRoute hostname.
+                                        maxLength: 253
+                                        minLength: 1
+                                        pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                                        type: string
                                       method:
                                         description: |-
                                           Method defines the HTTP method used for health checking.
