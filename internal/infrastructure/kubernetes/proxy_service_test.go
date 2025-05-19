@@ -27,16 +27,18 @@ func TestDeleteProxyService(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
+			ctx := context.Background()
 			kube := newTestInfra(t)
 			infra := ir.NewInfra()
 
 			infra.Proxy.GetProxyMetadata().Labels[gatewayapi.OwningGatewayNamespaceLabel] = "default"
 			infra.Proxy.GetProxyMetadata().Labels[gatewayapi.OwningGatewayNameLabel] = infra.Proxy.Name
-			r := proxy.NewResourceRender(kube.ControllerNamespace, kube.ControllerNamespace, kube.DNSDomain, infra.GetProxyInfra(), kube.EnvoyGateway, nil)
-			err := kube.createOrUpdateService(context.Background(), r)
+			r, err := proxy.NewResourceRender(ctx, kube, infra)
+			require.NoError(t, err)
+			err = kube.createOrUpdateService(ctx, r)
 			require.NoError(t, err)
 
-			err = kube.deleteService(context.Background(), r)
+			err = kube.deleteService(ctx, r)
 			require.NoError(t, err)
 		})
 	}

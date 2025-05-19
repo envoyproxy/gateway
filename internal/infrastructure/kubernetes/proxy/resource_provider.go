@@ -6,6 +6,7 @@
 package proxy
 
 import (
+	"context"
 	"fmt"
 	"strconv"
 
@@ -71,16 +72,30 @@ type ResourceRender struct {
 	ownerReferenceUID map[string]types.UID
 }
 
-func NewResourceRender(envoyNamespace, controllerNamespace, dnsDomain string, infra *ir.ProxyInfra, gateway *egv1a1.EnvoyGateway, ownerReferenceUID map[string]types.UID) *ResourceRender {
-	return &ResourceRender{
-		envoyNamespace:       envoyNamespace,
-		controllerNamespace:  controllerNamespace,
-		DNSDomain:            dnsDomain,
-		infra:                infra,
-		ShutdownManager:      gateway.GetEnvoyGatewayProvider().GetEnvoyGatewayKubeProvider().ShutdownManager,
-		GatewayNamespaceMode: gateway.GatewayNamespaceMode(),
-		ownerReferenceUID:    ownerReferenceUID,
+// KubernetesInfraProvider provide information for initializing the proxy resource render.
+type KubernetesInfraProvider interface {
+	GetControllerNamespace() string
+	GetDNSDomain() string
+	GetEnvoyGateway() *egv1a1.EnvoyGateway
+	GetOwnerReferenceUID(ctx context.Context, infra *ir.Infra) (map[string]types.UID, error)
+	GetResourceNamespace(ir *ir.Infra) string
+}
+
+func NewResourceRender(ctx context.Context, kubernetesInfra KubernetesInfraProvider, infra *ir.Infra) (*ResourceRender, error) {
+	ownerReference, err := kubernetesInfra.GetOwnerReferenceUID(ctx, infra)
+	if err != nil {
+		return nil, err
 	}
+
+	return &ResourceRender{
+		envoyNamespace:       kubernetesInfra.GetResourceNamespace(infra),
+		controllerNamespace:  kubernetesInfra.GetControllerNamespace(),
+		DNSDomain:            kubernetesInfra.GetDNSDomain(),
+		infra:                infra.GetProxyInfra(),
+		ShutdownManager:      kubernetesInfra.GetEnvoyGateway().GetEnvoyGatewayProvider().GetEnvoyGatewayKubeProvider().ShutdownManager,
+		GatewayNamespaceMode: kubernetesInfra.GetEnvoyGateway().GatewayNamespaceMode(),
+		ownerReferenceUID:    ownerReference,
+	}, nil
 }
 
 func (r *ResourceRender) Name() string {

@@ -16,7 +16,6 @@ import (
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -175,6 +174,7 @@ func TestCreateOrUpdateProxyConfigMap(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
+			ctx := context.Background()
 			cfg, err := config.New(os.Stdout)
 			require.NoError(t, err)
 			cfg.ControllerNamespace = tc.ns
@@ -197,13 +197,12 @@ func TestCreateOrUpdateProxyConfigMap(t *testing.T) {
 				kube.EnvoyGateway.Provider.Kubernetes.Deploy = &egv1a1.KubernetesDeployMode{
 					Type: ptr.To(egv1a1.KubernetesDeployModeType(egv1a1.KubernetesDeployModeTypeGatewayNamespace)),
 				}
+				require.NoError(t, createGatewayForGatewayNamespaceMode(ctx, kube.Client))
 			}
-			envoyNamespace := kube.GetResourceNamespace(tc.in)
-			ownerReferenceUID := map[string]types.UID{
-				proxy.ResourceKindGateway: "foo.bar",
-			}
-			r := proxy.NewResourceRender(envoyNamespace, cfg.ControllerNamespace, kube.DNSDomain, tc.in.GetProxyInfra(), kube.EnvoyGateway, ownerReferenceUID)
-			err = kube.createOrUpdateConfigMap(context.Background(), r)
+
+			r, err := proxy.NewResourceRender(ctx, kube, tc.in)
+			require.NoError(t, err)
+			err = kube.createOrUpdateConfigMap(ctx, r)
 			require.NoError(t, err)
 			actual := &corev1.ConfigMap{
 				ObjectMeta: metav1.ObjectMeta{
@@ -211,7 +210,7 @@ func TestCreateOrUpdateProxyConfigMap(t *testing.T) {
 					Name:      tc.expect.Name,
 				},
 			}
-			require.NoError(t, kube.Client.Get(context.Background(), client.ObjectKeyFromObject(actual), actual))
+			require.NoError(t, kube.Client.Get(ctx, client.ObjectKeyFromObject(actual), actual))
 
 			opts := cmpopts.IgnoreFields(metav1.ObjectMeta{}, "ResourceVersion")
 			assert.True(t, cmp.Equal(tc.expect, actual, opts))
@@ -255,20 +254,22 @@ func TestDeleteConfigProxyMap(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
+			ctx := context.Background()
 			cli := fakeclient.NewClientBuilder().WithScheme(envoygateway.GetScheme()).WithObjects(tc.current).Build()
 			kube := NewInfra(cli, cfg)
 
 			infra.Proxy.GetProxyMetadata().Labels[gatewayapi.OwningGatewayNamespaceLabel] = "default"
 			infra.Proxy.GetProxyMetadata().Labels[gatewayapi.OwningGatewayNameLabel] = infra.Proxy.Name
 
-			r := proxy.NewResourceRender(kube.ControllerNamespace, cfg.ControllerNamespace, kube.DNSDomain, infra.GetProxyInfra(), kube.EnvoyGateway, nil)
+			r, err := proxy.NewResourceRender(ctx, kube, infra)
+			require.NoError(t, err)
 			cm := &corev1.ConfigMap{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: kube.ControllerNamespace,
 					Name:      r.Name(),
 				},
 			}
-			err = kube.Client.Delete(context.Background(), cm)
+			err = kube.Client.Delete(ctx, cm)
 			require.NoError(t, err)
 		})
 	}

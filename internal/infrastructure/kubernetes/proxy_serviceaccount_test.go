@@ -16,7 +16,6 @@ import (
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -214,6 +213,7 @@ func TestCreateOrUpdateProxyServiceAccount(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
+			ctx := context.Background()
 			cfg, err := config.New(os.Stdout)
 			require.NoError(t, err)
 			cfg.ControllerNamespace = tc.ns
@@ -237,23 +237,21 @@ func TestCreateOrUpdateProxyServiceAccount(t *testing.T) {
 				kube.EnvoyGateway.Provider.Kubernetes.Deploy = &egv1a1.KubernetesDeployMode{
 					Type: ptr.To(egv1a1.KubernetesDeployModeType(egv1a1.KubernetesDeployModeTypeGatewayNamespace)),
 				}
-			}
-			envoyNamespace := kube.GetResourceNamespace(tc.in)
-			ownerReferenceUID := map[string]types.UID{
-				proxy.ResourceKindGateway: "foo.bar",
+				require.NoError(t, createGatewayForGatewayNamespaceMode(ctx, kube.Client))
 			}
 
-			r := proxy.NewResourceRender(envoyNamespace, cfg.ControllerNamespace, kube.DNSDomain, tc.in.GetProxyInfra(), cfg.EnvoyGateway, ownerReferenceUID)
-			err = kube.createOrUpdateServiceAccount(context.Background(), r)
+			r, err := proxy.NewResourceRender(ctx, kube, tc.in)
+			require.NoError(t, err)
+			err = kube.createOrUpdateServiceAccount(ctx, r)
 			require.NoError(t, err)
 
 			actual := &corev1.ServiceAccount{
 				ObjectMeta: metav1.ObjectMeta{
-					Namespace: envoyNamespace,
+					Namespace: kube.GetResourceNamespace(tc.in),
 					Name:      proxy.ExpectedResourceHashedName(tc.in.Proxy.Name),
 				},
 			}
-			require.NoError(t, kube.Client.Get(context.Background(), client.ObjectKeyFromObject(actual), actual))
+			require.NoError(t, kube.Client.Get(ctx, client.ObjectKeyFromObject(actual), actual))
 
 			opts := cmpopts.IgnoreFields(metav1.ObjectMeta{}, "ResourceVersion")
 			assert.True(t, cmp.Equal(tc.want, actual, opts))
@@ -271,17 +269,19 @@ func TestDeleteProxyServiceAccount(t *testing.T) {
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
+			ctx := context.Background()
 			kube := newTestInfra(t)
 
 			infra := ir.NewInfra()
 			infra.Proxy.GetProxyMetadata().Labels[gatewayapi.OwningGatewayNamespaceLabel] = "default"
 			infra.Proxy.GetProxyMetadata().Labels[gatewayapi.OwningGatewayNameLabel] = infra.Proxy.Name
-			r := proxy.NewResourceRender(kube.ControllerNamespace, kube.ControllerNamespace, kube.DNSDomain, infra.GetProxyInfra(), kube.EnvoyGateway, nil)
-
-			err := kube.createOrUpdateServiceAccount(context.Background(), r)
+			r, err := proxy.NewResourceRender(ctx, kube, infra)
 			require.NoError(t, err)
 
-			err = kube.deleteServiceAccount(context.Background(), r)
+			err = kube.createOrUpdateServiceAccount(ctx, r)
+			require.NoError(t, err)
+
+			err = kube.deleteServiceAccount(ctx, r)
 			require.NoError(t, err)
 		})
 	}

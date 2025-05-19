@@ -13,7 +13,6 @@ import (
 	"github.com/stretchr/testify/require"
 	appsv1 "k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -60,6 +59,7 @@ func deploymentWithOwnerReferences(deploy *appsv1.Deployment, ownerReferences []
 }
 
 func setupCreateOrUpdateProxyDeployment(gatewayNamespaceMode bool) (*appsv1.Deployment, *ir.Infra, *config.Server, error) {
+	ctx := context.Background()
 	cfg, err := config.New(os.Stdout)
 	if err != nil {
 		return nil, nil, nil, err
@@ -67,6 +67,12 @@ func setupCreateOrUpdateProxyDeployment(gatewayNamespaceMode bool) (*appsv1.Depl
 	infra := ir.NewInfra()
 	infra.Proxy.GetProxyMetadata().Labels[gatewayapi.OwningGatewayNamespaceLabel] = "default"
 	infra.Proxy.GetProxyMetadata().Labels[gatewayapi.OwningGatewayNameLabel] = infra.Proxy.Name
+
+	var cli client.Client
+	cli = fakeclient.NewClientBuilder().
+		WithScheme(envoygateway.GetScheme()).
+		Build()
+	kube := NewInfra(cli, cfg)
 
 	if gatewayNamespaceMode {
 		cfg.EnvoyGateway.Provider.Kubernetes.Deploy = &egv1a1.KubernetesDeployMode{
@@ -76,9 +82,16 @@ func setupCreateOrUpdateProxyDeployment(gatewayNamespaceMode bool) (*appsv1.Depl
 		infra.Proxy.Namespace = "ns1"
 		infra.Proxy.GetProxyMetadata().Labels[gatewayapi.OwningGatewayNamespaceLabel] = "ns1"
 		infra.Proxy.GetProxyMetadata().Labels[gatewayapi.OwningGatewayNameLabel] = "gateway-1"
+
+		if err := createGatewayForGatewayNamespaceMode(ctx, kube.Client); err != nil {
+			return nil, nil, nil, err
+		}
 	}
 
-	r := proxy.NewResourceRender(cfg.ControllerNamespace, cfg.ControllerNamespace, cfg.DNSDomain, infra.GetProxyInfra(), cfg.EnvoyGateway, nil)
+	r, err := proxy.NewResourceRender(ctx, kube, infra)
+	if err != nil {
+		return nil, nil, nil, err
+	}
 	deploy, err := r.Deployment()
 	if err != nil {
 		return nil, nil, nil, err
@@ -92,10 +105,6 @@ func TestCreateOrUpdateProxyDeployment(t *testing.T) {
 
 	gwDeploy, gwInfra, gwCfg, err := setupCreateOrUpdateProxyDeployment(true)
 	require.NoError(t, err)
-
-	ownerReferenceUID := map[string]types.UID{
-		proxy.ResourceKindGateway: "foo.bar",
-	}
 
 	testCases := []struct {
 		name                 string
@@ -272,6 +281,7 @@ func TestCreateOrUpdateProxyDeployment(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
+			ctx := context.Background()
 			var cli client.Client
 			if tc.current != nil {
 				cli = fakeclient.NewClientBuilder().
@@ -287,10 +297,13 @@ func TestCreateOrUpdateProxyDeployment(t *testing.T) {
 			}
 
 			kube := NewInfra(cli, tc.cfg)
-			envoyNamespace := kube.GetResourceNamespace(tc.in)
+			if tc.gatewayNamespaceMode {
+				require.NoError(t, createGatewayForGatewayNamespaceMode(ctx, kube.Client))
+			}
 
-			r := proxy.NewResourceRender(envoyNamespace, tc.cfg.ControllerNamespace, kube.DNSDomain, tc.in.GetProxyInfra(), tc.cfg.EnvoyGateway, ownerReferenceUID)
-			err := kube.createOrUpdateDeployment(context.Background(), r)
+			r, err := proxy.NewResourceRender(ctx, kube, tc.in)
+			require.NoError(t, err)
+			err = kube.createOrUpdateDeployment(ctx, r)
 			if tc.wantErr {
 				require.Error(t, err)
 				return
@@ -299,11 +312,11 @@ func TestCreateOrUpdateProxyDeployment(t *testing.T) {
 
 			actual := &appsv1.Deployment{
 				ObjectMeta: metav1.ObjectMeta{
-					Namespace: envoyNamespace,
+					Namespace: kube.GetResourceNamespace(tc.in),
 					Name:      proxy.ExpectedResourceHashedName(tc.in.Proxy.Name),
 				},
 			}
-			require.NoError(t, kube.Client.Get(context.Background(), client.ObjectKeyFromObject(actual), actual))
+			require.NoError(t, kube.Client.Get(ctx, client.ObjectKeyFromObject(actual), actual))
 			require.Equal(t, tc.want.Spec, actual.Spec)
 			require.Equal(t, tc.want.OwnerReferences, actual.OwnerReferences)
 		})
@@ -331,14 +344,16 @@ func TestDeleteProxyDeployment(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
+			ctx := context.Background()
 			kube := NewInfra(cli, cfg)
 
 			infra := ir.NewInfra()
 			infra.Proxy.GetProxyMetadata().Labels[gatewayapi.OwningGatewayNamespaceLabel] = "default"
 			infra.Proxy.GetProxyMetadata().Labels[gatewayapi.OwningGatewayNameLabel] = infra.Proxy.Name
-			r := proxy.NewResourceRender(kube.ControllerNamespace, cfg.ControllerNamespace, kube.DNSDomain, infra.GetProxyInfra(), kube.EnvoyGateway, nil)
+			r, err := proxy.NewResourceRender(ctx, kube, infra)
+			require.NoError(t, err)
 
-			err := kube.createOrUpdateDeployment(context.Background(), r)
+			err = kube.createOrUpdateDeployment(ctx, r)
 			require.NoError(t, err)
 			deployment := &appsv1.Deployment{
 				ObjectMeta: metav1.ObjectMeta{
@@ -346,7 +361,7 @@ func TestDeleteProxyDeployment(t *testing.T) {
 					Name:      r.Name(),
 				},
 			}
-			err = kube.Client.Delete(context.Background(), deployment)
+			err = kube.Client.Delete(ctx, deployment)
 			require.NoError(t, err)
 		})
 	}

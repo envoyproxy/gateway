@@ -6,6 +6,7 @@
 package proxy
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"sort"
@@ -40,8 +41,43 @@ const (
 	envoyHTTPSPort = int32(8443)
 )
 
-var ownerReferenceUID = map[string]types.UID{
-	ResourceKindGateway: "test-owner-reference-uid-for-gateway",
+type fakeKubernetesInfraProvider struct {
+	ControllerNamespace string
+	DNSDomain           string
+	EnvoyGateway        *egv1a1.EnvoyGateway
+}
+
+func newFakeKubernetesInfraProvider(cfg *config.Server) KubernetesInfraProvider {
+	return &fakeKubernetesInfraProvider{
+		ControllerNamespace: cfg.ControllerNamespace,
+		DNSDomain:           cfg.DNSDomain,
+		EnvoyGateway:        cfg.EnvoyGateway,
+	}
+}
+
+func (f *fakeKubernetesInfraProvider) GetControllerNamespace() string {
+	return f.ControllerNamespace
+}
+
+func (f *fakeKubernetesInfraProvider) GetDNSDomain() string {
+	return f.DNSDomain
+}
+
+func (f *fakeKubernetesInfraProvider) GetEnvoyGateway() *egv1a1.EnvoyGateway {
+	return f.EnvoyGateway
+}
+
+func (f *fakeKubernetesInfraProvider) GetOwnerReferenceUID(ctx context.Context, infra *ir.Infra) (map[string]types.UID, error) {
+	return map[string]types.UID{
+		ResourceKindGateway: "test-owner-reference-uid-for-gateway",
+	}, nil
+}
+
+func (f *fakeKubernetesInfraProvider) GetResourceNamespace(infra *ir.Infra) string {
+	if f.EnvoyGateway.GatewayNamespaceMode() {
+		return infra.Proxy.Namespace
+	}
+	return f.ControllerNamespace
 }
 
 func newTestInfra() *ir.Infra {
@@ -624,7 +660,6 @@ func TestDeployment(t *testing.T) {
 			if len(tc.extraArgs) > 0 {
 				tc.infra.Proxy.Config.Spec.ExtraArgs = tc.extraArgs
 			}
-			infraNamespace := cfg.ControllerNamespace
 			if tc.gatewayNamespaceMode {
 				deployType := egv1a1.KubernetesDeployModeType(egv1a1.KubernetesDeployModeTypeGatewayNamespace)
 				cfg.EnvoyGateway.Provider = &egv1a1.EnvoyGatewayProvider{
@@ -635,10 +670,10 @@ func TestDeployment(t *testing.T) {
 						},
 					},
 				}
-				infraNamespace = tc.infra.GetProxyInfra().Namespace
 			}
 
-			r := NewResourceRender(infraNamespace, cfg.ControllerNamespace, cfg.DNSDomain, tc.infra.GetProxyInfra(), cfg.EnvoyGateway, ownerReferenceUID)
+			r, err := NewResourceRender(context.Background(), newFakeKubernetesInfraProvider(cfg), tc.infra)
+			require.NoError(t, err)
 			dp, err := r.Deployment()
 			require.NoError(t, err)
 
@@ -1033,7 +1068,6 @@ func TestDaemonSet(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.caseName, func(t *testing.T) {
-			ns := cfg.ControllerNamespace
 			if tc.gatewayNamespaceMode {
 				deployType := egv1a1.KubernetesDeployModeType(egv1a1.KubernetesDeployModeTypeGatewayNamespace)
 				cfg.EnvoyGateway.Provider = &egv1a1.EnvoyGatewayProvider{
@@ -1044,7 +1078,6 @@ func TestDaemonSet(t *testing.T) {
 						},
 					},
 				}
-				ns = tc.infra.GetProxyInfra().Namespace
 			}
 
 			kube := tc.infra.GetProxyInfra().GetProxyConfig().GetEnvoyProxyProvider().GetEnvoyProxyKubeProvider()
@@ -1088,7 +1121,8 @@ func TestDaemonSet(t *testing.T) {
 				tc.infra.Proxy.Config.Spec.ExtraArgs = tc.extraArgs
 			}
 
-			r := NewResourceRender(ns, cfg.ControllerNamespace, cfg.DNSDomain, tc.infra.GetProxyInfra(), cfg.EnvoyGateway, ownerReferenceUID)
+			r, err := NewResourceRender(context.Background(), newFakeKubernetesInfraProvider(cfg), tc.infra)
+			require.NoError(t, err)
 			ds, err := r.DaemonSet()
 			require.NoError(t, err)
 
@@ -1255,7 +1289,6 @@ func TestService(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.caseName, func(t *testing.T) {
-			ns := cfg.ControllerNamespace
 			if tc.gatewayNamespaceMode {
 				deployType := egv1a1.KubernetesDeployModeType(egv1a1.KubernetesDeployModeTypeGatewayNamespace)
 				cfg.EnvoyGateway.Provider = &egv1a1.EnvoyGatewayProvider{
@@ -1266,7 +1299,6 @@ func TestService(t *testing.T) {
 						},
 					},
 				}
-				ns = tc.infra.GetProxyInfra().Namespace
 			}
 
 			provider := tc.infra.GetProxyInfra().GetProxyConfig().GetEnvoyProxyProvider().GetEnvoyProxyKubeProvider()
@@ -1274,7 +1306,8 @@ func TestService(t *testing.T) {
 				provider.EnvoyService = tc.service
 			}
 
-			r := NewResourceRender(ns, cfg.ControllerNamespace, cfg.DNSDomain, tc.infra.GetProxyInfra(), cfg.EnvoyGateway, ownerReferenceUID)
+			r, err := NewResourceRender(context.Background(), newFakeKubernetesInfraProvider(cfg), tc.infra)
+			require.NoError(t, err)
 			svc, err := r.Service()
 			require.NoError(t, err)
 
@@ -1324,7 +1357,6 @@ func TestConfigMap(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			ns := cfg.ControllerNamespace
 			if tc.gatewayNamespaceMode {
 				deployType := egv1a1.KubernetesDeployModeType(egv1a1.KubernetesDeployModeTypeGatewayNamespace)
 				cfg.EnvoyGateway.Provider = &egv1a1.EnvoyGatewayProvider{
@@ -1335,9 +1367,9 @@ func TestConfigMap(t *testing.T) {
 						},
 					},
 				}
-				ns = tc.infra.GetProxyInfra().Namespace
 			}
-			r := NewResourceRender(ns, cfg.ControllerNamespace, cfg.DNSDomain, tc.infra.GetProxyInfra(), cfg.EnvoyGateway, ownerReferenceUID)
+			r, err := NewResourceRender(context.Background(), newFakeKubernetesInfraProvider(cfg), tc.infra)
+			require.NoError(t, err)
 			cm, err := r.ConfigMap("")
 			require.NoError(t, err)
 
@@ -1387,7 +1419,6 @@ func TestServiceAccount(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			ns := cfg.ControllerNamespace
 			if tc.gatewayNamespaceMode {
 				deployType := egv1a1.KubernetesDeployModeType(egv1a1.KubernetesDeployModeTypeGatewayNamespace)
 				cfg.EnvoyGateway.Provider = &egv1a1.EnvoyGatewayProvider{
@@ -1398,9 +1429,9 @@ func TestServiceAccount(t *testing.T) {
 						},
 					},
 				}
-				ns = tc.infra.GetProxyInfra().Namespace
 			}
-			r := NewResourceRender(ns, cfg.ControllerNamespace, cfg.DNSDomain, tc.infra.GetProxyInfra(), cfg.EnvoyGateway, ownerReferenceUID)
+			r, err := NewResourceRender(context.Background(), newFakeKubernetesInfraProvider(cfg), tc.infra)
+			require.NoError(t, err)
 			sa, err := r.ServiceAccount()
 			require.NoError(t, err)
 
@@ -1520,7 +1551,6 @@ func TestPDB(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.caseName, func(t *testing.T) {
-			ns := cfg.ControllerNamespace
 			if tc.gatewayNamespaceMode {
 				deployType := egv1a1.KubernetesDeployModeType(egv1a1.KubernetesDeployModeTypeGatewayNamespace)
 				cfg.EnvoyGateway.Provider = &egv1a1.EnvoyGatewayProvider{
@@ -1531,7 +1561,6 @@ func TestPDB(t *testing.T) {
 						},
 					},
 				}
-				ns = tc.infra.GetProxyInfra().Namespace
 			}
 
 			provider := tc.infra.GetProxyInfra().GetProxyConfig().GetEnvoyProxyProvider()
@@ -1547,7 +1576,8 @@ func TestPDB(t *testing.T) {
 
 			provider.GetEnvoyProxyKubeProvider()
 
-			r := NewResourceRender(ns, cfg.ControllerNamespace, cfg.DNSDomain, tc.infra.GetProxyInfra(), cfg.EnvoyGateway, ownerReferenceUID)
+			r, err := NewResourceRender(context.Background(), newFakeKubernetesInfraProvider(cfg), tc.infra)
+			require.NoError(t, err)
 
 			pdb, err := r.PodDisruptionBudget()
 			require.NoError(t, err)
@@ -1657,7 +1687,6 @@ func TestHorizontalPodAutoscaler(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.caseName, func(t *testing.T) {
-			ns := cfg.ControllerNamespace
 			if tc.gatewayNamespaceMode {
 				deployType := egv1a1.KubernetesDeployModeType(egv1a1.KubernetesDeployModeTypeGatewayNamespace)
 				cfg.EnvoyGateway.Provider = &egv1a1.EnvoyGatewayProvider{
@@ -1668,7 +1697,6 @@ func TestHorizontalPodAutoscaler(t *testing.T) {
 						},
 					},
 				}
-				ns = tc.infra.GetProxyInfra().Namespace
 			}
 
 			provider := tc.infra.GetProxyInfra().GetProxyConfig().GetEnvoyProxyProvider()
@@ -1682,7 +1710,8 @@ func TestHorizontalPodAutoscaler(t *testing.T) {
 			}
 			provider.GetEnvoyProxyKubeProvider()
 
-			r := NewResourceRender(ns, cfg.ControllerNamespace, cfg.DNSDomain, tc.infra.GetProxyInfra(), cfg.EnvoyGateway, ownerReferenceUID)
+			r, err := NewResourceRender(context.Background(), newFakeKubernetesInfraProvider(cfg), tc.infra)
+			require.NoError(t, err)
 			hpa, err := r.HorizontalPodAutoscaler()
 			require.NoError(t, err)
 
@@ -1870,9 +1899,8 @@ func TestGatewayNamespaceModeMultipleResources(t *testing.T) {
 	hpas := make([]*autoscalingv2.HorizontalPodAutoscaler, 0, len(infraList))
 
 	for _, infra := range infraList {
-		namespace := infra.GetProxyInfra().Namespace
-		r := NewResourceRender(namespace, cfg.ControllerNamespace, cfg.DNSDomain,
-			infra.GetProxyInfra(), cfg.EnvoyGateway, ownerReferenceUID)
+		r, err := NewResourceRender(context.Background(), newFakeKubernetesInfraProvider(cfg), infra)
+		require.NoError(t, err)
 
 		dp, err := r.Deployment()
 		require.NoError(t, err)

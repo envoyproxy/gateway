@@ -8,10 +8,12 @@ package kubernetes
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	"k8s.io/apimachinery/pkg/types"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
+	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/infrastructure/kubernetes/proxy"
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/utils"
@@ -27,13 +29,10 @@ func (i *Infra) CreateOrUpdateProxyInfra(ctx context.Context, infra *ir.Infra) e
 		return errors.New("infra proxy ir is nil")
 	}
 
-	envoyNamespace := i.GetResourceNamespace(infra)
-	ownerReferenceUID, err := i.GetOwnerReferenceUID(ctx, infra)
+	r, err := proxy.NewResourceRender(ctx, i, infra)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to initialize proxy resource render: %w", err)
 	}
-
-	r := proxy.NewResourceRender(envoyNamespace, i.ControllerNamespace, i.DNSDomain, infra.GetProxyInfra(), i.EnvoyGateway, ownerReferenceUID)
 	return i.createOrUpdate(ctx, r)
 }
 
@@ -43,16 +42,23 @@ func (i *Infra) DeleteProxyInfra(ctx context.Context, infra *ir.Infra) error {
 		return errors.New("infra ir is nil")
 	}
 
-	envoyNamespace := i.GetResourceNamespace(infra)
-	r := proxy.NewResourceRender(envoyNamespace, i.ControllerNamespace, i.DNSDomain, infra.GetProxyInfra(), i.EnvoyGateway, nil)
+	r, err := proxy.NewResourceRender(ctx, i, infra)
+	if err != nil {
+		return fmt.Errorf("failed to create proxy resource render: %w", err)
+	}
 	return i.delete(ctx, r)
 }
 
-func (i *Infra) GetResourceNamespace(infra *ir.Infra) string {
-	if i.EnvoyGateway.GatewayNamespaceMode() {
-		return infra.Proxy.Namespace
-	}
+func (i *Infra) GetControllerNamespace() string {
 	return i.ControllerNamespace
+}
+
+func (i *Infra) GetDNSDomain() string {
+	return i.DNSDomain
+}
+
+func (i *Infra) GetEnvoyGateway() *egv1a1.EnvoyGateway {
+	return i.EnvoyGateway
 }
 
 func (i *Infra) GetOwnerReferenceUID(ctx context.Context, infra *ir.Infra) (map[string]types.UID, error) {
@@ -72,4 +78,11 @@ func (i *Infra) GetOwnerReferenceUID(ctx context.Context, infra *ir.Infra) (map[
 	// TODO: set GatewayClass UID when enable merged gateways
 
 	return ownerReferenceUID, nil
+}
+
+func (i *Infra) GetResourceNamespace(infra *ir.Infra) string {
+	if i.EnvoyGateway.GatewayNamespaceMode() {
+		return infra.Proxy.Namespace
+	}
+	return i.ControllerNamespace
 }
