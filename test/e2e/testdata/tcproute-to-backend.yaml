@@ -1,7 +1,7 @@
 apiVersion: gateway.networking.k8s.io/v1beta1
 kind: Gateway
 metadata:
-  name: my-tcp-gateway
+  name: tcp-backend-gateway
   namespace: gateway-conformance-infra
 spec:
   gatewayClassName: "{GATEWAY_CLASS_NAME}"
@@ -22,18 +22,34 @@ spec:
 apiVersion: gateway.networking.k8s.io/v1alpha2
 kind: TCPRoute
 metadata:
-  name: tcp-app-1
+  name: tcp-backend-ip
   namespace: gateway-conformance-infra
 spec:
   parentRefs:
-  - name: my-tcp-gateway
+  - name: tcp-backend-gateway
     sectionName: foo
   rules:
   - backendRefs:
     - group: gateway.envoyproxy.io
       kind: Backend
-      name: backend-fqdn
+      name: backend-ip
       port: 8080
+---
+apiVersion: gateway.networking.k8s.io/v1alpha2
+kind: TCPRoute
+metadata:
+  name: tcp-backend-fqdn
+  namespace: gateway-conformance-infra
+spec:
+  parentRefs:
+    - name: tcp-backend-gateway
+      sectionName: bar
+  rules:
+    - backendRefs:
+        - group: gateway.envoyproxy.io
+          kind: Backend
+          name: backend-fqdn
+          port: 8080
 ---
 apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: Backend
@@ -42,6 +58,6 @@ metadata:
   namespace: gateway-conformance-infra
 spec:
   endpoints:
-  - fqdn:
-      hostname: infra-backend-v1.gateway-conformance-infra.svc.cluster.local
-      port: 8080
+    - fqdn:
+        hostname: infra-backend-v1.gateway-conformance-infra.svc.cluster.local
+        port: 8080
