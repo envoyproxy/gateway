@@ -77,3 +77,13 @@ spec:
       name: "oidctest-secret"
     redirectURL: "http://www.example.com/myapp/oauth2/callback"
     logoutPath: "/myapp/logout"
+    forwardAccessToken: true
+    passThroughAuthHeader: true
+  jwt:
+    providers:
+    - name: "keycloak"  # This is needed so JWTs generated through the OIDC flow can be validated
+      remoteJWKS:
+        uri: "http://keycloak.gateway-conformance-infra/realms/master/protocol/openid-connect/certs"
+    - name: "example"  # This allows us to use the static JWTs in the test
+      remoteJWKS:
+        uri: "http://static-file-server.gateway-conformance-infra/jwt/jwks.json"

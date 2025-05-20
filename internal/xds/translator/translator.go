@@ -1049,6 +1049,30 @@ func buildXdsUpstreamTLSSocketWthCert(tlsConfig *ir.TLSUpstreamConfig) (*corev3.
 				},
 			},
 		}
+		for _, san := range tlsConfig.SubjectAltNames {
+			var sanType tlsv3.SubjectAltNameMatcher_SanType
+			var value string
+
+			// Exactly one of san.Hostname or san.URI is guaranteed to be set
+			if san.Hostname != nil {
+				sanType = tlsv3.SubjectAltNameMatcher_DNS
+				value = *san.Hostname
+			} else if san.URI != nil {
+				sanType = tlsv3.SubjectAltNameMatcher_URI
+				value = *san.URI
+			}
+			validationContext.DefaultValidationContext.MatchTypedSubjectAltNames = append(
+				validationContext.DefaultValidationContext.MatchTypedSubjectAltNames,
+				&tlsv3.SubjectAltNameMatcher{
+					SanType: sanType,
+					Matcher: &matcherv3.StringMatcher{
+						MatchPattern: &matcherv3.StringMatcher_Exact{
+							Exact: value,
+						},
+					},
+				},
+			)
+		}
 	}
 
 	tlsCtx := &tlsv3.UpstreamTlsContext{

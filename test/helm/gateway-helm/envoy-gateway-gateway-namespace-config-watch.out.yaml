@@ -1010,4 +1010,5 @@ webhooks:
         - key: kubernetes.io/metadata.name
           operator: In
           values:
-            - envoy-gateway-system
+            - "default"
+            - "app-ns"

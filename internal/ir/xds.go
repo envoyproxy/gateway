@@ -445,6 +445,20 @@ type TLSCACertificate struct {
 	Certificate []byte `json:"certificate,omitempty" yaml:"certificate,omitempty"`
 }
 
+// SubjectAltName holds the subject alternative name for the certificate
+// This is the internal representation of the SubjectAltName in the Gateway API
+// https://github.com/kubernetes-sigs/gateway-api/blob/6fbbd90954c2a30a6502cbb22ec6e7f3359ed3a0/apis/v1alpha3/backendtlspolicy_types.go#L177
+// +k8s:deepcopy-gen=true
+type SubjectAltName struct {
+	// Only one of the following fields should be set.
+	// Hostname contains Subject Alternative Name specified in DNS name format.
+	Hostname *string `json:"hostname,omitempty" yaml:"hostname,omitempty"`
+	// URI contains Subject Alternative Name specified in a full URI format.
+	// It MUST include both a scheme (e.g., "http" or "ftp") and a scheme-specific-part.
+	// Common values include SPIFFE IDs like "spiffe://mycluster.example.com/ns/myns/sa/svc1sa".
+	URI *string `json:"uri,omitempty" yaml:"uri,omitempty"`
+}
+
 func (t TLSCertificate) Validate() error {
 	var errs error
 	if len(t.Certificate) == 0 {
@@ -1094,6 +1108,11 @@ type OIDC struct {
 
 	// CookieDomain sets the domain of the cookies set by the oauth filter.
 	CookieDomain *string `json:"cookieDomain,omitempty"`
+
+	// Skips OIDC authentication when the request contains any header that will be extracted by the JWT
+	// filter, normally "Authorization: Bearer ...". This is typically used for non-browser clients that
+	// may not be able to handle OIDC redirects and wish to directly supply a token instead.
+	PassThroughAuthHeader bool `json:"passThroughAuthHeader,omitempty"`
 }
 
 // OIDCProvider defines the schema for the OIDC Provider.
@@ -2857,6 +2876,7 @@ type TLSUpstreamConfig struct {
 	UseSystemTrustStore bool              `json:"useSystemTrustStore,omitempty" yaml:"useSystemTrustStore,omitempty"`
 	CACertificate       *TLSCACertificate `json:"caCertificate,omitempty" yaml:"caCertificate,omitempty"`
 	TLSConfig           `json:",inline"`
+	SubjectAltNames     []SubjectAltName `json:"subjectAltNames,omitempty" yaml:"subjectAltNames,omitempty"`
 }
 
 func (t *TLSUpstreamConfig) ToTLSConfig() (*tls.Config, error) {
