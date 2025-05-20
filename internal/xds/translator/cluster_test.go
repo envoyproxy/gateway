@@ -160,6 +160,302 @@ func TestCheckZoneAwareRouting(t *testing.T) {
 	}
 }
 
+type regionAndZone struct {
+	Region string
+	Zone   string
+}
+
+func TestBuildLocalities(t *testing.T) {
+	tests := []struct {
+		name            string
+		destSettings    []*ir.DestinationSetting
+		expectedWeights []map[regionAndZone]uint32
+	}{
+		{
+			name: "default",
+			destSettings: []*ir.DestinationSetting{
+				{
+					Weight: ptr.To(uint32(20)),
+					Name:   "backend1",
+					Endpoints: []*ir.DestinationEndpoint{
+						{
+							Host: "host1",
+							Port: 8080,
+						},
+						{
+							Host: "host2",
+							Port: 8080,
+						},
+					},
+				},
+				{
+					Weight: ptr.To(uint32(60)),
+					Name:   "backend2",
+					Endpoints: []*ir.DestinationEndpoint{
+						{
+							Host: "host3",
+							Port: 8080,
+						},
+						{
+							Host: "host4",
+							Port: 8080,
+						},
+					},
+				},
+			},
+			expectedWeights: []map[regionAndZone]uint32{
+				{
+					{Region: "backend1", Zone: ""}: 20,
+					{Region: "backend2", Zone: ""}: 60,
+				},
+			},
+		},
+		{
+			name: "multiple zones, no normalization",
+			destSettings: []*ir.DestinationSetting{
+				{
+					Weight: ptr.To(uint32(20)),
+					Name:   "backend1",
+					Endpoints: []*ir.DestinationEndpoint{
+						{
+							Host: "host1",
+							Port: 8080,
+							Zone: ptr.To("zone1"),
+						},
+						{
+							Host: "host2",
+							Port: 8080,
+							Zone: ptr.To("zone2"),
+						},
+					},
+				},
+				{
+					Weight: ptr.To(uint32(60)),
+					Name:   "backend2",
+					Endpoints: []*ir.DestinationEndpoint{
+						{
+							Host: "host3",
+							Port: 8080,
+							Zone: ptr.To("zone1"),
+						},
+						{
+							Host: "host4",
+							Port: 8080,
+							Zone: ptr.To("zone2"),
+						},
+					},
+				},
+			},
+			expectedWeights: []map[regionAndZone]uint32{
+				{
+					{Region: "backend1", Zone: "zone1"}: 10,
+					{Region: "backend1", Zone: "zone2"}: 10,
+					{Region: "backend2", Zone: "zone1"}: 30,
+					{Region: "backend2", Zone: "zone2"}: 30,
+				},
+			},
+		},
+		{
+			name: "multiple zones require normalization",
+			destSettings: []*ir.DestinationSetting{
+				{
+					Weight: ptr.To(uint32(11)),
+					Name:   "backend1",
+					Endpoints: []*ir.DestinationEndpoint{
+						{
+							Host: "host1",
+							Port: 8080,
+							Zone: ptr.To("zone1"),
+						},
+						{
+							Host: "host2",
+							Port: 8080,
+							Zone: ptr.To("zone2"),
+						},
+						{
+							Host: "host3",
+							Port: 8080,
+							Zone: ptr.To("zone3"),
+						},
+					},
+				},
+				{
+					Weight: ptr.To(uint32(13)),
+					Name:   "backend2",
+					Endpoints: []*ir.DestinationEndpoint{
+						{
+							Host: "host4",
+							Port: 8080,
+							Zone: ptr.To("zone1"),
+						},
+						{
+							Host: "host5",
+							Port: 8080,
+							Zone: ptr.To("zone1"),
+						},
+						{
+							Host: "host6",
+							Port: 8080,
+							Zone: ptr.To("zone2"),
+						},
+						{
+							Host: "host7",
+							Port: 8080,
+							Zone: ptr.To("zone2"),
+						},
+						{
+							Host: "host8",
+							Port: 8080,
+							Zone: ptr.To("zone3"),
+						},
+					},
+				},
+				{
+					Weight: ptr.To(uint32(10)),
+					Name:   "backend3",
+					Endpoints: []*ir.DestinationEndpoint{
+						{
+							Host: "host9",
+							Port: 8080,
+							Zone: ptr.To("zone1"),
+						},
+						{
+							Host: "host10",
+							Port: 8080,
+							Zone: ptr.To("zone1"),
+						},
+						{
+							Host: "host11",
+							Port: 8080,
+							Zone: ptr.To("zone3"),
+						},
+						{
+							Host: "host12",
+							Port: 8080,
+							Zone: ptr.To("zone3"),
+						},
+					},
+				},
+			},
+			expectedWeights: []map[regionAndZone]uint32{
+				{
+					{Region: "backend1", Zone: "zone1"}: 55, // 11/3 * 5 = 55/15
+					{Region: "backend1", Zone: "zone2"}: 55, // 11/3 * 5 = 55/15
+					{Region: "backend1", Zone: "zone3"}: 55, // 11/3 * 5 = 55/15
+					{Region: "backend2", Zone: "zone1"}: 78, // 2 * 13/5 * 3 = 78/15
+					{Region: "backend2", Zone: "zone2"}: 78, // 2 * 13/5 * 3 = 78/15
+					{Region: "backend2", Zone: "zone3"}: 39, // 13/5 * 3 = 39/15
+					{Region: "backend3", Zone: "zone1"}: 75, // 2 * 10/4 * 15 = 75/15
+					{Region: "backend3", Zone: "zone3"}: 75, // 2 * 10/4 * 15 = 75/15
+				},
+			},
+		},
+		{
+			name: "multiple zones multiple priorities require normalization",
+			destSettings: []*ir.DestinationSetting{
+				{
+					Weight: ptr.To(uint32(11)),
+					Name:   "backend1",
+					Endpoints: []*ir.DestinationEndpoint{
+						{
+							Host: "host1",
+							Port: 8080,
+							Zone: ptr.To("zone1"),
+						},
+						{
+							Host: "host2",
+							Port: 8080,
+							Zone: ptr.To("zone2"),
+						},
+					},
+				},
+				{
+					Weight: ptr.To(uint32(13)),
+					Name:   "backend2",
+					Endpoints: []*ir.DestinationEndpoint{
+						{
+							Host: "host3",
+							Port: 8080,
+							Zone: ptr.To("zone1"),
+						},
+						{
+							Host: "host4",
+							Port: 8080,
+							Zone: ptr.To("zone1"),
+						},
+						{
+							Host: "host5",
+							Port: 8080,
+							Zone: ptr.To("zone2"),
+						},
+					},
+				},
+				{
+					Weight:   ptr.To(uint32(10)),
+					Name:     "backend3",
+					Priority: ptr.To(uint32(1)),
+					Endpoints: []*ir.DestinationEndpoint{
+						{
+							Host: "host9",
+							Port: 8080,
+							Zone: ptr.To("zone1"),
+						},
+					},
+				},
+				{
+					Weight:   ptr.To(uint32(7)),
+					Name:     "backend4",
+					Priority: ptr.To(uint32(1)),
+					Endpoints: []*ir.DestinationEndpoint{
+						{
+							Host: "host9",
+							Port: 8080,
+							Zone: ptr.To("zone1"),
+						},
+						{
+							Host: "host10",
+							Port: 8080,
+							Zone: ptr.To("zone2"),
+						},
+					},
+				},
+			},
+			expectedWeights: []map[regionAndZone]uint32{
+				{
+					{Region: "backend1", Zone: "zone1"}: 33, // 11/2 * 3 = 33/6
+					{Region: "backend1", Zone: "zone2"}: 33, // 11/2 * 3 = 33/6
+					{Region: "backend2", Zone: "zone1"}: 52, // 2 * 13/3 * 2 = 52/6
+					{Region: "backend2", Zone: "zone2"}: 26, // 13/3 * 2 = 26/6
+				},
+				{
+					{Region: "backend3", Zone: "zone1"}: 20, // 10 * 2 = 20/2
+					{Region: "backend4", Zone: "zone1"}: 7,  // 7/2
+					{Region: "backend4", Zone: "zone2"}: 7,  // 7/2
+				},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			bootstrapXdsCluster := getXdsClusterObjFromBootstrap(t)
+			dynamicXdsClusterLoadAssignment, err := buildXdsClusterLoadAssignment(bootstrapXdsCluster.Name, tt.destSettings)
+			require.NoError(t, err)
+
+			for _, localityLbEndpoints := range dynamicXdsClusterLoadAssignment.Endpoints {
+				priority := localityLbEndpoints.Priority
+
+				regionAndZone := regionAndZone{
+					Zone:   localityLbEndpoints.Locality.Zone,
+					Region: localityLbEndpoints.Locality.Region,
+				}
+
+				require.Equal(t, tt.expectedWeights[priority][regionAndZone], localityLbEndpoints.LoadBalancingWeight.Value)
+			}
+		})
+	}
+}
+
 func getExpectedClusterLbPolicies(policy clusterv3.Cluster_LbPolicy, lb *ir.LoadBalancer) *clusterv3.LoadBalancingPolicy {
 	localityLbConfig := &commonv3.LocalityLbConfig{
 		LocalityConfigSpecifier: &commonv3.LocalityLbConfig_ZoneAwareLbConfig_{
@@ -251,7 +547,8 @@ func TestBuildXdsClusterLoadAssignment(t *testing.T) {
 		Endpoints: []*ir.DestinationEndpoint{{Host: envoyGatewayXdsServerHost, Port: bootstrap.DefaultXdsServerPort}},
 	}
 	settings := []*ir.DestinationSetting{ds}
-	dynamicXdsClusterLoadAssignment := buildXdsClusterLoadAssignment(bootstrapXdsCluster.Name, settings)
+	dynamicXdsClusterLoadAssignment, err := buildXdsClusterLoadAssignment(bootstrapXdsCluster.Name, settings)
+	require.NoError(t, err)
 
 	assert.True(t, proto.Equal(bootstrapXdsCluster.LoadAssignment.Endpoints[0].LbEndpoints[0], dynamicXdsClusterLoadAssignment.Endpoints[0].LbEndpoints[0]))
 }

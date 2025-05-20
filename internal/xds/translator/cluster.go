@@ -6,8 +6,11 @@
 package translator
 
 import (
+	"cmp"
 	"encoding/hex"
 	"fmt"
+	"math/big"
+	"slices"
 	"sort"
 	"time"
 
@@ -627,40 +630,61 @@ func buildXdsClusterCircuitBreaker(circuitBreaker *ir.CircuitBreaker) *clusterv3
 	return ecb
 }
 
-func buildXdsClusterLoadAssignment(clusterName string, destSettings []*ir.DestinationSetting) *endpointv3.ClusterLoadAssignment {
-	localities := make([]*endpointv3.LocalityLbEndpoints, 0, len(destSettings))
-	for i, ds := range destSettings {
-
-		var metadata *corev3.Metadata
-
-		if ds.TLS != nil {
-			metadata = &corev3.Metadata{
-				FilterMetadata: map[string]*structpb.Struct{
-					"envoy.transport_socket_match": {
-						Fields: map[string]*structpb.Value{
-							"name": structpb.NewStringValue(fmt.Sprintf("%s/tls/%d", clusterName, i)),
-						},
-					},
-				},
-			}
-		}
-
-		// If zone aware routing is enabled for a backendRefs we include endpoint zone info in localities.
-		// Note: The locality.LoadBalancingWeight field applies only when using locality-weighted LB config
-		// so in order to support traffic splitting we rely on weighted clusters defined at the route level
-		// if multiple backendRefs exist. This pushes part of the routing logic higher up the stack which can
-		// limit host selection controls during retries and session affinity.
-		// For more details see https://github.com/envoyproxy/gateway/issues/5307#issuecomment-2688767482
-		if ds.ZoneAwareRoutingEnabled {
-			localities = append(localities, buildZonalLocalities(metadata, ds)...)
-		} else {
-			localities = append(localities, buildWeightedLocalities(metadata, ds))
-		}
+func getLbEndpointsTSMMetadata(ds *ir.DestinationSetting, dsIndex int, clusterName string) *corev3.Metadata {
+	if ds == nil || ds.TLS == nil {
+		return nil
 	}
-	return &endpointv3.ClusterLoadAssignment{ClusterName: clusterName, Endpoints: localities}
+
+	return &corev3.Metadata{
+		FilterMetadata: map[string]*structpb.Struct{
+			"envoy.transport_socket_match": {
+				Fields: map[string]*structpb.Value{
+					"name": structpb.NewStringValue(fmt.Sprintf("%s/tls/%d", clusterName, dsIndex)),
+				},
+			},
+		},
+	}
 }
 
-func buildZonalLocalities(metadata *corev3.Metadata, ds *ir.DestinationSetting) []*endpointv3.LocalityLbEndpoints {
+func buildXdsClusterLoadAssignment(clusterName string, destSettings []*ir.DestinationSetting) (*endpointv3.ClusterLoadAssignment, error) {
+	var localities []*endpointv3.LocalityLbEndpoints
+
+	hasZoneAwareRoutingEnabled := slices.ContainsFunc(destSettings, func(ds *ir.DestinationSetting) bool {
+		return ds.ZoneAwareRoutingEnabled
+	})
+
+	// If zone aware routing is enabled for a backendRefs we include endpoint zone info in localities.
+	// Note: The locality.LoadBalancingWeight field applies only when using locality-weighted LB config
+	// so in order to support traffic splitting we rely on weighted clusters defined at the route level
+	// if multiple backendRefs exist. This pushes part of the routing logic higher up the stack which can
+	// limit host selection controls during retries and session affinity.
+	// For more details see https://github.com/envoyproxy/gateway/issues/5307#issuecomment-2688767482
+
+	switch {
+	case len(destSettings) == 1 && hasZoneAwareRoutingEnabled:
+		return &endpointv3.ClusterLoadAssignment{
+			ClusterName: clusterName,
+			Endpoints:   buildZonalLocalities(destSettings[0], clusterName),
+		}, nil
+	case !hasZoneAwareRoutingEnabled:
+		{
+			var err error
+			localities, err = buildZonalLocalitiesWithWeights(destSettings, clusterName)
+			if err != nil {
+				return nil, fmt.Errorf("failed to build ClusterLoadAssigment: %w", err)
+			}
+
+			return &endpointv3.ClusterLoadAssignment{
+				ClusterName: clusterName,
+				Endpoints:   localities,
+			}, nil
+		}
+	default:
+		return nil, fmt.Errorf("expected 1 DestinationSetting with zone aware routing enabled, got multiple")
+	}
+}
+
+func buildZonalLocalities(ds *ir.DestinationSetting, clusterName string) []*endpointv3.LocalityLbEndpoints {
 	var localities []*endpointv3.LocalityLbEndpoints
 	zonalEndpoints := make(map[string][]*endpointv3.LbEndpoint)
 	for _, irEp := range ds.Endpoints {
@@ -669,7 +693,7 @@ func buildZonalLocalities(metadata *corev3.Metadata, ds *ir.DestinationSetting) 
 			healthStatus = corev3.HealthStatus_DRAINING
 		}
 		lbEndpoint := &endpointv3.LbEndpoint{
-			Metadata: metadata,
+			Metadata: getLbEndpointsTSMMetadata(ds, 0, clusterName),
 			HostIdentifier: &endpointv3.LbEndpoint_Endpoint{
 				Endpoint: &endpointv3.Endpoint{
 					Address: buildAddress(irEp),
@@ -702,46 +726,133 @@ func buildZonalLocalities(metadata *corev3.Metadata, ds *ir.DestinationSetting) 
 	return localities
 }
 
-func buildWeightedLocalities(metadata *corev3.Metadata, ds *ir.DestinationSetting) *endpointv3.LocalityLbEndpoints {
-	endpoints := make([]*endpointv3.LbEndpoint, 0, len(ds.Endpoints))
+func buildZonalLocalitiesWithWeights(dstSettings []*ir.DestinationSetting, clusterName string) ([]*endpointv3.LocalityLbEndpoints, error) {
+	type nameAndZone struct {
+		DsName string
+		Zone   string
+	}
 
-	for _, irEp := range ds.Endpoints {
-		healthStatus := corev3.HealthStatus_UNKNOWN
-		if irEp.Draining {
-			healthStatus = corev3.HealthStatus_DRAINING
-		}
-		lbEndpoint := &endpointv3.LbEndpoint{
-			Metadata: metadata,
-			HostIdentifier: &endpointv3.LbEndpoint_Endpoint{
-				Endpoint: &endpointv3.Endpoint{
-					Address: buildAddress(irEp),
+	type zonesWeightRatios map[nameAndZone]*big.Rat
+	type zonalEndpoints map[nameAndZone][]*endpointv3.LbEndpoint
+
+	var resultLocalities []*endpointv3.LocalityLbEndpoints
+
+	if len(dstSettings) == 0 {
+		return resultLocalities, nil
+	}
+
+	maxPrioritySetting := slices.MaxFunc(dstSettings, func(lhs, rhs *ir.DestinationSetting) int {
+		return cmp.Compare(ptr.Deref(lhs.Priority, 0), ptr.Deref(rhs.Priority, 0))
+	})
+	numPriorities := ptr.Deref(maxPrioritySetting.Priority, 0) + 1
+
+	zonesWeightRatiosByPriority := make([]zonesWeightRatios, numPriorities)
+	zonalEndpointsByPriority := make([]zonalEndpoints, numPriorities)
+
+	XDSMetadataByDsName := make(map[string]*corev3.Metadata)
+
+	for i := range int(numPriorities) {
+		zonesWeightRatiosByPriority[i] = make(zonesWeightRatios)
+		zonalEndpointsByPriority[i] = make(zonalEndpoints)
+	}
+
+	for i, ds := range dstSettings {
+		if len(ds.Endpoints) == 0 {
+			locality := &endpointv3.LocalityLbEndpoints{
+				Locality: &corev3.Locality{
+					Region: ds.Name,
 				},
-			},
-			HealthStatus: healthStatus,
+				Priority:            ptr.Deref(ds.Priority, 0),
+				LoadBalancingWeight: &wrapperspb.UInt32Value{Value: ptr.Deref(ds.Weight, 1)},
+				Metadata:            buildXdsMetadata(ds.Metadata),
+			}
+			resultLocalities = append(resultLocalities, locality)
+
+			continue
 		}
-		// Set default weight of 1 for all endpoints.
-		lbEndpoint.LoadBalancingWeight = &wrapperspb.UInt32Value{Value: 1}
-		endpoints = append(endpoints, lbEndpoint)
-	}
-	locality := &endpointv3.LocalityLbEndpoints{
-		Locality: &corev3.Locality{
-			Region: ds.Name,
-		},
-		LbEndpoints: endpoints,
-		Priority:    0,
-		Metadata:    buildXdsMetadata(ds.Metadata),
+
+		XDSMetadataByDsName[ds.Name] = buildXdsMetadata(ds.Metadata)
+
+		lbEndpointMetadata := getLbEndpointsTSMMetadata(ds, i, clusterName)
+		for _, irEp := range ds.Endpoints {
+			healthStatus := corev3.HealthStatus_UNKNOWN
+			if irEp.Draining {
+				healthStatus = corev3.HealthStatus_DRAINING
+			}
+			lbEndpoint := &endpointv3.LbEndpoint{
+				Metadata: lbEndpointMetadata,
+				HostIdentifier: &endpointv3.LbEndpoint_Endpoint{
+					Endpoint: &endpointv3.Endpoint{
+						Address: buildAddress(irEp),
+					},
+				},
+				HealthStatus:        healthStatus,
+				LoadBalancingWeight: wrapperspb.UInt32(1),
+			}
+
+			zone := ptr.Deref(irEp.Zone, "")
+			priority := ptr.Deref(ds.Priority, 0)
+
+			regionAndZone := nameAndZone{
+				DsName: ds.Name,
+				Zone:   zone,
+			}
+
+			zonalEndpointsByPriority[priority][regionAndZone] = append(zonalEndpointsByPriority[priority][regionAndZone], lbEndpoint)
+			zonalEndpointWeightRatio := big.NewRat(int64(ptr.Deref(ds.Weight, 1)), int64(len(ds.Endpoints)))
+
+			if _, ok := zonesWeightRatiosByPriority[priority][regionAndZone]; !ok {
+				zonesWeightRatiosByPriority[priority][regionAndZone] = big.NewRat(0, 1)
+			}
+			zonesWeightRatiosByPriority[priority][regionAndZone] = zonesWeightRatiosByPriority[priority][regionAndZone].Add(zonesWeightRatiosByPriority[priority][regionAndZone], zonalEndpointWeightRatio)
+		}
 	}
 
-	// Set locality weight
-	var weight uint32
-	if ds.Weight != nil {
-		weight = *ds.Weight
-	} else {
-		weight = 1
+	for priority, zoneWeightRatios := range zonesWeightRatiosByPriority {
+		if len(zoneWeightRatios) == 0 {
+			continue
+		}
+
+		zoneWeightRatiosFlat := make([]*big.Rat, len(zoneWeightRatios))
+		nameZoneToIdx := make(map[nameAndZone]int)
+
+		i := 0
+		for nameAndZone, zoneWeightRat := range zoneWeightRatios {
+			nameZoneToIdx[nameAndZone] = i
+			zoneWeightRatiosFlat[i] = zoneWeightRat
+			i++
+		}
+
+		scaledZoneWeigts, err := normalizeRatiosToUint32(zoneWeightRatiosFlat)
+		if err != nil {
+			return nil, fmt.Errorf("failed to build zonal localities with weights: %w", err)
+		}
+
+		for nameAndZone, endPts := range zonalEndpointsByPriority[priority] {
+			locality := &endpointv3.LocalityLbEndpoints{
+				Locality: &corev3.Locality{
+					Region: nameAndZone.DsName,
+					Zone:   nameAndZone.Zone,
+				},
+				LbEndpoints:         endPts,
+				Priority:            uint32(priority),
+				LoadBalancingWeight: wrapperspb.UInt32(scaledZoneWeigts[nameZoneToIdx[nameAndZone]]),
+				Metadata:            XDSMetadataByDsName[nameAndZone.DsName],
+			}
+			resultLocalities = append(resultLocalities, locality)
+		}
 	}
-	locality.LoadBalancingWeight = &wrapperspb.UInt32Value{Value: weight}
-	locality.Priority = ptr.Deref(ds.Priority, 0)
-	return locality
+
+	// Sort localities, so that the order is deterministic.
+	slices.SortFunc(resultLocalities, func(lhs, rhs *endpointv3.LocalityLbEndpoints) int {
+		return cmp.Or(
+			cmp.Compare(lhs.Priority, rhs.Priority),
+			cmp.Compare(lhs.Locality.Region, rhs.Locality.Region),
+			cmp.Compare(lhs.Locality.Zone, rhs.Locality.Zone),
+		)
+	})
+
+	return resultLocalities, nil
 }
 
 func buildTypedExtensionProtocolOptions(args *xdsClusterArgs) (map[string]*anypb.Any, []*tlsv3.Secret, error) {

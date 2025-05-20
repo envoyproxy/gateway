@@ -27,12 +27,18 @@
             address: 3.4.5.6
             portValue: 9090
       loadBalancingWeight: 1
+    loadBalancingWeight: 35
+    locality:
+      region: first-route-dest/backend/1
+      zone: us-east-1c
+  - lbEndpoints:
     - endpoint:
         address:
           socketAddress:
             address: 4.5.6.7
             portValue: 9090
       loadBalancingWeight: 1
-    loadBalancingWeight: 70
+    loadBalancingWeight: 35
     locality:
       region: first-route-dest/backend/1
+      zone: us-east-1d

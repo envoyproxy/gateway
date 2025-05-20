@@ -1,0 +1,91 @@
+- clusterName: first-route-dest
+  endpoints:
+  - lbEndpoints:
+    - endpoint:
+        address:
+          socketAddress:
+            address: 1.2.3.4
+            portValue: 8080
+      loadBalancingWeight: 1
+    loadBalancingWeight: 30
+    locality:
+      region: first-route-dest/backend/1
+      zone: zone1
+  - lbEndpoints:
+    - endpoint:
+        address:
+          socketAddress:
+            address: 2.3.4.5
+            portValue: 8080
+      loadBalancingWeight: 1
+    loadBalancingWeight: 30
+    locality:
+      region: first-route-dest/backend/1
+      zone: zone2
+  - lbEndpoints:
+    - endpoint:
+        address:
+          socketAddress:
+            address: 3.4.5.6
+            portValue: 8080
+      loadBalancingWeight: 1
+    loadBalancingWeight: 30
+    locality:
+      region: first-route-dest/backend/1
+      zone: zone3
+  - lbEndpoints:
+    - endpoint:
+        address:
+          socketAddress:
+            address: 4.5.6.7
+            portValue: 9090
+      loadBalancingWeight: 1
+    - endpoint:
+        address:
+          socketAddress:
+            address: 5.6.7.8
+            portValue: 9090
+      loadBalancingWeight: 1
+    loadBalancingWeight: 120
+    locality:
+      region: first-route-dest/backend/2
+      zone: zone1
+  - lbEndpoints:
+    - endpoint:
+        address:
+          socketAddress:
+            address: 6.7.8.9
+            portValue: 9090
+      loadBalancingWeight: 1
+    loadBalancingWeight: 60
+    locality:
+      region: first-route-dest/backend/2
+      zone: zone3
+  - lbEndpoints:
+    - endpoint:
+        address:
+          socketAddress:
+            address: 7.8.9.10
+            portValue: 9090
+      loadBalancingWeight: 1
+    loadBalancingWeight: 10
+    locality:
+      region: first-route-dest/backend/3
+      zone: zone2
+  - lbEndpoints:
+    - endpoint:
+        address:
+          socketAddress:
+            address: 8.9.10.11
+            portValue: 9090
+      loadBalancingWeight: 1
+    - endpoint:
+        address:
+          socketAddress:
+            address: 9.10.11.12
+            portValue: 9090
+      loadBalancingWeight: 1
+    loadBalancingWeight: 20
+    locality:
+      region: first-route-dest/backend/3
+      zone: zone3
