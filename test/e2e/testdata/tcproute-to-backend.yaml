@@ -6,13 +6,13 @@ metadata:
 spec:
   gatewayClassName: "{GATEWAY_CLASS_NAME}"
   listeners:
-    - name: foo
+    - name: ip
       protocol: TCP
       port: 8080
       allowedRoutes:
         kinds:
           - kind: TCPRoute
-    - name: bar
+    - name: fqdn
       protocol: TCP
       port: 8090
       allowedRoutes:
@@ -27,7 +27,7 @@ metadata:
 spec:
   parentRefs:
     - name: tcp-backend-gateway
-      sectionName: foo
+      sectionName: ip
   rules:
     - backendRefs:
         - group: gateway.envoyproxy.io
@@ -43,7 +43,7 @@ metadata:
 spec:
   parentRefs:
     - name: tcp-backend-gateway
-      sectionName: bar
+      sectionName: fqdn
   rules:
     - backendRefs:
         - group: gateway.envoyproxy.io
