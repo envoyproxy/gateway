@@ -2104,7 +2104,7 @@ type GlobalRateLimit struct {
 type GlobalResources struct {
 	// EnvoyClientCertificate holds the client certificate secret for envoy to use when establishing a TLS connection to
 	// control plane components. For example, the rate limit service, WASM HTTP server, etc.
-	EnvoyClientCertificate *TLSCertificate `json:"envoyClientCertificate" yaml:"envoyClientCertificate"`
+	EnvoyClientCertificate *TLSCertificate `json:"envoyClientCertificate,omitempty" yaml:"envoyClientCertificate,omitempty"`
 	// HMACSecret holds the HMAC Secret used by the OIDC.
 	// TODO: zhaohuabing move HMACSecret here
 	// HMACSecret PrivateBytes
