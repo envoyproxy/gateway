@@ -24702,27 +24702,22 @@ spec:
                               minLength: 1
                               type: string
                             type:
-                              allOf:
-                              - enum:
-                                - Exact
-                                - Prefix
-                                - Suffix
-                                - RegularExpression
-                              - enum:
-                                - Exact
-                                - Prefix
-                                - Suffix
-                                - RegularExpression
-                              description: |-
-                                The type of match to perform on the header.
-                                Valid MatchType values are "Exact", "Prefix", "Suffix", "RegularExpression".
+                              default: Exact
+                              description: Type specifies how to match against a string.
+                              enum:
+                              - Exact
+                              - Prefix
+                              - Suffix
+                              - RegularExpression
                               type: string
                             value:
-                              description: The value to match against the header.
+                              description: Value specifies the string value that the
+                                match must have.
+                              maxLength: 1024
+                              minLength: 1
                               type: string
                           required:
                           - name
-                          - type
                           - value
                           type: object
                         type: array
