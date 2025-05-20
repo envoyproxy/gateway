@@ -172,12 +172,7 @@ type OIDCDenyRedirectHeader struct {
 	// Specifies the name of the header in the request.
 	// +kubebuilder:validation:MinLength=1
 	Name string `json:"name"`
-	// The type of match to perform on the header.
-	// Valid MatchType values are "Exact", "Prefix", "Suffix", "RegularExpression".
-	// +kubebuilder:validation:Enum=Exact;Prefix;Suffix;RegularExpression
-	Type *StringMatchType `json:"type"`
-	// The value to match against the header.
-	Value string `json:"value"`
+	StringMatch
 }
 
 // OIDCCookieNames defines the names of cookies to use in the Envoy OIDC filter.

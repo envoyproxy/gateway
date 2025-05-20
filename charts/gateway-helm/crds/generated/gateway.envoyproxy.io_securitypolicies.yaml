@@ -3630,29 +3630,8 @@ spec:
                                 request.
                               minLength: 1
                               type: string
-                            type:
-                              allOf:
-                              - enum:
-                                - Exact
-                                - Prefix
-                                - Suffix
-                                - RegularExpression
-                              - enum:
-                                - Exact
-                                - Prefix
-                                - Suffix
-                                - RegularExpression
-                              description: |-
-                                The type of match to perform on the header.
-                                Valid MatchType values are "Exact", "Prefix", "Suffix", "RegularExpression".
-                              type: string
-                            value:
-                              description: The value to match against the header.
-                              type: string
                           required:
                           - name
-                          - type
-                          - value
                           type: object
                         type: array
                     required:
