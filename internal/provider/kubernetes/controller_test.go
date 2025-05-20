@@ -283,6 +283,59 @@ func TestProcessGatewayClassParamsRef(t *testing.T) {
 			expected:             false,
 			expectedError:        "it is not supported to run Merged Gateways and Gateway Namespace Mode together",
 		},
+		{
+			name: "valid merged gateways enabled configuration",
+			gc: &gwapiv1.GatewayClass{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "test-merge-gw",
+				},
+				Spec: gwapiv1.GatewayClassSpec{
+					ControllerName: gcCtrlName,
+					ParametersRef: &gwapiv1.ParametersReference{
+						Group:     gwapiv1.Group(egv1a1.GroupVersion.Group),
+						Kind:      gwapiv1.Kind(egv1a1.KindEnvoyProxy),
+						Name:      "test-merge-gw",
+						Namespace: gatewayapi.NamespacePtr(config.DefaultNamespace),
+					},
+				},
+			},
+			ep: &egv1a1.EnvoyProxy{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: config.DefaultNamespace,
+					Name:      "test-merge-gw",
+				},
+				Spec: egv1a1.EnvoyProxySpec{
+					MergeGateways: ptr.To(true),
+				},
+			},
+			gatewayNamespaceMode: false,
+			expected:             true,
+		},
+		{
+			name: "valid gateway namespace mode enabled configuration",
+			gc: &gwapiv1.GatewayClass{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "test",
+				},
+				Spec: gwapiv1.GatewayClassSpec{
+					ControllerName: gcCtrlName,
+					ParametersRef: &gwapiv1.ParametersReference{
+						Group:     gwapiv1.Group(egv1a1.GroupVersion.Group),
+						Kind:      gwapiv1.Kind(egv1a1.KindEnvoyProxy),
+						Name:      "test",
+						Namespace: gatewayapi.NamespacePtr(config.DefaultNamespace),
+					},
+				},
+			},
+			ep: &egv1a1.EnvoyProxy{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: config.DefaultNamespace,
+					Name:      "test",
+				},
+			},
+			gatewayNamespaceMode: true,
+			expected:             true,
+		},
 	}
 
 	for i := range testCases {
