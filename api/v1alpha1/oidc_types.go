@@ -162,6 +162,12 @@ type OIDCProvider struct {
 	//
 	// +optional
 	TokenEndpoint *string `json:"tokenEndpoint,omitempty"`
+
+	// The OIDC Provider's [end session endpoint](https://openid.net/specs/openid-connect-core-1_0.html#RPLogout).
+	// If not provided, EG will try to discover it from the provider's [Well-Known Configuration Endpoint](https://openid.net/specs/openid-connect-discovery-1_0.html#ProviderConfigurationResponse).
+	//
+	// +optional
+	EndSessionEndpoint *string `json:"endSessionEndpoint,omitempty"`
 }
 
 // OIDCDenyRedirect defines headers to match against the request to deny redirect to the OIDC Provider.

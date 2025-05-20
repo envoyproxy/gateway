@@ -1088,6 +1088,7 @@ func (t *Translator) buildOIDCProvider(policy *egv1a1.SecurityPolicy, resources 
 		provider              = policy.Spec.OIDC.Provider
 		tokenEndpoint         string
 		authorizationEndpoint string
+		endSessionEndpoint    *string
 		protocol              ir.AppProtocol
 		rd                    *ir.RouteDestination
 		traffic               *ir.TrafficFeatures
@@ -1131,13 +1132,18 @@ func (t *Translator) buildOIDCProvider(policy *egv1a1.SecurityPolicy, resources 
 	// EG assumes that the issuer url uses the same protocol and CA as the token endpoint.
 	// If we need to support different protocols or CAs, we need to add more fields to the OIDCProvider CRD.
 	if provider.TokenEndpoint == nil || provider.AuthorizationEndpoint == nil {
-		tokenEndpoint, authorizationEndpoint, err = fetchEndpointsFromIssuer(provider.Issuer, providerTLS)
+		discoveredConfig, err := fetchEndpointsFromIssuer(provider.Issuer, providerTLS)
 		if err != nil {
 			return nil, fmt.Errorf("error fetching endpoints from issuer: %w", err)
 		}
+		tokenEndpoint = discoveredConfig.TokenEndpoint
+		authorizationEndpoint = discoveredConfig.AuthorizationEndpoint
+		// endSessionEndpoint is optional, and we prioritize using the one provided in the well-known configuration.
+		endSessionEndpoint = discoveredConfig.EndSessionEndpoint
 	} else {
 		tokenEndpoint = *provider.TokenEndpoint
 		authorizationEndpoint = *provider.AuthorizationEndpoint
+		endSessionEndpoint = provider.EndSessionEndpoint
 	}
 
 	if err = validateTokenEndpoint(tokenEndpoint); err != nil {
@@ -1153,6 +1159,7 @@ func (t *Translator) buildOIDCProvider(policy *egv1a1.SecurityPolicy, resources 
 		Traffic:               traffic,
 		AuthorizationEndpoint: authorizationEndpoint,
 		TokenEndpoint:         tokenEndpoint,
+		EndSessionEndpoint:    endSessionEndpoint,
 	}, nil
 }
 
@@ -1196,11 +1203,12 @@ func appendOpenidScopeIfNotExist(scopes []string) []string {
 }
 
 type OpenIDConfig struct {
-	TokenEndpoint         string `json:"token_endpoint"`
-	AuthorizationEndpoint string `json:"authorization_endpoint"`
+	TokenEndpoint         string  `json:"token_endpoint"`
+	AuthorizationEndpoint string  `json:"authorization_endpoint"`
+	EndSessionEndpoint    *string `json:"end_session_endpoint,omitempty"`
 }
 
-func fetchEndpointsFromIssuer(issuerURL string, providerTLS *ir.TLSUpstreamConfig) (string, string, error) {
+func fetchEndpointsFromIssuer(issuerURL string, providerTLS *ir.TLSUpstreamConfig) (*OpenIDConfig, error) {
 	var (
 		tlsConfig *tls.Config
 		err       error
@@ -1208,7 +1216,7 @@ func fetchEndpointsFromIssuer(issuerURL string, providerTLS *ir.TLSUpstreamConfi
 
 	if providerTLS != nil {
 		if tlsConfig, err = providerTLS.ToTLSConfig(); err != nil {
-			return "", "", err
+			return nil, err
 		}
 	}
 
@@ -1232,10 +1240,10 @@ func fetchEndpointsFromIssuer(issuerURL string, providerTLS *ir.TLSUpstreamConfi
 		}
 		return nil
 	}, backoff.NewExponentialBackOff(backoff.WithMaxElapsedTime(5*time.Second))); err != nil {
-		return "", "", err
+		return nil, err
 	}
 
-	return config.TokenEndpoint, config.AuthorizationEndpoint, nil
+	return &config, nil
 }
 
 // validateTokenEndpoint validates the token endpoint URL
