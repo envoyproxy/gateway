@@ -261,7 +261,7 @@ func TestBackend(t *testing.T) {
 			desc: "dynamic resolver ok",
 			mutate: func(backend *egv1a1.Backend) {
 				backend.Spec = egv1a1.BackendSpec{
-					Type: ptr.To(egv1a1.BackendTypeDynamicResolver),
+					Type:         ptr.To(egv1a1.BackendTypeDynamicResolver),
 					AppProtocols: []egv1a1.AppProtocolType{egv1a1.AppProtocolTypeH2C},
 				}
 			},
