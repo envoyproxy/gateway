@@ -20,16 +20,16 @@ import (
 )
 
 // CreateOrUpdateProxyInfra creates the managed kube infra, if it doesn't exist.
-func (i *Infra) CreateOrUpdateProxyInfra(ctx context.Context, infra *ir.Infra) error {
-	if infra == nil {
+func (i *Infra) CreateOrUpdateProxyInfra(ctx context.Context, irInfra *ir.Infra) error {
+	if irInfra == nil {
 		return errors.New("infra ir is nil")
 	}
 
-	if infra.Proxy == nil {
+	if irInfra.Proxy == nil {
 		return errors.New("infra proxy ir is nil")
 	}
 
-	r, err := proxy.NewResourceRender(ctx, i, infra)
+	r, err := proxy.NewResourceRender(ctx, i, irInfra)
 	if err != nil {
 		return fmt.Errorf("failed to initialize proxy resource render: %w", err)
 	}
@@ -37,12 +37,12 @@ func (i *Infra) CreateOrUpdateProxyInfra(ctx context.Context, infra *ir.Infra) e
 }
 
 // DeleteProxyInfra removes the managed kube infra, if it doesn't exist.
-func (i *Infra) DeleteProxyInfra(ctx context.Context, infra *ir.Infra) error {
-	if infra == nil {
+func (i *Infra) DeleteProxyInfra(ctx context.Context, irInfra *ir.Infra) error {
+	if irInfra == nil {
 		return errors.New("infra ir is nil")
 	}
 
-	r, err := proxy.NewResourceRender(ctx, i, infra)
+	r, err := proxy.NewResourceRender(ctx, i, irInfra)
 	if err != nil {
 		return fmt.Errorf("failed to create proxy resource render: %w", err)
 	}
@@ -61,13 +61,13 @@ func (i *Infra) GetEnvoyGateway() *egv1a1.EnvoyGateway {
 	return i.EnvoyGateway
 }
 
-func (i *Infra) GetOwnerReferenceUID(ctx context.Context, infra *ir.Infra) (map[string]types.UID, error) {
+func (i *Infra) GetOwnerReferenceUID(ctx context.Context, irInfra *ir.Infra) (map[string]types.UID, error) {
 	ownerReferenceUID := make(map[string]types.UID)
 
 	if i.EnvoyGateway.GatewayNamespaceMode() {
 		key := types.NamespacedName{
-			Namespace: i.GetResourceNamespace(infra),
-			Name:      utils.GetKubernetesResourceName(infra.Proxy.Name),
+			Namespace: i.GetResourceNamespace(irInfra),
+			Name:      utils.GetKubernetesResourceName(irInfra.Proxy.Name),
 		}
 		gatewayUID, err := i.Client.GetUID(ctx, key, &gwapiv1.Gateway{})
 		if err != nil {
@@ -80,9 +80,9 @@ func (i *Infra) GetOwnerReferenceUID(ctx context.Context, infra *ir.Infra) (map[
 	return ownerReferenceUID, nil
 }
 
-func (i *Infra) GetResourceNamespace(infra *ir.Infra) string {
+func (i *Infra) GetResourceNamespace(irInfra *ir.Infra) string {
 	if i.EnvoyGateway.GatewayNamespaceMode() {
-		return infra.Proxy.Namespace
+		return irInfra.Proxy.Namespace
 	}
 	return i.ControllerNamespace
 }
