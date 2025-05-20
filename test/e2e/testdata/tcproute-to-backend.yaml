@@ -6,18 +6,18 @@ metadata:
 spec:
   gatewayClassName: "{GATEWAY_CLASS_NAME}"
   listeners:
-  - name: foo
-    protocol: TCP
-    port: 8080
-    allowedRoutes:
-      kinds:
-      - kind: TCPRoute
-  - name: bar
-    protocol: TCP
-    port: 8090
-    allowedRoutes:
-      kinds:
-      - kind: TCPRoute
+    - name: foo
+      protocol: TCP
+      port: 8080
+      allowedRoutes:
+        kinds:
+          - kind: TCPRoute
+    - name: bar
+      protocol: TCP
+      port: 8090
+      allowedRoutes:
+        kinds:
+          - kind: TCPRoute
 ---
 apiVersion: gateway.networking.k8s.io/v1alpha2
 kind: TCPRoute
@@ -26,14 +26,14 @@ metadata:
   namespace: gateway-conformance-infra
 spec:
   parentRefs:
-  - name: tcp-backend-gateway
-    sectionName: foo
+    - name: tcp-backend-gateway
+      sectionName: foo
   rules:
-  - backendRefs:
-    - group: gateway.envoyproxy.io
-      kind: Backend
-      name: backend-ip
-      port: 8080
+    - backendRefs:
+        - group: gateway.envoyproxy.io
+          kind: Backend
+          name: backend-ip
+          port: 8080
 ---
 apiVersion: gateway.networking.k8s.io/v1alpha2
 kind: TCPRoute
