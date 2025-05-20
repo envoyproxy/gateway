@@ -171,8 +171,8 @@ type OIDCDenyRedirect struct {
 type OIDCDenyRedirectHeader struct {
 	// Specifies the name of the header in the request.
 	// +kubebuilder:validation:MinLength=1
-	Name string `json:"name"`
-	StringMatch
+	Name        string `json:"name"`
+	StringMatch `json:",inline"`
 }
 
 // OIDCCookieNames defines the names of cookies to use in the Envoy OIDC filter.
