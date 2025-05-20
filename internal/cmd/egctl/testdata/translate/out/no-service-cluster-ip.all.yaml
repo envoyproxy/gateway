@@ -201,17 +201,17 @@ xds:
                     address: 1.2.3.4
                     portValue: 8080
               loadBalancingWeight: 1
-              metadata:
-                filterMetadata:
-                  envoy-gateway:
-                    resources:
-                    - kind: Service
-                      name: backend
-                      namespace: envoy-gateway-system
-                      sectionName: "8080"
             loadBalancingWeight: 1
             locality:
               region: httproute/envoy-gateway-system/routes/rule/0/backend/0
+            metadata:
+              filterMetadata:
+                envoy-gateway:
+                  resources:
+                  - kind: Service
+                    name: backend
+                    namespace: envoy-gateway-system
+                    sectionName: "8080"
     - '@type': type.googleapis.com/envoy.admin.v3.ClustersConfigDump
       dynamicActiveClusters:
       - cluster:

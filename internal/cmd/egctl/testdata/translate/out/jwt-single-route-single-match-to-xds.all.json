@@ -352,26 +352,26 @@
                             }
                           }
                         },
-                        "loadBalancingWeight": 1,
-                        "metadata": {
-                          "filterMetadata": {
-                            "envoy-gateway": {
-                              "resources": [
-                                {
-                                  "kind": "Service",
-                                  "name": "backend",
-                                  "namespace": "envoy-gateway-system",
-                                  "sectionName": "3000"
-                                }
-                              ]
-                            }
-                          }
-                        }
+                        "loadBalancingWeight": 1
                       }
                     ],
                     "loadBalancingWeight": 1,
                     "locality": {
                       "region": "httproute/envoy-gateway-system/backend/rule/0/backend/0"
+                    },
+                    "metadata": {
+                      "filterMetadata": {
+                        "envoy-gateway": {
+                          "resources": [
+                            {
+                              "kind": "Service",
+                              "name": "backend",
+                              "namespace": "envoy-gateway-system",
+                              "sectionName": "3000"
+                            }
+                          ]
+                        }
+                      }
                     }
                   }
                 ]

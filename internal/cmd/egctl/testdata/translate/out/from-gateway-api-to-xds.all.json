@@ -352,26 +352,26 @@
                             }
                           }
                         },
-                        "loadBalancingWeight": 1,
-                        "metadata": {
-                          "filterMetadata": {
-                            "envoy-gateway": {
-                              "resources": [
-                                {
-                                  "kind": "Service",
-                                  "name": "backend",
-                                  "namespace": "default",
-                                  "sectionName": "3000"
-                                }
-                              ]
-                            }
-                          }
-                        }
+                        "loadBalancingWeight": 1
                       }
                     ],
                     "loadBalancingWeight": 1,
                     "locality": {
                       "region": "httproute/default/backend/rule/0/backend/0"
+                    },
+                    "metadata": {
+                      "filterMetadata": {
+                        "envoy-gateway": {
+                          "resources": [
+                            {
+                              "kind": "Service",
+                              "name": "backend",
+                              "namespace": "default",
+                              "sectionName": "3000"
+                            }
+                          ]
+                        }
+                      }
                     }
                   }
                 ]
@@ -393,26 +393,26 @@
                             }
                           }
                         },
-                        "loadBalancingWeight": 1,
-                        "metadata": {
-                          "filterMetadata": {
-                            "envoy-gateway": {
-                              "resources": [
-                                {
-                                  "kind": "Service",
-                                  "name": "backend",
-                                  "namespace": "default",
-                                  "sectionName": "9000"
-                                }
-                              ]
-                            }
-                          }
-                        }
+                        "loadBalancingWeight": 1
                       }
                     ],
                     "loadBalancingWeight": 1,
                     "locality": {
                       "region": "grpcroute/default/backend/rule/0/backend/0"
+                    },
+                    "metadata": {
+                      "filterMetadata": {
+                        "envoy-gateway": {
+                          "resources": [
+                            {
+                              "kind": "Service",
+                              "name": "backend",
+                              "namespace": "default",
+                              "sectionName": "9000"
+                            }
+                          ]
+                        }
+                      }
                     }
                   }
                 ]
@@ -434,26 +434,26 @@
                             }
                           }
                         },
-                        "loadBalancingWeight": 1,
-                        "metadata": {
-                          "filterMetadata": {
-                            "envoy-gateway": {
-                              "resources": [
-                                {
-                                  "kind": "Service",
-                                  "name": "backend",
-                                  "namespace": "default",
-                                  "sectionName": "3000"
-                                }
-                              ]
-                            }
-                          }
-                        }
+                        "loadBalancingWeight": 1
                       }
                     ],
                     "loadBalancingWeight": 1,
                     "locality": {
                       "region": "tcproute/default/backend/rule/-1/backend/0"
+                    },
+                    "metadata": {
+                      "filterMetadata": {
+                        "envoy-gateway": {
+                          "resources": [
+                            {
+                              "kind": "Service",
+                              "name": "backend",
+                              "namespace": "default",
+                              "sectionName": "3000"
+                            }
+                          ]
+                        }
+                      }
                     }
                   }
                 ]
@@ -475,26 +475,26 @@
                             }
                           }
                         },
-                        "loadBalancingWeight": 1,
-                        "metadata": {
-                          "filterMetadata": {
-                            "envoy-gateway": {
-                              "resources": [
-                                {
-                                  "kind": "Service",
-                                  "name": "backend",
-                                  "namespace": "default",
-                                  "sectionName": "3000"
-                                }
-                              ]
-                            }
-                          }
-                        }
+                        "loadBalancingWeight": 1
                       }
                     ],
                     "loadBalancingWeight": 1,
                     "locality": {
                       "region": "tlsroute/default/backend/rule/-1/backend/0"
+                    },
+                    "metadata": {
+                      "filterMetadata": {
+                        "envoy-gateway": {
+                          "resources": [
+                            {
+                              "kind": "Service",
+                              "name": "backend",
+                              "namespace": "default",
+                              "sectionName": "3000"
+                            }
+                          ]
+                        }
+                      }
                     }
                   }
                 ]
@@ -516,26 +516,26 @@
                             }
                           }
                         },
-                        "loadBalancingWeight": 1,
-                        "metadata": {
-                          "filterMetadata": {
-                            "envoy-gateway": {
-                              "resources": [
-                                {
-                                  "kind": "Service",
-                                  "name": "backend",
-                                  "namespace": "default",
-                                  "sectionName": "3000"
-                                }
-                              ]
-                            }
-                          }
-                        }
+                        "loadBalancingWeight": 1
                       }
                     ],
                     "loadBalancingWeight": 1,
                     "locality": {
                       "region": "udproute/default/backend/rule/-1/backend/0"
+                    },
+                    "metadata": {
+                      "filterMetadata": {
+                        "envoy-gateway": {
+                          "resources": [
+                            {
+                              "kind": "Service",
+                              "name": "backend",
+                              "namespace": "default",
+                              "sectionName": "3000"
+                            }
+                          ]
+                        }
+                      }
                     }
                   }
                 ]

@@ -632,7 +632,6 @@ func buildXdsClusterLoadAssignment(clusterName string, destSettings []*ir.Destin
 	for i, ds := range destSettings {
 
 		var metadata *corev3.Metadata
-		resourceMetadata := buildXdsMetadata(ds.Metadata)
 
 		if ds.TLS != nil {
 			metadata = &corev3.Metadata{
@@ -644,11 +643,6 @@ func buildXdsClusterLoadAssignment(clusterName string, destSettings []*ir.Destin
 					},
 				},
 			}
-			if resourceMetadata != nil {
-				metadata.FilterMetadata[envoyGatewayXdsMetadataNamespace] = resourceMetadata.FilterMetadata[envoyGatewayXdsMetadataNamespace]
-			}
-		} else {
-			metadata = resourceMetadata
 		}
 
 		// If zone aware routing is enabled for a backendRefs we include endpoint zone info in localities.
@@ -696,6 +690,7 @@ func buildZonalLocalities(metadata *corev3.Metadata, ds *ir.DestinationSetting) 
 			},
 			LbEndpoints: endPts,
 			Priority:    ptr.Deref(ds.Priority, 0),
+			Metadata:    buildXdsMetadata(ds.Metadata),
 		}
 		localities = append(localities, locality)
 	}
@@ -734,6 +729,7 @@ func buildWeightedLocalities(metadata *corev3.Metadata, ds *ir.DestinationSettin
 		},
 		LbEndpoints: endpoints,
 		Priority:    0,
+		Metadata:    buildXdsMetadata(ds.Metadata),
 	}
 
 	// Set locality weight

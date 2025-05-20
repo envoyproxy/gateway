@@ -9,17 +9,19 @@
       loadBalancingWeight: 1
       metadata:
         filterMetadata:
-          envoy-gateway:
-            resources:
-            - kind: Service
-              name: http-backend
-              namespace: default
-              sectionName: "8080"
           envoy.transport_socket_match:
             name: httproute/envoy-gateway/httproute-btls/rule/0/tls/0
     loadBalancingWeight: 1
     locality:
       region: httproute/envoy-gateway/httproute-btls/rule/0/backend/0
+    metadata:
+      filterMetadata:
+        envoy-gateway:
+          resources:
+          - kind: Service
+            name: http-backend
+            namespace: default
+            sectionName: "8080"
   - lbEndpoints:
     - endpoint:
         address:
@@ -29,17 +31,19 @@
       loadBalancingWeight: 1
       metadata:
         filterMetadata:
-          envoy-gateway:
-            resources:
-            - kind: Service
-              name: http-backend2
-              namespace: default
-              sectionName: "8080"
           envoy.transport_socket_match:
             name: httproute/envoy-gateway/httproute-btls/rule/0/tls/1
     loadBalancingWeight: 1
     locality:
       region: httproute/envoy-gateway/httproute-btls/rule/0/backend/1
+    metadata:
+      filterMetadata:
+        envoy-gateway:
+          resources:
+          - kind: Service
+            name: http-backend2
+            namespace: default
+            sectionName: "8080"
 - clusterName: httproute/envoy-gateway/httproute-btls-2/rule/0
   endpoints:
   - lbEndpoints:
