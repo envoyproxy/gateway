@@ -42013,33 +42013,29 @@ spec:
                                 request.
                               minLength: 1
                               type: string
-                            stringMatch:
+                            type:
+                              allOf:
+                              - enum:
+                                - Exact
+                                - Prefix
+                                - Suffix
+                                - RegularExpression
+                              - enum:
+                                - Exact
+                                - Prefix
+                                - Suffix
+                                - RegularExpression
                               description: |-
-                                If specified, header match will be performed based on the string match of the header value.
-                                Specifies how the header match will be performed to route the request.
-                              properties:
-                                type:
-                                  default: Exact
-                                  description: Type specifies how to match against
-                                    a string.
-                                  enum:
-                                  - Exact
-                                  - Prefix
-                                  - Suffix
-                                  - RegularExpression
-                                  type: string
-                                value:
-                                  description: Value specifies the string value that
-                                    the match must have.
-                                  maxLength: 1024
-                                  minLength: 1
-                                  type: string
-                              required:
-                              - value
-                              type: object
+                                The type of match to perform on the header.
+                                Valid MatchType values are "Exact", "Prefix", "Suffix", "RegularExpression".
+                              type: string
+                            value:
+                              description: The value to match against the header.
+                              type: string
                           required:
                           - name
-                          - stringMatch
+                          - type
+                          - value
                           type: object
                         type: array
                     required:

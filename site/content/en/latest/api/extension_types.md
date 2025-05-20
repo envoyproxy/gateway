@@ -3190,7 +3190,8 @@ _Appears in:_
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
 | `name` | _string_ |  true  |  | Specifies the name of the header in the request. |
-| `stringMatch` | _[StringMatch](#stringmatch)_ |  true  |  | If specified, header match will be performed based on the string match of the header value.<br />Specifies how the header match will be performed to route the request. |
+| `type` | _[StringMatchType](#stringmatchtype)_ |  true  |  | The type of match to perform on the header.<br />Valid MatchType values are "Exact", "Prefix", "Suffix", "RegularExpression". |
+| `value` | _string_ |  true  |  | The value to match against the header. |
 
 
 #### OIDCProvider
@@ -4498,7 +4499,6 @@ This is a general purpose match condition that can be used by other EG APIs
 that need to match against a string.
 
 _Appears in:_
-- [OIDCDenyRedirectHeader](#oidcdenyredirectheader)
 - [ProxyMetrics](#proxymetrics)
 
 | Field | Type | Required | Default | Description |
@@ -4515,6 +4515,7 @@ StringMatchType specifies the semantics of how a string value should be compared
 Valid MatchType values are "Exact", "Prefix", "Suffix", "RegularExpression".
 
 _Appears in:_
+- [OIDCDenyRedirectHeader](#oidcdenyredirectheader)
 - [StringMatch](#stringmatch)
 
 | Value | Description |
