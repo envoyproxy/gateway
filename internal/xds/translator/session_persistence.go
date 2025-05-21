@@ -149,7 +149,7 @@ func getLongestNonRegexPrefix(path string) string {
 }
 
 // patchRoute patches the provide Route with a filter's Route level configuration.
-func (s *sessionPersistence) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute) error {
+func (s *sessionPersistence) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute, _ *ir.HTTPListener) error {
 	if route == nil {
 		return errors.New("xds route is nil")
 	}

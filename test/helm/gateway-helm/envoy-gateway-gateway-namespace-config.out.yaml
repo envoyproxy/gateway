@@ -756,9 +756,3 @@ webhooks:
         apiGroups: [""]
         apiVersions: ["v1"]
         resources: ["pods/binding"]
-    namespaceSelector:
-      matchExpressions:
-        - key: kubernetes.io/metadata.name
-          operator: In
-          values:
-            - envoy-gateway-system

@@ -1,4 +1,19 @@
 {{- if .Values.topologyInjector.enabled }}
+
+{{ $watchedNamespaces := list }}
+{{ $gatewayNamespaceMode := false}}
+{{- if .Values.config.envoyGateway.provider.kubernetes }}
+{{- $kube := .Values.config.envoyGateway.provider.kubernetes }}
+{{- $gatewayNamespaceMode = and ($kube.deploy) (eq $kube.deploy.type "GatewayNamespace") }}
+{{- if $kube.watch }}
+{{- if $kube.watch.namespaces }}
+{{- if gt (len $kube.watch.namespaces) 0 }}
+{{- $watchedNamespaces = $kube.watch.namespaces }}
+{{- end }}
+{{- end }}
+{{- end }}
+{{- end }}
+
 apiVersion: admissionregistration.k8s.io/v1
 kind: MutatingWebhookConfiguration
 metadata:
@@ -28,10 +43,21 @@ webhooks:
         apiGroups: [""]
         apiVersions: ["v1"]
         resources: ["pods/binding"]
+    {{- if not $gatewayNamespaceMode }}
     namespaceSelector:
       matchExpressions:
         - key: kubernetes.io/metadata.name
           operator: In
           values:
             - {{ .Release.Namespace }}
+    {{- else if gt (len $watchedNamespaces) 0 }}
+    namespaceSelector:
+      matchExpressions:
+        - key: kubernetes.io/metadata.name
+          operator: In
+          values:
+          {{- range $watchedNamespaces }}
+            - {{ . | quote }}
+          {{- end }}
+    {{- end }}
 {{- end }}

@@ -127,6 +127,7 @@ func New(ctx context.Context, restCfg *rest.Config, svrCfg *ec.Server, resources
 		mgr.GetWebhookServer().Register("/inject-pod-topology", &webhook.Admission{
 			Handler: &ProxyTopologyInjector{
 				Client:  mgr.GetClient(),
+				Logger:  svrCfg.Logger.WithName("proxy-topology-injector"),
 				Decoder: admission.NewDecoder(mgr.GetScheme()),
 			},
 		})

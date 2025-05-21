@@ -10,7 +10,7 @@ spec:
     - matches:
         - path:
             type: PathPrefix
-            value: /
+            value: /complete-rollout
       backendRefs:
         - name: infra-backend-v1
           port: 8080

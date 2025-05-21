@@ -1,0 +1,70 @@
+http:
+  - name: envoy-gateway/gateway-1/http
+    address: 0.0.0.0
+    port: 10080
+    hostnames:
+      - '*'
+    path:
+      escapedSlashesAction: UnescapeAndRedirect
+      mergeSlashes: true
+    routes:
+      - name: httproute/default/httproute-1/rule/0/match/0/www_example_com
+        hostname: www.example.com
+        pathMatch:
+          distinct: false
+          name: ""
+          prefix: /
+        destination:
+          name: httproute/default/httproute-1/rule/0
+          settings:
+            - endpoints:
+                - host: 7.7.7.7
+                  port: 8080
+              name: httproute/default/httproute-1/rule/0/backend/0
+        security:
+          jwt:
+            providers:
+              - issuer: https://oauth.foo.com
+                name: example1
+                remoteJWKS:
+                  uri: https://oauth.foo.com/jwt/public-key/jwks.json
+              - issuer: https://oauth.foo.com
+                name: example2
+                extractFrom:
+                  headers:
+                    - name: MyHeaderPrefixed
+                      valuePrefix: MyPrefix
+                    - name: MyHeaderNoPrefix
+                remoteJWKS:
+                  uri: https://oauth.foo.com/jwt/public-key/jwks.json
+              - issuer: https://oauth.foo.com
+                name: example3
+                extractFrom:
+                  cookies:
+                    - Cookie1
+                    - Cookie1
+                remoteJWKS:
+                  uri: https://oauth.foo.com/jwt/public-key/jwks.json
+              - issuer: https://oauth.foo.com
+                name: example4
+                extractFrom:
+                  params:
+                    - Param1
+                    - Param1
+                remoteJWKS:
+                  uri: https://oauth.foo.com/jwt/public-key/jwks.json
+          oidc:
+            clientID: client.oauth.foo.com
+            clientSecret: Y2xpZW50MTpzZWNyZXQK
+            cookieSuffix: b0a1b740
+            hmacSecret: qrOYACHXoe7UEDI/raOjNSx+Z9ufXSc/22C3T6X/zPY=
+            logoutPath: /logout
+            name: securitypolicy/envoy-gateway/security-policy-1
+            passThroughAuthHeader: true
+            provider:
+              authorizationEndpoint: https://oauth.foo.com/oauth2/v2/auth
+              tokenEndpoint: https://oauth.foo.com/token
+            redirectPath: /oauth2/callback
+            redirectURL: https://www.example.com/oauth2/callback
+            scopes:
+              - openid

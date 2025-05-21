@@ -54,7 +54,7 @@ var OIDCTest = suite.ConformanceTest{
 			testOIDC(t, suite, "testdata/oidc-securitypolicy.yaml")
 		})
 
-		t.Run("http route without oidc authentication", func(t *testing.T) {
+		t.Run("oidc bypass", func(t *testing.T) {
 			ns := "gateway-conformance-infra"
 
 			podInitialized := corev1.PodCondition{Type: corev1.PodInitialized, Status: corev1.ConditionTrue}
@@ -64,9 +64,10 @@ var OIDCTest = suite.ConformanceTest{
 			// Apply the security policy that configures OIDC authentication
 			suite.Applier.MustApplyWithCleanup(t, suite.Client, suite.TimeoutConfig, "testdata/oidc-securitypolicy.yaml", true)
 
-			routeNN := types.NamespacedName{Name: "http-without-oidc", Namespace: ns}
+			routeWithOIDCNN := types.NamespacedName{Name: "http-with-oidc", Namespace: ns}
+			routeWithoutOIDCNN := types.NamespacedName{Name: "http-without-oidc", Namespace: ns}
 			gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
-			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
+			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeWithOIDCNN, routeWithoutOIDCNN)
 
 			ancestorRef := gwapiv1a2.ParentReference{
 				Group:     gatewayapi.GroupPtr(gwapiv1.GroupName),
@@ -76,25 +77,50 @@ var OIDCTest = suite.ConformanceTest{
 			}
 			SecurityPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "oidc-test", Namespace: ns}, suite.ControllerName, ancestorRef)
 
-			expectedResponse := gwhttp.ExpectedResponse{
-				Request: gwhttp.Request{
-					Host: "www.example.com",
-					Path: "/public",
+			testCases := []gwhttp.ExpectedResponse{
+				{
+					TestCaseName: "http route without oidc authentication",
+					Request: gwhttp.Request{
+						Host: "www.example.com",
+						Path: "/public",
+					},
+					Response: gwhttp.Response{
+						StatusCode: 200,
+					},
+					Namespace: ns,
 				},
-				Response: gwhttp.Response{
-					StatusCode: 200,
+				{
+					TestCaseName: "oidc with jwt passthrough",
+					Request: gwhttp.Request{
+						Host: "www.example.com",
+						Path: "/myapp",
+						Headers: map[string]string{
+							"Authorization": "Bearer " + v1Token,
+						},
+					},
+					Backend: "infra-backend-v1",
+					Response: gwhttp.Response{
+						StatusCode: 200,
+					},
+					Namespace: ns,
 				},
-				Namespace: ns,
 			}
 
-			req := gwhttp.MakeRequest(t, &expectedResponse, gwAddr, "HTTP", "http")
-			cReq, cResp, err := suite.RoundTripper.CaptureRoundTrip(req)
-			if err != nil {
-				t.Errorf("failed to get expected response: %v", err)
-			}
+			for i := range testCases {
+				tc := testCases[i]
+				t.Run(tc.GetTestCaseName(i), func(t *testing.T) {
+					t.Parallel()
 
-			if err := gwhttp.CompareRequest(t, &req, cReq, cResp, expectedResponse); err != nil {
-				t.Errorf("failed to compare request and response: %v", err)
+					req := gwhttp.MakeRequest(t, &tc, gwAddr, "HTTP", "http")
+					cReq, cResp, err := suite.RoundTripper.CaptureRoundTrip(req)
+					if err != nil {
+						t.Errorf("failed to get expected response: %v", err)
+					}
+
+					if err := gwhttp.CompareRequest(t, &req, cReq, cResp, tc); err != nil {
+						t.Errorf("failed to compare request and response: %v", err)
+					}
+				})
 			}
 		})
 	},

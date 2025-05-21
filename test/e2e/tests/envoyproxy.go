@@ -184,7 +184,7 @@ func updateGateway(t *testing.T, suite *suite.ConformanceTestSuite, gwNN types.N
 			err = suite.Client.Update(context.Background(), gw)
 			if err != nil {
 				tlog.Logf(t, "Failed to update Gateway %s: %v", gwNN, err)
-				return false, err
+				return false, nil
 			}
 			return true, nil
 		})

@@ -28,6 +28,12 @@ Get the name of the Envoy service created the by the example Gateway:
 export ENVOY_SERVICE=$(kubectl get svc -n envoy-gateway-system --selector=gateway.envoyproxy.io/owning-gateway-namespace=default,gateway.envoyproxy.io/owning-gateway-name=eg -o jsonpath='{.items[0].metadata.name}')
 ```
 
+Get the deployment of the Envoy service created the by the example Gateway:
+
+```shell
+export ENVOY_DEPLOYMENT=$(kubectl get deploy -n envoy-gateway-system --selector=gateway.envoyproxy.io/owning-gateway-namespace=default,gateway.envoyproxy.io/owning-gateway-name=eg -o jsonpath='{.items[0].metadata.name}')
+```
+
 Port forward to the Envoy service:
 
 ```shell

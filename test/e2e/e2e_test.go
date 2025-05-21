@@ -66,19 +66,6 @@ func TestE2E(t *testing.T) {
 		skipTests = append(skipTests,
 			tests.HTTPWasmTest.ShortName,
 			tests.OCIWasmTest.ShortName,
-			tests.ZoneAwareRoutingTest.ShortName,
-
-			// Skip RateLimit tests because they are not supported in GatewayNamespaceMode
-			tests.RateLimitCIDRMatchTest.ShortName,
-			tests.RateLimitHeaderMatchTest.ShortName,
-			tests.GlobalRateLimitHeaderInvertMatchTest.ShortName,
-			tests.RateLimitHeadersDisabled.ShortName,
-			tests.RateLimitBasedJwtClaimsTest.ShortName,
-			tests.RateLimitMultipleListenersTest.ShortName,
-			tests.RateLimitHeadersAndCIDRMatchTest.ShortName,
-			tests.UsageRateLimitTest.ShortName,
-			tests.RateLimitGlobalSharedCidrMatchTest.ShortName,
-			tests.RateLimitGlobalSharedGatewayHeaderMatchTest.ShortName,
 		)
 	}
 

@@ -207,9 +207,25 @@ func getBackendTLSPolicy(
 }
 
 func getBackendTLSBundle(backendTLSPolicy *gwapiv1a3.BackendTLSPolicy, resources *resource.Resources) (*ir.TLSUpstreamConfig, error) {
+	// Translate SubjectAltNames from gwapiv1a3 to ir
+	var subjectAltNames []ir.SubjectAltName
+	for _, san := range backendTLSPolicy.Spec.Validation.SubjectAltNames {
+		var subjectAltName ir.SubjectAltName
+		switch san.Type {
+		case "DNS":
+			subjectAltName.Hostname = ptr.To(string(san.Hostname))
+		case "URI":
+			subjectAltName.URI = ptr.To(string(san.URI))
+		default:
+			continue // skip unknown types
+		}
+		subjectAltNames = append(subjectAltNames, subjectAltName)
+	}
+
 	tlsBundle := &ir.TLSUpstreamConfig{
 		SNI:                 ptr.To(string(backendTLSPolicy.Spec.Validation.Hostname)),
 		UseSystemTrustStore: ptr.Deref(backendTLSPolicy.Spec.Validation.WellKnownCACertificates, "") == gwapiv1a3.WellKnownCACertificatesSystem,
+		SubjectAltNames:     subjectAltNames,
 	}
 	if tlsBundle.UseSystemTrustStore {
 		tlsBundle.CACertificate = &ir.TLSCACertificate{

@@ -406,16 +406,25 @@ Curl the admin interface port to fetch the configured value for `xff_num_trusted
 
 ```shell
 curl -s 'http://localhost:19000/config_dump?resource=dynamic_listeners' \
-  | jq -r '.configs[0].active_state.listener.default_filter_chain.filters[0].typed_config 
-      | with_entries(select(.key | match("xff|remote_address|original_ip")))'
+  | jq -r '.configs[1].active_state.listener.default_filter_chain.filters[0].typed_config
+    | {use_remote_address, original_ip_detection_extensions}'
 ```
 
 You should expect to see the following:
 
 ```json
 {
-  "use_remote_address": true,
-  "xff_num_trusted_hops": 2
+  "use_remote_address": false,
+  "original_ip_detection_extensions": [
+    {
+      "name": "envoy.extensions.http.original_ip_detection.xff",
+      "typed_config": {
+        "@type": "type.googleapis.com/envoy.extensions.http.original_ip_detection.xff.v3.XffConfig",
+        "xff_num_trusted_hops": 1,
+        "skip_xff_append": false
+      }
+    }
+  ]
 }
 ```
 

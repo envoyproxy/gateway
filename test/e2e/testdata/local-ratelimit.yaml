@@ -1,4 +1,17 @@
 apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: ClientTrafficPolicy
+metadata:
+  name: disable-ratelimit-header
+  namespace: gateway-conformance-infra
+spec:
+  headers:
+    disableRateLimitHeaders: true
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: all-namespaces  # use different gatway
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: BackendTrafficPolicy
 metadata:
   name: ratelimit-specific-user
@@ -49,6 +62,7 @@ metadata:
 spec:
   parentRefs:
     - name: same-namespace
+    - name: all-namespaces
   rules:
     - backendRefs:
         - name: infra-backend-v1
@@ -66,6 +80,7 @@ metadata:
 spec:
   parentRefs:
     - name: same-namespace
+    - name: all-namespaces
   rules:
     - backendRefs:
         - name: infra-backend-v1
@@ -83,6 +98,7 @@ metadata:
 spec:
   parentRefs:
     - name: same-namespace
+    - name: all-namespaces
   rules:
     - backendRefs:
         - name: infra-backend-v1
@@ -125,6 +141,7 @@ metadata:
 spec:
   parentRefs:
     - name: same-namespace
+    - name: all-namespaces
   rules:
     - backendRefs:
         - name: infra-backend-v1

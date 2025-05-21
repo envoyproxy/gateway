@@ -18,27 +18,20 @@ import (
 )
 
 func init() {
-	ConformanceTests = append(ConformanceTests, TCPRouteBackendFQDNTest)
-	ConformanceTests = append(ConformanceTests, TCPRouteBackendIPTest)
+	ConformanceTests = append(ConformanceTests, TCPRouteBackend)
 }
 
-var TCPRouteBackendFQDNTest = suite.ConformanceTest{
-	ShortName:   "TCPRouteBackendFQDNTest",
-	Description: "TCPRoutes with a backend ref to a FQDN Backend",
-	Manifests:   []string{"testdata/tcproute-to-backend-fqdn.yaml"},
-	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
-		t.Run("tcp-route-1", func(t *testing.T) {
-			testTCPRouteWithBackend(t, suite, "backend-fqdn")
-		})
+var TCPRouteBackend = suite.ConformanceTest{
+	ShortName:   "TCPRouteBackend",
+	Description: "TCPRoute with a backend ref",
+	Manifests: []string{
+		"testdata/tcproute-to-backend.yaml",
 	},
-}
-
-var TCPRouteBackendIPTest = suite.ConformanceTest{
-	ShortName:   "TCPRouteBackendIPTest",
-	Description: "TCPRoutes with a backend ref to an IP Backend",
-	Manifests:   []string{"testdata/tcproute-to-backend-ip.yaml"},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
-		t.Run("tcp-route-1", func(t *testing.T) {
+		t.Run("FQDN", func(t *testing.T) {
+			testTCPRouteWithBackend(t, suite, "tcp-backend-gateway", "tcp-backend-fqdn", "backend-fqdn")
+		})
+		t.Run("IP", func(t *testing.T) {
 			svcNN := types.NamespacedName{
 				Name:      "infra-backend-v1",
 				Namespace: "gateway-conformance-infra",
@@ -59,15 +52,15 @@ var TCPRouteBackendIPTest = suite.ConformanceTest{
 					t.Fatalf("failed to delete backend %s: %v", backendIPName, err)
 				}
 			})
-			testTCPRouteWithBackend(t, suite, backendIPName)
+			testTCPRouteWithBackend(t, suite, "tcp-backend-gateway", "tcp-backend-ip", backendIPName)
 		})
 	},
 }
 
-func testTCPRouteWithBackend(t *testing.T, suite *suite.ConformanceTestSuite, backendName string) {
+func testTCPRouteWithBackend(t *testing.T, suite *suite.ConformanceTestSuite, gwName, routeName, backendName string) {
 	ns := "gateway-conformance-infra"
-	routeNN := types.NamespacedName{Name: "tcp-app-1", Namespace: ns}
-	gwNN := types.NamespacedName{Name: "my-tcp-gateway", Namespace: ns}
+	routeNN := types.NamespacedName{Name: routeName, Namespace: ns}
+	gwNN := types.NamespacedName{Name: gwName, Namespace: ns}
 	gwAddr := GatewayAndTCPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, NewGatewayRef(gwNN), routeNN)
 	BackendMustBeAccepted(t, suite.Client, types.NamespacedName{Name: backendName, Namespace: ns})
 	OkResp := http.ExpectedResponse{
@@ -80,6 +73,6 @@ func testTCPRouteWithBackend(t *testing.T, suite *suite.ConformanceTestSuite, ba
 		Namespace: ns,
 	}
 
-	// Send a request to an valid path and expect a successful response
+	// Send a request to a valid path and expect a successful response
 	http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, OkResp)
 }

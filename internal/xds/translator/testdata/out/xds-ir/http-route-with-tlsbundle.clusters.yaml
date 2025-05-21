@@ -29,6 +29,12 @@
               - matcher:
                   exact: example.com
                 sanType: DNS
+              - matcher:
+                  exact: spiffe://cluster.local/ns/istio-demo/sa/echo-v1
+                sanType: URI
+              - matcher:
+                  exact: subdomain.secondexample.com
+                sanType: DNS
             validationContextSdsSecretConfig:
               name: policy-btls/policies-ca
               sdsConfig:

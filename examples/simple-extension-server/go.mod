@@ -5,7 +5,7 @@ go 1.24.2
 require (
 	github.com/envoyproxy/gateway v1.4.0
 	github.com/urfave/cli/v2 v2.27.6
-	google.golang.org/grpc v1.72.0
+	google.golang.org/grpc v1.72.1
 )
 
 require (

@@ -17,7 +17,6 @@ import (
 	routev3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
 	ratelimitfilterv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/ratelimit/v3"
 	hcmv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/http_connection_manager/v3"
-	tlsv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/transport_sockets/tls/v3"
 	"github.com/envoyproxy/go-control-plane/pkg/wellknown"
 	rlsconfv3 "github.com/envoyproxy/go-control-plane/ratelimit/config/ratelimit/v3"
 	"github.com/envoyproxy/ratelimit/src/config"
@@ -25,20 +24,9 @@ import (
 	"google.golang.org/protobuf/types/known/durationpb"
 	"google.golang.org/protobuf/types/known/wrapperspb"
 	goyaml "gopkg.in/yaml.v3" // nolint: depguard
-	"k8s.io/utils/ptr"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/ir"
-	"github.com/envoyproxy/gateway/internal/xds/types"
-)
-
-const (
-	// rateLimitClientTLSCertFilename is the ratelimit tls cert file.
-	rateLimitClientTLSCertFilename = "/certs/tls.crt"
-	// rateLimitClientTLSKeyFilename is the ratelimit key file.
-	rateLimitClientTLSKeyFilename = "/certs/tls.key"
-	// rateLimitClientTLSCACertFilename is the ratelimit ca cert file.
-	rateLimitClientTLSCACertFilename = "/certs/ca.crt"
 )
 
 // patchHCMWithRateLimit builds and appends the Rate Limit Filter to the HTTP connection manager
@@ -745,73 +733,6 @@ func buildRateLimitServiceDescriptors(route *ir.HTTPRoute) []*rlsconfv3.RateLimi
 	}
 
 	return pbDescriptors
-}
-
-// buildRateLimitTLSocket builds the TLS socket for the rate limit service.
-func buildRateLimitTLSocket() (*corev3.TransportSocket, error) {
-	tlsCtx := &tlsv3.UpstreamTlsContext{
-		CommonTlsContext: &tlsv3.CommonTlsContext{
-			TlsCertificates: []*tlsv3.TlsCertificate{},
-			ValidationContextType: &tlsv3.CommonTlsContext_ValidationContext{
-				ValidationContext: &tlsv3.CertificateValidationContext{
-					TrustedCa: &corev3.DataSource{
-						Specifier: &corev3.DataSource_Filename{Filename: rateLimitClientTLSCACertFilename},
-					},
-				},
-			},
-		},
-	}
-
-	tlsCert := &tlsv3.TlsCertificate{
-		CertificateChain: &corev3.DataSource{
-			Specifier: &corev3.DataSource_Filename{Filename: rateLimitClientTLSCertFilename},
-		},
-		PrivateKey: &corev3.DataSource{
-			Specifier: &corev3.DataSource_Filename{Filename: rateLimitClientTLSKeyFilename},
-		},
-	}
-	tlsCtx.CommonTlsContext.TlsCertificates = append(tlsCtx.CommonTlsContext.TlsCertificates, tlsCert)
-
-	tlsCtxAny, err := anypb.New(tlsCtx)
-	if err != nil {
-		return nil, err
-	}
-
-	return &corev3.TransportSocket{
-		Name: wellknown.TransportSocketTls,
-		ConfigType: &corev3.TransportSocket_TypedConfig{
-			TypedConfig: tlsCtxAny,
-		},
-	}, nil
-}
-
-func (t *Translator) createRateLimitServiceCluster(tCtx *types.ResourceVersionTable, irListener *ir.HTTPListener, metrics *ir.Metrics) error {
-	// Return early if rate limits don't exist.
-	if !t.isRateLimitPresent(irListener) {
-		return nil
-	}
-	clusterName := getRateLimitServiceClusterName()
-	// Create cluster if it does not exist
-	host, port := t.getRateLimitServiceGrpcHostPort()
-	ds := &ir.DestinationSetting{
-		Weight:    ptr.To[uint32](1),
-		Protocol:  ir.GRPC,
-		Endpoints: []*ir.DestinationEndpoint{ir.NewDestEndpoint(host, port, false, nil)},
-		Name:      destinationSettingName(clusterName),
-	}
-
-	tSocket, err := buildRateLimitTLSocket()
-	if err != nil {
-		return err
-	}
-
-	return addXdsCluster(tCtx, &xdsClusterArgs{
-		name:         clusterName,
-		settings:     []*ir.DestinationSetting{ds},
-		tSocket:      tSocket,
-		endpointType: EndpointTypeDNS,
-		metrics:      metrics,
-	})
 }
 
 // getDomainSharedName returns the shared domain (stripped policy name), stripRuleIndexSuffix is used to remove the rule index suffix.

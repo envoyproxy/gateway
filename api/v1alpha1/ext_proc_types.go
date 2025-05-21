@@ -9,7 +9,7 @@ import (
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 )
 
-// +kubebuilder:validation:Enum=Streamed;Buffered;BufferedPartial
+// +kubebuilder:validation:Enum=Streamed;Buffered;BufferedPartial;FullDuplexStreamed
 type ExtProcBodyProcessingMode string
 
 const (

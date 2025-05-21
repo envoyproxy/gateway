@@ -115,7 +115,7 @@ func (*basicAuth) patchResources(*types.ResourceVersionTable, []*ir.HTTPRoute) e
 
 // patchRoute patches the provided route with the basicAuth config if applicable.
 // Note: this method overwrites the HCM level filter config with the per route filter config.
-func (*basicAuth) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute) error {
+func (*basicAuth) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute, _ *ir.HTTPListener) error {
 	if route == nil {
 		return errors.New("xds route is nil")
 	}
