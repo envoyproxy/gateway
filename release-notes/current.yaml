@@ -14,6 +14,7 @@ new features: |
   Added support for local rate limit header.
 
 bug fixes: |
+  Handle integer zone annotation values
 
 # Enhancements that improve performance.
 performance improvements: |
