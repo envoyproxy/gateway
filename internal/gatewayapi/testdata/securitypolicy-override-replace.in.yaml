@@ -7,9 +7,17 @@ gateways:
   spec:
     gatewayClassName: envoy-gateway-class
     listeners:
-    - name: http
+    - name: listener-1
       protocol: HTTP
       port: 80
+      hostname: listener-1.gateway-1.envoyproxy.io
+      allowedRoutes:
+        namespaces:
+          from: All
+    - name: listener-2
+      protocol: HTTP
+      port: 80
+      hostname: listener-2.gateway-1.envoyproxy.io
       allowedRoutes:
         namespaces:
           from: All
@@ -21,11 +29,11 @@ httpRoutes:
     name: httproute-1
   spec:
     hostnames:
-    - gateway.envoyproxy.io
+    - listener-1.gateway-1.envoyproxy.io
     parentRefs:
     - namespace: envoy-gateway
       name: gateway-1
-      sectionName: http
+      sectionName: listener-1
     rules:
     - matches:
       - path:
@@ -40,11 +48,11 @@ httpRoutes:
     name: httproute-2
   spec:
     hostnames:
-    - gateway.envoyproxy.io
+    - listener-1.gateway-1.envoyproxy.io
     parentRefs:
     - namespace: envoy-gateway
       name: gateway-1
-      sectionName: http
+      sectionName: listener-1
     rules:
     - matches:
       - path:
@@ -59,15 +67,72 @@ httpRoutes:
     name: httproute-3
   spec:
     hostnames:
-    - gateway.envoyproxy.io
+    - listener-2.gateway-1.envoyproxy.io
     parentRefs:
     - namespace: envoy-gateway
       name: gateway-1
-      sectionName: http
+      sectionName: listener-2
     rules:
     - matches:
       - path:
           value: "/baz"
+      backendRefs:
+      - name: service-1
+        port: 8080
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    namespace: default
+    name: httproute-4
+  spec:
+    hostnames:
+    - listener-2.gateway-1.envoyproxy.io
+    parentRefs:
+    - namespace: envoy-gateway
+      name: gateway-1
+      sectionName: listener-2
+    rules:
+    - matches:
+      - path:
+          value: "/httproute-4"
+      backendRefs:
+      - name: service-1
+        port: 8080
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    namespace: default
+    name: httproute-5
+  spec:
+    hostnames:
+    - listener-1.gateway-1.envoyproxy.io
+    - listener-2.gateway-1.envoyproxy.io
+    parentRefs:
+    - namespace: envoy-gateway
+      name: gateway-1
+    rules:
+    - matches:
+      - path:
+          value: "/httproute-5"
+      backendRefs:
+      - name: service-1
+        port: 8080
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    namespace: default
+    name: httproute-6
+  spec:
+    hostnames:
+    - listener-1.gateway-1.envoyproxy.io
+    - listener-2.gateway-1.envoyproxy.io
+    parentRefs:
+    - namespace: envoy-gateway
+      name: gateway-1
+    rules:
+    - matches:
+      - path:
+          value: "/httproute-6"
       backendRefs:
       - name: service-1
         port: 8080
@@ -111,6 +176,20 @@ securityPolicies:
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: SecurityPolicy
   metadata:
+    namespace: envoy-gateway
+    name: policy-for-listener-2
+  spec:
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: Gateway
+      name: gateway-1
+      sectionName: listener-2
+    cors:
+      allowHeaders:
+      - "x-listener-2"
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: SecurityPolicy
+  metadata:
     namespace: default
     name: policy-for-route-1
   spec:
@@ -146,3 +225,16 @@ securityPolicies:
       allowOrigins:
       - "http://*.example.com"
       maxAge: 1000s
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: SecurityPolicy
+  metadata:
+    namespace: default
+    name: policy-for-route-5
+  spec:
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: httproute-5
+    cors:
+      allowHeaders:
+      - "x-httproute-5"
