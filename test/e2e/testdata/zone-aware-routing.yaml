@@ -6,7 +6,7 @@ metadata:
   labels:
     app: zone-aware-backend
 spec:
-  replicas: 1
+  replicas: 3
   selector:
     matchLabels:
       app: zone-aware-backend
