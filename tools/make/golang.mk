@@ -107,7 +107,7 @@ go.mod.lint: go.mod.tidy go.mod.tidy.examples ## Check if go.mod is clean
 .PHONY: go.lint.fmt
 go.lint.fmt:
 	@$(LOG_TARGET)
-	@go tool golangci-lint fmt --build-tags=$(LINT_BUILD_TAGS) --config=tools/linter/golangci-lint/.golangci.yml
+	@go tool golangci-lint fmt --config=tools/linter/golangci-lint/.golangci.yml
 
 .PHONY: go.generate
 go.generate: ## Generate code from templates
