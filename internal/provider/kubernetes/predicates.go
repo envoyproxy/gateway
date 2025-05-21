@@ -31,7 +31,10 @@ import (
 )
 
 // nolint: gosec
-const oidcHMACSecretName = "envoy-oidc-hmac"
+const (
+	oidcHMACSecretName = "envoy-oidc-hmac"
+	envoyTLSSecretName = "envoy"
+)
 
 // hasMatchingController returns true if the provided object is a GatewayClass
 // with a Spec.Controller string matching this Envoy Gateway's controller string,
@@ -158,6 +161,10 @@ func (r *gatewayAPIReconciler) validateSecretForReconcile(obj client.Object) boo
 	}
 
 	if r.isOIDCHMACSecret(&nsName) {
+		return true
+	}
+
+	if r.isEnvoyTLSSecret(&nsName) {
 		return true
 	}
 
@@ -300,6 +307,14 @@ func (r *gatewayAPIReconciler) isOIDCHMACSecret(nsName *types.NamespacedName) bo
 		Name:      oidcHMACSecretName,
 	}
 	return *nsName == oidcHMACSecret
+}
+
+func (r *gatewayAPIReconciler) isEnvoyTLSSecret(nsName *types.NamespacedName) bool {
+	envoyTLSSecret := types.NamespacedName{
+		Namespace: r.namespace,
+		Name:      envoyTLSSecretName,
+	}
+	return *nsName == envoyTLSSecret
 }
 
 // validateServiceForReconcile tries finding the owning Gateway of the Service

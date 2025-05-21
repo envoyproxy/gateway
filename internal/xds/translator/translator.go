@@ -123,6 +123,14 @@ func (t *Translator) Translate(xdsIR *ir.Xds) (*types.ResourceVersionTable, erro
 		errs = errors.Join(errs, err)
 	}
 
+	// Patch global resources that are shared across listeners and routes.
+	// - the envoy client certificate
+	// - the OIDC HMAC secret
+	// - the rate limit server cluster
+	if err := t.patchGlobalResources(tCtx, xdsIR); err != nil {
+		errs = errors.Join(errs, err)
+	}
+
 	// Check if an extension want to inject any clusters/secrets
 	// If no extension exists (or it doesn't subscribe to this hook) then this is a quick no-op
 	if err := processExtensionPostTranslationHook(tCtx, t.ExtensionManager); err != nil {
@@ -413,13 +421,6 @@ func (t *Translator) processHTTPListenerXdsTranslation(
 		if err = patchResources(tCtx, httpListener.Routes); err != nil {
 			errs = errors.Join(errs, err)
 		}
-
-		// RateLimit filter is handled separately because it relies on the global
-		// rate limit server configuration.
-		// Check if a ratelimit cluster exists, if not, add it, if it's needed.
-		if err = t.createRateLimitServiceCluster(tCtx, httpListener, metrics); err != nil {
-			errs = errors.Join(errs, err)
-		}
 	}
 
 	return errs
@@ -480,7 +481,7 @@ func (t *Translator) addRouteToRouteConfig(
 
 		var xdsRoute *routev3.Route
 		// 1:1 between IR HTTPRoute and xDS config.route.v3.Route
-		xdsRoute, err = buildXdsRoute(httpRoute)
+		xdsRoute, err = buildXdsRoute(httpRoute, httpListener)
 		if err != nil {
 			// skip this route if failed to build xds route
 			errs = errors.Join(errs, err)
