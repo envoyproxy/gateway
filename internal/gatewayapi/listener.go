@@ -562,6 +562,7 @@ func (t *Translator) processAccessLog(envoyproxy *egv1a1.EnvoyProxy, resources *
 					Destination: ir.RouteDestination{
 						Name:     destName,
 						Settings: ds,
+						Metadata: buildResourceMetadata(envoyproxy, nil),
 					},
 					Traffic:    traffic,
 					Type:       sink.ALS.Type,
@@ -605,6 +606,7 @@ func (t *Translator) processAccessLog(envoyproxy *egv1a1.EnvoyProxy, resources *
 					Destination: ir.RouteDestination{
 						Name:     destName,
 						Settings: ds,
+						Metadata: buildResourceMetadata(envoyproxy, nil),
 					},
 					Traffic: traffic,
 					LogType: accessLogType,
@@ -681,6 +683,7 @@ func (t *Translator) processTracing(gw *gwapiv1.Gateway, envoyproxy *egv1a1.Envo
 		Destination: ir.RouteDestination{
 			Name:     destName,
 			Settings: ds,
+			Metadata: buildResourceMetadata(envoyproxy, nil),
 		},
 		Provider: tracing.Provider,
 		Traffic:  traffic,

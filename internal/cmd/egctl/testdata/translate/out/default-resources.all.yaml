@@ -446,6 +446,7 @@ httpRoutes:
       - path:
           type: PathPrefix
           value: /
+      name: rule-1
   status:
     parents:
     - conditions:
@@ -787,6 +788,14 @@ xds:
             loadBalancingWeight: 1
             locality:
               region: httproute/default/backend/rule/0/backend/0
+            metadata:
+              filterMetadata:
+                envoy-gateway:
+                  resources:
+                  - kind: Service
+                    name: providedBackend
+                    namespace: default
+                    sectionName: "8000"
       - endpointConfig:
           '@type': type.googleapis.com/envoy.config.endpoint.v3.ClusterLoadAssignment
           clusterName: grpcroute/default/backend/rule/0
@@ -801,6 +810,14 @@ xds:
             loadBalancingWeight: 1
             locality:
               region: grpcroute/default/backend/rule/0/backend/0
+            metadata:
+              filterMetadata:
+                envoy-gateway:
+                  resources:
+                  - kind: Service
+                    name: providedBackend
+                    namespace: default
+                    sectionName: "9000"
       - endpointConfig:
           '@type': type.googleapis.com/envoy.config.endpoint.v3.ClusterLoadAssignment
           clusterName: tcproute/default/backend/rule/-1
@@ -815,6 +832,14 @@ xds:
             loadBalancingWeight: 1
             locality:
               region: tcproute/default/backend/rule/-1/backend/0
+            metadata:
+              filterMetadata:
+                envoy-gateway:
+                  resources:
+                  - kind: Service
+                    name: backend
+                    namespace: default
+                    sectionName: "3000"
       - endpointConfig:
           '@type': type.googleapis.com/envoy.config.endpoint.v3.ClusterLoadAssignment
           clusterName: tlsroute/default/backend/rule/-1
@@ -829,6 +854,14 @@ xds:
             loadBalancingWeight: 1
             locality:
               region: tlsroute/default/backend/rule/-1/backend/0
+            metadata:
+              filterMetadata:
+                envoy-gateway:
+                  resources:
+                  - kind: Service
+                    name: backend
+                    namespace: default
+                    sectionName: "3000"
       - endpointConfig:
           '@type': type.googleapis.com/envoy.config.endpoint.v3.ClusterLoadAssignment
           clusterName: udproute/default/backend/rule/-1
@@ -843,6 +876,14 @@ xds:
             loadBalancingWeight: 1
             locality:
               region: udproute/default/backend/rule/-1/backend/0
+            metadata:
+              filterMetadata:
+                envoy-gateway:
+                  resources:
+                  - kind: Service
+                    name: backend
+                    namespace: default
+                    sectionName: "3000"
     - '@type': type.googleapis.com/envoy.admin.v3.ClustersConfigDump
       dynamicActiveClusters:
       - cluster:
@@ -861,6 +902,14 @@ xds:
             serviceName: httproute/default/backend/rule/0
           ignoreHealthOnHostRemoval: true
           lbPolicy: LEAST_REQUEST
+          metadata:
+            filterMetadata:
+              envoy-gateway:
+                resources:
+                - kind: HTTPRoute
+                  name: backend
+                  namespace: default
+                  sectionName: rule-1
           name: httproute/default/backend/rule/0
           perConnectionBufferLimitBytes: 32768
           type: EDS
@@ -880,6 +929,13 @@ xds:
             serviceName: grpcroute/default/backend/rule/0
           ignoreHealthOnHostRemoval: true
           lbPolicy: LEAST_REQUEST
+          metadata:
+            filterMetadata:
+              envoy-gateway:
+                resources:
+                - kind: GRPCRoute
+                  name: backend
+                  namespace: default
           name: grpcroute/default/backend/rule/0
           perConnectionBufferLimitBytes: 32768
           type: EDS
@@ -906,6 +962,13 @@ xds:
             serviceName: tcproute/default/backend/rule/-1
           ignoreHealthOnHostRemoval: true
           lbPolicy: LEAST_REQUEST
+          metadata:
+            filterMetadata:
+              envoy-gateway:
+                resources:
+                - kind: TCPRoute
+                  name: backend
+                  namespace: default
           name: tcproute/default/backend/rule/-1
           perConnectionBufferLimitBytes: 32768
           type: EDS
@@ -925,6 +988,13 @@ xds:
             serviceName: tlsroute/default/backend/rule/-1
           ignoreHealthOnHostRemoval: true
           lbPolicy: LEAST_REQUEST
+          metadata:
+            filterMetadata:
+              envoy-gateway:
+                resources:
+                - kind: TLSRoute
+                  name: backend
+                  namespace: default
           name: tlsroute/default/backend/rule/-1
           perConnectionBufferLimitBytes: 32768
           type: EDS
@@ -944,6 +1014,13 @@ xds:
             serviceName: udproute/default/backend/rule/-1
           ignoreHealthOnHostRemoval: true
           lbPolicy: LEAST_REQUEST
+          metadata:
+            filterMetadata:
+              envoy-gateway:
+                resources:
+                - kind: UDPRoute
+                  name: backend
+                  namespace: default
           name: udproute/default/backend/rule/-1
           perConnectionBufferLimitBytes: 32768
           type: EDS
@@ -1490,6 +1567,7 @@ xds:
                     - kind: HTTPRoute
                       name: backend
                       namespace: default
+                      sectionName: rule-1
               name: httproute/default/backend/rule/0/match/0/www_example_com
               route:
                 cluster: httproute/default/backend/rule/0

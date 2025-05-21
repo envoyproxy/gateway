@@ -146,12 +146,21 @@ xdsIR:
     accessLog:
       als:
       - destination:
+          metadata:
+            kind: EnvoyProxy
+            name: test
+            namespace: envoy-gateway-system
           name: accesslog_als_1_0
           settings:
           - addressType: IP
             endpoints:
             - host: 10.240.0.10
               port: 9090
+            metadata:
+              kind: Service
+              name: envoy-als
+              namespace: monitoring
+              sectionName: "9000"
             name: accesslog_als_1_0/backend/-1
             protocol: GRPC
         name: envoy-gateway-system/test
@@ -161,6 +170,10 @@ xdsIR:
         celMatches:
         - response.code >= 400
         destination:
+          metadata:
+            kind: EnvoyProxy
+            name: test
+            namespace: envoy-gateway-system
           name: accesslog_otel_0_1
           settings:
           - endpoints:

@@ -125,12 +125,23 @@ xdsIR:
       port: 10080
       routes:
       - destination:
+          metadata:
+            annotations:
+              foo: bar
+            kind: HTTPRoute
+            name: httproute-1
+            namespace: default
+            sectionName: rule-2
           name: httproute/default/httproute-1/rule/1
           settings:
           - addressType: IP
             endpoints:
             - host: 7.7.7.7
               port: 8080
+            metadata:
+              name: service-1
+              namespace: default
+              sectionName: "8080"
             name: httproute/default/httproute-1/rule/1/backend/0
             protocol: HTTP
             weight: 1
@@ -149,12 +160,23 @@ xdsIR:
           sectionName: rule-2
         name: httproute/default/httproute-1/rule/1/match/0/*
       - destination:
+          metadata:
+            annotations:
+              foo: bar
+            kind: HTTPRoute
+            name: httproute-1
+            namespace: default
+            sectionName: rule-1
           name: httproute/default/httproute-1/rule/0
           settings:
           - addressType: IP
             endpoints:
             - host: 7.7.7.7
               port: 8080
+            metadata:
+              name: service-1
+              namespace: default
+              sectionName: "8080"
             name: httproute/default/httproute-1/rule/0/backend/0
             protocol: HTTP
             weight: 1

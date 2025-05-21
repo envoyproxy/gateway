@@ -300,12 +300,21 @@ xdsIR:
       port: 10080
       routes:
       - destination:
+          metadata:
+            kind: HTTPRoute
+            name: httproute-2
+            namespace: envoy-gateway
           name: httproute/envoy-gateway/httproute-2/rule/0
           settings:
           - addressType: IP
             endpoints:
             - host: 7.7.7.7
               port: 8080
+            metadata:
+              kind: Service
+              name: service-1
+              namespace: envoy-gateway
+              sectionName: "8080"
             name: httproute/envoy-gateway/httproute-2/rule/0/backend/0
             protocol: HTTP
             weight: 1
@@ -325,12 +334,21 @@ xdsIR:
           exact: "yes"
           name: debug
       - destination:
+          metadata:
+            kind: HTTPRoute
+            name: httproute-3
+            namespace: envoy-gateway
           name: httproute/envoy-gateway/httproute-3/rule/0
           settings:
           - addressType: IP
             endpoints:
             - host: 8.8.8.8
               port: 8080
+            metadata:
+              kind: Service
+              name: service-2
+              namespace: envoy-gateway
+              sectionName: "8080"
             name: httproute/envoy-gateway/httproute-3/rule/0/backend/0
             protocol: HTTP
             weight: 1
@@ -346,12 +364,21 @@ xdsIR:
           name: ""
           prefix: /v1/example
       - destination:
+          metadata:
+            kind: HTTPRoute
+            name: httproute-4
+            namespace: envoy-gateway
           name: httproute/envoy-gateway/httproute-4/rule/0
           settings:
           - addressType: IP
             endpoints:
             - host: 7.7.7.7
               port: 8080
+            metadata:
+              kind: Service
+              name: service-1
+              namespace: envoy-gateway
+              sectionName: "8080"
             name: httproute/envoy-gateway/httproute-4/rule/0/backend/0
             protocol: HTTP
             weight: 1
@@ -371,12 +398,21 @@ xdsIR:
           name: ""
           prefix: /v1/status
       - destination:
+          metadata:
+            kind: HTTPRoute
+            name: httproute-5
+            namespace: envoy-gateway
           name: httproute/envoy-gateway/httproute-5/rule/0
           settings:
           - addressType: IP
             endpoints:
             - host: 8.8.8.8
               port: 8080
+            metadata:
+              kind: Service
+              name: service-2
+              namespace: envoy-gateway
+              sectionName: "8080"
             name: httproute/envoy-gateway/httproute-5/rule/0/backend/0
             protocol: HTTP
             weight: 1
@@ -392,12 +428,21 @@ xdsIR:
           name: ""
           prefix: /v1/status
       - destination:
+          metadata:
+            kind: HTTPRoute
+            name: httproute-1
+            namespace: envoy-gateway
           name: httproute/envoy-gateway/httproute-1/rule/0
           settings:
           - addressType: IP
             endpoints:
             - host: 7.7.7.7
               port: 8080
+            metadata:
+              kind: Service
+              name: service-1
+              namespace: envoy-gateway
+              sectionName: "8080"
             name: httproute/envoy-gateway/httproute-1/rule/0/backend/0
             protocol: HTTP
             weight: 1
@@ -413,12 +458,21 @@ xdsIR:
           name: ""
           prefix: /foo
       - destination:
+          metadata:
+            kind: HTTPRoute
+            name: httproute-1
+            namespace: envoy-gateway
           name: httproute/envoy-gateway/httproute-1/rule/0
           settings:
           - addressType: IP
             endpoints:
             - host: 7.7.7.7
               port: 8080
+            metadata:
+              kind: Service
+              name: service-1
+              namespace: envoy-gateway
+              sectionName: "8080"
             name: httproute/envoy-gateway/httproute-1/rule/0/backend/0
             protocol: HTTP
             weight: 1
@@ -434,12 +488,21 @@ xdsIR:
           name: ""
           prefix: /foo
       - destination:
+          metadata:
+            kind: HTTPRoute
+            name: httproute-1
+            namespace: envoy-gateway
           name: httproute/envoy-gateway/httproute-1/rule/0
           settings:
           - addressType: IP
             endpoints:
             - host: 7.7.7.7
               port: 8080
+            metadata:
+              kind: Service
+              name: service-1
+              namespace: envoy-gateway
+              sectionName: "8080"
             name: httproute/envoy-gateway/httproute-1/rule/0/backend/0
             protocol: HTTP
             weight: 1

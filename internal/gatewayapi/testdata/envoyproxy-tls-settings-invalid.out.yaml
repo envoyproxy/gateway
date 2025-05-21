@@ -270,6 +270,10 @@ xdsIR:
       port: 10445
       routes:
       - destination:
+          metadata:
+            kind: TCPRoute
+            name: envoy-gateway
+            namespace: envoy-gateway
           name: tcproute/envoy-gateway/envoy-gateway/rule/-1
         name: tcproute/envoy-gateway/envoy-gateway
         tls:
