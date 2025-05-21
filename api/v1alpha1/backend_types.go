@@ -69,6 +69,12 @@ type BackendEndpoint struct {
 	//
 	// +optional
 	Unix *UnixSocket `json:"unix,omitempty"`
+
+	// Priority defines the priority of the endpoint.
+	// If unspecified this will default to the highest priority (0).
+	//
+	// +optional
+	Priority *uint32 `json:"priority,omitempty"`
 }
 
 // IPEndpoint describes TCP/UDP socket address, corresponding to Envoy's Socket Address
@@ -150,6 +156,12 @@ type BackendSpec struct {
 	//
 	// +optional
 	TLS *BackendTLSSettings `json:"tls,omitempty"`
+
+	// OverprovisioningFactor defines the overprovisioning factor for the backend.
+	// Defaults to 140.
+	//
+	// +optional
+	OverprovisioningFactor *uint32 `json:"overprovisioningFactor,omitempty"`
 }
 
 // BackendTLSSettings holds the TLS settings for the backend.
