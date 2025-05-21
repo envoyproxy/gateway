@@ -358,6 +358,20 @@
                     "loadBalancingWeight": 1,
                     "locality": {
                       "region": "httproute/envoy-gateway-system/backend/rule/0/backend/0"
+                    },
+                    "metadata": {
+                      "filterMetadata": {
+                        "envoy-gateway": {
+                          "resources": [
+                            {
+                              "kind": "Service",
+                              "name": "backend",
+                              "namespace": "envoy-gateway-system",
+                              "sectionName": "3000"
+                            }
+                          ]
+                        }
+                      }
                     }
                   }
                 ]
@@ -392,6 +406,19 @@
                 },
                 "ignoreHealthOnHostRemoval": true,
                 "lbPolicy": "LEAST_REQUEST",
+                "metadata": {
+                  "filterMetadata": {
+                    "envoy-gateway": {
+                      "resources": [
+                        {
+                          "kind": "HTTPRoute",
+                          "name": "backend",
+                          "namespace": "envoy-gateway-system"
+                        }
+                      ]
+                    }
+                  }
+                },
                 "name": "httproute/envoy-gateway-system/backend/rule/0",
                 "perConnectionBufferLimitBytes": 32768,
                 "type": "EDS"
