@@ -13,13 +13,12 @@ import (
 
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 	"github.com/envoyproxy/gateway/internal/ir"
-	"github.com/envoyproxy/gateway/internal/utils"
 )
 
 const envoyTLSSecretName = "envoy"
 
 // ProcessGlobalResources processes global resources that are not tied to a specific listener or route
-func (t *Translator) ProcessGlobalResources(resources *resource.Resources, gateways []*GatewayContext, xdsIR resource.XdsIRMap) error {
+func (t *Translator) ProcessGlobalResources(resources *resource.Resources, xdsIRs resource.XdsIRMap) error {
 	// Get the envoy client TLS secret. It is used for envoy to establish a TLS connection with control plane components,
 	// including the rate limit server and the wasm HTTP server.
 	envoyTLSSecret := resources.GetSecret(t.ControllerNamespace, envoyTLSSecretName)
@@ -27,21 +26,17 @@ func (t *Translator) ProcessGlobalResources(resources *resource.Resources, gatew
 		return fmt.Errorf("envoy TLS secret %s/%s not found", t.ControllerNamespace, envoyTLSSecretName)
 	}
 
-	for _, gw := range gateways {
-		key := utils.NamespacedName(gw).String()
-		if _, ok := xdsIR[key]; ok {
-			// TODO zhaohuabing: this is also required by WASM
-			if containsGlobalRateLimit(xdsIR[key].HTTP) {
-				xdsIR[key].GlobalResources = &ir.GlobalResources{}
-				xdsIR[key].GlobalResources.EnvoyClientCertificate = &ir.TLSCertificate{
-					Name:        irGlobalConfigName(envoyTLSSecret),
-					Certificate: envoyTLSSecret.Data[corev1.TLSCertKey],
-					PrivateKey:  envoyTLSSecret.Data[corev1.TLSPrivateKeyKey],
-				}
+	for _, xdsIR := range xdsIRs {
+		// TODO zhaohuabing: this is also required by WASM
+		if containsGlobalRateLimit(xdsIR.HTTP) {
+			xdsIR.GlobalResources = &ir.GlobalResources{}
+			xdsIR.GlobalResources.EnvoyClientCertificate = &ir.TLSCertificate{
+				Name:        irGlobalConfigName(envoyTLSSecret),
+				Certificate: envoyTLSSecret.Data[corev1.TLSCertKey],
+				PrivateKey:  envoyTLSSecret.Data[corev1.TLSPrivateKeyKey],
 			}
 		}
 	}
-
 	return nil
 }
 
