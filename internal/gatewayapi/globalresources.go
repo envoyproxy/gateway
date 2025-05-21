@@ -27,8 +27,7 @@ func (t *Translator) ProcessGlobalResources(resources *resource.Resources, xdsIR
 	}
 
 	for _, xdsIR := range xdsIRs {
-		// TODO zhaohuabing: this is also required by WASM
-		if containsGlobalRateLimit(xdsIR.HTTP) {
+		if containsGlobalRateLimit(xdsIR.HTTP) || containsWasm(xdsIR.HTTP) {
 			xdsIR.GlobalResources = &ir.GlobalResources{}
 			xdsIR.GlobalResources.EnvoyClientCertificate = &ir.TLSCertificate{
 				Name:        irGlobalConfigName(envoyTLSSecret),
@@ -50,6 +49,18 @@ func containsGlobalRateLimit(httpListeners []*ir.HTTPListener) bool {
 			if route.Traffic != nil &&
 				route.Traffic.RateLimit != nil &&
 				route.Traffic.RateLimit.Global != nil {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+func containsWasm(httpListeners []*ir.HTTPListener) bool {
+	for _, httpListener := range httpListeners {
+		for _, route := range httpListener.Routes {
+			if route.EnvoyExtensions != nil &&
+				len(route.EnvoyExtensions.Wasms) > 0 {
 				return true
 			}
 		}

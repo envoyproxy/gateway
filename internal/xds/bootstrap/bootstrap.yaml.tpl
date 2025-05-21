@@ -248,25 +248,6 @@ static_resources:
               path_config_source:
                 path: {{ .SdsTrustedCAPath }}
               resource_api_version: V3
-  - name: wasm_cluster
-    type: STRICT_DNS
-    connect_timeout: 10s
-    load_assignment:
-      cluster_name: wasm_cluster
-      endpoints:
-      - load_balancing_weight: 1
-        lb_endpoints:
-        - load_balancing_weight: 1
-          endpoint:
-            address:
-              socket_address:
-                address: {{ .WasmServer.Address }}
-                port_value: {{ .WasmServer.Port }}
-    typed_extension_protocol_options:
-      envoy.extensions.upstreams.http.v3.HttpProtocolOptions:
-        "@type": "type.googleapis.com/envoy.extensions.upstreams.http.v3.HttpProtocolOptions"
-        explicit_http_config:
-          http2_protocol_options: {}
   {{- if .GatewayNamespaceMode }}
         http_filters:
         - name: envoy.filters.http.credential_injector
