@@ -16,7 +16,6 @@ import (
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/infrastructure/kubernetes/proxy"
 	"github.com/envoyproxy/gateway/internal/ir"
-	"github.com/envoyproxy/gateway/internal/utils"
 )
 
 // CreateOrUpdateProxyInfra creates the managed kube infra, if it doesn't exist.
@@ -67,7 +66,7 @@ func (i *Infra) GetOwnerReferenceUID(ctx context.Context, irInfra *ir.Infra) (ma
 	if i.EnvoyGateway.GatewayNamespaceMode() {
 		key := types.NamespacedName{
 			Namespace: i.GetResourceNamespace(irInfra),
-			Name:      utils.GetKubernetesResourceName(irInfra.Proxy.Name),
+			Name:      irInfra.GetProxyInfra().GetProxyMetadata().Name,
 		}
 		gatewayUID, err := i.Client.GetUID(ctx, key, &gwapiv1.Gateway{})
 		if err != nil {

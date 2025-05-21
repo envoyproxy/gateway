@@ -65,6 +65,7 @@ func setupCreateOrUpdateProxyDeployment(gatewayNamespaceMode bool) (*appsv1.Depl
 		return nil, nil, nil, err
 	}
 	infra := ir.NewInfra()
+	infra.Proxy.GetProxyMetadata().Name = infra.Proxy.Name
 	infra.Proxy.GetProxyMetadata().Labels[gatewayapi.OwningGatewayNamespaceLabel] = "default"
 	infra.Proxy.GetProxyMetadata().Labels[gatewayapi.OwningGatewayNameLabel] = infra.Proxy.Name
 
@@ -79,6 +80,7 @@ func setupCreateOrUpdateProxyDeployment(gatewayNamespaceMode bool) (*appsv1.Depl
 		}
 		infra.Proxy.Name = "ns1/gateway-1"
 		infra.Proxy.Namespace = "ns1"
+		infra.Proxy.GetProxyMetadata().Name = "gateway-1"
 		infra.Proxy.GetProxyMetadata().Labels[gatewayapi.OwningGatewayNamespaceLabel] = "ns1"
 		infra.Proxy.GetProxyMetadata().Labels[gatewayapi.OwningGatewayNameLabel] = "gateway-1"
 

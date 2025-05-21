@@ -233,6 +233,7 @@ infraIR:
         labels:
           gateway.envoyproxy.io/owning-gateway-name: tcp-gateway
           gateway.envoyproxy.io/owning-gateway-namespace: default
+        name: tcp-gateway
       name: default/tcp-gateway
       namespace: envoy-gateway-system
 tcpRoutes:

@@ -30,21 +30,3 @@ func TestGetHashedName(t *testing.T) {
 		})
 	}
 }
-
-func TestGetKubernetesResourceName(t *testing.T) {
-	testCases := []struct {
-		name     string
-		nsName   string
-		expected string
-	}{
-		{"gateway", "ns1/gateway-1", "gateway-1"},
-		{"gatewayclass", "envoy-gateway-class", "envoy-gateway-class"},
-	}
-
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			result := GetKubernetesResourceName(tc.nsName)
-			require.Equal(t, tc.expected, result, "Result does not match expected string")
-		})
-	}
-}
