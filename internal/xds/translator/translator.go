@@ -123,6 +123,14 @@ func (t *Translator) Translate(xdsIR *ir.Xds) (*types.ResourceVersionTable, erro
 		errs = errors.Join(errs, err)
 	}
 
+	// Patch global resources that are shared across listeners and routes.
+	// - the envoy client certificate
+	// - the OIDC HMAC secret
+	// - the rate limit server cluster
+	if err := t.patchGlobalResources(tCtx, xdsIR); err != nil {
+		errs = errors.Join(errs, err)
+	}
+
 	// Check if an extension want to inject any clusters/secrets
 	// If no extension exists (or it doesn't subscribe to this hook) then this is a quick no-op
 	if err := processExtensionPostTranslationHook(tCtx, t.ExtensionManager); err != nil {
@@ -411,13 +419,6 @@ func (t *Translator) processHTTPListenerXdsTranslation(
 		// Add all the other needed resources referenced by this filter to the
 		// resource version table.
 		if err = patchResources(tCtx, httpListener.Routes); err != nil {
-			errs = errors.Join(errs, err)
-		}
-
-		// RateLimit filter is handled separately because it relies on the global
-		// rate limit server configuration.
-		// Check if a ratelimit cluster exists, if not, add it, if it's needed.
-		if err = t.createRateLimitServiceCluster(tCtx, httpListener, metrics); err != nil {
 			errs = errors.Join(errs, err)
 		}
 	}
