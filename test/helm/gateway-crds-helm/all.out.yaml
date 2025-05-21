@@ -41999,6 +41999,46 @@ spec:
                       the authorization response must be set by the authorization server, or the
                       OAuth flow will fail.
                     type: string
+                  denyRedirect:
+                    description: |-
+                      Any request that matches any of the provided matchers (with either tokens that are expired or missing tokens) will not be redirected to the OIDC Provider.
+                      This behavior can be useful for AJAX or machine requests.
+                    properties:
+                      headers:
+                        description: Defines the headers to match against the request
+                          to deny redirect to the OIDC Provider.
+                        items:
+                          description: OIDCDenyRedirectHeader defines how a header
+                            is matched
+                          properties:
+                            name:
+                              description: Specifies the name of the header in the
+                                request.
+                              minLength: 1
+                              type: string
+                            type:
+                              default: Exact
+                              description: Type specifies how to match against a string.
+                              enum:
+                              - Exact
+                              - Prefix
+                              - Suffix
+                              - RegularExpression
+                              type: string
+                            value:
+                              description: Value specifies the string value that the
+                                match must have.
+                              maxLength: 1024
+                              minLength: 1
+                              type: string
+                          required:
+                          - name
+                          - value
+                          type: object
+                        type: array
+                    required:
+                    - headers
+                    type: object
                   forwardAccessToken:
                     description: |-
                       ForwardAccessToken indicates whether the Envoy should forward the access token

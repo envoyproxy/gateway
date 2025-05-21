@@ -151,6 +151,8 @@ type Xds struct {
 	EnvoyPatchPolicies []*EnvoyPatchPolicy `json:"envoyPatchPolicies,omitempty" yaml:"envoyPatchPolicies,omitempty"`
 	// FilterOrder holds the custom order of the HTTP filters
 	FilterOrder []egv1a1.FilterPosition `json:"filterOrder,omitempty" yaml:"filterOrder,omitempty"`
+	// GlobalResources holds the global resources used by the Envoy, for example, the envoy client certificate and the OIDC HMAC secret
+	GlobalResources *GlobalResources `json:"globalResources,omitempty" yaml:"globalResources,omitempty"`
 }
 
 // Equal implements the Comparable interface used by watchable.DeepEqual to skip unnecessary updates.
@@ -443,6 +445,20 @@ type TLSCACertificate struct {
 	Name string `json:"name,omitempty" yaml:"name,omitempty"`
 	// Certificate content.
 	Certificate []byte `json:"certificate,omitempty" yaml:"certificate,omitempty"`
+}
+
+// SubjectAltName holds the subject alternative name for the certificate
+// This is the internal representation of the SubjectAltName in the Gateway API
+// https://github.com/kubernetes-sigs/gateway-api/blob/6fbbd90954c2a30a6502cbb22ec6e7f3359ed3a0/apis/v1alpha3/backendtlspolicy_types.go#L177
+// +k8s:deepcopy-gen=true
+type SubjectAltName struct {
+	// Only one of the following fields should be set.
+	// Hostname contains Subject Alternative Name specified in DNS name format.
+	Hostname *string `json:"hostname,omitempty" yaml:"hostname,omitempty"`
+	// URI contains Subject Alternative Name specified in a full URI format.
+	// It MUST include both a scheme (e.g., "http" or "ftp") and a scheme-specific-part.
+	// Common values include SPIFFE IDs like "spiffe://mycluster.example.com/ns/myns/sa/svc1sa".
+	URI *string `json:"uri,omitempty" yaml:"uri,omitempty"`
 }
 
 func (t TLSCertificate) Validate() error {
@@ -2093,10 +2109,19 @@ type RateLimit struct {
 // GlobalRateLimit holds the global rate limiting configuration.
 // +k8s:deepcopy-gen=true
 type GlobalRateLimit struct {
-	// TODO zhaohuabing: add default values for Global rate limiting.
-
 	// Rules for rate limiting.
 	Rules []*RateLimitRule `json:"rules,omitempty" yaml:"rules,omitempty" patchStrategy:"merge" patchMergeKey:"name"`
+}
+
+// GlobalResources holds the global resources used by the Envoy that are not specific to any listener or route.
+// +k8s:deepcopy-gen=true
+type GlobalResources struct {
+	// EnvoyClientCertificate holds the client certificate secret for envoy to use when establishing a TLS connection to
+	// control plane components. For example, the rate limit service, WASM HTTP server, etc.
+	EnvoyClientCertificate *TLSCertificate `json:"envoyClientCertificate,omitempty" yaml:"envoyClientCertificate,omitempty"`
+	// HMACSecret holds the HMAC Secret used by the OIDC.
+	// TODO: zhaohuabing move HMACSecret here
+	// HMACSecret PrivateBytes
 }
 
 // LocalRateLimit holds the local rate limiting configuration.
@@ -2855,6 +2880,7 @@ type TLSUpstreamConfig struct {
 	UseSystemTrustStore bool              `json:"useSystemTrustStore,omitempty" yaml:"useSystemTrustStore,omitempty"`
 	CACertificate       *TLSCACertificate `json:"caCertificate,omitempty" yaml:"caCertificate,omitempty"`
 	TLSConfig           `json:",inline"`
+	SubjectAltNames     []SubjectAltName `json:"subjectAltNames,omitempty" yaml:"subjectAltNames,omitempty"`
 }
 
 func (t *TLSUpstreamConfig) ToTLSConfig() (*tls.Config, error) {
