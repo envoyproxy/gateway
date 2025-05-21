@@ -228,7 +228,55 @@ func oauth2Config(securityFeatures *ir.SecurityFeatures) (*oauth2v3.OAuth2, erro
 		oauth2.Config.PassThroughMatcher = buildHeaderMatchers(securityFeatures.JWT)
 	}
 
+	if oidc.DenyRedirect != nil {
+		oauth2.Config.DenyRedirectMatcher = buildDenyRedirectMatcher(oidc)
+	}
+
 	return oauth2, nil
+}
+
+func buildDenyRedirectMatcher(oidc *ir.OIDC) []*routev3.HeaderMatcher {
+	denyRedirectPathMatchers := make([]*routev3.HeaderMatcher, 0, len(oidc.DenyRedirect.Headers))
+
+	for _, m := range oidc.DenyRedirect.Headers {
+		var stringMatcher *matcherv3.StringMatcher
+
+		if m.Type == nil { // if no type is specified, default to exact match on value
+			stringMatcher = &matcherv3.StringMatcher{
+				MatchPattern: &matcherv3.StringMatcher_Exact{Exact: m.Value},
+			}
+		} else { // if type is specified, use it
+			switch {
+			case *m.Type == egv1a1.StringMatchExact:
+				stringMatcher = &matcherv3.StringMatcher{
+					MatchPattern: &matcherv3.StringMatcher_Exact{Exact: m.Value},
+				}
+			case *m.Type == egv1a1.StringMatchPrefix:
+				stringMatcher = &matcherv3.StringMatcher{
+					MatchPattern: &matcherv3.StringMatcher_Prefix{Prefix: m.Value},
+				}
+			case *m.Type == egv1a1.StringMatchSuffix:
+				stringMatcher = &matcherv3.StringMatcher{
+					MatchPattern: &matcherv3.StringMatcher_Suffix{Suffix: m.Value},
+				}
+			case *m.Type == egv1a1.StringMatchRegularExpression:
+				stringMatcher = &matcherv3.StringMatcher{
+					MatchPattern: &matcherv3.StringMatcher_SafeRegex{
+						SafeRegex: &matcherv3.RegexMatcher{Regex: m.Value},
+					},
+				}
+			}
+		}
+
+		denyRedirectPathMatchers = append(denyRedirectPathMatchers, &routev3.HeaderMatcher{
+			Name: m.Name,
+			HeaderMatchSpecifier: &routev3.HeaderMatcher_StringMatch{
+				StringMatch: stringMatcher,
+			},
+		})
+	}
+
+	return denyRedirectPathMatchers
 }
 
 func buildHeaderMatchers(jwt *ir.JWT) []*routev3.HeaderMatcher {

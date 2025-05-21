@@ -1115,6 +1115,11 @@ type OIDC struct {
 	// filter, normally "Authorization: Bearer ...". This is typically used for non-browser clients that
 	// may not be able to handle OIDC redirects and wish to directly supply a token instead.
 	PassThroughAuthHeader bool `json:"passThroughAuthHeader,omitempty"`
+
+	// Any request that matches any of the provided matchers won’t be redirected to OAuth server when tokens are not valid.
+	// Automatic access token refresh will be performed for these requests, if enabled.
+	// This behavior can be useful for AJAX requests.
+	DenyRedirect *egv1a1.OIDCDenyRedirect `json:"denyRedirect,omitempty"`
 }
 
 // OIDCProvider defines the schema for the OIDC Provider.

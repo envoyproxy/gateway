@@ -961,6 +961,7 @@ func (t *Translator) buildOIDC(
 		CookieDomain:           policy.Spec.OIDC.CookieDomain,
 		HMACSecret:             hmacData,
 		PassThroughAuthHeader:  passThroughAuthHeader,
+		DenyRedirect:           oidc.DenyRedirect,
 	}, nil
 }
 
