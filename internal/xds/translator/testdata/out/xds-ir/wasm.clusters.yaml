@@ -48,7 +48,7 @@
       - endpoint:
           address:
             socketAddress:
-              address: envoy-gateway..svc.cluster.local
+              address: envoy-gateway.envoy-gateway-system.svc.cluster.local
               portValue: 18002
         loadBalancingWeight: 1
       loadBalancingWeight: 1

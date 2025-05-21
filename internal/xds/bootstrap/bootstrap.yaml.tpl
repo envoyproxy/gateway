@@ -249,43 +249,6 @@ static_resources:
                 path: {{ .SdsTrustedCAPath }}
               resource_api_version: V3
   {{- if .GatewayNamespaceMode }}
-        http_filters:
-        - name: envoy.filters.http.credential_injector
-          typed_config:
-            "@type": type.googleapis.com/envoy.extensions.filters.http.credential_injector.v3.CredentialInjector
-            credential:
-              name: envoy.http.injected_credentials.generic
-              typed_config:
-                "@type": type.googleapis.com/envoy.extensions.http.injected_credentials.generic.v3.Generic
-                credential:
-                  name: jwt-sa-bearer
-            overwrite: true
-        - name: envoy.extensions.filters.http.upstream_codec.v3.UpstreamCodec
-          typed_config:
-            "@type": type.googleapis.com/envoy.extensions.filters.http.upstream_codec.v3.UpstreamCodec
-  {{- end }}
-    transport_socket:
-      name: envoy.transport_sockets.tls
-      typed_config:
-        "@type": type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.UpstreamTlsContext
-        common_tls_context:
-          tls_params:
-            tls_maximum_protocol_version: TLSv1_3
-  {{- if not .GatewayNamespaceMode }}
-          tls_certificate_sds_secret_configs:
-          - name: xds_certificate
-            sds_config:
-              path_config_source:
-                path: {{ .SdsCertificatePath }}
-              resource_api_version: V3
-  {{- end }}
-          validation_context_sds_secret_config:
-            name: xds_trusted_ca
-            sds_config:
-              path_config_source:
-                path: {{ .SdsTrustedCAPath }}
-              resource_api_version: V3
-  {{- if .GatewayNamespaceMode }}
   secrets:
   - name: jwt-sa-bearer
     generic_secret:
