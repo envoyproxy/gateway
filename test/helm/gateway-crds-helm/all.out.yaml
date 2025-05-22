@@ -17431,8 +17431,11 @@ spec:
                       description: Unix defines the unix domain socket endpoint
                       properties:
                         path:
-                          description: Path defines the unix domain socket path of
-                            the backend endpoint.
+                          description: |-
+                            Path defines the unix domain socket path of the backend endpoint.
+                            The path length must not exceed 108 characters.
+                          maxLength: 108
+                          minLength: 1
                           type: string
                       required:
                       - path
