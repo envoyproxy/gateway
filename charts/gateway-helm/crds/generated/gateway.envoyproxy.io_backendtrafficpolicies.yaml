@@ -636,6 +636,87 @@ spec:
                     - message: If consistent hash type is cookie, the cookie field
                         must be set.
                       rule: 'self.type == ''Cookie'' ? has(self.cookie) : !has(self.cookie)'
+                  requestDistribution:
+                    description: RequestDistribution defines the configuration related
+                      to the distribution of requests between localities.
+                    properties:
+                      preferLocalZone:
+                        description: PreferLocalZone configures zone-aware routing
+                          to prefer sending traffic to the local locality zone.
+                        properties:
+                          forceLocalZone:
+                            description: ForceLocalZone defines override configuration
+                              for local zone routing.
+                            properties:
+                              enabled:
+                                description: Enabled causes Envoy to route all requests
+                                  to the local zone if there are at least "minZoneSize"
+                                  healthy hosts available.
+                                type: boolean
+                              minZoneSize:
+                                description: MinZoneSize is the minimum number of
+                                  upstream hosts in the local zone required to honor
+                                  the forceLocalZone override.
+                                format: int64
+                                minimum: 1
+                                type: integer
+                            type: object
+                          minClusterSize:
+                            description: MinClusterSize is the minimum number of total
+                              upstream hosts across all zones required to enable zone-aware
+                              routing.
+                            format: int64
+                            minimum: 1
+                            type: integer
+                        type: object
+                      weightedLocality:
+                        description: WeightedLocality configures explicit weights
+                          for each locality.
+                        properties:
+                          weights:
+                            description: Weights specifies a list of localities and
+                              their corresponding traffic weights.
+                            items:
+                              description: LocalityWeights associates a locality with
+                                a traffic weight.
+                              properties:
+                                locality:
+                                  description: Locality identifies the zone for which
+                                    the weight applies.
+                                  properties:
+                                    zone:
+                                      description: Zone is the name of the locality
+                                        zone (e.g., availability zone or rack).
+                                      pattern: ^[A-Za-z0-9_-]+$
+                                      type: string
+                                  required:
+                                  - zone
+                                  type: object
+                                weight:
+                                  description: Weight is the relative weight for traffic
+                                    distribution to the specified locality.
+                                  format: int32
+                                  minimum: 0
+                                  type: integer
+                              required:
+                              - locality
+                              - weight
+                              type: object
+                            minItems: 1
+                            type: array
+                        required:
+                        - weights
+                        type: object
+                    type: object
+                    x-kubernetes-validations:
+                    - message: only one of preferLocalZone or weightedLocality may
+                        be specified
+                      rule: self.preferLocalZone == null || self.weightedLocality
+                        == null
+                    - message: one of preferLocalZone or weightedLocality must be
+                        specified
+                      rule: self.preferLocalZone != null || self.weightedLocality
+                        != null
                   slowStart:
                     description: |-
                       SlowStart defines the configuration related to the slow start load balancer policy.

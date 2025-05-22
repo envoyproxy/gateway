@@ -34,6 +34,12 @@ type LoadBalancer struct {
 	//
 	// +optional
 	SlowStart *SlowStart `json:"slowStart,omitempty"`
+
+	// RequestDistribution defines the configuration related to the distribution of requests between localities.
+	//
+	// +optional
+	// +notImplementedHide
+	RequestDistribution *RequestDistribution `json:"requestDistribution,omitempty"`
 }
 
 // LoadBalancerType specifies the types of LoadBalancer.
@@ -134,4 +140,76 @@ type SlowStart struct {
 	// +kubebuilder:validation:Required
 	Window *metav1.Duration `json:"window"`
 	// TODO: Add support for non-linear traffic increases based on user usage.
+}
+
+// RequestDistribution defines the configuration related to the distribution of requests between localities.
+// Exactly one of PreferLocalZone or WeightedLocality must be specified.
+// +kubebuilder:validation:XValidation:rule="self.preferLocalZone == null || self.weightedLocality == null",message="only one of preferLocalZone or weightedLocality may be specified"
+// +kubebuilder:validation:XValidation:rule="self.preferLocalZone != null || self.weightedLocality != null",message="one of preferLocalZone or weightedLocality must be specified"
+type RequestDistribution struct {
+	// PreferLocalZone configures zone-aware routing to prefer sending traffic to the local locality zone.
+	// +optional
+	// +notImplementedHide
+	PreferLocalZone *PreferLocalZone `json:"preferLocalZone,omitempty"`
+
+	// WeightedLocality configures explicit weights for each locality.
+	// +optional
+	// +notImplementedHide
+	WeightedLocality *WeightedLocality `json:"weightedLocality,omitempty"`
+}
+
+// PreferLocalZone configures zone-aware routing to prefer sending traffic to the local locality zone
+type PreferLocalZone struct {
+	// ForceLocalZone defines override configuration for local zone routing.
+	// +optional
+	// +notImplementedHide
+	ForceLocalZone *ForceLocalZone `json:"forceLocalZone,omitempty"`
+
+	// MinClusterSize is the minimum number of total upstream hosts across all zones required to enable zone-aware routing.
+	// +kubebuilder:validation:Minimum=1
+	// +optional
+	// +notImplementedHide
+	MinClusterSize *uint64 `json:"minClusterSize,omitempty"`
+}
+
+// ForceLocalZone defines override configuration for local zone routing.
+type ForceLocalZone struct {
+	// Enabled causes Envoy to route all requests to the local zone if there are at least "minZoneSize" healthy hosts available.
+	// +optional
+	// +notImplementedHide
+	Enabled *bool `json:"enabled"`
+
+	// MinZoneSize is the minimum number of upstream hosts in the local zone required to honor the forceLocalZone override.
+	// +kubebuilder:validation:Minimum=1
+	// +optional
+	// +notImplementedHide
+	MinZoneSize *uint64 `json:"minZoneSize,omitempty"`
+}
+
+// WeightedLocality defines explicit traffic weights per locality (zone).
+type WeightedLocality struct {
+	// Weights specifies a list of localities and their corresponding traffic weights.
+	// +kubebuilder:validation:MinItems=1
+	// +notImplementedHide
+	Weights []LocalityWeights `json:"weights"`
+}
+
+// LocalityWeights associates a locality with a traffic weight.
+type LocalityWeights struct {
+	// Locality identifies the zone for which the weight applies.
+	// +notImplementedHide
+	Locality Locality `json:"locality"`
+
+	// Weight is the relative weight for traffic distribution to the specified locality.
+	// +kubebuilder:validation:Minimum=0
+	// +notImplementedHide
+	Weight int32 `json:"weight"`
+}
+
+// Locality specifies a single zone identifier.
+type Locality struct {
+	// Zone is the name of the locality zone (e.g., availability zone or rack).
+	// +kubebuilder:validation:Pattern="^[A-Za-z0-9_-]+$"
+	// +notImplementedHide
+	Zone string `json:"zone"`
 }
