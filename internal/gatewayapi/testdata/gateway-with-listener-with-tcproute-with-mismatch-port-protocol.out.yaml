@@ -102,5 +102,9 @@ xdsIR:
       port: 10162
       routes:
       - destination:
+          metadata:
+            kind: TCPRoute
+            name: tcproute-1
+            namespace: default
           name: tcproute/default/tcproute-1/rule/-1
         name: tcproute/default/tcproute-1

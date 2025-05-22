@@ -12,6 +12,16 @@
     serviceName: first-route-dest
   ignoreHealthOnHostRemoval: true
   lbPolicy: LEAST_REQUEST
+  metadata:
+    filterMetadata:
+      envoy-gateway:
+        resources:
+        - annotations:
+            foo: bar
+          kind: HTTPRoute
+          name: first-route-name
+          namespace: first-route-ns
+          sectionName: first-route-rule
   name: first-route-dest
   perConnectionBufferLimitBytes: 32768
   type: EDS
@@ -29,6 +39,16 @@
     serviceName: second-route-dest
   ignoreHealthOnHostRemoval: true
   lbPolicy: LEAST_REQUEST
+  metadata:
+    filterMetadata:
+      envoy-gateway:
+        resources:
+        - annotations:
+            foo: bar
+          kind: HTTPRoute
+          name: second-route-name
+          namespace: second-route-ns
+          sectionName: second-route-rule
   name: second-route-dest
   perConnectionBufferLimitBytes: 32768
   type: EDS

@@ -530,6 +530,7 @@ func (t *Translator) addRouteToRouteConfig(
 					httpRoute.Destination.Settings,
 					&HTTPRouteTranslator{httpRoute},
 					ea,
+					httpRoute.Destination.Metadata,
 				)
 				if err != nil {
 					errs = errors.Join(errs, err)
@@ -544,7 +545,8 @@ func (t *Translator) addRouteToRouteConfig(
 						setting.Name,
 						tSettings,
 						&HTTPRouteTranslator{httpRoute},
-						ea)
+						ea,
+						httpRoute.Destination.Metadata)
 					if err != nil {
 						errs = errors.Join(errs, err)
 					}
@@ -565,6 +567,7 @@ func (t *Translator) addRouteToRouteConfig(
 						tSocket:      nil,
 						endpointType: EndpointTypeStatic,
 						metrics:      metrics,
+						metadata:     mrr.Destination.Metadata,
 					}); err != nil {
 						errs = errors.Join(errs, err)
 					}
@@ -691,7 +694,8 @@ func (t *Translator) processTCPListenerXdsTranslation(
 				route.Destination.Name,
 				route.Destination.Settings,
 				&TCPRouteTranslator{route},
-				&ExtraArgs{metrics: metrics}); err != nil {
+				&ExtraArgs{metrics: metrics},
+				route.Destination.Metadata); err != nil {
 				errs = errors.Join(errs, err)
 			}
 			if route.TLS != nil && route.TLS.Terminate != nil {
@@ -782,7 +786,8 @@ func processUDPListenerXdsTranslation(
 				route.Destination.Name,
 				route.Destination.Settings,
 				&UDPRouteTranslator{route},
-				&ExtraArgs{metrics: metrics}); err != nil {
+				&ExtraArgs{metrics: metrics},
+				route.Destination.Metadata); err != nil {
 				errs = errors.Join(errs, err)
 			}
 		}
@@ -880,8 +885,9 @@ func processXdsCluster(tCtx *types.ResourceVersionTable,
 	settings []*ir.DestinationSetting,
 	route clusterArgs,
 	extras *ExtraArgs,
+	metadata *ir.ResourceMetadata,
 ) error {
-	return addXdsCluster(tCtx, route.asClusterArgs(name, settings, extras))
+	return addXdsCluster(tCtx, route.asClusterArgs(name, settings, extras, metadata))
 }
 
 // findXdsSecret finds a xds secret with the same name, and returns nil if there is no match.

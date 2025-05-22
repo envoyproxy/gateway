@@ -69,6 +69,11 @@ type BackendEndpoint struct {
 	//
 	// +optional
 	Unix *UnixSocket `json:"unix,omitempty"`
+
+	// Zone defines the service zone of the backend endpoint.
+	//
+	// +optional
+	Zone *string `json:"zone,omitempty"`
 }
 
 // IPEndpoint describes TCP/UDP socket address, corresponding to Envoy's Socket Address
