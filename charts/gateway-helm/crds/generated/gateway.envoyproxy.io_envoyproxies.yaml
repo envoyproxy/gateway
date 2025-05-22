@@ -11297,7 +11297,6 @@ spec:
                                                           all zones required to enable
                                                           zone-aware routing.
                                                         format: int64
-                                                        minimum: 1
                                                         type: integer
                                                     type: object
                                                   weightedLocality:
@@ -11354,7 +11353,7 @@ spec:
                                                 - message: one of preferLocalZone
                                                     or weightedLocality must be specified.
                                                   rule: '!(!has(self.preferLocalZone)
-                                                    && !has(self.weightedLocality)'
+                                                    && !has(self.weightedLocality))'
                                               slowStart:
                                                 description: |-
                                                   SlowStart defines the configuration related to the slow start load balancer policy.
@@ -11398,6 +11397,14 @@ spec:
                                                 load balancers.
                                               rule: 'self.type in [''Random'', ''ConsistentHash'']
                                                 ? !has(self.slowStart) : true '
+                                            - message: ConsistentHash load balancer
+                                                only supports weightedLocality in
+                                                requestDistribution; preferLocalZone
+                                                is not allowed.
+                                              rule: 'self.type == ''ConsistentHash''
+                                                ? (!has(self.requestDistribution)
+                                                || !has(self.requestDistribution.preferLocalZone))
+                                                : true '
                                           proxyProtocol:
                                             description: ProxyProtocol enables the
                                               Proxy Protocol when communicating with
@@ -12410,7 +12417,6 @@ spec:
                                                           all zones required to enable
                                                           zone-aware routing.
                                                         format: int64
-                                                        minimum: 1
                                                         type: integer
                                                     type: object
                                                   weightedLocality:
@@ -12467,7 +12473,7 @@ spec:
                                                 - message: one of preferLocalZone
                                                     or weightedLocality must be specified.
                                                   rule: '!(!has(self.preferLocalZone)
-                                                    && !has(self.weightedLocality)'
+                                                    && !has(self.weightedLocality))'
                                               slowStart:
                                                 description: |-
                                                   SlowStart defines the configuration related to the slow start load balancer policy.
@@ -12511,6 +12517,14 @@ spec:
                                                 load balancers.
                                               rule: 'self.type in [''Random'', ''ConsistentHash'']
                                                 ? !has(self.slowStart) : true '
+                                            - message: ConsistentHash load balancer
+                                                only supports weightedLocality in
+                                                requestDistribution; preferLocalZone
+                                                is not allowed.
+                                              rule: 'self.type == ''ConsistentHash''
+                                                ? (!has(self.requestDistribution)
+                                                || !has(self.requestDistribution.preferLocalZone))
+                                                : true '
                                           proxyProtocol:
                                             description: ProxyProtocol enables the
                                               Proxy Protocol when communicating with
@@ -13590,7 +13604,6 @@ spec:
                                                     hosts across all zones required
                                                     to enable zone-aware routing.
                                                   format: int64
-                                                  minimum: 1
                                                   type: integer
                                               type: object
                                             weightedLocality:
@@ -13642,7 +13655,7 @@ spec:
                                           - message: one of preferLocalZone or weightedLocality
                                               must be specified.
                                             rule: '!(!has(self.preferLocalZone) &&
-                                              !has(self.weightedLocality)'
+                                              !has(self.weightedLocality))'
                                         slowStart:
                                           description: |-
                                             SlowStart defines the configuration related to the slow start load balancer policy.
@@ -13685,6 +13698,12 @@ spec:
                                           for RoundRobin and LeastRequest load balancers.
                                         rule: 'self.type in [''Random'', ''ConsistentHash'']
                                           ? !has(self.slowStart) : true '
+                                      - message: ConsistentHash load balancer only
+                                          supports weightedLocality in requestDistribution;
+                                          preferLocalZone is not allowed.
+                                        rule: 'self.type == ''ConsistentHash'' ? (!has(self.requestDistribution)
+                                          || !has(self.requestDistribution.preferLocalZone))
+                                          : true '
                                     proxyProtocol:
                                       description: ProxyProtocol enables the Proxy
                                         Protocol when communicating with the backend.
@@ -14699,7 +14718,6 @@ spec:
                                               all zones required to enable zone-aware
                                               routing.
                                             format: int64
-                                            minimum: 1
                                             type: integer
                                         type: object
                                       weightedLocality:
@@ -14748,7 +14766,7 @@ spec:
                                       rule: '!(has(self.preferLocalZone) && has(self.weightedLocality))'
                                     - message: one of preferLocalZone or weightedLocality
                                         must be specified.
-                                      rule: '!(!has(self.preferLocalZone) && !has(self.weightedLocality)'
+                                      rule: '!(!has(self.preferLocalZone) && !has(self.weightedLocality))'
                                   slowStart:
                                     description: |-
                                       SlowStart defines the configuration related to the slow start load balancer policy.
@@ -14791,6 +14809,12 @@ spec:
                                     RoundRobin and LeastRequest load balancers.
                                   rule: 'self.type in [''Random'', ''ConsistentHash'']
                                     ? !has(self.slowStart) : true '
+                                - message: ConsistentHash load balancer only supports
+                                    weightedLocality in requestDistribution; preferLocalZone
+                                    is not allowed.
+                                  rule: 'self.type == ''ConsistentHash'' ? (!has(self.requestDistribution)
+                                    || !has(self.requestDistribution.preferLocalZone))
+                                    : true '
                               proxyProtocol:
                                 description: ProxyProtocol enables the Proxy Protocol
                                   when communicating with the backend.
