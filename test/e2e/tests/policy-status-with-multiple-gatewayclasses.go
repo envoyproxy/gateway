@@ -13,7 +13,9 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	"sigs.k8s.io/gateway-api/conformance/utils/kubernetes"
 	"sigs.k8s.io/gateway-api/conformance/utils/suite"
 
@@ -54,13 +56,47 @@ var PolicyStatusWithMultipleGatewayClassesTest = suite.ConformanceTest{
 				err := suite.Client.Get(
 					context.Background(),
 					types.NamespacedName{Name: "btp-target-multiple-gateway-classes-success", Namespace: ns}, btp)
-				return err == nil && len(btp.Status.Ancestors) == 2
+				return err == nil && checkPolicyStatusAncestors(btp.Status, true)
 			}, suite.TimeoutConfig.GetTimeout, time.Second)
+
 			require.Eventually(t, func() bool {
 				btp := &egv1a1.BackendTrafficPolicy{}
 				err := suite.Client.Get(context.Background(), types.NamespacedName{Name: "btp-target-multiple-gateway-classes-failure", Namespace: ns}, btp)
-				return err == nil && len(btp.Status.Ancestors) == 2
+				return err == nil && checkPolicyStatusAncestors(btp.Status, false)
 			}, suite.TimeoutConfig.GetTimeout, time.Second)
 		})
 	},
+}
+
+func checkPolicyStatusAncestors(status gwapiv1a2.PolicyStatus, accepted bool) bool {
+	if len(status.Ancestors) != 2 {
+		return false
+	}
+	var gateway1Found, gateway2Found bool
+	for _, ancestor := range status.Ancestors {
+		if ancestor.AncestorRef.Name == "gateway-1" {
+			gateway1Found = true
+		}
+		if ancestor.AncestorRef.Name == "gateway-2" {
+			gateway2Found = true
+		}
+	}
+	if !gateway1Found || !gateway2Found {
+		return false
+	}
+	conditionStatus := metav1.ConditionTrue
+	if !accepted {
+		conditionStatus = metav1.ConditionFalse
+	}
+	for _, ancestor := range status.Ancestors {
+		if len(ancestor.Conditions) == 0 {
+			return false
+		}
+		if ancestor.Conditions[0].Type == string(gwapiv1a2.PolicyConditionAccepted) {
+			if ancestor.Conditions[0].Status != conditionStatus {
+				return false
+			}
+		}
+	}
+	return true
 }

@@ -83,6 +83,36 @@ spec:
     tcp:
       connectTimeout: 20s
 ---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: httproute-3
+  namespace: gateway-conformance-infra
+  labels:
+    bar: baz
+spec:
+  parentRefs:
+  - name: gateway-1
+  rules:
+  - backendRefs:
+    - name: infra-backend-v1
+      port: 8080
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: httproute-4
+  namespace: gateway-conformance-infra
+  labels:
+    bar: baz
+spec:
+  parentRefs:
+  - name: gateway-2
+  rules:
+  - backendRefs:
+    - name: infra-backend-v1
+      port: 8080
+---
 apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: BackendTrafficPolicy
 metadata:
@@ -93,7 +123,7 @@ spec:
   - group: gateway.networking.k8s.io
     kind: HTTPRoute
     matchLabels:
-      foo: bar
+      bar: baz
   rateLimit:
     type: Global
     global:
