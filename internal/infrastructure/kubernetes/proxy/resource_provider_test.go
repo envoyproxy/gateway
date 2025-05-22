@@ -88,9 +88,12 @@ func newTestInfraWithNamespaceName(namespace, name, proxyName string) *ir.Infra 
 	i := newTestInfraWithAnnotations(nil)
 	i.Proxy.Name = proxyName
 	i.Proxy.Namespace = namespace
-	i.Proxy.GetProxyMetadata().Name = name
 	i.Proxy.GetProxyMetadata().Labels[gatewayapi.OwningGatewayNamespaceLabel] = namespace
 	i.Proxy.GetProxyMetadata().Labels[gatewayapi.OwningGatewayNameLabel] = name
+	i.Proxy.GetProxyMetadata().OwnerReference = &ir.ResourceMetadata{
+		Kind: "Gateway",
+		Name: name,
+	}
 
 	return i
 }

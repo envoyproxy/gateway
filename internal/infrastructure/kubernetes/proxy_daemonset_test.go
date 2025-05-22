@@ -60,9 +60,12 @@ func setupCreateOrUpdateProxyDaemonSet(gatewayNamespaceMode bool) (*appsv1.Daemo
 		return nil, nil, nil, err
 	}
 	infra := ir.NewInfra()
-	infra.Proxy.GetProxyMetadata().Name = infra.Proxy.Name
 	infra.Proxy.GetProxyMetadata().Labels[gatewayapi.OwningGatewayNamespaceLabel] = "default"
 	infra.Proxy.GetProxyMetadata().Labels[gatewayapi.OwningGatewayNameLabel] = infra.Proxy.Name
+	infra.Proxy.GetProxyMetadata().OwnerReference = &ir.ResourceMetadata{
+		Kind: "Gateway",
+		Name: infra.Proxy.Name,
+	}
 	infra.Proxy.Config = &egv1a1.EnvoyProxy{
 		Spec: egv1a1.EnvoyProxySpec{
 			Provider: &egv1a1.EnvoyProxyProvider{
@@ -87,9 +90,12 @@ func setupCreateOrUpdateProxyDaemonSet(gatewayNamespaceMode bool) (*appsv1.Daemo
 		}
 		infra.Proxy.Name = "ns1/gateway-1"
 		infra.Proxy.Namespace = "ns1"
-		infra.Proxy.GetProxyMetadata().Name = "gateway-1"
 		infra.Proxy.GetProxyMetadata().Labels[gatewayapi.OwningGatewayNamespaceLabel] = "ns1"
 		infra.Proxy.GetProxyMetadata().Labels[gatewayapi.OwningGatewayNameLabel] = "gateway-1"
+		infra.Proxy.GetProxyMetadata().OwnerReference = &ir.ResourceMetadata{
+			Kind: "Gateway",
+			Name: "gateway-1",
+		}
 
 		if err := createGatewayForGatewayNamespaceMode(ctx, kube.Client); err != nil {
 			return nil, nil, nil, err

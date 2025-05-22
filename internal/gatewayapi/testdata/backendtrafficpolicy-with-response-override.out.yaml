@@ -342,7 +342,6 @@ infraIR:
         labels:
           gateway.envoyproxy.io/owning-gateway-name: gateway-1
           gateway.envoyproxy.io/owning-gateway-namespace: default
-        name: gateway-1
       name: default/gateway-1
       namespace: envoy-gateway-system
   default/gateway-2:
@@ -359,7 +358,6 @@ infraIR:
         labels:
           gateway.envoyproxy.io/owning-gateway-name: gateway-2
           gateway.envoyproxy.io/owning-gateway-namespace: default
-        name: gateway-2
       name: default/gateway-2
       namespace: envoy-gateway-system
 xdsIR:

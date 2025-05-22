@@ -64,9 +64,15 @@ func (i *Infra) GetOwnerReferenceUID(ctx context.Context, irInfra *ir.Infra) (ma
 	ownerReferenceUID := make(map[string]types.UID)
 
 	if i.EnvoyGateway.GatewayNamespaceMode() {
+		if irInfra.GetProxyInfra().GetProxyMetadata() == nil {
+			return nil, errors.New("infra proxy metadata ir is nil")
+		}
+		if irInfra.GetProxyInfra().GetProxyMetadata().OwnerReference == nil {
+			return nil, errors.New("infra proxy metadata owner reference ir is nil")
+		}
 		key := types.NamespacedName{
 			Namespace: i.GetResourceNamespace(irInfra),
-			Name:      irInfra.GetProxyInfra().GetProxyMetadata().Name,
+			Name:      irInfra.GetProxyInfra().GetProxyMetadata().OwnerReference.Name,
 		}
 		gatewayUID, err := i.Client.GetUID(ctx, key, &gwapiv1.Gateway{})
 		if err != nil {

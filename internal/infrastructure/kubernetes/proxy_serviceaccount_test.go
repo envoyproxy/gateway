@@ -175,10 +175,13 @@ func TestCreateOrUpdateProxyServiceAccount(t *testing.T) {
 					Name:      "ns1/gateway-1",
 					Namespace: "ns1",
 					Metadata: &ir.InfraMetadata{
-						Name: "gateway-1",
 						Labels: map[string]string{
 							gatewayapi.OwningGatewayNamespaceLabel: "ns1",
 							gatewayapi.OwningGatewayNameLabel:      "gateway-1",
+						},
+						OwnerReference: &ir.ResourceMetadata{
+							Kind: "Gateway",
+							Name: "gateway-1",
 						},
 					},
 				},

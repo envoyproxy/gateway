@@ -121,7 +121,7 @@ func (r *ResourceRender) OwnerReferences() []metav1.OwnerReference {
 			ownerReferences = append(ownerReferences, metav1.OwnerReference{
 				APIVersion: gatewayAPIV1Version,
 				Kind:       ResourceKindGateway,
-				Name:       r.infra.GetProxyMetadata().Name,
+				Name:       r.infra.GetProxyMetadata().OwnerReference.Name,
 				UID:        uid,
 			})
 		}

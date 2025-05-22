@@ -166,7 +166,6 @@ infraIR:
         labels:
           gateway.envoyproxy.io/owning-gateway-name: gateway-1
           gateway.envoyproxy.io/owning-gateway-namespace: envoy-gateway
-        name: gateway-1
       name: envoy-gateway/gateway-1
       namespace: envoy-gateway-system
 xdsIR:
