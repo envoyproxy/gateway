@@ -10,7 +10,6 @@ import (
 	"fmt"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/utils/ptr"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
@@ -21,82 +20,8 @@ import (
 	"github.com/envoyproxy/gateway/internal/ir"
 )
 
-func (t *Translator) ProcessXBackendTrafficPolicy(resources *resource.Resources) []*gwapixv1a1.XBackendTrafficPolicy {
-	res := make([]*gwapixv1a1.XBackendTrafficPolicy, 0, len(resources.XBackendTrafficPolicies))
-
-	btpByRefSets := sets.New[string]()
-	for _, xbtp := range resources.XBackendTrafficPolicies {
-		err := t.validateXBackendTrafficPolicy(xbtp)
-		for _, ref := range xbtp.Spec.TargetRefs {
-			ancestor := gwapiv1.ParentReference{
-				Group: ptr.To(ref.Group),
-				Kind:  ptr.To(ref.Kind),
-				Name:  ref.Name,
-			}
-
-			if err != nil {
-				status.SetConditionForPolicyAncestor(&xbtp.Status,
-					ancestor,
-					t.GatewayControllerName,
-					gwapiv1a2.PolicyConditionAccepted,
-					metav1.ConditionFalse,
-					gwapiv1a2.PolicyReasonInvalid,
-					status.Error2ConditionMsg(err),
-					xbtp.Generation,
-				)
-				continue
-			}
-
-			kind := KindDerefOr(&ref.Kind, resource.KindService)
-			if err := validateXBackendTrafficPolicyTargetRef(resources, xbtp, &ref); err != nil {
-				status.SetConditionForPolicyAncestor(&xbtp.Status,
-					ancestor,
-					t.GatewayControllerName,
-					gwapiv1a2.PolicyConditionAccepted,
-					metav1.ConditionFalse,
-					gwapiv1a2.PolicyReasonTargetNotFound,
-					status.Error2ConditionMsg(err),
-					xbtp.Generation,
-				)
-				continue
-			}
-
-			// Check if the backend reference is already in the set.
-			// Key format: /<kind>/<namespace>/<name>
-			refKey := fmt.Sprintf("/%s/%s/%s", kind, xbtp.Namespace, ref.Name)
-			if btpByRefSets.Has(refKey) {
-				// More than one policy reference to the same backend reference.
-				status.SetConditionForPolicyAncestor(&xbtp.Status,
-					ancestor,
-					t.GatewayControllerName,
-					gwapiv1a2.PolicyConditionAccepted,
-					metav1.ConditionFalse,
-					gwapiv1a2.PolicyReasonConflicted,
-					fmt.Sprintf("%s %s backend reference conflict.", kind, ref.Name),
-					xbtp.Generation,
-				)
-				continue
-			}
-			btpByRefSets.Insert(refKey)
-
-			status.SetConditionForPolicyAncestor(&xbtp.Status,
-				ancestor,
-				t.GatewayControllerName,
-				gwapiv1a2.PolicyConditionAccepted,
-				metav1.ConditionTrue,
-				gwapiv1a2.PolicyReasonAccepted,
-				"Policy has been accepted.",
-				xbtp.Generation,
-			)
-		}
-
-		res = append(res, xbtp)
-	}
-
-	return res
-}
-
 func (t *Translator) applyXBackendTrafficPolicy(backendRef *gwapiv1a2.NamespacedPolicyTargetReference,
+	parent gwapiv1a2.ParentReference,
 	resources *resource.Resources,
 ) *ir.RetryBudget {
 	policy := t.getXBackendTrafficPolicy(resources, backendRef)
@@ -104,6 +29,27 @@ func (t *Translator) applyXBackendTrafficPolicy(backendRef *gwapiv1a2.Namespaced
 		return nil
 	}
 
+	if err := t.validateXBackendTrafficPolicy(policy); err != nil {
+		status.SetConditionForPolicyAncestor(&policy.Status,
+			parent,
+			t.GatewayControllerName,
+			gwapiv1a2.PolicyConditionAccepted,
+			metav1.ConditionFalse,
+			gwapiv1a2.PolicyReasonInvalid,
+			status.Error2ConditionMsg(err),
+			policy.Generation,
+		)
+	}
+
+	status.SetConditionForPolicyAncestor(&policy.Status,
+		parent,
+		t.GatewayControllerName,
+		gwapiv1a2.PolicyConditionAccepted,
+		metav1.ConditionTrue,
+		gwapiv1a2.PolicyReasonAccepted,
+		"Policy has been accepted.",
+		policy.Generation,
+	)
 	return translateXBackendTrafficPolicyRetryBudget(policy)
 }
 

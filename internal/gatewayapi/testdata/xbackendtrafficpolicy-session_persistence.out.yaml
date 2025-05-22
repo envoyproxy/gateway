@@ -110,18 +110,7 @@ xBackendTrafficPolicies:
       kind: ""
       name: service-1
   status:
-    ancestors:
-    - ancestorRef:
-        group: ""
-        kind: ""
-        name: service-1
-      conditions:
-      - lastTransitionTime: null
-        message: Session persistence is not supported.
-        reason: Invalid
-        status: "False"
-        type: Accepted
-      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+    ancestors: null
 xdsIR:
   envoy-gateway/gateway-1:
     accessLog:

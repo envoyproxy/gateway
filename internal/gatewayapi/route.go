@@ -1436,6 +1436,13 @@ func (t *Translator) processDestination(name string, backendRefContext BackendRe
 		Namespace: ptr.To(gwapiv1.Namespace(backendNamespace)),
 		Kind:      gwapiv1.Kind(backendKind),
 		Group:     gwapiv1.Group(GroupDerefOr(backendRef.Group, "")),
+	}, gwapiv1a2.ParentReference{
+		Group:       parentRef.Group,
+		Kind:        parentRef.Kind,
+		Namespace:   parentRef.Namespace,
+		Name:        parentRef.Name,
+		SectionName: parentRef.SectionName,
+		Port:        parentRef.Port,
 	}, resources)
 
 	var filtersErr error

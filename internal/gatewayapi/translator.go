@@ -228,8 +228,6 @@ func (t *Translator) Translate(resources *resource.Resources) (*TranslateResult,
 		routes = append(routes, u)
 	}
 
-	xBtpList := t.ProcessXBackendTrafficPolicy(resources)
-
 	// Process BackendTrafficPolicies
 	backendTrafficPolicies := t.ProcessBackendTrafficPolicies(
 		resources, acceptedGateways, routes, xdsIR)
@@ -272,7 +270,7 @@ func (t *Translator) Translate(resources *resource.Resources) (*TranslateResult,
 	return newTranslateResult(allGateways, httpRoutes, grpcRoutes, tlsRoutes,
 		tcpRoutes, udpRoutes, clientTrafficPolicies, backendTrafficPolicies,
 		securityPolicies, resources.BackendTLSPolicies, envoyExtensionPolicies,
-		extServerPolicies, backends, xBtpList, xdsIR, infraIR), errs
+		extServerPolicies, backends, resources.XBackendTrafficPolicies, xdsIR, infraIR), errs
 }
 
 // GetRelevantGateways returns GatewayContexts, containing a copy of the original

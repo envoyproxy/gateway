@@ -115,9 +115,9 @@ xBackendTrafficPolicies:
   status:
     ancestors:
     - ancestorRef:
-        group: ""
-        kind: ""
-        name: service-1
+        name: gateway-1
+        namespace: envoy-gateway
+        sectionName: http
       conditions:
       - lastTransitionTime: null
         message: Policy has been accepted.

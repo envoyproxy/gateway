@@ -123,51 +123,7 @@ xBackendTrafficPolicies:
       kind: ServiceImport
       name: service-import-not-exist
   status:
-    ancestors:
-    - ancestorRef:
-        group: ""
-        kind: ""
-        name: service-1
-      conditions:
-      - lastTransitionTime: null
-        message: Min retry rate interval is not supported.
-        reason: Invalid
-        status: "False"
-        type: Accepted
-      controllerName: gateway.envoyproxy.io/gatewayclass-controller
-    - ancestorRef:
-        group: ""
-        kind: ""
-        name: service-not-exist
-      conditions:
-      - lastTransitionTime: null
-        message: Min retry rate interval is not supported.
-        reason: Invalid
-        status: "False"
-        type: Accepted
-      controllerName: gateway.envoyproxy.io/gatewayclass-controller
-    - ancestorRef:
-        group: gateway.envoyproxy.io
-        kind: Backend
-        name: backend-not-exist
-      conditions:
-      - lastTransitionTime: null
-        message: Min retry rate interval is not supported.
-        reason: Invalid
-        status: "False"
-        type: Accepted
-      controllerName: gateway.envoyproxy.io/gatewayclass-controller
-    - ancestorRef:
-        group: multicluster.x-k8s.io
-        kind: ServiceImport
-        name: service-import-not-exist
-      conditions:
-      - lastTransitionTime: null
-        message: Min retry rate interval is not supported.
-        reason: Invalid
-        status: "False"
-        type: Accepted
-      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+    ancestors: null
 xdsIR:
   envoy-gateway/gateway-1:
     accessLog:

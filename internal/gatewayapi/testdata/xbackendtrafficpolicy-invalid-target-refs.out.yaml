@@ -124,47 +124,14 @@ xBackendTrafficPolicies:
   status:
     ancestors:
     - ancestorRef:
-        group: ""
-        kind: ""
-        name: service-1
+        name: gateway-1
+        namespace: envoy-gateway
+        sectionName: http
       conditions:
       - lastTransitionTime: null
         message: Policy has been accepted.
         reason: Accepted
         status: "True"
-        type: Accepted
-      controllerName: gateway.envoyproxy.io/gatewayclass-controller
-    - ancestorRef:
-        group: ""
-        kind: ""
-        name: service-not-exist
-      conditions:
-      - lastTransitionTime: null
-        message: Service service-not-exist not found.
-        reason: TargetNotFound
-        status: "False"
-        type: Accepted
-      controllerName: gateway.envoyproxy.io/gatewayclass-controller
-    - ancestorRef:
-        group: gateway.envoyproxy.io
-        kind: Backend
-        name: backend-not-exist
-      conditions:
-      - lastTransitionTime: null
-        message: Backend backend-not-exist not found.
-        reason: TargetNotFound
-        status: "False"
-        type: Accepted
-      controllerName: gateway.envoyproxy.io/gatewayclass-controller
-    - ancestorRef:
-        group: multicluster.x-k8s.io
-        kind: ServiceImport
-        name: service-import-not-exist
-      conditions:
-      - lastTransitionTime: null
-        message: ServiceImport service-import-not-exist not found.
-        reason: TargetNotFound
-        status: "False"
         type: Accepted
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
 - apiVersion: gateway.networking.x-k8s.io/v1alpha1
@@ -184,18 +151,7 @@ xBackendTrafficPolicies:
       kind: ""
       name: service-1
   status:
-    ancestors:
-    - ancestorRef:
-        group: ""
-        kind: ""
-        name: service-1
-      conditions:
-      - lastTransitionTime: null
-        message: Service service-1 backend reference conflict.
-        reason: Conflicted
-        status: "False"
-        type: Accepted
-      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+    ancestors: null
 xdsIR:
   envoy-gateway/gateway-1:
     accessLog:
