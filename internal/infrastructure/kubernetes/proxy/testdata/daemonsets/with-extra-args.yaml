@@ -228,6 +228,7 @@ spec:
         - --log-level warn
         - --cpuset-threads
         - --drain-strategy immediate
+        - --component-log-level misc:error
         - --drain-time-s 60
         - --key1 val1
         - --key2 val2
