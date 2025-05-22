@@ -164,6 +164,12 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *re
 					ListenerPortShiftDisabled: r.EnvoyGateway.Provider != nil && r.EnvoyGateway.Provider.IsRunningOnHost(),
 				}
 
+				// Since a xPolicy can target resources tracing back to different GatewayClasses,
+				// we need to preserve the policy statuses across translators to ensure that they won't be lost.
+				// The status update logic inside a translator will only update the Ancestors of its
+				// GatewayClass, and won't overwrite the statuses from other GatewayClasses.
+				r.preservePolicyStatusesCrossGatewayClasses(resources)
+
 				// If an extension is loaded, pass its supported groups/kinds to the translator
 				if r.EnvoyGateway.ExtensionManager != nil {
 					var extGKs []schema.GroupKind
@@ -308,6 +314,49 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *re
 		},
 	)
 	r.Logger.Info("shutting down")
+}
+
+func (r *Runner) preservePolicyStatusesCrossGatewayClasses(resources *resource.Resources) {
+	for _, policy := range resources.ClientTrafficPolicies {
+		if policyStatus, ok := r.ProviderResources.ClientTrafficPolicyStatuses.Load(utils.NamespacedName(policy)); ok {
+			policy.Status = *policyStatus
+		}
+	}
+	for _, policy := range resources.BackendTrafficPolicies {
+		if policyStatus, ok := r.ProviderResources.BackendTrafficPolicyStatuses.Load(utils.NamespacedName(policy)); ok {
+			policy.Status = *policyStatus
+		}
+	}
+	/*
+	for _, policy := range resources.SecurityPolicies {
+		if policyStatus, ok := r.ProviderResources.SecurityPolicyStatuses.Load(utils.NamespacedName(policy)); ok {
+			policy.Status = *policyStatus
+		}
+	}
+	for _, policy := range resources.EnvoyExtensionPolicies {
+		if policyStatus, ok := r.ProviderResources.EnvoyExtensionPolicyStatuses.Load(utils.NamespacedName(policy)); ok {
+			policy.Status = *policyStatus
+		}
+	}
+	for _, policy := range resources.EnvoyPatchPolicies {
+		if policyStatus, ok := r.ProviderResources.EnvoyPatchPolicyStatuses.Load(utils.NamespacedName(policy)); ok {
+			policy.Status = *policyStatus
+		}
+	}
+	for _, policy := range resources.ExtensionServerPolicies {
+		key := message.NamespacedNameAndGVK{
+			NamespacedName:   utils.NamespacedName(&policy),
+			GroupVersionKind: policy.GroupVersionKind(),
+		}
+		if policyStatus, ok := r.ProviderResources.ExtensionPolicyStatuses.Load(key); ok {
+			policy.Object["status"] = policyStatus
+		}
+	}
+	for _, policy := range resources.BackendTLSPolicies {
+		if policyStatus, ok := r.ProviderResources.BackendTLSPolicyStatuses.Load(utils.NamespacedName(policy)); ok {
+			policy.Status = *policyStatus
+		}
+	}*/
 }
 
 func (r *Runner) loadTLSConfig(ctx context.Context) (tlsConfig *tls.Config, salt []byte, err error) {

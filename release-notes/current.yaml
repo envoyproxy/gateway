@@ -15,6 +15,7 @@ new features: |
   Added XDS metadata for clusters and endpoints from xRoutes and referenced backend resources (Backend, Service, ServiceImport).
 
 bug fixes: |
+  Fixed BackendTrafficPolicy status Ancestors not containing the Gateways from multiple GatewayClasses.
 
 # Enhancements that improve performance.
 performance improvements: |
