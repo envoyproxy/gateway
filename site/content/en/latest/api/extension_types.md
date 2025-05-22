@@ -1937,7 +1937,8 @@ _Appears in:_
 
 
 
-ForceLocalZone defines override configuration for local zone routing.
+ForceLocalZone defines override configuration for forcing all traffic to stay local vs Envoy default behavior
+which maintains equal distribution among upstreams while sending as much traffic as possible locally.
 
 _Appears in:_
 - [PreferLocalZone](#preferlocalzone)
@@ -3059,7 +3060,7 @@ _Appears in:_
 
 
 
-Locality specifies a single zone identifier.
+Locality specifies the details of a particular locality. Currently only Zone is supported.
 
 _Appears in:_
 - [LocalityWeights](#localityweights)
@@ -3416,7 +3417,7 @@ _Appears in:_
 
 
 
-PreferLocalZone configures zone-aware routing to prefer sending traffic to the local locality zone
+PreferLocalZone configures zone-aware routing to prefer sending traffic to the local locality zone.
 
 _Appears in:_
 - [RequestDistribution](#requestdistribution)
@@ -4913,7 +4914,7 @@ _Appears in:_
 
 
 
-WeightedLocality defines explicit traffic weights per locality (zone).
+WeightedLocality defines explicit traffic weights per locality.
 
 _Appears in:_
 - [RequestDistribution](#requestdistribution)

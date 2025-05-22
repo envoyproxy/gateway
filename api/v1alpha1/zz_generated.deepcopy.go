@@ -2807,7 +2807,7 @@ func (in *ForceLocalZone) DeepCopyInto(out *ForceLocalZone) {
 	}
 	if in.MinZoneSize != nil {
 		in, out := &in.MinZoneSize, &out.MinZoneSize
-		*out = new(uint64)
+		*out = new(uint32)
 		**out = **in
 	}
 }

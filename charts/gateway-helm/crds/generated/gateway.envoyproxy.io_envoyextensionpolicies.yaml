@@ -740,22 +740,20 @@ spec:
                                     locality zone.
                                   properties:
                                     forceLocalZone:
-                                      description: ForceLocalZone defines override
-                                        configuration for local zone routing.
+                                      description: |-
+                                        ForceLocalZone defines override configuration for forcing all traffic to stay local vs Envoy default behavior
+                                        which maintains equal distribution among upstreams while sending as much traffic as possible locally.
                                       properties:
                                         enabled:
-                                          description: Enabled causes Envoy to route
-                                            all requests to the local zone if there
-                                            are at least "minZoneSize" healthy hosts
+                                          description: |-
+                                            Enabled causes Envoy to route all requests to the local zone if there are at least "minZoneSize" healthy hosts
                                             available.
                                           type: boolean
                                         minZoneSize:
-                                          description: MinZoneSize is the minimum
-                                            number of upstream hosts in the local
-                                            zone required to honor the forceLocalZone
-                                            override.
-                                          format: int64
-                                          minimum: 1
+                                          description: |-
+                                            MinZoneSize is the minimum number of upstream hosts in the local zone required to honor the forceLocalZone
+                                            override. Defaults to 1 if not specified.
+                                          format: int32
                                           type: integer
                                       type: object
                                     minClusterSize:
@@ -778,14 +776,12 @@ spec:
                                           locality with a traffic weight.
                                         properties:
                                           locality:
-                                            description: Locality identifies the zone
-                                              for which the weight applies.
+                                            description: Locality defines locality
+                                              information for which the weight applies.
                                             properties:
                                               zone:
                                                 description: Zone is the name of the
-                                                  locality zone (e.g., availability
-                                                  zone or rack).
-                                                pattern: ^[A-Za-z0-9_-]+$
+                                                  locality zone (e.g. topology.kubernetes.io/zone).
                                                 type: string
                                             required:
                                             - zone
@@ -795,13 +791,11 @@ spec:
                                               for traffic distribution to the specified
                                               locality.
                                             format: int32
-                                            minimum: 0
                                             type: integer
                                         required:
                                         - locality
                                         - weight
                                         type: object
-                                      minItems: 1
                                       type: array
                                   required:
                                   - weights
@@ -809,13 +803,11 @@ spec:
                               type: object
                               x-kubernetes-validations:
                               - message: only one of preferLocalZone or weightedLocality
-                                  may be specified
-                                rule: self.preferLocalZone == null || self.weightedLocality
-                                  == null
+                                  may be specified.
+                                rule: '!(has(self.preferLocalZone) && has(self.weightedLocality))'
                               - message: one of preferLocalZone or weightedLocality
-                                  must be specified
-                                rule: self.preferLocalZone != null || self.weightedLocality
-                                  != null
+                                  must be specified.
+                                rule: '!(!has(self.preferLocalZone) && !has(self.weightedLocality)'
                             slowStart:
                               description: |-
                                 SlowStart defines the configuration related to the slow start load balancer policy.
