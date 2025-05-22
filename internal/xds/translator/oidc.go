@@ -246,20 +246,20 @@ func buildDenyRedirectMatcher(oidc *ir.OIDC) []*routev3.HeaderMatcher {
 				MatchPattern: &matcherv3.StringMatcher_Exact{Exact: m.Value},
 			}
 		} else { // if type is specified, use it
-			switch {
-			case *m.Type == egv1a1.StringMatchExact:
+			switch *m.Type {
+			case egv1a1.StringMatchExact:
 				stringMatcher = &matcherv3.StringMatcher{
 					MatchPattern: &matcherv3.StringMatcher_Exact{Exact: m.Value},
 				}
-			case *m.Type == egv1a1.StringMatchPrefix:
+			case egv1a1.StringMatchPrefix:
 				stringMatcher = &matcherv3.StringMatcher{
 					MatchPattern: &matcherv3.StringMatcher_Prefix{Prefix: m.Value},
 				}
-			case *m.Type == egv1a1.StringMatchSuffix:
+			case egv1a1.StringMatchSuffix:
 				stringMatcher = &matcherv3.StringMatcher{
 					MatchPattern: &matcherv3.StringMatcher_Suffix{Suffix: m.Value},
 				}
-			case *m.Type == egv1a1.StringMatchRegularExpression:
+			case egv1a1.StringMatchRegularExpression:
 				stringMatcher = &matcherv3.StringMatcher{
 					MatchPattern: &matcherv3.StringMatcher_SafeRegex{
 						SafeRegex: &matcherv3.RegexMatcher{Regex: m.Value},
