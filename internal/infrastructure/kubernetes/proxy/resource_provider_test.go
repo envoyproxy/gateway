@@ -30,6 +30,7 @@ import (
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
+	gwapiresource "github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/utils/test"
 )
@@ -69,7 +70,7 @@ func (f *fakeKubernetesInfraProvider) GetEnvoyGateway() *egv1a1.EnvoyGateway {
 
 func (f *fakeKubernetesInfraProvider) GetOwnerReferenceUID(ctx context.Context, infra *ir.Infra) (map[string]types.UID, error) {
 	return map[string]types.UID{
-		ResourceKindGateway: "test-owner-reference-uid-for-gateway",
+		gwapiresource.KindGateway: "test-owner-reference-uid-for-gateway",
 	}, nil
 }
 

@@ -20,9 +20,11 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/utils/ptr"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
+	gwapiresource "github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 	"github.com/envoyproxy/gateway/internal/infrastructure/common"
 	"github.com/envoyproxy/gateway/internal/infrastructure/kubernetes/resource"
 	"github.com/envoyproxy/gateway/internal/ir"
@@ -43,11 +45,6 @@ const (
 
 	// XdsTLSCaFileName is the file name of the xDS server TLS certificate.
 	XdsTLSCaFileName = "ca.crt"
-
-	// ResourceKind indicates owner of infra proxy resources.
-	ResourceKindGateway = "Gateway"
-
-	gatewayAPIV1Version = "gateway.networking.k8s.io/v1"
 )
 
 type ResourceRender struct {
@@ -117,10 +114,10 @@ func (r *ResourceRender) LabelSelector() labels.Selector {
 func (r *ResourceRender) OwnerReferences() []metav1.OwnerReference {
 	var ownerReferences []metav1.OwnerReference
 	if r.ownerReferenceUID != nil && r.GatewayNamespaceMode {
-		if uid, ok := r.ownerReferenceUID[ResourceKindGateway]; ok {
+		if uid, ok := r.ownerReferenceUID[gwapiresource.KindGateway]; ok {
 			ownerReferences = append(ownerReferences, metav1.OwnerReference{
-				APIVersion: gatewayAPIV1Version,
-				Kind:       ResourceKindGateway,
+				APIVersion: gwapiv1.GroupVersion.String(),
+				Kind:       r.infra.GetProxyMetadata().OwnerReference.Kind,
 				Name:       r.infra.GetProxyMetadata().OwnerReference.Name,
 				UID:        uid,
 			})

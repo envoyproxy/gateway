@@ -14,6 +14,7 @@ import (
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 	"github.com/envoyproxy/gateway/internal/infrastructure/kubernetes/proxy"
 	"github.com/envoyproxy/gateway/internal/ir"
 )
@@ -78,7 +79,7 @@ func (i *Infra) GetOwnerReferenceUID(ctx context.Context, irInfra *ir.Infra) (ma
 		if err != nil {
 			return nil, err
 		}
-		ownerReferenceUID[proxy.ResourceKindGateway] = gatewayUID
+		ownerReferenceUID[resource.KindGateway] = gatewayUID
 	}
 	// TODO: set GatewayClass UID when enable merged gateways
 
