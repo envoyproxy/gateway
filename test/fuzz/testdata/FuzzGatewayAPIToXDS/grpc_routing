@@ -37,13 +37,13 @@ spec:
             - name: com.example.Header
               value: foobar
       backendRefs:
-        - name: providedBackend
+        - name: provided-backend
           port: 9000
 ---
 apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: Backend
 metadata:
-  name: providedBackend
+  name: provided-backend
   namespace: default
 spec:
   endpoints:

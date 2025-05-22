@@ -22,7 +22,6 @@ spec:
     kubernetes:
       envoyDeployment:
         container:
-          image: envoyproxy/envoy:distroless-v1.34.1   # https://github.com/envoyproxy/gateway/issues/6077
           volumeMounts:
             - mountPath: /var/run/ext-proc
               name: socket-dir
