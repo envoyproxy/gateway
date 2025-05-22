@@ -28,6 +28,7 @@
               fillInterval: 0s
               maxTokens: 5
               tokensPerFill: 5
+          enableXRatelimitHeaders: DRAFT_VERSION_03
           filterEnabled:
             defaultValue:
               numerator: 100
@@ -110,6 +111,7 @@
               fillInterval: 60s
               maxTokens: 10
               tokensPerFill: 10
+          enableXRatelimitHeaders: DRAFT_VERSION_03
           filterEnabled:
             defaultValue:
               numerator: 100

@@ -151,6 +151,8 @@ type Xds struct {
 	EnvoyPatchPolicies []*EnvoyPatchPolicy `json:"envoyPatchPolicies,omitempty" yaml:"envoyPatchPolicies,omitempty"`
 	// FilterOrder holds the custom order of the HTTP filters
 	FilterOrder []egv1a1.FilterPosition `json:"filterOrder,omitempty" yaml:"filterOrder,omitempty"`
+	// GlobalResources holds the global resources used by the Envoy, for example, the envoy client certificate and the OIDC HMAC secret
+	GlobalResources *GlobalResources `json:"globalResources,omitempty" yaml:"globalResources,omitempty"`
 }
 
 // Equal implements the Comparable interface used by watchable.DeepEqual to skip unnecessary updates.
@@ -1489,6 +1491,10 @@ type RouteDestination struct {
 	// reused
 	Name     string                `json:"name" yaml:"name"`
 	Settings []*DestinationSetting `json:"settings,omitempty" yaml:"settings,omitempty"`
+	// Metadata is used to enrich envoy route metadata with user and provider-specific information
+	// RouteDestination metadata is primarily derived from the xRoute resources. In some cases,
+	// the primary resource is a Policy or Envoy Proxy, when non-xRoute backendRefs are used.
+	Metadata *ResourceMetadata `json:"metadata,omitempty" yaml:"metadata,omitempty"`
 }
 
 // Validate the fields within the RouteDestination structure
@@ -1598,6 +1604,9 @@ type DestinationSetting struct {
 	// ZoneAwareRoutingEnabled specifies whether to enable Zone Aware Routing for this destination's endpoints.
 	// This is derived from the backend service and depends on having Kubernetes Topology Aware Routing or Traffic Distribution enabled.
 	ZoneAwareRoutingEnabled bool `json:"zoneAwareRoutingEnabled,omitempty" yaml:"zoneAwareRoutingEnabled,omitempty"`
+	// Metadata is used to enrich envoy route metadata with user and provider-specific information
+	// The primary metadata for DestinationSettings comes from the Backend resource reference in BackendRef
+	Metadata *ResourceMetadata `json:"metadata,omitempty" yaml:"metadata,omitempty"`
 }
 
 // Validate the fields within the DestinationSetting structure
@@ -2107,10 +2116,19 @@ type RateLimit struct {
 // GlobalRateLimit holds the global rate limiting configuration.
 // +k8s:deepcopy-gen=true
 type GlobalRateLimit struct {
-	// TODO zhaohuabing: add default values for Global rate limiting.
-
 	// Rules for rate limiting.
 	Rules []*RateLimitRule `json:"rules,omitempty" yaml:"rules,omitempty" patchStrategy:"merge" patchMergeKey:"name"`
+}
+
+// GlobalResources holds the global resources used by the Envoy that are not specific to any listener or route.
+// +k8s:deepcopy-gen=true
+type GlobalResources struct {
+	// EnvoyClientCertificate holds the client certificate secret for envoy to use when establishing a TLS connection to
+	// control plane components. For example, the rate limit service, WASM HTTP server, etc.
+	EnvoyClientCertificate *TLSCertificate `json:"envoyClientCertificate,omitempty" yaml:"envoyClientCertificate,omitempty"`
+	// HMACSecret holds the HMAC Secret used by the OIDC.
+	// TODO: zhaohuabing move HMACSecret here
+	// HMACSecret PrivateBytes
 }
 
 // LocalRateLimit holds the local rate limiting configuration.

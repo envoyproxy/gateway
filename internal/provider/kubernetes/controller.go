@@ -775,6 +775,34 @@ func (r *gatewayAPIReconciler) processOIDCHMACSecret(ctx context.Context, resour
 	}
 }
 
+// processEnvoyTLSSecret adds the Envoy TLS Secret to the resourceTree.
+// The Envoy TLS Secret is created by the CertGen job and is used by envoy to establish
+// TLS connections to the rate limit service.
+func (r *gatewayAPIReconciler) processEnvoyTLSSecret(ctx context.Context, resourceTree *resource.Resources, resourceMap *resourceMappings) {
+	var (
+		secret corev1.Secret
+		err    error
+	)
+
+	err = r.client.Get(ctx,
+		types.NamespacedName{Namespace: r.namespace, Name: envoyTLSSecretName},
+		&secret,
+	)
+	if err != nil {
+		r.log.Error(err,
+			"failed to process Envoy TLS Secret",
+			"namespace", r.namespace, "name", envoyTLSSecretName)
+		return
+	}
+
+	key := utils.NamespacedName(&secret).String()
+	if !resourceMap.allAssociatedSecrets.Has(key) {
+		resourceMap.allAssociatedSecrets.Insert(key)
+		resourceTree.Secrets = append(resourceTree.Secrets, &secret)
+		r.log.Info("processing Envoy TLS Secret", "namespace", r.namespace, "name", envoyTLSSecretName)
+	}
+}
+
 // processSecretRef adds the referenced Secret to the resourceTree if it's valid.
 // - If it exists in the same namespace as the owner.
 // - If it exists in a different namespace, and there is a ReferenceGrant.
@@ -1244,6 +1272,9 @@ func (r *gatewayAPIReconciler) processSecurityPolicies(
 
 	// Add the OIDC HMAC Secret to the resourceTree
 	r.processOIDCHMACSecret(ctx, resourceTree, resourceMap)
+
+	// Add the Envoy TLS Secret to the resourceTree
+	r.processEnvoyTLSSecret(ctx, resourceTree, resourceMap)
 	return nil
 }
 
