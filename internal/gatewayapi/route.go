@@ -1911,21 +1911,16 @@ func (t *Translator) processBackendDestinationSetting(
 			ip := net.ParseIP(bep.IP.Address)
 			if ip != nil {
 				addrTypeMap[ir.IP]++
-				irde = &ir.DestinationEndpoint{
-					Host: bep.IP.Address,
-					Port: uint32(bep.IP.Port),
-				}
+				irde = ir.NewDestEndpoint(bep.IP.Address, uint32(bep.IP.Port), false, bep.Zone)
 			}
 		case bep.FQDN != nil:
 			addrTypeMap[ir.FQDN]++
-			irde = &ir.DestinationEndpoint{
-				Host: bep.FQDN.Hostname,
-				Port: uint32(bep.FQDN.Port),
-			}
+			irde = ir.NewDestEndpoint(bep.FQDN.Hostname, uint32(bep.FQDN.Port), false, bep.Zone)
 		case bep.Unix != nil:
 			addrTypeMap[ir.IP]++
 			irde = &ir.DestinationEndpoint{
 				Path: ptr.To(bep.Unix.Path),
+				Zone: bep.Zone,
 			}
 		}
 
