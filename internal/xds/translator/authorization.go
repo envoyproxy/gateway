@@ -107,7 +107,7 @@ func listenerContainsRBAC(irListener *ir.HTTPListener) bool {
 }
 
 // patchRoute patches the provided route with the RBAC config if applicable.
-func (*rbac) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute) error {
+func (*rbac) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute, _ *ir.HTTPListener) error {
 	if route == nil {
 		return errors.New("xds route is nil")
 	}

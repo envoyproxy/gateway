@@ -360,6 +360,7 @@ _Appears in:_
 | `fqdn` | _[FQDNEndpoint](#fqdnendpoint)_ |  false  |  | FQDN defines a FQDN endpoint |
 | `ip` | _[IPEndpoint](#ipendpoint)_ |  false  |  | IP defines an IP endpoint. Supports both IPv4 and IPv6 addresses. |
 | `unix` | _[UnixSocket](#unixsocket)_ |  false  |  | Unix defines the unix domain socket endpoint |
+| `zone` | _string_ |  false  |  | Zone defines the service zone of the backend endpoint. |
 
 
 #### BackendRef
@@ -1782,6 +1783,7 @@ _Appears in:_
 | `fqdn` | _[FQDNEndpoint](#fqdnendpoint)_ |  false  |  | FQDN defines a FQDN endpoint |
 | `ip` | _[IPEndpoint](#ipendpoint)_ |  false  |  | IP defines an IP endpoint. Supports both IPv4 and IPv6 addresses. |
 | `unix` | _[UnixSocket](#unixsocket)_ |  false  |  | Unix defines the unix domain socket endpoint |
+| `zone` | _string_ |  false  |  | Zone defines the service zone of the backend endpoint. |
 | `host` | _string_ |  false  |  | Host define the extension service hostname.<br />Deprecated: use the appropriate transport attribute instead (FQDN,IP,Unix) |
 | `port` | _integer_ |  false  | 80 | Port defines the port the extension service is exposed on.<br />Deprecated: use the appropriate transport attribute instead (FQDN,IP,Unix) |
 | `tls` | _[ExtensionTLS](#extensiontls)_ |  false  |  | TLS defines TLS configuration for communication between Envoy Gateway and<br />the extension service. |
@@ -3164,6 +3166,36 @@ _Appears in:_
 | `idToken` | _string_ |  false  |  | The name of the cookie used to store the IdToken in the<br />[Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest).<br />If not specified, defaults to "IdToken-(randomly generated uid)" |
 
 
+#### OIDCDenyRedirect
+
+
+
+OIDCDenyRedirect defines headers to match against the request to deny redirect to the OIDC Provider.
+
+_Appears in:_
+- [OIDC](#oidc)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `headers` | _[OIDCDenyRedirectHeader](#oidcdenyredirectheader) array_ |  true  |  | Defines the headers to match against the request to deny redirect to the OIDC Provider. |
+
+
+#### OIDCDenyRedirectHeader
+
+
+
+OIDCDenyRedirectHeader defines how a header is matched
+
+_Appears in:_
+- [OIDCDenyRedirect](#oidcdenyredirect)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `name` | _string_ |  true  |  | Specifies the name of the header in the request. |
+| `type` | _[StringMatchType](#stringmatchtype)_ |  false  | Exact | Type specifies how to match against a string. |
+| `value` | _string_ |  true  |  | Value specifies the string value that the match must have. |
+
+
 #### OIDCProvider
 
 
@@ -4469,6 +4501,7 @@ This is a general purpose match condition that can be used by other EG APIs
 that need to match against a string.
 
 _Appears in:_
+- [OIDCDenyRedirectHeader](#oidcdenyredirectheader)
 - [ProxyMetrics](#proxymetrics)
 
 | Field | Type | Required | Default | Description |
@@ -4485,6 +4518,7 @@ StringMatchType specifies the semantics of how a string value should be compared
 Valid MatchType values are "Exact", "Prefix", "Suffix", "RegularExpression".
 
 _Appears in:_
+- [OIDCDenyRedirectHeader](#oidcdenyredirectheader)
 - [StringMatch](#stringmatch)
 
 | Value | Description |

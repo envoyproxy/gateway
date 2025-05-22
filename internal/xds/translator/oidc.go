@@ -476,7 +476,7 @@ func oauth2HMACSecretName(oidc *ir.OIDC) string {
 
 // patchRoute patches the provided route with the oauth2 config if applicable.
 // Note: this method enables the corresponding oauth2 filter for the provided route.
-func (*oidc) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute) error {
+func (*oidc) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute, _ *ir.HTTPListener) error {
 	if route == nil {
 		return errors.New("xds route is nil")
 	}
