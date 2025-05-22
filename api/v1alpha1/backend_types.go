@@ -116,7 +116,6 @@ type FQDNEndpoint struct {
 type UnixSocket struct {
 	// Path defines the unix domain socket path of the backend endpoint.
 	// +kubebuilder:validation:MaxLength=108
-	// +kubebuilder:validation:XValidation:rule="self.size() <= 108",message="Unix domain socket path length must not exceed 108 characters"
 	Path string `json:"path"`
 }
 
