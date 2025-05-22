@@ -16,7 +16,6 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
-	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 )
@@ -276,28 +275,20 @@ func TestBackend(t *testing.T) {
 			wantErrors: []string{"DynamicResolver type cannot have endpoints and appProtocols specified"},
 		},
 		{
-			desc: "tls settings on non-dynamic resolver",
+			desc: "Invalid Unix socket path length",
 			mutate: func(backend *egv1a1.Backend) {
 				backend.Spec = egv1a1.BackendSpec{
 					AppProtocols: []egv1a1.AppProtocolType{egv1a1.AppProtocolTypeH2C},
 					Endpoints: []egv1a1.BackendEndpoint{
 						{
-							FQDN: &egv1a1.FQDNEndpoint{
-								Hostname: "example.com",
-								Port:     443,
-							},
-						},
-					},
-					TLS: &egv1a1.BackendTLSSettings{
-						CACertificateRefs: []gwapiv1.LocalObjectReference{
-							{
-								Name: "ca-certificate",
+							Unix: &egv1a1.UnixSocket{
+								Path: "/path/to/a/very/long/unix/socket/path/that/exceeds/the/maximum/allowed/length/of/108/characters/and/should/fail/validation.sock",
 							},
 						},
 					},
 				}
 			},
-			wantErrors: []string{"TLS settings can only be specified for DynamicResolver backends"},
+			wantErrors: []string{"spec.endpoints[0].unix.path: Too long: may not be more than 108 bytes"},
 		},
 	}
 
