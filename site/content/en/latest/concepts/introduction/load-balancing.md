@@ -22,7 +22,7 @@ Envoy Gateway provides support for several load balancing strategies that determ
 - **Round Robin** – Sends requests sequentially to all available backends
 - **Random** – Chooses a backend at random to balance load
 - **Least Request** – Sends the request to the backend with the fewest active requests (this is the default)
-- **Consistent Hash** – Routes requests based on a hash (e.g., client IP or header), which helps keep repeat requests going to the same backend (useful for session persistence)
+- **Consistent Hash** – Routes requests based on a hash (e.g., client IP or header), which helps keep repeat requests going to the same backend (useful for session affinity)
 
 If no load balancing strategy is specified, Envoy Gateway uses **Least Request** by default.
 
