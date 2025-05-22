@@ -23,7 +23,6 @@ var ZoneAwareRoutingTest = suite.ConformanceTest{
 	Manifests:   []string{"testdata/zone-aware-routing.yaml"},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
 		t.Run("only local zone should get requests", func(t *testing.T) {
-
 			// Pods from the backend-local deployment have affinity
 			// for the Envoy Proxy pods so should receive all requests.
 			expected := map[string]int{
