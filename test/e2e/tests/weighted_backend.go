@@ -66,7 +66,7 @@ func runWeightedBackendTest(t *testing.T, suite *suite.ConformanceTestSuite, rou
 		suite.ControllerName,
 		kubernetes.NewGatewayRef(SameNamespaceGateway), weightEqualRoute)
 
-	// make sure all backend resources are ready
+	// Make sure all test resources are ready
 	kubernetes.NamespacesMustBeReady(t, suite.Client, suite.TimeoutConfig, []string{ConformanceInfraNamespace})
 
 	expectedResponse := http.ExpectedResponse{
