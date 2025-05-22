@@ -161,6 +161,8 @@ type OIDCProvider struct {
 // OIDCDenyRedirect defines headers to match against the request to deny redirect to the OIDC Provider.
 type OIDCDenyRedirect struct {
 	// Defines the headers to match against the request to deny redirect to the OIDC Provider.
+        // +kubebuilder:validation:MinItems=1
+	// +kubebuilder:validation:MaxItems=16
 	Headers []OIDCDenyRedirectHeader `json:"headers"`
 }
 
