@@ -204,6 +204,14 @@ xds:
             loadBalancingWeight: 1
             locality:
               region: httproute/envoy-gateway-system/routes/rule/0/backend/0
+            metadata:
+              filterMetadata:
+                envoy-gateway:
+                  resources:
+                  - kind: Service
+                    name: backend
+                    namespace: envoy-gateway-system
+                    sectionName: "8080"
     - '@type': type.googleapis.com/envoy.admin.v3.ClustersConfigDump
       dynamicActiveClusters:
       - cluster:
@@ -222,6 +230,13 @@ xds:
             serviceName: httproute/envoy-gateway-system/routes/rule/0
           ignoreHealthOnHostRemoval: true
           lbPolicy: LEAST_REQUEST
+          metadata:
+            filterMetadata:
+              envoy-gateway:
+                resources:
+                - kind: HTTPRoute
+                  name: routes
+                  namespace: envoy-gateway-system
           name: httproute/envoy-gateway-system/routes/rule/0
           perConnectionBufferLimitBytes: 32768
           type: EDS

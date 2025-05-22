@@ -124,6 +124,9 @@ spec:
                       required:
                       - path
                       type: object
+                    zone:
+                      description: Zone defines the service zone of the backend endpoint.
+                      type: string
                   type: object
                   x-kubernetes-validations:
                   - message: one of fqdn, ip or unix must be specified
