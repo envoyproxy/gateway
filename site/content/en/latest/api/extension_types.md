@@ -1933,6 +1933,20 @@ _Appears in:_
 | `after` | _[EnvoyFilter](#envoyfilter)_ |  true  |  | After defines the filter that should come after the filter.<br />Only one of Before or After must be set. |
 
 
+#### ForceLocalZone
+
+
+
+ForceLocalZone defines override configuration for forcing all traffic to stay local vs Envoy default behavior
+which maintains equal distribution among upstreams while sending as much traffic as possible locally.
+
+_Appears in:_
+- [PreferLocalZone](#preferlocalzone)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+
+
 #### GRPCActiveHealthChecker
 
 
@@ -3042,6 +3056,32 @@ _Appears in:_
 | `rules` | _[RateLimitRule](#ratelimitrule) array_ |  false  |  | Rules are a list of RateLimit selectors and limits. If a request matches<br />multiple rules, the strictest limit is applied. For example, if a request<br />matches two rules, one with 10rps and one with 20rps, the final limit will<br />be based on the rule with 10rps. |
 
 
+#### Locality
+
+
+
+Locality specifies the details of a particular locality. Currently only Zone is supported.
+
+_Appears in:_
+- [LocalityWeights](#localityweights)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+
+
+#### LocalityWeights
+
+
+
+LocalityWeights associates a locality with a traffic weight.
+
+_Appears in:_
+- [WeightedLocality](#weightedlocality)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+
+
 #### LogLevel
 
 _Underlying type:_ _string_
@@ -3371,6 +3411,19 @@ _Appears in:_
 | `targetRef` | _[LocalPolicyTargetReferenceWithSectionName](https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1alpha2.LocalPolicyTargetReferenceWithSectionName)_ |  true  |  | TargetRef is the name of the resource this policy is being attached to.<br />This policy and the TargetRef MUST be in the same namespace for this<br />Policy to have effect<br />Deprecated: use targetRefs/targetSelectors instead |
 | `targetRefs` | _[LocalPolicyTargetReferenceWithSectionName](https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1alpha2.LocalPolicyTargetReferenceWithSectionName) array_ |  true  |  | TargetRefs are the names of the Gateway resources this policy<br />is being attached to. |
 | `targetSelectors` | _[TargetSelector](#targetselector) array_ |  true  |  | TargetSelectors allow targeting resources for this policy based on labels |
+
+
+#### PreferLocalZone
+
+
+
+PreferLocalZone configures zone-aware routing to prefer sending traffic to the local locality zone.
+
+_Appears in:_
+- [RequestDistribution](#requestdistribution)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
 
 
 #### Principal
@@ -4100,6 +4153,20 @@ _Appears in:_
 
 _Appears in:_
 - [BackendTrafficPolicySpec](#backendtrafficpolicyspec)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+
+
+#### RequestDistribution
+
+
+
+RequestDistribution defines the configuration related to the distribution of requests between localities.
+Exactly one of PreferLocalZone or WeightedLocality must be specified.
+
+_Appears in:_
+- [LoadBalancer](#loadbalancer)
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
@@ -4841,6 +4908,19 @@ _Appears in:_
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
 | `hostKeys` | _string array_ |  false  |  | HostKeys is a list of keys for environment variables from the host envoy process<br />that should be passed into the Wasm VM. This is useful for passing secrets to to Wasm extensions. |
+
+
+#### WeightedLocality
+
+
+
+WeightedLocality defines explicit traffic weights per locality.
+
+_Appears in:_
+- [RequestDistribution](#requestdistribution)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
 
 
 #### WithUnderscoresAction
