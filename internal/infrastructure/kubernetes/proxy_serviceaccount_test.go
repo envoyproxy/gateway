@@ -12,7 +12,6 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -172,7 +171,7 @@ func TestCreateOrUpdateProxyServiceAccount(t *testing.T) {
 			ns:   "test",
 			in: &ir.Infra{
 				Proxy: &ir.ProxyInfra{
-					Name:      "ns1/gateway-1",
+					Name:      "gateway-1",
 					Namespace: "ns1",
 					Metadata: &ir.InfraMetadata{
 						Labels: map[string]string{
@@ -194,7 +193,7 @@ func TestCreateOrUpdateProxyServiceAccount(t *testing.T) {
 				},
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "ns1",
-					Name:      "envoy-ns1-gateway-1-02ae0474",
+					Name:      "gateway-1",
 					Labels: map[string]string{
 						"app.kubernetes.io/name":               "envoy",
 						"app.kubernetes.io/component":          "proxy",
@@ -239,7 +238,7 @@ func TestCreateOrUpdateProxyServiceAccount(t *testing.T) {
 			kube := NewInfra(cli, cfg)
 			if tc.gatewayNamespaceMode {
 				kube.EnvoyGateway.Provider.Kubernetes.Deploy = &egv1a1.KubernetesDeployMode{
-					Type: ptr.To(egv1a1.KubernetesDeployModeType(egv1a1.KubernetesDeployModeTypeGatewayNamespace)),
+					Type: ptr.To(egv1a1.KubernetesDeployModeTypeGatewayNamespace),
 				}
 				require.NoError(t, createGatewayForGatewayNamespaceMode(ctx, kube.Client))
 			}
@@ -252,13 +251,13 @@ func TestCreateOrUpdateProxyServiceAccount(t *testing.T) {
 			actual := &corev1.ServiceAccount{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: kube.GetResourceNamespace(tc.in),
-					Name:      proxy.ExpectedResourceHashedName(tc.in.Proxy.Name),
+					Name:      expectedName(tc.in.Proxy, tc.gatewayNamespaceMode),
 				},
 			}
 			require.NoError(t, kube.Client.Get(ctx, client.ObjectKeyFromObject(actual), actual))
 
 			opts := cmpopts.IgnoreFields(metav1.ObjectMeta{}, "ResourceVersion")
-			assert.True(t, cmp.Equal(tc.want, actual, opts))
+			require.Empty(t, cmp.Diff(tc.want, actual, opts))
 		})
 	}
 }

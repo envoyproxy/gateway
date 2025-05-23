@@ -2777,6 +2777,10 @@ KubernetesDeployModeType defines the type of KubernetesDeployMode
 _Appears in:_
 - [KubernetesDeployMode](#kubernetesdeploymode)
 
+| Value | Description |
+| ----- | ----------- |
+| `ControllerNamespace` | KubernetesDeployModeTypeControllerNamespace indicates that the controller namespace is used for the infra proxy deployments.<br /> | 
+| `GatewayNamespace` | KubernetesDeployModeTypeGatewayNamespace indicates that the gateway namespace is used for the infra proxy deployments.<br /> | 
 
 
 #### KubernetesDeploymentSpec

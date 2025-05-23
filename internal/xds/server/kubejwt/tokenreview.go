@@ -13,12 +13,10 @@ import (
 
 	authenticationv1 "k8s.io/api/authentication/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apiserver/pkg/authentication/serviceaccount"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
-
-	"github.com/envoyproxy/gateway/internal/envoygateway/config"
-	"github.com/envoyproxy/gateway/internal/utils"
 )
 
 // GetKubernetesClient creates a Kubernetes client using in-cluster configuration.
@@ -71,25 +69,37 @@ func (i *JWTAuthInterceptor) validateKubeJWT(ctx context.Context, token, nodeID 
 	}
 
 	// Check if the service account name in the JWT token exists in the cache.
-	// This is used to verify that the token belongs to a valid Enovy managed by Envoy Gateway.
+	// This is used to verify that the token belongs to a valid Envoy managed by Envoy Gateway.
 	// example: "system:serviceaccount:default:envoy-default-eg-e41e7b31"
 	parts := strings.Split(tokenReview.Status.User.Username, ":")
 	if len(parts) != 4 {
 		return fmt.Errorf("invalid username format: %s", tokenReview.Status.User.Username)
 	}
-	sa := parts[3]
+	ns, sa := parts[2], parts[3]
 
 	irKeys := i.cache.GetIrKeys()
 	for _, irKey := range irKeys {
-		if irKey2ServiceAccountName(irKey) == sa {
+		nn := irKey2ServiceAccountName(irKey)
+		if nn.Name == sa && nn.Namespace == ns {
 			return nil
 		}
 	}
-	return fmt.Errorf("Envoy service account %s not found in the cache", sa)
+	return fmt.Errorf("service account for Envoy %s not found in the cache", sa)
 }
 
 // this is the same logic used in infra pkg func ExpectedResourceHashedName to generate the resource name.
-func irKey2ServiceAccountName(irKey string) string {
-	hashedName := utils.GetHashedName(irKey, 48)
-	return fmt.Sprintf("%s-%s", config.EnvoyPrefix, hashedName)
+func irKey2ServiceAccountName(irKey string) types.NamespacedName {
+	names := strings.Split(irKey, "/")
+	if len(names) == 2 {
+		return types.NamespacedName{
+			Namespace: names[0],
+			Name:      names[1],
+		}
+	}
+
+	// Might be MergeGateways, should not happen
+	// but just in case, return the first part as name
+	return types.NamespacedName{
+		Name: names[0],
+	}
 }

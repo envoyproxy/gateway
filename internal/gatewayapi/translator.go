@@ -318,6 +318,7 @@ func (t *Translator) InitIRs(gateways []*GatewayContext) (map[string]*ir.Xds, ma
 		gwInfraIR.Proxy.Name = irKey
 		gwInfraIR.Proxy.Namespace = t.ControllerNamespace
 		if t.GatewayNamespaceMode {
+			gwInfraIR.Proxy.Name = gateway.Name
 			gwInfraIR.Proxy.Namespace = gateway.Namespace
 			gwInfraIR.Proxy.GetProxyMetadata().OwnerReference = &ir.ResourceMetadata{
 				Kind: resource.KindGateway,

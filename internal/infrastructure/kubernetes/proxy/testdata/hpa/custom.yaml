@@ -1,6 +1,7 @@
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
+  creationTimestamp: null
   labels:
     gateway.envoyproxy.io/owning-gateway-name: default
     gateway.envoyproxy.io/owning-gateway-namespace: default
@@ -26,3 +27,6 @@ spec:
     apiVersion: apps/v1
     kind: Deployment
     name: envoy-default-37a8eec1
+status:
+  currentMetrics: null
+  desiredReplicas: 0

@@ -129,7 +129,7 @@ func TestCreateOrUpdateProxyConfigMap(t *testing.T) {
 			ns:   "test",
 			in: &ir.Infra{
 				Proxy: &ir.ProxyInfra{
-					Name:      "ns1/gateway-1",
+					Name:      "gateway-1",
 					Namespace: "ns1",
 					Metadata: &ir.InfraMetadata{
 						Labels: map[string]string{
@@ -151,7 +151,7 @@ func TestCreateOrUpdateProxyConfigMap(t *testing.T) {
 				},
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "ns1",
-					Name:      "envoy-ns1-gateway-1-02ae0474",
+					Name:      "gateway-1",
 					Labels: map[string]string{
 						"app.kubernetes.io/name":               "envoy",
 						"app.kubernetes.io/component":          "proxy",
@@ -199,7 +199,7 @@ func TestCreateOrUpdateProxyConfigMap(t *testing.T) {
 			kube := NewInfra(cli, cfg)
 			if tc.gatewayNamespaceMode {
 				kube.EnvoyGateway.Provider.Kubernetes.Deploy = &egv1a1.KubernetesDeployMode{
-					Type: ptr.To(egv1a1.KubernetesDeployModeType(egv1a1.KubernetesDeployModeTypeGatewayNamespace)),
+					Type: ptr.To(egv1a1.KubernetesDeployModeTypeGatewayNamespace),
 				}
 				require.NoError(t, createGatewayForGatewayNamespaceMode(ctx, kube.Client))
 			}

@@ -243,7 +243,7 @@ infraIR:
         ownerReference:
           kind: Gateway
           name: gateway-1
-      name: default/gateway-1
+      name: gateway-1
       namespace: default
   default/gateway-2:
     proxy:
@@ -262,7 +262,7 @@ infraIR:
         ownerReference:
           kind: Gateway
           name: gateway-2
-      name: default/gateway-2
+      name: gateway-2
       namespace: default
   test-ns/gateway-3:
     proxy:
@@ -281,7 +281,7 @@ infraIR:
         ownerReference:
           kind: Gateway
           name: gateway-3
-      name: test-ns/gateway-3
+      name: gateway-3
       namespace: test-ns
 xdsIR:
   default/gateway-1:

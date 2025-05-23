@@ -8,7 +8,7 @@ metadata:
     app.kubernetes.io/name: envoy
     gateway.envoyproxy.io/owning-gateway-name: gateway-1
     gateway.envoyproxy.io/owning-gateway-namespace: ns1
-  name: envoy-ns1-gateway-1-02ae0474
+  name: gateway-1
   namespace: ns1
   ownerReferences:
   - apiVersion: gateway.networking.k8s.io/v1
@@ -369,7 +369,7 @@ spec:
       dnsPolicy: ClusterFirst
       restartPolicy: Always
       schedulerName: default-scheduler
-      serviceAccountName: envoy-ns1-gateway-1-02ae0474
+      serviceAccountName: gateway-1
       terminationGracePeriodSeconds: 360
       volumes:
       - name: sa-token
@@ -385,7 +385,7 @@ spec:
           items:
           - key: ca.crt
             path: ca.crt
-          name: envoy-ns1-gateway-1-02ae0474
+          name: gateway-1
           optional: false
         name: certs
       - configMap:
@@ -393,7 +393,7 @@ spec:
           items:
           - key: xds-trusted-ca.json
             path: xds-trusted-ca.json
-          name: envoy-ns1-gateway-1-02ae0474
+          name: gateway-1
           optional: false
         name: sds
   updateStrategy:
