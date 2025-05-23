@@ -2045,7 +2045,7 @@ func (r *gatewayAPIReconciler) processGatewayClassParamsRef(ctx context.Context,
 
 	// Check for incompatible configuration: both MergeGateways and GatewayNamespaceMode enabled
 	if r.gatewayNamespaceMode && ep.Spec.MergeGateways != nil && *ep.Spec.MergeGateways {
-		return fmt.Errorf("it is not supported to run Merged Gateways and Gateway Namespace Mode together")
+		return fmt.Errorf("using Merged Gateways with Gateway Namespace Mode is not supported.")
 	}
 
 	if err := r.processEnvoyProxy(ep, resourceMap); err != nil {
