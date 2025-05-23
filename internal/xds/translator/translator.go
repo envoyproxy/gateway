@@ -44,6 +44,9 @@ const (
 
 // Translator translates the xDS IR into xDS resources.
 type Translator struct {
+	// ControllerNamespace is the namespace of the Gateway API controller
+	ControllerNamespace string
+
 	// GlobalRateLimit holds the global rate limit settings
 	// required during xds translation.
 	GlobalRateLimit *GlobalRateLimitSettings
