@@ -55,7 +55,7 @@ spec:
             local_cluster_name: local_cluster
           node:
             locality:
-              zone: "$(ENVOY_SERVICE_ZONE)"
+              zone: $(ENVOY_SERVICE_ZONE)
           layered_runtime:
             layers:
             - name: global_config
@@ -141,7 +141,7 @@ spec:
                     load_balancing_weight: 1
                   load_balancing_weight: 1
                   locality:
-                    zone: "$(ENVOY_SERVICE_ZONE)"
+                    zone: $(ENVOY_SERVICE_ZONE)
               name: local_cluster
               type: STATIC
             - connect_timeout: 10s
