@@ -6344,6 +6344,16 @@ spec:
                   the number of cpuset threads on the platform.
                 format: int32
                 type: integer
+              extensionPolicySettings:
+                description: ExtensionPolicySettings defines settings for EnvoyExtensionPolicies
+                  to be applied on the EnvoyProxy fleet.
+                properties:
+                  disableLuaValidation:
+                    description: |-
+                      DisableLuaValidation disables the Lua script validation for Lua EnvoyExtensionPolicies
+                      Default: false
+                    type: boolean
+                type: object
               extraArgs:
                 description: |-
                   ExtraArgs defines additional command line options that are provided to Envoy.
