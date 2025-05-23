@@ -4,7 +4,7 @@ title: "Rate Limiting"
 
 ## Overview
 
-Rate limiting is a technique used to control the number of incoming requests over a defined period. It helps maintain application stability and improve security by protecting backend systems from overload and malicious abuse, such as Denial of Service (DoS) attacks.
+Rate limiting is a technique for controlling the number of incoming requests over a defined period. It can be used to control usage for business purposes, like agreed usage quotas, or to ensure the stability of a system, preventing overload and protecting the system from, e.g., Denial of Service attacks.
 
 ## Use Cases
 
@@ -22,7 +22,7 @@ Envoy Gateway supports two types of rate limiting:
 - **Global Rate Limiting:** Shared limits across all Envoy instances.
 - **Local Rate Limiting:** Independent limits per Envoy instance.
 
-Envoy Gateway supports rate limiting through the BackendTrafficPolicy custom resource. You define rate limiting rules and apply them to HTTPRoute, GRPCRoute, or Gateway resources either by directly referencing them using the targetRefs field, or by dynamically selecting them using the targetSelectors field, which matches resources based on Kubernetes labels.
+Envoy Gateway supports rate limiting through the `BackendTrafficPolicy` custom resource. You can define rate-limiting rules and apply them to `HTTPRoute`, `GRPCRoute`, or `Gateway` resources either by directly referencing them with the targetRefs field or by dynamically selecting them using the targetSelectors field, which matches resources based on Kubernetes labels.
 
 {{% alert title="Note" color="primary" %}}
 Rate limits are applied per route, even if the `BackendTrafficPolicy` targets a `Gateway`. For example, if the limit is 100r/s and a Gateway has 3 routes, each route has its own 100r/s bucket.
@@ -34,7 +34,7 @@ Rate limits are applied per route, even if the `BackendTrafficPolicy` targets a 
 
 Global rate limiting ensures a consistent request limit across the entire Envoy fleet. This is ideal for shared resources or distributed environments where coordinated enforcement is critical.
 
-Global limits are enforced via Envoy’s external rate limit service, which requires a separate service component (commonly backed by Redis). When a request is received, Envoy sends a descriptor to this external service to determine if the request should be allowed.
+Global limits are enforced via Envoy’s external Rate Limit Service, which is automatically deployed and managed by the Envoy Gateway system. The Rate Limit Service requires a datastore component (commonly Redis). When a request is received, Envoy sends a descriptor to this external service to determine if the request should be allowed.
 
 **Benefits of global limits:**
 

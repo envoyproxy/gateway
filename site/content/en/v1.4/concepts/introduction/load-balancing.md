@@ -4,7 +4,7 @@ title: "Load Balancing"
 
 ## Overview
 
-Load balancing is the process of distributing incoming requests across multiple backend services to improve availability, responsiveness, and scalability. Instead of directing all traffic to a single backend—which can cause slowdowns or outages—load balancing spreads the load across multiple instances, helping your applications stay fast and reliable under pressure.
+Load balancing distributes incoming requests across multiple backend services to improve availability, responsiveness, and scalability. Instead of directing all traffic to a single backend, which can cause slowdowns or outages, load balancing spreads the load across multiple instances, helping your applications stay fast and reliable under pressure.
 
 ## Use Cases
 
@@ -16,13 +16,13 @@ Use load balancing to:
 
 ## Load Balancing in Envoy Gateway
 
-Envoy Gateway provides support for several load balancing strategies that determine how traffic is distributed across backend services. These strategies are configured using the `BackendTrafficPolicy` resource and can be applied to `Gateway`, `HTTPRoute`, or `GRPCRoute` resources either by directly referencing them using the targetRefs field, or by dynamically selecting them using the targetSelectors field, which matches resources based on Kubernetes labels.
+Envoy Gateway supports several load balancing strategies that determine how traffic is distributed across backend services. These strategies are configured using the `BackendTrafficPolicy` resource and can be applied to `Gateway`, `HTTPRoute`, or `GRPCRoute` resources either by directly referencing them using the targetRefs field or by dynamically selecting them using the targetSelectors field, which matches resources based on Kubernetes labels.
 
 **Supported load balancing types:**
 - **Round Robin** – Sends requests sequentially to all available backends
 - **Random** – Chooses a backend at random to balance load
 - **Least Request** – Sends the request to the backend with the fewest active requests (this is the default)
-- **Consistent Hash** – Routes requests based on a hash (e.g., client IP or header), which helps keep repeat requests going to the same backend (useful for session persistence)
+- **Consistent Hash** – Routes requests based on a hash (e.g., client IP or header), which helps keep repeat requests going to the same backend (useful for session affinity)
 
 If no load balancing strategy is specified, Envoy Gateway uses **Least Request** by default.
 
