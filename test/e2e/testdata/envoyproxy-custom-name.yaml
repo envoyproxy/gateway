@@ -1,7 +1,7 @@
 apiVersion: gateway.networking.k8s.io/v1
 kind: Gateway
 metadata:
-  name: deploy-custom-name
+  name: eg-deployment
   namespace: gateway-conformance-infra
 spec:
   gatewayClassName: "{GATEWAY_CLASS_NAME}"
@@ -35,7 +35,7 @@ metadata:
   namespace: gateway-conformance-infra
 spec:
   parentRefs:
-    - name: deploy-custom-name
+    - name: eg-deployment
   rules:
     - backendRefs:
         - name: infra-backend-v1
@@ -48,7 +48,7 @@ spec:
 apiVersion: gateway.networking.k8s.io/v1
 kind: Gateway
 metadata:
-  name: ds-custom-name
+  name: eg-daemonset
   namespace: gateway-conformance-infra
 spec:
   gatewayClassName: "{GATEWAY_CLASS_NAME}"
@@ -109,7 +109,7 @@ metadata:
   namespace: gateway-conformance-infra
 spec:
   parentRefs:
-    - name: ds-custom-name
+    - name: eg-daemonset
   rules:
     - backendRefs:
         - name: infra-backend-v1
