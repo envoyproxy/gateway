@@ -200,6 +200,7 @@ backendTrafficPolicies:
         healthyThreshold: 3
         type: HTTP
         http:
+          hostname: foo.bar
           path: "/healthz"
           method: "GET"
           expectedStatuses:
