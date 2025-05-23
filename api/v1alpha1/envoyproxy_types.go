@@ -157,6 +157,10 @@ type EnvoyProxySpec struct {
 	//
 	// +optional
 	PreserveRouteOrder *bool `json:"preserveRouteOrder,omitempty"`
+
+	// ExtensionPolicySettings defines settings for EnvoyExtensionPolicies to be applied on the EnvoyProxy fleet.
+	// +optional
+	ExtensionPolicySettings *ExtensionPolicySettings `json:"extensionPolicySettings,omitempty"`
 }
 
 // RoutingType defines the type of routing of this Envoy proxy.
@@ -168,6 +172,14 @@ const (
 	// EndpointRoutingType is the RoutingType for Endpoint routing.
 	EndpointRoutingType RoutingType = "Endpoint"
 )
+
+// ExtensionPolicySettings defines settings for EnvoyExtensionPolicies to be applied on the EnvoyProxy fleet.
+type ExtensionPolicySettings struct {
+	// DisableLuaValidation disables the Lua script validation for Lua EnvoyExtensionPolicies
+	// Default: false
+	// +optional
+	DisableLuaValidation *bool `json:"disableLuaValidation,omitempty"`
+}
 
 // BackendTLSConfig describes the BackendTLS configuration for Envoy Proxy.
 type BackendTLSConfig struct {
