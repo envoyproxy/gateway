@@ -22,7 +22,7 @@ Envoy Gateway supports two types of rate limiting:
 - **Global Rate Limiting:** Shared limits across all Envoy instances.
 - **Local Rate Limiting:** Independent limits per Envoy instance.
 
-Envoy Gateway supports rate limiting through the BackendTrafficPolicy custom resource. You define rate limiting rules and apply them to HTTPRoute, GRPCRoute, or Gateway resources either by directly referencing them using the targetRefs field, or by dynamically selecting them using the targetSelectors field, which matches resources based on Kubernetes labels.
+Envoy Gateway supports rate limiting through the `BackendTrafficPolicy` custom resource. You can define rate-limiting rules and apply them to `HTTPRoute`, `GRPCRoute`, or `Gateway` resources either by directly referencing them with the targetRefs field or by dynamically selecting them using the targetSelectors field, which matches resources based on Kubernetes labels.
 
 {{% alert title="Note" color="primary" %}}
 Rate limits are applied per route, even if the `BackendTrafficPolicy` targets a `Gateway`. For example, if the limit is 100r/s and a Gateway has 3 routes, each route has its own 100r/s bucket.
