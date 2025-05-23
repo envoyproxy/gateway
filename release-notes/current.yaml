@@ -13,8 +13,10 @@ new features: |
   Added support for configuring Subject Alternative Names (SANs) for upstream TLS validation via `BackendTLSPolicy.validation.subjectAltNames`.
   Added support for local rate limit header.
   Added XDS metadata for clusters and endpoints from xRoutes and referenced backend resources (Backend, Service, ServiceImport).
+  Added support for setting ownerreference to infra resources when enable gateway namespace mode.
 
 bug fixes: |
+  Fixed issue where WASM cache init failure caused routes with WASM-less EnvoyExtensionPolicies to have 500 direct responses.
 
 # Enhancements that improve performance.
 performance improvements: |
