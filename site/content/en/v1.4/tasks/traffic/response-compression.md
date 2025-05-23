@@ -4,10 +4,9 @@ title: "Response Compression"
 
 Response Compression allows you to compress the response from the backend before sending it to the client. This can be useful for scenarios where the backend sends large responses that can be compressed to reduce the network bandwidth. However, this comes with a trade-off of increased CPU usage on the Envoy side to compress the response.
 
-## Installation
+## Prerequisites
 
-Follow the steps from the [Quickstart](../../quickstart) to install Envoy Gateway and the example manifest.
-Before proceeding, you should be able to query the example backend using HTTP.
+{{< boilerplate prerequisites >}}
 
 ## Testing Response Compression
 
