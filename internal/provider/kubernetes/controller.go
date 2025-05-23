@@ -34,6 +34,7 @@ import (
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gwapiv1a3 "sigs.k8s.io/gateway-api/apis/v1alpha3"
 	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
+	gwapixv1a1 "sigs.k8s.io/gateway-api/apisx/v1alpha1"
 	mcsapiv1a1 "sigs.k8s.io/mcs-api/pkg/apis/v1alpha1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
@@ -83,6 +84,8 @@ type gatewayAPIReconciler struct {
 	tcpRouteCRDExists      bool
 	tlsRouteCRDExists      bool
 	udpRouteCRDExists      bool
+
+	xBtpCRDExists bool
 }
 
 // newGatewayAPIController
@@ -282,6 +285,12 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 			if err = r.processEnvoyExtensionPolicies(ctx, gwcResource, resourceMappings); err != nil {
 				r.log.Error(err, fmt.Sprintf("failed processEnvoyExtensionPolicies for gatewayClass %s, skipping it", managedGC.Name))
 				continue
+			}
+		}
+
+		if r.xBtpCRDExists {
+			if err = r.processXBackendTrafficPolicies(ctx, gwcResource, resourceMappings); err != nil {
+				return reconcile.Result{}, err
 			}
 		}
 
@@ -1303,6 +1312,28 @@ func (r *gatewayAPIReconciler) processBackendTLSPolicies(
 	return nil
 }
 
+// processXBackendTrafficPolicies adds XBackendTrafficPolicy to the resourceTree
+func (r *gatewayAPIReconciler) processXBackendTrafficPolicies(ctx context.Context,
+	resourceTree *resource.Resources, resourceMap *resourceMappings,
+) error {
+	btpList := gwapixv1a1.XBackendTrafficPolicyList{}
+	if err := r.client.List(ctx, &btpList); err != nil {
+		return fmt.Errorf("error listing XBackendTrafficPolicy: %w", err)
+	}
+
+	for _, btp := range btpList.Items {
+		// Discard Status to reduce memory consumption in watchable
+		// It will be recomputed by the gateway-api layer
+		btp.Status = gwapiv1a2.PolicyStatus{}
+		if !resourceMap.allAssociatedXBackendTrafficPolicies.Has(utils.NamespacedName(&btp).String()) {
+			resourceMap.allAssociatedXBackendTrafficPolicies.Insert(utils.NamespacedName(&btp).String())
+			resourceTree.XBackendTrafficPolicies = append(resourceTree.XBackendTrafficPolicies, &btp)
+		}
+	}
+
+	return nil
+}
+
 // processBackends adds Backends to the resourceTree
 func (r *gatewayAPIReconciler) processBackends(ctx context.Context, resourceTree *resource.Resources) error {
 	backends := egv1a1.BackendList{}
@@ -1615,6 +1646,34 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 		}
 
 		if err := addBackendIndexers(ctx, mgr); err != nil {
+			return err
+		}
+	}
+
+	r.xBtpCRDExists = r.crdExists(mgr, resource.KindXBackendTrafficPolicy, gwapixv1a1.GroupVersion.String())
+	enableXBackendTrafficPolicy := r.envoyGateway.ExtensionAPIs != nil && r.envoyGateway.ExtensionAPIs.EnableXBackendTrafficPolicy
+	switch {
+	case !r.xBtpCRDExists:
+		r.log.Info("XBackendTrafficPolicy CRD not found, skipping XBackendTrafficPolicy watch")
+	case !enableXBackendTrafficPolicy:
+		r.log.Info("XBackendTrafficPolicy doesn't enabled, skipping XBackendTrafficPolicy watch")
+	default:
+		// Watch BackendTLSPolicy
+		btpPredicates := []predicate.TypedPredicate[*gwapixv1a1.XBackendTrafficPolicy]{
+			predicate.TypedGenerationChangedPredicate[*gwapixv1a1.XBackendTrafficPolicy]{},
+		}
+		if r.namespaceLabel != nil {
+			btpPredicates = append(btpPredicates, predicate.NewTypedPredicateFuncs[*gwapixv1a1.XBackendTrafficPolicy](func(btp *gwapixv1a1.XBackendTrafficPolicy) bool {
+				return r.hasMatchingNamespaceLabels(btp)
+			}))
+		}
+
+		if err := c.Watch(
+			source.Kind(mgr.GetCache(), &gwapixv1a1.XBackendTrafficPolicy{},
+				handler.TypedEnqueueRequestsFromMapFunc(func(ctx context.Context, btp *gwapixv1a1.XBackendTrafficPolicy) []reconcile.Request {
+					return r.enqueueClass(ctx, btp)
+				}),
+				btpPredicates...)); err != nil {
 			return err
 		}
 	}

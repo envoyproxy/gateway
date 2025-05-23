@@ -1732,6 +1732,7 @@ _Appears in:_
 | ---   | ---  | ---      | ---     | ---         |
 | `enableEnvoyPatchPolicy` | _boolean_ |  true  |  | EnableEnvoyPatchPolicy enables Envoy Gateway to<br />reconcile and implement the EnvoyPatchPolicy resources. |
 | `enableBackend` | _boolean_ |  true  |  | EnableBackend enables Envoy Gateway to<br />reconcile and implement the Backend resources. |
+| `enableXBackendTrafficPolicy` | _boolean_ |  true  |  | EnableBackendTrafficPolicy enables Envoy Gateway to<br />reconcile and implement the Gateway API XBackendTrafficPolicy resources. |
 
 
 #### ExtensionHooks
