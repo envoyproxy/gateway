@@ -4,7 +4,7 @@ title: "Rate Limiting"
 
 ## Overview
 
-Rate limiting is a technique used to control the number of incoming requests over a defined period. It helps maintain application stability and improve security by protecting backend systems from overload and malicious abuse, such as Denial of Service (DoS) attacks.
+Rate limiting is a technique for controlling the number of incoming requests over a defined period. It can be used to control usage for business purposes, like agreed usage quotas, or to ensure the stability of a system, preventing overload and protecting the system from, e.g., Denial of Service attacks.
 
 ## Use Cases
 
