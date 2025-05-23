@@ -67,6 +67,9 @@ func BuildProxyArgs(
 
 	if componentsLogLevel := logging.GetEnvoyProxyComponentLevel(); componentsLogLevel != "" {
 		args = append(args, fmt.Sprintf("--component-log-level %s", componentsLogLevel))
+	} else {
+		// Default to error level for misc components if not set.
+		args = append(args, fmt.Sprintf("--component-log-level %s", "misc:error"))
 	}
 
 	// Default drain timeout.

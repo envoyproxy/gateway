@@ -6,6 +6,7 @@
 package gatewayapi
 
 import (
+	"errors"
 	"sort"
 
 	"golang.org/x/exp/maps"
@@ -160,6 +161,8 @@ func newTranslateResult(gateways []*GatewayContext,
 }
 
 func (t *Translator) Translate(resources *resource.Resources) (*TranslateResult, error) {
+	var errs error
+
 	// Get Gateways belonging to our GatewayClass.
 	acceptedGateways, failedGateways := t.GetRelevantGateways(resources)
 
@@ -231,8 +234,16 @@ func (t *Translator) Translate(resources *resource.Resources) (*TranslateResult,
 	envoyExtensionPolicies := t.ProcessEnvoyExtensionPolicies(
 		resources.EnvoyExtensionPolicies, acceptedGateways, routes, resources, xdsIR)
 
-	extServerPolicies, translateErrs := t.ProcessExtensionServerPolicies(
+	extServerPolicies, err := t.ProcessExtensionServerPolicies(
 		resources.ExtensionServerPolicies, acceptedGateways, xdsIR)
+	if err != nil {
+		errs = errors.Join(errs, err)
+	}
+
+	// Process global resources that are not tied to a specific listener or route
+	if err := t.ProcessGlobalResources(resources, xdsIR); err != nil {
+		errs = errors.Join(errs, err)
+	}
 
 	// Sort xdsIR based on the Gateway API spec
 	sortXdsIRMap(xdsIR)
@@ -253,7 +264,7 @@ func (t *Translator) Translate(resources *resource.Resources) (*TranslateResult,
 	return newTranslateResult(allGateways, httpRoutes, grpcRoutes, tlsRoutes,
 		tcpRoutes, udpRoutes, clientTrafficPolicies, backendTrafficPolicies,
 		securityPolicies, resources.BackendTLSPolicies, envoyExtensionPolicies,
-		extServerPolicies, backends, xdsIR, infraIR), translateErrs
+		extServerPolicies, backends, xdsIR, infraIR), errs
 }
 
 // GetRelevantGateways returns GatewayContexts, containing a copy of the original
@@ -308,6 +319,10 @@ func (t *Translator) InitIRs(gateways []*GatewayContext) (map[string]*ir.Xds, ma
 		gwInfraIR.Proxy.Namespace = t.ControllerNamespace
 		if t.GatewayNamespaceMode {
 			gwInfraIR.Proxy.Namespace = gateway.Namespace
+			gwInfraIR.Proxy.GetProxyMetadata().OwnerReference = &ir.ResourceMetadata{
+				Kind: resource.KindGateway,
+				Name: gateway.Name,
+			}
 		}
 		// save the IR references in the map before the translation starts
 		xdsIR[irKey] = gwXdsIR

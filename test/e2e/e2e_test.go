@@ -61,26 +61,6 @@ func TestE2E(t *testing.T) {
 		)
 	}
 
-	// TODO: make these tests work in GatewayNamespaceMode
-	if tests.IsGatewayNamespaceMode() {
-		skipTests = append(skipTests,
-			tests.HTTPWasmTest.ShortName,
-			tests.OCIWasmTest.ShortName,
-
-			// Skip RateLimit tests because they are not supported in GatewayNamespaceMode
-			tests.RateLimitCIDRMatchTest.ShortName,
-			tests.RateLimitHeaderMatchTest.ShortName,
-			tests.GlobalRateLimitHeaderInvertMatchTest.ShortName,
-			tests.RateLimitHeadersDisabled.ShortName,
-			tests.RateLimitBasedJwtClaimsTest.ShortName,
-			tests.RateLimitMultipleListenersTest.ShortName,
-			tests.RateLimitHeadersAndCIDRMatchTest.ShortName,
-			tests.UsageRateLimitTest.ShortName,
-			tests.RateLimitGlobalSharedCidrMatchTest.ShortName,
-			tests.RateLimitGlobalSharedGatewayHeaderMatchTest.ShortName,
-		)
-	}
-
 	cSuite, err := suite.NewConformanceTestSuite(suite.ConformanceOptions{
 		Client:               c,
 		RestConfig:           cfg,
