@@ -41,12 +41,6 @@ func TestMergeGateways(t *testing.T) {
 			*flags.GatewayClassName, *flags.CleanupBaseResources, *flags.ShowDebug)
 	}
 
-	var skipTests []string
-	if tests.IsGatewayNamespaceMode() {
-		// Skip MergeGateways test because it is not supported in GatewayNamespaceMode
-		skipTests = append(skipTests, tests.MergeGatewaysTest.ShortName)
-	}
-
 	cSuite, err := suite.NewConformanceTestSuite(suite.ConformanceOptions{
 		Client:               c,
 		RestConfig:           cfg,
