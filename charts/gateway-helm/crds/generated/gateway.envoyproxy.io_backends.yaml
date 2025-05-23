@@ -233,9 +233,8 @@ spec:
                 type: string
             type: object
             x-kubernetes-validations:
-            - message: DynamicResolver type cannot have endpoints and appProtocols
-                specified
-              rule: self.type != 'DynamicResolver' || !has(self.endpoints) && !has(self.appProtocols)
+            - message: DynamicResolver type cannot have endpoints specified
+              rule: self.type != 'DynamicResolver' || !has(self.endpoints)
             - message: TLS settings can only be specified for DynamicResolver backends
               rule: 'has(self.tls) ? self.type == ''DynamicResolver'' : true'
           status:
