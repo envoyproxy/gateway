@@ -1,7 +1,8 @@
 apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
-  name: envoy-ns1-gateway-1-02ae0474
+  creationTimestamp: null
+  name: gateway-1
   namespace: ns1
   ownerReferences:
   - apiVersion: gateway.networking.k8s.io/v1
@@ -17,3 +18,8 @@ spec:
       app.kubernetes.io/name: envoy
       gateway.envoyproxy.io/owning-gateway-name: gateway-1
       gateway.envoyproxy.io/owning-gateway-namespace: ns1
+status:
+  currentHealthy: 0
+  desiredHealthy: 0
+  disruptionsAllowed: 0
+  expectedPods: 0
