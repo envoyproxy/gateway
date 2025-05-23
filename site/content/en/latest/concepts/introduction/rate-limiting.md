@@ -34,7 +34,7 @@ Rate limits are applied per route, even if the `BackendTrafficPolicy` targets a 
 
 Global rate limiting ensures a consistent request limit across the entire Envoy fleet. This is ideal for shared resources or distributed environments where coordinated enforcement is critical.
 
-Global limits are enforced via Envoy’s external rate limit service, which requires a separate service component (commonly backed by Redis). When a request is received, Envoy sends a descriptor to this external service to determine if the request should be allowed.
+Global limits are enforced via Envoy’s external Rate Limit Service, which is automatically deployed and managed by the Envoy Gateway system. The Rate Limit Service requires a datastore component (commonly Redis). When a request is received, Envoy sends a descriptor to this external service to determine if the request should be allowed.
 
 **Benefits of global limits:**
 
