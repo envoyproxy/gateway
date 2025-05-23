@@ -304,11 +304,6 @@ func (t *Translator) translateEnvoyExtensionPolicyForRoute(
 		errs = errors.Join(errs, err)
 	}
 
-	if luas, err = t.buildLuas(policy, resources); err != nil {
-		err = perr.WithMessage(err, "Lua")
-		errs = errors.Join(errs, err)
-	}
-
 	// Apply IR to all relevant routes
 	prefix := irRoutePrefix(route)
 	parentRefs := GetParentReferences(route)
@@ -317,6 +312,11 @@ func (t *Translator) translateEnvoyExtensionPolicyForRoute(
 		gtwCtx := parentRefCtx.GetGateway()
 		if gtwCtx == nil {
 			continue
+		}
+
+		if luas, err = t.buildLuas(policy, resources, gtwCtx.envoyProxy); err != nil {
+			err = perr.WithMessage(err, "Lua")
+			errs = errors.Join(errs, err)
 		}
 
 		var extProcs []ir.ExtProc
@@ -373,7 +373,7 @@ func (t *Translator) translateEnvoyExtensionPolicyForGateway(
 		err = perr.WithMessage(err, "Wasm")
 		errs = errors.Join(errs, err)
 	}
-	if luas, err = t.buildLuas(policy, resources); err != nil {
+	if luas, err = t.buildLuas(policy, resources, gateway.envoyProxy); err != nil {
 		err = perr.WithMessage(err, "Lua")
 		errs = errors.Join(errs, err)
 	}
@@ -417,7 +417,7 @@ func (t *Translator) translateEnvoyExtensionPolicyForGateway(
 	return errs
 }
 
-func (t *Translator) buildLuas(policy *egv1a1.EnvoyExtensionPolicy, resources *resource.Resources) ([]ir.Lua, error) {
+func (t *Translator) buildLuas(policy *egv1a1.EnvoyExtensionPolicy, resources *resource.Resources, envoyProxy *egv1a1.EnvoyProxy) ([]ir.Lua, error) {
 	var luaIRList []ir.Lua
 
 	if policy == nil {
@@ -426,7 +426,7 @@ func (t *Translator) buildLuas(policy *egv1a1.EnvoyExtensionPolicy, resources *r
 
 	for idx, ep := range policy.Spec.Lua {
 		name := irConfigNameForLua(policy, idx)
-		luaIR, err := t.buildLua(name, policy, ep, resources)
+		luaIR, err := t.buildLua(name, policy, ep, resources, envoyProxy)
 		if err != nil {
 			return nil, err
 		}
@@ -440,6 +440,7 @@ func (t *Translator) buildLua(
 	policy *egv1a1.EnvoyExtensionPolicy,
 	lua egv1a1.Lua,
 	resources *resource.Resources,
+	envoyProxy *egv1a1.EnvoyProxy,
 ) (*ir.Lua, error) {
 	var luaCode *string
 	var err error
@@ -450,6 +451,12 @@ func (t *Translator) buildLua(
 	}
 	if err != nil {
 		return nil, err
+	}
+	if envoyProxy != nil && envoyProxy.Spec.DisableLuaValidation != nil && *envoyProxy.Spec.DisableLuaValidation {
+		return &ir.Lua{
+			Name: name,
+			Code: luaCode,
+		}, nil
 	}
 	if err = luavalidator.NewLuaValidator(*luaCode).Validate(); err != nil {
 		return nil, fmt.Errorf("validation failed for lua body in policy with name %v: %w", name, err)
