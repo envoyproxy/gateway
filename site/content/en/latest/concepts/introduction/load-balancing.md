@@ -16,7 +16,7 @@ Use load balancing to:
 
 ## Load Balancing in Envoy Gateway
 
-Envoy Gateway provides support for several load balancing strategies that determine how traffic is distributed across backend services. These strategies are configured using the `BackendTrafficPolicy` resource and can be applied to `Gateway`, `HTTPRoute`, or `GRPCRoute` resources either by directly referencing them using the targetRefs field, or by dynamically selecting them using the targetSelectors field, which matches resources based on Kubernetes labels.
+Envoy Gateway supports several load balancing strategies that determine how traffic is distributed across backend services. These strategies are configured using the `BackendTrafficPolicy` resource and can be applied to `Gateway`, `HTTPRoute`, or `GRPCRoute` resources either by directly referencing them using the targetRefs field or by dynamically selecting them using the targetSelectors field, which matches resources based on Kubernetes labels.
 
 **Supported load balancing types:**
 - **Round Robin** – Sends requests sequentially to all available backends
