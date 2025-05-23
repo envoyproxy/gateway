@@ -7,6 +7,7 @@ package translator
 
 import (
 	"errors"
+	"fmt"
 
 	corev3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	tlsv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/transport_sockets/tls/v3"
@@ -22,6 +23,9 @@ import (
 const (
 	// rateLimitClientTLSCACertFilename is the ratelimit ca cert file.
 	rateLimitClientTLSCACertFilename = "/certs/ca.crt"
+	wasmHTTPServiceClusterName       = "wasm_cluster"
+	wasmHTTPServiceHost              = "envoy-gateway"
+	wasmHTTPServicePort              = 18002
 )
 
 // patchGlobalResources builds and appends the global resources that are shared across listeners and routes.
@@ -37,6 +41,12 @@ func (t *Translator) patchGlobalResources(tCtx *types.ResourceVersionTable, irXd
 
 		if containsGlobalRateLimit(irXds.HTTP) {
 			if err := t.createRateLimitServiceCluster(tCtx, irXds.GlobalResources.EnvoyClientCertificate, irXds.Metrics); err != nil {
+				errs = errors.Join(errs, err)
+			}
+		}
+
+		if containsWasm(irXds.HTTP) {
+			if err := t.createWasmHTTPServiceCluster(tCtx, irXds.GlobalResources.EnvoyClientCertificate, irXds.Metrics); err != nil {
 				errs = errors.Join(errs, err)
 			}
 		}
@@ -77,7 +87,7 @@ func (t *Translator) createRateLimitServiceCluster(tCtx *types.ResourceVersionTa
 		Name:      destinationSettingName(clusterName),
 	}
 
-	tSocket, err := buildRateLimitTLSocket(envoyClientCertificate)
+	tSocket, err := buildEnvoyClientTLSSocket(envoyClientCertificate)
 	if err != nil {
 		return err
 	}
@@ -91,10 +101,13 @@ func (t *Translator) createRateLimitServiceCluster(tCtx *types.ResourceVersionTa
 	})
 }
 
-// buildRateLimitTLSocket builds the TLS socket for the rate limit service.
-func buildRateLimitTLSocket(envoyClientCertificate *ir.TLSCertificate) (*corev3.TransportSocket, error) {
+// buildEnvoyClientTLSSocket builds the TLS socket for Envoy to connect to the control plane components.
+func buildEnvoyClientTLSSocket(envoyClientCertificate *ir.TLSCertificate) (*corev3.TransportSocket, error) {
 	tlsCtx := &tlsv3.UpstreamTlsContext{
 		CommonTlsContext: &tlsv3.CommonTlsContext{
+			TlsParams: &tlsv3.TlsParameters{
+				TlsMaximumProtocolVersion: tlsv3.TlsParameters_TLSv1_3,
+			},
 			ValidationContextType: &tlsv3.CommonTlsContext_ValidationContext{
 				ValidationContext: &tlsv3.CertificateValidationContext{
 					TrustedCa: &corev3.DataSource{
@@ -122,4 +135,42 @@ func buildRateLimitTLSocket(envoyClientCertificate *ir.TLSCertificate) (*corev3.
 			TypedConfig: tlsCtxAny,
 		},
 	}, nil
+}
+
+func containsWasm(httpListeners []*ir.HTTPListener) bool {
+	for _, httpListener := range httpListeners {
+		for _, route := range httpListener.Routes {
+			if route.EnvoyExtensions != nil &&
+				len(route.EnvoyExtensions.Wasms) > 0 {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+func (t *Translator) createWasmHTTPServiceCluster(tCtx *types.ResourceVersionTable, envoyClientCertificate *ir.TLSCertificate, metrics *ir.Metrics) error {
+	ds := &ir.DestinationSetting{
+		Weight:    ptr.To[uint32](1),
+		Protocol:  ir.GRPC,
+		Endpoints: []*ir.DestinationEndpoint{ir.NewDestEndpoint(wasmHTTPServiceFQDN(t.ControllerNamespace), wasmHTTPServicePort, false, nil)},
+		Name:      destinationSettingName(wasmHTTPServiceClusterName),
+	}
+
+	tSocket, err := buildEnvoyClientTLSSocket(envoyClientCertificate)
+	if err != nil {
+		return err
+	}
+
+	return addXdsCluster(tCtx, &xdsClusterArgs{
+		name:         wasmHTTPServiceClusterName,
+		settings:     []*ir.DestinationSetting{ds},
+		tSocket:      tSocket,
+		endpointType: EndpointTypeDNS,
+		metrics:      metrics,
+	})
+}
+
+func wasmHTTPServiceFQDN(controllerNamespace string) string {
+	return fmt.Sprintf("%s.%s.svc.cluster.local", wasmHTTPServiceHost, controllerNamespace)
 }
