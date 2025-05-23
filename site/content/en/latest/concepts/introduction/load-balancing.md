@@ -4,7 +4,7 @@ title: "Load Balancing"
 
 ## Overview
 
-Load balancing is the process of distributing incoming requests across multiple backend services to improve availability, responsiveness, and scalability. Instead of directing all traffic to a single backend—which can cause slowdowns or outages—load balancing spreads the load across multiple instances, helping your applications stay fast and reliable under pressure.
+Load balancing distributes incoming requests across multiple backend services to improve availability, responsiveness, and scalability. Instead of directing all traffic to a single backend, which can cause slowdowns or outages, load balancing spreads the load across multiple instances, helping your applications stay fast and reliable under pressure.
 
 ## Use Cases
 
