@@ -22,6 +22,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/utils/ptr"
 	ctrl "sigs.k8s.io/controller-runtime"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
@@ -163,6 +164,13 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *re
 					WasmCache:                 r.wasmCache,
 					ListenerPortShiftDisabled: r.EnvoyGateway.Provider != nil && r.EnvoyGateway.Provider.IsRunningOnHost(),
 				}
+
+				// Since a xPolicy can target resources tracing back to different GatewayClasses, we need to preserve
+				// the policy statuses from the previous GatewayClasses(handled by previous translators) to ensure that
+				// they won't be lost in the current translator. The status update logic inside the current translator will
+				// only add the Ancestors from its own GatewayClass, and won't overwrite the statuses from previous
+				// GatewayClasses.
+				r.preservePolicyStatusesCrossGatewayClasses(resources)
 
 				// If an extension is loaded, pass its supported groups/kinds to the translator
 				if r.EnvoyGateway.ExtensionManager != nil {
@@ -308,6 +316,77 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *re
 		},
 	)
 	r.Logger.Info("shutting down")
+}
+
+// preservePolicyStatusesCrossGatewayClasses preserves the policy statuses from the previous GatewayClasses
+// to ensure that they won't be lost in the current translator.
+func (r *Runner) preservePolicyStatusesCrossGatewayClasses(resources *resource.Resources) {
+	for _, policy := range resources.ClientTrafficPolicies {
+		if policyStatus, ok := r.ProviderResources.ClientTrafficPolicyStatuses.Load(utils.NamespacedName(policy)); ok {
+			policy.Status = *policyAncestorsFromOtherGatewayClasses(policyStatus, policy.Namespace, resources)
+		}
+	}
+	for _, policy := range resources.BackendTrafficPolicies {
+		if policyStatus, ok := r.ProviderResources.BackendTrafficPolicyStatuses.Load(utils.NamespacedName(policy)); ok {
+			policy.Status = *policyAncestorsFromOtherGatewayClasses(policyStatus, policy.Namespace, resources)
+		}
+	}
+	for _, policy := range resources.SecurityPolicies {
+		if policyStatus, ok := r.ProviderResources.SecurityPolicyStatuses.Load(utils.NamespacedName(policy)); ok {
+			policy.Status = *policyAncestorsFromOtherGatewayClasses(policyStatus, policy.Namespace, resources)
+		}
+	}
+	for _, policy := range resources.EnvoyExtensionPolicies {
+		if policyStatus, ok := r.ProviderResources.EnvoyExtensionPolicyStatuses.Load(utils.NamespacedName(policy)); ok {
+			policy.Status = *policyAncestorsFromOtherGatewayClasses(policyStatus, policy.Namespace, resources)
+		}
+	}
+	for _, policy := range resources.EnvoyPatchPolicies {
+		if policyStatus, ok := r.ProviderResources.EnvoyPatchPolicyStatuses.Load(utils.NamespacedName(policy)); ok {
+			policy.Status = *policyAncestorsFromOtherGatewayClasses(policyStatus, policy.Namespace, resources)
+		}
+	}
+	for _, policy := range resources.ExtensionServerPolicies {
+		key := message.NamespacedNameAndGVK{
+			NamespacedName:   utils.NamespacedName(&policy),
+			GroupVersionKind: policy.GroupVersionKind(),
+		}
+		if policyStatus, ok := r.ProviderResources.ExtensionPolicyStatuses.Load(key); ok {
+			policy.Object["status"] = policyAncestorsFromOtherGatewayClasses(policyStatus, policy.GetNamespace(), resources)
+		}
+	}
+	for _, policy := range resources.BackendTLSPolicies {
+		if policyStatus, ok := r.ProviderResources.BackendTLSPolicyStatuses.Load(utils.NamespacedName(policy)); ok {
+			policy.Status = *policyAncestorsFromOtherGatewayClasses(policyStatus, policy.Namespace, resources)
+		}
+	}
+}
+
+func policyAncestorsFromOtherGatewayClasses(
+	policyStatus *gwapiv1a2.PolicyStatus,
+	policyNamespace string,
+	resourcesForCurrentGatewayClass *resource.Resources,
+) *gwapiv1a2.PolicyStatus {
+	ancestorsFromOtherGatewayClasses := make([]gwapiv1a2.PolicyAncestorStatus, 0)
+	for _, ancestor := range policyStatus.Ancestors {
+		belongToCurrentGatewayClass := false
+		if ancestor.AncestorRef.Group == nil || *ancestor.AncestorRef.Group == "gateway.networking.k8s.io" {
+			for _, gateway := range resourcesForCurrentGatewayClass.Gateways {
+				if resourcesForCurrentGatewayClass.GatewayClass.Spec.ControllerName == ancestor.ControllerName &&
+					string(ancestor.AncestorRef.Name) == gateway.Name &&
+					ptr.Deref((*string)(ancestor.AncestorRef.Namespace), policyNamespace) == gateway.Namespace {
+					belongToCurrentGatewayClass = true
+					break
+				}
+			}
+		}
+		if !belongToCurrentGatewayClass {
+			ancestorsFromOtherGatewayClasses = append(ancestorsFromOtherGatewayClasses, ancestor)
+		}
+	}
+	return &gwapiv1a2.PolicyStatus{
+		Ancestors: ancestorsFromOtherGatewayClasses,
+	}
 }
 
 func (r *Runner) loadTLSConfig(ctx context.Context) (tlsConfig *tls.Config, salt []byte, err error) {
