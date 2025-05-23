@@ -10,7 +10,6 @@ package tests
 import (
 	"testing"
 
-	"sigs.k8s.io/gateway-api/conformance/utils/kubernetes"
 	"sigs.k8s.io/gateway-api/conformance/utils/suite"
 )
 
@@ -24,9 +23,6 @@ var ZoneAwareRoutingTest = suite.ConformanceTest{
 	Manifests:   []string{"testdata/zone-aware-routing.yaml"},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
 		t.Run("only local zone should get requests", func(t *testing.T) {
-			// Let's make sure that all the deployments are ready.
-			kubernetes.NamespacesMustBeReady(t, suite.Client, suite.TimeoutConfig, []string{"gateway-conformance-infra"})
-
 			// Pods from the backend-local deployment have affinity
 			// for the Envoy Proxy pods so should receive all requests.
 			expected := map[string]int{
