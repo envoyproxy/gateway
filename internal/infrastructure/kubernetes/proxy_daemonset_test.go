@@ -47,13 +47,25 @@ func daemonsetWithSelectorAndLabel(ds *appsv1.DaemonSet, selector *metav1.LabelS
 	return dCopy
 }
 
-func TestCreateOrUpdateProxyDaemonSet(t *testing.T) {
-	cfg, err := config.New(os.Stdout)
-	require.NoError(t, err)
+func daemonsetWithOwnerReferences(ds *appsv1.DaemonSet, ownerReferences []metav1.OwnerReference) *appsv1.DaemonSet {
+	dCopy := ds.DeepCopy()
+	dCopy.OwnerReferences = ownerReferences
+	return dCopy
+}
 
+func setupCreateOrUpdateProxyDaemonSet(gatewayNamespaceMode bool) (*appsv1.DaemonSet, *ir.Infra, *config.Server, error) {
+	ctx := context.Background()
+	cfg, err := config.New(os.Stdout)
+	if err != nil {
+		return nil, nil, nil, err
+	}
 	infra := ir.NewInfra()
 	infra.Proxy.GetProxyMetadata().Labels[gatewayapi.OwningGatewayNamespaceLabel] = "default"
 	infra.Proxy.GetProxyMetadata().Labels[gatewayapi.OwningGatewayNameLabel] = infra.Proxy.Name
+	infra.Proxy.GetProxyMetadata().OwnerReference = &ir.ResourceMetadata{
+		Kind: "Gateway",
+		Name: infra.Proxy.Name,
+	}
 	infra.Proxy.Config = &egv1a1.EnvoyProxy{
 		Spec: egv1a1.EnvoyProxySpec{
 			Provider: &egv1a1.EnvoyProxyProvider{
@@ -67,30 +79,72 @@ func TestCreateOrUpdateProxyDaemonSet(t *testing.T) {
 		},
 	}
 
-	r := proxy.NewResourceRender(cfg.ControllerNamespace, cfg.ControllerNamespace, cfg.DNSDomain, infra.GetProxyInfra(), cfg.EnvoyGateway)
+	cli := fakeclient.NewClientBuilder().
+		WithScheme(envoygateway.GetScheme()).
+		Build()
+	kube := NewInfra(cli, cfg)
+
+	if gatewayNamespaceMode {
+		cfg.EnvoyGateway.Provider.Kubernetes.Deploy = &egv1a1.KubernetesDeployMode{
+			Type: ptr.To(egv1a1.KubernetesDeployModeType(egv1a1.KubernetesDeployModeTypeGatewayNamespace)),
+		}
+		infra.Proxy.Name = "ns1/gateway-1"
+		infra.Proxy.Namespace = "ns1"
+		infra.Proxy.GetProxyMetadata().Labels[gatewayapi.OwningGatewayNamespaceLabel] = "ns1"
+		infra.Proxy.GetProxyMetadata().Labels[gatewayapi.OwningGatewayNameLabel] = "gateway-1"
+		infra.Proxy.GetProxyMetadata().OwnerReference = &ir.ResourceMetadata{
+			Kind: "Gateway",
+			Name: "gateway-1",
+		}
+
+		if err := createGatewayForGatewayNamespaceMode(ctx, kube.Client); err != nil {
+			return nil, nil, nil, err
+		}
+	}
+
+	r, err := proxy.NewResourceRender(ctx, kube, infra)
+	if err != nil {
+		return nil, nil, nil, err
+	}
 	ds, err := r.DaemonSet()
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	return ds, infra, cfg, nil
+}
+
+func TestCreateOrUpdateProxyDaemonSet(t *testing.T) {
+	ds, infra, cfg, err := setupCreateOrUpdateProxyDaemonSet(false)
+	require.NoError(t, err)
+
+	gwDs, gwInfra, gwCfg, err := setupCreateOrUpdateProxyDaemonSet(true)
 	require.NoError(t, err)
 
 	testCases := []struct {
-		name    string
-		in      *ir.Infra
-		current *appsv1.DaemonSet
-		want    *appsv1.DaemonSet
-		wantErr bool
+		name                 string
+		cfg                  *config.Server
+		in                   *ir.Infra
+		gatewayNamespaceMode bool
+		current              *appsv1.DaemonSet
+		want                 *appsv1.DaemonSet
+		wantErr              bool
 	}{
 		{
 			name: "create daemonset",
+			cfg:  cfg,
 			in:   infra,
 			want: ds,
 		},
 		{
 			name:    "daemonset exists",
+			cfg:     cfg,
 			in:      infra,
 			current: ds,
 			want:    ds,
 		},
 		{
 			name: "update daemonset image",
+			cfg:  cfg,
 			in: &ir.Infra{
 				Proxy: &ir.ProxyInfra{
 					Metadata: &ir.InfraMetadata{
@@ -122,6 +176,7 @@ func TestCreateOrUpdateProxyDaemonSet(t *testing.T) {
 		},
 		{
 			name: "update daemonset label",
+			cfg:  cfg,
 			in: &ir.Infra{
 				Proxy: &ir.ProxyInfra{
 					Metadata: &ir.InfraMetadata{
@@ -158,6 +213,7 @@ func TestCreateOrUpdateProxyDaemonSet(t *testing.T) {
 		},
 		{
 			name: "the daemonset originally has a selector and label, and an user add a new label to the custom label config",
+			cfg:  cfg,
 			in: &ir.Infra{
 				Proxy: &ir.ProxyInfra{
 					Metadata: &ir.InfraMetadata{
@@ -193,6 +249,7 @@ func TestCreateOrUpdateProxyDaemonSet(t *testing.T) {
 		},
 		{
 			name: "the daemonset originally has a selector and label, and an user update an existing custom label",
+			cfg:  cfg,
 			in: &ir.Infra{
 				Proxy: &ir.ProxyInfra{
 					Metadata: &ir.InfraMetadata{
@@ -227,10 +284,18 @@ func TestCreateOrUpdateProxyDaemonSet(t *testing.T) {
 			current: daemonsetWithSelectorAndLabel(ds, resource2.GetSelector(map[string]string{"custom-label": "version1"}), map[string]string{"custom-label": "version1"}),
 			wantErr: true,
 		},
+		{
+			name:                 "create daemonset with gateway namespace mode",
+			cfg:                  gwCfg,
+			in:                   gwInfra,
+			gatewayNamespaceMode: true,
+			want:                 daemonsetWithOwnerReferences(gwDs, []metav1.OwnerReference{{APIVersion: "gateway.networking.k8s.io/v1", Kind: "Gateway", Name: "gateway-1", UID: "foo.bar"}}),
+		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
+			ctx := context.Background()
 			var cli client.Client
 			if tc.current != nil {
 				cli = fakeclient.NewClientBuilder().
@@ -245,9 +310,14 @@ func TestCreateOrUpdateProxyDaemonSet(t *testing.T) {
 					Build()
 			}
 
-			kube := NewInfra(cli, cfg)
-			r := proxy.NewResourceRender(kube.ControllerNamespace, cfg.ControllerNamespace, kube.DNSDomain, tc.in.GetProxyInfra(), cfg.EnvoyGateway)
-			err := kube.createOrUpdateDaemonSet(context.Background(), r)
+			kube := NewInfra(cli, tc.cfg)
+			if tc.gatewayNamespaceMode {
+				require.NoError(t, createGatewayForGatewayNamespaceMode(ctx, kube.Client))
+			}
+
+			r, err := proxy.NewResourceRender(ctx, kube, tc.in)
+			require.NoError(t, err)
+			err = kube.createOrUpdateDaemonSet(ctx, r)
 			if tc.wantErr {
 				require.Error(t, err)
 				return
@@ -256,12 +326,13 @@ func TestCreateOrUpdateProxyDaemonSet(t *testing.T) {
 
 			actual := &appsv1.DaemonSet{
 				ObjectMeta: metav1.ObjectMeta{
-					Namespace: kube.ControllerNamespace,
+					Namespace: kube.GetResourceNamespace(tc.in),
 					Name:      proxy.ExpectedResourceHashedName(tc.in.Proxy.Name),
 				},
 			}
-			require.NoError(t, kube.Client.Get(context.Background(), client.ObjectKeyFromObject(actual), actual))
+			require.NoError(t, kube.Client.Get(ctx, client.ObjectKeyFromObject(actual), actual))
 			require.Equal(t, tc.want.Spec, actual.Spec)
+			require.Equal(t, tc.want.OwnerReferences, actual.OwnerReferences)
 		})
 	}
 }
