@@ -847,7 +847,7 @@ func TestGetEnvoyProxyComponentLevelArgs(t *testing.T) {
 	}{
 		{
 			logging:  egv1a1.ProxyLogging{},
-			expected: "",
+			expected: "misc:error",
 		},
 		{
 			logging: egv1a1.ProxyLogging{
@@ -855,7 +855,7 @@ func TestGetEnvoyProxyComponentLevelArgs(t *testing.T) {
 					egv1a1.LogComponentDefault: egv1a1.LogLevelInfo,
 				},
 			},
-			expected: "",
+			expected: "misc:error",
 		},
 		{
 			logging: egv1a1.ProxyLogging{
