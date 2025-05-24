@@ -92,6 +92,23 @@
                   sdsConfig:
                     ads: {}
                     resourceApiVersion: V3
+              denyRedirectMatcher:
+              - name: test-exact
+                stringMatch:
+                  exact: /api
+              - name: test-regex
+                stringMatch:
+                  safeRegex:
+                    regex: .*
+              - name: test-suffix
+                stringMatch:
+                  suffix: bar
+              - name: test-prefix
+                stringMatch:
+                  prefix: foo
+              - name: test-no-type
+                stringMatch:
+                  exact: foobar
               preserveAuthorizationHeader: true
               redirectPathMatcher:
                 path:
