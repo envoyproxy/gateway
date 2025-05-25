@@ -78,7 +78,7 @@ go.test.cel: manifests # Run the CEL validation tests
   		echo "Run CEL Validation on k8s $$ver"; \
         go clean -testcache; \
         KUBEBUILDER_ASSETS="$$(go tool setup-envtest use $$ver -p path)" \
-         go test ./test/cel-validation --tags celvalidation -race; || exit 1 \
+         go test ./test/cel-validation --tags celvalidation -race || exit 1; \
     done
 
 .PHONY: go.clean

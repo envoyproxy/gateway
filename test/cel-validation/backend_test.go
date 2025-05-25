@@ -312,6 +312,7 @@ func TestBackend(t *testing.T) {
 			desc: "Invalid Unix socket path length",
 			mutate: func(backend *egv1a1.Backend) {
 				backend.Spec = egv1a1.BackendSpec{
+					Type:         ptr.To(egv1a1.BackendTypeEndpoints),
 					AppProtocols: []egv1a1.AppProtocolType{egv1a1.AppProtocolTypeH2C},
 					Endpoints: []egv1a1.BackendEndpoint{
 						{
@@ -322,7 +323,7 @@ func TestBackend(t *testing.T) {
 					},
 				}
 			},
-			wantErrors: []string{"spec.endpoints[0].unix.path: Too long: may not be more than 108 bytes"},
+			wantErrors: []string{`spec.endpoints[0].unix.path: Invalid value: "string": unix domain socket path must not exceed 108 characters`},
 		},
 	}
 
