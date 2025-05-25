@@ -308,6 +308,22 @@ func TestBackend(t *testing.T) {
 			},
 			wantErrors: []string{"TLS settings can only be specified for DynamicResolver backends"},
 		},
+		{
+			desc: "Invalid Unix socket path length",
+			mutate: func(backend *egv1a1.Backend) {
+				backend.Spec = egv1a1.BackendSpec{
+					AppProtocols: []egv1a1.AppProtocolType{egv1a1.AppProtocolTypeH2C},
+					Endpoints: []egv1a1.BackendEndpoint{
+						{
+							Unix: &egv1a1.UnixSocket{
+								Path: "/path/to/a/very/long/unix/socket/path/that/exceeds/the/maximum/allowed/length/of/108/characters/and/should/fail/validation.sock",
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{"spec.endpoints[0].unix.path: Too long: may not be more than 108 bytes"},
+		},
 	}
 
 	for _, tc := range cases {
