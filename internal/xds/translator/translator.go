@@ -38,7 +38,7 @@ import (
 
 const (
 	AuthorityHeaderKey = ":authority"
-	// The dummy cluster for TCP listeners that have no routes
+	// The dummy cluster for TCP/UDP listeners that have no routes
 	emptyClusterName = "EmptyCluster"
 )
 
@@ -770,29 +770,38 @@ func processUDPListenerXdsTranslation(
 		// There won't be multiple UDP listeners on the same port since it's already been checked at the gateway api
 		// translator
 		if udpListener.Route != nil {
-			route := udpListener.Route
-
-			xdsListener, err := buildXdsUDPListener(route.Destination.Name, udpListener, accesslog)
-			if err != nil {
-				// skip this listener if failed to build xds listener
-				errs = errors.Join(errs, err)
-				continue
-			}
-			if err := tCtx.AddXdsResource(resourcev3.ListenerType, xdsListener); err != nil {
-				// skip this listener if failed to add xds listener to the resource version table
-				errs = errors.Join(errs, err)
-				continue
-			}
-
 			// 1:1 between IR UDPRoute and xDS Cluster
 			if err := processXdsCluster(tCtx,
-				route.Destination.Name,
-				route.Destination.Settings,
-				&UDPRouteTranslator{route},
+				udpListener.Route.Destination.Name,
+				udpListener.Route.Destination.Settings,
+				&UDPRouteTranslator{udpListener.Route},
 				&ExtraArgs{metrics: metrics},
-				route.Destination.Metadata); err != nil {
+				udpListener.Route.Destination.Metadata); err != nil {
 				errs = errors.Join(errs, err)
 			}
+		} else {
+			// Add empty cluster for UDP listener which have no Route, when empty cluster is not found.
+			emptyRouteCluster := &clusterv3.Cluster{
+				Name:                 emptyClusterName,
+				ClusterDiscoveryType: &clusterv3.Cluster_Type{Type: clusterv3.Cluster_STATIC},
+			}
+			if findXdsCluster(tCtx, emptyClusterName) == nil {
+				if err := tCtx.AddXdsResource(resourcev3.ClusterType, emptyRouteCluster); err != nil {
+					errs = errors.Join(errs, err)
+				}
+			}
+		}
+
+		xdsListener, err := buildXdsUDPListener(getClusterNameForUDPListener(udpListener), udpListener, accesslog)
+		if err != nil {
+			// skip this listener if failed to build xds listener
+			errs = errors.Join(errs, err)
+			continue
+		}
+		if err := tCtx.AddXdsResource(resourcev3.ListenerType, xdsListener); err != nil {
+			// skip this listener if failed to add xds listener to the resource version table
+			errs = errors.Join(errs, err)
+			continue
 		}
 	}
 	return errs
@@ -1123,4 +1132,11 @@ func buildXdsUpstreamTLSSocketWthCert(tlsConfig *ir.TLSUpstreamConfig) (*corev3.
 			TypedConfig: tlsCtxAny,
 		},
 	}, nil
+}
+
+func getClusterNameForUDPListener(listener *ir.UDPListener) string {
+	if listener.Route == nil || listener.Route.Destination == nil {
+		return emptyClusterName
+	}
+	return listener.Route.Destination.Name
 }
