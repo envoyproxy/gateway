@@ -15,6 +15,7 @@ new features: |
   Added support for local rate limit header.
   Added XDS metadata for clusters and endpoints from xRoutes and referenced backend resources (Backend, Service, ServiceImport).
   Added support for setting ownerreference to infra resources when enable gateway namespace mode.
+  Added support for configuring hostname in active HTTP healthchecks.
 
 bug fixes: |
   Handle integer zone annotation values
