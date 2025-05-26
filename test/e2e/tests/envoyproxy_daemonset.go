@@ -13,6 +13,7 @@ import (
 	"time"
 
 	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
@@ -35,30 +36,23 @@ var EnvoyProxyDaemonSetTest = suite.ConformanceTest{
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
 		t.Run("RunAndDelete", func(t *testing.T) {
 			ns := "gateway-conformance-infra"
-			routeNN := types.NamespacedName{Name: "foo-route", Namespace: ns}
+			routeNN := types.NamespacedName{Name: "daemonset-route", Namespace: ns}
 			gwNN := types.NamespacedName{Name: "eg-daemonset", Namespace: ns}
 			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
-			OkResp := http.ExpectedResponse{
-				Request: http.Request{
-					Path: "/foo",
-				},
-				Response: http.Response{
-					StatusCode: 200,
-				},
-				Namespace: ns,
-			}
 
+			gwPodNamespace := GetGatewayResourceNamespace()
+			gwPodSelector := map[string]string{
+				"app.kubernetes.io/managed-by":                   "envoy-gateway",
+				"app.kubernetes.io/name":                         "envoy",
+				"gateway.envoyproxy.io/owning-gateway-name":      gwNN.Name,
+				"gateway.envoyproxy.io/owning-gateway-namespace": gwNN.Namespace,
+			}
 			// Make sure there's no deployment for the gateway
 			err := wait.PollUntilContextTimeout(context.TODO(), time.Second, suite.TimeoutConfig.DeleteTimeout, true, func(ctx context.Context) (bool, error) {
 				deploys := &appsv1.DeploymentList{}
 				err := suite.Client.List(ctx, deploys, &client.ListOptions{
-					Namespace: "envoy-gateway-system",
-					LabelSelector: labels.SelectorFromSet(map[string]string{
-						"app.kubernetes.io/managed-by":                   "envoy-gateway",
-						"app.kubernetes.io/name":                         "envoy",
-						"gateway.envoyproxy.io/owning-gateway-name":      gwNN.Name,
-						"gateway.envoyproxy.io/owning-gateway-namespace": gwNN.Namespace,
-					}),
+					Namespace:     gwPodNamespace,
+					LabelSelector: labels.SelectorFromSet(gwPodSelector),
 				})
 				if err != nil {
 					return false, err
@@ -70,8 +64,18 @@ var EnvoyProxyDaemonSetTest = suite.ConformanceTest{
 				t.Fatalf("Failed to check no deployments for the Gateway: %v", err)
 			}
 
+			WaitForPods(t, suite.Client, gwPodNamespace, gwPodSelector, corev1.PodRunning, PodReady)
+
 			// Send a request to a valid path and expect a successful response
-			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, OkResp)
+			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, http.ExpectedResponse{
+				Request: http.Request{
+					Path: "/daemonset",
+				},
+				Response: http.Response{
+					StatusCode: 200,
+				},
+				Namespace: ns,
+			})
 
 			// Delete the Gateway and wait for the DaemonSet to be deleted
 			gtw := &gwapiv1.Gateway{
@@ -87,22 +91,17 @@ var EnvoyProxyDaemonSetTest = suite.ConformanceTest{
 			err = wait.PollUntilContextTimeout(context.TODO(), time.Second, suite.TimeoutConfig.DeleteTimeout, true, func(ctx context.Context) (bool, error) {
 				dsList := &appsv1.DaemonSetList{}
 				err := suite.Client.List(ctx, dsList, &client.ListOptions{
-					Namespace: "envoy-gateway-system",
-					LabelSelector: labels.SelectorFromSet(map[string]string{
-						"app.kubernetes.io/managed-by":                   "envoy-gateway",
-						"app.kubernetes.io/name":                         "envoy",
-						"gateway.envoyproxy.io/owning-gateway-name":      gwNN.Name,
-						"gateway.envoyproxy.io/owning-gateway-namespace": gwNN.Namespace,
-					}),
+					Namespace:     gwPodNamespace,
+					LabelSelector: labels.SelectorFromSet(gwPodSelector),
 				})
 				if err != nil {
 					return false, err
 				}
 
-				return len(dsList.Items) == 0, err
+				return len(dsList.Items) == 0, nil
 			})
 			if err != nil {
-				t.Fatalf("Failed to delete Gateway: %v", err)
+				t.Fatalf("Failed to delete DaemonSet Gateway: %v", err)
 			}
 		})
 	},
