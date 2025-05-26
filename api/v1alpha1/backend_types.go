@@ -115,6 +115,9 @@ type FQDNEndpoint struct {
 // https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/core/v3/address.proto#config-core-v3-pipe
 type UnixSocket struct {
 	// Path defines the unix domain socket path of the backend endpoint.
+	// The path length must not exceed 108 characters.
+	//
+	// +kubebuilder:validation:XValidation:rule="size(self) <= 108",message="unix domain socket path must not exceed 108 characters"
 	Path string `json:"path"`
 }
 

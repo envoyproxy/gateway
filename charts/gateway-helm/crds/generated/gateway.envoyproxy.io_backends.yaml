@@ -118,9 +118,13 @@ spec:
                       description: Unix defines the unix domain socket endpoint
                       properties:
                         path:
-                          description: Path defines the unix domain socket path of
-                            the backend endpoint.
+                          description: |-
+                            Path defines the unix domain socket path of the backend endpoint.
+                            The path length must not exceed 108 characters.
                           type: string
+                          x-kubernetes-validations:
+                          - message: unix domain socket path must not exceed 108 characters
+                            rule: size(self) <= 108
                       required:
                       - path
                       type: object

@@ -85,15 +85,15 @@ func newTestInfra() *ir.Infra {
 	return newTestInfraWithAnnotations(nil)
 }
 
-func newTestInfraWithNamespaceName(namespace, name, proxyName string) *ir.Infra {
+func newTestInfraWithNamespacedName(gwNN types.NamespacedName) *ir.Infra {
 	i := newTestInfraWithAnnotations(nil)
-	i.Proxy.Name = proxyName
-	i.Proxy.Namespace = namespace
-	i.Proxy.GetProxyMetadata().Labels[gatewayapi.OwningGatewayNamespaceLabel] = namespace
-	i.Proxy.GetProxyMetadata().Labels[gatewayapi.OwningGatewayNameLabel] = name
+	i.Proxy.Name = gwNN.Name
+	i.Proxy.Namespace = gwNN.Namespace
+	i.Proxy.GetProxyMetadata().Labels[gatewayapi.OwningGatewayNamespaceLabel] = gwNN.Namespace
+	i.Proxy.GetProxyMetadata().Labels[gatewayapi.OwningGatewayNameLabel] = gwNN.Name
 	i.Proxy.GetProxyMetadata().OwnerReference = &ir.ResourceMetadata{
 		Kind: "Gateway",
-		Name: name,
+		Name: gwNN.Name,
 	}
 
 	return i
@@ -617,7 +617,7 @@ func TestDeployment(t *testing.T) {
 		},
 		{
 			caseName:             "gateway-namespace-mode",
-			infra:                newTestInfraWithNamespaceName("ns1", "gateway-1", "ns1/gateway-1"),
+			infra:                newTestInfraWithNamespacedName(types.NamespacedName{Namespace: "ns1", Name: "gateway-1"}),
 			deploy:               nil,
 			gatewayNamespaceMode: true,
 		},
@@ -666,12 +666,11 @@ func TestDeployment(t *testing.T) {
 				tc.infra.Proxy.Config.Spec.ExtraArgs = tc.extraArgs
 			}
 			if tc.gatewayNamespaceMode {
-				deployType := egv1a1.KubernetesDeployModeType(egv1a1.KubernetesDeployModeTypeGatewayNamespace)
 				cfg.EnvoyGateway.Provider = &egv1a1.EnvoyGatewayProvider{
 					Type: egv1a1.ProviderTypeKubernetes,
 					Kubernetes: &egv1a1.EnvoyGatewayKubernetesProvider{
 						Deploy: &egv1a1.KubernetesDeployMode{
-							Type: &deployType,
+							Type: ptr.To(egv1a1.KubernetesDeployModeTypeGatewayNamespace),
 						},
 					},
 				}
@@ -1066,7 +1065,7 @@ func TestDaemonSet(t *testing.T) {
 		},
 		{
 			caseName:             "gateway-namespace-mode",
-			infra:                newTestInfraWithNamespaceName("ns1", "gateway-1", "ns1/gateway-1"),
+			infra:                newTestInfraWithNamespacedName(types.NamespacedName{Namespace: "ns1", Name: "gateway-1"}),
 			daemonset:            nil,
 			gatewayNamespaceMode: true,
 		},
@@ -1074,12 +1073,11 @@ func TestDaemonSet(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.caseName, func(t *testing.T) {
 			if tc.gatewayNamespaceMode {
-				deployType := egv1a1.KubernetesDeployModeType(egv1a1.KubernetesDeployModeTypeGatewayNamespace)
 				cfg.EnvoyGateway.Provider = &egv1a1.EnvoyGatewayProvider{
 					Type: egv1a1.ProviderTypeKubernetes,
 					Kubernetes: &egv1a1.EnvoyGatewayKubernetesProvider{
 						Deploy: &egv1a1.KubernetesDeployMode{
-							Type: &deployType,
+							Type: ptr.To(egv1a1.KubernetesDeployModeTypeGatewayNamespace),
 						},
 					},
 				}
@@ -1287,7 +1285,7 @@ func TestService(t *testing.T) {
 		},
 		{
 			caseName:             "gateway-namespace-mode",
-			infra:                newTestInfraWithNamespaceName("ns1", "gateway-1", "ns1/gateway-1"),
+			infra:                newTestInfraWithNamespacedName(types.NamespacedName{Namespace: "ns1", Name: "gateway-1"}),
 			service:              nil,
 			gatewayNamespaceMode: true,
 		},
@@ -1295,12 +1293,11 @@ func TestService(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.caseName, func(t *testing.T) {
 			if tc.gatewayNamespaceMode {
-				deployType := egv1a1.KubernetesDeployModeType(egv1a1.KubernetesDeployModeTypeGatewayNamespace)
 				cfg.EnvoyGateway.Provider = &egv1a1.EnvoyGatewayProvider{
 					Type: egv1a1.ProviderTypeKubernetes,
 					Kubernetes: &egv1a1.EnvoyGatewayKubernetesProvider{
 						Deploy: &egv1a1.KubernetesDeployMode{
-							Type: &deployType,
+							Type: ptr.To(egv1a1.KubernetesDeployModeTypeGatewayNamespace),
 						},
 					},
 				}
@@ -1315,6 +1312,14 @@ func TestService(t *testing.T) {
 			require.NoError(t, err)
 			svc, err := r.Service()
 			require.NoError(t, err)
+
+			if test.OverrideTestData() {
+				data, err := yaml.Marshal(svc)
+				require.NoError(t, err)
+				err = os.WriteFile(fmt.Sprintf("testdata/services/%s.yaml", tc.caseName), data, 0o600)
+				require.NoError(t, err)
+				return
+			}
 
 			expected, err := loadService(tc.caseName)
 			require.NoError(t, err)
@@ -1355,7 +1360,7 @@ func TestConfigMap(t *testing.T) {
 		},
 		{
 			name:                 "gateway-namespace-mode",
-			infra:                newTestInfraWithNamespaceName("ns1", "gateway-1", "ns1/gateway-1"),
+			infra:                newTestInfraWithNamespacedName(types.NamespacedName{Namespace: "ns1", Name: "gateway-1"}),
 			gatewayNamespaceMode: true,
 		},
 	}
@@ -1363,12 +1368,11 @@ func TestConfigMap(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			if tc.gatewayNamespaceMode {
-				deployType := egv1a1.KubernetesDeployModeType(egv1a1.KubernetesDeployModeTypeGatewayNamespace)
 				cfg.EnvoyGateway.Provider = &egv1a1.EnvoyGatewayProvider{
 					Type: egv1a1.ProviderTypeKubernetes,
 					Kubernetes: &egv1a1.EnvoyGatewayKubernetesProvider{
 						Deploy: &egv1a1.KubernetesDeployMode{
-							Type: &deployType,
+							Type: ptr.To(egv1a1.KubernetesDeployModeTypeGatewayNamespace),
 						},
 					},
 				}
@@ -1378,9 +1382,16 @@ func TestConfigMap(t *testing.T) {
 			cm, err := r.ConfigMap("")
 			require.NoError(t, err)
 
+			if test.OverrideTestData() {
+				data, err := yaml.Marshal(cm)
+				require.NoError(t, err)
+				err = os.WriteFile(fmt.Sprintf("testdata/configmap/%s.yaml", tc.name), data, 0o600)
+				require.NoError(t, err)
+				return
+			}
+
 			expected, err := loadConfigmap(tc.name)
 			require.NoError(t, err)
-
 			assert.Equal(t, expected, cm)
 		})
 	}
@@ -1417,7 +1428,7 @@ func TestServiceAccount(t *testing.T) {
 		},
 		{
 			name:                 "gateway-namespace-mode",
-			infra:                newTestInfraWithNamespaceName("ns1", "gateway-1", "ns1/gateway-1"),
+			infra:                newTestInfraWithNamespacedName(types.NamespacedName{Namespace: "ns1", Name: "gateway-1"}),
 			gatewayNamespaceMode: true,
 		},
 	}
@@ -1425,12 +1436,11 @@ func TestServiceAccount(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			if tc.gatewayNamespaceMode {
-				deployType := egv1a1.KubernetesDeployModeType(egv1a1.KubernetesDeployModeTypeGatewayNamespace)
 				cfg.EnvoyGateway.Provider = &egv1a1.EnvoyGatewayProvider{
 					Type: egv1a1.ProviderTypeKubernetes,
 					Kubernetes: &egv1a1.EnvoyGatewayKubernetesProvider{
 						Deploy: &egv1a1.KubernetesDeployMode{
-							Type: &deployType,
+							Type: ptr.To(egv1a1.KubernetesDeployModeTypeGatewayNamespace),
 						},
 					},
 				}
@@ -1443,8 +1453,7 @@ func TestServiceAccount(t *testing.T) {
 			if test.OverrideTestData() {
 				saYAML, err := yaml.Marshal(sa)
 				require.NoError(t, err)
-				// nolint: gosec
-				err = os.WriteFile(fmt.Sprintf("testdata/serviceaccount/%s.yaml", tc.name), saYAML, 0o644)
+				err = os.WriteFile(fmt.Sprintf("testdata/serviceaccount/%s.yaml", tc.name), saYAML, 0o600)
 				require.NoError(t, err)
 				return
 			}
@@ -1546,7 +1555,7 @@ func TestPDB(t *testing.T) {
 		},
 		{
 			caseName: "gateway-namespace-mode",
-			infra:    newTestInfraWithNamespaceName("ns1", "gateway-1", "ns1/gateway-1"),
+			infra:    newTestInfraWithNamespacedName(types.NamespacedName{Namespace: "ns1", Name: "gateway-1"}),
 			pdb: &egv1a1.KubernetesPodDisruptionBudgetSpec{
 				MinAvailable: ptr.To(intstr.IntOrString{Type: intstr.Int, IntVal: 1}),
 			},
@@ -1557,12 +1566,11 @@ func TestPDB(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.caseName, func(t *testing.T) {
 			if tc.gatewayNamespaceMode {
-				deployType := egv1a1.KubernetesDeployModeType(egv1a1.KubernetesDeployModeTypeGatewayNamespace)
 				cfg.EnvoyGateway.Provider = &egv1a1.EnvoyGatewayProvider{
 					Type: egv1a1.ProviderTypeKubernetes,
 					Kubernetes: &egv1a1.EnvoyGatewayKubernetesProvider{
 						Deploy: &egv1a1.KubernetesDeployMode{
-							Type: &deployType,
+							Type: ptr.To(egv1a1.KubernetesDeployModeTypeGatewayNamespace),
 						},
 					},
 				}
@@ -1587,9 +1595,16 @@ func TestPDB(t *testing.T) {
 			pdb, err := r.PodDisruptionBudget()
 			require.NoError(t, err)
 
+			if test.OverrideTestData() {
+				data, err := yaml.Marshal(pdb)
+				require.NoError(t, err)
+				err = os.WriteFile(fmt.Sprintf("testdata/pdb/%s.yaml", tc.caseName), data, 0o600)
+				require.NoError(t, err)
+				return
+			}
+
 			podPDBExpected, err := loadPDB(tc.caseName)
 			require.NoError(t, err)
-
 			assert.Equal(t, podPDBExpected, pdb)
 		})
 	}
@@ -1682,7 +1697,7 @@ func TestHorizontalPodAutoscaler(t *testing.T) {
 		},
 		{
 			caseName: "gateway-namespace-mode",
-			infra:    newTestInfraWithNamespaceName("ns1", "gateway-1", "ns1/gateway-1"),
+			infra:    newTestInfraWithNamespacedName(types.NamespacedName{Namespace: "ns1", Name: "gateway-1"}),
 			hpa: &egv1a1.KubernetesHorizontalPodAutoscalerSpec{
 				MaxReplicas: ptr.To[int32](1),
 			},
@@ -1693,12 +1708,11 @@ func TestHorizontalPodAutoscaler(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.caseName, func(t *testing.T) {
 			if tc.gatewayNamespaceMode {
-				deployType := egv1a1.KubernetesDeployModeType(egv1a1.KubernetesDeployModeTypeGatewayNamespace)
 				cfg.EnvoyGateway.Provider = &egv1a1.EnvoyGatewayProvider{
 					Type: egv1a1.ProviderTypeKubernetes,
 					Kubernetes: &egv1a1.EnvoyGatewayKubernetesProvider{
 						Deploy: &egv1a1.KubernetesDeployMode{
-							Type: &deployType,
+							Type: ptr.To(egv1a1.KubernetesDeployModeTypeGatewayNamespace),
 						},
 					},
 				}
@@ -1720,9 +1734,16 @@ func TestHorizontalPodAutoscaler(t *testing.T) {
 			hpa, err := r.HorizontalPodAutoscaler()
 			require.NoError(t, err)
 
+			if test.OverrideTestData() {
+				data, err := yaml.Marshal(hpa)
+				require.NoError(t, err)
+				err = os.WriteFile(fmt.Sprintf("testdata/hpa/%s.yaml", tc.caseName), data, 0o600)
+				require.NoError(t, err)
+				return
+			}
+
 			want, err := loadHPA(tc.caseName)
 			require.NoError(t, err)
-
 			assert.Equal(t, want, hpa)
 		})
 	}
@@ -1850,19 +1871,18 @@ func TestGatewayNamespaceModeMultipleResources(t *testing.T) {
 	require.NoError(t, err)
 
 	// Configure gateway namespace mode
-	deployType := egv1a1.KubernetesDeployModeType(egv1a1.KubernetesDeployModeTypeGatewayNamespace)
 	cfg.EnvoyGateway.Provider = &egv1a1.EnvoyGatewayProvider{
 		Type: egv1a1.ProviderTypeKubernetes,
 		Kubernetes: &egv1a1.EnvoyGatewayKubernetesProvider{
 			Deploy: &egv1a1.KubernetesDeployMode{
-				Type: &deployType,
+				Type: ptr.To(egv1a1.KubernetesDeployModeTypeGatewayNamespace),
 			},
 		},
 	}
 
 	// Create test infra with multiple namespaces
 	var infraList []*ir.Infra
-	infra1 := newTestInfraWithNamespaceName("namespace-1", "gateway-1", "namespace-1/gateway-1")
+	infra1 := newTestInfraWithNamespacedName(types.NamespacedName{Namespace: "namespace-1", Name: "gateway-1"})
 	// Add HPA config to first infra
 	if infra1.Proxy.Config == nil {
 		infra1.Proxy.Config = &egv1a1.EnvoyProxy{Spec: egv1a1.EnvoyProxySpec{}}
@@ -1879,7 +1899,7 @@ func TestGatewayNamespaceModeMultipleResources(t *testing.T) {
 		MaxReplicas: ptr.To[int32](3),
 	}
 
-	infra2 := newTestInfraWithNamespaceName("namespace-2", "gateway-2", "namespace-2/gateway-2")
+	infra2 := newTestInfraWithNamespacedName(types.NamespacedName{Namespace: "namespace-2", Name: "gateway-2"})
 	// Add HPA config to second infra
 	if infra2.Proxy.Config == nil {
 		infra2.Proxy.Config = &egv1a1.EnvoyProxy{Spec: egv1a1.EnvoyProxySpec{}}
@@ -1966,7 +1986,7 @@ func TestGatewayNamespaceModeMultipleResources(t *testing.T) {
 
 	for i, infra := range infraList {
 		expectedNamespace := infra.GetProxyInfra().Namespace
-		expectedName := ExpectedResourceHashedName(infra.GetProxyInfra().Name)
+		expectedName := infra.GetProxyInfra().Name
 
 		require.Equal(t, expectedNamespace, deployments[i].Namespace)
 		require.Equal(t, expectedName, deployments[i].Name)
