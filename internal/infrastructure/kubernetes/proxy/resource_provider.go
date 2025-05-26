@@ -96,6 +96,10 @@ func NewResourceRender(ctx context.Context, kubernetesInfra KubernetesInfraProvi
 }
 
 func (r *ResourceRender) Name() string {
+	if r.GatewayNamespaceMode {
+		return r.infra.Name
+	}
+
 	return ExpectedResourceHashedName(r.infra.Name)
 }
 
@@ -380,7 +384,7 @@ func (r *ResourceRender) Deployment() (*appsv1.Deployment, error) {
 					SecurityContext:               deploymentConfig.Pod.SecurityContext,
 					Affinity:                      deploymentConfig.Pod.Affinity,
 					Tolerations:                   deploymentConfig.Pod.Tolerations,
-					Volumes:                       expectedVolumes(r.infra.Name, r.GatewayNamespaceMode, deploymentConfig.Pod, r.DNSDomain, r.controllerNamespace),
+					Volumes:                       r.expectedVolumes(deploymentConfig.Pod),
 					ImagePullSecrets:              deploymentConfig.Pod.ImagePullSecrets,
 					NodeSelector:                  deploymentConfig.Pod.NodeSelector,
 					TopologySpreadConstraints:     deploymentConfig.Pod.TopologySpreadConstraints,
@@ -598,7 +602,7 @@ func (r *ResourceRender) getPodSpec(
 	return corev1.PodSpec{
 		Containers:                    containers,
 		InitContainers:                initContainers,
-		ServiceAccountName:            ExpectedResourceHashedName(r.infra.Name),
+		ServiceAccountName:            r.Name(),
 		TerminationGracePeriodSeconds: expectedTerminationGracePeriodSeconds(proxyConfig.Spec.Shutdown),
 		DNSPolicy:                     corev1.DNSClusterFirst,
 		RestartPolicy:                 corev1.RestartPolicyAlways,
@@ -606,7 +610,7 @@ func (r *ResourceRender) getPodSpec(
 		SecurityContext:               pod.SecurityContext,
 		Affinity:                      pod.Affinity,
 		Tolerations:                   pod.Tolerations,
-		Volumes:                       expectedVolumes(r.infra.Name, r.GatewayNamespaceMode, pod, r.DNSDomain, r.controllerNamespace),
+		Volumes:                       r.expectedVolumes(pod),
 		ImagePullSecrets:              pod.ImagePullSecrets,
 		NodeSelector:                  pod.NodeSelector,
 		TopologySpreadConstraints:     pod.TopologySpreadConstraints,

@@ -79,9 +79,9 @@ func setupCreateOrUpdateProxyDeployment(gatewayNamespaceMode bool) (*appsv1.Depl
 
 	if gatewayNamespaceMode {
 		cfg.EnvoyGateway.Provider.Kubernetes.Deploy = &egv1a1.KubernetesDeployMode{
-			Type: ptr.To(egv1a1.KubernetesDeployModeType(egv1a1.KubernetesDeployModeTypeGatewayNamespace)),
+			Type: ptr.To(egv1a1.KubernetesDeployModeTypeGatewayNamespace),
 		}
-		infra.Proxy.Name = "ns1/gateway-1"
+		infra.Proxy.Name = "gateway-1"
 		infra.Proxy.Namespace = "ns1"
 		infra.Proxy.GetProxyMetadata().Labels[gatewayapi.OwningGatewayNamespaceLabel] = "ns1"
 		infra.Proxy.GetProxyMetadata().Labels[gatewayapi.OwningGatewayNameLabel] = "gateway-1"
@@ -320,7 +320,7 @@ func TestCreateOrUpdateProxyDeployment(t *testing.T) {
 			actual := &appsv1.Deployment{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: kube.GetResourceNamespace(tc.in),
-					Name:      proxy.ExpectedResourceHashedName(tc.in.Proxy.Name),
+					Name:      expectedName(tc.in.Proxy, tc.gatewayNamespaceMode),
 				},
 			}
 			require.NoError(t, kube.Client.Get(ctx, client.ObjectKeyFromObject(actual), actual))
