@@ -115,11 +115,14 @@ type FQDNEndpoint struct {
 // https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/core/v3/address.proto#config-core-v3-pipe
 type UnixSocket struct {
 	// Path defines the unix domain socket path of the backend endpoint.
+	// The path length must not exceed 108 characters.
+	//
+	// +kubebuilder:validation:XValidation:rule="size(self) <= 108",message="unix domain socket path must not exceed 108 characters"
 	Path string `json:"path"`
 }
 
 // BackendSpec describes the desired state of BackendSpec.
-// +kubebuilder:validation:XValidation:rule="self.type != 'DynamicResolver' || !has(self.endpoints) && !has(self.appProtocols)",message="DynamicResolver type cannot have endpoints and appProtocols specified"
+// +kubebuilder:validation:XValidation:rule="self.type != 'DynamicResolver' || !has(self.endpoints)",message="DynamicResolver type cannot have endpoints specified"
 // +kubebuilder:validation:XValidation:rule="has(self.tls) ? self.type == 'DynamicResolver' : true",message="TLS settings can only be specified for DynamicResolver backends"
 type BackendSpec struct {
 	// Type defines the type of the backend. Defaults to "Endpoints"

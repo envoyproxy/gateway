@@ -61,14 +61,6 @@ func TestE2E(t *testing.T) {
 		)
 	}
 
-	// TODO: make these tests work in GatewayNamespaceMode
-	if tests.IsGatewayNamespaceMode() {
-		skipTests = append(skipTests,
-			tests.HTTPWasmTest.ShortName,
-			tests.OCIWasmTest.ShortName,
-		)
-	}
-
 	cSuite, err := suite.NewConformanceTestSuite(suite.ConformanceOptions{
 		Client:               c,
 		RestConfig:           cfg,

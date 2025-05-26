@@ -2777,6 +2777,10 @@ KubernetesDeployModeType defines the type of KubernetesDeployMode
 _Appears in:_
 - [KubernetesDeployMode](#kubernetesdeploymode)
 
+| Value | Description |
+| ----- | ----------- |
+| `ControllerNamespace` | KubernetesDeployModeTypeControllerNamespace indicates that the controller namespace is used for the infra proxy deployments.<br /> | 
+| `GatewayNamespace` | KubernetesDeployModeTypeGatewayNamespace indicates that the gateway namespace is used for the infra proxy deployments.<br /> | 
 
 
 #### KubernetesDeploymentSpec
@@ -4757,7 +4761,7 @@ _Appears in:_
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `path` | _string_ |  true  |  | Path defines the unix domain socket path of the backend endpoint. |
+| `path` | _string_ |  true  |  | Path defines the unix domain socket path of the backend endpoint.<br />The path length must not exceed 108 characters. |
 
 
 #### Wasm

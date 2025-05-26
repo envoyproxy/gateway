@@ -41,7 +41,7 @@ import (
 	"github.com/envoyproxy/gateway/internal/wasm"
 )
 
-func mustUnmarshal(t *testing.T, val []byte, out interface{}) {
+func mustUnmarshal(t *testing.T, val []byte, out any) {
 	require.NoError(t, yaml.UnmarshalStrict(val, out, yaml.DisallowUnknownFields))
 }
 
@@ -880,7 +880,7 @@ func (m *mockWasmCache) Get(downloadURL string, options wasm.GetOptions) (url, c
 	if options.Checksum != "" && checksum != options.Checksum {
 		return "", "", fmt.Errorf("module downloaded from %v has checksum %v, which does not match: %v", downloadURL, checksum, options.Checksum)
 	}
-	return fmt.Sprintf("https://envoy-gateway:18002/%s.wasm", hashedName), checksum, nil
+	return fmt.Sprintf("https://envoy-gateway.envoy-gateway-system.svc.cluster.local:18002/%s.wasm", hashedName), checksum, nil
 }
 
 func (m *mockWasmCache) Cleanup() {}

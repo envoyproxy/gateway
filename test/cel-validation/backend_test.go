@@ -260,7 +260,10 @@ func TestBackend(t *testing.T) {
 		{
 			desc: "dynamic resolver ok",
 			mutate: func(backend *egv1a1.Backend) {
-				backend.Spec = egv1a1.BackendSpec{Type: ptr.To(egv1a1.BackendTypeDynamicResolver)}
+				backend.Spec = egv1a1.BackendSpec{
+					Type:         ptr.To(egv1a1.BackendTypeDynamicResolver),
+					AppProtocols: []egv1a1.AppProtocolType{egv1a1.AppProtocolTypeH2C},
+				}
 			},
 			wantErrors: []string{},
 		},
@@ -268,12 +271,18 @@ func TestBackend(t *testing.T) {
 			desc: "dynamic resolver invalid",
 			mutate: func(backend *egv1a1.Backend) {
 				backend.Spec = egv1a1.BackendSpec{
-					Type:         ptr.To(egv1a1.BackendTypeDynamicResolver),
-					Endpoints:    []egv1a1.BackendEndpoint{},
-					AppProtocols: []egv1a1.AppProtocolType{egv1a1.AppProtocolTypeH2C},
+					Type: ptr.To(egv1a1.BackendTypeDynamicResolver),
+					Endpoints: []egv1a1.BackendEndpoint{
+						{
+							FQDN: &egv1a1.FQDNEndpoint{
+								Hostname: "example.com",
+								Port:     443,
+							},
+						},
+					},
 				}
 			},
-			wantErrors: []string{"DynamicResolver type cannot have endpoints and appProtocols specified"},
+			wantErrors: []string{"DynamicResolver type cannot have endpoints specified"},
 		},
 		{
 			desc: "tls settings on non-dynamic resolver",
@@ -298,6 +307,23 @@ func TestBackend(t *testing.T) {
 				}
 			},
 			wantErrors: []string{"TLS settings can only be specified for DynamicResolver backends"},
+		},
+		{
+			desc: "Invalid Unix socket path length",
+			mutate: func(backend *egv1a1.Backend) {
+				backend.Spec = egv1a1.BackendSpec{
+					Type:         ptr.To(egv1a1.BackendTypeEndpoints),
+					AppProtocols: []egv1a1.AppProtocolType{egv1a1.AppProtocolTypeH2C},
+					Endpoints: []egv1a1.BackendEndpoint{
+						{
+							Unix: &egv1a1.UnixSocket{
+								Path: "/path/to/a/very/long/unix/socket/path/that/exceeds/the/maximum/allowed/length/of/108/characters/and/should/fail/validation.sock",
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{`spec.endpoints[0].unix.path: Invalid value: "string": unix domain socket path must not exceed 108 characters`},
 		},
 	}
 
