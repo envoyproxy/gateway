@@ -16,6 +16,7 @@ backendTrafficPolicies:
           expectedStatuses:
           - 200
           - 201
+          hostname: foo.bar
           method: GET
           path: /healthz
         interval: 5s
@@ -1017,7 +1018,7 @@ xdsIR:
                 expectedStatuses:
                 - 200
                 - 201
-                host: gateway.envoyproxy.io
+                host: foo.bar
                 method: GET
                 path: /healthz
               interval: 5s
