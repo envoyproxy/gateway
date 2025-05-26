@@ -780,6 +780,14 @@ func processUDPListenerXdsTranslation(
 				errs = errors.Join(errs, err)
 			}
 		} else {
+			emptyRoute := &ir.UDPRoute{
+				Name: emptyClusterName,
+				Destination: &ir.RouteDestination{
+					Name: emptyClusterName,
+				},
+			}
+			udpListener.Route = emptyRoute
+
 			// Add empty cluster for UDP listener which have no Route, when empty cluster is not found.
 			emptyRouteCluster := &clusterv3.Cluster{
 				Name:                 emptyClusterName,
@@ -792,7 +800,7 @@ func processUDPListenerXdsTranslation(
 			}
 		}
 
-		xdsListener, err := buildXdsUDPListener(getClusterNameForUDPListener(udpListener), udpListener, accesslog)
+		xdsListener, err := buildXdsUDPListener(udpListener.Route.Destination.Name, udpListener, accesslog)
 		if err != nil {
 			// skip this listener if failed to build xds listener
 			errs = errors.Join(errs, err)
@@ -1132,11 +1140,4 @@ func buildXdsUpstreamTLSSocketWthCert(tlsConfig *ir.TLSUpstreamConfig) (*corev3.
 			TypedConfig: tlsCtxAny,
 		},
 	}, nil
-}
-
-func getClusterNameForUDPListener(listener *ir.UDPListener) string {
-	if listener.Route == nil || listener.Route.Destination == nil {
-		return emptyClusterName
-	}
-	return listener.Route.Destination.Name
 }
