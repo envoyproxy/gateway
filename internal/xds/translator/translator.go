@@ -38,8 +38,16 @@ import (
 
 const (
 	AuthorityHeaderKey = ":authority"
-	// The dummy cluster for TCP/UDP listeners that have no routes
+	// The dummy cluster name for TCP/UDP listeners that have no routes
 	emptyClusterName = "EmptyCluster"
+)
+
+var (
+	// The dummy cluster for TCP/UDP listeners that have no routes
+	emptyRouteCluster = &clusterv3.Cluster{
+		Name:                 emptyClusterName,
+		ClusterDiscoveryType: &clusterv3.Cluster_Type{Type: clusterv3.Cluster_STATIC},
+	}
 )
 
 // Translator translates the xDS IR into xDS resources.
@@ -731,11 +739,6 @@ func (t *Translator) processTCPListenerXdsTranslation(
 		// If there are no routes, add a route without a destination to the listener to create a filter chain
 		// This is needed because Envoy requires a filter chain to be present in the listener, otherwise it will reject the listener and report a warning
 		if len(tcpListener.Routes) == 0 {
-			emptyRouteCluster := &clusterv3.Cluster{
-				Name:                 emptyClusterName,
-				ClusterDiscoveryType: &clusterv3.Cluster_Type{Type: clusterv3.Cluster_STATIC},
-			}
-
 			if findXdsCluster(tCtx, emptyClusterName) == nil {
 				if err := tCtx.AddXdsResource(resourcev3.ClusterType, emptyRouteCluster); err != nil {
 					errs = errors.Join(errs, err)
@@ -780,19 +783,14 @@ func processUDPListenerXdsTranslation(
 				errs = errors.Join(errs, err)
 			}
 		} else {
-			emptyRoute := &ir.UDPRoute{
+			udpListener.Route = &ir.UDPRoute{
 				Name: emptyClusterName,
 				Destination: &ir.RouteDestination{
 					Name: emptyClusterName,
 				},
 			}
-			udpListener.Route = emptyRoute
 
 			// Add empty cluster for UDP listener which have no Route, when empty cluster is not found.
-			emptyRouteCluster := &clusterv3.Cluster{
-				Name:                 emptyClusterName,
-				ClusterDiscoveryType: &clusterv3.Cluster_Type{Type: clusterv3.Cluster_STATIC},
-			}
 			if findXdsCluster(tCtx, emptyClusterName) == nil {
 				if err := tCtx.AddXdsResource(resourcev3.ClusterType, emptyRouteCluster); err != nil {
 					errs = errors.Join(errs, err)
