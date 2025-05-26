@@ -42,13 +42,11 @@ const (
 	emptyClusterName = "EmptyCluster"
 )
 
-var (
-	// The dummy cluster for TCP/UDP listeners that have no routes
-	emptyRouteCluster = &clusterv3.Cluster{
-		Name:                 emptyClusterName,
-		ClusterDiscoveryType: &clusterv3.Cluster_Type{Type: clusterv3.Cluster_STATIC},
-	}
-)
+// The dummy cluster for TCP/UDP listeners that have no routes
+var emptyRouteCluster = &clusterv3.Cluster{
+	Name:                 emptyClusterName,
+	ClusterDiscoveryType: &clusterv3.Cluster_Type{Type: clusterv3.Cluster_STATIC},
+}
 
 // Translator translates the xDS IR into xDS resources.
 type Translator struct {
