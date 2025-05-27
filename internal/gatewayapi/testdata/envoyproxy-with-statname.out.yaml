@@ -182,12 +182,21 @@ xdsIR:
       port: 10080
       routes:
       - destination:
+          metadata:
+            kind: HTTPRoute
+            name: httproute-1
+            namespace: default
+            sectionName: foo
           name: httproute/default/httproute-1/rule/0
           settings:
           - addressType: IP
             endpoints:
             - host: 7.7.7.7
               port: 8080
+            metadata:
+              name: service-3
+              namespace: default
+              sectionName: "8080"
             name: httproute/default/httproute-1/rule/0/backend/0
             protocol: HTTP
             weight: 1
@@ -195,6 +204,10 @@ xdsIR:
             endpoints:
             - host: 7.7.7.7
               port: 8080
+            metadata:
+              name: service-4
+              namespace: default
+              sectionName: "8080"
             name: httproute/default/httproute-1/rule/0/backend/1
             protocol: HTTP
             weight: 1
@@ -212,12 +225,21 @@ xdsIR:
           name: ""
           prefix: /foo
       - destination:
+          metadata:
+            kind: HTTPRoute
+            name: httproute-1
+            namespace: default
+            sectionName: fallback
           name: httproute/default/httproute-1/rule/1
           settings:
           - addressType: IP
             endpoints:
             - host: 7.7.7.7
               port: 8080
+            metadata:
+              name: service-1
+              namespace: default
+              sectionName: "8080"
             name: httproute/default/httproute-1/rule/1/backend/0
             protocol: HTTP
             weight: 1
@@ -235,12 +257,20 @@ xdsIR:
           name: ""
           prefix: /
       - destination:
+          metadata:
+            kind: GRPCRoute
+            name: grpcroute-1
+            namespace: default
           name: grpcroute/default/grpcroute-1/rule/0
           settings:
           - addressType: IP
             endpoints:
             - host: 7.7.7.7
               port: 8080
+            metadata:
+              name: service-1
+              namespace: default
+              sectionName: "8080"
             name: grpcroute/default/grpcroute-1/rule/0/backend/0
             protocol: GRPC
             weight: 1
@@ -248,6 +278,10 @@ xdsIR:
             endpoints:
             - host: 7.7.7.7
               port: 8080
+            metadata:
+              name: service-2
+              namespace: default
+              sectionName: "8080"
             name: grpcroute/default/grpcroute-1/rule/0/backend/1
             protocol: GRPC
             weight: 1
@@ -255,6 +289,10 @@ xdsIR:
             endpoints:
             - host: 7.7.7.7
               port: 8080
+            metadata:
+              name: service-3
+              namespace: default
+              sectionName: "8080"
             name: grpcroute/default/grpcroute-1/rule/0/backend/2
             protocol: GRPC
             weight: 1
@@ -262,6 +300,10 @@ xdsIR:
             endpoints:
             - host: 7.7.7.7
               port: 8080
+            metadata:
+              name: service-4
+              namespace: default
+              sectionName: "8080"
             name: grpcroute/default/grpcroute-1/rule/0/backend/3
             protocol: GRPC
             weight: 1
