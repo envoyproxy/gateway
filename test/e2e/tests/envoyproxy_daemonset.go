@@ -43,7 +43,7 @@ var EnvoyProxyDaemonSetTest = suite.ConformanceTest{
 
 			ns := "gateway-conformance-infra"
 			routeNN := types.NamespacedName{Name: "daemonset-route", Namespace: ns}
-			gwNN := types.NamespacedName{Name: "eg-daemonset", Namespace: ns}
+			gwNN := types.NamespacedName{Name: "eg-ds", Namespace: ns}
 			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
 
 			gwPodNamespace := GetGatewayResourceNamespace()

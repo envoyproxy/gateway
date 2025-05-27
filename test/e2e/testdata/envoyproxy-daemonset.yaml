@@ -1,7 +1,7 @@
 apiVersion: gateway.networking.k8s.io/v1
 kind: Gateway
 metadata:
-  name: eg-daemonset
+  name: eg-ds
   namespace: gateway-conformance-infra
 spec:
   gatewayClassName: "{GATEWAY_CLASS_NAME}"
@@ -16,12 +16,12 @@ spec:
     parametersRef:
       group: gateway.envoyproxy.io
       kind: EnvoyProxy
-      name: eg-daemonset
+      name: eg-ds
 ---
 apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: EnvoyProxy
 metadata:
-  name: eg-daemonset
+  name: eg-ds
   namespace: gateway-conformance-infra
 spec:
   ipFamily: IPv4
@@ -47,7 +47,7 @@ metadata:
   namespace: gateway-conformance-infra
 spec:
   parentRefs:
-    - name: eg-daemonset
+    - name: eg-ds
   rules:
     - backendRefs:
         - name: infra-backend-v1
