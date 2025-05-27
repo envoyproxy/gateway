@@ -602,7 +602,15 @@ type LokiQueryResponse struct {
 // CollectAndDump collects and dumps the cluster data for troubleshooting and log.
 // This function should be call within t.Cleanup.
 func CollectAndDump(t *testing.T, rest *rest.Config) {
-	result := tb.CollectResult(context.TODO(), rest, "", "envoy-gateway-system")
+	dumpedNamespaces := []string{"envoy-gateway-system"}
+	if IsGatewayNamespaceMode() {
+		dumpedNamespaces = append(dumpedNamespaces, ConformanceInfraNamespace)
+	}
+
+	result := tb.CollectResult(context.TODO(), rest, tb.CollectOptions{
+		BundlePath:          "",
+		CollectedNamespaces: dumpedNamespaces,
+	})
 	for r, data := range result {
 		tlog.Logf(t, "\nfilename: %s", r)
 		tlog.Logf(t, "\ndata: \n%s", data)
