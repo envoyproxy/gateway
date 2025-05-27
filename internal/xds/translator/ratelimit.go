@@ -25,6 +25,7 @@ import (
 	"google.golang.org/protobuf/types/known/durationpb"
 	"google.golang.org/protobuf/types/known/wrapperspb"
 	goyaml "gopkg.in/yaml.v3" // nolint: depguard
+	"k8s.io/apimachinery/pkg/util/sets"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/ir"
@@ -73,24 +74,21 @@ func (t *Translator) buildRateLimitFilter(irListener *ir.HTTPListener) []*hcmv3.
 	if irListener == nil || irListener.Routes == nil {
 		return nil
 	}
-	domains := make(map[string]struct{})
+	domains := sets.New[string]()
 	for _, route := range irListener.Routes {
 		if !isValidGlobalRateLimit(route) {
 			continue
 		}
 		for _, rule := range route.Traffic.RateLimit.Global.Rules {
 			if isRuleShared(rule) {
-				domains[stripRuleIndexSuffix(rule.Name)] = struct{}{}
+				domains.Insert(stripRuleIndexSuffix(rule.Name))
 			}
 		}
 	}
-	domains[irListener.Name] = struct{}{}
+	domains.Insert(irListener.Name)
 
 	// Deterministic order otherwise tests break
-	domainList := make([]string, 0, len(domains))
-	for d := range domains {
-		domainList = append(domainList, d)
-	}
+	domainList := sets.List(domains)
 	sort.Strings(domainList)
 
 	var filters []*hcmv3.HttpFilter
