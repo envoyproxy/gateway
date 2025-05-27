@@ -16,6 +16,8 @@ new features: |
   Added support for setting ownerreference to infra resources when enable gateway namespace mode.
 
 bug fixes: |
+  Handle integer zone annotation values
+  Fixed issue where WASM cache init failure caused routes with WASM-less EnvoyExtensionPolicies to have 500 direct responses.
 
 # Enhancements that improve performance.
 performance improvements: |
