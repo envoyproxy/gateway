@@ -67,7 +67,6 @@ func TestE2E(t *testing.T) {
 			tests.HTTPWasmTest.ShortName,
 			tests.OCIWasmTest.ShortName,
 			tests.ZoneAwareRoutingTest.ShortName,
-
 			// Skip RateLimit tests because they are not supported in GatewayNamespaceMode
 			tests.RateLimitCIDRMatchTest.ShortName,
 			tests.RateLimitHeaderMatchTest.ShortName,
