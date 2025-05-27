@@ -20,6 +20,7 @@ new features: |
 bug fixes: |
   Handle integer zone annotation values
   Fixed issue where WASM cache init failure caused routes with WASM-less EnvoyExtensionPolicies to have 500 direct responses.
+  Fixed issue which UDP listeners were not created in the Envoy proxy config when Gateway was created.
 
 # Enhancements that improve performance.
 performance improvements: |
