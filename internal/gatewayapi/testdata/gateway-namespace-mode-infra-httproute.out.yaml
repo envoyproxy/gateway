@@ -240,7 +240,10 @@ infraIR:
         labels:
           gateway.envoyproxy.io/owning-gateway-name: gateway-1
           gateway.envoyproxy.io/owning-gateway-namespace: default
-      name: default/gateway-1
+        ownerReference:
+          kind: Gateway
+          name: gateway-1
+      name: gateway-1
       namespace: default
   default/gateway-2:
     proxy:
@@ -256,7 +259,10 @@ infraIR:
         labels:
           gateway.envoyproxy.io/owning-gateway-name: gateway-2
           gateway.envoyproxy.io/owning-gateway-namespace: default
-      name: default/gateway-2
+        ownerReference:
+          kind: Gateway
+          name: gateway-2
+      name: gateway-2
       namespace: default
   test-ns/gateway-3:
     proxy:
@@ -272,7 +278,10 @@ infraIR:
         labels:
           gateway.envoyproxy.io/owning-gateway-name: gateway-3
           gateway.envoyproxy.io/owning-gateway-namespace: test-ns
-      name: test-ns/gateway-3
+        ownerReference:
+          kind: Gateway
+          name: gateway-3
+      name: gateway-3
       namespace: test-ns
 xdsIR:
   default/gateway-1:
@@ -296,12 +305,20 @@ xdsIR:
       port: 10080
       routes:
       - destination:
+          metadata:
+            kind: HTTPRoute
+            name: httproute-1
+            namespace: default
           name: httproute/default/httproute-1/rule/0
           settings:
           - addressType: IP
             endpoints:
             - host: 7.7.7.7
               port: 8080
+            metadata:
+              name: service-1
+              namespace: default
+              sectionName: "8080"
             name: httproute/default/httproute-1/rule/0/backend/0
             protocol: HTTP
             weight: 1
@@ -342,12 +359,20 @@ xdsIR:
       port: 10080
       routes:
       - destination:
+          metadata:
+            kind: HTTPRoute
+            name: httproute-2
+            namespace: default
           name: httproute/default/httproute-2/rule/0
           settings:
           - addressType: IP
             endpoints:
             - host: 7.7.7.7
               port: 8080
+            metadata:
+              name: service-2
+              namespace: default
+              sectionName: "8080"
             name: httproute/default/httproute-2/rule/0/backend/0
             protocol: HTTP
             weight: 1

@@ -1,13 +1,13 @@
 module github.com/exampleorg/envoygateway-extension
 
-go 1.24.2
+go 1.24.3
 
 require (
 	github.com/envoyproxy/gateway v1.3.1
 	github.com/envoyproxy/go-control-plane v0.13.5-0.20250408134212-157c26b62099
 	github.com/envoyproxy/go-control-plane/envoy v1.32.5-0.20250408134212-157c26b62099
 	github.com/urfave/cli/v2 v2.27.6
-	google.golang.org/grpc v1.72.0
+	google.golang.org/grpc v1.72.1
 	google.golang.org/protobuf v1.36.6
 	k8s.io/apimachinery v0.34.0-alpha.0
 	sigs.k8s.io/controller-runtime v0.20.4
@@ -47,8 +47,8 @@ require (
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
-	k8s.io/api v0.33.0 // indirect
-	k8s.io/apiextensions-apiserver v0.33.0 // indirect
+	k8s.io/api v0.33.1 // indirect
+	k8s.io/apiextensions-apiserver v0.33.1 // indirect
 	k8s.io/klog/v2 v2.130.1 // indirect
 	k8s.io/utils v0.0.0-20241210054802-24370beab758 // indirect
 	sigs.k8s.io/controller-tools v0.17.3 // indirect

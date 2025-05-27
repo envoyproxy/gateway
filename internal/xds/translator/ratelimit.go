@@ -18,7 +18,6 @@ import (
 	routev3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
 	ratelimitfilterv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/ratelimit/v3"
 	hcmv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/http_connection_manager/v3"
-	tlsv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/transport_sockets/tls/v3"
 	"github.com/envoyproxy/go-control-plane/pkg/wellknown"
 	rlsconfv3 "github.com/envoyproxy/go-control-plane/ratelimit/config/ratelimit/v3"
 	"github.com/envoyproxy/ratelimit/src/config"
@@ -26,20 +25,9 @@ import (
 	"google.golang.org/protobuf/types/known/durationpb"
 	"google.golang.org/protobuf/types/known/wrapperspb"
 	goyaml "gopkg.in/yaml.v3" // nolint: depguard
-	"k8s.io/utils/ptr"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/ir"
-	"github.com/envoyproxy/gateway/internal/xds/types"
-)
-
-const (
-	// rateLimitClientTLSCertFilename is the ratelimit tls cert file.
-	rateLimitClientTLSCertFilename = "/certs/tls.crt"
-	// rateLimitClientTLSKeyFilename is the ratelimit key file.
-	rateLimitClientTLSKeyFilename = "/certs/tls.key"
-	// rateLimitClientTLSCACertFilename is the ratelimit ca cert file.
-	rateLimitClientTLSCACertFilename = "/certs/ca.crt"
 )
 
 // patchHCMWithRateLimit builds and appends the Rate Limit Filter to the HTTP connection manager
@@ -774,6 +762,9 @@ func (t *Translator) createRateLimitServiceCluster(tCtx *types.ResourceVersionTa
 		endpointType: EndpointTypeDNS,
 		metrics:      metrics,
 	})
+// getDomainSharedName returns the shared domain (stripped policy name), stripRuleIndexSuffix is used to remove the rule index suffix.
+func getDomainSharedName(route *ir.HTTPRoute) string {
+	return stripRuleIndexSuffix(route.Traffic.RateLimit.Global.Rules[0].Name)
 }
 
 func getRouteRuleDescriptor(ruleIndex, matchIndex int) string {

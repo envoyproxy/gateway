@@ -56,7 +56,7 @@ helm-generate.%:
   		envsubst < charts/${CHART_NAME}/values.tmpl.yaml > ./charts/${CHART_NAME}/values.yaml; \
   	fi
 	helm dependency update charts/${CHART_NAME}
-	helm lint charts/${CHART_NAME}
+	helm lint charts/${CHART_NAME} || exit 1
 
 	# The jb does not support self-assigned jsonnetfile, so entering working dir before executing jb.
 	@if [ ${CHART_NAME} == "gateway-addons-helm" ]; then \

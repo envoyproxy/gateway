@@ -45,6 +45,7 @@ spec:
         - --cpuset-threads
         - --drain-strategy immediate
         - --concurrency 4
+        - --component-log-level misc:error
         - --drain-time-s 60
         command:
         - envoy

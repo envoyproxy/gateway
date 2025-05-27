@@ -119,12 +119,19 @@ spec:
                       description: Unix defines the unix domain socket endpoint
                       properties:
                         path:
-                          description: Path defines the unix domain socket path of
-                            the backend endpoint.
+                          description: |-
+                            Path defines the unix domain socket path of the backend endpoint.
+                            The path length must not exceed 108 characters.
                           type: string
+                          x-kubernetes-validations:
+                          - message: unix domain socket path must not exceed 108 characters
+                            rule: size(self) <= 108
                       required:
                       - path
                       type: object
+                    zone:
+                      description: Zone defines the service zone of the backend endpoint.
+                      type: string
                   type: object
                   x-kubernetes-validations:
                   - message: one of fqdn, ip or unix must be specified
@@ -231,9 +238,8 @@ spec:
                 type: string
             type: object
             x-kubernetes-validations:
-            - message: DynamicResolver type cannot have endpoints and appProtocols
-                specified
-              rule: self.type != 'DynamicResolver' || !has(self.endpoints) && !has(self.appProtocols)
+            - message: DynamicResolver type cannot have endpoints specified
+              rule: self.type != 'DynamicResolver' || !has(self.endpoints)
             - message: TLS settings can only be specified for DynamicResolver backends
               rule: 'has(self.tls) ? self.type == ''DynamicResolver'' : true'
           status:
@@ -633,6 +639,14 @@ spec:
                               minimum: 100
                               type: integer
                             type: array
+                          hostname:
+                            description: |-
+                              Hostname defines the HTTP host that will be requested during health checking.
+                              Default: HTTPRoute or GRPCRoute hostname.
+                            maxLength: 253
+                            minLength: 1
+                            pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                            type: string
                           method:
                             description: |-
                               Method defines the HTTP method used for health checking.
@@ -4112,6 +4126,14 @@ spec:
                                         minimum: 100
                                         type: integer
                                       type: array
+                                    hostname:
+                                      description: |-
+                                        Hostname defines the HTTP host that will be requested during health checking.
+                                        Default: HTTPRoute or GRPCRoute hostname.
+                                      maxLength: 253
+                                      minLength: 1
+                                      pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                                      type: string
                                     method:
                                       description: |-
                                         Method defines the HTTP method used for health checking.
@@ -4694,6 +4716,7 @@ spec:
                               - Streamed
                               - Buffered
                               - BufferedPartial
+                              - FullDuplexStreamed
                               type: string
                           type: object
                         response:
@@ -4717,6 +4740,7 @@ spec:
                               - Streamed
                               - Buffered
                               - BufferedPartial
+                              - FullDuplexStreamed
                               type: string
                           type: object
                       type: object
@@ -16984,6 +17008,14 @@ spec:
                                                           minimum: 100
                                                           type: integer
                                                         type: array
+                                                      hostname:
+                                                        description: |-
+                                                          Hostname defines the HTTP host that will be requested during health checking.
+                                                          Default: HTTPRoute or GRPCRoute hostname.
+                                                        maxLength: 253
+                                                        minLength: 1
+                                                        pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                                                        type: string
                                                       method:
                                                         description: |-
                                                           Method defines the HTTP method used for health checking.
@@ -18003,6 +18035,14 @@ spec:
                                                           minimum: 100
                                                           type: integer
                                                         type: array
+                                                      hostname:
+                                                        description: |-
+                                                          Hostname defines the HTTP host that will be requested during health checking.
+                                                          Default: HTTPRoute or GRPCRoute hostname.
+                                                        maxLength: 253
+                                                        minLength: 1
+                                                        pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                                                        type: string
                                                       method:
                                                         description: |-
                                                           Method defines the HTTP method used for health checking.
@@ -19111,6 +19151,14 @@ spec:
                                                     minimum: 100
                                                     type: integer
                                                   type: array
+                                                hostname:
+                                                  description: |-
+                                                    Hostname defines the HTTP host that will be requested during health checking.
+                                                    Default: HTTPRoute or GRPCRoute hostname.
+                                                  maxLength: 253
+                                                  minLength: 1
+                                                  pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                                                  type: string
                                                 method:
                                                   description: |-
                                                     Method defines the HTTP method used for health checking.
@@ -20136,6 +20184,14 @@ spec:
                                               minimum: 100
                                               type: integer
                                             type: array
+                                          hostname:
+                                            description: |-
+                                              Hostname defines the HTTP host that will be requested during health checking.
+                                              Default: HTTPRoute or GRPCRoute hostname.
+                                            maxLength: 253
+                                            minLength: 1
+                                            pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                                            type: string
                                           method:
                                             description: |-
                                               Method defines the HTTP method used for health checking.
@@ -21982,6 +22038,14 @@ spec:
                                           minimum: 100
                                           type: integer
                                         type: array
+                                      hostname:
+                                        description: |-
+                                          Hostname defines the HTTP host that will be requested during health checking.
+                                          Default: HTTPRoute or GRPCRoute hostname.
+                                        maxLength: 253
+                                        minLength: 1
+                                        pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                                        type: string
                                       method:
                                         description: |-
                                           Method defines the HTTP method used for health checking.
@@ -22899,6 +22963,14 @@ spec:
                                           minimum: 100
                                           type: integer
                                         type: array
+                                      hostname:
+                                        description: |-
+                                          Hostname defines the HTTP host that will be requested during health checking.
+                                          Default: HTTPRoute or GRPCRoute hostname.
+                                        maxLength: 253
+                                        minLength: 1
+                                        pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                                        type: string
                                       method:
                                         description: |-
                                           Method defines the HTTP method used for health checking.
@@ -24011,6 +24083,14 @@ spec:
                                                 minimum: 100
                                                 type: integer
                                               type: array
+                                            hostname:
+                                              description: |-
+                                                Hostname defines the HTTP host that will be requested during health checking.
+                                                Default: HTTPRoute or GRPCRoute hostname.
+                                              maxLength: 253
+                                              minLength: 1
+                                              pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                                              type: string
                                             method:
                                               description: |-
                                                 Method defines the HTTP method used for health checking.
@@ -24682,6 +24762,46 @@ spec:
                       the authorization response must be set by the authorization server, or the
                       OAuth flow will fail.
                     type: string
+                  denyRedirect:
+                    description: |-
+                      Any request that matches any of the provided matchers (with either tokens that are expired or missing tokens) will not be redirected to the OIDC Provider.
+                      This behavior can be useful for AJAX or machine requests.
+                    properties:
+                      headers:
+                        description: Defines the headers to match against the request
+                          to deny redirect to the OIDC Provider.
+                        items:
+                          description: OIDCDenyRedirectHeader defines how a header
+                            is matched
+                          properties:
+                            name:
+                              description: Specifies the name of the header in the
+                                request.
+                              minLength: 1
+                              type: string
+                            type:
+                              default: Exact
+                              description: Type specifies how to match against a string.
+                              enum:
+                              - Exact
+                              - Prefix
+                              - Suffix
+                              - RegularExpression
+                              type: string
+                            value:
+                              description: Value specifies the string value that the
+                                match must have.
+                              maxLength: 1024
+                              minLength: 1
+                              type: string
+                          required:
+                          - name
+                          - value
+                          type: object
+                        type: array
+                    required:
+                    - headers
+                    type: object
                   forwardAccessToken:
                     description: |-
                       ForwardAccessToken indicates whether the Envoy should forward the access token
@@ -24694,6 +24814,16 @@ spec:
 
                       If not specified, uses a default logout path "/logout"
                     type: string
+                  passThroughAuthHeader:
+                    description: |-
+                      Skips OIDC authentication when the request contains a header that will be extracted by the JWT filter. Unless
+                      explicitly stated otherwise in the extractFrom field, this will be the "Authorization: Bearer ..." header.
+
+                      The passThroughAuthHeader option is typically used for non-browser clients that may not be able to handle OIDC
+                      redirects and wish to directly supply a token instead.
+
+                      If not specified, defaults to false.
+                    type: boolean
                   provider:
                     description: The OIDC Provider configuration.
                     properties:
@@ -25068,6 +25198,14 @@ spec:
                                           minimum: 100
                                           type: integer
                                         type: array
+                                      hostname:
+                                        description: |-
+                                          Hostname defines the HTTP host that will be requested during health checking.
+                                          Default: HTTPRoute or GRPCRoute hostname.
+                                        maxLength: 253
+                                        minLength: 1
+                                        pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                                        type: string
                                       method:
                                         description: |-
                                           Method defines the HTTP method used for health checking.

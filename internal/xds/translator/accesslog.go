@@ -530,6 +530,7 @@ func processClusterForAccessLog(tCtx *types.ResourceVersionTable, al *ir.AccessL
 			backendConnection: traffic.BackendConnection,
 			dns:               traffic.DNS,
 			http2Settings:     traffic.HTTP2,
+			metadata:          als.Destination.Metadata,
 		}); err != nil {
 			return err
 		}
@@ -558,6 +559,7 @@ func processClusterForAccessLog(tCtx *types.ResourceVersionTable, al *ir.AccessL
 			backendConnection: traffic.BackendConnection,
 			dns:               traffic.DNS,
 			http2Settings:     traffic.HTTP2,
+			metadata:          otel.Destination.Metadata,
 		}); err != nil {
 			return err
 		}
