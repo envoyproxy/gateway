@@ -18,6 +18,7 @@ new features: |
   Added support for configuring hostname in active HTTP healthchecks.
 
 bug fixes: |
+  Handle integer zone annotation values
   Fixed issue where WASM cache init failure caused routes with WASM-less EnvoyExtensionPolicies to have 500 direct responses.
 
 # Enhancements that improve performance.
