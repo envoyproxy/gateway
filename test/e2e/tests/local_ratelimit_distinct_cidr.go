@@ -19,7 +19,6 @@ import (
 
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
-	"github.com/envoyproxy/gateway/test/e2e/utils"
 )
 
 func init() {
@@ -100,7 +99,7 @@ var LocalRateLimitDistinctCIDRTest = suite.ConformanceTest{
 }
 
 func testRatelimit(t *testing.T, suite *suite.ConformanceTestSuite, headers map[string]string, ns, gwAddr, path string) {
-	utils.MakeRequestAndExpectEventuallyConsistentResponse(t, suite, gwAddr, http.ExpectedResponse{
+	http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, http.ExpectedResponse{
 		Request: http.Request{
 			Path:    path,
 			Headers: headers,
@@ -115,7 +114,7 @@ func testRatelimit(t *testing.T, suite *suite.ConformanceTestSuite, headers map[
 			StatusCode: 200,
 			Headers: map[string]string{
 				RatelimitLimitHeaderName:     "3",
-				RatelimitRemainingHeaderName: "", // empty string means we don't care about the value
+				RatelimitRemainingHeaderName: "1",
 			},
 		},
 		Namespace: ns,
