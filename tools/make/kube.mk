@@ -28,6 +28,8 @@ BENCHMARK_REPORT_DIR ?= benchmark_report
 E2E_RUN_TEST ?=
 E2E_CLEANUP ?= true
 E2E_TIMEOUT ?= 20m
+# E2E_REDIRECT allow you specified a redirect when run e2e test locally, e.g. `>> test_output.out 2>&1`
+E2E_REDIRECT ?=
 E2E_TEST_ARGS ?= -v -tags e2e -timeout $(E2E_TIMEOUT)
 
 KUBE_DEPLOY_PROFILE ?= default
@@ -215,13 +217,13 @@ e2e-prepare: prepare-ip-family ## Prepare the environment for running e2e tests
 run-e2e: ## Run e2e tests
 	@$(LOG_TARGET)
 ifeq ($(E2E_RUN_TEST),)
-	go test $(E2E_TEST_ARGS) ./test/e2e --gateway-class=envoy-gateway --debug=true --cleanup-base-resources=false
+	go test $(E2E_TEST_ARGS) ./test/e2e --gateway-class=envoy-gateway --debug=true --cleanup-base-resources=false $(E2E_REDIRECT)
 	go test $(E2E_TEST_ARGS) ./test/e2e/merge_gateways --gateway-class=merge-gateways --debug=true --cleanup-base-resources=false
 	go test $(E2E_TEST_ARGS) ./test/e2e/multiple_gc --debug=true --cleanup-base-resources=true
 	LAST_VERSION_TAG=$(shell cat VERSION) go test $(E2E_TEST_ARGS) ./test/e2e/upgrade --gateway-class=upgrade --debug=true --cleanup-base-resources=$(E2E_CLEANUP)
 else
 	go test $(E2E_TEST_ARGS) ./test/e2e --gateway-class=envoy-gateway --debug=true --cleanup-base-resources=$(E2E_CLEANUP) \
-		--run-test $(E2E_RUN_TEST)
+		--run-test $(E2E_RUN_TEST) $(E2E_REDIRECT)
 endif
 
 run-e2e-upgrade:
