@@ -1,3 +1,8 @@
+globalResources:
+  envoyClientCertificate:
+    name: envoy-gateway-system/envoy
+    privateKey: [107, 101, 121, 45, 100, 97, 116, 97]
+    serverCertificate: [99, 101, 114, 116, 45, 100, 97, 116, 97]
 http:
 - address: 0.0.0.0
   hostnames:
@@ -67,7 +72,7 @@ http:
           parameter2: value3
         failOpen: false
         httpWasmCode:
-          servingURL: https://envoy-gateway:18002/5c90b9a82642ce00a7753923fabead306b9d9a54a7c0bd2463a1af3efcfb110b.wasm
+          servingURL: https://envoy-gateway.envoy-gateway-system.svc.cluster.local:18002/5c90b9a82642ce00a7753923fabead306b9d9a54a7c0bd2463a1af3efcfb110b.wasm
           originalDownloadingURL: https://www.example.com/wasm-filter-1.wasm
           sha256: 746df05c8f3a0b07a46c0967cfbc5cbe5b9d48d0f79b6177eeedf8be6c8b34b5
         name: envoyextensionpolicy/envoy-gateway/policy-for-gateway/wasm/0
@@ -77,7 +82,7 @@ http:
           parameter2: value2
         failOpen: false
         httpWasmCode:
-          servingURL: https://envoy-gateway:18002/7abf116e5cd5a20389604a5ba0f3bd04fdf76f92181fe67506b42c2ee596d3fd.wasm
+          servingURL: https://envoy-gateway.envoy-gateway-system.svc.cluster.local:18002/7abf116e5cd5a20389604a5ba0f3bd04fdf76f92181fe67506b42c2ee596d3fd.wasm
           originalDownloadingURL: oci://www.example.com/wasm-filter-2:v1.0.0
           sha256: 314100af781b98a8ca175d5bf90a8bf76576e20a2f397a88223404edc6ebfd46
         name: envoyextensionpolicy/envoy-gateway/policy-for-gateway/wasm/1
@@ -86,7 +91,7 @@ http:
       - config: null
         failOpen: false
         httpWasmCode:
-          servingURL: https://envoy-gateway:18002/42d30b4a4cc631415e6e48c02d244700da327201eb273f752cacf745715b31d9.wasm
+          servingURL: https://envoy-gateway.envoy-gateway-system.svc.cluster.local:18002/42d30b4a4cc631415e6e48c02d244700da327201eb273f752cacf745715b31d9.wasm
           originalDownloadingURL: oci://www.example.com:8080/wasm-filter-3:latest
           sha256: 2a19e4f337e5223d7287e7fccd933fb01905deaff804292e5257f8c681b82bee
         name: envoyextensionpolicy/envoy-gateway/policy-for-gateway/wasm/2

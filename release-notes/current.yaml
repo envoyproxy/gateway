@@ -2,6 +2,7 @@ date: Pending
 
 # Changes that are expected to cause an incompatibility with previous versions, such as deletions or modifications to existing APIs.
 breaking changes: |
+  Use gateway name as proxy fleet name for gateway namespace mode.
 
 # Updates addressing vulnerabilities, security flaws, or compliance requirements.
 security updates: |
@@ -13,8 +14,12 @@ new features: |
   Added support for configuring Subject Alternative Names (SANs) for upstream TLS validation via `BackendTLSPolicy.validation.subjectAltNames`.
   Added support for local rate limit header.
   Added XDS metadata for clusters and endpoints from xRoutes and referenced backend resources (Backend, Service, ServiceImport).
+  Added support for setting ownerreference to infra resources when enable gateway namespace mode.
+  Added support for configuring hostname in active HTTP healthchecks.
 
 bug fixes: |
+  Handle integer zone annotation values
+  Fixed issue where WASM cache init failure caused routes with WASM-less EnvoyExtensionPolicies to have 500 direct responses.
 
 # Enhancements that improve performance.
 performance improvements: |

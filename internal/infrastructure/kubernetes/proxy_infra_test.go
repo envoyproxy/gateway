@@ -158,7 +158,7 @@ func TestCreateProxyInfra(t *testing.T) {
 				sa := &corev1.ServiceAccount{
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace: kube.ControllerNamespace,
-						Name:      proxy.ExpectedResourceHashedName(tc.in.Proxy.Name),
+						Name:      expectedName(tc.in.Proxy, false),
 					},
 				}
 				require.NoError(t, kube.Client.Get(context.Background(), client.ObjectKeyFromObject(sa), sa))
@@ -166,7 +166,7 @@ func TestCreateProxyInfra(t *testing.T) {
 				cm := &corev1.ConfigMap{
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace: kube.ControllerNamespace,
-						Name:      proxy.ExpectedResourceHashedName(tc.in.Proxy.Name),
+						Name:      expectedName(tc.in.Proxy, false),
 					},
 				}
 				require.NoError(t, kube.Client.Get(context.Background(), client.ObjectKeyFromObject(cm), cm))
@@ -174,7 +174,7 @@ func TestCreateProxyInfra(t *testing.T) {
 				deploy := &appsv1.Deployment{
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace: kube.ControllerNamespace,
-						Name:      proxy.ExpectedResourceHashedName(tc.in.Proxy.Name),
+						Name:      expectedName(tc.in.Proxy, false),
 					},
 				}
 				require.NoError(t, kube.Client.Get(context.Background(), client.ObjectKeyFromObject(deploy), deploy))
@@ -182,7 +182,7 @@ func TestCreateProxyInfra(t *testing.T) {
 				svc := &corev1.Service{
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace: kube.ControllerNamespace,
-						Name:      proxy.ExpectedResourceHashedName(tc.in.Proxy.Name),
+						Name:      expectedName(tc.in.Proxy, false),
 					},
 				}
 				require.NoError(t, kube.Client.Get(context.Background(), client.ObjectKeyFromObject(svc), svc))
@@ -222,4 +222,17 @@ func TestDeleteProxyInfra(t *testing.T) {
 			}
 		})
 	}
+}
+
+// This function uses setup for GatewayNamespace mode.
+// When enable GatewayNamespace mode, ProxyInfra Get OwnerReference from Gateway.
+func createGatewayForGatewayNamespaceMode(ctx context.Context, client *InfraClient) error {
+	gw := &gwapiv1.Gateway{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: "ns1",
+			Name:      "gateway-1",
+			UID:       "foo.bar",
+		},
+	}
+	return client.Create(ctx, gw)
 }
