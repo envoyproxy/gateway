@@ -3673,6 +3673,8 @@ spec:
                           - name
                           - value
                           type: object
+                        maxItems: 16
+                        minItems: 1
                         type: array
                     required:
                     - headers
