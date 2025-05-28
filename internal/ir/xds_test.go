@@ -1500,7 +1500,7 @@ func TestRedaction(t *testing.T) {
 				`"basicAuth":{"name":"","users":"[redacted]"}` +
 				`}}],` +
 				`"isHTTP2":false,"path":{"mergeSlashes":false,"escapedSlashesAction":""}}],` +
-				`"globalResources":{"envoyClientCertificate":{"name":"test","serverCertificate":"Q2VydGlmaWNhdGU=","privateKey":"[redacted]"}}}`,
+				`"globalResources":{"envoyClientCertificate":{"name":"test","certificate":"Q2VydGlmaWNhdGU=","privateKey":"[redacted]"}}}`,
 		},
 	}
 	for _, test := range tests {
