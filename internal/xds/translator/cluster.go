@@ -324,7 +324,6 @@ func buildXdsCluster(args *xdsClusterArgs) (*buildClusterResult, error) {
 		// if the endpoint has been removed via EDS by the control plane
 		cluster.IgnoreHealthOnHostRemoval = true
 	default:
-		cluster.ClusterDiscoveryType = &clusterv3.Cluster_Type{Type: clusterv3.Cluster_STRICT_DNS}
 		dnsCluster := &dnsclusterv3.DnsCluster{
 			DnsRefreshRate: durationpb.New(5 * time.Second), // Default to 5000ms as per Envoy docs
 			RespectDnsTtl:  true,
