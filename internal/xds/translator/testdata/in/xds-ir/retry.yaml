@@ -57,6 +57,7 @@ http:
     traffic:
       retry:
         numRetries: 5
+        NumRetriesToAcrossPriorities: 2
         retryOn:
           triggers:
           - reset

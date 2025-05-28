@@ -18,6 +18,12 @@ type Retry struct {
 	// +kubebuilder:default=2
 	NumRetries *int32 `json:"numRetries,omitempty"`
 
+	// NumRetriesToAcrossPriorities defines the number of requests (initial attempt + retries)
+	// that should be sent to the same priority before switching to a different one.
+	//
+	// +optional
+	NumRetriesToAcrossPriorities *int32 `json:"numRetriesToAcrossPriorities,omitempty"`
+
 	// RetryOn specifies the retry trigger condition.
 	//
 	// If not specified, the default is to retry on connect-failure,refused-stream,unavailable,cancelled,retriable-status-codes(503).

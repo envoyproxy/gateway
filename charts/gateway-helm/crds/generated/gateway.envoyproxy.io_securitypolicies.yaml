@@ -1308,6 +1308,12 @@ spec:
                                 format: int32
                                 minimum: 0
                                 type: integer
+                              numRetriesToAcrossPriorities:
+                                description: |-
+                                  NumRetriesToAcrossPriorities defines the number of requests (initial attempt + retries)
+                                  that should be sent to the same priority before switching to a different one.
+                                format: int32
+                                type: integer
                               perRetry:
                                 description: PerRetry is the retry policy to be applied
                                   per retry attempt.
@@ -2232,6 +2238,12 @@ spec:
                                   be attempted. Defaults to 2.
                                 format: int32
                                 minimum: 0
+                                type: integer
+                              numRetriesToAcrossPriorities:
+                                description: |-
+                                  NumRetriesToAcrossPriorities defines the number of requests (initial attempt + retries)
+                                  that should be sent to the same priority before switching to a different one.
+                                format: int32
                                 type: integer
                               perRetry:
                                 description: PerRetry is the retry policy to be applied
@@ -3364,6 +3376,12 @@ spec:
                                       format: int32
                                       minimum: 0
                                       type: integer
+                                    numRetriesToAcrossPriorities:
+                                      description: |-
+                                        NumRetriesToAcrossPriorities defines the number of requests (initial attempt + retries)
+                                        that should be sent to the same priority before switching to a different one.
+                                      format: int32
+                                      type: integer
                                     perRetry:
                                       description: PerRetry is the retry policy to
                                         be applied per retry attempt.
@@ -4469,6 +4487,12 @@ spec:
                                   be attempted. Defaults to 2.
                                 format: int32
                                 minimum: 0
+                                type: integer
+                              numRetriesToAcrossPriorities:
+                                description: |-
+                                  NumRetriesToAcrossPriorities defines the number of requests (initial attempt + retries)
+                                  that should be sent to the same priority before switching to a different one.
+                                format: int32
                                 type: integer
                               perRetry:
                                 description: PerRetry is the retry policy to be applied
