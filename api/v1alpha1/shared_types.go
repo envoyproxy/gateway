@@ -9,6 +9,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv2 "k8s.io/api/autoscaling/v2"
 	corev1 "k8s.io/api/core/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -81,6 +82,12 @@ const (
 	// ProviderTypeCustom defines the "Custom" provider.
 	ProviderTypeCustom ProviderType = "Custom"
 )
+
+// KubernetesRoleSpec defines the desired state of the Kubernetes role resource.
+type KubernetesRoleSpec struct {
+	// Rules holds all the PolicyRules for this Role
+	Rules []rbacv1.PolicyRule `json:"rules"`
+}
 
 // KubernetesDeploymentSpec defines the desired state of the Kubernetes deployment resource.
 type KubernetesDeploymentSpec struct {

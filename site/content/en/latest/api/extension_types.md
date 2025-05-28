@@ -2887,6 +2887,20 @@ _Appears in:_
 | `topologySpreadConstraints` | _[TopologySpreadConstraint](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.29/#topologyspreadconstraint-v1-core) array_ |  false  |  | TopologySpreadConstraints describes how a group of pods ought to spread across topology<br />domains. Scheduler will schedule pods in a way which abides by the constraints.<br />All topologySpreadConstraints are ANDed. |
 
 
+#### KubernetesRoleSpec
+
+
+
+KubernetesRoleSpec defines the desired state of the Kubernetes role resource.
+
+_Appears in:_
+- [EnvoyProxyKubernetesProvider](#envoyproxykubernetesprovider)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `rules` | _[PolicyRule](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.29/#policyrule-v1-rbac) array_ |  true  |  | Rules holds all the PolicyRules for this Role |
+
+
 #### KubernetesServiceSpec
 
 

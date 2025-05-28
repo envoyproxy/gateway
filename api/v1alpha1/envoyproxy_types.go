@@ -350,6 +350,11 @@ type EnvoyProxyKubernetesProvider struct {
 	// EnvoyPDB allows to control the pod disruption budget of an Envoy Proxy.
 	// +optional
 	EnvoyPDB *KubernetesPodDisruptionBudgetSpec `json:"envoyPDB,omitempty"`
+
+	// EnvoyRole defines the desired state of the Envoy role resource.
+	// +optional
+	// +notImplementedHide
+	EnvoyRole *KubernetesRoleSpec `json:"envoyRole,omitempty"`
 }
 
 // ProxyLogging defines logging parameters for managed proxies.
