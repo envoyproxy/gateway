@@ -40,7 +40,7 @@ var (
 	ErrListenerPortInvalid                      = errors.New("field Port specified is invalid")
 	ErrHTTPListenerHostnamesEmpty               = errors.New("field Hostnames must be specified with at least a single hostname entry")
 	ErrTCPRouteSNIsEmpty                        = errors.New("field SNIs must be specified with at least a single server name entry")
-	ErrTLSServerCertEmpty                       = errors.New("field ServerCertificate must be specified")
+	ErrTLSCertEmpty                             = errors.New("field certificate must be specified")
 	ErrTLSPrivateKey                            = errors.New("field PrivateKey must be specified")
 	ErrRouteNameEmpty                           = errors.New("field Name must be specified")
 	ErrHTTPRouteHostnameEmpty                   = errors.New("field Hostname must be specified")
@@ -433,7 +433,7 @@ type TLSCertificate struct {
 	// Name of the Secret object.
 	Name string `json:"name" yaml:"name"`
 	// Certificate can be either a client or server certificate.
-	Certificate []byte `json:"serverCertificate,omitempty" yaml:"serverCertificate,omitempty"`
+	Certificate []byte `json:"certificate,omitempty" yaml:"certificate,omitempty"`
 	// PrivateKey for the server.
 	PrivateKey PrivateBytes `json:"privateKey,omitempty" yaml:"privateKey,omitempty"`
 }
@@ -464,7 +464,7 @@ type SubjectAltName struct {
 func (t TLSCertificate) Validate() error {
 	var errs error
 	if len(t.Certificate) == 0 {
-		errs = errors.Join(errs, ErrTLSServerCertEmpty)
+		errs = errors.Join(errs, ErrTLSCertEmpty)
 	}
 	if len(t.PrivateKey) == 0 {
 		errs = errors.Join(errs, ErrTLSPrivateKey)
