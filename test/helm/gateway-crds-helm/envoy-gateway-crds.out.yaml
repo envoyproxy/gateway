@@ -994,13 +994,6 @@ spec:
                             type: integer
                         type: object
                     type: object
-                    x-kubernetes-validations:
-                    - message: only one of preferLocalZone or weightedLocality may
-                        be specified.
-                      rule: '!(has(self.preferLocalZone) && has(self.weightedLocality))'
-                    - message: one of preferLocalZone or weightedLocality must be
-                        specified.
-                      rule: '!(!has(self.preferLocalZone) && !has(self.weightedLocality))'
                   slowStart:
                     description: |-
                       SlowStart defines the configuration related to the slow start load balancer policy.
@@ -1043,10 +1036,10 @@ spec:
                     LeastRequest load balancers.
                   rule: 'self.type in [''Random'', ''ConsistentHash''] ? !has(self.slowStart)
                     : true '
-                - message: ConsistentHash load balancer only supports weightedLocality
-                    in requestDistribution; preferLocalZone is not allowed.
-                  rule: 'self.type == ''ConsistentHash'' ? (!has(self.requestDistribution)
-                    || !has(self.requestDistribution.preferLocalZone)) : true '
+                - message: Currently RequestDistribution is only supported for LeastRequest,
+                    Random, and RoundRobin load balancers.
+                  rule: 'self.type == ''ConsistentHash'' ? !has(self.requestDistribution)
+                    : true '
               mergeType:
                 description: |-
                   MergeType determines how this configuration is merged with existing BackendTrafficPolicy
@@ -4522,13 +4515,6 @@ spec:
                                       type: integer
                                   type: object
                               type: object
-                              x-kubernetes-validations:
-                              - message: only one of preferLocalZone or weightedLocality
-                                  may be specified.
-                                rule: '!(has(self.preferLocalZone) && has(self.weightedLocality))'
-                              - message: one of preferLocalZone or weightedLocality
-                                  must be specified.
-                                rule: '!(!has(self.preferLocalZone) && !has(self.weightedLocality))'
                             slowStart:
                               description: |-
                                 SlowStart defines the configuration related to the slow start load balancer policy.
@@ -4571,11 +4557,10 @@ spec:
                               and LeastRequest load balancers.
                             rule: 'self.type in [''Random'', ''ConsistentHash''] ?
                               !has(self.slowStart) : true '
-                          - message: ConsistentHash load balancer only supports weightedLocality
-                              in requestDistribution; preferLocalZone is not allowed.
-                            rule: 'self.type == ''ConsistentHash'' ? (!has(self.requestDistribution)
-                              || !has(self.requestDistribution.preferLocalZone)) :
-                              true '
+                          - message: Currently RequestDistribution is only supported
+                              for LeastRequest, Random, and RoundRobin load balancers.
+                            rule: 'self.type == ''ConsistentHash'' ? !has(self.requestDistribution)
+                              : true '
                         proxyProtocol:
                           description: ProxyProtocol enables the Proxy Protocol when
                             communicating with the backend.
@@ -17492,15 +17477,6 @@ spec:
                                                         type: integer
                                                     type: object
                                                 type: object
-                                                x-kubernetes-validations:
-                                                - message: only one of preferLocalZone
-                                                    or weightedLocality may be specified.
-                                                  rule: '!(has(self.preferLocalZone)
-                                                    && has(self.weightedLocality))'
-                                                - message: one of preferLocalZone
-                                                    or weightedLocality must be specified.
-                                                  rule: '!(!has(self.preferLocalZone)
-                                                    && !has(self.weightedLocality))'
                                               slowStart:
                                                 description: |-
                                                   SlowStart defines the configuration related to the slow start load balancer policy.
@@ -17544,14 +17520,12 @@ spec:
                                                 load balancers.
                                               rule: 'self.type in [''Random'', ''ConsistentHash'']
                                                 ? !has(self.slowStart) : true '
-                                            - message: ConsistentHash load balancer
-                                                only supports weightedLocality in
-                                                requestDistribution; preferLocalZone
-                                                is not allowed.
+                                            - message: Currently RequestDistribution
+                                                is only supported for LeastRequest,
+                                                Random, and RoundRobin load balancers.
                                               rule: 'self.type == ''ConsistentHash''
-                                                ? (!has(self.requestDistribution)
-                                                || !has(self.requestDistribution.preferLocalZone))
-                                                : true '
+                                                ? !has(self.requestDistribution) :
+                                                true '
                                           proxyProtocol:
                                             description: ProxyProtocol enables the
                                               Proxy Protocol when communicating with
@@ -18575,15 +18549,6 @@ spec:
                                                         type: integer
                                                     type: object
                                                 type: object
-                                                x-kubernetes-validations:
-                                                - message: only one of preferLocalZone
-                                                    or weightedLocality may be specified.
-                                                  rule: '!(has(self.preferLocalZone)
-                                                    && has(self.weightedLocality))'
-                                                - message: one of preferLocalZone
-                                                    or weightedLocality must be specified.
-                                                  rule: '!(!has(self.preferLocalZone)
-                                                    && !has(self.weightedLocality))'
                                               slowStart:
                                                 description: |-
                                                   SlowStart defines the configuration related to the slow start load balancer policy.
@@ -18627,14 +18592,12 @@ spec:
                                                 load balancers.
                                               rule: 'self.type in [''Random'', ''ConsistentHash'']
                                                 ? !has(self.slowStart) : true '
-                                            - message: ConsistentHash load balancer
-                                                only supports weightedLocality in
-                                                requestDistribution; preferLocalZone
-                                                is not allowed.
+                                            - message: Currently RequestDistribution
+                                                is only supported for LeastRequest,
+                                                Random, and RoundRobin load balancers.
                                               rule: 'self.type == ''ConsistentHash''
-                                                ? (!has(self.requestDistribution)
-                                                || !has(self.requestDistribution.preferLocalZone))
-                                                : true '
+                                                ? !has(self.requestDistribution) :
+                                                true '
                                           proxyProtocol:
                                             description: ProxyProtocol enables the
                                               Proxy Protocol when communicating with
@@ -19725,15 +19688,6 @@ spec:
                                                   type: integer
                                               type: object
                                           type: object
-                                          x-kubernetes-validations:
-                                          - message: only one of preferLocalZone or
-                                              weightedLocality may be specified.
-                                            rule: '!(has(self.preferLocalZone) &&
-                                              has(self.weightedLocality))'
-                                          - message: one of preferLocalZone or weightedLocality
-                                              must be specified.
-                                            rule: '!(!has(self.preferLocalZone) &&
-                                              !has(self.weightedLocality))'
                                         slowStart:
                                           description: |-
                                             SlowStart defines the configuration related to the slow start load balancer policy.
@@ -19776,11 +19730,10 @@ spec:
                                           for RoundRobin and LeastRequest load balancers.
                                         rule: 'self.type in [''Random'', ''ConsistentHash'']
                                           ? !has(self.slowStart) : true '
-                                      - message: ConsistentHash load balancer only
-                                          supports weightedLocality in requestDistribution;
-                                          preferLocalZone is not allowed.
-                                        rule: 'self.type == ''ConsistentHash'' ? (!has(self.requestDistribution)
-                                          || !has(self.requestDistribution.preferLocalZone))
+                                      - message: Currently RequestDistribution is
+                                          only supported for LeastRequest, Random,
+                                          and RoundRobin load balancers.
+                                        rule: 'self.type == ''ConsistentHash'' ? !has(self.requestDistribution)
                                           : true '
                                     proxyProtocol:
                                       description: ProxyProtocol enables the Proxy
@@ -20807,13 +20760,6 @@ spec:
                                             type: integer
                                         type: object
                                     type: object
-                                    x-kubernetes-validations:
-                                    - message: only one of preferLocalZone or weightedLocality
-                                        may be specified.
-                                      rule: '!(has(self.preferLocalZone) && has(self.weightedLocality))'
-                                    - message: one of preferLocalZone or weightedLocality
-                                        must be specified.
-                                      rule: '!(!has(self.preferLocalZone) && !has(self.weightedLocality))'
                                   slowStart:
                                     description: |-
                                       SlowStart defines the configuration related to the slow start load balancer policy.
@@ -20856,11 +20802,10 @@ spec:
                                     RoundRobin and LeastRequest load balancers.
                                   rule: 'self.type in [''Random'', ''ConsistentHash'']
                                     ? !has(self.slowStart) : true '
-                                - message: ConsistentHash load balancer only supports
-                                    weightedLocality in requestDistribution; preferLocalZone
-                                    is not allowed.
-                                  rule: 'self.type == ''ConsistentHash'' ? (!has(self.requestDistribution)
-                                    || !has(self.requestDistribution.preferLocalZone))
+                                - message: Currently RequestDistribution is only supported
+                                    for LeastRequest, Random, and RoundRobin load
+                                    balancers.
+                                  rule: 'self.type == ''ConsistentHash'' ? !has(self.requestDistribution)
                                     : true '
                               proxyProtocol:
                                 description: ProxyProtocol enables the Proxy Protocol
@@ -22699,13 +22644,6 @@ spec:
                                         type: integer
                                     type: object
                                 type: object
-                                x-kubernetes-validations:
-                                - message: only one of preferLocalZone or weightedLocality
-                                    may be specified.
-                                  rule: '!(has(self.preferLocalZone) && has(self.weightedLocality))'
-                                - message: one of preferLocalZone or weightedLocality
-                                    must be specified.
-                                  rule: '!(!has(self.preferLocalZone) && !has(self.weightedLocality))'
                               slowStart:
                                 description: |-
                                   SlowStart defines the configuration related to the slow start load balancer policy.
@@ -22748,11 +22686,9 @@ spec:
                                 and LeastRequest load balancers.
                               rule: 'self.type in [''Random'', ''ConsistentHash'']
                                 ? !has(self.slowStart) : true '
-                            - message: ConsistentHash load balancer only supports
-                                weightedLocality in requestDistribution; preferLocalZone
-                                is not allowed.
-                              rule: 'self.type == ''ConsistentHash'' ? (!has(self.requestDistribution)
-                                || !has(self.requestDistribution.preferLocalZone))
+                            - message: Currently RequestDistribution is only supported
+                                for LeastRequest, Random, and RoundRobin load balancers.
+                              rule: 'self.type == ''ConsistentHash'' ? !has(self.requestDistribution)
                                 : true '
                           proxyProtocol:
                             description: ProxyProtocol enables the Proxy Protocol
@@ -23672,13 +23608,6 @@ spec:
                                         type: integer
                                     type: object
                                 type: object
-                                x-kubernetes-validations:
-                                - message: only one of preferLocalZone or weightedLocality
-                                    may be specified.
-                                  rule: '!(has(self.preferLocalZone) && has(self.weightedLocality))'
-                                - message: one of preferLocalZone or weightedLocality
-                                    must be specified.
-                                  rule: '!(!has(self.preferLocalZone) && !has(self.weightedLocality))'
                               slowStart:
                                 description: |-
                                   SlowStart defines the configuration related to the slow start load balancer policy.
@@ -23721,11 +23650,9 @@ spec:
                                 and LeastRequest load balancers.
                               rule: 'self.type in [''Random'', ''ConsistentHash'']
                                 ? !has(self.slowStart) : true '
-                            - message: ConsistentHash load balancer only supports
-                                weightedLocality in requestDistribution; preferLocalZone
-                                is not allowed.
-                              rule: 'self.type == ''ConsistentHash'' ? (!has(self.requestDistribution)
-                                || !has(self.requestDistribution.preferLocalZone))
+                            - message: Currently RequestDistribution is only supported
+                                for LeastRequest, Random, and RoundRobin load balancers.
+                              rule: 'self.type == ''ConsistentHash'' ? !has(self.requestDistribution)
                                 : true '
                           proxyProtocol:
                             description: ProxyProtocol enables the Proxy Protocol
@@ -24852,13 +24779,6 @@ spec:
                                               type: integer
                                           type: object
                                       type: object
-                                      x-kubernetes-validations:
-                                      - message: only one of preferLocalZone or weightedLocality
-                                          may be specified.
-                                        rule: '!(has(self.preferLocalZone) && has(self.weightedLocality))'
-                                      - message: one of preferLocalZone or weightedLocality
-                                          must be specified.
-                                        rule: '!(!has(self.preferLocalZone) && !has(self.weightedLocality))'
                                     slowStart:
                                       description: |-
                                         SlowStart defines the configuration related to the slow start load balancer policy.
@@ -24901,11 +24821,10 @@ spec:
                                       for RoundRobin and LeastRequest load balancers.
                                     rule: 'self.type in [''Random'', ''ConsistentHash'']
                                       ? !has(self.slowStart) : true '
-                                  - message: ConsistentHash load balancer only supports
-                                      weightedLocality in requestDistribution; preferLocalZone
-                                      is not allowed.
-                                    rule: 'self.type == ''ConsistentHash'' ? (!has(self.requestDistribution)
-                                      || !has(self.requestDistribution.preferLocalZone))
+                                  - message: Currently RequestDistribution is only
+                                      supported for LeastRequest, Random, and RoundRobin
+                                      load balancers.
+                                    rule: 'self.type == ''ConsistentHash'' ? !has(self.requestDistribution)
                                       : true '
                                 proxyProtocol:
                                   description: ProxyProtocol enables the Proxy Protocol
@@ -26006,13 +25925,6 @@ spec:
                                         type: integer
                                     type: object
                                 type: object
-                                x-kubernetes-validations:
-                                - message: only one of preferLocalZone or weightedLocality
-                                    may be specified.
-                                  rule: '!(has(self.preferLocalZone) && has(self.weightedLocality))'
-                                - message: one of preferLocalZone or weightedLocality
-                                    must be specified.
-                                  rule: '!(!has(self.preferLocalZone) && !has(self.weightedLocality))'
                               slowStart:
                                 description: |-
                                   SlowStart defines the configuration related to the slow start load balancer policy.
@@ -26055,11 +25967,9 @@ spec:
                                 and LeastRequest load balancers.
                               rule: 'self.type in [''Random'', ''ConsistentHash'']
                                 ? !has(self.slowStart) : true '
-                            - message: ConsistentHash load balancer only supports
-                                weightedLocality in requestDistribution; preferLocalZone
-                                is not allowed.
-                              rule: 'self.type == ''ConsistentHash'' ? (!has(self.requestDistribution)
-                                || !has(self.requestDistribution.preferLocalZone))
+                            - message: Currently RequestDistribution is only supported
+                                for LeastRequest, Random, and RoundRobin load balancers.
+                              rule: 'self.type == ''ConsistentHash'' ? !has(self.requestDistribution)
                                 : true '
                           proxyProtocol:
                             description: ProxyProtocol enables the Proxy Protocol
