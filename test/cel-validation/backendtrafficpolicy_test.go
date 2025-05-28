@@ -343,7 +343,7 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 			},
 		},
 		{
-			desc: "consistentHash lb with requestDistribution.preferLocalZone",
+			desc: "consistentHash lb with requestDistribution",
 			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
 				btp.Spec = egv1a1.BackendTrafficPolicySpec{
 					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
@@ -369,38 +369,8 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 				}
 			},
 			wantErrors: []string{
-				"spec.loadBalancer: Invalid value: \"object\": ConsistentHash load balancer only supports weightedLocality in requestDistribution; preferLocalZone is not allowed",
+				"spec.loadBalancer: Invalid value: \"object\": Currently RequestDistribution is only supported for LeastRequest, Random, and RoundRobin load balancers",
 			},
-		},
-		{
-			desc: "consistentHash lb with requestDistribution.weightedLocality",
-			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
-				btp.Spec = egv1a1.BackendTrafficPolicySpec{
-					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
-						TargetRef: &gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
-							LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
-								Group: gwapiv1a2.Group("gateway.networking.k8s.io"),
-								Kind:  gwapiv1a2.Kind("Gateway"),
-								Name:  gwapiv1a2.ObjectName("eg"),
-							},
-						},
-					},
-					ClusterSettings: egv1a1.ClusterSettings{
-						LoadBalancer: &egv1a1.LoadBalancer{
-							Type: egv1a1.ConsistentHashLoadBalancerType,
-							ConsistentHash: &egv1a1.ConsistentHash{
-								Type: "SourceIP",
-							},
-							RequestDistribution: &egv1a1.RequestDistribution{
-								WeightedLocality: &egv1a1.WeightedLocality{
-									Weights: []egv1a1.LocalityWeights{},
-								},
-							},
-						},
-					},
-				}
-			},
-			wantErrors: []string{},
 		},
 		{
 			desc: "leastRequest with ConsistentHash nil",
@@ -423,36 +393,6 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 				}
 			},
 			wantErrors: []string{},
-		},
-		{
-			desc: "leastRequest with RequestDistribution.PreferLocalZone and RequestDistribution.WeightedLocality set",
-			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
-				btp.Spec = egv1a1.BackendTrafficPolicySpec{
-					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
-						TargetRef: &gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
-							LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
-								Group: gwapiv1a2.Group("gateway.networking.k8s.io"),
-								Kind:  gwapiv1a2.Kind("Gateway"),
-								Name:  gwapiv1a2.ObjectName("eg"),
-							},
-						},
-					},
-					ClusterSettings: egv1a1.ClusterSettings{
-						LoadBalancer: &egv1a1.LoadBalancer{
-							Type: egv1a1.LeastRequestLoadBalancerType,
-							RequestDistribution: &egv1a1.RequestDistribution{
-								WeightedLocality: &egv1a1.WeightedLocality{
-									Weights: []egv1a1.LocalityWeights{},
-								},
-								PreferLocalZone: &egv1a1.PreferLocalZone{},
-							},
-						},
-					},
-				}
-			},
-			wantErrors: []string{
-				"spec.loadBalancer.requestDistribution: Invalid value: \"object\": only one of preferLocalZone or weightedLocality may be specified",
-			},
 		},
 		{
 			desc: "leastRequest with RequestDistribution.PreferLocalZone set",

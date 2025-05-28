@@ -18305,41 +18305,6 @@ spec:
                             format: int64
                             type: integer
                         type: object
-                      weightedLocality:
-                        description: WeightedLocality configures explicit weights
-                          for each locality.
-                        properties:
-                          weights:
-                            description: Weights specifies a list of localities and
-                              their corresponding traffic weights.
-                            items:
-                              description: LocalityWeights associates a locality with
-                                a traffic weight.
-                              properties:
-                                locality:
-                                  description: Locality defines locality information
-                                    for which the weight applies.
-                                  properties:
-                                    zone:
-                                      description: Zone is the name of the locality
-                                        zone (e.g. topology.kubernetes.io/zone).
-                                      type: string
-                                  required:
-                                  - zone
-                                  type: object
-                                weight:
-                                  description: Weight is the relative weight for traffic
-                                    distribution to the specified locality.
-                                  format: int32
-                                  type: integer
-                              required:
-                              - locality
-                              - weight
-                              type: object
-                            type: array
-                        required:
-                        - weights
-                        type: object
                     type: object
                     x-kubernetes-validations:
                     - message: only one of preferLocalZone or weightedLocality may
@@ -21867,42 +21832,6 @@ spec:
                                         to enable zone-aware routing.
                                       format: int64
                                       type: integer
-                                  type: object
-                                weightedLocality:
-                                  description: WeightedLocality configures explicit
-                                    weights for each locality.
-                                  properties:
-                                    weights:
-                                      description: Weights specifies a list of localities
-                                        and their corresponding traffic weights.
-                                      items:
-                                        description: LocalityWeights associates a
-                                          locality with a traffic weight.
-                                        properties:
-                                          locality:
-                                            description: Locality defines locality
-                                              information for which the weight applies.
-                                            properties:
-                                              zone:
-                                                description: Zone is the name of the
-                                                  locality zone (e.g. topology.kubernetes.io/zone).
-                                                type: string
-                                            required:
-                                            - zone
-                                            type: object
-                                          weight:
-                                            description: Weight is the relative weight
-                                              for traffic distribution to the specified
-                                              locality.
-                                            format: int32
-                                            type: integer
-                                        required:
-                                        - locality
-                                        - weight
-                                        type: object
-                                      type: array
-                                  required:
-                                  - weights
                                   type: object
                               type: object
                               x-kubernetes-validations:
@@ -34874,51 +34803,6 @@ spec:
                                                         format: int64
                                                         type: integer
                                                     type: object
-                                                  weightedLocality:
-                                                    description: WeightedLocality
-                                                      configures explicit weights
-                                                      for each locality.
-                                                    properties:
-                                                      weights:
-                                                        description: Weights specifies
-                                                          a list of localities and
-                                                          their corresponding traffic
-                                                          weights.
-                                                        items:
-                                                          description: LocalityWeights
-                                                            associates a locality
-                                                            with a traffic weight.
-                                                          properties:
-                                                            locality:
-                                                              description: Locality
-                                                                defines locality information
-                                                                for which the weight
-                                                                applies.
-                                                              properties:
-                                                                zone:
-                                                                  description: Zone
-                                                                    is the name of
-                                                                    the locality zone
-                                                                    (e.g. topology.kubernetes.io/zone).
-                                                                  type: string
-                                                              required:
-                                                              - zone
-                                                              type: object
-                                                            weight:
-                                                              description: Weight
-                                                                is the relative weight
-                                                                for traffic distribution
-                                                                to the specified locality.
-                                                              format: int32
-                                                              type: integer
-                                                          required:
-                                                          - locality
-                                                          - weight
-                                                          type: object
-                                                        type: array
-                                                    required:
-                                                    - weights
-                                                    type: object
                                                 type: object
                                                 x-kubernetes-validations:
                                                 - message: only one of preferLocalZone
@@ -36001,51 +35885,6 @@ spec:
                                                           zone-aware routing.
                                                         format: int64
                                                         type: integer
-                                                    type: object
-                                                  weightedLocality:
-                                                    description: WeightedLocality
-                                                      configures explicit weights
-                                                      for each locality.
-                                                    properties:
-                                                      weights:
-                                                        description: Weights specifies
-                                                          a list of localities and
-                                                          their corresponding traffic
-                                                          weights.
-                                                        items:
-                                                          description: LocalityWeights
-                                                            associates a locality
-                                                            with a traffic weight.
-                                                          properties:
-                                                            locality:
-                                                              description: Locality
-                                                                defines locality information
-                                                                for which the weight
-                                                                applies.
-                                                              properties:
-                                                                zone:
-                                                                  description: Zone
-                                                                    is the name of
-                                                                    the locality zone
-                                                                    (e.g. topology.kubernetes.io/zone).
-                                                                  type: string
-                                                              required:
-                                                              - zone
-                                                              type: object
-                                                            weight:
-                                                              description: Weight
-                                                                is the relative weight
-                                                                for traffic distribution
-                                                                to the specified locality.
-                                                              format: int32
-                                                              type: integer
-                                                          required:
-                                                          - locality
-                                                          - weight
-                                                          type: object
-                                                        type: array
-                                                    required:
-                                                    - weights
                                                     type: object
                                                 type: object
                                                 x-kubernetes-validations:
@@ -37197,46 +37036,6 @@ spec:
                                                   format: int64
                                                   type: integer
                                               type: object
-                                            weightedLocality:
-                                              description: WeightedLocality configures
-                                                explicit weights for each locality.
-                                              properties:
-                                                weights:
-                                                  description: Weights specifies a
-                                                    list of localities and their corresponding
-                                                    traffic weights.
-                                                  items:
-                                                    description: LocalityWeights associates
-                                                      a locality with a traffic weight.
-                                                    properties:
-                                                      locality:
-                                                        description: Locality defines
-                                                          locality information for
-                                                          which the weight applies.
-                                                        properties:
-                                                          zone:
-                                                            description: Zone is the
-                                                              name of the locality
-                                                              zone (e.g. topology.kubernetes.io/zone).
-                                                            type: string
-                                                        required:
-                                                        - zone
-                                                        type: object
-                                                      weight:
-                                                        description: Weight is the
-                                                          relative weight for traffic
-                                                          distribution to the specified
-                                                          locality.
-                                                        format: int32
-                                                        type: integer
-                                                    required:
-                                                    - locality
-                                                    - weight
-                                                    type: object
-                                                  type: array
-                                              required:
-                                              - weights
-                                              type: object
                                           type: object
                                           x-kubernetes-validations:
                                           - message: only one of preferLocalZone or
@@ -38318,45 +38117,6 @@ spec:
                                               routing.
                                             format: int64
                                             type: integer
-                                        type: object
-                                      weightedLocality:
-                                        description: WeightedLocality configures explicit
-                                          weights for each locality.
-                                        properties:
-                                          weights:
-                                            description: Weights specifies a list
-                                              of localities and their corresponding
-                                              traffic weights.
-                                            items:
-                                              description: LocalityWeights associates
-                                                a locality with a traffic weight.
-                                              properties:
-                                                locality:
-                                                  description: Locality defines locality
-                                                    information for which the weight
-                                                    applies.
-                                                  properties:
-                                                    zone:
-                                                      description: Zone is the name
-                                                        of the locality zone (e.g.
-                                                        topology.kubernetes.io/zone).
-                                                      type: string
-                                                  required:
-                                                  - zone
-                                                  type: object
-                                                weight:
-                                                  description: Weight is the relative
-                                                    weight for traffic distribution
-                                                    to the specified locality.
-                                                  format: int32
-                                                  type: integer
-                                              required:
-                                              - locality
-                                              - weight
-                                              type: object
-                                            type: array
-                                        required:
-                                        - weights
                                         type: object
                                     type: object
                                     x-kubernetes-validations:
@@ -40250,42 +40010,6 @@ spec:
                                         format: int64
                                         type: integer
                                     type: object
-                                  weightedLocality:
-                                    description: WeightedLocality configures explicit
-                                      weights for each locality.
-                                    properties:
-                                      weights:
-                                        description: Weights specifies a list of localities
-                                          and their corresponding traffic weights.
-                                        items:
-                                          description: LocalityWeights associates
-                                            a locality with a traffic weight.
-                                          properties:
-                                            locality:
-                                              description: Locality defines locality
-                                                information for which the weight applies.
-                                              properties:
-                                                zone:
-                                                  description: Zone is the name of
-                                                    the locality zone (e.g. topology.kubernetes.io/zone).
-                                                  type: string
-                                              required:
-                                              - zone
-                                              type: object
-                                            weight:
-                                              description: Weight is the relative
-                                                weight for traffic distribution to
-                                                the specified locality.
-                                              format: int32
-                                              type: integer
-                                          required:
-                                          - locality
-                                          - weight
-                                          type: object
-                                        type: array
-                                    required:
-                                    - weights
-                                    type: object
                                 type: object
                                 x-kubernetes-validations:
                                 - message: only one of preferLocalZone or weightedLocality
@@ -41258,42 +40982,6 @@ spec:
                                           zones required to enable zone-aware routing.
                                         format: int64
                                         type: integer
-                                    type: object
-                                  weightedLocality:
-                                    description: WeightedLocality configures explicit
-                                      weights for each locality.
-                                    properties:
-                                      weights:
-                                        description: Weights specifies a list of localities
-                                          and their corresponding traffic weights.
-                                        items:
-                                          description: LocalityWeights associates
-                                            a locality with a traffic weight.
-                                          properties:
-                                            locality:
-                                              description: Locality defines locality
-                                                information for which the weight applies.
-                                              properties:
-                                                zone:
-                                                  description: Zone is the name of
-                                                    the locality zone (e.g. topology.kubernetes.io/zone).
-                                                  type: string
-                                              required:
-                                              - zone
-                                              type: object
-                                            weight:
-                                              description: Weight is the relative
-                                                weight for traffic distribution to
-                                                the specified locality.
-                                              format: int32
-                                              type: integer
-                                          required:
-                                          - locality
-                                          - weight
-                                          type: object
-                                        type: array
-                                    required:
-                                    - weights
                                     type: object
                                 type: object
                                 x-kubernetes-validations:
@@ -42475,45 +42163,6 @@ spec:
                                               format: int64
                                               type: integer
                                           type: object
-                                        weightedLocality:
-                                          description: WeightedLocality configures
-                                            explicit weights for each locality.
-                                          properties:
-                                            weights:
-                                              description: Weights specifies a list
-                                                of localities and their corresponding
-                                                traffic weights.
-                                              items:
-                                                description: LocalityWeights associates
-                                                  a locality with a traffic weight.
-                                                properties:
-                                                  locality:
-                                                    description: Locality defines
-                                                      locality information for which
-                                                      the weight applies.
-                                                    properties:
-                                                      zone:
-                                                        description: Zone is the name
-                                                          of the locality zone (e.g.
-                                                          topology.kubernetes.io/zone).
-                                                        type: string
-                                                    required:
-                                                    - zone
-                                                    type: object
-                                                  weight:
-                                                    description: Weight is the relative
-                                                      weight for traffic distribution
-                                                      to the specified locality.
-                                                    format: int32
-                                                    type: integer
-                                                required:
-                                                - locality
-                                                - weight
-                                                type: object
-                                              type: array
-                                          required:
-                                          - weights
-                                          type: object
                                       type: object
                                       x-kubernetes-validations:
                                       - message: only one of preferLocalZone or weightedLocality
@@ -43665,42 +43314,6 @@ spec:
                                           zones required to enable zone-aware routing.
                                         format: int64
                                         type: integer
-                                    type: object
-                                  weightedLocality:
-                                    description: WeightedLocality configures explicit
-                                      weights for each locality.
-                                    properties:
-                                      weights:
-                                        description: Weights specifies a list of localities
-                                          and their corresponding traffic weights.
-                                        items:
-                                          description: LocalityWeights associates
-                                            a locality with a traffic weight.
-                                          properties:
-                                            locality:
-                                              description: Locality defines locality
-                                                information for which the weight applies.
-                                              properties:
-                                                zone:
-                                                  description: Zone is the name of
-                                                    the locality zone (e.g. topology.kubernetes.io/zone).
-                                                  type: string
-                                              required:
-                                              - zone
-                                              type: object
-                                            weight:
-                                              description: Weight is the relative
-                                                weight for traffic distribution to
-                                                the specified locality.
-                                              format: int32
-                                              type: integer
-                                          required:
-                                          - locality
-                                          - weight
-                                          type: object
-                                        type: array
-                                    required:
-                                    - weights
                                     type: object
                                 type: object
                                 x-kubernetes-validations:

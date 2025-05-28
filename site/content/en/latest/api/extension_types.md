@@ -3061,32 +3061,6 @@ _Appears in:_
 | `rules` | _[RateLimitRule](#ratelimitrule) array_ |  false  |  | Rules are a list of RateLimit selectors and limits. If a request matches<br />multiple rules, the strictest limit is applied. For example, if a request<br />matches two rules, one with 10rps and one with 20rps, the final limit will<br />be based on the rule with 10rps. |
 
 
-#### Locality
-
-
-
-Locality specifies the details of a particular locality. Currently only Zone is supported.
-
-_Appears in:_
-- [LocalityWeights](#localityweights)
-
-| Field | Type | Required | Default | Description |
-| ---   | ---  | ---      | ---     | ---         |
-
-
-#### LocalityWeights
-
-
-
-LocalityWeights associates a locality with a traffic weight.
-
-_Appears in:_
-- [WeightedLocality](#weightedlocality)
-
-| Field | Type | Required | Default | Description |
-| ---   | ---  | ---      | ---     | ---         |
-
-
 #### LogLevel
 
 _Underlying type:_ _string_
@@ -4168,7 +4142,6 @@ _Appears in:_
 
 
 RequestDistribution defines the configuration related to the distribution of requests between localities.
-Exactly one of PreferLocalZone or WeightedLocality must be specified.
 
 _Appears in:_
 - [LoadBalancer](#loadbalancer)
@@ -4913,19 +4886,6 @@ _Appears in:_
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
 | `hostKeys` | _string array_ |  false  |  | HostKeys is a list of keys for environment variables from the host envoy process<br />that should be passed into the Wasm VM. This is useful for passing secrets to to Wasm extensions. |
-
-
-#### WeightedLocality
-
-
-
-WeightedLocality defines explicit traffic weights per locality.
-
-_Appears in:_
-- [RequestDistribution](#requestdistribution)
-
-| Field | Type | Required | Default | Description |
-| ---   | ---  | ---      | ---     | ---         |
 
 
 #### WithUnderscoresAction
