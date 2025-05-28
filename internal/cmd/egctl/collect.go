@@ -50,7 +50,7 @@ func newCollectCommand() *cobra.Command {
 		"Specify the output file path for collected data. If not specified, a timestamped file will be created in the current directory.")
 	collectCommand.PersistentFlags().StringVarP(&collectOpts.envoyGatewayNamespace, "envoy-system-namespace", "", "envoy-gateway-system",
 		"Specify the namespace where the Envoy Gateway controller is installed.")
-	collectCommand.PersistentFlags().StringArrayVarP(&collectOpts.proxyNamespaces, "proxy-namespaces", "", []string{},
+	collectCommand.PersistentFlags().StringArrayVarP(&collectOpts.proxyNamespaces, "envoy-proxy-namespaces", "", []string{},
 		"Specify the namespaces where Envoy proxies are running.")
 
 	return collectCommand
