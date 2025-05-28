@@ -14,6 +14,7 @@ import (
 	clusterv3 "github.com/envoyproxy/go-control-plane/envoy/config/cluster/v3"
 	corev3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	endpointv3 "github.com/envoyproxy/go-control-plane/envoy/config/endpoint/v3"
+	dnsclusterv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/clusters/dns/v3"
 	dfpv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/clusters/dynamic_forward_proxy/v3"
 	commondfpv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/common/dynamic_forward_proxy/v3"
 	codecv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/upstream_codec/v3"
@@ -324,17 +325,33 @@ func buildXdsCluster(args *xdsClusterArgs) (*buildClusterResult, error) {
 		cluster.IgnoreHealthOnHostRemoval = true
 	default:
 		cluster.ClusterDiscoveryType = &clusterv3.Cluster_Type{Type: clusterv3.Cluster_STRICT_DNS}
-		cluster.DnsRefreshRate = durationpb.New(30 * time.Second)
-		cluster.RespectDnsTtl = true
+		dnsCluster := &dnsclusterv3.DnsCluster{
+			DnsRefreshRate: durationpb.New(5 * time.Second), // Default to 5000ms as per Envoy docs
+			RespectDnsTtl:  true,
+		}
 		if args.dns != nil {
 			if args.dns.DNSRefreshRate != nil {
-				if args.dns.DNSRefreshRate.Duration > 0 {
-					cluster.DnsRefreshRate = durationpb.New(args.dns.DNSRefreshRate.Duration)
+				if args.dns.DNSRefreshRate.Duration >= time.Millisecond {
+					dnsCluster.DnsRefreshRate = durationpb.New(args.dns.DNSRefreshRate.Duration)
 				}
 			}
 			if args.dns.RespectDNSTTL != nil {
-				cluster.RespectDnsTtl = ptr.Deref(args.dns.RespectDNSTTL, true)
+				dnsCluster.RespectDnsTtl = ptr.Deref(args.dns.RespectDNSTTL, true)
 			}
+		}
+
+		// Convert DnsCluster to Any type for the cluster_type extension
+		dnsClusterAny, err := proto.ToAnyWithValidation(dnsCluster)
+		if err != nil {
+			return nil, err
+		}
+
+		// Set the cluster_type extension with DnsCluster configuration
+		cluster.ClusterDiscoveryType = &clusterv3.Cluster_ClusterType{
+			ClusterType: &clusterv3.Cluster_CustomClusterType{
+				Name:        "envoy.clusters.dns",
+				TypedConfig: dnsClusterAny,
+			},
 		}
 	}
 
