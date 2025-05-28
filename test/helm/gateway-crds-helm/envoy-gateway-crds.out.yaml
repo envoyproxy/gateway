@@ -1730,6 +1730,13 @@ spec:
                   Retry provides more advanced usage, allowing users to customize the number of retries, retry fallback strategy, and retry triggering conditions.
                   If not set, retry will be disabled.
                 properties:
+                  numAttemptsPerPriority:
+                    description: |-
+                      NumAttemptsPerPriority defines the number of requests (initial attempt + retries)
+                      that should be sent to the same priority before switching to a different one.
+                      If not specified or set to 0, all requests are sent to the highest priority that is healthy.
+                    format: int32
+                    type: integer
                   numRetries:
                     default: 2
                     description: NumRetries is the number of retries to be attempted.
@@ -4508,6 +4515,13 @@ spec:
                             Retry provides more advanced usage, allowing users to customize the number of retries, retry fallback strategy, and retry triggering conditions.
                             If not set, retry will be disabled.
                           properties:
+                            numAttemptsPerPriority:
+                              description: |-
+                                NumAttemptsPerPriority defines the number of requests (initial attempt + retries)
+                                that should be sent to the same priority before switching to a different one.
+                                If not specified or set to 0, all requests are sent to the highest priority that is healthy.
+                              format: int32
+                              type: integer
                             numRetries:
                               default: 2
                               description: NumRetries is the number of retries to
@@ -17429,6 +17443,13 @@ spec:
                                               Retry provides more advanced usage, allowing users to customize the number of retries, retry fallback strategy, and retry triggering conditions.
                                               If not set, retry will be disabled.
                                             properties:
+                                              numAttemptsPerPriority:
+                                                description: |-
+                                                  NumAttemptsPerPriority defines the number of requests (initial attempt + retries)
+                                                  that should be sent to the same priority before switching to a different one.
+                                                  If not specified or set to 0, all requests are sent to the highest priority that is healthy.
+                                                format: int32
+                                                type: integer
                                               numRetries:
                                                 default: 2
                                                 description: NumRetries is the number
@@ -18456,6 +18477,13 @@ spec:
                                               Retry provides more advanced usage, allowing users to customize the number of retries, retry fallback strategy, and retry triggering conditions.
                                               If not set, retry will be disabled.
                                             properties:
+                                              numAttemptsPerPriority:
+                                                description: |-
+                                                  NumAttemptsPerPriority defines the number of requests (initial attempt + retries)
+                                                  that should be sent to the same priority before switching to a different one.
+                                                  If not specified or set to 0, all requests are sent to the highest priority that is healthy.
+                                                format: int32
+                                                type: integer
                                               numRetries:
                                                 default: 2
                                                 description: NumRetries is the number
@@ -19551,6 +19579,13 @@ spec:
                                         Retry provides more advanced usage, allowing users to customize the number of retries, retry fallback strategy, and retry triggering conditions.
                                         If not set, retry will be disabled.
                                       properties:
+                                        numAttemptsPerPriority:
+                                          description: |-
+                                            NumAttemptsPerPriority defines the number of requests (initial attempt + retries)
+                                            that should be sent to the same priority before switching to a different one.
+                                            If not specified or set to 0, all requests are sent to the highest priority that is healthy.
+                                          format: int32
+                                          type: integer
                                         numRetries:
                                           default: 2
                                           description: NumRetries is the number of
@@ -20582,6 +20617,13 @@ spec:
                                   Retry provides more advanced usage, allowing users to customize the number of retries, retry fallback strategy, and retry triggering conditions.
                                   If not set, retry will be disabled.
                                 properties:
+                                  numAttemptsPerPriority:
+                                    description: |-
+                                      NumAttemptsPerPriority defines the number of requests (initial attempt + retries)
+                                      that should be sent to the same priority before switching to a different one.
+                                      If not specified or set to 0, all requests are sent to the highest priority that is healthy.
+                                    format: int32
+                                    type: integer
                                   numRetries:
                                     default: 2
                                     description: NumRetries is the number of retries
@@ -22426,6 +22468,13 @@ spec:
                               Retry provides more advanced usage, allowing users to customize the number of retries, retry fallback strategy, and retry triggering conditions.
                               If not set, retry will be disabled.
                             properties:
+                              numAttemptsPerPriority:
+                                description: |-
+                                  NumAttemptsPerPriority defines the number of requests (initial attempt + retries)
+                                  that should be sent to the same priority before switching to a different one.
+                                  If not specified or set to 0, all requests are sent to the highest priority that is healthy.
+                                format: int32
+                                type: integer
                               numRetries:
                                 default: 2
                                 description: NumRetries is the number of retries to
@@ -23351,6 +23400,13 @@ spec:
                               Retry provides more advanced usage, allowing users to customize the number of retries, retry fallback strategy, and retry triggering conditions.
                               If not set, retry will be disabled.
                             properties:
+                              numAttemptsPerPriority:
+                                description: |-
+                                  NumAttemptsPerPriority defines the number of requests (initial attempt + retries)
+                                  that should be sent to the same priority before switching to a different one.
+                                  If not specified or set to 0, all requests are sent to the highest priority that is healthy.
+                                format: int32
+                                type: integer
                               numRetries:
                                 default: 2
                                 description: NumRetries is the number of retries to
@@ -24482,6 +24538,13 @@ spec:
                                     Retry provides more advanced usage, allowing users to customize the number of retries, retry fallback strategy, and retry triggering conditions.
                                     If not set, retry will be disabled.
                                   properties:
+                                    numAttemptsPerPriority:
+                                      description: |-
+                                        NumAttemptsPerPriority defines the number of requests (initial attempt + retries)
+                                        that should be sent to the same priority before switching to a different one.
+                                        If not specified or set to 0, all requests are sent to the highest priority that is healthy.
+                                      format: int32
+                                      type: integer
                                     numRetries:
                                       default: 2
                                       description: NumRetries is the number of retries
@@ -25588,6 +25651,13 @@ spec:
                               Retry provides more advanced usage, allowing users to customize the number of retries, retry fallback strategy, and retry triggering conditions.
                               If not set, retry will be disabled.
                             properties:
+                              numAttemptsPerPriority:
+                                description: |-
+                                  NumAttemptsPerPriority defines the number of requests (initial attempt + retries)
+                                  that should be sent to the same priority before switching to a different one.
+                                  If not specified or set to 0, all requests are sent to the highest priority that is healthy.
+                                format: int32
+                                type: integer
                               numRetries:
                                 default: 2
                                 description: NumRetries is the number of retries to
