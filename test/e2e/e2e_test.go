@@ -55,6 +55,7 @@ func TestE2E(t *testing.T) {
 	if tests.IPFamily == "ipv6" {
 		skipTests = append(skipTests,
 			tests.DynamicResolverBackendTest.ShortName,
+			tests.DynamicResolverBackendWithTLSTest.ShortName,
 			tests.RateLimitCIDRMatchTest.ShortName,
 			tests.RateLimitMultipleListenersTest.ShortName,
 			tests.RateLimitGlobalSharedCidrMatchTest.ShortName,
