@@ -38,7 +38,7 @@
         {
             "datasource": {
                 "type": "prometheus",
-                "uid": "PBFA97CFB590B2093"
+                "uid": "$datasource"
             },
             "description": "The fraction of this program's available CPU time used by the GC since the program started.",
             "fieldConfig": {
@@ -122,7 +122,7 @@
                 {
                     "datasource": {
                         "type": "prometheus",
-                        "uid": "PBFA97CFB590B2093"
+                        "uid": "$datasource"
                     },
                     "disableTextWrap": false,
                     "editorMode": "code",
@@ -145,7 +145,7 @@
         {
             "datasource": {
                 "type": "prometheus",
-                "uid": "PBFA97CFB590B2093"
+                "uid": "$datasource"
             },
             "description": "Resident memory size",
             "fieldConfig": {
@@ -194,7 +194,7 @@
                 {
                     "datasource": {
                         "type": "prometheus",
-                        "uid": "PBFA97CFB590B2093"
+                        "uid": "$datasource"
                     },
                     "disableTextWrap": false,
                     "editorMode": "code",
@@ -216,7 +216,7 @@
         {
             "datasource": {
                 "type": "prometheus",
-                "uid": "PBFA97CFB590B2093"
+                "uid": "$datasource"
             },
             "description": "Virtual memory size",
             "fieldConfig": {
@@ -266,7 +266,7 @@
                 {
                     "datasource": {
                         "type": "prometheus",
-                        "uid": "PBFA97CFB590B2093"
+                        "uid": "$datasource"
                     },
                     "disableTextWrap": false,
                     "editorMode": "code",
@@ -288,7 +288,7 @@
         {
             "datasource": {
                 "type": "prometheus",
-                "uid": "PBFA97CFB590B2093"
+                "uid": "$datasource"
             },
             "description": "Number of ratelimit rule hits in total",
             "fieldConfig": {
@@ -341,7 +341,7 @@
                 {
                     "datasource": {
                         "type": "prometheus",
-                        "uid": "PBFA97CFB590B2093"
+                        "uid": "$datasource"
                     },
                     "disableTextWrap": false,
                     "editorMode": "builder",
@@ -363,7 +363,7 @@
         {
             "datasource": {
                 "type": "prometheus",
-                "uid": "PBFA97CFB590B2093"
+                "uid": "$datasource"
             },
             "description": "Number of rule hits over the NearLimit ratio threshold (currently 80%) but under the threshold rate.",
             "fieldConfig": {
@@ -416,7 +416,7 @@
                 {
                     "datasource": {
                         "type": "prometheus",
-                        "uid": "PBFA97CFB590B2093"
+                        "uid": "$datasource"
                     },
                     "disableTextWrap": false,
                     "editorMode": "builder",
@@ -438,7 +438,7 @@
         {
             "datasource": {
                 "type": "prometheus",
-                "uid": "PBFA97CFB590B2093"
+                "uid": "$datasource"
             },
             "description": "Number of rule hits exceeding the threshold rate",
             "fieldConfig": {
@@ -491,7 +491,7 @@
                 {
                     "datasource": {
                         "type": "prometheus",
-                        "uid": "PBFA97CFB590B2093"
+                        "uid": "$datasource"
                     },
                     "disableTextWrap": false,
                     "editorMode": "builder",
@@ -522,7 +522,7 @@
                 "current": {
                     "selected": false,
                     "text": "Prometheus",
-                    "value": "PBFA97CFB590B2093"
+                    "value": "$datasource"
                 },
                 "hide": 0,
                 "includeAll": false,
