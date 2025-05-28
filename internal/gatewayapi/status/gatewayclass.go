@@ -71,10 +71,6 @@ func computeGatewayClassAcceptedCondition(gatewayClass *gwapiv1.GatewayClass,
 	}
 }
 
-// GatewaySupportedFeatures is a list of supported Gateway-API features,
-// based on the running conformance tests suite.
-var GatewaySupportedFeatures = getSupportedFeatures(conformance.EnvoyGatewaySuite, conformance.SkipTests)
-
 func getSupportedFeatures(gatewaySuite suite.ConformanceOptions, skippedTests []suite.ConformanceTest) []gwapiv1.SupportedFeature {
 	supportedFeatures := gatewaySuite.SupportedFeatures.Clone()
 	unsupportedFeatures := getUnsupportedFeatures(gatewaySuite, skippedTests)

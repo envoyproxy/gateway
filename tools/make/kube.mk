@@ -25,6 +25,8 @@ BENCHMARK_CONNECTIONS ?= 100
 BENCHMARK_DURATION ?= 60
 BENCHMARK_REPORT_DIR ?= benchmark_report
 
+CONFORMANCE_RUN_TEST ?=
+
 E2E_RUN_TEST ?=
 E2E_CLEANUP ?= true
 E2E_TIMEOUT ?= 20m
@@ -295,7 +297,11 @@ run-conformance: prepare-ip-family ## Run Gateway API conformance.
 	@$(LOG_TARGET)
 	kubectl wait --timeout=$(WAIT_TIMEOUT) -n envoy-gateway-system deployment/envoy-gateway --for=condition=Available
 	kubectl apply -f test/config/gatewayclass.yaml
+ifeq ($(CONFORMANCE_RUN_TEST),)
 	go test -v -tags conformance ./test/conformance --gateway-class=envoy-gateway --debug=true
+else
+	go test -v -tags conformance ./test/conformance --gateway-class=envoy-gateway --debug=true --run-test $(CONFORMANCE_RUN_TEST)
+endif
 
 CONFORMANCE_REPORT_PATH ?=
 

@@ -30,10 +30,13 @@ func TestExperimentalConformance(t *testing.T) {
 	flag.Parse()
 	log.SetLogger(zap.New(zap.WriteTo(os.Stderr), zap.UseDevMode(true)))
 
+	internalSuite := internalconf.EnvoyGatewaySuite(false)
+
 	opts := conformance.DefaultOptions(t)
-	opts.SkipTests = internalconf.EnvoyGatewaySuite.SkipTests
-	opts.SupportedFeatures = internalconf.EnvoyGatewaySuite.SupportedFeatures
-	opts.ExemptFeatures = internalconf.EnvoyGatewaySuite.ExemptFeatures
+	opts.SkipTests = internalSuite.SkipTests
+	opts.SupportedFeatures = internalSuite.SupportedFeatures
+	opts.ExemptFeatures = internalSuite.ExemptFeatures
+
 	opts.ConformanceProfiles = sets.New(
 		suite.GatewayHTTPConformanceProfileName,
 		suite.GatewayTLSConformanceProfileName,
