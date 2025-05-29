@@ -6,7 +6,12 @@ metadata:
     app.kubernetes.io/component: proxy
     app.kubernetes.io/managed-by: envoy-gateway
     app.kubernetes.io/name: envoy
-    gateway.envoyproxy.io/owning-gateway-name: default
+    gateway.envoyproxy.io/owning-gateway-name: gateway-1
     gateway.envoyproxy.io/owning-gateway-namespace: ns1
-  name: envoy-default-37a8eec1
+  name: gateway-1
   namespace: ns1
+  ownerReferences:
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: Gateway
+    name: gateway-1
+    uid: test-owner-reference-uid-for-gateway
