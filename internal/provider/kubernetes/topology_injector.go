@@ -80,7 +80,7 @@ func (m *ProxyTopologyInjector) Handle(ctx context.Context, req admission.Reques
 		if binding.Annotations == nil {
 			binding.Annotations = map[string]string{}
 		}
-		binding.Annotations[corev1.LabelTopologyZone] = zone
+		binding.Annotations[corev1.LabelTopologyZone] = fmt.Sprintf("%q", zone)
 	} else {
 		logger.V(1).Info("Skipping injection due to missing topology label on node")
 		return admission.Allowed("Skipping injection due to missing topology label on node")

@@ -2095,6 +2095,7 @@ _Appears in:_
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
+| `hostname` | _string_ |  true  |  | Hostname defines the HTTP host that will be requested during health checking.<br />Default: HTTPRoute or GRPCRoute hostname. |
 | `path` | _string_ |  true  |  | Path defines the HTTP path that will be requested during health checking. |
 | `method` | _string_ |  false  |  | Method defines the HTTP method used for health checking.<br />Defaults to GET |
 | `expectedStatuses` | _[HTTPStatus](#httpstatus) array_ |  false  |  | ExpectedStatuses defines a list of HTTP response statuses considered healthy.<br />Defaults to 200 only |
@@ -2777,6 +2778,10 @@ KubernetesDeployModeType defines the type of KubernetesDeployMode
 _Appears in:_
 - [KubernetesDeployMode](#kubernetesdeploymode)
 
+| Value | Description |
+| ----- | ----------- |
+| `ControllerNamespace` | KubernetesDeployModeTypeControllerNamespace indicates that the controller namespace is used for the infra proxy deployments.<br /> | 
+| `GatewayNamespace` | KubernetesDeployModeTypeGatewayNamespace indicates that the gateway namespace is used for the infra proxy deployments.<br /> | 
 
 
 #### KubernetesDeploymentSpec
@@ -3143,6 +3148,7 @@ _Appears in:_
 | `scopes` | _string array_ |  false  |  | The OIDC scopes to be used in the<br />[Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest).<br />The "openid" scope is always added to the list of scopes if not already<br />specified. |
 | `resources` | _string array_ |  false  |  | The OIDC resources to be used in the<br />[Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest). |
 | `redirectURL` | _string_ |  true  |  | The redirect URL to be used in the OIDC<br />[Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest).<br />If not specified, uses the default redirect URI "%REQ(x-forwarded-proto)%://%REQ(:authority)%/oauth2/callback" |
+| `denyRedirect` | _[OIDCDenyRedirect](#oidcdenyredirect)_ |  false  |  | Any request that matches any of the provided matchers (with either tokens that are expired or missing tokens) will not be redirected to the OIDC Provider.<br />This behavior can be useful for AJAX or machine requests. |
 | `logoutPath` | _string_ |  true  |  | The path to log a user out, clearing their credential cookies.<br />If not specified, uses a default logout path "/logout" |
 | `forwardAccessToken` | _boolean_ |  false  |  | ForwardAccessToken indicates whether the Envoy should forward the access token<br />via the Authorization header Bearer scheme to the upstream.<br />If not specified, defaults to false. |
 | `defaultTokenTTL` | _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.29/#duration-v1-meta)_ |  false  |  | DefaultTokenTTL is the default lifetime of the id token and access token.<br />Please note that Envoy will always use the expiry time from the response<br />of the authorization server if it is provided. This field is only used when<br />the expiry time is not provided by the authorization.<br />If not specified, defaults to 0. In this case, the "expires_in" field in<br />the authorization response must be set by the authorization server, or the<br />OAuth flow will fail. |
@@ -4757,7 +4763,7 @@ _Appears in:_
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `path` | _string_ |  true  |  | Path defines the unix domain socket path of the backend endpoint. |
+| `path` | _string_ |  true  |  | Path defines the unix domain socket path of the backend endpoint.<br />The path length must not exceed 108 characters. |
 
 
 #### Wasm
