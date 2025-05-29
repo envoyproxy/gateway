@@ -9,6 +9,7 @@ import (
 	"context"
 	"crypto/tls"
 	"crypto/x509"
+	"errors"
 	"fmt"
 	"math"
 	"net"
@@ -17,6 +18,7 @@ import (
 	"sync"
 	"testing"
 
+	clusterv3 "github.com/envoyproxy/go-control-plane/envoy/config/cluster/v3"
 	v3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc"
@@ -26,12 +28,14 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/utils/ptr"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/envoygateway"
+	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/proto/extension"
 )
 
@@ -541,6 +545,182 @@ func Test_Integration_RetryPolicy_MaxAttempts(t *testing.T) {
 
 			if (err != nil) != tt.wantErr {
 				t.Errorf("PostRouteModifyHook() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+		})
+	}
+}
+
+type clusterUpdateTestServer struct {
+	extension.UnimplementedEnvoyGatewayExtensionServer
+}
+
+func getTargetRefKind(obj *unstructured.Unstructured) (string, error) {
+	targetRef, found, err := unstructured.NestedMap(obj.Object, "spec", "targetRef")
+	if err != nil || !found {
+		return "", errors.New("targetRef not found or error")
+	}
+
+	kind, ok := targetRef["kind"].(string)
+	if !ok {
+		return "", errors.New("kind is not a string or missing in targetRef")
+	}
+
+	return kind, nil
+}
+
+func (s *clusterUpdateTestServer) PostTranslateModify(ctx context.Context, req *extension.PostTranslateModifyRequest) (*extension.PostTranslateModifyResponse, error) {
+	clusters := req.GetClusters()
+	if clusters == nil {
+		return &extension.PostTranslateModifyResponse{
+			Clusters: clusters,
+			Secrets:  req.GetSecrets(),
+		}, errors.New("No clusters found")
+	}
+
+	if len(req.PostTranslateContext.ExtensionResources) == 0 {
+		return &extension.PostTranslateModifyResponse{
+			Clusters: clusters,
+			Secrets:  req.GetSecrets(),
+		}, errors.New("No policy found")
+	}
+
+	for _, extensionResourceBytes := range req.PostTranslateContext.ExtensionResources {
+		extensionResource := unstructured.Unstructured{}
+		if err := extensionResource.UnmarshalJSON(extensionResourceBytes.UnstructuredBytes); err != nil {
+			return &extension.PostTranslateModifyResponse{
+				Clusters: clusters,
+				Secrets:  req.GetSecrets(),
+			}, err
+		}
+
+		targetKind, err := getTargetRefKind(&extensionResource)
+		if err != nil || extensionResource.GetObjectKind().GroupVersionKind().Kind != "ExampleExtPolicy" || targetKind != "Gateway" {
+			return &extension.PostTranslateModifyResponse{
+				Clusters: clusters,
+				Secrets:  req.GetSecrets(),
+			}, errors.New("No matching policy found")
+		}
+	}
+
+	ret := &extension.PostTranslateModifyResponse{
+		Clusters: clusters,
+		Secrets:  req.GetSecrets(),
+	}
+
+	return ret, nil
+}
+
+func Test_Integration_ClusterUpdateExtensionServer(t *testing.T) {
+	testCases := []struct {
+		name              string
+		extensionPolicies []*ir.UnstructuredRef
+		errorExpected     bool
+	}{
+		{
+			name: "valid extension policy with targetRef",
+			extensionPolicies: []*ir.UnstructuredRef{
+				{
+					Object: &unstructured.Unstructured{
+						Object: map[string]any{
+							"apiVersion": "gateway.example.io/v1",
+							"kind":       "ExampleExtPolicy",
+							"metadata": map[string]any{
+								"name":      "test",
+								"namespace": "test",
+							},
+							"spec": map[string]any{
+								"targetRef": map[string]any{
+									"group": "gateway.networking.k8s.io",
+									"kind":  "Gateway",
+									"name":  "test",
+								},
+								"data": "some data",
+							},
+						},
+					},
+				},
+			},
+			errorExpected: false,
+		},
+
+		{
+			name: "invalid extension policy - no target",
+			extensionPolicies: []*ir.UnstructuredRef{
+				{
+					Object: &unstructured.Unstructured{
+						Object: map[string]any{
+							"apiVersion": "gateway.example.io/v1alpha1",
+							"kind":       "ExampleExtPolicy",
+							"metadata": map[string]any{
+								"name":      "test",
+								"namespace": "test",
+							},
+							"spec": map[string]any{
+								"data": "some data",
+							},
+						},
+					},
+				},
+			},
+			errorExpected: true,
+		},
+		{
+			name: "invalid extension policy - no spec",
+			extensionPolicies: []*ir.UnstructuredRef{
+				{
+					Object: &unstructured.Unstructured{
+						Object: map[string]any{
+							"apiVersion": "gateway.example.io/v1alpha1",
+							"kind":       "ExampleExtPolicy",
+							"metadata": map[string]any{
+								"name":      "test",
+								"namespace": "test",
+							},
+						},
+					},
+				},
+			},
+			errorExpected: true,
+		},
+	}
+
+	for _, tt := range testCases {
+		t.Run(tt.name, func(t *testing.T) {
+			extManager := egv1a1.ExtensionManager{
+				Hooks: &egv1a1.ExtensionHooks{
+					XDSTranslator: &egv1a1.XDSTranslatorHooks{
+						Post: []egv1a1.XDSTranslatorHook{
+							egv1a1.XDSTranslation,
+						},
+					},
+				},
+				Service: &egv1a1.ExtensionService{
+					BackendEndpoint: egv1a1.BackendEndpoint{
+						FQDN: &egv1a1.FQDNEndpoint{
+							Hostname: "example.foo",
+							Port:     44344,
+						},
+					},
+				},
+			}
+
+			mgr, _, err := NewInMemoryManager(extManager, &clusterUpdateTestServer{})
+			require.NoError(t, err)
+
+			hook, err := mgr.GetPostXDSHookClient(egv1a1.XDSTranslation)
+			require.NoError(t, err)
+			require.NotNil(t, hook)
+
+			_, _, err = hook.PostTranslateModifyHook(
+				[]*clusterv3.Cluster{
+					{
+						Name: "test-cluster",
+					},
+				}, nil, tt.extensionPolicies)
+
+			if (err != nil) != tt.errorExpected {
+				t.Errorf("PostRouteModifyHook() error = %v, errorExpected %v", err, tt.errorExpected)
 				return
 			}
 		})

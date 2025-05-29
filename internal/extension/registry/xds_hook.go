@@ -15,6 +15,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	"github.com/envoyproxy/gateway/internal/extension/types"
+	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/proto/extension"
 )
 
@@ -105,12 +106,17 @@ func (h *XDSHook) PostHTTPListenerModifyHook(l *listener.Listener, extensionReso
 	return resp.Listener, nil
 }
 
-func (h *XDSHook) PostTranslateModifyHook(clusters []*cluster.Cluster, secrets []*tls.Secret, extensionPolicies []*unstructured.Unstructured) ([]*cluster.Cluster, []*tls.Secret, error) {
+func (h *XDSHook) PostTranslateModifyHook(clusters []*cluster.Cluster, secrets []*tls.Secret, extensionPolicies []*ir.UnstructuredRef) ([]*cluster.Cluster, []*tls.Secret, error) {
 	// Make the request to the extension server
 	// Take all of the unstructured resources for the extension and package them into bytes
-	extensionPoliciesBytes, err := translateUnstructuredToUnstructuredBytes(extensionPolicies)
+	unstructuredPolicies := make([]*unstructured.Unstructured, len(extensionPolicies))
+	for i, policy := range extensionPolicies {
+		unstructuredPolicies[i] = policy.Object
+	}
+	// Convert the unstructured policies to bytes
+	extensionPoliciesBytes, err := translateUnstructuredToUnstructuredBytes(unstructuredPolicies)
 	if err != nil {
-		return clusters, secrets, err
+		return nil, nil, err
 	}
 
 	ctx := context.Background()

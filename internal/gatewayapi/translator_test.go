@@ -26,7 +26,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/utils/ptr"
@@ -902,7 +901,7 @@ func xdsWithoutEqual(a *ir.Xds) any {
 		EnvoyPatchPolicies      []*ir.EnvoyPatchPolicy
 		FilterOrder             []egv1a1.FilterPosition
 		GlobalResources         *ir.GlobalResources
-		ExtensionServerPolicies []unstructured.Unstructured
+		ExtensionServerPolicies []*ir.UnstructuredRef
 	}{
 		ReadyListener:           a.ReadyListener,
 		AccessLog:               a.AccessLog,

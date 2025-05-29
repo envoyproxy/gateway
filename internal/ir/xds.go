@@ -153,8 +153,8 @@ type Xds struct {
 	FilterOrder []egv1a1.FilterPosition `json:"filterOrder,omitempty" yaml:"filterOrder,omitempty"`
 	// GlobalResources holds the global resources used by the Envoy, for example, the envoy client certificate and the OIDC HMAC secret
 	GlobalResources *GlobalResources `json:"globalResources,omitempty" yaml:"globalResources,omitempty"`
-	// extensionServerPolicies is the intermediate representation of the ExtensionServerPolicy resource
-	ExtensionServerPolicies []unstructured.Unstructured `json:"extensionServerPolicies,omitempty" yaml:"extensionServerPolicies,omitempty"`
+	// ExtensionServerPolicies is the intermediate representation of the ExtensionServerPolicy resource
+	ExtensionServerPolicies []*UnstructuredRef `json:"extensionServerPolicies,omitempty" yaml:"extensionServerPolicies,omitempty"`
 }
 
 // Equal implements the Comparable interface used by watchable.DeepEqual to skip unnecessary updates.

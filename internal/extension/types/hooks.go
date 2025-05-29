@@ -11,6 +11,8 @@ import (
 	route "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
 	tls "github.com/envoyproxy/go-control-plane/envoy/extensions/transport_sockets/tls/v3"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+
+	"github.com/envoyproxy/gateway/internal/ir"
 )
 
 type XDSHookClient interface {
@@ -41,5 +43,5 @@ type XDSHookClient interface {
 	// An example of how this may be used is to inject a cluster that will be used by an ext_authz http filter created by the extension.
 	// The list of clusters and secrets returned by the extension are used as the final list of all clusters and secrets
 	// PostTranslateModifyHook is always executed when an extension is loaded
-	PostTranslateModifyHook([]*cluster.Cluster, []*tls.Secret, []*unstructured.Unstructured) ([]*cluster.Cluster, []*tls.Secret, error)
+	PostTranslateModifyHook([]*cluster.Cluster, []*tls.Secret, []*ir.UnstructuredRef) ([]*cluster.Cluster, []*tls.Secret, error)
 }

@@ -6,7 +6,9 @@
 package translator
 
 import (
+	"context"
 	"embed"
+	"errors"
 	"path/filepath"
 	"runtime"
 	"sort"
@@ -21,6 +23,7 @@ import (
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/yaml"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
@@ -32,6 +35,7 @@ import (
 	"github.com/envoyproxy/gateway/internal/utils/test"
 	xtypes "github.com/envoyproxy/gateway/internal/xds/types"
 	"github.com/envoyproxy/gateway/internal/xds/utils"
+	"github.com/envoyproxy/gateway/proto/extension"
 )
 
 var (
@@ -215,6 +219,135 @@ func TestTranslateXds(t *testing.T) {
 			}
 		})
 	}
+}
+
+type clusterUpdateTestServer struct {
+	extension.UnimplementedEnvoyGatewayExtensionServer
+}
+
+func getTargetRefKind(obj *unstructured.Unstructured) (string, error) {
+	targetRef, found, err := unstructured.NestedMap(obj.Object, "spec", "targetRef")
+	if err != nil || !found {
+		return "", errors.New("targetRef not found or error")
+	}
+
+	kind, ok := targetRef["kind"].(string)
+	if !ok {
+		return "", errors.New("kind is not a string or missing in targetRef")
+	}
+
+	return kind, nil
+}
+
+func (s *clusterUpdateTestServer) PostTranslateModify(ctx context.Context, req *extension.PostTranslateModifyRequest) (*extension.PostTranslateModifyResponse, error) {
+	clusters := req.GetClusters()
+	if clusters == nil {
+		return &extension.PostTranslateModifyResponse{
+			Clusters: clusters,
+			Secrets:  req.GetSecrets(),
+		}, errors.New("No clusters found")
+	}
+
+	if len(req.PostTranslateContext.ExtensionResources) == 0 {
+		return &extension.PostTranslateModifyResponse{
+			Clusters: clusters,
+			Secrets:  req.GetSecrets(),
+		}, errors.New("No policy found")
+	}
+
+	for _, extensionResourceBytes := range req.PostTranslateContext.ExtensionResources {
+		extensionResource := unstructured.Unstructured{}
+		if err := extensionResource.UnmarshalJSON(extensionResourceBytes.UnstructuredBytes); err != nil {
+			return &extension.PostTranslateModifyResponse{
+				Clusters: clusters,
+				Secrets:  req.GetSecrets(),
+			}, err
+		}
+
+		targetKind, err := getTargetRefKind(&extensionResource)
+		if err != nil || extensionResource.GetObjectKind().GroupVersionKind().Kind != "ExampleExtPolicy" || targetKind != "Gateway" {
+			return &extension.PostTranslateModifyResponse{
+				Clusters: clusters,
+				Secrets:  req.GetSecrets(),
+			}, errors.New("No matching policy found")
+		}
+	}
+
+	ret := &extension.PostTranslateModifyResponse{
+		Clusters: clusters,
+		Secrets:  req.GetSecrets(),
+	}
+
+	return ret, nil
+}
+
+func TestTranslateXdsTranslateModify(t *testing.T) {
+	testConfigs := map[string]testFileConfig{
+		"extension-server-policy": {
+			errMsg: "No clusters found",
+		},
+	}
+
+	t.Run("extension-server-policy", func(t *testing.T) {
+		cfg := testConfigs["extension-server-policy"]
+
+		extManager := egv1a1.ExtensionManager{
+			Hooks: &egv1a1.ExtensionHooks{
+				XDSTranslator: &egv1a1.XDSTranslatorHooks{
+					Post: []egv1a1.XDSTranslatorHook{
+						egv1a1.XDSTranslation,
+					},
+				},
+			},
+			Service: &egv1a1.ExtensionService{
+				BackendEndpoint: egv1a1.BackendEndpoint{
+					FQDN: &egv1a1.FQDNEndpoint{
+						Hostname: "example.foo",
+						Port:     44344,
+					},
+				},
+			},
+		}
+
+		mgr, _, err := registry.NewInMemoryManager(extManager, &clusterUpdateTestServer{})
+		if err != nil {
+			t.Fatalf("failed to create extension manager: %v", err)
+		}
+
+		x := &ir.Xds{}
+		x.ExtensionServerPolicies = []*ir.UnstructuredRef{
+			{
+				Object: &unstructured.Unstructured{
+					Object: map[string]any{
+						"apiVersion": "gateway.networking.k8s.io/v1",
+						"kind":       "ExampleExtPolicy",
+						"metadata": map[string]any{
+							"name":      "ext-server-policy-test",
+							"namespace": "test",
+						},
+						"spec": map[string]any{
+							"targetRef": map[string]any{
+								"group": "gateway.networking.k8s.io",
+								"kind":  "Gateway",
+								"name":  "test-gtw",
+							},
+							"data": "some data",
+						},
+					},
+				},
+			},
+		}
+		tr := &Translator{
+			ControllerNamespace: "envoy-gateway-system",
+			ExtensionManager:    &mgr,
+		}
+		_, err = tr.Translate(x)
+		if len(cfg.errMsg) > 0 {
+			require.Error(t, err)
+			require.Contains(t, err.Error(), cfg.errMsg)
+			return
+		}
+	})
 }
 
 func TestTranslateRateLimitConfig(t *testing.T) {
