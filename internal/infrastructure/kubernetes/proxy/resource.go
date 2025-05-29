@@ -131,7 +131,7 @@ func expectedProxyContainers(infra *ir.ProxyInfra,
 			ImagePullPolicy:          corev1.PullIfNotPresent,
 			Command:                  []string{"envoy"},
 			Args:                     args,
-			Env:                      expectedContainerEnv(containerSpec, controllerNamespace),
+			Env:                      expectedContainerEnv(containerSpec, controllerNamespace, gatewayNamespaceMode),
 			Resources:                *containerSpec.Resources,
 			SecurityContext:          expectedEnvoySecurityContext(containerSpec),
 			Ports:                    ports,
@@ -193,7 +193,7 @@ func expectedProxyContainers(infra *ir.ProxyInfra,
 			ImagePullPolicy:          corev1.PullIfNotPresent,
 			Command:                  []string{"envoy-gateway"},
 			Args:                     expectedShutdownManagerArgs(shutdownConfig),
-			Env:                      expectedContainerEnv(nil, controllerNamespace),
+			Env:                      expectedContainerEnv(nil, controllerNamespace, gatewayNamespaceMode),
 			Resources:                *egv1a1.DefaultShutdownManagerContainerResourceRequirements(),
 			TerminationMessagePolicy: corev1.TerminationMessageReadFile,
 			TerminationMessagePath:   "/dev/termination-log",
@@ -409,11 +409,16 @@ func expectedVolumes(name string, gatewayNamespacedMode bool, pod *egv1a1.Kubern
 }
 
 // expectedContainerEnv returns expected proxy container envs.
-func expectedContainerEnv(containerSpec *egv1a1.KubernetesContainerSpec, controllerNamespace string) []corev1.EnvVar {
+func expectedContainerEnv(containerSpec *egv1a1.KubernetesContainerSpec, controllerNamespace string, gatewayNamespaceMode bool) []corev1.EnvVar {
 	env := []corev1.EnvVar{
 		{
-			Name:  envoyNsEnvVar,
-			Value: controllerNamespace,
+			Name: envoyNsEnvVar,
+			ValueFrom: &corev1.EnvVarSource{
+				FieldRef: &corev1.ObjectFieldSelector{
+					APIVersion: "v1",
+					FieldPath:  "metadata.namespace",
+				},
+			},
 		},
 		{
 			Name: envoyZoneEnvVar,
@@ -424,6 +429,24 @@ func expectedContainerEnv(containerSpec *egv1a1.KubernetesContainerSpec, control
 				},
 			},
 		},
+	}
+
+	if gatewayNamespaceMode {
+		env = []corev1.EnvVar{
+			{
+				Name:  envoyNsEnvVar,
+				Value: controllerNamespace,
+			},
+			{
+				Name: envoyZoneEnvVar,
+				ValueFrom: &corev1.EnvVarSource{
+					FieldRef: &corev1.ObjectFieldSelector{
+						APIVersion: "v1",
+						FieldPath:  fmt.Sprintf("metadata.annotations['%s']", corev1.LabelTopologyZone),
+					},
+				},
+			},
+		}
 	}
 
 	env = append(env, corev1.EnvVar{
