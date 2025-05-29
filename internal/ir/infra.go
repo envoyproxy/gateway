@@ -67,6 +67,8 @@ type InfraMetadata struct {
 	// Labels define a map of string keys and values that can be used to organize
 	// and categorize proxy infrastructure objects.
 	Labels map[string]string `json:"labels,omitempty" yaml:"labels,omitempty"`
+	// OwnerReference define the values that be used to set ownerReference for proxy infrastructure objects.
+	OwnerReference *ResourceMetadata `json:"ownerReference,omitempty" yaml:"ownerReference,omitempty"`
 }
 
 // ProxyListener defines the listener configuration of the proxy infrastructure.

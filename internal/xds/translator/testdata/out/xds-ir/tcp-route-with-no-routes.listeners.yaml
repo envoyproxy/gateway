@@ -1,0 +1,14 @@
+- address:
+    socketAddress:
+      address: '::'
+      portValue: 10080
+  filterChains:
+  - filters:
+    - name: envoy.filters.network.tcp_proxy
+      typedConfig:
+        '@type': type.googleapis.com/envoy.extensions.filters.network.tcp_proxy.v3.TcpProxy
+        cluster: EmptyCluster
+        statPrefix: tcp-10080
+    name: EmptyCluster
+  name: tcp-listener-with-no-routes
+  perConnectionBufferLimitBytes: 32768

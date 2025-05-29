@@ -67,8 +67,9 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *ir
 			} else {
 				// Translate to xds resources
 				t := &translator.Translator{
-					FilterOrder: val.FilterOrder,
-					Logger:      r.Logger,
+					ControllerNamespace: r.ControllerNamespace,
+					FilterOrder:         val.FilterOrder,
+					Logger:              r.Logger,
 				}
 
 				// Set the extension manager if an extension is loaded

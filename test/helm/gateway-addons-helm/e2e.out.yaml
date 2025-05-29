@@ -8586,7 +8586,7 @@ data:
               {
                   "datasource": {
                       "type": "prometheus",
-                      "uid": "PBFA97CFB590B2093"
+                      "uid": "$datasource"
                   },
                   "description": "The fraction of this program's available CPU time used by the GC since the program started.",
                   "fieldConfig": {
@@ -8670,7 +8670,7 @@ data:
                       {
                           "datasource": {
                               "type": "prometheus",
-                              "uid": "PBFA97CFB590B2093"
+                              "uid": "$datasource"
                           },
                           "disableTextWrap": false,
                           "editorMode": "code",
@@ -8693,7 +8693,7 @@ data:
               {
                   "datasource": {
                       "type": "prometheus",
-                      "uid": "PBFA97CFB590B2093"
+                      "uid": "$datasource"
                   },
                   "description": "Resident memory size",
                   "fieldConfig": {
@@ -8742,7 +8742,7 @@ data:
                       {
                           "datasource": {
                               "type": "prometheus",
-                              "uid": "PBFA97CFB590B2093"
+                              "uid": "$datasource"
                           },
                           "disableTextWrap": false,
                           "editorMode": "code",
@@ -8764,7 +8764,7 @@ data:
               {
                   "datasource": {
                       "type": "prometheus",
-                      "uid": "PBFA97CFB590B2093"
+                      "uid": "$datasource"
                   },
                   "description": "Virtual memory size",
                   "fieldConfig": {
@@ -8814,7 +8814,7 @@ data:
                       {
                           "datasource": {
                               "type": "prometheus",
-                              "uid": "PBFA97CFB590B2093"
+                              "uid": "$datasource"
                           },
                           "disableTextWrap": false,
                           "editorMode": "code",
@@ -8836,7 +8836,7 @@ data:
               {
                   "datasource": {
                       "type": "prometheus",
-                      "uid": "PBFA97CFB590B2093"
+                      "uid": "$datasource"
                   },
                   "description": "Number of ratelimit rule hits in total",
                   "fieldConfig": {
@@ -8889,7 +8889,7 @@ data:
                       {
                           "datasource": {
                               "type": "prometheus",
-                              "uid": "PBFA97CFB590B2093"
+                              "uid": "$datasource"
                           },
                           "disableTextWrap": false,
                           "editorMode": "builder",
@@ -8911,7 +8911,7 @@ data:
               {
                   "datasource": {
                       "type": "prometheus",
-                      "uid": "PBFA97CFB590B2093"
+                      "uid": "$datasource"
                   },
                   "description": "Number of rule hits over the NearLimit ratio threshold (currently 80%) but under the threshold rate.",
                   "fieldConfig": {
@@ -8964,7 +8964,7 @@ data:
                       {
                           "datasource": {
                               "type": "prometheus",
-                              "uid": "PBFA97CFB590B2093"
+                              "uid": "$datasource"
                           },
                           "disableTextWrap": false,
                           "editorMode": "builder",
@@ -8986,7 +8986,7 @@ data:
               {
                   "datasource": {
                       "type": "prometheus",
-                      "uid": "PBFA97CFB590B2093"
+                      "uid": "$datasource"
                   },
                   "description": "Number of rule hits exceeding the threshold rate",
                   "fieldConfig": {
@@ -9039,7 +9039,7 @@ data:
                       {
                           "datasource": {
                               "type": "prometheus",
-                              "uid": "PBFA97CFB590B2093"
+                              "uid": "$datasource"
                           },
                           "disableTextWrap": false,
                           "editorMode": "builder",
@@ -9070,7 +9070,7 @@ data:
                       "current": {
                           "selected": false,
                           "text": "Prometheus",
-                          "value": "PBFA97CFB590B2093"
+                          "value": "$datasource"
                       },
                       "hide": 0,
                       "includeAll": false,

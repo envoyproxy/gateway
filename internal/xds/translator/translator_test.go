@@ -157,6 +157,7 @@ func TestTranslateXds(t *testing.T) {
 
 			x := requireXdsIRFromInputTestData(t, inputFile)
 			tr := &Translator{
+				ControllerNamespace: "envoy-gateway-system",
 				GlobalRateLimit: &GlobalRateLimitSettings{
 					ServiceURL: ratelimit.GetServiceURL("envoy-gateway-system", dnsDomain),
 				},

@@ -6,6 +6,8 @@ backends:
     name: backend-with-custom-ca
     namespace: default
   spec:
+    appProtocols:
+    - gateway.envoyproxy.io/h2c
     tls:
       caCertificateRefs:
       - group: ""
@@ -197,6 +199,7 @@ xdsIR:
           settings:
           - isDynamicResolver: true
             name: httproute/default/httproute-1/rule/0/backend/0
+            protocol: HTTP2
             tls:
               alpnProtocols: null
               caCertificate:
@@ -219,6 +222,7 @@ xdsIR:
           settings:
           - isDynamicResolver: true
             name: httproute/default/httproute-2/rule/0/backend/0
+            protocol: HTTP
             tls:
               alpnProtocols: null
               caCertificate:

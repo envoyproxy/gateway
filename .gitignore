@@ -44,3 +44,5 @@ charts/gateway-addons-helm/dashboards/vendor/
 *.tar.gz
 
 *.yaml-e
+
+*.out

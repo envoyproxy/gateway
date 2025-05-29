@@ -1097,6 +1097,7 @@ func (r *gatewayAPIReconciler) processGateways(ctx context.Context, managedGC *g
 				continue
 			}
 		}
+
 		r.log.Info("processing Gateway", "namespace", gtw.Namespace, "name", gtw.Name)
 		resourceMap.allAssociatedNamespaces.Insert(gtw.Namespace)
 
@@ -2040,6 +2041,11 @@ func (r *gatewayAPIReconciler) processGatewayClassParamsRef(ctx context.Context,
 			return fmt.Errorf("envoyproxy referenced by gatewayclass is not found: %w", err)
 		}
 		return fmt.Errorf("failed to find envoyproxy %s/%s: %w", r.namespace, gc.Spec.ParametersRef.Name, err)
+	}
+
+	// Check for incompatible configuration: both MergeGateways and GatewayNamespaceMode enabled
+	if r.gatewayNamespaceMode && ep.Spec.MergeGateways != nil && *ep.Spec.MergeGateways {
+		return fmt.Errorf("using Merged Gateways with Gateway Namespace Mode is not supported.")
 	}
 
 	if err := r.processEnvoyProxy(ep, resourceMap); err != nil {

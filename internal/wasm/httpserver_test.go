@@ -338,7 +338,7 @@ func startLocalHTTPServer(ctx context.Context, cacheDir string, maxFailedAttempt
 		},
 		CacheOptions{
 			CacheDir: cacheDir,
-		}, logger)
+		}, "envoy-gateway-system", logger)
 	go s.Start(ctx)
 
 	// Wait for the server to start

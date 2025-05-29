@@ -23,8 +23,7 @@ import (
 )
 
 const (
-	vmRuntimeV8           = "envoy.wasm.runtime.v8"
-	wasmHTTPServerCluster = "wasm_cluster"
+	vmRuntimeV8 = "envoy.wasm.runtime.v8"
 )
 
 func init() {
@@ -124,7 +123,7 @@ func wasmConfig(wasm ir.Wasm) (*wasmfilterv3.Wasm, error) {
 					HttpUri: &corev3.HttpUri{
 						Uri: wasm.Code.ServingURL,
 						HttpUpstreamType: &corev3.HttpUri_Cluster{
-							Cluster: wasmHTTPServerCluster,
+							Cluster: wasmHTTPServiceClusterName,
 						},
 						Timeout: &durationpb.Duration{
 							Seconds: defaultExtServiceRequestTimeout,

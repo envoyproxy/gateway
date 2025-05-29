@@ -70,6 +70,22 @@ http:
         - api
         redirectURL: "https://www.example.com/bar/oauth2/callback"
         redirectPath: "/bar/oauth2/callback"
+        denyRedirect:
+          headers:
+          - name: test-exact
+            type: Exact
+            value: /api
+          - name: test-regex
+            type: RegularExpression
+            value: .*
+          - name: test-suffix
+            type: Suffix
+            value: bar
+          - name: test-prefix
+            type: Prefix
+            value: foo
+          - name: test-no-type
+            value: foobar
         logoutPath: "/bar/logout"
         cookieSuffix: 5f93c2e4
         cookieNameOverrides:

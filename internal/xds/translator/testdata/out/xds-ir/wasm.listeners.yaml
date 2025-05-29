@@ -49,7 +49,7 @@
                     httpUri:
                       cluster: wasm_cluster
                       timeout: 10s
-                      uri: https://envoy-gateway:18002/5c90b9a82642ce00a7753923fabead306b9d9a54a7c0bd2463a1af3efcfb110b.wasm
+                      uri: https://envoy-gateway.envoy-gateway-system.svc.cluster.local:18002/5c90b9a82642ce00a7753923fabead306b9d9a54a7c0bd2463a1af3efcfb110b.wasm
                     sha256: 746df05c8f3a0b07a46c0967cfbc5cbe5b9d48d0f79b6177eeedf8be6c8b34b5
                 runtime: envoy.wasm.runtime.v8
                 vmId: envoyextensionpolicy/envoy-gateway/policy-for-gateway/wasm/0
@@ -69,7 +69,7 @@
                     httpUri:
                       cluster: wasm_cluster
                       timeout: 10s
-                      uri: https://envoy-gateway:18002/7abf116e5cd5a20389604a5ba0f3bd04fdf76f92181fe67506b42c2ee596d3fd.wasm
+                      uri: https://envoy-gateway.envoy-gateway-system.svc.cluster.local:18002/7abf116e5cd5a20389604a5ba0f3bd04fdf76f92181fe67506b42c2ee596d3fd.wasm
                     sha256: 314100af781b98a8ca175d5bf90a8bf76576e20a2f397a88223404edc6ebfd46
                 runtime: envoy.wasm.runtime.v8
                 vmId: envoyextensionpolicy/envoy-gateway/policy-for-gateway/wasm/1
@@ -88,7 +88,7 @@
                     httpUri:
                       cluster: wasm_cluster
                       timeout: 10s
-                      uri: https://envoy-gateway:18002/42d30b4a4cc631415e6e48c02d244700da327201eb273f752cacf745715b31d9.wasm
+                      uri: https://envoy-gateway.envoy-gateway-system.svc.cluster.local:18002/42d30b4a4cc631415e6e48c02d244700da327201eb273f752cacf745715b31d9.wasm
                     sha256: 2a19e4f337e5223d7287e7fccd933fb01905deaff804292e5257f8c681b82bee
                 environmentVariables:
                   hostEnvKeys:

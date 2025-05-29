@@ -40,7 +40,7 @@ var (
 	ErrListenerPortInvalid                      = errors.New("field Port specified is invalid")
 	ErrHTTPListenerHostnamesEmpty               = errors.New("field Hostnames must be specified with at least a single hostname entry")
 	ErrTCPRouteSNIsEmpty                        = errors.New("field SNIs must be specified with at least a single server name entry")
-	ErrTLSServerCertEmpty                       = errors.New("field ServerCertificate must be specified")
+	ErrTLSCertEmpty                             = errors.New("field certificate must be specified")
 	ErrTLSPrivateKey                            = errors.New("field PrivateKey must be specified")
 	ErrRouteNameEmpty                           = errors.New("field Name must be specified")
 	ErrHTTPRouteHostnameEmpty                   = errors.New("field Hostname must be specified")
@@ -433,7 +433,7 @@ type TLSCertificate struct {
 	// Name of the Secret object.
 	Name string `json:"name" yaml:"name"`
 	// Certificate can be either a client or server certificate.
-	Certificate []byte `json:"serverCertificate,omitempty" yaml:"serverCertificate,omitempty"`
+	Certificate []byte `json:"certificate,omitempty" yaml:"certificate,omitempty"`
 	// PrivateKey for the server.
 	PrivateKey PrivateBytes `json:"privateKey,omitempty" yaml:"privateKey,omitempty"`
 }
@@ -464,7 +464,7 @@ type SubjectAltName struct {
 func (t TLSCertificate) Validate() error {
 	var errs error
 	if len(t.Certificate) == 0 {
-		errs = errors.Join(errs, ErrTLSServerCertEmpty)
+		errs = errors.Join(errs, ErrTLSCertEmpty)
 	}
 	if len(t.PrivateKey) == 0 {
 		errs = errors.Join(errs, ErrTLSPrivateKey)
@@ -1115,6 +1115,11 @@ type OIDC struct {
 	// filter, normally "Authorization: Bearer ...". This is typically used for non-browser clients that
 	// may not be able to handle OIDC redirects and wish to directly supply a token instead.
 	PassThroughAuthHeader bool `json:"passThroughAuthHeader,omitempty"`
+
+	// Any request that matches any of the provided matchers won’t be redirected to OAuth server when tokens are not valid.
+	// Automatic access token refresh will be performed for these requests, if enabled.
+	// This behavior can be useful for AJAX requests.
+	DenyRedirect *egv1a1.OIDCDenyRedirect `json:"denyRedirect,omitempty"`
 }
 
 // OIDCProvider defines the schema for the OIDC Provider.

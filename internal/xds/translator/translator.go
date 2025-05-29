@@ -38,12 +38,21 @@ import (
 
 const (
 	AuthorityHeaderKey = ":authority"
-	// The dummy cluster for TCP listeners that have no routes
+	// The dummy cluster name for TCP/UDP listeners that have no routes
 	emptyClusterName = "EmptyCluster"
 )
 
+// The dummy cluster for TCP/UDP listeners that have no routes
+var emptyRouteCluster = &clusterv3.Cluster{
+	Name:                 emptyClusterName,
+	ClusterDiscoveryType: &clusterv3.Cluster_Type{Type: clusterv3.Cluster_STATIC},
+}
+
 // Translator translates the xDS IR into xDS resources.
 type Translator struct {
+	// ControllerNamespace is the namespace of the Gateway API controller
+	ControllerNamespace string
+
 	// GlobalRateLimit holds the global rate limit settings
 	// required during xds translation.
 	GlobalRateLimit *GlobalRateLimitSettings
@@ -728,11 +737,6 @@ func (t *Translator) processTCPListenerXdsTranslation(
 		// If there are no routes, add a route without a destination to the listener to create a filter chain
 		// This is needed because Envoy requires a filter chain to be present in the listener, otherwise it will reject the listener and report a warning
 		if len(tcpListener.Routes) == 0 {
-			emptyRouteCluster := &clusterv3.Cluster{
-				Name:                 emptyClusterName,
-				ClusterDiscoveryType: &clusterv3.Cluster_Type{Type: clusterv3.Cluster_STATIC},
-			}
-
 			if findXdsCluster(tCtx, emptyClusterName) == nil {
 				if err := tCtx.AddXdsResource(resourcev3.ClusterType, emptyRouteCluster); err != nil {
 					errs = errors.Join(errs, err)
@@ -767,29 +771,41 @@ func processUDPListenerXdsTranslation(
 		// There won't be multiple UDP listeners on the same port since it's already been checked at the gateway api
 		// translator
 		if udpListener.Route != nil {
-			route := udpListener.Route
-
-			xdsListener, err := buildXdsUDPListener(route.Destination.Name, udpListener, accesslog)
-			if err != nil {
-				// skip this listener if failed to build xds listener
-				errs = errors.Join(errs, err)
-				continue
-			}
-			if err := tCtx.AddXdsResource(resourcev3.ListenerType, xdsListener); err != nil {
-				// skip this listener if failed to add xds listener to the resource version table
-				errs = errors.Join(errs, err)
-				continue
-			}
-
 			// 1:1 between IR UDPRoute and xDS Cluster
 			if err := processXdsCluster(tCtx,
-				route.Destination.Name,
-				route.Destination.Settings,
-				&UDPRouteTranslator{route},
+				udpListener.Route.Destination.Name,
+				udpListener.Route.Destination.Settings,
+				&UDPRouteTranslator{udpListener.Route},
 				&ExtraArgs{metrics: metrics},
-				route.Destination.Metadata); err != nil {
+				udpListener.Route.Destination.Metadata); err != nil {
 				errs = errors.Join(errs, err)
 			}
+		} else {
+			udpListener.Route = &ir.UDPRoute{
+				Name: emptyClusterName,
+				Destination: &ir.RouteDestination{
+					Name: emptyClusterName,
+				},
+			}
+
+			// Add empty cluster for UDP listener which have no Route, when empty cluster is not found.
+			if findXdsCluster(tCtx, emptyClusterName) == nil {
+				if err := tCtx.AddXdsResource(resourcev3.ClusterType, emptyRouteCluster); err != nil {
+					errs = errors.Join(errs, err)
+				}
+			}
+		}
+
+		xdsListener, err := buildXdsUDPListener(udpListener.Route.Destination.Name, udpListener, accesslog)
+		if err != nil {
+			// skip this listener if failed to build xds listener
+			errs = errors.Join(errs, err)
+			continue
+		}
+		if err := tCtx.AddXdsResource(resourcev3.ListenerType, xdsListener); err != nil {
+			// skip this listener if failed to add xds listener to the resource version table
+			errs = errors.Join(errs, err)
+			continue
 		}
 	}
 	return errs

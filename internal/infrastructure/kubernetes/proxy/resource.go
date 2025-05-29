@@ -35,6 +35,7 @@ const (
 )
 
 // ExpectedResourceHashedName returns expected resource hashed name including up to the 48 characters of the original name.
+// WARNING: DO NOT USE THIS FUNCTION IN MOST OF THE CASES. Use ResourceRender.Name() instead.
 func ExpectedResourceHashedName(name string) string {
 	hashedName := utils.GetHashedName(name, 48)
 	return fmt.Sprintf("%s-%s", config.EnvoyPrefix, hashedName)
@@ -308,7 +309,7 @@ func expectedContainerVolumeMounts(containerSpec *egv1a1.KubernetesContainerSpec
 }
 
 // expectedVolumes returns expected proxy deployment volumes.
-func expectedVolumes(name string, gatewayNamespacedMode bool, pod *egv1a1.KubernetesPodSpec, dnsDomain, controllerNamespace string) []corev1.Volume {
+func (r *ResourceRender) expectedVolumes(pod *egv1a1.KubernetesPodSpec) []corev1.Volume {
 	var volumes []corev1.Volume
 	certsVolume := corev1.Volume{
 		Name: "certs",
@@ -320,13 +321,13 @@ func expectedVolumes(name string, gatewayNamespacedMode bool, pod *egv1a1.Kubern
 		},
 	}
 
-	if gatewayNamespacedMode {
+	if r.GatewayNamespaceMode {
 		certsVolume = corev1.Volume{
 			Name: "certs",
 			VolumeSource: corev1.VolumeSource{
 				ConfigMap: &corev1.ConfigMapVolumeSource{
 					LocalObjectReference: corev1.LocalObjectReference{
-						Name: ExpectedResourceHashedName(name),
+						Name: r.Name(),
 					},
 					Items: []corev1.KeyToPath{
 						{
@@ -339,7 +340,7 @@ func expectedVolumes(name string, gatewayNamespacedMode bool, pod *egv1a1.Kubern
 				},
 			},
 		}
-		saAudience := fmt.Sprintf("%s.%s.svc.%s", config.EnvoyGatewayServiceName, controllerNamespace, dnsDomain)
+		saAudience := fmt.Sprintf("%s.%s.svc.%s", config.EnvoyGatewayServiceName, r.ControllerNamespace(), r.DNSDomain)
 		saTokenProjectedVolume := corev1.Volume{
 			Name: "sa-token",
 			VolumeSource: corev1.VolumeSource{
@@ -367,45 +368,39 @@ func expectedVolumes(name string, gatewayNamespacedMode bool, pod *egv1a1.Kubern
 		VolumeSource: corev1.VolumeSource{
 			ConfigMap: &corev1.ConfigMapVolumeSource{
 				LocalObjectReference: corev1.LocalObjectReference{
-					Name: ExpectedResourceHashedName(name),
+					Name: r.Name(),
 				},
-				Items: []corev1.KeyToPath{
-					{
-						Key:  common.SdsCAFilename,
-						Path: common.SdsCAFilename,
-					},
-					{
-						Key:  common.SdsCertFilename,
-						Path: common.SdsCertFilename,
-					},
-				},
+				Items:       sdsConfigMapItems(r.GatewayNamespaceMode),
 				DefaultMode: ptr.To[int32](420),
 				Optional:    ptr.To(false),
 			},
 		},
 	}
-	if gatewayNamespacedMode {
-		sdsVolume = corev1.Volume{
-			Name: "sds",
-			VolumeSource: corev1.VolumeSource{
-				ConfigMap: &corev1.ConfigMapVolumeSource{
-					LocalObjectReference: corev1.LocalObjectReference{
-						Name: ExpectedResourceHashedName(name),
-					},
-					Items: []corev1.KeyToPath{
-						{
-							Key:  common.SdsCAFilename,
-							Path: common.SdsCAFilename,
-						},
-					},
-					DefaultMode: ptr.To[int32](420),
-					Optional:    ptr.To(false),
-				},
+
+	volumes = append(volumes, sdsVolume)
+	return resource.ExpectedVolumes(pod, volumes)
+}
+
+func sdsConfigMapItems(gatewayNamespaceMode bool) []corev1.KeyToPath {
+	if gatewayNamespaceMode {
+		return []corev1.KeyToPath{
+			{
+				Key:  common.SdsCAFilename,
+				Path: common.SdsCAFilename,
 			},
 		}
 	}
-	volumes = append(volumes, sdsVolume)
-	return resource.ExpectedVolumes(pod, volumes)
+
+	return []corev1.KeyToPath{
+		{
+			Key:  common.SdsCAFilename,
+			Path: common.SdsCAFilename,
+		},
+		{
+			Key:  common.SdsCertFilename,
+			Path: common.SdsCertFilename,
+		},
+	}
 }
 
 // expectedContainerEnv returns expected proxy container envs.

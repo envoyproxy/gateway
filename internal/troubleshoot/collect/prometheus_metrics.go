@@ -25,6 +25,7 @@ import (
 	"k8s.io/client-go/rest"
 
 	kube "github.com/envoyproxy/gateway/internal/kubernetes"
+	"github.com/envoyproxy/gateway/internal/utils/str"
 )
 
 var _ tbcollect.Collector = &PrometheusMetric{}
@@ -76,38 +77,55 @@ func (p PrometheusMetric) Collect(_ chan<- interface{}) (tbcollect.CollectorResu
 
 	logs := make([]string, 0)
 	for _, pod := range pods {
-		annos := pod.GetAnnotations()
-		if v, ok := annos["prometheus.io/scrape"]; !ok || v != "true" {
-			logs = append(logs, fmt.Sprintf("pod %s/%s is skipped because of missing annotation prometheus.io/scrape", pod.Namespace, pod.Name))
-			continue
-		}
 
-		nn, port, reqPath := types.NamespacedName{Namespace: pod.Namespace, Name: pod.Name}, 19001, "/metrics"
-		if v, ok := annos["prometheus.io/port"]; !ok {
-			port, err = strconv.Atoi(v)
-			if err != nil {
-				logs = append(logs, fmt.Sprintf("pod %s/%s is skipped because of invalid prometheus.io/port", pod.Namespace, pod.Name))
-				continue
-			}
-		}
-		if v, ok := annos["prometheus.io/path"]; ok {
-			reqPath = v
-		}
-
-		data, err := RequestWithPortForwarder(cliClient, nn, port, reqPath)
+		scrape, reqPath, port, err := getPrometheusPathAndPort(&pod)
 		if err != nil {
 			logs = append(logs, fmt.Sprintf("pod %s/%s is skipped because of err: %v", pod.Namespace, pod.Name, err))
+		}
+		if !scrape {
+			logs = append(logs, fmt.Sprintf("pod %s/%s is skipped because of annotation prometheus.io/scrape=false", pod.Namespace, pod.Name))
 			continue
 		}
 
-		k := fmt.Sprintf("%s-%s.prom", pod.Namespace, pod.Name)
-		_ = output.SaveResult(p.BundlePath, path.Join("prometheus-metrics", k), bytes.NewBuffer(data))
+		data, err := RequestWithPortForwarder(cliClient, types.NamespacedName{Name: pod.Name, Namespace: pod.Namespace}, port, reqPath)
+		if err != nil {
+			logs = append(logs, fmt.Sprintf("pod %s/%s:%v%s is skipped because of err: %v", pod.Namespace, pod.Name, port, reqPath, err))
+			continue
+		}
+
+		_ = output.SaveResult(p.BundlePath, path.Join("prometheus-metrics", pod.Namespace, fmt.Sprintf("%s.prom", pod.Name)), bytes.NewBuffer(data))
 	}
 	if len(logs) > 0 {
 		_ = output.SaveResult(p.BundlePath, path.Join("prometheus-metrics", "error.log"), bytes.NewBuffer([]byte(strings.Join(logs, "\n"))))
 	}
 
 	return output, nil
+}
+
+func getPrometheusPathAndPort(pod *corev1.Pod) (bool, string, int, error) {
+	reqPath := "/metrics"
+	port := 9090
+	scrape := false
+	annotations := pod.GetAnnotations()
+	for k, v := range annotations {
+		switch str.SanitizeLabelName(k) {
+		case "prometheus_io_scrape":
+			if v != "true" {
+				return false, "", 0, fmt.Errorf("pod %s/%s is skipped because of missing annotation prometheus.io/scrape", pod.Namespace, pod.Name)
+			}
+			scrape = true
+		case "prometheus_io_port":
+			p, err := strconv.Atoi(v)
+			if err != nil {
+				return false, "", 0, fmt.Errorf("failed to parse port from annotation: %w", err)
+			}
+			port = p
+		case "prometheus_io_path":
+			reqPath = v
+		}
+	}
+
+	return scrape, reqPath, port, nil
 }
 
 func listPods(ctx context.Context, client kubernetes.Interface, namespace string, selector labels.Selector) ([]corev1.Pod, error) {
