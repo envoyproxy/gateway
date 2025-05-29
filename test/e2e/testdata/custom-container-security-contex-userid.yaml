@@ -37,8 +37,8 @@ metadata:
   namespace: gateway-conformance-infra
 spec:
   parentRefs:
-  - name: custom-container-security-contex-userid-gateway
+    - name: custom-container-security-contex-userid-gateway
   rules:
-  - backendRefs:
-    - name: infra-backend-v1
-      port: 8080
+    - backendRefs:
+        - name: infra-backend-v1
+          port: 8080
