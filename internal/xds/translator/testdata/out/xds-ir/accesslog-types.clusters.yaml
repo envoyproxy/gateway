@@ -162,12 +162,6 @@
 - circuitBreakers:
     thresholds:
     - maxRetries: 1024
-  clusterType:
-    name: envoy.clusters.dns
-    typedConfig:
-      '@type': type.googleapis.com/envoy.extensions.clusters.dns.v3.DnsCluster
-      dnsRefreshRate: 5s
-      respectDnsTtl: true
   commonLbConfig:
     localityWeightedLbConfig: {}
   connectTimeout: 10s
@@ -188,6 +182,7 @@
         region: accesslog_otel_0_3/backend/0
   name: accesslog_otel_0_3
   perConnectionBufferLimitBytes: 32768
+  type: STRICT_DNS
   typedExtensionProtocolOptions:
     envoy.extensions.upstreams.http.v3.HttpProtocolOptions:
       '@type': type.googleapis.com/envoy.extensions.upstreams.http.v3.HttpProtocolOptions
@@ -198,12 +193,6 @@
 - circuitBreakers:
     thresholds:
     - maxRetries: 1024
-  clusterType:
-    name: envoy.clusters.dns
-    typedConfig:
-      '@type': type.googleapis.com/envoy.extensions.clusters.dns.v3.DnsCluster
-      dnsRefreshRate: 5s
-      respectDnsTtl: true
   commonLbConfig:
     localityWeightedLbConfig: {}
   connectTimeout: 10s
@@ -224,6 +213,7 @@
         region: accesslog_otel_1_3/backend/0
   name: accesslog_otel_1_3
   perConnectionBufferLimitBytes: 32768
+  type: STRICT_DNS
   typedExtensionProtocolOptions:
     envoy.extensions.upstreams.http.v3.HttpProtocolOptions:
       '@type': type.googleapis.com/envoy.extensions.upstreams.http.v3.HttpProtocolOptions
@@ -234,12 +224,6 @@
 - circuitBreakers:
     thresholds:
     - maxRetries: 1024
-  clusterType:
-    name: envoy.clusters.dns
-    typedConfig:
-      '@type': type.googleapis.com/envoy.extensions.clusters.dns.v3.DnsCluster
-      dnsRefreshRate: 5s
-      respectDnsTtl: true
   commonLbConfig:
     localityWeightedLbConfig: {}
   connectTimeout: 10s
@@ -260,6 +244,7 @@
         region: accesslog_otel_2_3/backend/0
   name: accesslog_otel_2_3
   perConnectionBufferLimitBytes: 32768
+  type: STRICT_DNS
   typedExtensionProtocolOptions:
     envoy.extensions.upstreams.http.v3.HttpProtocolOptions:
       '@type': type.googleapis.com/envoy.extensions.upstreams.http.v3.HttpProtocolOptions

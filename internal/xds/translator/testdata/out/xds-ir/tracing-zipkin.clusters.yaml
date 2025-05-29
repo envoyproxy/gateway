@@ -18,12 +18,6 @@
 - circuitBreakers:
     thresholds:
     - maxRetries: 1024
-  clusterType:
-    name: envoy.clusters.dns
-    typedConfig:
-      '@type': type.googleapis.com/envoy.extensions.clusters.dns.v3.DnsCluster
-      dnsRefreshRate: 5s
-      respectDnsTtl: true
   commonLbConfig:
     localityWeightedLbConfig: {}
   connectTimeout: 10s
@@ -44,3 +38,4 @@
         region: tracing-0/backend/0
   name: tracing-0
   perConnectionBufferLimitBytes: 32768
+  type: STRICT_DNS

@@ -352,6 +352,7 @@ func buildXdsCluster(args *xdsClusterArgs) (*buildClusterResult, error) {
 				TypedConfig: dnsClusterAny,
 			},
 		}
+		cluster.ClusterDiscoveryType = &clusterv3.Cluster_Type{Type: clusterv3.Cluster_STRICT_DNS}
 	}
 
 	if args.endpointType != EndpointTypeDynamicResolver {

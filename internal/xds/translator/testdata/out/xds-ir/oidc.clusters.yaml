@@ -35,12 +35,6 @@
 - circuitBreakers:
     thresholds:
     - maxRetries: 1024
-  clusterType:
-    name: envoy.clusters.dns
-    typedConfig:
-      '@type': type.googleapis.com/envoy.extensions.clusters.dns.v3.DnsCluster
-      dnsRefreshRate: 5s
-      respectDnsTtl: true
   commonLbConfig:
     localityWeightedLbConfig: {}
   connectTimeout: 10s
@@ -70,15 +64,10 @@
           trustedCa:
             filename: /etc/ssl/certs/ca-certificates.crt
       sni: oauth.foo.com
+  type: STRICT_DNS
 - circuitBreakers:
     thresholds:
     - maxRetries: 1024
-  clusterType:
-    name: envoy.clusters.dns
-    typedConfig:
-      '@type': type.googleapis.com/envoy.extensions.clusters.dns.v3.DnsCluster
-      dnsRefreshRate: 5s
-      respectDnsTtl: true
   commonLbConfig:
     localityWeightedLbConfig: {}
   connectTimeout: 10s
@@ -108,3 +97,4 @@
           trustedCa:
             filename: /etc/ssl/certs/ca-certificates.crt
       sni: oauth.bar.com
+  type: STRICT_DNS
