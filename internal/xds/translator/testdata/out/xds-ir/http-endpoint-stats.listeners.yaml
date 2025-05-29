@@ -30,5 +30,6 @@
         statPrefix: http-10080
         useRemoteAddress: true
     name: listener-enable-endpoint-stats
+  maxConnectionsToAcceptPerSocketEvent: 1
   name: listener-enable-endpoint-stats
   perConnectionBufferLimitBytes: 32768

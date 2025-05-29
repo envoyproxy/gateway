@@ -52,7 +52,8 @@ const (
 	// https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/core/v3/protocol.proto#envoy-v3-api-field-config-core-v3-http2protocoloptions-initial-connection-window-size
 	http2InitialConnectionWindowSize = 1048576 // 1 MiB
 	// https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/network/connection_limit/v3/connection_limit.proto
-	networkConnectionLimit = "envoy.filters.network.connection_limit"
+	networkConnectionLimit      = "envoy.filters.network.connection_limit"
+	maxConnAcceptPerSocketEvent = 1
 )
 
 func http1ProtocolOptions(opts *ir.HTTP1Settings) *corev3.Http1ProtocolOptions {
@@ -197,11 +198,13 @@ func buildXdsTCPListener(
 		return nil, err
 	}
 	bufferLimitBytes := buildPerConnectionBufferLimitBytes(connection)
+	maxAcceptPerSocketEvent := buildMaxAcceptPerSocketEvent(connection)
 	listener := &listenerv3.Listener{
-		Name:                          name,
-		AccessLog:                     al,
-		SocketOptions:                 socketOptions,
-		PerConnectionBufferLimitBytes: bufferLimitBytes,
+		Name:                                 name,
+		AccessLog:                            al,
+		SocketOptions:                        socketOptions,
+		PerConnectionBufferLimitBytes:        bufferLimitBytes,
+		MaxConnectionsToAcceptPerSocketEvent: maxAcceptPerSocketEvent,
 		Address: &corev3.Address{
 			Address: &corev3.Address_SocketAddress{
 				SocketAddress: &corev3.SocketAddress{
@@ -228,6 +231,13 @@ func buildPerConnectionBufferLimitBytes(connection *ir.ClientConnection) *wrappe
 		return wrapperspb.UInt32(*connection.BufferLimitBytes)
 	}
 	return wrapperspb.UInt32(tcpListenerPerConnectionBufferLimitBytes)
+}
+
+func buildMaxAcceptPerSocketEvent(connection *ir.ClientConnection) *wrapperspb.UInt32Value {
+	if connection != nil && connection.MaxAcceptPerSocketEvent != nil {
+		return wrapperspb.UInt32(*connection.MaxAcceptPerSocketEvent)
+	}
+	return wrapperspb.UInt32(maxConnAcceptPerSocketEvent)
 }
 
 // buildXdsQuicListener creates a xds Listener resource for quic
