@@ -257,6 +257,53 @@ func (x *ExtensionResource) GetUnstructuredBytes() []byte {
 	return nil
 }
 
+// PostClusterExtensionContext provides resources introduced by an extension and watched by Envoy Gateway
+// additional context information can be added to this message as more use-cases are discovered
+type PostClusterExtensionContext struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Resources introduced by the extension that were used as extensionRefs in an HTTPRoute/GRPCRoute BackendRefs
+	ExtensionResources []*ExtensionResource `protobuf:"bytes,1,rep,name=extension_resources,json=extensionResources,proto3" json:"extension_resources,omitempty"`
+	unknownFields      protoimpl.UnknownFields
+	sizeCache          protoimpl.SizeCache
+}
+
+func (x *PostClusterExtensionContext) Reset() {
+	*x = PostClusterExtensionContext{}
+	mi := &file_proto_extension_context_proto_msgTypes[5]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *PostClusterExtensionContext) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PostClusterExtensionContext) ProtoMessage() {}
+
+func (x *PostClusterExtensionContext) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_extension_context_proto_msgTypes[5]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use PostClusterExtensionContext.ProtoReflect.Descriptor instead.
+func (*PostClusterExtensionContext) Descriptor() ([]byte, []int) {
+	return file_proto_extension_context_proto_rawDescGZIP(), []int{5}
+}
+
+func (x *PostClusterExtensionContext) GetExtensionResources() []*ExtensionResource {
+	if x != nil {
+		return x.ExtensionResources
+	}
+	return nil
+}
+
 var File_proto_extension_context_proto protoreflect.FileDescriptor
 
 var file_proto_extension_context_proto_rawDesc = string([]byte{
@@ -289,9 +336,16 @@ var file_proto_extension_context_proto_rawDesc = string([]byte{
 	0x52, 0x65, 0x73, 0x6f, 0x75, 0x72, 0x63, 0x65, 0x12, 0x2d, 0x0a, 0x12, 0x75, 0x6e, 0x73, 0x74,
 	0x72, 0x75, 0x63, 0x74, 0x75, 0x72, 0x65, 0x64, 0x5f, 0x62, 0x79, 0x74, 0x65, 0x73, 0x18, 0x01,
 	0x20, 0x01, 0x28, 0x0c, 0x52, 0x11, 0x75, 0x6e, 0x73, 0x74, 0x72, 0x75, 0x63, 0x74, 0x75, 0x72,
-	0x65, 0x64, 0x42, 0x79, 0x74, 0x65, 0x73, 0x42, 0x11, 0x5a, 0x0f, 0x70, 0x72, 0x6f, 0x74, 0x6f,
-	0x2f, 0x65, 0x78, 0x74, 0x65, 0x6e, 0x73, 0x69, 0x6f, 0x6e, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74,
-	0x6f, 0x33,
+	0x65, 0x64, 0x42, 0x79, 0x74, 0x65, 0x73, 0x22, 0x79, 0x0a, 0x1b, 0x50, 0x6f, 0x73, 0x74, 0x43,
+	0x6c, 0x75, 0x73, 0x74, 0x65, 0x72, 0x45, 0x78, 0x74, 0x65, 0x6e, 0x73, 0x69, 0x6f, 0x6e, 0x43,
+	0x6f, 0x6e, 0x74, 0x65, 0x78, 0x74, 0x12, 0x5a, 0x0a, 0x13, 0x65, 0x78, 0x74, 0x65, 0x6e, 0x73,
+	0x69, 0x6f, 0x6e, 0x5f, 0x72, 0x65, 0x73, 0x6f, 0x75, 0x72, 0x63, 0x65, 0x73, 0x18, 0x01, 0x20,
+	0x03, 0x28, 0x0b, 0x32, 0x29, 0x2e, 0x65, 0x6e, 0x76, 0x6f, 0x79, 0x67, 0x61, 0x74, 0x65, 0x77,
+	0x61, 0x79, 0x2e, 0x65, 0x78, 0x74, 0x65, 0x6e, 0x73, 0x69, 0x6f, 0x6e, 0x2e, 0x45, 0x78, 0x74,
+	0x65, 0x6e, 0x73, 0x69, 0x6f, 0x6e, 0x52, 0x65, 0x73, 0x6f, 0x75, 0x72, 0x63, 0x65, 0x52, 0x12,
+	0x65, 0x78, 0x74, 0x65, 0x6e, 0x73, 0x69, 0x6f, 0x6e, 0x52, 0x65, 0x73, 0x6f, 0x75, 0x72, 0x63,
+	0x65, 0x73, 0x42, 0x11, 0x5a, 0x0f, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x2f, 0x65, 0x78, 0x74, 0x65,
+	0x6e, 0x73, 0x69, 0x6f, 0x6e, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
 })
 
 var (
@@ -306,22 +360,24 @@ func file_proto_extension_context_proto_rawDescGZIP() []byte {
 	return file_proto_extension_context_proto_rawDescData
 }
 
-var file_proto_extension_context_proto_msgTypes = make([]protoimpl.MessageInfo, 5)
+var file_proto_extension_context_proto_msgTypes = make([]protoimpl.MessageInfo, 6)
 var file_proto_extension_context_proto_goTypes = []any{
 	(*PostRouteExtensionContext)(nil),        // 0: envoygateway.extension.PostRouteExtensionContext
 	(*PostVirtualHostExtensionContext)(nil),  // 1: envoygateway.extension.PostVirtualHostExtensionContext
 	(*PostHTTPListenerExtensionContext)(nil), // 2: envoygateway.extension.PostHTTPListenerExtensionContext
 	(*PostTranslateExtensionContext)(nil),    // 3: envoygateway.extension.PostTranslateExtensionContext
 	(*ExtensionResource)(nil),                // 4: envoygateway.extension.ExtensionResource
+	(*PostClusterExtensionContext)(nil),      // 5: envoygateway.extension.PostClusterExtensionContext
 }
 var file_proto_extension_context_proto_depIdxs = []int32{
 	4, // 0: envoygateway.extension.PostRouteExtensionContext.extension_resources:type_name -> envoygateway.extension.ExtensionResource
 	4, // 1: envoygateway.extension.PostHTTPListenerExtensionContext.extension_resources:type_name -> envoygateway.extension.ExtensionResource
-	2, // [2:2] is the sub-list for method output_type
-	2, // [2:2] is the sub-list for method input_type
-	2, // [2:2] is the sub-list for extension type_name
-	2, // [2:2] is the sub-list for extension extendee
-	0, // [0:2] is the sub-list for field type_name
+	4, // 2: envoygateway.extension.PostClusterExtensionContext.extension_resources:type_name -> envoygateway.extension.ExtensionResource
+	3, // [3:3] is the sub-list for method output_type
+	3, // [3:3] is the sub-list for method input_type
+	3, // [3:3] is the sub-list for extension type_name
+	3, // [3:3] is the sub-list for extension extendee
+	0, // [0:3] is the sub-list for field type_name
 }
 
 func init() { file_proto_extension_context_proto_init() }
@@ -335,7 +391,7 @@ func file_proto_extension_context_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_proto_extension_context_proto_rawDesc), len(file_proto_extension_context_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   5,
+			NumMessages:   6,
 			NumExtensions: 0,
 			NumServices:   0,
 		},
