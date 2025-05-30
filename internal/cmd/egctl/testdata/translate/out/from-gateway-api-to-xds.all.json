@@ -912,7 +912,6 @@
                     ],
                     "name": "default/eg/http"
                   },
-                  "maxConnectionsToAcceptPerSocketEvent": 1,
                   "name": "default/eg/http",
                   "perConnectionBufferLimitBytes": 32768
                 }
@@ -1064,7 +1063,6 @@
                     ],
                     "name": "default/eg/grpc"
                   },
-                  "maxConnectionsToAcceptPerSocketEvent": 1,
                   "name": "default/eg/grpc",
                   "perConnectionBufferLimitBytes": 32768
                 }
@@ -1176,7 +1174,6 @@
                       "name": "tcproute/default/backend"
                     }
                   ],
-                  "maxConnectionsToAcceptPerSocketEvent": 1,
                   "name": "default/eg/tcp",
                   "perConnectionBufferLimitBytes": 32768
                 }
@@ -1301,7 +1298,6 @@
                       }
                     }
                   ],
-                  "maxConnectionsToAcceptPerSocketEvent": 1,
                   "name": "default/eg/tls-passthrough",
                   "perConnectionBufferLimitBytes": 32768
                 }

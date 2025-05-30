@@ -11,6 +11,5 @@
         cluster: tcp-route-dual-dest
         statPrefix: tcp-8082
     name: tcp-route-dual
-  maxConnectionsToAcceptPerSocketEvent: 1
   name: tcp-listener-dual
   perConnectionBufferLimitBytes: 32768

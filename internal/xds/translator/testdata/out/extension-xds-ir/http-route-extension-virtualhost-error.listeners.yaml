@@ -30,6 +30,5 @@
         statPrefix: http-10080
         useRemoteAddress: true
     name: extension-post-xdsvirtualhost-hook-error
-  maxConnectionsToAcceptPerSocketEvent: 1
   name: extension-post-xdsvirtualhost-hook-error
   perConnectionBufferLimitBytes: 32768

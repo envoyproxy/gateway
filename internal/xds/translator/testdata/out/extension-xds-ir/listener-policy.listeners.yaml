@@ -30,7 +30,6 @@
         statPrefix: http-10081
         useRemoteAddress: true
     name: policyextension-listener
-  maxConnectionsToAcceptPerSocketEvent: 1
   name: policyextension-listener
   perConnectionBufferLimitBytes: 32768
   statPrefix: from-the-policy

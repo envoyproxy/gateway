@@ -163,6 +163,5 @@
         statPrefix: http-10080
         useRemoteAddress: true
     name: default/gateway-1/http
-  maxConnectionsToAcceptPerSocketEvent: 1
   name: default/gateway-1/http
   perConnectionBufferLimitBytes: 32768

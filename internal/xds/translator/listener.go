@@ -52,8 +52,7 @@ const (
 	// https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/core/v3/protocol.proto#envoy-v3-api-field-config-core-v3-http2protocoloptions-initial-connection-window-size
 	http2InitialConnectionWindowSize = 1048576 // 1 MiB
 	// https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/network/connection_limit/v3/connection_limit.proto
-	networkConnectionLimit      = "envoy.filters.network.connection_limit"
-	maxConnAcceptPerSocketEvent = 1
+	networkConnectionLimit = "envoy.filters.network.connection_limit"
 )
 
 func http1ProtocolOptions(opts *ir.HTTP1Settings) *corev3.Http1ProtocolOptions {
@@ -237,7 +236,7 @@ func buildMaxAcceptPerSocketEvent(connection *ir.ClientConnection) *wrapperspb.U
 	if connection != nil && connection.MaxAcceptPerSocketEvent != nil {
 		return wrapperspb.UInt32(*connection.MaxAcceptPerSocketEvent)
 	}
-	return wrapperspb.UInt32(maxConnAcceptPerSocketEvent)
+	return nil
 }
 
 // buildXdsQuicListener creates a xds Listener resource for quic

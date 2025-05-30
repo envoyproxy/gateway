@@ -38,9 +38,9 @@ type ClientConnection struct {
 	SocketBufferLimit *resource.Quantity `json:"socketBufferLimit,omitempty"`
 
 	// MaxAcceptPerSocketEvent provides configuration for the maximum number of connections to accept from the kernel
-	// per socket event. If there are more than MaxAcceptPerSocketEvent connections
-	// pending accept, connections over this threshold will be accepted in later event loop iterations.
-	// Default: 1
+	// per socket event. If there are more than MaxAcceptPerSocketEvent connections pending accept, connections over
+	// this threshold will be accepted in later event loop iterations. If no value is provided Envoy will accept
+	// all connections pending accept from the kernel.
 	// +optional
 	MaxAcceptPerSocketEvent *uint32 `json:"maxAcceptPerSocketEvent,omitempty"`
 }

@@ -30,7 +30,6 @@
         statPrefix: http-8081
         useRemoteAddress: true
     name: first-listener
-  maxConnectionsToAcceptPerSocketEvent: 1
   name: first-listener
   perConnectionBufferLimitBytes: 32768
 - address:
@@ -63,6 +62,5 @@
         statPrefix: http-8082
         useRemoteAddress: true
     name: second-listener
-  maxConnectionsToAcceptPerSocketEvent: 1
   name: second-listener
   perConnectionBufferLimitBytes: 32768
