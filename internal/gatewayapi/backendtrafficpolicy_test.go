@@ -111,24 +111,40 @@ func TestMakeIrTriggerSet(t *testing.T) {
 
 func Test_translateRateLimitCost(t *testing.T) {
 	for _, tc := range []struct {
-		name string
-		cost *egv1a1.RateLimitCostSpecifier
-		exp  *ir.RateLimitCost
+		name    string
+		cost    *egv1a1.RateLimitCostSpecifier
+		exp     *ir.RateLimitCost
+		wantErr bool
 	}{
 		{
-			name: "number",
-			cost: &egv1a1.RateLimitCostSpecifier{Number: ptr.To[uint64](1)},
-			exp:  &ir.RateLimitCost{Number: ptr.To[uint64](1)},
+			name:    "number",
+			cost:    &egv1a1.RateLimitCostSpecifier{Number: ptr.To[uint64](1)},
+			exp:     &ir.RateLimitCost{Number: ptr.To[uint64](1)},
+			wantErr: false,
 		},
 		{
-			name: "metadata",
-			cost: &egv1a1.RateLimitCostSpecifier{Metadata: &egv1a1.RateLimitCostMetadata{Namespace: "something.com", Key: "name"}},
-			exp:  &ir.RateLimitCost{Format: ptr.To(`%DYNAMIC_METADATA(something.com:name)%`)},
+			name:    "metadata",
+			cost:    &egv1a1.RateLimitCostSpecifier{Metadata: &egv1a1.RateLimitCostMetadata{Namespace: "something.com", Key: "name"}},
+			exp:     &ir.RateLimitCost{Format: ptr.To(`%DYNAMIC_METADATA(something.com:name)%`)},
+			wantErr: false,
+		},
+		{
+			name: "both",
+			cost: &egv1a1.RateLimitCostSpecifier{
+				Metadata: &egv1a1.RateLimitCostMetadata{Namespace: "something.com", Key: "name"},
+				Number:   ptr.To[uint64](1),
+			},
+			wantErr: true,
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			act := translateRateLimitCost(tc.cost)
-			require.Equal(t, tc.exp, act)
+			act, err := translateRateLimitCost(tc.cost)
+			if err != nil {
+				require.Equal(t, tc.wantErr, true)
+			} else {
+				require.Equal(t, tc.wantErr, false)
+				require.Equal(t, tc.exp, act)
+			}
 		})
 	}
 }
