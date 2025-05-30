@@ -1,18 +1,5 @@
-apiVersion: gateway.envoyproxy.io/v1alpha1
-kind: EnvoyProxy
-metadata:
-  name: custom-container-security-contex-userid-envoyproxy
-  namespace: gateway-conformance-infra
-spec:
-  provider:
-    type: Kubernetes
-    kubernetes:
-      envoyDeployment:
-        container:
-          securityContext:
-            runAsUser: 65534
-            runAsGroup: 65534
----
+# This test is to verify that the basic http route works with EG having custom security context user id
+# The custom security context user id is set to 65534 in the test go code
 apiVersion: gateway.networking.k8s.io/v1
 kind: Gateway
 metadata:
@@ -24,11 +11,6 @@ spec:
     - name: http
       port: 80
       protocol: HTTP
-  infrastructure:
-    parametersRef:
-      group: gateway.envoyproxy.io
-      kind: EnvoyProxy
-      name: custom-container-security-contex-userid-envoyproxy
 ---
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
