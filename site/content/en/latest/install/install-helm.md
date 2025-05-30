@@ -55,6 +55,43 @@ consideration when debugging.
 
 [`quickstart.yaml`]: https://github.com/envoyproxy/gateway/releases/download/{{< yaml-version >}}/quickstart.yaml
 
+## Installing CRDs separately
+
+The [Envoy Gateway Helm Chart](https://hub.docker.com/r/envoyproxy/gateway-helm/tags) includes two types of CRDs under its crds/ directory:
+* [Gateway API CRDs](../concepts/introduction/#gateway-api/) (from the *experimental* channel): This channel includes additional `alpha` resources
+such as `TCPRoute` and `BackendTLSPolicy`, which are commonly used by Envoy Gateway users.
+* [Envoy Gateway CRDs](../concepts/introduction/#gateway_api_extensions): These are custom CRDs that extend the Gateway API to support additional
+Envoy Gateway-specific features.
+
+If you prefer to manage CRDs separately, the [Envoy Gateway CRDs Helm Chart](https://hub.docker.com/r/envoyproxy/gateway-crds-helm/tags) allows you
+to install just the CRDs, with fine-grained control over:
+* Which Gateway API channel to use (`standard` or `experimental`)
+* Whether to include Envoy Gateway-specific CRDs
+
+Use the following command to install the CRDs using `helm template` and `kubectl`
+
+```shell
+helm template eg oci://docker.io/envoyproxy/gateway-crds-helm \
+  --version {{< helm-version >}} \
+  --set crds.gatewayAPI.enabled=true \
+  --set crds.gatewayAPI.channel=standard \
+  --set crds.envoyGateway.enabled=true \
+  | kubectl apply --server-side -f -
+```
+
+**Note**: We're using `helm template` piped into `kubectl apply` instead of `helm install` due to a [known Helm limitation](https://github.com/helm/helm/pull/12277)
+related to large CRDs in the `templates/` directory.
+
+Once the CRDs are installed, you can install the main Envoy Gateway Helm chart without re-applying CRDs by using the `--skip-crds` flag:
+
+```shell
+helm install eg oci://docker.io/envoyproxy/gateway-helm \
+  --version {{< helm-version >}} \
+  -n envoy-gateway-system \
+  --create-namespace \
+  --skip-crds
+```
+
 ## Upgrading from the previous version
 
 [Helm](https://helm.sh/docs/chart_best_practices/custom_resource_definitions/#some-caveats-and-explanations) does not update CRDs
