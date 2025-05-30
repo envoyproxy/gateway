@@ -13,16 +13,31 @@ import (
 )
 
 // SkipTests is a list of tests that are skipped in the conformance suite.
-var SkipTests = []suite.ConformanceTest{
-	tests.GatewayStaticAddresses,
-	tests.GatewayInfrastructure,
+func SkipTests(gatewayNamespaceMode bool) []suite.ConformanceTest {
+	if gatewayNamespaceMode {
+		return []suite.ConformanceTest{
+			tests.GatewayStaticAddresses,
+			tests.GatewayInfrastructure, // https://github.com/envoyproxy/gateway/pull/5996 will fix this later.
+		}
+	}
+
+	return []suite.ConformanceTest{
+		tests.GatewayStaticAddresses,
+		tests.GatewayInfrastructure,
+	}
 }
 
 // SkipFeatures is a list of features that are skipped in the conformance report.
-var SkipFeatures = sets.New[features.FeatureName](
-	features.GatewayStaticAddressesFeature.Name,
-	features.GatewayInfrastructurePropagationFeature.Name,
-)
+func SkipFeatures(gatewayNamespaceMode bool) sets.Set[features.FeatureName] {
+	if gatewayNamespaceMode {
+		return sets.New(features.GatewayStaticAddressesFeature.Name)
+	}
+
+	return sets.New(
+		features.GatewayStaticAddressesFeature.Name,
+		features.GatewayInfrastructurePropagationFeature.Name,
+	)
+}
 
 func skipTestsShortNames(skipTests []suite.ConformanceTest) []string {
 	shortNames := make([]string, len(skipTests))
@@ -33,30 +48,33 @@ func skipTestsShortNames(skipTests []suite.ConformanceTest) []string {
 }
 
 // EnvoyGatewaySuite is the conformance suite configuration for the Gateway API.
-var EnvoyGatewaySuite = suite.ConformanceOptions{
-	SupportedFeatures: allFeatures(),
-	ExemptFeatures:    meshFeatures(),
-	SkipTests:         skipTestsShortNames(SkipTests),
+func EnvoyGatewaySuite(gatewayNamespaceMode bool) suite.ConformanceOptions {
+	return suite.ConformanceOptions{
+		SupportedFeatures: allFeatures(gatewayNamespaceMode),
+		ExemptFeatures:    meshFeatures(),
+		SkipTests:         skipTestsShortNames(SkipTests(gatewayNamespaceMode)),
+	}
 }
 
-func allFeatures() sets.Set[features.FeatureName] {
-	allFeatures := sets.New[features.FeatureName]()
+func allFeatures(gatewayNamespaceMode bool) sets.Set[features.FeatureName] {
+	result := sets.New[features.FeatureName]()
+	skipped := SkipFeatures(gatewayNamespaceMode)
 	for _, feature := range features.AllFeatures.UnsortedList() {
-		// Dont add skipped features in the conformance report.
-		if !SkipFeatures.Has(feature.Name) {
-			allFeatures.Insert(feature.Name)
+		// Don't add skipped features in the conformance report.
+		if !skipped.Has(feature.Name) {
+			result.Insert(feature.Name)
 		}
 	}
-	return allFeatures
+	return result
 }
 
 func meshFeatures() sets.Set[features.FeatureName] {
-	meshFeatures := sets.New[features.FeatureName]()
+	result := sets.New[features.FeatureName]()
 	for _, feature := range features.MeshCoreFeatures.UnsortedList() {
-		meshFeatures.Insert(feature.Name)
+		result.Insert(feature.Name)
 	}
 	for _, feature := range features.MeshExtendedFeatures.UnsortedList() {
-		meshFeatures.Insert(feature.Name)
+		result.Insert(feature.Name)
 	}
-	return meshFeatures
+	return result
 }

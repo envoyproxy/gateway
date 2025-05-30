@@ -8,7 +8,7 @@ ENVTEST_K8S_VERSIONS ?= 1.29.5 1.30.3 1.31.0 1.32.0
 
 # GATEWAY_API_VERSION refers to the version of Gateway API CRDs.
 # For more details, see https://gateway-api.sigs.k8s.io/guides/getting-started/#installing-gateway-api
-GATEWAY_API_VERSION ?= $(shell go list -m -f '{{.Version}}' sigs.k8s.io/gateway-api)
+GATEWAY_API_VERSION ?= v1.3.0
 
 GATEWAY_API_RELEASE_URL ?= https://github.com/kubernetes-sigs/gateway-api/releases/download/${GATEWAY_API_VERSION}
 EXPERIMENTAL_GATEWAY_API_RELEASE_URL ?= ${GATEWAY_API_RELEASE_URL}/experimental-install.yaml
@@ -24,6 +24,8 @@ BENCHMARK_RPS ?= 10000
 BENCHMARK_CONNECTIONS ?= 100
 BENCHMARK_DURATION ?= 60
 BENCHMARK_REPORT_DIR ?= benchmark_report
+
+CONFORMANCE_RUN_TEST ?=
 
 E2E_RUN_TEST ?=
 E2E_CLEANUP ?= true
@@ -82,7 +84,7 @@ manifests: generate-gwapi-manifests ## Generate WebhookConfiguration and CustomR
 	done
 
 .PHONY: generate-gwapi-manifests
-generate-gwapi-manifests: ## Generate GWAPI manifests and make it consistent with the go mod version.
+generate-gwapi-manifests: ## Generate Gateway API manifests and make it consistent with the go mod version.
 	@$(LOG_TARGET)
 	@echo "Generating Gateway API CRDs"
 	@mkdir -p $(OUTPUT_DIR)/
@@ -295,7 +297,11 @@ run-conformance: prepare-ip-family ## Run Gateway API conformance.
 	@$(LOG_TARGET)
 	kubectl wait --timeout=$(WAIT_TIMEOUT) -n envoy-gateway-system deployment/envoy-gateway --for=condition=Available
 	kubectl apply -f test/config/gatewayclass.yaml
+ifeq ($(CONFORMANCE_RUN_TEST),)
 	go test -v -tags conformance ./test/conformance --gateway-class=envoy-gateway --debug=true
+else
+	go test -v -tags conformance ./test/conformance --gateway-class=envoy-gateway --debug=true --run-test $(CONFORMANCE_RUN_TEST)
+endif
 
 CONFORMANCE_REPORT_PATH ?=
 
