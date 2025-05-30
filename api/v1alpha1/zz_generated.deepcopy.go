@@ -5625,6 +5625,11 @@ func (in *Retry) DeepCopyInto(out *Retry) {
 		*out = new(int32)
 		**out = **in
 	}
+	if in.NumRetriesToAcrossPriorities != nil {
+		in, out := &in.NumRetriesToAcrossPriorities, &out.NumRetriesToAcrossPriorities
+		*out = new(int32)
+		**out = **in
+	}
 	if in.RetryOn != nil {
 		in, out := &in.RetryOn, &out.RetryOn
 		*out = new(RetryOn)

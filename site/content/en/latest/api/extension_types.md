@@ -4200,6 +4200,7 @@ _Appears in:_
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
 | `numRetries` | _integer_ |  false  | 2 | NumRetries is the number of retries to be attempted. Defaults to 2. |
+| `numRetriesToAcrossPriorities` | _integer_ |  false  |  | NumRetriesToAcrossPriorities defines the number of requests (initial attempt + retries)<br />that should be sent to the same priority before switching to a different one. |
 | `retryOn` | _[RetryOn](#retryon)_ |  false  |  | RetryOn specifies the retry trigger condition.<br />If not specified, the default is to retry on connect-failure,refused-stream,unavailable,cancelled,retriable-status-codes(503). |
 | `perRetry` | _[PerRetryPolicy](#perretrypolicy)_ |  false  |  | PerRetry is the retry policy to be applied per retry attempt. |
 

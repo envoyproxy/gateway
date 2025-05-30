@@ -2835,6 +2835,10 @@ type Retry struct {
 	// NumRetries is the number of retries to be attempted. Defaults to 2.
 	NumRetries *uint32 `json:"numRetries,omitempty"`
 
+	// NumRetriesToAcrossPriorities defines the number of requests (initial attempt + retries)
+	// that should be sent to the same priority before switching to a different one.
+	NumRetriesToAcrossPriorities *int32 `json:"numRetriesToAcrossPriorities,omitempty"`
+
 	// RetryOn specifies the retry trigger condition.
 	RetryOn *RetryOn `json:"retryOn,omitempty"`
 
