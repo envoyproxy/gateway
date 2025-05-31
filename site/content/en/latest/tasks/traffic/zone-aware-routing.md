@@ -123,7 +123,7 @@ Next apply the example manifests to create two Deployments and an HTTPRoute. For
 zone and the second Deployment (zone-aware-routing-backend-nonlocal) uses anti-affinity to ensure its Pods _don't_ 
 schedule to the same zone in order to demonstrate functionality. 
 ```shell
-kubectl apply -f https://github.com/envoyproxy/gateway/releases/download/latest/zone-aware-routing.yaml -n default
+kubectl apply -f https://raw.githubusercontent.com/envoyproxy/gateway/latest/examples/kubernetes/zone-aware-routing.yaml -n default
 ```
 
 Ensure that both example Deployments are marked as ready and produces the following output:
