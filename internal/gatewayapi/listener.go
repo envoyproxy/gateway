@@ -270,14 +270,14 @@ func checkOverlappingHostnames(httpsListeners []*ListenerContext) {
 			if gateway1.Name == gateway2.Name &&
 				gateway1.Namespace == gateway2.Namespace {
 				message = fmt.Sprintf(
-					"The hostname %s overlaps with the hostname %s in listener %s. ALPN is set to HTTP/1.1 to prevent HTTP/2 connection coalescing",
+					"The hostname %s overlaps with the hostname %s in listener %s. ALPN will default to HTTP/1.1 to prevent HTTP/2 connection coalescing, unless explicitly configured via ClientTrafficPolicy",
 					overlappingListeners[i].hostname1,
 					overlappingListeners[i].hostname2,
 					overlappingListeners[i].listener2,
 				)
 			} else {
 				message = fmt.Sprintf(
-					"The hostname %s overlaps with the hostname %s in listener %s of gateway %s. ALPN is set to HTTP/1.1 to prevent HTTP/2 connection coalescing",
+					"The hostname %s overlaps with the hostname %s in listener %s of gateway %s. ALPN will default to HTTP/1.1 to prevent HTTP/2 connection coalescing, unless explicitly configured via ClientTrafficPolicy",
 					overlappingListeners[i].hostname1,
 					overlappingListeners[i].hostname2,
 					overlappingListeners[i].listener2,
@@ -355,14 +355,14 @@ func checkOverlappingCertificates(httpsListeners []*ListenerContext) {
 			if gateway1.Name == gateway2.Name &&
 				gateway1.Namespace == gateway2.Namespace {
 				message = fmt.Sprintf(
-					"The certificate san %s overlaps with the certificate san %s in listener %s. ALPN is set to HTTP/1.1 to prevent HTTP/2 connection coalescing",
+					"The certificate SAN %s overlaps with the certificate SAN %s in listener %s. ALPN will default to HTTP/1.1 to prevent HTTP/2 connection coalescing, unless explicitly configured via ClientTrafficPolicy",
 					overlappingListeners[i].san1,
 					overlappingListeners[i].san2,
 					overlappingListeners[i].listener2,
 				)
 			} else {
 				message = fmt.Sprintf(
-					"The certificate san %s overlaps with the certificate san %s in listener %s of gateway %s. ALPN is set to HTTP/1.1 to prevent HTTP/2 connection coalescing",
+					"The certificate SAN %s overlaps with the certificate SAN %s in listener %s of gateway %s. ALPN will default to HTTP/1.1 to prevent HTTP/2 connection coalescing, unless explicitly configured via ClientTrafficPolicy",
 					overlappingListeners[i].san1,
 					overlappingListeners[i].san2,
 					overlappingListeners[i].listener2,
