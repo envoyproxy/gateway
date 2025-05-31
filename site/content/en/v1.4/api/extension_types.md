@@ -3437,6 +3437,16 @@ _Appears in:_
 | `text` | _string_ |  false  |  | Text defines the text accesslog format, following Envoy accesslog formatting,<br />It's required when the format type is "Text".<br />Envoy [command operators](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#command-operators) may be used in the format.<br />The [format string documentation](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#config-access-log-format-strings) provides more information. |
 | `json` | _object (keys:string, values:string)_ |  false  |  | JSON is additional attributes that describe the specific event occurrence.<br />Structured format for the envoy access logs. Envoy [command operators](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#command-operators)<br />can be used as values for fields within the Struct.<br />It's required when the format type is "JSON". |
 
+**Note:**  
+`%PATH%` is **not a supported command operator** in Envoy for access log format strings.  
+To log the request path, use `%REQ(:path)%` instead.  
+See the [Envoy command operator documentation](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#command-operators) for all valid options.
+
+**Example:**
+```
+%REQ(:method)% %REQ(:path)% %PROTOCOL%
+```
+
 
 #### ProxyAccessLogFormatType
 
