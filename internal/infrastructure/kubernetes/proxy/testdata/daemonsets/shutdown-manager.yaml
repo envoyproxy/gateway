@@ -195,18 +195,21 @@ spec:
         command:
         - envoy
         env:
-        - name: ENVOY_GATEWAY_NAMESPACE
-          value: envoy-gateway-system
-        - name: ENVOY_SERVICE_ZONE
+        - name: ENVOY_POD_NAMESPACE
           valueFrom:
             fieldRef:
               apiVersion: v1
-              fieldPath: metadata.annotations['topology.kubernetes.io/zone']
+              fieldPath: metadata.namespace
         - name: ENVOY_POD_NAME
           valueFrom:
             fieldRef:
               apiVersion: v1
               fieldPath: metadata.name
+        - name: ENVOY_SERVICE_ZONE
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: metadata.annotations['topology.kubernetes.io/zone']
         image: docker.io/envoyproxy/envoy:distroless-dev
         imagePullPolicy: IfNotPresent
         lifecycle:
@@ -284,18 +287,21 @@ spec:
           value: env_a_value
         - name: env_b
           value: env_b_value
-        - name: ENVOY_GATEWAY_NAMESPACE
-          value: envoy-gateway-system
-        - name: ENVOY_SERVICE_ZONE
+        - name: ENVOY_POD_NAMESPACE
           valueFrom:
             fieldRef:
               apiVersion: v1
-              fieldPath: metadata.annotations['topology.kubernetes.io/zone']
+              fieldPath: metadata.namespace
         - name: ENVOY_POD_NAME
           valueFrom:
             fieldRef:
               apiVersion: v1
               fieldPath: metadata.name
+        - name: ENVOY_SERVICE_ZONE
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: metadata.annotations['topology.kubernetes.io/zone']
         image: envoyproxy/gateway-dev:v1.2.3
         imagePullPolicy: IfNotPresent
         lifecycle:

@@ -375,7 +375,7 @@ spec:
 {{% /tab %}}
 {{< /tabpane >}}
 
-> Envoy Gateway has provided two initial `env` `ENVOY_GATEWAY_NAMESPACE` and `ENVOY_POD_NAME` for envoyproxy container.
+> Envoy Gateway has provided two initial `env` `ENVOY_POD_NAMESPACE` and `ENVOY_POD_NAME` for envoyproxy container.
 
 After applying the config, you can get the envoyproxy deployment, and see resources has been changed.
 
@@ -513,7 +513,7 @@ apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: EnvoyProxy
 metadata:
   name: custom-proxy-config
-  namespace: default 
+  namespace: default
 spec:
   bootstrap:
     type: Replace
@@ -733,7 +733,7 @@ apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: EnvoyProxy
 metadata:
   name: custom-proxy-config
-  namespace: default 
+  namespace: default
 spec:
   bootstrap:
     type: JSONPatch
@@ -787,7 +787,7 @@ apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: EnvoyProxy
 metadata:
   name: custom-proxy-config
-  namespace: default 
+  namespace: default
 spec:
   provider:
     type: Kubernetes
@@ -815,7 +815,7 @@ apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: EnvoyProxy
 metadata:
   name: custom-proxy-config
-  namespace: default 
+  namespace: default
 spec:
   provider:
     type: Kubernetes
@@ -851,10 +851,10 @@ apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: EnvoyProxy
 metadata:
   name: custom-proxy-config
-  namespace: default 
+  namespace: default
 spec:
   extraArgs:
-    - --disable-extensions envoy.access_loggers/envoy.access_loggers.wasm 
+    - --disable-extensions envoy.access_loggers/envoy.access_loggers.wasm
 EOF
 ```
 
@@ -868,10 +868,10 @@ apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: EnvoyProxy
 metadata:
   name: custom-proxy-config
-  namespace: default 
+  namespace: default
 spec:
   extraArgs:
-    - --disable-extensions envoy.access_loggers/envoy.access_loggers.wasm 
+    - --disable-extensions envoy.access_loggers/envoy.access_loggers.wasm
 ```
 
 {{% /tab %}}
@@ -894,7 +894,7 @@ apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: EnvoyProxy
 metadata:
   name: eg
-  namespace: default 
+  namespace: default
 spec:
   provider:
     type: Kubernetes
@@ -1036,7 +1036,7 @@ By default, Envoy Gateway applies the following filters in the order shown:
 * envoy.filters.http.ratelimit
 * envoy.filters.http.router
 
-The default order in which these filters are applied is opinionated and may not suit all use cases. 
+The default order in which these filters are applied is opinionated and may not suit all use cases.
 To address this, Envoy Gateway allows you to adjust the execution order of these filters with the `filterOrder` field in the [EnvoyProxy][] resource.
 
 `filterOrder` is a list of customized filter order configurations. Each configuration can specify a filter

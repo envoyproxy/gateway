@@ -123,12 +123,8 @@ var OpenTelemetryTestText = suite.ConformanceTest{
 	Description: "Make sure OpenTelemetry text access log is working",
 	Manifests:   []string{"testdata/accesslog-otel.yaml"},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
-		labels := map[string]string{
-			"k8s_namespace_name": "envoy-gateway-system",
-			"exporter":           "OTLP",
-		}
-
 		ns := "gateway-conformance-infra"
+		labels := getOTELLabels(ns)
 		routeNN := types.NamespacedName{Name: "accesslog-otel", Namespace: ns}
 		gwNN := types.NamespacedName{Name: "accesslog-gtw", Namespace: ns}
 		gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
@@ -176,12 +172,8 @@ var OpenTelemetryTestJSONAsDefault = suite.ConformanceTest{
 	Description: "Make sure OpenTelemetry JSON access log is working as default when no format or type is specified",
 	Manifests:   []string{"testdata/accesslog-otel-default.yaml"},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
-		labels := map[string]string{
-			"k8s_namespace_name": "envoy-gateway-system",
-			"exporter":           "OTLP",
-		}
-
 		ns := "gateway-conformance-infra"
+		labels := getOTELLabels(ns)
 		routeNN := types.NamespacedName{Name: "accesslog-otel", Namespace: ns}
 		gwNN := types.NamespacedName{Name: "accesslog-gtw", Namespace: ns}
 		gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
@@ -229,12 +221,8 @@ var OpenTelemetryTestJSON = suite.ConformanceTest{
 	Description: "Make sure OpenTelemetry JSON access log is working with custom JSON attributes",
 	Manifests:   []string{"testdata/accesslog-otel-json.yaml"},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
-		labels := map[string]string{
-			"k8s_namespace_name": "envoy-gateway-system",
-			"exporter":           "OTLP",
-		}
-
 		ns := "gateway-conformance-infra"
+		labels := getOTELLabels(ns)
 		routeNN := types.NamespacedName{Name: "accesslog-otel", Namespace: ns}
 		gwNN := types.NamespacedName{Name: "accesslog-gtw", Namespace: ns}
 		gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
@@ -311,6 +299,21 @@ var ALSTest = suite.ConformanceTest{
 			runLogTest(t, suite, gwAddr, expectedResponse, labels, match, 0)
 		})
 	},
+}
+
+// getOTELLabels returns the appropriate OpenTelemetry labels based on gateway namespace mode
+func getOTELLabels(testNamespace string) map[string]string {
+	if IsGatewayNamespaceMode() {
+		return map[string]string{
+			"k8s_namespace_name": testNamespace,
+			"exporter":           "OTLP",
+		}
+	}
+
+	return map[string]string{
+		"k8s_namespace_name": "envoy-gateway-system",
+		"exporter":           "OTLP",
+	}
 }
 
 func runLogTest(t *testing.T, suite *suite.ConformanceTestSuite, gwAddr string,
