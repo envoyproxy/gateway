@@ -62,7 +62,6 @@
     localityWeightedLbConfig: {}
   connectTimeout: 10s
   dnsLookupFamily: V4_PREFERRED
-  dnsRefreshRate: 30s
   lbPolicy: LEAST_REQUEST
   loadAssignment:
     clusterName: ratelimit_cluster
@@ -79,7 +78,6 @@
         region: ratelimit_cluster/backend/-1
   name: ratelimit_cluster
   perConnectionBufferLimitBytes: 32768
-  respectDnsTtl: true
   trackClusterStats:
     perEndpointStats: true
   transportSocket:

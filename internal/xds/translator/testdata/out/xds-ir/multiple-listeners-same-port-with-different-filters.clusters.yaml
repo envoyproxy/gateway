@@ -73,7 +73,6 @@
     localityWeightedLbConfig: {}
   connectTimeout: 10s
   dnsLookupFamily: V4_PREFERRED
-  dnsRefreshRate: 30s
   lbPolicy: LEAST_REQUEST
   loadAssignment:
     clusterName: oauth_foo_com_443
@@ -90,7 +89,6 @@
         region: oauth_foo_com_443/backend/-1
   name: oauth_foo_com_443
   perConnectionBufferLimitBytes: 32768
-  respectDnsTtl: true
   transportSocket:
     name: envoy.transport_sockets.tls
     typedConfig:
