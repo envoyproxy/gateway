@@ -1,0 +1,86 @@
+gateways:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: Gateway
+  metadata:
+    namespace: envoy-gateway
+    name: gateway-1
+  spec:
+    gatewayClassName: envoy-gateway-class
+    listeners:
+    - name: http
+      protocol: HTTP
+      port: 80
+      allowedRoutes:
+        namespaces:
+          from: All
+httpRoutes:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    namespace: default
+    name: httproute-1
+  spec:
+    hostnames:
+    - www.example.com
+    parentRefs:
+    - namespace: envoy-gateway
+      name: gateway-1
+      sectionName: http
+    rules:
+    - matches:
+      - path:
+          value: "/foo"
+      backendRefs:
+      - name: service-1
+        port: 8080
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    namespace: default
+    name: httproute-2
+  spec:
+    hostnames:
+    - www.example.com
+    parentRefs:
+    - namespace: envoy-gateway
+      name: gateway-1
+      sectionName: http
+    rules:
+    - matches:
+      - path:
+          value: "/bar"
+      backendRefs:
+      - name: service-1
+        port: 8080
+envoyextensionpolicies:
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: EnvoyExtensionPolicy
+  metadata:
+    namespace: envoy-gateway
+    name: policy-for-gateway  # This policy should attach httproute-2
+  spec:
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: Gateway
+      name: gateway-1
+    dynamicModules:
+    - extensionName: dynamic-module-1
+      module: my_module_1
+      extensionConfig: "{parameter1: value1,parameter2: value2}"
+      doNotClose: true
+    - module: my_module_2
+      extensionConfig: "{parameter1: value1,parameter2: value2}"
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: EnvoyExtensionPolicy
+  metadata:
+    namespace: default
+    name: policy-for-http-route   # This policy should attach httproute-1
+  spec:
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: httproute-1
+    dynamicModules:
+    - extensionName: dynamic-module-3
+      module: my_module_3
+      extensionConfig: "{parameter1: value1,parameter2: value2}"

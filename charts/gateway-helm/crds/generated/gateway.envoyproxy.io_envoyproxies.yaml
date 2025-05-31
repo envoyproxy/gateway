@@ -306,6 +306,8 @@ spec:
 
                   - envoy.filters.http.wasm
 
+                  - envoy.filters.http.dynamic_modules
+
                   - envoy.filters.http.rbac
 
                   - envoy.filters.http.local_ratelimit
@@ -343,6 +345,7 @@ spec:
                       - envoy.filters.http.ratelimit
                       - envoy.filters.http.custom_response
                       - envoy.filters.http.compressor
+                      - envoy.filters.http.dynamic_modules
                       type: string
                     before:
                       description: |-
@@ -366,6 +369,7 @@ spec:
                       - envoy.filters.http.ratelimit
                       - envoy.filters.http.custom_response
                       - envoy.filters.http.compressor
+                      - envoy.filters.http.dynamic_modules
                       type: string
                     name:
                       description: Name of the filter.
@@ -387,6 +391,7 @@ spec:
                       - envoy.filters.http.ratelimit
                       - envoy.filters.http.custom_response
                       - envoy.filters.http.compressor
+                      - envoy.filters.http.dynamic_modules
                       type: string
                   required:
                   - name

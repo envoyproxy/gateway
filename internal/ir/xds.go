@@ -934,6 +934,8 @@ type EnvoyExtensionFeatures struct {
 	Wasms []Wasm `json:"wasms,omitempty" yaml:"wasms,omitempty"`
 	// Lua extensions
 	Luas []Lua `json:"luas,omitempty" yaml:"luas,omitempty"`
+	// DynamicModule extensions
+	DynamicModules []DynamicModule `json:"dynamicModules,omitempty" yaml:"dynamicModules,omitempty"`
 }
 
 // UnstructuredRef holds unstructured data for an arbitrary k8s resource introduced by an extension

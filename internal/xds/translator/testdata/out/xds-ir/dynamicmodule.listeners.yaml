@@ -1,0 +1,47 @@
+- address:
+    socketAddress:
+      address: 0.0.0.0
+      portValue: 10080
+  defaultFilterChain:
+    filters:
+    - name: envoy.filters.network.http_connection_manager
+      typedConfig:
+        '@type': type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
+        commonHttpProtocolOptions:
+          headersWithUnderscoresAction: REJECT_REQUEST
+        http2ProtocolOptions:
+          initialConnectionWindowSize: 1048576
+          initialStreamWindowSize: 65536
+          maxConcurrentStreams: 100
+        httpFilters:
+        - disabled: true
+          name: envoy.filters.http.dynamic_modules/envoyextensionpolicy/default/policy-for-http-route/dynamicmodule/0
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.dynamic_modules.v3.DynamicModuleFilter
+            dynamicModuleConfig:
+              doNotClose: true
+              name: test_module
+            filterConfig:
+              '@type': type.googleapis.com/google.protobuf.Struct
+              value:
+                config: '{"request_headers": [["X-Envoy-Header", "envoy-header"],
+                  ["X-Envoy-Header2", "envoy-header2"]]}'
+            filterName: envoyextensionpolicy/default/policy-for-http-route/dynamicmodule/0
+        - name: envoy.filters.http.router
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+            suppressEnvoyHeaders: true
+        mergeSlashes: true
+        normalizePath: true
+        pathWithEscapedSlashesAction: UNESCAPE_AND_REDIRECT
+        rds:
+          configSource:
+            ads: {}
+            resourceApiVersion: V3
+          routeConfigName: envoy-gateway/gateway-1/http
+        serverHeaderTransformation: PASS_THROUGH
+        statPrefix: http-10080
+        useRemoteAddress: true
+    name: envoy-gateway/gateway-1/http
+  name: envoy-gateway/gateway-1/http
+  perConnectionBufferLimitBytes: 32768
