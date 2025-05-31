@@ -478,7 +478,7 @@ func convertToKeyValueList(attributes map[string]string, additionalLabels bool) 
 		// TODO: check the provider type and set the appropriate attributes
 		keyValueList.Values = append(keyValueList.Values, &otlpcommonv1.KeyValue{
 			Key:   k8sNamespaceNameKey,
-			Value: &otlpcommonv1.AnyValue{Value: &otlpcommonv1.AnyValue_StringValue{StringValue: "%ENVIRONMENT(ENVOY_GATEWAY_NAMESPACE)%"}},
+			Value: &otlpcommonv1.AnyValue{Value: &otlpcommonv1.AnyValue_StringValue{StringValue: "%ENVIRONMENT(ENVOY_POD_NAMESPACE)%"}},
 		})
 
 		keyValueList.Values = append(keyValueList.Values, &otlpcommonv1.KeyValue{
