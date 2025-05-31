@@ -1,6 +1,7 @@
 apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
+  creationTimestamp: null
   name: envoy-default-37a8eec1
   namespace: envoy-gateway-system
 spec:
@@ -12,3 +13,8 @@ spec:
       app.kubernetes.io/name: envoy
       gateway.envoyproxy.io/owning-gateway-name: default
       gateway.envoyproxy.io/owning-gateway-namespace: default
+status:
+  currentHealthy: 0
+  desiredHealthy: 0
+  disruptionsAllowed: 0
+  expectedPods: 0

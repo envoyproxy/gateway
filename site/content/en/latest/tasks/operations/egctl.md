@@ -4,6 +4,294 @@ title: "Use egctl"
 
 `egctl` is a command line tool to provide additional functionality for Envoy Gateway users.
 
+Follow the instructions [here](./../../install/install-egctl.md) to install `egctl`.
+
+## egctl config
+
+The `egctl config` subcommand provides tools for viewing and validating the Envoy Proxy and Envoy RateLimit configuration configured in Envoy Proxy.
+
+Here's an example of retrieving the [xDS Route Configuration](https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/route/v3/route.proto#envoy-v3-api-msg-config-route-v3-routeconfiguration) from all the proxies. 
+
+```console
+~ egctl config envoy-proxy route
+{
+  "envoy-gateway-system": {
+    "envoy-default-eg-e41e7b31-6d749cdb85-hcfrk": {
+      "@type": "type.googleapis.com/envoy.admin.v3.RoutesConfigDump",
+      "dynamicRouteConfigs": [
+        {
+          "lastUpdated": "2025-05-22T17:51:06.237Z",
+          "routeConfig": {
+            "@type": "type.googleapis.com/envoy.config.route.v3.RouteConfiguration",
+            "ignorePortInHostMatching": true,
+            "name": "default/eg/http",
+            "virtualHosts": [
+              {
+                "domains": [
+                  "www.example.com"
+                ],
+                "metadata": {
+                  "filterMetadata": {
+                    "envoy-gateway": {
+                      "resources": [
+                        {
+                          "kind": "Gateway",
+                          "name": "eg",
+                          "namespace": "default",
+                          "sectionName": "http"
+                        }
+                      ]
+                    }
+                  }
+                },
+                "name": "default/eg/http/www_example_com",
+                "routes": [
+                  {
+                    "match": {
+                      "prefix": "/"
+                    },
+                    "metadata": {
+                      "filterMetadata": {
+                        "envoy-gateway": {
+                          "resources": [
+                            {
+                              "kind": "HTTPRoute",
+                              "name": "backend",
+                              "namespace": "default"
+                            }
+                          ]
+                        }
+                      }
+                    },
+                    "name": "httproute/default/backend/rule/0/match/0/www_example_com",
+                    "route": {
+                      "cluster": "httproute/default/backend/rule/0",
+                      "upgradeConfigs": [
+                        {
+                          "upgradeType": "websocket"
+                        }
+                      ]
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          "versionInfo": "bc44981323d08bcb24abad6867942912675bb35bb674f2ee9ae866efbe1375dd"
+        }
+      ],
+      "staticRouteConfigs": [
+        {
+          "lastUpdated": "2025-05-22T17:51:06.198Z",
+          "routeConfig": {
+            "@type": "type.googleapis.com/envoy.config.route.v3.RouteConfiguration",
+            "name": "local_route",
+            "virtualHosts": [
+              {
+                "domains": [
+                  "*"
+                ],
+                "name": "prometheus_stats",
+                "routes": [
+                  {
+                    "match": {
+                      "headers": [
+                        {
+                          "name": ":method",
+                          "stringMatch": {
+                            "exact": "GET"
+                          }
+                        }
+                      ],
+                      "path": "/stats/prometheus"
+                    },
+                    "route": {
+                      "cluster": "prometheus_stats"
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "lastUpdated": "2025-05-22T17:51:06.219Z",
+          "routeConfig": {
+            "@type": "type.googleapis.com/envoy.config.route.v3.RouteConfiguration",
+            "name": "ready_route",
+            "virtualHosts": [
+              {
+                "domains": [
+                  "*"
+                ],
+                "name": "ready_route",
+                "routes": [
+                  {
+                    "directResponse": {
+                      "status": 500
+                    },
+                    "match": {
+                      "prefix": "/"
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    }
+  }
+}
+```
+
+## egctl experimental status
+
+This subcommand allows users to show the summary of the status of specific or all resource types, in order to quickly find
+out the status of any resources.
+
+By default, `egctl x status` display all the conditions for one resource type. You can either add `--quiet` to only
+display the latest condition, or add `--verbose` to display more details about current status.
+
+{{% alert title="Note" color="primary" %}}
+
+The resource types that this subcommand currently supports:
+
+- `xRoute`, `HTTPRoute`, `GRPCRoute`, `TLSRoute`, `TCPRoute`, `UDPRoute`
+- `xPolicy`, `BackendTLSPolicy`, `BackendTrafficPolicy`, `ClientTrafficPolicy`, `EnvoyPatchPolicy`, `SecurityPolicy`
+- `all`, `GatewayClass`, `Gateway`
+
+{{% /alert %}}
+
+Some examples of this command after installing [Multi-tenancy][] example manifest:
+
+- Show the summary of GatewayClass.
+
+```console
+~ egctl x status gatewayclass
+
+NAME           TYPE       STATUS    REASON
+eg-marketing   Accepted   True      Accepted
+eg-product     Accepted   True      Accepted
+```
+
+- Show the summary of all resource types under all namespaces, the resource type with empty status will be ignored.
+
+```console
+~ egctl x status all -A
+
+NAME                        TYPE       STATUS    REASON
+gatewayclass/eg-marketing   Accepted   True      Accepted
+gatewayclass/eg-product     Accepted   True      Accepted
+
+NAMESPACE   NAME         TYPE         STATUS    REASON
+marketing   gateway/eg   Programmed   True      Programmed
+                         Accepted     True      Accepted
+product     gateway/eg   Programmed   True      Programmed
+                         Accepted     True      Accepted
+
+NAMESPACE   NAME                PARENT       TYPE           STATUS    REASON
+marketing   httproute/backend   gateway/eg   ResolvedRefs   True      ResolvedRefs
+                                             Accepted       True      Accepted
+product     httproute/backend   gateway/eg   ResolvedRefs   True      ResolvedRefs
+                                             Accepted       True      Accepted
+```
+
+- Show the summary of all the Gateways with details under all namespaces.
+
+```console
+~ egctl x status gateway --verbose --all-namespaces
+
+NAMESPACE   NAME      TYPE         STATUS    REASON       MESSAGE                                                                    OBSERVED GENERATION   LAST TRANSITION TIME
+marketing   eg        Programmed   True      Programmed   Address assigned to the Gateway, 1/1 envoy Deployment replicas available   1                     2024-02-02 18:17:14 +0800 CST
+                      Accepted     True      Accepted     The Gateway has been scheduled by Envoy Gateway                            1                     2024-02-01 17:50:39 +0800 CST
+product     eg        Programmed   True      Programmed   Address assigned to the Gateway, 1/1 envoy Deployment replicas available   1                     2024-02-02 18:17:14 +0800 CST
+                      Accepted     True      Accepted     The Gateway has been scheduled by Envoy Gateway                            1                     2024-02-01 17:52:42 +0800 CST
+```
+
+- Show the summary of the latest Gateways condition under `product` namespace.
+
+```console
+~ egctl x status gateway --quiet -n product
+
+NAME      TYPE         STATUS    REASON
+eg        Programmed   True      Programmed
+```
+
+- Show the summary of latest HTTPRoutes condition under all namespaces.
+
+```console
+~ egctl x status httproute --quiet --all-namespaces
+
+NAMESPACE   NAME      PARENT       TYPE           STATUS    REASON
+marketing   backend   gateway/eg   ResolvedRefs   True      ResolvedRefs
+product     backend   gateway/eg   ResolvedRefs   True      ResolvedRefs
+```
+
+[Multi-tenancy]: ../deployment-mode#multi-tenancy
+[EnvoyProxy]: ../../../api/extension_types#envoyproxy
+
+## egctl experimental dashboard
+
+This subcommand streamlines the process for users to access the Envoy admin dashboard. By executing the following command:
+
+```bash
+egctl x dashboard envoy-proxy -n envoy-gateway-system envoy-engw-eg-a9c23fbb-558f94486c-82wh4
+```
+
+You will see the following output:
+
+```bash
+egctl x dashboard envoy-proxy -n envoy-gateway-system envoy-engw-eg-a9c23fbb-558f94486c-82wh4
+http://localhost:19000
+```
+
+the Envoy admin dashboard will automatically open in your default web browser. This eliminates the need to manually locate and expose the admin port.
+
+
+## egctl experimental install
+
+This subcommand can be used to install envoy-gateway.
+
+```bash
+egctl x install
+```
+
+By default, this will install both the envoy-gateway workload resource and the required gateway-api and envoy-gatewayCRDs.
+
+We can specify to install only workload resources via `--skip-crds`
+
+```bash
+egctl x install --skip-crds
+```
+
+We can specify to install only CRDs resources via `--only-crds`
+
+```bash
+egctl x install --only-crds
+```
+
+We can specify `--name` and `--namespace` to install envoy-gateway in different places to support multi-tenant mode.
+> Note: If CRDs are already installed, then we need to specify `--skip-crds` to avoid repeated installation of CRDs resources.
+
+```bash
+egctl x install --name shop-backend --namespace shop
+```
+
+## egctl experimental uninstall
+
+This subcommand can be used to uninstall envoy-gateway.
+
+```bash
+egctl x uninstall
+```
+
+By default, this will only uninstall the envoy-gateway workload resource, if we want to also uninstall CRDs, we need to specify `--with-crds`
+
+```bash
+egctl x uninstall --with-crds
+```
+
 ## egctl experimental translate
 
 This subcommand allows users to translate from an input configuration type to an output configuration type.
@@ -754,153 +1042,4 @@ httpRoutes:
 xds:
   envoy-gateway-system-eg:
     '@type': type.googleapis.com/envoy.admin.v3.RoutesConfigDump
-```
-
-## egctl experimental status
-
-This subcommand allows users to show the summary of the status of specific or all resource types, in order to quickly find
-out the status of any resources.
-
-By default, `egctl x status` display all the conditions for one resource type. You can either add `--quiet` to only
-display the latest condition, or add `--verbose` to display more details about current status.
-
-{{% alert title="Note" color="primary" %}}
-
-The resource types that this subcommand currently supports:
-
-- `xRoute`, `HTTPRoute`, `GRPCRoute`, `TLSRoute`, `TCPRoute`, `UDPRoute`
-- `xPolicy`, `BackendTLSPolicy`, `BackendTrafficPolicy`, `ClientTrafficPolicy`, `EnvoyPatchPolicy`, `SecurityPolicy`
-- `all`, `GatewayClass`, `Gateway`
-
-{{% /alert %}}
-
-Some examples of this command after installing [Multi-tenancy][] example manifest:
-
-- Show the summary of GatewayClass.
-
-```console
-~ egctl x status gatewayclass
-
-NAME           TYPE       STATUS    REASON
-eg-marketing   Accepted   True      Accepted
-eg-product     Accepted   True      Accepted
-```
-
-- Show the summary of all resource types under all namespaces, the resource type with empty status will be ignored.
-
-```console
-~ egctl x status all -A
-
-NAME                        TYPE       STATUS    REASON
-gatewayclass/eg-marketing   Accepted   True      Accepted
-gatewayclass/eg-product     Accepted   True      Accepted
-
-NAMESPACE   NAME         TYPE         STATUS    REASON
-marketing   gateway/eg   Programmed   True      Programmed
-                         Accepted     True      Accepted
-product     gateway/eg   Programmed   True      Programmed
-                         Accepted     True      Accepted
-
-NAMESPACE   NAME                PARENT       TYPE           STATUS    REASON
-marketing   httproute/backend   gateway/eg   ResolvedRefs   True      ResolvedRefs
-                                             Accepted       True      Accepted
-product     httproute/backend   gateway/eg   ResolvedRefs   True      ResolvedRefs
-                                             Accepted       True      Accepted
-```
-
-- Show the summary of all the Gateways with details under all namespaces.
-
-```console
-~ egctl x status gateway --verbose --all-namespaces
-
-NAMESPACE   NAME      TYPE         STATUS    REASON       MESSAGE                                                                    OBSERVED GENERATION   LAST TRANSITION TIME
-marketing   eg        Programmed   True      Programmed   Address assigned to the Gateway, 1/1 envoy Deployment replicas available   1                     2024-02-02 18:17:14 +0800 CST
-                      Accepted     True      Accepted     The Gateway has been scheduled by Envoy Gateway                            1                     2024-02-01 17:50:39 +0800 CST
-product     eg        Programmed   True      Programmed   Address assigned to the Gateway, 1/1 envoy Deployment replicas available   1                     2024-02-02 18:17:14 +0800 CST
-                      Accepted     True      Accepted     The Gateway has been scheduled by Envoy Gateway                            1                     2024-02-01 17:52:42 +0800 CST
-```
-
-- Show the summary of the latest Gateways condition under `product` namespace.
-
-```console
-~ egctl x status gateway --quiet -n product
-
-NAME      TYPE         STATUS    REASON
-eg        Programmed   True      Programmed
-```
-
-- Show the summary of latest HTTPRoutes condition under all namespaces.
-
-```console
-~ egctl x status httproute --quiet --all-namespaces
-
-NAMESPACE   NAME      PARENT       TYPE           STATUS    REASON
-marketing   backend   gateway/eg   ResolvedRefs   True      ResolvedRefs
-product     backend   gateway/eg   ResolvedRefs   True      ResolvedRefs
-```
-
-[Multi-tenancy]: ../deployment-mode#multi-tenancy
-[EnvoyProxy]: ../../../api/extension_types#envoyproxy
-
-
-## egctl experimental dashboard
-
-This subcommand streamlines the process for users to access the Envoy admin dashboard. By executing the following command:
-
-```bash
-egctl x dashboard envoy-proxy -n envoy-gateway-system envoy-engw-eg-a9c23fbb-558f94486c-82wh4
-```
-
-You will see the following output:
-
-```bash
-egctl x dashboard envoy-proxy -n envoy-gateway-system envoy-engw-eg-a9c23fbb-558f94486c-82wh4
-http://localhost:19000
-```
-
-the Envoy admin dashboard will automatically open in your default web browser. This eliminates the need to manually locate and expose the admin port.
-
-
-## egctl experimental install
-
-This subcommand can be used to install envoy-gateway.
-
-```bash
-egctl x install
-```
-
-By default, this will install both the envoy-gateway workload resource and the required gateway-api and envoy-gatewayCRDs.
-
-We can specify to install only workload resources via `--skip-crds`
-
-```bash
-egctl x install --skip-crds
-```
-
-We can specify to install only CRDs resources via `--only-crds`
-
-```bash
-egctl x install --only-crds
-```
-
-We can specify `--name` and `--namespace` to install envoy-gateway in different places to support multi-tenant mode.
-> Note: If CRDs are already installed, then we need to specify `--skip-crds` to avoid repeated installation of CRDs resources.
-
-```bash
-egctl x install --name shop-backend --namespace shop
-```
-
-
-## egctl experimental uninstall
-
-This subcommand can be used to uninstall envoy-gateway.
-
-```bash
-egctl x uninstall
-```
-
-By default, this will only uninstall the envoy-gateway workload resource, if we want to also uninstall CRDs, we need to specify `--with-crds`
-
-```bash
-egctl x uninstall --with-crds
 ```

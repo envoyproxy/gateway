@@ -111,6 +111,8 @@
           sdsConfig:
             ads: {}
             resourceApiVersion: V3
+        tlsParams:
+          tlsMaximumProtocolVersion: TLSv1_3
         validationContext:
           trustedCa:
             filename: /certs/ca.crt

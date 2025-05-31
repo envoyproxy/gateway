@@ -8,16 +8,32 @@ metadata:
     app.kubernetes.io/name: envoy
     gateway.envoyproxy.io/owning-gateway-name: gateway-1
     gateway.envoyproxy.io/owning-gateway-namespace: namespace-1
-  name: envoy-namespace-1-gateway-1-e2117e41
+    gateway.networking.k8s.io/gateway-name: gateway-1
+  name: gateway-1
   namespace: namespace-1
+  ownerReferences:
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: Gateway
+    name: gateway-1
+    uid: test-owner-reference-uid-for-gateway
 spec:
   externalTrafficPolicy: Local
+  ports:
+  - name: EnvoyHTTPPort
+    port: 0
+    protocol: TCP
+    targetPort: 8080
+  - name: EnvoyHTTPSPort
+    port: 0
+    protocol: TCP
+    targetPort: 8443
   selector:
     app.kubernetes.io/component: proxy
     app.kubernetes.io/managed-by: envoy-gateway
     app.kubernetes.io/name: envoy
     gateway.envoyproxy.io/owning-gateway-name: gateway-1
     gateway.envoyproxy.io/owning-gateway-namespace: namespace-1
+    gateway.networking.k8s.io/gateway-name: gateway-1
   sessionAffinity: None
   type: LoadBalancer
 status:
@@ -33,16 +49,32 @@ metadata:
     app.kubernetes.io/name: envoy
     gateway.envoyproxy.io/owning-gateway-name: gateway-2
     gateway.envoyproxy.io/owning-gateway-namespace: namespace-2
-  name: envoy-namespace-2-gateway-2-107e8cb2
+    gateway.networking.k8s.io/gateway-name: gateway-2
+  name: gateway-2
   namespace: namespace-2
+  ownerReferences:
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: Gateway
+    name: gateway-2
+    uid: test-owner-reference-uid-for-gateway
 spec:
   externalTrafficPolicy: Local
+  ports:
+  - name: EnvoyHTTPPort
+    port: 0
+    protocol: TCP
+    targetPort: 8080
+  - name: EnvoyHTTPSPort
+    port: 0
+    protocol: TCP
+    targetPort: 8443
   selector:
     app.kubernetes.io/component: proxy
     app.kubernetes.io/managed-by: envoy-gateway
     app.kubernetes.io/name: envoy
     gateway.envoyproxy.io/owning-gateway-name: gateway-2
     gateway.envoyproxy.io/owning-gateway-namespace: namespace-2
+    gateway.networking.k8s.io/gateway-name: gateway-2
   sessionAffinity: None
   type: LoadBalancer
 status:
