@@ -197,11 +197,13 @@ func buildXdsTCPListener(
 		return nil, err
 	}
 	bufferLimitBytes := buildPerConnectionBufferLimitBytes(connection)
+	maxAcceptPerSocketEvent := buildMaxAcceptPerSocketEvent(connection)
 	listener := &listenerv3.Listener{
-		Name:                          name,
-		AccessLog:                     al,
-		SocketOptions:                 socketOptions,
-		PerConnectionBufferLimitBytes: bufferLimitBytes,
+		Name:                                 name,
+		AccessLog:                            al,
+		SocketOptions:                        socketOptions,
+		PerConnectionBufferLimitBytes:        bufferLimitBytes,
+		MaxConnectionsToAcceptPerSocketEvent: maxAcceptPerSocketEvent,
 		Address: &corev3.Address{
 			Address: &corev3.Address_SocketAddress{
 				SocketAddress: &corev3.SocketAddress{
@@ -228,6 +230,13 @@ func buildPerConnectionBufferLimitBytes(connection *ir.ClientConnection) *wrappe
 		return wrapperspb.UInt32(*connection.BufferLimitBytes)
 	}
 	return wrapperspb.UInt32(tcpListenerPerConnectionBufferLimitBytes)
+}
+
+func buildMaxAcceptPerSocketEvent(connection *ir.ClientConnection) *wrapperspb.UInt32Value {
+	if connection != nil && connection.MaxAcceptPerSocketEvent != nil {
+		return wrapperspb.UInt32(*connection.MaxAcceptPerSocketEvent)
+	}
+	return nil
 }
 
 // buildXdsQuicListener creates a xds Listener resource for quic
