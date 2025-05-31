@@ -8,6 +8,7 @@ metadata:
     app.kubernetes.io/name: envoy
     gateway.envoyproxy.io/owning-gateway-name: gateway-1
     gateway.envoyproxy.io/owning-gateway-namespace: namespace-1
+    gateway.networking.k8s.io/gateway-name: gateway-1
   name: gateway-1
   namespace: namespace-1
   ownerReferences:
@@ -25,6 +26,7 @@ spec:
       app.kubernetes.io/name: envoy
       gateway.envoyproxy.io/owning-gateway-name: gateway-1
       gateway.envoyproxy.io/owning-gateway-namespace: namespace-1
+      gateway.networking.k8s.io/gateway-name: gateway-1
   strategy:
     type: RollingUpdate
   template:
@@ -40,6 +42,7 @@ spec:
         app.kubernetes.io/name: envoy
         gateway.envoyproxy.io/owning-gateway-name: gateway-1
         gateway.envoyproxy.io/owning-gateway-namespace: namespace-1
+        gateway.networking.k8s.io/gateway-name: gateway-1
     spec:
       containers:
       - args:
@@ -418,6 +421,7 @@ metadata:
     app.kubernetes.io/name: envoy
     gateway.envoyproxy.io/owning-gateway-name: gateway-2
     gateway.envoyproxy.io/owning-gateway-namespace: namespace-2
+    gateway.networking.k8s.io/gateway-name: gateway-2
   name: gateway-2
   namespace: namespace-2
   ownerReferences:
@@ -435,6 +439,7 @@ spec:
       app.kubernetes.io/name: envoy
       gateway.envoyproxy.io/owning-gateway-name: gateway-2
       gateway.envoyproxy.io/owning-gateway-namespace: namespace-2
+      gateway.networking.k8s.io/gateway-name: gateway-2
   strategy:
     type: RollingUpdate
   template:
@@ -450,6 +455,7 @@ spec:
         app.kubernetes.io/name: envoy
         gateway.envoyproxy.io/owning-gateway-name: gateway-2
         gateway.envoyproxy.io/owning-gateway-namespace: namespace-2
+        gateway.networking.k8s.io/gateway-name: gateway-2
     spec:
       containers:
       - args:

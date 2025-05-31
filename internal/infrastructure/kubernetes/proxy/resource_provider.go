@@ -133,8 +133,8 @@ func (r *ResourceRender) OwnerReferences() []metav1.OwnerReference {
 // ServiceAccount returns the expected proxy serviceAccount.
 func (r *ResourceRender) ServiceAccount() (*corev1.ServiceAccount, error) {
 	// Set the labels based on the owning gateway name.
-	labels := envoyLabels(r.infra.GetProxyMetadata().Labels)
-	if OwningGatewayLabelsAbsent(labels) {
+	saLabels := r.envoyLabels(r.infra.GetProxyMetadata().Labels)
+	if OwningGatewayLabelsAbsent(saLabels) {
 		return nil, fmt.Errorf("missing owning gateway labels")
 	}
 
@@ -146,11 +146,22 @@ func (r *ResourceRender) ServiceAccount() (*corev1.ServiceAccount, error) {
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace:       r.Namespace(),
 			Name:            r.Name(),
-			Labels:          labels,
+			Labels:          saLabels,
 			Annotations:     r.infra.GetProxyMetadata().Annotations,
 			OwnerReferences: r.OwnerReferences(),
 		},
 	}, nil
+}
+
+// envoyLabels returns the labels, including extraLabels, used for Envoy resources.
+func (r *ResourceRender) envoyLabels(extraLabels map[string]string) map[string]string {
+	appLabels := EnvoyAppLabel()
+	if r.GatewayNamespaceMode {
+		appLabels[gatewayapi.GatewayNameLabel] = r.Name()
+	}
+	maps.Copy(appLabels, extraLabels)
+
+	return appLabels
 }
 
 // Service returns the expected Service based on the provided infra.
@@ -187,7 +198,7 @@ func (r *ResourceRender) Service() (*corev1.Service, error) {
 	}
 
 	// Set the infraLabels based on the owning gatewayclass name.
-	infraLabels := envoyLabels(r.infra.GetProxyMetadata().Labels)
+	infraLabels := r.envoyLabels(r.infra.GetProxyMetadata().Labels)
 	if OwningGatewayLabelsAbsent(infraLabels) {
 		return nil, fmt.Errorf("missing owning gateway infraLabels")
 	}
@@ -279,8 +290,8 @@ func (r *ResourceRender) Service() (*corev1.Service, error) {
 // ConfigMap returns the expected ConfigMap based on the provided infra.
 func (r *ResourceRender) ConfigMap(cert string) (*corev1.ConfigMap, error) {
 	// Set the labels based on the owning gateway name.
-	labels := envoyLabels(r.infra.GetProxyMetadata().Labels)
-	if OwningGatewayLabelsAbsent(labels) {
+	cmLabels := r.envoyLabels(r.infra.GetProxyMetadata().Labels)
+	if OwningGatewayLabelsAbsent(cmLabels) {
 		return nil, fmt.Errorf("missing owning gateway labels")
 	}
 
@@ -300,7 +311,7 @@ func (r *ResourceRender) ConfigMap(cert string) (*corev1.ConfigMap, error) {
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace:       r.Namespace(),
 			Name:            r.Name(),
-			Labels:          labels,
+			Labels:          cmLabels,
 			Annotations:     r.infra.GetProxyMetadata().Annotations,
 			OwnerReferences: r.OwnerReferences(),
 		},
@@ -311,14 +322,14 @@ func (r *ResourceRender) ConfigMap(cert string) (*corev1.ConfigMap, error) {
 // stableSelector returns a stable selector based on the owning gateway labels.
 // "stable" here means the selector doesn't change when the infra is updated.
 func (r *ResourceRender) stableSelector() *metav1.LabelSelector {
-	labels := map[string]string{}
+	stableLabels := map[string]string{}
 	for k, v := range r.infra.GetProxyMetadata().Labels {
 		if k == gatewayapi.OwningGatewayNameLabel || k == gatewayapi.OwningGatewayNamespaceLabel || k == gatewayapi.OwningGatewayClassLabel {
-			labels[k] = v
+			stableLabels[k] = v
 		}
 	}
 
-	return resource.GetSelector(envoyLabels(labels))
+	return resource.GetSelector(r.envoyLabels(stableLabels))
 }
 
 // Deployment returns the expected Deployment based on the provided infra.
@@ -637,7 +648,7 @@ func (r *ResourceRender) getPodAnnotations(resourceAnnotation map[string]string,
 
 func (r *ResourceRender) getLabels() (map[string]string, error) {
 	// Set the labels based on the owning gateway name.
-	resourceLabels := envoyLabels(r.infra.GetProxyMetadata().Labels)
+	resourceLabels := r.envoyLabels(r.infra.GetProxyMetadata().Labels)
 	if OwningGatewayLabelsAbsent(resourceLabels) {
 		return nil, fmt.Errorf("missing owning gateway labels")
 	}
@@ -646,10 +657,10 @@ func (r *ResourceRender) getLabels() (map[string]string, error) {
 }
 
 func (r *ResourceRender) getPodLabels(pod *egv1a1.KubernetesPodSpec) map[string]string {
-	labels := r.infra.GetProxyMetadata().Labels
-	maps.Copy(labels, pod.Labels)
+	podLabels := r.infra.GetProxyMetadata().Labels
+	maps.Copy(podLabels, pod.Labels)
 
-	return envoyLabels(labels)
+	return r.envoyLabels(podLabels)
 }
 
 // OwningGatewayLabelsAbsent Check if labels are missing some OwningGatewayLabels

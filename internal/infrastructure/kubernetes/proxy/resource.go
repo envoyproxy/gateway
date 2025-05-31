@@ -59,16 +59,6 @@ func EnvoyAppLabelSelector() []string {
 	}
 }
 
-// envoyLabels returns the labels, including extraLabels, used for Envoy resources.
-func envoyLabels(extraLabels map[string]string) map[string]string {
-	labels := EnvoyAppLabel()
-	for k, v := range extraLabels {
-		labels[k] = v
-	}
-
-	return labels
-}
-
 func enablePrometheus(infra *ir.ProxyInfra) bool {
 	if infra.Config != nil &&
 		infra.Config.Spec.Telemetry != nil &&
