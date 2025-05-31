@@ -17,7 +17,6 @@ func SkipTests(gatewayNamespaceMode bool) []suite.ConformanceTest {
 	if gatewayNamespaceMode {
 		return []suite.ConformanceTest{
 			tests.GatewayStaticAddresses,
-			tests.GatewayInfrastructure, // https://github.com/envoyproxy/gateway/pull/5996 will fix this later.
 		}
 	}
 
