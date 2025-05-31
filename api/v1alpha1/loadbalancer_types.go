@@ -12,6 +12,7 @@ import metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 //
 // +kubebuilder:validation:XValidation:rule="self.type == 'ConsistentHash' ? has(self.consistentHash) : !has(self.consistentHash)",message="If LoadBalancer type is consistentHash, consistentHash field needs to be set."
 // +kubebuilder:validation:XValidation:rule="self.type in ['Random', 'ConsistentHash'] ? !has(self.slowStart) : true ",message="Currently SlowStart is only supported for RoundRobin and LeastRequest load balancers."
+// +kubebuilder:validation:XValidation:rule="self.type == 'ConsistentHash' ? !has(self.requestDistribution) : true ",message="Currently RequestDistribution is only supported for LeastRequest, Random, and RoundRobin load balancers."
 type LoadBalancer struct {
 	// Type decides the type of Load Balancer policy.
 	// Valid LoadBalancerType values are
@@ -34,6 +35,12 @@ type LoadBalancer struct {
 	//
 	// +optional
 	SlowStart *SlowStart `json:"slowStart,omitempty"`
+
+	// RequestDistribution defines the configuration related to the distribution of requests between localities.
+	//
+	// +optional
+	// +notImplementedHide
+	RequestDistribution *RequestDistribution `json:"requestDistribution,omitempty"`
 }
 
 // LoadBalancerType specifies the types of LoadBalancer.
@@ -134,4 +141,47 @@ type SlowStart struct {
 	// +kubebuilder:validation:Required
 	Window *metav1.Duration `json:"window"`
 	// TODO: Add support for non-linear traffic increases based on user usage.
+}
+
+// RequestDistribution defines the configuration related to the distribution of requests between localities.
+type RequestDistribution struct {
+	// PreferLocalZone configures zone-aware routing to prefer sending traffic to the local locality zone.
+	//
+	// +optional
+	// +notImplementedHide
+	PreferLocalZone *PreferLocalZone `json:"preferLocalZone,omitempty"`
+}
+
+// PreferLocalZone configures zone-aware routing to prefer sending traffic to the local locality zone.
+type PreferLocalZone struct {
+	// ForceLocalZone defines override configuration for forcing all traffic to stay local vs Envoy default behavior
+	// which maintains equal distribution among upstreams while sending as much traffic as possible locally.
+	//
+	// +optional
+	// +notImplementedHide
+	ForceLocalZone *ForceLocalZone `json:"forceLocalZone,omitempty"`
+
+	// MinClusterSize is the minimum number of total upstream hosts across all zones required to enable zone-aware routing.
+	//
+	// +optional
+	// +notImplementedHide
+	MinClusterSize *uint64 `json:"minClusterSize,omitempty"`
+}
+
+// ForceLocalZone defines override configuration for forcing all traffic to stay local vs Envoy default behavior
+// which maintains equal distribution among upstreams while sending as much traffic as possible locally.
+type ForceLocalZone struct {
+	// Enabled causes Envoy to route all requests to the local zone if there are at least "minZoneSize" healthy hosts
+	// available.
+	//
+	// +optional
+	// +notImplementedHide
+	Enabled *bool `json:"enabled"`
+
+	// MinZoneSize is the minimum number of upstream hosts in the local zone required to honor the forceLocalZone
+	// override. Defaults to 1 if not specified.
+	//
+	// +optional
+	// +notImplementedHide
+	MinZoneSize *uint32 `json:"minZoneSize,omitempty"`
 }
