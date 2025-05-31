@@ -69,6 +69,7 @@ type xdsClusterArgs struct {
 	useClientProtocol bool
 	ipFamily          *egv1a1.IPFamily
 	metadata          *ir.ResourceMetadata
+	statName          *string
 }
 
 type EndpointType int
@@ -146,6 +147,10 @@ func buildXdsCluster(args *xdsClusterArgs) (*buildClusterResult, error) {
 		},
 		PerConnectionBufferLimitBytes: buildBackandConnectionBufferLimitBytes(args.backendConnection),
 		Metadata:                      buildXdsMetadata(args.metadata),
+	}
+
+	if args.statName != nil {
+		cluster.AltStatName = *args.statName
 	}
 
 	// 50% is the Envoy default value for panic threshold. No need to explicitly set it in this case.
@@ -1042,6 +1047,7 @@ type ExtraArgs struct {
 	http1Settings *ir.HTTP1Settings
 	http2Settings *ir.HTTP2Settings
 	ipFamily      *egv1a1.IPFamily
+	statName      *string
 }
 
 type clusterArgs interface {
@@ -1116,6 +1122,7 @@ func (httpRoute *HTTPRouteTranslator) asClusterArgs(name string,
 		useClientProtocol: ptr.Deref(httpRoute.UseClientProtocol, false),
 		ipFamily:          extra.ipFamily,
 		metadata:          metadata,
+		statName:          extra.statName,
 	}
 
 	// Populate traffic features.
