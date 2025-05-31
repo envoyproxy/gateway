@@ -84,11 +84,6 @@ var DynamicResolverBackendTest = suite.ConformanceTest{
 
 			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
 		})
-		t.Cleanup(func() {
-			if t.Failed() {
-				CollectAndDump(t, suite.RestConfig)
-			}
-		})
 	},
 }
 
@@ -141,11 +136,6 @@ var DynamicResolverBackendWithTLSTest = suite.ConformanceTest{
 				},
 			}
 			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
-		})
-		t.Cleanup(func() {
-			if t.Failed() {
-				CollectAndDump(t, suite.RestConfig)
-			}
 		})
 	},
 }

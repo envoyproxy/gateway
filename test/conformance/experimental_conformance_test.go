@@ -24,6 +24,7 @@ import (
 	"sigs.k8s.io/yaml"
 
 	internalconf "github.com/envoyproxy/gateway/internal/gatewayapi/conformance"
+	"github.com/envoyproxy/gateway/test/e2e"
 )
 
 func TestExperimentalConformance(t *testing.T) {
@@ -42,6 +43,7 @@ func TestExperimentalConformance(t *testing.T) {
 		suite.GatewayTLSConformanceProfileName,
 		suite.GatewayGRPCConformanceProfileName,
 	)
+	opts.Hook = e2e.Hook
 
 	t.Logf("Running experimental conformance tests with %s GatewayClass\n cleanup: %t\n debug: %t\n enable all features: %t \n conformance profiles: [%v]",
 		*flags.GatewayClassName, *flags.CleanupBaseResources, *flags.ShowDebug, *flags.EnableAllSupportedFeatures, opts.ConformanceProfiles)
