@@ -22,7 +22,7 @@ requirement and applies the same logic as `spec.TrafficDistribution=PreferClose`
 ### Kubernetes Service
 Create the example Kubernetes Service with either topology aware routing or traffic distribution enabled.
 
-###### Topology Aware Routing
+#### Topology Aware Routing
 {{< tabpane text=true >}}
 {{% tab header="Apply from stdin" %}}
 ```shell
@@ -70,8 +70,7 @@ spec:
 {{% /tab %}}
 {{< /tabpane >}}
 
-
-###### Traffic Distribution
+#### Traffic Distribution
 {{< tabpane text=true >}}
 {{% tab header="Apply from stdin" %}}
 ```shell
