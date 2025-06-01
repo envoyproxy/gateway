@@ -28,6 +28,8 @@ no_list: true
   </div>
 </div>
 
+{{ partial "community-cta.html" . }}
+
 <section class="feature-section">
   <div class="container">
     <div class="row justify-content-center">
