@@ -1,0 +1,48 @@
+{{ $latest_version := .Site.Params.version }}
+{{ $github_repo := .Site.Params.github_repo }}
+
+<!-- Announcement Banner -->
+<div class="announcement-banner" id="announcement-banner">
+  <div class="container">
+    <div class="announcement-content">
+      <div class="announcement-icon">
+        <i class="fas fa-rocket"></i>
+      </div>
+      <div class="announcement-text">
+        <span class="announcement-title">🎉 New Release Available!</span>
+        <span class="announcement-message">
+          Envoy Gateway {{ $latest_version }} is now available with enhanced features and improved performance.
+          <a href="{{ $github_repo }}/releases/tag/{{ $latest_version }}" target="_blank" class="announcement-link">
+            View Release Notes <i class="fas fa-external-link-alt"></i>
+          </a>
+        </span>
+      </div>
+      <button class="announcement-close" onclick="dismissBanner()" aria-label="Close announcement">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+  </div>
+</div>
+
+<script>
+function dismissBanner() {
+  const banner = document.getElementById('announcement-banner');
+  banner.style.transform = 'translateY(-100%)';
+  banner.style.opacity = '0';
+  setTimeout(() => {
+    banner.style.display = 'none';
+  }, 300);
+  
+  // Store dismissal in localStorage to remember user preference
+  localStorage.setItem('announcement-banner-dismissed-{{ $latest_version }}', 'true');
+}
+
+// Check if banner was previously dismissed for this version
+document.addEventListener('DOMContentLoaded', function() {
+  const dismissed = localStorage.getItem('announcement-banner-dismissed-{{ $latest_version }}');
+  if (dismissed === 'true') {
+    const banner = document.getElementById('announcement-banner');
+    banner.style.display = 'none';
+  }
+});
+</script>
