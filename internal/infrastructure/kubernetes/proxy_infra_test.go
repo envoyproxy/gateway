@@ -33,6 +33,11 @@ import (
 	"github.com/envoyproxy/gateway/internal/ir"
 )
 
+const (
+	testGatewayClass = "envoy-gateway-class"
+	testResourceUID  = "foo.bar"
+)
+
 func newTestInfra(t *testing.T) *Infra {
 	cli := fakeclient.NewClientBuilder().
 		WithScheme(envoygateway.GetScheme()).
@@ -224,14 +229,24 @@ func TestDeleteProxyInfra(t *testing.T) {
 	}
 }
 
-// This function uses setup for GatewayNamespace mode.
+// This function uses setup creating Resources for OwnerReference.
+// When the default case, ProxyInfra Get OwnerReference from GatewayClass.
 // When enable GatewayNamespace mode, ProxyInfra Get OwnerReference from Gateway.
-func createGatewayForGatewayNamespaceMode(ctx context.Context, client *InfraClient) error {
+func setupOwnerReferenceResources(ctx context.Context, client *InfraClient) error {
+	gwc := &gwapiv1.GatewayClass{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: testGatewayClass,
+			UID:  testResourceUID,
+		},
+	}
+	if err := client.Create(ctx, gwc); err != nil {
+		return err
+	}
 	gw := &gwapiv1.Gateway{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: "ns1",
 			Name:      "gateway-1",
-			UID:       "foo.bar",
+			UID:       testResourceUID,
 		},
 	}
 	return client.Create(ctx, gw)

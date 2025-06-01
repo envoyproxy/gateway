@@ -64,8 +64,8 @@ type ResourceRender struct {
 	GatewayNamespaceMode bool
 
 	// ownerReferenceUID store the uid of its owner reference. Key is the kind of owner resource.
+	// - GatewayClass when enabled ControllerNamespaceMode, merged Gateway...
 	// - Gateway when enabled GatewayNamespaceMode
-	// - TODO: GatewayClass when enabled merged gateways
 	ownerReferenceUID map[string]types.UID
 }
 
@@ -117,8 +117,12 @@ func (r *ResourceRender) LabelSelector() labels.Selector {
 
 func (r *ResourceRender) OwnerReferences() []metav1.OwnerReference {
 	var ownerReferences []metav1.OwnerReference
-	if r.ownerReferenceUID != nil && r.GatewayNamespaceMode {
-		if uid, ok := r.ownerReferenceUID[gwapiresource.KindGateway]; ok {
+	if r.ownerReferenceUID != nil {
+		key := gwapiresource.KindGatewayClass
+		if r.GatewayNamespaceMode {
+			key = gwapiresource.KindGateway
+		}
+		if uid, ok := r.ownerReferenceUID[key]; ok {
 			ownerReferences = append(ownerReferences, metav1.OwnerReference{
 				APIVersion: gwapiv1.GroupVersion.String(),
 				Kind:       r.infra.GetProxyMetadata().OwnerReference.Kind,
