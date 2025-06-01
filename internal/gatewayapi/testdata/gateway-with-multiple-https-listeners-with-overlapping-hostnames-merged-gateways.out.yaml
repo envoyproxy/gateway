@@ -42,8 +42,9 @@ gateways:
         type: ResolvedRefs
       - lastTransitionTime: null
         message: The hostname foo.example.com overlaps with the hostname *.example.com
-          in listener https-1 of gateway gateway-2. ALPN is set to HTTP/1.1 to prevent
-          HTTP/2 connection coalescing
+          in listener https-1 of gateway gateway-2. ALPN will default to HTTP/1.1
+          to prevent HTTP/2 connection coalescing, unless explicitly configured via
+          ClientTrafficPolicy
         reason: OverlappingHostnames
         status: "True"
         type: OverlappingTLSConfig
@@ -109,8 +110,9 @@ gateways:
         type: ResolvedRefs
       - lastTransitionTime: null
         message: The hostname *.example.com overlaps with the hostname foo.example.com
-          in listener https-1 of gateway gateway-1. ALPN is set to HTTP/1.1 to prevent
-          HTTP/2 connection coalescing
+          in listener https-1 of gateway gateway-1. ALPN will default to HTTP/1.1
+          to prevent HTTP/2 connection coalescing, unless explicitly configured via
+          ClientTrafficPolicy
         reason: OverlappingHostnames
         status: "True"
         type: OverlappingTLSConfig
