@@ -158,6 +158,7 @@ func TestCreateOrUpdateProxyConfigMap(t *testing.T) {
 						"app.kubernetes.io/managed-by":         "envoy-gateway",
 						gatewayapi.OwningGatewayNamespaceLabel: "ns1",
 						gatewayapi.OwningGatewayNameLabel:      "gateway-1",
+						gatewayapi.GatewayNameLabel:            "gateway-1",
 					},
 					OwnerReferences: []metav1.OwnerReference{
 						{
