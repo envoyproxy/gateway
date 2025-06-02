@@ -7,7 +7,6 @@ package status
 
 import (
 	"fmt"
-	"slices"
 	"time"
 
 	appsv1 "k8s.io/api/apps/v1"
