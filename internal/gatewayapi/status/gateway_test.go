@@ -12,7 +12,7 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
-	"github.com/google/go-cmp/cmp/cmpopts"
+	"github.com/google/go-cmp/cmp/cmp/cmpopts"
 	"github.com/stretchr/testify/assert"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -246,6 +246,30 @@ func TestUpdateGatewayStatusProgrammedCondition(t *testing.T) {
 			name: "Headless ClusterIP svc with None",
 			args: args{
 				gw: &gwapiv1.Gateway{},
+				svc: &corev1.Service{
+					TypeMeta:   metav1.TypeMeta{},
+					ObjectMeta: metav1.ObjectMeta{},
+					Spec: corev1.ServiceSpec{
+						ClusterIPs: []string{"None"},
+						Type:       corev1.ServiceTypeClusterIP,
+					},
+				},
+			},
+			wantAddresses: []gwapiv1.GatewayStatusAddress{},
+		},
+		{
+			name: "Headless ClusterIP svc with None and explicit Gateway addresses",
+			args: args{
+				gw: &gwapiv1.Gateway{
+					Spec: gwapiv1.GatewaySpec{
+						Addresses: []gwapiv1.GatewaySpecAddress{
+							{
+								Type:  ptr.To(gwapiv1.IPAddressType),
+								Value: "10.0.0.1",
+							},
+						},
+					},
+				},
 				svc: &corev1.Service{
 					TypeMeta:   metav1.TypeMeta{},
 					ObjectMeta: metav1.ObjectMeta{},
