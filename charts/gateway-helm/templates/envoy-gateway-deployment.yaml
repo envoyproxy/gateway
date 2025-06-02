@@ -7,7 +7,9 @@ metadata:
     control-plane: envoy-gateway
   {{- include "eg.labels" . | nindent 4 }}
 spec:
+  {{- if not .Values.hpa.enabled }}
   replicas: {{ .Values.deployment.replicas }}
+  {{- end }}
   selector:
     matchLabels:
       control-plane: envoy-gateway
