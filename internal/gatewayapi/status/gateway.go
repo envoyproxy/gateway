@@ -7,6 +7,7 @@ package status
 
 import (
 	"fmt"
+	"slices"
 	"time"
 
 	appsv1 "k8s.io/api/apps/v1"
@@ -58,7 +59,10 @@ func UpdateGatewayStatusProgrammedCondition(gw *gwapiv1.Gateway, svc *corev1.Ser
 			if len(svc.Spec.ExternalIPs) > 0 {
 				addresses = append(addresses, svc.Spec.ExternalIPs...)
 			} else if len(svc.Spec.ClusterIPs) > 0 {
-				addresses = append(addresses, svc.Spec.ClusterIPs...)
+				validIPs := slices.DeleteFunc(slices.Clone(svc.Spec.ClusterIPs), func(ip string) bool {
+					return ip == "" || ip == "None"
+				})
+				addresses = append(addresses, validIPs...)
 			}
 		} else {
 			if svc.Spec.Type == corev1.ServiceTypeLoadBalancer {
