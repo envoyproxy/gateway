@@ -84,7 +84,8 @@ func UpdateGatewayStatusProgrammedCondition(gw *gwapiv1.Gateway, svc *corev1.Ser
 
 			if svc.Spec.Type == corev1.ServiceTypeClusterIP {
 				for i := range svc.Spec.ClusterIPs {
-					if svc.Spec.ClusterIPs[i] != "" {
+					// Filter out "None" values which represent headless services
+					if svc.Spec.ClusterIPs[i] != "" && svc.Spec.ClusterIPs[i] != "None" {
 						addresses = append(addresses, svc.Spec.ClusterIPs[i])
 					}
 				}
