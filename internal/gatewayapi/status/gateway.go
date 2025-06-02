@@ -59,10 +59,11 @@ func UpdateGatewayStatusProgrammedCondition(gw *gwapiv1.Gateway, svc *corev1.Ser
 			if len(svc.Spec.ExternalIPs) > 0 {
 				addresses = append(addresses, svc.Spec.ExternalIPs...)
 			} else if len(svc.Spec.ClusterIPs) > 0 {
-				validIPs := slices.DeleteFunc(slices.Clone(svc.Spec.ClusterIPs), func(ip string) bool {
-					return ip == "" || ip == "None"
-				})
-				addresses = append(addresses, validIPs...)
+				for _, ip := range svc.Spec.ClusterIPs {
+					if ip != "" && ip != "None" {
+						addresses = append(addresses, ip)
+					}
+				}
 			}
 		} else {
 			if svc.Spec.Type == corev1.ServiceTypeLoadBalancer {
