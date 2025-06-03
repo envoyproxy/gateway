@@ -41,6 +41,9 @@ type ClientConnection struct {
 	// per socket event. If there are more than MaxAcceptPerSocketEvent connections pending accept, connections over
 	// this threshold will be accepted in later event loop iterations. If no value is provided Envoy will accept
 	// all connections pending accept from the kernel.
+	// It is recommended to lower this value for better overload management and reduced per-event cost.
+	// Setting it to 1 is a viable option with no noticeable impact on performance.
+	//
 	// +optional
 	MaxAcceptPerSocketEvent *uint32 `json:"maxAcceptPerSocketEvent,omitempty"`
 }
