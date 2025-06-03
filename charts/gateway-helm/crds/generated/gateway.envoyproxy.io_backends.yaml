@@ -170,6 +170,8 @@ spec:
                       If CACertificateRefs is empty or unspecified, then WellKnownCACertificates must be
                       specified. Only one of CACertificateRefs or WellKnownCACertificates may be specified,
                       not both.
+
+                      Only used for DynamicResolver backends.
                     items:
                       description: |-
                         LocalObjectReference identifies an API object within the namespace of the
@@ -207,6 +209,12 @@ spec:
                       type: object
                     maxItems: 8
                     type: array
+                  insecureSkipVerify:
+                    default: false
+                    description: |-
+                      InsecureSkipVerify indicates whether the upstream's certificate verification
+                      should be skipped. Defaults to "false".
+                    type: boolean
                   wellKnownCACertificates:
                     description: |-
                       WellKnownCACertificates specifies whether system CA certificates may be used in
@@ -215,6 +223,8 @@ spec:
                       If WellKnownCACertificates is unspecified or empty (""), then CACertificateRefs
                       must be specified with at least one entry for a valid configuration. Only one of
                       CACertificateRefs or WellKnownCACertificates may be specified, not both.
+
+                      Only used for DynamicResolver backends.
                     enum:
                     - System
                     type: string
@@ -239,8 +249,6 @@ spec:
             x-kubernetes-validations:
             - message: DynamicResolver type cannot have endpoints specified
               rule: self.type != 'DynamicResolver' || !has(self.endpoints)
-            - message: TLS settings can only be specified for DynamicResolver backends
-              rule: 'has(self.tls) ? self.type == ''DynamicResolver'' : true'
           status:
             description: Status defines the current status of Backend.
             properties:
