@@ -1,0 +1,12 @@
+date: June 3, 2025
+
+# New features or capabilities added in this release.
+new features: |
+  Added support for configuring Subject Alternative Names (SANs) for upstream TLS validation via `BackendTLSPolicy.validation.subjectAltNames`.
+  Added support for GatewayInfrastructure in gateway namespace mode.
+
+bug fixes: |
+  Handle integer zone annotation values
+  Fixed issue where WASM cache init failure caused routes with WASM-less EnvoyExtensionPolicies to have 500 direct responses.
+  Fixed issue which UDP listeners were not created in the Envoy proxy config when Gateway was created.
+  Keep ALPN configuration for listeners with overlapping certificates when ALPN is explicitly set in ClientTrafficPolicy.
