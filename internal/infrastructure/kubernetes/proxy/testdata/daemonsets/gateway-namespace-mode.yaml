@@ -254,7 +254,6 @@ spec:
         - --log-level warn
         - --cpuset-threads
         - --drain-strategy immediate
-        - --component-log-level misc:error
         - --drain-time-s 60
         command:
         - envoy
@@ -271,7 +270,7 @@ spec:
             fieldRef:
               apiVersion: v1
               fieldPath: metadata.name
-        image: docker.io/envoyproxy/envoy:distroless-dev
+        image: docker.io/envoyproxy/envoy:distroless-v1.34.1
         imagePullPolicy: IfNotPresent
         lifecycle:
           preStop:
