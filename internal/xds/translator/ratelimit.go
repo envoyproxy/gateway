@@ -774,11 +774,6 @@ func (t *Translator) createRateLimitServiceCluster(tCtx *types.ResourceVersionTa
 	})
 }
 
-// getDomainSharedName returns the shared domain (stripped policy name), stripRuleIndexSuffix is used to remove the rule index suffix.
-func getDomainSharedName(route *ir.HTTPRoute) string {
-	return stripRuleIndexSuffix(route.Traffic.RateLimit.Global.Rules[0].Name)
-}
-
 func getRouteRuleDescriptor(ruleIndex, matchIndex int) string {
 	return "rule-" + strconv.Itoa(ruleIndex) + "-match-" + strconv.Itoa(matchIndex)
 }
