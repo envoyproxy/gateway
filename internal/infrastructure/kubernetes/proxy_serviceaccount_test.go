@@ -28,6 +28,15 @@ import (
 )
 
 func TestCreateOrUpdateProxyServiceAccount(t *testing.T) {
+	proxyInfra := &ir.ProxyInfra{
+		Name: "test",
+		Metadata: &ir.InfraMetadata{
+			Labels: map[string]string{
+				gatewayapi.OwningGatewayNamespaceLabel: "default",
+				gatewayapi.OwningGatewayNameLabel:      "gateway-1",
+			},
+		},
+	}
 	testCases := []struct {
 		name                 string
 		ns                   string
@@ -40,15 +49,7 @@ func TestCreateOrUpdateProxyServiceAccount(t *testing.T) {
 			name: "create-sa",
 			ns:   "test",
 			in: &ir.Infra{
-				Proxy: &ir.ProxyInfra{
-					Name: "test",
-					Metadata: &ir.InfraMetadata{
-						Labels: map[string]string{
-							gatewayapi.OwningGatewayNamespaceLabel: "default",
-							gatewayapi.OwningGatewayNameLabel:      "gateway-1",
-						},
-					},
-				},
+				Proxy: proxyInfra,
 			},
 			want: &corev1.ServiceAccount{
 				TypeMeta: metav1.TypeMeta{
@@ -72,15 +73,7 @@ func TestCreateOrUpdateProxyServiceAccount(t *testing.T) {
 			name: "sa-exists",
 			ns:   "test",
 			in: &ir.Infra{
-				Proxy: &ir.ProxyInfra{
-					Name: "test",
-					Metadata: &ir.InfraMetadata{
-						Labels: map[string]string{
-							gatewayapi.OwningGatewayNamespaceLabel: "default",
-							gatewayapi.OwningGatewayNameLabel:      "gateway-1",
-						},
-					},
-				},
+				Proxy: proxyInfra,
 			},
 			current: &corev1.ServiceAccount{
 				TypeMeta: metav1.TypeMeta{
@@ -95,7 +88,6 @@ func TestCreateOrUpdateProxyServiceAccount(t *testing.T) {
 						"app.kubernetes.io/component":          "proxy",
 						"app.kubernetes.io/managed-by":         "envoy-gateway",
 						gatewayapi.OwningGatewayNamespaceLabel: "default",
-						gatewayapi.OwningGatewayNameLabel:      "gateway-1",
 					},
 				},
 			},
@@ -144,7 +136,6 @@ func TestCreateOrUpdateProxyServiceAccount(t *testing.T) {
 						"app.kubernetes.io/component":          "proxy",
 						"app.kubernetes.io/managed-by":         "envoy-gateway",
 						gatewayapi.OwningGatewayNamespaceLabel: "default",
-						gatewayapi.OwningGatewayNameLabel:      "gateway-1",
 					},
 				},
 			},
@@ -200,6 +191,7 @@ func TestCreateOrUpdateProxyServiceAccount(t *testing.T) {
 						"app.kubernetes.io/managed-by":         "envoy-gateway",
 						gatewayapi.OwningGatewayNamespaceLabel: "ns1",
 						gatewayapi.OwningGatewayNameLabel:      "gateway-1",
+						gatewayapi.GatewayNameLabel:            "gateway-1",
 					},
 					OwnerReferences: []metav1.OwnerReference{
 						{

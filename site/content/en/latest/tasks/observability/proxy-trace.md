@@ -72,7 +72,7 @@ spec:
         "k8s.namespace.name":
           type: Environment
           environment:
-            name: ENVOY_GATEWAY_NAMESPACE
+            name: ENVOY_POD_NAMESPACE
             defaultValue: "envoy-gateway-system"
         # This is an example of using a header value as a tag value
         header1:
@@ -138,7 +138,7 @@ spec:
         "k8s.namespace.name":
           type: Environment
           environment:
-            name: ENVOY_GATEWAY_NAMESPACE
+            name: ENVOY_POD_NAMESPACE
             defaultValue: "envoy-gateway-system"
         # This is an example of using a header value as a tag value
         header1:
@@ -202,7 +202,7 @@ spec:
         "k8s.namespace.name":
           type: Environment
           environment:
-            name: ENVOY_GATEWAY_NAMESPACE
+            name: ENVOY_POD_NAMESPACE
             defaultValue: "envoy-gateway-system"
         # This is an example of using a header value as a tag value
         header1:
@@ -277,7 +277,7 @@ spec:
         "k8s.namespace.name":
           type: Environment
           environment:
-            name: ENVOY_GATEWAY_NAMESPACE
+            name: ENVOY_POD_NAMESPACE
             defaultValue: "envoy-gateway-system"
         # This is an example of using a header value as a tag value
         header1:
@@ -336,7 +336,7 @@ spec:
         "k8s.namespace.name":
           type: Environment
           environment:
-            name: ENVOY_GATEWAY_NAMESPACE
+            name: ENVOY_POD_NAMESPACE
             defaultValue: "envoy-gateway-system"
         # This is an example of using a header value as a tag value
         header1:

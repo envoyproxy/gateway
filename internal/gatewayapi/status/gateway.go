@@ -58,7 +58,12 @@ func UpdateGatewayStatusProgrammedCondition(gw *gwapiv1.Gateway, svc *corev1.Ser
 			if len(svc.Spec.ExternalIPs) > 0 {
 				addresses = append(addresses, svc.Spec.ExternalIPs...)
 			} else if len(svc.Spec.ClusterIPs) > 0 {
-				addresses = append(addresses, svc.Spec.ClusterIPs...)
+				// Filter out "None" values which represent headless services
+				for _, ip := range svc.Spec.ClusterIPs {
+					if ip != "" && ip != "None" {
+						addresses = append(addresses, ip)
+					}
+				}
 			}
 		} else {
 			if svc.Spec.Type == corev1.ServiceTypeLoadBalancer {
@@ -79,7 +84,8 @@ func UpdateGatewayStatusProgrammedCondition(gw *gwapiv1.Gateway, svc *corev1.Ser
 
 			if svc.Spec.Type == corev1.ServiceTypeClusterIP {
 				for i := range svc.Spec.ClusterIPs {
-					if svc.Spec.ClusterIPs[i] != "" {
+					// Filter out "None" values which represent headless services
+					if svc.Spec.ClusterIPs[i] != "" && svc.Spec.ClusterIPs[i] != "None" {
 						addresses = append(addresses, svc.Spec.ClusterIPs[i])
 					}
 				}

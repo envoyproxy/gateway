@@ -440,7 +440,13 @@ func (t *Translator) translateBackendTrafficPolicyForRouteWithMerge(
 	// Since GlobalRateLimit merge relies on IR auto-generated key: (<policy-ns>/<policy-name>/rule/<rule-index>)
 	// We can't simply merge the BTP's using utils.Merge() we need to specifically merge the GlobalRateLimit.Rules using IR fields.
 	// Since ir.TrafficFeatures is not a built-in Kubernetes API object with defined merging strategies and it does not support a deep merge (for lists/maps).
+
+	// Handle rate limit merging cases:
+	// 1. Both policies have rate limits - merge them
+	// 2. Only gateway policy has rate limits - preserve gateway policy's rule names
+	// 3. Only route policy has rate limits - use route policy's rule names (default behavior)
 	if policy.Spec.RateLimit != nil && gwPolicy.Spec.RateLimit != nil {
+		// Case 1: Both policies have rate limits - merge them
 		tfGW, _ := t.buildTrafficFeatures(gwPolicy, resources)
 		tfRoute, _ := t.buildTrafficFeatures(policy, resources)
 
@@ -454,7 +460,15 @@ func (t *Translator) translateBackendTrafficPolicyForRouteWithMerge(
 			// Replace the rate limit in the merged features if successful
 			tf.RateLimit = mergedRL
 		}
+	} else if policy.Spec.RateLimit == nil && gwPolicy.Spec.RateLimit != nil {
+		// Case 2: Only gateway policy has rate limits - preserve gateway policy's rule names
+		tfGW, _ := t.buildTrafficFeatures(gwPolicy, resources)
+		if tfGW != nil && tfGW.RateLimit != nil {
+			// Use the gateway policy's rate limit with its original rule names
+			tf.RateLimit = tfGW.RateLimit
+		}
 	}
+	// Case 3: Only route policy has rate limits or neither has rate limits - use default behavior (tf already built from merged policy)
 
 	x, ok := xdsIR[t.IRKey(gatewayNN)]
 	if !ok {

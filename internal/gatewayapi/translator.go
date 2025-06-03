@@ -35,6 +35,8 @@ const (
 	// The value should be the name of the accepted Envoy Gateway.
 	OwningGatewayNameLabel = "gateway.envoyproxy.io/owning-gateway-name"
 
+	GatewayNameLabel = "gateway.networking.k8s.io/gateway-name"
+
 	// minEphemeralPort is the first port in the ephemeral port range.
 	minEphemeralPort = 1024
 	// wellKnownPortShift is the constant added to the well known port (1-1023)

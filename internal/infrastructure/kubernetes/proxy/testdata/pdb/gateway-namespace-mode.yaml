@@ -18,6 +18,7 @@ spec:
       app.kubernetes.io/name: envoy
       gateway.envoyproxy.io/owning-gateway-name: gateway-1
       gateway.envoyproxy.io/owning-gateway-namespace: ns1
+      gateway.networking.k8s.io/gateway-name: gateway-1
 status:
   currentHealthy: 0
   desiredHealthy: 0
