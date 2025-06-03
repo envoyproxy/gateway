@@ -133,6 +133,9 @@ spec:
                       - Gzip
                       - Brotli
                       type: string
+                    ztsd:
+                      description: The configuration for ZTSD compressor.
+                      type: object
                   required:
                   - type
                   type: object
