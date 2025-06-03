@@ -174,32 +174,6 @@ xdsIR:
           - group: gateway.networking.k8s.io
             kind: Gateway
             name: gateway-1
-        status:
-          ancestors:
-          - ancestorRef:
-              group: gateway.networking.k8s.io
-              kind: Gateway
-              name: gateway-2
-              namespace: envoy-gateway
-            conditions:
-            - lastTransitionTime: null
-              message: Policy has been accepted.
-              reason: Accepted
-              status: "True"
-              type: Accepted
-            controllerName: gateway.envoyproxy.io/gatewayclass-controller
-          - ancestorRef:
-              group: gateway.networking.k8s.io
-              kind: Gateway
-              name: gateway-1
-              namespace: envoy-gateway
-            conditions:
-            - lastTransitionTime: null
-              message: Policy has been accepted.
-              reason: Accepted
-              status: "True"
-              type: Accepted
-            controllerName: gateway.envoyproxy.io/gatewayclass-controller
     http:
     - address: 0.0.0.0
       extensionRefs:
@@ -282,32 +256,6 @@ xdsIR:
           - group: gateway.networking.k8s.io
             kind: Gateway
             name: gateway-1
-        status:
-          ancestors:
-          - ancestorRef:
-              group: gateway.networking.k8s.io
-              kind: Gateway
-              name: gateway-2
-              namespace: envoy-gateway
-            conditions:
-            - lastTransitionTime: null
-              message: Policy has been accepted.
-              reason: Accepted
-              status: "True"
-              type: Accepted
-            controllerName: gateway.envoyproxy.io/gatewayclass-controller
-          - ancestorRef:
-              group: gateway.networking.k8s.io
-              kind: Gateway
-              name: gateway-1
-              namespace: envoy-gateway
-            conditions:
-            - lastTransitionTime: null
-              message: Policy has been accepted.
-              reason: Accepted
-              status: "True"
-              type: Accepted
-            controllerName: gateway.envoyproxy.io/gatewayclass-controller
     http:
     - address: 0.0.0.0
       extensionRefs:
