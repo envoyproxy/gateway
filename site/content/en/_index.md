@@ -22,13 +22,39 @@ no_list: true
         <i class="fab fa-github me-2"></i>GitHub
       </a>
     </div>
-    <!-- <div class="mt-4">
-      <a href="/docs/tasks/quickstart/" class="btn btn-primary btn-lg me-3">Get Started →</a>
-    </div> -->
+    <div class="mt-4">
+      <p class="text-white-50 mb-3">Join our community:</p>
+      <div class="d-flex justify-content-center gap-3 flex-wrap">
+        <a href="https://envoyproxy.slack.com/archives/C03E6NHLESV" 
+           target="_blank" 
+           rel="noopener noreferrer"
+           class="btn btn-outline-light btn-sm">
+          <i class="fab fa-slack me-1"></i>Slack
+        </a>
+        <a href="https://www.linkedin.com/company/envoyproxy" 
+           target="_blank" 
+           rel="noopener noreferrer"
+           class="btn btn-outline-light btn-sm">
+          <i class="fab fa-linkedin me-1"></i>LinkedIn
+        </a>
+        <a href="https://twitter.com/EnvoyProxy" 
+           target="_blank" 
+           rel="noopener noreferrer"
+           class="btn btn-outline-light btn-sm">
+          <i class="fab fa-twitter me-1"></i>Twitter
+        </a>
+        <a href="https://github.com/envoyproxy/gateway" 
+           target="_blank" 
+           rel="noopener noreferrer"
+           class="btn btn-outline-light btn-sm">
+          <i class="fab fa-github me-1"></i>Follow
+        </a>
+      </div>
+    </div>
   </div>
 </div>
 
-{{ partial "community-cta.html" . }}
+{{- partial "community-cta.html" . -}}
 
 <section class="feature-section">
   <div class="container">
