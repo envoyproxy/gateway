@@ -1,12 +1,21 @@
-date: June 3, 2025
+date: June 4, 2025
 
 # New features or capabilities added in this release.
 new features: |
   Added support for configuring Subject Alternative Names (SANs) for upstream TLS validation via `BackendTLSPolicy.validation.subjectAltNames`.
-  Added support for GatewayInfrastructure in gateway namespace mode.
+  Added support for setting ownerreference to infra resources when enable gateway namespace mode.
 
 bug fixes: |
-  Handle integer zone annotation values
+  Fixed OverlappingTLSConfig condition for merged Gateways.
+  Fixed shared rules in ratelimit translator when there's no clientSelector.
+  Fixed issue while handling integer zone annotation values.
   Fixed issue where WASM cache init failure caused routes with WASM-less EnvoyExtensionPolicies to have 500 direct responses.
   Fixed issue which UDP listeners were not created in the Envoy proxy config when Gateway was created.
-  Keep ALPN configuration for listeners with overlapping certificates when ALPN is explicitly set in ClientTrafficPolicy.
+  Fixed broken ratelimit merge for BackendTrafficPolicy when gateway target has ratelimit defined but the route target does not.
+  Fixed issue which keep ALPN configuration for listeners with overlapping certificates when ALPN is explicitly set in ClientTrafficPolicy.
+  Change static uid to dynamic uid for global ratelimit grafana dashboard.
+
+# Other notable changes not covered by the above sections.
+Other changes: |
+  Fixed backend tls e2e test.
+  Bumped go version to 1.24.3.
