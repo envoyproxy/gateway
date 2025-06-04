@@ -1,6 +1,9 @@
 name: Experimental Conformance Test
 on:
   push:
+    # Sequence of patterns matched against refs/tags
+    tags:
+      - "v*.*.*"
     paths:
     - 'charts/gateway-helm/crds/gatewayapi-crds.yaml'
     - 'test/conformance/experimental_conformance_test.go'
@@ -19,7 +22,23 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        version: [ v1.30.10, v1.31.6, v1.32.3, v1.33.0 ]
+        target:
+          - version: v1.30.10
+            ipFamily: ipv4
+            profile: default
+          - version: v1.31.6
+            ipFamily: ipv4
+            profile: default
+          - version: v1.32.3
+            ipFamily: ipv6  # only run ipv6 test on this version to save time
+            profile: default
+          # TODO: this's IPv4 first, need a way to test IPv6 first.
+          - version: v1.33.0
+            ipFamily: dual  # only run dual test on latest version to save time
+            profile: default
+          - version: v1.33.0
+            ipFamily: dual  # only run dual test on latest version to save time
+            profile: gateway-namespace-mode
     steps:
     - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
     - uses: ./tools/github-actions/setup-deps
@@ -27,7 +46,9 @@ jobs:
     # gateway api experimental conformance
     - name: Run Experimental Conformance Tests
       env:
-        CONFORMANCE_REPORT_PATH: conformance-report-k8s-${{ matrix.version }}.yaml
+        IP_FAMILY: ${{ matrix.target.ipFamily }}
+        KUBE_DEPLOY_PROFILE: ${{ matrix.target.profile }}
+        CONFORMANCE_REPORT_PATH: conformance-report-k8s-${{ matrix.version }}-${{ matrix.target.profile }}.yaml
         KIND_NODE_TAG: ${{ matrix.version }}
         IMAGE_PULL_POLICY: IfNotPresent
       run: make experimental-conformance
@@ -35,5 +56,5 @@ jobs:
     - name: Upload Conformance Report
       uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4.6.2
       with:
-        name: conformance-report-k8s-${{ matrix.version }}
-        path: ./test/conformance/conformance-report-k8s-${{ matrix.version }}.yaml
+        name: conformance-report-k8s-${{ matrix.version }}-${{ matrix.target.profile }}
+        path: ./test/conformance/conformance-report-k8s-${{ matrix.version }}-${{ matrix.target.profile }}.yaml

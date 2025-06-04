@@ -63,6 +63,7 @@ func TestExperimentalConformance(t *testing.T) {
 		t.Fatalf("error generating conformance profile report: %v", err)
 	}
 
+	// use to trigger the experimental conformance report
 	err = experimentalConformanceReport(t.Logf, *report, *flags.ReportOutput)
 	require.NoError(t, err)
 }
