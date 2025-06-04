@@ -16,6 +16,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/ptr"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/gateway-api/conformance/utils/http"
 	"sigs.k8s.io/gateway-api/conformance/utils/kubernetes"
 	"sigs.k8s.io/gateway-api/conformance/utils/suite"
@@ -54,9 +55,25 @@ var EnvoyGatewayCustomSecurityContextUseridTest = suite.ConformanceTest{
 
 			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
 
-			// we don't set the envoy-gateway deployment security context user id back to default because this will
-			// cause the envoy proxies failed to be deleted after the Gateway resources in the base are deleted.
-			// This is acceptable because this won't affect the later tests in the same suite.
+			// reset envoy-gateway deployment security context user id to the default value 65532
+			setEGSecurityContextUserID(t, suite, 65532)
+			// We have to manually delete the envoy proxy deployment to ensure that the test suite can clean up properly.
+			// This is because the rollout restart of the envoy-gateway deployment may cause Envoy Gateway fail to delete
+			// the envoy proxy deployments after the Gateway resources are deleted in ControllerNamspace mod, which can
+			// lead to failure of the upgrade test.
+			if suite.Cleanup {
+				proxies := appsv1.DeploymentList{}
+				err := suite.Client.List(
+					context.Background(),
+					&proxies,
+					client.InNamespace("envoy-gateway-system"),
+					client.MatchingLabels{"app.kubernetes.io/component": "proxy", "app.kubernetes.io/managed-by": "envoy-gateway"})
+				require.NoError(t, err, "failed to list envoy proxy deployments")
+				for _, proxy := range proxies.Items {
+					err = suite.Client.Delete(context.Background(), &proxy)
+					require.NoError(t, err, "failed to delete envoy proxy deployment %s", proxy.Name)
+				}
+			}
 		})
 	},
 }
