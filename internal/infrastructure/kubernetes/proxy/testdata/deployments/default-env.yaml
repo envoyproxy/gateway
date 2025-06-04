@@ -56,7 +56,7 @@ spec:
             local_cluster_name: local_cluster
           node:
             locality:
-              zone: "$(ENVOY_SERVICE_ZONE)"
+              zone: $(ENVOY_SERVICE_ZONE)
           layered_runtime:
             layers:
             - name: global_config
@@ -141,7 +141,7 @@ spec:
                     load_balancing_weight: 1
                   load_balancing_weight: 1
                   locality:
-                    zone: "$(ENVOY_SERVICE_ZONE)"
+                    zone: $(ENVOY_SERVICE_ZONE)
               name: local_cluster
               type: STATIC
             - connect_timeout: 10s
@@ -252,18 +252,21 @@ spec:
         command:
         - envoy
         env:
-        - name: ENVOY_GATEWAY_NAMESPACE
-          value: envoy-gateway-system
-        - name: ENVOY_SERVICE_ZONE
+        - name: ENVOY_POD_NAMESPACE
           valueFrom:
             fieldRef:
               apiVersion: v1
-              fieldPath: metadata.annotations['topology.kubernetes.io/zone']
+              fieldPath: metadata.namespace
         - name: ENVOY_POD_NAME
           valueFrom:
             fieldRef:
               apiVersion: v1
               fieldPath: metadata.name
+        - name: ENVOY_SERVICE_ZONE
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: metadata.annotations['topology.kubernetes.io/zone']
         image: envoyproxy/envoy:v1.2.3
         imagePullPolicy: IfNotPresent
         lifecycle:
@@ -330,18 +333,21 @@ spec:
         command:
         - envoy-gateway
         env:
-        - name: ENVOY_GATEWAY_NAMESPACE
-          value: envoy-gateway-system
-        - name: ENVOY_SERVICE_ZONE
+        - name: ENVOY_POD_NAMESPACE
           valueFrom:
             fieldRef:
               apiVersion: v1
-              fieldPath: metadata.annotations['topology.kubernetes.io/zone']
+              fieldPath: metadata.namespace
         - name: ENVOY_POD_NAME
           valueFrom:
             fieldRef:
               apiVersion: v1
               fieldPath: metadata.name
+        - name: ENVOY_SERVICE_ZONE
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: metadata.annotations['topology.kubernetes.io/zone']
         image: docker.io/envoyproxy/gateway-dev:latest
         imagePullPolicy: IfNotPresent
         lifecycle:

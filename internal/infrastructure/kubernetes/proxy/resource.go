@@ -26,8 +26,8 @@ import (
 const (
 	// envoyContainerName is the name of the Envoy container.
 	envoyContainerName = "envoy"
-	// envoyNsEnvVar is the name of the Envoy Gateway namespace environment variable.
-	envoyNsEnvVar = "ENVOY_GATEWAY_NAMESPACE"
+	// envoyNsEnvVar is the name of the Envoy pod namespace environment variable.
+	envoyNsEnvVar = "ENVOY_POD_NAMESPACE"
 	// envoyPodEnvVar is the name of the Envoy pod name environment variable.
 	envoyPodEnvVar = "ENVOY_POD_NAME"
 	// envoyZoneEnvVar is the Envoy pod locality zone name
@@ -131,7 +131,7 @@ func expectedProxyContainers(infra *ir.ProxyInfra,
 			ImagePullPolicy:          corev1.PullIfNotPresent,
 			Command:                  []string{"envoy"},
 			Args:                     args,
-			Env:                      expectedContainerEnv(containerSpec, controllerNamespace),
+			Env:                      expectedContainerEnv(containerSpec),
 			Resources:                *containerSpec.Resources,
 			SecurityContext:          expectedEnvoySecurityContext(containerSpec),
 			Ports:                    ports,
@@ -193,7 +193,7 @@ func expectedProxyContainers(infra *ir.ProxyInfra,
 			ImagePullPolicy:          corev1.PullIfNotPresent,
 			Command:                  []string{"envoy-gateway"},
 			Args:                     expectedShutdownManagerArgs(shutdownConfig),
-			Env:                      expectedContainerEnv(nil, controllerNamespace),
+			Env:                      expectedContainerEnv(nil),
 			Resources:                *egv1a1.DefaultShutdownManagerContainerResourceRequirements(),
 			TerminationMessagePolicy: corev1.TerminationMessageReadFile,
 			TerminationMessagePath:   "/dev/termination-log",
@@ -409,11 +409,25 @@ func expectedVolumes(name string, gatewayNamespacedMode bool, pod *egv1a1.Kubern
 }
 
 // expectedContainerEnv returns expected proxy container envs.
-func expectedContainerEnv(containerSpec *egv1a1.KubernetesContainerSpec, controllerNamespace string) []corev1.EnvVar {
+func expectedContainerEnv(containerSpec *egv1a1.KubernetesContainerSpec) []corev1.EnvVar {
 	env := []corev1.EnvVar{
 		{
-			Name:  envoyNsEnvVar,
-			Value: controllerNamespace,
+			Name: envoyNsEnvVar,
+			ValueFrom: &corev1.EnvVarSource{
+				FieldRef: &corev1.ObjectFieldSelector{
+					APIVersion: "v1",
+					FieldPath:  "metadata.namespace",
+				},
+			},
+		},
+		{
+			Name: envoyPodEnvVar,
+			ValueFrom: &corev1.EnvVarSource{
+				FieldRef: &corev1.ObjectFieldSelector{
+					APIVersion: "v1",
+					FieldPath:  "metadata.name",
+				},
+			},
 		},
 		{
 			Name: envoyZoneEnvVar,
@@ -425,16 +439,6 @@ func expectedContainerEnv(containerSpec *egv1a1.KubernetesContainerSpec, control
 			},
 		},
 	}
-
-	env = append(env, corev1.EnvVar{
-		Name: envoyPodEnvVar,
-		ValueFrom: &corev1.EnvVarSource{
-			FieldRef: &corev1.ObjectFieldSelector{
-				APIVersion: "v1",
-				FieldPath:  "metadata.name",
-			},
-		},
-	})
 
 	if containerSpec != nil {
 		return resource.ExpectedContainerEnv(containerSpec, env)
