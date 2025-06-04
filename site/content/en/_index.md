@@ -31,13 +31,13 @@ no_list: true
            class="btn btn-outline-light btn-sm">
           <i class="fab fa-slack me-1"></i>Slack
         </a>
-        <a href="https://www.linkedin.com/company/envoyproxy" 
+        <a href="https://www.linkedin.com/company/envoy-cloud-native/" 
            target="_blank" 
            rel="noopener noreferrer"
            class="btn btn-outline-light btn-sm">
           <i class="fab fa-linkedin me-1"></i>LinkedIn
         </a>
-        <a href="https://twitter.com/EnvoyProxy" 
+        <a href="https://x.com/EnvoyProxy" 
            target="_blank" 
            rel="noopener noreferrer"
            class="btn btn-outline-light btn-sm">
