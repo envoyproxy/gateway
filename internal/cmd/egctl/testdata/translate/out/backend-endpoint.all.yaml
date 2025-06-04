@@ -77,9 +77,7 @@ envoyExtensionPolicies:
         namespace: envoy-gateway-system
       conditions:
       - lastTransitionTime: null
-        message: |-
-          Wasm: wasm cache is not initialized
-          ExtProc: service envoy-gateway-system/grpc-ext-proc not found.
+        message: 'ExtProc: service envoy-gateway-system/grpc-ext-proc not found.'
         reason: Invalid
         status: "False"
         type: Accepted
