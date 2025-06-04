@@ -25,13 +25,14 @@ import (
 
 	internalconf "github.com/envoyproxy/gateway/internal/gatewayapi/conformance"
 	"github.com/envoyproxy/gateway/test/e2e"
+	ege2etest "github.com/envoyproxy/gateway/test/e2e/tests"
 )
 
 func TestExperimentalConformance(t *testing.T) {
 	flag.Parse()
 	log.SetLogger(zap.New(zap.WriteTo(os.Stderr), zap.UseDevMode(true)))
 
-	internalSuite := internalconf.EnvoyGatewaySuite(false)
+	internalSuite := internalconf.EnvoyGatewaySuite(ege2etest.IsGatewayNamespaceMode())
 
 	opts := conformance.DefaultOptions(t)
 	opts.SkipTests = internalSuite.SkipTests
