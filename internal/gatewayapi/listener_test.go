@@ -307,30 +307,6 @@ func TestCheckOverlappingHostnames(t *testing.T) {
 			},
 		},
 		{
-			name: "non-HTTPS listeners",
-			gateway: &GatewayContext{
-				listeners: []*ListenerContext{
-					{
-						Listener: &gwapiv1.Listener{
-							Name:     "listener-1",
-							Protocol: gwapiv1.HTTPProtocolType,
-							Port:     80,
-							Hostname: ptr.To(gwapiv1.Hostname("example.com")),
-						},
-					},
-					{
-						Listener: &gwapiv1.Listener{
-							Name:     "listener-2",
-							Protocol: gwapiv1.HTTPProtocolType,
-							Port:     80,
-							Hostname: ptr.To(gwapiv1.Hostname("example.com")),
-						},
-					},
-				},
-			},
-			expected: map[int]string{},
-		},
-		{
 			name: "nil hostnames",
 			gateway: &GatewayContext{
 				listeners: []*ListenerContext{
@@ -369,13 +345,14 @@ func TestCheckOverlappingHostnames(t *testing.T) {
 			}
 			for i := range tt.gateway.listeners {
 				tt.gateway.listeners[i].listenerStatusIdx = i
+				tt.gateway.listeners[i].gateway = tt.gateway
 				tt.gateway.Status.Listeners[i] = gwapiv1.ListenerStatus{
 					Name:       tt.gateway.listeners[i].Name,
 					Conditions: []metav1.Condition{},
 				}
 			}
 
-			checkOverlappingHostnames(tt.gateway)
+			checkOverlappingHostnames(tt.gateway.listeners)
 
 			// Verify the status conditions
 			for idx, expectedHostname := range tt.expected {
@@ -476,14 +453,14 @@ func TestCheckOverlappingCertificates(t *testing.T) {
 					condition:    gwapiv1.ListenerConditionOverlappingTLSConfig,
 					status:       metav1.ConditionTrue,
 					reason:       gwapiv1.ListenerReasonOverlappingCertificates,
-					message:      "The certificate san foo.example.com overlaps with the certificate san foo.example.com in listener listener-2. ALPN is set to HTTP/1.1 to prevent HTTP/2 connection coalescing",
+					message:      "The certificate SAN foo.example.com overlaps with the certificate SAN foo.example.com in listener listener-2. ALPN will default to HTTP/1.1 to prevent HTTP/2 connection coalescing, unless explicitly configured via ClientTrafficPolicy",
 				},
 				{
 					listenerName: "listener-2",
 					condition:    gwapiv1.ListenerConditionOverlappingTLSConfig,
 					status:       metav1.ConditionTrue,
 					reason:       gwapiv1.ListenerReasonOverlappingCertificates,
-					message:      "The certificate san foo.example.com overlaps with the certificate san foo.example.com in listener listener-1. ALPN is set to HTTP/1.1 to prevent HTTP/2 connection coalescing",
+					message:      "The certificate SAN foo.example.com overlaps with the certificate SAN foo.example.com in listener listener-1. ALPN will default to HTTP/1.1 to prevent HTTP/2 connection coalescing, unless explicitly configured via ClientTrafficPolicy",
 				},
 			},
 		},
@@ -539,14 +516,14 @@ func TestCheckOverlappingCertificates(t *testing.T) {
 					condition:    gwapiv1.ListenerConditionOverlappingTLSConfig,
 					status:       metav1.ConditionTrue,
 					reason:       gwapiv1.ListenerReasonOverlappingCertificates,
-					message:      "The certificate san *.example.com overlaps with the certificate san foo.example.com in listener listener-2. ALPN is set to HTTP/1.1 to prevent HTTP/2 connection coalescing",
+					message:      "The certificate SAN *.example.com overlaps with the certificate SAN foo.example.com in listener listener-2. ALPN will default to HTTP/1.1 to prevent HTTP/2 connection coalescing, unless explicitly configured via ClientTrafficPolicy",
 				},
 				{
 					listenerName: "listener-2",
 					condition:    gwapiv1.ListenerConditionOverlappingTLSConfig,
 					status:       metav1.ConditionTrue,
 					reason:       gwapiv1.ListenerReasonOverlappingCertificates,
-					message:      "The certificate san foo.example.com overlaps with the certificate san *.example.com in listener listener-1. ALPN is set to HTTP/1.1 to prevent HTTP/2 connection coalescing",
+					message:      "The certificate SAN foo.example.com overlaps with the certificate SAN *.example.com in listener listener-1. ALPN will default to HTTP/1.1 to prevent HTTP/2 connection coalescing, unless explicitly configured via ClientTrafficPolicy",
 				},
 			},
 		},
@@ -578,14 +555,14 @@ func TestCheckOverlappingCertificates(t *testing.T) {
 					condition:    gwapiv1.ListenerConditionOverlappingTLSConfig,
 					status:       metav1.ConditionTrue,
 					reason:       gwapiv1.ListenerReasonOverlappingCertificates,
-					message:      "The certificate san bar.example.org overlaps with the certificate san *.example.org in listener listener-2. ALPN is set to HTTP/1.1 to prevent HTTP/2 connection coalescing",
+					message:      "The certificate SAN bar.example.org overlaps with the certificate SAN *.example.org in listener listener-2. ALPN will default to HTTP/1.1 to prevent HTTP/2 connection coalescing, unless explicitly configured via ClientTrafficPolicy",
 				},
 				{
 					listenerName: "listener-2",
 					condition:    gwapiv1.ListenerConditionOverlappingTLSConfig,
 					status:       metav1.ConditionTrue,
 					reason:       gwapiv1.ListenerReasonOverlappingCertificates,
-					message:      "The certificate san *.example.org overlaps with the certificate san bar.example.org in listener listener-1. ALPN is set to HTTP/1.1 to prevent HTTP/2 connection coalescing",
+					message:      "The certificate SAN *.example.org overlaps with the certificate SAN bar.example.org in listener listener-1. ALPN will default to HTTP/1.1 to prevent HTTP/2 connection coalescing, unless explicitly configured via ClientTrafficPolicy",
 				},
 			},
 		},
@@ -603,16 +580,18 @@ func TestCheckOverlappingCertificates(t *testing.T) {
 				listeners: tt.listeners,
 			}
 
-			// Initialize listener status indices
+			// Initialize listener
 			for i := range gateway.Status.Listeners {
 				gateway.Status.Listeners[i] = gwapiv1.ListenerStatus{
 					Name:       tt.listeners[i].Name,
 					Conditions: []metav1.Condition{},
 				}
+				gateway.listeners[i].listenerStatusIdx = i
+				gateway.listeners[i].gateway = gateway
 			}
 
 			// Process overlapping certificates
-			checkOverlappingCertificates(gateway)
+			checkOverlappingCertificates(tt.listeners)
 
 			// Verify the status conditions
 			for _, expected := range tt.expectedStatus {
