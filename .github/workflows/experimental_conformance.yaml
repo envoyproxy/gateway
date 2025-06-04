@@ -48,13 +48,13 @@ jobs:
         env:
           IP_FAMILY: ${{ matrix.target.ipFamily }}
           KUBE_DEPLOY_PROFILE: ${{ matrix.target.profile }}
-          CONFORMANCE_REPORT_PATH: conformance-report-k8s-${{ matrix.version }}-${{ matrix.target.profile }}.yaml
-          KIND_NODE_TAG: ${{ matrix.version }}
+          CONFORMANCE_REPORT_PATH: conformance-report-k8s-${{ matrix.target.version }}-${{ matrix.target.profile }}.yaml
+          KIND_NODE_TAG: ${{ matrix.target.version }}
           IMAGE_PULL_POLICY: IfNotPresent
         run: make experimental-conformance
 
       - name: Upload Conformance Report
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
-          name: conformance-report-k8s-${{ matrix.version }}-${{ matrix.target.profile }}
-          path: ./test/conformance/conformance-report-k8s-${{ matrix.version }}-${{ matrix.target.profile }}.yaml
+          name: conformance-report-k8s-${{ matrix.target.version }}-${{ matrix.target.profile }}
+          path: ./test/conformance/conformance-report-k8s-${{ matrix.target.version }}-${{ matrix.target.profile }}.yaml
