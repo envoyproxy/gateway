@@ -17431,12 +17431,19 @@ spec:
                       description: Unix defines the unix domain socket endpoint
                       properties:
                         path:
-                          description: Path defines the unix domain socket path of
-                            the backend endpoint.
+                          description: |-
+                            Path defines the unix domain socket path of the backend endpoint.
+                            The path length must not exceed 108 characters.
                           type: string
+                          x-kubernetes-validations:
+                          - message: unix domain socket path must not exceed 108 characters
+                            rule: size(self) <= 108
                       required:
                       - path
                       type: object
+                    zone:
+                      description: Zone defines the service zone of the backend endpoint.
+                      type: string
                   type: object
                   x-kubernetes-validations:
                   - message: one of fqdn, ip or unix must be specified
@@ -17476,6 +17483,8 @@ spec:
                       If CACertificateRefs is empty or unspecified, then WellKnownCACertificates must be
                       specified. Only one of CACertificateRefs or WellKnownCACertificates may be specified,
                       not both.
+
+                      Only used for DynamicResolver backends.
                     items:
                       description: |-
                         LocalObjectReference identifies an API object within the namespace of the
@@ -17513,6 +17522,12 @@ spec:
                       type: object
                     maxItems: 8
                     type: array
+                  insecureSkipVerify:
+                    default: false
+                    description: |-
+                      InsecureSkipVerify indicates whether the upstream's certificate verification
+                      should be skipped. Defaults to "false".
+                    type: boolean
                   wellKnownCACertificates:
                     description: |-
                       WellKnownCACertificates specifies whether system CA certificates may be used in
@@ -17521,6 +17536,8 @@ spec:
                       If WellKnownCACertificates is unspecified or empty (""), then CACertificateRefs
                       must be specified with at least one entry for a valid configuration. Only one of
                       CACertificateRefs or WellKnownCACertificates may be specified, not both.
+
+                      Only used for DynamicResolver backends.
                     enum:
                     - System
                     type: string
@@ -17543,11 +17560,8 @@ spec:
                 type: string
             type: object
             x-kubernetes-validations:
-            - message: DynamicResolver type cannot have endpoints and appProtocols
-                specified
-              rule: self.type != 'DynamicResolver' || !has(self.endpoints) && !has(self.appProtocols)
-            - message: TLS settings can only be specified for DynamicResolver backends
-              rule: 'has(self.tls) ? self.type == ''DynamicResolver'' : true'
+            - message: DynamicResolver type cannot have endpoints specified
+              rule: self.type != 'DynamicResolver' || !has(self.endpoints)
           status:
             description: Status defines the current status of Backend.
             properties:
@@ -17945,6 +17959,14 @@ spec:
                               minimum: 100
                               type: integer
                             type: array
+                          hostname:
+                            description: |-
+                              Hostname defines the HTTP host that will be requested during health checking.
+                              Default: HTTPRoute or GRPCRoute hostname.
+                            maxLength: 253
+                            minLength: 1
+                            pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                            type: string
                           method:
                             description: |-
                               Method defines the HTTP method used for health checking.
@@ -18939,6 +18961,117 @@ spec:
                       required:
                       - statusCodes
                       type: object
+                    redirect:
+                      description: Redirect configuration
+                      properties:
+                        hostname:
+                          description: |-
+                            Hostname is the hostname to be used in the value of the `Location`
+                            header in the response.
+                            When empty, the hostname in the `Host` header of the request is used.
+                          maxLength: 253
+                          minLength: 1
+                          pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                          type: string
+                        path:
+                          description: |-
+                            Path defines parameters used to modify the path of the incoming request.
+                            The modified path is then used to construct the `Location` header. When
+                            empty, the request path is used as-is.
+                          properties:
+                            replaceFullPath:
+                              description: |-
+                                ReplaceFullPath specifies the value with which to replace the full path
+                                of a request during a rewrite or redirect.
+                              maxLength: 1024
+                              type: string
+                            replacePrefixMatch:
+                              description: |-
+                                ReplacePrefixMatch specifies the value with which to replace the prefix
+                                match of a request during a rewrite or redirect. For example, a request
+                                to "/foo/bar" with a prefix match of "/foo" and a ReplacePrefixMatch
+                                of "/xyz" would be modified to "/xyz/bar".
+
+                                Note that this matches the behavior of the PathPrefix match type. This
+                                matches full path elements. A path element refers to the list of labels
+                                in the path split by the `/` separator. When specified, a trailing `/` is
+                                ignored. For example, the paths `/abc`, `/abc/`, and `/abc/def` would all
+                                match the prefix `/abc`, but the path `/abcd` would not.
+
+                                ReplacePrefixMatch is only compatible with a `PathPrefix` HTTPRouteMatch.
+                                Using any other HTTPRouteMatch type on the same HTTPRouteRule will result in
+                                the implementation setting the Accepted Condition for the Route to `status: False`.
+
+                                Request Path | Prefix Match | Replace Prefix | Modified Path
+                              maxLength: 1024
+                              type: string
+                            type:
+                              description: |-
+                                Type defines the type of path modifier. Additional types may be
+                                added in a future release of the API.
+
+                                Note that values may be added to this enum, implementations
+                                must ensure that unknown values will not cause a crash.
+
+                                Unknown values here must result in the implementation setting the
+                                Accepted Condition for the Route to `status: False`, with a
+                                Reason of `UnsupportedValue`.
+                              enum:
+                              - ReplaceFullPath
+                              - ReplacePrefixMatch
+                              type: string
+                          required:
+                          - type
+                          type: object
+                          x-kubernetes-validations:
+                          - message: replaceFullPath must be specified when type is
+                              set to 'ReplaceFullPath'
+                            rule: 'self.type == ''ReplaceFullPath'' ? has(self.replaceFullPath)
+                              : true'
+                          - message: type must be 'ReplaceFullPath' when replaceFullPath
+                              is set
+                            rule: 'has(self.replaceFullPath) ? self.type == ''ReplaceFullPath''
+                              : true'
+                          - message: replacePrefixMatch must be specified when type
+                              is set to 'ReplacePrefixMatch'
+                            rule: 'self.type == ''ReplacePrefixMatch'' ? has(self.replacePrefixMatch)
+                              : true'
+                          - message: type must be 'ReplacePrefixMatch' when replacePrefixMatch
+                              is set
+                            rule: 'has(self.replacePrefixMatch) ? self.type == ''ReplacePrefixMatch''
+                              : true'
+                        port:
+                          description: |-
+                            Port is the port to be used in the value of the `Location`
+                            header in the response.
+
+                            If redirect scheme is not-empty, the well-known port associated with the redirect scheme will be used.
+                            Specifically "http" to port 80 and "https" to port 443. If the redirect scheme does not have a
+                            well-known port or redirect scheme is empty, the listener port of the Gateway will be used.
+
+                            Port will not be added in the 'Location' header if scheme is HTTP and port is 80
+                            or scheme is HTTPS and port is 443.
+                          format: int32
+                          maximum: 65535
+                          minimum: 1
+                          type: integer
+                        scheme:
+                          description: |-
+                            Scheme is the scheme to be used in the value of the `Location` header in
+                            the response. When empty, the scheme of the request is used.
+                          enum:
+                          - http
+                          - https
+                          type: string
+                        statusCode:
+                          default: 302
+                          description: StatusCode is the HTTP status code to be used
+                            in response.
+                          enum:
+                          - 301
+                          - 302
+                          type: integer
+                      type: object
                     response:
                       description: Response configuration.
                       properties:
@@ -19020,8 +19153,11 @@ spec:
                       type: object
                   required:
                   - match
-                  - response
                   type: object
+                  x-kubernetes-validations:
+                  - message: exactly one of response or redirect must be specified
+                    rule: (has(self.response) && !has(self.redirect)) || (!has(self.response)
+                      && has(self.redirect))
                 type: array
               retry:
                 description: |-
@@ -21424,6 +21560,14 @@ spec:
                                         minimum: 100
                                         type: integer
                                       type: array
+                                    hostname:
+                                      description: |-
+                                        Hostname defines the HTTP host that will be requested during health checking.
+                                        Default: HTTPRoute or GRPCRoute hostname.
+                                      maxLength: 253
+                                      minLength: 1
+                                      pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                                      type: string
                                     method:
                                       description: |-
                                         Method defines the HTTP method used for health checking.
@@ -22006,6 +22150,7 @@ spec:
                               - Streamed
                               - Buffered
                               - BufferedPartial
+                              - FullDuplexStreamed
                               type: string
                           type: object
                         response:
@@ -22029,6 +22174,7 @@ spec:
                               - Streamed
                               - Buffered
                               - BufferedPartial
+                              - FullDuplexStreamed
                               type: string
                           type: object
                       type: object
@@ -34296,6 +34442,14 @@ spec:
                                                           minimum: 100
                                                           type: integer
                                                         type: array
+                                                      hostname:
+                                                        description: |-
+                                                          Hostname defines the HTTP host that will be requested during health checking.
+                                                          Default: HTTPRoute or GRPCRoute hostname.
+                                                        maxLength: 253
+                                                        minLength: 1
+                                                        pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                                                        type: string
                                                       method:
                                                         description: |-
                                                           Method defines the HTTP method used for health checking.
@@ -35315,6 +35469,14 @@ spec:
                                                           minimum: 100
                                                           type: integer
                                                         type: array
+                                                      hostname:
+                                                        description: |-
+                                                          Hostname defines the HTTP host that will be requested during health checking.
+                                                          Default: HTTPRoute or GRPCRoute hostname.
+                                                        maxLength: 253
+                                                        minLength: 1
+                                                        pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                                                        type: string
                                                       method:
                                                         description: |-
                                                           Method defines the HTTP method used for health checking.
@@ -36423,6 +36585,14 @@ spec:
                                                     minimum: 100
                                                     type: integer
                                                   type: array
+                                                hostname:
+                                                  description: |-
+                                                    Hostname defines the HTTP host that will be requested during health checking.
+                                                    Default: HTTPRoute or GRPCRoute hostname.
+                                                  maxLength: 253
+                                                  minLength: 1
+                                                  pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                                                  type: string
                                                 method:
                                                   description: |-
                                                     Method defines the HTTP method used for health checking.
@@ -37448,6 +37618,14 @@ spec:
                                               minimum: 100
                                               type: integer
                                             type: array
+                                          hostname:
+                                            description: |-
+                                              Hostname defines the HTTP host that will be requested during health checking.
+                                              Default: HTTPRoute or GRPCRoute hostname.
+                                            maxLength: 253
+                                            minLength: 1
+                                            pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                                            type: string
                                           method:
                                             description: |-
                                               Method defines the HTTP method used for health checking.
@@ -39294,6 +39472,14 @@ spec:
                                           minimum: 100
                                           type: integer
                                         type: array
+                                      hostname:
+                                        description: |-
+                                          Hostname defines the HTTP host that will be requested during health checking.
+                                          Default: HTTPRoute or GRPCRoute hostname.
+                                        maxLength: 253
+                                        minLength: 1
+                                        pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                                        type: string
                                       method:
                                         description: |-
                                           Method defines the HTTP method used for health checking.
@@ -40211,6 +40397,14 @@ spec:
                                           minimum: 100
                                           type: integer
                                         type: array
+                                      hostname:
+                                        description: |-
+                                          Hostname defines the HTTP host that will be requested during health checking.
+                                          Default: HTTPRoute or GRPCRoute hostname.
+                                        maxLength: 253
+                                        minLength: 1
+                                        pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                                        type: string
                                       method:
                                         description: |-
                                           Method defines the HTTP method used for health checking.
@@ -41323,6 +41517,14 @@ spec:
                                                 minimum: 100
                                                 type: integer
                                               type: array
+                                            hostname:
+                                              description: |-
+                                                Hostname defines the HTTP host that will be requested during health checking.
+                                                Default: HTTPRoute or GRPCRoute hostname.
+                                              maxLength: 253
+                                              minLength: 1
+                                              pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                                              type: string
                                             method:
                                               description: |-
                                                 Method defines the HTTP method used for health checking.
@@ -41994,6 +42196,48 @@ spec:
                       the authorization response must be set by the authorization server, or the
                       OAuth flow will fail.
                     type: string
+                  denyRedirect:
+                    description: |-
+                      Any request that matches any of the provided matchers (with either tokens that are expired or missing tokens) will not be redirected to the OIDC Provider.
+                      This behavior can be useful for AJAX or machine requests.
+                    properties:
+                      headers:
+                        description: Defines the headers to match against the request
+                          to deny redirect to the OIDC Provider.
+                        items:
+                          description: OIDCDenyRedirectHeader defines how a header
+                            is matched
+                          properties:
+                            name:
+                              description: Specifies the name of the header in the
+                                request.
+                              minLength: 1
+                              type: string
+                            type:
+                              default: Exact
+                              description: Type specifies how to match against a string.
+                              enum:
+                              - Exact
+                              - Prefix
+                              - Suffix
+                              - RegularExpression
+                              type: string
+                            value:
+                              description: Value specifies the string value that the
+                                match must have.
+                              maxLength: 1024
+                              minLength: 1
+                              type: string
+                          required:
+                          - name
+                          - value
+                          type: object
+                        maxItems: 16
+                        minItems: 1
+                        type: array
+                    required:
+                    - headers
+                    type: object
                   forwardAccessToken:
                     description: |-
                       ForwardAccessToken indicates whether the Envoy should forward the access token
@@ -42006,6 +42250,16 @@ spec:
 
                       If not specified, uses a default logout path "/logout"
                     type: string
+                  passThroughAuthHeader:
+                    description: |-
+                      Skips OIDC authentication when the request contains a header that will be extracted by the JWT filter. Unless
+                      explicitly stated otherwise in the extractFrom field, this will be the "Authorization: Bearer ..." header.
+
+                      The passThroughAuthHeader option is typically used for non-browser clients that may not be able to handle OIDC
+                      redirects and wish to directly supply a token instead.
+
+                      If not specified, defaults to false.
+                    type: boolean
                   provider:
                     description: The OIDC Provider configuration.
                     properties:
@@ -42380,6 +42634,14 @@ spec:
                                           minimum: 100
                                           type: integer
                                         type: array
+                                      hostname:
+                                        description: |-
+                                          Hostname defines the HTTP host that will be requested during health checking.
+                                          Default: HTTPRoute or GRPCRoute hostname.
+                                        maxLength: 253
+                                        minLength: 1
+                                        pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                                        type: string
                                       method:
                                         description: |-
                                           Method defines the HTTP method used for health checking.

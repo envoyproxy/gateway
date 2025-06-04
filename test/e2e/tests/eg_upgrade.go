@@ -52,7 +52,7 @@ var EGUpgradeTest = suite.ConformanceTest{
 			chartPath := "../../../charts/gateway-helm"
 			relName := "eg"
 			depNS := "envoy-gateway-system"
-			lastVersionTag := "v1.3.2" //  the latest prior release
+			lastVersionTag := "v1.4.0" //  the latest prior release
 
 			t.Logf("Upgrading from version: %s", lastVersionTag)
 
@@ -60,7 +60,13 @@ var EGUpgradeTest = suite.ConformanceTest{
 			relNamespace := "envoy-gateway-system"
 			options.DefaultConfigFlags.Namespace = ptr.To(relNamespace)
 
-			ht := helm.NewPackageTool()
+			// use values file for e2e test
+			valuesFile := "../../config/helm/default.yaml"
+			if IsGatewayNamespaceMode() {
+				valuesFile = "../../config/helm/gateway-namespace-mode.yaml"
+			}
+
+			ht := helm.NewPackageTool(valuesFile)
 			if err := ht.Setup(); err != nil {
 				t.Errorf("failed to setup of packageTool: %v", err)
 			}
@@ -162,11 +168,6 @@ var EGUpgradeTest = suite.ConformanceTest{
 				t.Errorf("failed to get expected response for the first three requests: %v", err)
 			}
 		})
-		t.Cleanup(func() {
-			if t.Failed() {
-				CollectAndDump(t, suite.RestConfig)
-			}
-		})
 	},
 }
 
@@ -243,7 +244,7 @@ func upgradeChartFromPath(relName, relNamespace, chartPath string, timeout time.
 		return err
 	}
 
-	_, err = upgrade.Run(relName, gatewayChart, map[string]interface{}{})
+	_, err = upgrade.Run(relName, gatewayChart, map[string]any{})
 	if err != nil {
 		return err
 	}

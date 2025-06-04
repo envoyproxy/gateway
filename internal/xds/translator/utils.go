@@ -167,6 +167,7 @@ func createExtServiceXDSCluster(rd *ir.RouteDestination, traffic *ir.TrafficFeat
 		endpointType:      endpointType,
 		dns:               traffic.DNS,
 		http2Settings:     traffic.HTTP2,
+		metadata:          rd.Metadata,
 	})
 }
 

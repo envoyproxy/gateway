@@ -41,7 +41,7 @@ var EnvoyProxyCustomNameTest = suite.ConformanceTest{
 		t.Run("Deployment", func(t *testing.T) {
 			ns := "gateway-conformance-infra"
 			routeNN := types.NamespacedName{Name: "deploy-route", Namespace: ns}
-			gwNN := types.NamespacedName{Name: "deploy-custom-name", Namespace: ns}
+			gwNN := types.NamespacedName{Name: "eg-deployment", Namespace: ns}
 			okResp := http.ExpectedResponse{
 				Request: http.Request{
 					Path: "/deploy",
@@ -53,11 +53,11 @@ var EnvoyProxyCustomNameTest = suite.ConformanceTest{
 			}
 
 			// Make sure there's deployment for the gateway
-			err := checkEnvoyProxyDeployment(t, suite, gwNN, gatewayNS, fmt.Sprintf("envoy-%s-%s", gwNN.Namespace, gwNN.Name))
+			err := checkEnvoyProxyDeployment(t, suite, gwNN, gatewayNS, expectedGatewayName(gwNN))
 			if err != nil {
 				t.Fatalf("Failed to check EnvoyProxy deployment: %v", err)
 			}
-			err = checkEnvoyProxyService(t, suite, gwNN, gatewayNS, fmt.Sprintf("envoy-%s-%s", gwNN.Namespace, gwNN.Name))
+			err = checkEnvoyProxyService(t, suite, gwNN, gatewayNS, expectedGatewayName(gwNN))
 			if err != nil {
 				t.Fatalf("Failed to check EnvoyProxy service: %v", err)
 			}
@@ -88,11 +88,11 @@ var EnvoyProxyCustomNameTest = suite.ConformanceTest{
 			updateGateway(t, suite, gwNN, &gwapiv1.GatewayInfrastructure{})
 
 			// Make sure there's deployment for the gateway
-			err = checkEnvoyProxyDeployment(t, suite, gwNN, gatewayNS, fmt.Sprintf("envoy-%s-%s", gwNN.Namespace, gwNN.Name))
+			err = checkEnvoyProxyDeployment(t, suite, gwNN, gatewayNS, expectedGatewayName(gwNN))
 			if err != nil {
 				t.Fatalf("Failed to check EnvoyProxy deployment: %v", err)
 			}
-			err = checkEnvoyProxyService(t, suite, gwNN, gatewayNS, fmt.Sprintf("envoy-%s-%s", gwNN.Namespace, gwNN.Name))
+			err = checkEnvoyProxyService(t, suite, gwNN, gatewayNS, expectedGatewayName(gwNN))
 			if err != nil {
 				t.Fatalf("Failed to check EnvoyProxy service: %v", err)
 			}
@@ -103,7 +103,7 @@ var EnvoyProxyCustomNameTest = suite.ConformanceTest{
 		t.Run("DaemonSet", func(t *testing.T) {
 			ns := "gateway-conformance-infra"
 			routeNN := types.NamespacedName{Name: "ds-route", Namespace: ns}
-			gwNN := types.NamespacedName{Name: "ds-custom-name", Namespace: ns}
+			gwNN := types.NamespacedName{Name: "eg-daemonset", Namespace: ns}
 			okResp := http.ExpectedResponse{
 				Request: http.Request{
 					Path: "/daemonset",
@@ -115,11 +115,11 @@ var EnvoyProxyCustomNameTest = suite.ConformanceTest{
 			}
 
 			// Make sure there's DaemonSet for the gateway
-			err := checkEnvoyProxyDaemonSet(t, suite, gwNN, gatewayNS, fmt.Sprintf("envoy-%s-%s", gwNN.Namespace, gwNN.Name))
+			err := checkEnvoyProxyDaemonSet(t, suite, gwNN, gatewayNS, expectedGatewayName(gwNN))
 			if err != nil {
 				t.Fatalf("Failed to check EnvoyProxy deployment: %v", err)
 			}
-			err = checkEnvoyProxyService(t, suite, gwNN, gatewayNS, fmt.Sprintf("envoy-%s-%s", gwNN.Namespace, gwNN.Name))
+			err = checkEnvoyProxyService(t, suite, gwNN, gatewayNS, expectedGatewayName(gwNN))
 			if err != nil {
 				t.Fatalf("Failed to check EnvoyProxy service: %v", err)
 			}
@@ -156,11 +156,11 @@ var EnvoyProxyCustomNameTest = suite.ConformanceTest{
 			})
 
 			// Make sure there's DaemonSet for the gateway
-			err = checkEnvoyProxyDaemonSet(t, suite, gwNN, gatewayNS, fmt.Sprintf("envoy-%s-%s", gwNN.Namespace, gwNN.Name))
+			err = checkEnvoyProxyDaemonSet(t, suite, gwNN, gatewayNS, expectedGatewayName(gwNN))
 			if err != nil {
 				t.Fatalf("Failed to check EnvoyProxy deployment: %v", err)
 			}
-			err = checkEnvoyProxyService(t, suite, gwNN, gatewayNS, fmt.Sprintf("envoy-%s-%s", gwNN.Namespace, gwNN.Name))
+			err = checkEnvoyProxyService(t, suite, gwNN, gatewayNS, expectedGatewayName(gwNN))
 			if err != nil {
 				t.Fatalf("Failed to check EnvoyProxy service: %v", err)
 			}
@@ -169,6 +169,14 @@ var EnvoyProxyCustomNameTest = suite.ConformanceTest{
 			ExpectEventuallyConsistentResponse(t, suite, gwNN, routeNN, okResp)
 		})
 	},
+}
+
+func expectedGatewayName(gwNN types.NamespacedName) string {
+	if IsGatewayNamespaceMode() {
+		return gwNN.Name
+	}
+
+	return fmt.Sprintf("envoy-%s-%s", gwNN.Namespace, gwNN.Name)
 }
 
 func updateGateway(t *testing.T, suite *suite.ConformanceTestSuite, gwNN types.NamespacedName, paramRef *gwapiv1.GatewayInfrastructure) {
@@ -184,7 +192,7 @@ func updateGateway(t *testing.T, suite *suite.ConformanceTestSuite, gwNN types.N
 			err = suite.Client.Update(context.Background(), gw)
 			if err != nil {
 				tlog.Logf(t, "Failed to update Gateway %s: %v", gwNN, err)
-				return false, err
+				return false, nil
 			}
 			return true, nil
 		})
@@ -228,7 +236,7 @@ func checkEnvoyProxyDeployment(t *testing.T, suite *suite.ConformanceTestSuite, 
 	// Make sure there's deployment for the gateway
 	return wait.PollUntilContextTimeout(context.TODO(), time.Second, suite.TimeoutConfig.CreateTimeout, true, func(ctx context.Context) (bool, error) {
 		deploys := &appsv1.DeploymentList{}
-		err := suite.Client.List(ctx, deploys, &client.ListOptions{
+		opts := &client.ListOptions{
 			Namespace: exceptNs,
 			LabelSelector: labels.SelectorFromSet(map[string]string{
 				"app.kubernetes.io/managed-by":                   "envoy-gateway",
@@ -236,12 +244,13 @@ func checkEnvoyProxyDeployment(t *testing.T, suite *suite.ConformanceTestSuite, 
 				"gateway.envoyproxy.io/owning-gateway-name":      gwNN.Name,
 				"gateway.envoyproxy.io/owning-gateway-namespace": gwNN.Namespace,
 			}),
-		})
+		}
+		err := suite.Client.List(ctx, deploys, opts)
 		if err != nil {
 			return false, err
 		}
 		if len(deploys.Items) != 1 {
-			tlog.Logf(t, "Expected 1 Deployment for the Gateway, got %d", len(deploys.Items))
+			tlog.Logf(t, "Expected 1 Deployment for the Gateway (%v), got %d", opts, len(deploys.Items))
 			return false, nil
 		}
 
@@ -264,7 +273,7 @@ func checkEnvoyProxyService(t *testing.T, suite *suite.ConformanceTestSuite, gwN
 	// Make sure there's deployment for the gateway
 	return wait.PollUntilContextTimeout(context.TODO(), time.Second, suite.TimeoutConfig.CreateTimeout, true, func(ctx context.Context) (bool, error) {
 		svcList := &corev1.ServiceList{}
-		err := suite.Client.List(ctx, svcList, &client.ListOptions{
+		opts := &client.ListOptions{
 			Namespace: exceptNs,
 			LabelSelector: labels.SelectorFromSet(map[string]string{
 				"app.kubernetes.io/managed-by":                   "envoy-gateway",
@@ -272,12 +281,13 @@ func checkEnvoyProxyService(t *testing.T, suite *suite.ConformanceTestSuite, gwN
 				"gateway.envoyproxy.io/owning-gateway-name":      gwNN.Name,
 				"gateway.envoyproxy.io/owning-gateway-namespace": gwNN.Namespace,
 			}),
-		})
+		}
+		err := suite.Client.List(ctx, svcList, opts)
 		if err != nil {
 			return false, err
 		}
 		if len(svcList.Items) != 1 {
-			tlog.Logf(t, "Expected 1 Service for the Gateway, got %d", len(svcList.Items))
+			tlog.Logf(t, "Expected 1 Service for the Gateway (%v), got %d", opts, len(svcList.Items))
 			return false, nil
 		}
 
@@ -296,7 +306,7 @@ func checkEnvoyProxyDaemonSet(t *testing.T, suite *suite.ConformanceTestSuite, g
 	// Make sure there's deployment for the gateway
 	return wait.PollUntilContextTimeout(context.TODO(), time.Second, suite.TimeoutConfig.CreateTimeout, true, func(ctx context.Context) (bool, error) {
 		dsList := &appsv1.DaemonSetList{}
-		err := suite.Client.List(ctx, dsList, &client.ListOptions{
+		opts := &client.ListOptions{
 			Namespace: exceptNs,
 			LabelSelector: labels.SelectorFromSet(map[string]string{
 				"app.kubernetes.io/managed-by":                   "envoy-gateway",
@@ -304,12 +314,13 @@ func checkEnvoyProxyDaemonSet(t *testing.T, suite *suite.ConformanceTestSuite, g
 				"gateway.envoyproxy.io/owning-gateway-name":      gwNN.Name,
 				"gateway.envoyproxy.io/owning-gateway-namespace": gwNN.Namespace,
 			}),
-		})
+		}
+		err := suite.Client.List(ctx, dsList, opts)
 		if err != nil {
 			return false, err
 		}
 		if len(dsList.Items) != 1 {
-			tlog.Logf(t, "Expected 1 DaemonSet for the Gateway, got %d", len(dsList.Items))
+			tlog.Logf(t, "Expected 1 DaemonSet for the Gateway (%v), got %d", opts, len(dsList.Items))
 			return false, nil
 		}
 

@@ -290,10 +290,10 @@ type KubernetesWatchMode struct {
 
 const (
 	// KubernetesDeployModeTypeControllerNamespace indicates that the controller namespace is used for the infra proxy deployments.
-	KubernetesDeployModeTypeControllerNamespace = "ControllerNamespace"
+	KubernetesDeployModeTypeControllerNamespace KubernetesDeployModeType = "ControllerNamespace"
 
 	// KubernetesDeployModeTypeGatewayNamespace indicates that the gateway namespace is used for the infra proxy deployments.
-	KubernetesDeployModeTypeGatewayNamespace = "GatewayNamespace"
+	KubernetesDeployModeTypeGatewayNamespace KubernetesDeployModeType = "GatewayNamespace"
 )
 
 // KubernetesDeployModeType defines the type of KubernetesDeployMode
