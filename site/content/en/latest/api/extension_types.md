@@ -2177,6 +2177,7 @@ _Appears in:_
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
+| `allowConnect` | _boolean_ |  false  |  | AllowConnect specifies whether the CONNECT method is allowed. |
 | `initialStreamWindowSize` | _[Quantity](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.29/#quantity-resource-api)_ |  false  |  | InitialStreamWindowSize sets the initial window size for HTTP/2 streams.<br />If not set, the default value is 64 KiB(64*1024). |
 | `initialConnectionWindowSize` | _[Quantity](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.29/#quantity-resource-api)_ |  false  |  | InitialConnectionWindowSize sets the initial window size for HTTP/2 connections.<br />If not set, the default value is 1 MiB. |
 | `maxConcurrentStreams` | _integer_ |  false  |  | MaxConcurrentStreams sets the maximum number of concurrent streams allowed per connection.<br />If not set, the default value is 100. |
@@ -2192,6 +2193,9 @@ HTTP3Settings provides HTTP/3 configuration on the listener.
 _Appears in:_
 - [ClientTrafficPolicySpec](#clienttrafficpolicyspec)
 
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `allowConnect` | _boolean_ |  false  |  | AllowConnect specifies whether the CONNECT method is allowed. |
 
 
 #### HTTPActiveHealthChecker

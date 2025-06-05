@@ -524,6 +524,10 @@ spec:
               http2:
                 description: HTTP2 provides HTTP/2 configuration for backend connections.
                 properties:
+                  allowConnect:
+                    description: AllowConnect specifies whether the CONNECT method
+                      is allowed.
+                    type: boolean
                   initialConnectionWindowSize:
                     allOf:
                     - pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
