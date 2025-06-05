@@ -44,11 +44,9 @@ func (t *Translator) ProcessExtensionServerPolicies(policies []unstructured.Unst
 	}
 
 	var errs error
-	policyIndex := -1
 	// Process the policies targeting Gateways. Only update the policy status if it was accepted.
 	// A policy is considered accepted if at least one targetRef contained inside matched a listener.
-	for _, policy := range policies {
-		policyIndex++
+	for policyIndex, policy := range policies {
 		policy := policy.DeepCopy()
 		var policyStatus gwapiv1a2.PolicyStatus
 		accepted := false
