@@ -21,6 +21,7 @@ import (
 	"github.com/envoyproxy/gateway/internal/envoygateway"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
+	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 	"github.com/envoyproxy/gateway/internal/infrastructure/kubernetes/proxy"
 	resource2 "github.com/envoyproxy/gateway/internal/infrastructure/kubernetes/resource"
 	"github.com/envoyproxy/gateway/internal/ir"
@@ -47,12 +48,6 @@ func daemonsetWithSelectorAndLabel(ds *appsv1.DaemonSet, selector *metav1.LabelS
 	return dCopy
 }
 
-func daemonsetWithOwnerReferences(ds *appsv1.DaemonSet, ownerReferences []metav1.OwnerReference) *appsv1.DaemonSet {
-	dCopy := ds.DeepCopy()
-	dCopy.OwnerReferences = ownerReferences
-	return dCopy
-}
-
 func setupCreateOrUpdateProxyDaemonSet(gatewayNamespaceMode bool) (*appsv1.DaemonSet, *ir.Infra, *config.Server, error) {
 	ctx := context.Background()
 	cfg, err := config.New(os.Stdout)
@@ -63,8 +58,8 @@ func setupCreateOrUpdateProxyDaemonSet(gatewayNamespaceMode bool) (*appsv1.Daemo
 	infra.Proxy.GetProxyMetadata().Labels[gatewayapi.OwningGatewayNamespaceLabel] = "default"
 	infra.Proxy.GetProxyMetadata().Labels[gatewayapi.OwningGatewayNameLabel] = infra.Proxy.Name
 	infra.Proxy.GetProxyMetadata().OwnerReference = &ir.ResourceMetadata{
-		Kind: "Gateway",
-		Name: infra.Proxy.Name,
+		Kind: resource.KindGatewayClass,
+		Name: testGatewayClass,
 	}
 	infra.Proxy.Config = &egv1a1.EnvoyProxy{
 		Spec: egv1a1.EnvoyProxySpec{
@@ -83,6 +78,9 @@ func setupCreateOrUpdateProxyDaemonSet(gatewayNamespaceMode bool) (*appsv1.Daemo
 		WithScheme(envoygateway.GetScheme()).
 		Build()
 	kube := NewInfra(cli, cfg)
+	if err := setupOwnerReferenceResources(ctx, kube.Client); err != nil {
+		return nil, nil, nil, err
+	}
 
 	if gatewayNamespaceMode {
 		cfg.EnvoyGateway.Provider.Kubernetes.Deploy = &egv1a1.KubernetesDeployMode{
@@ -93,12 +91,8 @@ func setupCreateOrUpdateProxyDaemonSet(gatewayNamespaceMode bool) (*appsv1.Daemo
 		infra.Proxy.GetProxyMetadata().Labels[gatewayapi.OwningGatewayNamespaceLabel] = "ns1"
 		infra.Proxy.GetProxyMetadata().Labels[gatewayapi.OwningGatewayNameLabel] = "gateway-1"
 		infra.Proxy.GetProxyMetadata().OwnerReference = &ir.ResourceMetadata{
-			Kind: "Gateway",
+			Kind: resource.KindGateway,
 			Name: "gateway-1",
-		}
-
-		if err := createGatewayForGatewayNamespaceMode(ctx, kube.Client); err != nil {
-			return nil, nil, nil, err
 		}
 	}
 
@@ -152,6 +146,10 @@ func TestCreateOrUpdateProxyDaemonSet(t *testing.T) {
 							gatewayapi.OwningGatewayNamespaceLabel: "default",
 							gatewayapi.OwningGatewayNameLabel:      infra.Proxy.Name,
 						},
+						OwnerReference: &ir.ResourceMetadata{
+							Kind: resource.KindGatewayClass,
+							Name: testGatewayClass,
+						},
 					},
 					Config: &egv1a1.EnvoyProxy{
 						Spec: egv1a1.EnvoyProxySpec{
@@ -183,6 +181,10 @@ func TestCreateOrUpdateProxyDaemonSet(t *testing.T) {
 						Labels: map[string]string{
 							gatewayapi.OwningGatewayNamespaceLabel: "default",
 							gatewayapi.OwningGatewayNameLabel:      infra.Proxy.Name,
+						},
+						OwnerReference: &ir.ResourceMetadata{
+							Kind: resource.KindGatewayClass,
+							Name: testGatewayClass,
 						},
 					},
 					Config: &egv1a1.EnvoyProxy{
@@ -221,6 +223,10 @@ func TestCreateOrUpdateProxyDaemonSet(t *testing.T) {
 							gatewayapi.OwningGatewayNamespaceLabel: "default",
 							gatewayapi.OwningGatewayNameLabel:      infra.Proxy.Name,
 						},
+						OwnerReference: &ir.ResourceMetadata{
+							Kind: resource.KindGatewayClass,
+							Name: testGatewayClass,
+						},
 					},
 					Config: &egv1a1.EnvoyProxy{
 						Spec: egv1a1.EnvoyProxySpec{
@@ -257,6 +263,10 @@ func TestCreateOrUpdateProxyDaemonSet(t *testing.T) {
 							gatewayapi.OwningGatewayNamespaceLabel: "default",
 							gatewayapi.OwningGatewayNameLabel:      infra.Proxy.Name,
 						},
+						OwnerReference: &ir.ResourceMetadata{
+							Kind: resource.KindGatewayClass,
+							Name: testGatewayClass,
+						},
 					},
 					Config: &egv1a1.EnvoyProxy{
 						Spec: egv1a1.EnvoyProxySpec{
@@ -289,7 +299,7 @@ func TestCreateOrUpdateProxyDaemonSet(t *testing.T) {
 			cfg:                  gwCfg,
 			in:                   gwInfra,
 			gatewayNamespaceMode: true,
-			want:                 daemonsetWithOwnerReferences(gwDs, []metav1.OwnerReference{{APIVersion: "gateway.networking.k8s.io/v1", Kind: "Gateway", Name: "gateway-1", UID: "foo.bar"}}),
+			want:                 gwDs,
 		},
 	}
 
@@ -311,9 +321,7 @@ func TestCreateOrUpdateProxyDaemonSet(t *testing.T) {
 			}
 
 			kube := NewInfra(cli, tc.cfg)
-			if tc.gatewayNamespaceMode {
-				require.NoError(t, createGatewayForGatewayNamespaceMode(ctx, kube.Client))
-			}
+			require.NoError(t, setupOwnerReferenceResources(ctx, kube.Client))
 
 			r, err := proxy.NewResourceRender(ctx, kube, tc.in)
 			require.NoError(t, err)

@@ -63,14 +63,14 @@ func (i *Infra) GetEnvoyGateway() *egv1a1.EnvoyGateway {
 
 func (i *Infra) GetOwnerReferenceUID(ctx context.Context, irInfra *ir.Infra) (map[string]types.UID, error) {
 	ownerReferenceUID := make(map[string]types.UID)
+	if irInfra.GetProxyInfra().GetProxyMetadata() == nil {
+		return nil, errors.New("infra proxy metadata ir is nil")
+	}
+	if irInfra.GetProxyInfra().GetProxyMetadata().OwnerReference == nil {
+		return nil, errors.New("infra proxy metadata owner reference ir is nil")
+	}
 
 	if i.EnvoyGateway.GatewayNamespaceMode() {
-		if irInfra.GetProxyInfra().GetProxyMetadata() == nil {
-			return nil, errors.New("infra proxy metadata ir is nil")
-		}
-		if irInfra.GetProxyInfra().GetProxyMetadata().OwnerReference == nil {
-			return nil, errors.New("infra proxy metadata owner reference ir is nil")
-		}
 		key := types.NamespacedName{
 			Namespace: i.GetResourceNamespace(irInfra),
 			Name:      irInfra.GetProxyInfra().GetProxyMetadata().OwnerReference.Name,
@@ -80,8 +80,16 @@ func (i *Infra) GetOwnerReferenceUID(ctx context.Context, irInfra *ir.Infra) (ma
 			return nil, err
 		}
 		ownerReferenceUID[resource.KindGateway] = gatewayUID
+	} else {
+		key := types.NamespacedName{
+			Name: irInfra.GetProxyInfra().GetProxyMetadata().OwnerReference.Name,
+		}
+		gatewayClassUID, err := i.Client.GetUID(ctx, key, &gwapiv1.GatewayClass{})
+		if err != nil {
+			return nil, err
+		}
+		ownerReferenceUID[resource.KindGatewayClass] = gatewayClassUID
 	}
-	// TODO: set GatewayClass UID when enable merged gateways
 
 	return ownerReferenceUID, nil
 }

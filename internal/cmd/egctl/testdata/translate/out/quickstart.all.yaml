@@ -97,6 +97,9 @@ infraIR:
         labels:
           gateway.envoyproxy.io/owning-gateway-name: eg
           gateway.envoyproxy.io/owning-gateway-namespace: envoy-gateway-system
+        ownerReference:
+          kind: GatewayClass
+          name: eg
       name: envoy-gateway-system/eg
       namespace: ""
 xdsIR:

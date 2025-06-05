@@ -17,6 +17,7 @@ new features: |
   Added support for setting ownerreference to infra resources when enable gateway namespace mode.
   Added support for configuring hostname in active HTTP healthchecks.
   Added support for GatewayInfrastructure in gateway namespace mode.
+  Added support for setting GatewayClass ownerreference to infra resources when all cases except gateway namespace mode.
 
 bug fixes: |
   Handle integer zone annotation values

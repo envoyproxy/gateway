@@ -56,6 +56,9 @@ infraIR:
         labels:
           gateway.envoyproxy.io/owning-gateway-name: gateway-tlsroute-referencegrant
           gateway.envoyproxy.io/owning-gateway-namespace: gateway-conformance-infra
+        ownerReference:
+          kind: GatewayClass
+          name: envoy-gateway-class
       name: gateway-conformance-infra/gateway-tlsroute-referencegrant
       namespace: envoy-gateway-system
 tlsRoutes:

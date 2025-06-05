@@ -188,6 +188,9 @@ infraIR:
         labels:
           gateway.envoyproxy.io/owning-gateway-name: gateway-tls
           gateway.envoyproxy.io/owning-gateway-namespace: envoy-gateway
+        ownerReference:
+          kind: GatewayClass
+          name: envoy-gateway-class
       name: envoy-gateway/gateway-tls
       namespace: envoy-gateway-system
 tcpRoutes:
