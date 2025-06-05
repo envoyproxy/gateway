@@ -6,6 +6,7 @@
 package kubernetes
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"testing"
@@ -1338,6 +1339,183 @@ func TestValidateHTTPRouteFilerForReconcile(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			res := r.validateHTTPRouteFilterForReconcile(tc.httpRouteFilter)
 			require.Equal(t, tc.expect, res)
+		})
+	}
+}
+
+// TestEnvoyServiceForGateway tests the envoyServiceForGateway function to ensure
+// it prefers non-headless services over headless services for Gateway address assignment.
+func TestEnvoyServiceForGateway(t *testing.T) {
+	testCases := []struct {
+		name               string
+		gateway            *gwapiv1.Gateway
+		services           []client.Object
+		mergeGateways      bool
+		expectServiceName  string
+		expectServiceFound bool
+	}{
+		{
+			name:    "no services found",
+			gateway: test.GetGateway(types.NamespacedName{Name: "test-gateway", Namespace: "default"}, "test-gc", 8080),
+			services: []client.Object{
+				// Service with different labels that won't match
+				test.GetService(
+					types.NamespacedName{Name: "unrelated-service", Namespace: "default"},
+					map[string]string{"unrelated": "label"},
+					map[string]int32{"http": 80},
+				),
+			},
+			expectServiceFound: false,
+		},
+		{
+			name:    "single non-headless service",
+			gateway: test.GetGateway(types.NamespacedName{Name: "test-gateway", Namespace: "default"}, "test-gc", 8080),
+			services: []client.Object{
+				func() *corev1.Service {
+					svc := test.GetService(
+						types.NamespacedName{Name: "envoy-service", Namespace: "default"},
+						gatewayapi.GatewayOwnerLabels("default", "test-gateway"),
+						map[string]int32{"http": 80},
+					)
+					svc.Spec.ClusterIP = "10.0.0.1"
+					svc.Spec.ClusterIPs = []string{"10.0.0.1"}
+					return svc
+				}(),
+			},
+			expectServiceName:  "envoy-service",
+			expectServiceFound: true,
+		},
+		{
+			name:    "single headless service",
+			gateway: test.GetGateway(types.NamespacedName{Name: "test-gateway", Namespace: "default"}, "test-gc", 8080),
+			services: []client.Object{
+				func() *corev1.Service {
+					svc := test.GetService(
+						types.NamespacedName{Name: "envoy-headless", Namespace: "default"},
+						gatewayapi.GatewayOwnerLabels("default", "test-gateway"),
+						map[string]int32{"http": 80},
+					)
+					svc.Spec.ClusterIP = "None"
+					svc.Spec.ClusterIPs = []string{"None"}
+					return svc
+				}(),
+			},
+			expectServiceName:  "envoy-headless",
+			expectServiceFound: true,
+		},
+		{
+			name:    "prefers non-headless over headless service",
+			gateway: test.GetGateway(types.NamespacedName{Name: "test-gateway", Namespace: "default"}, "test-gc", 8080),
+			services: []client.Object{
+				// Create headless service first
+				func() *corev1.Service {
+					svc := test.GetService(
+						types.NamespacedName{Name: "envoy-headless", Namespace: "default"},
+						gatewayapi.GatewayOwnerLabels("default", "test-gateway"),
+						map[string]int32{"http": 80},
+					)
+					svc.Spec.ClusterIP = "None"
+					svc.Spec.ClusterIPs = []string{"None"}
+					return svc
+				}(),
+				// Create regular service second
+				func() *corev1.Service {
+					svc := test.GetService(
+						types.NamespacedName{Name: "envoy-service", Namespace: "default"},
+						gatewayapi.GatewayOwnerLabels("default", "test-gateway"),
+						map[string]int32{"http": 80},
+					)
+					svc.Spec.ClusterIP = "10.0.0.1"
+					svc.Spec.ClusterIPs = []string{"10.0.0.1"}
+					return svc
+				}(),
+			},
+			// Should return the non-headless service regardless of order
+			expectServiceName:  "envoy-service",
+			expectServiceFound: true,
+		},
+		{
+			name:    "multiple non-headless services returns first one",
+			gateway: test.GetGateway(types.NamespacedName{Name: "test-gateway", Namespace: "default"}, "test-gc", 8080),
+			services: []client.Object{
+				func() *corev1.Service {
+					svc := test.GetService(
+						types.NamespacedName{Name: "envoy-service-1", Namespace: "default"},
+						gatewayapi.GatewayOwnerLabels("default", "test-gateway"),
+						map[string]int32{"http": 80},
+					)
+					svc.Spec.ClusterIP = "10.0.0.1"
+					svc.Spec.ClusterIPs = []string{"10.0.0.1"}
+					return svc
+				}(),
+				func() *corev1.Service {
+					svc := test.GetService(
+						types.NamespacedName{Name: "envoy-service-2", Namespace: "default"},
+						gatewayapi.GatewayOwnerLabels("default", "test-gateway"),
+						map[string]int32{"http": 80},
+					)
+					svc.Spec.ClusterIP = "10.0.0.2"
+					svc.Spec.ClusterIPs = []string{"10.0.0.2"}
+					return svc
+				}(),
+			},
+			// Should return the first non-headless service found
+			expectServiceName:  "envoy-service-1",
+			expectServiceFound: true,
+		},
+		{
+			name:          "merged gateways with gateway class label",
+			gateway:       test.GetGateway(types.NamespacedName{Name: "test-gateway", Namespace: "default"}, "test-gc", 8080),
+			mergeGateways: true,
+			services: []client.Object{
+				func() *corev1.Service {
+					svc := test.GetService(
+						types.NamespacedName{Name: "merged-envoy-service", Namespace: "default"},
+						gatewayapi.GatewayClassOwnerLabel("test-gc"),
+						map[string]int32{"http": 80},
+					)
+					svc.Spec.ClusterIP = "10.0.0.1"
+					svc.Spec.ClusterIPs = []string{"10.0.0.1"}
+					return svc
+				}(),
+			},
+			expectServiceName:  "merged-envoy-service",
+			expectServiceFound: true,
+		},
+	}
+
+	logger := logging.DefaultLogger(os.Stdout, egv1a1.LogLevelInfo)
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			// Set up mergeGateways
+			mergeGateways := sets.New[string]()
+			if tc.mergeGateways {
+				mergeGateways.Insert(string(tc.gateway.Spec.GatewayClassName))
+			}
+
+			r := gatewayAPIReconciler{
+				classController: egv1a1.GatewayControllerName,
+				namespace:       "default",
+				log:             logger,
+				mergeGateways:   mergeGateways,
+				client: fakeclient.NewClientBuilder().
+					WithScheme(envoygateway.GetScheme()).
+					WithObjects(tc.services...).
+					Build(),
+			}
+
+			ctx := context.Background()
+			svc, err := r.envoyServiceForGateway(ctx, tc.gateway)
+
+			require.NoError(t, err)
+
+			if tc.expectServiceFound {
+				require.NotNil(t, svc, "expected to find a service")
+				require.Equal(t, tc.expectServiceName, svc.Name, "expected service name to match")
+			} else {
+				require.Nil(t, svc, "expected no service to be found")
+			}
 		})
 	}
 }
