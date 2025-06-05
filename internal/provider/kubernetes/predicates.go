@@ -642,6 +642,16 @@ func (r *gatewayAPIReconciler) envoyServiceForGateway(ctx context.Context, gatew
 	if len(services.Items) == 0 {
 		return nil, nil
 	}
+
+	// Prefer non-headless services over headless services for Gateway address assignment
+	for i := range services.Items {
+		svc := &services.Items[i]
+		if svc.Spec.ClusterIP != "" && svc.Spec.ClusterIP != "None" {
+			return svc, nil
+		}
+	}
+
+	// If no non-headless service found, return the first service (may be headless)
 	return &services.Items[0], nil
 }
 
