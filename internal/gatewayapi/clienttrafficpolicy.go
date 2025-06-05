@@ -473,7 +473,8 @@ func (t *Translator) translateClientTrafficPolicyForListener(policy *egv1a1.Clie
 		// enable http3 if set and TLS is enabled
 		if httpIR.TLS != nil && policy.Spec.HTTP3 != nil {
 			http3 := &ir.HTTP3Settings{
-				QUICPort: int32(l.Port),
+				AllowConnect: ptr.Deref(policy.Spec.HTTP3.AllowConnect, false),
+				QUICPort:     int32(l.Port),
 			}
 			httpIR.HTTP3 = http3
 			var proxyListenerIR *ir.ProxyListener
@@ -774,6 +775,7 @@ func translateHTTP2Settings(http2Settings *egv1a1.HTTP2Settings, httpIR *ir.HTTP
 		}
 	}
 
+	http2.AllowConnect = ptr.Deref(http2Settings.AllowConnect, false)
 	http2.MaxConcurrentStreams = http2Settings.MaxConcurrentStreams
 
 	httpIR.HTTP2 = http2

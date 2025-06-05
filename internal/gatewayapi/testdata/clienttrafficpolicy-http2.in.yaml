@@ -21,6 +21,7 @@ clientTrafficPolicies:
     name: target-gateway-1-section-http-2
   spec:
     http2:
+      allowConnect: true
       initialStreamWindowSize: 1Ki
       initialConnectionWindowSize: 1Ti
       maxConcurrentStreams: 200

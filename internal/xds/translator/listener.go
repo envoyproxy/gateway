@@ -87,21 +87,32 @@ func http1ProtocolOptions(opts *ir.HTTP1Settings) *corev3.Http1ProtocolOptions {
 	return r
 }
 
-func http2ProtocolOptions(opts *ir.HTTP2Settings) *corev3.Http2ProtocolOptions {
+func http2ProtocolOptions(opts *ir.HTTP2Settings, forCluster bool) *corev3.Http2ProtocolOptions {
 	if opts == nil {
 		opts = &ir.HTTP2Settings{}
 	}
 
 	out := &corev3.Http2ProtocolOptions{
-		MaxConcurrentStreams: &wrapperspb.UInt32Value{
-			Value: ptr.Deref(opts.MaxConcurrentStreams, http2MaxConcurrentStreamsLimit),
-		},
+		AllowConnect: opts.AllowConnect,
 		InitialStreamWindowSize: &wrapperspb.UInt32Value{
 			Value: ptr.Deref(opts.InitialStreamWindowSize, http2InitialStreamWindowSize),
 		},
 		InitialConnectionWindowSize: &wrapperspb.UInt32Value{
 			Value: ptr.Deref(opts.InitialConnectionWindowSize, http2InitialConnectionWindowSize),
 		},
+	}
+
+	if forCluster {
+		// we didn't set MaxConcurrentStreams for cluster by default.
+		if opts.MaxConcurrentStreams != nil {
+			out.MaxConcurrentStreams = &wrapperspb.UInt32Value{
+				Value: *opts.MaxConcurrentStreams,
+			}
+		}
+	} else {
+		out.MaxConcurrentStreams = &wrapperspb.UInt32Value{
+			Value: ptr.Deref(opts.MaxConcurrentStreams, http2MaxConcurrentStreamsLimit),
+		}
 	}
 
 	if opts.ResetStreamOnError != nil {
@@ -111,6 +122,16 @@ func http2ProtocolOptions(opts *ir.HTTP2Settings) *corev3.Http2ProtocolOptions {
 	}
 
 	return out
+}
+
+func http3ProtocolOptions(opts *ir.HTTP3Settings) *corev3.Http3ProtocolOptions {
+	if opts == nil {
+		return nil
+	}
+
+	return &corev3.Http3ProtocolOptions{
+		AllowExtendedConnect: opts.AllowConnect,
+	}
 }
 
 // xffNumTrustedHops returns the number of hops to be configured in proxy
@@ -358,7 +379,8 @@ func (t *Translator) addHCMToXDSListener(
 		ServerHeaderTransformation: hcmv3.HttpConnectionManager_PASS_THROUGH,
 		// Add HTTP2 protocol options
 		// Set it by default to also support HTTP1.1 to HTTP2 Upgrades
-		Http2ProtocolOptions: http2ProtocolOptions(irListener.HTTP2),
+		Http2ProtocolOptions: http2ProtocolOptions(irListener.HTTP2, false),
+		Http3ProtocolOptions: http3ProtocolOptions(irListener.HTTP3),
 		// https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_conn_man/headers#x-forwarded-for
 		UseRemoteAddress:              &wrapperspb.BoolValue{Value: useRemoteAddress},
 		OriginalIpDetectionExtensions: originalIPDetectionExtensions,

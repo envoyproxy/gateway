@@ -6,7 +6,8 @@ clientTrafficPolicies:
     name: target-gateway-1
     namespace: envoy-gateway
   spec:
-    http3: {}
+    http3:
+      allowConnect: true
     targetRef:
       group: gateway.networking.k8s.io
       kind: Gateway
@@ -113,6 +114,7 @@ infraIR:
       listeners:
       - address: null
         http3:
+          allowConnect: true
           quicPort: 443
         name: envoy-gateway/gateway-1/tls
         ports:
@@ -155,6 +157,7 @@ xdsIR:
       hostnames:
       - '*'
       http3:
+        allowConnect: true
         quicPort: 443
       isHTTP2: false
       metadata:

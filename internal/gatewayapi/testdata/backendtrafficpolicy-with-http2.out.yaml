@@ -302,6 +302,7 @@ xdsIR:
         name: grpcroute/default/grpcroute-1/rule/0/match/-1/*
         traffic:
           http2:
+            allowConnect: false
             initialConnectionWindowSize: 2097152
             initialStreamWindowSize: 1073741824
             maxConcurrentStreams: 500
@@ -373,6 +374,7 @@ xdsIR:
           prefix: /
         traffic:
           http2:
+            allowConnect: false
             initialConnectionWindowSize: 1048576
             initialStreamWindowSize: 524288000
             maxConcurrentStreams: 200

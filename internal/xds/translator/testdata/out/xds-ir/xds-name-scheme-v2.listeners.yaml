@@ -208,6 +208,7 @@
           initialConnectionWindowSize: 1048576
           initialStreamWindowSize: 65536
           maxConcurrentStreams: 100
+        http3ProtocolOptions: {}
         httpFilters:
         - name: envoy.filters.http.router
           typedConfig:

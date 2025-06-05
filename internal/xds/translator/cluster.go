@@ -859,14 +859,14 @@ func buildTypedExtensionProtocolOptions(args *xdsClusterArgs) (map[string]*anypb
 		protocolOptions.UpstreamProtocolOptions = &httpv3.HttpProtocolOptions_UseDownstreamProtocolConfig{
 			UseDownstreamProtocolConfig: &httpv3.HttpProtocolOptions_UseDownstreamHttpConfig{
 				HttpProtocolOptions:  http1opts,
-				Http2ProtocolOptions: buildHTTP2Settings(args.http2Settings),
+				Http2ProtocolOptions: http2ProtocolOptions(args.http2Settings, true),
 			},
 		}
 	case requiresHTTP2Options:
 		protocolOptions.UpstreamProtocolOptions = &httpv3.HttpProtocolOptions_ExplicitHttpConfig_{
 			ExplicitHttpConfig: &httpv3.HttpProtocolOptions_ExplicitHttpConfig{
 				ProtocolConfig: &httpv3.HttpProtocolOptions_ExplicitHttpConfig_Http2ProtocolOptions{
-					Http2ProtocolOptions: buildHTTP2Settings(args.http2Settings),
+					Http2ProtocolOptions: http2ProtocolOptions(args.http2Settings, true),
 				},
 			},
 		}
@@ -1179,36 +1179,6 @@ func (httpRoute *HTTPRouteTranslator) asClusterArgs(name string,
 	}
 
 	return clusterArgs
-}
-
-func buildHTTP2Settings(opts *ir.HTTP2Settings) *corev3.Http2ProtocolOptions {
-	if opts == nil {
-		opts = &ir.HTTP2Settings{}
-	}
-
-	// defaults based on https://www.envoyproxy.io/docs/envoy/latest/configuration/best_practices/edge
-	out := &corev3.Http2ProtocolOptions{
-		InitialStreamWindowSize: &wrapperspb.UInt32Value{
-			Value: ptr.Deref(opts.InitialStreamWindowSize, http2InitialStreamWindowSize),
-		},
-		InitialConnectionWindowSize: &wrapperspb.UInt32Value{
-			Value: ptr.Deref(opts.InitialConnectionWindowSize, http2InitialConnectionWindowSize),
-		},
-	}
-
-	if opts.MaxConcurrentStreams != nil {
-		out.MaxConcurrentStreams = &wrapperspb.UInt32Value{
-			Value: *opts.MaxConcurrentStreams,
-		}
-	}
-
-	if opts.ResetStreamOnError != nil {
-		out.OverrideStreamErrorOnInvalidHttpMessage = &wrapperspb.BoolValue{
-			Value: *opts.ResetStreamOnError,
-		}
-	}
-
-	return out
 }
 
 // buildEndpointOverrideLoadBalancingPolicy builds the Envoy LoadBalancingPolicy for EndpointOverride

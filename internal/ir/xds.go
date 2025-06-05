@@ -588,6 +588,7 @@ type HTTP10Settings struct {
 // HTTP2Settings provides HTTP/2 configuration on the listener.
 // +k8s:deepcopy-gen=true
 type HTTP2Settings struct {
+	AllowConnect bool `json:"allowConnect" yaml:"allowConnect"`
 	// InitialStreamWindowSize is the initial window size for a stream.
 	InitialStreamWindowSize *uint32 `json:"initialConnectionWindowSize,omitempty" yaml:"initialConnectionWindowSize,omitempty"`
 	// InitialConnectionWindowSize is the initial window size for a connection.

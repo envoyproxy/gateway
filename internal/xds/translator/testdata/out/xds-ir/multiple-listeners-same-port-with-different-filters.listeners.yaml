@@ -121,6 +121,7 @@
           initialConnectionWindowSize: 1048576
           initialStreamWindowSize: 65536
           maxConcurrentStreams: 100
+        http3ProtocolOptions: {}
         httpFilters:
         - disabled: true
           name: envoy.filters.http.ext_authz/securitypolicy/default/policy-for-http-route-2

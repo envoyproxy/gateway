@@ -1,6 +1,7 @@
 http:
 - address: 0.0.0.0
   http3:
+    allowConnect: true
     quicPort: 443
   hostnames:
   - '*'

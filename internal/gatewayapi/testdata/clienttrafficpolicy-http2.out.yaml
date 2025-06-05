@@ -38,6 +38,7 @@ clientTrafficPolicies:
     namespace: envoy-gateway
   spec:
     http2:
+      allowConnect: true
       initialConnectionWindowSize: 1Ti
       initialStreamWindowSize: 1Ki
       maxConcurrentStreams: 200
@@ -187,6 +188,7 @@ xdsIR:
       hostnames:
       - '*'
       http2:
+        allowConnect: false
         initialConnectionWindowSize: 65536
         initialStreamWindowSize: 33554432
         maxConcurrentStreams: 200
@@ -206,6 +208,7 @@ xdsIR:
       hostnames:
       - www.example.com
       http2:
+        allowConnect: true
         maxConcurrentStreams: 200
       isHTTP2: false
       metadata:
