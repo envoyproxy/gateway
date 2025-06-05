@@ -71,3 +71,7 @@ adopters:
     logo: "/logos/bitnami.svg"
     url: "https://bitnami.com/"
     description: "Bitnami has added Envoy Gateway to its application catalog, making it easy for users to deploy and manage the gateway using trusted and up-to-date Helm charts across Kubernetes environments."
+  - name: "Alibaba Cloud"
+    logo: "/logos/alibaba-cloud.png"
+    url: "https://www.alibabacloud.com/"
+    description: "Alibaba Cloud Container Service adopts Envoy Gateway as a network addon, providing comprehensive Gateway API support and dedicated LLM load balancing capabilities."
