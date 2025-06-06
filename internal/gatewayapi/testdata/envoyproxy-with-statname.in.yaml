@@ -7,7 +7,7 @@ envoyProxyForGatewayClass:
   spec:
     telemetry:
       metrics:
-        clusterStatName: "%ROUTE_KIND%/%ROUTE%/%ROUTE_RULE%/%ROUTE_RULE_NUMBER%/%BACKEND_REFS%"
+        clusterStatName: "%ROUTE_KIND%/%ROUTE_NAMESPACE%/%ROUTE_NAME%/%ROUTE_RULE_NAME%/%ROUTE_RULE_NUMBER%/%BACKEND_REFS%"
     provider:
       type: Kubernetes
 gateways:

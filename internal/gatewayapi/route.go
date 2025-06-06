@@ -2004,14 +2004,15 @@ func getStatPattern(routeContext RouteContext, parentRef *RouteParentContext) st
 }
 
 func buildStatName(pattern string, route RouteContext, ruleName *gwapiv1.SectionName, idx int, refs []string) string {
-	statName := strings.ReplaceAll(pattern, "%ROUTE%", fmt.Sprintf("%s/%s", route.GetNamespace(), route.GetName()))
-	statName = strings.ReplaceAll(statName, "%ROUTE_KIND%", route.GetObjectKind().GroupVersionKind().Kind)
+	statName := strings.ReplaceAll(pattern, egv1a1.StatFormatterRouteName, route.GetName())
+	statName = strings.ReplaceAll(statName, egv1a1.StatFormatterRouteNamespace, route.GetNamespace())
+	statName = strings.ReplaceAll(statName, egv1a1.StatFormatterRouteKind, route.GetObjectKind().GroupVersionKind().Kind)
 	if ruleName == nil {
-		statName = strings.ReplaceAll(statName, "%ROUTE_RULE%", "-")
+		statName = strings.ReplaceAll(statName, egv1a1.StatFormatterRouteRuleName, "-")
 	} else {
-		statName = strings.ReplaceAll(statName, "%ROUTE_RULE%", string(*ruleName))
+		statName = strings.ReplaceAll(statName, egv1a1.StatFormatterRouteRuleName, string(*ruleName))
 	}
-	statName = strings.ReplaceAll(statName, "%ROUTE_RULE_NUMBER%", fmt.Sprintf("%d", idx))
-	statName = strings.ReplaceAll(statName, "%BACKEND_REFS%", strings.Join(refs, ","))
+	statName = strings.ReplaceAll(statName, egv1a1.StatFormatterRouteRuleNumber, fmt.Sprintf("%d", idx))
+	statName = strings.ReplaceAll(statName, egv1a1.StatFormatterBackendRefs, strings.Join(refs, "|"))
 	return statName
 }

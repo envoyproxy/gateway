@@ -6,6 +6,7 @@
 package validation
 
 import (
+	"fmt"
 	"reflect"
 	"testing"
 
@@ -734,25 +735,35 @@ func TestValidateEnvoyProxy(t *testing.T) {
 			expected: true,
 		},
 		{
-			name: "invalid filter order with circular dependency",
+			name: "valid operators in ClusterStatName",
 			proxy: &egv1a1.EnvoyProxy{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "test",
 					Name:      "test",
 				},
 				Spec: egv1a1.EnvoyProxySpec{
-					FilterOrder: []egv1a1.FilterPosition{
-						{
-							Name:   egv1a1.EnvoyFilterOAuth2,
-							Before: ptr.To(egv1a1.EnvoyFilterJWTAuthn),
+					Telemetry: &egv1a1.ProxyTelemetry{
+						Metrics: &egv1a1.ProxyMetrics{
+							ClusterStatName: ptr.To(fmt.Sprintf("%s/%s/%s/%s/%s/%s/%s", egv1a1.StatFormatterRouteName,
+								egv1a1.StatFormatterRouteName, egv1a1.StatFormatterRouteNamespace, egv1a1.StatFormatterRouteKind,
+								egv1a1.StatFormatterRouteRuleName, egv1a1.StatFormatterRouteRuleNumber, egv1a1.StatFormatterBackendRefs)),
 						},
-						{
-							Name:   egv1a1.EnvoyFilterJWTAuthn,
-							Before: ptr.To(egv1a1.EnvoyFilterExtProc),
-						},
-						{
-							Name:   egv1a1.EnvoyFilterExtProc,
-							Before: ptr.To(egv1a1.EnvoyFilterOAuth2),
+					},
+				},
+			},
+			expected: false,
+		},
+		{
+			name: "invalid operators in ClusterStatName",
+			proxy: &egv1a1.EnvoyProxy{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "test",
+					Name:      "test",
+				},
+				Spec: egv1a1.EnvoyProxySpec{
+					Telemetry: &egv1a1.ProxyTelemetry{
+						Metrics: &egv1a1.ProxyMetrics{
+							ClusterStatName: ptr.To("%ROUTE_NAME%.%FOO%.%BAR%/my/%BACKEND_REFS%/%FOOBAR%"),
 						},
 					},
 				},
