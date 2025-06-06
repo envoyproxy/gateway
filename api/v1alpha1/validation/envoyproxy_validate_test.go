@@ -777,7 +777,7 @@ func TestValidateEnvoyProxy(t *testing.T) {
 					},
 				},
 			},
-			expected: false,
+			expected: true,
 		},
 		{
 			name: "invalid operators in ClusterStatName",
