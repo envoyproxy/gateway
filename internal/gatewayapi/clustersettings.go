@@ -504,6 +504,8 @@ func buildRetry(r *egv1a1.Retry) (*ir.Retry, error) {
 		rt.NumRetries = ptr.To(uint32(*r.NumRetries))
 	}
 
+	rt.NumAttemptsPerPriority = r.NumAttemptsPerPriority
+
 	if r.RetryOn != nil {
 		ro := &ir.RetryOn{}
 		bro := false

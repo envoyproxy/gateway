@@ -2995,6 +2995,11 @@ func (in *Retry) DeepCopyInto(out *Retry) {
 		*out = new(uint32)
 		**out = **in
 	}
+	if in.NumAttemptsPerPriority != nil {
+		in, out := &in.NumAttemptsPerPriority, &out.NumAttemptsPerPriority
+		*out = new(int32)
+		**out = **in
+	}
 	if in.RetryOn != nil {
 		in, out := &in.RetryOn, &out.RetryOn
 		*out = new(RetryOn)

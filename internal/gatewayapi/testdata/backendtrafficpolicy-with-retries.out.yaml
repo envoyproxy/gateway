@@ -7,6 +7,7 @@ backendTrafficPolicies:
     namespace: default
   spec:
     retry:
+      numAttemptsPerPriority: 4
       numRetries: 5
       perRetry:
         backOff:
@@ -77,6 +78,7 @@ backendTrafficPolicies:
     namespace: default
   spec:
     retry:
+      numAttemptsPerPriority: 0
       perRetry:
         backOff:
           baseInterval: 2s
@@ -571,6 +573,7 @@ xdsIR:
           prefix: /
         traffic:
           retry:
+            numAttemptsPerPriority: 4
             numRetries: 5
             perRetry:
               backOff:
