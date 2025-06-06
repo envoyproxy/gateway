@@ -164,8 +164,9 @@ type OIDCProvider struct {
 	TokenEndpoint *string `json:"tokenEndpoint,omitempty"`
 
 	// The OIDC Provider's [end session endpoint](https://openid.net/specs/openid-connect-core-1_0.html#RPLogout).
-	// If not provided, EG will try to discover it from the provider's [Well-Known Configuration Endpoint](https://openid.net/specs/openid-connect-discovery-1_0.html#ProviderConfigurationResponse).
 	//
+	// If the end session endpoint is provided, EG will use it to log out the user from the OIDC Provider when the user accesses the logout path.
+	// EG will also try to discover the end session endpoint from the provider's [Well-Known Configuration Endpoint](https://openid.net/specs/openid-connect-discovery-1_0.html#ProviderConfigurationResponse) when authorizationEndpoint or tokenEndpoint is not provided.
 	// +optional
 	EndSessionEndpoint *string `json:"endSessionEndpoint,omitempty"`
 }
