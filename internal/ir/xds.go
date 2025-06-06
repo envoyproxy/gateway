@@ -2893,11 +2893,13 @@ type TLSUpstreamConfig struct {
 	CACertificate       *TLSCACertificate `json:"caCertificate,omitempty" yaml:"caCertificate,omitempty"`
 	TLSConfig           `json:",inline"`
 	SubjectAltNames     []SubjectAltName `json:"subjectAltNames,omitempty" yaml:"subjectAltNames,omitempty"`
+	InsecureSkipVerify  bool             `json:"insecureSkipVerify,omitempty" yaml:"insecureSkipVerify,omitempty"`
 }
 
 func (t *TLSUpstreamConfig) ToTLSConfig() (*tls.Config, error) {
 	// nolint:gosec
 	tlsConfig := &tls.Config{}
+	tlsConfig.InsecureSkipVerify = t.InsecureSkipVerify
 	if t.SNI != nil {
 		tlsConfig.ServerName = *t.SNI
 	}

@@ -38,9 +38,15 @@ func (t *Translator) applyBackendTLSSetting(
 	// and not from the BackendTLSPolicy. This is because the BackendTLSPolicy requires a valid hostname, and
 	// dynamic resolvers's hostname is not fixed.
 	if isDynamicResolver {
-		if tlsBundle, err = t.processBackendTLSConfig(backendRef, backendNamespace, resources); err != nil {
+		upstreamConfig, err := t.processDynamicResolverBackendTLSConfig(backendRef, backendNamespace, resources)
+		if err != nil {
 			return nil, err
 		}
+
+		if tlsBundle, err = t.applyCommonBackendTLSConfig(upstreamConfig, backendRef, backendNamespace, resources); err != nil {
+			return nil, err
+		}
+
 		return t.applyEnvoyProxyBackendTLSSetting(tlsBundle, resources, envoyProxy)
 	}
 
@@ -49,13 +55,39 @@ func (t *Translator) applyBackendTLSSetting(
 		return nil, err
 	}
 
-	if tlsBundle, err = t.applyEnvoyProxyBackendTLSSetting(upstreamConfig, resources, envoyProxy); err != nil {
+	if tlsBundle, err = t.applyCommonBackendTLSConfig(upstreamConfig, backendRef, backendNamespace, resources); err != nil {
+		return nil, err
+	}
+
+	if tlsBundle, err = t.applyEnvoyProxyBackendTLSSetting(tlsBundle, resources, envoyProxy); err != nil {
 		return nil, err
 	}
 	return tlsBundle, nil
 }
 
-func (t *Translator) processBackendTLSConfig(
+func (t *Translator) applyCommonBackendTLSConfig(
+	tlsConfig *ir.TLSUpstreamConfig,
+	backendRef gwapiv1.BackendObjectReference,
+	backendNamespace string,
+	resources *resource.Resources,
+) (*ir.TLSUpstreamConfig, error) {
+	if tlsConfig == nil || KindDerefOr(backendRef.Kind, resource.KindService) != resource.KindBackend {
+		return tlsConfig, nil
+	}
+
+	backend := resources.GetBackend(backendNamespace, string(backendRef.Name))
+	if backend == nil {
+		return nil, fmt.Errorf("backend %s not found", backendRef.Name)
+	}
+	if backend.Spec.TLS == nil {
+		return tlsConfig, nil
+	}
+
+	tlsConfig.InsecureSkipVerify = ptr.Deref(backend.Spec.TLS.InsecureSkipVerify, false)
+	return tlsConfig, nil
+}
+
+func (t *Translator) processDynamicResolverBackendTLSConfig(
 	backendRef gwapiv1.BackendObjectReference,
 	backendNamespace string,
 	resources *resource.Resources,
@@ -64,28 +96,33 @@ func (t *Translator) processBackendTLSConfig(
 	if backend == nil {
 		return nil, fmt.Errorf("backend %s not found", backendRef.Name)
 	}
-	if backend.Spec.TLS == nil {
+	if backend.Spec.TLS == nil || (len(backend.Spec.TLS.CACertificateRefs) == 0 && backend.Spec.TLS.WellKnownCACertificates == nil) {
 		return nil, nil
 	}
 
 	tlsBundle := &ir.TLSUpstreamConfig{
-		UseSystemTrustStore: ptr.Deref(backend.Spec.TLS.WellKnownCACertificates, "") == gwapiv1a3.WellKnownCACertificatesSystem,
-	}
-	if tlsBundle.UseSystemTrustStore {
-		tlsBundle.CACertificate = &ir.TLSCACertificate{
-			Name: fmt.Sprintf("%s/%s-ca", backend.Name, backend.Namespace),
-		}
-		return tlsBundle, nil
+		InsecureSkipVerify: ptr.Deref(backend.Spec.TLS.InsecureSkipVerify, false),
 	}
 
-	caCert, err := getCaCertsFromCARefs(backend.Spec.TLS.CACertificateRefs, resources)
-	if err != nil {
-		return nil, err
+	if !tlsBundle.InsecureSkipVerify {
+		tlsBundle.UseSystemTrustStore = ptr.Deref(backend.Spec.TLS.WellKnownCACertificates, "") == gwapiv1a3.WellKnownCACertificatesSystem
+
+		if tlsBundle.UseSystemTrustStore {
+			tlsBundle.CACertificate = &ir.TLSCACertificate{
+				Name: fmt.Sprintf("%s/%s-ca", backend.Name, backend.Namespace),
+			}
+		} else {
+			caCert, err := getCaCertsFromCARefs(backend.Spec.TLS.CACertificateRefs, resources)
+			if err != nil {
+				return nil, err
+			}
+			tlsBundle.CACertificate = &ir.TLSCACertificate{
+				Certificate: caCert,
+				Name:        fmt.Sprintf("%s/%s-ca", backend.Name, backend.Namespace),
+			}
+		}
 	}
-	tlsBundle.CACertificate = &ir.TLSCACertificate{
-		Certificate: caCert,
-		Name:        fmt.Sprintf("%s/%s-ca", backend.Name, backend.Namespace),
-	}
+
 	return tlsBundle, nil
 }
 

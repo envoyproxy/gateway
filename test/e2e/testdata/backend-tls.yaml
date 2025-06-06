@@ -107,3 +107,48 @@ spec:
     - fqdn:
         hostname: gateway.envoyproxy.io
         port: 443
+---
+apiVersion: gateway.networking.k8s.io/v1alpha3
+kind: BackendTLSPolicy
+metadata:
+  name: policy-btls-ca-mismatch
+  namespace: gateway-conformance-infra
+spec:
+  targetRefs:
+    - group: gateway.envoyproxy.io
+      kind: Backend
+      name: backend-insecure-tls-verify
+  validation:
+    wellKnownCACertificates: System
+    hostname: example.com
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: Backend
+metadata:
+  name: backend-insecure-tls-verify
+  namespace: gateway-conformance-infra
+spec:
+  endpoints:
+    - fqdn:
+        hostname: tls-backend-2.gateway-conformance-infra.svc.cluster.local
+        port: 443
+  tls:
+    insecureSkipVerify: true
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: http-with-backend-insecure-skip-verify
+  namespace: gateway-conformance-infra
+spec:
+  parentRefs:
+    - name: same-namespace
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /backend-tls-skip-verify
+      backendRefs:
+        - name: backend-insecure-tls-verify
+          group: gateway.envoyproxy.io
+          kind: Backend

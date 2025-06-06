@@ -46,5 +46,24 @@ backends:
       reason: Accepted
       status: "False"
       type: Invalid
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: Backend
+  metadata:
+    creationTimestamp: null
+    name: backend-2
+    namespace: default
+  spec:
+    tls:
+      insecureSkipVerify: false
+    type: DynamicResolver
+  status:
+    conditions:
+    - lastTransitionTime: null
+      message: 'The Backend was not accepted: must specify either CACertificateRefs
+        or WellKnownCACertificates for DynamicResolver type when InsecureSkipVerify
+        is unset or false'
+      reason: Accepted
+      status: "False"
+      type: Invalid
 infraIR: {}
 xdsIR: {}

@@ -157,7 +157,8 @@ spec:
               tls:
                 description: |-
                   TLS defines the TLS settings for the backend.
-                  Only supported for DynamicResolver backends.
+                  TLS.CACertificateRefs and TLS.WellKnownCACertificates can only be specified for DynamicResolver backends.
+                  TLS.InsecureSkipVerify can be specified for any Backends
                 properties:
                   caCertificateRefs:
                     description: |-
@@ -235,10 +236,12 @@ spec:
                   rule: '!(has(self.caCertificateRefs) && size(self.caCertificateRefs)
                     > 0 && has(self.wellKnownCACertificates) && self.wellKnownCACertificates
                     != "")'
-                - message: must specify either CACertificateRefs or WellKnownCACertificates
-                  rule: (has(self.caCertificateRefs) && size(self.caCertificateRefs)
-                    > 0 || has(self.wellKnownCACertificates) && self.wellKnownCACertificates
-                    != "")
+                - message: must not contain either CACertificateRefs or WellKnownCACertificates
+                    when InsecureSkipVerify is enabled
+                  rule: '!((has(self.insecureSkipVerify) && self.insecureSkipVerify)
+                    && ((has(self.caCertificateRefs) && size(self.caCertificateRefs)
+                    > 0) || (has(self.wellKnownCACertificates) && self.wellKnownCACertificates
+                    != "")))'
               type:
                 default: Endpoints
                 description: Type defines the type of the backend. Defaults to "Endpoints"

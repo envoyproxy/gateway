@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"k8s.io/apimachinery/pkg/util/validation"
+	"k8s.io/utils/ptr"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/status"
@@ -48,20 +49,29 @@ func validateBackend(backend *egv1a1.Backend) status.Error {
 				status.RouteReasonInvalidBackendRef,
 			)
 		}
-	} else {
-		if backend.Spec.TLS != nil {
-			if backend.Spec.TLS.WellKnownCACertificates != nil {
-				return status.NewRouteStatusError(
-					fmt.Errorf("TLS.WellKnownCACertificates settings can only be specified for DynamicResolver backends"),
-					status.RouteReasonInvalidBackendRef,
-				)
-			}
-			if len(backend.Spec.TLS.CACertificateRefs) > 0 {
-				return status.NewRouteStatusError(
-					fmt.Errorf("TLS.CACertificateRefs settings can only be specified for DynamicResolver backends"),
-					status.RouteReasonInvalidBackendRef,
-				)
-			}
+
+		if backend.Spec.TLS != nil &&
+			!ptr.Deref(backend.Spec.TLS.InsecureSkipVerify, false) &&
+			backend.Spec.TLS.WellKnownCACertificates == nil &&
+			len(backend.Spec.TLS.CACertificateRefs) == 0 {
+			return status.NewRouteStatusError(
+				fmt.Errorf("must specify either CACertificateRefs or WellKnownCACertificates for DynamicResolver type when InsecureSkipVerify is unset or false"),
+				status.RouteReasonInvalidBackendRef,
+			)
+		}
+
+	} else if backend.Spec.TLS != nil {
+		if backend.Spec.TLS.WellKnownCACertificates != nil {
+			return status.NewRouteStatusError(
+				fmt.Errorf("TLS.WellKnownCACertificates settings can only be specified for DynamicResolver backends"),
+				status.RouteReasonInvalidBackendRef,
+			)
+		}
+		if len(backend.Spec.TLS.CACertificateRefs) > 0 {
+			return status.NewRouteStatusError(
+				fmt.Errorf("TLS.CACertificateRefs settings can only be specified for DynamicResolver backends"),
+				status.RouteReasonInvalidBackendRef,
+			)
 		}
 	}
 
