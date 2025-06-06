@@ -6,7 +6,6 @@
 package validation
 
 import (
-	"fmt"
 	"reflect"
 	"testing"
 
@@ -733,6 +732,32 @@ func TestValidateEnvoyProxy(t *testing.T) {
 				},
 			},
 			expected: true,
+		},
+		{
+			name: "invalid filter order with circular dependency",
+			proxy: &egv1a1.EnvoyProxy{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "test",
+					Name:      "test",
+				},
+				Spec: egv1a1.EnvoyProxySpec{
+					FilterOrder: []egv1a1.FilterPosition{
+						{
+							Name:   egv1a1.EnvoyFilterOAuth2,
+							Before: ptr.To(egv1a1.EnvoyFilterJWTAuthn),
+						},
+						{
+							Name:   egv1a1.EnvoyFilterJWTAuthn,
+							Before: ptr.To(egv1a1.EnvoyFilterExtProc),
+						},
+						{
+							Name:   egv1a1.EnvoyFilterExtProc,
+							Before: ptr.To(egv1a1.EnvoyFilterOAuth2),
+						},
+					},
+				},
+			},
+			expected: false,
 		},
 		{
 			name: "valid operators in ClusterStatName",
