@@ -1951,6 +1951,20 @@ _Appears in:_
 | `after` | _[EnvoyFilter](#envoyfilter)_ |  true  |  | After defines the filter that should come after the filter.<br />Only one of Before or After must be set. |
 
 
+#### ForceLocalZone
+
+
+
+ForceLocalZone defines override configuration for forcing all traffic to stay local vs Envoy default behavior
+which maintains equal distribution among upstreams while sending as much traffic as possible locally.
+
+_Appears in:_
+- [PreferLocalZone](#preferlocalzone)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+
+
 #### GRPCActiveHealthChecker
 
 
@@ -3397,6 +3411,19 @@ _Appears in:_
 | `targetSelectors` | _[TargetSelector](#targetselector) array_ |  true  |  | TargetSelectors allow targeting resources for this policy based on labels |
 
 
+#### PreferLocalZone
+
+
+
+PreferLocalZone configures zone-aware routing to prefer sending traffic to the local locality zone.
+
+_Appears in:_
+- [RequestDistribution](#requestdistribution)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+
+
 #### Principal
 
 
@@ -4124,6 +4151,19 @@ _Appears in:_
 
 _Appears in:_
 - [BackendTrafficPolicySpec](#backendtrafficpolicyspec)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+
+
+#### RequestDistribution
+
+
+
+RequestDistribution defines the configuration related to the distribution of requests between localities.
+
+_Appears in:_
+- [LoadBalancer](#loadbalancer)
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |

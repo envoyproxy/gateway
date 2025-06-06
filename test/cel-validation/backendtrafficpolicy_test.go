@@ -342,7 +342,36 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 				"spec.loadBalancer.consistentHash: Invalid value: \"object\": If consistent hash type is cookie, the cookie field must be set",
 			},
 		},
-
+		{
+			desc: "consistentHash lb with requestDistribution",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
+								Group: gwapiv1a2.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1a2.Kind("Gateway"),
+								Name:  gwapiv1a2.ObjectName("eg"),
+							},
+						},
+					},
+					ClusterSettings: egv1a1.ClusterSettings{
+						LoadBalancer: &egv1a1.LoadBalancer{
+							Type: egv1a1.ConsistentHashLoadBalancerType,
+							ConsistentHash: &egv1a1.ConsistentHash{
+								Type: "SourceIP",
+							},
+							RequestDistribution: &egv1a1.RequestDistribution{
+								PreferLocalZone: &egv1a1.PreferLocalZone{},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{
+				"spec.loadBalancer: Invalid value: \"object\": Currently RequestDistribution is only supported for LeastRequest, Random, and RoundRobin load balancers",
+			},
+		},
 		{
 			desc: "leastRequest with ConsistentHash nil",
 			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
@@ -359,6 +388,31 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 					ClusterSettings: egv1a1.ClusterSettings{
 						LoadBalancer: &egv1a1.LoadBalancer{
 							Type: egv1a1.LeastRequestLoadBalancerType,
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "leastRequest with RequestDistribution.PreferLocalZone set",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
+								Group: gwapiv1a2.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1a2.Kind("Gateway"),
+								Name:  gwapiv1a2.ObjectName("eg"),
+							},
+						},
+					},
+					ClusterSettings: egv1a1.ClusterSettings{
+						LoadBalancer: &egv1a1.LoadBalancer{
+							Type: egv1a1.LeastRequestLoadBalancerType,
+							RequestDistribution: &egv1a1.RequestDistribution{
+								PreferLocalZone: &egv1a1.PreferLocalZone{},
+							},
 						},
 					},
 				}
