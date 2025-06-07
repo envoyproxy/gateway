@@ -266,6 +266,24 @@ const (
 
 	// EnvoyFilterBuffer defines the Envoy HTTP buffer filter
 	EnvoyFilterBuffer EnvoyFilter = "envoy.filters.http.buffer"
+
+	// StatFormatterRouteName defines the Route Name formatter for stats
+	StatFormatterRouteName string = "%ROUTE_NAME%"
+
+	// StatFormatterRouteNamespace defines the Route Name formatter for stats
+	StatFormatterRouteNamespace string = "%ROUTE_NAMESPACE%"
+
+	// StatFormatterRouteKind defines the Route Name formatter for stats
+	StatFormatterRouteKind string = "%ROUTE_KIND%"
+
+	// StatFormatterRouteRuleName defines the Route Name formatter for stats
+	StatFormatterRouteRuleName string = "%ROUTE_RULE_NAME%"
+
+	// StatFormatterRouteRuleNumber defines the Route Name formatter for stats
+	StatFormatterRouteRuleNumber string = "%ROUTE_RULE_NUMBER%"
+
+	// StatFormatterBackendRefs defines the Route Name formatter for stats
+	StatFormatterBackendRefs string = "%BACKEND_REFS%"
 )
 
 type ProxyTelemetry struct {

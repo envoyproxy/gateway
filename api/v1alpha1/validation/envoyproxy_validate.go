@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"net"
 	"net/netip"
+	"regexp"
 
 	"github.com/dominikbraun/graph"
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
@@ -204,6 +205,12 @@ func validateProxyTelemetry(spec *egv1a1.EnvoyProxySpec) []error {
 				}
 			}
 		}
+
+		if spec.Telemetry.Metrics.ClusterStatName != nil {
+			if clusterStatErrs := validateClusterStatName(*spec.Telemetry.Metrics.ClusterStatName); clusterStatErrs != nil {
+				errs = append(errs, clusterStatErrs...)
+			}
+		}
 	}
 
 	return errs
@@ -282,4 +289,27 @@ func validateFilterOrder(filterOrder []egv1a1.FilterPosition) error {
 	}
 
 	return nil
+}
+
+func validateClusterStatName(clusterStatName string) []error {
+	supportedOperators := map[string]bool{
+		egv1a1.StatFormatterRouteName:       true,
+		egv1a1.StatFormatterRouteNamespace:  true,
+		egv1a1.StatFormatterRouteKind:       true,
+		egv1a1.StatFormatterRouteRuleName:   true,
+		egv1a1.StatFormatterRouteRuleNumber: true,
+		egv1a1.StatFormatterBackendRefs:     true,
+	}
+
+	var errs []error
+	re := regexp.MustCompile("%[^%]*%")
+	matches := re.FindAllString(clusterStatName, -1)
+	for _, operator := range matches {
+		if _, ok := supportedOperators[operator]; !ok {
+			err := fmt.Errorf("unable to configure Cluster Stat Name with unsupported operator: %s", operator)
+			errs = append(errs, err)
+		}
+	}
+
+	return errs
 }
