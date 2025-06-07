@@ -17,6 +17,7 @@ new features: |
   Added support for setting ownerreference to infra resources when enable gateway namespace mode.
   Added support for configuring hostname in active HTTP healthchecks.
   Added support for GatewayInfrastructure in gateway namespace mode.
+  Added support for using extension server policies to in PostTranslateModify hook.
   Added support for configuring cluster stat name for HTTPRoute and GRPCRoute in EnvoyProxy CRD.
 
 bug fixes: |

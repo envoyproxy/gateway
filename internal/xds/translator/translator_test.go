@@ -288,6 +288,11 @@ func TestTranslateXdsWithExtensionErrorsWhenFailOpen(t *testing.T) {
 						Version: "v1alpha1",
 						Kind:    "Bar",
 					},
+					{
+						Group:   "security.example.io",
+						Version: "v1alpha1",
+						Kind:    "ExampleExtPolicy",
+					},
 				},
 				Hooks: &egv1a1.ExtensionHooks{
 					XDSTranslator: &egv1a1.XDSTranslatorHooks{
@@ -357,6 +362,9 @@ func TestTranslateXdsWithExtensionErrorsWhenFailClosed(t *testing.T) {
 		"multiple-listeners-same-port-error": {
 			errMsg: "rpc error: code = Unknown desc = simulate error when there is no default filter chain in the original resources",
 		},
+		"extensionpolicy-extension-server-error": {
+			errMsg: "rpc error: code = Unknown desc = invalid extension policy : ext-server-policy-invalid-test",
+		},
 	}
 
 	inputFiles, err := filepath.Glob(filepath.Join("testdata", "in", "extension-xds-ir", "*-error.yaml"))
@@ -397,6 +405,11 @@ func TestTranslateXdsWithExtensionErrorsWhenFailClosed(t *testing.T) {
 						Group:   "foo.example.io",
 						Version: "v1alpha1",
 						Kind:    "Bar",
+					},
+					{
+						Group:   "security.example.io",
+						Version: "v1alpha1",
+						Kind:    "ExampleExtPolicy",
 					},
 				},
 				Hooks: &egv1a1.ExtensionHooks{
