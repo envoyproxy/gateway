@@ -5,7 +5,9 @@
 
 package v1alpha1
 
-import gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
+import (
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
+)
 
 // Timeout defines configuration for timeouts related to connections.
 type Timeout struct {
@@ -81,4 +83,10 @@ type HTTPClientTimeout struct {
 	//
 	// +optional
 	IdleTimeout *gwapiv1.Duration `json:"idleTimeout,omitempty"`
+
+	// RequestHeadersTimeout is the duration envoy waits for the complete request reception. This timer starts upon request
+	// initiation and stops when either the last byte of the request is sent upstream or when the response begins.
+	//
+	// +optional
+	RequestHeadersTimeout *gwapiv1.Duration `json:"requestHeadersTimeout,omitempty" yaml:"requestHeadersTimeout,omitempty"`
 }
