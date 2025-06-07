@@ -16,7 +16,7 @@ require (
 	github.com/dominikbraun/graph v0.23.0
 	github.com/envoyproxy/go-control-plane v0.13.5-0.20250408134212-157c26b62099
 	github.com/envoyproxy/go-control-plane/contrib v1.32.5-0.20250408134212-157c26b62099
-	github.com/envoyproxy/go-control-plane/envoy v1.32.5-0.20250408134212-157c26b62099
+	github.com/envoyproxy/go-control-plane/envoy v1.32.5-0.20250528180650-5cd15bcedda4
 	github.com/envoyproxy/go-control-plane/ratelimit v0.1.0
 	github.com/envoyproxy/ratelimit v1.4.1-0.20230427142404-e2a87f41d3a7
 	github.com/evanphx/json-patch v5.9.11+incompatible
@@ -62,7 +62,7 @@ require (
 	golang.org/x/net v0.40.0
 	gomodules.xyz/jsonpatch/v2 v2.5.0
 	google.golang.org/genproto/googleapis/api v0.0.0-20250428153025-10db94c68c34
-	google.golang.org/grpc v1.72.1
+	google.golang.org/grpc v1.72.2
 	google.golang.org/grpc/security/advancedtls v1.0.0
 	google.golang.org/protobuf v1.36.6
 	gopkg.in/yaml.v3 v3.0.1

@@ -16,6 +16,7 @@ new features: |
   Added XDS metadata for clusters and endpoints from xRoutes and referenced backend resources (Backend, Service, ServiceImport).
   Added support for setting ownerreference to infra resources when enable gateway namespace mode.
   Added support for configuring hostname in active HTTP healthchecks.
+  Added support for OIDC RP initialized logout. If the end session endpoint is explicitly specified or discovered from the issuer's well-known url, the end session endpoint will be invoked when the user logs out.
   Added support for GatewayInfrastructure in gateway namespace mode.
 
 bug fixes: |
