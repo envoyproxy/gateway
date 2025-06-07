@@ -22,7 +22,6 @@
     localityWeightedLbConfig: {}
   connectTimeout: 10s
   dnsLookupFamily: V4_PREFERRED
-  dnsRefreshRate: 30s
   lbPolicy: LEAST_REQUEST
   loadAssignment:
     clusterName: securitypolicy/default/policy-for-route/jwt/0
@@ -43,7 +42,6 @@
         region: securitypolicy/default/policy-for-route/jwt/0/backend/0
   name: securitypolicy/default/policy-for-route/jwt/0
   perConnectionBufferLimitBytes: 32768
-  respectDnsTtl: true
   transportSocketMatches:
   - match:
       name: securitypolicy/default/policy-for-route/jwt/0/tls/0
