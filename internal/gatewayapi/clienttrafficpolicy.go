@@ -911,7 +911,7 @@ func setTLSClientValidationContext(tlsClientValidation *egv1a1.ClientValidationC
 			irTLSConfig.MatchTypedSubjectAltNames = append(irTLSConfig.MatchTypedSubjectAltNames, irStringMatch("URI", match))
 		}
 		for _, otherName := range tlsClientValidation.SubjectAltNames.OtherNames {
-			irTLSConfig.MatchTypedSubjectAltNames = append(irTLSConfig.MatchTypedSubjectAltNames, irStringMatch(otherName.Oid, otherName.Match))
+			irTLSConfig.MatchTypedSubjectAltNames = append(irTLSConfig.MatchTypedSubjectAltNames, irStringMatch(otherName.Oid, otherName.StringMatch))
 		}
 	}
 }

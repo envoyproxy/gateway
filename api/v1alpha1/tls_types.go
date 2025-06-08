@@ -185,8 +185,8 @@ type SubjectAltNames struct {
 
 type OtherNameMatch struct {
 	// OID Value
-	Oid   string      `json:"oid"`
-	Match StringMatch `json:",inline"`
+	Oid         string `json:"oid"`
+	StringMatch `json:",inline"`
 }
 
 // Session defines settings related to TLS session management.
