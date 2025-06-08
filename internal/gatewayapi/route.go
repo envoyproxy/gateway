@@ -221,6 +221,7 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 		allDs := []*ir.DestinationSetting{}
 		failedProcessDestination := false
 		hasDynamicResolver := false
+		hasStaticResolver := false
 
 		// process each backendRef, and calculate the destination settings for this rule
 		for i, backendRef := range rule.BackendRefs {
@@ -244,6 +245,10 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 			// check if there is a dynamic resolver in the backendRefs
 			if ds.IsDynamicResolver {
 				hasDynamicResolver = true
+			}
+			// check if there is a static resolver in the backendRefs
+			if ds.IsStaticResolver {
+				hasStaticResolver = true
 			}
 		}
 
@@ -275,6 +280,10 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 				irRoute.DirectResponse = &ir.CustomResponse{
 					StatusCode: ptr.To(uint32(500)),
 				}
+			case hasStaticResolver && len(rule.BackendRefs) > 1:
+				irRoute.DirectResponse = &ir.CustomResponse{
+					StatusCode: ptr.To(uint32(500)),
+				}
 			default:
 				destination.Name = destName
 				destination.Settings = allDs
@@ -286,6 +295,14 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 			errs.Add(status.NewRouteStatusError(
 				fmt.Errorf(
 					"failed to process route rule %d: dynamic resolver is not supported for multiple backendRefs",
+					ruleIdx),
+				status.RouteReasonInvalidBackendRef,
+			))
+		}
+		if hasStaticResolver && len(rule.BackendRefs) > 1 {
+			errs.Add(status.NewRouteStatusError(
+				fmt.Errorf(
+					"failed to process route rule %d: static resolver is not supported for multiple backendRefs",
 					ruleIdx),
 				status.RouteReasonInvalidBackendRef,
 			))
@@ -1891,11 +1908,19 @@ func (t *Translator) processBackendDestinationSetting(
 
 	ds := &ir.DestinationSetting{Name: name}
 
-	// There is only one backend if it is a dynamic resolver
-	if backend.Spec.Type != nil && *backend.Spec.Type == egv1a1.BackendTypeDynamicResolver {
-		ds.IsDynamicResolver = true
-		ds.Protocol = protocol
-		return ds
+	// Handle special backend types
+	if backend.Spec.Type != nil {
+		switch *backend.Spec.Type {
+		case egv1a1.BackendTypeDynamicResolver:
+			ds.IsDynamicResolver = true
+			ds.Protocol = protocol
+			return ds
+		case egv1a1.BackendTypeStaticResolver:
+			ds.IsStaticResolver = true
+			ds.StaticResolverConfig = buildStaticResolverConfig(backend.Spec.StaticResolver)
+			ds.Protocol = protocol
+			return ds
+		}
 	}
 
 	for _, bep := range backend.Spec.Endpoints {
@@ -1972,4 +1997,37 @@ func backendAppProtocolToIRAppProtocol(ap egv1a1.AppProtocolType, defaultProtoco
 	default:
 		return defaultProtocol
 	}
+}
+
+func buildStaticResolverConfig(settings *egv1a1.StaticResolverSettings) *ir.StaticResolverConfig {
+	if settings == nil {
+		return nil
+	}
+
+	config := &ir.StaticResolverConfig{
+		OverrideHostSources: make([]ir.OverrideHostSource, len(settings.OverrideHostSources)),
+	}
+
+	// Convert override host sources
+	for i, source := range settings.OverrideHostSources {
+		irSource := ir.OverrideHostSource{
+			Header: source.Header,
+		}
+
+		if source.Metadata != nil {
+			irSource.Metadata = &ir.MetadataKey{
+				Key:  source.Metadata.Key,
+				Path: make([]ir.MetadataPathSegment, len(source.Metadata.Path)),
+			}
+			for j, pathSegment := range source.Metadata.Path {
+				irSource.Metadata.Path[j] = ir.MetadataPathSegment{
+					Key: pathSegment.Key,
+				}
+			}
+		}
+
+		config.OverrideHostSources[i] = irSource
+	}
+
+	return config
 }

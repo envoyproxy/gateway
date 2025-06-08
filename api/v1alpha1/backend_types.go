@@ -123,10 +123,11 @@ type UnixSocket struct {
 
 // BackendSpec describes the desired state of BackendSpec.
 // +kubebuilder:validation:XValidation:rule="self.type != 'DynamicResolver' || !has(self.endpoints)",message="DynamicResolver type cannot have endpoints specified"
+// +kubebuilder:validation:XValidation:rule="self.type != 'StaticResolver' || !has(self.endpoints)",message="StaticResolver type cannot have endpoints specified"
 type BackendSpec struct {
 	// Type defines the type of the backend. Defaults to "Endpoints"
 	//
-	// +kubebuilder:validation:Enum=Endpoints;DynamicResolver
+	// +kubebuilder:validation:Enum=Endpoints;DynamicResolver;StaticResolver
 	// +kubebuilder:default=Endpoints
 	// +optional
 	Type *BackendType `json:"type,omitempty"`
@@ -157,6 +158,13 @@ type BackendSpec struct {
 	//
 	// +optional
 	TLS *BackendTLSSettings `json:"tls,omitempty"`
+
+	// StaticResolver defines the configuration for StaticResolver backend type.
+	// This allows endpoint selection based on request headers or dynamic metadata.
+	// Only supported for StaticResolver backends.
+	//
+	// +optional
+	StaticResolver *StaticResolverSettings `json:"staticResolver,omitempty"`
 }
 
 // BackendTLSSettings holds the TLS settings for the backend.
@@ -201,6 +209,54 @@ type BackendTLSSettings struct {
 	InsecureSkipVerify *bool `json:"insecureSkipVerify,omitempty"`
 }
 
+// StaticResolverSettings holds the configuration for StaticResolver backend type.
+type StaticResolverSettings struct {
+	// OverrideHostSources defines the sources to get host addresses from for endpoint selection.
+	// The host sources are searched in the order specified. The request is forwarded to the first
+	// address and subsequent addresses are used for request retries or hedging.
+	//
+	// +kubebuilder:validation:MinItems=1
+	// +kubebuilder:validation:MaxItems=8
+	OverrideHostSources []OverrideHostSource `json:"overrideHostSources"`
+}
+
+// OverrideHostSource defines a source for getting override host addresses.
+// +kubebuilder:validation:XValidation:rule="(has(self.header) && !has(self.metadata)) || (!has(self.header) && has(self.metadata))",message="exactly one of header or metadata must be specified"
+type OverrideHostSource struct {
+	// Header specifies the header name to get the override host addresses from.
+	// The header value should contain host addresses in "IP:Port" format or multiple
+	// addresses separated by commas like "IP:Port,IP:Port,...".
+	// For example: "10.0.0.5:8080" or "[2600:4040:5204::1574:24ae]:80".
+	//
+	// +optional
+	Header *string `json:"header,omitempty"`
+
+	// Metadata specifies the metadata key to get the override host addresses from
+	// the request dynamic metadata. The metadata value should contain host addresses
+	// in the same format as the header field.
+	//
+	// +optional
+	Metadata *MetadataKey `json:"metadata,omitempty"`
+}
+
+// MetadataKey defines a key for accessing dynamic metadata.
+type MetadataKey struct {
+	// Key is the top-level metadata key.
+	Key string `json:"key"`
+
+	// Path defines the path within the metadata to access the value.
+	// Each element in the path represents a key in nested metadata structure.
+	//
+	// +optional
+	Path []MetadataPathSegment `json:"path,omitempty"`
+}
+
+// MetadataPathSegment represents a segment in the metadata path.
+type MetadataPathSegment struct {
+	// Key is the metadata key for this path segment.
+	Key string `json:"key"`
+}
+
 // BackendType defines the type of the Backend.
 type BackendType string
 
@@ -215,6 +271,13 @@ const (
 	// upstream address. If the hostname is set in the host header, the Envoy will resolve the
 	// ip address and port from the hostname using the DNS resolver.
 	BackendTypeDynamicResolver BackendType = "DynamicResolver"
+	// BackendTypeStaticResolver defines the type of the backend as StaticResolver.
+	//
+	// When a backend is of type StaticResolver, the Envoy will select endpoints from the
+	// configured endpoint list based on request headers or dynamic metadata. This allows
+	// for header-based endpoint selection while maintaining a static list of available endpoints.
+	// If no valid override host is found in headers/metadata, it falls back to normal load balancing.
+	BackendTypeStaticResolver BackendType = "StaticResolver"
 )
 
 // BackendConditionType is a type of condition for a backend. This type should be

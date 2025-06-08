@@ -40,15 +40,30 @@ func (t *Translator) ProcessBackends(backends []*egv1a1.Backend) []*egv1a1.Backe
 }
 
 func validateBackend(backend *egv1a1.Backend) status.Error {
-	if backend.Spec.Type != nil &&
-		*backend.Spec.Type == egv1a1.BackendTypeDynamicResolver {
+	backendType := egv1a1.BackendTypeEndpoints
+	if backend.Spec.Type != nil {
+		backendType = *backend.Spec.Type
+	}
+
+	switch backendType {
+	case egv1a1.BackendTypeDynamicResolver:
 		if len(backend.Spec.Endpoints) > 0 {
 			return status.NewRouteStatusError(
 				fmt.Errorf("DynamicResolver type cannot have endpoints specified"),
 				status.RouteReasonInvalidBackendRef,
 			)
 		}
-	} else {
+	case egv1a1.BackendTypeStaticResolver:
+		if len(backend.Spec.Endpoints) > 0 {
+			return status.NewRouteStatusError(
+				fmt.Errorf("StaticResolver type cannot have endpoints specified"),
+				status.RouteReasonInvalidBackendRef,
+			)
+		}
+		if err := validateStaticResolverSettings(backend.Spec.StaticResolver); err != nil {
+			return status.NewRouteStatusError(err, status.RouteReasonInvalidBackendRef)
+		}
+	default: // BackendTypeEndpoints
 		if backend.Spec.TLS != nil {
 			if backend.Spec.TLS.WellKnownCACertificates != nil {
 				return status.NewRouteStatusError(
@@ -62,6 +77,12 @@ func validateBackend(backend *egv1a1.Backend) status.Error {
 					status.RouteReasonInvalidBackendRef,
 				)
 			}
+		}
+		if backend.Spec.StaticResolver != nil {
+			return status.NewRouteStatusError(
+				fmt.Errorf("StaticResolver settings can only be specified for StaticResolver backends"),
+				status.RouteReasonInvalidBackendRef,
+			)
 		}
 	}
 
@@ -103,5 +124,35 @@ func validateBackend(backend *egv1a1.Backend) status.Error {
 			}
 		}
 	}
+	return nil
+}
+
+func validateStaticResolverSettings(settings *egv1a1.StaticResolverSettings) error {
+	if len(settings.OverrideHostSources) == 0 {
+		return fmt.Errorf("at least one override host source must be specified")
+	}
+
+	for i, source := range settings.OverrideHostSources {
+		if source.Header == nil && source.Metadata == nil {
+			return fmt.Errorf("override host source %d must specify either header or metadata", i)
+		}
+		if source.Header != nil && source.Metadata != nil {
+			return fmt.Errorf("override host source %d cannot specify both header and metadata", i)
+		}
+		if source.Header != nil && *source.Header == "" {
+			return fmt.Errorf("override host source %d header name cannot be empty", i)
+		}
+		if source.Metadata != nil {
+			if source.Metadata.Key == "" {
+				return fmt.Errorf("override host source %d metadata key cannot be empty", i)
+			}
+			for j, pathSegment := range source.Metadata.Path {
+				if pathSegment.Key == "" {
+					return fmt.Errorf("override host source %d metadata path segment %d key cannot be empty", i, j)
+				}
+			}
+		}
+	}
+
 	return nil
 }
