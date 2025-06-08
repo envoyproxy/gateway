@@ -49,7 +49,7 @@ func TestSetTLSClientValidationContext(t *testing.T) {
 					EmailAddresses: []egv1a1.StringMatch{sanMatcher},
 					IPAddresses:    []egv1a1.StringMatch{sanMatcher},
 					URIs:           []egv1a1.StringMatch{sanMatcher},
-					OtherNames:     []egv1a1.OtherNameMatch{{Oid: "1.3.6.1.4.1.311.20.2.3", Match: sanMatcher}},
+					OtherNames:     []egv1a1.OtherNameMatch{{Oid: "1.3.6.1.4.1.311.20.2.3", StringMatch: sanMatcher}},
 				},
 			},
 			want: &ir.TLSConfig{
