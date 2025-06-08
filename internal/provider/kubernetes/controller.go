@@ -1354,6 +1354,8 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 		return fmt.Errorf("failed to watch GatewayClass: %w", err)
 	}
 
+	extensionAPISettings := r.envoyGateway.GetExtensionAPISettings()
+
 	if err := c.Watch(
 		source.Kind(mgr.GetCache(), &gwapiv1.GatewayClass{},
 			handler.TypedEnqueueRequestsFromMapFunc(func(ctx context.Context, gc *gwapiv1.GatewayClass) []reconcile.Request {
@@ -1593,7 +1595,7 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 	r.backendCRDExists = r.crdExists(mgr, resource.KindBackend, egv1a1.GroupVersion.String())
 	if !r.backendCRDExists {
 		r.log.Info("Backend CRD not found, skipping Backend watch")
-	} else if r.envoyGateway.ExtensionAPIs != nil && r.envoyGateway.ExtensionAPIs.EnableBackend {
+	} else if extensionAPISettings != nil && extensionAPISettings.EnableBackend {
 		// Watch Backend CRUDs and process affected *Route objects.
 		backendPredicates := []predicate.TypedPredicate[*egv1a1.Backend]{
 			predicate.TypedGenerationChangedPredicate[*egv1a1.Backend]{},
@@ -1747,7 +1749,7 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 	r.eppCRDExists = r.crdExists(mgr, resource.KindEnvoyPatchPolicy, egv1a1.GroupVersion.String())
 	if !r.eppCRDExists {
 		r.log.Info("EnvoyPatchPolicy CRD not found, skipping EnvoyPatchPolicy watch")
-	} else if r.envoyGateway.ExtensionAPIs != nil && r.envoyGateway.ExtensionAPIs.EnableEnvoyPatchPolicy {
+	} else if extensionAPISettings != nil && extensionAPISettings.EnableEnvoyPatchPolicy {
 		// Watch EnvoyPatchPolicy if enabled in config
 		eppPredicates := []predicate.TypedPredicate[*egv1a1.EnvoyPatchPolicy]{
 			predicate.TypedGenerationChangedPredicate[*egv1a1.EnvoyPatchPolicy]{},

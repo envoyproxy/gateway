@@ -316,3 +316,15 @@ func (kcr *KubernetesClientRateLimit) GetQPSAndBurst() (float32, int) {
 	burst := ptr.Deref(kcr.Burst, DefaultKubernetesClientBurst)
 	return float32(qps), int(burst)
 }
+
+// GetExtensionAPISettings returns the EnvoyGateway ExtensionAPISettings.
+func (e *EnvoyGateway) GetExtensionAPISettings() *ExtensionAPISettings {
+	if e.ExtensionAPI != nil {
+		return e.ExtensionAPI
+	}
+	// Deprecated: use ExtensionAPI instead.
+	if e.ExtensionAPIs != nil {
+		return e.ExtensionAPIs
+	}
+	return nil
+}

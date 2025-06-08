@@ -88,11 +88,18 @@ type EnvoyGatewaySpec struct {
 	// +optional
 	ExtensionManager *ExtensionManager `json:"extensionManager,omitempty"`
 
+	// Deprecated: use ExtensionAPI instead.
 	// ExtensionAPIs defines the settings related to specific Gateway API Extensions
 	// implemented by Envoy Gateway
 	//
 	// +optional
 	ExtensionAPIs *ExtensionAPISettings `json:"extensionApis,omitempty"`
+
+	// ExtensionAPI defines the settings related to specific Gateway API Extensions
+	// implemented by Envoy Gateway
+	//
+	// +optional
+	ExtensionAPI *ExtensionAPISettings `json:"extensionAPI,omitempty"`
 }
 
 type KubernetesClient struct {
