@@ -3,6 +3,112 @@ clientTrafficPolicies:
   kind: ClientTrafficPolicy
   metadata:
     creationTimestamp: null
+    name: target-gateway-3
+    namespace: envoy-gateway
+  spec:
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: Gateway
+      name: gateway-3
+      sectionName: http-1
+    tls:
+      clientValidation:
+        caCertificateRefs:
+        - group: null
+          kind: ConfigMap
+          name: ca-configmap
+          namespace: envoy-gateway
+        certificateHashes:
+        - df6ff72fe9116521268f6f2dd4966f51df479883fe7037b39f75916ac3049d1a
+        publicKeyPins:
+        - NvqYIYSbgK2vCJpQhObf77vv+bQWtc5ek5RIOwPiC9A=
+        subjectAltNames:
+          dnsNames:
+          - type: Exact
+            value: client1.example.com
+          emailAddresses:
+          - type: Suffix
+            value: '@example.com'
+          ipAddresses:
+          - type: Prefix
+            value: 192.168.
+          otherNames:
+          - oid: 1.3.6.1.4.1.311.20.2.3
+            value: client1
+          uris:
+          - value: spiffe://example.com/client1
+  status:
+    ancestors:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: gateway-3
+        namespace: envoy-gateway
+        sectionName: http-1
+      conditions:
+      - lastTransitionTime: null
+        message: Policy has been accepted.
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: ClientTrafficPolicy
+  metadata:
+    creationTimestamp: null
+    name: target-gateway-4
+    namespace: envoy-gateway
+  spec:
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: Gateway
+      name: gateway-3
+      sectionName: tls-1
+    tls:
+      clientValidation:
+        caCertificateRefs:
+        - group: null
+          kind: ConfigMap
+          name: ca-configmap
+          namespace: envoy-gateway
+        certificateHashes:
+        - df6ff72fe9116521268f6f2dd4966f51df479883fe7037b39f75916ac3049d1a
+        publicKeyPins:
+        - NvqYIYSbgK2vCJpQhObf77vv+bQWtc5ek5RIOwPiC9A=
+        subjectAltNames:
+          dnsNames:
+          - type: Exact
+            value: client2.example.org
+          emailAddresses:
+          - type: Suffix
+            value: '@example.org'
+          ipAddresses:
+          - type: Prefix
+            value: "10."
+          otherNames:
+          - oid: 1.3.6.1.4.1.311.20.2.3
+            value: client2
+          uris:
+          - value: spiffe://example.com/client2
+  status:
+    ancestors:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: gateway-3
+        namespace: envoy-gateway
+        sectionName: tls-1
+      conditions:
+      - lastTransitionTime: null
+        message: Policy has been accepted.
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: ClientTrafficPolicy
+  metadata:
+    creationTimestamp: null
     name: target-gateway-1
     namespace: envoy-gateway
   spec:
@@ -188,6 +294,87 @@ gateways:
         kind: HTTPRoute
       - group: gateway.networking.k8s.io
         kind: GRPCRoute
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: Gateway
+  metadata:
+    creationTimestamp: null
+    name: gateway-3
+    namespace: envoy-gateway
+  spec:
+    gatewayClassName: envoy-gateway-class
+    listeners:
+    - allowedRoutes:
+        namespaces:
+          from: Same
+      name: http-1
+      port: 443
+      protocol: HTTPS
+      tls:
+        certificateRefs:
+        - group: null
+          kind: null
+          name: tls-secret-1
+          namespace: envoy-gateway
+        mode: Terminate
+    - allowedRoutes:
+        namespaces:
+          from: Same
+      name: tls-1
+      port: 6443
+      protocol: TLS
+      tls:
+        certificateRefs:
+        - group: null
+          kind: null
+          name: tls-secret-1
+          namespace: envoy-gateway
+        mode: Terminate
+  status:
+    listeners:
+    - attachedRoutes: 0
+      conditions:
+      - lastTransitionTime: null
+        message: Sending translated listener configuration to the data plane
+        reason: Programmed
+        status: "True"
+        type: Programmed
+      - lastTransitionTime: null
+        message: Listener has been successfully translated
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Listener references have been resolved
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      name: http-1
+      supportedKinds:
+      - group: gateway.networking.k8s.io
+        kind: HTTPRoute
+      - group: gateway.networking.k8s.io
+        kind: GRPCRoute
+    - attachedRoutes: 1
+      conditions:
+      - lastTransitionTime: null
+        message: Sending translated listener configuration to the data plane
+        reason: Programmed
+        status: "True"
+        type: Programmed
+      - lastTransitionTime: null
+        message: Listener has been successfully translated
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Listener references have been resolved
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      name: tls-1
+      supportedKinds:
+      - group: gateway.networking.k8s.io
+        kind: TCPRoute
 infraIR:
   envoy-gateway/gateway-1:
     proxy:
@@ -234,6 +421,63 @@ infraIR:
           name: envoy-gateway-class
       name: envoy-gateway/gateway-2
       namespace: envoy-gateway-system
+  envoy-gateway/gateway-3:
+    proxy:
+      listeners:
+      - address: null
+        name: envoy-gateway/gateway-3/http-1
+        ports:
+        - containerPort: 10443
+          name: https-443
+          protocol: HTTPS
+          servicePort: 443
+      - address: null
+        name: envoy-gateway/gateway-3/tls-1
+        ports:
+        - containerPort: 6443
+          name: tls-6443
+          protocol: TLS
+          servicePort: 6443
+      metadata:
+        labels:
+          gateway.envoyproxy.io/owning-gateway-name: gateway-3
+          gateway.envoyproxy.io/owning-gateway-namespace: envoy-gateway
+      name: envoy-gateway/gateway-3
+      namespace: envoy-gateway-system
+tcpRoutes:
+- apiVersion: gateway.networking.k8s.io/v1alpha2
+  kind: TCPRoute
+  metadata:
+    creationTimestamp: null
+    name: tcproute-1
+    namespace: envoy-gateway
+  spec:
+    parentRefs:
+    - name: gateway-3
+      namespace: envoy-gateway
+      sectionName: tls-1
+    rules:
+    - backendRefs:
+      - name: service-1
+        port: 8080
+  status:
+    parents:
+    - conditions:
+      - lastTransitionTime: null
+        message: Route is accepted
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: service envoy-gateway/service-1 not found
+        reason: BackendNotFound
+        status: "False"
+        type: ResolvedRefs
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+      parentRef:
+        name: gateway-3
+        namespace: envoy-gateway
+        sectionName: tls-1
 xdsIR:
   envoy-gateway/gateway-1:
     accessLog:
@@ -320,3 +564,136 @@ xdsIR:
       ipFamily: IPv4
       path: /ready
       port: 19003
+  envoy-gateway/gateway-3:
+    accessLog:
+      json:
+      - path: /dev/stdout
+    http:
+    - address: 0.0.0.0
+      hostnames:
+      - '*'
+      isHTTP2: false
+      metadata:
+        kind: Gateway
+        name: gateway-3
+        namespace: envoy-gateway
+        sectionName: http-1
+      name: envoy-gateway/gateway-3/http-1
+      path:
+        escapedSlashesAction: UnescapeAndRedirect
+        mergeSlashes: true
+      port: 10443
+      tls:
+        alpnProtocols: null
+        caCertificate:
+          certificate: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSURRekNDQWl1Z0F3SUJBZ0lCQVRBTkJna3Foa2lHOXcwQkFRc0ZBREJDTVJNd0VRWURWUVFLRXdwRmJuWnYKZVZCeWIzaDVNUkF3RGdZRFZRUUxFd2RIWVhSbGQyRjVNUmt3RndZRFZRUURFeEJGYm5admVTQkhZWFJsZDJGNQpJRU5CTUNBWERUSTBNRE14TURFMU16SXhOMW9ZRHpJeE1qUXdNekV3TVRZek1qRTNXakJDTVJNd0VRWURWUVFLCkV3cEZiblp2ZVZCeWIzaDVNUkF3RGdZRFZRUUxFd2RIWVhSbGQyRjVNUmt3RndZRFZRUURFeEJGYm5admVTQkgKWVhSbGQyRjVJRU5CTUlJQklqQU5CZ2txaGtpRzl3MEJBUUVGQUFPQ0FROEFNSUlCQ2dLQ0FRRUE3WkZtR0I0ZQptMUtkR0VvaEFaQmZxeWRBRUdMREhKMVl5ZkhXZGQrdkJBZXZkVzY0Ylp4M3BnZ0pPdGdDbmVQdUZkMDJyRFFTCmRsc0psWC82bUZ0b1FpbG82d3Z4RFNKUmZhVERidGZUancrN2s4eWZkL0pzbWgwUldHK1VleUk3TmE5c1hBejcKYjU3bXB4c0NvTm93emVLNUVUaU9HR05XUGNqRU5Ka1NuQmFyejVtdU4wMHhJWldCVSt5TjVQTEpOeFp2eHBaSgpPbC9TU0k4c25vMGUwUHhBbXAzZmU3UWFYaVpqL1RBR0pQR3VUSmtVeHJIcXlaR0p0WVV4c1M4QTBkVDF6QmpqCml6QTVEcCtiNXl6WW8yM0hoN0JncGJaN1g0Z3NEVGhGdXdDRDZmSHllcHV2MnpIUHF2U3NkcWcyaEFoRHA5MVIKenJuN2E5R3hHMlZTSXdJREFRQUJvMEl3UURBT0JnTlZIUThCQWY4RUJBTUNBUVl3RHdZRFZSMFRBUUgvQkFVdwpBd0VCL3pBZEJnTlZIUTRFRmdRVVVwUDFhWjFNMktJdVBQV3JOUERWMmM1Q25nb3dEUVlKS29aSWh2Y05BUUVMCkJRQURnZ0VCQUdTRWtBVnorWjBxUzRGbUEwcTRTQ3BJSXE2NGJzZEVqaVV6ZXY3cEsxTEVLMC9ZMjhRQlBpeFYKY1VYZmF4MThWUFI5cGxzMUpnWHRvOXFZK0MwaG5SWmljNjYxMVFUSmxXSzFwNmRpblEvZURkWUNCQytudjV4eApzc0FTd21wbEl4TXZqM1MxcUY2ZHI3c01JMlpWRDVIRWxUV2RPMTlVQkx5aGlLS1pXMkt4RHNZais1TlJ3R0ZlCkcrSnVEZ3E3bmpVTThtZHlZazBOZWhlZmRCVUVVVUNRdG53VXRXOTUvNDI5WHdxUVJPdVJEdGVHVDlrakQrWTUKZWE1bVc0bWZxTGV1R0pYWnM5YmRXaktLZExRUHJuOUlzaFB5c1dxejJIejhkUTFmN045L2c4VVdWU2pkNGN5eApTNUVBb2x6VnYweUI3d0hDV0NnZkcvY2tkT1RVTm5FPQotLS0tLUVORCBDRVJUSUZJQ0FURS0tLS0tCg==
+          name: envoy-gateway/target-gateway-3/ca.crt
+        certificates:
+        - certificate: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUR6akNDQXJhZ0F3SUJBZ0lVT0dKOUx1VGtKWkU0NmNVaUpGYmJ2bm10elFvd0RRWUpLb1pJaHZjTkFRRUwKQlFBd2J6RUxNQWtHQTFVRUJoTUNWVk14Q3pBSkJnTlZCQWdNQWxaQk1SRXdEd1lEVlFRSERBaFRiMjFsUTJsMAplVEVUTUJFR0ExVUVDZ3dLUlc1MmIzbFFjbTk0ZVRFUU1BNEdBMVVFQ3d3SFIyRjBaWGRoZVRFWk1CY0dBMVVFCkF3d1FiWFJzY3k1bGVHRnRjR3hsTG1OdmJUQWdGdzB5TkRBM01UWXlNalV4TWpOYUdBOHlNVEkwTURZeU1qSXkKTlRFeU0xb3diekVMTUFrR0ExVUVCaE1DVlZNeEN6QUpCZ05WQkFnTUFsWkJNUkV3RHdZRFZRUUhEQWhUYjIxbApRMmwwZVRFVE1CRUdBMVVFQ2d3S1JXNTJiM2xRY205NGVURVFNQTRHQTFVRUN3d0hSMkYwWlhkaGVURVpNQmNHCkExVUVBd3dRYlhSc2N5NWxlR0Z0Y0d4bExtTnZiVENDQVNJd0RRWUpLb1pJaHZjTkFRRUJCUUFEZ2dFUEFEQ0MKQVFvQ2dnRUJBS3kwZnp5NWFaVnRNajAxVWJPRGtsU1IxbTI1Mkt0QTJ2L2tmT05vNTZkNEJQbGdqVXdXUVZNUgpTclUxZzd4T2tWdjZiL0czdG5tQVhwWWY2VlIxODIyak96cCsxQ0c4ZWlGSEpjT2ZxV2lZMjh1NnFSV2VKUFZlCnpYdUFsMmd4cWJpTzZLdDZwbnI0aXFoVGhIK3ZqV3NXTnBDSVhrbDFydVlYbnhWLzRCOENxY1JJeTZHaEp6bloKRjR3NHJBNkRlRlJmZHl0MWd1bWtkN25PVVhYKzRZMzJrd0xGRU8zR3NnUTh1aVpEQmN1UEs5RjRHRDUydDZYTgowT2tlNTU0eEl2VldvZ1M1Vzl4UFIvcU5kQlpIQ1pid05jZzRRTVllbWZva0pkUXo4elVJcnZ6VUltM3ZvOUs3CnE4MmI1eTVFSm4yWEU5OVMycDZUZnJlSG1sUHpKNHNDQXdFQUFhTmdNRjR3Q3dZRFZSMFBCQVFEQWdTd01CTUcKQTFVZEpRUU1NQW9HQ0NzR0FRVUZCd01CTUJzR0ExVWRFUVFVTUJLQ0VHMTBiSE11WlhoaGJYQnNaUzVqYjIwdwpIUVlEVlIwT0JCWUVGRm1FTjBqRVFpckpYeGlLRHFlK2tTMVV3Q2gyTUEwR0NTcUdTSWIzRFFFQkN3VUFBNElCCkFRQ0NTVlluRVJPbHJpWDM2M0VtRzd1b091Nm54ajU1eWVmOXRKbnRubFVMVFZsMjlqc205Z3d5VnFUVCtUcXMKdzFPYW01TExmMEpjSWNRdmFUM203b0RpMElDUUo5eTlRQkNwMTh1TDBUeElDaFdVRTVnRUIxM3MyTzEwWWNFMQp1K2ozSzM0MStQNStoaEJpQnJ1d0dncStkVVRGRTZTYVVMY0xMVlB1RjdTeG1KbTRHK0Q0NVlqM1NDVy9aMzU2CkFXZzB4L0prZGFKSVVLVFJaUDVJTEZKQ1lJTUM3QWI1RmdWeGRCVW5kNWxheUZGb2NVMzRQaDlwZUxiYW00alYKdGt0SGNTSFJ6OERNTm1PNHpHTEZYNzlQR0lsaTZzTDU3V0N6bkw5RFFtajRyajFIS2tyeEdnMVExbUcwbDhOTQo5cXQyWEZNNUttWkVOb2E1MmFWSklHYWoKLS0tLS1FTkQgQ0VSVElGSUNBVEUtLS0tLQo=
+          name: envoy-gateway/tls-secret-1
+          privateKey: '[redacted]'
+        matchTypedSubjectAltNames:
+        - distinct: false
+          exact: client1.example.com
+          name: DNS
+        - distinct: false
+          name: EMAIL
+          suffix: '@example.com'
+        - distinct: false
+          name: IP_ADDRESS
+          prefix: 192.168.
+        - distinct: false
+          exact: spiffe://example.com/client1
+          name: URI
+        - distinct: false
+          exact: client1
+          name: 1.3.6.1.4.1.311.20.2.3
+        maxVersion: "1.3"
+        minVersion: "1.2"
+        requireClientCertificate: true
+        verifyCertificateHash:
+        - df6ff72fe9116521268f6f2dd4966f51df479883fe7037b39f75916ac3049d1a
+        verifyCertificateSpki:
+        - NvqYIYSbgK2vCJpQhObf77vv+bQWtc5ek5RIOwPiC9A=
+    readyListener:
+      address: 0.0.0.0
+      ipFamily: IPv4
+      path: /ready
+      port: 19003
+    tcp:
+    - address: 0.0.0.0
+      name: envoy-gateway/gateway-3/tls-1
+      port: 6443
+      routes:
+      - destination:
+          metadata:
+            kind: TCPRoute
+            name: tcproute-1
+            namespace: envoy-gateway
+          name: tcproute/envoy-gateway/tcproute-1/rule/-1
+        name: tcproute/envoy-gateway/tcproute-1
+        tls:
+          terminate:
+            alpnProtocols: []
+            caCertificate:
+              certificate: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSURRekNDQWl1Z0F3SUJBZ0lCQVRBTkJna3Foa2lHOXcwQkFRc0ZBREJDTVJNd0VRWURWUVFLRXdwRmJuWnYKZVZCeWIzaDVNUkF3RGdZRFZRUUxFd2RIWVhSbGQyRjVNUmt3RndZRFZRUURFeEJGYm5admVTQkhZWFJsZDJGNQpJRU5CTUNBWERUSTBNRE14TURFMU16SXhOMW9ZRHpJeE1qUXdNekV3TVRZek1qRTNXakJDTVJNd0VRWURWUVFLCkV3cEZiblp2ZVZCeWIzaDVNUkF3RGdZRFZRUUxFd2RIWVhSbGQyRjVNUmt3RndZRFZRUURFeEJGYm5admVTQkgKWVhSbGQyRjVJRU5CTUlJQklqQU5CZ2txaGtpRzl3MEJBUUVGQUFPQ0FROEFNSUlCQ2dLQ0FRRUE3WkZtR0I0ZQptMUtkR0VvaEFaQmZxeWRBRUdMREhKMVl5ZkhXZGQrdkJBZXZkVzY0Ylp4M3BnZ0pPdGdDbmVQdUZkMDJyRFFTCmRsc0psWC82bUZ0b1FpbG82d3Z4RFNKUmZhVERidGZUancrN2s4eWZkL0pzbWgwUldHK1VleUk3TmE5c1hBejcKYjU3bXB4c0NvTm93emVLNUVUaU9HR05XUGNqRU5Ka1NuQmFyejVtdU4wMHhJWldCVSt5TjVQTEpOeFp2eHBaSgpPbC9TU0k4c25vMGUwUHhBbXAzZmU3UWFYaVpqL1RBR0pQR3VUSmtVeHJIcXlaR0p0WVV4c1M4QTBkVDF6QmpqCml6QTVEcCtiNXl6WW8yM0hoN0JncGJaN1g0Z3NEVGhGdXdDRDZmSHllcHV2MnpIUHF2U3NkcWcyaEFoRHA5MVIKenJuN2E5R3hHMlZTSXdJREFRQUJvMEl3UURBT0JnTlZIUThCQWY4RUJBTUNBUVl3RHdZRFZSMFRBUUgvQkFVdwpBd0VCL3pBZEJnTlZIUTRFRmdRVVVwUDFhWjFNMktJdVBQV3JOUERWMmM1Q25nb3dEUVlKS29aSWh2Y05BUUVMCkJRQURnZ0VCQUdTRWtBVnorWjBxUzRGbUEwcTRTQ3BJSXE2NGJzZEVqaVV6ZXY3cEsxTEVLMC9ZMjhRQlBpeFYKY1VYZmF4MThWUFI5cGxzMUpnWHRvOXFZK0MwaG5SWmljNjYxMVFUSmxXSzFwNmRpblEvZURkWUNCQytudjV4eApzc0FTd21wbEl4TXZqM1MxcUY2ZHI3c01JMlpWRDVIRWxUV2RPMTlVQkx5aGlLS1pXMkt4RHNZais1TlJ3R0ZlCkcrSnVEZ3E3bmpVTThtZHlZazBOZWhlZmRCVUVVVUNRdG53VXRXOTUvNDI5WHdxUVJPdVJEdGVHVDlrakQrWTUKZWE1bVc0bWZxTGV1R0pYWnM5YmRXaktLZExRUHJuOUlzaFB5c1dxejJIejhkUTFmN045L2c4VVdWU2pkNGN5eApTNUVBb2x6VnYweUI3d0hDV0NnZkcvY2tkT1RVTm5FPQotLS0tLUVORCBDRVJUSUZJQ0FURS0tLS0tCg==
+              name: envoy-gateway/target-gateway-4/ca.crt
+            certificates:
+            - certificate: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUR6akNDQXJhZ0F3SUJBZ0lVT0dKOUx1VGtKWkU0NmNVaUpGYmJ2bm10elFvd0RRWUpLb1pJaHZjTkFRRUwKQlFBd2J6RUxNQWtHQTFVRUJoTUNWVk14Q3pBSkJnTlZCQWdNQWxaQk1SRXdEd1lEVlFRSERBaFRiMjFsUTJsMAplVEVUTUJFR0ExVUVDZ3dLUlc1MmIzbFFjbTk0ZVRFUU1BNEdBMVVFQ3d3SFIyRjBaWGRoZVRFWk1CY0dBMVVFCkF3d1FiWFJzY3k1bGVHRnRjR3hsTG1OdmJUQWdGdzB5TkRBM01UWXlNalV4TWpOYUdBOHlNVEkwTURZeU1qSXkKTlRFeU0xb3diekVMTUFrR0ExVUVCaE1DVlZNeEN6QUpCZ05WQkFnTUFsWkJNUkV3RHdZRFZRUUhEQWhUYjIxbApRMmwwZVRFVE1CRUdBMVVFQ2d3S1JXNTJiM2xRY205NGVURVFNQTRHQTFVRUN3d0hSMkYwWlhkaGVURVpNQmNHCkExVUVBd3dRYlhSc2N5NWxlR0Z0Y0d4bExtTnZiVENDQVNJd0RRWUpLb1pJaHZjTkFRRUJCUUFEZ2dFUEFEQ0MKQVFvQ2dnRUJBS3kwZnp5NWFaVnRNajAxVWJPRGtsU1IxbTI1Mkt0QTJ2L2tmT05vNTZkNEJQbGdqVXdXUVZNUgpTclUxZzd4T2tWdjZiL0czdG5tQVhwWWY2VlIxODIyak96cCsxQ0c4ZWlGSEpjT2ZxV2lZMjh1NnFSV2VKUFZlCnpYdUFsMmd4cWJpTzZLdDZwbnI0aXFoVGhIK3ZqV3NXTnBDSVhrbDFydVlYbnhWLzRCOENxY1JJeTZHaEp6bloKRjR3NHJBNkRlRlJmZHl0MWd1bWtkN25PVVhYKzRZMzJrd0xGRU8zR3NnUTh1aVpEQmN1UEs5RjRHRDUydDZYTgowT2tlNTU0eEl2VldvZ1M1Vzl4UFIvcU5kQlpIQ1pid05jZzRRTVllbWZva0pkUXo4elVJcnZ6VUltM3ZvOUs3CnE4MmI1eTVFSm4yWEU5OVMycDZUZnJlSG1sUHpKNHNDQXdFQUFhTmdNRjR3Q3dZRFZSMFBCQVFEQWdTd01CTUcKQTFVZEpRUU1NQW9HQ0NzR0FRVUZCd01CTUJzR0ExVWRFUVFVTUJLQ0VHMTBiSE11WlhoaGJYQnNaUzVqYjIwdwpIUVlEVlIwT0JCWUVGRm1FTjBqRVFpckpYeGlLRHFlK2tTMVV3Q2gyTUEwR0NTcUdTSWIzRFFFQkN3VUFBNElCCkFRQ0NTVlluRVJPbHJpWDM2M0VtRzd1b091Nm54ajU1eWVmOXRKbnRubFVMVFZsMjlqc205Z3d5VnFUVCtUcXMKdzFPYW01TExmMEpjSWNRdmFUM203b0RpMElDUUo5eTlRQkNwMTh1TDBUeElDaFdVRTVnRUIxM3MyTzEwWWNFMQp1K2ozSzM0MStQNStoaEJpQnJ1d0dncStkVVRGRTZTYVVMY0xMVlB1RjdTeG1KbTRHK0Q0NVlqM1NDVy9aMzU2CkFXZzB4L0prZGFKSVVLVFJaUDVJTEZKQ1lJTUM3QWI1RmdWeGRCVW5kNWxheUZGb2NVMzRQaDlwZUxiYW00alYKdGt0SGNTSFJ6OERNTm1PNHpHTEZYNzlQR0lsaTZzTDU3V0N6bkw5RFFtajRyajFIS2tyeEdnMVExbUcwbDhOTQo5cXQyWEZNNUttWkVOb2E1MmFWSklHYWoKLS0tLS1FTkQgQ0VSVElGSUNBVEUtLS0tLQo=
+              name: envoy-gateway/tls-secret-1
+              privateKey: '[redacted]'
+            matchTypedSubjectAltNames:
+            - distinct: false
+              exact: client2.example.org
+              name: DNS
+            - distinct: false
+              name: EMAIL
+              suffix: '@example.org'
+            - distinct: false
+              name: IP_ADDRESS
+              prefix: "10."
+            - distinct: false
+              exact: spiffe://example.com/client2
+              name: URI
+            - distinct: false
+              exact: client2
+              name: 1.3.6.1.4.1.311.20.2.3
+            maxVersion: "1.3"
+            minVersion: "1.2"
+            requireClientCertificate: true
+            verifyCertificateHash:
+            - df6ff72fe9116521268f6f2dd4966f51df479883fe7037b39f75916ac3049d1a
+            verifyCertificateSpki:
+            - NvqYIYSbgK2vCJpQhObf77vv+bQWtc5ek5RIOwPiC9A=
+      tls:
+        alpnProtocols: []
+        caCertificate:
+          certificate: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSURRekNDQWl1Z0F3SUJBZ0lCQVRBTkJna3Foa2lHOXcwQkFRc0ZBREJDTVJNd0VRWURWUVFLRXdwRmJuWnYKZVZCeWIzaDVNUkF3RGdZRFZRUUxFd2RIWVhSbGQyRjVNUmt3RndZRFZRUURFeEJGYm5admVTQkhZWFJsZDJGNQpJRU5CTUNBWERUSTBNRE14TURFMU16SXhOMW9ZRHpJeE1qUXdNekV3TVRZek1qRTNXakJDTVJNd0VRWURWUVFLCkV3cEZiblp2ZVZCeWIzaDVNUkF3RGdZRFZRUUxFd2RIWVhSbGQyRjVNUmt3RndZRFZRUURFeEJGYm5admVTQkgKWVhSbGQyRjVJRU5CTUlJQklqQU5CZ2txaGtpRzl3MEJBUUVGQUFPQ0FROEFNSUlCQ2dLQ0FRRUE3WkZtR0I0ZQptMUtkR0VvaEFaQmZxeWRBRUdMREhKMVl5ZkhXZGQrdkJBZXZkVzY0Ylp4M3BnZ0pPdGdDbmVQdUZkMDJyRFFTCmRsc0psWC82bUZ0b1FpbG82d3Z4RFNKUmZhVERidGZUancrN2s4eWZkL0pzbWgwUldHK1VleUk3TmE5c1hBejcKYjU3bXB4c0NvTm93emVLNUVUaU9HR05XUGNqRU5Ka1NuQmFyejVtdU4wMHhJWldCVSt5TjVQTEpOeFp2eHBaSgpPbC9TU0k4c25vMGUwUHhBbXAzZmU3UWFYaVpqL1RBR0pQR3VUSmtVeHJIcXlaR0p0WVV4c1M4QTBkVDF6QmpqCml6QTVEcCtiNXl6WW8yM0hoN0JncGJaN1g0Z3NEVGhGdXdDRDZmSHllcHV2MnpIUHF2U3NkcWcyaEFoRHA5MVIKenJuN2E5R3hHMlZTSXdJREFRQUJvMEl3UURBT0JnTlZIUThCQWY4RUJBTUNBUVl3RHdZRFZSMFRBUUgvQkFVdwpBd0VCL3pBZEJnTlZIUTRFRmdRVVVwUDFhWjFNMktJdVBQV3JOUERWMmM1Q25nb3dEUVlKS29aSWh2Y05BUUVMCkJRQURnZ0VCQUdTRWtBVnorWjBxUzRGbUEwcTRTQ3BJSXE2NGJzZEVqaVV6ZXY3cEsxTEVLMC9ZMjhRQlBpeFYKY1VYZmF4MThWUFI5cGxzMUpnWHRvOXFZK0MwaG5SWmljNjYxMVFUSmxXSzFwNmRpblEvZURkWUNCQytudjV4eApzc0FTd21wbEl4TXZqM1MxcUY2ZHI3c01JMlpWRDVIRWxUV2RPMTlVQkx5aGlLS1pXMkt4RHNZais1TlJ3R0ZlCkcrSnVEZ3E3bmpVTThtZHlZazBOZWhlZmRCVUVVVUNRdG53VXRXOTUvNDI5WHdxUVJPdVJEdGVHVDlrakQrWTUKZWE1bVc0bWZxTGV1R0pYWnM5YmRXaktLZExRUHJuOUlzaFB5c1dxejJIejhkUTFmN045L2c4VVdWU2pkNGN5eApTNUVBb2x6VnYweUI3d0hDV0NnZkcvY2tkT1RVTm5FPQotLS0tLUVORCBDRVJUSUZJQ0FURS0tLS0tCg==
+          name: envoy-gateway/target-gateway-4/ca.crt
+        certificates:
+        - certificate: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUR6akNDQXJhZ0F3SUJBZ0lVT0dKOUx1VGtKWkU0NmNVaUpGYmJ2bm10elFvd0RRWUpLb1pJaHZjTkFRRUwKQlFBd2J6RUxNQWtHQTFVRUJoTUNWVk14Q3pBSkJnTlZCQWdNQWxaQk1SRXdEd1lEVlFRSERBaFRiMjFsUTJsMAplVEVUTUJFR0ExVUVDZ3dLUlc1MmIzbFFjbTk0ZVRFUU1BNEdBMVVFQ3d3SFIyRjBaWGRoZVRFWk1CY0dBMVVFCkF3d1FiWFJzY3k1bGVHRnRjR3hsTG1OdmJUQWdGdzB5TkRBM01UWXlNalV4TWpOYUdBOHlNVEkwTURZeU1qSXkKTlRFeU0xb3diekVMTUFrR0ExVUVCaE1DVlZNeEN6QUpCZ05WQkFnTUFsWkJNUkV3RHdZRFZRUUhEQWhUYjIxbApRMmwwZVRFVE1CRUdBMVVFQ2d3S1JXNTJiM2xRY205NGVURVFNQTRHQTFVRUN3d0hSMkYwWlhkaGVURVpNQmNHCkExVUVBd3dRYlhSc2N5NWxlR0Z0Y0d4bExtTnZiVENDQVNJd0RRWUpLb1pJaHZjTkFRRUJCUUFEZ2dFUEFEQ0MKQVFvQ2dnRUJBS3kwZnp5NWFaVnRNajAxVWJPRGtsU1IxbTI1Mkt0QTJ2L2tmT05vNTZkNEJQbGdqVXdXUVZNUgpTclUxZzd4T2tWdjZiL0czdG5tQVhwWWY2VlIxODIyak96cCsxQ0c4ZWlGSEpjT2ZxV2lZMjh1NnFSV2VKUFZlCnpYdUFsMmd4cWJpTzZLdDZwbnI0aXFoVGhIK3ZqV3NXTnBDSVhrbDFydVlYbnhWLzRCOENxY1JJeTZHaEp6bloKRjR3NHJBNkRlRlJmZHl0MWd1bWtkN25PVVhYKzRZMzJrd0xGRU8zR3NnUTh1aVpEQmN1UEs5RjRHRDUydDZYTgowT2tlNTU0eEl2VldvZ1M1Vzl4UFIvcU5kQlpIQ1pid05jZzRRTVllbWZva0pkUXo4elVJcnZ6VUltM3ZvOUs3CnE4MmI1eTVFSm4yWEU5OVMycDZUZnJlSG1sUHpKNHNDQXdFQUFhTmdNRjR3Q3dZRFZSMFBCQVFEQWdTd01CTUcKQTFVZEpRUU1NQW9HQ0NzR0FRVUZCd01CTUJzR0ExVWRFUVFVTUJLQ0VHMTBiSE11WlhoaGJYQnNaUzVqYjIwdwpIUVlEVlIwT0JCWUVGRm1FTjBqRVFpckpYeGlLRHFlK2tTMVV3Q2gyTUEwR0NTcUdTSWIzRFFFQkN3VUFBNElCCkFRQ0NTVlluRVJPbHJpWDM2M0VtRzd1b091Nm54ajU1eWVmOXRKbnRubFVMVFZsMjlqc205Z3d5VnFUVCtUcXMKdzFPYW01TExmMEpjSWNRdmFUM203b0RpMElDUUo5eTlRQkNwMTh1TDBUeElDaFdVRTVnRUIxM3MyTzEwWWNFMQp1K2ozSzM0MStQNStoaEJpQnJ1d0dncStkVVRGRTZTYVVMY0xMVlB1RjdTeG1KbTRHK0Q0NVlqM1NDVy9aMzU2CkFXZzB4L0prZGFKSVVLVFJaUDVJTEZKQ1lJTUM3QWI1RmdWeGRCVW5kNWxheUZGb2NVMzRQaDlwZUxiYW00alYKdGt0SGNTSFJ6OERNTm1PNHpHTEZYNzlQR0lsaTZzTDU3V0N6bkw5RFFtajRyajFIS2tyeEdnMVExbUcwbDhOTQo5cXQyWEZNNUttWkVOb2E1MmFWSklHYWoKLS0tLS1FTkQgQ0VSVElGSUNBVEUtLS0tLQo=
+          name: envoy-gateway/tls-secret-1
+          privateKey: '[redacted]'
+        matchTypedSubjectAltNames:
+        - distinct: false
+          exact: client2.example.org
+          name: DNS
+        - distinct: false
+          name: EMAIL
+          suffix: '@example.org'
+        - distinct: false
+          name: IP_ADDRESS
+          prefix: "10."
+        - distinct: false
+          exact: spiffe://example.com/client2
+          name: URI
+        - distinct: false
+          exact: client2
+          name: 1.3.6.1.4.1.311.20.2.3
+        maxVersion: "1.3"
+        minVersion: "1.2"
+        requireClientCertificate: true
+        verifyCertificateHash:
+        - df6ff72fe9116521268f6f2dd4966f51df479883fe7037b39f75916ac3049d1a
+        verifyCertificateSpki:
+        - NvqYIYSbgK2vCJpQhObf77vv+bQWtc5ek5RIOwPiC9A=
