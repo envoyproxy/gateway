@@ -39,11 +39,12 @@ import (
 )
 
 const (
-	defaultRedirectURL        = "%REQ(x-forwarded-proto)%://%REQ(:authority)%/oauth2/callback"
-	defaultRedirectPath       = "/oauth2/callback"
-	defaultLogoutPath         = "/logout"
-	defaultForwardAccessToken = false
-	defaultRefreshToken       = false
+	defaultRedirectURL           = "%REQ(x-forwarded-proto)%://%REQ(:authority)%/oauth2/callback"
+	defaultRedirectPath          = "/oauth2/callback"
+	defaultLogoutPath            = "/logout"
+	defaultForwardAccessToken    = false
+	defaultRefreshToken          = false
+	defaultPassThroughAuthHeader = false
 
 	// nolint: gosec
 	oidcHMACSecretName = "envoy-oidc-hmac"
@@ -270,6 +271,27 @@ func validateSecurityPolicy(p *egv1a1.SecurityPolicy) error {
 			return err
 		}
 	}
+
+	oidc := p.Spec.OIDC
+	jwt := p.Spec.JWT
+	if oidc != nil && oidc.PassThroughAuthHeader != nil && *oidc.PassThroughAuthHeader {
+		if jwt == nil {
+			return errors.New("the OIDC.PassThroughAuthHeader setting must be used in conjunction with JWT settings")
+		}
+
+		hasValidJwtExtractor := false
+		for _, provider := range jwt.Providers {
+			// When ExtractFrom is not specified it falls back to looking at the "Authorization: Bearer ..." header
+			if provider.ExtractFrom == nil || len(provider.ExtractFrom.Headers) > 0 {
+				hasValidJwtExtractor = true
+				break
+			}
+		}
+		if !hasValidJwtExtractor {
+			return errors.New("the OIDC.PassThroughAuthHeader setting must be used in conjunction with a JWT provider that is configured to read from a header")
+		}
+	}
+
 	return nil
 }
 
@@ -843,15 +865,16 @@ func (t *Translator) buildOIDC(
 	envoyProxy *egv1a1.EnvoyProxy,
 ) (*ir.OIDC, error) {
 	var (
-		oidc               = policy.Spec.OIDC
-		provider           *ir.OIDCProvider
-		clientSecret       *corev1.Secret
-		redirectURL        = defaultRedirectURL
-		redirectPath       = defaultRedirectPath
-		logoutPath         = defaultLogoutPath
-		forwardAccessToken = defaultForwardAccessToken
-		refreshToken       = defaultRefreshToken
-		err                error
+		oidc                  = policy.Spec.OIDC
+		provider              *ir.OIDCProvider
+		clientSecret          *corev1.Secret
+		redirectURL           = defaultRedirectURL
+		redirectPath          = defaultRedirectPath
+		logoutPath            = defaultLogoutPath
+		forwardAccessToken    = defaultForwardAccessToken
+		refreshToken          = defaultRefreshToken
+		passThroughAuthHeader = defaultPassThroughAuthHeader
+		err                   error
 	)
 
 	if provider, err = t.buildOIDCProvider(policy, resources, envoyProxy); err != nil {
@@ -896,6 +919,10 @@ func (t *Translator) buildOIDC(
 		refreshToken = *oidc.RefreshToken
 	}
 
+	if oidc.PassThroughAuthHeader != nil {
+		passThroughAuthHeader = *oidc.PassThroughAuthHeader
+	}
+
 	// Generate a unique cookie suffix for oauth filters.
 	// This is to avoid cookie name collision when multiple security policies are applied
 	// to the same route.
@@ -933,6 +960,8 @@ func (t *Translator) buildOIDC(
 		CookieNameOverrides:    policy.Spec.OIDC.CookieNames,
 		CookieDomain:           policy.Spec.OIDC.CookieDomain,
 		HMACSecret:             hmacData,
+		PassThroughAuthHeader:  passThroughAuthHeader,
+		DenyRedirect:           oidc.DenyRedirect,
 	}, nil
 }
 

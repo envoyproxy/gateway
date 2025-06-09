@@ -289,12 +289,20 @@ xdsIR:
       port: 10080
       routes:
       - destination:
+          metadata:
+            kind: HTTPRoute
+            name: httproute-1
+            namespace: default
           name: httproute/default/httproute-1/rule/0
           settings:
           - addressType: IP
             endpoints:
             - host: 7.7.7.7
               port: 8080
+            metadata:
+              name: service-1
+              namespace: default
+              sectionName: "8080"
             name: httproute/default/httproute-1/rule/0/backend/0
             protocol: HTTP
             weight: 1
@@ -313,14 +321,21 @@ xdsIR:
           loadBalancer:
             consistentHash:
               sourceIP: true
-          name: default/policy-for-route-1
       - destination:
+          metadata:
+            kind: HTTPRoute
+            name: httproute-2
+            namespace: default
           name: httproute/default/httproute-2/rule/0
           settings:
           - addressType: IP
             endpoints:
             - host: 7.7.7.7
               port: 8080
+            metadata:
+              name: service-1
+              namespace: default
+              sectionName: "8080"
             name: httproute/default/httproute-2/rule/0/backend/0
             protocol: HTTP
             weight: 1
@@ -338,7 +353,6 @@ xdsIR:
         traffic:
           loadBalancer:
             random: {}
-          name: envoy-gateway/policy-for-gateway-1
           timeout:
             http:
               connectionIdleTimeout: 21s
@@ -346,12 +360,20 @@ xdsIR:
             tcp:
               connectTimeout: 20s
       - destination:
+          metadata:
+            kind: HTTPRoute
+            name: httproute-3
+            namespace: default
           name: httproute/default/httproute-3/rule/0
           settings:
           - addressType: IP
             endpoints:
             - host: 7.7.7.7
               port: 8080
+            metadata:
+              name: service-1
+              namespace: default
+              sectionName: "8080"
             name: httproute/default/httproute-3/rule/0/backend/0
             protocol: HTTP
             weight: 1
@@ -366,8 +388,7 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /baz
-        traffic:
-          name: default/policy-for-route-3
+        traffic: {}
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4

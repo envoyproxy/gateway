@@ -26,8 +26,8 @@ import (
 const (
 	// envoyContainerName is the name of the Envoy container.
 	envoyContainerName = "envoy"
-	// envoyNsEnvVar is the name of the Envoy Gateway namespace environment variable.
-	envoyNsEnvVar = "ENVOY_GATEWAY_NAMESPACE"
+	// envoyNsEnvVar is the name of the Envoy pod namespace environment variable.
+	envoyNsEnvVar = "ENVOY_POD_NAMESPACE"
 	// envoyPodEnvVar is the name of the Envoy pod name environment variable.
 	envoyPodEnvVar = "ENVOY_POD_NAME"
 	// envoyZoneEnvVar is the Envoy pod locality zone name
@@ -35,6 +35,7 @@ const (
 )
 
 // ExpectedResourceHashedName returns expected resource hashed name including up to the 48 characters of the original name.
+// WARNING: DO NOT USE THIS FUNCTION IN MOST OF THE CASES. Use ResourceRender.Name() instead.
 func ExpectedResourceHashedName(name string) string {
 	hashedName := utils.GetHashedName(name, 48)
 	return fmt.Sprintf("%s-%s", config.EnvoyPrefix, hashedName)
@@ -56,16 +57,6 @@ func EnvoyAppLabelSelector() []string {
 		"app.kubernetes.io/component=proxy",
 		"app.kubernetes.io/managed-by=envoy-gateway",
 	}
-}
-
-// envoyLabels returns the labels, including extraLabels, used for Envoy resources.
-func envoyLabels(extraLabels map[string]string) map[string]string {
-	labels := EnvoyAppLabel()
-	for k, v := range extraLabels {
-		labels[k] = v
-	}
-
-	return labels
 }
 
 func enablePrometheus(infra *ir.ProxyInfra) bool {
@@ -131,7 +122,7 @@ func expectedProxyContainers(infra *ir.ProxyInfra,
 			ImagePullPolicy:          corev1.PullIfNotPresent,
 			Command:                  []string{"envoy"},
 			Args:                     args,
-			Env:                      expectedContainerEnv(containerSpec, controllerNamespace),
+			Env:                      expectedContainerEnv(containerSpec),
 			Resources:                *containerSpec.Resources,
 			SecurityContext:          expectedEnvoySecurityContext(containerSpec),
 			Ports:                    ports,
@@ -193,7 +184,7 @@ func expectedProxyContainers(infra *ir.ProxyInfra,
 			ImagePullPolicy:          corev1.PullIfNotPresent,
 			Command:                  []string{"envoy-gateway"},
 			Args:                     expectedShutdownManagerArgs(shutdownConfig),
-			Env:                      expectedContainerEnv(nil, controllerNamespace),
+			Env:                      expectedContainerEnv(nil),
 			Resources:                *egv1a1.DefaultShutdownManagerContainerResourceRequirements(),
 			TerminationMessagePolicy: corev1.TerminationMessageReadFile,
 			TerminationMessagePath:   "/dev/termination-log",
@@ -308,7 +299,7 @@ func expectedContainerVolumeMounts(containerSpec *egv1a1.KubernetesContainerSpec
 }
 
 // expectedVolumes returns expected proxy deployment volumes.
-func expectedVolumes(name string, gatewayNamespacedMode bool, pod *egv1a1.KubernetesPodSpec, dnsDomain string) []corev1.Volume {
+func (r *ResourceRender) expectedVolumes(pod *egv1a1.KubernetesPodSpec) []corev1.Volume {
 	var volumes []corev1.Volume
 	certsVolume := corev1.Volume{
 		Name: "certs",
@@ -320,13 +311,13 @@ func expectedVolumes(name string, gatewayNamespacedMode bool, pod *egv1a1.Kubern
 		},
 	}
 
-	if gatewayNamespacedMode {
+	if r.GatewayNamespaceMode {
 		certsVolume = corev1.Volume{
 			Name: "certs",
 			VolumeSource: corev1.VolumeSource{
 				ConfigMap: &corev1.ConfigMapVolumeSource{
 					LocalObjectReference: corev1.LocalObjectReference{
-						Name: ExpectedResourceHashedName(name),
+						Name: r.Name(),
 					},
 					Items: []corev1.KeyToPath{
 						{
@@ -339,7 +330,7 @@ func expectedVolumes(name string, gatewayNamespacedMode bool, pod *egv1a1.Kubern
 				},
 			},
 		}
-		saAudience := fmt.Sprintf("%s.%s.svc.%s", config.EnvoyGatewayServiceName, config.DefaultNamespace, dnsDomain)
+		saAudience := fmt.Sprintf("%s.%s.svc.%s", config.EnvoyGatewayServiceName, r.ControllerNamespace(), r.DNSDomain)
 		saTokenProjectedVolume := corev1.Volume{
 			Name: "sa-token",
 			VolumeSource: corev1.VolumeSource{
@@ -367,53 +358,61 @@ func expectedVolumes(name string, gatewayNamespacedMode bool, pod *egv1a1.Kubern
 		VolumeSource: corev1.VolumeSource{
 			ConfigMap: &corev1.ConfigMapVolumeSource{
 				LocalObjectReference: corev1.LocalObjectReference{
-					Name: ExpectedResourceHashedName(name),
+					Name: r.Name(),
 				},
-				Items: []corev1.KeyToPath{
-					{
-						Key:  common.SdsCAFilename,
-						Path: common.SdsCAFilename,
-					},
-					{
-						Key:  common.SdsCertFilename,
-						Path: common.SdsCertFilename,
-					},
-				},
+				Items:       sdsConfigMapItems(r.GatewayNamespaceMode),
 				DefaultMode: ptr.To[int32](420),
 				Optional:    ptr.To(false),
 			},
 		},
 	}
-	if gatewayNamespacedMode {
-		sdsVolume = corev1.Volume{
-			Name: "sds",
-			VolumeSource: corev1.VolumeSource{
-				ConfigMap: &corev1.ConfigMapVolumeSource{
-					LocalObjectReference: corev1.LocalObjectReference{
-						Name: ExpectedResourceHashedName(name),
-					},
-					Items: []corev1.KeyToPath{
-						{
-							Key:  common.SdsCAFilename,
-							Path: common.SdsCAFilename,
-						},
-					},
-					DefaultMode: ptr.To[int32](420),
-					Optional:    ptr.To(false),
-				},
-			},
-		}
-	}
+
 	volumes = append(volumes, sdsVolume)
 	return resource.ExpectedVolumes(pod, volumes)
 }
 
+func sdsConfigMapItems(gatewayNamespaceMode bool) []corev1.KeyToPath {
+	if gatewayNamespaceMode {
+		return []corev1.KeyToPath{
+			{
+				Key:  common.SdsCAFilename,
+				Path: common.SdsCAFilename,
+			},
+		}
+	}
+
+	return []corev1.KeyToPath{
+		{
+			Key:  common.SdsCAFilename,
+			Path: common.SdsCAFilename,
+		},
+		{
+			Key:  common.SdsCertFilename,
+			Path: common.SdsCertFilename,
+		},
+	}
+}
+
 // expectedContainerEnv returns expected proxy container envs.
-func expectedContainerEnv(containerSpec *egv1a1.KubernetesContainerSpec, controllerNamespace string) []corev1.EnvVar {
+func expectedContainerEnv(containerSpec *egv1a1.KubernetesContainerSpec) []corev1.EnvVar {
 	env := []corev1.EnvVar{
 		{
-			Name:  envoyNsEnvVar,
-			Value: controllerNamespace,
+			Name: envoyNsEnvVar,
+			ValueFrom: &corev1.EnvVarSource{
+				FieldRef: &corev1.ObjectFieldSelector{
+					APIVersion: "v1",
+					FieldPath:  "metadata.namespace",
+				},
+			},
+		},
+		{
+			Name: envoyPodEnvVar,
+			ValueFrom: &corev1.EnvVarSource{
+				FieldRef: &corev1.ObjectFieldSelector{
+					APIVersion: "v1",
+					FieldPath:  "metadata.name",
+				},
+			},
 		},
 		{
 			Name: envoyZoneEnvVar,
@@ -425,16 +424,6 @@ func expectedContainerEnv(containerSpec *egv1a1.KubernetesContainerSpec, control
 			},
 		},
 	}
-
-	env = append(env, corev1.EnvVar{
-		Name: envoyPodEnvVar,
-		ValueFrom: &corev1.EnvVarSource{
-			FieldRef: &corev1.ObjectFieldSelector{
-				APIVersion: "v1",
-				FieldPath:  "metadata.name",
-			},
-		},
-	})
 
 	if containerSpec != nil {
 		return resource.ExpectedContainerEnv(containerSpec, env)

@@ -255,12 +255,21 @@ xdsIR:
       port: 10080
       routes:
       - destination:
+          metadata:
+            kind: GRPCRoute
+            name: grpcroute-1
+            namespace: envoy-gateway
           name: grpcroute/envoy-gateway/grpcroute-1/rule/0
           settings:
           - addressType: IP
             endpoints:
             - host: 7.7.7.7
               port: 8080
+            metadata:
+              kind: Service
+              name: service-1
+              namespace: envoy-gateway
+              sectionName: "8080"
             name: grpcroute/envoy-gateway/grpcroute-1/rule/0/backend/0
             protocol: GRPC
             weight: 1
@@ -272,7 +281,6 @@ xdsIR:
           namespace: envoy-gateway
         name: grpcroute/envoy-gateway/grpcroute-1/rule/0/match/-1/*
         traffic:
-          name: envoy-gateway/policy-for-gateway
           timeout:
             http:
               connectionIdleTimeout: 16s
@@ -305,12 +313,21 @@ xdsIR:
       port: 10080
       routes:
       - destination:
+          metadata:
+            kind: HTTPRoute
+            name: httproute-1
+            namespace: envoy-gateway
           name: httproute/envoy-gateway/httproute-1/rule/0
           settings:
           - addressType: IP
             endpoints:
             - host: 7.7.7.7
               port: 8080
+            metadata:
+              kind: Service
+              name: service-1
+              namespace: envoy-gateway
+              sectionName: "8080"
             name: httproute/envoy-gateway/httproute-1/rule/0/backend/0
             protocol: HTTP
             weight: 1
@@ -326,7 +343,6 @@ xdsIR:
           name: ""
           prefix: /
         traffic:
-          name: envoy-gateway/policy-for-gateway
           timeout:
             http:
               connectionIdleTimeout: 16s

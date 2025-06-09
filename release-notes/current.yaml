@@ -2,18 +2,28 @@ date: Pending
 
 # Changes that are expected to cause an incompatibility with previous versions, such as deletions or modifications to existing APIs.
 breaking changes: |
+  Use gateway name as proxy fleet name for gateway namespace mode.
 
 # Updates addressing vulnerabilities, security flaws, or compliance requirements.
 security updates: |
 
 # New features or capabilities added in this release.
 new features: |
-  Added support for optionally installing the Gateway API standard channel CRDs through the gateway-crds-helm chart.
+  Added support for percentage-based request mirroring
+  Add an option to OIDC authentication to bypass it and defer to JWT when the request contains an "Authorization: Bearer ..." header.
+  Added support for configuring Subject Alternative Names (SANs) for upstream TLS validation via `BackendTLSPolicy.validation.subjectAltNames`.
+  Added support for local rate limit header.
+  Added XDS metadata for clusters and endpoints from xRoutes and referenced backend resources (Backend, Service, ServiceImport).
+  Added support for setting ownerreference to infra resources when enable gateway namespace mode.
+  Added support for configuring hostname in active HTTP healthchecks.
+  Added support for GatewayInfrastructure in gateway namespace mode.
+  Added support for using extension server policies to in PostTranslateModify hook.
 
 bug fixes: |
-  Fix reference grant from SecurityPolicy to referenced remoteJWKS backend not respected.
-  Added validation for header values.
-  Added validation for duplicated API keys.
+  Handle integer zone annotation values
+  Fixed issue where WASM cache init failure caused routes with WASM-less EnvoyExtensionPolicies to have 500 direct responses.
+  Fixed issue which UDP listeners were not created in the Envoy proxy config when Gateway was created.
+  Keep ALPN configuration for listeners with overlapping certificates when ALPN is explicitly set in ClientTrafficPolicy.
 
 # Enhancements that improve performance.
 performance improvements: |

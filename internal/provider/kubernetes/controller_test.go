@@ -13,6 +13,7 @@ import (
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
@@ -156,10 +157,12 @@ func TestProcessGatewayClassParamsRef(t *testing.T) {
 	gcCtrlName := gwapiv1.GatewayController(egv1a1.GatewayControllerName)
 
 	testCases := []struct {
-		name     string
-		gc       *gwapiv1.GatewayClass
-		ep       *egv1a1.EnvoyProxy
-		expected bool
+		name                 string
+		gc                   *gwapiv1.GatewayClass
+		ep                   *egv1a1.EnvoyProxy
+		gatewayNamespaceMode bool
+		expected             bool
+		expectedError        string
 	}{
 		{
 			name: "valid envoyproxy reference",
@@ -251,6 +254,88 @@ func TestProcessGatewayClassParamsRef(t *testing.T) {
 			},
 			expected: false,
 		},
+		{
+			name: "incompatible configuration: merged gateways with gateway namespace mode",
+			gc: &gwapiv1.GatewayClass{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "test-merged-gw",
+				},
+				Spec: gwapiv1.GatewayClassSpec{
+					ControllerName: gcCtrlName,
+					ParametersRef: &gwapiv1.ParametersReference{
+						Group:     gwapiv1.Group(egv1a1.GroupVersion.Group),
+						Kind:      gwapiv1.Kind(egv1a1.KindEnvoyProxy),
+						Name:      "test-merge-gw",
+						Namespace: gatewayapi.NamespacePtr(config.DefaultNamespace),
+					},
+				},
+			},
+			ep: &egv1a1.EnvoyProxy{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: config.DefaultNamespace,
+					Name:      "test-merge-gw",
+				},
+				Spec: egv1a1.EnvoyProxySpec{
+					MergeGateways: ptr.To(true),
+				},
+			},
+			gatewayNamespaceMode: true,
+			expected:             false,
+			expectedError:        "using Merged Gateways with Gateway Namespace Mode is not supported.",
+		},
+		{
+			name: "valid merged gateways enabled configuration",
+			gc: &gwapiv1.GatewayClass{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "test-merge-gw",
+				},
+				Spec: gwapiv1.GatewayClassSpec{
+					ControllerName: gcCtrlName,
+					ParametersRef: &gwapiv1.ParametersReference{
+						Group:     gwapiv1.Group(egv1a1.GroupVersion.Group),
+						Kind:      gwapiv1.Kind(egv1a1.KindEnvoyProxy),
+						Name:      "test-merge-gw",
+						Namespace: gatewayapi.NamespacePtr(config.DefaultNamespace),
+					},
+				},
+			},
+			ep: &egv1a1.EnvoyProxy{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: config.DefaultNamespace,
+					Name:      "test-merge-gw",
+				},
+				Spec: egv1a1.EnvoyProxySpec{
+					MergeGateways: ptr.To(true),
+				},
+			},
+			gatewayNamespaceMode: false,
+			expected:             true,
+		},
+		{
+			name: "valid gateway namespace mode enabled configuration",
+			gc: &gwapiv1.GatewayClass{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "test",
+				},
+				Spec: gwapiv1.GatewayClassSpec{
+					ControllerName: gcCtrlName,
+					ParametersRef: &gwapiv1.ParametersReference{
+						Group:     gwapiv1.Group(egv1a1.GroupVersion.Group),
+						Kind:      gwapiv1.Kind(egv1a1.KindEnvoyProxy),
+						Name:      "test",
+						Namespace: gatewayapi.NamespacePtr(config.DefaultNamespace),
+					},
+				},
+			},
+			ep: &egv1a1.EnvoyProxy{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: config.DefaultNamespace,
+					Name:      "test",
+				},
+			},
+			gatewayNamespaceMode: true,
+			expected:             true,
+		},
 	}
 
 	for i := range testCases {
@@ -260,9 +345,10 @@ func TestProcessGatewayClassParamsRef(t *testing.T) {
 		logger := logging.DefaultLogger(os.Stdout, egv1a1.LogLevelInfo)
 
 		r := &gatewayAPIReconciler{
-			log:             logger,
-			classController: gcCtrlName,
-			namespace:       config.DefaultNamespace,
+			log:                  logger,
+			classController:      gcCtrlName,
+			namespace:            config.DefaultNamespace,
+			gatewayNamespaceMode: tc.gatewayNamespaceMode,
 		}
 
 		// Run the test cases.
@@ -287,6 +373,9 @@ func TestProcessGatewayClassParamsRef(t *testing.T) {
 				require.Equal(t, tc.ep, resourceTree.EnvoyProxyForGatewayClass)
 			} else {
 				require.Error(t, err)
+				if tc.expectedError != "" {
+					require.Contains(t, err.Error(), tc.expectedError)
+				}
 			}
 		})
 	}

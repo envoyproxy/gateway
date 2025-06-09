@@ -16,6 +16,7 @@ backendTrafficPolicies:
           expectedStatuses:
           - 200
           - 201
+          hostname: foo.bar
           method: GET
           path: /healthz
         interval: 5s
@@ -696,12 +697,20 @@ xdsIR:
       port: 10080
       routes:
       - destination:
+          metadata:
+            kind: GRPCRoute
+            name: grpcroute-1
+            namespace: default
           name: grpcroute/default/grpcroute-1/rule/0
           settings:
           - addressType: IP
             endpoints:
             - host: 7.7.7.7
               port: 8080
+            metadata:
+              name: service-1
+              namespace: default
+              sectionName: "8080"
             name: grpcroute/default/grpcroute-1/rule/0/backend/0
             protocol: GRPC
             weight: 1
@@ -736,14 +745,21 @@ xdsIR:
               interval: 2s
               maxEjectionPercent: 100
               splitExternalLocalOriginErrors: false
-          name: envoy-gateway/policy-for-gateway
       - destination:
+          metadata:
+            kind: GRPCRoute
+            name: grpcroute-3
+            namespace: default
           name: grpcroute/default/grpcroute-3/rule/0
           settings:
           - addressType: IP
             endpoints:
             - host: 7.7.7.7
               port: 8080
+            metadata:
+              name: service-3
+              namespace: default
+              sectionName: "8080"
             name: grpcroute/default/grpcroute-3/rule/0/backend/0
             protocol: GRPC
             weight: 1
@@ -763,14 +779,21 @@ xdsIR:
               interval: 3s
               timeout: 1s
               unhealthyThreshold: 3
-          name: default/policy-for-grpc-route-3
       - destination:
+          metadata:
+            kind: GRPCRoute
+            name: grpcroute-2
+            namespace: default
           name: grpcroute/default/grpcroute-2/rule/0
           settings:
           - addressType: IP
             endpoints:
             - host: 7.7.7.7
               port: 8080
+            metadata:
+              name: service-2
+              namespace: default
+              sectionName: "8080"
             name: grpcroute/default/grpcroute-2/rule/0/backend/0
             protocol: GRPC
             weight: 1
@@ -789,7 +812,6 @@ xdsIR:
               interval: 3s
               timeout: 1s
               unhealthyThreshold: 3
-          name: default/policy-for-grpc-route
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4
@@ -816,12 +838,20 @@ xdsIR:
       port: 10080
       routes:
       - destination:
+          metadata:
+            kind: HTTPRoute
+            name: httproute-2
+            namespace: default
           name: httproute/default/httproute-2/rule/0
           settings:
           - addressType: IP
             endpoints:
             - host: 7.7.7.7
               port: 8080
+            metadata:
+              name: service-2
+              namespace: default
+              sectionName: "8080"
             name: httproute/default/httproute-2/rule/0/backend/0
             protocol: HTTP
             weight: 1
@@ -856,14 +886,21 @@ xdsIR:
               interval: 10s
               maxEjectionPercent: 10
               splitExternalLocalOriginErrors: false
-          name: default/policy-for-route-2
       - destination:
+          metadata:
+            kind: HTTPRoute
+            name: httproute-3
+            namespace: default
           name: httproute/default/httproute-3/rule/0
           settings:
           - addressType: IP
             endpoints:
             - host: 7.7.7.7
               port: 8080
+            metadata:
+              name: service-3
+              namespace: default
+              sectionName: "8080"
             name: httproute/default/httproute-3/rule/0/backend/0
             protocol: HTTP
             weight: 1
@@ -898,14 +935,21 @@ xdsIR:
               interval: 8ms
               maxEjectionPercent: 11
               splitExternalLocalOriginErrors: false
-          name: default/policy-for-route-3
       - destination:
+          metadata:
+            kind: HTTPRoute
+            name: httproute-4
+            namespace: default
           name: httproute/default/httproute-4/rule/0
           settings:
           - addressType: IP
             endpoints:
             - host: 7.7.7.7
               port: 8080
+            metadata:
+              name: service-2
+              namespace: default
+              sectionName: "8080"
             name: httproute/default/httproute-4/rule/0/backend/0
             protocol: HTTP
             weight: 1
@@ -935,14 +979,21 @@ xdsIR:
               interval: 5s
               timeout: 1s
               unhealthyThreshold: 3
-          name: default/policy-for-route-4
       - destination:
+          metadata:
+            kind: HTTPRoute
+            name: httproute-1
+            namespace: default
           name: httproute/default/httproute-1/rule/0
           settings:
           - addressType: IP
             endpoints:
             - host: 7.7.7.7
               port: 8080
+            metadata:
+              name: service-1
+              namespace: default
+              sectionName: "8080"
             name: httproute/default/httproute-1/rule/0/backend/0
             protocol: HTTP
             weight: 1
@@ -967,7 +1018,7 @@ xdsIR:
                 expectedStatuses:
                 - 200
                 - 201
-                host: gateway.envoyproxy.io
+                host: foo.bar
                 method: GET
                 path: /healthz
               interval: 5s
@@ -981,7 +1032,6 @@ xdsIR:
               interval: 1s
               maxEjectionPercent: 100
               splitExternalLocalOriginErrors: false
-          name: default/policy-for-route-1
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4

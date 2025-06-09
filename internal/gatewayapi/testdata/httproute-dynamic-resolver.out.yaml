@@ -6,6 +6,8 @@ backends:
     name: backend-with-custom-ca
     namespace: default
   spec:
+    appProtocols:
+    - gateway.envoyproxy.io/h2c
     tls:
       caCertificateRefs:
       - group: ""
@@ -189,10 +191,15 @@ xdsIR:
       port: 10080
       routes:
       - destination:
+          metadata:
+            kind: HTTPRoute
+            name: httproute-1
+            namespace: default
           name: httproute/default/httproute-1/rule/0
           settings:
           - isDynamicResolver: true
             name: httproute/default/httproute-1/rule/0/backend/0
+            protocol: HTTP2
             tls:
               alpnProtocols: null
               caCertificate:
@@ -207,10 +214,15 @@ xdsIR:
           namespace: default
         name: httproute/default/httproute-1/rule/0/match/-1/gateway_envoyproxy_io
       - destination:
+          metadata:
+            kind: HTTPRoute
+            name: httproute-2
+            namespace: default
           name: httproute/default/httproute-2/rule/0
           settings:
           - isDynamicResolver: true
             name: httproute/default/httproute-2/rule/0/backend/0
+            protocol: HTTP
             tls:
               alpnProtocols: null
               caCertificate:

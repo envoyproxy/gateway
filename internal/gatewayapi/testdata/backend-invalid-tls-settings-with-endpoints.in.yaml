@@ -1,0 +1,30 @@
+backends:
+  - apiVersion: gateway.envoyproxy.io/v1alpha1
+    kind: Backend
+    metadata:
+      name: backend-1
+      namespace: default
+    spec:
+      tls:
+        caCertificateRefs:
+          - name: backend-ca-certificate
+            group: ""
+            kind: ConfigMap
+      endpoints:
+        - ip:
+            address: 1.1.1.1
+            port: 3001
+          zone: zone1
+  - apiVersion: gateway.envoyproxy.io/v1alpha1
+    kind: Backend
+    metadata:
+      name: backend-2
+      namespace: default
+    spec:
+      tls:
+        wellKnownCACertificates: System
+      endpoints:
+        - ip:
+            address: 2.2.2.2
+            port: 3001
+          zone: zone2

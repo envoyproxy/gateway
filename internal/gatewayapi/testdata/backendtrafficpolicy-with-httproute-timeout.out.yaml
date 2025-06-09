@@ -225,12 +225,20 @@ xdsIR:
       port: 10080
       routes:
       - destination:
+          metadata:
+            kind: HTTPRoute
+            name: httproute-1
+            namespace: default
           name: httproute/default/httproute-1/rule/0
           settings:
           - addressType: IP
             endpoints:
             - host: 7.7.7.7
               port: 8080
+            metadata:
+              name: service-1
+              namespace: default
+              sectionName: "8080"
             name: httproute/default/httproute-1/rule/0/backend/0
             protocol: HTTP
             weight: 1
@@ -246,16 +254,23 @@ xdsIR:
           name: ""
           prefix: /
         timeout: 2m10s
-        traffic:
-          name: default/policy-for-http-route-1
+        traffic: {}
         useClientProtocol: true
       - destination:
+          metadata:
+            kind: HTTPRoute
+            name: httproute-2
+            namespace: default
           name: httproute/default/httproute-2/rule/0
           settings:
           - addressType: IP
             endpoints:
             - host: 7.7.7.7
               port: 8080
+            metadata:
+              name: service-1
+              namespace: default
+              sectionName: "8080"
             name: httproute/default/httproute-2/rule/0/backend/0
             protocol: HTTP
             weight: 1
@@ -276,7 +291,6 @@ xdsIR:
             consistentHash:
               cookie:
                 name: test
-          name: envoy-gateway/policy-for-gateway
         useClientProtocol: true
     readyListener:
       address: 0.0.0.0

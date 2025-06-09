@@ -333,12 +333,20 @@ xdsIR:
       port: 10080
       routes:
       - destination:
+          metadata:
+            kind: HTTPRoute
+            name: httproute-3
+            namespace: default
           name: httproute/default/httproute-3/rule/0
           settings:
           - addressType: IP
             endpoints:
             - host: 7.7.7.7
               port: 8080
+            metadata:
+              name: service-3
+              namespace: default
+              sectionName: "8080"
             name: httproute/default/httproute-3/rule/0/backend/0
             protocol: HTTP
             weight: 1
@@ -356,7 +364,6 @@ xdsIR:
         traffic:
           healthCheck:
             panicThreshold: 80
-          name: envoy-gateway/policy-for-all-routes-in-gateway-1
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4
@@ -383,12 +390,20 @@ xdsIR:
       port: 10080
       routes:
       - destination:
+          metadata:
+            kind: HTTPRoute
+            name: httproute-2
+            namespace: default
           name: httproute/default/httproute-2/rule/0
           settings:
           - addressType: IP
             endpoints:
             - host: 7.7.7.7
               port: 8080
+            metadata:
+              name: service-2
+              namespace: default
+              sectionName: "8080"
             name: httproute/default/httproute-2/rule/0/backend/0
             protocol: HTTP
             weight: 1
@@ -406,14 +421,21 @@ xdsIR:
         traffic:
           healthCheck:
             panicThreshold: 10
-          name: default/policy-for-route-2
       - destination:
+          metadata:
+            kind: HTTPRoute
+            name: httproute-1
+            namespace: default
           name: httproute/default/httproute-1/rule/0
           settings:
           - addressType: IP
             endpoints:
             - host: 7.7.7.7
               port: 8080
+            metadata:
+              name: service-1
+              namespace: default
+              sectionName: "8080"
             name: httproute/default/httproute-1/rule/0/backend/0
             protocol: HTTP
             weight: 1
@@ -431,7 +453,6 @@ xdsIR:
         traffic:
           healthCheck:
             panicThreshold: 66
-          name: default/policy-for-route-1
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4

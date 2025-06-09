@@ -41,7 +41,7 @@ import (
 	"github.com/envoyproxy/gateway/internal/wasm"
 )
 
-func mustUnmarshal(t *testing.T, val []byte, out interface{}) {
+func mustUnmarshal(t *testing.T, val []byte, out any) {
 	require.NoError(t, yaml.UnmarshalStrict(val, out, yaml.DisallowUnknownFields))
 }
 
@@ -68,6 +68,10 @@ func TestTranslate(t *testing.T) {
 
 	inputFiles, err := filepath.Glob(filepath.Join("testdata", "*.in.yaml"))
 	require.NoError(t, err)
+	base, err := os.ReadFile("testdata/base/base.yaml")
+	require.NoError(t, err)
+	baseResources := &resource.Resources{}
+	mustUnmarshal(t, base, baseResources)
 
 	for _, inputFile := range inputFiles {
 		t.Run(testName(inputFile), func(t *testing.T) {
@@ -76,6 +80,9 @@ func TestTranslate(t *testing.T) {
 
 			resources := &resource.Resources{}
 			mustUnmarshal(t, input, resources)
+			// Merge base resources with test resources
+			// Only secrets are in the base resources, we may have more in the future
+			resources.Secrets = append(resources.Secrets, baseResources.Secrets...)
 			envoyPatchPolicyEnabled := true
 			backendEnabled := true
 			gatewayNamespaceMode := false
@@ -873,7 +880,7 @@ func (m *mockWasmCache) Get(downloadURL string, options wasm.GetOptions) (url, c
 	if options.Checksum != "" && checksum != options.Checksum {
 		return "", "", fmt.Errorf("module downloaded from %v has checksum %v, which does not match: %v", downloadURL, checksum, options.Checksum)
 	}
-	return fmt.Sprintf("https://envoy-gateway:18002/%s.wasm", hashedName), checksum, nil
+	return fmt.Sprintf("https://envoy-gateway.envoy-gateway-system.svc.cluster.local:18002/%s.wasm", hashedName), checksum, nil
 }
 
 func (m *mockWasmCache) Cleanup() {}
@@ -884,25 +891,29 @@ func (m *mockWasmCache) Cleanup() {}
 // This allows us to use cmp.Diff to compare the types with field-level cmpopts.
 func xdsWithoutEqual(a *ir.Xds) any {
 	ret := struct {
-		ReadyListener      *ir.ReadyListener
-		AccessLog          *ir.AccessLog
-		Tracing            *ir.Tracing
-		Metrics            *ir.Metrics
-		HTTP               []*ir.HTTPListener
-		TCP                []*ir.TCPListener
-		UDP                []*ir.UDPListener
-		EnvoyPatchPolicies []*ir.EnvoyPatchPolicy
-		FilterOrder        []egv1a1.FilterPosition
+		ReadyListener           *ir.ReadyListener
+		AccessLog               *ir.AccessLog
+		Tracing                 *ir.Tracing
+		Metrics                 *ir.Metrics
+		HTTP                    []*ir.HTTPListener
+		TCP                     []*ir.TCPListener
+		UDP                     []*ir.UDPListener
+		EnvoyPatchPolicies      []*ir.EnvoyPatchPolicy
+		FilterOrder             []egv1a1.FilterPosition
+		GlobalResources         *ir.GlobalResources
+		ExtensionServerPolicies []*ir.UnstructuredRef
 	}{
-		ReadyListener:      a.ReadyListener,
-		AccessLog:          a.AccessLog,
-		Tracing:            a.Tracing,
-		Metrics:            a.Metrics,
-		HTTP:               a.HTTP,
-		TCP:                a.TCP,
-		UDP:                a.UDP,
-		EnvoyPatchPolicies: a.EnvoyPatchPolicies,
-		FilterOrder:        a.FilterOrder,
+		ReadyListener:           a.ReadyListener,
+		AccessLog:               a.AccessLog,
+		Tracing:                 a.Tracing,
+		Metrics:                 a.Metrics,
+		HTTP:                    a.HTTP,
+		TCP:                     a.TCP,
+		UDP:                     a.UDP,
+		EnvoyPatchPolicies:      a.EnvoyPatchPolicies,
+		FilterOrder:             a.FilterOrder,
+		GlobalResources:         a.GlobalResources,
+		ExtensionServerPolicies: a.ExtensionServerPolicies,
 	}
 
 	// Ensure we didn't drop an exported field.

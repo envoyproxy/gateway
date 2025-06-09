@@ -73,9 +73,9 @@ udpRoutes:
     parents:
     - conditions:
       - lastTransitionTime: null
-        message: UDP Port 8080 not found on Service default/service-1
-        reason: Failed to process the settings associated with the UDP route.
-        status: "False"
+        message: Route is accepted
+        reason: Accepted
+        status: "True"
         type: Accepted
       - lastTransitionTime: null
         message: UDP Port 8080 not found on Service default/service-1
@@ -100,3 +100,11 @@ xdsIR:
     - address: 0.0.0.0
       name: envoy-gateway/gateway-1/udp
       port: 10162
+      route:
+        destination:
+          metadata:
+            kind: UDPRoute
+            name: udproute-1
+            namespace: default
+          name: udproute/default/udproute-1/rule/-1
+        name: udproute/default/udproute-1

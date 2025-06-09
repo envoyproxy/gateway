@@ -170,12 +170,20 @@ xdsIR:
       port: 10080
       routes:
       - destination:
+          metadata:
+            kind: HTTPRoute
+            name: httproute-1
+            namespace: default
           name: httproute/default/httproute-1/rule/0
           settings:
           - addressType: IP
             endpoints:
             - host: 7.7.7.7
               port: 8080
+            metadata:
+              name: service-1
+              namespace: default
+              sectionName: "8080"
             name: httproute/default/httproute-1/rule/0/backend/0
             protocol: HTTP
             weight: 1
@@ -191,7 +199,6 @@ xdsIR:
           name: ""
           prefix: /
         traffic:
-          name: envoy-gateway/policy-for-gateway
           rateLimit:
             local:
               default:
@@ -208,6 +215,7 @@ xdsIR:
                 limit:
                   requests: 10
                   unit: Hour
+                name: envoy-gateway/policy-for-gateway/rule/1
               - cidrMatch:
                   cidr: 192.168.0.0/16
                   distinct: false
@@ -224,6 +232,7 @@ xdsIR:
                 limit:
                   requests: 10
                   unit: Minute
+                name: envoy-gateway/policy-for-gateway/rule/2
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4
