@@ -37,4 +37,5 @@ http:
           prefix: /
         traffic:
           httpUpgrade:
-            - CONNECT
+            - type: CONNECT
+              connect: {}

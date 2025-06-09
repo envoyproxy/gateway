@@ -7,7 +7,7 @@ backendTrafficPolicies:
     namespace: default
   spec:
     httpUpgrade:
-    - type: spdy/3.1
+    - type: CONNECT
     targetRef:
       group: gateway.networking.k8s.io
       kind: HTTPRoute
@@ -122,9 +122,6 @@ infraIR:
         labels:
           gateway.envoyproxy.io/owning-gateway-name: gateway-1
           gateway.envoyproxy.io/owning-gateway-namespace: envoy-gateway
-        ownerReference:
-          kind: GatewayClass
-          name: envoy-gateway-class
       name: envoy-gateway/gateway-1
       namespace: envoy-gateway-system
 xdsIR:
@@ -179,7 +176,7 @@ xdsIR:
           prefix: /
         traffic:
           httpUpgrade:
-          - type: spdy/3.1
+          - type: CONNECT
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4

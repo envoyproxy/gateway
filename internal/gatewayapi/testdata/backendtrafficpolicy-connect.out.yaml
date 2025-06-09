@@ -7,7 +7,8 @@ backendTrafficPolicies:
     namespace: default
   spec:
     httpUpgrade:
-    - type: CONNECT
+    - connect: {}
+      type: CONNECT
     targetRef:
       group: gateway.networking.k8s.io
       kind: HTTPRoute
@@ -176,7 +177,8 @@ xdsIR:
           prefix: /
         traffic:
           httpUpgrade:
-          - CONNECT
+          - connect: {}
+            type: CONNECT
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4

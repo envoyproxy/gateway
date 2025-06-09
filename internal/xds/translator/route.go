@@ -141,7 +141,7 @@ func trafficUpgradeConnect(trafficFeatures *ir.TrafficFeatures) bool {
 	}
 
 	for _, protocol := range trafficFeatures.HTTPUpgrade {
-		if strings.EqualFold(protocol, ConnectProtocol) {
+		if strings.EqualFold(protocol.Type, ConnectProtocol) {
 			return true
 		}
 	}
@@ -157,9 +157,9 @@ func buildUpgradeConfig(trafficFeatures *ir.TrafficFeatures) []*routev3.RouteAct
 	upgradeConfigs := make([]*routev3.RouteAction_UpgradeConfig, 0, len(trafficFeatures.HTTPUpgrade))
 	for _, protocol := range trafficFeatures.HTTPUpgrade {
 		cfg := &routev3.RouteAction_UpgradeConfig{
-			UpgradeType: protocol,
+			UpgradeType: protocol.Type,
 		}
-		if protocol == ConnectProtocol {
+		if protocol.Type == ConnectProtocol && protocol.Connect != nil {
 			cfg.ConnectConfig = &routev3.RouteAction_UpgradeConfig_ConnectConfig{}
 		}
 		upgradeConfigs = append(upgradeConfigs, cfg)

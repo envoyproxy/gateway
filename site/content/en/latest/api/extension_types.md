@@ -861,6 +861,17 @@ _Appears in:_
 | `Brotli` |  | 
 
 
+#### ConnectConfig
+
+
+
+
+
+_Appears in:_
+- [ProtocolUpgradeConfig](#protocolupgradeconfig)
+
+
+
 #### ConnectionLimit
 
 
@@ -3437,7 +3448,7 @@ _Appears in:_
 
 
 
-
+ProtocolUpgradeConfig specifies the configuration for protocol upgrades.
 
 _Appears in:_
 - [BackendTrafficPolicySpec](#backendtrafficpolicyspec)
@@ -3445,6 +3456,7 @@ _Appears in:_
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
 | `type` | _string_ |  true  |  | Type is the case-insensitive type of protocol upgrade.<br />e.g. `websocket`, `CONNECT`, `spdy/3.1` etc. |
+| `connect` | _[ConnectConfig](#connectconfig)_ |  false  |  | Connect specifies the configuration for the CONNECT config.<br />This is allowed only when type is CONNECT. |
 
 
 #### ProviderType
