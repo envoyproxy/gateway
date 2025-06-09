@@ -27,7 +27,7 @@ spec:
   ipFamily: IPv4
   telemetry:
     metrics:
-      clusterStatName: "%ROUTE%/%BACKEND_REFS%"
+      clusterStatName: "%ROUTE_NAMESPACE%/%ROUTE_NAME%/%BACKEND_REFS%"
   shutdown:
     drainTimeout: 5s
     minDrainDuration: 1s
