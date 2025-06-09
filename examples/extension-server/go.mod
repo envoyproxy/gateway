@@ -5,9 +5,9 @@ go 1.24.3
 require (
 	github.com/envoyproxy/gateway v1.3.1
 	github.com/envoyproxy/go-control-plane v0.13.5-0.20250408134212-157c26b62099
-	github.com/envoyproxy/go-control-plane/envoy v1.32.5-0.20250408134212-157c26b62099
+	github.com/envoyproxy/go-control-plane/envoy v1.32.5-0.20250606132447-d936c5d669b5
 	github.com/urfave/cli/v2 v2.27.6
-	google.golang.org/grpc v1.72.1
+	google.golang.org/grpc v1.72.2
 	google.golang.org/protobuf v1.36.6
 	k8s.io/apimachinery v0.34.0-alpha.0
 	sigs.k8s.io/controller-runtime v0.21.0
@@ -42,8 +42,8 @@ require (
 	golang.org/x/sys v0.33.0 // indirect
 	golang.org/x/text v0.25.0 // indirect
 	golang.org/x/tools v0.32.0 // indirect
-	google.golang.org/genproto/googleapis/api v0.0.0-20250428153025-10db94c68c34 // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20250428153025-10db94c68c34 // indirect
+	google.golang.org/genproto/googleapis/api v0.0.0-20250528174236-200df99c418a // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20250528174236-200df99c418a // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect

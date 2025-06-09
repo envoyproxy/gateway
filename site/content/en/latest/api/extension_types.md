@@ -407,6 +407,7 @@ _Appears in:_
 | `appProtocols` | _[AppProtocolType](#appprotocoltype) array_ |  false  |  | AppProtocols defines the application protocols to be supported when connecting to the backend. |
 | `fallback` | _boolean_ |  false  |  | Fallback indicates whether the backend is designated as a fallback.<br />It is highly recommended to configure active or passive health checks to ensure that failover can be detected<br />when the active backends become unhealthy and to automatically readjust once the primary backends are healthy again.<br />The overprovisioning factor is set to 1.4, meaning the fallback backends will only start receiving traffic when<br />the health of the active backends falls below 72%. |
 | `tls` | _[BackendTLSSettings](#backendtlssettings)_ |  false  |  | TLS defines the TLS settings for the backend.<br />Only supported for DynamicResolver backends. |
+| `staticResolver` | _[StaticResolverSettings](#staticresolversettings)_ |  false  |  | StaticResolver defines the configuration for StaticResolver backend type.<br />This allows endpoint selection based on request headers or dynamic metadata.<br />Only supported for StaticResolver backends. |
 
 
 #### BackendStatus
@@ -537,6 +538,7 @@ _Appears in:_
 | ----- | ----------- |
 | `Endpoints` | BackendTypeEndpoints defines the type of the backend as Endpoints.<br /> | 
 | `DynamicResolver` | BackendTypeDynamicResolver defines the type of the backend as DynamicResolver.<br />When a backend is of type DynamicResolver, the Envoy will resolve the upstream<br />ip address and port from the host header of the incoming request. If the ip address<br />is directly set in the host header, the Envoy will use the ip address and port as the<br />upstream address. If the hostname is set in the host header, the Envoy will resolve the<br />ip address and port from the hostname using the DNS resolver.<br /> | 
+| `StaticResolver` | BackendTypeStaticResolver defines the type of the backend as StaticResolver.<br />When a backend is of type StaticResolver, the Envoy will select endpoints from the<br />configured endpoint list based on request headers or dynamic metadata. This allows<br />for header-based endpoint selection while maintaining a static list of available endpoints.<br />If no valid override host is found in headers/metadata, it falls back to normal load balancing.<br /> | 
 
 
 #### BasicAuth
@@ -3132,6 +3134,35 @@ _Appears in:_
 | `JSONMerge` | JSONMerge indicates a JSON merge patch type<br /> | 
 
 
+#### MetadataKey
+
+
+
+MetadataKey defines a key for accessing dynamic metadata.
+
+_Appears in:_
+- [OverrideHostSource](#overridehostsource)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `key` | _string_ |  true  |  | Key is the top-level metadata key. |
+| `path` | _[MetadataPathSegment](#metadatapathsegment) array_ |  false  |  | Path defines the path within the metadata to access the value.<br />Each element in the path represents a key in nested metadata structure. |
+
+
+#### MetadataPathSegment
+
+
+
+MetadataPathSegment represents a segment in the metadata path.
+
+_Appears in:_
+- [MetadataKey](#metadatakey)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `key` | _string_ |  true  |  | Key is the metadata key for this path segment. |
+
+
 #### MetricSinkType
 
 _Underlying type:_ _string_
@@ -3293,6 +3324,21 @@ For example, the following are valid origins:
 _Appears in:_
 - [CORS](#cors)
 
+
+
+#### OverrideHostSource
+
+
+
+OverrideHostSource defines a source for getting override host addresses.
+
+_Appears in:_
+- [StaticResolverSettings](#staticresolversettings)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `header` | _string_ |  false  |  | Header specifies the header name to get the override host addresses from.<br />The header value should contain host addresses in "IP:Port" format or multiple<br />addresses separated by commas like "IP:Port,IP:Port,...".<br />For example: "10.0.0.5:8080" or "[2600:4040:5204::1574:24ae]:80". |
+| `metadata` | _[MetadataKey](#metadatakey)_ |  false  |  | Refer to Kubernetes API documentation for fields of `metadata`. |
 
 
 #### PassiveHealthCheck
@@ -4469,6 +4515,20 @@ https://commondatastorage.googleapis.com/chromium-boringssl-docs/ssl.h.html#Sess
 _Appears in:_
 - [SessionResumption](#sessionresumption)
 
+
+
+#### StaticResolverSettings
+
+
+
+StaticResolverSettings holds the configuration for StaticResolver backend type.
+
+_Appears in:_
+- [BackendSpec](#backendspec)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `overrideHostSources` | _[OverrideHostSource](#overridehostsource) array_ |  true  |  | OverrideHostSources defines the sources to get host addresses from for endpoint selection.<br />The host sources are searched in the order specified. The request is forwarded to the first<br />address and subsequent addresses are used for request retries or hedging. |
 
 
 #### StatusCodeMatch
