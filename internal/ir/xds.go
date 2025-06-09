@@ -886,12 +886,21 @@ type TrafficFeatures struct {
 	// Compression settings for HTTP Response
 	Compression []*Compression `json:"compression,omitempty" yaml:"compression,omitempty"`
 	// HTTPUpgrade defines the schema for upgrading the HTTP protocol.
-	HTTPUpgrade []string `json:"httpUpgrade,omitempty" yaml:"httpUpgrade,omitempty"`
+	HTTPUpgrade []HTTPUpgradeConfig `json:"httpUpgrade,omitempty" yaml:"httpUpgrade,omitempty"`
 	// Telemetry defines the schema for telemetry configuration.
 	Telemetry *egv1a1.BackendTelemetry `json:"telemetry,omitempty" yaml:"telemetry,omitempty"`
 	// RequestBuffer defines the schema for enabling buffered requests
 	RequestBuffer *RequestBuffer `json:"requestBuffer,omitempty" yaml:"requestBuffer,omitempty"`
 }
+
+// +k8s:deepcopy-gen=true
+type HTTPUpgradeConfig struct {
+	Type    string         `json:"type" yaml:"type"`
+	Connect *ConnectConfig `json:"connect,omitempty" yaml:"connect,omitempty"`
+}
+
+// +k8s:deepcopy-gen=true
+type ConnectConfig struct{}
 
 func (b *TrafficFeatures) Validate() error {
 	var errs error
