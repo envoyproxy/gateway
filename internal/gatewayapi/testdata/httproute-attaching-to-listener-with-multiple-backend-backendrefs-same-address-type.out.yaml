@@ -178,8 +178,10 @@ httpRoutes:
         status: "True"
         type: Accepted
       - lastTransitionTime: null
-        message: Unix domain sockets are not supported in backend references
-        reason: UnsupportedRefAddressFound
+        message: |-
+          Failed to process route rule 0 backendRef 0: unix domain sockets are not supported in backend references.
+          Failed to process route rule 0 backendRef 1: unix domain sockets are not supported in backend references.
+        reason: UnsupportedAddressType
         status: "False"
         type: ResolvedRefs
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
@@ -283,6 +285,7 @@ infraIR:
           gateway.envoyproxy.io/owning-gateway-name: gateway-1
           gateway.envoyproxy.io/owning-gateway-namespace: envoy-gateway
       name: envoy-gateway/gateway-1
+      namespace: envoy-gateway-system
 xdsIR:
   envoy-gateway/gateway-1:
     accessLog:
@@ -318,12 +321,20 @@ xdsIR:
           name: ""
           prefix: /1
       - destination:
+          metadata:
+            kind: HTTPRoute
+            name: httproute-2
+            namespace: default
           name: httproute/default/httproute-2/rule/0
           settings:
           - addressType: IP
             endpoints:
             - host: 1.1.1.1
               port: 3001
+            metadata:
+              kind: Backend
+              name: backend-ip
+              namespace: default
             name: httproute/default/httproute-2/rule/0/backend/0
             protocol: HTTP
             weight: 1
@@ -331,6 +342,10 @@ xdsIR:
             endpoints:
             - host: 2.2.2.2
               port: 3001
+            metadata:
+              kind: Backend
+              name: backend-ip2
+              namespace: default
             name: httproute/default/httproute-2/rule/0/backend/1
             protocol: HTTP
             weight: 1
@@ -346,12 +361,20 @@ xdsIR:
           name: ""
           prefix: /2
       - destination:
+          metadata:
+            kind: HTTPRoute
+            name: httproute-3
+            namespace: default
           name: httproute/default/httproute-3/rule/0
           settings:
           - addressType: FQDN
             endpoints:
             - host: primary.foo.com
               port: 3000
+            metadata:
+              kind: Backend
+              name: backend-fqdn
+              namespace: default
             name: httproute/default/httproute-3/rule/0/backend/0
             protocol: HTTP
             weight: 1
@@ -359,6 +382,10 @@ xdsIR:
             endpoints:
             - host: primary2.foo.com
               port: 3000
+            metadata:
+              kind: Backend
+              name: backend-fqdn2
+              namespace: default
             name: httproute/default/httproute-3/rule/0/backend/1
             protocol: HTTP
             weight: 1

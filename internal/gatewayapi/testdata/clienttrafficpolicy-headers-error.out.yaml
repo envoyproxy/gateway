@@ -11,15 +11,20 @@ clientTrafficPolicies:
         add:
         - name: ""
           value: empty
-        - name: invalid
+        - name: Example/Header/1
           value: :/
+        - name: example-header-2
+          value: |
+            multi-line-header-value
         remove:
         - ""
         set:
         - name: ""
           value: empty
-        - name: invalid
+        - name: Example:Header:3
           value: :/
+        - name: example-header-4
+          value: '  invalid'
       enableEnvoyHeaders: true
       preserveXRequestID: true
       withUnderscoresAction: Allow
@@ -38,8 +43,13 @@ clientTrafficPolicies:
       - lastTransitionTime: null
         message: |-
           Headers: EarlyRequestHeaders cannot add a header with an empty name
+          EarlyRequestHeaders cannot add a header with a '/' or ':' character in them. Header: '"Example/Header/1"'
+          EarlyRequestHeaders cannot add a header with an invalid value. Header: '"example-header-2"'
           EarlyRequestHeaders cannot set a header with an empty name
-          EarlyRequestHeaders cannot remove a header with an empty name.
+          EarlyRequestHeaders cannot set a header with a '/' or ':' character in them. Header: '"Example:Header:3"'
+          EarlyRequestHeaders cannot set a header with an invalid value. Header: '"example-header-4"'
+          EarlyRequestHeaders cannot remove a header with an empty name
+          EarlyRequestHeaders did not provide valid configuration to add/set/remove any headers.
         reason: Invalid
         status: "False"
         type: Accepted
@@ -101,6 +111,7 @@ infraIR:
           gateway.envoyproxy.io/owning-gateway-name: gateway-1
           gateway.envoyproxy.io/owning-gateway-namespace: envoy-gateway
       name: envoy-gateway/gateway-1
+      namespace: envoy-gateway-system
 xdsIR:
   envoy-gateway/gateway-1:
     accessLog:

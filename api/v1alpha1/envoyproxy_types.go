@@ -157,6 +157,11 @@ type EnvoyProxySpec struct {
 	//
 	// +optional
 	PreserveRouteOrder *bool `json:"preserveRouteOrder,omitempty"`
+
+	// DisableLuaValidation disables the Lua script validation for Lua EnvoyExtensionPolicies
+	// +kubebuilder:default=false
+	// +optional
+	DisableLuaValidation *bool `json:"disableLuaValidation,omitempty"`
 }
 
 // RoutingType defines the type of routing of this Envoy proxy.
@@ -258,6 +263,9 @@ const (
 
 	// EnvoyFilterRouter defines the Envoy HTTP router filter.
 	EnvoyFilterRouter EnvoyFilter = "envoy.filters.http.router"
+
+	// EnvoyFilterBuffer defines the Envoy HTTP buffer filter
+	EnvoyFilterBuffer EnvoyFilter = "envoy.filters.http.buffer"
 )
 
 type ProxyTelemetry struct {

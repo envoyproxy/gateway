@@ -69,9 +69,10 @@ httpRoutes:
         status: "True"
         type: Accepted
       - lastTransitionTime: null
-        message: Group is invalid, only the core API group (specified by omitting
-          the group field or setting it to an empty string), multicluster.x-k8s.io
-          and gateway.envoyproxy.io are supported
+        message: 'Failed to process route rule 0 backendRef 0: Group is invalid, only
+          the core API group (specified by omitting the group field or setting it
+          to an empty string), multicluster.x-k8s.io and gateway.envoyproxy.io are
+          supported.'
         reason: InvalidKind
         status: "False"
         type: ResolvedRefs
@@ -95,6 +96,7 @@ infraIR:
           gateway.envoyproxy.io/owning-gateway-name: gateway-1
           gateway.envoyproxy.io/owning-gateway-namespace: envoy-gateway
       name: envoy-gateway/gateway-1
+      namespace: envoy-gateway-system
 xdsIR:
   envoy-gateway/gateway-1:
     accessLog:

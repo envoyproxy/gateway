@@ -69,7 +69,8 @@ httpRoutes:
         status: "True"
         type: Accepted
       - lastTransitionTime: null
-        message: Service import default/service-import-that-doesnt-exist not found
+        message: 'Failed to process route rule 0 backendRef 0: service import default/service-import-that-doesnt-exist
+          not found.'
         reason: BackendNotFound
         status: "False"
         type: ResolvedRefs
@@ -93,6 +94,7 @@ infraIR:
           gateway.envoyproxy.io/owning-gateway-name: gateway-1
           gateway.envoyproxy.io/owning-gateway-namespace: envoy-gateway
       name: envoy-gateway/gateway-1
+      namespace: envoy-gateway-system
 xdsIR:
   envoy-gateway/gateway-1:
     accessLog:

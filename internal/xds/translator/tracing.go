@@ -92,9 +92,65 @@ func buildHCMTracing(tracing *ir.Tracing) (*hcm.HttpConnectionManager_Tracing, e
 		return nil, fmt.Errorf("failed to marshal tracing configuration: %w", err)
 	}
 
-	tags := make([]*tracingtype.CustomTag, 0, len(tracing.CustomTags))
+	tags, err := buildTracingTags(tracing.CustomTags)
+	if err != nil {
+		return nil, fmt.Errorf("failed to build tracing tags: %w", err)
+	}
+
+	return &hcm.HttpConnectionManager_Tracing{
+		ClientSampling: &xdstype.Percent{
+			Value: 100.0,
+		},
+		OverallSampling: &xdstype.Percent{
+			Value: 100.0,
+		},
+		RandomSampling: &xdstype.Percent{
+			Value: tracing.SamplingRate,
+		},
+		Provider: &tracecfg.Tracing_Http{
+			Name: providerName,
+			ConfigType: &tracecfg.Tracing_Http_TypedConfig{
+				TypedConfig: ocAny,
+			},
+		},
+		CustomTags:        tags,
+		SpawnUpstreamSpan: wrapperspb.Bool(true),
+	}, nil
+}
+
+func processClusterForTracing(tCtx *types.ResourceVersionTable, tracing *ir.Tracing, metrics *ir.Metrics) error {
+	if tracing == nil {
+		return nil
+	}
+
+	traffic := tracing.Traffic
+	// Make sure that there are safe defaults for the traffic
+	if traffic == nil {
+		traffic = &ir.TrafficFeatures{}
+	}
+	return addXdsCluster(tCtx, &xdsClusterArgs{
+		name:              tracing.Destination.Name,
+		settings:          tracing.Destination.Settings,
+		tSocket:           nil,
+		endpointType:      EndpointTypeDNS,
+		metrics:           metrics,
+		loadBalancer:      traffic.LoadBalancer,
+		proxyProtocol:     traffic.ProxyProtocol,
+		circuitBreaker:    traffic.CircuitBreaker,
+		healthCheck:       traffic.HealthCheck,
+		timeout:           traffic.Timeout,
+		tcpkeepalive:      traffic.TCPKeepalive,
+		backendConnection: traffic.BackendConnection,
+		dns:               traffic.DNS,
+		http2Settings:     traffic.HTTP2,
+		metadata:          tracing.Destination.Metadata,
+	})
+}
+
+func buildTracingTags(tracingTags map[string]egv1a1.CustomTag) ([]*tracingtype.CustomTag, error) {
+	tags := make([]*tracingtype.CustomTag, 0, len(tracingTags))
 	// TODO: consider add some default tags for better UX
-	for k, v := range tracing.CustomTags {
+	for k, v := range tracingTags {
 		switch v.Type {
 		case egv1a1.CustomTagTypeLiteral:
 			tags = append(tags, &tracingtype.CustomTag{
@@ -144,51 +200,5 @@ func buildHCMTracing(tracing *ir.Tracing) (*hcm.HttpConnectionManager_Tracing, e
 		return tags[i].Tag < tags[j].Tag
 	})
 
-	return &hcm.HttpConnectionManager_Tracing{
-		ClientSampling: &xdstype.Percent{
-			Value: 100.0,
-		},
-		OverallSampling: &xdstype.Percent{
-			Value: 100.0,
-		},
-		RandomSampling: &xdstype.Percent{
-			Value: tracing.SamplingRate,
-		},
-		Provider: &tracecfg.Tracing_Http{
-			Name: providerName,
-			ConfigType: &tracecfg.Tracing_Http_TypedConfig{
-				TypedConfig: ocAny,
-			},
-		},
-		CustomTags:        tags,
-		SpawnUpstreamSpan: wrapperspb.Bool(true),
-	}, nil
-}
-
-func processClusterForTracing(tCtx *types.ResourceVersionTable, tracing *ir.Tracing, metrics *ir.Metrics) error {
-	if tracing == nil {
-		return nil
-	}
-
-	traffic := tracing.Traffic
-	// Make sure that there are safe defaults for the traffic
-	if traffic == nil {
-		traffic = &ir.TrafficFeatures{}
-	}
-	return addXdsCluster(tCtx, &xdsClusterArgs{
-		name:              tracing.Destination.Name,
-		settings:          tracing.Destination.Settings,
-		tSocket:           nil,
-		endpointType:      EndpointTypeDNS,
-		metrics:           metrics,
-		loadBalancer:      traffic.LoadBalancer,
-		proxyProtocol:     traffic.ProxyProtocol,
-		circuitBreaker:    traffic.CircuitBreaker,
-		healthCheck:       traffic.HealthCheck,
-		timeout:           traffic.Timeout,
-		tcpkeepalive:      traffic.TCPKeepalive,
-		backendConnection: traffic.BackendConnection,
-		dns:               traffic.DNS,
-		http2Settings:     traffic.HTTP2,
-	})
+	return tags, nil
 }

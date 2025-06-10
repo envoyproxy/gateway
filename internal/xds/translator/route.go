@@ -7,6 +7,7 @@ package translator
 
 import (
 	"errors"
+	"fmt"
 	"strings"
 	"time"
 
@@ -20,6 +21,7 @@ import (
 
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/utils/proto"
+	"github.com/envoyproxy/gateway/internal/xds/utils/fractionalpercent"
 )
 
 const (
@@ -38,7 +40,7 @@ var defaultUpgradeConfig = []*routev3.RouteAction_UpgradeConfig{
 	},
 }
 
-func buildXdsRoute(httpRoute *ir.HTTPRoute) (*routev3.Route, error) {
+func buildXdsRoute(httpRoute *ir.HTTPRoute, httpListener *ir.HTTPListener) (*routev3.Route, error) {
 	router := &routev3.Route{
 		Name:     httpRoute.Name,
 		Match:    buildXdsRouteMatch(httpRoute.PathMatch, httpRoute.HeaderMatches, httpRoute.QueryParamMatches),
@@ -77,7 +79,7 @@ func buildXdsRoute(httpRoute *ir.HTTPRoute) (*routev3.Route, error) {
 		router.Action = &routev3.Route_Route{Route: routeAction}
 	default:
 		backendWeights := httpRoute.Destination.ToBackendWeights()
-		routeAction := buildXdsRouteAction(backendWeights, httpRoute.Destination.Settings)
+		routeAction := buildXdsRouteAction(backendWeights, httpRoute.Destination)
 		routeAction.IdleTimeout = idleTimeout(httpRoute)
 
 		if httpRoute.Mirrors != nil {
@@ -112,8 +114,17 @@ func buildXdsRoute(httpRoute *ir.HTTPRoute) (*routev3.Route, error) {
 		}
 	}
 
+	// Telemetry
+	if httpRoute.Traffic != nil && httpRoute.Traffic.Telemetry != nil {
+		if tracingCfg, err := buildRouteTracing(httpRoute); err == nil {
+			router.Tracing = tracingCfg
+		} else {
+			return nil, err
+		}
+	}
+
 	// Add per route filter configs to the route, if needed.
-	if err := patchRouteWithPerRouteConfig(router, httpRoute); err != nil {
+	if err := patchRouteWithPerRouteConfig(router, httpRoute, httpListener); err != nil {
 		return nil, err
 	}
 
@@ -235,10 +246,10 @@ func buildXdsStringMatcher(irMatch *ir.StringMatch) *matcherv3.StringMatcher {
 	return stringMatcher
 }
 
-func buildXdsRouteAction(backendWeights *ir.BackendWeights, settings []*ir.DestinationSetting) *routev3.RouteAction {
+func buildXdsRouteAction(backendWeights *ir.BackendWeights, dest *ir.RouteDestination) *routev3.RouteAction {
 	// only use weighted cluster when there are invalid weights
-	if needsClusterPerSetting(settings) || backendWeights.Invalid != 0 {
-		return buildXdsWeightedRouteAction(backendWeights, settings)
+	if dest.NeedsClusterPerSetting() || backendWeights.Invalid != 0 {
+		return buildXdsWeightedRouteAction(backendWeights, dest.Settings)
 	}
 
 	return &routev3.RouteAction{
@@ -259,7 +270,7 @@ func buildXdsWeightedRouteAction(backendWeights *ir.BackendWeights, settings []*
 	}
 
 	for _, destinationSetting := range settings {
-		if len(destinationSetting.Endpoints) > 0 {
+		if len(destinationSetting.Endpoints) > 0 || destinationSetting.IsDynamicResolver { // Dynamic resolver has no endpoints
 			validCluster := &routev3.WeightedCluster_ClusterWeight{
 				Name:   destinationSetting.Name,
 				Weight: &wrapperspb.UInt32Value{Value: *destinationSetting.Weight},
@@ -494,9 +505,9 @@ func buildXdsRequestMirrorPolicies(mirrorPolicies []*ir.MirrorPolicy) []*routev3
 func mirrorPercentByPolicy(mirror *ir.MirrorPolicy) *corev3.RuntimeFractionalPercent {
 	switch {
 	case mirror.Percentage != nil:
-		if *mirror.Percentage > 0 {
+		if p := *mirror.Percentage; p > 0 {
 			return &corev3.RuntimeFractionalPercent{
-				DefaultValue: translatePercentToFractionalPercent(mirror.Percentage),
+				DefaultValue: fractionalpercent.FromFloat32(p),
 			}
 		}
 		// If zero percent is provided explicitly, we should not mirror.
@@ -504,7 +515,7 @@ func mirrorPercentByPolicy(mirror *ir.MirrorPolicy) *corev3.RuntimeFractionalPer
 	default:
 		// Default to 100 percent if percent is not given.
 		return &corev3.RuntimeFractionalPercent{
-			DefaultValue: translateIntegerToFractionalPercent(100),
+			DefaultValue: fractionalpercent.FromIn32(100),
 		}
 	}
 }
@@ -640,9 +651,7 @@ func buildRetryPolicy(route *ir.HTTPRoute) (*routev3.RetryPolicy, error) {
 			}
 		}
 
-		if len(rr.RetryOn.HTTPStatusCodes) > 0 {
-			rp.RetriableStatusCodes = buildRetryStatusCodes(rr.RetryOn.HTTPStatusCodes)
-		}
+		rp.RetriableStatusCodes = buildRetryStatusCodes(rr.RetryOn.HTTPStatusCodes)
 	}
 
 	if rr.PerRetry != nil {
@@ -669,6 +678,25 @@ func buildRetryPolicy(route *ir.HTTPRoute) (*routev3.RetryPolicy, error) {
 		}
 	}
 	return rp, nil
+}
+
+func buildRouteTracing(httpRoute *ir.HTTPRoute) (*routev3.Tracing, error) {
+	if httpRoute == nil || httpRoute.Traffic == nil ||
+		httpRoute.Traffic.Telemetry == nil ||
+		httpRoute.Traffic.Telemetry.Tracing == nil {
+		return nil, nil
+	}
+
+	tracing := httpRoute.Traffic.Telemetry.Tracing
+	tags, err := buildTracingTags(tracing.CustomTags)
+	if err != nil {
+		return nil, fmt.Errorf("failed to build route tracing tags:%w", err)
+	}
+
+	return &routev3.Tracing{
+		RandomSampling: fractionalpercent.FromFraction(tracing.SamplingFraction),
+		CustomTags:     tags,
+	}, nil
 }
 
 func buildRetryStatusCodes(codes []ir.HTTPStatus) []uint32 {
@@ -719,34 +747,4 @@ func buildRetryOn(triggers []ir.TriggerEnum) (string, error) {
 	}
 
 	return b.String(), nil
-}
-
-func needsClusterPerSetting(settings []*ir.DestinationSetting) bool {
-	if hasFiltersInSettings(settings) || hasZoneAwareRouting(settings) {
-		return true
-	}
-	return false
-}
-
-func hasFiltersInSettings(settings []*ir.DestinationSetting) bool {
-	for _, setting := range settings {
-		filters := setting.Filters
-		if filters != nil {
-			return true
-		}
-	}
-	return false
-}
-
-func hasZoneAwareRouting(settings []*ir.DestinationSetting) bool {
-	// Only use weighted clusters if more than one setting
-	if len(settings) < 2 {
-		return false
-	}
-	for _, setting := range settings {
-		if setting.ZoneAwareRoutingEnabled {
-			return true
-		}
-	}
-	return false
 }

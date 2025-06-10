@@ -52,3 +52,19 @@ http:
         - host: "1.2.3.4"
           port: 50000
         name: "first-route-dest/backend/0"
+  - name: "third-route-only-triggers"
+    hostname: "foo"
+    traffic:
+      retry:
+        numRetries: 5
+        retryOn:
+          triggers:
+          - reset
+          - connect-failure
+    destination:
+      name: "first-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
+        name: "first-route-dest/backend/0"

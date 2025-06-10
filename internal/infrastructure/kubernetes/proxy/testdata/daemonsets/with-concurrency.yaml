@@ -32,7 +32,6 @@ spec:
         gateway.envoyproxy.io/owning-gateway-name: default
         gateway.envoyproxy.io/owning-gateway-namespace: default
     spec:
-      automountServiceAccountToken: false
       containers:
       - args:
         - --service-cluster default
@@ -42,11 +41,12 @@ spec:
         - --cpuset-threads
         - --drain-strategy immediate
         - --concurrency 4
+        - --component-log-level misc:error
         - --drain-time-s 60
         command:
         - envoy
         env:
-        - name: ENVOY_GATEWAY_NAMESPACE
+        - name: ENVOY_POD_NAMESPACE
           valueFrom:
             fieldRef:
               apiVersion: v1
@@ -56,6 +56,11 @@ spec:
             fieldRef:
               apiVersion: v1
               fieldPath: metadata.name
+        - name: ENVOY_SERVICE_ZONE
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: metadata.annotations['topology.kubernetes.io/zone']
         image: docker.io/envoyproxy/envoy:distroless-dev
         imagePullPolicy: IfNotPresent
         lifecycle:
@@ -128,7 +133,7 @@ spec:
         command:
         - envoy-gateway
         env:
-        - name: ENVOY_GATEWAY_NAMESPACE
+        - name: ENVOY_POD_NAMESPACE
           valueFrom:
             fieldRef:
               apiVersion: v1
@@ -138,6 +143,11 @@ spec:
             fieldRef:
               apiVersion: v1
               fieldPath: metadata.name
+        - name: ENVOY_SERVICE_ZONE
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: metadata.annotations['topology.kubernetes.io/zone']
         image: docker.io/envoyproxy/gateway-dev:latest
         imagePullPolicy: IfNotPresent
         lifecycle:

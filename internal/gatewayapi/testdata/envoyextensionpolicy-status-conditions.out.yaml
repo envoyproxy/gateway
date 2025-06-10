@@ -385,9 +385,9 @@ grpcRoutes:
         status: "True"
         type: Accepted
       - lastTransitionTime: null
-        message: Service envoy-gateway/service-1 not found
-        reason: BackendNotFound
-        status: "False"
+        message: Resolved all the Object references for the Route
+        reason: ResolvedRefs
+        status: "True"
         type: ResolvedRefs
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
@@ -420,9 +420,9 @@ httpRoutes:
         status: "True"
         type: Accepted
       - lastTransitionTime: null
-        message: Service envoy-gateway/service-1 not found
-        reason: BackendNotFound
-        status: "False"
+        message: Resolved all the Object references for the Route
+        reason: ResolvedRefs
+        status: "True"
         type: ResolvedRefs
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
@@ -454,9 +454,9 @@ httpRoutes:
         status: "False"
         type: Accepted
       - lastTransitionTime: null
-        message: Service another-namespace/service-1 not found
-        reason: BackendNotFound
-        status: "False"
+        message: Resolved all the Object references for the Route
+        reason: ResolvedRefs
+        status: "True"
         type: ResolvedRefs
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
@@ -478,6 +478,7 @@ infraIR:
           gateway.envoyproxy.io/owning-gateway-name: not-same-namespace-gateway
           gateway.envoyproxy.io/owning-gateway-namespace: another-namespace
       name: another-namespace/not-same-namespace-gateway
+      namespace: envoy-gateway-system
   envoy-gateway/gateway-1:
     proxy:
       listeners:
@@ -493,6 +494,7 @@ infraIR:
           gateway.envoyproxy.io/owning-gateway-name: gateway-1
           gateway.envoyproxy.io/owning-gateway-namespace: envoy-gateway
       name: envoy-gateway/gateway-1
+      namespace: envoy-gateway-system
   envoy-gateway/gateway-2:
     proxy:
       listeners:
@@ -515,6 +517,7 @@ infraIR:
           gateway.envoyproxy.io/owning-gateway-name: gateway-2
           gateway.envoyproxy.io/owning-gateway-namespace: envoy-gateway
       name: envoy-gateway/gateway-2
+      namespace: envoy-gateway-system
 xdsIR:
   another-namespace/not-same-namespace-gateway:
     accessLog:
@@ -560,8 +563,25 @@ xdsIR:
         mergeSlashes: true
       port: 10080
       routes:
-      - directResponse:
-          statusCode: 500
+      - destination:
+          metadata:
+            kind: HTTPRoute
+            name: httproute-1
+            namespace: envoy-gateway
+          name: httproute/envoy-gateway/httproute-1/rule/0
+          settings:
+          - addressType: IP
+            endpoints:
+            - host: 7.7.7.7
+              port: 8080
+            metadata:
+              kind: Service
+              name: service-1
+              namespace: envoy-gateway
+              sectionName: "8080"
+            name: httproute/envoy-gateway/httproute-1/rule/0/backend/0
+            protocol: HTTP
+            weight: 1
         envoyExtensions: {}
         hostname: '*'
         isHTTP2: false
@@ -599,8 +619,25 @@ xdsIR:
         mergeSlashes: true
       port: 10080
       routes:
-      - directResponse:
-          statusCode: 500
+      - destination:
+          metadata:
+            kind: GRPCRoute
+            name: grpcroute-1
+            namespace: envoy-gateway
+          name: grpcroute/envoy-gateway/grpcroute-1/rule/0
+          settings:
+          - addressType: IP
+            endpoints:
+            - host: 7.7.7.7
+              port: 8080
+            metadata:
+              kind: Service
+              name: service-1
+              namespace: envoy-gateway
+              sectionName: "8080"
+            name: grpcroute/envoy-gateway/grpcroute-1/rule/0/backend/0
+            protocol: GRPC
+            weight: 1
         envoyExtensions: {}
         headerMatches:
         - distinct: false

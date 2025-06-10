@@ -653,10 +653,8 @@ func TestWasmCache(t *testing.T) {
 			},
 			wantCachedModules:   map[moduleKey]*cacheEntry{},
 			wantCachedChecksums: map[string]*checksumEntry{},
-			wantErrorMsgPrefix: `could not fetch Wasm binary: the given image is in invalid format as an OCI image: 2 errors occurred:
-	* could not parse as compat variant: invalid media type application/vnd.oci.image.layer.v1.tar (expect application/vnd.oci.image.layer.v1.tar+gzip)
-	* could not parse as oci variant: number of layers must be 2 but got 1`,
-			wantVisitServer: true,
+			wantErrorMsgPrefix:  `could not fetch Wasm binary: the given image is in invalid format as an OCI image: could not parse as compat variant: invalid media type application/vnd.oci.image.layer.v1.tar (expect application/vnd.oci.image.layer.v1.tar+gzip)`,
+			wantVisitServer:     true,
 		},
 		{
 			name: "cache size limit",
@@ -765,7 +763,7 @@ func TestWasmCache(t *testing.T) {
 
 			cache.mux.Lock()
 			if cacheHitKey != nil {
-				if entry, ok := cache.modules[*cacheHitKey]; ok && entry.last == initTime {
+				if entry, ok := cache.modules[*cacheHitKey]; ok && initTime.Equal(entry.last) {
 					t.Errorf("Wasm module cache entry's last access time not updated after get operation, key: %v", *cacheHitKey)
 				}
 			}

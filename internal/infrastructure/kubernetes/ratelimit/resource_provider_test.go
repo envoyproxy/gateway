@@ -6,7 +6,6 @@
 package ratelimit
 
 import (
-	"flag"
 	"fmt"
 	"os"
 	"strconv"
@@ -27,9 +26,8 @@ import (
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
+	"github.com/envoyproxy/gateway/internal/utils/test"
 )
-
-var overrideTestData = flag.Bool("override-testdata", false, "if override the test output data.")
 
 const (
 	// RedisAuthEnvVar is the redis auth.
@@ -100,7 +98,7 @@ func TestServiceAccount(t *testing.T) {
 			},
 		},
 	}
-	r := NewResourceRender(cfg.Namespace, cfg.EnvoyGateway, ownerReferenceUID)
+	r := NewResourceRender(cfg.ControllerNamespace, cfg.EnvoyGateway, ownerReferenceUID)
 
 	sa, err := r.ServiceAccount()
 	require.NoError(t, err)
@@ -162,7 +160,7 @@ func TestService(t *testing.T) {
 
 	for _, tc := range cases {
 		cfg.EnvoyGateway.RateLimit = tc.rateLimit
-		r := NewResourceRender(cfg.Namespace, cfg.EnvoyGateway, ownerReferenceUID)
+		r := NewResourceRender(cfg.ControllerNamespace, cfg.EnvoyGateway, ownerReferenceUID)
 
 		svc, err := r.Service()
 		require.NoError(t, err)
@@ -196,11 +194,11 @@ func TestConfigmap(t *testing.T) {
 			},
 		},
 	}
-	r := NewResourceRender(cfg.Namespace, cfg.EnvoyGateway, ownerReferenceUID)
-	cm, err := r.ConfigMap()
+	r := NewResourceRender(cfg.ControllerNamespace, cfg.EnvoyGateway, ownerReferenceUID)
+	cm, err := r.ConfigMap("")
 	require.NoError(t, err)
 
-	if *overrideTestData {
+	if test.OverrideTestData() {
 		cmYAML, err := yaml.Marshal(cm)
 		require.NoError(t, err)
 		// nolint:gosec
@@ -766,11 +764,11 @@ func TestDeployment(t *testing.T) {
 					RateLimitDeployment: tc.deploy,
 				},
 			}
-			r := NewResourceRender(cfg.Namespace, cfg.EnvoyGateway, ownerReferenceUID)
+			r := NewResourceRender(cfg.ControllerNamespace, cfg.EnvoyGateway, ownerReferenceUID)
 			dp, err := r.Deployment()
 			require.NoError(t, err)
 
-			if *overrideTestData {
+			if test.OverrideTestData() {
 				deploymentYAML, err := yaml.Marshal(dp)
 				require.NoError(t, err)
 				// nolint:gosec
@@ -882,11 +880,11 @@ func TestHorizontalPodAutoscaler(t *testing.T) {
 					RateLimitDeployment: tc.rateLimitDeployment,
 				},
 			}
-			r := NewResourceRender(cfg.Namespace, cfg.EnvoyGateway, ownerReferenceUID)
+			r := NewResourceRender(cfg.ControllerNamespace, cfg.EnvoyGateway, ownerReferenceUID)
 			hpa, err := r.HorizontalPodAutoscaler()
 			require.NoError(t, err)
 
-			if *overrideTestData {
+			if test.OverrideTestData() {
 				hpaYAML, err := yaml.Marshal(hpa)
 				require.NoError(t, err)
 				// nolint:gosec

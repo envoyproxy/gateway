@@ -13,6 +13,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
+	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 )
 
 const (
@@ -36,6 +37,28 @@ const (
 	HTTPProtocol = "http"
 	// GRPCProtocol is the common-used grpc protocol.
 	GRPCProtocol = "grpc"
+)
+
+const (
+	// PolicyConditionOverridden indicates whether the policy has
+	// completely attached to all the sections within the target or not.
+	//
+	// Possible reasons for this condition to be True are:
+	//
+	// * "Overridden"
+	//
+	PolicyConditionOverridden gwapiv1a2.PolicyConditionType = "Overridden"
+
+	// PolicyReasonOverridden is used with the "Overridden" condition when the policy
+	// has been overridden by another policy targeting a section within the same target.
+	PolicyReasonOverridden gwapiv1a2.PolicyConditionReason = "Overridden"
+
+	// PolicyConditionMerged indicates whether the policy has
+	// been merged with another policy targeting the parent(e.g. Gateway).
+	PolicyConditionMerged gwapiv1a2.PolicyConditionType = "Merged"
+	// PolicyReasonMerged is used with the "Merged" condition when the policy
+	// has been merged with another policy targeting the parent(e.g. Gateway).
+	PolicyReasonMerged gwapiv1a2.PolicyConditionReason = "Merged"
 )
 
 // GroupVersionKind unambiguously identifies a Kind.
@@ -639,11 +662,14 @@ type HTTP2Settings struct {
 }
 
 // ResponseOverride defines the configuration to override specific responses with a custom one.
+// +kubebuilder:validation:XValidation:rule="(has(self.response) && !has(self.redirect)) || (!has(self.response) && has(self.redirect))",message="exactly one of response or redirect must be specified"
 type ResponseOverride struct {
 	// Match configuration.
 	Match CustomResponseMatch `json:"match"`
 	// Response configuration.
-	Response CustomResponse `json:"response"`
+	Response *CustomResponse `json:"response,omitempty"`
+	// Redirect configuration
+	Redirect *CustomRedirect `json:"redirect,omitempty"`
 }
 
 // CustomResponseMatch defines the configuration for matching a user response to return a custom one.
@@ -773,4 +799,48 @@ type Tracing struct {
 	//
 	// +optional
 	CustomTags map[string]CustomTag `json:"customTags,omitempty"`
+}
+
+// CustomRedirect contains configuration for returning a custom redirect.
+type CustomRedirect struct {
+	// Scheme is the scheme to be used in the value of the `Location` header in
+	// the response. When empty, the scheme of the request is used.
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=http;https
+	Scheme *string `json:"scheme,omitempty"`
+
+	// Hostname is the hostname to be used in the value of the `Location`
+	// header in the response.
+	// When empty, the hostname in the `Host` header of the request is used.
+	//
+	// +optional
+	Hostname *gwapiv1.PreciseHostname `json:"hostname,omitempty"`
+
+	// Path defines parameters used to modify the path of the incoming request.
+	// The modified path is then used to construct the `Location` header. When
+	// empty, the request path is used as-is.
+	//
+	// +optional
+	Path *gwapiv1.HTTPPathModifier `json:"path,omitempty"`
+
+	// Port is the port to be used in the value of the `Location`
+	// header in the response.
+	//
+	// If redirect scheme is not-empty, the well-known port associated with the redirect scheme will be used.
+	// Specifically "http" to port 80 and "https" to port 443. If the redirect scheme does not have a
+	// well-known port or redirect scheme is empty, the listener port of the Gateway will be used.
+	//
+	// Port will not be added in the 'Location' header if scheme is HTTP and port is 80
+	// or scheme is HTTPS and port is 443.
+	//
+	// +optional
+	Port *gwapiv1.PortNumber `json:"port,omitempty"`
+
+	// StatusCode is the HTTP status code to be used in response.
+	//
+	// +optional
+	// +kubebuilder:default=302
+	// +kubebuilder:validation:Enum=301;302
+	StatusCode *int `json:"statusCode,omitempty"`
 }

@@ -1,0 +1,87 @@
+- ignorePortInHostMatching: true
+  name: envoy-gateway/gateway-1/https-1
+  virtualHosts:
+  - domains:
+    - foo.example.com
+    metadata:
+      filterMetadata:
+        envoy-gateway:
+          resources:
+          - kind: Gateway
+            name: gateway-1
+            namespace: envoy-gateway
+            sectionName: https-1
+    name: envoy-gateway/gateway-1/https-1/foo_example_com
+    routes:
+    - match:
+        prefix: /
+      metadata:
+        filterMetadata:
+          envoy-gateway:
+            resources:
+            - kind: HTTPRoute
+              name: httproute-1
+              namespace: envoy-gateway
+      name: httproute/envoy-gateway/httproute-1/rule/0/match/0/foo_example_com
+      route:
+        cluster: httproute/envoy-gateway/httproute-1/rule/0
+        upgradeConfigs:
+        - upgradeType: websocket
+- ignorePortInHostMatching: true
+  name: envoy-gateway/gateway-1/https-2
+  virtualHosts:
+  - domains:
+    - '*.example.com'
+    metadata:
+      filterMetadata:
+        envoy-gateway:
+          resources:
+          - kind: Gateway
+            name: gateway-1
+            namespace: envoy-gateway
+            sectionName: https-2
+    name: envoy-gateway/gateway-1/https-2/*_example_com
+    routes:
+    - match:
+        prefix: /
+      metadata:
+        filterMetadata:
+          envoy-gateway:
+            resources:
+            - kind: HTTPRoute
+              name: httproute-1
+              namespace: envoy-gateway
+      name: httproute/envoy-gateway/httproute-1/rule/0/match/0/*_example_com
+      route:
+        cluster: httproute/envoy-gateway/httproute-1/rule/0
+        upgradeConfigs:
+        - upgradeType: websocket
+- ignorePortInHostMatching: true
+  name: envoy-gateway/gateway-1/https-1
+  virtualHosts:
+  - domains:
+    - foo.example.com
+    metadata:
+      filterMetadata:
+        envoy-gateway:
+          resources:
+          - kind: Gateway
+            name: gateway-1
+            namespace: envoy-gateway
+            sectionName: https-1
+    name: envoy-gateway/gateway-1/https-1/foo_example_com
+    routes:
+    - match:
+        prefix: /
+      metadata:
+        filterMetadata:
+          envoy-gateway:
+            resources:
+            - kind: HTTPRoute
+              name: httproute-1
+              namespace: envoy-gateway
+      name: httproute/envoy-gateway/httproute-1/rule/0/match/0/foo_example_com
+      route:
+        cluster: httproute/envoy-gateway/httproute-1/rule/0
+        upgradeConfigs:
+        - upgradeType: websocket

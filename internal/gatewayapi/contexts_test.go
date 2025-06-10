@@ -54,9 +54,9 @@ func TestContexts(t *testing.T) {
 	require.EqualValues(t, "http", gateway.Status.Listeners[0].Name)
 	require.Len(t, gateway.Status.Listeners[0].Conditions, 1)
 	require.EqualValues(t, gwapiv1.ListenerConditionAccepted, gateway.Status.Listeners[0].Conditions[0].Type)
-	require.EqualValues(t, metav1.ConditionFalse, gateway.Status.Listeners[0].Conditions[0].Status)
+	require.Equal(t, metav1.ConditionFalse, gateway.Status.Listeners[0].Conditions[0].Status)
 	require.EqualValues(t, gwapiv1.ListenerReasonUnsupportedProtocol, gateway.Status.Listeners[0].Conditions[0].Reason)
-	require.EqualValues(t, "HTTPS protocol is not supported yet", gateway.Status.Listeners[0].Conditions[0].Message)
+	require.Equal(t, "HTTPS protocol is not supported yet", gateway.Status.Listeners[0].Conditions[0].Message)
 
 	lctx.SetSupportedKinds(gwapiv1.RouteGroupKind{Group: GroupPtr(gwapiv1.GroupName), Kind: "HTTPRoute"})
 
@@ -139,7 +139,7 @@ func TestContextsStaleListener(t *testing.T) {
 		httpsListenerCtx,
 		httpListenerCtx,
 	}
-	require.EqualValues(t, expectedListenerContexts, gCtx.listeners)
+	require.Equal(t, expectedListenerContexts, gCtx.listeners)
 
 	require.Len(t, gCtx.Status.Listeners, 2)
 
@@ -151,7 +151,7 @@ func TestContextsStaleListener(t *testing.T) {
 			Name: "http",
 		},
 	}
-	require.EqualValues(t, expectedListenerStatuses, gCtx.Status.Listeners)
+	require.Equal(t, expectedListenerStatuses, gCtx.Status.Listeners)
 
 	// Remove one of the listeners
 	gateway.Spec.Listeners = gateway.Spec.Listeners[:1]
@@ -161,9 +161,9 @@ func TestContextsStaleListener(t *testing.T) {
 	// Ensure the listener status has been updated and the stale listener has been
 	// removed.
 	expectedListenerStatus := []gwapiv1.ListenerStatus{{Name: "https"}}
-	require.EqualValues(t, expectedListenerStatus, gCtx.Gateway.Status.Listeners)
+	require.Equal(t, expectedListenerStatus, gCtx.Status.Listeners)
 
 	// Ensure that the listeners within GatewayContext have been properly updated.
 	expectedGCtxListeners := []*ListenerContext{httpsListenerCtx}
-	require.EqualValues(t, expectedGCtxListeners, gCtx.listeners)
+	require.Equal(t, expectedGCtxListeners, gCtx.listeners)
 }

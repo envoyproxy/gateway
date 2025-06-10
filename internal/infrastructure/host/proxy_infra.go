@@ -69,12 +69,11 @@ func (i *Infra) CreateOrUpdateProxyInfra(ctx context.Context, infra *ir.Infra) e
 			TrustedCA:   filepath.Join(i.sdsConfigPath, common.SdsCAFilename),
 		},
 		XdsServerHost:   ptr.To("0.0.0.0"),
-		WasmServerPort:  ptr.To(int32(0)),
 		AdminServerPort: ptr.To(int32(0)),
 		StatsServerPort: ptr.To(int32(0)),
 	}
 
-	args, err := common.BuildProxyArgs(proxyInfra, proxyConfig.Spec.Shutdown, bootstrapConfigOptions, proxyName)
+	args, err := common.BuildProxyArgs(proxyInfra, proxyConfig.Spec.Shutdown, bootstrapConfigOptions, proxyName, false)
 	if err != nil {
 		return err
 	}

@@ -3,7 +3,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.17.1
+    controller-gen.kubebuilder.io/version: v0.17.3
   name: envoyextensionpolicies.gateway.envoyproxy.io
 spec:
   group: gateway.envoyproxy.io
@@ -420,6 +420,14 @@ spec:
                                         minimum: 100
                                         type: integer
                                       type: array
+                                    hostname:
+                                      description: |-
+                                        Hostname defines the HTTP host that will be requested during health checking.
+                                        Default: HTTPRoute or GRPCRoute hostname.
+                                      maxLength: 253
+                                      minLength: 1
+                                      pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                                      type: string
                                     method:
                                       description: |-
                                         Method defines the HTTP method used for health checking.
@@ -1002,6 +1010,7 @@ spec:
                               - Streamed
                               - Buffered
                               - BufferedPartial
+                              - FullDuplexStreamed
                               type: string
                           type: object
                         response:
@@ -1025,6 +1034,7 @@ spec:
                               - Streamed
                               - Buffered
                               - BufferedPartial
+                              - FullDuplexStreamed
                               type: string
                           type: object
                       type: object

@@ -67,7 +67,9 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *ir
 			} else {
 				// Translate to xds resources
 				t := &translator.Translator{
-					FilterOrder: val.FilterOrder,
+					ControllerNamespace: r.ControllerNamespace,
+					FilterOrder:         val.FilterOrder,
+					Logger:              r.Logger,
 				}
 
 				// Set the extension manager if an extension is loaded
@@ -78,7 +80,7 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *ir
 				// Set the rate limit service URL if global rate limiting is enabled.
 				if r.EnvoyGateway.RateLimit != nil {
 					t.GlobalRateLimit = &translator.GlobalRateLimitSettings{
-						ServiceURL: ratelimit.GetServiceURL(r.Namespace, r.DNSDomain),
+						ServiceURL: ratelimit.GetServiceURL(r.ControllerNamespace, r.DNSDomain),
 						FailClosed: r.EnvoyGateway.RateLimit.FailClosed,
 					}
 					if r.EnvoyGateway.RateLimit.Timeout != nil {
@@ -125,7 +127,11 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *ir
 				result.EnvoyPatchPolicyStatuses = nil
 
 				// Publish
-				r.Xds.Store(key, result)
+				if err == nil {
+					r.Xds.Store(key, result)
+				} else {
+					r.Logger.Error(err, "skipped publishing xds resources")
+				}
 
 				// Delete all the deletable status keys
 				for key := range statusesToDelete {

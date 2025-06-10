@@ -159,7 +159,8 @@ grpcRoutes:
         status: "True"
         type: Accepted
       - lastTransitionTime: null
-        message: Service envoy-gateway/service-1 not found
+        message: 'Failed to process route rule 0 backendRef 0: service envoy-gateway/service-1
+          not found.'
         reason: BackendNotFound
         status: "False"
         type: ResolvedRefs
@@ -194,7 +195,8 @@ httpRoutes:
         status: "True"
         type: Accepted
       - lastTransitionTime: null
-        message: Service envoy-gateway/service-1 not found
+        message: 'Failed to process route rule 0 backendRef 0: service envoy-gateway/service-1
+          not found.'
         reason: BackendNotFound
         status: "False"
         type: ResolvedRefs
@@ -218,6 +220,7 @@ infraIR:
           gateway.envoyproxy.io/owning-gateway-name: gateway-1
           gateway.envoyproxy.io/owning-gateway-namespace: envoy-gateway
       name: envoy-gateway/gateway-1
+      namespace: envoy-gateway-system
   envoy-gateway/gateway-2:
     proxy:
       listeners:
@@ -240,6 +243,7 @@ infraIR:
           gateway.envoyproxy.io/owning-gateway-name: gateway-2
           gateway.envoyproxy.io/owning-gateway-namespace: envoy-gateway
       name: envoy-gateway/gateway-2
+      namespace: envoy-gateway-system
 securityPolicies:
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: SecurityPolicy

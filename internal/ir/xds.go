@@ -19,6 +19,7 @@ import (
 
 	"golang.org/x/exp/slices"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/util/sets"
@@ -39,11 +40,10 @@ var (
 	ErrListenerPortInvalid                      = errors.New("field Port specified is invalid")
 	ErrHTTPListenerHostnamesEmpty               = errors.New("field Hostnames must be specified with at least a single hostname entry")
 	ErrTCPRouteSNIsEmpty                        = errors.New("field SNIs must be specified with at least a single server name entry")
-	ErrTLSServerCertEmpty                       = errors.New("field ServerCertificate must be specified")
+	ErrTLSCertEmpty                             = errors.New("field certificate must be specified")
 	ErrTLSPrivateKey                            = errors.New("field PrivateKey must be specified")
 	ErrRouteNameEmpty                           = errors.New("field Name must be specified")
 	ErrHTTPRouteHostnameEmpty                   = errors.New("field Hostname must be specified")
-	ErrRouteDestinationsFQDNMixed               = errors.New("mixed endpoints address type for the same route destination is not supported")
 	ErrDestinationNameEmpty                     = errors.New("field Name must be specified")
 	ErrDestEndpointHostInvalid                  = errors.New("field Address must be a valid IP or FQDN address")
 	ErrDestEndpointPortInvalid                  = errors.New("field Port specified is invalid")
@@ -151,6 +151,10 @@ type Xds struct {
 	EnvoyPatchPolicies []*EnvoyPatchPolicy `json:"envoyPatchPolicies,omitempty" yaml:"envoyPatchPolicies,omitempty"`
 	// FilterOrder holds the custom order of the HTTP filters
 	FilterOrder []egv1a1.FilterPosition `json:"filterOrder,omitempty" yaml:"filterOrder,omitempty"`
+	// GlobalResources holds the global resources used by the Envoy, for example, the envoy client certificate and the OIDC HMAC secret
+	GlobalResources *GlobalResources `json:"globalResources,omitempty" yaml:"globalResources,omitempty"`
+	// ExtensionServerPolicies is the intermediate representation of the ExtensionServerPolicy resource
+	ExtensionServerPolicies []*UnstructuredRef `json:"extensionServerPolicies,omitempty" yaml:"extensionServerPolicies,omitempty"`
 }
 
 // Equal implements the Comparable interface used by watchable.DeepEqual to skip unnecessary updates.
@@ -289,6 +293,10 @@ type HTTPListener struct {
 	Hostnames []string `json:"hostnames" yaml:"hostnames"`
 	// Tls configuration. If omitted, the gateway will expose a plain text HTTP server.
 	TLS *TLSConfig `json:"tls,omitempty" yaml:"tls,omitempty"`
+	// TLSOverlaps indicates if the listener has TLS configuration that overlaps with other listeners.
+	// HTTP2 should be disabled if this is true to avoid the HTTP/2 Connection Coalescing issue (see https://gateway-api.sigs.k8s.io/geps/gep-3567/)
+	// We use a standalone field to avoid messing with the ClientTrafficPolicy ALPN config.
+	TLSOverlaps bool `json:"tlsOverlaps,omitempty" yaml:"tlsOverlaps,omitempty"`
 	// Routes associated with HTTP traffic to the service.
 	Routes []*HTTPRoute `json:"routes,omitempty" yaml:"routes,omitempty"`
 	// IsHTTP2 is set if the listener is configured to serve HTTP2 traffic,
@@ -427,7 +435,7 @@ type TLSCertificate struct {
 	// Name of the Secret object.
 	Name string `json:"name" yaml:"name"`
 	// Certificate can be either a client or server certificate.
-	Certificate []byte `json:"serverCertificate,omitempty" yaml:"serverCertificate,omitempty"`
+	Certificate []byte `json:"certificate,omitempty" yaml:"certificate,omitempty"`
 	// PrivateKey for the server.
 	PrivateKey PrivateBytes `json:"privateKey,omitempty" yaml:"privateKey,omitempty"`
 }
@@ -441,10 +449,24 @@ type TLSCACertificate struct {
 	Certificate []byte `json:"certificate,omitempty" yaml:"certificate,omitempty"`
 }
 
+// SubjectAltName holds the subject alternative name for the certificate
+// This is the internal representation of the SubjectAltName in the Gateway API
+// https://github.com/kubernetes-sigs/gateway-api/blob/6fbbd90954c2a30a6502cbb22ec6e7f3359ed3a0/apis/v1alpha3/backendtlspolicy_types.go#L177
+// +k8s:deepcopy-gen=true
+type SubjectAltName struct {
+	// Only one of the following fields should be set.
+	// Hostname contains Subject Alternative Name specified in DNS name format.
+	Hostname *string `json:"hostname,omitempty" yaml:"hostname,omitempty"`
+	// URI contains Subject Alternative Name specified in a full URI format.
+	// It MUST include both a scheme (e.g., "http" or "ftp") and a scheme-specific-part.
+	// Common values include SPIFFE IDs like "spiffe://mycluster.example.com/ns/myns/sa/svc1sa".
+	URI *string `json:"uri,omitempty" yaml:"uri,omitempty"`
+}
+
 func (t TLSCertificate) Validate() error {
 	var errs error
 	if len(t.Certificate) == 0 {
-		errs = errors.Join(errs, ErrTLSServerCertEmpty)
+		errs = errors.Join(errs, ErrTLSCertEmpty)
 	}
 	if len(t.PrivateKey) == 0 {
 		errs = errors.Join(errs, ErrTLSPrivateKey)
@@ -766,6 +788,9 @@ type HTTPRoute struct {
 	// Retry defines the retry policy for the route.
 	// This is derived from the core Gateway API, and should take precedence over Traffic.Retry.
 	Retry *Retry `json:"retry,omitempty" yaml:"retry,omitempty"`
+	// CORS defines the CORS policy for the route.
+	// This is derived from the core Gateway API, and should take precedence over Security.CORS.
+	CORS *CORS `json:"cors,omitempty" yaml:"cors,omitempty"`
 }
 
 func (h *HTTPRoute) GetRetry() *Retry {
@@ -828,8 +853,6 @@ type Compression struct {
 // TrafficFeatures holds the information associated with the Backend Traffic Policy.
 // +k8s:deepcopy-gen=true
 type TrafficFeatures struct {
-	// Name of the backend traffic policy and namespace
-	Name string `json:"name,omitempty"`
 	// RateLimit defines the more specific match conditions as well as limits for ratelimiting
 	// the requests on this route.
 	RateLimit *RateLimit `json:"rateLimit,omitempty" yaml:"rateLimit,omitempty"`
@@ -862,6 +885,10 @@ type TrafficFeatures struct {
 	Compression []*Compression `json:"compression,omitempty" yaml:"compression,omitempty"`
 	// HTTPUpgrade defines the schema for upgrading the HTTP protocol.
 	HTTPUpgrade []string `json:"httpUpgrade,omitempty" yaml:"httpUpgrade,omitempty"`
+	// Telemetry defines the schema for telemetry configuration.
+	Telemetry *egv1a1.BackendTelemetry `json:"telemetry,omitempty" yaml:"telemetry,omitempty"`
+	// RequestBuffer defines the schema for enabling buffered requests
+	RequestBuffer *RequestBuffer `json:"requestBuffer,omitempty" yaml:"requestBuffer,omitempty"`
 }
 
 func (b *TrafficFeatures) Validate() error {
@@ -1085,6 +1112,16 @@ type OIDC struct {
 
 	// CookieDomain sets the domain of the cookies set by the oauth filter.
 	CookieDomain *string `json:"cookieDomain,omitempty"`
+
+	// Skips OIDC authentication when the request contains any header that will be extracted by the JWT
+	// filter, normally "Authorization: Bearer ...". This is typically used for non-browser clients that
+	// may not be able to handle OIDC redirects and wish to directly supply a token instead.
+	PassThroughAuthHeader bool `json:"passThroughAuthHeader,omitempty"`
+
+	// Any request that matches any of the provided matchers won’t be redirected to OAuth server when tokens are not valid.
+	// Automatic access token refresh will be performed for these requests, if enabled.
+	// This behavior can be useful for AJAX requests.
+	DenyRedirect *egv1a1.OIDCDenyRedirect `json:"denyRedirect,omitempty"`
 }
 
 // OIDCProvider defines the schema for the OIDC Provider.
@@ -1461,6 +1498,10 @@ type RouteDestination struct {
 	// reused
 	Name     string                `json:"name" yaml:"name"`
 	Settings []*DestinationSetting `json:"settings,omitempty" yaml:"settings,omitempty"`
+	// Metadata is used to enrich envoy route metadata with user and provider-specific information
+	// RouteDestination metadata is primarily derived from the xRoute resources. In some cases,
+	// the primary resource is a Policy or Envoy Proxy, when non-xRoute backendRefs are used.
+	Metadata *ResourceMetadata `json:"metadata,omitempty" yaml:"metadata,omitempty"`
 }
 
 // Validate the fields within the RouteDestination structure
@@ -1469,20 +1510,51 @@ func (r *RouteDestination) Validate() error {
 	if len(r.Name) == 0 {
 		errs = errors.Join(errs, ErrDestinationNameEmpty)
 	}
-	routeHasAddressTypes := make(sets.Set[DestinationAddressType])
 	for _, s := range r.Settings {
 		if err := s.Validate(); err != nil {
 			errs = errors.Join(errs, err)
 		}
-		if s.AddressType != nil {
-			routeHasAddressTypes.Insert(*s.AddressType)
-		}
-	}
-	if routeHasAddressTypes.Len() > 1 || routeHasAddressTypes.Has(MIXED) {
-		errs = errors.Join(ErrRouteDestinationsFQDNMixed)
 	}
 
 	return errs
+}
+
+func (r *RouteDestination) NeedsClusterPerSetting() bool {
+	return r.HasMixedEndpoints() ||
+		r.HasFiltersInSettings() ||
+		(len(r.Settings) > 1 && r.HasZoneAwareRouting())
+}
+
+// HasMixedEndpoints returns true if the RouteDestination has endpoints of multiple types
+func (r *RouteDestination) HasMixedEndpoints() bool {
+	destinationAddressTypes := sets.Set[DestinationAddressType]{}
+	for _, s := range r.Settings {
+		if s.AddressType != nil {
+			destinationAddressTypes.Insert(*s.AddressType)
+		}
+	}
+	return destinationAddressTypes.Len() > 1 || destinationAddressTypes.Has(MIXED)
+}
+
+// HasFiltersInSettings returns true if any setting in the destination has a filter
+func (r *RouteDestination) HasFiltersInSettings() bool {
+	for _, setting := range r.Settings {
+		filters := setting.Filters
+		if filters != nil {
+			return true
+		}
+	}
+	return false
+}
+
+// HasZoneAwareRouting returns true if any setting in the destination has ZoneAwareRoutingEnabled set
+func (r *RouteDestination) HasZoneAwareRouting() bool {
+	for _, setting := range r.Settings {
+		if setting.ZoneAwareRoutingEnabled {
+			return true
+		}
+	}
+	return false
 }
 
 func (r *RouteDestination) ToBackendWeights() *BackendWeights {
@@ -1495,9 +1567,12 @@ func (r *RouteDestination) ToBackendWeights() *BackendWeights {
 			continue
 		}
 
-		if len(s.Endpoints) > 0 {
+		switch {
+		case s.IsDynamicResolver: // Dynamic resolver has no endpoints
 			w.Valid += *s.Weight
-		} else {
+		case len(s.Endpoints) > 0:
+			w.Valid += *s.Weight
+		default:
 			w.Invalid += *s.Weight
 		}
 	}
@@ -1510,6 +1585,11 @@ func (r *RouteDestination) ToBackendWeights() *BackendWeights {
 type DestinationSetting struct {
 	// Name of the setting
 	Name string `json:"name" yaml:"name"`
+
+	// IsDynamicResolver specifies whether the destination is a dynamic resolver.
+	// A dynamic resolver is a destination that is resolved dynamically using the request's host header.
+	IsDynamicResolver bool `json:"isDynamicResolver,omitempty" yaml:"isDynamicResolver,omitempty"`
+
 	// Weight associated with this destination,
 	// invalid endpoints are represents with a
 	// non-zero weight with an empty endpoints list
@@ -1531,6 +1611,9 @@ type DestinationSetting struct {
 	// ZoneAwareRoutingEnabled specifies whether to enable Zone Aware Routing for this destination's endpoints.
 	// This is derived from the backend service and depends on having Kubernetes Topology Aware Routing or Traffic Distribution enabled.
 	ZoneAwareRoutingEnabled bool `json:"zoneAwareRoutingEnabled,omitempty" yaml:"zoneAwareRoutingEnabled,omitempty"`
+	// Metadata is used to enrich envoy route metadata with user and provider-specific information
+	// The primary metadata for DestinationSettings comes from the Backend resource reference in BackendRef
+	Metadata *ResourceMetadata `json:"metadata,omitempty" yaml:"metadata,omitempty"`
 }
 
 // Validate the fields within the DestinationSetting structure
@@ -2040,19 +2123,19 @@ type RateLimit struct {
 // GlobalRateLimit holds the global rate limiting configuration.
 // +k8s:deepcopy-gen=true
 type GlobalRateLimit struct {
-	// TODO zhaohuabing: add default values for Global rate limiting.
-
 	// Rules for rate limiting.
-	Rules []*RateLimitRule `json:"rules,omitempty" yaml:"rules,omitempty"`
+	Rules []*RateLimitRule `json:"rules,omitempty" yaml:"rules,omitempty" patchStrategy:"merge" patchMergeKey:"name"`
+}
 
-	// Shared determines whether this rate limit rule applies globally across the gateway, or xRoute(s).
-	// If set to true, the rule is treated as a common bucket and is shared across all routes under the backend traffic policy.
-	// Must have targetRef set to Gateway or xRoute(s).
-	// Default: false.
-	//
-	// +optional
-	// +kubebuilder:default=false
-	Shared *bool `json:"shared,omitempty" yaml:"shared,omitempty"`
+// GlobalResources holds the global resources used by the Envoy that are not specific to any listener or route.
+// +k8s:deepcopy-gen=true
+type GlobalResources struct {
+	// EnvoyClientCertificate holds the client certificate secret for envoy to use when establishing a TLS connection to
+	// control plane components. For example, the rate limit service, WASM HTTP server, etc.
+	EnvoyClientCertificate *TLSCertificate `json:"envoyClientCertificate,omitempty" yaml:"envoyClientCertificate,omitempty"`
+	// HMACSecret holds the HMAC Secret used by the OIDC.
+	// TODO: zhaohuabing move HMACSecret here
+	// HMACSecret PrivateBytes
 }
 
 // LocalRateLimit holds the local rate limiting configuration.
@@ -2063,7 +2146,7 @@ type LocalRateLimit struct {
 	Default RateLimitValue `json:"default,omitempty" yaml:"default,omitempty"`
 
 	// Rules for rate limiting.
-	Rules []*RateLimitRule `json:"rules,omitempty" yaml:"rules,omitempty"`
+	Rules []*RateLimitRule `json:"rules,omitempty" yaml:"rules,omitempty" patchStrategy:"merge" patchMergeKey:"name"`
 }
 
 // RateLimitRule holds the match and limit configuration for ratelimiting.
@@ -2079,6 +2162,15 @@ type RateLimitRule struct {
 	RequestCost *RateLimitCost `json:"requestCost,omitempty" yaml:"requestCost,omitempty"`
 	// ResponseCost specifies the cost of the response.
 	ResponseCost *RateLimitCost `json:"responseCost,omitempty" yaml:"responseCost,omitempty"`
+	// Shared determines whether this rate limit rule applies globally across the gateway, or xRoute(s).
+	// If set to true, the rule is treated as a common bucket and is shared across all routes under the backend traffic policy.
+	// Must have targetRef set to Gateway or xRoute(s).
+	// Default: false.
+	//
+	// +optional
+	Shared *bool `json:"shared,omitempty" yaml:"shared,omitempty"`
+	// Name is a unique identifier for this rule, set as <policy-ns>/<policy-name>/rule/<rule-index>.
+	Name string `json:"name,omitempty" yaml:"name,omitempty"`
 }
 
 // RateLimitCost specifies the cost of the request or response.
@@ -2798,16 +2890,18 @@ type BackOffPolicy struct {
 // TLSUpstreamConfig contains sni and ca file in []byte format.
 // +k8s:deepcopy-gen=true
 type TLSUpstreamConfig struct {
-	SNI                 string            `json:"sni,omitempty" yaml:"sni,omitempty"`
+	SNI                 *string           `json:"sni,omitempty" yaml:"sni,omitempty"`
 	UseSystemTrustStore bool              `json:"useSystemTrustStore,omitempty" yaml:"useSystemTrustStore,omitempty"`
 	CACertificate       *TLSCACertificate `json:"caCertificate,omitempty" yaml:"caCertificate,omitempty"`
 	TLSConfig           `json:",inline"`
+	SubjectAltNames     []SubjectAltName `json:"subjectAltNames,omitempty" yaml:"subjectAltNames,omitempty"`
 }
 
 func (t *TLSUpstreamConfig) ToTLSConfig() (*tls.Config, error) {
 	// nolint:gosec
-	tlsConfig := &tls.Config{
-		ServerName: t.SNI,
+	tlsConfig := &tls.Config{}
+	if t.SNI != nil {
+		tlsConfig.ServerName = *t.SNI
 	}
 	if t.MinVersion != nil {
 		tlsConfig.MinVersion = t.MinVersion.Int()
@@ -2996,6 +3090,8 @@ type DestinationFilters struct {
 	AddResponseHeaders []AddHeader `json:"addResponseHeaders,omitempty" yaml:"addResponseHeaders,omitempty"`
 	// RemoveResponseHeaders defines a list of headers to be removed from response.
 	RemoveResponseHeaders []string `json:"removeResponseHeaders,omitempty" yaml:"removeResponseHeaders,omitempty"`
+	// CredentialInjection defines the credential injection configuration.
+	CredentialInjection *CredentialInjection `json:"credentialInjection,omitempty" yaml:"credentialInjection,omitempty"`
 }
 
 // ResourceMetadata is metadata from the provider resource that is translated to an envoy resource
@@ -3011,4 +3107,11 @@ type ResourceMetadata struct {
 	Annotations map[string]string `json:"annotations,omitempty" yaml:"annotations,omitempty"`
 	// SectionName is the name of a section of a resource
 	SectionName string `json:"sectionName,omitempty" yaml:"sectionName,omitempty"`
+}
+
+// RequestBuffer holds the information for the Buffer filter
+// +k8s:deepcopy-gen=true
+type RequestBuffer struct {
+	// Limit defines the maximum buffer size for requests
+	Limit resource.Quantity `json:"limit" yaml:"limit"`
 }

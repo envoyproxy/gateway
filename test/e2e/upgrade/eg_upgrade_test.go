@@ -57,8 +57,9 @@ func TestEGUpgrade(t *testing.T) {
 		ManifestFS:           []fs.FS{e2e.UpgradeManifests},
 		RunTest:              *flags.RunTest,
 		BaseManifests:        "upgrade/manifests.yaml",
-		SupportedFeatures:    sets.New[features.FeatureName](features.SupportGateway),
+		SupportedFeatures:    sets.New(features.SupportGateway),
 		SkipTests:            skipTests,
+		Hook:                 e2e.Hook,
 	})
 	if err != nil {
 		t.Fatalf("Failed to create test suite: %v", err)

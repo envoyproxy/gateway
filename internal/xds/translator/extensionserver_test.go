@@ -18,6 +18,7 @@ import (
 	routeV3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
 	tlsV3 "github.com/envoyproxy/go-control-plane/envoy/extensions/transport_sockets/tls/v3"
 	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/types/known/anypb"
 	"google.golang.org/protobuf/types/known/durationpb"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
@@ -95,11 +96,12 @@ func (t *testingExtensionServer) PostRouteModify(_ context.Context, req *pb.Post
 func (t *testingExtensionServer) PostVirtualHostModify(_ context.Context, req *pb.PostVirtualHostModifyRequest) (*pb.PostVirtualHostModifyResponse, error) {
 	// Only make the change when the VirtualHost's name matches the expected testdata
 	// This prevents us from having to update every single testfile.out
-	if req.VirtualHost.Name == "extension-post-xdsvirtualhost-hook-error/*" {
+	switch req.VirtualHost.Name {
+	case "extension-post-xdsvirtualhost-hook-error/*":
 		return &pb.PostVirtualHostModifyResponse{
 			VirtualHost: req.VirtualHost,
 		}, fmt.Errorf("extension post xds virtual host hook error")
-	} else if req.VirtualHost.Name == "extension-listener" {
+	case "extension-listener":
 		// Setup a new VirtualHost to avoid operating directly on the passed in pointer for better test coverage that the
 		// VirtualHost we are returning gets used properly
 		modifiedVH := proto.Clone(req.VirtualHost).(*routeV3.VirtualHost)
@@ -263,6 +265,65 @@ func (t *testingExtensionServer) PostTranslateModify(_ context.Context, req *pb.
 		},
 	})
 
+	for _, extensionResourceBytes := range req.PostTranslateContext.ExtensionResources {
+		extensionResource := unstructured.Unstructured{}
+		if err := extensionResource.UnmarshalJSON(extensionResourceBytes.UnstructuredBytes); err != nil {
+			return response, err
+		}
+
+		targetKind, err := getTargetRefKind(&extensionResource)
+		if err != nil {
+			return response, fmt.Errorf("failed to get targetRef kind: %w", err)
+		}
+
+		if extensionResource.GetObjectKind().GroupVersionKind().Kind == "ExampleExtPolicy" && targetKind == "Gateway" {
+			upstreamTLS := &tlsV3.UpstreamTlsContext{
+				CommonTlsContext: &tlsV3.CommonTlsContext{
+					TlsCertificateSdsSecretConfigs: []*tlsV3.SdsSecretConfig{
+						{
+							Name: "default",
+							SdsConfig: &coreV3.ConfigSource{
+								ConfigSourceSpecifier: &coreV3.ConfigSource_ApiConfigSource{
+									ApiConfigSource: &coreV3.ApiConfigSource{
+										ApiType: coreV3.ApiConfigSource_GRPC,
+										GrpcServices: []*coreV3.GrpcService{
+											{
+												TargetSpecifier: &coreV3.GrpcService_EnvoyGrpc_{
+													EnvoyGrpc: &coreV3.GrpcService_EnvoyGrpc{
+														ClusterName: "sds-cluster",
+													},
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			}
+
+			typedConfig, err := anypb.New(upstreamTLS)
+			if err != nil {
+				return nil, err
+			}
+
+			for _, cluster := range response.Clusters {
+				if cluster.Name == "mock-extension-injected-cluster" {
+					cluster.TransportSocket = &coreV3.TransportSocket{
+						Name: "envoy.transport_sockets.tls",
+						ConfigType: &coreV3.TransportSocket_TypedConfig{
+							TypedConfig: typedConfig,
+						},
+					}
+				}
+			}
+		} else if extensionResource.GetObjectKind().GroupVersionKind().Kind == "ExampleExtPolicy" && targetKind != "Gateway" {
+			// This simulates an extension server that returns an error. It allows verifying that fail-close is working.
+			return response, fmt.Errorf("invalid extension policy : %s", extensionResource.GetName())
+		}
+	}
+
 	for idx, secret := range req.Secrets {
 		response.Secrets[idx] = proto.Clone(secret).(*tlsV3.Secret)
 	}
@@ -280,4 +341,18 @@ func (t *testingExtensionServer) PostTranslateModify(_ context.Context, req *pb.
 	})
 
 	return response, nil
+}
+
+func getTargetRefKind(obj *unstructured.Unstructured) (string, error) {
+	targetRef, found, err := unstructured.NestedMap(obj.Object, "spec", "targetRef")
+	if err != nil || !found {
+		return "", errors.New("targetRef not found or error")
+	}
+
+	kind, ok := targetRef["kind"].(string)
+	if !ok {
+		return "", errors.New("kind is not a string or missing in targetRef")
+	}
+
+	return kind, nil
 }

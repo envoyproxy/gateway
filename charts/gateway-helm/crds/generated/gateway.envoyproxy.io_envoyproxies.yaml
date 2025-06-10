@@ -3,7 +3,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.17.1
+    controller-gen.kubebuilder.io/version: v0.17.3
   name: envoyproxies.gateway.envoyproxy.io
 spec:
   group: gateway.envoyproxy.io
@@ -269,6 +269,11 @@ spec:
                   the number of cpuset threads on the platform.
                 format: int32
                 type: integer
+              disableLuaValidation:
+                default: false
+                description: DisableLuaValidation disables the Lua script validation
+                  for Lua EnvoyExtensionPolicies
+                type: boolean
               extraArgs:
                 description: |-
                   ExtraArgs defines additional command line options that are provided to Envoy.
@@ -1245,7 +1250,6 @@ spec:
                                                     pod labels will be ignored. The default value is empty.
                                                     The same key is forbidden to exist in both matchLabelKeys and labelSelector.
                                                     Also, matchLabelKeys cannot be set when labelSelector isn't set.
-                                                    This is a beta field and requires enabling MatchLabelKeysInPodAffinity feature gate (enabled by default).
                                                   items:
                                                     type: string
                                                   type: array
@@ -1260,7 +1264,6 @@ spec:
                                                     pod labels will be ignored. The default value is empty.
                                                     The same key is forbidden to exist in both mismatchLabelKeys and labelSelector.
                                                     Also, mismatchLabelKeys cannot be set when labelSelector isn't set.
-                                                    This is a beta field and requires enabling MatchLabelKeysInPodAffinity feature gate (enabled by default).
                                                   items:
                                                     type: string
                                                   type: array
@@ -1430,7 +1433,6 @@ spec:
                                                 pod labels will be ignored. The default value is empty.
                                                 The same key is forbidden to exist in both matchLabelKeys and labelSelector.
                                                 Also, matchLabelKeys cannot be set when labelSelector isn't set.
-                                                This is a beta field and requires enabling MatchLabelKeysInPodAffinity feature gate (enabled by default).
                                               items:
                                                 type: string
                                               type: array
@@ -1445,7 +1447,6 @@ spec:
                                                 pod labels will be ignored. The default value is empty.
                                                 The same key is forbidden to exist in both mismatchLabelKeys and labelSelector.
                                                 Also, mismatchLabelKeys cannot be set when labelSelector isn't set.
-                                                This is a beta field and requires enabling MatchLabelKeysInPodAffinity feature gate (enabled by default).
                                               items:
                                                 type: string
                                               type: array
@@ -1614,7 +1615,6 @@ spec:
                                                     pod labels will be ignored. The default value is empty.
                                                     The same key is forbidden to exist in both matchLabelKeys and labelSelector.
                                                     Also, matchLabelKeys cannot be set when labelSelector isn't set.
-                                                    This is a beta field and requires enabling MatchLabelKeysInPodAffinity feature gate (enabled by default).
                                                   items:
                                                     type: string
                                                   type: array
@@ -1629,7 +1629,6 @@ spec:
                                                     pod labels will be ignored. The default value is empty.
                                                     The same key is forbidden to exist in both mismatchLabelKeys and labelSelector.
                                                     Also, mismatchLabelKeys cannot be set when labelSelector isn't set.
-                                                    This is a beta field and requires enabling MatchLabelKeysInPodAffinity feature gate (enabled by default).
                                                   items:
                                                     type: string
                                                   type: array
@@ -1799,7 +1798,6 @@ spec:
                                                 pod labels will be ignored. The default value is empty.
                                                 The same key is forbidden to exist in both matchLabelKeys and labelSelector.
                                                 Also, matchLabelKeys cannot be set when labelSelector isn't set.
-                                                This is a beta field and requires enabling MatchLabelKeysInPodAffinity feature gate (enabled by default).
                                               items:
                                                 type: string
                                               type: array
@@ -1814,7 +1812,6 @@ spec:
                                                 pod labels will be ignored. The default value is empty.
                                                 The same key is forbidden to exist in both mismatchLabelKeys and labelSelector.
                                                 Also, mismatchLabelKeys cannot be set when labelSelector isn't set.
-                                                This is a beta field and requires enabling MatchLabelKeysInPodAffinity feature gate (enabled by default).
                                               items:
                                                 type: string
                                               type: array
@@ -2343,7 +2340,6 @@ spec:
                                         - Ignore: nodeAffinity/nodeSelector are ignored. All nodes are included in the calculations.
 
                                         If this value is nil, the behavior is equivalent to the Honor policy.
-                                        This is a beta-level feature default enabled by the NodeInclusionPolicyInPodTopologySpread feature flag.
                                       type: string
                                     nodeTaintsPolicy:
                                       description: |-
@@ -2354,7 +2350,6 @@ spec:
                                         - Ignore: node taints are ignored. All nodes are included.
 
                                         If this value is nil, the behavior is equivalent to the Ignore policy.
-                                        This is a beta-level feature default enabled by the NodeInclusionPolicyInPodTopologySpread feature flag.
                                       type: string
                                     topologyKey:
                                       description: |-
@@ -3344,7 +3339,7 @@ spec:
                                         The types of objects that may be mounted by this volume are defined by the container runtime implementation on a host machine and at minimum must include all valid types supported by the container image field.
                                         The OCI object gets mounted in a single directory (spec.containers[*].volumeMounts.mountPath) by merging the manifest layers in the same way as for container images.
                                         The volume will be mounted read-only (ro) and non-executable files (noexec).
-                                        Sub path mounts for containers are not supported (spec.containers[*].volumeMounts.subpath).
+                                        Sub path mounts for containers are not supported (spec.containers[*].volumeMounts.subpath) before 1.33.
                                         The field spec.securityContext.fsGroupChangePolicy has no effect on this volume type.
                                       properties:
                                         pullPolicy:
@@ -4937,7 +4932,7 @@ spec:
                                     Cannot be updated.
                                   items:
                                     description: EnvFromSource represents the source
-                                      of a set of ConfigMaps
+                                      of a set of ConfigMaps or Secrets
                                     properties:
                                       configMapRef:
                                         description: The ConfigMap to select from
@@ -4958,9 +4953,9 @@ spec:
                                         type: object
                                         x-kubernetes-map-type: atomic
                                       prefix:
-                                        description: An optional identifier to prepend
-                                          to each key in the ConfigMap. Must be a
-                                          C_IDENTIFIER.
+                                        description: Optional text to prepend to the
+                                          name of each environment variable. Must
+                                          be a C_IDENTIFIER.
                                         type: string
                                       secretRef:
                                         description: The Secret to select from
@@ -5232,6 +5227,12 @@ spec:
                                           - port
                                           type: object
                                       type: object
+                                    stopSignal:
+                                      description: |-
+                                        StopSignal defines which signal will be sent to a container when it is being stopped.
+                                        If not specified, the default is defined by the container runtime in use.
+                                        StopSignal can only be set for Pods with a non-empty .spec.os.name
+                                      type: string
                                   type: object
                                 livenessProbe:
                                   description: |-
@@ -6534,7 +6535,6 @@ spec:
                                                     pod labels will be ignored. The default value is empty.
                                                     The same key is forbidden to exist in both matchLabelKeys and labelSelector.
                                                     Also, matchLabelKeys cannot be set when labelSelector isn't set.
-                                                    This is a beta field and requires enabling MatchLabelKeysInPodAffinity feature gate (enabled by default).
                                                   items:
                                                     type: string
                                                   type: array
@@ -6549,7 +6549,6 @@ spec:
                                                     pod labels will be ignored. The default value is empty.
                                                     The same key is forbidden to exist in both mismatchLabelKeys and labelSelector.
                                                     Also, mismatchLabelKeys cannot be set when labelSelector isn't set.
-                                                    This is a beta field and requires enabling MatchLabelKeysInPodAffinity feature gate (enabled by default).
                                                   items:
                                                     type: string
                                                   type: array
@@ -6719,7 +6718,6 @@ spec:
                                                 pod labels will be ignored. The default value is empty.
                                                 The same key is forbidden to exist in both matchLabelKeys and labelSelector.
                                                 Also, matchLabelKeys cannot be set when labelSelector isn't set.
-                                                This is a beta field and requires enabling MatchLabelKeysInPodAffinity feature gate (enabled by default).
                                               items:
                                                 type: string
                                               type: array
@@ -6734,7 +6732,6 @@ spec:
                                                 pod labels will be ignored. The default value is empty.
                                                 The same key is forbidden to exist in both mismatchLabelKeys and labelSelector.
                                                 Also, mismatchLabelKeys cannot be set when labelSelector isn't set.
-                                                This is a beta field and requires enabling MatchLabelKeysInPodAffinity feature gate (enabled by default).
                                               items:
                                                 type: string
                                               type: array
@@ -6903,7 +6900,6 @@ spec:
                                                     pod labels will be ignored. The default value is empty.
                                                     The same key is forbidden to exist in both matchLabelKeys and labelSelector.
                                                     Also, matchLabelKeys cannot be set when labelSelector isn't set.
-                                                    This is a beta field and requires enabling MatchLabelKeysInPodAffinity feature gate (enabled by default).
                                                   items:
                                                     type: string
                                                   type: array
@@ -6918,7 +6914,6 @@ spec:
                                                     pod labels will be ignored. The default value is empty.
                                                     The same key is forbidden to exist in both mismatchLabelKeys and labelSelector.
                                                     Also, mismatchLabelKeys cannot be set when labelSelector isn't set.
-                                                    This is a beta field and requires enabling MatchLabelKeysInPodAffinity feature gate (enabled by default).
                                                   items:
                                                     type: string
                                                   type: array
@@ -7088,7 +7083,6 @@ spec:
                                                 pod labels will be ignored. The default value is empty.
                                                 The same key is forbidden to exist in both matchLabelKeys and labelSelector.
                                                 Also, matchLabelKeys cannot be set when labelSelector isn't set.
-                                                This is a beta field and requires enabling MatchLabelKeysInPodAffinity feature gate (enabled by default).
                                               items:
                                                 type: string
                                               type: array
@@ -7103,7 +7097,6 @@ spec:
                                                 pod labels will be ignored. The default value is empty.
                                                 The same key is forbidden to exist in both mismatchLabelKeys and labelSelector.
                                                 Also, mismatchLabelKeys cannot be set when labelSelector isn't set.
-                                                This is a beta field and requires enabling MatchLabelKeysInPodAffinity feature gate (enabled by default).
                                               items:
                                                 type: string
                                               type: array
@@ -7632,7 +7625,6 @@ spec:
                                         - Ignore: nodeAffinity/nodeSelector are ignored. All nodes are included in the calculations.
 
                                         If this value is nil, the behavior is equivalent to the Honor policy.
-                                        This is a beta-level feature default enabled by the NodeInclusionPolicyInPodTopologySpread feature flag.
                                       type: string
                                     nodeTaintsPolicy:
                                       description: |-
@@ -7643,7 +7635,6 @@ spec:
                                         - Ignore: node taints are ignored. All nodes are included.
 
                                         If this value is nil, the behavior is equivalent to the Ignore policy.
-                                        This is a beta-level feature default enabled by the NodeInclusionPolicyInPodTopologySpread feature flag.
                                       type: string
                                     topologyKey:
                                       description: |-
@@ -8633,7 +8624,7 @@ spec:
                                         The types of objects that may be mounted by this volume are defined by the container runtime implementation on a host machine and at minimum must include all valid types supported by the container image field.
                                         The OCI object gets mounted in a single directory (spec.containers[*].volumeMounts.mountPath) by merging the manifest layers in the same way as for container images.
                                         The volume will be mounted read-only (ro) and non-executable files (noexec).
-                                        Sub path mounts for containers are not supported (spec.containers[*].volumeMounts.subpath).
+                                        Sub path mounts for containers are not supported (spec.containers[*].volumeMounts.subpath) before 1.33.
                                         The field spec.securityContext.fsGroupChangePolicy has no effect on this volume type.
                                       properties:
                                         pullPolicy:
@@ -9604,7 +9595,9 @@ spec:
                                   policies:
                                     description: |-
                                       policies is a list of potential scaling polices which can be used during scaling.
-                                      At least one policy must be specified, otherwise the HPAScalingRules will be discarded as invalid
+                                      If not set, use the default values:
+                                      - For scale up: allow doubling the number of pods, or an absolute change of 4 pods in a 15s window.
+                                      - For scale down: allow all pods to be removed in a 15s window.
                                     items:
                                       description: HPAScalingPolicy is a single policy
                                         which must hold true for a specified past
@@ -9648,6 +9641,24 @@ spec:
                                       - For scale down: 300 (i.e. the stabilization window is 300 seconds long).
                                     format: int32
                                     type: integer
+                                  tolerance:
+                                    anyOf:
+                                    - type: integer
+                                    - type: string
+                                    description: |-
+                                      tolerance is the tolerance on the ratio between the current and desired
+                                      metric value under which no updates are made to the desired number of
+                                      replicas (e.g. 0.01 for 1%). Must be greater than or equal to zero. If not
+                                      set, the default cluster-wide tolerance is applied (by default 10%).
+
+                                      For example, if autoscaling is configured with a memory consumption target of 100Mi,
+                                      and scale-down and scale-up tolerances of 5% and 1% respectively, scaling will be
+                                      triggered when the actual consumption falls below 95Mi or exceeds 101Mi.
+
+                                      This is an alpha field and requires enabling the HPAConfigurableTolerance
+                                      feature gate.
+                                    pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                                    x-kubernetes-int-or-string: true
                                 type: object
                               scaleUp:
                                 description: |-
@@ -9660,7 +9671,9 @@ spec:
                                   policies:
                                     description: |-
                                       policies is a list of potential scaling polices which can be used during scaling.
-                                      At least one policy must be specified, otherwise the HPAScalingRules will be discarded as invalid
+                                      If not set, use the default values:
+                                      - For scale up: allow doubling the number of pods, or an absolute change of 4 pods in a 15s window.
+                                      - For scale down: allow all pods to be removed in a 15s window.
                                     items:
                                       description: HPAScalingPolicy is a single policy
                                         which must hold true for a specified past
@@ -9704,6 +9717,24 @@ spec:
                                       - For scale down: 300 (i.e. the stabilization window is 300 seconds long).
                                     format: int32
                                     type: integer
+                                  tolerance:
+                                    anyOf:
+                                    - type: integer
+                                    - type: string
+                                    description: |-
+                                      tolerance is the tolerance on the ratio between the current and desired
+                                      metric value under which no updates are made to the desired number of
+                                      replicas (e.g. 0.01 for 1%). Must be greater than or equal to zero. If not
+                                      set, the default cluster-wide tolerance is applied (by default 10%).
+
+                                      For example, if autoscaling is configured with a memory consumption target of 100Mi,
+                                      and scale-down and scale-up tolerances of 5% and 1% respectively, scaling will be
+                                      triggered when the actual consumption falls below 95Mi or exceeds 101Mi.
+
+                                      This is an alpha field and requires enabling the HPAConfigurableTolerance
+                                      feature gate.
+                                    pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                                    x-kubernetes-int-or-string: true
                                 type: object
                             type: object
                           maxReplicas:
@@ -10888,6 +10919,14 @@ spec:
                                                           minimum: 100
                                                           type: integer
                                                         type: array
+                                                      hostname:
+                                                        description: |-
+                                                          Hostname defines the HTTP host that will be requested during health checking.
+                                                          Default: HTTPRoute or GRPCRoute hostname.
+                                                        maxLength: 253
+                                                        minLength: 1
+                                                        pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                                                        type: string
                                                       method:
                                                         description: |-
                                                           Method defines the HTTP method used for health checking.
@@ -11907,6 +11946,14 @@ spec:
                                                           minimum: 100
                                                           type: integer
                                                         type: array
+                                                      hostname:
+                                                        description: |-
+                                                          Hostname defines the HTTP host that will be requested during health checking.
+                                                          Default: HTTPRoute or GRPCRoute hostname.
+                                                        maxLength: 253
+                                                        minLength: 1
+                                                        pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                                                        type: string
                                                       method:
                                                         description: |-
                                                           Method defines the HTTP method used for health checking.
@@ -13015,6 +13062,14 @@ spec:
                                                     minimum: 100
                                                     type: integer
                                                   type: array
+                                                hostname:
+                                                  description: |-
+                                                    Hostname defines the HTTP host that will be requested during health checking.
+                                                    Default: HTTPRoute or GRPCRoute hostname.
+                                                  maxLength: 253
+                                                  minLength: 1
+                                                  pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                                                  type: string
                                                 method:
                                                   description: |-
                                                     Method defines the HTTP method used for health checking.
@@ -14040,6 +14095,14 @@ spec:
                                               minimum: 100
                                               type: integer
                                             type: array
+                                          hostname:
+                                            description: |-
+                                              Hostname defines the HTTP host that will be requested during health checking.
+                                              Default: HTTPRoute or GRPCRoute hostname.
+                                            maxLength: 253
+                                            minLength: 1
+                                            pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                                            type: string
                                           method:
                                             description: |-
                                               Method defines the HTTP method used for health checking.

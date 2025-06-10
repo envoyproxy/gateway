@@ -92,11 +92,16 @@ httpRoutes:
     parents:
     - conditions:
       - lastTransitionTime: null
-        message: 'Regex "*regex*" is invalid: error parsing regexp: missing argument
-          to repetition operator: `*`.'
+        message: 'Failed to process route rule 2: regex "*regex*" is invalid: error
+          parsing regexp: missing argument to repetition operator: `*`.'
         reason: UnsupportedValue
         status: "False"
         type: Accepted
+      - lastTransitionTime: null
+        message: Resolved all the Object references for the Route
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
         name: gateway-1
@@ -117,6 +122,7 @@ infraIR:
           gateway.envoyproxy.io/owning-gateway-name: gateway-1
           gateway.envoyproxy.io/owning-gateway-namespace: envoy-gateway
       name: envoy-gateway/gateway-1
+      namespace: envoy-gateway-system
 xdsIR:
   envoy-gateway/gateway-1:
     accessLog:

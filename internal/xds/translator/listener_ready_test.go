@@ -18,6 +18,7 @@ import (
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/utils/proto"
+	"github.com/envoyproxy/gateway/internal/utils/test"
 )
 
 func TestBuildReadyListener(t *testing.T) {
@@ -61,7 +62,7 @@ func TestBuildReadyListener(t *testing.T) {
 				t.Errorf("unexpected error: %v", err)
 			}
 
-			if *overrideTestData {
+			if test.OverrideTestData() {
 				data, err := proto.ToYAML(got)
 				require.NoError(t, err)
 				err = os.WriteFile(path.Join("testdata", "readylistener", tc.name+".yaml"), data, 0o600)

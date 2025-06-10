@@ -85,8 +85,11 @@ type BackendTrafficPolicySpec struct {
 	// HTTPUpgrade defines the configuration for HTTP protocol upgrades.
 	// If not specified, the default upgrade configuration(websocket) will be used.
 	//
+	// +patchMergeKey=type
+	// +patchStrategy=merge
+	//
 	// +optional
-	HTTPUpgrade []*ProtocolUpgradeConfig `json:"httpUpgrade,omitempty"`
+	HTTPUpgrade []*ProtocolUpgradeConfig `json:"httpUpgrade,omitempty" patchMergeKey:"type" patchStrategy:"merge"`
 
 	// RequestBuffer allows the gateway to buffer and fully receive each request from a client before continuing to send the request
 	// upstream to the backends. This can be helpful to shield your backend servers from slow clients, and also to enforce a maximum size per request
@@ -100,16 +103,15 @@ type BackendTrafficPolicySpec struct {
 	// +notImplementedHide
 	// +optional
 	RequestBuffer *RequestBuffer `json:"requestBuffer,omitempty"`
-	// Telemetry configures the telemetry settings for the backend or backend.
+	// Telemetry configures the telemetry settings for the policy target (Gateway or xRoute).
 	// This will override the telemetry settings in the EnvoyProxy resource.
 	//
-	// +notImplementedHide
 	// +optional
 	Telemetry *BackendTelemetry `json:"telemetry,omitempty"`
 }
 
 type BackendTelemetry struct {
-	// Tracing configures the tracing settings for the backend.
+	// Tracing configures the tracing settings for the backend or HTTPRoute.
 	//
 	// +optional
 	Tracing *Tracing `json:"tracing,omitempty"`

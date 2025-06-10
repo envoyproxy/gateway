@@ -168,6 +168,7 @@ infraIR:
           gateway.envoyproxy.io/owning-gateway-name: gateway-btls
           gateway.envoyproxy.io/owning-gateway-namespace: envoy-gateway
       name: envoy-gateway/gateway-btls
+      namespace: envoy-gateway-system
 xdsIR:
   envoy-gateway/gateway-btls:
     accessLog:
@@ -190,9 +191,22 @@ xdsIR:
       port: 10080
       routes:
       - destination:
+          metadata:
+            kind: HTTPRoute
+            name: httproute-btls-1
+            namespace: envoy-gateway
           name: httproute/envoy-gateway/httproute-btls-1/rule/0
           settings:
-          - name: httproute/envoy-gateway/httproute-btls-1/rule/0/backend/0
+          - addressType: IP
+            endpoints:
+            - host: 10.244.0.11
+              port: 8080
+            metadata:
+              kind: Service
+              name: http-backend
+              namespace: envoy-gateway
+              sectionName: "8080"
+            name: httproute/envoy-gateway/httproute-btls-1/rule/0/backend/0
             protocol: HTTP
             tls:
               alpnProtocols: null
@@ -201,8 +215,6 @@ xdsIR:
                 name: policy-btls/envoy-gateway-ca
               sni: example.com
             weight: 1
-        directResponse:
-          statusCode: 500
         hostname: '*'
         isHTTP2: false
         metadata:
@@ -215,9 +227,22 @@ xdsIR:
           exact: /exact-1
           name: ""
       - destination:
+          metadata:
+            kind: HTTPRoute
+            name: httproute-btls-2
+            namespace: envoy-gateway
           name: httproute/envoy-gateway/httproute-btls-2/rule/0
           settings:
-          - name: httproute/envoy-gateway/httproute-btls-2/rule/0/backend/0
+          - addressType: IP
+            endpoints:
+            - host: 10.244.0.11
+              port: 8081
+            metadata:
+              kind: Service
+              name: http-backend
+              namespace: envoy-gateway
+              sectionName: "8081"
+            name: httproute/envoy-gateway/httproute-btls-2/rule/0/backend/0
             protocol: HTTP
             tls:
               alpnProtocols: null
@@ -226,8 +251,6 @@ xdsIR:
                 name: policy-btls/envoy-gateway-ca
               sni: example.com
             weight: 1
-        directResponse:
-          statusCode: 500
         hostname: '*'
         isHTTP2: false
         metadata:

@@ -56,7 +56,7 @@
         values:
         - key: k8s.namespace.name
           value:
-            stringValue: '%ENVIRONMENT(ENVOY_GATEWAY_NAMESPACE)%'
+            stringValue: '%ENVIRONMENT(ENVOY_POD_NAMESPACE)%'
         - key: k8s.pod.name
           value:
             stringValue: '%ENVIRONMENT(ENVOY_POD_NAME)%'
@@ -129,7 +129,7 @@
               values:
               - key: k8s.namespace.name
                 value:
-                  stringValue: '%ENVIRONMENT(ENVOY_GATEWAY_NAMESPACE)%'
+                  stringValue: '%ENVIRONMENT(ENVOY_POD_NAMESPACE)%'
               - key: k8s.pod.name
                 value:
                   stringValue: '%ENVIRONMENT(ENVOY_POD_NAME)%'

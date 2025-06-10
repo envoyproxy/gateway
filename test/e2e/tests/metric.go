@@ -15,6 +15,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
 	httputils "sigs.k8s.io/gateway-api/conformance/utils/http"
@@ -23,10 +24,11 @@ import (
 	"sigs.k8s.io/gateway-api/conformance/utils/tlog"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/test/utils/prometheus"
 )
 
 func init() {
-	ConformanceTests = append(ConformanceTests, MetricTest, MetricCompressorTest)
+	ConformanceTests = append(ConformanceTests, MetricTest, MetricWorkqueueAndRestclientTest, MetricCompressorTest)
 }
 
 var MetricTest = suite.ConformanceTest{
@@ -55,12 +57,15 @@ var MetricTest = suite.ConformanceTest{
 			// let's check the metric
 			if err := wait.PollUntilContextTimeout(context.TODO(), time.Second, time.Minute, true,
 				func(_ context.Context) (done bool, err error) {
-					if err := ScrapeMetrics(t, suite.Client, types.NamespacedName{
-						Namespace: "envoy-gateway-system",
-						Name:      "same-namespace-gw-metrics",
-					}, 19001, "/stats/prometheus"); err != nil {
+					pql := fmt.Sprintf(`envoy_cluster_default_total_match_count{app_kubernetes_io_component="proxy", app_kubernetes_io_managed_by="envoy-gateway", app_kubernetes_io_name="envoy", envoy_cluster_name="xds_cluster", gateway_envoyproxy_io_owning_gateway_name="%s"}`, "same-namespace")
+					v, err := prometheus.QueryPrometheus(suite.Client, pql)
+					if err != nil {
 						tlog.Logf(t, "failed to get metric: %v", err)
 						return false, nil
+					}
+					if v != nil {
+						tlog.Logf(t, "got expected value: %v", v)
+						return true, nil
 					}
 					return true, nil
 				}); err != nil {
@@ -95,6 +100,43 @@ var MetricTest = suite.ConformanceTest{
 				}); err != nil {
 				t.Errorf("failed to scrape metrics: %v", err)
 			}
+		})
+	},
+}
+
+var MetricWorkqueueAndRestclientTest = suite.ConformanceTest{
+	ShortName:   "MetricWorkqueueAndRestclientTest",
+	Description: "Ensure workqueue and restclient metrics are exposed",
+	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
+		ctx := context.Background()
+		promClient, err := prometheus.NewClient(suite.Client,
+			types.NamespacedName{Name: "prometheus", Namespace: "monitoring"},
+		)
+		require.NoError(t, err)
+
+		verifyMetrics := func(t *testing.T, metricQuery, metricName string) {
+			httputils.AwaitConvergence(
+				t,
+				suite.TimeoutConfig.RequiredConsecutiveSuccesses,
+				suite.TimeoutConfig.MaxTimeToConsistency,
+				func(_ time.Duration) bool {
+					v, err := promClient.QuerySum(ctx, metricQuery)
+					if err != nil {
+						tlog.Logf(t, "failed to get %s metrics: %v", metricName, err)
+						return false
+					}
+					tlog.Logf(t, "%s metrics query count: %v", metricName, v)
+					return true
+				},
+			)
+		}
+
+		t.Run("verify workqueue metrics", func(t *testing.T) {
+			verifyMetrics(t, `workqueue_adds_total{namespace="envoy-gateway-system"}`, "workqueue")
+		})
+
+		t.Run("verify restclient metrics", func(t *testing.T) {
+			verifyMetrics(t, `rest_client_request_duration_seconds_sum{namespace="envoy-gateway-system"}`, "restclient")
 		})
 	},
 }
@@ -136,25 +178,8 @@ func runMetricCompressorTest(t *testing.T, suite *suite.ConformanceTestSuite, ns
 	}
 	httputils.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
 
-	// make sure compression work as expected
-	statsNN := types.NamespacedName{Namespace: "envoy-gateway-system", Name: fmt.Sprintf("%s-gtw-metrics", compressor)}
-	var statsHost string
-	if err := wait.PollUntilContextTimeout(context.TODO(), time.Second, time.Minute, true, func(_ context.Context) (done bool, err error) {
-		addr, err := ServiceHost(suite.Client, statsNN, 19001)
-		if err != nil {
-			tlog.Logf(t, "failed to get service host %s: %v", statsNN, err)
-			return false, nil
-		}
-		if addr != "" {
-			statsHost = addr
-			return true, nil
-		}
-		return false, nil
-	}); err != nil {
-		t.Errorf("failed to get service host %s: %v", statsNN, err)
-		return
-	}
-
+	// stats exposed at port 19001
+	statsHost := strings.Replace(gwAddr, ":80", ":19001", 1)
 	statsAddr := fmt.Sprintf("http://%s/stats/prometheus", statsHost)
 	tlog.Logf(t, "check stats from %s", statsAddr)
 

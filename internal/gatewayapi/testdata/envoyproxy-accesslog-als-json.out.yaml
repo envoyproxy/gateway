@@ -144,6 +144,7 @@ infraIR:
           gateway.envoyproxy.io/owning-gateway-name: gateway-1
           gateway.envoyproxy.io/owning-gateway-namespace: envoy-gateway
       name: envoy-gateway/gateway-1
+      namespace: envoy-gateway-system
 xdsIR:
   envoy-gateway/gateway-1:
     accessLog:
@@ -152,12 +153,21 @@ xdsIR:
           attr1: val1
           attr2: val2
         destination:
+          metadata:
+            kind: EnvoyProxy
+            name: test
+            namespace: envoy-gateway-system
           name: accesslog_als_0_0
           settings:
           - addressType: IP
             endpoints:
             - host: 10.240.0.10
               port: 9090
+            metadata:
+              kind: Service
+              name: envoy-als
+              namespace: monitoring
+              sectionName: "9000"
             name: accesslog_als_0_0/backend/-1
             protocol: GRPC
         http:
@@ -173,12 +183,21 @@ xdsIR:
           attr1: val1
           attr2: val2
         destination:
+          metadata:
+            kind: EnvoyProxy
+            name: test
+            namespace: envoy-gateway-system
           name: accesslog_als_0_1
           settings:
           - addressType: IP
             endpoints:
             - host: 10.240.0.10
               port: 9090
+            metadata:
+              kind: Service
+              name: envoy-als
+              namespace: monitoring
+              sectionName: "9000"
             name: accesslog_als_0_1/backend/-1
             protocol: GRPC
         name: envoy-gateway-system/test

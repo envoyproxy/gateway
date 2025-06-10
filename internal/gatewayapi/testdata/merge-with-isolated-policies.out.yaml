@@ -248,6 +248,7 @@ infraIR:
         labels:
           gateway.envoyproxy.io/owning-gatewayclass: envoy-gateway-class
       name: envoy-gateway-class
+      namespace: envoy-gateway-system
 securityPolicies:
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: SecurityPolicy
@@ -309,12 +310,20 @@ xdsIR:
       port: 10080
       routes:
       - destination:
+          metadata:
+            kind: HTTPRoute
+            name: httproute-1
+            namespace: default
           name: httproute/default/httproute-1/rule/0
           settings:
           - addressType: IP
             endpoints:
             - host: 7.7.7.7
               port: 8080
+            metadata:
+              name: service-1
+              namespace: default
+              sectionName: "8080"
             name: httproute/default/httproute-1/rule/0/backend/0
             protocol: HTTP
             weight: 1
@@ -346,7 +355,6 @@ xdsIR:
             - x-header-8
             maxAge: 33m20s
         traffic:
-          name: default/policy-for-gateway
           tcpKeepalive:
             idleTime: 1200
             interval: 60
@@ -367,12 +375,20 @@ xdsIR:
       port: 8888
       routes:
       - destination:
+          metadata:
+            kind: HTTPRoute
+            name: httproute-2
+            namespace: default
           name: httproute/default/httproute-2/rule/0
           settings:
           - addressType: IP
             endpoints:
             - host: 7.7.7.7
               port: 8080
+            metadata:
+              name: service-2
+              namespace: default
+              sectionName: "8080"
             name: httproute/default/httproute-2/rule/0/backend/0
             protocol: HTTP
             weight: 1

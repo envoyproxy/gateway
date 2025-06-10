@@ -56,7 +56,7 @@ type httpFilter interface {
 	patchHCM(mgr *hcmv3.HttpConnectionManager, irListener *ir.HTTPListener) error
 
 	// patchRoute patches the provide Route with a filter's Route level configuration.
-	patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute) error
+	patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute, httpListener *ir.HTTPListener) error
 
 	// patchResources adds all the other needed resources referenced by this
 	// filter to the resource version table.
@@ -116,8 +116,10 @@ func newOrderedHTTPFilter(filter *hcmv3.HttpFilter) *OrderedHTTPFilter {
 		order = 7
 	case isFilterType(filter, egv1a1.EnvoyFilterSessionPersistence):
 		order = 8
+	case isFilterType(filter, egv1a1.EnvoyFilterBuffer):
+		order = 9
 	case isFilterType(filter, egv1a1.EnvoyFilterLua):
-		order = 9 + mustGetFilterIndex(filter.Name)
+		order = 10 + mustGetFilterIndex(filter.Name)
 	case isFilterType(filter, egv1a1.EnvoyFilterExtProc):
 		order = 100 + mustGetFilterIndex(filter.Name)
 	case isFilterType(filter, egv1a1.EnvoyFilterWasm):
@@ -294,12 +296,9 @@ func (t *Translator) patchHCMWithFilters(
 
 // patchRouteWithPerRouteConfig appends per-route filter configuration to the
 // provided route.
-func patchRouteWithPerRouteConfig(
-	route *routev3.Route,
-	irRoute *ir.HTTPRoute,
-) error {
+func patchRouteWithPerRouteConfig(route *routev3.Route, irRoute *ir.HTTPRoute, httpListener *ir.HTTPListener) error {
 	for _, filter := range httpFilters {
-		if err := filter.patchRoute(route, irRoute); err != nil {
+		if err := filter.patchRoute(route, irRoute, httpListener); err != nil {
 			return err
 		}
 	}

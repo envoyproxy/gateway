@@ -225,7 +225,8 @@ httpRoutes:
         status: "True"
         type: Accepted
       - lastTransitionTime: null
-        message: Service default/service-5 not found
+        message: 'Failed to process route rule 0 backendRef 0: service default/service-5
+          not found.'
         reason: BackendNotFound
         status: "False"
         type: ResolvedRefs
@@ -250,6 +251,7 @@ infraIR:
           gateway.envoyproxy.io/owning-gateway-name: gateway-1
           gateway.envoyproxy.io/owning-gateway-namespace: default
       name: default/gateway-1
+      namespace: envoy-gateway-system
 securityPolicies:
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: SecurityPolicy
@@ -378,12 +380,20 @@ xdsIR:
       port: 10080
       routes:
       - destination:
+          metadata:
+            kind: HTTPRoute
+            name: httproute-1
+            namespace: default
           name: httproute/default/httproute-1/rule/0
           settings:
           - addressType: IP
             endpoints:
             - host: 7.7.7.7
               port: 8080
+            metadata:
+              name: service-1
+              namespace: default
+              sectionName: "8080"
             name: httproute/default/httproute-1/rule/0/backend/0
             protocol: HTTP
             weight: 1
@@ -404,12 +414,20 @@ xdsIR:
             grpc:
               authority: primary.foo.com:3000
               destination:
+                metadata:
+                  kind: SecurityPolicy
+                  name: policy-for-http-route-1
+                  namespace: default
                 name: securitypolicy/default/policy-for-http-route-1/extauth/0
                 settings:
                 - addressType: FQDN
                   endpoints:
                   - host: primary.foo.com
                     port: 3000
+                  metadata:
+                    kind: Backend
+                    name: backend-fqdn
+                    namespace: default
                   name: securitypolicy/default/policy-for-http-route-1/extauth/0/backend/0
                   protocol: GRPC
                   weight: 1
@@ -418,12 +436,20 @@ xdsIR:
             - header2
             name: securitypolicy/default/policy-for-http-route-1
       - destination:
+          metadata:
+            kind: HTTPRoute
+            name: httproute-1
+            namespace: default
           name: httproute/default/httproute-1/rule/1
           settings:
           - addressType: IP
             endpoints:
             - host: 7.7.7.7
               port: 8080
+            metadata:
+              name: service-2
+              namespace: default
+              sectionName: "8080"
             name: httproute/default/httproute-1/rule/1/backend/0
             protocol: HTTP
             weight: 1
@@ -444,12 +470,20 @@ xdsIR:
             grpc:
               authority: primary.foo.com:3000
               destination:
+                metadata:
+                  kind: SecurityPolicy
+                  name: policy-for-http-route-1
+                  namespace: default
                 name: securitypolicy/default/policy-for-http-route-1/extauth/0
                 settings:
                 - addressType: FQDN
                   endpoints:
                   - host: primary.foo.com
                     port: 3000
+                  metadata:
+                    kind: Backend
+                    name: backend-fqdn
+                    namespace: default
                   name: securitypolicy/default/policy-for-http-route-1/extauth/0/backend/0
                   protocol: GRPC
                   weight: 1
@@ -458,12 +492,20 @@ xdsIR:
             - header2
             name: securitypolicy/default/policy-for-http-route-1
       - destination:
+          metadata:
+            kind: HTTPRoute
+            name: httproute-2
+            namespace: default
           name: httproute/default/httproute-2/rule/0
           settings:
           - addressType: IP
             endpoints:
             - host: 7.7.7.7
               port: 8080
+            metadata:
+              name: service-3
+              namespace: default
+              sectionName: "8080"
             name: httproute/default/httproute-2/rule/0/backend/0
             protocol: HTTP
             weight: 1
@@ -479,12 +521,20 @@ xdsIR:
           name: ""
           prefix: /bar
       - destination:
+          metadata:
+            kind: HTTPRoute
+            name: httproute-3
+            namespace: default
           name: httproute/default/httproute-3/rule/0
           settings:
           - addressType: IP
             endpoints:
             - host: 7.7.7.7
               port: 8080
+            metadata:
+              name: service-4
+              namespace: default
+              sectionName: "8080"
             name: httproute/default/httproute-3/rule/0/backend/0
             protocol: HTTP
             weight: 1
@@ -505,12 +555,20 @@ xdsIR:
             grpc:
               authority: service-2.default:8080
               destination:
+                metadata:
+                  kind: SecurityPolicy
+                  name: policy-for-http-route-3--grpc-backendref
+                  namespace: default
                 name: securitypolicy/default/policy-for-http-route-3--grpc-backendref/extauth/0
                 settings:
                 - addressType: IP
                   endpoints:
                   - host: 7.7.7.7
                     port: 8080
+                  metadata:
+                    name: service-2
+                    namespace: default
+                    sectionName: "8080"
                   name: securitypolicy/default/policy-for-http-route-3--grpc-backendref/extauth/0/backend/0
                   protocol: GRPC
                   weight: 1
@@ -536,6 +594,10 @@ xdsIR:
             http:
               authority: backend-uds.default
               destination:
+                metadata:
+                  kind: SecurityPolicy
+                  name: policy-for-http-route-3-http-backendref
+                  namespace: default
                 name: securitypolicy/default/policy-for-http-route-3-http-backendref/extauth/0
                 settings:
                 - addressType: IP
@@ -543,6 +605,10 @@ xdsIR:
                   - host: ""
                     path: /var/run/uds.sock
                     port: 0
+                  metadata:
+                    kind: Backend
+                    name: backend-uds
+                    namespace: default
                   name: securitypolicy/default/policy-for-http-route-3-http-backendref/extauth/0/backend/0
                   protocol: HTTP
                   weight: 1

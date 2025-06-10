@@ -6,11 +6,13 @@
 package gatewayapi
 
 import (
+	"errors"
 	"sort"
 
 	"golang.org/x/exp/maps"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/ptr"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a3 "sigs.k8s.io/gateway-api/apis/v1alpha3"
@@ -32,6 +34,8 @@ const (
 	// OwningGatewayNameLabel is the owner reference label used for managed infra.
 	// The value should be the name of the accepted Envoy Gateway.
 	OwningGatewayNameLabel = "gateway.envoyproxy.io/owning-gateway-name"
+
+	GatewayNameLabel = "gateway.networking.k8s.io/gateway-name"
 
 	// minEphemeralPort is the first port in the ephemeral port range.
 	minEphemeralPort = 1024
@@ -75,6 +79,9 @@ type Translator struct {
 	// should be merged under the parent GatewayClass.
 	MergeGateways bool
 
+	// GatewayNamespaceMode is true if controller uses gateway namespace mode for infra deployments.
+	GatewayNamespaceMode bool
+
 	// EnvoyPatchPolicyEnabled when the EnvoyPatchPolicy
 	// feature is enabled.
 	EnvoyPatchPolicyEnabled bool
@@ -87,8 +94,8 @@ type Translator struct {
 	// store referenced resources in the IR for later use.
 	ExtensionGroupKinds []schema.GroupKind
 
-	// Namespace is the namespace that Envoy Gateway runs in.
-	Namespace string
+	// ControllerNamespace is the namespace that Envoy Gateway controller runs in.
+	ControllerNamespace string
 
 	// WasmCache is the cache for Wasm modules.
 	WasmCache wasm.Cache
@@ -156,6 +163,8 @@ func newTranslateResult(gateways []*GatewayContext,
 }
 
 func (t *Translator) Translate(resources *resource.Resources) (*TranslateResult, error) {
+	var errs error
+
 	// Get Gateways belonging to our GatewayClass.
 	acceptedGateways, failedGateways := t.GetRelevantGateways(resources)
 
@@ -227,8 +236,16 @@ func (t *Translator) Translate(resources *resource.Resources) (*TranslateResult,
 	envoyExtensionPolicies := t.ProcessEnvoyExtensionPolicies(
 		resources.EnvoyExtensionPolicies, acceptedGateways, routes, resources, xdsIR)
 
-	extServerPolicies, translateErrs := t.ProcessExtensionServerPolicies(
+	extServerPolicies, err := t.ProcessExtensionServerPolicies(
 		resources.ExtensionServerPolicies, acceptedGateways, xdsIR)
+	if err != nil {
+		errs = errors.Join(errs, err)
+	}
+
+	// Process global resources that are not tied to a specific listener or route
+	if err := t.ProcessGlobalResources(resources, xdsIR); err != nil {
+		errs = errors.Join(errs, err)
+	}
 
 	// Sort xdsIR based on the Gateway API spec
 	sortXdsIRMap(xdsIR)
@@ -249,7 +266,7 @@ func (t *Translator) Translate(resources *resource.Resources) (*TranslateResult,
 	return newTranslateResult(allGateways, httpRoutes, grpcRoutes, tlsRoutes,
 		tcpRoutes, udpRoutes, clientTrafficPolicies, backendTrafficPolicies,
 		securityPolicies, resources.BackendTLSPolicies, envoyExtensionPolicies,
-		extServerPolicies, backends, xdsIR, infraIR), translateErrs
+		extServerPolicies, backends, xdsIR, infraIR), errs
 }
 
 // GetRelevantGateways returns GatewayContexts, containing a copy of the original
@@ -284,7 +301,6 @@ func (t *Translator) InitIRs(gateways []*GatewayContext) (map[string]*ir.Xds, ma
 	xdsIR := make(resource.XdsIRMap)
 	infraIR := make(resource.InfraIRMap)
 
-	var irKey string
 	for _, gateway := range gateways {
 		gwXdsIR := &ir.Xds{}
 		gwInfraIR := ir.NewInfra()
@@ -292,25 +308,38 @@ func (t *Translator) InitIRs(gateways []*GatewayContext) (map[string]*ir.Xds, ma
 		annotations := infrastructureAnnotations(gateway.Gateway)
 		gwInfraIR.Proxy.GetProxyMetadata().Annotations = annotations
 
+		irKey := t.IRKey(types.NamespacedName{Namespace: gateway.Namespace, Name: gateway.Name})
 		if t.MergeGateways {
-			irKey = string(t.GatewayClassName)
-
 			maps.Copy(labels, GatewayClassOwnerLabel(string(t.GatewayClassName)))
 			gwInfraIR.Proxy.GetProxyMetadata().Labels = labels
 		} else {
-			irKey = irStringKey(gateway.Gateway.Namespace, gateway.Gateway.Name)
-
 			maps.Copy(labels, GatewayOwnerLabels(gateway.Namespace, gateway.Name))
 			gwInfraIR.Proxy.GetProxyMetadata().Labels = labels
 		}
 
 		gwInfraIR.Proxy.Name = irKey
+		gwInfraIR.Proxy.Namespace = t.ControllerNamespace
+		if t.GatewayNamespaceMode {
+			gwInfraIR.Proxy.Name = gateway.Name
+			gwInfraIR.Proxy.Namespace = gateway.Namespace
+			gwInfraIR.Proxy.GetProxyMetadata().OwnerReference = &ir.ResourceMetadata{
+				Kind: resource.KindGateway,
+				Name: gateway.Name,
+			}
+		}
 		// save the IR references in the map before the translation starts
 		xdsIR[irKey] = gwXdsIR
 		infraIR[irKey] = gwInfraIR
 	}
 
 	return xdsIR, infraIR
+}
+
+func (t *Translator) IRKey(gatewayNN types.NamespacedName) string {
+	if t.MergeGateways {
+		return string(t.GatewayClassName)
+	}
+	return irStringKey(gatewayNN.Namespace, gatewayNN.Name)
 }
 
 // IsEnvoyServiceRouting returns true if EnvoyProxy.Spec.RoutingType == ServiceRoutingType

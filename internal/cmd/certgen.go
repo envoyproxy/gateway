@@ -6,6 +6,7 @@
 package cmd
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -13,6 +14,9 @@ import (
 	"path"
 
 	"github.com/spf13/cobra"
+	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	clicfg "sigs.k8s.io/controller-runtime/pkg/client/config"
 
@@ -26,8 +30,13 @@ import (
 // cfgPath is the path to the EnvoyGateway configuration file.
 var overwriteControlPlaneCerts bool
 
+var disableTopologyInjector bool
+
 // TODO: make this path configurable or use server config directly.
-const defaultLocalCertPath = "/tmp/envoy-gateway/certs"
+const (
+	defaultLocalCertPath      = "/tmp/envoy-gateway/certs"
+	topologyWebhookNamePrefix = "envoy-gateway-topology-injector"
+)
 
 // GetCertGenCommand returns the certGen cobra command to be executed.
 func GetCertGenCommand() *cobra.Command {
@@ -45,6 +54,8 @@ func GetCertGenCommand() *cobra.Command {
 		"Generate all the certificates locally.")
 	cmd.PersistentFlags().BoolVarP(&overwriteControlPlaneCerts, "overwrite", "o", false,
 		"Updates the secrets containing the control plane certs.")
+	cmd.PersistentFlags().BoolVar(&disableTopologyInjector, "disable-topology-injector", false,
+		"Disables patching caBundle for injector MutatingWebhookConfiguration.")
 	return cmd
 }
 
@@ -71,6 +82,9 @@ func certGen(ctx context.Context, logOut io.Writer, local bool) error {
 		if err = outputCertsForKubernetes(ctx, cli, cfg, overwriteControlPlaneCerts, certs); err != nil {
 			return fmt.Errorf("failed to output certificates: %w", err)
 		}
+		if err = patchTopologyInjectorWebhook(ctx, cli, cfg); err != nil {
+			return fmt.Errorf("failed to patch webhook: %w", err)
+		}
 	} else {
 		log.Info("generated certificates", "path", defaultLocalCertPath)
 		if err = outputCertsForLocal(defaultLocalCertPath, certs); err != nil {
@@ -85,7 +99,7 @@ func certGen(ctx context.Context, logOut io.Writer, local bool) error {
 func outputCertsForKubernetes(ctx context.Context, cli client.Client, cfg *config.Server,
 	updateSecrets bool, certs *crypto.Certificates,
 ) error {
-	secrets, err := kubernetes.CreateOrUpdateSecrets(ctx, cli, kubernetes.CertsToSecret(cfg.Namespace, certs), updateSecrets)
+	secrets, err := kubernetes.CreateOrUpdateSecrets(ctx, cli, kubernetes.CertsToSecret(cfg.ControllerNamespace, certs), updateSecrets)
 	log := cfg.Logger
 
 	if err != nil {
@@ -101,6 +115,39 @@ func outputCertsForKubernetes(ctx context.Context, cli client.Client, cfg *confi
 		log.Info("created secret", "namespace", s.Namespace, "name", s.Name)
 	}
 
+	return nil
+}
+
+func patchTopologyInjectorWebhook(ctx context.Context, cli client.Client, cfg *config.Server) error {
+	if disableTopologyInjector {
+		return nil
+	}
+
+	webhookConfigName := fmt.Sprintf("%s.%s", topologyWebhookNamePrefix, cfg.ControllerNamespace)
+	webhookCfg := &admissionregistrationv1.MutatingWebhookConfiguration{}
+	if err := cli.Get(ctx, client.ObjectKey{Name: webhookConfigName}, webhookCfg); err != nil {
+		return fmt.Errorf("failed to get mutating webhook configuration: %w", err)
+	}
+
+	secretName := types.NamespacedName{Name: "envoy-gateway", Namespace: cfg.ControllerNamespace}
+	current := &corev1.Secret{}
+	if err := cli.Get(ctx, secretName, current); err != nil {
+		return fmt.Errorf("failed to get secret %s/%s: %w", current.Namespace, current.Name, err)
+	}
+
+	var updated bool
+	desiredBundle := current.Data["ca.crt"]
+	for i, webhook := range webhookCfg.Webhooks {
+		if !bytes.Equal(desiredBundle, webhook.ClientConfig.CABundle) {
+			webhookCfg.Webhooks[i].ClientConfig.CABundle = desiredBundle
+			updated = true
+		}
+	}
+	if updated {
+		if err := cli.Update(ctx, webhookCfg); err != nil {
+			return fmt.Errorf("failed to update mutating webhook configuration: %w", err)
+		}
+	}
 	return nil
 }
 

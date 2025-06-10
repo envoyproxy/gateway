@@ -148,11 +148,16 @@ infraIR:
           gateway.envoyproxy.io/owning-gateway-name: gateway-1
           gateway.envoyproxy.io/owning-gateway-namespace: envoy-gateway
       name: envoy-gateway/gateway-1
+      namespace: envoy-gateway-system
 xdsIR:
   envoy-gateway/gateway-1:
     accessLog:
       openTelemetry:
       - destination:
+          metadata:
+            kind: EnvoyProxy
+            name: als-backend
+            namespace: envoy-gateway-system
           name: accesslog_otel_0_0
           settings:
           - addressType: IP
@@ -160,18 +165,30 @@ xdsIR:
             - host: ""
               path: /var/run/backend.sock
               port: 0
+            metadata:
+              kind: Backend
+              name: backend-uds
+              namespace: envoy-gateway
             name: accesslog_otel_0_0/backend/-1
             protocol: TCP
           - addressType: FQDN
             endpoints:
             - host: primary.foo.com
               port: 3000
+            metadata:
+              kind: Backend
+              name: backend-fqdn
+              namespace: envoy-gateway
             name: accesslog_otel_0_0/backend/-1
             protocol: HTTP2
           - addressType: IP
             endpoints:
             - host: 1.1.1.1
               port: 3001
+            metadata:
+              kind: Backend
+              name: backend-ip
+              namespace: envoy-gateway
             name: accesslog_otel_0_0/backend/-1
             protocol: TCP
         resources:

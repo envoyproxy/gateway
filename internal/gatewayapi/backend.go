@@ -39,27 +39,67 @@ func (t *Translator) ProcessBackends(backends []*egv1a1.Backend) []*egv1a1.Backe
 	return res
 }
 
-func validateBackend(backend *egv1a1.Backend) error {
+func validateBackend(backend *egv1a1.Backend) status.Error {
+	if backend.Spec.Type != nil &&
+		*backend.Spec.Type == egv1a1.BackendTypeDynamicResolver {
+		if len(backend.Spec.Endpoints) > 0 {
+			return status.NewRouteStatusError(
+				fmt.Errorf("DynamicResolver type cannot have endpoints specified"),
+				status.RouteReasonInvalidBackendRef,
+			)
+		}
+	} else {
+		if backend.Spec.TLS != nil {
+			if backend.Spec.TLS.WellKnownCACertificates != nil {
+				return status.NewRouteStatusError(
+					fmt.Errorf("TLS.WellKnownCACertificates settings can only be specified for DynamicResolver backends"),
+					status.RouteReasonInvalidBackendRef,
+				)
+			}
+			if len(backend.Spec.TLS.CACertificateRefs) > 0 {
+				return status.NewRouteStatusError(
+					fmt.Errorf("TLS.CACertificateRefs settings can only be specified for DynamicResolver backends"),
+					status.RouteReasonInvalidBackendRef,
+				)
+			}
+		}
+	}
+
 	for _, ep := range backend.Spec.Endpoints {
 		if ep.FQDN != nil {
 			hostname := ep.FQDN.Hostname
 			// must be a valid hostname
 			if errs := validation.IsDNS1123Subdomain(hostname); errs != nil {
-				return fmt.Errorf("hostname %s is not a valid FQDN", hostname)
+				return status.NewRouteStatusError(
+					fmt.Errorf("hostname %s is not a valid FQDN", hostname),
+					status.RouteReasonInvalidAddress,
+				)
 			}
 			if len(strings.Split(hostname, ".")) < 2 {
-				return fmt.Errorf("hostname %s should be a domain with at least two segments separated by dots", hostname)
+				return status.NewRouteStatusError(
+					fmt.Errorf("hostname %s should be a domain with at least two segments separated by dots", hostname),
+					status.RouteReasonInvalidAddress,
+				)
 			}
 			// IP addresses are not allowed so parsing the hostname as an address needs to fail
 			if _, err := netip.ParseAddr(hostname); err == nil {
-				return fmt.Errorf("hostname %s is an IP address", hostname)
+				return status.NewRouteStatusError(
+					fmt.Errorf("hostname %s is an IP address", hostname),
+					status.RouteReasonInvalidAddress,
+				)
 			}
 		} else if ep.IP != nil {
 			ip, err := netip.ParseAddr(ep.IP.Address)
 			if err != nil {
-				return fmt.Errorf("IP address %s is invalid", ep.IP.Address)
+				return status.NewRouteStatusError(
+					fmt.Errorf("IP address %s is invalid", ep.IP.Address),
+					status.RouteReasonInvalidAddress,
+				)
 			} else if ip.IsLoopback() {
-				return fmt.Errorf("IP address %s in the loopback range is not supported", ep.IP.Address)
+				return status.NewRouteStatusError(
+					fmt.Errorf("IP address %s in the loopback range is not supported", ep.IP.Address),
+					status.RouteReasonInvalidAddress,
+				)
 			}
 		}
 	}

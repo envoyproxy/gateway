@@ -67,9 +67,9 @@ httpRoutes:
         status: "True"
         type: Accepted
       - lastTransitionTime: null
-        message: Service envoy-gateway/service-1 not found
-        reason: BackendNotFound
-        status: "False"
+        message: Resolved all the Object references for the Route
+        reason: ResolvedRefs
+        status: "True"
         type: ResolvedRefs
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
@@ -266,17 +266,27 @@ infraIR:
           gateway.envoyproxy.io/owning-gateway-name: gateway-1
           gateway.envoyproxy.io/owning-gateway-namespace: envoy-gateway
       name: envoy-gateway/gateway-1
+      namespace: envoy-gateway-system
 xdsIR:
   envoy-gateway/gateway-1:
     accessLog:
       als:
       - destination:
+          metadata:
+            kind: EnvoyProxy
+            name: test
+            namespace: envoy-gateway-system
           name: accesslog_als_2_1
           settings:
           - addressType: IP
             endpoints:
             - host: 10.240.0.10
               port: 9090
+            metadata:
+              kind: Service
+              name: envoy-als
+              namespace: monitoring
+              sectionName: "9000"
             name: accesslog_als_2_1/backend/-1
             protocol: GRPC
         http:
@@ -292,12 +302,21 @@ xdsIR:
           this is a route log
         type: HTTP
       - destination:
+          metadata:
+            kind: EnvoyProxy
+            name: test
+            namespace: envoy-gateway-system
           name: accesslog_als_2_2
           settings:
           - addressType: IP
             endpoints:
             - host: 10.240.0.10
               port: 9090
+            metadata:
+              kind: Service
+              name: envoy-als
+              namespace: monitoring
+              sectionName: "9000"
             name: accesslog_als_2_2/backend/-1
             protocol: GRPC
         logType: Route
@@ -306,12 +325,21 @@ xdsIR:
           this is a route log
         type: TCP
       - destination:
+          metadata:
+            kind: EnvoyProxy
+            name: test
+            namespace: envoy-gateway-system
           name: accesslog_als_3_1
           settings:
           - addressType: IP
             endpoints:
             - host: 10.240.0.10
               port: 9090
+            metadata:
+              kind: Service
+              name: envoy-als
+              namespace: monitoring
+              sectionName: "9000"
             name: accesslog_als_3_1/backend/-1
             protocol: GRPC
         http:
@@ -327,12 +355,21 @@ xdsIR:
           this is a listener log
         type: HTTP
       - destination:
+          metadata:
+            kind: EnvoyProxy
+            name: test
+            namespace: envoy-gateway-system
           name: accesslog_als_3_2
           settings:
           - addressType: IP
             endpoints:
             - host: 10.240.0.10
               port: 9090
+            metadata:
+              kind: Service
+              name: envoy-als
+              namespace: monitoring
+              sectionName: "9000"
             name: accesslog_als_3_2/backend/-1
             protocol: GRPC
         logType: Listener
@@ -341,12 +378,21 @@ xdsIR:
           this is a listener log
         type: TCP
       - destination:
+          metadata:
+            kind: EnvoyProxy
+            name: test
+            namespace: envoy-gateway-system
           name: accesslog_als_4_1
           settings:
           - addressType: IP
             endpoints:
             - host: 10.240.0.10
               port: 9090
+            metadata:
+              kind: Service
+              name: envoy-als
+              namespace: monitoring
+              sectionName: "9000"
             name: accesslog_als_4_1/backend/-1
             protocol: GRPC
         http:
@@ -361,12 +407,21 @@ xdsIR:
           this is a Global log
         type: HTTP
       - destination:
+          metadata:
+            kind: EnvoyProxy
+            name: test
+            namespace: envoy-gateway-system
           name: accesslog_als_4_2
           settings:
           - addressType: IP
             endpoints:
             - host: 10.240.0.10
               port: 9090
+            metadata:
+              kind: Service
+              name: envoy-als
+              namespace: monitoring
+              sectionName: "9000"
             name: accesslog_als_4_2/backend/-1
             protocol: GRPC
         name: envoy-gateway-system/test
@@ -381,6 +436,10 @@ xdsIR:
       openTelemetry:
       - authority: otel-collector.monitoring.svc.cluster.local
         destination:
+          metadata:
+            kind: EnvoyProxy
+            name: test
+            namespace: envoy-gateway-system
           name: accesslog_otel_2_3
           settings:
           - endpoints:
@@ -396,6 +455,10 @@ xdsIR:
           this is a route log
       - authority: otel-collector.monitoring.svc.cluster.local
         destination:
+          metadata:
+            kind: EnvoyProxy
+            name: test
+            namespace: envoy-gateway-system
           name: accesslog_otel_3_3
           settings:
           - endpoints:
@@ -411,6 +474,10 @@ xdsIR:
           this is a listener log
       - authority: otel-collector.monitoring.svc.cluster.local
         destination:
+          metadata:
+            kind: EnvoyProxy
+            name: test
+            namespace: envoy-gateway-system
           name: accesslog_otel_4_3
           settings:
           - endpoints:
@@ -451,8 +518,25 @@ xdsIR:
         mergeSlashes: true
       port: 10080
       routes:
-      - directResponse:
-          statusCode: 500
+      - destination:
+          metadata:
+            kind: HTTPRoute
+            name: httproute-1
+            namespace: envoy-gateway
+          name: httproute/envoy-gateway/httproute-1/rule/0
+          settings:
+          - addressType: IP
+            endpoints:
+            - host: 7.7.7.7
+              port: 8080
+            metadata:
+              kind: Service
+              name: service-1
+              namespace: envoy-gateway
+              sectionName: "8080"
+            name: httproute/envoy-gateway/httproute-1/rule/0/backend/0
+            protocol: HTTP
+            weight: 1
         hostname: '*'
         isHTTP2: false
         metadata:

@@ -24,21 +24,27 @@ import (
 	"sigs.k8s.io/yaml"
 
 	internalconf "github.com/envoyproxy/gateway/internal/gatewayapi/conformance"
+	"github.com/envoyproxy/gateway/test/e2e"
+	ege2etest "github.com/envoyproxy/gateway/test/e2e/tests"
 )
 
 func TestExperimentalConformance(t *testing.T) {
 	flag.Parse()
 	log.SetLogger(zap.New(zap.WriteTo(os.Stderr), zap.UseDevMode(true)))
 
+	internalSuite := internalconf.EnvoyGatewaySuite(ege2etest.IsGatewayNamespaceMode())
+
 	opts := conformance.DefaultOptions(t)
-	opts.SkipTests = internalconf.EnvoyGatewaySuite.SkipTests
-	opts.SupportedFeatures = internalconf.EnvoyGatewaySuite.SupportedFeatures
-	opts.ExemptFeatures = internalconf.EnvoyGatewaySuite.ExemptFeatures
+	opts.SkipTests = internalSuite.SkipTests
+	opts.SupportedFeatures = internalSuite.SupportedFeatures
+	opts.ExemptFeatures = internalSuite.ExemptFeatures
+
 	opts.ConformanceProfiles = sets.New(
 		suite.GatewayHTTPConformanceProfileName,
 		suite.GatewayTLSConformanceProfileName,
 		suite.GatewayGRPCConformanceProfileName,
 	)
+	opts.Hook = e2e.Hook
 
 	t.Logf("Running experimental conformance tests with %s GatewayClass\n cleanup: %t\n debug: %t\n enable all features: %t \n conformance profiles: [%v]",
 		*flags.GatewayClassName, *flags.CleanupBaseResources, *flags.ShowDebug, *flags.EnableAllSupportedFeatures, opts.ConformanceProfiles)
@@ -58,6 +64,7 @@ func TestExperimentalConformance(t *testing.T) {
 		t.Fatalf("error generating conformance profile report: %v", err)
 	}
 
+	// use to trigger the experimental conformance report
 	err = experimentalConformanceReport(t.Logf, *report, *flags.ReportOutput)
 	require.NoError(t, err)
 }

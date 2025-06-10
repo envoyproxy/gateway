@@ -1,5 +1,6 @@
 gateways:
-- kind: Gateway
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: Gateway
   metadata:
     creationTimestamp: null
     name: eg
@@ -39,7 +40,8 @@ gateways:
       - group: gateway.networking.k8s.io
         kind: GRPCRoute
 httpRoutes:
-- kind: HTTPRoute
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
   metadata:
     creationTimestamp: null
     name: backend
@@ -96,6 +98,7 @@ infraIR:
           gateway.envoyproxy.io/owning-gateway-name: eg
           gateway.envoyproxy.io/owning-gateway-namespace: envoy-gateway-system
       name: envoy-gateway-system/eg
+      namespace: ""
 xdsIR:
   envoy-gateway-system/eg:
     accessLog:
@@ -118,11 +121,20 @@ xdsIR:
       port: 10080
       routes:
       - destination:
+          metadata:
+            kind: HTTPRoute
+            name: backend
+            namespace: envoy-gateway-system
           name: httproute/envoy-gateway-system/backend/rule/0
           settings:
           - endpoints:
             - host: 7.7.7.7
               port: 3000
+            metadata:
+              kind: Service
+              name: backend
+              namespace: envoy-gateway-system
+              sectionName: "3000"
             name: httproute/envoy-gateway-system/backend/rule/0/backend/0
             protocol: HTTP
             weight: 1

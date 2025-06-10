@@ -102,7 +102,7 @@ func (r *Runner) startWasmCache(ctx context.Context) {
 		return
 	}
 	cacheOption := wasm.CacheOptions{}
-	if r.Config.EnvoyGateway.Provider.Type == egv1a1.ProviderTypeKubernetes {
+	if r.EnvoyGateway.Provider.Type == egv1a1.ProviderTypeKubernetes {
 		cacheOption.CacheDir = "/var/lib/eg/wasm"
 	} else {
 		h, _ := os.UserHomeDir() // Assume we always get the home directory.
@@ -119,7 +119,7 @@ func (r *Runner) startWasmCache(ctx context.Context) {
 			Salt:      salt,
 			TLSConfig: tlsConfig,
 		},
-		cacheOption, r.Logger)
+		cacheOption, r.ControllerNamespace, r.Logger)
 	r.wasmCache.Start(ctx)
 }
 
@@ -152,12 +152,13 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *re
 			for _, resources := range *val {
 				// Translate and publish IRs.
 				t := &gatewayapi.Translator{
-					GatewayControllerName:     r.Server.EnvoyGateway.Gateway.ControllerName,
+					GatewayControllerName:     r.EnvoyGateway.Gateway.ControllerName,
 					GatewayClassName:          gwapiv1.ObjectName(resources.GatewayClass.Name),
 					GlobalRateLimitEnabled:    r.EnvoyGateway.RateLimit != nil,
 					EnvoyPatchPolicyEnabled:   r.EnvoyGateway.ExtensionAPIs != nil && r.EnvoyGateway.ExtensionAPIs.EnableEnvoyPatchPolicy,
 					BackendEnabled:            r.EnvoyGateway.ExtensionAPIs != nil && r.EnvoyGateway.ExtensionAPIs.EnableBackend,
-					Namespace:                 r.Namespace,
+					ControllerNamespace:       r.ControllerNamespace,
+					GatewayNamespaceMode:      r.EnvoyGateway.GatewayNamespaceMode(),
 					MergeGateways:             gatewayapi.IsMergeGatewaysEnabled(resources),
 					WasmCache:                 r.wasmCache,
 					ListenerPortShiftDisabled: r.EnvoyGateway.Provider != nil && r.EnvoyGateway.Provider.IsRunningOnHost(),
@@ -312,7 +313,7 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *re
 func (r *Runner) loadTLSConfig(ctx context.Context) (tlsConfig *tls.Config, salt []byte, err error) {
 	switch {
 	case r.EnvoyGateway.Provider.IsRunningOnKubernetes():
-		salt, err = hmac(ctx, r.Namespace)
+		salt, err = hmac(ctx, r.ControllerNamespace)
 		if err != nil {
 			return nil, nil, fmt.Errorf("failed to get hmac secret: %w", err)
 		}

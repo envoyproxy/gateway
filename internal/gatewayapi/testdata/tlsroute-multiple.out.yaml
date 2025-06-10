@@ -55,6 +55,7 @@ infraIR:
           gateway.envoyproxy.io/owning-gateway-name: gateway-1
           gateway.envoyproxy.io/owning-gateway-namespace: envoy-gateway
       name: envoy-gateway/gateway-1
+      namespace: envoy-gateway-system
 tlsRoutes:
 - apiVersion: gateway.networking.k8s.io/v1alpha2
   kind: TLSRoute
@@ -138,12 +139,20 @@ xdsIR:
       port: 10091
       routes:
       - destination:
+          metadata:
+            kind: TLSRoute
+            name: tlsroute-1
+            namespace: default
           name: tlsroute/default/tlsroute-1/rule/-1
           settings:
           - addressType: IP
             endpoints:
             - host: 7.7.7.7
               port: 8080
+            metadata:
+              name: service-1
+              namespace: default
+              sectionName: "8080"
             name: tlsroute/default/tlsroute-1/rule/-1/backend/0
             protocol: HTTPS
             weight: 1
@@ -153,12 +162,20 @@ xdsIR:
             snis:
             - foo.com
       - destination:
+          metadata:
+            kind: TLSRoute
+            name: tlsroute-2
+            namespace: default
           name: tlsroute/default/tlsroute-2/rule/-1
           settings:
           - addressType: IP
             endpoints:
             - host: 7.7.7.7
               port: 8080
+            metadata:
+              name: service-1
+              namespace: default
+              sectionName: "8080"
             name: tlsroute/default/tlsroute-2/rule/-1/backend/0
             protocol: HTTPS
             weight: 1

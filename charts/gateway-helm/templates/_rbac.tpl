@@ -9,6 +9,9 @@ All namespaced resources for Envoy Gateway RBAC.
 - {{ include "eg.rbac.namespaced.gateway.envoyproxy.status" . | nindent 2 | trim }}
 - {{ include "eg.rbac.namespaced.gateway.networking" . | nindent 2 | trim }}
 - {{ include "eg.rbac.namespaced.gateway.networking.status" . | nindent 2 | trim }}
+{{- if .Values.topologyInjector.enabled }}
+- {{ include "eg.rbac.namespaced.topologyinjector" . | nindent 2 | trim }}
+{{- end }}
 {{- end }}
 
 {{/*
@@ -35,6 +38,20 @@ resources:
 verbs:
 - get
 - list
+- watch
+{{- end }}
+
+{{- define "eg.rbac.namespaced.topologyinjector" -}}
+apiGroups:
+- ""
+resources:
+- pods
+- pods/binding
+verbs:
+- get
+- list
+- patch
+- update
 - watch
 {{- end }}
 
@@ -174,4 +191,51 @@ resources:
 - gatewayclasses/status
 verbs:
 - update
+{{- end }}
+
+{{- define "eg.rbac.infra.basic" -}}
+- apiGroups:
+  - ""
+  resources:
+  - serviceaccounts
+  - services
+  - configmaps
+  verbs:
+  - create
+  - get
+  - delete
+  - deletecollection
+  - patch
+- apiGroups:
+  - apps
+  resources:
+  - deployments
+  - daemonsets
+  verbs:
+  - create
+  - get
+  - delete
+  - deletecollection
+  - patch
+- apiGroups:
+  - autoscaling
+  - policy
+  resources:
+  - horizontalpodautoscalers
+  - poddisruptionbudgets
+  verbs:
+  - create
+  - get
+  - delete
+  - deletecollection
+  - patch
+{{- end }}
+
+{{- define "eg.rbac.infra.tokenreview" -}}
+- apiGroups:
+  - authentication.k8s.io
+  resources:
+  - tokenreviews
+  verbs:
+  - create
 {{- end }}

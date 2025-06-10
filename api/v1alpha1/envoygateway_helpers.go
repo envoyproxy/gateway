@@ -33,11 +33,11 @@ func DefaultEnvoyGateway() *EnvoyGateway {
 
 // SetEnvoyGatewayDefaults sets default EnvoyGateway configuration parameters.
 func (e *EnvoyGateway) SetEnvoyGatewayDefaults() {
-	if e.TypeMeta.Kind == "" {
-		e.TypeMeta.Kind = KindEnvoyGateway
+	if e.Kind == "" {
+		e.Kind = KindEnvoyGateway
 	}
-	if e.TypeMeta.APIVersion == "" {
-		e.TypeMeta.APIVersion = GroupVersion.String()
+	if e.APIVersion == "" {
+		e.APIVersion = GroupVersion.String()
 	}
 	if e.Provider == nil {
 		e.Provider = DefaultEnvoyGatewayProvider()
@@ -50,6 +50,11 @@ func (e *EnvoyGateway) SetEnvoyGatewayDefaults() {
 	if e.Provider.Kubernetes.LeaderElection == nil {
 		e.Provider.Kubernetes.LeaderElection = DefaultLeaderElection()
 	}
+
+	if e.Provider.Kubernetes.Client == nil {
+		e.Provider.Kubernetes.Client = DefaultKubernetesClient()
+	}
+
 	if e.Gateway == nil {
 		e.Gateway = DefaultGateway()
 	}
@@ -96,6 +101,14 @@ func (e *EnvoyGateway) NamespaceMode() bool {
 		len(e.Provider.Kubernetes.Watch.Namespaces) > 0
 }
 
+// GatewayNamespaceMode returns true if controller uses gateway namespace mode for infra deployments.
+func (e *EnvoyGateway) GatewayNamespaceMode() bool {
+	return e.Provider != nil &&
+		e.Provider.Kubernetes != nil &&
+		e.Provider.Kubernetes.Deploy != nil &&
+		*e.Provider.Kubernetes.Deploy.Type == KubernetesDeployModeTypeGatewayNamespace
+}
+
 // DefaultLeaderElection returns a new LeaderElection with default configuration parameters.
 func DefaultLeaderElection() *LeaderElection {
 	return &LeaderElection{
@@ -103,6 +116,16 @@ func DefaultLeaderElection() *LeaderElection {
 		RetryPeriod:   ptr.To(gwapiv1.Duration("2s")),
 		LeaseDuration: ptr.To(gwapiv1.Duration("15s")),
 		Disable:       ptr.To(false),
+	}
+}
+
+// DefaultKubernetesClient returns a new DefaultKubernetesClient with default parameters.
+func DefaultKubernetesClient() *KubernetesClient {
+	return &KubernetesClient{
+		RateLimit: &KubernetesClientRateLimit{
+			QPS:   ptr.To(DefaultKubernetesClientQPS),
+			Burst: ptr.To(DefaultKubernetesClientBurst),
+		},
 	}
 }
 
@@ -171,6 +194,7 @@ func DefaultEnvoyGatewayProvider() *EnvoyGatewayProvider {
 		Type: ProviderTypeKubernetes,
 		Kubernetes: &EnvoyGatewayKubernetesProvider{
 			LeaderElection: DefaultLeaderElection(),
+			Client:         DefaultKubernetesClient(),
 		},
 	}
 }
@@ -222,11 +246,18 @@ func (r *EnvoyGatewayProvider) GetEnvoyGatewayKubeProvider() *EnvoyGatewayKubern
 		if r.Kubernetes.LeaderElection == nil {
 			r.Kubernetes.LeaderElection = DefaultLeaderElection()
 		}
+		if r.Kubernetes.Client == nil {
+			r.Kubernetes.Client = DefaultKubernetesClient()
+		}
 		return r.Kubernetes
 	}
 
 	if r.Kubernetes.LeaderElection == nil {
 		r.Kubernetes.LeaderElection = DefaultLeaderElection()
+	}
+
+	if r.Kubernetes.Client == nil {
+		r.Kubernetes.Client = DefaultKubernetesClient()
 	}
 
 	if r.Kubernetes.RateLimitDeployment == nil {
@@ -275,4 +306,13 @@ func (logging *EnvoyGatewayLogging) SetEnvoyGatewayLoggingDefaults() {
 	if logging != nil && logging.Level != nil && logging.Level[LogComponentGatewayDefault] == "" {
 		logging.Level[LogComponentGatewayDefault] = LogLevelInfo
 	}
+}
+
+func (kcr *KubernetesClientRateLimit) GetQPSAndBurst() (float32, int) {
+	if kcr == nil {
+		return float32(DefaultKubernetesClientQPS), int(DefaultKubernetesClientBurst)
+	}
+	qps := ptr.Deref(kcr.QPS, DefaultKubernetesClientQPS)
+	burst := ptr.Deref(kcr.Burst, DefaultKubernetesClientBurst)
+	return float32(qps), int(burst)
 }

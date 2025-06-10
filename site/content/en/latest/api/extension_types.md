@@ -360,6 +360,7 @@ _Appears in:_
 | `fqdn` | _[FQDNEndpoint](#fqdnendpoint)_ |  false  |  | FQDN defines a FQDN endpoint |
 | `ip` | _[IPEndpoint](#ipendpoint)_ |  false  |  | IP defines an IP endpoint. Supports both IPv4 and IPv6 addresses. |
 | `unix` | _[UnixSocket](#unixsocket)_ |  false  |  | Unix defines the unix domain socket endpoint |
+| `zone` | _string_ |  false  |  | Zone defines the service zone of the backend endpoint. |
 
 
 #### BackendRef
@@ -405,6 +406,7 @@ _Appears in:_
 | `endpoints` | _[BackendEndpoint](#backendendpoint) array_ |  true  |  | Endpoints defines the endpoints to be used when connecting to the backend. |
 | `appProtocols` | _[AppProtocolType](#appprotocoltype) array_ |  false  |  | AppProtocols defines the application protocols to be supported when connecting to the backend. |
 | `fallback` | _boolean_ |  false  |  | Fallback indicates whether the backend is designated as a fallback.<br />It is highly recommended to configure active or passive health checks to ensure that failover can be detected<br />when the active backends become unhealthy and to automatically readjust once the primary backends are healthy again.<br />The overprovisioning factor is set to 1.4, meaning the fallback backends will only start receiving traffic when<br />the health of the active backends falls below 72%. |
+| `tls` | _[BackendTLSSettings](#backendtlssettings)_ |  false  |  | TLS defines the TLS settings for the backend.<br />Only supported for DynamicResolver backends. |
 
 
 #### BackendStatus
@@ -441,6 +443,21 @@ _Appears in:_
 | `alpnProtocols` | _[ALPNProtocol](#alpnprotocol) array_ |  false  |  | ALPNProtocols supplies the list of ALPN protocols that should be<br />exposed by the listener or used by the proxy to connect to the backend.<br />Defaults:<br />1. HTTPS Routes: h2 and http/1.1 are enabled in listener context.<br />2. Other Routes: ALPN is disabled.<br />3. Backends: proxy uses the appropriate ALPN options for the backend protocol.<br />When an empty list is provided, the ALPN TLS extension is disabled.<br />Supported values are:<br />- http/1.0<br />- http/1.1<br />- h2 |
 
 
+#### BackendTLSSettings
+
+
+
+BackendTLSSettings holds the TLS settings for the backend.
+
+_Appears in:_
+- [BackendSpec](#backendspec)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `caCertificateRefs` | _LocalObjectReference array_ |  false  |  | CACertificateRefs contains one or more references to Kubernetes objects that<br />contain TLS certificates of the Certificate Authorities that can be used<br />as a trust anchor to validate the certificates presented by the backend.<br />A single reference to a Kubernetes ConfigMap or a Kubernetes Secret,<br />with the CA certificate in a key named `ca.crt` is currently supported.<br />If CACertificateRefs is empty or unspecified, then WellKnownCACertificates must be<br />specified. Only one of CACertificateRefs or WellKnownCACertificates may be specified,<br />not both.<br />Only used for DynamicResolver backends. |
+| `wellKnownCACertificates` | _[WellKnownCACertificatesType](#wellknowncacertificatestype)_ |  false  |  | WellKnownCACertificates specifies whether system CA certificates may be used in<br />the TLS handshake between the gateway and backend pod.<br />If WellKnownCACertificates is unspecified or empty (""), then CACertificateRefs<br />must be specified with at least one entry for a valid configuration. Only one of<br />CACertificateRefs or WellKnownCACertificates may be specified, not both.<br />Only used for DynamicResolver backends. |
+
+
 #### BackendTelemetry
 
 
@@ -452,7 +469,7 @@ _Appears in:_
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `tracing` | _[Tracing](#tracing)_ |  false  |  | Tracing configures the tracing settings for the backend. |
+| `tracing` | _[Tracing](#tracing)_ |  false  |  | Tracing configures the tracing settings for the backend or HTTPRoute. |
 
 
 #### BackendTrafficPolicy
@@ -504,6 +521,7 @@ _Appears in:_
 | `compression` | _[Compression](#compression) array_ |  false  |  | The compression config for the http streams. |
 | `responseOverride` | _[ResponseOverride](#responseoverride) array_ |  false  |  | ResponseOverride defines the configuration to override specific responses with a custom one.<br />If multiple configurations are specified, the first one to match wins. |
 | `httpUpgrade` | _[ProtocolUpgradeConfig](#protocolupgradeconfig) array_ |  false  |  | HTTPUpgrade defines the configuration for HTTP protocol upgrades.<br />If not specified, the default upgrade configuration(websocket) will be used. |
+| `telemetry` | _[BackendTelemetry](#backendtelemetry)_ |  false  |  | Telemetry configures the telemetry settings for the policy target (Gateway or xRoute).<br />This will override the telemetry settings in the EnvoyProxy resource. |
 
 
 #### BackendType
@@ -926,6 +944,24 @@ _Appears in:_
 | `failClosed` | _boolean_ |  false  |  | FailClosed is a switch used to control the flow of traffic when client IP detection<br />fails. If set to true, the listener will respond with 403 Forbidden when the client<br />IP address cannot be determined. |
 
 
+#### CustomRedirect
+
+
+
+CustomRedirect contains configuration for returning a custom redirect.
+
+_Appears in:_
+- [ResponseOverride](#responseoverride)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `scheme` | _string_ |  false  |  | Scheme is the scheme to be used in the value of the `Location` header in<br />the response. When empty, the scheme of the request is used. |
+| `hostname` | _[PreciseHostname](#precisehostname)_ |  false  |  | Hostname is the hostname to be used in the value of the `Location`<br />header in the response.<br />When empty, the hostname in the `Host` header of the request is used. |
+| `path` | _[HTTPPathModifier](#httppathmodifier)_ |  false  |  | Path defines parameters used to modify the path of the incoming request.<br />The modified path is then used to construct the `Location` header. When<br />empty, the request path is used as-is. |
+| `port` | _[PortNumber](#portnumber)_ |  false  |  | Port is the port to be used in the value of the `Location`<br />header in the response.<br />If redirect scheme is not-empty, the well-known port associated with the redirect scheme will be used.<br />Specifically "http" to port 80 and "https" to port 443. If the redirect scheme does not have a<br />well-known port or redirect scheme is empty, the listener port of the Gateway will be used.<br />Port will not be added in the 'Location' header if scheme is HTTP and port is 80<br />or scheme is HTTPS and port is 443. |
+| `statusCode` | _integer_ |  false  | 302 | StatusCode is the HTTP status code to be used in response. |
+
+
 #### CustomResponse
 
 
@@ -1123,6 +1159,7 @@ _Appears in:_
 | `envoy.filters.http.credential_injector` | EnvoyFilterCredentialInjector defines the Envoy HTTP credential injector filter.<br /> | 
 | `envoy.filters.http.compressor` | EnvoyFilterCompressor defines the Envoy HTTP compressor filter.<br /> | 
 | `envoy.filters.http.router` | EnvoyFilterRouter defines the Envoy HTTP router filter.<br /> | 
+| `envoy.filters.http.buffer` | EnvoyFilterBuffer defines the Envoy HTTP buffer filter<br /> | 
 
 
 #### EnvoyGateway
@@ -1250,6 +1287,8 @@ _Appears in:_
 | `watch` | _[KubernetesWatchMode](#kuberneteswatchmode)_ |  false  |  | Watch holds configuration of which input resources should be watched and reconciled. |
 | `leaderElection` | _[LeaderElection](#leaderelection)_ |  false  |  | LeaderElection specifies the configuration for leader election.<br />If it's not set up, leader election will be active by default, using Kubernetes' standard settings. |
 | `shutdownManager` | _[ShutdownManager](#shutdownmanager)_ |  false  |  | ShutdownManager defines the configuration for the shutdown manager. |
+| `client` | _[KubernetesClient](#kubernetesclient)_ |  true  |  | Client holds the configuration for the Kubernetes client. |
+| `proxyTopologyInjector` | _[EnvoyGatewayTopologyInjector](#envoygatewaytopologyinjector)_ |  false  |  | TopologyInjector defines the configuration for topology injector MutatatingWebhookConfiguration |
 
 
 #### EnvoyGatewayLogComponent
@@ -1419,6 +1458,20 @@ _Appears in:_
 | `metrics` | _[EnvoyGatewayMetrics](#envoygatewaymetrics)_ |  true  |  | Metrics defines metrics configuration for envoy gateway. |
 
 
+#### EnvoyGatewayTopologyInjector
+
+
+
+EnvoyGatewayTopologyInjector defines the configuration for topology injector MutatatingWebhookConfiguration
+
+_Appears in:_
+- [EnvoyGatewayKubernetesProvider](#envoygatewaykubernetesprovider)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `disabled` | _boolean_ |  false  |  |  |
+
+
 #### EnvoyJSONPatchConfig
 
 
@@ -1561,6 +1614,7 @@ _Appears in:_
 | `backendTLS` | _[BackendTLSConfig](#backendtlsconfig)_ |  false  |  | BackendTLS is the TLS configuration for the Envoy proxy to use when connecting to backends.<br />These settings are applied on backends for which TLS policies are specified. |
 | `ipFamily` | _[IPFamily](#ipfamily)_ |  false  |  | IPFamily specifies the IP family for the EnvoyProxy fleet.<br />This setting only affects the Gateway listener port and does not impact<br />other aspects of the Envoy proxy configuration.<br />If not specified, the system will operate as follows:<br />- It defaults to IPv4 only.<br />- IPv6 and dual-stack environments are not supported in this default configuration.<br />Note: To enable IPv6 or dual-stack functionality, explicit configuration is required. |
 | `preserveRouteOrder` | _boolean_ |  false  |  | PreserveRouteOrder determines if the order of matching for HTTPRoutes is determined by Gateway-API<br />specification (https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.HTTPRouteRule)<br />or preserves the order defined by users in the HTTPRoute's HTTPRouteRule list.<br />Default: False |
+| `disableLuaValidation` | _boolean_ |  false  | false | DisableLuaValidation disables the Lua script validation for Lua EnvoyExtensionPolicies |
 
 
 #### EnvoyProxyStatus
@@ -1729,7 +1783,7 @@ _Appears in:_
 | `policyResources` | _[GroupVersionKind](#groupversionkind) array_ |  false  |  | PolicyResources defines the set of K8S resources the extension server will handle<br />as directly attached GatewayAPI policies |
 | `hooks` | _[ExtensionHooks](#extensionhooks)_ |  true  |  | Hooks defines the set of hooks the extension supports |
 | `service` | _[ExtensionService](#extensionservice)_ |  true  |  | Service defines the configuration of the extension service that the Envoy<br />Gateway Control Plane will call through extension hooks. |
-| `failOpen` | _boolean_ |  false  |  | FailOpen defines if Envoy Gateway should ignore errors returned from the Extension Service hooks.<br />The default is false, which means Envoy Gateway will fail closed if the Extension Service returns an error.<br />Fail-close means that if the Extension Service hooks return an error, the relevant route/listener/resource<br />will be replaced with a default configuration returning Internal Server Error (HTTP 500).<br />Fail-open means that if the Extension Service hooks return an error, no changes will be applied to the<br />source of the configuration which was sent to the extension server. |
+| `failOpen` | _boolean_ |  false  |  | FailOpen defines if Envoy Gateway should ignore errors returned from the Extension Service hooks.<br />When set to false, Envoy Gateway does not ignore extension Service hook errors. As a result,<br />xDS updates are skipped for the relevant envoy proxy fleet and the previous state is preserved.<br />When set to true, if the Extension Service hooks return an error, no changes will be applied to the<br />source of the configuration which was sent to the extension server. The errors are ignored and the resulting<br />xDS configuration is updated in the xDS snapshot.<br />Default: false |
 | `maxMessageSize` | _[Quantity](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.29/#quantity-resource-api)_ |  false  |  | MaxMessageSize defines the maximum message size in bytes that can be<br />sent to or received from the Extension Service.<br />Default: 4M |
 
 
@@ -1747,9 +1801,29 @@ _Appears in:_
 | `fqdn` | _[FQDNEndpoint](#fqdnendpoint)_ |  false  |  | FQDN defines a FQDN endpoint |
 | `ip` | _[IPEndpoint](#ipendpoint)_ |  false  |  | IP defines an IP endpoint. Supports both IPv4 and IPv6 addresses. |
 | `unix` | _[UnixSocket](#unixsocket)_ |  false  |  | Unix defines the unix domain socket endpoint |
+| `zone` | _string_ |  false  |  | Zone defines the service zone of the backend endpoint. |
 | `host` | _string_ |  false  |  | Host define the extension service hostname.<br />Deprecated: use the appropriate transport attribute instead (FQDN,IP,Unix) |
 | `port` | _integer_ |  false  | 80 | Port defines the port the extension service is exposed on.<br />Deprecated: use the appropriate transport attribute instead (FQDN,IP,Unix) |
 | `tls` | _[ExtensionTLS](#extensiontls)_ |  false  |  | TLS defines TLS configuration for communication between Envoy Gateway and<br />the extension service. |
+| `retry` | _[ExtensionServiceRetry](#extensionserviceretry)_ |  false  |  | Retry defines the retry policy for to use when errors are encountered in communication with<br />the extension service. |
+
+
+#### ExtensionServiceRetry
+
+
+
+ExtensionServiceRetry defines the retry policy for to use when errors are encountered in communication with the extension service.
+
+_Appears in:_
+- [ExtensionService](#extensionservice)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `maxAttempts` | _integer_ |  false  |  | MaxAttempts defines the maximum number of retry attempts.<br />Default: 4 |
+| `initialBackoff` | _[Duration](https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.Duration)_ |  false  |  | InitialBackoff defines the initial backoff in seconds for retries, details: https://github.com/grpc/proposal/blob/master/A6-client-retries.md#integration-with-service-config.<br />Default: 0.1s |
+| `maxBackoff` | _[Duration](https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.Duration)_ |  false  |  | MaxBackoff defines the maximum backoff in seconds for retries.<br />Default: 1s |
+| `backoffMultiplier` | _[Fraction](https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.Fraction)_ |  false  |  | BackoffMultiplier defines the multiplier to use for exponential backoff for retries.<br />Default: 2.0 |
+| `RetryableStatusCodes` | _[RetryableGRPCStatusCode](#retryablegrpcstatuscode) array_ |  false  |  | RetryableStatusCodes defines the grpc status code for which retries will be attempted.<br />Default: [ "UNAVAILABLE" ] |
 
 
 #### ExtensionTLS
@@ -2039,6 +2113,7 @@ _Appears in:_
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
+| `hostname` | _string_ |  false  |  | Hostname defines the HTTP host that will be requested during health checking.<br />Default: HTTPRoute or GRPCRoute hostname. |
 | `path` | _string_ |  true  |  | Path defines the HTTP path that will be requested during health checking. |
 | `method` | _string_ |  false  |  | Method defines the HTTP method used for health checking.<br />Defaults to GET |
 | `expectedStatuses` | _[HTTPStatus](#httpstatus) array_ |  false  |  | ExpectedStatuses defines a list of HTTP response statuses considered healthy.<br />Defaults to 200 only |
@@ -2631,6 +2706,35 @@ _Appears in:_
 
 
 
+#### KubernetesClient
+
+
+
+
+
+_Appears in:_
+- [EnvoyGatewayKubernetesProvider](#envoygatewaykubernetesprovider)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `rateLimit` | _[KubernetesClientRateLimit](#kubernetesclientratelimit)_ |  true  |  | RateLimit defines the rate limit settings for the Kubernetes client. |
+
+
+#### KubernetesClientRateLimit
+
+
+
+KubernetesClientRateLimit defines the rate limit settings for the Kubernetes client.
+
+_Appears in:_
+- [KubernetesClient](#kubernetesclient)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `qps` | _integer_ |  false  | 50 | QPS defines the queries per second limit for the Kubernetes client. |
+| `burst` | _integer_ |  false  | 100 | Burst defines the maximum burst of requests allowed when tokens have accumulated. |
+
+
 #### KubernetesContainerSpec
 
 
@@ -2692,6 +2796,10 @@ KubernetesDeployModeType defines the type of KubernetesDeployMode
 _Appears in:_
 - [KubernetesDeployMode](#kubernetesdeploymode)
 
+| Value | Description |
+| ----- | ----------- |
+| `ControllerNamespace` | KubernetesDeployModeTypeControllerNamespace indicates that the controller namespace is used for the infra proxy deployments.<br /> | 
+| `GatewayNamespace` | KubernetesDeployModeTypeGatewayNamespace indicates that the gateway namespace is used for the infra proxy deployments.<br /> | 
 
 
 #### KubernetesDeploymentSpec
@@ -3058,11 +3166,13 @@ _Appears in:_
 | `scopes` | _string array_ |  false  |  | The OIDC scopes to be used in the<br />[Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest).<br />The "openid" scope is always added to the list of scopes if not already<br />specified. |
 | `resources` | _string array_ |  false  |  | The OIDC resources to be used in the<br />[Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest). |
 | `redirectURL` | _string_ |  true  |  | The redirect URL to be used in the OIDC<br />[Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest).<br />If not specified, uses the default redirect URI "%REQ(x-forwarded-proto)%://%REQ(:authority)%/oauth2/callback" |
+| `denyRedirect` | _[OIDCDenyRedirect](#oidcdenyredirect)_ |  false  |  | Any request that matches any of the provided matchers (with either tokens that are expired or missing tokens) will not be redirected to the OIDC Provider.<br />This behavior can be useful for AJAX or machine requests. |
 | `logoutPath` | _string_ |  true  |  | The path to log a user out, clearing their credential cookies.<br />If not specified, uses a default logout path "/logout" |
 | `forwardAccessToken` | _boolean_ |  false  |  | ForwardAccessToken indicates whether the Envoy should forward the access token<br />via the Authorization header Bearer scheme to the upstream.<br />If not specified, defaults to false. |
 | `defaultTokenTTL` | _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.29/#duration-v1-meta)_ |  false  |  | DefaultTokenTTL is the default lifetime of the id token and access token.<br />Please note that Envoy will always use the expiry time from the response<br />of the authorization server if it is provided. This field is only used when<br />the expiry time is not provided by the authorization.<br />If not specified, defaults to 0. In this case, the "expires_in" field in<br />the authorization response must be set by the authorization server, or the<br />OAuth flow will fail. |
 | `refreshToken` | _boolean_ |  false  |  | RefreshToken indicates whether the Envoy should automatically refresh the<br />id token and access token when they expire.<br />When set to true, the Envoy will use the refresh token to get a new id token<br />and access token when they expire.<br />If not specified, defaults to false. |
 | `defaultRefreshTokenTTL` | _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.29/#duration-v1-meta)_ |  false  |  | DefaultRefreshTokenTTL is the default lifetime of the refresh token.<br />This field is only used when the exp (expiration time) claim is omitted in<br />the refresh token or the refresh token is not JWT.<br />If not specified, defaults to 604800s (one week).<br />Note: this field is only applicable when the "refreshToken" field is set to true. |
+| `passThroughAuthHeader` | _boolean_ |  false  |  | Skips OIDC authentication when the request contains a header that will be extracted by the JWT filter. Unless<br />explicitly stated otherwise in the extractFrom field, this will be the "Authorization: Bearer ..." header.<br />The passThroughAuthHeader option is typically used for non-browser clients that may not be able to handle OIDC<br />redirects and wish to directly supply a token instead.<br />If not specified, defaults to false. |
 
 
 #### OIDCCookieNames
@@ -3078,6 +3188,36 @@ _Appears in:_
 | ---   | ---  | ---      | ---     | ---         |
 | `accessToken` | _string_ |  false  |  | The name of the cookie used to store the AccessToken in the<br />[Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest).<br />If not specified, defaults to "AccessToken-(randomly generated uid)" |
 | `idToken` | _string_ |  false  |  | The name of the cookie used to store the IdToken in the<br />[Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest).<br />If not specified, defaults to "IdToken-(randomly generated uid)" |
+
+
+#### OIDCDenyRedirect
+
+
+
+OIDCDenyRedirect defines headers to match against the request to deny redirect to the OIDC Provider.
+
+_Appears in:_
+- [OIDC](#oidc)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `headers` | _[OIDCDenyRedirectHeader](#oidcdenyredirectheader) array_ |  true  |  | Defines the headers to match against the request to deny redirect to the OIDC Provider. |
+
+
+#### OIDCDenyRedirectHeader
+
+
+
+OIDCDenyRedirectHeader defines how a header is matched
+
+_Appears in:_
+- [OIDCDenyRedirect](#oidcdenyredirect)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `name` | _string_ |  true  |  | Specifies the name of the header in the request. |
+| `type` | _[StringMatchType](#stringmatchtype)_ |  false  | Exact | Type specifies how to match against a string. |
+| `value` | _string_ |  true  |  | Value specifies the string value that the match must have. |
 
 
 #### OIDCProvider
@@ -3790,6 +3930,7 @@ _Appears in:_
 | `clientSelectors` | _[RateLimitSelectCondition](#ratelimitselectcondition) array_ |  false  |  | ClientSelectors holds the list of select conditions to select<br />specific clients using attributes from the traffic flow.<br />All individual select conditions must hold True for this rule<br />and its limit to be applied.<br />If no client selectors are specified, the rule applies to all traffic of<br />the targeted Route.<br />If the policy targets a Gateway, the rule applies to each Route of the Gateway.<br />Please note that each Route has its own rate limit counters. For example,<br />if a Gateway has two Routes, and the policy has a rule with limit 10rps,<br />each Route will have its own 10rps limit. |
 | `limit` | _[RateLimitValue](#ratelimitvalue)_ |  true  |  | Limit holds the rate limit values.<br />This limit is applied for traffic flows when the selectors<br />compute to True, causing the request to be counted towards the limit.<br />The limit is enforced and the request is ratelimited, i.e. a response with<br />429 HTTP status code is sent back to the client when<br />the selected requests have reached the limit. |
 | `cost` | _[RateLimitCost](#ratelimitcost)_ |  false  |  | Cost specifies the cost of requests and responses for the rule.<br />This is optional and if not specified, the default behavior is to reduce the rate limit counters by 1 on<br />the request path and do not reduce the rate limit counters on the response path. |
+| `shared` | _boolean_ |  false  |  | Shared determines whether this rate limit rule applies across all the policy targets.<br />If set to true, the rule is treated as a common bucket and is shared across all policy targets (xRoutes).<br />Default: false. |
 
 
 #### RateLimitSelectCondition
@@ -4047,6 +4188,7 @@ _Appears in:_
 | ---   | ---  | ---      | ---     | ---         |
 | `match` | _[CustomResponseMatch](#customresponsematch)_ |  true  |  | Match configuration. |
 | `response` | _[CustomResponse](#customresponse)_ |  true  |  | Response configuration. |
+| `redirect` | _[CustomRedirect](#customredirect)_ |  true  |  | Redirect configuration |
 
 
 #### ResponseValueType
@@ -4094,6 +4236,17 @@ _Appears in:_
 | ---   | ---  | ---      | ---     | ---         |
 | `triggers` | _[TriggerEnum](#triggerenum) array_ |  false  |  | Triggers specifies the retry trigger condition(Http/Grpc). |
 | `httpStatusCodes` | _[HTTPStatus](#httpstatus) array_ |  false  |  | HttpStatusCodes specifies the http status codes to be retried.<br />The retriable-status-codes trigger must also be configured for these status codes to trigger a retry. |
+
+
+#### RetryableGRPCStatusCode
+
+_Underlying type:_ _string_
+
+GRPCStatus defines grpc status codes as defined in https://github.com/grpc/grpc/blob/master/doc/statuscodes.md.
+
+_Appears in:_
+- [ExtensionServiceRetry](#extensionserviceretry)
+
 
 
 #### RoutingType
@@ -4373,6 +4526,7 @@ This is a general purpose match condition that can be used by other EG APIs
 that need to match against a string.
 
 _Appears in:_
+- [OIDCDenyRedirectHeader](#oidcdenyredirectheader)
 - [ProxyMetrics](#proxymetrics)
 
 | Field | Type | Required | Default | Description |
@@ -4389,6 +4543,7 @@ StringMatchType specifies the semantics of how a string value should be compared
 Valid MatchType values are "Exact", "Prefix", "Suffix", "RegularExpression".
 
 _Appears in:_
+- [OIDCDenyRedirectHeader](#oidcdenyredirectheader)
 - [StringMatch](#stringmatch)
 
 | Value | Description |
@@ -4627,7 +4782,7 @@ _Appears in:_
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `path` | _string_ |  true  |  | Path defines the unix domain socket path of the backend endpoint. |
+| `path` | _string_ |  true  |  | Path defines the unix domain socket path of the backend endpoint.<br />The path length must not exceed 108 characters. |
 
 
 #### Wasm

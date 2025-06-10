@@ -132,17 +132,26 @@ infraIR:
           gateway.envoyproxy.io/owning-gateway-name: gateway-1
           gateway.envoyproxy.io/owning-gateway-namespace: envoy-gateway
       name: envoy-gateway/gateway-1
+      namespace: envoy-gateway-system
 xdsIR:
   envoy-gateway/gateway-1:
     accessLog:
       openTelemetry:
       - destination:
+          metadata:
+            kind: EnvoyProxy
+            name: test
+            namespace: envoy-gateway-system
           name: accesslog_otel_0_1
           settings:
           - addressType: IP
             endpoints:
             - host: 8.7.6.5
               port: 4317
+            metadata:
+              name: otel-collector
+              namespace: monitoring
+              sectionName: "4317"
             name: accesslog_otel_0_1/backend/-1
             protocol: GRPC
         resources:

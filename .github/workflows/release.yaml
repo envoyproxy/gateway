@@ -78,7 +78,7 @@ jobs:
           IMAGE_PULL_POLICY=IfNotPresent OCI_REGISTRY=oci://docker.io/envoyproxy CHART_VERSION=${{ env.without_v_release_tag }} IMAGE=docker.io/envoyproxy/gateway TAG=${{ env.release_tag }} make helm-package helm-push
 
       - name: Download Benchmark Report
-        uses: actions/download-artifact@95815c38cf2ff2164869cbab79da8d1f422bc89e  # v4.2.1
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093  # v4.3.0
         with:
           name: benchmark_report
           path: release-artifacts
@@ -95,10 +95,9 @@ jobs:
           tar -zcvf egctl_${{ env.release_tag }}_darwin_amd64.tar.gz bin/darwin/amd64/egctl
           tar -zcvf egctl_${{ env.release_tag }}_darwin_arm64.tar.gz bin/darwin/arm64/egctl
           zip -r egctl_${{ env.release_tag }}_windows_amd64.zip bin/windows/amd64/egctl
-          zip -r egctl_${{ env.release_tag }}_windows_arm64.zip bin/windows/arm64/egctl
 
       - name: Upload Release Manifests
-        uses: softprops/action-gh-release@c95fe1489396fe8a9eb87c0abf8aa5b2ef267fda  # v2.2.1
+        uses: softprops/action-gh-release@da05d552573ad5aba039eaac05058a918a7bf631  # v2.2.2
         with:
           files: |
             release-artifacts/install.yaml
@@ -115,4 +114,3 @@ jobs:
             egctl_${{ env.release_tag }}_darwin_amd64.tar.gz
             egctl_${{ env.release_tag }}_darwin_arm64.tar.gz
             egctl_${{ env.release_tag }}_windows_amd64.zip
-            egctl_${{ env.release_tag }}_windows_arm64.zip

@@ -80,7 +80,7 @@ func (ka *KubeActions) ManageEgress(ctx context.Context, ip, namespace, policyNa
 
 	// remove the policy
 	if !blockTraffic {
-		if err := ka.Client.Delete(ctx, netPolicy); err != nil {
+		if err := ka.Delete(ctx, netPolicy); err != nil {
 			return nil, fmt.Errorf("failed to delete NetworkPolicy: %w", err)
 		}
 		return nil, nil
@@ -88,14 +88,14 @@ func (ka *KubeActions) ManageEgress(ctx context.Context, ip, namespace, policyNa
 
 	if kerrors.IsNotFound(err) {
 		// Create the NetworkPolicy if it doesn't exist
-		if err := ka.Client.Create(ctx, netPolicy); err != nil {
+		if err := ka.Create(ctx, netPolicy); err != nil {
 			return nil, fmt.Errorf("failed to create NetworkPolicy: %w", err)
 		}
 		fmt.Printf("NetworkPolicy %s created.\n", netPolicy.Name)
 	} else {
 		// Update the existing NetworkPolicy
 		existingPolicy.Spec = netPolicy.Spec
-		if err := ka.Client.Update(ctx, existingPolicy); err != nil {
+		if err := ka.Update(ctx, existingPolicy); err != nil {
 			return nil, fmt.Errorf("failed to update NetworkPolicy: %w", err)
 		}
 		fmt.Printf("NetworkPolicy %s updated.\n", netPolicy.Name)
@@ -114,7 +114,7 @@ func (ka *KubeActions) ScaleDeploymentAndWait(ctx context.Context, deploymentNam
 			return err
 		}
 	} else {
-		err := ka.Client.Get(ctx, client.ObjectKey{Name: deploymentName, Namespace: namespace}, deployment)
+		err := ka.Get(ctx, client.ObjectKey{Name: deploymentName, Namespace: namespace}, deployment)
 		if err != nil {
 			return err
 		}
@@ -124,7 +124,7 @@ func (ka *KubeActions) ScaleDeploymentAndWait(ctx context.Context, deploymentNam
 	deployment.Spec.Replicas = &replicas
 
 	// Apply the update
-	err := ka.Client.Update(ctx, deployment)
+	err := ka.Update(ctx, deployment)
 	if err != nil {
 		return err
 	}
@@ -138,7 +138,7 @@ func (ka *KubeActions) ScaleEnvoyProxy(envoyProxyName, namespace string, replica
 
 	// Retrieve the existing EnvoyProxy resource
 	envoyProxy := &egv1a1.EnvoyProxy{}
-	err := ka.Client.Get(ctx, types.NamespacedName{Name: envoyProxyName, Namespace: namespace}, envoyProxy)
+	err := ka.Get(ctx, types.NamespacedName{Name: envoyProxyName, Namespace: namespace}, envoyProxy)
 	if err != nil {
 		return fmt.Errorf("failed to get EnvoyProxy: %w", err)
 	}
@@ -152,7 +152,7 @@ func (ka *KubeActions) ScaleEnvoyProxy(envoyProxyName, namespace string, replica
 	envoyProxy.Spec.Provider.Kubernetes.EnvoyDeployment.Replicas = &replicas
 
 	// Apply the update
-	err = ka.Client.Update(ctx, envoyProxy)
+	err = ka.Update(ctx, envoyProxy)
 	if err != nil {
 		return fmt.Errorf("failed to update EnvoyProxy: %w", err)
 	}

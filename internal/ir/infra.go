@@ -47,6 +47,8 @@ type ProxyInfra struct {
 	Metadata *InfraMetadata `json:"metadata,omitempty" yaml:"metadata,omitempty"`
 	// Name is the name used for managed proxy infrastructure.
 	Name string `json:"name" yaml:"name"`
+	// Namespace is the namespace used for managed proxy infrastructure.
+	Namespace string `json:"namespace" yaml:"namespace"`
 	// Config defines user-facing configuration of the managed proxy infrastructure.
 	Config *egv1a1.EnvoyProxy `json:"config,omitempty" yaml:"config,omitempty"`
 	// Listeners define the listeners exposed by the proxy infrastructure.
@@ -65,6 +67,8 @@ type InfraMetadata struct {
 	// Labels define a map of string keys and values that can be used to organize
 	// and categorize proxy infrastructure objects.
 	Labels map[string]string `json:"labels,omitempty" yaml:"labels,omitempty"`
+	// OwnerReference define the values that be used to set ownerReference for proxy infrastructure objects.
+	OwnerReference *ResourceMetadata `json:"ownerReference,omitempty" yaml:"ownerReference,omitempty"`
 }
 
 // ProxyListener defines the listener configuration of the proxy infrastructure.

@@ -10,7 +10,6 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
-	"flag"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -38,12 +37,11 @@ import (
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/utils/field"
 	"github.com/envoyproxy/gateway/internal/utils/file"
+	"github.com/envoyproxy/gateway/internal/utils/test"
 	"github.com/envoyproxy/gateway/internal/wasm"
 )
 
-var overrideTestData = flag.Bool("override-testdata", false, "if override the test output data.")
-
-func mustUnmarshal(t *testing.T, val []byte, out interface{}) {
+func mustUnmarshal(t *testing.T, val []byte, out any) {
 	require.NoError(t, yaml.UnmarshalStrict(val, out, yaml.DisallowUnknownFields))
 }
 
@@ -52,6 +50,7 @@ func TestTranslate(t *testing.T) {
 		name                    string
 		EnvoyPatchPolicyEnabled bool
 		BackendEnabled          bool
+		GatewayNamespaceMode    bool
 	}{
 		{
 			name:                    "envoypatchpolicy-invalid-feature-disabled",
@@ -61,10 +60,18 @@ func TestTranslate(t *testing.T) {
 			name:                    "backend-invalid-feature-disabled",
 			EnvoyPatchPolicyEnabled: false,
 		},
+		{
+			name:                 "gateway-namespace-mode-infra-httproute",
+			GatewayNamespaceMode: true,
+		},
 	}
 
 	inputFiles, err := filepath.Glob(filepath.Join("testdata", "*.in.yaml"))
 	require.NoError(t, err)
+	base, err := os.ReadFile("testdata/base/base.yaml")
+	require.NoError(t, err)
+	baseResources := &resource.Resources{}
+	mustUnmarshal(t, base, baseResources)
 
 	for _, inputFile := range inputFiles {
 		t.Run(testName(inputFile), func(t *testing.T) {
@@ -73,13 +80,18 @@ func TestTranslate(t *testing.T) {
 
 			resources := &resource.Resources{}
 			mustUnmarshal(t, input, resources)
+			// Merge base resources with test resources
+			// Only secrets are in the base resources, we may have more in the future
+			resources.Secrets = append(resources.Secrets, baseResources.Secrets...)
 			envoyPatchPolicyEnabled := true
 			backendEnabled := true
+			gatewayNamespaceMode := false
 
 			for _, config := range testCasesConfig {
 				if config.name == strings.Split(filepath.Base(inputFile), ".")[0] {
 					envoyPatchPolicyEnabled = config.EnvoyPatchPolicyEnabled
 					backendEnabled = config.BackendEnabled
+					gatewayNamespaceMode = config.GatewayNamespaceMode
 				}
 			}
 
@@ -89,8 +101,9 @@ func TestTranslate(t *testing.T) {
 				GlobalRateLimitEnabled:  true,
 				EnvoyPatchPolicyEnabled: envoyPatchPolicyEnabled,
 				BackendEnabled:          backendEnabled,
-				Namespace:               "envoy-gateway-system",
+				ControllerNamespace:     "envoy-gateway-system",
 				MergeGateways:           IsMergeGatewaysEnabled(resources),
+				GatewayNamespaceMode:    gatewayNamespaceMode,
 				WasmCache:               &mockWasmCache{},
 			}
 
@@ -98,89 +111,99 @@ func TestTranslate(t *testing.T) {
 			for i := 1; i <= 4; i++ {
 				svcName := "service-" + strconv.Itoa(i)
 				epSliceName := "endpointslice-" + strconv.Itoa(i)
-				resources.Services = append(resources.Services,
-					&corev1.Service{
-						ObjectMeta: metav1.ObjectMeta{
-							Namespace: "default",
-							Name:      svcName,
-						},
-						Spec: corev1.ServiceSpec{
-							ClusterIP: "1.1.1.1",
-							Ports: []corev1.ServicePort{
-								{
-									Name:       "http",
-									Port:       8080,
-									TargetPort: intstr.IntOrString{IntVal: 8080},
-									Protocol:   corev1.ProtocolTCP,
-								},
-								{
-									Name:       "https",
-									Port:       8443,
-									TargetPort: intstr.IntOrString{IntVal: 8443},
-									Protocol:   corev1.ProtocolTCP,
-								},
-								{
-									Name:       "tcp",
-									Port:       8163,
-									TargetPort: intstr.IntOrString{IntVal: 8163},
-									Protocol:   corev1.ProtocolTCP,
-								},
-								{
-									Name:       "udp",
-									Port:       8162,
-									TargetPort: intstr.IntOrString{IntVal: 8162},
-									Protocol:   corev1.ProtocolUDP,
-								},
-							},
-						},
-					},
-				)
-				resources.EndpointSlices = append(resources.EndpointSlices,
-					&discoveryv1.EndpointSlice{
-						ObjectMeta: metav1.ObjectMeta{
-							Name:      epSliceName,
-							Namespace: "default",
-							Labels: map[string]string{
-								discoveryv1.LabelServiceName: svcName,
-							},
-						},
-						AddressType: discoveryv1.AddressTypeIPv4,
-						Ports: []discoveryv1.EndpointPort{
-							{
-								Name:     ptr.To("http"),
-								Port:     ptr.To[int32](8080),
-								Protocol: ptr.To(corev1.ProtocolTCP),
-							},
-							{
-								Name:     ptr.To("https"),
-								Port:     ptr.To[int32](8443),
-								Protocol: ptr.To(corev1.ProtocolTCP),
-							},
-							{
-								Name:     ptr.To("tcp"),
-								Port:     ptr.To[int32](8163),
-								Protocol: ptr.To(corev1.ProtocolTCP),
-							},
-							{
-								Name:     ptr.To("udp"),
-								Port:     ptr.To[int32](8162),
-								Protocol: ptr.To(corev1.ProtocolUDP),
-							},
-						},
-						Endpoints: []discoveryv1.Endpoint{
-							{
-								Addresses: []string{
-									"7.7.7.7",
-								},
-								Conditions: discoveryv1.EndpointConditions{
-									Ready: ptr.To(true),
-								},
-							},
-						},
-					},
-				)
-			}
 
+				svc := &corev1.Service{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "default",
+						Name:      svcName,
+					},
+					Spec: corev1.ServiceSpec{
+						ClusterIP: "1.1.1.1",
+						Ports: []corev1.ServicePort{
+							{
+								Name:       "http",
+								Port:       8080,
+								TargetPort: intstr.IntOrString{IntVal: 8080},
+								Protocol:   corev1.ProtocolTCP,
+							},
+							{
+								Name:       "https",
+								Port:       8443,
+								TargetPort: intstr.IntOrString{IntVal: 8443},
+								Protocol:   corev1.ProtocolTCP,
+							},
+							{
+								Name:       "tcp",
+								Port:       8163,
+								TargetPort: intstr.IntOrString{IntVal: 8163},
+								Protocol:   corev1.ProtocolTCP,
+							},
+							{
+								Name:       "udp",
+								Port:       8162,
+								TargetPort: intstr.IntOrString{IntVal: 8162},
+								Protocol:   corev1.ProtocolUDP,
+							},
+						},
+					},
+				}
+				if strings.Contains(inputFile, "enable-zone-discovery") {
+					svc.Spec.TrafficDistribution = ptr.To("PreferClose")
+				}
+				resources.Services = append(resources.Services, svc)
+
+				endptSlice := &discoveryv1.EndpointSlice{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      epSliceName,
+						Namespace: "default",
+						Labels: map[string]string{
+							discoveryv1.LabelServiceName: svcName,
+						},
+					},
+					AddressType: discoveryv1.AddressTypeIPv4,
+					Ports: []discoveryv1.EndpointPort{
+						{
+							Name:     ptr.To("http"),
+							Port:     ptr.To[int32](8080),
+							Protocol: ptr.To(corev1.ProtocolTCP),
+						},
+						{
+							Name:     ptr.To("https"),
+							Port:     ptr.To[int32](8443),
+							Protocol: ptr.To(corev1.ProtocolTCP),
+						},
+						{
+							Name:     ptr.To("tcp"),
+							Port:     ptr.To[int32](8163),
+							Protocol: ptr.To(corev1.ProtocolTCP),
+						},
+						{
+							Name:     ptr.To("udp"),
+							Port:     ptr.To[int32](8162),
+							Protocol: ptr.To(corev1.ProtocolUDP),
+						},
+					},
+					Endpoints: []discoveryv1.Endpoint{
+						{
+							Addresses: []string{
+								"7.7.7.7",
+							},
+							Conditions: discoveryv1.EndpointConditions{
+								Ready: ptr.To(true),
+							},
+						},
+					},
+				}
+
+				// TODO: Add zone information by default
+				if strings.Contains(inputFile, "enable-zone-discovery") {
+					svc.Spec.TrafficDistribution = ptr.To("PreferClose")
+					zoneIdx := rune('a' + i)
+					zone := fmt.Sprintf("%s%c", "antarctica-east1", zoneIdx)
+					endptSlice.Endpoints[0].Zone = ptr.To(zone)
+				}
+				resources.EndpointSlices = append(resources.EndpointSlices, endptSlice)
+			}
 			resources.Services = append(resources.Services,
 				&corev1.Service{
 					ObjectMeta: metav1.ObjectMeta{
@@ -308,7 +331,7 @@ func TestTranslate(t *testing.T) {
 			out, err := yaml.Marshal(got)
 			require.NoError(t, err)
 
-			if *overrideTestData {
+			if test.OverrideTestData() {
 				overrideOutputConfig(t, string(out), outputFilePath)
 			}
 
@@ -509,7 +532,7 @@ func TestTranslateWithExtensionKinds(t *testing.T) {
 			out, err := yaml.Marshal(got)
 			require.NoError(t, err)
 
-			if *overrideTestData {
+			if test.OverrideTestData() {
 				require.NoError(t, file.Write(string(out), outputFilePath))
 			}
 
@@ -857,7 +880,7 @@ func (m *mockWasmCache) Get(downloadURL string, options wasm.GetOptions) (url, c
 	if options.Checksum != "" && checksum != options.Checksum {
 		return "", "", fmt.Errorf("module downloaded from %v has checksum %v, which does not match: %v", downloadURL, checksum, options.Checksum)
 	}
-	return fmt.Sprintf("https://envoy-gateway:18002/%s.wasm", hashedName), checksum, nil
+	return fmt.Sprintf("https://envoy-gateway.envoy-gateway-system.svc.cluster.local:18002/%s.wasm", hashedName), checksum, nil
 }
 
 func (m *mockWasmCache) Cleanup() {}
@@ -868,25 +891,29 @@ func (m *mockWasmCache) Cleanup() {}
 // This allows us to use cmp.Diff to compare the types with field-level cmpopts.
 func xdsWithoutEqual(a *ir.Xds) any {
 	ret := struct {
-		ReadyListener      *ir.ReadyListener
-		AccessLog          *ir.AccessLog
-		Tracing            *ir.Tracing
-		Metrics            *ir.Metrics
-		HTTP               []*ir.HTTPListener
-		TCP                []*ir.TCPListener
-		UDP                []*ir.UDPListener
-		EnvoyPatchPolicies []*ir.EnvoyPatchPolicy
-		FilterOrder        []egv1a1.FilterPosition
+		ReadyListener           *ir.ReadyListener
+		AccessLog               *ir.AccessLog
+		Tracing                 *ir.Tracing
+		Metrics                 *ir.Metrics
+		HTTP                    []*ir.HTTPListener
+		TCP                     []*ir.TCPListener
+		UDP                     []*ir.UDPListener
+		EnvoyPatchPolicies      []*ir.EnvoyPatchPolicy
+		FilterOrder             []egv1a1.FilterPosition
+		GlobalResources         *ir.GlobalResources
+		ExtensionServerPolicies []*ir.UnstructuredRef
 	}{
-		ReadyListener:      a.ReadyListener,
-		AccessLog:          a.AccessLog,
-		Tracing:            a.Tracing,
-		Metrics:            a.Metrics,
-		HTTP:               a.HTTP,
-		TCP:                a.TCP,
-		UDP:                a.UDP,
-		EnvoyPatchPolicies: a.EnvoyPatchPolicies,
-		FilterOrder:        a.FilterOrder,
+		ReadyListener:           a.ReadyListener,
+		AccessLog:               a.AccessLog,
+		Tracing:                 a.Tracing,
+		Metrics:                 a.Metrics,
+		HTTP:                    a.HTTP,
+		TCP:                     a.TCP,
+		UDP:                     a.UDP,
+		EnvoyPatchPolicies:      a.EnvoyPatchPolicies,
+		FilterOrder:             a.FilterOrder,
+		GlobalResources:         a.GlobalResources,
+		ExtensionServerPolicies: a.ExtensionServerPolicies,
 	}
 
 	// Ensure we didn't drop an exported field.
