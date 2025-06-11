@@ -1497,6 +1497,7 @@ type RouteDestination struct {
 	// to check if this route destination already exists and can be
 	// reused
 	Name     string                `json:"name" yaml:"name"`
+	StatName *string               `json:"statName,omitempty" yaml:"statName,omitempty"`
 	Settings []*DestinationSetting `json:"settings,omitempty" yaml:"settings,omitempty"`
 	// Metadata is used to enrich envoy route metadata with user and provider-specific information
 	// RouteDestination metadata is primarily derived from the xRoute resources. In some cases,
