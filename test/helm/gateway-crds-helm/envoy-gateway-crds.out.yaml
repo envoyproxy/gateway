@@ -972,6 +972,39 @@ spec:
                     - message: If consistent hash type is cookie, the cookie field
                         must be set.
                       rule: 'self.type == ''Cookie'' ? has(self.cookie) : !has(self.cookie)'
+                  requestDistribution:
+                    description: RequestDistribution defines the configuration related
+                      to the distribution of requests between localities.
+                    properties:
+                      preferLocalZone:
+                        description: PreferLocalZone configures zone-aware routing
+                          to prefer sending traffic to the local locality zone.
+                        properties:
+                          forceLocalZone:
+                            description: |-
+                              ForceLocalZone defines override configuration for forcing all traffic to stay local vs Envoy default behavior
+                              which maintains equal distribution among upstreams while sending as much traffic as possible locally.
+                            properties:
+                              enabled:
+                                description: |-
+                                  Enabled causes Envoy to route all requests to the local zone if there are at least "minZoneSize" healthy hosts
+                                  available.
+                                type: boolean
+                              minZoneSize:
+                                description: |-
+                                  MinZoneSize is the minimum number of upstream hosts in the local zone required to honor the forceLocalZone
+                                  override. Defaults to 1 if not specified.
+                                format: int32
+                                type: integer
+                            type: object
+                          minClusterSize:
+                            description: MinClusterSize is the minimum number of total
+                              upstream hosts across all zones required to enable zone-aware
+                              routing.
+                            format: int64
+                            type: integer
+                        type: object
+                    type: object
                   slowStart:
                     description: |-
                       SlowStart defines the configuration related to the slow start load balancer policy.
@@ -1013,6 +1046,10 @@ spec:
                 - message: Currently SlowStart is only supported for RoundRobin and
                     LeastRequest load balancers.
                   rule: 'self.type in [''Random'', ''ConsistentHash''] ? !has(self.slowStart)
+                    : true '
+                - message: Currently RequestDistribution is only supported for LeastRequest,
+                    Random, and RoundRobin load balancers.
+                  rule: 'self.type == ''ConsistentHash'' ? !has(self.requestDistribution)
                     : true '
               mergeType:
                 description: |-
@@ -4569,6 +4606,40 @@ spec:
                                   field must be set.
                                 rule: 'self.type == ''Cookie'' ? has(self.cookie)
                                   : !has(self.cookie)'
+                            requestDistribution:
+                              description: RequestDistribution defines the configuration
+                                related to the distribution of requests between localities.
+                              properties:
+                                preferLocalZone:
+                                  description: PreferLocalZone configures zone-aware
+                                    routing to prefer sending traffic to the local
+                                    locality zone.
+                                  properties:
+                                    forceLocalZone:
+                                      description: |-
+                                        ForceLocalZone defines override configuration for forcing all traffic to stay local vs Envoy default behavior
+                                        which maintains equal distribution among upstreams while sending as much traffic as possible locally.
+                                      properties:
+                                        enabled:
+                                          description: |-
+                                            Enabled causes Envoy to route all requests to the local zone if there are at least "minZoneSize" healthy hosts
+                                            available.
+                                          type: boolean
+                                        minZoneSize:
+                                          description: |-
+                                            MinZoneSize is the minimum number of upstream hosts in the local zone required to honor the forceLocalZone
+                                            override. Defaults to 1 if not specified.
+                                          format: int32
+                                          type: integer
+                                      type: object
+                                    minClusterSize:
+                                      description: MinClusterSize is the minimum number
+                                        of total upstream hosts across all zones required
+                                        to enable zone-aware routing.
+                                      format: int64
+                                      type: integer
+                                  type: object
+                              type: object
                             slowStart:
                               description: |-
                                 SlowStart defines the configuration related to the slow start load balancer policy.
@@ -4611,6 +4682,10 @@ spec:
                               and LeastRequest load balancers.
                             rule: 'self.type in [''Random'', ''ConsistentHash''] ?
                               !has(self.slowStart) : true '
+                          - message: Currently RequestDistribution is only supported
+                              for LeastRequest, Random, and RoundRobin load balancers.
+                            rule: 'self.type == ''ConsistentHash'' ? !has(self.requestDistribution)
+                              : true '
                         proxyProtocol:
                           description: ProxyProtocol enables the Proxy Protocol when
                             communicating with the backend.
@@ -17493,6 +17568,45 @@ spec:
                                                     be set.
                                                   rule: 'self.type == ''Cookie'' ?
                                                     has(self.cookie) : !has(self.cookie)'
+                                              requestDistribution:
+                                                description: RequestDistribution defines
+                                                  the configuration related to the
+                                                  distribution of requests between
+                                                  localities.
+                                                properties:
+                                                  preferLocalZone:
+                                                    description: PreferLocalZone configures
+                                                      zone-aware routing to prefer
+                                                      sending traffic to the local
+                                                      locality zone.
+                                                    properties:
+                                                      forceLocalZone:
+                                                        description: |-
+                                                          ForceLocalZone defines override configuration for forcing all traffic to stay local vs Envoy default behavior
+                                                          which maintains equal distribution among upstreams while sending as much traffic as possible locally.
+                                                        properties:
+                                                          enabled:
+                                                            description: |-
+                                                              Enabled causes Envoy to route all requests to the local zone if there are at least "minZoneSize" healthy hosts
+                                                              available.
+                                                            type: boolean
+                                                          minZoneSize:
+                                                            description: |-
+                                                              MinZoneSize is the minimum number of upstream hosts in the local zone required to honor the forceLocalZone
+                                                              override. Defaults to 1 if not specified.
+                                                            format: int32
+                                                            type: integer
+                                                        type: object
+                                                      minClusterSize:
+                                                        description: MinClusterSize
+                                                          is the minimum number of
+                                                          total upstream hosts across
+                                                          all zones required to enable
+                                                          zone-aware routing.
+                                                        format: int64
+                                                        type: integer
+                                                    type: object
+                                                type: object
                                               slowStart:
                                                 description: |-
                                                   SlowStart defines the configuration related to the slow start load balancer policy.
@@ -17536,6 +17650,12 @@ spec:
                                                 load balancers.
                                               rule: 'self.type in [''Random'', ''ConsistentHash'']
                                                 ? !has(self.slowStart) : true '
+                                            - message: Currently RequestDistribution
+                                                is only supported for LeastRequest,
+                                                Random, and RoundRobin load balancers.
+                                              rule: 'self.type == ''ConsistentHash''
+                                                ? !has(self.requestDistribution) :
+                                                true '
                                           proxyProtocol:
                                             description: ProxyProtocol enables the
                                               Proxy Protocol when communicating with
@@ -18520,6 +18640,45 @@ spec:
                                                     be set.
                                                   rule: 'self.type == ''Cookie'' ?
                                                     has(self.cookie) : !has(self.cookie)'
+                                              requestDistribution:
+                                                description: RequestDistribution defines
+                                                  the configuration related to the
+                                                  distribution of requests between
+                                                  localities.
+                                                properties:
+                                                  preferLocalZone:
+                                                    description: PreferLocalZone configures
+                                                      zone-aware routing to prefer
+                                                      sending traffic to the local
+                                                      locality zone.
+                                                    properties:
+                                                      forceLocalZone:
+                                                        description: |-
+                                                          ForceLocalZone defines override configuration for forcing all traffic to stay local vs Envoy default behavior
+                                                          which maintains equal distribution among upstreams while sending as much traffic as possible locally.
+                                                        properties:
+                                                          enabled:
+                                                            description: |-
+                                                              Enabled causes Envoy to route all requests to the local zone if there are at least "minZoneSize" healthy hosts
+                                                              available.
+                                                            type: boolean
+                                                          minZoneSize:
+                                                            description: |-
+                                                              MinZoneSize is the minimum number of upstream hosts in the local zone required to honor the forceLocalZone
+                                                              override. Defaults to 1 if not specified.
+                                                            format: int32
+                                                            type: integer
+                                                        type: object
+                                                      minClusterSize:
+                                                        description: MinClusterSize
+                                                          is the minimum number of
+                                                          total upstream hosts across
+                                                          all zones required to enable
+                                                          zone-aware routing.
+                                                        format: int64
+                                                        type: integer
+                                                    type: object
+                                                type: object
                                               slowStart:
                                                 description: |-
                                                   SlowStart defines the configuration related to the slow start load balancer policy.
@@ -18563,6 +18722,12 @@ spec:
                                                 load balancers.
                                               rule: 'self.type in [''Random'', ''ConsistentHash'']
                                                 ? !has(self.slowStart) : true '
+                                            - message: Currently RequestDistribution
+                                                is only supported for LeastRequest,
+                                                Random, and RoundRobin load balancers.
+                                              rule: 'self.type == ''ConsistentHash''
+                                                ? !has(self.requestDistribution) :
+                                                true '
                                           proxyProtocol:
                                             description: ProxyProtocol enables the
                                               Proxy Protocol when communicating with
@@ -19617,6 +19782,42 @@ spec:
                                               the cookie field must be set.
                                             rule: 'self.type == ''Cookie'' ? has(self.cookie)
                                               : !has(self.cookie)'
+                                        requestDistribution:
+                                          description: RequestDistribution defines
+                                            the configuration related to the distribution
+                                            of requests between localities.
+                                          properties:
+                                            preferLocalZone:
+                                              description: PreferLocalZone configures
+                                                zone-aware routing to prefer sending
+                                                traffic to the local locality zone.
+                                              properties:
+                                                forceLocalZone:
+                                                  description: |-
+                                                    ForceLocalZone defines override configuration for forcing all traffic to stay local vs Envoy default behavior
+                                                    which maintains equal distribution among upstreams while sending as much traffic as possible locally.
+                                                  properties:
+                                                    enabled:
+                                                      description: |-
+                                                        Enabled causes Envoy to route all requests to the local zone if there are at least "minZoneSize" healthy hosts
+                                                        available.
+                                                      type: boolean
+                                                    minZoneSize:
+                                                      description: |-
+                                                        MinZoneSize is the minimum number of upstream hosts in the local zone required to honor the forceLocalZone
+                                                        override. Defaults to 1 if not specified.
+                                                      format: int32
+                                                      type: integer
+                                                  type: object
+                                                minClusterSize:
+                                                  description: MinClusterSize is the
+                                                    minimum number of total upstream
+                                                    hosts across all zones required
+                                                    to enable zone-aware routing.
+                                                  format: int64
+                                                  type: integer
+                                              type: object
+                                          type: object
                                         slowStart:
                                           description: |-
                                             SlowStart defines the configuration related to the slow start load balancer policy.
@@ -19659,6 +19860,11 @@ spec:
                                           for RoundRobin and LeastRequest load balancers.
                                         rule: 'self.type in [''Random'', ''ConsistentHash'']
                                           ? !has(self.slowStart) : true '
+                                      - message: Currently RequestDistribution is
+                                          only supported for LeastRequest, Random,
+                                          and RoundRobin load balancers.
+                                        rule: 'self.type == ''ConsistentHash'' ? !has(self.requestDistribution)
+                                          : true '
                                     proxyProtocol:
                                       description: ProxyProtocol enables the Proxy
                                         Protocol when communicating with the backend.
@@ -20648,6 +20854,42 @@ spec:
                                         the cookie field must be set.
                                       rule: 'self.type == ''Cookie'' ? has(self.cookie)
                                         : !has(self.cookie)'
+                                  requestDistribution:
+                                    description: RequestDistribution defines the configuration
+                                      related to the distribution of requests between
+                                      localities.
+                                    properties:
+                                      preferLocalZone:
+                                        description: PreferLocalZone configures zone-aware
+                                          routing to prefer sending traffic to the
+                                          local locality zone.
+                                        properties:
+                                          forceLocalZone:
+                                            description: |-
+                                              ForceLocalZone defines override configuration for forcing all traffic to stay local vs Envoy default behavior
+                                              which maintains equal distribution among upstreams while sending as much traffic as possible locally.
+                                            properties:
+                                              enabled:
+                                                description: |-
+                                                  Enabled causes Envoy to route all requests to the local zone if there are at least "minZoneSize" healthy hosts
+                                                  available.
+                                                type: boolean
+                                              minZoneSize:
+                                                description: |-
+                                                  MinZoneSize is the minimum number of upstream hosts in the local zone required to honor the forceLocalZone
+                                                  override. Defaults to 1 if not specified.
+                                                format: int32
+                                                type: integer
+                                            type: object
+                                          minClusterSize:
+                                            description: MinClusterSize is the minimum
+                                              number of total upstream hosts across
+                                              all zones required to enable zone-aware
+                                              routing.
+                                            format: int64
+                                            type: integer
+                                        type: object
+                                    type: object
                                   slowStart:
                                     description: |-
                                       SlowStart defines the configuration related to the slow start load balancer policy.
@@ -20690,6 +20932,11 @@ spec:
                                     RoundRobin and LeastRequest load balancers.
                                   rule: 'self.type in [''Random'', ''ConsistentHash'']
                                     ? !has(self.slowStart) : true '
+                                - message: Currently RequestDistribution is only supported
+                                    for LeastRequest, Random, and RoundRobin load
+                                    balancers.
+                                  rule: 'self.type == ''ConsistentHash'' ? !has(self.requestDistribution)
+                                    : true '
                               proxyProtocol:
                                 description: ProxyProtocol enables the Proxy Protocol
                                   when communicating with the backend.
@@ -22492,6 +22739,41 @@ spec:
                                     cookie field must be set.
                                   rule: 'self.type == ''Cookie'' ? has(self.cookie)
                                     : !has(self.cookie)'
+                              requestDistribution:
+                                description: RequestDistribution defines the configuration
+                                  related to the distribution of requests between
+                                  localities.
+                                properties:
+                                  preferLocalZone:
+                                    description: PreferLocalZone configures zone-aware
+                                      routing to prefer sending traffic to the local
+                                      locality zone.
+                                    properties:
+                                      forceLocalZone:
+                                        description: |-
+                                          ForceLocalZone defines override configuration for forcing all traffic to stay local vs Envoy default behavior
+                                          which maintains equal distribution among upstreams while sending as much traffic as possible locally.
+                                        properties:
+                                          enabled:
+                                            description: |-
+                                              Enabled causes Envoy to route all requests to the local zone if there are at least "minZoneSize" healthy hosts
+                                              available.
+                                            type: boolean
+                                          minZoneSize:
+                                            description: |-
+                                              MinZoneSize is the minimum number of upstream hosts in the local zone required to honor the forceLocalZone
+                                              override. Defaults to 1 if not specified.
+                                            format: int32
+                                            type: integer
+                                        type: object
+                                      minClusterSize:
+                                        description: MinClusterSize is the minimum
+                                          number of total upstream hosts across all
+                                          zones required to enable zone-aware routing.
+                                        format: int64
+                                        type: integer
+                                    type: object
+                                type: object
                               slowStart:
                                 description: |-
                                   SlowStart defines the configuration related to the slow start load balancer policy.
@@ -22534,6 +22816,10 @@ spec:
                                 and LeastRequest load balancers.
                               rule: 'self.type in [''Random'', ''ConsistentHash'']
                                 ? !has(self.slowStart) : true '
+                            - message: Currently RequestDistribution is only supported
+                                for LeastRequest, Random, and RoundRobin load balancers.
+                              rule: 'self.type == ''ConsistentHash'' ? !has(self.requestDistribution)
+                                : true '
                           proxyProtocol:
                             description: ProxyProtocol enables the Proxy Protocol
                               when communicating with the backend.
@@ -23417,6 +23703,41 @@ spec:
                                     cookie field must be set.
                                   rule: 'self.type == ''Cookie'' ? has(self.cookie)
                                     : !has(self.cookie)'
+                              requestDistribution:
+                                description: RequestDistribution defines the configuration
+                                  related to the distribution of requests between
+                                  localities.
+                                properties:
+                                  preferLocalZone:
+                                    description: PreferLocalZone configures zone-aware
+                                      routing to prefer sending traffic to the local
+                                      locality zone.
+                                    properties:
+                                      forceLocalZone:
+                                        description: |-
+                                          ForceLocalZone defines override configuration for forcing all traffic to stay local vs Envoy default behavior
+                                          which maintains equal distribution among upstreams while sending as much traffic as possible locally.
+                                        properties:
+                                          enabled:
+                                            description: |-
+                                              Enabled causes Envoy to route all requests to the local zone if there are at least "minZoneSize" healthy hosts
+                                              available.
+                                            type: boolean
+                                          minZoneSize:
+                                            description: |-
+                                              MinZoneSize is the minimum number of upstream hosts in the local zone required to honor the forceLocalZone
+                                              override. Defaults to 1 if not specified.
+                                            format: int32
+                                            type: integer
+                                        type: object
+                                      minClusterSize:
+                                        description: MinClusterSize is the minimum
+                                          number of total upstream hosts across all
+                                          zones required to enable zone-aware routing.
+                                        format: int64
+                                        type: integer
+                                    type: object
+                                type: object
                               slowStart:
                                 description: |-
                                   SlowStart defines the configuration related to the slow start load balancer policy.
@@ -23459,6 +23780,10 @@ spec:
                                 and LeastRequest load balancers.
                               rule: 'self.type in [''Random'', ''ConsistentHash'']
                                 ? !has(self.slowStart) : true '
+                            - message: Currently RequestDistribution is only supported
+                                for LeastRequest, Random, and RoundRobin load balancers.
+                              rule: 'self.type == ''ConsistentHash'' ? !has(self.requestDistribution)
+                                : true '
                           proxyProtocol:
                             description: ProxyProtocol enables the Proxy Protocol
                               when communicating with the backend.
@@ -24548,6 +24873,42 @@ spec:
                                           the cookie field must be set.
                                         rule: 'self.type == ''Cookie'' ? has(self.cookie)
                                           : !has(self.cookie)'
+                                    requestDistribution:
+                                      description: RequestDistribution defines the
+                                        configuration related to the distribution
+                                        of requests between localities.
+                                      properties:
+                                        preferLocalZone:
+                                          description: PreferLocalZone configures
+                                            zone-aware routing to prefer sending traffic
+                                            to the local locality zone.
+                                          properties:
+                                            forceLocalZone:
+                                              description: |-
+                                                ForceLocalZone defines override configuration for forcing all traffic to stay local vs Envoy default behavior
+                                                which maintains equal distribution among upstreams while sending as much traffic as possible locally.
+                                              properties:
+                                                enabled:
+                                                  description: |-
+                                                    Enabled causes Envoy to route all requests to the local zone if there are at least "minZoneSize" healthy hosts
+                                                    available.
+                                                  type: boolean
+                                                minZoneSize:
+                                                  description: |-
+                                                    MinZoneSize is the minimum number of upstream hosts in the local zone required to honor the forceLocalZone
+                                                    override. Defaults to 1 if not specified.
+                                                  format: int32
+                                                  type: integer
+                                              type: object
+                                            minClusterSize:
+                                              description: MinClusterSize is the minimum
+                                                number of total upstream hosts across
+                                                all zones required to enable zone-aware
+                                                routing.
+                                              format: int64
+                                              type: integer
+                                          type: object
+                                      type: object
                                     slowStart:
                                       description: |-
                                         SlowStart defines the configuration related to the slow start load balancer policy.
@@ -24590,6 +24951,11 @@ spec:
                                       for RoundRobin and LeastRequest load balancers.
                                     rule: 'self.type in [''Random'', ''ConsistentHash'']
                                       ? !has(self.slowStart) : true '
+                                  - message: Currently RequestDistribution is only
+                                      supported for LeastRequest, Random, and RoundRobin
+                                      load balancers.
+                                    rule: 'self.type == ''ConsistentHash'' ? !has(self.requestDistribution)
+                                      : true '
                                 proxyProtocol:
                                   description: ProxyProtocol enables the Proxy Protocol
                                     when communicating with the backend.
@@ -25654,6 +26020,41 @@ spec:
                                     cookie field must be set.
                                   rule: 'self.type == ''Cookie'' ? has(self.cookie)
                                     : !has(self.cookie)'
+                              requestDistribution:
+                                description: RequestDistribution defines the configuration
+                                  related to the distribution of requests between
+                                  localities.
+                                properties:
+                                  preferLocalZone:
+                                    description: PreferLocalZone configures zone-aware
+                                      routing to prefer sending traffic to the local
+                                      locality zone.
+                                    properties:
+                                      forceLocalZone:
+                                        description: |-
+                                          ForceLocalZone defines override configuration for forcing all traffic to stay local vs Envoy default behavior
+                                          which maintains equal distribution among upstreams while sending as much traffic as possible locally.
+                                        properties:
+                                          enabled:
+                                            description: |-
+                                              Enabled causes Envoy to route all requests to the local zone if there are at least "minZoneSize" healthy hosts
+                                              available.
+                                            type: boolean
+                                          minZoneSize:
+                                            description: |-
+                                              MinZoneSize is the minimum number of upstream hosts in the local zone required to honor the forceLocalZone
+                                              override. Defaults to 1 if not specified.
+                                            format: int32
+                                            type: integer
+                                        type: object
+                                      minClusterSize:
+                                        description: MinClusterSize is the minimum
+                                          number of total upstream hosts across all
+                                          zones required to enable zone-aware routing.
+                                        format: int64
+                                        type: integer
+                                    type: object
+                                type: object
                               slowStart:
                                 description: |-
                                   SlowStart defines the configuration related to the slow start load balancer policy.
@@ -25696,6 +26097,10 @@ spec:
                                 and LeastRequest load balancers.
                               rule: 'self.type in [''Random'', ''ConsistentHash'']
                                 ? !has(self.slowStart) : true '
+                            - message: Currently RequestDistribution is only supported
+                                for LeastRequest, Random, and RoundRobin load balancers.
+                              rule: 'self.type == ''ConsistentHash'' ? !has(self.requestDistribution)
+                                : true '
                           proxyProtocol:
                             description: ProxyProtocol enables the Proxy Protocol
                               when communicating with the backend.
