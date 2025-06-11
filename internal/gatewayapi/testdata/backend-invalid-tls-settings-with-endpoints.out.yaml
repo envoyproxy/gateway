@@ -1,0 +1,69 @@
+backends:
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: Backend
+  metadata:
+    creationTimestamp: null
+    name: backend-1
+    namespace: default
+  spec:
+    endpoints:
+    - ip:
+        address: 1.1.1.1
+        port: 3001
+      zone: zone1
+    tls:
+      caCertificateRefs:
+      - group: ""
+        kind: ConfigMap
+        name: backend-ca-certificate
+  status:
+    conditions:
+    - lastTransitionTime: null
+      message: 'The Backend was not accepted: TLS.CACertificateRefs settings can only
+        be specified for DynamicResolver backends'
+      reason: Accepted
+      status: "False"
+      type: Invalid
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: Backend
+  metadata:
+    creationTimestamp: null
+    name: backend-2
+    namespace: default
+  spec:
+    endpoints:
+    - ip:
+        address: 2.2.2.2
+        port: 3001
+      zone: zone2
+    tls:
+      wellKnownCACertificates: System
+  status:
+    conditions:
+    - lastTransitionTime: null
+      message: 'The Backend was not accepted: TLS.WellKnownCACertificates settings
+        can only be specified for DynamicResolver backends'
+      reason: Accepted
+      status: "False"
+      type: Invalid
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: Backend
+  metadata:
+    creationTimestamp: null
+    name: backend-2
+    namespace: default
+  spec:
+    tls:
+      insecureSkipVerify: false
+    type: DynamicResolver
+  status:
+    conditions:
+    - lastTransitionTime: null
+      message: 'The Backend was not accepted: must specify either CACertificateRefs
+        or WellKnownCACertificates for DynamicResolver type when InsecureSkipVerify
+        is unset or false'
+      reason: Accepted
+      status: "False"
+      type: Invalid
+infraIR: {}
+xdsIR: {}

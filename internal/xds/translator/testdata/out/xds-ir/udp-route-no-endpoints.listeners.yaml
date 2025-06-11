@@ -1,0 +1,18 @@
+- address:
+    socketAddress:
+      address: 0.0.0.0
+      portValue: 10162
+      protocol: UDP
+  listenerFilters:
+  - name: envoy.filters.udp_listener.udp_proxy
+    typedConfig:
+      '@type': type.googleapis.com/envoy.extensions.filters.udp.udp_proxy.v3.UdpProxyConfig
+      matcher:
+        onNoMatch:
+          action:
+            name: route
+            typedConfig:
+              '@type': type.googleapis.com/envoy.extensions.filters.udp.udp_proxy.v3.Route
+              cluster: udproute/default/udproute-1/rule/-1
+      statPrefix: service
+  name: udp-route

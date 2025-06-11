@@ -1325,6 +1325,117 @@ spec:
                       required:
                       - statusCodes
                       type: object
+                    redirect:
+                      description: Redirect configuration
+                      properties:
+                        hostname:
+                          description: |-
+                            Hostname is the hostname to be used in the value of the `Location`
+                            header in the response.
+                            When empty, the hostname in the `Host` header of the request is used.
+                          maxLength: 253
+                          minLength: 1
+                          pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                          type: string
+                        path:
+                          description: |-
+                            Path defines parameters used to modify the path of the incoming request.
+                            The modified path is then used to construct the `Location` header. When
+                            empty, the request path is used as-is.
+                          properties:
+                            replaceFullPath:
+                              description: |-
+                                ReplaceFullPath specifies the value with which to replace the full path
+                                of a request during a rewrite or redirect.
+                              maxLength: 1024
+                              type: string
+                            replacePrefixMatch:
+                              description: |-
+                                ReplacePrefixMatch specifies the value with which to replace the prefix
+                                match of a request during a rewrite or redirect. For example, a request
+                                to "/foo/bar" with a prefix match of "/foo" and a ReplacePrefixMatch
+                                of "/xyz" would be modified to "/xyz/bar".
+
+                                Note that this matches the behavior of the PathPrefix match type. This
+                                matches full path elements. A path element refers to the list of labels
+                                in the path split by the `/` separator. When specified, a trailing `/` is
+                                ignored. For example, the paths `/abc`, `/abc/`, and `/abc/def` would all
+                                match the prefix `/abc`, but the path `/abcd` would not.
+
+                                ReplacePrefixMatch is only compatible with a `PathPrefix` HTTPRouteMatch.
+                                Using any other HTTPRouteMatch type on the same HTTPRouteRule will result in
+                                the implementation setting the Accepted Condition for the Route to `status: False`.
+
+                                Request Path | Prefix Match | Replace Prefix | Modified Path
+                              maxLength: 1024
+                              type: string
+                            type:
+                              description: |-
+                                Type defines the type of path modifier. Additional types may be
+                                added in a future release of the API.
+
+                                Note that values may be added to this enum, implementations
+                                must ensure that unknown values will not cause a crash.
+
+                                Unknown values here must result in the implementation setting the
+                                Accepted Condition for the Route to `status: False`, with a
+                                Reason of `UnsupportedValue`.
+                              enum:
+                              - ReplaceFullPath
+                              - ReplacePrefixMatch
+                              type: string
+                          required:
+                          - type
+                          type: object
+                          x-kubernetes-validations:
+                          - message: replaceFullPath must be specified when type is
+                              set to 'ReplaceFullPath'
+                            rule: 'self.type == ''ReplaceFullPath'' ? has(self.replaceFullPath)
+                              : true'
+                          - message: type must be 'ReplaceFullPath' when replaceFullPath
+                              is set
+                            rule: 'has(self.replaceFullPath) ? self.type == ''ReplaceFullPath''
+                              : true'
+                          - message: replacePrefixMatch must be specified when type
+                              is set to 'ReplacePrefixMatch'
+                            rule: 'self.type == ''ReplacePrefixMatch'' ? has(self.replacePrefixMatch)
+                              : true'
+                          - message: type must be 'ReplacePrefixMatch' when replacePrefixMatch
+                              is set
+                            rule: 'has(self.replacePrefixMatch) ? self.type == ''ReplacePrefixMatch''
+                              : true'
+                        port:
+                          description: |-
+                            Port is the port to be used in the value of the `Location`
+                            header in the response.
+
+                            If redirect scheme is not-empty, the well-known port associated with the redirect scheme will be used.
+                            Specifically "http" to port 80 and "https" to port 443. If the redirect scheme does not have a
+                            well-known port or redirect scheme is empty, the listener port of the Gateway will be used.
+
+                            Port will not be added in the 'Location' header if scheme is HTTP and port is 80
+                            or scheme is HTTPS and port is 443.
+                          format: int32
+                          maximum: 65535
+                          minimum: 1
+                          type: integer
+                        scheme:
+                          description: |-
+                            Scheme is the scheme to be used in the value of the `Location` header in
+                            the response. When empty, the scheme of the request is used.
+                          enum:
+                          - http
+                          - https
+                          type: string
+                        statusCode:
+                          default: 302
+                          description: StatusCode is the HTTP status code to be used
+                            in response.
+                          enum:
+                          - 301
+                          - 302
+                          type: integer
+                      type: object
                     response:
                       description: Response configuration.
                       properties:
@@ -1406,14 +1517,24 @@ spec:
                       type: object
                   required:
                   - match
-                  - response
                   type: object
+                  x-kubernetes-validations:
+                  - message: exactly one of response or redirect must be specified
+                    rule: (has(self.response) && !has(self.redirect)) || (!has(self.response)
+                      && has(self.redirect))
                 type: array
               retry:
                 description: |-
                   Retry provides more advanced usage, allowing users to customize the number of retries, retry fallback strategy, and retry triggering conditions.
                   If not set, retry will be disabled.
                 properties:
+                  numAttemptsPerPriority:
+                    description: |-
+                      NumAttemptsPerPriority defines the number of requests (initial attempt + retries)
+                      that should be sent to the same priority before switching to a different one.
+                      If not specified or set to 0, all requests are sent to the highest priority that is healthy.
+                    format: int32
+                    type: integer
                   numRetries:
                     default: 2
                     description: NumRetries is the number of retries to be attempted.

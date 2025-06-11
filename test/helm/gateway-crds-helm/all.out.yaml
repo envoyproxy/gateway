@@ -17469,7 +17469,8 @@ spec:
               tls:
                 description: |-
                   TLS defines the TLS settings for the backend.
-                  Only supported for DynamicResolver backends.
+                  TLS.CACertificateRefs and TLS.WellKnownCACertificates can only be specified for DynamicResolver backends.
+                  TLS.InsecureSkipVerify can be specified for any Backends
                 properties:
                   caCertificateRefs:
                     description: |-
@@ -17483,6 +17484,8 @@ spec:
                       If CACertificateRefs is empty or unspecified, then WellKnownCACertificates must be
                       specified. Only one of CACertificateRefs or WellKnownCACertificates may be specified,
                       not both.
+
+                      Only used for DynamicResolver backends.
                     items:
                       description: |-
                         LocalObjectReference identifies an API object within the namespace of the
@@ -17520,6 +17523,12 @@ spec:
                       type: object
                     maxItems: 8
                     type: array
+                  insecureSkipVerify:
+                    default: false
+                    description: |-
+                      InsecureSkipVerify indicates whether the upstream's certificate verification
+                      should be skipped. Defaults to "false".
+                    type: boolean
                   wellKnownCACertificates:
                     description: |-
                       WellKnownCACertificates specifies whether system CA certificates may be used in
@@ -17528,6 +17537,8 @@ spec:
                       If WellKnownCACertificates is unspecified or empty (""), then CACertificateRefs
                       must be specified with at least one entry for a valid configuration. Only one of
                       CACertificateRefs or WellKnownCACertificates may be specified, not both.
+
+                      Only used for DynamicResolver backends.
                     enum:
                     - System
                     type: string
@@ -17537,10 +17548,12 @@ spec:
                   rule: '!(has(self.caCertificateRefs) && size(self.caCertificateRefs)
                     > 0 && has(self.wellKnownCACertificates) && self.wellKnownCACertificates
                     != "")'
-                - message: must specify either CACertificateRefs or WellKnownCACertificates
-                  rule: (has(self.caCertificateRefs) && size(self.caCertificateRefs)
-                    > 0 || has(self.wellKnownCACertificates) && self.wellKnownCACertificates
-                    != "")
+                - message: must not contain either CACertificateRefs or WellKnownCACertificates
+                    when InsecureSkipVerify is enabled
+                  rule: '!((has(self.insecureSkipVerify) && self.insecureSkipVerify)
+                    && ((has(self.caCertificateRefs) && size(self.caCertificateRefs)
+                    > 0) || (has(self.wellKnownCACertificates) && self.wellKnownCACertificates
+                    != "")))'
               type:
                 default: Endpoints
                 description: Type defines the type of the backend. Defaults to "Endpoints"
@@ -17552,8 +17565,6 @@ spec:
             x-kubernetes-validations:
             - message: DynamicResolver type cannot have endpoints specified
               rule: self.type != 'DynamicResolver' || !has(self.endpoints)
-            - message: TLS settings can only be specified for DynamicResolver backends
-              rule: 'has(self.tls) ? self.type == ''DynamicResolver'' : true'
           status:
             description: Status defines the current status of Backend.
             properties:
@@ -18953,6 +18964,117 @@ spec:
                       required:
                       - statusCodes
                       type: object
+                    redirect:
+                      description: Redirect configuration
+                      properties:
+                        hostname:
+                          description: |-
+                            Hostname is the hostname to be used in the value of the `Location`
+                            header in the response.
+                            When empty, the hostname in the `Host` header of the request is used.
+                          maxLength: 253
+                          minLength: 1
+                          pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                          type: string
+                        path:
+                          description: |-
+                            Path defines parameters used to modify the path of the incoming request.
+                            The modified path is then used to construct the `Location` header. When
+                            empty, the request path is used as-is.
+                          properties:
+                            replaceFullPath:
+                              description: |-
+                                ReplaceFullPath specifies the value with which to replace the full path
+                                of a request during a rewrite or redirect.
+                              maxLength: 1024
+                              type: string
+                            replacePrefixMatch:
+                              description: |-
+                                ReplacePrefixMatch specifies the value with which to replace the prefix
+                                match of a request during a rewrite or redirect. For example, a request
+                                to "/foo/bar" with a prefix match of "/foo" and a ReplacePrefixMatch
+                                of "/xyz" would be modified to "/xyz/bar".
+
+                                Note that this matches the behavior of the PathPrefix match type. This
+                                matches full path elements. A path element refers to the list of labels
+                                in the path split by the `/` separator. When specified, a trailing `/` is
+                                ignored. For example, the paths `/abc`, `/abc/`, and `/abc/def` would all
+                                match the prefix `/abc`, but the path `/abcd` would not.
+
+                                ReplacePrefixMatch is only compatible with a `PathPrefix` HTTPRouteMatch.
+                                Using any other HTTPRouteMatch type on the same HTTPRouteRule will result in
+                                the implementation setting the Accepted Condition for the Route to `status: False`.
+
+                                Request Path | Prefix Match | Replace Prefix | Modified Path
+                              maxLength: 1024
+                              type: string
+                            type:
+                              description: |-
+                                Type defines the type of path modifier. Additional types may be
+                                added in a future release of the API.
+
+                                Note that values may be added to this enum, implementations
+                                must ensure that unknown values will not cause a crash.
+
+                                Unknown values here must result in the implementation setting the
+                                Accepted Condition for the Route to `status: False`, with a
+                                Reason of `UnsupportedValue`.
+                              enum:
+                              - ReplaceFullPath
+                              - ReplacePrefixMatch
+                              type: string
+                          required:
+                          - type
+                          type: object
+                          x-kubernetes-validations:
+                          - message: replaceFullPath must be specified when type is
+                              set to 'ReplaceFullPath'
+                            rule: 'self.type == ''ReplaceFullPath'' ? has(self.replaceFullPath)
+                              : true'
+                          - message: type must be 'ReplaceFullPath' when replaceFullPath
+                              is set
+                            rule: 'has(self.replaceFullPath) ? self.type == ''ReplaceFullPath''
+                              : true'
+                          - message: replacePrefixMatch must be specified when type
+                              is set to 'ReplacePrefixMatch'
+                            rule: 'self.type == ''ReplacePrefixMatch'' ? has(self.replacePrefixMatch)
+                              : true'
+                          - message: type must be 'ReplacePrefixMatch' when replacePrefixMatch
+                              is set
+                            rule: 'has(self.replacePrefixMatch) ? self.type == ''ReplacePrefixMatch''
+                              : true'
+                        port:
+                          description: |-
+                            Port is the port to be used in the value of the `Location`
+                            header in the response.
+
+                            If redirect scheme is not-empty, the well-known port associated with the redirect scheme will be used.
+                            Specifically "http" to port 80 and "https" to port 443. If the redirect scheme does not have a
+                            well-known port or redirect scheme is empty, the listener port of the Gateway will be used.
+
+                            Port will not be added in the 'Location' header if scheme is HTTP and port is 80
+                            or scheme is HTTPS and port is 443.
+                          format: int32
+                          maximum: 65535
+                          minimum: 1
+                          type: integer
+                        scheme:
+                          description: |-
+                            Scheme is the scheme to be used in the value of the `Location` header in
+                            the response. When empty, the scheme of the request is used.
+                          enum:
+                          - http
+                          - https
+                          type: string
+                        statusCode:
+                          default: 302
+                          description: StatusCode is the HTTP status code to be used
+                            in response.
+                          enum:
+                          - 301
+                          - 302
+                          type: integer
+                      type: object
                     response:
                       description: Response configuration.
                       properties:
@@ -19034,14 +19156,24 @@ spec:
                       type: object
                   required:
                   - match
-                  - response
                   type: object
+                  x-kubernetes-validations:
+                  - message: exactly one of response or redirect must be specified
+                    rule: (has(self.response) && !has(self.redirect)) || (!has(self.response)
+                      && has(self.redirect))
                 type: array
               retry:
                 description: |-
                   Retry provides more advanced usage, allowing users to customize the number of retries, retry fallback strategy, and retry triggering conditions.
                   If not set, retry will be disabled.
                 properties:
+                  numAttemptsPerPriority:
+                    description: |-
+                      NumAttemptsPerPriority defines the number of requests (initial attempt + retries)
+                      that should be sent to the same priority before switching to a different one.
+                      If not specified or set to 0, all requests are sent to the highest priority that is healthy.
+                    format: int32
+                    type: integer
                   numRetries:
                     default: 2
                     description: NumRetries is the number of retries to be attempted.
@@ -21820,6 +21952,13 @@ spec:
                             Retry provides more advanced usage, allowing users to customize the number of retries, retry fallback strategy, and retry triggering conditions.
                             If not set, retry will be disabled.
                           properties:
+                            numAttemptsPerPriority:
+                              description: |-
+                                NumAttemptsPerPriority defines the number of requests (initial attempt + retries)
+                                that should be sent to the same priority before switching to a different one.
+                                If not specified or set to 0, all requests are sent to the highest priority that is healthy.
+                              format: int32
+                              type: integer
                             numRetries:
                               default: 2
                               description: NumRetries is the number of retries to
@@ -23675,6 +23814,11 @@ spec:
                   the number of cpuset threads on the platform.
                 format: int32
                 type: integer
+              disableLuaValidation:
+                default: false
+                description: DisableLuaValidation disables the Lua script validation
+                  for Lua EnvoyExtensionPolicies
+                type: boolean
               extraArgs:
                 description: |-
                   ExtraArgs defines additional command line options that are provided to Envoy.
@@ -34741,6 +34885,13 @@ spec:
                                               Retry provides more advanced usage, allowing users to customize the number of retries, retry fallback strategy, and retry triggering conditions.
                                               If not set, retry will be disabled.
                                             properties:
+                                              numAttemptsPerPriority:
+                                                description: |-
+                                                  NumAttemptsPerPriority defines the number of requests (initial attempt + retries)
+                                                  that should be sent to the same priority before switching to a different one.
+                                                  If not specified or set to 0, all requests are sent to the highest priority that is healthy.
+                                                format: int32
+                                                type: integer
                                               numRetries:
                                                 default: 2
                                                 description: NumRetries is the number
@@ -35768,6 +35919,13 @@ spec:
                                               Retry provides more advanced usage, allowing users to customize the number of retries, retry fallback strategy, and retry triggering conditions.
                                               If not set, retry will be disabled.
                                             properties:
+                                              numAttemptsPerPriority:
+                                                description: |-
+                                                  NumAttemptsPerPriority defines the number of requests (initial attempt + retries)
+                                                  that should be sent to the same priority before switching to a different one.
+                                                  If not specified or set to 0, all requests are sent to the highest priority that is healthy.
+                                                format: int32
+                                                type: integer
                                               numRetries:
                                                 default: 2
                                                 description: NumRetries is the number
@@ -35999,6 +36157,21 @@ spec:
                     description: Metrics defines metrics configuration for managed
                       proxies.
                     properties:
+                      clusterStatName:
+                        description: |-
+                          ClusterStatName defines the value of cluster alt_stat_name, determining how cluster stats are named.
+                          For more details, see envoy docs: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/cluster/v3/cluster.proto.html
+                          The supported operators for this pattern are:
+                          %ROUTE_NAME%: name of Gateway API xRoute resource
+                          %ROUTE_NAMESPACE%: namespace of Gateway API xRoute resource
+                          %ROUTE_KIND%: kind of Gateway API xRoute resource
+                          %ROUTE_RULE_NAME%: name of the Gateway API xRoute section
+                          %ROUTE_RULE_NUMBER%: name of the Gateway API xRoute section
+                          %BACKEND_REFS%: names of all backends referenced in <NAMESPACE>/<NAME>|<NAMESPACE>/<NAME>|... format
+                          Only xDS Clusters created for HTTPRoute and GRPCRoute are currently supported.
+                          Default: %ROUTE_KIND%/%ROUTE_NAMESPACE%/%ROUTE_NAME%/rule/%ROUTE_RULE_NUMBER%
+                          Example: httproute/my-ns/my-route/rule/0
+                        type: string
                       enablePerEndpointStats:
                         description: |-
                           EnablePerEndpointStats enables per endpoint envoy stats metrics.
@@ -36863,6 +37036,13 @@ spec:
                                         Retry provides more advanced usage, allowing users to customize the number of retries, retry fallback strategy, and retry triggering conditions.
                                         If not set, retry will be disabled.
                                       properties:
+                                        numAttemptsPerPriority:
+                                          description: |-
+                                            NumAttemptsPerPriority defines the number of requests (initial attempt + retries)
+                                            that should be sent to the same priority before switching to a different one.
+                                            If not specified or set to 0, all requests are sent to the highest priority that is healthy.
+                                          format: int32
+                                          type: integer
                                         numRetries:
                                           default: 2
                                           description: NumRetries is the number of
@@ -37894,6 +38074,13 @@ spec:
                                   Retry provides more advanced usage, allowing users to customize the number of retries, retry fallback strategy, and retry triggering conditions.
                                   If not set, retry will be disabled.
                                 properties:
+                                  numAttemptsPerPriority:
+                                    description: |-
+                                      NumAttemptsPerPriority defines the number of requests (initial attempt + retries)
+                                      that should be sent to the same priority before switching to a different one.
+                                      If not specified or set to 0, all requests are sent to the highest priority that is healthy.
+                                    format: int32
+                                    type: integer
                                   numRetries:
                                     default: 2
                                     description: NumRetries is the number of retries
@@ -39738,6 +39925,13 @@ spec:
                               Retry provides more advanced usage, allowing users to customize the number of retries, retry fallback strategy, and retry triggering conditions.
                               If not set, retry will be disabled.
                             properties:
+                              numAttemptsPerPriority:
+                                description: |-
+                                  NumAttemptsPerPriority defines the number of requests (initial attempt + retries)
+                                  that should be sent to the same priority before switching to a different one.
+                                  If not specified or set to 0, all requests are sent to the highest priority that is healthy.
+                                format: int32
+                                type: integer
                               numRetries:
                                 default: 2
                                 description: NumRetries is the number of retries to
@@ -40663,6 +40857,13 @@ spec:
                               Retry provides more advanced usage, allowing users to customize the number of retries, retry fallback strategy, and retry triggering conditions.
                               If not set, retry will be disabled.
                             properties:
+                              numAttemptsPerPriority:
+                                description: |-
+                                  NumAttemptsPerPriority defines the number of requests (initial attempt + retries)
+                                  that should be sent to the same priority before switching to a different one.
+                                  If not specified or set to 0, all requests are sent to the highest priority that is healthy.
+                                format: int32
+                                type: integer
                               numRetries:
                                 default: 2
                                 description: NumRetries is the number of retries to
@@ -41794,6 +41995,13 @@ spec:
                                     Retry provides more advanced usage, allowing users to customize the number of retries, retry fallback strategy, and retry triggering conditions.
                                     If not set, retry will be disabled.
                                   properties:
+                                    numAttemptsPerPriority:
+                                      description: |-
+                                        NumAttemptsPerPriority defines the number of requests (initial attempt + retries)
+                                        that should be sent to the same priority before switching to a different one.
+                                        If not specified or set to 0, all requests are sent to the highest priority that is healthy.
+                                      format: int32
+                                      type: integer
                                     numRetries:
                                       default: 2
                                       description: NumRetries is the number of retries
@@ -42900,6 +43108,13 @@ spec:
                               Retry provides more advanced usage, allowing users to customize the number of retries, retry fallback strategy, and retry triggering conditions.
                               If not set, retry will be disabled.
                             properties:
+                              numAttemptsPerPriority:
+                                description: |-
+                                  NumAttemptsPerPriority defines the number of requests (initial attempt + retries)
+                                  that should be sent to the same priority before switching to a different one.
+                                  If not specified or set to 0, all requests are sent to the highest priority that is healthy.
+                                format: int32
+                                type: integer
                               numRetries:
                                 default: 2
                                 description: NumRetries is the number of retries to

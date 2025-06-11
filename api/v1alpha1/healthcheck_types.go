@@ -155,6 +155,7 @@ type HTTPActiveHealthChecker struct {
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=253
 	// +kubebuilder:validation:Pattern=`^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$`
+	// +optional
 	Hostname *string `json:"hostname,omitempty" yaml:"hostname,omitempty"`
 	// Path defines the HTTP path that will be requested during health checking.
 	// +kubebuilder:validation:MinLength=1
