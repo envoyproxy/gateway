@@ -153,7 +153,8 @@ type BackendSpec struct {
 	Fallback *bool `json:"fallback,omitempty"`
 
 	// TLS defines the TLS settings for the backend.
-	// Only supported for DynamicResolver backends.
+	// TLS.CACertificateRefs and TLS.WellKnownCACertificates can only be specified for DynamicResolver backends.
+	// TLS.InsecureSkipVerify can be specified for any Backends
 	//
 	// +optional
 	TLS *BackendTLSSettings `json:"tls,omitempty"`
@@ -161,7 +162,7 @@ type BackendSpec struct {
 
 // BackendTLSSettings holds the TLS settings for the backend.
 // +kubebuilder:validation:XValidation:message="must not contain both CACertificateRefs and WellKnownCACertificates",rule="!(has(self.caCertificateRefs) && size(self.caCertificateRefs) > 0 && has(self.wellKnownCACertificates) && self.wellKnownCACertificates != \"\")"
-// +kubebuilder:validation:XValidation:message="must specify either CACertificateRefs or WellKnownCACertificates",rule="(has(self.caCertificateRefs) && size(self.caCertificateRefs) > 0 || has(self.wellKnownCACertificates) && self.wellKnownCACertificates != \"\")"
+// +kubebuilder:validation:XValidation:message="must not contain either CACertificateRefs or WellKnownCACertificates when InsecureSkipVerify is enabled",rule="!((has(self.insecureSkipVerify) && self.insecureSkipVerify) && ((has(self.caCertificateRefs) && size(self.caCertificateRefs) > 0) || (has(self.wellKnownCACertificates) && self.wellKnownCACertificates != \"\")))"
 type BackendTLSSettings struct {
 	// CACertificateRefs contains one or more references to Kubernetes objects that
 	// contain TLS certificates of the Certificate Authorities that can be used
@@ -197,7 +198,6 @@ type BackendTLSSettings struct {
 	//
 	// +kubebuilder:default=false
 	// +optional
-	// +notImplementedHide
 	InsecureSkipVerify *bool `json:"insecureSkipVerify,omitempty"`
 }
 

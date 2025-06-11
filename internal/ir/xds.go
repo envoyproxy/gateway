@@ -1497,6 +1497,7 @@ type RouteDestination struct {
 	// to check if this route destination already exists and can be
 	// reused
 	Name     string                `json:"name" yaml:"name"`
+	StatName *string               `json:"statName,omitempty" yaml:"statName,omitempty"`
 	Settings []*DestinationSetting `json:"settings,omitempty" yaml:"settings,omitempty"`
 	// Metadata is used to enrich envoy route metadata with user and provider-specific information
 	// RouteDestination metadata is primarily derived from the xRoute resources. In some cases,
@@ -2837,6 +2838,11 @@ type Retry struct {
 	// NumRetries is the number of retries to be attempted. Defaults to 2.
 	NumRetries *uint32 `json:"numRetries,omitempty"`
 
+	// NumAttemptsPerPriority defines the number of requests (initial attempt + retries)
+	// that should be sent to the same priority before switching to a different one.
+	// If not specified or set to 0, all requests are sent to the highest priority that is healthy.
+	NumAttemptsPerPriority *int32 `json:"numAttemptsPerPriority,omitempty"`
+
 	// RetryOn specifies the retry trigger condition.
 	RetryOn *RetryOn `json:"retryOn,omitempty"`
 
@@ -2895,11 +2901,13 @@ type TLSUpstreamConfig struct {
 	CACertificate       *TLSCACertificate `json:"caCertificate,omitempty" yaml:"caCertificate,omitempty"`
 	TLSConfig           `json:",inline"`
 	SubjectAltNames     []SubjectAltName `json:"subjectAltNames,omitempty" yaml:"subjectAltNames,omitempty"`
+	InsecureSkipVerify  bool             `json:"insecureSkipVerify,omitempty" yaml:"insecureSkipVerify,omitempty"`
 }
 
 func (t *TLSUpstreamConfig) ToTLSConfig() (*tls.Config, error) {
 	// nolint:gosec
 	tlsConfig := &tls.Config{}
+	tlsConfig.InsecureSkipVerify = t.InsecureSkipVerify
 	if t.SNI != nil {
 		tlsConfig.ServerName = *t.SNI
 	}
