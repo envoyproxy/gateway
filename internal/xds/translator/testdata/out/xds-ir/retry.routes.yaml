@@ -58,5 +58,10 @@
             typedConfig:
               '@type': type.googleapis.com/envoy.extensions.retry.host.previous_hosts.v3.PreviousHostsPredicate
           retryOn: reset,connect-failure
+          retryPriority:
+            name: envoy.retry_priorities.previous_priorities
+            typedConfig:
+              '@type': type.googleapis.com/envoy.extensions.retry.priority.previous_priorities.v3.PreviousPrioritiesConfig
+              updateFrequency: 3
         upgradeConfigs:
         - upgradeType: websocket
