@@ -102,7 +102,7 @@ config:
     logging:
       level:
         default: info
-    extensionApis: {}
+    extensionAPI: {}
 
 createNamespace: false
 
