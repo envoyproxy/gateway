@@ -29,8 +29,14 @@ import (
 	"github.com/envoyproxy/gateway/internal/envoygateway"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
+	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 	"github.com/envoyproxy/gateway/internal/infrastructure/kubernetes/proxy"
 	"github.com/envoyproxy/gateway/internal/ir"
+)
+
+const (
+	testGatewayClass = "envoy-gateway-class"
+	testResourceUID  = "foo.bar"
 )
 
 func newTestInfra(t *testing.T) *Infra {
@@ -108,11 +114,21 @@ func newTestInfraWithClient(t *testing.T, cli client.Client) *Infra {
 }
 
 func TestCreateProxyInfra(t *testing.T) {
+	infra := ir.NewInfra()
+	infra.GetProxyInfra().GetProxyMetadata().OwnerReference = &ir.ResourceMetadata{
+		Kind: resource.KindGateway,
+		Name: testGatewayClass,
+	}
+
 	// Infra with Gateway owner labels.
-	infraWithLabels := ir.NewInfra()
+	infraWithLabels := infra.DeepCopy()
 	infraWithLabels.GetProxyInfra().GetProxyMetadata().Labels = proxy.EnvoyAppLabel()
 	infraWithLabels.GetProxyInfra().GetProxyMetadata().Labels[gatewayapi.OwningGatewayNamespaceLabel] = "default"
 	infraWithLabels.GetProxyInfra().GetProxyMetadata().Labels[gatewayapi.OwningGatewayNameLabel] = "test-gw"
+	infraWithLabels.GetProxyInfra().GetProxyMetadata().OwnerReference = &ir.ResourceMetadata{
+		Kind: resource.KindGateway,
+		Name: testGatewayClass,
+	}
 
 	testCases := []struct {
 		name   string
@@ -126,7 +142,7 @@ func TestCreateProxyInfra(t *testing.T) {
 		},
 		{
 			name:   "default infra without Gateway owner labels",
-			in:     ir.NewInfra(),
+			in:     infra,
 			expect: false,
 		},
 		{
@@ -147,6 +163,7 @@ func TestCreateProxyInfra(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 			kube := newTestInfra(t)
+			require.NoError(t, setupOwnerReferenceResources(context.Background(), kube.Client))
 			// Create or update the proxy infra.
 			err := kube.CreateOrUpdateProxyInfra(context.Background(), tc.in)
 			if !tc.expect {
@@ -192,6 +209,12 @@ func TestCreateProxyInfra(t *testing.T) {
 }
 
 func TestDeleteProxyInfra(t *testing.T) {
+	infra := ir.NewInfra()
+	infra.GetProxyInfra().GetProxyMetadata().OwnerReference = &ir.ResourceMetadata{
+		Kind: resource.KindGatewayClass,
+		Name: testGatewayClass,
+	}
+
 	testCases := []struct {
 		name   string
 		in     *ir.Infra
@@ -204,7 +227,7 @@ func TestDeleteProxyInfra(t *testing.T) {
 		},
 		{
 			name:   "default infra",
-			in:     ir.NewInfra(),
+			in:     infra,
 			expect: true,
 		},
 	}
@@ -213,6 +236,7 @@ func TestDeleteProxyInfra(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 			kube := newTestInfra(t)
+			require.NoError(t, setupOwnerReferenceResources(context.Background(), kube.Client))
 
 			err := kube.DeleteProxyInfra(context.Background(), tc.in)
 			if !tc.expect {
@@ -224,14 +248,24 @@ func TestDeleteProxyInfra(t *testing.T) {
 	}
 }
 
-// This function uses setup for GatewayNamespace mode.
+// This function uses setup creating Resources for OwnerReference.
+// When the default case, ProxyInfra Get OwnerReference from GatewayClass.
 // When enable GatewayNamespace mode, ProxyInfra Get OwnerReference from Gateway.
-func createGatewayForGatewayNamespaceMode(ctx context.Context, client *InfraClient) error {
+func setupOwnerReferenceResources(ctx context.Context, client *InfraClient) error {
+	gwc := &gwapiv1.GatewayClass{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: testGatewayClass,
+			UID:  testResourceUID,
+		},
+	}
+	if err := client.Create(ctx, gwc); err != nil {
+		return err
+	}
 	gw := &gwapiv1.Gateway{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: "ns1",
 			Name:      "gateway-1",
-			UID:       "foo.bar",
+			UID:       testResourceUID,
 		},
 	}
 	return client.Create(ctx, gw)

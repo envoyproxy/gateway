@@ -477,6 +477,9 @@ infraIR:
         labels:
           gateway.envoyproxy.io/owning-gateway-name: gateway-1
           gateway.envoyproxy.io/owning-gateway-namespace: envoy-gateway
+        ownerReference:
+          kind: GatewayClass
+          name: envoy-gateway-class
       name: envoy-gateway/gateway-1
       namespace: envoy-gateway-system
   envoy-gateway/gateway-2:
@@ -493,6 +496,9 @@ infraIR:
         labels:
           gateway.envoyproxy.io/owning-gateway-name: gateway-2
           gateway.envoyproxy.io/owning-gateway-namespace: envoy-gateway
+        ownerReference:
+          kind: GatewayClass
+          name: envoy-gateway-class
       name: envoy-gateway/gateway-2
       namespace: envoy-gateway-system
   envoy-gateway/gateway-3:
@@ -509,6 +515,9 @@ infraIR:
         labels:
           gateway.envoyproxy.io/owning-gateway-name: gateway-3
           gateway.envoyproxy.io/owning-gateway-namespace: envoy-gateway
+        ownerReference:
+          kind: GatewayClass
+          name: envoy-gateway-class
       name: envoy-gateway/gateway-3
       namespace: envoy-gateway-system
   envoy-gateway/gateway-4:
@@ -525,6 +534,9 @@ infraIR:
         labels:
           gateway.envoyproxy.io/owning-gateway-name: gateway-4
           gateway.envoyproxy.io/owning-gateway-namespace: envoy-gateway
+        ownerReference:
+          kind: GatewayClass
+          name: envoy-gateway-class
       name: envoy-gateway/gateway-4
       namespace: envoy-gateway-system
   envoy-gateway/gateway-5:
@@ -541,6 +553,9 @@ infraIR:
         labels:
           gateway.envoyproxy.io/owning-gateway-name: gateway-5
           gateway.envoyproxy.io/owning-gateway-namespace: envoy-gateway
+        ownerReference:
+          kind: GatewayClass
+          name: envoy-gateway-class
       name: envoy-gateway/gateway-5
       namespace: envoy-gateway-system
 xdsIR:
