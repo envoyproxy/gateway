@@ -16,6 +16,7 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
+	gwapiv1a3 "sigs.k8s.io/gateway-api/apis/v1alpha3"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 )
@@ -299,6 +300,19 @@ func TestBackend(t *testing.T) {
 				}
 			},
 			wantErrors: []string{`spec.endpoints[0].unix.path: Invalid value: "string": unix domain socket path must not exceed 108 characters`},
+		},
+		{
+			desc: "dynamic resolver invalid WellKnownCACertificates and InsecureSkipVerify specified",
+			mutate: func(backend *egv1a1.Backend) {
+				backend.Spec = egv1a1.BackendSpec{
+					Type: ptr.To(egv1a1.BackendTypeDynamicResolver),
+					TLS: &egv1a1.BackendTLSSettings{
+						InsecureSkipVerify:      ptr.To(true),
+						WellKnownCACertificates: ptr.To(gwapiv1a3.WellKnownCACertificatesSystem),
+					},
+				}
+			},
+			wantErrors: []string{`must not contain either CACertificateRefs or WellKnownCACertificates when InsecureSkipVerify is enabled`},
 		},
 	}
 

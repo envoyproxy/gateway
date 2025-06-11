@@ -14,6 +14,7 @@ import (
 	corev3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	routev3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
 	previoushost "github.com/envoyproxy/go-control-plane/envoy/extensions/retry/host/previous_hosts/v3"
+	previouspriority "github.com/envoyproxy/go-control-plane/envoy/extensions/retry/priority/previous_priorities/v3"
 	matcherv3 "github.com/envoyproxy/go-control-plane/envoy/type/matcher/v3"
 	"google.golang.org/protobuf/types/known/durationpb"
 	"google.golang.org/protobuf/types/known/wrapperspb"
@@ -640,6 +641,21 @@ func buildRetryPolicy(route *ir.HTTPRoute) (*routev3.RetryPolicy, error) {
 
 	if rr.NumRetries != nil {
 		rp.NumRetries = &wrapperspb.UInt32Value{Value: *rr.NumRetries}
+	}
+
+	if rr.NumAttemptsPerPriority != nil && *rr.NumAttemptsPerPriority > 0 {
+		anyCfgPriority, err := proto.ToAnyWithValidation(&previouspriority.PreviousPrioritiesConfig{
+			UpdateFrequency: *rr.NumAttemptsPerPriority,
+		})
+		if err != nil {
+			return nil, err
+		}
+		rp.RetryPriority = &routev3.RetryPolicy_RetryPriority{
+			Name: "envoy.retry_priorities.previous_priorities",
+			ConfigType: &routev3.RetryPolicy_RetryPriority_TypedConfig{
+				TypedConfig: anyCfgPriority,
+			},
+		}
 	}
 
 	if rr.RetryOn != nil {
