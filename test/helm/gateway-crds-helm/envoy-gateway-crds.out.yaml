@@ -1669,6 +1669,7 @@ spec:
                             Path defines parameters used to modify the path of the incoming request.
                             The modified path is then used to construct the `Location` header. When
                             empty, the request path is used as-is.
+                            Only ReplaceFullPath path modifier is supported currently.
                           properties:
                             replaceFullPath:
                               description: |-
@@ -1715,6 +1716,8 @@ spec:
                           - type
                           type: object
                           x-kubernetes-validations:
+                          - message: only ReplaceFullPath is supported for path.type
+                            rule: self.type == 'ReplaceFullPath'
                           - message: replaceFullPath must be specified when type is
                               set to 'ReplaceFullPath'
                             rule: 'self.type == ''ReplaceFullPath'' ? has(self.replaceFullPath)

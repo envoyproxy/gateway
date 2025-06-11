@@ -958,7 +958,7 @@ _Appears in:_
 | ---   | ---  | ---      | ---     | ---         |
 | `scheme` | _string_ |  false  |  | Scheme is the scheme to be used in the value of the `Location` header in<br />the response. When empty, the scheme of the request is used. |
 | `hostname` | _[PreciseHostname](#precisehostname)_ |  false  |  | Hostname is the hostname to be used in the value of the `Location`<br />header in the response.<br />When empty, the hostname in the `Host` header of the request is used. |
-| `path` | _[HTTPPathModifier](#httppathmodifier)_ |  false  |  | Path defines parameters used to modify the path of the incoming request.<br />The modified path is then used to construct the `Location` header. When<br />empty, the request path is used as-is. |
+| `path` | _[HTTPPathModifier](#httppathmodifier)_ |  false  |  | Path defines parameters used to modify the path of the incoming request.<br />The modified path is then used to construct the `Location` header. When<br />empty, the request path is used as-is.<br />Only ReplaceFullPath path modifier is supported currently. |
 | `port` | _[PortNumber](#portnumber)_ |  false  |  | Port is the port to be used in the value of the `Location`<br />header in the response.<br />If redirect scheme is not-empty, the well-known port associated with the redirect scheme will be used.<br />Specifically "http" to port 80 and "https" to port 443. If the redirect scheme does not have a<br />well-known port or redirect scheme is empty, the listener port of the Gateway will be used.<br />Port will not be added in the 'Location' header if scheme is HTTP and port is 80<br />or scheme is HTTPS and port is 443. |
 | `statusCode` | _integer_ |  false  | 302 | StatusCode is the HTTP status code to be used in response. |
 
