@@ -157,7 +157,8 @@ spec:
               tls:
                 description: |-
                   TLS defines the TLS settings for the backend.
-                  Only supported for DynamicResolver backends.
+                  TLS.CACertificateRefs and TLS.WellKnownCACertificates can only be specified for DynamicResolver backends.
+                  TLS.InsecureSkipVerify can be specified for any Backends
                 properties:
                   caCertificateRefs:
                     description: |-
@@ -171,6 +172,8 @@ spec:
                       If CACertificateRefs is empty or unspecified, then WellKnownCACertificates must be
                       specified. Only one of CACertificateRefs or WellKnownCACertificates may be specified,
                       not both.
+
+                      Only used for DynamicResolver backends.
                     items:
                       description: |-
                         LocalObjectReference identifies an API object within the namespace of the
@@ -208,6 +211,12 @@ spec:
                       type: object
                     maxItems: 8
                     type: array
+                  insecureSkipVerify:
+                    default: false
+                    description: |-
+                      InsecureSkipVerify indicates whether the upstream's certificate verification
+                      should be skipped. Defaults to "false".
+                    type: boolean
                   wellKnownCACertificates:
                     description: |-
                       WellKnownCACertificates specifies whether system CA certificates may be used in
@@ -216,6 +225,8 @@ spec:
                       If WellKnownCACertificates is unspecified or empty (""), then CACertificateRefs
                       must be specified with at least one entry for a valid configuration. Only one of
                       CACertificateRefs or WellKnownCACertificates may be specified, not both.
+
+                      Only used for DynamicResolver backends.
                     enum:
                     - System
                     type: string
@@ -225,10 +236,12 @@ spec:
                   rule: '!(has(self.caCertificateRefs) && size(self.caCertificateRefs)
                     > 0 && has(self.wellKnownCACertificates) && self.wellKnownCACertificates
                     != "")'
-                - message: must specify either CACertificateRefs or WellKnownCACertificates
-                  rule: (has(self.caCertificateRefs) && size(self.caCertificateRefs)
-                    > 0 || has(self.wellKnownCACertificates) && self.wellKnownCACertificates
-                    != "")
+                - message: must not contain either CACertificateRefs or WellKnownCACertificates
+                    when InsecureSkipVerify is enabled
+                  rule: '!((has(self.insecureSkipVerify) && self.insecureSkipVerify)
+                    && ((has(self.caCertificateRefs) && size(self.caCertificateRefs)
+                    > 0) || (has(self.wellKnownCACertificates) && self.wellKnownCACertificates
+                    != "")))'
               type:
                 default: Endpoints
                 description: Type defines the type of the backend. Defaults to "Endpoints"
@@ -240,8 +253,6 @@ spec:
             x-kubernetes-validations:
             - message: DynamicResolver type cannot have endpoints specified
               rule: self.type != 'DynamicResolver' || !has(self.endpoints)
-            - message: TLS settings can only be specified for DynamicResolver backends
-              rule: 'has(self.tls) ? self.type == ''DynamicResolver'' : true'
           status:
             description: Status defines the current status of Backend.
             properties:

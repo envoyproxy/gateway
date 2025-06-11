@@ -21,6 +21,7 @@ import (
 	"sigs.k8s.io/gateway-api/conformance/utils/tlog"
 
 	internalconf "github.com/envoyproxy/gateway/internal/gatewayapi/conformance"
+	"github.com/envoyproxy/gateway/test/e2e"
 	ege2etest "github.com/envoyproxy/gateway/test/e2e/tests"
 )
 
@@ -44,6 +45,7 @@ func TestGatewayAPIConformance(t *testing.T) {
 	opts.SupportedFeatures = internalSuite.SupportedFeatures
 	opts.ExemptFeatures = internalSuite.ExemptFeatures
 	opts.RunTest = *flags.RunTest
+	opts.Hook = e2e.Hook
 
 	cSuite, err := suite.NewConformanceTestSuite(opts)
 	if err != nil {

@@ -18,6 +18,8 @@ new features: |
   Added support for configuring hostname in active HTTP healthchecks.
   Added support for GatewayInfrastructure in gateway namespace mode.
   Added support for setting previous priorities retry predicate.
+  Added support for using extension server policies to in PostTranslateModify hook.
+
 
 bug fixes: |
   Handle integer zone annotation values

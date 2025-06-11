@@ -406,7 +406,7 @@ _Appears in:_
 | `endpoints` | _[BackendEndpoint](#backendendpoint) array_ |  true  |  | Endpoints defines the endpoints to be used when connecting to the backend. |
 | `appProtocols` | _[AppProtocolType](#appprotocoltype) array_ |  false  |  | AppProtocols defines the application protocols to be supported when connecting to the backend. |
 | `fallback` | _boolean_ |  false  |  | Fallback indicates whether the backend is designated as a fallback.<br />It is highly recommended to configure active or passive health checks to ensure that failover can be detected<br />when the active backends become unhealthy and to automatically readjust once the primary backends are healthy again.<br />The overprovisioning factor is set to 1.4, meaning the fallback backends will only start receiving traffic when<br />the health of the active backends falls below 72%. |
-| `tls` | _[BackendTLSSettings](#backendtlssettings)_ |  false  |  | TLS defines the TLS settings for the backend.<br />Only supported for DynamicResolver backends. |
+| `tls` | _[BackendTLSSettings](#backendtlssettings)_ |  false  |  | TLS defines the TLS settings for the backend.<br />TLS.CACertificateRefs and TLS.WellKnownCACertificates can only be specified for DynamicResolver backends.<br />TLS.InsecureSkipVerify can be specified for any Backends |
 
 
 #### BackendStatus
@@ -448,15 +448,15 @@ _Appears in:_
 
 
 BackendTLSSettings holds the TLS settings for the backend.
-Only used for DynamicResolver backends.
 
 _Appears in:_
 - [BackendSpec](#backendspec)
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `caCertificateRefs` | _LocalObjectReference array_ |  false  |  | CACertificateRefs contains one or more references to Kubernetes objects that<br />contain TLS certificates of the Certificate Authorities that can be used<br />as a trust anchor to validate the certificates presented by the backend.<br />A single reference to a Kubernetes ConfigMap or a Kubernetes Secret,<br />with the CA certificate in a key named `ca.crt` is currently supported.<br />If CACertificateRefs is empty or unspecified, then WellKnownCACertificates must be<br />specified. Only one of CACertificateRefs or WellKnownCACertificates may be specified,<br />not both. |
-| `wellKnownCACertificates` | _[WellKnownCACertificatesType](#wellknowncacertificatestype)_ |  false  |  | WellKnownCACertificates specifies whether system CA certificates may be used in<br />the TLS handshake between the gateway and backend pod.<br />If WellKnownCACertificates is unspecified or empty (""), then CACertificateRefs<br />must be specified with at least one entry for a valid configuration. Only one of<br />CACertificateRefs or WellKnownCACertificates may be specified, not both. |
+| `caCertificateRefs` | _LocalObjectReference array_ |  false  |  | CACertificateRefs contains one or more references to Kubernetes objects that<br />contain TLS certificates of the Certificate Authorities that can be used<br />as a trust anchor to validate the certificates presented by the backend.<br />A single reference to a Kubernetes ConfigMap or a Kubernetes Secret,<br />with the CA certificate in a key named `ca.crt` is currently supported.<br />If CACertificateRefs is empty or unspecified, then WellKnownCACertificates must be<br />specified. Only one of CACertificateRefs or WellKnownCACertificates may be specified,<br />not both.<br />Only used for DynamicResolver backends. |
+| `wellKnownCACertificates` | _[WellKnownCACertificatesType](#wellknowncacertificatestype)_ |  false  |  | WellKnownCACertificates specifies whether system CA certificates may be used in<br />the TLS handshake between the gateway and backend pod.<br />If WellKnownCACertificates is unspecified or empty (""), then CACertificateRefs<br />must be specified with at least one entry for a valid configuration. Only one of<br />CACertificateRefs or WellKnownCACertificates may be specified, not both.<br />Only used for DynamicResolver backends. |
+| `insecureSkipVerify` | _boolean_ |  false  | false | InsecureSkipVerify indicates whether the upstream's certificate verification<br />should be skipped. Defaults to "false". |
 
 
 #### BackendTelemetry
@@ -943,6 +943,24 @@ _Appears in:_
 | ---   | ---  | ---      | ---     | ---         |
 | `name` | _string_ |  true  |  | Name of the header containing the original downstream remote address, if present. |
 | `failClosed` | _boolean_ |  false  |  | FailClosed is a switch used to control the flow of traffic when client IP detection<br />fails. If set to true, the listener will respond with 403 Forbidden when the client<br />IP address cannot be determined. |
+
+
+#### CustomRedirect
+
+
+
+CustomRedirect contains configuration for returning a custom redirect.
+
+_Appears in:_
+- [ResponseOverride](#responseoverride)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `scheme` | _string_ |  false  |  | Scheme is the scheme to be used in the value of the `Location` header in<br />the response. When empty, the scheme of the request is used. |
+| `hostname` | _[PreciseHostname](#precisehostname)_ |  false  |  | Hostname is the hostname to be used in the value of the `Location`<br />header in the response.<br />When empty, the hostname in the `Host` header of the request is used. |
+| `path` | _[HTTPPathModifier](#httppathmodifier)_ |  false  |  | Path defines parameters used to modify the path of the incoming request.<br />The modified path is then used to construct the `Location` header. When<br />empty, the request path is used as-is. |
+| `port` | _[PortNumber](#portnumber)_ |  false  |  | Port is the port to be used in the value of the `Location`<br />header in the response.<br />If redirect scheme is not-empty, the well-known port associated with the redirect scheme will be used.<br />Specifically "http" to port 80 and "https" to port 443. If the redirect scheme does not have a<br />well-known port or redirect scheme is empty, the listener port of the Gateway will be used.<br />Port will not be added in the 'Location' header if scheme is HTTP and port is 80<br />or scheme is HTTPS and port is 443. |
+| `statusCode` | _integer_ |  false  | 302 | StatusCode is the HTTP status code to be used in response. |
 
 
 #### CustomResponse
@@ -1597,6 +1615,7 @@ _Appears in:_
 | `backendTLS` | _[BackendTLSConfig](#backendtlsconfig)_ |  false  |  | BackendTLS is the TLS configuration for the Envoy proxy to use when connecting to backends.<br />These settings are applied on backends for which TLS policies are specified. |
 | `ipFamily` | _[IPFamily](#ipfamily)_ |  false  |  | IPFamily specifies the IP family for the EnvoyProxy fleet.<br />This setting only affects the Gateway listener port and does not impact<br />other aspects of the Envoy proxy configuration.<br />If not specified, the system will operate as follows:<br />- It defaults to IPv4 only.<br />- IPv6 and dual-stack environments are not supported in this default configuration.<br />Note: To enable IPv6 or dual-stack functionality, explicit configuration is required. |
 | `preserveRouteOrder` | _boolean_ |  false  |  | PreserveRouteOrder determines if the order of matching for HTTPRoutes is determined by Gateway-API<br />specification (https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.HTTPRouteRule)<br />or preserves the order defined by users in the HTTPRoute's HTTPRouteRule list.<br />Default: False |
+| `disableLuaValidation` | _boolean_ |  false  | false | DisableLuaValidation disables the Lua script validation for Lua EnvoyExtensionPolicies |
 
 
 #### EnvoyProxyStatus
@@ -2095,7 +2114,7 @@ _Appears in:_
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `hostname` | _string_ |  true  |  | Hostname defines the HTTP host that will be requested during health checking.<br />Default: HTTPRoute or GRPCRoute hostname. |
+| `hostname` | _string_ |  false  |  | Hostname defines the HTTP host that will be requested during health checking.<br />Default: HTTPRoute or GRPCRoute hostname. |
 | `path` | _string_ |  true  |  | Path defines the HTTP path that will be requested during health checking. |
 | `method` | _string_ |  false  |  | Method defines the HTTP method used for health checking.<br />Defaults to GET |
 | `expectedStatuses` | _[HTTPStatus](#httpstatus) array_ |  false  |  | ExpectedStatuses defines a list of HTTP response statuses considered healthy.<br />Defaults to 200 only |
@@ -4170,6 +4189,7 @@ _Appears in:_
 | ---   | ---  | ---      | ---     | ---         |
 | `match` | _[CustomResponseMatch](#customresponsematch)_ |  true  |  | Match configuration. |
 | `response` | _[CustomResponse](#customresponse)_ |  true  |  | Response configuration. |
+| `redirect` | _[CustomRedirect](#customredirect)_ |  true  |  | Redirect configuration |
 
 
 #### ResponseValueType

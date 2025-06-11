@@ -35,12 +35,6 @@ var EnvoyProxyDaemonSetTest = suite.ConformanceTest{
 	Manifests:   []string{"testdata/envoyproxy-daemonset.yaml"},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
 		t.Run("RunAndDelete", func(t *testing.T) {
-			t.Cleanup(func() {
-				if t.Failed() {
-					CollectAndDump(t, suite.RestConfig)
-				}
-			})
-
 			ns := "gateway-conformance-infra"
 			routeNN := types.NamespacedName{Name: "daemonset-route", Namespace: ns}
 			gwNN := types.NamespacedName{Name: "eg-ds", Namespace: ns}
