@@ -163,7 +163,7 @@ kubectl get deployment -l gateway.envoyproxy.io/owning-gateway-name=eg -n envoy-
 
 By default, Envoy Gateway creates a EnvoyProxy Deployment, but it can also be configured to create a DaemonSet instead.
 
-To configure Envoy Gateway to deploy the EnvoyProxy as a DaemonSet, you need to specify a spec.provider.kubernetes.envoyDaemonset instead of a envoyDeployment.
+To configure Envoy Gateway to deploy the EnvoyProxy as a DaemonSet, you need to specify a `spec.provider.kubernetes.envoyDaemonset` instead of a `envoyDeployment`.
 
 Below is a common example configuration with a nodeSelector specified for the EnvoyProxy pod template, which makes the DaemonSet deploy the pod only on the specified nodes.
 
