@@ -1832,10 +1832,60 @@ spec:
                           - message: only ConfigMap is supported for ValueRef
                             rule: 'has(self.valueRef) ? self.valueRef.kind == ''ConfigMap''
                               : true'
+                        bodyFormat:
+                          description: |-
+                            BodyFormat specifies the format for the response body.
+                            This allows customizing the response body format with dynamic values.
+                          properties:
+                            contentType:
+                              description: ContentType defines response body content
+                                type
+                              type: string
+                            jsonFormat:
+                              additionalProperties:
+                                type: string
+                              description: JSONFormat defines response body JSON format
+                              type: object
+                            textFormat:
+                              description: TextFormat defines response body text format
+                              type: string
+                          type: object
+                          x-kubernetes-validations:
+                          - message: exactly one of jsonFormat or textFormat must
+                              be specified
+                            rule: (has(self.jsonFormat) && !has(self.textFormat))
+                              || (!has(self.jsonFormat) && has(self.textFormat))
                         contentType:
                           description: Content Type of the response. This will be
                             set in the Content-Type header.
                           type: string
+                        responseHeadersToAdd:
+                          description: |-
+                            ResponseHeadersToAdd defines headers to add to the response.
+                            This allows the response policy to append, add or override headers
+                            of the original response before it is sent to a downstream client.
+                          items:
+                            description: ResponseHeaderToAdd defines a header to add
+                              to the response.
+                            properties:
+                              append:
+                                description: |-
+                                  Append specifies the action to take when the header already exists.
+                                  If true, the value will be appended to the existing header value.
+                                  If false, the value will overwrite the existing header value.
+                                  Default is false.
+                                type: boolean
+                              name:
+                                description: Name is the name of the header to add.
+                                type: string
+                              value:
+                                description: Value is the value of the header to add.
+                                type: string
+                            required:
+                            - name
+                            - value
+                            type: object
+                          type: array
                         statusCode:
                           description: |-
                             Status Code of the Custom Response

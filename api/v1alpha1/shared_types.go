@@ -741,6 +741,52 @@ type CustomResponse struct {
 	//
 	// +optional
 	StatusCode *int `json:"statusCode,omitempty"`
+
+	// ResponseHeadersToAdd defines headers to add to the response.
+	// This allows the response policy to append, add or override headers
+	// of the original response before it is sent to a downstream client.
+	//
+	// +optional
+	ResponseHeadersToAdd []ResponseHeaderToAdd `json:"responseHeadersToAdd,omitempty"`
+
+	// BodyFormat specifies the format for the response body.
+	// This allows customizing the response body format with dynamic values.
+	//
+	// +optional
+	BodyFormat *ResponseBodyFormat `json:"bodyFormat,omitempty"`
+}
+
+// ResponseHeaderToAdd defines a header to add to the response.
+type ResponseHeaderToAdd struct {
+	// Name is the name of the header to add.
+	Name string `json:"name"`
+
+	// Value is the value of the header to add.
+	Value string `json:"value"`
+
+	// Append specifies the action to take when the header already exists.
+	// If true, the value will be appended to the existing header value.
+	// If false, the value will overwrite the existing header value.
+	// Default is false.
+	//
+	// +optional
+	Append *bool `json:"append,omitempty"`
+}
+
+// ResponseBodyFormat defines the format configuration for response body.
+// +kubebuilder:validation:XValidation:message="exactly one of jsonFormat or textFormat must be specified",rule="(has(self.jsonFormat) && !has(self.textFormat)) || (!has(self.jsonFormat) && has(self.textFormat))"
+type ResponseBodyFormat struct {
+	// JSONFormat defines response body JSON format
+	// +optional
+	JSONFormat map[string]string `json:"jsonFormat,omitempty"`
+
+	// TextFormat defines response body text format
+	// +optional
+	TextFormat *string `json:"textFormat,omitempty"`
+
+	// ContentType defines response body content type
+	// +optional
+	ContentType *string `json:"contentType,omitempty"`
 }
 
 // ResponseValueType defines the types of values for the response body supported by Envoy Gateway.

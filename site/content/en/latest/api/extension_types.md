@@ -977,6 +977,8 @@ _Appears in:_
 | `contentType` | _string_ |  false  |  | Content Type of the response. This will be set in the Content-Type header. |
 | `body` | _[CustomResponseBody](#customresponsebody)_ |  false  |  | Body of the Custom Response |
 | `statusCode` | _integer_ |  false  |  | Status Code of the Custom Response<br />If unset, does not override the status of response. |
+| `responseHeadersToAdd` | _[ResponseHeaderToAdd](#responseheadertoadd) array_ |  false  |  | ResponseHeadersToAdd defines headers to add to the response.<br />This allows the response policy to append, add or override headers<br />of the original response before it is sent to a downstream client. |
+| `bodyFormat` | _[ResponseBodyFormat](#responsebodyformat)_ |  false  |  | BodyFormat specifies the format for the response body.<br />This allows customizing the response body format with dynamic values. |
 
 
 #### CustomResponseBody
@@ -4175,6 +4177,38 @@ _Appears in:_
 | Value | Description |
 | ----- | ----------- |
 | `File` | ResourceProviderTypeFile defines the "File" provider.<br /> | 
+
+
+#### ResponseBodyFormat
+
+
+
+ResponseBodyFormat defines the format configuration for response body.
+
+_Appears in:_
+- [CustomResponse](#customresponse)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `jsonFormat` | _object (keys:string, values:string)_ |  false  |  | JSONFormat defines response body JSON format |
+| `textFormat` | _string_ |  false  |  | TextFormat defines response body text format |
+| `contentType` | _string_ |  false  |  | ContentType defines response body content type |
+
+
+#### ResponseHeaderToAdd
+
+
+
+ResponseHeaderToAdd defines a header to add to the response.
+
+_Appears in:_
+- [CustomResponse](#customresponse)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `name` | _string_ |  true  |  | Name is the name of the header to add. |
+| `value` | _string_ |  true  |  | Value is the value of the header to add. |
+| `append` | _boolean_ |  false  |  | Append specifies the action to take when the header already exists.<br />If true, the value will be appended to the existing header value.<br />If false, the value will overwrite the existing header value.<br />Default is false. |
 
 
 #### ResponseOverride

@@ -2,7 +2,7 @@
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
-  name: response-override
+  name: response-override-enhanced
   namespace: gateway-conformance-infra
 spec:
   parentRefs:
@@ -19,50 +19,57 @@ spec:
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: response-override-config
+  name: response-override-config-enhanced
   namespace: gateway-conformance-infra
 data:
-  response.body: '{"error": "Internal Server Error"}'
+  response.body: 'Internal Server Error'
 ---
 apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: BackendTrafficPolicy
 metadata:
-  name: response-override
+  name: response-override-enhanced
   namespace: gateway-conformance-infra
 spec:
   targetRef:
     group: gateway.networking.k8s.io
     kind: HTTPRoute
-    name: response-override
+    name: response-override-enhanced
   responseOverride:
     - match:
         statusCodes:
           - type: Value
             value: 404
       response:
-        contentType: text/plain
-        body:
-          type: Inline
-          inline: "Oops! Your request is not found."
-    - match:
-        statusCodes:
-          - type: Value
-            value: 403
-      response:
         statusCode: 404
+        responseHeadersToAdd:
+          - name: "X-Custom-Error"
+            value: "Not Found"
+            append: false
+          - name: "X-Gateway-Source"
+            value: "Envoy Gateway"
+            append: false
+        bodyFormat:
+          jsonFormat:
+            status: "%RESPONSE_CODE%"
+            message: "%LOCAL_REPLY_BODY%"
+            timestamp: "%START_TIME%"
+          contentType: "application/json"
     - match:
         statusCodes:
           - type: Value
             value: 500
-          - type: Range
-            range:
-              start: 501
-              end: 511
       response:
-        contentType: application/json
+        statusCode: 500
+        responseHeadersToAdd:
+          - name: "X-Error-Type"
+            value: "Internal"
+            append: false
+        bodyFormat:
+          textFormat: "Error %RESPONSE_CODE%: %LOCAL_REPLY_BODY% at %START_TIME%"
+          contentType: "text/plain"
         body:
           type: ValueRef
           valueRef:
             group: ""
             kind: ConfigMap
-            name: response-override-config
+            name: response-override-config-enhanced

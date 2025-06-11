@@ -1,0 +1,146 @@
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: response-override-enhanced
+  namespace: gateway-conformance-infra
+spec:
+  parentRefs:
+    - name: same-namespace
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      backendRefs:
+        - name: infra-backend-v1
+          port: 8080
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: response-override-config-enhanced
+  namespace: gateway-conformance-infra
+data:
+  response.body: |
+    {
+      "error": "Service temporarily unavailable",
+      "support_contact": "support@example.com",
+      "incident_id": "INC-2024-001"
+    }
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: BackendTrafficPolicy
+metadata:
+  name: response-override-enhanced
+  namespace: gateway-conformance-infra
+spec:
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: response-override-enhanced
+  responseOverride:
+    # 404 responses with JSON body format and custom headers
+    - match:
+        statusCodes:
+          - type: Value
+            value: 404
+      response:
+        statusCode: 404
+        responseHeadersToAdd:
+          - name: "X-Custom-Error"
+            value: "Not Found"
+            append: false
+          - name: "X-Gateway-Source"
+            value: "Envoy Gateway"
+            append: false
+        bodyFormat:
+          jsonFormat:
+            status: "%RESPONSE_CODE%"
+            message: "%LOCAL_REPLY_BODY%"
+            timestamp: "%START_TIME%"
+            error_type: "not_found"
+          contentType: "application/json"
+
+    # 500 responses with text body format and custom headers
+    - match:
+        statusCodes:
+          - type: Value
+            value: 500
+      response:
+        statusCode: 500
+        responseHeadersToAdd:
+          - name: "X-Error-Type"
+            value: "Internal"
+            append: false
+        bodyFormat:
+          textFormat: "Error %RESPONSE_CODE%: %LOCAL_REPLY_BODY% at %START_TIME%"
+          contentType: "text/plain"
+
+    # 429 rate limit responses with comprehensive headers and JSON format
+    - match:
+        statusCodes:
+          - type: Value
+            value: 429
+      response:
+        statusCode: 429
+        responseHeadersToAdd:
+          - name: "X-RateLimit-Limit"
+            value: "100"
+            append: false
+          - name: "X-RateLimit-Remaining"
+            value: "0"
+            append: false
+          - name: "Retry-After"
+            value: "60"
+            append: false
+        bodyFormat:
+          jsonFormat:
+            error: "rate_limit_exceeded"
+            message: "Too many requests"
+            status_code: "%RESPONSE_CODE%"
+            limit: "100 requests per minute"
+            reset_time: "%START_TIME(%s)%"
+          contentType: "application/json; charset=utf-8"
+
+    # 503 responses with ConfigMap body and body format override
+    - match:
+        statusCodes:
+          - type: Value
+            value: 503
+      response:
+        body:
+          type: ValueRef
+          valueRef:
+            name: response-override-config-enhanced
+        responseHeadersToAdd:
+          - name: "X-Custom-Response"
+            value: "true"
+            append: false
+          - name: "X-Service-Version"
+            value: "v1.2.3"
+            append: false
+        bodyFormat:
+          jsonFormat:
+            original_response: "%LOCAL_REPLY_BODY%"
+            enhanced_status: "%RESPONSE_CODE%"
+            server_info: "Gateway Enhanced Response"
+          contentType: "application/json"
+
+    # 502 responses to test header append behavior
+    - match:
+        statusCodes:
+          - type: Value
+            value: 502
+      response:
+        statusCode: 502
+        responseHeadersToAdd:
+          - name: "Cache-Control"
+            value: "no-cache, no-store"
+            append: true  # This should append to existing Cache-Control headers
+          - name: "X-Error-Source"
+            value: "backend-service"
+            append: false  # This should overwrite any existing X-Error-Source headers
+        body:
+          type: Inline
+          inline: "Bad Gateway - Service temporarily unavailable"

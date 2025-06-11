@@ -387,6 +387,47 @@ func (c *customResponse) buildAction(r ir.ResponseOverrideRule) (*matcherv3.Matc
 		})
 	}
 
+	// Handle additional response headers to add
+	for _, header := range r.Response.ResponseHeadersToAdd {
+		var appendAction corev3.HeaderValueOption_HeaderAppendAction
+		if header.Append {
+			appendAction = corev3.HeaderValueOption_APPEND_IF_EXISTS_OR_ADD
+		} else {
+			appendAction = corev3.HeaderValueOption_OVERWRITE_IF_EXISTS_OR_ADD
+		}
+
+		for _, value := range header.Value {
+			response.ResponseHeadersToAdd = append(response.ResponseHeadersToAdd, &corev3.HeaderValueOption{
+				Header: &corev3.HeaderValue{
+					Key:   header.Name,
+					Value: value,
+				},
+				AppendAction: appendAction,
+			})
+		}
+	}
+
+	// Set body format if specified
+	if r.Response.BodyFormat != nil {
+		response.BodyFormat = &corev3.SubstitutionFormatString{}
+
+		if r.Response.BodyFormat.JSONFormat != nil {
+			// Convert JSON format map to protobuf Struct
+			jsonStruct := mapToStruct(r.Response.BodyFormat.JSONFormat)
+			response.BodyFormat.Format = &corev3.SubstitutionFormatString_JsonFormat{
+				JsonFormat: jsonStruct,
+			}
+		} else if r.Response.BodyFormat.TextFormat != nil {
+			response.BodyFormat.Format = &corev3.SubstitutionFormatString_TextFormat{
+				TextFormat: *r.Response.BodyFormat.TextFormat,
+			}
+		}
+
+		if r.Response.BodyFormat.ContentType != nil {
+			response.BodyFormat.ContentType = *r.Response.BodyFormat.ContentType
+		}
+	}
+
 	if r.Response.StatusCode != nil {
 		response.StatusCode = &wrapperspb.UInt32Value{Value: *r.Response.StatusCode}
 	}

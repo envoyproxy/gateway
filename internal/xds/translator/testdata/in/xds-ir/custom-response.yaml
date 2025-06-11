@@ -42,6 +42,19 @@ http:
                 response:
                   body: gateway-1 Not Found
                   contentType: text/plain
+                  responseHeadersToAdd:
+                    - name: X-Custom-Error
+                      value: ["Not Found"]
+                      append: false
+                    - name: X-Gateway-Source
+                      value: ["Envoy Gateway"]
+                      append: false
+                  bodyFormat:
+                    jsonFormat:
+                      status: "%RESPONSE_CODE%"
+                      message: "Resource not found"
+                      timestamp: "%START_TIME%"
+                    contentType: "application/json"
               - match:
                   statusCodes:
                     - value: 500
@@ -55,6 +68,13 @@ http:
                       "error": "Internal Server Error"
                     }
                   contentType: application/json
+                  responseHeadersToAdd:
+                    - name: X-Error-Type
+                      value: ["Internal"]
+                      append: false
+                  bodyFormat:
+                    textFormat: "Error %RESPONSE_CODE%: %LOCAL_REPLY_BODY% at %START_TIME%"
+                    contentType: "text/plain"
       - destination:
           name: httproute/default/httproute-2/rule/0
           settings:

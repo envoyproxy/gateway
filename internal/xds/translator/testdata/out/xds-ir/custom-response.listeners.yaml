@@ -28,11 +28,25 @@
                         '@type': type.googleapis.com/envoy.extensions.http.custom_response.local_response_policy.v3.LocalResponsePolicy
                         body:
                           inlineString: gateway-1 Not Found
+                        bodyFormat:
+                          contentType: application/json
+                          jsonFormat:
+                            message: Resource not found
+                            status: '%RESPONSE_CODE%'
+                            timestamp: '%START_TIME%'
                         responseHeadersToAdd:
                         - appendAction: OVERWRITE_IF_EXISTS_OR_ADD
                           header:
                             key: Content-Type
                             value: text/plain
+                        - appendAction: OVERWRITE_IF_EXISTS_OR_ADD
+                          header:
+                            key: X-Custom-Error
+                            value: Not Found
+                        - appendAction: OVERWRITE_IF_EXISTS_OR_ADD
+                          header:
+                            key: X-Gateway-Source
+                            value: Envoy Gateway
                   predicate:
                     singlePredicate:
                       input:
@@ -51,11 +65,19 @@
                             {
                               "error": "Internal Server Error"
                             }
+                        bodyFormat:
+                          contentType: text/plain
+                          textFormat: 'Error %RESPONSE_CODE%: %LOCAL_REPLY_BODY% at
+                            %START_TIME%'
                         responseHeadersToAdd:
                         - appendAction: OVERWRITE_IF_EXISTS_OR_ADD
                           header:
                             key: Content-Type
                             value: application/json
+                        - appendAction: OVERWRITE_IF_EXISTS_OR_ADD
+                          header:
+                            key: X-Error-Type
+                            value: Internal
                   predicate:
                     orMatcher:
                       predicate:

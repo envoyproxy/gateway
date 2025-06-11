@@ -630,6 +630,25 @@ type CustomResponse struct {
 
 	// StatusCode will be used for the response's status code.
 	StatusCode *uint32 `json:"statusCode,omitempty"`
+
+	// ResponseHeadersToAdd defines headers to add to the response.
+	ResponseHeadersToAdd []AddHeader `json:"responseHeadersToAdd,omitempty"`
+
+	// BodyFormat specifies the format for the response body.
+	BodyFormat *ResponseBodyFormat `json:"bodyFormat,omitempty"`
+}
+
+// ResponseBodyFormat defines the format configuration for response body.
+// +k8s:deepcopy-gen=true
+type ResponseBodyFormat struct {
+	// JSONFormat defines response body JSON format
+	JSONFormat map[string]string `json:"jsonFormat,omitempty"`
+
+	// TextFormat defines response body text format
+	TextFormat *string `json:"textFormat,omitempty"`
+
+	// ContentType defines response body content type
+	ContentType *string `json:"contentType,omitempty"`
 }
 
 // Validate the fields within the CustomResponse structure

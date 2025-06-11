@@ -1065,6 +1065,32 @@ func buildResponseOverride(policy *egv1a1.BackendTrafficPolicy, resources *resou
 			return nil, err
 		}
 
+		// Handle response headers to add
+		if len(ro.Response.ResponseHeadersToAdd) > 0 {
+			response.ResponseHeadersToAdd = make([]ir.AddHeader, 0, len(ro.Response.ResponseHeadersToAdd))
+			for _, header := range ro.Response.ResponseHeadersToAdd {
+				addHeader := ir.AddHeader{
+					Name:  header.Name,
+					Value: []string{header.Value},
+				}
+				if header.Append != nil && *header.Append {
+					addHeader.Append = true
+				} else {
+					addHeader.Append = false
+				}
+				response.ResponseHeadersToAdd = append(response.ResponseHeadersToAdd, addHeader)
+			}
+		}
+
+		// Convert response body format if specified
+		if ro.Response.BodyFormat != nil {
+			response.BodyFormat = &ir.ResponseBodyFormat{
+				JSONFormat:  ro.Response.BodyFormat.JSONFormat,
+				TextFormat:  ro.Response.BodyFormat.TextFormat,
+				ContentType: ro.Response.BodyFormat.ContentType,
+			}
+		}
+
 		rules = append(rules, ir.ResponseOverrideRule{
 			Name:     defaultResponseOverrideRuleName(policy, index),
 			Match:    match,
