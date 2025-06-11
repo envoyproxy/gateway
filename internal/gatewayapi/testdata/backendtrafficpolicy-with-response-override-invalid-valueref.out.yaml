@@ -3,58 +3,6 @@ backendTrafficPolicies:
   kind: BackendTrafficPolicy
   metadata:
     creationTimestamp: null
-    name: policy-for-route
-    namespace: default
-  spec:
-    responseOverride:
-    - match:
-        statusCodes:
-        - type: null
-          value: 404
-      response:
-        body:
-          inline: httproute-1 Not Found
-          type: null
-        contentType: text/plain
-    - match:
-        statusCodes:
-        - type: null
-          value: 500
-        - range:
-            end: 511
-            start: 501
-          type: Range
-      response:
-        body:
-          type: ValueRef
-          valueRef:
-            group: ""
-            kind: ConfigMap
-            name: response-override-config-1
-        contentType: application/json
-    targetRef:
-      group: gateway.networking.k8s.io
-      kind: HTTPRoute
-      name: httproute-1
-  status:
-    ancestors:
-    - ancestorRef:
-        group: gateway.networking.k8s.io
-        kind: Gateway
-        name: gateway-2
-        namespace: default
-        sectionName: http
-      conditions:
-      - lastTransitionTime: null
-        message: 'ResponseOverride: can''t find the referenced configmap response-override-config-1.'
-        reason: Invalid
-        status: "False"
-        type: Accepted
-      controllerName: gateway.envoyproxy.io/gatewayclass-controller
-- apiVersion: gateway.envoyproxy.io/v1alpha1
-  kind: BackendTrafficPolicy
-  metadata:
-    creationTimestamp: null
     name: policy-for-gateway
     namespace: default
   spec:
@@ -99,6 +47,58 @@ backendTrafficPolicies:
       - lastTransitionTime: null
         message: 'ResponseOverride: can''t find the key response.body in the referenced
           configmap response-override-config.'
+        reason: Invalid
+        status: "False"
+        type: Accepted
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: BackendTrafficPolicy
+  metadata:
+    creationTimestamp: null
+    name: policy-for-route
+    namespace: default
+  spec:
+    responseOverride:
+    - match:
+        statusCodes:
+        - type: null
+          value: 404
+      response:
+        body:
+          inline: httproute-1 Not Found
+          type: null
+        contentType: text/plain
+    - match:
+        statusCodes:
+        - type: null
+          value: 500
+        - range:
+            end: 511
+            start: 501
+          type: Range
+      response:
+        body:
+          type: ValueRef
+          valueRef:
+            group: ""
+            kind: ConfigMap
+            name: response-override-config-1
+        contentType: application/json
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: httproute-1
+  status:
+    ancestors:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: gateway-2
+        namespace: default
+        sectionName: http
+      conditions:
+      - lastTransitionTime: null
+        message: 'ResponseOverride: can''t find the referenced configmap response-override-config-1.'
         reason: Invalid
         status: "False"
         type: Accepted
