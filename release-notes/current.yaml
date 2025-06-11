@@ -21,6 +21,7 @@ new features: |
   Added support for setting previous priorities retry predicate.
   Added support for using extension server policies to in PostTranslateModify hook.
   Added support for configuring cluster stat name for HTTPRoute and GRPCRoute in EnvoyProxy CRD.
+  Added support for configuring `SameSite` attribute for Oauth cookies for OIDC authentication.
 
 bug fixes: |
   Handle integer zone annotation values

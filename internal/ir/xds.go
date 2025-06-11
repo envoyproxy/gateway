@@ -1128,6 +1128,11 @@ type OIDC struct {
 	// CookieDomain sets the domain of the cookies set by the oauth filter.
 	CookieDomain *string `json:"cookieDomain,omitempty"`
 
+	// CookieConfigs allows overriding the SameSite attribute for OIDC cookies.
+	// If a specific cookie is not configured, it will use the default xds value of disabled.
+	// +optional
+	CookieConfigs *egv1a1.OIDCCookieConfigs `json:"cookieConfigs,omitempty"`
+
 	// Skips OIDC authentication when the request contains any header that will be extracted by the JWT
 	// filter, normally "Authorization: Bearer ...". This is typically used for non-browser clients that
 	// may not be able to handle OIDC redirects and wish to directly supply a token instead.
