@@ -493,6 +493,22 @@ type policyGatewayTargetContext struct {
 	attached bool
 }
 
+type btpRouteTargetContext struct {
+	RouteContext
+	policy *egv1a1.BackendTrafficPolicy
+}
+
+type btpGatewayTargetContext struct {
+	*GatewayContext
+	// Policy that is attached to the Gateway
+	policy *egv1a1.BackendTrafficPolicy
+	// Polices(attached to routes) that are merged with the BTP
+	mergedPolicies sets.Set[string]
+
+	// Routes attached to the gateway
+	routes sets.Set[string]
+}
+
 // listenersWithSameHTTPPort returns a list of the names of all other HTTP listeners
 // that would share the same filter chain as the provided listener when translated
 // to XDS

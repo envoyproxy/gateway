@@ -34,9 +34,7 @@ const (
 )
 
 func (t *Translator) ProcessBackendTrafficPolicies(resources *resource.Resources,
-	gateways []*GatewayContext,
-	routes []RouteContext,
-	xdsIR resource.XdsIRMap,
+	gateways []*GatewayContext, routes []RouteContext, xdsIR resource.XdsIRMap,
 ) []*egv1a1.BackendTrafficPolicy {
 	res := make([]*egv1a1.BackendTrafficPolicy, 0, len(resources.BackendTrafficPolicies))
 
@@ -47,58 +45,56 @@ func (t *Translator) ProcessBackendTrafficPolicies(resources *resource.Resources
 	})
 
 	// First build a map out of the routes and gateways for faster lookup since users might have thousands of routes or more.
-	routeMap := map[policyTargetRouteKey]*policyRouteTargetContext{}
+	routeContextMap := map[policyTargetRouteKey]*btpRouteTargetContext{}
 	for _, route := range routes {
 		key := policyTargetRouteKey{
 			Kind:      string(GetRouteType(route)),
 			Name:      route.GetName(),
 			Namespace: route.GetNamespace(),
 		}
-		routeMap[key] = &policyRouteTargetContext{RouteContext: route}
+		routeContextMap[key] = &btpRouteTargetContext{RouteContext: route}
 	}
 
-	gatewayMap := map[types.NamespacedName]*policyGatewayTargetContext{}
-	for _, gw := range gateways {
-		key := utils.NamespacedName(gw)
-		gatewayMap[key] = &policyGatewayTargetContext{GatewayContext: gw}
+	gatewayContextMap := map[types.NamespacedName]*btpGatewayTargetContext{}
+	for _, gtw := range gateways {
+		key := utils.NamespacedName(gtw)
+		gatewayContextMap[key] = &btpGatewayTargetContext{
+			GatewayContext: gtw,
+			mergedPolicies: sets.New[string](),
+			routes:         sets.New[string](),
+		}
 	}
-
-	// Map of Gateway to the routes attached to it
-	gatewayRouteMap := make(map[string]sets.Set[string])
 
 	handledPolicies := make(map[types.NamespacedName]*egv1a1.BackendTrafficPolicy)
-
-	gatewayPolicyMap := make(map[types.NamespacedName]*egv1a1.BackendTrafficPolicy)
-	gatewayPolicyMerged := make(map[types.NamespacedName]sets.Set[string])
 
 	// Translate
 	// 1. First translate Policies targeting xRoutes
 	// 2. Finally, the policies targeting Gateways
 
 	// Build gateway policy map, which is needed when processing the policies targeting xRoutes.
-	// TODO: This loop is similar to the one 'Process the policies targeting Gateways', we may want to
-	// merge them into one if possible.
 	for _, currPolicy := range backendTrafficPolicies {
+		policyName := utils.NamespacedName(currPolicy)
 		targetRefs := getPolicyTargetRefs(currPolicy.Spec.PolicyTargetReferences, gateways)
 		for _, currTarget := range targetRefs {
 			if currTarget.Kind == resource.KindGateway {
+				policy, found := handledPolicies[policyName]
+				if !found {
+					policy = currPolicy.DeepCopy()
+					handledPolicies[policyName] = policy
+					res = append(res, policy)
+				}
+
 				// Check if the gateway exists
 				key := types.NamespacedName{
 					Name:      string(currTarget.Name),
-					Namespace: currPolicy.Namespace,
+					Namespace: policy.Namespace,
 				}
-				gateway, ok := gatewayMap[key]
-				if !ok {
+				gtwCtx, ok := gatewayContextMap[key]
+				if !ok || gtwCtx.policy != nil {
 					continue
 				}
 
-				// Check if policy for gateway exists
-				gatewayNN := utils.NamespacedName(gateway)
-				_, policyExists := gatewayPolicyMap[gatewayNN]
-				if policyExists {
-					continue
-				}
-				gatewayPolicyMap[gatewayNN] = currPolicy
+				gtwCtx.policy = policy
 			}
 		}
 	}
@@ -117,7 +113,7 @@ func (t *Translator) ProcessBackendTrafficPolicies(resources *resource.Resources
 				}
 
 				// Negative statuses have already been assigned so it's safe to skip
-				route, resolveErr := resolveBTPolicyRouteTargetRef(policy, currTarget, routeMap)
+				route, resolveErr := resolveBTPolicyRouteTargetRef(policy, currTarget, routeContextMap)
 				if route == nil {
 					continue
 				}
@@ -134,20 +130,20 @@ func (t *Translator) ProcessBackendTrafficPolicies(resources *resource.Resources
 						if p.Namespace != nil {
 							namespace = string(*p.Namespace)
 						}
-						gwNN := types.NamespacedName{
+						gtwNN := types.NamespacedName{
 							Namespace: namespace,
 							Name:      string(p.Name),
 						}
-						routeParents.Insert(gwNN)
+						routeParents.Insert(gtwNN)
 
-						key := gwNN.String()
-						if _, ok := gatewayRouteMap[key]; !ok {
-							gatewayRouteMap[key] = make(sets.Set[string])
+						gtwCtx, ok := gatewayContextMap[gtwNN]
+						if !ok {
+							continue
 						}
-						gatewayRouteMap[key].Insert(utils.NamespacedName(route).String())
+						gtwCtx.routes.Insert(utils.NamespacedName(route).String())
 
 						// Do need a section name since the policy is targeting to a route
-						ancestorRefs = append(ancestorRefs, getAncestorRefForPolicy(gwNN, p.SectionName))
+						ancestorRefs = append(ancestorRefs, getAncestorRefForPolicy(gtwNN, p.SectionName))
 					}
 				}
 
@@ -175,13 +171,13 @@ func (t *Translator) ProcessBackendTrafficPolicies(resources *resource.Resources
 					}
 				} else {
 					// merge with parent target policy if exists
-					for _, gwNN := range routeParents.UnsortedList() {
-						ancestorRef := getAncestorRefForPolicy(gwNN, nil)
+					for _, gtwNN := range routeParents.UnsortedList() {
+						ancestorRef := getAncestorRefForPolicy(gtwNN, nil)
 						// find policy for Gateway
-						gwPolicy := gatewayPolicyMap[gwNN]
-						if gwPolicy == nil {
+						gwCtx, exists := gatewayContextMap[gtwNN]
+						if !exists || gwCtx.policy == nil {
 							// not found, fall back to the current policy
-							if err := t.translateBackendTrafficPolicyForRoute(policy, route, xdsIR, resources, &gwNN); err != nil {
+							if err := t.translateBackendTrafficPolicyForRoute(policy, route, xdsIR, resources, &gtwNN); err != nil {
 								status.SetConditionForPolicyAncestor(&policy.Status,
 									ancestorRef,
 									t.GatewayControllerName,
@@ -196,7 +192,8 @@ func (t *Translator) ProcessBackendTrafficPolicies(resources *resource.Resources
 						}
 
 						// merge with parent policy
-						if err := t.translateBackendTrafficPolicyForRouteWithMerge(policy, gwNN, gwPolicy, route, xdsIR, resources); err != nil {
+						gwPolicy := gwCtx.policy
+						if err := t.translateBackendTrafficPolicyForRouteWithMerge(policy, gtwNN, gwPolicy, route, xdsIR, resources); err != nil {
 							status.SetConditionForPolicyAncestor(&policy.Status,
 								ancestorRef,
 								t.GatewayControllerName,
@@ -208,10 +205,7 @@ func (t *Translator) ProcessBackendTrafficPolicies(resources *resource.Resources
 							continue
 						}
 
-						if _, ok := gatewayPolicyMerged[gwNN]; !ok {
-							gatewayPolicyMerged[gwNN] = make(sets.Set[string])
-						}
-						gatewayPolicyMerged[gwNN].Insert(utils.NamespacedName(route).String())
+						gwCtx.mergedPolicies.Insert(utils.NamespacedName(route).String())
 
 						status.SetConditionForPolicyAncestor(&policy.Status,
 							ancestorRef,
@@ -232,137 +226,90 @@ func (t *Translator) ProcessBackendTrafficPolicies(resources *resource.Resources
 	}
 
 	// Process the policies targeting Gateways
-	for _, currPolicy := range backendTrafficPolicies {
-		policyName := utils.NamespacedName(currPolicy)
-		targetRefs := getPolicyTargetRefs(currPolicy.Spec.PolicyTargetReferences, gateways)
-		for _, currTarget := range targetRefs {
-			if currTarget.Kind == resource.KindGateway {
-				policy, found := handledPolicies[policyName]
-				if !found {
-					policy = currPolicy.DeepCopy()
-					handledPolicies[policyName] = policy
-					res = append(res, policy)
-				}
+	for _, gtwCtx := range gatewayContextMap {
+		policy := gtwCtx.policy
+		if policy == nil {
+			continue
+		}
 
-				// Negative statuses have already been assigned so it's safe to skip
-				gateway, resolveErr := resolveBTPolicyGatewayTargetRef(policy, currTarget, gatewayMap)
-				if gateway == nil {
-					continue
-				}
+		// Find its ancestor reference by resolved gateway, even with resolve error
+		gtwNN := utils.NamespacedName(gtwCtx)
+		ancestorRefs := []gwapiv1a2.ParentReference{
+			// Don't need a section name since the policy is targeting to a gateway
+			getAncestorRefForPolicy(gtwNN, nil),
+		}
 
-				// Find its ancestor reference by resolved gateway, even with resolve error
-				gatewayNN := utils.NamespacedName(gateway)
-				ancestorRefs := []gwapiv1a2.ParentReference{
-					// Don't need a section name since the policy is targeting to a gateway
-					getAncestorRefForPolicy(gatewayNN, nil),
-				}
+		currTarget := gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
+			LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
+				Group: gwapiv1a2.Group("gateway.networking.k8s.io"),
+				Kind:  gwapiv1a2.Kind("Gateway"),
+				Name:  gwapiv1a2.ObjectName(gtwCtx.Name),
+			},
+		}
 
-				// Set conditions for resolve error, then skip current gateway
-				if resolveErr != nil {
-					status.SetResolveErrorForPolicyAncestors(&policy.Status,
-						ancestorRefs,
-						t.GatewayControllerName,
-						policy.Generation,
-						resolveErr,
-					)
+		// Set conditions for translation error if it got any
+		if err := t.translateBackendTrafficPolicyForGateway(policy, currTarget, gtwCtx.GatewayContext, xdsIR, resources); err != nil {
+			status.SetTranslationErrorForPolicyAncestors(&policy.Status,
+				ancestorRefs,
+				t.GatewayControllerName,
+				policy.Generation,
+				status.Error2ConditionMsg(err),
+			)
+		}
 
-					continue
-				}
+		// Set Accepted condition if it is unset
+		status.SetAcceptedForPolicyAncestors(&policy.Status, ancestorRefs, t.GatewayControllerName)
 
-				// Set conditions for translation error if it got any
-				if err := t.translateBackendTrafficPolicyForGateway(policy, currTarget, gateway, xdsIR, resources); err != nil {
-					status.SetTranslationErrorForPolicyAncestors(&policy.Status,
-						ancestorRefs,
-						t.GatewayControllerName,
-						policy.Generation,
-						status.Error2ConditionMsg(err),
-					)
-				}
+		// Check if this policy is overridden by other policies targeting at
+		// route level
+		mergedRoutes := gtwCtx.mergedPolicies
+		if len(mergedRoutes) > 0 {
+			// if merge happened, skip the overridden check
+			gatewayMergedRoutes := mergedRoutes.UnsortedList()
+			sort.Strings(gatewayMergedRoutes)
 
-				// Set Accepted condition if it is unset
-				status.SetAcceptedForPolicyAncestors(&policy.Status, ancestorRefs, t.GatewayControllerName)
+			status.SetConditionForPolicyAncestors(&policy.Status,
+				ancestorRefs,
+				t.GatewayControllerName,
+				egv1a1.PolicyConditionMerged,
+				metav1.ConditionTrue,
+				egv1a1.PolicyReasonMerged,
+				fmt.Sprintf("This policy is being merged by other backendTrafficPolicies for these routes: %v", gatewayMergedRoutes),
+				policy.Generation,
+			)
+		}
 
-				// Check if this policy is overridden by other policies targeting at
-				// route level
-				mergedRoutes, routeMerged := gatewayPolicyMerged[gatewayNN]
-				if routeMerged && len(mergedRoutes) > 0 {
-					// if merge happened, skip the overridden check
-					gatewayMergedRoutes := mergedRoutes.UnsortedList()
-					sort.Strings(gatewayMergedRoutes)
-
-					status.SetConditionForPolicyAncestors(&policy.Status,
-						ancestorRefs,
-						t.GatewayControllerName,
-						egv1a1.PolicyConditionMerged,
-						metav1.ConditionTrue,
-						egv1a1.PolicyReasonMerged,
-						fmt.Sprintf("This policy is being merged by other backendTrafficPolicies for these routes: %v", gatewayMergedRoutes),
-						policy.Generation,
-					)
-				}
-
-				if r, ok := gatewayRouteMap[gatewayNN.String()]; ok {
-					// Maintain order here to ensure status/string does not change with the same data
-					var gatewayRoutes []string
-					if len(mergedRoutes) > 0 {
-						gatewayRoutes = r.Difference(mergedRoutes).UnsortedList()
-					} else {
-						gatewayRoutes = r.UnsortedList()
-					}
-					sort.Strings(gatewayRoutes)
-					if len(gatewayRoutes) == 0 {
-						continue
-					}
-
-					status.SetConditionForPolicyAncestors(&policy.Status,
-						ancestorRefs,
-						t.GatewayControllerName,
-						egv1a1.PolicyConditionOverridden,
-						metav1.ConditionTrue,
-						egv1a1.PolicyReasonOverridden,
-						fmt.Sprintf("This policy is being overridden by other backendTrafficPolicies for these routes: %v", gatewayRoutes),
-						policy.Generation,
-					)
-				}
+		if r := gtwCtx.routes; len(r) > 0 {
+			// Maintain order here to ensure status/string does not change with the same data
+			var gatewayRoutes []string
+			if len(mergedRoutes) > 0 {
+				gatewayRoutes = r.Difference(mergedRoutes).UnsortedList()
+			} else {
+				gatewayRoutes = r.UnsortedList()
 			}
+			sort.Strings(gatewayRoutes)
+			if len(gatewayRoutes) == 0 {
+				continue
+			}
+
+			status.SetConditionForPolicyAncestors(&policy.Status,
+				ancestorRefs,
+				t.GatewayControllerName,
+				egv1a1.PolicyConditionOverridden,
+				metav1.ConditionTrue,
+				egv1a1.PolicyReasonOverridden,
+				fmt.Sprintf("This policy is being overridden by other backendTrafficPolicies for these routes: %v", gatewayRoutes),
+				policy.Generation,
+			)
 		}
 	}
 
 	return res
 }
 
-func resolveBTPolicyGatewayTargetRef(policy *egv1a1.BackendTrafficPolicy, target gwapiv1a2.LocalPolicyTargetReferenceWithSectionName, gateways map[types.NamespacedName]*policyGatewayTargetContext) (*GatewayContext, *status.PolicyResolveError) {
-	// Check if the gateway exists
-	key := types.NamespacedName{
-		Name:      string(target.Name),
-		Namespace: policy.Namespace,
-	}
-	gateway, ok := gateways[key]
-
-	// Gateway not found
-	if !ok {
-		return nil, nil
-	}
-
-	// Check if another policy targeting the same Gateway exists
-	if gateway.attached {
-		message := fmt.Sprintf("Unable to target Gateway %s, another BackendTrafficPolicy has already attached to it",
-			string(target.Name))
-
-		return gateway.GatewayContext, &status.PolicyResolveError{
-			Reason:  gwapiv1a2.PolicyReasonConflicted,
-			Message: message,
-		}
-	}
-
-	// Set context and save
-	gateway.attached = true
-	gateways[key] = gateway
-
-	return gateway.GatewayContext, nil
-}
-
-func resolveBTPolicyRouteTargetRef(policy *egv1a1.BackendTrafficPolicy, target gwapiv1a2.LocalPolicyTargetReferenceWithSectionName, routes map[policyTargetRouteKey]*policyRouteTargetContext) (RouteContext, *status.PolicyResolveError) {
+func resolveBTPolicyRouteTargetRef(policy *egv1a1.BackendTrafficPolicy, target gwapiv1a2.LocalPolicyTargetReferenceWithSectionName,
+	routes map[policyTargetRouteKey]*btpRouteTargetContext,
+) (RouteContext, *status.PolicyResolveError) {
 	// Check if the route exists
 	key := policyTargetRouteKey{
 		Kind:      string(target.Kind),
@@ -377,7 +324,7 @@ func resolveBTPolicyRouteTargetRef(policy *egv1a1.BackendTrafficPolicy, target g
 	}
 
 	// Check if another policy targeting the same xRoute exists
-	if route.attached {
+	if route.policy != nil {
 		message := fmt.Sprintf("Unable to target %s %s, another BackendTrafficPolicy has already attached to it",
 			string(target.Kind), string(target.Name))
 
@@ -388,8 +335,7 @@ func resolveBTPolicyRouteTargetRef(policy *egv1a1.BackendTrafficPolicy, target g
 	}
 
 	// Set context and save
-	route.attached = true
-	routes[key] = route
+	route.policy = policy
 
 	return route.RouteContext, nil
 }

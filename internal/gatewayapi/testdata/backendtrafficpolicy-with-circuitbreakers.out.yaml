@@ -3,6 +3,37 @@ backendTrafficPolicies:
   kind: BackendTrafficPolicy
   metadata:
     creationTimestamp: null
+    name: policy-for-gateway
+    namespace: envoy-gateway
+  spec:
+    circuitBreaker:
+      maxConnections: 2048
+      maxParallelRequests: 4294967295
+      maxParallelRetries: 1024
+      maxPendingRequests: 1
+      maxRequestsPerConnection: 1
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: Gateway
+      name: gateway-1
+  status:
+    ancestors:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: gateway-1
+        namespace: envoy-gateway
+      conditions:
+      - lastTransitionTime: null
+        message: Policy has been accepted.
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: BackendTrafficPolicy
+  metadata:
+    creationTimestamp: null
     name: policy-for-route
     namespace: default
   spec:
@@ -24,37 +55,6 @@ backendTrafficPolicies:
         name: gateway-2
         namespace: envoy-gateway
         sectionName: http
-      conditions:
-      - lastTransitionTime: null
-        message: Policy has been accepted.
-        reason: Accepted
-        status: "True"
-        type: Accepted
-      controllerName: gateway.envoyproxy.io/gatewayclass-controller
-- apiVersion: gateway.envoyproxy.io/v1alpha1
-  kind: BackendTrafficPolicy
-  metadata:
-    creationTimestamp: null
-    name: policy-for-gateway
-    namespace: envoy-gateway
-  spec:
-    circuitBreaker:
-      maxConnections: 2048
-      maxParallelRequests: 4294967295
-      maxParallelRetries: 1024
-      maxPendingRequests: 1
-      maxRequestsPerConnection: 1
-    targetRef:
-      group: gateway.networking.k8s.io
-      kind: Gateway
-      name: gateway-1
-  status:
-    ancestors:
-    - ancestorRef:
-        group: gateway.networking.k8s.io
-        kind: Gateway
-        name: gateway-1
-        namespace: envoy-gateway
       conditions:
       - lastTransitionTime: null
         message: Policy has been accepted.

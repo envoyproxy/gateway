@@ -3,6 +3,33 @@ backendTrafficPolicies:
   kind: BackendTrafficPolicy
   metadata:
     creationTimestamp: null
+    name: policy-for-gateway
+    namespace: envoy-gateway
+  spec:
+    circuitBreaker:
+      maxConnections: -1
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: Gateway
+      name: gateway-1
+  status:
+    ancestors:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: gateway-1
+        namespace: envoy-gateway
+      conditions:
+      - lastTransitionTime: null
+        message: 'CircuitBreaker: invalid MaxConnections value -1.'
+        reason: Invalid
+        status: "False"
+        type: Accepted
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: BackendTrafficPolicy
+  metadata:
+    creationTimestamp: null
     name: policy-for-route
     namespace: default
   spec:
@@ -51,33 +78,6 @@ backendTrafficPolicies:
       conditions:
       - lastTransitionTime: null
         message: 'CircuitBreaker: invalid MaxParallelRetries value -1.'
-        reason: Invalid
-        status: "False"
-        type: Accepted
-      controllerName: gateway.envoyproxy.io/gatewayclass-controller
-- apiVersion: gateway.envoyproxy.io/v1alpha1
-  kind: BackendTrafficPolicy
-  metadata:
-    creationTimestamp: null
-    name: policy-for-gateway
-    namespace: envoy-gateway
-  spec:
-    circuitBreaker:
-      maxConnections: -1
-    targetRef:
-      group: gateway.networking.k8s.io
-      kind: Gateway
-      name: gateway-1
-  status:
-    ancestors:
-    - ancestorRef:
-        group: gateway.networking.k8s.io
-        kind: Gateway
-        name: gateway-1
-        namespace: envoy-gateway
-      conditions:
-      - lastTransitionTime: null
-        message: 'CircuitBreaker: invalid MaxConnections value -1.'
         reason: Invalid
         status: "False"
         type: Accepted
