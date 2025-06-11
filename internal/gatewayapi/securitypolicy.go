@@ -1140,7 +1140,7 @@ func (t *Translator) buildOIDCProvider(policy *egv1a1.SecurityPolicy, resources 
 		authorizationEndpoint = discoveredConfig.AuthorizationEndpoint
 		// endSessionEndpoint is optional, and we prioritize using the one provided in the well-known configuration.
 		if discoveredConfig.EndSessionEndpoint != nil && *discoveredConfig.EndSessionEndpoint != "" {
-		    endSessionEndpoint = discoveredConfig.EndSessionEndpoint
+			endSessionEndpoint = discoveredConfig.EndSessionEndpoint
 		}
 	} else {
 		tokenEndpoint = *provider.TokenEndpoint
