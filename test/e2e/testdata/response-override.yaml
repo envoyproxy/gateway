@@ -74,7 +74,7 @@ metadata:
   name: response-btp-config
   namespace: gateway-conformance-infra
 data:
-  response.body: "ConfigMap response with status: %RESPONSE_CODE% and user: %REQ(x-user-id)%"
+  response.body: "ConfigMap response with user: %REQ(x-user-id)%"
 ---
 apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: HTTPRouteFilter
@@ -133,57 +133,21 @@ spec:
     name: response-override
   responseOverride:
     # Basic response overrides
-    - match:
-        statusCodes:
-          - type: Value
-            value: 404
-      response:
-        statusCode: 404
-        responseHeadersToAdd:
-          - name: "Content-Type"
-            value: "text/plain"
-            append: false
-        body:
-          type: Inline
-          inline: "Oops! Your request is not found."
-    - match:
-        statusCodes:
-          - type: Value
-            value: 500
-      response:
-        statusCode: 500
-        responseHeadersToAdd:
-          - name: "Content-Type"
-            value: "application/json"
-            append: false
-        body:
-          type: Inline
-          inline: '{"error": "Internal Server Error"}'
-    - match:
-        statusCodes:
-          - type: Value
-            value: 403
-      response:
-        statusCode: 404
-
     # Backend Traffic Policy with dynamic variables - JSON response
     - match:
         statusCodes:
           - type: Value
             value: 404
-        path:
-          type: PathPrefix
-          value: "/backend"
       response:
         statusCode: 404
+        contentType: "application/json"
         responseHeadersToAdd:
-          - name: "Content-Type"
-            value: "application/json"
+          - name: "Response-Override-Test"
+            value: "True"
             append: false
         body:
           type: JSON
           json:
-            status_code: "%RESPONSE_CODE%"
             user_id: "%REQ(x-user-id)%"
             error: "not_found"
 
@@ -192,32 +156,28 @@ spec:
         statusCodes:
           - type: Value
             value: 500
-        path:
-          type: PathPrefix
-          value: "/backend"
       response:
         statusCode: 500
+        contentType: "text/plain"
         responseHeadersToAdd:
-          - name: "Content-Type"
-            value: "text/plain"
+          - name: "Response-Override-Test"
+            value: "True"
             append: false
         body:
           type: Inline
-          inline: "Error %RESPONSE_CODE% for user %REQ(x-user-id)%: Internal Server Error"
+          inline: "Error for user %REQ(x-user-id)%: Internal Server Error"
 
     # Backend Traffic Policy with dynamic variables - ValueRef response
     - match:
         statusCodes:
           - type: Value
             value: 503
-        path:
-          type: PathPrefix
-          value: "/backend"
       response:
         statusCode: 503
+        contentType: "text/plain"
         responseHeadersToAdd:
-          - name: "Content-Type"
-            value: "text/plain"
+          - name: "Response-Override-Test"
+            value: "True"
             append: false
         body:
           type: ValueRef

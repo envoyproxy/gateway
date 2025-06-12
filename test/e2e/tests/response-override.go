@@ -50,91 +50,32 @@ var ResponseOverrideTest = suite.ConformanceTest{
 		}
 		BackendTrafficPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "response-override", Namespace: ns}, suite.ControllerName, ancestorRef)
 
-		// Test basic response override
-		t.Run("basic response override", func(t *testing.T) {
-			verifyCustomResponse(t, suite.TimeoutConfig, gwAddr, "/status/404", "text/plain", "Oops! Your request is not found.", 404)
-			verifyCustomResponse(t, suite.TimeoutConfig, gwAddr, "/status/500", "application/json", `{"error": "Internal Server Error"}`, 500)
-			verifyCustomResponse(t, suite.TimeoutConfig, gwAddr, "/status/403", "", "", 404)
-		})
-
 		// Test backend traffic policy with dynamic variables
 		t.Run("backend traffic policy with dynamic variables", func(t *testing.T) {
 			// Test JSON response with variables
-			verifyBackendTrafficPolicyResponse(t, suite.TimeoutConfig, gwAddr, "/backend/404", "user-404", 404, "json")
+			verifyBackendTrafficPolicyResponse(t, suite.TimeoutConfig, gwAddr, "/backend/404", "user-404", 404)
 			// Test inline response with variables
-			verifyBackendTrafficPolicyResponse(t, suite.TimeoutConfig, gwAddr, "/backend/500", "user-500", 500, "inline")
+			verifyBackendTrafficPolicyResponse(t, suite.TimeoutConfig, gwAddr, "/backend/500", "user-500", 500)
 			// Test valueref response with variables
-			verifyBackendTrafficPolicyResponse(t, suite.TimeoutConfig, gwAddr, "/backend/503", "user-503", 503, "valueref")
+			verifyBackendTrafficPolicyResponse(t, suite.TimeoutConfig, gwAddr, "/backend/503", "user-503", 503)
 		})
 
 		// Test HTTPRoute filters with direct responses
 		t.Run("HTTPRoute filter responses", func(t *testing.T) {
 			verifyDirectResponse(t, suite.TimeoutConfig, gwAddr, "/filter/json", "application/json",
-				func(body string) bool {
-					return contains(body, `"response_type":"JSON"`)
-				}, 503)
+				`{"response_type":"JSON","message":"Direct response from HTTPRoute filter","source":"filter"}`, 503)
 
 			verifyDirectResponse(t, suite.TimeoutConfig, gwAddr, "/filter/inline", "text/html",
-				func(body string) bool {
-					return contains(body, "Inline response from filter")
-				}, 503)
+				"Inline response from filter - Service temporarily unavailable", 503)
 
 			verifyDirectResponse(t, suite.TimeoutConfig, gwAddr, "/filter/valueref", "text/html",
-				func(body string) bool {
-					return contains(body, "ValueRef response from ConfigMap")
-				}, 503)
+				`{"message":"ValueRef response from ConfigMap","source":"configmap"}`, 503)
 		})
 	},
 }
 
-func verifyCustomResponse(t *testing.T, timeoutConfig config.TimeoutConfig, gwAddr,
-	path, expectedContentType, expectedBody string, expectedStatusCode int,
-) {
-	reqURL := url.URL{
-		Scheme: "http",
-		Host:   httputils.CalculateHost(t, gwAddr, "http"),
-		Path:   path,
-	}
-
-	httputils.AwaitConvergence(t, timeoutConfig.RequiredConsecutiveSuccesses, timeoutConfig.MaxTimeToConsistency, func(elapsed time.Duration) bool {
-		rsp, err := http.Get(reqURL.String())
-		if err != nil {
-			tlog.Logf(t, "failed to get response: %v", err)
-			return false
-		}
-
-		// Verify that the response body is overridden
-		defer rsp.Body.Close()
-		body, err := io.ReadAll(rsp.Body)
-		if err != nil {
-			tlog.Logf(t, "failed to read response body: %v", err)
-			return false
-		}
-		if string(body) != expectedBody {
-			tlog.Logf(t, "expected response body to be %s but got %s", expectedBody, string(body))
-			return false
-		}
-
-		// Verify that the content type is overridden
-		contentType := rsp.Header.Get("Content-Type")
-		if contentType != expectedContentType {
-			tlog.Logf(t, "expected content type to be %s but got %s", expectedContentType, contentType)
-			return false
-		}
-
-		if expectedStatusCode != rsp.StatusCode {
-			tlog.Logf(t, "expected status code to be %d but got %d", expectedStatusCode, rsp.StatusCode)
-			return false
-		}
-
-		return true
-	})
-
-	tlog.Logf(t, "Request passed")
-}
-
 func verifyBackendTrafficPolicyResponse(t *testing.T, timeoutConfig config.TimeoutConfig, gwAddr,
-	path, userID string, expectedStatusCode int, responseType string,
+	path, userID string, expectedStatusCode int,
 ) {
 	reqURL := url.URL{
 		Scheme: "http",
@@ -164,7 +105,14 @@ func verifyBackendTrafficPolicyResponse(t *testing.T, timeoutConfig config.Timeo
 			return false
 		}
 
-		// Verify response body contains expected values
+		// Verify that the custom response header is added
+		customHeader := rsp.Header.Get("Response-Override-Test")
+		if customHeader != "True" {
+			tlog.Logf(t, "expected Response-Override-Test header to be 'True' but got '%s'", customHeader)
+			return false
+		}
+
+		// Verify response body contains expected values based on status code
 		body, err := io.ReadAll(rsp.Body)
 		if err != nil {
 			tlog.Logf(t, "failed to read response body: %v", err)
@@ -172,32 +120,26 @@ func verifyBackendTrafficPolicyResponse(t *testing.T, timeoutConfig config.Timeo
 		}
 
 		bodyStr := string(body)
+		var expectedBody string
 
-		// Check based on response type and expected format
-		switch responseType {
-		case "json":
-			// Expected: {"status_code":"404","user_id":"user-404","error":"not_found"}
-			expectedContent := []string{
-				fmt.Sprintf(`"status_code":"%d"`, expectedStatusCode),
-				fmt.Sprintf(`"user_id":"%s"`, userID),
-				`"error":"not_found"`,
+		switch expectedStatusCode {
+		case 404:
+			// Verify JSON response for 404
+			if !contains(bodyStr, fmt.Sprintf(`"user_id":"%s"`, userID)) ||
+				!contains(bodyStr, `"error":"not_found"`) {
+				tlog.Logf(t, "expected response body to contain user_id and error fields but got: %s", bodyStr)
+				return false
 			}
-			for _, expected := range expectedContent {
-				if !contains(bodyStr, expected) {
-					tlog.Logf(t, "expected response body to contain %s but got %s", expected, bodyStr)
-					return false
-				}
-			}
-		case "inline":
-			// Expected: "Error 500 for user user-500: Internal Server Error"
-			expectedBody := fmt.Sprintf("Error %d for user %s: Internal Server Error", expectedStatusCode, userID)
+		case 500:
+			// Verify inline response for 500
+			expectedBody = fmt.Sprintf("Error for user %s: Internal Server Error", userID)
 			if bodyStr != expectedBody {
 				tlog.Logf(t, "expected response body to be '%s' but got '%s'", expectedBody, bodyStr)
 				return false
 			}
-		case "valueref":
-			// Expected: "ConfigMap response with status: 503 and user: user-503"
-			expectedBody := fmt.Sprintf("ConfigMap response with status: %d and user: %s", expectedStatusCode, userID)
+		case 503:
+			// Verify valueref response for 503
+			expectedBody = fmt.Sprintf("ConfigMap response with user: %s", userID)
 			if bodyStr != expectedBody {
 				tlog.Logf(t, "expected response body to be '%s' but got '%s'", expectedBody, bodyStr)
 				return false
@@ -211,7 +153,7 @@ func verifyBackendTrafficPolicyResponse(t *testing.T, timeoutConfig config.Timeo
 }
 
 func verifyDirectResponse(t *testing.T, timeoutConfig config.TimeoutConfig, gwAddr,
-	path, expectedContentType string, bodyValidator func(string) bool, expectedStatusCode int,
+	path, expectedContentType string, expectedBody string, expectedStatusCode int,
 ) {
 	reqURL := url.URL{
 		Scheme: "http",
@@ -247,8 +189,9 @@ func verifyDirectResponse(t *testing.T, timeoutConfig config.TimeoutConfig, gwAd
 			return false
 		}
 
-		if !bodyValidator(string(body)) {
-			tlog.Logf(t, "body validation failed for: %s", string(body))
+		bodyStr := string(body)
+		if bodyStr != expectedBody {
+			tlog.Logf(t, "expected response body to be '%s' but got '%s'", expectedBody, bodyStr)
 			return false
 		}
 

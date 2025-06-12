@@ -574,10 +574,6 @@ type HTTP2Settings struct {
 
 // ResponseOverride defines the configuration to override specific responses with a custom one.
 //
-// This feature supports dynamic variable substitution in response bodies through Envoy's
-// SubstitutionFormatString, allowing variables like %START_TIME%, %RESPONSE_CODE%, etc.
-// to be dynamically rendered at runtime.
-//
 // +k8s:deepcopy-gen=true
 type ResponseOverride struct {
 	// Name is a unique name for a ResponseOverride configuration.
