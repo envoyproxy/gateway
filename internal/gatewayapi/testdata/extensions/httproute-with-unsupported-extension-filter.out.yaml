@@ -71,7 +71,7 @@ httpRoutes:
     parents:
     - conditions:
       - lastTransitionTime: null
-        message: 'Filter ExtensionRef is invalid: unknown kind foo.example.io/Unsupported'
+        message: 'Invalid filter ExtensionRef: unknown kind foo.example.io/Unsupported'
         reason: UnsupportedValue
         status: "False"
         type: Accepted
