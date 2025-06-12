@@ -741,34 +741,10 @@ type CustomResponse struct {
 	//
 	// +optional
 	StatusCode *int `json:"statusCode,omitempty"`
-
-	// ResponseHeadersToAdd defines headers to add to the response.
-	// This allows the response policy to append, add or override headers
-	// of the original response before it is sent to a downstream client.
-	//
-	// +optional
-	ResponseHeadersToAdd []ResponseHeaderToAdd `json:"responseHeadersToAdd,omitempty"`
-}
-
-// ResponseHeaderToAdd defines a header to add to the response.
-type ResponseHeaderToAdd struct {
-	// Name is the name of the header to add.
-	Name string `json:"name"`
-
-	// Value is the value of the header to add.
-	Value string `json:"value"`
-
-	// Append specifies the action to take when the header already exists.
-	// If true, the value will be appended to the existing header value.
-	// If false, the value will overwrite the existing header value.
-	// Default is false.
-	//
-	// +optional
-	Append *bool `json:"append,omitempty"`
 }
 
 // ResponseValueType defines the types of values for the response body supported by Envoy Gateway.
-// +kubebuilder:validation:Enum=Inline;ValueRef;JSON
+// +kubebuilder:validation:Enum=Inline;ValueRef
 type ResponseValueType string
 
 const (
@@ -777,23 +753,18 @@ const (
 
 	// ResponseValueTypeValueRef defines the "ValueRef" response body type.
 	ResponseValueTypeValueRef ResponseValueType = "ValueRef"
-
-	// ResponseValueTypeJSON defines the "JSON" response body type.
-	ResponseValueTypeJSON ResponseValueType = "JSON"
 )
 
-// CustomResponseBody supports dynamic variable substitution (e.g. %START_TIME%, %REQ(header)%)
-// for BackendTrafficPolicy but not for HTTPRouteFilter DirectResponse.
+// CustomResponseBody
 // +kubebuilder:validation:XValidation:message="inline must be set for type Inline",rule="(!has(self.type) || self.type == 'Inline')? has(self.inline) : true"
 // +kubebuilder:validation:XValidation:message="valueRef must be set for type ValueRef",rule="(has(self.type) && self.type == 'ValueRef')? has(self.valueRef) : true"
-// +kubebuilder:validation:XValidation:message="json must be set for type JSON",rule="(has(self.type) && self.type == 'JSON')? has(self.json) : true"
 // +kubebuilder:validation:XValidation:message="only ConfigMap is supported for ValueRef",rule="has(self.valueRef) ? self.valueRef.kind == 'ConfigMap' : true"
 type CustomResponseBody struct {
 	// Type is the type of method to use to read the body value.
-	// Valid values are Inline, ValueRef, and JSON, default is Inline.
+	// Valid values are Inline and ValueRef, default is Inline.
 	//
 	// +kubebuilder:default=Inline
-	// +kubebuilder:validation:Enum=Inline;ValueRef;JSON
+	// +kubebuilder:validation:Enum=Inline;ValueRef
 	// +unionDiscriminator
 	Type *ResponseValueType `json:"type"`
 
@@ -811,10 +782,6 @@ type CustomResponseBody struct {
 	//
 	// +optional
 	ValueRef *gwapiv1.LocalObjectReference `json:"valueRef,omitempty"`
-
-	// JSON defines response body JSON format
-	// +optional
-	JSON map[string]string `json:"json,omitempty"`
 }
 
 // Tracing defines the configuration for tracing.

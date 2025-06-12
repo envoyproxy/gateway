@@ -573,7 +573,6 @@ type HTTP2Settings struct {
 }
 
 // ResponseOverride defines the configuration to override specific responses with a custom one.
-//
 // +k8s:deepcopy-gen=true
 type ResponseOverride struct {
 	// Name is a unique name for a ResponseOverride configuration.
@@ -631,9 +630,6 @@ type CustomResponse struct {
 
 	// StatusCode will be used for the response's status code.
 	StatusCode *uint32 `json:"statusCode,omitempty"`
-
-	// ResponseHeadersToAdd defines headers to add to the response.
-	ResponseHeadersToAdd []AddHeader `json:"responseHeadersToAdd,omitempty"`
 }
 
 // Validate the fields within the CustomResponse structure

@@ -123,7 +123,6 @@ backendTrafficPolicies:
           response:
             contentType: text/plain
             body:
-              type: Inline
               inline: "httproute-1 Not Found"
         - match:
             statusCodes:

@@ -14,7 +14,7 @@ backendTrafficPolicies:
       response:
         body:
           inline: httproute-1 Not Found
-          type: Inline
+          type: null
         contentType: text/plain
     - match:
         statusCodes:
@@ -46,8 +46,7 @@ backendTrafficPolicies:
         sectionName: http
       conditions:
       - lastTransitionTime: null
-        message: 'ResponseOverride: failed to resolve ValueRef: ConfigMap response-override-config-1
-          not found in namespace default.'
+        message: 'ResponseOverride: can''t find the referenced configmap response-override-config-1.'
         reason: Invalid
         status: "False"
         type: Accepted
@@ -98,8 +97,8 @@ backendTrafficPolicies:
         namespace: default
       conditions:
       - lastTransitionTime: null
-        message: 'ResponseOverride: failed to resolve ValueRef: ConfigMap response-override-config
-          does not contain any data.'
+        message: 'ResponseOverride: can''t find the key response.body in the referenced
+          configmap response-override-config.'
         reason: Invalid
         status: "False"
         type: Accepted

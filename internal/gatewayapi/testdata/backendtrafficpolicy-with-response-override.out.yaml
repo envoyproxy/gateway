@@ -13,11 +13,8 @@ backendTrafficPolicies:
           value: 404
       response:
         body:
-          json:
-            message: Resource not found
-            status: '%RESPONSE_CODE%'
-            timestamp: '%START_TIME%'
-          type: JSON
+          inline: httproute-1 Not Found
+          type: null
         contentType: text/plain
     - match:
         statusCodes:
@@ -101,11 +98,8 @@ backendTrafficPolicies:
           value: 404
       response:
         body:
-          json:
-            message: Resource not found
-            status: '%RESPONSE_CODE%'
-            timestamp: '%START_TIME%'
-          type: JSON
+          inline: gateway-1 Not Found
+          type: Inline
         contentType: text/plain
     - match:
         statusCodes:
@@ -425,9 +419,9 @@ xdsIR:
             - match:
                 statusCodes:
                 - value: 404
-              name: default/policy-for-gateway/responseoverride/rule/0
+              name: backendtrafficpolicy/default/policy-for-gateway/responseoverride/rule/0
               response:
-                body: '{"message":"Resource not found","status":"%RESPONSE_CODE%","timestamp":"%START_TIME%"}'
+                body: gateway-1 Not Found
                 contentType: text/plain
             - match:
                 statusCodes:
@@ -435,7 +429,7 @@ xdsIR:
                 - range:
                     end: 511
                     start: 501
-              name: default/policy-for-gateway/responseoverride/rule/1
+              name: backendtrafficpolicy/default/policy-for-gateway/responseoverride/rule/1
               response:
                 body: |
                   {
@@ -503,9 +497,9 @@ xdsIR:
             - match:
                 statusCodes:
                 - value: 404
-              name: default/policy-for-route-1/responseoverride/rule/0
+              name: backendtrafficpolicy/default/policy-for-route-1/responseoverride/rule/0
               response:
-                body: '{"message":"Resource not found","status":"%RESPONSE_CODE%","timestamp":"%START_TIME%"}'
+                body: httproute-1 Not Found
                 contentType: text/plain
             - match:
                 statusCodes:
@@ -513,7 +507,7 @@ xdsIR:
                 - range:
                     end: 511
                     start: 501
-              name: default/policy-for-route-1/responseoverride/rule/1
+              name: backendtrafficpolicy/default/policy-for-route-1/responseoverride/rule/1
               response:
                 body: |
                   {
@@ -556,7 +550,7 @@ xdsIR:
             - match:
                 statusCodes:
                 - value: 403
-              name: default/policy-for-route-2/responseoverride/rule/0
+              name: backendtrafficpolicy/default/policy-for-route-2/responseoverride/rule/0
               response:
                 statusCode: 401
     readyListener:
