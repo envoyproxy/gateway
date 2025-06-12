@@ -2,39 +2,137 @@
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
-  name: response-override-enhanced
+  name: response-override
   namespace: gateway-conformance-infra
 spec:
   parentRefs:
     - name: same-namespace
   rules:
+    # Default backend routes for basic response override testing
     - matches:
         - path:
             type: PathPrefix
-            value: /
+            value: /status
       backendRefs:
         - name: infra-backend-v1
           port: 8080
+    # Backend routes for testing BackendTrafficPolicy with dynamic variables
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /backend
+      backendRefs:
+        - name: infra-backend-v1
+          port: 8080
+    # HTTPRoute filter rules for direct responses
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /filter/json
+      filters:
+        - type: ExtensionRef
+          extensionRef:
+            group: gateway.envoyproxy.io
+            kind: HTTPRouteFilter
+            name: response-filter-json
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /filter/inline
+      filters:
+        - type: ExtensionRef
+          extensionRef:
+            group: gateway.envoyproxy.io
+            kind: HTTPRouteFilter
+            name: response-filter-inline
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /filter/valueref
+      filters:
+        - type: ExtensionRef
+          extensionRef:
+            group: gateway.envoyproxy.io
+            kind: HTTPRouteFilter
+            name: response-filter-valueref
 ---
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: response-override-config-enhanced
+  name: response-filter-config
   namespace: gateway-conformance-infra
 data:
-  response.body: 'Internal Server Error'
+  response.body: |
+    {
+      "message": "ValueRef response from ConfigMap",
+      "source": "configmap"
+    }
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: response-btp-config
+  namespace: gateway-conformance-infra
+data:
+  response.body: "ConfigMap response with status: %RESPONSE_CODE% and user: %REQ(x-user-id)%"
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: HTTPRouteFilter
+metadata:
+  name: response-filter-json
+  namespace: gateway-conformance-infra
+spec:
+  directResponse:
+    statusCode: 503
+    body:
+      type: JSON
+      json:
+        response_type: "JSON"
+        message: "Direct response from HTTPRoute filter"
+        source: "filter"
+    contentType: application/json
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: HTTPRouteFilter
+metadata:
+  name: response-filter-inline
+  namespace: gateway-conformance-infra
+spec:
+  directResponse:
+    statusCode: 503
+    body:
+      type: Inline
+      inline: "Inline response from filter - Service temporarily unavailable"
+    contentType: text/html
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: HTTPRouteFilter
+metadata:
+  name: response-filter-valueref
+  namespace: gateway-conformance-infra
+spec:
+  directResponse:
+    statusCode: 503
+    body:
+      type: ValueRef
+      valueRef:
+        group: v1
+        kind: ConfigMap
+        name: response-filter-config
+    contentType: text/html
 ---
 apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: BackendTrafficPolicy
 metadata:
-  name: response-override-enhanced
+  name: response-override
   namespace: gateway-conformance-infra
 spec:
   targetRef:
     group: gateway.networking.k8s.io
     kind: HTTPRoute
-    name: response-override-enhanced
+    name: response-override
   responseOverride:
+    # Basic response overrides
     - match:
         statusCodes:
           - type: Value
@@ -42,18 +140,12 @@ spec:
       response:
         statusCode: 404
         responseHeadersToAdd:
-          - name: "X-Custom-Error"
-            value: "Not Found"
+          - name: "Content-Type"
+            value: "text/plain"
             append: false
-          - name: "X-Gateway-Source"
-            value: "Envoy Gateway"
-            append: false
-        bodyFormat:
-          jsonFormat:
-            status: "%RESPONSE_CODE%"
-            message: "%LOCAL_REPLY_BODY%"
-            timestamp: "%START_TIME%"
-          contentType: "application/json"
+        body:
+          type: Inline
+          inline: "Oops! Your request is not found."
     - match:
         statusCodes:
           - type: Value
@@ -61,15 +153,75 @@ spec:
       response:
         statusCode: 500
         responseHeadersToAdd:
-          - name: "X-Error-Type"
-            value: "Internal"
+          - name: "Content-Type"
+            value: "application/json"
             append: false
-        bodyFormat:
-          textFormat: "Error %RESPONSE_CODE%: %LOCAL_REPLY_BODY% at %START_TIME%"
-          contentType: "text/plain"
+        body:
+          type: Inline
+          inline: '{"error": "Internal Server Error"}'
+    - match:
+        statusCodes:
+          - type: Value
+            value: 403
+      response:
+        statusCode: 404
+
+    # Backend Traffic Policy with dynamic variables - JSON response
+    - match:
+        statusCodes:
+          - type: Value
+            value: 404
+        path:
+          type: PathPrefix
+          value: "/backend"
+      response:
+        statusCode: 404
+        responseHeadersToAdd:
+          - name: "Content-Type"
+            value: "application/json"
+            append: false
+        body:
+          type: JSON
+          json:
+            status_code: "%RESPONSE_CODE%"
+            user_id: "%REQ(x-user-id)%"
+            error: "not_found"
+
+    # Backend Traffic Policy with dynamic variables - Inline response
+    - match:
+        statusCodes:
+          - type: Value
+            value: 500
+        path:
+          type: PathPrefix
+          value: "/backend"
+      response:
+        statusCode: 500
+        responseHeadersToAdd:
+          - name: "Content-Type"
+            value: "text/plain"
+            append: false
+        body:
+          type: Inline
+          inline: "Error %RESPONSE_CODE% for user %REQ(x-user-id)%: Internal Server Error"
+
+    # Backend Traffic Policy with dynamic variables - ValueRef response
+    - match:
+        statusCodes:
+          - type: Value
+            value: 503
+        path:
+          type: PathPrefix
+          value: "/backend"
+      response:
+        statusCode: 503
+        responseHeadersToAdd:
+          - name: "Content-Type"
+            value: "text/plain"
+            append: false
         body:
           type: ValueRef
           valueRef:
-            group: ""
+            group: v1
             kind: ConfigMap
-            name: response-override-config-enhanced
+            name: response-btp-config

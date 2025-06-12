@@ -825,11 +825,12 @@ func (t *Translator) processExtensionRefHTTPFilter(extFilter *gwapiv1.LocalObjec
 				if hrf.Spec.DirectResponse != nil {
 					dr := &ir.CustomResponse{}
 					if hrf.Spec.DirectResponse.Body != nil {
-						var err error
-						if dr.Body, err = getCustomResponseBody(hrf.Spec.DirectResponse.Body, resources, filterNs); err != nil {
-							t.processInvalidHTTPFilter(string(extFilter.Kind), filterContext, err)
-							return
+						body, err := processResponseBody(hrf.Spec.DirectResponse.Body, resources, filterNs)
+						if err != nil {
+							t.processInvalidHTTPFilter(string(gwapiv1.HTTPRouteFilterExtensionRef), filterContext, err)
+							continue
 						}
+						dr.Body = body
 					}
 
 					if hrf.Spec.DirectResponse.StatusCode != nil {
@@ -859,7 +860,7 @@ func (t *Translator) processExtensionRefHTTPFilter(extFilter *gwapiv1.LocalObjec
 						},
 						hrf.Spec.CredentialInjection.Credential.ValueRef, resources)
 					if err != nil {
-						t.processInvalidHTTPFilter(string(extFilter.Kind), filterContext, err)
+						t.processInvalidHTTPFilter(string(gwapiv1.HTTPRouteFilterExtensionRef), filterContext, err)
 						return
 					}
 
@@ -869,7 +870,7 @@ func (t *Translator) processExtensionRefHTTPFilter(extFilter *gwapiv1.LocalObjec
 							"credential key %s not found in secret %s/%s",
 							egv1a1.InjectedCredentialKey, secret.Namespace,
 							secret.Name)
-						t.processInvalidHTTPFilter(string(extFilter.Kind), filterContext, err)
+						t.processInvalidHTTPFilter(string(gwapiv1.HTTPRouteFilterExtensionRef), filterContext, err)
 						return
 					}
 
@@ -1049,10 +1050,9 @@ func (t *Translator) processUnsupportedHTTPFilter(filterType string, filterConte
 }
 
 func (t *Translator) processInvalidHTTPFilter(filterType string, filterContext *HTTPFiltersContext, err error) {
-	updateRouteStatusForFilter(
-		filterContext,
-		fmt.Sprintf("Invalid filter %s: %v", filterType, err))
 	filterContext.DirectResponse = &ir.CustomResponse{
 		StatusCode: ptr.To(uint32(500)),
 	}
+
+	updateRouteStatusForFilter(filterContext, fmt.Sprintf("Filter %s is invalid: %s", filterType, err.Error()))
 }

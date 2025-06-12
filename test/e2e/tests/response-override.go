@@ -8,6 +8,7 @@
 package tests
 
 import (
+	"fmt"
 	"io"
 	"net/http"
 	"net/url"
@@ -33,111 +34,55 @@ func init() {
 
 var ResponseOverrideTest = suite.ConformanceTest{
 	ShortName:   "ResponseOverride",
-	Description: "Response Override with Basic and Enhanced Features",
-	Manifests:   []string{"testdata/response-override.yaml", "testdata/response-override-enhanced.yaml"},
+	Description: "Response Override with Backend Traffic Policy and HTTPRoute Filters",
+	Manifests:   []string{"testdata/response-override.yaml"},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
-		t.Run("basic response override", func(t *testing.T) {
-			ns := "gateway-conformance-infra"
-			routeNN := types.NamespacedName{Name: "response-override", Namespace: ns}
-			gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
-			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
+		ns := "gateway-conformance-infra"
+		routeNN := types.NamespacedName{Name: "response-override", Namespace: ns}
+		gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
+		gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
 
-			ancestorRef := gwapiv1a2.ParentReference{
-				Group:     gatewayapi.GroupPtr(gwapiv1.GroupName),
-				Kind:      gatewayapi.KindPtr(resource.KindGateway),
-				Namespace: gatewayapi.NamespacePtr(gwNN.Namespace),
-				Name:      gwapiv1.ObjectName(gwNN.Name),
-			}
-			BackendTrafficPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "response-override", Namespace: ns}, suite.ControllerName, ancestorRef)
+		ancestorRef := gwapiv1a2.ParentReference{
+			Group:     gatewayapi.GroupPtr(gwapiv1.GroupName),
+			Kind:      gatewayapi.KindPtr(resource.KindGateway),
+			Namespace: gatewayapi.NamespacePtr(gwNN.Namespace),
+			Name:      gwapiv1.ObjectName(gwNN.Name),
+		}
+		BackendTrafficPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "response-override", Namespace: ns}, suite.ControllerName, ancestorRef)
+
+		// Test basic response override
+		t.Run("basic response override", func(t *testing.T) {
 			verifyCustomResponse(t, suite.TimeoutConfig, gwAddr, "/status/404", "text/plain", "Oops! Your request is not found.", 404)
 			verifyCustomResponse(t, suite.TimeoutConfig, gwAddr, "/status/500", "application/json", `{"error": "Internal Server Error"}`, 500)
 			verifyCustomResponse(t, suite.TimeoutConfig, gwAddr, "/status/403", "", "", 404)
 		})
 
-		t.Run("enhanced response override", func(t *testing.T) {
-			ns := "gateway-conformance-infra"
-			routeNN := types.NamespacedName{Name: "response-override-enhanced", Namespace: ns}
-			gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
-			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
+		// Test backend traffic policy with dynamic variables
+		t.Run("backend traffic policy with dynamic variables", func(t *testing.T) {
+			// Test JSON response with variables
+			verifyBackendTrafficPolicyResponse(t, suite.TimeoutConfig, gwAddr, "/backend/404", "user-404", 404, "json")
+			// Test inline response with variables
+			verifyBackendTrafficPolicyResponse(t, suite.TimeoutConfig, gwAddr, "/backend/500", "user-500", 500, "inline")
+			// Test valueref response with variables
+			verifyBackendTrafficPolicyResponse(t, suite.TimeoutConfig, gwAddr, "/backend/503", "user-503", 503, "valueref")
+		})
 
-			ancestorRef := gwapiv1a2.ParentReference{
-				Group:     gatewayapi.GroupPtr(gwapiv1.GroupName),
-				Kind:      gatewayapi.KindPtr(resource.KindGateway),
-				Namespace: gatewayapi.NamespacePtr(gwNN.Namespace),
-				Name:      gwapiv1.ObjectName(gwNN.Name),
-			}
-			BackendTrafficPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "response-override-enhanced", Namespace: ns}, suite.ControllerName, ancestorRef)
+		// Test HTTPRoute filters with direct responses
+		t.Run("HTTPRoute filter responses", func(t *testing.T) {
+			verifyDirectResponse(t, suite.TimeoutConfig, gwAddr, "/filter/json", "application/json",
+				func(body string) bool {
+					return contains(body, `"response_type":"JSON"`)
+				}, 503)
 
-			// Test 404 response with JSON body format and custom headers
-			t.Run("404 with JSON format and headers", func(t *testing.T) {
-				verifyEnhancedCustomResponse(t, suite.TimeoutConfig, gwAddr, "/status/404",
-					map[string]string{
-						"Content-Type":     "application/json",
-						"X-Custom-Error":   "Not Found",
-						"X-Gateway-Source": "Envoy Gateway",
-					},
-					func(body string) bool {
-						return containsAll(body, []string{`"status":"404"`, `"message":`, `"timestamp":`})
-					},
-					404)
-			})
+			verifyDirectResponse(t, suite.TimeoutConfig, gwAddr, "/filter/inline", "text/html",
+				func(body string) bool {
+					return contains(body, "Inline response from filter")
+				}, 503)
 
-			// Test 500 response with text body format and custom headers
-			t.Run("500 with text format and headers", func(t *testing.T) {
-				verifyEnhancedCustomResponse(t, suite.TimeoutConfig, gwAddr, "/status/500",
-					map[string]string{
-						"Content-Type": "text/plain",
-						"X-Error-Type": "Internal",
-					},
-					func(body string) bool {
-						return containsAll(body, []string{"Error 500:", " at "})
-					},
-					500)
-			})
-
-			// Test 429 rate limit response with comprehensive headers and JSON format
-			t.Run("429 with rate limit headers and JSON format", func(t *testing.T) {
-				verifyEnhancedCustomResponse(t, suite.TimeoutConfig, gwAddr, "/status/429",
-					map[string]string{
-						"Content-Type":          "application/json; charset=utf-8",
-						"X-RateLimit-Limit":     "100",
-						"X-RateLimit-Remaining": "0",
-						"Retry-After":           "60",
-					},
-					func(body string) bool {
-						return containsAll(body, []string{
-							`"error":"rate_limit_exceeded"`,
-							`"message":"Too many requests"`,
-							`"status_code":"429"`,
-							`"limit":"100 requests per minute"`,
-							`"reset_time":`,
-						})
-					},
-					429)
-			})
-
-			// Test 503 with ConfigMap body and body format override
-			t.Run("503 with ConfigMap body and format override", func(t *testing.T) {
-				verifyEnhancedCustomResponse(t, suite.TimeoutConfig, gwAddr, "/status/503",
-					map[string]string{
-						"Content-Type":      "application/json",
-						"X-Custom-Response": "true",
-						"X-Service-Version": "v1.2.3",
-					},
-					func(body string) bool {
-						return containsAll(body, []string{
-							`"original_response":`,
-							`"enhanced_status":"503"`,
-							`"server_info":"Gateway Enhanced Response"`,
-						})
-					},
-					503)
-			})
-
-			// Test header append functionality
-			t.Run("header append functionality", func(t *testing.T) {
-				verifyHeaderAppendBehavior(t, suite.TimeoutConfig, gwAddr, "/status/502")
-			})
+			verifyDirectResponse(t, suite.TimeoutConfig, gwAddr, "/filter/valueref", "text/html",
+				func(body string) bool {
+					return contains(body, "ValueRef response from ConfigMap")
+				}, 503)
 		})
 	},
 }
@@ -188,8 +133,85 @@ func verifyCustomResponse(t *testing.T, timeoutConfig config.TimeoutConfig, gwAd
 	tlog.Logf(t, "Request passed")
 }
 
-func verifyEnhancedCustomResponse(t *testing.T, timeoutConfig config.TimeoutConfig, gwAddr,
-	path string, expectedHeaders map[string]string, bodyValidator func(string) bool, expectedStatusCode int,
+func verifyBackendTrafficPolicyResponse(t *testing.T, timeoutConfig config.TimeoutConfig, gwAddr,
+	path, userID string, expectedStatusCode int, responseType string,
+) {
+	reqURL := url.URL{
+		Scheme: "http",
+		Host:   httputils.CalculateHost(t, gwAddr, "http"),
+		Path:   path,
+	}
+
+	httputils.AwaitConvergence(t, timeoutConfig.RequiredConsecutiveSuccesses, timeoutConfig.MaxTimeToConsistency, func(elapsed time.Duration) bool {
+		req, err := http.NewRequest("GET", reqURL.String(), nil)
+		if err != nil {
+			tlog.Logf(t, "failed to create request: %v", err)
+			return false
+		}
+		req.Header.Set("X-User-ID", userID)
+
+		client := &http.Client{}
+		rsp, err := client.Do(req)
+		if err != nil {
+			tlog.Logf(t, "failed to get response: %v", err)
+			return false
+		}
+		defer rsp.Body.Close()
+
+		// Verify status code
+		if expectedStatusCode != rsp.StatusCode {
+			tlog.Logf(t, "expected status code to be %d but got %d", expectedStatusCode, rsp.StatusCode)
+			return false
+		}
+
+		// Verify response body contains expected values
+		body, err := io.ReadAll(rsp.Body)
+		if err != nil {
+			tlog.Logf(t, "failed to read response body: %v", err)
+			return false
+		}
+
+		bodyStr := string(body)
+
+		// Check based on response type and expected format
+		switch responseType {
+		case "json":
+			// Expected: {"status_code":"404","user_id":"user-404","error":"not_found"}
+			expectedContent := []string{
+				fmt.Sprintf(`"status_code":"%d"`, expectedStatusCode),
+				fmt.Sprintf(`"user_id":"%s"`, userID),
+				`"error":"not_found"`,
+			}
+			for _, expected := range expectedContent {
+				if !contains(bodyStr, expected) {
+					tlog.Logf(t, "expected response body to contain %s but got %s", expected, bodyStr)
+					return false
+				}
+			}
+		case "inline":
+			// Expected: "Error 500 for user user-500: Internal Server Error"
+			expectedBody := fmt.Sprintf("Error %d for user %s: Internal Server Error", expectedStatusCode, userID)
+			if bodyStr != expectedBody {
+				tlog.Logf(t, "expected response body to be '%s' but got '%s'", expectedBody, bodyStr)
+				return false
+			}
+		case "valueref":
+			// Expected: "ConfigMap response with status: 503 and user: user-503"
+			expectedBody := fmt.Sprintf("ConfigMap response with status: %d and user: %s", expectedStatusCode, userID)
+			if bodyStr != expectedBody {
+				tlog.Logf(t, "expected response body to be '%s' but got '%s'", expectedBody, bodyStr)
+				return false
+			}
+		}
+
+		return true
+	})
+
+	tlog.Logf(t, "Backend traffic policy response test passed for %s", path)
+}
+
+func verifyDirectResponse(t *testing.T, timeoutConfig config.TimeoutConfig, gwAddr,
+	path, expectedContentType string, bodyValidator func(string) bool, expectedStatusCode int,
 ) {
 	reqURL := url.URL{
 		Scheme: "http",
@@ -211,13 +233,11 @@ func verifyEnhancedCustomResponse(t *testing.T, timeoutConfig config.TimeoutConf
 			return false
 		}
 
-		// Verify headers
-		for expectedHeader, expectedValue := range expectedHeaders {
-			actualValue := rsp.Header.Get(expectedHeader)
-			if actualValue != expectedValue {
-				tlog.Logf(t, "expected header %s to be %s but got %s", expectedHeader, expectedValue, actualValue)
-				return false
-			}
+		// Verify content type
+		contentType := rsp.Header.Get("Content-Type")
+		if contentType != expectedContentType {
+			tlog.Logf(t, "expected content type to be %s but got %s", expectedContentType, contentType)
+			return false
 		}
 
 		// Verify response body
@@ -235,59 +255,7 @@ func verifyEnhancedCustomResponse(t *testing.T, timeoutConfig config.TimeoutConf
 		return true
 	})
 
-	tlog.Logf(t, "Enhanced custom response test passed for %s", path)
-}
-
-func verifyHeaderAppendBehavior(t *testing.T, timeoutConfig config.TimeoutConfig, gwAddr, path string) {
-	reqURL := url.URL{
-		Scheme: "http",
-		Host:   httputils.CalculateHost(t, gwAddr, "http"),
-		Path:   path,
-	}
-
-	// Add a request with existing Cache-Control header to test append behavior
-	req, err := http.NewRequest("GET", reqURL.String(), nil)
-	if err != nil {
-		t.Fatalf("failed to create request: %v", err)
-	}
-	req.Header.Set("Cache-Control", "max-age=3600")
-
-	httputils.AwaitConvergence(t, timeoutConfig.RequiredConsecutiveSuccesses, timeoutConfig.MaxTimeToConsistency, func(elapsed time.Duration) bool {
-		client := &http.Client{}
-		rsp, err := client.Do(req)
-		if err != nil {
-			tlog.Logf(t, "failed to get response: %v", err)
-			return false
-		}
-		defer rsp.Body.Close()
-
-		// Verify that Cache-Control header was appended (not overwritten)
-		cacheControlValues := rsp.Header.Values("Cache-Control")
-		if len(cacheControlValues) < 2 {
-			tlog.Logf(t, "expected multiple Cache-Control headers due to append behavior, got: %v", cacheControlValues)
-			return false
-		}
-
-		// Verify that X-Error-Source header was overwritten (not appended)
-		errorSourceValues := rsp.Header.Values("X-Error-Source")
-		if len(errorSourceValues) != 1 || errorSourceValues[0] != "backend-service" {
-			tlog.Logf(t, "expected single X-Error-Source header with value 'backend-service', got: %v", errorSourceValues)
-			return false
-		}
-
-		return true
-	})
-
-	tlog.Logf(t, "Header append behavior test passed")
-}
-
-func containsAll(text string, substrings []string) bool {
-	for _, substring := range substrings {
-		if !contains(text, substring) {
-			return false
-		}
-	}
-	return true
+	tlog.Logf(t, "Direct response test passed for %s", path)
 }
 
 func contains(text, substring string) bool {

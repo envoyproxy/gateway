@@ -15,7 +15,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
-	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
@@ -193,20 +193,14 @@ func TestBuildHTTPProtocolUpgradeConfig(t *testing.T) {
 }
 
 func TestBuildResponseOverride(t *testing.T) {
-	// Helper function to create a basic policy with TypeMeta
-	createPolicy := func(name string, overrides []*egv1a1.ResponseOverride) *egv1a1.BackendTrafficPolicy {
+	createPolicy := func(name string, responseOverrides []*egv1a1.ResponseOverride) *egv1a1.BackendTrafficPolicy {
 		return &egv1a1.BackendTrafficPolicy{
 			TypeMeta: metav1.TypeMeta{
 				APIVersion: "gateway.envoyproxy.io/v1alpha1",
 				Kind:       "BackendTrafficPolicy",
 			},
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      name,
-				Namespace: "default",
-			},
-			Spec: egv1a1.BackendTrafficPolicySpec{
-				ResponseOverride: overrides,
-			},
+			ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: "default"},
+			Spec:       egv1a1.BackendTrafficPolicySpec{ResponseOverride: responseOverrides},
 		}
 	}
 
@@ -217,7 +211,7 @@ func TestBuildResponseOverride(t *testing.T) {
 		wantErr  bool
 	}{
 		{
-			name: "WithResponseHeadersToAddAndJsonFormat",
+			name: "WithBodyFormatJSONFormat",
 			policy: createPolicy("test-policy", []*egv1a1.ResponseOverride{
 				{
 					Match: egv1a1.CustomResponseMatch{
@@ -230,9 +224,9 @@ func TestBuildResponseOverride(t *testing.T) {
 							{Name: "X-RateLimit-Limit", Value: "100", Append: ptr.To(false)},
 							{Name: "Retry-After", Value: "60", Append: ptr.To(false)},
 						},
-						BodyFormat: &egv1a1.ResponseBodyFormat{
-							JSONFormat:  map[string]string{"error": "rate_limit_exceeded", "status_code": "%RESPONSE_CODE%"},
-							ContentType: ptr.To("application/json; charset=utf-8"),
+						Body: &egv1a1.CustomResponseBody{
+							Type: ptr.To(egv1a1.ResponseValueTypeJSON),
+							JSON: map[string]string{"error": "rate_limit_exceeded", "status_code": "%RESPONSE_CODE%"},
 						},
 					},
 				},
@@ -241,7 +235,7 @@ func TestBuildResponseOverride(t *testing.T) {
 				Name: "backendtrafficpolicy/default/test-policy",
 				Rules: []ir.ResponseOverrideRule{
 					{
-						Name: "backendtrafficpolicy/default/test-policy/responseoverride/rule/0",
+						Name: "default/test-policy/responseoverride/rule/0",
 						Match: ir.CustomResponseMatch{
 							StatusCodes: []ir.StatusCodeMatch{{Value: ptr.To(429)}},
 						},
@@ -252,10 +246,7 @@ func TestBuildResponseOverride(t *testing.T) {
 								{Name: "X-RateLimit-Limit", Value: []string{"100"}, Append: false},
 								{Name: "Retry-After", Value: []string{"60"}, Append: false},
 							},
-							BodyFormat: &ir.ResponseBodyFormat{
-								JSONFormat:  map[string]string{"error": "rate_limit_exceeded", "status_code": "%RESPONSE_CODE%"},
-								ContentType: ptr.To("application/json; charset=utf-8"),
-							},
+							Body: ptr.To(`{"error":"rate_limit_exceeded","status_code":"%RESPONSE_CODE%"}`),
 						},
 					},
 				},
@@ -273,9 +264,9 @@ func TestBuildResponseOverride(t *testing.T) {
 						ResponseHeadersToAdd: []egv1a1.ResponseHeaderToAdd{
 							{Name: "X-Error-Type", Value: "client-error", Append: ptr.To(false)},
 						},
-						BodyFormat: &egv1a1.ResponseBodyFormat{
-							TextFormat:  ptr.To("Error %RESPONSE_CODE%: %LOCAL_REPLY_BODY%"),
-							ContentType: ptr.To("text/plain"),
+						Body: &egv1a1.CustomResponseBody{
+							Type:   ptr.To(egv1a1.ResponseValueTypeInline),
+							Inline: ptr.To("Error %RESPONSE_CODE%: %LOCAL_REPLY_BODY%"),
 						},
 					},
 				},
@@ -284,7 +275,7 @@ func TestBuildResponseOverride(t *testing.T) {
 				Name: "backendtrafficpolicy/default/test-policy",
 				Rules: []ir.ResponseOverrideRule{
 					{
-						Name: "backendtrafficpolicy/default/test-policy/responseoverride/rule/0",
+						Name: "default/test-policy/responseoverride/rule/0",
 						Match: ir.CustomResponseMatch{
 							StatusCodes: []ir.StatusCodeMatch{{Range: &ir.StatusCodeRange{Start: 400, End: 499}}},
 						},
@@ -293,10 +284,7 @@ func TestBuildResponseOverride(t *testing.T) {
 							ResponseHeadersToAdd: []ir.AddHeader{
 								{Name: "X-Error-Type", Value: []string{"client-error"}, Append: false},
 							},
-							BodyFormat: &ir.ResponseBodyFormat{
-								TextFormat:  ptr.To("Error %RESPONSE_CODE%: %LOCAL_REPLY_BODY%"),
-								ContentType: ptr.To("text/plain"),
-							},
+							Body: ptr.To("Error %RESPONSE_CODE%: %LOCAL_REPLY_BODY%"),
 						},
 					},
 				},
@@ -323,17 +311,17 @@ func TestBuildResponseOverride(t *testing.T) {
 				Name: "backendtrafficpolicy/default/test-policy",
 				Rules: []ir.ResponseOverrideRule{
 					{
-						Name: "backendtrafficpolicy/default/test-policy/responseoverride/rule/0",
+						Name: "default/test-policy/responseoverride/rule/0",
 						Match: ir.CustomResponseMatch{
 							StatusCodes: []ir.StatusCodeMatch{{Value: ptr.To(500)}},
 						},
 						Response: ir.CustomResponse{
 							StatusCode: ptr.To(uint32(503)),
-							Body:       ptr.To("Service unavailable"),
 							ResponseHeadersToAdd: []ir.AddHeader{
 								{Name: "Cache-Control", Value: []string{"no-cache"}, Append: true},
 								{Name: "X-Error-Source", Value: []string{"backend-service"}, Append: false},
 							},
+							Body: ptr.To("Service unavailable"),
 						},
 					},
 				},
@@ -349,14 +337,10 @@ func TestBuildResponseOverride(t *testing.T) {
 					Response: &egv1a1.CustomResponse{
 						Body: &egv1a1.CustomResponseBody{
 							Type:     ptr.To(egv1a1.ResponseValueTypeValueRef),
-							ValueRef: &gwapiv1a2.LocalObjectReference{Kind: "ConfigMap", Name: "custom-error-responses"},
+							ValueRef: &gwapiv1.LocalObjectReference{Kind: "ConfigMap", Name: "custom-error-responses"},
 						},
 						ResponseHeadersToAdd: []egv1a1.ResponseHeaderToAdd{
 							{Name: "X-Custom-Response", Value: "true", Append: ptr.To(false)},
-						},
-						BodyFormat: &egv1a1.ResponseBodyFormat{
-							JSONFormat:  map[string]string{"original_response": "%LOCAL_REPLY_BODY%", "enhanced_status": "%RESPONSE_CODE%"},
-							ContentType: ptr.To("application/json"),
 						},
 					},
 				},
@@ -365,19 +349,15 @@ func TestBuildResponseOverride(t *testing.T) {
 				Name: "backendtrafficpolicy/default/test-policy",
 				Rules: []ir.ResponseOverrideRule{
 					{
-						Name: "backendtrafficpolicy/default/test-policy/responseoverride/rule/0",
+						Name: "default/test-policy/responseoverride/rule/0",
 						Match: ir.CustomResponseMatch{
 							StatusCodes: []ir.StatusCodeMatch{{Value: ptr.To(503)}},
 						},
 						Response: ir.CustomResponse{
-							Body: ptr.To(`{"error": "Service temporarily unavailable", "support_contact": "support@example.com"}`),
 							ResponseHeadersToAdd: []ir.AddHeader{
 								{Name: "X-Custom-Response", Value: []string{"true"}, Append: false},
 							},
-							BodyFormat: &ir.ResponseBodyFormat{
-								JSONFormat:  map[string]string{"original_response": "%LOCAL_REPLY_BODY%", "enhanced_status": "%RESPONSE_CODE%"},
-								ContentType: ptr.To("application/json"),
-							},
+							Body: ptr.To(`{"error": "Service temporarily unavailable", "support_contact": "support@example.com"}`),
 						},
 					},
 				},
@@ -414,15 +394,6 @@ func TestBuildResponseOverride(t *testing.T) {
 					assert.Equal(t, expectedRule.Response.ContentType, actualRule.Response.ContentType)
 					assert.Equal(t, expectedRule.Response.Body, actualRule.Response.Body)
 					assert.Equal(t, expectedRule.Response.ResponseHeadersToAdd, actualRule.Response.ResponseHeadersToAdd)
-
-					if expectedRule.Response.BodyFormat != nil {
-						require.NotNil(t, actualRule.Response.BodyFormat)
-						assert.Equal(t, expectedRule.Response.BodyFormat.JSONFormat, actualRule.Response.BodyFormat.JSONFormat)
-						assert.Equal(t, expectedRule.Response.BodyFormat.TextFormat, actualRule.Response.BodyFormat.TextFormat)
-						assert.Equal(t, expectedRule.Response.BodyFormat.ContentType, actualRule.Response.BodyFormat.ContentType)
-					} else {
-						assert.Nil(t, actualRule.Response.BodyFormat)
-					}
 				}
 			}
 		})

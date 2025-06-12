@@ -19085,18 +19085,25 @@ spec:
                               description: Inline contains the value as an inline
                                 string.
                               type: string
+                            json:
+                              additionalProperties:
+                                type: string
+                              description: JSON defines response body JSON format
+                              type: object
                             type:
                               allOf:
                               - enum:
                                 - Inline
                                 - ValueRef
+                                - JSON
                               - enum:
                                 - Inline
                                 - ValueRef
+                                - JSON
                               default: Inline
                               description: |-
                                 Type is the type of method to use to read the body value.
-                                Valid values are Inline and ValueRef, default is Inline.
+                                Valid values are Inline, ValueRef, and JSON, default is Inline.
                               type: string
                             valueRef:
                               description: |-
@@ -19141,32 +19148,12 @@ spec:
                           - message: valueRef must be set for type ValueRef
                             rule: '(has(self.type) && self.type == ''ValueRef'')?
                               has(self.valueRef) : true'
+                          - message: json must be set for type JSON
+                            rule: '(has(self.type) && self.type == ''JSON'')? has(self.json)
+                              : true'
                           - message: only ConfigMap is supported for ValueRef
                             rule: 'has(self.valueRef) ? self.valueRef.kind == ''ConfigMap''
                               : true'
-                        bodyFormat:
-                          description: |-
-                            BodyFormat specifies the format for the response body.
-                            This allows customizing the response body format with dynamic values.
-                          properties:
-                            contentType:
-                              description: ContentType defines response body content
-                                type
-                              type: string
-                            jsonFormat:
-                              additionalProperties:
-                                type: string
-                              description: JSONFormat defines response body JSON format
-                              type: object
-                            textFormat:
-                              description: TextFormat defines response body text format
-                              type: string
-                          type: object
-                          x-kubernetes-validations:
-                          - message: exactly one of jsonFormat or textFormat must
-                              be specified
-                            rule: (has(self.jsonFormat) && !has(self.textFormat))
-                              || (!has(self.jsonFormat) && has(self.textFormat))
                         contentType:
                           description: Content Type of the response. This will be
                             set in the Content-Type header.
@@ -38512,18 +38499,25 @@ spec:
                       inline:
                         description: Inline contains the value as an inline string.
                         type: string
+                      json:
+                        additionalProperties:
+                          type: string
+                        description: JSON defines response body JSON format
+                        type: object
                       type:
                         allOf:
                         - enum:
                           - Inline
                           - ValueRef
+                          - JSON
                         - enum:
                           - Inline
                           - ValueRef
+                          - JSON
                         default: Inline
                         description: |-
                           Type is the type of method to use to read the body value.
-                          Valid values are Inline and ValueRef, default is Inline.
+                          Valid values are Inline, ValueRef, and JSON, default is Inline.
                         type: string
                       valueRef:
                         description: |-
@@ -38567,6 +38561,9 @@ spec:
                         : true'
                     - message: valueRef must be set for type ValueRef
                       rule: '(has(self.type) && self.type == ''ValueRef'')? has(self.valueRef)
+                        : true'
+                    - message: json must be set for type JSON
+                      rule: '(has(self.type) && self.type == ''JSON'')? has(self.json)
                         : true'
                     - message: only ConfigMap is supported for ValueRef
                       rule: 'has(self.valueRef) ? self.valueRef.kind == ''ConfigMap''

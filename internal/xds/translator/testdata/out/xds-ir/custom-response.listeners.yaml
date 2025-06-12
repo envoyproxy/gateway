@@ -26,10 +26,8 @@
                       name: backendtrafficpolicy/default/policy-for-gateway/responseoverride/rule/0
                       typedConfig:
                         '@type': type.googleapis.com/envoy.extensions.http.custom_response.local_response_policy.v3.LocalResponsePolicy
-                        body:
-                          inlineString: gateway-1 Not Found
                         bodyFormat:
-                          contentType: application/json
+                          contentType: text/plain
                           jsonFormat:
                             message: Resource not found
                             status: '%RESPONSE_CODE%'
@@ -60,15 +58,12 @@
                       name: backendtrafficpolicy/default/policy-for-gateway/responseoverride/rule/1
                       typedConfig:
                         '@type': type.googleapis.com/envoy.extensions.http.custom_response.local_response_policy.v3.LocalResponsePolicy
-                        body:
-                          inlineString: |
+                        bodyFormat:
+                          contentType: application/json
+                          textFormat: |
                             {
                               "error": "Internal Server Error"
                             }
-                        bodyFormat:
-                          contentType: text/plain
-                          textFormat: 'Error %RESPONSE_CODE%: %LOCAL_REPLY_BODY% at
-                            %START_TIME%'
                         responseHeadersToAdd:
                         - appendAction: OVERWRITE_IF_EXISTS_OR_ADD
                           header:

@@ -40,7 +40,6 @@ http:
                     - value: 404
                 name: backendtrafficpolicy/default/policy-for-gateway/responseoverride/rule/0
                 response:
-                  body: gateway-1 Not Found
                   contentType: text/plain
                   responseHeadersToAdd:
                     - name: X-Custom-Error
@@ -49,12 +48,7 @@ http:
                     - name: X-Gateway-Source
                       value: ["Envoy Gateway"]
                       append: false
-                  bodyFormat:
-                    jsonFormat:
-                      status: "%RESPONSE_CODE%"
-                      message: "Resource not found"
-                      timestamp: "%START_TIME%"
-                    contentType: "application/json"
+                  body: '{"status":"%RESPONSE_CODE%","message":"Resource not found","timestamp":"%START_TIME%"}'
               - match:
                   statusCodes:
                     - value: 500
@@ -63,18 +57,15 @@ http:
                         start: 501
                 name: backendtrafficpolicy/default/policy-for-gateway/responseoverride/rule/1
                 response:
-                  body: |
-                    {
-                      "error": "Internal Server Error"
-                    }
                   contentType: application/json
                   responseHeadersToAdd:
                     - name: X-Error-Type
                       value: ["Internal"]
                       append: false
-                  bodyFormat:
-                    textFormat: "Error %RESPONSE_CODE%: %LOCAL_REPLY_BODY% at %START_TIME%"
-                    contentType: "text/plain"
+                  body: |
+                    {
+                      "error": "Internal Server Error"
+                    }
       - destination:
           name: httproute/default/httproute-2/rule/0
           settings:

@@ -13,8 +13,11 @@ backendTrafficPolicies:
           value: 404
       response:
         body:
-          inline: httproute-1 Not Found
-          type: null
+          json:
+            message: Resource not found
+            status: '%RESPONSE_CODE%'
+            timestamp: '%START_TIME%'
+          type: JSON
         contentType: text/plain
     - match:
         statusCodes:
@@ -98,8 +101,11 @@ backendTrafficPolicies:
           value: 404
       response:
         body:
-          inline: gateway-1 Not Found
-          type: Inline
+          json:
+            message: Resource not found
+            status: '%RESPONSE_CODE%'
+            timestamp: '%START_TIME%'
+          type: JSON
         contentType: text/plain
     - match:
         statusCodes:
@@ -419,9 +425,9 @@ xdsIR:
             - match:
                 statusCodes:
                 - value: 404
-              name: backendtrafficpolicy/default/policy-for-gateway/responseoverride/rule/0
+              name: default/policy-for-gateway/responseoverride/rule/0
               response:
-                body: gateway-1 Not Found
+                body: '{"message":"Resource not found","status":"%RESPONSE_CODE%","timestamp":"%START_TIME%"}'
                 contentType: text/plain
             - match:
                 statusCodes:
@@ -429,7 +435,7 @@ xdsIR:
                 - range:
                     end: 511
                     start: 501
-              name: backendtrafficpolicy/default/policy-for-gateway/responseoverride/rule/1
+              name: default/policy-for-gateway/responseoverride/rule/1
               response:
                 body: |
                   {
@@ -497,9 +503,9 @@ xdsIR:
             - match:
                 statusCodes:
                 - value: 404
-              name: backendtrafficpolicy/default/policy-for-route-1/responseoverride/rule/0
+              name: default/policy-for-route-1/responseoverride/rule/0
               response:
-                body: httproute-1 Not Found
+                body: '{"message":"Resource not found","status":"%RESPONSE_CODE%","timestamp":"%START_TIME%"}'
                 contentType: text/plain
             - match:
                 statusCodes:
@@ -507,7 +513,7 @@ xdsIR:
                 - range:
                     end: 511
                     start: 501
-              name: backendtrafficpolicy/default/policy-for-route-1/responseoverride/rule/1
+              name: default/policy-for-route-1/responseoverride/rule/1
               response:
                 body: |
                   {
@@ -550,7 +556,7 @@ xdsIR:
             - match:
                 statusCodes:
                 - value: 403
-              name: backendtrafficpolicy/default/policy-for-route-2/responseoverride/rule/0
+              name: default/policy-for-route-2/responseoverride/rule/0
               response:
                 statusCode: 401
     readyListener:

@@ -111,8 +111,11 @@ backendTrafficPolicies:
           response:
             contentType: text/plain
             body:
-              type: Inline
-              inline: "gateway-1 Not Found"
+              type: JSON
+              json:
+                status: "%RESPONSE_CODE%"
+                message: "Resource not found"
+                timestamp: "%START_TIME%"
         - match:
             statusCodes:
               - type: Value
@@ -146,7 +149,11 @@ backendTrafficPolicies:
           response:
             contentType: text/plain
             body:
-              inline: "httproute-1 Not Found"
+              type: JSON
+              json:
+                status: "%RESPONSE_CODE%"
+                message: "Resource not found"
+                timestamp: "%START_TIME%"
         - match:
             statusCodes:
               - value: 500
