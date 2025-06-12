@@ -1565,19 +1565,14 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 								},
 							},
 							Response: &egv1a1.CustomResponse{
-								Body: &egv1a1.CustomResponseBody{
-									ValueRef: &gwapiv1.LocalObjectReference{
-										Kind: "ConfigMap",
-										Name: "eg",
-									},
-								},
+								Body: &egv1a1.CustomResponseBody{},
 							},
 						},
 					},
 				}
 			},
 			wantErrors: []string{
-				"valueRef must be set for type ValueRef",
+				"inline must be set for type Inline",
 			},
 		},
 		{
