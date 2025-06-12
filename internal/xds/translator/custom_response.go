@@ -370,7 +370,6 @@ func (c *customResponse) buildStatusCodeCELMatcher(codeRange ir.StatusCodeRange)
 func (c *customResponse) buildAction(r ir.ResponseOverrideRule) (*matcherv3.Matcher_OnMatch_Action, error) {
 	response := &policyv3.LocalResponsePolicy{}
 
-	// Handle the Body field
 	if r.Response.Body != nil && *r.Response.Body != "" {
 		bodyContent := *r.Response.Body
 		response.BodyFormat = &corev3.SubstitutionFormatString{
