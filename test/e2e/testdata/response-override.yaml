@@ -8,118 +8,21 @@ spec:
   parentRefs:
     - name: same-namespace
   rules:
-    # Default backend routes for basic response override testing
     - matches:
         - path:
             type: PathPrefix
-            value: /status
+            value: /
       backendRefs:
         - name: infra-backend-v1
           port: 8080
-    # Backend routes for testing BackendTrafficPolicy with dynamic variables
-    - matches:
-        - path:
-            type: PathPrefix
-            value: /backend
-      backendRefs:
-        - name: infra-backend-v1
-          port: 8080
-    # HTTPRoute filter rules for direct responses
-    - matches:
-        - path:
-            type: PathPrefix
-            value: /filter/json
-      filters:
-        - type: ExtensionRef
-          extensionRef:
-            group: gateway.envoyproxy.io
-            kind: HTTPRouteFilter
-            name: response-filter-json
-    - matches:
-        - path:
-            type: PathPrefix
-            value: /filter/inline
-      filters:
-        - type: ExtensionRef
-          extensionRef:
-            group: gateway.envoyproxy.io
-            kind: HTTPRouteFilter
-            name: response-filter-inline
-    - matches:
-        - path:
-            type: PathPrefix
-            value: /filter/valueref
-      filters:
-        - type: ExtensionRef
-          extensionRef:
-            group: gateway.envoyproxy.io
-            kind: HTTPRouteFilter
-            name: response-filter-valueref
 ---
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: response-filter-config
+  name: response-override-config
   namespace: gateway-conformance-infra
 data:
-  response.body: |
-    {
-      "message": "ValueRef response from ConfigMap",
-      "source": "configmap"
-    }
----
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: response-btp-config
-  namespace: gateway-conformance-infra
-data:
-  response.body: "ConfigMap response with user: %REQ(x-user-id)%"
----
-apiVersion: gateway.envoyproxy.io/v1alpha1
-kind: HTTPRouteFilter
-metadata:
-  name: response-filter-json
-  namespace: gateway-conformance-infra
-spec:
-  directResponse:
-    statusCode: 503
-    body:
-      type: JSON
-      json:
-        response_type: "JSON"
-        message: "Direct response from HTTPRoute filter"
-        source: "filter"
-    contentType: application/json
----
-apiVersion: gateway.envoyproxy.io/v1alpha1
-kind: HTTPRouteFilter
-metadata:
-  name: response-filter-inline
-  namespace: gateway-conformance-infra
-spec:
-  directResponse:
-    statusCode: 503
-    body:
-      type: Inline
-      inline: "Inline response from filter - Service temporarily unavailable"
-    contentType: text/html
----
-apiVersion: gateway.envoyproxy.io/v1alpha1
-kind: HTTPRouteFilter
-metadata:
-  name: response-filter-valueref
-  namespace: gateway-conformance-infra
-spec:
-  directResponse:
-    statusCode: 503
-    body:
-      type: ValueRef
-      valueRef:
-        group: v1
-        kind: ConfigMap
-        name: response-filter-config
-    contentType: text/html
+  response.body: '{"error": "Internal Server Error"}'
 ---
 apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: BackendTrafficPolicy
@@ -132,56 +35,34 @@ spec:
     kind: HTTPRoute
     name: response-override
   responseOverride:
-    # Basic response overrides
-    # Backend Traffic Policy with dynamic variables - JSON response
     - match:
         statusCodes:
           - type: Value
             value: 404
       response:
-        statusCode: 404
-        contentType: "application/json"
-        responseHeadersToAdd:
-          - name: "Response-Override-Test"
-            value: "True"
-            append: false
+        contentType: text/plain
         body:
-          type: JSON
-          json:
-            user_id: "%REQ(x-user-id)%"
-            error: "not_found"
-
-    # Backend Traffic Policy with dynamic variables - Inline response
+          type: Inline
+          inline: "Oops! Your request is not found."
+    - match:
+        statusCodes:
+          - type: Value
+            value: 403
+      response:
+        statusCode: 404
     - match:
         statusCodes:
           - type: Value
             value: 500
+          - type: Range
+            range:
+              start: 501
+              end: 511
       response:
-        statusCode: 500
-        contentType: "text/plain"
-        responseHeadersToAdd:
-          - name: "Response-Override-Test"
-            value: "True"
-            append: false
-        body:
-          type: Inline
-          inline: "Error for user %REQ(x-user-id)%: Internal Server Error"
-
-    # Backend Traffic Policy with dynamic variables - ValueRef response
-    - match:
-        statusCodes:
-          - type: Value
-            value: 503
-      response:
-        statusCode: 503
-        contentType: "text/plain"
-        responseHeadersToAdd:
-          - name: "Response-Override-Test"
-            value: "True"
-            append: false
+        contentType: application/json
         body:
           type: ValueRef
           valueRef:
-            group: v1
+            group: ""
             kind: ConfigMap
-            name: response-btp-config
+            name: response-override-config

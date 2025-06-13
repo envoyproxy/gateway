@@ -826,7 +826,7 @@ func (t *Translator) processExtensionRefHTTPFilter(extFilter *gwapiv1.LocalObjec
 					dr := &ir.CustomResponse{}
 					if hrf.Spec.DirectResponse.Body != nil {
 						var err error
-						if dr.Body, err = processResponseBody(hrf.Spec.DirectResponse.Body, resources, filterNs); err != nil {
+						if dr.Body, err = getCustomResponseBody(hrf.Spec.DirectResponse.Body, resources, filterNs); err != nil {
 							t.processInvalidHTTPFilter(string(extFilter.Kind), filterContext, err)
 							return
 						}
@@ -844,6 +844,22 @@ func (t *Translator) processExtensionRefHTTPFilter(extFilter *gwapiv1.LocalObjec
 							Value: []string{*hrf.Spec.DirectResponse.ContentType},
 						}
 						filterContext.AddResponseHeaders = append(filterContext.AddResponseHeaders, newHeader)
+					}
+
+					// Convert ResponseHeadersToAdd from filter spec to IR format
+					if len(hrf.Spec.DirectResponse.ResponseHeadersToAdd) > 0 {
+						dr.ResponseHeadersToAdd = make([]ir.AddHeader, 0, len(hrf.Spec.DirectResponse.ResponseHeadersToAdd))
+						for _, h := range hrf.Spec.DirectResponse.ResponseHeadersToAdd {
+							appendHeader := false
+							if h.Append != nil {
+								appendHeader = *h.Append
+							}
+							dr.ResponseHeadersToAdd = append(dr.ResponseHeadersToAdd, ir.AddHeader{
+								Name:   h.Name,
+								Value:  []string{h.Value},
+								Append: appendHeader,
+							})
+						}
 					}
 
 					filterContext.DirectResponse = dr

@@ -1320,9 +1320,9 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 							Response: &egv1a1.CustomResponse{
 								Body: &egv1a1.CustomResponseBody{
 									Type: ptr.To(egv1a1.ResponseValueTypeValueRef),
-									ValueRef: &gwapiv1.LocalObjectReference{
-										Kind: "ConfigMap",
-										Name: "eg",
+									ValueRef: &gwapiv1a2.LocalObjectReference{
+										Kind: gwapiv1a2.Kind("ConfigMap"),
+										Name: gwapiv1a2.ObjectName("eg"),
 									},
 								},
 							},
@@ -1403,9 +1403,9 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 							Response: &egv1a1.CustomResponse{
 								Body: &egv1a1.CustomResponseBody{
 									Type: ptr.To(egv1a1.ResponseValueTypeValueRef),
-									ValueRef: &gwapiv1.LocalObjectReference{
-										Kind: "ConfigMap",
-										Name: "eg",
+									ValueRef: &gwapiv1a2.LocalObjectReference{
+										Kind: gwapiv1a2.Kind("ConfigMap"),
+										Name: gwapiv1a2.ObjectName("eg"),
 									},
 								},
 							},
@@ -1445,9 +1445,9 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 							Response: &egv1a1.CustomResponse{
 								Body: &egv1a1.CustomResponseBody{
 									Type: ptr.To(egv1a1.ResponseValueTypeValueRef),
-									ValueRef: &gwapiv1.LocalObjectReference{
-										Kind: "ConfigMap",
-										Name: "eg",
+									ValueRef: &gwapiv1a2.LocalObjectReference{
+										Kind: gwapiv1a2.Kind("ConfigMap"),
+										Name: gwapiv1a2.ObjectName("eg"),
 									},
 								},
 							},
@@ -1485,9 +1485,9 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 							Response: &egv1a1.CustomResponse{
 								Body: &egv1a1.CustomResponseBody{
 									Type: ptr.To(egv1a1.ResponseValueTypeValueRef),
-									ValueRef: &gwapiv1.LocalObjectReference{
-										Kind: "ConfigMap",
-										Name: "eg",
+									ValueRef: &gwapiv1a2.LocalObjectReference{
+										Kind: gwapiv1a2.Kind("ConfigMap"),
+										Name: gwapiv1a2.ObjectName("eg"),
 									},
 								},
 							},
@@ -1528,9 +1528,9 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 							Response: &egv1a1.CustomResponse{
 								Body: &egv1a1.CustomResponseBody{
 									Type: ptr.To(egv1a1.ResponseValueTypeValueRef),
-									ValueRef: &gwapiv1.LocalObjectReference{
-										Kind: "ConfigMap",
-										Name: "eg",
+									ValueRef: &gwapiv1a2.LocalObjectReference{
+										Kind: gwapiv1a2.Kind("ConfigMap"),
+										Name: gwapiv1a2.ObjectName("eg"),
 									},
 								},
 							},
@@ -1565,7 +1565,12 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 								},
 							},
 							Response: &egv1a1.CustomResponse{
-								Body: &egv1a1.CustomResponseBody{},
+								Body: &egv1a1.CustomResponseBody{
+									ValueRef: &gwapiv1a2.LocalObjectReference{
+										Kind: gwapiv1a2.Kind("ConfigMap"),
+										Name: gwapiv1a2.ObjectName("eg"),
+									},
+								},
 							},
 						},
 					},
@@ -1636,9 +1641,9 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 							Response: &egv1a1.CustomResponse{
 								Body: &egv1a1.CustomResponseBody{
 									Type: ptr.To(egv1a1.ResponseValueTypeValueRef),
-									ValueRef: &gwapiv1.LocalObjectReference{
-										Kind: "Foo",
-										Name: "eg",
+									ValueRef: &gwapiv1a2.LocalObjectReference{
+										Kind: gwapiv1a2.Kind("Foo"),
+										Name: gwapiv1a2.ObjectName("eg"),
 									},
 								},
 							},

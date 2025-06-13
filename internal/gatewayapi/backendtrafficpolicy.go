@@ -6,11 +6,11 @@
 package gatewayapi
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"math"
 	"sort"
+	"strconv"
 	"strings"
 
 	perr "github.com/pkg/errors"
@@ -18,7 +18,6 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/utils/ptr"
-	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
@@ -1060,29 +1059,25 @@ func buildResponseOverride(policy *egv1a1.BackendTrafficPolicy, resources *resou
 			response.StatusCode = ptr.To(uint32(*ro.Response.StatusCode))
 		}
 
-		// Handle the new ResponseBody structure
-		if ro.Response.Body != nil {
-			body, err := processResponseBody(ro.Response.Body, resources, policy.Namespace)
-			if err != nil {
-				return nil, err
-			}
-			response.Body = body
+		var err error
+		response.Body, err = getCustomResponseBody(ro.Response.Body, resources, policy.Namespace)
+		if err != nil {
+			return nil, err
 		}
 
-		// Handle response headers to add
+		// Convert ResponseHeadersToAdd from policy spec to IR format
 		if len(ro.Response.ResponseHeadersToAdd) > 0 {
 			response.ResponseHeadersToAdd = make([]ir.AddHeader, 0, len(ro.Response.ResponseHeadersToAdd))
-			for _, header := range ro.Response.ResponseHeadersToAdd {
-				addHeader := ir.AddHeader{
-					Name:  header.Name,
-					Value: []string{header.Value},
+			for _, h := range ro.Response.ResponseHeadersToAdd {
+				appendHeader := false
+				if h.Append != nil {
+					appendHeader = *h.Append
 				}
-				if header.Append != nil && *header.Append {
-					addHeader.Append = true
-				} else {
-					addHeader.Append = false
-				}
-				response.ResponseHeadersToAdd = append(response.ResponseHeadersToAdd, addHeader)
+				response.ResponseHeadersToAdd = append(response.ResponseHeadersToAdd, ir.AddHeader{
+					Name:   h.Name,
+					Value:  []string{h.Value},
+					Append: appendHeader,
+				})
 			}
 		}
 
@@ -1098,37 +1093,6 @@ func buildResponseOverride(policy *egv1a1.BackendTrafficPolicy, resources *resou
 	}, nil
 }
 
-func resolveValueRef(valueRef *gwapiv1.LocalObjectReference, resources *resource.Resources, policyNs string) (string, error) {
-	if valueRef.Kind != "ConfigMap" {
-		return "", fmt.Errorf("only ConfigMap is supported for ValueRef, got %s", valueRef.Kind)
-	}
-
-	cm := resources.GetConfigMap(policyNs, string(valueRef.Name))
-	if cm == nil {
-		return "", fmt.Errorf("ConfigMap %s not found in namespace %s", valueRef.Name, policyNs)
-	}
-
-	// Try to get response.body key first
-	if body, exists := cm.Data["response.body"]; exists {
-		if err := checkResponseBodySize(&body); err != nil {
-			return "", err
-		}
-		return body, nil
-	}
-
-	// Fallback to the first value if response.body key doesn't exist
-	if len(cm.Data) > 0 {
-		for _, value := range cm.Data {
-			if err := checkResponseBodySize(&value); err != nil {
-				return "", err
-			}
-			return value, nil
-		}
-	}
-
-	return "", fmt.Errorf("ConfigMap %s does not contain any data", valueRef.Name)
-}
-
 func checkResponseBodySize(b *string) error {
 	// Make this configurable in the future
 	// https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/route/v3/route.proto.html#max_direct_response_body_size_bytes
@@ -1141,8 +1105,48 @@ func checkResponseBodySize(b *string) error {
 	return nil
 }
 
+func getCustomResponseBody(body *egv1a1.CustomResponseBody, resources *resource.Resources, policyNs string) (*string, error) {
+	if body != nil && body.Type != nil && *body.Type == egv1a1.ResponseValueTypeValueRef {
+		cm := resources.GetConfigMap(policyNs, string(body.ValueRef.Name))
+		if cm != nil {
+			b, dataOk := cm.Data["response.body"]
+			switch {
+			case dataOk:
+				if err := checkResponseBodySize(&b); err != nil {
+					return nil, err
+				}
+				return &b, nil
+			case len(cm.Data) > 0: // Fallback to the first key if response.body is not found
+				for _, value := range cm.Data {
+					b = value
+					break
+				}
+				if err := checkResponseBodySize(&b); err != nil {
+					return nil, err
+				}
+				return &b, nil
+			default:
+				return nil, fmt.Errorf("can't find the key response.body in the referenced configmap %s", body.ValueRef.Name)
+			}
+
+		} else {
+			return nil, fmt.Errorf("can't find the referenced configmap %s", body.ValueRef.Name)
+		}
+	} else if body != nil && body.Inline != nil {
+		if err := checkResponseBodySize(body.Inline); err != nil {
+			return nil, err
+		}
+		return body.Inline, nil
+	}
+
+	return nil, nil
+}
+
 func defaultResponseOverrideRuleName(policy *egv1a1.BackendTrafficPolicy, index int) string {
-	return fmt.Sprintf("%s/%s/responseoverride/rule/%d", policy.Namespace, policy.Name, index)
+	return fmt.Sprintf(
+		"%s/responseoverride/rule/%s",
+		irConfigName(policy),
+		strconv.Itoa(index))
 }
 
 func buildCompression(compression []*egv1a1.Compression) []*ir.Compression {
@@ -1170,39 +1174,4 @@ func buildHTTPProtocolUpgradeConfig(cfgs []*egv1a1.ProtocolUpgradeConfig) []stri
 	}
 
 	return result
-}
-
-// processResponseBody handles the common logic for processing response body across different contexts
-func processResponseBody(body *egv1a1.CustomResponseBody, resources *resource.Resources, namespace string) (*string, error) {
-	if body == nil {
-		return nil, nil
-	}
-
-	switch {
-	case body.Type == nil || *body.Type == egv1a1.ResponseValueTypeInline:
-		// Default to inline if type is not specified
-		if body.Inline != nil {
-			return body.Inline, nil
-		}
-	case *body.Type == egv1a1.ResponseValueTypeValueRef:
-		if body.ValueRef != nil {
-			// Resolve the ValueRef to get the actual content
-			resolvedContent, err := resolveValueRef(body.ValueRef, resources, namespace)
-			if err != nil {
-				return nil, fmt.Errorf("failed to resolve ValueRef: %w", err)
-			}
-			return &resolvedContent, nil
-		}
-	case *body.Type == egv1a1.ResponseValueTypeJSON:
-		if body.JSON != nil {
-			// Convert JSON map to JSON string
-			jsonBytes, err := json.Marshal(body.JSON)
-			if err != nil {
-				return nil, fmt.Errorf("failed to marshal JSON body: %w", err)
-			}
-			jsonString := string(jsonBytes)
-			return &jsonString, nil
-		}
-	}
-	return nil, nil
 }

@@ -19085,25 +19085,18 @@ spec:
                               description: Inline contains the value as an inline
                                 string.
                               type: string
-                            json:
-                              additionalProperties:
-                                type: string
-                              description: JSON defines response body JSON format
-                              type: object
                             type:
                               allOf:
                               - enum:
                                 - Inline
                                 - ValueRef
-                                - JSON
                               - enum:
                                 - Inline
                                 - ValueRef
-                                - JSON
                               default: Inline
                               description: |-
                                 Type is the type of method to use to read the body value.
-                                Valid values are Inline, ValueRef, and JSON, default is Inline.
+                                Valid values are Inline and ValueRef, default is Inline.
                               type: string
                             valueRef:
                               description: |-
@@ -19148,9 +19141,6 @@ spec:
                           - message: valueRef must be set for type ValueRef
                             rule: '(has(self.type) && self.type == ''ValueRef'')?
                               has(self.valueRef) : true'
-                          - message: json must be set for type JSON
-                            rule: '(has(self.type) && self.type == ''JSON'')? has(self.json)
-                              : true'
                           - message: only ConfigMap is supported for ValueRef
                             rule: 'has(self.valueRef) ? self.valueRef.kind == ''ConfigMap''
                               : true'
@@ -38499,25 +38489,18 @@ spec:
                       inline:
                         description: Inline contains the value as an inline string.
                         type: string
-                      json:
-                        additionalProperties:
-                          type: string
-                        description: JSON defines response body JSON format
-                        type: object
                       type:
                         allOf:
                         - enum:
                           - Inline
                           - ValueRef
-                          - JSON
                         - enum:
                           - Inline
                           - ValueRef
-                          - JSON
                         default: Inline
                         description: |-
                           Type is the type of method to use to read the body value.
-                          Valid values are Inline, ValueRef, and JSON, default is Inline.
+                          Valid values are Inline and ValueRef, default is Inline.
                         type: string
                       valueRef:
                         description: |-
@@ -38562,9 +38545,6 @@ spec:
                     - message: valueRef must be set for type ValueRef
                       rule: '(has(self.type) && self.type == ''ValueRef'')? has(self.valueRef)
                         : true'
-                    - message: json must be set for type JSON
-                      rule: '(has(self.type) && self.type == ''JSON'')? has(self.json)
-                        : true'
                     - message: only ConfigMap is supported for ValueRef
                       rule: 'has(self.valueRef) ? self.valueRef.kind == ''ConfigMap''
                         : true'
@@ -38572,6 +38552,33 @@ spec:
                     description: Content Type of the response. This will be set in
                       the Content-Type header.
                     type: string
+                  responseHeadersToAdd:
+                    description: |-
+                      ResponseHeadersToAdd defines headers to add to the response.
+                      This allows the response policy to append, add or override headers
+                      of the original response before it is sent to a downstream client.
+                    items:
+                      description: ResponseHeaderToAdd defines a header to add to
+                        the response.
+                      properties:
+                        append:
+                          description: |-
+                            Append specifies the action to take when the header already exists.
+                            If true, the value will be appended to the existing header value.
+                            If false, the value will overwrite the existing header value.
+                            Default is false.
+                          type: boolean
+                        name:
+                          description: Name is the name of the header to add.
+                          type: string
+                        value:
+                          description: Value is the value of the header to add.
+                          type: string
+                      required:
+                      - name
+                      - value
+                      type: object
+                    type: array
                   statusCode:
                     description: |-
                       Status Code of the HTTP response
