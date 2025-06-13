@@ -6,11 +6,9 @@
 package translator
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"strconv"
-	"strings"
 
 	cncfv3 "github.com/cncf/xds/go/xds/core/v3"
 	matcherv3 "github.com/cncf/xds/go/xds/type/matcher/v3"
@@ -372,52 +370,12 @@ func (c *customResponse) buildStatusCodeCELMatcher(codeRange ir.StatusCodeRange)
 func (c *customResponse) buildAction(r ir.ResponseOverrideRule) (*matcherv3.Matcher_OnMatch_Action, error) {
 	response := &policyv3.LocalResponsePolicy{}
 
-	// Handle the Body field
 	if r.Response.Body != nil && *r.Response.Body != "" {
-		bodyContent := *r.Response.Body
-		contentType := "text/plain" // default content type
-		if r.Response.ContentType != nil {
-			contentType = *r.Response.ContentType
+		response.BodyFormat = &corev3.SubstitutionFormatString{
+			Format: &corev3.SubstitutionFormatString_TextFormat{
+				TextFormat: *r.Response.Body,
+			},
 		}
-
-		// Check if the body contains JSON-like content (starts with { or [)
-		if (strings.HasPrefix(bodyContent, "{") && strings.HasSuffix(bodyContent, "}")) ||
-			(strings.HasPrefix(bodyContent, "[") && strings.HasSuffix(bodyContent, "]")) {
-			// Try to parse as JSON for structured format
-			var jsonData map[string]interface{}
-			if err := json.Unmarshal([]byte(bodyContent), &jsonData); err == nil {
-				// It's valid JSON, convert to map[string]string for mapToStruct
-				jsonStringMap := make(map[string]string)
-				for k, v := range jsonData {
-					jsonStringMap[k] = fmt.Sprintf("%v", v)
-				}
-				// Use BodyFormat with JsonFormat
-				response.BodyFormat = &corev3.SubstitutionFormatString{
-					Format: &corev3.SubstitutionFormatString_JsonFormat{
-						JsonFormat: mapToStruct(jsonStringMap),
-					},
-				}
-				// Set default content type for JSON if not specified
-				if r.Response.ContentType == nil {
-					contentType = "application/json"
-				}
-			} else {
-				// Not valid JSON, treat as text with dynamic variable substitution
-				response.BodyFormat = &corev3.SubstitutionFormatString{
-					Format: &corev3.SubstitutionFormatString_TextFormat{
-						TextFormat: bodyContent,
-					},
-				}
-			}
-		} else {
-			// Use BodyFormat with TextFormat to support dynamic variable substitution
-			response.BodyFormat = &corev3.SubstitutionFormatString{
-				Format: &corev3.SubstitutionFormatString_TextFormat{
-					TextFormat: bodyContent,
-				},
-			}
-		}
-		response.BodyFormat.ContentType = contentType
 	}
 
 	if r.Response.ContentType != nil && *r.Response.ContentType != "" {

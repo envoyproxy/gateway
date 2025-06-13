@@ -27,11 +27,8 @@
                       typedConfig:
                         '@type': type.googleapis.com/envoy.extensions.http.custom_response.local_response_policy.v3.LocalResponsePolicy
                         bodyFormat:
-                          contentType: text/plain
-                          jsonFormat:
-                            message: Resource not found
-                            status: '%RESPONSE_CODE%'
-                            timestamp: '%START_TIME%'
+                          textFormat: '{"status":"%RESPONSE_CODE%","message":"Resource
+                            not found","timestamp":"%START_TIME%"}'
                         responseHeadersToAdd:
                         - appendAction: OVERWRITE_IF_EXISTS_OR_ADD
                           header:
@@ -59,7 +56,6 @@
                       typedConfig:
                         '@type': type.googleapis.com/envoy.extensions.http.custom_response.local_response_policy.v3.LocalResponsePolicy
                         bodyFormat:
-                          contentType: application/json
                           textFormat: |
                             {
                               "error": "Internal Server Error"
