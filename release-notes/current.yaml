@@ -27,6 +27,7 @@ bug fixes: |
   Fixed issue where WASM cache init failure caused routes with WASM-less EnvoyExtensionPolicies to have 500 direct responses.
   Fixed issue which UDP listeners were not created in the Envoy proxy config when Gateway was created.
   Keep ALPN configuration for listeners with overlapping certificates when ALPN is explicitly set in ClientTrafficPolicy.
+  Fixed issue that switch on wrong SubjectAltNameType enum value in BackendTLSPolicy.
 
 # Enhancements that improve performance.
 performance improvements: |

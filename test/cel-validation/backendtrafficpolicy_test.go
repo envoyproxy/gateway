@@ -1375,6 +1375,50 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 			wantErrors: []string{},
 		},
 		{
+			desc: "custom redirect in response override",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
+								Group: gwapiv1a2.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1a2.Kind("Gateway"),
+								Name:  gwapiv1a2.ObjectName("eg"),
+							},
+						},
+					},
+					ResponseOverride: []*egv1a1.ResponseOverride{
+						{
+							Match: egv1a1.CustomResponseMatch{
+								StatusCodes: []egv1a1.StatusCodeMatch{
+									{
+										Type: ptr.To(egv1a1.StatusCodeValueTypeRange),
+										Range: &egv1a1.StatusCodeRange{
+											Start: 100,
+											End:   200,
+										},
+									},
+								},
+							},
+							Redirect: &egv1a1.CustomRedirect{
+								Scheme:   ptr.To("https"),
+								Hostname: ptr.To(gwapiv1a2.PreciseHostname("redirect.host")),
+								Path: &gwapiv1.HTTPPathModifier{
+									Type:               "ReplacePrefixMatch",
+									ReplacePrefixMatch: ptr.To("/redirect"),
+								},
+								Port:       ptr.To(gwapiv1a2.PortNumber(9090)),
+								StatusCode: ptr.To(302),
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{
+				"spec.responseOverride[0].redirect.path: Invalid value: \"object\": only ReplaceFullPath is supported for path.type",
+			},
+		},
+		{
 			desc: "status value required for type in response override",
 			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
 				btp.Spec = egv1a1.BackendTrafficPolicySpec{

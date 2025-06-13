@@ -136,7 +136,6 @@ xdsIR:
           prefix: /
         redirect:
           hostname: redirected.com
-          path: null
           port: 443
           scheme: https
           statusCode: 301

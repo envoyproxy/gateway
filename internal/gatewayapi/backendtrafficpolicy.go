@@ -1051,19 +1051,39 @@ func buildResponseOverride(policy *egv1a1.BackendTrafficPolicy, resources *resou
 			}
 		}
 
-		response := ir.CustomResponse{
-			ContentType: ro.Response.ContentType,
-		}
+		if ro.Redirect != nil {
+			redirect := &ir.Redirect{
+				Scheme: ro.Redirect.Scheme,
+			}
+			if ro.Redirect.Path != nil {
+				redirect.Path = &ir.HTTPPathModifier{
+					FullReplace:        ro.Redirect.Path.ReplaceFullPath,
+					PrefixMatchReplace: ro.Redirect.Path.ReplacePrefixMatch,
+				}
+			}
+			if ro.Redirect.Hostname != nil {
+				redirect.Hostname = ptr.To(string(*ro.Redirect.Hostname))
+			}
+			if ro.Redirect.Port != nil {
+				redirect.Port = ptr.To(uint32(*ro.Redirect.Port))
+			}
+			if ro.Redirect.StatusCode != nil {
+				redirect.StatusCode = ptr.To(int32(*ro.Redirect.StatusCode))
+			}
 
-		if ro.Response.StatusCode != nil {
-			response.StatusCode = ptr.To(uint32(*ro.Response.StatusCode))
-		}
+			rules = append(rules, ir.ResponseOverrideRule{
+				Name:     defaultResponseOverrideRuleName(policy, index),
+				Match:    match,
+				Redirect: redirect,
+			})
+		} else {
+			response := &ir.CustomResponse{
+				ContentType: ro.Response.ContentType,
+			}
 
-		var err error
-		response.Body, err = getCustomResponseBody(ro.Response.Body, resources, policy.Namespace)
-		if err != nil {
-			return nil, err
-		}
+			if ro.Response.StatusCode != nil {
+				response.StatusCode = ptr.To(uint32(*ro.Response.StatusCode))
+			}
 
 		if len(ro.Response.ResponseHeadersToAdd) > 0 {
 			response.ResponseHeadersToAdd = make([]ir.AddHeader, 0, len(ro.Response.ResponseHeadersToAdd))
@@ -1080,11 +1100,18 @@ func buildResponseOverride(policy *egv1a1.BackendTrafficPolicy, resources *resou
 			}
 		}
 
-		rules = append(rules, ir.ResponseOverrideRule{
-			Name:     defaultResponseOverrideRuleName(policy, index),
-			Match:    match,
-			Response: response,
-		})
+			var err error
+			response.Body, err = getCustomResponseBody(ro.Response.Body, resources, policy.Namespace)
+			if err != nil {
+				return nil, err
+			}
+
+			rules = append(rules, ir.ResponseOverrideRule{
+				Name:     defaultResponseOverrideRuleName(policy, index),
+				Match:    match,
+				Response: response,
+			})
+		}
 	}
 	return &ir.ResponseOverride{
 		Name:  irConfigName(policy),

@@ -21,7 +21,7 @@ backendTLSPolicies:
       - type: URI
         uri: spiffe://cluster.local/ns/istio-demo/sa/echo-v1
       - hostname: subdomain.secondexample.com
-        type: DNS
+        type: Hostname
   status:
     ancestors:
     - ancestorRef:
