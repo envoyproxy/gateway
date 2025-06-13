@@ -11,7 +11,6 @@ import (
 	"testing"
 
 	"k8s.io/apimachinery/pkg/types"
-	"sigs.k8s.io/gateway-api/conformance/utils/http"
 	"sigs.k8s.io/gateway-api/conformance/utils/kubernetes"
 	"sigs.k8s.io/gateway-api/conformance/utils/suite"
 )
@@ -32,28 +31,7 @@ var DirectResponseTest = suite.ConformanceTest{
 			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
 
 			kubernetes.HTTPRouteMustHaveResolvedRefsConditionsTrue(t, suite.Client, suite.TimeoutConfig, routeNN, gwNN)
-
-			// Test /inline with custom header
-			customHeaders := make(map[string]string)
-			expectedResponse := http.ExpectedResponse{
-				Request: http.Request{Path: "/inline"},
-				Response: http.Response{
-					StatusCode: 200,
-					Headers:    customHeaders,
-				},
-				Namespace: ns,
-			}
-			expectedResponse.Response.Headers["Content-Type"] = "text/plain"
-			expectedResponse.Response.Headers["X-Custom-Header"] = "custom-value"
-			req := http.MakeRequest(t, &expectedResponse, gwAddr, "HTTP", "http")
-			cReq, cResp, err := suite.RoundTripper.CaptureRoundTrip(req)
-			if err != nil {
-				t.Errorf("failed to get expected response: %v", err)
-			}
-			if err := http.CompareRequest(t, &req, cReq, cResp, expectedResponse); err != nil {
-				t.Errorf("failed to compare request and response: %v", err)
-			}
-
+			verifyCustomResponse(t, suite.TimeoutConfig, gwAddr, "/inline", "text/plain", "Oops! Your request is not found.", 200, map[string]string{"X-Custom-Header": "custom-value"})
 			verifyCustomResponse(t, suite.TimeoutConfig, gwAddr, "/value-ref", "application/json", `{"error": "Internal Server Error"}`, 200)
 			verifyCustomResponse(t, suite.TimeoutConfig, gwAddr, "/401", "", ``, 401)
 		})

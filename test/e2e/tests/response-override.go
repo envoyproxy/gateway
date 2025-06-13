@@ -49,28 +49,7 @@ var ResponseOverrideTest = suite.ConformanceTest{
 				Name:      gwapiv1.ObjectName(gwNN.Name),
 			}
 			BackendTrafficPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "response-override", Namespace: ns}, suite.ControllerName, ancestorRef)
-
-			// Test /status/404 with custom header
-			customHeaders := make(map[string]string)
-			expectedResponse := httputils.ExpectedResponse{
-				Request: httputils.Request{Path: "/status/404"},
-				Response: httputils.Response{
-					StatusCode: 404,
-					Headers:    customHeaders,
-				},
-				Namespace: ns,
-			}
-			expectedResponse.Response.Headers["Content-Type"] = "text/plain"
-			expectedResponse.Response.Headers["X-Custom-Header"] = "custom-value"
-			req := httputils.MakeRequest(t, &expectedResponse, gwAddr, "HTTP", "http")
-			cReq, cResp, err := suite.RoundTripper.CaptureRoundTrip(req)
-			if err != nil {
-				t.Errorf("failed to get expected response: %v", err)
-			}
-			if err := httputils.CompareRequest(t, &req, cReq, cResp, expectedResponse); err != nil {
-				t.Errorf("failed to compare request and response: %v", err)
-			}
-
+			verifyCustomResponse(t, suite.TimeoutConfig, gwAddr, "/status/404", "text/plain", "Oops! Your request is not found.", 404, map[string]string{"X-Custom-Header": "custom-value"})
 			verifyCustomResponse(t, suite.TimeoutConfig, gwAddr, "/status/500", "application/json", `{"error": "Internal Server Error"}`, 500)
 			verifyCustomResponse(t, suite.TimeoutConfig, gwAddr, "/status/403", "", "", 404)
 		})
@@ -78,7 +57,7 @@ var ResponseOverrideTest = suite.ConformanceTest{
 }
 
 func verifyCustomResponse(t *testing.T, timeoutConfig config.TimeoutConfig, gwAddr,
-	path, expectedContentType, expectedBody string, expectedStatusCode int,
+	path, expectedContentType, expectedBody string, expectedStatusCode int, expectedHeaders ...map[string]string,
 ) {
 	reqURL := url.URL{
 		Scheme: "http",
@@ -115,6 +94,17 @@ func verifyCustomResponse(t *testing.T, timeoutConfig config.TimeoutConfig, gwAd
 		if expectedStatusCode != rsp.StatusCode {
 			tlog.Logf(t, "expected status code to be %d but got %d", expectedStatusCode, rsp.StatusCode)
 			return false
+		}
+
+		// Verify expected headers if provided
+		if len(expectedHeaders) > 0 {
+			for headerName, expectedValue := range expectedHeaders[0] {
+				actualValue := rsp.Header.Get(headerName)
+				if actualValue != expectedValue {
+					tlog.Logf(t, "expected header %s to be %s but got %s", headerName, expectedValue, actualValue)
+					return false
+				}
+			}
 		}
 
 		return true
