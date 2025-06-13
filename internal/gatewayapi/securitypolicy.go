@@ -81,7 +81,8 @@ func (t *Translator) ProcessSecurityPolicies(securityPolicies []*egv1a1.Security
 		gatewayMap[key] = &policyGatewayTargetContext{GatewayContext: gw, attachedToListeners: make(sets.Set[string])}
 	}
 
-	// Map of Gateway to the routes attached to it
+	// Map of Gateway to the routes attached to it.
+	// The routes are grouped by sectionNames of their targetRefs
 	gatewayRouteMap := make(map[string]map[string]sets.Set[string])
 
 	handledPolicies := make(map[types.NamespacedName]*egv1a1.SecurityPolicy)
@@ -669,11 +670,13 @@ func (t *Translator) translateSecurityPolicyForGateway(
 
 	policyTarget := irStringKey(policy.Namespace, string(target.Name))
 	for _, h := range x.HTTP {
+		// A HTTPListener name has the format namespace/gatewayName/listenerName
 		gatewayNameEnd := strings.LastIndex(h.Name, "/")
 		gatewayName := h.Name[0:gatewayNameEnd]
 		if t.MergeGateways && gatewayName != policyTarget {
 			continue
 		}
+		// If specified the sectionName must match the listenerName part of the HTTPListener name
 		if target.SectionName != nil && string(*target.SectionName) != h.Name[gatewayNameEnd+1:] {
 			continue
 		}
