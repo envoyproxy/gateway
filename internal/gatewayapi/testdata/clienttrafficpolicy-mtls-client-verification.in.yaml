@@ -50,7 +50,7 @@ clientTrafficPolicies:
         - kind: ConfigMap
           name: ca-configmap
           namespace: envoy-gateway
-        publicKeyPins:
+        spkiHashes:
         - NvqYIYSbgK2vCJpQhObf77vv+bQWtc5ek5RIOwPiC9A=
         certificateHashes:
         - df6ff72fe9116521268f6f2dd4966f51df479883fe7037b39f75916ac3049d1a
@@ -83,7 +83,7 @@ clientTrafficPolicies:
         - kind: ConfigMap
           name: ca-configmap
           namespace: envoy-gateway
-        publicKeyPins:
+        spkiHashes:
         - NvqYIYSbgK2vCJpQhObf77vv+bQWtc5ek5RIOwPiC9A=
         certificateHashes:
         - df6ff72fe9116521268f6f2dd4966f51df479883fe7037b39f75916ac3049d1a

@@ -20,7 +20,7 @@ clientTrafficPolicies:
           namespace: envoy-gateway
         certificateHashes:
         - df6ff72fe9116521268f6f2dd4966f51df479883fe7037b39f75916ac3049d1a
-        publicKeyPins:
+        spkiHashes:
         - NvqYIYSbgK2vCJpQhObf77vv+bQWtc5ek5RIOwPiC9A=
         subjectAltNames:
           dnsNames:
@@ -73,7 +73,7 @@ clientTrafficPolicies:
           namespace: envoy-gateway
         certificateHashes:
         - df6ff72fe9116521268f6f2dd4966f51df479883fe7037b39f75916ac3049d1a
-        publicKeyPins:
+        spkiHashes:
         - NvqYIYSbgK2vCJpQhObf77vv+bQWtc5ek5RIOwPiC9A=
         subjectAltNames:
           dnsNames:
