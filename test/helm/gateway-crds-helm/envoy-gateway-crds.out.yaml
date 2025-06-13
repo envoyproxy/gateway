@@ -896,8 +896,8 @@ spec:
                         This is allowed only when type is CONNECT.
                       properties:
                         terminate:
-                          description: Terminate the connection after the CONNECT
-                            request is processed.
+                          description: Terminate the CONNECT request, and forwards
+                            the payload as raw TCP data.
                           type: boolean
                       type: object
                     type:
