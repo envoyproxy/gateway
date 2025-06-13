@@ -249,9 +249,9 @@ func getBackendTLSBundle(backendTLSPolicy *gwapiv1a3.BackendTLSPolicy, resources
 	for _, san := range backendTLSPolicy.Spec.Validation.SubjectAltNames {
 		var subjectAltName ir.SubjectAltName
 		switch san.Type {
-		case "DNS":
+		case gwapiv1a3.HostnameSubjectAltNameType:
 			subjectAltName.Hostname = ptr.To(string(san.Hostname))
-		case "URI":
+		case gwapiv1a3.URISubjectAltNameType:
 			subjectAltName.URI = ptr.To(string(san.URI))
 		default:
 			continue // skip unknown types
