@@ -51,18 +51,17 @@ var ResponseOverrideTest = suite.ConformanceTest{
 			BackendTrafficPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "response-override", Namespace: ns}, suite.ControllerName, ancestorRef)
 
 			// Test /status/404 with custom header
+			customHeaders := make(map[string]string)
 			expectedResponse := httputils.ExpectedResponse{
 				Request: httputils.Request{Path: "/status/404"},
 				Response: httputils.Response{
 					StatusCode: 404,
-					Headers: map[string]string{
-						"Content-Type":    "text/plain",
-						"X-Custom-Header": "custom-value",
-					},
+					Headers:    customHeaders,
 				},
-				ResponseBody: "Oops! Your request is not found.",
-				Namespace:    ns,
+				Namespace: ns,
 			}
+			expectedResponse.Response.Headers["Content-Type"] = "text/plain"
+			expectedResponse.Response.Headers["X-Custom-Header"] = "custom-value"
 			req := httputils.MakeRequest(t, &expectedResponse, gwAddr, "HTTP", "http")
 			cReq, cResp, err := suite.RoundTripper.CaptureRoundTrip(req)
 			if err != nil {

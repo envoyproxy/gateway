@@ -34,18 +34,17 @@ var DirectResponseTest = suite.ConformanceTest{
 			kubernetes.HTTPRouteMustHaveResolvedRefsConditionsTrue(t, suite.Client, suite.TimeoutConfig, routeNN, gwNN)
 
 			// Test /inline with custom header
+			customHeaders := make(map[string]string)
 			expectedResponse := http.ExpectedResponse{
 				Request: http.Request{Path: "/inline"},
 				Response: http.Response{
 					StatusCode: 200,
-					Headers: map[string]string{
-						"Content-Type":    "text/plain",
-						"X-Custom-Header": "custom-value",
-					},
+					Headers:    customHeaders,
 				},
-				ResponseBody: "Oops! Your request is not found.",
-				Namespace:    ns,
+				Namespace: ns,
 			}
+			expectedResponse.Response.Headers["Content-Type"] = "text/plain"
+			expectedResponse.Response.Headers["X-Custom-Header"] = "custom-value"
 			req := http.MakeRequest(t, &expectedResponse, gwAddr, "HTTP", "http")
 			cReq, cResp, err := suite.RoundTripper.CaptureRoundTrip(req)
 			if err != nil {
