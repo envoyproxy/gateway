@@ -137,7 +137,6 @@ xdsIR:
           name: ""
           prefix: /
         redirect:
-          hostname: null
           path:
             fullReplace: /redirected
             prefixMatchReplace: null
