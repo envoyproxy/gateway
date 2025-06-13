@@ -1185,7 +1185,9 @@ func buildHTTPProtocolUpgradeConfig(cfgs []*egv1a1.ProtocolUpgradeConfig) []ir.H
 			Type: cfg.Type,
 		}
 		if cfg.Connect != nil {
-			upgrade.Connect = &ir.ConnectConfig{}
+			upgrade.Connect = &ir.ConnectConfig{
+				Terminate: ptr.Deref(cfg.Connect.Terminate, false),
+			}
 		}
 		result = append(result, upgrade)
 	}

@@ -899,8 +899,12 @@ type HTTPUpgradeConfig struct {
 	Connect *ConnectConfig `json:"connect,omitempty" yaml:"connect,omitempty"`
 }
 
+// ConnectConfig indicates whether the CONNECT should be terminated.
+//
 // +k8s:deepcopy-gen=true
-type ConnectConfig struct{}
+type ConnectConfig struct {
+	Terminate bool `json:"terminate" yaml:"terminate"`
+}
 
 func (b *TrafficFeatures) Validate() error {
 	var errs error

@@ -38,4 +38,5 @@ http:
         traffic:
           httpUpgrade:
             - type: CONNECT
-              connect: {}
+              connect:
+                terminate: true

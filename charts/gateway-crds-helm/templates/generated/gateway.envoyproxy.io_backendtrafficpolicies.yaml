@@ -567,6 +567,11 @@ spec:
                       description: |-
                         Connect specifies the configuration for the CONNECT config.
                         This is allowed only when type is CONNECT.
+                      properties:
+                        terminate:
+                          description: Terminate the connection after the CONNECT
+                            request is processed.
+                          type: boolean
                       type: object
                     type:
                       description: |-

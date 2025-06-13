@@ -46,4 +46,5 @@ backendTrafficPolicies:
         name: httproute-1
       httpUpgrade:
         - type: CONNECT
-          connect: {}
+          connect:
+            terminate: true

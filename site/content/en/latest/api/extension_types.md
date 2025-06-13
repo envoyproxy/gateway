@@ -870,6 +870,9 @@ _Appears in:_
 _Appears in:_
 - [ProtocolUpgradeConfig](#protocolupgradeconfig)
 
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `terminate` | _boolean_ |  false  |  | Terminate the connection after the CONNECT request is processed. |
 
 
 #### ConnectionLimit
