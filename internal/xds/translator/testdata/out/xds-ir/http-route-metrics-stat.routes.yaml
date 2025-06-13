@@ -1,0 +1,39 @@
+- ignorePortInHostMatching: true
+  name: first-listener
+  virtualHosts:
+  - domains:
+    - '*'
+    name: first-listener/*
+    routes:
+    - match:
+        pathSeparatedPrefix: /first
+      metadata:
+        filterMetadata:
+          envoy-gateway:
+            resources:
+            - kind: HTTPRoute
+              name: httproute-1
+              namespace: default
+              sectionName: first
+      name: first-route
+      route:
+        cluster: first-route-dest
+        upgradeConfigs:
+        - upgradeType: websocket
+      statPrefix: route=/test,kind=HTTPRoute,ns=default,name=httproute-1,ruleName=first,ruleNumber=0
+    - match:
+        pathSeparatedPrefix: /second
+      metadata:
+        filterMetadata:
+          envoy-gateway:
+            resources:
+            - kind: HTTPRoute
+              name: httproute-1
+              namespace: default
+              sectionName: second
+      name: second-route
+      route:
+        cluster: second-route-dest
+        upgradeConfigs:
+        - upgradeType: websocket
+      statPrefix: route=/test,kind=HTTPRoute,ns=default,name=httproute-1,ruleName=second,ruleNumber=1
