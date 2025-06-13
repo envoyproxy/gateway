@@ -1142,8 +1142,8 @@ func (in *ClientValidationContext) DeepCopyInto(out *ClientValidationContext) {
 			(*in)[i].DeepCopyInto(&(*out)[i])
 		}
 	}
-	if in.PublicKeyPins != nil {
-		in, out := &in.PublicKeyPins, &out.PublicKeyPins
+	if in.SPKIHashes != nil {
+		in, out := &in.SPKIHashes, &out.SPKIHashes
 		*out = make([]string, len(*in))
 		copy(*out, *in)
 	}

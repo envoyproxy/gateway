@@ -146,7 +146,7 @@ type ClientValidationContext struct {
 	// verify that the SHA-256 of the DER-encoded Subject Public Key Information
 	// (SPKI) of the presented certificate matches one of the specified values.
 	// +optional
-	PublicKeyPins []string `json:"publicKeyPins,omitempty"`
+	SPKIHashes []string `json:"spkiHashes,omitempty"`
 
 	// An optional list of hex-encoded SHA-256 hashes. If specified, Envoy will
 	// verify that the SHA-256 of the DER-encoded presented certificate matches

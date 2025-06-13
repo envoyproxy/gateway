@@ -882,8 +882,8 @@ func (t *Translator) buildListenerTLSParameters(policy *egv1a1.ClientTrafficPoli
 }
 
 func setTLSClientValidationContext(tlsClientValidation *egv1a1.ClientValidationContext, irTLSConfig *ir.TLSConfig) {
-	if len(tlsClientValidation.PublicKeyPins) > 0 {
-		irTLSConfig.VerifyCertificateSpki = append(irTLSConfig.VerifyCertificateSpki, tlsClientValidation.PublicKeyPins...)
+	if len(tlsClientValidation.SPKIHashes) > 0 {
+		irTLSConfig.VerifyCertificateSpki = append(irTLSConfig.VerifyCertificateSpki, tlsClientValidation.SPKIHashes...)
 	}
 	if len(tlsClientValidation.CertificateHashes) > 0 {
 		irTLSConfig.VerifyCertificateHash = append(irTLSConfig.VerifyCertificateHash, tlsClientValidation.CertificateHashes...)
