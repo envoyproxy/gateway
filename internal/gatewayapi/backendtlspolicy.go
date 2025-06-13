@@ -21,6 +21,10 @@ import (
 	"github.com/envoyproxy/gateway/internal/ir"
 )
 
+const (
+	caCertsKey = "ca.crt"
+)
+
 func (t *Translator) applyBackendTLSSetting(
 	backendRef gwapiv1.BackendObjectReference,
 	backendNamespace string,
@@ -112,7 +116,7 @@ func (t *Translator) processDynamicResolverBackendTLSConfig(
 				Name: fmt.Sprintf("%s/%s-ca", backend.Name, backend.Namespace),
 			}
 		} else {
-			caCert, err := getCaCertsFromCARefs(backend.Spec.TLS.CACertificateRefs, resources)
+			caCert, err := getCaCertsFromCARefs(backend.Namespace, backend.Spec.TLS.CACertificateRefs, resources)
 			if err != nil {
 				return nil, err
 			}
@@ -271,7 +275,7 @@ func getBackendTLSBundle(backendTLSPolicy *gwapiv1a3.BackendTLSPolicy, resources
 		return tlsBundle, nil
 	}
 
-	caCert, err := getCaCertsFromCARefs(backendTLSPolicy.Spec.Validation.CACertificateRefs, resources)
+	caCert, err := getCaCertsFromCARefs(backendTLSPolicy.Namespace, backendTLSPolicy.Spec.Validation.CACertificateRefs, resources)
 	if err != nil {
 		return nil, err
 	}
@@ -282,43 +286,45 @@ func getBackendTLSBundle(backendTLSPolicy *gwapiv1a3.BackendTLSPolicy, resources
 	return tlsBundle, nil
 }
 
-func getCaCertsFromCARefs(caCertificates []gwapiv1.LocalObjectReference, resources *resource.Resources) ([]byte, error) {
+func getCaCertsFromCARefs(namespace string, caCertificates []gwapiv1.LocalObjectReference, resources *resource.Resources) ([]byte, error) {
 	ca := ""
 	for _, caRef := range caCertificates {
 		kind := string(caRef.Kind)
 
 		switch kind {
 		case resource.KindConfigMap:
-			for _, cmap := range resources.ConfigMaps {
-				if cmap.Name == string(caRef.Name) {
-					if crt, dataOk := cmap.Data["ca.crt"]; dataOk {
-						if ca != "" {
-							ca += "\n"
-						}
-						ca += crt
-					} else {
-						return nil, fmt.Errorf("no ca found in configmap %s", cmap.Name)
+			cm := resources.GetConfigMap(namespace, string(caRef.Name))
+			if cm != nil {
+				if crt, dataOk := cm.Data[caCertsKey]; dataOk {
+					if ca != "" {
+						ca += "\n"
 					}
+					ca += crt
+				} else {
+					return nil, fmt.Errorf("no ca found in configmap %s", cm.Name)
 				}
+			} else {
+				return nil, fmt.Errorf("configmap %s not found in namespace %s", caRef.Name, namespace)
 			}
 		case resource.KindSecret:
-			for _, secret := range resources.Secrets {
-				if secret.Name == string(caRef.Name) {
-					if crt, dataOk := secret.Data["ca.crt"]; dataOk {
-						if ca != "" {
-							ca += "\n"
-						}
-						ca += string(crt)
-					} else {
-						return nil, fmt.Errorf("no ca found in secret %s", secret.Name)
+			secret := resources.GetSecret(namespace, string(caRef.Name))
+			if secret != nil {
+				if crt, dataOk := secret.Data[caCertsKey]; dataOk {
+					if ca != "" {
+						ca += "\n"
 					}
+					ca += string(crt)
+				} else {
+					return nil, fmt.Errorf("no ca found in secret %s", secret.Name)
 				}
+			} else {
+				return nil, fmt.Errorf("secret %s not found in namespace %s", caRef.Name, namespace)
 			}
 		}
 	}
 
 	if ca == "" {
-		return nil, fmt.Errorf("no ca found in referred configmaps")
+		return nil, fmt.Errorf("no ca found in referred ConfigMap or Secret")
 	}
 	return []byte(ca), nil
 }
