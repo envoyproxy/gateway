@@ -1065,7 +1065,6 @@ func buildResponseOverride(policy *egv1a1.BackendTrafficPolicy, resources *resou
 			return nil, err
 		}
 
-		// Convert ResponseHeadersToAdd from policy spec to IR format
 		if len(ro.Response.ResponseHeadersToAdd) > 0 {
 			response.ResponseHeadersToAdd = make([]ir.AddHeader, 0, len(ro.Response.ResponseHeadersToAdd))
 			for _, h := range ro.Response.ResponseHeadersToAdd {

@@ -388,7 +388,6 @@ func (c *customResponse) buildAction(r ir.ResponseOverrideRule) (*matcherv3.Matc
 		})
 	}
 
-	// Handle additional response headers to add
 	for _, header := range r.Response.ResponseHeadersToAdd {
 		var appendAction corev3.HeaderValueOption_HeaderAppendAction
 		if header.Append {

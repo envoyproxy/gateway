@@ -846,7 +846,6 @@ func (t *Translator) processExtensionRefHTTPFilter(extFilter *gwapiv1.LocalObjec
 						filterContext.AddResponseHeaders = append(filterContext.AddResponseHeaders, newHeader)
 					}
 
-					// Convert ResponseHeadersToAdd from filter spec to IR format and add to route headers
 					if len(hrf.Spec.DirectResponse.ResponseHeadersToAdd) > 0 {
 						for _, h := range hrf.Spec.DirectResponse.ResponseHeadersToAdd {
 							appendHeader := false
