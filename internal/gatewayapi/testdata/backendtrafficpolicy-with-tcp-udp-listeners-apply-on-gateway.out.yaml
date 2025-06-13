@@ -160,6 +160,9 @@ infraIR:
         labels:
           gateway.envoyproxy.io/owning-gateway-name: tcp-gateway
           gateway.envoyproxy.io/owning-gateway-namespace: default
+        ownerReference:
+          kind: GatewayClass
+          name: envoy-gateway-class
       name: default/tcp-gateway
       namespace: envoy-gateway-system
 tcpRoutes:

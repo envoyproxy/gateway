@@ -820,8 +820,10 @@ type CustomRedirect struct {
 	// Path defines parameters used to modify the path of the incoming request.
 	// The modified path is then used to construct the `Location` header. When
 	// empty, the request path is used as-is.
+	// Only ReplaceFullPath path modifier is supported currently.
 	//
 	// +optional
+	// +kubebuilder:validation:XValidation:message="only ReplaceFullPath is supported for path.type",rule="self.type == 'ReplaceFullPath'"
 	Path *gwapiv1.HTTPPathModifier `json:"path,omitempty"`
 
 	// Port is the port to be used in the value of the `Location`
