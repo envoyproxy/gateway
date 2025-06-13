@@ -872,7 +872,7 @@ _Appears in:_
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `terminate` | _boolean_ |  false  |  | Terminate the connection after the CONNECT request is processed. |
+| `terminate` | _boolean_ |  false  |  | Terminate the CONNECT request, and forwards the payload as raw TCP data. |
 
 
 #### ConnectionLimit

@@ -134,7 +134,7 @@ type ProtocolUpgradeConfig struct {
 }
 
 type ConnectConfig struct {
-	// Terminate the connection after the CONNECT request is processed.
+	// Terminate the CONNECT request, and forwards the payload as raw TCP data.
 	//
 	// +optional
 	Terminate *bool `json:"terminate,omitempty"`
