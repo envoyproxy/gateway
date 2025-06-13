@@ -1,0 +1,84 @@
+http:
+- name: "first-listener"
+  address: "::"
+  port: 10080
+  hostnames:
+  - "*"
+  path:
+    mergeSlashes: true
+    escapedSlashesAction: UnescapeAndRedirect
+  routes:
+  - name: "first-route"
+    metadata:
+      kind: HTTPRoute
+      name: httproute-1
+      namespace: default
+      sectionName: first
+      ruleIndex: 0
+    pathMatch:
+      prefix: "/first/"
+    traffic:
+      telemetry:
+        metrics:
+          routeStatName: "route=/test,kind=%ROUTE_KIND%,ns=%ROUTE_NAMESPACE%,name=%ROUTE_NAME%,ruleName=%ROUTE_RULE_NAME%,ruleNumber=%ROUTE_RULE_NUMBER%"
+    hostname: "*"
+    destination:
+      name: "first-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.1.1.1"
+          port: 50001
+        weight: 20
+        name: "first-route-dest/backend/0"
+      - endpoints:
+        - host: "2.2.2.2"
+          port: 50002
+        weight: 40
+        name: "first-route-dest/backend/1"
+      - endpoints:
+        - host: "3.3.3.3"
+          port: 50003
+        weight: 20
+        name: "first-route-dest/backend/2"
+      - endpoints:
+        - host: "4.4.4.4"
+          port: 50004
+        weight: 20
+        name: "first-route-dest/backend/3"
+  - name: "second-route"
+    hostname: "*"
+    metadata:
+      kind: HTTPRoute
+      name: httproute-1
+      namespace: default
+      sectionName: second
+      ruleIndex: 1
+    pathMatch:
+      prefix: "/second/"
+    traffic:
+      telemetry:
+        metrics:
+          routeStatName: "route=/test,kind=%ROUTE_KIND%,ns=%ROUTE_NAMESPACE%,name=%ROUTE_NAME%,ruleName=%ROUTE_RULE_NAME%,ruleNumber=%ROUTE_RULE_NUMBER%"
+    destination:
+      name: "second-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.1.1.1"
+          port: 50001
+        weight: 20
+        name: "second-route-dest/backend/0"
+      - endpoints:
+        - host: "2.2.2.2"
+          port: 50002
+        weight: 40
+        name: "second-route-dest/backend/1"
+      - endpoints:
+        - host: "3.3.3.3"
+          port: 50003
+        weight: 20
+        name: "second-route-dest/backend/2"
+      - endpoints:
+        - host: "4.4.4.4"
+          port: 50004
+        weight: 20
+        name: "second-route-dest/backend/3"

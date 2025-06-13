@@ -576,17 +576,23 @@ func addXdsTCPFilterChain(xdsListener *listenerv3.Listener, irRoute *ir.TCPRoute
 
 	isTLSPassthrough := irRoute.TLS != nil && irRoute.TLS.TLSInspectorConfig != nil
 	isTLSTerminate := irRoute.TLS != nil && irRoute.TLS.Terminate != nil
-	statPrefix := "tcp"
-	if isTLSPassthrough {
-		statPrefix = "tls-passthrough"
+	var statPrefix string
+	if irRoute.Metrics != nil && irRoute.Metrics.RouteStatName != "" {
+		statPrefix = buildRouteStatName(irRoute.Metrics, irRoute.Metadata)
+	} else {
+		statPrefix = "tcp"
+		if isTLSPassthrough {
+			statPrefix = "tls-passthrough"
+		}
+
+		if isTLSTerminate {
+			statPrefix = "tls-terminate"
+		}
+
+		// Append port to the statPrefix.
+		statPrefix = strings.Join([]string{statPrefix, strconv.Itoa(int(xdsListener.Address.GetSocketAddress().GetPortValue()))}, "-")
 	}
 
-	if isTLSTerminate {
-		statPrefix = "tls-terminate"
-	}
-
-	// Append port to the statPrefix.
-	statPrefix = strings.Join([]string{statPrefix, strconv.Itoa(int(xdsListener.Address.GetSocketAddress().GetPortValue()))}, "-")
 	al, error := buildXdsAccessLog(accesslog, ir.ProxyAccessLogTypeRoute)
 	if error != nil {
 		return error

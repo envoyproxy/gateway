@@ -218,6 +218,10 @@ xdsIR:
             name: tcproute/default/tcproute-1/rule/-1/backend/0
             protocol: TCP
             weight: 1
+        metadata:
+          kind: TCPRoute
+          name: tcproute-1
+          namespace: default
         name: tcproute/default/tcproute-1
         tls:
           terminate:
@@ -289,6 +293,10 @@ xdsIR:
             name: tcproute/default/tcproute-1/rule/-1/backend/0
             protocol: TCP
             weight: 1
+        metadata:
+          kind: TCPRoute
+          name: tcproute-1
+          namespace: default
         name: tcproute/default/tcproute-1
       tcpKeepalive:
         idleTime: 1200
