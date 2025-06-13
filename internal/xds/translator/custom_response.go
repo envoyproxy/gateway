@@ -371,10 +371,9 @@ func (c *customResponse) buildAction(r ir.ResponseOverrideRule) (*matcherv3.Matc
 	response := &policyv3.LocalResponsePolicy{}
 
 	if r.Response.Body != nil && *r.Response.Body != "" {
-		bodyContent := *r.Response.Body
 		response.BodyFormat = &corev3.SubstitutionFormatString{
 			Format: &corev3.SubstitutionFormatString_TextFormat{
-				TextFormat: bodyContent,
+				TextFormat: *r.Response.Body,
 			},
 		}
 	}
