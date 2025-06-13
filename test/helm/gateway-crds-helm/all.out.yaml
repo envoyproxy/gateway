@@ -24486,7 +24486,7 @@ spec:
                                 type: array
                             type: object
                             x-kubernetes-validations:
-                            - message: image and imageRepository are mutually exclusive
+                            - message: Either image or imageRepository can be set.
                               rule: '!has(self.image) || !has(self.imageRepository)'
                           name:
                             description: |-
@@ -28323,7 +28323,7 @@ spec:
                                 type: array
                             type: object
                             x-kubernetes-validations:
-                            - message: image and imageRepository are mutually exclusive
+                            - message: Either image or imageRepository can be set.
                               rule: '!has(self.image) || !has(self.imageRepository)'
                           initContainers:
                             description: |-

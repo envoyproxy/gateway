@@ -208,7 +208,7 @@ type KubernetesPodSpec struct {
 }
 
 // KubernetesContainerSpec defines the desired state of the Kubernetes container resource.
-// +kubebuilder:validation:XValidation:rule="!has(self.image) || !has(self.imageRepository)",message="image and imageRepository are mutually exclusive"
+// +kubebuilder:validation:XValidation:rule="!has(self.image) || !has(self.imageRepository)",message="Either image or imageRepository can be set."
 type KubernetesContainerSpec struct {
 	// List of environment variables to set in the container.
 	//
