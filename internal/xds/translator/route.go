@@ -159,7 +159,7 @@ func buildUpgradeConfig(trafficFeatures *ir.TrafficFeatures) []*routev3.RouteAct
 		cfg := &routev3.RouteAction_UpgradeConfig{
 			UpgradeType: protocol.Type,
 		}
-		if protocol.Type == ConnectProtocol && protocol.Connect != nil {
+		if protocol.Type == ConnectProtocol && protocol.Connect != nil && protocol.Connect.Terminate {
 			cfg.ConnectConfig = &routev3.RouteAction_UpgradeConfig_ConnectConfig{}
 		}
 		upgradeConfigs = append(upgradeConfigs, cfg)

@@ -7,7 +7,8 @@ backendTrafficPolicies:
     namespace: default
   spec:
     httpUpgrade:
-    - connect: {}
+    - connect:
+        terminate: true
       type: CONNECT
     targetRef:
       group: gateway.networking.k8s.io
@@ -180,7 +181,8 @@ xdsIR:
           prefix: /
         traffic:
           httpUpgrade:
-          - connect: {}
+          - connect:
+              terminate: true
             type: CONNECT
     readyListener:
       address: 0.0.0.0

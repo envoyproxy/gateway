@@ -133,7 +133,12 @@ type ProtocolUpgradeConfig struct {
 	Connect *ConnectConfig `json:"connect,omitempty"`
 }
 
-type ConnectConfig struct{}
+type ConnectConfig struct {
+	// Terminate the connection after the CONNECT request is processed.
+	//
+	// +optional
+	Terminate *bool `json:"terminate,omitempty"`
+}
 
 type RequestBuffer struct {
 	// Limit specifies the maximum allowed size in bytes for each incoming request buffer.
