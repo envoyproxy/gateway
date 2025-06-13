@@ -44,6 +44,10 @@ spec:
         body:
           type: Inline
           inline: "Oops! Your request is not found."
+        responseHeadersToAdd:
+        - name: X-Custom-Header
+          value: "custom-value"
+          append: false
     - match:
         statusCodes:
           - type: Value

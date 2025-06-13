@@ -49,7 +49,29 @@ var ResponseOverrideTest = suite.ConformanceTest{
 				Name:      gwapiv1.ObjectName(gwNN.Name),
 			}
 			BackendTrafficPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "response-override", Namespace: ns}, suite.ControllerName, ancestorRef)
-			verifyCustomResponse(t, suite.TimeoutConfig, gwAddr, "/status/404", "text/plain", "Oops! Your request is not found.", 404)
+
+			// Test /status/404 with custom header
+			expectedResponse := httputils.ExpectedResponse{
+				Request: httputils.Request{Path: "/status/404"},
+				Response: httputils.Response{
+					StatusCode: 404,
+					Headers: map[string]string{
+						"Content-Type":    "text/plain",
+						"X-Custom-Header": "custom-value",
+					},
+				},
+				ResponseBody: "Oops! Your request is not found.",
+				Namespace:    ns,
+			}
+			req := httputils.MakeRequest(t, &expectedResponse, gwAddr, "HTTP", "http")
+			cReq, cResp, err := suite.RoundTripper.CaptureRoundTrip(req)
+			if err != nil {
+				t.Errorf("failed to get expected response: %v", err)
+			}
+			if err := httputils.CompareRequest(t, &req, cReq, cResp, expectedResponse); err != nil {
+				t.Errorf("failed to compare request and response: %v", err)
+			}
+
 			verifyCustomResponse(t, suite.TimeoutConfig, gwAddr, "/status/500", "application/json", `{"error": "Internal Server Error"}`, 500)
 			verifyCustomResponse(t, suite.TimeoutConfig, gwAddr, "/status/403", "", "", 404)
 		})
