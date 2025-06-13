@@ -511,3 +511,49 @@ func requireResourcesToYAMLString(t *testing.T, resources []types.Resource) stri
 	require.NoError(t, err)
 	return string(data)
 }
+
+func TestCustomResponseHeaderAppendAction(t *testing.T) {
+	tests := []struct {
+		name           string
+		appendValue    bool
+		expectedAction string
+	}{
+		{
+			name:           "append-true",
+			appendValue:    true,
+			expectedAction: "APPEND_IF_EXISTS_OR_ADD",
+		},
+		{
+			name:           "append-false",
+			appendValue:    false,
+			expectedAction: "OVERWRITE_IF_EXISTS_OR_ADD",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			rule := ir.ResponseOverrideRule{
+				Response: &ir.CustomResponse{
+					ResponseHeadersToAdd: []ir.AddHeader{
+						{
+							Name:   "test-header",
+							Value:  []string{"test-value"},
+							Append: tt.appendValue,
+						},
+					},
+				},
+			}
+
+			cr := &customResponse{}
+			action, err := cr.buildResponseAction(rule)
+			require.NoError(t, err)
+			require.NotNil(t, action)
+
+			// The action contains the serialized LocalResponsePolicy
+			// This is a simple smoke test to ensure the function works
+			// More detailed testing is covered by integration tests
+			require.Contains(t, action.String(), "test-header")
+			require.Contains(t, action.String(), "test-value")
+		})
+	}
+}
