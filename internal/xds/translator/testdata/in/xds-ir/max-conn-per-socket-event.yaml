@@ -1,0 +1,36 @@
+http:
+  - name: "first-listener"
+    address: "::"
+    port: 10080
+    hostnames:
+      - "*"
+    path:
+      mergeSlashes: true
+      escapedSlashesAction: UnescapeAndRedirect
+    routes:
+      - name: "first-route"
+        hostname: "*"
+        destination:
+          name: "first-route-dest"
+          settings:
+            - endpoints:
+                - host: "1.2.3.4"
+                  port: 50000
+              name: "first-route-dest/backend/0"
+    connection:
+      maxAcceptPerSocketEvent: 2
+tcp:
+  - name: "second-listener"
+    address: "::"
+    connection:
+      maxAcceptPerSocketEvent: 3
+    port: 10081
+    routes:
+      - name: "tcp-route-dest"
+        destination:
+          name: "tcp-route-dest"
+          settings:
+            - endpoints:
+                - host: "1.2.3.4"
+                  port: 50000
+              name: "tcp-route-dest/backend/0"
