@@ -254,7 +254,7 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 		for _, irRoute := range ruleRoutes {
 			destination := &ir.RouteDestination{
 				Settings: allDs,
-				Metadata: buildResourceMetadata(httpRoute, rule.Name),
+				Metadata: buildResourceMetadata(httpRoute, rule.Name, ruleIdx),
 			}
 
 			switch {
@@ -389,7 +389,7 @@ func (t *Translator) processHTTPRouteRule(
 		irRoute := &ir.HTTPRoute{
 			Name: irRouteName(httpRoute, ruleIdx, -1),
 		}
-		irRoute.Metadata = buildResourceMetadata(httpRoute, rule.Name)
+		irRoute.Metadata = buildResourceMetadata(httpRoute, rule.Name, ruleIdx)
 		processRouteTrafficFeatures(irRoute, rule)
 		applyHTTPFiltersContextToIRRoute(httpFiltersContext, irRoute)
 		ruleRoutes = append(ruleRoutes, irRoute)
@@ -456,7 +456,7 @@ func (t *Translator) processHTTPRouteRule(
 			Name:               irRouteName(httpRoute, ruleIdx, matchIdx),
 			SessionPersistence: sessionPersistence,
 		}
-		irRoute.Metadata = buildResourceMetadata(httpRoute, rule.Name)
+		irRoute.Metadata = buildResourceMetadata(httpRoute, rule.Name, ruleIdx)
 		processRouteTrafficFeatures(irRoute, rule)
 
 		if match.Path != nil {
@@ -688,7 +688,7 @@ func (t *Translator) processGRPCRouteRules(grpcRoute *GRPCRouteContext, parentRe
 			irRoute.IsHTTP2 = true
 			destination := &ir.RouteDestination{
 				Settings: allDs,
-				Metadata: buildResourceMetadata(grpcRoute, rule.Name),
+				Metadata: buildResourceMetadata(grpcRoute, rule.Name, ruleIdx),
 			}
 
 			switch {
@@ -738,7 +738,7 @@ func (t *Translator) processGRPCRouteRule(grpcRoute *GRPCRouteContext, ruleIdx i
 		irRoute := &ir.HTTPRoute{
 			Name: irRouteName(grpcRoute, ruleIdx, -1),
 		}
-		irRoute.Metadata = buildResourceMetadata(grpcRoute, rule.Name)
+		irRoute.Metadata = buildResourceMetadata(grpcRoute, rule.Name, ruleIdx)
 		applyHTTPFiltersContextToIRRoute(httpFiltersContext, irRoute)
 		ruleRoutes = append(ruleRoutes, irRoute)
 	}
@@ -750,7 +750,7 @@ func (t *Translator) processGRPCRouteRule(grpcRoute *GRPCRouteContext, ruleIdx i
 		irRoute := &ir.HTTPRoute{
 			Name: irRouteName(grpcRoute, ruleIdx, matchIdx),
 		}
-		irRoute.Metadata = buildResourceMetadata(grpcRoute, rule.Name)
+		irRoute.Metadata = buildResourceMetadata(grpcRoute, rule.Name, ruleIdx)
 		for _, headerMatch := range match.Headers {
 			switch GRPCHeaderMatchTypeDerefOr(headerMatch.Type, gwapiv1.GRPCHeaderMatchExact) {
 			case gwapiv1.GRPCHeaderMatchExact:
@@ -884,12 +884,13 @@ func (t *Translator) processHTTPRouteParentRefListener(route RouteContext, route
 	return hasHostnameIntersection
 }
 
-func buildResourceMetadata(resource client.Object, sectionName *gwapiv1.SectionName) *ir.ResourceMetadata {
+func buildResourceMetadata(resource client.Object, sectionName *gwapiv1.SectionName, ruleIdx int) *ir.ResourceMetadata {
 	metadata := &ir.ResourceMetadata{
 		Kind:        resource.GetObjectKind().GroupVersionKind().Kind,
 		Name:        resource.GetName(),
 		Namespace:   resource.GetNamespace(),
 		Annotations: filterEGPrefix(resource.GetAnnotations()),
+		RuleIndex:   ruleIdx,
 	}
 	if sectionName != nil {
 		metadata.SectionName = string(*sectionName)
@@ -1018,8 +1019,9 @@ func (t *Translator) processTLSRouteParentRefs(tlsRoute *TLSRouteContext, resour
 					Destination: &ir.RouteDestination{
 						Name:     destName,
 						Settings: destSettings,
-						Metadata: buildResourceMetadata(tlsRoute, nil),
+						Metadata: buildResourceMetadata(tlsRoute, nil, 0),
 					},
+					Metadata: buildResourceMetadata(tlsRoute, nil, 0),
 				}
 				irListener.Routes = append(irListener.Routes, irRoute)
 
@@ -1169,7 +1171,7 @@ func (t *Translator) processUDPRouteParentRefs(udpRoute *UDPRouteContext, resour
 					Destination: &ir.RouteDestination{
 						Name:     destName,
 						Settings: destSettings,
-						Metadata: buildResourceMetadata(udpRoute, nil),
+						Metadata: buildResourceMetadata(udpRoute, nil, 0),
 					},
 				}
 				irListener.Route = irRoute
@@ -1318,8 +1320,9 @@ func (t *Translator) processTCPRouteParentRefs(tcpRoute *TCPRouteContext, resour
 					Destination: &ir.RouteDestination{
 						Name:     destName,
 						Settings: destSettings,
-						Metadata: buildResourceMetadata(tcpRoute, nil),
+						Metadata: buildResourceMetadata(tcpRoute, nil, 0),
 					},
+					Metadata: buildResourceMetadata(tcpRoute, nil, 0),
 				}
 
 				if irListener.TLS != nil {
@@ -1529,7 +1532,7 @@ func (t *Translator) processServiceImportDestinationSetting(
 		Protocol:    protocol,
 		Endpoints:   endpoints,
 		AddressType: addrType,
-		Metadata:    buildResourceMetadata(serviceImport, ptr.To(gwapiv1.SectionName(strconv.Itoa(int(*backendRef.Port))))),
+		Metadata:    buildResourceMetadata(serviceImport, ptr.To(gwapiv1.SectionName(strconv.Itoa(int(*backendRef.Port)))), 0),
 	}
 }
 
@@ -1576,7 +1579,7 @@ func (t *Translator) processServiceDestinationSetting(
 		Endpoints:               endpoints,
 		AddressType:             addrType,
 		ZoneAwareRoutingEnabled: isZoneAwareRoutingEnabled(service),
-		Metadata:                buildResourceMetadata(service, ptr.To(gwapiv1.SectionName(strconv.Itoa(int(*backendRef.Port))))),
+		Metadata:                buildResourceMetadata(service, ptr.To(gwapiv1.SectionName(strconv.Itoa(int(*backendRef.Port)))), 0),
 	}
 }
 
@@ -1958,7 +1961,7 @@ func (t *Translator) processBackendDestinationSetting(
 		}
 	}
 
-	ds.Metadata = buildResourceMetadata(backend, nil)
+	ds.Metadata = buildResourceMetadata(backend, nil, 0)
 
 	return ds
 }
