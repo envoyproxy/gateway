@@ -941,6 +941,20 @@ _Appears in:_
 | `attributes` | _object (keys:string, values:string)_ |  false  |  | Additional Attributes to set for the generated cookie. |
 
 
+#### CookieConfig
+
+
+
+
+
+_Appears in:_
+- [OIDCCookieConfig](#oidccookieconfig)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `sameSite` | _string_ |  false  | Strict |  |
+
+
 #### CustomHeaderExtensionSettings
 
 
@@ -3177,7 +3191,7 @@ _Appears in:_
 | `clientID` | _string_ |  true  |  | The client ID to be used in the OIDC<br />[Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest). |
 | `clientSecret` | _[SecretObjectReference](https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1.SecretObjectReference)_ |  true  |  | The Kubernetes secret which contains the OIDC client secret to be used in the<br />[Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest).<br />This is an Opaque secret. The client secret should be stored in the key<br />"client-secret". |
 | `cookieNames` | _[OIDCCookieNames](#oidccookienames)_ |  false  |  | The optional cookie name overrides to be used for Bearer and IdToken cookies in the<br />[Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest).<br />If not specified, uses a randomly generated suffix |
-| `cookieConfigs` | _[OIDCCookieConfigs](#oidccookieconfigs)_ |  false  |  | CookieConfigs allows overriding the SameSite attribute for OIDC cookies.<br />If a specific cookie is not configured, it will use the "Disabled" SameSite policy and xds will omit SameSite when generating the cookie. |
+| `cookieConfig` | _[OIDCCookieConfig](#oidccookieconfig)_ |  false  |  | CookieConfigs allows overriding the SameSite attribute for OIDC cookies.<br />If a specific cookie is not configured, it will use the "Disabled" SameSite policy and xds will omit SameSite when generating the cookie. |
 | `cookieDomain` | _string_ |  false  |  | The optional domain to set the access and ID token cookies on.<br />If not set, the cookies will default to the host of the request, not including the subdomains.<br />If set, the cookies will be set on the specified domain and all subdomains.<br />This means that requests to any subdomain will not require reauthentication after users log in to the parent domain. |
 | `scopes` | _string array_ |  false  |  | The OIDC scopes to be used in the<br />[Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest).<br />The "openid" scope is always added to the list of scopes if not already<br />specified. |
 | `resources` | _string array_ |  false  |  | The OIDC resources to be used in the<br />[Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest). |
@@ -3198,29 +3212,17 @@ _Appears in:_
 
 
 _Appears in:_
-- [OIDCCookieConfigs](#oidccookieconfigs)
-
-| Field | Type | Required | Default | Description |
-| ---   | ---  | ---      | ---     | ---         |
-| `sameSite` | _string_ |  false  | Disabled |  |
-
-
-#### OIDCCookieConfigs
-
-ODICCookieConfigs provides configurable mappings for SameSite attributes on OIDC Cookies.
-
-_Appears in:_
 - [OIDC](#oidc)
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `bearerToken` | _[OIDCCookieConfig](#oidccookieconfig)_ |  true  |  |  |
-| `oauthHmac` | _[OIDCCookieConfig](#oidccookieconfig)_ |  true  |  |  |
-| `oauthExpires` | _[OIDCCookieConfig](#oidccookieconfig)_ |  true  |  |  |
-| `idToken` | _[OIDCCookieConfig](#oidccookieconfig)_ |  true  |  |  |
-| `RefreshToken` | _[OIDCCookieConfig](#oidccookieconfig)_ |  true  |  |  |
-| `oauthNonce` | _[OIDCCookieConfig](#oidccookieconfig)_ |  true  |  |  |
-| `codeVerifier` | _[OIDCCookieConfig](#oidccookieconfig)_ |  true  |  |  |
+| `bearerToken` | _[CookieConfig](#cookieconfig)_ |  true  |  |  |
+| `oauthHmac` | _[CookieConfig](#cookieconfig)_ |  true  |  |  |
+| `oauthExpires` | _[CookieConfig](#cookieconfig)_ |  true  |  |  |
+| `idToken` | _[CookieConfig](#cookieconfig)_ |  true  |  |  |
+| `RefreshToken` | _[CookieConfig](#cookieconfig)_ |  true  |  |  |
+| `oauthNonce` | _[CookieConfig](#cookieconfig)_ |  true  |  |  |
+| `codeVerifier` | _[CookieConfig](#cookieconfig)_ |  true  |  |  |
 
 
 #### OIDCCookieNames

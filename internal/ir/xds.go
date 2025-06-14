@@ -1131,7 +1131,7 @@ type OIDC struct {
 	// CookieConfigs allows overriding the SameSite attribute for OIDC cookies.
 	// If a specific cookie is not configured, it will use the default xds value of disabled.
 	// +optional
-	CookieConfigs *egv1a1.OIDCCookieConfigs `json:"cookieConfigs,omitempty"`
+	CookieConfig *egv1a1.OIDCCookieConfig `json:"cookieConfig,omitempty"`
 
 	// Skips OIDC authentication when the request contains any header that will be extracted by the JWT
 	// filter, normally "Authorization: Bearer ...". This is typically used for non-browser clients that

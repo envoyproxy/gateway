@@ -2397,9 +2397,9 @@ func (in *OIDC) DeepCopyInto(out *OIDC) {
 		*out = new(string)
 		**out = **in
 	}
-	if in.CookieConfigs != nil {
-		in, out := &in.CookieConfigs, &out.CookieConfigs
-		*out = new(v1alpha1.OIDCCookieConfigs)
+	if in.CookieConfig != nil {
+		in, out := &in.CookieConfig, &out.CookieConfig
+		*out = new(v1alpha1.OIDCCookieConfig)
 		(*in).DeepCopyInto(*out)
 	}
 	if in.DenyRedirect != nil {

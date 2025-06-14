@@ -236,9 +236,9 @@ func oauth2Config(securityFeatures *ir.SecurityFeatures) (*oauth2v3.OAuth2, erro
 	return oauth2, nil
 }
 
-func getSameSiteOrDefault(config *egv1a1.OIDCCookieConfig) oauth2v3.CookieConfig_SameSite {
+func getSameSiteOrDefault(config *egv1a1.CookieConfig) oauth2v3.CookieConfig_SameSite {
 	if config == nil || config.SameSite == nil {
-		return oauth2v3.CookieConfig_DISABLED
+		return oauth2v3.CookieConfig_STRICT
 	}
 
 	samesite := egv1a1.SameSite(*config.SameSite)
@@ -253,39 +253,39 @@ func getSameSiteOrDefault(config *egv1a1.OIDCCookieConfig) oauth2v3.CookieConfig
 	case egv1a1.SameSiteDisabled:
 		return oauth2v3.CookieConfig_DISABLED
 	default:
-		return oauth2v3.CookieConfig_DISABLED
+		return oauth2v3.CookieConfig_STRICT
 	}
 }
 
 // buildCookieConfigs translates the OIDC configuration from the US
 func buildCookieConfigs(oidc *ir.OIDC) *oauth2v3.CookieConfigs {
-	cookieConfigs := &oauth2v3.CookieConfigs{
-		BearerTokenCookieConfig:  &oauth2v3.CookieConfig{SameSite: oauth2v3.CookieConfig_DISABLED},
-		OauthHmacCookieConfig:    &oauth2v3.CookieConfig{SameSite: oauth2v3.CookieConfig_DISABLED},
-		OauthExpiresCookieConfig: &oauth2v3.CookieConfig{SameSite: oauth2v3.CookieConfig_DISABLED},
-		IdTokenCookieConfig:      &oauth2v3.CookieConfig{SameSite: oauth2v3.CookieConfig_DISABLED},
-		RefreshTokenCookieConfig: &oauth2v3.CookieConfig{SameSite: oauth2v3.CookieConfig_DISABLED},
-		OauthNonceCookieConfig:   &oauth2v3.CookieConfig{SameSite: oauth2v3.CookieConfig_DISABLED},
-		CodeVerifierCookieConfig: &oauth2v3.CookieConfig{SameSite: oauth2v3.CookieConfig_DISABLED},
+	cookieConfig := &oauth2v3.CookieConfigs{
+		BearerTokenCookieConfig:  &oauth2v3.CookieConfig{SameSite: oauth2v3.CookieConfig_STRICT},
+		OauthHmacCookieConfig:    &oauth2v3.CookieConfig{SameSite: oauth2v3.CookieConfig_STRICT},
+		OauthExpiresCookieConfig: &oauth2v3.CookieConfig{SameSite: oauth2v3.CookieConfig_STRICT},
+		IdTokenCookieConfig:      &oauth2v3.CookieConfig{SameSite: oauth2v3.CookieConfig_STRICT},
+		RefreshTokenCookieConfig: &oauth2v3.CookieConfig{SameSite: oauth2v3.CookieConfig_STRICT},
+		OauthNonceCookieConfig:   &oauth2v3.CookieConfig{SameSite: oauth2v3.CookieConfig_STRICT},
+		CodeVerifierCookieConfig: &oauth2v3.CookieConfig{SameSite: oauth2v3.CookieConfig_STRICT},
 	}
 
 	// If the user did not specify any custom cookie configurations at all, return the defaults.
-	if oidc.CookieConfigs == nil {
-		return cookieConfigs
+	if oidc.CookieConfig == nil {
+		return cookieConfig
 	}
 
 	// Apply the user-defined SameSite policy for each cookie if it has been configured.
 	// The helper function handles the logic of falling back to DISABLED if a specific
 	// cookie's configuration is omitted in the CRD.
-	cookieConfigs.BearerTokenCookieConfig.SameSite = getSameSiteOrDefault(oidc.CookieConfigs.BearerToken)
-	cookieConfigs.OauthHmacCookieConfig.SameSite = getSameSiteOrDefault(oidc.CookieConfigs.OauthHmac)
-	cookieConfigs.OauthExpiresCookieConfig.SameSite = getSameSiteOrDefault(oidc.CookieConfigs.OauthExpires)
-	cookieConfigs.IdTokenCookieConfig.SameSite = getSameSiteOrDefault(oidc.CookieConfigs.IdToken)
-	cookieConfigs.RefreshTokenCookieConfig.SameSite = getSameSiteOrDefault(oidc.CookieConfigs.RefreshToken)
-	cookieConfigs.OauthNonceCookieConfig.SameSite = getSameSiteOrDefault(oidc.CookieConfigs.OauthNonce)
-	cookieConfigs.CodeVerifierCookieConfig.SameSite = getSameSiteOrDefault(oidc.CookieConfigs.CodeVerifier)
+	cookieConfig.BearerTokenCookieConfig.SameSite = getSameSiteOrDefault(oidc.CookieConfig.BearerToken)
+	cookieConfig.OauthHmacCookieConfig.SameSite = getSameSiteOrDefault(oidc.CookieConfig.OauthHmac)
+	cookieConfig.OauthExpiresCookieConfig.SameSite = getSameSiteOrDefault(oidc.CookieConfig.OauthExpires)
+	cookieConfig.IdTokenCookieConfig.SameSite = getSameSiteOrDefault(oidc.CookieConfig.IDToken)
+	cookieConfig.RefreshTokenCookieConfig.SameSite = getSameSiteOrDefault(oidc.CookieConfig.RefreshToken)
+	cookieConfig.OauthNonceCookieConfig.SameSite = getSameSiteOrDefault(oidc.CookieConfig.OauthNonce)
+	cookieConfig.CodeVerifierCookieConfig.SameSite = getSameSiteOrDefault(oidc.CookieConfig.CodeVerifier)
 
-	return cookieConfigs
+	return cookieConfig
 }
 
 func buildDenyRedirectMatcher(oidc *ir.OIDC) []*routev3.HeaderMatcher {
