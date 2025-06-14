@@ -75,7 +75,7 @@ backendTrafficPolicies:
       name: gateway-1
     telemetry:
       metrics:
-        routeStatName: "%ROUTE_KIND%/%ROUTE_NAMESPACE%/%ROUTE_NAME%/%ROUTE_RULE_NAME%/%ROUTE_RULE_NUMBER%"
+        routeStatName: "%ROUTE_KIND%/%ROUTE_NAMESPACE%/%ROUTE_NAME%"
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: BackendTrafficPolicy
   metadata:
@@ -88,4 +88,4 @@ backendTrafficPolicies:
       name: httproute-1
     telemetry:
       metrics:
-        routeStatName: "route=/test,kind=%ROUTE_KIND%,ns=%ROUTE_NAMESPACE%,name=%ROUTE_NAME%,ruleName=%ROUTE_RULE_NAME%,ruleNumber=%ROUTE_RULE_NUMBER%"
+        routeStatName: "route=/test,kind=%ROUTE_KIND%,ns=%ROUTE_NAMESPACE%,name=%ROUTE_NAME%"

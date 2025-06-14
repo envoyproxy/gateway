@@ -20,7 +20,6 @@
         cluster: first-route-dest
         upgradeConfigs:
         - upgradeType: websocket
-      statPrefix: route=/test,kind=HTTPRoute,ns=default,name=httproute-1,ruleName=first,ruleNumber=0
     - match:
         pathSeparatedPrefix: /second
       metadata:
@@ -36,4 +35,3 @@
         cluster: second-route-dest
         upgradeConfigs:
         - upgradeType: websocket
-      statPrefix: route=/test,kind=HTTPRoute,ns=default,name=httproute-1,ruleName=second,ruleNumber=1

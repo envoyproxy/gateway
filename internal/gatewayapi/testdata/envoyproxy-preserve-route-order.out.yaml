@@ -208,7 +208,6 @@ xdsIR:
             kind: HTTPRoute
             name: httproute-1
             namespace: default
-            ruleIndex: 1
           name: httproute/default/httproute-1/rule/1
           settings:
           - addressType: IP
@@ -228,7 +227,6 @@ xdsIR:
           kind: HTTPRoute
           name: httproute-1
           namespace: default
-          ruleIndex: 1
         name: httproute/default/httproute-1/rule/1/match/0/*
         pathMatch:
           distinct: false
@@ -239,7 +237,6 @@ xdsIR:
             kind: HTTPRoute
             name: httproute-1
             namespace: default
-            ruleIndex: 2
           name: httproute/default/httproute-1/rule/2
           settings:
           - addressType: IP
@@ -259,7 +256,6 @@ xdsIR:
           kind: HTTPRoute
           name: httproute-1
           namespace: default
-          ruleIndex: 2
         name: httproute/default/httproute-1/rule/2/match/0/*
         pathMatch:
           distinct: false
@@ -270,7 +266,6 @@ xdsIR:
             kind: HTTPRoute
             name: httproute-1
             namespace: default
-            ruleIndex: 3
           name: httproute/default/httproute-1/rule/3
           settings:
           - addressType: IP
@@ -290,7 +285,6 @@ xdsIR:
           kind: HTTPRoute
           name: httproute-1
           namespace: default
-          ruleIndex: 3
         name: httproute/default/httproute-1/rule/3/match/0/*
         pathMatch:
           distinct: false
@@ -301,7 +295,6 @@ xdsIR:
             kind: HTTPRoute
             name: httproute-1
             namespace: default
-            ruleIndex: 4
           name: httproute/default/httproute-1/rule/4
           settings:
           - addressType: IP
@@ -321,7 +314,6 @@ xdsIR:
           kind: HTTPRoute
           name: httproute-1
           namespace: default
-          ruleIndex: 4
         name: httproute/default/httproute-1/rule/4/match/0/*
         pathMatch:
           distinct: false
@@ -332,7 +324,6 @@ xdsIR:
             kind: HTTPRoute
             name: httproute-1
             namespace: default
-            ruleIndex: 5
           name: httproute/default/httproute-1/rule/5
           settings:
           - addressType: IP
@@ -352,7 +343,6 @@ xdsIR:
           kind: HTTPRoute
           name: httproute-1
           namespace: default
-          ruleIndex: 5
         name: httproute/default/httproute-1/rule/5/match/0/*
         pathMatch:
           distinct: false
@@ -363,7 +353,6 @@ xdsIR:
             kind: HTTPRoute
             name: httproute-1
             namespace: default
-            ruleIndex: 6
           name: httproute/default/httproute-1/rule/6
           settings:
           - addressType: IP
@@ -383,7 +372,6 @@ xdsIR:
           kind: HTTPRoute
           name: httproute-1
           namespace: default
-          ruleIndex: 6
         name: httproute/default/httproute-1/rule/6/match/0/*
         pathMatch:
           distinct: false
@@ -394,7 +382,6 @@ xdsIR:
             kind: HTTPRoute
             name: httproute-1
             namespace: default
-            ruleIndex: 7
           name: httproute/default/httproute-1/rule/7
           settings:
           - addressType: IP
@@ -414,7 +401,6 @@ xdsIR:
           kind: HTTPRoute
           name: httproute-1
           namespace: default
-          ruleIndex: 7
         name: httproute/default/httproute-1/rule/7/match/0/*
         pathMatch:
           distinct: false

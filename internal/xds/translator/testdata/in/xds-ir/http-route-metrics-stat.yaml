@@ -20,7 +20,7 @@ http:
     traffic:
       telemetry:
         metrics:
-          routeStatName: "route=/test,kind=%ROUTE_KIND%,ns=%ROUTE_NAMESPACE%,name=%ROUTE_NAME%,ruleName=%ROUTE_RULE_NAME%,ruleNumber=%ROUTE_RULE_NUMBER%"
+          routeStatName: "route=/test,kind=%ROUTE_KIND%,ns=%ROUTE_NAMESPACE%,name=%ROUTE_NAME%,ruleName=%ROUTE_RULE_NAME%"
     hostname: "*"
     destination:
       name: "first-route-dest"
@@ -58,7 +58,7 @@ http:
     traffic:
       telemetry:
         metrics:
-          routeStatName: "route=/test,kind=%ROUTE_KIND%,ns=%ROUTE_NAMESPACE%,name=%ROUTE_NAME%,ruleName=%ROUTE_RULE_NAME%,ruleNumber=%ROUTE_RULE_NUMBER%"
+          routeStatName: "route=/test,kind=%ROUTE_KIND%,ns=%ROUTE_NAMESPACE%,name=%ROUTE_NAME%,ruleName=%ROUTE_RULE_NAME%"
     destination:
       name: "second-route-dest"
       settings:

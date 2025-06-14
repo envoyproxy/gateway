@@ -156,10 +156,6 @@ xdsIR:
             name: tlsroute/default/tlsroute-1/rule/-1/backend/0
             protocol: HTTPS
             weight: 1
-        metadata:
-          kind: TLSRoute
-          name: tlsroute-1
-          namespace: default
         name: tlsroute/default/tlsroute-1
         tls:
           inspector:
@@ -183,10 +179,6 @@ xdsIR:
             name: tlsroute/default/tlsroute-2/rule/-1/backend/0
             protocol: HTTPS
             weight: 1
-        metadata:
-          kind: TLSRoute
-          name: tlsroute-2
-          namespace: default
         name: tlsroute/default/tlsroute-2
         tls:
           inspector:

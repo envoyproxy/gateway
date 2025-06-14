@@ -18,4 +18,4 @@ tcp:
           port: 50001
         name: "tcp-route-simple-dest/backend/0"
     metrics:
-      routeStatName: "route=/test,kind=%ROUTE_KIND%,ns=%ROUTE_NAMESPACE%,name=%ROUTE_NAME%,ruleName=%ROUTE_RULE_NAME%,ruleNumber=%ROUTE_RULE_NUMBER%"
+      routeStatName: "route=/test,kind=%ROUTE_KIND%,ns=%ROUTE_NAMESPACE%,name=%ROUTE_NAME%,ruleName=%ROUTE_RULE_NAME%"

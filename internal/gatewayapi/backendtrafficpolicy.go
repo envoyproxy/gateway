@@ -485,6 +485,11 @@ func applyTrafficFeatureToRoute(route RouteContext,
 	tf *ir.TrafficFeatures, errs error,
 	policy *egv1a1.BackendTrafficPolicy, x *ir.Xds,
 ) {
+	statName := ""
+	if tf.Telemetry != nil && tf.Telemetry.Metrics != nil {
+		statName = buildRouteStatName(route, ptr.Deref(tf.Telemetry.Metrics.RouteStatName, ""))
+	}
+
 	prefix := irRoutePrefix(route)
 	for _, tcp := range x.TCP {
 		for _, r := range tcp.Routes {
@@ -497,9 +502,7 @@ func applyTrafficFeatureToRoute(route RouteContext,
 				r.Timeout = tf.Timeout
 				r.BackendConnection = tf.BackendConnection
 				r.DNS = tf.DNS
-				if tf.Telemetry != nil {
-					r.Metrics = tf.Telemetry.Metrics
-				}
+				r.StatName = statName
 			}
 		}
 	}
@@ -518,6 +521,7 @@ func applyTrafficFeatureToRoute(route RouteContext,
 		for _, r := range http.Routes {
 			// Apply if there is a match
 			if strings.HasPrefix(r.Name, prefix) {
+				r.StatName = statName
 				if errs != nil {
 					// Return a 500 direct response
 					r.DirectResponse = &ir.CustomResponse{
@@ -1174,9 +1178,21 @@ func validateTelemetry(telemetry *egv1a1.BackendTelemetry) error {
 		return nil
 	}
 
-	if telemetry.Metrics != nil && telemetry.Metrics.RouteStatName != "" {
-		return egv1a1validation.ValidateRouteStatName(telemetry.Metrics.RouteStatName)
+	if telemetry.Metrics != nil && ptr.Deref(telemetry.Metrics.RouteStatName, "") != "" {
+		return egv1a1validation.ValidateRouteStatName(*telemetry.Metrics.RouteStatName)
 	}
 
 	return nil
+}
+
+func buildRouteStatName(route RouteContext, routeStatName string) string {
+	if routeStatName == "" {
+		return ""
+	}
+
+	statName := strings.ReplaceAll(routeStatName, egv1a1.StatFormatterRouteName, route.GetName())
+	statName = strings.ReplaceAll(statName, egv1a1.StatFormatterRouteNamespace, route.GetNamespace())
+	statName = strings.ReplaceAll(statName, egv1a1.StatFormatterRouteKind, string(GetRouteType(route)))
+
+	return statName
 }
