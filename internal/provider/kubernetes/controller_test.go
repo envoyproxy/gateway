@@ -11,7 +11,9 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -1021,4 +1023,33 @@ func setupReferenceGrantReconciler(objs []client.Object) *gatewayAPIReconciler {
 		WithIndex(&gwapiv1b1.ReferenceGrant{}, targetRefGrantRouteIndex, getReferenceGrantIndexerFunc).
 		Build()
 	return r
+}
+
+func TestIsTransientError(t *testing.T) {
+	serverTimeoutErr := kerrors.NewServerTimeout(
+		schema.GroupResource{Group: "core", Resource: "pods"}, "list", 10)
+	timeoutErr := kerrors.NewTimeoutError("request timeout", 1)
+	tooManyRequestsErr := kerrors.NewTooManyRequests("too many requests", 1)
+	serviceUnavailableErr := kerrors.NewServiceUnavailable("service unavailable")
+	badRequestErr := kerrors.NewBadRequest("bad request")
+
+	testCases := []struct {
+		name     string
+		err      error
+		expected bool
+	}{
+		{"ServerTimeout", serverTimeoutErr, true},
+		{"Timeout", timeoutErr, true},
+		{"TooManyRequests", tooManyRequestsErr, true},
+		{"ServiceUnavailable", serviceUnavailableErr, true},
+		{"BadRequest", badRequestErr, false},
+		{"NilError", nil, false},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			actual := isTransientError(tc.err)
+			require.Equal(t, tc.expected, actual)
+		})
+	}
 }
