@@ -421,10 +421,11 @@ func (c *customResponse) buildRedirectAction(r ir.ResponseOverrideRule) (*anypb.
 
 func (c *customResponse) buildResponseAction(r ir.ResponseOverrideRule) (*anypb.Any, error) {
 	response := &policyv3.LocalResponsePolicy{}
+
 	if r.Response.Body != nil && *r.Response.Body != "" {
-		response.Body = &corev3.DataSource{
-			Specifier: &corev3.DataSource_InlineString{
-				InlineString: *r.Response.Body,
+		response.BodyFormat = &corev3.SubstitutionFormatString{
+			Format: &corev3.SubstitutionFormatString_TextFormat{
+				TextFormat: *r.Response.Body,
 			},
 		}
 	}
@@ -437,6 +438,25 @@ func (c *customResponse) buildResponseAction(r ir.ResponseOverrideRule) (*anypb.
 			},
 			AppendAction: corev3.HeaderValueOption_OVERWRITE_IF_EXISTS_OR_ADD,
 		})
+	}
+
+	for _, header := range r.Response.ResponseHeadersToAdd {
+		var appendAction corev3.HeaderValueOption_HeaderAppendAction
+		if header.Append {
+			appendAction = corev3.HeaderValueOption_APPEND_IF_EXISTS_OR_ADD
+		} else {
+			appendAction = corev3.HeaderValueOption_OVERWRITE_IF_EXISTS_OR_ADD
+		}
+
+		for _, value := range header.Value {
+			response.ResponseHeadersToAdd = append(response.ResponseHeadersToAdd, &corev3.HeaderValueOption{
+				Header: &corev3.HeaderValue{
+					Key:   header.Name,
+					Value: value,
+				},
+				AppendAction: appendAction,
+			})
+		}
 	}
 
 	if r.Response.StatusCode != nil {

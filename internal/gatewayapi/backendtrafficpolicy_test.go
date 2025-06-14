@@ -186,3 +186,81 @@ func TestBuildHTTPProtocolUpgradeConfig(t *testing.T) {
 		})
 	}
 }
+
+func TestResponseHeadersToAddAppend(t *testing.T) {
+	tests := []struct {
+		name     string
+		headers  []egv1a1.ResponseHeaderToAdd
+		expected []ir.AddHeader
+	}{
+		{
+			name: "append-nil-defaults-to-false",
+			headers: []egv1a1.ResponseHeaderToAdd{
+				{
+					Name:   "test-header",
+					Value:  "test-value",
+					Append: nil, // should default to false
+				},
+			},
+			expected: []ir.AddHeader{
+				{
+					Name:   "test-header",
+					Value:  []string{"test-value"},
+					Append: false,
+				},
+			},
+		},
+		{
+			name: "append-explicitly-true",
+			headers: []egv1a1.ResponseHeaderToAdd{
+				{
+					Name:   "test-header",
+					Value:  "test-value",
+					Append: ptr.To(true),
+				},
+			},
+			expected: []ir.AddHeader{
+				{
+					Name:   "test-header",
+					Value:  []string{"test-value"},
+					Append: true,
+				},
+			},
+		},
+		{
+			name: "append-explicitly-false",
+			headers: []egv1a1.ResponseHeaderToAdd{
+				{
+					Name:   "test-header",
+					Value:  "test-value",
+					Append: ptr.To(false),
+				},
+			},
+			expected: []ir.AddHeader{
+				{
+					Name:   "test-header",
+					Value:  []string{"test-value"},
+					Append: false,
+				},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := make([]ir.AddHeader, 0, len(tt.headers))
+			for _, h := range tt.headers {
+				appendHeader := false
+				if h.Append != nil {
+					appendHeader = *h.Append
+				}
+				result = append(result, ir.AddHeader{
+					Name:   h.Name,
+					Value:  []string{h.Value},
+					Append: appendHeader,
+				})
+			}
+			require.Equal(t, tt.expected, result)
+		})
+	}
+}
