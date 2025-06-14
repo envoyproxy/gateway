@@ -522,6 +522,10 @@ func mirrorPercentByPolicy(mirror *ir.MirrorPolicy) *corev3.RuntimeFractionalPer
 }
 
 func buildXdsAddedHeaders(headersToAdd []ir.AddHeader) []*corev3.HeaderValueOption {
+	if len(headersToAdd) == 0 {
+		return nil
+	}
+
 	headerValueOptions := []*corev3.HeaderValueOption{}
 
 	for _, header := range headersToAdd {
