@@ -1544,6 +1544,61 @@ func TestEnvoyProxyProvider(t *testing.T) {
 				}
 			},
 		},
+		{
+			desc: "valid: image set, imageRepository not set",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					Provider: &egv1a1.EnvoyProxyProvider{
+						Type: egv1a1.ProviderTypeKubernetes,
+						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
+							EnvoyDeployment: &egv1a1.KubernetesDeploymentSpec{
+								Container: &egv1a1.KubernetesContainerSpec{
+									Image: ptr.To("envoyproxy/envoy:v1.2.3"),
+								},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "valid: imageRepository set, image not set",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					Provider: &egv1a1.EnvoyProxyProvider{
+						Type: egv1a1.ProviderTypeKubernetes,
+						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
+							EnvoyDeployment: &egv1a1.KubernetesDeploymentSpec{
+								Container: &egv1a1.KubernetesContainerSpec{
+									ImageRepository: ptr.To("envoyproxy/envoy"),
+								},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "invalid: both image and imageRepository set",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					Provider: &egv1a1.EnvoyProxyProvider{
+						Type: egv1a1.ProviderTypeKubernetes,
+						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
+							EnvoyDeployment: &egv1a1.KubernetesDeploymentSpec{
+								Container: &egv1a1.KubernetesContainerSpec{
+									Image:           ptr.To("envoyproxy/envoy:v1.2.3"),
+									ImageRepository: ptr.To("envoyproxy/envoy"),
+								},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{"Either image or imageRepository can be set."},
+		},
 	}
 
 	for _, tc := range cases {
