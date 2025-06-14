@@ -26,8 +26,8 @@
                       name: backendtrafficpolicy/default/policy-for-gateway/responseoverride/rule/0
                       typedConfig:
                         '@type': type.googleapis.com/envoy.extensions.http.custom_response.local_response_policy.v3.LocalResponsePolicy
-                        body:
-                          inlineString: gateway-1 Not Found
+                        bodyFormat:
+                          textFormat: gateway-1 Not Found
                         responseHeadersToAdd:
                         - appendAction: OVERWRITE_IF_EXISTS_OR_ADD
                           header:
@@ -46,8 +46,8 @@
                       name: backendtrafficpolicy/default/policy-for-gateway/responseoverride/rule/1
                       typedConfig:
                         '@type': type.googleapis.com/envoy.extensions.http.custom_response.local_response_policy.v3.LocalResponsePolicy
-                        body:
-                          inlineString: |
+                        bodyFormat:
+                          textFormat: |
                             {
                               "error": "Internal Server Error"
                             }

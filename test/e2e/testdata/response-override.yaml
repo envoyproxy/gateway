@@ -43,7 +43,7 @@ spec:
         contentType: text/plain
         body:
           type: Inline
-          inline: "Oops! Your request is not found."
+          inline: "%RESPONSE_CODE% Oops! Your request is not found."
     - match:
         statusCodes:
           - type: Value
