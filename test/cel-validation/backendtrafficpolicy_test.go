@@ -1874,6 +1874,80 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 			},
 			wantErrors: []string{`Invalid value: 200: spec.healthCheck.panicThreshold in body should be less than or equal to 100`},
 		},
+		{
+			desc: "websocket with connect config",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRefs: []gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
+							{
+								LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
+									Group: "gateway.networking.k8s.io",
+									Kind:  "Gateway",
+									Name:  "eg",
+								},
+							},
+						},
+					},
+					HTTPUpgrade: []*egv1a1.ProtocolUpgradeConfig{
+						{
+							Type:    "websocket",
+							Connect: &egv1a1.ConnectConfig{},
+						},
+					},
+				}
+			},
+			wantErrors: []string{"The connect configuration is only allowed when the type is CONNECT."},
+		},
+		{
+			desc: "http connect config",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRefs: []gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
+							{
+								LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
+									Group: "gateway.networking.k8s.io",
+									Kind:  "Gateway",
+									Name:  "eg",
+								},
+							},
+						},
+					},
+					HTTPUpgrade: []*egv1a1.ProtocolUpgradeConfig{
+						{
+							Type:    "CONNECT",
+							Connect: &egv1a1.ConnectConfig{},
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "http with connect config",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRefs: []gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
+							{
+								LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
+									Group: "gateway.networking.k8s.io",
+									Kind:  "Gateway",
+									Name:  "eg",
+								},
+							},
+						},
+					},
+					HTTPUpgrade: []*egv1a1.ProtocolUpgradeConfig{
+						{
+							Type: "CONNECT",
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
 	}
 
 	for _, tc := range cases {

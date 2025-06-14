@@ -37,5 +37,6 @@ http:
           prefix: /
         traffic:
           httpUpgrade:
-            - type: "websocket"
-            - type: "spdy/3.1"
+            - type: CONNECT
+              connect:
+                terminate: true
