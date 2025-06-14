@@ -40,7 +40,7 @@ type OIDC struct {
 	// CookieConfigs allows overriding the SameSite attribute for OIDC cookies.
 	// If a specific cookie is not configured, it will use the "Disabled" SameSite policy and xds will omit SameSite when generating the cookie.
 	// +optional
-	CookieConfigs *OIDCCookieConfigs `json:"cookieConfigs,omitempty"`
+	CookieConfig *OIDCCookieConfig `json:"cookieConfig,omitempty"`
 
 	// The optional domain to set the access and ID token cookies on.
 	// If not set, the cookies will default to the host of the request, not including the subdomains.
@@ -207,19 +207,19 @@ const (
 	SameSiteDisabled SameSite = "Disabled"
 )
 
-type OIDCCookieConfigs struct {
-	BearerToken  *OIDCCookieConfig `json:"bearerToken,omitempty"`
-	OauthHmac    *OIDCCookieConfig `json:"oauthHmac,omitempty"`
-	OauthExpires *OIDCCookieConfig `json:"oauthExpires,omitempty"`
-	IdToken      *OIDCCookieConfig `json:"idToken,omitempty"`
-	RefreshToken *OIDCCookieConfig `json:"RefreshToken,omitempty"`
-	OauthNonce   *OIDCCookieConfig `json:"oauthNonce,omitempty"`
-	CodeVerifier *OIDCCookieConfig `json:"codeVerifier,omitempty"`
+type OIDCCookieConfig struct {
+	BearerToken  *CookieConfig `json:"bearerToken,omitempty"`
+	OauthHmac    *CookieConfig `json:"oauthHmac,omitempty"`
+	OauthExpires *CookieConfig `json:"oauthExpires,omitempty"`
+	IDToken      *CookieConfig `json:"idToken,omitempty"`
+	RefreshToken *CookieConfig `json:"RefreshToken,omitempty"`
+	OauthNonce   *CookieConfig `json:"oauthNonce,omitempty"`
+	CodeVerifier *CookieConfig `json:"codeVerifier,omitempty"`
 }
 
-type OIDCCookieConfig struct {
+type CookieConfig struct {
 	// +optional
 	// +kubebuilder:validation:Enum=Lax;Strict;None;Disabled
-	// +kubebuilder:default=Disabled
+	// +kubebuilder:default=Strict
 	SameSite *string `json:"sameSite,omitempty"`
 }

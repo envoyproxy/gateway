@@ -3612,7 +3612,7 @@ spec:
                     required:
                     - name
                     type: object
-                  cookieConfigs:
+                  cookieConfig:
                     description: |-
                       CookieConfigs allows overriding the SameSite attribute for OIDC cookies.
                       If a specific cookie is not configured, it will use the "Disabled" SameSite policy and xds will omit SameSite when generating the cookie.
@@ -3620,7 +3620,7 @@ spec:
                       RefreshToken:
                         properties:
                           sameSite:
-                            default: Disabled
+                            default: Strict
                             enum:
                             - Lax
                             - Strict
@@ -3631,7 +3631,7 @@ spec:
                       bearerToken:
                         properties:
                           sameSite:
-                            default: Disabled
+                            default: Strict
                             enum:
                             - Lax
                             - Strict
@@ -3642,7 +3642,7 @@ spec:
                       codeVerifier:
                         properties:
                           sameSite:
-                            default: Disabled
+                            default: Strict
                             enum:
                             - Lax
                             - Strict
@@ -3653,7 +3653,7 @@ spec:
                       idToken:
                         properties:
                           sameSite:
-                            default: Disabled
+                            default: Strict
                             enum:
                             - Lax
                             - Strict
@@ -3664,7 +3664,7 @@ spec:
                       oauthExpires:
                         properties:
                           sameSite:
-                            default: Disabled
+                            default: Strict
                             enum:
                             - Lax
                             - Strict
@@ -3675,7 +3675,7 @@ spec:
                       oauthHmac:
                         properties:
                           sameSite:
-                            default: Disabled
+                            default: Strict
                             enum:
                             - Lax
                             - Strict
@@ -3686,7 +3686,7 @@ spec:
                       oauthNonce:
                         properties:
                           sameSite:
-                            default: Disabled
+                            default: Strict
                             enum:
                             - Lax
                             - Strict
