@@ -629,7 +629,7 @@ func (t *Translator) addXdsTCPFilterChain(
 
 	isTLSPassthrough := irRoute.TLS != nil && irRoute.TLS.TLSInspectorConfig != nil
 	isTLSTerminate := irRoute.TLS != nil && irRoute.TLS.Terminate != nil
-	statPrefix := irRoute.StatName
+	statPrefix := ptr.Deref(irRoute.StatName, "")
 	if statPrefix == "" {
 		statPrefix = "tcp"
 		if isTLSPassthrough {

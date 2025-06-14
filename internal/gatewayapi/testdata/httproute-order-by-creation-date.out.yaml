@@ -327,6 +327,7 @@ xdsIR:
             kind: HTTPRoute
             name: httproute-1
             namespace: default
+            ruleIndex: 1
           name: httproute/default/httproute-1/rule/1
           settings:
           - addressType: IP
@@ -346,6 +347,7 @@ xdsIR:
           kind: HTTPRoute
           name: httproute-1
           namespace: default
+          ruleIndex: 1
         name: httproute/default/httproute-1/rule/1/match/0/gateway_envoyproxy_io
         pathMatch:
           distinct: false
