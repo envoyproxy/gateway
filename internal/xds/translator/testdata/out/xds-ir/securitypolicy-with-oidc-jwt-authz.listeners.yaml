@@ -25,6 +25,21 @@
               - profile
               authType: BASIC_AUTH
               authorizationEndpoint: https://oidc.example.com/authorize
+              cookieConfigs:
+                bearerTokenCookieConfig:
+                  sameSite: STRICT
+                codeVerifierCookieConfig:
+                  sameSite: STRICT
+                idTokenCookieConfig:
+                  sameSite: STRICT
+                oauthExpiresCookieConfig:
+                  sameSite: STRICT
+                oauthHmacCookieConfig:
+                  sameSite: STRICT
+                oauthNonceCookieConfig:
+                  sameSite: STRICT
+                refreshTokenCookieConfig:
+                  sameSite: STRICT
               credentials:
                 clientId: prometheus
                 cookieNames:
