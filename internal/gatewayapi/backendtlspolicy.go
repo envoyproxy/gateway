@@ -21,10 +21,6 @@ import (
 	"github.com/envoyproxy/gateway/internal/ir"
 )
 
-const (
-	caCertsKey = "ca.crt"
-)
-
 func (t *Translator) applyBackendTLSSetting(
 	backendRef gwapiv1.BackendObjectReference,
 	backendNamespace string,
@@ -295,7 +291,7 @@ func getCaCertsFromCARefs(namespace string, caCertificates []gwapiv1.LocalObject
 		case resource.KindConfigMap:
 			cm := resources.GetConfigMap(namespace, string(caRef.Name))
 			if cm != nil {
-				if crt, dataOk := cm.Data[caCertsKey]; dataOk {
+				if crt, dataOk := cm.Data[caCertKey]; dataOk {
 					if ca != "" {
 						ca += "\n"
 					}
@@ -309,7 +305,7 @@ func getCaCertsFromCARefs(namespace string, caCertificates []gwapiv1.LocalObject
 		case resource.KindSecret:
 			secret := resources.GetSecret(namespace, string(caRef.Name))
 			if secret != nil {
-				if crt, dataOk := secret.Data[caCertsKey]; dataOk {
+				if crt, dataOk := secret.Data[caCertKey]; dataOk {
 					if ca != "" {
 						ca += "\n"
 					}
