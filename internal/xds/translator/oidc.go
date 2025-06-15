@@ -236,7 +236,7 @@ func oauth2Config(securityFeatures *ir.SecurityFeatures) (*oauth2v3.OAuth2, erro
 	return oauth2, nil
 }
 
-func getSameSiteOrDefault(config *egv1a1.CookieConfig) oauth2v3.CookieConfig_SameSite {
+func getSameSiteOrDefault(config *egv1a1.OIDCCookieConfig) oauth2v3.CookieConfig_SameSite {
 	if config == nil || config.SameSite == nil {
 		return oauth2v3.CookieConfig_STRICT
 	}
@@ -275,15 +275,16 @@ func buildCookieConfigs(oidc *ir.OIDC) *oauth2v3.CookieConfigs {
 	}
 
 	// Apply the user-defined SameSite policy for each cookie if it has been configured.
-	// The helper function handles the logic of falling back to DISABLED if a specific
+	// The helper function handles the logic of falling back to STRICT if a specific
 	// cookie's configuration is omitted in the CRD.
-	cookieConfig.BearerTokenCookieConfig.SameSite = getSameSiteOrDefault(oidc.CookieConfig.BearerToken)
-	cookieConfig.OauthHmacCookieConfig.SameSite = getSameSiteOrDefault(oidc.CookieConfig.OauthHmac)
-	cookieConfig.OauthExpiresCookieConfig.SameSite = getSameSiteOrDefault(oidc.CookieConfig.OauthExpires)
-	cookieConfig.IdTokenCookieConfig.SameSite = getSameSiteOrDefault(oidc.CookieConfig.IDToken)
-	cookieConfig.RefreshTokenCookieConfig.SameSite = getSameSiteOrDefault(oidc.CookieConfig.RefreshToken)
-	cookieConfig.OauthNonceCookieConfig.SameSite = getSameSiteOrDefault(oidc.CookieConfig.OauthNonce)
-	cookieConfig.CodeVerifierCookieConfig.SameSite = getSameSiteOrDefault(oidc.CookieConfig.CodeVerifier)
+	samesite := getSameSiteOrDefault(oidc.CookieConfig)
+	cookieConfig.BearerTokenCookieConfig.SameSite = samesite
+	cookieConfig.OauthHmacCookieConfig.SameSite = samesite
+	cookieConfig.OauthExpiresCookieConfig.SameSite = samesite
+	cookieConfig.IdTokenCookieConfig.SameSite = samesite
+	cookieConfig.RefreshTokenCookieConfig.SameSite = samesite
+	cookieConfig.OauthNonceCookieConfig.SameSite = samesite
+	cookieConfig.CodeVerifierCookieConfig.SameSite = samesite
 
 	return cookieConfig
 }
