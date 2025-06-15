@@ -147,3 +147,21 @@ namespaces:
     kind: Namespace
     metadata:
       name: test-ns
+endpointslices:
+  - apiVersion: discovery.k8s.io/v1
+    kind: EndpointSlice
+    metadata:
+      namespace: test-ns
+      name: endpointslice-service-3
+      labels:
+        kubernetes.io/service-name: service-3
+    addressType: IPv4
+    ports:
+      - name: http
+        port: 8080
+        protocol: TCP
+    endpoints:
+      - addresses:
+          - 7.7.7.7
+        conditions:
+          ready: true

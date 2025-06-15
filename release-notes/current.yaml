@@ -21,6 +21,7 @@ new features: |
   Added support for setting previous priorities retry predicate.
   Added support for using extension server policies to in PostTranslateModify hook.
   Added support for configuring cluster stat name for HTTPRoute and GRPCRoute in EnvoyProxy CRD.
+  Added support for returning 503 responses and reporting HTTPRoute and GRPCRoute status error when no valid backend endpoints exist.
 
 bug fixes: |
   Handle integer zone annotation values

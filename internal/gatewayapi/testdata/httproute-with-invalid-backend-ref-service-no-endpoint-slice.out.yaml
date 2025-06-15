@@ -44,7 +44,7 @@ httpRoutes:
   kind: HTTPRoute
   metadata:
     creationTimestamp: null
-    name: httproute-headless
+    name: httproute-1
     namespace: default
   spec:
     parentRefs:
@@ -52,8 +52,12 @@ httpRoutes:
       namespace: envoy-gateway
     rules:
     - backendRefs:
-      - name: headless-service
-        port: 80
+      - name: service-not-exist-endpoint-slice
+        port: 8080
+      matches:
+      - path:
+          type: Exact
+          value: /exact
   status:
     parents:
     - conditions:
@@ -63,9 +67,10 @@ httpRoutes:
         status: "True"
         type: Accepted
       - lastTransitionTime: null
-        message: Resolved all the Object references for the Route
-        reason: ResolvedRefs
-        status: "True"
+        message: 'Failed to process route rule 0 backendRef 0: no ready endpoints
+          for the related service default/service-not-exist-endpoint-slice.'
+        reason: EndpointSliceNotFound
+        status: "False"
         type: ResolvedRefs
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
@@ -74,17 +79,6 @@ httpRoutes:
 infraIR:
   envoy-gateway/gateway-1:
     proxy:
-      config:
-        apiVersion: gateway.envoyproxy.io/v1alpha1
-        kind: EnvoyProxy
-        metadata:
-          creationTimestamp: null
-          name: default
-          namespace: default
-        spec:
-          logging: {}
-          routingType: Endpoint
-        status: {}
       listeners:
       - address: null
         name: envoy-gateway/gateway-1/http
@@ -123,32 +117,19 @@ xdsIR:
         mergeSlashes: true
       port: 10080
       routes:
-      - destination:
-          metadata:
-            kind: HTTPRoute
-            name: httproute-headless
-            namespace: default
-          name: httproute/default/httproute-headless/rule/0
-          settings:
-          - addressType: IP
-            endpoints:
-            - host: 7.7.7.7
-              port: 80
-            metadata:
-              kind: Service
-              name: headless-service
-              namespace: default
-              sectionName: "80"
-            name: httproute/default/httproute-headless/rule/0/backend/0
-            protocol: HTTP
-            weight: 1
+      - directResponse:
+          statusCode: 503
         hostname: '*'
         isHTTP2: false
         metadata:
           kind: HTTPRoute
-          name: httproute-headless
+          name: httproute-1
           namespace: default
-        name: httproute/default/httproute-headless/rule/0/match/-1/*
+        name: httproute/default/httproute-1/rule/0/match/0/*
+        pathMatch:
+          distinct: false
+          exact: /exact
+          name: ""
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4

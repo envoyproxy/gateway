@@ -315,7 +315,11 @@ xdsIR:
                 namespace: default
               name: envoyextensionpolicy/default/policy-for-route-1/extproc/0
               settings:
-              - metadata:
+              - addressType: IP
+                endpoints:
+                - host: 8.8.8.8
+                  port: 8000
+                metadata:
                   kind: Service
                   name: grpc-backend-2
                   namespace: default
@@ -363,7 +367,11 @@ xdsIR:
                 namespace: envoy-gateway
               name: envoyextensionpolicy/envoy-gateway/policy-for-gateway-1/extproc/0
               settings:
-              - metadata:
+              - addressType: IP
+                endpoints:
+                - host: 7.7.7.7
+                  port: 9000
+                metadata:
                   kind: Service
                   name: grpc-backend
                   namespace: envoy-gateway

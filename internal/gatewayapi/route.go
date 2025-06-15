@@ -221,6 +221,7 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 		destName := irRouteDestinationName(httpRoute, ruleIdx)
 		allDs := []*ir.DestinationSetting{}
 		failedProcessDestination := false
+		failedProcessDestinationByNotFoundES := false
 		hasDynamicResolver := false
 		backendRefNames := make([]string, len(rule.BackendRefs))
 		// process each backendRef, and calculate the destination settings for this rule
@@ -232,7 +233,12 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 					fmt.Errorf("failed to process route rule %d backendRef %d: %w", ruleIdx, i, err),
 					err.Reason(),
 				))
-				failedProcessDestination = true
+				// Check for custom error reason to return 503 only if no endpoint, according to gateway api specification.
+				if err.Reason() == status.RouteReasonEndpointSliceNotFound {
+					failedProcessDestinationByNotFoundES = true
+				} else {
+					failedProcessDestination = true
+				}
 				continue
 			}
 
@@ -266,6 +272,12 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 			case failedProcessDestination:
 				irRoute.DirectResponse = &ir.CustomResponse{
 					StatusCode: ptr.To(uint32(500)),
+				}
+			// return 503 if endpoint does not exist.
+			// the error is already added to the error list when processing the destination.
+			case failedProcessDestinationByNotFoundES && len(allDs) == 0:
+				irRoute.DirectResponse = &ir.CustomResponse{
+					StatusCode: ptr.To(uint32(503)),
 				}
 			// return 500 if the weight of all the valid destination settings(endpoints list is not empty) is 0
 			case destination.ToBackendWeights().Valid == 0:
@@ -661,6 +673,7 @@ func (t *Translator) processGRPCRouteRules(grpcRoute *GRPCRouteContext, parentRe
 		destName := irRouteDestinationName(grpcRoute, ruleIdx)
 		allDs := []*ir.DestinationSetting{}
 		failedProcessDestination := false
+		failedProcessDestinationByNotFoundES := false
 
 		backendRefNames := make([]string, len(rule.BackendRefs))
 		for i, backendRef := range rule.BackendRefs {
@@ -671,7 +684,12 @@ func (t *Translator) processGRPCRouteRules(grpcRoute *GRPCRouteContext, parentRe
 					fmt.Errorf("failed to process route rule %d backendRef %d: %w", ruleIdx, i, err),
 					err.Reason(),
 				))
-				failedProcessDestination = true
+				// Check for custom error reason to return 503 only if no endpoint, according to gateway api specification.
+				if err.Reason() == status.RouteReasonEndpointSliceNotFound {
+					failedProcessDestinationByNotFoundES = true
+				} else {
+					failedProcessDestination = true
+				}
 				continue
 			}
 
@@ -700,6 +718,12 @@ func (t *Translator) processGRPCRouteRules(grpcRoute *GRPCRouteContext, parentRe
 			case failedProcessDestination:
 				irRoute.DirectResponse = &ir.CustomResponse{
 					StatusCode: ptr.To(uint32(500)),
+				}
+			// return 503 if endpoint does not exist.
+			// the error is already added to the error list when processing the destination.
+			case failedProcessDestinationByNotFoundES && len(allDs) == 0:
+				irRoute.DirectResponse = &ir.CustomResponse{
+					StatusCode: ptr.To(uint32(503)),
 				}
 			// return 500 if the weight of all the valid destination settings(endpoints list is not empty) is 0
 			case destination.ToBackendWeights().Valid == 0:
@@ -1403,10 +1427,15 @@ func (t *Translator) processDestination(name string, backendRefContext BackendRe
 
 	switch KindDerefOr(backendRef.Kind, resource.KindService) {
 	case resource.KindServiceImport:
-		ds = t.processServiceImportDestinationSetting(name, backendRef.BackendObjectReference, backendNamespace, protocol, resources, envoyProxy)
-
+		ds, err = t.processServiceImportDestinationSetting(name, backendRef.BackendObjectReference, backendNamespace, protocol, resources, envoyProxy)
+		if err != nil {
+			return nil, err
+		}
 	case resource.KindService:
-		ds = t.processServiceDestinationSetting(name, backendRef.BackendObjectReference, backendNamespace, protocol, resources, envoyProxy)
+		ds, err = t.processServiceDestinationSetting(name, backendRef.BackendObjectReference, backendNamespace, protocol, resources, envoyProxy)
+		if err != nil {
+			return nil, err
+		}
 		svc := resources.GetService(backendNamespace, string(backendRef.Name))
 		ds.IPFamily = getServiceIPFamily(svc)
 		ds.ZoneAwareRoutingEnabled = isZoneAwareRoutingEnabled(svc)
@@ -1492,7 +1521,7 @@ func (t *Translator) processServiceImportDestinationSetting(
 	protocol ir.AppProtocol,
 	resources *resource.Resources,
 	envoyProxy *egv1a1.EnvoyProxy,
-) *ir.DestinationSetting {
+) (*ir.DestinationSetting, status.Error) {
 	var (
 		endpoints []*ir.DestinationEndpoint
 		addrType  *ir.DestinationAddressType
@@ -1515,6 +1544,11 @@ func (t *Translator) processServiceImportDestinationSetting(
 	if !t.IsEnvoyServiceRouting(envoyProxy) {
 		endpointSlices := resources.GetEndpointSlicesForBackend(backendNamespace, string(backendRef.Name), resource.KindServiceImport)
 		endpoints, addrType = getIREndpointsFromEndpointSlices(endpointSlices, servicePort.Name, servicePort.Protocol)
+		if len(endpoints) == 0 {
+			return nil, status.NewRouteStatusError(
+				fmt.Errorf("no ready endpoints for the related serviceImport %s/%s", backendNamespace, string(backendRef.Name)),
+				status.RouteReasonEndpointSliceNotFound)
+		}
 	} else {
 		// Fall back to Service ClusterIP routing
 		backendIps := resources.GetServiceImport(backendNamespace, string(backendRef.Name)).Spec.IPs
@@ -1530,7 +1564,7 @@ func (t *Translator) processServiceImportDestinationSetting(
 		Endpoints:   endpoints,
 		AddressType: addrType,
 		Metadata:    buildResourceMetadata(serviceImport, ptr.To(gwapiv1.SectionName(strconv.Itoa(int(*backendRef.Port))))),
-	}
+	}, nil
 }
 
 func (t *Translator) processServiceDestinationSetting(
@@ -1540,7 +1574,7 @@ func (t *Translator) processServiceDestinationSetting(
 	protocol ir.AppProtocol,
 	resources *resource.Resources,
 	envoyProxy *egv1a1.EnvoyProxy,
-) *ir.DestinationSetting {
+) (*ir.DestinationSetting, status.Error) {
 	var (
 		endpoints []*ir.DestinationEndpoint
 		addrType  *ir.DestinationAddressType
@@ -1564,6 +1598,11 @@ func (t *Translator) processServiceDestinationSetting(
 	if !t.IsEnvoyServiceRouting(envoyProxy) {
 		endpointSlices := resources.GetEndpointSlicesForBackend(backendNamespace, string(backendRef.Name), KindDerefOr(backendRef.Kind, resource.KindService))
 		endpoints, addrType = getIREndpointsFromEndpointSlices(endpointSlices, servicePort.Name, servicePort.Protocol)
+		if len(endpoints) == 0 {
+			return nil, status.NewRouteStatusError(
+				fmt.Errorf("no ready endpoints for the related service %s/%s", backendNamespace, string(backendRef.Name)),
+				status.RouteReasonEndpointSliceNotFound)
+		}
 	} else {
 		// Fall back to Service ClusterIP routing
 		ep := ir.NewDestEndpoint(service.Spec.ClusterIP, uint32(*backendRef.Port), false, nil)
@@ -1577,7 +1616,7 @@ func (t *Translator) processServiceDestinationSetting(
 		AddressType:             addrType,
 		ZoneAwareRoutingEnabled: isZoneAwareRoutingEnabled(service),
 		Metadata:                buildResourceMetadata(service, ptr.To(gwapiv1.SectionName(strconv.Itoa(int(*backendRef.Port))))),
-	}
+	}, nil
 }
 
 func getBackendFilters(routeType gwapiv1.Kind, backendRefContext BackendRefContext) (backendFilters any) {
