@@ -104,9 +104,8 @@ func (u *UpdateHandler) apply(update Update) {
 		newObj := update.Mutator.Mutate(obj)
 
 		if isStatusEqual(obj, newObj) {
-			u.log.WithName(update.NamespacedName.Name).
-				WithName(update.NamespacedName.Namespace).
-				Info("status unchanged, bypassing update")
+			u.log.Info("status unchanged, bypassing update", "name", update.NamespacedName.Name,
+				"namespace", update.NamespacedName.Namespace)
 
 			statusUpdateTotal.WithStatus(statusNoAction, kindLabel.Value(objKind)).Increment()
 			return nil
