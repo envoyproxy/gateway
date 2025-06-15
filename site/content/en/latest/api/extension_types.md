@@ -941,20 +941,6 @@ _Appears in:_
 | `attributes` | _object (keys:string, values:string)_ |  false  |  | Additional Attributes to set for the generated cookie. |
 
 
-#### CookieConfig
-
-
-
-
-
-_Appears in:_
-- [OIDCCookieConfig](#oidccookieconfig)
-
-| Field | Type | Required | Default | Description |
-| ---   | ---  | ---      | ---     | ---         |
-| `sameSite` | _string_ |  false  | Strict |  |
-
-
 #### CustomHeaderExtensionSettings
 
 
@@ -3216,13 +3202,7 @@ _Appears in:_
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `bearerToken` | _[CookieConfig](#cookieconfig)_ |  true  |  |  |
-| `oauthHmac` | _[CookieConfig](#cookieconfig)_ |  true  |  |  |
-| `oauthExpires` | _[CookieConfig](#cookieconfig)_ |  true  |  |  |
-| `idToken` | _[CookieConfig](#cookieconfig)_ |  true  |  |  |
-| `RefreshToken` | _[CookieConfig](#cookieconfig)_ |  true  |  |  |
-| `oauthNonce` | _[CookieConfig](#cookieconfig)_ |  true  |  |  |
-| `codeVerifier` | _[CookieConfig](#cookieconfig)_ |  true  |  |  |
+| `sameSite` | _string_ |  false  | Strict |  |
 
 
 #### OIDCCookieNames

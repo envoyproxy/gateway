@@ -208,16 +208,6 @@ const (
 )
 
 type OIDCCookieConfig struct {
-	BearerToken  *CookieConfig `json:"bearerToken,omitempty"`
-	OauthHmac    *CookieConfig `json:"oauthHmac,omitempty"`
-	OauthExpires *CookieConfig `json:"oauthExpires,omitempty"`
-	IDToken      *CookieConfig `json:"idToken,omitempty"`
-	RefreshToken *CookieConfig `json:"RefreshToken,omitempty"`
-	OauthNonce   *CookieConfig `json:"oauthNonce,omitempty"`
-	CodeVerifier *CookieConfig `json:"codeVerifier,omitempty"`
-}
-
-type CookieConfig struct {
 	// +optional
 	// +kubebuilder:validation:Enum=Lax;Strict;None;Disabled
 	// +kubebuilder:default=Strict

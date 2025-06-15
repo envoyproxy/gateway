@@ -36,33 +36,10 @@ func TestOIDCCookieConfigSameSite(t *testing.T) {
 			},
 		},
 		{
-			name: "partial configuration on bearer token",
-			input: ir.OIDC{
-				CookieConfig: &egv1a1.OIDCCookieConfig{
-					BearerToken: &egv1a1.CookieConfig{SameSite: ptr.To("Lax")},
-				},
-			},
-			expect: oauth2v3.CookieConfigs{
-				BearerTokenCookieConfig:  &oauth2v3.CookieConfig{SameSite: oauth2v3.CookieConfig_LAX},
-				OauthHmacCookieConfig:    &oauth2v3.CookieConfig{SameSite: oauth2v3.CookieConfig_STRICT},
-				OauthExpiresCookieConfig: &oauth2v3.CookieConfig{SameSite: oauth2v3.CookieConfig_STRICT},
-				IdTokenCookieConfig:      &oauth2v3.CookieConfig{SameSite: oauth2v3.CookieConfig_STRICT},
-				RefreshTokenCookieConfig: &oauth2v3.CookieConfig{SameSite: oauth2v3.CookieConfig_STRICT},
-				OauthNonceCookieConfig:   &oauth2v3.CookieConfig{SameSite: oauth2v3.CookieConfig_STRICT},
-				CodeVerifierCookieConfig: &oauth2v3.CookieConfig{SameSite: oauth2v3.CookieConfig_STRICT},
-			},
-		},
-		{
 			name: "all cookie configs set to None",
 			input: ir.OIDC{
 				CookieConfig: &egv1a1.OIDCCookieConfig{
-					BearerToken:  &egv1a1.CookieConfig{SameSite: ptr.To("None")},
-					OauthHmac:    &egv1a1.CookieConfig{SameSite: ptr.To("None")},
-					OauthExpires: &egv1a1.CookieConfig{SameSite: ptr.To("None")},
-					IDToken:      &egv1a1.CookieConfig{SameSite: ptr.To("None")},
-					RefreshToken: &egv1a1.CookieConfig{SameSite: ptr.To("None")},
-					OauthNonce:   &egv1a1.CookieConfig{SameSite: ptr.To("None")},
-					CodeVerifier: &egv1a1.CookieConfig{SameSite: ptr.To("None")},
+					SameSite: ptr.To("None"),
 				},
 			},
 			expect: oauth2v3.CookieConfigs{
@@ -73,6 +50,74 @@ func TestOIDCCookieConfigSameSite(t *testing.T) {
 				RefreshTokenCookieConfig: &oauth2v3.CookieConfig{SameSite: oauth2v3.CookieConfig_NONE},
 				OauthNonceCookieConfig:   &oauth2v3.CookieConfig{SameSite: oauth2v3.CookieConfig_NONE},
 				CodeVerifierCookieConfig: &oauth2v3.CookieConfig{SameSite: oauth2v3.CookieConfig_NONE},
+			},
+		},
+		{
+			name: "all cookie configs set to Lax",
+			input: ir.OIDC{
+				CookieConfig: &egv1a1.OIDCCookieConfig{
+					SameSite: ptr.To("Lax"),
+				},
+			},
+			expect: oauth2v3.CookieConfigs{
+				BearerTokenCookieConfig:  &oauth2v3.CookieConfig{SameSite: oauth2v3.CookieConfig_LAX},
+				OauthHmacCookieConfig:    &oauth2v3.CookieConfig{SameSite: oauth2v3.CookieConfig_LAX},
+				OauthExpiresCookieConfig: &oauth2v3.CookieConfig{SameSite: oauth2v3.CookieConfig_LAX},
+				IdTokenCookieConfig:      &oauth2v3.CookieConfig{SameSite: oauth2v3.CookieConfig_LAX},
+				RefreshTokenCookieConfig: &oauth2v3.CookieConfig{SameSite: oauth2v3.CookieConfig_LAX},
+				OauthNonceCookieConfig:   &oauth2v3.CookieConfig{SameSite: oauth2v3.CookieConfig_LAX},
+				CodeVerifierCookieConfig: &oauth2v3.CookieConfig{SameSite: oauth2v3.CookieConfig_LAX},
+			},
+		},
+		{
+			name: "all cookie configs set to Strict",
+			input: ir.OIDC{
+				CookieConfig: &egv1a1.OIDCCookieConfig{
+					SameSite: ptr.To("Strict"),
+				},
+			},
+			expect: oauth2v3.CookieConfigs{
+				BearerTokenCookieConfig:  &oauth2v3.CookieConfig{SameSite: oauth2v3.CookieConfig_STRICT},
+				OauthHmacCookieConfig:    &oauth2v3.CookieConfig{SameSite: oauth2v3.CookieConfig_STRICT},
+				OauthExpiresCookieConfig: &oauth2v3.CookieConfig{SameSite: oauth2v3.CookieConfig_STRICT},
+				IdTokenCookieConfig:      &oauth2v3.CookieConfig{SameSite: oauth2v3.CookieConfig_STRICT},
+				RefreshTokenCookieConfig: &oauth2v3.CookieConfig{SameSite: oauth2v3.CookieConfig_STRICT},
+				OauthNonceCookieConfig:   &oauth2v3.CookieConfig{SameSite: oauth2v3.CookieConfig_STRICT},
+				CodeVerifierCookieConfig: &oauth2v3.CookieConfig{SameSite: oauth2v3.CookieConfig_STRICT},
+			},
+		},
+		{
+			name: "all cookie configs set to Disabled",
+			input: ir.OIDC{
+				CookieConfig: &egv1a1.OIDCCookieConfig{
+					SameSite: ptr.To("Disabled"),
+				},
+			},
+			expect: oauth2v3.CookieConfigs{
+				BearerTokenCookieConfig:  &oauth2v3.CookieConfig{SameSite: oauth2v3.CookieConfig_DISABLED},
+				OauthHmacCookieConfig:    &oauth2v3.CookieConfig{SameSite: oauth2v3.CookieConfig_DISABLED},
+				OauthExpiresCookieConfig: &oauth2v3.CookieConfig{SameSite: oauth2v3.CookieConfig_DISABLED},
+				IdTokenCookieConfig:      &oauth2v3.CookieConfig{SameSite: oauth2v3.CookieConfig_DISABLED},
+				RefreshTokenCookieConfig: &oauth2v3.CookieConfig{SameSite: oauth2v3.CookieConfig_DISABLED},
+				OauthNonceCookieConfig:   &oauth2v3.CookieConfig{SameSite: oauth2v3.CookieConfig_DISABLED},
+				CodeVerifierCookieConfig: &oauth2v3.CookieConfig{SameSite: oauth2v3.CookieConfig_DISABLED},
+			},
+		},
+		{
+			name: "cookie config received invalid SameSite value will default to Strict",
+			input: ir.OIDC{
+				CookieConfig: &egv1a1.OIDCCookieConfig{
+					SameSite: ptr.To("InvalidValue"),
+				},
+			},
+			expect: oauth2v3.CookieConfigs{
+				BearerTokenCookieConfig:  &oauth2v3.CookieConfig{SameSite: oauth2v3.CookieConfig_STRICT},
+				OauthHmacCookieConfig:    &oauth2v3.CookieConfig{SameSite: oauth2v3.CookieConfig_STRICT},
+				OauthExpiresCookieConfig: &oauth2v3.CookieConfig{SameSite: oauth2v3.CookieConfig_STRICT},
+				IdTokenCookieConfig:      &oauth2v3.CookieConfig{SameSite: oauth2v3.CookieConfig_STRICT},
+				RefreshTokenCookieConfig: &oauth2v3.CookieConfig{SameSite: oauth2v3.CookieConfig_STRICT},
+				OauthNonceCookieConfig:   &oauth2v3.CookieConfig{SameSite: oauth2v3.CookieConfig_STRICT},
+				CodeVerifierCookieConfig: &oauth2v3.CookieConfig{SameSite: oauth2v3.CookieConfig_STRICT},
 			},
 		},
 	}

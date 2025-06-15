@@ -3617,83 +3617,14 @@ spec:
                       CookieConfigs allows overriding the SameSite attribute for OIDC cookies.
                       If a specific cookie is not configured, it will use the "Disabled" SameSite policy and xds will omit SameSite when generating the cookie.
                     properties:
-                      RefreshToken:
-                        properties:
-                          sameSite:
-                            default: Strict
-                            enum:
-                            - Lax
-                            - Strict
-                            - None
-                            - Disabled
-                            type: string
-                        type: object
-                      bearerToken:
-                        properties:
-                          sameSite:
-                            default: Strict
-                            enum:
-                            - Lax
-                            - Strict
-                            - None
-                            - Disabled
-                            type: string
-                        type: object
-                      codeVerifier:
-                        properties:
-                          sameSite:
-                            default: Strict
-                            enum:
-                            - Lax
-                            - Strict
-                            - None
-                            - Disabled
-                            type: string
-                        type: object
-                      idToken:
-                        properties:
-                          sameSite:
-                            default: Strict
-                            enum:
-                            - Lax
-                            - Strict
-                            - None
-                            - Disabled
-                            type: string
-                        type: object
-                      oauthExpires:
-                        properties:
-                          sameSite:
-                            default: Strict
-                            enum:
-                            - Lax
-                            - Strict
-                            - None
-                            - Disabled
-                            type: string
-                        type: object
-                      oauthHmac:
-                        properties:
-                          sameSite:
-                            default: Strict
-                            enum:
-                            - Lax
-                            - Strict
-                            - None
-                            - Disabled
-                            type: string
-                        type: object
-                      oauthNonce:
-                        properties:
-                          sameSite:
-                            default: Strict
-                            enum:
-                            - Lax
-                            - Strict
-                            - None
-                            - Disabled
-                            type: string
-                        type: object
+                      sameSite:
+                        default: Strict
+                        enum:
+                        - Lax
+                        - Strict
+                        - None
+                        - Disabled
+                        type: string
                     type: object
                   cookieDomain:
                     description: |-
