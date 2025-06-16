@@ -1341,6 +1341,7 @@ spec:
                             Path defines parameters used to modify the path of the incoming request.
                             The modified path is then used to construct the `Location` header. When
                             empty, the request path is used as-is.
+                            Only ReplaceFullPath path modifier is supported currently.
                           properties:
                             replaceFullPath:
                               description: |-
@@ -1387,6 +1388,8 @@ spec:
                           - type
                           type: object
                           x-kubernetes-validations:
+                          - message: only ReplaceFullPath is supported for path.type
+                            rule: self.type == 'ReplaceFullPath'
                           - message: replaceFullPath must be specified when type is
                               set to 'ReplaceFullPath'
                             rule: 'self.type == ''ReplaceFullPath'' ? has(self.replaceFullPath)
@@ -1527,6 +1530,13 @@ spec:
                   Retry provides more advanced usage, allowing users to customize the number of retries, retry fallback strategy, and retry triggering conditions.
                   If not set, retry will be disabled.
                 properties:
+                  numAttemptsPerPriority:
+                    description: |-
+                      NumAttemptsPerPriority defines the number of requests (initial attempt + retries)
+                      that should be sent to the same priority before switching to a different one.
+                      If not specified or set to 0, all requests are sent to the highest priority that is healthy.
+                    format: int32
+                    type: integer
                   numRetries:
                     default: 2
                     description: NumRetries is the number of retries to be attempted.

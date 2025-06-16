@@ -133,6 +133,9 @@ infraIR:
         labels:
           gateway.envoyproxy.io/owning-gateway-name: gateway-btls
           gateway.envoyproxy.io/owning-gateway-namespace: envoy-gateway
+        ownerReference:
+          kind: GatewayClass
+          name: envoy-gateway-class
       name: envoy-gateway/gateway-btls
       namespace: envoy-gateway-system
 xdsIR:

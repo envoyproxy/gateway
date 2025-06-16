@@ -24,6 +24,7 @@ import (
 	"github.com/envoyproxy/gateway/internal/envoygateway"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
+	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 	"github.com/envoyproxy/gateway/internal/infrastructure/common"
 	"github.com/envoyproxy/gateway/internal/infrastructure/kubernetes/proxy"
 	"github.com/envoyproxy/gateway/internal/ir"
@@ -49,6 +50,10 @@ func TestCreateOrUpdateProxyConfigMap(t *testing.T) {
 							gatewayapi.OwningGatewayNamespaceLabel: "default",
 							gatewayapi.OwningGatewayNameLabel:      "test",
 						},
+						OwnerReference: &ir.ResourceMetadata{
+							Kind: resource.KindGatewayClass,
+							Name: testGatewayClass,
+						},
 					},
 				},
 			},
@@ -67,6 +72,14 @@ func TestCreateOrUpdateProxyConfigMap(t *testing.T) {
 						gatewayapi.OwningGatewayNamespaceLabel: "default",
 						gatewayapi.OwningGatewayNameLabel:      "test",
 					},
+					OwnerReferences: []metav1.OwnerReference{
+						{
+							APIVersion: "gateway.networking.k8s.io/v1",
+							Kind:       "GatewayClass",
+							Name:       "envoy-gateway-class",
+							UID:        "foo.bar",
+						},
+					},
 				},
 				Data: map[string]string{
 					common.SdsCAFilename:   common.GetSdsCAConfigMapData(proxy.XdsTLSCaFilepath),
@@ -84,6 +97,10 @@ func TestCreateOrUpdateProxyConfigMap(t *testing.T) {
 						Labels: map[string]string{
 							gatewayapi.OwningGatewayNamespaceLabel: "default",
 							gatewayapi.OwningGatewayNameLabel:      "test",
+						},
+						OwnerReference: &ir.ResourceMetadata{
+							Kind: resource.KindGatewayClass,
+							Name: testGatewayClass,
 						},
 					},
 				},
@@ -116,6 +133,14 @@ func TestCreateOrUpdateProxyConfigMap(t *testing.T) {
 						"app.kubernetes.io/managed-by":         "envoy-gateway",
 						gatewayapi.OwningGatewayNamespaceLabel: "default",
 						gatewayapi.OwningGatewayNameLabel:      "test",
+					},
+					OwnerReferences: []metav1.OwnerReference{
+						{
+							APIVersion: "gateway.networking.k8s.io/v1",
+							Kind:       "GatewayClass",
+							Name:       "envoy-gateway-class",
+							UID:        "foo.bar",
+						},
 					},
 				},
 				Data: map[string]string{
@@ -198,11 +223,11 @@ func TestCreateOrUpdateProxyConfigMap(t *testing.T) {
 					Build()
 			}
 			kube := NewInfra(cli, cfg)
+			require.NoError(t, setupOwnerReferenceResources(ctx, kube.Client))
 			if tc.gatewayNamespaceMode {
 				kube.EnvoyGateway.Provider.Kubernetes.Deploy = &egv1a1.KubernetesDeployMode{
 					Type: ptr.To(egv1a1.KubernetesDeployModeTypeGatewayNamespace),
 				}
-				require.NoError(t, createGatewayForGatewayNamespaceMode(ctx, kube.Client))
 			}
 
 			r, err := proxy.NewResourceRender(ctx, kube, tc.in)
@@ -262,9 +287,14 @@ func TestDeleteConfigProxyMap(t *testing.T) {
 			ctx := context.Background()
 			cli := fakeclient.NewClientBuilder().WithScheme(envoygateway.GetScheme()).WithObjects(tc.current).Build()
 			kube := NewInfra(cli, cfg)
+			require.NoError(t, setupOwnerReferenceResources(ctx, kube.Client))
 
 			infra.Proxy.GetProxyMetadata().Labels[gatewayapi.OwningGatewayNamespaceLabel] = "default"
 			infra.Proxy.GetProxyMetadata().Labels[gatewayapi.OwningGatewayNameLabel] = infra.Proxy.Name
+			infra.Proxy.GetProxyMetadata().OwnerReference = &ir.ResourceMetadata{
+				Kind: resource.KindGatewayClass,
+				Name: testGatewayClass,
+			}
 
 			r, err := proxy.NewResourceRender(ctx, kube, infra)
 			require.NoError(t, err)

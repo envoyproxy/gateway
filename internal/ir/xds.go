@@ -591,7 +591,9 @@ type ResponseOverrideRule struct {
 	// Match configuration.
 	Match CustomResponseMatch `json:"match"`
 	// Response configuration.
-	Response CustomResponse `json:"response"`
+	Response *CustomResponse `json:"response,omitempty"`
+	// Redirect configuration
+	Redirect *Redirect `json:"redirect,omitempty"`
 }
 
 // CustomResponseMatch defines the configuration for matching a user response to return a custom one.
@@ -1497,6 +1499,7 @@ type RouteDestination struct {
 	// to check if this route destination already exists and can be
 	// reused
 	Name     string                `json:"name" yaml:"name"`
+	StatName *string               `json:"statName,omitempty" yaml:"statName,omitempty"`
 	Settings []*DestinationSetting `json:"settings,omitempty" yaml:"settings,omitempty"`
 	// Metadata is used to enrich envoy route metadata with user and provider-specific information
 	// RouteDestination metadata is primarily derived from the xRoute resources. In some cases,
@@ -1740,15 +1743,15 @@ func (r URLRewrite) Validate() error {
 // +k8s:deepcopy-gen=true
 type Redirect struct {
 	// Scheme configures the replacement of the request's scheme.
-	Scheme *string `json:"scheme" yaml:"scheme"`
+	Scheme *string `json:"scheme,omitempty" yaml:"scheme,omitempty"`
 	// Hostname configures the replacement of the request's hostname.
-	Hostname *string `json:"hostname" yaml:"hostname"`
+	Hostname *string `json:"hostname,omitempty" yaml:"hostname,omitempty"`
 	// Path contains config for rewriting the path of the request.
-	Path *HTTPPathModifier `json:"path" yaml:"path"`
+	Path *HTTPPathModifier `json:"path,omitempty" yaml:"path,omitempty"`
 	// Port configures the replacement of the request's port.
-	Port *uint32 `json:"port" yaml:"port"`
+	Port *uint32 `json:"port,omitempty" yaml:"port,omitempty"`
 	// Status code configures the redirection response's status code.
-	StatusCode *int32 `json:"statusCode" yaml:"statusCode"`
+	StatusCode *int32 `json:"statusCode,omitempty" yaml:"statusCode,omitempty"`
 }
 
 // Validate the fields within the Redirect structure
@@ -2837,6 +2840,11 @@ type Retry struct {
 	// NumRetries is the number of retries to be attempted. Defaults to 2.
 	NumRetries *uint32 `json:"numRetries,omitempty"`
 
+	// NumAttemptsPerPriority defines the number of requests (initial attempt + retries)
+	// that should be sent to the same priority before switching to a different one.
+	// If not specified or set to 0, all requests are sent to the highest priority that is healthy.
+	NumAttemptsPerPriority *int32 `json:"numAttemptsPerPriority,omitempty"`
+
 	// RetryOn specifies the retry trigger condition.
 	RetryOn *RetryOn `json:"retryOn,omitempty"`
 
@@ -2895,11 +2903,13 @@ type TLSUpstreamConfig struct {
 	CACertificate       *TLSCACertificate `json:"caCertificate,omitempty" yaml:"caCertificate,omitempty"`
 	TLSConfig           `json:",inline"`
 	SubjectAltNames     []SubjectAltName `json:"subjectAltNames,omitempty" yaml:"subjectAltNames,omitempty"`
+	InsecureSkipVerify  bool             `json:"insecureSkipVerify,omitempty" yaml:"insecureSkipVerify,omitempty"`
 }
 
 func (t *TLSUpstreamConfig) ToTLSConfig() (*tls.Config, error) {
 	// nolint:gosec
 	tlsConfig := &tls.Config{}
+	tlsConfig.InsecureSkipVerify = t.InsecureSkipVerify
 	if t.SNI != nil {
 		tlsConfig.ServerName = *t.SNI
 	}

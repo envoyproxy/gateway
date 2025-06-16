@@ -46,3 +46,4 @@ charts/gateway-addons-helm/dashboards/vendor/
 *.yaml-e
 
 *.out
+.hugo_build.lock

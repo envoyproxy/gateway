@@ -7,6 +7,7 @@ backendTrafficPolicies:
     namespace: default
   spec:
     retry:
+      numAttemptsPerPriority: 4
       numRetries: 5
       perRetry:
         backOff:
@@ -77,6 +78,7 @@ backendTrafficPolicies:
     namespace: default
   spec:
     retry:
+      numAttemptsPerPriority: 0
       perRetry:
         backOff:
           baseInterval: 2s
@@ -379,6 +381,9 @@ infraIR:
         labels:
           gateway.envoyproxy.io/owning-gateway-name: gateway-1
           gateway.envoyproxy.io/owning-gateway-namespace: envoy-gateway
+        ownerReference:
+          kind: GatewayClass
+          name: envoy-gateway-class
       name: envoy-gateway/gateway-1
       namespace: envoy-gateway-system
   envoy-gateway/gateway-2:
@@ -395,6 +400,9 @@ infraIR:
         labels:
           gateway.envoyproxy.io/owning-gateway-name: gateway-2
           gateway.envoyproxy.io/owning-gateway-namespace: envoy-gateway
+        ownerReference:
+          kind: GatewayClass
+          name: envoy-gateway-class
       name: envoy-gateway/gateway-2
       namespace: envoy-gateway-system
 xdsIR:
@@ -571,6 +579,7 @@ xdsIR:
           prefix: /
         traffic:
           retry:
+            numAttemptsPerPriority: 4
             numRetries: 5
             perRetry:
               backOff:

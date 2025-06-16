@@ -28,3 +28,12 @@ backends:
             address: 2.2.2.2
             port: 3001
           zone: zone2
+  - apiVersion: gateway.envoyproxy.io/v1alpha1
+    kind: Backend
+    metadata:
+      name: backend-2
+      namespace: default
+    spec:
+      type: DynamicResolver
+      tls:
+        insecureSkipVerify: false

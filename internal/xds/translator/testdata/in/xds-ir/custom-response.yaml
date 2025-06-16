@@ -55,6 +55,17 @@ http:
                       "error": "Internal Server Error"
                     }
                   contentType: application/json
+              - match:
+                  statusCodes:
+                    - value: 401
+                name: backendtrafficpolicy/default/policy-for-gateway/responseoverride/rule/2
+                redirect:
+                  scheme: https
+                  hostname: www.redirect.com
+                  port: 8443
+                  statusCode: 301
+                  path:
+                    fullReplace: /redirect/path
       - destination:
           name: httproute/default/httproute-2/rule/0
           settings:
