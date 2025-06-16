@@ -195,7 +195,11 @@ infraIR:
         labels:
           gateway.envoyproxy.io/owning-gateway-name: gateway-1
           gateway.envoyproxy.io/owning-gateway-namespace: envoy-gateway
+        ownerReference:
+          kind: GatewayClass
+          name: envoy-gateway-class
       name: envoy-gateway/gateway-1
+      namespace: envoy-gateway-system
 xdsIR:
   envoy-gateway/gateway-1:
     accessLog:
@@ -218,12 +222,20 @@ xdsIR:
       port: 10080
       routes:
       - destination:
+          metadata:
+            kind: HTTPRoute
+            name: httproute-static
+            namespace: default
           name: httproute/default/httproute-static/rule/0
           settings:
           - addressType: IP
             endpoints:
             - host: 1.1.1.1
               port: 3001
+            metadata:
+              kind: Backend
+              name: backend-ip
+              namespace: default
             name: httproute/default/httproute-static/rule/0/backend/0
             protocol: HTTP
             weight: 1
@@ -231,6 +243,11 @@ xdsIR:
             endpoints:
             - host: 4.3.2.1
               port: 8080
+            metadata:
+              kind: Service
+              name: service-ip
+              namespace: default
+              sectionName: "8080"
             name: httproute/default/httproute-static/rule/0/backend/1
             protocol: HTTP
             weight: 1
@@ -238,6 +255,11 @@ xdsIR:
             endpoints:
             - host: 1.2.3.4
               port: 8081
+            metadata:
+              kind: ServiceImport
+              name: service-import-ip
+              namespace: default
+              sectionName: "8081"
             name: httproute/default/httproute-static/rule/0/backend/2
             protocol: HTTP
             weight: 1
@@ -253,12 +275,20 @@ xdsIR:
           name: ""
           prefix: /1
       - destination:
+          metadata:
+            kind: HTTPRoute
+            name: httproute-fqdn
+            namespace: default
           name: httproute/default/httproute-fqdn/rule/0
           settings:
           - addressType: FQDN
             endpoints:
             - host: primary.foo.com
               port: 3000
+            metadata:
+              kind: Backend
+              name: backend-fqdn
+              namespace: default
             name: httproute/default/httproute-fqdn/rule/0/backend/0
             protocol: HTTP
             weight: 1
@@ -266,6 +296,11 @@ xdsIR:
             endpoints:
             - host: bar.foo
               port: 8080
+            metadata:
+              kind: Service
+              name: service-fqdn
+              namespace: default
+              sectionName: "8080"
             name: httproute/default/httproute-fqdn/rule/0/backend/1
             protocol: HTTP
             weight: 1
@@ -273,6 +308,11 @@ xdsIR:
             endpoints:
             - host: foo.bar
               port: 8080
+            metadata:
+              kind: ServiceImport
+              name: service-import-fqdn
+              namespace: default
+              sectionName: "8081"
             name: httproute/default/httproute-fqdn/rule/0/backend/2
             protocol: HTTP
             weight: 1

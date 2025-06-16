@@ -52,7 +52,11 @@ infraIR:
         labels:
           gateway.envoyproxy.io/owning-gateway-name: gateway-1
           gateway.envoyproxy.io/owning-gateway-namespace: envoy-gateway
+        ownerReference:
+          kind: GatewayClass
+          name: envoy-gateway-class
       name: envoy-gateway/gateway-1
+      namespace: envoy-gateway-system
 tcpRoutes:
 - apiVersion: gateway.networking.k8s.io/v1alpha2
   kind: TCPRoute
@@ -72,9 +76,9 @@ tcpRoutes:
     parents:
     - conditions:
       - lastTransitionTime: null
-        message: TCP Port 8081 not found on Service default/service-1
-        reason: Failed to process the settings associated with the TCP route.
-        status: "False"
+        message: Route is accepted
+        reason: Accepted
+        status: "True"
         type: Accepted
       - lastTransitionTime: null
         message: TCP Port 8081 not found on Service default/service-1
@@ -99,3 +103,11 @@ xdsIR:
     - address: 0.0.0.0
       name: envoy-gateway/gateway-1/tcp
       port: 10162
+      routes:
+      - destination:
+          metadata:
+            kind: TCPRoute
+            name: tcproute-1
+            namespace: default
+          name: tcproute/default/tcproute-1/rule/-1
+        name: tcproute/default/tcproute-1

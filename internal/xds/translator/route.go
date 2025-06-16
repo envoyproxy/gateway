@@ -14,6 +14,7 @@ import (
 	corev3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	routev3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
 	previoushost "github.com/envoyproxy/go-control-plane/envoy/extensions/retry/host/previous_hosts/v3"
+	previouspriority "github.com/envoyproxy/go-control-plane/envoy/extensions/retry/priority/previous_priorities/v3"
 	matcherv3 "github.com/envoyproxy/go-control-plane/envoy/type/matcher/v3"
 	"google.golang.org/protobuf/types/known/durationpb"
 	"google.golang.org/protobuf/types/known/wrapperspb"
@@ -40,7 +41,7 @@ var defaultUpgradeConfig = []*routev3.RouteAction_UpgradeConfig{
 	},
 }
 
-func buildXdsRoute(httpRoute *ir.HTTPRoute) (*routev3.Route, error) {
+func buildXdsRoute(httpRoute *ir.HTTPRoute, httpListener *ir.HTTPListener) (*routev3.Route, error) {
 	router := &routev3.Route{
 		Name:     httpRoute.Name,
 		Match:    buildXdsRouteMatch(httpRoute.PathMatch, httpRoute.HeaderMatches, httpRoute.QueryParamMatches),
@@ -79,7 +80,7 @@ func buildXdsRoute(httpRoute *ir.HTTPRoute) (*routev3.Route, error) {
 		router.Action = &routev3.Route_Route{Route: routeAction}
 	default:
 		backendWeights := httpRoute.Destination.ToBackendWeights()
-		routeAction := buildXdsRouteAction(backendWeights, httpRoute.Destination.Settings)
+		routeAction := buildXdsRouteAction(backendWeights, httpRoute.Destination)
 		routeAction.IdleTimeout = idleTimeout(httpRoute)
 
 		if httpRoute.Mirrors != nil {
@@ -124,7 +125,7 @@ func buildXdsRoute(httpRoute *ir.HTTPRoute) (*routev3.Route, error) {
 	}
 
 	// Add per route filter configs to the route, if needed.
-	if err := patchRouteWithPerRouteConfig(router, httpRoute); err != nil {
+	if err := patchRouteWithPerRouteConfig(router, httpRoute, httpListener); err != nil {
 		return nil, err
 	}
 
@@ -246,10 +247,10 @@ func buildXdsStringMatcher(irMatch *ir.StringMatch) *matcherv3.StringMatcher {
 	return stringMatcher
 }
 
-func buildXdsRouteAction(backendWeights *ir.BackendWeights, settings []*ir.DestinationSetting) *routev3.RouteAction {
+func buildXdsRouteAction(backendWeights *ir.BackendWeights, dest *ir.RouteDestination) *routev3.RouteAction {
 	// only use weighted cluster when there are invalid weights
-	if needsClusterPerSetting(settings) || backendWeights.Invalid != 0 {
-		return buildXdsWeightedRouteAction(backendWeights, settings)
+	if dest.NeedsClusterPerSetting() || backendWeights.Invalid != 0 {
+		return buildXdsWeightedRouteAction(backendWeights, dest.Settings)
 	}
 
 	return &routev3.RouteAction{
@@ -270,7 +271,7 @@ func buildXdsWeightedRouteAction(backendWeights *ir.BackendWeights, settings []*
 	}
 
 	for _, destinationSetting := range settings {
-		if len(destinationSetting.Endpoints) > 0 {
+		if len(destinationSetting.Endpoints) > 0 || destinationSetting.IsDynamicResolver { // Dynamic resolver has no endpoints
 			validCluster := &routev3.WeightedCluster_ClusterWeight{
 				Name:   destinationSetting.Name,
 				Weight: &wrapperspb.UInt32Value{Value: *destinationSetting.Weight},
@@ -642,6 +643,21 @@ func buildRetryPolicy(route *ir.HTTPRoute) (*routev3.RetryPolicy, error) {
 		rp.NumRetries = &wrapperspb.UInt32Value{Value: *rr.NumRetries}
 	}
 
+	if rr.NumAttemptsPerPriority != nil && *rr.NumAttemptsPerPriority > 0 {
+		anyCfgPriority, err := proto.ToAnyWithValidation(&previouspriority.PreviousPrioritiesConfig{
+			UpdateFrequency: *rr.NumAttemptsPerPriority,
+		})
+		if err != nil {
+			return nil, err
+		}
+		rp.RetryPriority = &routev3.RetryPolicy_RetryPriority{
+			Name: "envoy.retry_priorities.previous_priorities",
+			ConfigType: &routev3.RetryPolicy_RetryPriority_TypedConfig{
+				TypedConfig: anyCfgPriority,
+			},
+		}
+	}
+
 	if rr.RetryOn != nil {
 		if len(rr.RetryOn.Triggers) > 0 {
 			if ro, err := buildRetryOn(rr.RetryOn.Triggers); err == nil {
@@ -747,34 +763,4 @@ func buildRetryOn(triggers []ir.TriggerEnum) (string, error) {
 	}
 
 	return b.String(), nil
-}
-
-func needsClusterPerSetting(settings []*ir.DestinationSetting) bool {
-	if hasFiltersInSettings(settings) || hasZoneAwareRouting(settings) {
-		return true
-	}
-	return false
-}
-
-func hasFiltersInSettings(settings []*ir.DestinationSetting) bool {
-	for _, setting := range settings {
-		filters := setting.Filters
-		if filters != nil {
-			return true
-		}
-	}
-	return false
-}
-
-func hasZoneAwareRouting(settings []*ir.DestinationSetting) bool {
-	// Only use weighted clusters if more than one setting
-	if len(settings) < 2 {
-		return false
-	}
-	for _, setting := range settings {
-		if setting.ZoneAwareRoutingEnabled {
-			return true
-		}
-	}
-	return false
 }

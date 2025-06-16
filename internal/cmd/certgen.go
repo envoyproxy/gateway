@@ -15,6 +15,8 @@ import (
 
 	"github.com/spf13/cobra"
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	clicfg "sigs.k8s.io/controller-runtime/pkg/client/config"
 
@@ -80,7 +82,7 @@ func certGen(ctx context.Context, logOut io.Writer, local bool) error {
 		if err = outputCertsForKubernetes(ctx, cli, cfg, overwriteControlPlaneCerts, certs); err != nil {
 			return fmt.Errorf("failed to output certificates: %w", err)
 		}
-		if err = patchTopologyInjectorWebhook(ctx, cli, cfg, certs.CACertificate); err != nil {
+		if err = patchTopologyInjectorWebhook(ctx, cli, cfg); err != nil {
 			return fmt.Errorf("failed to patch webhook: %w", err)
 		}
 	} else {
@@ -97,7 +99,7 @@ func certGen(ctx context.Context, logOut io.Writer, local bool) error {
 func outputCertsForKubernetes(ctx context.Context, cli client.Client, cfg *config.Server,
 	updateSecrets bool, certs *crypto.Certificates,
 ) error {
-	secrets, err := kubernetes.CreateOrUpdateSecrets(ctx, cli, kubernetes.CertsToSecret(cfg.Namespace, certs), updateSecrets)
+	secrets, err := kubernetes.CreateOrUpdateSecrets(ctx, cli, kubernetes.CertsToSecret(cfg.ControllerNamespace, certs), updateSecrets)
 	log := cfg.Logger
 
 	if err != nil {
@@ -116,21 +118,28 @@ func outputCertsForKubernetes(ctx context.Context, cli client.Client, cfg *confi
 	return nil
 }
 
-func patchTopologyInjectorWebhook(ctx context.Context, cli client.Client, cfg *config.Server, caBundle []byte) error {
+func patchTopologyInjectorWebhook(ctx context.Context, cli client.Client, cfg *config.Server) error {
 	if disableTopologyInjector {
 		return nil
 	}
 
-	webhookConfigName := fmt.Sprintf("%s.%s", topologyWebhookNamePrefix, cfg.Namespace)
+	webhookConfigName := fmt.Sprintf("%s.%s", topologyWebhookNamePrefix, cfg.ControllerNamespace)
 	webhookCfg := &admissionregistrationv1.MutatingWebhookConfiguration{}
 	if err := cli.Get(ctx, client.ObjectKey{Name: webhookConfigName}, webhookCfg); err != nil {
 		return fmt.Errorf("failed to get mutating webhook configuration: %w", err)
 	}
 
+	secretName := types.NamespacedName{Name: "envoy-gateway", Namespace: cfg.ControllerNamespace}
+	current := &corev1.Secret{}
+	if err := cli.Get(ctx, secretName, current); err != nil {
+		return fmt.Errorf("failed to get secret %s/%s: %w", current.Namespace, current.Name, err)
+	}
+
 	var updated bool
+	desiredBundle := current.Data["ca.crt"]
 	for i, webhook := range webhookCfg.Webhooks {
-		if !bytes.Equal(caBundle, webhook.ClientConfig.CABundle) {
-			webhookCfg.Webhooks[i].ClientConfig.CABundle = caBundle
+		if !bytes.Equal(desiredBundle, webhook.ClientConfig.CABundle) {
+			webhookCfg.Webhooks[i].ClientConfig.CABundle = desiredBundle
 			updated = true
 		}
 	}

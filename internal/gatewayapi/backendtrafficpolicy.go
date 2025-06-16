@@ -38,7 +38,7 @@ func (t *Translator) ProcessBackendTrafficPolicies(resources *resource.Resources
 	routes []RouteContext,
 	xdsIR resource.XdsIRMap,
 ) []*egv1a1.BackendTrafficPolicy {
-	res := []*egv1a1.BackendTrafficPolicy{}
+	res := make([]*egv1a1.BackendTrafficPolicy, 0, len(resources.BackendTrafficPolicies))
 
 	backendTrafficPolicies := resources.BackendTrafficPolicies
 	// Sort based on timestamp
@@ -68,9 +68,40 @@ func (t *Translator) ProcessBackendTrafficPolicies(resources *resource.Resources
 
 	handledPolicies := make(map[types.NamespacedName]*egv1a1.BackendTrafficPolicy)
 
+	gatewayPolicyMap := make(map[types.NamespacedName]*egv1a1.BackendTrafficPolicy)
+	gatewayPolicyMerged := make(map[types.NamespacedName]sets.Set[string])
+
 	// Translate
 	// 1. First translate Policies targeting xRoutes
 	// 2. Finally, the policies targeting Gateways
+
+	// Build gateway policy map, which is needed when processing the policies targeting xRoutes.
+	// TODO: This loop is similar to the one 'Process the policies targeting Gateways', we may want to
+	// merge them into one if possible.
+	for _, currPolicy := range backendTrafficPolicies {
+		targetRefs := getPolicyTargetRefs(currPolicy.Spec.PolicyTargetReferences, gateways)
+		for _, currTarget := range targetRefs {
+			if currTarget.Kind == resource.KindGateway {
+				// Check if the gateway exists
+				key := types.NamespacedName{
+					Name:      string(currTarget.Name),
+					Namespace: currPolicy.Namespace,
+				}
+				gateway, ok := gatewayMap[key]
+				if !ok {
+					continue
+				}
+
+				// Check if policy for gateway exists
+				gatewayNN := utils.NamespacedName(gateway)
+				_, policyExists := gatewayPolicyMap[gatewayNN]
+				if policyExists {
+					continue
+				}
+				gatewayPolicyMap[gatewayNN] = currPolicy
+			}
+		}
+	}
 
 	// Process the policies targeting xRoutes
 	for _, currPolicy := range backendTrafficPolicies {
@@ -96,6 +127,7 @@ func (t *Translator) ProcessBackendTrafficPolicies(resources *resource.Resources
 				// policy overrides and populate its ancestor status.
 				parentRefs := GetParentReferences(route)
 				ancestorRefs := make([]gwapiv1a2.ParentReference, 0, len(parentRefs))
+				routeParents := sets.New[types.NamespacedName]()
 				for _, p := range parentRefs {
 					if p.Kind == nil || *p.Kind == resource.KindGateway {
 						namespace := route.GetNamespace()
@@ -106,6 +138,7 @@ func (t *Translator) ProcessBackendTrafficPolicies(resources *resource.Resources
 							Namespace: namespace,
 							Name:      string(p.Name),
 						}
+						routeParents.Insert(gwNN)
 
 						key := gwNN.String()
 						if _, ok := gatewayRouteMap[key]; !ok {
@@ -130,14 +163,66 @@ func (t *Translator) ProcessBackendTrafficPolicies(resources *resource.Resources
 					continue
 				}
 
-				// Set conditions for translation error if it got any
-				if err := t.translateBackendTrafficPolicyForRoute(policy, route, xdsIR, resources); err != nil {
-					status.SetTranslationErrorForPolicyAncestors(&policy.Status,
-						ancestorRefs,
-						t.GatewayControllerName,
-						policy.Generation,
-						status.Error2ConditionMsg(err),
-					)
+				if policy.Spec.MergeType == nil {
+					// Set conditions for translation error if it got any
+					if err := t.translateBackendTrafficPolicyForRoute(policy, route, xdsIR, resources, nil); err != nil {
+						status.SetTranslationErrorForPolicyAncestors(&policy.Status,
+							ancestorRefs,
+							t.GatewayControllerName,
+							policy.Generation,
+							status.Error2ConditionMsg(err),
+						)
+					}
+				} else {
+					// merge with parent target policy if exists
+					for _, gwNN := range routeParents.UnsortedList() {
+						ancestorRef := getAncestorRefForPolicy(gwNN, nil)
+						// find policy for Gateway
+						gwPolicy := gatewayPolicyMap[gwNN]
+						if gwPolicy == nil {
+							// not found, fall back to the current policy
+							if err := t.translateBackendTrafficPolicyForRoute(policy, route, xdsIR, resources, &gwNN); err != nil {
+								status.SetConditionForPolicyAncestor(&policy.Status,
+									ancestorRef,
+									t.GatewayControllerName,
+									gwapiv1a2.PolicyConditionAccepted, metav1.ConditionFalse,
+									egv1a1.PolicyReasonInvalid,
+									status.Error2ConditionMsg(err),
+									policy.Generation,
+								)
+							}
+
+							continue
+						}
+
+						// merge with parent policy
+						if err := t.translateBackendTrafficPolicyForRouteWithMerge(policy, gwNN, gwPolicy, route, xdsIR, resources); err != nil {
+							status.SetConditionForPolicyAncestor(&policy.Status,
+								ancestorRef,
+								t.GatewayControllerName,
+								gwapiv1a2.PolicyConditionAccepted, metav1.ConditionFalse,
+								egv1a1.PolicyReasonInvalid,
+								status.Error2ConditionMsg(err),
+								policy.Generation,
+							)
+							continue
+						}
+
+						if _, ok := gatewayPolicyMerged[gwNN]; !ok {
+							gatewayPolicyMerged[gwNN] = make(sets.Set[string])
+						}
+						gatewayPolicyMerged[gwNN].Insert(utils.NamespacedName(route).String())
+
+						status.SetConditionForPolicyAncestor(&policy.Status,
+							ancestorRef,
+							t.GatewayControllerName,
+							egv1a1.PolicyConditionMerged,
+							metav1.ConditionTrue,
+							egv1a1.PolicyReasonMerged,
+							fmt.Sprintf("Merged with policy %s/%s", gwPolicy.Namespace, gwPolicy.Name),
+							policy.Generation,
+						)
+					}
 				}
 
 				// Set Accepted condition if it is unset
@@ -199,11 +284,35 @@ func (t *Translator) ProcessBackendTrafficPolicies(resources *resource.Resources
 
 				// Check if this policy is overridden by other policies targeting at
 				// route level
+				mergedRoutes, routeMerged := gatewayPolicyMerged[gatewayNN]
+				if routeMerged && len(mergedRoutes) > 0 {
+					// if merge happened, skip the overridden check
+					gatewayMergedRoutes := mergedRoutes.UnsortedList()
+					sort.Strings(gatewayMergedRoutes)
+
+					status.SetConditionForPolicyAncestors(&policy.Status,
+						ancestorRefs,
+						t.GatewayControllerName,
+						egv1a1.PolicyConditionMerged,
+						metav1.ConditionTrue,
+						egv1a1.PolicyReasonMerged,
+						fmt.Sprintf("This policy is being merged by other backendTrafficPolicies for these routes: %v", gatewayMergedRoutes),
+						policy.Generation,
+					)
+				}
+
 				if r, ok := gatewayRouteMap[gatewayNN.String()]; ok {
 					// Maintain order here to ensure status/string does not change with the same data
-					routes := r.UnsortedList()
-					sort.Strings(routes)
-					message := fmt.Sprintf("This policy is being overridden by other backendTrafficPolicies for these routes: %v", routes)
+					var gatewayRoutes []string
+					if len(mergedRoutes) > 0 {
+						gatewayRoutes = r.Difference(mergedRoutes).UnsortedList()
+					} else {
+						gatewayRoutes = r.UnsortedList()
+					}
+					sort.Strings(gatewayRoutes)
+					if len(gatewayRoutes) == 0 {
+						continue
+					}
 
 					status.SetConditionForPolicyAncestors(&policy.Status,
 						ancestorRefs,
@@ -211,7 +320,7 @@ func (t *Translator) ProcessBackendTrafficPolicies(resources *resource.Resources
 						egv1a1.PolicyConditionOverridden,
 						metav1.ConditionTrue,
 						egv1a1.PolicyReasonOverridden,
-						message,
+						fmt.Sprintf("This policy is being overridden by other backendTrafficPolicies for these routes: %v", gatewayRoutes),
 						policy.Generation,
 					)
 				}
@@ -290,6 +399,7 @@ func (t *Translator) translateBackendTrafficPolicyForRoute(
 	route RouteContext,
 	xdsIR resource.XdsIRMap,
 	resources *resource.Resources,
+	gatewayNN *types.NamespacedName,
 ) error {
 	tf, errs := t.buildTrafficFeatures(policy, resources)
 	if tf == nil {
@@ -298,65 +408,143 @@ func (t *Translator) translateBackendTrafficPolicyForRoute(
 	}
 
 	// Apply IR to all relevant routes
+	for key, x := range xdsIR {
+		// if gatewayNN is not nil, only apply to the specific gateway
+		if gatewayNN != nil && key != t.IRKey(*gatewayNN) {
+			// Skip if not the gateway wanted
+			continue
+		}
+		applyTrafficFeatureToRoute(route, tf, errs, policy, x)
+	}
+
+	return errs
+}
+
+func (t *Translator) translateBackendTrafficPolicyForRouteWithMerge(
+	policy *egv1a1.BackendTrafficPolicy,
+	gatewayNN types.NamespacedName, gwPolicy *egv1a1.BackendTrafficPolicy,
+	route RouteContext, xdsIR resource.XdsIRMap, resources *resource.Resources,
+) error {
+	mergedPolicy, err := mergeBackendTrafficPolicy(policy, gwPolicy)
+	if err != nil {
+		return fmt.Errorf("error merging policies: %w", err)
+	}
+
+	// Build traffic features from the merged policy
+	tf, errs := t.buildTrafficFeatures(mergedPolicy, resources)
+	if tf == nil {
+		// should not happen
+		return nil
+	}
+
+	// Since GlobalRateLimit merge relies on IR auto-generated key: (<policy-ns>/<policy-name>/rule/<rule-index>)
+	// We can't simply merge the BTP's using utils.Merge() we need to specifically merge the GlobalRateLimit.Rules using IR fields.
+	// Since ir.TrafficFeatures is not a built-in Kubernetes API object with defined merging strategies and it does not support a deep merge (for lists/maps).
+
+	// Handle rate limit merging cases:
+	// 1. Both policies have rate limits - merge them
+	// 2. Only gateway policy has rate limits - preserve gateway policy's rule names
+	// 3. Only route policy has rate limits - use route policy's rule names (default behavior)
+	if policy.Spec.RateLimit != nil && gwPolicy.Spec.RateLimit != nil {
+		// Case 1: Both policies have rate limits - merge them
+		tfGW, _ := t.buildTrafficFeatures(gwPolicy, resources)
+		tfRoute, _ := t.buildTrafficFeatures(policy, resources)
+
+		if tfGW != nil && tfRoute != nil &&
+			tfGW.RateLimit != nil && tfRoute.RateLimit != nil {
+
+			mergedRL, err := utils.Merge(tfGW.RateLimit, tfRoute.RateLimit, *policy.Spec.MergeType)
+			if err != nil {
+				return fmt.Errorf("error merging rate limits: %w", err)
+			}
+			// Replace the rate limit in the merged features if successful
+			tf.RateLimit = mergedRL
+		}
+	} else if policy.Spec.RateLimit == nil && gwPolicy.Spec.RateLimit != nil {
+		// Case 2: Only gateway policy has rate limits - preserve gateway policy's rule names
+		tfGW, _ := t.buildTrafficFeatures(gwPolicy, resources)
+		if tfGW != nil && tfGW.RateLimit != nil {
+			// Use the gateway policy's rate limit with its original rule names
+			tf.RateLimit = tfGW.RateLimit
+		}
+	}
+	// Case 3: Only route policy has rate limits or neither has rate limits - use default behavior (tf already built from merged policy)
+
+	x, ok := xdsIR[t.IRKey(gatewayNN)]
+	if !ok {
+		// should not happen.
+		return nil
+	}
+	applyTrafficFeatureToRoute(route, tf, errs, mergedPolicy, x)
+
+	return nil
+}
+
+func applyTrafficFeatureToRoute(route RouteContext,
+	tf *ir.TrafficFeatures, errs error,
+	policy *egv1a1.BackendTrafficPolicy, x *ir.Xds,
+) {
 	prefix := irRoutePrefix(route)
-	for _, x := range xdsIR {
-		for _, tcp := range x.TCP {
-			for _, r := range tcp.Routes {
-				if strings.HasPrefix(r.Destination.Name, prefix) {
-					r.LoadBalancer = tf.LoadBalancer
-					r.ProxyProtocol = tf.ProxyProtocol
-					r.HealthCheck = tf.HealthCheck
-					r.CircuitBreaker = tf.CircuitBreaker
-					r.TCPKeepalive = tf.TCPKeepalive
-					r.Timeout = tf.Timeout
-					r.BackendConnection = tf.BackendConnection
-					r.DNS = tf.DNS
-				}
-			}
-		}
-
-		for _, udp := range x.UDP {
-			if udp.Route != nil {
-				r := udp.Route
-
-				if strings.HasPrefix(r.Destination.Name, prefix) {
-					r.LoadBalancer = tf.LoadBalancer
-					r.DNS = tf.DNS
-				}
-			}
-		}
-
-		for _, http := range x.HTTP {
-			for _, r := range http.Routes {
-				// Apply if there is a match
-				if strings.HasPrefix(r.Name, prefix) {
-					if errs != nil {
-						// Return a 500 direct response
-						r.DirectResponse = &ir.CustomResponse{
-							StatusCode: ptr.To(uint32(500)),
-						}
-						continue
-					}
-
-					r.Traffic = tf.DeepCopy()
-					r.Traffic.Name = irTrafficName(policy)
-
-					if localTo, err := buildClusterSettingsTimeout(policy.Spec.ClusterSettings); err == nil {
-						r.Traffic.Timeout = localTo
-					}
-
-					// Update the Host field in HealthCheck, now that we have access to the Route Hostname.
-					r.Traffic.HealthCheck.SetHTTPHostIfAbsent(r.Hostname)
-
-					if policy.Spec.UseClientProtocol != nil {
-						r.UseClientProtocol = policy.Spec.UseClientProtocol
-					}
-				}
+	for _, tcp := range x.TCP {
+		for _, r := range tcp.Routes {
+			if strings.HasPrefix(r.Destination.Name, prefix) {
+				r.LoadBalancer = tf.LoadBalancer
+				r.ProxyProtocol = tf.ProxyProtocol
+				r.HealthCheck = tf.HealthCheck
+				r.CircuitBreaker = tf.CircuitBreaker
+				r.TCPKeepalive = tf.TCPKeepalive
+				r.Timeout = tf.Timeout
+				r.BackendConnection = tf.BackendConnection
+				r.DNS = tf.DNS
 			}
 		}
 	}
 
-	return errs
+	for _, udp := range x.UDP {
+		if udp.Route != nil {
+			r := udp.Route
+			if strings.HasPrefix(r.Destination.Name, prefix) {
+				r.LoadBalancer = tf.LoadBalancer
+				r.DNS = tf.DNS
+			}
+		}
+	}
+
+	for _, http := range x.HTTP {
+		for _, r := range http.Routes {
+			// Apply if there is a match
+			if strings.HasPrefix(r.Name, prefix) {
+				if errs != nil {
+					// Return a 500 direct response
+					r.DirectResponse = &ir.CustomResponse{
+						StatusCode: ptr.To(uint32(500)),
+					}
+					continue
+				}
+
+				r.Traffic = tf.DeepCopy()
+
+				if localTo, err := buildClusterSettingsTimeout(policy.Spec.ClusterSettings); err == nil {
+					r.Traffic.Timeout = localTo
+				}
+
+				// Update the Host field in HealthCheck, now that we have access to the Route Hostname.
+				r.Traffic.HealthCheck.SetHTTPHostIfAbsent(r.Hostname)
+
+				if policy.Spec.UseClientProtocol != nil {
+					r.UseClientProtocol = policy.Spec.UseClientProtocol
+				}
+			}
+		}
+	}
+}
+
+func mergeBackendTrafficPolicy(routePolicy, gwPolicy *egv1a1.BackendTrafficPolicy) (*egv1a1.BackendTrafficPolicy, error) {
+	if routePolicy.Spec.MergeType == nil || gwPolicy == nil {
+		return routePolicy.DeepCopy(), nil
+	}
+
+	return utils.Merge[*egv1a1.BackendTrafficPolicy](gwPolicy, routePolicy, *routePolicy.Spec.MergeType)
 }
 
 func (t *Translator) buildTrafficFeatures(policy *egv1a1.BackendTrafficPolicy, resources *resource.Resources) (*ir.TrafficFeatures, error) {
@@ -540,7 +728,6 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(
 			}
 
 			r.Traffic = tf.DeepCopy()
-			r.Traffic.Name = irTrafficName(policy)
 
 			// Update the Host field in HealthCheck, now that we have access to the Route Hostname.
 			r.Traffic.HealthCheck.SetHTTPHostIfAbsent(r.Hostname)
@@ -614,7 +801,7 @@ func (t *Translator) buildLocalRateLimit(policy *egv1a1.BackendTrafficPolicy) (*
 	var err error
 	var irRule *ir.RateLimitRule
 	irRules := make([]*ir.RateLimitRule, 0)
-	for _, rule := range local.Rules {
+	for i, rule := range local.Rules {
 		// We don't process the rule without clientSelectors here because it's
 		// previously used as the default route-level limit.
 		if len(rule.ClientSelectors) == 0 {
@@ -625,6 +812,8 @@ func (t *Translator) buildLocalRateLimit(policy *egv1a1.BackendTrafficPolicy) (*
 		if err != nil {
 			return nil, err
 		}
+		// Set the Name field as <policy-ns>/<policy-name>/rule/<rule-index>
+		irRule.Name = irRuleName(policy.Namespace, policy.Name, i)
 		irRules = append(irRules, irRule)
 	}
 
@@ -649,8 +838,7 @@ func (t *Translator) buildGlobalRateLimit(policy *egv1a1.BackendTrafficPolicy) (
 	global := policy.Spec.RateLimit.Global
 	rateLimit := &ir.RateLimit{
 		Global: &ir.GlobalRateLimit{
-			Rules:  make([]*ir.RateLimitRule, len(global.Rules)),
-			Shared: global.Shared,
+			Rules: make([]*ir.RateLimitRule, len(global.Rules)),
 		},
 	}
 
@@ -661,6 +849,8 @@ func (t *Translator) buildGlobalRateLimit(policy *egv1a1.BackendTrafficPolicy) (
 		if err != nil {
 			return nil, err
 		}
+		// Set the Name field as <policy-ns>/<policy-name>/rule/<rule-index>
+		irRules[i].Name = irRuleName(policy.Namespace, policy.Name, i)
 	}
 
 	return rateLimit, nil
@@ -673,6 +863,7 @@ func buildRateLimitRule(rule egv1a1.RateLimitRule) (*ir.RateLimitRule, error) {
 			Unit:     ir.RateLimitUnit(rule.Limit.Unit),
 		},
 		HeaderMatches: make([]*ir.StringMatch, 0),
+		Shared:        rule.Shared,
 	}
 
 	for _, match := range rule.ClientSelectors {
@@ -860,25 +1051,52 @@ func buildResponseOverride(policy *egv1a1.BackendTrafficPolicy, resources *resou
 			}
 		}
 
-		response := ir.CustomResponse{
-			ContentType: ro.Response.ContentType,
-		}
+		if ro.Redirect != nil {
+			redirect := &ir.Redirect{
+				Scheme: ro.Redirect.Scheme,
+			}
+			if ro.Redirect.Path != nil {
+				redirect.Path = &ir.HTTPPathModifier{
+					FullReplace:        ro.Redirect.Path.ReplaceFullPath,
+					PrefixMatchReplace: ro.Redirect.Path.ReplacePrefixMatch,
+				}
+			}
+			if ro.Redirect.Hostname != nil {
+				redirect.Hostname = ptr.To(string(*ro.Redirect.Hostname))
+			}
+			if ro.Redirect.Port != nil {
+				redirect.Port = ptr.To(uint32(*ro.Redirect.Port))
+			}
+			if ro.Redirect.StatusCode != nil {
+				redirect.StatusCode = ptr.To(int32(*ro.Redirect.StatusCode))
+			}
 
-		if ro.Response.StatusCode != nil {
-			response.StatusCode = ptr.To(uint32(*ro.Response.StatusCode))
-		}
+			rules = append(rules, ir.ResponseOverrideRule{
+				Name:     defaultResponseOverrideRuleName(policy, index),
+				Match:    match,
+				Redirect: redirect,
+			})
+		} else {
+			response := &ir.CustomResponse{
+				ContentType: ro.Response.ContentType,
+			}
 
-		var err error
-		response.Body, err = getCustomResponseBody(ro.Response.Body, resources, policy.Namespace)
-		if err != nil {
-			return nil, err
-		}
+			if ro.Response.StatusCode != nil {
+				response.StatusCode = ptr.To(uint32(*ro.Response.StatusCode))
+			}
 
-		rules = append(rules, ir.ResponseOverrideRule{
-			Name:     defaultResponseOverrideRuleName(policy, index),
-			Match:    match,
-			Response: response,
-		})
+			var err error
+			response.Body, err = getCustomResponseBody(ro.Response.Body, resources, policy.Namespace)
+			if err != nil {
+				return nil, err
+			}
+
+			rules = append(rules, ir.ResponseOverrideRule{
+				Name:     defaultResponseOverrideRuleName(policy, index),
+				Match:    match,
+				Response: response,
+			})
+		}
 	}
 	return &ir.ResponseOverride{
 		Name:  irConfigName(policy),

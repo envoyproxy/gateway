@@ -68,7 +68,7 @@ func New(ctx context.Context, restCfg *rest.Config, svrCfg *ec.Server, resources
 		Logger:                  svrCfg.Logger.Logger,
 		HealthProbeBindAddress:  healthProbeBindAddress,
 		LeaderElectionID:        "5b9825d2.gateway.envoyproxy.io",
-		LeaderElectionNamespace: svrCfg.Namespace,
+		LeaderElectionNamespace: svrCfg.ControllerNamespace,
 	}
 
 	log.SetLogger(mgrOpts.Logger)
@@ -127,6 +127,7 @@ func New(ctx context.Context, restCfg *rest.Config, svrCfg *ec.Server, resources
 		mgr.GetWebhookServer().Register("/inject-pod-topology", &webhook.Admission{
 			Handler: &ProxyTopologyInjector{
 				Client:  mgr.GetClient(),
+				Logger:  svrCfg.Logger.WithName("proxy-topology-injector"),
 				Decoder: admission.NewDecoder(mgr.GetScheme()),
 			},
 		})
@@ -138,7 +139,7 @@ func New(ctx context.Context, restCfg *rest.Config, svrCfg *ec.Server, resources
 
 	// Create and register the controllers with the manager.
 	if err := newGatewayAPIController(ctx, mgr, svrCfg, updateHandler.Writer(), resources); err != nil {
-		return nil, fmt.Errorf("failted to create gatewayapi controller: %w", err)
+		return nil, fmt.Errorf("failed to create gatewayapi controller: %w", err)
 	}
 
 	// Add health check health probes.

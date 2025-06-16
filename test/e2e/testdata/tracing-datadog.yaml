@@ -69,7 +69,7 @@ spec:
         "k8s.namespace.name":
           type: Environment
           environment:
-            name: ENVOY_GATEWAY_NAMESPACE
+            name: ENVOY_POD_NAMESPACE
             defaultValue: "envoy-gateway-system"
   shutdown:
     drainTimeout: 5s

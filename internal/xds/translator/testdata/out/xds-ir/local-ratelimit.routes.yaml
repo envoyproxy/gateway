@@ -44,6 +44,7 @@
               fillInterval: 3600s
               maxTokens: 10
               tokensPerFill: 10
+          enableXRatelimitHeaders: DRAFT_VERSION_03
           filterEnabled:
             defaultValue:
               numerator: 100
@@ -124,6 +125,7 @@
               fillInterval: 60s
               maxTokens: 10
               tokensPerFill: 10
+          enableXRatelimitHeaders: DRAFT_VERSION_03
           filterEnabled:
             defaultValue:
               numerator: 100
@@ -146,6 +148,7 @@
         envoy.filters.http.local_ratelimit:
           '@type': type.googleapis.com/envoy.extensions.filters.http.local_ratelimit.v3.LocalRateLimit
           alwaysConsumeDefaultTokenBucket: false
+          enableXRatelimitHeaders: DRAFT_VERSION_03
           filterEnabled:
             defaultValue:
               numerator: 100

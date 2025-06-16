@@ -59,10 +59,14 @@ type Manager struct {
 }
 
 // NewManager returns a new Manager
-func NewManager(cfg *config.Server) (extTypes.Manager, error) {
-	cli, err := k8scli.New(k8sclicfg.GetConfigOrDie(), k8scli.Options{Scheme: envoygateway.GetScheme()})
-	if err != nil {
-		return nil, err
+func NewManager(cfg *config.Server, inK8s bool) (extTypes.Manager, error) {
+	var cli k8scli.Client
+	var err error
+	if inK8s {
+		cli, err = k8scli.New(k8sclicfg.GetConfigOrDie(), k8scli.Options{Scheme: envoygateway.GetScheme()})
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	var extension *egv1a1.ExtensionManager
@@ -77,7 +81,7 @@ func NewManager(cfg *config.Server) (extTypes.Manager, error) {
 
 	return &Manager{
 		k8sClient: cli,
-		namespace: cfg.Namespace,
+		namespace: cfg.ControllerNamespace,
 		extension: *extension,
 	}, nil
 }
@@ -270,6 +274,9 @@ func setupGRPCOpts(ctx context.Context, client k8scli.Client, ext *egv1a1.Extens
 	}
 	if ext.Service == nil {
 		return nil, errors.New("the registered extension doesn't have a service config")
+	}
+	if ext.Service.TLS != nil && client == nil {
+		return nil, errors.New("the registered extension's service config has TLS enabled but no k8s client was provided")
 	}
 
 	var opts []grpc.DialOption

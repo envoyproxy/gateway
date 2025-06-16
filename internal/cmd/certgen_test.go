@@ -15,6 +15,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -57,7 +58,7 @@ func TestPatchTopologyWebhook(t *testing.T) {
 	cases := []struct {
 		caseName  string
 		webhook   *admissionregistrationv1.MutatingWebhookConfiguration
-		caBundle  []byte
+		secret    *corev1.Secret
 		wantErr   error
 		wantPatch bool
 	}{
@@ -65,11 +66,14 @@ func TestPatchTopologyWebhook(t *testing.T) {
 			caseName: "Update caBundle",
 			webhook: &admissionregistrationv1.MutatingWebhookConfiguration{
 				ObjectMeta: metav1.ObjectMeta{
-					Name: fmt.Sprintf("%s.%s", topologyWebhookNamePrefix, cfg.Namespace),
+					Name: fmt.Sprintf("%s.%s", topologyWebhookNamePrefix, cfg.ControllerNamespace),
 				},
 				Webhooks: []admissionregistrationv1.MutatingWebhook{{ClientConfig: admissionregistrationv1.WebhookClientConfig{}}},
 			},
-			caBundle:  []byte("foo"),
+			secret: &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{Name: "envoy-gateway", Namespace: cfg.ControllerNamespace},
+				Data:       map[string][]byte{"ca.crt": []byte("foo")},
+			},
 			wantErr:   nil,
 			wantPatch: true,
 		},
@@ -77,29 +81,32 @@ func TestPatchTopologyWebhook(t *testing.T) {
 			caseName: "No-op",
 			webhook: &admissionregistrationv1.MutatingWebhookConfiguration{
 				ObjectMeta: metav1.ObjectMeta{
-					Name: fmt.Sprintf("%s.%s", topologyWebhookNamePrefix, cfg.Namespace),
+					Name: fmt.Sprintf("%s.%s", topologyWebhookNamePrefix, cfg.ControllerNamespace),
 				},
 				Webhooks: []admissionregistrationv1.MutatingWebhook{{ClientConfig: admissionregistrationv1.WebhookClientConfig{CABundle: []byte("foo")}}},
 			},
-			caBundle:  []byte("foo"),
+			secret: &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{Name: "envoy-gateway", Namespace: cfg.ControllerNamespace},
+				Data:       map[string][]byte{"ca.crt": []byte("foo")},
+			},
 			wantPatch: false,
 		},
 	}
 	for _, tc := range cases {
 		t.Run(tc.caseName, func(t *testing.T) {
 			fakeClient := fake.NewClientBuilder().
-				WithRuntimeObjects(tc.webhook).
+				WithRuntimeObjects(tc.webhook, tc.secret).
 				Build()
 			beforeWebhook := &admissionregistrationv1.MutatingWebhookConfiguration{}
 			require.NoError(t, fakeClient.Get(context.Background(), client.ObjectKey{Name: tc.webhook.Name}, beforeWebhook))
-			err = patchTopologyInjectorWebhook(context.Background(), fakeClient, cfg, tc.caBundle)
 
+			err = patchTopologyInjectorWebhook(context.Background(), fakeClient, cfg)
 			require.NoError(t, err)
 
 			afterWebhook := &admissionregistrationv1.MutatingWebhookConfiguration{}
 			require.NoError(t, fakeClient.Get(context.Background(), client.ObjectKey{Name: tc.webhook.Name}, afterWebhook))
 
-			require.Equal(t, afterWebhook.Webhooks[0].ClientConfig.CABundle, tc.caBundle)
+			require.Equal(t, afterWebhook.Webhooks[0].ClientConfig.CABundle, tc.secret.Data["ca.crt"])
 			assert.Equal(t, tc.wantPatch, beforeWebhook.GetResourceVersion() != afterWebhook.GetResourceVersion())
 		})
 	}

@@ -58,7 +58,12 @@ func UpdateGatewayStatusProgrammedCondition(gw *gwapiv1.Gateway, svc *corev1.Ser
 			if len(svc.Spec.ExternalIPs) > 0 {
 				addresses = append(addresses, svc.Spec.ExternalIPs...)
 			} else if len(svc.Spec.ClusterIPs) > 0 {
-				addresses = append(addresses, svc.Spec.ClusterIPs...)
+				// Filter out "None" values which represent headless services
+				for _, ip := range svc.Spec.ClusterIPs {
+					if ip != "" && ip != "None" {
+						addresses = append(addresses, ip)
+					}
+				}
 			}
 		} else {
 			if svc.Spec.Type == corev1.ServiceTypeLoadBalancer {
@@ -79,7 +84,8 @@ func UpdateGatewayStatusProgrammedCondition(gw *gwapiv1.Gateway, svc *corev1.Ser
 
 			if svc.Spec.Type == corev1.ServiceTypeClusterIP {
 				for i := range svc.Spec.ClusterIPs {
-					if svc.Spec.ClusterIPs[i] != "" {
+					// Filter out "None" values which represent headless services
+					if svc.Spec.ClusterIPs[i] != "" && svc.Spec.ClusterIPs[i] != "None" {
 						addresses = append(addresses, svc.Spec.ClusterIPs[i])
 					}
 				}
@@ -181,4 +187,12 @@ func updateGatewayProgrammedCondition(gw *gwapiv1.Gateway, envoyObj client.Objec
 	gw.Status.Conditions = MergeConditions(gw.Status.Conditions,
 		newCondition(string(gwapiv1.GatewayConditionProgrammed), metav1.ConditionFalse, string(gwapiv1.GatewayReasonNoResources),
 			messageNoResources, time.Now(), gw.Generation))
+}
+
+// GetGatewayListenerStatusConditions returns the status conditions for a specific listener in the gateway status.
+func GetGatewayListenerStatusConditions(gateway *gwapiv1.Gateway, listenerStatusIdx int) []metav1.Condition {
+	if gateway == nil || listenerStatusIdx < 0 || listenerStatusIdx >= len(gateway.Status.Listeners) {
+		return nil
+	}
+	return gateway.Status.Listeners[listenerStatusIdx].Conditions
 }

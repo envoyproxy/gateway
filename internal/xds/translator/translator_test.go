@@ -7,7 +7,6 @@ package translator
 
 import (
 	"embed"
-	"flag"
 	"path/filepath"
 	"runtime"
 	"sort"
@@ -30,6 +29,7 @@ import (
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/utils/field"
 	"github.com/envoyproxy/gateway/internal/utils/file"
+	"github.com/envoyproxy/gateway/internal/utils/test"
 	xtypes "github.com/envoyproxy/gateway/internal/xds/types"
 	"github.com/envoyproxy/gateway/internal/xds/utils"
 )
@@ -39,8 +39,6 @@ var (
 	outFiles embed.FS
 	//go:embed testdata/in/*
 	inFiles embed.FS
-
-	overrideTestData = flag.Bool("override-testdata", false, "if override the test output data.")
 )
 
 type testFileConfig struct {
@@ -159,6 +157,7 @@ func TestTranslateXds(t *testing.T) {
 
 			x := requireXdsIRFromInputTestData(t, inputFile)
 			tr := &Translator{
+				ControllerNamespace: "envoy-gateway-system",
 				GlobalRateLimit: &GlobalRateLimitSettings{
 					ServiceURL: ratelimit.GetServiceURL("envoy-gateway-system", dnsDomain),
 				},
@@ -178,7 +177,7 @@ func TestTranslateXds(t *testing.T) {
 			routes := tCtx.XdsResources[resourcev3.RouteType]
 			clusters := tCtx.XdsResources[resourcev3.ClusterType]
 			endpoints := tCtx.XdsResources[resourcev3.EndpointType]
-			if *overrideTestData {
+			if test.OverrideTestData() {
 				require.NoError(t, file.Write(requireResourcesToYAMLString(t, listeners), filepath.Join("testdata", "out", "xds-ir", inputFileName+".listeners.yaml")))
 				require.NoError(t, file.Write(requireResourcesToYAMLString(t, routes), filepath.Join("testdata", "out", "xds-ir", inputFileName+".routes.yaml")))
 				require.NoError(t, file.Write(requireResourcesToYAMLString(t, clusters), filepath.Join("testdata", "out", "xds-ir", inputFileName+".clusters.yaml")))
@@ -191,7 +190,7 @@ func TestTranslateXds(t *testing.T) {
 
 			secrets, ok := tCtx.XdsResources[resourcev3.SecretType]
 			if ok && len(secrets) > 0 {
-				if *overrideTestData {
+				if test.OverrideTestData() {
 					require.NoError(t, file.Write(requireResourcesToYAMLString(t, secrets), filepath.Join("testdata", "out", "xds-ir", inputFileName+".secrets.yaml")))
 				}
 				require.Equal(t, requireTestDataOutFile(t, "xds-ir", inputFileName+".secrets.yaml"), requireResourcesToYAMLString(t, secrets))
@@ -202,7 +201,7 @@ func TestTranslateXds(t *testing.T) {
 				for _, e := range got {
 					require.NoError(t, field.SetValue(e, "LastTransitionTime", metav1.NewTime(time.Time{})))
 				}
-				if *overrideTestData {
+				if test.OverrideTestData() {
 					out, err := yaml.Marshal(got)
 					require.NoError(t, err)
 					require.NoError(t, file.Write(string(out), filepath.Join("testdata", "out", "xds-ir", inputFileName+".envoypatchpolicies.yaml")))
@@ -231,7 +230,7 @@ func TestTranslateRateLimitConfig(t *testing.T) {
 			// Call BuildRateLimitServiceConfig with the list of listeners
 			configs := BuildRateLimitServiceConfig(listeners)
 
-			if *overrideTestData {
+			if test.OverrideTestData() {
 				require.NoError(t, file.Write(requireRateLimitConfigsToYAMLString(t, configs), filepath.Join("testdata", "out", "ratelimit-config", inputFileName+".yaml")))
 			}
 			require.Equal(t, requireTestDataOutFile(t, "ratelimit-config", inputFileName+".yaml"), requireRateLimitConfigsToYAMLString(t, configs))
@@ -289,6 +288,11 @@ func TestTranslateXdsWithExtensionErrorsWhenFailOpen(t *testing.T) {
 						Version: "v1alpha1",
 						Kind:    "Bar",
 					},
+					{
+						Group:   "security.example.io",
+						Version: "v1alpha1",
+						Kind:    "ExampleExtPolicy",
+					},
 				},
 				Hooks: &egv1a1.ExtensionHooks{
 					XDSTranslator: &egv1a1.XDSTranslatorHooks{
@@ -317,7 +321,7 @@ func TestTranslateXdsWithExtensionErrorsWhenFailOpen(t *testing.T) {
 			routes := tCtx.XdsResources[resourcev3.RouteType]
 			clusters := tCtx.XdsResources[resourcev3.ClusterType]
 			endpoints := tCtx.XdsResources[resourcev3.EndpointType]
-			if *overrideTestData {
+			if test.OverrideTestData() {
 				require.NoError(t, file.Write(requireResourcesToYAMLString(t, listeners), filepath.Join("testdata", "out", "extension-xds-ir", inputFileName+".listeners.yaml")))
 				require.NoError(t, file.Write(requireResourcesToYAMLString(t, routes), filepath.Join("testdata", "out", "extension-xds-ir", inputFileName+".routes.yaml")))
 				require.NoError(t, file.Write(requireResourcesToYAMLString(t, clusters), filepath.Join("testdata", "out", "extension-xds-ir", inputFileName+".clusters.yaml")))
@@ -330,7 +334,7 @@ func TestTranslateXdsWithExtensionErrorsWhenFailOpen(t *testing.T) {
 
 			secrets, ok := tCtx.XdsResources[resourcev3.SecretType]
 			if ok {
-				if *overrideTestData {
+				if test.OverrideTestData() {
 					require.NoError(t, file.Write(requireResourcesToYAMLString(t, secrets), filepath.Join("testdata", "out", "extension-xds-ir", inputFileName+".secrets.yaml")))
 				}
 				require.Equal(t, requireTestDataOutFile(t, "extension-xds-ir", inputFileName+".secrets.yaml"), requireResourcesToYAMLString(t, secrets))
@@ -357,6 +361,9 @@ func TestTranslateXdsWithExtensionErrorsWhenFailClosed(t *testing.T) {
 		},
 		"multiple-listeners-same-port-error": {
 			errMsg: "rpc error: code = Unknown desc = simulate error when there is no default filter chain in the original resources",
+		},
+		"extensionpolicy-extension-server-error": {
+			errMsg: "rpc error: code = Unknown desc = invalid extension policy : ext-server-policy-invalid-test",
 		},
 	}
 
@@ -398,6 +405,11 @@ func TestTranslateXdsWithExtensionErrorsWhenFailClosed(t *testing.T) {
 						Group:   "foo.example.io",
 						Version: "v1alpha1",
 						Kind:    "Bar",
+					},
+					{
+						Group:   "security.example.io",
+						Version: "v1alpha1",
+						Kind:    "ExampleExtPolicy",
 					},
 				},
 				Hooks: &egv1a1.ExtensionHooks{

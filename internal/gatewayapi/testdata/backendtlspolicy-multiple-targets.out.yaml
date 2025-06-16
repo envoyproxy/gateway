@@ -167,7 +167,11 @@ infraIR:
         labels:
           gateway.envoyproxy.io/owning-gateway-name: gateway-btls
           gateway.envoyproxy.io/owning-gateway-namespace: envoy-gateway
+        ownerReference:
+          kind: GatewayClass
+          name: envoy-gateway-class
       name: envoy-gateway/gateway-btls
+      namespace: envoy-gateway-system
 xdsIR:
   envoy-gateway/gateway-btls:
     accessLog:
@@ -190,12 +194,21 @@ xdsIR:
       port: 10080
       routes:
       - destination:
+          metadata:
+            kind: HTTPRoute
+            name: httproute-btls-1
+            namespace: envoy-gateway
           name: httproute/envoy-gateway/httproute-btls-1/rule/0
           settings:
           - addressType: IP
             endpoints:
             - host: 10.244.0.11
               port: 8080
+            metadata:
+              kind: Service
+              name: http-backend
+              namespace: envoy-gateway
+              sectionName: "8080"
             name: httproute/envoy-gateway/httproute-btls-1/rule/0/backend/0
             protocol: HTTP
             tls:
@@ -217,12 +230,21 @@ xdsIR:
           exact: /exact-1
           name: ""
       - destination:
+          metadata:
+            kind: HTTPRoute
+            name: httproute-btls-2
+            namespace: envoy-gateway
           name: httproute/envoy-gateway/httproute-btls-2/rule/0
           settings:
           - addressType: IP
             endpoints:
             - host: 10.244.0.11
               port: 8081
+            metadata:
+              kind: Service
+              name: http-backend
+              namespace: envoy-gateway
+              sectionName: "8081"
             name: httproute/envoy-gateway/httproute-btls-2/rule/0/backend/0
             protocol: HTTP
             tls:

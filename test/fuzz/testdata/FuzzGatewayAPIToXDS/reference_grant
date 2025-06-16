@@ -1,0 +1,22 @@
+apiVersion: gateway.networking.k8s.io/v1beta1
+kind: ReferenceGrant
+metadata:
+  name: refg-example
+  namespace: default
+spec:
+  from:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      namespace: envoy-gateway
+    - group: gateway.networking.k8s.io
+      kind: TCPRoute
+      namespace: envoy-gateway
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      namespace: envoy-gateway
+    - group: gateway.networking.k8s.io
+      kind: BackendTLSPolicy
+      namespace: default
+  to:
+    - group: ""
+      kind: Service

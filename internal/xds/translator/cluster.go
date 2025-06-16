@@ -14,6 +14,8 @@ import (
 	clusterv3 "github.com/envoyproxy/go-control-plane/envoy/config/cluster/v3"
 	corev3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	endpointv3 "github.com/envoyproxy/go-control-plane/envoy/config/endpoint/v3"
+	dfpv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/clusters/dynamic_forward_proxy/v3"
+	commondfpv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/common/dynamic_forward_proxy/v3"
 	codecv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/upstream_codec/v3"
 	hcmv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/http_connection_manager/v3"
 	preservecasev3 "github.com/envoyproxy/go-control-plane/envoy/extensions/http/header_formatters/preserve_case/v3"
@@ -66,6 +68,8 @@ type xdsClusterArgs struct {
 	dns               *ir.DNS
 	useClientProtocol bool
 	ipFamily          *egv1a1.IPFamily
+	metadata          *ir.ResourceMetadata
+	statName          *string
 }
 
 type EndpointType int
@@ -73,6 +77,7 @@ type EndpointType int
 const (
 	EndpointTypeDNS EndpointType = iota
 	EndpointTypeStatic
+	EndpointTypeDynamicResolver
 )
 
 func buildEndpointType(settings []*ir.DestinationSetting) EndpointType {
@@ -80,6 +85,10 @@ func buildEndpointType(settings []*ir.DestinationSetting) EndpointType {
 	// since there's no Mixed AddressType among all the DestinationSettings.
 	if settings == nil {
 		return EndpointTypeStatic
+	}
+
+	if settings[0].IsDynamicResolver {
+		return EndpointTypeDynamicResolver
 	}
 
 	addrType := settings[0].AddressType
@@ -137,6 +146,11 @@ func buildXdsCluster(args *xdsClusterArgs) (*buildClusterResult, error) {
 			},
 		},
 		PerConnectionBufferLimitBytes: buildBackandConnectionBufferLimitBytes(args.backendConnection),
+		Metadata:                      buildXdsMetadata(args.metadata),
+	}
+
+	if args.statName != nil {
+		cluster.AltStatName = *args.statName
 	}
 
 	// 50% is the Envoy default value for panic threshold. No need to explicitly set it in this case.
@@ -163,32 +177,43 @@ func buildXdsCluster(args *xdsClusterArgs) (*buildClusterResult, error) {
 		}
 	}
 
-	if args.endpointType == EndpointTypeStatic {
-		cluster.ClusterDiscoveryType = &clusterv3.Cluster_Type{Type: clusterv3.Cluster_EDS}
-		cluster.EdsClusterConfig = &clusterv3.Cluster_EdsClusterConfig{
-			ServiceName: args.name,
-			EdsConfig: &corev3.ConfigSource{
-				ResourceApiVersion: resource.DefaultAPIVersion,
-				ConfigSourceSpecifier: &corev3.ConfigSource_Ads{
-					Ads: &corev3.AggregatedConfigSource{},
-				},
-			},
+	// Set Proxy Protocol
+	if args.proxyProtocol != nil {
+		cluster.TransportSocket = buildProxyProtocolSocket(args.proxyProtocol, args.tSocket)
+	} else if args.tSocket != nil {
+		cluster.TransportSocket = args.tSocket
+	}
+
+	for i, ds := range args.settings {
+		// If zone aware routing is enabled we update the cluster lb config
+		if ds.ZoneAwareRoutingEnabled {
+			cluster.CommonLbConfig.LocalityConfigSpecifier = &clusterv3.Cluster_CommonLbConfig_ZoneAwareLbConfig_{ZoneAwareLbConfig: &clusterv3.Cluster_CommonLbConfig_ZoneAwareLbConfig{}}
 		}
-		// Dont wait for a health check to determine health and remove these endpoints
-		// if the endpoint has been removed via EDS by the control plane
-		cluster.IgnoreHealthOnHostRemoval = true
-	} else {
-		cluster.ClusterDiscoveryType = &clusterv3.Cluster_Type{Type: clusterv3.Cluster_STRICT_DNS}
-		cluster.DnsRefreshRate = durationpb.New(30 * time.Second)
-		cluster.RespectDnsTtl = true
-		if args.dns != nil {
-			if args.dns.DNSRefreshRate != nil {
-				if args.dns.DNSRefreshRate.Duration > 0 {
-					cluster.DnsRefreshRate = durationpb.New(args.dns.DNSRefreshRate.Duration)
-				}
+
+		if ds.TLS != nil {
+			socket, err := buildXdsUpstreamTLSSocketWthCert(ds.TLS)
+			if err != nil {
+				// TODO: Log something here
+				return nil, err
 			}
-			if args.dns.RespectDNSTTL != nil {
-				cluster.RespectDnsTtl = ptr.Deref(args.dns.RespectDNSTTL, true)
+			if args.proxyProtocol != nil {
+				socket = buildProxyProtocolSocket(args.proxyProtocol, socket)
+			}
+			matchName := fmt.Sprintf("%s/tls/%d", args.name, i)
+
+			// Dynamic resolver clusters have no endpoints, so we need to set the transport socket directly.
+			if args.endpointType == EndpointTypeDynamicResolver {
+				cluster.TransportSocket = socket
+			} else {
+				cluster.TransportSocketMatches = append(cluster.TransportSocketMatches, &clusterv3.Cluster_TransportSocketMatch{
+					Name: matchName,
+					Match: &structpb.Struct{
+						Fields: map[string]*structpb.Value{
+							"name": structpb.NewStringValue(matchName),
+						},
+					},
+					TransportSocket: socket,
+				})
 			}
 		}
 	}
@@ -204,9 +229,10 @@ func buildXdsCluster(args *xdsClusterArgs) (*buildClusterResult, error) {
 
 	// Set Load Balancer policy
 	//nolint:gocritic
-	if args.loadBalancer == nil {
+	switch {
+	case args.loadBalancer == nil:
 		cluster.LbPolicy = clusterv3.Cluster_LEAST_REQUEST
-	} else if args.loadBalancer.LeastRequest != nil {
+	case args.loadBalancer.LeastRequest != nil:
 		cluster.LbPolicy = clusterv3.Cluster_LEAST_REQUEST
 		if args.loadBalancer.LeastRequest.SlowStart != nil {
 			if args.loadBalancer.LeastRequest.SlowStart.Window != nil {
@@ -219,7 +245,7 @@ func buildXdsCluster(args *xdsClusterArgs) (*buildClusterResult, error) {
 				}
 			}
 		}
-	} else if args.loadBalancer.RoundRobin != nil {
+	case args.loadBalancer.RoundRobin != nil:
 		cluster.LbPolicy = clusterv3.Cluster_ROUND_ROBIN
 		if args.loadBalancer.RoundRobin.SlowStart != nil && args.loadBalancer.RoundRobin.SlowStart.Window != nil {
 			cluster.LbConfig = &clusterv3.Cluster_RoundRobinLbConfig_{
@@ -230,11 +256,10 @@ func buildXdsCluster(args *xdsClusterArgs) (*buildClusterResult, error) {
 				},
 			}
 		}
-	} else if args.loadBalancer.Random != nil {
+	case args.loadBalancer.Random != nil:
 		cluster.LbPolicy = clusterv3.Cluster_RANDOM
-	} else if args.loadBalancer.ConsistentHash != nil {
+	case args.loadBalancer.ConsistentHash != nil:
 		cluster.LbPolicy = clusterv3.Cluster_MAGLEV
-
 		if args.loadBalancer.ConsistentHash.TableSize != nil {
 			cluster.LbConfig = &clusterv3.Cluster_MaglevLbConfig_{
 				MaglevLbConfig: &clusterv3.Cluster_MaglevLbConfig{
@@ -258,35 +283,70 @@ func buildXdsCluster(args *xdsClusterArgs) (*buildClusterResult, error) {
 		cluster.UpstreamConnectionOptions = buildXdsClusterUpstreamOptions(args.tcpkeepalive)
 	}
 
-	// Set Proxy Protocol
-	if args.proxyProtocol != nil {
-		cluster.TransportSocket = buildProxyProtocolSocket(args.proxyProtocol, args.tSocket)
-	} else if args.tSocket != nil {
-		cluster.TransportSocket = args.tSocket
+	switch args.endpointType {
+	case EndpointTypeDynamicResolver:
+		dnsCacheConfig := &commondfpv3.DnsCacheConfig{
+			Name:            args.name,
+			DnsLookupFamily: dnsLookupFamily,
+		}
+		dnsCacheConfig.DnsRefreshRate = durationpb.New(30 * time.Second)
+		if args.dns != nil {
+			if args.dns.DNSRefreshRate != nil {
+				if args.dns.DNSRefreshRate.Duration > 0 {
+					dnsCacheConfig.DnsRefreshRate = durationpb.New(args.dns.DNSRefreshRate.Duration)
+				}
+			}
+		}
+
+		dfp := &dfpv3.ClusterConfig{
+			ClusterImplementationSpecifier: &dfpv3.ClusterConfig_DnsCacheConfig{
+				DnsCacheConfig: dnsCacheConfig,
+			},
+		}
+		dfpAny, err := proto.ToAnyWithValidation(dfp)
+		if err != nil {
+			return nil, err
+		}
+		cluster.ClusterDiscoveryType = &clusterv3.Cluster_ClusterType{ClusterType: &clusterv3.Cluster_CustomClusterType{
+			Name:        args.name,
+			TypedConfig: dfpAny,
+		}}
+		cluster.LbPolicy = clusterv3.Cluster_CLUSTER_PROVIDED
+
+	case EndpointTypeStatic:
+		cluster.ClusterDiscoveryType = &clusterv3.Cluster_Type{Type: clusterv3.Cluster_EDS}
+		cluster.EdsClusterConfig = &clusterv3.Cluster_EdsClusterConfig{
+			ServiceName: args.name,
+			EdsConfig: &corev3.ConfigSource{
+				ResourceApiVersion: resource.DefaultAPIVersion,
+				ConfigSourceSpecifier: &corev3.ConfigSource_Ads{
+					Ads: &corev3.AggregatedConfigSource{},
+				},
+			},
+		}
+		// Dont wait for a health check to determine health and remove these endpoints
+		// if the endpoint has been removed via EDS by the control plane
+		cluster.IgnoreHealthOnHostRemoval = true
+	default:
+		cluster.ClusterDiscoveryType = &clusterv3.Cluster_Type{Type: clusterv3.Cluster_STRICT_DNS}
+		cluster.DnsRefreshRate = durationpb.New(30 * time.Second)
+		cluster.RespectDnsTtl = true
+		if args.dns != nil {
+			if args.dns.DNSRefreshRate != nil {
+				if args.dns.DNSRefreshRate.Duration > 0 {
+					cluster.DnsRefreshRate = durationpb.New(args.dns.DNSRefreshRate.Duration)
+				}
+			}
+			if args.dns.RespectDNSTTL != nil {
+				cluster.RespectDnsTtl = ptr.Deref(args.dns.RespectDNSTTL, true)
+			}
+		}
 	}
 
-	for i, ds := range args.settings {
-		if ds.TLS != nil {
-			socket, err := buildXdsUpstreamTLSSocketWthCert(ds.TLS)
-			if err != nil {
-				// TODO: Log something here
-				return nil, err
-			}
-			if args.proxyProtocol != nil {
-				socket = buildProxyProtocolSocket(args.proxyProtocol, socket)
-			}
-			matchName := fmt.Sprintf("%s/tls/%d", args.name, i)
-			cluster.TransportSocketMatches = append(cluster.TransportSocketMatches, &clusterv3.Cluster_TransportSocketMatch{
-				Name: matchName,
-				Match: &structpb.Struct{
-					Fields: map[string]*structpb.Value{
-						"name": structpb.NewStringValue(matchName),
-					},
-				},
-				TransportSocket: socket,
-			})
+	if args.endpointType != EndpointTypeDynamicResolver {
+		for _, ds := range args.settings {
+			buildZoneAwareRoutingCluster(ds.ZoneAwareRoutingEnabled, cluster, args.loadBalancer)
 		}
-		buildZoneAwareRoutingCluster(ds.ZoneAwareRoutingEnabled, cluster, args.loadBalancer)
 	}
 
 	return &buildClusterResult{
@@ -578,6 +638,7 @@ func buildXdsClusterLoadAssignment(clusterName string, destSettings []*ir.Destin
 	for i, ds := range destSettings {
 
 		var metadata *corev3.Metadata
+
 		if ds.TLS != nil {
 			metadata = &corev3.Metadata{
 				FilterMetadata: map[string]*structpb.Struct{
@@ -635,6 +696,7 @@ func buildZonalLocalities(metadata *corev3.Metadata, ds *ir.DestinationSetting) 
 			},
 			LbEndpoints: endPts,
 			Priority:    ptr.Deref(ds.Priority, 0),
+			Metadata:    buildXdsMetadata(ds.Metadata),
 		}
 		localities = append(localities, locality)
 	}
@@ -673,6 +735,7 @@ func buildWeightedLocalities(metadata *corev3.Metadata, ds *ir.DestinationSettin
 		},
 		LbEndpoints: endpoints,
 		Priority:    0,
+		Metadata:    buildXdsMetadata(ds.Metadata),
 	}
 
 	// Set locality weight
@@ -706,7 +769,7 @@ func buildTypedExtensionProtocolOptions(args *xdsClusterArgs) (map[string]*anypb
 
 	requiresHTTPFilters := len(args.settings) > 0 && args.settings[0].Filters != nil && args.settings[0].Filters.CredentialInjection != nil
 
-	if !(requiresCommonHTTPOptions || requiresHTTP1Options || requiresHTTP2Options || args.useClientProtocol || requiresHTTPFilters) {
+	if !requiresCommonHTTPOptions && !requiresHTTP1Options && !requiresHTTP2Options && !args.useClientProtocol && !requiresHTTPFilters {
 		return nil, nil, nil
 	}
 
@@ -786,6 +849,14 @@ func buildTypedExtensionProtocolOptions(args *xdsClusterArgs) (map[string]*anypb
 			ExplicitHttpConfig: &httpv3.HttpProtocolOptions_ExplicitHttpConfig{
 				ProtocolConfig: &httpv3.HttpProtocolOptions_ExplicitHttpConfig_HttpProtocolOptions{},
 			},
+		}
+	}
+
+	// Envoy proxy requires AutoSNI and AutoSanValidation to be set to true for dynamic_forward_proxy clusters
+	if args.endpointType == EndpointTypeDynamicResolver {
+		protocolOptions.UpstreamHttpProtocolOptions = &corev3.UpstreamHttpProtocolOptions{
+			AutoSni:           true,
+			AutoSanValidation: true,
 		}
 	}
 
@@ -976,10 +1047,11 @@ type ExtraArgs struct {
 	http1Settings *ir.HTTP1Settings
 	http2Settings *ir.HTTP2Settings
 	ipFamily      *egv1a1.IPFamily
+	statName      *string
 }
 
 type clusterArgs interface {
-	asClusterArgs(name string, settings []*ir.DestinationSetting, extras *ExtraArgs) *xdsClusterArgs
+	asClusterArgs(name string, settings []*ir.DestinationSetting, extras *ExtraArgs, metadata *ir.ResourceMetadata) *xdsClusterArgs
 }
 
 type UDPRouteTranslator struct {
@@ -989,6 +1061,7 @@ type UDPRouteTranslator struct {
 func (route *UDPRouteTranslator) asClusterArgs(name string,
 	settings []*ir.DestinationSetting,
 	extra *ExtraArgs,
+	metadata *ir.ResourceMetadata,
 ) *xdsClusterArgs {
 	return &xdsClusterArgs{
 		name:         name,
@@ -998,6 +1071,7 @@ func (route *UDPRouteTranslator) asClusterArgs(name string,
 		metrics:      extra.metrics,
 		dns:          route.DNS,
 		ipFamily:     extra.ipFamily,
+		metadata:     metadata,
 	}
 }
 
@@ -1008,6 +1082,7 @@ type TCPRouteTranslator struct {
 func (route *TCPRouteTranslator) asClusterArgs(name string,
 	settings []*ir.DestinationSetting,
 	extra *ExtraArgs,
+	metadata *ir.ResourceMetadata,
 ) *xdsClusterArgs {
 	return &xdsClusterArgs{
 		name:              name,
@@ -1023,6 +1098,7 @@ func (route *TCPRouteTranslator) asClusterArgs(name string,
 		backendConnection: route.BackendConnection,
 		dns:               route.DNS,
 		ipFamily:          extra.ipFamily,
+		metadata:          metadata,
 	}
 }
 
@@ -1033,6 +1109,7 @@ type HTTPRouteTranslator struct {
 func (httpRoute *HTTPRouteTranslator) asClusterArgs(name string,
 	settings []*ir.DestinationSetting,
 	extra *ExtraArgs,
+	metadata *ir.ResourceMetadata,
 ) *xdsClusterArgs {
 	clusterArgs := &xdsClusterArgs{
 		name:              name,
@@ -1044,6 +1121,8 @@ func (httpRoute *HTTPRouteTranslator) asClusterArgs(name string,
 		http2Settings:     extra.http2Settings,
 		useClientProtocol: ptr.Deref(httpRoute.UseClientProtocol, false),
 		ipFamily:          extra.ipFamily,
+		metadata:          metadata,
+		statName:          extra.statName,
 	}
 
 	// Populate traffic features.

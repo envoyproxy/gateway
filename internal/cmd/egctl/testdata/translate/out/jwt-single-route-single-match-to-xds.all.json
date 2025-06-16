@@ -200,71 +200,6 @@
                       }
                     }
                   }
-                },
-                {
-                  "connectTimeout": "10s",
-                  "loadAssignment": {
-                    "clusterName": "wasm_cluster",
-                    "endpoints": [
-                      {
-                        "lbEndpoints": [
-                          {
-                            "endpoint": {
-                              "address": {
-                                "socketAddress": {
-                                  "address": "envoy-gateway",
-                                  "portValue": 18002
-                                }
-                              }
-                            },
-                            "loadBalancingWeight": 1
-                          }
-                        ],
-                        "loadBalancingWeight": 1
-                      }
-                    ]
-                  },
-                  "name": "wasm_cluster",
-                  "transportSocket": {
-                    "name": "envoy.transport_sockets.tls",
-                    "typedConfig": {
-                      "@type": "type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.UpstreamTlsContext",
-                      "commonTlsContext": {
-                        "tlsCertificateSdsSecretConfigs": [
-                          {
-                            "name": "xds_certificate",
-                            "sdsConfig": {
-                              "pathConfigSource": {
-                                "path": "/sds/xds-certificate.json"
-                              },
-                              "resourceApiVersion": "V3"
-                            }
-                          }
-                        ],
-                        "tlsParams": {
-                          "tlsMaximumProtocolVersion": "TLSv1_3"
-                        },
-                        "validationContextSdsSecretConfig": {
-                          "name": "xds_trusted_ca",
-                          "sdsConfig": {
-                            "pathConfigSource": {
-                              "path": "/sds/xds-trusted-ca.json"
-                            },
-                            "resourceApiVersion": "V3"
-                          }
-                        }
-                      }
-                    }
-                  },
-                  "type": "STRICT_DNS",
-                  "typedExtensionProtocolOptions": {
-                    "envoy.extensions.upstreams.http.v3.HttpProtocolOptions": {
-                      "@type": "type.googleapis.com/envoy.extensions.upstreams.http.v3.HttpProtocolOptions",
-                      "explicitHttpConfig": {
-                        "http2ProtocolOptions": {}
-                      }
-                    }
-                  }
                 }
               ],
               "listeners": [
@@ -358,6 +293,20 @@
                     "loadBalancingWeight": 1,
                     "locality": {
                       "region": "httproute/envoy-gateway-system/backend/rule/0/backend/0"
+                    },
+                    "metadata": {
+                      "filterMetadata": {
+                        "envoy-gateway": {
+                          "resources": [
+                            {
+                              "kind": "Service",
+                              "name": "backend",
+                              "namespace": "envoy-gateway-system",
+                              "sectionName": "3000"
+                            }
+                          ]
+                        }
+                      }
                     }
                   }
                 ]
@@ -392,6 +341,19 @@
                 },
                 "ignoreHealthOnHostRemoval": true,
                 "lbPolicy": "LEAST_REQUEST",
+                "metadata": {
+                  "filterMetadata": {
+                    "envoy-gateway": {
+                      "resources": [
+                        {
+                          "kind": "HTTPRoute",
+                          "name": "backend",
+                          "namespace": "envoy-gateway-system"
+                        }
+                      ]
+                    }
+                  }
+                },
                 "name": "httproute/envoy-gateway-system/backend/rule/0",
                 "perConnectionBufferLimitBytes": 32768,
                 "type": "EDS"

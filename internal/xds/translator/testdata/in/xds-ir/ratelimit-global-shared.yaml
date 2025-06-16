@@ -1,3 +1,8 @@
+globalResources:
+  envoyClientCertificate:
+    name: envoy-gateway-system/envoy
+    privateKey: [107, 101, 121, 45, 100, 97, 116, 97]
+    certificate: [99, 101, 114, 116, 45, 100, 97, 116, 97]
 metrics:
   enablePerEndpointStats: true
 http:
@@ -13,17 +18,18 @@ http:
       - name: "first-route"
         hostname: "*"
         traffic:
-          name: "test-policy-1/test-namespace"
+          name: "test-namespace/test-policy-1"
           rateLimit:
             global:
-              shared: true
               rules:
-                - headerMatches:
+                - name: "test-namespace/test-policy-1/rule/0"
+                  headerMatches:
                     - name: "x-user-id"
                       exact: "one"
                   limit:
                     requests: 5
                     unit: second
+                  shared: true
         pathMatch:
           exact: "foo/bar"
         destination:
@@ -37,17 +43,18 @@ http:
       - name: "second-route"
         hostname: "*"
         traffic:
-          name: "test-policy-1/test-namespace"
+          name: "test-namespace/test-policy-1"
           rateLimit:
             global:
-              shared: true
               rules:
-                - headerMatches:
+                - name: "test-namespace/test-policy-1/rule/0"
+                  headerMatches:
                     - name: "x-user-id"
                       exact: "one"
                   limit:
                     requests: 5
                     unit: second
+                  shared: true
         pathMatch:
           exact: "foo/baz"
         destination:
@@ -61,17 +68,18 @@ http:
       - name: "third-route"
         hostname: "*"
         traffic:
-          name: "test-policy-2/test-namespace"
+          name: "test-namespace/test-policy-2"
           rateLimit:
             global:
-              shared: true
               rules:
-                - headerMatches:
+                - name: "test-namespace/test-policy-2/rule/0"
+                  headerMatches:
                     - name: "x-user-id"
                       exact: "two"
                   limit:
                     requests: 10
                     unit: second
+                  shared: true
         pathMatch:
           exact: "test"
         destination:
@@ -85,17 +93,18 @@ http:
       - name: "fourth-route"
         hostname: "*"
         traffic:
-          name: "test-policy-3/test-namespace"
+          name: "test-namespace/test-policy-3"
           rateLimit:
             global:
-              shared: false
               rules:
-                - headerMatches:
+                - name: "test-namespace/test-policy-3/rule/0"
+                  headerMatches:
                     - name: "x-user-id"
                       exact: "two"
                   limit:
                     requests: 10
                     unit: second
+                  shared: false
         pathMatch:
           exact: "foo/bar"
         destination:

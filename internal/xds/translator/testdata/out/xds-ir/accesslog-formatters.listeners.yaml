@@ -7,10 +7,6 @@
     typedConfig:
       '@type': type.googleapis.com/envoy.extensions.access_loggers.file.v3.FileAccessLog
       logFormat:
-        formatters:
-        - name: envoy.formatter.cel
-          typedConfig:
-            '@type': type.googleapis.com/envoy.extensions.formatter.cel.v3.Cel
         textFormatSource:
           inlineString: |
             [%START_TIME%] "%CEL(request.method)% %CEL(request.path)% %CEL(request.protocol)%" %CEL(response.code)% %CEL(response.flags)% %CEL(request.total_size)% %CEL(response.total_size)% %CEL(request.duration)% %CEL(response.headers['X-ENVOY-UPSTREAM-SERVICE-TIME'])% "%CEL(request.headers['X-FORWARDED-FOR'])%" "%CEL(request.useragent)%" "%CEL(request.id)%" "%CEL(request.host)%" "%CEL(upstream.address)%"
@@ -23,10 +19,6 @@
     typedConfig:
       '@type': type.googleapis.com/envoy.extensions.access_loggers.file.v3.FileAccessLog
       logFormat:
-        formatters:
-        - name: envoy.formatter.metadata
-          typedConfig:
-            '@type': type.googleapis.com/envoy.extensions.formatter.metadata.v3.Metadata
         jsonFormat:
           method: '%REQ(:METHOD)%'
           path: '%REQ(X-ENVOY-ORIGINAL-PATH?:PATH)%'
@@ -65,7 +57,7 @@
         values:
         - key: k8s.namespace.name
           value:
-            stringValue: '%ENVIRONMENT(ENVOY_GATEWAY_NAMESPACE)%'
+            stringValue: '%ENVIRONMENT(ENVOY_POD_NAMESPACE)%'
         - key: k8s.pod.name
           value:
             stringValue: '%ENVIRONMENT(ENVOY_POD_NAME)%'
@@ -92,12 +84,6 @@
       - name: envoy.formatter.req_without_query
         typedConfig:
           '@type': type.googleapis.com/envoy.extensions.formatter.req_without_query.v3.ReqWithoutQuery
-      - name: envoy.formatter.metadata
-        typedConfig:
-          '@type': type.googleapis.com/envoy.extensions.formatter.metadata.v3.Metadata
-      - name: envoy.formatter.cel
-        typedConfig:
-          '@type': type.googleapis.com/envoy.extensions.formatter.cel.v3.Cel
       resourceAttributes:
         values:
         - key: cluster_name
@@ -117,10 +103,6 @@
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.access_loggers.file.v3.FileAccessLog
             logFormat:
-              formatters:
-              - name: envoy.formatter.cel
-                typedConfig:
-                  '@type': type.googleapis.com/envoy.extensions.formatter.cel.v3.Cel
               textFormatSource:
                 inlineString: |
                   [%START_TIME%] "%CEL(request.method)% %CEL(request.path)% %CEL(request.protocol)%" %CEL(response.code)% %CEL(response.flags)% %CEL(request.total_size)% %CEL(response.total_size)% %CEL(request.duration)% %CEL(response.headers['X-ENVOY-UPSTREAM-SERVICE-TIME'])% "%CEL(request.headers['X-FORWARDED-FOR'])%" "%CEL(request.useragent)%" "%CEL(request.id)%" "%CEL(request.host)%" "%CEL(upstream.address)%"
@@ -129,10 +111,6 @@
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.access_loggers.file.v3.FileAccessLog
             logFormat:
-              formatters:
-              - name: envoy.formatter.metadata
-                typedConfig:
-                  '@type': type.googleapis.com/envoy.extensions.formatter.metadata.v3.Metadata
               jsonFormat:
                 method: '%REQ(:METHOD)%'
                 path: '%REQ(X-ENVOY-ORIGINAL-PATH?:PATH)%'
@@ -163,7 +141,7 @@
               values:
               - key: k8s.namespace.name
                 value:
-                  stringValue: '%ENVIRONMENT(ENVOY_GATEWAY_NAMESPACE)%'
+                  stringValue: '%ENVIRONMENT(ENVOY_POD_NAMESPACE)%'
               - key: k8s.pod.name
                 value:
                   stringValue: '%ENVIRONMENT(ENVOY_POD_NAME)%'
@@ -190,12 +168,6 @@
             - name: envoy.formatter.req_without_query
               typedConfig:
                 '@type': type.googleapis.com/envoy.extensions.formatter.req_without_query.v3.ReqWithoutQuery
-            - name: envoy.formatter.metadata
-              typedConfig:
-                '@type': type.googleapis.com/envoy.extensions.formatter.metadata.v3.Metadata
-            - name: envoy.formatter.cel
-              typedConfig:
-                '@type': type.googleapis.com/envoy.extensions.formatter.cel.v3.Cel
             resourceAttributes:
               values:
               - key: cluster_name

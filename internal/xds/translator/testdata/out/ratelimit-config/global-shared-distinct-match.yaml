@@ -1,8 +1,8 @@
-name: test-policy-1-test-namespace
-domain: test-policy-1-test-namespace
+name: test-namespace/test-policy-1
+domain: test-namespace/test-policy-1
 descriptors:
-  - key: test-policy-1/test-namespace
-    value: test-policy-1/test-namespace
+  - key: test-namespace/test-policy-1/rule/0
+    value: test-namespace/test-policy-1/rule/0
     rate_limit: null
     descriptors:
       - key: rule-0-match-0

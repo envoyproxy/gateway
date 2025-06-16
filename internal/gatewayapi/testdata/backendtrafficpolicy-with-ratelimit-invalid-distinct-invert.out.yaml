@@ -103,7 +103,8 @@ grpcRoutes:
         status: "True"
         type: Accepted
       - lastTransitionTime: null
-        message: Service default/service not found
+        message: 'Failed to process route rule 0 backendRef 0: service default/service
+          not found.'
         reason: BackendNotFound
         status: "False"
         type: ResolvedRefs
@@ -127,7 +128,11 @@ infraIR:
         labels:
           gateway.envoyproxy.io/owning-gateway-name: gateway
           gateway.envoyproxy.io/owning-gateway-namespace: envoy-gateway
+        ownerReference:
+          kind: GatewayClass
+          name: envoy-gateway-class
       name: envoy-gateway/gateway
+      namespace: envoy-gateway-system
 xdsIR:
   envoy-gateway/gateway:
     accessLog:

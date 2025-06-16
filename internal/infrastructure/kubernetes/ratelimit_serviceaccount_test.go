@@ -106,7 +106,7 @@ func TestCreateOrUpdateRateLimitServiceAccount(t *testing.T) {
 
 			cfg, err := config.New(os.Stdout)
 			require.NoError(t, err)
-			cfg.Namespace = tc.ns
+			cfg.ControllerNamespace = tc.ns
 
 			kube := NewInfra(cli, cfg)
 			kube.EnvoyGateway.RateLimit = rl
@@ -114,14 +114,14 @@ func TestCreateOrUpdateRateLimitServiceAccount(t *testing.T) {
 			ownerReferenceUID := map[string]types.UID{
 				ratelimit.ResourceKindServiceAccount: "foo.bar",
 			}
-			r := ratelimit.NewResourceRender(kube.Namespace, kube.EnvoyGateway, ownerReferenceUID)
+			r := ratelimit.NewResourceRender(kube.ControllerNamespace, kube.EnvoyGateway, ownerReferenceUID)
 
 			err = kube.createOrUpdateServiceAccount(context.Background(), r)
 			require.NoError(t, err)
 
 			actual := &corev1.ServiceAccount{
 				ObjectMeta: metav1.ObjectMeta{
-					Namespace: kube.Namespace,
+					Namespace: kube.ControllerNamespace,
 					Name:      ratelimit.InfraName,
 				},
 			}
@@ -158,7 +158,7 @@ func TestDeleteRateLimitServiceAccount(t *testing.T) {
 
 			kube.EnvoyGateway.RateLimit = rl
 
-			r := ratelimit.NewResourceRender(kube.Namespace, kube.EnvoyGateway, nil)
+			r := ratelimit.NewResourceRender(kube.ControllerNamespace, kube.EnvoyGateway, nil)
 			err := kube.createOrUpdateServiceAccount(context.Background(), r)
 			require.NoError(t, err)
 

@@ -38,10 +38,6 @@ const (
 	// DefaultXdsServerPort is the default listening port of the xds-server.
 	DefaultXdsServerPort = 18000
 
-	wasmServerHost = envoyGatewayXdsServerHost
-	// DefaultWasmServerPort is the default listening port of the wasm HTTP server.
-	wasmServerPort = 18002
-
 	EnvoyStatsPort = 19001
 
 	EnvoyReadinessPort = 19003
@@ -68,8 +64,6 @@ type bootstrapConfig struct {
 type bootstrapParameters struct {
 	// XdsServer defines the configuration of the XDS server.
 	XdsServer serverParameters
-	// WasmServer defines the configuration of the Wasm HTTP server.
-	WasmServer serverParameters
 	// AdminServer defines the configuration of the Envoy admin interface.
 	AdminServer adminServerParameters
 	// StatsServer defines the configuration for stats listener
@@ -99,6 +93,8 @@ type bootstrapParameters struct {
 
 	// IPFamily of the Listener
 	IPFamily string
+	// GatewayNamespaceMode defines whether to use the Envoy Gateway namespace mode.
+	GatewayNamespaceMode bool
 }
 
 type serverParameters struct {
@@ -136,15 +132,15 @@ type overloadManagerParameters struct {
 }
 
 type RenderBootstrapConfigOptions struct {
-	IPFamily         *egv1a1.IPFamily
-	ProxyMetrics     *egv1a1.ProxyMetrics
-	SdsConfig        SdsConfigPath
-	XdsServerHost    *string
-	XdsServerPort    *int32
-	WasmServerPort   *int32
-	AdminServerPort  *int32
-	StatsServerPort  *int32
-	MaxHeapSizeBytes uint64
+	IPFamily             *egv1a1.IPFamily
+	ProxyMetrics         *egv1a1.ProxyMetrics
+	SdsConfig            SdsConfigPath
+	XdsServerHost        *string
+	XdsServerPort        *int32
+	AdminServerPort      *int32
+	StatsServerPort      *int32
+	MaxHeapSizeBytes     uint64
+	GatewayNamespaceMode bool
 }
 
 type SdsConfigPath struct {
@@ -243,10 +239,6 @@ func GetRenderedBootstrapConfig(opts *RenderBootstrapConfigOptions) (string, err
 				Address: envoyGatewayXdsServerHost,
 				Port:    DefaultXdsServerPort,
 			},
-			WasmServer: serverParameters{
-				Address: wasmServerHost,
-				Port:    wasmServerPort,
-			},
 			AdminServer: adminServerParameters{
 				Address:       EnvoyAdminAddress,
 				Port:          EnvoyAdminPort,
@@ -293,20 +285,18 @@ func GetRenderedBootstrapConfig(opts *RenderBootstrapConfigOptions) (string, err
 		if opts.StatsServerPort != nil {
 			cfg.parameters.StatsServer.Port = *opts.StatsServerPort
 		}
-		if opts.WasmServerPort != nil {
-			cfg.parameters.WasmServer.Port = *opts.WasmServerPort
-		}
 
 		if opts.IPFamily != nil {
 			cfg.parameters.IPFamily = string(*opts.IPFamily)
-			if *opts.IPFamily == egv1a1.IPv6 {
+			switch *opts.IPFamily {
+			case egv1a1.IPv6:
 				cfg.parameters.AdminServer.Address = EnvoyAdminAddressV6
 				cfg.parameters.StatsServer.Address = netutils.IPv6ListenerAddress
-			} else if *opts.IPFamily == egv1a1.DualStack {
+			case egv1a1.DualStack:
 				cfg.parameters.StatsServer.Address = netutils.IPv6ListenerAddress
 			}
 		}
-
+		cfg.parameters.GatewayNamespaceMode = opts.GatewayNamespaceMode
 		cfg.parameters.OverloadManager.MaxHeapSizeBytes = opts.MaxHeapSizeBytes
 	}
 

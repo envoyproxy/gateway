@@ -17,6 +17,7 @@ import (
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/utils/test"
 )
 
 func TestGetRenderedBootstrapConfig(t *testing.T) {
@@ -161,7 +162,6 @@ func TestGetRenderedBootstrapConfig(t *testing.T) {
 			opts: &RenderBootstrapConfigOptions{
 				XdsServerHost:   ptr.To("foo.bar"),
 				XdsServerPort:   ptr.To(int32(12345)),
-				WasmServerPort:  ptr.To(int32(1111)),
 				AdminServerPort: ptr.To(int32(2222)),
 				StatsServerPort: ptr.To(int32(3333)),
 				SdsConfig:       sds,
@@ -187,7 +187,7 @@ func TestGetRenderedBootstrapConfig(t *testing.T) {
 			got, err := GetRenderedBootstrapConfig(tc.opts)
 			require.NoError(t, err)
 
-			if *overrideTestData {
+			if test.OverrideTestData() {
 				// nolint:gosec
 				err = os.WriteFile(path.Join("testdata", "render", fmt.Sprintf("%s.yaml", tc.name)), []byte(got), 0o644)
 				require.NoError(t, err)

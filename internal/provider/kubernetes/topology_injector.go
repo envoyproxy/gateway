@@ -7,32 +7,39 @@ package kubernetes
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
-	"net/http"
 
-	"github.com/go-openapi/jsonpointer"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/klog/v2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
+	"github.com/envoyproxy/gateway/internal/logging"
+	"github.com/envoyproxy/gateway/internal/metrics"
 )
 
 type ProxyTopologyInjector struct {
 	client.Client
 	Decoder admission.Decoder
+
+	Logger logging.Logger
 }
 
 func (m *ProxyTopologyInjector) Handle(ctx context.Context, req admission.Request) admission.Response {
+	logger := m.Logger
+	logger.V(1).Info("receive injector request", "request", req)
+
 	binding := &corev1.Binding{}
 	if err := m.Decoder.Decode(req, binding); err != nil {
-		klog.Error(err, "decoding binding failed")
-		return admission.Errored(http.StatusInternalServerError, err)
+		logger.Error(err, "decoding binding failed", "request.ObjectKind", req.Object.Object.GetObjectKind())
+		topologyInjectorEventsTotal.WithFailure(metrics.ReasonError).Increment()
+		return admission.Allowed("internal error, skipped")
 	}
 
 	if binding.Target.Name == "" {
+		topologyInjectorEventsTotal.WithStatus(statusNoAction).Increment()
 		return admission.Allowed("skipped")
 	}
 
@@ -43,37 +50,50 @@ func (m *ProxyTopologyInjector) Handle(ctx context.Context, req admission.Reques
 
 	pod := &corev1.Pod{}
 	if err := m.Get(ctx, podName, pod); err != nil {
-		klog.Error(err, "get pod failed")
-		return admission.Errored(http.StatusInternalServerError, err)
+		logger.Error(err, "get pod failed", "pod", podName.String())
+		topologyInjectorEventsTotal.WithFailure(metrics.ReasonError).Increment()
+		return admission.Allowed("internal error, skipped")
 	}
 
 	// Skip non-proxy pods
 	if !hasEnvoyProxyLabels(pod.Labels) {
-		klog.Info("skipping pod due to missing labels", "pod", podName)
+		logger.V(1).Info("skipping pod due to missing labels", "pod", podName)
+		topologyInjectorEventsTotal.WithStatus(statusNoAction).Increment()
 		return admission.Allowed("skipped")
 	}
+
+	logger = logger.WithValues("pod", podName)
 
 	nodeName := types.NamespacedName{
 		Name: binding.Target.Name,
 	}
 	node := &corev1.Node{}
 	if err := m.Get(ctx, nodeName, node); err != nil {
-		klog.Error(err, "get node failed")
-		return admission.Errored(http.StatusInternalServerError, err)
-	}
+		logger.Error(err, "get node failed", "node", node.Name)
 
-	var patch string
+		topologyInjectorEventsTotal.WithFailure(metrics.ReasonError).Increment()
+		return admission.Allowed("internal error, skipped")
+	}
+	logger = logger.WithValues("node", node)
+
 	if zone, ok := node.Labels[corev1.LabelTopologyZone]; ok {
-		patch = fmt.Sprintf(`[{"op":"replace", "path":"/metadata/labels/%s", "value":"%s"}]`, jsonpointer.Escape(corev1.LabelTopologyZone), zone)
+		if binding.Annotations == nil {
+			binding.Annotations = map[string]string{}
+		}
+		binding.Annotations[corev1.LabelTopologyZone] = fmt.Sprintf("%q", zone)
+	} else {
+		logger.V(1).Info("Skipping injection due to missing topology label on node")
+		return admission.Allowed("Skipping injection due to missing topology label on node")
 	}
 
-	rawPatch := client.RawPatch(types.JSONPatchType, []byte(patch))
-	if err := m.Patch(ctx, pod, rawPatch); err != nil {
-		klog.Error(err, "patch pod failed")
-		return admission.Errored(http.StatusInternalServerError, err)
+	marshaledBinding, err := json.Marshal(binding)
+	if err != nil {
+		logger.Error(err, "failed to marshal Pod Binding")
+		return admission.Allowed(fmt.Sprintf("failed to marshal binding, skipped: %v", err))
 	}
-	klog.Info("patch pod succeeded", "pod", podName)
-	return admission.Allowed("pod patched")
+
+	topologyInjectorEventsTotal.WithSuccess().Increment()
+	return admission.PatchResponseFromRaw(req.Object.Raw, marshaledBinding)
 }
 
 func hasEnvoyProxyLabels(labels map[string]string) bool {

@@ -3,7 +3,7 @@ title = "ReferenceGrant"
 +++
 
 
-    The `ReferenceGrant` resource is Beta and part of the 
+    The `ReferenceGrant` resource is Beta and part of the
     Standard Channel since `v0.6.0`. For more information on release
     channels, refer to our [versioning guide](https://gateway-api.sigs.k8s.io/concepts/versioning).
 

@@ -73,9 +73,9 @@ httpRoutes:
         status: "True"
         type: Accepted
       - lastTransitionTime: null
-        message: 'Failed to process route rule 0 backendRef 0: specific filter is
-          not supported within BackendRef, only RequestHeaderModifier and ResponseHeaderModifier
-          are supported.'
+        message: 'Failed to process route rule 0 backendRef 0: Specific filter is
+          not supported within BackendRef, only RequestHeaderModifier, ResponseHeaderModifier
+          and gateway.envoyproxy.io/HTTPRouteFilter are supported.'
         reason: UnsupportedRefValue
         status: "False"
         type: ResolvedRefs
@@ -98,7 +98,11 @@ infraIR:
         labels:
           gateway.envoyproxy.io/owning-gateway-name: gateway-1
           gateway.envoyproxy.io/owning-gateway-namespace: envoy-gateway
+        ownerReference:
+          kind: GatewayClass
+          name: envoy-gateway-class
       name: envoy-gateway/gateway-1
+      namespace: envoy-gateway-system
 xdsIR:
   envoy-gateway/gateway-1:
     accessLog:

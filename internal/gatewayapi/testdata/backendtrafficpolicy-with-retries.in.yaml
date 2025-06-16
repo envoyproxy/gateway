@@ -132,6 +132,7 @@ backendTrafficPolicies:
       name: httproute-1
     retry:
       numRetries: 5
+      numAttemptsPerPriority: 4
       retryOn:
         httpStatusCodes:
         - 429
@@ -169,6 +170,7 @@ backendTrafficPolicies:
       kind: HTTPRoute
       name: httproute-3
     retry:
+      numAttemptsPerPriority: 0
       perRetry:
         backoff:
           baseInterval: 2s

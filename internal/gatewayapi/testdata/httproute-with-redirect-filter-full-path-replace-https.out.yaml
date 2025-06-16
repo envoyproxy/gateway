@@ -99,7 +99,11 @@ infraIR:
         labels:
           gateway.envoyproxy.io/owning-gateway-name: gateway-1
           gateway.envoyproxy.io/owning-gateway-namespace: envoy-gateway
+        ownerReference:
+          kind: GatewayClass
+          name: envoy-gateway-class
       name: envoy-gateway/gateway-1
+      namespace: envoy-gateway-system
 xdsIR:
   envoy-gateway/gateway-1:
     accessLog:
@@ -133,7 +137,6 @@ xdsIR:
           name: ""
           prefix: /
         redirect:
-          hostname: null
           path:
             fullReplace: /redirected
             prefixMatchReplace: null

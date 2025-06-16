@@ -19,6 +19,48 @@ $gradient-end: #4F46E5;    // Indigo
   -webkit-text-fill-color: transparent;
 }
 
+// Ask AI button style
+.btn-ask-ai {
+  background: #4F46E5;
+  border: 1px solid #7c75e8;
+  border-radius: 24px;
+  color: white !important;
+  padding: 8px 16px;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+
+  &:hover {
+    background: #7c75e8;
+    border-color: #7c75e8;
+    color: white !important;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+    text-decoration: none !important;
+  }
+
+  &:active {
+    transform: translateY(0);
+    background: #7c75e8;
+    color: white !important;
+  }
+
+  &:focus {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.2);
+    color: white !important;
+  }
+
+  &:visited {
+    color: white !important;
+  }
+}
+
 // Glass effect button
 .btn-glass {
   background: rgba(255, 255, 255, 0.15);

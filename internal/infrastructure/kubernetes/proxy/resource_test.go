@@ -16,32 +16,6 @@ import (
 	"github.com/envoyproxy/gateway/internal/infrastructure/kubernetes/resource"
 )
 
-func TestEnvoyPodSelector(t *testing.T) {
-	cases := []struct {
-		name     string
-		in       map[string]string
-		expected map[string]string
-	}{
-		{
-			name: "default",
-			in:   map[string]string{"foo": "bar"},
-			expected: map[string]string{
-				"foo":                          "bar",
-				"app.kubernetes.io/name":       "envoy",
-				"app.kubernetes.io/component":  "proxy",
-				"app.kubernetes.io/managed-by": "envoy-gateway",
-			},
-		},
-	}
-
-	for _, tc := range cases {
-		t.Run("", func(t *testing.T) {
-			got := envoyLabels(tc.in)
-			require.Equal(t, tc.expected, got)
-		})
-	}
-}
-
 func TestExpectedShutdownManagerSecurityContext(t *testing.T) {
 	defaultSecurityContext := func() *corev1.SecurityContext {
 		sc := resource.DefaultSecurityContext()
