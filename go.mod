@@ -9,9 +9,9 @@ require (
 	github.com/andybalholm/brotli v1.1.1
 	github.com/avast/retry-go v3.0.0+incompatible
 	github.com/cenkalti/backoff/v4 v4.3.0
-	github.com/cncf/xds/go v0.0.0-20250121191232-2f005788dc42
+	github.com/cncf/xds/go v0.0.0-20250326154945-ae57f3c0d45f
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc
-	github.com/docker/cli v28.1.1+incompatible
+	github.com/docker/cli v28.2.2+incompatible
 	github.com/docker/docker v27.5.1+incompatible
 	github.com/dominikbraun/graph v0.23.0
 	github.com/envoyproxy/go-control-plane v0.13.5-0.20250408134212-157c26b62099
@@ -62,7 +62,7 @@ require (
 	golang.org/x/net v0.41.0
 	gomodules.xyz/jsonpatch/v2 v2.5.0
 	google.golang.org/genproto/googleapis/api v0.0.0-20250528174236-200df99c418a
-	google.golang.org/grpc v1.72.2
+	google.golang.org/grpc v1.73.0
 	google.golang.org/grpc/security/advancedtls v1.0.0
 	google.golang.org/protobuf v1.36.6
 	gopkg.in/yaml.v3 v3.0.1
@@ -96,7 +96,7 @@ require (
 	buf.build/go/bufplugin v0.6.0 // indirect
 	buf.build/go/protoyaml v0.3.1 // indirect
 	buf.build/go/spdx v0.2.0 // indirect
-	cel.dev/expr v0.20.0 // indirect
+	cel.dev/expr v0.23.0 // indirect
 	connectrpc.com/connect v1.18.1 // indirect
 	connectrpc.com/otelconnect v0.7.1 // indirect
 	dario.cat/mergo v1.0.1 // indirect
@@ -438,7 +438,7 @@ require (
 	github.com/ulikunitz/xz v0.5.12 // indirect
 	github.com/ultraware/funlen v0.2.0 // indirect
 	github.com/ultraware/whitespace v0.2.0 // indirect
-	github.com/urfave/cli/v2 v2.27.6 // indirect
+	github.com/urfave/cli/v2 v2.27.7 // indirect
 	github.com/uudashr/gocognit v1.2.0 // indirect
 	github.com/uudashr/iface v1.3.1 // indirect
 	github.com/vbatts/tar-split v0.12.1 // indirect
