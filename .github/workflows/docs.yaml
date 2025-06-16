@@ -28,7 +28,7 @@ jobs:
     - uses: ./tools/github-actions/setup-deps
 
     - name: Run markdown linter
-      uses: nosborn/github-action-markdown-cli@58bcfd1af530d87a13d51b76e6713b52602e3613  # v3.4.0
+      uses: nosborn/github-action-markdown-cli@508d6cefd8f0cc99eab5d2d4685b1d5f470042c1  # v3.5.0
       with:
         files: site/content/*
         config_file: ".github/markdown_lint_config.json"

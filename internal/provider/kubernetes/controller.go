@@ -1360,7 +1360,7 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 				return r.enqueueClass(ctx, gc)
 			}),
 			&predicate.TypedGenerationChangedPredicate[*gwapiv1.GatewayClass]{},
-			predicate.NewTypedPredicateFuncs[*gwapiv1.GatewayClass](r.hasMatchingController))); err != nil {
+			predicate.NewTypedPredicateFuncs(r.hasMatchingController))); err != nil {
 		return fmt.Errorf("failed to watch GatewayClass: %w", err)
 	}
 
@@ -1441,13 +1441,13 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 		// Watch GRPCRoute CRUDs and process affected Gateways.
 		grpcrPredicates := commonPredicates[*gwapiv1.GRPCRoute]()
 		if r.namespaceLabel != nil {
-			grpcrPredicates = append(grpcrPredicates, predicate.NewTypedPredicateFuncs[*gwapiv1.GRPCRoute](func(grpc *gwapiv1.GRPCRoute) bool {
+			grpcrPredicates = append(grpcrPredicates, predicate.NewTypedPredicateFuncs(func(grpc *gwapiv1.GRPCRoute) bool {
 				return r.hasMatchingNamespaceLabels(grpc)
 			}))
 		}
 		if err := c.Watch(
 			source.Kind(mgr.GetCache(), &gwapiv1.GRPCRoute{},
-				handler.TypedEnqueueRequestsFromMapFunc[*gwapiv1.GRPCRoute](func(ctx context.Context, route *gwapiv1.GRPCRoute) []reconcile.Request {
+				handler.TypedEnqueueRequestsFromMapFunc(func(ctx context.Context, route *gwapiv1.GRPCRoute) []reconcile.Request {
 					return r.enqueueClass(ctx, route)
 				}),
 				grpcrPredicates...)); err != nil {
@@ -1465,13 +1465,13 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 		// Watch TLSRoute CRUDs and process affected Gateways.
 		tlsrPredicates := commonPredicates[*gwapiv1a2.TLSRoute]()
 		if r.namespaceLabel != nil {
-			tlsrPredicates = append(tlsrPredicates, predicate.NewTypedPredicateFuncs[*gwapiv1a2.TLSRoute](func(route *gwapiv1a2.TLSRoute) bool {
+			tlsrPredicates = append(tlsrPredicates, predicate.NewTypedPredicateFuncs(func(route *gwapiv1a2.TLSRoute) bool {
 				return r.hasMatchingNamespaceLabels(route)
 			}))
 		}
 		if err := c.Watch(
 			source.Kind(mgr.GetCache(), &gwapiv1a2.TLSRoute{},
-				handler.TypedEnqueueRequestsFromMapFunc[*gwapiv1a2.TLSRoute](func(ctx context.Context, route *gwapiv1a2.TLSRoute) []reconcile.Request {
+				handler.TypedEnqueueRequestsFromMapFunc(func(ctx context.Context, route *gwapiv1a2.TLSRoute) []reconcile.Request {
 					return r.enqueueClass(ctx, route)
 				}),
 				tlsrPredicates...)); err != nil {
@@ -1489,13 +1489,13 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 		// Watch UDPRoute CRUDs and process affected Gateways.
 		udprPredicates := commonPredicates[*gwapiv1a2.UDPRoute]()
 		if r.namespaceLabel != nil {
-			udprPredicates = append(udprPredicates, predicate.NewTypedPredicateFuncs[*gwapiv1a2.UDPRoute](func(route *gwapiv1a2.UDPRoute) bool {
+			udprPredicates = append(udprPredicates, predicate.NewTypedPredicateFuncs(func(route *gwapiv1a2.UDPRoute) bool {
 				return r.hasMatchingNamespaceLabels(route)
 			}))
 		}
 		if err := c.Watch(
 			source.Kind(mgr.GetCache(), &gwapiv1a2.UDPRoute{},
-				handler.TypedEnqueueRequestsFromMapFunc[*gwapiv1a2.UDPRoute](func(ctx context.Context, route *gwapiv1a2.UDPRoute) []reconcile.Request {
+				handler.TypedEnqueueRequestsFromMapFunc(func(ctx context.Context, route *gwapiv1a2.UDPRoute) []reconcile.Request {
 					return r.enqueueClass(ctx, route)
 				}),
 				udprPredicates...)); err != nil {
@@ -1513,13 +1513,13 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 		// Watch TCPRoute CRUDs and process affected Gateways.
 		tcprPredicates := commonPredicates[*gwapiv1a2.TCPRoute]()
 		if r.namespaceLabel != nil {
-			tcprPredicates = append(tcprPredicates, predicate.NewTypedPredicateFuncs[*gwapiv1a2.TCPRoute](func(route *gwapiv1a2.TCPRoute) bool {
+			tcprPredicates = append(tcprPredicates, predicate.NewTypedPredicateFuncs(func(route *gwapiv1a2.TCPRoute) bool {
 				return r.hasMatchingNamespaceLabels(route)
 			}))
 		}
 		if err := c.Watch(
 			source.Kind(mgr.GetCache(), &gwapiv1a2.TCPRoute{},
-				handler.TypedEnqueueRequestsFromMapFunc[*gwapiv1a2.TCPRoute](func(ctx context.Context, route *gwapiv1a2.TCPRoute) []reconcile.Request {
+				handler.TypedEnqueueRequestsFromMapFunc(func(ctx context.Context, route *gwapiv1a2.TCPRoute) []reconcile.Request {
 					return r.enqueueClass(ctx, route)
 				}),
 				tcprPredicates...)); err != nil {
@@ -1532,12 +1532,12 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 
 	// Watch Service CRUDs and process affected *Route objects.
 	servicePredicates := []predicate.TypedPredicate[*corev1.Service]{
-		predicate.NewTypedPredicateFuncs[*corev1.Service](func(svc *corev1.Service) bool {
+		predicate.NewTypedPredicateFuncs(func(svc *corev1.Service) bool {
 			return r.validateServiceForReconcile(svc)
 		}),
 	}
 	if r.namespaceLabel != nil {
-		servicePredicates = append(servicePredicates, predicate.NewTypedPredicateFuncs[*corev1.Service](func(svc *corev1.Service) bool {
+		servicePredicates = append(servicePredicates, predicate.NewTypedPredicateFuncs(func(svc *corev1.Service) bool {
 			return r.hasMatchingNamespaceLabels(svc)
 		}))
 	}
@@ -1561,7 +1561,7 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 					return r.enqueueClass(ctx, si)
 				}),
 				predicate.TypedGenerationChangedPredicate[*mcsapiv1a1.ServiceImport]{},
-				predicate.NewTypedPredicateFuncs[*mcsapiv1a1.ServiceImport](func(si *mcsapiv1a1.ServiceImport) bool {
+				predicate.NewTypedPredicateFuncs(func(si *mcsapiv1a1.ServiceImport) bool {
 					return r.validateServiceImportForReconcile(si)
 				}))); err != nil {
 			// ServiceImport is not available in the cluster, skip the watch and not throw error.
@@ -1572,12 +1572,12 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 	// Watch EndpointSlice CRUDs and process affected *Route objects.
 	esPredicates := []predicate.TypedPredicate[*discoveryv1.EndpointSlice]{
 		predicate.TypedGenerationChangedPredicate[*discoveryv1.EndpointSlice]{},
-		predicate.NewTypedPredicateFuncs[*discoveryv1.EndpointSlice](func(eps *discoveryv1.EndpointSlice) bool {
+		predicate.NewTypedPredicateFuncs(func(eps *discoveryv1.EndpointSlice) bool {
 			return r.validateEndpointSliceForReconcile(eps)
 		}),
 	}
 	if r.namespaceLabel != nil {
-		esPredicates = append(esPredicates, predicate.NewTypedPredicateFuncs[*discoveryv1.EndpointSlice](func(eps *discoveryv1.EndpointSlice) bool {
+		esPredicates = append(esPredicates, predicate.NewTypedPredicateFuncs(func(eps *discoveryv1.EndpointSlice) bool {
 			return r.hasMatchingNamespaceLabels(eps)
 		}))
 	}
@@ -1597,12 +1597,12 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 		// Watch Backend CRUDs and process affected *Route objects.
 		backendPredicates := []predicate.TypedPredicate[*egv1a1.Backend]{
 			predicate.TypedGenerationChangedPredicate[*egv1a1.Backend]{},
-			predicate.NewTypedPredicateFuncs[*egv1a1.Backend](func(be *egv1a1.Backend) bool {
+			predicate.NewTypedPredicateFuncs(func(be *egv1a1.Backend) bool {
 				return r.validateBackendForReconcile(be)
 			}),
 		}
 		if r.namespaceLabel != nil {
-			backendPredicates = append(backendPredicates, predicate.NewTypedPredicateFuncs[*egv1a1.Backend](func(be *egv1a1.Backend) bool {
+			backendPredicates = append(backendPredicates, predicate.NewTypedPredicateFuncs(func(be *egv1a1.Backend) bool {
 				return r.hasMatchingNamespaceLabels(be)
 			}))
 		}
@@ -1624,12 +1624,12 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 	// Node creation/deletion and ExternalIP updates would require update in the Gateway
 	nPredicates := []predicate.TypedPredicate[*corev1.Node]{
 		predicate.TypedGenerationChangedPredicate[*corev1.Node]{},
-		predicate.NewTypedPredicateFuncs[*corev1.Node](func(node *corev1.Node) bool {
+		predicate.NewTypedPredicateFuncs(func(node *corev1.Node) bool {
 			return r.handleNode(node)
 		}),
 	}
 	if r.namespaceLabel != nil {
-		nPredicates = append(nPredicates, predicate.NewTypedPredicateFuncs[*corev1.Node](func(node *corev1.Node) bool {
+		nPredicates = append(nPredicates, predicate.NewTypedPredicateFuncs(func(node *corev1.Node) bool {
 			return r.hasMatchingNamespaceLabels(node)
 		}))
 	}
@@ -1665,12 +1665,12 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 
 	// Watch ConfigMap CRUDs and process affected EG Resources.
 	configMapPredicates := []predicate.TypedPredicate[*corev1.ConfigMap]{
-		predicate.NewTypedPredicateFuncs[*corev1.ConfigMap](func(cm *corev1.ConfigMap) bool {
+		predicate.NewTypedPredicateFuncs(func(cm *corev1.ConfigMap) bool {
 			return r.validateConfigMapForReconcile(cm)
 		}),
 	}
 	if r.namespaceLabel != nil {
-		configMapPredicates = append(configMapPredicates, predicate.NewTypedPredicateFuncs[*corev1.ConfigMap](func(cm *corev1.ConfigMap) bool {
+		configMapPredicates = append(configMapPredicates, predicate.NewTypedPredicateFuncs(func(cm *corev1.ConfigMap) bool {
 			return r.hasMatchingNamespaceLabels(cm)
 		}))
 	}
@@ -1688,7 +1688,7 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 		predicate.TypedGenerationChangedPredicate[*gwapiv1b1.ReferenceGrant]{},
 	}
 	if r.namespaceLabel != nil {
-		rgPredicates = append(rgPredicates, predicate.NewTypedPredicateFuncs[*gwapiv1b1.ReferenceGrant](func(rg *gwapiv1b1.ReferenceGrant) bool {
+		rgPredicates = append(rgPredicates, predicate.NewTypedPredicateFuncs(func(rg *gwapiv1b1.ReferenceGrant) bool {
 			return r.hasMatchingNamespaceLabels(rg)
 		}))
 	}
@@ -1706,12 +1706,12 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 
 	// Watch Deployment CRUDs and process affected Gateways.
 	deploymentPredicates := []predicate.TypedPredicate[*appsv1.Deployment]{
-		predicate.NewTypedPredicateFuncs[*appsv1.Deployment](func(deploy *appsv1.Deployment) bool {
+		predicate.NewTypedPredicateFuncs(func(deploy *appsv1.Deployment) bool {
 			return r.validateObjectForReconcile(deploy)
 		}),
 	}
 	if r.namespaceLabel != nil {
-		deploymentPredicates = append(deploymentPredicates, predicate.NewTypedPredicateFuncs[*appsv1.Deployment](func(deploy *appsv1.Deployment) bool {
+		deploymentPredicates = append(deploymentPredicates, predicate.NewTypedPredicateFuncs(func(deploy *appsv1.Deployment) bool {
 			return r.hasMatchingNamespaceLabels(deploy)
 		}))
 	}
@@ -1726,12 +1726,12 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 
 	// Watch DaemonSet CRUDs and process affected Gateways.
 	daemonsetPredicates := []predicate.TypedPredicate[*appsv1.DaemonSet]{
-		predicate.NewTypedPredicateFuncs[*appsv1.DaemonSet](func(daemonset *appsv1.DaemonSet) bool {
+		predicate.NewTypedPredicateFuncs(func(daemonset *appsv1.DaemonSet) bool {
 			return r.validateObjectForReconcile(daemonset)
 		}),
 	}
 	if r.namespaceLabel != nil {
-		daemonsetPredicates = append(daemonsetPredicates, predicate.NewTypedPredicateFuncs[*appsv1.DaemonSet](func(daemonset *appsv1.DaemonSet) bool {
+		daemonsetPredicates = append(daemonsetPredicates, predicate.NewTypedPredicateFuncs(func(daemonset *appsv1.DaemonSet) bool {
 			return r.hasMatchingNamespaceLabels(daemonset)
 		}))
 	}
@@ -1753,7 +1753,7 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 			predicate.TypedGenerationChangedPredicate[*egv1a1.EnvoyPatchPolicy]{},
 		}
 		if r.namespaceLabel != nil {
-			eppPredicates = append(eppPredicates, predicate.NewTypedPredicateFuncs[*egv1a1.EnvoyPatchPolicy](func(epp *egv1a1.EnvoyPatchPolicy) bool {
+			eppPredicates = append(eppPredicates, predicate.NewTypedPredicateFuncs(func(epp *egv1a1.EnvoyPatchPolicy) bool {
 				return r.hasMatchingNamespaceLabels(epp)
 			}))
 		}
@@ -1777,7 +1777,7 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 			predicate.TypedGenerationChangedPredicate[*egv1a1.ClientTrafficPolicy]{},
 		}
 		if r.namespaceLabel != nil {
-			ctpPredicates = append(ctpPredicates, predicate.NewTypedPredicateFuncs[*egv1a1.ClientTrafficPolicy](func(ctp *egv1a1.ClientTrafficPolicy) bool {
+			ctpPredicates = append(ctpPredicates, predicate.NewTypedPredicateFuncs(func(ctp *egv1a1.ClientTrafficPolicy) bool {
 				return r.hasMatchingNamespaceLabels(ctp)
 			}))
 		}
@@ -1805,7 +1805,7 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 			predicate.TypedGenerationChangedPredicate[*egv1a1.BackendTrafficPolicy]{},
 		}
 		if r.namespaceLabel != nil {
-			btpPredicates = append(btpPredicates, predicate.NewTypedPredicateFuncs[*egv1a1.BackendTrafficPolicy](func(btp *egv1a1.BackendTrafficPolicy) bool {
+			btpPredicates = append(btpPredicates, predicate.NewTypedPredicateFuncs(func(btp *egv1a1.BackendTrafficPolicy) bool {
 				return r.hasMatchingNamespaceLabels(btp)
 			}))
 		}
@@ -1833,7 +1833,7 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 			predicate.TypedGenerationChangedPredicate[*egv1a1.SecurityPolicy]{},
 		}
 		if r.namespaceLabel != nil {
-			spPredicates = append(spPredicates, predicate.NewTypedPredicateFuncs[*egv1a1.SecurityPolicy](func(sp *egv1a1.SecurityPolicy) bool {
+			spPredicates = append(spPredicates, predicate.NewTypedPredicateFuncs(func(sp *egv1a1.SecurityPolicy) bool {
 				return r.hasMatchingNamespaceLabels(sp)
 			}))
 		}
@@ -1860,7 +1860,7 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 			predicate.TypedGenerationChangedPredicate[*gwapiv1a3.BackendTLSPolicy]{},
 		}
 		if r.namespaceLabel != nil {
-			btlsPredicates = append(btlsPredicates, predicate.NewTypedPredicateFuncs[*gwapiv1a3.BackendTLSPolicy](func(btp *gwapiv1a3.BackendTLSPolicy) bool {
+			btlsPredicates = append(btlsPredicates, predicate.NewTypedPredicateFuncs(func(btp *gwapiv1a3.BackendTLSPolicy) bool {
 				return r.hasMatchingNamespaceLabels(btp)
 			}))
 		}
@@ -1888,7 +1888,7 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 			predicate.TypedGenerationChangedPredicate[*egv1a1.EnvoyExtensionPolicy]{},
 		}
 		if r.namespaceLabel != nil {
-			eepPredicates = append(eepPredicates, predicate.NewTypedPredicateFuncs[*egv1a1.EnvoyExtensionPolicy](func(eep *egv1a1.EnvoyExtensionPolicy) bool {
+			eepPredicates = append(eepPredicates, predicate.NewTypedPredicateFuncs(func(eep *egv1a1.EnvoyExtensionPolicy) bool {
 				return r.hasMatchingNamespaceLabels(eep)
 			}))
 		}
@@ -1914,7 +1914,7 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 		predicate.TypedGenerationChangedPredicate[*unstructured.Unstructured]{},
 	}
 	if r.namespaceLabel != nil {
-		uPredicates = append(uPredicates, predicate.NewTypedPredicateFuncs[*unstructured.Unstructured](func(obj *unstructured.Unstructured) bool {
+		uPredicates = append(uPredicates, predicate.NewTypedPredicateFuncs(func(obj *unstructured.Unstructured) bool {
 			return r.hasMatchingNamespaceLabels(obj)
 		}))
 	}
@@ -1950,12 +1950,12 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 		// Watch HTTPRouteFilter CRUDs and process affected HTTPRoute objects.
 		httpRouteFilter := []predicate.TypedPredicate[*egv1a1.HTTPRouteFilter]{
 			predicate.TypedGenerationChangedPredicate[*egv1a1.HTTPRouteFilter]{},
-			predicate.NewTypedPredicateFuncs[*egv1a1.HTTPRouteFilter](func(be *egv1a1.HTTPRouteFilter) bool {
+			predicate.NewTypedPredicateFuncs(func(be *egv1a1.HTTPRouteFilter) bool {
 				return r.validateHTTPRouteFilterForReconcile(be)
 			}),
 		}
 		if r.namespaceLabel != nil {
-			httpRouteFilter = append(httpRouteFilter, predicate.NewTypedPredicateFuncs[*egv1a1.HTTPRouteFilter](func(be *egv1a1.HTTPRouteFilter) bool {
+			httpRouteFilter = append(httpRouteFilter, predicate.NewTypedPredicateFuncs(func(be *egv1a1.HTTPRouteFilter) bool {
 				return r.hasMatchingNamespaceLabels(be)
 			}))
 		}

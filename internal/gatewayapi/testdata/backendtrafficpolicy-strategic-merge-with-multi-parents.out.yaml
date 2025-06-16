@@ -329,8 +329,8 @@ xdsIR:
           backendConnection:
             bufferLimit: 100000000
           httpUpgrade:
-          - spdy/3.1
-          - websocket
+          - type: spdy/3.1
+          - type: websocket
           timeout:
             http:
               connectionIdleTimeout: 16s
@@ -395,7 +395,7 @@ xdsIR:
           backendConnection:
             bufferLimit: 100000000
           httpUpgrade:
-          - spdy/3.1
+          - type: spdy/3.1
           timeout:
             tcp:
               connectTimeout: 10s

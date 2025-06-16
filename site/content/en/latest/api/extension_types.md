@@ -862,6 +862,20 @@ _Appears in:_
 | `Brotli` |  | 
 
 
+#### ConnectConfig
+
+
+
+
+
+_Appears in:_
+- [ProtocolUpgradeConfig](#protocolupgradeconfig)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `terminate` | _boolean_ |  false  |  | Terminate the CONNECT request, and forwards the payload as raw TCP data. |
+
+
 #### ConnectionLimit
 
 
@@ -976,7 +990,7 @@ _Appears in:_
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
 | `contentType` | _string_ |  false  |  | Content Type of the response. This will be set in the Content-Type header. |
-| `body` | _[CustomResponseBody](#customresponsebody)_ |  false  |  | Body of the Custom Response |
+| `body` | _[CustomResponseBody](#customresponsebody)_ |  false  |  | Body of the Custom Response<br />Supports Envoy command operators for dynamic content (see https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#command-operators). |
 | `statusCode` | _integer_ |  false  |  | Status Code of the Custom Response<br />If unset, does not override the status of response. |
 
 
@@ -3438,7 +3452,7 @@ _Appears in:_
 
 
 
-
+ProtocolUpgradeConfig specifies the configuration for protocol upgrades.
 
 _Appears in:_
 - [BackendTrafficPolicySpec](#backendtrafficpolicyspec)
@@ -3446,6 +3460,7 @@ _Appears in:_
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
 | `type` | _string_ |  true  |  | Type is the case-insensitive type of protocol upgrade.<br />e.g. `websocket`, `CONNECT`, `spdy/3.1` etc. |
+| `connect` | _[ConnectConfig](#connectconfig)_ |  false  |  | Connect specifies the configuration for the CONNECT config.<br />This is allowed only when type is CONNECT. |
 
 
 #### ProviderType

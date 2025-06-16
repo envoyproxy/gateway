@@ -265,3 +265,28 @@ jobs:
       run: |
         IMAGE_PULL_POLICY=Always OCI_REGISTRY=oci://docker.io/envoyproxy CHART_VERSION=v0.0.0-latest TAG=latest make helm-push
         IMAGE_PULL_POLICY=Always OCI_REGISTRY=oci://docker.io/envoyproxy CHART_VERSION=0.0.0-latest TAG=latest make helm-push
+
+  # Aggregate all the required jobs and make it easier to customize CI required jobs
+  ci-checks:
+    runs-on: ubuntu-latest
+    needs:
+    - lint
+    - gen-check
+    - license-check
+    - coverage-test
+    - build
+    - conformance-test
+    - e2e-test
+    - benchmark-test
+    - resilience-test
+    - publish
+    # We need this to run always to force-fail (and not skip) if any needed
+    # job has failed. Otherwise, a skipped job will not fail the workflow.
+    if: always()
+    steps:
+    - run: |
+        echo "CI checks completed"
+        [ "${{
+            contains(needs.*.result, 'failure') ||
+            contains(needs.*.result, 'cancelled')
+          }}" == "false" ] || exit 1
