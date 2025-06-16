@@ -38,7 +38,7 @@ type OIDC struct {
 	CookieNames *OIDCCookieNames `json:"cookieNames,omitempty"`
 
 	// CookieConfigs allows overriding the SameSite attribute for OIDC cookies.
-	// If a specific cookie is not configured, it will use the "Disabled" SameSite policy and xds will omit SameSite when generating the cookie.
+	// If a specific cookie is not configured, it will use the "Strict" SameSite policy by default.
 	// +optional
 	CookieConfig *OIDCCookieConfig `json:"cookieConfig,omitempty"`
 
