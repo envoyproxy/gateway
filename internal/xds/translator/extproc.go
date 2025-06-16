@@ -119,6 +119,9 @@ func extProcConfig(extProc ir.ExtProc) *extprocv3.ExternalProcessor {
 
 	if extProc.RequestBodyProcessingMode != nil {
 		config.ProcessingMode.RequestBodyMode = buildExtProcBodyProcessingMode(extProc.RequestBodyProcessingMode)
+		if config.ProcessingMode.RequestBodyMode == extprocv3.ProcessingMode_FULL_DUPLEX_STREAMED {
+			config.ProcessingMode.RequestTrailerMode = extprocv3.ProcessingMode_SEND
+		}
 	}
 
 	if extProc.RequestHeaderProcessing {
@@ -127,6 +130,9 @@ func extProcConfig(extProc ir.ExtProc) *extprocv3.ExternalProcessor {
 
 	if extProc.ResponseBodyProcessingMode != nil {
 		config.ProcessingMode.ResponseBodyMode = buildExtProcBodyProcessingMode(extProc.ResponseBodyProcessingMode)
+		if config.ProcessingMode.ResponseBodyMode == extprocv3.ProcessingMode_FULL_DUPLEX_STREAMED {
+			config.ProcessingMode.ResponseTrailerMode = extprocv3.ProcessingMode_SEND
+		}
 	}
 
 	if extProc.ResponseHeaderProcessing {
