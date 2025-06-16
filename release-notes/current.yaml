@@ -28,6 +28,7 @@ bug fixes: |
   Fixed issue which UDP listeners were not created in the Envoy proxy config when Gateway was created.
   Keep ALPN configuration for listeners with overlapping certificates when ALPN is explicitly set in ClientTrafficPolicy.
   Fixed issue that switch on wrong SubjectAltNameType enum value in BackendTLSPolicy.
+  Fixed issue that BackendTLSPolicy should not reference ConfigMap or Secret across namespace.
   Fixed issue where EnvoyExtensionPolicy ExtProc body processing mode is set to FullDuplexStreamed, but trailers were not sent.
   Fixed validation issue where EnvoyExtensionPolicy ExtProc failOpen is true, and body processing mode FullDuplexStreamed is not rejected.
 
