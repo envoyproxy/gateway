@@ -333,6 +333,7 @@ func TestTranslate(t *testing.T) {
 
 			if test.OverrideTestData() {
 				overrideOutputConfig(t, string(out), outputFilePath)
+				return
 			}
 
 			output, err := os.ReadFile(outputFilePath)
