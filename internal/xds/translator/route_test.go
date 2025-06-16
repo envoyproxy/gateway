@@ -9,6 +9,7 @@ import (
 	"reflect"
 	"testing"
 
+	corev3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	routev3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
 	"k8s.io/utils/ptr"
 
@@ -167,6 +168,113 @@ func TestBuildUpgradeConfig(t *testing.T) {
 			got := buildUpgradeConfig(tc.trafficFeature)
 			if !reflect.DeepEqual(got, tc.expected) {
 				t.Errorf("buildUpgradeConfig() got = %v, want %v", got, tc.expected)
+			}
+		})
+	}
+}
+
+func TestBuildXdsAddedHeaders(t *testing.T) {
+	tests := []struct {
+		name         string
+		headersToAdd []ir.AddHeader
+		want         []*corev3.HeaderValueOption
+	}{
+		{
+			name:         "No headers",
+			headersToAdd: nil,
+			want:         nil,
+		},
+		{
+			name: "Single header, no value (should keep empty value)",
+			headersToAdd: []ir.AddHeader{
+				{Name: "X-Test-Empty", Value: []string{}, Append: false},
+			},
+			want: []*corev3.HeaderValueOption{
+				{
+					Header:         &corev3.HeaderValue{Key: "X-Test-Empty"},
+					AppendAction:   corev3.HeaderValueOption_OVERWRITE_IF_EXISTS_OR_ADD,
+					KeepEmptyValue: true,
+				},
+			},
+		},
+		{
+			name: "Single header, one value, overwrite",
+			headersToAdd: []ir.AddHeader{
+				{Name: "X-Test", Value: []string{"foo"}, Append: false},
+			},
+			want: []*corev3.HeaderValueOption{
+				{
+					Header:         &corev3.HeaderValue{Key: "X-Test", Value: "foo"},
+					AppendAction:   corev3.HeaderValueOption_OVERWRITE_IF_EXISTS_OR_ADD,
+					KeepEmptyValue: false,
+				},
+			},
+		},
+		{
+			name: "Single header, one value, append",
+			headersToAdd: []ir.AddHeader{
+				{Name: "X-Test", Value: []string{"foo"}, Append: true},
+			},
+			want: []*corev3.HeaderValueOption{
+				{
+					Header:         &corev3.HeaderValue{Key: "X-Test", Value: "foo"},
+					AppendAction:   corev3.HeaderValueOption_APPEND_IF_EXISTS_OR_ADD,
+					KeepEmptyValue: false,
+				},
+			},
+		},
+		{
+			name: "Header with multiple values (should join with comma)",
+			headersToAdd: []ir.AddHeader{
+				{Name: "Cache-Control", Value: []string{"private,no-store"}, Append: false},
+			},
+			want: []*corev3.HeaderValueOption{
+				{
+					Header:         &corev3.HeaderValue{Key: "Cache-Control", Value: "private,no-store"},
+					AppendAction:   corev3.HeaderValueOption_OVERWRITE_IF_EXISTS_OR_ADD,
+					KeepEmptyValue: false,
+				},
+			},
+		},
+		{
+			name: "Multiple headers",
+			headersToAdd: []ir.AddHeader{
+				{Name: "X-First", Value: []string{"foo"}, Append: false},
+				{Name: "X-Second", Value: []string{"bar,baz"}, Append: true},
+			},
+			want: []*corev3.HeaderValueOption{
+				{
+					Header:         &corev3.HeaderValue{Key: "X-First", Value: "foo"},
+					AppendAction:   corev3.HeaderValueOption_OVERWRITE_IF_EXISTS_OR_ADD,
+					KeepEmptyValue: false,
+				},
+				{
+					Header:         &corev3.HeaderValue{Key: "X-Second", Value: "bar,baz"},
+					AppendAction:   corev3.HeaderValueOption_APPEND_IF_EXISTS_OR_ADD,
+					KeepEmptyValue: false,
+				},
+			},
+		},
+		{
+			name: "Header with explicit empty value string",
+			headersToAdd: []ir.AddHeader{
+				{Name: "X-Explicit-Empty", Value: []string{""}, Append: false},
+			},
+			want: []*corev3.HeaderValueOption{
+				{
+					Header:         &corev3.HeaderValue{Key: "X-Explicit-Empty", Value: ""},
+					AppendAction:   corev3.HeaderValueOption_OVERWRITE_IF_EXISTS_OR_ADD,
+					KeepEmptyValue: true,
+				},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := buildXdsAddedHeaders(tt.headersToAdd)
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("buildXdsAddedHeaders() = %v, want %v", got, tt.want)
 			}
 		})
 	}
