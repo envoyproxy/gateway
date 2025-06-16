@@ -7,19 +7,4 @@
 
 package suite
 
-// BenchmarkOptions for nighthawk-client.
-type BenchmarkOptions struct {
-	RPS         string
-	Connections string
-	Duration    string
-	Concurrency string
-}
-
-func NewBenchmarkOptions(rps, connections, duration, concurrency string) BenchmarkOptions {
-	return BenchmarkOptions{
-		RPS:         rps,
-		Connections: connections,
-		Duration:    duration,
-		Concurrency: concurrency,
-	}
-}
+// BenchmarkOptions and constructor moved to types.go

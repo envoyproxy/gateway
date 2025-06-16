@@ -30,27 +30,7 @@ const (
 	dataPlaneCPUQL    = `rate(container_cpu_usage_seconds_total{namespace="envoy-gateway-system", container="envoy"}[30s])*100`
 )
 
-// BenchmarkMetricSample contains sampled metrics and profiles data.
-type BenchmarkMetricSample struct {
-	ControlPlaneMem float64
-	ControlPlaneCPU float64
-	DataPlaneMem    float64
-	DataPlaneCPU    float64
-
-	HeapProfile []byte
-}
-
-type BenchmarkReport struct {
-	Name              string
-	ProfilesOutputDir string
-	// Nighthawk benchmark result
-	Result []byte
-	// Prometheus metrics and pprof profiles sampled data
-	Samples []BenchmarkMetricSample
-
-	kubeClient kube.CLIClient
-	promClient *prom.Client
-}
+// Type definitions moved to types.go
 
 func NewBenchmarkReport(name, profilesOutputDir string, kubeClient kube.CLIClient, promClient *prom.Client) *BenchmarkReport {
 	return &BenchmarkReport{

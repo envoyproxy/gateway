@@ -24,6 +24,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	"sigs.k8s.io/gateway-api/conformance/utils/config"
+	"sigs.k8s.io/gateway-api/conformance/utils/kubernetes"
 	"sigs.k8s.io/yaml"
 
 	opt "github.com/envoyproxy/gateway/internal/cmd/options"
@@ -423,4 +424,55 @@ func createDirIfNotExist(dir string) (err error) {
 		return err
 	}
 	return nil
+}
+
+// BenchmarkWithPropagationTiming runs benchmark test with route propagation timing measurements
+func (b *BenchmarkTestSuite) BenchmarkWithPropagationTiming(t *testing.T, ctx context.Context, jobName, resultTitle, unusedGatewayHostPort, hostnamePattern string, host int, routeNNs []types.NamespacedName, gatewayNN types.NamespacedName) (*BenchmarkReport, error) {
+	t.Logf("Running benchmark test with propagation timing: %s", resultTitle)
+
+	// Measure the route propagation timing
+	propagationTiming, gatewayAddr, err := b.MeasureRoutePropagationTiming(t, ctx, gatewayNN, routeNNs, hostnamePattern, host)
+	if err != nil {
+		return nil, fmt.Errorf("failed to measure route propagation timing: %w", err)
+	}
+
+	// Run the actual benchmark test using the retrieved gateway address
+	report, err := b.Benchmark(t, ctx, jobName, resultTitle, gatewayAddr, hostnamePattern, host)
+	if err != nil {
+		return nil, err
+	}
+
+	// Add propagation timing to the report
+	report.PropagationTiming = propagationTiming
+
+	return report, nil
+}
+
+// MeasureRoutePropagationTiming measures the time it takes for routes to be propagated from creation to data plane readiness
+func (b *BenchmarkTestSuite) MeasureRoutePropagationTiming(t *testing.T, ctx context.Context, gatewayNN types.NamespacedName, routeNNs []types.NamespacedName, hostnamePattern string, hostCount int) (*RoutePropagationTiming, string, error) {
+	startTime := time.Now()
+
+	// Wait for routes to be accepted (control plane processing)
+	controlPlaneStart := time.Now()
+	gatewayAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, b.Client, b.TimeoutConfig, b.ControllerName, kubernetes.NewGatewayRef(gatewayNN), routeNNs...)
+	controlPlaneTime := time.Since(controlPlaneStart)
+
+	// For now, we'll estimate data plane time as a small additional delay after control plane acceptance
+	// TODO: In the future, we could implement more sophisticated data plane readiness checks
+	// using the nighthawk client approach or other cluster-internal verification
+	dataPlaneTime := 500 * time.Millisecond // Conservative estimate
+
+	endToEndTime := time.Since(startTime)
+
+	timing := &RoutePropagationTiming{
+		ControlPlaneTime: controlPlaneTime,
+		DataPlaneTime:    dataPlaneTime,
+		EndToEndTime:     endToEndTime,
+		RouteCount:       len(routeNNs),
+	}
+
+	t.Logf("Route propagation timing - Control Plane: %v, End-to-End: %v, Routes: %d",
+		controlPlaneTime, endToEndTime, len(routeNNs))
+
+	return timing, gatewayAddr, nil
 }

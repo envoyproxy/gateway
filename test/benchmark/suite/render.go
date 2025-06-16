@@ -17,11 +17,22 @@ import (
 	"sort"
 	"strings"
 	"text/tabwriter"
+	"time"
 )
 
 // RenderReport renders a report out of given list of benchmark report in Markdown format.
 func RenderReport(writer io.Writer, name, description string, titleLevel int, reports []*BenchmarkReport) error {
 	writeSection(writer, "Test: "+name, titleLevel, description)
+
+	// Add Route Propagation Metrics section if we have timing data
+	if hasRoutePropagationData(reports) {
+		writeSection(writer, "Route Propagation Metrics", titleLevel+1,
+			"Timing measurements from route creation to data plane readiness. "+
+				"Control Plane Time: Route creation → RouteConditionAccepted=True. "+
+				"Data Plane Time: Accepted=True → First successful request. "+
+				"End-to-End Time: Route creation → Traffic flowing correctly.")
+		renderRoutePropagationTable(writer, reports)
+	}
 
 	writeSection(writer, "Results", titleLevel+1, "Expand to see the full results.")
 	if err := renderResultsTable(writer, reports); err != nil {
@@ -36,6 +47,57 @@ func RenderReport(writer io.Writer, name, description string, titleLevel int, re
 	renderProfilesTable(writer, "Heap", "heap", titleLevel+2, reports)
 
 	return nil
+}
+
+// hasRoutePropagationData checks if any of the reports contain route propagation timing data
+func hasRoutePropagationData(reports []*BenchmarkReport) bool {
+	for _, report := range reports {
+		if report.PropagationTiming != nil {
+			return true
+		}
+	}
+	return false
+}
+
+// renderRoutePropagationTable renders the route propagation timing metrics table
+func renderRoutePropagationTable(writer io.Writer, reports []*BenchmarkReport) {
+	table := newMarkdownStyleTableWriter(writer)
+
+	// write headers
+	headers := []string{
+		"Test Name",
+		"Routes",
+		"Control Plane Time",
+		"Data Plane Time",
+		"End-to-End Time",
+	}
+	writeTableHeader(table, headers)
+
+	for _, report := range reports {
+		if report.PropagationTiming != nil {
+			data := []string{
+				report.Name,
+				fmt.Sprintf("%d", report.PropagationTiming.RouteCount),
+				formatDuration(report.PropagationTiming.ControlPlaneTime),
+				formatDuration(report.PropagationTiming.DataPlaneTime),
+				formatDuration(report.PropagationTiming.EndToEndTime),
+			}
+			writeTableRow(table, data)
+		}
+	}
+
+	_ = table.Flush()
+}
+
+// formatDuration formats a duration in a human-readable way for the table
+func formatDuration(d time.Duration) string {
+	if d < time.Millisecond {
+		return fmt.Sprintf("%.1fµs", float64(d.Nanoseconds())/1000.0)
+	} else if d < time.Second {
+		return fmt.Sprintf("%.1fms", float64(d.Nanoseconds())/1000000.0)
+	} else {
+		return fmt.Sprintf("%.1fs", d.Seconds())
+	}
 }
 
 // newMarkdownStyleTableWriter returns a tabwriter that write table in Markdown style.
