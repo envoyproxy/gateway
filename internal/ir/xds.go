@@ -632,6 +632,9 @@ type CustomResponse struct {
 
 	// StatusCode will be used for the response's status code.
 	StatusCode *uint32 `json:"statusCode,omitempty"`
+
+	// ResponseHeadersToAdd defines headers to add to the response.
+	ResponseHeadersToAdd []AddHeader `json:"responseHeadersToAdd,omitempty"`
 }
 
 // Validate the fields within the CustomResponse structure
@@ -1751,7 +1754,9 @@ type Redirect struct {
 	// Port configures the replacement of the request's port.
 	Port *uint32 `json:"port,omitempty" yaml:"port,omitempty"`
 	// Status code configures the redirection response's status code.
-	StatusCode *int32 `json:"statusCode,omitempty" yaml:"statusCode,omitempty"`
+	StatusCode *int32 `json:"statusCode" yaml:"statusCode,omitempty"`
+	// ResponseHeadersToAdd defines headers to add to the redirect response.
+	ResponseHeadersToAdd []AddHeader `json:"responseHeadersToAdd,omitempty"`
 }
 
 // Validate the fields within the Redirect structure
