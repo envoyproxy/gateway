@@ -17,7 +17,7 @@ Every feature in Envoy Gateway starts as an idea - perhaps a new capability, a p
 
 ### 1. Development Phase
 When a developer has an idea to improve Envoy Gateway, the journey begins with a well-thought-out proposal. During development:
-- Code is written following the project's strict coding standards
+- Code is written following the project's coding standards
 - Unit tests are written alongside the code
 - Local testing ensures basic functionality
 - Documentation is prepared
