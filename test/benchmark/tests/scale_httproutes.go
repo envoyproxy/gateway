@@ -72,25 +72,17 @@ var ScaleHTTPRoutes = suite.BenchmarkTest{
 					batchRouteNNs := routeNNs[batchStartIndex:]
 
 					// Get gateway address (needed for propagation timing measurement)
-					// We'll temporarily use the existing method to get the address
 					gatewayAddr := ""
 					if len(batchRouteNNs) > 0 {
-						// For timing measurement, we need the gateway address
-						// The timing measurement will be integrated with route acceptance
 						jobName := fmt.Sprintf("scale-up-httproutes-%d", scale)
 
-						// Use the new BenchmarkWithPropagationTiming function
 						report, err := bSuite.BenchmarkWithPropagationTiming(t, ctx, jobName, testName,
 							gatewayAddr, routeHostnameFormat, int(totalHosts), batchRouteNNs, gatewayNN)
 						require.NoError(t, err)
 
 						reports = append(reports, report)
 					} else {
-						// Fallback to original method if no new routes were created
-						// This shouldn't happen in normal operation
 						t.Logf("No new routes created for scale %d, using original benchmark method", scale)
-						// We still need to get the gateway address for the regular benchmark
-						// For now, we'll skip the timing measurement for this case
 					}
 				})
 			}
@@ -118,11 +110,9 @@ var ScaleHTTPRoutes = suite.BenchmarkTest{
 
 					// For scale down, we still want timing measurements for the remaining routes
 					if len(routeNNs) > 0 {
-						// Get gateway address for the remaining routes
 						jobName := fmt.Sprintf("scale-down-httproutes-%d", scale)
 						gatewayAddr := "" // Will be determined during timing measurement
 
-						// Use the new BenchmarkWithPropagationTiming function
 						report, err := bSuite.BenchmarkWithPropagationTiming(t, ctx, jobName, testName,
 							gatewayAddr, routeHostnameFormat, int(totalHosts), routeNNs, gatewayNN)
 						require.NoError(t, err)
