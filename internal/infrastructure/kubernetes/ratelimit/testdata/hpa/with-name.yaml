@@ -1,0 +1,26 @@
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  creationTimestamp: null
+  labels:
+    app.kubernetes.io/component: ratelimit
+    app.kubernetes.io/managed-by: envoy-gateway
+    app.kubernetes.io/name: envoy-ratelimit
+  name: custom-hpa-name
+  namespace: envoy-gateway-system
+spec:
+  maxReplicas: 1
+  metrics:
+  - resource:
+      name: cpu
+      target:
+        averageUtilization: 80
+        type: Utilization
+    type: Resource
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: envoy-ratelimit
+status:
+  currentMetrics: null
+  desiredReplicas: 0
