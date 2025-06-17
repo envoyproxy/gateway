@@ -85,7 +85,6 @@ type TLSSettings struct {
 }
 
 // ALPNProtocol specifies the protocol to be negotiated using ALPN
-// +kubebuilder:validation:Enum=http/1.0;http/1.1;h2
 type ALPNProtocol string
 
 // When adding ALPN constants, they must be values that are defined
