@@ -80,7 +80,8 @@ func (u *UpdateHandler) apply(update Update) {
 		obj       = update.Resource
 		objKind   = KindOf(obj)
 	)
-
+	log := u.log.WithValues("name", update.NamespacedName.Name,
+		"namespace", update.NamespacedName.Namespace, "kind", objKind)
 	defer func() {
 		updateDuration := time.Since(startTime)
 		statusUpdateDurationSeconds.With(kindLabel.Value(objKind)).Record(updateDuration.Seconds())
@@ -104,9 +105,7 @@ func (u *UpdateHandler) apply(update Update) {
 		newObj := update.Mutator.Mutate(obj)
 
 		if isStatusEqual(obj, newObj) {
-			u.log.WithName(update.NamespacedName.Name).
-				WithName(update.NamespacedName.Namespace).
-				Info("status unchanged, bypassing update")
+			log.Info("status unchanged, bypassing update")
 
 			statusUpdateTotal.WithStatus(statusNoAction, kindLabel.Value(objKind)).Increment()
 			return nil
@@ -116,8 +115,7 @@ func (u *UpdateHandler) apply(update Update) {
 
 		return u.client.Status().Update(context.Background(), newObj)
 	}); err != nil {
-		u.log.Error(err, "unable to update status", "name", update.NamespacedName.Name,
-			"namespace", update.NamespacedName.Namespace)
+		log.Error(err, "unable to update status")
 
 		statusUpdateTotal.WithFailure(metrics.ReasonError, kindLabel.Value(objKind)).Increment()
 	} else {
@@ -143,7 +141,7 @@ func (u *UpdateHandler) Start(ctx context.Context) error {
 			return nil
 		case update := <-u.updateChannel:
 			u.log.Info("received a status update", "namespace", update.NamespacedName.Namespace,
-				"name", update.NamespacedName.Name)
+				"name", update.NamespacedName.Name, "kind", KindOf(update.Resource))
 
 			u.apply(update)
 		}
