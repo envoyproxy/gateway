@@ -604,6 +604,7 @@ type LokiQueryResponse struct {
 func CollectAndDump(t *testing.T, rest *rest.Config) {
 	if os.Getenv("ACTIONS_STEP_DEBUG") != "true" {
 		tlog.Logf(t, "Skipping collecting and dumping cluster data, set ACTIONS_STEP_DEBUG=true to enable it")
+		return
 	}
 
 	dumpedNamespaces := []string{"envoy-gateway-system"}
