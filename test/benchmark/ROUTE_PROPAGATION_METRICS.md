@@ -12,12 +12,12 @@ The enhanced benchmark reports now include a "Route Propagation Metrics" section
 
 ### Timing Definitions
 
-1. **Control Plane Time**: Time from route creation to `RouteConditionAccepted=True`
+1. **RouteAccepted Duration**: Time from route creation to `RouteConditionAccepted=True`
    - Measures control plane processing speed
    - Includes validation, admission, and status updates
    - Typically 1-5 seconds for small to medium route sets
 
-2. **Data Plane Time**: Time from `Accepted=True` to traffic flowing correctly
+2. **DataPlaneReady Duration**: Time from `Accepted=True` to traffic flowing correctly
    - Currently estimated (simplified for reliability)
    - In production, this would include xDS propagation to Envoy
    - Typically 500ms-2s additional time
@@ -25,7 +25,7 @@ The enhanced benchmark reports now include a "Route Propagation Metrics" section
 3. **End-to-End Time**: Complete route deployment time
    - Total time from `kubectl apply` to traffic routing correctly
    - Most important metric for operational planning
-   - Sum of control plane + data plane times
+   - Sum of control plane + DataPlaneReady Duration
 
 4. **Route Count**: Number of routes in the test
    - Helps correlate timing with scale
@@ -49,13 +49,47 @@ This indicates:
 - Kubernetes cluster (Kind recommended for local testing)
 - Sufficient resources (4+ CPU cores, 8GB+ RAM recommended)
 - Network connectivity for monitoring stack
+- Helm 3.x installed
+
 
 ### Quick Start
+
+Full benchmark with infrastructure setup
+
 ```bash
-# Full benchmark with infrastructure setup
 make benchmark
+```
 
 # Just run tests (requires existing cluster + Envoy Gateway)
+### Installing Envoy Gateway (For Existing Clusters)
+
+**Note**: If you're using `make benchmark`, Envoy Gateway is automatically installed in the Kind cluster. This section is only needed if you're running benchmarks on your own existing cluster with `make run-benchmark`.
+
+If you don't have Envoy Gateway installed in your existing cluster, you can install it using Helm:
+
+```bash
+# Add the Envoy Gateway Helm repository
+helm repo add eg https://gateway.envoyproxy.io
+helm repo update
+
+# Install Envoy Gateway in the envoy-gateway-system namespace
+helm install eg eg/gateway-helm --create-namespace -n envoy-gateway-system
+
+# Verify the installation
+kubectl get pods -n envoy-gateway-system
+kubectl wait --for=condition=Available deployment/envoy-gateway -n envoy-gateway-system --timeout=300s
+```
+
+For custom configurations, you can override values:
+```bash
+# Install with custom resource limits
+helm install eg eg/gateway-helm \
+  --create-namespace -n envoy-gateway-system \
+  --set resources.limits.cpu=1000m \
+  --set resources.limits.memory=1Gi
+```
+
+```bash
 make run-benchmark BENCHMARK_RPS=100 BENCHMARK_CONNECTIONS=10 BENCHMARK_DURATION=30
 ```
 
@@ -74,7 +108,7 @@ go test -v -tags benchmark -timeout 20m ./test/benchmark \
 
 ### Route Propagation Performance
 
-| Route Count | Expected Control Plane Time | Notes |
+| Route Count | Expected RouteAccepted Duration | Notes |
 |-------------|----------------------------|-------|
 | 10-50       | 0.5-2s                    | Fast for small deployments |
 | 100-200     | 2-5s                      | Typical service mesh scale |
@@ -85,13 +119,13 @@ go test -v -tags benchmark -timeout 20m ./test/benchmark \
 
 **Good Performance:**
 - Linear scaling: 2x routes ≈ 2x time
-- Control plane time < 50ms per route
+- RouteAccepted Duration < 50ms per route
 - Consistent timing across test runs
 
 **Potential Issues:**
 - Exponential scaling: 2x routes >> 2x time
 - High variance between runs
-- Control plane time > 100ms per route
+- RouteAccepted Duration > 100ms per route
 
 ## Troubleshooting
 

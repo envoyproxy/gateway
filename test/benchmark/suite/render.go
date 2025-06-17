@@ -28,9 +28,9 @@ func RenderReport(writer io.Writer, name, description string, titleLevel int, re
 	if hasRoutePropagationData(reports) {
 		writeSection(writer, "Route Propagation Metrics", titleLevel+1,
 			"Timing measurements from route creation to data plane readiness. "+
-				"Control Plane Time: Route creation → RouteConditionAccepted=True. "+
-				"Data Plane Time: Accepted=True → First successful request. "+
-				"End-to-End Time: Route creation → Traffic flowing correctly.")
+				"RouteAccepted Duration: Route creation → RouteConditionAccepted=True. "+
+				"DataPlaneReady Duration: Accepted=True → First successful request. "+
+				"EndToEnd Duration: Route creation → Traffic flowing correctly.")
 		renderRoutePropagationTable(writer, reports)
 	}
 
@@ -67,9 +67,9 @@ func renderRoutePropagationTable(writer io.Writer, reports []*BenchmarkReport) {
 	headers := []string{
 		"Test Name",
 		"Routes",
-		"Control Plane Time",
-		"Data Plane Time",
-		"End-to-End Time",
+		"RouteAccepted Duration",
+		"DataPlaneReady Duration",
+		"EndToEnd Duration",
 	}
 	writeTableHeader(table, headers)
 
