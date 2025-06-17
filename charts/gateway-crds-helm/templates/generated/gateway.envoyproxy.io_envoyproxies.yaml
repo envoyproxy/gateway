@@ -65,10 +65,6 @@ spec:
                     items:
                       description: ALPNProtocol specifies the protocol to be negotiated
                         using ALPN
-                      enum:
-                      - http/1.0
-                      - http/1.1
-                      - h2
                       type: string
                     type: array
                   ciphers:
