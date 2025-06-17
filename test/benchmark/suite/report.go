@@ -30,8 +30,6 @@ const (
 	dataPlaneCPUQL    = `rate(container_cpu_usage_seconds_total{namespace="envoy-gateway-system", container="envoy"}[30s])*100`
 )
 
-// Type definitions moved to types.go
-
 func NewBenchmarkReport(name, profilesOutputDir string, kubeClient kube.CLIClient, promClient *prom.Client) *BenchmarkReport {
 	return &BenchmarkReport{
 		Name:              name,
