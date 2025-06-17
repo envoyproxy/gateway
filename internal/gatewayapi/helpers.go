@@ -681,7 +681,7 @@ func getCaCertFromConfigMap(cm *corev1.ConfigMap) (string, bool) {
 	switch {
 	case exits:
 		return data, true
-	case len(cm.Data) == 1: // Fallback to the first key if response.body is not found
+	case len(cm.Data) == 1: // Fallback to the first key if ca.crt is not found
 		for _, value := range cm.Data {
 			data = value
 			break
@@ -698,7 +698,7 @@ func getCaCertFromSecret(s *corev1.Secret) ([]byte, bool) {
 	switch {
 	case exits:
 		return data, true
-	case len(s.Data) == 1: // Fallback to the first key if response.body is not found
+	case len(s.Data) == 1: // Fallback to the first key if ca.crt is not found
 		for _, value := range s.Data {
 			data = value
 			break
