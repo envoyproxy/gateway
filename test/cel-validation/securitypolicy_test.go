@@ -187,7 +187,7 @@ func TestSecurityPolicyTarget(t *testing.T) {
 			wantErrors: []string{},
 		},
 		{
-			desc: "sectionName disabled until supported for kind xRoute - targetRef",
+			desc: "sectionName supported for kind xRoute - targetRef",
 			mutate: func(sp *egv1a1.SecurityPolicy) {
 				sp.Spec = egv1a1.SecurityPolicySpec{
 					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
@@ -202,12 +202,10 @@ func TestSecurityPolicyTarget(t *testing.T) {
 					},
 				}
 			},
-			wantErrors: []string{
-				"spec: Invalid value: \"object\": this policy supports the sectionName field only for kind Gateway",
-			},
+			wantErrors: []string{},
 		},
 		{
-			desc: "sectionName disabled until supported for kind xRoute - targetRefs",
+			desc: "sectionName supported for kind xRoute - targetRefs",
 			mutate: func(sp *egv1a1.SecurityPolicy) {
 				sp.Spec = egv1a1.SecurityPolicySpec{
 					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
@@ -224,9 +222,7 @@ func TestSecurityPolicyTarget(t *testing.T) {
 					},
 				}
 			},
-			wantErrors: []string{
-				"spec: Invalid value: \"object\": this policy supports the sectionName field only for kind Gateway",
-			},
+			wantErrors: []string{},
 		},
 
 		// cors
