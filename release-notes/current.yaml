@@ -37,3 +37,4 @@ deprecations: |
 
 # Other notable changes not covered by the above sections.
 Other changes: |
+  Enhanced benchmark testing suite with route propagation timing metrics to measure control plane and end-to-end route deployment performance.
