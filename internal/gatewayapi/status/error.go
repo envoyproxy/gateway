@@ -28,6 +28,7 @@ const (
 	RouteReasonPortNotSpecified       gwapiv1.RouteConditionReason = "PortNotSpecified"
 	RouteReasonUnsupportedAddressType gwapiv1.RouteConditionReason = "UnsupportedAddressType"
 	RouteReasonInvalidAddress         gwapiv1.RouteConditionReason = "InvalidAddress"
+	RouteReasonEndpointSliceNotFound  gwapiv1.RouteConditionReason = "EndpointSliceNotFound"
 )
 
 // Error is an error interface that represents errors that need to be reflected

@@ -412,8 +412,25 @@ xdsIR:
         mergeSlashes: true
       port: 10080
       routes:
-      - directResponse:
-          statusCode: 500
+      - destination:
+          metadata:
+            kind: HTTPRoute
+            name: httproute-3
+            namespace: test-ns
+          name: httproute/test-ns/httproute-3/rule/0
+          settings:
+          - addressType: IP
+            endpoints:
+            - host: 7.7.7.7
+              port: 8080
+            metadata:
+              kind: Service
+              name: service-3
+              namespace: test-ns
+              sectionName: "8080"
+            name: httproute/test-ns/httproute-3/rule/0/backend/0
+            protocol: HTTP
+            weight: 1
         hostname: '*'
         isHTTP2: false
         metadata:
