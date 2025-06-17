@@ -47,16 +47,6 @@ func RenderReport(writer io.Writer, name, description string, titleLevel int, re
 	return nil
 }
 
-// hasRoutePropagationData checks if any of the reports contain route propagation timing data
-func hasRoutePropagationData(reports []*BenchmarkReport) bool {
-	for _, report := range reports {
-		if report.PropagationTiming != nil {
-			return true
-		}
-	}
-	return false
-}
-
 // renderRoutePropagationTable renders the route propagation timing metrics table
 func renderRoutePropagationTable(writer io.Writer, reports []*BenchmarkReport) {
 	table := newMarkdownStyleTableWriter(writer)
