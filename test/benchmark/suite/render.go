@@ -24,15 +24,13 @@ import (
 func RenderReport(writer io.Writer, name, description string, titleLevel int, reports []*BenchmarkReport) error {
 	writeSection(writer, "Test: "+name, titleLevel, description)
 
-	// Add Route Propagation Metrics section if we have timing data
-	if hasRoutePropagationData(reports) {
-		writeSection(writer, "Route Propagation Metrics", titleLevel+1,
-			"Timing measurements from route creation to data plane readiness. "+
-				"RouteAccepted Duration: Route creation → RouteConditionAccepted=True. "+
-				"DataPlaneReady Duration: Accepted=True → First successful request. "+
-				"EndToEnd Duration: Route creation → Traffic flowing correctly.")
-		renderRoutePropagationTable(writer, reports)
-	}
+	// Add Route Propagation Metrics section
+	writeSection(writer, "Route Propagation Metrics", titleLevel+1,
+		"Timing measurements from route creation to data plane readiness. "+
+			"RouteAccepted Duration: Route creation → RouteConditionAccepted=True. "+
+			"DataPlaneReady Duration: Accepted=True → First successful request. "+
+			"EndToEnd Duration: Route creation → Traffic flowing correctly.")
+	renderRoutePropagationTable(writer, reports)
 
 	writeSection(writer, "Results", titleLevel+1, "Expand to see the full results.")
 	if err := renderResultsTable(writer, reports); err != nil {
