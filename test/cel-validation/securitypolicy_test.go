@@ -149,7 +149,7 @@ func TestSecurityPolicyTarget(t *testing.T) {
 		},
 
 		{
-			desc: "sectionName disabled until supported - targetRef",
+			desc: "sectionName supported for kind Gateway - targetRef",
 			mutate: func(sp *egv1a1.SecurityPolicy) {
 				sp.Spec = egv1a1.SecurityPolicySpec{
 					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
@@ -164,12 +164,10 @@ func TestSecurityPolicyTarget(t *testing.T) {
 					},
 				}
 			},
-			wantErrors: []string{
-				"spec: Invalid value: \"object\": this policy does not yet support the sectionName field",
-			},
+			wantErrors: []string{},
 		},
 		{
-			desc: "sectionName disabled until supported - targetRefs",
+			desc: "sectionName supported for kind Gateway - targetRefs",
 			mutate: func(sp *egv1a1.SecurityPolicy) {
 				sp.Spec = egv1a1.SecurityPolicySpec{
 					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
@@ -186,8 +184,48 @@ func TestSecurityPolicyTarget(t *testing.T) {
 					},
 				}
 			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "sectionName disabled until supported for kind xRoute - targetRef",
+			mutate: func(sp *egv1a1.SecurityPolicy) {
+				sp.Spec = egv1a1.SecurityPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
+								Group: gwapiv1a2.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1a2.Kind("HTTPRoute"),
+								Name:  gwapiv1a2.ObjectName("backend"),
+							},
+							SectionName: &sectionName,
+						},
+					},
+				}
+			},
 			wantErrors: []string{
-				"spec: Invalid value: \"object\": this policy does not yet support the sectionName field",
+				"spec: Invalid value: \"object\": this policy supports the sectionName field only for kind Gateway",
+			},
+		},
+		{
+			desc: "sectionName disabled until supported for kind xRoute - targetRefs",
+			mutate: func(sp *egv1a1.SecurityPolicy) {
+				sp.Spec = egv1a1.SecurityPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRefs: []gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
+							{
+								LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
+									Group: gwapiv1a2.Group("gateway.networking.k8s.io"),
+									Kind:  gwapiv1a2.Kind("HTTPRoute"),
+									Name:  gwapiv1a2.ObjectName("backend"),
+								},
+								SectionName: &sectionName,
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{
+				"spec: Invalid value: \"object\": this policy supports the sectionName field only for kind Gateway",
 			},
 		},
 
