@@ -91,11 +91,12 @@ func renderRoutePropagationTable(writer io.Writer, reports []*BenchmarkReport) {
 
 // formatDuration formats a duration in a human-readable way for the table
 func formatDuration(d time.Duration) string {
-	if d < time.Millisecond {
+	switch {
+	case d < time.Millisecond:
 		return fmt.Sprintf("%.1fµs", float64(d.Nanoseconds())/1000.0)
-	} else if d < time.Second {
+	case d < time.Second:
 		return fmt.Sprintf("%.1fms", float64(d.Nanoseconds())/1000000.0)
-	} else {
+	default:
 		return fmt.Sprintf("%.1fs", d.Seconds())
 	}
 }
