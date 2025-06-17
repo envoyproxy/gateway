@@ -202,7 +202,7 @@ We invite you to be part of this journey. The beauty of open source is that qual
 
 Ready to join our quality journey? Here's how:
 
-1. **Explore our test suite**: Browse through `/test` directory in our [GitHub repository](https://github.com/envoyproxy/gateway)
+1. **Explore our test suite**: Browse through /test directory in our [GitHub repository](https://github.com/envoyproxy/gateway)
 2. **Pick a test area**: Choose from E2E, benchmark, conformance, resilience, or fuzz testing
 3. **Start small**: Add a test case or improve documentation
 4. **Join the conversation**: Participate in our community discussions about testing strategies
