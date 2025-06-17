@@ -254,6 +254,16 @@ type EnvoyGatewayKubernetesProvider struct {
 	// TopologyInjector defines the configuration for topology injector MutatatingWebhookConfiguration
 	// +optional
 	TopologyInjector *EnvoyGatewayTopologyInjector `json:"proxyTopologyInjector,omitempty"`
+
+	// CacheSyncPeriod determines the minimum frequency at which watched resources are synced.
+	// Note that a sync in the provider layer will not lead to a full reconciliation (including translation),
+	// unless there are actual changes in the provider resources.
+	// This option can be used to protect against missed events or issues in Envoy Gateway where resources
+	// are not requeued when they should be, at the cost of increased resource consumption.
+	// Learn more about the implications of this option: https://pkg.go.dev/sigs.k8s.io/controller-runtime/pkg/cache#Options
+	// Default: 10 hours
+	// +optional
+	CacheSyncPeriod *gwapiv1.Duration `json:"cacheSyncPeriod,omitempty"`
 }
 
 const (

@@ -104,6 +104,14 @@ func New(ctx context.Context, restCfg *rest.Config, svrCfg *ec.Server, resources
 		mgrOpts.Controller = config.Controller{NeedLeaderElection: ptr.To(false)}
 	}
 
+	if svrCfg.EnvoyGateway.Provider.Kubernetes.CacheSyncPeriod != nil {
+		csp, err := time.ParseDuration(string(*svrCfg.EnvoyGateway.Provider.Kubernetes.CacheSyncPeriod))
+		if err != nil {
+			return nil, err
+		}
+		mgrOpts.Cache.SyncPeriod = ptr.To(csp)
+	}
+
 	if svrCfg.EnvoyGateway.NamespaceMode() {
 		mgrOpts.Cache.DefaultNamespaces = make(map[string]cache.Config)
 		for _, watchNS := range svrCfg.EnvoyGateway.Provider.Kubernetes.Watch.Namespaces {
