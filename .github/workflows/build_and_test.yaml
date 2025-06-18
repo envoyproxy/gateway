@@ -73,7 +73,12 @@ jobs:
     - name: Build EG Multiarch Binaries
       run: make build-multiarch PLATFORMS="linux_amd64 linux_arm64"
 
-    - name: Upload EG Binaries
+    - name: Build EG Image  # only for test
+      run: |
+        make image.build
+        make image.save
+
+    - name: Upload EG Binaries & Image
       uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4.6.2
       with:
         name: envoy-gateway
@@ -106,16 +111,15 @@ jobs:
     - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
     - uses: ./tools/github-actions/setup-deps
 
-    - name: Download EG Binaries
+    - name: Download EG Binaries & Image
       uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093  # v4.3.0
       with:
         name: envoy-gateway
         path: bin/
 
-    - name: Give Privileges To EG Binaries
+    - name: Load Built EG Image
       run: |
-        chmod +x bin/linux/amd64/envoy-gateway
-        chmod +x bin/linux/arm64/envoy-gateway
+        docker load -i bin/linux/amd64/envoy-gateway-image.tar.gz
 
     # conformance
     - name: Run Standard Conformance Tests
@@ -124,6 +128,7 @@ jobs:
         IMAGE_PULL_POLICY: IfNotPresent
         IP_FAMILY: ${{ matrix.target.ipFamily }}
         KUBE_DEPLOY_PROFILE: ${{ matrix.target.profile }}
+        TEST_SKIP_IMAGE_BUILD: 1
       run: make conformance
 
   e2e-test:

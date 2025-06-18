@@ -91,6 +91,11 @@ image.push.multiarch:
 	@$(LOG_TARGET)
 	docker buildx build bin -f "$(ROOT_DIR)/tools/docker/$(IMAGES)/Dockerfile" -t "${IMAGE}:${TAG}" --platform "${BUILDX_PLATFORMS}" --sbom=false --provenance=false --push
 
+.PHONY: image.save
+image.save:
+	@$(LOG_TARGET)
+	docker save -o $(OUTPUT_DIR)/$(OS)/$(ARCH)/$(COMMAND)-image.tar.gz "${IMAGE}:${TAG}"
+
 ##@ Image
 
 .PHONY: image

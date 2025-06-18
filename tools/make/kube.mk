@@ -6,6 +6,9 @@ ENVTEST_K8S_VERSION ?= 1.29.5
 # TODO: zhaohuabing update kubebuilder assets to 1.33.0 when available
 ENVTEST_K8S_VERSIONS ?= 1.29.5 1.30.3 1.31.0 1.32.0
 
+# Whether to skip image build when running conformance and e2e, etc.
+TEST_SKIP_IMAGE_BUILD ?= 0
+
 # GATEWAY_API_VERSION refers to the version of Gateway API CRDs.
 # For more details, see https://gateway-api.sigs.k8s.io/guides/getting-started/#installing-gateway-api
 GATEWAY_API_VERSION ?= v1.3.0
@@ -176,7 +179,7 @@ kube-demo-undeploy: ## Uninstall the Kubernetes resources installed from the `ma
 #	tools/hack/run-kube-local.sh
 
 .PHONY: conformance
-conformance: create-cluster kube-install-image kube-deploy run-conformance delete-cluster ## Create a kind cluster, deploy EG into it, run Gateway API conformance, and clean up.
+conformance: create-cluster kube-install-image-test kube-deploy run-conformance delete-cluster ## Create a kind cluster, deploy EG into it, run Gateway API conformance, and clean up.
 
 .PHONY: experimental-conformance ## Create a kind cluster, deploy EG into it, run Gateway API experimental conformance, and clean up.
 experimental-conformance: create-cluster kube-install-image kube-deploy run-experimental-conformance delete-cluster ## Create a kind cluster, deploy EG into it, run Gateway API conformance, and clean up.
@@ -289,6 +292,14 @@ create-cluster: ## Create a kind cluster suitable for running Gateway API confor
 
 .PHONY: kube-install-image
 kube-install-image: image.build ## Install the EG image to a kind cluster using the provided $IMAGE and $TAG.
+	@$(LOG_TARGET)
+	tools/hack/kind-load-image.sh $(IMAGE) $(TAG)
+
+.PHONY: kube-install-image-test
+kube-install-image-test: ## Install the EG image to a kind cluster using the provided $IMAGE and $TAG.
+ifneq ($(TEST_SKIP_IMAGE_BUILD),1)
+	@$(MAKE) image.build
+endif
 	@$(LOG_TARGET)
 	tools/hack/kind-load-image.sh $(IMAGE) $(TAG)
 
