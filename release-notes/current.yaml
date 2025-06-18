@@ -34,6 +34,7 @@ bug fixes: |
   Keep ALPN configuration for listeners with overlapping certificates when ALPN is explicitly set in ClientTrafficPolicy.
   Fixed issue that switch on wrong SubjectAltNameType enum value in BackendTLSPolicy.
   Fixed issue that BackendTLSPolicy should not reference ConfigMap or Secret across namespace.
+  Fixed bug in certificate SANs overlap detection in listeners.
 
 # Enhancements that improve performance.
 performance improvements: |
