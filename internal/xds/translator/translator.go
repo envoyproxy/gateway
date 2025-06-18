@@ -953,7 +953,10 @@ func addXdsCluster(tCtx *types.ResourceVersionTable, args *xdsClusterArgs) error
 		return err
 	}
 	xdsCluster := result.cluster
-	xdsEndpoints := buildXdsClusterLoadAssignment(args.name, args.settings)
+	xdsEndpoints, err := buildXdsClusterLoadAssignment(args.name, args.settings)
+	if err != nil {
+		return err
+	}
 	for _, ds := range args.settings {
 		if ds.TLS != nil {
 			// Create an SDS secret for the CA certificate - either with inline bytes or with a filesystem ref

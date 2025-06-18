@@ -8,6 +8,8 @@ package translator
 import (
 	"errors"
 	"fmt"
+	"math"
+	"math/big"
 	"net/netip"
 	"net/url"
 	"strconv"
@@ -243,4 +245,42 @@ func determineIPFamily(settings []*ir.DestinationSetting) *egv1a1.IPFamily {
 	default:
 		return nil
 	}
+}
+
+func normalizeRatiosToUint32(ratios []*big.Rat) ([]uint32, error) {
+	result := make([]uint32, len(ratios))
+
+	denoms := make([]*big.Int, len(ratios))
+	for i, r := range ratios {
+		denoms[i] = r.Denom()
+	}
+
+	lcmDenom := lcmMultiple(denoms)
+	u32max := big.NewInt(int64(math.MaxUint32))
+
+	for i, r := range ratios {
+		scale := new(big.Int).Div(lcmDenom, r.Denom())
+		scaled := new(big.Int).Mul(r.Num(), scale)
+
+		if scaled.Cmp(u32max) > 0 {
+			return nil, fmt.Errorf("scaled ratios is too large: exceeds uint32")
+		}
+
+		result[i] = uint32(scaled.Uint64())
+	}
+
+	return result, nil
+}
+
+func lcmMultiple(denoms []*big.Int) *big.Int {
+	result := new(big.Int).Set(denoms[0])
+	for _, d := range denoms[1:] {
+		result = lcm(result, d)
+	}
+	return result
+}
+
+func lcm(a, b *big.Int) *big.Int {
+	gcd := new(big.Int).GCD(nil, nil, a, b)
+	return new(big.Int).Div(new(big.Int).Mul(a, b), gcd)
 }
