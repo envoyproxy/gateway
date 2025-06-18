@@ -15,19 +15,18 @@ The enhanced benchmark reports now include a "Route Propagation Metrics" section
 1. **RouteAccepted Duration**: Time from route creation to `RouteConditionAccepted=True`
    - Measures control plane processing speed
    - Includes validation, admission, and status updates
+   - Waits for Kubernetes API to confirm route acceptance
    - Typically 1-5 seconds for small to medium route sets
 
-2. **DataPlaneReady Duration**: Time from `Accepted=True` to traffic flowing correctly
-   - Currently estimated (simplified for reliability)
-   - In production, this would include xDS propagation to Envoy
-   - Typically 500ms-2s additional time
+2. **RouteReady Duration**: Time from T(Apply) to T(Route in Envoy / 200 Status on Route Traffic)
+   - **Deterministically measured** by making actual HTTP requests to each route
+   - Tests every hostname/route combination until successful traffic flow
+   - Includes xDS propagation to Envoy proxies and actual data plane configuration
+   - Waits for real traffic readiness, not estimates
+   - Represents complete route deployment from creation to traffic serving
+   - Typically 2-8 seconds depending on route complexity and cluster performance
 
-3. **End-to-End Time**: Complete route deployment time
-   - Total time from `kubectl apply` to traffic routing correctly
-   - Most important metric for operational planning
-   - Sum of control plane + DataPlaneReady Duration
-
-4. **Route Count**: Number of routes in the test
+3. **Route Count**: Number of routes in the test
    - Helps correlate timing with scale
    - Useful for capacity planning
 
@@ -35,13 +34,21 @@ The enhanced benchmark reports now include a "Route Propagation Metrics" section
 
 During benchmark runs, you'll see timing output like:
 ```
-suite.go:474: Route propagation timing - Control Plane: 2.575107292s, End-to-End: 2.575107334s, Routes: 200
+suite.go:493: Route propagation timing - RouteAccepted: 2.1s, RouteReady: 3.3s, Routes: 200
 ```
 
 This indicates:
-- 200 routes took 2.575s to reach `Accepted=True`
-- End-to-end time was essentially the same
-- This represents ~77 routes/second control plane throughput
+- 200 routes took **2.1s** to reach `RouteConditionAccepted=True` (control plane)
+- **3.3s total** from route creation to all routes serving successful HTTP 200 responses
+- This represents ~95 routes/second control plane throughput
+- Complete route deployment achieved at ~61 routes/second
+
+The benchmark report will include a "Route Propagation Metrics" table:
+
+| Test Name | Routes | RouteAccepted Duration | RouteReady Duration |
+|-----------|--------|------------------------|---------------------|
+| scale-up-httproutes-200 | 200 | 2.1s | 3.3s |
+| scale-up-httproutes-500 | 500 | 5.8s | 12.1s |
 
 ## Running the Enhanced Benchmarks
 
@@ -108,24 +115,28 @@ go test -v -tags benchmark -timeout 20m ./test/benchmark \
 
 ### Route Propagation Performance
 
-| Route Count | Expected RouteAccepted Duration | Notes |
-|-------------|----------------------------|-------|
-| 10-50       | 0.5-2s                    | Fast for small deployments |
-| 100-200     | 2-5s                      | Typical service mesh scale |
-| 300-500     | 5-15s                     | Large application scale |
-| 1000+       | 15s+                      | Enterprise/platform scale |
+| Route Count | Expected RouteAccepted Duration | Expected RouteReady Duration | Notes |
+|-------------|---------------------------|----------------------------|-------|
+| 10-50       | 0.5-2s                   | 1-3s                       | Fast for small deployments |
+| 100-200     | 2-5s                     | 3-7s                       | Typical service mesh scale |
+| 300-500     | 5-15s                    | 7-19s                      | Large application scale |
+| 1000+       | 15s+                     | 19s+                       | Enterprise/platform scale |
 
 ### Performance Indicators
 
 **Good Performance:**
-- Linear scaling: 2x routes ≈ 2x time
+- Linear scaling: 2x routes ≈ 2x time for both control plane and complete route deployment
 - RouteAccepted Duration < 50ms per route
+- RouteReady Duration < 75ms per route (includes complete deployment)
 - Consistent timing across test runs
+- RouteReady time shows reasonable overhead over RouteAccepted time
 
 **Potential Issues:**
 - Exponential scaling: 2x routes >> 2x time
-- High variance between runs
+- High variance between runs (>20% deviation)
 - RouteAccepted Duration > 100ms per route
+- RouteReady Duration > 150ms per route
+- RouteReady time significantly exceeding RouteAccepted time (indicates xDS propagation bottleneck)
 
 ## Troubleshooting
 
@@ -161,6 +172,29 @@ Job scale-up-httproutes-500 still not complete
 **Cause**: Load testing takes time, especially at scale
 **Solution**: This is normal - the route propagation timing is still captured successfully
 
+#### 4. **Route Readiness Timeouts**
+```
+MakeRequestAndExpectEventuallyConsistentResponse: timeout waiting for 200 response
+```
+
+**Cause**: Routes not serving traffic despite being accepted
+**Solution**:
+- Check backend service availability: `kubectl get pods -n benchmark-test`
+- Verify route configuration: `kubectl get httproute -n benchmark-test`
+- Check Envoy proxy logs: `kubectl logs -n envoy-gateway-system -l app.kubernetes.io/name=envoy-gateway`
+- Increase timeout: `BENCHMARK_TIMEOUT=30m make run-benchmark`
+
+#### 5. **Inconsistent RouteReady Timing**
+```
+RouteReady Duration varies significantly between runs
+```
+
+**Cause**: Network latency, resource contention, or backend startup timing
+**Solution**:
+- Run multiple benchmark iterations to get average timing
+- Ensure adequate cluster resources
+- Use dedicated cluster for consistent results
+
 ### Resource Requirements
 
 For reliable results:
@@ -183,28 +217,75 @@ Monitor these metrics in your pipeline:
 ```yaml
 # Example performance thresholds
 route_propagation_thresholds:
-  control_plane_ms_per_route: 50  # Alert if > 50ms per route
-  end_to_end_seconds_100_routes: 5  # Alert if 100 routes > 5s
-  variance_threshold: 0.2  # Alert if >20% variance
+  # Control plane performance
+  route_accepted_ms_per_route: 50    # Alert if > 50ms per route
+  route_accepted_max_seconds: 15     # Alert if any test > 15s
+
+  # Complete route deployment performance (T(Apply) -> T(Route Traffic Ready))
+  route_ready_ms_per_route: 75       # Alert if > 75ms per route
+  route_ready_max_seconds: 20        # Alert if any test > 20s
+
+  # Scale-specific thresholds
+  route_ready_seconds_100_routes: 7   # Alert if 100 routes > 7s
+  route_ready_seconds_500_routes: 20  # Alert if 500 routes > 20s
+
+  # Consistency checks
+  timing_variance_threshold: 0.2      # Alert if >20% variance between runs
+  route_ready_accepted_ratio: 3.0     # Alert if RouteReady > 3x RouteAccepted time
 ```
 
 ### Automated Analysis
 ```bash
-# Extract timing from benchmark logs
+# Extract all timing metrics from benchmark logs
 grep "Route propagation timing" benchmark.log | \
-  awk '{print $8, $10, $12}' | \
-  # Further analysis...
+  awk -F'[: ,]' '{
+    print "route_accepted_seconds=" $8
+    print "route_ready_seconds=" $10
+    print "route_count=" $12
+  }' > metrics.env
+
+# Calculate per-route performance
+source metrics.env
+echo "route_accepted_ms_per_route=$((route_accepted_seconds * 1000 / route_count))"
+echo "route_ready_ms_per_route=$((route_ready_seconds * 1000 / route_count))"
+
+# Parse structured report table
+grep -A 100 "Route Propagation Metrics" benchmark_report.md | \
+  grep "scale-up-httproutes" | \
+  awk -F'|' '{print $2 " " $3 " " $4}' > parsed_metrics.txt
 ```
 
 ## Future Enhancements
 
-The route propagation timing framework provides foundation for:
+The current deterministic route propagation timing framework provides foundation for:
 
-1. **Per-Route Type Metrics**: Separate timing for HTTPRoute vs GRPCRoute
-2. **xDS Propagation Timing**: Actual data plane readiness verification
-3. **Concurrent Route Creation**: Measure bulk vs incremental updates
-4. **Cross-Cluster Timing**: Multi-cluster route propagation
-5. **Error Recovery Timing**: How quickly bad routes are detected/fixed
+1. **Per-Route Type Metrics**: Separate timing for HTTPRoute vs GRPCRoute vs TCPRoute
+2. **Granular xDS Timing**: Break down data plane timing into:
+   - xDS config generation
+   - xDS delivery to Envoy
+   - Envoy configuration application
+   - First successful request processing
+3. **Concurrent vs Sequential Route Creation**: Compare bulk vs incremental update performance
+4. **Cross-Cluster Timing**: Multi-cluster route propagation measurements
+5. **Error Recovery Timing**: How quickly failed routes are detected and corrected
+6. **Resource Impact Analysis**: Correlate propagation timing with CPU/memory usage
+7. **Advanced Data Plane Verification**:
+   - Test multiple request types (GET, POST, etc.)
+   - Verify load balancing across backends
+   - Test with various traffic policies applied
+
+## Implementation Details
+
+### Route Readiness Testing
+
+The system now performs **deterministic route readiness verification** by:
+
+1. **Sequential Route Testing**: Tests each hostname/route combination individually
+2. **HTTP Request Verification**: Makes actual HTTP requests expecting 200 responses
+3. **Timeout-Based Polling**: Uses `MakeRequestAndExpectEventuallyConsistentResponse()` with configurable timeouts
+4. **Complete Route Set Validation**: Only considers routes ready when ALL routes respond successfully
+
+This approach ensures that the `RouteReady Duration` represents the time when your entire route configuration is actually serving traffic, measuring from T(Apply) to T(Route in Envoy / 200 Status on Route Traffic) as defined in Gateway API GEP-1364.
 
 ## Contributing
 

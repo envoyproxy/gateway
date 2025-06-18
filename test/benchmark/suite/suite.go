@@ -452,7 +452,7 @@ func (b *BenchmarkTestSuite) BenchmarkWithPropagationTiming(t *testing.T, ctx co
 	return report, nil
 }
 
-// MeasureRoutePropagationTiming measures the time it takes for routes to be propagated from creation to data plane readiness
+// MeasureRoutePropagationTiming measures the time it takes for routes to be propagated from creation to route readiness
 func (b *BenchmarkTestSuite) MeasureRoutePropagationTiming(t *testing.T, ctx context.Context, gatewayNN types.NamespacedName, routeNNs []types.NamespacedName, hostnamePattern string, hostCount int) (*RoutePropagationTiming, string, error) {
 	startTime := time.Now()
 
@@ -461,8 +461,7 @@ func (b *BenchmarkTestSuite) MeasureRoutePropagationTiming(t *testing.T, ctx con
 	gatewayAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, b.Client, b.TimeoutConfig, b.ControllerName, kubernetes.NewGatewayRef(gatewayNN), routeNNs...)
 	controlPlaneTime := time.Since(controlPlaneStart)
 
-	// Measure actual data plane readiness by testing HTTP requests
-	dataPlaneStart := time.Now()
+	// Measure complete route readiness: T(Apply) -> T(Route in Envoy / 200 Status on Route Traffic)
 	for i := 1; i <= hostCount; i++ {
 		hostname := fmt.Sprintf(hostnamePattern, i)
 		expectedResponse := http.ExpectedResponse{
@@ -479,19 +478,16 @@ func (b *BenchmarkTestSuite) MeasureRoutePropagationTiming(t *testing.T, ctx con
 		// Wait for this specific hostname/route to be ready
 		http.MakeRequestAndExpectEventuallyConsistentResponse(t, b.RoundTripper, b.TimeoutConfig, gatewayAddr, expectedResponse)
 	}
-	dataPlaneTime := time.Since(dataPlaneStart)
-
-	endToEndTime := time.Since(startTime)
+	routeReadyTime := time.Since(startTime)
 
 	timing := &RoutePropagationTiming{
-		RouteAcceptedTime:  controlPlaneTime,
-		DataPlaneReadyTime: dataPlaneTime,
-		EndToEndTime:       endToEndTime,
-		RouteCount:         len(routeNNs),
+		RouteAcceptedTime: controlPlaneTime,
+		RouteReadyTime:    routeReadyTime,
+		RouteCount:        len(routeNNs),
 	}
 
-	t.Logf("Route propagation timing - RouteAccepted: %v, DataPlaneReady: %v, End-to-End: %v, Routes: %d",
-		controlPlaneTime, dataPlaneTime, endToEndTime, len(routeNNs))
+	t.Logf("Route propagation timing - RouteAccepted: %v, RouteReady: %v, Routes: %d",
+		controlPlaneTime, routeReadyTime, len(routeNNs))
 
 	return timing, gatewayAddr, nil
 }

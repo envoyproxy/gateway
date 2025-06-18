@@ -26,10 +26,9 @@ func RenderReport(writer io.Writer, name, description string, titleLevel int, re
 
 	// Add Route Propagation Metrics section
 	writeSection(writer, "Route Propagation Metrics", titleLevel+1,
-		"Timing measurements from route creation to data plane readiness. "+
+		"Timing measurements from route creation to route readiness. "+
 			"RouteAccepted Duration: Route creation → RouteConditionAccepted=True. "+
-			"DataPlaneReady Duration: Accepted=True → First successful request. "+
-			"EndToEnd Duration: Route creation → Traffic flowing correctly.")
+			"RouteReady Duration: T(Apply) → T(Route in Envoy / 200 Status on Route Traffic).")
 	renderRoutePropagationTable(writer, reports)
 
 	writeSection(writer, "Results", titleLevel+1, "Expand to see the full results.")
@@ -56,8 +55,7 @@ func renderRoutePropagationTable(writer io.Writer, reports []*BenchmarkReport) {
 		"Test Name",
 		"Routes",
 		"RouteAccepted Duration",
-		"DataPlaneReady Duration",
-		"EndToEnd Duration",
+		"RouteReady Duration",
 	}
 	writeTableHeader(table, headers)
 
@@ -67,8 +65,7 @@ func renderRoutePropagationTable(writer io.Writer, reports []*BenchmarkReport) {
 				report.Name,
 				fmt.Sprintf("%d", report.PropagationTiming.RouteCount),
 				formatDuration(report.PropagationTiming.RouteAcceptedTime),
-				formatDuration(report.PropagationTiming.DataPlaneReadyTime),
-				formatDuration(report.PropagationTiming.EndToEndTime),
+				formatDuration(report.PropagationTiming.RouteReadyTime),
 			}
 			writeTableRow(table, data)
 		}
