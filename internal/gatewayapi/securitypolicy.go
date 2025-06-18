@@ -527,8 +527,8 @@ func resolveSecurityPolicyRouteTargetRef(
 			}
 		}
 		if !found {
-			message := fmt.Sprintf("No section name %s found for %s %s",
-				string(*target.SectionName), string(target.Kind), string(target.Name))
+			message := fmt.Sprintf("No section name %s found for %s %s/%s",
+				string(*target.SectionName), string(target.Kind), policy.Namespace, string(target.Name))
 
 			return route.RouteContext, &status.PolicyResolveError{
 				Reason:  gwapiv1a2.PolicyReasonInvalid,

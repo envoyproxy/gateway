@@ -125,7 +125,7 @@ securityPolicies:
         sectionName: listener-1
       conditions:
       - lastTransitionTime: null
-        message: No section name not-found-section-name found for HTTPRoute httproute-1
+        message: No section name not-found-section-name found for HTTPRoute default/httproute-1
         reason: Invalid
         status: "False"
         type: Accepted
