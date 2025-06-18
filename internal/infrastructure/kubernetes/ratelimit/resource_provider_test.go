@@ -868,6 +868,20 @@ func TestHorizontalPodAutoscaler(t *testing.T) {
 				Name: ptr.To("foo"),
 			},
 		},
+		{
+			caseName: "with-name",
+			rateLimit: &egv1a1.RateLimit{
+				Backend: egv1a1.RateLimitDatabaseBackend{
+					Type: egv1a1.RedisBackendType,
+					Redis: &egv1a1.RateLimitRedisSettings{
+						URL: "redis.redis.svc:6379",
+					},
+				},
+			},
+			rateLimitHpa: &egv1a1.KubernetesHorizontalPodAutoscalerSpec{
+				Name: ptr.To("custom-hpa-name"),
+			},
+		},
 	}
 	for _, tc := range cases {
 		t.Run(tc.caseName, func(t *testing.T) {
