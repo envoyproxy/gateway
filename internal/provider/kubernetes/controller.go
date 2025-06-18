@@ -11,6 +11,7 @@ import (
 	"time"
 
 	appsv1 "k8s.io/api/apps/v1"
+	certificatesv1a1 "k8s.io/api/certificates/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
@@ -83,6 +84,8 @@ type gatewayAPIReconciler struct {
 	tcpRouteCRDExists      bool
 	tlsRouteCRDExists      bool
 	udpRouteCRDExists      bool
+
+	clusterTrustBundleExits bool
 }
 
 // newGatewayAPIController
@@ -507,6 +510,8 @@ func (r *gatewayAPIReconciler) processBackendRefs(ctx context.Context, gwcResour
 								backend.Namespace,
 								backend.Name,
 								caRefNew)
+						case resource.KindClusterTrustBundle:
+							err = r.processClusterTrustBundleRef(ctx, resourceMappings, gwcResource, caRefNew)
 						}
 						if err != nil {
 							r.log.Error(err,
@@ -860,6 +865,27 @@ func (r *gatewayAPIReconciler) processSecretRef(
 		resourceMap.allAssociatedSecrets.Insert(key)
 		resourceTree.Secrets = append(resourceTree.Secrets, secret)
 		r.log.Info("processing Secret", "namespace", secretNS, "name", string(secretRef.Name))
+	}
+	return nil
+}
+
+func (r *gatewayAPIReconciler) processClusterTrustBundleRef(
+	ctx context.Context,
+	resourceMap *resourceMappings,
+	resourceTree *resource.Resources,
+	ref gwapiv1.SecretObjectReference,
+) error {
+	trustBundle := &certificatesv1a1.ClusterTrustBundle{}
+	err := r.client.Get(ctx, types.NamespacedName{Name: string(ref.Name)}, trustBundle)
+	if err != nil && kerrors.IsNotFound(err) {
+		return fmt.Errorf("unable to find the ClusterTrustBundle: %s", string(ref.Name))
+	}
+
+	key := trustBundle.Name
+	if !resourceMap.allAssociatedClusterTrustBundles.Has(key) {
+		resourceMap.allAssociatedClusterTrustBundles.Insert(key)
+		resourceTree.ClusterTrustBundles = append(resourceTree.ClusterTrustBundles, trustBundle)
+		r.log.Info("processing ClusterTrustBundle", "name", string(ref.Name))
 	}
 	return nil
 }
@@ -1972,6 +1998,11 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 			return err
 		}
 	}
+
+	if err := r.watchClusterTrustBundle(c, mgr); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -2180,6 +2211,8 @@ func (r *gatewayAPIReconciler) processBackendTLSPolicyRefs(
 							policy.Namespace,
 							policy.Name,
 							caRefNew)
+					case resource.KindClusterTrustBundle:
+						err = r.processClusterTrustBundleRef(ctx, resourceMap, resourceTree, caRefNew)
 					}
 					if err != nil {
 						// we don't return an error here, because we want to continue
