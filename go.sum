@@ -1245,8 +1245,8 @@ github.com/tenntenn/text/transform v0.0.0-20200319021203-7eef512accb3 h1:f+jULpR
 github.com/tenntenn/text/transform v0.0.0-20200319021203-7eef512accb3/go.mod h1:ON8b8w4BN/kE1EOhwT0o+d62W65a6aPw1nouo9LMgyY=
 github.com/tetafro/godot v1.5.0 h1:aNwfVI4I3+gdxjMgYPus9eHmoBeJIbnajOyqZYStzuw=
 github.com/tetafro/godot v1.5.0/go.mod h1:2oVxTBSftRTh4+MVfUaUXR6bn2GDXCaMcOG4Dk3rfio=
-github.com/tetratelabs/func-e v1.1.5-0.20250319211008-ca8702e12788 h1:hgrf9mjrDENx+A5b5O03qqww7EknhRR0D9TQ0PX9LoU=
-github.com/tetratelabs/func-e v1.1.5-0.20250319211008-ca8702e12788/go.mod h1:FDAoUIMZc6Jkc0oEsbd2aTWRQhWDVrKhKy+yAdMfZbg=
+github.com/tetratelabs/func-e v1.1.5-0.20250618051429-6a0f4e478076 h1:WhWdSJ8QinLKWKgr3aE4veeR+Mg0Qu+3LfD9oTyA9CM=
+github.com/tetratelabs/func-e v1.1.5-0.20250618051429-6a0f4e478076/go.mod h1:FDAoUIMZc6Jkc0oEsbd2aTWRQhWDVrKhKy+yAdMfZbg=
 github.com/tetratelabs/wazero v1.8.2 h1:yIgLR/b2bN31bjxwXHD8a3d+BogigR952csSDdLYEv4=
 github.com/tetratelabs/wazero v1.8.2/go.mod h1:yAI0XTsMBhREkM/YDAK/zNou3GoiAce1P6+rp/wQhjs=
 github.com/tidwall/pretty v1.0.0/go.mod h1:XNkn88O1ChpSDQmQeStsy+sBenx6DDtFZJxhVysOjyk=
