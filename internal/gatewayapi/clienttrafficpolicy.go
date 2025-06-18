@@ -829,10 +829,7 @@ func (t *Translator) buildListenerTLSParameters(policy *egv1a1.ClientTrafficPoli
 
 		for _, caCertRef := range tlsParams.ClientValidation.CACertificateRefs {
 			caCertRefKind := string(ptr.Deref(caCertRef.Kind, resource.KindSecret))
-			var (
-				caCertBytes []byte
-				ok          bool
-			)
+			var caCertBytes []byte
 			switch caCertRefKind {
 			case resource.KindSecret:
 				secret, err := t.validateSecretRef(false, from, caCertRef, resources)
@@ -840,11 +837,12 @@ func (t *Translator) buildListenerTLSParameters(policy *egv1a1.ClientTrafficPoli
 					return irTLSConfig, err
 				}
 
-				caCertBytes, ok := getCaCertFromSecret(secret)
-				if !ok || len(caCertBytes) == 0 {
+				secretCertBytes, ok := getCaCertFromSecret(secret)
+				if !ok || len(secretCertBytes) == 0 {
 					return irTLSConfig, fmt.Errorf(
 						"caCertificateRef not found in secret %s", caCertRef.Name)
 				}
+				caCertBytes = secretCertBytes
 			case resource.KindConfigMap:
 				configMap, err := t.validateConfigMapRef(false, from, caCertRef, resources)
 				if err != nil {
