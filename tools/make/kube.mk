@@ -179,7 +179,7 @@ kube-demo-undeploy: ## Uninstall the Kubernetes resources installed from the `ma
 #	tools/hack/run-kube-local.sh
 
 .PHONY: conformance
-conformance: create-cluster kube-install-image-test kube-deploy run-conformance delete-cluster ## Create a kind cluster, deploy EG into it, run Gateway API conformance, and clean up.
+conformance: create-cluster kube-install-image kube-deploy run-conformance delete-cluster ## Create a kind cluster, deploy EG into it, run Gateway API conformance, and clean up.
 
 .PHONY: experimental-conformance ## Create a kind cluster, deploy EG into it, run Gateway API experimental conformance, and clean up.
 experimental-conformance: create-cluster kube-install-image kube-deploy run-experimental-conformance delete-cluster ## Create a kind cluster, deploy EG into it, run Gateway API conformance, and clean up.
@@ -291,12 +291,7 @@ create-cluster: ## Create a kind cluster suitable for running Gateway API confor
 	tools/hack/create-cluster.sh
 
 .PHONY: kube-install-image
-kube-install-image: image.build ## Install the EG image to a kind cluster using the provided $IMAGE and $TAG.
-	@$(LOG_TARGET)
-	tools/hack/kind-load-image.sh $(IMAGE) $(TAG)
-
-.PHONY: kube-install-image-test
-kube-install-image-test: ## Install the EG image to a kind cluster using the provided $IMAGE and $TAG.
+kube-install-image: ## Install the EG image to a kind cluster using the provided $IMAGE and $TAG.
 ifneq ($(TEST_SKIP_IMAGE_BUILD),1)
 	@$(MAKE) image.build
 endif

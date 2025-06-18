@@ -158,16 +158,15 @@ jobs:
     - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
     - uses: ./tools/github-actions/setup-deps
 
-    - name: Download EG Binaries
+    - name: Download EG Binaries & Image
       uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093  # v4.3.0
       with:
         name: envoy-gateway
         path: bin/
 
-    - name: Give Privileges To EG Binaries
+    - name: Load Built EG Image
       run: |
-        chmod +x bin/linux/amd64/envoy-gateway
-        chmod +x bin/linux/arm64/envoy-gateway
+        docker load -i bin/gateway-dev-image.tar.gz
 
     # E2E
     - name: Run E2E Tests
@@ -178,6 +177,7 @@ jobs:
         KUBE_DEPLOY_PROFILE: ${{ matrix.target.profile }}
         E2E_TIMEOUT: 1h
         NUM_WORKERS: 2
+        TEST_SKIP_IMAGE_BUILD: 1
       run: make e2e
 
   benchmark-test:
@@ -192,6 +192,16 @@ jobs:
     - name: Setup Graphviz
       uses: ts-graphviz/setup-graphviz@b1de5da23ed0a6d14e0aeee8ed52fdd87af2363c  # v2.0.2
 
+    - name: Download EG Binaries & Image
+      uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093  # v4.3.0
+      with:
+        name: envoy-gateway
+        path: bin/
+
+    - name: Load Built EG Image
+      run: |
+        docker load -i bin/gateway-dev-image.tar.gz
+
     # Benchmark
     - name: Run Benchmark tests
       env:
@@ -204,6 +214,7 @@ jobs:
         BENCHMARK_CPU_LIMITS: 1000m
         BENCHMARK_MEMORY_LIMITS: 2000Mi
         BENCHMARK_REPORT_DIR: benchmark_report
+        TEST_SKIP_IMAGE_BUILD: 1
       run: make benchmark
 
     - name: Read Benchmark report
@@ -216,11 +227,23 @@ jobs:
     steps:
     - uses: actions/checkout@v4.2.2
     - uses: ./tools/github-actions/setup-deps
+
+    - name: Download EG Binaries & Image
+      uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093  # v4.3.0
+      with:
+        name: envoy-gateway
+        path: bin/
+
+    - name: Load Built EG Image
+      run: |
+        docker load -i bin/gateway-dev-image.tar.gz
+
     - name: Resilience Test
       env:
         KIND_NODE_TAG: v1.28.13
         IMAGE_PULL_POLICY: IfNotPresent
         CUSTOM_CNI: "true"
+        TEST_SKIP_IMAGE_BUILD: 1
       run: make resilience
 
   publish:
