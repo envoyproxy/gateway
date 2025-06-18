@@ -819,7 +819,9 @@ func (t *Translator) buildListenerTLSParameters(policy *egv1a1.ClientTrafficPoli
 		}
 
 		for _, caCertRef := range tlsParams.ClientValidation.CACertificateRefs {
-			if caCertRef.Kind == nil || string(*caCertRef.Kind) == resource.KindSecret { // nolint
+			caCertRefKind := string(ptr.Deref[gwapiv1.Kind](caCertRef.Kind, resource.KindSecret))
+			switch caCertRefKind {
+			case resource.KindSecret:
 				secret, err := t.validateSecretRef(false, from, caCertRef, resources)
 				if err != nil {
 					return irTLSConfig, err
@@ -837,8 +839,7 @@ func (t *Translator) buildListenerTLSParameters(policy *egv1a1.ClientTrafficPoli
 				}
 
 				irCACert.Certificate = append(irCACert.Certificate, secretBytes...)
-
-			} else if string(*caCertRef.Kind) == resource.KindConfigMap {
+			case resource.KindConfigMap:
 				configMap, err := t.validateConfigMapRef(false, from, caCertRef, resources)
 				if err != nil {
 					return irTLSConfig, err
@@ -856,9 +857,8 @@ func (t *Translator) buildListenerTLSParameters(policy *egv1a1.ClientTrafficPoli
 				}
 
 				irCACert.Certificate = append(irCACert.Certificate, configMapBytes...)
-			} else {
-				return irTLSConfig, fmt.Errorf(
-					"unsupported caCertificateRef kind:%s", string(*caCertRef.Kind))
+			default:
+				return irTLSConfig, fmt.Errorf("unsupported caCertificateRef kind:%s", caCertRefKind)
 			}
 		}
 
