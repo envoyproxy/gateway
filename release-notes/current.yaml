@@ -25,6 +25,7 @@ new features: |
   Added support for configuring `SameSite` attribute for Oauth cookies for OIDC authentication.
   Added support for configuring the cache sync period for K8s provider.
   Added support for configuring user provided name to generated HorizontalPodAutoscaler and PodDisruptionBudget resources.
+  Added support for specifying deployment annotations through the helm chart.
 
 
 bug fixes: |
