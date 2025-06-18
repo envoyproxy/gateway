@@ -37,8 +37,9 @@ type OIDC struct {
 	// +optional
 	CookieNames *OIDCCookieNames `json:"cookieNames,omitempty"`
 
-	// CookieConfigs allows overriding the SameSite attribute for OIDC cookies.
-	// If a specific cookie is not configured, it will use the "Lax" SameSite policy by default.
+	// CookieConfigs allows setting the SameSite attribute for OIDC cookies.
+	// By default, its unset.
+	//
 	// +optional
 	CookieConfig *OIDCCookieConfig `json:"cookieConfig,omitempty"`
 
@@ -204,6 +205,7 @@ const (
 	SameSiteNone SameSite = "None"
 )
 
+// OIDCCookieConfig defines the cookie configuration for OAuth2 cookies.
 type OIDCCookieConfig struct {
 	// +optional
 	// +kubebuilder:validation:Enum=Lax;Strict;None
