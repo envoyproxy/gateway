@@ -119,7 +119,7 @@ jobs:
 
     - name: Load Built EG Image
       run: |
-        docker load -i bin/linux/amd64/envoy-gateway-image.tar.gz
+        docker load -i bin/gateway-dev-image.tar.gz
 
     # conformance
     - name: Run Standard Conformance Tests

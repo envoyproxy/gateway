@@ -94,7 +94,7 @@ image.push.multiarch:
 .PHONY: image.save
 image.save:
 	@$(LOG_TARGET)
-	docker save -o $(OUTPUT_DIR)/$(OS)/$(ARCH)/$(COMMAND)-image.tar.gz "${IMAGE}:${TAG}"
+	docker save -o $(OUTPUT_DIR)/gateway-dev-image.tar.gz "${IMAGE}:${TAG}"
 
 ##@ Image
 
