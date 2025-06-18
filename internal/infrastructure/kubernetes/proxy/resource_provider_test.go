@@ -1565,6 +1565,14 @@ func TestPDB(t *testing.T) {
 			},
 		},
 		{
+			caseName: "with-name",
+			infra:    newTestInfra(),
+			pdb: &egv1a1.KubernetesPodDisruptionBudgetSpec{
+				MinAvailable: ptr.To(intstr.IntOrString{Type: intstr.Int, IntVal: 1}),
+				Name:         ptr.To("custom-pdb-name"),
+			},
+		},
+		{
 			caseName: "gateway-namespace-mode",
 			infra:    newTestInfraWithNamespacedName(types.NamespacedName{Namespace: "ns1", Name: "gateway-1"}),
 			pdb: &egv1a1.KubernetesPodDisruptionBudgetSpec{
@@ -1704,6 +1712,14 @@ func TestHorizontalPodAutoscaler(t *testing.T) {
 			},
 			deploy: &egv1a1.KubernetesDeploymentSpec{
 				Name: ptr.To("custom-deployment-name"),
+			},
+		},
+		{
+			caseName: "with-name",
+			infra:    newTestInfra(),
+			hpa: &egv1a1.KubernetesHorizontalPodAutoscalerSpec{
+				MaxReplicas: ptr.To[int32](1),
+				Name:        ptr.To("custom-hpa-name"),
 			},
 		},
 		{

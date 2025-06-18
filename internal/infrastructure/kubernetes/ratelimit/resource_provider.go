@@ -341,6 +341,13 @@ func (r *ResourceRender) HorizontalPodAutoscaler() (*autoscalingv2.HorizontalPod
 		hpa.Spec.ScaleTargetRef.Name = r.Name()
 	}
 
+	// set name
+	if hpaConfig.Name != nil {
+		hpa.Name = *hpaConfig.Name
+	} else {
+		hpa.Name = r.Name()
+	}
+
 	if hpa, err = utils.MergeWithPatch(hpa, hpaConfig.Patch); err != nil {
 		return nil, err
 	}
