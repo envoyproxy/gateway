@@ -23,6 +23,9 @@ new features: |
   Added support for using extension server policies to in PostTranslateModify hook.
   Added support for configuring cluster stat name for HTTPRoute and GRPCRoute in EnvoyProxy CRD.
   Added support for configuring `SameSite` attribute for Oauth cookies for OIDC authentication.
+  Added support for configuring the cache sync period for K8s provider.
+  Added support for configuring user provided name to generated HorizontalPodAutoscaler and PodDisruptionBudget resources.
+
 
 bug fixes: |
   Handle integer zone annotation values
@@ -30,6 +33,7 @@ bug fixes: |
   Fixed issue which UDP listeners were not created in the Envoy proxy config when Gateway was created.
   Keep ALPN configuration for listeners with overlapping certificates when ALPN is explicitly set in ClientTrafficPolicy.
   Fixed issue that switch on wrong SubjectAltNameType enum value in BackendTLSPolicy.
+  Fixed issue that BackendTLSPolicy should not reference ConfigMap or Secret across namespace.
 
 # Enhancements that improve performance.
 performance improvements: |

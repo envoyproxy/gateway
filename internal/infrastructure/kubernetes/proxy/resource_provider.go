@@ -531,7 +531,6 @@ func (r *ResourceRender) PodDisruptionBudget() (*policyv1.PodDisruptionBudget, e
 
 	podDisruptionBudget := &policyv1.PodDisruptionBudget{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:            r.Name(),
 			Namespace:       r.Namespace(),
 			OwnerReferences: r.OwnerReferences(),
 		},
@@ -540,6 +539,13 @@ func (r *ResourceRender) PodDisruptionBudget() (*policyv1.PodDisruptionBudget, e
 			Kind:       "PodDisruptionBudget",
 		},
 		Spec: pdbSpec,
+	}
+
+	// set name
+	if pdb.Name != nil {
+		podDisruptionBudget.Name = *pdb.Name
+	} else {
+		podDisruptionBudget.Name = r.Name()
 	}
 
 	// apply merge patch to PodDisruptionBudget
@@ -568,7 +574,6 @@ func (r *ResourceRender) HorizontalPodAutoscaler() (*autoscalingv2.HorizontalPod
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace:       r.Namespace(),
-			Name:            r.Name(),
 			Annotations:     r.infra.GetProxyMetadata().Annotations,
 			Labels:          r.infra.GetProxyMetadata().Labels,
 			OwnerReferences: r.OwnerReferences(),
@@ -591,6 +596,13 @@ func (r *ResourceRender) HorizontalPodAutoscaler() (*autoscalingv2.HorizontalPod
 		hpa.Spec.ScaleTargetRef.Name = *deploymentConfig.Name
 	} else {
 		hpa.Spec.ScaleTargetRef.Name = r.Name()
+	}
+
+	// set name
+	if hpaConfig.Name != nil {
+		hpa.Name = *hpaConfig.Name
+	} else {
+		hpa.Name = r.Name()
 	}
 
 	var err error
