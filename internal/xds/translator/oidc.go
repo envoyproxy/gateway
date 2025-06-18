@@ -270,7 +270,6 @@ func buildCookieConfigs(oidc *ir.OIDC) *oauth2v3.CookieConfigs {
 		OauthNonceCookieConfig:   &oauth2v3.CookieConfig{SameSite: sameSite},
 		CodeVerifierCookieConfig: &oauth2v3.CookieConfig{SameSite: sameSite},
 	}
-
 }
 
 func buildDenyRedirectMatcher(oidc *ir.OIDC) []*routev3.HeaderMatcher {
