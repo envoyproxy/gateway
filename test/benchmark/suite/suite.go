@@ -24,7 +24,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	"sigs.k8s.io/gateway-api/conformance/utils/config"
+	"sigs.k8s.io/gateway-api/conformance/utils/http"
 	"sigs.k8s.io/gateway-api/conformance/utils/kubernetes"
+	"sigs.k8s.io/gateway-api/conformance/utils/roundtripper"
 	"sigs.k8s.io/yaml"
 
 	opt "github.com/envoyproxy/gateway/internal/cmd/options"
@@ -61,8 +63,9 @@ type BenchmarkTestSuite struct {
 	scaledLabels map[string]string // indicate which resources are scaled
 
 	// Clients that for internal usage.
-	kubeClient kube.CLIClient // required for getting logs from pod
-	promClient *prom.Client
+	kubeClient   kube.CLIClient // required for getting logs from pod
+	promClient   *prom.Client
+	RoundTripper roundtripper.RoundTripper // for HTTP requests
 }
 
 func NewBenchmarkTestSuite(client client.Client, options BenchmarkOptions,
@@ -137,8 +140,9 @@ func NewBenchmarkTestSuite(client client.Client, options BenchmarkOptions,
 		scaledLabels: map[string]string{
 			BenchmarkTestScaledKey: "true",
 		},
-		kubeClient: kubeClient,
-		promClient: promClient,
+		kubeClient:   kubeClient,
+		promClient:   promClient,
+		RoundTripper: &roundtripper.DefaultRoundTripper{Debug: false, TimeoutConfig: timeoutConfig},
 	}, nil
 }
 
@@ -457,22 +461,37 @@ func (b *BenchmarkTestSuite) MeasureRoutePropagationTiming(t *testing.T, ctx con
 	gatewayAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, b.Client, b.TimeoutConfig, b.ControllerName, kubernetes.NewGatewayRef(gatewayNN), routeNNs...)
 	controlPlaneTime := time.Since(controlPlaneStart)
 
-	// For now, we'll estimate data plane time as a small additional delay after control plane acceptance
-	// TODO: In the future, we could implement more sophisticated data plane readiness checks
-	// using the nighthawk client approach or other cluster-internal verification
-	dataPlaneTime := 500 * time.Millisecond // Conservative estimate
+	// Measure actual data plane readiness by testing HTTP requests
+	dataPlaneStart := time.Now()
+	for i := 1; i <= hostCount; i++ {
+		hostname := fmt.Sprintf(hostnamePattern, i)
+		expectedResponse := http.ExpectedResponse{
+			Request: http.Request{
+				Host: hostname,
+				Path: "/", // Use root path for testing
+			},
+			Response: http.Response{
+				StatusCode: 200,
+			},
+			Namespace: routeNNs[0].Namespace, // Use namespace from first route
+		}
+
+		// Wait for this specific hostname/route to be ready
+		http.MakeRequestAndExpectEventuallyConsistentResponse(t, b.RoundTripper, b.TimeoutConfig, gatewayAddr, expectedResponse)
+	}
+	dataPlaneTime := time.Since(dataPlaneStart)
 
 	endToEndTime := time.Since(startTime)
 
 	timing := &RoutePropagationTiming{
-		ControlPlaneTime: controlPlaneTime,
-		DataPlaneTime:    dataPlaneTime,
-		EndToEndTime:     endToEndTime,
-		RouteCount:       len(routeNNs),
+		RouteAcceptedTime:  controlPlaneTime,
+		DataPlaneReadyTime: dataPlaneTime,
+		EndToEndTime:       endToEndTime,
+		RouteCount:         len(routeNNs),
 	}
 
-	t.Logf("Route propagation timing - Control Plane: %v, End-to-End: %v, Routes: %d",
-		controlPlaneTime, endToEndTime, len(routeNNs))
+	t.Logf("Route propagation timing - RouteAccepted: %v, DataPlaneReady: %v, End-to-End: %v, Routes: %d",
+		controlPlaneTime, dataPlaneTime, endToEndTime, len(routeNNs))
 
 	return timing, gatewayAddr, nil
 }

@@ -66,8 +66,8 @@ func renderRoutePropagationTable(writer io.Writer, reports []*BenchmarkReport) {
 			data := []string{
 				report.Name,
 				fmt.Sprintf("%d", report.PropagationTiming.RouteCount),
-				formatDuration(report.PropagationTiming.ControlPlaneTime),
-				formatDuration(report.PropagationTiming.DataPlaneTime),
+				formatDuration(report.PropagationTiming.RouteAcceptedTime),
+				formatDuration(report.PropagationTiming.DataPlaneReadyTime),
 				formatDuration(report.PropagationTiming.EndToEndTime),
 			}
 			writeTableRow(table, data)

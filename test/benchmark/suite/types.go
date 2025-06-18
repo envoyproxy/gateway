@@ -16,10 +16,10 @@ import (
 
 // RoutePropagationTiming contains timing measurements for route propagation
 type RoutePropagationTiming struct {
-	ControlPlaneTime time.Duration // Route creation → RouteConditionAccepted=True
-	DataPlaneTime    time.Duration // Accepted=True → First successful request
-	EndToEndTime     time.Duration // Route creation → Traffic flowing correctly
-	RouteCount       int           // Number of routes being tested
+	RouteAcceptedTime  time.Duration // Route creation → RouteConditionAccepted=True
+	DataPlaneReadyTime time.Duration // Accepted=True → First successful request
+	EndToEndTime       time.Duration // Route creation → Traffic flowing correctly
+	RouteCount         int           // Number of routes being tested
 }
 
 // BenchmarkMetricSample contains sampled metrics and profiles data.
