@@ -479,45 +479,31 @@ func (r *gatewayAPIReconciler) processBackendRefs(ctx context.Context, gwcResour
 
 			if backend.Spec.TLS != nil && backend.Spec.TLS.CACertificateRefs != nil {
 				for _, caCertRef := range backend.Spec.TLS.CACertificateRefs {
-					// if kind is not Secret or ConfigMap, we skip early to avoid further calculation overhead
-					if string(caCertRef.Kind) == resource.KindConfigMap ||
-						string(caCertRef.Kind) == resource.KindSecret {
-
-						var err error
-						caRefNew := gwapiv1.SecretObjectReference{
-							Group:     gatewayapi.GroupPtr(string(caCertRef.Group)),
-							Kind:      gatewayapi.KindPtr(string(caCertRef.Kind)),
-							Name:      caCertRef.Name,
-							Namespace: gatewayapi.NamespacePtr(backend.Namespace),
-						}
-						switch string(caCertRef.Kind) {
-						case resource.KindConfigMap:
-							err = r.processConfigMapRef(
-								ctx,
-								resourceMappings,
-								gwcResource,
-								resource.KindBackendTLSPolicy,
-								backend.Namespace,
-								backend.Name,
-								caRefNew)
-
-						case resource.KindSecret:
-							err = r.processSecretRef(
-								ctx,
-								resourceMappings,
-								gwcResource,
-								resource.KindBackendTLSPolicy,
-								backend.Namespace,
-								backend.Name,
-								caRefNew)
-						case resource.KindClusterTrustBundle:
-							err = r.processClusterTrustBundleRef(ctx, resourceMappings, gwcResource, caRefNew)
-						}
-						if err != nil {
-							r.log.Error(err,
-								"failed to process CACertificateRef for Backend",
-								"backend", backend, "caCertificateRef", caCertRef.Name)
-						}
+					var err error
+					caRefNew := gwapiv1.SecretObjectReference{
+						Group:     gatewayapi.GroupPtr(string(caCertRef.Group)),
+						Kind:      gatewayapi.KindPtr(string(caCertRef.Kind)),
+						Name:      caCertRef.Name,
+						Namespace: gatewayapi.NamespacePtr(backend.Namespace),
+					}
+					switch string(caCertRef.Kind) {
+					case resource.KindConfigMap:
+						err = r.processConfigMapRef(
+							ctx, resourceMappings, gwcResource,
+							resource.KindBackendTLSPolicy, backend.Namespace, backend.Name,
+							caRefNew)
+					case resource.KindSecret:
+						err = r.processSecretRef(
+							ctx, resourceMappings, gwcResource,
+							resource.KindBackendTLSPolicy, backend.Namespace, backend.Name,
+							caRefNew)
+					case resource.KindClusterTrustBundle:
+						err = r.processClusterTrustBundleRef(ctx, resourceMappings, gwcResource, caRefNew)
+					}
+					if err != nil {
+						r.log.Error(err,
+							"failed to process CACertificateRef for Backend",
+							"backend", backend, "caCertificateRef", caCertRef.Name)
 					}
 				}
 			}
