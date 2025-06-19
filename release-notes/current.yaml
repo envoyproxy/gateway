@@ -24,6 +24,7 @@ new features: |
   Added support for configuring cluster stat name for HTTPRoute and GRPCRoute in EnvoyProxy CRD.
   Added support for configuring `SameSite` attribute for Oauth cookies for OIDC authentication.
   Added support for configuring the cache sync period for K8s provider.
+  Added support for fallback to first key when load ca certificate from Secret or ConfigMap.
   Added support for configuring user provided name to generated HorizontalPodAutoscaler and PodDisruptionBudget resources.
 
 

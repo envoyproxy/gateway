@@ -717,3 +717,95 @@ func TestGetServiceIPFamily(t *testing.T) {
 		})
 	}
 }
+
+func TestGetCaCertFromConfigMap(t *testing.T) {
+	cases := []struct {
+		name          string
+		cm            *corev1.ConfigMap
+		expectedFound bool
+		expected      string
+	}{
+		{
+			name: "get from ca.crt",
+			cm: &corev1.ConfigMap{
+				Data: map[string]string{
+					"ca.crt":        "fake-cert",
+					"root-cert.pem": "fake-root",
+				},
+			},
+			expectedFound: true,
+			expected:      "fake-cert",
+		},
+		{
+			name: "get from first key",
+			cm: &corev1.ConfigMap{
+				Data: map[string]string{
+					"root-cert.pem": "fake-root",
+				},
+			},
+			expectedFound: true,
+			expected:      "fake-root",
+		},
+		{
+			name: "not found",
+			cm: &corev1.ConfigMap{
+				Data: map[string]string{},
+			},
+			expectedFound: false,
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			got, found := getCaCertFromConfigMap(tc.cm)
+			require.Equal(t, tc.expectedFound, found)
+			require.Equal(t, tc.expected, got)
+		})
+	}
+}
+
+func TestGetCaCertFromSecret(t *testing.T) {
+	cases := []struct {
+		name          string
+		s             *corev1.Secret
+		expectedFound bool
+		expected      string
+	}{
+		{
+			name: "get from ca.crt",
+			s: &corev1.Secret{
+				Data: map[string][]byte{
+					"ca.crt":        []byte("fake-cert"),
+					"root-cert.pem": []byte("fake-root"),
+				},
+			},
+			expectedFound: true,
+			expected:      "fake-cert",
+		},
+		{
+			name: "get from first key",
+			s: &corev1.Secret{
+				Data: map[string][]byte{
+					"root-cert.pem": []byte("fake-root"),
+				},
+			},
+			expectedFound: true,
+			expected:      "fake-root",
+		},
+		{
+			name: "not found",
+			s: &corev1.Secret{
+				Data: map[string][]byte{},
+			},
+			expectedFound: false,
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			got, found := getCaCertFromSecret(tc.s)
+			require.Equal(t, tc.expectedFound, found)
+			require.Equal(t, tc.expected, string(got))
+		})
+	}
+}
