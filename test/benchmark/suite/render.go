@@ -27,8 +27,9 @@ func RenderReport(writer io.Writer, name, description string, titleLevel int, re
 	// Add Route Propagation Metrics section
 	writeSection(writer, "Route Propagation Metrics", titleLevel+1,
 		"Timing measurements from route creation to route readiness. "+
-			"RouteAccepted Duration: Route creation → RouteConditionAccepted=True. "+
-			"RouteReady Duration: T(Apply) → T(Route in Envoy / 200 Status on Route Traffic).")
+			"RouteAccepted Duration: Time from route creation to RouteConditionAccepted=True (control plane processing). "+
+			"RouteReady Duration: Total time from route creation to traffic serving (T(0)→T(3) complete propagation). "+
+			"Data Plane Time: xDS propagation to Envoy proxies.")
 	renderRoutePropagationTable(writer, reports)
 
 	writeSection(writer, "Results", titleLevel+1, "Expand to see the full results.")
@@ -50,22 +51,29 @@ func RenderReport(writer io.Writer, name, description string, titleLevel int, re
 func renderRoutePropagationTable(writer io.Writer, reports []*BenchmarkReport) {
 	table := newMarkdownStyleTableWriter(writer)
 
-	// write headers
+	// write headers - using proper terminology
 	headers := []string{
 		"Test Name",
 		"Routes",
 		"RouteAccepted Duration",
 		"RouteReady Duration",
+		"Data Plane Time",
+		"Per Route Avg",
 	}
 	writeTableHeader(table, headers)
 
 	for _, report := range reports {
 		if report.PropagationTiming != nil {
+			pt := report.PropagationTiming
+			perRouteAvg := pt.RouteReadyTime / time.Duration(pt.RouteCount)
+
 			data := []string{
 				report.Name,
-				fmt.Sprintf("%d", report.PropagationTiming.RouteCount),
-				formatDuration(report.PropagationTiming.RouteAcceptedTime),
-				formatDuration(report.PropagationTiming.RouteReadyTime),
+				fmt.Sprintf("%d", pt.RouteCount),
+				formatDuration(pt.RouteAcceptedTime), // Control plane processing time
+				formatDuration(pt.RouteReadyTime),    // Total propagation time
+				formatDuration(pt.DataPlaneTime),     // xDS propagation time
+				formatDuration(perRouteAvg),
 			}
 			writeTableRow(table, data)
 		}

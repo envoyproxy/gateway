@@ -16,9 +16,12 @@ import (
 
 // RoutePropagationTiming contains timing measurements for route propagation
 type RoutePropagationTiming struct {
-	RouteAcceptedTime time.Duration // Route creation → RouteConditionAccepted=True
-	RouteReadyTime    time.Duration // T(Apply) → T(Route in Envoy / 200 Status on Route Traffic)
+	RouteAcceptedTime time.Duration // RouteAccepted Duration: route creation → RouteConditionAccepted=True (control plane processing)
+	RouteReadyTime    time.Duration // RouteReady Duration: T(Apply) → T(Route in Envoy / 200 Status on Route Traffic) (total propagation)
 	RouteCount        int           // Number of routes being tested
+
+	// Additional detailed timing metrics
+	DataPlaneTime time.Duration // Data Plane Time: T(accepted) → T(traffic ready) - xDS propagation
 }
 
 // BenchmarkMetricSample contains sampled metrics and profiles data.

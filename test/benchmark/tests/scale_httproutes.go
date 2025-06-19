@@ -55,10 +55,8 @@ var ScaleHTTPRoutes = suite.BenchmarkTest{
 				testName := fmt.Sprintf("scaling up httproutes to %d with %d routes per hostname", scale, routePerHost)
 
 				t.Run(testName, func(t *testing.T) {
-					// Record routes created in this batch for timing measurement
-					batchStartIndex := len(routeNNs)
-
-					err = bSuite.ScaleUpHTTPRoutes(ctx, [2]uint16{start, scale}, routeNameFormat, routeHostnameFormat, gatewayNN.Name, routePerHost-batch, func(route *gwapiv1.HTTPRoute) {
+					// Use the new timing-integrated function for accurate measurements
+					timing, batchRouteNNs, gatewayAddr, err := bSuite.ScaleUpHTTPRoutesWithTiming(ctx, [2]uint16{start, scale}, routeNameFormat, routeHostnameFormat, gatewayNN.Name, routePerHost-batch, int(totalHosts), gatewayNN, func(route *gwapiv1.HTTPRoute) {
 						routeNN := types.NamespacedName{Name: route.Name, Namespace: route.Namespace}
 						routeNNs = append(routeNNs, routeNN)
 
@@ -68,21 +66,20 @@ var ScaleHTTPRoutes = suite.BenchmarkTest{
 					start = scale
 					batch = routePerHost
 
-					// Get only the routes created in this batch for propagation timing
-					batchRouteNNs := routeNNs[batchStartIndex:]
-
-					// Get gateway address (needed for propagation timing measurement)
-					gatewayAddr := ""
+					// Get gateway address (needed for benchmark test)
 					if len(batchRouteNNs) > 0 {
 						jobName := fmt.Sprintf("scale-up-httproutes-%d", scale)
 
-						report, err := bSuite.BenchmarkWithPropagationTiming(t, ctx, jobName, testName,
-							gatewayAddr, routeHostnameFormat, int(totalHosts), batchRouteNNs, gatewayNN)
+						// Run the actual benchmark test
+						report, err := bSuite.Benchmark(t, ctx, jobName, testName, gatewayAddr, routeHostnameFormat, int(totalHosts))
 						require.NoError(t, err)
+
+						// Add propagation timing to the report
+						report.PropagationTiming = timing
 
 						reports = append(reports, report)
 					} else {
-						t.Logf("No new routes created for scale %d, using original benchmark method", scale)
+						t.Logf("No new routes created for scale %d", scale)
 					}
 				})
 			}
