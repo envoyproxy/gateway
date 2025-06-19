@@ -490,7 +490,8 @@ type policyRouteTargetContext struct {
 
 type policyGatewayTargetContext struct {
 	*GatewayContext
-	attached bool
+	attached            bool
+	attachedToListeners sets.Set[string]
 }
 
 // listenersWithSameHTTPPort returns a list of the names of all other HTTP listeners
@@ -672,4 +673,38 @@ func getPreserveRouteOrder(envoyProxy *egv1a1.EnvoyProxy) bool {
 		return true
 	}
 	return false
+}
+
+func getCaCertFromConfigMap(cm *corev1.ConfigMap) (string, bool) {
+	var data string
+	data, exits := cm.Data[caCertKey]
+	switch {
+	case exits:
+		return data, true
+	case len(cm.Data) == 1: // Fallback to the first key if ca.crt is not found
+		for _, value := range cm.Data {
+			data = value
+			break
+		}
+		return data, true
+	default:
+		return "", false
+	}
+}
+
+func getCaCertFromSecret(s *corev1.Secret) ([]byte, bool) {
+	var data []byte
+	data, exits := s.Data[caCertKey]
+	switch {
+	case exits:
+		return data, true
+	case len(s.Data) == 1: // Fallback to the first key if ca.crt is not found
+		for _, value := range s.Data {
+			data = value
+			break
+		}
+		return data, true
+	default:
+		return nil, false
+	}
 }

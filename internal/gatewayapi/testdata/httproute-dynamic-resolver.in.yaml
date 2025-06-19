@@ -77,7 +77,7 @@ configMaps:
   kind: ConfigMap
   metadata:
     name: ca-cmap
-    namespace: backends
+    namespace: default
   data:
     ca.crt: |
       -----BEGIN CERTIFICATE-----

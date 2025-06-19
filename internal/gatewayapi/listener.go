@@ -408,10 +408,17 @@ func isOverlappingHostname(hostname1, hostname2 *gwapiv1.Hostname) bool {
 	if hostname1 == nil || hostname2 == nil {
 		return true
 	}
+	domain1 := strings.Replace(string(*hostname1), "*.", "", 1)
+	domain2 := strings.Replace(string(*hostname2), "*.", "", 1)
+	return isSubdomain(domain1, domain2) || isSubdomain(domain2, domain1)
+}
 
-	h1 := strings.Replace(string(*hostname1), "*.", "", 1)
-	h2 := strings.Replace(string(*hostname2), "*.", "", 1)
-	return strings.HasSuffix(h1, h2) || strings.HasSuffix(h2, h1)
+// isSubdomain checks if subDomain is a sub-domain of domain
+func isSubdomain(subDomain, domain string) bool {
+	if subDomain == domain {
+		return true
+	}
+	return strings.HasSuffix(subDomain, fmt.Sprintf(".%s", domain))
 }
 
 func buildListenerMetadata(listener *ListenerContext, gateway *GatewayContext) *ir.ResourceMetadata {
