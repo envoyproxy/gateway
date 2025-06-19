@@ -412,7 +412,7 @@ func resolveSecurityPolicyGatewayTargetRef(
 				string(*target.SectionName), key.String())
 
 			return gateway.GatewayContext, &status.PolicyResolveError{
-				Reason:  gwapiv1a2.PolicyReasonInvalid,
+				Reason:  gwapiv1a2.PolicyReasonTargetNotFound,
 				Message: message,
 			}
 		}

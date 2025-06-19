@@ -126,7 +126,7 @@ securityPolicies:
       conditions:
       - lastTransitionTime: null
         message: No section name not-found-section-name found for Gateway envoy-gateway/gateway-1
-        reason: Invalid
+        reason: TargetNotFound
         status: "False"
         type: Accepted
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
