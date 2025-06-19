@@ -1,0 +1,14 @@
+- ignorePortInHostMatching: true
+  name: custom-backend-listener
+  virtualHosts:
+  - domains:
+    - '*'
+    name: custom-backend-listener/*
+    routes:
+    - match:
+        prefix: /
+      name: custom-backend-route
+      route:
+        cluster: custom-backend-dest
+        upgradeConfigs:
+        - upgradeType: websocket

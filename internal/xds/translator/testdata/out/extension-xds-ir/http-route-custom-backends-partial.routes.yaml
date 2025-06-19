@@ -1,0 +1,14 @@
+- ignorePortInHostMatching: true
+  name: multiple-custom-backends-listener
+  virtualHosts:
+  - domains:
+    - '*'
+    name: multiple-custom-backends-listener/*
+    routes:
+    - match:
+        pathSeparatedPrefix: /s3
+      name: s3-route
+      route:
+        cluster: s3-backend-dest
+        upgradeConfigs:
+        - upgradeType: websocket
