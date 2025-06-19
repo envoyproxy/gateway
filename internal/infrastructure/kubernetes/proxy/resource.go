@@ -493,6 +493,10 @@ func resolveProxyImage(containerSpec *egv1a1.KubernetesContainerSpec) (string, e
 
 	repo := ptr.Deref(containerSpec.ImageRepository, "")
 	if repo != "" {
+		// if the imageRepository is set, it should not contain a tag
+		if existingTag, err := getImageTag(repo); err == nil && existingTag != "" {
+			return "", fmt.Errorf("imageRepository %q should not contain a tag: %q", repo, existingTag)
+		}
 		tag, err := getImageTag(egv1a1.DefaultEnvoyProxyImage)
 		if err != nil {
 			return "", err
@@ -502,6 +506,10 @@ func resolveProxyImage(containerSpec *egv1a1.KubernetesContainerSpec) (string, e
 
 	image := ptr.Deref(containerSpec.Image, "")
 	if image != "" {
+		// if the image field is set, it should contain a tag
+		if _, err := getImageTag(image); err != nil {
+			return "", fmt.Errorf("image %q should contain a tag: %w", image, err)
+		}
 		return image, nil
 	}
 
