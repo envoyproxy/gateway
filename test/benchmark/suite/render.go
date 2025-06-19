@@ -23,6 +23,9 @@ import (
 func RenderReport(writer io.Writer, name, description string, titleLevel int, reports []*BenchmarkReport) error {
 	writeSection(writer, "Test: "+name, titleLevel, description)
 
+	writeSection(writer, "Latency Analysis", titleLevel+1, "Proxy latency breakdown extracted from total request processing time.")
+	renderLatencyMetricsTable(writer, reports)
+
 	writeSection(writer, "Results", titleLevel+1, "Expand to see the full results.")
 	if err := renderResultsTable(writer, reports); err != nil {
 		return err
@@ -224,4 +227,108 @@ func getMetricsMinMaxMeans(metrics []float64) string {
 	}
 
 	return fmt.Sprintf("%.2f / %.2f / %.2f", min, max, avg)
+}
+
+func renderLatencyMetricsTable(writer io.Writer, reports []*BenchmarkReport) {
+	table := newMarkdownStyleTableWriter(writer)
+
+	// Write headers for latency breakdown
+	headers := []string{
+		"Test Name",
+		"Total Latency (ms) <br> P50 / P95 / P99",
+		"Estimated Proxy Latency (ms) <br> P50 / P95 / P99",
+		"Proxy % of Total <br> P95",
+		"Success Rate (%)",
+		"Throughput (RPS)",
+	}
+	writeTableHeader(table, headers)
+
+	for _, report := range reports {
+		data := []string{report.Name}
+		
+		if report.LatencyMetrics != nil && report.LatencyMetrics.TotalLatency != nil {
+			// Total latency percentiles
+			totalP50 := getPercentile(report.LatencyMetrics.TotalLatency, "P50")
+			totalP95 := getPercentile(report.LatencyMetrics.TotalLatency, "P95")
+			totalP99 := getPercentile(report.LatencyMetrics.TotalLatency, "P99")
+			data = append(data, fmt.Sprintf("%.2f / %.2f / %.2f", totalP50, totalP95, totalP99))
+			
+			// Estimated proxy latency percentiles
+			if report.LatencyMetrics.EstimatedProxyLatency != nil {
+				proxyP50 := getPercentile(report.LatencyMetrics.EstimatedProxyLatency, "P50")
+				proxyP95 := getPercentile(report.LatencyMetrics.EstimatedProxyLatency, "P95")
+				proxyP99 := getPercentile(report.LatencyMetrics.EstimatedProxyLatency, "P99")
+				data = append(data, fmt.Sprintf("%.2f / %.2f / %.2f", proxyP50, proxyP95, proxyP99))
+				
+				// Proxy percentage of total latency at P95
+				proxyPercent := 0.0
+				if totalP95 > 0 {
+					proxyPercent = (proxyP95 / totalP95) * 100.0
+				}
+				data = append(data, fmt.Sprintf("%.1f%%", proxyPercent))
+			} else {
+				data = append(data, "N/A", "N/A")
+			}
+			
+			// Success rate and throughput
+			data = append(data, fmt.Sprintf("%.1f", report.LatencyMetrics.SuccessRate))
+			data = append(data, fmt.Sprintf("%.0f", report.LatencyMetrics.ThroughputRPS))
+		} else {
+			// No latency data available
+			data = append(data, "N/A", "N/A", "N/A", "N/A", "N/A")
+		}
+		
+		writeTableRow(table, data)
+	}
+
+	_ = table.Flush()
+	
+	// Add detailed breakdown section
+	writeSection(writer, "Detailed Latency Breakdown", 4, "Breakdown of latency components for P95 percentile")
+	
+	detailTable := newMarkdownStyleTableWriter(writer)
+	detailHeaders := []string{
+		"Test Name",
+		"Client Processing (ms)",
+		"Network Round-trip (ms)", 
+		"Proxy Processing (ms)",
+		"Server Processing (ms)",
+		"Total (ms)",
+	}
+	writeTableHeader(detailTable, detailHeaders)
+	
+	for _, report := range reports {
+		data := []string{report.Name}
+		
+		if report.LatencyMetrics != nil {
+			breakdown := report.LatencyMetrics.GetLatencyBreakdown("P95")
+			if breakdown != nil {
+				data = append(data, 
+					fmt.Sprintf("%.2f", breakdown.ClientLatency),
+					fmt.Sprintf("%.2f", breakdown.NetworkLatency),
+					fmt.Sprintf("%.2f", breakdown.ProxyLatency),
+					fmt.Sprintf("%.2f", breakdown.ServerLatency),
+					fmt.Sprintf("%.2f", breakdown.ClientLatency + breakdown.NetworkLatency + breakdown.ProxyLatency + breakdown.ServerLatency),
+				)
+			} else {
+				data = append(data, "N/A", "N/A", "N/A", "N/A", "N/A")
+			}
+		} else {
+			data = append(data, "N/A", "N/A", "N/A", "N/A", "N/A")
+		}
+		
+		writeTableRow(detailTable, data)
+	}
+	
+	_ = detailTable.Flush()
+}
+
+func getPercentile(stats *LatencyStats, percentile string) float64 {
+	if stats == nil || stats.Percentiles == nil {
+		return 0.0
+	}
+	if value, exists := stats.Percentiles[percentile]; exists {
+		return value
+	}
+	return 0.0
 }

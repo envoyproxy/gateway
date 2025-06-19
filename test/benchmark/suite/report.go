@@ -13,6 +13,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"strings"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -45,6 +46,8 @@ type BenchmarkReport struct {
 	ProfilesOutputDir string
 	// Nighthawk benchmark result
 	Result []byte
+	// Parsed latency metrics with proxy-specific analysis
+	LatencyMetrics *LatencyMetrics
 	// Prometheus metrics and pprof profiles sampled data
 	Samples []BenchmarkMetricSample
 
@@ -101,6 +104,12 @@ func (r *BenchmarkReport) GetResult(ctx context.Context, job *types.NamespacedNa
 	}
 
 	r.Result = logs
+
+	// Parse JSON output and extract latency metrics
+	if err := r.parseLatencyMetrics(logs); err != nil {
+		// Log the error but don't fail the entire benchmark
+		fmt.Printf("Warning: failed to parse latency metrics: %v\n", err)
+	}
 
 	return nil
 }
@@ -185,4 +194,33 @@ func (r *BenchmarkReport) fetchEnvoyGatewayPod(ctx context.Context) (*corev1.Pod
 
 	// Using the first one pod as default envoy-gateway pod
 	return &egPods.Items[0], nil
+}
+
+// parseLatencyMetrics extracts JSON output from logs and parses latency metrics
+func (r *BenchmarkReport) parseLatencyMetrics(logs []byte) error {
+	// Extract JSON from logs - look for the JSON output among log lines
+	logLines := strings.Split(string(logs), "\n")
+	var jsonOutput string
+	
+	// Find the line containing JSON results (usually the last substantial line)
+	for i := len(logLines) - 1; i >= 0; i-- {
+		line := strings.TrimSpace(logLines[i])
+		if strings.HasPrefix(line, "{") && strings.HasSuffix(line, "}") {
+			jsonOutput = line
+			break
+		}
+	}
+	
+	if jsonOutput == "" {
+		return fmt.Errorf("no JSON output found in logs")
+	}
+	
+	// Parse the JSON and extract latency metrics
+	latencyMetrics, err := ParseNighthawkResults([]byte(jsonOutput))
+	if err != nil {
+		return fmt.Errorf("failed to parse Nighthawk JSON results: %w", err)
+	}
+	
+	r.LatencyMetrics = latencyMetrics
+	return nil
 }

@@ -275,6 +275,8 @@ func prepareBenchmarkClientStaticArgs(options BenchmarkOptions) []string {
 		"--connections", options.Connections,
 		"--duration", options.Duration,
 		"--concurrency", options.Concurrency,
+		"--output-format", "json", // Enable JSON output for structured parsing
+		"--verbosity", "warn",      // Reduce log noise for cleaner JSON output
 	}
 	return staticArgs
 }

@@ -1,0 +1,66 @@
+static_resources:
+  listeners:
+    # Enhanced test server with timing headers for proxy latency isolation
+    - address:
+        socket_address:
+          address: 0.0.0.0
+          port_value: 8080
+      filter_chains:
+        - filters:
+            - name: envoy.filters.network.http_connection_manager
+              typed_config:
+                "@type": type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
+                generate_request_id: false
+                codec_type: AUTO
+                stat_prefix: ingress_http
+                route_config:
+                  name: local_route
+                  virtual_hosts:
+                    - name: service
+                      domains:
+                        - "*"
+                      routes:
+                        - match:
+                            prefix: "/"
+                          route:
+                            cluster: local_service
+                http_filters:
+                  - name: dynamic-delay
+                    typed_config:
+                      "@type": type.googleapis.com/nighthawk.server.DynamicDelayConfiguration
+                      static_delay: 0s
+                  - name: test-server  # before envoy.router because order matters!
+                    typed_config:
+                      "@type": type.googleapis.com/nighthawk.server.ResponseOptions
+                      response_body_size: 10
+                      v3_response_headers:
+                        - {header: {key: "foo", value: "bar"}}
+                        - {header: {key: "foo", value: "bar2"}, append: true}
+                        - {header: {key: "x-nh", value: "1"}}
+                        # Add server timing headers for latency analysis
+                        - {header: {key: "Server-Timing", value: "processing;dur=0.1"}}
+                        - {header: {key: "X-Server-Start-Time", value: "%START_TIME%"}}
+                        - {header: {key: "X-Server-End-Time", value: "%END_TIME%"}}
+                  - name: envoy.filters.http.router
+                    typed_config:
+                      "@type": type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+                      dynamic_stats: false
+  clusters:
+    - name: local_service
+      connect_timeout: 0.25s
+      type: STATIC
+      load_assignment:
+        cluster_name: local_service
+        endpoints:
+          - lb_endpoints:
+              - endpoint:
+                  address:
+                    socket_address:
+                      address: 127.0.0.1
+                      port_value: 8080
+admin:
+  access_log_path: /tmp/envoy.log
+  address:
+    socket_address:
+      address: 0.0.0.0
+      port_value: 8081
