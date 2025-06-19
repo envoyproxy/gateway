@@ -208,6 +208,7 @@ type KubernetesPodSpec struct {
 }
 
 // KubernetesContainerSpec defines the desired state of the Kubernetes container resource.
+// +kubebuilder:validation:XValidation:rule="!has(self.image) || !has(self.imageRepository)",message="Either image or imageRepository can be set."
 type KubernetesContainerSpec struct {
 	// List of environment variables to set in the container.
 	//
@@ -227,10 +228,18 @@ type KubernetesContainerSpec struct {
 	// +optional
 	SecurityContext *corev1.SecurityContext `json:"securityContext,omitempty"`
 
-	// Image specifies the EnvoyProxy container image to be used, instead of the default image.
+	// Image specifies the EnvoyProxy container image to be used including a tag, instead of the default image.
+	// This field is mutually exclusive with ImageRepository.
 	//
 	// +optional
 	Image *string `json:"image,omitempty"`
+
+	// ImageRepository specifies the container image repository to be used without specifying a tag.
+	// The default tag will be used.
+	// This field is mutually exclusive with Image.
+	//
+	// +optional
+	ImageRepository *string `json:"imageRepository,omitempty"`
 
 	// VolumeMounts are volumes to mount into the container's filesystem.
 	// Cannot be updated.

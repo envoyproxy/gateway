@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"path/filepath"
 
+	"github.com/containers/image/v5/docker/reference"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/utils/ptr"
@@ -115,10 +116,15 @@ func expectedProxyContainers(infra *ir.ProxyInfra,
 		return nil, err
 	}
 
+	proxyImage, err := resolveProxyImage(containerSpec)
+	if err != nil {
+		return nil, err
+	}
+
 	containers := []corev1.Container{
 		{
 			Name:                     envoyContainerName,
-			Image:                    *containerSpec.Image,
+			Image:                    proxyImage,
 			ImagePullPolicy:          corev1.PullIfNotPresent,
 			Command:                  []string{"envoy"},
 			Args:                     args,
@@ -478,4 +484,42 @@ func expectedShutdownManagerSecurityContext(containerSpec *egv1a1.KubernetesCont
 	// so it needs file write permission.
 	sc.ReadOnlyRootFilesystem = nil
 	return sc
+}
+
+func resolveProxyImage(containerSpec *egv1a1.KubernetesContainerSpec) (string, error) {
+	if containerSpec == nil {
+		return "", fmt.Errorf("containerSpec is nil")
+	}
+
+	repo := ptr.Deref(containerSpec.ImageRepository, "")
+	if repo != "" {
+		tag, err := getImageTag(egv1a1.DefaultEnvoyProxyImage)
+		if err != nil {
+			return "", err
+		}
+		return fmt.Sprintf("%s:%s", repo, tag), nil
+	}
+
+	image := ptr.Deref(containerSpec.Image, "")
+	if image != "" {
+		return image, nil
+	}
+
+	return egv1a1.DefaultEnvoyProxyImage, nil
+}
+
+// getImageTag parses a Docker/OCI image reference and returns the tag if present.
+// Returns an error if parsing fails or if no tag is found.
+func getImageTag(image string) (string, error) {
+	ref, err := reference.ParseNormalizedNamed(image)
+	if err != nil {
+		return "", fmt.Errorf("failed to parse image reference %q: %w", image, err)
+	}
+
+	tagged, ok := ref.(reference.Tagged)
+	if !ok {
+		return "", fmt.Errorf("no tag found in image reference %q", image)
+	}
+
+	return tagged.Tag(), nil
 }
