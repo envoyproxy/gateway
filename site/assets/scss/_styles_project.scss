@@ -115,7 +115,7 @@ $td-sidebar-border-color: $gray-200;
 body {
   color: $dark;
   line-height: 1.6;
-  font-size: 14px;
+  font-size: 1.1rem;
 }
 
 // Navbar customization
@@ -1083,7 +1083,6 @@ footer {
 
   // Paragraph styling
   p {
-    font-size: 1.1rem;
     line-height: 1.8;
     color: #374151;
     margin-bottom: 1.5rem;
@@ -1094,7 +1093,6 @@ footer {
     margin-bottom: 2rem;
 
     li {
-      font-size: 1.1rem;
       line-height: 1.8;
       color: #374151;
       position: relative;
@@ -1193,7 +1191,6 @@ footer {
       }
 
       p {
-        font-size: 1.1rem;
         line-height: 1.7;
         color: rgba($dark, 0.8);
         margin-bottom: 0;
@@ -1333,7 +1330,6 @@ footer {
 
     p {
       color: #374151;
-      font-size: 1.1rem;
       line-height: 1.7;
     }
 
@@ -1372,7 +1368,6 @@ footer {
 
     p {
       color: rgba($white, 0.9);
-      font-size: 1.1rem;
       line-height: 1.7;
     }
 
@@ -1442,7 +1437,6 @@ footer {
 
     p {
       color: #374151;
-      font-size: 1.1rem;
       line-height: 1.7;
     }
 
@@ -1480,7 +1474,6 @@ footer {
       padding-left: 1.5rem;
       margin-bottom: 0.75rem;
       color: #374151;
-      font-size: 1.1rem;
       line-height: 1.7;
 
       &::before {
@@ -1631,7 +1624,6 @@ footer {
 
   p {
     color: rgba($dark, 0.8);
-    font-size: 1.1rem;
     line-height: 1.6;
   }
 }
