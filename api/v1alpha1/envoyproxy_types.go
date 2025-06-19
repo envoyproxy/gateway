@@ -158,11 +158,26 @@ type EnvoyProxySpec struct {
 	// +optional
 	PreserveRouteOrder *bool `json:"preserveRouteOrder,omitempty"`
 
-	// DisableLuaValidation disables the Lua script validation for Lua EnvoyExtensionPolicies
-	// +kubebuilder:default=false
+	// LuaValidation determines strictness of the Lua script validation for Lua EnvoyExtensionPolicies
+	// +kubebuilder:default=Run
+	// +kubebuilder:validation:Enum=Run;Disabled
 	// +optional
-	DisableLuaValidation *bool `json:"disableLuaValidation,omitempty"`
+	LuaValidation *LuaValidation `json:"luaValidation,omitempty"`
 }
+
+type LuaValidation string
+
+const (
+	// LuaValidationRun enables runtime validation of Lua scripts.
+	// This is the default level and checks for issues during script execution.
+	// Recommended if your scripts only use the standard Envoy Lua stream handle API.
+	// For supported APIs, see: https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_filters/lua_filter#stream-handle-api
+	LuaValidationRun LuaValidation = "Run"
+
+	// LuaValidationDisabled disables all validation of Lua scripts.
+	// Scripts will be accepted and executed without any validation checks.
+	LuaValidationDisabled LuaValidation = "Disabled"
+)
 
 // RoutingType defines the type of routing of this Envoy proxy.
 type RoutingType string
