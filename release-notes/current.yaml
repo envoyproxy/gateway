@@ -3,6 +3,7 @@ date: Pending
 # Changes that are expected to cause an incompatibility with previous versions, such as deletions or modifications to existing APIs.
 breaking changes: |
   Use gateway name as proxy fleet name for gateway namespace mode.
+  SameSite attribute for Oauth cookies defaults to `Strict`, make sure to set `CookieConfig.SameSite` to `Disabled` if you want to keep the previous behavior.
 
 # Updates addressing vulnerabilities, security flaws, or compliance requirements.
 security updates: |
@@ -21,6 +22,11 @@ new features: |
   Added support for setting previous priorities retry predicate.
   Added support for using extension server policies to in PostTranslateModify hook.
   Added support for configuring cluster stat name for HTTPRoute and GRPCRoute in EnvoyProxy CRD.
+  Added support for configuring `SameSite` attribute for Oauth cookies for OIDC authentication.
+  Added support for configuring the cache sync period for K8s provider.
+  Added support for fallback to first key when load ca certificate from Secret or ConfigMap.
+  Added support for configuring user provided name to generated HorizontalPodAutoscaler and PodDisruptionBudget resources.
+
 
 bug fixes: |
   Handle integer zone annotation values
@@ -29,8 +35,10 @@ bug fixes: |
   Keep ALPN configuration for listeners with overlapping certificates when ALPN is explicitly set in ClientTrafficPolicy.
   Fixed issue that switch on wrong SubjectAltNameType enum value in BackendTLSPolicy.
   Fixed issue that BackendTLSPolicy should not reference ConfigMap or Secret across namespace.
+  Fixed bug in certificate SANs overlap detection in listeners.
   Fixed issue where EnvoyExtensionPolicy ExtProc body processing mode is set to FullDuplexStreamed, but trailers were not sent.
   Fixed validation issue where EnvoyExtensionPolicy ExtProc failOpen is true, and body processing mode FullDuplexStreamed is not rejected.
+
 
 # Enhancements that improve performance.
 performance improvements: |

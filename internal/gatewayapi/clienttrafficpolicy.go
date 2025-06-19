@@ -834,7 +834,7 @@ func (t *Translator) buildListenerTLSParameters(policy *egv1a1.ClientTrafficPoli
 					return irTLSConfig, err
 				}
 
-				secretBytes, ok := secret.Data[caCertKey]
+				secretBytes, ok := getCaCertFromSecret(secret)
 				if !ok || len(secretBytes) == 0 {
 					return irTLSConfig, fmt.Errorf(
 						"caCertificateRef not found in secret %s", caCertRef.Name)
@@ -853,7 +853,7 @@ func (t *Translator) buildListenerTLSParameters(policy *egv1a1.ClientTrafficPoli
 					return irTLSConfig, err
 				}
 
-				configMapBytes, ok := configMap.Data[caCertKey]
+				configMapBytes, ok := getCaCertFromConfigMap(configMap)
 				if !ok || len(configMapBytes) == 0 {
 					return irTLSConfig, fmt.Errorf(
 						"caCertificateRef not found in configMap %s", caCertRef.Name)
