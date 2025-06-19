@@ -531,7 +531,7 @@ func resolveSecurityPolicyRouteTargetRef(
 				string(*target.SectionName), string(target.Kind), policy.Namespace, string(target.Name))
 
 			return route.RouteContext, &status.PolicyResolveError{
-				Reason:  gwapiv1a2.PolicyReasonInvalid,
+				Reason:  gwapiv1a2.PolicyReasonTargetNotFound,
 				Message: message,
 			}
 		}
