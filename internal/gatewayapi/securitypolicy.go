@@ -1049,6 +1049,7 @@ func (t *Translator) buildOIDC(
 		CookieSuffix:           suffix,
 		CookieNameOverrides:    policy.Spec.OIDC.CookieNames,
 		CookieDomain:           policy.Spec.OIDC.CookieDomain,
+		CookieConfig:           policy.Spec.OIDC.CookieConfig,
 		HMACSecret:             hmacData,
 		PassThroughAuthHeader:  passThroughAuthHeader,
 		DenyRedirect:           oidc.DenyRedirect,

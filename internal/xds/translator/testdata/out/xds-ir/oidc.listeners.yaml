@@ -25,6 +25,21 @@
               - profile
               authType: BASIC_AUTH
               authorizationEndpoint: https://oauth.foo.com/oauth2/v2/auth
+              cookieConfigs:
+                bearerTokenCookieConfig:
+                  sameSite: STRICT
+                codeVerifierCookieConfig:
+                  sameSite: STRICT
+                idTokenCookieConfig:
+                  sameSite: STRICT
+                oauthExpiresCookieConfig:
+                  sameSite: STRICT
+                oauthHmacCookieConfig:
+                  sameSite: STRICT
+                oauthNonceCookieConfig:
+                  sameSite: STRICT
+                refreshTokenCookieConfig:
+                  sameSite: STRICT
               credentials:
                 clientId: client.oauth.foo.com
                 cookieNames:
@@ -72,6 +87,21 @@
               - profile
               authType: BASIC_AUTH
               authorizationEndpoint: https://oauth.bar.com/oauth2/v2/auth
+              cookieConfigs:
+                bearerTokenCookieConfig:
+                  sameSite: STRICT
+                codeVerifierCookieConfig:
+                  sameSite: STRICT
+                idTokenCookieConfig:
+                  sameSite: STRICT
+                oauthExpiresCookieConfig:
+                  sameSite: STRICT
+                oauthHmacCookieConfig:
+                  sameSite: STRICT
+                oauthNonceCookieConfig:
+                  sameSite: STRICT
+                refreshTokenCookieConfig:
+                  sameSite: STRICT
               credentials:
                 clientId: client.oauth.bar.com
                 cookieDomain: example.com
