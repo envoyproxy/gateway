@@ -207,6 +207,16 @@ func (r *gatewayAPIReconciler) processHTTPRoutes(ctx context.Context, gatewayNam
 		resourceMap.extensionRefFilters[utils.GetNamespacedNameWithGroupKind(&filter)] = filter
 	}
 
+	// Collect custom backend resources managed by extensions
+	extensionBackendResources, err := r.getExtensionBackendResources(ctx)
+	if err != nil {
+		return err
+	}
+	for i := range extensionBackendResources {
+		backend := extensionBackendResources[i]
+		resourceMap.extensionRefFilters[utils.GetNamespacedNameWithGroupKind(&backend)] = backend
+	}
+
 	if err := r.client.List(ctx, httpRouteList, &client.ListOptions{
 		FieldSelector: fields.OneTermEqualSelector(gatewayHTTPRouteIndex, gatewayNamespaceName),
 	}); err != nil {

@@ -45,11 +45,11 @@ func translateUnstructuredToUnstructuredBytes(e []*unstructured.Unstructured) ([
 	return extensionResourceBytes, nil
 }
 
-func (h *XDSHook) PostRouteModifyHook(route *route.Route, routeHostnames []string, extensionResources []*unstructured.Unstructured) (*route.Route, error) {
+func (h *XDSHook) PostRouteModifyHook(route *route.Route, routeHostnames []string, extensionResources []*unstructured.Unstructured) (*route.Route, []*cluster.Cluster, error) {
 	// Take all of the unstructured resources for the extension and package them into bytes
 	extensionResourceBytes, err := translateUnstructuredToUnstructuredBytes(extensionResources)
 	if err != nil {
-		return route, err
+		return route, nil, err
 	}
 
 	// Make the request to the extension server
@@ -63,10 +63,10 @@ func (h *XDSHook) PostRouteModifyHook(route *route.Route, routeHostnames []strin
 			},
 		})
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
-	return resp.Route, nil
+	return resp.Route, resp.Clusters, nil
 }
 
 func (h *XDSHook) PostVirtualHostModifyHook(vh *route.VirtualHost) (*route.VirtualHost, error) {

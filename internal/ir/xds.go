@@ -773,6 +773,8 @@ type HTTPRoute struct {
 	CredentialInjection *CredentialInjection `json:"credentialInjection,omitempty" yaml:"credentialInjection,omitempty"`
 	// ExtensionRefs holds unstructured resources that were introduced by an extension and used on the HTTPRoute as extensionRef filters
 	ExtensionRefs []*UnstructuredRef `json:"extensionRefs,omitempty" yaml:"extensionRefs,omitempty"`
+	// BackendExtensionRefs holds unstructured resources that were introduced by an extension and used on the backendRef as a dynamic backend
+	BackendExtensionRefs []*UnstructuredRef `json:"backendExtensionRefs,omitempty" yaml:"backendExtensionRefs,omitempty"`
 	// Traffic holds the features associated with BackendTrafficPolicy
 	Traffic *TrafficFeatures `json:"traffic,omitempty" yaml:"traffic,omitempty"`
 	// Security holds the features associated with SecurityPolicy
@@ -1637,6 +1639,8 @@ type DestinationSetting struct {
 	// Metadata is used to enrich envoy route metadata with user and provider-specific information
 	// The primary metadata for DestinationSettings comes from the Backend resource reference in BackendRef
 	Metadata *ResourceMetadata `json:"metadata,omitempty" yaml:"metadata,omitempty"`
+	// UnstructuredRef holds unstructured data for an arbitrary k8s resource introduced by a backendRef extension
+	UnstructuredRef *UnstructuredRef `json:"unstructuredRef,omitempty" yaml:"unstructuredRef,omitempty"`
 }
 
 // Validate the fields within the DestinationSetting structure

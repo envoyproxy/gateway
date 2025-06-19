@@ -46,7 +46,7 @@ func processExtensionPostRouteHook(route *routev3.Route, vHost *routev3.VirtualH
 	for refIdx, ref := range irRoute.ExtensionRefs {
 		unstructuredResources[refIdx] = ref.Object
 	}
-	modifiedRoute, err := extRouteHookClient.PostRouteModifyHook(
+	modifiedRoute, _, err := extRouteHookClient.PostRouteModifyHook(
 		route,
 		vHost.Domains,
 		unstructuredResources,
@@ -64,6 +64,45 @@ func processExtensionPostRouteHook(route *routev3.Route, vHost *routev3.VirtualH
 		}
 	}
 	return nil
+}
+
+func processExtensionBackendPostHook(route *routev3.Route, vHost *routev3.VirtualHost, irRoute *ir.HTTPRoute, em *extensionTypes.Manager) ([]*clusterv3.Cluster, error) {
+	// Do nothing unless there is an extension manager and the ir.HTTPRoute has extension filters
+	if em == nil || len(irRoute.BackendExtensionRefs) == 0 {
+		return nil, nil
+	}
+
+	// Check if an extension want to modify the route that was just configured/created
+	extManager := *em
+	extRouteHookClient, err := extManager.GetPostXDSHookClient(egv1a1.XDSRoute)
+	if err != nil {
+		return nil, err
+	}
+	if extRouteHookClient == nil {
+		return nil, nil
+	}
+	unstructuredResources := make([]*unstructured.Unstructured, len(irRoute.BackendExtensionRefs))
+	for refIdx, ref := range irRoute.BackendExtensionRefs {
+		unstructuredResources[refIdx] = ref.Object
+	}
+	modifiedRoute, clusters, err := extRouteHookClient.PostRouteModifyHook(
+		route,
+		vHost.Domains,
+		unstructuredResources,
+	)
+	if err != nil {
+		// Maybe logging the error is better here, but this only happens when an extension is in-use
+		// so if modification fails then we should probably treat that as a serious problem.
+		return nil, err
+	}
+
+	// If the extension returned a modified Route, then copy its to the one that was passed in as a reference
+	if modifiedRoute != nil {
+		if err = deepCopyPtr(modifiedRoute, route); err != nil {
+			return nil, err
+		}
+	}
+	return clusters, nil
 }
 
 func processExtensionPostVHostHook(vHost *routev3.VirtualHost, em *extensionTypes.Manager) error {

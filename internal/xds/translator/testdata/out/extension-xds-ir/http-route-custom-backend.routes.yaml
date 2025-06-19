@@ -1,0 +1,16 @@
+- ignorePortInHostMatching: true
+  name: custom-backend-listener
+  virtualHosts:
+  - domains:
+    - '*'
+    name: custom-backend-listener/*
+    routes:
+    - match:
+        prefix: /
+      name: custom-backend-route
+      responseHeadersToAdd:
+      - header:
+          key: mock-extension-was-here
+          value: "true"
+      route:
+        cluster: original_destination_cluster

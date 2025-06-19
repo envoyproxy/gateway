@@ -538,7 +538,7 @@ func Test_Integration_RetryPolicy_MaxAttempts(t *testing.T) {
 			require.NoError(t, err)
 			require.NotNil(t, hook)
 
-			_, err = hook.PostRouteModifyHook(
+			_, _, err = hook.PostRouteModifyHook(
 				&v3.Route{
 					Name: "test-route",
 				}, nil, nil)

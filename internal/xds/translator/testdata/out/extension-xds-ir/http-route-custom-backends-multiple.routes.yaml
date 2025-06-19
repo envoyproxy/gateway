@@ -1,0 +1,19 @@
+- ignorePortInHostMatching: true
+  name: multiple-custom-backends-listener
+  virtualHosts:
+  - domains:
+    - '*'
+    name: multiple-custom-backends-listener/*
+    routes:
+    - match:
+        pathSeparatedPrefix: /s3
+      name: s3-route
+      responseHeadersToAdd:
+      - header:
+          key: mock-extension-was-here
+          value: "true"
+      - header:
+          key: mock-extension-was-here
+          value: "true"
+      route:
+        cluster: original_destination_cluster

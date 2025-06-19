@@ -41,12 +41,49 @@ func (t *testingExtensionServer) PostRouteModify(_ context.Context, req *pb.Post
 	// Setup a new route to avoid operating directly on the passed in pointer for better test coverage that the
 	// route we are returning gets used properly
 	modifiedRoute := proto.Clone(req.Route).(*routeV3.Route)
+	clusters := []*clusterV3.Cluster{}
 	for _, extensionResourceBytes := range req.PostRouteContext.ExtensionResources {
 		extensionResource := unstructured.Unstructured{}
 		if err := extensionResource.UnmarshalJSON(extensionResourceBytes.UnstructuredBytes); err != nil {
 			return &pb.PostRouteModifyResponse{
 				Route: req.Route,
 			}, err
+		}
+		if extensionResource.GetKind() == "InferencePool" {
+			extensionResource := extensionResource.Object["spec"].(map[string]any)
+			targetPortNumber := int(extensionResource["targetPortNumber"].(int64))
+			if targetPortNumber == 0 {
+				return &pb.PostRouteModifyResponse{
+					Route: req.Route,
+				}, errors.New("inference pool target port number is 0")
+			}
+			// Add a header to the response to verify the extension was called
+			modifiedRoute.ResponseHeadersToAdd = append(modifiedRoute.ResponseHeadersToAdd,
+				&coreV3.HeaderValueOption{
+					Header: &coreV3.HeaderValue{
+						Key:   "mock-extension-was-here",
+						Value: "true",
+					},
+				},
+			)
+			modifiedRoute.Action = &routeV3.Route_Route{
+				Route: &routeV3.RouteAction{
+					ClusterSpecifier: &routeV3.RouteAction_Cluster{
+						Cluster: "original_destination_cluster",
+					},
+				},
+			}
+			clusters = append(clusters, &clusterV3.Cluster{
+				Name:                 "original_destination_cluster",
+				ClusterDiscoveryType: &clusterV3.Cluster_Type{Type: clusterV3.Cluster_LOGICAL_DNS},
+				LbConfig: &clusterV3.Cluster_OriginalDstLbConfig_{
+					OriginalDstLbConfig: &clusterV3.Cluster_OriginalDstLbConfig{
+						UseHttpHeader:  true,
+						HttpHeaderName: "x-gateway-destination-endpoint",
+					},
+				},
+			})
+			continue
 		}
 		modifiedRoute.ResponseHeadersToAdd = append(modifiedRoute.ResponseHeadersToAdd,
 			&coreV3.HeaderValueOption{
@@ -88,7 +125,8 @@ func (t *testingExtensionServer) PostRouteModify(_ context.Context, req *pb.Post
 		)
 	}
 	return &pb.PostRouteModifyResponse{
-		Route: modifiedRoute,
+		Route:    modifiedRoute,
+		Clusters: clusters,
 	}, nil
 }
 
