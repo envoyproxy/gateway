@@ -938,7 +938,7 @@ func (in *DestinationSetting) DeepCopyInto(out *DestinationSetting) {
 		in, out := &in.ZoneAwareRouting, &out.ZoneAwareRouting
 		*out = new(ZoneAwareRouting)
 		**out = **in
-  }
+	}
 	if in.Metadata != nil {
 		in, out := &in.Metadata, &out.Metadata
 		*out = new(ResourceMetadata)

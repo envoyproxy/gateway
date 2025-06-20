@@ -1576,7 +1576,7 @@ func (t *Translator) processServiceDestinationSetting(
 		Endpoints:        endpoints,
 		AddressType:      addrType,
 		ZoneAwareRouting: processZoneAwareRouting(service),
-    Metadata:         buildResourceMetadata(service, ptr.To(gwapiv1.SectionName(strconv.Itoa(int(*backendRef.Port))))),
+		Metadata:         buildResourceMetadata(service, ptr.To(gwapiv1.SectionName(strconv.Itoa(int(*backendRef.Port))))),
 	}
 }
 
