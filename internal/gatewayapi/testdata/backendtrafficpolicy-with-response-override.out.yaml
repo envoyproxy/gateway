@@ -88,6 +88,45 @@ backendTrafficPolicies:
   kind: BackendTrafficPolicy
   metadata:
     creationTimestamp: null
+    name: policy-for-route-3
+    namespace: default
+  spec:
+    responseOverride:
+    - match:
+        statusCodes:
+        - type: null
+          value: 200
+      redirect:
+        hostname: www.redirect.com
+        path:
+          replaceFullPath: /redirect/path
+          type: ReplaceFullPath
+        port: 8443
+        scheme: https
+        statusCode: 301
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: httproute-3
+  status:
+    ancestors:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: gateway-2
+        namespace: default
+        sectionName: http
+      conditions:
+      - lastTransitionTime: null
+        message: Policy has been accepted.
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: BackendTrafficPolicy
+  metadata:
+    creationTimestamp: null
     name: policy-for-gateway
     namespace: default
   spec:
@@ -193,7 +232,7 @@ gateways:
       protocol: HTTP
   status:
     listeners:
-    - attachedRoutes: 2
+    - attachedRoutes: 3
       conditions:
       - lastTransitionTime: null
         message: Sending translated listener configuration to the data plane
@@ -327,6 +366,44 @@ httpRoutes:
         name: gateway-2
         namespace: default
         sectionName: http
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    creationTimestamp: null
+    name: httproute-3
+    namespace: default
+  spec:
+    hostnames:
+    - bar.envoyproxy.io
+    parentRefs:
+    - name: gateway-2
+      namespace: default
+      sectionName: http
+    rules:
+    - backendRefs:
+      - name: service-1
+        port: 8080
+      matches:
+      - path:
+          value: /
+  status:
+    parents:
+    - conditions:
+      - lastTransitionTime: null
+        message: Route is accepted
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Resolved all the Object references for the Route
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+      parentRef:
+        name: gateway-2
+        namespace: default
+        sectionName: http
 infraIR:
   default/gateway-1:
     proxy:
@@ -342,6 +419,9 @@ infraIR:
         labels:
           gateway.envoyproxy.io/owning-gateway-name: gateway-1
           gateway.envoyproxy.io/owning-gateway-namespace: default
+        ownerReference:
+          kind: GatewayClass
+          name: envoy-gateway-class
       name: default/gateway-1
       namespace: envoy-gateway-system
   default/gateway-2:
@@ -358,6 +438,9 @@ infraIR:
         labels:
           gateway.envoyproxy.io/owning-gateway-name: gateway-2
           gateway.envoyproxy.io/owning-gateway-namespace: default
+        ownerReference:
+          kind: GatewayClass
+          name: envoy-gateway-class
       name: default/gateway-2
       namespace: envoy-gateway-system
 xdsIR:
@@ -547,6 +630,51 @@ xdsIR:
               name: backendtrafficpolicy/default/policy-for-route-2/responseoverride/rule/0
               response:
                 statusCode: 401
+      - destination:
+          metadata:
+            kind: HTTPRoute
+            name: httproute-3
+            namespace: default
+          name: httproute/default/httproute-3/rule/0
+          settings:
+          - addressType: IP
+            endpoints:
+            - host: 7.7.7.7
+              port: 8080
+            metadata:
+              name: service-1
+              namespace: default
+              sectionName: "8080"
+            name: httproute/default/httproute-3/rule/0/backend/0
+            protocol: HTTP
+            weight: 1
+        hostname: bar.envoyproxy.io
+        isHTTP2: false
+        metadata:
+          kind: HTTPRoute
+          name: httproute-3
+          namespace: default
+        name: httproute/default/httproute-3/rule/0/match/0/bar_envoyproxy_io
+        pathMatch:
+          distinct: false
+          name: ""
+          prefix: /
+        traffic:
+          responseOverride:
+            name: backendtrafficpolicy/default/policy-for-route-3
+            rules:
+            - match:
+                statusCodes:
+                - value: 200
+              name: backendtrafficpolicy/default/policy-for-route-3/responseoverride/rule/0
+              redirect:
+                hostname: www.redirect.com
+                path:
+                  fullReplace: /redirect/path
+                  prefixMatchReplace: null
+                port: 8443
+                scheme: https
+                statusCode: 301
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4

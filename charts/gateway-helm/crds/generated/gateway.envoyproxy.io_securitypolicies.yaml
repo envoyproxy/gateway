@@ -1340,6 +1340,13 @@ spec:
                               Retry provides more advanced usage, allowing users to customize the number of retries, retry fallback strategy, and retry triggering conditions.
                               If not set, retry will be disabled.
                             properties:
+                              numAttemptsPerPriority:
+                                description: |-
+                                  NumAttemptsPerPriority defines the number of requests (initial attempt + retries)
+                                  that should be sent to the same priority before switching to a different one.
+                                  If not specified or set to 0, all requests are sent to the highest priority that is healthy.
+                                format: int32
+                                type: integer
                               numRetries:
                                 default: 2
                                 description: NumRetries is the number of retries to
@@ -2304,6 +2311,13 @@ spec:
                               Retry provides more advanced usage, allowing users to customize the number of retries, retry fallback strategy, and retry triggering conditions.
                               If not set, retry will be disabled.
                             properties:
+                              numAttemptsPerPriority:
+                                description: |-
+                                  NumAttemptsPerPriority defines the number of requests (initial attempt + retries)
+                                  that should be sent to the same priority before switching to a different one.
+                                  If not specified or set to 0, all requests are sent to the highest priority that is healthy.
+                                format: int32
+                                type: integer
                               numRetries:
                                 default: 2
                                 description: NumRetries is the number of retries to
@@ -3476,6 +3490,13 @@ spec:
                                     Retry provides more advanced usage, allowing users to customize the number of retries, retry fallback strategy, and retry triggering conditions.
                                     If not set, retry will be disabled.
                                   properties:
+                                    numAttemptsPerPriority:
+                                      description: |-
+                                        NumAttemptsPerPriority defines the number of requests (initial attempt + retries)
+                                        that should be sent to the same priority before switching to a different one.
+                                        If not specified or set to 0, all requests are sent to the highest priority that is healthy.
+                                      format: int32
+                                      type: integer
                                     numRetries:
                                       default: 2
                                       description: NumRetries is the number of retries
@@ -3708,6 +3729,20 @@ spec:
                         type: string
                     required:
                     - name
+                    type: object
+                  cookieConfig:
+                    description: |-
+                      CookieConfigs allows overriding the SameSite attribute for OIDC cookies.
+                      If a specific cookie is not configured, it will use the "Strict" SameSite policy by default.
+                    properties:
+                      sameSite:
+                        default: Strict
+                        enum:
+                        - Lax
+                        - Strict
+                        - None
+                        - Disabled
+                        type: string
                     type: object
                   cookieDomain:
                     description: |-
@@ -4621,6 +4656,13 @@ spec:
                               Retry provides more advanced usage, allowing users to customize the number of retries, retry fallback strategy, and retry triggering conditions.
                               If not set, retry will be disabled.
                             properties:
+                              numAttemptsPerPriority:
+                                description: |-
+                                  NumAttemptsPerPriority defines the number of requests (initial attempt + retries)
+                                  that should be sent to the same priority before switching to a different one.
+                                  If not specified or set to 0, all requests are sent to the highest priority that is healthy.
+                                format: int32
+                                type: integer
                               numRetries:
                                 default: 2
                                 description: NumRetries is the number of retries to
@@ -4999,17 +5041,18 @@ spec:
             - message: this policy can only have a targetRef.kind of Gateway/HTTPRoute/GRPCRoute
               rule: 'has(self.targetRef) ? self.targetRef.kind in [''Gateway'', ''HTTPRoute'',
                 ''GRPCRoute''] : true'
-            - message: this policy does not yet support the sectionName field
-              rule: 'has(self.targetRef) ? !has(self.targetRef.sectionName) : true'
+            - message: this policy supports the sectionName field only for kind Gateway
+              rule: 'has(self.targetRef) ? self.targetRef.kind == ''Gateway'' || !has(self.targetRef.sectionName)
+                : true'
             - message: this policy can only have a targetRefs[*].group of gateway.networking.k8s.io
               rule: 'has(self.targetRefs) ? self.targetRefs.all(ref, ref.group ==
                 ''gateway.networking.k8s.io'') : true '
             - message: this policy can only have a targetRefs[*].kind of Gateway/HTTPRoute/GRPCRoute
               rule: 'has(self.targetRefs) ? self.targetRefs.all(ref, ref.kind in [''Gateway'',
                 ''HTTPRoute'', ''GRPCRoute'']) : true '
-            - message: this policy does not yet support the sectionName field
-              rule: 'has(self.targetRefs) ? self.targetRefs.all(ref, !has(ref.sectionName))
-                : true'
+            - message: this policy supports the sectionName field only for kind Gateway
+              rule: 'has(self.targetRefs) ? self.targetRefs.all(ref, ref.kind == ''Gateway''
+                || !has(ref.sectionName)) : true'
             - message: if authorization.rules.principal.jwt is used, jwt must be defined
               rule: '(has(self.authorization) && has(self.authorization.rules) &&
                 self.authorization.rules.exists(r, has(r.principal.jwt))) ? has(self.jwt)

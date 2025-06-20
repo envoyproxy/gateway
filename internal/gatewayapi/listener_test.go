@@ -174,6 +174,12 @@ func TestIsOverlappingHostname(t *testing.T) {
 			hostname2: ptr.To(gwapiv1.Hostname("*.test.com")),
 			want:      false,
 		},
+		{
+			name:      "different sub domains of same domain",
+			hostname1: ptr.To(gwapiv1.Hostname("api.foo.dev")),
+			hostname2: ptr.To(gwapiv1.Hostname("testing-api.foo.dev")),
+			want:      false,
+		},
 	}
 
 	for _, tt := range tests {

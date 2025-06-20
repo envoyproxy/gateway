@@ -17469,7 +17469,8 @@ spec:
               tls:
                 description: |-
                   TLS defines the TLS settings for the backend.
-                  Only supported for DynamicResolver backends.
+                  TLS.CACertificateRefs and TLS.WellKnownCACertificates can only be specified for DynamicResolver backends.
+                  TLS.InsecureSkipVerify can be specified for any Backends
                 properties:
                   caCertificateRefs:
                     description: |-
@@ -17547,10 +17548,12 @@ spec:
                   rule: '!(has(self.caCertificateRefs) && size(self.caCertificateRefs)
                     > 0 && has(self.wellKnownCACertificates) && self.wellKnownCACertificates
                     != "")'
-                - message: must specify either CACertificateRefs or WellKnownCACertificates
-                  rule: (has(self.caCertificateRefs) && size(self.caCertificateRefs)
-                    > 0 || has(self.wellKnownCACertificates) && self.wellKnownCACertificates
-                    != "")
+                - message: must not contain either CACertificateRefs or WellKnownCACertificates
+                    when InsecureSkipVerify is enabled
+                  rule: '!((has(self.insecureSkipVerify) && self.insecureSkipVerify)
+                    && ((has(self.caCertificateRefs) && size(self.caCertificateRefs)
+                    > 0) || (has(self.wellKnownCACertificates) && self.wellKnownCACertificates
+                    != "")))'
               type:
                 default: Endpoints
                 description: Type defines the type of the backend. Defaults to "Endpoints"
@@ -18196,7 +18199,19 @@ spec:
                   HTTPUpgrade defines the configuration for HTTP protocol upgrades.
                   If not specified, the default upgrade configuration(websocket) will be used.
                 items:
+                  description: ProtocolUpgradeConfig specifies the configuration for
+                    protocol upgrades.
                   properties:
+                    connect:
+                      description: |-
+                        Connect specifies the configuration for the CONNECT config.
+                        This is allowed only when type is CONNECT.
+                      properties:
+                        terminate:
+                          description: Terminate the CONNECT request, and forwards
+                            the payload as raw TCP data.
+                          type: boolean
+                      type: object
                     type:
                       description: |-
                         Type is the case-insensitive type of protocol upgrade.
@@ -18205,6 +18220,10 @@ spec:
                   required:
                   - type
                   type: object
+                  x-kubernetes-validations:
+                  - message: The connect configuration is only allowed when the type
+                      is CONNECT.
+                    rule: '!has(self.connect) || self.type == ''CONNECT'''
                 type: array
               loadBalancer:
                 description: |-
@@ -19015,6 +19034,7 @@ spec:
                             Path defines parameters used to modify the path of the incoming request.
                             The modified path is then used to construct the `Location` header. When
                             empty, the request path is used as-is.
+                            Only ReplaceFullPath path modifier is supported currently.
                           properties:
                             replaceFullPath:
                               description: |-
@@ -19061,6 +19081,8 @@ spec:
                           - type
                           type: object
                           x-kubernetes-validations:
+                          - message: only ReplaceFullPath is supported for path.type
+                            rule: self.type == 'ReplaceFullPath'
                           - message: replaceFullPath must be specified when type is
                               set to 'ReplaceFullPath'
                             rule: 'self.type == ''ReplaceFullPath'' ? has(self.replaceFullPath)
@@ -19113,7 +19135,9 @@ spec:
                       description: Response configuration.
                       properties:
                         body:
-                          description: Body of the Custom Response
+                          description: |-
+                            Body of the Custom Response
+                            Supports Envoy command operators for dynamic content (see https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#command-operators).
                           properties:
                             inline:
                               description: Inline contains the value as an inline
@@ -19201,6 +19225,13 @@ spec:
                   Retry provides more advanced usage, allowing users to customize the number of retries, retry fallback strategy, and retry triggering conditions.
                   If not set, retry will be disabled.
                 properties:
+                  numAttemptsPerPriority:
+                    description: |-
+                      NumAttemptsPerPriority defines the number of requests (initial attempt + retries)
+                      that should be sent to the same priority before switching to a different one.
+                      If not specified or set to 0, all requests are sent to the highest priority that is healthy.
+                    format: int32
+                    type: integer
                   numRetries:
                     default: 2
                     description: NumRetries is the number of retries to be attempted.
@@ -22017,6 +22048,13 @@ spec:
                             Retry provides more advanced usage, allowing users to customize the number of retries, retry fallback strategy, and retry triggering conditions.
                             If not set, retry will be disabled.
                           properties:
+                            numAttemptsPerPriority:
+                              description: |-
+                                NumAttemptsPerPriority defines the number of requests (initial attempt + retries)
+                                that should be sent to the same priority before switching to a different one.
+                                If not specified or set to 0, all requests are sent to the highest priority that is healthy.
+                              format: int32
+                              type: integer
                             numRetries:
                               default: 2
                               description: NumRetries is the number of retries to
@@ -22264,6 +22302,12 @@ spec:
                       group.
                     rule: 'has(self.backendRefs) ? (self.backendRefs.all(f, f.group
                       == "" || f.group == ''gateway.envoyproxy.io'')) : true'
+                  - message: If FullDuplexStreamed body processing mode is used, FailOpen
+                      must be false.
+                    rule: '!(has(self.failOpen) && self.failOpen == true && ((has(self.processingMode.request.body)
+                      && self.processingMode.request.body == ''FullDuplexStreamed'')
+                      || (has(self.processingMode.response.body) && self.processingMode.response.body
+                      == ''FullDuplexStreamed'')))'
                 maxItems: 16
                 type: array
               lua:
@@ -23872,6 +23916,11 @@ spec:
                   the number of cpuset threads on the platform.
                 format: int32
                 type: integer
+              disableLuaValidation:
+                default: false
+                description: DisableLuaValidation disables the Lua script validation
+                  for Lua EnvoyExtensionPolicies
+                type: boolean
               extraArgs:
                 description: |-
                   ExtraArgs defines additional command line options that are provided to Envoy.
@@ -24201,8 +24250,15 @@ spec:
                                   type: object
                                 type: array
                               image:
-                                description: Image specifies the EnvoyProxy container
-                                  image to be used, instead of the default image.
+                                description: |-
+                                  Image specifies the EnvoyProxy container image to be used including a tag, instead of the default image.
+                                  This field is mutually exclusive with ImageRepository.
+                                type: string
+                              imageRepository:
+                                description: |-
+                                  ImageRepository specifies the container image repository to be used without specifying a tag.
+                                  The default tag will be used.
+                                  This field is mutually exclusive with Image.
                                 type: string
                               resources:
                                 description: |-
@@ -24528,6 +24584,9 @@ spec:
                                   type: object
                                 type: array
                             type: object
+                            x-kubernetes-validations:
+                            - message: Either image or imageRepository can be set.
+                              rule: '!has(self.image) || !has(self.imageRepository)'
                           name:
                             description: |-
                               Name of the daemonSet.
@@ -28028,8 +28087,15 @@ spec:
                                   type: object
                                 type: array
                               image:
-                                description: Image specifies the EnvoyProxy container
-                                  image to be used, instead of the default image.
+                                description: |-
+                                  Image specifies the EnvoyProxy container image to be used including a tag, instead of the default image.
+                                  This field is mutually exclusive with ImageRepository.
+                                type: string
+                              imageRepository:
+                                description: |-
+                                  ImageRepository specifies the container image repository to be used without specifying a tag.
+                                  The default tag will be used.
+                                  This field is mutually exclusive with Image.
                                 type: string
                               resources:
                                 description: |-
@@ -28355,6 +28421,9 @@ spec:
                                   type: object
                                 type: array
                             type: object
+                            x-kubernetes-validations:
+                            - message: Either image or imageRepository can be set.
+                              rule: '!has(self.image) || !has(self.imageRepository)'
                           initContainers:
                             description: |-
                               List of initialization containers belonging to the pod.
@@ -33833,6 +33902,11 @@ spec:
                             x-kubernetes-validations:
                             - message: minReplicas must be greater than 0
                               rule: self > 0
+                          name:
+                            description: |-
+                              Name of the horizontalPodAutoScaler.
+                              When unset, this defaults to an autogenerated name.
+                            type: string
                           patch:
                             description: Patch defines how to perform the patch operation
                               to the HorizontalPodAutoscaler
@@ -33878,6 +33952,11 @@ spec:
                               such as node drains or updates. This setting ensures that your envoy proxy maintains a certain level of availability
                               and resilience during maintenance operations. Cannot be combined with maxUnavailable.
                             x-kubernetes-int-or-string: true
+                          name:
+                            description: |-
+                              Name of the podDisruptionBudget.
+                              When unset, this defaults to an autogenerated name.
+                            type: string
                           patch:
                             description: Patch defines how to perform the patch operation
                               to the PodDisruptionBudget
@@ -34983,6 +35062,13 @@ spec:
                                               Retry provides more advanced usage, allowing users to customize the number of retries, retry fallback strategy, and retry triggering conditions.
                                               If not set, retry will be disabled.
                                             properties:
+                                              numAttemptsPerPriority:
+                                                description: |-
+                                                  NumAttemptsPerPriority defines the number of requests (initial attempt + retries)
+                                                  that should be sent to the same priority before switching to a different one.
+                                                  If not specified or set to 0, all requests are sent to the highest priority that is healthy.
+                                                format: int32
+                                                type: integer
                                               numRetries:
                                                 default: 2
                                                 description: NumRetries is the number
@@ -36055,6 +36141,13 @@ spec:
                                               Retry provides more advanced usage, allowing users to customize the number of retries, retry fallback strategy, and retry triggering conditions.
                                               If not set, retry will be disabled.
                                             properties:
+                                              numAttemptsPerPriority:
+                                                description: |-
+                                                  NumAttemptsPerPriority defines the number of requests (initial attempt + retries)
+                                                  that should be sent to the same priority before switching to a different one.
+                                                  If not specified or set to 0, all requests are sent to the highest priority that is healthy.
+                                                format: int32
+                                                type: integer
                                               numRetries:
                                                 default: 2
                                                 description: NumRetries is the number
@@ -36286,6 +36379,21 @@ spec:
                     description: Metrics defines metrics configuration for managed
                       proxies.
                     properties:
+                      clusterStatName:
+                        description: |-
+                          ClusterStatName defines the value of cluster alt_stat_name, determining how cluster stats are named.
+                          For more details, see envoy docs: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/cluster/v3/cluster.proto.html
+                          The supported operators for this pattern are:
+                          %ROUTE_NAME%: name of Gateway API xRoute resource
+                          %ROUTE_NAMESPACE%: namespace of Gateway API xRoute resource
+                          %ROUTE_KIND%: kind of Gateway API xRoute resource
+                          %ROUTE_RULE_NAME%: name of the Gateway API xRoute section
+                          %ROUTE_RULE_NUMBER%: name of the Gateway API xRoute section
+                          %BACKEND_REFS%: names of all backends referenced in <NAMESPACE>/<NAME>|<NAMESPACE>/<NAME>|... format
+                          Only xDS Clusters created for HTTPRoute and GRPCRoute are currently supported.
+                          Default: %ROUTE_KIND%/%ROUTE_NAMESPACE%/%ROUTE_NAME%/rule/%ROUTE_RULE_NUMBER%
+                          Example: httproute/my-ns/my-route/rule/0
+                        type: string
                       enablePerEndpointStats:
                         description: |-
                           EnablePerEndpointStats enables per endpoint envoy stats metrics.
@@ -37191,6 +37299,13 @@ spec:
                                         Retry provides more advanced usage, allowing users to customize the number of retries, retry fallback strategy, and retry triggering conditions.
                                         If not set, retry will be disabled.
                                       properties:
+                                        numAttemptsPerPriority:
+                                          description: |-
+                                            NumAttemptsPerPriority defines the number of requests (initial attempt + retries)
+                                            that should be sent to the same priority before switching to a different one.
+                                            If not specified or set to 0, all requests are sent to the highest priority that is healthy.
+                                          format: int32
+                                          type: integer
                                         numRetries:
                                           default: 2
                                           description: NumRetries is the number of
@@ -38263,6 +38378,13 @@ spec:
                                   Retry provides more advanced usage, allowing users to customize the number of retries, retry fallback strategy, and retry triggering conditions.
                                   If not set, retry will be disabled.
                                 properties:
+                                  numAttemptsPerPriority:
+                                    description: |-
+                                      NumAttemptsPerPriority defines the number of requests (initial attempt + retries)
+                                      that should be sent to the same priority before switching to a different one.
+                                      If not specified or set to 0, all requests are sent to the highest priority that is healthy.
+                                    format: int32
+                                    type: integer
                                   numRetries:
                                     default: 2
                                     description: NumRetries is the number of retries
@@ -40146,6 +40268,13 @@ spec:
                               Retry provides more advanced usage, allowing users to customize the number of retries, retry fallback strategy, and retry triggering conditions.
                               If not set, retry will be disabled.
                             properties:
+                              numAttemptsPerPriority:
+                                description: |-
+                                  NumAttemptsPerPriority defines the number of requests (initial attempt + retries)
+                                  that should be sent to the same priority before switching to a different one.
+                                  If not specified or set to 0, all requests are sent to the highest priority that is healthy.
+                                format: int32
+                                type: integer
                               numRetries:
                                 default: 2
                                 description: NumRetries is the number of retries to
@@ -41110,6 +41239,13 @@ spec:
                               Retry provides more advanced usage, allowing users to customize the number of retries, retry fallback strategy, and retry triggering conditions.
                               If not set, retry will be disabled.
                             properties:
+                              numAttemptsPerPriority:
+                                description: |-
+                                  NumAttemptsPerPriority defines the number of requests (initial attempt + retries)
+                                  that should be sent to the same priority before switching to a different one.
+                                  If not specified or set to 0, all requests are sent to the highest priority that is healthy.
+                                format: int32
+                                type: integer
                               numRetries:
                                 default: 2
                                 description: NumRetries is the number of retries to
@@ -42282,6 +42418,13 @@ spec:
                                     Retry provides more advanced usage, allowing users to customize the number of retries, retry fallback strategy, and retry triggering conditions.
                                     If not set, retry will be disabled.
                                   properties:
+                                    numAttemptsPerPriority:
+                                      description: |-
+                                        NumAttemptsPerPriority defines the number of requests (initial attempt + retries)
+                                        that should be sent to the same priority before switching to a different one.
+                                        If not specified or set to 0, all requests are sent to the highest priority that is healthy.
+                                      format: int32
+                                      type: integer
                                     numRetries:
                                       default: 2
                                       description: NumRetries is the number of retries
@@ -42514,6 +42657,20 @@ spec:
                         type: string
                     required:
                     - name
+                    type: object
+                  cookieConfig:
+                    description: |-
+                      CookieConfigs allows overriding the SameSite attribute for OIDC cookies.
+                      If a specific cookie is not configured, it will use the "Strict" SameSite policy by default.
+                    properties:
+                      sameSite:
+                        default: Strict
+                        enum:
+                        - Lax
+                        - Strict
+                        - None
+                        - Disabled
+                        type: string
                     type: object
                   cookieDomain:
                     description: |-
@@ -43427,6 +43584,13 @@ spec:
                               Retry provides more advanced usage, allowing users to customize the number of retries, retry fallback strategy, and retry triggering conditions.
                               If not set, retry will be disabled.
                             properties:
+                              numAttemptsPerPriority:
+                                description: |-
+                                  NumAttemptsPerPriority defines the number of requests (initial attempt + retries)
+                                  that should be sent to the same priority before switching to a different one.
+                                  If not specified or set to 0, all requests are sent to the highest priority that is healthy.
+                                format: int32
+                                type: integer
                               numRetries:
                                 default: 2
                                 description: NumRetries is the number of retries to
@@ -43805,17 +43969,18 @@ spec:
             - message: this policy can only have a targetRef.kind of Gateway/HTTPRoute/GRPCRoute
               rule: 'has(self.targetRef) ? self.targetRef.kind in [''Gateway'', ''HTTPRoute'',
                 ''GRPCRoute''] : true'
-            - message: this policy does not yet support the sectionName field
-              rule: 'has(self.targetRef) ? !has(self.targetRef.sectionName) : true'
+            - message: this policy supports the sectionName field only for kind Gateway
+              rule: 'has(self.targetRef) ? self.targetRef.kind == ''Gateway'' || !has(self.targetRef.sectionName)
+                : true'
             - message: this policy can only have a targetRefs[*].group of gateway.networking.k8s.io
               rule: 'has(self.targetRefs) ? self.targetRefs.all(ref, ref.group ==
                 ''gateway.networking.k8s.io'') : true '
             - message: this policy can only have a targetRefs[*].kind of Gateway/HTTPRoute/GRPCRoute
               rule: 'has(self.targetRefs) ? self.targetRefs.all(ref, ref.kind in [''Gateway'',
                 ''HTTPRoute'', ''GRPCRoute'']) : true '
-            - message: this policy does not yet support the sectionName field
-              rule: 'has(self.targetRefs) ? self.targetRefs.all(ref, !has(ref.sectionName))
-                : true'
+            - message: this policy supports the sectionName field only for kind Gateway
+              rule: 'has(self.targetRefs) ? self.targetRefs.all(ref, ref.kind == ''Gateway''
+                || !has(ref.sectionName)) : true'
             - message: if authorization.rules.principal.jwt is used, jwt must be defined
               rule: '(has(self.authorization) && has(self.authorization.rules) &&
                 self.authorization.rules.exists(r, has(r.principal.jwt))) ? has(self.jwt)

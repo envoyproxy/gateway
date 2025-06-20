@@ -205,6 +205,9 @@ infraIR:
       metadata:
         labels:
           gateway.envoyproxy.io/owning-gatewayclass: envoy-gateway-class
+        ownerReference:
+          kind: GatewayClass
+          name: envoy-gateway-class
       name: envoy-gateway-class
       namespace: envoy-gateway-system
 xdsIR:

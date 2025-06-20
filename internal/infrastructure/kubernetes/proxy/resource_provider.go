@@ -64,8 +64,8 @@ type ResourceRender struct {
 	GatewayNamespaceMode bool
 
 	// ownerReferenceUID store the uid of its owner reference. Key is the kind of owner resource.
+	// - GatewayClass when enabled ControllerNamespaceMode, merged Gateway...
 	// - Gateway when enabled GatewayNamespaceMode
-	// - TODO: GatewayClass when enabled merged gateways
 	ownerReferenceUID map[string]types.UID
 }
 
@@ -117,8 +117,12 @@ func (r *ResourceRender) LabelSelector() labels.Selector {
 
 func (r *ResourceRender) OwnerReferences() []metav1.OwnerReference {
 	var ownerReferences []metav1.OwnerReference
-	if r.ownerReferenceUID != nil && r.GatewayNamespaceMode {
-		if uid, ok := r.ownerReferenceUID[gwapiresource.KindGateway]; ok {
+	if r.ownerReferenceUID != nil {
+		key := gwapiresource.KindGatewayClass
+		if r.GatewayNamespaceMode {
+			key = gwapiresource.KindGateway
+		}
+		if uid, ok := r.ownerReferenceUID[key]; ok {
 			ownerReferences = append(ownerReferences, metav1.OwnerReference{
 				APIVersion: gwapiv1.GroupVersion.String(),
 				Kind:       r.infra.GetProxyMetadata().OwnerReference.Kind,
@@ -527,7 +531,6 @@ func (r *ResourceRender) PodDisruptionBudget() (*policyv1.PodDisruptionBudget, e
 
 	podDisruptionBudget := &policyv1.PodDisruptionBudget{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:            r.Name(),
 			Namespace:       r.Namespace(),
 			OwnerReferences: r.OwnerReferences(),
 		},
@@ -536,6 +539,13 @@ func (r *ResourceRender) PodDisruptionBudget() (*policyv1.PodDisruptionBudget, e
 			Kind:       "PodDisruptionBudget",
 		},
 		Spec: pdbSpec,
+	}
+
+	// set name
+	if pdb.Name != nil {
+		podDisruptionBudget.Name = *pdb.Name
+	} else {
+		podDisruptionBudget.Name = r.Name()
 	}
 
 	// apply merge patch to PodDisruptionBudget
@@ -564,7 +574,6 @@ func (r *ResourceRender) HorizontalPodAutoscaler() (*autoscalingv2.HorizontalPod
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace:       r.Namespace(),
-			Name:            r.Name(),
 			Annotations:     r.infra.GetProxyMetadata().Annotations,
 			Labels:          r.infra.GetProxyMetadata().Labels,
 			OwnerReferences: r.OwnerReferences(),
@@ -587,6 +596,13 @@ func (r *ResourceRender) HorizontalPodAutoscaler() (*autoscalingv2.HorizontalPod
 		hpa.Spec.ScaleTargetRef.Name = *deploymentConfig.Name
 	} else {
 		hpa.Spec.ScaleTargetRef.Name = r.Name()
+	}
+
+	// set name
+	if hpaConfig.Name != nil {
+		hpa.Name = *hpaConfig.Name
+	} else {
+		hpa.Name = r.Name()
 	}
 
 	var err error

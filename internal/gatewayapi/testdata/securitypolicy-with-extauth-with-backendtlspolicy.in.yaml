@@ -127,6 +127,32 @@ configMaps:
     kind: ConfigMap
     metadata:
       name: ca-cmap
+      namespace: envoy-gateway
+    data:
+      ca.crt: |
+        -----BEGIN CERTIFICATE-----
+        MIIDJzCCAg+gAwIBAgIUAl6UKIuKmzte81cllz5PfdN2IlIwDQYJKoZIhvcNAQEL
+        BQAwIzEQMA4GA1UEAwwHbXljaWVudDEPMA0GA1UECgwGa3ViZWRiMB4XDTIzMTAw
+        MjA1NDE1N1oXDTI0MTAwMTA1NDE1N1owIzEQMA4GA1UEAwwHbXljaWVudDEPMA0G
+        A1UECgwGa3ViZWRiMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAwSTc
+        1yj8HW62nynkFbXo4VXKv2jC0PM7dPVky87FweZcTKLoWQVPQE2p2kLDK6OEszmM
+        yyr+xxWtyiveremrWqnKkNTYhLfYPhgQkczib7eUalmFjUbhWdLvHakbEgCodn3b
+        kz57mInX2VpiDOKg4kyHfiuXWpiBqrCx0KNLpxo3DEQcFcsQTeTHzh4752GV04RU
+        Ti/GEWyzIsl4Rg7tGtAwmcIPgUNUfY2Q390FGqdH4ahn+mw/6aFbW31W63d9YJVq
+        ioyOVcaMIpM5B/c7Qc8SuhCI1YGhUyg4cRHLEw5VtikioyE3X04kna3jQAj54YbR
+        bpEhc35apKLB21HOUQIDAQABo1MwUTAdBgNVHQ4EFgQUyvl0VI5vJVSuYFXu7B48
+        6PbMEAowHwYDVR0jBBgwFoAUyvl0VI5vJVSuYFXu7B486PbMEAowDwYDVR0TAQH/
+        BAUwAwEB/zANBgkqhkiG9w0BAQsFAAOCAQEAMLxrgFVMuNRq2wAwcBt7SnNR5Cfz
+        2MvXq5EUmuawIUi9kaYjwdViDREGSjk7JW17vl576HjDkdfRwi4E28SydRInZf6J
+        i8HZcZ7caH6DxR335fgHVzLi5NiTce/OjNBQzQ2MJXVDd8DBmG5fyatJiOJQ4bWE
+        A7FlP0RdP3CO3GWE0M5iXOB2m1qWkE2eyO4UHvwTqNQLdrdAXgDQlbam9e4BG3Gg
+        d/6thAkWDbt/QNT+EJHDCvhDRKh1RuGHyg+Y+/nebTWWrFWsktRrbOoHCZiCpXI1
+        3eXE6nt0YkgtDxG22KqnhpAg9gUSs2hlhoxyvkzyF0mu6NhPlwAgnq7+/Q==
+        -----END CERTIFICATE-----
+  - apiVersion: v1
+    kind: ConfigMap
+    metadata:
+      name: ca-cmap
       namespace: default
     data:
       ca.crt: |

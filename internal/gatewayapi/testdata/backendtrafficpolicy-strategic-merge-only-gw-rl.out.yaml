@@ -272,6 +272,9 @@ infraIR:
         labels:
           gateway.envoyproxy.io/owning-gateway-name: gateway-1
           gateway.envoyproxy.io/owning-gateway-namespace: envoy-gateway
+        ownerReference:
+          kind: GatewayClass
+          name: envoy-gateway-class
       name: envoy-gateway/gateway-1
       namespace: envoy-gateway-system
   envoy-gateway/gateway-2:
@@ -288,6 +291,9 @@ infraIR:
         labels:
           gateway.envoyproxy.io/owning-gateway-name: gateway-2
           gateway.envoyproxy.io/owning-gateway-namespace: envoy-gateway
+        ownerReference:
+          kind: GatewayClass
+          name: envoy-gateway-class
       name: envoy-gateway/gateway-2
       namespace: envoy-gateway-system
 xdsIR:
@@ -349,8 +355,8 @@ xdsIR:
           backendConnection:
             bufferLimit: 100000000
           httpUpgrade:
-          - spdy/3.1
-          - websocket
+          - type: spdy/3.1
+          - type: websocket
           rateLimit:
             global:
               rules:
@@ -439,7 +445,7 @@ xdsIR:
           backendConnection:
             bufferLimit: 100000000
           httpUpgrade:
-          - spdy/3.1
+          - type: spdy/3.1
           timeout:
             tcp:
               connectTimeout: 10s

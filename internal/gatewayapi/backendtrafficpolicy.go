@@ -564,7 +564,7 @@ func (t *Translator) buildTrafficFeatures(policy *egv1a1.BackendTrafficPolicy, r
 		ro          *ir.ResponseOverride
 		rb          *ir.RequestBuffer
 		cp          []*ir.Compression
-		httpUpgrade []string
+		httpUpgrade []ir.HTTPUpgradeConfig
 		err, errs   error
 	)
 
@@ -1051,25 +1051,52 @@ func buildResponseOverride(policy *egv1a1.BackendTrafficPolicy, resources *resou
 			}
 		}
 
-		response := ir.CustomResponse{
-			ContentType: ro.Response.ContentType,
-		}
+		if ro.Redirect != nil {
+			redirect := &ir.Redirect{
+				Scheme: ro.Redirect.Scheme,
+			}
+			if ro.Redirect.Path != nil {
+				redirect.Path = &ir.HTTPPathModifier{
+					FullReplace:        ro.Redirect.Path.ReplaceFullPath,
+					PrefixMatchReplace: ro.Redirect.Path.ReplacePrefixMatch,
+				}
+			}
+			if ro.Redirect.Hostname != nil {
+				redirect.Hostname = ptr.To(string(*ro.Redirect.Hostname))
+			}
+			if ro.Redirect.Port != nil {
+				redirect.Port = ptr.To(uint32(*ro.Redirect.Port))
+			}
+			if ro.Redirect.StatusCode != nil {
+				redirect.StatusCode = ptr.To(int32(*ro.Redirect.StatusCode))
+			}
 
-		if ro.Response.StatusCode != nil {
-			response.StatusCode = ptr.To(uint32(*ro.Response.StatusCode))
-		}
+			rules = append(rules, ir.ResponseOverrideRule{
+				Name:     defaultResponseOverrideRuleName(policy, index),
+				Match:    match,
+				Redirect: redirect,
+			})
+		} else {
+			response := &ir.CustomResponse{
+				ContentType: ro.Response.ContentType,
+			}
 
-		var err error
-		response.Body, err = getCustomResponseBody(ro.Response.Body, resources, policy.Namespace)
-		if err != nil {
-			return nil, err
-		}
+			if ro.Response.StatusCode != nil {
+				response.StatusCode = ptr.To(uint32(*ro.Response.StatusCode))
+			}
 
-		rules = append(rules, ir.ResponseOverrideRule{
-			Name:     defaultResponseOverrideRuleName(policy, index),
-			Match:    match,
-			Response: response,
-		})
+			var err error
+			response.Body, err = getCustomResponseBody(ro.Response.Body, resources, policy.Namespace)
+			if err != nil {
+				return nil, err
+			}
+
+			rules = append(rules, ir.ResponseOverrideRule{
+				Name:     defaultResponseOverrideRuleName(policy, index),
+				Match:    match,
+				Response: response,
+			})
+		}
 	}
 	return &ir.ResponseOverride{
 		Name:  irConfigName(policy),
@@ -1147,14 +1174,22 @@ func buildCompression(compression []*egv1a1.Compression) []*ir.Compression {
 	return irCompression
 }
 
-func buildHTTPProtocolUpgradeConfig(cfgs []*egv1a1.ProtocolUpgradeConfig) []string {
+func buildHTTPProtocolUpgradeConfig(cfgs []*egv1a1.ProtocolUpgradeConfig) []ir.HTTPUpgradeConfig {
 	if len(cfgs) == 0 {
 		return nil
 	}
 
-	result := make([]string, 0, len(cfgs))
+	result := make([]ir.HTTPUpgradeConfig, 0, len(cfgs))
 	for _, cfg := range cfgs {
-		result = append(result, cfg.Type)
+		upgrade := ir.HTTPUpgradeConfig{
+			Type: cfg.Type,
+		}
+		if cfg.Connect != nil {
+			upgrade.Connect = &ir.ConnectConfig{
+				Terminate: ptr.Deref(cfg.Connect.Terminate, false),
+			}
+		}
+		result = append(result, upgrade)
 	}
 
 	return result

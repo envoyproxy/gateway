@@ -123,6 +123,9 @@ infraIR:
         labels:
           gateway.envoyproxy.io/owning-gateway-name: gateway-1
           gateway.envoyproxy.io/owning-gateway-namespace: envoy-gateway
+        ownerReference:
+          kind: GatewayClass
+          name: envoy-gateway-class
       name: envoy-gateway/gateway-1
       namespace: envoy-gateway-system
 xdsIR:
@@ -177,8 +180,8 @@ xdsIR:
           prefix: /
         traffic:
           httpUpgrade:
-          - websocket
-          - spdy/3.1
+          - type: websocket
+          - type: spdy/3.1
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4

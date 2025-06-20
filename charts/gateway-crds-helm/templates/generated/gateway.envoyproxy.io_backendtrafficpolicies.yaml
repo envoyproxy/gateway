@@ -560,7 +560,19 @@ spec:
                   HTTPUpgrade defines the configuration for HTTP protocol upgrades.
                   If not specified, the default upgrade configuration(websocket) will be used.
                 items:
+                  description: ProtocolUpgradeConfig specifies the configuration for
+                    protocol upgrades.
                   properties:
+                    connect:
+                      description: |-
+                        Connect specifies the configuration for the CONNECT config.
+                        This is allowed only when type is CONNECT.
+                      properties:
+                        terminate:
+                          description: Terminate the CONNECT request, and forwards
+                            the payload as raw TCP data.
+                          type: boolean
+                      type: object
                     type:
                       description: |-
                         Type is the case-insensitive type of protocol upgrade.
@@ -569,6 +581,10 @@ spec:
                   required:
                   - type
                   type: object
+                  x-kubernetes-validations:
+                  - message: The connect configuration is only allowed when the type
+                      is CONNECT.
+                    rule: '!has(self.connect) || self.type == ''CONNECT'''
                 type: array
               loadBalancer:
                 description: |-
@@ -1379,6 +1395,7 @@ spec:
                             Path defines parameters used to modify the path of the incoming request.
                             The modified path is then used to construct the `Location` header. When
                             empty, the request path is used as-is.
+                            Only ReplaceFullPath path modifier is supported currently.
                           properties:
                             replaceFullPath:
                               description: |-
@@ -1425,6 +1442,8 @@ spec:
                           - type
                           type: object
                           x-kubernetes-validations:
+                          - message: only ReplaceFullPath is supported for path.type
+                            rule: self.type == 'ReplaceFullPath'
                           - message: replaceFullPath must be specified when type is
                               set to 'ReplaceFullPath'
                             rule: 'self.type == ''ReplaceFullPath'' ? has(self.replaceFullPath)
@@ -1477,7 +1496,9 @@ spec:
                       description: Response configuration.
                       properties:
                         body:
-                          description: Body of the Custom Response
+                          description: |-
+                            Body of the Custom Response
+                            Supports Envoy command operators for dynamic content (see https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#command-operators).
                           properties:
                             inline:
                               description: Inline contains the value as an inline
@@ -1565,6 +1586,13 @@ spec:
                   Retry provides more advanced usage, allowing users to customize the number of retries, retry fallback strategy, and retry triggering conditions.
                   If not set, retry will be disabled.
                 properties:
+                  numAttemptsPerPriority:
+                    description: |-
+                      NumAttemptsPerPriority defines the number of requests (initial attempt + retries)
+                      that should be sent to the same priority before switching to a different one.
+                      If not specified or set to 0, all requests are sent to the highest priority that is healthy.
+                    format: int32
+                    type: integer
                   numRetries:
                     default: 2
                     description: NumRetries is the number of retries to be attempted.
