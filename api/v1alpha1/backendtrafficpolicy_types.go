@@ -117,14 +117,27 @@ type BackendTelemetry struct {
 	Tracing *Tracing `json:"tracing,omitempty"`
 }
 
+// ProtocolUpgradeConfig specifies the configuration for protocol upgrades.
+//
+// +kubebuilder:validation:XValidation:rule="!has(self.connect) || self.type == 'CONNECT'",message="The connect configuration is only allowed when the type is CONNECT."
 type ProtocolUpgradeConfig struct {
 	// Type is the case-insensitive type of protocol upgrade.
 	// e.g. `websocket`, `CONNECT`, `spdy/3.1` etc.
 	//
 	// +kubebuilder:validation:Required
 	Type string `json:"type"`
+	// Connect specifies the configuration for the CONNECT config.
+	// This is allowed only when type is CONNECT.
+	//
+	// +optional
+	Connect *ConnectConfig `json:"connect,omitempty"`
+}
 
-	// TODO: support more options for CONNECT
+type ConnectConfig struct {
+	// Terminate the CONNECT request, and forwards the payload as raw TCP data.
+	//
+	// +optional
+	Terminate *bool `json:"terminate,omitempty"`
 }
 
 type RequestBuffer struct {

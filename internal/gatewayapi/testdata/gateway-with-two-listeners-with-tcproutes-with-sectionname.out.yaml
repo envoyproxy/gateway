@@ -86,6 +86,9 @@ infraIR:
         labels:
           gateway.envoyproxy.io/owning-gateway-name: gateway-1
           gateway.envoyproxy.io/owning-gateway-namespace: envoy-gateway
+        ownerReference:
+          kind: GatewayClass
+          name: envoy-gateway-class
       name: envoy-gateway/gateway-1
       namespace: envoy-gateway-system
 tcpRoutes:
@@ -171,12 +174,20 @@ xdsIR:
       port: 10162
       routes:
       - destination:
+          metadata:
+            kind: TCPRoute
+            name: tcproute-1
+            namespace: default
           name: tcproute/default/tcproute-1/rule/-1
           settings:
           - addressType: IP
             endpoints:
             - host: 7.7.7.7
               port: 8163
+            metadata:
+              name: service-1
+              namespace: default
+              sectionName: "8163"
             name: tcproute/default/tcproute-1/rule/-1/backend/0
             protocol: TCP
             weight: 1
@@ -186,12 +197,20 @@ xdsIR:
       port: 10163
       routes:
       - destination:
+          metadata:
+            kind: TCPRoute
+            name: tcproute-2
+            namespace: default
           name: tcproute/default/tcproute-2/rule/-1
           settings:
           - addressType: IP
             endpoints:
             - host: 7.7.7.7
               port: 8163
+            metadata:
+              name: service-2
+              namespace: default
+              sectionName: "8163"
             name: tcproute/default/tcproute-2/rule/-1/backend/0
             protocol: TCP
             weight: 1

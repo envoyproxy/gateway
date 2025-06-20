@@ -10,6 +10,11 @@ metadata:
     gateway.envoyproxy.io/owning-gateway-namespace: default
   name: envoy-default-37a8eec1
   namespace: envoy-gateway-system
+  ownerReferences:
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: GatewayClass
+    name: envoy-gateway-class
+    uid: test-owner-reference-uid-for-gatewayclass
 spec:
   progressDeadlineSeconds: 600
   revisionHistoryLimit: 10
@@ -36,7 +41,6 @@ spec:
         gateway.envoyproxy.io/owning-gateway-name: default
         gateway.envoyproxy.io/owning-gateway-namespace: default
     spec:
-      automountServiceAccountToken: false
       containers:
       - args:
         - --service-cluster default
@@ -46,25 +50,26 @@ spec:
         - --cpuset-threads
         - --drain-strategy immediate
         - --concurrency 4
+        - --component-log-level misc:error
         - --drain-time-s 60
         command:
         - envoy
         env:
-        - name: ENVOY_GATEWAY_NAMESPACE
+        - name: ENVOY_POD_NAMESPACE
           valueFrom:
             fieldRef:
               apiVersion: v1
               fieldPath: metadata.namespace
-        - name: ENVOY_SERVICE_ZONE
-          valueFrom:
-            fieldRef:
-              apiVersion: v1
-              fieldPath: metadata.annotations['topology.kubernetes.io/zone']
         - name: ENVOY_POD_NAME
           valueFrom:
             fieldRef:
               apiVersion: v1
               fieldPath: metadata.name
+        - name: ENVOY_SERVICE_ZONE
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: metadata.annotations['topology.kubernetes.io/zone']
         image: docker.io/envoyproxy/envoy:distroless-dev
         imagePullPolicy: IfNotPresent
         lifecycle:
@@ -137,21 +142,21 @@ spec:
         command:
         - envoy-gateway
         env:
-        - name: ENVOY_GATEWAY_NAMESPACE
+        - name: ENVOY_POD_NAMESPACE
           valueFrom:
             fieldRef:
               apiVersion: v1
               fieldPath: metadata.namespace
-        - name: ENVOY_SERVICE_ZONE
-          valueFrom:
-            fieldRef:
-              apiVersion: v1
-              fieldPath: metadata.annotations['topology.kubernetes.io/zone']
         - name: ENVOY_POD_NAME
           valueFrom:
             fieldRef:
               apiVersion: v1
               fieldPath: metadata.name
+        - name: ENVOY_SERVICE_ZONE
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: metadata.annotations['topology.kubernetes.io/zone']
         image: docker.io/envoyproxy/gateway-dev:latest
         imagePullPolicy: IfNotPresent
         lifecycle:

@@ -148,6 +148,9 @@ infraIR:
         labels:
           gateway.envoyproxy.io/owning-gateway-name: gateway-1
           gateway.envoyproxy.io/owning-gateway-namespace: envoy-gateway
+        ownerReference:
+          kind: GatewayClass
+          name: envoy-gateway-class
       name: envoy-gateway/gateway-1
       namespace: envoy-gateway-system
 xdsIR:
@@ -177,12 +180,20 @@ xdsIR:
       port: 19003
     tracing:
       destination:
+        metadata:
+          kind: EnvoyProxy
+          name: test
+          namespace: envoy-gateway-system
         name: tracing
         settings:
         - addressType: IP
           endpoints:
           - host: 8.7.6.5
             port: 4317
+          metadata:
+            name: otel-collector
+            namespace: monitoring
+            sectionName: "4317"
           name: tracing/backend/-1
           protocol: GRPC
       provider:

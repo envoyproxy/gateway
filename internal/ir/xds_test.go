@@ -732,7 +732,7 @@ func TestValidateTLSListenerConfig(t *testing.T) {
 					PrivateKey: []byte("priv-key"),
 				}},
 			},
-			want: ErrTLSServerCertEmpty,
+			want: ErrTLSCertEmpty,
 		},
 		{
 			name: "invalid private key",
@@ -1452,6 +1452,13 @@ func TestRedaction(t *testing.T) {
 		{
 			name: "explicit string check",
 			input: Xds{
+				GlobalResources: &GlobalResources{
+					EnvoyClientCertificate: &TLSCertificate{
+						Name:        "test",
+						Certificate: []byte("Certificate"),
+						PrivateKey:  PrivateBytes([]byte("PrivateBytes")),
+					},
+				},
 				HTTP: []*HTTPListener{{
 					TLS: &TLSConfig{
 						Certificates: []TLSCertificate{{
@@ -1483,8 +1490,8 @@ func TestRedaction(t *testing.T) {
 			},
 			wantStr: `{"http":[{"name":"","address":"","port":0,"hostnames":null,` +
 				`"tls":{` +
-				`"certificates":[{"name":"server","serverCertificate":"LS0t","privateKey":"[redacted]"}],` +
-				`"clientCertificates":[{"name":"client","serverCertificate":"LS0t","privateKey":"[redacted]"}],` +
+				`"certificates":[{"name":"server","certificate":"LS0t","privateKey":"[redacted]"}],` +
+				`"clientCertificates":[{"name":"client","certificate":"LS0t","privateKey":"[redacted]"}],` +
 				`"alpnProtocols":null},` +
 				`"routes":[{` +
 				`"name":"","hostname":"","isHTTP2":false,"security":{` +
@@ -1492,7 +1499,8 @@ func TestRedaction(t *testing.T) {
 				`"apiKeyAuth":{"credentials":{"client-id":"[redacted]"},"extractFrom":null},` +
 				`"basicAuth":{"name":"","users":"[redacted]"}` +
 				`}}],` +
-				`"isHTTP2":false,"path":{"mergeSlashes":false,"escapedSlashesAction":""}}]}`,
+				`"isHTTP2":false,"path":{"mergeSlashes":false,"escapedSlashesAction":""}}],` +
+				`"globalResources":{"envoyClientCertificate":{"name":"test","certificate":"Q2VydGlmaWNhdGU=","privateKey":"[redacted]"}}}`,
 		},
 	}
 	for _, test := range tests {

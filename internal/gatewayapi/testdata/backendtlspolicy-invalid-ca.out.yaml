@@ -25,7 +25,7 @@ backendTLSPolicies:
         sectionName: http
       conditions:
       - lastTransitionTime: null
-        message: No ca found in configmap no-ca-cmap.
+        message: Configmap no-ca-cmap not found in namespace backends.
         reason: Invalid
         status: "False"
         type: Accepted
@@ -101,8 +101,8 @@ httpRoutes:
         status: "True"
         type: Accepted
       - lastTransitionTime: null
-        message: 'Failed to process route rule 0 backendRef 0: no ca found in configmap
-          no-ca-cmap.'
+        message: 'Failed to process route rule 0 backendRef 0: configmap no-ca-cmap
+          not found in namespace backends.'
         reason: InvalidBackendTLS
         status: "False"
         type: ResolvedRefs
@@ -126,6 +126,9 @@ infraIR:
         labels:
           gateway.envoyproxy.io/owning-gateway-name: gateway-btls
           gateway.envoyproxy.io/owning-gateway-namespace: envoy-gateway
+        ownerReference:
+          kind: GatewayClass
+          name: envoy-gateway-class
       name: envoy-gateway/gateway-btls
       namespace: envoy-gateway-system
 xdsIR:

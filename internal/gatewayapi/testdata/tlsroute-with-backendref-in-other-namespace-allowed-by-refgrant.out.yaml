@@ -55,6 +55,9 @@ infraIR:
         labels:
           gateway.envoyproxy.io/owning-gateway-name: gateway-1
           gateway.envoyproxy.io/owning-gateway-namespace: envoy-gateway
+        ownerReference:
+          kind: GatewayClass
+          name: envoy-gateway-class
       name: envoy-gateway/gateway-1
       namespace: envoy-gateway-system
 tlsRoutes:
@@ -106,12 +109,21 @@ xdsIR:
       port: 10090
       routes:
       - destination:
+          metadata:
+            kind: TLSRoute
+            name: tlsroute-1
+            namespace: default
           name: tlsroute/default/tlsroute-1/rule/-1
           settings:
           - addressType: IP
             endpoints:
             - host: 7.7.7.7
               port: 8080
+            metadata:
+              kind: Service
+              name: service-1
+              namespace: test-service-namespace
+              sectionName: "8080"
             name: tlsroute/default/tlsroute-1/rule/-1/backend/0
             protocol: HTTPS
             weight: 1

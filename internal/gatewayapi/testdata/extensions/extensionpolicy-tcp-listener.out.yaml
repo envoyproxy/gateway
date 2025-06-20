@@ -139,6 +139,9 @@ infraIR:
         labels:
           gateway.envoyproxy.io/owning-gateway-name: gateway-1
           gateway.envoyproxy.io/owning-gateway-namespace: envoy-gateway
+        ownerReference:
+          kind: GatewayClass
+          name: envoy-gateway-class
       name: envoy-gateway/gateway-1
       namespace: ""
 xdsIR:
@@ -146,6 +149,32 @@ xdsIR:
     accessLog:
       json:
       - path: /dev/stdout
+    extensionServerPolicies:
+    - object:
+        apiVersion: foo.example.io/v1alpha1
+        kind: Bar
+        metadata:
+          name: test1
+          namespace: envoy-gateway
+        spec:
+          data: attached to all listeners
+          targetRef:
+            group: gateway.networking.k8s.io
+            kind: Gateway
+            name: gateway-1
+    - object:
+        apiVersion: foo.example.io/v1alpha1
+        kind: Bar
+        metadata:
+          name: test2
+          namespace: envoy-gateway
+        spec:
+          data: attached only to listener on port 80
+          targetRef:
+            group: gateway.networking.k8s.io
+            kind: Gateway
+            name: gateway-1
+            sectionName: tcp1
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4

@@ -37,6 +37,11 @@ type OIDC struct {
 	// +optional
 	CookieNames *OIDCCookieNames `json:"cookieNames,omitempty"`
 
+	// CookieConfigs allows overriding the SameSite attribute for OIDC cookies.
+	// If a specific cookie is not configured, it will use the "Strict" SameSite policy by default.
+	// +optional
+	CookieConfig *OIDCCookieConfig `json:"cookieConfig,omitempty"`
+
 	// The optional domain to set the access and ID token cookies on.
 	// If not set, the cookies will default to the host of the request, not including the subdomains.
 	// If set, the cookies will be set on the specified domain and all subdomains.
@@ -61,6 +66,11 @@ type OIDC struct {
 	// [Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest).
 	// If not specified, uses the default redirect URI "%REQ(x-forwarded-proto)%://%REQ(:authority)%/oauth2/callback"
 	RedirectURL *string `json:"redirectURL,omitempty"`
+
+	// Any request that matches any of the provided matchers (with either tokens that are expired or missing tokens) will not be redirected to the OIDC Provider.
+	// This behavior can be useful for AJAX or machine requests.
+	// +optional
+	DenyRedirect *OIDCDenyRedirect `json:"denyRedirect,omitempty"`
 
 	// The path to log a user out, clearing their credential cookies.
 	//
@@ -102,6 +112,16 @@ type OIDC struct {
 	// Note: this field is only applicable when the "refreshToken" field is set to true.
 	// +optional
 	DefaultRefreshTokenTTL *metav1.Duration `json:"defaultRefreshTokenTTL,omitempty"`
+
+	// Skips OIDC authentication when the request contains a header that will be extracted by the JWT filter. Unless
+	// explicitly stated otherwise in the extractFrom field, this will be the "Authorization: Bearer ..." header.
+	//
+	// The passThroughAuthHeader option is typically used for non-browser clients that may not be able to handle OIDC
+	// redirects and wish to directly supply a token instead.
+	//
+	// If not specified, defaults to false.
+	// +optional
+	PassThroughAuthHeader *bool `json:"passThroughAuthHeader,omitempty"`
 }
 
 // OIDCProvider defines the OIDC Provider configuration.
@@ -143,6 +163,22 @@ type OIDCProvider struct {
 	TokenEndpoint *string `json:"tokenEndpoint,omitempty"`
 }
 
+// OIDCDenyRedirect defines headers to match against the request to deny redirect to the OIDC Provider.
+type OIDCDenyRedirect struct {
+	// Defines the headers to match against the request to deny redirect to the OIDC Provider.
+	// +kubebuilder:validation:MinItems=1
+	// +kubebuilder:validation:MaxItems=16
+	Headers []OIDCDenyRedirectHeader `json:"headers"`
+}
+
+// OIDCDenyRedirectHeader defines how a header is matched
+type OIDCDenyRedirectHeader struct {
+	// Specifies the name of the header in the request.
+	// +kubebuilder:validation:MinLength=1
+	Name        string `json:"name"`
+	StringMatch `json:",inline"`
+}
+
 // OIDCCookieNames defines the names of cookies to use in the Envoy OIDC filter.
 type OIDCCookieNames struct {
 	// The name of the cookie used to store the AccessToken in the
@@ -155,4 +191,25 @@ type OIDCCookieNames struct {
 	// If not specified, defaults to "IdToken-(randomly generated uid)"
 	// +optional
 	IDToken *string `json:"idToken,omitempty"`
+}
+
+type SameSite string
+
+const (
+	// SameSiteLax specifies the "Lax" SameSite policy.
+	SameSiteLax SameSite = "Lax"
+	// SameSiteStrict specifies the "Strict" SameSite policy.
+	SameSiteStrict SameSite = "Strict"
+	// SameSiteNone specifies the "None" SameSite policy. Requires a Secure cookie.
+	SameSiteNone SameSite = "None"
+
+	// SameSiteDisabled specifies the "Disabled" SameSite policy.
+	SameSiteDisabled SameSite = "Disabled"
+)
+
+type OIDCCookieConfig struct {
+	// +optional
+	// +kubebuilder:validation:Enum=Lax;Strict;None;Disabled
+	// +kubebuilder:default=Strict
+	SameSite *string `json:"sameSite,omitempty"`
 }

@@ -477,6 +477,9 @@ infraIR:
         labels:
           gateway.envoyproxy.io/owning-gateway-name: not-same-namespace-gateway
           gateway.envoyproxy.io/owning-gateway-namespace: another-namespace
+        ownerReference:
+          kind: GatewayClass
+          name: envoy-gateway-class
       name: another-namespace/not-same-namespace-gateway
       namespace: envoy-gateway-system
   envoy-gateway/gateway-1:
@@ -493,6 +496,9 @@ infraIR:
         labels:
           gateway.envoyproxy.io/owning-gateway-name: gateway-1
           gateway.envoyproxy.io/owning-gateway-namespace: envoy-gateway
+        ownerReference:
+          kind: GatewayClass
+          name: envoy-gateway-class
       name: envoy-gateway/gateway-1
       namespace: envoy-gateway-system
   envoy-gateway/gateway-2:
@@ -516,6 +522,9 @@ infraIR:
         labels:
           gateway.envoyproxy.io/owning-gateway-name: gateway-2
           gateway.envoyproxy.io/owning-gateway-namespace: envoy-gateway
+        ownerReference:
+          kind: GatewayClass
+          name: envoy-gateway-class
       name: envoy-gateway/gateway-2
       namespace: envoy-gateway-system
 xdsIR:
@@ -564,12 +573,21 @@ xdsIR:
       port: 10080
       routes:
       - destination:
+          metadata:
+            kind: HTTPRoute
+            name: httproute-1
+            namespace: envoy-gateway
           name: httproute/envoy-gateway/httproute-1/rule/0
           settings:
           - addressType: IP
             endpoints:
             - host: 7.7.7.7
               port: 8080
+            metadata:
+              kind: Service
+              name: service-1
+              namespace: envoy-gateway
+              sectionName: "8080"
             name: httproute/envoy-gateway/httproute-1/rule/0/backend/0
             protocol: HTTP
             weight: 1
@@ -584,8 +602,7 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /
-        traffic:
-          name: envoy-gateway/target-httproute-in-gateway-1
+        traffic: {}
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4
@@ -612,12 +629,21 @@ xdsIR:
       port: 10080
       routes:
       - destination:
+          metadata:
+            kind: GRPCRoute
+            name: grpcroute-1
+            namespace: envoy-gateway
           name: grpcroute/envoy-gateway/grpcroute-1/rule/0
           settings:
           - addressType: IP
             endpoints:
             - host: 7.7.7.7
               port: 8080
+            metadata:
+              kind: Service
+              name: service-1
+              namespace: envoy-gateway
+              sectionName: "8080"
             name: grpcroute/envoy-gateway/grpcroute-1/rule/0/backend/0
             protocol: GRPC
             weight: 1
@@ -632,8 +658,7 @@ xdsIR:
           name: grpcroute-1
           namespace: envoy-gateway
         name: grpcroute/envoy-gateway/grpcroute-1/rule/0/match/0/*
-        traffic:
-          name: envoy-gateway/target-grpcroute-in-gateway-2
+        traffic: {}
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4

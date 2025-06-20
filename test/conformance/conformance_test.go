@@ -16,19 +16,36 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/gateway-api/conformance"
 	"sigs.k8s.io/gateway-api/conformance/tests"
+	"sigs.k8s.io/gateway-api/conformance/utils/flags"
 	"sigs.k8s.io/gateway-api/conformance/utils/suite"
+	"sigs.k8s.io/gateway-api/conformance/utils/tlog"
 
 	internalconf "github.com/envoyproxy/gateway/internal/gatewayapi/conformance"
+	"github.com/envoyproxy/gateway/test/e2e"
+	ege2etest "github.com/envoyproxy/gateway/test/e2e/tests"
 )
 
 func TestGatewayAPIConformance(t *testing.T) {
 	flag.Parse()
 	log.SetLogger(zap.New(zap.WriteTo(os.Stderr), zap.UseDevMode(true)))
 
+	if flags.RunTest != nil && *flags.RunTest != "" {
+		tlog.Logf(t, "Running Conformance test %s with %s GatewayClass\n cleanup: %t\n debug: %t",
+			*flags.RunTest, *flags.GatewayClassName, *flags.CleanupBaseResources, *flags.ShowDebug)
+	} else {
+		tlog.Logf(t, "Running Conformance tests with %s GatewayClass\n cleanup: %t\n debug: %t",
+			*flags.GatewayClassName, *flags.CleanupBaseResources, *flags.ShowDebug)
+	}
+
+	gatewayNamespaceMode := ege2etest.IsGatewayNamespaceMode()
+	internalSuite := internalconf.EnvoyGatewaySuite(gatewayNamespaceMode)
+
 	opts := conformance.DefaultOptions(t)
-	opts.SkipTests = internalconf.EnvoyGatewaySuite.SkipTests
-	opts.SupportedFeatures = internalconf.EnvoyGatewaySuite.SupportedFeatures
-	opts.ExemptFeatures = internalconf.EnvoyGatewaySuite.ExemptFeatures
+	opts.SkipTests = internalSuite.SkipTests
+	opts.SupportedFeatures = internalSuite.SupportedFeatures
+	opts.ExemptFeatures = internalSuite.ExemptFeatures
+	opts.RunTest = *flags.RunTest
+	opts.Hook = e2e.Hook
 
 	cSuite, err := suite.NewConformanceTestSuite(opts)
 	if err != nil {

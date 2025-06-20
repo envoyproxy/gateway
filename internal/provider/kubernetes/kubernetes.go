@@ -104,6 +104,14 @@ func New(ctx context.Context, restCfg *rest.Config, svrCfg *ec.Server, resources
 		mgrOpts.Controller = config.Controller{NeedLeaderElection: ptr.To(false)}
 	}
 
+	if svrCfg.EnvoyGateway.Provider.Kubernetes.CacheSyncPeriod != nil {
+		csp, err := time.ParseDuration(string(*svrCfg.EnvoyGateway.Provider.Kubernetes.CacheSyncPeriod))
+		if err != nil {
+			return nil, err
+		}
+		mgrOpts.Cache.SyncPeriod = ptr.To(csp)
+	}
+
 	if svrCfg.EnvoyGateway.NamespaceMode() {
 		mgrOpts.Cache.DefaultNamespaces = make(map[string]cache.Config)
 		for _, watchNS := range svrCfg.EnvoyGateway.Provider.Kubernetes.Watch.Namespaces {
@@ -127,6 +135,7 @@ func New(ctx context.Context, restCfg *rest.Config, svrCfg *ec.Server, resources
 		mgr.GetWebhookServer().Register("/inject-pod-topology", &webhook.Admission{
 			Handler: &ProxyTopologyInjector{
 				Client:  mgr.GetClient(),
+				Logger:  svrCfg.Logger.WithName("proxy-topology-injector"),
 				Decoder: admission.NewDecoder(mgr.GetScheme()),
 			},
 		})
@@ -138,7 +147,7 @@ func New(ctx context.Context, restCfg *rest.Config, svrCfg *ec.Server, resources
 
 	// Create and register the controllers with the manager.
 	if err := newGatewayAPIController(ctx, mgr, svrCfg, updateHandler.Writer(), resources); err != nil {
-		return nil, fmt.Errorf("failted to create gatewayapi controller: %w", err)
+		return nil, fmt.Errorf("failed to create gatewayapi controller: %w", err)
 	}
 
 	// Add health check health probes.

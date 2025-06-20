@@ -71,6 +71,9 @@ infraIR:
         labels:
           gateway.envoyproxy.io/owning-gateway-name: gateway-1
           gateway.envoyproxy.io/owning-gateway-namespace: envoy-gateway
+        ownerReference:
+          kind: GatewayClass
+          name: envoy-gateway-class
       name: envoy-gateway/gateway-1
       namespace: envoy-gateway-system
 tcpRoutes:
@@ -122,12 +125,20 @@ xdsIR:
       port: 10090
       routes:
       - destination:
+          metadata:
+            kind: TCPRoute
+            name: tcproute-1
+            namespace: default
           name: tcproute/default/tcproute-1/rule/-1
           settings:
           - addressType: IP
             endpoints:
             - host: 1.1.1.1
               port: 3001
+            metadata:
+              kind: Backend
+              name: backend-ip
+              namespace: default
             name: tcproute/default/tcproute-1/rule/-1/backend/0
             protocol: TCP
             weight: 1

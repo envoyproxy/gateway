@@ -68,6 +68,8 @@ type xdsClusterArgs struct {
 	dns               *ir.DNS
 	useClientProtocol bool
 	ipFamily          *egv1a1.IPFamily
+	metadata          *ir.ResourceMetadata
+	statName          *string
 }
 
 type EndpointType int
@@ -144,6 +146,11 @@ func buildXdsCluster(args *xdsClusterArgs) (*buildClusterResult, error) {
 			},
 		},
 		PerConnectionBufferLimitBytes: buildBackandConnectionBufferLimitBytes(args.backendConnection),
+		Metadata:                      buildXdsMetadata(args.metadata),
+	}
+
+	if args.statName != nil {
+		cluster.AltStatName = *args.statName
 	}
 
 	// 50% is the Envoy default value for panic threshold. No need to explicitly set it in this case.
@@ -300,6 +307,7 @@ func buildXdsCluster(args *xdsClusterArgs) (*buildClusterResult, error) {
 			TypedConfig: dfpAny,
 		}}
 		cluster.LbPolicy = clusterv3.Cluster_CLUSTER_PROVIDED
+
 	case EndpointTypeStatic:
 		cluster.ClusterDiscoveryType = &clusterv3.Cluster_Type{Type: clusterv3.Cluster_EDS}
 		cluster.EdsClusterConfig = &clusterv3.Cluster_EdsClusterConfig{
@@ -625,6 +633,7 @@ func buildXdsClusterLoadAssignment(clusterName string, destSettings []*ir.Destin
 	for i, ds := range destSettings {
 
 		var metadata *corev3.Metadata
+
 		if ds.TLS != nil {
 			metadata = &corev3.Metadata{
 				FilterMetadata: map[string]*structpb.Struct{
@@ -682,6 +691,7 @@ func buildZonalLocalities(metadata *corev3.Metadata, ds *ir.DestinationSetting) 
 			},
 			LbEndpoints: endPts,
 			Priority:    ptr.Deref(ds.Priority, 0),
+			Metadata:    buildXdsMetadata(ds.Metadata),
 		}
 		localities = append(localities, locality)
 	}
@@ -720,6 +730,7 @@ func buildWeightedLocalities(metadata *corev3.Metadata, ds *ir.DestinationSettin
 		},
 		LbEndpoints: endpoints,
 		Priority:    0,
+		Metadata:    buildXdsMetadata(ds.Metadata),
 	}
 
 	// Set locality weight
@@ -833,6 +844,14 @@ func buildTypedExtensionProtocolOptions(args *xdsClusterArgs) (map[string]*anypb
 			ExplicitHttpConfig: &httpv3.HttpProtocolOptions_ExplicitHttpConfig{
 				ProtocolConfig: &httpv3.HttpProtocolOptions_ExplicitHttpConfig_HttpProtocolOptions{},
 			},
+		}
+	}
+
+	// Envoy proxy requires AutoSNI and AutoSanValidation to be set to true for dynamic_forward_proxy clusters
+	if args.endpointType == EndpointTypeDynamicResolver {
+		protocolOptions.UpstreamHttpProtocolOptions = &corev3.UpstreamHttpProtocolOptions{
+			AutoSni:           true,
+			AutoSanValidation: true,
 		}
 	}
 
@@ -1023,10 +1042,11 @@ type ExtraArgs struct {
 	http1Settings *ir.HTTP1Settings
 	http2Settings *ir.HTTP2Settings
 	ipFamily      *egv1a1.IPFamily
+	statName      *string
 }
 
 type clusterArgs interface {
-	asClusterArgs(name string, settings []*ir.DestinationSetting, extras *ExtraArgs) *xdsClusterArgs
+	asClusterArgs(name string, settings []*ir.DestinationSetting, extras *ExtraArgs, metadata *ir.ResourceMetadata) *xdsClusterArgs
 }
 
 type UDPRouteTranslator struct {
@@ -1036,6 +1056,7 @@ type UDPRouteTranslator struct {
 func (route *UDPRouteTranslator) asClusterArgs(name string,
 	settings []*ir.DestinationSetting,
 	extra *ExtraArgs,
+	metadata *ir.ResourceMetadata,
 ) *xdsClusterArgs {
 	return &xdsClusterArgs{
 		name:         name,
@@ -1045,6 +1066,7 @@ func (route *UDPRouteTranslator) asClusterArgs(name string,
 		metrics:      extra.metrics,
 		dns:          route.DNS,
 		ipFamily:     extra.ipFamily,
+		metadata:     metadata,
 	}
 }
 
@@ -1055,6 +1077,7 @@ type TCPRouteTranslator struct {
 func (route *TCPRouteTranslator) asClusterArgs(name string,
 	settings []*ir.DestinationSetting,
 	extra *ExtraArgs,
+	metadata *ir.ResourceMetadata,
 ) *xdsClusterArgs {
 	return &xdsClusterArgs{
 		name:              name,
@@ -1070,6 +1093,7 @@ func (route *TCPRouteTranslator) asClusterArgs(name string,
 		backendConnection: route.BackendConnection,
 		dns:               route.DNS,
 		ipFamily:          extra.ipFamily,
+		metadata:          metadata,
 	}
 }
 
@@ -1080,6 +1104,7 @@ type HTTPRouteTranslator struct {
 func (httpRoute *HTTPRouteTranslator) asClusterArgs(name string,
 	settings []*ir.DestinationSetting,
 	extra *ExtraArgs,
+	metadata *ir.ResourceMetadata,
 ) *xdsClusterArgs {
 	clusterArgs := &xdsClusterArgs{
 		name:              name,
@@ -1091,6 +1116,8 @@ func (httpRoute *HTTPRouteTranslator) asClusterArgs(name string,
 		http2Settings:     extra.http2Settings,
 		useClientProtocol: ptr.Deref(httpRoute.UseClientProtocol, false),
 		ipFamily:          extra.ipFamily,
+		metadata:          metadata,
+		statName:          extra.statName,
 	}
 
 	// Populate traffic features.

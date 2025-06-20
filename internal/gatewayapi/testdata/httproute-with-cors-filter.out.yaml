@@ -160,6 +160,9 @@ infraIR:
         labels:
           gateway.envoyproxy.io/owning-gateway-name: gateway-1
           gateway.envoyproxy.io/owning-gateway-namespace: envoy-gateway
+        ownerReference:
+          kind: GatewayClass
+          name: envoy-gateway-class
       name: envoy-gateway/gateway-1
       namespace: envoy-gateway-system
 xdsIR:
@@ -202,12 +205,20 @@ xdsIR:
           - header4
           maxAge: 16m40s
         destination:
+          metadata:
+            kind: HTTPRoute
+            name: httproute-cors-exact
+            namespace: default
           name: httproute/default/httproute-cors-exact/rule/0
           settings:
           - addressType: IP
             endpoints:
             - host: 7.7.7.7
               port: 8080
+            metadata:
+              name: service-1
+              namespace: default
+              sectionName: "8080"
             name: httproute/default/httproute-cors-exact/rule/0/backend/0
             protocol: HTTP
             weight: 1
@@ -234,12 +245,20 @@ xdsIR:
             safeRegex: https://.*\.envoyproxy\.io
           maxAge: 0s
         destination:
+          metadata:
+            kind: HTTPRoute
+            name: httproute-cors-wildcard
+            namespace: default
           name: httproute/default/httproute-cors-wildcard/rule/0
           settings:
           - addressType: IP
             endpoints:
             - host: 7.7.7.7
               port: 8080
+            metadata:
+              name: service-1
+              namespace: default
+              sectionName: "8080"
             name: httproute/default/httproute-cors-wildcard/rule/0/backend/0
             protocol: HTTP
             weight: 1

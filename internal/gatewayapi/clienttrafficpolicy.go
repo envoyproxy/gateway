@@ -834,7 +834,7 @@ func (t *Translator) buildListenerTLSParameters(policy *egv1a1.ClientTrafficPoli
 					return irTLSConfig, err
 				}
 
-				secretBytes, ok := secret.Data[caCertKey]
+				secretBytes, ok := getCaCertFromSecret(secret)
 				if !ok || len(secretBytes) == 0 {
 					return irTLSConfig, fmt.Errorf(
 						"caCertificateRef not found in secret %s", caCertRef.Name)
@@ -853,7 +853,7 @@ func (t *Translator) buildListenerTLSParameters(policy *egv1a1.ClientTrafficPoli
 					return irTLSConfig, err
 				}
 
-				configMapBytes, ok := configMap.Data[caCertKey]
+				configMapBytes, ok := getCaCertFromConfigMap(configMap)
 				if !ok || len(configMapBytes) == 0 {
 					return irTLSConfig, fmt.Errorf(
 						"caCertificateRef not found in configMap %s", caCertRef.Name)
@@ -952,7 +952,12 @@ func translateEarlyRequestHeaders(headerModifier *gwapiv1.HTTPHeaderFilter) ([]i
 			}
 			// Per Gateway API specification on HTTPHeaderName, : and / are invalid characters in header names
 			if strings.ContainsAny(string(addHeader.Name), "/:") {
-				errs = errors.Join(errs, fmt.Errorf("EarlyRequestHeaders Filter cannot set headers with a '/' or ':' character in them. Header: %q", string(addHeader.Name)))
+				errs = errors.Join(errs, fmt.Errorf("EarlyRequestHeaders cannot add a header with a '/' or ':' character in them. Header: '%q'", string(addHeader.Name)))
+				continue
+			}
+			// Gateway API specification allows only valid value as defined by RFC 7230
+			if !HeaderValueRegexp.MatchString(addHeader.Value) {
+				errs = errors.Join(errs, fmt.Errorf("EarlyRequestHeaders cannot add a header with an invalid value. Header: '%q'", string(addHeader.Name)))
 				continue
 			}
 			// Check if the header is a duplicate
@@ -992,7 +997,12 @@ func translateEarlyRequestHeaders(headerModifier *gwapiv1.HTTPHeaderFilter) ([]i
 			}
 			// Per Gateway API specification on HTTPHeaderName, : and / are invalid characters in header names
 			if strings.ContainsAny(string(setHeader.Name), "/:") {
-				errs = errors.Join(errs, fmt.Errorf("EarlyRequestHeaders cannot set headers with a '/' or ':' character in them. Header: '%s'", string(setHeader.Name)))
+				errs = errors.Join(errs, fmt.Errorf("EarlyRequestHeaders cannot set a header with a '/' or ':' character in them. Header: '%q'", string(setHeader.Name)))
+				continue
+			}
+			// Gateway API specification allows only valid value as defined by RFC 7230
+			if !HeaderValueRegexp.MatchString(setHeader.Value) {
+				errs = errors.Join(errs, fmt.Errorf("EarlyRequestHeaders cannot set a header with an invalid value. Header: '%q'", string(setHeader.Name)))
 				continue
 			}
 

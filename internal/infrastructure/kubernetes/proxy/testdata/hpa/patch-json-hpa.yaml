@@ -1,12 +1,19 @@
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
+  creationTimestamp: null
   labels:
     gateway.envoyproxy.io/owning-gateway-name: default
     gateway.envoyproxy.io/owning-gateway-namespace: default
   name: foo
   namespace: envoy-gateway-system
+  ownerReferences:
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: GatewayClass
+    name: envoy-gateway-class
+    uid: test-owner-reference-uid-for-gatewayclass
 spec:
+  maxReplicas: 1
   metrics:
   - resource:
       name: cpu
@@ -14,8 +21,10 @@ spec:
         averageUtilization: 80
         type: Utilization
     type: Resource
-  maxReplicas: 1
   scaleTargetRef:
     apiVersion: apps/v1
     kind: Deployment
     name: bar
+status:
+  currentMetrics: null
+  desiredReplicas: 0

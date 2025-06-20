@@ -1,5 +1,5 @@
 ---
-# Source: gateway-crds-helm/templates/gatewayapi-crds.yaml
+# Source: gateway-crds-helm/templates/experimental-gatewayapi-crds.yaml
 #
 # config/crd/experimental/gateway.networking.k8s.io_backendtlspolicies.yaml
 #
@@ -651,7 +651,7 @@ status:
   conditions: null
   storedVersions: null
 ---
-# Source: gateway-crds-helm/templates/gatewayapi-crds.yaml
+# Source: gateway-crds-helm/templates/experimental-gatewayapi-crds.yaml
 #
 # config/crd/experimental/gateway.networking.k8s.io_gatewayclasses.yaml
 #
@@ -1172,7 +1172,7 @@ status:
   conditions: null
   storedVersions: null
 ---
-# Source: gateway-crds-helm/templates/gatewayapi-crds.yaml
+# Source: gateway-crds-helm/templates/experimental-gatewayapi-crds.yaml
 #
 # config/crd/experimental/gateway.networking.k8s.io_gateways.yaml
 #
@@ -3881,7 +3881,7 @@ status:
   conditions: null
   storedVersions: null
 ---
-# Source: gateway-crds-helm/templates/gatewayapi-crds.yaml
+# Source: gateway-crds-helm/templates/experimental-gatewayapi-crds.yaml
 #
 # config/crd/experimental/gateway.networking.k8s.io_grpcroutes.yaml
 #
@@ -6103,7 +6103,7 @@ status:
   conditions: null
   storedVersions: null
 ---
-# Source: gateway-crds-helm/templates/gatewayapi-crds.yaml
+# Source: gateway-crds-helm/templates/experimental-gatewayapi-crds.yaml
 #
 # config/crd/experimental/gateway.networking.k8s.io_httproutes.yaml
 #
@@ -13386,7 +13386,7 @@ status:
   conditions: null
   storedVersions: null
 ---
-# Source: gateway-crds-helm/templates/gatewayapi-crds.yaml
+# Source: gateway-crds-helm/templates/experimental-gatewayapi-crds.yaml
 #
 # config/crd/experimental/gateway.networking.k8s.io_referencegrants.yaml
 #
@@ -13580,7 +13580,7 @@ status:
   conditions: null
   storedVersions: null
 ---
-# Source: gateway-crds-helm/templates/gatewayapi-crds.yaml
+# Source: gateway-crds-helm/templates/experimental-gatewayapi-crds.yaml
 #
 # config/crd/experimental/gateway.networking.k8s.io_tcproutes.yaml
 #
@@ -14317,7 +14317,7 @@ status:
   conditions: null
   storedVersions: null
 ---
-# Source: gateway-crds-helm/templates/gatewayapi-crds.yaml
+# Source: gateway-crds-helm/templates/experimental-gatewayapi-crds.yaml
 #
 # config/crd/experimental/gateway.networking.k8s.io_tlsroutes.yaml
 #
@@ -15117,7 +15117,7 @@ status:
   conditions: null
   storedVersions: null
 ---
-# Source: gateway-crds-helm/templates/gatewayapi-crds.yaml
+# Source: gateway-crds-helm/templates/experimental-gatewayapi-crds.yaml
 #
 # config/crd/experimental/gateway.networking.k8s.io_udproutes.yaml
 #
@@ -15854,7 +15854,7 @@ status:
   conditions: null
   storedVersions: null
 ---
-# Source: gateway-crds-helm/templates/gatewayapi-crds.yaml
+# Source: gateway-crds-helm/templates/experimental-gatewayapi-crds.yaml
 #
 # config/crd/experimental/gateway.networking.x-k8s.io_xbackendtrafficpolicies.yaml
 #
@@ -16464,7 +16464,7 @@ status:
   conditions: null
   storedVersions: null
 ---
-# Source: gateway-crds-helm/templates/gatewayapi-crds.yaml
+# Source: gateway-crds-helm/templates/experimental-gatewayapi-crds.yaml
 #
 # config/crd/experimental/gateway.networking.x-k8s.io_xlistenersets.yaml
 #
@@ -17431,12 +17431,19 @@ spec:
                       description: Unix defines the unix domain socket endpoint
                       properties:
                         path:
-                          description: Path defines the unix domain socket path of
-                            the backend endpoint.
+                          description: |-
+                            Path defines the unix domain socket path of the backend endpoint.
+                            The path length must not exceed 108 characters.
                           type: string
+                          x-kubernetes-validations:
+                          - message: unix domain socket path must not exceed 108 characters
+                            rule: size(self) <= 108
                       required:
                       - path
                       type: object
+                    zone:
+                      description: Zone defines the service zone of the backend endpoint.
+                      type: string
                   type: object
                   x-kubernetes-validations:
                   - message: one of fqdn, ip or unix must be specified
@@ -17462,7 +17469,8 @@ spec:
               tls:
                 description: |-
                   TLS defines the TLS settings for the backend.
-                  Only supported for DynamicResolver backends.
+                  TLS.CACertificateRefs and TLS.WellKnownCACertificates can only be specified for DynamicResolver backends.
+                  TLS.InsecureSkipVerify can be specified for any Backends
                 properties:
                   caCertificateRefs:
                     description: |-
@@ -17476,6 +17484,8 @@ spec:
                       If CACertificateRefs is empty or unspecified, then WellKnownCACertificates must be
                       specified. Only one of CACertificateRefs or WellKnownCACertificates may be specified,
                       not both.
+
+                      Only used for DynamicResolver backends.
                     items:
                       description: |-
                         LocalObjectReference identifies an API object within the namespace of the
@@ -17513,6 +17523,12 @@ spec:
                       type: object
                     maxItems: 8
                     type: array
+                  insecureSkipVerify:
+                    default: false
+                    description: |-
+                      InsecureSkipVerify indicates whether the upstream's certificate verification
+                      should be skipped. Defaults to "false".
+                    type: boolean
                   wellKnownCACertificates:
                     description: |-
                       WellKnownCACertificates specifies whether system CA certificates may be used in
@@ -17521,6 +17537,8 @@ spec:
                       If WellKnownCACertificates is unspecified or empty (""), then CACertificateRefs
                       must be specified with at least one entry for a valid configuration. Only one of
                       CACertificateRefs or WellKnownCACertificates may be specified, not both.
+
+                      Only used for DynamicResolver backends.
                     enum:
                     - System
                     type: string
@@ -17530,10 +17548,12 @@ spec:
                   rule: '!(has(self.caCertificateRefs) && size(self.caCertificateRefs)
                     > 0 && has(self.wellKnownCACertificates) && self.wellKnownCACertificates
                     != "")'
-                - message: must specify either CACertificateRefs or WellKnownCACertificates
-                  rule: (has(self.caCertificateRefs) && size(self.caCertificateRefs)
-                    > 0 || has(self.wellKnownCACertificates) && self.wellKnownCACertificates
-                    != "")
+                - message: must not contain either CACertificateRefs or WellKnownCACertificates
+                    when InsecureSkipVerify is enabled
+                  rule: '!((has(self.insecureSkipVerify) && self.insecureSkipVerify)
+                    && ((has(self.caCertificateRefs) && size(self.caCertificateRefs)
+                    > 0) || (has(self.wellKnownCACertificates) && self.wellKnownCACertificates
+                    != "")))'
               type:
                 default: Endpoints
                 description: Type defines the type of the backend. Defaults to "Endpoints"
@@ -17543,11 +17563,8 @@ spec:
                 type: string
             type: object
             x-kubernetes-validations:
-            - message: DynamicResolver type cannot have endpoints and appProtocols
-                specified
-              rule: self.type != 'DynamicResolver' || !has(self.endpoints) && !has(self.appProtocols)
-            - message: TLS settings can only be specified for DynamicResolver backends
-              rule: 'has(self.tls) ? self.type == ''DynamicResolver'' : true'
+            - message: DynamicResolver type cannot have endpoints specified
+              rule: self.type != 'DynamicResolver' || !has(self.endpoints)
           status:
             description: Status defines the current status of Backend.
             properties:
@@ -17945,6 +17962,14 @@ spec:
                               minimum: 100
                               type: integer
                             type: array
+                          hostname:
+                            description: |-
+                              Hostname defines the HTTP host that will be requested during health checking.
+                              Default: HTTPRoute or GRPCRoute hostname.
+                            maxLength: 253
+                            minLength: 1
+                            pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                            type: string
                           method:
                             description: |-
                               Method defines the HTTP method used for health checking.
@@ -18174,7 +18199,19 @@ spec:
                   HTTPUpgrade defines the configuration for HTTP protocol upgrades.
                   If not specified, the default upgrade configuration(websocket) will be used.
                 items:
+                  description: ProtocolUpgradeConfig specifies the configuration for
+                    protocol upgrades.
                   properties:
+                    connect:
+                      description: |-
+                        Connect specifies the configuration for the CONNECT config.
+                        This is allowed only when type is CONNECT.
+                      properties:
+                        terminate:
+                          description: Terminate the CONNECT request, and forwards
+                            the payload as raw TCP data.
+                          type: boolean
+                      type: object
                     type:
                       description: |-
                         Type is the case-insensitive type of protocol upgrade.
@@ -18183,6 +18220,10 @@ spec:
                   required:
                   - type
                   type: object
+                  x-kubernetes-validations:
+                  - message: The connect configuration is only allowed when the type
+                      is CONNECT.
+                    rule: '!has(self.connect) || self.type == ''CONNECT'''
                 type: array
               loadBalancer:
                 description: |-
@@ -18570,23 +18611,17 @@ spec:
                               - requests
                               - unit
                               type: object
-                            name:
+                            shared:
                               description: |-
-                                Name is the name of the rule. This is used to identify the rule
-                                in the Envoy configuration and as a unique identifier for merging.
-                              type: string
+                                Shared determines whether this rate limit rule applies across all the policy targets.
+                                If set to true, the rule is treated as a common bucket and is shared across all policy targets (xRoutes).
+                                Default: false.
+                              type: boolean
                           required:
                           - limit
                           type: object
                         maxItems: 64
                         type: array
-                      shared:
-                        default: false
-                        description: |-
-                          Shared determines whether the rate limit rules apply across all the policy targets.
-                          If set to true, the rule is treated as a common bucket and is shared across all policy targets (xRoutes).
-                          Default: false.
-                        type: boolean
                     required:
                     - rules
                     type: object
@@ -18825,11 +18860,12 @@ spec:
                               - requests
                               - unit
                               type: object
-                            name:
+                            shared:
                               description: |-
-                                Name is the name of the rule. This is used to identify the rule
-                                in the Envoy configuration and as a unique identifier for merging.
-                              type: string
+                                Shared determines whether this rate limit rule applies across all the policy targets.
+                                If set to true, the rule is treated as a common bucket and is shared across all policy targets (xRoutes).
+                                Default: false.
+                              type: boolean
                           required:
                           - limit
                           type: object
@@ -18944,11 +18980,127 @@ spec:
                       required:
                       - statusCodes
                       type: object
+                    redirect:
+                      description: Redirect configuration
+                      properties:
+                        hostname:
+                          description: |-
+                            Hostname is the hostname to be used in the value of the `Location`
+                            header in the response.
+                            When empty, the hostname in the `Host` header of the request is used.
+                          maxLength: 253
+                          minLength: 1
+                          pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                          type: string
+                        path:
+                          description: |-
+                            Path defines parameters used to modify the path of the incoming request.
+                            The modified path is then used to construct the `Location` header. When
+                            empty, the request path is used as-is.
+                            Only ReplaceFullPath path modifier is supported currently.
+                          properties:
+                            replaceFullPath:
+                              description: |-
+                                ReplaceFullPath specifies the value with which to replace the full path
+                                of a request during a rewrite or redirect.
+                              maxLength: 1024
+                              type: string
+                            replacePrefixMatch:
+                              description: |-
+                                ReplacePrefixMatch specifies the value with which to replace the prefix
+                                match of a request during a rewrite or redirect. For example, a request
+                                to "/foo/bar" with a prefix match of "/foo" and a ReplacePrefixMatch
+                                of "/xyz" would be modified to "/xyz/bar".
+
+                                Note that this matches the behavior of the PathPrefix match type. This
+                                matches full path elements. A path element refers to the list of labels
+                                in the path split by the `/` separator. When specified, a trailing `/` is
+                                ignored. For example, the paths `/abc`, `/abc/`, and `/abc/def` would all
+                                match the prefix `/abc`, but the path `/abcd` would not.
+
+                                ReplacePrefixMatch is only compatible with a `PathPrefix` HTTPRouteMatch.
+                                Using any other HTTPRouteMatch type on the same HTTPRouteRule will result in
+                                the implementation setting the Accepted Condition for the Route to `status: False`.
+
+                                Request Path | Prefix Match | Replace Prefix | Modified Path
+                              maxLength: 1024
+                              type: string
+                            type:
+                              description: |-
+                                Type defines the type of path modifier. Additional types may be
+                                added in a future release of the API.
+
+                                Note that values may be added to this enum, implementations
+                                must ensure that unknown values will not cause a crash.
+
+                                Unknown values here must result in the implementation setting the
+                                Accepted Condition for the Route to `status: False`, with a
+                                Reason of `UnsupportedValue`.
+                              enum:
+                              - ReplaceFullPath
+                              - ReplacePrefixMatch
+                              type: string
+                          required:
+                          - type
+                          type: object
+                          x-kubernetes-validations:
+                          - message: only ReplaceFullPath is supported for path.type
+                            rule: self.type == 'ReplaceFullPath'
+                          - message: replaceFullPath must be specified when type is
+                              set to 'ReplaceFullPath'
+                            rule: 'self.type == ''ReplaceFullPath'' ? has(self.replaceFullPath)
+                              : true'
+                          - message: type must be 'ReplaceFullPath' when replaceFullPath
+                              is set
+                            rule: 'has(self.replaceFullPath) ? self.type == ''ReplaceFullPath''
+                              : true'
+                          - message: replacePrefixMatch must be specified when type
+                              is set to 'ReplacePrefixMatch'
+                            rule: 'self.type == ''ReplacePrefixMatch'' ? has(self.replacePrefixMatch)
+                              : true'
+                          - message: type must be 'ReplacePrefixMatch' when replacePrefixMatch
+                              is set
+                            rule: 'has(self.replacePrefixMatch) ? self.type == ''ReplacePrefixMatch''
+                              : true'
+                        port:
+                          description: |-
+                            Port is the port to be used in the value of the `Location`
+                            header in the response.
+
+                            If redirect scheme is not-empty, the well-known port associated with the redirect scheme will be used.
+                            Specifically "http" to port 80 and "https" to port 443. If the redirect scheme does not have a
+                            well-known port or redirect scheme is empty, the listener port of the Gateway will be used.
+
+                            Port will not be added in the 'Location' header if scheme is HTTP and port is 80
+                            or scheme is HTTPS and port is 443.
+                          format: int32
+                          maximum: 65535
+                          minimum: 1
+                          type: integer
+                        scheme:
+                          description: |-
+                            Scheme is the scheme to be used in the value of the `Location` header in
+                            the response. When empty, the scheme of the request is used.
+                          enum:
+                          - http
+                          - https
+                          type: string
+                        statusCode:
+                          default: 302
+                          description: StatusCode is the HTTP status code to be used
+                            in response.
+                          enum:
+                          - 301
+                          - 302
+                          type: integer
+                      type: object
                     response:
                       description: Response configuration.
                       properties:
                         body:
-                          description: Body of the Custom Response
+                          description: |-
+                            Body of the Custom Response
+                            Supports Envoy command operators for dynamic content (see https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#command-operators).
                           properties:
                             inline:
                               description: Inline contains the value as an inline
@@ -19025,14 +19177,24 @@ spec:
                       type: object
                   required:
                   - match
-                  - response
                   type: object
+                  x-kubernetes-validations:
+                  - message: exactly one of response or redirect must be specified
+                    rule: (has(self.response) && !has(self.redirect)) || (!has(self.response)
+                      && has(self.redirect))
                 type: array
               retry:
                 description: |-
                   Retry provides more advanced usage, allowing users to customize the number of retries, retry fallback strategy, and retry triggering conditions.
                   If not set, retry will be disabled.
                 properties:
+                  numAttemptsPerPriority:
+                    description: |-
+                      NumAttemptsPerPriority defines the number of requests (initial attempt + retries)
+                      that should be sent to the same priority before switching to a different one.
+                      If not specified or set to 0, all requests are sent to the highest priority that is healthy.
+                    format: int32
+                    type: integer
                   numRetries:
                     default: 2
                     description: NumRetries is the number of retries to be attempted.
@@ -21429,6 +21591,14 @@ spec:
                                         minimum: 100
                                         type: integer
                                       type: array
+                                    hostname:
+                                      description: |-
+                                        Hostname defines the HTTP host that will be requested during health checking.
+                                        Default: HTTPRoute or GRPCRoute hostname.
+                                      maxLength: 253
+                                      minLength: 1
+                                      pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                                      type: string
                                     method:
                                       description: |-
                                         Method defines the HTTP method used for health checking.
@@ -21803,6 +21973,13 @@ spec:
                             Retry provides more advanced usage, allowing users to customize the number of retries, retry fallback strategy, and retry triggering conditions.
                             If not set, retry will be disabled.
                           properties:
+                            numAttemptsPerPriority:
+                              description: |-
+                                NumAttemptsPerPriority defines the number of requests (initial attempt + retries)
+                                that should be sent to the same priority before switching to a different one.
+                                If not specified or set to 0, all requests are sent to the highest priority that is healthy.
+                              format: int32
+                              type: integer
                             numRetries:
                               default: 2
                               description: NumRetries is the number of retries to
@@ -22011,6 +22188,7 @@ spec:
                               - Streamed
                               - Buffered
                               - BufferedPartial
+                              - FullDuplexStreamed
                               type: string
                           type: object
                         response:
@@ -22034,6 +22212,7 @@ spec:
                               - Streamed
                               - Buffered
                               - BufferedPartial
+                              - FullDuplexStreamed
                               type: string
                           type: object
                       type: object
@@ -22048,6 +22227,12 @@ spec:
                       group.
                     rule: 'has(self.backendRefs) ? (self.backendRefs.all(f, f.group
                       == "" || f.group == ''gateway.envoyproxy.io'')) : true'
+                  - message: If FullDuplexStreamed body processing mode is used, FailOpen
+                      must be false.
+                    rule: '!(has(self.failOpen) && self.failOpen == true && ((has(self.processingMode.request.body)
+                      && self.processingMode.request.body == ''FullDuplexStreamed'')
+                      || (has(self.processingMode.response.body) && self.processingMode.response.body
+                      == ''FullDuplexStreamed'')))'
                 maxItems: 16
                 type: array
               lua:
@@ -23656,6 +23841,11 @@ spec:
                   the number of cpuset threads on the platform.
                 format: int32
                 type: integer
+              disableLuaValidation:
+                default: false
+                description: DisableLuaValidation disables the Lua script validation
+                  for Lua EnvoyExtensionPolicies
+                type: boolean
               extraArgs:
                 description: |-
                   ExtraArgs defines additional command line options that are provided to Envoy.
@@ -23985,8 +24175,15 @@ spec:
                                   type: object
                                 type: array
                               image:
-                                description: Image specifies the EnvoyProxy container
-                                  image to be used, instead of the default image.
+                                description: |-
+                                  Image specifies the EnvoyProxy container image to be used including a tag, instead of the default image.
+                                  This field is mutually exclusive with ImageRepository.
+                                type: string
+                              imageRepository:
+                                description: |-
+                                  ImageRepository specifies the container image repository to be used without specifying a tag.
+                                  The default tag will be used.
+                                  This field is mutually exclusive with Image.
                                 type: string
                               resources:
                                 description: |-
@@ -24312,6 +24509,9 @@ spec:
                                   type: object
                                 type: array
                             type: object
+                            x-kubernetes-validations:
+                            - message: Either image or imageRepository can be set.
+                              rule: '!has(self.image) || !has(self.imageRepository)'
                           name:
                             description: |-
                               Name of the daemonSet.
@@ -27812,8 +28012,15 @@ spec:
                                   type: object
                                 type: array
                               image:
-                                description: Image specifies the EnvoyProxy container
-                                  image to be used, instead of the default image.
+                                description: |-
+                                  Image specifies the EnvoyProxy container image to be used including a tag, instead of the default image.
+                                  This field is mutually exclusive with ImageRepository.
+                                type: string
+                              imageRepository:
+                                description: |-
+                                  ImageRepository specifies the container image repository to be used without specifying a tag.
+                                  The default tag will be used.
+                                  This field is mutually exclusive with Image.
                                 type: string
                               resources:
                                 description: |-
@@ -28139,6 +28346,9 @@ spec:
                                   type: object
                                 type: array
                             type: object
+                            x-kubernetes-validations:
+                            - message: Either image or imageRepository can be set.
+                              rule: '!has(self.image) || !has(self.imageRepository)'
                           initContainers:
                             description: |-
                               List of initialization containers belonging to the pod.
@@ -33617,6 +33827,11 @@ spec:
                             x-kubernetes-validations:
                             - message: minReplicas must be greater than 0
                               rule: self > 0
+                          name:
+                            description: |-
+                              Name of the horizontalPodAutoScaler.
+                              When unset, this defaults to an autogenerated name.
+                            type: string
                           patch:
                             description: Patch defines how to perform the patch operation
                               to the HorizontalPodAutoscaler
@@ -33662,6 +33877,11 @@ spec:
                               such as node drains or updates. This setting ensures that your envoy proxy maintains a certain level of availability
                               and resilience during maintenance operations. Cannot be combined with maxUnavailable.
                             x-kubernetes-int-or-string: true
+                          name:
+                            description: |-
+                              Name of the podDisruptionBudget.
+                              When unset, this defaults to an autogenerated name.
+                            type: string
                           patch:
                             description: Patch defines how to perform the patch operation
                               to the PodDisruptionBudget
@@ -34301,6 +34521,14 @@ spec:
                                                           minimum: 100
                                                           type: integer
                                                         type: array
+                                                      hostname:
+                                                        description: |-
+                                                          Hostname defines the HTTP host that will be requested during health checking.
+                                                          Default: HTTPRoute or GRPCRoute hostname.
+                                                        maxLength: 253
+                                                        minLength: 1
+                                                        pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                                                        type: string
                                                       method:
                                                         description: |-
                                                           Method defines the HTTP method used for health checking.
@@ -34714,6 +34942,13 @@ spec:
                                               Retry provides more advanced usage, allowing users to customize the number of retries, retry fallback strategy, and retry triggering conditions.
                                               If not set, retry will be disabled.
                                             properties:
+                                              numAttemptsPerPriority:
+                                                description: |-
+                                                  NumAttemptsPerPriority defines the number of requests (initial attempt + retries)
+                                                  that should be sent to the same priority before switching to a different one.
+                                                  If not specified or set to 0, all requests are sent to the highest priority that is healthy.
+                                                format: int32
+                                                type: integer
                                               numRetries:
                                                 default: 2
                                                 description: NumRetries is the number
@@ -35320,6 +35555,14 @@ spec:
                                                           minimum: 100
                                                           type: integer
                                                         type: array
+                                                      hostname:
+                                                        description: |-
+                                                          Hostname defines the HTTP host that will be requested during health checking.
+                                                          Default: HTTPRoute or GRPCRoute hostname.
+                                                        maxLength: 253
+                                                        minLength: 1
+                                                        pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                                                        type: string
                                                       method:
                                                         description: |-
                                                           Method defines the HTTP method used for health checking.
@@ -35733,6 +35976,13 @@ spec:
                                               Retry provides more advanced usage, allowing users to customize the number of retries, retry fallback strategy, and retry triggering conditions.
                                               If not set, retry will be disabled.
                                             properties:
+                                              numAttemptsPerPriority:
+                                                description: |-
+                                                  NumAttemptsPerPriority defines the number of requests (initial attempt + retries)
+                                                  that should be sent to the same priority before switching to a different one.
+                                                  If not specified or set to 0, all requests are sent to the highest priority that is healthy.
+                                                format: int32
+                                                type: integer
                                               numRetries:
                                                 default: 2
                                                 description: NumRetries is the number
@@ -35964,6 +36214,21 @@ spec:
                     description: Metrics defines metrics configuration for managed
                       proxies.
                     properties:
+                      clusterStatName:
+                        description: |-
+                          ClusterStatName defines the value of cluster alt_stat_name, determining how cluster stats are named.
+                          For more details, see envoy docs: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/cluster/v3/cluster.proto.html
+                          The supported operators for this pattern are:
+                          %ROUTE_NAME%: name of Gateway API xRoute resource
+                          %ROUTE_NAMESPACE%: namespace of Gateway API xRoute resource
+                          %ROUTE_KIND%: kind of Gateway API xRoute resource
+                          %ROUTE_RULE_NAME%: name of the Gateway API xRoute section
+                          %ROUTE_RULE_NUMBER%: name of the Gateway API xRoute section
+                          %BACKEND_REFS%: names of all backends referenced in <NAMESPACE>/<NAME>|<NAMESPACE>/<NAME>|... format
+                          Only xDS Clusters created for HTTPRoute and GRPCRoute are currently supported.
+                          Default: %ROUTE_KIND%/%ROUTE_NAMESPACE%/%ROUTE_NAME%/rule/%ROUTE_RULE_NUMBER%
+                          Example: httproute/my-ns/my-route/rule/0
+                        type: string
                       enablePerEndpointStats:
                         description: |-
                           EnablePerEndpointStats enables per endpoint envoy stats metrics.
@@ -36428,6 +36693,14 @@ spec:
                                                     minimum: 100
                                                     type: integer
                                                   type: array
+                                                hostname:
+                                                  description: |-
+                                                    Hostname defines the HTTP host that will be requested during health checking.
+                                                    Default: HTTPRoute or GRPCRoute hostname.
+                                                  maxLength: 253
+                                                  minLength: 1
+                                                  pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                                                  type: string
                                                 method:
                                                   description: |-
                                                     Method defines the HTTP method used for health checking.
@@ -36820,6 +37093,13 @@ spec:
                                         Retry provides more advanced usage, allowing users to customize the number of retries, retry fallback strategy, and retry triggering conditions.
                                         If not set, retry will be disabled.
                                       properties:
+                                        numAttemptsPerPriority:
+                                          description: |-
+                                            NumAttemptsPerPriority defines the number of requests (initial attempt + retries)
+                                            that should be sent to the same priority before switching to a different one.
+                                            If not specified or set to 0, all requests are sent to the highest priority that is healthy.
+                                          format: int32
+                                          type: integer
                                         numRetries:
                                           default: 2
                                           description: NumRetries is the number of
@@ -37453,6 +37733,14 @@ spec:
                                               minimum: 100
                                               type: integer
                                             type: array
+                                          hostname:
+                                            description: |-
+                                              Hostname defines the HTTP host that will be requested during health checking.
+                                              Default: HTTPRoute or GRPCRoute hostname.
+                                            maxLength: 253
+                                            minLength: 1
+                                            pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                                            type: string
                                           method:
                                             description: |-
                                               Method defines the HTTP method used for health checking.
@@ -37843,6 +38131,13 @@ spec:
                                   Retry provides more advanced usage, allowing users to customize the number of retries, retry fallback strategy, and retry triggering conditions.
                                   If not set, retry will be disabled.
                                 properties:
+                                  numAttemptsPerPriority:
+                                    description: |-
+                                      NumAttemptsPerPriority defines the number of requests (initial attempt + retries)
+                                      that should be sent to the same priority before switching to a different one.
+                                      If not specified or set to 0, all requests are sent to the highest priority that is healthy.
+                                    format: int32
+                                    type: integer
                                   numRetries:
                                     default: 2
                                     description: NumRetries is the number of retries
@@ -39299,6 +39594,14 @@ spec:
                                           minimum: 100
                                           type: integer
                                         type: array
+                                      hostname:
+                                        description: |-
+                                          Hostname defines the HTTP host that will be requested during health checking.
+                                          Default: HTTPRoute or GRPCRoute hostname.
+                                        maxLength: 253
+                                        minLength: 1
+                                        pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                                        type: string
                                       method:
                                         description: |-
                                           Method defines the HTTP method used for health checking.
@@ -39679,6 +39982,13 @@ spec:
                               Retry provides more advanced usage, allowing users to customize the number of retries, retry fallback strategy, and retry triggering conditions.
                               If not set, retry will be disabled.
                             properties:
+                              numAttemptsPerPriority:
+                                description: |-
+                                  NumAttemptsPerPriority defines the number of requests (initial attempt + retries)
+                                  that should be sent to the same priority before switching to a different one.
+                                  If not specified or set to 0, all requests are sent to the highest priority that is healthy.
+                                format: int32
+                                type: integer
                               numRetries:
                                 default: 2
                                 description: NumRetries is the number of retries to
@@ -40216,6 +40526,14 @@ spec:
                                           minimum: 100
                                           type: integer
                                         type: array
+                                      hostname:
+                                        description: |-
+                                          Hostname defines the HTTP host that will be requested during health checking.
+                                          Default: HTTPRoute or GRPCRoute hostname.
+                                        maxLength: 253
+                                        minLength: 1
+                                        pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                                        type: string
                                       method:
                                         description: |-
                                           Method defines the HTTP method used for health checking.
@@ -40596,6 +40914,13 @@ spec:
                               Retry provides more advanced usage, allowing users to customize the number of retries, retry fallback strategy, and retry triggering conditions.
                               If not set, retry will be disabled.
                             properties:
+                              numAttemptsPerPriority:
+                                description: |-
+                                  NumAttemptsPerPriority defines the number of requests (initial attempt + retries)
+                                  that should be sent to the same priority before switching to a different one.
+                                  If not specified or set to 0, all requests are sent to the highest priority that is healthy.
+                                format: int32
+                                type: integer
                               numRetries:
                                 default: 2
                                 description: NumRetries is the number of retries to
@@ -41328,6 +41653,14 @@ spec:
                                                 minimum: 100
                                                 type: integer
                                               type: array
+                                            hostname:
+                                              description: |-
+                                                Hostname defines the HTTP host that will be requested during health checking.
+                                                Default: HTTPRoute or GRPCRoute hostname.
+                                              maxLength: 253
+                                              minLength: 1
+                                              pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                                              type: string
                                             method:
                                               description: |-
                                                 Method defines the HTTP method used for health checking.
@@ -41719,6 +42052,13 @@ spec:
                                     Retry provides more advanced usage, allowing users to customize the number of retries, retry fallback strategy, and retry triggering conditions.
                                     If not set, retry will be disabled.
                                   properties:
+                                    numAttemptsPerPriority:
+                                      description: |-
+                                        NumAttemptsPerPriority defines the number of requests (initial attempt + retries)
+                                        that should be sent to the same priority before switching to a different one.
+                                        If not specified or set to 0, all requests are sent to the highest priority that is healthy.
+                                      format: int32
+                                      type: integer
                                     numRetries:
                                       default: 2
                                       description: NumRetries is the number of retries
@@ -41952,6 +42292,20 @@ spec:
                     required:
                     - name
                     type: object
+                  cookieConfig:
+                    description: |-
+                      CookieConfigs allows overriding the SameSite attribute for OIDC cookies.
+                      If a specific cookie is not configured, it will use the "Strict" SameSite policy by default.
+                    properties:
+                      sameSite:
+                        default: Strict
+                        enum:
+                        - Lax
+                        - Strict
+                        - None
+                        - Disabled
+                        type: string
+                    type: object
                   cookieDomain:
                     description: |-
                       The optional domain to set the access and ID token cookies on.
@@ -41999,6 +42353,48 @@ spec:
                       the authorization response must be set by the authorization server, or the
                       OAuth flow will fail.
                     type: string
+                  denyRedirect:
+                    description: |-
+                      Any request that matches any of the provided matchers (with either tokens that are expired or missing tokens) will not be redirected to the OIDC Provider.
+                      This behavior can be useful for AJAX or machine requests.
+                    properties:
+                      headers:
+                        description: Defines the headers to match against the request
+                          to deny redirect to the OIDC Provider.
+                        items:
+                          description: OIDCDenyRedirectHeader defines how a header
+                            is matched
+                          properties:
+                            name:
+                              description: Specifies the name of the header in the
+                                request.
+                              minLength: 1
+                              type: string
+                            type:
+                              default: Exact
+                              description: Type specifies how to match against a string.
+                              enum:
+                              - Exact
+                              - Prefix
+                              - Suffix
+                              - RegularExpression
+                              type: string
+                            value:
+                              description: Value specifies the string value that the
+                                match must have.
+                              maxLength: 1024
+                              minLength: 1
+                              type: string
+                          required:
+                          - name
+                          - value
+                          type: object
+                        maxItems: 16
+                        minItems: 1
+                        type: array
+                    required:
+                    - headers
+                    type: object
                   forwardAccessToken:
                     description: |-
                       ForwardAccessToken indicates whether the Envoy should forward the access token
@@ -42011,6 +42407,16 @@ spec:
 
                       If not specified, uses a default logout path "/logout"
                     type: string
+                  passThroughAuthHeader:
+                    description: |-
+                      Skips OIDC authentication when the request contains a header that will be extracted by the JWT filter. Unless
+                      explicitly stated otherwise in the extractFrom field, this will be the "Authorization: Bearer ..." header.
+
+                      The passThroughAuthHeader option is typically used for non-browser clients that may not be able to handle OIDC
+                      redirects and wish to directly supply a token instead.
+
+                      If not specified, defaults to false.
+                    type: boolean
                   provider:
                     description: The OIDC Provider configuration.
                     properties:
@@ -42385,6 +42791,14 @@ spec:
                                           minimum: 100
                                           type: integer
                                         type: array
+                                      hostname:
+                                        description: |-
+                                          Hostname defines the HTTP host that will be requested during health checking.
+                                          Default: HTTPRoute or GRPCRoute hostname.
+                                        maxLength: 253
+                                        minLength: 1
+                                        pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                                        type: string
                                       method:
                                         description: |-
                                           Method defines the HTTP method used for health checking.
@@ -42765,6 +43179,13 @@ spec:
                               Retry provides more advanced usage, allowing users to customize the number of retries, retry fallback strategy, and retry triggering conditions.
                               If not set, retry will be disabled.
                             properties:
+                              numAttemptsPerPriority:
+                                description: |-
+                                  NumAttemptsPerPriority defines the number of requests (initial attempt + retries)
+                                  that should be sent to the same priority before switching to a different one.
+                                  If not specified or set to 0, all requests are sent to the highest priority that is healthy.
+                                format: int32
+                                type: integer
                               numRetries:
                                 default: 2
                                 description: NumRetries is the number of retries to
@@ -43143,17 +43564,18 @@ spec:
             - message: this policy can only have a targetRef.kind of Gateway/HTTPRoute/GRPCRoute
               rule: 'has(self.targetRef) ? self.targetRef.kind in [''Gateway'', ''HTTPRoute'',
                 ''GRPCRoute''] : true'
-            - message: this policy does not yet support the sectionName field
-              rule: 'has(self.targetRef) ? !has(self.targetRef.sectionName) : true'
+            - message: this policy supports the sectionName field only for kind Gateway
+              rule: 'has(self.targetRef) ? self.targetRef.kind == ''Gateway'' || !has(self.targetRef.sectionName)
+                : true'
             - message: this policy can only have a targetRefs[*].group of gateway.networking.k8s.io
               rule: 'has(self.targetRefs) ? self.targetRefs.all(ref, ref.group ==
                 ''gateway.networking.k8s.io'') : true '
             - message: this policy can only have a targetRefs[*].kind of Gateway/HTTPRoute/GRPCRoute
               rule: 'has(self.targetRefs) ? self.targetRefs.all(ref, ref.kind in [''Gateway'',
                 ''HTTPRoute'', ''GRPCRoute'']) : true '
-            - message: this policy does not yet support the sectionName field
-              rule: 'has(self.targetRefs) ? self.targetRefs.all(ref, !has(ref.sectionName))
-                : true'
+            - message: this policy supports the sectionName field only for kind Gateway
+              rule: 'has(self.targetRefs) ? self.targetRefs.all(ref, ref.kind == ''Gateway''
+                || !has(ref.sectionName)) : true'
             - message: if authorization.rules.principal.jwt is used, jwt must be defined
               rule: '(has(self.authorization) && has(self.authorization.rules) &&
                 self.authorization.rules.exists(r, has(r.principal.jwt))) ? has(self.jwt)
@@ -43462,7 +43884,7 @@ spec:
     subresources:
       status: {}
 ---
-# Source: gateway-crds-helm/templates/gatewayapi-crds.yaml
+# Source: gateway-crds-helm/templates/experimental-gatewayapi-crds.yaml
 # Copyright 2025 The Kubernetes Authors.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");

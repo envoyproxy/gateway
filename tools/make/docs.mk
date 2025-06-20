@@ -4,7 +4,7 @@ RELEASE_VERSIONS ?= $(foreach v,$(wildcard ${ROOT_DIR}/docs/*),$(notdir ${v}))
 #       find a way to remove github.com from ignore list
 # TODO: example.com is not a valid domain, we should remove it from ignore list
 # TODO: https://www.gnu.org/software/make became unstable, we should remove it from ignore list later
-LINKINATOR_IGNORE := "github.com jwt.io githubusercontent.com example.com github.io gnu.org _print canva.com sched.co sap.com httpbin.org nemlig.com"
+LINKINATOR_IGNORE := "opentelemetry.io github.com jwt.io githubusercontent.com example.com github.io gnu.org _print canva.com sched.co sap.com httpbin.org nemlig.com"
 CLEAN_NODE_MODULES ?= true
 
 ##@ Docs
@@ -75,7 +75,7 @@ gwapi-doc-download:
 # Transform the first line of each markdown file to a header format suitable for Hugo.
 gwapi-doc-transform:
 	@$(LOG_TARGET)
-	@$(foreach file, $(SYNC_FILES), sed -i '' '1s/^# \(.*\)/+++\ntitle = "\1"\n+++/' $(DOC_DEST_DIR)/$(file);)
+	@$(foreach file, $(SYNC_FILES), sed -i '1s/^# \(.*\)/+++\ntitle = "\1"\n+++/' $(DOC_DEST_DIR)/$(file);)
 
 # Download included YAML files referenced within the documentation.
 gwapi-doc-download-includes:
@@ -109,12 +109,14 @@ gwapi-doc-clean-includes:
 gwapi-doc-remove-special-lines:
 	@$(LOG_TARGET)
 	@$(foreach file, $(SYNC_FILES), \
-		sed -i '' '/^[\?!]\{3\}/d' $(DOC_DEST_DIR)/$(file);)
+		sed -i '/^[\?!]\{3\}/d' $(DOC_DEST_DIR)/$(file);)
 
 # Update relative links
 gwapi-doc-update-relative-links:
 	@$(foreach file, $(SYNC_FILES), \
-		sed -i '' -e 's/\(\.*\]\)(\(\/[^:]*\))/\1(https:\/\/gateway-api.sigs.k8s.io\2)/g' -e 's/\(\[.*\]: \)\(\/[^:]*\)/\1https:\/\/gateway-api.sigs.k8s.io\2/g' $(DOC_DEST_DIR)/$(file);)
+		sed -i -e 's/\(\.*\]\)(\(\.\.\/[^:]*\))/\1(https:\/\/gateway-api.sigs.k8s.io\2)/g' -e 's/\(\[.*\]: \)\(\/[^:]*\)/\1https:\/\/gateway-api.sigs.k8s.io\2/g' -e 's/\(\[.*\]: \)\(\.\.\/[^:]*\)/\1https:\/\/gateway-api.sigs.k8s.io\2/g' $(DOC_DEST_DIR)/$(file);)
+	@$(foreach file, $(SYNC_FILES), \
+		sed -i -e 's/https:\/\/gateway-api.sigs.k8s.io\.\./https:\/\/gateway-api.sigs.k8s.io/g' $(DOC_DEST_DIR)/$(file);)
 
 .PHONY: helm-readme-gen
 helm-readme-gen:
@@ -168,10 +170,6 @@ docs-release-gen:
 	$(eval DOC_VERSION := $(shell cat VERSION | cut -d "." -f 1,2))
 	@$(call log, "Added Release Doc: site/content/en/$(DOC_VERSION)")
 	cp -r site/content/en/latest/ site/content/en/$(DOC_VERSION)/
-	@echo "" >> site/hugo.toml
-	@echo '[[params.versions]]' >> site/hugo.toml
-	@echo '  version = "$(DOC_VERSION)"' >> site/hugo.toml
-	@echo '  url = "/$(DOC_VERSION)"' >> site/hugo.toml
 
 .PHONY: docs-check-links
 docs-check-links: # Check for broken links in the docs

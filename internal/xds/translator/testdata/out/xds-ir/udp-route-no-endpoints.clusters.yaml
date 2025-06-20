@@ -1,0 +1,24 @@
+- circuitBreakers:
+    thresholds:
+    - maxRetries: 1024
+  commonLbConfig:
+    localityWeightedLbConfig: {}
+  connectTimeout: 10s
+  dnsLookupFamily: V4_PREFERRED
+  edsClusterConfig:
+    edsConfig:
+      ads: {}
+      resourceApiVersion: V3
+    serviceName: udproute/default/udproute-1/rule/-1
+  ignoreHealthOnHostRemoval: true
+  lbPolicy: LEAST_REQUEST
+  metadata:
+    filterMetadata:
+      envoy-gateway:
+        resources:
+        - kind: UDPRoute
+          name: udproute-1
+          namespace: default
+  name: udproute/default/udproute-1/rule/-1
+  perConnectionBufferLimitBytes: 32768
+  type: EDS

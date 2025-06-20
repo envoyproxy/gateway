@@ -9,7 +9,7 @@ import (
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 )
 
-// +kubebuilder:validation:Enum=Streamed;Buffered;BufferedPartial
+// +kubebuilder:validation:Enum=Streamed;Buffered;BufferedPartial;FullDuplexStreamed
 type ExtProcBodyProcessingMode string
 
 const (
@@ -17,7 +17,8 @@ const (
 	StreamedExtProcBodyProcessingMode ExtProcBodyProcessingMode = "Streamed"
 	// BufferedExtProcBodyProcessingMode will buffer the message body in memory and send the entire body at once. If the body exceeds the configured buffer limit, then the downstream system will receive an error.
 	BufferedExtProcBodyProcessingMode ExtProcBodyProcessingMode = "Buffered"
-	// FullDuplexStreamedExtBodyProcessingMode will send the body in pieces, to be read in a stream. Full details here: https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/http/ext_proc/v3/processing_mode.proto.html#enum-extensions-filters-http-ext-proc-v3-processingmode-bodysendmode
+	// FullDuplexStreamedExtBodyProcessingMode will send the body in pieces, to be read in a stream. When enabled, trailers are also sent, and failOpen must be false.
+	// Full details here: https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/http/ext_proc/v3/processing_mode.proto.html#enum-extensions-filters-http-ext-proc-v3-processingmode-bodysendmode
 	FullDuplexStreamedExtBodyProcessingMode ExtProcBodyProcessingMode = "FullDuplexStreamed"
 	// BufferedPartialExtBodyHeaderProcessingMode will buffer the message body in memory and send the entire body in one chunk. If the body exceeds the configured buffer limit, then the body contents up to the buffer limit will be sent.
 	BufferedPartialExtBodyHeaderProcessingMode ExtProcBodyProcessingMode = "BufferedPartial"
@@ -67,6 +68,7 @@ type ExtProcProcessingMode struct {
 // +kubebuilder:validation:XValidation:message="BackendRefs must be used, backendRef is not supported.",rule="!has(self.backendRef)"
 // +kubebuilder:validation:XValidation:message="BackendRefs only supports Service and Backend kind.",rule="has(self.backendRefs) ? self.backendRefs.all(f, f.kind == 'Service' || f.kind == 'Backend') : true"
 // +kubebuilder:validation:XValidation:message="BackendRefs only supports Core and gateway.envoyproxy.io group.",rule="has(self.backendRefs) ? (self.backendRefs.all(f, f.group == \"\" || f.group == 'gateway.envoyproxy.io')) : true"
+// +kubebuilder:validation:XValidation:message="If FullDuplexStreamed body processing mode is used, FailOpen must be false.",rule="!(has(self.failOpen) && self.failOpen == true && ((has(self.processingMode.request.body) && self.processingMode.request.body == 'FullDuplexStreamed') || (has(self.processingMode.response.body) && self.processingMode.response.body == 'FullDuplexStreamed')))"
 type ExtProc struct {
 	BackendCluster `json:",inline"`
 

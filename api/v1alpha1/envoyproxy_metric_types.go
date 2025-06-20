@@ -41,6 +41,22 @@ type ProxyMetrics struct {
 	//
 	// +optional
 	EnableRequestResponseSizesStats *bool `json:"enableRequestResponseSizesStats,omitempty"`
+
+	// ClusterStatName defines the value of cluster alt_stat_name, determining how cluster stats are named.
+	// For more details, see envoy docs: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/cluster/v3/cluster.proto.html
+	// The supported operators for this pattern are:
+	// %ROUTE_NAME%: name of Gateway API xRoute resource
+	// %ROUTE_NAMESPACE%: namespace of Gateway API xRoute resource
+	// %ROUTE_KIND%: kind of Gateway API xRoute resource
+	// %ROUTE_RULE_NAME%: name of the Gateway API xRoute section
+	// %ROUTE_RULE_NUMBER%: name of the Gateway API xRoute section
+	// %BACKEND_REFS%: names of all backends referenced in <NAMESPACE>/<NAME>|<NAMESPACE>/<NAME>|... format
+	// Only xDS Clusters created for HTTPRoute and GRPCRoute are currently supported.
+	// Default: %ROUTE_KIND%/%ROUTE_NAMESPACE%/%ROUTE_NAME%/rule/%ROUTE_RULE_NUMBER%
+	// Example: httproute/my-ns/my-route/rule/0
+	//
+	// +optional
+	ClusterStatName *string `json:"clusterStatName,omitempty"`
 }
 
 // ProxyMetricSink defines the sink of metrics.

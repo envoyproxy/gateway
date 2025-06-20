@@ -101,7 +101,7 @@ func (r *requestBuffer) patchResources(tCtx *types.ResourceVersionTable, routes 
 }
 
 // patchRoute will add a BufferPerRoute filter for a particular route
-func (r *requestBuffer) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute) error {
+func (r *requestBuffer) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute, _ *ir.HTTPListener) error {
 	if !routeContainsRequestBuffer(irRoute) {
 		return nil
 	}

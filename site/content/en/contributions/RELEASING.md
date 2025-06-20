@@ -150,7 +150,16 @@ export GITHUB_REMOTE=origin
       {{- "v1.2.0" -}}
       {{- end -}}
       ```
-      
+
+   1. Update `site/hugo.toml`, add the new version to the `params.versions` section.
+
+      ```console
+      [[params.versions]]
+        version = "v1.3"
+        url = "/v1.3"
+        eol = "2025-07-30"
+      ```
+
    1. Update `site/hugo.toml`, change the version to current major version.
 
       ```console
@@ -158,7 +167,7 @@ export GITHUB_REMOTE=origin
       # Used in the "version-banner" partial to display a version number for the
       # current doc set.
       version = "v1.3"
-      ```  
+      ```
 
 3. Sign, commit, and push your changes to your fork.
 4. Submit a [Pull Request][] to merge the changes into the `main` branch. Do not proceed until all your PRs have merged
@@ -173,7 +182,7 @@ export GITHUB_REMOTE=origin
 6. If the tip of the release branch does not match the tip of `main`, perform the following:
 
    1. Create a topic branch from the release branch.
-   2. Cherry-pick the commits from `main` that differ from the release branch.
+   2. Cherry-pick the commits from `main` that differ from the release branch, e.g. `git cherry-pick <present commit in rc>..<latest commit on main> -s`
    3. Run tests locally, e.g. `make lint`.
    4. Sign, commit, and push your topic branch to your Envoy Gateway fork.
    5. Submit a PR to merge the topic from of your fork into the Envoy Gateway release branch.
@@ -232,7 +241,7 @@ It's important that the world knows about the release. Use the following steps t
    Envoy Gateway v${MAJOR_VERSION}.${MINOR_VERSION} has been released: https://github.com/envoyproxy/gateway/releases/tag/v${MAJOR_VERSION}.${MINOR_VERSION}.0
    ```
 
-2. Send a message to the Envoy Gateway Slack channel. For example:
+2. Send a message to the Envoy Gateway Slack channel and the [Google Group](https://groups.google.com/g/envoy-gateway-announce). For example:
 
    ```shell
    On behalf of the entire Envoy Gateway community, I am pleased to announce the release of Envoy Gateway

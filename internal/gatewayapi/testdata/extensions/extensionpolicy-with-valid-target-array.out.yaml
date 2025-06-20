@@ -135,6 +135,9 @@ infraIR:
         labels:
           gateway.envoyproxy.io/owning-gateway-name: gateway-1
           gateway.envoyproxy.io/owning-gateway-namespace: envoy-gateway
+        ownerReference:
+          kind: GatewayClass
+          name: envoy-gateway-class
       name: envoy-gateway/gateway-1
       namespace: ""
   envoy-gateway/gateway-2:
@@ -151,6 +154,9 @@ infraIR:
         labels:
           gateway.envoyproxy.io/owning-gateway-name: gateway-2
           gateway.envoyproxy.io/owning-gateway-namespace: envoy-gateway
+        ownerReference:
+          kind: GatewayClass
+          name: envoy-gateway-class
       name: envoy-gateway/gateway-2
       namespace: ""
 xdsIR:
@@ -158,6 +164,22 @@ xdsIR:
     accessLog:
       json:
       - path: /dev/stdout
+    extensionServerPolicies:
+    - object:
+        apiVersion: foo.example.io/v1alpha1
+        kind: Bar
+        metadata:
+          name: test2
+          namespace: envoy-gateway
+        spec:
+          data: attached to multiple gateways
+          targetRefs:
+          - group: gateway.networking.k8s.io
+            kind: Gateway
+            name: gateway-2
+          - group: gateway.networking.k8s.io
+            kind: Gateway
+            name: gateway-1
     http:
     - address: 0.0.0.0
       extensionRefs:
@@ -224,6 +246,22 @@ xdsIR:
     accessLog:
       json:
       - path: /dev/stdout
+    extensionServerPolicies:
+    - object:
+        apiVersion: foo.example.io/v1alpha1
+        kind: Bar
+        metadata:
+          name: test2
+          namespace: envoy-gateway
+        spec:
+          data: attached to multiple gateways
+          targetRefs:
+          - group: gateway.networking.k8s.io
+            kind: Gateway
+            name: gateway-2
+          - group: gateway.networking.k8s.io
+            kind: Gateway
+            name: gateway-1
     http:
     - address: 0.0.0.0
       extensionRefs:

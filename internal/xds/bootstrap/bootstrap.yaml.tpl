@@ -12,7 +12,7 @@ cluster_manager:
   local_cluster_name: local_cluster
 node:
   locality:
-    zone: "$(ENVOY_SERVICE_ZONE)"
+    zone: $(ENVOY_SERVICE_ZONE)
 {{- if .StatsMatcher  }}
 stats_config:
   stats_matcher:
@@ -186,7 +186,7 @@ static_resources:
           load_balancing_weight: 1
         load_balancing_weight: 1
         locality:
-          zone: "$(ENVOY_SERVICE_ZONE)"
+          zone: $(ENVOY_SERVICE_ZONE)
     name: local_cluster
     type: STATIC
   - connect_timeout: 10s
@@ -248,68 +248,12 @@ static_resources:
               path_config_source:
                 path: {{ .SdsTrustedCAPath }}
               resource_api_version: V3
-  - name: wasm_cluster
-    type: STRICT_DNS
-    connect_timeout: 10s
-    load_assignment:
-      cluster_name: wasm_cluster
-      endpoints:
-      - load_balancing_weight: 1
-        lb_endpoints:
-        - load_balancing_weight: 1
-          endpoint:
-            address:
-              socket_address:
-                address: {{ .WasmServer.Address }}
-                port_value: {{ .WasmServer.Port }}
-    typed_extension_protocol_options:
-      envoy.extensions.upstreams.http.v3.HttpProtocolOptions:
-        "@type": "type.googleapis.com/envoy.extensions.upstreams.http.v3.HttpProtocolOptions"
-        explicit_http_config:
-          http2_protocol_options: {}
-  {{- if .GatewayNamespaceMode }}
-        http_filters:
-        - name: envoy.filters.http.credential_injector
-          typed_config:
-            "@type": type.googleapis.com/envoy.extensions.filters.http.credential_injector.v3.CredentialInjector
-            credential:
-              name: envoy.http.injected_credentials.generic
-              typed_config:
-                "@type": type.googleapis.com/envoy.extensions.http.injected_credentials.generic.v3.Generic
-                credential:
-                  name: jwt-sa-bearer
-            overwrite: true
-        - name: envoy.extensions.filters.http.upstream_codec.v3.UpstreamCodec
-          typed_config:
-            "@type": type.googleapis.com/envoy.extensions.filters.http.upstream_codec.v3.UpstreamCodec
-  {{- end }}
-    transport_socket:
-      name: envoy.transport_sockets.tls
-      typed_config:
-        "@type": type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.UpstreamTlsContext
-        common_tls_context:
-          tls_params:
-            tls_maximum_protocol_version: TLSv1_3
-  {{- if not .GatewayNamespaceMode }}
-          tls_certificate_sds_secret_configs:
-          - name: xds_certificate
-            sds_config:
-              path_config_source:
-                path: {{ .SdsCertificatePath }}
-              resource_api_version: V3
-  {{- end }}
-          validation_context_sds_secret_config:
-            name: xds_trusted_ca
-            sds_config:
-              path_config_source:
-                path: {{ .SdsTrustedCAPath }}
-              resource_api_version: V3
   {{- if .GatewayNamespaceMode }}
   secrets:
   - name: jwt-sa-bearer
     generic_secret:
       secret:
-        filename: "/var/run/secrets/kubernetes.io/serviceaccount/token"
+        filename: "/var/run/secrets/token/sa-token"
   {{- end }}
 overload_manager:
   refresh_interval: 0.25s

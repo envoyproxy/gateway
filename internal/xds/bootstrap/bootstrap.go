@@ -38,10 +38,6 @@ const (
 	// DefaultXdsServerPort is the default listening port of the xds-server.
 	DefaultXdsServerPort = 18000
 
-	wasmServerHost = envoyGatewayXdsServerHost
-	// DefaultWasmServerPort is the default listening port of the wasm HTTP server.
-	wasmServerPort = 18002
-
 	EnvoyStatsPort = 19001
 
 	EnvoyReadinessPort = 19003
@@ -68,8 +64,6 @@ type bootstrapConfig struct {
 type bootstrapParameters struct {
 	// XdsServer defines the configuration of the XDS server.
 	XdsServer serverParameters
-	// WasmServer defines the configuration of the Wasm HTTP server.
-	WasmServer serverParameters
 	// AdminServer defines the configuration of the Envoy admin interface.
 	AdminServer adminServerParameters
 	// StatsServer defines the configuration for stats listener
@@ -98,7 +92,8 @@ type bootstrapParameters struct {
 	OverloadManager overloadManagerParameters
 
 	// IPFamily of the Listener
-	IPFamily             string
+	IPFamily string
+	// GatewayNamespaceMode defines whether to use the Envoy Gateway namespace mode.
 	GatewayNamespaceMode bool
 }
 
@@ -142,7 +137,6 @@ type RenderBootstrapConfigOptions struct {
 	SdsConfig            SdsConfigPath
 	XdsServerHost        *string
 	XdsServerPort        *int32
-	WasmServerPort       *int32
 	AdminServerPort      *int32
 	StatsServerPort      *int32
 	MaxHeapSizeBytes     uint64
@@ -245,10 +239,6 @@ func GetRenderedBootstrapConfig(opts *RenderBootstrapConfigOptions) (string, err
 				Address: envoyGatewayXdsServerHost,
 				Port:    DefaultXdsServerPort,
 			},
-			WasmServer: serverParameters{
-				Address: wasmServerHost,
-				Port:    wasmServerPort,
-			},
 			AdminServer: adminServerParameters{
 				Address:       EnvoyAdminAddress,
 				Port:          EnvoyAdminPort,
@@ -294,9 +284,6 @@ func GetRenderedBootstrapConfig(opts *RenderBootstrapConfigOptions) (string, err
 		}
 		if opts.StatsServerPort != nil {
 			cfg.parameters.StatsServer.Port = *opts.StatsServerPort
-		}
-		if opts.WasmServerPort != nil {
-			cfg.parameters.WasmServer.Port = *opts.WasmServerPort
 		}
 
 		if opts.IPFamily != nil {

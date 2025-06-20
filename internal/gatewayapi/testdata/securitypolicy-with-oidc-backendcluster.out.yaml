@@ -144,6 +144,9 @@ infraIR:
         labels:
           gateway.envoyproxy.io/owning-gateway-name: gateway-1
           gateway.envoyproxy.io/owning-gateway-namespace: envoy-gateway
+        ownerReference:
+          kind: GatewayClass
+          name: envoy-gateway-class
       name: envoy-gateway/gateway-1
       namespace: envoy-gateway-system
 securityPolicies:
@@ -228,12 +231,20 @@ xdsIR:
       port: 10080
       routes:
       - destination:
+          metadata:
+            kind: HTTPRoute
+            name: httproute-1
+            namespace: default
           name: httproute/default/httproute-1/rule/0
           settings:
           - addressType: IP
             endpoints:
             - host: 7.7.7.7
               port: 8080
+            metadata:
+              name: service-1
+              namespace: default
+              sectionName: "8080"
             name: httproute/default/httproute-1/rule/0/backend/0
             protocol: HTTP
             weight: 1
@@ -262,12 +273,20 @@ xdsIR:
             provider:
               authorizationEndpoint: https://oauth.foo.com/oauth2/v2/auth
               destination:
+                metadata:
+                  kind: SecurityPolicy
+                  name: policy-for-gateway
+                  namespace: envoy-gateway
                 name: securitypolicy/envoy-gateway/policy-for-gateway/oidc/0
                 settings:
                 - addressType: FQDN
                   endpoints:
                   - host: oauth.foo.com
                     port: 443
+                  metadata:
+                    kind: Backend
+                    name: backend-fqdn
+                    namespace: envoy-gateway
                   name: securitypolicy/envoy-gateway/policy-for-gateway/oidc/0/backend/0
                   protocol: HTTPS
                   tls:

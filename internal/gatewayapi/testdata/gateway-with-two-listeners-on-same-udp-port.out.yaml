@@ -79,6 +79,9 @@ infraIR:
         labels:
           gateway.envoyproxy.io/owning-gateway-name: gateway-1
           gateway.envoyproxy.io/owning-gateway-namespace: envoy-gateway
+        ownerReference:
+          kind: GatewayClass
+          name: envoy-gateway-class
       name: envoy-gateway/gateway-1
       namespace: envoy-gateway-system
 udpRoutes:
@@ -129,12 +132,20 @@ xdsIR:
       port: 10162
       route:
         destination:
+          metadata:
+            kind: UDPRoute
+            name: udproute-1
+            namespace: default
           name: udproute/default/udproute-1/rule/-1
           settings:
           - addressType: IP
             endpoints:
             - host: 7.7.7.7
               port: 8162
+            metadata:
+              name: service-1
+              namespace: default
+              sectionName: "8162"
             name: udproute/default/udproute-1/rule/-1/backend/0
             protocol: UDP
             weight: 1

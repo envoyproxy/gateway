@@ -421,6 +421,14 @@ spec:
                                         minimum: 100
                                         type: integer
                                       type: array
+                                    hostname:
+                                      description: |-
+                                        Hostname defines the HTTP host that will be requested during health checking.
+                                        Default: HTTPRoute or GRPCRoute hostname.
+                                      maxLength: 253
+                                      minLength: 1
+                                      pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                                      type: string
                                     method:
                                       description: |-
                                         Method defines the HTTP method used for health checking.
@@ -795,6 +803,13 @@ spec:
                             Retry provides more advanced usage, allowing users to customize the number of retries, retry fallback strategy, and retry triggering conditions.
                             If not set, retry will be disabled.
                           properties:
+                            numAttemptsPerPriority:
+                              description: |-
+                                NumAttemptsPerPriority defines the number of requests (initial attempt + retries)
+                                that should be sent to the same priority before switching to a different one.
+                                If not specified or set to 0, all requests are sent to the highest priority that is healthy.
+                              format: int32
+                              type: integer
                             numRetries:
                               default: 2
                               description: NumRetries is the number of retries to
@@ -1003,6 +1018,7 @@ spec:
                               - Streamed
                               - Buffered
                               - BufferedPartial
+                              - FullDuplexStreamed
                               type: string
                           type: object
                         response:
@@ -1026,6 +1042,7 @@ spec:
                               - Streamed
                               - Buffered
                               - BufferedPartial
+                              - FullDuplexStreamed
                               type: string
                           type: object
                       type: object
@@ -1040,6 +1057,12 @@ spec:
                       group.
                     rule: 'has(self.backendRefs) ? (self.backendRefs.all(f, f.group
                       == "" || f.group == ''gateway.envoyproxy.io'')) : true'
+                  - message: If FullDuplexStreamed body processing mode is used, FailOpen
+                      must be false.
+                    rule: '!(has(self.failOpen) && self.failOpen == true && ((has(self.processingMode.request.body)
+                      && self.processingMode.request.body == ''FullDuplexStreamed'')
+                      || (has(self.processingMode.response.body) && self.processingMode.response.body
+                      == ''FullDuplexStreamed'')))'
                 maxItems: 16
                 type: array
               lua:

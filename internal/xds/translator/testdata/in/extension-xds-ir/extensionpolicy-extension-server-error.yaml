@@ -1,0 +1,13 @@
+extensionServerPolicies:
+- Object:
+    apiVersion: security.example.io/v1alpha1
+    kind: ExampleExtPolicy
+    metadata:
+      name: ext-server-policy-invalid-test
+      namespace: test
+    spec:
+      data: attached to all clusters
+      targetRef:
+        group: gateway.networking.k8s.io
+        kind: Service
+        name: Service-1

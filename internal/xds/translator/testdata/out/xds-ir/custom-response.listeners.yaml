@@ -26,8 +26,8 @@
                       name: backendtrafficpolicy/default/policy-for-gateway/responseoverride/rule/0
                       typedConfig:
                         '@type': type.googleapis.com/envoy.extensions.http.custom_response.local_response_policy.v3.LocalResponsePolicy
-                        body:
-                          inlineString: gateway-1 Not Found
+                        bodyFormat:
+                          textFormat: gateway-1 Not Found
                         responseHeadersToAdd:
                         - appendAction: OVERWRITE_IF_EXISTS_OR_ADD
                           header:
@@ -46,8 +46,8 @@
                       name: backendtrafficpolicy/default/policy-for-gateway/responseoverride/rule/1
                       typedConfig:
                         '@type': type.googleapis.com/envoy.extensions.http.custom_response.local_response_policy.v3.LocalResponsePolicy
-                        body:
-                          inlineString: |
+                        bodyFormat:
+                          textFormat: |
                             {
                               "error": "Internal Server Error"
                             }
@@ -110,6 +110,25 @@
                             name: http-attributes-cel-match-input
                             typedConfig:
                               '@type': type.googleapis.com/xds.type.matcher.v3.HttpAttributesCelMatchInput
+                - onMatch:
+                    action:
+                      name: backendtrafficpolicy/default/policy-for-gateway/responseoverride/rule/2
+                      typedConfig:
+                        '@type': type.googleapis.com/envoy.extensions.http.custom_response.redirect_policy.v3.RedirectPolicy
+                        redirectAction:
+                          hostRedirect: www.redirect.com
+                          pathRedirect: /redirect/path
+                          portRedirect: 8443
+                          schemeRedirect: https
+                        statusCode: 301
+                  predicate:
+                    singlePredicate:
+                      input:
+                        name: http-response-status-code-match-input
+                        typedConfig:
+                          '@type': type.googleapis.com/envoy.type.matcher.v3.HttpResponseStatusCodeMatchInput
+                      valueMatch:
+                        exact: "401"
         - disabled: true
           name: envoy.filters.http.custom_response/backendtrafficpolicy/default/policy-for-route
           typedConfig:

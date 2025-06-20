@@ -1,0 +1,18 @@
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyExtensionPolicy
+metadata:
+  name: wasm-test
+spec:
+  targetRefs:
+  - group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: backend
+  wasm:
+  - name: wasm-filter
+    rootID: my_root_id
+    code:
+      type: HTTP
+      http:
+        url: https://raw.githubusercontent.com/envoyproxy/examples/main/wasm-cc/lib/envoy_filter_http_wasm_example.wasm
+        sha256: 79c9f85128bb0177b6511afa85d587224efded376ac0ef76df56595f1e6315c0

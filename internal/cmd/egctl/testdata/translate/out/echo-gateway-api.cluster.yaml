@@ -117,6 +117,13 @@ xds:
           serviceName: httproute/envoy-gateway-system/backend/rule/0
         ignoreHealthOnHostRemoval: true
         lbPolicy: LEAST_REQUEST
+        metadata:
+          filterMetadata:
+            envoy-gateway:
+              resources:
+              - kind: HTTPRoute
+                name: backend
+                namespace: envoy-gateway-system
         name: httproute/envoy-gateway-system/backend/rule/0
         perConnectionBufferLimitBytes: 32768
         type: EDS

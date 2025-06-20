@@ -151,6 +151,9 @@ infraIR:
         labels:
           gateway.envoyproxy.io/owning-gateway-name: gateway-1
           gateway.envoyproxy.io/owning-gateway-namespace: envoy-gateway
+        ownerReference:
+          kind: GatewayClass
+          name: envoy-gateway-class
       name: envoy-gateway/gateway-1
       namespace: envoy-gateway-system
 xdsIR:
@@ -158,12 +161,21 @@ xdsIR:
     accessLog:
       als:
       - destination:
+          metadata:
+            kind: EnvoyProxy
+            name: test
+            namespace: envoy-gateway-system
           name: accesslog_als_0_1
           settings:
           - addressType: IP
             endpoints:
             - host: 10.240.0.10
               port: 9090
+            metadata:
+              kind: Service
+              name: envoy-als
+              namespace: monitoring
+              sectionName: "9000"
             name: accesslog_als_0_1/backend/-1
             protocol: GRPC
         http:
@@ -178,12 +190,21 @@ xdsIR:
           [%START_TIME%] "%REQ(:METHOD)% %PROTOCOL%" %RESPONSE_CODE% %RESPONSE_FLAGS% %BYTES_RECEIVED% %BYTES_SENT% %DURATION% %RESP(X-ENVOY-UPSTREAM-SERVICE-TIME)% "%REQ(X-FORWARDED-FOR)%" "%REQ(USER-AGENT)%" "%REQ(X-REQUEST-ID)%" "%REQ(:AUTHORITY)%" "%UPSTREAM_HOST%"\n
         type: HTTP
       - destination:
+          metadata:
+            kind: EnvoyProxy
+            name: test
+            namespace: envoy-gateway-system
           name: accesslog_als_0_2
           settings:
           - addressType: IP
             endpoints:
             - host: 10.240.0.10
               port: 9090
+            metadata:
+              kind: Service
+              name: envoy-als
+              namespace: monitoring
+              sectionName: "9000"
             name: accesslog_als_0_2/backend/-1
             protocol: GRPC
         name: envoy-gateway-system/test
@@ -193,6 +214,10 @@ xdsIR:
       openTelemetry:
       - authority: otel-collector.monitoring.svc.cluster.local
         destination:
+          metadata:
+            kind: EnvoyProxy
+            name: test
+            namespace: envoy-gateway-system
           name: accesslog_otel_0_3
           settings:
           - endpoints:
