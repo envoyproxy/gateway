@@ -18,12 +18,14 @@ import (
 
 func TestInitAdminServer(t *testing.T) {
 	svrConfig := &config.Server{
-		EnvoyGateway: &egv1a1.EnvoyGateway{
-			EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{},
+		ServerConfiguration: config.ServerConfiguration{
+			EnvoyGateway: &egv1a1.EnvoyGateway{
+				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{},
+			},
 		},
 	}
 
 	svrConfig.Logger = logging.NewLogger(os.Stdout, egv1a1.DefaultEnvoyGatewayLogging())
-	err := Init(svrConfig)
+	err := Init(svrConfig, nil) // Pass nil client for test
 	require.NoError(t, err)
 }
