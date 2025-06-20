@@ -415,6 +415,209 @@ func TestEnvoyExtensionPolicyTarget(t *testing.T) {
 			},
 		},
 		{
+			desc: "valid ExtProc without FullDuplexStreamed body and failOpen true",
+			mutate: func(sp *egv1a1.EnvoyExtensionPolicy) {
+				sp.Spec = egv1a1.EnvoyExtensionPolicySpec{
+					ExtProc: []egv1a1.ExtProc{
+						{
+							BackendCluster: egv1a1.BackendCluster{
+								BackendRefs: []egv1a1.BackendRef{
+									{
+										BackendObjectReference: gwapiv1.BackendObjectReference{
+											Name: "grpc-proc-service",
+											Port: ptr.To(gwapiv1.PortNumber(80)),
+										},
+									},
+								},
+							},
+							ProcessingMode: &egv1a1.ExtProcProcessingMode{
+								Request: &egv1a1.ProcessingModeOptions{
+									Body: ptr.To(egv1a1.ExtProcBodyProcessingMode("Buffered")),
+								},
+								Response: &egv1a1.ProcessingModeOptions{
+									Body: ptr.To(egv1a1.ExtProcBodyProcessingMode("Buffered")),
+								},
+							},
+							FailOpen: ptr.To(true),
+						},
+					},
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
+								Group: "gateway.networking.k8s.io",
+								Kind:  "Gateway",
+								Name:  "eg",
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "valid ExtProc with FullDuplexStreamed body and failOpen false",
+			mutate: func(sp *egv1a1.EnvoyExtensionPolicy) {
+				sp.Spec = egv1a1.EnvoyExtensionPolicySpec{
+					ExtProc: []egv1a1.ExtProc{
+						{
+							BackendCluster: egv1a1.BackendCluster{
+								BackendRefs: []egv1a1.BackendRef{
+									{
+										BackendObjectReference: gwapiv1.BackendObjectReference{
+											Name: "grpc-proc-service",
+											Port: ptr.To(gwapiv1.PortNumber(80)),
+										},
+									},
+								},
+							},
+							ProcessingMode: &egv1a1.ExtProcProcessingMode{
+								Request: &egv1a1.ProcessingModeOptions{
+									Body: ptr.To(egv1a1.ExtProcBodyProcessingMode("FullDuplexStreamed")),
+								},
+								Response: &egv1a1.ProcessingModeOptions{
+									Body: ptr.To(egv1a1.ExtProcBodyProcessingMode("FullDuplexStreamed")),
+								},
+							},
+							FailOpen: ptr.To(false),
+						},
+					},
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
+								Group: "gateway.networking.k8s.io",
+								Kind:  "Gateway",
+								Name:  "eg",
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "valid ExtProc with FullDuplexStreamed body and failOpen nil",
+			mutate: func(sp *egv1a1.EnvoyExtensionPolicy) {
+				sp.Spec = egv1a1.EnvoyExtensionPolicySpec{
+					ExtProc: []egv1a1.ExtProc{
+						{
+							BackendCluster: egv1a1.BackendCluster{
+								BackendRefs: []egv1a1.BackendRef{
+									{
+										BackendObjectReference: gwapiv1.BackendObjectReference{
+											Name: "grpc-proc-service",
+											Port: ptr.To(gwapiv1.PortNumber(80)),
+										},
+									},
+								},
+							},
+							ProcessingMode: &egv1a1.ExtProcProcessingMode{
+								Request: &egv1a1.ProcessingModeOptions{
+									Body: ptr.To(egv1a1.ExtProcBodyProcessingMode("FullDuplexStreamed")),
+								},
+								Response: &egv1a1.ProcessingModeOptions{
+									Body: ptr.To(egv1a1.ExtProcBodyProcessingMode("FullDuplexStreamed")),
+								},
+							},
+						},
+					},
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
+								Group: "gateway.networking.k8s.io",
+								Kind:  "Gateway",
+								Name:  "eg",
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "invalid ExtProc with FullDuplexStreamed request body and failOpen",
+			mutate: func(sp *egv1a1.EnvoyExtensionPolicy) {
+				sp.Spec = egv1a1.EnvoyExtensionPolicySpec{
+					ExtProc: []egv1a1.ExtProc{
+						{
+							BackendCluster: egv1a1.BackendCluster{
+								BackendRefs: []egv1a1.BackendRef{
+									{
+										BackendObjectReference: gwapiv1.BackendObjectReference{
+											Name: "grpc-proc-service",
+											Port: ptr.To(gwapiv1.PortNumber(80)),
+										},
+									},
+								},
+							},
+							ProcessingMode: &egv1a1.ExtProcProcessingMode{
+								Request: &egv1a1.ProcessingModeOptions{
+									Body: ptr.To(egv1a1.ExtProcBodyProcessingMode("FullDuplexStreamed")),
+								},
+								Response: &egv1a1.ProcessingModeOptions{
+									Body: ptr.To(egv1a1.ExtProcBodyProcessingMode("Buffered")),
+								},
+							},
+							FailOpen: ptr.To(true),
+						},
+					},
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
+								Group: "gateway.networking.k8s.io",
+								Kind:  "Gateway",
+								Name:  "eg",
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{
+				"spec.extProc[0]: Invalid value: \"object\": If FullDuplexStreamed body processing mode is used, FailOpen must be false.",
+			},
+		},
+		{
+			desc: "invalid ExtProc with FullDuplexStreamed response body and failOpen",
+			mutate: func(sp *egv1a1.EnvoyExtensionPolicy) {
+				sp.Spec = egv1a1.EnvoyExtensionPolicySpec{
+					ExtProc: []egv1a1.ExtProc{
+						{
+							BackendCluster: egv1a1.BackendCluster{
+								BackendRefs: []egv1a1.BackendRef{
+									{
+										BackendObjectReference: gwapiv1.BackendObjectReference{
+											Name: "grpc-proc-service",
+											Port: ptr.To(gwapiv1.PortNumber(80)),
+										},
+									},
+								},
+							},
+							ProcessingMode: &egv1a1.ExtProcProcessingMode{
+								Request: &egv1a1.ProcessingModeOptions{
+									Body: ptr.To(egv1a1.ExtProcBodyProcessingMode("Buffered")),
+								},
+								Response: &egv1a1.ProcessingModeOptions{
+									Body: ptr.To(egv1a1.ExtProcBodyProcessingMode("FullDuplexStreamed")),
+								},
+							},
+							FailOpen: ptr.To(true),
+						},
+					},
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
+								Group: "gateway.networking.k8s.io",
+								Kind:  "Gateway",
+								Name:  "eg",
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{
+				"spec.extProc[0]: Invalid value: \"object\": If FullDuplexStreamed body processing mode is used, FailOpen must be false.",
+			},
+		},
+		{
 			desc: "Valid Lua filter (inline)",
 			mutate: func(sp *egv1a1.EnvoyExtensionPolicy) {
 				sp.Spec = egv1a1.EnvoyExtensionPolicySpec{
