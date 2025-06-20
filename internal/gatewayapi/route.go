@@ -252,6 +252,11 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 
 		// process each ir route
 		for _, irRoute := range ruleRoutes {
+			for _, ds := range allDs {
+				if ds.UnstructuredRef != nil {
+					irRoute.BackendExtensionRefs = append(irRoute.BackendExtensionRefs, ds.UnstructuredRef)
+				}
+			}
 			destination := &ir.RouteDestination{
 				Settings: allDs,
 				Metadata: buildResourceMetadata(httpRoute, rule.Name),
@@ -1378,19 +1383,20 @@ func (t *Translator) processDestination(name string, backendRefContext BackendRe
 	if backendRef.Weight != nil {
 		weight = uint32(*backendRef.Weight)
 	}
-
-	backendNamespace := NamespaceDerefOr(backendRef.Namespace, route.GetNamespace())
-	err = t.validateBackendRef(backendRefContext, route, resources, backendNamespace, routeType)
-	{
-		// return with empty endpoint means the backend is invalid and an error to fail the associated route.
-		if err != nil {
-			return nil, err
-		}
-	}
-
 	// Skip processing backends with 0 weight
 	if weight == 0 {
 		return nil, nil
+	}
+
+	backendNamespace := NamespaceDerefOr(backendRef.Namespace, route.GetNamespace())
+	if !t.isCustomBackendResource(backendRef.Group, KindDerefOr(backendRef.Kind, resource.KindService)) {
+		err = t.validateBackendRef(backendRefContext, route, resources, backendNamespace, routeType)
+		{
+			// return with empty endpoint means the backend is invalid and an error to fail the associated route.
+			if err != nil {
+				return nil, err
+			}
+		}
 	}
 
 	var envoyProxy *egv1a1.EnvoyProxy
@@ -1413,6 +1419,13 @@ func (t *Translator) processDestination(name string, backendRefContext BackendRe
 
 	case egv1a1.KindBackend:
 		ds = t.processBackendDestinationSetting(name, backendRef.BackendObjectReference, backendNamespace, protocol, resources)
+	default:
+		// Handle custom backend resources defined in extension manager
+		if t.isCustomBackendResource(backendRef.Group, KindDerefOr(backendRef.Kind, resource.KindService)) {
+			// Add the custom backend resource to ExtensionRefFilters so it can be processed by the extension system
+			ds = t.processBackendExtensions(backendRef.BackendObjectReference, backendNamespace, resources)
+			return ds, nil
+		}
 	}
 
 	var tlsErr error
@@ -1829,6 +1842,44 @@ func getIREndpointsFromEndpointSlice(endpointSlice *discoveryv1.EndpointSlice, p
 	}
 
 	return endpoints
+}
+
+// isCustomBackendResource checks if the given group and kind match any of the configured custom backend resources
+func (t *Translator) isCustomBackendResource(group *gwapiv1.Group, kind string) bool {
+	groupStr := GroupDerefOr(group, "")
+	for _, gk := range t.ExtensionGroupKinds {
+		if gk.Group == groupStr && gk.Kind == kind {
+			return true
+		}
+	}
+	return false
+}
+
+// addCustomBackendToExtensionRefs adds custom backend resources to the ExtensionRefFilters
+// so they can be processed by the extension system
+func (t *Translator) processBackendExtensions(
+	backendRef gwapiv1.BackendObjectReference,
+	backendNamespace string,
+	resources *resource.Resources,
+) *ir.DestinationSetting { // This list of resources will be empty unless an extension is loaded (and introduces resources)
+	for _, res := range resources.ExtensionRefFilters {
+		if res.GetKind() == string(*backendRef.Kind) && res.GetName() == string(backendRef.Name) && res.GetNamespace() == backendNamespace {
+			apiVers := res.GetAPIVersion()
+			// To get only the group we cut off the version.
+			// This could be a one liner but just to be safe we check that the APIVersion is properly formatted
+			idx := strings.IndexByte(apiVers, '/')
+			if idx != -1 {
+				group := apiVers[:idx]
+				if group == string(*backendRef.Group) {
+					res := res // Capture loop variable
+					return &ir.DestinationSetting{
+						UnstructuredRef: &ir.UnstructuredRef{Object: &res},
+					}
+				}
+			}
+		}
+	}
+	return nil
 }
 
 func getTargetBackendReference(backendRef gwapiv1a2.BackendObjectReference, backendNamespace string, resources *resource.Resources) gwapiv1a2.LocalPolicyTargetReferenceWithSectionName {

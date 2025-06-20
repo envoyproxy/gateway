@@ -145,6 +145,12 @@ func (m *Manager) HasExtension(g gwapiv1.Group, k gwapiv1.Kind) bool {
 			return true
 		}
 	}
+	// Also check backend resources for custom backend support
+	for _, gvk := range extension.BackendResources {
+		if g == gwapiv1.Group(gvk.Group) && k == gwapiv1.Kind(gvk.Kind) {
+			return true
+		}
+	}
 	return false
 }
 
