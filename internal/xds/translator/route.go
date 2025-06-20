@@ -127,6 +127,9 @@ func buildXdsRoute(httpRoute *ir.HTTPRoute, httpListener *ir.HTTPListener) (*rou
 		}
 	}
 
+	// Metrics
+	router.StatPrefix = httpRoute.StatName
+
 	// Add per route filter configs to the route, if needed.
 	if err := patchRouteWithPerRouteConfig(router, httpRoute, httpListener); err != nil {
 		return nil, err

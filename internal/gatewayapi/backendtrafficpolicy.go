@@ -21,6 +21,7 @@ import (
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	egv1a1validation "github.com/envoyproxy/gateway/api/v1alpha1/validation"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/status"
 	"github.com/envoyproxy/gateway/internal/ir"
@@ -484,6 +485,11 @@ func applyTrafficFeatureToRoute(route RouteContext,
 	tf *ir.TrafficFeatures, errs error,
 	policy *egv1a1.BackendTrafficPolicy, x *ir.Xds,
 ) {
+	statName := ""
+	if tf.Telemetry != nil && tf.Telemetry.Metrics != nil {
+		statName = buildRouteStatName(route, ptr.Deref(tf.Telemetry.Metrics.RouteStatName, ""))
+	}
+
 	prefix := irRoutePrefix(route)
 	for _, tcp := range x.TCP {
 		for _, r := range tcp.Routes {
@@ -496,6 +502,7 @@ func applyTrafficFeatureToRoute(route RouteContext,
 				r.Timeout = tf.Timeout
 				r.BackendConnection = tf.BackendConnection
 				r.DNS = tf.DNS
+				r.StatName = statName
 			}
 		}
 	}
@@ -514,6 +521,7 @@ func applyTrafficFeatureToRoute(route RouteContext,
 		for _, r := range http.Routes {
 			// Apply if there is a match
 			if strings.HasPrefix(r.Name, prefix) {
+				r.StatName = statName
 				if errs != nil {
 					// Return a 500 direct response
 					r.DirectResponse = &ir.CustomResponse{
@@ -619,6 +627,11 @@ func (t *Translator) buildTrafficFeatures(policy *egv1a1.BackendTrafficPolicy, r
 
 	if rb, err = buildRequestBuffer(policy.Spec.RequestBuffer); err != nil {
 		err = perr.WithMessage(err, "RequestBuffer")
+		errs = errors.Join(errs, err)
+	}
+
+	if err = validateTelemetry(policy.Spec.Telemetry); err != nil {
+		err = perr.WithMessage(err, "Telemetry")
 		errs = errors.Join(errs, err)
 	}
 
@@ -1193,4 +1206,28 @@ func buildHTTPProtocolUpgradeConfig(cfgs []*egv1a1.ProtocolUpgradeConfig) []ir.H
 	}
 
 	return result
+}
+
+func validateTelemetry(telemetry *egv1a1.BackendTelemetry) error {
+	if telemetry == nil {
+		return nil
+	}
+
+	if telemetry.Metrics != nil && ptr.Deref(telemetry.Metrics.RouteStatName, "") != "" {
+		return egv1a1validation.ValidateRouteStatName(*telemetry.Metrics.RouteStatName)
+	}
+
+	return nil
+}
+
+func buildRouteStatName(route RouteContext, routeStatName string) string {
+	if routeStatName == "" {
+		return ""
+	}
+
+	statName := strings.ReplaceAll(routeStatName, egv1a1.StatFormatterRouteName, route.GetName())
+	statName = strings.ReplaceAll(statName, egv1a1.StatFormatterRouteNamespace, route.GetNamespace())
+	statName = strings.ReplaceAll(statName, egv1a1.StatFormatterRouteKind, string(GetRouteType(route)))
+
+	return statName
 }
