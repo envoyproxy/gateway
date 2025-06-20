@@ -36,6 +36,9 @@ bug fixes: |
   Fixed issue that switch on wrong SubjectAltNameType enum value in BackendTLSPolicy.
   Fixed issue that BackendTLSPolicy should not reference ConfigMap or Secret across namespace.
   Fixed bug in certificate SANs overlap detection in listeners.
+  Fixed issue where EnvoyExtensionPolicy ExtProc body processing mode is set to FullDuplexStreamed, but trailers were not sent.
+  Fixed validation issue where EnvoyExtensionPolicy ExtProc failOpen is true, and body processing mode FullDuplexStreamed is not rejected.
+
 
 # Enhancements that improve performance.
 performance improvements: |
