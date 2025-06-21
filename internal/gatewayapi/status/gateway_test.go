@@ -27,7 +27,7 @@ func TestUpdateGatewayStatusProgrammedCondition(t *testing.T) {
 		gw            *gwapiv1.Gateway
 		svc           *corev1.Service
 		deployment    *appsv1.Deployment
-		nodeAddresses []string
+		nodeAddresses NodeAddresses
 	}
 	tests := []struct {
 		name          string
@@ -52,6 +52,9 @@ func TestUpdateGatewayStatusProgrammedCondition(t *testing.T) {
 					Spec: corev1.ServiceSpec{
 						ClusterIPs: []string{"127.0.0.1"},
 						Type:       corev1.ServiceTypeLoadBalancer,
+						IPFamilies: []corev1.IPFamily{
+							corev1.IPv4Protocol,
+						},
 					},
 					Status: corev1.ServiceStatus{
 						LoadBalancer: corev1.LoadBalancerStatus{
@@ -81,6 +84,9 @@ func TestUpdateGatewayStatusProgrammedCondition(t *testing.T) {
 					Spec: corev1.ServiceSpec{
 						ClusterIPs: []string{"127.0.0.1"},
 						Type:       corev1.ServiceTypeLoadBalancer,
+						IPFamilies: []corev1.IPFamily{
+							corev1.IPv4Protocol,
+						},
 					},
 					Status: corev1.ServiceStatus{
 						LoadBalancer: corev1.LoadBalancerStatus{
@@ -114,6 +120,9 @@ func TestUpdateGatewayStatusProgrammedCondition(t *testing.T) {
 					Spec: corev1.ServiceSpec{
 						ClusterIPs: []string{"127.0.0.1"},
 						Type:       corev1.ServiceTypeClusterIP,
+						IPFamilies: []corev1.IPFamily{
+							corev1.IPv4Protocol,
+						},
 					},
 				},
 			},
@@ -127,13 +136,18 @@ func TestUpdateGatewayStatusProgrammedCondition(t *testing.T) {
 		{
 			name: "Nodeport svc",
 			args: args{
-				gw:            &gwapiv1.Gateway{},
-				nodeAddresses: []string{"1", "2"},
+				gw: &gwapiv1.Gateway{},
+				nodeAddresses: NodeAddresses{
+					IPv4: []string{"1", "2"},
+				},
 				svc: &corev1.Service{
 					TypeMeta:   metav1.TypeMeta{},
 					ObjectMeta: metav1.ObjectMeta{},
 					Spec: corev1.ServiceSpec{
 						Type: corev1.ServiceTypeNodePort,
+						IPFamilies: []corev1.IPFamily{
+							corev1.IPv4Protocol,
+						},
 					},
 				},
 			},
@@ -153,9 +167,9 @@ func TestUpdateGatewayStatusProgrammedCondition(t *testing.T) {
 			args: args{
 				gw: &gwapiv1.Gateway{},
 				// 20 node addresses
-				nodeAddresses: func() (addr []string) {
+				nodeAddresses: func() (addr NodeAddresses) {
 					for i := 0; i < 20; i++ {
-						addr = append(addr, strconv.Itoa(i))
+						addr.IPv4 = append(addr.IPv4, strconv.Itoa(i))
 					}
 					return
 				}(),
@@ -164,6 +178,9 @@ func TestUpdateGatewayStatusProgrammedCondition(t *testing.T) {
 					ObjectMeta: metav1.ObjectMeta{},
 					Spec: corev1.ServiceSpec{
 						Type: corev1.ServiceTypeNodePort,
+						IPFamilies: []corev1.IPFamily{
+							corev1.IPv4Protocol,
+						},
 					},
 				},
 			},
@@ -185,6 +202,9 @@ func TestUpdateGatewayStatusProgrammedCondition(t *testing.T) {
 				svc: &corev1.Service{
 					Spec: corev1.ServiceSpec{
 						Type: corev1.ServiceTypeLoadBalancer,
+						IPFamilies: []corev1.IPFamily{
+							corev1.IPv6Protocol,
+						},
 					},
 					Status: corev1.ServiceStatus{
 						LoadBalancer: corev1.LoadBalancerStatus{
@@ -210,6 +230,9 @@ func TestUpdateGatewayStatusProgrammedCondition(t *testing.T) {
 					Spec: corev1.ServiceSpec{
 						ClusterIPs: []string{"2001:db8::2"},
 						Type:       corev1.ServiceTypeClusterIP,
+						IPFamilies: []corev1.IPFamily{
+							corev1.IPv6Protocol,
+						},
 					},
 				},
 			},
@@ -223,11 +246,16 @@ func TestUpdateGatewayStatusProgrammedCondition(t *testing.T) {
 		{
 			name: "Nodeport svc with IPv6 node addresses",
 			args: args{
-				gw:            &gwapiv1.Gateway{},
-				nodeAddresses: []string{"2001:db8::3", "2001:db8::4"},
+				gw: &gwapiv1.Gateway{},
+				nodeAddresses: NodeAddresses{
+					IPv6: []string{"2001:db8::3", "2001:db8::4"},
+				},
 				svc: &corev1.Service{
 					Spec: corev1.ServiceSpec{
 						Type: corev1.ServiceTypeNodePort,
+						IPFamilies: []corev1.IPFamily{
+							corev1.IPv6Protocol,
+						},
 					},
 				},
 			},
@@ -284,7 +312,7 @@ func TestUpdateGatewayStatusProgrammedCondition(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			UpdateGatewayStatusProgrammedCondition(tt.args.gw, tt.args.svc, tt.args.deployment, tt.args.nodeAddresses...)
+			UpdateGatewayStatusProgrammedCondition(tt.args.gw, tt.args.svc, tt.args.deployment, tt.args.nodeAddresses)
 			assert.True(t, reflect.DeepEqual(tt.wantAddresses, tt.args.gw.Status.Addresses))
 		})
 	}
