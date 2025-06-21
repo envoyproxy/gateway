@@ -190,7 +190,7 @@ resilience: create-cluster kube-install-image kube-install-examples-image kube-d
 .PHONY: e2e
 e2e: create-cluster kube-install-image kube-deploy \
 	install-ratelimit install-eg-addons kube-install-examples-image \
-	e2e-prepare run-e2e delete-cluster
+	e2e-prepare setup-mac-net-connect run-e2e cleanup-mac-net-connect delete-cluster
 
 .PHONY: install-ratelimit
 install-ratelimit:
@@ -214,6 +214,16 @@ e2e-prepare: prepare-ip-family ## Prepare the environment for running e2e tests
 	kubectl wait --timeout=5m -n envoy-gateway-system deployment/envoy-gateway --for=condition=Available
 	kubectl apply -f $(KUBE_DEPLOY_EG_CONFIG_FILE)
 	kubectl apply -f test/config/gatewayclass.yaml
+
+.PHONY: setup-mac-net-connect
+setup-mac-net-connect:
+	@$(LOG_TARGET)
+	DOCKER_MAC_NET_CONNECT=$(DOCKER_MAC_NET_CONNECT) HOMEBREW_GOPROXY=$(HOMEBREW_GOPROXY) tools/hack/manage-mac-net-connect.sh setup
+
+.PHONY: cleanup-mac-net-connect
+cleanup-mac-net-connect:
+	@$(LOG_TARGET)
+	tools/hack/manage-mac-net-connect.sh cleanup
 
 .PHONY: run-e2e
 run-e2e: ## Run e2e tests
