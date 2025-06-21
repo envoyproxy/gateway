@@ -68,7 +68,7 @@
       commonConfig:
         grpcService:
           envoyGrpc:
-            clusterName: accesslog_otel_0_1
+            clusterName: accesslog-0
         logName: otel_envoy_accesslog
         transportApiVersion: V3
       resourceAttributes:
@@ -111,7 +111,7 @@
             commonConfig:
               grpcService:
                 envoyGrpc:
-                  clusterName: accesslog_otel_0_1
+                  clusterName: accesslog-0
               logName: otel_envoy_accesslog
               transportApiVersion: V3
             resourceAttributes:

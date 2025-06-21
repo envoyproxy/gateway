@@ -10,3 +10,15 @@
     loadBalancingWeight: 1
     locality:
       region: direct-route-dest/backend/0
+- clusterName: tracing-0
+  endpoints:
+  - lbEndpoints:
+    - endpoint:
+        address:
+          socketAddress:
+            address: otel-collector.default.svc.cluster.local
+            portValue: 4317
+      loadBalancingWeight: 1
+    loadBalancingWeight: 1
+    locality:
+      region: tracing-0/backend/0

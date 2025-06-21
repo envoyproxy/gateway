@@ -1,1 +1,12 @@
-[]
+- clusterName: accesslog-0
+  endpoints:
+  - lbEndpoints:
+    - endpoint:
+        address:
+          socketAddress:
+            address: otel-collector.default.svc.cluster.local
+            portValue: 4317
+      loadBalancingWeight: 1
+    loadBalancingWeight: 1
+    locality:
+      region: accesslog-0/backend/0
