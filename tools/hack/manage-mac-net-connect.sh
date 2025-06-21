@@ -20,9 +20,7 @@ is_running() {
 }
 
 setup() {
-    is_macos || return
-
-    if [[ "$DOCKER_MAC_NET_CONNECT" == "false" ]]; then
+    if ! is_macos || [[ "$DOCKER_MAC_NET_CONNECT" == "false" ]]; then
         return
     fi
 
@@ -50,11 +48,10 @@ setup() {
 }
 
 cleanup() {
-    is_macos || return
-    [ -f "$FLAG_FILE" ] || return
-
-    sudo brew services stop chipmk/tap/docker-mac-net-connect || true
-    rm -f "$FLAG_FILE"
+    if is_macos && [ -f "$FLAG_FILE" ]; then
+        sudo brew services stop chipmk/tap/docker-mac-net-connect || true
+        rm -f "$FLAG_FILE"
+    fi
 }
 
 case "$MODE" in
