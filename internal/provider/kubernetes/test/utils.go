@@ -364,6 +364,18 @@ func GetService(nsName types.NamespacedName, labels map[string]string, ports map
 	return service
 }
 
+// GetConfigMap returns a sample ConfigMap with labels and data
+func GetConfigMap(nsName types.NamespacedName, labels, data map[string]string) *corev1.ConfigMap {
+	return &corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      nsName.Name,
+			Namespace: nsName.Namespace,
+			Labels:    labels,
+		},
+		Data: data,
+	}
+}
+
 // GetEndpointSlice returns a sample EndpointSlice.
 func GetEndpointSlice(nsName types.NamespacedName, svcName string, isServiceImport bool) *discoveryv1.EndpointSlice {
 	var labels map[string]string
