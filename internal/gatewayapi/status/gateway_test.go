@@ -309,6 +309,30 @@ func TestUpdateGatewayStatusProgrammedCondition(t *testing.T) {
 			},
 			wantAddresses: []gwapiv1.GatewayStatusAddress{},
 		},
+		{
+			name: "Nodeport svc Ipv6 with dual stack node addresses",
+			args: args{
+				gw: &gwapiv1.Gateway{},
+				nodeAddresses: NodeAddresses{
+					IPv4: []string{"10.0.0.1"},
+					IPv6: []string{"2001:db8::4"},
+				},
+				svc: &corev1.Service{
+					Spec: corev1.ServiceSpec{
+						Type: corev1.ServiceTypeNodePort,
+						IPFamilies: []corev1.IPFamily{
+							corev1.IPv6Protocol,
+						},
+					},
+				},
+			},
+			wantAddresses: []gwapiv1.GatewayStatusAddress{
+				{
+					Type:  ptr.To(gwapiv1.IPAddressType),
+					Value: "2001:db8::4",
+				},
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
