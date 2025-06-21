@@ -105,20 +105,6 @@ func TestResolveProxyImage(t *testing.T) {
 			},
 			expected: fmt.Sprintf("envoyproxy/envoy:%s", defaultTag),
 		},
-		{
-			name: "imageRepository contains tag (invalid)",
-			container: &egv1a1.KubernetesContainerSpec{
-				ImageRepository: ptr.To("envoyproxy/envoy:v1.2.3"),
-			},
-			expectError: true,
-		},
-		{
-			name: "image without tag (invalid)",
-			container: &egv1a1.KubernetesContainerSpec{
-				Image: ptr.To("envoyproxy/envoy"),
-			},
-			expectError: true,
-		},
 	}
 
 	for _, tc := range tests {

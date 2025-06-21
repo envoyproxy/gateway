@@ -1545,7 +1545,7 @@ func TestEnvoyProxyProvider(t *testing.T) {
 			},
 		},
 		{
-			desc: "valid: image set, imageRepository not set",
+			desc: "valid: image set with tag, imageRepository not set",
 			mutate: func(envoy *egv1a1.EnvoyProxy) {
 				envoy.Spec = egv1a1.EnvoyProxySpec{
 					Provider: &egv1a1.EnvoyProxyProvider{
@@ -1563,7 +1563,7 @@ func TestEnvoyProxyProvider(t *testing.T) {
 			wantErrors: []string{},
 		},
 		{
-			desc: "valid: imageRepository set, image not set",
+			desc: "valid: imageRepository set without tag, image not set",
 			mutate: func(envoy *egv1a1.EnvoyProxy) {
 				envoy.Spec = egv1a1.EnvoyProxySpec{
 					Provider: &egv1a1.EnvoyProxyProvider{
@@ -1598,6 +1598,42 @@ func TestEnvoyProxyProvider(t *testing.T) {
 				}
 			},
 			wantErrors: []string{"Either image or imageRepository can be set."},
+		},
+		{
+			desc: "invalid: image set without tag",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					Provider: &egv1a1.EnvoyProxyProvider{
+						Type: egv1a1.ProviderTypeKubernetes,
+						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
+							EnvoyDeployment: &egv1a1.KubernetesDeploymentSpec{
+								Container: &egv1a1.KubernetesContainerSpec{
+									Image: ptr.To("envoyproxy/envoy"),
+								},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{"Image must include a tag"},
+		},
+		{
+			desc: "invalid: imageRepository contains tag",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					Provider: &egv1a1.EnvoyProxyProvider{
+						Type: egv1a1.ProviderTypeKubernetes,
+						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
+							EnvoyDeployment: &egv1a1.KubernetesDeploymentSpec{
+								Container: &egv1a1.KubernetesContainerSpec{
+									ImageRepository: ptr.To("envoyproxy/envoy:v1.2.3"),
+								},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{"ImageRepository must not include a tag"},
 		},
 	}
 
