@@ -22,25 +22,16 @@
     localityWeightedLbConfig: {}
   connectTimeout: 10s
   dnsLookupFamily: V4_PREFERRED
-  dnsRefreshRate: 30s
+  edsClusterConfig:
+    edsConfig:
+      ads: {}
+      resourceApiVersion: V3
+    serviceName: accesslog-0
+  ignoreHealthOnHostRemoval: true
   lbPolicy: LEAST_REQUEST
-  loadAssignment:
-    clusterName: accesslog-0
-    endpoints:
-    - lbEndpoints:
-      - endpoint:
-          address:
-            socketAddress:
-              address: otel-collector.default.svc.cluster.local
-              portValue: 4317
-        loadBalancingWeight: 1
-      loadBalancingWeight: 1
-      locality:
-        region: accesslog-0/backend/0
   name: accesslog-0
   perConnectionBufferLimitBytes: 32768
-  respectDnsTtl: true
-  type: STRICT_DNS
+  type: EDS
   typedExtensionProtocolOptions:
     envoy.extensions.upstreams.http.v3.HttpProtocolOptions:
       '@type': type.googleapis.com/envoy.extensions.upstreams.http.v3.HttpProtocolOptions
