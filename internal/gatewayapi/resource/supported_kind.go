@@ -28,4 +28,5 @@ const (
 	KindSecret               = "Secret"
 	KindHTTPRouteFilter      = "HTTPRouteFilter"
 	KindReferenceGrant       = "ReferenceGrant"
+	KindClusterTrustBundle   = "ClusterTrustBundle"
 )
