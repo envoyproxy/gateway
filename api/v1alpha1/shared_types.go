@@ -209,6 +209,8 @@ type KubernetesPodSpec struct {
 
 // KubernetesContainerSpec defines the desired state of the Kubernetes container resource.
 // +kubebuilder:validation:XValidation:rule="!has(self.image) || !has(self.imageRepository)",message="Either image or imageRepository can be set."
+// +kubebuilder:validation:XValidation:rule="has(self.image) ? self.image.matches('^[^:]+:[^:]+$') : true",message="Image must include a tag (e.g., 'image:tag')."
+// +kubebuilder:validation:XValidation:rule="has(self.imageRepository) ? !self.imageRepository.contains(':') : true",message="ImageRepository must not include a tag or any colons."
 type KubernetesContainerSpec struct {
 	// List of environment variables to set in the container.
 	//

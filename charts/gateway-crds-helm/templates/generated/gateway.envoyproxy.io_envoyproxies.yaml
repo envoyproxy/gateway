@@ -941,6 +941,13 @@ spec:
                             x-kubernetes-validations:
                             - message: Either image or imageRepository can be set.
                               rule: '!has(self.image) || !has(self.imageRepository)'
+                            - message: Image must include a tag (e.g., 'image:tag').
+                              rule: 'has(self.image) ? self.image.matches(''^[^:]+:[^:]+$'')
+                                : true'
+                            - message: ImageRepository must not include a tag or any
+                                colons.
+                              rule: 'has(self.imageRepository) ? !self.imageRepository.contains('':'')
+                                : true'
                           name:
                             description: |-
                               Name of the daemonSet.
@@ -4778,6 +4785,13 @@ spec:
                             x-kubernetes-validations:
                             - message: Either image or imageRepository can be set.
                               rule: '!has(self.image) || !has(self.imageRepository)'
+                            - message: Image must include a tag (e.g., 'image:tag').
+                              rule: 'has(self.image) ? self.image.matches(''^[^:]+:[^:]+$'')
+                                : true'
+                            - message: ImageRepository must not include a tag or any
+                                colons.
+                              rule: 'has(self.imageRepository) ? !self.imageRepository.contains('':'')
+                                : true'
                           initContainers:
                             description: |-
                               List of initialization containers belonging to the pod.
