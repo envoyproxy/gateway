@@ -236,11 +236,7 @@ func oauth2Config(securityFeatures *ir.SecurityFeatures) (*oauth2v3.OAuth2, erro
 	return oauth2, nil
 }
 
-func getSameSiteOrDefault(config *egv1a1.OIDCCookieConfig) oauth2v3.CookieConfig_SameSite {
-	if config == nil || config.SameSite == nil {
-		return oauth2v3.CookieConfig_STRICT
-	}
-
+func buildSameSite(config *egv1a1.OIDCCookieConfig) oauth2v3.CookieConfig_SameSite {
 	samesite := egv1a1.SameSite(*config.SameSite)
 
 	switch samesite {
@@ -250,43 +246,30 @@ func getSameSiteOrDefault(config *egv1a1.OIDCCookieConfig) oauth2v3.CookieConfig
 		return oauth2v3.CookieConfig_LAX
 	case egv1a1.SameSiteNone:
 		return oauth2v3.CookieConfig_NONE
-	case egv1a1.SameSiteDisabled:
-		return oauth2v3.CookieConfig_DISABLED
 	default:
-		return oauth2v3.CookieConfig_STRICT
+		// should not reach here
+		return oauth2v3.CookieConfig_DISABLED
 	}
 }
 
 // buildCookieConfigs translates the OIDC configuration from the US
 func buildCookieConfigs(oidc *ir.OIDC) *oauth2v3.CookieConfigs {
-	cookieConfig := &oauth2v3.CookieConfigs{
-		BearerTokenCookieConfig:  &oauth2v3.CookieConfig{SameSite: oauth2v3.CookieConfig_STRICT},
-		OauthHmacCookieConfig:    &oauth2v3.CookieConfig{SameSite: oauth2v3.CookieConfig_STRICT},
-		OauthExpiresCookieConfig: &oauth2v3.CookieConfig{SameSite: oauth2v3.CookieConfig_STRICT},
-		IdTokenCookieConfig:      &oauth2v3.CookieConfig{SameSite: oauth2v3.CookieConfig_STRICT},
-		RefreshTokenCookieConfig: &oauth2v3.CookieConfig{SameSite: oauth2v3.CookieConfig_STRICT},
-		OauthNonceCookieConfig:   &oauth2v3.CookieConfig{SameSite: oauth2v3.CookieConfig_STRICT},
-		CodeVerifierCookieConfig: &oauth2v3.CookieConfig{SameSite: oauth2v3.CookieConfig_STRICT},
-	}
-
 	// If the user did not specify any custom cookie configurations at all, return the defaults.
-	if oidc.CookieConfig == nil {
-		return cookieConfig
+	if oidc.CookieConfig == nil || oidc.CookieConfig.SameSite == nil {
+		return nil
 	}
 
 	// Apply the user-defined SameSite policy for each cookie if it has been configured.
-	// The helper function handles the logic of falling back to STRICT if a specific
-	// cookie's configuration is omitted in the CRD.
-	samesite := getSameSiteOrDefault(oidc.CookieConfig)
-	cookieConfig.BearerTokenCookieConfig.SameSite = samesite
-	cookieConfig.OauthHmacCookieConfig.SameSite = samesite
-	cookieConfig.OauthExpiresCookieConfig.SameSite = samesite
-	cookieConfig.IdTokenCookieConfig.SameSite = samesite
-	cookieConfig.RefreshTokenCookieConfig.SameSite = samesite
-	cookieConfig.OauthNonceCookieConfig.SameSite = samesite
-	cookieConfig.CodeVerifierCookieConfig.SameSite = samesite
-
-	return cookieConfig
+	sameSite := buildSameSite(oidc.CookieConfig)
+	return &oauth2v3.CookieConfigs{
+		BearerTokenCookieConfig:  &oauth2v3.CookieConfig{SameSite: sameSite},
+		OauthHmacCookieConfig:    &oauth2v3.CookieConfig{SameSite: sameSite},
+		OauthExpiresCookieConfig: &oauth2v3.CookieConfig{SameSite: sameSite},
+		IdTokenCookieConfig:      &oauth2v3.CookieConfig{SameSite: sameSite},
+		RefreshTokenCookieConfig: &oauth2v3.CookieConfig{SameSite: sameSite},
+		OauthNonceCookieConfig:   &oauth2v3.CookieConfig{SameSite: sameSite},
+		CodeVerifierCookieConfig: &oauth2v3.CookieConfig{SameSite: sameSite},
+	}
 }
 
 func buildDenyRedirectMatcher(oidc *ir.OIDC) []*routev3.HeaderMatcher {
