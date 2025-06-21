@@ -316,7 +316,7 @@ func resolveCTPolicyTargetRef(
 			message := fmt.Sprintf("No section name %s found for %s", *sectionName, key.String())
 
 			return gateway.GatewayContext, &status.PolicyResolveError{
-				Reason:  gwapiv1a2.PolicyReasonInvalid,
+				Reason:  gwapiv1a2.PolicyReasonTargetNotFound,
 				Message: message,
 			}
 		}
