@@ -1618,6 +1618,60 @@ func TestEnvoyProxyProvider(t *testing.T) {
 			wantErrors: []string{"Image must include a tag"},
 		},
 		{
+			desc: "invalid: image ends with colon",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					Provider: &egv1a1.EnvoyProxyProvider{
+						Type: egv1a1.ProviderTypeKubernetes,
+						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
+							EnvoyDeployment: &egv1a1.KubernetesDeploymentSpec{
+								Container: &egv1a1.KubernetesContainerSpec{
+									Image: ptr.To("envoyproxy/envoy:"),
+								},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{"Image must include a tag"},
+		},
+		{
+			desc: "invalid: image starts with colon",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					Provider: &egv1a1.EnvoyProxyProvider{
+						Type: egv1a1.ProviderTypeKubernetes,
+						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
+							EnvoyDeployment: &egv1a1.KubernetesDeploymentSpec{
+								Container: &egv1a1.KubernetesContainerSpec{
+									Image: ptr.To(":v1.25.2"),
+								},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{"Image must include a tag"},
+		},
+		{
+			desc: "invalid: image with multiple colons",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					Provider: &egv1a1.EnvoyProxyProvider{
+						Type: egv1a1.ProviderTypeKubernetes,
+						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
+							EnvoyDeployment: &egv1a1.KubernetesDeploymentSpec{
+								Container: &egv1a1.KubernetesContainerSpec{
+									Image: ptr.To("registry.com/envoy:v1.2.3:latest"),
+								},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{"Image must include a tag"},
+		},
+		{
 			desc: "invalid: imageRepository contains tag",
 			mutate: func(envoy *egv1a1.EnvoyProxy) {
 				envoy.Spec = egv1a1.EnvoyProxySpec{
