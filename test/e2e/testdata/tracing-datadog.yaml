@@ -18,21 +18,6 @@ spec:
       kind: EnvoyProxy
       name: datadog-tracing
 ---
-apiVersion: v1
-kind: Service
-metadata:
-  name: datadog-agent
-  namespace: monitoring
-spec:
-  selector:
-    app.kubernetes.io/instance: eg-addons
-    app.kubernetes.io/name: opentelemetry-collector
-    component: standalone-collector
-  ports:
-    - protocol: TCP
-      port: 8126
-      targetPort: 8126
----
 apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: EnvoyProxy
 metadata:
@@ -48,9 +33,8 @@ spec:
       provider:
         type: Datadog
         backendRefs:
-          - name: backend-fqdn
-            kind: Backend
-            group: gateway.envoyproxy.io
+          - name: otel-collector
+            namespace: monitoring
             port: 8126
       customTags:
         "provider":
@@ -74,17 +58,6 @@ spec:
   shutdown:
     drainTimeout: 5s
     minDrainDuration: 1s
----
-apiVersion: gateway.envoyproxy.io/v1alpha1
-kind: Backend
-metadata:
-  name: backend-fqdn
-  namespace: gateway-conformance-infra
-spec:
-  endpoints:
-    - fqdn:
-        hostname: datadog-agent.monitoring.svc.cluster.local
-        port: 8126
 ---
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
