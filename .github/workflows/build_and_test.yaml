@@ -190,7 +190,6 @@ jobs:
     # Benchmark
     - name: Run Benchmark tests
       env:
-        KIND_NODE_TAG: v1.29.10
         IMAGE_PULL_POLICY: IfNotPresent
         # Args for benchmark test
         BENCHMARK_RPS: 10000
@@ -213,7 +212,6 @@ jobs:
     - uses: ./tools/github-actions/setup-deps
     - name: Resilience Test
       env:
-        KIND_NODE_TAG: v1.28.13
         IMAGE_PULL_POLICY: IfNotPresent
         CUSTOM_CNI: "true"
       run: make resilience
