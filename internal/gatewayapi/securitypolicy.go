@@ -400,21 +400,12 @@ func resolveSecurityPolicyGatewayTargetRef(
 
 	// If sectionName is set, make sure its valid
 	if target.SectionName != nil {
-		found := false
-		for _, l := range gateway.listeners {
-			if l.Name == *target.SectionName {
-				found = true
-				break
-			}
-		}
-		if !found {
-			message := fmt.Sprintf("No section name %s found for Gateway %s",
-				string(*target.SectionName), key.String())
-
-			return gateway.GatewayContext, &status.PolicyResolveError{
-				Reason:  gwapiv1a2.PolicyReasonTargetNotFound,
-				Message: message,
-			}
+		if err := validateGatewayListenerSectionName(
+			*target.SectionName,
+			key,
+			gateway.listeners,
+		); err != nil {
+			return gateway.GatewayContext, err
 		}
 	}
 

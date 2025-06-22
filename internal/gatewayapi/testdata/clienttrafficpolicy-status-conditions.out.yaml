@@ -103,7 +103,7 @@ clientTrafficPolicies:
         sectionName: foo-bar
       conditions:
       - lastTransitionTime: null
-        message: No section name foo-bar found for envoy-gateway/gateway-3
+        message: No section name foo-bar found for Gateway envoy-gateway/gateway-3
         reason: TargetNotFound
         status: "False"
         type: Accepted
