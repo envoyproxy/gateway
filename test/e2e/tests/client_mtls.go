@@ -34,7 +34,7 @@ var ClientMTLSTest = suite.ConformanceTest{
 	ShortName:   "ClientMTLS",
 	Description: "Use Gateway with Client MTLS policy",
 	Manifests: []string{
-		// "testdata/client-mtls.yaml",
+		"testdata/client-mtls.yaml",
 		"testdata/client-mtls-trustbundle.yaml",
 	},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
