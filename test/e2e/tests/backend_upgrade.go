@@ -10,6 +10,7 @@ package tests
 import (
 	"context"
 	"net/url"
+	"sigs.k8s.io/gateway-api/conformance/utils/tlog"
 	"testing"
 	"time"
 
@@ -65,24 +66,23 @@ var BackendUpgradeTest = suite.ConformanceTest{
 			// will contain indication on success or failure of load test
 			loadSuccess := make(chan bool)
 
-			t.Log("Starting load generation")
+			tlog.Logf(t, "Starting load generation")
 			// Run load async and continue to restart deployment
 			go runLoadAndWait(t, suite.TimeoutConfig, loadSuccess, aborter, reqURL.String())
 
-			t.Log("Restarting deployment")
+			tlog.Logf(t, "Restarting deployment")
 			err = restartDeploymentAndWaitForNewPods(t, suite.TimeoutConfig, suite.Client, dp)
 
-			t.Log("Stopping load generation and collecting results")
+			tlog.Logf(t, "Stopping load generation and collecting results")
 			aborter.Abort(false) // abort the load either way
-
 			if err != nil {
-				t.Errorf("Failed to restart deployment")
+				tlog.Errorf(t, "Failed to restart deployment")
 			}
 
 			// Wait for the goroutine to finish
 			result := <-loadSuccess
 			if !result {
-				t.Errorf("Load test failed")
+				tlog.Errorf(t, "Load test failed")
 			}
 		})
 	},
