@@ -2967,6 +2967,8 @@ type ClientConnection struct {
 	ConnectionLimit *ConnectionLimit `json:"limit,omitempty" yaml:"limit,omitempty"`
 	// BufferLimitBytes is the maximum number of bytes that can be buffered for a connection.
 	BufferLimitBytes *uint32 `json:"bufferLimit,omitempty" yaml:"bufferLimit,omitempty"`
+	// MaxAcceptPerSocketEvent is the maximum number of connections to accept from the kernel per socket event.
+	MaxAcceptPerSocketEvent *uint32 `json:"maxAcceptPerSocketEvent,omitempty" yaml:"maxAcceptPerSocketEvent,omitempty"`
 }
 
 // ConnectionLimit contains settings for downstream connection limits

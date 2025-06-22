@@ -660,3 +660,57 @@ func Test_OIDC_PassThroughAuthHeader(t *testing.T) {
 func ToPointer[T any](v T) *T {
 	return &v
 }
+
+func Test_validateHtpasswdFormat(t *testing.T) {
+	tests := []struct {
+		name      string
+		htpasswd  string
+		wantError bool
+	}{
+		{
+			name:      "valid htpasswd with SHA format",
+			htpasswd:  "user1:{SHA}hashed_user1_password\nuser2:{SHA}hashed_user2_password",
+			wantError: false,
+		},
+		{
+			name:      "valid htpasswd with SHA format and empty lines",
+			htpasswd:  "user1:{SHA}hashed_user1_password\n\nuser2:{SHA}hashed_user2_password\n",
+			wantError: false,
+		},
+		{
+			name:      "invalid htpasswd with missing SHA prefix",
+			htpasswd:  "user1:hashed_user1_password",
+			wantError: true,
+		},
+		{
+			name:      "invalid htpasswd with MD5 format",
+			htpasswd:  "user1:$apr1$hashed_user1_password",
+			wantError: true,
+		},
+		{
+			name:      "invalid htpasswd with bcrypt format",
+			htpasswd:  "user1:$2y$hashed_user1_password",
+			wantError: true,
+		},
+		{
+			name:      "invalid htpasswd with missing colon",
+			htpasswd:  "user1{SHA}hashed_user1_password",
+			wantError: true,
+		},
+		{
+			name:      "mixed valid and invalid formats",
+			htpasswd:  "user1:{SHA}hashed_user1_password\nuser2:$apr1$hashed_user2_password",
+			wantError: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := validateHtpasswdFormat([]byte(tt.htpasswd))
+			if (err != nil) != tt.wantError {
+				t.Errorf("validateHtpasswdFormat() error = %v, wantErr %v", err, tt.wantError)
+				return
+			}
+		})
+	}
+}
