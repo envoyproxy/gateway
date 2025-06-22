@@ -19,8 +19,7 @@ import (
 func init() {
 	ConformanceTests = append(ConformanceTests,
 		DynamicResolverBackendTest,
-		DynamicResolverBackendWithTLSTest,
-		DynamicResolverBackendWithClusterTrustBundleTest)
+		DynamicResolverBackendWithTLSTest)
 }
 
 var DynamicResolverBackendTest = suite.ConformanceTest{
@@ -96,12 +95,30 @@ var DynamicResolverBackendWithTLSTest = suite.ConformanceTest{
 	Manifests: []string{
 		"testdata/httproute-with-dynamic-resolver-backend-with-tls.yaml",
 		"testdata/httproute-with-dynamic-resolver-backend-with-tls-system-ca.yaml",
+		"testdata/httproute-with-dynamic-resolver-backend-with-clustertrustbundle.yaml",
 	},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
 		ns := "gateway-conformance-infra"
 		gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
+		t.Run("ClusterTrustBundle", func(t *testing.T) {
+			routeNN := types.NamespacedName{Name: "httproute-with-dynamic-resolver-backend-tls", Namespace: ns}
+			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
+			BackendMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "backend-dynamic-resolver-clustertrustbundle", Namespace: ns})
 
-		t.Run("route to service with TLS", func(t *testing.T) {
+			expectedResponse := http.ExpectedResponse{
+				Request: http.Request{
+					Host: "backend-dynamic-resolver-tls.gateway-conformance-infra.svc.cluster.local:443",
+					Path: "/with-clustertrustbundle",
+				},
+				Response: http.Response{
+					StatusCode: 200,
+				},
+				Namespace: ns,
+			}
+
+			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
+		})
+		t.Run("TLS", func(t *testing.T) {
 			routeNN := types.NamespacedName{Name: "httproute-with-dynamic-resolver-backend-tls", Namespace: ns}
 			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
 			BackendMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "backend-dynamic-resolver-tls", Namespace: ns})
@@ -119,7 +136,7 @@ var DynamicResolverBackendWithTLSTest = suite.ConformanceTest{
 
 			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
 		})
-		t.Run("route to service with TLS using system CA", func(t *testing.T) {
+		t.Run("SystemCA", func(t *testing.T) {
 			routeNN := types.NamespacedName{Name: "httproute-with-dynamic-resolver-backend-tls-system-trust-store", Namespace: ns}
 			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
 			BackendMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "backend-dynamic-resolver-tls-system-trust-store", Namespace: ns})
@@ -140,35 +157,5 @@ var DynamicResolverBackendWithTLSTest = suite.ConformanceTest{
 			}
 			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
 		})
-	},
-}
-
-var DynamicResolverBackendWithClusterTrustBundleTest = suite.ConformanceTest{
-	ShortName:   "DynamicResolverBackendWithClusterTrustBundle",
-	Description: "Routes with a backend ref to a dynamic resolver backend with ClusterTrustBundle",
-	Manifests: []string{
-		"testdata/httproute-with-dynamic-resolver-backend-with-tls.yaml",
-		"testdata/httproute-with-dynamic-resolver-backend-with-clustertrustbundle.yaml",
-	},
-	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
-		ns := "gateway-conformance-infra"
-		gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
-
-		routeNN := types.NamespacedName{Name: "httproute-with-dynamic-resolver-backend-tls", Namespace: ns}
-		gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
-		BackendMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "backend-dynamic-resolver-tls", Namespace: ns})
-
-		expectedResponse := http.ExpectedResponse{
-			Request: http.Request{
-				Host: "backend-dynamic-resolver-tls.gateway-conformance-infra.svc.cluster.local:443",
-				Path: "/with-tls",
-			},
-			Response: http.Response{
-				StatusCode: 200,
-			},
-			Namespace: ns,
-		}
-
-		http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
 	},
 }

@@ -29,7 +29,7 @@ spec:
 apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: Backend
 metadata:
-  name: backend-dynamic-resolver-tls
+  name: backend-dynamic-resolver-clustertrustbundle
   namespace: gateway-conformance-infra
 spec:
   type: DynamicResolver
