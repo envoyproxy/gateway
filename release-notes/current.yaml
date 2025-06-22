@@ -3,7 +3,6 @@ date: Pending
 # Changes that are expected to cause an incompatibility with previous versions, such as deletions or modifications to existing APIs.
 breaking changes: |
   Use gateway name as proxy fleet name for gateway namespace mode.
-  SameSite attribute for Oauth cookies defaults to `Strict`, make sure to set `CookieConfig.SameSite` to `Disabled` if you want to keep the previous behavior.
 
 # Updates addressing vulnerabilities, security flaws, or compliance requirements.
 security updates: |
