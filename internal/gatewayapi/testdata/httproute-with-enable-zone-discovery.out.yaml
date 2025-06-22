@@ -160,7 +160,6 @@ xdsIR:
             protocol: HTTP
             weight: 1
             zoneAwareRouting:
-              enabled: true
               minSize: 1
         headerMatches:
         - distinct: false
@@ -199,7 +198,6 @@ xdsIR:
             protocol: HTTP
             weight: 1
             zoneAwareRouting:
-              enabled: true
               minSize: 1
         hostname: '*'
         isHTTP2: false

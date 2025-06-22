@@ -1125,7 +1125,7 @@ func TestRouteDestination_NeedsClusterPerSetting(t *testing.T) {
 							},
 						},
 						AddressType:      ptr.To(FQDN),
-						ZoneAwareRouting: &ZoneAwareRouting{Enabled: true, MinSize: 1},
+						ZoneAwareRouting: &ZoneAwareRouting{MinSize: 1},
 					},
 					{
 						Endpoints: []*DestinationEndpoint{
@@ -1153,7 +1153,7 @@ func TestRouteDestination_NeedsClusterPerSetting(t *testing.T) {
 							},
 						},
 						AddressType:      ptr.To(FQDN),
-						ZoneAwareRouting: &ZoneAwareRouting{Enabled: true, MinSize: 1},
+						ZoneAwareRouting: &ZoneAwareRouting{MinSize: 1},
 					},
 				},
 			},

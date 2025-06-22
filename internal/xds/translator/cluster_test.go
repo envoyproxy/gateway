@@ -66,26 +66,26 @@ func TestCheckZoneAwareRouting(t *testing.T) {
 	}{
 		{
 			name:        "zone-routing with default lb",
-			zoneRouting: &ir.ZoneAwareRouting{Enabled: true, MinSize: 1},
+			zoneRouting: &ir.ZoneAwareRouting{MinSize: 1},
 			loadBalancerCfg: &ir.LoadBalancer{
 				LeastRequest: &ir.LeastRequest{},
 			},
 		},
 		{
 			name:        "zone-routing with default lb and topology aware routing",
-			zoneRouting: &ir.ZoneAwareRouting{Enabled: true, MinSize: 3},
+			zoneRouting: &ir.ZoneAwareRouting{MinSize: 3},
 			loadBalancerCfg: &ir.LoadBalancer{
 				LeastRequest: &ir.LeastRequest{},
 			},
 		},
 		{
 			name:            "zone-routing with nil lb",
-			zoneRouting:     &ir.ZoneAwareRouting{Enabled: true, MinSize: 1},
+			zoneRouting:     &ir.ZoneAwareRouting{MinSize: 1},
 			loadBalancerCfg: nil,
 		},
 		{
 			name:        "zone-routing with least request",
-			zoneRouting: &ir.ZoneAwareRouting{Enabled: true, MinSize: 1},
+			zoneRouting: &ir.ZoneAwareRouting{MinSize: 1},
 			loadBalancerCfg: &ir.LoadBalancer{
 				LeastRequest: &ir.LeastRequest{
 					SlowStart: &ir.SlowStart{Window: &metav1.Duration{Duration: 1 * time.Second}},
@@ -94,7 +94,7 @@ func TestCheckZoneAwareRouting(t *testing.T) {
 		},
 		{
 			name:        "zone-routing with round robin",
-			zoneRouting: &ir.ZoneAwareRouting{Enabled: true, MinSize: 1},
+			zoneRouting: &ir.ZoneAwareRouting{MinSize: 1},
 			loadBalancerCfg: &ir.LoadBalancer{
 				RoundRobin: &ir.RoundRobin{
 					SlowStart: &ir.SlowStart{Window: &metav1.Duration{Duration: 1 * time.Second}},
@@ -103,12 +103,12 @@ func TestCheckZoneAwareRouting(t *testing.T) {
 		},
 		{
 			name:            "zone-routing with random",
-			zoneRouting:     &ir.ZoneAwareRouting{Enabled: true, MinSize: 1},
+			zoneRouting:     &ir.ZoneAwareRouting{MinSize: 1},
 			loadBalancerCfg: &ir.LoadBalancer{Random: &ir.Random{}},
 		},
 		{
 			name:        "zone-routing with maglev",
-			zoneRouting: &ir.ZoneAwareRouting{Enabled: true, MinSize: 1},
+			zoneRouting: &ir.ZoneAwareRouting{MinSize: 1},
 			loadBalancerCfg: &ir.LoadBalancer{
 				ConsistentHash: &ir.ConsistentHash{
 					TableSize: proto.Uint64(65537),
@@ -117,7 +117,7 @@ func TestCheckZoneAwareRouting(t *testing.T) {
 		},
 		{
 			name:        "zone-routing with round robin",
-			zoneRouting: &ir.ZoneAwareRouting{Enabled: true, MinSize: 1},
+			zoneRouting: &ir.ZoneAwareRouting{MinSize: 1},
 			loadBalancerCfg: &ir.LoadBalancer{
 				RoundRobin: &ir.RoundRobin{
 					SlowStart: &ir.SlowStart{Window: &metav1.Duration{Duration: 1 * time.Second}},
@@ -153,7 +153,7 @@ func TestCheckZoneAwareRouting(t *testing.T) {
 			dynamicXdsCluster := clusterResult.cluster
 			require.NoError(t, err)
 
-			if !ptr.Deref(tt.zoneRouting, ir.ZoneAwareRouting{}).Enabled {
+			if tt.zoneRouting == nil {
 				require.Nil(t, dynamicXdsCluster.LoadBalancingPolicy)
 				require.Equal(t, &clusterv3.Cluster_CommonLbConfig_LocalityWeightedLbConfig_{LocalityWeightedLbConfig: &clusterv3.Cluster_CommonLbConfig_LocalityWeightedLbConfig{}}, dynamicXdsCluster.CommonLbConfig.LocalityConfigSpecifier)
 			} else {

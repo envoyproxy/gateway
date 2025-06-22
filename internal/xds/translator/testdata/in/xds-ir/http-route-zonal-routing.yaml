@@ -20,5 +20,4 @@ http:
         name: "first-route-dest/backend/0"
         weight: 30
         zoneAwareRouting:
-          enabled: true
           minSize: 1

@@ -24,7 +24,6 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/validation"
-	"k8s.io/utils/ptr"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	"sigs.k8s.io/yaml"
 
@@ -1572,7 +1571,7 @@ func (r *RouteDestination) HasFiltersInSettings() bool {
 // HasZoneAwareRouting returns true if any setting in the destination has ZoneAwareRoutingEnabled set
 func (r *RouteDestination) HasZoneAwareRouting() bool {
 	for _, setting := range r.Settings {
-		if ptr.Deref(setting.ZoneAwareRouting, ZoneAwareRouting{}).Enabled {
+		if setting.ZoneAwareRouting != nil {
 			return true
 		}
 	}
@@ -1632,6 +1631,8 @@ type DestinationSetting struct {
 	Filters  *DestinationFilters `json:"filters,omitempty" yaml:"filters,omitempty"`
 	// ZoneAwareRouting specifies whether to enable Zone Aware Routing for this destination's endpoints.
 	// This is derived from the backend service and depends on having Kubernetes Topology Aware Routing or Traffic Distribution enabled.
+	//
+	// +optional
 	ZoneAwareRouting *ZoneAwareRouting `json:"zoneAwareRouting,omitempty" yaml:"zoneAwareRouting,omitempty"`
 	// Metadata is used to enrich envoy route metadata with user and provider-specific information
 	// The primary metadata for DestinationSettings comes from the Backend resource reference in BackendRef
@@ -3150,6 +3151,5 @@ type RequestBuffer struct {
 // ZoneAwareRouting holds the zone aware routing configuration
 // +k8s:deepcopy-gen=true
 type ZoneAwareRouting struct {
-	Enabled bool `json:"enabled" yaml:"enabled"`
-	MinSize int  `json:"minSize" yaml:"minSize"`
+	MinSize int `json:"minSize" yaml:"minSize"`
 }

@@ -1603,7 +1603,6 @@ func processZoneAwareRouting(svc *corev1.Service) *ir.ZoneAwareRouting {
 
 	if trafficDist := svc.Spec.TrafficDistribution; trafficDist != nil {
 		return &ir.ZoneAwareRouting{
-			Enabled: *trafficDist == corev1.ServiceTrafficDistributionPreferClose,
 			MinSize: 1,
 		}
 	}
@@ -1612,9 +1611,8 @@ func processZoneAwareRouting(svc *corev1.Service) *ir.ZoneAwareRouting {
 	// Ref:
 	// https://kubernetes.io/docs/concepts/services-networking/topology-aware-routing/#enabling-topology-aware-routing
 	// https://github.com/kubernetes/kubernetes/blob/9d9e1afdf78bce0a517cc22557457f942040ca19/staging/src/k8s.io/endpointslice/utils.go#L355-L368
-	if val, ok := svc.Annotations[corev1.AnnotationTopologyMode]; ok {
+	if val, ok := svc.Annotations[corev1.AnnotationTopologyMode]; ok && val == "Auto" || val == "auto" {
 		return &ir.ZoneAwareRouting{
-			Enabled: val == "Auto" || val == "auto",
 			MinSize: 3,
 		}
 	}

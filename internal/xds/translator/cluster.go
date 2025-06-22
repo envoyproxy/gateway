@@ -355,7 +355,7 @@ func buildXdsCluster(args *xdsClusterArgs) (*buildClusterResult, error) {
 // TODO: Remove cluster.LbPolicy along with clustercommongLbConfig and switch to cluster.LoadBalancingPolicy
 // everywhere as the preferred and more feature-rich configuration field.
 func buildZoneAwareRoutingCluster(cfg *ir.ZoneAwareRouting, cluster *clusterv3.Cluster, lb *ir.LoadBalancer) {
-	if cfg == nil || !cfg.Enabled {
+	if cfg == nil {
 		return
 	}
 
@@ -652,7 +652,7 @@ func buildXdsClusterLoadAssignment(clusterName string, destSettings []*ir.Destin
 		// if multiple backendRefs exist. This pushes part of the routing logic higher up the stack which can
 		// limit host selection controls during retries and session affinity.
 		// For more details see https://github.com/envoyproxy/gateway/issues/5307#issuecomment-2688767482
-		if ptr.Deref(ds.ZoneAwareRouting, ir.ZoneAwareRouting{}).Enabled {
+		if ds.ZoneAwareRouting != nil {
 			localities = append(localities, buildZonalLocalities(metadata, ds)...)
 		} else {
 			localities = append(localities, buildWeightedLocalities(metadata, ds))
