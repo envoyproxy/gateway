@@ -245,7 +245,7 @@ func (r *gatewayAPIReconciler) isBackendReferencingClusterTrustBundle(ctb *certi
 func (r *gatewayAPIReconciler) isBackendTLSPolicyReferencingClusterTrustBundle(ctb *certificatesv1a1.ClusterTrustBundle) bool {
 	btlsList := &gwapiv1a3.BackendTLSPolicyList{}
 	if err := r.client.List(context.Background(), btlsList, &client.ListOptions{
-		FieldSelector: fields.OneTermEqualSelector(clusterTrustBundleBackendIndex, ctb.Name),
+		FieldSelector: fields.OneTermEqualSelector(clusterTrustBundleBtlsIndex, ctb.Name),
 	}); err != nil {
 		r.log.Error(err, "unable to find associated BackendTLSPolicy")
 		return false

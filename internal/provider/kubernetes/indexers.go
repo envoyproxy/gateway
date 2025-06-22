@@ -955,11 +955,9 @@ func secretBtlsIndexFunc(rawObj client.Object) []string {
 func clusterTrustBundleBtlsIndexFunc(rawObj client.Object) []string {
 	btls := rawObj.(*gwapiv1a3.BackendTLSPolicy)
 	var refs []string
-	if btls.Spec.Validation.CACertificateRefs != nil {
-		for _, caCertRef := range btls.Spec.Validation.CACertificateRefs {
-			if string(caCertRef.Kind) == resource.KindClusterTrustBundle {
-				refs = append(refs, string(caCertRef.Name))
-			}
+	for _, caCertRef := range btls.Spec.Validation.CACertificateRefs {
+		if string(caCertRef.Kind) == resource.KindClusterTrustBundle {
+			refs = append(refs, string(caCertRef.Name))
 		}
 	}
 	return refs
