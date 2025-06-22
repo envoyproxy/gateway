@@ -65,22 +65,32 @@ var DynamicResolverBackendTest = suite.ConformanceTest{
 			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
 			BackendMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "backend-dynamic-resolver-with-app-protocol", Namespace: ConformanceInfraNamespace})
 
-			expectedResponse := http.ExpectedResponse{
+			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, http.ExpectedResponse{
 				Request: http.Request{
 					Host: "httpbin.org",
 					Path: "/status/200",
 				},
-				ExpectedRequest: &http.ExpectedRequest{
-					Request: http.Request{
-						Host: "",
-					},
+				Response: http.Response{
+					StatusCode: 502, // request will fail because httpbin.org doesn't support http2.0
+				},
+			})
+
+			// test with nghttp2.org, it support http2.0
+			// https://github.com/postmanlabs/httpbin/issues/373#issuecomment-354534597
+			req := http.MakeRequest(t, &http.ExpectedResponse{
+				Request: http.Request{
+					Host: "nghttp2.org",
+					Path: "httpbin/status/200",
 				},
 				Response: http.Response{
 					StatusCode: 200,
 				},
-			}
-
-			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
+			}, gwAddr, "HTTP", "http")
+			http.WaitForConsistentResponse(t, suite.RoundTripper, req, http.ExpectedResponse{
+				Response: http.Response{
+					StatusCode: 200,
+				},
+			}, suite.TimeoutConfig.RequiredConsecutiveSuccesses, suite.TimeoutConfig.MaxTimeToConsistency)
 		})
 	},
 }
