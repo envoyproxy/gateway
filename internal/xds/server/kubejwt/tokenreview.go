@@ -9,11 +9,9 @@ import (
 	"context"
 	"fmt"
 	"slices"
-	"strings"
 
 	authenticationv1 "k8s.io/api/authentication/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apiserver/pkg/authentication/serviceaccount"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
@@ -69,21 +67,4 @@ func (i *JWTAuthInterceptor) validateKubeJWT(ctx context.Context, token, nodeID 
 	}
 
 	return nil
-}
-
-// this is the same logic used in infra pkg func ExpectedResourceHashedName to generate the resource name.
-func irKey2ServiceAccountName(irKey string) types.NamespacedName {
-	names := strings.Split(irKey, "/")
-	if len(names) == 2 {
-		return types.NamespacedName{
-			Namespace: names[0],
-			Name:      names[1],
-		}
-	}
-
-	// Might be MergeGateways, should not happen
-	// but just in case, return the first part as name
-	return types.NamespacedName{
-		Name: names[0],
-	}
 }
