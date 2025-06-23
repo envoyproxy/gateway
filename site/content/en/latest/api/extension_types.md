@@ -3946,7 +3946,7 @@ _Appears in:_
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `url` | _string_ |  true  |  | URL of the Redis Database. |
+| `url` | _string_ |  true  |  | URL of the Redis Database. This can reference a single Redis host, or a comma delimited list for Sentinel and Cluster deployments of Redis. |
 | `tls` | _[RedisTLSSettings](#redistlssettings)_ |  false  |  | TLS defines TLS configuration for connecting to redis database. |
 
 
