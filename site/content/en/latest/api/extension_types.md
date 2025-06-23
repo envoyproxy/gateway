@@ -678,6 +678,7 @@ _Appears in:_
 | ---   | ---  | ---      | ---     | ---         |
 | `connectionLimit` | _[ConnectionLimit](#connectionlimit)_ |  false  |  | ConnectionLimit defines limits related to connections |
 | `bufferLimit` | _[Quantity](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.29/#quantity-resource-api)_ |  false  |  | BufferLimit provides configuration for the maximum buffer size in bytes for each incoming connection.<br />BufferLimit applies to connection streaming (maybe non-streaming) channel between processes, it's in user space.<br />For example, 20Mi, 1Gi, 256Ki etc.<br />Note that when the suffix is not provided, the value is interpreted as bytes.<br />Default: 32768 bytes. |
+| `maxAcceptPerSocketEvent` | _integer_ |  false  |  | MaxAcceptPerSocketEvent provides configuration for the maximum number of connections to accept from the kernel<br />per socket event. If there are more than MaxAcceptPerSocketEvent connections pending accept, connections over<br />this threshold will be accepted in later event loop iterations. If no value is provided Envoy will accept<br />all connections pending accept from the kernel.<br />It is recommended to lower this value for better overload management and reduced per-event cost.<br />Setting it to 1 is a viable option with no noticeable impact on performance. |
 
 
 #### ClientIPDetectionSettings
@@ -3181,7 +3182,7 @@ _Appears in:_
 | `clientID` | _string_ |  true  |  | The client ID to be used in the OIDC<br />[Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest). |
 | `clientSecret` | _[SecretObjectReference](https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1.SecretObjectReference)_ |  true  |  | The Kubernetes secret which contains the OIDC client secret to be used in the<br />[Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest).<br />This is an Opaque secret. The client secret should be stored in the key<br />"client-secret". |
 | `cookieNames` | _[OIDCCookieNames](#oidccookienames)_ |  false  |  | The optional cookie name overrides to be used for Bearer and IdToken cookies in the<br />[Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest).<br />If not specified, uses a randomly generated suffix |
-| `cookieConfig` | _[OIDCCookieConfig](#oidccookieconfig)_ |  false  |  | CookieConfigs allows overriding the SameSite attribute for OIDC cookies.<br />If a specific cookie is not configured, it will use the "Strict" SameSite policy by default. |
+| `cookieConfig` | _[OIDCCookieConfig](#oidccookieconfig)_ |  false  |  | CookieConfigs allows setting the SameSite attribute for OIDC cookies.<br />By default, its unset. |
 | `cookieDomain` | _string_ |  false  |  | The optional domain to set the access and ID token cookies on.<br />If not set, the cookies will default to the host of the request, not including the subdomains.<br />If set, the cookies will be set on the specified domain and all subdomains.<br />This means that requests to any subdomain will not require reauthentication after users log in to the parent domain. |
 | `scopes` | _string array_ |  false  |  | The OIDC scopes to be used in the<br />[Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest).<br />The "openid" scope is always added to the list of scopes if not already<br />specified. |
 | `resources` | _string array_ |  false  |  | The OIDC resources to be used in the<br />[Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest). |
@@ -3199,7 +3200,7 @@ _Appears in:_
 
 
 
-
+OIDCCookieConfig defines the cookie configuration for OAuth2 cookies.
 
 _Appears in:_
 - [OIDC](#oidc)

@@ -25,7 +25,8 @@ spec:
     - group: gateway.envoyproxy.io
       kind: Backend
       name: backend-dynamic-resolver-with-app-protocol
-      match:
+    matches:
+    - path:
         type: PathPrefix
         value: /status
 ---

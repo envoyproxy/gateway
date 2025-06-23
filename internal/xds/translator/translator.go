@@ -120,10 +120,6 @@ func (t *Translator) Translate(xdsIR *ir.Xds) (*types.ResourceVersionTable, erro
 		errs = errors.Join(errs, err)
 	}
 
-	if err := processJSONPatches(tCtx, xdsIR.EnvoyPatchPolicies); err != nil {
-		errs = errors.Join(errs, err)
-	}
-
 	if err := processClusterForAccessLog(tCtx, xdsIR.AccessLog, xdsIR.Metrics); err != nil {
 		errs = errors.Join(errs, err)
 	}
@@ -137,6 +133,11 @@ func (t *Translator) Translate(xdsIR *ir.Xds) (*types.ResourceVersionTable, erro
 	// - the OIDC HMAC secret
 	// - the rate limit server cluster
 	if err := t.patchGlobalResources(tCtx, xdsIR); err != nil {
+		errs = errors.Join(errs, err)
+	}
+
+	// All XDS resources is ready, let's do the patch.
+	if err := processJSONPatches(tCtx, xdsIR.EnvoyPatchPolicies); err != nil {
 		errs = errors.Join(errs, err)
 	}
 
