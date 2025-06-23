@@ -72,7 +72,7 @@ func (t *Translator) translateExtServiceBackendRefs(
 	rs = &ir.RouteDestination{
 		Name:     destName,
 		Settings: ds,
-		Metadata: buildResourceMetadata(policy, nil),
+		Metadata: buildResourceMetadata(policy, nil, 0),
 	}
 
 	if validationErr := rs.Validate(); validationErr != nil {

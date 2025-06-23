@@ -3507,6 +3507,11 @@ func (in *TCPRoute) DeepCopyInto(out *TCPRoute) {
 		*out = new(ProxyProtocol)
 		**out = **in
 	}
+	if in.Metadata != nil {
+		in, out := &in.Metadata, &out.Metadata
+		*out = new(ResourceMetadata)
+		(*in).DeepCopyInto(*out)
+	}
 	if in.BackendConnection != nil {
 		in, out := &in.BackendConnection, &out.BackendConnection
 		*out = new(BackendConnection)
