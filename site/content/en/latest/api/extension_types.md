@@ -1968,15 +1968,15 @@ _Appears in:_
 | `after` | _[EnvoyFilter](#envoyfilter)_ |  true  |  | After defines the filter that should come after the filter.<br />Only one of Before or After must be set. |
 
 
-#### ForceLocalZone
+#### ForceLocal
 
 
 
-ForceLocalZone defines override configuration for forcing all traffic to stay local vs Envoy default behavior
+ForceLocal defines override configuration for forcing all traffic to stay local vs Envoy default behavior
 which maintains equal distribution among upstreams while sending as much traffic as possible locally.
 
 _Appears in:_
-- [PreferLocalZone](#preferlocalzone)
+- [ZoneAware](#zoneaware)
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
@@ -3446,19 +3446,6 @@ _Appears in:_
 | `targetSelectors` | _[TargetSelector](#targetselector) array_ |  true  |  | TargetSelectors allow targeting resources for this policy based on labels |
 
 
-#### PreferLocalZone
-
-
-
-PreferLocalZone configures zone-aware routing to prefer sending traffic to the local locality zone.
-
-_Appears in:_
-- [RequestDistribution](#requestdistribution)
-
-| Field | Type | Required | Default | Description |
-| ---   | ---  | ---      | ---     | ---         |
-
-
 #### Principal
 
 
@@ -4188,19 +4175,6 @@ _Appears in:_
 
 _Appears in:_
 - [BackendTrafficPolicySpec](#backendtrafficpolicyspec)
-
-| Field | Type | Required | Default | Description |
-| ---   | ---  | ---      | ---     | ---         |
-
-
-#### RequestDistribution
-
-
-
-RequestDistribution defines the configuration related to the distribution of requests between localities.
-
-_Appears in:_
-- [LoadBalancer](#loadbalancer)
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
@@ -5079,5 +5053,18 @@ _Appears in:_
 | ---   | ---  | ---      | ---     | ---         |
 | `enable128BitTraceId` | _boolean_ |  false  |  | Enable128BitTraceID determines whether a 128bit trace id will be used<br />when creating a new trace instance. If set to false, a 64bit trace<br />id will be used. |
 | `disableSharedSpanContext` | _boolean_ |  false  |  | DisableSharedSpanContext determines whether the default Envoy behaviour of<br />client and server spans sharing the same span context should be disabled. |
+
+
+#### ZoneAware
+
+
+
+ZoneAware configures zone-aware routing to prefer sending traffic to the local locality zone.
+
+_Appears in:_
+- [LoadBalancer](#loadbalancer)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
 
 

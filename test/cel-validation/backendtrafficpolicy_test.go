@@ -343,7 +343,7 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 			},
 		},
 		{
-			desc: "consistentHash lb with requestDistribution",
+			desc: "consistentHash lb with zoneAware",
 			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
 				btp.Spec = egv1a1.BackendTrafficPolicySpec{
 					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
@@ -361,15 +361,13 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 							ConsistentHash: &egv1a1.ConsistentHash{
 								Type: "SourceIP",
 							},
-							RequestDistribution: &egv1a1.RequestDistribution{
-								PreferLocalZone: &egv1a1.PreferLocalZone{},
-							},
+							ZoneAware: &egv1a1.ZoneAware{},
 						},
 					},
 				}
 			},
 			wantErrors: []string{
-				"spec.loadBalancer: Invalid value: \"object\": Currently RequestDistribution is only supported for LeastRequest, Random, and RoundRobin load balancers",
+				"spec.loadBalancer: Invalid value: \"object\": Currently ZoneAware is only supported for LeastRequest, Random, and RoundRobin load balancers",
 			},
 		},
 		{
@@ -395,7 +393,7 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 			wantErrors: []string{},
 		},
 		{
-			desc: "leastRequest with RequestDistribution.PreferLocalZone set",
+			desc: "leastRequest with ZoneAware set",
 			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
 				btp.Spec = egv1a1.BackendTrafficPolicySpec{
 					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
@@ -409,10 +407,8 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 					},
 					ClusterSettings: egv1a1.ClusterSettings{
 						LoadBalancer: &egv1a1.LoadBalancer{
-							Type: egv1a1.LeastRequestLoadBalancerType,
-							RequestDistribution: &egv1a1.RequestDistribution{
-								PreferLocalZone: &egv1a1.PreferLocalZone{},
-							},
+							Type:      egv1a1.LeastRequestLoadBalancerType,
+							ZoneAware: &egv1a1.ZoneAware{},
 						},
 					},
 				}
