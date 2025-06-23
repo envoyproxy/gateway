@@ -17,6 +17,9 @@ metadata:
     uid: test-owner-reference-uid-for-gatewayclass
 spec:
   externalTrafficPolicy: Local
+  ipFamilies:
+  - IPv4
+  ipFamilyPolicy: SingleStack
   ports:
   - name: EnvoyHTTPPort
     port: 0
