@@ -1615,7 +1615,7 @@ func TestEnvoyProxyProvider(t *testing.T) {
 					},
 				}
 			},
-			wantErrors: []string{"Image must include a tag"},
+			wantErrors: []string{"Image must include a tag and allowed characters only (e.g., 'repo:tag')."},
 		},
 		{
 			desc: "invalid: image ends with colon",
@@ -1633,7 +1633,7 @@ func TestEnvoyProxyProvider(t *testing.T) {
 					},
 				}
 			},
-			wantErrors: []string{"Image must include a tag"},
+			wantErrors: []string{"Image must include a tag and allowed characters only (e.g., 'repo:tag')."},
 		},
 		{
 			desc: "invalid: image starts with colon",
@@ -1651,7 +1651,7 @@ func TestEnvoyProxyProvider(t *testing.T) {
 					},
 				}
 			},
-			wantErrors: []string{"Image must include a tag"},
+			wantErrors: []string{"Image must include a tag and allowed characters only (e.g., 'repo:tag')."},
 		},
 		{
 			desc: "invalid: image with multiple colons",
@@ -1669,7 +1669,7 @@ func TestEnvoyProxyProvider(t *testing.T) {
 					},
 				}
 			},
-			wantErrors: []string{"Image must include a tag"},
+			wantErrors: []string{"Image must include a tag and allowed characters only (e.g., 'repo:tag')."},
 		},
 		{
 			desc: "invalid: imageRepository contains tag",
@@ -1687,7 +1687,7 @@ func TestEnvoyProxyProvider(t *testing.T) {
 					},
 				}
 			},
-			wantErrors: []string{"ImageRepository must not include a tag"},
+			wantErrors: []string{"ImageRepository must contain only allowed characters and must not include a tag or any colons."},
 		},
 	}
 
