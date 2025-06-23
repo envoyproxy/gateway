@@ -1864,8 +1864,8 @@ func TestIPFamilyPresentInSpec(t *testing.T) {
 		{
 			"ipv4 specified",
 			ptr.To(egv1a1.IPv4),
-			nil,
-			nil,
+			[]corev1.IPFamily{corev1.IPv4Protocol},
+			ptr.To(corev1.IPFamilyPolicySingleStack),
 		},
 		{
 			"ipv6 specified",
