@@ -2767,6 +2767,16 @@ spec:
                     required:
                     - value
                     type: object
+                  maxAcceptPerSocketEvent:
+                    description: |-
+                      MaxAcceptPerSocketEvent provides configuration for the maximum number of connections to accept from the kernel
+                      per socket event. If there are more than MaxAcceptPerSocketEvent connections pending accept, connections over
+                      this threshold will be accepted in later event loop iterations. If no value is provided Envoy will accept
+                      all connections pending accept from the kernel.
+                      It is recommended to lower this value for better overload management and reduced per-event cost.
+                      Setting it to 1 is a viable option with no noticeable impact on performance.
+                    format: int32
+                    type: integer
                   socketBufferLimit:
                     allOf:
                     - pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
@@ -4915,6 +4925,12 @@ spec:
                       group.
                     rule: 'has(self.backendRefs) ? (self.backendRefs.all(f, f.group
                       == "" || f.group == ''gateway.envoyproxy.io'')) : true'
+                  - message: If FullDuplexStreamed body processing mode is used, FailOpen
+                      must be false.
+                    rule: '!(has(self.failOpen) && self.failOpen == true && ((has(self.processingMode.request.body)
+                      && self.processingMode.request.body == ''FullDuplexStreamed'')
+                      || (has(self.processingMode.response.body) && self.processingMode.response.body
+                      == ''FullDuplexStreamed'')))'
                 maxItems: 16
                 type: array
               lua:
@@ -24976,8 +24992,8 @@ spec:
                     type: object
                   cookieConfig:
                     description: |-
-                      CookieConfigs allows overriding the SameSite attribute for OIDC cookies.
-                      If a specific cookie is not configured, it will use the "Strict" SameSite policy by default.
+                      CookieConfigs allows setting the SameSite attribute for OIDC cookies.
+                      By default, its unset.
                     properties:
                       sameSite:
                         default: Strict
@@ -24985,7 +25001,6 @@ spec:
                         - Lax
                         - Strict
                         - None
-                        - Disabled
                         type: string
                     type: object
                   cookieDomain:
