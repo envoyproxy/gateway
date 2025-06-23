@@ -456,6 +456,9 @@ func buildXdsHealthCheck(healthcheck *ir.ActiveHealthCheck) []*corev3.HealthChec
 		Timeout:  durationpb.New(healthcheck.Timeout.Duration),
 		Interval: durationpb.New(healthcheck.Interval.Duration),
 	}
+	if healthcheck.InitialJitter != nil {
+		hc.InitialJitter = durationpb.New(healthcheck.InitialJitter.Duration)
+	}
 	if healthcheck.UnhealthyThreshold != nil {
 		hc.UnhealthyThreshold = wrapperspb.UInt32(*healthcheck.UnhealthyThreshold)
 	}
