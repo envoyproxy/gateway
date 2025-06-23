@@ -39,6 +39,7 @@ bug fixes: |
   Fixed bug in certificate SANs overlap detection in listeners.
   Fixed issue where EnvoyExtensionPolicy ExtProc body processing mode is set to FullDuplexStreamed, but trailers were not sent.
   Fixed validation issue where EnvoyExtensionPolicy ExtProc failOpen is true, and body processing mode FullDuplexStreamed is not rejected.
+  Fixed bug with IPv6, dual stack clusters and ipFamily IPV4 where the Service was IPv6.
 
 
 # Enhancements that improve performance.
