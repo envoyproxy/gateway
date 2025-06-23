@@ -18,6 +18,13 @@ spec:
     metadata:
       labels:
         app: certgen
+        {{- if .Values.certgen.job.podLabels }}
+          {{- toYaml .Values.certgen.job.podLabels | nindent 8 -}}
+        {{- end }}
+      {{- if .Values.certgen.job.podAnnotations }}
+      annotations:
+        {{- toYaml .Values.certgen.job.podAnnotations | nindent 8 -}}
+      {{- end }}
     spec:
       containers:
       {{- $args := .Values.certgen.job.args }}
