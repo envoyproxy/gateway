@@ -44,6 +44,7 @@ spec:
         gateway.envoyproxy.io/owning-gateway-namespace: namespace-1
         gateway.networking.k8s.io/gateway-name: gateway-1
     spec:
+      automountServiceAccountToken: false
       containers:
       - args:
         - --service-cluster namespace-1/gateway-1
@@ -457,6 +458,7 @@ spec:
         gateway.envoyproxy.io/owning-gateway-namespace: namespace-2
         gateway.networking.k8s.io/gateway-name: gateway-2
     spec:
+      automountServiceAccountToken: false
       containers:
       - args:
         - --service-cluster namespace-2/gateway-2
