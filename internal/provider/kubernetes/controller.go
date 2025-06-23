@@ -812,8 +812,8 @@ func (r *gatewayAPIReconciler) processSecretRef(
 		types.NamespacedName{Namespace: secretNS, Name: string(secretRef.Name)},
 		secret,
 	)
-	if err != nil && kerrors.IsNotFound(err) {
-		return fmt.Errorf("unable to find the Secret: %s/%s", secretNS, string(secretRef.Name))
+	if err != nil {
+		return fmt.Errorf("unable to find the Secret %s/%s: %w", secretNS, string(secretRef.Name), err)
 	}
 
 	if secretNS != ownerNS {
@@ -863,8 +863,8 @@ func (r *gatewayAPIReconciler) processClusterTrustBundleRef(
 ) error {
 	trustBundle := &certificatesv1a1.ClusterTrustBundle{}
 	err := r.client.Get(ctx, types.NamespacedName{Name: string(ref.Name)}, trustBundle)
-	if err != nil && kerrors.IsNotFound(err) {
-		return fmt.Errorf("unable to find the ClusterTrustBundle: %s", string(ref.Name))
+	if err != nil {
+		return fmt.Errorf("unable to find the ClusterTrustBundle %s: %w", string(ref.Name), err)
 	}
 
 	key := trustBundle.Name
@@ -945,8 +945,8 @@ func (r *gatewayAPIReconciler) processConfigMapRef(
 		types.NamespacedName{Namespace: configMapNS, Name: string(configMapRef.Name)},
 		configMap,
 	)
-	if err != nil && kerrors.IsNotFound(err) {
-		return fmt.Errorf("unable to find the ConfigMap: %s/%s", configMapNS, string(configMapRef.Name))
+	if err != nil {
+		return fmt.Errorf("unable to find the ConfigMap %s/%s: %w", configMapNS, string(configMapRef.Name), err)
 	}
 
 	if configMapNS != ownerNS {
