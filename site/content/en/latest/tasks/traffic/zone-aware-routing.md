@@ -124,8 +124,8 @@ Ensure that both example Deployments are marked as ready and produces the follow
 ```shell
 kubectl get deployment/zone-aware-routing-backend-local deployment/zone-aware-routing-backend-nonlocal -n default
 NAME                            READY   UP-TO-DATE   AVAILABLE   AGE
-zone-aware-routing-backend-local      2/2     2            2           9m1s
-zone-aware-routing-backend-nonlocal   2/2     2            2           9m1s
+zone-aware-routing-backend-local      3/3     3            3           9m1s
+zone-aware-routing-backend-nonlocal   3/3     3            3           9m1s
 
 ```
 
