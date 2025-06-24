@@ -312,7 +312,7 @@ func TestValidateEnvoyGateway(t *testing.T) {
 						Backend: egv1a1.RateLimitDatabaseBackend{
 							Type: egv1a1.RedisBackendType,
 							Redis: &egv1a1.RateLimitRedisSettings{
-								URL: "primary,node-0:26379,node-1:26379",
+								URL: "primary_.-,node-0:26379,node-1:26379",
 							},
 						},
 					},
