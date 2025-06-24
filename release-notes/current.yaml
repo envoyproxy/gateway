@@ -23,6 +23,7 @@ bug fixes: |
   Keep ALPN configuration for listeners with overlapping certificates when ALPN is explicitly set in ClientTrafficPolicy.
   Fixed issue where EnvoyExtensionPolicy ExtProc body processing mode is set to FullDuplexStreamed, but trailers were not sent.
   Fixed validation issue where EnvoyExtensionPolicy ExtProc failOpen is true, and body processing mode FullDuplexStreamed is not rejected.
+  Add ConfigMap indexers for EnvoyExtensionPolicies to reconcile Lua changes
 
 
 # Enhancements that improve performance.

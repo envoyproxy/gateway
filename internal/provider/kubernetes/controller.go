@@ -2182,6 +2182,7 @@ func (r *gatewayAPIReconciler) processEnvoyExtensionPolicies(
 		// It will be recomputed by the gateway-api layer
 		envoyExtensionPolicy.Status = gwapiv1a2.PolicyStatus{}
 		if !resourceMap.allAssociatedEnvoyExtensionPolicies.Has(utils.NamespacedName(&envoyExtensionPolicy).String()) {
+			r.log.Info("processing EnvoyExtensionPolicy", "namespace", policy.Namespace, "name", policy.Name)
 			resourceMap.allAssociatedEnvoyExtensionPolicies.Insert(utils.NamespacedName(&envoyExtensionPolicy).String())
 			resourceTree.EnvoyExtensionPolicies = append(resourceTree.EnvoyExtensionPolicies, &envoyExtensionPolicy)
 		}
