@@ -11,7 +11,8 @@ gateways:
     - allowedRoutes:
         namespaces:
           from: All
-      name: http
+      hostname: listener-1.gateway-1.envoyproxy.io
+      name: listener-1
       port: 80
       protocol: HTTP
   status:
@@ -33,7 +34,7 @@ gateways:
         reason: ResolvedRefs
         status: "True"
         type: ResolvedRefs
-      name: http
+      name: listener-1
       supportedKinds:
       - group: gateway.networking.k8s.io
         kind: HTTPRoute
@@ -43,31 +44,23 @@ httpRoutes:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: HTTPRoute
   metadata:
-    annotations:
-      gateway.envoyproxy.io/foo: bar
-      k8s.io/bar: foo
     creationTimestamp: null
     name: httproute-1
     namespace: default
   spec:
+    hostnames:
+    - listener-1.gateway-1.envoyproxy.io
     parentRefs:
     - name: gateway-1
       namespace: envoy-gateway
-      sectionName: http
+      sectionName: listener-1
     rules:
     - backendRefs:
       - name: service-1
         port: 8080
-      name: rule-1
-    - backendRefs:
-      - name: service-1
-        port: 8080
       matches:
-      - headers:
-        - name: foo
-          type: Exact
-          value: bar
-      name: rule-2
+      - path:
+          value: /foo
   status:
     parents:
     - conditions:
@@ -85,23 +78,13 @@ httpRoutes:
       parentRef:
         name: gateway-1
         namespace: envoy-gateway
-        sectionName: http
+        sectionName: listener-1
 infraIR:
   envoy-gateway/gateway-1:
     proxy:
-      config:
-        apiVersion: gateway.envoyproxy.io/v1alpha1
-        kind: EnvoyProxy
-        metadata:
-          creationTimestamp: null
-          name: test
-          namespace: envoy-gateway-system
-        spec:
-          logging: {}
-        status: {}
       listeners:
       - address: null
-        name: envoy-gateway/gateway-1/http
+        name: envoy-gateway/gateway-1/listener-1
         ports:
         - containerPort: 10080
           name: http-80
@@ -116,6 +99,37 @@ infraIR:
           name: envoy-gateway-class
       name: envoy-gateway/gateway-1
       namespace: envoy-gateway-system
+securityPolicies:
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: SecurityPolicy
+  metadata:
+    creationTimestamp: null
+    name: policy-for-gateway-1
+    namespace: envoy-gateway
+  spec:
+    cors:
+      allowHeaders:
+      - x-gateway-1
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: Gateway
+      name: gateway-1
+      sectionName: not-found-section-name
+  status:
+    ancestors:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: gateway-1
+        namespace: envoy-gateway
+        sectionName: not-found-section-name
+      conditions:
+      - lastTransitionTime: null
+        message: No section name not-found-section-name found for Gateway envoy-gateway/gateway-1
+        reason: TargetNotFound
+        status: "False"
+        type: Accepted
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
 xdsIR:
   envoy-gateway/gateway-1:
     accessLog:
@@ -124,14 +138,14 @@ xdsIR:
     http:
     - address: 0.0.0.0
       hostnames:
-      - '*'
+      - listener-1.gateway-1.envoyproxy.io
       isHTTP2: false
       metadata:
         kind: Gateway
         name: gateway-1
         namespace: envoy-gateway
-        sectionName: http
-      name: envoy-gateway/gateway-1/http
+        sectionName: listener-1
+      name: envoy-gateway/gateway-1/listener-1
       path:
         escapedSlashesAction: UnescapeAndRedirect
         mergeSlashes: true
@@ -139,57 +153,15 @@ xdsIR:
       routes:
       - destination:
           metadata:
-            annotations:
-              foo: bar
             kind: HTTPRoute
             name: httproute-1
             namespace: default
-            sectionName: rule-2
-          name: httproute/default/httproute-1/rule/1
-          settings:
-          - addressType: IP
-            endpoints:
-            - host: 7.7.7.7
-              port: 8080
-              zone: antarctica-east1b
-            metadata:
-              name: service-1
-              namespace: default
-              sectionName: "8080"
-            name: httproute/default/httproute-1/rule/1/backend/0
-            protocol: HTTP
-            weight: 1
-            zoneAwareRouting:
-              minSize: 1
-        headerMatches:
-        - distinct: false
-          exact: bar
-          name: foo
-        hostname: '*'
-        isHTTP2: false
-        metadata:
-          annotations:
-            foo: bar
-          kind: HTTPRoute
-          name: httproute-1
-          namespace: default
-          sectionName: rule-2
-        name: httproute/default/httproute-1/rule/1/match/0/*
-      - destination:
-          metadata:
-            annotations:
-              foo: bar
-            kind: HTTPRoute
-            name: httproute-1
-            namespace: default
-            sectionName: rule-1
           name: httproute/default/httproute-1/rule/0
           settings:
           - addressType: IP
             endpoints:
             - host: 7.7.7.7
               port: 8080
-              zone: antarctica-east1b
             metadata:
               name: service-1
               namespace: default
@@ -197,18 +169,17 @@ xdsIR:
             name: httproute/default/httproute-1/rule/0/backend/0
             protocol: HTTP
             weight: 1
-            zoneAwareRouting:
-              minSize: 1
-        hostname: '*'
+        hostname: listener-1.gateway-1.envoyproxy.io
         isHTTP2: false
         metadata:
-          annotations:
-            foo: bar
           kind: HTTPRoute
           name: httproute-1
           namespace: default
-          sectionName: rule-1
-        name: httproute/default/httproute-1/rule/0/match/-1/*
+        name: httproute/default/httproute-1/rule/0/match/0/listener-1_gateway-1_envoyproxy_io
+        pathMatch:
+          distinct: false
+          name: ""
+          prefix: /foo
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4
