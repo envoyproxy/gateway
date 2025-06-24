@@ -113,8 +113,9 @@ certgen:
   job:
     annotations: {}
     args: []
-    podLabels: {}
-    podAnnotations: {}
+    pod:
+      annotations: {}
+      labels: {}
     resources: {}
     affinity: {}
     tolerations: []
