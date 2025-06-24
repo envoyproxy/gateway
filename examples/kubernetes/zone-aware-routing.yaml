@@ -3,7 +3,7 @@ kind: Deployment
 metadata:
   name: zone-aware-routing-backend-local
 spec:
-  replicas: 1
+  replicas: 2
   selector:
     matchLabels:
       app: zone-aware-routing-backend
@@ -50,7 +50,7 @@ kind: Deployment
 metadata:
   name: zone-aware-routing-backend-nonlocal
 spec:
-  replicas: 1
+  replicas: 2
   selector:
     matchLabels:
       app: zone-aware-routing-backend
