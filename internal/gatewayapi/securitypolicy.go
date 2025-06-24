@@ -414,6 +414,17 @@ func resolveSecurityPolicyGatewayTargetRef(
 		return nil, nil
 	}
 
+	// If sectionName is set, make sure its valid
+	if target.SectionName != nil {
+		if err := validateGatewayListenerSectionName(
+			*target.SectionName,
+			key,
+			gateway.listeners,
+		); err != nil {
+			return gateway.GatewayContext, err
+		}
+	}
+
 	if target.SectionName == nil {
 		// Check if another policy targeting the same Gateway exists
 		if gateway.attached {

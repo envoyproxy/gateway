@@ -6,6 +6,7 @@ breaking changes: |
 
 # Updates addressing vulnerabilities, security flaws, or compliance requirements.
 security updates: |
+  Disable automountServiceAccountToken for proxy and ratelimit deployments and serviceAccounts
 
 # New features or capabilities added in this release.
 new features: |
