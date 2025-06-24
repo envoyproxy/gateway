@@ -242,11 +242,9 @@ func (t *Translator) Translate(resources *resource.Resources) (*TranslateResult,
 		errs = errors.Join(errs, err)
 	}
 
-	if len(acceptedGateways) > 0 {
-		// Process global resources that are not tied to a specific listener or route
-		if err := t.ProcessGlobalResources(resources, xdsIR); err != nil {
-			errs = errors.Join(errs, err)
-		}
+	// Process global resources that are not tied to a specific listener or route
+	if err := t.ProcessGlobalResources(resources, xdsIR); err != nil {
+		errs = errors.Join(errs, err)
 	}
 
 	// Sort xdsIR based on the Gateway API spec
