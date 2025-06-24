@@ -14,6 +14,7 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/validation"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
@@ -1033,6 +1034,32 @@ func (t *Translator) validateExtServiceBackendReference(
 			return fmt.Errorf(
 				"backend ref to %s %s/%s not permitted by any ReferenceGrant",
 				backendRefKind, *backendRef.Namespace, backendRef.Name)
+		}
+	}
+	return nil
+}
+
+// validateGatewayListenerSectionName check:
+// if the section name exists in the target Gateway listeners.
+func validateGatewayListenerSectionName(
+	sectionName gwapiv1.SectionName,
+	targetKey types.NamespacedName,
+	listeners []*ListenerContext,
+) *status.PolicyResolveError {
+	found := false
+	for _, l := range listeners {
+		if l.Name == sectionName {
+			found = true
+			break
+		}
+	}
+	if !found {
+		message := fmt.Sprintf("No section name %s found for Gateway %s",
+			string(sectionName), targetKey.String())
+
+		return &status.PolicyResolveError{
+			Reason:  gwapiv1a2.PolicyReasonTargetNotFound,
+			Message: message,
 		}
 	}
 	return nil
