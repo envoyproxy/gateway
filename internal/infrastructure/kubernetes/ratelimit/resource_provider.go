@@ -174,6 +174,7 @@ func (r *ResourceRender) ServiceAccount() (*corev1.ServiceAccount, error) {
 			Kind:       ResourceKindServiceAccount,
 			APIVersion: apiVersion,
 		},
+		AutomountServiceAccountToken: ptr.To(false),
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: r.Namespace(),
 			Name:      InfraName,
