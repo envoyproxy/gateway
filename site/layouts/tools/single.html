@@ -23,6 +23,7 @@
   {{ $projectStyles := resources.Get "scss/_styles_project.scss" | css.Sass }}
   <link rel="stylesheet" href="{{ $projectStyles.RelPermalink }}">
 
+
 </head>
 <body class="td-{{ .Kind }}">
   <!-- Include site navbar -->
