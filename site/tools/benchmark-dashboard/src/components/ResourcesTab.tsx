@@ -3,7 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
 import { ChartPlaceholder } from '@/components/common/DataPlaceholder';
 import ChartWatermark from '@/components/common/ChartWatermark';
-import { AreaChart, Area, LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts';
+import { AreaChart, Area, LineChart, Line, BarChart, Bar, ComposedChart, XAxis, YAxis, CartesianGrid } from 'recharts';
 import { MemoryStick, Cpu, Server, Database, TrendingUp, Zap, Activity, CheckCircle } from 'lucide-react';
 
 interface ResourcesTabProps {
@@ -345,7 +345,7 @@ const ResourcesTab = ({ resourceTrends, benchmarkResults }: ResourcesTabProps) =
           <CardHeader>
             <CardTitle>CPU Usage Patterns</CardTitle>
             <CardDescription>
-              Mean vs peak CPU usage showing burst characteristics
+              Mean vs peak CPU usage showing burst characteristics.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -353,7 +353,7 @@ const ResourcesTab = ({ resourceTrends, benchmarkResults }: ResourcesTabProps) =
               <div className="relative">
                 <ChartWatermark />
                 <ChartContainer config={chartConfig}>
-                <AreaChart data={cpuData}>
+                <ComposedChart data={cpuData}>
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis
                     dataKey="routes"
@@ -380,33 +380,35 @@ const ResourcesTab = ({ resourceTrends, benchmarkResults }: ResourcesTabProps) =
                     dataKey="gatewayMax"
                     type="monotone"
                     fill="#c084fc"
-                    fillOpacity={0.3}
+                    fillOpacity={0.1}
                     stroke="#c084fc"
                     strokeWidth={1}
+                    strokeDasharray="2 2"
                   />
                   <Area
                     dataKey="proxyMax"
                     type="monotone"
                     fill="#818cf8"
-                    fillOpacity={0.3}
+                    fillOpacity={0.1}
                     stroke="#818cf8"
                     strokeWidth={1}
+                    strokeDasharray="2 2"
                   />
                   <Line
                     dataKey="gatewayMean"
                     type="monotone"
                     stroke="#8b5cf6"
                     strokeWidth={3}
-                    dot={{ fill: "#8b5cf6", strokeWidth: 2, r: 3 }}
+                    dot={{ fill: "#8b5cf6", strokeWidth: 2, r: 4 }}
                   />
                   <Line
                     dataKey="proxyMean"
                     type="monotone"
                     stroke="#6366f1"
                     strokeWidth={3}
-                    dot={{ fill: "#6366f1", strokeWidth: 2, r: 3 }}
+                    dot={{ fill: "#6366f1", strokeWidth: 2, r: 4 }}
                   />
-                </AreaChart>
+                </ComposedChart>
               </ChartContainer>
               </div>
             ) : (
