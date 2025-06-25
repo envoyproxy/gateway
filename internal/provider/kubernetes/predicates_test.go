@@ -175,6 +175,115 @@ func TestValidateGatewayForReconcile(t *testing.T) {
 	}
 }
 
+// TestValidateConfigMapForReconcile tests the validateConfigMapForReconcile
+// predicate function.
+func TestValidateConfigMapForReconcile(t *testing.T) {
+	testCases := []struct {
+		name      string
+		configs   []client.Object
+		configMap client.Object
+		expect    bool
+	}{
+		{
+			name: "references EnvoyExtensionPolicy Lua config map",
+			configs: []client.Object{
+				test.GetGatewayClass("test-gc", egv1a1.GatewayControllerName, nil),
+				test.GetGateway(types.NamespacedName{Name: "scheduled-status-test"}, "test-gc", 8080),
+				&egv1a1.EnvoyExtensionPolicy{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "lua-cm",
+						Namespace: "test",
+					},
+					Spec: egv1a1.EnvoyExtensionPolicySpec{
+						PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+							TargetRefs: []gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
+								{
+									LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
+										Kind: "Gateway",
+										Name: "scheduled-status-test",
+									},
+								},
+							},
+						},
+						Lua: []egv1a1.Lua{
+							{
+								Type: egv1a1.LuaValueTypeValueRef,
+								ValueRef: &gwapiv1.LocalObjectReference{
+									Kind:  gwapiv1a2.Kind("ConfigMap"),
+									Name:  gwapiv1a2.ObjectName("lua"),
+									Group: gwapiv1a2.Group("v1"),
+								},
+							},
+						},
+					},
+				},
+			},
+			configMap: test.GetConfigMap(types.NamespacedName{Name: "lua", Namespace: "test"}, make(map[string]string), make(map[string]string)),
+			expect:    true,
+		},
+		{
+			name: "does not reference EnvoyExtensionPolicy Lua config map",
+			configs: []client.Object{
+				test.GetGatewayClass("test-gc", egv1a1.GatewayControllerName, nil),
+				test.GetGateway(types.NamespacedName{Name: "scheduled-status-test"}, "test-gc", 8080),
+				&egv1a1.EnvoyExtensionPolicy{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "lua-cm",
+						Namespace: "test",
+					},
+					Spec: egv1a1.EnvoyExtensionPolicySpec{
+						PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+							TargetRefs: []gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
+								{
+									LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
+										Kind: "Gateway",
+										Name: "scheduled-status-test",
+									},
+								},
+							},
+						},
+						Lua: []egv1a1.Lua{
+							{
+								Type: egv1a1.LuaValueTypeValueRef,
+								ValueRef: &gwapiv1.LocalObjectReference{
+									Kind:  gwapiv1a2.Kind("ConfigMap"),
+									Name:  gwapiv1a2.ObjectName("lua"),
+									Group: gwapiv1a2.Group("v1"),
+								},
+							},
+						},
+					},
+				},
+			},
+			configMap: test.GetConfigMap(types.NamespacedName{Name: "not-lua", Namespace: "test"}, make(map[string]string), make(map[string]string)),
+			expect:    false,
+		},
+	}
+
+	// Create the reconciler.
+	logger := logging.DefaultLogger(os.Stdout, egv1a1.LogLevelInfo)
+
+	r := gatewayAPIReconciler{
+		classController: egv1a1.GatewayControllerName,
+		log:             logger,
+		spCRDExists:     true,
+		epCRDExists:     true,
+		eepCRDExists:    true,
+	}
+
+	for _, tc := range testCases {
+		r.client = fakeclient.NewClientBuilder().
+			WithScheme(envoygateway.GetScheme()).
+			WithObjects(tc.configs...).
+			WithIndex(&egv1a1.EnvoyExtensionPolicy{}, configMapEepIndex, configMapEepIndexFunc).
+			Build()
+		t.Run(tc.name, func(t *testing.T) {
+			res := r.validateConfigMapForReconcile(tc.configMap)
+			require.Equal(t, tc.expect, res)
+		})
+	}
+}
+
 // TestValidateSecretForReconcile tests the validateSecretForReconcile
 // predicate function.
 func TestValidateSecretForReconcile(t *testing.T) {
