@@ -124,4 +124,4 @@ done
 
 ## Next Steps
 
-Check out the [Gateway Exported Metrics](./grafana-integration.md) section to learn more about the metrics exported by the Envoy Gateway.
+Check out the [Gateway Exported Metrics](./gateway-exported-metrics.md) section to learn more about the metrics exported by the Envoy Gateway.

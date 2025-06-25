@@ -732,7 +732,7 @@ func TestValidateTLSListenerConfig(t *testing.T) {
 					PrivateKey: []byte("priv-key"),
 				}},
 			},
-			want: ErrTLSServerCertEmpty,
+			want: ErrTLSCertEmpty,
 		},
 		{
 			name: "invalid private key",
@@ -1124,8 +1124,8 @@ func TestRouteDestination_NeedsClusterPerSetting(t *testing.T) {
 								Port: 8080,
 							},
 						},
-						AddressType:             ptr.To(FQDN),
-						ZoneAwareRoutingEnabled: true,
+						AddressType:      ptr.To(FQDN),
+						ZoneAwareRouting: &ZoneAwareRouting{MinSize: 1},
 					},
 					{
 						Endpoints: []*DestinationEndpoint{
@@ -1152,8 +1152,8 @@ func TestRouteDestination_NeedsClusterPerSetting(t *testing.T) {
 								Port: 8080,
 							},
 						},
-						AddressType:             ptr.To(FQDN),
-						ZoneAwareRoutingEnabled: true,
+						AddressType:      ptr.To(FQDN),
+						ZoneAwareRouting: &ZoneAwareRouting{MinSize: 1},
 					},
 				},
 			},
@@ -1490,8 +1490,8 @@ func TestRedaction(t *testing.T) {
 			},
 			wantStr: `{"http":[{"name":"","address":"","port":0,"hostnames":null,` +
 				`"tls":{` +
-				`"certificates":[{"name":"server","serverCertificate":"LS0t","privateKey":"[redacted]"}],` +
-				`"clientCertificates":[{"name":"client","serverCertificate":"LS0t","privateKey":"[redacted]"}],` +
+				`"certificates":[{"name":"server","certificate":"LS0t","privateKey":"[redacted]"}],` +
+				`"clientCertificates":[{"name":"client","certificate":"LS0t","privateKey":"[redacted]"}],` +
 				`"alpnProtocols":null},` +
 				`"routes":[{` +
 				`"name":"","hostname":"","isHTTP2":false,"security":{` +
@@ -1500,7 +1500,7 @@ func TestRedaction(t *testing.T) {
 				`"basicAuth":{"name":"","users":"[redacted]"}` +
 				`}}],` +
 				`"isHTTP2":false,"path":{"mergeSlashes":false,"escapedSlashesAction":""}}],` +
-				`"globalResources":{"envoyClientCertificate":{"name":"test","serverCertificate":"Q2VydGlmaWNhdGU=","privateKey":"[redacted]"}}}`,
+				`"globalResources":{"envoyClientCertificate":{"name":"test","certificate":"Q2VydGlmaWNhdGU=","privateKey":"[redacted]"}}}`,
 		},
 	}
 	for _, test := range tests {

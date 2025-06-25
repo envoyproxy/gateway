@@ -37,6 +37,12 @@ type OIDC struct {
 	// +optional
 	CookieNames *OIDCCookieNames `json:"cookieNames,omitempty"`
 
+	// CookieConfigs allows setting the SameSite attribute for OIDC cookies.
+	// By default, its unset.
+	//
+	// +optional
+	CookieConfig *OIDCCookieConfig `json:"cookieConfig,omitempty"`
+
 	// The optional domain to set the access and ID token cookies on.
 	// If not set, the cookies will default to the host of the request, not including the subdomains.
 	// If set, the cookies will be set on the specified domain and all subdomains.
@@ -65,7 +71,6 @@ type OIDC struct {
 	// Any request that matches any of the provided matchers (with either tokens that are expired or missing tokens) will not be redirected to the OIDC Provider.
 	// This behavior can be useful for AJAX or machine requests.
 	// +optional
-	// +notImplementedHide
 	DenyRedirect *OIDCDenyRedirect `json:"denyRedirect,omitempty"`
 
 	// The path to log a user out, clearing their credential cookies.
@@ -160,14 +165,14 @@ type OIDCProvider struct {
 }
 
 // OIDCDenyRedirect defines headers to match against the request to deny redirect to the OIDC Provider.
-// +notImplementedHide
 type OIDCDenyRedirect struct {
 	// Defines the headers to match against the request to deny redirect to the OIDC Provider.
+	// +kubebuilder:validation:MinItems=1
+	// +kubebuilder:validation:MaxItems=16
 	Headers []OIDCDenyRedirectHeader `json:"headers"`
 }
 
 // OIDCDenyRedirectHeader defines how a header is matched
-// +notImplementedHide
 type OIDCDenyRedirectHeader struct {
 	// Specifies the name of the header in the request.
 	// +kubebuilder:validation:MinLength=1
@@ -187,4 +192,23 @@ type OIDCCookieNames struct {
 	// If not specified, defaults to "IdToken-(randomly generated uid)"
 	// +optional
 	IDToken *string `json:"idToken,omitempty"`
+}
+
+type SameSite string
+
+const (
+	// SameSiteLax specifies the "Lax" SameSite policy.
+	SameSiteLax SameSite = "Lax"
+	// SameSiteStrict specifies the "Strict" SameSite policy.
+	SameSiteStrict SameSite = "Strict"
+	// SameSiteNone specifies the "None" SameSite policy. Requires a Secure cookie.
+	SameSiteNone SameSite = "None"
+)
+
+// OIDCCookieConfig defines the cookie configuration for OAuth2 cookies.
+type OIDCCookieConfig struct {
+	// +optional
+	// +kubebuilder:validation:Enum=Lax;Strict;None
+	// +kubebuilder:default=Strict
+	SameSite *string `json:"sameSite,omitempty"`
 }

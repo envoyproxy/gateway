@@ -6,6 +6,7 @@
 package validation
 
 import (
+	"fmt"
 	"reflect"
 	"testing"
 
@@ -759,6 +760,42 @@ func TestValidateEnvoyProxy(t *testing.T) {
 			},
 			expected: false,
 		},
+		{
+			name: "valid operators in ClusterStatName",
+			proxy: &egv1a1.EnvoyProxy{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "test",
+					Name:      "test",
+				},
+				Spec: egv1a1.EnvoyProxySpec{
+					Telemetry: &egv1a1.ProxyTelemetry{
+						Metrics: &egv1a1.ProxyMetrics{
+							ClusterStatName: ptr.To(fmt.Sprintf("%s/%s/%s/%s/%s/%s/%s", egv1a1.StatFormatterRouteName,
+								egv1a1.StatFormatterRouteName, egv1a1.StatFormatterRouteNamespace, egv1a1.StatFormatterRouteKind,
+								egv1a1.StatFormatterRouteRuleName, egv1a1.StatFormatterRouteRuleNumber, egv1a1.StatFormatterBackendRefs)),
+						},
+					},
+				},
+			},
+			expected: true,
+		},
+		{
+			name: "invalid operators in ClusterStatName",
+			proxy: &egv1a1.EnvoyProxy{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "test",
+					Name:      "test",
+				},
+				Spec: egv1a1.EnvoyProxySpec{
+					Telemetry: &egv1a1.ProxyTelemetry{
+						Metrics: &egv1a1.ProxyMetrics{
+							ClusterStatName: ptr.To("%ROUTE_NAME%.%FOO%.%BAR%/my/%BACKEND_REFS%/%FOOBAR%"),
+						},
+					},
+				},
+			},
+			expected: false,
+		},
 	}
 
 	for i := range testCases {
@@ -847,7 +884,7 @@ func TestGetEnvoyProxyComponentLevelArgs(t *testing.T) {
 	}{
 		{
 			logging:  egv1a1.ProxyLogging{},
-			expected: "",
+			expected: "misc:error",
 		},
 		{
 			logging: egv1a1.ProxyLogging{
@@ -855,7 +892,7 @@ func TestGetEnvoyProxyComponentLevelArgs(t *testing.T) {
 					egv1a1.LogComponentDefault: egv1a1.LogLevelInfo,
 				},
 			},
-			expected: "",
+			expected: "misc:error",
 		},
 		{
 			logging: egv1a1.ProxyLogging{

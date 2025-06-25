@@ -139,6 +139,7 @@ func oauth2Config(securityFeatures *ir.SecurityFeatures) (*oauth2v3.OAuth2, erro
 			},
 			AuthorizationEndpoint: oidc.Provider.AuthorizationEndpoint,
 			RedirectUri:           oidc.RedirectURL,
+			CookieConfigs:         buildCookieConfigs(oidc),
 			RedirectPathMatcher: &matcherv3.PathMatcher{
 				Rule: &matcherv3.PathMatcher_Path{
 					Path: &matcherv3.StringMatcher{
@@ -228,7 +229,91 @@ func oauth2Config(securityFeatures *ir.SecurityFeatures) (*oauth2v3.OAuth2, erro
 		oauth2.Config.PassThroughMatcher = buildHeaderMatchers(securityFeatures.JWT)
 	}
 
+	if oidc.DenyRedirect != nil {
+		oauth2.Config.DenyRedirectMatcher = buildDenyRedirectMatcher(oidc)
+	}
+
 	return oauth2, nil
+}
+
+func buildSameSite(config *egv1a1.OIDCCookieConfig) oauth2v3.CookieConfig_SameSite {
+	samesite := egv1a1.SameSite(*config.SameSite)
+
+	switch samesite {
+	case egv1a1.SameSiteStrict:
+		return oauth2v3.CookieConfig_STRICT
+	case egv1a1.SameSiteLax:
+		return oauth2v3.CookieConfig_LAX
+	case egv1a1.SameSiteNone:
+		return oauth2v3.CookieConfig_NONE
+	default:
+		// should not reach here
+		return oauth2v3.CookieConfig_DISABLED
+	}
+}
+
+// buildCookieConfigs translates the OIDC configuration from the US
+func buildCookieConfigs(oidc *ir.OIDC) *oauth2v3.CookieConfigs {
+	// If the user did not specify any custom cookie configurations at all, return the defaults.
+	if oidc.CookieConfig == nil || oidc.CookieConfig.SameSite == nil {
+		return nil
+	}
+
+	// Apply the user-defined SameSite policy for each cookie if it has been configured.
+	sameSite := buildSameSite(oidc.CookieConfig)
+	return &oauth2v3.CookieConfigs{
+		BearerTokenCookieConfig:  &oauth2v3.CookieConfig{SameSite: sameSite},
+		OauthHmacCookieConfig:    &oauth2v3.CookieConfig{SameSite: sameSite},
+		OauthExpiresCookieConfig: &oauth2v3.CookieConfig{SameSite: sameSite},
+		IdTokenCookieConfig:      &oauth2v3.CookieConfig{SameSite: sameSite},
+		RefreshTokenCookieConfig: &oauth2v3.CookieConfig{SameSite: sameSite},
+		OauthNonceCookieConfig:   &oauth2v3.CookieConfig{SameSite: sameSite},
+		CodeVerifierCookieConfig: &oauth2v3.CookieConfig{SameSite: sameSite},
+	}
+}
+
+func buildDenyRedirectMatcher(oidc *ir.OIDC) []*routev3.HeaderMatcher {
+	denyRedirectPathMatchers := make([]*routev3.HeaderMatcher, 0, len(oidc.DenyRedirect.Headers))
+
+	for _, m := range oidc.DenyRedirect.Headers {
+		var stringMatcher *matcherv3.StringMatcher
+
+		if m.Type == nil { // if no type is specified, default to exact match on value
+			stringMatcher = &matcherv3.StringMatcher{
+				MatchPattern: &matcherv3.StringMatcher_Exact{Exact: m.Value},
+			}
+		} else { // if type is specified, use it
+			switch *m.Type {
+			case egv1a1.StringMatchExact:
+				stringMatcher = &matcherv3.StringMatcher{
+					MatchPattern: &matcherv3.StringMatcher_Exact{Exact: m.Value},
+				}
+			case egv1a1.StringMatchPrefix:
+				stringMatcher = &matcherv3.StringMatcher{
+					MatchPattern: &matcherv3.StringMatcher_Prefix{Prefix: m.Value},
+				}
+			case egv1a1.StringMatchSuffix:
+				stringMatcher = &matcherv3.StringMatcher{
+					MatchPattern: &matcherv3.StringMatcher_Suffix{Suffix: m.Value},
+				}
+			case egv1a1.StringMatchRegularExpression:
+				stringMatcher = &matcherv3.StringMatcher{
+					MatchPattern: &matcherv3.StringMatcher_SafeRegex{
+						SafeRegex: &matcherv3.RegexMatcher{Regex: m.Value},
+					},
+				}
+			}
+		}
+
+		denyRedirectPathMatchers = append(denyRedirectPathMatchers, &routev3.HeaderMatcher{
+			Name: m.Name,
+			HeaderMatchSpecifier: &routev3.HeaderMatcher_StringMatch{
+				StringMatch: stringMatcher,
+			},
+		})
+	}
+
+	return denyRedirectPathMatchers
 }
 
 func buildHeaderMatchers(jwt *ir.JWT) []*routev3.HeaderMatcher {

@@ -55,6 +55,7 @@ func TestE2E(t *testing.T) {
 	if tests.IPFamily == "ipv6" {
 		skipTests = append(skipTests,
 			tests.DynamicResolverBackendTest.ShortName,
+			tests.DynamicResolverBackendWithTLSTest.ShortName,
 			tests.RateLimitCIDRMatchTest.ShortName,
 			tests.RateLimitMultipleListenersTest.ShortName,
 			tests.RateLimitGlobalSharedCidrMatchTest.ShortName,
@@ -66,6 +67,7 @@ func TestE2E(t *testing.T) {
 		skipTests = append(skipTests,
 			tests.HTTPWasmTest.ShortName,
 			tests.OCIWasmTest.ShortName,
+			tests.ZoneAwareRoutingTest.ShortName,
 		)
 	}
 
@@ -82,6 +84,7 @@ func TestE2E(t *testing.T) {
 		SupportedFeatures: sets.New(features.SupportGateway),
 		SkipTests:         skipTests,
 		AllowCRDsMismatch: *flags.AllowCRDsMismatch,
+		Hook:              Hook,
 	})
 	if err != nil {
 		t.Fatalf("Failed to create ConformanceTestSuite: %v", err)

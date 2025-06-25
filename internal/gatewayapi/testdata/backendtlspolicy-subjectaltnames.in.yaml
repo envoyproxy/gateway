@@ -133,5 +133,5 @@ backendTLSPolicies:
         subjectAltNames:
           - type: URI
             uri: spiffe://cluster.local/ns/istio-demo/sa/echo-v1
-          - type: DNS
+          - type: Hostname
             hostname: subdomain.secondexample.com

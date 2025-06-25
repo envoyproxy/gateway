@@ -303,22 +303,13 @@ func resolveCTPolicyTargetRef(
 	}
 
 	// If sectionName is set, make sure its valid
-	sectionName := targetRef.SectionName
-	if sectionName != nil {
-		found := false
-		for _, l := range gateway.listeners {
-			if l.Name == *sectionName {
-				found = true
-				break
-			}
-		}
-		if !found {
-			message := fmt.Sprintf("No section name %s found for %s", *sectionName, key.String())
-
-			return gateway.GatewayContext, &status.PolicyResolveError{
-				Reason:  gwapiv1a2.PolicyReasonInvalid,
-				Message: message,
-			}
+	if targetRef.SectionName != nil {
+		if err := validateGatewayListenerSectionName(
+			*targetRef.SectionName,
+			key,
+			gateway.listeners,
+		); err != nil {
+			return gateway.GatewayContext, err
 		}
 	}
 
@@ -834,7 +825,7 @@ func (t *Translator) buildListenerTLSParameters(policy *egv1a1.ClientTrafficPoli
 					return irTLSConfig, err
 				}
 
-				secretBytes, ok := secret.Data[caCertKey]
+				secretBytes, ok := getCaCertFromSecret(secret)
 				if !ok || len(secretBytes) == 0 {
 					return irTLSConfig, fmt.Errorf(
 						"caCertificateRef not found in secret %s", caCertRef.Name)
@@ -853,7 +844,7 @@ func (t *Translator) buildListenerTLSParameters(policy *egv1a1.ClientTrafficPoli
 					return irTLSConfig, err
 				}
 
-				configMapBytes, ok := configMap.Data[caCertKey]
+				configMapBytes, ok := getCaCertFromConfigMap(configMap)
 				if !ok || len(configMapBytes) == 0 {
 					return irTLSConfig, fmt.Errorf(
 						"caCertificateRef not found in configMap %s", caCertRef.Name)

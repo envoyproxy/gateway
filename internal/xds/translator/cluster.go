@@ -69,6 +69,7 @@ type xdsClusterArgs struct {
 	useClientProtocol bool
 	ipFamily          *egv1a1.IPFamily
 	metadata          *ir.ResourceMetadata
+	statName          *string
 }
 
 type EndpointType int
@@ -148,6 +149,10 @@ func buildXdsCluster(args *xdsClusterArgs) (*buildClusterResult, error) {
 		Metadata:                      buildXdsMetadata(args.metadata),
 	}
 
+	if args.statName != nil {
+		cluster.AltStatName = *args.statName
+	}
+
 	// 50% is the Envoy default value for panic threshold. No need to explicitly set it in this case.
 	if args.healthCheck != nil && args.healthCheck.PanicThreshold != nil && *args.healthCheck.PanicThreshold != 50 {
 		cluster.CommonLbConfig.HealthyPanicThreshold = &xdstype.Percent{
@@ -180,11 +185,6 @@ func buildXdsCluster(args *xdsClusterArgs) (*buildClusterResult, error) {
 	}
 
 	for i, ds := range args.settings {
-		// If zone aware routing is enabled we update the cluster lb config
-		if ds.ZoneAwareRoutingEnabled {
-			cluster.CommonLbConfig.LocalityConfigSpecifier = &clusterv3.Cluster_CommonLbConfig_ZoneAwareLbConfig_{ZoneAwareLbConfig: &clusterv3.Cluster_CommonLbConfig_ZoneAwareLbConfig{}}
-		}
-
 		if ds.TLS != nil {
 			socket, err := buildXdsUpstreamTLSSocketWthCert(ds.TLS)
 			if err != nil {
@@ -307,6 +307,7 @@ func buildXdsCluster(args *xdsClusterArgs) (*buildClusterResult, error) {
 			TypedConfig: dfpAny,
 		}}
 		cluster.LbPolicy = clusterv3.Cluster_CLUSTER_PROVIDED
+
 	case EndpointTypeStatic:
 		cluster.ClusterDiscoveryType = &clusterv3.Cluster_Type{Type: clusterv3.Cluster_EDS}
 		cluster.EdsClusterConfig = &clusterv3.Cluster_EdsClusterConfig{
@@ -339,7 +340,7 @@ func buildXdsCluster(args *xdsClusterArgs) (*buildClusterResult, error) {
 
 	if args.endpointType != EndpointTypeDynamicResolver {
 		for _, ds := range args.settings {
-			buildZoneAwareRoutingCluster(ds.ZoneAwareRoutingEnabled, cluster, args.loadBalancer)
+			buildZoneAwareRoutingCluster(ds.ZoneAwareRouting, cluster, args.loadBalancer)
 		}
 	}
 
@@ -353,8 +354,8 @@ func buildXdsCluster(args *xdsClusterArgs) (*buildClusterResult, error) {
 // cluster.LbPolicy and cluster.CommonLbConfig with cluster.LoadBalancingPolicy.
 // TODO: Remove cluster.LbPolicy along with clustercommongLbConfig and switch to cluster.LoadBalancingPolicy
 // everywhere as the preferred and more feature-rich configuration field.
-func buildZoneAwareRoutingCluster(enabled bool, cluster *clusterv3.Cluster, lb *ir.LoadBalancer) {
-	if !enabled {
+func buildZoneAwareRoutingCluster(cfg *ir.ZoneAwareRouting, cluster *clusterv3.Cluster, lb *ir.LoadBalancer) {
+	if cfg == nil {
 		return
 	}
 
@@ -364,10 +365,10 @@ func buildZoneAwareRoutingCluster(enabled bool, cluster *clusterv3.Cluster, lb *
 	localityLbConfig := &commonv3.LocalityLbConfig{
 		LocalityConfigSpecifier: &commonv3.LocalityLbConfig_ZoneAwareLbConfig_{
 			ZoneAwareLbConfig: &commonv3.LocalityLbConfig_ZoneAwareLbConfig{
-				// Future enhancement: differentiate between topology-aware-routing and trafficDistribution
-				// once https://github.com/envoyproxy/envoy/pull/39058 is merged
-				MinClusterSize:             wrapperspb.UInt64(1),
-				ForceLocalityDirectRouting: true,
+				MinClusterSize: wrapperspb.UInt64(1),
+				ForceLocalZone: &commonv3.LocalityLbConfig_ZoneAwareLbConfig_ForceLocalZone{
+					MinSize: wrapperspb.UInt32(uint32(cfg.MinSize)),
+				},
 			},
 		},
 	}
@@ -651,7 +652,7 @@ func buildXdsClusterLoadAssignment(clusterName string, destSettings []*ir.Destin
 		// if multiple backendRefs exist. This pushes part of the routing logic higher up the stack which can
 		// limit host selection controls during retries and session affinity.
 		// For more details see https://github.com/envoyproxy/gateway/issues/5307#issuecomment-2688767482
-		if ds.ZoneAwareRoutingEnabled {
+		if ds.ZoneAwareRouting != nil {
 			localities = append(localities, buildZonalLocalities(metadata, ds)...)
 		} else {
 			localities = append(localities, buildWeightedLocalities(metadata, ds))
@@ -846,6 +847,14 @@ func buildTypedExtensionProtocolOptions(args *xdsClusterArgs) (map[string]*anypb
 		}
 	}
 
+	// Envoy proxy requires AutoSNI and AutoSanValidation to be set to true for dynamic_forward_proxy clusters
+	if args.endpointType == EndpointTypeDynamicResolver {
+		protocolOptions.UpstreamHttpProtocolOptions = &corev3.UpstreamHttpProtocolOptions{
+			AutoSni:           true,
+			AutoSanValidation: true,
+		}
+	}
+
 	var (
 		filters []*hcmv3.HttpFilter
 		secrets []*tlsv3.Secret
@@ -1033,6 +1042,7 @@ type ExtraArgs struct {
 	http1Settings *ir.HTTP1Settings
 	http2Settings *ir.HTTP2Settings
 	ipFamily      *egv1a1.IPFamily
+	statName      *string
 }
 
 type clusterArgs interface {
@@ -1107,6 +1117,7 @@ func (httpRoute *HTTPRouteTranslator) asClusterArgs(name string,
 		useClientProtocol: ptr.Deref(httpRoute.UseClientProtocol, false),
 		ipFamily:          extra.ipFamily,
 		metadata:          metadata,
+		statName:          extra.statName,
 	}
 
 	// Populate traffic features.

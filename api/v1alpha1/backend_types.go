@@ -115,12 +115,14 @@ type FQDNEndpoint struct {
 // https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/core/v3/address.proto#config-core-v3-pipe
 type UnixSocket struct {
 	// Path defines the unix domain socket path of the backend endpoint.
+	// The path length must not exceed 108 characters.
+	//
+	// +kubebuilder:validation:XValidation:rule="size(self) <= 108",message="unix domain socket path must not exceed 108 characters"
 	Path string `json:"path"`
 }
 
 // BackendSpec describes the desired state of BackendSpec.
-// +kubebuilder:validation:XValidation:rule="self.type != 'DynamicResolver' || !has(self.endpoints) && !has(self.appProtocols)",message="DynamicResolver type cannot have endpoints and appProtocols specified"
-// +kubebuilder:validation:XValidation:rule="has(self.tls) ? self.type == 'DynamicResolver' : true",message="TLS settings can only be specified for DynamicResolver backends"
+// +kubebuilder:validation:XValidation:rule="self.type != 'DynamicResolver' || !has(self.endpoints)",message="DynamicResolver type cannot have endpoints specified"
 type BackendSpec struct {
 	// Type defines the type of the backend. Defaults to "Endpoints"
 	//
@@ -151,16 +153,16 @@ type BackendSpec struct {
 	Fallback *bool `json:"fallback,omitempty"`
 
 	// TLS defines the TLS settings for the backend.
-	// Only supported for DynamicResolver backends.
+	// TLS.CACertificateRefs and TLS.WellKnownCACertificates can only be specified for DynamicResolver backends.
+	// TLS.InsecureSkipVerify can be specified for any Backends
 	//
 	// +optional
 	TLS *BackendTLSSettings `json:"tls,omitempty"`
 }
 
 // BackendTLSSettings holds the TLS settings for the backend.
-// Only used for DynamicResolver backends.
 // +kubebuilder:validation:XValidation:message="must not contain both CACertificateRefs and WellKnownCACertificates",rule="!(has(self.caCertificateRefs) && size(self.caCertificateRefs) > 0 && has(self.wellKnownCACertificates) && self.wellKnownCACertificates != \"\")"
-// +kubebuilder:validation:XValidation:message="must specify either CACertificateRefs or WellKnownCACertificates",rule="(has(self.caCertificateRefs) && size(self.caCertificateRefs) > 0 || has(self.wellKnownCACertificates) && self.wellKnownCACertificates != \"\")"
+// +kubebuilder:validation:XValidation:message="must not contain either CACertificateRefs or WellKnownCACertificates when InsecureSkipVerify is enabled",rule="!((has(self.insecureSkipVerify) && self.insecureSkipVerify) && ((has(self.caCertificateRefs) && size(self.caCertificateRefs) > 0) || (has(self.wellKnownCACertificates) && self.wellKnownCACertificates != \"\")))"
 type BackendTLSSettings struct {
 	// CACertificateRefs contains one or more references to Kubernetes objects that
 	// contain TLS certificates of the Certificate Authorities that can be used
@@ -173,6 +175,8 @@ type BackendTLSSettings struct {
 	// specified. Only one of CACertificateRefs or WellKnownCACertificates may be specified,
 	// not both.
 	//
+	// Only used for DynamicResolver backends.
+	//
 	// +kubebuilder:validation:MaxItems=8
 	// +optional
 	CACertificateRefs []gwapiv1.LocalObjectReference `json:"caCertificateRefs,omitempty"`
@@ -184,8 +188,17 @@ type BackendTLSSettings struct {
 	// must be specified with at least one entry for a valid configuration. Only one of
 	// CACertificateRefs or WellKnownCACertificates may be specified, not both.
 	//
+	// Only used for DynamicResolver backends.
+	//
 	// +optional
 	WellKnownCACertificates *gwapiv1a3.WellKnownCACertificatesType `json:"wellKnownCACertificates,omitempty"`
+
+	// InsecureSkipVerify indicates whether the upstream's certificate verification
+	// should be skipped. Defaults to "false".
+	//
+	// +kubebuilder:default=false
+	// +optional
+	InsecureSkipVerify *bool `json:"insecureSkipVerify,omitempty"`
 }
 
 // BackendType defines the type of the Backend.

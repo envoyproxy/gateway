@@ -78,17 +78,19 @@ func (t *Translator) ProcessSecurityPolicies(securityPolicies []*egv1a1.Security
 	gatewayMap := map[types.NamespacedName]*policyGatewayTargetContext{}
 	for _, gw := range gateways {
 		key := utils.NamespacedName(gw)
-		gatewayMap[key] = &policyGatewayTargetContext{GatewayContext: gw}
+		gatewayMap[key] = &policyGatewayTargetContext{GatewayContext: gw, attachedToListeners: make(sets.Set[string])}
 	}
 
-	// Map of Gateway to the routes attached to it
-	gatewayRouteMap := make(map[string]sets.Set[string])
+	// Map of Gateway to the routes attached to it.
+	// The routes are grouped by sectionNames of their targetRefs
+	gatewayRouteMap := make(map[string]map[string]sets.Set[string])
 
 	handledPolicies := make(map[types.NamespacedName]*egv1a1.SecurityPolicy)
 
 	// Translate
 	// 1. First translate Policies targeting xRoutes
-	// 2. Finally, the policies targeting Gateways
+	// 2. Then translate Policies targeting Listeners
+	// 3. Finally, the policies targeting Gateways
 
 	// Process the policies targeting xRoutes
 	for _, currPolicy := range securityPolicies {
@@ -134,9 +136,17 @@ func (t *Translator) ProcessSecurityPolicies(securityPolicies []*egv1a1.Security
 
 						key := gwNN.String()
 						if _, ok := gatewayRouteMap[key]; !ok {
-							gatewayRouteMap[key] = make(sets.Set[string])
+							gatewayRouteMap[key] = make(map[string]sets.Set[string])
 						}
-						gatewayRouteMap[key].Insert(utils.NamespacedName(targetedRoute).String())
+						listenerRouteMap := gatewayRouteMap[key]
+						sectionName := ""
+						if p.SectionName != nil {
+							sectionName = string(*p.SectionName)
+						}
+						if _, ok := listenerRouteMap[sectionName]; !ok {
+							listenerRouteMap[sectionName] = make(sets.Set[string])
+						}
+						listenerRouteMap[sectionName].Insert(utils.NamespacedName(targetedRoute).String())
 						parentGateways = append(parentGateways, getAncestorRefForPolicy(gwNN, p.SectionName))
 					}
 				}
@@ -179,17 +189,12 @@ func (t *Translator) ProcessSecurityPolicies(securityPolicies []*egv1a1.Security
 		}
 	}
 
-	// Process the policies targeting Gateways
+	// Process the policies targeting Listeners
 	for _, currPolicy := range securityPolicies {
 		policyName := utils.NamespacedName(currPolicy)
 		targetRefs := getPolicyTargetRefs(currPolicy.Spec.PolicyTargetReferences, gateways)
 		for _, currTarget := range targetRefs {
-			if currTarget.Kind == resource.KindGateway {
-				var (
-					targetedGateway *GatewayContext
-					resolveErr      *status.PolicyResolveError
-				)
-
+			if currTarget.Kind == resource.KindGateway && currTarget.SectionName != nil {
 				policy, found := handledPolicies[policyName]
 				if !found {
 					policy = currPolicy.DeepCopy()
@@ -197,69 +202,135 @@ func (t *Translator) ProcessSecurityPolicies(securityPolicies []*egv1a1.Security
 					res = append(res, policy)
 				}
 
-				targetedGateway, resolveErr = resolveSecurityPolicyGatewayTargetRef(policy, currTarget, gatewayMap)
-				// Skip if the gateway is not found
-				// It's not necessarily an error because the SecurityPolicy may be
-				// reconciled by multiple controllers. And the other controller may
-				// have the target gateway.
-				if targetedGateway == nil {
-					continue
+				t.processSecurityPolicyForGateway(resources, xdsIR,
+					gatewayMap, gatewayRouteMap, policy, currTarget)
+			}
+		}
+	}
+	// Process the policies targeting Gateways
+	for _, currPolicy := range securityPolicies {
+		policyName := utils.NamespacedName(currPolicy)
+		targetRefs := getPolicyTargetRefs(currPolicy.Spec.PolicyTargetReferences, gateways)
+		for _, currTarget := range targetRefs {
+			if currTarget.Kind == resource.KindGateway && currTarget.SectionName == nil {
+				policy, found := handledPolicies[policyName]
+				if !found {
+					policy = currPolicy.DeepCopy()
+					handledPolicies[policyName] = policy
+					res = append(res, policy)
 				}
 
-				// Find its ancestor reference by resolved gateway, even with resolve error
-				gatewayNN := utils.NamespacedName(targetedGateway)
-				parentGateways := []gwapiv1a2.ParentReference{
-					getAncestorRefForPolicy(gatewayNN, nil),
-				}
-
-				// Set conditions for resolve error, then skip current gateway
-				if resolveErr != nil {
-					status.SetResolveErrorForPolicyAncestors(&policy.Status,
-						parentGateways,
-						t.GatewayControllerName,
-						policy.Generation,
-						resolveErr,
-					)
-
-					continue
-				}
-
-				if err := t.translateSecurityPolicyForGateway(policy, targetedGateway, currTarget, resources, xdsIR); err != nil {
-					status.SetTranslationErrorForPolicyAncestors(&policy.Status,
-						parentGateways,
-						t.GatewayControllerName,
-						policy.Generation,
-						status.Error2ConditionMsg(err),
-					)
-				}
-
-				// Set Accepted condition if it is unset
-				status.SetAcceptedForPolicyAncestors(&policy.Status, parentGateways, t.GatewayControllerName)
-
-				// Check if this policy is overridden by other policies targeting
-				// at route level
-				if r, ok := gatewayRouteMap[gatewayNN.String()]; ok {
-					// Maintain order here to ensure status/string does not change with the same data
-					routes := r.UnsortedList()
-					sort.Strings(routes)
-					message := fmt.Sprintf(
-						"This policy is being overridden by other securityPolicies for these routes: %v",
-						routes)
-					status.SetConditionForPolicyAncestors(&policy.Status,
-						parentGateways,
-						t.GatewayControllerName,
-						egv1a1.PolicyConditionOverridden,
-						metav1.ConditionTrue,
-						egv1a1.PolicyReasonOverridden,
-						message,
-						policy.Generation,
-					)
-				}
+				t.processSecurityPolicyForGateway(resources, xdsIR,
+					gatewayMap, gatewayRouteMap, policy, currTarget)
 			}
 		}
 	}
 
 	return res
+}
+
+func (t *Translator) processSecurityPolicyForGateway(
+	resources *resource.Resources,
+	xdsIR resource.XdsIRMap,
+	gatewayMap map[types.NamespacedName]*policyGatewayTargetContext,
+	gatewayRouteMap map[string]map[string]sets.Set[string],
+	policy *egv1a1.SecurityPolicy,
+	currTarget gwapiv1a2.LocalPolicyTargetReferenceWithSectionName,
+) {
+	var (
+		targetedGateway *GatewayContext
+		resolveErr      *status.PolicyResolveError
+	)
+
+	targetedGateway, resolveErr = resolveSecurityPolicyGatewayTargetRef(policy, currTarget, gatewayMap)
+	// Skip if the gateway is not found
+	// It's not necessarily an error because the SecurityPolicy may be
+	// reconciled by multiple controllers. And the other controller may
+	// have the target gateway.
+	if targetedGateway == nil {
+		return
+	}
+
+	// Find its ancestor reference by resolved gateway, even with resolve error
+	gatewayNN := utils.NamespacedName(targetedGateway)
+	parentGateways := []gwapiv1a2.ParentReference{
+		getAncestorRefForPolicy(gatewayNN, currTarget.SectionName),
+	}
+
+	// Set conditions for resolve error, then skip current gateway
+	if resolveErr != nil {
+		status.SetResolveErrorForPolicyAncestors(&policy.Status,
+			parentGateways,
+			t.GatewayControllerName,
+			policy.Generation,
+			resolveErr,
+		)
+
+		return
+	}
+
+	if err := t.translateSecurityPolicyForGateway(policy, targetedGateway, currTarget, resources, xdsIR); err != nil {
+		status.SetTranslationErrorForPolicyAncestors(&policy.Status,
+			parentGateways,
+			t.GatewayControllerName,
+			policy.Generation,
+			status.Error2ConditionMsg(err),
+		)
+	}
+
+	// Set Accepted condition if it is unset
+	status.SetAcceptedForPolicyAncestors(&policy.Status, parentGateways, t.GatewayControllerName)
+
+	// Check if this policy is overridden by other policies targeting at route and listener levels
+	overriddenTargetsMessage := getOverriddenTargetsMessage(
+		gatewayMap[gatewayNN], gatewayRouteMap[gatewayNN.String()], currTarget.SectionName)
+	if overriddenTargetsMessage != "" {
+		status.SetConditionForPolicyAncestors(&policy.Status,
+			parentGateways,
+			t.GatewayControllerName,
+			egv1a1.PolicyConditionOverridden,
+			metav1.ConditionTrue,
+			egv1a1.PolicyReasonOverridden,
+			"This policy is being overridden by other securityPolicies for "+overriddenTargetsMessage,
+			policy.Generation,
+		)
+	}
+}
+
+func getOverriddenTargetsMessage(
+	targetContext *policyGatewayTargetContext,
+	listenerRouteMap map[string]sets.Set[string],
+	sectionName *gwapiv1.SectionName,
+) string {
+	var listeners, routes []string
+	if sectionName == nil {
+		if targetContext != nil {
+			listeners = targetContext.attachedToListeners.UnsortedList()
+		}
+		for _, routeSet := range listenerRouteMap {
+			routes = append(routes, routeSet.UnsortedList()...)
+		}
+	} else if listenerRouteMap != nil {
+		if routeSet, ok := listenerRouteMap[string(*sectionName)]; ok {
+			routes = routeSet.UnsortedList()
+		}
+		if routeSet, ok := listenerRouteMap[""]; ok {
+			routes = append(routes, routeSet.UnsortedList()...)
+		}
+	}
+	if len(listeners) > 0 {
+		sort.Strings(listeners)
+		if len(routes) > 0 {
+			sort.Strings(routes)
+			return fmt.Sprintf("these listeners: %v and these routes: %v", listeners, routes)
+		} else {
+			return fmt.Sprintf("these listeners: %v", listeners)
+		}
+	} else if len(routes) > 0 {
+		sort.Strings(routes)
+		return fmt.Sprintf("these routes: %v", routes)
+	}
+	return ""
 }
 
 // validateSecurityPolicy validates the SecurityPolicy.
@@ -292,6 +363,12 @@ func validateSecurityPolicy(p *egv1a1.SecurityPolicy) error {
 		}
 	}
 
+	basicAuth := p.Spec.BasicAuth
+	if basicAuth != nil {
+		if err := validateBasicAuth(basicAuth); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 
@@ -304,6 +381,16 @@ func validateAPIKeyAuth(apiKeyAuth *egv1a1.APIKeyAuth) error {
 			return errors.New("only one of headers, params or cookies must be specified")
 		}
 	}
+	return nil
+}
+
+// validateBasicAuth validates the BasicAuth configuration.
+// Currently, we only validate that the secret exists, but we don't validate
+// the content of the secret. This function will be called when the security policy
+// is being processed, but before the secret is actually read.
+func validateBasicAuth(basicAuth *egv1a1.BasicAuth) error {
+	// The actual validation of the htpasswd format will happen when the secret is read
+	// in the buildBasicAuth function.
 	return nil
 }
 
@@ -327,19 +414,43 @@ func resolveSecurityPolicyGatewayTargetRef(
 		return nil, nil
 	}
 
-	// Check if another policy targeting the same Gateway exists
-	if gateway.attached {
-		message := fmt.Sprintf("Unable to target Gateway %s, another SecurityPolicy has already attached to it",
-			string(target.Name))
-
-		return gateway.GatewayContext, &status.PolicyResolveError{
-			Reason:  gwapiv1a2.PolicyReasonConflicted,
-			Message: message,
+	// If sectionName is set, make sure its valid
+	if target.SectionName != nil {
+		if err := validateGatewayListenerSectionName(
+			*target.SectionName,
+			key,
+			gateway.listeners,
+		); err != nil {
+			return gateway.GatewayContext, err
 		}
 	}
 
-	// Set context and save
-	gateway.attached = true
+	if target.SectionName == nil {
+		// Check if another policy targeting the same Gateway exists
+		if gateway.attached {
+			message := fmt.Sprintf("Unable to target Gateway %s, another SecurityPolicy has already attached to it",
+				string(target.Name))
+
+			return gateway.GatewayContext, &status.PolicyResolveError{
+				Reason:  gwapiv1a2.PolicyReasonConflicted,
+				Message: message,
+			}
+		}
+		gateway.attached = true
+	} else {
+		listenerName := string(*target.SectionName)
+		if gateway.attachedToListeners.Has(listenerName) {
+			message := fmt.Sprintf("Unable to target Listener %s/%s, another SecurityPolicy has already attached to it",
+				string(target.Name), listenerName)
+
+			return gateway.GatewayContext, &status.PolicyResolveError{
+				Reason:  gwapiv1a2.PolicyReasonConflicted,
+				Message: message,
+			}
+		}
+		gateway.attachedToListeners.Insert(listenerName)
+	}
+
 	gateways[key] = gateway
 
 	return gateway.GatewayContext, nil
@@ -586,8 +697,14 @@ func (t *Translator) translateSecurityPolicyForGateway(
 
 	policyTarget := irStringKey(policy.Namespace, string(target.Name))
 	for _, h := range x.HTTP {
-		gatewayName := h.Name[0:strings.LastIndex(h.Name, "/")]
+		// A HTTPListener name has the format namespace/gatewayName/listenerName
+		gatewayNameEnd := strings.LastIndex(h.Name, "/")
+		gatewayName := h.Name[0:gatewayNameEnd]
 		if t.MergeGateways && gatewayName != policyTarget {
+			continue
+		}
+		// If specified the sectionName must match the listenerName part of the HTTPListener name
+		if target.SectionName != nil && string(*target.SectionName) != h.Name[gatewayNameEnd+1:] {
 			continue
 		}
 		// A Policy targeting the most specific scope(xRoute) wins over a policy
@@ -959,8 +1076,10 @@ func (t *Translator) buildOIDC(
 		CookieSuffix:           suffix,
 		CookieNameOverrides:    policy.Spec.OIDC.CookieNames,
 		CookieDomain:           policy.Spec.OIDC.CookieDomain,
+		CookieConfig:           policy.Spec.OIDC.CookieConfig,
 		HMACSecret:             hmacData,
 		PassThroughAuthHeader:  passThroughAuthHeader,
+		DenyRedirect:           oidc.DenyRedirect,
 	}, nil
 }
 
@@ -1217,11 +1336,39 @@ func (t *Translator) buildBasicAuth(
 			usersSecret.Namespace, usersSecret.Name)
 	}
 
+	// Validate the htpasswd format
+	if err := validateHtpasswdFormat(usersSecretBytes); err != nil {
+		return nil, err
+	}
+
 	return &ir.BasicAuth{
 		Name:                  irConfigName(policy),
 		Users:                 usersSecretBytes,
 		ForwardUsernameHeader: basicAuth.ForwardUsernameHeader,
 	}, nil
+}
+
+// validateHtpasswdFormat validates that the htpasswd data is in the correct format.
+// Currently, only the SHA format is supported by Envoy.
+func validateHtpasswdFormat(data []byte) error {
+	lines := strings.Split(string(data), "\n")
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+		if line == "" {
+			continue
+		}
+
+		parts := strings.SplitN(line, ":", 2)
+		if len(parts) != 2 {
+			return fmt.Errorf("invalid htpasswd format: each line must be in the format 'username:password'")
+		}
+
+		password := parts[1]
+		if !strings.HasPrefix(password, "{SHA}") {
+			return fmt.Errorf("unsupported htpasswd format: please use {SHA}")
+		}
+	}
+	return nil
 }
 
 func (t *Translator) buildExtAuth(

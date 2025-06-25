@@ -241,10 +241,20 @@ func AlmostEquals(actual, expect, offset int) bool {
 // the done channel is used to notify caller of execution result
 // the execution may end due to an external abort or timeout
 func runLoadAndWait(t *testing.T, timeoutConfig config.TimeoutConfig, done chan bool, aborter *periodic.Aborter, reqURL string) {
+	qpsVal := os.Getenv("E2E_BACKEND_UPGRADE_QPS")
+	qps := 5000
+	if qpsVal != "" {
+		if v, err := strconv.Atoi(qpsVal); err == nil {
+			qps = v
+		} else {
+			tlog.Logf(t, "Invalid QPS value %s, using default %d", qpsVal, qps)
+		}
+	}
+
 	flog.SetLogLevel(flog.Error)
 	opts := fhttp.HTTPRunnerOptions{
 		RunnerOptions: periodic.RunnerOptions{
-			QPS: 5000,
+			QPS: float64(qps),
 			// allow some overhead time for setting up workers and tearing down after restart
 			Duration:   timeoutConfig.CreateTimeout + timeoutConfig.CreateTimeout/2,
 			NumThreads: 50,
@@ -602,7 +612,20 @@ type LokiQueryResponse struct {
 // CollectAndDump collects and dumps the cluster data for troubleshooting and log.
 // This function should be call within t.Cleanup.
 func CollectAndDump(t *testing.T, rest *rest.Config) {
-	result := tb.CollectResult(context.TODO(), rest, "", "envoy-gateway-system")
+	if os.Getenv("ACTIONS_STEP_DEBUG") != "true" {
+		tlog.Logf(t, "Skipping collecting and dumping cluster data, set ACTIONS_STEP_DEBUG=true to enable it")
+		return
+	}
+
+	dumpedNamespaces := []string{"envoy-gateway-system"}
+	if IsGatewayNamespaceMode() {
+		dumpedNamespaces = append(dumpedNamespaces, ConformanceInfraNamespace)
+	}
+
+	result := tb.CollectResult(context.TODO(), rest, tb.CollectOptions{
+		BundlePath:          "",
+		CollectedNamespaces: dumpedNamespaces,
+	})
 	for r, data := range result {
 		tlog.Logf(t, "\nfilename: %s", r)
 		tlog.Logf(t, "\ndata: \n%s", data)

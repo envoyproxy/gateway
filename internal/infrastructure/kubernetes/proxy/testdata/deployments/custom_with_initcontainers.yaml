@@ -10,6 +10,11 @@ metadata:
     gateway.envoyproxy.io/owning-gateway-namespace: default
   name: envoy-default-37a8eec1
   namespace: envoy-gateway-system
+  ownerReferences:
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: GatewayClass
+    name: envoy-gateway-class
+    uid: test-owner-reference-uid-for-gatewayclass
 spec:
   progressDeadlineSeconds: 600
   replicas: 3
@@ -38,6 +43,7 @@ spec:
         gateway.envoyproxy.io/owning-gateway-name: default
         gateway.envoyproxy.io/owning-gateway-namespace: default
     spec:
+      automountServiceAccountToken: false
       containers:
       - args:
         - --service-cluster default
@@ -57,7 +63,7 @@ spec:
             local_cluster_name: local_cluster
           node:
             locality:
-              zone: "$(ENVOY_SERVICE_ZONE)"
+              zone: $(ENVOY_SERVICE_ZONE)
           layered_runtime:
             layers:
             - name: global_config
@@ -142,7 +148,7 @@ spec:
                     load_balancing_weight: 1
                   load_balancing_weight: 1
                   locality:
-                    zone: "$(ENVOY_SERVICE_ZONE)"
+                    zone: $(ENVOY_SERVICE_ZONE)
               name: local_cluster
               type: STATIC
             - connect_timeout: 10s
@@ -167,44 +173,6 @@ spec:
                         timeout: 5s
               name: xds_cluster
               type: STRICT_DNS
-              transport_socket:
-                name: envoy.transport_sockets.tls
-                typed_config:
-                  "@type": type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.UpstreamTlsContext
-                  common_tls_context:
-                    tls_params:
-                      tls_maximum_protocol_version: TLSv1_3
-                    tls_certificate_sds_secret_configs:
-                    - name: xds_certificate
-                      sds_config:
-                        path_config_source:
-                          path: /sds/xds-certificate.json
-                        resource_api_version: V3
-                    validation_context_sds_secret_config:
-                      name: xds_trusted_ca
-                      sds_config:
-                        path_config_source:
-                          path: /sds/xds-trusted-ca.json
-                        resource_api_version: V3
-            - name: wasm_cluster
-              type: STRICT_DNS
-              connect_timeout: 10s
-              load_assignment:
-                cluster_name: wasm_cluster
-                endpoints:
-                - load_balancing_weight: 1
-                  lb_endpoints:
-                  - load_balancing_weight: 1
-                    endpoint:
-                      address:
-                        socket_address:
-                          address: envoy-gateway
-                          port_value: 18002
-              typed_extension_protocol_options:
-                envoy.extensions.upstreams.http.v3.HttpProtocolOptions:
-                  "@type": "type.googleapis.com/envoy.extensions.upstreams.http.v3.HttpProtocolOptions"
-                  explicit_http_config:
-                    http2_protocol_options: {}
               transport_socket:
                 name: envoy.transport_sockets.tls
                 typed_config:
@@ -254,18 +222,21 @@ spec:
         command:
         - envoy
         env:
-        - name: ENVOY_GATEWAY_NAMESPACE
-          value: envoy-gateway-system
-        - name: ENVOY_SERVICE_ZONE
+        - name: ENVOY_POD_NAMESPACE
           valueFrom:
             fieldRef:
               apiVersion: v1
-              fieldPath: metadata.annotations['topology.kubernetes.io/zone']
+              fieldPath: metadata.namespace
         - name: ENVOY_POD_NAME
           valueFrom:
             fieldRef:
               apiVersion: v1
               fieldPath: metadata.name
+        - name: ENVOY_SERVICE_ZONE
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: metadata.annotations['topology.kubernetes.io/zone']
         image: envoyproxy/envoy:v1.2.3
         imagePullPolicy: IfNotPresent
         lifecycle:
@@ -334,18 +305,21 @@ spec:
         command:
         - envoy-gateway
         env:
-        - name: ENVOY_GATEWAY_NAMESPACE
-          value: envoy-gateway-system
-        - name: ENVOY_SERVICE_ZONE
+        - name: ENVOY_POD_NAMESPACE
           valueFrom:
             fieldRef:
               apiVersion: v1
-              fieldPath: metadata.annotations['topology.kubernetes.io/zone']
+              fieldPath: metadata.namespace
         - name: ENVOY_POD_NAME
           valueFrom:
             fieldRef:
               apiVersion: v1
               fieldPath: metadata.name
+        - name: ENVOY_SERVICE_ZONE
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: metadata.annotations['topology.kubernetes.io/zone']
         image: docker.io/envoyproxy/gateway-dev:latest
         imagePullPolicy: IfNotPresent
         lifecycle:

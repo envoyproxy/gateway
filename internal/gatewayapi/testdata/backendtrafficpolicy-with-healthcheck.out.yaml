@@ -16,6 +16,7 @@ backendTrafficPolicies:
           expectedStatuses:
           - 200
           - 201
+          hostname: foo.bar
           method: GET
           path: /healthz
         interval: 5s
@@ -656,6 +657,9 @@ infraIR:
         labels:
           gateway.envoyproxy.io/owning-gateway-name: gateway-1
           gateway.envoyproxy.io/owning-gateway-namespace: envoy-gateway
+        ownerReference:
+          kind: GatewayClass
+          name: envoy-gateway-class
       name: envoy-gateway/gateway-1
       namespace: envoy-gateway-system
   envoy-gateway/gateway-2:
@@ -672,6 +676,9 @@ infraIR:
         labels:
           gateway.envoyproxy.io/owning-gateway-name: gateway-2
           gateway.envoyproxy.io/owning-gateway-namespace: envoy-gateway
+        ownerReference:
+          kind: GatewayClass
+          name: envoy-gateway-class
       name: envoy-gateway/gateway-2
       namespace: envoy-gateway-system
 xdsIR:
@@ -1017,7 +1024,7 @@ xdsIR:
                 expectedStatuses:
                 - 200
                 - 201
-                host: gateway.envoyproxy.io
+                host: foo.bar
                 method: GET
                 path: /healthz
               interval: 5s

@@ -41,7 +41,7 @@ func TestProxyTopologyInjector_Handle(t *testing.T) {
 	defaultNode := &corev1.Node{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:   "node-A",
-			Labels: map[string]string{corev1.LabelTopologyZone: "zone1"},
+			Labels: map[string]string{corev1.LabelTopologyZone: "0"},
 		},
 	}
 
@@ -67,7 +67,7 @@ func TestProxyTopologyInjector_Handle(t *testing.T) {
 				Operation: "add",
 				Path:      "/metadata/annotations",
 				Value: map[string]interface{}{
-					"topology.kubernetes.io/zone": "zone1",
+					"topology.kubernetes.io/zone": "\"0\"",
 				},
 			}},
 		},

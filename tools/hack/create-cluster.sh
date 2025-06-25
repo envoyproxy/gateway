@@ -19,6 +19,11 @@ fi
 KIND_CFG=$(cat <<-EOM
 kind: Cluster
 apiVersion: kind.x-k8s.io/v1alpha4
+runtimeConfig:
+  "certificates.k8s.io/v1alpha1/clustertrustbundles": "true"
+featureGates:
+  "ClusterTrustBundle": true
+  "ClusterTrustBundleProjection": true
 networking:
   ${CNI_CONFIG}
   ipFamily: ${IP_FAMILY}
@@ -30,14 +35,14 @@ networking:
 nodes:
 - role: control-plane
   labels:
-    "topology.kubernetes.io/zone": "0"
+    "topology.kubernetes.io/zone": 0
 EOM
 )
 
 # https://kind.sigs.k8s.io/docs/user/quick-start/#multi-node-clusters
 if [[ -n "${NUM_WORKERS}" ]]; then
 for i in $(seq 1 "${NUM_WORKERS}"); do
-  KIND_CFG+=$(printf "\n- role: worker\n  labels:\n    \"topology.kubernetes.io/zone\": \"%s\"" "$i")
+  KIND_CFG+=$(printf "\n- role: worker\n  labels:\n    \"topology.kubernetes.io/zone\": %s" "$i")
 done
 fi
 

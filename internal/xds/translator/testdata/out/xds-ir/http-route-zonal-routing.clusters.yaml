@@ -19,7 +19,8 @@
           '@type': type.googleapis.com/envoy.extensions.load_balancing_policies.least_request.v3.LeastRequest
           localityLbConfig:
             zoneAwareLbConfig:
-              forceLocalityDirectRouting: true
+              forceLocalZone:
+                minSize: 1
               minClusterSize: "1"
   name: first-route-dest
   perConnectionBufferLimitBytes: 32768

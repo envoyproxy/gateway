@@ -35,6 +35,8 @@ const (
 	// The value should be the name of the accepted Envoy Gateway.
 	OwningGatewayNameLabel = "gateway.envoyproxy.io/owning-gateway-name"
 
+	GatewayNameLabel = "gateway.networking.k8s.io/gateway-name"
+
 	// minEphemeralPort is the first port in the ephemeral port range.
 	minEphemeralPort = 1024
 	// wellKnownPortShift is the constant added to the well known port (1-1023)
@@ -317,8 +319,17 @@ func (t *Translator) InitIRs(gateways []*GatewayContext) (map[string]*ir.Xds, ma
 
 		gwInfraIR.Proxy.Name = irKey
 		gwInfraIR.Proxy.Namespace = t.ControllerNamespace
+		gwInfraIR.Proxy.GetProxyMetadata().OwnerReference = &ir.ResourceMetadata{
+			Kind: resource.KindGatewayClass,
+			Name: string(t.GatewayClassName),
+		}
 		if t.GatewayNamespaceMode {
+			gwInfraIR.Proxy.Name = gateway.Name
 			gwInfraIR.Proxy.Namespace = gateway.Namespace
+			gwInfraIR.Proxy.GetProxyMetadata().OwnerReference = &ir.ResourceMetadata{
+				Kind: resource.KindGateway,
+				Name: gateway.Name,
+			}
 		}
 		// save the IR references in the map before the translation starts
 		xdsIR[irKey] = gwXdsIR

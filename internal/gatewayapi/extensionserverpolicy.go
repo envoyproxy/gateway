@@ -46,7 +46,7 @@ func (t *Translator) ProcessExtensionServerPolicies(policies []unstructured.Unst
 	var errs error
 	// Process the policies targeting Gateways. Only update the policy status if it was accepted.
 	// A policy is considered accepted if at least one targetRef contained inside matched a listener.
-	for _, policy := range policies {
+	for policyIndex, policy := range policies {
 		policy := policy.DeepCopy()
 		var policyStatus gwapiv1a2.PolicyStatus
 		accepted := false
@@ -67,6 +67,13 @@ func (t *Translator) ProcessExtensionServerPolicies(policies []unstructured.Unst
 				// unable to find a matching Gateway for policy
 				continue
 			}
+
+			// Append policy extension server policy list for related gateway.
+			gatewayKey := t.getIRKey(gateway.Gateway)
+			unstructuredPolicy := &ir.UnstructuredRef{
+				Object: &policies[policyIndex],
+			}
+			xdsIR[gatewayKey].ExtensionServerPolicies = append(xdsIR[gatewayKey].ExtensionServerPolicies, unstructuredPolicy)
 
 			// Set conditions for translation if it got any
 			if t.translateExtServerPolicyForGateway(policy, gateway, currTarget, xdsIR) {

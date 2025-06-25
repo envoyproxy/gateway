@@ -187,6 +187,7 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 		irRoutes []*ir.HTTPRoute
 		errs     = &status.MultiStatusError{}
 	)
+	pattern := getStatPattern(httpRoute, parentRef)
 
 	// process each HTTPRouteRule, generate a unique Xds IR HTTPRoute per match of the rule
 	for ruleIdx, rule := range httpRoute.Spec.Rules {
@@ -221,7 +222,7 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 		allDs := []*ir.DestinationSetting{}
 		failedProcessDestination := false
 		hasDynamicResolver := false
-
+		backendRefNames := make([]string, len(rule.BackendRefs))
 		// process each backendRef, and calculate the destination settings for this rule
 		for i, backendRef := range rule.BackendRefs {
 			settingName := irDestinationSettingName(destName, i)
@@ -245,6 +246,8 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 			if ds.IsDynamicResolver {
 				hasDynamicResolver = true
 			}
+			backendNamespace := NamespaceDerefOr(backendRef.Namespace, httpRoute.GetNamespace())
+			backendRefNames[i] = fmt.Sprintf("%s/%s", backendNamespace, backendRef.Name)
 		}
 
 		// process each ir route
@@ -279,6 +282,10 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 				destination.Name = destName
 				destination.Settings = allDs
 				irRoute.Destination = destination
+			}
+
+			if pattern != "" {
+				destination.StatName = ptr.To(buildStatName(pattern, httpRoute, rule.Name, ruleIdx, backendRefNames))
 			}
 		}
 
@@ -627,6 +634,7 @@ func (t *Translator) processGRPCRouteRules(grpcRoute *GRPCRouteContext, parentRe
 		irRoutes []*ir.HTTPRoute
 		errs     = &status.MultiStatusError{}
 	)
+	pattern := getStatPattern(grpcRoute, parentRef)
 
 	// compute matches, filters, backends
 	for ruleIdx, rule := range grpcRoute.Spec.Rules {
@@ -654,6 +662,7 @@ func (t *Translator) processGRPCRouteRules(grpcRoute *GRPCRouteContext, parentRe
 		allDs := []*ir.DestinationSetting{}
 		failedProcessDestination := false
 
+		backendRefNames := make([]string, len(rule.BackendRefs))
 		for i, backendRef := range rule.BackendRefs {
 			settingName := irDestinationSettingName(destName, i)
 			ds, err := t.processDestination(settingName, backendRef, parentRef, grpcRoute, resources)
@@ -670,6 +679,8 @@ func (t *Translator) processGRPCRouteRules(grpcRoute *GRPCRouteContext, parentRe
 				continue
 			}
 			allDs = append(allDs, ds)
+			backendNamespace := NamespaceDerefOr(backendRef.Namespace, grpcRoute.GetNamespace())
+			backendRefNames[i] = fmt.Sprintf("%s/%s", backendNamespace, backendRef.Name)
 		}
 
 		// process each ir route
@@ -699,6 +710,10 @@ func (t *Translator) processGRPCRouteRules(grpcRoute *GRPCRouteContext, parentRe
 				destination.Name = destName
 				destination.Settings = allDs
 				irRoute.Destination = destination
+			}
+
+			if pattern != "" {
+				destination.StatName = ptr.To(buildStatName(pattern, grpcRoute, rule.Name, ruleIdx, backendRefNames))
 			}
 		}
 
@@ -1117,16 +1132,6 @@ func (t *Translator) processUDPRouteParentRefs(udpRoute *UDPRouteContext, resour
 				metav1.ConditionFalse,
 				resolveErrs.Reason(),
 				resolveErrs.Error())
-
-			// TODO: zhaohuabing should we set the accepted condition to false here?
-			status.SetRouteStatusCondition(routeStatus,
-				parentRef.routeParentStatusIdx,
-				udpRoute.GetGeneration(),
-				gwapiv1.RouteConditionAccepted,
-				metav1.ConditionFalse,
-				"Failed to process the settings associated with the UDP route.",
-				resolveErrs.Error(),
-			)
 		} else {
 			status.SetRouteStatusCondition(routeStatus,
 				parentRef.routeParentStatusIdx,
@@ -1404,7 +1409,7 @@ func (t *Translator) processDestination(name string, backendRefContext BackendRe
 		ds = t.processServiceDestinationSetting(name, backendRef.BackendObjectReference, backendNamespace, protocol, resources, envoyProxy)
 		svc := resources.GetService(backendNamespace, string(backendRef.Name))
 		ds.IPFamily = getServiceIPFamily(svc)
-		ds.ZoneAwareRoutingEnabled = isZoneAwareRoutingEnabled(svc)
+		ds.ZoneAwareRouting = processZoneAwareRouting(svc)
 
 	case egv1a1.KindBackend:
 		ds = t.processBackendDestinationSetting(name, backendRef.BackendObjectReference, backendNamespace, protocol, resources)
@@ -1566,12 +1571,12 @@ func (t *Translator) processServiceDestinationSetting(
 	}
 
 	return &ir.DestinationSetting{
-		Name:                    name,
-		Protocol:                protocol,
-		Endpoints:               endpoints,
-		AddressType:             addrType,
-		ZoneAwareRoutingEnabled: isZoneAwareRoutingEnabled(service),
-		Metadata:                buildResourceMetadata(service, ptr.To(gwapiv1.SectionName(strconv.Itoa(int(*backendRef.Port))))),
+		Name:             name,
+		Protocol:         protocol,
+		Endpoints:        endpoints,
+		AddressType:      addrType,
+		ZoneAwareRouting: processZoneAwareRouting(service),
+		Metadata:         buildResourceMetadata(service, ptr.To(gwapiv1.SectionName(strconv.Itoa(int(*backendRef.Port))))),
 	}
 }
 
@@ -1591,24 +1596,28 @@ func getBackendFilters(routeType gwapiv1.Kind, backendRefContext BackendRefConte
 	return nil
 }
 
-func isZoneAwareRoutingEnabled(svc *corev1.Service) bool {
+func processZoneAwareRouting(svc *corev1.Service) *ir.ZoneAwareRouting {
 	if svc == nil {
-		return false
+		return nil
 	}
 
 	if trafficDist := svc.Spec.TrafficDistribution; trafficDist != nil {
-		return *trafficDist == corev1.ServiceTrafficDistributionPreferClose
+		return &ir.ZoneAwareRouting{
+			MinSize: 1,
+		}
 	}
 
 	// Allows annotation values that align with Kubernetes defaults.
 	// Ref:
 	// https://kubernetes.io/docs/concepts/services-networking/topology-aware-routing/#enabling-topology-aware-routing
 	// https://github.com/kubernetes/kubernetes/blob/9d9e1afdf78bce0a517cc22557457f942040ca19/staging/src/k8s.io/endpointslice/utils.go#L355-L368
-	if val, ok := svc.Annotations[corev1.AnnotationTopologyMode]; ok {
-		return val == "Auto" || val == "auto"
+	if val, ok := svc.Annotations[corev1.AnnotationTopologyMode]; ok && val == "Auto" || val == "auto" {
+		return &ir.ZoneAwareRouting{
+			MinSize: 3,
+		}
 	}
 
-	return false
+	return nil
 }
 
 func (t *Translator) processDestinationFilters(routeType gwapiv1.Kind, backendRefContext BackendRefContext, parentRef *RouteParentContext, route RouteContext, resources *resource.Resources) (*ir.DestinationFilters, error) {
@@ -1894,13 +1903,17 @@ func (t *Translator) processBackendDestinationSetting(
 	)
 
 	addrTypeMap := make(map[ir.DestinationAddressType]int)
-
 	backend := resources.GetBackend(backendNamespace, string(backendRef.Name))
+	for _, ap := range backend.Spec.AppProtocols {
+		protocol = backendAppProtocolToIRAppProtocol(ap, protocol)
+	}
+
 	ds := &ir.DestinationSetting{Name: name}
 
 	// There is only one backend if it is a dynamic resolver
 	if backend.Spec.Type != nil && *backend.Spec.Type == egv1a1.BackendTypeDynamicResolver {
 		ds.IsDynamicResolver = true
+		ds.Protocol = protocol
 		return ds
 	}
 
@@ -1938,9 +1951,6 @@ func (t *Translator) processBackendDestinationSetting(
 		dstAddrType = ptr.To(ir.MIXED)
 	}
 
-	for _, ap := range backend.Spec.AppProtocols {
-		protocol = backendAppProtocolToIRAppProtocol(ap, protocol)
-	}
 	ds.Endpoints = dstEndpoints
 	ds.AddressType = dstAddrType
 	ds.Protocol = protocol
@@ -1981,4 +1991,32 @@ func backendAppProtocolToIRAppProtocol(ap egv1a1.AppProtocolType, defaultProtoco
 	default:
 		return defaultProtocol
 	}
+}
+
+func getStatPattern(routeContext RouteContext, parentRef *RouteParentContext) string {
+	var pattern string
+	var envoyProxy *egv1a1.EnvoyProxy
+	gatewayCtx := GetRouteParentContext(routeContext, *parentRef.ParentReference).GetGateway()
+	if gatewayCtx != nil {
+		envoyProxy = gatewayCtx.envoyProxy
+	}
+	if envoyProxy != nil && envoyProxy.Spec.Telemetry != nil && envoyProxy.Spec.Telemetry.Metrics != nil &&
+		envoyProxy.Spec.Telemetry.Metrics.ClusterStatName != nil {
+		pattern = *envoyProxy.Spec.Telemetry.Metrics.ClusterStatName
+	}
+	return pattern
+}
+
+func buildStatName(pattern string, route RouteContext, ruleName *gwapiv1.SectionName, idx int, refs []string) string {
+	statName := strings.ReplaceAll(pattern, egv1a1.StatFormatterRouteName, route.GetName())
+	statName = strings.ReplaceAll(statName, egv1a1.StatFormatterRouteNamespace, route.GetNamespace())
+	statName = strings.ReplaceAll(statName, egv1a1.StatFormatterRouteKind, route.GetObjectKind().GroupVersionKind().Kind)
+	if ruleName == nil {
+		statName = strings.ReplaceAll(statName, egv1a1.StatFormatterRouteRuleName, "-")
+	} else {
+		statName = strings.ReplaceAll(statName, egv1a1.StatFormatterRouteRuleName, string(*ruleName))
+	}
+	statName = strings.ReplaceAll(statName, egv1a1.StatFormatterRouteRuleNumber, fmt.Sprintf("%d", idx))
+	statName = strings.ReplaceAll(statName, egv1a1.StatFormatterBackendRefs, strings.Join(refs, "|"))
+	return statName
 }
