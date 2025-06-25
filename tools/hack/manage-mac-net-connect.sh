@@ -4,7 +4,6 @@ set -euo pipefail
 MODE="${1:-setup}"  # setup | cleanup
 DOCKER_MAC_NET_CONNECT=${DOCKER_MAC_NET_CONNECT:-}
 HOMEBREW_GOPROXY=${HOMEBREW_GOPROXY:-}
-FLAG_FILE="/tmp/.docker-mac-net-connect-started"
 
 is_macos() {
     [[ "$(uname -s)" == "Darwin" ]]
@@ -42,15 +41,7 @@ setup() {
 
     if ! is_running; then
         sudo brew services start chipmk/tap/docker-mac-net-connect
-        touch "$FLAG_FILE"
         sleep 5
-    fi
-}
-
-cleanup() {
-    if is_macos && [ -f "$FLAG_FILE" ]; then
-        sudo brew services stop chipmk/tap/docker-mac-net-connect || true
-        rm -f "$FLAG_FILE"
     fi
 }
 
