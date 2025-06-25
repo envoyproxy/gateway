@@ -24,11 +24,12 @@ setup() {
     fi
 
     if is_installed && is_running; then
-        echo "docker-mac-net-connect is already installed and running."
+        echo "Docker Mac Net Connect is already installed and running."
         return
     fi
 
-    read -rp "Install and start docker-mac-net-connect? [y/N]: " input
+    echo "Docker Mac Net Connect is recommended on macOS to ensure Docker networking works properly."
+    read -rp "Install and start Docker Mac Net Connect? [y/N]: " input
     case "$(echo "$input" | tr '[:upper:]' '[:lower:]')" in
         y|yes) ;;
         *) return ;;
@@ -48,5 +49,5 @@ setup() {
 case "$MODE" in
     setup) setup ;;
     cleanup) cleanup ;;
-    *) echo "Usage: $0 [setup|cleanup]"; exit 1 ;;
+    *) echo "Usage: $0 [setup]"; exit 1 ;;
 esac
