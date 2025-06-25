@@ -226,7 +226,7 @@ func (t *Translator) ProcessBackendTrafficPolicies(resources *resource.Resources
 				}
 
 				// Set Accepted condition if it is unset
-				status.SetAcceptedForPolicyAncestors(&policy.Status, ancestorRefs, t.GatewayControllerName)
+				status.SetAcceptedForPolicyAncestors(&policy.Status, ancestorRefs, t.GatewayControllerName, policy.Generation)
 			}
 		}
 	}
@@ -280,7 +280,7 @@ func (t *Translator) ProcessBackendTrafficPolicies(resources *resource.Resources
 				}
 
 				// Set Accepted condition if it is unset
-				status.SetAcceptedForPolicyAncestors(&policy.Status, ancestorRefs, t.GatewayControllerName)
+				status.SetAcceptedForPolicyAncestors(&policy.Status, ancestorRefs, t.GatewayControllerName, policy.Generation)
 
 				// Check if this policy is overridden by other policies targeting at
 				// route level
