@@ -233,21 +233,19 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 				continue
 			}
 		}
+		// it's safe here to append gwcResource to gwcResources
+		gwcResources = append(gwcResources, gwcResource)
+		// process global resources
+		// add the OIDC HMAC Secret to the resourceTree
+		r.processOIDCHMACSecret(ctx, gwcResource, gwcResourceMapping)
+		// add the Envoy TLS Secret to the resourceTree
+		r.processEnvoyTLSSecret(ctx, gwcResource, gwcResourceMapping)
 
 		// Add all Gateways, their associated Routes, and referenced resources to the resourceTree
 		if err = r.processGateways(ctx, managedGC, gwcResourceMapping, gwcResource); err != nil {
 			r.log.Error(err, fmt.Sprintf("failed processGateways for gatewayClass %s, skipping it", managedGC.Name))
 			continue
 		}
-
-		// it's safe here to append gwcResource to gwcResources
-		gwcResources = append(gwcResources, gwcResource)
-
-		// process global resources
-		// add the OIDC HMAC Secret to the resourceTree
-		r.processOIDCHMACSecret(ctx, gwcResource, gwcResourceMapping)
-		// add the Envoy TLS Secret to the resourceTree
-		r.processEnvoyTLSSecret(ctx, gwcResource, gwcResourceMapping)
 
 		if r.eppCRDExists {
 			// Add all EnvoyPatchPolicies to the resourceTree
