@@ -288,6 +288,13 @@ func (i *Infra) createOrUpdatePodDisruptionBudget(ctx context.Context, r Resourc
 	)
 
 	defer func() {
+		if err == nil {
+			resourceApplyDurationSeconds.With(labels...).Record(time.Since(startTime).Seconds())
+			resourceApplyTotal.WithSuccess(labels...).Increment()
+		} else {
+			resourceApplyTotal.WithFailure(metrics.ReasonError, labels...).Increment()
+		}
+
 		if pdb != nil {
 			deleteErr := i.Client.DeleteAllExcept(ctx, &policyv1.PodDisruptionBudgetList{}, client.ObjectKey{
 				Namespace: pdb.Namespace,
@@ -300,13 +307,6 @@ func (i *Infra) createOrUpdatePodDisruptionBudget(ctx context.Context, r Resourc
 				i.logger.Error(deleteErr, "failed to delete all except PodDisruptionBudget",
 					"name", r.Name(), "namespace", r.Namespace())
 			}
-		}
-
-		if err == nil {
-			resourceApplyDurationSeconds.With(labels...).Record(time.Since(startTime).Seconds())
-			resourceApplyTotal.WithSuccess(labels...).Increment()
-		} else {
-			resourceApplyTotal.WithFailure(metrics.ReasonError, labels...).Increment()
 		}
 	}()
 
@@ -339,6 +339,13 @@ func (i *Infra) createOrUpdateHPA(ctx context.Context, r ResourceRender) (err er
 	)
 
 	defer func() {
+		if err == nil {
+			resourceApplyDurationSeconds.With(labels...).Record(time.Since(startTime).Seconds())
+			resourceApplyTotal.WithSuccess(labels...).Increment()
+		} else {
+			resourceApplyTotal.WithFailure(metrics.ReasonError, labels...).Increment()
+		}
+
 		if hpa != nil {
 			deleteErr := i.Client.DeleteAllExcept(ctx, &autoscalingv2.HorizontalPodAutoscalerList{}, client.ObjectKey{
 				Namespace: hpa.Namespace,
@@ -351,13 +358,6 @@ func (i *Infra) createOrUpdateHPA(ctx context.Context, r ResourceRender) (err er
 				i.logger.Error(deleteErr, "failed to delete all except HorizontalPodAutoscaler",
 					"name", r.Name(), "namespace", r.Namespace())
 			}
-		}
-
-		if err == nil {
-			resourceApplyDurationSeconds.With(labels...).Record(time.Since(startTime).Seconds())
-			resourceApplyTotal.WithSuccess(labels...).Increment()
-		} else {
-			resourceApplyTotal.WithFailure(metrics.ReasonError, labels...).Increment()
 		}
 	}()
 
