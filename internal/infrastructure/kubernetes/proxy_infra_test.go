@@ -183,12 +183,12 @@ func TestCreateProxyInfra(t *testing.T) {
 		{
 			name:   "pdb enabled",
 			in:     infraWithPDB,
-			expect: false,
+			expect: true,
 		},
 		{
 			name:   "hpa enabled",
 			in:     infraWithHPA,
-			expect: false,
+			expect: true,
 		},
 	}
 
