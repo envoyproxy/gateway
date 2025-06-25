@@ -148,8 +148,8 @@ func TestCreateProxyInfra(t *testing.T) {
 	}
 
 	infraWithHPA := infraWithLabels.DeepCopy()
-	infraWithPDB.GetProxyInfra().Config = ep.DeepCopy()
-	infraWithPDB.GetProxyInfra().Config.Spec.Provider.Kubernetes.EnvoyHpa = &egv1a1.KubernetesHorizontalPodAutoscalerSpec{
+	infraWithHPA.GetProxyInfra().Config = ep.DeepCopy()
+	infraWithHPA.GetProxyInfra().Config.Spec.Provider.Kubernetes.EnvoyHpa = &egv1a1.KubernetesHorizontalPodAutoscalerSpec{
 		MinReplicas: ptr.To[int32](1),
 	}
 
