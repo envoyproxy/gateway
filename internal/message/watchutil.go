@@ -100,3 +100,8 @@ func HandleSubscription[K comparable, V any](
 		}
 	}
 }
+
+func HandleStore[K comparable, V any](meta Metadata, key K, value V, publish *watchable.Map[K, V]) {
+	publish.Store(key, value)
+	watchablePublishTotal.WithSuccess(meta.LabelValues()...).Increment()
+}

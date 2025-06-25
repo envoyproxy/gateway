@@ -128,7 +128,11 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *ir
 
 				// Publish
 				if err == nil {
-					r.Xds.Store(key, result)
+					message.HandleStore(message.Metadata{
+						Runner:  string(egv1a1.LogComponentXdsTranslatorRunner),
+						Message: "xds",
+					},
+						key, result, &r.Xds.Map)
 				} else {
 					r.Logger.Error(err, "skipped publishing xds resources")
 				}
