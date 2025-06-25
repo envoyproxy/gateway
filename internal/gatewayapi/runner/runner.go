@@ -192,7 +192,11 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *re
 						r.Logger.Error(err, "unable to validate infra ir, skipped sending it")
 						errChan <- err
 					} else {
-						r.InfraIR.Store(key, val)
+						message.HandleStore(message.Metadata{
+							Runner:  string(egv1a1.LogComponentGatewayAPIRunner),
+							Message: "infra-ir",
+						},
+							key, val, &r.InfraIR.Map)
 						newIRKeys = append(newIRKeys, key)
 					}
 				}
@@ -203,39 +207,67 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *re
 						r.Logger.Error(err, "unable to validate xds ir, skipped sending it")
 						errChan <- err
 					} else {
-						r.XdsIR.Store(key, val)
+						message.HandleStore(message.Metadata{
+							Runner:  string(egv1a1.LogComponentGatewayAPIRunner),
+							Message: "xds-ir",
+						},
+							key, val, &r.XdsIR.Map)
 					}
 				}
 
 				// Update Status
 				for _, gateway := range result.Gateways {
 					key := utils.NamespacedName(gateway)
-					r.ProviderResources.GatewayStatuses.Store(key, &gateway.Status)
+					message.HandleStore(message.Metadata{
+						Runner:  string(egv1a1.LogComponentGatewayAPIRunner),
+						Message: "gateway-status",
+					},
+						key, &gateway.Status, &r.ProviderResources.GatewayStatuses)
 					delete(statusesToDelete.GatewayStatusKeys, key)
 				}
 				for _, httpRoute := range result.HTTPRoutes {
 					key := utils.NamespacedName(httpRoute)
-					r.ProviderResources.HTTPRouteStatuses.Store(key, &httpRoute.Status)
+					message.HandleStore(message.Metadata{
+						Runner:  string(egv1a1.LogComponentGatewayAPIRunner),
+						Message: "httproute-status",
+					},
+						key, &httpRoute.Status, &r.ProviderResources.HTTPRouteStatuses)
 					delete(statusesToDelete.HTTPRouteStatusKeys, key)
 				}
 				for _, grpcRoute := range result.GRPCRoutes {
 					key := utils.NamespacedName(grpcRoute)
-					r.ProviderResources.GRPCRouteStatuses.Store(key, &grpcRoute.Status)
+					message.HandleStore(message.Metadata{
+						Runner:  string(egv1a1.LogComponentGatewayAPIRunner),
+						Message: "grpcroute-status",
+					},
+						key, &grpcRoute.Status, &r.ProviderResources.GRPCRouteStatuses)
 					delete(statusesToDelete.GRPCRouteStatusKeys, key)
 				}
 				for _, tlsRoute := range result.TLSRoutes {
 					key := utils.NamespacedName(tlsRoute)
-					r.ProviderResources.TLSRouteStatuses.Store(key, &tlsRoute.Status)
+					message.HandleStore(message.Metadata{
+						Runner:  string(egv1a1.LogComponentGatewayAPIRunner),
+						Message: "tlsroute-status",
+					},
+						key, &tlsRoute.Status, &r.ProviderResources.TLSRouteStatuses)
 					delete(statusesToDelete.TLSRouteStatusKeys, key)
 				}
 				for _, tcpRoute := range result.TCPRoutes {
 					key := utils.NamespacedName(tcpRoute)
-					r.ProviderResources.TCPRouteStatuses.Store(key, &tcpRoute.Status)
+					message.HandleStore(message.Metadata{
+						Runner:  string(egv1a1.LogComponentGatewayAPIRunner),
+						Message: "tcproute-status",
+					},
+						key, &tcpRoute.Status, &r.ProviderResources.TCPRouteStatuses)
 					delete(statusesToDelete.TCPRouteStatusKeys, key)
 				}
 				for _, udpRoute := range result.UDPRoutes {
 					key := utils.NamespacedName(udpRoute)
-					r.ProviderResources.UDPRouteStatuses.Store(key, &udpRoute.Status)
+					message.HandleStore(message.Metadata{
+						Runner:  string(egv1a1.LogComponentGatewayAPIRunner),
+						Message: "udproute-status",
+					},
+						key, &udpRoute.Status, &r.ProviderResources.UDPRouteStatuses)
 					delete(statusesToDelete.UDPRouteStatusKeys, key)
 				}
 
@@ -246,7 +278,11 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *re
 				for _, backendTLSPolicy := range result.BackendTLSPolicies {
 					key := utils.NamespacedName(backendTLSPolicy)
 					if !(reflect.ValueOf(backendTLSPolicy.Status).IsZero()) {
-						r.ProviderResources.BackendTLSPolicyStatuses.Store(key, &backendTLSPolicy.Status)
+						message.HandleStore(message.Metadata{
+							Runner:  string(egv1a1.LogComponentGatewayAPIRunner),
+							Message: "backendtlspolicy-status",
+						},
+							key, &backendTLSPolicy.Status, &r.ProviderResources.BackendTLSPolicyStatuses)
 					}
 					delete(statusesToDelete.BackendTLSPolicyStatusKeys, key)
 				}
@@ -254,35 +290,55 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *re
 				for _, clientTrafficPolicy := range result.ClientTrafficPolicies {
 					key := utils.NamespacedName(clientTrafficPolicy)
 					if !(reflect.ValueOf(clientTrafficPolicy.Status).IsZero()) {
-						r.ProviderResources.ClientTrafficPolicyStatuses.Store(key, &clientTrafficPolicy.Status)
+						message.HandleStore(message.Metadata{
+							Runner:  string(egv1a1.LogComponentGatewayAPIRunner),
+							Message: "clienttrafficpolicy-status",
+						},
+							key, &clientTrafficPolicy.Status, &r.ProviderResources.ClientTrafficPolicyStatuses)
 					}
 					delete(statusesToDelete.ClientTrafficPolicyStatusKeys, key)
 				}
 				for _, backendTrafficPolicy := range result.BackendTrafficPolicies {
 					key := utils.NamespacedName(backendTrafficPolicy)
 					if !(reflect.ValueOf(backendTrafficPolicy.Status).IsZero()) {
-						r.ProviderResources.BackendTrafficPolicyStatuses.Store(key, &backendTrafficPolicy.Status)
+						message.HandleStore(message.Metadata{
+							Runner:  string(egv1a1.LogComponentGatewayAPIRunner),
+							Message: "backendtrafficpolicy-status",
+						},
+							key, &backendTrafficPolicy.Status, &r.ProviderResources.BackendTrafficPolicyStatuses)
 					}
 					delete(statusesToDelete.BackendTrafficPolicyStatusKeys, key)
 				}
 				for _, securityPolicy := range result.SecurityPolicies {
 					key := utils.NamespacedName(securityPolicy)
 					if !(reflect.ValueOf(securityPolicy.Status).IsZero()) {
-						r.ProviderResources.SecurityPolicyStatuses.Store(key, &securityPolicy.Status)
+						message.HandleStore(message.Metadata{
+							Runner:  string(egv1a1.LogComponentGatewayAPIRunner),
+							Message: "securitypolicy-status",
+						},
+							key, &securityPolicy.Status, &r.ProviderResources.SecurityPolicyStatuses)
 					}
 					delete(statusesToDelete.SecurityPolicyStatusKeys, key)
 				}
 				for _, envoyExtensionPolicy := range result.EnvoyExtensionPolicies {
 					key := utils.NamespacedName(envoyExtensionPolicy)
 					if !(reflect.ValueOf(envoyExtensionPolicy.Status).IsZero()) {
-						r.ProviderResources.EnvoyExtensionPolicyStatuses.Store(key, &envoyExtensionPolicy.Status)
+						message.HandleStore(message.Metadata{
+							Runner:  string(egv1a1.LogComponentGatewayAPIRunner),
+							Message: "envoyextensionpolicy-status",
+						},
+							key, &envoyExtensionPolicy.Status, &r.ProviderResources.EnvoyExtensionPolicyStatuses)
 					}
 					delete(statusesToDelete.EnvoyExtensionPolicyStatusKeys, key)
 				}
 				for _, backend := range result.Backends {
 					key := utils.NamespacedName(backend)
 					if !(reflect.ValueOf(backend.Status).IsZero()) {
-						r.ProviderResources.BackendStatuses.Store(key, &backend.Status)
+						message.HandleStore(message.Metadata{
+							Runner:  string(egv1a1.LogComponentGatewayAPIRunner),
+							Message: "backend-status",
+						},
+							key, &backend.Status, &r.ProviderResources.BackendStatuses)
 					}
 					delete(statusesToDelete.BackendStatusKeys, key)
 				}
@@ -293,7 +349,11 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *re
 					}
 					if !(reflect.ValueOf(extServerPolicy.Object["status"]).IsZero()) {
 						policyStatus := unstructuredToPolicyStatus(extServerPolicy.Object["status"].(map[string]any))
-						r.ProviderResources.ExtensionPolicyStatuses.Store(key, &policyStatus)
+						message.HandleStore(message.Metadata{
+							Runner:  string(egv1a1.LogComponentGatewayAPIRunner),
+							Message: "backend-status",
+						},
+							key, &policyStatus, &r.ProviderResources.ExtensionPolicyStatuses)
 					}
 					delete(statusesToDelete.ExtensionServerPolicyStatusKeys, key)
 				}
