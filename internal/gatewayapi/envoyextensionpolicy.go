@@ -330,10 +330,14 @@ func (t *Translator) translateEnvoyExtensionPolicyForRoute(
 			if irListener != nil {
 				for _, r := range irListener.Routes {
 					if strings.HasPrefix(r.Name, prefix) {
-						// return 500 and do not configure EnvoyExtensions in this case
+						// if FailOpen is false, return 500 error directly and not forward the request to the backend.
+						// if FailOpen is true, skip the policy application and requests will be processed as if the
+						// policy was not present. https://github.com/envoyproxy/gateway/issues/5905
 						if errs != nil {
-							r.DirectResponse = &ir.CustomResponse{
-								StatusCode: ptr.To(uint32(500)),
+							if !ShouldFailOpen(errs) {
+								r.DirectResponse = &ir.CustomResponse{
+									StatusCode: ptr.To(uint32(500)),
+								}
 							}
 							continue
 						}
@@ -398,10 +402,15 @@ func (t *Translator) translateEnvoyExtensionPolicyForGateway(
 				continue
 			}
 
-			// return 500 and do not configure EnvoyExtensions in this case
+			// ShouldFailOpen checks if the policy is fail open or not when there are errors.
+			// if FailOpen is false, return 500 error directly and not forward the request to the backend.
+			// if FailOpen is true, skip the policy application and requests will be processed as if the
+			// policy was not present. https://github.com/envoyproxy/gateway/issues/5905
 			if errs != nil {
-				r.DirectResponse = &ir.CustomResponse{
-					StatusCode: ptr.To(uint32(500)),
+				if !ShouldFailOpen(errs) {
+					r.DirectResponse = &ir.CustomResponse{
+						StatusCode: ptr.To(uint32(500)),
+					}
 				}
 				continue
 			}
@@ -501,7 +510,10 @@ func (t *Translator) buildExtProcs(policy *egv1a1.EnvoyExtensionPolicy, resource
 		name := irConfigNameForExtProc(policy, idx)
 		extProcIR, err := t.buildExtProc(name, policy, ep, idx, resources, envoyProxy)
 		if err != nil {
-			return nil, err
+			return nil, &PolicyTranslationError{
+				Wrapped:  err,
+				FailOpen: ptr.Deref(ep.FailOpen, false),
+			}
 		}
 		extProcIRList = append(extProcIRList, *extProcIR)
 	}
