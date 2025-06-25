@@ -80,6 +80,8 @@ type ExtProc struct {
 
 	// FailOpen defines if requests or responses that cannot be processed due to connectivity to the
 	// external processor are terminated or passed-through.
+	// If set to true, requests or responses will be passed-through to the backend service when the external processor
+	// does not exist, is unreachable, or returns an error.
 	// Default: false
 	//
 	// +optional
