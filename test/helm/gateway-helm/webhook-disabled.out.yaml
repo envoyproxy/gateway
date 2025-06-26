@@ -234,6 +234,7 @@ rules:
   verbs:
   - create
   - get
+  - list
   - delete
   - deletecollection
   - patch
