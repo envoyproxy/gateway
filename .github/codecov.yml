@@ -16,3 +16,4 @@ ignore:
   - "**/*.pb.go"
   - "**/zz_generated.*.go"
   - "api/**/*_types.go"
+  - "site/**"
