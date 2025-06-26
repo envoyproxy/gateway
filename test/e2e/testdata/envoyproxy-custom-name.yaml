@@ -33,6 +33,8 @@ spec:
       envoyHpa:
         name: custom-hpa
         maxReplicas: 3
+      envoyServiceAccount:
+        name: custom-sa
 ---
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
@@ -124,3 +126,18 @@ spec:
         - path:
             type: PathPrefix
             value: /daemonset
+---
+# custom sa for gateway namespace mode
+apiVersion: v1
+automountServiceAccountToken: false
+kind: ServiceAccount
+metadata:
+  name: custom-sa
+  namespace: gateway-conformance-infra
+---
+# custom sa for controller namespace mode
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: custom-sa
+  namespace: envoy-gateway-system

@@ -78,21 +78,29 @@ type KubernetesInfraProvider interface {
 	GetResourceNamespace(ir *ir.Infra) string
 }
 
-func NewResourceRender(ctx context.Context, kubernetesInfra KubernetesInfraProvider, infra *ir.Infra) (*ResourceRender, error) {
-	ownerReference, err := kubernetesInfra.GetOwnerReferenceUID(ctx, infra)
+func NewResourceRender(ctx context.Context, kubeInfra KubernetesInfraProvider, infra *ir.Infra) (*ResourceRender, error) {
+	ownerReference, err := kubeInfra.GetOwnerReferenceUID(ctx, infra)
 	if err != nil {
 		return nil, err
 	}
 
 	return &ResourceRender{
-		envoyNamespace:       kubernetesInfra.GetResourceNamespace(infra),
-		controllerNamespace:  kubernetesInfra.GetControllerNamespace(),
-		DNSDomain:            kubernetesInfra.GetDNSDomain(),
+		envoyNamespace:       kubeInfra.GetResourceNamespace(infra),
+		controllerNamespace:  kubeInfra.GetControllerNamespace(),
+		DNSDomain:            kubeInfra.GetDNSDomain(),
 		infra:                infra.GetProxyInfra(),
-		ShutdownManager:      kubernetesInfra.GetEnvoyGateway().GetEnvoyGatewayProvider().GetEnvoyGatewayKubeProvider().ShutdownManager,
-		GatewayNamespaceMode: kubernetesInfra.GetEnvoyGateway().GatewayNamespaceMode(),
+		ShutdownManager:      kubeInfra.GetEnvoyGateway().GetEnvoyGatewayProvider().GetEnvoyGatewayKubeProvider().ShutdownManager,
+		GatewayNamespaceMode: kubeInfra.GetEnvoyGateway().GatewayNamespaceMode(),
 		ownerReferenceUID:    ownerReference,
 	}, nil
+}
+
+func (r *ResourceRender) serviceAccountName() string {
+	if r.usingCustomServiceAccountName() {
+		return *r.infra.GetProxyConfig().GetEnvoyProxyProvider().GetEnvoyProxyKubeProvider().EnvoyServiceAccount.Name
+	}
+
+	return r.Name()
 }
 
 func (r *ResourceRender) Name() string {
@@ -136,6 +144,10 @@ func (r *ResourceRender) OwnerReferences() []metav1.OwnerReference {
 
 // ServiceAccount returns the expected proxy serviceAccount.
 func (r *ResourceRender) ServiceAccount() (*corev1.ServiceAccount, error) {
+	if r.usingCustomServiceAccountName() {
+		return nil, nil
+	}
+
 	// Set the labels based on the owning gateway name.
 	saLabels := r.envoyLabels(r.infra.GetProxyMetadata().Labels)
 	if OwningGatewayLabelsAbsent(saLabels) {
@@ -156,6 +168,17 @@ func (r *ResourceRender) ServiceAccount() (*corev1.ServiceAccount, error) {
 			OwnerReferences: r.OwnerReferences(),
 		},
 	}, nil
+}
+
+func (r *ResourceRender) usingCustomServiceAccountName() bool {
+	prov := r.infra.GetProxyConfig().GetEnvoyProxyProvider().GetEnvoyProxyKubeProvider()
+	if prov != nil &&
+		prov.EnvoyServiceAccount != nil &&
+		prov.EnvoyServiceAccount.Name != nil {
+		return true
+	}
+	// If service account name is not set, use the default name.
+	return false
 }
 
 // envoyLabels returns the labels, including extraLabels, used for Envoy resources.
@@ -393,7 +416,7 @@ func (r *ResourceRender) Deployment() (*appsv1.Deployment, error) {
 					AutomountServiceAccountToken:  ptr.To(false),
 					Containers:                    containers,
 					InitContainers:                deploymentConfig.InitContainers,
-					ServiceAccountName:            r.Name(),
+					ServiceAccountName:            r.serviceAccountName(),
 					TerminationGracePeriodSeconds: expectedTerminationGracePeriodSeconds(proxyConfig.Spec.Shutdown),
 					DNSPolicy:                     corev1.DNSClusterFirst,
 					RestartPolicy:                 corev1.RestartPolicyAlways,

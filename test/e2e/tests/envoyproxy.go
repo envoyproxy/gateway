@@ -54,7 +54,7 @@ var EnvoyProxyCustomNameTest = suite.ConformanceTest{
 			}
 
 			// Make sure there's deployment for the gateway
-			err := checkDeployment(t, suite, gwNN, gatewayNS, expectedGatewayName(gwNN), 0, 0)
+			err := checkDeployment(t, suite, gwNN, gatewayNS, expectedGatewayName(gwNN), 0, 0, 1)
 			if err != nil {
 				t.Fatalf("Failed to check EnvoyProxy deployment: %v", err)
 			}
@@ -70,7 +70,7 @@ var EnvoyProxyCustomNameTest = suite.ConformanceTest{
 				},
 			})
 
-			err = checkDeployment(t, suite, gwNN, gatewayNS, "custom-", 1, 1)
+			err = checkDeployment(t, suite, gwNN, gatewayNS, "custom-", 1, 1, 0)
 			if err != nil {
 				t.Fatalf("Failed to delete Gateway: %v", err)
 			}
@@ -81,7 +81,7 @@ var EnvoyProxyCustomNameTest = suite.ConformanceTest{
 			updateGateway(t, suite, gwNN, &gwapiv1.GatewayInfrastructure{})
 
 			// Make sure there's deployment for the gateway
-			err = checkDeployment(t, suite, gwNN, gatewayNS, expectedGatewayName(gwNN), 0, 0)
+			err = checkDeployment(t, suite, gwNN, gatewayNS, expectedGatewayName(gwNN), 0, 0, 1)
 			if err != nil {
 				t.Fatalf("Failed to check EnvoyProxy deployment: %v", err)
 			}
@@ -225,13 +225,14 @@ func checkDaemonSet(t *testing.T, suite *suite.ConformanceTestSuite, gwNN types.
 }
 
 var (
-	serviceGVK = schema.FromAPIVersionAndKind("v1", "Service")
-	hpaGVK     = schema.FromAPIVersionAndKind("autoscaling/v2", "HorizontalPodAutoscaler")
-	pdbGVK     = schema.FromAPIVersionAndKind("policy/v1", "PodDisruptionBudget")
+	serviceGVK        = schema.FromAPIVersionAndKind("v1", "Service")
+	serviceAccountGVK = schema.FromAPIVersionAndKind("v1", "ServiceAccount")
+	hpaGVK            = schema.FromAPIVersionAndKind("autoscaling/v2", "HorizontalPodAutoscaler")
+	pdbGVK            = schema.FromAPIVersionAndKind("policy/v1", "PodDisruptionBudget")
 )
 
 func checkDeployment(t *testing.T, suite *suite.ConformanceTestSuite, gwNN types.NamespacedName, exceptNs, exceptName string,
-	exceptHpaCount, exceptPdbCount int,
+	exceptHpaCount, exceptPdbCount, exceptSaCount int,
 ) error {
 	if err := checkObject(t, suite, appsv1.SchemeGroupVersion.WithKind("Deployment"), gwNN, 1, // service always exists
 		exceptNs, exceptName); err != nil {
@@ -246,6 +247,9 @@ func checkDeployment(t *testing.T, suite *suite.ConformanceTestSuite, gwNN types
 		return err
 	}
 	if err := checkObject(t, suite, pdbGVK, gwNN, exceptPdbCount, exceptNs, exceptName); err != nil {
+		return err
+	}
+	if err := checkObject(t, suite, serviceAccountGVK, gwNN, exceptSaCount, exceptNs, exceptName); err != nil {
 		return err
 	}
 	return nil
