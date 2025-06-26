@@ -7,6 +7,7 @@ package kubernetes
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"testing"
 
@@ -1028,7 +1029,7 @@ func setupReferenceGrantReconciler(objs []client.Object) *gatewayAPIReconciler {
 func TestIsTransientError(t *testing.T) {
 	serverTimeoutErr := kerrors.NewServerTimeout(
 		schema.GroupResource{Group: "core", Resource: "pods"}, "list", 10)
-	timeoutErr := kerrors.NewTimeoutError("request timeout", 1)
+	timeoutErr := fmt.Errorf("wrapped request timeout: %w", kerrors.NewTimeoutError("request timeout", 1))
 	tooManyRequestsErr := kerrors.NewTooManyRequests("too many requests", 1)
 	serviceUnavailableErr := kerrors.NewServiceUnavailable("service unavailable")
 	badRequestErr := kerrors.NewBadRequest("bad request")
@@ -1039,7 +1040,7 @@ func TestIsTransientError(t *testing.T) {
 		expected bool
 	}{
 		{"ServerTimeout", serverTimeoutErr, true},
-		{"Timeout", timeoutErr, true},
+		{"Wrapped Timeout", timeoutErr, true},
 		{"TooManyRequests", tooManyRequestsErr, true},
 		{"ServiceUnavailable", serviceUnavailableErr, true},
 		{"BadRequest", badRequestErr, false},
