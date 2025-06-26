@@ -1269,28 +1269,35 @@ spec:
                                 - RoundRobin
                                 type: string
                               zoneAware:
-                                description: ZoneAware configures zone-aware routing
-                                  to prefer sending traffic to the local locality
-                                  zone.
+                                description: ZoneAware defines the configuration related
+                                  to the distribution of requests between locality
+                                  zones.
                                 properties:
-                                  forceLocal:
-                                    description: |-
-                                      ForceLocalZone defines override configuration for forcing all traffic to stay local vs Envoy default behavior
-                                      which maintains equal distribution among upstreams while sending as much traffic as possible locally.
+                                  preferLocal:
+                                    description: PreferLocalZone configures zone-aware
+                                      routing to prefer sending traffic to the local
+                                      locality zone.
                                     properties:
-                                      minEndpointsInZoneCount:
+                                      force:
                                         description: |-
-                                          MinEndpointsInZoneCount is the minimum number of upstream hosts in the local zone required to honor the forceLocal
-                                          override. Envoy defaults to 1 if not specified.
-                                        format: int32
+                                          ForceLocalZone defines override configuration for forcing all traffic to stay local instead of the default behavior
+                                          which maintains equal distribution among upstream endpoints while sending as much traffic as possible locally.
+                                        properties:
+                                          minEndpointsInZoneCount:
+                                            description: |-
+                                              MinEndpointsInZoneCount is the minimum number of upstream endpoints in the local zone required to honor the forceLocalZone
+                                              override. This is useful for protecting zones with fewer endpoints.
+                                            format: int32
+                                            type: integer
+                                        type: object
+                                      minEndpointsCount:
+                                        description: MinEndpointsCount is the minimum
+                                          number of total upstream endpoints across
+                                          all zones required to enable zone-aware
+                                          routing.
+                                        format: int64
                                         type: integer
                                     type: object
-                                  minEndpointsCount:
-                                    description: |-
-                                      MinEndpointsCount is the minimum number of total upstream hosts across all zones required to enable zone-aware routing.
-                                      Envoy defaults to 6 if not specified.
-                                    format: int64
-                                    type: integer
                                 type: object
                             required:
                             - type
@@ -1304,9 +1311,9 @@ spec:
                                 and LeastRequest load balancers.
                               rule: 'self.type in [''Random'', ''ConsistentHash'']
                                 ? !has(self.slowStart) : true '
-                            - message: Currently ZoneAware is only supported for LeastRequest,
-                                Random, and RoundRobin load balancers.
-                              rule: 'self.type == ''ConsistentHash'' ? !has(self.zoneAware)
+                            - message: Currently RequestDistribution is only supported
+                                for LeastRequest, Random, and RoundRobin load balancers.
+                              rule: 'self.type == ''ConsistentHash'' ? !has(self.requestDistribution)
                                 : true '
                           proxyProtocol:
                             description: ProxyProtocol enables the Proxy Protocol
@@ -2229,28 +2236,35 @@ spec:
                                 - RoundRobin
                                 type: string
                               zoneAware:
-                                description: ZoneAware configures zone-aware routing
-                                  to prefer sending traffic to the local locality
-                                  zone.
+                                description: ZoneAware defines the configuration related
+                                  to the distribution of requests between locality
+                                  zones.
                                 properties:
-                                  forceLocal:
-                                    description: |-
-                                      ForceLocalZone defines override configuration for forcing all traffic to stay local vs Envoy default behavior
-                                      which maintains equal distribution among upstreams while sending as much traffic as possible locally.
+                                  preferLocal:
+                                    description: PreferLocalZone configures zone-aware
+                                      routing to prefer sending traffic to the local
+                                      locality zone.
                                     properties:
-                                      minEndpointsInZoneCount:
+                                      force:
                                         description: |-
-                                          MinEndpointsInZoneCount is the minimum number of upstream hosts in the local zone required to honor the forceLocal
-                                          override. Envoy defaults to 1 if not specified.
-                                        format: int32
+                                          ForceLocalZone defines override configuration for forcing all traffic to stay local instead of the default behavior
+                                          which maintains equal distribution among upstream endpoints while sending as much traffic as possible locally.
+                                        properties:
+                                          minEndpointsInZoneCount:
+                                            description: |-
+                                              MinEndpointsInZoneCount is the minimum number of upstream endpoints in the local zone required to honor the forceLocalZone
+                                              override. This is useful for protecting zones with fewer endpoints.
+                                            format: int32
+                                            type: integer
+                                        type: object
+                                      minEndpointsCount:
+                                        description: MinEndpointsCount is the minimum
+                                          number of total upstream endpoints across
+                                          all zones required to enable zone-aware
+                                          routing.
+                                        format: int64
                                         type: integer
                                     type: object
-                                  minEndpointsCount:
-                                    description: |-
-                                      MinEndpointsCount is the minimum number of total upstream hosts across all zones required to enable zone-aware routing.
-                                      Envoy defaults to 6 if not specified.
-                                    format: int64
-                                    type: integer
                                 type: object
                             required:
                             - type
@@ -2264,9 +2278,9 @@ spec:
                                 and LeastRequest load balancers.
                               rule: 'self.type in [''Random'', ''ConsistentHash'']
                                 ? !has(self.slowStart) : true '
-                            - message: Currently ZoneAware is only supported for LeastRequest,
-                                Random, and RoundRobin load balancers.
-                              rule: 'self.type == ''ConsistentHash'' ? !has(self.zoneAware)
+                            - message: Currently RequestDistribution is only supported
+                                for LeastRequest, Random, and RoundRobin load balancers.
+                              rule: 'self.type == ''ConsistentHash'' ? !has(self.requestDistribution)
                                 : true '
                           proxyProtocol:
                             description: ProxyProtocol enables the Proxy Protocol
@@ -3395,28 +3409,35 @@ spec:
                                       - RoundRobin
                                       type: string
                                     zoneAware:
-                                      description: ZoneAware configures zone-aware
-                                        routing to prefer sending traffic to the local
-                                        locality zone.
+                                      description: ZoneAware defines the configuration
+                                        related to the distribution of requests between
+                                        locality zones.
                                       properties:
-                                        forceLocal:
-                                          description: |-
-                                            ForceLocalZone defines override configuration for forcing all traffic to stay local vs Envoy default behavior
-                                            which maintains equal distribution among upstreams while sending as much traffic as possible locally.
+                                        preferLocal:
+                                          description: PreferLocalZone configures
+                                            zone-aware routing to prefer sending traffic
+                                            to the local locality zone.
                                           properties:
-                                            minEndpointsInZoneCount:
+                                            force:
                                               description: |-
-                                                MinEndpointsInZoneCount is the minimum number of upstream hosts in the local zone required to honor the forceLocal
-                                                override. Envoy defaults to 1 if not specified.
-                                              format: int32
+                                                ForceLocalZone defines override configuration for forcing all traffic to stay local instead of the default behavior
+                                                which maintains equal distribution among upstream endpoints while sending as much traffic as possible locally.
+                                              properties:
+                                                minEndpointsInZoneCount:
+                                                  description: |-
+                                                    MinEndpointsInZoneCount is the minimum number of upstream endpoints in the local zone required to honor the forceLocalZone
+                                                    override. This is useful for protecting zones with fewer endpoints.
+                                                  format: int32
+                                                  type: integer
+                                              type: object
+                                            minEndpointsCount:
+                                              description: MinEndpointsCount is the
+                                                minimum number of total upstream endpoints
+                                                across all zones required to enable
+                                                zone-aware routing.
+                                              format: int64
                                               type: integer
                                           type: object
-                                        minEndpointsCount:
-                                          description: |-
-                                            MinEndpointsCount is the minimum number of total upstream hosts across all zones required to enable zone-aware routing.
-                                            Envoy defaults to 6 if not specified.
-                                          format: int64
-                                          type: integer
                                       type: object
                                   required:
                                   - type
@@ -3430,10 +3451,10 @@ spec:
                                       for RoundRobin and LeastRequest load balancers.
                                     rule: 'self.type in [''Random'', ''ConsistentHash'']
                                       ? !has(self.slowStart) : true '
-                                  - message: Currently ZoneAware is only supported
-                                      for LeastRequest, Random, and RoundRobin load
-                                      balancers.
-                                    rule: 'self.type == ''ConsistentHash'' ? !has(self.zoneAware)
+                                  - message: Currently RequestDistribution is only
+                                      supported for LeastRequest, Random, and RoundRobin
+                                      load balancers.
+                                    rule: 'self.type == ''ConsistentHash'' ? !has(self.requestDistribution)
                                       : true '
                                 proxyProtocol:
                                   description: ProxyProtocol enables the Proxy Protocol
@@ -4550,28 +4571,35 @@ spec:
                                 - RoundRobin
                                 type: string
                               zoneAware:
-                                description: ZoneAware configures zone-aware routing
-                                  to prefer sending traffic to the local locality
-                                  zone.
+                                description: ZoneAware defines the configuration related
+                                  to the distribution of requests between locality
+                                  zones.
                                 properties:
-                                  forceLocal:
-                                    description: |-
-                                      ForceLocalZone defines override configuration for forcing all traffic to stay local vs Envoy default behavior
-                                      which maintains equal distribution among upstreams while sending as much traffic as possible locally.
+                                  preferLocal:
+                                    description: PreferLocalZone configures zone-aware
+                                      routing to prefer sending traffic to the local
+                                      locality zone.
                                     properties:
-                                      minEndpointsInZoneCount:
+                                      force:
                                         description: |-
-                                          MinEndpointsInZoneCount is the minimum number of upstream hosts in the local zone required to honor the forceLocal
-                                          override. Envoy defaults to 1 if not specified.
-                                        format: int32
+                                          ForceLocalZone defines override configuration for forcing all traffic to stay local instead of the default behavior
+                                          which maintains equal distribution among upstream endpoints while sending as much traffic as possible locally.
+                                        properties:
+                                          minEndpointsInZoneCount:
+                                            description: |-
+                                              MinEndpointsInZoneCount is the minimum number of upstream endpoints in the local zone required to honor the forceLocalZone
+                                              override. This is useful for protecting zones with fewer endpoints.
+                                            format: int32
+                                            type: integer
+                                        type: object
+                                      minEndpointsCount:
+                                        description: MinEndpointsCount is the minimum
+                                          number of total upstream endpoints across
+                                          all zones required to enable zone-aware
+                                          routing.
+                                        format: int64
                                         type: integer
                                     type: object
-                                  minEndpointsCount:
-                                    description: |-
-                                      MinEndpointsCount is the minimum number of total upstream hosts across all zones required to enable zone-aware routing.
-                                      Envoy defaults to 6 if not specified.
-                                    format: int64
-                                    type: integer
                                 type: object
                             required:
                             - type
@@ -4585,9 +4613,9 @@ spec:
                                 and LeastRequest load balancers.
                               rule: 'self.type in [''Random'', ''ConsistentHash'']
                                 ? !has(self.slowStart) : true '
-                            - message: Currently ZoneAware is only supported for LeastRequest,
-                                Random, and RoundRobin load balancers.
-                              rule: 'self.type == ''ConsistentHash'' ? !has(self.zoneAware)
+                            - message: Currently RequestDistribution is only supported
+                                for LeastRequest, Random, and RoundRobin load balancers.
+                              rule: 'self.type == ''ConsistentHash'' ? !has(self.requestDistribution)
                                 : true '
                           proxyProtocol:
                             description: ProxyProtocol enables the Proxy Protocol

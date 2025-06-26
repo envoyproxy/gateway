@@ -1969,15 +1969,15 @@ _Appears in:_
 | `after` | _[EnvoyFilter](#envoyfilter)_ |  true  |  | After defines the filter that should come after the filter.<br />Only one of Before or After must be set. |
 
 
-#### ForceLocal
+#### ForceLocalZone
 
 
 
-ForceLocal defines override configuration for forcing all traffic to stay local vs Envoy default behavior
+ForceLocalZone defines override configuration for forcing all traffic to stay local vs Envoy default behavior
 which maintains equal distribution among upstreams while sending as much traffic as possible locally.
 
 _Appears in:_
-- [ZoneAware](#zoneaware)
+- [PreferLocalZone](#preferlocalzone)
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
@@ -3459,6 +3459,19 @@ _Appears in:_
 | `targetRef` | _[LocalPolicyTargetReferenceWithSectionName](https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1alpha2.LocalPolicyTargetReferenceWithSectionName)_ |  true  |  | TargetRef is the name of the resource this policy is being attached to.<br />This policy and the TargetRef MUST be in the same namespace for this<br />Policy to have effect<br />Deprecated: use targetRefs/targetSelectors instead |
 | `targetRefs` | _[LocalPolicyTargetReferenceWithSectionName](https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1alpha2.LocalPolicyTargetReferenceWithSectionName) array_ |  true  |  | TargetRefs are the names of the Gateway resources this policy<br />is being attached to. |
 | `targetSelectors` | _[TargetSelector](#targetselector) array_ |  true  |  | TargetSelectors allow targeting resources for this policy based on labels |
+
+
+#### PreferLocalZone
+
+
+
+PreferLocalZone configures zone-aware routing to prefer sending traffic to the local locality zone.
+
+_Appears in:_
+- [ZoneAware](#zoneaware)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
 
 
 #### Principal
@@ -5074,7 +5087,7 @@ _Appears in:_
 
 
 
-ZoneAware configures zone-aware routing to prefer sending traffic to the local locality zone.
+ZoneAware defines the configuration related to the distribution of requests between localities.
 
 _Appears in:_
 - [LoadBalancer](#loadbalancer)
