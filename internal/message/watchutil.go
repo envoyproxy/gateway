@@ -25,7 +25,7 @@ var logger = logging.DefaultLogger(os.Stdout, egv1a1.LogLevelInfo).WithName("wat
 
 type Metadata struct {
 	Runner  string
-	Message string
+	Message MessageName
 }
 
 func (m Metadata) LabelValues() []metrics.LabelValue {
@@ -34,7 +34,7 @@ func (m Metadata) LabelValues() []metrics.LabelValue {
 		labels = append(labels, runnerLabel.Value(m.Runner))
 	}
 	if m.Message != "" {
-		labels = append(labels, messageLabel.Value(m.Message))
+		labels = append(labels, messageLabel.Value(string(m.Message)))
 	}
 
 	return labels

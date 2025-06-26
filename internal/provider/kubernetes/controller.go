@@ -254,7 +254,7 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 					msg)
 				message.HandleStore(message.Metadata{
 					Runner:  string(egv1a1.LogComponentProviderRunner),
-					Message: "gatewayclass-status",
+					Message: message.GatewayClassStatusMessageName,
 				},
 					utils.NamespacedName(gc), &gc.Status, &r.resources.GatewayClassStatuses)
 				failToProcessGCParamsRef = true
@@ -472,7 +472,7 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 	// Store will be required to trigger a cleanup of envoy infra resources.
 	message.HandleStore(message.Metadata{
 		Runner:  string(egv1a1.LogComponentProviderRunner),
-		Message: "provider-resources",
+		Message: message.ProviderResourcesMessageName,
 	},
 		string(r.classController), &gwcResources, &r.resources.GatewayAPIResources)
 
