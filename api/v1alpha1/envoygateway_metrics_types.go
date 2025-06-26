@@ -59,4 +59,11 @@ type EnvoyGatewayPrometheusProvider struct {
 	// Disable defines if disables the prometheus metrics in pull mode.
 	//
 	Disable bool `json:"disable,omitempty"`
+
+	// Annotations defines additional annotations to be added to the Kubernetes resources
+	// when Prometheus is enabled. These annotations will be merged with the default
+	// prometheus annotations.
+	//
+	// +optional
+	Annotations map[string]string `json:"annotations,omitempty"`
 }

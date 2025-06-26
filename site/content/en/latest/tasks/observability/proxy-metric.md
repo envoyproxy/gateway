@@ -23,10 +23,10 @@ kubectl port-forward service/prometheus -n monitoring 19001:$PROMETHEUS_PORT
 Query metrics using Prometheus API:
 
 ```shell
-curl -s 'http://localhost:19001/api/v1/query?query=topk(1,envoy_cluster_upstream_cx_connect_ms_sum)' | jq . 
+curl -s 'http://localhost:19001/api/v1/query?query=topk(1,envoy_cluster_upstream_cx_connect_ms_sum)' | jq .
 ```
 
-To directly view the metrics in Prometheus format from the Envoy's `/stats/prometheus` 
+To directly view the metrics in Prometheus format from the Envoy's `/stats/prometheus`
 [admin endpoint](https://www.envoyproxy.io/docs/envoy/latest/operations/admin), follow the steps below.
 
 ```shell
@@ -114,13 +114,104 @@ spec:
 To completely remove Prometheus resources from the cluster, set the `prometheus.enabled` Helm value to `false`.
 
 ```shell
-helm upgrade eg-addons oci://docker.io/envoyproxy/gateway-addons-helm --version {{< helm-version >}} -n monitoring --reuse-values --set prometheus.enabled=false 
+helm upgrade eg-addons oci://docker.io/envoyproxy/gateway-addons-helm --version {{< helm-version >}} -n monitoring --reuse-values --set prometheus.enabled=false
 ```
+
+### Configuring Prometheus Metrics Annotations
+
+When `telemetry.metrics.prometheus.annotations` is not specified, the following default annotations are used:
+
+```yaml
+prometheus.io/path: "/stats/prometheus"
+prometheus.io/scrape: "true"
+prometheus.io/port: "19001"
+```
+
+Add the following configuration to configure custom Prometheus annotations:
+
+
+{{< tabpane text=true >}}
+{{% tab header="Apply from stdin" %}}
+```shell
+cat <<EOF | kubectl apply -f -
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: eg
+  namespace: envoy-gateway-system
+spec:
+  gatewayClassName: eg
+  infrastructure:
+    parametersRef:
+      group: gateway.envoyproxy.io
+      kind: EnvoyProxy
+      name: prometheus
+  listeners:
+    - name: http
+      protocol: HTTP
+      port: 80
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyProxy
+metadata:
+  name: prometheus
+  namespace: envoy-gateway-system
+spec:
+  telemetry:
+    metrics:
+      prometheus:
+        disable: false
+        annotations:
+          prometheus.io/path: "/stats/prometheus"
+          prometheus.io/scrape: "false"
+          prometheus.io/port: "19001"
+          custom.annotation: "custom-value"
+EOF
+```
+{{% /tab %}}
+{{% tab header="Apply from file" %}}
+```yaml
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: eg
+  namespace: envoy-gateway-system
+spec:
+  gatewayClassName: eg
+  infrastructure:
+    parametersRef:
+      group: gateway.envoyproxy.io
+      kind: EnvoyProxy
+      name: prometheus
+  listeners:
+    - name: http
+      protocol: HTTP
+      port: 80
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyProxy
+metadata:
+  name: prometheus
+  namespace: envoy-gateway-system
+spec:
+  telemetry:
+    metrics:
+      prometheus:
+        disable: false
+        annotations:
+          prometheus.io/path: "/stats/prometheus"
+          prometheus.io/scrape: "false"
+          prometheus.io/port: "19001"
+          custom.annotation: "custom-value"
+```
+{{% /tab %}}
+{{< /tabpane >}}
+
 
 ### OpenTelemetry Metrics
 
-Envoy Gateway can export metrics to an OpenTelemetry sink. Use the following command to send metrics to the 
-OpenTelemetry Collector. Ensure that the OpenTelemetry components are enabled, 
+Envoy Gateway can export metrics to an OpenTelemetry sink. Use the following command to send metrics to the
+OpenTelemetry Collector. Ensure that the OpenTelemetry components are enabled,
 as mentioned in the [Prerequisites](#prerequisites).
 
 {{< tabpane text=true >}}
@@ -197,7 +288,7 @@ spec:
 {{< /tabpane >}}
 
 
-Temporarily enable the `debug` exporter in the OpenTelemetry Collector 
+Temporarily enable the `debug` exporter in the OpenTelemetry Collector
 to view metrics in the pod logs using the following command. Debug exporter is enabled for demonstration purposes and
 should not be used in production.
 

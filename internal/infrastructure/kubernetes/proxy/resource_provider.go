@@ -67,6 +67,9 @@ type ResourceRender struct {
 	// - GatewayClass when enabled ControllerNamespaceMode, merged Gateway...
 	// - Gateway when enabled GatewayNamespaceMode
 	ownerReferenceUID map[string]types.UID
+
+	// envoyGateway contains the EnvoyGateway configuration
+	envoyGateway *egv1a1.EnvoyGateway
 }
 
 // KubernetesInfraProvider provide information for initializing the proxy resource render.
@@ -92,6 +95,7 @@ func NewResourceRender(ctx context.Context, kubernetesInfra KubernetesInfraProvi
 		ShutdownManager:      kubernetesInfra.GetEnvoyGateway().GetEnvoyGatewayProvider().GetEnvoyGatewayKubeProvider().ShutdownManager,
 		GatewayNamespaceMode: kubernetesInfra.GetEnvoyGateway().GatewayNamespaceMode(),
 		ownerReferenceUID:    ownerReference,
+		envoyGateway:         kubernetesInfra.GetEnvoyGateway(),
 	}, nil
 }
 
@@ -655,9 +659,9 @@ func (r *ResourceRender) getPodAnnotations(resourceAnnotation map[string]string,
 	maps.Copy(podAnnotations, pod.Annotations)
 
 	if enablePrometheus(r.infra) {
-		podAnnotations["prometheus.io/path"] = "/stats/prometheus" // TODO: make this configurable
-		podAnnotations["prometheus.io/scrape"] = "true"
-		podAnnotations["prometheus.io/port"] = strconv.Itoa(bootstrap.EnvoyStatsPort)
+		// Get configurable prometheus annotations from EnvoyGateway config
+		prometheusAnnotations := r.getPrometheusAnnotations()
+		maps.Copy(podAnnotations, prometheusAnnotations)
 	}
 
 	if len(podAnnotations) == 0 {
@@ -682,6 +686,31 @@ func (r *ResourceRender) getPodLabels(pod *egv1a1.KubernetesPodSpec) map[string]
 	maps.Copy(podLabels, pod.Labels)
 
 	return r.envoyLabels(podLabels)
+}
+
+// getPrometheusAnnotations returns the prometheus annotations from EnvoyGateway configuration
+// with fallback to default annotations
+func (r *ResourceRender) getPrometheusAnnotations() map[string]string {
+	annotations := make(map[string]string)
+
+	// Set default annotations
+	defaultAnnotations := map[string]string{
+		"prometheus.io/path":   "/stats/prometheus",
+		"prometheus.io/scrape": "true",
+		"prometheus.io/port":   strconv.Itoa(bootstrap.EnvoyStatsPort),
+	}
+	maps.Copy(annotations, defaultAnnotations)
+
+	// Override with configurable annotations if available
+	if r.envoyGateway != nil &&
+		r.envoyGateway.Telemetry != nil &&
+		r.envoyGateway.Telemetry.Metrics != nil &&
+		r.envoyGateway.Telemetry.Metrics.Prometheus != nil &&
+		r.envoyGateway.Telemetry.Metrics.Prometheus.Annotations != nil {
+		maps.Copy(annotations, r.envoyGateway.Telemetry.Metrics.Prometheus.Annotations)
+	}
+
+	return annotations
 }
 
 // OwningGatewayLabelsAbsent Check if labels are missing some OwningGatewayLabels

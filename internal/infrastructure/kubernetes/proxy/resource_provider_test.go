@@ -1938,6 +1938,7 @@ func TestGatewayNamespaceModeMultipleResources(t *testing.T) {
 	if infra2.Proxy.Config.Spec.Provider.Kubernetes == nil {
 		infra2.Proxy.Config.Spec.Provider.Kubernetes = &egv1a1.EnvoyProxyKubernetesProvider{}
 	}
+
 	infra2.Proxy.Config.Spec.Provider.Kubernetes.EnvoyHpa = &egv1a1.KubernetesHorizontalPodAutoscalerSpec{
 		MinReplicas: ptr.To[int32](1),
 		MaxReplicas: ptr.To[int32](3),
@@ -2046,4 +2047,45 @@ func writeTestDataToFile(filename string, resources []any) error {
 	}
 
 	return os.WriteFile(filename, combinedYAML, 0o600)
+}
+
+// TestConfigurablePrometheusAnnotations tests the configurable prometheus annotations feature
+func TestConfigurablePrometheusAnnotations(t *testing.T) {
+	cfg, err := config.New(os.Stdout)
+	require.NoError(t, err)
+
+	// Test with custom prometheus annotations
+	cfg.EnvoyGateway.Telemetry = &egv1a1.EnvoyGatewayTelemetry{
+		Metrics: &egv1a1.EnvoyGatewayMetrics{
+			Prometheus: &egv1a1.EnvoyGatewayPrometheusProvider{
+				Disable: false,
+				Annotations: map[string]string{
+					"prometheus.io/path":   "/custom/metrics",
+					"prometheus.io/scrape": "true",
+					"prometheus.io/port":   "9090",
+					"custom.annotation":    "custom-value",
+				},
+			},
+		},
+	}
+
+	provider := &fakeKubernetesInfraProvider{
+		ControllerNamespace: "envoy-gateway-system",
+		DNSDomain:           "cluster.local",
+		EnvoyGateway:        cfg.EnvoyGateway,
+	}
+
+	infra := newTestInfra()
+	r, err := NewResourceRender(context.Background(), provider, infra)
+	require.NoError(t, err)
+
+	deployment, err := r.Deployment()
+	require.NoError(t, err)
+
+	// Verify the custom annotations are present
+	annotations := deployment.Spec.Template.Annotations
+	assert.Equal(t, "/custom/metrics", annotations["prometheus.io/path"], "Custom prometheus path should be set")
+	assert.Equal(t, "9090", annotations["prometheus.io/port"], "Custom prometheus port should be set")
+	assert.Equal(t, "true", annotations["prometheus.io/scrape"], "Prometheus scrape should be enabled")
+	assert.Equal(t, "custom-value", annotations["custom.annotation"], "Custom annotation should be set")
 }
