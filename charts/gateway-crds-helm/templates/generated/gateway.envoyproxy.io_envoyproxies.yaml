@@ -11377,15 +11377,15 @@ spec:
                                                           ForceLocalZone defines override configuration for forcing all traffic to stay local instead of the default behavior
                                                           which maintains equal distribution among upstream endpoints while sending as much traffic as possible locally.
                                                         properties:
-                                                          minEndpointsInZoneCount:
+                                                          minEndpointsInZoneThreshold:
                                                             description: |-
-                                                              MinEndpointsInZoneCount is the minimum number of upstream endpoints in the local zone required to honor the forceLocalZone
+                                                              MinEndpointsInZoneThreshold is the minimum number of upstream endpoints in the local zone required to honor the forceLocalZone
                                                               override. This is useful for protecting zones with fewer endpoints.
                                                             format: int32
                                                             type: integer
                                                         type: object
                                                       minEndpointsCount:
-                                                        description: MinEndpointsCount
+                                                        description: MinEndpointsThreshold
                                                           is the minimum number of
                                                           total upstream endpoints
                                                           across all zones required
@@ -11407,12 +11407,11 @@ spec:
                                                 load balancers.
                                               rule: 'self.type in [''Random'', ''ConsistentHash'']
                                                 ? !has(self.slowStart) : true '
-                                            - message: Currently RequestDistribution
-                                                is only supported for LeastRequest,
-                                                Random, and RoundRobin load balancers.
+                                            - message: Currently ZoneAware is only
+                                                supported for LeastRequest, Random,
+                                                and RoundRobin load balancers.
                                               rule: 'self.type == ''ConsistentHash''
-                                                ? !has(self.requestDistribution) :
-                                                true '
+                                                ? !has(self.zoneAware) : true '
                                           proxyProtocol:
                                             description: ProxyProtocol enables the
                                               Proxy Protocol when communicating with
@@ -12450,15 +12449,15 @@ spec:
                                                           ForceLocalZone defines override configuration for forcing all traffic to stay local instead of the default behavior
                                                           which maintains equal distribution among upstream endpoints while sending as much traffic as possible locally.
                                                         properties:
-                                                          minEndpointsInZoneCount:
+                                                          minEndpointsInZoneThreshold:
                                                             description: |-
-                                                              MinEndpointsInZoneCount is the minimum number of upstream endpoints in the local zone required to honor the forceLocalZone
+                                                              MinEndpointsInZoneThreshold is the minimum number of upstream endpoints in the local zone required to honor the forceLocalZone
                                                               override. This is useful for protecting zones with fewer endpoints.
                                                             format: int32
                                                             type: integer
                                                         type: object
                                                       minEndpointsCount:
-                                                        description: MinEndpointsCount
+                                                        description: MinEndpointsThreshold
                                                           is the minimum number of
                                                           total upstream endpoints
                                                           across all zones required
@@ -12480,12 +12479,11 @@ spec:
                                                 load balancers.
                                               rule: 'self.type in [''Random'', ''ConsistentHash'']
                                                 ? !has(self.slowStart) : true '
-                                            - message: Currently RequestDistribution
-                                                is only supported for LeastRequest,
-                                                Random, and RoundRobin load balancers.
+                                            - message: Currently ZoneAware is only
+                                                supported for LeastRequest, Random,
+                                                and RoundRobin load balancers.
                                               rule: 'self.type == ''ConsistentHash''
-                                                ? !has(self.requestDistribution) :
-                                                true '
+                                                ? !has(self.zoneAware) : true '
                                           proxyProtocol:
                                             description: ProxyProtocol enables the
                                               Proxy Protocol when communicating with
@@ -13607,18 +13605,19 @@ spec:
                                                     ForceLocalZone defines override configuration for forcing all traffic to stay local instead of the default behavior
                                                     which maintains equal distribution among upstream endpoints while sending as much traffic as possible locally.
                                                   properties:
-                                                    minEndpointsInZoneCount:
+                                                    minEndpointsInZoneThreshold:
                                                       description: |-
-                                                        MinEndpointsInZoneCount is the minimum number of upstream endpoints in the local zone required to honor the forceLocalZone
+                                                        MinEndpointsInZoneThreshold is the minimum number of upstream endpoints in the local zone required to honor the forceLocalZone
                                                         override. This is useful for protecting zones with fewer endpoints.
                                                       format: int32
                                                       type: integer
                                                   type: object
                                                 minEndpointsCount:
-                                                  description: MinEndpointsCount is
-                                                    the minimum number of total upstream
-                                                    endpoints across all zones required
-                                                    to enable zone-aware routing.
+                                                  description: MinEndpointsThreshold
+                                                    is the minimum number of total
+                                                    upstream endpoints across all
+                                                    zones required to enable zone-aware
+                                                    routing.
                                                   format: int64
                                                   type: integer
                                               type: object
@@ -13635,10 +13634,10 @@ spec:
                                           for RoundRobin and LeastRequest load balancers.
                                         rule: 'self.type in [''Random'', ''ConsistentHash'']
                                           ? !has(self.slowStart) : true '
-                                      - message: Currently RequestDistribution is
-                                          only supported for LeastRequest, Random,
-                                          and RoundRobin load balancers.
-                                        rule: 'self.type == ''ConsistentHash'' ? !has(self.requestDistribution)
+                                      - message: Currently ZoneAware is only supported
+                                          for LeastRequest, Random, and RoundRobin
+                                          load balancers.
+                                        rule: 'self.type == ''ConsistentHash'' ? !has(self.zoneAware)
                                           : true '
                                     proxyProtocol:
                                       description: ProxyProtocol enables the Proxy
@@ -14681,18 +14680,18 @@ spec:
                                               ForceLocalZone defines override configuration for forcing all traffic to stay local instead of the default behavior
                                               which maintains equal distribution among upstream endpoints while sending as much traffic as possible locally.
                                             properties:
-                                              minEndpointsInZoneCount:
+                                              minEndpointsInZoneThreshold:
                                                 description: |-
-                                                  MinEndpointsInZoneCount is the minimum number of upstream endpoints in the local zone required to honor the forceLocalZone
+                                                  MinEndpointsInZoneThreshold is the minimum number of upstream endpoints in the local zone required to honor the forceLocalZone
                                                   override. This is useful for protecting zones with fewer endpoints.
                                                 format: int32
                                                 type: integer
                                             type: object
                                           minEndpointsCount:
-                                            description: MinEndpointsCount is the
-                                              minimum number of total upstream endpoints
-                                              across all zones required to enable
-                                              zone-aware routing.
+                                            description: MinEndpointsThreshold is
+                                              the minimum number of total upstream
+                                              endpoints across all zones required
+                                              to enable zone-aware routing.
                                             format: int64
                                             type: integer
                                         type: object
@@ -14709,10 +14708,9 @@ spec:
                                     RoundRobin and LeastRequest load balancers.
                                   rule: 'self.type in [''Random'', ''ConsistentHash'']
                                     ? !has(self.slowStart) : true '
-                                - message: Currently RequestDistribution is only supported
-                                    for LeastRequest, Random, and RoundRobin load
-                                    balancers.
-                                  rule: 'self.type == ''ConsistentHash'' ? !has(self.requestDistribution)
+                                - message: Currently ZoneAware is only supported for
+                                    LeastRequest, Random, and RoundRobin load balancers.
+                                  rule: 'self.type == ''ConsistentHash'' ? !has(self.zoneAware)
                                     : true '
                               proxyProtocol:
                                 description: ProxyProtocol enables the Proxy Protocol

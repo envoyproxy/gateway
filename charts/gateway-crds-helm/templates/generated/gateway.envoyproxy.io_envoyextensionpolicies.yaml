@@ -783,15 +783,15 @@ spec:
                                         ForceLocalZone defines override configuration for forcing all traffic to stay local instead of the default behavior
                                         which maintains equal distribution among upstream endpoints while sending as much traffic as possible locally.
                                       properties:
-                                        minEndpointsInZoneCount:
+                                        minEndpointsInZoneThreshold:
                                           description: |-
-                                            MinEndpointsInZoneCount is the minimum number of upstream endpoints in the local zone required to honor the forceLocalZone
+                                            MinEndpointsInZoneThreshold is the minimum number of upstream endpoints in the local zone required to honor the forceLocalZone
                                             override. This is useful for protecting zones with fewer endpoints.
                                           format: int32
                                           type: integer
                                       type: object
                                     minEndpointsCount:
-                                      description: MinEndpointsCount is the minimum
+                                      description: MinEndpointsThreshold is the minimum
                                         number of total upstream endpoints across
                                         all zones required to enable zone-aware routing.
                                       format: int64
@@ -810,9 +810,9 @@ spec:
                               and LeastRequest load balancers.
                             rule: 'self.type in [''Random'', ''ConsistentHash''] ?
                               !has(self.slowStart) : true '
-                          - message: Currently RequestDistribution is only supported
-                              for LeastRequest, Random, and RoundRobin load balancers.
-                            rule: 'self.type == ''ConsistentHash'' ? !has(self.requestDistribution)
+                          - message: Currently ZoneAware is only supported for LeastRequest,
+                              Random, and RoundRobin load balancers.
+                            rule: 'self.type == ''ConsistentHash'' ? !has(self.zoneAware)
                               : true '
                         proxyProtocol:
                           description: ProxyProtocol enables the Proxy Protocol when

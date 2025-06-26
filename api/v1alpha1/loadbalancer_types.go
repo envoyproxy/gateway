@@ -161,20 +161,20 @@ type PreferLocalZone struct {
 	// +notImplementedHide
 	Force *ForceLocalZone `json:"force,omitempty"`
 
-	// MinEndpointsCount is the minimum number of total upstream endpoints across all zones required to enable zone-aware routing.
+	// MinEndpointsThreshold is the minimum number of total upstream endpoints across all zones required to enable zone-aware routing.
 	//
 	// +optional
 	// +notImplementedHide
-	MinEndpointsCount *uint64 `json:"minEndpointsCount,omitempty"`
+	MinEndpointsThreshold *uint64 `json:"minEndpointsCount,omitempty"`
 }
 
 // ForceLocalZone defines override configuration for forcing all traffic to stay local vs Envoy default behavior
 // which maintains equal distribution among upstreams while sending as much traffic as possible locally.
 type ForceLocalZone struct {
-	// MinEndpointsInZoneCount is the minimum number of upstream endpoints in the local zone required to honor the forceLocalZone
+	// MinEndpointsInZoneThreshold is the minimum number of upstream endpoints in the local zone required to honor the forceLocalZone
 	// override. This is useful for protecting zones with fewer endpoints.
 	//
 	// +optional
 	// +notImplementedHide
-	MinEndpointsInZoneCount *uint32 `json:"minEndpointsInZoneCount,omitempty"`
+	MinEndpointsInZoneThreshold *uint32 `json:"minEndpointsInZoneThreshold,omitempty"`
 }
