@@ -535,6 +535,8 @@ func (r *ResourceRender) PodDisruptionBudget() (*policyv1.PodDisruptionBudget, e
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace:       r.Namespace(),
 			OwnerReferences: r.OwnerReferences(),
+			Annotations:     r.infra.GetProxyMetadata().Annotations,
+			Labels:          r.stableSelector().MatchLabels,
 		},
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "policy/v1",
@@ -577,7 +579,7 @@ func (r *ResourceRender) HorizontalPodAutoscaler() (*autoscalingv2.HorizontalPod
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace:       r.Namespace(),
 			Annotations:     r.infra.GetProxyMetadata().Annotations,
-			Labels:          r.infra.GetProxyMetadata().Labels,
+			Labels:          r.stableSelector().MatchLabels,
 			OwnerReferences: r.OwnerReferences(),
 		},
 		Spec: autoscalingv2.HorizontalPodAutoscalerSpec{
