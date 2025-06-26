@@ -20079,6 +20079,16 @@ spec:
                     required:
                     - value
                     type: object
+                  maxAcceptPerSocketEvent:
+                    description: |-
+                      MaxAcceptPerSocketEvent provides configuration for the maximum number of connections to accept from the kernel
+                      per socket event. If there are more than MaxAcceptPerSocketEvent connections pending accept, connections over
+                      this threshold will be accepted in later event loop iterations. If no value is provided Envoy will accept
+                      all connections pending accept from the kernel.
+                      It is recommended to lower this value for better overload management and reduced per-event cost.
+                      Setting it to 1 is a viable option with no noticeable impact on performance.
+                    format: int32
+                    type: integer
                   socketBufferLimit:
                     allOf:
                     - pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
@@ -22227,6 +22237,12 @@ spec:
                       group.
                     rule: 'has(self.backendRefs) ? (self.backendRefs.all(f, f.group
                       == "" || f.group == ''gateway.envoyproxy.io'')) : true'
+                  - message: If FullDuplexStreamed body processing mode is used, FailOpen
+                      must be false.
+                    rule: '!(has(self.failOpen) && self.failOpen == true && ((has(self.processingMode.request.body)
+                      && self.processingMode.request.body == ''FullDuplexStreamed'')
+                      || (has(self.processingMode.response.body) && self.processingMode.response.body
+                      == ''FullDuplexStreamed'')))'
                 maxItems: 16
                 type: array
               lua:
@@ -24169,9 +24185,24 @@ spec:
                                   type: object
                                 type: array
                               image:
-                                description: Image specifies the EnvoyProxy container
-                                  image to be used, instead of the default image.
+                                description: |-
+                                  Image specifies the EnvoyProxy container image to be used including a tag, instead of the default image.
+                                  This field is mutually exclusive with ImageRepository.
                                 type: string
+                                x-kubernetes-validations:
+                                - message: Image must include a tag and allowed characters
+                                    only (e.g., 'repo:tag').
+                                  rule: self.matches('^[a-zA-Z0-9._/-]+:[a-zA-Z0-9._-]+$')
+                              imageRepository:
+                                description: |-
+                                  ImageRepository specifies the container image repository to be used without specifying a tag.
+                                  The default tag will be used.
+                                  This field is mutually exclusive with Image.
+                                type: string
+                                x-kubernetes-validations:
+                                - message: ImageRepository must contain only allowed
+                                    characters and must not include a tag or any colons.
+                                  rule: self.matches('^[a-zA-Z0-9._/-]+$')
                               resources:
                                 description: |-
                                   Resources required by this container.
@@ -24496,6 +24527,9 @@ spec:
                                   type: object
                                 type: array
                             type: object
+                            x-kubernetes-validations:
+                            - message: Either image or imageRepository can be set.
+                              rule: '!has(self.image) || !has(self.imageRepository)'
                           name:
                             description: |-
                               Name of the daemonSet.
@@ -27996,9 +28030,24 @@ spec:
                                   type: object
                                 type: array
                               image:
-                                description: Image specifies the EnvoyProxy container
-                                  image to be used, instead of the default image.
+                                description: |-
+                                  Image specifies the EnvoyProxy container image to be used including a tag, instead of the default image.
+                                  This field is mutually exclusive with ImageRepository.
                                 type: string
+                                x-kubernetes-validations:
+                                - message: Image must include a tag and allowed characters
+                                    only (e.g., 'repo:tag').
+                                  rule: self.matches('^[a-zA-Z0-9._/-]+:[a-zA-Z0-9._-]+$')
+                              imageRepository:
+                                description: |-
+                                  ImageRepository specifies the container image repository to be used without specifying a tag.
+                                  The default tag will be used.
+                                  This field is mutually exclusive with Image.
+                                type: string
+                                x-kubernetes-validations:
+                                - message: ImageRepository must contain only allowed
+                                    characters and must not include a tag or any colons.
+                                  rule: self.matches('^[a-zA-Z0-9._/-]+$')
                               resources:
                                 description: |-
                                   Resources required by this container.
@@ -28323,6 +28372,9 @@ spec:
                                   type: object
                                 type: array
                             type: object
+                            x-kubernetes-validations:
+                            - message: Either image or imageRepository can be set.
+                              rule: '!has(self.image) || !has(self.imageRepository)'
                           initContainers:
                             description: |-
                               List of initialization containers belonging to the pod.
@@ -33990,6 +34042,16 @@ spec:
                         - message: loadBalancerIP can only be set for LoadBalancer
                             type
                           rule: '!has(self.loadBalancerIP) || self.type == ''LoadBalancer'''
+                      envoyServiceAccount:
+                        description: EnvoyServiceAccount defines the desired state
+                          of the Envoy service account resource.
+                        properties:
+                          name:
+                            description: |-
+                              Name of the Service Account.
+                              When unset, this defaults to an autogenerated name.
+                            type: string
+                        type: object
                       useListenerPortAsContainerPort:
                         description: |-
                           UseListenerPortAsContainerPort disables the port shifting feature in the Envoy Proxy.
@@ -42268,8 +42330,8 @@ spec:
                     type: object
                   cookieConfig:
                     description: |-
-                      CookieConfigs allows overriding the SameSite attribute for OIDC cookies.
-                      If a specific cookie is not configured, it will use the "Strict" SameSite policy by default.
+                      CookieConfigs allows setting the SameSite attribute for OIDC cookies.
+                      By default, its unset.
                     properties:
                       sameSite:
                         default: Strict
@@ -42277,7 +42339,6 @@ spec:
                         - Lax
                         - Strict
                         - None
-                        - Disabled
                         type: string
                     type: object
                   cookieDomain:

@@ -97,7 +97,7 @@ jobs:
           zip -r egctl_${{ env.release_tag }}_windows_amd64.zip bin/windows/amd64/egctl
 
       - name: Upload Release Manifests
-        uses: softprops/action-gh-release@da05d552573ad5aba039eaac05058a918a7bf631  # v2.2.2
+        uses: softprops/action-gh-release@72f2c25fcb47643c292f7107632f7a47c1df5cd8  # v2.3.2
         with:
           files: |
             release-artifacts/install.yaml

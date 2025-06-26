@@ -1,0 +1,60 @@
+- address:
+    socketAddress:
+      address: '::'
+      portValue: 10080
+  defaultFilterChain:
+    filters:
+    - name: envoy.filters.network.http_connection_manager
+      typedConfig:
+        '@type': type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
+        commonHttpProtocolOptions:
+          headersWithUnderscoresAction: REJECT_REQUEST
+        http2ProtocolOptions:
+          initialConnectionWindowSize: 1048576
+          initialStreamWindowSize: 65536
+          maxConcurrentStreams: 100
+        httpFilters:
+        - name: envoy.filters.http.router
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+            suppressEnvoyHeaders: true
+        mergeSlashes: true
+        normalizePath: true
+        pathWithEscapedSlashesAction: UNESCAPE_AND_REDIRECT
+        rds:
+          configSource:
+            ads: {}
+            resourceApiVersion: V3
+          routeConfigName: first-listener
+        serverHeaderTransformation: PASS_THROUGH
+        statPrefix: http-10080
+        tracing:
+          clientSampling:
+            value: 100
+          customTags:
+          - environment:
+              defaultValue: '-'
+              name: env1
+            tag: env1
+          - literal:
+              value: value1
+            tag: literal1
+          - requestHeader:
+              defaultValue: '-'
+              name: X-Request-Id
+            tag: req1
+          overallSampling:
+            value: 100
+          provider:
+            name: envoy.tracers.datadog
+            typedConfig:
+              '@type': type.googleapis.com/envoy.config.trace.v3.DatadogConfig
+              collectorCluster: tracing-0
+              serviceName: fake-name.fake-ns
+          randomSampling:
+            value: 90
+          spawnUpstreamSpan: true
+        useRemoteAddress: true
+    name: first-listener
+  name: first-listener
+  perConnectionBufferLimitBytes: 32768

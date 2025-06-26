@@ -19,6 +19,11 @@ fi
 KIND_CFG=$(cat <<-EOM
 kind: Cluster
 apiVersion: kind.x-k8s.io/v1alpha4
+runtimeConfig:
+  "certificates.k8s.io/v1alpha1/clustertrustbundles": "true"
+featureGates:
+  "ClusterTrustBundle": true
+  "ClusterTrustBundleProjection": true
 networking:
   ${CNI_CONFIG}
   ipFamily: ${IP_FAMILY}

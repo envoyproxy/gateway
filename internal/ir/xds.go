@@ -1571,7 +1571,7 @@ func (r *RouteDestination) HasFiltersInSettings() bool {
 // HasZoneAwareRouting returns true if any setting in the destination has ZoneAwareRoutingEnabled set
 func (r *RouteDestination) HasZoneAwareRouting() bool {
 	for _, setting := range r.Settings {
-		if setting.ZoneAwareRoutingEnabled {
+		if setting.ZoneAwareRouting != nil {
 			return true
 		}
 	}
@@ -1629,9 +1629,11 @@ type DestinationSetting struct {
 	IPFamily *egv1a1.IPFamily    `json:"ipFamily,omitempty" yaml:"ipFamily,omitempty"`
 	TLS      *TLSUpstreamConfig  `json:"tls,omitempty" yaml:"tls,omitempty"`
 	Filters  *DestinationFilters `json:"filters,omitempty" yaml:"filters,omitempty"`
-	// ZoneAwareRoutingEnabled specifies whether to enable Zone Aware Routing for this destination's endpoints.
+	// ZoneAwareRouting specifies whether to enable Zone Aware Routing for this destination's endpoints.
 	// This is derived from the backend service and depends on having Kubernetes Topology Aware Routing or Traffic Distribution enabled.
-	ZoneAwareRoutingEnabled bool `json:"zoneAwareRoutingEnabled,omitempty" yaml:"zoneAwareRoutingEnabled,omitempty"`
+	//
+	// +optional
+	ZoneAwareRouting *ZoneAwareRouting `json:"zoneAwareRouting,omitempty" yaml:"zoneAwareRouting,omitempty"`
 	// Metadata is used to enrich envoy route metadata with user and provider-specific information
 	// The primary metadata for DestinationSettings comes from the Backend resource reference in BackendRef
 	Metadata *ResourceMetadata `json:"metadata,omitempty" yaml:"metadata,omitempty"`
@@ -2966,6 +2968,8 @@ type ClientConnection struct {
 	ConnectionLimit *ConnectionLimit `json:"limit,omitempty" yaml:"limit,omitempty"`
 	// BufferLimitBytes is the maximum number of bytes that can be buffered for a connection.
 	BufferLimitBytes *uint32 `json:"bufferLimit,omitempty" yaml:"bufferLimit,omitempty"`
+	// MaxAcceptPerSocketEvent is the maximum number of connections to accept from the kernel per socket event.
+	MaxAcceptPerSocketEvent *uint32 `json:"maxAcceptPerSocketEvent,omitempty" yaml:"maxAcceptPerSocketEvent,omitempty"`
 }
 
 // ConnectionLimit contains settings for downstream connection limits
@@ -3142,4 +3146,10 @@ type ResourceMetadata struct {
 type RequestBuffer struct {
 	// Limit defines the maximum buffer size for requests
 	Limit resource.Quantity `json:"limit" yaml:"limit"`
+}
+
+// ZoneAwareRouting holds the zone aware routing configuration
+// +k8s:deepcopy-gen=true
+type ZoneAwareRouting struct {
+	MinSize int `json:"minSize" yaml:"minSize"`
 }

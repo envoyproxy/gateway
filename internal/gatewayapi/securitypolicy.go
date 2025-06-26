@@ -184,7 +184,7 @@ func (t *Translator) ProcessSecurityPolicies(securityPolicies []*egv1a1.Security
 				}
 
 				// Set Accepted condition if it is unset
-				status.SetAcceptedForPolicyAncestors(&policy.Status, parentGateways, t.GatewayControllerName)
+				status.SetAcceptedForPolicyAncestors(&policy.Status, parentGateways, t.GatewayControllerName, policy.Generation)
 			}
 		}
 	}
@@ -279,7 +279,7 @@ func (t *Translator) processSecurityPolicyForGateway(
 	}
 
 	// Set Accepted condition if it is unset
-	status.SetAcceptedForPolicyAncestors(&policy.Status, parentGateways, t.GatewayControllerName)
+	status.SetAcceptedForPolicyAncestors(&policy.Status, parentGateways, t.GatewayControllerName, policy.Generation)
 
 	// Check if this policy is overridden by other policies targeting at route and listener levels
 	overriddenTargetsMessage := getOverriddenTargetsMessage(
@@ -363,6 +363,12 @@ func validateSecurityPolicy(p *egv1a1.SecurityPolicy) error {
 		}
 	}
 
+	basicAuth := p.Spec.BasicAuth
+	if basicAuth != nil {
+		if err := validateBasicAuth(basicAuth); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 
@@ -375,6 +381,16 @@ func validateAPIKeyAuth(apiKeyAuth *egv1a1.APIKeyAuth) error {
 			return errors.New("only one of headers, params or cookies must be specified")
 		}
 	}
+	return nil
+}
+
+// validateBasicAuth validates the BasicAuth configuration.
+// Currently, we only validate that the secret exists, but we don't validate
+// the content of the secret. This function will be called when the security policy
+// is being processed, but before the secret is actually read.
+func validateBasicAuth(basicAuth *egv1a1.BasicAuth) error {
+	// The actual validation of the htpasswd format will happen when the secret is read
+	// in the buildBasicAuth function.
 	return nil
 }
 
@@ -396,6 +412,17 @@ func resolveSecurityPolicyGatewayTargetRef(
 	// by this controller.
 	if !ok {
 		return nil, nil
+	}
+
+	// If sectionName is set, make sure its valid
+	if target.SectionName != nil {
+		if err := validateGatewayListenerSectionName(
+			*target.SectionName,
+			key,
+			gateway.listeners,
+		); err != nil {
+			return gateway.GatewayContext, err
+		}
 	}
 
 	if target.SectionName == nil {
@@ -1309,11 +1336,39 @@ func (t *Translator) buildBasicAuth(
 			usersSecret.Namespace, usersSecret.Name)
 	}
 
+	// Validate the htpasswd format
+	if err := validateHtpasswdFormat(usersSecretBytes); err != nil {
+		return nil, err
+	}
+
 	return &ir.BasicAuth{
 		Name:                  irConfigName(policy),
 		Users:                 usersSecretBytes,
 		ForwardUsernameHeader: basicAuth.ForwardUsernameHeader,
 	}, nil
+}
+
+// validateHtpasswdFormat validates that the htpasswd data is in the correct format.
+// Currently, only the SHA format is supported by Envoy.
+func validateHtpasswdFormat(data []byte) error {
+	lines := strings.Split(string(data), "\n")
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+		if line == "" {
+			continue
+		}
+
+		parts := strings.SplitN(line, ":", 2)
+		if len(parts) != 2 {
+			return fmt.Errorf("invalid htpasswd format: each line must be in the format 'username:password'")
+		}
+
+		password := parts[1]
+		if !strings.HasPrefix(password, "{SHA}") {
+			return fmt.Errorf("unsupported htpasswd format: please use {SHA}")
+		}
+	}
+	return nil
 }
 
 func (t *Translator) buildExtAuth(

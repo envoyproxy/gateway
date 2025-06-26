@@ -3,6 +3,7 @@ envoyExtensionPolicies:
   kind: EnvoyExtensionPolicy
   metadata:
     creationTimestamp: null
+    generation: 20
     name: policy-for-http-route
     namespace: default
   spec:
@@ -25,6 +26,7 @@ envoyExtensionPolicies:
       conditions:
       - lastTransitionTime: null
         message: Policy has been accepted.
+        observedGeneration: 20
         reason: Accepted
         status: "True"
         type: Accepted
@@ -33,6 +35,7 @@ envoyExtensionPolicies:
   kind: EnvoyExtensionPolicy
   metadata:
     creationTimestamp: null
+    generation: 10
     name: policy-for-gateway
     namespace: envoy-gateway
   spec:
@@ -54,12 +57,14 @@ envoyExtensionPolicies:
       conditions:
       - lastTransitionTime: null
         message: Policy has been accepted.
+        observedGeneration: 10
         reason: Accepted
         status: "True"
         type: Accepted
       - lastTransitionTime: null
         message: 'This policy is being overridden by other envoyExtensionPolicies
           for these routes: [default/httproute-1]'
+        observedGeneration: 10
         reason: Overridden
         status: "True"
         type: Overridden
