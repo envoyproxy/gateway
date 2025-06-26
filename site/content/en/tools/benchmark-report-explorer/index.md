@@ -1,6 +1,6 @@
 ---
 title: "Performance Benchmark Report Explorer"
-description: "Envoy Gateway Performance Benchmark Report Explorer Tool"
+description: "Explore the Benchmark Reports from Envoy Gateway Releases"
 type: "tools"
 includeBenchmark: true
 ---

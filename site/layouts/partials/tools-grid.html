@@ -1,0 +1,78 @@
+<style>
+  .tools-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 2rem;
+    margin-top: 2rem;
+  }
+  .tool-card {
+    background: white;
+    border-radius: 12px;
+    padding: 1.5rem;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+    border: 1px solid #e5e7eb;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+  }
+  .tool-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  }
+  .tool-card h3 {
+    color: #1f2937;
+    margin-bottom: 0.5rem;
+    font-size: 1.25rem;
+    font-weight: 600;
+  }
+  .tool-card p {
+    color: #6b7280;
+    margin-bottom: 1rem;
+    line-height: 1.5;
+    flex-grow: 1;
+  }
+  .tool-card a {
+    display: inline-flex;
+    align-items: center;
+    color: #4f46e5;
+    text-decoration: none;
+    font-weight: 500;
+    transition: color 0.2s ease-in-out;
+    margin-top: auto;
+  }
+  .tool-card a:hover {
+    color: #3730a3;
+  }
+  .tool-card a i {
+    margin-left: 0.5rem;
+  }
+</style>
+<div class="container">
+  <div class="tools-grid">
+    {{ $currentPage := . }}
+    {{ range where .Site.Pages "Section" "tools" }}
+    {{ if not .IsSection }}
+    <div class="tool-card">
+      <h3>{{ .Title }}</h3>
+      <p>{{ with .Description }}{{ . }}{{ else }}{{ .Summary | plainify | truncate 120 }}{{ end }}</p>
+      <a href="{{ .RelPermalink }}">
+        Try Tool <i class="fas fa-arrow-right"></i>
+      </a>
+    </div>
+    {{ end }}
+    {{ end }}
+  </div>
+  {{ $toolPages := where .Site.Pages "Section" "tools" }}
+  {{ $toolsCount := 0 }}
+  {{ range $toolPages }}
+    {{ if not .IsSection }}
+      {{ $toolsCount = add $toolsCount 1 }}
+    {{ end }}
+  {{ end }}
+  {{ if eq $toolsCount 0 }}
+  <div class="text-center mt-5">
+    <p class="text-muted">No tools are currently available. Check back soon!</p>
+  </div>
+  {{ end }}
+</div>
