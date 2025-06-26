@@ -25,6 +25,7 @@ tracing:
       - host: "zipkin.default.svc.cluster.local"
         port: 9411
       protocol: "TCP"
+      addressType: FQDN
       name: "tracing-0/backend/0"
   provider:
     host: zipkin.default.svc.cluster.local
