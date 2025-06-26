@@ -172,6 +172,7 @@ jobs:
         IP_FAMILY: ${{ matrix.target.ipFamily }}
         KUBE_DEPLOY_PROFILE: ${{ matrix.target.profile }}
         E2E_TIMEOUT: 1h
+        NUM_WORKERS: 2
         # QPS more than 3000 may cause e2e flaky test.
         # This is not the limit of Envoy Gateway,
         # but the limit of running e2e tests in github CI.
