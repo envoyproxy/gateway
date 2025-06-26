@@ -84,7 +84,7 @@ func (t *Translator) ProcessExtensionServerPolicies(policies []unstructured.Unst
 				ancestorRefs := []gwapiv1a2.ParentReference{
 					getAncestorRefForPolicy(gatewayNN, currTarget.SectionName),
 				}
-				status.SetAcceptedForPolicyAncestors(&policyStatus, ancestorRefs, t.GatewayControllerName)
+				status.SetAcceptedForPolicyAncestors(&policyStatus, ancestorRefs, t.GatewayControllerName, policy.GetGeneration())
 				accepted = true
 			}
 		}
