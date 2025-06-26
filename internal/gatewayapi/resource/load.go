@@ -76,6 +76,8 @@ func loadKubernetesYAMLToResources(input []byte, addMissingResources bool) (*Res
 				if err = validator.Validate(yamlByte); err != nil {
 					return fmt.Errorf("local validation error: %w", err)
 				}
+			} else {
+				return fmt.Errorf("failed to init validator")
 			}
 
 			if defaulter != nil {
@@ -83,6 +85,8 @@ func loadKubernetesYAMLToResources(input []byte, addMissingResources bool) (*Res
 				if err != nil {
 					return fmt.Errorf("failed to apply default values for %s/%s: %w", un.GetKind(), un.GetName(), err)
 				}
+			} else {
+				return fmt.Errorf("failed to init defaulter")
 			}
 		}
 
