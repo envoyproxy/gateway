@@ -144,7 +144,7 @@ func (r *Runner) Start(ctx context.Context) (err error) {
 	// Start message Subscription.
 	// Do not call .Subscribe() inside Goroutine since it is supposed to be called from the same
 	// Goroutine where Close() is called.
-	xdsSubCh := r.Xds.Subscribe(ctx)
+	xdsSubCh := r.Xds.Subscriptions.GetNextAvailable()
 	go r.subscribeAndTranslate(xdsSubCh)
 	r.Logger.Info("started")
 	return

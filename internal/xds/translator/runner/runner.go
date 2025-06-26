@@ -48,7 +48,7 @@ func (r *Runner) Name() string {
 // Start starts the xds-translator runner
 func (r *Runner) Start(ctx context.Context) (err error) {
 	r.Logger = r.Logger.WithName(r.Name()).WithValues("runner", r.Name())
-	sub := r.XdsIR.Subscribe(ctx)
+	sub := r.XdsIR.Subscriptions.GetNextAvailable()
 	go r.subscribeAndTranslate(sub)
 	r.Logger.Info("started")
 	return
