@@ -100,7 +100,7 @@ func TestFileProvider(t *testing.T) {
 
 	cfg, err := newFileProviderConfig([]string{watchFilePath, watchDirPath})
 	require.NoError(t, err)
-	pResources := new(message.ProviderResources)
+	pResources := message.NewSubscribedProviderResources(ctx)
 	fp, err := New(ctx, cfg, pResources)
 	require.NoError(t, err)
 	// Start file provider.
@@ -239,6 +239,7 @@ func TestFileProvider(t *testing.T) {
 
 	t.Cleanup(func() {
 		cancel()
+		pResources.Close()
 		_ = os.RemoveAll(watchFileBase)
 		_ = os.RemoveAll(watchDirPath)
 	})

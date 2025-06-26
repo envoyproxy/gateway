@@ -57,7 +57,7 @@ func (r *Runner) Start(ctx context.Context) (err error) {
 		return err
 	}
 
-	sub := r.InfraIR.Subscribe(ctx)
+	sub := r.InfraIR.Subscriptions.GetNextAvailable()
 	initInfra := func() {
 		go r.subscribeToProxyInfraIR(ctx, sub)
 
