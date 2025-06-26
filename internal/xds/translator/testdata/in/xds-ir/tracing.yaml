@@ -25,6 +25,7 @@ tracing:
       - host: "otel-collector.default.svc.cluster.local"
         port: 4317
       protocol: "GRPC"
+      addressType: FQDN
       name: "tracing-0/backend/0"
   traffic:
     backendConnection:

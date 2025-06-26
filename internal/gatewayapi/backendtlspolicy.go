@@ -151,7 +151,7 @@ func (t *Translator) processBackendTLSPolicy(
 		return nil, err
 	}
 
-	status.SetAcceptedForPolicyAncestors(&policy.Status, ancestorRefs, t.GatewayControllerName)
+	status.SetAcceptedForPolicyAncestors(&policy.Status, ancestorRefs, t.GatewayControllerName, policy.Generation)
 	return tlsBundle, nil
 }
 

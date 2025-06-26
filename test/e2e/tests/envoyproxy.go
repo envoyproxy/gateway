@@ -15,8 +15,9 @@ import (
 	"time"
 
 	appsv1 "k8s.io/api/apps/v1"
-	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -53,13 +54,9 @@ var EnvoyProxyCustomNameTest = suite.ConformanceTest{
 			}
 
 			// Make sure there's deployment for the gateway
-			err := checkEnvoyProxyDeployment(t, suite, gwNN, gatewayNS, expectedGatewayName(gwNN))
+			err := checkDeployment(t, suite, gwNN, gatewayNS, expectedGatewayName(gwNN), 0, 0)
 			if err != nil {
 				t.Fatalf("Failed to check EnvoyProxy deployment: %v", err)
-			}
-			err = checkEnvoyProxyService(t, suite, gwNN, gatewayNS, expectedGatewayName(gwNN))
-			if err != nil {
-				t.Fatalf("Failed to check EnvoyProxy service: %v", err)
 			}
 			// Send a request to a valid path and expect a successful response
 			ExpectEventuallyConsistentResponse(t, suite, gwNN, routeNN, okResp)
@@ -73,13 +70,9 @@ var EnvoyProxyCustomNameTest = suite.ConformanceTest{
 				},
 			})
 
-			err = checkEnvoyProxyDeployment(t, suite, gwNN, gatewayNS, "deploy-custom-name")
+			err = checkDeployment(t, suite, gwNN, gatewayNS, "custom-", 1, 1)
 			if err != nil {
 				t.Fatalf("Failed to delete Gateway: %v", err)
-			}
-			err = checkEnvoyProxyService(t, suite, gwNN, gatewayNS, "deploy-custom-name")
-			if err != nil {
-				t.Fatalf("Failed to check EnvoyProxy service: %v", err)
 			}
 			// Send a request to a valid path and expect a successful response
 			ExpectEventuallyConsistentResponse(t, suite, gwNN, routeNN, okResp)
@@ -88,13 +81,9 @@ var EnvoyProxyCustomNameTest = suite.ConformanceTest{
 			updateGateway(t, suite, gwNN, &gwapiv1.GatewayInfrastructure{})
 
 			// Make sure there's deployment for the gateway
-			err = checkEnvoyProxyDeployment(t, suite, gwNN, gatewayNS, expectedGatewayName(gwNN))
+			err = checkDeployment(t, suite, gwNN, gatewayNS, expectedGatewayName(gwNN), 0, 0)
 			if err != nil {
 				t.Fatalf("Failed to check EnvoyProxy deployment: %v", err)
-			}
-			err = checkEnvoyProxyService(t, suite, gwNN, gatewayNS, expectedGatewayName(gwNN))
-			if err != nil {
-				t.Fatalf("Failed to check EnvoyProxy service: %v", err)
 			}
 			// Send a request to a valid path and expect a successful response
 			ExpectEventuallyConsistentResponse(t, suite, gwNN, routeNN, okResp)
@@ -115,14 +104,11 @@ var EnvoyProxyCustomNameTest = suite.ConformanceTest{
 			}
 
 			// Make sure there's DaemonSet for the gateway
-			err := checkEnvoyProxyDaemonSet(t, suite, gwNN, gatewayNS, expectedGatewayName(gwNN))
+			err := checkDaemonSet(t, suite, gwNN, gatewayNS, expectedGatewayName(gwNN))
 			if err != nil {
 				t.Fatalf("Failed to check EnvoyProxy deployment: %v", err)
 			}
-			err = checkEnvoyProxyService(t, suite, gwNN, gatewayNS, expectedGatewayName(gwNN))
-			if err != nil {
-				t.Fatalf("Failed to check EnvoyProxy service: %v", err)
-			}
+
 			// Send a request to a valid path and expect a successful response
 			ExpectEventuallyConsistentResponse(t, suite, gwNN, routeNN, okResp)
 
@@ -135,13 +121,9 @@ var EnvoyProxyCustomNameTest = suite.ConformanceTest{
 				},
 			})
 
-			err = checkEnvoyProxyDaemonSet(t, suite, gwNN, gatewayNS, "ds-custom-name")
+			err = checkDaemonSet(t, suite, gwNN, gatewayNS, "ds-custom-name")
 			if err != nil {
 				t.Fatalf("Failed to delete Gateway: %v", err)
-			}
-			err = checkEnvoyProxyService(t, suite, gwNN, gatewayNS, "ds-custom-name")
-			if err != nil {
-				t.Fatalf("Failed to check EnvoyProxy service: %v", err)
 			}
 			// Send a request to a valid path and expect a successful response
 			ExpectEventuallyConsistentResponse(t, suite, gwNN, routeNN, okResp)
@@ -156,13 +138,9 @@ var EnvoyProxyCustomNameTest = suite.ConformanceTest{
 			})
 
 			// Make sure there's DaemonSet for the gateway
-			err = checkEnvoyProxyDaemonSet(t, suite, gwNN, gatewayNS, expectedGatewayName(gwNN))
+			err = checkDaemonSet(t, suite, gwNN, gatewayNS, expectedGatewayName(gwNN))
 			if err != nil {
 				t.Fatalf("Failed to check EnvoyProxy deployment: %v", err)
-			}
-			err = checkEnvoyProxyService(t, suite, gwNN, gatewayNS, expectedGatewayName(gwNN))
-			if err != nil {
-				t.Fatalf("Failed to check EnvoyProxy service: %v", err)
 			}
 
 			// Send a request to a valid path and expect a successful response
@@ -232,109 +210,82 @@ func ExpectEventuallyConsistentResponse(t *testing.T, suite *suite.ConformanceTe
 	tlog.Logf(t, "Request passed")
 }
 
-func checkEnvoyProxyDeployment(t *testing.T, suite *suite.ConformanceTestSuite, gwNN types.NamespacedName, exceptNs, exceptName string) error {
-	// Make sure there's deployment for the gateway
-	return wait.PollUntilContextTimeout(context.TODO(), time.Second, suite.TimeoutConfig.CreateTimeout, true, func(ctx context.Context) (bool, error) {
-		deploys := &appsv1.DeploymentList{}
-		opts := &client.ListOptions{
-			Namespace: exceptNs,
-			LabelSelector: labels.SelectorFromSet(map[string]string{
-				"app.kubernetes.io/managed-by":                   "envoy-gateway",
-				"app.kubernetes.io/name":                         "envoy",
-				"gateway.envoyproxy.io/owning-gateway-name":      gwNN.Name,
-				"gateway.envoyproxy.io/owning-gateway-namespace": gwNN.Namespace,
-			}),
-		}
-		err := suite.Client.List(ctx, deploys, opts)
-		if err != nil {
-			return false, err
-		}
-		if len(deploys.Items) != 1 {
-			tlog.Logf(t, "Expected 1 Deployment for the Gateway (%v), got %d", opts, len(deploys.Items))
-			return false, nil
-		}
+func checkDaemonSet(t *testing.T, suite *suite.ConformanceTestSuite, gwNN types.NamespacedName, exceptNs, exceptName string) error {
+	if err := checkObject(t, suite, appsv1.SchemeGroupVersion.WithKind("DaemonSet"), gwNN, 1, // service always exists
+		exceptNs, exceptName); err != nil {
+		return err
+	}
 
-		dp := deploys.Items[0]
-		if !strings.HasPrefix(dp.Name, exceptName) {
-			tlog.Logf(t, "Expected Deployment name has prefix '%s', got %s", exceptName, dp.Name)
-			return false, nil
-		}
+	if err := checkObject(t, suite, serviceGVK, gwNN, 1, // service always exists
+		exceptNs, exceptName); err != nil {
+		return err
+	}
 
-		if dp.Status.ReadyReplicas <= 0 {
-			tlog.Logf(t, "Expected Deployment %s ready", dp.Name)
-		}
-
-		tlog.Logf(t, "Check Envoy proxy deployment pass, name: %s", dp.Name)
-		return true, nil
-	})
+	return nil
 }
 
-func checkEnvoyProxyService(t *testing.T, suite *suite.ConformanceTestSuite, gwNN types.NamespacedName, exceptNs, exceptName string) error {
-	// Make sure there's deployment for the gateway
-	return wait.PollUntilContextTimeout(context.TODO(), time.Second, suite.TimeoutConfig.CreateTimeout, true, func(ctx context.Context) (bool, error) {
-		svcList := &corev1.ServiceList{}
-		opts := &client.ListOptions{
-			Namespace: exceptNs,
-			LabelSelector: labels.SelectorFromSet(map[string]string{
-				"app.kubernetes.io/managed-by":                   "envoy-gateway",
-				"app.kubernetes.io/name":                         "envoy",
-				"gateway.envoyproxy.io/owning-gateway-name":      gwNN.Name,
-				"gateway.envoyproxy.io/owning-gateway-namespace": gwNN.Namespace,
-			}),
-		}
-		err := suite.Client.List(ctx, svcList, opts)
-		if err != nil {
-			return false, err
-		}
-		if len(svcList.Items) != 1 {
-			tlog.Logf(t, "Expected 1 Service for the Gateway (%v), got %d", opts, len(svcList.Items))
-			return false, nil
-		}
+var (
+	serviceGVK = schema.FromAPIVersionAndKind("v1", "Service")
+	hpaGVK     = schema.FromAPIVersionAndKind("autoscaling/v2", "HorizontalPodAutoscaler")
+	pdbGVK     = schema.FromAPIVersionAndKind("policy/v1", "PodDisruptionBudget")
+)
 
-		svc := svcList.Items[0]
-		if !strings.HasPrefix(svc.Name, exceptName) {
-			tlog.Logf(t, "Expected Service name has prefix '%s', got %s", exceptName, svc.Name)
-			return false, nil
-		}
+func checkDeployment(t *testing.T, suite *suite.ConformanceTestSuite, gwNN types.NamespacedName, exceptNs, exceptName string,
+	exceptHpaCount, exceptPdbCount int,
+) error {
+	if err := checkObject(t, suite, appsv1.SchemeGroupVersion.WithKind("Deployment"), gwNN, 1, // service always exists
+		exceptNs, exceptName); err != nil {
+		return err
+	}
 
-		tlog.Logf(t, "Check envoy proxy service pass, name: %s", svc.Name)
-		return true, nil
-	})
+	if err := checkObject(t, suite, serviceGVK, gwNN, 1, // service always exists
+		exceptNs, exceptName); err != nil {
+		return err
+	}
+	if err := checkObject(t, suite, hpaGVK, gwNN, exceptHpaCount, exceptNs, exceptName); err != nil {
+		return err
+	}
+	if err := checkObject(t, suite, pdbGVK, gwNN, exceptPdbCount, exceptNs, exceptName); err != nil {
+		return err
+	}
+	return nil
 }
 
-func checkEnvoyProxyDaemonSet(t *testing.T, suite *suite.ConformanceTestSuite, gwNN types.NamespacedName, exceptNs, exceptName string) error {
-	// Make sure there's deployment for the gateway
-	return wait.PollUntilContextTimeout(context.TODO(), time.Second, suite.TimeoutConfig.CreateTimeout, true, func(ctx context.Context) (bool, error) {
-		dsList := &appsv1.DaemonSetList{}
-		opts := &client.ListOptions{
-			Namespace: exceptNs,
-			LabelSelector: labels.SelectorFromSet(map[string]string{
-				"app.kubernetes.io/managed-by":                   "envoy-gateway",
-				"app.kubernetes.io/name":                         "envoy",
-				"gateway.envoyproxy.io/owning-gateway-name":      gwNN.Name,
-				"gateway.envoyproxy.io/owning-gateway-namespace": gwNN.Namespace,
-			}),
+func checkObject(t *testing.T, suite *suite.ConformanceTestSuite, gvk schema.GroupVersionKind, gwNN types.NamespacedName, exceptCount int, exceptNs, exceptName string) error {
+	return wait.PollUntilContextTimeout(t.Context(), time.Second, suite.TimeoutConfig.CreateTimeout, true, func(ctx context.Context) (bool, error) {
+		objList := &unstructured.UnstructuredList{}
+		objList.SetGroupVersionKind(gvk)
+
+		selector := map[string]string{
+			"app.kubernetes.io/managed-by":                   "envoy-gateway",
+			"app.kubernetes.io/name":                         "envoy",
+			"gateway.envoyproxy.io/owning-gateway-name":      gwNN.Name,
+			"gateway.envoyproxy.io/owning-gateway-namespace": gwNN.Namespace,
 		}
-		err := suite.Client.List(ctx, dsList, opts)
+
+		opts := &client.ListOptions{
+			Namespace:     exceptNs,
+			LabelSelector: labels.SelectorFromSet(selector),
+		}
+		err := suite.Client.List(t.Context(), objList, opts)
 		if err != nil {
 			return false, err
 		}
-		if len(dsList.Items) != 1 {
-			tlog.Logf(t, "Expected 1 DaemonSet for the Gateway (%v), got %d", opts, len(dsList.Items))
+		if len(objList.Items) != exceptCount {
+			tlog.Logf(t, "Expected %d %s for the Gateway (%v), got %d", exceptCount, gvk, opts, len(objList.Items))
 			return false, nil
 		}
 
-		ds := dsList.Items[0]
-		if !strings.HasPrefix(ds.Name, exceptName) {
-			tlog.Logf(t, "Expected DaemonSet name has prefix '%s', got %s", exceptName, ds.Name)
-			return false, nil
+		if exceptCount > 0 {
+			obj := objList.Items[0]
+
+			if !strings.HasPrefix(obj.GetName(), exceptName) {
+				tlog.Logf(t, "Expected %s name has prefix '%s', got %s", gvk, exceptName, obj.GetName())
+				return false, nil
+			}
+			tlog.Logf(t, "Check envoy proxy %s pass, name: %s", gvk, obj.GetName())
 		}
 
-		if ds.Status.NumberReady <= 0 {
-			tlog.Logf(t, "Expected DaemonSet %s ready", ds.Name)
-		}
-
-		tlog.Logf(t, "Check envoy proxy DaemonSet pass, name: %s", ds.Name)
 		return true, nil
 	})
 }

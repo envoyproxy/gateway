@@ -2,6 +2,12 @@ apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
   creationTimestamp: null
+  labels:
+    app.kubernetes.io/component: proxy
+    app.kubernetes.io/managed-by: envoy-gateway
+    app.kubernetes.io/name: envoy
+    gateway.envoyproxy.io/owning-gateway-name: default
+    gateway.envoyproxy.io/owning-gateway-namespace: default
   name: custom-pdb-name
   namespace: envoy-gateway-system
   ownerReferences:

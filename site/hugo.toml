@@ -223,6 +223,11 @@ enable = true
     name = "Documentation"
     weight = -102
     url = "/docs"
+  [[menu.main]]
+    name = "Tools"
+    weight = -99
+    url = "/tools"
+    hasChildren = true
 
 [[params.versions]]
   version = "latest"

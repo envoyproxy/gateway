@@ -3,6 +3,7 @@ backendTrafficPolicies:
   kind: BackendTrafficPolicy
   metadata:
     creationTimestamp: null
+    generation: 20
     name: policy-for-route
     namespace: default
   spec:
@@ -23,6 +24,7 @@ backendTrafficPolicies:
       conditions:
       - lastTransitionTime: null
         message: Policy has been accepted.
+        observedGeneration: 20
         reason: Accepted
         status: "True"
         type: Accepted
@@ -31,6 +33,7 @@ backendTrafficPolicies:
   kind: BackendTrafficPolicy
   metadata:
     creationTimestamp: null
+    generation: 10
     name: policy-for-gateway
     namespace: envoy-gateway
   spec:
@@ -54,6 +57,7 @@ backendTrafficPolicies:
       conditions:
       - lastTransitionTime: null
         message: Policy has been accepted.
+        observedGeneration: 10
         reason: Accepted
         status: "True"
         type: Accepted

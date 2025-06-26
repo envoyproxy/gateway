@@ -1,9 +1,14 @@
 accessLog:
   openTelemetry:
     - destination:
-        name: accesslog_otel_0_1
+        name: "accesslog_otel_0_1"
         settings:
-          - protocol: TCP
+          - endpoints:
+              - host: "otel-collector.default.svc.cluster.local"
+                port: 4317
+            protocol: "GRPC"
+            addressType: FQDN
+            name: "accesslog-0/backend/0"
       resources:
         k8s.cluster.name: cluster-1
       text: |
@@ -19,7 +24,7 @@ accessLog:
 http:
   - address: 0.0.0.0
     hostnames:
-      - '*'
+      - "*"
     isHTTP2: true
     metadata:
       kind: Gateway
@@ -101,7 +106,7 @@ http:
                   port: 8080
               protocol: GRPC
               weight: 1
-        hostname: '*'
+        hostname: "*"
         isHTTP2: true
         metadata:
           kind: GRPCRoute

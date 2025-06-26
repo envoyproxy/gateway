@@ -159,7 +159,7 @@ func (t *Translator) ProcessClientTrafficPolicies(
 				}
 
 				// Set Accepted condition if it is unset
-				status.SetAcceptedForPolicyAncestors(&policy.Status, ancestorRefs, t.GatewayControllerName)
+				status.SetAcceptedForPolicyAncestors(&policy.Status, ancestorRefs, t.GatewayControllerName, policy.Generation)
 			}
 		}
 	}
@@ -277,7 +277,7 @@ func (t *Translator) ProcessClientTrafficPolicies(
 				}
 
 				// Set Accepted condition if it is unset
-				status.SetAcceptedForPolicyAncestors(&policy.Status, ancestorRefs, t.GatewayControllerName)
+				status.SetAcceptedForPolicyAncestors(&policy.Status, ancestorRefs, t.GatewayControllerName, policy.Generation)
 			}
 		}
 	}

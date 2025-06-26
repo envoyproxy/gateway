@@ -123,6 +123,6 @@ func (t *Translator) ProcessEnvoyPatchPolicies(envoyPatchPolicies []*egv1a1.Envo
 		}
 
 		// Set Accepted=True
-		status.SetAcceptedForPolicyAncestors(&policy.Status, ancestorRefs, t.GatewayControllerName)
+		status.SetAcceptedForPolicyAncestors(&policy.Status, ancestorRefs, t.GatewayControllerName, policy.Generation)
 	}
 }

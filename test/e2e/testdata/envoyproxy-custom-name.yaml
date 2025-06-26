@@ -24,9 +24,15 @@ spec:
     type: Kubernetes
     kubernetes:
       envoyDeployment:
-        name: deploy-custom-name
+        name: custom-deploy
       envoyService:
-        name: deploy-custom-name
+        name: custom-service
+      envoyPDB:
+        name: custom-pdb
+        minAvailable: 1
+      envoyHpa:
+        name: custom-hpa
+        maxReplicas: 3
 ---
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
