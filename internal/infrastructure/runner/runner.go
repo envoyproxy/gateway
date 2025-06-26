@@ -8,7 +8,6 @@ package runner
 import (
 	"context"
 
-	"github.com/telepresenceio/watchable"
 	"k8s.io/utils/ptr"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
@@ -57,9 +56,8 @@ func (r *Runner) Start(ctx context.Context) (err error) {
 		return err
 	}
 
-	sub := r.InfraIR.Subscribe(ctx)
 	initInfra := func() {
-		go r.subscribeToProxyInfraIR(ctx, sub)
+		go r.subscribeToProxyInfraIR(ctx)
 
 		// Enable global ratelimit if it has been configured.
 		if r.EnvoyGateway.RateLimit != nil {
@@ -93,9 +91,10 @@ func (r *Runner) Start(ctx context.Context) (err error) {
 	return
 }
 
-func (r *Runner) subscribeToProxyInfraIR(ctx context.Context, sub <-chan watchable.Snapshot[string, *ir.Infra]) {
+func (r *Runner) subscribeToProxyInfraIR(ctx context.Context) {
 	// Subscribe to resources
-	message.HandleSubscription(message.Metadata{Runner: r.Name(), Message: message.InfraIRMessageName}, sub,
+	message.HandleSubscription(message.Metadata{Runner: r.Name(), Message: message.InfraIRMessageName},
+		r.InfraIR.GetSubscription(),
 		func(update message.Update[string, *ir.Infra], errChan chan error) {
 			r.Logger.Info("received an update")
 			val := update.Value

@@ -9,7 +9,6 @@ import (
 	"context"
 	"reflect"
 
-	"github.com/telepresenceio/watchable"
 	ktypes "k8s.io/apimachinery/pkg/types"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
@@ -48,15 +47,15 @@ func (r *Runner) Name() string {
 // Start starts the xds-translator runner
 func (r *Runner) Start(ctx context.Context) (err error) {
 	r.Logger = r.Logger.WithName(r.Name()).WithValues("runner", r.Name())
-	sub := r.XdsIR.Subscribe(ctx)
-	go r.subscribeAndTranslate(sub)
+	go r.subscribeAndTranslate()
 	r.Logger.Info("started")
 	return
 }
 
-func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *ir.Xds]) {
+func (r *Runner) subscribeAndTranslate() {
 	// Subscribe to resources
-	message.HandleSubscription(message.Metadata{Runner: r.Name(), Message: message.XDSIRMessageName}, sub,
+	message.HandleSubscription(message.Metadata{Runner: r.Name(), Message: message.XDSIRMessageName},
+		r.XdsIR.GetSubscription(),
 		func(update message.Update[string, *ir.Xds], errChan chan error) {
 			r.Logger.Info("received an update")
 			key := update.Key
@@ -132,7 +131,7 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *ir
 						Runner:  r.Name(),
 						Message: message.XDSMessageName,
 					},
-						key, result, &r.Xds.Map)
+						key, result, r.Xds)
 				} else {
 					r.Logger.Error(err, "skipped publishing xds resources")
 				}

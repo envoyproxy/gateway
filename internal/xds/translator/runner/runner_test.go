@@ -26,9 +26,10 @@ import (
 
 func TestRunner(t *testing.T) {
 	// Setup
-	xdsIR := new(message.XdsIR)
-	xds := new(message.Xds)
-	pResource := new(message.ProviderResources)
+	ctx := context.Background()
+	xdsIR := message.NewSubscribedXdsIR(ctx)
+	xds := message.NewSubscribedXds(ctx)
+	pResource := message.NewSubscribedProviderResources(ctx)
 	cfg, err := config.New(os.Stdout)
 	require.NoError(t, err)
 	r := New(&Config{
@@ -38,7 +39,6 @@ func TestRunner(t *testing.T) {
 		Xds:               xds,
 	})
 
-	ctx := context.Background()
 	// Start
 	err = r.Start(ctx)
 	require.NoError(t, err)
@@ -105,9 +105,10 @@ func TestRunner(t *testing.T) {
 
 func TestRunner_withExtensionManager_FailOpen(t *testing.T) {
 	// Setup
-	xdsIR := new(message.XdsIR)
-	xds := new(message.Xds)
-	pResource := new(message.ProviderResources)
+	ctx := context.Background()
+	xdsIR := message.NewSubscribedXdsIR(ctx)
+	xds := message.NewSubscribedXds(ctx)
+	pResource := message.NewSubscribedProviderResources(ctx)
 
 	cfg, err := config.New(os.Stdout)
 	require.NoError(t, err)
@@ -124,7 +125,6 @@ func TestRunner_withExtensionManager_FailOpen(t *testing.T) {
 		ExtensionManager:  extMgr,
 	})
 
-	ctx := context.Background()
 	// Start
 	err = r.Start(ctx)
 	require.NoError(t, err)
@@ -178,9 +178,10 @@ func TestRunner_withExtensionManager_FailOpen(t *testing.T) {
 
 func TestRunner_withExtensionManager_FailClosed(t *testing.T) {
 	// Setup
-	xdsIR := new(message.XdsIR)
-	xds := new(message.Xds)
-	pResource := new(message.ProviderResources)
+	ctx := context.Background()
+	xdsIR := message.NewSubscribedXdsIR(ctx)
+	xds := message.NewSubscribedXds(ctx)
+	pResource := message.NewSubscribedProviderResources(ctx)
 
 	cfg, err := config.New(os.Stdout)
 	require.NoError(t, err)
@@ -196,7 +197,6 @@ func TestRunner_withExtensionManager_FailClosed(t *testing.T) {
 		ExtensionManager:  extMgr,
 	})
 
-	ctx := context.Background()
 	// Start
 	err = r.Start(ctx)
 	require.NoError(t, err)

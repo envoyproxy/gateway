@@ -22,6 +22,22 @@ lint.golint:
 	@$(LOG_TARGET)
 	@go tool golangci-lint run $(GOLANGCI_LINT_FLAGS) --build-tags=$(LINT_BUILD_TAGS) --config=tools/linter/golangci-lint/.golangci.yml
 
+.PHONY: lint.dependencycheck
+lint: lint.dependencycheck
+lint.dependencycheck: ## Check that dependency restrictions are not violated
+	@$(LOG_TARGET)
+# Ensure that only internal/message imports watchable.
+	@WATCHABLE_IMPORTS=$$(go list -json ./... | jq -r 'select(type == "object" and .Imports != null) | select(.Imports[]? == "github.com/telepresenceio/watchable") | .ImportPath'); \
+	if [ "$$WATCHABLE_IMPORTS" != "github.com/envoyproxy/gateway/internal/message" ]; then \
+		echo "Error: github.com/telepresenceio/watchable should only be imported by internal/message"; \
+		echo "Found imports in:"; \
+		echo "$$WATCHABLE_IMPORTS"; \
+		exit 1; \
+	else \
+		echo "✓ Dependency check passed:"; \
+		echo "Current imports for github.com/telepresenceio/watchable: $$WATCHABLE_IMPORTS"; \
+	fi
+
 .PHONY: lint.yamllint
 lint: lint.yamllint
 lint-deps: $(tools/yamllint)

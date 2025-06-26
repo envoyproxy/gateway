@@ -66,10 +66,10 @@ func TestProvider(t *testing.T) {
 	// Disable webhook server for provider test to avoid non-existent cert errors
 	svr.EnvoyGateway.Provider.Kubernetes.TopologyInjector = &egv1a1.EnvoyGatewayTopologyInjector{Disable: ptr.To(true)}
 	require.NoError(t, err)
-	resources := new(message.ProviderResources)
+	ctx, cancel := context.WithCancel(ctrl.SetupSignalHandler())
+	resources := message.NewSubscribedProviderResources(ctx)
 	provider, err := New(context.Background(), cliCfg, svr, resources)
 	require.NoError(t, err)
-	ctx, cancel := context.WithCancel(ctrl.SetupSignalHandler())
 	go func() {
 		require.NoError(t, provider.Start(ctx))
 	}()
@@ -82,6 +82,7 @@ func TestProvider(t *testing.T) {
 	// Stop the kube provider.
 	defer func() {
 		cancel()
+		resources.Close()
 		require.NoError(t, testEnv.Stop())
 	}()
 
@@ -198,11 +199,13 @@ func testGatewayClassWithParamRef(ctx context.Context, t *testing.T, provider *P
 
 	// Ensure the GatewayClass reports "Ready".
 	require.Eventually(t, func() bool {
-		if err := cli.Get(ctx, types.NamespacedName{Name: gc.Name}, gc); err != nil {
+		// Use a separate object instance to avoid race condition
+		gcCopy := &gwapiv1.GatewayClass{}
+		if err := cli.Get(ctx, types.NamespacedName{Name: gc.Name}, gcCopy); err != nil {
 			return false
 		}
 
-		for _, cond := range gc.Status.Conditions {
+		for _, cond := range gcCopy.Status.Conditions {
 			if cond.Type == string(gwapiv1.GatewayClassConditionStatusAccepted) && cond.Status == metav1.ConditionTrue {
 				return true
 			}
@@ -238,11 +241,13 @@ func testGatewayScheduledStatus(ctx context.Context, t *testing.T, provider *Pro
 
 	// Ensure the GatewayClass reports "Ready".
 	require.Eventually(t, func() bool {
-		if err := cli.Get(ctx, types.NamespacedName{Name: gc.Name}, gc); err != nil {
+		// Use a separate object instance to avoid race condition
+		gcCopy := &gwapiv1.GatewayClass{}
+		if err := cli.Get(ctx, types.NamespacedName{Name: gc.Name}, gcCopy); err != nil {
 			return false
 		}
 
-		for _, cond := range gc.Status.Conditions {
+		for _, cond := range gcCopy.Status.Conditions {
 			if cond.Type == string(gwapiv1.GatewayClassConditionStatusAccepted) && cond.Status == metav1.ConditionTrue {
 				return true
 			}
@@ -333,11 +338,13 @@ func testGatewayScheduledStatus(ctx context.Context, t *testing.T, provider *Pro
 
 	// Ensure the Gateway reports "Scheduled".
 	require.Eventually(t, func() bool {
-		if err := cli.Get(ctx, utils.NamespacedName(gw), gw); err != nil {
+		// Use a separate object instance to avoid race condition
+		gwCopy := &gwapiv1.Gateway{}
+		if err := cli.Get(ctx, utils.NamespacedName(gw), gwCopy); err != nil {
 			return false
 		}
 
-		for _, cond := range gw.Status.Conditions {
+		for _, cond := range gwCopy.Status.Conditions {
 			fmt.Printf("Condition: %v\n", cond)
 			if cond.Type == string(gwapiv1.GatewayConditionAccepted) && cond.Status == metav1.ConditionTrue {
 				return true
@@ -367,14 +374,18 @@ func testGatewayScheduledStatus(ctx context.Context, t *testing.T, provider *Pro
 
 	// Ensure the gatewayclass has been finalized.
 	require.Eventually(t, func() bool {
-		err := cli.Get(ctx, types.NamespacedName{Name: gc.Name}, gc)
-		return err == nil && slices.Contains(gc.Finalizers, gatewayClassFinalizer)
+		// Use a separate object instance to avoid race condition
+		gcCopy := &gwapiv1.GatewayClass{}
+		err := cli.Get(ctx, types.NamespacedName{Name: gc.Name}, gcCopy)
+		return err == nil && slices.Contains(gcCopy.Finalizers, gatewayClassFinalizer)
 	}, defaultWait, defaultTick)
 
 	// Ensure the test Gateway in the Gateway resources is as expected.
 	key := utils.NamespacedName(gw)
 	require.Eventually(t, func() bool {
-		return cli.Get(ctx, key, gw) == nil
+		// Use a separate object instance to avoid race condition
+		gwCopy := &gwapiv1.Gateway{}
+		return cli.Get(ctx, key, gwCopy) == nil
 	}, defaultWait, defaultTick)
 
 	res := resources.GetResourcesByGatewayClass(gc.Name)
@@ -1282,10 +1293,10 @@ func TestNamespacedProvider(t *testing.T) {
 	// Disable webhook server for provider test to avoid non-existent cert errors
 	svr.EnvoyGateway.Provider.Kubernetes.TopologyInjector = &egv1a1.EnvoyGatewayTopologyInjector{Disable: ptr.To(true)}
 
-	resources := new(message.ProviderResources)
+	ctx, cancel := context.WithCancel(context.Background())
+	resources := message.NewSubscribedProviderResources(ctx)
 	provider, err := New(context.Background(), cliCfg, svr, resources)
 	require.NoError(t, err)
-	ctx, cancel := context.WithCancel(context.Background())
 	go func() {
 		require.NoError(t, provider.Start(ctx))
 	}()
@@ -1322,6 +1333,7 @@ func TestNamespacedProvider(t *testing.T) {
 	// Stop the kube provider.
 	defer func() {
 		cancel()
+		resources.Close()
 		require.NoError(t, testEnv.Stop())
 	}()
 }
@@ -1347,10 +1359,10 @@ func TestNamespaceSelectorProvider(t *testing.T) {
 	// Disable webhook server for provider test to avoid non-existent cert errors
 	svr.EnvoyGateway.Provider.Kubernetes.TopologyInjector = &egv1a1.EnvoyGatewayTopologyInjector{Disable: ptr.To(true)}
 
-	resources := new(message.ProviderResources)
+	ctx, cancel := context.WithCancel(context.Background())
+	resources := message.NewSubscribedProviderResources(ctx)
 	provider, err := New(context.Background(), cliCfg, svr, resources)
 	require.NoError(t, err)
-	ctx, cancel := context.WithCancel(context.Background())
 	go func() {
 		require.NoError(t, provider.Start(ctx))
 	}()
@@ -1362,6 +1374,7 @@ func TestNamespaceSelectorProvider(t *testing.T) {
 
 	defer func() {
 		cancel()
+		resources.Close()
 		require.NoError(t, testEnv.Stop())
 	}()
 

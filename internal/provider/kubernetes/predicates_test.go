@@ -6,6 +6,7 @@
 package kubernetes
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"testing"
@@ -1057,7 +1058,7 @@ func TestValidateServiceForReconcile(t *testing.T) {
 		classController:    egv1a1.GatewayControllerName,
 		log:                logger,
 		mergeGateways:      sets.New[string]("test-mg"),
-		resources:          &message.ProviderResources{},
+		resources:          message.NewSubscribedProviderResources(context.Background()),
 		grpcRouteCRDExists: true,
 		tcpRouteCRDExists:  true,
 		udpRouteCRDExists:  true,
@@ -1176,7 +1177,7 @@ func TestValidateObjectForReconcile(t *testing.T) {
 		classController: egv1a1.GatewayControllerName,
 		log:             logger,
 		mergeGateways:   sets.New[string]("test-mg"),
-		resources:       &message.ProviderResources{},
+		resources:       message.NewSubscribedProviderResources(context.Background()),
 	}
 
 	for _, tc := range testCases {

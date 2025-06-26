@@ -28,9 +28,10 @@ import (
 
 func TestRunner(t *testing.T) {
 	// Setup
-	pResources := new(message.ProviderResources)
-	xdsIR := new(message.XdsIR)
-	infraIR := new(message.InfraIR)
+	ctx := context.Background()
+	pResources := message.NewSubscribedProviderResources(ctx)
+	xdsIR := message.NewSubscribedXdsIR(ctx)
+	infraIR := message.NewSubscribedInfraIR(ctx)
 	cfg, err := config.New(os.Stdout)
 	require.NoError(t, err)
 	extMgr, closeFunc, err := registry.NewInMemoryManager(egv1a1.ExtensionManager{}, &pb.UnimplementedEnvoyGatewayExtensionServer{})
@@ -43,7 +44,6 @@ func TestRunner(t *testing.T) {
 		InfraIR:           infraIR,
 		ExtensionManager:  extMgr,
 	})
-	ctx := context.Background()
 	// Start
 	err = r.Start(ctx)
 	require.NoError(t, err)
@@ -114,9 +114,10 @@ func TestGetIRKeysToDelete(t *testing.T) {
 
 func TestDeleteStatusKeys(t *testing.T) {
 	// Setup
-	pResources := new(message.ProviderResources)
-	xdsIR := new(message.XdsIR)
-	infraIR := new(message.InfraIR)
+	ctx := context.Background()
+	pResources := message.NewSubscribedProviderResources(ctx)
+	xdsIR := message.NewSubscribedXdsIR(ctx)
+	infraIR := message.NewSubscribedInfraIR(ctx)
 	cfg, err := config.New(os.Stdout)
 	require.NoError(t, err)
 	extMgr, closeFunc, err := registry.NewInMemoryManager(egv1a1.ExtensionManager{}, &pb.UnimplementedEnvoyGatewayExtensionServer{})
@@ -129,7 +130,6 @@ func TestDeleteStatusKeys(t *testing.T) {
 		InfraIR:           infraIR,
 		ExtensionManager:  extMgr,
 	})
-	ctx := context.Background()
 
 	// Start
 	err = r.Start(ctx)
@@ -215,9 +215,10 @@ func TestDeleteStatusKeys(t *testing.T) {
 
 func TestDeleteAllStatusKeys(t *testing.T) {
 	// Setup
-	pResources := new(message.ProviderResources)
-	xdsIR := new(message.XdsIR)
-	infraIR := new(message.InfraIR)
+	ctx := context.Background()
+	pResources := message.NewSubscribedProviderResources(ctx)
+	xdsIR := message.NewSubscribedXdsIR(ctx)
+	infraIR := message.NewSubscribedInfraIR(ctx)
 	cfg, err := config.New(os.Stdout)
 	require.NoError(t, err)
 	extMgr, closeFunc, err := registry.NewInMemoryManager(egv1a1.ExtensionManager{}, &pb.UnimplementedEnvoyGatewayExtensionServer{})
@@ -230,7 +231,6 @@ func TestDeleteAllStatusKeys(t *testing.T) {
 		InfraIR:           infraIR,
 		ExtensionManager:  extMgr,
 	})
-	ctx := context.Background()
 
 	// Start
 	err = r.Start(ctx)

@@ -53,6 +53,7 @@ bug fixes: |
   Fixed validation errors when the rateLimit url for Redis in the EnvoyGateway API includes multiple comma separated hosts.
   Fixes addresses in status of DualStack NodePort Gateways.
   Fixed issue that not able to override the prometheus annotation in EnvoyProxy CRD.
+  Fixed race condition in watchable.Map Snapshot subscription.
 
 
 # Enhancements that improve performance.
