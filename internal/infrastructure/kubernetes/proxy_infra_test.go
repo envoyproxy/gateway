@@ -20,6 +20,8 @@ import (
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/intstr"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
@@ -123,11 +125,32 @@ func TestCreateProxyInfra(t *testing.T) {
 	// Infra with Gateway owner labels.
 	infraWithLabels := infra.DeepCopy()
 	infraWithLabels.GetProxyInfra().GetProxyMetadata().Labels = proxy.EnvoyAppLabel()
+	infraWithLabels.GetProxyInfra().GetProxyMetadata().Labels[gatewayapi.OwningGatewayClassLabel] = "testGatewayClass"
 	infraWithLabels.GetProxyInfra().GetProxyMetadata().Labels[gatewayapi.OwningGatewayNamespaceLabel] = "default"
 	infraWithLabels.GetProxyInfra().GetProxyMetadata().Labels[gatewayapi.OwningGatewayNameLabel] = "test-gw"
 	infraWithLabels.GetProxyInfra().GetProxyMetadata().OwnerReference = &ir.ResourceMetadata{
 		Kind: resource.KindGateway,
 		Name: testGatewayClass,
+	}
+
+	ep := &egv1a1.EnvoyProxy{
+		Spec: egv1a1.EnvoyProxySpec{
+			Provider: &egv1a1.EnvoyProxyProvider{
+				Type:       egv1a1.ProviderTypeKubernetes,
+				Kubernetes: egv1a1.DefaultEnvoyProxyKubeProvider(),
+			},
+		},
+	}
+	infraWithPDB := infraWithLabels.DeepCopy()
+	infraWithPDB.GetProxyInfra().Config = ep.DeepCopy()
+	infraWithPDB.GetProxyInfra().Config.Spec.Provider.Kubernetes.EnvoyPDB = &egv1a1.KubernetesPodDisruptionBudgetSpec{
+		MinAvailable: ptr.To(intstr.IntOrString{Type: intstr.Int, IntVal: 1}),
+	}
+
+	infraWithHPA := infraWithLabels.DeepCopy()
+	infraWithHPA.GetProxyInfra().Config = ep.DeepCopy()
+	infraWithHPA.GetProxyInfra().Config.Spec.Provider.Kubernetes.EnvoyHpa = &egv1a1.KubernetesHorizontalPodAutoscalerSpec{
+		MinReplicas: ptr.To[int32](1),
 	}
 
 	testCases := []struct {
@@ -156,6 +179,16 @@ func TestCreateProxyInfra(t *testing.T) {
 				Proxy: nil,
 			},
 			expect: false,
+		},
+		{
+			name:   "pdb enabled",
+			in:     infraWithPDB,
+			expect: true,
+		},
+		{
+			name:   "hpa enabled",
+			in:     infraWithHPA,
+			expect: true,
 		},
 	}
 
