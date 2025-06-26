@@ -124,7 +124,7 @@ func (r *Runner) startWasmCache(ctx context.Context) {
 }
 
 func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *resource.ControllerResources]) {
-	message.HandleSubscription(message.Metadata{Runner: string(egv1a1.LogComponentGatewayAPIRunner), Message: "provider-resources"}, sub,
+	message.HandleSubscription(message.Metadata{Runner: r.Name(), Message: "provider-resources"}, sub,
 		func(update message.Update[string, *resource.ControllerResources], errChan chan error) {
 			r.Logger.Info("received an update")
 			val := update.Value
@@ -183,14 +183,14 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *re
 				// Publish the IRs.
 				// Also validate the ir before sending it.
 				for key, val := range result.InfraIR {
-					r.Logger.V(1).WithValues("infra-ir", key).Info(val.JSONString())
+					r.Logger.V(1).WithValues(string(message.InfraIRMessageName), key).Info(val.JSONString())
 					if err := val.Validate(); err != nil {
 						r.Logger.Error(err, "unable to validate infra ir, skipped sending it")
 						errChan <- err
 					} else {
 						message.HandleStore(message.Metadata{
-							Runner:  string(egv1a1.LogComponentGatewayAPIRunner),
-							Message: "infra-ir",
+							Runner:  r.Name(),
+							Message: message.InfraIRMessageName,
 						},
 							key, val, &r.InfraIR.Map)
 						newIRKeys = append(newIRKeys, key)
@@ -198,14 +198,14 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *re
 				}
 
 				for key, val := range result.XdsIR {
-					r.Logger.V(1).WithValues("xds-ir", key).Info(val.JSONString())
+					r.Logger.V(1).WithValues(string(message.XDSIRMessageName), key).Info(val.JSONString())
 					if err := val.Validate(); err != nil {
 						r.Logger.Error(err, "unable to validate xds ir, skipped sending it")
 						errChan <- err
 					} else {
 						message.HandleStore(message.Metadata{
-							Runner:  string(egv1a1.LogComponentGatewayAPIRunner),
-							Message: "xds-ir",
+							Runner:  r.Name(),
+							Message: message.XDSIRMessageName,
 						},
 							key, val, &r.XdsIR.Map)
 					}
@@ -215,8 +215,8 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *re
 				for _, gateway := range result.Gateways {
 					key := utils.NamespacedName(gateway)
 					message.HandleStore(message.Metadata{
-						Runner:  string(egv1a1.LogComponentGatewayAPIRunner),
-						Message: "gateway-status",
+						Runner:  r.Name(),
+						Message: message.GatewayStatusMessageName,
 					},
 						key, &gateway.Status, &r.ProviderResources.GatewayStatuses)
 					delete(statusesToDelete.GatewayStatusKeys, key)
@@ -224,8 +224,8 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *re
 				for _, httpRoute := range result.HTTPRoutes {
 					key := utils.NamespacedName(httpRoute)
 					message.HandleStore(message.Metadata{
-						Runner:  string(egv1a1.LogComponentGatewayAPIRunner),
-						Message: "httproute-status",
+						Runner:  r.Name(),
+						Message: message.HTTPRouteStatusMessageName,
 					},
 						key, &httpRoute.Status, &r.ProviderResources.HTTPRouteStatuses)
 					delete(statusesToDelete.HTTPRouteStatusKeys, key)
@@ -233,8 +233,8 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *re
 				for _, grpcRoute := range result.GRPCRoutes {
 					key := utils.NamespacedName(grpcRoute)
 					message.HandleStore(message.Metadata{
-						Runner:  string(egv1a1.LogComponentGatewayAPIRunner),
-						Message: "grpcroute-status",
+						Runner:  r.Name(),
+						Message: message.GRPCRouteStatusMessageName,
 					},
 						key, &grpcRoute.Status, &r.ProviderResources.GRPCRouteStatuses)
 					delete(statusesToDelete.GRPCRouteStatusKeys, key)
@@ -242,8 +242,8 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *re
 				for _, tlsRoute := range result.TLSRoutes {
 					key := utils.NamespacedName(tlsRoute)
 					message.HandleStore(message.Metadata{
-						Runner:  string(egv1a1.LogComponentGatewayAPIRunner),
-						Message: "tlsroute-status",
+						Runner:  r.Name(),
+						Message: message.TLSRouteStatusMessageName,
 					},
 						key, &tlsRoute.Status, &r.ProviderResources.TLSRouteStatuses)
 					delete(statusesToDelete.TLSRouteStatusKeys, key)
@@ -251,8 +251,8 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *re
 				for _, tcpRoute := range result.TCPRoutes {
 					key := utils.NamespacedName(tcpRoute)
 					message.HandleStore(message.Metadata{
-						Runner:  string(egv1a1.LogComponentGatewayAPIRunner),
-						Message: "tcproute-status",
+						Runner:  r.Name(),
+						Message: message.TCPRouteStatusMessageName,
 					},
 						key, &tcpRoute.Status, &r.ProviderResources.TCPRouteStatuses)
 					delete(statusesToDelete.TCPRouteStatusKeys, key)
@@ -260,8 +260,8 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *re
 				for _, udpRoute := range result.UDPRoutes {
 					key := utils.NamespacedName(udpRoute)
 					message.HandleStore(message.Metadata{
-						Runner:  string(egv1a1.LogComponentGatewayAPIRunner),
-						Message: "udproute-status",
+						Runner:  r.Name(),
+						Message: message.UDPRouteStatusMessageName,
 					},
 						key, &udpRoute.Status, &r.ProviderResources.UDPRouteStatuses)
 					delete(statusesToDelete.UDPRouteStatusKeys, key)
@@ -275,8 +275,8 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *re
 					key := utils.NamespacedName(backendTLSPolicy)
 					if !(reflect.ValueOf(backendTLSPolicy.Status).IsZero()) {
 						message.HandleStore(message.Metadata{
-							Runner:  string(egv1a1.LogComponentGatewayAPIRunner),
-							Message: "backendtlspolicy-status",
+							Runner:  r.Name(),
+							Message: message.BackendTLSPolicyStatusMessageName,
 						},
 							key, &backendTLSPolicy.Status, &r.ProviderResources.BackendTLSPolicyStatuses)
 					}
@@ -287,8 +287,8 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *re
 					key := utils.NamespacedName(clientTrafficPolicy)
 					if !(reflect.ValueOf(clientTrafficPolicy.Status).IsZero()) {
 						message.HandleStore(message.Metadata{
-							Runner:  string(egv1a1.LogComponentGatewayAPIRunner),
-							Message: "clienttrafficpolicy-status",
+							Runner:  r.Name(),
+							Message: message.ClientTrafficPolicyStatusMessageName,
 						},
 							key, &clientTrafficPolicy.Status, &r.ProviderResources.ClientTrafficPolicyStatuses)
 					}
@@ -298,8 +298,8 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *re
 					key := utils.NamespacedName(backendTrafficPolicy)
 					if !(reflect.ValueOf(backendTrafficPolicy.Status).IsZero()) {
 						message.HandleStore(message.Metadata{
-							Runner:  string(egv1a1.LogComponentGatewayAPIRunner),
-							Message: "backendtrafficpolicy-status",
+							Runner:  r.Name(),
+							Message: message.BackendTrafficPolicyStatusMessageName,
 						},
 							key, &backendTrafficPolicy.Status, &r.ProviderResources.BackendTrafficPolicyStatuses)
 					}
@@ -309,8 +309,8 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *re
 					key := utils.NamespacedName(securityPolicy)
 					if !(reflect.ValueOf(securityPolicy.Status).IsZero()) {
 						message.HandleStore(message.Metadata{
-							Runner:  string(egv1a1.LogComponentGatewayAPIRunner),
-							Message: "securitypolicy-status",
+							Runner:  r.Name(),
+							Message: message.SecurityPolicyStatusMessageName,
 						},
 							key, &securityPolicy.Status, &r.ProviderResources.SecurityPolicyStatuses)
 					}
@@ -320,8 +320,8 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *re
 					key := utils.NamespacedName(envoyExtensionPolicy)
 					if !(reflect.ValueOf(envoyExtensionPolicy.Status).IsZero()) {
 						message.HandleStore(message.Metadata{
-							Runner:  string(egv1a1.LogComponentGatewayAPIRunner),
-							Message: "envoyextensionpolicy-status",
+							Runner:  r.Name(),
+							Message: message.EnvoyExtensionPolicyStatusMessageName,
 						},
 							key, &envoyExtensionPolicy.Status, &r.ProviderResources.EnvoyExtensionPolicyStatuses)
 					}
@@ -331,8 +331,8 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *re
 					key := utils.NamespacedName(backend)
 					if !(reflect.ValueOf(backend.Status).IsZero()) {
 						message.HandleStore(message.Metadata{
-							Runner:  string(egv1a1.LogComponentGatewayAPIRunner),
-							Message: "backend-status",
+							Runner:  r.Name(),
+							Message: message.BackendStatusMessageName,
 						},
 							key, &backend.Status, &r.ProviderResources.BackendStatuses)
 					}
@@ -346,8 +346,8 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *re
 					if !(reflect.ValueOf(extServerPolicy.Object["status"]).IsZero()) {
 						policyStatus := unstructuredToPolicyStatus(extServerPolicy.Object["status"].(map[string]any))
 						message.HandleStore(message.Metadata{
-							Runner:  string(egv1a1.LogComponentGatewayAPIRunner),
-							Message: "backend-status",
+							Runner:  r.Name(),
+							Message: message.ExtensionServerPoliciesStatusMessageName,
 						},
 							key, &policyStatus, &r.ProviderResources.ExtensionPolicyStatuses)
 					}

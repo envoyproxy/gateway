@@ -30,7 +30,7 @@ func (r *gatewayAPIReconciler) subscribeAndUpdateStatus(ctx context.Context, ext
 	// GatewayClass object status updater
 	go func() {
 		message.HandleSubscription(
-			message.Metadata{Runner: string(egv1a1.LogComponentProviderRunner), Message: "gatewayclass-status"},
+			message.Metadata{Runner: string(egv1a1.LogComponentProviderRunner), Message: message.GatewayClassStatusMessageName},
 			r.resources.GatewayClassStatuses.Subscribe(ctx),
 			func(update message.Update[types.NamespacedName, *gwapiv1.GatewayClassStatus], errChan chan error) {
 				// skip delete updates.
@@ -59,7 +59,7 @@ func (r *gatewayAPIReconciler) subscribeAndUpdateStatus(ctx context.Context, ext
 	// Gateway object status updater
 	go func() {
 		message.HandleSubscription(
-			message.Metadata{Runner: string(egv1a1.LogComponentProviderRunner), Message: "gateway-status"},
+			message.Metadata{Runner: string(egv1a1.LogComponentProviderRunner), Message: message.GatewayStatusMessageName},
 			r.resources.GatewayStatuses.Subscribe(ctx),
 			func(update message.Update[types.NamespacedName, *gwapiv1.GatewayStatus], errChan chan error) {
 				// skip delete updates.
@@ -84,7 +84,7 @@ func (r *gatewayAPIReconciler) subscribeAndUpdateStatus(ctx context.Context, ext
 	// HTTPRoute object status updater
 	go func() {
 		message.HandleSubscription(
-			message.Metadata{Runner: string(egv1a1.LogComponentProviderRunner), Message: "httproute-status"},
+			message.Metadata{Runner: string(egv1a1.LogComponentProviderRunner), Message: message.HTTPRouteStatusMessageName},
 			r.resources.HTTPRouteStatuses.Subscribe(ctx),
 			func(update message.Update[types.NamespacedName, *gwapiv1.HTTPRouteStatus], errChan chan error) {
 				// skip delete updates.
@@ -115,7 +115,7 @@ func (r *gatewayAPIReconciler) subscribeAndUpdateStatus(ctx context.Context, ext
 
 	// GRPCRoute object status updater
 	go func() {
-		message.HandleSubscription(message.Metadata{Runner: string(egv1a1.LogComponentProviderRunner), Message: "grpcroute-status"}, r.resources.GRPCRouteStatuses.Subscribe(ctx),
+		message.HandleSubscription(message.Metadata{Runner: string(egv1a1.LogComponentProviderRunner), Message: message.GRPCRouteStatusMessageName}, r.resources.GRPCRouteStatuses.Subscribe(ctx),
 			func(update message.Update[types.NamespacedName, *gwapiv1.GRPCRouteStatus], errChan chan error) {
 				// skip delete updates.
 				if update.Delete {
@@ -146,7 +146,7 @@ func (r *gatewayAPIReconciler) subscribeAndUpdateStatus(ctx context.Context, ext
 	// TLSRoute object status updater
 	go func() {
 		message.HandleSubscription(
-			message.Metadata{Runner: string(egv1a1.LogComponentProviderRunner), Message: "tlsroute-status"},
+			message.Metadata{Runner: string(egv1a1.LogComponentProviderRunner), Message: message.TLSRouteStatusMessageName},
 			r.resources.TLSRouteStatuses.Subscribe(ctx),
 			func(update message.Update[types.NamespacedName, *gwapiv1a2.TLSRouteStatus], errChan chan error) {
 				// skip delete updates.
@@ -178,7 +178,7 @@ func (r *gatewayAPIReconciler) subscribeAndUpdateStatus(ctx context.Context, ext
 	// TCPRoute object status updater
 	go func() {
 		message.HandleSubscription(
-			message.Metadata{Runner: string(egv1a1.LogComponentProviderRunner), Message: "tcproute-status"},
+			message.Metadata{Runner: string(egv1a1.LogComponentProviderRunner), Message: message.TCPRouteStatusMessageName},
 			r.resources.TCPRouteStatuses.Subscribe(ctx),
 			func(update message.Update[types.NamespacedName, *gwapiv1a2.TCPRouteStatus], errChan chan error) {
 				// skip delete updates.
@@ -210,7 +210,7 @@ func (r *gatewayAPIReconciler) subscribeAndUpdateStatus(ctx context.Context, ext
 	// UDPRoute object status updater
 	go func() {
 		message.HandleSubscription(
-			message.Metadata{Runner: string(egv1a1.LogComponentProviderRunner), Message: "udproute-status"},
+			message.Metadata{Runner: string(egv1a1.LogComponentProviderRunner), Message: message.UDPRouteStatusMessageName},
 			r.resources.UDPRouteStatuses.Subscribe(ctx),
 			func(update message.Update[types.NamespacedName, *gwapiv1a2.UDPRouteStatus], errChan chan error) {
 				// skip delete updates.
@@ -242,7 +242,7 @@ func (r *gatewayAPIReconciler) subscribeAndUpdateStatus(ctx context.Context, ext
 	// EnvoyPatchPolicy object status updater
 	go func() {
 		message.HandleSubscription(
-			message.Metadata{Runner: string(egv1a1.LogComponentProviderRunner), Message: "envoypatchpolicy-status"},
+			message.Metadata{Runner: string(egv1a1.LogComponentProviderRunner), Message: message.EnvoyPatchPolicyStatusMessageName},
 			r.resources.EnvoyPatchPolicyStatuses.Subscribe(ctx),
 			func(update message.Update[types.NamespacedName, *gwapiv1a2.PolicyStatus], errChan chan error) {
 				// skip delete updates.
@@ -274,7 +274,7 @@ func (r *gatewayAPIReconciler) subscribeAndUpdateStatus(ctx context.Context, ext
 	// ClientTrafficPolicy object status updater
 	go func() {
 		message.HandleSubscription(
-			message.Metadata{Runner: string(egv1a1.LogComponentProviderRunner), Message: "clienttrafficpolicy-status"},
+			message.Metadata{Runner: string(egv1a1.LogComponentProviderRunner), Message: message.ClientTrafficPolicyStatusMessageName},
 			r.resources.ClientTrafficPolicyStatuses.Subscribe(ctx),
 			func(update message.Update[types.NamespacedName, *gwapiv1a2.PolicyStatus], errChan chan error) {
 				// skip delete updates.
@@ -306,7 +306,7 @@ func (r *gatewayAPIReconciler) subscribeAndUpdateStatus(ctx context.Context, ext
 	// BackendTrafficPolicy object status updater
 	go func() {
 		message.HandleSubscription(
-			message.Metadata{Runner: string(egv1a1.LogComponentProviderRunner), Message: "backendtrafficpolicy-status"},
+			message.Metadata{Runner: string(egv1a1.LogComponentProviderRunner), Message: message.BackendTrafficPolicyStatusMessageName},
 			r.resources.BackendTrafficPolicyStatuses.Subscribe(ctx),
 			func(update message.Update[types.NamespacedName, *gwapiv1a2.PolicyStatus], errChan chan error) {
 				// skip delete updates.
@@ -338,7 +338,7 @@ func (r *gatewayAPIReconciler) subscribeAndUpdateStatus(ctx context.Context, ext
 	// SecurityPolicy object status updater
 	go func() {
 		message.HandleSubscription(
-			message.Metadata{Runner: string(egv1a1.LogComponentProviderRunner), Message: "securitypolicy-status"},
+			message.Metadata{Runner: string(egv1a1.LogComponentProviderRunner), Message: message.SecurityPolicyStatusMessageName},
 			r.resources.SecurityPolicyStatuses.Subscribe(ctx),
 			func(update message.Update[types.NamespacedName, *gwapiv1a2.PolicyStatus], errChan chan error) {
 				// skip delete updates.
@@ -369,7 +369,7 @@ func (r *gatewayAPIReconciler) subscribeAndUpdateStatus(ctx context.Context, ext
 
 	// BackendTLSPolicy object status updater
 	go func() {
-		message.HandleSubscription(message.Metadata{Runner: string(egv1a1.LogComponentProviderRunner), Message: "backendtlspolicy-status"}, r.resources.BackendTLSPolicyStatuses.Subscribe(ctx),
+		message.HandleSubscription(message.Metadata{Runner: string(egv1a1.LogComponentProviderRunner), Message: message.BackendTLSPolicyStatusMessageName}, r.resources.BackendTLSPolicyStatuses.Subscribe(ctx),
 			func(update message.Update[types.NamespacedName, *gwapiv1a2.PolicyStatus], errChan chan error) {
 				// skip delete updates.
 				if update.Delete {
@@ -400,7 +400,7 @@ func (r *gatewayAPIReconciler) subscribeAndUpdateStatus(ctx context.Context, ext
 	// EnvoyExtensionPolicy object status updater
 	go func() {
 		message.HandleSubscription(
-			message.Metadata{Runner: string(egv1a1.LogComponentProviderRunner), Message: "envoyextensionpolicy-status"},
+			message.Metadata{Runner: string(egv1a1.LogComponentProviderRunner), Message: message.EnvoyExtensionPolicyStatusMessageName},
 			r.resources.EnvoyExtensionPolicyStatuses.Subscribe(ctx),
 			func(update message.Update[types.NamespacedName, *gwapiv1a2.PolicyStatus], errChan chan error) {
 				// skip delete updates.
@@ -432,7 +432,7 @@ func (r *gatewayAPIReconciler) subscribeAndUpdateStatus(ctx context.Context, ext
 	// Backend object status updater
 	go func() {
 		message.HandleSubscription(
-			message.Metadata{Runner: string(egv1a1.LogComponentProviderRunner), Message: "backend-status"},
+			message.Metadata{Runner: string(egv1a1.LogComponentProviderRunner), Message: message.BackendStatusMessageName},
 			r.resources.BackendStatuses.Subscribe(ctx),
 			func(update message.Update[types.NamespacedName, *egv1a1.BackendStatus], errChan chan error) {
 				// skip delete updates.
@@ -465,7 +465,7 @@ func (r *gatewayAPIReconciler) subscribeAndUpdateStatus(ctx context.Context, ext
 		// ExtensionServerPolicy object status updater
 		go func() {
 			message.HandleSubscription(
-				message.Metadata{Runner: string(egv1a1.LogComponentProviderRunner), Message: "extensionserverpolicies-status"},
+				message.Metadata{Runner: string(egv1a1.LogComponentProviderRunner), Message: message.ExtensionServerPoliciesStatusMessageName},
 				r.resources.ExtensionPolicyStatuses.Subscribe(ctx),
 				func(update message.Update[message.NamespacedNameAndGVK, *gwapiv1a2.PolicyStatus], errChan chan error) {
 					// skip delete updates.

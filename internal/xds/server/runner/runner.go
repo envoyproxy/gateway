@@ -187,7 +187,7 @@ func registerServer(srv serverv3.Server, g *grpc.Server) {
 }
 
 func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *xdstypes.ResourceVersionTable]) {
-	message.HandleSubscription(message.Metadata{Runner: string(egv1a1.LogComponentXdsServerRunner), Message: "xds"}, sub,
+	message.HandleSubscription(message.Metadata{Runner: r.Name(), Message: message.XDSMessageName}, sub,
 		func(update message.Update[string, *xdstypes.ResourceVersionTable], errChan chan error) {
 			key := update.Key
 			val := update.Value
