@@ -1,0 +1,23 @@
+- clusterName: direct-route-dest
+  endpoints:
+  - lbEndpoints:
+    - endpoint:
+        address:
+          socketAddress:
+            address: 1.2.3.4
+            portValue: 50000
+      loadBalancingWeight: 1
+    loadBalancingWeight: 1
+    locality:
+      region: direct-route-dest/backend/0
+- clusterName: tracing-0
+  endpoints:
+  - lbEndpoints:
+    - endpoint:
+        address:
+          pipe:
+            path: /var/run/envoy-uds/dsd.socket
+      loadBalancingWeight: 1
+    loadBalancingWeight: 1
+    locality:
+      region: tracing-0/backend/0

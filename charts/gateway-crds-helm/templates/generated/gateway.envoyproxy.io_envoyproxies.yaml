@@ -608,12 +608,20 @@ spec:
                                   Image specifies the EnvoyProxy container image to be used including a tag, instead of the default image.
                                   This field is mutually exclusive with ImageRepository.
                                 type: string
+                                x-kubernetes-validations:
+                                - message: Image must include a tag and allowed characters
+                                    only (e.g., 'repo:tag').
+                                  rule: self.matches('^[a-zA-Z0-9._/-]+:[a-zA-Z0-9._-]+$')
                               imageRepository:
                                 description: |-
                                   ImageRepository specifies the container image repository to be used without specifying a tag.
                                   The default tag will be used.
                                   This field is mutually exclusive with Image.
                                 type: string
+                                x-kubernetes-validations:
+                                - message: ImageRepository must contain only allowed
+                                    characters and must not include a tag or any colons.
+                                  rule: self.matches('^[a-zA-Z0-9._/-]+$')
                               resources:
                                 description: |-
                                   Resources required by this container.
@@ -4445,12 +4453,20 @@ spec:
                                   Image specifies the EnvoyProxy container image to be used including a tag, instead of the default image.
                                   This field is mutually exclusive with ImageRepository.
                                 type: string
+                                x-kubernetes-validations:
+                                - message: Image must include a tag and allowed characters
+                                    only (e.g., 'repo:tag').
+                                  rule: self.matches('^[a-zA-Z0-9._/-]+:[a-zA-Z0-9._-]+$')
                               imageRepository:
                                 description: |-
                                   ImageRepository specifies the container image repository to be used without specifying a tag.
                                   The default tag will be used.
                                   This field is mutually exclusive with Image.
                                 type: string
+                                x-kubernetes-validations:
+                                - message: ImageRepository must contain only allowed
+                                    characters and must not include a tag or any colons.
+                                  rule: self.matches('^[a-zA-Z0-9._/-]+$')
                               resources:
                                 description: |-
                                   Resources required by this container.
