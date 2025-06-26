@@ -18340,7 +18340,7 @@ spec:
                         properties:
                           force:
                             description: |-
-                              ForceLocalZone defines override configuration for forcing all traffic to stay local instead of the default behavior
+                              ForceLocalZone defines override configuration for forcing all traffic to stay within the local zone instead of the default behavior
                               which maintains equal distribution among upstream endpoints while sending as much traffic as possible locally.
                             properties:
                               minEndpointsInZoneThreshold:
@@ -21992,7 +21992,7 @@ spec:
                                   properties:
                                     force:
                                       description: |-
-                                        ForceLocalZone defines override configuration for forcing all traffic to stay local instead of the default behavior
+                                        ForceLocalZone defines override configuration for forcing all traffic to stay within the local zone instead of the default behavior
                                         which maintains equal distribution among upstream endpoints while sending as much traffic as possible locally.
                                       properties:
                                         minEndpointsInZoneThreshold:
@@ -35020,7 +35020,7 @@ spec:
                                                     properties:
                                                       force:
                                                         description: |-
-                                                          ForceLocalZone defines override configuration for forcing all traffic to stay local instead of the default behavior
+                                                          ForceLocalZone defines override configuration for forcing all traffic to stay within the local zone instead of the default behavior
                                                           which maintains equal distribution among upstream endpoints while sending as much traffic as possible locally.
                                                         properties:
                                                           minEndpointsInZoneThreshold:
@@ -36092,7 +36092,7 @@ spec:
                                                     properties:
                                                       force:
                                                         description: |-
-                                                          ForceLocalZone defines override configuration for forcing all traffic to stay local instead of the default behavior
+                                                          ForceLocalZone defines override configuration for forcing all traffic to stay within the local zone instead of the default behavior
                                                           which maintains equal distribution among upstream endpoints while sending as much traffic as possible locally.
                                                         properties:
                                                           minEndpointsInZoneThreshold:
@@ -37248,7 +37248,7 @@ spec:
                                               properties:
                                                 force:
                                                   description: |-
-                                                    ForceLocalZone defines override configuration for forcing all traffic to stay local instead of the default behavior
+                                                    ForceLocalZone defines override configuration for forcing all traffic to stay within the local zone instead of the default behavior
                                                     which maintains equal distribution among upstream endpoints while sending as much traffic as possible locally.
                                                   properties:
                                                     minEndpointsInZoneThreshold:
@@ -38323,7 +38323,7 @@ spec:
                                         properties:
                                           force:
                                             description: |-
-                                              ForceLocalZone defines override configuration for forcing all traffic to stay local instead of the default behavior
+                                              ForceLocalZone defines override configuration for forcing all traffic to stay within the local zone instead of the default behavior
                                               which maintains equal distribution among upstream endpoints while sending as much traffic as possible locally.
                                             properties:
                                               minEndpointsInZoneThreshold:
@@ -40209,7 +40209,7 @@ spec:
                                     properties:
                                       force:
                                         description: |-
-                                          ForceLocalZone defines override configuration for forcing all traffic to stay local instead of the default behavior
+                                          ForceLocalZone defines override configuration for forcing all traffic to stay within the local zone instead of the default behavior
                                           which maintains equal distribution among upstream endpoints while sending as much traffic as possible locally.
                                         properties:
                                           minEndpointsInZoneThreshold:
@@ -41176,7 +41176,7 @@ spec:
                                     properties:
                                       force:
                                         description: |-
-                                          ForceLocalZone defines override configuration for forcing all traffic to stay local instead of the default behavior
+                                          ForceLocalZone defines override configuration for forcing all traffic to stay within the local zone instead of the default behavior
                                           which maintains equal distribution among upstream endpoints while sending as much traffic as possible locally.
                                         properties:
                                           minEndpointsInZoneThreshold:
@@ -42349,7 +42349,7 @@ spec:
                                           properties:
                                             force:
                                               description: |-
-                                                ForceLocalZone defines override configuration for forcing all traffic to stay local instead of the default behavior
+                                                ForceLocalZone defines override configuration for forcing all traffic to stay within the local zone instead of the default behavior
                                                 which maintains equal distribution among upstream endpoints while sending as much traffic as possible locally.
                                               properties:
                                                 minEndpointsInZoneThreshold:
@@ -43511,7 +43511,7 @@ spec:
                                     properties:
                                       force:
                                         description: |-
-                                          ForceLocalZone defines override configuration for forcing all traffic to stay local instead of the default behavior
+                                          ForceLocalZone defines override configuration for forcing all traffic to stay within the local zone instead of the default behavior
                                           which maintains equal distribution among upstream endpoints while sending as much traffic as possible locally.
                                         properties:
                                           minEndpointsInZoneThreshold:

@@ -1973,8 +1973,8 @@ _Appears in:_
 
 
 
-ForceLocalZone defines override configuration for forcing all traffic to stay local vs Envoy default behavior
-which maintains equal distribution among upstreams while sending as much traffic as possible locally.
+ForceLocalZone defines override configuration for forcing all traffic to stay within the local zone instead of the default behavior
+which maintains equal distribution among upstream endpoints while sending as much traffic as possible locally.
 
 _Appears in:_
 - [PreferLocalZone](#preferlocalzone)
@@ -5087,7 +5087,7 @@ _Appears in:_
 
 
 
-ZoneAware defines the configuration related to the distribution of requests between localities.
+ZoneAware defines the configuration related to the distribution of requests between locality zones.
 
 _Appears in:_
 - [LoadBalancer](#loadbalancer)

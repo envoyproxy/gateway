@@ -143,7 +143,7 @@ type SlowStart struct {
 	// TODO: Add support for non-linear traffic increases based on user usage.
 }
 
-// ZoneAware defines the configuration related to the distribution of requests between localities.
+// ZoneAware defines the configuration related to the distribution of requests between locality zones.
 type ZoneAware struct {
 	// PreferLocalZone configures zone-aware routing to prefer sending traffic to the local locality zone.
 	//
@@ -154,7 +154,7 @@ type ZoneAware struct {
 
 // PreferLocalZone configures zone-aware routing to prefer sending traffic to the local locality zone.
 type PreferLocalZone struct {
-	// ForceLocalZone defines override configuration for forcing all traffic to stay local instead of the default behavior
+	// ForceLocalZone defines override configuration for forcing all traffic to stay within the local zone instead of the default behavior
 	// which maintains equal distribution among upstream endpoints while sending as much traffic as possible locally.
 	//
 	// +optional
@@ -168,8 +168,8 @@ type PreferLocalZone struct {
 	MinEndpointsThreshold *uint64 `json:"minEndpointsCount,omitempty"`
 }
 
-// ForceLocalZone defines override configuration for forcing all traffic to stay local vs Envoy default behavior
-// which maintains equal distribution among upstreams while sending as much traffic as possible locally.
+// ForceLocalZone defines override configuration for forcing all traffic to stay within the local zone instead of the default behavior
+// which maintains equal distribution among upstream endpoints while sending as much traffic as possible locally.
 type ForceLocalZone struct {
 	// MinEndpointsInZoneThreshold is the minimum number of upstream endpoints in the local zone required to honor the forceLocalZone
 	// override. This is useful for protecting zones with fewer endpoints.
