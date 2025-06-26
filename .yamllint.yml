@@ -1,0 +1,22 @@
+---
+extends: default
+
+rules:
+  line-length:
+    max: 120
+    level: warning
+  comments:
+    min-spaces-from-content: 1
+  indentation:
+    spaces: 2
+  truthy:
+    allowed-values: ['true', 'false', 'on', 'off']
+  document-start: disable
+  new-line-at-end-of-file: disable
+
+ignore: |
+  site/node_modules/
+  site/public/
+  site/resources/
+  *.min.yml
+  *.min.yaml
