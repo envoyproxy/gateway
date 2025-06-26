@@ -35,13 +35,13 @@ func SetTranslationErrorForPolicyAncestors(policyStatus *gwapiv1a2.PolicyStatus,
 }
 
 // SetAcceptedForPolicyAncestors sets accepted conditions for each ancestor reference if it is unset.
-func SetAcceptedForPolicyAncestors(policyStatus *gwapiv1a2.PolicyStatus, ancestorRefs []gwapiv1a2.ParentReference, controllerName string) {
+func SetAcceptedForPolicyAncestors(policyStatus *gwapiv1a2.PolicyStatus, ancestorRefs []gwapiv1a2.ParentReference, controllerName string, generation int64) {
 	for _, ancestorRef := range ancestorRefs {
-		setAcceptedForPolicyAncestor(policyStatus, ancestorRef, controllerName)
+		setAcceptedForPolicyAncestor(policyStatus, ancestorRef, controllerName, generation)
 	}
 }
 
-func setAcceptedForPolicyAncestor(policyStatus *gwapiv1a2.PolicyStatus, ancestorRef gwapiv1a2.ParentReference, controllerName string) {
+func setAcceptedForPolicyAncestor(policyStatus *gwapiv1a2.PolicyStatus, ancestorRef gwapiv1a2.ParentReference, controllerName string, generation int64) {
 	// Return early if Accepted condition is already set for specific ancestor.
 	for _, ancestor := range policyStatus.Ancestors {
 		if string(ancestor.ControllerName) == controllerName && cmp.Equal(ancestor.AncestorRef, ancestorRef) {
@@ -55,7 +55,7 @@ func setAcceptedForPolicyAncestor(policyStatus *gwapiv1a2.PolicyStatus, ancestor
 
 	message := "Policy has been accepted."
 	SetConditionForPolicyAncestor(policyStatus, ancestorRef, controllerName,
-		gwapiv1a2.PolicyConditionAccepted, metav1.ConditionTrue, gwapiv1a2.PolicyReasonAccepted, message, 0)
+		gwapiv1a2.PolicyConditionAccepted, metav1.ConditionTrue, gwapiv1a2.PolicyReasonAccepted, message, generation)
 }
 
 func SetConditionForPolicyAncestors(policyStatus *gwapiv1a2.PolicyStatus, ancestorRefs []gwapiv1a2.ParentReference, controllerName string,
