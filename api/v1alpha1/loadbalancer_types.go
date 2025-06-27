@@ -165,7 +165,7 @@ type PreferLocalZone struct {
 	//
 	// +optional
 	// +notImplementedHide
-	MinEndpointsThreshold *uint64 `json:"minEndpointsCount,omitempty"`
+	MinEndpointsThreshold *uint64 `json:"minEndpointsThreshold,omitempty"`
 }
 
 // ForceLocalZone defines override configuration for forcing all traffic to stay within the local zone instead of the default behavior

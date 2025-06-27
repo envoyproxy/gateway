@@ -1038,7 +1038,7 @@ spec:
                                 format: int32
                                 type: integer
                             type: object
-                          minEndpointsCount:
+                          minEndpointsThreshold:
                             description: MinEndpointsThreshold is the minimum number
                               of total upstream endpoints across all zones required
                               to enable zone-aware routing.
@@ -4690,7 +4690,7 @@ spec:
                                           format: int32
                                           type: integer
                                       type: object
-                                    minEndpointsCount:
+                                    minEndpointsThreshold:
                                       description: MinEndpointsThreshold is the minimum
                                         number of total upstream endpoints across
                                         all zones required to enable zone-aware routing.
@@ -17718,7 +17718,7 @@ spec:
                                                             format: int32
                                                             type: integer
                                                         type: object
-                                                      minEndpointsCount:
+                                                      minEndpointsThreshold:
                                                         description: MinEndpointsThreshold
                                                           is the minimum number of
                                                           total upstream endpoints
@@ -18790,7 +18790,7 @@ spec:
                                                             format: int32
                                                             type: integer
                                                         type: object
-                                                      minEndpointsCount:
+                                                      minEndpointsThreshold:
                                                         description: MinEndpointsThreshold
                                                           is the minimum number of
                                                           total upstream endpoints
@@ -19946,7 +19946,7 @@ spec:
                                                       format: int32
                                                       type: integer
                                                   type: object
-                                                minEndpointsCount:
+                                                minEndpointsThreshold:
                                                   description: MinEndpointsThreshold
                                                     is the minimum number of total
                                                     upstream endpoints across all
@@ -21021,7 +21021,7 @@ spec:
                                                 format: int32
                                                 type: integer
                                             type: object
-                                          minEndpointsCount:
+                                          minEndpointsThreshold:
                                             description: MinEndpointsThreshold is
                                               the minimum number of total upstream
                                               endpoints across all zones required
@@ -22907,7 +22907,7 @@ spec:
                                             format: int32
                                             type: integer
                                         type: object
-                                      minEndpointsCount:
+                                      minEndpointsThreshold:
                                         description: MinEndpointsThreshold is the
                                           minimum number of total upstream endpoints
                                           across all zones required to enable zone-aware
@@ -23874,7 +23874,7 @@ spec:
                                             format: int32
                                             type: integer
                                         type: object
-                                      minEndpointsCount:
+                                      minEndpointsThreshold:
                                         description: MinEndpointsThreshold is the
                                           minimum number of total upstream endpoints
                                           across all zones required to enable zone-aware
@@ -25047,7 +25047,7 @@ spec:
                                                   format: int32
                                                   type: integer
                                               type: object
-                                            minEndpointsCount:
+                                            minEndpointsThreshold:
                                               description: MinEndpointsThreshold is
                                                 the minimum number of total upstream
                                                 endpoints across all zones required
@@ -26209,7 +26209,7 @@ spec:
                                             format: int32
                                             type: integer
                                         type: object
-                                      minEndpointsCount:
+                                      minEndpointsThreshold:
                                         description: MinEndpointsThreshold is the
                                           minimum number of total upstream endpoints
                                           across all zones required to enable zone-aware
