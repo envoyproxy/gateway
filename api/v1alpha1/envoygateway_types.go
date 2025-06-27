@@ -505,6 +505,7 @@ type RedisTLSSettings struct {
 // RateLimitRedisSettings defines the configuration for connecting to redis database.
 type RateLimitRedisSettings struct {
 	// URL of the Redis Database.
+	// This can reference a single Redis host or a comma delimited list for Sentinel and Cluster deployments of Redis.
 	URL string `json:"url"`
 
 	// TLS defines TLS configuration for connecting to redis database.
