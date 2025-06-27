@@ -79,3 +79,7 @@ adopters:
     logo: "/logos/the-trade-desk.png"
     url: "https://www.thetradedesk.com"
     description: "The Trade Desk is using Envoy Gateway to handle global scale load balancing within Kubernetes via GatewayAPI."
+  - name: "Verve"
+    logo: "/logos/verve.png"
+    url: "https://www.verve.com"
+    description: "Verve is using Envoy Gateway for VLB+, a cost-effective Load Balancer optimized for ad-tech."
