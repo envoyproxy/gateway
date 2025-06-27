@@ -327,7 +327,7 @@ func processRouteTimeout(irRoute *ir.HTTPRoute, rule gwapiv1.HTTPRouteRule) {
 
 		// Also set the IR Route Timeout to the backend request timeout
 		// until we introduce retries, then set it to per try timeout
-		if rule.Timeouts.BackendRequest != nil {
+		if rule.Timeouts.BackendRequest != nil && rule.Retry == nil {
 			d, err := time.ParseDuration(string(*rule.Timeouts.BackendRequest))
 			if err != nil {
 				d, _ = time.ParseDuration(HTTPRequestTimeout)
