@@ -323,7 +323,6 @@ xdsIR:
           retryOn:
             httpStatusCodes:
             - 500
-        timeout: 3s
         traffic:
           retry:
             numAttemptsPerPriority: 1
