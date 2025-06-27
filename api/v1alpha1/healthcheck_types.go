@@ -99,6 +99,13 @@ type ActiveHealthCheck struct {
 	// +optional
 	Interval *metav1.Duration `json:"interval"`
 
+	// InitialJitter defines the maximum time Envoy will wait before the first health check.
+	// Envoy will randomly select a value between 0 and the initial jitter value.
+	//
+	// +kubebuilder:validation:Format=duration
+	// +optional
+	InitialJitter *metav1.Duration `json:"initialJitter,omitempty"`
+
 	// UnhealthyThreshold defines the number of unhealthy health checks required before a backend host is marked unhealthy.
 	//
 	// +kubebuilder:validation:Minimum=1

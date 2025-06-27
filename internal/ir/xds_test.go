@@ -1581,6 +1581,27 @@ func TestValidateHealthCheck(t *testing.T) {
 			want: ErrHealthCheckIntervalInvalid,
 		},
 		{
+			name: "invalid initial jitter",
+			input: HealthCheck{
+				&ActiveHealthCheck{
+					Timeout:            &metav1.Duration{Duration: time.Second},
+					Interval:           &metav1.Duration{Duration: time.Second},
+					InitialJitter:      &metav1.Duration{Duration: time.Duration(-1)},
+					UnhealthyThreshold: ptr.To[uint32](3),
+					HealthyThreshold:   ptr.To[uint32](3),
+					HTTP: &HTTPHealthChecker{
+						Host:             "*",
+						Path:             "/healthz",
+						Method:           ptr.To(http.MethodGet),
+						ExpectedStatuses: []HTTPStatus{200, 400},
+					},
+				},
+				&OutlierDetection{},
+				ptr.To[uint32](10),
+			},
+			want: ErrHealthCheckInitialJitterInvalid,
+		},
+		{
 			name: "invalid unhealthy threshold",
 			input: HealthCheck{
 				&ActiveHealthCheck{

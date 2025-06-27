@@ -672,6 +672,12 @@ spec:
                         required:
                         - path
                         type: object
+                      initialJitter:
+                        description: |-
+                          InitialJitter defines the maximum time Envoy will wait before the first health check.
+                          Envoy will randomly select a value between 0 and the initial jitter value.
+                        format: duration
+                        type: string
                       interval:
                         default: 3s
                         description: Interval defines the time between active health
@@ -4343,6 +4349,12 @@ spec:
                                   required:
                                   - path
                                   type: object
+                                initialJitter:
+                                  description: |-
+                                    InitialJitter defines the maximum time Envoy will wait before the first health check.
+                                    Envoy will randomly select a value between 0 and the initial jitter value.
+                                  format: duration
+                                  type: string
                                 interval:
                                   default: 3s
                                   description: Interval defines the time between active
@@ -17334,6 +17346,12 @@ spec:
                                                     required:
                                                     - path
                                                     type: object
+                                                  initialJitter:
+                                                    description: |-
+                                                      InitialJitter defines the maximum time Envoy will wait before the first health check.
+                                                      Envoy will randomly select a value between 0 and the initial jitter value.
+                                                    format: duration
+                                                    type: string
                                                   interval:
                                                     default: 3s
                                                     description: Interval defines
@@ -18406,6 +18424,12 @@ spec:
                                                     required:
                                                     - path
                                                     type: object
+                                                  initialJitter:
+                                                    description: |-
+                                                      InitialJitter defines the maximum time Envoy will wait before the first health check.
+                                                      Envoy will randomly select a value between 0 and the initial jitter value.
+                                                    format: duration
+                                                    type: string
                                                   interval:
                                                     default: 3s
                                                     description: Interval defines
@@ -19581,6 +19605,12 @@ spec:
                                               required:
                                               - path
                                               type: object
+                                            initialJitter:
+                                              description: |-
+                                                InitialJitter defines the maximum time Envoy will wait before the first health check.
+                                                Envoy will randomly select a value between 0 and the initial jitter value.
+                                              format: duration
+                                              type: string
                                             interval:
                                               default: 3s
                                               description: Interval defines the time
@@ -20658,6 +20688,12 @@ spec:
                                         required:
                                         - path
                                         type: object
+                                      initialJitter:
+                                        description: |-
+                                          InitialJitter defines the maximum time Envoy will wait before the first health check.
+                                          Envoy will randomly select a value between 0 and the initial jitter value.
+                                        format: duration
+                                        type: string
                                       interval:
                                         default: 3s
                                         description: Interval defines the time between
@@ -22553,6 +22589,12 @@ spec:
                                     required:
                                     - path
                                     type: object
+                                  initialJitter:
+                                    description: |-
+                                      InitialJitter defines the maximum time Envoy will wait before the first health check.
+                                      Envoy will randomly select a value between 0 and the initial jitter value.
+                                    format: duration
+                                    type: string
                                   interval:
                                     default: 3s
                                     description: Interval defines the time between
@@ -23520,6 +23562,12 @@ spec:
                                     required:
                                     - path
                                     type: object
+                                  initialJitter:
+                                    description: |-
+                                      InitialJitter defines the maximum time Envoy will wait before the first health check.
+                                      Envoy will randomly select a value between 0 and the initial jitter value.
+                                    format: duration
+                                    type: string
                                   interval:
                                     default: 3s
                                     description: Interval defines the time between
@@ -24683,6 +24731,12 @@ spec:
                                           required:
                                           - path
                                           type: object
+                                        initialJitter:
+                                          description: |-
+                                            InitialJitter defines the maximum time Envoy will wait before the first health check.
+                                            Envoy will randomly select a value between 0 and the initial jitter value.
+                                          format: duration
+                                          type: string
                                         interval:
                                           default: 3s
                                           description: Interval defines the time between
@@ -25855,6 +25909,12 @@ spec:
                                     required:
                                     - path
                                     type: object
+                                  initialJitter:
+                                    description: |-
+                                      InitialJitter defines the maximum time Envoy will wait before the first health check.
+                                      Envoy will randomly select a value between 0 and the initial jitter value.
+                                    format: duration
+                                    type: string
                                   interval:
                                     default: 3s
                                     description: Interval defines the time between

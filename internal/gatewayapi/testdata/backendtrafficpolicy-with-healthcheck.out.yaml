@@ -189,6 +189,41 @@ backendTrafficPolicies:
   kind: BackendTrafficPolicy
   metadata:
     creationTimestamp: null
+    name: policy-for-route-5
+    namespace: default
+  spec:
+    healthCheck:
+      active:
+        healthyThreshold: 2
+        initialJitter: 15s
+        interval: 30s
+        tcp: {}
+        timeout: 10s
+        type: TCP
+        unhealthyThreshold: 2
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: httproute-5
+  status:
+    ancestors:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: gateway-2
+        namespace: envoy-gateway
+        sectionName: http
+      conditions:
+      - lastTransitionTime: null
+        message: Policy has been accepted.
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: BackendTrafficPolicy
+  metadata:
+    creationTimestamp: null
     name: policy-for-grpc-route
     namespace: default
   spec:
@@ -366,7 +401,7 @@ gateways:
       protocol: HTTP
   status:
     listeners:
-    - attachedRoutes: 4
+    - attachedRoutes: 5
       conditions:
       - lastTransitionTime: null
         message: Sending translated listener configuration to the data plane
@@ -624,6 +659,44 @@ httpRoutes:
       matches:
       - path:
           value: /v2
+  status:
+    parents:
+    - conditions:
+      - lastTransitionTime: null
+        message: Route is accepted
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Resolved all the Object references for the Route
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+      parentRef:
+        name: gateway-2
+        namespace: envoy-gateway
+        sectionName: http
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    creationTimestamp: null
+    name: httproute-5
+    namespace: default
+  spec:
+    hostnames:
+    - gateway.envoyproxy.io
+    parentRefs:
+    - name: gateway-2
+      namespace: envoy-gateway
+      sectionName: http
+    rules:
+    - backendRefs:
+      - name: service-4
+        port: 8080
+      matches:
+      - path:
+          value: /v5
   status:
     parents:
     - conditions:
@@ -985,6 +1058,44 @@ xdsIR:
               interval: 5s
               timeout: 1s
               unhealthyThreshold: 3
+      - destination:
+          metadata:
+            kind: HTTPRoute
+            name: httproute-5
+            namespace: default
+          name: httproute/default/httproute-5/rule/0
+          settings:
+          - addressType: IP
+            endpoints:
+            - host: 7.7.7.7
+              port: 8080
+            metadata:
+              name: service-4
+              namespace: default
+              sectionName: "8080"
+            name: httproute/default/httproute-5/rule/0/backend/0
+            protocol: HTTP
+            weight: 1
+        hostname: gateway.envoyproxy.io
+        isHTTP2: false
+        metadata:
+          kind: HTTPRoute
+          name: httproute-5
+          namespace: default
+        name: httproute/default/httproute-5/rule/0/match/0/gateway_envoyproxy_io
+        pathMatch:
+          distinct: false
+          name: ""
+          prefix: /v5
+        traffic:
+          healthCheck:
+            active:
+              healthyThreshold: 2
+              initialJitter: 15s
+              interval: 30s
+              tcp: {}
+              timeout: 10s
+              unhealthyThreshold: 2
       - destination:
           metadata:
             kind: HTTPRoute
