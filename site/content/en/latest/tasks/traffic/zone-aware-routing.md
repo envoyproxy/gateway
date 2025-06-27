@@ -6,12 +6,6 @@ EnvoyGateway makes use of [Envoy Zone Aware Routing][Envoy Zone Aware Routing] t
 and [Topology Aware Routing][Topology Aware Routing] which are useful for keeping network traffic in the originating zone.
 Preferring same-zone traffic between Pods in your cluster can help with reliability, performance (network latency and throughput), or cost.
 
-{{% alert title="Note" color="primary" %}}
-The current implementation for Topology Aware Routing support doesn't respect the minimum of 3 endpoints per zone
-requirement and applies the same logic as `spec.TrafficDistribution=PreferClose`. This will be fixed in the next release.
-{{% /alert %}}
-
-
 ## Prerequisites
 * The Kubernetes cluster's nodes must indicate topology information via the `topology.kubernetes.io/zone` [well-known label][Kubernetes well-known metadata].
 * There must be at least two valid topology zones for scheduling.
@@ -130,8 +124,8 @@ Ensure that both example Deployments are marked as ready and produces the follow
 ```shell
 kubectl get deployment/zone-aware-routing-backend-local deployment/zone-aware-routing-backend-nonlocal -n default
 NAME                            READY   UP-TO-DATE   AVAILABLE   AGE
-zone-aware-routing-backend-local      1/1     1            1           9m1s
-zone-aware-routing-backend-nonlocal   1/1     1            1           9m1s
+zone-aware-routing-backend-local      3/3     3            3           9m1s
+zone-aware-routing-backend-nonlocal   3/3     3            3           9m1s
 
 ```
 
