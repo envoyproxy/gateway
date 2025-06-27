@@ -48,7 +48,7 @@ contributing to the project.
 
 - Extending Envoy Gateway control plane [Issue #20][20]
 - Helm based installation for Envoy Gateway [Issue #650][650]
-- Customizing managed Envoy Proxy Kubernetes resource fields [Issue #648][648] 
+- Customizing managed Envoy Proxy Kubernetes resource fields [Issue #648][648]
 - Configuring xDS Bootstrap [Issue #31][31]
 
 ### [v0.5.0][v0.5.0]: Observability and Scale
@@ -61,14 +61,14 @@ contributing to the project.
 - Observability for control plane [Issue #700][700].
 - Compute and document Envoy Gateway performance [Issue #1365][1365].
 - Add TrafficPolicy APIs for advanced features [Issue #1492][1492].
-- Envoy Gateway meets readiness criteria [Issue #1160][1160]. 
+- Envoy Gateway meets readiness criteria [Issue #1160][1160].
 
 ### [v1.0.0][v1.0.0]: Envoy Gateway goes GA
 
 Visit the [milestones][milestones] page to learn more about the future roadmap.
 
 [issue]: https://github.com/envoyproxy/gateway/issues
-[meeting]: https://docs.google.com/document/d/1leqwsHX8N-XxNEyTflYjRur462ukFxd19Rnk3Uzy55I/edit?usp=sharing
+[meeting]: https://docs.google.com/document/d/1i5wa1VsxIbQw7jbWvGmvy8C4Zpp7SGV1aVViSLgqU4M/edit?usp=sharing
 [pr]: https://github.com/envoyproxy/gateway/compare
 [milestones]: https://github.com/envoyproxy/gateway/milestones
 [v0.2.0]: https://github.com/envoyproxy/gateway/milestone/1
