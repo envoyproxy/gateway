@@ -314,6 +314,162 @@ func TestBackend(t *testing.T) {
 			},
 			wantErrors: []string{`must not contain either CACertificateRefs or WellKnownCACertificates when InsecureSkipVerify is enabled`},
 		},
+		{
+			desc: "valid host override settings with header",
+			mutate: func(backend *egv1a1.Backend) {
+				backend.Spec = egv1a1.BackendSpec{
+					Type: ptr.To(egv1a1.BackendTypeHostOverride),
+					HostOverrideSettings: &egv1a1.HostOverrideSettings{
+						OverrideHostSources: []egv1a1.OverrideHostSource{
+							{
+								Header: ptr.To("target-pod"),
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "valid host override settings with metadata",
+			mutate: func(backend *egv1a1.Backend) {
+				backend.Spec = egv1a1.BackendSpec{
+					Type: ptr.To(egv1a1.BackendTypeHostOverride),
+					HostOverrideSettings: &egv1a1.HostOverrideSettings{
+						OverrideHostSources: []egv1a1.OverrideHostSource{
+							{
+								Metadata: &egv1a1.MetadataKey{
+									Key: "envoy.lb",
+									Path: []egv1a1.MetadataPathSegment{
+										{Key: "override-host"},
+									},
+								},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "valid host override settings with multiple sources",
+			mutate: func(backend *egv1a1.Backend) {
+				backend.Spec = egv1a1.BackendSpec{
+					Type: ptr.To(egv1a1.BackendTypeHostOverride),
+					HostOverrideSettings: &egv1a1.HostOverrideSettings{
+						OverrideHostSources: []egv1a1.OverrideHostSource{
+							{
+								Header: ptr.To("target-pod"),
+							},
+							{
+								Metadata: &egv1a1.MetadataKey{
+									Key: "envoy.lb",
+									Path: []egv1a1.MetadataPathSegment{
+										{Key: "override-host"},
+									},
+								},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "invalid host override settings - missing hostOverrideSettings",
+			mutate: func(backend *egv1a1.Backend) {
+				backend.Spec = egv1a1.BackendSpec{
+					Type: ptr.To(egv1a1.BackendTypeHostOverride),
+				}
+			},
+			wantErrors: []string{"HostOverride type must have hostOverrideSettings specified"},
+		},
+		{
+			desc: "invalid host override settings - empty sources",
+			mutate: func(backend *egv1a1.Backend) {
+				backend.Spec = egv1a1.BackendSpec{
+					Type: ptr.To(egv1a1.BackendTypeHostOverride),
+					HostOverrideSettings: &egv1a1.HostOverrideSettings{
+						OverrideHostSources: []egv1a1.OverrideHostSource{},
+					},
+				}
+			},
+			wantErrors: []string{"spec.hostOverrideSettings.overrideHostSources: Invalid value: 0: spec.hostOverrideSettings.overrideHostSources in body should have at least 1 items"},
+		},
+		{
+			desc: "invalid host override settings - empty header",
+			mutate: func(backend *egv1a1.Backend) {
+				backend.Spec = egv1a1.BackendSpec{
+					Type: ptr.To(egv1a1.BackendTypeHostOverride),
+					HostOverrideSettings: &egv1a1.HostOverrideSettings{
+						OverrideHostSources: []egv1a1.OverrideHostSource{
+							{
+								Header: ptr.To(""),
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{"spec.hostOverrideSettings.overrideHostSources[0].header: Invalid value: \"\": spec.hostOverrideSettings.overrideHostSources[0].header in body should be at least 1 chars long"},
+		},
+		{
+			desc: "invalid host override settings - empty metadata key",
+			mutate: func(backend *egv1a1.Backend) {
+				backend.Spec = egv1a1.BackendSpec{
+					Type: ptr.To(egv1a1.BackendTypeHostOverride),
+					HostOverrideSettings: &egv1a1.HostOverrideSettings{
+						OverrideHostSources: []egv1a1.OverrideHostSource{
+							{
+								Metadata: &egv1a1.MetadataKey{
+									Key: "",
+								},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{"spec.hostOverrideSettings.overrideHostSources[0].metadata.key: Invalid value: \"\": spec.hostOverrideSettings.overrideHostSources[0].metadata.key in body should be at least 1 chars long"},
+		},
+		{
+			desc: "invalid host override settings - empty metadata path segment key",
+			mutate: func(backend *egv1a1.Backend) {
+				backend.Spec = egv1a1.BackendSpec{
+					Type: ptr.To(egv1a1.BackendTypeHostOverride),
+					HostOverrideSettings: &egv1a1.HostOverrideSettings{
+						OverrideHostSources: []egv1a1.OverrideHostSource{
+							{
+								Metadata: &egv1a1.MetadataKey{
+									Key: "envoy.lb",
+									Path: []egv1a1.MetadataPathSegment{
+										{Key: ""},
+									},
+								},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{"spec.hostOverrideSettings.overrideHostSources[0].metadata.path[0].key: Invalid value: \"\": spec.hostOverrideSettings.overrideHostSources[0].metadata.path[0].key in body should be at least 1 chars long"},
+		},
+		{
+			desc: "invalid host override settings - both header and metadata specified",
+			mutate: func(backend *egv1a1.Backend) {
+				backend.Spec = egv1a1.BackendSpec{
+					Type: ptr.To(egv1a1.BackendTypeHostOverride),
+					HostOverrideSettings: &egv1a1.HostOverrideSettings{
+						OverrideHostSources: []egv1a1.OverrideHostSource{
+							{
+								Header: ptr.To("target-pod"),
+								Metadata: &egv1a1.MetadataKey{
+									Key: "envoy.lb",
+								},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{"exactly one of header or metadata must be specified"},
+		},
 	}
 
 	for _, tc := range cases {

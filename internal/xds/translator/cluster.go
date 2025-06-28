@@ -22,12 +22,14 @@ import (
 	commonv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/load_balancing_policies/common/v3"
 	least_requestv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/load_balancing_policies/least_request/v3"
 	maglevv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/load_balancing_policies/maglev/v3"
+	override_hostv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/load_balancing_policies/override_host/v3"
 	randomv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/load_balancing_policies/random/v3"
 	round_robinv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/load_balancing_policies/round_robin/v3"
 	proxyprotocolv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/transport_sockets/proxy_protocol/v3"
 	rawbufferv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/transport_sockets/raw_buffer/v3"
 	tlsv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/transport_sockets/tls/v3"
 	httpv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/upstreams/http/v3"
+	metadatav3 "github.com/envoyproxy/go-control-plane/envoy/type/metadata/v3"
 	xdstype "github.com/envoyproxy/go-control-plane/envoy/type/v3"
 	"github.com/envoyproxy/go-control-plane/pkg/resource/v3"
 	"github.com/envoyproxy/go-control-plane/pkg/wellknown"
@@ -78,6 +80,7 @@ const (
 	EndpointTypeDNS EndpointType = iota
 	EndpointTypeStatic
 	EndpointTypeDynamicResolver
+	EndpointTypeHostOverride
 )
 
 func buildEndpointType(settings []*ir.DestinationSetting) EndpointType {
@@ -89,6 +92,10 @@ func buildEndpointType(settings []*ir.DestinationSetting) EndpointType {
 
 	if settings[0].IsDynamicResolver {
 		return EndpointTypeDynamicResolver
+	}
+
+	if settings[0].IsHostOverride {
+		return EndpointTypeHostOverride
 	}
 
 	addrType := settings[0].AddressType
@@ -308,6 +315,21 @@ func buildXdsCluster(args *xdsClusterArgs) (*buildClusterResult, error) {
 		}}
 		cluster.LbPolicy = clusterv3.Cluster_CLUSTER_PROVIDED
 
+	case EndpointTypeHostOverride:
+		// host override uses EDS for endpoints but with override host load balancing policy
+		cluster.ClusterDiscoveryType = &clusterv3.Cluster_Type{Type: clusterv3.Cluster_EDS}
+		cluster.EdsClusterConfig = &clusterv3.Cluster_EdsClusterConfig{
+			ServiceName: args.name,
+			EdsConfig: &corev3.ConfigSource{
+				ResourceApiVersion: resource.DefaultAPIVersion,
+				ConfigSourceSpecifier: &corev3.ConfigSource_Ads{
+					Ads: &corev3.AggregatedConfigSource{},
+				},
+			},
+		}
+		cluster.IgnoreHealthOnHostRemoval = true
+		// Load balancing policy will be set to override host in buildHostOverrideLoadBalancingPolicy
+
 	case EndpointTypeStatic:
 		cluster.ClusterDiscoveryType = &clusterv3.Cluster_Type{Type: clusterv3.Cluster_EDS}
 		cluster.EdsClusterConfig = &clusterv3.Cluster_EdsClusterConfig{
@@ -341,6 +363,13 @@ func buildXdsCluster(args *xdsClusterArgs) (*buildClusterResult, error) {
 	if args.endpointType != EndpointTypeDynamicResolver {
 		for _, ds := range args.settings {
 			buildZoneAwareRoutingCluster(ds.ZoneAwareRouting, cluster, args.loadBalancer)
+		}
+	}
+
+	// Set override host load balancing policy for host override clusters
+	if args.endpointType == EndpointTypeHostOverride {
+		if err := buildHostOverrideLoadBalancingPolicy(cluster, args.settings); err != nil {
+			return nil, err
 		}
 	}
 
@@ -444,6 +473,67 @@ func buildZoneAwareRoutingCluster(cfg *ir.ZoneAwareRouting, cluster *clusterv3.C
 			}
 		}
 	}
+}
+
+// buildHostOverrideLoadBalancingPolicy configures an xds cluster with Override Host Load Balancing Policy
+// for host override backends. This allows endpoint selection based on request headers or dynamic metadata.
+// The actual endpoints will be provided at runtime through service discovery or other mechanisms.
+func buildHostOverrideLoadBalancingPolicy(cluster *clusterv3.Cluster, settings []*ir.DestinationSetting) error {
+	if len(settings) == 0 || !settings[0].IsHostOverride || settings[0].HostOverrideConfig == nil {
+		return fmt.Errorf("invalid host override configuration")
+	}
+
+	config := settings[0].HostOverrideConfig
+
+	// Build override host sources
+	overrideHostSources := make([]*override_hostv3.OverrideHost_OverrideHostSource, 0, len(config.OverrideHostSources))
+	for _, source := range config.OverrideHostSources {
+		overrideSource := &override_hostv3.OverrideHost_OverrideHostSource{}
+
+		if source.Header != nil {
+			overrideSource.Header = *source.Header
+		} else if source.Metadata != nil {
+			// Build metadata key path
+			metadataKey := &metadatav3.MetadataKey{
+				Key: source.Metadata.Key,
+			}
+
+			// Add path segments if any
+			for _, pathSegment := range source.Metadata.Path {
+				metadataKey.Path = append(metadataKey.Path, &metadatav3.MetadataKey_PathSegment{
+					Segment: &metadatav3.MetadataKey_PathSegment_Key{
+						Key: pathSegment.Key,
+					},
+				})
+			}
+
+			overrideSource.Metadata = metadataKey
+		}
+
+		overrideHostSources = append(overrideHostSources, overrideSource)
+	}
+
+	// Build override host policy
+	overrideHostPolicy := &override_hostv3.OverrideHost{
+		OverrideHostSources: overrideHostSources,
+	}
+
+	typedOverrideHostPolicy, err := anypb.New(overrideHostPolicy)
+	if err != nil {
+		return fmt.Errorf("failed to marshal override host policy: %w", err)
+	}
+
+	// Set the load balancing policy on the cluster
+	cluster.LoadBalancingPolicy = &clusterv3.LoadBalancingPolicy{
+		Policies: []*clusterv3.LoadBalancingPolicy_Policy{{
+			TypedExtensionConfig: &corev3.TypedExtensionConfig{
+				Name:        "envoy.load_balancing_policies.override_host",
+				TypedConfig: typedOverrideHostPolicy,
+			},
+		}},
+	}
+
+	return nil
 }
 
 func buildXdsHealthCheck(healthcheck *ir.ActiveHealthCheck) []*corev3.HealthCheck {

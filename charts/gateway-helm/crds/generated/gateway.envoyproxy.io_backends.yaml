@@ -153,6 +153,68 @@ spec:
                   The overprovisioning factor is set to 1.4, meaning the fallback backends will only start receiving traffic when
                   the health of the active backends falls below 72%.
                 type: boolean
+              hostOverrideSettings:
+                description: HostOverrideSettings defines the host override settings
+                  for the backend.
+                properties:
+                  overrideHostSources:
+                    description: |-
+                      OverrideHostSources defines the sources to get host addresses from for endpoint selection.
+                      The host sources are searched in the order specified. The request is forwarded to the first
+                      address and subsequent addresses are used for request retries or hedging.
+                    items:
+                      description: OverrideHostSource defines a source for getting
+                        override host addresses.
+                      properties:
+                        header:
+                          description: |-
+                            Header specifies the header name to get the override host addresses from.
+                            The header value should contain host addresses in "IP:Port" format or multiple
+                            addresses separated by commas like "IP:Port,IP:Port,...".
+                            For example: "10.0.0.5:8080" or "[2600:4040:5204::1574:24ae]:80".
+                          minLength: 1
+                          type: string
+                        metadata:
+                          description: |-
+                            Metadata specifies the metadata key to get the override host addresses from
+                            the request dynamic metadata. The metadata value should contain host addresses
+                            in the same format as the header field.
+                          properties:
+                            key:
+                              description: Key is the top-level metadata key.
+                              minLength: 1
+                              type: string
+                            path:
+                              description: |-
+                                Path defines the path within the metadata to access the value.
+                                Each element in the path represents a key in nested metadata structure.
+                              items:
+                                description: MetadataPathSegment represents a segment
+                                  in the metadata path.
+                                properties:
+                                  key:
+                                    description: Key is the metadata key for this
+                                      path segment.
+                                    minLength: 1
+                                    type: string
+                                required:
+                                - key
+                                type: object
+                              type: array
+                          required:
+                          - key
+                          type: object
+                      type: object
+                      x-kubernetes-validations:
+                      - message: exactly one of header or metadata must be specified
+                        rule: (has(self.header) && !has(self.metadata)) || (!has(self.header)
+                          && has(self.metadata))
+                    maxItems: 8
+                    minItems: 1
+                    type: array
+                required:
+                - overrideHostSources
+                type: object
               tls:
                 description: |-
                   TLS defines the TLS settings for the backend.
@@ -247,11 +309,16 @@ spec:
                 enum:
                 - Endpoints
                 - DynamicResolver
+                - HostOverride
                 type: string
             type: object
             x-kubernetes-validations:
             - message: DynamicResolver type cannot have endpoints specified
               rule: self.type != 'DynamicResolver' || !has(self.endpoints)
+            - message: HostOverride type cannot have endpoints specified
+              rule: self.type != 'HostOverride' || !has(self.endpoints)
+            - message: HostOverride type must have hostOverrideSettings specified
+              rule: self.type != 'HostOverride' || has(self.hostOverrideSettings)
           status:
             description: Status defines the current status of Backend.
             properties:
