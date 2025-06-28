@@ -1600,6 +1600,8 @@ func (r *RouteDestination) ToBackendWeights() *BackendWeights {
 		switch {
 		case s.IsDynamicResolver: // Dynamic resolver has no endpoints
 			w.Valid += *s.Weight
+		case s.IsHostOverride: // host override has endpoints but uses override host selection
+			w.Valid += *s.Weight
 		case len(s.Endpoints) > 0:
 			w.Valid += *s.Weight
 		default:
@@ -1619,6 +1621,13 @@ type DestinationSetting struct {
 	// IsDynamicResolver specifies whether the destination is a dynamic resolver.
 	// A dynamic resolver is a destination that is resolved dynamically using the request's host header.
 	IsDynamicResolver bool `json:"isDynamicResolver,omitempty" yaml:"isDynamicResolver,omitempty"`
+
+	// IsHostOverride specifies whether the destination is a host override.
+	// A host override resolver selects endpoints from a static list based on request headers or metadata.
+	IsHostOverride bool `json:"isHostOverride,omitempty" yaml:"isHostOverride,omitempty"`
+
+	// HostOverrideConfig holds the configuration for host override backends.
+	HostOverrideConfig *HostOverrideConfig `json:"hostOverrideConfig,omitempty" yaml:"hostOverrideConfig,omitempty"`
 
 	// Weight associated with this destination,
 	// invalid endpoints are represents with a
@@ -1720,6 +1729,40 @@ func NewDestEndpoint(host string, port uint32, draining bool, zone *string) *Des
 		Draining: draining,
 		Zone:     zone,
 	}
+}
+
+// HostOverrideConfig holds the configuration for host override backends.
+// +k8s:deepcopy-gen=true
+type HostOverrideConfig struct {
+	// OverrideHostSources defines the sources to get host addresses from for endpoint selection.
+	OverrideHostSources []OverrideHostSource `json:"overrideHostSources" yaml:"overrideHostSources"`
+}
+
+// OverrideHostSource defines a source for getting override host addresses.
+// +k8s:deepcopy-gen=true
+type OverrideHostSource struct {
+	// Header specifies the header name to get the override host addresses from.
+	Header *string `json:"header,omitempty" yaml:"header,omitempty"`
+
+	// Metadata specifies the metadata key to get the override host addresses from.
+	Metadata *MetadataKey `json:"metadata,omitempty" yaml:"metadata,omitempty"`
+}
+
+// MetadataKey defines a key for accessing dynamic metadata.
+// +k8s:deepcopy-gen=true
+type MetadataKey struct {
+	// Key is the top-level metadata key.
+	Key string `json:"key" yaml:"key"`
+
+	// Path defines the path within the metadata to access the value.
+	Path []MetadataPathSegment `json:"path,omitempty" yaml:"path,omitempty"`
+}
+
+// MetadataPathSegment represents a segment in the metadata path.
+// +k8s:deepcopy-gen=true
+type MetadataPathSegment struct {
+	// Key is the metadata key for this path segment.
+	Key string `json:"key" yaml:"key"`
 }
 
 // AddHeader configures a header to be added to a request or response.

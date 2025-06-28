@@ -1,0 +1,83 @@
+- circuitBreakers:
+    thresholds:
+    - maxRetries: 1024
+  commonLbConfig:
+    localityWeightedLbConfig: {}
+  connectTimeout: 10s
+  dnsLookupFamily: V4_PREFERRED
+  edsClusterConfig:
+    edsConfig:
+      ads: {}
+      resourceApiVersion: V3
+    serviceName: first-route-dest
+  ignoreHealthOnHostRemoval: true
+  lbPolicy: LEAST_REQUEST
+  loadBalancingPolicy:
+    policies:
+    - typedExtensionConfig:
+        name: envoy.load_balancing_policies.override_host
+        typedConfig:
+          '@type': type.googleapis.com/envoy.extensions.load_balancing_policies.override_host.v3.OverrideHost
+          overrideHostSources:
+          - header: target-pod
+  name: first-route-dest
+  perConnectionBufferLimitBytes: 32768
+  type: EDS
+- circuitBreakers:
+    thresholds:
+    - maxRetries: 1024
+  commonLbConfig:
+    localityWeightedLbConfig: {}
+  connectTimeout: 10s
+  dnsLookupFamily: V4_PREFERRED
+  edsClusterConfig:
+    edsConfig:
+      ads: {}
+      resourceApiVersion: V3
+    serviceName: second-route-dest
+  ignoreHealthOnHostRemoval: true
+  lbPolicy: LEAST_REQUEST
+  loadBalancingPolicy:
+    policies:
+    - typedExtensionConfig:
+        name: envoy.load_balancing_policies.override_host
+        typedConfig:
+          '@type': type.googleapis.com/envoy.extensions.load_balancing_policies.override_host.v3.OverrideHost
+          overrideHostSources:
+          - metadata:
+              key: envoy.lb
+              path:
+              - key: target-pod
+  name: second-route-dest
+  perConnectionBufferLimitBytes: 32768
+  type: EDS
+- circuitBreakers:
+    thresholds:
+    - maxRetries: 1024
+  commonLbConfig:
+    localityWeightedLbConfig: {}
+  connectTimeout: 10s
+  dnsLookupFamily: V4_PREFERRED
+  edsClusterConfig:
+    edsConfig:
+      ads: {}
+      resourceApiVersion: V3
+    serviceName: third-route-dest
+  ignoreHealthOnHostRemoval: true
+  lbPolicy: LEAST_REQUEST
+  loadBalancingPolicy:
+    policies:
+    - typedExtensionConfig:
+        name: envoy.load_balancing_policies.override_host
+        typedConfig:
+          '@type': type.googleapis.com/envoy.extensions.load_balancing_policies.override_host.v3.OverrideHost
+          overrideHostSources:
+          - header: target-pod
+          - header: route-strategy
+          - metadata:
+              key: envoy.lb
+              path:
+              - key: override-host
+  name: third-route-dest
+  perConnectionBufferLimitBytes: 32768
+  type: EDS

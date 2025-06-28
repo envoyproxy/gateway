@@ -223,6 +223,8 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 		failedProcessDestination := false
 		hasDynamicResolver := false
 		backendRefNames := make([]string, len(rule.BackendRefs))
+		hasHostOverride := false
+
 		// process each backendRef, and calculate the destination settings for this rule
 		for i, backendRef := range rule.BackendRefs {
 			settingName := irDestinationSettingName(destName, i)
@@ -248,6 +250,10 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 			}
 			backendNamespace := NamespaceDerefOr(backendRef.Namespace, httpRoute.GetNamespace())
 			backendRefNames[i] = fmt.Sprintf("%s/%s", backendNamespace, backendRef.Name)
+			// check if there is a host override in the backendRefs
+			if ds.IsHostOverride {
+				hasHostOverride = true
+			}
 		}
 
 		// process each ir route
@@ -278,6 +284,10 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 				irRoute.DirectResponse = &ir.CustomResponse{
 					StatusCode: ptr.To(uint32(500)),
 				}
+			case hasHostOverride && len(rule.BackendRefs) > 1:
+				irRoute.DirectResponse = &ir.CustomResponse{
+					StatusCode: ptr.To(uint32(500)),
+				}
 			default:
 				destination.Name = destName
 				destination.Settings = allDs
@@ -293,6 +303,14 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 			errs.Add(status.NewRouteStatusError(
 				fmt.Errorf(
 					"failed to process route rule %d: dynamic resolver is not supported for multiple backendRefs",
+					ruleIdx),
+				status.RouteReasonInvalidBackendRef,
+			))
+		}
+		if hasHostOverride && len(rule.BackendRefs) > 1 {
+			errs.Add(status.NewRouteStatusError(
+				fmt.Errorf(
+					"failed to process route rule %d: host override is not supported for multiple backendRefs",
 					ruleIdx),
 				status.RouteReasonInvalidBackendRef,
 			))
@@ -1911,11 +1929,19 @@ func (t *Translator) processBackendDestinationSetting(
 
 	ds := &ir.DestinationSetting{Name: name}
 
-	// There is only one backend if it is a dynamic resolver
-	if backend.Spec.Type != nil && *backend.Spec.Type == egv1a1.BackendTypeDynamicResolver {
-		ds.IsDynamicResolver = true
-		ds.Protocol = protocol
-		return ds
+	// Handle special backend types
+	if backend.Spec.Type != nil {
+		switch *backend.Spec.Type {
+		case egv1a1.BackendTypeDynamicResolver:
+			ds.IsDynamicResolver = true
+			ds.Protocol = protocol
+			return ds
+		case egv1a1.BackendTypeHostOverride:
+			ds.IsHostOverride = true
+			ds.HostOverrideConfig = buildHostOverrideConfig(backend.Spec.HostOverrideSettings)
+			ds.Protocol = protocol
+			return ds
+		}
 	}
 
 	for _, bep := range backend.Spec.Endpoints {
@@ -2020,4 +2046,37 @@ func buildStatName(pattern string, route RouteContext, ruleName *gwapiv1.Section
 	statName = strings.ReplaceAll(statName, egv1a1.StatFormatterRouteRuleNumber, fmt.Sprintf("%d", idx))
 	statName = strings.ReplaceAll(statName, egv1a1.StatFormatterBackendRefs, strings.Join(refs, "|"))
 	return statName
+}
+
+func buildHostOverrideConfig(settings *egv1a1.HostOverrideSettings) *ir.HostOverrideConfig {
+	if settings == nil {
+		return nil
+	}
+
+	config := &ir.HostOverrideConfig{
+		OverrideHostSources: make([]ir.OverrideHostSource, len(settings.OverrideHostSources)),
+	}
+
+	// Convert override host sources
+	for i, source := range settings.OverrideHostSources {
+		irSource := ir.OverrideHostSource{
+			Header: source.Header,
+		}
+
+		if source.Metadata != nil {
+			irSource.Metadata = &ir.MetadataKey{
+				Key:  source.Metadata.Key,
+				Path: make([]ir.MetadataPathSegment, len(source.Metadata.Path)),
+			}
+			for j, pathSegment := range source.Metadata.Path {
+				irSource.Metadata.Path[j] = ir.MetadataPathSegment{
+					Key: pathSegment.Key,
+				}
+			}
+		}
+
+		config.OverrideHostSources[i] = irSource
+	}
+
+	return config
 }
