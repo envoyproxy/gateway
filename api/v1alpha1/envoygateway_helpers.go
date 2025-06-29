@@ -185,6 +185,12 @@ func DefaultEnvoyGatewayPrometheus() *EnvoyGatewayPrometheusProvider {
 	return &EnvoyGatewayPrometheusProvider{
 		// Enable prometheus pull by default.
 		Disable: false,
+		// Default prometheus annotations
+		Annotations: map[string]string{
+			"prometheus.io/path":   "/stats/prometheus",
+			"prometheus.io/scrape": "true",
+			"prometheus.io/port":   "19001",
+		},
 	}
 }
 

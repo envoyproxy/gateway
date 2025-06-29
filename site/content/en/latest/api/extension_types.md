@@ -1404,6 +1404,7 @@ _Appears in:_
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
 | `disable` | _boolean_ |  true  |  | Disable defines if disables the prometheus metrics in pull mode. |
+| `annotations` | _object (keys:string, values:string)_ |  false  |  | Annotations defines additional annotations to be added to the Kubernetes resources<br />when Prometheus is enabled. These annotations will be merged with the default<br />prometheus annotations. |
 
 
 #### EnvoyGatewayProvider
