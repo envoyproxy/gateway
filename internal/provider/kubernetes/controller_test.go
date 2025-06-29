@@ -323,10 +323,10 @@ func TestProcessBackendRefsWithCustomBackends(t *testing.T) {
 			// in the extensionRefFilters map. The logic should be `exists` instead of `!exists`.
 			// For now, we test the current (buggy) behavior.
 			if tc.name == "skip non-custom backends" {
-				require.Equal(t, tc.expectedExtFiltersCount, len(gwcResource.ExtensionRefFilters))
+				require.Len(t, gwcResource.ExtensionRefFilters, tc.expectedExtFiltersCount)
 			} else {
 				// Current buggy behavior: custom backends are not added to ExtensionRefFilters
-				require.Equal(t, 0, len(gwcResource.ExtensionRefFilters))
+				require.Empty(t, gwcResource.ExtensionRefFilters)
 			}
 
 			for _, expectedNS := range tc.expectedNamespaces {

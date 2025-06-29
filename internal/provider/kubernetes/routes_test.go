@@ -1301,11 +1301,11 @@ func TestProcessHTTPRoutesWithCustomBackends(t *testing.T) {
 
 			// Verify results
 			require.NoError(t, err)
-			require.Equal(t, tc.expectedExtFiltersCount, len(resourceMap.extensionRefFilters))
+			require.Len(t, resourceMap.extensionRefFilters, tc.expectedExtFiltersCount)
 			require.Equal(t, tc.expectedBackendRefsCount, resourceMap.allAssociatedBackendRefs.Len())
 
 			// Verify that HTTPRoutes were processed
-			require.Equal(t, 1, len(resourceTree.HTTPRoutes))
+			require.Len(t, resourceTree.HTTPRoutes, 1)
 			require.Equal(t, "test-route", resourceTree.HTTPRoutes[0].Name)
 		})
 	}

@@ -157,7 +157,7 @@ func TestGetExtensionRefFilters(t *testing.T) {
 			// Create fake client with test objects
 			scheme := runtime.NewScheme()
 			require.NoError(t, corev1.AddToScheme(scheme))
-			
+
 			fakeClient := fakeclient.NewClientBuilder().
 				WithScheme(scheme).
 				WithObjects(tc.objects...).
@@ -179,7 +179,7 @@ func TestGetExtensionRefFilters(t *testing.T) {
 				require.Error(t, err)
 			} else {
 				require.NoError(t, err)
-				require.Equal(t, tc.expectedCount, len(result))
+				require.Len(t, result, tc.expectedCount)
 			}
 		})
 	}
@@ -319,7 +319,7 @@ func TestGetExtensionBackendResources(t *testing.T) {
 			// Create fake client with test objects
 			scheme := runtime.NewScheme()
 			require.NoError(t, corev1.AddToScheme(scheme))
-			
+
 			fakeClient := fakeclient.NewClientBuilder().
 				WithScheme(scheme).
 				WithObjects(tc.objects...).
@@ -341,7 +341,7 @@ func TestGetExtensionBackendResources(t *testing.T) {
 				require.Error(t, err)
 			} else {
 				require.NoError(t, err)
-				require.Equal(t, tc.expectedCount, len(result))
+				require.Len(t, result, tc.expectedCount)
 			}
 		})
 	}
