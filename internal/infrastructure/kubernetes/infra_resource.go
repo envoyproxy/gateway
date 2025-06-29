@@ -39,6 +39,13 @@ func (i *Infra) createOrUpdateServiceAccount(ctx context.Context, r ResourceRend
 	)
 
 	defer func() {
+		if err == nil {
+			resourceApplyDurationSeconds.With(labels...).Record(time.Since(startTime).Seconds())
+			resourceApplyTotal.WithSuccess(labels...).Increment()
+		} else {
+			resourceApplyTotal.WithFailure(metrics.ReasonError, labels...).Increment()
+		}
+
 		if sa == nil {
 			deleteErr := i.Client.DeleteAllOf(ctx, &corev1.ServiceAccount{}, &client.DeleteAllOfOptions{
 				ListOptions: client.ListOptions{
@@ -52,12 +59,6 @@ func (i *Infra) createOrUpdateServiceAccount(ctx context.Context, r ResourceRend
 			}
 		}
 
-		if err == nil {
-			resourceApplyDurationSeconds.With(labels...).Record(time.Since(startTime).Seconds())
-			resourceApplyTotal.WithSuccess(labels...).Increment()
-		} else {
-			resourceApplyTotal.WithFailure(metrics.ReasonError, labels...).Increment()
-		}
 	}()
 
 	if sa, err = r.ServiceAccount(); err != nil {
