@@ -106,6 +106,19 @@ func newTestInfraWithNamespacedName(gwNN types.NamespacedName) *ir.Infra {
 	return i
 }
 
+func newTestInfraWithCustomServiceAccount(gwNN types.NamespacedName) *ir.Infra {
+	i := newTestInfraWithNamespacedName(gwNN)
+	i.Proxy.Config = new(egv1a1.EnvoyProxy)
+	i.Proxy.Config.Spec.Provider = egv1a1.DefaultEnvoyProxyProvider()
+	i.Proxy.Config.Spec.Provider.Kubernetes = &egv1a1.EnvoyProxyKubernetesProvider{
+		EnvoyServiceAccount: &egv1a1.KubernetesServiceAccountSpec{
+			Name: ptr.To("custom-sa"),
+		},
+	}
+
+	return i
+}
+
 func newTestInfraWithIPFamily(family *egv1a1.IPFamily) *ir.Infra {
 	i := newTestInfra()
 	i.Proxy.Config = &egv1a1.EnvoyProxy{
@@ -629,6 +642,12 @@ func TestDeployment(t *testing.T) {
 		{
 			caseName:             "gateway-namespace-mode",
 			infra:                newTestInfraWithNamespacedName(types.NamespacedName{Namespace: "ns1", Name: "gateway-1"}),
+			deploy:               nil,
+			gatewayNamespaceMode: true,
+		},
+		{
+			caseName:             "custom-sa",
+			infra:                newTestInfraWithCustomServiceAccount(types.NamespacedName{Namespace: "ns1", Name: "gateway-1"}),
 			deploy:               nil,
 			gatewayNamespaceMode: true,
 		},
@@ -1425,6 +1444,7 @@ func TestServiceAccount(t *testing.T) {
 		name                 string
 		infra                *ir.Infra
 		gatewayNamespaceMode bool
+		expectNil            bool
 	}{
 		{
 			name:  "default",
@@ -1441,6 +1461,12 @@ func TestServiceAccount(t *testing.T) {
 			name:                 "gateway-namespace-mode",
 			infra:                newTestInfraWithNamespacedName(types.NamespacedName{Namespace: "ns1", Name: "gateway-1"}),
 			gatewayNamespaceMode: true,
+		},
+		{
+			name:                 "custom-sa",
+			infra:                newTestInfraWithCustomServiceAccount(types.NamespacedName{Namespace: "ns1", Name: "gateway-1"}),
+			gatewayNamespaceMode: false,
+			expectNil:            true,
 		},
 	}
 
@@ -1460,6 +1486,11 @@ func TestServiceAccount(t *testing.T) {
 			require.NoError(t, err)
 			sa, err := r.ServiceAccount()
 			require.NoError(t, err)
+
+			if tc.expectNil {
+				require.Nil(t, sa)
+				return
+			}
 
 			if test.OverrideTestData() {
 				saYAML, err := yaml.Marshal(sa)

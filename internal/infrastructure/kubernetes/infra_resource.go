@@ -38,11 +38,6 @@ func (i *Infra) createOrUpdateServiceAccount(ctx context.Context, r ResourceRend
 		}
 	)
 
-	if sa, err = r.ServiceAccount(); err != nil {
-		resourceApplyTotal.WithFailure(metrics.ReasonError, labels...).Increment()
-		return err
-	}
-
 	defer func() {
 		if err == nil {
 			resourceApplyDurationSeconds.With(labels...).Record(time.Since(startTime).Seconds())
@@ -50,7 +45,30 @@ func (i *Infra) createOrUpdateServiceAccount(ctx context.Context, r ResourceRend
 		} else {
 			resourceApplyTotal.WithFailure(metrics.ReasonError, labels...).Increment()
 		}
+
+		if sa == nil {
+			deleteErr := i.Client.DeleteAllOf(ctx, &corev1.ServiceAccount{}, &client.DeleteAllOfOptions{
+				ListOptions: client.ListOptions{
+					Namespace:     r.Namespace(),
+					LabelSelector: r.LabelSelector(),
+				},
+			})
+
+			if deleteErr != nil {
+				i.logger.Error(deleteErr, "failed to delete all except deployment", "name", r.Name())
+			}
+		}
 	}()
+
+	if sa, err = r.ServiceAccount(); err != nil {
+		resourceApplyTotal.WithFailure(metrics.ReasonError, labels...).Increment()
+		return err
+	}
+
+	if sa == nil {
+		i.logger.Info("ServiceAccount is not set, skipping creation")
+		return nil
+	}
 
 	return i.Client.ServerSideApply(ctx, sa)
 }
