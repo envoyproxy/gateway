@@ -316,6 +316,16 @@ func getCaCertsFromCARefs(namespace string, caCertificates []gwapiv1.LocalObject
 			} else {
 				return nil, fmt.Errorf("secret %s not found in namespace %s", caRef.Name, namespace)
 			}
+		case resource.KindClusterTrustBundle:
+			ctb := resources.GetClusterTrustBundle(string(caRef.Name))
+			if ctb != nil {
+				if ca != "" {
+					ca += "\n"
+				}
+				ca += ctb.Spec.TrustBundle
+			} else {
+				return nil, fmt.Errorf("cluster trust bundle %s not found", caRef.Name)
+			}
 		}
 	}
 

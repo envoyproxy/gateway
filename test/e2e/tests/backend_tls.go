@@ -25,10 +25,9 @@ var BackendTLSTest = suite.ConformanceTest{
 	Description: "Connect to backend with TLS",
 	Manifests:   []string{"testdata/backend-tls.yaml"},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
+		gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ConformanceInfraNamespace}
 		t.Run("with a backend TLS Policy", func(t *testing.T) {
-			ns := "gateway-conformance-infra"
-			routeNN := types.NamespacedName{Name: "http-with-backend-tls", Namespace: ns}
-			gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
+			routeNN := types.NamespacedName{Name: "http-with-backend-tls", Namespace: ConformanceInfraNamespace}
 			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
 
 			expectedResponse := http.ExpectedResponse{
@@ -38,7 +37,7 @@ var BackendTLSTest = suite.ConformanceTest{
 				Response: http.Response{
 					StatusCode: 200,
 				},
-				Namespace: ns,
+				Namespace: ConformanceInfraNamespace,
 			}
 
 			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
@@ -49,9 +48,7 @@ var BackendTLSTest = suite.ConformanceTest{
 			if IPFamily == "ipv6" {
 				t.Skip("Skipping test as IP_FAMILY is IPv6")
 			}
-			ns := "gateway-conformance-infra"
-			routeNN := types.NamespacedName{Name: "http-with-backend-tls-system-trust-store", Namespace: ns}
-			gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
+			routeNN := types.NamespacedName{Name: "http-with-backend-tls-system-trust-store", Namespace: ConformanceInfraNamespace}
 			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
 
 			expectedResponse := http.ExpectedResponse{
@@ -73,9 +70,7 @@ var BackendTLSTest = suite.ConformanceTest{
 		})
 
 		t.Run("without a backend TLS Policy", func(t *testing.T) {
-			ns := "gateway-conformance-infra"
-			routeNN := types.NamespacedName{Name: "http-without-backend-tls", Namespace: ns}
-			gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
+			routeNN := types.NamespacedName{Name: "http-without-backend-tls", Namespace: ConformanceInfraNamespace}
 			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
 
 			expectedResponse := http.ExpectedResponse{
@@ -85,16 +80,14 @@ var BackendTLSTest = suite.ConformanceTest{
 				Response: http.Response{
 					StatusCode: 400, // Bad Request: Client sent an HTTP request to an HTTPS server
 				},
-				Namespace: ns,
+				Namespace: ConformanceInfraNamespace,
 			}
 
 			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
 		})
 
 		t.Run("with CA mismatch and skip tls verify", func(t *testing.T) {
-			ns := "gateway-conformance-infra"
-			routeNN := types.NamespacedName{Name: "http-with-backend-insecure-skip-verify", Namespace: ns}
-			gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
+			routeNN := types.NamespacedName{Name: "http-with-backend-insecure-skip-verify", Namespace: ConformanceInfraNamespace}
 			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
 
 			expectedResponse := http.ExpectedResponse{
@@ -104,7 +97,24 @@ var BackendTLSTest = suite.ConformanceTest{
 				Response: http.Response{
 					StatusCode: 200, // Bad Request: Client sent an HTTP request to an HTTPS server
 				},
-				Namespace: ns,
+				Namespace: ConformanceInfraNamespace,
+			}
+
+			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
+		})
+
+		t.Run("with ClusterTrustBundle", func(t *testing.T) {
+			routeNN := types.NamespacedName{Name: "http-with-backend-tls-trust-bundle", Namespace: ConformanceInfraNamespace}
+			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
+
+			expectedResponse := http.ExpectedResponse{
+				Request: http.Request{
+					Path: "/cluster-trust-bundle",
+				},
+				Response: http.Response{
+					StatusCode: 200,
+				},
+				Namespace: ConformanceInfraNamespace,
 			}
 
 			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
