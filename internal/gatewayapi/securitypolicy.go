@@ -184,7 +184,7 @@ func (t *Translator) ProcessSecurityPolicies(securityPolicies []*egv1a1.Security
 				}
 
 				// Set Accepted condition if it is unset
-				status.SetAcceptedForPolicyAncestors(&policy.Status, parentGateways, t.GatewayControllerName)
+				status.SetAcceptedForPolicyAncestors(&policy.Status, parentGateways, t.GatewayControllerName, policy.Generation)
 			}
 		}
 	}
@@ -279,7 +279,7 @@ func (t *Translator) processSecurityPolicyForGateway(
 	}
 
 	// Set Accepted condition if it is unset
-	status.SetAcceptedForPolicyAncestors(&policy.Status, parentGateways, t.GatewayControllerName)
+	status.SetAcceptedForPolicyAncestors(&policy.Status, parentGateways, t.GatewayControllerName, policy.Generation)
 
 	// Check if this policy is overridden by other policies targeting at route and listener levels
 	overriddenTargetsMessage := getOverriddenTargetsMessage(
@@ -412,6 +412,17 @@ func resolveSecurityPolicyGatewayTargetRef(
 	// by this controller.
 	if !ok {
 		return nil, nil
+	}
+
+	// If sectionName is set, make sure its valid
+	if target.SectionName != nil {
+		if err := validateGatewayListenerSectionName(
+			*target.SectionName,
+			key,
+			gateway.listeners,
+		); err != nil {
+			return gateway.GatewayContext, err
+		}
 	}
 
 	if target.SectionName == nil {

@@ -16,7 +16,6 @@ import (
 	"k8s.io/client-go/kubernetes"
 
 	"github.com/envoyproxy/gateway/internal/logging"
-	"github.com/envoyproxy/gateway/internal/xds/cache"
 )
 
 // JWTAuthInterceptor verifies Kubernetes Service Account JWT tokens in gRPC requests.
@@ -24,17 +23,15 @@ type JWTAuthInterceptor struct {
 	clientset *kubernetes.Clientset
 	issuer    string
 	audience  string
-	cache     cache.SnapshotCacheWithCallbacks
 	logger    logging.Logger
 }
 
 // NewJWTAuthInterceptor initializes a new JWTAuthInterceptor.
-func NewJWTAuthInterceptor(logger logging.Logger, clientset *kubernetes.Clientset, issuer, audience string, cache cache.SnapshotCacheWithCallbacks) *JWTAuthInterceptor {
+func NewJWTAuthInterceptor(logger logging.Logger, clientset *kubernetes.Clientset, issuer, audience string) *JWTAuthInterceptor {
 	return &JWTAuthInterceptor{
 		clientset: clientset,
 		issuer:    issuer,
 		audience:  audience,
-		cache:     cache,
 		logger:    logger.WithName("jwt-auth-interceptor"),
 	}
 }

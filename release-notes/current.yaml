@@ -6,6 +6,7 @@ breaking changes: |
 
 # Updates addressing vulnerabilities, security flaws, or compliance requirements.
 security updates: |
+  Disable automountServiceAccountToken for proxy and ratelimit deployments and serviceAccounts
 
 # New features or capabilities added in this release.
 new features: |
@@ -38,6 +39,7 @@ bug fixes: |
   Fixed bug in certificate SANs overlap detection in listeners.
   Fixed issue where EnvoyExtensionPolicy ExtProc body processing mode is set to FullDuplexStreamed, but trailers were not sent.
   Fixed validation issue where EnvoyExtensionPolicy ExtProc failOpen is true, and body processing mode FullDuplexStreamed is not rejected.
+  Add ConfigMap indexers for EnvoyExtensionPolicies to reconcile Lua changes
 
 
 # Enhancements that improve performance.

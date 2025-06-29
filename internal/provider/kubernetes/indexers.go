@@ -52,6 +52,7 @@ const (
 	secretEnvoyExtensionPolicyIndex  = "secretEnvoyExtensionPolicyIndex"
 	httpRouteFilterHTTPRouteIndex    = "httpRouteFilterHTTPRouteIndex"
 	configMapBtpIndex                = "configMapBtpIndex"
+	configMapEepIndex                = "configMapEepIndex"
 	configMapHTTPRouteFilterIndex    = "configMapHTTPRouteFilterIndex"
 	secretHTTPRouteFilterIndex       = "secretHTTPRouteFilterIndex"
 )
@@ -809,6 +810,28 @@ func configMapBtpIndexFunc(rawObj client.Object) []string {
 	return configMapReferences
 }
 
+func configMapEepIndexFunc(rawObj client.Object) []string {
+	eep := rawObj.(*egv1a1.EnvoyExtensionPolicy)
+	var configMapReferences []string
+	if eep.Spec.Lua == nil {
+		return configMapReferences
+	}
+
+	for _, p := range eep.Spec.Lua {
+		if p.ValueRef != nil {
+			if string(p.ValueRef.Kind) == resource.KindConfigMap {
+				configMapReferences = append(configMapReferences,
+					types.NamespacedName{
+						Namespace: eep.Namespace,
+						Name:      string(p.ValueRef.Name),
+					}.String(),
+				)
+			}
+		}
+	}
+	return configMapReferences
+}
+
 // addRouteFilterIndexers adds indexing on HTTPRouteFilter, for ConfigMap objects that are
 // referenced in HTTPRouteFilter objects. This helps in querying for HTTPRouteFilters that are
 // affected by a particular ConfigMap CRUD.
@@ -925,6 +948,12 @@ func addEnvoyExtensionPolicyIndexers(ctx context.Context, mgr manager.Manager) e
 	if err = mgr.GetFieldIndexer().IndexField(
 		ctx, &egv1a1.EnvoyExtensionPolicy{}, secretEnvoyExtensionPolicyIndex,
 		secretEnvoyExtensionPolicyIndexFunc); err != nil {
+		return err
+	}
+
+	if err = mgr.GetFieldIndexer().IndexField(
+		ctx, &egv1a1.EnvoyExtensionPolicy{}, configMapEepIndex,
+		configMapEepIndexFunc); err != nil {
 		return err
 	}
 

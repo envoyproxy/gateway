@@ -1,0 +1,119 @@
+envoyProxyForGatewayClass:
+  apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: EnvoyProxy
+  metadata:
+    namespace: envoy-gateway-system
+    name: test
+  spec:
+    telemetry:
+      tracing:
+        samplingRate: 100
+        provider:
+          backendSettings:
+            http2:
+              initialStreamWindowSize: 128Ki
+              initialConnectionWindowSize: 2Mi
+              maxConcurrentStreams: 200
+              onInvalidMessage: TerminateStream
+            loadBalancer:
+              type: ConsistentHash
+              consistentHash:
+                type: Header
+                header:
+                  name: X-some-header
+            proxyProtocol:
+              version: V2
+            tcpKeepalive:
+              probes: 7
+            healthCheck:
+              passive:
+                consecutiveGatewayErrors: 4
+                interval: 5s
+            circuitBreaker:
+              maxConnections: 2048
+            timeout:
+              tcp:
+                connectTimeout: 15s
+            connection:
+              bufferLimit: 20Mi
+          backendRefs:
+            - group: gateway.envoyproxy.io
+              kind: Backend
+              name: datadog-svc
+              namespace: envoy-gateway-system
+              port: 8126
+          type: OpenTelemetry
+    provider:
+      type: Kubernetes
+      kubernetes:
+        envoyService:
+          type: LoadBalancer
+        envoyDeployment:
+          replicas: 2
+          container:
+            env:
+              - name: env_a
+                value: env_a_value
+              - name: env_b
+                value: env_b_name
+            image: "envoyproxy/envoy:distroless-dev"
+            resources:
+              requests:
+                cpu: 100m
+                memory: 512Mi
+            securityContext:
+              runAsUser: 2000
+              allowPrivilegeEscalation: false
+          pod:
+            annotations:
+              key1: val1
+              key2: val2
+            affinity:
+              nodeAffinity:
+                requiredDuringSchedulingIgnoredDuringExecution:
+                  nodeSelectorTerms:
+                    - matchExpressions:
+                        - key: cloud.google.com/gke-nodepool
+                          operator: In
+                          values:
+                            - router-node
+            tolerations:
+              - effect: NoSchedule
+                key: node-type
+                operator: Exists
+                value: "router"
+            securityContext:
+              runAsUser: 1000
+              runAsGroup: 3000
+              fsGroup: 2000
+              fsGroupChangePolicy: "OnRootMismatch"
+            volumes:
+              - name: certs
+                secret:
+                  secretName: envoy-cert
+gateways:
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: Gateway
+    metadata:
+      namespace: envoy-gateway
+      name: gateway-1
+    spec:
+      gatewayClassName: envoy-gateway-class
+      listeners:
+        - name: http
+          protocol: HTTP
+          port: 80
+          allowedRoutes:
+            namespaces:
+              from: Same
+backends:
+  - apiVersion: gateway.envoyproxy.io/v1alpha1
+    kind: Backend
+    metadata:
+      name: datadog-svc
+      namespace: envoy-gateway-system
+    spec:
+      endpoints:
+        - unix:
+            path: /var/run/envoy-uds/dsd.socket
+      type: Endpoints

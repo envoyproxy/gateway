@@ -147,6 +147,7 @@ func (r *ResourceRender) ServiceAccount() (*corev1.ServiceAccount, error) {
 			Kind:       "ServiceAccount",
 			APIVersion: "v1",
 		},
+		AutomountServiceAccountToken: ptr.To(false),
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace:       r.Namespace(),
 			Name:            r.Name(),
@@ -389,6 +390,7 @@ func (r *ResourceRender) Deployment() (*appsv1.Deployment, error) {
 					Annotations: podAnnotations,
 				},
 				Spec: corev1.PodSpec{
+					AutomountServiceAccountToken:  ptr.To(false),
 					Containers:                    containers,
 					InitContainers:                deploymentConfig.InitContainers,
 					ServiceAccountName:            r.Name(),
@@ -533,6 +535,8 @@ func (r *ResourceRender) PodDisruptionBudget() (*policyv1.PodDisruptionBudget, e
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace:       r.Namespace(),
 			OwnerReferences: r.OwnerReferences(),
+			Annotations:     r.infra.GetProxyMetadata().Annotations,
+			Labels:          r.stableSelector().MatchLabels,
 		},
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "policy/v1",
@@ -575,7 +579,7 @@ func (r *ResourceRender) HorizontalPodAutoscaler() (*autoscalingv2.HorizontalPod
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace:       r.Namespace(),
 			Annotations:     r.infra.GetProxyMetadata().Annotations,
-			Labels:          r.infra.GetProxyMetadata().Labels,
+			Labels:          r.stableSelector().MatchLabels,
 			OwnerReferences: r.OwnerReferences(),
 		},
 		Spec: autoscalingv2.HorizontalPodAutoscalerSpec{
@@ -627,6 +631,7 @@ func (r *ResourceRender) getPodSpec(
 	proxyConfig *egv1a1.EnvoyProxy,
 ) corev1.PodSpec {
 	return corev1.PodSpec{
+		AutomountServiceAccountToken:  ptr.To(false),
 		Containers:                    containers,
 		InitContainers:                initContainers,
 		ServiceAccountName:            r.Name(),

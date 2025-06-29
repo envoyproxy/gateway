@@ -27,22 +27,21 @@ var DynamicResolverBackendTest = suite.ConformanceTest{
 		"testdata/httproute-with-dynamic-resolver-backend.yaml",
 	},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
-		ns := "gateway-conformance-infra"
-		routeNN := types.NamespacedName{Name: "httproute-with-dynamic-resolver-backend", Namespace: ns}
-		gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
+		gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ConformanceInfraNamespace}
+		routeNN := types.NamespacedName{Name: "httproute-with-dynamic-resolver-backend", Namespace: ConformanceInfraNamespace}
 		gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
-		BackendMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "backend-dynamic-resolver", Namespace: ns})
+		BackendMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "backend-dynamic-resolver", Namespace: ConformanceInfraNamespace})
 
 		t.Run("route to service foo", func(t *testing.T) {
 			expectedResponse := http.ExpectedResponse{
 				Request: http.Request{
-					Host: "test-service-foo.gateway-conformance-infra",
+					Host: "test-service-foo.gateway-conformance-infra.svc.cluster.local",
 					Path: "/",
 				},
 				Response: http.Response{
 					StatusCode: 200,
 				},
-				Namespace: ns,
+				Namespace: ConformanceInfraNamespace,
 			}
 
 			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
@@ -50,39 +49,48 @@ var DynamicResolverBackendTest = suite.ConformanceTest{
 		t.Run("route to service bar", func(t *testing.T) {
 			expectedResponse := http.ExpectedResponse{
 				Request: http.Request{
-					Host: "test-service-bar.gateway-conformance-infra",
+					Host: "test-service-bar.gateway-conformance-infra.svc.cluster.local",
 					Path: "/",
 				},
 				Response: http.Response{
 					StatusCode: 200,
 				},
-				Namespace: ns,
+				Namespace: ConformanceInfraNamespace,
 			}
 
 			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
 		})
-
 		t.Run("route to external service with app protocol", func(t *testing.T) {
-			routeNN := types.NamespacedName{Name: "httproute-with-dynamic-resolver-backend-with-app-protocol", Namespace: ns}
+			routeNN := types.NamespacedName{Name: "httproute-with-dynamic-resolver-backend-with-app-protocol", Namespace: ConformanceInfraNamespace}
 			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
-			BackendMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "backend-dynamic-resolver-with-app-protocol", Namespace: ns})
+			BackendMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "backend-dynamic-resolver-with-app-protocol", Namespace: ConformanceInfraNamespace})
 
-			expectedResponse := http.ExpectedResponse{
+			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, http.ExpectedResponse{
 				Request: http.Request{
 					Host: "httpbin.org",
 					Path: "/status/200",
 				},
-				ExpectedRequest: &http.ExpectedRequest{
-					Request: http.Request{
-						Host: "",
-					},
+				Response: http.Response{
+					StatusCode: 502, // request will fail because httpbin.org doesn't support http2.0
+				},
+			})
+
+			// test with nghttp2.org, it support http2.0
+			// https://github.com/postmanlabs/httpbin/issues/373#issuecomment-354534597
+			req := http.MakeRequest(t, &http.ExpectedResponse{
+				Request: http.Request{
+					Host: "nghttp2.org",
+					Path: "httpbin/status/200",
 				},
 				Response: http.Response{
 					StatusCode: 200,
 				},
-			}
-
-			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
+			}, gwAddr, "HTTP", "http")
+			http.WaitForConsistentResponse(t, suite.RoundTripper, req, http.ExpectedResponse{
+				Response: http.Response{
+					StatusCode: 200,
+				},
+			}, suite.TimeoutConfig.RequiredConsecutiveSuccesses, suite.TimeoutConfig.MaxTimeToConsistency)
 		})
 	},
 }

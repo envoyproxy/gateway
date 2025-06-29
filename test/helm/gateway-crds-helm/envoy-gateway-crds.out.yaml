@@ -1018,6 +1018,34 @@ spec:
                     - Random
                     - RoundRobin
                     type: string
+                  zoneAware:
+                    description: ZoneAware defines the configuration related to the
+                      distribution of requests between locality zones.
+                    properties:
+                      preferLocal:
+                        description: PreferLocalZone configures zone-aware routing
+                          to prefer sending traffic to the local locality zone.
+                        properties:
+                          force:
+                            description: |-
+                              ForceLocalZone defines override configuration for forcing all traffic to stay within the local zone instead of the default behavior
+                              which maintains equal distribution among upstream endpoints while sending as much traffic as possible locally.
+                            properties:
+                              minEndpointsInZoneThreshold:
+                                description: |-
+                                  MinEndpointsInZoneThreshold is the minimum number of upstream endpoints in the local zone required to honor the forceLocalZone
+                                  override. This is useful for protecting zones with fewer endpoints.
+                                format: int32
+                                type: integer
+                            type: object
+                          minEndpointsThreshold:
+                            description: MinEndpointsThreshold is the minimum number
+                              of total upstream endpoints across all zones required
+                              to enable zone-aware routing.
+                            format: int64
+                            type: integer
+                        type: object
+                    type: object
                 required:
                 - type
                 type: object
@@ -1030,6 +1058,10 @@ spec:
                     LeastRequest load balancers.
                   rule: 'self.type in [''Random'', ''ConsistentHash''] ? !has(self.slowStart)
                     : true '
+                - message: Currently ZoneAware is only supported for LeastRequest,
+                    Random, and RoundRobin load balancers.
+                  rule: 'self.type == ''ConsistentHash'' ? !has(self.zoneAware) :
+                    true '
               mergeType:
                 description: |-
                   MergeType determines how this configuration is merged with existing BackendTrafficPolicy
@@ -4637,6 +4669,35 @@ spec:
                               - Random
                               - RoundRobin
                               type: string
+                            zoneAware:
+                              description: ZoneAware defines the configuration related
+                                to the distribution of requests between locality zones.
+                              properties:
+                                preferLocal:
+                                  description: PreferLocalZone configures zone-aware
+                                    routing to prefer sending traffic to the local
+                                    locality zone.
+                                  properties:
+                                    force:
+                                      description: |-
+                                        ForceLocalZone defines override configuration for forcing all traffic to stay within the local zone instead of the default behavior
+                                        which maintains equal distribution among upstream endpoints while sending as much traffic as possible locally.
+                                      properties:
+                                        minEndpointsInZoneThreshold:
+                                          description: |-
+                                            MinEndpointsInZoneThreshold is the minimum number of upstream endpoints in the local zone required to honor the forceLocalZone
+                                            override. This is useful for protecting zones with fewer endpoints.
+                                          format: int32
+                                          type: integer
+                                      type: object
+                                    minEndpointsThreshold:
+                                      description: MinEndpointsThreshold is the minimum
+                                        number of total upstream endpoints across
+                                        all zones required to enable zone-aware routing.
+                                      format: int64
+                                      type: integer
+                                  type: object
+                              type: object
                           required:
                           - type
                           type: object
@@ -4649,6 +4710,10 @@ spec:
                               and LeastRequest load balancers.
                             rule: 'self.type in [''Random'', ''ConsistentHash''] ?
                               !has(self.slowStart) : true '
+                          - message: Currently ZoneAware is only supported for LeastRequest,
+                              Random, and RoundRobin load balancers.
+                            rule: 'self.type == ''ConsistentHash'' ? !has(self.zoneAware)
+                              : true '
                         proxyProtocol:
                           description: ProxyProtocol enables the Proxy Protocol when
                             communicating with the backend.
@@ -6877,12 +6942,20 @@ spec:
                                   Image specifies the EnvoyProxy container image to be used including a tag, instead of the default image.
                                   This field is mutually exclusive with ImageRepository.
                                 type: string
+                                x-kubernetes-validations:
+                                - message: Image must include a tag and allowed characters
+                                    only (e.g., 'repo:tag').
+                                  rule: self.matches('^[a-zA-Z0-9._/-]+:[a-zA-Z0-9._-]+$')
                               imageRepository:
                                 description: |-
                                   ImageRepository specifies the container image repository to be used without specifying a tag.
                                   The default tag will be used.
                                   This field is mutually exclusive with Image.
                                 type: string
+                                x-kubernetes-validations:
+                                - message: ImageRepository must contain only allowed
+                                    characters and must not include a tag or any colons.
+                                  rule: self.matches('^[a-zA-Z0-9._/-]+$')
                               resources:
                                 description: |-
                                   Resources required by this container.
@@ -10714,12 +10787,20 @@ spec:
                                   Image specifies the EnvoyProxy container image to be used including a tag, instead of the default image.
                                   This field is mutually exclusive with ImageRepository.
                                 type: string
+                                x-kubernetes-validations:
+                                - message: Image must include a tag and allowed characters
+                                    only (e.g., 'repo:tag').
+                                  rule: self.matches('^[a-zA-Z0-9._/-]+:[a-zA-Z0-9._-]+$')
                               imageRepository:
                                 description: |-
                                   ImageRepository specifies the container image repository to be used without specifying a tag.
                                   The default tag will be used.
                                   This field is mutually exclusive with Image.
                                 type: string
+                                x-kubernetes-validations:
+                                - message: ImageRepository must contain only allowed
+                                    characters and must not include a tag or any colons.
+                                  rule: self.matches('^[a-zA-Z0-9._/-]+$')
                               resources:
                                 description: |-
                                   Resources required by this container.
@@ -16714,6 +16795,16 @@ spec:
                         - message: loadBalancerIP can only be set for LoadBalancer
                             type
                           rule: '!has(self.loadBalancerIP) || self.type == ''LoadBalancer'''
+                      envoyServiceAccount:
+                        description: EnvoyServiceAccount defines the desired state
+                          of the Envoy service account resource.
+                        properties:
+                          name:
+                            description: |-
+                              Name of the Service Account.
+                              When unset, this defaults to an autogenerated name.
+                            type: string
+                        type: object
                       useListenerPortAsContainerPort:
                         description: |-
                           UseListenerPortAsContainerPort disables the port shifting feature in the Envoy Proxy.
@@ -17604,6 +17695,39 @@ spec:
                                                 - Random
                                                 - RoundRobin
                                                 type: string
+                                              zoneAware:
+                                                description: ZoneAware defines the
+                                                  configuration related to the distribution
+                                                  of requests between locality zones.
+                                                properties:
+                                                  preferLocal:
+                                                    description: PreferLocalZone configures
+                                                      zone-aware routing to prefer
+                                                      sending traffic to the local
+                                                      locality zone.
+                                                    properties:
+                                                      force:
+                                                        description: |-
+                                                          ForceLocalZone defines override configuration for forcing all traffic to stay within the local zone instead of the default behavior
+                                                          which maintains equal distribution among upstream endpoints while sending as much traffic as possible locally.
+                                                        properties:
+                                                          minEndpointsInZoneThreshold:
+                                                            description: |-
+                                                              MinEndpointsInZoneThreshold is the minimum number of upstream endpoints in the local zone required to honor the forceLocalZone
+                                                              override. This is useful for protecting zones with fewer endpoints.
+                                                            format: int32
+                                                            type: integer
+                                                        type: object
+                                                      minEndpointsThreshold:
+                                                        description: MinEndpointsThreshold
+                                                          is the minimum number of
+                                                          total upstream endpoints
+                                                          across all zones required
+                                                          to enable zone-aware routing.
+                                                        format: int64
+                                                        type: integer
+                                                    type: object
+                                                type: object
                                             required:
                                             - type
                                             type: object
@@ -17617,6 +17741,11 @@ spec:
                                                 load balancers.
                                               rule: 'self.type in [''Random'', ''ConsistentHash'']
                                                 ? !has(self.slowStart) : true '
+                                            - message: Currently ZoneAware is only
+                                                supported for LeastRequest, Random,
+                                                and RoundRobin load balancers.
+                                              rule: 'self.type == ''ConsistentHash''
+                                                ? !has(self.zoneAware) : true '
                                           proxyProtocol:
                                             description: ProxyProtocol enables the
                                               Proxy Protocol when communicating with
@@ -18638,6 +18767,39 @@ spec:
                                                 - Random
                                                 - RoundRobin
                                                 type: string
+                                              zoneAware:
+                                                description: ZoneAware defines the
+                                                  configuration related to the distribution
+                                                  of requests between locality zones.
+                                                properties:
+                                                  preferLocal:
+                                                    description: PreferLocalZone configures
+                                                      zone-aware routing to prefer
+                                                      sending traffic to the local
+                                                      locality zone.
+                                                    properties:
+                                                      force:
+                                                        description: |-
+                                                          ForceLocalZone defines override configuration for forcing all traffic to stay within the local zone instead of the default behavior
+                                                          which maintains equal distribution among upstream endpoints while sending as much traffic as possible locally.
+                                                        properties:
+                                                          minEndpointsInZoneThreshold:
+                                                            description: |-
+                                                              MinEndpointsInZoneThreshold is the minimum number of upstream endpoints in the local zone required to honor the forceLocalZone
+                                                              override. This is useful for protecting zones with fewer endpoints.
+                                                            format: int32
+                                                            type: integer
+                                                        type: object
+                                                      minEndpointsThreshold:
+                                                        description: MinEndpointsThreshold
+                                                          is the minimum number of
+                                                          total upstream endpoints
+                                                          across all zones required
+                                                          to enable zone-aware routing.
+                                                        format: int64
+                                                        type: integer
+                                                    type: object
+                                                type: object
                                             required:
                                             - type
                                             type: object
@@ -18651,6 +18813,11 @@ spec:
                                                 load balancers.
                                               rule: 'self.type in [''Random'', ''ConsistentHash'']
                                                 ? !has(self.slowStart) : true '
+                                            - message: Currently ZoneAware is only
+                                                supported for LeastRequest, Random,
+                                                and RoundRobin load balancers.
+                                              rule: 'self.type == ''ConsistentHash''
+                                                ? !has(self.zoneAware) : true '
                                           proxyProtocol:
                                             description: ProxyProtocol enables the
                                               Proxy Protocol when communicating with
@@ -19757,6 +19924,38 @@ spec:
                                           - Random
                                           - RoundRobin
                                           type: string
+                                        zoneAware:
+                                          description: ZoneAware defines the configuration
+                                            related to the distribution of requests
+                                            between locality zones.
+                                          properties:
+                                            preferLocal:
+                                              description: PreferLocalZone configures
+                                                zone-aware routing to prefer sending
+                                                traffic to the local locality zone.
+                                              properties:
+                                                force:
+                                                  description: |-
+                                                    ForceLocalZone defines override configuration for forcing all traffic to stay within the local zone instead of the default behavior
+                                                    which maintains equal distribution among upstream endpoints while sending as much traffic as possible locally.
+                                                  properties:
+                                                    minEndpointsInZoneThreshold:
+                                                      description: |-
+                                                        MinEndpointsInZoneThreshold is the minimum number of upstream endpoints in the local zone required to honor the forceLocalZone
+                                                        override. This is useful for protecting zones with fewer endpoints.
+                                                      format: int32
+                                                      type: integer
+                                                  type: object
+                                                minEndpointsThreshold:
+                                                  description: MinEndpointsThreshold
+                                                    is the minimum number of total
+                                                    upstream endpoints across all
+                                                    zones required to enable zone-aware
+                                                    routing.
+                                                  format: int64
+                                                  type: integer
+                                              type: object
+                                          type: object
                                       required:
                                       - type
                                       type: object
@@ -19769,6 +19968,11 @@ spec:
                                           for RoundRobin and LeastRequest load balancers.
                                         rule: 'self.type in [''Random'', ''ConsistentHash'']
                                           ? !has(self.slowStart) : true '
+                                      - message: Currently ZoneAware is only supported
+                                          for LeastRequest, Random, and RoundRobin
+                                          load balancers.
+                                        rule: 'self.type == ''ConsistentHash'' ? !has(self.zoneAware)
+                                          : true '
                                     proxyProtocol:
                                       description: ProxyProtocol enables the Proxy
                                         Protocol when communicating with the backend.
@@ -20795,6 +20999,37 @@ spec:
                                     - Random
                                     - RoundRobin
                                     type: string
+                                  zoneAware:
+                                    description: ZoneAware defines the configuration
+                                      related to the distribution of requests between
+                                      locality zones.
+                                    properties:
+                                      preferLocal:
+                                        description: PreferLocalZone configures zone-aware
+                                          routing to prefer sending traffic to the
+                                          local locality zone.
+                                        properties:
+                                          force:
+                                            description: |-
+                                              ForceLocalZone defines override configuration for forcing all traffic to stay within the local zone instead of the default behavior
+                                              which maintains equal distribution among upstream endpoints while sending as much traffic as possible locally.
+                                            properties:
+                                              minEndpointsInZoneThreshold:
+                                                description: |-
+                                                  MinEndpointsInZoneThreshold is the minimum number of upstream endpoints in the local zone required to honor the forceLocalZone
+                                                  override. This is useful for protecting zones with fewer endpoints.
+                                                format: int32
+                                                type: integer
+                                            type: object
+                                          minEndpointsThreshold:
+                                            description: MinEndpointsThreshold is
+                                              the minimum number of total upstream
+                                              endpoints across all zones required
+                                              to enable zone-aware routing.
+                                            format: int64
+                                            type: integer
+                                        type: object
+                                    type: object
                                 required:
                                 - type
                                 type: object
@@ -20807,6 +21042,10 @@ spec:
                                     RoundRobin and LeastRequest load balancers.
                                   rule: 'self.type in [''Random'', ''ConsistentHash'']
                                     ? !has(self.slowStart) : true '
+                                - message: Currently ZoneAware is only supported for
+                                    LeastRequest, Random, and RoundRobin load balancers.
+                                  rule: 'self.type == ''ConsistentHash'' ? !has(self.zoneAware)
+                                    : true '
                               proxyProtocol:
                                 description: ProxyProtocol enables the Proxy Protocol
                                   when communicating with the backend.
@@ -22646,6 +22885,37 @@ spec:
                                 - Random
                                 - RoundRobin
                                 type: string
+                              zoneAware:
+                                description: ZoneAware defines the configuration related
+                                  to the distribution of requests between locality
+                                  zones.
+                                properties:
+                                  preferLocal:
+                                    description: PreferLocalZone configures zone-aware
+                                      routing to prefer sending traffic to the local
+                                      locality zone.
+                                    properties:
+                                      force:
+                                        description: |-
+                                          ForceLocalZone defines override configuration for forcing all traffic to stay within the local zone instead of the default behavior
+                                          which maintains equal distribution among upstream endpoints while sending as much traffic as possible locally.
+                                        properties:
+                                          minEndpointsInZoneThreshold:
+                                            description: |-
+                                              MinEndpointsInZoneThreshold is the minimum number of upstream endpoints in the local zone required to honor the forceLocalZone
+                                              override. This is useful for protecting zones with fewer endpoints.
+                                            format: int32
+                                            type: integer
+                                        type: object
+                                      minEndpointsThreshold:
+                                        description: MinEndpointsThreshold is the
+                                          minimum number of total upstream endpoints
+                                          across all zones required to enable zone-aware
+                                          routing.
+                                        format: int64
+                                        type: integer
+                                    type: object
+                                type: object
                             required:
                             - type
                             type: object
@@ -22658,6 +22928,10 @@ spec:
                                 and LeastRequest load balancers.
                               rule: 'self.type in [''Random'', ''ConsistentHash'']
                                 ? !has(self.slowStart) : true '
+                            - message: Currently ZoneAware is only supported for LeastRequest,
+                                Random, and RoundRobin load balancers.
+                              rule: 'self.type == ''ConsistentHash'' ? !has(self.zoneAware)
+                                : true '
                           proxyProtocol:
                             description: ProxyProtocol enables the Proxy Protocol
                               when communicating with the backend.
@@ -23578,6 +23852,37 @@ spec:
                                 - Random
                                 - RoundRobin
                                 type: string
+                              zoneAware:
+                                description: ZoneAware defines the configuration related
+                                  to the distribution of requests between locality
+                                  zones.
+                                properties:
+                                  preferLocal:
+                                    description: PreferLocalZone configures zone-aware
+                                      routing to prefer sending traffic to the local
+                                      locality zone.
+                                    properties:
+                                      force:
+                                        description: |-
+                                          ForceLocalZone defines override configuration for forcing all traffic to stay within the local zone instead of the default behavior
+                                          which maintains equal distribution among upstream endpoints while sending as much traffic as possible locally.
+                                        properties:
+                                          minEndpointsInZoneThreshold:
+                                            description: |-
+                                              MinEndpointsInZoneThreshold is the minimum number of upstream endpoints in the local zone required to honor the forceLocalZone
+                                              override. This is useful for protecting zones with fewer endpoints.
+                                            format: int32
+                                            type: integer
+                                        type: object
+                                      minEndpointsThreshold:
+                                        description: MinEndpointsThreshold is the
+                                          minimum number of total upstream endpoints
+                                          across all zones required to enable zone-aware
+                                          routing.
+                                        format: int64
+                                        type: integer
+                                    type: object
+                                type: object
                             required:
                             - type
                             type: object
@@ -23590,6 +23895,10 @@ spec:
                                 and LeastRequest load balancers.
                               rule: 'self.type in [''Random'', ''ConsistentHash'']
                                 ? !has(self.slowStart) : true '
+                            - message: Currently ZoneAware is only supported for LeastRequest,
+                                Random, and RoundRobin load balancers.
+                              rule: 'self.type == ''ConsistentHash'' ? !has(self.zoneAware)
+                                : true '
                           proxyProtocol:
                             description: ProxyProtocol enables the Proxy Protocol
                               when communicating with the backend.
@@ -24716,6 +25025,37 @@ spec:
                                       - Random
                                       - RoundRobin
                                       type: string
+                                    zoneAware:
+                                      description: ZoneAware defines the configuration
+                                        related to the distribution of requests between
+                                        locality zones.
+                                      properties:
+                                        preferLocal:
+                                          description: PreferLocalZone configures
+                                            zone-aware routing to prefer sending traffic
+                                            to the local locality zone.
+                                          properties:
+                                            force:
+                                              description: |-
+                                                ForceLocalZone defines override configuration for forcing all traffic to stay within the local zone instead of the default behavior
+                                                which maintains equal distribution among upstream endpoints while sending as much traffic as possible locally.
+                                              properties:
+                                                minEndpointsInZoneThreshold:
+                                                  description: |-
+                                                    MinEndpointsInZoneThreshold is the minimum number of upstream endpoints in the local zone required to honor the forceLocalZone
+                                                    override. This is useful for protecting zones with fewer endpoints.
+                                                  format: int32
+                                                  type: integer
+                                              type: object
+                                            minEndpointsThreshold:
+                                              description: MinEndpointsThreshold is
+                                                the minimum number of total upstream
+                                                endpoints across all zones required
+                                                to enable zone-aware routing.
+                                              format: int64
+                                              type: integer
+                                          type: object
+                                      type: object
                                   required:
                                   - type
                                   type: object
@@ -24728,6 +25068,11 @@ spec:
                                       for RoundRobin and LeastRequest load balancers.
                                     rule: 'self.type in [''Random'', ''ConsistentHash'']
                                       ? !has(self.slowStart) : true '
+                                  - message: Currently ZoneAware is only supported
+                                      for LeastRequest, Random, and RoundRobin load
+                                      balancers.
+                                    rule: 'self.type == ''ConsistentHash'' ? !has(self.zoneAware)
+                                      : true '
                                 proxyProtocol:
                                   description: ProxyProtocol enables the Proxy Protocol
                                     when communicating with the backend.
@@ -25842,6 +26187,37 @@ spec:
                                 - Random
                                 - RoundRobin
                                 type: string
+                              zoneAware:
+                                description: ZoneAware defines the configuration related
+                                  to the distribution of requests between locality
+                                  zones.
+                                properties:
+                                  preferLocal:
+                                    description: PreferLocalZone configures zone-aware
+                                      routing to prefer sending traffic to the local
+                                      locality zone.
+                                    properties:
+                                      force:
+                                        description: |-
+                                          ForceLocalZone defines override configuration for forcing all traffic to stay within the local zone instead of the default behavior
+                                          which maintains equal distribution among upstream endpoints while sending as much traffic as possible locally.
+                                        properties:
+                                          minEndpointsInZoneThreshold:
+                                            description: |-
+                                              MinEndpointsInZoneThreshold is the minimum number of upstream endpoints in the local zone required to honor the forceLocalZone
+                                              override. This is useful for protecting zones with fewer endpoints.
+                                            format: int32
+                                            type: integer
+                                        type: object
+                                      minEndpointsThreshold:
+                                        description: MinEndpointsThreshold is the
+                                          minimum number of total upstream endpoints
+                                          across all zones required to enable zone-aware
+                                          routing.
+                                        format: int64
+                                        type: integer
+                                    type: object
+                                type: object
                             required:
                             - type
                             type: object
@@ -25854,6 +26230,10 @@ spec:
                                 and LeastRequest load balancers.
                               rule: 'self.type in [''Random'', ''ConsistentHash'']
                                 ? !has(self.slowStart) : true '
+                            - message: Currently ZoneAware is only supported for LeastRequest,
+                                Random, and RoundRobin load balancers.
+                              rule: 'self.type == ''ConsistentHash'' ? !has(self.zoneAware)
+                                : true '
                           proxyProtocol:
                             description: ProxyProtocol enables the Proxy Protocol
                               when communicating with the backend.
