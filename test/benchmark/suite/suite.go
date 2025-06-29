@@ -17,8 +17,11 @@ import (
 	"testing"
 	"time"
 
+	appsv1 "k8s.io/api/apps/v1"
 	batchv1 "k8s.io/api/batch/v1"
+	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -32,10 +35,13 @@ import (
 )
 
 const (
-	BenchmarkTestScaledKey     = "benchmark-test/scaled"
-	BenchmarkTestClientKey     = "benchmark-test/client"
-	BenchmarkMetricsSampleTick = 3 * time.Second
-	DefaultControllerName      = "gateway.envoyproxy.io/gatewayclass-controller"
+	BenchmarkTestScaledKey                  = "benchmark-test/scaled"
+	BenchmarkTestClientKey                  = "benchmark-test/client"
+	BenchmarkTestServerDeploymentNameFormat = "nighthawk-test-server-%d"
+	BenchmarkTestServerServiceFormat        = BenchmarkTestServerDeploymentNameFormat
+	BenchmarkMetricsSampleTick              = 3 * time.Second
+	DefaultDeploymentAvailablePeriod        = 3 * time.Minute
+	DefaultControllerName                   = "gateway.envoyproxy.io/gatewayclass-controller"
 )
 
 type BenchmarkTest struct {
@@ -52,9 +58,11 @@ type BenchmarkTestSuite struct {
 	ReportSaveDir  string
 
 	// Resources template for supported benchmark targets.
-	GatewayTemplate    *gwapiv1.Gateway
-	HTTPRouteTemplate  *gwapiv1.HTTPRoute
-	BenchmarkClientJob *batchv1.Job
+	GatewayTemplate           *gwapiv1.Gateway
+	HTTPRouteTemplate         *gwapiv1.HTTPRoute
+	BenchmarkClientJob        *batchv1.Job
+	BenchmarkServerDeployment *appsv1.Deployment
+	BenchmarkServerService    *corev1.Service
 
 	// Labels
 	scaledLabels map[string]string // indicate which resources are scaled
@@ -64,14 +72,18 @@ type BenchmarkTestSuite struct {
 	promClient *prom.Client
 }
 
-func NewBenchmarkTestSuite(client client.Client, options BenchmarkOptions,
-	gatewayManifest, httpRouteManifest, benchmarkClientManifest, reportDir string,
+func NewBenchmarkTestSuite(
+	client client.Client,
+	options BenchmarkOptions,
+	gatewayManifest, httpRouteManifest, benchmarkClientManifest, benchmarkServerManifest, reportDir string,
 ) (*BenchmarkTestSuite, error) {
 	var (
-		gateway         = new(gwapiv1.Gateway)
-		httproute       = new(gwapiv1.HTTPRoute)
-		benchmarkClient = new(batchv1.Job)
-		timeoutConfig   = config.TimeoutConfig{}
+		gateway                   = new(gwapiv1.Gateway)
+		httproute                 = new(gwapiv1.HTTPRoute)
+		benchmarkClient           = new(batchv1.Job)
+		benchmarkServerDeployment = new(appsv1.Deployment)
+		benchmarkServerService    = new(corev1.Service)
+		timeoutConfig             = config.TimeoutConfig{}
 	)
 
 	data, err := os.ReadFile(gatewayManifest)
@@ -95,6 +107,18 @@ func NewBenchmarkTestSuite(client client.Client, options BenchmarkOptions,
 		return nil, err
 	}
 	if err = yaml.Unmarshal(data, benchmarkClient); err != nil {
+		return nil, err
+	}
+
+	data, err = os.ReadFile(benchmarkServerManifest)
+	if err != nil {
+		return nil, err
+	}
+	splitedData := bytes.SplitN(data, []byte("---"), 2)
+	if err = yaml.Unmarshal(splitedData[0], benchmarkServerDeployment); err != nil {
+		return nil, err
+	}
+	if err = yaml.Unmarshal(splitedData[1], benchmarkServerService); err != nil {
 		return nil, err
 	}
 
@@ -125,14 +149,16 @@ func NewBenchmarkTestSuite(client client.Client, options BenchmarkOptions,
 	}
 
 	return &BenchmarkTestSuite{
-		Client:             client,
-		Options:            options,
-		TimeoutConfig:      timeoutConfig,
-		ControllerName:     DefaultControllerName,
-		ReportSaveDir:      reportDir,
-		GatewayTemplate:    gateway,
-		HTTPRouteTemplate:  httproute,
-		BenchmarkClientJob: benchmarkClient,
+		Client:                    client,
+		Options:                   options,
+		TimeoutConfig:             timeoutConfig,
+		ControllerName:            DefaultControllerName,
+		ReportSaveDir:             reportDir,
+		GatewayTemplate:           gateway,
+		HTTPRouteTemplate:         httproute,
+		BenchmarkClientJob:        benchmarkClient,
+		BenchmarkServerDeployment: benchmarkServerDeployment,
+		BenchmarkServerService:    benchmarkServerService,
 		scaledLabels: map[string]string{
 			BenchmarkTestScaledKey: "true",
 		},
@@ -290,10 +316,28 @@ func prepareBenchmarkClientRuntimeArgs(gatewayHostPort string, requestHeaders []
 	return args
 }
 
+/*
+ * HTTPRoutes resource processing
+ */
+
+func (b *BenchmarkTestSuite) getExpectHTTPRoute(name, hostname, gatewayName, serviceName string) *gwapiv1.HTTPRoute {
+	newRoute := b.HTTPRouteTemplate.DeepCopy()
+	newRoute.SetName(name)
+	newRoute.SetLabels(b.scaledLabels)
+	newRoute.Spec.ParentRefs[0].Name = gwapiv1.ObjectName(gatewayName)
+	if len(hostname) > 0 {
+		newRoute.Spec.Hostnames[0] = gwapiv1.Hostname(hostname)
+	}
+	if len(serviceName) > 0 {
+		newRoute.Spec.Rules[0].BackendRefs[0].Name = gwapiv1.ObjectName(serviceName)
+	}
+	return newRoute
+}
+
 // ScaleUpHTTPRoutes scales up HTTPRoutes that are all referenced to one Gateway according to
 // the scale range: (a, b], which scales up from a to b with a <= b.
 //
-// The `afterCreation` is a callback function that only runs every time after one HTTPRoutes
+// The `afterCreation` is a callback function that only runs every time after one HTTPRoute
 // has been created successfully.
 //
 // All created scaled resources will be labeled with BenchmarkTestScaledKey.
@@ -309,13 +353,9 @@ func (b *BenchmarkTestSuite) ScaleUpHTTPRoutes(ctx context.Context, scaleRange [
 	for i = begin + 1; i <= end; i++ {
 		routeName := fmt.Sprintf(routeNameFormat, i)
 		routeHostname := fmt.Sprintf(routeHostnameFormat, currentBatch)
+		serviceName := fmt.Sprintf(BenchmarkTestServerServiceFormat, currentBatch)
 
-		newRoute := b.HTTPRouteTemplate.DeepCopy()
-		newRoute.SetName(routeName)
-		newRoute.SetLabels(b.scaledLabels)
-		newRoute.Spec.ParentRefs[0].Name = gwapiv1.ObjectName(refGateway)
-		newRoute.Spec.Hostnames[0] = gwapiv1.Hostname(routeHostname)
-
+		newRoute := b.getExpectHTTPRoute(routeName, routeHostname, refGateway, serviceName)
 		if err := b.CreateResource(ctx, newRoute); err != nil {
 			return err
 		}
@@ -337,7 +377,7 @@ func (b *BenchmarkTestSuite) ScaleUpHTTPRoutes(ctx context.Context, scaleRange [
 // ScaleDownHTTPRoutes scales down HTTPRoutes that are all referenced to one Gateway according to
 // the scale range: [a, b), which scales down from a to b with a > b.
 //
-// The `afterDeletion` is a callback function that only runs every time after one HTTPRoutes has
+// The `afterDeletion` is a callback function that only runs every time after one HTTPRoute has
 // been deleted successfully.
 func (b *BenchmarkTestSuite) ScaleDownHTTPRoutes(ctx context.Context, scaleRange [2]uint16, routeNameFormat, refGateway string, afterDeletion func(*gwapiv1.HTTPRoute)) error {
 	var i, begin, end uint16
@@ -347,23 +387,190 @@ func (b *BenchmarkTestSuite) ScaleDownHTTPRoutes(ctx context.Context, scaleRange
 		return fmt.Errorf("got wrong scale range, %d is not less than %d", end, begin)
 	}
 
-	if end == 0 {
-		return fmt.Errorf("cannot scale routes down to zero")
-	}
-
 	for i = begin; i > end; i-- {
 		routeName := fmt.Sprintf(routeNameFormat, i)
-		oldRoute := b.HTTPRouteTemplate.DeepCopy()
-		oldRoute.SetName(routeName)
-		oldRoute.SetLabels(b.scaledLabels)
-		oldRoute.Spec.ParentRefs[0].Name = gwapiv1.ObjectName(refGateway)
-
+		oldRoute := b.getExpectHTTPRoute(routeName, "", refGateway, "")
 		if err := b.DeleteResource(ctx, oldRoute); err != nil {
 			return err
 		}
 
 		if afterDeletion != nil {
 			afterDeletion(oldRoute)
+		}
+	}
+
+	return nil
+}
+
+/*
+ * Deployments and Services resource processing
+ */
+
+func (b *BenchmarkTestSuite) getExpectDeployment(name string, replicas int32) *appsv1.Deployment {
+	matchingLabels := map[string]string{
+		"app": name,
+	}
+	newDeployment := b.BenchmarkServerDeployment.DeepCopy()
+	newDeployment.SetName(name)
+	newDeployment.SetLabels(b.scaledLabels)
+	newDeployment.Spec.Selector.MatchLabels = matchingLabels
+	newDeployment.Spec.Template.Labels = matchingLabels
+	if replicas > 0 {
+		newDeployment.Spec.Replicas = &replicas
+	}
+	return newDeployment
+}
+
+func (b *BenchmarkTestSuite) getExpectService(name string) *corev1.Service {
+	matchingLabels := map[string]string{
+		"app": name,
+	}
+	newService := b.BenchmarkServerService.DeepCopy()
+	newService.SetName(name)
+	newService.SetLabels(b.scaledLabels)
+	newService.Spec.Selector = matchingLabels
+	return newService
+}
+
+// ScaleUpDeployments scales up Deployments and Services according to
+// the scale range: (a, b], which scales up from a to b with a <= b.
+//
+// The `afterCreation` is a callback function that only runs every time after one
+// Deployment and Service has been created successfully.
+func (b *BenchmarkTestSuite) ScaleUpDeployments(ctx context.Context, scaleRange [2]uint16, replicas int32, afterCreation func(*appsv1.Deployment, *corev1.Service)) error {
+	var i, begin, end uint16
+	begin, end = scaleRange[0], scaleRange[1]
+
+	if begin > end {
+		return fmt.Errorf("got wrong scale range, %d is not greater than %d", end, begin)
+	}
+
+	for i = begin + 1; i <= end; i++ {
+		deploymentName := fmt.Sprintf(BenchmarkTestServerDeploymentNameFormat, i)
+		serviceName := fmt.Sprintf(BenchmarkTestServerServiceFormat, i)
+
+		newDeployment := b.getExpectDeployment(deploymentName, replicas)
+		if err := b.CreateResource(ctx, newDeployment); err != nil {
+			return err
+		}
+
+		newService := b.getExpectService(serviceName)
+		if err := b.CreateResource(ctx, newService); err != nil {
+			return err
+		}
+
+		if afterCreation != nil {
+			afterCreation(newDeployment, newService)
+		}
+
+		// Wait until deployment is available.
+		if err := wait.PollUntilContextTimeout(ctx, BenchmarkMetricsSampleTick, DefaultDeploymentAvailablePeriod, true, func(ctx context.Context) (bool, error) {
+			d := new(appsv1.Deployment)
+			if err := b.Client.Get(ctx, types.NamespacedName{Namespace: "benchmark-test", Name: deploymentName}, d); err != nil {
+				return false, err
+			}
+			if d.Status.AvailableReplicas == replicas {
+				return true, nil
+			}
+			return false, nil
+		}); err != nil {
+			return err
+		}
+
+		// Wait until all pods are ready.
+		if err := wait.PollUntilContextTimeout(ctx, BenchmarkMetricsSampleTick, DefaultDeploymentAvailablePeriod, true, func(ctx context.Context) (bool, error) {
+			pods := &corev1.PodList{}
+			err := b.Client.List(ctx, pods, &client.ListOptions{
+				Namespace:     "benchmark-test",
+				LabelSelector: labels.SelectorFromSet(map[string]string{"app": deploymentName}),
+			})
+			if err != nil || len(pods.Items) == 0 {
+				return false, fmt.Errorf("no available pods for %s", deploymentName)
+			}
+
+		checkPods:
+			for _, p := range pods.Items {
+				if p.Status.Phase != corev1.PodRunning {
+					return false, nil
+				}
+				if len(p.Status.Conditions) == 0 {
+					return false, nil
+				}
+				for _, c := range p.Status.Conditions {
+					if c.Type == corev1.PodReady && c.Status == corev1.ConditionTrue {
+						continue checkPods
+					}
+				}
+				return false, nil
+			}
+
+			return true, nil
+		}); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// ScaleDownDeployments scales down Deployments and Services according to
+// the scale range: [a, b), which scales down from a to b with a > b.
+//
+// The `afterDeletion` is a callback function that only runs every time after one
+// Deployment and Service has been deleted successfully.
+func (b *BenchmarkTestSuite) ScaleDownDeployments(ctx context.Context, scaleRange [2]uint16, afterDeletion func(*appsv1.Deployment, *corev1.Service)) error {
+	var i, begin, end uint16
+	begin, end = scaleRange[0], scaleRange[1]
+
+	if begin <= end {
+		return fmt.Errorf("got wrong scale range, %d is not less than %d", end, begin)
+	}
+
+	for i = begin; i > end; i-- {
+		deploymentName := fmt.Sprintf(BenchmarkTestServerDeploymentNameFormat, i)
+		serviceName := fmt.Sprintf(BenchmarkTestServerServiceFormat, i)
+
+		oldService := b.getExpectService(serviceName)
+		if err := b.DeleteResource(ctx, oldService); err != nil {
+			return err
+		}
+
+		oldDeployment := b.getExpectDeployment(deploymentName, 0)
+		if err := b.DeleteResource(ctx, oldDeployment); err != nil {
+			return err
+		}
+
+		if afterDeletion != nil {
+			afterDeletion(oldDeployment, oldService)
+		}
+
+		// Wait until deployment is removed.
+		if err := wait.PollUntilContextTimeout(ctx, BenchmarkMetricsSampleTick, DefaultDeploymentAvailablePeriod, true, func(ctx context.Context) (bool, error) {
+			d := new(appsv1.Deployment)
+			if err := b.Client.Get(ctx, types.NamespacedName{Namespace: "benchmark-test", Name: deploymentName}, d); err != nil {
+				if kerrors.IsNotFound(err) {
+					return true, nil
+				}
+				return false, err
+			}
+			return false, nil
+		}); err != nil {
+			return err
+		}
+
+		// Wait until all pods are removed.
+		if err := wait.PollUntilContextTimeout(ctx, BenchmarkMetricsSampleTick, DefaultDeploymentAvailablePeriod, true, func(ctx context.Context) (bool, error) {
+			pods := &corev1.PodList{}
+			err := b.Client.List(ctx, pods, &client.ListOptions{
+				Namespace:     "benchmark-test",
+				LabelSelector: labels.SelectorFromSet(map[string]string{"app": deploymentName}),
+			})
+			if err == nil && len(pods.Items) == 0 {
+				return true, nil
+			}
+			return false, err
+		}); err != nil {
+			return err
 		}
 	}
 
@@ -402,12 +609,14 @@ func (b *BenchmarkTestSuite) DeleteScaledResources(ctx context.Context, object c
 }
 
 // RegisterCleanup registers cleanup functions for all benchmark test resources.
-func (b *BenchmarkTestSuite) RegisterCleanup(t *testing.T, ctx context.Context, object, scaledObject client.Object) {
+func (b *BenchmarkTestSuite) RegisterCleanup(t *testing.T, ctx context.Context, object client.Object, scaledObjects ...client.Object) {
 	t.Cleanup(func() {
 		t.Logf("Start to cleanup benchmark test resources")
 
 		_ = b.DeleteResource(ctx, object)
-		_ = b.DeleteScaledResources(ctx, scaledObject)
+		for _, so := range scaledObjects {
+			_ = b.DeleteScaledResources(ctx, so)
+		}
 
 		t.Logf("Clean up complete!")
 	})
