@@ -7,12 +7,16 @@ package cmd
 
 import (
 	"context"
+	"fmt"
 	"io"
 
 	"github.com/spf13/cobra"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	clicfg "sigs.k8s.io/controller-runtime/pkg/client/config"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/admin"
+	"github.com/envoyproxy/gateway/internal/envoygateway"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config/loader"
 	extensionregistry "github.com/envoyproxy/gateway/internal/extension/registry"
@@ -78,7 +82,18 @@ func server(ctx context.Context, logOut io.Writer) error {
 	}
 
 	// Init eg admin servers.
-	if err := admin.Init(cfg); err != nil {
+	// Create a Kubernetes client for the admin server
+	var k8sClient client.Client
+	if cfg.EnvoyGateway.Provider.Type == egv1a1.ProviderTypeKubernetes {
+		clientConfig := clicfg.GetConfigOrDie()
+		clientConfig.QPS, clientConfig.Burst = cfg.EnvoyGateway.Provider.Kubernetes.Client.RateLimit.GetQPSAndBurst()
+		k8sClient, err = client.New(clientConfig, client.Options{Scheme: envoygateway.GetScheme()})
+		if err != nil {
+			return fmt.Errorf("failed to create Kubernetes client for admin server: %w", err)
+		}
+	}
+
+	if err := admin.Init(cfg, k8sClient); err != nil {
 		return err
 	}
 	// Init eg metrics servers.

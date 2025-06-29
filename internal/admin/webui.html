@@ -1,0 +1,812 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Envoy Gateway Admin</title>
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+            display: flex;
+            flex-direction: column;
+        }
+        .header {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            color: #2c3e50;
+            padding: 1rem 2rem;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+            border-bottom: 3px solid #3498db;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .header-left {
+            display: flex;
+            align-items: center;
+        }
+        .logo {
+            width: 32px;
+            height: 32px;
+            margin-right: 0.75rem;
+        }
+        .header h1 {
+            margin: 0;
+            font-size: 1.8rem;
+            font-weight: 600;
+        }
+        .nav {
+            display: flex;
+            align-items: center;
+        }
+        .nav ul {
+            list-style: none;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            gap: 0.5rem;
+        }
+        .nav li {
+            margin: 0;
+        }
+        .nav a {
+            display: block;
+            padding: 0.75rem 1.25rem;
+            color: #2c3e50;
+            text-decoration: none;
+            transition: all 0.3s ease;
+            font-weight: 500;
+            border-radius: 25px;
+            background: rgba(52, 152, 219, 0.1);
+            border: 2px solid transparent;
+        }
+        .nav a:hover {
+            background: rgba(52, 152, 219, 0.2);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(52, 152, 219, 0.3);
+        }
+        .nav a.active {
+            background: #3498db;
+            color: white;
+            border-color: #2980b9;
+            box-shadow: 0 4px 15px rgba(52, 152, 219, 0.4);
+        }
+        .container {
+            width: 100%;
+            margin: 0 auto;
+            padding: 2rem;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .section {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 12px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+            margin-bottom: 2rem;
+            padding: 2rem;
+            display: none;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            width: 50%;
+            min-width: 600px;
+            max-width: 800px;
+            box-sizing: border-box;
+        }
+        .section.active {
+            display: block;
+            animation: fadeIn 0.3s ease-in;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .section h2 {
+            margin-top: 0;
+            color: #2c3e50;
+            border-bottom: 3px solid #3498db;
+            padding-bottom: 0.75rem;
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-bottom: 1.5rem;
+        }
+        .section-content {
+            width: 100%;
+            box-sizing: border-box;
+        }
+        .loading {
+            text-align: center;
+            padding: 3rem;
+            color: #7f8c8d;
+            font-size: 1.1rem;
+        }
+        .loading::before {
+            content: "⏳";
+            display: block;
+            font-size: 2rem;
+            margin-bottom: 1rem;
+            animation: spin 2s linear infinite;
+        }
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        .error {
+            background: linear-gradient(135deg, #e74c3c, #c0392b);
+            color: white;
+            padding: 1.5rem;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+            box-shadow: 0 4px 15px rgba(231, 76, 60, 0.3);
+            border-left: 4px solid #c0392b;
+        }
+        .error::before {
+            content: "⚠️ ";
+            font-size: 1.2rem;
+        }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-top: 1.5rem;
+            width: 100%;
+            box-sizing: border-box;
+        }
+        .stat-card {
+            background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+            border: 1px solid rgba(222, 226, 230, 0.5);
+            border-radius: 12px;
+            padding: 1.5rem;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, #3498db, #2ecc71);
+        }
+        .stat-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+        }
+        .stat-card h4 {
+            margin: 0 0 0.75rem 0;
+            color: #495057;
+            font-weight: 600;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .stat-value {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: #2c3e50;
+            margin-bottom: 0.5rem;
+        }
+        .resources-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1.5rem;
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            box-sizing: border-box;
+            table-layout: fixed;
+        }
+        .resources-table th,
+        .resources-table td {
+            padding: 1rem 0.75rem;
+            text-align: left;
+            border-bottom: 1px solid rgba(222, 226, 230, 0.5);
+        }
+        .resources-table th {
+            background: linear-gradient(135deg, #34495e, #2c3e50);
+            color: white;
+            font-weight: 600;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .resources-table tbody tr {
+            transition: all 0.2s ease;
+        }
+        .resources-table tbody tr:hover {
+            background-color: rgba(52, 152, 219, 0.05);
+            transform: scale(1.01);
+        }
+        .resources-table tbody tr:nth-child(even) {
+            background-color: rgba(248, 249, 250, 0.5);
+        }
+        .status-badge {
+            padding: 0.4rem 0.8rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.3rem;
+        }
+        .status-true {
+            background: linear-gradient(135deg, #d4edda, #c3e6cb);
+            color: #155724;
+            border: 1px solid #b8dacc;
+        }
+        .status-true::before {
+            content: "✅";
+            font-size: 0.8rem;
+        }
+        .status-false {
+            background: linear-gradient(135deg, #f8d7da, #f1b0b7);
+            color: #721c24;
+            border: 1px solid #f1b0b7;
+        }
+        .status-false::before {
+            content: "❌";
+            font-size: 0.8rem;
+        }
+        .status-unknown {
+            background: linear-gradient(135deg, #fff3cd, #ffeaa7);
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
+        .status-unknown::before {
+            content: "❓";
+            font-size: 0.8rem;
+        }
+        .pprof-links {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 1rem;
+            margin-top: 1.5rem;
+            width: 100%;
+            box-sizing: border-box;
+        }
+        .pprof-link {
+            display: block;
+            padding: 1.5rem;
+            background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+            border: 1px solid rgba(222, 226, 230, 0.5);
+            border-radius: 12px;
+            text-decoration: none;
+            color: #495057;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        .pprof-link::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, #9b59b6, #8e44ad);
+        }
+        .pprof-link:hover {
+            background: linear-gradient(135deg, #e9ecef, #dee2e6);
+            transform: translateY(-5px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+            color: #2c3e50;
+        }
+        .pprof-link strong {
+            display: block;
+            font-size: 1.1rem;
+            margin-bottom: 0.5rem;
+            color: #2c3e50;
+        }
+        .pprof-link small {
+            color: #6c757d;
+            font-size: 0.9rem;
+        }
+        .refresh-btn {
+            background: linear-gradient(135deg, #3498db, #2980b9);
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 25px;
+            cursor: pointer;
+            margin-bottom: 1.5rem;
+            font-weight: 600;
+            font-size: 0.9rem;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(52, 152, 219, 0.3);
+        }
+        .refresh-btn:hover {
+            background: linear-gradient(135deg, #2980b9, #1f4e79);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(52, 152, 219, 0.4);
+        }
+        .refresh-btn::before {
+            content: "🔄 ";
+            margin-right: 0.5rem;
+        }
+        pre {
+            background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+            border: 1px solid rgba(222, 226, 230, 0.5);
+            border-radius: 8px;
+            padding: 1.5rem;
+            overflow-x: auto;
+            white-space: pre-wrap;
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+            font-size: 0.9rem;
+            line-height: 1.5;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .empty-state {
+            text-align: center;
+            padding: 3rem;
+            color: #6c757d;
+        }
+        .empty-state::before {
+            content: "📭";
+            display: block;
+            font-size: 3rem;
+            margin-bottom: 1rem;
+        }
+        .resource-section {
+            margin-bottom: 2rem;
+            width: 100%;
+            box-sizing: border-box;
+        }
+        .resource-section h3 {
+            color: #2c3e50;
+            font-size: 1.2rem;
+            margin-bottom: 1rem;
+            padding-left: 1rem;
+            border-left: 4px solid #3498db;
+        }
+        .footer {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-top: 1px solid rgba(222, 226, 230, 0.5);
+            padding: 2rem;
+            text-align: center;
+            color: #6c757d;
+            margin-top: auto;
+        }
+        .footer-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 1rem;
+        }
+        .cncf-logo {
+            width: 80px;
+            height: auto;
+        }
+        .footer-text {
+            font-size: 0.9rem;
+        }
+        .stats-summary {
+            background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+            border: 1px solid rgba(222, 226, 230, 0.5);
+            width: 100%;
+            box-sizing: border-box;
+        }
+        .stats-summary h3 {
+            margin: 0 0 1rem 0;
+            color: #2c3e50;
+            font-size: 1.2rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .stats-summary-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 0.75rem;
+            width: 100%;
+            box-sizing: border-box;
+        }
+        .stats-summary-item {
+            text-align: center;
+            padding: 1rem;
+            background: white;
+            border-radius: 8px;
+            border: 1px solid rgba(222, 226, 230, 0.3);
+        }
+        .stats-summary-item .count {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #3498db;
+            display: block;
+        }
+        .stats-summary-item .label {
+            font-size: 0.8rem;
+            color: #6c757d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-top: 0.25rem;
+        }
+
+        /* 响应式设计 */
+        @media (max-width: 1200px) {
+            .section {
+                width: 60%;
+                min-width: 500px;
+            }
+        }
+
+        @media (max-width: 900px) {
+            .section {
+                width: 80%;
+                min-width: 400px;
+            }
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+            .pprof-links {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 600px) {
+            .section {
+                width: 95%;
+                min-width: 300px;
+                padding: 1rem;
+            }
+            .container {
+                padding: 1rem;
+            }
+            .stats-summary-grid {
+                grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="header-left">
+            <img src="logo.svg" alt="Envoy Gateway Logo" class="logo">
+            <h1>Envoy Gateway Admin</h1>
+        </div>
+
+        <nav class="nav">
+            <ul>
+                <li><a href="#" onclick="showSection('overview')" class="nav-link active">Overview</a></li>
+                <li><a href="#" onclick="showSection('resources')" class="nav-link">Resources</a></li>
+                <li><a href="#" onclick="showSection('stats')" class="nav-link">Stats</a></li>
+                <li><a href="#" onclick="showSection('pprof')" class="nav-link">Profiling</a></li>
+            </ul>
+        </nav>
+    </div>
+
+    <div class="container">
+        <!-- Overview Section -->
+        <div id="overview" class="section active">
+            <h2>Overview</h2>
+            <div class="section-content">
+                <div class="loading" id="overview-loading">Loading...</div>
+                <div id="overview-content"></div>
+            </div>
+        </div>
+
+        <!-- Resources Section -->
+        <div id="resources" class="section">
+            <h2>Gateway Resources</h2>
+            <div class="section-content">
+                <button class="refresh-btn" onclick="loadResources()">Refresh</button>
+                <div class="loading" id="resources-loading">Loading...</div>
+                <div id="resources-content"></div>
+            </div>
+        </div>
+
+        <!-- Stats Section -->
+        <div id="stats" class="section">
+            <h2>Statistics</h2>
+            <div class="section-content">
+                <button class="refresh-btn" onclick="loadStats()">Refresh</button>
+                <div class="loading" id="stats-loading">Loading...</div>
+                <div id="stats-content"></div>
+            </div>
+        </div>
+
+        <!-- Profiling Section -->
+        <div id="pprof" class="section">
+            <h2>Performance Profiling</h2>
+            <div class="section-content">
+                <p>Access profiling endpoints for performance analysis:</p>
+                <div class="pprof-links">
+                    <a href="/debug/pprof/" class="pprof-link" target="_blank">
+                        <strong>Profile Index</strong><br>
+                        <small>Overview of all available profiles</small>
+                    </a>
+                    <a href="/debug/pprof/goroutine" class="pprof-link" target="_blank">
+                        <strong>Goroutines</strong><br>
+                        <small>Stack traces of all current goroutines</small>
+                    </a>
+                    <a href="/debug/pprof/heap" class="pprof-link" target="_blank">
+                        <strong>Heap</strong><br>
+                        <small>Memory allocation sampling</small>
+                    </a>
+                    <a href="/debug/pprof/profile" class="pprof-link" target="_blank">
+                        <strong>CPU Profile</strong><br>
+                        <small>30-second CPU profile</small>
+                    </a>
+                    <a href="/debug/pprof/trace?seconds=5" class="pprof-link" target="_blank">
+                        <strong>Trace</strong><br>
+                        <small>5-second execution trace</small>
+                    </a>
+                    <a href="/debug/pprof/cmdline" class="pprof-link" target="_blank">
+                        <strong>Command Line</strong><br>
+                        <small>Command line invocation</small>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="footer">
+        <div class="footer-content">
+            <img src="cncf.svg" alt="CNCF Logo" class="cncf-logo">
+            <div class="footer-text">
+                Copyright © 2025 Envoy Gateway Maintainers
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Navigation
+        function showSection(sectionId) {
+            // Hide all sections
+            document.querySelectorAll('.section').forEach(section => {
+                section.classList.remove('active');
+            });
+            
+            // Remove active class from all nav links
+            document.querySelectorAll('.nav-link').forEach(link => {
+                link.classList.remove('active');
+            });
+            
+            // Show selected section
+            document.getElementById(sectionId).classList.add('active');
+            
+            // Add active class to clicked nav link
+            event.target.classList.add('active');
+            
+            // Load data for the section
+            switch(sectionId) {
+                case 'overview':
+                    loadOverview();
+                    break;
+                case 'resources':
+                    loadResources();
+                    break;
+                case 'stats':
+                    loadStats();
+                    break;
+            }
+        }
+
+        // API calls
+        async function fetchData(endpoint) {
+            try {
+                const response = await fetch(endpoint);
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return await response.json();
+            } catch (error) {
+                console.error('Fetch error:', error);
+                throw error;
+            }
+        }
+
+        function showError(containerId, message) {
+            document.getElementById(containerId).innerHTML = 
+                `<div class="error">Error: ${message}</div>`;
+        }
+
+        function hideLoading(loadingId) {
+            const loading = document.getElementById(loadingId);
+            if (loading) loading.style.display = 'none';
+        }
+
+        // Load Overview
+        async function loadOverview() {
+            try {
+                const data = await fetchData('/admin/api/status');
+                hideLoading('overview-loading');
+
+                document.getElementById('overview-content').innerHTML = `
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <h4>🏷️ Version</h4>
+                            <div class="stat-value">${data.version || 'Unknown'}</div>
+                        </div>
+                        <div class="stat-card">
+                            <h4>⏱️ Uptime</h4>
+                            <div class="stat-value">${data.uptime || 'Unknown'}</div>
+                        </div>
+                        <div class="stat-card">
+                            <h4>🟢 Status</h4>
+                            <div class="stat-value" style="color: #27ae60;">${data.status || 'Running'}</div>
+                        </div>
+                        <div class="stat-card">
+                            <h4>⚙️ Configuration</h4>
+                            <div class="stat-value" style="color: #2980b9;">${data.configStatus || 'Loaded'}</div>
+                        </div>
+                    </div>
+                    <div class="resource-section">
+                        <h3>📋 Configuration Details</h3>
+                        <pre>${JSON.stringify(data.config || {}, null, 2)}</pre>
+                    </div>
+                `;
+            } catch (error) {
+                hideLoading('overview-loading');
+                showError('overview-content', error.message);
+            }
+        }
+
+        // Load Resources
+        async function loadResources() {
+            try {
+                const data = await fetchData('/admin/api/resources');
+                hideLoading('resources-loading');
+
+                let html = '';
+                let hasResources = false;
+                let totalResources = 0;
+                let resourceCounts = {};
+
+                if (data && typeof data === 'object') {
+                    // Calculate statistics
+                    for (const [resourceType, resources] of Object.entries(data)) {
+                        if (resources && Array.isArray(resources)) {
+                            resourceCounts[resourceType] = resources.length;
+                            totalResources += resources.length;
+                            if (resources.length > 0) {
+                                hasResources = true;
+                            }
+                        }
+                    }
+
+                    // Add statistics summary
+                    if (hasResources) {
+                        html += `
+                            <div class="stats-summary">
+                                <h3>📊 Resource Statistics</h3>
+                                <div class="stats-summary-grid">
+                                    <div class="stats-summary-item">
+                                        <span class="count">${totalResources}</span>
+                                        <span class="label">Total Resources</span>
+                                    </div>
+                        `;
+
+                        // Add individual resource type counts
+                        for (const [resourceType, count] of Object.entries(resourceCounts)) {
+                            if (count > 0) {
+                                html += `
+                                    <div class="stats-summary-item">
+                                        <span class="count">${count}</span>
+                                        <span class="label">${resourceType}</span>
+                                    </div>
+                                `;
+                            }
+                        }
+
+                        html += '</div></div>';
+                    }
+
+                    // Add resource tables
+                    for (const [resourceType, resources] of Object.entries(data)) {
+                        if (resources && Array.isArray(resources) && resources.length > 0) {
+                            html += `
+                                <div class="resource-section">
+                                    <h3>${resourceType} (${resources.length})</h3>
+                                    <table class="resources-table">
+                                        <thead>
+                                            <tr>
+                                                <th>Name</th>
+                                                <th>Namespace</th>
+                                                <th>Status</th>
+                                                <th>Reason</th>
+                                                <th>Message</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                            `;
+
+                            resources.forEach(resource => {
+                                const statusClass = resource.status === 'True' ? 'status-true' :
+                                                  resource.status === 'False' ? 'status-false' : 'status-unknown';
+                                html += `
+                                    <tr>
+                                        <td><strong>${resource.name || 'Unknown'}</strong></td>
+                                        <td>${resource.namespace || '-'}</td>
+                                        <td><span class="status-badge ${statusClass}">${resource.status || 'Unknown'}</span></td>
+                                        <td>${resource.reason || '-'}</td>
+                                        <td>${resource.message || '-'}</td>
+                                    </tr>
+                                `;
+                            });
+
+                            html += '</tbody></table></div>';
+                        }
+                    }
+                }
+
+                if (!hasResources) {
+                    html = `
+                        <div class="empty-state">
+                            <h3>No Resources Found</h3>
+                            <p>No Gateway resources are currently available or the Kubernetes client is not connected.</p>
+                        </div>
+                    `;
+                }
+
+                document.getElementById('resources-content').innerHTML = html;
+            } catch (error) {
+                hideLoading('resources-loading');
+                showError('resources-content', error.message);
+            }
+        }
+
+        // Load Stats
+        async function loadStats() {
+            try {
+                const data = await fetchData('/admin/api/stats');
+                hideLoading('stats-loading');
+
+                let html = '<div class="stats-grid">';
+
+                if (data && typeof data === 'object') {
+                    for (const [category, stats] of Object.entries(data)) {
+                        const categoryIcon = category === 'runtime' ? '🔧' :
+                                           category === 'system' ? '💻' : '📊';
+
+                        html += `
+                            <div class="stat-card">
+                                <h4>${categoryIcon} ${category.charAt(0).toUpperCase() + category.slice(1)}</h4>
+                                <pre>${JSON.stringify(stats, null, 2)}</pre>
+                            </div>
+                        `;
+                    }
+                } else {
+                    html += `
+                        <div class="stat-card">
+                            <h4>📊 No Statistics Available</h4>
+                            <p>Unable to retrieve statistics at this time.</p>
+                        </div>
+                    `;
+                }
+
+                html += '</div>';
+
+                document.getElementById('stats-content').innerHTML = html;
+            } catch (error) {
+                hideLoading('stats-loading');
+                showError('stats-content', error.message);
+            }
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            loadOverview();
+        });
+    </script>
+</body>
+</html>
