@@ -58,7 +58,6 @@ func (i *Infra) createOrUpdateServiceAccount(ctx context.Context, r ResourceRend
 				i.logger.Error(deleteErr, "failed to delete all except deployment", "name", r.Name())
 			}
 		}
-
 	}()
 
 	if sa, err = r.ServiceAccount(); err != nil {
