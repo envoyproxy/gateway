@@ -1060,3 +1060,48 @@ func TestEnvoyGatewayTelemetry(t *testing.T) {
 	assert.False(t, eg.Telemetry.Metrics.Prometheus.Disable)
 	assert.Nil(t, eg.Telemetry.Metrics.Sinks)
 }
+
+func TestExtensionAPISettings(t *testing.T) {
+	eg := egv1a1.DefaultEnvoyGateway()
+
+	// By default, settings should be nil
+	egExtensionAPISettings := eg.GetExtensionAPISettings()
+	assert.Nil(t, egExtensionAPISettings)
+
+	// Set new field ExtensionAPI
+	eg.ExtensionAPI = &egv1a1.ExtensionAPISettings{
+		EnableEnvoyPatchPolicy: true,
+		EnableBackend:          false,
+	}
+	assert.Equal(t, eg.ExtensionAPI, eg.GetExtensionAPISettings())
+	assert.True(t, eg.GetExtensionAPISettings().EnableEnvoyPatchPolicy)
+	assert.False(t, eg.GetExtensionAPISettings().EnableBackend)
+
+	// Set only deprecated field ExtensionAPIs, new field nil
+	eg.ExtensionAPI = nil
+	eg.ExtensionAPIs = &egv1a1.ExtensionAPISettings{
+		EnableEnvoyPatchPolicy: false,
+		EnableBackend:          true,
+	}
+	assert.Equal(t, eg.ExtensionAPIs, eg.GetExtensionAPISettings())
+	assert.False(t, eg.GetExtensionAPISettings().EnableEnvoyPatchPolicy)
+	assert.True(t, eg.GetExtensionAPISettings().EnableBackend)
+
+	// Both are set, prefer new ExtensionAPI
+	eg.ExtensionAPI = &egv1a1.ExtensionAPISettings{
+		EnableEnvoyPatchPolicy: true,
+		EnableBackend:          true,
+	}
+	eg.ExtensionAPIs = &egv1a1.ExtensionAPISettings{
+		EnableEnvoyPatchPolicy: false,
+		EnableBackend:          false,
+	}
+	assert.Equal(t, eg.ExtensionAPI, eg.GetExtensionAPISettings())
+	assert.True(t, eg.GetExtensionAPISettings().EnableEnvoyPatchPolicy)
+	assert.True(t, eg.GetExtensionAPISettings().EnableBackend)
+
+	// Both nil, GetExtensionAPISettings should return nil
+	eg.ExtensionAPI = nil
+	eg.ExtensionAPIs = nil
+	assert.Nil(t, eg.GetExtensionAPISettings())
+}
