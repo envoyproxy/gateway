@@ -754,6 +754,39 @@ xdsIR:
       - destination:
           metadata:
             kind: GRPCRoute
+            name: grpcroute-2
+            namespace: default
+          name: grpcroute/default/grpcroute-2/rule/0
+          settings:
+          - addressType: IP
+            endpoints:
+            - host: 7.7.7.7
+              port: 8080
+            metadata:
+              name: service-2
+              namespace: default
+              sectionName: "8080"
+            name: grpcroute/default/grpcroute-2/rule/0/backend/0
+            protocol: GRPC
+            weight: 1
+        hostname: '*'
+        isHTTP2: true
+        metadata:
+          kind: GRPCRoute
+          name: grpcroute-2
+          namespace: default
+        name: grpcroute/default/grpcroute-2/rule/0/match/-1/*
+        traffic:
+          healthCheck:
+            active:
+              grpc: {}
+              healthyThreshold: 1
+              interval: 3s
+              timeout: 1s
+              unhealthyThreshold: 3
+      - destination:
+          metadata:
+            kind: GRPCRoute
             name: grpcroute-3
             namespace: default
           name: grpcroute/default/grpcroute-3/rule/0
@@ -781,39 +814,6 @@ xdsIR:
             active:
               grpc:
                 service: foo-service
-              healthyThreshold: 1
-              interval: 3s
-              timeout: 1s
-              unhealthyThreshold: 3
-      - destination:
-          metadata:
-            kind: GRPCRoute
-            name: grpcroute-2
-            namespace: default
-          name: grpcroute/default/grpcroute-2/rule/0
-          settings:
-          - addressType: IP
-            endpoints:
-            - host: 7.7.7.7
-              port: 8080
-            metadata:
-              name: service-2
-              namespace: default
-              sectionName: "8080"
-            name: grpcroute/default/grpcroute-2/rule/0/backend/0
-            protocol: GRPC
-            weight: 1
-        hostname: '*'
-        isHTTP2: true
-        metadata:
-          kind: GRPCRoute
-          name: grpcroute-2
-          namespace: default
-        name: grpcroute/default/grpcroute-2/rule/0/match/-1/*
-        traffic:
-          healthCheck:
-            active:
-              grpc: {}
               healthyThreshold: 1
               interval: 3s
               timeout: 1s
