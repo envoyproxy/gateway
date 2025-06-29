@@ -120,8 +120,8 @@ infraIR:
           name: test
           namespace: envoy-gateway-system
         spec:
-          disableLuaValidation: true
           logging: {}
+          luaValidation: Disabled
         status: {}
       listeners:
       - address: null
