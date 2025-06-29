@@ -442,6 +442,9 @@ infraIR:
         labels:
           gateway.envoyproxy.io/owning-gateway-name: gateway-3
           gateway.envoyproxy.io/owning-gateway-namespace: envoy-gateway
+        ownerReference:
+          kind: GatewayClass
+          name: envoy-gateway-class
       name: envoy-gateway/gateway-3
       namespace: envoy-gateway-system
 tcpRoutes:
