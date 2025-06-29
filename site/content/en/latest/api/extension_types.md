@@ -3362,7 +3362,7 @@ _Appears in:_
 
 
 
-#### OtherNameMatch
+#### OtherSANMatch
 
 
 
@@ -4628,7 +4628,7 @@ that need to match against a string.
 
 _Appears in:_
 - [OIDCDenyRedirectHeader](#oidcdenyredirectheader)
-- [OtherNameMatch](#othernamematch)
+- [OtherSANMatch](#othersanmatch)
 - [ProxyMetrics](#proxymetrics)
 - [SubjectAltNames](#subjectaltnames)
 
@@ -4647,7 +4647,7 @@ Valid MatchType values are "Exact", "Prefix", "Suffix", "RegularExpression".
 
 _Appears in:_
 - [OIDCDenyRedirectHeader](#oidcdenyredirectheader)
-- [OtherNameMatch](#othernamematch)
+- [OtherSANMatch](#othersanmatch)
 - [StringMatch](#stringmatch)
 
 | Value | Description |
@@ -4673,7 +4673,7 @@ _Appears in:_
 | `emailAddresses` | _[StringMatch](#stringmatch) array_ |  false  |  | Email addresses matchers |
 | `ipAddresses` | _[StringMatch](#stringmatch) array_ |  false  |  | IP addresses matchers |
 | `uris` | _[StringMatch](#stringmatch) array_ |  false  |  | URIs matchers |
-| `otherNames` | _[OtherNameMatch](#othernamematch) array_ |  false  |  | Other names matchers |
+| `otherNames` | _[OtherSANMatch](#othersanmatch) array_ |  false  |  | Other names matchers |
 
 
 #### TCPActiveHealthChecker

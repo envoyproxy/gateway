@@ -180,10 +180,10 @@ type SubjectAltNames struct {
 
 	// Other names matchers
 	// +optional
-	OtherNames []OtherNameMatch `json:"otherNames,omitempty"`
+	OtherNames []OtherSANMatch `json:"otherNames,omitempty"`
 }
 
-type OtherNameMatch struct {
+type OtherSANMatch struct {
 	// OID Value
 	Oid         string `json:"oid"`
 	StringMatch `json:",inline"`
