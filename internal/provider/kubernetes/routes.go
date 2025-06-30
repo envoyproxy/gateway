@@ -122,9 +122,13 @@ func (r *gatewayAPIReconciler) processGRPCRoutes(ctx context.Context, gatewayNam
 
 		for _, rule := range grpcRoute.Spec.Rules {
 			for _, backendRef := range rule.BackendRefs {
-				if err := validateBackendRef(&backendRef.BackendRef); err != nil {
-					r.log.Error(err, "invalid backendRef")
-					continue
+				// Skip validation for custom backend resources managed by extensions
+				backendRefKind := gatewayapi.KindDerefOr(backendRef.Kind, resource.KindService)
+				if !r.isCustomBackendResource(backendRef.Group, backendRefKind) {
+					if err := validateBackendRef(&backendRef.BackendRef); err != nil {
+						r.log.Error(err, "invalid backendRef")
+						continue
+					}
 				}
 				if err := r.processBackendRef(
 					ctx,
@@ -207,6 +211,16 @@ func (r *gatewayAPIReconciler) processHTTPRoutes(ctx context.Context, gatewayNam
 		resourceMap.extensionRefFilters[utils.GetNamespacedNameWithGroupKind(&filter)] = filter
 	}
 
+	// Collect custom backend resources managed by extensions
+	extensionBackendResources, err := r.getExtensionBackendResources(ctx)
+	if err != nil {
+		return err
+	}
+	for i := range extensionBackendResources {
+		backend := extensionBackendResources[i]
+		resourceMap.extensionRefFilters[utils.GetNamespacedNameWithGroupKind(&backend)] = backend
+	}
+
 	if err := r.client.List(ctx, httpRouteList, &client.ListOptions{
 		FieldSelector: fields.OneTermEqualSelector(gatewayHTTPRouteIndex, gatewayNamespaceName),
 	}); err != nil {
@@ -235,9 +249,13 @@ func (r *gatewayAPIReconciler) processHTTPRoutes(ctx context.Context, gatewayNam
 
 		for _, rule := range httpRoute.Spec.Rules {
 			for _, backendRef := range rule.BackendRefs {
-				if err := validateBackendRef(&backendRef.BackendRef); err != nil {
-					r.log.Error(err, "invalid backendRef")
-					continue
+				// Skip validation for custom backend resources managed by extensions
+				backendRefKind := gatewayapi.KindDerefOr(backendRef.Kind, resource.KindService)
+				if !r.isCustomBackendResource(backendRef.Group, backendRefKind) {
+					if err := validateBackendRef(&backendRef.BackendRef); err != nil {
+						r.log.Error(err, "invalid backendRef")
+						continue
+					}
 				}
 				if err := r.processBackendRef(
 					ctx,
@@ -313,8 +331,12 @@ func (r *gatewayAPIReconciler) processHTTPRouteFilter(
 			Weight:                 &weight,
 		}
 
-		if err := validateBackendRef(&mirrorBackendRef); err != nil {
-			return fmt.Errorf("invalid backendRef for requestMirror filter: %w", err)
+		// Skip validation for custom backend resources managed by extensions
+		mirrorBackendRefKind := gatewayapi.KindDerefOr(mirrorBackendRef.Kind, resource.KindService)
+		if !r.isCustomBackendResource(mirrorBackendRef.Group, mirrorBackendRefKind) {
+			if err := validateBackendRef(&mirrorBackendRef); err != nil {
+				return fmt.Errorf("invalid backendRef for requestMirror filter: %w", err)
+			}
 		}
 		if err := r.processBackendRef(
 			ctx,

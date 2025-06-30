@@ -59,6 +59,7 @@ message PostRouteModifyRequest {
 // If an extension returns a nil Route then it will not be modified
 message PostRouteModifyResponse {
     envoy.config.route.v3.Route route = 1;
+    repeated envoy.config.cluster.v3.Cluster clusters = 2;
 }
 
 

@@ -170,6 +170,10 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *re
 					for _, gvk := range r.EnvoyGateway.ExtensionManager.Resources {
 						extGKs = append(extGKs, schema.GroupKind{Group: gvk.Group, Kind: gvk.Kind})
 					}
+					// Include backend resources in extension group kinds for custom backend support
+					for _, gvk := range r.EnvoyGateway.ExtensionManager.BackendResources {
+						extGKs = append(extGKs, schema.GroupKind{Group: gvk.Group, Kind: gvk.Kind})
+					}
 					t.ExtensionGroupKinds = extGKs
 					r.Logger.Info("extension resources", "GVKs count", len(extGKs))
 				}

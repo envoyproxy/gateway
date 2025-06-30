@@ -1,0 +1,15 @@
+- name: original_destination_cluster
+  originalDstLbConfig:
+    httpHeaderName: x-gateway-destination-endpoint
+    useHttpHeader: true
+  type: LOGICAL_DNS
+- loadAssignment:
+    clusterName: mock-extension-injected-cluster
+    endpoints:
+    - lbEndpoints:
+      - endpoint:
+          address:
+            socketAddress:
+              address: exampleservice.examplenamespace.svc.cluster.local
+              portValue: 5000
+  name: mock-extension-injected-cluster

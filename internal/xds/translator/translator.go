@@ -532,9 +532,28 @@ func (t *Translator) addRouteToRouteConfig(
 			}
 
 			var err error
+			var clusters []*clusterv3.Cluster
+			switch {
+			case len(httpRoute.BackendExtensionRefs) > 0:
+				clusters, err = processExtensionBackendPostHook(xdsRoute, vHost, httpRoute, t.ExtensionManager)
+				if err != nil {
+					// If the extension server returns an error, and the extension server is not configured to fail open,
+					// then propagate the error
+					if !(*t.ExtensionManager).FailOpen() {
+						errs = errors.Join(errs, err)
+					} else {
+						t.Logger.Error(err, "extension manager process extension backend PostHook failure")
+					}
+				} else {
+					for _, xdsCluster := range clusters {
+						if err := tCtx.AddXdsResource(resourcev3.ClusterType, xdsCluster); err != nil {
+							errs = errors.Join(errs, err)
+						}
+					}
+				}
 			// If there are no filters in the destination settings we create
 			// a regular xds Cluster
-			if !httpRoute.Destination.NeedsClusterPerSetting() {
+			case !httpRoute.Destination.NeedsClusterPerSetting():
 				err = processXdsCluster(
 					tCtx,
 					httpRoute.Destination.Name,
@@ -546,7 +565,7 @@ func (t *Translator) addRouteToRouteConfig(
 				if err != nil {
 					errs = errors.Join(errs, err)
 				}
-			} else {
+			default:
 				// If a filter does exist, we create a weighted cluster that's
 				// attached to the route, and create a xds Cluster per setting
 				for _, setting := range httpRoute.Destination.Settings {
@@ -562,10 +581,6 @@ func (t *Translator) addRouteToRouteConfig(
 						errs = errors.Join(errs, err)
 					}
 				}
-			}
-
-			if err != nil {
-				errs = errors.Join(errs, err)
 			}
 		}
 

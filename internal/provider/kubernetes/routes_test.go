@@ -1126,3 +1126,187 @@ func TestValidateHTTPRouteParentRefs(t *testing.T) {
 		})
 	}
 }
+
+func TestProcessHTTPRoutesWithCustomBackends(t *testing.T) {
+	ctx := context.Background()
+
+	// Create test custom backend resources
+	s3Backend := &unstructured.Unstructured{
+		Object: map[string]any{
+			"apiVersion": "storage.example.io/v1alpha1",
+			"kind":       "S3Backend",
+			"metadata": map[string]any{
+				"name":      "s3-backend",
+				"namespace": "default",
+			},
+			"spec": map[string]any{
+				"bucket": "my-s3-bucket",
+				"region": "us-west-2",
+			},
+		},
+	}
+	s3Backend.SetGroupVersionKind(schema.GroupVersionKind{
+		Group:   "storage.example.io",
+		Version: "v1alpha1",
+		Kind:    "S3Backend",
+	})
+
+	lambdaBackend := &unstructured.Unstructured{
+		Object: map[string]any{
+			"apiVersion": "compute.example.io/v1alpha1",
+			"kind":       "LambdaBackend",
+			"metadata": map[string]any{
+				"name":      "lambda-backend",
+				"namespace": "default",
+			},
+			"spec": map[string]any{
+				"functionName": "my-function",
+				"region":       "us-west-2",
+			},
+		},
+	}
+	lambdaBackend.SetGroupVersionKind(schema.GroupVersionKind{
+		Group:   "compute.example.io",
+		Version: "v1alpha1",
+		Kind:    "LambdaBackend",
+	})
+
+	// Create test HTTPRoute with custom backend references
+	httpRoute := &gwapiv1.HTTPRoute{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-route",
+			Namespace: "default",
+		},
+		Spec: gwapiv1.HTTPRouteSpec{
+			CommonRouteSpec: gwapiv1.CommonRouteSpec{
+				ParentRefs: []gwapiv1.ParentReference{
+					{
+						Name: "test-gateway",
+					},
+				},
+			},
+			Rules: []gwapiv1.HTTPRouteRule{
+				{
+					BackendRefs: []gwapiv1.HTTPBackendRef{
+						{
+							BackendRef: gwapiv1.BackendRef{
+								BackendObjectReference: gwapiv1.BackendObjectReference{
+									Group: ptr.To(gwapiv1.Group("storage.example.io")),
+									Kind:  ptr.To(gwapiv1.Kind("S3Backend")),
+									Name:  "s3-backend",
+								},
+							},
+						},
+						{
+							BackendRef: gwapiv1.BackendRef{
+								BackendObjectReference: gwapiv1.BackendObjectReference{
+									Group: ptr.To(gwapiv1.Group("compute.example.io")),
+									Kind:  ptr.To(gwapiv1.Kind("LambdaBackend")),
+									Name:  "lambda-backend",
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	// Create test Gateway
+	gateway := &gwapiv1.Gateway{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-gateway",
+			Namespace: "default",
+		},
+		Spec: gwapiv1.GatewaySpec{
+			GatewayClassName: "test",
+			Listeners: []gwapiv1.Listener{
+				{
+					Name:     "http",
+					Port:     80,
+					Protocol: gwapiv1.HTTPProtocolType,
+				},
+			},
+		},
+	}
+
+	// Create test GatewayClass
+	gatewayClass := &gwapiv1.GatewayClass{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "test",
+		},
+		Spec: gwapiv1.GatewayClassSpec{
+			ControllerName: gwapiv1.GatewayController(egv1a1.GatewayControllerName),
+		},
+	}
+
+	testCases := []struct {
+		name                     string
+		extBackendGVKs           []schema.GroupVersionKind
+		objects                  []client.Object
+		expectedExtFiltersCount  int
+		expectedBackendRefsCount int
+	}{
+		{
+			name:                     "no custom backend GVKs configured",
+			extBackendGVKs:           []schema.GroupVersionKind{},
+			objects:                  []client.Object{httpRoute, gateway, gatewayClass},
+			expectedExtFiltersCount:  0,
+			expectedBackendRefsCount: 0, // Both backends will be rejected due to invalid group
+		},
+		{
+			name: "custom backend GVKs configured with matching resources",
+			extBackendGVKs: []schema.GroupVersionKind{
+				{Group: "storage.example.io", Version: "v1alpha1", Kind: "S3Backend"},
+				{Group: "compute.example.io", Version: "v1alpha1", Kind: "LambdaBackend"},
+			},
+			objects:                  []client.Object{httpRoute, gateway, gatewayClass, s3Backend, lambdaBackend},
+			expectedExtFiltersCount:  2, // Both custom backends should be added to ExtensionRefFilters
+			expectedBackendRefsCount: 2, // Both backends should be processed as backend refs
+		},
+		{
+			name: "partial custom backend GVKs configured",
+			extBackendGVKs: []schema.GroupVersionKind{
+				{Group: "storage.example.io", Version: "v1alpha1", Kind: "S3Backend"},
+			},
+			objects:                  []client.Object{httpRoute, gateway, gatewayClass, s3Backend, lambdaBackend},
+			expectedExtFiltersCount:  1, // Only S3Backend should be added to ExtensionRefFilters
+			expectedBackendRefsCount: 1, // Only S3Backend should be processed, LambdaBackend will be rejected
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			// Create fake client with test objects
+			fakeClient := fakeclient.NewClientBuilder().
+				WithScheme(envoygateway.GetScheme()).
+				WithObjects(tc.objects...).
+				WithIndex(&gwapiv1.HTTPRoute{}, gatewayHTTPRouteIndex, gatewayHTTPRouteIndexFunc).
+				Build()
+
+			// Create reconciler with test configuration
+			r := &gatewayAPIReconciler{
+				extBackendGVKs: tc.extBackendGVKs,
+				log:            logging.DefaultLogger(os.Stdout, egv1a1.LogLevelInfo),
+				client:         fakeClient,
+			}
+
+			// Create resource mappings and tree
+			resourceMap := newResourceMapping()
+			resourceTree := resource.NewResources()
+			resourceTree.GatewayClass = gatewayClass
+
+			// Call the function under test
+			err := r.processHTTPRoutes(ctx, "default/test-gateway", resourceMap, resourceTree)
+
+			// Verify results
+			require.NoError(t, err)
+			require.Len(t, resourceMap.extensionRefFilters, tc.expectedExtFiltersCount)
+			require.Equal(t, tc.expectedBackendRefsCount, resourceMap.allAssociatedBackendRefs.Len())
+
+			// Verify that HTTPRoutes were processed
+			require.Len(t, resourceTree.HTTPRoutes, 1)
+			require.Equal(t, "test-route", resourceTree.HTTPRoutes[0].Name)
+		})
+	}
+}

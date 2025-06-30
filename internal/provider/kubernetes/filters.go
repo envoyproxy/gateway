@@ -50,6 +50,39 @@ func (r *gatewayAPIReconciler) getExtensionRefFilters(ctx context.Context) ([]un
 	return resourceItems, nil
 }
 
+// getExtensionBackendResources returns all custom backend resources managed by extensions
+func (r *gatewayAPIReconciler) getExtensionBackendResources(ctx context.Context) ([]unstructured.Unstructured, error) {
+	var resourceItems []unstructured.Unstructured
+	for _, gvk := range r.extBackendGVKs {
+		uExtResourceList := &unstructured.UnstructuredList{}
+		uExtResourceList.SetGroupVersionKind(gvk)
+		if err := r.client.List(ctx, uExtResourceList); err != nil {
+			r.log.Info("no associated backend resources found for %s", gvk.String())
+			return nil, fmt.Errorf("failed to list %s: %w", gvk.String(), err)
+		}
+
+		uExtResources := uExtResourceList.Items
+		if r.namespaceLabel != nil {
+			var extRs []unstructured.Unstructured
+			for _, extR := range uExtResources {
+				ok, err := r.checkObjectNamespaceLabels(&extR)
+				if err != nil {
+					r.log.Error(err, "failed to check namespace labels for ExtensionBackendResource %s in namespace %s: %w", extR.GetName(), extR.GetNamespace())
+					continue
+				}
+				if ok {
+					extRs = append(extRs, extR)
+				}
+			}
+			uExtResources = extRs
+		}
+
+		resourceItems = append(resourceItems, uExtResources...)
+	}
+
+	return resourceItems, nil
+}
+
 func (r *gatewayAPIReconciler) getHTTPRouteFilter(ctx context.Context, name, namespace string) (*egv1a1.HTTPRouteFilter, error) {
 	hrf := new(egv1a1.HTTPRouteFilter)
 	if err := r.client.Get(ctx, types.NamespacedName{Namespace: namespace, Name: name}, hrf); err != nil {

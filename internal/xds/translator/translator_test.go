@@ -247,6 +247,10 @@ func TestTranslateXdsWithExtensionErrorsWhenFailOpen(t *testing.T) {
 		"http-route-extension-listener-error":    {},
 		"http-route-extension-translate-error":   {},
 		"multiple-listeners-same-port-error":     {},
+		"http-route-custom-backend":              {},
+		"http-route-custom-backends-multiple":    {},
+		"http-route-custom-backends-partial":     {},
+		"http-route-custom-backend-error":        {},
 	}
 
 	inputFiles, err := filepath.Glob(filepath.Join("testdata", "in", "extension-xds-ir", "*.yaml"))
@@ -275,6 +279,13 @@ func TestTranslateXdsWithExtensionErrorsWhenFailOpen(t *testing.T) {
 						Group:   "foo.example.io",
 						Version: "v1alpha1",
 						Kind:    "examplefilter",
+					},
+				},
+				BackendResources: []egv1a1.GroupVersionKind{
+					{
+						Group:   "inference.networking.x-k8s.io",
+						Version: "v1alpha2",
+						Kind:    "InferencePool",
 					},
 				},
 				PolicyResources: []egv1a1.GroupVersionKind{
@@ -365,6 +376,9 @@ func TestTranslateXdsWithExtensionErrorsWhenFailClosed(t *testing.T) {
 		"extensionpolicy-extension-server-error": {
 			errMsg: "rpc error: code = Unknown desc = invalid extension policy : ext-server-policy-invalid-test",
 		},
+		"http-route-custom-backend-error": {
+			errMsg: "rpc error: code = Unknown desc = inference pool target port number is 0",
+		},
 	}
 
 	inputFiles, err := filepath.Glob(filepath.Join("testdata", "in", "extension-xds-ir", "*-error.yaml"))
@@ -393,6 +407,13 @@ func TestTranslateXdsWithExtensionErrorsWhenFailClosed(t *testing.T) {
 						Group:   "foo.example.io",
 						Version: "v1alpha1",
 						Kind:    "examplefilter",
+					},
+				},
+				BackendResources: []egv1a1.GroupVersionKind{
+					{
+						Group:   "inference.networking.x-k8s.io",
+						Version: "v1alpha2",
+						Kind:    "InferencePool",
 					},
 				},
 				PolicyResources: []egv1a1.GroupVersionKind{
