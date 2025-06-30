@@ -149,10 +149,10 @@ func startRunners(ctx context.Context, cfg *config.Server) (err error) {
 		infraIR    *message.InfraIR
 		xds        *message.Xds
 	}{
-		pResources: new(message.ProviderResources),
-		xdsIR:      new(message.XdsIR),
-		infraIR:    new(message.InfraIR),
-		xds:        new(message.Xds),
+		pResources: message.NewSubscribedProviderResources(ctx),
+		xdsIR:      message.NewSubscribedXdsIR(ctx),
+		infraIR:    message.NewSubscribedInfraIR(ctx),
+		xds:        message.NewSubscribedXds(ctx),
 	}
 
 	// The Elected channel is used to block the tasks that are waiting for the leader to be elected.
