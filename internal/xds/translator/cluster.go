@@ -316,20 +316,10 @@ func buildXdsCluster(args *xdsClusterArgs) (*buildClusterResult, error) {
 		cluster.LbPolicy = clusterv3.Cluster_CLUSTER_PROVIDED
 
 	case EndpointTypeHostOverride:
-		// host override uses EDS for endpoints but with override host load balancing policy
-		cluster.ClusterDiscoveryType = &clusterv3.Cluster_Type{Type: clusterv3.Cluster_EDS}
-		cluster.EdsClusterConfig = &clusterv3.Cluster_EdsClusterConfig{
-			ServiceName: args.name,
-			EdsConfig: &corev3.ConfigSource{
-				ResourceApiVersion: resource.DefaultAPIVersion,
-				ConfigSourceSpecifier: &corev3.ConfigSource_Ads{
-					Ads: &corev3.AggregatedConfigSource{},
-				},
-			},
-		}
-		cluster.IgnoreHealthOnHostRemoval = true
 		// Load balancing policy will be set to override host in buildHostOverrideLoadBalancingPolicy
-
+		if err := buildHostOverrideLoadBalancingPolicy(cluster, args.settings); err != nil {
+			return nil, err
+		}
 	case EndpointTypeStatic:
 		cluster.ClusterDiscoveryType = &clusterv3.Cluster_Type{Type: clusterv3.Cluster_EDS}
 		cluster.EdsClusterConfig = &clusterv3.Cluster_EdsClusterConfig{
@@ -363,13 +353,6 @@ func buildXdsCluster(args *xdsClusterArgs) (*buildClusterResult, error) {
 	if args.endpointType != EndpointTypeDynamicResolver {
 		for _, ds := range args.settings {
 			buildZoneAwareRoutingCluster(ds.ZoneAwareRouting, cluster, args.loadBalancer)
-		}
-	}
-
-	// Set override host load balancing policy for host override clusters
-	if args.endpointType == EndpointTypeHostOverride {
-		if err := buildHostOverrideLoadBalancingPolicy(cluster, args.settings); err != nil {
-			return nil, err
 		}
 	}
 
@@ -513,9 +496,24 @@ func buildHostOverrideLoadBalancingPolicy(cluster *clusterv3.Cluster, settings [
 		overrideHostSources = append(overrideHostSources, overrideSource)
 	}
 
+	// Build fallback policy - use round robin as default fallback
+	fallbackPolicy := &clusterv3.LoadBalancingPolicy{
+		Policies: []*clusterv3.LoadBalancingPolicy_Policy{{
+			TypedExtensionConfig: &corev3.TypedExtensionConfig{
+				Name: "envoy.load_balancing_policies.round_robin",
+				TypedConfig: func() *anypb.Any {
+					roundRobinPolicy := &round_robinv3.RoundRobin{}
+					typedConfig, _ := anypb.New(roundRobinPolicy)
+					return typedConfig
+				}(),
+			},
+		}},
+	}
+
 	// Build override host policy
 	overrideHostPolicy := &override_hostv3.OverrideHost{
 		OverrideHostSources: overrideHostSources,
+		FallbackPolicy:      fallbackPolicy,
 	}
 
 	typedOverrideHostPolicy, err := anypb.New(overrideHostPolicy)
@@ -523,6 +521,15 @@ func buildHostOverrideLoadBalancingPolicy(cluster *clusterv3.Cluster, settings [
 		return fmt.Errorf("failed to marshal override host policy: %w", err)
 	}
 
+	// Clear CommonLbConfig fields that conflict with LoadBalancingPolicy
+	// This is required because Envoy doesn't allow both LoadBalancingPolicy and
+	// CommonLbConfig partial fields to be set simultaneously
+	if cluster.CommonLbConfig != nil {
+		cluster.CommonLbConfig.LocalityConfigSpecifier = nil
+		cluster.CommonLbConfig.HealthyPanicThreshold = nil
+	}
+
+	cluster.LbPolicy = clusterv3.Cluster_CLUSTER_PROVIDED
 	// Set the load balancing policy on the cluster
 	cluster.LoadBalancingPolicy = &clusterv3.LoadBalancingPolicy{
 		Policies: []*clusterv3.LoadBalancingPolicy_Policy{{

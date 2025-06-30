@@ -1,48 +1,45 @@
 - circuitBreakers:
     thresholds:
     - maxRetries: 1024
-  commonLbConfig:
-    localityWeightedLbConfig: {}
+  commonLbConfig: {}
   connectTimeout: 10s
   dnsLookupFamily: V4_PREFERRED
-  edsClusterConfig:
-    edsConfig:
-      ads: {}
-      resourceApiVersion: V3
-    serviceName: first-route-dest
-  ignoreHealthOnHostRemoval: true
-  lbPolicy: LEAST_REQUEST
+  lbPolicy: CLUSTER_PROVIDED
   loadBalancingPolicy:
     policies:
     - typedExtensionConfig:
         name: envoy.load_balancing_policies.override_host
         typedConfig:
           '@type': type.googleapis.com/envoy.extensions.load_balancing_policies.override_host.v3.OverrideHost
+          fallbackPolicy:
+            policies:
+            - typedExtensionConfig:
+                name: envoy.load_balancing_policies.round_robin
+                typedConfig:
+                  '@type': type.googleapis.com/envoy.extensions.load_balancing_policies.round_robin.v3.RoundRobin
           overrideHostSources:
           - header: target-pod
   name: first-route-dest
   perConnectionBufferLimitBytes: 32768
-  type: EDS
 - circuitBreakers:
     thresholds:
     - maxRetries: 1024
-  commonLbConfig:
-    localityWeightedLbConfig: {}
+  commonLbConfig: {}
   connectTimeout: 10s
   dnsLookupFamily: V4_PREFERRED
-  edsClusterConfig:
-    edsConfig:
-      ads: {}
-      resourceApiVersion: V3
-    serviceName: second-route-dest
-  ignoreHealthOnHostRemoval: true
-  lbPolicy: LEAST_REQUEST
+  lbPolicy: CLUSTER_PROVIDED
   loadBalancingPolicy:
     policies:
     - typedExtensionConfig:
         name: envoy.load_balancing_policies.override_host
         typedConfig:
           '@type': type.googleapis.com/envoy.extensions.load_balancing_policies.override_host.v3.OverrideHost
+          fallbackPolicy:
+            policies:
+            - typedExtensionConfig:
+                name: envoy.load_balancing_policies.round_robin
+                typedConfig:
+                  '@type': type.googleapis.com/envoy.extensions.load_balancing_policies.round_robin.v3.RoundRobin
           overrideHostSources:
           - metadata:
               key: envoy.lb
@@ -50,27 +47,25 @@
               - key: target-pod
   name: second-route-dest
   perConnectionBufferLimitBytes: 32768
-  type: EDS
 - circuitBreakers:
     thresholds:
     - maxRetries: 1024
-  commonLbConfig:
-    localityWeightedLbConfig: {}
+  commonLbConfig: {}
   connectTimeout: 10s
   dnsLookupFamily: V4_PREFERRED
-  edsClusterConfig:
-    edsConfig:
-      ads: {}
-      resourceApiVersion: V3
-    serviceName: third-route-dest
-  ignoreHealthOnHostRemoval: true
-  lbPolicy: LEAST_REQUEST
+  lbPolicy: CLUSTER_PROVIDED
   loadBalancingPolicy:
     policies:
     - typedExtensionConfig:
         name: envoy.load_balancing_policies.override_host
         typedConfig:
           '@type': type.googleapis.com/envoy.extensions.load_balancing_policies.override_host.v3.OverrideHost
+          fallbackPolicy:
+            policies:
+            - typedExtensionConfig:
+                name: envoy.load_balancing_policies.round_robin
+                typedConfig:
+                  '@type': type.googleapis.com/envoy.extensions.load_balancing_policies.round_robin.v3.RoundRobin
           overrideHostSources:
           - header: target-pod
           - header: route-strategy
@@ -80,4 +75,3 @@
               - key: override-host
   name: third-route-dest
   perConnectionBufferLimitBytes: 32768
-  type: EDS

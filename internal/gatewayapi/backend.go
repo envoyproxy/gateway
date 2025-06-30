@@ -75,13 +75,13 @@ func validateBackend(backend *egv1a1.Backend) status.Error {
 		if backend.Spec.TLS != nil {
 			if backend.Spec.TLS.WellKnownCACertificates != nil {
 				return status.NewRouteStatusError(
-					fmt.Errorf("TLS.WellKnownCACertificates settings can only be specified for DynamicResolver backends"),
+					fmt.Errorf("TLS.WellKnownCACertificates settings can only be specified for DynamicResolver or HostOverride backends"),
 					status.RouteReasonInvalidBackendRef,
 				)
 			}
 			if len(backend.Spec.TLS.CACertificateRefs) > 0 {
 				return status.NewRouteStatusError(
-					fmt.Errorf("TLS.CACertificateRefs settings can only be specified for DynamicResolver backends"),
+					fmt.Errorf("TLS.CACertificateRefs settings can only be specified for DynamicResolver or HostOverride backends"),
 					status.RouteReasonInvalidBackendRef,
 				)
 			}
