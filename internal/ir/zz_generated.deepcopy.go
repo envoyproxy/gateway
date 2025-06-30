@@ -3651,6 +3651,27 @@ func (in *TLSConfig) DeepCopyInto(out *TLSConfig) {
 		*out = new(TLSCACertificate)
 		(*in).DeepCopyInto(*out)
 	}
+	if in.VerifyCertificateSpki != nil {
+		in, out := &in.VerifyCertificateSpki, &out.VerifyCertificateSpki
+		*out = make([]string, len(*in))
+		copy(*out, *in)
+	}
+	if in.VerifyCertificateHash != nil {
+		in, out := &in.VerifyCertificateHash, &out.VerifyCertificateHash
+		*out = make([]string, len(*in))
+		copy(*out, *in)
+	}
+	if in.MatchTypedSubjectAltNames != nil {
+		in, out := &in.MatchTypedSubjectAltNames, &out.MatchTypedSubjectAltNames
+		*out = make([]*StringMatch, len(*in))
+		for i := range *in {
+			if (*in)[i] != nil {
+				in, out := &(*in)[i], &(*out)[i]
+				*out = new(StringMatch)
+				(*in).DeepCopyInto(*out)
+			}
+		}
+	}
 	if in.MinVersion != nil {
 		in, out := &in.MinVersion, &out.MinVersion
 		*out = new(TLSVersion)
