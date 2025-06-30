@@ -603,6 +603,15 @@ func buildClientTimeout(clientTimeout *egv1a1.ClientTimeout) (*ir.ClientTimeout,
 				Duration: d,
 			}
 		}
+		if clientTimeout.HTTP.RequestHeadersTimeout != nil {
+			d, err := time.ParseDuration(string(*clientTimeout.HTTP.RequestHeadersTimeout))
+			if err != nil {
+				return nil, fmt.Errorf("invalid HTTP RequestHeadersTimeout value %s", *clientTimeout.HTTP.RequestHeadersTimeout)
+			}
+			irHTTPTimeout.RequestHeadersTimeout = &metav1.Duration{
+				Duration: d,
+			}
+		}
 		irClientTimeout.HTTP = irHTTPTimeout
 	}
 
