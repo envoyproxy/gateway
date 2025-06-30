@@ -113,7 +113,7 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR resource
 
 			// Add the listener to the Xds IR
 			servicePort := &protocolPort{protocol: listener.Protocol, port: int32(listener.Port)}
-			containerPort := t.servicePortToContainerPort(int32(listener.Port), gateway.envoyProxy)
+			containerPort := t.servicePortToContainerPort(int32(listener.Port), gateway.envoyProxy, listener.Protocol == gwapiv1.TLSProtocolType && listener.TLS != nil && listener.TLS.Mode != nil && *listener.TLS.Mode == gwapiv1.TLSModePassthrough)
 			switch listener.Protocol {
 			case gwapiv1.HTTPProtocolType, gwapiv1.HTTPSProtocolType:
 				irListener := &ir.HTTPListener{
@@ -859,7 +859,7 @@ func validCELExpression(expr string) bool {
 
 // servicePortToContainerPort translates a service port into an ephemeral
 // container port.
-func (t *Translator) servicePortToContainerPort(servicePort int32, envoyProxy *egv1a1.EnvoyProxy) int32 {
+func (t *Translator) servicePortToContainerPort(servicePort int32, envoyProxy *egv1a1.EnvoyProxy, isTLSPassthrough bool) int32 {
 	if t.ListenerPortShiftDisabled {
 		return servicePort
 	}
@@ -868,6 +868,11 @@ func (t *Translator) servicePortToContainerPort(servicePort int32, envoyProxy *e
 		if !envoyProxy.NeedToSwitchPorts() {
 			return servicePort
 		}
+	}
+
+	// Avoid port shifting for TLS passthrough on port 443 to prevent PROXY protocol port mismatch.
+	if isTLSPassthrough && servicePort == 443 {
+		return servicePort
 	}
 
 	// If the service port is a privileged port (1-1023)
