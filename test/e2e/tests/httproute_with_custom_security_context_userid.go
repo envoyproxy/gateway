@@ -80,21 +80,31 @@ var EnvoyGatewayCustomSecurityContextUseridTest = suite.ConformanceTest{
 
 func setEGSecurityContextUserID(t *testing.T, suite *suite.ConformanceTestSuite, uid int64) {
 	// update envoy-gateway deployment with custom security context user id
-	egDeployment := &appsv1.Deployment{}
-	err := suite.Client.Get(
-		context.Background(),
-		types.NamespacedName{Name: "envoy-gateway", Namespace: "envoy-gateway-system"},
-		egDeployment)
+	retries := 5
+	var err error
+	for i := 0; i < retries; i++ { // retry a few times to avoid update conflicts
+		egDeployment := &appsv1.Deployment{}
+		err = suite.Client.Get(
+			context.Background(),
+			types.NamespacedName{Name: "envoy-gateway", Namespace: "envoy-gateway-system"},
+			egDeployment,
+		)
+		require.NoError(t, err)
+
+		egDeployment.Spec.Template.Spec.Containers[0].SecurityContext.RunAsUser = ptr.To(uid)
+		egDeployment.Spec.Template.Spec.Containers[0].SecurityContext.RunAsGroup = ptr.To(uid)
+
+		if err = suite.Client.Update(context.Background(), egDeployment); err == nil {
+			break
+		}
+	}
 	require.NoError(t, err)
-	egDeployment.Spec.Template.Spec.Containers[0].SecurityContext.RunAsUser = ptr.To(uid)
-	egDeployment.Spec.Template.Spec.Containers[0].SecurityContext.RunAsGroup = ptr.To(uid)
-	err = suite.Client.Update(context.Background(), egDeployment)
-	require.NoError(t, err)
+
 	// test that envoy-gateway pod is running with custom security context user id
 	WaitForPods(t, suite.Client, "envoy-gateway-system", map[string]string{"control-plane": "envoy-gateway"}, corev1.PodRunning, PodReady)
 
 	// test that envoy-gateway deployment is updated with custom security context user id
-	egDeployment = &appsv1.Deployment{}
+	egDeployment := &appsv1.Deployment{}
 	err = suite.Client.Get(
 		context.Background(),
 		types.NamespacedName{Name: "envoy-gateway", Namespace: "envoy-gateway-system"},
