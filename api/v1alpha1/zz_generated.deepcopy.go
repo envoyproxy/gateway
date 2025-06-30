@@ -686,6 +686,13 @@ func (in *BackendTrafficPolicySpec) DeepCopyInto(out *BackendTrafficPolicySpec) 
 			}
 		}
 	}
+	if in.ExtProc != nil {
+		in, out := &in.ExtProc, &out.ExtProc
+		*out = make([]ExtProc, len(*in))
+		for i := range *in {
+			(*in)[i].DeepCopyInto(&(*out)[i])
+		}
+	}
 	if in.ResponseOverride != nil {
 		in, out := &in.ResponseOverride, &out.ResponseOverride
 		*out = make([]*ResponseOverride, len(*in))

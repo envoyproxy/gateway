@@ -3937,6 +3937,13 @@ func (in *TrafficFeatures) DeepCopyInto(out *TrafficFeatures) {
 			(*in)[i].DeepCopyInto(&(*out)[i])
 		}
 	}
+	if in.ExtProc != nil {
+		in, out := &in.ExtProc, &out.ExtProc
+		*out = make([]ExtProc, len(*in))
+		for i := range *in {
+			(*in)[i].DeepCopyInto(&(*out)[i])
+		}
+	}
 	if in.Telemetry != nil {
 		in, out := &in.Telemetry, &out.Telemetry
 		*out = new(v1alpha1.BackendTelemetry)
