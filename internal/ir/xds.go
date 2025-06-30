@@ -1155,10 +1155,13 @@ type OIDCProvider struct {
 	Traffic *TrafficFeatures `json:"traffic,omitempty"`
 
 	// The OIDC Provider's [authorization endpoint](https://openid.net/specs/openid-connect-core-1_0.html#AuthorizationEndpoint).
-	AuthorizationEndpoint string `json:"authorizationEndpoint,omitempty"`
+	AuthorizationEndpoint string `json:"authorizationEndpoint"`
 
 	// The OIDC Provider's [token endpoint](https://openid.net/specs/openid-connect-core-1_0.html#TokenEndpoint).
-	TokenEndpoint string `json:"tokenEndpoint,omitempty"`
+	TokenEndpoint string `json:"tokenEndpoint"`
+
+	// The OIDC Provider's [end session endpoint](https://openid.net/specs/openid-connect-core-1_0.html#RPLogout).
+	EndSessionEndpoint *string `json:"endSessionEndpoint,omitempty"`
 }
 
 // BasicAuth defines the schema for the HTTP Basic Authentication.
