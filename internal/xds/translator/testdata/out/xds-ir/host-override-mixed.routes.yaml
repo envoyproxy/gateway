@@ -1,0 +1,14 @@
+- ignorePortInHostMatching: true
+  name: mixed-listener
+  virtualHosts:
+  - domains:
+    - '*'
+    name: mixed-listener/*
+    routes:
+    - match:
+        path: /
+      name: mixed-route
+      route:
+        cluster: mixed-route-dest
+        upgradeConfigs:
+        - upgradeType: websocket

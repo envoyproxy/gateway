@@ -41,8 +41,13 @@ func (t *Translator) ProcessBackends(backends []*egv1a1.Backend) []*egv1a1.Backe
 }
 
 func validateBackend(backend *egv1a1.Backend) status.Error {
-	if backend.Spec.Type != nil &&
-		*backend.Spec.Type == egv1a1.BackendTypeDynamicResolver {
+	backendType := egv1a1.BackendTypeEndpoints
+	if backend.Spec.Type != nil {
+		backendType = *backend.Spec.Type
+	}
+
+	switch backendType {
+	case egv1a1.BackendTypeDynamicResolver:
 		if len(backend.Spec.Endpoints) > 0 {
 			return status.NewRouteStatusError(
 				fmt.Errorf("DynamicResolver type cannot have endpoints specified"),
@@ -59,17 +64,31 @@ func validateBackend(backend *egv1a1.Backend) status.Error {
 				status.RouteReasonInvalidBackendRef,
 			)
 		}
-
-	} else if backend.Spec.TLS != nil {
-		if backend.Spec.TLS.WellKnownCACertificates != nil {
+	case egv1a1.BackendTypeHostOverride:
+		if len(backend.Spec.Endpoints) > 0 {
 			return status.NewRouteStatusError(
-				fmt.Errorf("TLS.WellKnownCACertificates settings can only be specified for DynamicResolver backends"),
+				fmt.Errorf("HostOverride type cannot have endpoints specified"),
 				status.RouteReasonInvalidBackendRef,
 			)
 		}
-		if len(backend.Spec.TLS.CACertificateRefs) > 0 {
+	default: // BackendTypeEndpoints
+		if backend.Spec.TLS != nil {
+			if backend.Spec.TLS.WellKnownCACertificates != nil {
+				return status.NewRouteStatusError(
+					fmt.Errorf("TLS.WellKnownCACertificates settings can only be specified for DynamicResolver or HostOverride backends"),
+					status.RouteReasonInvalidBackendRef,
+				)
+			}
+			if len(backend.Spec.TLS.CACertificateRefs) > 0 {
+				return status.NewRouteStatusError(
+					fmt.Errorf("TLS.CACertificateRefs settings can only be specified for DynamicResolver or HostOverride backends"),
+					status.RouteReasonInvalidBackendRef,
+				)
+			}
+		}
+		if backend.Spec.HostOverrideSettings != nil {
 			return status.NewRouteStatusError(
-				fmt.Errorf("TLS.CACertificateRefs settings can only be specified for DynamicResolver backends"),
+				fmt.Errorf("HostOverride settings can only be specified for HostOverride backends"),
 				status.RouteReasonInvalidBackendRef,
 			)
 		}
