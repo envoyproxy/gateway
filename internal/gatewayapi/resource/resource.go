@@ -33,6 +33,11 @@ type (
 // resources that the translators needs as inputs.
 // +k8s:deepcopy-gen=true
 type Resources struct {
+	// HasErrors indicates whether the resources contain errors that may affect xDS generation.
+	// For example, if some resources are missing due to errors in the Provider layer, EG should not update the xDS cache.
+	// This ensures the xDS cache is not updated with incomplete or erroneous data and the Envoy Proxy can continue to serve requests
+	// with the last known good configuration.
+	HasErrors bool `json:"hasErrors,omitempty" yaml:"hasErrors,omitempty"`
 	// This field is only used for marshalling/unmarshalling purposes and is not used by
 	// the translator
 
