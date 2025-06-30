@@ -338,6 +338,10 @@ func (t *Translator) translateEnvoyExtensionPolicyForRoute(
 								r.DirectResponse = &ir.CustomResponse{
 									StatusCode: ptr.To(uint32(500)),
 								}
+							} else {
+								t.Logger.Error(
+									errs,
+									"failed to translate EnvoyExtensionPolicy, and skipping the policy application due to FailOpen being true")
 							}
 							continue
 						}
@@ -411,6 +415,10 @@ func (t *Translator) translateEnvoyExtensionPolicyForGateway(
 					r.DirectResponse = &ir.CustomResponse{
 						StatusCode: ptr.To(uint32(500)),
 					}
+				} else {
+					t.Logger.Error(
+						errs,
+						"failed to translate EnvoyExtensionPolicy, and skipping the policy application due to FailOpen being true")
 				}
 				continue
 			}
