@@ -793,6 +793,9 @@ _Appears in:_
 | ---   | ---  | ---      | ---     | ---         |
 | `optional` | _boolean_ |  false  |  | Optional set to true accepts connections even when a client doesn't present a certificate.<br />Defaults to false, which rejects connections without a valid client certificate. |
 | `caCertificateRefs` | _[SecretObjectReference](https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1.SecretObjectReference) array_ |  false  |  | CACertificateRefs contains one or more references to<br />Kubernetes objects that contain TLS certificates of<br />the Certificate Authorities that can be used<br />as a trust anchor to validate the certificates presented by the client.<br />A single reference to a Kubernetes ConfigMap or a Kubernetes Secret,<br />with the CA certificate in a key named `ca.crt` is currently supported.<br />References to a resource in different namespace are invalid UNLESS there<br />is a ReferenceGrant in the target namespace that allows the certificate<br />to be attached. |
+| `spkiHashes` | _string array_ |  false  |  | An optional list of base64-encoded SHA-256 hashes. If specified, Envoy will<br />verify that the SHA-256 of the DER-encoded Subject Public Key Information<br />(SPKI) of the presented certificate matches one of the specified values. |
+| `certificateHashes` | _string array_ |  false  |  | An optional list of hex-encoded SHA-256 hashes. If specified, Envoy will<br />verify that the SHA-256 of the DER-encoded presented certificate matches<br />one of the specified values. |
+| `subjectAltNames` | _[SubjectAltNames](#subjectaltnames)_ |  false  |  | An optional list of Subject Alternative name matchers. If specified, Envoy<br />will verify that the Subject Alternative Name of the presented certificate<br />matches one of the specified matchers |
 
 
 #### ClusterSettings
@@ -1967,6 +1970,20 @@ _Appears in:_
 | `name` | _[EnvoyFilter](#envoyfilter)_ |  true  |  | Name of the filter. |
 | `before` | _[EnvoyFilter](#envoyfilter)_ |  true  |  | Before defines the filter that should come before the filter.<br />Only one of Before or After must be set. |
 | `after` | _[EnvoyFilter](#envoyfilter)_ |  true  |  | After defines the filter that should come after the filter.<br />Only one of Before or After must be set. |
+
+
+#### ForceLocalZone
+
+
+
+ForceLocalZone defines override configuration for forcing all traffic to stay within the local zone instead of the default behavior
+which maintains equal distribution among upstream endpoints while sending as much traffic as possible locally.
+
+_Appears in:_
+- [PreferLocalZone](#preferlocalzone)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
 
 
 #### GRPCActiveHealthChecker
@@ -3287,6 +3304,7 @@ _Appears in:_
 | `issuer` | _string_ |  true  |  | The OIDC Provider's [issuer identifier](https://openid.net/specs/openid-connect-discovery-1_0.html#IssuerDiscovery).<br />Issuer MUST be a URI RFC 3986 [RFC3986] with a scheme component that MUST<br />be https, a host component, and optionally, port and path components and<br />no query or fragment components. |
 | `authorizationEndpoint` | _string_ |  false  |  | The OIDC Provider's [authorization endpoint](https://openid.net/specs/openid-connect-core-1_0.html#AuthorizationEndpoint).<br />If not provided, EG will try to discover it from the provider's [Well-Known Configuration Endpoint](https://openid.net/specs/openid-connect-discovery-1_0.html#ProviderConfigurationResponse). |
 | `tokenEndpoint` | _string_ |  false  |  | The OIDC Provider's [token endpoint](https://openid.net/specs/openid-connect-core-1_0.html#TokenEndpoint).<br />If not provided, EG will try to discover it from the provider's [Well-Known Configuration Endpoint](https://openid.net/specs/openid-connect-discovery-1_0.html#ProviderConfigurationResponse). |
+| `endSessionEndpoint` | _string_ |  false  |  | The OIDC Provider's [end session endpoint](https://openid.net/specs/openid-connect-core-1_0.html#RPLogout).<br />If the end session endpoint is provided, EG will use it to log out the user from the OIDC Provider when the user accesses the logout path.<br />EG will also try to discover the end session endpoint from the provider's [Well-Known Configuration Endpoint](https://openid.net/specs/openid-connect-discovery-1_0.html#ProviderConfigurationResponse) when authorizationEndpoint or tokenEndpoint is not provided. |
 
 
 #### OpenTelemetryEnvoyProxyAccessLog
@@ -3343,6 +3361,22 @@ For example, the following are valid origins:
 _Appears in:_
 - [CORS](#cors)
 
+
+
+#### OtherSANMatch
+
+
+
+
+
+_Appears in:_
+- [SubjectAltNames](#subjectaltnames)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `oid` | _string_ |  true  |  | OID Value |
+| `type` | _[StringMatchType](#stringmatchtype)_ |  false  | Exact | Type specifies how to match against a string. |
+| `value` | _string_ |  true  |  | Value specifies the string value that the match must have. |
 
 
 #### PassiveHealthCheck
@@ -3445,6 +3479,19 @@ _Appears in:_
 | `targetRef` | _[LocalPolicyTargetReferenceWithSectionName](https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1alpha2.LocalPolicyTargetReferenceWithSectionName)_ |  true  |  | TargetRef is the name of the resource this policy is being attached to.<br />This policy and the TargetRef MUST be in the same namespace for this<br />Policy to have effect<br />Deprecated: use targetRefs/targetSelectors instead |
 | `targetRefs` | _[LocalPolicyTargetReferenceWithSectionName](https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1alpha2.LocalPolicyTargetReferenceWithSectionName) array_ |  true  |  | TargetRefs are the names of the Gateway resources this policy<br />is being attached to. |
 | `targetSelectors` | _[TargetSelector](#targetselector) array_ |  true  |  | TargetSelectors allow targeting resources for this policy based on labels |
+
+
+#### PreferLocalZone
+
+
+
+PreferLocalZone configures zone-aware routing to prefer sending traffic to the local locality zone.
+
+_Appears in:_
+- [ZoneAware](#zoneaware)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
 
 
 #### Principal
@@ -4582,7 +4629,9 @@ that need to match against a string.
 
 _Appears in:_
 - [OIDCDenyRedirectHeader](#oidcdenyredirectheader)
+- [OtherSANMatch](#othersanmatch)
 - [ProxyMetrics](#proxymetrics)
+- [SubjectAltNames](#subjectaltnames)
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
@@ -4599,6 +4648,7 @@ Valid MatchType values are "Exact", "Prefix", "Suffix", "RegularExpression".
 
 _Appears in:_
 - [OIDCDenyRedirectHeader](#oidcdenyredirectheader)
+- [OtherSANMatch](#othersanmatch)
 - [StringMatch](#stringmatch)
 
 | Value | Description |
@@ -4607,6 +4657,24 @@ _Appears in:_
 | `Prefix` | StringMatchPrefix :the input string must start with the match value.<br /> | 
 | `Suffix` | StringMatchSuffix :the input string must end with the match value.<br /> | 
 | `RegularExpression` | StringMatchRegularExpression :The input string must match the regular expression<br />specified in the match value.<br />The regex string must adhere to the syntax documented in<br />https://github.com/google/re2/wiki/Syntax.<br /> | 
+
+
+#### SubjectAltNames
+
+
+
+
+
+_Appears in:_
+- [ClientValidationContext](#clientvalidationcontext)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `dnsNames` | _[StringMatch](#stringmatch) array_ |  false  |  | DNS names matchers |
+| `emailAddresses` | _[StringMatch](#stringmatch) array_ |  false  |  | Email addresses matchers |
+| `ipAddresses` | _[StringMatch](#stringmatch) array_ |  false  |  | IP addresses matchers |
+| `uris` | _[StringMatch](#stringmatch) array_ |  false  |  | URIs matchers |
+| `otherNames` | _[OtherSANMatch](#othersanmatch) array_ |  false  |  | Other names matchers |
 
 
 #### TCPActiveHealthChecker
@@ -5054,5 +5122,18 @@ _Appears in:_
 | ---   | ---  | ---      | ---     | ---         |
 | `enable128BitTraceId` | _boolean_ |  false  |  | Enable128BitTraceID determines whether a 128bit trace id will be used<br />when creating a new trace instance. If set to false, a 64bit trace<br />id will be used. |
 | `disableSharedSpanContext` | _boolean_ |  false  |  | DisableSharedSpanContext determines whether the default Envoy behaviour of<br />client and server spans sharing the same span context should be disabled. |
+
+
+#### ZoneAware
+
+
+
+ZoneAware defines the configuration related to the distribution of requests between locality zones.
+
+_Appears in:_
+- [LoadBalancer](#loadbalancer)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
 
 
