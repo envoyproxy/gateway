@@ -152,6 +152,7 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *re
 			for _, resources := range *val {
 				// Translate and publish IRs.
 				t := &gatewayapi.Translator{
+					Logger:                    r.Logger,
 					GatewayControllerName:     r.EnvoyGateway.Gateway.ControllerName,
 					GatewayClassName:          gwapiv1.ObjectName(resources.GatewayClass.Name),
 					GlobalRateLimitEnabled:    r.EnvoyGateway.RateLimit != nil,

@@ -21,6 +21,7 @@ import (
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/status"
 	"github.com/envoyproxy/gateway/internal/ir"
+	"github.com/envoyproxy/gateway/internal/logging"
 	"github.com/envoyproxy/gateway/internal/wasm"
 )
 
@@ -59,6 +60,9 @@ type TranslatorManager interface {
 // Translator translates Gateway API resources to IRs and computes status
 // for Gateway API resources.
 type Translator struct {
+	// Logger is the logr implementation used by Envoy Gateway.
+	Logger logging.Logger
+
 	// GatewayControllerName is the name of the Gateway API controller
 	GatewayControllerName string
 
