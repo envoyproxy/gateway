@@ -297,19 +297,6 @@ xdsIR:
         isHTTP2: false
         metadata:
           kind: HTTPRoute
-          name: httproute-3
-          namespace: default
-        name: httproute/default/httproute-3/rule/0/match/0/*
-        pathMatch:
-          distinct: false
-          name: ""
-          prefix: /3
-      - directResponse:
-          statusCode: 500
-        hostname: '*'
-        isHTTP2: false
-        metadata:
-          kind: HTTPRoute
           name: httproute-2
           namespace: default
         name: httproute/default/httproute-2/rule/0/match/0/*
@@ -317,6 +304,19 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /2
+      - directResponse:
+          statusCode: 500
+        hostname: '*'
+        isHTTP2: false
+        metadata:
+          kind: HTTPRoute
+          name: httproute-3
+          namespace: default
+        name: httproute/default/httproute-3/rule/0/match/0/*
+        pathMatch:
+          distinct: false
+          name: ""
+          prefix: /3
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4

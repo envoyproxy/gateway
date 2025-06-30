@@ -1,95 +1,3 @@
-backends:
-- apiVersion: gateway.envoyproxy.io/v1alpha1
-  kind: Backend
-  metadata:
-    creationTimestamp: null
-    name: backend-uds
-    namespace: default
-  spec:
-    endpoints:
-    - unix:
-        path: /var/run/backend.sock
-  status:
-    conditions:
-    - lastTransitionTime: null
-      message: The Backend was accepted
-      reason: Accepted
-      status: "True"
-      type: Accepted
-- apiVersion: gateway.envoyproxy.io/v1alpha1
-  kind: Backend
-  metadata:
-    creationTimestamp: null
-    name: backend-fqdn
-    namespace: default
-  spec:
-    endpoints:
-    - fqdn:
-        hostname: primary.foo.com
-        port: 3000
-  status:
-    conditions:
-    - lastTransitionTime: null
-      message: The Backend was accepted
-      reason: Accepted
-      status: "True"
-      type: Accepted
-- apiVersion: gateway.envoyproxy.io/v1alpha1
-  kind: Backend
-  metadata:
-    creationTimestamp: null
-    name: backend-ip
-    namespace: default
-  spec:
-    endpoints:
-    - ip:
-        address: 1.1.1.1
-        port: 3001
-  status:
-    conditions:
-    - lastTransitionTime: null
-      message: The Backend was accepted
-      reason: Accepted
-      status: "True"
-      type: Accepted
-- apiVersion: gateway.envoyproxy.io/v1alpha1
-  kind: Backend
-  metadata:
-    creationTimestamp: null
-    name: backend-ip-localhost
-    namespace: default
-  spec:
-    endpoints:
-    - ip:
-        address: 127.0.0.1
-        port: 3001
-  status:
-    conditions:
-    - lastTransitionTime: null
-      message: 'The Backend was not accepted: IP address 127.0.0.1 in the loopback
-        range is not supported'
-      reason: Accepted
-      status: "False"
-      type: Invalid
-- apiVersion: gateway.envoyproxy.io/v1alpha1
-  kind: Backend
-  metadata:
-    creationTimestamp: null
-    name: backend-fqdn-localhost
-    namespace: default
-  spec:
-    endpoints:
-    - fqdn:
-        hostname: localhost
-        port: 3001
-  status:
-    conditions:
-    - lastTransitionTime: null
-      message: 'The Backend was not accepted: hostname localhost should be a domain
-        with at least two segments separated by dots'
-      reason: Accepted
-      status: "False"
-      type: Invalid
 gateways:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: Gateway
@@ -103,12 +11,13 @@ gateways:
     - allowedRoutes:
         namespaces:
           from: All
+      hostname: '*.envoyproxy.io'
       name: http
       port: 80
       protocol: HTTP
   status:
     listeners:
-    - attachedRoutes: 5
+    - attachedRoutes: 4
       conditions:
       - lastTransitionTime: null
         message: Sending translated listener configuration to the data plane
@@ -136,21 +45,23 @@ httpRoutes:
   kind: HTTPRoute
   metadata:
     creationTimestamp: null
-    name: httproute-1
+    name: httproute-default
     namespace: default
   spec:
+    hostnames:
+    - gateway.envoyproxy.io
     parentRefs:
     - name: gateway-1
       namespace: envoy-gateway
       sectionName: http
     rules:
     - backendRefs:
-      - group: gateway.envoyproxy.io
-        kind: Backend
-        name: backend-uds
+      - name: service-1
+        port: 8080
       matches:
       - path:
-          value: /1
+          type: PathPrefix
+          value: /
   status:
     parents:
     - conditions:
@@ -160,10 +71,9 @@ httpRoutes:
         status: "True"
         type: Accepted
       - lastTransitionTime: null
-        message: 'Failed to process route rule 0 backendRef 0: unix domain sockets
-          are not supported in backend references.'
-        reason: UnsupportedAddressType
-        status: "False"
+        message: Resolved all the Object references for the Route
+        reason: ResolvedRefs
+        status: "True"
         type: ResolvedRefs
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
@@ -177,18 +87,59 @@ httpRoutes:
     name: httproute-3
     namespace: default
   spec:
+    hostnames:
+    - gateway.envoyproxy.io
     parentRefs:
     - name: gateway-1
       namespace: envoy-gateway
       sectionName: http
     rules:
     - backendRefs:
-      - group: gateway.envoyproxy.io
-        kind: Backend
-        name: backend-fqdn
+      - name: service-1
+        port: 8080
       matches:
       - path:
-          value: /3
+          type: PathPrefix
+          value: /route3
+  status:
+    parents:
+    - conditions:
+      - lastTransitionTime: null
+        message: Route is accepted
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Resolved all the Object references for the Route
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+      parentRef:
+        name: gateway-1
+        namespace: envoy-gateway
+        sectionName: http
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    creationTimestamp: null
+    name: httproute-1
+    namespace: default
+  spec:
+    hostnames:
+    - gateway.envoyproxy.io
+    parentRefs:
+    - name: gateway-1
+      namespace: envoy-gateway
+      sectionName: http
+    rules:
+    - backendRefs:
+      - name: service-1
+        port: 8080
+      matches:
+      - path:
+          type: PathPrefix
+          value: /route1
   status:
     parents:
     - conditions:
@@ -212,20 +163,22 @@ httpRoutes:
   metadata:
     creationTimestamp: null
     name: httproute-2
-    namespace: default
+    namespace: test-ns
   spec:
+    hostnames:
+    - gateway.envoyproxy.io
     parentRefs:
     - name: gateway-1
       namespace: envoy-gateway
       sectionName: http
     rules:
     - backendRefs:
-      - group: gateway.envoyproxy.io
-        kind: Backend
-        name: backend-ip
+      - name: test-service
+        port: 8080
       matches:
       - path:
-          value: /2
+          type: PathPrefix
+          value: /route2
   status:
     parents:
     - conditions:
@@ -238,82 +191,6 @@ httpRoutes:
         message: Resolved all the Object references for the Route
         reason: ResolvedRefs
         status: "True"
-        type: ResolvedRefs
-      controllerName: gateway.envoyproxy.io/gatewayclass-controller
-      parentRef:
-        name: gateway-1
-        namespace: envoy-gateway
-        sectionName: http
-- apiVersion: gateway.networking.k8s.io/v1
-  kind: HTTPRoute
-  metadata:
-    creationTimestamp: null
-    name: httproute-4
-    namespace: default
-  spec:
-    parentRefs:
-    - name: gateway-1
-      namespace: envoy-gateway
-      sectionName: http
-    rules:
-    - backendRefs:
-      - group: gateway.envoyproxy.io
-        kind: Backend
-        name: backend-ip-localhost
-      matches:
-      - path:
-          value: /4
-  status:
-    parents:
-    - conditions:
-      - lastTransitionTime: null
-        message: Route is accepted
-        reason: Accepted
-        status: "True"
-        type: Accepted
-      - lastTransitionTime: null
-        message: 'Failed to process route rule 0 backendRef 0: IP address 127.0.0.1
-          in the loopback range is not supported.'
-        reason: InvalidAddress
-        status: "False"
-        type: ResolvedRefs
-      controllerName: gateway.envoyproxy.io/gatewayclass-controller
-      parentRef:
-        name: gateway-1
-        namespace: envoy-gateway
-        sectionName: http
-- apiVersion: gateway.networking.k8s.io/v1
-  kind: HTTPRoute
-  metadata:
-    creationTimestamp: null
-    name: httproute-5
-    namespace: default
-  spec:
-    parentRefs:
-    - name: gateway-1
-      namespace: envoy-gateway
-      sectionName: http
-    rules:
-    - backendRefs:
-      - group: gateway.envoyproxy.io
-        kind: Backend
-        name: backend-fqdn-localhost
-      matches:
-      - path:
-          value: /5
-  status:
-    parents:
-    - conditions:
-      - lastTransitionTime: null
-        message: Route is accepted
-        reason: Accepted
-        status: "True"
-        type: Accepted
-      - lastTransitionTime: null
-        message: 'Failed to process route rule 0 backendRef 0: hostname localhost
-          should be a domain with at least two segments separated by dots.'
-        reason: InvalidAddress
-        status: "False"
         type: ResolvedRefs
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
@@ -348,7 +225,7 @@ xdsIR:
     http:
     - address: 0.0.0.0
       hostnames:
-      - '*'
+      - '*.envoyproxy.io'
       isHTTP2: false
       metadata:
         kind: Gateway
@@ -361,48 +238,35 @@ xdsIR:
         mergeSlashes: true
       port: 10080
       routes:
-      - directResponse:
-          statusCode: 500
-        hostname: '*'
+      - destination:
+          metadata:
+            kind: HTTPRoute
+            name: httproute-1
+            namespace: default
+          name: httproute/default/httproute-1/rule/0
+          settings:
+          - addressType: IP
+            endpoints:
+            - host: 7.7.7.7
+              port: 8080
+            metadata:
+              name: service-1
+              namespace: default
+              sectionName: "8080"
+            name: httproute/default/httproute-1/rule/0/backend/0
+            protocol: HTTP
+            weight: 1
+        hostname: gateway.envoyproxy.io
         isHTTP2: false
         metadata:
           kind: HTTPRoute
           name: httproute-1
           namespace: default
-        name: httproute/default/httproute-1/rule/0/match/0/*
+        name: httproute/default/httproute-1/rule/0/match/0/gateway_envoyproxy_io
         pathMatch:
           distinct: false
           name: ""
-          prefix: /1
-      - destination:
-          metadata:
-            kind: HTTPRoute
-            name: httproute-2
-            namespace: default
-          name: httproute/default/httproute-2/rule/0
-          settings:
-          - addressType: IP
-            endpoints:
-            - host: 1.1.1.1
-              port: 3001
-            metadata:
-              kind: Backend
-              name: backend-ip
-              namespace: default
-            name: httproute/default/httproute-2/rule/0/backend/0
-            protocol: HTTP
-            weight: 1
-        hostname: '*'
-        isHTTP2: false
-        metadata:
-          kind: HTTPRoute
-          name: httproute-2
-          namespace: default
-        name: httproute/default/httproute-2/rule/0/match/0/*
-        pathMatch:
-          distinct: false
-          name: ""
-          prefix: /2
+          prefix: /route1
       - destination:
           metadata:
             kind: HTTPRoute
@@ -410,54 +274,87 @@ xdsIR:
             namespace: default
           name: httproute/default/httproute-3/rule/0
           settings:
-          - addressType: FQDN
+          - addressType: IP
             endpoints:
-            - host: primary.foo.com
-              port: 3000
+            - host: 7.7.7.7
+              port: 8080
             metadata:
-              kind: Backend
-              name: backend-fqdn
+              name: service-1
               namespace: default
+              sectionName: "8080"
             name: httproute/default/httproute-3/rule/0/backend/0
             protocol: HTTP
             weight: 1
-        hostname: '*'
+        hostname: gateway.envoyproxy.io
         isHTTP2: false
         metadata:
           kind: HTTPRoute
           name: httproute-3
           namespace: default
-        name: httproute/default/httproute-3/rule/0/match/0/*
+        name: httproute/default/httproute-3/rule/0/match/0/gateway_envoyproxy_io
         pathMatch:
           distinct: false
           name: ""
-          prefix: /3
-      - directResponse:
-          statusCode: 500
-        hostname: '*'
+          prefix: /route3
+      - destination:
+          metadata:
+            kind: HTTPRoute
+            name: httproute-2
+            namespace: test-ns
+          name: httproute/test-ns/httproute-2/rule/0
+          settings:
+          - addressType: IP
+            endpoints:
+            - host: 8.8.8.8
+              port: 8080
+            metadata:
+              kind: Service
+              name: test-service
+              namespace: test-ns
+              sectionName: "8080"
+            name: httproute/test-ns/httproute-2/rule/0/backend/0
+            protocol: HTTP
+            weight: 1
+        hostname: gateway.envoyproxy.io
         isHTTP2: false
         metadata:
           kind: HTTPRoute
-          name: httproute-4
-          namespace: default
-        name: httproute/default/httproute-4/rule/0/match/0/*
+          name: httproute-2
+          namespace: test-ns
+        name: httproute/test-ns/httproute-2/rule/0/match/0/gateway_envoyproxy_io
         pathMatch:
           distinct: false
           name: ""
-          prefix: /4
-      - directResponse:
-          statusCode: 500
-        hostname: '*'
+          prefix: /route2
+      - destination:
+          metadata:
+            kind: HTTPRoute
+            name: httproute-default
+            namespace: default
+          name: httproute/default/httproute-default/rule/0
+          settings:
+          - addressType: IP
+            endpoints:
+            - host: 7.7.7.7
+              port: 8080
+            metadata:
+              name: service-1
+              namespace: default
+              sectionName: "8080"
+            name: httproute/default/httproute-default/rule/0/backend/0
+            protocol: HTTP
+            weight: 1
+        hostname: gateway.envoyproxy.io
         isHTTP2: false
         metadata:
           kind: HTTPRoute
-          name: httproute-5
+          name: httproute-default
           namespace: default
-        name: httproute/default/httproute-5/rule/0/match/0/*
+        name: httproute/default/httproute-default/rule/0/match/0/gateway_envoyproxy_io
         pathMatch:
           distinct: false
           name: ""
-          prefix: /5
+          prefix: /
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4
