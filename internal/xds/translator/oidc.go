@@ -125,7 +125,6 @@ func oauth2Config(securityFeatures *ir.SecurityFeatures) (*oauth2v3.OAuth2, erro
 	// If the user wants to forward the oauth2 access token to the upstream service,
 	// we should not preserve the original authorization header.
 	preserveAuthorizationHeader := !oidc.ForwardAccessToken
-
 	oauth2 := &oauth2v3.OAuth2{
 		Config: &oauth2v3.OAuth2Config{
 			TokenEndpoint: &corev3.HttpUri{
@@ -231,6 +230,10 @@ func oauth2Config(securityFeatures *ir.SecurityFeatures) (*oauth2v3.OAuth2, erro
 
 	if oidc.DenyRedirect != nil {
 		oauth2.Config.DenyRedirectMatcher = buildDenyRedirectMatcher(oidc)
+	}
+
+	if oidc.Provider.EndSessionEndpoint != nil {
+		oauth2.Config.EndSessionEndpoint = *oidc.Provider.EndSessionEndpoint
 	}
 
 	return oauth2, nil

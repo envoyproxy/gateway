@@ -27,6 +27,8 @@ new features: |
   Added support for configuring the cache sync period for K8s provider.
   Added support for fallback to first key when load ca certificate from Secret or ConfigMap.
   Added support for configuring user provided name to generated HorizontalPodAutoscaler and PodDisruptionBudget resources.
+  Added support for client certificate validation (SPKI, hash, SAN) in ClientTrafficPolicy.
+  Added support for OIDC RP initialized logout. If the end session endpoint is explicitly specified or discovered from the issuer's well-known url, the end session endpoint will be invoked when the user logs out.
 
 
 bug fixes: |

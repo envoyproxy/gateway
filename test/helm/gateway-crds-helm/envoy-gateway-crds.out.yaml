@@ -3500,11 +3500,174 @@ spec:
                           type: object
                         maxItems: 8
                         type: array
+                      certificateHashes:
+                        description: |-
+                          An optional list of hex-encoded SHA-256 hashes. If specified, Envoy will
+                          verify that the SHA-256 of the DER-encoded presented certificate matches
+                          one of the specified values.
+                        items:
+                          type: string
+                        type: array
                       optional:
                         description: |-
                           Optional set to true accepts connections even when a client doesn't present a certificate.
                           Defaults to false, which rejects connections without a valid client certificate.
                         type: boolean
+                      spkiHashes:
+                        description: |-
+                          An optional list of base64-encoded SHA-256 hashes. If specified, Envoy will
+                          verify that the SHA-256 of the DER-encoded Subject Public Key Information
+                          (SPKI) of the presented certificate matches one of the specified values.
+                        items:
+                          type: string
+                        type: array
+                      subjectAltNames:
+                        description: |-
+                          An optional list of Subject Alternative name matchers. If specified, Envoy
+                          will verify that the Subject Alternative Name of the presented certificate
+                          matches one of the specified matchers
+                        properties:
+                          dnsNames:
+                            description: DNS names matchers
+                            items:
+                              description: |-
+                                StringMatch defines how to match any strings.
+                                This is a general purpose match condition that can be used by other EG APIs
+                                that need to match against a string.
+                              properties:
+                                type:
+                                  default: Exact
+                                  description: Type specifies how to match against
+                                    a string.
+                                  enum:
+                                  - Exact
+                                  - Prefix
+                                  - Suffix
+                                  - RegularExpression
+                                  type: string
+                                value:
+                                  description: Value specifies the string value that
+                                    the match must have.
+                                  maxLength: 1024
+                                  minLength: 1
+                                  type: string
+                              required:
+                              - value
+                              type: object
+                            type: array
+                          emailAddresses:
+                            description: Email addresses matchers
+                            items:
+                              description: |-
+                                StringMatch defines how to match any strings.
+                                This is a general purpose match condition that can be used by other EG APIs
+                                that need to match against a string.
+                              properties:
+                                type:
+                                  default: Exact
+                                  description: Type specifies how to match against
+                                    a string.
+                                  enum:
+                                  - Exact
+                                  - Prefix
+                                  - Suffix
+                                  - RegularExpression
+                                  type: string
+                                value:
+                                  description: Value specifies the string value that
+                                    the match must have.
+                                  maxLength: 1024
+                                  minLength: 1
+                                  type: string
+                              required:
+                              - value
+                              type: object
+                            type: array
+                          ipAddresses:
+                            description: IP addresses matchers
+                            items:
+                              description: |-
+                                StringMatch defines how to match any strings.
+                                This is a general purpose match condition that can be used by other EG APIs
+                                that need to match against a string.
+                              properties:
+                                type:
+                                  default: Exact
+                                  description: Type specifies how to match against
+                                    a string.
+                                  enum:
+                                  - Exact
+                                  - Prefix
+                                  - Suffix
+                                  - RegularExpression
+                                  type: string
+                                value:
+                                  description: Value specifies the string value that
+                                    the match must have.
+                                  maxLength: 1024
+                                  minLength: 1
+                                  type: string
+                              required:
+                              - value
+                              type: object
+                            type: array
+                          otherNames:
+                            description: Other names matchers
+                            items:
+                              properties:
+                                oid:
+                                  description: OID Value
+                                  type: string
+                                type:
+                                  default: Exact
+                                  description: Type specifies how to match against
+                                    a string.
+                                  enum:
+                                  - Exact
+                                  - Prefix
+                                  - Suffix
+                                  - RegularExpression
+                                  type: string
+                                value:
+                                  description: Value specifies the string value that
+                                    the match must have.
+                                  maxLength: 1024
+                                  minLength: 1
+                                  type: string
+                              required:
+                              - oid
+                              - value
+                              type: object
+                            type: array
+                          uris:
+                            description: URIs matchers
+                            items:
+                              description: |-
+                                StringMatch defines how to match any strings.
+                                This is a general purpose match condition that can be used by other EG APIs
+                                that need to match against a string.
+                              properties:
+                                type:
+                                  default: Exact
+                                  description: Type specifies how to match against
+                                    a string.
+                                  enum:
+                                  - Exact
+                                  - Prefix
+                                  - Suffix
+                                  - RegularExpression
+                                  type: string
+                                value:
+                                  description: Value specifies the string value that
+                                    the match must have.
+                                  maxLength: 1024
+                                  minLength: 1
+                                  type: string
+                              required:
+                              - value
+                              type: object
+                            type: array
+                        type: object
                     type: object
                   ecdhCurves:
                     description: |-
@@ -26402,6 +26565,13 @@ spec:
                                 type: object
                             type: object
                         type: object
+                      endSessionEndpoint:
+                        description: |-
+                          The OIDC Provider's [end session endpoint](https://openid.net/specs/openid-connect-core-1_0.html#RPLogout).
+
+                          If the end session endpoint is provided, EG will use it to log out the user from the OIDC Provider when the user accesses the logout path.
+                          EG will also try to discover the end session endpoint from the provider's [Well-Known Configuration Endpoint](https://openid.net/specs/openid-connect-discovery-1_0.html#ProviderConfigurationResponse) when authorizationEndpoint or tokenEndpoint is not provided.
+                        type: string
                       issuer:
                         description: |-
                           The OIDC Provider's [issuer identifier](https://openid.net/specs/openid-connect-discovery-1_0.html#IssuerDiscovery).

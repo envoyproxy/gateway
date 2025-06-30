@@ -1,0 +1,123 @@
+http:
+- name: "first-listener"
+  address: "::"
+  port: 10080
+  hostnames:
+  - "*"
+  path:
+    mergeSlashes: true
+    escapedSlashesAction: UnescapeAndRedirect
+  tls:
+    alpnProtocols:
+    - h2
+    - http/1.1
+    certificates:
+    - name: secret-1
+      # byte slice representation of "key-data"
+      certificate: [99, 101, 114, 116, 45, 100, 97, 116, 97]
+      # byte slice representation of "key-data"
+      privateKey: [107, 101, 121, 45, 100, 97, 116, 97]
+    - name: secret-2
+      certificate: [99, 101, 114, 116, 45, 100, 97, 116, 97]
+      privateKey: [107, 101, 121, 45, 100, 97, 116, 97]
+    caCertificate:
+      name: ca-cert
+      certificate: [99, 101, 114, 116, 45, 100, 97, 116, 97]
+    requireClientCertificate: true
+    matchTypedSubjectAltNames:
+    - distinct: false
+      exact: client1.example.com
+      name: DNS
+    - distinct: false
+      name: EMAIL
+      suffix: '@example.com'
+    - distinct: false
+      name: IP_ADDRESS
+      prefix: 192.168.
+    - distinct: false
+      exact: spiffe://example.com/client1
+      name: URI
+    - distinct: false
+      exact: client1
+      name: 1.3.6.1.4.1.311.20.2.3
+    verifyCertificateHash:
+    - df6ff72fe9116521268f6f2dd4966f51df479883fe7037b39f75916ac3049d1a
+    verifyCertificateSpki:
+    - NvqYIYSbgK2vCJpQhObf77vv+bQWtc5ek5RIOwPiC9A=
+  routes:
+  - name: "first-route"
+    destination:
+      name: "first-route-dest"
+tcp:
+- name: "second-listener"
+  address: "::"
+  port: 10081
+  tls:
+    alpnProtocols: []
+    certificates:
+    - name: secret-3
+      # byte slice representation of "key-data"
+      certificate: [99, 101, 114, 116, 45, 100, 97, 116, 97]
+      # byte slice representation of "key-data"
+      privateKey: [107, 101, 121, 45, 100, 97, 116, 97]
+    caCertificate:
+      name: ca-cert-2
+      certificate: [99, 101, 114, 116, 45, 100, 97, 116, 97]
+    requireClientCertificate: true
+    matchTypedSubjectAltNames:
+    - distinct: false
+      exact: client2.example.org
+      name: DNS
+    - distinct: false
+      name: EMAIL
+      suffix: '@example.org'
+    - distinct: false
+      name: IP_ADDRESS
+      prefix: "10."
+    - distinct: false
+      exact: spiffe://example.com/client2
+      name: URI
+    - distinct: false
+      exact: client2
+      name: 1.3.6.1.4.1.311.20.2.3
+    verifyCertificateHash:
+    - df6ff72fe9116521268f6f2dd4966f51df479883fe7037b39f75916ac3049d1a
+    verifyCertificateSpki:
+    - NvqYIYSbgK2vCJpQhObf77vv+bQWtc5ek5RIOwPiC9A=
+  routes:
+  - name: "tls-route-terminate"
+    tls:
+      terminate:
+        alpnProtocols: []
+        certificates:
+        - name: secret-3
+          # byte slice representation of "key-data"
+          certificate: [99, 101, 114, 116, 45, 100, 97, 116, 97]
+          # byte slice representation of "key-data"
+          privateKey: [107, 101, 121, 45, 100, 97, 116, 97]
+        caCertificate:
+          name: ca-cert-2
+          certificate: [99, 101, 114, 116, 45, 100, 97, 116, 97]
+        requireClientCertificate: true
+        matchTypedSubjectAltNames:
+        - distinct: false
+          exact: client2.example.org
+          name: DNS
+        - distinct: false
+          name: EMAIL
+          suffix: '@example.org'
+        - distinct: false
+          name: IP_ADDRESS
+          prefix: "10."
+        - distinct: false
+          exact: spiffe://example.com/client2
+          name: URI
+        - distinct: false
+          exact: client2
+          name: 1.3.6.1.4.1.311.20.2.3
+        verifyCertificateHash:
+        - df6ff72fe9116521268f6f2dd4966f51df479883fe7037b39f75916ac3049d1a
+        verifyCertificateSpki:
+        - NvqYIYSbgK2vCJpQhObf77vv+bQWtc5ek5RIOwPiC9A=
+    destination:
+      name: "tls-terminate-dest"
