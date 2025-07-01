@@ -6,11 +6,14 @@
 package status
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/google/go-cmp/cmp"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+
+	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 )
 
 type PolicyResolveError struct {
@@ -89,4 +92,42 @@ func SetConditionForPolicyAncestor(policyStatus *gwapiv1a2.PolicyStatus, ancesto
 		ControllerName: gwapiv1a2.GatewayController(controllerName),
 		Conditions:     []metav1.Condition{cond},
 	})
+}
+
+func TruncatePolicyAncestors(policyStatus *gwapiv1a2.PolicyStatus, ancestorRef gwapiv1a2.ParentReference, controllerName string, generation int64) {
+	aggregatedPolicyConditions := map[metav1.Condition]int{}
+	for _, ancestor := range policyStatus.Ancestors {
+		for _, condition := range ancestor.Conditions {
+			apc := metav1.Condition{
+				Type:   condition.Type,
+				Status: condition.Status,
+				Reason: condition.Reason,
+			}
+			aggregatedPolicyConditions[apc]++
+		}
+	}
+
+	policyStatus.Ancestors = nil
+
+	for apc, count := range aggregatedPolicyConditions {
+		SetConditionForPolicyAncestor(policyStatus,
+			ancestorRef,
+			controllerName,
+			gwapiv1a2.PolicyConditionType(apc.Type),
+			apc.Status,
+			gwapiv1a2.PolicyConditionReason(apc.Reason),
+			fmt.Sprintf("This policy has %d ancestors with %s condition in %s status due to %s reason", count, apc.Type, apc.Status, apc.Reason),
+			generation,
+		)
+	}
+
+	SetConditionForPolicyAncestor(policyStatus,
+		ancestorRef,
+		controllerName,
+		egv1a1.PolicyConditionAggregated,
+		metav1.ConditionTrue,
+		egv1a1.PolicyReasonAggregated,
+		"This policy has been aggregated because policy ancestor is greater than 16",
+		generation,
+	)
 }
