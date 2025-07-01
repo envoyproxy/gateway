@@ -139,7 +139,7 @@ jobs:
         - version: v1.31.9
           ipFamily: ipv4
           profile: default
-        - version: v1.32.5
+        - version: v1.32.0
           ipFamily: ipv6  # only run ipv6 test on this version to save time
           profile: default
         # TODO: this's IPv4 first, need a way to test IPv6 first.
