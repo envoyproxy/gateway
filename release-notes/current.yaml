@@ -42,6 +42,7 @@ bug fixes: |
   Fixed issue where EnvoyExtensionPolicy ExtProc body processing mode is set to FullDuplexStreamed, but trailers were not sent.
   Fixed validation issue where EnvoyExtensionPolicy ExtProc failOpen is true, and body processing mode FullDuplexStreamed is not rejected.
   Add ConfigMap indexers for EnvoyExtensionPolicies to reconcile Lua changes
+  Fixed issue that default accesslog format not working.
 
 
 # Enhancements that improve performance.
