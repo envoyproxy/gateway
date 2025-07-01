@@ -57,6 +57,9 @@ fi
 if go tool kind get clusters | grep -q "${CLUSTER_NAME}"; then
   echo "Cluster ${CLUSTER_NAME} already exists."
 else
+  echo "Creating kind cluster ${CLUSTER_NAME} with the following configuration:"
+  echo "${KIND_CFG}"
+
 ## Create kind cluster.
 if [[ -z "${KIND_NODE_TAG}" ]]; then
   cat << EOF | go tool kind create cluster --name "${CLUSTER_NAME}" --config -
