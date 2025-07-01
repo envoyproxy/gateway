@@ -9,6 +9,7 @@ KIND_NODE_TAG=${KIND_NODE_TAG:-"v1.33.0"}
 NUM_WORKERS=${NUM_WORKERS:-""}
 IP_FAMILY=${IP_FAMILY:-"ipv4"}
 CUSTOM_CNI=${CUSTOM_CNI:-"false"}
+ENABLE_CLUSTER_TRUST_BUNDLE=${ENABLE_CLUSTER_TRUST_BUNDLE:-"false"}
 
 if [ "$CUSTOM_CNI" = "true" ]; then
   CNI_CONFIG="disableDefaultCNI: true"
@@ -16,11 +17,17 @@ else
   CNI_CONFIG="disableDefaultCNI: false"
 fi
 
+if [ "$ENABLE_CLUSTER_TRUST_BUNDLE" = "true" ]; then
+  RUNTIME_CONFIG+="certificates.k8s.io/v1beta1/clustertrustbundles: true"
+else
+  RUNTIME_CONFIG+="certificates.k8s.io/v1beta1/clustertrustbundles: false"
+fi
+
 KIND_CFG=$(cat <<-EOM
 kind: Cluster
 apiVersion: kind.x-k8s.io/v1alpha4
 runtimeConfig:
-  "certificates.k8s.io/v1beta1/clustertrustbundles": "true"
+  ${RUNTIME_CONFIG}
 featureGates:
   "ClusterTrustBundle": true
   "ClusterTrustBundleProjection": true
