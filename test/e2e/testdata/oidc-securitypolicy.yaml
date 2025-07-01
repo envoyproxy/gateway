@@ -72,6 +72,7 @@ spec:
       issuer: "http://keycloak.gateway-conformance-infra/realms/master"
       authorizationEndpoint: "http://keycloak.gateway-conformance-infra/realms/master/protocol/openid-connect/auth"
       tokenEndpoint: "http://keycloak.gateway-conformance-infra/realms/master/protocol/openid-connect/token"
+      endSessionEndpoint: "https://keycloak.gateway-conformance-infra/realms/master/protocol/openid-connect/logout"
     clientID: "oidctest"
     clientSecret:
       name: "oidctest-secret"
