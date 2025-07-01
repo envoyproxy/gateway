@@ -96,8 +96,11 @@ func NewResourceRender(ctx context.Context, kubeInfra KubernetesInfraProvider, i
 }
 
 func (r *ResourceRender) serviceAccountName() string {
-	if r.usingCustomServiceAccountName() {
-		return *r.infra.GetProxyConfig().GetEnvoyProxyProvider().GetEnvoyProxyKubeProvider().EnvoyServiceAccount.Name
+	prov := r.infra.GetProxyConfig().GetEnvoyProxyProvider().GetEnvoyProxyKubeProvider()
+	if prov != nil &&
+		prov.EnvoyServiceAccount != nil &&
+		prov.EnvoyServiceAccount.Name != nil {
+		return *prov.EnvoyServiceAccount.Name
 	}
 
 	return r.Name()
@@ -144,10 +147,6 @@ func (r *ResourceRender) OwnerReferences() []metav1.OwnerReference {
 
 // ServiceAccount returns the expected proxy serviceAccount.
 func (r *ResourceRender) ServiceAccount() (*corev1.ServiceAccount, error) {
-	if r.usingCustomServiceAccountName() {
-		return nil, nil
-	}
-
 	// Set the labels based on the owning gateway name.
 	saLabels := r.envoyLabels(r.infra.GetProxyMetadata().Labels)
 	if OwningGatewayLabelsAbsent(saLabels) {
@@ -162,7 +161,7 @@ func (r *ResourceRender) ServiceAccount() (*corev1.ServiceAccount, error) {
 		AutomountServiceAccountToken: ptr.To(false),
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace:       r.Namespace(),
-			Name:            r.Name(),
+			Name:            r.serviceAccountName(),
 			Labels:          saLabels,
 			Annotations:     r.infra.GetProxyMetadata().Annotations,
 			OwnerReferences: r.OwnerReferences(),

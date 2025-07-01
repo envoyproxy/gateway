@@ -1444,7 +1444,6 @@ func TestServiceAccount(t *testing.T) {
 		name                 string
 		infra                *ir.Infra
 		gatewayNamespaceMode bool
-		expectNil            bool
 	}{
 		{
 			name:  "default",
@@ -1466,7 +1465,6 @@ func TestServiceAccount(t *testing.T) {
 			name:                 "custom-sa",
 			infra:                newTestInfraWithCustomServiceAccount(types.NamespacedName{Namespace: "ns1", Name: "gateway-1"}),
 			gatewayNamespaceMode: false,
-			expectNil:            true,
 		},
 	}
 
@@ -1486,12 +1484,7 @@ func TestServiceAccount(t *testing.T) {
 			require.NoError(t, err)
 			sa, err := r.ServiceAccount()
 			require.NoError(t, err)
-
-			if tc.expectNil {
-				require.Nil(t, sa)
-				return
-			}
-
+			
 			if test.OverrideTestData() {
 				saYAML, err := yaml.Marshal(sa)
 				require.NoError(t, err)
