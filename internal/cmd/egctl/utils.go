@@ -7,6 +7,11 @@ package egctl
 
 import (
 	"fmt"
+	"io"
+	"os"
+	"os/exec"
+	"os/signal"
+	"runtime"
 
 	adminv3 "github.com/envoyproxy/go-control-plane/envoy/admin/v3"
 	"google.golang.org/protobuf/reflect/protoreflect"
@@ -14,6 +19,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 
 	"github.com/envoyproxy/gateway/internal/envoygateway"
+	kube "github.com/envoyproxy/gateway/internal/kubernetes"
 )
 
 type envoyConfigType string
@@ -78,4 +84,37 @@ func newK8sClient() (client.Client, error) {
 	}
 
 	return cli, nil
+}
+
+// ClosePortForwarderOnInterrupt closes the port forwarder when an interrupt signal is received
+func ClosePortForwarderOnInterrupt(fw kube.PortForwarder) {
+	go func() {
+		signals := make(chan os.Signal, 1)
+		signal.Notify(signals, os.Interrupt)
+		defer signal.Stop(signals)
+		<-signals
+		fw.Stop()
+	}()
+}
+
+// openBrowser opens the given URL in the default browser
+func openBrowser(url string, writer io.Writer) {
+	var err error
+
+	fmt.Fprintf(writer, "%s\n", url)
+
+	switch runtime.GOOS {
+	case "linux":
+		err = exec.Command("xdg-open", url).Start()
+	case "windows":
+		err = exec.Command("rundll32", "url.dll,FileProtocolHandler", url).Start()
+	case "darwin":
+		err = exec.Command("open", url).Start()
+	default:
+		fmt.Fprintf(writer, "Unsupported platform %q; open %s in your browser.\n", runtime.GOOS, url)
+	}
+
+	if err != nil {
+		fmt.Fprintf(writer, "Failed to open browser; open %s in your browser.\n", url)
+	}
 }

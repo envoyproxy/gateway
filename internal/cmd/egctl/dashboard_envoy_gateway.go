@@ -16,21 +16,25 @@ import (
 	kube "github.com/envoyproxy/gateway/internal/kubernetes"
 )
 
-func newEnvoyDashboardCmd() *cobra.Command {
+const (
+	envoyGatewayAdminPort = 19000 // Default Envoy Gateway admin port
+)
+
+func newEnvoyGatewayDashboardCmd() *cobra.Command {
 	var podName, podNamespace string
 	var listenPort int
 
 	dashboardCmd := &cobra.Command{
-		Use:   "envoy-proxy <name> -n <namespace>",
-		Short: "Retrieve Envoy admin dashboard for the specified pod",
-		Long:  `Retrieve Envoy admin dashboard for the specified pod.`,
-		Example: `  # Retrieve Envoy admin dashboard for the specified pod.
-  egctl experimental dashboard envoy-proxy <pod-name> -n <namespace>
+		Use:   "envoy-gateway <name> -n <namespace>",
+		Short: "Retrieve Envoy Gateway admin dashboard for the specified pod",
+		Long:  `Retrieve Envoy Gateway admin dashboard for the specified pod.`,
+		Example: `  # Retrieve Envoy Gateway admin dashboard for the specified pod.
+  egctl experimental dashboard envoy-gateway <pod-name> -n <namespace>
 
   # short syntax
-  egctl experimental d envoy-proxy <pod-name> -n <namespace>
+  egctl experimental d envoy-gateway <pod-name> -n <namespace>
 `,
-		Aliases: []string{"d"},
+		Aliases: []string{"eg"},
 		Args: func(cmd *cobra.Command, args []string) error {
 			if len(args) != 1 && len(labelSelectors) == 0 {
 				cmd.Println(cmd.UsageString())
@@ -66,31 +70,31 @@ func newEnvoyDashboardCmd() *cobra.Command {
 				podNamespace = pl.Items[0].Namespace
 			}
 
-			return portForward(podName, podNamespace, "http://%s", listenPort, kubeClient, c.OutOrStdout())
+			return portForwardEnvoyGateway(podName, podNamespace, "http://%s", listenPort, kubeClient, c.OutOrStdout())
 		},
 	}
-	dashboardCmd.PersistentFlags().StringArrayVarP(&labelSelectors, "labels", "l", nil, "Labels to select the envoy proxy pod.")
-	dashboardCmd.PersistentFlags().StringVarP(&podNamespace, "namespace", "n", "envoy-gateway-system", "Namespace where envoy proxy pod are installed.")
+	dashboardCmd.PersistentFlags().StringArrayVarP(&labelSelectors, "labels", "l", nil, "Labels to select the envoy gateway pod.")
+	dashboardCmd.PersistentFlags().StringVarP(&podNamespace, "namespace", "n", "envoy-gateway-system", "Namespace where envoy gateway pod are installed.")
 	dashboardCmd.PersistentFlags().IntVarP(&listenPort, "port", "p", 0, "Local port to listen to.")
 
 	return dashboardCmd
 }
 
-// portForward first tries to forward localhost:remotePort to podName:remotePort, falls back to dynamic local port
-func portForward(podName, namespace, urlFormat string, listenPort int, client kube.CLIClient, writer io.Writer) error {
+// portForwardEnvoyGateway forwards port for Envoy Gateway admin interface
+func portForwardEnvoyGateway(podName, namespace, urlFormat string, listenPort int, client kube.CLIClient, writer io.Writer) error {
 	var fw kube.PortForwarder
 	meta := types.NamespacedName{
 		Namespace: namespace,
 		Name:      podName,
 	}
-	fw, err := kube.NewLocalPortForwarder(client, meta, listenPort, adminPort)
+	fw, err := kube.NewLocalPortForwarder(client, meta, listenPort, envoyGatewayAdminPort)
 	if err != nil {
-		return fmt.Errorf("could not build port forwarder for envoy proxy: %w", err)
+		return fmt.Errorf("could not build port forwarder for envoy gateway: %w", err)
 	}
 
 	if err = fw.Start(); err != nil {
 		fw.Stop()
-		return fmt.Errorf("could not start port forwarder for envoy proxy: %w", err)
+		return fmt.Errorf("could not start port forwarder for envoy gateway: %w", err)
 	}
 
 	ClosePortForwarderOnInterrupt(fw)
