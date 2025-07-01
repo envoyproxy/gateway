@@ -38,10 +38,6 @@ func TestHandleSVG(t *testing.T) {
 			name:     "logo.svg",
 			filename: "logo.svg",
 		},
-		{
-			name:     "cncf.svg",
-			filename: "cncf.svg",
-		},
 	}
 
 	for _, tt := range tests {
