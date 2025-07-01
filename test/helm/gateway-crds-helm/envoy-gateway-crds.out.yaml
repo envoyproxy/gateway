@@ -21928,6 +21928,24 @@ spec:
                           items:
                             type: string
                           type: array
+                        forwarding:
+                          description: |-
+                            Forwarding defines how to forward the client identity to the backend service.
+                            If not specified, the client identity will not be forwarded.
+                          properties:
+                            clientIdentityHeader:
+                              description: ClientIdentityHeader is the name of the
+                                header to forward the client identity to the backend
+                              type: string
+                            suppressCredentials:
+                              description: |-
+                                SuppressCredentials indicates whether to remove the API key credential from the request
+                                before forwarding it to the backend service
+                              type: boolean
+                          required:
+                          - clientIdentityHeader
+                          - suppressCredentials
+                          type: object
                         headers:
                           description: |-
                             Headers is the names of the header to fetch the key from.

@@ -45,4 +45,24 @@ type ExtractFrom struct {
 	//
 	// +optional
 	Cookies []string `json:"cookies,omitempty"`
+
+	// Forwarding defines how to forward the client identity to the backend service.
+	// If not specified, the client identity will not be forwarded.
+	//
+	// +optional
+	Forwarding *APIKeyAuthHeaderForwarding `json:"forwarding,omitempty"`
+}
+
+type APIKeyAuthHeaderForwarding struct {
+	// ClientIdentityHeader is the name of the header to forward the client identity to the backend
+	// service. The header will be added to the request with the client id as the value.
+	//
+	// +optional
+	ClientIdentityHeader *string `json:"clientIdentityHeader,omitempty"`
+
+	// SuppressCredentials indicates whether to remove the API key credential from the request
+	// before forwarding it to the backend service.
+	//
+	// +optional
+	SuppressCredentials *bool `json:"suppressCredentials,omitempty"`
 }
