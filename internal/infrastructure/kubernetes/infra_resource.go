@@ -46,11 +46,12 @@ func (i *Infra) createOrUpdateServiceAccount(ctx context.Context, r ResourceRend
 			resourceApplyTotal.WithFailure(metrics.ReasonError, labels...).Increment()
 		}
 
-		deleteErr := i.Client.DeleteAllOf(ctx, &corev1.ServiceAccount{}, &client.DeleteAllOfOptions{
-			ListOptions: client.ListOptions{
-				Namespace:     r.Namespace(),
-				LabelSelector: r.LabelSelector(),
-			},
+		deleteErr := i.Client.DeleteAllExcept(ctx, &corev1.ServiceAccountList{}, client.ObjectKey{
+			Namespace: sa.Namespace,
+			Name:      sa.Name,
+		}, &client.ListOptions{
+			Namespace:     sa.Namespace,
+			LabelSelector: r.LabelSelector(),
 		})
 
 		if deleteErr != nil {

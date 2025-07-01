@@ -169,17 +169,6 @@ func (r *ResourceRender) ServiceAccount() (*corev1.ServiceAccount, error) {
 	}, nil
 }
 
-func (r *ResourceRender) usingCustomServiceAccountName() bool {
-	prov := r.infra.GetProxyConfig().GetEnvoyProxyProvider().GetEnvoyProxyKubeProvider()
-	if prov != nil &&
-		prov.EnvoyServiceAccount != nil &&
-		prov.EnvoyServiceAccount.Name != nil {
-		return true
-	}
-	// If service account name is not set, use the default name.
-	return false
-}
-
 // envoyLabels returns the labels, including extraLabels, used for Envoy resources.
 func (r *ResourceRender) envoyLabels(extraLabels map[string]string) map[string]string {
 	appLabels := EnvoyAppLabel()

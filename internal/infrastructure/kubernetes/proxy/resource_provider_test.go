@@ -1484,7 +1484,7 @@ func TestServiceAccount(t *testing.T) {
 			require.NoError(t, err)
 			sa, err := r.ServiceAccount()
 			require.NoError(t, err)
-			
+
 			if test.OverrideTestData() {
 				saYAML, err := yaml.Marshal(sa)
 				require.NoError(t, err)
