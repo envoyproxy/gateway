@@ -56,7 +56,7 @@ func (i *Infra) createOrUpdateServiceAccount(ctx context.Context, r ResourceRend
 			})
 
 			if deleteErr != nil {
-				i.logger.Error(deleteErr, "failed to delete all except deployment", "name", r.Name())
+				i.logger.Error(deleteErr, "failed to delete all except serviceaccount", "name", sa.Name)
 			}
 		}
 	}()

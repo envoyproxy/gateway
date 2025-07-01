@@ -54,7 +54,7 @@ var EnvoyProxyCustomNameTest = suite.ConformanceTest{
 			}
 
 			// Make sure there's deployment for the gateway
-			err := checkDeployment(t, suite, gwNN, gatewayNS, expectedGatewayName(gwNN), 0, 0, 1)
+			err := checkDeployment(t, suite, gwNN, gatewayNS, expectedGatewayName(gwNN), 0, 0)
 			if err != nil {
 				t.Fatalf("Failed to check EnvoyProxy deployment: %v", err)
 			}
@@ -70,7 +70,7 @@ var EnvoyProxyCustomNameTest = suite.ConformanceTest{
 				},
 			})
 
-			err = checkDeployment(t, suite, gwNN, gatewayNS, "custom-", 1, 1, 0)
+			err = checkDeployment(t, suite, gwNN, gatewayNS, "custom-", 1, 1)
 			if err != nil {
 				t.Fatalf("Failed to delete Gateway: %v", err)
 			}
@@ -81,7 +81,7 @@ var EnvoyProxyCustomNameTest = suite.ConformanceTest{
 			updateGateway(t, suite, gwNN, &gwapiv1.GatewayInfrastructure{})
 
 			// Make sure there's deployment for the gateway
-			err = checkDeployment(t, suite, gwNN, gatewayNS, expectedGatewayName(gwNN), 0, 0, 1)
+			err = checkDeployment(t, suite, gwNN, gatewayNS, expectedGatewayName(gwNN), 0, 0)
 			if err != nil {
 				t.Fatalf("Failed to check EnvoyProxy deployment: %v", err)
 			}
@@ -232,7 +232,7 @@ var (
 )
 
 func checkDeployment(t *testing.T, suite *suite.ConformanceTestSuite, gwNN types.NamespacedName, exceptNs, exceptName string,
-	exceptHpaCount, exceptPdbCount, exceptSaCount int,
+	exceptHpaCount, exceptPdbCount int,
 ) error {
 	if err := checkObject(t, suite, appsv1.SchemeGroupVersion.WithKind("Deployment"), gwNN, 1, // service always exists
 		exceptNs, exceptName); err != nil {
@@ -249,7 +249,7 @@ func checkDeployment(t *testing.T, suite *suite.ConformanceTestSuite, gwNN types
 	if err := checkObject(t, suite, pdbGVK, gwNN, exceptPdbCount, exceptNs, exceptName); err != nil {
 		return err
 	}
-	if err := checkObject(t, suite, serviceAccountGVK, gwNN, exceptSaCount, exceptNs, exceptName); err != nil {
+	if err := checkObject(t, suite, serviceAccountGVK, gwNN, 1, exceptNs, exceptName); err != nil {
 		return err
 	}
 	return nil
