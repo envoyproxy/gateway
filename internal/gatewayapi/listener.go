@@ -113,7 +113,7 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR resource
 
 			// Add the listener to the Xds IR
 			servicePort := &protocolPort{protocol: listener.Protocol, port: int32(listener.Port)}
-			containerPort := t.servicePortToContainerPort(int32(listener.Port), gateway.envoyProxy, listener.Protocol == gwapiv1.TLSProtocolType && listener.TLS != nil && listener.TLS.Mode != nil && *listener.TLS.Mode == gwapiv1.TLSModePassthrough)
+			containerPort := t.servicePortToContainerPort(int32(listener.Port), gateway.envoyProxy, listener.Protocol == gwapiv1.TLSProtocolType && listener.TLS != nil && listener.TLS.Mode != nil && *listener.TLS.Mode == gwapiv1.TLSModePassthrough, t.hasProxyProtocolEnabled(listener, resources))
 			switch listener.Protocol {
 			case gwapiv1.HTTPProtocolType, gwapiv1.HTTPSProtocolType:
 				irListener := &ir.HTTPListener{
@@ -859,7 +859,7 @@ func validCELExpression(expr string) bool {
 
 // servicePortToContainerPort translates a service port into an ephemeral
 // container port.
-func (t *Translator) servicePortToContainerPort(servicePort int32, envoyProxy *egv1a1.EnvoyProxy, isTLSPassthrough bool) int32 {
+func (t *Translator) servicePortToContainerPort(servicePort int32, envoyProxy *egv1a1.EnvoyProxy, isTLSPassthrough bool, hasProxyProtocol bool) int32 {
 	if t.ListenerPortShiftDisabled {
 		return servicePort
 	}
@@ -875,6 +875,11 @@ func (t *Translator) servicePortToContainerPort(servicePort int32, envoyProxy *e
 		return servicePort
 	}
 
+	// Avoid port shifting when PROXY protocol is enabled to prevent port mismatch in PROXY headers.
+	if hasProxyProtocol {
+		return servicePort
+	}
+
 	// If the service port is a privileged port (1-1023)
 	// add a constant to the value converting it into an ephemeral port.
 	// This allows the container to bind to the port without needing a
@@ -884,4 +889,43 @@ func (t *Translator) servicePortToContainerPort(servicePort int32, envoyProxy *e
 	}
 
 	return servicePort
+}
+
+// hasProxyProtocolEnabled checks if PROXY protocol is enabled for the given listener
+// via ClientTrafficPolicy.
+func (t *Translator) hasProxyProtocolEnabled(listener *ListenerContext, resources *resource.Resources) bool {
+	if listener == nil || listener.gateway == nil || listener.gateway.Gateway == nil || resources == nil {
+		return false
+	}
+
+	for _, policy := range resources.ClientTrafficPolicies {
+		if policy == nil || policy.Spec.EnableProxyProtocol == nil {
+			continue
+		}
+		if string(policy.Spec.TargetRef.Group) != "gateway.networking.k8s.io" {
+			continue
+		}
+		if string(policy.Spec.TargetRef.Kind) != "Gateway" {
+			continue
+		}
+		if string(policy.Spec.TargetRef.Name) != listener.gateway.Gateway.Name {
+			continue
+		}
+		if policy.Namespace != listener.gateway.Gateway.Namespace {
+			continue
+		}
+
+		// Check if policy targets this specific listener
+		if policy.Spec.TargetRef.SectionName != nil {
+			if string(*policy.Spec.TargetRef.SectionName) != string(listener.Name) {
+				continue
+			}
+		}
+
+		// Check if PROXY protocol is enabled
+		if *policy.Spec.EnableProxyProtocol {
+			return true
+		}
+	}
+	return false
 }
