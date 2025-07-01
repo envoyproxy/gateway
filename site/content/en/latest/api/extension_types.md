@@ -1703,6 +1703,7 @@ _Appears in:_
 | `backendRef` | _[BackendObjectReference](https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1.BackendObjectReference)_ |  false  |  | BackendRef references a Kubernetes object that represents the<br />backend server to which the authorization request will be sent.<br />Deprecated: Use BackendRefs instead. |
 | `backendRefs` | _[BackendRef](#backendref) array_ |  false  |  | BackendRefs references a Kubernetes object that represents the<br />backend server to which the authorization request will be sent. |
 | `backendSettings` | _[ClusterSettings](#clustersettings)_ |  false  |  | BackendSettings holds configuration for managing the connection<br />to the backend. |
+| `stage` | _[ExtProcStage](#extprocstage)_ |  false  | Route | Stage defines at which stage of request processing the ExtProc filter is executed.<br />Default: Route |
 | `messageTimeout` | _[Duration](https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.Duration)_ |  false  |  | MessageTimeout is the timeout for a response to be returned from the external processor<br />Default: 200ms |
 | `failOpen` | _boolean_ |  false  |  | FailOpen defines if requests or responses that cannot be processed due to connectivity to the<br />external processor are terminated or passed-through.<br />Default: false |
 | `processingMode` | _[ExtProcProcessingMode](#extprocprocessingmode)_ |  false  |  | ProcessingMode defines how request and response body is processed<br />Default: header and body are not sent to the external processor |
@@ -1757,6 +1758,22 @@ _Appears in:_
 | `request` | _[ProcessingModeOptions](#processingmodeoptions)_ |  false  |  | Defines processing mode for requests. If present, request headers are sent. Request body is processed according<br />to the specified mode. |
 | `response` | _[ProcessingModeOptions](#processingmodeoptions)_ |  false  |  | Defines processing mode for responses. If present, response headers are sent. Response body is processed according<br />to the specified mode. |
 | `allowModeOverride` | _boolean_ |  false  |  | AllowModeOverride allows the external processor to override the processing mode set via the<br />`mode_override` field in the gRPC response message. This defaults to false. |
+
+
+#### ExtProcStage
+
+_Underlying type:_ _string_
+
+
+
+_Appears in:_
+- [ExtProc](#extproc)
+
+| Value | Description |
+| ----- | ----------- |
+| `Route` | ExtProcStageRoute configures ExtProc to execute at the route phase (downstream, listener HCM filter)<br /> | 
+| `Backend` | ExtProcStageBackend configures ExtProc to execute at the backend phase (upstream, cluster filter)<br /> | 
+| `All` | ExtProcStageAll configures ExtProc to execute at both route and backend phases<br /> | 
 
 
 #### ExtensionAPISettings
