@@ -86,7 +86,7 @@ func (r *Runner) Start(ctx context.Context) (err error) {
 	r.Logger = r.Logger.WithName(r.Name()).WithValues("runner", r.Name())
 
 	go r.startWasmCache(ctx)
-	c := r.ProviderResources.GatewayAPIResources.Subscribe(ctx)
+	c := r.ProviderResources.GatewayAPIResources.Subscriptions.GetNextAvailable()
 	go r.subscribeAndTranslate(c)
 	r.Logger.Info("started")
 	return

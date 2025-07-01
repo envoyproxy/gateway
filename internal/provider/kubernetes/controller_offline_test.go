@@ -30,8 +30,10 @@ func TestNewOfflineGatewayAPIController(t *testing.T) {
 		cfg.EnvoyGateway.Provider = &egv1a1.EnvoyGatewayProvider{
 			Type: egv1a1.ProviderTypeKubernetes,
 		}
-		pResources := new(message.ProviderResources)
-		_, err = NewOfflineGatewayAPIController(context.Background(), cfg, nil, pResources)
+		ctx := context.Background()
+		pResources := message.NewSubscribedProviderResources(ctx)
+		defer pResources.Close()
+		_, err = NewOfflineGatewayAPIController(ctx, cfg, nil, pResources)
 		require.Error(t, err)
 	})
 
@@ -42,8 +44,10 @@ func TestNewOfflineGatewayAPIController(t *testing.T) {
 		cfg.EnvoyGateway.Provider = &egv1a1.EnvoyGatewayProvider{
 			Type: egv1a1.ProviderTypeCustom,
 		}
-		pResources := new(message.ProviderResources)
-		_, err = NewOfflineGatewayAPIController(context.Background(), cfg, nil, pResources)
+		ctx := context.Background()
+		pResources := message.NewSubscribedProviderResources(ctx)
+		defer pResources.Close()
+		_, err = NewOfflineGatewayAPIController(ctx, cfg, nil, pResources)
 		require.NoError(t, err)
 	})
 }
