@@ -75,10 +75,24 @@ httpRoutes:
       backendRefs:
       - name: service-1
         port: 8080
+    - matches:
+      - path:
+          type: PathPrefix
+          value: '/foobar'
+      backendRefs:
+      - name: service-2
+        port: 8080
+    - matches:
+      - path:
+          type: PathPrefix
+          value: '/barfoo'
+      backendRefs:
+      - name: service-3
+        port: 8080
 - apiVersion: gateway.networking.k8s.io/v1
   kind: HTTPRoute
   metadata:
-    namespace: test-ns 
+    namespace: test-ns
     name: httproute-2
   spec:
     hostnames:
@@ -96,36 +110,36 @@ httpRoutes:
       - name: test-service
         port: 8080
 namespaces:
-  - apiVersion: v1
-    kind: Namespace
-    metadata:
-      name: test-ns
+- apiVersion: v1
+  kind: Namespace
+  metadata:
+    name: test-ns
 services:
-  - apiVersion: v1
-    kind: Service
-    metadata:
-      namespace: test-ns
-      name: test-service
-    spec:
-      ports:
-        - port: 8080
-          name: http
-          protocol: TCP
-endpointSlices:
-  - apiVersion: discovery.k8s.io/v1
-    kind: EndpointSlice
-    metadata:
-      name: endpointslice-test-service
-      namespace: test-ns
-      labels:
-        kubernetes.io/service-name: test-service
-    addressType: IPv4
+- apiVersion: v1
+  kind: Service
+  metadata:
+    namespace: test-ns
+    name: test-service
+  spec:
     ports:
-      - name: http
-        protocol: TCP
-        port: 8080
-    endpoints:
-      - addresses:
-          - 8.8.8.8
-        conditions:
-          ready: true
+    - port: 8080
+      name: http
+      protocol: TCP
+endpointSlices:
+- apiVersion: discovery.k8s.io/v1
+  kind: EndpointSlice
+  metadata:
+    name: endpointslice-test-service
+    namespace: test-ns
+    labels:
+      kubernetes.io/service-name: test-service
+  addressType: IPv4
+  ports:
+  - name: http
+    protocol: TCP
+    port: 8080
+  endpoints:
+  - addresses:
+    - 8.8.8.8
+    conditions:
+      ready: true

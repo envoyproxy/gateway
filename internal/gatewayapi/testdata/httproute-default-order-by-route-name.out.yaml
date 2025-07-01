@@ -140,6 +140,20 @@ httpRoutes:
       - path:
           type: PathPrefix
           value: /route1
+    - backendRefs:
+      - name: service-2
+        port: 8080
+      matches:
+      - path:
+          type: PathPrefix
+          value: /foobar
+    - backendRefs:
+      - name: service-3
+        port: 8080
+      matches:
+      - path:
+          type: PathPrefix
+          value: /barfoo
   status:
     parents:
     - conditions:
@@ -267,6 +281,64 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /route1
+      - destination:
+          metadata:
+            kind: HTTPRoute
+            name: httproute-1
+            namespace: default
+          name: httproute/default/httproute-1/rule/1
+          settings:
+          - addressType: IP
+            endpoints:
+            - host: 7.7.7.7
+              port: 8080
+            metadata:
+              name: service-2
+              namespace: default
+              sectionName: "8080"
+            name: httproute/default/httproute-1/rule/1/backend/0
+            protocol: HTTP
+            weight: 1
+        hostname: gateway.envoyproxy.io
+        isHTTP2: false
+        metadata:
+          kind: HTTPRoute
+          name: httproute-1
+          namespace: default
+        name: httproute/default/httproute-1/rule/1/match/0/gateway_envoyproxy_io
+        pathMatch:
+          distinct: false
+          name: ""
+          prefix: /foobar
+      - destination:
+          metadata:
+            kind: HTTPRoute
+            name: httproute-1
+            namespace: default
+          name: httproute/default/httproute-1/rule/2
+          settings:
+          - addressType: IP
+            endpoints:
+            - host: 7.7.7.7
+              port: 8080
+            metadata:
+              name: service-3
+              namespace: default
+              sectionName: "8080"
+            name: httproute/default/httproute-1/rule/2/backend/0
+            protocol: HTTP
+            weight: 1
+        hostname: gateway.envoyproxy.io
+        isHTTP2: false
+        metadata:
+          kind: HTTPRoute
+          name: httproute-1
+          namespace: default
+        name: httproute/default/httproute-1/rule/2/match/0/gateway_envoyproxy_io
+        pathMatch:
+          distinct: false
+          name: ""
+          prefix: /barfoo
       - destination:
           metadata:
             kind: HTTPRoute
