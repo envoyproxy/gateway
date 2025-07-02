@@ -590,11 +590,6 @@ func (t *Translator) processAccessLog(envoyproxy *egv1a1.EnvoyProxy, resources *
 					}
 					irAccessLog.Text = append(irAccessLog.Text, al)
 				case egv1a1.ProxyAccessLogFormatTypeJSON:
-					if len(format.JSON) == 0 {
-						// TODO: use a default JSON format if not specified?
-						continue
-					}
-
 					al := &ir.JSONAccessLog{
 						JSON:       format.JSON,
 						Path:       sink.File.Path,

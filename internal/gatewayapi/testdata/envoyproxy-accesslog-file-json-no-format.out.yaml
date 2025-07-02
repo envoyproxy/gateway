@@ -128,7 +128,9 @@ infraIR:
       namespace: envoy-gateway-system
 xdsIR:
   envoy-gateway/gateway-1:
-    accessLog: {}
+    accessLog:
+      json:
+      - path: /dev/stdout
     http:
     - address: 0.0.0.0
       hostnames:
