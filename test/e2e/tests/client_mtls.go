@@ -24,10 +24,11 @@ import (
 	"sigs.k8s.io/gateway-api/conformance/utils/roundtripper"
 	"sigs.k8s.io/gateway-api/conformance/utils/suite"
 	"sigs.k8s.io/gateway-api/conformance/utils/tlog"
+	"sigs.k8s.io/gateway-api/pkg/features"
 )
 
 func init() {
-	ConformanceTests = append(ConformanceTests, ClientMTLSTest)
+	ConformanceTests = append(ConformanceTests, ClientMTLSTest, ClientMTLSClusterTrustBundleTest)
 }
 
 var ClientMTLSTest = suite.ConformanceTest{
@@ -68,7 +69,7 @@ var ClientMTLSTest = suite.ConformanceTest{
 
 			// This test uses the same key/cert pair as both a client cert and server cert
 			// Both backend and client treat the self-signed cert as a trusted CA
-			cPem, keyPem, err := GetTLSSecret(suite.Client, certNN)
+			cPem, keyPem, _, err := GetTLSSecret(suite.Client, certNN)
 			if err != nil {
 				t.Fatalf("unexpected error finding TLS secret: %v", err)
 			}
@@ -107,7 +108,7 @@ var ClientMTLSTest = suite.ConformanceTest{
 			req := http.MakeRequest(t, &expected, gwAddr, "HTTPS", "https")
 
 			// added but not used, as these are required by test utils when for SNI to be added
-			cPem, keyPem, err := GetTLSSecret(suite.Client, certNN)
+			cPem, keyPem, _, err := GetTLSSecret(suite.Client, certNN)
 			if err != nil {
 				t.Fatalf("unexpected error finding TLS secret: %v", err)
 			}
@@ -149,6 +150,58 @@ var ClientMTLSTest = suite.ConformanceTest{
 	},
 }
 
+var ClientMTLSClusterTrustBundleTest = suite.ConformanceTest{
+	ShortName:   "ClientMTLSClusterTrustBundle",
+	Description: "Use Gateway with Client MTLS policy",
+	Manifests:   []string{"testdata/client-mtls-trustbundle.yaml"},
+	Features: []features.FeatureName{
+		ClusterTrustBundleFeature,
+	},
+	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
+		t.Run("Client MTLS with ClusterTrustBundle", func(t *testing.T) {
+			ns := "gateway-conformance-infra"
+			routeNN := types.NamespacedName{Name: "client-mtls-clustertrustbundle", Namespace: ns}
+			gwNN := types.NamespacedName{Name: "client-mtls-clustertrustbundle", Namespace: ns}
+			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
+			certNN := types.NamespacedName{Name: "client-example-com", Namespace: ns}
+
+			expected := http.ExpectedResponse{
+				Request: http.Request{
+					Host: "www.example.com",
+					Path: "/cluster-trust-bundle",
+				},
+				ExpectedRequest: &http.ExpectedRequest{
+					Request: http.Request{
+						Host: "www.example.com",
+						Path: "/cluster-trust-bundle",
+						Headers: map[string]string{
+							"X-Forwarded-Client-Cert": "Hash=42a13e4b02c8a6d2ae5bf2fdaa032e24fdbabbaa79b6017fd0db6c077e6999e0;Subject=\"O=example organization,CN=client.example.com\"",
+						},
+					},
+				},
+				Response: http.Response{
+					StatusCode: 200,
+				},
+				Namespace: ns,
+			}
+
+			req := http.MakeRequest(t, &expected, gwAddr, "HTTPS", "https")
+
+			// This test uses the same key/cert pair as both a client cert and server cert
+			// Both backend and client treat the self-signed cert as a trusted CA
+			cPem, keyPem, caPem, err := GetTLSSecret(suite.Client, certNN)
+			if err != nil {
+				t.Fatalf("unexpected error finding TLS secret: %v", err)
+			}
+
+			combined := string(cPem) + "\n" + string(caPem)
+
+			WaitForConsistentMTLSResponse(t, suite.RoundTripper, req, expected, suite.TimeoutConfig.RequiredConsecutiveSuccesses, suite.TimeoutConfig.MaxTimeToConsistency,
+				[]byte(combined), keyPem, "www.example.com")
+		})
+	},
+}
+
 func WaitForConsistentMTLSResponse(t *testing.T, r roundtripper.RoundTripper, req roundtripper.Request, expected http.ExpectedResponse, threshold int, maxTimeToConsistency time.Duration, cPem, keyPem []byte, server string) {
 	http.AwaitConvergence(t, threshold, maxTimeToConsistency, func(elapsed time.Duration) bool {
 		req.KeyPem = keyPem
@@ -172,8 +225,8 @@ func WaitForConsistentMTLSResponse(t *testing.T, r roundtripper.RoundTripper, re
 }
 
 // GetTLSSecret fetches the named Secret and converts both cert and key to []byte
-func GetTLSSecret(client client.Client, secretName types.NamespacedName) ([]byte, []byte, error) {
-	var cert, key []byte
+func GetTLSSecret(client client.Client, secretName types.NamespacedName) ([]byte, []byte, []byte, error) {
+	var cert, key, ca []byte
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
@@ -181,12 +234,13 @@ func GetTLSSecret(client client.Client, secretName types.NamespacedName) ([]byte
 	secret := &corev1.Secret{}
 	err := client.Get(ctx, secretName, secret)
 	if err != nil {
-		return cert, key, fmt.Errorf("error fetching TLS Secret: %w", err)
+		return cert, key, ca, fmt.Errorf("error fetching TLS Secret: %w", err)
 	}
 	cert = secret.Data["tls.crt"]
 	key = secret.Data["tls.key"]
+	ca = secret.Data["ca.crt"]
 
-	return cert, key, nil
+	return cert, key, ca, nil
 }
 
 func dialWithTLSVersion(t *testing.T, gwAddr string, baseTLSConfig *tls.Config, version uint16, expectedError bool) {
