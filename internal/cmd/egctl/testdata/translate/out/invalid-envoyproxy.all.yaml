@@ -19,10 +19,10 @@ envoyProxyForGatewayClass:
             socket_address:
               address: 127.0.0.1
               port_value: 19000
-    disableLuaValidation: false
     logging:
       level:
         default: warn
+    luaValidation: Run
   status: {}
 gatewayClass:
   apiVersion: gateway.networking.k8s.io/v1

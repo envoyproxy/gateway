@@ -2412,9 +2412,9 @@ func (in *EnvoyProxySpec) DeepCopyInto(out *EnvoyProxySpec) {
 		*out = new(bool)
 		**out = **in
 	}
-	if in.DisableLuaValidation != nil {
-		in, out := &in.DisableLuaValidation, &out.DisableLuaValidation
-		*out = new(bool)
+	if in.LuaValidation != nil {
+		in, out := &in.LuaValidation, &out.LuaValidation
+		*out = new(LuaValidation)
 		**out = **in
 	}
 }
