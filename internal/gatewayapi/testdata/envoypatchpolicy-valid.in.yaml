@@ -4,6 +4,7 @@ envoyPatchPolicies:
   metadata:
     namespace: envoy-gateway
     name: edit-conn-buffer-bytes
+    generation: 10
   spec:
     type: "JSONPatch"
     targetRef:
@@ -22,6 +23,7 @@ envoyPatchPolicies:
   metadata:
     namespace: envoy-gateway
     name: edit-ignore-global-limit
+    generation: 10
   spec:
     type: "JSONPatch"
     targetRef:

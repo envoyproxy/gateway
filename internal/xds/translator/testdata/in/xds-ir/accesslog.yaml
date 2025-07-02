@@ -52,6 +52,7 @@ accesslog:
         - host: "otel-collector.default.svc.cluster.local"
           port: 4317
         protocol: "GRPC"
+        addressType: FQDN
         name: "accesslog-0/backend/0"
 http:
 - name: "first-listener"
