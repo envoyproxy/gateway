@@ -230,7 +230,6 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 		// Process the parametersRef of the accepted GatewayClass.
 		// This should run before processGateways and processBackendRefs
 		if managedGC.Spec.ParametersRef != nil && managedGC.DeletionTimestamp == nil {
-
 			if err := r.processGatewayClassParamsRef(ctx, managedGC, gwcResourceMapping, gwcResource); err != nil {
 				if isTransientError(err) {
 					r.log.Error(err, "transient error processing GatewayClass parametersRef", "gatewayClass", managedGC.Name)
@@ -248,6 +247,32 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 				continue
 			}
 		}
+
+		// process envoy gateway secret refs
+		if err := r.processEnvoyProxySecretRef(ctx, gwcResource); err != nil {
+			if isTransientError(err) {
+				r.log.Error(err, "transient error processing TLS SecretRef for EnvoyProxy", "gatewayClass", managedGC.Name)
+				return reconcile.Result{}, err
+			}
+
+			r.log.Error(err, fmt.Sprintf("failed process TLS SecretRef for EnvoyProxy for gatewayClass %s, skipping it", managedGC.Name))
+			gc := status.SetGatewayClassAccepted(
+				managedGC.DeepCopy(),
+				false,
+				string(gwapiv1.GatewayClassReasonAccepted),
+				fmt.Sprintf("%s: %v", status.MsgGatewayClassInvalidParams, err))
+			r.resources.GatewayClassStatuses.Store(utils.NamespacedName(gc), &gc.Status)
+			continue
+		}
+
+		// GatewayClass is valid so far, mark it as accepted.
+		gc := status.SetGatewayClassAccepted(
+			managedGC.DeepCopy(),
+			true,
+			string(gwapiv1.GatewayClassReasonAccepted),
+			status.MsgValidGatewayClass)
+		r.resources.GatewayClassStatuses.Store(utils.NamespacedName(gc), &gc.Status)
+
 		// it's safe here to append gwcResource to gwcResources
 		gwcResources = append(gwcResources, gwcResource)
 		// process global resources
@@ -388,28 +413,6 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 			} else {
 				r.mergeGateways.Delete(managedGC.Name)
 			}
-		}
-
-		// process envoy gateway secret refs
-		if err := r.processEnvoyProxySecretRef(ctx, gwcResource); err != nil {
-			if isTransientError(err) {
-				r.log.Error(err, "transient error processing TLS SecretRef for EnvoyProxy", "gatewayClass", managedGC.Name)
-				return reconcile.Result{}, err
-			}
-			gc := status.SetGatewayClassAccepted(
-				managedGC.DeepCopy(),
-				false,
-				string(gwapiv1.GatewayClassReasonAccepted),
-				fmt.Sprintf("%s: %v", status.MsgGatewayClassInvalidParams, err))
-			r.resources.GatewayClassStatuses.Store(utils.NamespacedName(gc), &gc.Status)
-			r.log.Error(err, fmt.Sprintf("failed process TLS SecretRef for EnvoyProxy for gatewayClass %s", managedGC.Name))
-		} else {
-			gc := status.SetGatewayClassAccepted(
-				managedGC.DeepCopy(),
-				true,
-				string(gwapiv1.GatewayClassReasonAccepted),
-				status.MsgValidGatewayClass)
-			r.resources.GatewayClassStatuses.Store(utils.NamespacedName(gc), &gc.Status)
 		}
 
 		if len(gwcResource.Gateways) == 0 {
