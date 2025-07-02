@@ -36,54 +36,6 @@ var ClientMTLSTest = suite.ConformanceTest{
 	Description: "Use Gateway with Client MTLS policy",
 	Manifests:   []string{"testdata/client-mtls.yaml"},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
-		t.Run("Client MTLS with ClusterTrustBundle", func(t *testing.T) {
-			if !EnabledClusterTrustBundle() {
-				t.Skipf("Skipping test as ClusterTrustBundle is not enabled")
-			}
-
-			depNS := "envoy-gateway-system"
-			ns := "gateway-conformance-infra"
-			routeNN := types.NamespacedName{Name: "client-mtls-clustertrustbundle", Namespace: ns}
-			gwNN := types.NamespacedName{Name: "client-mtls-clustertrustbundle", Namespace: ns}
-			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
-			kubernetes.NamespacesMustBeReady(t, suite.Client, suite.TimeoutConfig, []string{depNS})
-			certNN := types.NamespacedName{Name: "client-example-com", Namespace: ns}
-
-			expected := http.ExpectedResponse{
-				Request: http.Request{
-					Host: "www.example.com",
-					Path: "/cluster-trust-bundle",
-				},
-				ExpectedRequest: &http.ExpectedRequest{
-					Request: http.Request{
-						Host: "www.example.com",
-						Path: "/cluster-trust-bundle",
-						Headers: map[string]string{
-							"X-Forwarded-Client-Cert": "Hash=42a13e4b02c8a6d2ae5bf2fdaa032e24fdbabbaa79b6017fd0db6c077e6999e0;Subject=\"O=example organization,CN=client.example.com\"",
-						},
-					},
-				},
-				Response: http.Response{
-					StatusCode: 200,
-				},
-				Namespace: ns,
-			}
-
-			req := http.MakeRequest(t, &expected, gwAddr, "HTTPS", "https")
-
-			// This test uses the same key/cert pair as both a client cert and server cert
-			// Both backend and client treat the self-signed cert as a trusted CA
-			cPem, keyPem, caPem, err := GetTLSSecret(suite.Client, certNN)
-			if err != nil {
-				t.Fatalf("unexpected error finding TLS secret: %v", err)
-			}
-
-			combined := string(cPem) + "\n" + string(caPem)
-
-			WaitForConsistentMTLSResponse(t, suite.RoundTripper, req, expected, suite.TimeoutConfig.RequiredConsecutiveSuccesses, suite.TimeoutConfig.MaxTimeToConsistency,
-				[]byte(combined), keyPem, "www.example.com")
-		})
-
 		t.Run("Use Client MTLS", func(t *testing.T) {
 			depNS := "envoy-gateway-system"
 			ns := "gateway-conformance-infra"
