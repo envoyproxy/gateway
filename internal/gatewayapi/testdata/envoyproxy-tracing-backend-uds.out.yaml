@@ -169,9 +169,6 @@ infraIR:
         labels:
           gateway.envoyproxy.io/owning-gateway-name: gateway-1
           gateway.envoyproxy.io/owning-gateway-namespace: envoy-gateway
-        ownerReference:
-          kind: GatewayClass
-          name: envoy-gateway-class
       name: envoy-gateway/gateway-1
       namespace: envoy-gateway-system
 xdsIR:
@@ -201,10 +198,6 @@ xdsIR:
       port: 19003
     tracing:
       destination:
-        metadata:
-          kind: EnvoyProxy
-          name: test
-          namespace: envoy-gateway-system
         name: tracing
         settings:
         - addressType: IP
@@ -212,10 +205,6 @@ xdsIR:
           - host: ""
             path: /var/run/envoy-uds/dsd.socket
             port: 0
-          metadata:
-            kind: Backend
-            name: datadog-svc
-            namespace: envoy-gateway-system
           name: tracing/backend/-1
           protocol: TCP
       provider:
