@@ -49,8 +49,9 @@ import (
 )
 
 var (
-	IPFamily      = os.Getenv("IP_FAMILY")
-	DeployProfile = os.Getenv("KUBE_DEPLOY_PROFILE")
+	IPFamily                  = os.Getenv("IP_FAMILY")
+	DeployProfile             = os.Getenv("KUBE_DEPLOY_PROFILE")
+	enabledClusterTrustBundle = os.Getenv("ENABLE_CLUSTER_TRUST_BUNDLE")
 
 	SameNamespaceGateway    = types.NamespacedName{Name: "same-namespace", Namespace: ConformanceInfraNamespace}
 	SameNamespaceGatewayRef = k8sutils.NewGatewayRef(SameNamespaceGateway)
@@ -764,4 +765,9 @@ func ExpectRequestTimeout(t *testing.T, suite *suite.ConformanceTestSuite, gwAdd
 				return false
 			}
 		})
+}
+
+// TODO: remove this when the min version EG supported is v1.33
+func EnabledClusterTrustBundle() bool {
+	return enabledClusterTrustBundle == "true"
 }

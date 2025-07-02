@@ -819,7 +819,8 @@ func (t *Translator) buildListenerTLSParameters(policy *egv1a1.ClientTrafficPoli
 		}
 
 		for _, caCertRef := range tlsParams.ClientValidation.CACertificateRefs {
-			caCertRefKind := string(ptr.Deref[gwapiv1.Kind](caCertRef.Kind, resource.KindSecret))
+			caCertRefKind := string(ptr.Deref(caCertRef.Kind, resource.KindSecret))
+			var caCertBytes []byte
 			switch caCertRefKind {
 			case resource.KindSecret:
 				secret, err := t.validateSecretRef(false, from, caCertRef, resources)
@@ -827,39 +828,40 @@ func (t *Translator) buildListenerTLSParameters(policy *egv1a1.ClientTrafficPoli
 					return irTLSConfig, err
 				}
 
-				secretBytes, ok := getCaCertFromSecret(secret)
-				if !ok || len(secretBytes) == 0 {
+				secretCertBytes, ok := getCaCertFromSecret(secret)
+				if !ok || len(secretCertBytes) == 0 {
 					return irTLSConfig, fmt.Errorf(
 						"caCertificateRef not found in secret %s", caCertRef.Name)
 				}
-
-				if err := validateCertificate(secretBytes); err != nil {
-					return irTLSConfig, fmt.Errorf(
-						"invalid certificate in secret %s: %w", caCertRef.Name, err)
-				}
-
-				irCACert.Certificate = append(irCACert.Certificate, secretBytes...)
+				caCertBytes = secretCertBytes
 			case resource.KindConfigMap:
 				configMap, err := t.validateConfigMapRef(false, from, caCertRef, resources)
 				if err != nil {
 					return irTLSConfig, err
 				}
 
-				configMapBytes, ok := getCaCertFromConfigMap(configMap)
-				if !ok || len(configMapBytes) == 0 {
+				configMapData, ok := getCaCertFromConfigMap(configMap)
+				if !ok || len(configMapData) == 0 {
 					return irTLSConfig, fmt.Errorf(
-						"caCertificateRef not found in configMap %s", caCertRef.Name)
+						"caCertificateRef not found in configmap %s", caCertRef.Name)
 				}
-
-				if err := validateCertificate([]byte(configMapBytes)); err != nil {
+				caCertBytes = []byte(configMapData)
+			case resource.KindClusterTrustBundle:
+				trustBundle := resources.GetClusterTrustBundle(string(caCertRef.Name))
+				if trustBundle == nil {
 					return irTLSConfig, fmt.Errorf(
-						"invalid certificate in configmap %s: %w", caCertRef.Name, err)
+						"caCertificateRef not found in ClusterTrustBundle %s", caCertRef.Name)
 				}
-
-				irCACert.Certificate = append(irCACert.Certificate, configMapBytes...)
+				caCertBytes = []byte(trustBundle.Spec.TrustBundle)
 			default:
 				return irTLSConfig, fmt.Errorf("unsupported caCertificateRef kind:%s", caCertRefKind)
 			}
+
+			if err := validateCertificate(caCertBytes); err != nil {
+				return irTLSConfig, fmt.Errorf(
+					"invalid certificate in %s %s: %w", caCertRefKind, caCertRef.Name, err)
+			}
+			irCACert.Certificate = append(irCACert.Certificate, caCertBytes...)
 		}
 
 		if len(irCACert.Certificate) > 0 {

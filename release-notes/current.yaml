@@ -29,6 +29,7 @@ new features: |
   Added support for configuring user provided name to generated HorizontalPodAutoscaler and PodDisruptionBudget resources.
   Added support for client certificate validation (SPKI, hash, SAN) in ClientTrafficPolicy.
   Added support for OIDC RP initialized logout. If the end session endpoint is explicitly specified or discovered from the issuer's well-known url, the end session endpoint will be invoked when the user logs out.
+  Added support for using ClusterTrustBundle as CA.
 
 
 bug fixes: |

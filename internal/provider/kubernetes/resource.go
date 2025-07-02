@@ -63,6 +63,10 @@ type resourceMappings struct {
 	// Set for storing HTTPRouteExtensions (Envoy Gateway or Custom) NamespacedNames referenced by various
 	// route rules objects.
 	allAssociatedHTTPRouteExtensionFilters sets.Set[utils.NamespacedNameWithGroupKind]
+
+	// allAssociatedClusterTrustBundles is a set of all ClusterTrustBundles' name
+	// key is the name of ClusterTrustBundle, because ClusterTrustBundle is cluster-scoped resource
+	allAssociatedClusterTrustBundles sets.Set[string]
 }
 
 func newResourceMapping() *resourceMappings {
@@ -90,5 +94,6 @@ func newResourceMapping() *resourceMappings {
 		allAssociatedEnvoyExtensionPolicies:    sets.New[string](),
 		extensionRefFilters:                    map[utils.NamespacedNameWithGroupKind]unstructured.Unstructured{},
 		allAssociatedHTTPRouteExtensionFilters: sets.New[utils.NamespacedNameWithGroupKind](),
+		allAssociatedClusterTrustBundles:       sets.New[string](),
 	}
 }
