@@ -72,21 +72,17 @@ func ShouldFailOpen(err error) bool {
 }
 
 func shouldFailOpenForSingleError(err error) bool {
-	if err == nil {
-		return false
-	}
-
-	var policyErr *PolicyTranslationError
-	if errors.As(err, &policyErr) {
-		return policyErr.FailOpen
-	}
-
-	// Check if error can be unwrapped and recurse
-	if unwrapper, ok := err.(interface{ Unwrap() error }); ok {
-		if wrapped := unwrapper.Unwrap(); wrapped != nil {
-			return shouldFailOpenForSingleError(wrapped)
+	for err != nil {
+		var policyErr *PolicyTranslationError
+		if errors.As(err, &policyErr) {
+			return policyErr.FailOpen
 		}
-	}
 
+		unwrapper, ok := err.(interface{ Unwrap() error })
+		if !ok {
+			break
+		}
+		err = unwrapper.Unwrap()
+	}
 	return false
 }

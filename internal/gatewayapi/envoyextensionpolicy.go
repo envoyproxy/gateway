@@ -518,10 +518,7 @@ func (t *Translator) buildExtProcs(policy *egv1a1.EnvoyExtensionPolicy, resource
 		name := irConfigNameForExtProc(policy, idx)
 		extProcIR, err := t.buildExtProc(name, policy, ep, idx, resources, envoyProxy)
 		if err != nil {
-			return nil, &PolicyTranslationError{
-				Wrapped:  err,
-				FailOpen: ptr.Deref(ep.FailOpen, false),
-			}
+			return nil, NewPolicyTranslationError(err, ptr.Deref(ep.FailOpen, false))
 		}
 		extProcIRList = append(extProcIRList, *extProcIR)
 	}
