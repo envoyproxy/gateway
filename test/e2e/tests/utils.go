@@ -42,6 +42,7 @@ import (
 	k8sutils "sigs.k8s.io/gateway-api/conformance/utils/kubernetes"
 	"sigs.k8s.io/gateway-api/conformance/utils/suite"
 	"sigs.k8s.io/gateway-api/conformance/utils/tlog"
+	"sigs.k8s.io/gateway-api/pkg/features"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/kubernetes"
@@ -60,7 +61,11 @@ var (
 )
 
 const (
+	ClusterTrustBundleFeature features.FeatureName = "ClusterTrustBundle"
+
 	ConformanceInfraNamespace = "gateway-conformance-infra"
+
+	AllNamespacesGateway = "all-namespaces"
 
 	defaultServiceStartupTimeout = 5 * time.Minute
 )

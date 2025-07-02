@@ -14,23 +14,17 @@ import (
 	"sigs.k8s.io/gateway-api/conformance/utils/http"
 	"sigs.k8s.io/gateway-api/conformance/utils/kubernetes"
 	"sigs.k8s.io/gateway-api/conformance/utils/suite"
+	"sigs.k8s.io/gateway-api/pkg/features"
 )
 
-var backendTLSTestManifests []string
-
 func init() {
-	ConformanceTests = append(ConformanceTests, BackendTLSTest)
-
-	backendTLSTestManifests = []string{"testdata/backend-tls.yaml"}
-	if EnabledClusterTrustBundle() {
-		backendTLSTestManifests = append(backendTLSTestManifests, "testdata/backend-tls-clustertrustbundle.yaml")
-	}
+	ConformanceTests = append(ConformanceTests, BackendTLSTest, BackendClusterTrustBundleTest)
 }
 
 var BackendTLSTest = suite.ConformanceTest{
 	ShortName:   "BackendTLS",
 	Description: "Connect to backend with TLS",
-	Manifests:   backendTLSTestManifests,
+	Manifests:   []string{"testdata/backend-tls.yaml"},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
 		gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ConformanceInfraNamespace}
 		t.Run("with a backend TLS Policy", func(t *testing.T) {
@@ -109,12 +103,21 @@ var BackendTLSTest = suite.ConformanceTest{
 
 			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
 		})
+	},
+}
 
+var BackendClusterTrustBundleTest = suite.ConformanceTest{
+	ShortName:   "BackendTLSClusterTrustBundle",
+	Description: "Connect to backend with TLS",
+	Manifests: []string{
+		"testdata/backend-tls-clustertrustbundle.yaml",
+	},
+	Features: []features.FeatureName{
+		ClusterTrustBundleFeature,
+	},
+	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
+		gwNN := types.NamespacedName{Name: AllNamespacesGateway, Namespace: ConformanceInfraNamespace}
 		t.Run("with ClusterTrustBundle", func(t *testing.T) {
-			if !EnabledClusterTrustBundle() {
-				t.Skipf("Skipping test as ClusterTrustBundle is not enabled")
-			}
-
 			routeNN := types.NamespacedName{Name: "http-with-backend-tls-trust-bundle", Namespace: ConformanceInfraNamespace}
 			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
 

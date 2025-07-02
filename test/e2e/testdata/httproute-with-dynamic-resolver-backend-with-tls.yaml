@@ -15,14 +15,6 @@ spec:
     - path:
         type: PathPrefix
         value: /with-tls
-  - backendRefs:
-    - group: gateway.envoyproxy.io
-      kind: Backend
-      name: backend-dynamic-resolver-clustertrustbundle
-    matches:
-    - path:
-        type: PathPrefix
-        value: /with-clustertrustbundle
 ---
 apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: Backend

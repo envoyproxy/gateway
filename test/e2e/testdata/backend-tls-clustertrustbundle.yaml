@@ -33,7 +33,7 @@ metadata:
   namespace: gateway-conformance-infra
 spec:
   parentRefs:
-    - name: same-namespace
+    - name: all-namespaces
   rules:
     - matches:
         - path:

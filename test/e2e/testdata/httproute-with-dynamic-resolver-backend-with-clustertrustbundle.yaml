@@ -1,3 +1,21 @@
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: httproute-clustertrustbundle
+  namespace: gateway-conformance-infra
+spec:
+  parentRefs:
+    - name: all-namespaces
+  rules:
+    - backendRefs:
+        - group: gateway.envoyproxy.io
+          kind: Backend
+          name: backend-clustertrustbundle
+      matches:
+        - path:
+            type: PathPrefix
+            value: /with-clustertrustbundle
+---
 # keep this same as configmap backend-ca-certificate
 apiVersion: certificates.k8s.io/v1beta1
 kind: ClusterTrustBundle
@@ -29,7 +47,7 @@ spec:
 apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: Backend
 metadata:
-  name: backend-dynamic-resolver-clustertrustbundle
+  name: backend-clustertrustbundle
   namespace: gateway-conformance-infra
 spec:
   type: DynamicResolver
