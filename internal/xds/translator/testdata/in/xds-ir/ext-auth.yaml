@@ -118,6 +118,14 @@ http:
           extAuth:
             name: securitypolicy/default/policy-for-gateway-1
             failOpen: true
+            metadataContextNamespaces:
+              - envoy.filters.http.custom1
+            typedMetadataContextNamespaces:
+              - envoy.filters.http.custom2
+            routeMetadataContextNamespaces:
+              - envoy.filters.http.custom3
+            routeTypedMetadataContextNamespaces:
+              - envoy.filters.http.custom4
             http:
               authority: http-backend.envoy-gateway:80
               destination:

@@ -9,6 +9,7 @@ package v1alpha1
 //
 // +kubebuilder:validation:XValidation:rule="(has(self.grpc) || has(self.http))",message="one of grpc or http must be specified"
 // +kubebuilder:validation:XValidation:rule="(has(self.grpc) && !has(self.http)) || (!has(self.grpc) && has(self.http))",message="only one of grpc or http can be specified"
+// +kubebuilder:validation:XValidation:rule="!(has(self.http) && has(self.accessibleMetadata))",message="accessible metadata cannot be used with HTTP external authorization service due to underlying Envoy Proxy limitation"
 type ExtAuth struct {
 	// GRPC defines the gRPC External Authorization service.
 	// Either GRPCService or HTTPService must be specified,
@@ -54,6 +55,15 @@ type ExtAuth struct {
 	//
 	// +optional
 	RecomputeRoute *bool `json:"recomputeRoute,omitempty"`
+
+	// AccessibleMetadata defines options related to the sending of dynamic metadata.
+	// These options define which metadata namespaces would be sent to the processor.
+	// Users can specify custom namespaces or well-known envoy metadata namespace (such as envoy.filters.http.header_to_metadata)
+	// documented here: https://www.envoyproxy.io/docs/envoy/latest/configuration/advanced/well_known_dynamic_metadata#well-known-dynamic-metadata
+	// Default: no metadata context is sent to the external authorization service.
+	//
+	// +optional
+	AccessibleMetadata *ExtAuthAccessibleMetadata `json:"accessibleMetadata,omitempty"`
 }
 
 // GRPCExtAuthService defines the gRPC External Authorization service
@@ -105,4 +115,28 @@ type BodyToExtAuth struct {
 	//
 	// +kubebuilder:validation:Minimum=1
 	MaxRequestBytes uint32 `json:"maxRequestBytes"`
+}
+
+// ExtAuthAccessibleMetadata defines options related to the sending of dynamic metadata to and from the
+// external authorization service.
+type ExtAuthAccessibleMetadata struct {
+	// Namespaces are metadata namespaces that are sent to the external authorization server as context.
+	//
+	// +optional
+	Namespaces []string `json:"namespaces,omitempty"`
+
+	// TypedNamespaces are typed metadata namespaces that are sent to the external authorization server as context.
+	//
+	// +optional
+	TypedNamespaces []string `json:"typedNamespaces,omitempty"`
+
+	// RouteNamespaces are route-level metadata namespaces that are sent to the external authorization server as context.
+	//
+	// +optional
+	RouteNamespaces []string `json:"routeNamespaces,omitempty"`
+
+	// RouteTypedNamespaces are route-level typed metadata namespaces that are sent to the external authorization server as context.
+	//
+	// +optional
+	RouteTypedNamespaces []string `json:"routeTypedNamespaces,omitempty"`
 }

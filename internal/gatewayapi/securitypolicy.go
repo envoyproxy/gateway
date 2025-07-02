@@ -1486,6 +1486,13 @@ func (t *Translator) buildExtAuth(
 		}
 	}
 
+	if policy.Spec.ExtAuth.AccessibleMetadata != nil {
+		extAuth.MetadataContextNamespaces = policy.Spec.ExtAuth.AccessibleMetadata.Namespaces
+		extAuth.TypedMetadataContextNamespaces = policy.Spec.ExtAuth.AccessibleMetadata.TypedNamespaces
+		extAuth.RouteMetadataContextNamespaces = policy.Spec.ExtAuth.AccessibleMetadata.RouteNamespaces
+		extAuth.RouteTypedMetadataContextNamespaces = policy.Spec.ExtAuth.AccessibleMetadata.RouteTypedNamespaces
+	}
+
 	return extAuth, nil
 }
 

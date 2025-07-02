@@ -1685,6 +1685,25 @@ _Appears in:_
 | `bodyToExtAuth` | _[BodyToExtAuth](#bodytoextauth)_ |  false  |  | BodyToExtAuth defines the Body to Ext Auth configuration. |
 | `failOpen` | _boolean_ |  false  | false | FailOpen is a switch used to control the behavior when a response from the External Authorization service cannot be obtained.<br />If FailOpen is set to true, the system allows the traffic to pass through.<br />Otherwise, if it is set to false or not set (defaulting to false),<br />the system blocks the traffic and returns a HTTP 5xx error, reflecting a fail-closed approach.<br />This setting determines whether to prioritize accessibility over strict security in case of authorization service failure. |
 | `recomputeRoute` | _boolean_ |  false  |  | RecomputeRoute clears the route cache and recalculates the routing decision.<br />This field must be enabled if the headers added or modified by the ExtAuth are used for<br />route matching decisions. If the recomputation selects a new route, features targeting<br />the new matched route will be applied. |
+| `accessibleMetadata` | _[ExtAuthAccessibleMetadata](#extauthaccessiblemetadata)_ |  false  |  | AccessibleMetadata defines options related to the sending of dynamic metadata.<br />These options define which metadata namespaces would be sent to the processor.<br />Users can specify custom namespaces or well-known envoy metadata namespace (such as envoy.filters.http.header_to_metadata)<br />documented here: https://www.envoyproxy.io/docs/envoy/latest/configuration/advanced/well_known_dynamic_metadata#well-known-dynamic-metadata<br />Default: no metadata context is sent to the external authorization service. |
+
+
+#### ExtAuthAccessibleMetadata
+
+
+
+ExtAuthAccessibleMetadata defines options related to the sending of dynamic metadata to and from the
+external authorization service.
+
+_Appears in:_
+- [ExtAuth](#extauth)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `namespaces` | _string array_ |  false  |  | Namespaces are metadata namespaces that are sent to the external authorization server as context. |
+| `typedNamespaces` | _string array_ |  false  |  | TypedNamespaces are typed metadata namespaces that are sent to the external authorization server as context. |
+| `routeNamespaces` | _string array_ |  false  |  | RouteNamespaces are route-level metadata namespaces that are sent to the external authorization server as context. |
+| `routeTypedNamespaces` | _string array_ |  false  |  | RouteTypedNamespaces are route-level typed metadata namespaces that are sent to the external authorization server as context. |
 
 
 #### ExtProc

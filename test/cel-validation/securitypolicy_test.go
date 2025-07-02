@@ -748,6 +748,31 @@ func TestSecurityPolicyTarget(t *testing.T) {
 			wantErrors: []string{"BackendRefs only supports Service and Backend kind."},
 		},
 		{
+			desc: "http extAuthz doesn't support accessible metadata",
+			mutate: func(sp *egv1a1.SecurityPolicy) {
+				sp.Spec = egv1a1.SecurityPolicySpec{
+					ExtAuth: &egv1a1.ExtAuth{
+						HTTP: &egv1a1.HTTPExtAuthService{
+							BackendCluster: egv1a1.BackendCluster{
+								BackendRef: &gwapiv1.BackendObjectReference{
+									Name: "http-auth-service",
+									Port: ptr.To(gwapiv1.PortNumber(15001)),
+								},
+							},
+						},
+						AccessibleMetadata: &egv1a1.ExtAuthAccessibleMetadata{
+							Namespaces: []string{
+								"envoy.filters.http.header_to_metadata",
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{
+				"spec.extAuth: Invalid value: \"object\": accessible metadata cannot be used with HTTP external authorization service due to underlying Envoy Proxy limitation",
+			},
+		},
+		{
 			desc: "grpc extAuth service invalid Group",
 			mutate: func(sp *egv1a1.SecurityPolicy) {
 				sp.Spec = egv1a1.SecurityPolicySpec{

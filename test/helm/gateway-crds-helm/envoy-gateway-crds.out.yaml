@@ -22297,6 +22297,40 @@ spec:
               extAuth:
                 description: ExtAuth defines the configuration for External Authorization.
                 properties:
+                  accessibleMetadata:
+                    description: |-
+                      AccessibleMetadata defines options related to the sending of dynamic metadata.
+                      These options define which metadata namespaces would be sent to the processor.
+                      Users can specify custom namespaces or well-known envoy metadata namespace (such as envoy.filters.http.header_to_metadata)
+                      documented here: https://www.envoyproxy.io/docs/envoy/latest/configuration/advanced/well_known_dynamic_metadata#well-known-dynamic-metadata
+                      Default: no metadata context is sent to the external authorization service.
+                    properties:
+                      namespaces:
+                        description: Namespaces are metadata namespaces that are sent
+                          to the external authorization server as context.
+                        items:
+                          type: string
+                        type: array
+                      routeNamespaces:
+                        description: RouteNamespaces are route-level metadata namespaces
+                          that are sent to the external authorization server as context.
+                        items:
+                          type: string
+                        type: array
+                      routeTypedNamespaces:
+                        description: RouteTypedNamespaces are route-level typed metadata
+                          namespaces that are sent to the external authorization server
+                          as context.
+                        items:
+                          type: string
+                        type: array
+                      typedNamespaces:
+                        description: TypedNamespaces are typed metadata namespaces
+                          that are sent to the external authorization server as context.
+                        items:
+                          type: string
+                        type: array
+                    type: object
                   bodyToExtAuth:
                     description: BodyToExtAuth defines the Body to Ext Auth configuration.
                     properties:
@@ -24275,6 +24309,9 @@ spec:
                 - message: only one of grpc or http can be specified
                   rule: (has(self.grpc) && !has(self.http)) || (!has(self.grpc) &&
                     has(self.http))
+                - message: accessible metadata cannot be used with HTTP external authorization
+                    service due to underlying Envoy Proxy limitation
+                  rule: '!(has(self.http) && has(self.accessibleMetadata))'
               jwt:
                 description: JWT defines the configuration for JSON Web Token (JWT)
                   authentication.
