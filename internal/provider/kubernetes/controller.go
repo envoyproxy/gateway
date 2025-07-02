@@ -7,6 +7,7 @@ package kubernetes
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -214,13 +215,14 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 		// Initialize resource types.
 		gwcResource := resource.NewResources()
 		gwcResource.GatewayClass = managedGC
-		gwcResources = append(gwcResources, gwcResource)
-		resourceMappings := newResourceMapping()
+
+		gwcResourceMapping := newResourceMapping()
 
 		// Process the parametersRef of the accepted GatewayClass.
 		// This should run before processGateways and processBackendRefs
 		if managedGC.Spec.ParametersRef != nil && managedGC.DeletionTimestamp == nil {
-			if err := r.processGatewayClassParamsRef(ctx, managedGC, resourceMappings, gwcResource); err != nil {
+			if err := r.processGatewayClassParamsRef(ctx, managedGC, gwcResourceMapping, gwcResource); err != nil {
+				r.log.Error(err, fmt.Sprintf("failed processGatewayClassParamsRef for gatewayClass %s, skipping it", managedGC.Name))
 				msg := fmt.Sprintf("%s: %v", status.MsgGatewayClassInvalidParams, err)
 				gc := status.SetGatewayClassAccepted(
 					managedGC.DeepCopy(),
@@ -231,23 +233,31 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 				continue
 			}
 		}
+		// it's safe here to append gwcResource to gwcResources
+		gwcResources = append(gwcResources, gwcResource)
+		// process global resources
+		// add the OIDC HMAC Secret to the resourceTree
+		r.processOIDCHMACSecret(ctx, gwcResource, gwcResourceMapping)
+		// add the Envoy TLS Secret to the resourceTree
+		r.processEnvoyTLSSecret(ctx, gwcResource, gwcResourceMapping)
 
 		// Add all Gateways, their associated Routes, and referenced resources to the resourceTree
-		if err = r.processGateways(ctx, managedGC, resourceMappings, gwcResource); err != nil {
+		if err = r.processGateways(ctx, managedGC, gwcResourceMapping, gwcResource); err != nil {
 			r.log.Error(err, fmt.Sprintf("failed processGateways for gatewayClass %s, skipping it", managedGC.Name))
 			continue
 		}
 
 		if r.eppCRDExists {
 			// Add all EnvoyPatchPolicies to the resourceTree
-			if err = r.processEnvoyPatchPolicies(ctx, gwcResource, resourceMappings); err != nil {
+			if err = r.processEnvoyPatchPolicies(ctx, gwcResource, gwcResourceMapping); err != nil {
 				r.log.Error(err, fmt.Sprintf("failed processEnvoyPatchPolicies for gatewayClass %s, skipping it", managedGC.Name))
 				continue
 			}
 		}
+
 		if r.ctpCRDExists {
 			// Add all ClientTrafficPolicies and their referenced resources to the resourceTree
-			if err = r.processClientTrafficPolicies(ctx, gwcResource, resourceMappings); err != nil {
+			if err = r.processClientTrafficPolicies(ctx, gwcResource, gwcResourceMapping); err != nil {
 				r.log.Error(err, fmt.Sprintf("failed processClientTrafficPolicies for gatewayClass %s, skipping it", managedGC.Name))
 				continue
 			}
@@ -255,7 +265,7 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 
 		if r.btpCRDExists {
 			// Add all BackendTrafficPolicies to the resourceTree
-			if err = r.processBackendTrafficPolicies(ctx, gwcResource, resourceMappings); err != nil {
+			if err = r.processBackendTrafficPolicies(ctx, gwcResource, gwcResourceMapping); err != nil {
 				r.log.Error(err, fmt.Sprintf("failed processBackendTrafficPolicies for gatewayClass %s, skipping it", managedGC.Name))
 				continue
 			}
@@ -263,7 +273,7 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 
 		if r.spCRDExists {
 			// Add all SecurityPolicies and their referenced resources to the resourceTree
-			if err = r.processSecurityPolicies(ctx, gwcResource, resourceMappings); err != nil {
+			if err = r.processSecurityPolicies(ctx, gwcResource, gwcResourceMapping); err != nil {
 				r.log.Error(err, fmt.Sprintf("failed processSecurityPolicies for gatewayClass %s, skipping it", managedGC.Name))
 				continue
 			}
@@ -271,7 +281,7 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 
 		if r.bTLSPolicyCRDExists {
 			// Add all BackendTLSPolies to the resourceTree
-			if err = r.processBackendTLSPolicies(ctx, gwcResource, resourceMappings); err != nil {
+			if err = r.processBackendTLSPolicies(ctx, gwcResource, gwcResourceMapping); err != nil {
 				r.log.Error(err, fmt.Sprintf("failed processBackendTLSPolicies for gatewayClass %s, skipping it", managedGC.Name))
 				continue
 			}
@@ -279,7 +289,7 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 
 		if r.eepCRDExists {
 			// Add all EnvoyExtensionPolicies and their referenced resources to the resourceTree
-			if err = r.processEnvoyExtensionPolicies(ctx, gwcResource, resourceMappings); err != nil {
+			if err = r.processEnvoyExtensionPolicies(ctx, gwcResource, gwcResourceMapping); err != nil {
 				r.log.Error(err, fmt.Sprintf("failed processEnvoyExtensionPolicies for gatewayClass %s, skipping it", managedGC.Name))
 				continue
 			}
@@ -300,11 +310,11 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 		// Add the referenced services, ServiceImports, and EndpointSlices in
 		// the collected BackendRefs to the resourceTree.
 		// BackendRefs are referred by various Route objects and the ExtAuth in SecurityPolicies.
-		r.processBackendRefs(ctx, gwcResource, resourceMappings)
+		r.processBackendRefs(ctx, gwcResource, gwcResourceMapping)
 
 		// For this particular Gateway, and all associated objects, check whether the
 		// namespace exists. Add to the resourceTree.
-		for ns := range resourceMappings.allAssociatedNamespaces {
+		for ns := range gwcResourceMapping.allAssociatedNamespaces {
 			namespace, err := r.getNamespace(ctx, ns)
 			if err != nil {
 				r.log.Error(err, "unable to find the namespace")
@@ -1243,8 +1253,6 @@ func (r *gatewayAPIReconciler) processSecurityPolicies(
 	// Add the referenced Resources in SecurityPolicies to the resourceTree
 	r.processSecurityPolicyObjectRefs(ctx, resourceTree, resourceMap)
 
-	// Add the OIDC HMAC Secret to the resourceTree
-	r.processOIDCHMACSecret(ctx, resourceTree, resourceMap)
 	return nil
 }
 
@@ -2014,7 +2022,7 @@ func (r *gatewayAPIReconciler) processGatewayClassParamsRef(ctx context.Context,
 
 	// Check for incompatible configuration: both MergeGateways and GatewayNamespaceMode enabled
 	if r.gatewayNamespaceMode && ep.Spec.MergeGateways != nil && *ep.Spec.MergeGateways {
-		return fmt.Errorf("using Merged Gateways with Gateway Namespace Mode is not supported.")
+		return errors.New("using Merged Gateways with Gateway Namespace Mode is not supported")
 	}
 
 	if err := r.processEnvoyProxy(ep, resourceMap); err != nil {
