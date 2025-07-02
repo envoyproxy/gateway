@@ -17,20 +17,14 @@ else
   CNI_CONFIG="disableDefaultCNI: false"
 fi
 
-if [ "$ENABLE_CLUSTER_TRUST_BUNDLE" = "true" ]; then
-  RUNTIME_CONFIG+="certificates.k8s.io/v1beta1/clustertrustbundles: true"
-else
-  RUNTIME_CONFIG+="certificates.k8s.io/v1beta1/clustertrustbundles: false"
-fi
-
 KIND_CFG=$(cat <<-EOM
 kind: Cluster
 apiVersion: kind.x-k8s.io/v1alpha4
 runtimeConfig:
-  ${RUNTIME_CONFIG}
+  certificates.k8s.io/v1beta1/clustertrustbundles: ${ENABLE_CLUSTER_TRUST_BUNDLE}
 featureGates:
-  "ClusterTrustBundle": true
-  "ClusterTrustBundleProjection": true
+  "ClusterTrustBundle": ${ENABLE_CLUSTER_TRUST_BUNDLE}
+  "ClusterTrustBundleProjection": ${ENABLE_CLUSTER_TRUST_BUNDLE}
 networking:
   ${CNI_CONFIG}
   ipFamily: ${IP_FAMILY}
