@@ -521,7 +521,7 @@ spec:
                   accessibleMetadata:
                     description: |-
                       AccessibleMetadata defines options related to the sending of dynamic metadata.
-                      These options define which metadata namespaces would be sent to the processor.
+                      These options define which metadata namespaces would be sent to the external authorization server.
                       Users can specify custom namespaces or well-known envoy metadata namespace (such as envoy.filters.http.header_to_metadata)
                       documented here: https://www.envoyproxy.io/docs/envoy/latest/configuration/advanced/well_known_dynamic_metadata#well-known-dynamic-metadata
                       Default: no metadata context is sent to the external authorization service.
