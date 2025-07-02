@@ -859,7 +859,12 @@ func validCELExpression(expr string) bool {
 
 // servicePortToContainerPort translates a service port into an ephemeral
 // container port.
-func (t *Translator) servicePortToContainerPort(servicePort int32, envoyProxy *egv1a1.EnvoyProxy, isTLSPassthrough bool, hasProxyProtocol bool) int32 {
+func (t *Translator) servicePortToContainerPort(
+	servicePort int32,
+	envoyProxy *egv1a1.EnvoyProxy,
+	isTLSPassthrough bool,
+	hasProxyProtocol bool,
+) int32 {
 	if t.ListenerPortShiftDisabled {
 		return servicePort
 	}
@@ -902,29 +907,33 @@ func (t *Translator) hasProxyProtocolEnabled(listener *ListenerContext, resource
 		if policy == nil || policy.Spec.EnableProxyProtocol == nil {
 			continue
 		}
-		if string(policy.Spec.TargetRef.Group) != "gateway.networking.k8s.io" {
-			continue
-		}
-		if string(policy.Spec.TargetRef.Kind) != "Gateway" {
-			continue
-		}
-		if string(policy.Spec.TargetRef.Name) != listener.gateway.Gateway.Name {
-			continue
-		}
-		if policy.Namespace != listener.gateway.Gateway.Namespace {
-			continue
-		}
 
-		// Check if policy targets this specific listener
-		if policy.Spec.TargetRef.SectionName != nil {
-			if string(*policy.Spec.TargetRef.SectionName) != string(listener.Name) {
+		// Use getPolicyTargetRefs to properly handle TargetRefs and TargetSelectors
+		gateways := []*GatewayContext{listener.gateway}
+		targetRefs := getPolicyTargetRefs(policy.Spec.PolicyTargetReferences, gateways)
+
+		for _, targetRef := range targetRefs {
+			if targetRef.Group != "" && string(targetRef.Group) != "gateway.networking.k8s.io" {
 				continue
 			}
-		}
+			if targetRef.Kind != "" && string(targetRef.Kind) != "Gateway" {
+				continue
+			}
+			if string(targetRef.Name) != listener.gateway.Name {
+				continue
+			}
 
-		// Check if PROXY protocol is enabled
-		if *policy.Spec.EnableProxyProtocol {
-			return true
+			// Check if policy targets this specific listener
+			if targetRef.SectionName != nil {
+				if string(*targetRef.SectionName) != string(listener.Name) {
+					continue
+				}
+			}
+
+			// Check if PROXY protocol is enabled
+			if *policy.Spec.EnableProxyProtocol {
+				return true
+			}
 		}
 	}
 	return false
