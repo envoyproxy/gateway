@@ -238,8 +238,6 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 		// process global resources
 		// add the OIDC HMAC Secret to the resourceTree
 		r.processOIDCHMACSecret(ctx, gwcResource, gwcResourceMapping)
-		// add the Envoy TLS Secret to the resourceTree
-		r.processEnvoyTLSSecret(ctx, gwcResource, gwcResourceMapping)
 
 		// Add all Gateways, their associated Routes, and referenced resources to the resourceTree
 		if err = r.processGateways(ctx, managedGC, gwcResourceMapping, gwcResource); err != nil {
