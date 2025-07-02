@@ -42,16 +42,8 @@
     - name: envoy.filters.network.tcp_proxy
       typedConfig:
         '@type': type.googleapis.com/envoy.extensions.filters.network.tcp_proxy.v3.TcpProxy
-        cluster: tcp-route-dest
-        statPrefix: tcp-10081
-    name: tcp-route-dest
-  - filters:
-    - name: envoy.filters.network.tcp_proxy
-      typedConfig:
-        '@type': type.googleapis.com/envoy.extensions.filters.network.tcp_proxy.v3.TcpProxy
         cluster: max-accept-disabled
         statPrefix: tcp-10081
     name: max-accept-disabled
-  maxConnectionsToAcceptPerSocketEvent: 3
   name: second-listener
   perConnectionBufferLimitBytes: 32768

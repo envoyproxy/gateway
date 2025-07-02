@@ -10,25 +10,13 @@
     loadBalancingWeight: 1
     locality:
       region: first-route-dest/backend/0
-- clusterName: tcp-route-dest
-  endpoints:
-  - lbEndpoints:
-    - endpoint:
-        address:
-          socketAddress:
-            address: 1.2.3.4
-            portValue: 50000
-      loadBalancingWeight: 1
-    loadBalancingWeight: 1
-    locality:
-      region: tcp-route-dest/backend/0
 - clusterName: max-accept-disabled
   endpoints:
   - lbEndpoints:
     - endpoint:
         address:
           socketAddress:
-            address: 2.3.4.5
+            address: 1.2.3.4
             portValue: 50000
       loadBalancingWeight: 1
     loadBalancingWeight: 1

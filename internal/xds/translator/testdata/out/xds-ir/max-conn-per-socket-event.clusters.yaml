@@ -26,23 +26,6 @@
     edsConfig:
       ads: {}
       resourceApiVersion: V3
-    serviceName: tcp-route-dest
-  ignoreHealthOnHostRemoval: true
-  lbPolicy: LEAST_REQUEST
-  name: tcp-route-dest
-  perConnectionBufferLimitBytes: 32768
-  type: EDS
-- circuitBreakers:
-    thresholds:
-    - maxRetries: 1024
-  commonLbConfig:
-    localityWeightedLbConfig: {}
-  connectTimeout: 10s
-  dnsLookupFamily: V4_PREFERRED
-  edsClusterConfig:
-    edsConfig:
-      ads: {}
-      resourceApiVersion: V3
     serviceName: max-accept-disabled
   ignoreHealthOnHostRemoval: true
   lbPolicy: LEAST_REQUEST

@@ -23,20 +23,6 @@ tcp:
   - name: "second-listener"
     address: "::"
     connection:
-      maxAcceptPerSocketEvent: 3
-    port: 10081
-    routes:
-      - name: "tcp-route-dest"
-        destination:
-          name: "tcp-route-dest"
-          settings:
-            - endpoints:
-                - host: "1.2.3.4"
-                  port: 50000
-              name: "tcp-route-dest/backend/0"
-  - name: "third-listener"
-    address: "::"
-    connection:
       maxAcceptPerSocketEvent: 0
     port: 10081
     routes:
@@ -45,6 +31,6 @@ tcp:
           name: "max-accept-disabled"
           settings:
             - endpoints:
-                - host: "2.3.4.5"
+                - host: "1.2.3.4"
                   port: 50000
               name: "max-accept-disabled/backend/0"
