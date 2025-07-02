@@ -53,7 +53,7 @@ const (
 	http2InitialConnectionWindowSize = 1048576 // 1 MiB
 	// https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/network/connection_limit/v3/connection_limit.proto
 	networkConnectionLimit             = "envoy.filters.network.connection_limit"
-	maxAcceptConnectionsPerSocketEvent = 1
+	defaultMaxAcceptConnectionsPerSocketEvent = 1
 )
 
 func http1ProtocolOptions(opts *ir.HTTP1Settings) *corev3.Http1ProtocolOptions {
