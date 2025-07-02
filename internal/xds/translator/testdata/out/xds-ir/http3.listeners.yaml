@@ -100,5 +100,6 @@
               resourceApiVersion: V3
         disableStatefulSessionResumption: true
         disableStatelessSessionResumption: true
+  maxConnectionsToAcceptPerSocketEvent: 1
   name: envoy-gateway/gateway-1/tls
   perConnectionBufferLimitBytes: 32768
