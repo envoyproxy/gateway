@@ -283,7 +283,7 @@ func TestProcessGatewayClassParamsRef(t *testing.T) {
 			},
 			gatewayNamespaceMode: true,
 			expected:             false,
-			expectedError:        "using Merged Gateways with Gateway Namespace Mode is not supported.",
+			expectedError:        "using Merged Gateways with Gateway Namespace Mode is not supported",
 		},
 		{
 			name: "valid merged gateways enabled configuration",

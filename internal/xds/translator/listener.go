@@ -723,12 +723,7 @@ func buildDownstreamQUICTransportSocket(tlsConfig *ir.TLSConfig) (*corev3.Transp
 
 	if tlsConfig.CACertificate != nil {
 		tlsCtx.DownstreamTlsContext.RequireClientCertificate = &wrapperspb.BoolValue{Value: true}
-		tlsCtx.DownstreamTlsContext.CommonTlsContext.ValidationContextType = &tlsv3.CommonTlsContext_ValidationContextSdsSecretConfig{
-			ValidationContextSdsSecretConfig: &tlsv3.SdsSecretConfig{
-				Name:      tlsConfig.CACertificate.Name,
-				SdsConfig: makeConfigSource(),
-			},
-		}
+		setTLSValidationContext(tlsConfig, tlsCtx.DownstreamTlsContext.CommonTlsContext)
 	}
 
 	setDownstreamTLSSessionSettings(tlsConfig, tlsCtx.DownstreamTlsContext)
@@ -765,12 +760,7 @@ func buildXdsDownstreamTLSSocket(tlsConfig *ir.TLSConfig) (*corev3.TransportSock
 
 	if tlsConfig.CACertificate != nil {
 		tlsCtx.RequireClientCertificate = &wrapperspb.BoolValue{Value: tlsConfig.RequireClientCertificate}
-		tlsCtx.CommonTlsContext.ValidationContextType = &tlsv3.CommonTlsContext_ValidationContextSdsSecretConfig{
-			ValidationContextSdsSecretConfig: &tlsv3.SdsSecretConfig{
-				Name:      tlsConfig.CACertificate.Name,
-				SdsConfig: makeConfigSource(),
-			},
-		}
+		setTLSValidationContext(tlsConfig, tlsCtx.CommonTlsContext)
 	}
 
 	setDownstreamTLSSessionSettings(tlsConfig, tlsCtx)
@@ -786,6 +776,51 @@ func buildXdsDownstreamTLSSocket(tlsConfig *ir.TLSConfig) (*corev3.TransportSock
 			TypedConfig: tlsCtxAny,
 		},
 	}, nil
+}
+
+func setTLSValidationContext(tlsConfig *ir.TLSConfig, tlsCtx *tlsv3.CommonTlsContext) {
+	sdsSecretConfig := &tlsv3.SdsSecretConfig{
+		Name:      tlsConfig.CACertificate.Name,
+		SdsConfig: makeConfigSource(),
+	}
+	if len(tlsConfig.VerifyCertificateSpki) > 0 || len(tlsConfig.VerifyCertificateHash) > 0 || len(tlsConfig.MatchTypedSubjectAltNames) > 0 {
+		validationContext := &tlsv3.CertificateValidationContext{}
+		validationContext.VerifyCertificateSpki = append(validationContext.VerifyCertificateSpki, tlsConfig.VerifyCertificateSpki...)
+		validationContext.VerifyCertificateHash = append(validationContext.VerifyCertificateHash, tlsConfig.VerifyCertificateHash...)
+		for _, match := range tlsConfig.MatchTypedSubjectAltNames {
+			sanType := tlsv3.SubjectAltNameMatcher_OTHER_NAME
+			oid := ""
+			switch match.Name {
+			case "":
+				sanType = tlsv3.SubjectAltNameMatcher_SAN_TYPE_UNSPECIFIED
+			case "EMAIL":
+				sanType = tlsv3.SubjectAltNameMatcher_EMAIL
+			case "DNS":
+				sanType = tlsv3.SubjectAltNameMatcher_DNS
+			case "URI":
+				sanType = tlsv3.SubjectAltNameMatcher_URI
+			case "IP_ADDRESS":
+				sanType = tlsv3.SubjectAltNameMatcher_IP_ADDRESS
+			default:
+				oid = match.Name
+			}
+			validationContext.MatchTypedSubjectAltNames = append(validationContext.MatchTypedSubjectAltNames, &tlsv3.SubjectAltNameMatcher{
+				SanType: sanType,
+				Matcher: buildXdsStringMatcher(match),
+				Oid:     oid,
+			})
+		}
+		tlsCtx.ValidationContextType = &tlsv3.CommonTlsContext_CombinedValidationContext{
+			CombinedValidationContext: &tlsv3.CommonTlsContext_CombinedCertificateValidationContext{
+				DefaultValidationContext:         validationContext,
+				ValidationContextSdsSecretConfig: sdsSecretConfig,
+			},
+		}
+	} else {
+		tlsCtx.ValidationContextType = &tlsv3.CommonTlsContext_ValidationContextSdsSecretConfig{
+			ValidationContextSdsSecretConfig: sdsSecretConfig,
+		}
+	}
 }
 
 func setDownstreamTLSSessionSettings(tlsConfig *ir.TLSConfig, tlsCtx *tlsv3.DownstreamTlsContext) {
