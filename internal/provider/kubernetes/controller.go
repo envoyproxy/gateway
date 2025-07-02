@@ -186,6 +186,7 @@ func isTransientError(err error) bool {
 		kerrors.IsTooManyRequests(err) ||
 		kerrors.IsServiceUnavailable(err) ||
 		kerrors.IsStoreReadError(err) ||
+		kerrors.IsInternalError(err) ||
 		kerrors.IsUnexpectedServerError(err)
 }
 

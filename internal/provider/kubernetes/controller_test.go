@@ -7,6 +7,7 @@ package kubernetes
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"testing"
 
@@ -1029,7 +1030,7 @@ func TestIsTransientError(t *testing.T) {
 	serverTimeoutErr := kerrors.NewServerTimeout(
 		schema.GroupResource{Group: "core", Resource: "pods"}, "list", 10)
 	timeoutErr := kerrors.NewTimeoutError("request timeout", 1)
-	tooManyRequestsErr := kerrors.NewTooManyRequests("too many requests", 1)
+	wrappedTooManyRequestsErr := fmt.Errorf("wrapping: %w", kerrors.NewTooManyRequests("too many requests", 1))
 	serviceUnavailableErr := kerrors.NewServiceUnavailable("service unavailable")
 	badRequestErr := kerrors.NewBadRequest("bad request")
 
@@ -1040,7 +1041,7 @@ func TestIsTransientError(t *testing.T) {
 	}{
 		{"ServerTimeout", serverTimeoutErr, true},
 		{"Timeout", timeoutErr, true},
-		{"TooManyRequests", tooManyRequestsErr, true},
+		{"TooManyRequests", wrappedTooManyRequestsErr, true},
 		{"ServiceUnavailable", serviceUnavailableErr, true},
 		{"BadRequest", badRequestErr, false},
 		{"NilError", nil, false},
