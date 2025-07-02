@@ -376,6 +376,10 @@ kind: Deployment
 metadata:
   name: envoy-gateway
   namespace: 'envoy-gateway-system'
+  annotations:
+    my-custom-annotation-1: example-1
+    my-custom-annotation-2: example-2
+    my-custom-annotation-3: example-3
   labels:
     control-plane: envoy-gateway
     helm.sh/chart: gateway-helm-v0.0.0-latest
@@ -383,10 +387,6 @@ metadata:
     app.kubernetes.io/instance: gateway-helm
     app.kubernetes.io/version: "latest"
     app.kubernetes.io/managed-by: Helm
-  annotations:
-    my-custom-annotation-1: example-1
-    my-custom-annotation-2: example-2
-    my-custom-annotation-3: example-3
 spec:
   replicas: 1
   selector:
