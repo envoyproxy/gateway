@@ -32,3 +32,20 @@
   name: max-accept-disabled
   perConnectionBufferLimitBytes: 32768
   type: EDS
+- circuitBreakers:
+    thresholds:
+    - maxRetries: 1024
+  commonLbConfig:
+    localityWeightedLbConfig: {}
+  connectTimeout: 10s
+  dnsLookupFamily: V4_PREFERRED
+  edsClusterConfig:
+    edsConfig:
+      ads: {}
+      resourceApiVersion: V3
+    serviceName: max-accept-default
+  ignoreHealthOnHostRemoval: true
+  lbPolicy: LEAST_REQUEST
+  name: max-accept-default
+  perConnectionBufferLimitBytes: 32768
+  type: EDS

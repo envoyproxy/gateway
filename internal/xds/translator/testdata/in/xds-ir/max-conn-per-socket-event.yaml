@@ -34,3 +34,15 @@ tcp:
                 - host: "1.2.3.4"
                   port: 50000
               name: "max-accept-disabled/backend/0"
+  - name: "third-listener"
+    address: "::"
+    port: 10082
+    routes:
+      - name: "max-accept-default"
+        destination:
+          name: "max-accept-default"
+          settings:
+            - endpoints:
+                - host: "2.3.4.5"
+                  port: 50001
+              name: "max-accept-default/backend/0"
