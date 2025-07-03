@@ -11,15 +11,17 @@ import metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 // +union
 //
 // +kubebuilder:validation:XValidation:rule="self.type == 'ConsistentHash' ? has(self.consistentHash) : !has(self.consistentHash)",message="If LoadBalancer type is consistentHash, consistentHash field needs to be set."
-// +kubebuilder:validation:XValidation:rule="self.type in ['Random', 'ConsistentHash'] ? !has(self.slowStart) : true ",message="Currently SlowStart is only supported for RoundRobin and LeastRequest load balancers."
-// +kubebuilder:validation:XValidation:rule="self.type == 'ConsistentHash' ? !has(self.zoneAware) : true ",message="Currently ZoneAware is only supported for LeastRequest, Random, and RoundRobin load balancers."
+// +kubebuilder:validation:XValidation:rule="self.type == 'HostOverride' ? has(self.hostOverrideSettings) : !has(self.hostOverrideSettings)",message="If LoadBalancer type is HostOverride, hostOverrideSettings field needs to be set."
+// +kubebuilder:validation:XValidation:rule="self.type in ['Random', 'ConsistentHash', 'HostOverride'] ? !has(self.slowStart) : true ",message="Currently SlowStart is only supported for RoundRobin and LeastRequest load balancers."
+// +kubebuilder:validation:XValidation:rule="self.type in ['ConsistentHash', 'HostOverride'] ? !has(self.zoneAware) : true ",message="Currently ZoneAware is only supported for LeastRequest, Random, and RoundRobin load balancers."
 type LoadBalancer struct {
 	// Type decides the type of Load Balancer policy.
 	// Valid LoadBalancerType values are
 	// "ConsistentHash",
 	// "LeastRequest",
 	// "Random",
-	// "RoundRobin".
+	// "RoundRobin",
+	// "HostOverride".
 	//
 	// +unionDiscriminator
 	Type LoadBalancerType `json:"type"`
@@ -28,6 +30,12 @@ type LoadBalancer struct {
 	//
 	// +optional
 	ConsistentHash *ConsistentHash `json:"consistentHash,omitempty"`
+
+	// HostOverrideSettings defines the configuration when the load balancer type is
+	// set to HostOverride
+	//
+	// +optional
+	HostOverrideSettings *HostOverrideSettings `json:"hostOverrideSettings,omitempty"`
 
 	// SlowStart defines the configuration related to the slow start load balancer policy.
 	// If set, during slow start window, traffic sent to the newly added hosts will gradually increase.
@@ -44,7 +52,7 @@ type LoadBalancer struct {
 }
 
 // LoadBalancerType specifies the types of LoadBalancer.
-// +kubebuilder:validation:Enum=ConsistentHash;LeastRequest;Random;RoundRobin
+// +kubebuilder:validation:Enum=ConsistentHash;LeastRequest;Random;RoundRobin;HostOverride
 type LoadBalancerType string
 
 const (
@@ -56,6 +64,8 @@ const (
 	RandomLoadBalancerType LoadBalancerType = "Random"
 	// RoundRobinLoadBalancerType load balancer policy.
 	RoundRobinLoadBalancerType LoadBalancerType = "RoundRobin"
+	// HostOverrideLoadBalancerType load balancer policy.
+	HostOverrideLoadBalancerType LoadBalancerType = "HostOverride"
 )
 
 // ConsistentHash defines the configuration related to the consistent hash
@@ -177,4 +187,69 @@ type ForceLocalZone struct {
 	// +optional
 	// +notImplementedHide
 	MinEndpointsInZoneThreshold *uint32 `json:"minEndpointsInZoneThreshold,omitempty"`
+}
+
+// HostOverrideSettings defines the configuration for the Host Override load balancer policy.
+// This policy allows endpoint picking to be implemented in downstream HTTP filters.
+// It extracts selected override hosts from a list of OverrideHostSource (request headers, metadata, etc.).
+// If no valid host in the override host list, then the specified fallback load balancing policy is used.
+type HostOverrideSettings struct {
+	// OverrideHostSources defines a list of sources to get host addresses from.
+	// The host sources are searched in the order specified.
+	// The request is forwarded to the first address and subsequent addresses are used for request retries or hedging.
+	// Note that if an overridden host address is not present in the current endpoint set, it is skipped and the next found address is used.
+	// If there are not enough overridden addresses to satisfy all retry attempts the fallback load balancing policy is used to pick a host.
+	//
+	// +kubebuilder:validation:MinItems=1
+	// +kubebuilder:validation:MaxItems=10
+	OverrideHostSources []OverrideHostSource `json:"overrideHostSources"`
+
+	// FallbackPolicy defines the child LB policy to use in case neither header nor metadata with selected hosts is present.
+	// If not specified, defaults to LeastRequest.
+	//
+	// +optional
+	// +kubebuilder:default="LeastRequest"
+	FallbackPolicy *LoadBalancerType `json:"fallbackPolicy,omitempty"`
+}
+
+// OverrideHostSource defines a source to get override host addresses from.
+// +union
+//
+// +kubebuilder:validation:XValidation:rule="(has(self.header) && !has(self.metadata)) || (!has(self.header) && has(self.metadata))",message="Exactly one of header or metadata must be set."
+type OverrideHostSource struct {
+	// Header defines the header to get the override host addresses.
+	// The header value must specify at least one host in `IP:Port` format or multiple hosts in `IP:Port,IP:Port,...` format.
+	// For example `10.0.0.5:8080` or `[2600:4040:5204::1574:24ae]:80`.
+	// The IPv6 address is enclosed in square brackets.
+	//
+	// +optional
+	Header *string `json:"header,omitempty"`
+
+	// Metadata defines the metadata key to get the override host addresses from the request dynamic metadata.
+	// If set this field then it will take precedence over the header field.
+	//
+	// +optional
+	Metadata *MetadataKey `json:"metadata,omitempty"`
+}
+
+// MetadataKey defines the metadata key configuration for host override.
+type MetadataKey struct {
+	// Key defines the metadata key.
+	//
+	// +kubebuilder:validation:MinLength=1
+	Key string `json:"key"`
+
+	// Path defines the path within the metadata to extract the host addresses.
+	// Each path element represents a key in nested metadata structure.
+	//
+	// +optional
+	Path []MetadataKeyPath `json:"path,omitempty"`
+}
+
+// MetadataKeyPath defines a path element in the metadata structure.
+type MetadataKeyPath struct {
+	// Key defines the key name in the metadata structure.
+	//
+	// +kubebuilder:validation:MinLength=1
+	Key string `json:"key"`
 }

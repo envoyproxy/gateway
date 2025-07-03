@@ -2490,6 +2490,8 @@ type LoadBalancer struct {
 	Random *Random `json:"random,omitempty" yaml:"random,omitempty"`
 	// ConsistentHash load balancer policy
 	ConsistentHash *ConsistentHash `json:"consistentHash,omitempty" yaml:"consistentHash,omitempty"`
+	// HostOverride load balancer policy
+	HostOverride *HostOverride `json:"hostOverride,omitempty" yaml:"hostOverride,omitempty"`
 }
 
 // Validate the fields within the LoadBalancer structure
@@ -2506,6 +2508,9 @@ func (l *LoadBalancer) Validate() error {
 		matchCount++
 	}
 	if l.ConsistentHash != nil {
+		matchCount++
+	}
+	if l.HostOverride != nil {
 		matchCount++
 	}
 	if matchCount != 1 {
@@ -3167,3 +3172,51 @@ type RequestBuffer struct {
 type ZoneAwareRouting struct {
 	MinSize int `json:"minSize" yaml:"minSize"`
 }
+
+// HostOverride load balancer settings
+// +k8s:deepcopy-gen=true
+type HostOverride struct {
+	// OverrideHostSources defines a list of sources to get host addresses from.
+	OverrideHostSources []OverrideHostSource `json:"overrideHostSources" yaml:"overrideHostSources"`
+	// FallbackPolicy defines the child LB policy to use in case neither header nor metadata with selected hosts is present.
+	FallbackPolicy LoadBalancerType `json:"fallbackPolicy" yaml:"fallbackPolicy"`
+}
+
+// OverrideHostSource defines a source to get override host addresses from.
+// +k8s:deepcopy-gen=true
+type OverrideHostSource struct {
+	// Header defines the header to get the override host addresses.
+	Header *string `json:"header,omitempty" yaml:"header,omitempty"`
+	// Metadata defines the metadata key to get the override host addresses from the request dynamic metadata.
+	Metadata *MetadataKey `json:"metadata,omitempty" yaml:"metadata,omitempty"`
+}
+
+// MetadataKey defines the metadata key configuration for host override.
+// +k8s:deepcopy-gen=true
+type MetadataKey struct {
+	// Key defines the metadata key.
+	Key string `json:"key" yaml:"key"`
+	// Path defines the path within the metadata to extract the host addresses.
+	Path []MetadataKeyPath `json:"path,omitempty" yaml:"path,omitempty"`
+}
+
+// MetadataKeyPath defines a path element in the metadata structure.
+// +k8s:deepcopy-gen=true
+type MetadataKeyPath struct {
+	// Key defines the key name in the metadata structure.
+	Key string `json:"key" yaml:"key"`
+}
+
+// LoadBalancerType defines the type of load balancer for IR.
+type LoadBalancerType string
+
+const (
+	// LeastRequestLoadBalancer is the least request load balancer type.
+	LeastRequestLoadBalancer LoadBalancerType = "LeastRequest"
+	// RoundRobinLoadBalancer is the round robin load balancer type.
+	RoundRobinLoadBalancer LoadBalancerType = "RoundRobin"
+	// RandomLoadBalancer is the random load balancer type.
+	RandomLoadBalancer LoadBalancerType = "Random"
+	// ConsistentHashLoadBalancer is the consistent hash load balancer type.
+	ConsistentHashLoadBalancer LoadBalancerType = "ConsistentHash"
+)

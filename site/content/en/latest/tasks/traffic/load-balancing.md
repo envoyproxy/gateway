@@ -11,6 +11,7 @@ Envoy Gateway supports the following load balancing policies:
 - **Random**: load balancer selects a random available host.
 - **Least Request**: load balancer uses different algorithms depending on whether hosts have the same or different weights.
 - **Consistent Hash**: load balancer implements consistent hashing to upstream hosts.
+- **Host Override**: load balancer allows endpoint selection based on headers or metadata with fallback policy support.
 
 Envoy Gateway introduces a new CRD called [BackendTrafficPolicy][] that allows the user to describe their desired load balancing polices.
 This instantiated resource can be linked to a [Gateway][], [HTTPRoute][] or [GRPCRoute][] resource. If `loadBalancer` is not specified in [BackendTrafficPolicy][], the default load balancing policy is `Least Request`.
@@ -913,6 +914,250 @@ curl -v --header "Host: www.example.com" http://${GATEWAY_HOST}/cookie
  "pod": "backend-69fcff487f-5dxz9"
 ```
 
+## Host Override
+
+This example will create a Load Balancer with Host Override policy via [BackendTrafficPolicy][].
+
+The Host Override load balancer allows endpoint selection based on headers or metadata with fallback policy support. It can derive the target host from the following sources:
+
+- **Header**: Extract target host from HTTP request headers
+- **Metadata**: Extract target host from request metadata
+
+When the specified override host is not available or invalid, the load balancer will fall back to the configured fallback policy.
+
+### Header-based Host Override
+
+This example will create a Load Balancer with Header-based Host Override policy.
+
+{{< tabpane text=true >}}
+{{% tab header="Apply from stdin" %}}
+
+```shell
+cat <<EOF | kubectl apply -f -
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: BackendTrafficPolicy
+metadata:
+  name: host-override-header-policy
+  namespace: default
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: host-override-header-route
+  loadBalancer:
+    type: HostOverride
+    hostOverrideSettings:
+      overrideHostSources:
+        - header: x-custom-host
+      fallbackPolicy: RoundRobin
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: host-override-header-route
+  namespace: default
+spec:
+  parentRefs:
+    - name: eg
+  hostnames:
+    - "www.example.com"
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /host-override-header
+      backendRefs:
+        - name: backend
+          port: 3000
+EOF
+```
+
+{{% /tab %}}
+{{% tab header="Apply from file" %}}
+Save and apply the following resource to your cluster:
+
+```yaml
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: BackendTrafficPolicy
+metadata:
+  name: host-override-header-policy
+  namespace: default
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: host-override-header-route
+  loadBalancer:
+    type: HostOverride
+    hostOverrideSettings:
+      overrideHostSources:
+        - header: x-custom-host
+      fallbackPolicy: RoundRobin
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: host-override-header-route
+  namespace: default
+spec:
+  parentRefs:
+    - name: eg
+  hostnames:
+    - "www.example.com"
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /host-override-header
+      backendRefs:
+        - name: backend
+          port: 3000
+```
+
+{{% /tab %}}
+{{< /tabpane >}}
+
+First, get one of the backend pod IPs to use as the override host:
+
+```shell
+BACKEND_POD_IP=$(kubectl get pods -l app=backend -o jsonpath='{.items[0].status.podIP}')
+echo "Backend Pod IP: $BACKEND_POD_IP"
+```
+
+Test with a valid pod IP in the header - all requests should go to the specific pod:
+
+```shell
+for i in {1..10}; do
+  curl -s -H "Host: www.example.com" -H "x-custom-host: $BACKEND_POD_IP:3000" \
+    http://${GATEWAY_HOST}/host-override-header | jq -r '.pod'
+done
+```
+
+All requests should return the same pod name, demonstrating that the override host is working.
+
+Test with an invalid IP in the header - requests should fall back to round robin:
+
+```shell
+for i in {1..10}; do
+  curl -s -H "Host: www.example.com" -H "x-custom-host: 192.168.1.100:3000" \
+    http://${GATEWAY_HOST}/host-override-header | jq -r '.pod'
+done
+```
+
+You should see requests distributed across different pods using the round robin fallback policy.
+
+### Metadata-based Host Override
+
+This example will create a Load Balancer with Metadata-based Host Override policy.
+
+{{< tabpane text=true >}}
+{{% tab header="Apply from stdin" %}}
+
+```shell
+cat <<EOF | kubectl apply -f -
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: BackendTrafficPolicy
+metadata:
+  name: host-override-metadata-policy
+  namespace: default
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: host-override-metadata-route
+  loadBalancer:
+    type: HostOverride
+    hostOverrideSettings:
+      overrideHostSources:
+        - metadata:
+            key: envoy.lb
+            path:
+              - key: override_host
+      fallbackPolicy: LeastRequest
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: host-override-metadata-route
+  namespace: default
+spec:
+  parentRefs:
+    - name: eg
+  hostnames:
+    - "www.example.com"
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /host-override-metadata
+      backendRefs:
+        - name: backend
+          port: 3000
+EOF
+```
+
+{{% /tab %}}
+{{% tab header="Apply from file" %}}
+Save and apply the following resource to your cluster:
+
+```yaml
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: BackendTrafficPolicy
+metadata:
+  name: host-override-metadata-policy
+  namespace: default
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: host-override-metadata-route
+  loadBalancer:
+    type: HostOverride
+    hostOverrideSettings:
+      overrideHostSources:
+        - metadata:
+            key: envoy.lb
+            path:
+              - key: override_host
+      fallbackPolicy: LeastRequest
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: host-override-metadata-route
+  namespace: default
+spec:
+  parentRefs:
+    - name: eg
+  hostnames:
+    - "www.example.com"
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /host-override-metadata
+      backendRefs:
+        - name: backend
+          port: 3000
+```
+
+{{% /tab %}}
+{{< /tabpane >}}
+
+The metadata-based host override extracts the target host from request metadata using the specified key path. In this example, it looks for the override host in the metadata path `envoy.lb.override_host`. When no valid override host is found in the metadata, requests fall back to the Least Request load balancing policy.
+
+Test the metadata-based host override:
+
+```shell
+for i in {1..10}; do
+  curl -s -H "Host: www.example.com" \
+    http://${GATEWAY_HOST}/host-override-metadata | jq -r '.pod'
+done
+```
+
+Since no metadata is provided in this example, all requests will use the Least Request fallback policy, distributing traffic to the pod with the fewest active requests.
 
 [Envoy load balancing]: https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/upstream/load_balancing/overview
 [BackendTrafficPolicy]: ../../../api/extension_types#backendtrafficpolicy

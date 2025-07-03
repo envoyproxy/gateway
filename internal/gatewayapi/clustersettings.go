@@ -310,6 +310,15 @@ func buildLoadBalancer(policy egv1a1.ClusterSettings) (*ir.LoadBalancer, error) 
 				Window: policy.LoadBalancer.SlowStart.Window,
 			}
 		}
+	case egv1a1.HostOverrideLoadBalancerType:
+		hostOverride, err := buildHostOverrideLoadBalancer(*policy.LoadBalancer)
+		if err != nil {
+			return nil, perr.WithMessage(err, "HostOverride")
+		}
+
+		lb = &ir.LoadBalancer{
+			HostOverride: hostOverride,
+		}
 	}
 
 	return lb, nil
@@ -340,6 +349,59 @@ func buildConsistentHashLoadBalancer(policy egv1a1.LoadBalancer) (*ir.Consistent
 	}
 
 	return consistentHash, nil
+}
+
+func buildHostOverrideLoadBalancer(policy egv1a1.LoadBalancer) (*ir.HostOverride, error) {
+	if policy.HostOverrideSettings == nil {
+		return nil, fmt.Errorf("hostOverrideSettings is required for HostOverride load balancer type")
+	}
+
+	hostOverride := &ir.HostOverride{}
+
+	// Convert override host sources
+	for _, source := range policy.HostOverrideSettings.OverrideHostSources {
+		irSource := ir.OverrideHostSource{}
+
+		if source.Header != nil {
+			irSource.Header = source.Header
+		}
+
+		if source.Metadata != nil {
+			irSource.Metadata = &ir.MetadataKey{
+				Key: source.Metadata.Key,
+			}
+
+			// Convert path if present
+			for _, pathElement := range source.Metadata.Path {
+				irSource.Metadata.Path = append(irSource.Metadata.Path, ir.MetadataKeyPath{
+					Key: pathElement.Key,
+				})
+			}
+		}
+
+		hostOverride.OverrideHostSources = append(hostOverride.OverrideHostSources, irSource)
+	}
+
+	// Set fallback policy
+	if policy.HostOverrideSettings.FallbackPolicy != nil {
+		switch *policy.HostOverrideSettings.FallbackPolicy {
+		case egv1a1.LeastRequestLoadBalancerType:
+			hostOverride.FallbackPolicy = ir.LeastRequestLoadBalancer
+		case egv1a1.RoundRobinLoadBalancerType:
+			hostOverride.FallbackPolicy = ir.RoundRobinLoadBalancer
+		case egv1a1.RandomLoadBalancerType:
+			hostOverride.FallbackPolicy = ir.RandomLoadBalancer
+		case egv1a1.ConsistentHashLoadBalancerType:
+			hostOverride.FallbackPolicy = ir.ConsistentHashLoadBalancer
+		default:
+			return nil, fmt.Errorf("unsupported fallback policy: %s", *policy.HostOverrideSettings.FallbackPolicy)
+		}
+	} else {
+		// Default to LeastRequest if not specified
+		hostOverride.FallbackPolicy = ir.LeastRequestLoadBalancer
+	}
+
+	return hostOverride, nil
 }
 
 func buildProxyProtocol(policy egv1a1.ClusterSettings) *ir.ProxyProtocol {
