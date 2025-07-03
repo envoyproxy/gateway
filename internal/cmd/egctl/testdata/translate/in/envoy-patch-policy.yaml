@@ -156,5 +156,3 @@ spec:
                         socket_address:
                           address: ratelimit.svc.cluster.local
                           port_value: 8081
-
-

@@ -1,8 +1,13 @@
-
+kind: Namespace
+apiVersion: v1
+metadata:
+  name: redis-system
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: redis
+  namespace: redis-system
   labels:
     app: redis
 spec:
@@ -31,9 +36,9 @@ apiVersion: v1
 kind: Service
 metadata:
   name: redis
+  namespace: redis-system
   labels:
     app: redis
-    istio.io/use-waypoint: reviews-waypoint
   annotations:
 spec:
   ports:
@@ -61,4 +66,4 @@ data:
       backend:
         type: Redis
         redis:
-          url: redis.default.svc.cluster.local:6379
+          url: redis.redis-system.svc.cluster.local:6379
