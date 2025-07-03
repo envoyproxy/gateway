@@ -245,7 +245,6 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 					string(gwapiv1.GatewayClassReasonInvalidParameters),
 					msg)
 				r.resources.GatewayClassStatuses.Store(utils.NamespacedName(gc), &gc.Status)
-				continue
 			}
 		}
 
@@ -263,16 +262,17 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 				string(gwapiv1.GatewayClassReasonAccepted),
 				fmt.Sprintf("%s: %v", status.MsgGatewayClassInvalidParams, err))
 			r.resources.GatewayClassStatuses.Store(utils.NamespacedName(gc), &gc.Status)
-			continue
 		}
 
-		// GatewayClass is valid so far, mark it as accepted.
-		gc := status.SetGatewayClassAccepted(
-			managedGC.DeepCopy(),
-			true,
-			string(gwapiv1.GatewayClassReasonAccepted),
-			status.MsgValidGatewayClass)
-		r.resources.GatewayClassStatuses.Store(utils.NamespacedName(gc), &gc.Status)
+		if _, ok := r.resources.GatewayClassStatuses.Load(utils.NamespacedName(managedGC)); !ok {
+			// GatewayClass is valid so far, mark it as accepted.
+			gc := status.SetGatewayClassAccepted(
+				managedGC.DeepCopy(),
+				true,
+				string(gwapiv1.GatewayClassReasonAccepted),
+				status.MsgValidGatewayClass)
+			r.resources.GatewayClassStatuses.Store(utils.NamespacedName(gc), &gc.Status)
+		}
 
 		// it's safe here to append gwcResource to gwcResources
 		gwcResources = append(gwcResources, gwcResource)
