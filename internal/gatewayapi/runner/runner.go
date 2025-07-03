@@ -149,14 +149,16 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *re
 			// Remaining keys will be deleted from watchable before we exit this function.
 			statusesToDelete := r.getAllStatuses()
 
+			extensionAPISettings := r.EnvoyGateway.GetExtensionAPISettings()
+
 			for _, resources := range *val {
 				// Translate and publish IRs.
 				t := &gatewayapi.Translator{
 					GatewayControllerName:     r.EnvoyGateway.Gateway.ControllerName,
 					GatewayClassName:          gwapiv1.ObjectName(resources.GatewayClass.Name),
 					GlobalRateLimitEnabled:    r.EnvoyGateway.RateLimit != nil,
-					EnvoyPatchPolicyEnabled:   r.EnvoyGateway.ExtensionAPIs != nil && r.EnvoyGateway.ExtensionAPIs.EnableEnvoyPatchPolicy,
-					BackendEnabled:            r.EnvoyGateway.ExtensionAPIs != nil && r.EnvoyGateway.ExtensionAPIs.EnableBackend,
+					EnvoyPatchPolicyEnabled:   extensionAPISettings != nil && extensionAPISettings.EnableEnvoyPatchPolicy,
+					BackendEnabled:            extensionAPISettings != nil && extensionAPISettings.EnableBackend,
 					ControllerNamespace:       r.ControllerNamespace,
 					GatewayNamespaceMode:      r.EnvoyGateway.GatewayNamespaceMode(),
 					MergeGateways:             gatewayapi.IsMergeGatewaysEnabled(resources),

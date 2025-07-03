@@ -1200,7 +1200,8 @@ EnvoyGateway is the schema for the envoygateways API.
 | `telemetry` | _[EnvoyGatewayTelemetry](#envoygatewaytelemetry)_ |  false  |  | Telemetry defines the desired control plane telemetry related abilities.<br />If unspecified, the telemetry is used with default configuration. |
 | `rateLimit` | _[RateLimit](#ratelimit)_ |  false  |  | RateLimit defines the configuration associated with the Rate Limit service<br />deployed by Envoy Gateway required to implement the Global Rate limiting<br />functionality. The specific rate limit service used here is the reference<br />implementation in Envoy. For more details visit https://github.com/envoyproxy/ratelimit.<br />This configuration is unneeded for "Local" rate limiting. |
 | `extensionManager` | _[ExtensionManager](#extensionmanager)_ |  false  |  | ExtensionManager defines an extension manager to register for the Envoy Gateway Control Plane. |
-| `extensionApis` | _[ExtensionAPISettings](#extensionapisettings)_ |  false  |  | ExtensionAPIs defines the settings related to specific Gateway API Extensions<br />implemented by Envoy Gateway |
+| `extensionApis` | _[ExtensionAPISettings](#extensionapisettings)_ |  false  |  | Deprecated: use ExtensionAPI instead.<br />ExtensionAPIs defines the settings related to specific Gateway API Extensions<br />implemented by Envoy Gateway |
+| `extensionAPI` | _[ExtensionAPISettings](#extensionapisettings)_ |  false  |  | ExtensionAPI defines the settings related to specific Gateway API Extensions<br />implemented by Envoy Gateway |
 
 
 #### EnvoyGatewayAdmin
@@ -1459,7 +1460,8 @@ _Appears in:_
 | `telemetry` | _[EnvoyGatewayTelemetry](#envoygatewaytelemetry)_ |  false  |  | Telemetry defines the desired control plane telemetry related abilities.<br />If unspecified, the telemetry is used with default configuration. |
 | `rateLimit` | _[RateLimit](#ratelimit)_ |  false  |  | RateLimit defines the configuration associated with the Rate Limit service<br />deployed by Envoy Gateway required to implement the Global Rate limiting<br />functionality. The specific rate limit service used here is the reference<br />implementation in Envoy. For more details visit https://github.com/envoyproxy/ratelimit.<br />This configuration is unneeded for "Local" rate limiting. |
 | `extensionManager` | _[ExtensionManager](#extensionmanager)_ |  false  |  | ExtensionManager defines an extension manager to register for the Envoy Gateway Control Plane. |
-| `extensionApis` | _[ExtensionAPISettings](#extensionapisettings)_ |  false  |  | ExtensionAPIs defines the settings related to specific Gateway API Extensions<br />implemented by Envoy Gateway |
+| `extensionApis` | _[ExtensionAPISettings](#extensionapisettings)_ |  false  |  | Deprecated: use ExtensionAPI instead.<br />ExtensionAPIs defines the settings related to specific Gateway API Extensions<br />implemented by Envoy Gateway |
+| `extensionAPI` | _[ExtensionAPISettings](#extensionapisettings)_ |  false  |  | ExtensionAPI defines the settings related to specific Gateway API Extensions<br />implemented by Envoy Gateway |
 
 
 #### EnvoyGatewayTelemetry
