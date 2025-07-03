@@ -1275,6 +1275,18 @@ type ExtAuth struct {
 	// the new matched route will be applied.
 	// +optional
 	RecomputeRoute *bool `json:"recomputeRoute,omitempty"`
+
+	// MetadataContextNamespaces are metadata namespaces that are sent to the external authorization server as context.
+	MetadataContextNamespaces []string `json:"metadataContextNamespaces,omitempty"`
+
+	// TypedMetadataContextNamespaces are typed metadata namespaces that are sent to the external authorization server as context.
+	TypedMetadataContextNamespaces []string `json:"typedMetadataContextNamespaces,omitempty"`
+
+	// RouteMetadataContextNamespaces are route-level metadata namespaces that are sent to the external authorization server as context.
+	RouteMetadataContextNamespaces []string `json:"routeMetadataContextNamespaces,omitempty"`
+
+	// RouteTypedMetadataContextNamespaces are route-level typed metadata namespaces that are sent to the external authorization server as context.
+	RouteTypedMetadataContextNamespaces []string `json:"routeTypedMetadataContextNamespaces,omitempty"`
 }
 
 // BodyToExtAuth defines the Body to Ext Auth configuration
