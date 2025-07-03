@@ -230,6 +230,7 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 
 		// Process the parametersRef of the accepted GatewayClass.
 		// This should run before processGateways and processBackendRefs
+		failToProcessGCParamsRef := false
 		if managedGC.Spec.ParametersRef != nil && managedGC.DeletionTimestamp == nil {
 			if err := r.processGatewayClassParamsRef(ctx, managedGC, gwcResourceMapping, gwcResource); err != nil {
 				if isTransientError(err) {
@@ -245,6 +246,7 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 					string(gwapiv1.GatewayClassReasonInvalidParameters),
 					msg)
 				r.resources.GatewayClassStatuses.Store(utils.NamespacedName(gc), &gc.Status)
+				failToProcessGCParamsRef = true
 			}
 		}
 
@@ -262,9 +264,10 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 				string(gwapiv1.GatewayClassReasonAccepted),
 				fmt.Sprintf("%s: %v", status.MsgGatewayClassInvalidParams, err))
 			r.resources.GatewayClassStatuses.Store(utils.NamespacedName(gc), &gc.Status)
+			failToProcessGCParamsRef = true
 		}
 
-		if _, ok := r.resources.GatewayClassStatuses.Load(utils.NamespacedName(managedGC)); !ok {
+		if !failToProcessGCParamsRef {
 			// GatewayClass is valid so far, mark it as accepted.
 			gc := status.SetGatewayClassAccepted(
 				managedGC.DeepCopy(),
