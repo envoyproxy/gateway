@@ -281,6 +281,7 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 		if err = r.processOIDCHMACSecret(ctx, gwcResource, gwcResourceMapping); err != nil {
 			if isTransientError(err) {
 				r.log.Error(err, "transient error processing OIDC HMAC Secret", "gatewayClass", managedGC.Name)
+				return reconcile.Result{}, err
 			}
 			r.log.Error(err, fmt.Sprintf("failed processOIDCHMACSecret for gatewayClass %s, skipping it", managedGC.Name))
 		}
