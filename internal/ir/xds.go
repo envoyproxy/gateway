@@ -411,6 +411,12 @@ type TLSConfig struct {
 	CACertificate *TLSCACertificate `json:"caCertificate,omitempty" yaml:"caCertificate,omitempty"`
 	// RequireClientCertificate to enforce client certificate
 	RequireClientCertificate bool `json:"requireClientCertificate,omitempty" yaml:"requireClientCertificate,omitempty"`
+	// A list of allowed base64-encoded SHA-256 hashes of the DER-encoded Subject Public Key Information (SPKI)
+	VerifyCertificateSpki []string `json:"verifyCertificateSpki,omitempty" yaml:"verifyCertificateSpki,omitempty"`
+	// A list of allowed hex-encoded SHA-256 hashes of the DER-encoded certificate
+	VerifyCertificateHash []string `json:"verifyCertificateHash,omitempty" yaml:"verifyCertificateHash,omitempty"`
+	// A list of Subject Alternative name matchers
+	MatchTypedSubjectAltNames []*StringMatch `json:"matchTypedSubjectAltNames,omitempty" yaml:"matchTypedSubjectAltNames,omitempty"`
 	// MinVersion defines the minimal version of the TLS protocol supported by this listener.
 	MinVersion *TLSVersion `json:"minVersion,omitempty" yaml:"version,omitempty"`
 	// MaxVersion defines the maximal version of the TLS protocol supported by this listener.
@@ -889,11 +895,24 @@ type TrafficFeatures struct {
 	// Compression settings for HTTP Response
 	Compression []*Compression `json:"compression,omitempty" yaml:"compression,omitempty"`
 	// HTTPUpgrade defines the schema for upgrading the HTTP protocol.
-	HTTPUpgrade []string `json:"httpUpgrade,omitempty" yaml:"httpUpgrade,omitempty"`
+	HTTPUpgrade []HTTPUpgradeConfig `json:"httpUpgrade,omitempty" yaml:"httpUpgrade,omitempty"`
 	// Telemetry defines the schema for telemetry configuration.
 	Telemetry *egv1a1.BackendTelemetry `json:"telemetry,omitempty" yaml:"telemetry,omitempty"`
 	// RequestBuffer defines the schema for enabling buffered requests
 	RequestBuffer *RequestBuffer `json:"requestBuffer,omitempty" yaml:"requestBuffer,omitempty"`
+}
+
+// +k8s:deepcopy-gen=true
+type HTTPUpgradeConfig struct {
+	Type    string         `json:"type" yaml:"type"`
+	Connect *ConnectConfig `json:"connect,omitempty" yaml:"connect,omitempty"`
+}
+
+// ConnectConfig indicates whether the CONNECT should be terminated.
+//
+// +k8s:deepcopy-gen=true
+type ConnectConfig struct {
+	Terminate bool `json:"terminate" yaml:"terminate"`
 }
 
 func (b *TrafficFeatures) Validate() error {
@@ -1118,6 +1137,11 @@ type OIDC struct {
 	// CookieDomain sets the domain of the cookies set by the oauth filter.
 	CookieDomain *string `json:"cookieDomain,omitempty"`
 
+	// CookieConfigs allows overriding the SameSite attribute for OIDC cookies.
+	// If a specific cookie is not configured, it will use the default xds value of disabled.
+	// +optional
+	CookieConfig *egv1a1.OIDCCookieConfig `json:"cookieConfig,omitempty"`
+
 	// Skips OIDC authentication when the request contains any header that will be extracted by the JWT
 	// filter, normally "Authorization: Bearer ...". This is typically used for non-browser clients that
 	// may not be able to handle OIDC redirects and wish to directly supply a token instead.
@@ -1140,10 +1164,13 @@ type OIDCProvider struct {
 	Traffic *TrafficFeatures `json:"traffic,omitempty"`
 
 	// The OIDC Provider's [authorization endpoint](https://openid.net/specs/openid-connect-core-1_0.html#AuthorizationEndpoint).
-	AuthorizationEndpoint string `json:"authorizationEndpoint,omitempty"`
+	AuthorizationEndpoint string `json:"authorizationEndpoint"`
 
 	// The OIDC Provider's [token endpoint](https://openid.net/specs/openid-connect-core-1_0.html#TokenEndpoint).
-	TokenEndpoint string `json:"tokenEndpoint,omitempty"`
+	TokenEndpoint string `json:"tokenEndpoint"`
+
+	// The OIDC Provider's [end session endpoint](https://openid.net/specs/openid-connect-core-1_0.html#RPLogout).
+	EndSessionEndpoint *string `json:"endSessionEndpoint,omitempty"`
 }
 
 // BasicAuth defines the schema for the HTTP Basic Authentication.
@@ -1556,7 +1583,7 @@ func (r *RouteDestination) HasFiltersInSettings() bool {
 // HasZoneAwareRouting returns true if any setting in the destination has ZoneAwareRoutingEnabled set
 func (r *RouteDestination) HasZoneAwareRouting() bool {
 	for _, setting := range r.Settings {
-		if setting.ZoneAwareRoutingEnabled {
+		if setting.ZoneAwareRouting != nil {
 			return true
 		}
 	}
@@ -1614,9 +1641,11 @@ type DestinationSetting struct {
 	IPFamily *egv1a1.IPFamily    `json:"ipFamily,omitempty" yaml:"ipFamily,omitempty"`
 	TLS      *TLSUpstreamConfig  `json:"tls,omitempty" yaml:"tls,omitempty"`
 	Filters  *DestinationFilters `json:"filters,omitempty" yaml:"filters,omitempty"`
-	// ZoneAwareRoutingEnabled specifies whether to enable Zone Aware Routing for this destination's endpoints.
+	// ZoneAwareRouting specifies whether to enable Zone Aware Routing for this destination's endpoints.
 	// This is derived from the backend service and depends on having Kubernetes Topology Aware Routing or Traffic Distribution enabled.
-	ZoneAwareRoutingEnabled bool `json:"zoneAwareRoutingEnabled,omitempty" yaml:"zoneAwareRoutingEnabled,omitempty"`
+	//
+	// +optional
+	ZoneAwareRouting *ZoneAwareRouting `json:"zoneAwareRouting,omitempty" yaml:"zoneAwareRouting,omitempty"`
 	// Metadata is used to enrich envoy route metadata with user and provider-specific information
 	// The primary metadata for DestinationSettings comes from the Backend resource reference in BackendRef
 	Metadata *ResourceMetadata `json:"metadata,omitempty" yaml:"metadata,omitempty"`
@@ -2953,6 +2982,8 @@ type ClientConnection struct {
 	ConnectionLimit *ConnectionLimit `json:"limit,omitempty" yaml:"limit,omitempty"`
 	// BufferLimitBytes is the maximum number of bytes that can be buffered for a connection.
 	BufferLimitBytes *uint32 `json:"bufferLimit,omitempty" yaml:"bufferLimit,omitempty"`
+	// MaxAcceptPerSocketEvent is the maximum number of connections to accept from the kernel per socket event.
+	MaxAcceptPerSocketEvent *uint32 `json:"maxAcceptPerSocketEvent,omitempty" yaml:"maxAcceptPerSocketEvent,omitempty"`
 }
 
 // ConnectionLimit contains settings for downstream connection limits
@@ -3129,4 +3160,10 @@ type ResourceMetadata struct {
 type RequestBuffer struct {
 	// Limit defines the maximum buffer size for requests
 	Limit resource.Quantity `json:"limit" yaml:"limit"`
+}
+
+// ZoneAwareRouting holds the zone aware routing configuration
+// +k8s:deepcopy-gen=true
+type ZoneAwareRouting struct {
+	MinSize int `json:"minSize" yaml:"minSize"`
 }

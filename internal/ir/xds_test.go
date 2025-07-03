@@ -1124,8 +1124,8 @@ func TestRouteDestination_NeedsClusterPerSetting(t *testing.T) {
 								Port: 8080,
 							},
 						},
-						AddressType:             ptr.To(FQDN),
-						ZoneAwareRoutingEnabled: true,
+						AddressType:      ptr.To(FQDN),
+						ZoneAwareRouting: &ZoneAwareRouting{MinSize: 1},
 					},
 					{
 						Endpoints: []*DestinationEndpoint{
@@ -1152,8 +1152,8 @@ func TestRouteDestination_NeedsClusterPerSetting(t *testing.T) {
 								Port: 8080,
 							},
 						},
-						AddressType:             ptr.To(FQDN),
-						ZoneAwareRoutingEnabled: true,
+						AddressType:      ptr.To(FQDN),
+						ZoneAwareRouting: &ZoneAwareRouting{MinSize: 1},
 					},
 				},
 			},
@@ -1495,7 +1495,7 @@ func TestRedaction(t *testing.T) {
 				`"alpnProtocols":null},` +
 				`"routes":[{` +
 				`"name":"","hostname":"","isHTTP2":false,"security":{` +
-				`"oidc":{"name":"","provider":{},"clientID":"","clientSecret":"[redacted]","hmacSecret":"[redacted]"},` +
+				`"oidc":{"name":"","provider":{"authorizationEndpoint":"","tokenEndpoint":""},"clientID":"","clientSecret":"[redacted]","hmacSecret":"[redacted]"},` +
 				`"apiKeyAuth":{"credentials":{"client-id":"[redacted]"},"extractFrom":null},` +
 				`"basicAuth":{"name":"","users":"[redacted]"}` +
 				`}}],` +

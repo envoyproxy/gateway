@@ -226,7 +226,7 @@ func (t *Translator) ProcessBackendTrafficPolicies(resources *resource.Resources
 				}
 
 				// Set Accepted condition if it is unset
-				status.SetAcceptedForPolicyAncestors(&policy.Status, ancestorRefs, t.GatewayControllerName)
+				status.SetAcceptedForPolicyAncestors(&policy.Status, ancestorRefs, t.GatewayControllerName, policy.Generation)
 			}
 		}
 	}
@@ -280,7 +280,7 @@ func (t *Translator) ProcessBackendTrafficPolicies(resources *resource.Resources
 				}
 
 				// Set Accepted condition if it is unset
-				status.SetAcceptedForPolicyAncestors(&policy.Status, ancestorRefs, t.GatewayControllerName)
+				status.SetAcceptedForPolicyAncestors(&policy.Status, ancestorRefs, t.GatewayControllerName, policy.Generation)
 
 				// Check if this policy is overridden by other policies targeting at
 				// route level
@@ -564,7 +564,7 @@ func (t *Translator) buildTrafficFeatures(policy *egv1a1.BackendTrafficPolicy, r
 		ro          *ir.ResponseOverride
 		rb          *ir.RequestBuffer
 		cp          []*ir.Compression
-		httpUpgrade []string
+		httpUpgrade []ir.HTTPUpgradeConfig
 		err, errs   error
 	)
 
@@ -1189,14 +1189,22 @@ func buildCompression(compression []*egv1a1.Compression) []*ir.Compression {
 	return irCompression
 }
 
-func buildHTTPProtocolUpgradeConfig(cfgs []*egv1a1.ProtocolUpgradeConfig) []string {
+func buildHTTPProtocolUpgradeConfig(cfgs []*egv1a1.ProtocolUpgradeConfig) []ir.HTTPUpgradeConfig {
 	if len(cfgs) == 0 {
 		return nil
 	}
 
-	result := make([]string, 0, len(cfgs))
+	result := make([]ir.HTTPUpgradeConfig, 0, len(cfgs))
 	for _, cfg := range cfgs {
-		result = append(result, cfg.Type)
+		upgrade := ir.HTTPUpgradeConfig{
+			Type: cfg.Type,
+		}
+		if cfg.Connect != nil {
+			upgrade.Connect = &ir.ConnectConfig{
+				Terminate: ptr.Deref(cfg.Connect.Terminate, false),
+			}
+		}
+		result = append(result, upgrade)
 	}
 
 	return result

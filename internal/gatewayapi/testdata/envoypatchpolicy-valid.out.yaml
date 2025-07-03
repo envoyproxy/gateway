@@ -84,6 +84,7 @@ xdsIR:
           conditions:
           - lastTransitionTime: null
             message: Policy has been accepted.
+            observedGeneration: 10
             reason: Accepted
             status: "True"
             type: Accepted
@@ -107,6 +108,7 @@ xdsIR:
           conditions:
           - lastTransitionTime: null
             message: Policy has been accepted.
+            observedGeneration: 10
             reason: Accepted
             status: "True"
             type: Accepted

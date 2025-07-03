@@ -353,8 +353,8 @@ xdsIR:
           backendConnection:
             bufferLimit: 100000000
           httpUpgrade:
-          - spdy/3.1
-          - websocket
+          - type: spdy/3.1
+          - type: websocket
           rateLimit:
             local:
               default:
@@ -441,7 +441,7 @@ xdsIR:
           backendConnection:
             bufferLimit: 100000000
           httpUpgrade:
-          - spdy/3.1
+          - type: spdy/3.1
           rateLimit:
             local:
               default:

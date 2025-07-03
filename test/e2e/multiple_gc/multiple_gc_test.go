@@ -48,7 +48,7 @@ func TestMultipleGC(t *testing.T) {
 			RunTest:              *flags.RunTest,
 			// SupportedFeatures cannot be empty, so we set it to SupportGateway
 			// All e2e tests should leave Features empty.
-			SupportedFeatures: sets.New[features.FeatureName](features.SupportGateway),
+			SupportedFeatures: sets.New(features.SupportGateway),
 			SkipTests:         []string{},
 			Hook:              e2e.Hook,
 		})
@@ -82,7 +82,7 @@ func TestMultipleGC(t *testing.T) {
 			RunTest:              *flags.RunTest,
 			// SupportedFeatures cannot be empty, so we set it to SupportGateway
 			// All e2e tests should leave Features empty.
-			SupportedFeatures: sets.New[features.FeatureName](features.SupportGateway),
+			SupportedFeatures: sets.New(features.SupportGateway),
 			SkipTests:         []string{},
 			Hook:              e2e.Hook,
 		})

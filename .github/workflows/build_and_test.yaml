@@ -86,20 +86,20 @@ jobs:
       fail-fast: false
       matrix:
         target:
-        - version: v1.30.10
+        - version: v1.30.13
           ipFamily: ipv4
           profile: default
-        - version: v1.31.6
+        - version: v1.31.9
           ipFamily: ipv4
           profile: default
-        - version: v1.32.3
+        - version: v1.32.5
           ipFamily: ipv6  # only run ipv6 test on this version to save time
           profile: default
         # TODO: this's IPv4 first, need a way to test IPv6 first.
-        - version: v1.33.0
+        - version: v1.33.1
           ipFamily: dual  # only run dual test on latest version to save time
           profile: default
-        - version: v1.33.0
+        - version: v1.33.1
           ipFamily: dual  # only run dual test on latest version to save time
           profile: gateway-namespace-mode
     steps:
@@ -133,20 +133,20 @@ jobs:
       fail-fast: false
       matrix:
         target:
-        - version: v1.30.10
+        - version: v1.30.13
           ipFamily: ipv4
           profile: default
-        - version: v1.31.6
+        - version: v1.31.9
           ipFamily: ipv4
           profile: default
-        - version: v1.32.3
+        - version: v1.32.5
           ipFamily: ipv6  # only run ipv6 test on this version to save time
           profile: default
         # TODO: this's IPv4 first, need a way to test IPv6 first.
-        - version: v1.33.0
+        - version: v1.33.1
           ipFamily: dual  # only run dual test on latest version to save time
           profile: default
-        - version: v1.33.0
+        - version: v1.33.1
           ipFamily: dual  # only run dual test on latest version to save time
           profile: gateway-namespace-mode
     steps:
@@ -173,6 +173,12 @@ jobs:
         KUBE_DEPLOY_PROFILE: ${{ matrix.target.profile }}
         E2E_TIMEOUT: 1h
         NUM_WORKERS: 2
+        # QPS more than 3000 may cause e2e flaky test.
+        # This is not the limit of Envoy Gateway,
+        # but the limit of running e2e tests in github CI.
+        E2E_BACKEND_UPGRADE_QPS: "3000"
+        # Cluster trust bundle reach beta in v1.33, so we can enable it for v1.33 and later.
+        ENABLE_CLUSTER_TRUST_BUNDLE: ${{ startsWith(matrix.target.version, 'v1.33') }}
       run: make e2e
 
   benchmark-test:
@@ -190,7 +196,6 @@ jobs:
     # Benchmark
     - name: Run Benchmark tests
       env:
-        KIND_NODE_TAG: v1.29.10
         IMAGE_PULL_POLICY: IfNotPresent
         # Args for benchmark test
         BENCHMARK_RPS: 10000
@@ -213,7 +218,6 @@ jobs:
     - uses: ./tools/github-actions/setup-deps
     - name: Resilience Test
       env:
-        KIND_NODE_TAG: v1.28.13
         IMAGE_PULL_POLICY: IfNotPresent
         CUSTOM_CNI: "true"
       run: make resilience
@@ -265,3 +269,28 @@ jobs:
       run: |
         IMAGE_PULL_POLICY=Always OCI_REGISTRY=oci://docker.io/envoyproxy CHART_VERSION=v0.0.0-latest TAG=latest make helm-push
         IMAGE_PULL_POLICY=Always OCI_REGISTRY=oci://docker.io/envoyproxy CHART_VERSION=0.0.0-latest TAG=latest make helm-push
+
+  # Aggregate all the required jobs and make it easier to customize CI required jobs
+  ci-checks:
+    runs-on: ubuntu-latest
+    needs:
+    - lint
+    - gen-check
+    - license-check
+    - coverage-test
+    - build
+    - conformance-test
+    - e2e-test
+    - benchmark-test
+    - resilience-test
+    - publish
+    # We need this to run always to force-fail (and not skip) if any needed
+    # job has failed. Otherwise, a skipped job will not fail the workflow.
+    if: always()
+    steps:
+    - run: |
+        echo "CI checks completed"
+        [ "${{
+            contains(needs.*.result, 'failure') ||
+            contains(needs.*.result, 'cancelled')
+          }}" == "false" ] || exit 1

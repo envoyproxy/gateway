@@ -325,9 +325,10 @@ func processRouteTimeout(irRoute *ir.HTTPRoute, rule gwapiv1.HTTPRouteRule) {
 			irRoute.Timeout = ptr.To(metav1.Duration{Duration: d})
 		}
 
-		// Also set the IR Route Timeout to the backend request timeout
-		// until we introduce retries, then set it to per try timeout
-		if rule.Timeouts.BackendRequest != nil {
+		// Only set the IR Route Timeout to the backend request timeout
+		// when retries are not configured. When retries are configured,
+		// the backend request timeout should set for per-retry timeout.
+		if rule.Timeouts.BackendRequest != nil && rule.Retry == nil {
 			d, err := time.ParseDuration(string(*rule.Timeouts.BackendRequest))
 			if err != nil {
 				d, _ = time.ParseDuration(HTTPRequestTimeout)
@@ -1409,7 +1410,7 @@ func (t *Translator) processDestination(name string, backendRefContext BackendRe
 		ds = t.processServiceDestinationSetting(name, backendRef.BackendObjectReference, backendNamespace, protocol, resources, envoyProxy)
 		svc := resources.GetService(backendNamespace, string(backendRef.Name))
 		ds.IPFamily = getServiceIPFamily(svc)
-		ds.ZoneAwareRoutingEnabled = isZoneAwareRoutingEnabled(svc)
+		ds.ZoneAwareRouting = processZoneAwareRouting(svc)
 
 	case egv1a1.KindBackend:
 		ds = t.processBackendDestinationSetting(name, backendRef.BackendObjectReference, backendNamespace, protocol, resources)
@@ -1571,12 +1572,12 @@ func (t *Translator) processServiceDestinationSetting(
 	}
 
 	return &ir.DestinationSetting{
-		Name:                    name,
-		Protocol:                protocol,
-		Endpoints:               endpoints,
-		AddressType:             addrType,
-		ZoneAwareRoutingEnabled: isZoneAwareRoutingEnabled(service),
-		Metadata:                buildResourceMetadata(service, ptr.To(gwapiv1.SectionName(strconv.Itoa(int(*backendRef.Port))))),
+		Name:             name,
+		Protocol:         protocol,
+		Endpoints:        endpoints,
+		AddressType:      addrType,
+		ZoneAwareRouting: processZoneAwareRouting(service),
+		Metadata:         buildResourceMetadata(service, ptr.To(gwapiv1.SectionName(strconv.Itoa(int(*backendRef.Port))))),
 	}
 }
 
@@ -1596,24 +1597,28 @@ func getBackendFilters(routeType gwapiv1.Kind, backendRefContext BackendRefConte
 	return nil
 }
 
-func isZoneAwareRoutingEnabled(svc *corev1.Service) bool {
+func processZoneAwareRouting(svc *corev1.Service) *ir.ZoneAwareRouting {
 	if svc == nil {
-		return false
+		return nil
 	}
 
 	if trafficDist := svc.Spec.TrafficDistribution; trafficDist != nil {
-		return *trafficDist == corev1.ServiceTrafficDistributionPreferClose
+		return &ir.ZoneAwareRouting{
+			MinSize: 1,
+		}
 	}
 
 	// Allows annotation values that align with Kubernetes defaults.
 	// Ref:
 	// https://kubernetes.io/docs/concepts/services-networking/topology-aware-routing/#enabling-topology-aware-routing
 	// https://github.com/kubernetes/kubernetes/blob/9d9e1afdf78bce0a517cc22557457f942040ca19/staging/src/k8s.io/endpointslice/utils.go#L355-L368
-	if val, ok := svc.Annotations[corev1.AnnotationTopologyMode]; ok {
-		return val == "Auto" || val == "auto"
+	if val, ok := svc.Annotations[corev1.AnnotationTopologyMode]; ok && val == "Auto" || val == "auto" {
+		return &ir.ZoneAwareRouting{
+			MinSize: 3,
+		}
 	}
 
-	return false
+	return nil
 }
 
 func (t *Translator) processDestinationFilters(routeType gwapiv1.Kind, backendRefContext BackendRefContext, parentRef *RouteParentContext, route RouteContext, resources *resource.Resources) (*ir.DestinationFilters, error) {

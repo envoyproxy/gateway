@@ -125,7 +125,6 @@ func oauth2Config(securityFeatures *ir.SecurityFeatures) (*oauth2v3.OAuth2, erro
 	// If the user wants to forward the oauth2 access token to the upstream service,
 	// we should not preserve the original authorization header.
 	preserveAuthorizationHeader := !oidc.ForwardAccessToken
-
 	oauth2 := &oauth2v3.OAuth2{
 		Config: &oauth2v3.OAuth2Config{
 			TokenEndpoint: &corev3.HttpUri{
@@ -139,6 +138,7 @@ func oauth2Config(securityFeatures *ir.SecurityFeatures) (*oauth2v3.OAuth2, erro
 			},
 			AuthorizationEndpoint: oidc.Provider.AuthorizationEndpoint,
 			RedirectUri:           oidc.RedirectURL,
+			CookieConfigs:         buildCookieConfigs(oidc),
 			RedirectPathMatcher: &matcherv3.PathMatcher{
 				Rule: &matcherv3.PathMatcher_Path{
 					Path: &matcherv3.StringMatcher{
@@ -232,7 +232,47 @@ func oauth2Config(securityFeatures *ir.SecurityFeatures) (*oauth2v3.OAuth2, erro
 		oauth2.Config.DenyRedirectMatcher = buildDenyRedirectMatcher(oidc)
 	}
 
+	if oidc.Provider.EndSessionEndpoint != nil {
+		oauth2.Config.EndSessionEndpoint = *oidc.Provider.EndSessionEndpoint
+	}
+
 	return oauth2, nil
+}
+
+func buildSameSite(config *egv1a1.OIDCCookieConfig) oauth2v3.CookieConfig_SameSite {
+	samesite := egv1a1.SameSite(*config.SameSite)
+
+	switch samesite {
+	case egv1a1.SameSiteStrict:
+		return oauth2v3.CookieConfig_STRICT
+	case egv1a1.SameSiteLax:
+		return oauth2v3.CookieConfig_LAX
+	case egv1a1.SameSiteNone:
+		return oauth2v3.CookieConfig_NONE
+	default:
+		// should not reach here
+		return oauth2v3.CookieConfig_DISABLED
+	}
+}
+
+// buildCookieConfigs translates the OIDC configuration from the US
+func buildCookieConfigs(oidc *ir.OIDC) *oauth2v3.CookieConfigs {
+	// If the user did not specify any custom cookie configurations at all, return the defaults.
+	if oidc.CookieConfig == nil || oidc.CookieConfig.SameSite == nil {
+		return nil
+	}
+
+	// Apply the user-defined SameSite policy for each cookie if it has been configured.
+	sameSite := buildSameSite(oidc.CookieConfig)
+	return &oauth2v3.CookieConfigs{
+		BearerTokenCookieConfig:  &oauth2v3.CookieConfig{SameSite: sameSite},
+		OauthHmacCookieConfig:    &oauth2v3.CookieConfig{SameSite: sameSite},
+		OauthExpiresCookieConfig: &oauth2v3.CookieConfig{SameSite: sameSite},
+		IdTokenCookieConfig:      &oauth2v3.CookieConfig{SameSite: sameSite},
+		RefreshTokenCookieConfig: &oauth2v3.CookieConfig{SameSite: sameSite},
+		OauthNonceCookieConfig:   &oauth2v3.CookieConfig{SameSite: sameSite},
+		CodeVerifierCookieConfig: &oauth2v3.CookieConfig{SameSite: sameSite},
+	}
 }
 
 func buildDenyRedirectMatcher(oidc *ir.OIDC) []*routev3.HeaderMatcher {

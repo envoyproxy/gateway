@@ -84,16 +84,6 @@ endpointSlices:
           - "10.244.0.11"
         conditions:
           ready: true
-
-configMaps:
-  - apiVersion: v1
-    kind: ConfigMap
-    metadata:
-      name: no-ca-cmap
-      namespace: backends
-    data:
-      garbage.crt: |
-        itsAllGarbage
 backendTLSPolicies:
   - apiVersion: gateway.networking.k8s.io/v1alpha2
     kind: BackendTLSPolicy

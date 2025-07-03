@@ -37,6 +37,12 @@ type OIDC struct {
 	// +optional
 	CookieNames *OIDCCookieNames `json:"cookieNames,omitempty"`
 
+	// CookieConfigs allows setting the SameSite attribute for OIDC cookies.
+	// By default, its unset.
+	//
+	// +optional
+	CookieConfig *OIDCCookieConfig `json:"cookieConfig,omitempty"`
+
 	// The optional domain to set the access and ID token cookies on.
 	// If not set, the cookies will default to the host of the request, not including the subdomains.
 	// If set, the cookies will be set on the specified domain and all subdomains.
@@ -156,6 +162,13 @@ type OIDCProvider struct {
 	//
 	// +optional
 	TokenEndpoint *string `json:"tokenEndpoint,omitempty"`
+
+	// The OIDC Provider's [end session endpoint](https://openid.net/specs/openid-connect-core-1_0.html#RPLogout).
+	//
+	// If the end session endpoint is provided, EG will use it to log out the user from the OIDC Provider when the user accesses the logout path.
+	// EG will also try to discover the end session endpoint from the provider's [Well-Known Configuration Endpoint](https://openid.net/specs/openid-connect-discovery-1_0.html#ProviderConfigurationResponse) when authorizationEndpoint or tokenEndpoint is not provided.
+	// +optional
+	EndSessionEndpoint *string `json:"endSessionEndpoint,omitempty"`
 }
 
 // OIDCDenyRedirect defines headers to match against the request to deny redirect to the OIDC Provider.
@@ -186,4 +199,23 @@ type OIDCCookieNames struct {
 	// If not specified, defaults to "IdToken-(randomly generated uid)"
 	// +optional
 	IDToken *string `json:"idToken,omitempty"`
+}
+
+type SameSite string
+
+const (
+	// SameSiteLax specifies the "Lax" SameSite policy.
+	SameSiteLax SameSite = "Lax"
+	// SameSiteStrict specifies the "Strict" SameSite policy.
+	SameSiteStrict SameSite = "Strict"
+	// SameSiteNone specifies the "None" SameSite policy. Requires a Secure cookie.
+	SameSiteNone SameSite = "None"
+)
+
+// OIDCCookieConfig defines the cookie configuration for OAuth2 cookies.
+type OIDCCookieConfig struct {
+	// +optional
+	// +kubebuilder:validation:Enum=Lax;Strict;None
+	// +kubebuilder:default=Strict
+	SameSite *string `json:"sameSite,omitempty"`
 }

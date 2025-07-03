@@ -559,7 +559,19 @@ spec:
                   HTTPUpgrade defines the configuration for HTTP protocol upgrades.
                   If not specified, the default upgrade configuration(websocket) will be used.
                 items:
+                  description: ProtocolUpgradeConfig specifies the configuration for
+                    protocol upgrades.
                   properties:
+                    connect:
+                      description: |-
+                        Connect specifies the configuration for the CONNECT config.
+                        This is allowed only when type is CONNECT.
+                      properties:
+                        terminate:
+                          description: Terminate the CONNECT request, and forwards
+                            the payload as raw TCP data.
+                          type: boolean
+                      type: object
                     type:
                       description: |-
                         Type is the case-insensitive type of protocol upgrade.
@@ -568,6 +580,10 @@ spec:
                   required:
                   - type
                   type: object
+                  x-kubernetes-validations:
+                  - message: The connect configuration is only allowed when the type
+                      is CONNECT.
+                    rule: '!has(self.connect) || self.type == ''CONNECT'''
                 type: array
               loadBalancer:
                 description: |-
@@ -674,6 +690,34 @@ spec:
                     - Random
                     - RoundRobin
                     type: string
+                  zoneAware:
+                    description: ZoneAware defines the configuration related to the
+                      distribution of requests between locality zones.
+                    properties:
+                      preferLocal:
+                        description: PreferLocalZone configures zone-aware routing
+                          to prefer sending traffic to the local locality zone.
+                        properties:
+                          force:
+                            description: |-
+                              ForceLocalZone defines override configuration for forcing all traffic to stay within the local zone instead of the default behavior
+                              which maintains equal distribution among upstream endpoints while sending as much traffic as possible locally.
+                            properties:
+                              minEndpointsInZoneThreshold:
+                                description: |-
+                                  MinEndpointsInZoneThreshold is the minimum number of upstream endpoints in the local zone required to honor the forceLocalZone
+                                  override. This is useful for protecting zones with fewer endpoints.
+                                format: int32
+                                type: integer
+                            type: object
+                          minEndpointsThreshold:
+                            description: MinEndpointsThreshold is the minimum number
+                              of total upstream endpoints across all zones required
+                              to enable zone-aware routing.
+                            format: int64
+                            type: integer
+                        type: object
+                    type: object
                 required:
                 - type
                 type: object
@@ -686,6 +730,10 @@ spec:
                     LeastRequest load balancers.
                   rule: 'self.type in [''Random'', ''ConsistentHash''] ? !has(self.slowStart)
                     : true '
+                - message: Currently ZoneAware is only supported for LeastRequest,
+                    Random, and RoundRobin load balancers.
+                  rule: 'self.type == ''ConsistentHash'' ? !has(self.zoneAware) :
+                    true '
               mergeType:
                 description: |-
                   MergeType determines how this configuration is merged with existing BackendTrafficPolicy
@@ -1442,7 +1490,9 @@ spec:
                       description: Response configuration.
                       properties:
                         body:
-                          description: Body of the Custom Response
+                          description: |-
+                            Body of the Custom Response
+                            Supports Envoy command operators for dynamic content (see https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#command-operators).
                           properties:
                             inline:
                               description: Inline contains the value as an inline

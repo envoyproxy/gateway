@@ -36,6 +36,15 @@ type ClientConnection struct {
 	// +optional
 	// +notImplementedHide
 	SocketBufferLimit *resource.Quantity `json:"socketBufferLimit,omitempty"`
+
+	// MaxAcceptPerSocketEvent provides configuration for the maximum number of connections to accept from the kernel
+	// per socket event. If there are more than MaxAcceptPerSocketEvent connections pending accept, connections over
+	// this threshold will be accepted in later event loop iterations.
+	// Defaults to 1 and can be disabled by setting to 0 for allowing unlimited accepted connections.
+	//
+	// +optional
+	// +kubebuilder:default=1
+	MaxAcceptPerSocketEvent *uint32 `json:"maxAcceptPerSocketEvent,omitempty"`
 }
 
 // BackendConnection allows users to configure connection-level settings of backend

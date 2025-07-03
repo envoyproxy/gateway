@@ -9,6 +9,7 @@ KIND_NODE_TAG=${KIND_NODE_TAG:-"v1.33.0"}
 NUM_WORKERS=${NUM_WORKERS:-""}
 IP_FAMILY=${IP_FAMILY:-"ipv4"}
 CUSTOM_CNI=${CUSTOM_CNI:-"false"}
+ENABLE_CLUSTER_TRUST_BUNDLE=${ENABLE_CLUSTER_TRUST_BUNDLE:-"false"}
 
 if [ "$CUSTOM_CNI" = "true" ]; then
   CNI_CONFIG="disableDefaultCNI: true"
@@ -19,6 +20,11 @@ fi
 KIND_CFG=$(cat <<-EOM
 kind: Cluster
 apiVersion: kind.x-k8s.io/v1alpha4
+runtimeConfig:
+  certificates.k8s.io/v1beta1/clustertrustbundles: ${ENABLE_CLUSTER_TRUST_BUNDLE}
+featureGates:
+  "ClusterTrustBundle": ${ENABLE_CLUSTER_TRUST_BUNDLE}
+  "ClusterTrustBundleProjection": ${ENABLE_CLUSTER_TRUST_BUNDLE}
 networking:
   ${CNI_CONFIG}
   ipFamily: ${IP_FAMILY}
@@ -45,6 +51,9 @@ fi
 if go tool kind get clusters | grep -q "${CLUSTER_NAME}"; then
   echo "Cluster ${CLUSTER_NAME} already exists."
 else
+  echo "Creating kind cluster ${CLUSTER_NAME} with the following configuration:"
+  echo "${KIND_CFG}"
+
 ## Create kind cluster.
 if [[ -z "${KIND_NODE_TAG}" ]]; then
   cat << EOF | go tool kind create cluster --name "${CLUSTER_NAME}" --config -
