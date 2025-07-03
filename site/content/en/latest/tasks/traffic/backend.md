@@ -8,6 +8,8 @@ Envoy Gateway supports routing to native K8s resources such as `Service` and `Se
 The Backend API was added to support several use cases:
 - Allowing users to integrate Envoy with services (Ext Auth, Rate Limit, ALS, ...) using Unix Domain Sockets, which are currently not supported by K8s.
 - Simplify [routing to cluster-external backends][], which currently requires users to maintain both K8s `Service` and `EndpointSlice` resources.
+- Enable dynamic forward proxy functionality for HTTP proxy use cases without prior knowledge of destination hostnames.
+- Support header-based and metadata-based endpoint selection for advanced routing scenarios, such as AI inference workloads that need to route to specific pods based on request metadata.
 
 ## Warning
 
@@ -17,6 +19,7 @@ A Backend resource can be used to:
 - Reference a Service or Pod by a Route without appropriate Reference Grants
 - Expose the Envoy Proxy localhost (including the Envoy admin endpoint)
 - When configured as the `DynamicResolver` type, it can route traffic to any destination, effectively exposing all potential endpoints to clients. This can introduce security risks if not properly managed.
+- When configured as the `HostOverride` type, it allows clients to specify target endpoints through headers or metadata, which could potentially be exploited to route traffic to unintended destinations if not properly validated.
 
 For these reasons, the Backend API is disabled by default in Envoy Gateway configuration. Envoy Gateway admins are advised to follow [upstream recommendations][] and restrict access to the Backend API using K8s RBAC.
 
@@ -292,6 +295,211 @@ You can also send a request to any other domain, and Envoy Gateway will resolve 
 ```shell
 curl -HHost:httpbin.org http://${GATEWAY_HOST}/get
 ```
+
+### Host Override
+
+Envoy Gateway supports header-based and metadata-based endpoint selection using the [Backend][] API by setting its type to `HostOverride`.
+This allows you to route traffic to specific endpoints based on request headers or dynamic metadata, while maintaining a static list of available endpoints.
+
+Under the hood, Envoy Gateway uses the Envoy [Override Host Load Balancing Policy](https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/load_balancing_policies/override_host/v3/override_host.proto)
+to implement this feature.
+
+#### Header-based Endpoint Selection
+
+In the following example, we will create a `HTTPRoute` that references a `Backend` resource of type `HostOverride` with header-based endpoint selection.
+This setup allows Envoy Gateway to select endpoints based on the value of the `target-pod` header.
+
+{{< tabpane text=true >}}
+{{% tab header="Apply from stdin" %}}
+
+```shell
+cat <<EOF | kubectl apply -f -
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: host-override-header
+spec:
+  parentRefs:
+    - name: eg
+  hostnames:
+    - "www.example.com"
+  rules:
+    - backendRefs:
+        - group: gateway.envoyproxy.io
+          kind: Backend
+          name: backend-host-override-header
+      matches:
+        - path:
+            type: PathPrefix
+            value: /
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: Backend
+metadata:
+  name: backend-host-override-header
+  namespace: default
+spec:
+  type: HostOverride
+  hostOverrideSettings:
+    overrideHostSources:
+      - header: "target-pod"
+EOF
+```
+
+{{% /tab %}}
+{{% tab header="Apply from file" %}}
+Save and apply the following resources to your cluster:
+
+```yaml
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: host-override-header
+spec:
+  parentRefs:
+    - name: eg
+  hostnames:
+    - "www.example.com"
+  rules:
+    - backendRefs:
+        - group: gateway.envoyproxy.io
+          kind: Backend
+          name: backend-host-override-header
+      matches:
+        - path:
+            type: PathPrefix
+            value: /
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: Backend
+metadata:
+  name: backend-host-override-header
+  namespace: default
+spec:
+  type: HostOverride
+  hostOverrideSettings:
+    overrideHostSources:
+      - header: "target-pod"
+```
+
+{{% /tab %}}
+{{< /tabpane >}}
+
+Get the Gateway address:
+
+```shell
+export GATEWAY_HOST=$(kubectl get gateway/eg -o jsonpath='{.status.addresses[0].value}')
+```
+
+Send a request with the `target-pod` header to route to a specific endpoint:
+
+```shell
+curl -HHost:www.example.com -H"target-pod: 10.0.0.5:8080" http://${GATEWAY_HOST}/
+```
+
+The header value should contain host addresses in "IP:Port" format or multiple addresses separated by commas like "IP:Port,IP:Port,...".
+For example: "10.0.0.5:8080" or "[2600:4040:5204::1574:24ae]:80".
+
+#### Metadata-based Endpoint Selection
+
+You can also configure endpoint selection based on dynamic metadata. In the following example, we configure multiple override host sources,
+where the system will search for host addresses in the order specified:
+
+{{< tabpane text=true >}}
+{{% tab header="Apply from stdin" %}}
+
+```shell
+cat <<EOF | kubectl apply -f -
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: host-override-metadata
+spec:
+  parentRefs:
+    - name: eg
+  hostnames:
+    - "www.example.com"
+  rules:
+    - backendRefs:
+        - group: gateway.envoyproxy.io
+          kind: Backend
+          name: backend-host-override-metadata
+      matches:
+        - path:
+            type: PathPrefix
+            value: /metadata
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: Backend
+metadata:
+  name: backend-host-override-metadata
+  namespace: default
+spec:
+  type: HostOverride
+  hostOverrideSettings:
+    overrideHostSources:
+      - header: "target-pod"
+      - metadata:
+          key: "envoy.lb"
+          path:
+            - key: "override-host"
+EOF
+```
+
+{{% /tab %}}
+{{% tab header="Apply from file" %}}
+Save and apply the following resources to your cluster:
+
+```yaml
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: host-override-metadata
+spec:
+  parentRefs:
+    - name: eg
+  hostnames:
+    - "www.example.com"
+  rules:
+    - backendRefs:
+        - group: gateway.envoyproxy.io
+          kind: Backend
+          name: backend-host-override-metadata
+      matches:
+        - path:
+            type: PathPrefix
+            value: /metadata
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: Backend
+metadata:
+  name: backend-host-override-metadata
+  namespace: default
+spec:
+  type: HostOverride
+  hostOverrideSettings:
+    overrideHostSources:
+      - header: "target-pod"
+      - metadata:
+          key: "envoy.lb"
+          path:
+            - key: "override-host"
+```
+
+{{% /tab %}}
+{{< /tabpane >}}
+
+Send a request with the `target-pod` header:
+
+```shell
+curl -HHost:www.example.com -H"target-pod: 10.0.0.5:8080" http://${GATEWAY_HOST}/metadata
+```
+
+In this configuration, Envoy Gateway will first check the `target-pod` header for host addresses. If not found, it will look for the host addresses in the dynamic metadata at the path `envoy.lb.override-host`. The first address found will be used for the request, and subsequent addresses will be used for retries or hedging.
 
 [Backend]: ../../../api/extension_types#backend
 [routing to cluster-external backends]: ./../../tasks/traffic/routing-outside-kubernetes.md

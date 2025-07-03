@@ -1,0 +1,28 @@
+http:
+- name: "mixed-listener"
+  address: "0.0.0.0"
+  port: 10080
+  hostnames:
+  - "*"
+  path:
+    mergeSlashes: true
+    escapedSlashesAction: UnescapeAndRedirect
+  routes:
+  - name: "mixed-route"
+    hostname: "*"
+    pathMatch:
+      exact: "/"
+    destination:
+      name: "mixed-route-dest"
+      settings:
+      - name: backend-hosts-override-header
+        protocol: HTTP
+        weight: 1
+        isHostOverride: true
+        hostOverrideConfig:
+          overrideHostSources:
+          - header: "target-pod"
+            metadata:
+              key: "envoy.lb"
+              path:
+              - key: "target-pod"

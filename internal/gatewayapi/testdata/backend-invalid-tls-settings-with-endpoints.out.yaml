@@ -20,7 +20,7 @@ backends:
     conditions:
     - lastTransitionTime: null
       message: 'The Backend was not accepted: TLS.CACertificateRefs settings can only
-        be specified for DynamicResolver backends'
+        be specified for DynamicResolver or HostOverride backends'
       reason: Accepted
       status: "False"
       type: Invalid
@@ -42,7 +42,7 @@ backends:
     conditions:
     - lastTransitionTime: null
       message: 'The Backend was not accepted: TLS.WellKnownCACertificates settings
-        can only be specified for DynamicResolver backends'
+        can only be specified for DynamicResolver or HostOverride backends'
       reason: Accepted
       status: "False"
       type: Invalid

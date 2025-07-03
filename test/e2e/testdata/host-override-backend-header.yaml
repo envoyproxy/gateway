@@ -1,0 +1,28 @@
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: httproute-host-override-header
+  namespace: gateway-conformance-infra
+spec:
+  parentRefs:
+  - name: same-namespace
+  rules:
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /header-override
+    backendRefs:
+    - group: gateway.envoyproxy.io
+      kind: Backend
+      name: backend-host-override-header
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: Backend
+metadata:
+  name: backend-host-override-header
+  namespace: gateway-conformance-infra
+spec:
+  type: HostOverride
+  hostOverrideSettings:
+    overrideHostSources:
+    - header: "target-pod"
