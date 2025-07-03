@@ -87,6 +87,7 @@ func ApplyJSONPatches(document json.RawMessage, patches ...ir.JSONPatchOperation
 			}
 
 			// Apply patch
+			fmt.Println("xxxx applying patch:", string(jsonBytes), "to document:", string(document))
 			document, err = patchObj.ApplyWithOptions(document, opts)
 			if err != nil {
 				tErr := fmt.Errorf("unable to apply patch:\n%s on resource:\n%s, err: %s", string(jsonBytes), string(document), err.Error())
