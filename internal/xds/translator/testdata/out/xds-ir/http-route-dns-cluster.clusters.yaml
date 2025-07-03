@@ -5,7 +5,6 @@
     localityWeightedLbConfig: {}
   connectTimeout: 10s
   dnsLookupFamily: V4_PREFERRED
-  dnsRefreshRate: 30s
   lbPolicy: LEAST_REQUEST
   loadAssignment:
     clusterName: first-route-dest
@@ -28,5 +27,4 @@
         region: first-route-dest/backend/0
   name: first-route-dest
   perConnectionBufferLimitBytes: 32768
-  respectDnsTtl: true
   type: STRICT_DNS
