@@ -6,6 +6,8 @@
 package translator
 
 import (
+	"testing"
+
 	bootstrapv3 "github.com/envoyproxy/go-control-plane/envoy/config/bootstrap/v3"
 	clusterv3 "github.com/envoyproxy/go-control-plane/envoy/config/cluster/v3"
 	"github.com/stretchr/testify/assert"
@@ -14,7 +16,6 @@ import (
 	"google.golang.org/protobuf/proto"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/yaml"
-	"testing"
 
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/xds/bootstrap"
