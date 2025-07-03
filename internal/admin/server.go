@@ -6,21 +6,29 @@
 package admin
 
 import (
+	"embed"
 	"net/http"
 	"net/http/pprof"
 	"time"
 
 	"github.com/davecgh/go-spew/spew"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 )
 
-func Init(cfg *config.Server) error {
+//go:embed webui.html logo.svg
+var webuiFS embed.FS
+
+func Init(cfg *config.Server, k8sClient client.Client) error {
 	if cfg.EnvoyGateway.GetEnvoyGatewayAdmin().EnableDumpConfig {
 		spewConfig := spew.NewDefaultConfig()
 		spewConfig.DisableMethods = true
 		spewConfig.Dump(cfg)
 	}
+
+	// Set the k8s client for handlers
+	SetK8sClient(k8sClient)
 
 	return start(cfg)
 }
@@ -32,6 +40,23 @@ func start(cfg *config.Server) error {
 
 	adminLogger := cfg.Logger.WithName("admin")
 	adminLogger.Info("starting admin server", "address", address, "enablePprof", enablePprof)
+
+	// Serve the web UI
+	handlers.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/":
+			handleWebUI(w, r)
+		case "/logo.svg":
+			handleSVG(w, r, "logo.svg")
+		default:
+			http.NotFound(w, r)
+		}
+	})
+
+	// API endpoints
+	handlers.HandleFunc("/admin/api/status", handleStatus(cfg))
+	handlers.HandleFunc("/admin/api/resources", handleResources)
+	handlers.HandleFunc("/admin/api/stats", handleStats)
 
 	if enablePprof {
 		// Serve pprof endpoints to aid in live debugging.
