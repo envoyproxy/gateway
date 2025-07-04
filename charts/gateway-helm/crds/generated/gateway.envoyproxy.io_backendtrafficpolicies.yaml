@@ -660,6 +660,81 @@ spec:
                     - message: If consistent hash type is cookie, the cookie field
                         must be set.
                       rule: 'self.type == ''Cookie'' ? has(self.cookie) : !has(self.cookie)'
+                  hostOverrideSettings:
+                    description: |-
+                      HostOverrideSettings defines the configuration when the load balancer type is
+                      set to HostOverride
+                    properties:
+                      fallbackPolicy:
+                        default: LeastRequest
+                        description: |-
+                          FallbackPolicy defines the child LB policy to use in case neither header nor metadata with selected hosts is present.
+                          If not specified, defaults to LeastRequest.
+                        enum:
+                        - ConsistentHash
+                        - LeastRequest
+                        - Random
+                        - RoundRobin
+                        - HostOverride
+                        type: string
+                      overrideHostSources:
+                        description: |-
+                          OverrideHostSources defines a list of sources to get host addresses from.
+                          The host sources are searched in the order specified.
+                          The request is forwarded to the first address and subsequent addresses are used for request retries or hedging.
+                          Note that if an overridden host address is not present in the current endpoint set, it is skipped and the next found address is used.
+                          If there are not enough overridden addresses to satisfy all retry attempts the fallback load balancing policy is used to pick a host.
+                        items:
+                          description: OverrideHostSource defines a source to get
+                            override host addresses from.
+                          properties:
+                            header:
+                              description: |-
+                                Header defines the header to get the override host addresses.
+                                The header value must specify at least one host in `IP:Port` format or multiple hosts in `IP:Port,IP:Port,...` format.
+                                For example `10.0.0.5:8080` or `[2600:4040:5204::1574:24ae]:80`.
+                                The IPv6 address is enclosed in square brackets.
+                              type: string
+                            metadata:
+                              description: |-
+                                Metadata defines the metadata key to get the override host addresses from the request dynamic metadata.
+                                If set this field then it will take precedence over the header field.
+                              properties:
+                                key:
+                                  description: Key defines the metadata key.
+                                  minLength: 1
+                                  type: string
+                                path:
+                                  description: |-
+                                    Path defines the path within the metadata to extract the host addresses.
+                                    Each path element represents a key in nested metadata structure.
+                                  items:
+                                    description: MetadataKeyPath defines a path element
+                                      in the metadata structure.
+                                    properties:
+                                      key:
+                                        description: Key defines the key name in the
+                                          metadata structure.
+                                        minLength: 1
+                                        type: string
+                                    required:
+                                    - key
+                                    type: object
+                                  type: array
+                              required:
+                              - key
+                              type: object
+                          type: object
+                          x-kubernetes-validations:
+                          - message: Exactly one of header or metadata must be set.
+                            rule: (has(self.header) && !has(self.metadata)) || (!has(self.header)
+                              && has(self.metadata))
+                        maxItems: 10
+                        minItems: 1
+                        type: array
+                    required:
+                    - overrideHostSources
+                    type: object
                   slowStart:
                     description: |-
                       SlowStart defines the configuration related to the slow start load balancer policy.
@@ -683,12 +758,14 @@ spec:
                       "ConsistentHash",
                       "LeastRequest",
                       "Random",
-                      "RoundRobin".
+                      "RoundRobin",
+                      "HostOverride".
                     enum:
                     - ConsistentHash
                     - LeastRequest
                     - Random
                     - RoundRobin
+                    - HostOverride
                     type: string
                   zoneAware:
                     description: ZoneAware defines the configuration related to the
@@ -726,14 +803,18 @@ spec:
                     field needs to be set.
                   rule: 'self.type == ''ConsistentHash'' ? has(self.consistentHash)
                     : !has(self.consistentHash)'
+                - message: If LoadBalancer type is HostOverride, hostOverrideSettings
+                    field needs to be set.
+                  rule: 'self.type == ''HostOverride'' ? has(self.hostOverrideSettings)
+                    : !has(self.hostOverrideSettings)'
                 - message: Currently SlowStart is only supported for RoundRobin and
                     LeastRequest load balancers.
-                  rule: 'self.type in [''Random'', ''ConsistentHash''] ? !has(self.slowStart)
-                    : true '
+                  rule: 'self.type in [''Random'', ''ConsistentHash'', ''HostOverride'']
+                    ? !has(self.slowStart) : true '
                 - message: Currently ZoneAware is only supported for LeastRequest,
                     Random, and RoundRobin load balancers.
-                  rule: 'self.type == ''ConsistentHash'' ? !has(self.zoneAware) :
-                    true '
+                  rule: 'self.type in [''ConsistentHash'', ''HostOverride''] ? !has(self.zoneAware)
+                    : true '
               mergeType:
                 description: |-
                   MergeType determines how this configuration is merged with existing BackendTrafficPolicy

@@ -22,12 +22,14 @@ import (
 	commonv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/load_balancing_policies/common/v3"
 	least_requestv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/load_balancing_policies/least_request/v3"
 	maglevv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/load_balancing_policies/maglev/v3"
+	override_hostv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/load_balancing_policies/override_host/v3"
 	randomv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/load_balancing_policies/random/v3"
 	round_robinv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/load_balancing_policies/round_robin/v3"
 	proxyprotocolv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/transport_sockets/proxy_protocol/v3"
 	rawbufferv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/transport_sockets/raw_buffer/v3"
 	tlsv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/transport_sockets/tls/v3"
 	httpv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/upstreams/http/v3"
+	metadatav3 "github.com/envoyproxy/go-control-plane/envoy/type/metadata/v3"
 	xdstype "github.com/envoyproxy/go-control-plane/envoy/type/v3"
 	"github.com/envoyproxy/go-control-plane/pkg/resource/v3"
 	"github.com/envoyproxy/go-control-plane/pkg/wellknown"
@@ -267,6 +269,20 @@ func buildXdsCluster(args *xdsClusterArgs) (*buildClusterResult, error) {
 					TableSize: &wrapperspb.UInt64Value{Value: *args.loadBalancer.ConsistentHash.TableSize},
 				},
 			}
+		}
+	case args.loadBalancer.HostOverride != nil:
+		// For HostOverride, we use LoadBalancingPolicy instead of the legacy LbPolicy
+		hostOverridePolicy, err := buildHostOverrideLoadBalancingPolicy(args.loadBalancer.HostOverride)
+		if err != nil {
+			return nil, err
+		}
+		cluster.LbPolicy = clusterv3.Cluster_CLUSTER_PROVIDED
+		cluster.LoadBalancingPolicy = hostOverridePolicy
+		// Clear CommonLbConfig fields that conflict with LoadBalancingPolicy
+		// This is required because Envoy doesn't allow both LoadBalancingPolicy and
+		// CommonLbConfig partial fields to be set simultaneously
+		if cluster.CommonLbConfig != nil {
+			cluster.CommonLbConfig.LocalityConfigSpecifier = nil
 		}
 	}
 
@@ -1176,4 +1192,131 @@ func buildHTTP2Settings(opts *ir.HTTP2Settings) *corev3.Http2ProtocolOptions {
 	}
 
 	return out
+}
+
+// buildHostOverrideLoadBalancingPolicy builds the Envoy LoadBalancingPolicy for HostOverride
+func buildHostOverrideLoadBalancingPolicy(hostOverride *ir.HostOverride) (*clusterv3.LoadBalancingPolicy, error) {
+	// Build override host sources
+	var overrideHostSources []*override_hostv3.OverrideHost_OverrideHostSource
+
+	for _, source := range hostOverride.OverrideHostSources {
+		overrideSource := &override_hostv3.OverrideHost_OverrideHostSource{}
+
+		if source.Header != nil {
+			overrideSource.Header = *source.Header
+		}
+
+		if source.Metadata != nil {
+			metadataKey := &metadatav3.MetadataKey{
+				Key: source.Metadata.Key,
+			}
+
+			// Convert path if present
+			for _, pathElement := range source.Metadata.Path {
+				metadataKey.Path = append(metadataKey.Path, &metadatav3.MetadataKey_PathSegment{
+					Segment: &metadatav3.MetadataKey_PathSegment_Key{
+						Key: pathElement.Key,
+					},
+				})
+			}
+
+			overrideSource.Metadata = metadataKey
+		}
+
+		overrideHostSources = append(overrideHostSources, overrideSource)
+	}
+
+	// Build fallback policy
+	fallbackPolicy, err := buildFallbackLoadBalancingPolicy(hostOverride.FallbackPolicy)
+	if err != nil {
+		return nil, fmt.Errorf("failed to build fallback policy: %w", err)
+	}
+
+	// Build override host policy
+	overrideHostPolicy := &override_hostv3.OverrideHost{
+		OverrideHostSources: overrideHostSources,
+		FallbackPolicy:      fallbackPolicy,
+	}
+
+	typedOverrideHostPolicy, err := anypb.New(overrideHostPolicy)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal override host policy: %w", err)
+	}
+
+	return &clusterv3.LoadBalancingPolicy{
+		Policies: []*clusterv3.LoadBalancingPolicy_Policy{{
+			TypedExtensionConfig: &corev3.TypedExtensionConfig{
+				Name:        "envoy.load_balancing_policies.override_host",
+				TypedConfig: typedOverrideHostPolicy,
+			},
+		}},
+	}, nil
+}
+
+// buildFallbackLoadBalancingPolicy builds a fallback LoadBalancingPolicy for HostOverride
+func buildFallbackLoadBalancingPolicy(fallbackType ir.LoadBalancerType) (*clusterv3.LoadBalancingPolicy, error) {
+	switch fallbackType {
+	case ir.LeastRequestLoadBalancer:
+		fallbackPolicyAny, err := anypb.New(&least_requestv3.LeastRequest{})
+		if err != nil {
+			return nil, fmt.Errorf("failed to marshal LeastRequest policy: %w", err)
+		}
+		return &clusterv3.LoadBalancingPolicy{
+			Policies: []*clusterv3.LoadBalancingPolicy_Policy{
+				{
+					TypedExtensionConfig: &corev3.TypedExtensionConfig{
+						Name:        "envoy.load_balancing_policies.least_request",
+						TypedConfig: fallbackPolicyAny,
+					},
+				},
+			},
+		}, nil
+	case ir.RoundRobinLoadBalancer:
+		fallbackPolicyAny, err := anypb.New(&round_robinv3.RoundRobin{})
+		if err != nil {
+			return nil, fmt.Errorf("failed to marshal RoundRobin policy: %w", err)
+		}
+		return &clusterv3.LoadBalancingPolicy{
+			Policies: []*clusterv3.LoadBalancingPolicy_Policy{
+				{
+					TypedExtensionConfig: &corev3.TypedExtensionConfig{
+						Name:        "envoy.load_balancing_policies.round_robin",
+						TypedConfig: fallbackPolicyAny,
+					},
+				},
+			},
+		}, nil
+	case ir.RandomLoadBalancer:
+		fallbackPolicyAny, err := anypb.New(&randomv3.Random{})
+		if err != nil {
+			return nil, fmt.Errorf("failed to marshal Random policy: %w", err)
+		}
+		return &clusterv3.LoadBalancingPolicy{
+			Policies: []*clusterv3.LoadBalancingPolicy_Policy{
+				{
+					TypedExtensionConfig: &corev3.TypedExtensionConfig{
+						Name:        "envoy.load_balancing_policies.random",
+						TypedConfig: fallbackPolicyAny,
+					},
+				},
+			},
+		}, nil
+	case ir.ConsistentHashLoadBalancer:
+		fallbackPolicyAny, err := anypb.New(&maglevv3.Maglev{})
+		if err != nil {
+			return nil, fmt.Errorf("failed to marshal Maglev policy: %w", err)
+		}
+		return &clusterv3.LoadBalancingPolicy{
+			Policies: []*clusterv3.LoadBalancingPolicy_Policy{
+				{
+					TypedExtensionConfig: &corev3.TypedExtensionConfig{
+						Name:        "envoy.load_balancing_policies.maglev",
+						TypedConfig: fallbackPolicyAny,
+					},
+				},
+			},
+		}, nil
+	default:
+		return nil, fmt.Errorf("unsupported fallback policy: %s", fallbackType)
+	}
 }

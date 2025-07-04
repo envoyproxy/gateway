@@ -90,3 +90,24 @@
             name: test
         upgradeConfigs:
         - upgradeType: websocket
+    - match:
+        prefix: /
+      name: eleventh-route
+      route:
+        cluster: eleventh-route-dest
+        upgradeConfigs:
+        - upgradeType: websocket
+    - match:
+        prefix: /
+      name: twelfth-route
+      route:
+        cluster: twelfth-route-dest
+        upgradeConfigs:
+        - upgradeType: websocket
+    - match:
+        prefix: /
+      name: thirteen-route
+      route:
+        cluster: thirteen-route-dest
+        upgradeConfigs:
+        - upgradeType: websocket

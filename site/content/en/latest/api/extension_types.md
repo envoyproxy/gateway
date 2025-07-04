@@ -2475,6 +2475,24 @@ _Appears in:_
 | `path` | _string_ |  true  |  | Path specifies the HTTP path to match on for health check requests. |
 
 
+#### HostOverrideSettings
+
+
+
+HostOverrideSettings defines the configuration for the Host Override load balancer policy.
+This policy allows endpoint picking to be implemented in downstream HTTP filters.
+It extracts selected override hosts from a list of OverrideHostSource (request headers, metadata, etc.).
+If no valid host in the override host list, then the specified fallback load balancing policy is used.
+
+_Appears in:_
+- [LoadBalancer](#loadbalancer)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `overrideHostSources` | _[OverrideHostSource](#overridehostsource) array_ |  true  |  | OverrideHostSources defines a list of sources to get host addresses from.<br />The host sources are searched in the order specified.<br />The request is forwarded to the first address and subsequent addresses are used for request retries or hedging.<br />Note that if an overridden host address is not present in the current endpoint set, it is skipped and the next found address is used.<br />If there are not enough overridden addresses to satisfy all retry attempts the fallback load balancing policy is used to pick a host. |
+| `fallbackPolicy` | _[LoadBalancerType](#loadbalancertype)_ |  false  | LeastRequest | FallbackPolicy defines the child LB policy to use in case neither header nor metadata with selected hosts is present.<br />If not specified, defaults to LeastRequest. |
+
+
 #### IPEndpoint
 
 
@@ -3051,8 +3069,9 @@ _Appears in:_
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `type` | _[LoadBalancerType](#loadbalancertype)_ |  true  |  | Type decides the type of Load Balancer policy.<br />Valid LoadBalancerType values are<br />"ConsistentHash",<br />"LeastRequest",<br />"Random",<br />"RoundRobin". |
+| `type` | _[LoadBalancerType](#loadbalancertype)_ |  true  |  | Type decides the type of Load Balancer policy.<br />Valid LoadBalancerType values are<br />"ConsistentHash",<br />"LeastRequest",<br />"Random",<br />"RoundRobin",<br />"HostOverride". |
 | `consistentHash` | _[ConsistentHash](#consistenthash)_ |  false  |  | ConsistentHash defines the configuration when the load balancer type is<br />set to ConsistentHash |
+| `hostOverrideSettings` | _[HostOverrideSettings](#hostoverridesettings)_ |  false  |  | HostOverrideSettings defines the configuration when the load balancer type is<br />set to HostOverride |
 | `slowStart` | _[SlowStart](#slowstart)_ |  false  |  | SlowStart defines the configuration related to the slow start load balancer policy.<br />If set, during slow start window, traffic sent to the newly added hosts will gradually increase.<br />Currently this is only supported for RoundRobin and LeastRequest load balancers |
 
 
@@ -3063,6 +3082,7 @@ _Underlying type:_ _string_
 LoadBalancerType specifies the types of LoadBalancer.
 
 _Appears in:_
+- [HostOverrideSettings](#hostoverridesettings)
 - [LoadBalancer](#loadbalancer)
 
 | Value | Description |
@@ -3071,6 +3091,7 @@ _Appears in:_
 | `LeastRequest` | LeastRequestLoadBalancerType load balancer policy.<br /> | 
 | `Random` | RandomLoadBalancerType load balancer policy.<br /> | 
 | `RoundRobin` | RoundRobinLoadBalancerType load balancer policy.<br /> | 
+| `HostOverride` | HostOverrideLoadBalancerType load balancer policy.<br /> | 
 
 
 #### LocalJWKS
@@ -3183,6 +3204,35 @@ _Appears in:_
 | ----- | ----------- |
 | `StrategicMerge` | StrategicMerge indicates a strategic merge patch type<br /> | 
 | `JSONMerge` | JSONMerge indicates a JSON merge patch type<br /> | 
+
+
+#### MetadataKey
+
+
+
+MetadataKey defines the metadata key configuration for host override.
+
+_Appears in:_
+- [OverrideHostSource](#overridehostsource)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `key` | _string_ |  true  |  | Key defines the metadata key. |
+| `path` | _[MetadataKeyPath](#metadatakeypath) array_ |  false  |  | Path defines the path within the metadata to extract the host addresses.<br />Each path element represents a key in nested metadata structure. |
+
+
+#### MetadataKeyPath
+
+
+
+MetadataKeyPath defines a path element in the metadata structure.
+
+_Appears in:_
+- [MetadataKey](#metadatakey)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `key` | _string_ |  true  |  | Key defines the key name in the metadata structure. |
 
 
 #### MetricSinkType
@@ -3378,6 +3428,21 @@ _Appears in:_
 | `oid` | _string_ |  true  |  | OID Value |
 | `type` | _[StringMatchType](#stringmatchtype)_ |  false  | Exact | Type specifies how to match against a string. |
 | `value` | _string_ |  true  |  | Value specifies the string value that the match must have. |
+
+
+#### OverrideHostSource
+
+
+
+OverrideHostSource defines a source to get override host addresses from.
+
+_Appears in:_
+- [HostOverrideSettings](#hostoverridesettings)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `header` | _string_ |  false  |  | Header defines the header to get the override host addresses.<br />The header value must specify at least one host in `IP:Port` format or multiple hosts in `IP:Port,IP:Port,...` format.<br />For example `10.0.0.5:8080` or `[2600:4040:5204::1574:24ae]:80`.<br />The IPv6 address is enclosed in square brackets. |
+| `metadata` | _[MetadataKey](#metadatakey)_ |  false  |  | Refer to Kubernetes API documentation for fields of `metadata`. |
 
 
 #### PassiveHealthCheck
