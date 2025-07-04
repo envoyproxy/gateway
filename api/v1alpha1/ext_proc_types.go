@@ -24,6 +24,18 @@ const (
 	BufferedPartialExtBodyHeaderProcessingMode ExtProcBodyProcessingMode = "BufferedPartial"
 )
 
+// +kubebuilder:validation:Enum=Route;Backend;All
+type ExtProcStage string
+
+const (
+	// ExtProcStageRoute configures ExtProc to execute at the route phase (downstream, listener HCM filter)
+	ExtProcStageRoute ExtProcStage = "Route"
+	// ExtProcStageBackend configures ExtProc to execute at the backend phase (upstream, cluster filter)
+	ExtProcStageBackend ExtProcStage = "Backend"
+	// ExtProcStageAll configures ExtProc to execute at both route and backend phases
+	ExtProcStageAll ExtProcStage = "All"
+)
+
 // ProcessingModeOptions defines if headers or body should be processed by the external service
 // and which attributes are sent to the processor
 type ProcessingModeOptions struct {
@@ -71,6 +83,13 @@ type ExtProcProcessingMode struct {
 // +kubebuilder:validation:XValidation:message="If FullDuplexStreamed body processing mode is used, FailOpen must be false.",rule="!(has(self.failOpen) && self.failOpen == true && ((has(self.processingMode.request.body) && self.processingMode.request.body == 'FullDuplexStreamed') || (has(self.processingMode.response.body) && self.processingMode.response.body == 'FullDuplexStreamed')))"
 type ExtProc struct {
 	BackendCluster `json:",inline"`
+
+	// Stage defines at which stage of request processing the ExtProc filter is executed.
+	// Default: Route
+	//
+	// +optional
+	// +kubebuilder:default=Route
+	Stage *ExtProcStage `json:"stage,omitempty"`
 
 	// MessageTimeout is the timeout for a response to be returned from the external processor
 	// Default: 200ms

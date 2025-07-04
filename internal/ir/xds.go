@@ -893,6 +893,8 @@ type TrafficFeatures struct {
 	Compression []*Compression `json:"compression,omitempty" yaml:"compression,omitempty"`
 	// HTTPUpgrade defines the schema for upgrading the HTTP protocol.
 	HTTPUpgrade []HTTPUpgradeConfig `json:"httpUpgrade,omitempty" yaml:"httpUpgrade,omitempty"`
+	// ExtProc for backend-specific external processing
+	ExtProc []ExtProc `json:"extProc,omitempty" yaml:"extProc,omitempty"`
 	// Telemetry defines the schema for telemetry configuration.
 	Telemetry *egv1a1.BackendTelemetry `json:"telemetry,omitempty" yaml:"telemetry,omitempty"`
 	// RequestBuffer defines the schema for enabling buffered requests
@@ -1144,7 +1146,7 @@ type OIDC struct {
 	// may not be able to handle OIDC redirects and wish to directly supply a token instead.
 	PassThroughAuthHeader bool `json:"passThroughAuthHeader,omitempty"`
 
-	// Any request that matches any of the provided matchers won’t be redirected to OAuth server when tokens are not valid.
+	// Any request that matches any of the provided matchers won't be redirected to OAuth server when tokens are not valid.
 	// Automatic access token refresh will be performed for these requests, if enabled.
 	// This behavior can be useful for AJAX requests.
 	DenyRedirect *egv1a1.OIDCDenyRedirect `json:"denyRedirect,omitempty"`
