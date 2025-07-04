@@ -138,8 +138,19 @@ xdsIR:
         mergeSlashes: true
       port: 10080
       routes:
-      - directResponse:
-          statusCode: 500
+      - destination:
+          metadata:
+            kind: HTTPRoute
+            name: httproute-1
+            namespace: default
+          name: httproute/default/httproute-1/rule/0
+          settings:
+          - isCustomBackend: true
+            name: httproute/default/httproute-1/rule/0/backend/0
+            weight: 1
+          - isCustomBackend: true
+            name: httproute/default/httproute-1/rule/0/backend/1
+            weight: 1
         extensionRefs:
         - object:
             apiVersion: storage.example.io/v1alpha1
@@ -172,8 +183,19 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /service
-      - directResponse:
-          statusCode: 500
+      - destination:
+          metadata:
+            kind: HTTPRoute
+            name: httproute-1
+            namespace: default
+          name: httproute/default/httproute-1/rule/1
+          settings:
+          - isCustomBackend: true
+            name: httproute/default/httproute-1/rule/1/backend/0
+            weight: 1
+          - isCustomBackend: true
+            name: httproute/default/httproute-1/rule/1/backend/1
+            weight: 1
         extensionRefs:
         - object:
             apiVersion: storage.example.io/v1alpha1
