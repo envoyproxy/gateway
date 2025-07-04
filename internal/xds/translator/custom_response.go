@@ -440,6 +440,25 @@ func (c *customResponse) buildResponseAction(r ir.ResponseOverrideRule) (*anypb.
 		})
 	}
 
+	for _, header := range r.Response.ResponseHeadersToAdd {
+		var appendAction corev3.HeaderValueOption_HeaderAppendAction
+		if header.Append {
+			appendAction = corev3.HeaderValueOption_APPEND_IF_EXISTS_OR_ADD
+		} else {
+			appendAction = corev3.HeaderValueOption_OVERWRITE_IF_EXISTS_OR_ADD
+		}
+
+		for _, value := range header.Value {
+			response.ResponseHeadersToAdd = append(response.ResponseHeadersToAdd, &corev3.HeaderValueOption{
+				Header: &corev3.HeaderValue{
+					Key:   header.Name,
+					Value: value,
+				},
+				AppendAction: appendAction,
+			})
+		}
+	}
+
 	if r.Response.StatusCode != nil {
 		response.StatusCode = &wrapperspb.UInt32Value{Value: *r.Response.StatusCode}
 	}

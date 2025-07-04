@@ -766,6 +766,30 @@ type CustomResponse struct {
 	//
 	// +optional
 	StatusCode *int `json:"statusCode,omitempty"`
+
+	// ResponseHeadersToAdd defines headers to add to the response.
+	// This allows the response policy to append, add or override headers
+	// of the original response before it is sent to a downstream client.
+	//
+	// +optional
+	ResponseHeadersToAdd []ResponseHeaderToAdd `json:"responseHeadersToAdd,omitempty"`
+}
+
+// ResponseHeaderToAdd defines a header to add to the response.
+type ResponseHeaderToAdd struct {
+	// Name is the name of the header to add.
+	Name string `json:"name"`
+
+	// Value is the value of the header to add.
+	Value string `json:"value"`
+
+	// Append specifies the action to take when the header already exists.
+	// If true, the value will be appended to the existing header value.
+	// If false, the value will overwrite the existing header value.
+	// Default is false.
+	//
+	// +optional
+	Append *bool `json:"append,omitempty"`
 }
 
 // ResponseValueType defines the types of values for the response body supported by Envoy Gateway.

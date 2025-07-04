@@ -846,6 +846,21 @@ func (t *Translator) processExtensionRefHTTPFilter(extFilter *gwapiv1.LocalObjec
 						filterContext.AddResponseHeaders = append(filterContext.AddResponseHeaders, newHeader)
 					}
 
+					if len(hrf.Spec.DirectResponse.ResponseHeadersToAdd) > 0 {
+						for _, h := range hrf.Spec.DirectResponse.ResponseHeadersToAdd {
+							appendHeader := false
+							if h.Append != nil {
+								appendHeader = *h.Append
+							}
+							newHeader := ir.AddHeader{
+								Name:   h.Name,
+								Value:  []string{h.Value},
+								Append: appendHeader,
+							}
+							filterContext.AddResponseHeaders = append(filterContext.AddResponseHeaders, newHeader)
+						}
+					}
+
 					filterContext.DirectResponse = dr
 				}
 

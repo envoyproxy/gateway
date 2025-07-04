@@ -1085,6 +1085,21 @@ func buildResponseOverride(policy *egv1a1.BackendTrafficPolicy, resources *resou
 				response.StatusCode = ptr.To(uint32(*ro.Response.StatusCode))
 			}
 
+			if len(ro.Response.ResponseHeadersToAdd) > 0 {
+				response.ResponseHeadersToAdd = make([]ir.AddHeader, 0, len(ro.Response.ResponseHeadersToAdd))
+				for _, h := range ro.Response.ResponseHeadersToAdd {
+					appendHeader := false
+					if h.Append != nil {
+						appendHeader = *h.Append
+					}
+					response.ResponseHeadersToAdd = append(response.ResponseHeadersToAdd, ir.AddHeader{
+						Name:   h.Name,
+						Value:  []string{h.Value},
+						Append: appendHeader,
+					})
+				}
+			}
+
 			var err error
 			response.Body, err = getCustomResponseBody(ro.Response.Body, resources, policy.Namespace)
 			if err != nil {

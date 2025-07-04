@@ -995,6 +995,7 @@ _Appears in:_
 | `contentType` | _string_ |  false  |  | Content Type of the response. This will be set in the Content-Type header. |
 | `body` | _[CustomResponseBody](#customresponsebody)_ |  false  |  | Body of the Custom Response<br />Supports Envoy command operators for dynamic content (see https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#command-operators). |
 | `statusCode` | _integer_ |  false  |  | Status Code of the Custom Response<br />If unset, does not override the status of response. |
+| `responseHeadersToAdd` | _[ResponseHeaderToAdd](#responseheadertoadd) array_ |  false  |  | ResponseHeadersToAdd defines headers to add to the response.<br />This allows the response policy to append, add or override headers<br />of the original response before it is sent to a downstream client. |
 
 
 #### CustomResponseBody
@@ -2204,6 +2205,7 @@ _Appears in:_
 | `contentType` | _string_ |  false  |  | Content Type of the response. This will be set in the Content-Type header. |
 | `body` | _[CustomResponseBody](#customresponsebody)_ |  false  |  | Body of the Response |
 | `statusCode` | _integer_ |  false  |  | Status Code of the HTTP response<br />If unset, defaults to 200. |
+| `responseHeadersToAdd` | _[ResponseHeaderToAdd](#responseheadertoadd) array_ |  false  |  | ResponseHeadersToAdd defines headers to add to the response.<br />This allows the response policy to append, add or override headers<br />of the original response before it is sent to a downstream client. |
 
 
 #### HTTPExtAuthService
@@ -4273,6 +4275,23 @@ _Appears in:_
 | Value | Description |
 | ----- | ----------- |
 | `File` | ResourceProviderTypeFile defines the "File" provider.<br /> | 
+
+
+#### ResponseHeaderToAdd
+
+
+
+ResponseHeaderToAdd defines a header to add to the response.
+
+_Appears in:_
+- [CustomResponse](#customresponse)
+- [HTTPDirectResponseFilter](#httpdirectresponsefilter)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `name` | _string_ |  true  |  | Name is the name of the header to add. |
+| `value` | _string_ |  true  |  | Value is the value of the header to add. |
+| `append` | _boolean_ |  false  |  | Append specifies the action to take when the header already exists.<br />If true, the value will be appended to the existing header value.<br />If false, the value will overwrite the existing header value.<br />Default is false. |
 
 
 #### ResponseOverride
