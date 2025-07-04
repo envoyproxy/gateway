@@ -764,6 +764,20 @@ func (r *gatewayAPIReconciler) validateConfigMapForReconcile(obj client.Object) 
 		}
 	}
 
+	if r.eepCRDExists {
+		eepList := &egv1a1.EnvoyExtensionPolicyList{}
+		if err := r.client.List(context.Background(), eepList, &client.ListOptions{
+			FieldSelector: fields.OneTermEqualSelector(configMapEepIndex, utils.NamespacedName(configMap).String()),
+		}); err != nil {
+			r.log.Error(err, "unable to find associated EnvoyExtensionPolicy")
+			return false
+		}
+
+		if len(eepList.Items) > 0 {
+			return true
+		}
+	}
+
 	if r.hrfCRDExists {
 		routeFilterList := &egv1a1.HTTPRouteFilterList{}
 		if err := r.client.List(context.Background(), routeFilterList, &client.ListOptions{

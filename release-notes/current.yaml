@@ -5,6 +5,7 @@ breaking changes: |
 
 # Updates addressing vulnerabilities, security flaws, or compliance requirements.
 security updates: |
+  Disable automountServiceAccountToken for proxy and ratelimit deployments and serviceAccounts
 
 # New features or capabilities added in this release.
 new features: |
@@ -20,6 +21,12 @@ bug fixes: |
   Fixed issue where WASM cache init failure caused routes with WASM-less EnvoyExtensionPolicies to have 500 direct responses.
   Fixed issue which UDP listeners were not created in the Envoy proxy config when Gateway was created.
   Keep ALPN configuration for listeners with overlapping certificates when ALPN is explicitly set in ClientTrafficPolicy.
+  Fixed issue where EnvoyExtensionPolicy ExtProc body processing mode is set to FullDuplexStreamed, but trailers were not sent.
+  Fixed validation issue where EnvoyExtensionPolicy ExtProc failOpen is true, and body processing mode FullDuplexStreamed is not rejected.
+  Add ConfigMap indexers for EnvoyExtensionPolicies to reconcile Lua changes
+  Fixed issue that default accesslog format not working.
+  Fixed bug in certificate SANs overlap detection in listeners.
+  Fixed issue that BackendTLSPolicy should not reference ConfigMap or Secret across namespace.
 
 # Enhancements that improve performance.
 performance improvements: |

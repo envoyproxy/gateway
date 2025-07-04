@@ -112,6 +112,7 @@ accessLog:
               - host: otel-collector.monitoring.svc.cluster.local
                 port: 4317
             protocol: GRPC
+            addressType: FQDN
             weight: 1
             name: accesslog_otel_0_3/backend/0
       logType: Route
@@ -127,6 +128,7 @@ accessLog:
               - host: otel-collector.monitoring.svc.cluster.local
                 port: 4317
             protocol: GRPC
+            addressType: FQDN
             weight: 1
             name: accesslog_otel_1_3/backend/0
       logType: Listener
@@ -142,6 +144,7 @@ accessLog:
               - host: otel-collector.monitoring.svc.cluster.local
                 port: 4317
             protocol: GRPC
+            addressType: FQDN
             weight: 1
             name: accesslog_otel_2_3/backend/0
       resources:

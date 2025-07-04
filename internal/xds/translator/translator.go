@@ -117,15 +117,16 @@ func (t *Translator) Translate(xdsIR *ir.Xds) (*types.ResourceVersionTable, erro
 		errs = errors.Join(errs, err)
 	}
 
-	if err := processJSONPatches(tCtx, xdsIR.EnvoyPatchPolicies); err != nil {
-		errs = errors.Join(errs, err)
-	}
-
 	if err := processClusterForAccessLog(tCtx, xdsIR.AccessLog, xdsIR.Metrics); err != nil {
 		errs = errors.Join(errs, err)
 	}
 
 	if err := processClusterForTracing(tCtx, xdsIR.Tracing, xdsIR.Metrics); err != nil {
+		errs = errors.Join(errs, err)
+	}
+
+	// All XDS resources is ready, let's do the patch.
+	if err := processJSONPatches(tCtx, xdsIR.EnvoyPatchPolicies); err != nil {
 		errs = errors.Join(errs, err)
 	}
 

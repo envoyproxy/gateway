@@ -316,9 +316,10 @@ func processRouteTimeout(irRoute *ir.HTTPRoute, rule gwapiv1.HTTPRouteRule) {
 			irRoute.Timeout = ptr.To(metav1.Duration{Duration: d})
 		}
 
-		// Also set the IR Route Timeout to the backend request timeout
-		// until we introduce retries, then set it to per try timeout
-		if rule.Timeouts.BackendRequest != nil {
+		// Only set the IR Route Timeout to the backend request timeout
+		// when retries are not configured. When retries are configured,
+		// the backend request timeout should set for per-retry timeout.
+		if rule.Timeouts.BackendRequest != nil && rule.Retry == nil {
 			d, err := time.ParseDuration(string(*rule.Timeouts.BackendRequest))
 			if err != nil {
 				d, _ = time.ParseDuration(HTTPRequestTimeout)
