@@ -34,26 +34,10 @@ func CollectResult(ctx context.Context, restConfig *rest.Config, opts CollectOpt
 		}
 	}()
 
-	collectors := []tbcollect.Collector{
-		// Collect the custom resources from Gateway API and EG
-		collect.CustomResource{
-			ClientConfig: restConfig,
-			BundlePath:   opts.BundlePath,
-			IncludeGroups: []string{
-				"gateway.envoyproxy.io",
-				"gateway.networking.k8s.io",
-			},
-		},
-	}
+	collectors := []tbcollect.Collector{}
 	for _, ns := range opts.CollectedNamespaces {
 		bundlePath := opts.BundlePath
 		collectors = append(collectors,
-			// Collect resources from EnvoyGateway system namespace
-			collect.EnvoyGatewayResource{
-				ClientConfig: restConfig,
-				BundlePath:   bundlePath,
-				Namespace:    ns,
-			},
 			// Collect logs from EnvoyGateway system namespace
 			&tbcollect.CollectLogs{
 				Collector: &troubleshootv1b2.Logs{
@@ -63,12 +47,6 @@ func CollectResult(ctx context.Context, restConfig *rest.Config, opts CollectOpt
 				ClientConfig: restConfig,
 				BundlePath:   bundlePath,
 				Context:      ctx,
-			},
-			// Collect prometheus metrics from EnvoyGateway system namespace
-			collect.PrometheusMetric{
-				BundlePath:   bundlePath,
-				ClientConfig: restConfig,
-				Namespace:    ns,
 			},
 			// Collect config dump from EnvoyGateway system namespace
 			collect.ConfigDump{
