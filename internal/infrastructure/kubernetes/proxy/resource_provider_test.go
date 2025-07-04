@@ -70,7 +70,7 @@ func (f *fakeKubernetesInfraProvider) GetEnvoyGateway() *egv1a1.EnvoyGateway {
 	return f.EnvoyGateway
 }
 
-func (f *fakeKubernetesInfraProvider) GetOwnerReferenceUID(ctx context.Context, infra *ir.Infra) (map[string]types.UID, error) {
+func (f *fakeKubernetesInfraProvider) GetOwnerReferenceUID(_ context.Context, _ *ir.Infra) (map[string]types.UID, error) {
 	if f.EnvoyGateway.GatewayNamespaceMode() {
 		return map[string]types.UID{
 			gwapiresource.KindGateway: "test-owner-reference-uid-for-gateway",
@@ -465,6 +465,26 @@ func TestDeployment(t *testing.T) {
 				Metrics: &egv1a1.ProxyMetrics{
 					Prometheus: &egv1a1.ProxyPrometheusProvider{
 						Disable: true,
+					},
+				},
+			},
+		},
+		{
+			caseName: "override-prometheus-annotations",
+			infra: newTestInfraWithAnnotations(map[string]string{
+				"prometheus.io/scrape": "true",
+			}),
+			deploy: &egv1a1.KubernetesDeploymentSpec{
+				Pod: &egv1a1.KubernetesPodSpec{
+					Annotations: map[string]string{
+						"prometheus.io/scrape": "false",
+					},
+				},
+			},
+			telemetry: &egv1a1.ProxyTelemetry{
+				Metrics: &egv1a1.ProxyMetrics{
+					Prometheus: &egv1a1.ProxyPrometheusProvider{
+						Disable: false,
 					},
 				},
 			},
@@ -1000,6 +1020,24 @@ func TestDaemonSet(t *testing.T) {
 			},
 		},
 		{
+			caseName: "override-prometheus-annotations",
+			infra:    newTestInfra(),
+			daemonset: &egv1a1.KubernetesDaemonSetSpec{
+				Pod: &egv1a1.KubernetesPodSpec{
+					Annotations: map[string]string{
+						"prometheus.io/scrape": "false",
+					},
+				},
+			},
+			telemetry: &egv1a1.ProxyTelemetry{
+				Metrics: &egv1a1.ProxyMetrics{
+					Prometheus: &egv1a1.ProxyPrometheusProvider{
+						Disable: false,
+					},
+				},
+			},
+		},
+		{
 			caseName:    "with-concurrency",
 			infra:       newTestInfra(),
 			daemonset:   nil,
@@ -1159,9 +1197,6 @@ func TestDaemonSet(t *testing.T) {
 			ds, err := r.DaemonSet()
 			require.NoError(t, err)
 
-			expected, err := loadDaemonSet(tc.caseName)
-			require.NoError(t, err)
-
 			sortEnv := func(env []corev1.EnvVar) {
 				sort.Slice(env, func(i, j int) bool {
 					return env[i].Name > env[j].Name
@@ -1177,8 +1212,12 @@ func TestDaemonSet(t *testing.T) {
 				return
 			}
 
+			expected, err := loadDaemonSet(tc.caseName)
+			require.NoError(t, err)
+
 			sortEnv(ds.Spec.Template.Spec.Containers[0].Env)
 			sortEnv(expected.Spec.Template.Spec.Containers[0].Env)
+
 			assert.Equal(t, expected, ds)
 		})
 	}
@@ -2058,8 +2097,8 @@ func TestGatewayNamespaceModeMultipleResources(t *testing.T) {
 
 func writeTestDataToFile(filename string, resources []any) error {
 	var combinedYAML []byte
-	for i, resource := range resources {
-		resourceYAML, err := yaml.Marshal(resource)
+	for i, res := range resources {
+		resourceYAML, err := yaml.Marshal(res)
 		if err != nil {
 			return err
 		}

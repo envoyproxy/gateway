@@ -662,14 +662,13 @@ func (r *ResourceRender) getPodSpec(
 
 func (r *ResourceRender) getPodAnnotations(resourceAnnotation map[string]string, pod *egv1a1.KubernetesPodSpec) map[string]string {
 	podAnnotations := map[string]string{}
-	maps.Copy(podAnnotations, resourceAnnotation)
-	maps.Copy(podAnnotations, pod.Annotations)
-
 	if enablePrometheus(r.infra) {
 		podAnnotations["prometheus.io/path"] = "/stats/prometheus" // TODO: make this configurable
 		podAnnotations["prometheus.io/scrape"] = "true"
 		podAnnotations["prometheus.io/port"] = strconv.Itoa(bootstrap.EnvoyStatsPort)
 	}
+	maps.Copy(podAnnotations, resourceAnnotation)
+	maps.Copy(podAnnotations, pod.Annotations)
 
 	if len(podAnnotations) == 0 {
 		podAnnotations = nil
