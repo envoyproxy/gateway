@@ -36,10 +36,13 @@ import (
 	"google.golang.org/protobuf/types/known/durationpb"
 	"google.golang.org/protobuf/types/known/structpb"
 	"google.golang.org/protobuf/types/known/wrapperspb"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/utils/ptr"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	extensionTypes "github.com/envoyproxy/gateway/internal/extension/types"
 	"github.com/envoyproxy/gateway/internal/ir"
+	"github.com/envoyproxy/gateway/internal/logging"
 	"github.com/envoyproxy/gateway/internal/utils/proto"
 )
 
@@ -70,6 +73,9 @@ type xdsClusterArgs struct {
 	ipFamily          *egv1a1.IPFamily
 	metadata          *ir.ResourceMetadata
 	statName          *string
+	unstructuredRefs  []*unstructured.Unstructured
+	extensionMgr      *extensionTypes.Manager
+	logger            logging.Logger
 }
 
 type EndpointType int
@@ -1038,11 +1044,14 @@ func buildBackandConnectionBufferLimitBytes(bc *ir.BackendConnection) *wrappers.
 }
 
 type ExtraArgs struct {
-	metrics       *ir.Metrics
-	http1Settings *ir.HTTP1Settings
-	http2Settings *ir.HTTP2Settings
-	ipFamily      *egv1a1.IPFamily
-	statName      *string
+	metrics          *ir.Metrics
+	http1Settings    *ir.HTTP1Settings
+	http2Settings    *ir.HTTP2Settings
+	ipFamily         *egv1a1.IPFamily
+	statName         *string
+	extensionMgr     *extensionTypes.Manager
+	unstructuredRefs []*unstructured.Unstructured
+	logger           logging.Logger
 }
 
 type clusterArgs interface {
@@ -1118,6 +1127,9 @@ func (httpRoute *HTTPRouteTranslator) asClusterArgs(name string,
 		ipFamily:          extra.ipFamily,
 		metadata:          metadata,
 		statName:          extra.statName,
+		extensionMgr:      extra.extensionMgr,
+		unstructuredRefs:  extra.unstructuredRefs,
+		logger:            extra.logger,
 	}
 
 	// Populate traffic features.
