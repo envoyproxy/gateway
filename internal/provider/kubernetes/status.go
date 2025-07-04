@@ -576,7 +576,7 @@ func (r *gatewayAPIReconciler) updateStatusForGateway(ctx context.Context, gtw *
 		// to true in the Gateway API translator
 		status.UpdateGatewayStatusAccepted(gtw)
 		// update address field and programmed condition
-		status.UpdateGatewayStatusProgrammedCondition(gtw, svc, envoyObj, r.store.listNodeAddresses()...)
+		status.UpdateGatewayStatusProgrammedCondition(gtw, svc, envoyObj, r.store.listNodeAddresses())
 	}
 
 	key := utils.NamespacedName(gtw)

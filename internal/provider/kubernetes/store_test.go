@@ -11,6 +11,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	"github.com/envoyproxy/gateway/internal/gatewayapi/status"
 )
 
 func TestNodeDetailsAddressStore(t *testing.T) {
@@ -18,7 +20,7 @@ func TestNodeDetailsAddressStore(t *testing.T) {
 	testCases := []struct {
 		name              string
 		nodeObject        *corev1.Node
-		expectedAddresses []string
+		expectedAddresses status.NodeAddresses
 	}{
 		{
 			name: "No node addresses",
@@ -26,7 +28,7 @@ func TestNodeDetailsAddressStore(t *testing.T) {
 				ObjectMeta: metav1.ObjectMeta{Name: "node1"},
 				Status:     corev1.NodeStatus{Addresses: []corev1.NodeAddress{{}}},
 			},
-			expectedAddresses: []string{},
+			expectedAddresses: status.NodeAddresses{},
 		},
 		{
 			name: "only external address",
@@ -37,7 +39,9 @@ func TestNodeDetailsAddressStore(t *testing.T) {
 					Type:    corev1.NodeExternalIP,
 				}}},
 			},
-			expectedAddresses: []string{"1.1.1.1"},
+			expectedAddresses: status.NodeAddresses{
+				IPv4: []string{"1.1.1.1"},
+			},
 		},
 		{
 			name: "only internal address",
@@ -48,7 +52,9 @@ func TestNodeDetailsAddressStore(t *testing.T) {
 					Type:    corev1.NodeInternalIP,
 				}}},
 			},
-			expectedAddresses: []string{"1.1.1.1"},
+			expectedAddresses: status.NodeAddresses{
+				IPv4: []string{"1.1.1.1"},
+			},
 		},
 		{
 			name: "prefer external address",
@@ -65,7 +71,43 @@ func TestNodeDetailsAddressStore(t *testing.T) {
 					},
 				}},
 			},
-			expectedAddresses: []string{"1.1.1.1"},
+			expectedAddresses: status.NodeAddresses{
+				IPv4: []string{"1.1.1.1"},
+			},
+		},
+		{
+			name: "all external addresses",
+			nodeObject: &corev1.Node{
+				ObjectMeta: metav1.ObjectMeta{Name: "node1"},
+				Status: corev1.NodeStatus{Addresses: []corev1.NodeAddress{{
+					Address: "1.1.1.1",
+					Type:    corev1.NodeExternalIP,
+				}, {
+					Address: "2606:4700:4700::1111",
+					Type:    corev1.NodeExternalIP,
+				}}},
+			},
+			expectedAddresses: status.NodeAddresses{
+				IPv4: []string{"1.1.1.1"},
+				IPv6: []string{"2606:4700:4700::1111"},
+			},
+		},
+		{
+			name: "all internal addresses",
+			nodeObject: &corev1.Node{
+				ObjectMeta: metav1.ObjectMeta{Name: "node1"},
+				Status: corev1.NodeStatus{Addresses: []corev1.NodeAddress{{
+					Address: "1.1.1.1",
+					Type:    corev1.NodeInternalIP,
+				}, {
+					Address: "2606:4700:4700::1111",
+					Type:    corev1.NodeInternalIP,
+				}}},
+			},
+			expectedAddresses: status.NodeAddresses{
+				IPv4: []string{"1.1.1.1"},
+				IPv6: []string{"2606:4700:4700::1111"},
+			},
 		},
 	}
 
