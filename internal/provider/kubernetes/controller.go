@@ -68,6 +68,7 @@ type gatewayAPIReconciler struct {
 	resources            *message.ProviderResources
 	extGVKs              []schema.GroupVersionKind
 	extServerPolicies    []schema.GroupVersionKind
+	extBackendGVKs       []schema.GroupVersionKind
 	gatewayNamespaceMode bool
 
 	backendCRDExists       bool
@@ -93,6 +94,7 @@ func newGatewayAPIController(ctx context.Context, mgr manager.Manager, cfg *conf
 	// Gather additional resources to watch from registered extensions
 	var extServerPoliciesGVKs []schema.GroupVersionKind
 	var extGVKs []schema.GroupVersionKind
+	var extBackendGVKs []schema.GroupVersionKind
 	if cfg.EnvoyGateway.ExtensionManager != nil {
 		for _, rsrc := range cfg.EnvoyGateway.ExtensionManager.Resources {
 			gvk := schema.GroupVersionKind(rsrc)
@@ -101,6 +103,10 @@ func newGatewayAPIController(ctx context.Context, mgr manager.Manager, cfg *conf
 		for _, rsrc := range cfg.EnvoyGateway.ExtensionManager.PolicyResources {
 			gvk := schema.GroupVersionKind(rsrc)
 			extServerPoliciesGVKs = append(extServerPoliciesGVKs, gvk)
+		}
+		for _, rsrc := range cfg.EnvoyGateway.ExtensionManager.BackendResources {
+			gvk := schema.GroupVersionKind(rsrc)
+			extBackendGVKs = append(extBackendGVKs, gvk)
 		}
 	}
 
@@ -116,6 +122,7 @@ func newGatewayAPIController(ctx context.Context, mgr manager.Manager, cfg *conf
 		envoyGateway:         cfg.EnvoyGateway,
 		mergeGateways:        sets.New[string](),
 		extServerPolicies:    extServerPoliciesGVKs,
+		extBackendGVKs:       extBackendGVKs,
 		gatewayNamespaceMode: cfg.EnvoyGateway.GatewayNamespaceMode(),
 	}
 
@@ -631,6 +638,31 @@ func (r *gatewayAPIReconciler) processBackendRefs(ctx context.Context, gwcResour
 								"failed to process CACertificateRef for Backend",
 								"backend", backend, "caCertificateRef", caCertRef.Name)
 						}
+					}
+				}
+			}
+		default:
+			// Handle custom backend resources defined in extension manager
+			if r.isCustomBackendResource(backendRef.Group, backendRefKind) {
+				resourceMappings.allAssociatedNamespaces.Insert(string(*backendRef.Namespace))
+				key := utils.NamespacedNameWithGroupKind{
+					NamespacedName: types.NamespacedName{
+						Namespace: string(*backendRef.Namespace),
+						Name:      string(backendRef.Name),
+					},
+					GroupKind: schema.GroupKind{
+						Group: string(*backendRef.Group),
+						Kind:  backendRefKind,
+					},
+				}
+				if !resourceMappings.allAssociatedBackendRefExtensionFilters.Has(key) {
+					resourceMappings.allAssociatedBackendRefExtensionFilters.Insert(key)
+					if extRefFilter, exists := resourceMappings.extensionRefFilters[key]; !exists {
+						resourceMappings.extensionRefFilters[key] = extRefFilter
+						gwcResource.ExtensionRefFilters = append(gwcResource.ExtensionRefFilters, extRefFilter)
+						r.log.Info("added custom backend resource to resource tree",
+							"kind", backendRefKind, "namespace", string(*backendRef.Namespace),
+							"name", string(backendRef.Name))
 					}
 				}
 			}
@@ -2079,6 +2111,18 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 		}
 		r.log.Info("Watching additional policy resource", "resource", gvk.String())
 	}
+	for _, gvk := range r.extBackendGVKs {
+		u := &unstructured.Unstructured{}
+		u.SetGroupVersionKind(gvk)
+		if err := c.Watch(source.Kind(mgr.GetCache(), u,
+			handler.TypedEnqueueRequestsFromMapFunc(func(ctx context.Context, si *unstructured.Unstructured) []reconcile.Request {
+				return r.enqueueClass(ctx, si)
+			}),
+			uPredicates...)); err != nil {
+			return err
+		}
+		r.log.Info("Watching additional backend resource", "resource", gvk.String())
+	}
 
 	r.hrfCRDExists = r.crdExists(mgr, resource.KindHTTPRouteFilter, egv1a1.GroupVersion.String())
 	if !r.hrfCRDExists {
@@ -2269,6 +2313,17 @@ func (r *gatewayAPIReconciler) crdExists(mgr manager.Manager, kind, groupVersion
 	}
 
 	return found
+}
+
+// isCustomBackendResource checks if the given group and kind match any of the configured custom backend resources
+func (r *gatewayAPIReconciler) isCustomBackendResource(group *gwapiv1.Group, kind string) bool {
+	groupStr := gatewayapi.GroupDerefOr(group, "")
+	for _, gvk := range r.extBackendGVKs {
+		if gvk.Group == groupStr && gvk.Kind == kind {
+			return true
+		}
+	}
+	return false
 }
 
 func (r *gatewayAPIReconciler) processBackendTLSPolicyRefs(

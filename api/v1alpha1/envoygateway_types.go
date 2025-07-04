@@ -529,6 +529,14 @@ type ExtensionManager struct {
 	// +optional
 	PolicyResources []GroupVersionKind `json:"policyResources,omitempty"`
 
+	// BackendResources defines the set of K8s resources the extension will handle as
+	// custom backendRef resources. These resources can be referenced in HTTPRoute
+	// backendRefs to enable support for custom backend types (e.g., S3, Lambda, etc.)
+	// that are not natively supported by Envoy Gateway.
+	//
+	// +optional
+	BackendResources []GroupVersionKind `json:"backendResources,omitempty"`
+
 	// Hooks defines the set of hooks the extension supports
 	//
 	// +kubebuilder:validation:Required
