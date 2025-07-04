@@ -5,6 +5,14 @@
   dnsLookupFamily: V4_PREFERRED
   ignoreHealthOnHostRemoval: true
   lbPolicy: CLUSTER_PROVIDED
+  loadBalancingPolicy:
+    policies:
+    - typedExtensionConfig:
+        name: envoy.load_balancing_policies.least_request
+        typedConfig:
+          '@type': type.googleapis.com/envoy.extensions.load_balancing_policies.least_request.v3.LeastRequest
+          localityLbConfig:
+            localityWeightedLbConfig: {}
   name: custom-backend-dest
   originalDstLbConfig:
     httpHeaderName: x-gateway-destination-endpoint
