@@ -217,6 +217,10 @@ enable = true
     weight = -98
     url = "/contributions"
   [[menu.main]]
+    name = "Release Notes"
+    weight = -99
+    url = "/news/releases/notes"
+  [[menu.main]]
     name = "About"
     weight = -100
     url = "/about"
