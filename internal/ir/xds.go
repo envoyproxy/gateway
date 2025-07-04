@@ -777,7 +777,7 @@ type HTTPRoute struct {
 	URLRewrite *URLRewrite `json:"urlRewrite,omitempty" yaml:"urlRewrite,omitempty"`
 	// Credentials to be injected into the request.
 	CredentialInjection *CredentialInjection `json:"credentialInjection,omitempty" yaml:"credentialInjection,omitempty"`
-	// ExtensionRefs holds unstructured resources that were introduced by an extension and used on the HTTPRoute as extensionRef filters
+	// ExtensionRefs holds unstructured resources that were introduced by an extension and used on the HTTPRoute as extensionRef filters or on the backendRef as a dynamic backend
 	ExtensionRefs []*UnstructuredRef `json:"extensionRefs,omitempty" yaml:"extensionRefs,omitempty"`
 	// Traffic holds the features associated with BackendTrafficPolicy
 	Traffic *TrafficFeatures `json:"traffic,omitempty" yaml:"traffic,omitempty"`
