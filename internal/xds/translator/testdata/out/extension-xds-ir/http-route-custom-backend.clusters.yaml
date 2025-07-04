@@ -1,0 +1,13 @@
+- circuitBreakers:
+    thresholds:
+    - maxRetries: 1024
+  connectTimeout: 10s
+  dnsLookupFamily: V4_PREFERRED
+  ignoreHealthOnHostRemoval: true
+  lbPolicy: CLUSTER_PROVIDED
+  name: custom-backend-dest
+  originalDstLbConfig:
+    httpHeaderName: x-gateway-destination-endpoint
+    useHttpHeader: true
+  perConnectionBufferLimitBytes: 32768
+  type: ORIGINAL_DST

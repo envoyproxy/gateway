@@ -1,0 +1,33 @@
+http:
+- name: "multiple-custom-backends-listener"
+  address: "0.0.0.0"
+  port: 10080
+  hostnames:
+  - "*"
+  path:
+    mergeSlashes: true
+    escapedSlashesAction: UnescapeAndRedirect
+  routes:
+  - name: "s3-route"
+    hostname: "*"
+    pathMatch:
+      prefix: "/s3"
+    destination:
+      name: "custom-backend-dest"
+      settings:
+      - endpoints:
+        - host: "s3.amazonaws.com"
+          port: 443
+        name: "custom-backend-dest/backend/0"
+    extensionRefs:
+    - object:
+        apiVersion: inference.networking.x-k8s.io/v1alpha2
+        kind: InferencePool
+        metadata:
+          name: inference-pool
+        spec:
+          targetPortNumber: 8000
+          selector:
+            app: vllm-llama3-8b-instruct
+          extensionRef:
+            name: vllm-llama3-8b-instruct-epp

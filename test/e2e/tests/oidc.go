@@ -231,10 +231,8 @@ func testOIDC(t *testing.T, suite *suite.ConformanceTestSuite, securityPolicyMan
 	require.NoError(t, err)
 	require.Equal(t, http.StatusFound, res.StatusCode)
 
-	// After logout, OAuth2 filter will redirect back to the root of the host, e.g, "www.example.com".
-	// Ideally, this should redirect to the application's root, e.g, "www.example.com/myapp",
-	// but Envoy OAuth2 filter does not support this yet.
-	require.Equal(t, "http://www.example.com/", res.Header.Get("Location"), "Expected redirect to the root of the host")
+	// After logout, OAuth2 filter will redirect to the IdP end session endpoint.
+	require.Contains(t, res.Header.Get("Location"), "https://keycloak.gateway-conformance-infra/realms/master/protocol/openid-connect/logout", "Expected redirect to the root of the host")
 
 	// Verify that the oauth2 cookies have been deleted
 	var cookieDeleted bool

@@ -1,0 +1,34 @@
+- circuitBreakers:
+    thresholds:
+    - maxRetries: 1024
+  commonLbConfig:
+    localityWeightedLbConfig: {}
+  connectTimeout: 10s
+  dnsLookupFamily: V4_PREFERRED
+  edsClusterConfig:
+    edsConfig:
+      ads: {}
+      resourceApiVersion: V3
+    serviceName: direct-route-dest
+  ignoreHealthOnHostRemoval: true
+  lbPolicy: LEAST_REQUEST
+  name: direct-route-dest
+  perConnectionBufferLimitBytes: 32768
+  type: EDS
+- circuitBreakers:
+    thresholds:
+    - maxRetries: 1024
+  commonLbConfig:
+    localityWeightedLbConfig: {}
+  connectTimeout: 10s
+  dnsLookupFamily: V4_PREFERRED
+  edsClusterConfig:
+    edsConfig:
+      ads: {}
+      resourceApiVersion: V3
+    serviceName: tracing-0
+  ignoreHealthOnHostRemoval: true
+  lbPolicy: LEAST_REQUEST
+  name: tracing-0
+  perConnectionBufferLimitBytes: 32768
+  type: EDS

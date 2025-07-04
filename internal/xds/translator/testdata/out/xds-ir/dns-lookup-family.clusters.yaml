@@ -122,9 +122,24 @@
   loadAssignment:
     clusterName: accesslog_otel_0_1
     endpoints:
-    - loadBalancingWeight: 1
-      locality: {}
+    - lbEndpoints:
+      - endpoint:
+          address:
+            socketAddress:
+              address: otel-collector.default.svc.cluster.local
+              portValue: 4317
+        loadBalancingWeight: 1
+      loadBalancingWeight: 1
+      locality:
+        region: accesslog-0/backend/0
   name: accesslog_otel_0_1
   perConnectionBufferLimitBytes: 32768
   respectDnsTtl: true
   type: STRICT_DNS
+  typedExtensionProtocolOptions:
+    envoy.extensions.upstreams.http.v3.HttpProtocolOptions:
+      '@type': type.googleapis.com/envoy.extensions.upstreams.http.v3.HttpProtocolOptions
+      explicitHttpConfig:
+        http2ProtocolOptions:
+          initialConnectionWindowSize: 1048576
+          initialStreamWindowSize: 65536

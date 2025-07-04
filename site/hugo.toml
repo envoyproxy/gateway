@@ -81,6 +81,11 @@ id = "G-DXJEH1ZRXX"
     style = "tango"
     # Uncomment if you want your chosen highlight style used for code blocks without a specified language
     # guessSyntax = "true"
+  [markup.tableOfContents]
+    # Need this for Gateway API Extensions page.
+    endLevel = 4
+    ordered = false
+    startLevel = 2
 
 # Everything below this are Site Params
 
@@ -223,6 +228,11 @@ enable = true
     name = "Documentation"
     weight = -102
     url = "/docs"
+  [[menu.main]]
+    name = "Tools"
+    weight = -99
+    url = "/tools"
+    hasChildren = true
 
 [[params.versions]]
   version = "latest"
