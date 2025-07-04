@@ -274,7 +274,8 @@ xdsIR:
         destination:
           name: accesslog_otel_0_3
           settings:
-          - endpoints:
+          - addressType: FQDN
+            endpoints:
             - host: otel-collector.monitoring.svc.cluster.local
               port: 4317
             name: accesslog_otel_0_3/backend/-1

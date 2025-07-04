@@ -1041,6 +1041,12 @@ spec:
                       group.
                     rule: 'has(self.backendRefs) ? (self.backendRefs.all(f, f.group
                       == "" || f.group == ''gateway.envoyproxy.io'')) : true'
+                  - message: If FullDuplexStreamed body processing mode is used, FailOpen
+                      must be false.
+                    rule: '!(has(self.failOpen) && self.failOpen == true && ((has(self.processingMode.request.body)
+                      && self.processingMode.request.body == ''FullDuplexStreamed'')
+                      || (has(self.processingMode.response.body) && self.processingMode.response.body
+                      == ''FullDuplexStreamed'')))'
                 maxItems: 16
                 type: array
               lua:

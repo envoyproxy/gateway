@@ -327,7 +327,8 @@ xdsIR:
       destination:
         name: tracing
         settings:
-        - endpoints:
+        - addressType: FQDN
+          endpoints:
           - host: otel-collector.monitoring.svc.cluster.local
             port: 4317
           name: tracing/backend/-1

@@ -41,6 +41,7 @@ spec:
         gateway.envoyproxy.io/owning-gateway-name: gateway-1
         gateway.envoyproxy.io/owning-gateway-namespace: ns1
     spec:
+      automountServiceAccountToken: false
       containers:
       - args:
         - --service-cluster ns1/gateway-1

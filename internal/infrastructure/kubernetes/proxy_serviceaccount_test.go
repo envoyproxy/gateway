@@ -56,6 +56,7 @@ func TestCreateOrUpdateProxyServiceAccount(t *testing.T) {
 					Kind:       "ServiceAccount",
 					APIVersion: "v1",
 				},
+				AutomountServiceAccountToken: ptr.To(false),
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "test",
 					Name:      "envoy-test-9f86d081",
@@ -105,6 +106,7 @@ func TestCreateOrUpdateProxyServiceAccount(t *testing.T) {
 					Kind:       "ServiceAccount",
 					APIVersion: "v1",
 				},
+				AutomountServiceAccountToken: ptr.To(false),
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "test",
 					Name:      "envoy-test-9f86d081",
@@ -137,6 +139,7 @@ func TestCreateOrUpdateProxyServiceAccount(t *testing.T) {
 					Kind:       "ServiceAccount",
 					APIVersion: "v1",
 				},
+				AutomountServiceAccountToken: ptr.To(false),
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "test",
 					Name:      "very-long-name-that-will-be-hashed-and-cut-off-because-its-too-long",
@@ -154,6 +157,7 @@ func TestCreateOrUpdateProxyServiceAccount(t *testing.T) {
 					Kind:       "ServiceAccount",
 					APIVersion: "v1",
 				},
+				AutomountServiceAccountToken: ptr.To(false),
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "test",
 					Name:      "envoy-very-long-name-that-will-be-hashed-and-cut-off-b-5bacc75e",
@@ -192,6 +196,7 @@ func TestCreateOrUpdateProxyServiceAccount(t *testing.T) {
 					Kind:       "ServiceAccount",
 					APIVersion: "v1",
 				},
+				AutomountServiceAccountToken: ptr.To(false),
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "ns1",
 					Name:      "envoy-ns1-gateway-1-02ae0474",

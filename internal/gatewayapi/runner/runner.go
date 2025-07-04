@@ -177,7 +177,7 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *re
 				result, err := t.Translate(resources)
 				if err != nil {
 					// Currently all errors that Translate returns should just be logged
-					r.Logger.Error(err, "errors detected during translation")
+					r.Logger.Error(err, "errors detected during translation", "gateway-class", resources.GatewayClass.Name)
 				}
 
 				// Publish the IRs.
