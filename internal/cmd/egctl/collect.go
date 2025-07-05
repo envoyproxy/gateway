@@ -57,6 +57,7 @@ func newCollectCommand() *cobra.Command {
 }
 
 func runCollect(collectOpts collectOptions) error {
+	// test
 	cc := options.DefaultConfigFlags.ToRawKubeConfigLoader()
 	restConfig, err := cc.ClientConfig()
 	if err != nil {
