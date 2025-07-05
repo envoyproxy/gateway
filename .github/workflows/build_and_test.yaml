@@ -30,7 +30,7 @@ jobs:
         filters: |
           skip_test:
             - 'site/**'
-            - '!**'
+            - '!**/*'
 
   lint:
     runs-on: ubuntu-22.04
