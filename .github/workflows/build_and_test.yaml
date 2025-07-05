@@ -17,20 +17,23 @@ permissions:
   contents: read
 
 jobs:
-  skip-tests:
+  change-path-check:
     runs-on: ubuntu-latest
     permissions:
       pull-requests: read
     outputs:
-      skip_test: ${{ steps.filter.outputs.skip_test }}
+      site_change: ${{ steps.filter.outputs.site_change }}
+      other_change: ${{ steps.filter.outputs.other_change }}
     steps:
     - uses: dorny/paths-filter@v3
       id: filter
       with:
         filters: |
-          skip_test:
+          site_change:
             - 'site/**'
-            - '!**/*'
+          other_change:
+            - '**'
+            - '!site/**'
 
   lint:
     runs-on: ubuntu-22.04
@@ -58,8 +61,8 @@ jobs:
     - run: make -k licensecheck
 
   coverage-test:
-    needs: skip-tests
-    if: ${{ needs.skip-tests.outputs.skip_test == 'false' }}
+    needs: change-path-check
+    if: ${{ needs.change-path-check.outputs.site_change == 'true' && needs.change-path-check.outputs.other_change == 'false'  }}
     runs-on: ubuntu-latest
     permissions:
       contents: read   #  for actions/checkout
