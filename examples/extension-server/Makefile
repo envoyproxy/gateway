@@ -10,7 +10,7 @@ APP_NAME ?= extension-server
 TAG ?= latest
 
 .PHONY: docker-buildx
-docker-buildx:
+docker-buildx: build
 	docker buildx build -f tools/docker/extension-server/Dockerfile . -t $(IMAGE_PREFIX)$(APP_NAME):$(TAG) --build-arg GO_LDFLAGS="$(GO_LDFLAGS)" --load
 
 build: generate manifests
