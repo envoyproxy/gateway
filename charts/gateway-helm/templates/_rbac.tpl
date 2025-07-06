@@ -203,6 +203,7 @@ verbs:
   verbs:
   - create
   - get
+  - list
   - delete
   - deletecollection
   - patch

@@ -63,7 +63,8 @@ type resourceMappings struct {
 	// Set for storing HTTPRouteExtensions (Envoy Gateway or Custom) NamespacedNames referenced by various
 	// route rules objects.
 	allAssociatedHTTPRouteExtensionFilters sets.Set[utils.NamespacedNameWithGroupKind]
-
+	// Set for storing BackendRef Extensions' NamespacedNames attaching to various HTTPRoute objects.
+	allAssociatedBackendRefExtensionFilters sets.Set[utils.NamespacedNameWithGroupKind]
 	// allAssociatedClusterTrustBundles is a set of all ClusterTrustBundles' name
 	// key is the name of ClusterTrustBundle, because ClusterTrustBundle is cluster-scoped resource
 	allAssociatedClusterTrustBundles sets.Set[string]
@@ -71,29 +72,30 @@ type resourceMappings struct {
 
 func newResourceMapping() *resourceMappings {
 	return &resourceMappings{
-		allAssociatedGateways:                  sets.New[string](),
-		allAssociatedReferenceGrants:           sets.New[string](),
-		allAssociatedServiceImports:            sets.New[string](),
-		allAssociatedEndpointSlices:            sets.New[string](),
-		allAssociatedBackends:                  sets.New[string](),
-		allAssociatedSecrets:                   sets.New[string](),
-		allAssociatedConfigMaps:                sets.New[string](),
-		allAssociatedNamespaces:                sets.New[string](),
-		allAssociatedEnvoyProxies:              sets.New[string](),
-		allAssociatedEnvoyPatchPolicies:        sets.New[string](),
-		allAssociatedTLSRoutes:                 sets.New[string](),
-		allAssociatedHTTPRoutes:                sets.New[string](),
-		allAssociatedGRPCRoutes:                sets.New[string](),
-		allAssociatedTCPRoutes:                 sets.New[string](),
-		allAssociatedUDPRoutes:                 sets.New[string](),
-		allAssociatedBackendRefs:               sets.New[gwapiv1.BackendObjectReference](),
-		allAssociatedClientTrafficPolicies:     sets.New[string](),
-		allAssociatedBackendTrafficPolicies:    sets.New[string](),
-		allAssociatedSecurityPolicies:          sets.New[string](),
-		allAssociatedBackendTLSPolicies:        sets.New[string](),
-		allAssociatedEnvoyExtensionPolicies:    sets.New[string](),
-		extensionRefFilters:                    map[utils.NamespacedNameWithGroupKind]unstructured.Unstructured{},
-		allAssociatedHTTPRouteExtensionFilters: sets.New[utils.NamespacedNameWithGroupKind](),
-		allAssociatedClusterTrustBundles:       sets.New[string](),
+		allAssociatedGateways:                   sets.New[string](),
+		allAssociatedReferenceGrants:            sets.New[string](),
+		allAssociatedServiceImports:             sets.New[string](),
+		allAssociatedEndpointSlices:             sets.New[string](),
+		allAssociatedBackends:                   sets.New[string](),
+		allAssociatedSecrets:                    sets.New[string](),
+		allAssociatedConfigMaps:                 sets.New[string](),
+		allAssociatedNamespaces:                 sets.New[string](),
+		allAssociatedEnvoyProxies:               sets.New[string](),
+		allAssociatedEnvoyPatchPolicies:         sets.New[string](),
+		allAssociatedTLSRoutes:                  sets.New[string](),
+		allAssociatedHTTPRoutes:                 sets.New[string](),
+		allAssociatedGRPCRoutes:                 sets.New[string](),
+		allAssociatedTCPRoutes:                  sets.New[string](),
+		allAssociatedUDPRoutes:                  sets.New[string](),
+		allAssociatedBackendRefs:                sets.New[gwapiv1.BackendObjectReference](),
+		allAssociatedClientTrafficPolicies:      sets.New[string](),
+		allAssociatedBackendTrafficPolicies:     sets.New[string](),
+		allAssociatedSecurityPolicies:           sets.New[string](),
+		allAssociatedBackendTLSPolicies:         sets.New[string](),
+		allAssociatedEnvoyExtensionPolicies:     sets.New[string](),
+		extensionRefFilters:                     map[utils.NamespacedNameWithGroupKind]unstructured.Unstructured{},
+		allAssociatedHTTPRouteExtensionFilters:  sets.New[utils.NamespacedNameWithGroupKind](),
+		allAssociatedBackendRefExtensionFilters: sets.New[utils.NamespacedNameWithGroupKind](),
+		allAssociatedClusterTrustBundles:        sets.New[string](),
 	}
 }

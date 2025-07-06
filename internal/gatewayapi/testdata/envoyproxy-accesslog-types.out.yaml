@@ -445,7 +445,8 @@ xdsIR:
             namespace: envoy-gateway-system
           name: accesslog_otel_2_3
           settings:
-          - endpoints:
+          - addressType: FQDN
+            endpoints:
             - host: otel-collector.monitoring.svc.cluster.local
               port: 4317
             name: accesslog_otel_2_3/backend/-1
@@ -464,7 +465,8 @@ xdsIR:
             namespace: envoy-gateway-system
           name: accesslog_otel_3_3
           settings:
-          - endpoints:
+          - addressType: FQDN
+            endpoints:
             - host: otel-collector.monitoring.svc.cluster.local
               port: 4317
             name: accesslog_otel_3_3/backend/-1
@@ -483,7 +485,8 @@ xdsIR:
             namespace: envoy-gateway-system
           name: accesslog_otel_4_3
           settings:
-          - endpoints:
+          - addressType: FQDN
+            endpoints:
             - host: otel-collector.monitoring.svc.cluster.local
               port: 4317
             name: accesslog_otel_4_3/backend/-1
