@@ -1414,9 +1414,7 @@ func (r *gatewayAPIReconciler) processClientTrafficPolicies(
 		}
 	}
 
-	r.processCTPCACertificateRefs(ctx, resourceTree, resourceMap)
-
-	return nil
+	return r.processCTPCACertificateRefs(ctx, resourceTree, resourceMap)
 }
 
 // processBackendTrafficPolicies adds BackendTrafficPolicies to the resourceTree

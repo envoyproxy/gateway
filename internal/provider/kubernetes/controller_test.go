@@ -1360,7 +1360,7 @@ func TestProcessBackendRefs(t *testing.T) {
 				Name:      gwapiv1.ObjectName(backend.Name),
 			})
 
-			r.processBackendRefs(t.Context(), resourceTree, resourceMap)
+			require.NoError(t, r.processBackendRefs(t.Context(), resourceTree, resourceMap))
 			if tc.ctpShouldBeAdded {
 				require.Contains(t, resourceTree.ClusterTrustBundles, ctb)
 			} else {
