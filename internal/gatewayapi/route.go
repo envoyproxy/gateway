@@ -1590,6 +1590,14 @@ func (t *Translator) processServiceDestinationSetting(
 		endpoints = append(endpoints, ep)
 	}
 
+	// Log if Zone-Aware Routing is configured for a Service but no active endpoints are found.
+	if processZoneAwareRouting(service) != nil && len(endpoints) == 0 {
+		t.Log.Info("Zone-aware routing configured for Service but no active endpoints found.",
+			"serviceNamespace", service.Namespace,
+			"serviceName", service.Name,
+		)
+	}
+
 	return &ir.DestinationSetting{
 		Name:             name,
 		Protocol:         protocol,

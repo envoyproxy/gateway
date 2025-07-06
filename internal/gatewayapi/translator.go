@@ -9,6 +9,7 @@ import (
 	"errors"
 	"sort"
 
+	"github.com/go-logr/logr"
 	"golang.org/x/exp/maps"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -104,6 +105,9 @@ type Translator struct {
 	// gateway listener port into a non privileged port
 	// and reuses the specified value.
 	ListenerPortShiftDisabled bool
+
+	// Logger logs messages.
+	Log logr.Logger
 }
 
 type TranslateResult struct {
