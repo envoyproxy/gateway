@@ -151,6 +151,15 @@ securityPolicies:
     namespace: default
   spec:
     extAuth:
+      accessibleMetadata:
+        namespaces:
+        - envoy.filters.http.custom1
+        routeNamespaces:
+        - envoy.filters.http.custom3
+        routeTypedNamespaces:
+        - envoy.filters.http.custom4
+        typedNamespaces:
+        - envoy.filters.http.custom2
       failOpen: true
       grpc:
         backendRefs:
@@ -159,15 +168,6 @@ securityPolicies:
       headersToExtAuth:
       - header1
       - header2
-      metadata:
-        accessibleNamespaces:
-        - envoy.filters.http.custom1
-        accessibleRouteNamespaces:
-        - envoy.filters.http.custom3
-        accessibleRouteTypedNamespaces:
-        - envoy.filters.http.custom4
-        accessibleTypedNamespaces:
-        - envoy.filters.http.custom2
     targetRef:
       group: gateway.networking.k8s.io
       kind: HTTPRoute

@@ -29,6 +29,14 @@ message PostVirtualHostExtensionContext {
 }
 
 
+// PostClusterExtensionContext provides context information for cluster modification
+// additional context information can be added to this message as more use-cases are discovered
+message PostClusterExtensionContext {
+    // Resources introduced by the extension that were used as custom backendRefs
+    repeated ExtensionResource backend_extension_resources = 1;
+}
+
+
 // Empty for now but we can add fields to the context as use-cases are discovered without
 // breaking any clients that use the API
 // additional context information can be added to this message as more use-cases are discovered
