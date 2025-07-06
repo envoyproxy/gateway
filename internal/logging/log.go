@@ -8,6 +8,7 @@ package logging
 import (
 	"io"
 	"os"
+	"strings"
 
 	"github.com/go-logr/logr"
 	"github.com/go-logr/zapr"
@@ -16,6 +17,46 @@ import (
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 )
+
+// transientErrorFilteringCore wraps a zapcore.Core to filter out transient API server connection errors.
+type transientErrorFilteringCore struct {
+	zapcore.Core
+}
+
+// Check determines whether the supplied Entry should be logged and filters transient errors.
+func (c *transientErrorFilteringCore) Check(ent zapcore.Entry, ce *zapcore.CheckedEntry) *zapcore.CheckedEntry {
+	// Only apply filtering to logs from controller-runtime's cache/reflector.
+	if strings.Contains(ent.Caller.File, "controller-runtime/pkg/cache/internal/informers.go") {
+		transientErrors := []string{
+			"connect: connection refused",
+			"net/http: TLS handshake timeout",
+			"read: connection reset by peer",
+			"the server was unable to return a response in the time allotted",
+			"failed to watch",
+			"failed to list",
+		}
+
+		for _, transient := range transientErrors {
+			if strings.Contains(ent.Message, transient) {
+				return nil // Discard the log entry entirely.
+			}
+		}
+	}
+
+	return c.Core.Check(ent, ce)
+}
+
+func (c *transientErrorFilteringCore) With(fields []zapcore.Field) zapcore.Core {
+	return &transientErrorFilteringCore{Core: c.Core.With(fields)}
+}
+
+func (c *transientErrorFilteringCore) Write(ent zapcore.Entry, fields []zapcore.Field) error {
+	return c.Core.Write(ent, fields)
+}
+
+func (c *transientErrorFilteringCore) Sync() error {
+	return c.Core.Sync()
+}
 
 type Logger struct {
 	logr.Logger
@@ -114,5 +155,8 @@ func initZapLogger(w io.Writer, logging *egv1a1.EnvoyGatewayLogging, level egv1a
 	parseLevel, _ := zapcore.ParseLevel(string(logging.DefaultEnvoyGatewayLoggingLevel(level)))
 	core := zapcore.NewCore(zapcore.NewConsoleEncoder(zap.NewDevelopmentEncoderConfig()), zapcore.AddSync(w), zap.NewAtomicLevelAt(parseLevel))
 
-	return zap.New(core, zap.AddCaller())
+	// Wrap the core with our filtering core to suppress specific transient errors.
+	filteringCore := &transientErrorFilteringCore{Core: core}
+
+	return zap.New(filteringCore, zap.AddCaller())
 }
