@@ -20,20 +20,21 @@ backendTLSPolicies:
   status:
     ancestors:
     - ancestorRef:
-        group: gateway.networking.k8s.io
-        kind: BackendTLSPolicy
-        name: policy-btls
+        name: gateway-1
         namespace: envoy-gateway
       conditions:
       - lastTransitionTime: null
-        message: This policy has 18 ancestors with Accepted condition in True status
-          due to Accepted reason
+        message: 'This policy has 18 ancestors with Accepted condition in True status
+          due to Accepted reason. Aggregated ancestors: gateway-1, gateway-10, gateway-11,
+          gateway-12, gateway-13, gateway-14, gateway-15, gateway-16, gateway-17,
+          gateway-18, gateway-2, gateway-3, gateway-4, gateway-5, gateway-6, gateway-7,
+          gateway-8, gateway-9.'
         reason: Accepted
         status: "True"
         type: Accepted
       - lastTransitionTime: null
-        message: This policy has been aggregated because policy ancestor is greater
-          than 16
+        message: Ancestors have been aggregated because the number of policy ancestors
+          exceeds 16.
         reason: Aggregated
         status: "True"
         type: Aggregated
@@ -59,20 +60,21 @@ backendTLSPolicies:
   status:
     ancestors:
     - ancestorRef:
-        group: gateway.networking.k8s.io
-        kind: BackendTLSPolicy
-        name: policy-btls-invalid
+        name: gateway-1
         namespace: envoy-gateway
       conditions:
       - lastTransitionTime: null
-        message: This policy has 18 ancestors with Accepted condition in False status
-          due to Invalid reason
+        message: 'This policy has 18 ancestors with Accepted condition in False status
+          due to Invalid reason. Aggregated ancestors: gateway-1, gateway-10, gateway-11,
+          gateway-12, gateway-13, gateway-14, gateway-15, gateway-16, gateway-17,
+          gateway-18, gateway-2, gateway-3, gateway-4, gateway-5, gateway-6, gateway-7,
+          gateway-8, gateway-9.'
         reason: Invalid
         status: "False"
         type: Accepted
       - lastTransitionTime: null
-        message: This policy has been aggregated because policy ancestor is greater
-          than 16
+        message: Ancestors have been aggregated because the number of policy ancestors
+          exceeds 16.
         reason: Aggregated
         status: "True"
         type: Aggregated

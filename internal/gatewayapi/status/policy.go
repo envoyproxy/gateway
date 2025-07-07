@@ -7,6 +7,8 @@ package status
 
 import (
 	"fmt"
+	"sort"
+	"strings"
 	"time"
 
 	"github.com/google/go-cmp/cmp"
@@ -95,7 +97,7 @@ func SetConditionForPolicyAncestor(policyStatus *gwapiv1a2.PolicyStatus, ancesto
 }
 
 func TruncatePolicyAncestors(policyStatus *gwapiv1a2.PolicyStatus, ancestorRef gwapiv1a2.ParentReference, controllerName string, generation int64) {
-	aggregatedPolicyConditions := map[metav1.Condition]int{}
+	aggregatedPolicyConditions := map[metav1.Condition][]string{}
 	for _, ancestor := range policyStatus.Ancestors {
 		for _, condition := range ancestor.Conditions {
 			apc := metav1.Condition{
@@ -103,20 +105,23 @@ func TruncatePolicyAncestors(policyStatus *gwapiv1a2.PolicyStatus, ancestorRef g
 				Status: condition.Status,
 				Reason: condition.Reason,
 			}
-			aggregatedPolicyConditions[apc]++
+			aggregatedPolicyConditions[apc] = append(aggregatedPolicyConditions[apc], string(ancestor.AncestorRef.Name))
 		}
 	}
 
 	policyStatus.Ancestors = nil
 
-	for apc, count := range aggregatedPolicyConditions {
+	for apc, parents := range aggregatedPolicyConditions {
+		sort.Strings(parents)
+
 		SetConditionForPolicyAncestor(policyStatus,
 			ancestorRef,
 			controllerName,
 			gwapiv1a2.PolicyConditionType(apc.Type),
 			apc.Status,
 			gwapiv1a2.PolicyConditionReason(apc.Reason),
-			fmt.Sprintf("This policy has %d ancestors with %s condition in %s status due to %s reason", count, apc.Type, apc.Status, apc.Reason),
+			fmt.Sprintf("This policy has %d ancestors with %s condition in %s status due to %s reason. Aggregated ancestors: %s.",
+				len(parents), apc.Type, apc.Status, apc.Reason, strings.Join(parents, ", ")),
 			generation,
 		)
 	}
@@ -127,7 +132,7 @@ func TruncatePolicyAncestors(policyStatus *gwapiv1a2.PolicyStatus, ancestorRef g
 		egv1a1.PolicyConditionAggregated,
 		metav1.ConditionTrue,
 		egv1a1.PolicyReasonAggregated,
-		"This policy has been aggregated because policy ancestor is greater than 16",
+		"Ancestors have been aggregated because the number of policy ancestors exceeds 16.",
 		generation,
 	)
 }
