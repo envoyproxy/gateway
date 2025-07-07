@@ -8,6 +8,7 @@ package validation
 import (
 	"fmt"
 	"net/url"
+	"strings"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 )
@@ -167,8 +168,11 @@ func validateEnvoyGatewayRateLimit(rateLimit *egv1a1.RateLimit) error {
 	if rateLimit.Backend.Redis == nil || rateLimit.Backend.Redis.URL == "" {
 		return fmt.Errorf("empty ratelimit redis settings")
 	}
-	if _, err := url.Parse(rateLimit.Backend.Redis.URL); err != nil {
-		return fmt.Errorf("unknown ratelimit redis url format: %w", err)
+	redisHosts := strings.Split(rateLimit.Backend.Redis.URL, ",")
+	for _, host := range redisHosts {
+		if _, err := url.Parse(host); err != nil {
+			return fmt.Errorf("unknown ratelimit redis url format: %w", err)
+		}
 	}
 	return nil
 }

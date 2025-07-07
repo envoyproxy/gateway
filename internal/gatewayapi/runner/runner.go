@@ -170,6 +170,10 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *re
 					for _, gvk := range r.EnvoyGateway.ExtensionManager.Resources {
 						extGKs = append(extGKs, schema.GroupKind{Group: gvk.Group, Kind: gvk.Kind})
 					}
+					// Include backend resources in extension group kinds for custom backend support
+					for _, gvk := range r.EnvoyGateway.ExtensionManager.BackendResources {
+						extGKs = append(extGKs, schema.GroupKind{Group: gvk.Group, Kind: gvk.Kind})
+					}
 					t.ExtensionGroupKinds = extGKs
 					r.Logger.Info("extension resources", "GVKs count", len(extGKs))
 				}
@@ -177,7 +181,7 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *re
 				result, err := t.Translate(resources)
 				if err != nil {
 					// Currently all errors that Translate returns should just be logged
-					r.Logger.Error(err, "errors detected during translation")
+					r.Logger.Error(err, "errors detected during translation", "gateway-class", resources.GatewayClass.Name)
 				}
 
 				// Publish the IRs.
