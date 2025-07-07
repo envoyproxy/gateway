@@ -253,7 +253,10 @@ func buildXdsCluster(args *xdsClusterArgs) (*buildClusterResult, error) {
 		leastRequest := &least_requestv3.LeastRequest{
 			LocalityLbConfig: localityLbConfig,
 		}
-		typedLeastRequest, _ := anypb.New(leastRequest)
+		typedLeastRequest, err := proto.ToAnyWithValidation(leastRequest)
+		if err != nil {
+			return nil, err
+		}
 		cluster.LoadBalancingPolicy = &clusterv3.LoadBalancingPolicy{
 			Policies: []*clusterv3.LoadBalancingPolicy_Policy{{
 				TypedExtensionConfig: &corev3.TypedExtensionConfig{
@@ -273,7 +276,10 @@ func buildXdsCluster(args *xdsClusterArgs) (*buildClusterResult, error) {
 				SlowStartWindow: durationpb.New(args.loadBalancer.LeastRequest.SlowStart.Window.Duration),
 			}
 		}
-		typedLeastRequest, _ := anypb.New(leastRequest)
+		typedLeastRequest, err := proto.ToAnyWithValidation(leastRequest)
+		if err != nil {
+			return nil, err
+		}
 		cluster.LoadBalancingPolicy = &clusterv3.LoadBalancingPolicy{
 			Policies: []*clusterv3.LoadBalancingPolicy_Policy{{
 				TypedExtensionConfig: &corev3.TypedExtensionConfig{
@@ -292,7 +298,10 @@ func buildXdsCluster(args *xdsClusterArgs) (*buildClusterResult, error) {
 				SlowStartWindow: durationpb.New(args.loadBalancer.RoundRobin.SlowStart.Window.Duration),
 			}
 		}
-		typedRoundRobin, _ := anypb.New(roundRobin)
+		typedRoundRobin, err := proto.ToAnyWithValidation(roundRobin)
+		if err != nil {
+			return nil, err
+		}
 		cluster.LoadBalancingPolicy = &clusterv3.LoadBalancingPolicy{
 			Policies: []*clusterv3.LoadBalancingPolicy_Policy{{
 				TypedExtensionConfig: &corev3.TypedExtensionConfig{
@@ -306,7 +315,10 @@ func buildXdsCluster(args *xdsClusterArgs) (*buildClusterResult, error) {
 		random := &randomv3.Random{
 			LocalityLbConfig: localityLbConfig,
 		}
-		typeRandom, _ := anypb.New(random)
+		typeRandom, err := proto.ToAnyWithValidation(random)
+		if err != nil {
+			return nil, err
+		}
 		cluster.LoadBalancingPolicy = &clusterv3.LoadBalancingPolicy{
 			Policies: []*clusterv3.LoadBalancingPolicy_Policy{{
 				TypedExtensionConfig: &corev3.TypedExtensionConfig{
@@ -321,7 +333,10 @@ func buildXdsCluster(args *xdsClusterArgs) (*buildClusterResult, error) {
 		if args.loadBalancer.ConsistentHash.TableSize != nil {
 			consistentHash.TableSize = wrapperspb.UInt64(*args.loadBalancer.ConsistentHash.TableSize)
 		}
-		typedConsistentHash, _ := anypb.New(consistentHash)
+		typedConsistentHash, err := proto.ToAnyWithValidation(consistentHash)
+		if err != nil {
+			return nil, err
+		}
 		cluster.LoadBalancingPolicy = &clusterv3.LoadBalancingPolicy{
 			Policies: []*clusterv3.LoadBalancingPolicy_Policy{{
 				TypedExtensionConfig: &corev3.TypedExtensionConfig{
@@ -376,7 +391,10 @@ func buildXdsCluster(args *xdsClusterArgs) (*buildClusterResult, error) {
 		}}
 		cluster.LbPolicy = clusterv3.Cluster_CLUSTER_PROVIDED
 		clusterProvided := &cluster_providedv3.ClusterProvided{}
-		typedClusterProvided, _ := anypb.New(clusterProvided)
+		typedClusterProvided, err := proto.ToAnyWithValidation(clusterProvided)
+		if err != nil {
+			return nil, err
+		}
 		cluster.LoadBalancingPolicy = &clusterv3.LoadBalancingPolicy{
 			Policies: []*clusterv3.LoadBalancingPolicy_Policy{{
 				TypedExtensionConfig: &corev3.TypedExtensionConfig{
