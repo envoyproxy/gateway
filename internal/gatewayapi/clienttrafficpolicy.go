@@ -831,7 +831,7 @@ func (t *Translator) buildListenerTLSParameters(policy *egv1a1.ClientTrafficPoli
 				secretCertBytes, ok := getCaCertFromSecret(secret)
 				if !ok || len(secretCertBytes) == 0 {
 					return irTLSConfig, fmt.Errorf(
-						"caCertificateRef not found in secret %s", caCertRef.Name)
+						"caCertificateRef secret [%s] not found", caCertRef.Name)
 				}
 				caCertBytes = secretCertBytes
 			case resource.KindConfigMap:
@@ -843,14 +843,14 @@ func (t *Translator) buildListenerTLSParameters(policy *egv1a1.ClientTrafficPoli
 				configMapData, ok := getCaCertFromConfigMap(configMap)
 				if !ok || len(configMapData) == 0 {
 					return irTLSConfig, fmt.Errorf(
-						"caCertificateRef not found in configmap %s", caCertRef.Name)
+						"caCertificateRef configmap [%s] not found", caCertRef.Name)
 				}
 				caCertBytes = []byte(configMapData)
 			case resource.KindClusterTrustBundle:
 				trustBundle := resources.GetClusterTrustBundle(string(caCertRef.Name))
 				if trustBundle == nil {
 					return irTLSConfig, fmt.Errorf(
-						"caCertificateRef not found in ClusterTrustBundle %s", caCertRef.Name)
+						"caCertificateRef ClusterTrustBundle [%s] not found", caCertRef.Name)
 				}
 				caCertBytes = []byte(trustBundle.Spec.TrustBundle)
 			default:

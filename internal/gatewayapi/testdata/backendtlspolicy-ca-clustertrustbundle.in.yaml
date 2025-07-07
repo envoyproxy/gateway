@@ -45,12 +45,6 @@ referenceGrants:
         - group: gateway.networking.k8s.io
           kind: HTTPRoute
           namespace: envoy-gateway
-        - group: gateway.networking.k8s.io
-          kind: Gateway
-          namespace: envoy-gateway
-        - group: gateway.networking.k8s.io
-          kind: BackendTLSPolicy
-          namespace: policies
       to:
         - group: ""
           kind: Service
