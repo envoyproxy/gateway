@@ -318,6 +318,8 @@ xdsIR:
             port: 8080
             zone: zone1
           name: envoy-default-tcp-gateway-1ec60381
+          preferLocal:
+            minEndpointsThreshold: 1
           protocol: HTTP
         name: envoy-default-tcp-gateway-1ec60381
     readyListener:

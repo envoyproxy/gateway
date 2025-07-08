@@ -187,6 +187,8 @@ xdsIR:
       proxyInfraCluster:
         destination:
           name: envoy-envoy-gateway-gateway-a-37c12ef1
+          preferLocal:
+            minEndpointsThreshold: 1
           protocol: HTTP
         name: envoy-envoy-gateway-gateway-a-37c12ef1
     http:
@@ -243,6 +245,8 @@ xdsIR:
             port: 8080
             zone: zone1
           name: envoy-envoy-gateway-gateway-b-3a004b3a
+          preferLocal:
+            minEndpointsThreshold: 1
           protocol: HTTP
         name: envoy-envoy-gateway-gateway-b-3a004b3a
     http:

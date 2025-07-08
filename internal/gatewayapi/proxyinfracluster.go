@@ -86,7 +86,7 @@ func (t *Translator) processEnvoyServiceDestinationSetting(
 		Protocol:    ir.HTTP,
 		Endpoints:   endpoints,
 		AddressType: addrType,
-		// might need to come back to this
-		// ZoneAwareRoutingEnabled: true,
+		// Use Zone Aware Lb so locality info is injected for endpoints
+		PreferLocal: &ir.PreferLocalZone{MinEndpointsThreshold: ptr.To[uint64](1)},
 	}
 }

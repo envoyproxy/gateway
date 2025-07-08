@@ -109,6 +109,8 @@ xdsIR:
             port: 8080
             zone: zone1
           name: envoy-gateway-conformance-infra-gateway-tlsroute-refer-1a02781b
+          preferLocal:
+            minEndpointsThreshold: 1
           protocol: HTTP
         name: envoy-gateway-conformance-infra-gateway-tlsroute-refer-1a02781b
     readyListener:

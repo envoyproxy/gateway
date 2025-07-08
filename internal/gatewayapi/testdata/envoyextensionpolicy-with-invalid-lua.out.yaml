@@ -219,6 +219,8 @@ xdsIR:
             port: 8080
             zone: zone1
           name: envoy-envoy-gateway-gateway-1-196ae069
+          preferLocal:
+            minEndpointsThreshold: 1
           protocol: HTTP
         name: envoy-envoy-gateway-gateway-1-196ae069
     http:

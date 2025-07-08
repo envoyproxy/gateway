@@ -239,6 +239,8 @@ xdsIR:
             port: 8080
             zone: zone1
           name: envoy-envoy-gateway-gateway-btls-a945b5bb
+          preferLocal:
+            minEndpointsThreshold: 1
           protocol: HTTP
         name: envoy-envoy-gateway-gateway-btls-a945b5bb
     http:
