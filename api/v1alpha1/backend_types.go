@@ -134,9 +134,9 @@ type BackendSpec struct {
 	// Endpoints defines the endpoints to be used when connecting to the backend.
 	//
 	// +kubebuilder:validation:MinItems=1
-	// +kubebuilder:validation:MaxItems=64
-	// +kubebuilder:validation:XValidation:rule="self.all(f, has(f.fqdn)) || !self.exists(f, has(f.fqdn))",message="fqdn addresses cannot be mixed with other address types"
-	Endpoints []BackendEndpoint `json:"endpoints,omitempty"`
+        // +kubebuilder:validation:MaxItems=4
+        // +kubebuilder:validation:XValidation:rule="self.all(f, has(f.fqdn)) || !self.exists(f, has(f.fqdn))",message="fqdn addresses cannot be mixed with other address types"
+        // +optional	Endpoints []BackendEndpoint `json:"endpoints,omitempty"`
 
 	// AppProtocols defines the application protocols to be supported when connecting to the backend.
 	//

@@ -17365,18 +17365,6 @@ spec:
           spec:
             description: Spec defines the desired state of Backend.
             properties:
-              appProtocols:
-                description: AppProtocols defines the application protocols to be
-                  supported when connecting to the backend.
-                items:
-                  description: AppProtocolType defines various backend applications
-                    protocols supported by Envoy Gateway
-                  enum:
-                  - gateway.envoyproxy.io/h2c
-                  - gateway.envoyproxy.io/ws
-                  - gateway.envoyproxy.io/wss
-                  type: string
-                type: array
               endpoints:
                 description: Endpoints defines the endpoints to be used when connecting
                   to the backend.
@@ -17452,25 +17440,47 @@ spec:
                     rule: ((has(self.fqdn) && !(has(self.ip) || has(self.unix))) ||
                       (has(self.ip) && !(has(self.fqdn) || has(self.unix))) || (has(self.unix)
                       && !(has(self.ip) || has(self.fqdn))))
-                maxItems: 64
+                maxItems: 4
                 minItems: 1
                 type: array
                 x-kubernetes-validations:
                 - message: fqdn addresses cannot be mixed with other address types
                   rule: self.all(f, has(f.fqdn)) || !self.exists(f, has(f.fqdn))
-              fallback:
+              fqdn:
+                description: FQDN defines the FQDN used to contact the backend.
+                maxLength: 253
+                pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                type: string
+              originalDestinationSettings:
                 description: |-
-                  Fallback indicates whether the backend is designated as a fallback.
-                  It is highly recommended to configure active or passive health checks to ensure that failover can be detected
-                  when the active backends become unhealthy and to automatically readjust once the primary backends are healthy again.
-                  The overprovisioning factor is set to 1.4, meaning the fallback backends will only start receiving traffic when
-                  the health of the active backends falls below 72%.
-                type: boolean
+                  OriginalDestinationSettings defines settings for Original Destination backend type.
+                  This field is only valid when Type is "OriginalDestination".
+                properties:
+                  allowedDestinations:
+                    description: |-
+                      AllowedDestinations specifies CIDR blocks or hostnames that are permitted
+                      as routing destinations. If empty, all destinations are allowed.
+                      Use this for security to prevent routing to unintended endpoints.
+
+                      Examples:
+                      - "10.0.0.0/8" (private networks)
+                      - "backend.example.com" (specific hostname)
+                      - "*.example.com" (wildcard hostname)
+                    items:
+                      type: string
+                    maxItems: 20
+                    type: array
+                  header:
+                    default: x-envoy-original-dst-host
+                    description: |-
+                      Header specifies the header name containing the destination address.
+                      The header value must be in "host:port" format (e.g., "backend.example.com:8080").
+                      If not specified, defaults to "x-envoy-original-dst-host".
+                    pattern: ^[a-zA-Z0-9]([a-zA-Z0-9\-_]{0,61}[a-zA-Z0-9])?$
+                    type: string
+                type: object
               tls:
-                description: |-
-                  TLS defines the TLS settings for the backend.
-                  TLS.CACertificateRefs and TLS.WellKnownCACertificates can only be specified for DynamicResolver backends.
-                  TLS.InsecureSkipVerify can be specified for any Backends
+                description: TLS defines the TLS configuration for the backend.
                 properties:
                   caCertificateRefs:
                     description: |-
@@ -17560,11 +17570,16 @@ spec:
                 enum:
                 - Endpoints
                 - DynamicResolver
+                - OriginalDestination
                 type: string
             type: object
             x-kubernetes-validations:
             - message: DynamicResolver type cannot have endpoints specified
               rule: self.type != 'DynamicResolver' || !has(self.endpoints)
+            - message: OriginalDestination type cannot have endpoints specified
+              rule: self.type != 'OriginalDestination' || !has(self.endpoints)
+            - message: OriginalDestination type must specify originalDestinationSettings
+              rule: self.type != 'OriginalDestination' || has(self.originalDestinationSettings)
           status:
             description: Status defines the current status of Backend.
             properties:

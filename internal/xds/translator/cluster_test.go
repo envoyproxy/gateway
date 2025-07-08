@@ -47,6 +47,291 @@ func TestBuildXdsCluster(t *testing.T) {
 	assert.True(t, proto.Equal(bootstrapXdsCluster.ConnectTimeout, dynamicXdsCluster.ConnectTimeout))
 }
 
+func TestCheckZoneAwareRouting(t *testing.T) {
+	tests := []struct {
+		name            string
+		zoneRouting     *ir.ZoneAwareRouting
+		loadBalancerCfg *ir.LoadBalancer
+	}{
+		{
+			name:        "zone-routing with default lb",
+			zoneRouting: &ir.ZoneAwareRouting{MinSize: 1},
+			loadBalancerCfg: &ir.LoadBalancer{
+				LeastRequest: &ir.LeastRequest{},
+			},
+		},
+		{
+			name:        "zone-routing with default lb and topology aware routing",
+			zoneRouting: &ir.ZoneAwareRouting{MinSize: 3},
+			loadBalancerCfg: &ir.LoadBalancer{
+				LeastRequest: &ir.LeastRequest{},
+			},
+		},
+		{
+			name:            "zone-routing with nil lb",
+			zoneRouting:     &ir.ZoneAwareRouting{MinSize: 1},
+			loadBalancerCfg: nil,
+		},
+		{
+			name:        "zone-routing with least request",
+			zoneRouting: &ir.ZoneAwareRouting{MinSize: 1},
+			loadBalancerCfg: &ir.LoadBalancer{
+				LeastRequest: &ir.LeastRequest{
+					SlowStart: &ir.SlowStart{Window: &metav1.Duration{Duration: 1 * time.Second}},
+				},
+			},
+		},
+		{
+			name:        "zone-routing with round robin",
+			zoneRouting: &ir.ZoneAwareRouting{MinSize: 1},
+			loadBalancerCfg: &ir.LoadBalancer{
+				RoundRobin: &ir.RoundRobin{
+					SlowStart: &ir.SlowStart{Window: &metav1.Duration{Duration: 1 * time.Second}},
+				},
+			},
+		},
+		{
+			name:            "zone-routing with random",
+			zoneRouting:     &ir.ZoneAwareRouting{MinSize: 1},
+			loadBalancerCfg: &ir.LoadBalancer{Random: &ir.Random{}},
+		},
+		{
+			name:        "zone-routing with maglev",
+			zoneRouting: &ir.ZoneAwareRouting{MinSize: 1},
+			loadBalancerCfg: &ir.LoadBalancer{
+				ConsistentHash: &ir.ConsistentHash{
+					TableSize: proto.Uint64(65537),
+				},
+			},
+		},
+		{
+			name:        "zone-routing with round robin",
+			zoneRouting: &ir.ZoneAwareRouting{MinSize: 1},
+			loadBalancerCfg: &ir.LoadBalancer{
+				RoundRobin: &ir.RoundRobin{
+					SlowStart: &ir.SlowStart{Window: &metav1.Duration{Duration: 1 * time.Second}},
+				},
+			},
+		},
+		{
+			name:        "zone-routing disabled",
+			zoneRouting: nil,
+			loadBalancerCfg: &ir.LoadBalancer{
+				LeastRequest: &ir.LeastRequest{},
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			bootstrapXdsCluster := getXdsClusterObjFromBootstrap(t)
+			ds := &ir.DestinationSetting{
+				Endpoints:        []*ir.DestinationEndpoint{{Host: envoyGatewayXdsServerHost, Port: bootstrap.DefaultXdsServerPort}},
+				ZoneAwareRouting: tt.zoneRouting,
+			}
+			args := &xdsClusterArgs{
+				name:         bootstrapXdsCluster.Name,
+				tSocket:      bootstrapXdsCluster.TransportSocket,
+				endpointType: EndpointTypeDNS,
+				healthCheck: &ir.HealthCheck{
+					PanicThreshold: ptr.To[uint32](66),
+				},
+				loadBalancer: tt.loadBalancerCfg,
+				settings:     []*ir.DestinationSetting{ds},
+			}
+			clusterResult, err := buildXdsCluster(args)
+			dynamicXdsCluster := clusterResult.cluster
+			require.NoError(t, err)
+
+			if tt.zoneRouting == nil {
+				require.Nil(t, dynamicXdsCluster.LoadBalancingPolicy)
+				require.Equal(t, &clusterv3.Cluster_CommonLbConfig_LocalityWeightedLbConfig_{LocalityWeightedLbConfig: &clusterv3.Cluster_CommonLbConfig_LocalityWeightedLbConfig{}}, dynamicXdsCluster.CommonLbConfig.LocalityConfigSpecifier)
+			} else {
+				require.Nil(t, dynamicXdsCluster.CommonLbConfig.LocalityConfigSpecifier)
+				expectedLoadBalancingPolicy := getExpectedClusterLbPolicies(tt.zoneRouting, dynamicXdsCluster.LbPolicy, args.loadBalancer)
+				require.Equal(t, expectedLoadBalancingPolicy.Policies[0].TypedExtensionConfig.Name, dynamicXdsCluster.LoadBalancingPolicy.Policies[0].TypedExtensionConfig.Name)
+				require.Equal(t, expectedLoadBalancingPolicy.Policies[0].GetTypedExtensionConfig().GetTypedConfig().String(), dynamicXdsCluster.LoadBalancingPolicy.Policies[0].GetTypedExtensionConfig().GetTypedConfig().String())
+			}
+		})
+	}
+}
+
+func getExpectedClusterLbPolicies(zoneRouting *ir.ZoneAwareRouting, policy clusterv3.Cluster_LbPolicy, lb *ir.LoadBalancer) *clusterv3.LoadBalancingPolicy {
+	localityLbConfig := &commonv3.LocalityLbConfig{
+		LocalityConfigSpecifier: &commonv3.LocalityLbConfig_ZoneAwareLbConfig_{
+			ZoneAwareLbConfig: &commonv3.LocalityLbConfig_ZoneAwareLbConfig{
+				MinClusterSize: wrapperspb.UInt64(1),
+				ForceLocalZone: &commonv3.LocalityLbConfig_ZoneAwareLbConfig_ForceLocalZone{
+					MinSize: wrapperspb.UInt32(uint32(zoneRouting.MinSize)),
+				},
+			},
+		},
+	}
+	leastRequest := &least_requestv3.LeastRequest{
+		LocalityLbConfig: localityLbConfig,
+	}
+	typedLeastRequest, _ := anypb.New(leastRequest)
+	loadBalancingPolicy := &clusterv3.LoadBalancingPolicy{
+		Policies: []*clusterv3.LoadBalancingPolicy_Policy{{
+			TypedExtensionConfig: &corev3.TypedExtensionConfig{
+				Name:        "envoy.load_balancing_policies.least_request",
+				TypedConfig: typedLeastRequest,
+			},
+		}},
+	}
+
+	if lb == nil {
+		return loadBalancingPolicy
+	}
+	switch policy {
+	case clusterv3.Cluster_LEAST_REQUEST:
+		if lb.LeastRequest != nil && lb.LeastRequest.SlowStart != nil && lb.LeastRequest.SlowStart.Window != nil {
+			leastRequest.SlowStartConfig = &commonv3.SlowStartConfig{
+				SlowStartWindow: durationpb.New(lb.LeastRequest.SlowStart.Window.Duration),
+			}
+		}
+		loadBalancingPolicy.Policies[0].TypedExtensionConfig.TypedConfig, _ = anypb.New(leastRequest)
+		return loadBalancingPolicy
+	case clusterv3.Cluster_ROUND_ROBIN:
+		roundRobin := &round_robinv3.RoundRobin{
+			LocalityLbConfig: localityLbConfig,
+		}
+		if lb.RoundRobin.SlowStart != nil && lb.RoundRobin.SlowStart.Window != nil {
+			roundRobin.SlowStartConfig = &commonv3.SlowStartConfig{
+				SlowStartWindow: durationpb.New(lb.RoundRobin.SlowStart.Window.Duration),
+			}
+		}
+		typedRoundRobin, _ := anypb.New(roundRobin)
+		return &clusterv3.LoadBalancingPolicy{
+			Policies: []*clusterv3.LoadBalancingPolicy_Policy{{
+				TypedExtensionConfig: &corev3.TypedExtensionConfig{
+					Name:        "envoy.load_balancing_policies.round_robin",
+					TypedConfig: typedRoundRobin,
+				},
+			}},
+		}
+	case clusterv3.Cluster_RANDOM:
+		random := &randomv3.Random{
+			LocalityLbConfig: localityLbConfig,
+		}
+		typeRandom, _ := anypb.New(random)
+		return &clusterv3.LoadBalancingPolicy{
+			Policies: []*clusterv3.LoadBalancingPolicy_Policy{{
+				TypedExtensionConfig: &corev3.TypedExtensionConfig{
+					Name:        "envoy.load_balancing_policies.random",
+					TypedConfig: typeRandom,
+				},
+			}},
+		}
+	case clusterv3.Cluster_MAGLEV:
+		consistentHash := &maglevv3.Maglev{}
+		if lb.ConsistentHash.TableSize != nil {
+			consistentHash.TableSize = wrapperspb.UInt64(*lb.ConsistentHash.TableSize)
+		}
+		typedConsistentHash, _ := anypb.New(consistentHash)
+
+		return &clusterv3.LoadBalancingPolicy{
+			Policies: []*clusterv3.LoadBalancingPolicy_Policy{{
+				TypedExtensionConfig: &corev3.TypedExtensionConfig{
+					Name:        "envoy.load_balancing_policies.maglev",
+					TypedConfig: typedConsistentHash,
+				},
+			}},
+		}
+
+	}
+	return nil
+}
+
+func TestBuildXdsClusterOriginalDestination(t *testing.T) {
+	tests := []struct {
+		name     string
+		settings []*ir.DestinationSetting
+		expected *clusterv3.Cluster_OriginalDstLbConfig_
+	}{
+		{
+			name: "original destination with header",
+			settings: []*ir.DestinationSetting{
+				{
+					IsOriginalDestination: true,
+					OriginalDestinationSettings: &ir.OriginalDestinationSettings{
+						Header: ptr.To("target-host"),
+					},
+				},
+			},
+			expected: &clusterv3.Cluster_OriginalDstLbConfig_{
+				OriginalDstLbConfig: &clusterv3.Cluster_OriginalDstLbConfig{
+					UseHttpHeader:  true,
+					HttpHeaderName: "target-host",
+				},
+			},
+		},
+		{
+			name: "original destination with custom header",
+			settings: []*ir.DestinationSetting{
+				{
+					IsOriginalDestination: true,
+					OriginalDestinationSettings: &ir.OriginalDestinationSettings{
+						Header:              ptr.To("custom-target-header"),
+						AllowedDestinations: []string{"10.0.0.0/8"},
+					},
+				},
+			},
+			expected: &clusterv3.Cluster_OriginalDstLbConfig_{
+				OriginalDstLbConfig: &clusterv3.Cluster_OriginalDstLbConfig{
+					UseHttpHeader:  true,
+					HttpHeaderName: "custom-target-header",
+				},
+			},
+		},
+		{
+			name: "normal destination",
+			settings: []*ir.DestinationSetting{
+				{
+					IsOriginalDestination: false,
+					Endpoints: []*ir.DestinationEndpoint{
+						{Host: "example.com", Port: 80},
+					},
+				},
+			},
+			expected: nil,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			args := &xdsClusterArgs{
+				name:         "test-cluster",
+				settings:     tt.settings,
+				endpointType: EndpointTypeOriginalDestination,
+			}
+
+			if !tt.settings[0].IsOriginalDestination {
+				args.endpointType = EndpointTypeStatic
+			}
+
+			result, err := buildXdsCluster(args)
+			require.NoError(t, err)
+			cluster := result.cluster
+
+			switch {
+			case tt.expected != nil:
+				// Check cluster type and load balancing policy
+				assert.Equal(t, clusterv3.Cluster_ORIGINAL_DST, cluster.ClusterDiscoveryType.(*clusterv3.Cluster_Type).Type)
+				assert.Equal(t, clusterv3.Cluster_CLUSTER_PROVIDED, cluster.LbPolicy)
+				assert.Equal(t, tt.expected, cluster.LbConfig)
+			case tt.settings[0].IsOriginalDestination:
+				// Original destination without header should still be ORIGINAL_DST type
+				assert.Equal(t, clusterv3.Cluster_ORIGINAL_DST, cluster.ClusterDiscoveryType.(*clusterv3.Cluster_Type).Type)
+				assert.Equal(t, clusterv3.Cluster_CLUSTER_PROVIDED, cluster.LbPolicy)
+				assert.Nil(t, cluster.LbConfig)
+			default:
+				// Normal destination should not be ORIGINAL_DST
+				assert.NotEqual(t, clusterv3.Cluster_ORIGINAL_DST, cluster.ClusterDiscoveryType.(*clusterv3.Cluster_Type).Type)
+			}
+		})
+	}
+}
+
 func TestBuildXdsClusterLoadAssignment(t *testing.T) {
 	bootstrapXdsCluster := getXdsClusterObjFromBootstrap(t)
 	ds := &ir.DestinationSetting{
