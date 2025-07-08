@@ -3,6 +3,7 @@ date: Pending
 # Changes that are expected to cause an incompatibility with previous versions, such as deletions or modifications to existing APIs.
 breaking changes: |
   Use gateway name as proxy fleet name for gateway namespace mode.
+  Endpoints that are absent from service discovery are removed even if their active health checks succeed.
 
 # Updates addressing vulnerabilities, security flaws, or compliance requirements.
 security updates: |

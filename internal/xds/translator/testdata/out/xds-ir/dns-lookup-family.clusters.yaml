@@ -5,6 +5,7 @@
   connectTimeout: 10s
   dnsLookupFamily: V6_ONLY
   dnsRefreshRate: 5s
+  ignoreHealthOnHostRemoval: true
   lbPolicy: LEAST_REQUEST
   loadAssignment:
     clusterName: httproute/default/httproute-1/rule/0
@@ -36,6 +37,7 @@
   connectTimeout: 10s
   dnsLookupFamily: V6_ONLY
   dnsRefreshRate: 5s
+  ignoreHealthOnHostRemoval: true
   lbPolicy: LEAST_REQUEST
   loadAssignment:
     clusterName: grpcroute/default/grpcroute-1/rule/0
@@ -74,6 +76,7 @@
   connectTimeout: 10s
   dnsLookupFamily: V4_PREFERRED
   dnsRefreshRate: 30s
+  ignoreHealthOnHostRemoval: true
   lbPolicy: LEAST_REQUEST
   loadAssignment:
     clusterName: securitypolicy/envoy-gateway/policy-for-gateway-1/extauth/0
@@ -106,6 +109,7 @@
   connectTimeout: 10s
   dnsLookupFamily: ALL
   dnsRefreshRate: 5s
+  ignoreHealthOnHostRemoval: true
   lbPolicy: LEAST_REQUEST
   loadAssignment:
     clusterName: envoyextensionpolicy/default/policy-for-httproute/extproc/0
@@ -145,6 +149,7 @@
   connectTimeout: 10s
   dnsLookupFamily: V4_ONLY
   dnsRefreshRate: 30s
+  ignoreHealthOnHostRemoval: true
   lbPolicy: LEAST_REQUEST
   loadAssignment:
     clusterName: accesslog_otel_0_1
