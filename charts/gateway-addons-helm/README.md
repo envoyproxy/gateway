@@ -41,7 +41,7 @@ The Envoy Gateway must be installed before installing this chart.
 Once Helm has been set up correctly, install the chart from dockerhub:
 
 ``` shell
-    helm install eg-addons oci://docker.io/envoyproxy/gateway-addons-helm --version v0.0.0-latest -n monitoring --create-namespace
+helm install eg-addons oci://docker.io/envoyproxy/gateway-addons-helm --version v0.0.0-latest -n monitoring --create-namespace
 ```
 
 You can find all helm chart release in [Dockerhub](https://hub.docker.com/r/envoyproxy/gateway-addons-helm/tags)
@@ -49,7 +49,7 @@ You can find all helm chart release in [Dockerhub](https://hub.docker.com/r/envo
 To uninstall the chart:
 
 ``` shell
-    helm uninstall eg-addons -n monitoring
+helm uninstall eg-addons -n monitoring
 ```
 
 ## Values
