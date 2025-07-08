@@ -21,23 +21,13 @@ import (
 	"github.com/envoyproxy/gateway/internal/ir"
 )
 
-// ProcessBackendTLSPolicies is called to post-process Backend TLS Policy status
+// ProcessBackendTLSPolicyStatus is called to post-process Backend TLS Policy status
 // after they were applied in all relevant translations.
-func (t *Translator) ProcessBackendTLSPolicies(btlsp []*gwapiv1a3.BackendTLSPolicy) {
+func (t *Translator) ProcessBackendTLSPolicyStatus(btlsp []*gwapiv1a3.BackendTLSPolicy) {
 	for _, policy := range btlsp {
 		// Truncate Ancestor list of longer than 16
 		if len(policy.Status.Ancestors) > 16 {
-			// Policy Status currently only supports AncestorRefs, so select the one ancestor
-			// whose AncestorRef.Name is first in dictionary order and treat it
-			// as the representative ancestor for the aggregated ancestors.
-			selected := policy.Status.Ancestors[0].AncestorRef
-			for _, ancestor := range policy.Status.Ancestors[1:] {
-				if ancestor.AncestorRef.Name < selected.Name {
-					selected = ancestor.AncestorRef
-				}
-			}
-
-			status.TruncatePolicyAncestors(&policy.Status, selected, t.GatewayControllerName, policy.Generation)
+			status.TruncatePolicyAncestors(&policy.Status, t.GatewayControllerName, policy.Generation)
 		}
 	}
 }

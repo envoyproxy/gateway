@@ -24,11 +24,157 @@ backendTLSPolicies:
         namespace: envoy-gateway
       conditions:
       - lastTransitionTime: null
-        message: 'This policy has 18 ancestors with Accepted condition in True status
-          due to Accepted reason. Aggregated ancestors: gateway-1, gateway-10, gateway-11,
-          gateway-12, gateway-13, gateway-14, gateway-15, gateway-16, gateway-17,
-          gateway-18, gateway-2, gateway-3, gateway-4, gateway-5, gateway-6, gateway-7,
-          gateway-8, gateway-9.'
+        message: Policy has been accepted.
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+    - ancestorRef:
+        name: gateway-10
+        namespace: envoy-gateway
+      conditions:
+      - lastTransitionTime: null
+        message: Policy has been accepted.
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+    - ancestorRef:
+        name: gateway-11
+        namespace: envoy-gateway
+      conditions:
+      - lastTransitionTime: null
+        message: Policy has been accepted.
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+    - ancestorRef:
+        name: gateway-12
+        namespace: envoy-gateway
+      conditions:
+      - lastTransitionTime: null
+        message: Policy has been accepted.
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+    - ancestorRef:
+        name: gateway-13
+        namespace: envoy-gateway
+      conditions:
+      - lastTransitionTime: null
+        message: Policy has been accepted.
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+    - ancestorRef:
+        name: gateway-14
+        namespace: envoy-gateway
+      conditions:
+      - lastTransitionTime: null
+        message: Policy has been accepted.
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+    - ancestorRef:
+        name: gateway-15
+        namespace: envoy-gateway
+      conditions:
+      - lastTransitionTime: null
+        message: Policy has been accepted.
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+    - ancestorRef:
+        name: gateway-16
+        namespace: envoy-gateway
+      conditions:
+      - lastTransitionTime: null
+        message: Policy has been accepted.
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+    - ancestorRef:
+        name: gateway-17
+        namespace: envoy-gateway
+      conditions:
+      - lastTransitionTime: null
+        message: Policy has been accepted.
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+    - ancestorRef:
+        name: gateway-18
+        namespace: envoy-gateway
+      conditions:
+      - lastTransitionTime: null
+        message: Policy has been accepted.
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+    - ancestorRef:
+        name: gateway-2
+        namespace: envoy-gateway
+      conditions:
+      - lastTransitionTime: null
+        message: Policy has been accepted.
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+    - ancestorRef:
+        name: gateway-3
+        namespace: envoy-gateway
+      conditions:
+      - lastTransitionTime: null
+        message: Policy has been accepted.
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+    - ancestorRef:
+        name: gateway-4
+        namespace: envoy-gateway
+      conditions:
+      - lastTransitionTime: null
+        message: Policy has been accepted.
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+    - ancestorRef:
+        name: gateway-5
+        namespace: envoy-gateway
+      conditions:
+      - lastTransitionTime: null
+        message: Policy has been accepted.
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+    - ancestorRef:
+        name: gateway-6
+        namespace: envoy-gateway
+      conditions:
+      - lastTransitionTime: null
+        message: Policy has been accepted.
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+    - ancestorRef:
+        name: gateway-7
+        namespace: envoy-gateway
+      conditions:
+      - lastTransitionTime: null
+        message: Policy has been accepted.
         reason: Accepted
         status: "True"
         type: Accepted
@@ -64,11 +210,157 @@ backendTLSPolicies:
         namespace: envoy-gateway
       conditions:
       - lastTransitionTime: null
-        message: 'This policy has 18 ancestors with Accepted condition in False status
-          due to Invalid reason. Aggregated ancestors: gateway-1, gateway-10, gateway-11,
-          gateway-12, gateway-13, gateway-14, gateway-15, gateway-16, gateway-17,
-          gateway-18, gateway-2, gateway-3, gateway-4, gateway-5, gateway-6, gateway-7,
-          gateway-8, gateway-9.'
+        message: Configmap ca-not-found not found in namespace envoy-gateway.
+        reason: Invalid
+        status: "False"
+        type: Accepted
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+    - ancestorRef:
+        name: gateway-10
+        namespace: envoy-gateway
+      conditions:
+      - lastTransitionTime: null
+        message: Configmap ca-not-found not found in namespace envoy-gateway.
+        reason: Invalid
+        status: "False"
+        type: Accepted
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+    - ancestorRef:
+        name: gateway-11
+        namespace: envoy-gateway
+      conditions:
+      - lastTransitionTime: null
+        message: Configmap ca-not-found not found in namespace envoy-gateway.
+        reason: Invalid
+        status: "False"
+        type: Accepted
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+    - ancestorRef:
+        name: gateway-12
+        namespace: envoy-gateway
+      conditions:
+      - lastTransitionTime: null
+        message: Configmap ca-not-found not found in namespace envoy-gateway.
+        reason: Invalid
+        status: "False"
+        type: Accepted
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+    - ancestorRef:
+        name: gateway-13
+        namespace: envoy-gateway
+      conditions:
+      - lastTransitionTime: null
+        message: Configmap ca-not-found not found in namespace envoy-gateway.
+        reason: Invalid
+        status: "False"
+        type: Accepted
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+    - ancestorRef:
+        name: gateway-14
+        namespace: envoy-gateway
+      conditions:
+      - lastTransitionTime: null
+        message: Configmap ca-not-found not found in namespace envoy-gateway.
+        reason: Invalid
+        status: "False"
+        type: Accepted
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+    - ancestorRef:
+        name: gateway-15
+        namespace: envoy-gateway
+      conditions:
+      - lastTransitionTime: null
+        message: Configmap ca-not-found not found in namespace envoy-gateway.
+        reason: Invalid
+        status: "False"
+        type: Accepted
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+    - ancestorRef:
+        name: gateway-16
+        namespace: envoy-gateway
+      conditions:
+      - lastTransitionTime: null
+        message: Configmap ca-not-found not found in namespace envoy-gateway.
+        reason: Invalid
+        status: "False"
+        type: Accepted
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+    - ancestorRef:
+        name: gateway-17
+        namespace: envoy-gateway
+      conditions:
+      - lastTransitionTime: null
+        message: Configmap ca-not-found not found in namespace envoy-gateway.
+        reason: Invalid
+        status: "False"
+        type: Accepted
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+    - ancestorRef:
+        name: gateway-18
+        namespace: envoy-gateway
+      conditions:
+      - lastTransitionTime: null
+        message: Configmap ca-not-found not found in namespace envoy-gateway.
+        reason: Invalid
+        status: "False"
+        type: Accepted
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+    - ancestorRef:
+        name: gateway-2
+        namespace: envoy-gateway
+      conditions:
+      - lastTransitionTime: null
+        message: Configmap ca-not-found not found in namespace envoy-gateway.
+        reason: Invalid
+        status: "False"
+        type: Accepted
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+    - ancestorRef:
+        name: gateway-3
+        namespace: envoy-gateway
+      conditions:
+      - lastTransitionTime: null
+        message: Configmap ca-not-found not found in namespace envoy-gateway.
+        reason: Invalid
+        status: "False"
+        type: Accepted
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+    - ancestorRef:
+        name: gateway-4
+        namespace: envoy-gateway
+      conditions:
+      - lastTransitionTime: null
+        message: Configmap ca-not-found not found in namespace envoy-gateway.
+        reason: Invalid
+        status: "False"
+        type: Accepted
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+    - ancestorRef:
+        name: gateway-5
+        namespace: envoy-gateway
+      conditions:
+      - lastTransitionTime: null
+        message: Configmap ca-not-found not found in namespace envoy-gateway.
+        reason: Invalid
+        status: "False"
+        type: Accepted
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+    - ancestorRef:
+        name: gateway-6
+        namespace: envoy-gateway
+      conditions:
+      - lastTransitionTime: null
+        message: Configmap ca-not-found not found in namespace envoy-gateway.
+        reason: Invalid
+        status: "False"
+        type: Accepted
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+    - ancestorRef:
+        name: gateway-7
+        namespace: envoy-gateway
+      conditions:
+      - lastTransitionTime: null
+        message: Configmap ca-not-found not found in namespace envoy-gateway.
         reason: Invalid
         status: "False"
         type: Accepted

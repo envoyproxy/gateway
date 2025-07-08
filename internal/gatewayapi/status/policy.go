@@ -6,12 +6,13 @@
 package status
 
 import (
-	"fmt"
-	"sort"
+	"cmp"
+	"slices"
 	"strings"
 	"time"
 
-	"github.com/google/go-cmp/cmp"
+	gocmp "github.com/google/go-cmp/cmp"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
@@ -49,7 +50,7 @@ func SetAcceptedForPolicyAncestors(policyStatus *gwapiv1a2.PolicyStatus, ancesto
 func setAcceptedForPolicyAncestor(policyStatus *gwapiv1a2.PolicyStatus, ancestorRef gwapiv1a2.ParentReference, controllerName string, generation int64) {
 	// Return early if Accepted condition is already set for specific ancestor.
 	for _, ancestor := range policyStatus.Ancestors {
-		if string(ancestor.ControllerName) == controllerName && cmp.Equal(ancestor.AncestorRef, ancestorRef) {
+		if string(ancestor.ControllerName) == controllerName && gocmp.Equal(ancestor.AncestorRef, ancestorRef) {
 			for _, c := range ancestor.Conditions {
 				if c.Type == string(gwapiv1a2.PolicyConditionAccepted) {
 					return
@@ -82,7 +83,7 @@ func SetConditionForPolicyAncestor(policyStatus *gwapiv1a2.PolicyStatus, ancesto
 
 	// Add condition for exist PolicyAncestorStatus.
 	for i, ancestor := range policyStatus.Ancestors {
-		if string(ancestor.ControllerName) == controllerName && cmp.Equal(ancestor.AncestorRef, ancestorRef) {
+		if string(ancestor.ControllerName) == controllerName && gocmp.Equal(ancestor.AncestorRef, ancestorRef) {
 			policyStatus.Ancestors[i].Conditions = MergeConditions(policyStatus.Ancestors[i].Conditions, cond)
 			return
 		}
@@ -96,38 +97,24 @@ func SetConditionForPolicyAncestor(policyStatus *gwapiv1a2.PolicyStatus, ancesto
 	})
 }
 
-func TruncatePolicyAncestors(policyStatus *gwapiv1a2.PolicyStatus, ancestorRef gwapiv1a2.ParentReference, controllerName string, generation int64) {
-	aggregatedPolicyConditions := map[metav1.Condition][]string{}
-	for _, ancestor := range policyStatus.Ancestors {
-		for _, condition := range ancestor.Conditions {
-			apc := metav1.Condition{
-				Type:   condition.Type,
-				Status: condition.Status,
-				Reason: condition.Reason,
-			}
-			aggregatedPolicyConditions[apc] = append(aggregatedPolicyConditions[apc], string(ancestor.AncestorRef.Name))
+// TruncatePolicyAncestors trims PolicyStatus.Ancestors down to at most 16 entries.
+// The first 15 ancestors are shown as is.
+// The last 16th ancestor is shown as is and add Aggregated condition.
+func TruncatePolicyAncestors(policyStatus *gwapiv1a2.PolicyStatus, controllerName string, generation int64) {
+	if len(policyStatus.Ancestors) <= 16 {
+		return
+	}
+
+	slices.SortStableFunc(policyStatus.Ancestors, func(a, b gwapiv1a2.PolicyAncestorStatus) int {
+		if r := cmp.Compare(sortRankForPolicyAncestor(a), sortRankForPolicyAncestor(b)); r != 0 {
+			return r
 		}
-	}
+		return strings.Compare(string(a.AncestorRef.Name), string(b.AncestorRef.Name))
+	})
 
-	policyStatus.Ancestors = nil
-
-	for apc, parents := range aggregatedPolicyConditions {
-		sort.Strings(parents)
-
-		SetConditionForPolicyAncestor(policyStatus,
-			ancestorRef,
-			controllerName,
-			gwapiv1a2.PolicyConditionType(apc.Type),
-			apc.Status,
-			gwapiv1a2.PolicyConditionReason(apc.Reason),
-			fmt.Sprintf("This policy has %d ancestors with %s condition in %s status due to %s reason. Aggregated ancestors: %s.",
-				len(parents), apc.Type, apc.Status, apc.Reason, strings.Join(parents, ", ")),
-			generation,
-		)
-	}
-
+	policyStatus.Ancestors = policyStatus.Ancestors[:16]
 	SetConditionForPolicyAncestor(policyStatus,
-		ancestorRef,
+		policyStatus.Ancestors[15].AncestorRef,
 		controllerName,
 		egv1a1.PolicyConditionAggregated,
 		metav1.ConditionTrue,
@@ -135,4 +122,21 @@ func TruncatePolicyAncestors(policyStatus *gwapiv1a2.PolicyStatus, ancestorRef g
 		"Ancestors have been aggregated because the number of policy ancestors exceeds 16.",
 		generation,
 	)
+}
+
+// sortRankForPolicyAncestor returns an integer sort key.
+// ranking rules (smaller value -> higher priority):
+//
+//	– The ancestor is not accepted (Accepted == false).
+//	– The ancestor is accepted and overridden (Override == true).
+//	– All other cases.
+func sortRankForPolicyAncestor(ancestor gwapiv1a2.PolicyAncestorStatus) int {
+	switch {
+	case meta.IsStatusConditionFalse(ancestor.Conditions, string(gwapiv1a2.PolicyConditionAccepted)):
+		return 0
+	case meta.IsStatusConditionTrue(ancestor.Conditions, string(egv1a1.PolicyReasonOverridden)):
+		return 1
+	default:
+		return 2
+	}
 }

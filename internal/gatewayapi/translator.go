@@ -248,7 +248,7 @@ func (t *Translator) Translate(resources *resource.Resources) (*TranslateResult,
 	}
 
 	// Update status of Backend TLS Policies after translating all resources
-	t.ProcessBackendTLSPolicies(resources.BackendTLSPolicies)
+	t.ProcessBackendTLSPolicyStatus(resources.BackendTLSPolicies)
 
 	// Sort xdsIR based on the Gateway API spec
 	sortXdsIRMap(xdsIR)
