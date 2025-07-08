@@ -343,7 +343,7 @@ func (r *gatewayAPIReconciler) validateServiceForReconcile(obj client.Object) bo
 			r.log.Info("no Gateways found under GatewayClass", "name", gcName)
 			return false
 		}
-		return false
+		return true
 	}
 
 	nsName := utils.NamespacedName(svc)
@@ -403,10 +403,6 @@ func (r *gatewayAPIReconciler) validateBackendForReconcile(obj client.Object) bo
 		if r.isEnvoyExtensionPolicyReferencingBackend(&nsName) {
 			return true
 		}
-	}
-
-	if r.isProxyInfraService(&nsName) {
-		return true
 	}
 
 	return false
@@ -553,6 +549,10 @@ func (r *gatewayAPIReconciler) validateEndpointSliceForReconcile(obj client.Obje
 		if r.isEnvoyExtensionPolicyReferencingBackend(&nsName) {
 			return true
 		}
+	}
+
+	if r.isProxyInfraService(&nsName) {
+		return true
 	}
 
 	return false

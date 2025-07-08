@@ -23,7 +23,7 @@
               }
             },
             "clusterManager": {
-              "localClusterName": "local_cluster"
+              "localClusterName": "$(ENVOY_PROXY_INFRA_NAME)"
             },
             "dynamicResources": {
               "adsConfig": {
@@ -104,32 +104,30 @@
                 },
                 {
                   "connectTimeout": "10s",
-                  "loadAssignment": {
-                    "clusterName": "local_cluster",
-                    "endpoints": [
+                  "edsClusterConfig": {
+                    "edsConfig": {
+                      "ads": {},
+                      "resourceApiVersion": "V3"
+                    },
+                    "serviceName": "$(ENVOY_PROXY_INFRA_NAME)"
+                  },
+                  "loadBalancingPolicy": {
+                    "policies": [
                       {
-                        "lbEndpoints": [
-                          {
-                            "endpoint": {
-                              "address": {
-                                "socketAddress": {
-                                  "address": "127.0.0.1",
-                                  "portValue": 10080
-                                }
-                              }
-                            },
-                            "loadBalancingWeight": 1
+                        "typedExtensionConfig": {
+                          "name": "envoy.load_balancing_policies.least_request",
+                          "typedConfig": {
+                            "@type": "type.googleapis.com/envoy.extensions.load_balancing_policies.least_request.v3.LeastRequest",
+                            "localityLbConfig": {
+                              "localityWeightedLbConfig": {}
+                            }
                           }
-                        ],
-                        "loadBalancingWeight": 1,
-                        "locality": {
-                          "zone": "$(ENVOY_SERVICE_ZONE)"
                         }
                       }
                     ]
                   },
-                  "name": "local_cluster",
-                  "type": "STATIC"
+                  "name": "$(ENVOY_PROXY_INFRA_NAME)",
+                  "type": "EDS"
                 },
                 {
                   "connectTimeout": "10s",
