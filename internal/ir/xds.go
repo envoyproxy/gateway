@@ -813,14 +813,14 @@ func (h *HTTPRoute) GetRetry() *Retry {
 	return nil
 }
 
-func (r *HTTPRoute) NeedsClusterPerSetting() bool {
-	if r.Traffic != nil &&
-		r.Traffic.LoadBalancer != nil &&
-		r.Traffic.LoadBalancer.ZoneAware != nil &&
-		r.Traffic.LoadBalancer.ZoneAware.PreferLocal != nil {
+func (h *HTTPRoute) NeedsClusterPerSetting() bool {
+	if h.Traffic != nil &&
+		h.Traffic.LoadBalancer != nil &&
+		h.Traffic.LoadBalancer.ZoneAware != nil &&
+		h.Traffic.LoadBalancer.ZoneAware.PreferLocal != nil {
 		return true
 	}
-	return r.Destination.NeedsClusterPerSetting()
+	return h.Destination.NeedsClusterPerSetting()
 }
 
 // DNS contains configuration options for DNS resolution.
