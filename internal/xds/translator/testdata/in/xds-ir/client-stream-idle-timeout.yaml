@@ -1,0 +1,40 @@
+http:
+  - name: "first-listener"
+    address: "::"
+    port: 10080
+    hostnames:
+      - "*"
+    path:
+      mergeSlashes: true
+      escapedSlashesAction: UnescapeAndRedirect
+    routes:
+      - name: "first-route"
+        hostname: "*"
+        destination:
+          name: "first-route-dest"
+          settings:
+            - endpoints:
+                - host: "1.2.3.4"
+                  port: 50000
+              name: "first-route-dest/backend/0"
+    timeout:
+      http:
+        requestReceivedTimeout: "5s"
+        idleTimeout: "10s"
+        streamIdleTimeout: "1h"
+tcp:
+  - name: "second-listener"
+    address: "::"
+    port: 10081
+    routes:
+      - name: "second-route"
+        destination:
+          name: "second-route-dest"
+          settings:
+            - endpoints:
+                - host: "1.2.3.4"
+                  port: 50000
+              name: "second-route-dest/backend/0"
+    timeout:
+      tcp:
+        idleTimeout: "1200s"
