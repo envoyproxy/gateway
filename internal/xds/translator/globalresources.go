@@ -31,9 +31,12 @@ const (
 // patchGlobalResources builds and appends the global resources that are shared across listeners and routes.
 // for example, the envoy client certificate and the OIDC HMAC secret.
 func (t *Translator) patchGlobalResources(tCtx *types.ResourceVersionTable, irXds *ir.Xds) error {
-	var errs error
+	if irXds.GlobalResources == nil {
+		return nil
+	}
 
-	if irXds.GlobalResources != nil && irXds.GlobalResources.EnvoyClientCertificate != nil {
+	var errs error
+	if irXds.GlobalResources.EnvoyClientCertificate != nil {
 		// Create the envoy client TLS secret. It is used for envoy to establish a TLS connection with control plane components.
 		if err := createEnvoyClientTLSCertSecret(tCtx, irXds.GlobalResources); err != nil {
 			errs = errors.Join(errs, err)
@@ -49,6 +52,16 @@ func (t *Translator) patchGlobalResources(tCtx *types.ResourceVersionTable, irXd
 			if err := t.createWasmHTTPServiceCluster(tCtx, irXds.GlobalResources.EnvoyClientCertificate, irXds.Metrics); err != nil {
 				errs = errors.Join(errs, err)
 			}
+		}
+	}
+	if irXds.GlobalResources.ProxyInfraCluster != nil {
+		proxyCluster := irXds.GlobalResources.ProxyInfraCluster
+		if err := addXdsCluster(tCtx, &xdsClusterArgs{
+			name:         proxyCluster.Name,
+			settings:     []*ir.DestinationSetting{proxyCluster.Destination},
+			endpointType: EndpointTypeStatic,
+		}); err != nil {
+			errs = errors.Join(errs, err)
 		}
 	}
 	return errs

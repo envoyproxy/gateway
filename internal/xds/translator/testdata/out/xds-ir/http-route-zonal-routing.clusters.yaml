@@ -18,10 +18,7 @@
         typedConfig:
           '@type': type.googleapis.com/envoy.extensions.load_balancing_policies.least_request.v3.LeastRequest
           localityLbConfig:
-            zoneAwareLbConfig:
-              forceLocalZone:
-                minSize: 1
-              minClusterSize: "1"
+            localityWeightedLbConfig: {}
   name: first-route-dest
   perConnectionBufferLimitBytes: 32768
   type: EDS

@@ -216,6 +216,8 @@ spec:
             fieldRef:
               apiVersion: v1
               fieldPath: metadata.annotations['topology.kubernetes.io/zone']
+        - name: ENVOY_PROXY_INFRA_NAME
+          value: envoy-default-37a8eec1
         image: docker.io/envoyproxy/envoy:distroless-dev
         imagePullPolicy: IfNotPresent
         lifecycle:
@@ -308,6 +310,8 @@ spec:
             fieldRef:
               apiVersion: v1
               fieldPath: metadata.annotations['topology.kubernetes.io/zone']
+        - name: ENVOY_PROXY_INFRA_NAME
+          value: envoy-default-37a8eec1
         image: envoyproxy/gateway-dev:v1.2.3
         imagePullPolicy: IfNotPresent
         lifecycle:

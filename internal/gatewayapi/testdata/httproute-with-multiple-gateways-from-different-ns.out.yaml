@@ -188,6 +188,12 @@ xdsIR:
     accessLog:
       json:
       - path: /dev/stdout
+    globalResources:
+      proxyInfraCluster:
+        destination:
+          name: envoy-default-gateway-a-573db404
+          protocol: HTTP
+        name: envoy-default-gateway-a-573db404
     http:
     - address: 0.0.0.0
       hostnames:
@@ -247,6 +253,20 @@ xdsIR:
     accessLog:
       json:
       - path: /dev/stdout
+    globalResources:
+      proxyInfraCluster:
+        destination:
+          addressType: IP
+          endpoints:
+          - host: 7.6.5.4
+            port: 8080
+            zone: zone1
+          - host: 7.6.5.4
+            port: 8080
+            zone: zone1
+          name: envoy-envoy-gateway-gateway-b-3a004b3a
+          protocol: HTTP
+        name: envoy-envoy-gateway-gateway-b-3a004b3a
     http:
     - address: 0.0.0.0
       hostnames:

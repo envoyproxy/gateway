@@ -133,6 +133,7 @@ func (t *Translator) Translate(xdsIR *ir.Xds) (*types.ResourceVersionTable, erro
 	// - the envoy client certificate
 	// - the OIDC HMAC secret
 	// - the rate limit server cluster
+	// - the EnvoyProxy cluster
 	if err := t.patchGlobalResources(tCtx, xdsIR); err != nil {
 		errs = errors.Join(errs, err)
 	}
@@ -547,7 +548,7 @@ func (t *Translator) addRouteToRouteConfig(
 			var err error
 			// If there are no filters in the destination settings we create
 			// a regular xds Cluster
-			if !httpRoute.Destination.NeedsClusterPerSetting() {
+			if !httpRoute.NeedsClusterPerSetting() {
 				err = processXdsCluster(
 					tCtx,
 					httpRoute.Destination.Name,

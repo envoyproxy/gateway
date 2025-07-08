@@ -19,5 +19,7 @@ http:
           zone: us-east-1b
         name: "first-route-dest/backend/0"
         weight: 30
-        zoneAwareRouting:
-          minSize: 1
+        preferLocalZone:
+          minEndpointsThreshold: 1
+          force:
+            minEndpointsInZoneThreshold: 1

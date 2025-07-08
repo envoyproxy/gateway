@@ -121,6 +121,17 @@ xdsIR:
     accessLog:
       json:
       - path: /dev/stdout
+    globalResources:
+      proxyInfraCluster:
+        destination:
+          addressType: IP
+          endpoints:
+          - host: 7.6.5.4
+            port: 8080
+            zone: zone1
+          name: envoy-envoy-gateway-gateway-1-196ae069
+          protocol: HTTP
+        name: envoy-envoy-gateway-gateway-1-196ae069
     http:
     - address: 0.0.0.0
       hostnames:
@@ -157,10 +168,12 @@ xdsIR:
               namespace: default
               sectionName: "8080"
             name: httproute/default/httproute-1/rule/1/backend/0
+            preferLocal:
+              force:
+                minEndpointsInZoneThreshold: 1
+              minEndpointsThreshold: 1
             protocol: HTTP
             weight: 1
-            zoneAwareRouting:
-              minSize: 1
         headerMatches:
         - distinct: false
           exact: bar
@@ -195,10 +208,12 @@ xdsIR:
               namespace: default
               sectionName: "8080"
             name: httproute/default/httproute-1/rule/0/backend/0
+            preferLocal:
+              force:
+                minEndpointsInZoneThreshold: 1
+              minEndpointsThreshold: 1
             protocol: HTTP
             weight: 1
-            zoneAwareRouting:
-              minSize: 1
         hostname: '*'
         isHTTP2: false
         metadata:

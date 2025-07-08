@@ -92,6 +92,17 @@ xdsIR:
             status: "False"
             type: Accepted
           controllerName: gateway.envoyproxy.io/gatewayclass-controller
+    globalResources:
+      proxyInfraCluster:
+        destination:
+          addressType: IP
+          endpoints:
+          - host: 7.6.5.4
+            port: 8080
+            zone: zone1
+          name: envoy-envoy-gateway-class-3b1df594
+          protocol: HTTP
+        name: envoy-envoy-gateway-class-3b1df594
     http:
     - address: 0.0.0.0
       hostnames:

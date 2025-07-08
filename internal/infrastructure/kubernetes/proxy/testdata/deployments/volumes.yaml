@@ -236,6 +236,8 @@ spec:
             fieldRef:
               apiVersion: v1
               fieldPath: metadata.annotations['topology.kubernetes.io/zone']
+        - name: ENVOY_PROXY_INFRA_NAME
+          value: envoy-default-37a8eec1
         - name: env_a
           value: env_a_value
         - name: env_b
@@ -321,6 +323,8 @@ spec:
             fieldRef:
               apiVersion: v1
               fieldPath: metadata.annotations['topology.kubernetes.io/zone']
+        - name: ENVOY_PROXY_INFRA_NAME
+          value: envoy-default-37a8eec1
         image: docker.io/envoyproxy/gateway-dev:latest
         imagePullPolicy: IfNotPresent
         lifecycle:

@@ -333,7 +333,7 @@ func (r *gatewayAPIReconciler) validateServiceForReconcile(obj client.Object) bo
 	gtw := r.findOwningGateway(ctx, labels)
 	if gtw != nil {
 		r.updateGatewayStatus(gtw)
-		return false
+		return true
 	}
 
 	// Merged gateways will have only this label, update status of all Gateways under found GatewayClass.
@@ -403,6 +403,10 @@ func (r *gatewayAPIReconciler) validateBackendForReconcile(obj client.Object) bo
 		if r.isEnvoyExtensionPolicyReferencingBackend(&nsName) {
 			return true
 		}
+	}
+
+	if r.isProxyInfraService(&nsName) {
+		return true
 	}
 
 	return false
@@ -578,7 +582,7 @@ func (r *gatewayAPIReconciler) validateObjectForReconcile(obj client.Object) boo
 			r.log.Info("no Gateways found under GatewayClass", "name", gcName)
 			return false
 		}
-		return false
+		return true
 	}
 
 	// There is no need to reconcile the object any further.
@@ -872,6 +876,29 @@ func (r *gatewayAPIReconciler) isRouteReferencingHTTPRouteFilter(nsName *types.N
 	}
 
 	return len(httpRouteList.Items) != 0
+}
+
+func (r *gatewayAPIReconciler) isProxyInfraService(nn *types.NamespacedName) bool {
+	ctx := context.Background()
+	svc := &corev1.Service{}
+	if err := r.client.Get(ctx, *nn, svc); err != nil {
+		r.log.Error(err, "unable to find associated ProxyInfra service")
+		return false
+	}
+
+	svcLabels := svc.GetLabels()
+
+	// Check if the Service belongs to a Gateway, if so, update the Gateway status.
+	if gtw := r.findOwningGateway(ctx, svcLabels); gtw != nil {
+		return true
+	}
+
+	// Merged gateways will have only this label, update status of all Gateways under found GatewayClass.
+	gcName, ok := svcLabels[gatewayapi.OwningGatewayClassLabel]
+	if ok && r.mergeGateways.Has(gcName) {
+		return true
+	}
+	return false
 }
 
 // validateHTTPRouteFilterForReconcile tries finding the referencing HTTPRoute of the filter
