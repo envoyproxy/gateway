@@ -9,9 +9,12 @@ import (
 	"context"
 	"sync"
 
+	log "github.com/envoyproxy/gateway/internal/logging"
 	"go.opentelemetry.io/otel/attribute"
 	api "go.opentelemetry.io/otel/metric"
 )
+
+var metricsLogger log.Logger
 
 // NewCounter creates a new Counter Metric (the values will be cumulative).
 // That means that data collected by the new Metric will be summed before export.

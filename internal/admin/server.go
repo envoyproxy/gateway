@@ -6,6 +6,7 @@
 package admin
 
 import (
+	"context"
 	"net/http"
 	"net/http/pprof"
 	"time"
@@ -15,22 +16,46 @@ import (
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 )
 
-func Init(cfg *config.Server) error {
-	if cfg.EnvoyGateway.GetEnvoyGatewayAdmin().EnableDumpConfig {
-		spewConfig := spew.NewDefaultConfig()
-		spewConfig.DisableMethods = true
-		spewConfig.Dump(cfg)
-	}
-
-	return start(cfg)
+type Runner struct {
+	cfg    *config.Server
+	server *http.Server
 }
 
-func start(cfg *config.Server) error {
-	handlers := http.NewServeMux()
-	address := cfg.EnvoyGateway.GetEnvoyGatewayAdminAddress()
-	enablePprof := cfg.EnvoyGateway.GetEnvoyGatewayAdmin().EnablePprof
+func New(cfg *config.Server) *Runner {
+	return &Runner{
+		cfg: cfg,
+	}
+}
 
-	adminLogger := cfg.Logger.WithName("admin")
+func (r *Runner) Start(ctx context.Context) error {
+	if r.cfg.EnvoyGateway.GetEnvoyGatewayAdmin().EnableDumpConfig {
+		spewConfig := spew.NewDefaultConfig()
+		spewConfig.DisableMethods = true
+		spewConfig.Dump(r.cfg)
+	}
+
+	return r.start(ctx)
+}
+
+func (r *Runner) Name() string {
+	return "admin"
+}
+
+func (r *Runner) Close() error {
+	if r.server != nil {
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		return r.server.Shutdown(ctx)
+	}
+	return nil
+}
+
+func (r *Runner) start(ctx context.Context) error {
+	handlers := http.NewServeMux()
+	address := r.cfg.EnvoyGateway.GetEnvoyGatewayAdminAddress()
+	enablePprof := r.cfg.EnvoyGateway.GetEnvoyGatewayAdmin().EnablePprof
+
+	adminLogger := r.cfg.Logger.WithName("admin")
 	adminLogger.Info("starting admin server", "address", address, "enablePprof", enablePprof)
 
 	if enablePprof {
@@ -42,7 +67,7 @@ func start(cfg *config.Server) error {
 		handlers.HandleFunc("/debug/pprof/cmdline", pprof.Cmdline)
 	}
 
-	adminServer := &http.Server{
+	r.server = &http.Server{
 		Handler:           handlers,
 		Addr:              address,
 		ReadTimeout:       5 * time.Second,
@@ -53,7 +78,7 @@ func start(cfg *config.Server) error {
 
 	// Listen And Serve Admin Server.
 	go func() {
-		if err := adminServer.ListenAndServe(); err != nil {
+		if err := r.server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			adminLogger.Error(err, "start admin server failed")
 		}
 	}()
