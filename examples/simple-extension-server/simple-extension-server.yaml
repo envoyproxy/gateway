@@ -11,7 +11,7 @@ data:
       type: Kubernetes
     gateway:
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
-    extensionApis:
+    extensionAPI:
       enableEnvoyPatchPolicy: true
       enableBackend: true
     extensionManager:
