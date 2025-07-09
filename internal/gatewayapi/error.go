@@ -47,7 +47,10 @@ func (p *PolicyTranslationError) Is(target error) bool {
 	return ok
 }
 
-// ShouldFailOpen checks if the error is a PolicyTranslationError and returns its FailOpen status.
+// ShouldFailOpen checks if we should fail open based on the provided error.
+// If the error is a PolicyTranslationError with FailOpen set to true, it returns true.
+// If the error wraps multiple errors, it returns true only if all wrapped errors are PolicyTranslationError with FailOpen set to true.
+// If any error in the chain is not a PolicyTranslationError or has FailOpen set to false, it returns false.
 func ShouldFailOpen(err error) bool {
 	if err == nil {
 		return false

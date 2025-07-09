@@ -71,11 +71,11 @@ envoyExtensionPolicies:
   spec:
     extProc:
     - backendRefs:
-      - name: grpc-backend
+      - name: grpc-backend-1
         namespace: envoy-gateway
         port: 9000
     - backendRefs:
-      - name: grpc-backend
+      - name: grpc-backend-2
         namespace: envoy-gateway
         port: 9000
       failOpen: true
@@ -93,7 +93,49 @@ envoyExtensionPolicies:
         sectionName: http
       conditions:
       - lastTransitionTime: null
-        message: 'ExtProc: service envoy-gateway/grpc-backend not found.'
+        message: |-
+          ExtProc: service envoy-gateway/grpc-backend-1 not found
+          service envoy-gateway/grpc-backend-2 not found.
+        reason: Invalid
+        status: "False"
+        type: Accepted
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: EnvoyExtensionPolicy
+  metadata:
+    creationTimestamp: null
+    name: policy-for-httproute-4
+    namespace: default
+  spec:
+    extProc:
+    - backendRefs:
+      - name: grpc-backend-2
+        namespace: envoy-gateway
+        port: 9000
+      failOpen: true
+    lua:
+    - inline: function envoy_on_response(response_handle) response_handle:UnknownApi()
+        end
+      type: Inline
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: httproute-4
+  status:
+    ancestors:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: gateway-1
+        namespace: default
+        sectionName: http
+      conditions:
+      - lastTransitionTime: null
+        message: "Lua: validation failed for lua body in policy with name envoyextensionpolicy/default/policy-for-httproute-4/lua/0:
+          failed to mock run envoy_on_response: <string>:614: attempt to call a non-function
+          object\nstack traceback:\n\t<string>:614: in function 'envoy_on_response'\n\t<string>:615:
+          in main chunk\n\t[G]: ?\nExtProc: service envoy-gateway/grpc-backend-2 not
+          found."
         reason: Invalid
         status: "False"
         type: Accepted
@@ -116,7 +158,7 @@ gateways:
       protocol: HTTP
   status:
     listeners:
-    - attachedRoutes: 3
+    - attachedRoutes: 4
       conditions:
       - lastTransitionTime: null
         message: Sending translated listener configuration to the data plane
@@ -236,6 +278,44 @@ httpRoutes:
       matches:
       - path:
           value: /baz
+  status:
+    parents:
+    - conditions:
+      - lastTransitionTime: null
+        message: Route is accepted
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Resolved all the Object references for the Route
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+      parentRef:
+        name: gateway-1
+        namespace: default
+        sectionName: http
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    creationTimestamp: null
+    name: httproute-4
+    namespace: default
+  spec:
+    hostnames:
+    - www.baz.com
+    parentRefs:
+    - name: gateway-1
+      namespace: default
+      sectionName: http
+    rules:
+    - backendRefs:
+      - name: service-1
+        port: 8080
+      matches:
+      - path:
+          value: /qux
   status:
     parents:
     - conditions:
@@ -386,6 +466,37 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /baz
+      - destination:
+          metadata:
+            kind: HTTPRoute
+            name: httproute-4
+            namespace: default
+          name: httproute/default/httproute-4/rule/0
+          settings:
+          - addressType: IP
+            endpoints:
+            - host: 7.7.7.7
+              port: 8080
+            metadata:
+              name: service-1
+              namespace: default
+              sectionName: "8080"
+            name: httproute/default/httproute-4/rule/0/backend/0
+            protocol: HTTP
+            weight: 1
+        directResponse:
+          statusCode: 500
+        hostname: www.baz.com
+        isHTTP2: false
+        metadata:
+          kind: HTTPRoute
+          name: httproute-4
+          namespace: default
+        name: httproute/default/httproute-4/rule/0/match/0/www_baz_com
+        pathMatch:
+          distinct: false
+          name: ""
+          prefix: /qux
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4

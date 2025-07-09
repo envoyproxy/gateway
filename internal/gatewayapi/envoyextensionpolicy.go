@@ -330,6 +330,7 @@ func (t *Translator) translateEnvoyExtensionPolicyForRoute(
 			if irListener != nil {
 				for _, r := range irListener.Routes {
 					if strings.HasPrefix(r.Name, prefix) {
+						// ShouldFailOpen checks if the policy is fail open or not when there are errors.
 						// if FailOpen is false, return 500 error directly and not forward the request to the backend.
 						// if FailOpen is true, skip the policy application and requests will be processed as if the
 						// policy was not present. https://github.com/envoyproxy/gateway/issues/5905
@@ -508,19 +509,32 @@ func getLuaBodyFromLocalObjectReference(valueRef *gwapiv1.LocalObjectReference, 
 }
 
 func (t *Translator) buildExtProcs(policy *egv1a1.EnvoyExtensionPolicy, resources *resource.Resources, envoyProxy *egv1a1.EnvoyProxy) ([]ir.ExtProc, error) {
-	var extProcIRList []ir.ExtProc
+	var (
+		extProcIRList []ir.ExtProc
+		failOpen      bool
+		errs          error
+	)
 
 	if policy == nil {
 		return nil, nil
 	}
 
+	// If any failed ExtProcs are not fail open, the whole policy is not fail open.
+	failOpen = true
 	for idx, ep := range policy.Spec.ExtProc {
 		name := irConfigNameForExtProc(policy, idx)
 		extProcIR, err := t.buildExtProc(name, policy, ep, idx, resources, envoyProxy)
 		if err != nil {
-			return nil, NewPolicyTranslationError(err, ptr.Deref(ep.FailOpen, false))
+			errs = errors.Join(errs, err)
+			if ep.FailOpen == nil || !*ep.FailOpen {
+				failOpen = false
+			}
+			continue
 		}
 		extProcIRList = append(extProcIRList, *extProcIR)
+	}
+	if errs != nil {
+		return extProcIRList, NewPolicyTranslationError(errs, failOpen)
 	}
 	return extProcIRList, nil
 }
