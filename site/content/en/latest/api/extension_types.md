@@ -352,7 +352,6 @@ BackendEndpoint describes a backend endpoint, which can be either a fully-qualif
 corresponding to Envoy's Address: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/core/v3/address.proto#config-core-v3-address
 
 _Appears in:_
-- [BackendSpec](#backendspec)
 - [ExtensionService](#extensionservice)
 
 | Field | Type | Required | Default | Description |
@@ -403,12 +402,15 @@ _Appears in:_
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
 | `type` | _[BackendType](#backendtype)_ |  false  | Endpoints | Type defines the type of the backend. Defaults to "Endpoints" |
-| `endpoints` | _[BackendEndpoint](#backendendpoint) array_ |  false  |  | Endpoints defines the endpoints to be used when connecting to the backend. |
 | `appProtocols` | _[AppProtocolType](#appprotocoltype) array_ |  false  |  | AppProtocols defines the application protocols to be supported when connecting to the backend. |
 | `fqdn` | _string_ |  false  |  | FQDN defines the FQDN used to contact the backend. |
 | `fallback` | _boolean_ |  false  |  | Fallback indicates whether the backend is designated as a fallback.<br />It is highly recommended to configure active or passive health checks to ensure that failover can be detected<br />when the active backends become unhealthy and to automatically readjust once the primary backends are healthy again.<br />The overprovisioning factor is set to 1.4, meaning the fallback backends will only start receiving traffic when<br />the health of the active backends falls below 72%. |
-| `tls` | _[BackendTLSSettings](#backendtlssettings)_ |  false  |  | TLS defines the TLS configuration for the backend. |
-| `originalDestinationSettings` | _[OriginalDestinationSettings](#originaldestinationsettings)_ |  false  |  | OriginalDestinationSettings defines settings for Original Destination backend type.<br />This field is only valid when Type is "OriginalDestination". |
+| `appProtocols` | _[AppProtocolType](#appprotocoltype) array_ |  false  |  | TLS defines the TLS configuration for the backend.	// |
+| `fallback` | _boolean_ |  false  |  | Fallback indicates whether the backend is designated as a fallback.<br />It is highly recommended to configure active or passive health checks to ensure that failover can be detected<br />when the active backends become unhealthy and to automatically readjust once the primary backends are healthy again.<br />The overprovisioning factor is set to 1.4, meaning the fallback backends will only start receiving traffic when<br />the health of the active backends falls below 72%. |
+| `appProtocols` | _[AppProtocolType](#appprotocoltype) array_ |  false  |  |  |
+| `fqdn` | _string_ |  false  |  | FQDN defines the FQDN used to contact the backend. |
+| `fallback` | _boolean_ |  false  |  | Fallback indicates whether the backend is designated as a fallback.<br />It is highly recommended to configure active or passive health checks to ensure that failover can be detected<br />when the active backends become unhealthy and to automatically readjust once the primary backends are healthy again.<br />The overprovisioning factor is set to 1.4, meaning the fallback backends will only start receiving traffic when<br />the health of the active backends falls below 72%. |
+| `tls` | _[BackendTLSSettings](#backendtlssettings)_ |  false  |  | TLS defines the TLS configuration for the backend.	// |
 
 
 #### BackendStatus
@@ -540,7 +542,6 @@ _Appears in:_
 | ----- | ----------- |
 | `Endpoints` | BackendTypeEndpoints defines the type of the backend as Endpoints.<br /> | 
 | `DynamicResolver` | BackendTypeDynamicResolver defines the type of the backend as DynamicResolver.<br />When a backend is of type DynamicResolver, the Envoy will resolve the upstream<br />ip address and port from the host header of the incoming request. If the ip address<br />is directly set in the host header, the Envoy will use the ip address and port as the<br />upstream address. If the hostname is set in the host header, the Envoy will resolve the<br />ip address and port from the hostname using the DNS resolver.<br /> | 
-| `OriginalDestination` | BackendTypeOriginalDestination defines the type of the backend as OriginalDestination.<br />When a backend is of type OriginalDestination, the Envoy will use the original destination<br />of the incoming request as the upstream address.<br /> | 
 
 
 #### BasicAuth
@@ -3380,21 +3381,6 @@ For example, the following are valid origins:
 _Appears in:_
 - [CORS](#cors)
 
-
-
-#### OriginalDestinationSettings
-
-
-
-OriginalDestinationSettings defines settings for Original Destination backend type.
-
-_Appears in:_
-- [BackendSpec](#backendspec)
-
-| Field | Type | Required | Default | Description |
-| ---   | ---  | ---      | ---     | ---         |
-| `header` | _string_ |  false  | x-envoy-original-dst-host | Header specifies the header name containing the destination address.<br />The header value must be in "host:port" format (e.g., "backend.example.com:8080").<br />If not specified, defaults to "x-envoy-original-dst-host". |
-| `allowedDestinations` | _string array_ |  false  |  | AllowedDestinations specifies CIDR blocks or hostnames that are permitted<br />as routing destinations. If empty, all destinations are allowed.<br />Use this for security to prevent routing to unintended endpoints.<br />Examples:<br />- "10.0.0.0/8" (private networks)<br />- "backend.example.com" (specific hostname)<br />- "*.example.com" (wildcard hostname) |
 
 
 #### OtherSANMatch
