@@ -124,7 +124,7 @@ func (r *Runner) startWasmCache(ctx context.Context) {
 }
 
 func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *resource.ControllerResources]) {
-	message.HandleSubscription(message.Metadata{Runner: r.Name(), Message: "provider-resources"}, sub,
+	message.HandleSubscription(message.Metadata{Runner: r.Name(), Message: message.ProviderResourcesMessageName}, sub,
 		func(update message.Update[string, *resource.ControllerResources], errChan chan error) {
 			r.Logger.Info("received an update")
 			val := update.Value
