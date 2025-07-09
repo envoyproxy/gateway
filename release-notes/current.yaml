@@ -48,6 +48,8 @@ bug fixes: |
   Fixed issue that default accesslog format not working.
   Fixed validation errors when the rateLimit url for Redis in the EnvoyGateway API includes multiple comma separated hosts.
   Fixes addresses in status of DualStack NodePort Gateways.
+  Fixed issue that not able to override the prometheus annotation in EnvoyProxy CRD.
+
 
 # Enhancements that improve performance.
 performance improvements: |
