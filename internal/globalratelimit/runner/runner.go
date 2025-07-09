@@ -137,7 +137,8 @@ func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 	rateLimitConfigsCache := map[string][]cachetype.Resource{}
 
 	// Subscribe to resources.
-	message.HandleSubscription(message.Metadata{Runner: string(egv1a1.LogComponentGlobalRateLimitRunner), Message: "xds-ir"}, r.XdsIR.Subscribe(ctx),
+
+	message.HandleSubscription(message.Metadata{Runner: r.Name(), Message: message.XDSIRMessageName}, r.XdsIR.Subscribe(ctx),
 		func(update message.Update[string, *ir.Xds], errChan chan error) {
 			r.Logger.Info("received a notification")
 
