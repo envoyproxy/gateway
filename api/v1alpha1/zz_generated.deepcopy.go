@@ -476,6 +476,15 @@ func (in *BackendSpec) DeepCopyInto(out *BackendSpec) {
 		*out = make([]AppProtocolType, len(*in))
 		copy(*out, *in)
 	}
+        if in.FQDN != nil {
+                in, out := &in.FQDN, &out.FQDN
+                *out = new(string)
+                **out = **in
+        }
+        if in.Fallback != nil {
+                in, out := &in.Fallback, &out.Fallback
+                *out = new(bool)		**out = **in
+	}
 	if in.Fallback != nil {
 		in, out := &in.Fallback, &out.Fallback
 		*out = new(bool)
