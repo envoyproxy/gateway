@@ -652,7 +652,11 @@ func (t *Translator) buildWasms(
 	policy *egv1a1.EnvoyExtensionPolicy,
 	resources *resource.Resources,
 ) ([]ir.Wasm, error) {
-	var wasmIRList []ir.Wasm
+	var (
+		wasmIRList []ir.Wasm
+		failOpen   bool
+		errs       error
+	)
 
 	if len(policy.Spec.Wasm) == 0 {
 		return wasmIRList, nil
@@ -670,7 +674,14 @@ func (t *Translator) buildWasms(
 		name := irConfigNameForWasm(policy, idx)
 		wasmIR, err := t.buildWasm(name, wasm, policy, idx, resources)
 		if err != nil {
-			return nil, err
+			errs = errors.Join(errs, err)
+			if wasm.FailOpen == nil || !*wasm.FailOpen {
+				failOpen = false
+			}
+			continue
+		}
+		if errs != nil {
+			return wasmIRList, NewPolicyTranslationError(errs, failOpen)
 		}
 		wasmIRList = append(wasmIRList, *wasmIR)
 	}
