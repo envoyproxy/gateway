@@ -1082,13 +1082,16 @@ spec:
                   x-kubernetes-validations:
                   - message: BackendRefs must be used, backendRef is not supported.
                     rule: '!has(self.backendRef)'
-                  - message: BackendRefs only supports Service and Backend kind.
+                  - message: BackendRefs only supports Service, ServiceImport, and
+                      Backend kind.
                     rule: 'has(self.backendRefs) ? self.backendRefs.all(f, f.kind
-                      == ''Service'' || f.kind == ''Backend'') : true'
-                  - message: BackendRefs only supports Core and gateway.envoyproxy.io
-                      group.
+                      == ''Service'' || f.kind == ''ServiceImport'' || f.kind == ''Backend'')
+                      : true'
+                  - message: BackendRefs only supports Core, multicluster.x-k8s.io,
+                      and gateway.envoyproxy.io groups.
                     rule: 'has(self.backendRefs) ? (self.backendRefs.all(f, f.group
-                      == "" || f.group == ''gateway.envoyproxy.io'')) : true'
+                      == "" || f.group == ''multicluster.x-k8s.io'' || f.group ==
+                      ''gateway.envoyproxy.io'')) : true'
                   - message: If FullDuplexStreamed body processing mode is used, FailOpen
                       must be false.
                     rule: '!(has(self.failOpen) && self.failOpen == true && ((has(self.processingMode.request.body)

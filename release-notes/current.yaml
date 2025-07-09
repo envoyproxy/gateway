@@ -32,6 +32,7 @@ new features: |
   Added support for specifying deployment annotations through the helm chart.
   Added support for customizing the name of the ServiceAccount used by the Proxy.
   Added support for custom backendRefs via extension server using PostClusterModify hook.
+  Added support for SecurityPolicy and EnvoyExtensionPolicy to target ServiceImport via BackendRefs.
   Introduce validation strictness levels for Lua scripts in EnvoyExtensionPolicies.
 bug fixes: |
   Handle integer zone annotation values
