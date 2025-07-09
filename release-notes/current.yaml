@@ -33,6 +33,9 @@ new features: |
   Added support for customizing the name of the ServiceAccount used by the Proxy.
   Added support for custom backendRefs via extension server using PostClusterModify hook.
   Introduce validation strictness levels for Lua scripts in EnvoyExtensionPolicies.
+  Added metric `watchable_publish_total` counting store events in watchable message queues.
+
+
 bug fixes: |
   Handle integer zone annotation values
   Fixed issue where WASM cache init failure caused routes with WASM-less EnvoyExtensionPolicies to have 500 direct responses.
