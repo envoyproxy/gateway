@@ -117,4 +117,5 @@ helm uninstall eg -n envoy-gateway-system
 | service.trafficDistribution | string | `""` |  |
 | topologyInjector.annotations | object | `{}` |  |
 | topologyInjector.enabled | bool | `true` |  |
+| cleanup | object | `{"job":{"image":"bitnami/kubectl:1.24","annotations":{},"args":[],"resources":{},"affinity":{},"tolerations":[],"nodeSelector":{},"ttlSecondsAfterFinished":0,"securityContext":{"allowPrivilegeEscalation":false,"capabilities":{"drop":["ALL"]},"privileged":false,"readOnlyRootFilesystem":true,"runAsNonRoot":true,"runAsGroup":65532,"runAsUser":65532,"seccompProfile":{"type":"RuntimeDefault"}}},"rbac":{"annotations":{},"labels":{}}}` |  |
 

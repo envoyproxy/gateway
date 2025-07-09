@@ -135,6 +135,33 @@ certgen:
     annotations: {}
     labels: {}
 
+# -- Cleanup is used to cleanup left-over resources when uninstalling.
+cleanup:
+  job:
+    image: bitnami/kubectl:1.24
+    annotations: {}
+    args: []
+    resources: {}
+    affinity: {}
+    tolerations: []
+    nodeSelector: {}
+    ttlSecondsAfterFinished: 0
+    securityContext:
+      allowPrivilegeEscalation: false
+      capabilities:
+        drop:
+        - ALL
+      privileged: false
+      readOnlyRootFilesystem: true
+      runAsNonRoot: true
+      runAsGroup: 65532
+      runAsUser: 65532
+      seccompProfile:
+        type: RuntimeDefault
+  rbac:
+    annotations: {}
+    labels: {}
+
 topologyInjector:
   enabled: true
   annotations: {}
