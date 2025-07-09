@@ -657,7 +657,7 @@ func (r *gatewayAPIReconciler) processBackendRefs(ctx context.Context, gwcResour
 				}
 				if !resourceMappings.allAssociatedBackendRefExtensionFilters.Has(key) {
 					resourceMappings.allAssociatedBackendRefExtensionFilters.Insert(key)
-					if extRefFilter, exists := resourceMappings.extensionRefFilters[key]; !exists {
+					if extRefFilter, exists := resourceMappings.extensionRefFilters[key]; exists {
 						resourceMappings.extensionRefFilters[key] = extRefFilter
 						gwcResource.ExtensionRefFilters = append(gwcResource.ExtensionRefFilters, extRefFilter)
 						r.log.Info("added custom backend resource to resource tree",

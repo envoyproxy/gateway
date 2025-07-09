@@ -152,6 +152,9 @@ xdsIR:
             name: httproute/default/httproute-1/rule/0/backend/0
             protocol: HTTP
             weight: 1
+          - isCustomBackend: true
+            name: httproute/default/httproute-1/rule/0/backend/1
+            weight: 1
         extensionRefs:
         - object:
             apiVersion: storage.example.io/v1alpha1
@@ -181,6 +184,9 @@ xdsIR:
             namespace: default
           name: httproute/default/httproute-1/rule/1
           settings:
+          - isCustomBackend: true
+            name: httproute/default/httproute-1/rule/1/backend/0
+            weight: 1
           - addressType: IP
             endpoints:
             - host: 7.7.7.7
