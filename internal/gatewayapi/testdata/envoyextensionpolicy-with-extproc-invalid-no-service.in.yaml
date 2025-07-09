@@ -137,8 +137,8 @@ envoyExtensionPolicies:
       - name: grpc-backend-1
         namespace: envoy-gateway
         port: 9000
-    - failOpen: true
-      backendRefs:
+      failOpen: true
+    - backendRefs:
       - name: grpc-backend-2
         namespace: envoy-gateway
         port: 9000
