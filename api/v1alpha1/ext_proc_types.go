@@ -78,10 +78,14 @@ type ExtProc struct {
 	// +optional
 	MessageTimeout *gwapiv1.Duration `json:"messageTimeout,omitempty"`
 
-	// FailOpen defines if requests or responses that cannot be processed due to connectivity to the
-	// external processor are terminated or passed-through.
-	// If set to true, requests or responses will be passed-through to the backend service when the external processor
-	// does not exist, is unreachable, or returns an error.
+	// FailOpen is a switch used to control the behavior when failing to call the external processor.
+	//
+	// If FailOpen is set to true, the system bypasses the ExtProc extension and
+	// allows the traffic to pass through. If it is set to false or
+	// not set (defaulting to false), the system blocks the traffic and returns
+	// an HTTP 5xx error.
+	//
+	// If set to true, the ExtProc extension will also be bypassed if the configuration is invalid.
 	// Default: false
 	//
 	// +optional
