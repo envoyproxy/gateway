@@ -28,7 +28,6 @@
   commonLbConfig: {}
   connectTimeout: 10s
   dnsLookupFamily: V4_PREFERRED
-  dnsRefreshRate: 30s
   lbPolicy: LEAST_REQUEST
   loadAssignment:
     clusterName: securitypolicy/envoy-gateway/policy-for-gateway/0
@@ -57,7 +56,6 @@
             localityWeightedLbConfig: {}
   name: securitypolicy/envoy-gateway/policy-for-gateway/0
   perConnectionBufferLimitBytes: 32768
-  respectDnsTtl: true
   transportSocketMatches:
   - match:
       name: securitypolicy/envoy-gateway/policy-for-gateway/0/tls/0

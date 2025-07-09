@@ -76,7 +76,6 @@
   commonLbConfig: {}
   connectTimeout: 10s
   dnsLookupFamily: V4_PREFERRED
-  dnsRefreshRate: 30s
   lbPolicy: LEAST_REQUEST
   loadAssignment:
     clusterName: securitypolicy/default/policy-for-http-route-1/default/grpc-backend
@@ -101,7 +100,6 @@
             localityWeightedLbConfig: {}
   name: securitypolicy/default/policy-for-http-route-1/default/grpc-backend
   perConnectionBufferLimitBytes: 32768
-  respectDnsTtl: true
   type: STRICT_DNS
   typedExtensionProtocolOptions:
     envoy.extensions.upstreams.http.v3.HttpProtocolOptions:
@@ -116,7 +114,6 @@
   commonLbConfig: {}
   connectTimeout: 10s
   dnsLookupFamily: V4_PREFERRED
-  dnsRefreshRate: 30s
   lbPolicy: LEAST_REQUEST
   loadAssignment:
     clusterName: securitypolicy/default/policy-for-gateway-1/envoy-gateway/http-backend
@@ -141,5 +138,4 @@
             localityWeightedLbConfig: {}
   name: securitypolicy/default/policy-for-gateway-1/envoy-gateway/http-backend
   perConnectionBufferLimitBytes: 32768
-  respectDnsTtl: true
   type: STRICT_DNS

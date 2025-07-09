@@ -4,7 +4,6 @@
   commonLbConfig: {}
   connectTimeout: 10s
   dnsLookupFamily: V4_PREFERRED
-  dnsRefreshRate: 30s
   lbPolicy: LEAST_REQUEST
   loadAssignment:
     clusterName: one_example_com_443
@@ -29,7 +28,6 @@
             localityWeightedLbConfig: {}
   name: one_example_com_443
   perConnectionBufferLimitBytes: 32768
-  respectDnsTtl: true
   transportSocket:
     name: envoy.transport_sockets.tls
     typedConfig:
@@ -46,7 +44,6 @@
   commonLbConfig: {}
   connectTimeout: 10s
   dnsLookupFamily: V4_PREFERRED
-  dnsRefreshRate: 30s
   lbPolicy: LEAST_REQUEST
   loadAssignment:
     clusterName: two_example_com_80
@@ -71,5 +68,4 @@
             localityWeightedLbConfig: {}
   name: two_example_com_80
   perConnectionBufferLimitBytes: 32768
-  respectDnsTtl: true
   type: STRICT_DNS

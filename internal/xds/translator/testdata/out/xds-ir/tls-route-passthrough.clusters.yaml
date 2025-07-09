@@ -28,7 +28,6 @@
   commonLbConfig: {}
   connectTimeout: 10s
   dnsLookupFamily: V4_PREFERRED
-  dnsRefreshRate: 30s
   lbPolicy: LEAST_REQUEST
   loadAssignment:
     clusterName: tls-passthrough-bar-dest
@@ -53,5 +52,4 @@
             localityWeightedLbConfig: {}
   name: tls-passthrough-bar-dest
   perConnectionBufferLimitBytes: 32768
-  respectDnsTtl: true
   type: STRICT_DNS

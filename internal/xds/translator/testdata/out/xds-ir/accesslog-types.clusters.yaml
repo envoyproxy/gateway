@@ -214,7 +214,6 @@
   commonLbConfig: {}
   connectTimeout: 10s
   dnsLookupFamily: V4_PREFERRED
-  dnsRefreshRate: 30s
   lbPolicy: LEAST_REQUEST
   loadAssignment:
     clusterName: accesslog_otel_0_3
@@ -239,7 +238,6 @@
             localityWeightedLbConfig: {}
   name: accesslog_otel_0_3
   perConnectionBufferLimitBytes: 32768
-  respectDnsTtl: true
   type: STRICT_DNS
   typedExtensionProtocolOptions:
     envoy.extensions.upstreams.http.v3.HttpProtocolOptions:
@@ -254,7 +252,6 @@
   commonLbConfig: {}
   connectTimeout: 10s
   dnsLookupFamily: V4_PREFERRED
-  dnsRefreshRate: 30s
   lbPolicy: LEAST_REQUEST
   loadAssignment:
     clusterName: accesslog_otel_1_3
@@ -279,7 +276,6 @@
             localityWeightedLbConfig: {}
   name: accesslog_otel_1_3
   perConnectionBufferLimitBytes: 32768
-  respectDnsTtl: true
   type: STRICT_DNS
   typedExtensionProtocolOptions:
     envoy.extensions.upstreams.http.v3.HttpProtocolOptions:
@@ -294,7 +290,6 @@
   commonLbConfig: {}
   connectTimeout: 10s
   dnsLookupFamily: V4_PREFERRED
-  dnsRefreshRate: 30s
   lbPolicy: LEAST_REQUEST
   loadAssignment:
     clusterName: accesslog_otel_2_3
@@ -319,7 +314,6 @@
             localityWeightedLbConfig: {}
   name: accesslog_otel_2_3
   perConnectionBufferLimitBytes: 32768
-  respectDnsTtl: true
   type: STRICT_DNS
   typedExtensionProtocolOptions:
     envoy.extensions.upstreams.http.v3.HttpProtocolOptions:
