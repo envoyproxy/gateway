@@ -1635,7 +1635,7 @@ _Appears in:_
 | `backendTLS` | _[BackendTLSConfig](#backendtlsconfig)_ |  false  |  | BackendTLS is the TLS configuration for the Envoy proxy to use when connecting to backends.<br />These settings are applied on backends for which TLS policies are specified. |
 | `ipFamily` | _[IPFamily](#ipfamily)_ |  false  |  | IPFamily specifies the IP family for the EnvoyProxy fleet.<br />This setting only affects the Gateway listener port and does not impact<br />other aspects of the Envoy proxy configuration.<br />If not specified, the system will operate as follows:<br />- It defaults to IPv4 only.<br />- IPv6 and dual-stack environments are not supported in this default configuration.<br />Note: To enable IPv6 or dual-stack functionality, explicit configuration is required. |
 | `preserveRouteOrder` | _boolean_ |  false  |  | PreserveRouteOrder determines if the order of matching for HTTPRoutes is determined by Gateway-API<br />specification (https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.HTTPRouteRule)<br />or preserves the order defined by users in the HTTPRoute's HTTPRouteRule list.<br />Default: False |
-| `disableLuaValidation` | _boolean_ |  false  | false | DisableLuaValidation disables the Lua script validation for Lua EnvoyExtensionPolicies |
+| `luaValidation` | _[LuaValidation](#luavalidation)_ |  false  |  | LuaValidation determines strictness of the Lua script validation for Lua EnvoyExtensionPolicies<br />Default: Strict |
 
 
 #### EnvoyProxyStatus
@@ -3152,6 +3152,21 @@ _Appears in:_
 | `type` | _[LuaValueType](#luavaluetype)_ |  true  | Inline | Type is the type of method to use to read the Lua value.<br />Valid values are Inline and ValueRef, default is Inline. |
 | `inline` | _string_ |  false  |  | Inline contains the source code as an inline string. |
 | `valueRef` | _[LocalObjectReference](#localobjectreference)_ |  false  |  | ValueRef has the source code specified as a local object reference.<br />Only a reference to ConfigMap is supported.<br />The value of key `lua` in the ConfigMap will be used.<br />If the key is not found, the first value in the ConfigMap will be used. |
+
+
+#### LuaValidation
+
+_Underlying type:_ _string_
+
+
+
+_Appears in:_
+- [EnvoyProxySpec](#envoyproxyspec)
+
+| Value | Description |
+| ----- | ----------- |
+| `Strict` | LuaValidationStrict is the default level and checks for issues during script execution.<br />Recommended if your scripts only use the standard Envoy Lua stream handle API.<br />For supported APIs, see: https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_filters/lua_filter#stream-handle-api<br /> | 
+| `Disabled` | LuaValidationDisabled disables all validation of Lua scripts.<br />Scripts will be accepted and executed without any validation checks.<br />This is not recommended unless your scripts import libraries that are not supported by Lua runtime validation.<br /> | 
 
 
 #### LuaValueType
