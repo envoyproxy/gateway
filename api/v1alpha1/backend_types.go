@@ -139,7 +139,26 @@ type BackendSpec struct {
         // +optional	Endpoints []BackendEndpoint `json:"endpoints,omitempty"`
 
 	// AppProtocols defines the application protocols to be supported when connecting to the backend.
-	//
+        //
+        // +optional
+        AppProtocols []AppProtocolType `json:"appProtocols,omitempty"`
+
+        // FQDN defines the FQDN used to contact the backend.
+        //
+        // +kubebuilder:validation:MaxLength=253
+        // +optional
+        FQDN *string `json:"fqdn,omitempty"`
+
+        // Fallback indicates whether the backend is designated as a fallback.
+        // It is highly recommended to configure active or passive health checks to ensure that failover can be detected
+        // when the active backends become unhealthy and to automatically readjust once the primary backends are healthy again.
+        // The overprovisioning factor is set to 1.4, meaning the fallback backends will only start receiving traffic when
+        // the health of the active backends falls below 72%.
+        //
+        // +optional
+        Fallback *bool `json:"fallback,omitempty"`
+
+        // TLS defines the TLS configuration for the backend.	//
 	// +optional
 	AppProtocols []AppProtocolType `json:"appProtocols,omitempty"`
 
@@ -152,10 +171,26 @@ type BackendSpec struct {
 	// +optional
 	Fallback *bool `json:"fallback,omitempty"`
 
-	// TLS defines the TLS settings for the backend.
-	// TLS.CACertificateRefs and TLS.WellKnownCACertificates can only be specified for DynamicResolver backends.
-	// TLS.InsecureSkipVerify can be specified for any Backends
-	//
+        //
+        // +optional
+        AppProtocols []AppProtocolType `json:"appProtocols,omitempty"`
+
+        // FQDN defines the FQDN used to contact the backend.
+        //
+        // +kubebuilder:validation:MaxLength=253
+        // +optional
+        FQDN *string `json:"fqdn,omitempty"`
+
+        // Fallback indicates whether the backend is designated as a fallback.
+        // It is highly recommended to configure active or passive health checks to ensure that failover can be detected
+        // when the active backends become unhealthy and to automatically readjust once the primary backends are healthy again.
+        // The overprovisioning factor is set to 1.4, meaning the fallback backends will only start receiving traffic when
+        // the health of the active backends falls below 72%.
+        //
+        // +optional
+        Fallback *bool `json:"fallback,omitempty"`
+
+        // TLS defines the TLS configuration for the backend.	//
 	// +optional
 	TLS *BackendTLSSettings `json:"tls,omitempty"`
 }
