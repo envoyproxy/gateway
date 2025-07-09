@@ -122,6 +122,57 @@ func (t *testingExtensionServer) PostVirtualHostModify(_ context.Context, req *p
 	}, nil
 }
 
+// PostClusterModifyHook modifies clusters for custom backend support
+func (t *testingExtensionServer) PostClusterModify(_ context.Context, req *pb.PostClusterModifyRequest) (*pb.PostClusterModifyResponse, error) {
+	// Clone the cluster to avoid modifying the original
+	modifiedCluster := proto.Clone(req.Cluster).(*clusterV3.Cluster)
+	var poolCount int
+	// Check if this cluster should be modified based on extension resources
+	for _, extensionResourceBytes := range req.PostClusterContext.BackendExtensionResources {
+		if poolCount == 1 {
+			return &pb.PostClusterModifyResponse{
+				Cluster: req.Cluster,
+			}, errors.New("inference pool only support one per rule")
+		}
+
+		extensionResource := unstructured.Unstructured{}
+		if err := extensionResource.UnmarshalJSON(extensionResourceBytes.UnstructuredBytes); err != nil {
+			return &pb.PostClusterModifyResponse{
+				Cluster: req.Cluster,
+			}, err
+		}
+
+		if extensionResource.GetKind() == "InferencePool" {
+			extensionSpec := extensionResource.Object["spec"].(map[string]any)
+			targetPortNumber := int(extensionSpec["targetPortNumber"].(int64))
+			if targetPortNumber == 0 {
+				return &pb.PostClusterModifyResponse{
+					Cluster: req.Cluster,
+				}, errors.New("inference pool target port number is 0")
+			}
+
+			modifiedCluster.ClusterDiscoveryType = &clusterV3.Cluster_Type{Type: clusterV3.Cluster_LOGICAL_DNS}
+			modifiedCluster.LbConfig = &clusterV3.Cluster_OriginalDstLbConfig_{
+				OriginalDstLbConfig: &clusterV3.Cluster_OriginalDstLbConfig{
+					UseHttpHeader:  true,
+					HttpHeaderName: "x-gateway-destination-endpoint",
+				},
+			}
+
+			modifiedCluster.EdsClusterConfig = nil
+			modifiedCluster.LoadAssignment = nil
+			modifiedCluster.LbPolicy = clusterV3.Cluster_CLUSTER_PROVIDED
+			modifiedCluster.CommonLbConfig = nil
+			modifiedCluster.ClusterDiscoveryType = &clusterV3.Cluster_Type{Type: clusterV3.Cluster_ORIGINAL_DST}
+			poolCount++
+		}
+	}
+
+	return &pb.PostClusterModifyResponse{
+		Cluster: modifiedCluster,
+	}, nil
+}
+
 // PostHTTPListenerModifyHook returns a modified version of the listener with a changed statprefix of the listener
 // A more useful use-case for an extension would be looping through the FilterChains to find the
 // HTTPConnectionManager(s) and inject a custom HTTPFilter, but that for testing purposes we don't need to make a complex change
@@ -211,6 +262,12 @@ func (t *testingExtensionServer) PostHTTPListenerModify(_ context.Context, req *
 // PostTranslateModifyHook inserts and overrides some clusters/secrets
 func (t *testingExtensionServer) PostTranslateModify(_ context.Context, req *pb.PostTranslateModifyRequest) (*pb.PostTranslateModifyResponse, error) {
 	for _, cluster := range req.Clusters {
+		if cluster.Name == "custom-backend-dest" {
+			return &pb.PostTranslateModifyResponse{
+				Clusters: req.Clusters,
+				Secrets:  req.Secrets,
+			}, nil
+		}
 		// This simulates an extension server that returns an error. It allows verifying that fail-close is working.
 		if edsConfig := cluster.GetEdsClusterConfig(); edsConfig != nil {
 			if strings.Contains(edsConfig.ServiceName, "fail-close-error") {

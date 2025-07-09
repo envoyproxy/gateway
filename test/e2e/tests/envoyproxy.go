@@ -225,9 +225,10 @@ func checkDaemonSet(t *testing.T, suite *suite.ConformanceTestSuite, gwNN types.
 }
 
 var (
-	serviceGVK = schema.FromAPIVersionAndKind("v1", "Service")
-	hpaGVK     = schema.FromAPIVersionAndKind("autoscaling/v2", "HorizontalPodAutoscaler")
-	pdbGVK     = schema.FromAPIVersionAndKind("policy/v1", "PodDisruptionBudget")
+	serviceGVK        = schema.FromAPIVersionAndKind("v1", "Service")
+	serviceAccountGVK = schema.FromAPIVersionAndKind("v1", "ServiceAccount")
+	hpaGVK            = schema.FromAPIVersionAndKind("autoscaling/v2", "HorizontalPodAutoscaler")
+	pdbGVK            = schema.FromAPIVersionAndKind("policy/v1", "PodDisruptionBudget")
 )
 
 func checkDeployment(t *testing.T, suite *suite.ConformanceTestSuite, gwNN types.NamespacedName, exceptNs, exceptName string,
@@ -246,6 +247,9 @@ func checkDeployment(t *testing.T, suite *suite.ConformanceTestSuite, gwNN types
 		return err
 	}
 	if err := checkObject(t, suite, pdbGVK, gwNN, exceptPdbCount, exceptNs, exceptName); err != nil {
+		return err
+	}
+	if err := checkObject(t, suite, serviceAccountGVK, gwNN, 1, exceptNs, exceptName); err != nil {
 		return err
 	}
 	return nil

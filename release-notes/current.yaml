@@ -29,8 +29,10 @@ new features: |
   Added support for configuring user provided name to generated HorizontalPodAutoscaler and PodDisruptionBudget resources.
   Added support for client certificate validation (SPKI, hash, SAN) in ClientTrafficPolicy.
   Added support for OIDC RP initialized logout. If the end session endpoint is explicitly specified or discovered from the issuer's well-known url, the end session endpoint will be invoked when the user logs out.
-
-
+  Added support for specifying deployment annotations through the helm chart.
+  Added support for customizing the name of the ServiceAccount used by the Proxy.
+  Added support for custom backendRefs via extension server using PostClusterModify hook.
+  Introduce validation strictness levels for Lua scripts in EnvoyExtensionPolicies.
 bug fixes: |
   Handle integer zone annotation values
   Fixed issue where WASM cache init failure caused routes with WASM-less EnvoyExtensionPolicies to have 500 direct responses.
@@ -42,6 +44,10 @@ bug fixes: |
   Fixed issue where EnvoyExtensionPolicy ExtProc body processing mode is set to FullDuplexStreamed, but trailers were not sent.
   Fixed validation issue where EnvoyExtensionPolicy ExtProc failOpen is true, and body processing mode FullDuplexStreamed is not rejected.
   Add ConfigMap indexers for EnvoyExtensionPolicies to reconcile Lua changes
+  Fixed issue that default accesslog format not working.
+  Fixed validation errors when the rateLimit url for Redis in the EnvoyGateway API includes multiple comma separated hosts.
+  Fixes addresses in status of DualStack NodePort Gateways.
+  Fixed issue that not able to override the prometheus annotation in EnvoyProxy CRD.
 
 
 # Enhancements that improve performance.

@@ -327,9 +327,7 @@
                     }
                   ]
                 },
-                "commonLbConfig": {
-                  "localityWeightedLbConfig": {}
-                },
+                "commonLbConfig": {},
                 "connectTimeout": "10s",
                 "dnsLookupFamily": "V4_PREFERRED",
                 "edsClusterConfig": {
@@ -341,6 +339,21 @@
                 },
                 "ignoreHealthOnHostRemoval": true,
                 "lbPolicy": "LEAST_REQUEST",
+                "loadBalancingPolicy": {
+                  "policies": [
+                    {
+                      "typedExtensionConfig": {
+                        "name": "envoy.load_balancing_policies.least_request",
+                        "typedConfig": {
+                          "@type": "type.googleapis.com/envoy.extensions.load_balancing_policies.least_request.v3.LeastRequest",
+                          "localityLbConfig": {
+                            "localityWeightedLbConfig": {}
+                          }
+                        }
+                      }
+                    }
+                  ]
+                },
                 "metadata": {
                   "filterMetadata": {
                     "envoy-gateway": {
@@ -369,9 +382,7 @@
                     }
                   ]
                 },
-                "commonLbConfig": {
-                  "localityWeightedLbConfig": {}
-                },
+                "commonLbConfig": {},
                 "connectTimeout": "10s",
                 "dnsLookupFamily": "V4_PREFERRED",
                 "dnsRefreshRate": "30s",
@@ -396,6 +407,21 @@
                       "loadBalancingWeight": 1,
                       "locality": {
                         "region": "raw_githubusercontent_com_443/backend/-1"
+                      }
+                    }
+                  ]
+                },
+                "loadBalancingPolicy": {
+                  "policies": [
+                    {
+                      "typedExtensionConfig": {
+                        "name": "envoy.load_balancing_policies.least_request",
+                        "typedConfig": {
+                          "@type": "type.googleapis.com/envoy.extensions.load_balancing_policies.least_request.v3.LeastRequest",
+                          "localityLbConfig": {
+                            "localityWeightedLbConfig": {}
+                          }
+                        }
                       }
                     }
                   ]
@@ -661,6 +687,7 @@
                     ],
                     "name": "envoy-gateway-system/eg/http"
                   },
+                  "maxConnectionsToAcceptPerSocketEvent": 1,
                   "name": "envoy-gateway-system/eg/http",
                   "perConnectionBufferLimitBytes": 32768
                 }

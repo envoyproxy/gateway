@@ -777,7 +777,7 @@ type HTTPRoute struct {
 	URLRewrite *URLRewrite `json:"urlRewrite,omitempty" yaml:"urlRewrite,omitempty"`
 	// Credentials to be injected into the request.
 	CredentialInjection *CredentialInjection `json:"credentialInjection,omitempty" yaml:"credentialInjection,omitempty"`
-	// ExtensionRefs holds unstructured resources that were introduced by an extension and used on the HTTPRoute as extensionRef filters
+	// ExtensionRefs holds unstructured resources that were introduced by an extension and used on the HTTPRoute as extensionRef filters or on the backendRef as a dynamic backend
 	ExtensionRefs []*UnstructuredRef `json:"extensionRefs,omitempty" yaml:"extensionRefs,omitempty"`
 	// Traffic holds the features associated with BackendTrafficPolicy
 	Traffic *TrafficFeatures `json:"traffic,omitempty" yaml:"traffic,omitempty"`
@@ -1602,6 +1602,8 @@ func (r *RouteDestination) ToBackendWeights() *BackendWeights {
 		switch {
 		case s.IsDynamicResolver: // Dynamic resolver has no endpoints
 			w.Valid += *s.Weight
+		case s.IsCustomBackend: // Custom backends has no endpoints
+			w.Valid += *s.Weight
 		case len(s.Endpoints) > 0:
 			w.Valid += *s.Weight
 		default:
@@ -1621,6 +1623,9 @@ type DestinationSetting struct {
 	// IsDynamicResolver specifies whether the destination is a dynamic resolver.
 	// A dynamic resolver is a destination that is resolved dynamically using the request's host header.
 	IsDynamicResolver bool `json:"isDynamicResolver,omitempty" yaml:"isDynamicResolver,omitempty"`
+
+	// IsCustomBackend specifies whether the destination is a custom backend.
+	IsCustomBackend bool `json:"isCustomBackend,omitempty" yaml:"isCustomBackend,omitempty"`
 
 	// Weight associated with this destination,
 	// invalid endpoints are represents with a
