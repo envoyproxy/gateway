@@ -34,7 +34,7 @@ func (r *Runner) Start(ctx context.Context) error {
 		spewConfig.Dump(r.cfg)
 	}
 
-	return r.start(ctx)
+	return r.start()
 }
 
 func (r *Runner) Name() string {
@@ -50,7 +50,7 @@ func (r *Runner) Close() error {
 	return nil
 }
 
-func (r *Runner) start(ctx context.Context) error {
+func (r *Runner) start() error {
 	handlers := http.NewServeMux()
 	address := r.cfg.EnvoyGateway.GetEnvoyGatewayAdminAddress()
 	enablePprof := r.cfg.EnvoyGateway.GetEnvoyGatewayAdmin().EnablePprof

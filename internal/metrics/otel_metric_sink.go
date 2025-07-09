@@ -9,9 +9,10 @@ import (
 	"context"
 	"sync"
 
-	log "github.com/envoyproxy/gateway/internal/logging"
 	"go.opentelemetry.io/otel/attribute"
 	api "go.opentelemetry.io/otel/metric"
+
+	log "github.com/envoyproxy/gateway/internal/logging"
 )
 
 var metricsLogger log.Logger
