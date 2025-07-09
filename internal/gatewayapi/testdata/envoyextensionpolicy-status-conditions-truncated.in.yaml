@@ -1,6 +1,6 @@
-backendTrafficPolicies:
+envoyExtensionPolicies:
 - apiVersion: gateway.envoyproxy.io/v1alpha1
-  kind: BackendTrafficPolicy
+  kind: EnvoyExtensionPolicy
   metadata:
     namespace: envoy-gateway
     name: target-gateway-with-route-level-override-truncated-ancestors
@@ -13,7 +13,7 @@ backendTrafficPolicies:
       kind: HTTPRoute
       name: httproute-2
 - apiVersion: gateway.envoyproxy.io/v1alpha1
-  kind: BackendTrafficPolicy
+  kind: EnvoyExtensionPolicy
   metadata:
     namespace: envoy-gateway
     name: target-httproute-with-attachment-conflict-truncated-ancestors
@@ -23,7 +23,7 @@ backendTrafficPolicies:
       kind: HTTPRoute
       name: httproute-2
 - apiVersion: gateway.envoyproxy.io/v1alpha1
-  kind: BackendTrafficPolicy
+  kind: EnvoyExtensionPolicy
   metadata:
     namespace: envoy-gateway
     name: target-httproute-with-accepted-truncated-ancestors
