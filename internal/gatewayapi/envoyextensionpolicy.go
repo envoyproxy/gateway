@@ -458,7 +458,8 @@ func (t *Translator) buildLua(
 	if err != nil {
 		return nil, err
 	}
-	if envoyProxy != nil && envoyProxy.Spec.DisableLuaValidation != nil && *envoyProxy.Spec.DisableLuaValidation {
+	if envoyProxy != nil && envoyProxy.Spec.LuaValidation != nil &&
+		*envoyProxy.Spec.LuaValidation == egv1a1.LuaValidationDisabled {
 		return &ir.Lua{
 			Name: name,
 			Code: luaCode,
