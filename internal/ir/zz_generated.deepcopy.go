@@ -1464,7 +1464,7 @@ func (in *HTTPClientTimeout) DeepCopyInto(out *HTTPClientTimeout) {
 	}
 	if in.StreamIdleTimeout != nil {
 		in, out := &in.StreamIdleTimeout, &out.StreamIdleTimeout
-		*out = new(v1.Duration)
+		*out = new(metav1.Duration)
 		**out = **in
 	}
 }

@@ -770,7 +770,7 @@ type CustomResponse struct {
 
 	// ResponseHeaderModifier defines headers to add, set or remove from the response.
 	// This allows the response policy to append, add or override headers
-	// of the original response before it is sent to a downstream client.
+	// of the final response before it is sent to a downstream client.
 	// Note: Header removal is not supported for responseOverride.
 	//
 	// +optional
