@@ -401,9 +401,6 @@ xdsIR:
                 name: securitypolicy/default/policy-for-gateway-1/extauth/0
                 settings:
                 - addressType: IP
-                  endpoints:
-                  - host: 7.7.7.7
-                    port: 80
                   metadata:
                     kind: ServiceImport
                     name: http-backend
