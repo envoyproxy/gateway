@@ -565,6 +565,7 @@ func (t *Translator) buildTrafficFeatures(policy *egv1a1.BackendTrafficPolicy, r
 		rb          *ir.RequestBuffer
 		cp          []*ir.Compression
 		httpUpgrade []ir.HTTPUpgradeConfig
+		extProcs    []ir.ExtProc
 		err, errs   error
 	)
 
@@ -625,6 +626,11 @@ func (t *Translator) buildTrafficFeatures(policy *egv1a1.BackendTrafficPolicy, r
 	cp = buildCompression(policy.Spec.Compression)
 	httpUpgrade = buildHTTPProtocolUpgradeConfig(policy.Spec.HTTPUpgrade)
 
+	if extProcs, err = t.buildBackendExtProc(policy, resources); err != nil {
+		err = perr.WithMessage(err, "ExtProc")
+		errs = errors.Join(errs, err)
+	}
+
 	ds = translateDNS(policy.Spec.ClusterSettings)
 
 	return &ir.TrafficFeatures{
@@ -644,6 +650,7 @@ func (t *Translator) buildTrafficFeatures(policy *egv1a1.BackendTrafficPolicy, r
 		RequestBuffer:     rb,
 		Compression:       cp,
 		HTTPUpgrade:       httpUpgrade,
+		ExtProc:           extProcs,
 		Telemetry:         policy.Spec.Telemetry,
 	}, errs
 }
@@ -1179,18 +1186,41 @@ func buildHTTPProtocolUpgradeConfig(cfgs []*egv1a1.ProtocolUpgradeConfig) []ir.H
 		return nil
 	}
 
-	result := make([]ir.HTTPUpgradeConfig, 0, len(cfgs))
-	for _, cfg := range cfgs {
-		upgrade := ir.HTTPUpgradeConfig{
+	upgradeConfigs := make([]ir.HTTPUpgradeConfig, len(cfgs))
+
+	for i, cfg := range cfgs {
+		upgradeConfigs[i] = ir.HTTPUpgradeConfig{
 			Type: cfg.Type,
 		}
+
 		if cfg.Connect != nil {
-			upgrade.Connect = &ir.ConnectConfig{
-				Terminate: ptr.Deref(cfg.Connect.Terminate, false),
+			upgradeConfigs[i].Connect = &ir.ConnectConfig{
+				Terminate: *cfg.Connect.Terminate,
 			}
 		}
-		result = append(result, upgrade)
 	}
 
-	return result
+	return upgradeConfigs
+}
+
+// buildBackendExtProc builds IR ExtProc configurations from BackendTrafficPolicy ExtProc specifications
+func (t *Translator) buildBackendExtProc(policy *egv1a1.BackendTrafficPolicy, resources *resource.Resources) ([]ir.ExtProc, error) {
+	var extProcs []ir.ExtProc
+
+	for idx, extProcSpec := range policy.Spec.ExtProc {
+		// Reuse existing buildExtProc logic from EnvoyExtensionPolicy
+		dummyPolicy := &egv1a1.EnvoyExtensionPolicy{ObjectMeta: policy.ObjectMeta}
+
+		extProcIR, err := t.buildExtProc(
+			fmt.Sprintf("%s/%s/extproc/%d", policy.Namespace, policy.Name, idx),
+			dummyPolicy, extProcSpec, idx, resources, nil,
+		)
+		if err != nil {
+			return nil, err
+		}
+
+		extProcs = append(extProcs, *extProcIR)
+	}
+
+	return extProcs, nil
 }

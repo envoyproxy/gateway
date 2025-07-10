@@ -686,6 +686,13 @@ func (in *BackendTrafficPolicySpec) DeepCopyInto(out *BackendTrafficPolicySpec) 
 			}
 		}
 	}
+	if in.ExtProc != nil {
+		in, out := &in.ExtProc, &out.ExtProc
+		*out = make([]ExtProc, len(*in))
+		for i := range *in {
+			(*in)[i].DeepCopyInto(&(*out)[i])
+		}
+	}
 	if in.ResponseOverride != nil {
 		in, out := &in.ResponseOverride, &out.ResponseOverride
 		*out = make([]*ResponseOverride, len(*in))
@@ -2493,6 +2500,11 @@ func (in *ExtAuth) DeepCopy() *ExtAuth {
 func (in *ExtProc) DeepCopyInto(out *ExtProc) {
 	*out = *in
 	in.BackendCluster.DeepCopyInto(&out.BackendCluster)
+	if in.Stage != nil {
+		in, out := &in.Stage, &out.Stage
+		*out = new(ExtProcStage)
+		**out = **in
+	}
 	if in.MessageTimeout != nil {
 		in, out := &in.MessageTimeout, &out.MessageTimeout
 		*out = new(v1.Duration)

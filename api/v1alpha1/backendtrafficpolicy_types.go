@@ -72,10 +72,12 @@ type BackendTrafficPolicySpec struct {
 	// +optional
 	UseClientProtocol *bool `json:"useClientProtocol,omitempty"`
 
-	// The compression config for the http streams.
-	//
-	// +optional
+	// Compression settings for HTTP Response
 	Compression []*Compression `json:"compression,omitempty"`
+
+	// ExtProc for backend-specific external processing
+	// +optional
+	ExtProc []ExtProc `json:"extProc,omitempty"`
 
 	// ResponseOverride defines the configuration to override specific responses with a custom one.
 	// If multiple configurations are specified, the first one to match wins.
