@@ -173,9 +173,14 @@ const (
 	// For supported APIs, see: https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_filters/lua_filter#stream-handle-api
 	LuaValidationStrict LuaValidation = "Strict"
 
-	// LuaValidationDisabled disables all validation of Lua scripts.
+	// LuaValidationSyntax checks for syntax errors in the Lua script.
+	// Note that this is not a full runtime validation and does not check for issues during script execution.
+	// This is recommended if your scripts use external libraries that are not supported by Lua runtime validation.
+	LuaValidationSyntax LuaValidation = "Syntax"
+
+	// LuaValidationDisabled disables all validations of Lua scripts.
 	// Scripts will be accepted and executed without any validation checks.
-	// This is not recommended unless your scripts import libraries that are not supported by Lua runtime validation.
+	// This is not recommended unless both runtime and syntax validations are failing unexpectedly.
 	LuaValidationDisabled LuaValidation = "Disabled"
 )
 
