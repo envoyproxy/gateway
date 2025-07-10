@@ -150,6 +150,9 @@ func buildXdsCluster(args *xdsClusterArgs) (*buildClusterResult, error) {
 		CommonLbConfig:                &clusterv3.Cluster_CommonLbConfig{},
 		PerConnectionBufferLimitBytes: buildBackandConnectionBufferLimitBytes(args.backendConnection),
 		Metadata:                      buildXdsMetadata(args.metadata),
+		// Dont wait for a health check to determine health and remove these endpoints
+		// if the endpoint has been removed via EDS by the control plane or removed from DNS query results
+		IgnoreHealthOnHostRemoval: true,
 	}
 
 	if args.statName != nil {
@@ -396,9 +399,6 @@ func buildXdsCluster(args *xdsClusterArgs) (*buildClusterResult, error) {
 				},
 			},
 		}
-		// Dont wait for a health check to determine health and remove these endpoints
-		// if the endpoint has been removed via EDS by the control plane
-		cluster.IgnoreHealthOnHostRemoval = true
 	default:
 		cluster.ClusterDiscoveryType = &clusterv3.Cluster_Type{Type: clusterv3.Cluster_STRICT_DNS}
 		cluster.DnsRefreshRate = durationpb.New(30 * time.Second)
