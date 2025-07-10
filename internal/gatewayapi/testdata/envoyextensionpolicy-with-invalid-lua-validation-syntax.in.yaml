@@ -1,3 +1,11 @@
+envoyProxyForGatewayClass:
+  apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: EnvoyProxy
+  metadata:
+    namespace: envoy-gateway-system
+    name: test
+  spec:
+    luaValidation: Syntax
 gateways:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: Gateway
@@ -48,26 +56,11 @@ httpRoutes:
     rules:
     - matches:
       - path:
-          value: "/bar"
+          value: "/foo"
       backendRefs:
       - name: service-1
         port: 8080
 envoyextensionpolicies:
-- apiVersion: gateway.envoyproxy.io/v1alpha1
-  kind: EnvoyExtensionPolicy
-  metadata:
-    namespace: envoy-gateway
-    name: policy-for-gateway  # This policy should attach httproute-2
-  spec:
-    targetRef:
-      group: gateway.networking.k8s.io
-      kind: Gateway
-      name: gateway-1
-    lua:
-    - type: Inline
-      inline: "function envoy_on_request(request_handle)
-      request_handle:logInfo('Goodbye.')
-      end"
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: EnvoyExtensionPolicy
   metadata:
@@ -79,8 +72,9 @@ envoyextensionpolicies:
       kind: HTTPRoute
       name: httproute-1
     lua:
-    - type: Inline  # Lua with external library and UnknownApi() call should be rejected
+    - type: Inline  # Lua with external library and UnknownApi() call but correct syntax so should be accepted
       inline: |
+        local json = require("json")
         function envoy_on_response(response_handle)
             local content_type = response_handle:headers():get("content-type")
             if content_type and string.find(content_type, "application/json", 1, true) then
@@ -97,4 +91,23 @@ envoyextensionpolicies:
                 end
             end
             return envoy.lua.ResponseStatus.Continue
+        end
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: EnvoyExtensionPolicy
+  metadata:
+    namespace: default
+    name: policy-for-http-route-2
+  spec:
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: httproute-2
+    lua:
+    - type: Inline  # Invalid Lua syntax (missing then keyword in if statement) so should be rejected
+      inline: |
+        function envoy_on_response(response_handle)
+          local value = 10
+          if value > 5
+            print("Value is greater than 5")
+          end
         end

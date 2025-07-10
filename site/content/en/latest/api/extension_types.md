@@ -3167,7 +3167,8 @@ _Appears in:_
 | Value | Description |
 | ----- | ----------- |
 | `Strict` | LuaValidationStrict is the default level and checks for issues during script execution.<br />Recommended if your scripts only use the standard Envoy Lua stream handle API.<br />For supported APIs, see: https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_filters/lua_filter#stream-handle-api<br /> | 
-| `Disabled` | LuaValidationDisabled disables all validation of Lua scripts.<br />Scripts will be accepted and executed without any validation checks.<br />This is not recommended unless your scripts import libraries that are not supported by Lua runtime validation.<br /> | 
+| `Syntax` | LuaValidationSyntax checks for syntax errors in the Lua script.<br />Note that this is not a full runtime validation and does not check for issues during script execution.<br />This is recommended if your scripts use external libraries that are not supported by Lua runtime validation.<br /> | 
+| `Disabled` | LuaValidationDisabled disables all validations of Lua scripts.<br />Scripts will be accepted and executed without any validation checks.<br />This is not recommended unless both runtime and syntax validations are failing unexpectedly.<br /> | 
 
 
 #### LuaValueType

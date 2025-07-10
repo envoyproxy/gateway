@@ -8,6 +8,7 @@ envoyExtensionPolicies:
   spec:
     lua:
     - inline: |
+        local json = require("json")
         function envoy_on_response(response_handle)
             local content_type = response_handle:headers():get("content-type")
             if content_type and string.find(content_type, "application/json", 1, true) then
@@ -40,29 +41,31 @@ envoyExtensionPolicies:
         sectionName: http
       conditions:
       - lastTransitionTime: null
-        message: "Lua: validation failed for lua body in policy with name envoyextensionpolicy/default/policy-for-http-route/lua/0:
-          failed to validate with envoy_on_response: <string>:629: attempt to index
-          a non-table object(nil) with key 'lua'\nstack traceback:\n\t<string>:629:
-          in function 'envoy_on_response'\n\t<string>:632: in main chunk\n\t[G]: ?."
-        reason: Invalid
-        status: "False"
+        message: Policy has been accepted.
+        reason: Accepted
+        status: "True"
         type: Accepted
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: EnvoyExtensionPolicy
   metadata:
     creationTimestamp: null
-    name: policy-for-gateway
-    namespace: envoy-gateway
+    name: policy-for-http-route-2
+    namespace: default
   spec:
     lua:
-    - inline: function envoy_on_request(request_handle) request_handle:logInfo('Goodbye.')
+    - inline: |
+        function envoy_on_response(response_handle)
+          local value = 10
+          if value > 5
+            print("Value is greater than 5")
+          end
         end
       type: Inline
     targetRef:
       group: gateway.networking.k8s.io
-      kind: Gateway
-      name: gateway-1
+      kind: HTTPRoute
+      name: httproute-2
   status:
     ancestors:
     - ancestorRef:
@@ -70,18 +73,15 @@ envoyExtensionPolicies:
         kind: Gateway
         name: gateway-1
         namespace: envoy-gateway
+        sectionName: http
       conditions:
       - lastTransitionTime: null
-        message: Policy has been accepted.
-        reason: Accepted
-        status: "True"
+        message: |-
+          Lua: validation failed for lua body in policy with name envoyextensionpolicy/default/policy-for-http-route-2/lua/0: failed to validate with envoy_on_response: <string> line:617(column:9) near 'print':   syntax error
+          .
+        reason: Invalid
+        status: "False"
         type: Accepted
-      - lastTransitionTime: null
-        message: 'This policy is being overridden by other envoyExtensionPolicies
-          for these routes: [default/httproute-1]'
-        reason: Overridden
-        status: "True"
-        type: Overridden
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
 gateways:
 - apiVersion: gateway.networking.k8s.io/v1
@@ -182,7 +182,7 @@ httpRoutes:
         port: 8080
       matches:
       - path:
-          value: /bar
+          value: /foo
   status:
     parents:
     - conditions:
@@ -204,6 +204,17 @@ httpRoutes:
 infraIR:
   envoy-gateway/gateway-1:
     proxy:
+      config:
+        apiVersion: gateway.envoyproxy.io/v1alpha1
+        kind: EnvoyProxy
+        metadata:
+          creationTimestamp: null
+          name: test
+          namespace: envoy-gateway-system
+        spec:
+          logging: {}
+          luaValidation: Syntax
+        status: {}
       listeners:
       - address: null
         name: envoy-gateway/gateway-1/http
@@ -260,13 +271,28 @@ xdsIR:
             name: httproute/default/httproute-1/rule/0/backend/0
             protocol: HTTP
             weight: 1
-        directResponse:
-          statusCode: 500
         envoyExtensions:
           luas:
-          - Code: function envoy_on_request(request_handle) request_handle:logInfo('Goodbye.')
+          - Code: |
+              local json = require("json")
+              function envoy_on_response(response_handle)
+                  local content_type = response_handle:headers():get("content-type")
+                  if content_type and string.find(content_type, "application/json", 1, true) then
+                      response_handle:body():setBytes(0, response_handle:body():length())
+                      response_handle:UnknownApi()
+                      local response_body = response_handle:body():getBytes(0, response_handle:body():length())
+                      if response_body and #response_body > 0 then
+                          local parsed_json = json.decode(response_body)
+                          if type(parsed_json) == "table" then
+                              response_handle:logInfo("Successfully parsed JSON response.")
+                          else
+                              response_handle:logWarn("Parsed JSON is not a table, or unexpected format.")
+                          end
+                      end
+                  end
+                  return envoy.lua.ResponseStatus.Continue
               end
-            Name: envoyextensionpolicy/envoy-gateway/policy-for-gateway/lua/0
+            Name: envoyextensionpolicy/default/policy-for-http-route/lua/0
         hostname: www.example.com
         isHTTP2: false
         metadata:
@@ -296,11 +322,8 @@ xdsIR:
             name: httproute/default/httproute-2/rule/0/backend/0
             protocol: HTTP
             weight: 1
-        envoyExtensions:
-          luas:
-          - Code: function envoy_on_request(request_handle) request_handle:logInfo('Goodbye.')
-              end
-            Name: envoyextensionpolicy/envoy-gateway/policy-for-gateway/lua/0
+        directResponse:
+          statusCode: 500
         hostname: www.example.com
         isHTTP2: false
         metadata:
@@ -311,7 +334,7 @@ xdsIR:
         pathMatch:
           distinct: false
           name: ""
-          prefix: /bar
+          prefix: /foo
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4
