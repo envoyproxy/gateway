@@ -23,6 +23,7 @@ Envoy Gateway collects the following metrics in Watching Components:
 | `watchable_subscribe_duration_seconds` | How long in seconds a subscribed watchable queue is handled. |
 | `watchable_subscribe_total`            | Total number of subscribed watchable queue.                  |
 | `watchable_panics_recovered_total`     | Total recovered panics in the watchable infrastructure.      |
+| `watchable_publish_total`              | Total number of published event to watchable queue.          |
 
 Each metric includes the `runner` label to identify the corresponding components,
 the relationship between label values and components is as follows:

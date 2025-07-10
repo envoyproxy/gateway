@@ -26,15 +26,20 @@ If you do, make sure that you don't install the CRDs again when installing the E
 Once Helm has been set up correctly, install the chart from dockerhub:
 
 ``` shell
-    helm install gateway-crds oci://docker.io/envoyproxy/gateway-crds-helm --version v0.0.0-latest -n envoy-gateway-system --create-namespace
+helm template eg-crds oci://docker.io/envoyproxy/gateway-crds-helm \
+    --version v0.0.0-latest | kubectl apply --server-side -f -
 ```
+
+**Note**: We're using `helm template` piped into `kubectl apply` instead of `helm install` due to a [known Helm limitation](https://github.com/helm/helm/pull/12277)
+related to large CRDs in the `templates/` directory.
 
 You can find all helm chart release in [Dockerhub](https://hub.docker.com/r/envoyproxy/gateway-crds-helm/tags)
 
 To uninstall the chart:
 
 ``` shell
-    helm uninstall gateway-crds -n envoy-gateway-system
+helm template eg-crds oci://docker.io/envoyproxy/gateway-crds-helm \
+    --version v0.0.0-latest | kubectl delete --server-side -f -
 ```
 
 {{ template "chart.valuesSection" . }}

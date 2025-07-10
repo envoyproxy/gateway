@@ -19,7 +19,6 @@ envoyProxyForGatewayClass:
             socket_address:
               address: 127.0.0.1
               port_value: 19000
-    disableLuaValidation: false
     logging:
       level:
         default: warn

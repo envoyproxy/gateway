@@ -56,7 +56,7 @@ func (r *Runner) Start(ctx context.Context) (err error) {
 
 func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *ir.Xds]) {
 	// Subscribe to resources
-	message.HandleSubscription(message.Metadata{Runner: string(egv1a1.LogComponentXdsTranslatorRunner), Message: "xds-ir"}, sub,
+	message.HandleSubscription(message.Metadata{Runner: r.Name(), Message: message.XDSIRMessageName}, sub,
 		func(update message.Update[string, *ir.Xds], errChan chan error) {
 			r.Logger.Info("received an update")
 			key := update.Key
@@ -128,7 +128,11 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *ir
 
 				// Publish
 				if err == nil {
-					r.Xds.Store(key, result)
+					message.HandleStore(message.Metadata{
+						Runner:  r.Name(),
+						Message: message.XDSMessageName,
+					},
+						key, result, &r.Xds.Map)
 				} else {
 					r.Logger.Error(err, "skipped publishing xds resources")
 				}

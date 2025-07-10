@@ -2419,9 +2419,9 @@ func (in *EnvoyProxySpec) DeepCopyInto(out *EnvoyProxySpec) {
 		*out = new(bool)
 		**out = **in
 	}
-	if in.DisableLuaValidation != nil {
-		in, out := &in.DisableLuaValidation, &out.DisableLuaValidation
-		*out = new(bool)
+	if in.LuaValidation != nil {
+		in, out := &in.LuaValidation, &out.LuaValidation
+		*out = new(LuaValidation)
 		**out = **in
 	}
 }
@@ -2627,6 +2627,11 @@ func (in *ExtensionManager) DeepCopyInto(out *ExtensionManager) {
 	}
 	if in.PolicyResources != nil {
 		in, out := &in.PolicyResources, &out.PolicyResources
+		*out = make([]GroupVersionKind, len(*in))
+		copy(*out, *in)
+	}
+	if in.BackendResources != nil {
+		in, out := &in.BackendResources, &out.BackendResources
 		*out = make([]GroupVersionKind, len(*in))
 		copy(*out, *in)
 	}
@@ -3172,6 +3177,11 @@ func (in *HTTPClientTimeout) DeepCopyInto(out *HTTPClientTimeout) {
 	}
 	if in.IdleTimeout != nil {
 		in, out := &in.IdleTimeout, &out.IdleTimeout
+		*out = new(v1.Duration)
+		**out = **in
+	}
+	if in.StreamIdleTimeout != nil {
+		in, out := &in.StreamIdleTimeout, &out.StreamIdleTimeout
 		*out = new(v1.Duration)
 		**out = **in
 	}
