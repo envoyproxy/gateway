@@ -312,6 +312,11 @@ func buildLoadBalancer(policy egv1a1.ClusterSettings) (*ir.LoadBalancer, error) 
 		}
 	}
 
+	// Add EndpointOverride if specified
+	if policy.LoadBalancer.EndpointOverride != nil {
+		lb.EndpointOverride = buildEndpointOverride(*policy.LoadBalancer.EndpointOverride)
+	}
+
 	return lb, nil
 }
 
@@ -340,6 +345,36 @@ func buildConsistentHashLoadBalancer(policy egv1a1.LoadBalancer) (*ir.Consistent
 	}
 
 	return consistentHash, nil
+}
+
+func buildEndpointOverride(policy egv1a1.EndpointOverride) *ir.EndpointOverride {
+	endpointOverride := &ir.EndpointOverride{}
+
+	// Convert extract from sources
+	for _, source := range policy.ExtractFrom {
+		irSource := ir.EndpointOverrideExtractFrom{}
+
+		if source.Header != nil {
+			irSource.Header = source.Header
+		}
+
+		if source.Metadata != nil {
+			irSource.Metadata = &ir.EndpointOverrideMetadataKey{
+				Key: source.Metadata.Key,
+			}
+
+			// Convert path if present
+			for _, pathElement := range source.Metadata.Path {
+				irSource.Metadata.Path = append(irSource.Metadata.Path, ir.EndpointOverrideMetadataKeyPath{
+					Key: pathElement.Key,
+				})
+			}
+		}
+
+		endpointOverride.ExtractFrom = append(endpointOverride.ExtractFrom, irSource)
+	}
+
+	return endpointOverride
 }
 
 func buildProxyProtocol(policy egv1a1.ClusterSettings) *ir.ProxyProtocol {
