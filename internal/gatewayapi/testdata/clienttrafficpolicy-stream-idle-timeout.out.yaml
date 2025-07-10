@@ -150,7 +150,7 @@ xdsIR:
       timeout:
         http:
           requestReceivedTimeout: 5s
-          streamIdleTimeout: 1h
+          streamIdleTimeout: 1h0m0s
     - address: 0.0.0.0
       hostnames:
       - '*'

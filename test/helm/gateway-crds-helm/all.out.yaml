@@ -20684,6 +20684,12 @@ spec:
                           initiation and stops when either the last byte of the request is sent upstream or when the response begins.
                         pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                         type: string
+                      streamIdleTimeout:
+                        description: |2-
+                           The stream idle timeout defines the amount of time a stream can exist without any upstream or downstream activity.
+                           Default: 5 minutes.
+                        pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                        type: string
                     type: object
                   tcp:
                     description: Timeout settings for TCP.
