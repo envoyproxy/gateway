@@ -101,6 +101,7 @@
   connectTimeout: 10s
   dnsLookupFamily: V4_PREFERRED
   dnsRefreshRate: 30s
+  ignoreHealthOnHostRemoval: true
   lbPolicy: LEAST_REQUEST
   loadAssignment:
     clusterName: oauth_foo_com_443
