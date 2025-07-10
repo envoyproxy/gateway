@@ -105,6 +105,9 @@ func TruncatePolicyAncestors(policyStatus *gwapiv1a2.PolicyStatus, controllerNam
 		return
 	}
 
+	// we need to truncate policy ancestor status due to the item limit (max 16).
+	// so we are choosing to preserve the 16 most important ancestors.
+	// negative polarity (Conflicted, Overridden...) should be clearly indicated to the user.
 	slices.SortStableFunc(policyStatus.Ancestors, func(a, b gwapiv1a2.PolicyAncestorStatus) int {
 		if r := cmp.Compare(sortRankForPolicyAncestor(a), sortRankForPolicyAncestor(b)); r != 0 {
 			return r
