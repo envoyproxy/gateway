@@ -304,7 +304,7 @@ httpRoutes:
     namespace: default
   spec:
     hostnames:
-    - www.baz.com
+    - www.qux.com
     parentRefs:
     - name: gateway-1
       namespace: default
@@ -486,13 +486,13 @@ xdsIR:
             weight: 1
         directResponse:
           statusCode: 500
-        hostname: www.baz.com
+        hostname: www.qux.com
         isHTTP2: false
         metadata:
           kind: HTTPRoute
           name: httproute-4
           namespace: default
-        name: httproute/default/httproute-4/rule/0/match/0/www_baz_com
+        name: httproute/default/httproute-4/rule/0/match/0/www_qux_com
         pathMatch:
           distinct: false
           name: ""

@@ -78,7 +78,7 @@ httpRoutes:
     name: httproute-4   # should return 500 because there are one invalid ext procs with failopen and one invalid lua in the attached policy.
   spec:
     hostnames:
-    - www.baz.com
+    - www.qux.com
     parentRefs:
     - namespace: default
       name: gateway-1
