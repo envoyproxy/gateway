@@ -740,6 +740,12 @@ type HTTPClientTimeout struct {
 	RequestReceivedTimeout *metav1.Duration `json:"requestReceivedTimeout,omitempty" yaml:"requestReceivedTimeout,omitempty"`
 	// IdleTimeout for an HTTP connection. Idle time is defined as a period in which there are no active requests in the connection.
 	IdleTimeout *metav1.Duration `json:"idleTimeout,omitempty" yaml:"idleTimeout,omitempty"`
+	// The stream idle timeout for connections managed by the connection manager.
+	// If not specified, this defaults to 5 minutes. The default value was selected
+	// so as not to interfere with any smaller configured timeouts that may have
+	// existed in configurations prior to the introduction of this feature, while
+	// introducing robustness to TCP connections that terminate without a FIN.
+	StreamIdleTimeout *metav1.Duration `json:"streamIdleTimeout,omitempty" yaml:"streamIdleTimeout,omitempty"`
 }
 
 // HTTPRoute holds the route information associated with the HTTP Route
