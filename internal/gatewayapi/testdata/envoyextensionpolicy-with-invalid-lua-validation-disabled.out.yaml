@@ -7,7 +7,12 @@ envoyExtensionPolicies:
     namespace: default
   spec:
     lua:
-    - inline: function envoy_on_response(response_handle) response_handle:UnknownApi()
+    - inline: |
+        function envoy_on_response(response_handle)
+          local value = 10
+          if value > 5
+            print("Value is greater than 5")
+          end
         end
       type: Inline
     targetRef:
@@ -181,7 +186,12 @@ xdsIR:
             weight: 1
         envoyExtensions:
           luas:
-          - Code: function envoy_on_response(response_handle) response_handle:UnknownApi()
+          - Code: |
+              function envoy_on_response(response_handle)
+                local value = 10
+                if value > 5
+                  print("Value is greater than 5")
+                end
               end
             Name: envoyextensionpolicy/default/policy-for-http-route/lua/0
         hostname: www.example.com
