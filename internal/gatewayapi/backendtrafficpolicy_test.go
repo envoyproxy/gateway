@@ -12,6 +12,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"k8s.io/utils/ptr"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/ir"
@@ -195,59 +196,61 @@ func TestBuildHTTPProtocolUpgradeConfig(t *testing.T) {
 	}
 }
 
-func TestResponseHeadersToAddAppend(t *testing.T) {
+func TestResponseHeaderModifier(t *testing.T) {
 	tests := []struct {
 		name     string
-		headers  []egv1a1.ResponseHeaderToAdd
+		modifier *gwapiv1.HTTPHeaderFilter
 		expected []ir.AddHeader
 	}{
 		{
-			name: "append-nil-defaults-to-false",
-			headers: []egv1a1.ResponseHeaderToAdd{
-				{
-					Name:   "test-header",
-					Value:  "test-value",
-					Append: nil, // should default to false
+			name: "add-headers",
+			modifier: &gwapiv1.HTTPHeaderFilter{
+				Add: []gwapiv1.HTTPHeader{
+					{Name: "test-header", Value: "test-value"},
 				},
 			},
 			expected: []ir.AddHeader{
 				{
 					Name:   "test-header",
 					Value:  []string{"test-value"},
-					Append: false,
+					Append: true, // Gateway API Add always appends
 				},
 			},
 		},
 		{
-			name: "append-explicitly-true",
-			headers: []egv1a1.ResponseHeaderToAdd{
-				{
-					Name:   "test-header",
-					Value:  "test-value",
-					Append: ptr.To(true),
+			name: "set-headers",
+			modifier: &gwapiv1.HTTPHeaderFilter{
+				Set: []gwapiv1.HTTPHeader{
+					{Name: "test-header", Value: "test-value"},
 				},
 			},
 			expected: []ir.AddHeader{
 				{
 					Name:   "test-header",
 					Value:  []string{"test-value"},
+					Append: false, // Gateway API Set overwrites
+				},
+			},
+		},
+		{
+			name: "add-and-set-headers",
+			modifier: &gwapiv1.HTTPHeaderFilter{
+				Add: []gwapiv1.HTTPHeader{
+					{Name: "add-header", Value: "add-value"},
+				},
+				Set: []gwapiv1.HTTPHeader{
+					{Name: "set-header", Value: "set-value"},
+				},
+			},
+			expected: []ir.AddHeader{
+				{
+					Name:   "add-header",
+					Value:  []string{"add-value"},
 					Append: true,
 				},
-			},
-		},
-		{
-			name: "append-explicitly-false",
-			headers: []egv1a1.ResponseHeaderToAdd{
 				{
-					Name:   "test-header",
-					Value:  "test-value",
-					Append: ptr.To(false),
-				},
-			},
-			expected: []ir.AddHeader{
-				{
-					Name:   "test-header",
-					Value:  []string{"test-value"},
+					Name:   "set-header",
+					Value:  []string{"set-value"},
 					Append: false,
 				},
 			},
@@ -256,18 +259,30 @@ func TestResponseHeadersToAddAppend(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := make([]ir.AddHeader, 0, len(tt.headers))
-			for _, h := range tt.headers {
-				appendHeader := false
-				if h.Append != nil {
-					appendHeader = *h.Append
+			result := make([]ir.AddHeader, 0)
+
+			// Process Add headers
+			if len(tt.modifier.Add) > 0 {
+				for _, h := range tt.modifier.Add {
+					result = append(result, ir.AddHeader{
+						Name:   string(h.Name),
+						Value:  []string{h.Value},
+						Append: true,
+					})
 				}
-				result = append(result, ir.AddHeader{
-					Name:   h.Name,
-					Value:  []string{h.Value},
-					Append: appendHeader,
-				})
 			}
+
+			// Process Set headers
+			if len(tt.modifier.Set) > 0 {
+				for _, h := range tt.modifier.Set {
+					result = append(result, ir.AddHeader{
+						Name:   string(h.Name),
+						Value:  []string{h.Value},
+						Append: false,
+					})
+				}
+			}
+
 			require.Equal(t, tt.expected, result)
 		})
 	}

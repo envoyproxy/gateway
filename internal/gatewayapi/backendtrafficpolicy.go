@@ -18,6 +18,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/utils/ptr"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
@@ -1026,97 +1027,96 @@ func buildRequestBuffer(spec *egv1a1.RequestBuffer) (*ir.RequestBuffer, error) {
 }
 
 func buildResponseOverride(policy *egv1a1.BackendTrafficPolicy, resources *resource.Resources) (*ir.ResponseOverride, error) {
-	if len(policy.Spec.ResponseOverride) == 0 {
+	if policy.Spec.ResponseOverride == nil || len(policy.Spec.ResponseOverride) == 0 {
 		return nil, nil
 	}
 
-	rules := make([]ir.ResponseOverrideRule, 0, len(policy.Spec.ResponseOverride))
-	for index, ro := range policy.Spec.ResponseOverride {
-		match := ir.CustomResponseMatch{
-			StatusCodes: make([]ir.StatusCodeMatch, 0, len(ro.Match.StatusCodes)),
-		}
-
-		for _, code := range ro.Match.StatusCodes {
-			if code.Type != nil && *code.Type == egv1a1.StatusCodeValueTypeRange {
-				match.StatusCodes = append(match.StatusCodes, ir.StatusCodeMatch{
-					Range: &ir.StatusCodeRange{
-						Start: code.Range.Start,
-						End:   code.Range.End,
-					},
-				})
-			} else {
-				match.StatusCodes = append(match.StatusCodes, ir.StatusCodeMatch{
-					Value: code.Value,
-				})
-			}
-		}
-
-		if ro.Redirect != nil {
-			redirect := &ir.Redirect{
-				Scheme: ro.Redirect.Scheme,
-			}
-			if ro.Redirect.Path != nil {
-				redirect.Path = &ir.HTTPPathModifier{
-					FullReplace:        ro.Redirect.Path.ReplaceFullPath,
-					PrefixMatchReplace: ro.Redirect.Path.ReplacePrefixMatch,
-				}
-			}
-			if ro.Redirect.Hostname != nil {
-				redirect.Hostname = ptr.To(string(*ro.Redirect.Hostname))
-			}
-			if ro.Redirect.Port != nil {
-				redirect.Port = ptr.To(uint32(*ro.Redirect.Port))
-			}
-			if ro.Redirect.StatusCode != nil {
-				redirect.StatusCode = ptr.To(int32(*ro.Redirect.StatusCode))
-			}
-
-			rules = append(rules, ir.ResponseOverrideRule{
-				Name:     defaultResponseOverrideRuleName(policy, index),
-				Match:    match,
-				Redirect: redirect,
-			})
-		} else {
-			response := &ir.CustomResponse{
-				ContentType: ro.Response.ContentType,
-			}
-
-			if ro.Response.StatusCode != nil {
-				response.StatusCode = ptr.To(uint32(*ro.Response.StatusCode))
-			}
-
-			if len(ro.Response.ResponseHeadersToAdd) > 0 {
-				response.ResponseHeadersToAdd = make([]ir.AddHeader, 0, len(ro.Response.ResponseHeadersToAdd))
-				for _, h := range ro.Response.ResponseHeadersToAdd {
-					appendHeader := false
-					if h.Append != nil {
-						appendHeader = *h.Append
-					}
-					response.ResponseHeadersToAdd = append(response.ResponseHeadersToAdd, ir.AddHeader{
-						Name:   h.Name,
-						Value:  []string{h.Value},
-						Append: appendHeader,
-					})
-				}
-			}
-
-			var err error
-			response.Body, err = getCustomResponseBody(ro.Response.Body, resources, policy.Namespace)
-			if err != nil {
-				return nil, err
-			}
-
-			rules = append(rules, ir.ResponseOverrideRule{
-				Name:     defaultResponseOverrideRuleName(policy, index),
-				Match:    match,
-				Response: response,
-			})
-		}
+	responseOverride := &ir.ResponseOverride{
+		Name: irConfigName(policy),
 	}
-	return &ir.ResponseOverride{
-		Name:  irConfigName(policy),
-		Rules: rules,
-	}, nil
+
+	for i, override := range policy.Spec.ResponseOverride {
+		irRule := ir.ResponseOverrideRule{
+			Name: defaultResponseOverrideRuleName(policy, i),
+		}
+
+		// Convert match from EG to IR
+		irRule.Match = ir.CustomResponseMatch{
+			StatusCodes: make([]ir.StatusCodeMatch, len(override.Match.StatusCodes)),
+		}
+		for j, statusCode := range override.Match.StatusCodes {
+			irStatusCode := ir.StatusCodeMatch{}
+			if statusCode.Type != nil && *statusCode.Type == egv1a1.StatusCodeValueTypeRange {
+				irStatusCode.Range = &ir.StatusCodeRange{
+					Start: statusCode.Range.Start,
+					End:   statusCode.Range.End,
+				}
+			} else {
+				irStatusCode.Value = statusCode.Value
+			}
+			irRule.Match.StatusCodes[j] = irStatusCode
+		}
+
+		if override.Response != nil {
+			response := &ir.CustomResponse{}
+
+			if override.Response.StatusCode != nil {
+				response.StatusCode = ptr.To(uint32(*override.Response.StatusCode))
+			}
+
+			if override.Response.ContentType != nil {
+				response.ContentType = override.Response.ContentType
+			}
+
+			if override.Response.Body != nil {
+				body, err := getCustomResponseBody(override.Response.Body, resources, policy.Namespace)
+				if err != nil {
+					return nil, err
+				}
+				response.Body = body
+			}
+
+			if override.Response.ResponseHeaderModifier != nil {
+				response.ResponseHeaderModifier = &gwapiv1.HTTPHeaderFilter{
+					Add: override.Response.ResponseHeaderModifier.Add,
+					Set: override.Response.ResponseHeaderModifier.Set,
+				}
+			}
+
+			irRule.Response = response
+		} else if override.Redirect != nil {
+			redirect := &ir.Redirect{}
+
+			if override.Redirect.Scheme != nil {
+				redirect.Scheme = override.Redirect.Scheme
+			}
+
+			if override.Redirect.Hostname != nil {
+				redirect.Hostname = ptr.To(string(*override.Redirect.Hostname))
+			}
+
+			if override.Redirect.Path != nil {
+				redirect.Path = &ir.HTTPPathModifier{
+					FullReplace:        override.Redirect.Path.ReplaceFullPath,
+					PrefixMatchReplace: override.Redirect.Path.ReplacePrefixMatch,
+				}
+			}
+
+			if override.Redirect.Port != nil {
+				redirect.Port = ptr.To(uint32(*override.Redirect.Port))
+			}
+
+			if override.Redirect.StatusCode != nil {
+				redirect.StatusCode = ptr.To(int32(*override.Redirect.StatusCode))
+			}
+
+			irRule.Redirect = redirect
+		}
+
+		responseOverride.Rules = append(responseOverride.Rules, irRule)
+	}
+
+	return responseOverride, nil
 }
 
 func checkResponseBodySize(b *string) error {

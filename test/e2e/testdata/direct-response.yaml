@@ -58,10 +58,17 @@ spec:
     body:
       type: Inline
       inline: "Oops! Your request is not found."
-    responseHeadersToAdd:
-    - name: X-Custom-Header
-      value: "custom-value"
-      append: false
+    responseHeaderModifier:
+      add:
+      - name: X-Add-Header
+        value: "added-value"
+      - name: X-Response-Type
+        value: "direct"
+      set:
+      - name: X-Set-Header
+        value: "set-value"
+      - name: Cache-Control
+        value: "no-cache"
 ---
 apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: HTTPRouteFilter
@@ -77,6 +84,13 @@ spec:
         group: ""
         kind: ConfigMap
         name: value-ref-response
+    responseHeaderModifier:
+      add:
+      - name: X-Add-Header
+        value: "added-json"
+      set:
+      - name: X-Set-Header
+        value: "set-json"
 ---
 apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: HTTPRouteFilter
@@ -86,3 +100,10 @@ metadata:
 spec:
   directResponse:
     statusCode: 401
+    responseHeaderModifier:
+      add:
+      - name: X-Add-Header
+        value: "added-401"
+      set:
+      - name: X-Set-Header
+        value: "set-401"

@@ -34,14 +34,23 @@
                           header:
                             key: Content-Type
                             value: text/plain
-                        - appendAction: OVERWRITE_IF_EXISTS_OR_ADD
-                          header:
+                        - header:
                             key: X-Custom-Error
                             value: Not Found
-                        - appendAction: OVERWRITE_IF_EXISTS_OR_ADD
-                          header:
+                        - header:
                             key: X-Gateway-Source
                             value: Envoy Gateway
+                        - header:
+                            key: X-Processing-Time
+                            value: '%DURATION%'
+                        - appendAction: OVERWRITE_IF_EXISTS_OR_ADD
+                          header:
+                            key: Cache-Control
+                            value: no-cache, no-store
+                        - appendAction: OVERWRITE_IF_EXISTS_OR_ADD
+                          header:
+                            key: X-Response-Modified
+                            value: "true"
                   predicate:
                     singlePredicate:
                       input:
@@ -65,10 +74,16 @@
                           header:
                             key: Content-Type
                             value: application/json
-                        - appendAction: OVERWRITE_IF_EXISTS_OR_ADD
-                          header:
+                        - header:
                             key: X-Error-Type
                             value: Internal
+                        - header:
+                            key: X-Error-Source
+                            value: BackendTrafficPolicy
+                        - appendAction: OVERWRITE_IF_EXISTS_OR_ADD
+                          header:
+                            key: X-Server-Error
+                            value: "true"
                   predicate:
                     orMatcher:
                       predicate:
@@ -154,6 +169,14 @@
                       name: backendtrafficpolicy/default/policy-for-route/responseoverride/rule/0
                       typedConfig:
                         '@type': type.googleapis.com/envoy.extensions.http.custom_response.local_response_policy.v3.LocalResponsePolicy
+                        responseHeadersToAdd:
+                        - header:
+                            key: X-Custom-403-Handler
+                            value: Forbidden-to-NotFound
+                        - appendAction: OVERWRITE_IF_EXISTS_OR_ADD
+                          header:
+                            key: X-Status-Override
+                            value: 403-to-404
                         statusCode: 404
                   predicate:
                     singlePredicate:

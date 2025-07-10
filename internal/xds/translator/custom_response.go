@@ -440,23 +440,33 @@ func (c *customResponse) buildResponseAction(r ir.ResponseOverrideRule) (*anypb.
 		})
 	}
 
-	for _, header := range r.Response.ResponseHeadersToAdd {
-		var appendAction corev3.HeaderValueOption_HeaderAppendAction
-		if header.Append {
-			appendAction = corev3.HeaderValueOption_APPEND_IF_EXISTS_OR_ADD
-		} else {
-			appendAction = corev3.HeaderValueOption_OVERWRITE_IF_EXISTS_OR_ADD
-		}
+	if r.Response.ResponseHeaderModifier != nil {
+		headerModifier := r.Response.ResponseHeaderModifier
 
-		for _, value := range header.Value {
+		// Process Add headers
+		for _, header := range headerModifier.Add {
 			response.ResponseHeadersToAdd = append(response.ResponseHeadersToAdd, &corev3.HeaderValueOption{
 				Header: &corev3.HeaderValue{
-					Key:   header.Name,
-					Value: value,
+					Key:   string(header.Name),
+					Value: header.Value,
 				},
-				AppendAction: appendAction,
+				AppendAction: corev3.HeaderValueOption_APPEND_IF_EXISTS_OR_ADD,
 			})
 		}
+
+		// Process Set headers
+		for _, header := range headerModifier.Set {
+			response.ResponseHeadersToAdd = append(response.ResponseHeadersToAdd, &corev3.HeaderValueOption{
+				Header: &corev3.HeaderValue{
+					Key:   string(header.Name),
+					Value: header.Value,
+				},
+				AppendAction: corev3.HeaderValueOption_OVERWRITE_IF_EXISTS_OR_ADD,
+			})
+		}
+
+		// Note: Header removal is explicitly prevented at the API level via CEL validation
+		// LocalResponsePolicy does not support header removal
 	}
 
 	if r.Response.StatusCode != nil {
