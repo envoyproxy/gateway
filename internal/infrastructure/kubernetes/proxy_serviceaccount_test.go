@@ -281,7 +281,7 @@ func TestCreateOrUpdateProxyServiceAccount(t *testing.T) {
 			actual := &corev1.ServiceAccount{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: kube.GetResourceNamespace(tc.in),
-					Name:      expectedName(tc.in.Proxy, tc.gatewayNamespaceMode),
+					Name:      tc.want.Name,
 				},
 			}
 			require.NoError(t, kube.Client.Get(ctx, client.ObjectKeyFromObject(actual), actual))

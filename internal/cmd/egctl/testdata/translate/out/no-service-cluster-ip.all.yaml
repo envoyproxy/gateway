@@ -181,8 +181,7 @@ xds:
           circuitBreakers:
             thresholds:
             - maxRetries: 1024
-          commonLbConfig:
-            localityWeightedLbConfig: {}
+          commonLbConfig: {}
           connectTimeout: 10s
           dnsLookupFamily: V4_PREFERRED
           edsClusterConfig:
@@ -192,6 +191,14 @@ xds:
             serviceName: httproute/envoy-gateway-system/routes/rule/0
           ignoreHealthOnHostRemoval: true
           lbPolicy: LEAST_REQUEST
+          loadBalancingPolicy:
+            policies:
+            - typedExtensionConfig:
+                name: envoy.load_balancing_policies.least_request
+                typedConfig:
+                  '@type': type.googleapis.com/envoy.extensions.load_balancing_policies.least_request.v3.LeastRequest
+                  localityLbConfig:
+                    localityWeightedLbConfig: {}
           metadata:
             filterMetadata:
               envoy-gateway:
@@ -344,6 +351,7 @@ xds:
                   statPrefix: http-10080
                   useRemoteAddress: true
               name: envoy-gateway-system/eg/http
+            maxConnectionsToAcceptPerSocketEvent: 1
             name: envoy-gateway-system/eg/http
             perConnectionBufferLimitBytes: 32768
     - '@type': type.googleapis.com/envoy.admin.v3.RoutesConfigDump

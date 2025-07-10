@@ -30,6 +30,7 @@
         statPrefix: http-10080
         useRemoteAddress: true
     name: first-listener
+  maxConnectionsToAcceptPerSocketEvent: 1
   name: first-listener
   perConnectionBufferLimitBytes: 32768
   socketOptions:
@@ -69,6 +70,7 @@
         statPrefix: http-10081
         useRemoteAddress: true
     name: second-listener
+  maxConnectionsToAcceptPerSocketEvent: 1
   name: second-listener
   perConnectionBufferLimitBytes: 32768
   socketOptions:
@@ -106,6 +108,7 @@
   - name: envoy.filters.listener.tls_inspector
     typedConfig:
       '@type': type.googleapis.com/envoy.extensions.filters.listener.tls_inspector.v3.TlsInspector
+  maxConnectionsToAcceptPerSocketEvent: 1
   name: third-listener
   perConnectionBufferLimitBytes: 32768
   socketOptions:
@@ -124,6 +127,7 @@
         '@type': type.googleapis.com/envoy.extensions.filters.network.tcp_proxy.v3.TcpProxy
         cluster: tcp-route-dest
         statPrefix: tcp-10083
+  maxConnectionsToAcceptPerSocketEvent: 1
   name: fourth-listener
   perConnectionBufferLimitBytes: 32768
   socketOptions:

@@ -50,7 +50,7 @@ contributing to the project.
 - Support for Chaos engineering?
 
 [issue]: https://github.com/envoyproxy/gateway/issues
-[meeting]: https://docs.google.com/document/d/1leqwsHX8N-XxNEyTflYjRur462ukFxd19Rnk3Uzy55I/edit?usp=sharing
+[meeting]: https://docs.google.com/document/d/1i5wa1VsxIbQw7jbWvGmvy8C4Zpp7SGV1aVViSLgqU4M/edit?usp=sharing
 [pr]: https://github.com/envoyproxy/gateway/compare
 [milestones]: https://github.com/envoyproxy/gateway/milestones
 [v0.2.0]: https://github.com/envoyproxy/gateway/milestone/1
