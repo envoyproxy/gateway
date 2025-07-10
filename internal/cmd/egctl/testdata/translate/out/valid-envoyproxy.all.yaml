@@ -6,7 +6,6 @@ envoyProxyForGatewayClass:
     name: example
     namespace: default
   spec:
-    disableLuaValidation: false
     logging:
       level:
         default: warn
