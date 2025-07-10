@@ -23,12 +23,14 @@ import (
 	commonv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/load_balancing_policies/common/v3"
 	least_requestv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/load_balancing_policies/least_request/v3"
 	maglevv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/load_balancing_policies/maglev/v3"
+	override_hostv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/load_balancing_policies/override_host/v3"
 	randomv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/load_balancing_policies/random/v3"
 	round_robinv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/load_balancing_policies/round_robin/v3"
 	proxyprotocolv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/transport_sockets/proxy_protocol/v3"
 	rawbufferv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/transport_sockets/raw_buffer/v3"
 	tlsv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/transport_sockets/tls/v3"
 	httpv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/upstreams/http/v3"
+	metadatav3 "github.com/envoyproxy/go-control-plane/envoy/type/metadata/v3"
 	xdstype "github.com/envoyproxy/go-control-plane/envoy/type/v3"
 	"github.com/envoyproxy/go-control-plane/pkg/resource/v3"
 	"github.com/envoyproxy/go-control-plane/pkg/wellknown"
@@ -232,103 +234,122 @@ func buildXdsCluster(args *xdsClusterArgs) (*buildClusterResult, error) {
 
 	// Set Load Balancer policy
 	//nolint:gocritic
-	switch {
-	case args.loadBalancer == nil:
-		cluster.LbPolicy = clusterv3.Cluster_LEAST_REQUEST
-		leastRequest := &least_requestv3.LeastRequest{
-			LocalityLbConfig: localityLbConfig,
-		}
-		typedLeastRequest, err := proto.ToAnyWithValidation(leastRequest)
+	// Check if EndpointOverride is specified
+	if args.loadBalancer != nil && args.loadBalancer.EndpointOverride != nil {
+		// For EndpointOverride, we use LoadBalancingPolicy with HostOverride
+		// and the configured load balancer type as fallback policy
+		endpointOverridePolicy, err := buildEndpointOverrideLoadBalancingPolicy(args.loadBalancer)
 		if err != nil {
 			return nil, err
 		}
-		cluster.LoadBalancingPolicy = &clusterv3.LoadBalancingPolicy{
-			Policies: []*clusterv3.LoadBalancingPolicy_Policy{{
-				TypedExtensionConfig: &corev3.TypedExtensionConfig{
-					Name:        "envoy.load_balancing_policies.least_request",
-					TypedConfig: typedLeastRequest,
-				},
-			}},
+		cluster.LbPolicy = clusterv3.Cluster_CLUSTER_PROVIDED
+		cluster.LoadBalancingPolicy = endpointOverridePolicy
+		// Clear CommonLbConfig fields that conflict with LoadBalancingPolicy
+		// This is required because Envoy doesn't allow both LoadBalancingPolicy and
+		// CommonLbConfig partial fields to be set simultaneously
+		if cluster.CommonLbConfig != nil {
+			cluster.CommonLbConfig.LocalityConfigSpecifier = nil
 		}
-	case args.loadBalancer.LeastRequest != nil:
-		cluster.LbPolicy = clusterv3.Cluster_LEAST_REQUEST
+	} else {
+		// Use traditional load balancer policies
+		switch {
+		case args.loadBalancer == nil:
+			cluster.LbPolicy = clusterv3.Cluster_LEAST_REQUEST
+			leastRequest := &least_requestv3.LeastRequest{
+				LocalityLbConfig: localityLbConfig,
+			}
+			typedLeastRequest, err := proto.ToAnyWithValidation(leastRequest)
+			if err != nil {
+				return nil, err
+			}
+			cluster.LoadBalancingPolicy = &clusterv3.LoadBalancingPolicy{
+				Policies: []*clusterv3.LoadBalancingPolicy_Policy{{
+					TypedExtensionConfig: &corev3.TypedExtensionConfig{
+						Name:        "envoy.load_balancing_policies.least_request",
+						TypedConfig: typedLeastRequest,
+					},
+				}},
+			}
+		case args.loadBalancer.LeastRequest != nil:
+			cluster.LbPolicy = clusterv3.Cluster_LEAST_REQUEST
 
-		leastRequest := &least_requestv3.LeastRequest{
-			LocalityLbConfig: localityLbConfig,
-		}
-		if args.loadBalancer.LeastRequest.SlowStart != nil && args.loadBalancer.LeastRequest.SlowStart.Window != nil {
-			leastRequest.SlowStartConfig = &commonv3.SlowStartConfig{
-				SlowStartWindow: durationpb.New(args.loadBalancer.LeastRequest.SlowStart.Window.Duration),
+			leastRequest := &least_requestv3.LeastRequest{
+				LocalityLbConfig: localityLbConfig,
 			}
-		}
-		typedLeastRequest, err := proto.ToAnyWithValidation(leastRequest)
-		if err != nil {
-			return nil, err
-		}
-		cluster.LoadBalancingPolicy = &clusterv3.LoadBalancingPolicy{
-			Policies: []*clusterv3.LoadBalancingPolicy_Policy{{
-				TypedExtensionConfig: &corev3.TypedExtensionConfig{
-					Name:        "envoy.load_balancing_policies.least_request",
-					TypedConfig: typedLeastRequest,
-				},
-			}},
-		}
-	case args.loadBalancer.RoundRobin != nil:
-		cluster.LbPolicy = clusterv3.Cluster_ROUND_ROBIN
-		roundRobin := &round_robinv3.RoundRobin{
-			LocalityLbConfig: localityLbConfig,
-		}
-		if args.loadBalancer.RoundRobin.SlowStart != nil && args.loadBalancer.RoundRobin.SlowStart.Window != nil {
-			roundRobin.SlowStartConfig = &commonv3.SlowStartConfig{
-				SlowStartWindow: durationpb.New(args.loadBalancer.RoundRobin.SlowStart.Window.Duration),
+			if args.loadBalancer.LeastRequest.SlowStart != nil && args.loadBalancer.LeastRequest.SlowStart.Window != nil {
+				leastRequest.SlowStartConfig = &commonv3.SlowStartConfig{
+					SlowStartWindow: durationpb.New(args.loadBalancer.LeastRequest.SlowStart.Window.Duration),
+				}
 			}
-		}
-		typedRoundRobin, err := proto.ToAnyWithValidation(roundRobin)
-		if err != nil {
-			return nil, err
-		}
-		cluster.LoadBalancingPolicy = &clusterv3.LoadBalancingPolicy{
-			Policies: []*clusterv3.LoadBalancingPolicy_Policy{{
-				TypedExtensionConfig: &corev3.TypedExtensionConfig{
-					Name:        "envoy.load_balancing_policies.round_robin",
-					TypedConfig: typedRoundRobin,
-				},
-			}},
-		}
-	case args.loadBalancer.Random != nil:
-		cluster.LbPolicy = clusterv3.Cluster_RANDOM
-		random := &randomv3.Random{
-			LocalityLbConfig: localityLbConfig,
-		}
-		typeRandom, err := proto.ToAnyWithValidation(random)
-		if err != nil {
-			return nil, err
-		}
-		cluster.LoadBalancingPolicy = &clusterv3.LoadBalancingPolicy{
-			Policies: []*clusterv3.LoadBalancingPolicy_Policy{{
-				TypedExtensionConfig: &corev3.TypedExtensionConfig{
-					Name:        "envoy.load_balancing_policies.random",
-					TypedConfig: typeRandom,
-				},
-			}},
-		}
-	case args.loadBalancer.ConsistentHash != nil:
-		cluster.LbPolicy = clusterv3.Cluster_MAGLEV
-		consistentHash := &maglevv3.Maglev{}
-		if args.loadBalancer.ConsistentHash.TableSize != nil {
-			consistentHash.TableSize = wrapperspb.UInt64(*args.loadBalancer.ConsistentHash.TableSize)
-		}
-		typedConsistentHash, err := proto.ToAnyWithValidation(consistentHash)
-		if err != nil {
-			return nil, err
-		}
-		cluster.LoadBalancingPolicy = &clusterv3.LoadBalancingPolicy{
-			Policies: []*clusterv3.LoadBalancingPolicy_Policy{{
-				TypedExtensionConfig: &corev3.TypedExtensionConfig{
-					Name:        "envoy.load_balancing_policies.maglev",
-					TypedConfig: typedConsistentHash,
-				},
-			}},
+			typedLeastRequest, err := proto.ToAnyWithValidation(leastRequest)
+			if err != nil {
+				return nil, err
+			}
+			cluster.LoadBalancingPolicy = &clusterv3.LoadBalancingPolicy{
+				Policies: []*clusterv3.LoadBalancingPolicy_Policy{{
+					TypedExtensionConfig: &corev3.TypedExtensionConfig{
+						Name:        "envoy.load_balancing_policies.least_request",
+						TypedConfig: typedLeastRequest,
+					},
+				}},
+			}
+		case args.loadBalancer.RoundRobin != nil:
+			cluster.LbPolicy = clusterv3.Cluster_ROUND_ROBIN
+			roundRobin := &round_robinv3.RoundRobin{
+				LocalityLbConfig: localityLbConfig,
+			}
+			if args.loadBalancer.RoundRobin.SlowStart != nil && args.loadBalancer.RoundRobin.SlowStart.Window != nil {
+				roundRobin.SlowStartConfig = &commonv3.SlowStartConfig{
+					SlowStartWindow: durationpb.New(args.loadBalancer.RoundRobin.SlowStart.Window.Duration),
+				}
+			}
+			typedRoundRobin, err := proto.ToAnyWithValidation(roundRobin)
+			if err != nil {
+				return nil, err
+			}
+			cluster.LoadBalancingPolicy = &clusterv3.LoadBalancingPolicy{
+				Policies: []*clusterv3.LoadBalancingPolicy_Policy{{
+					TypedExtensionConfig: &corev3.TypedExtensionConfig{
+						Name:        "envoy.load_balancing_policies.round_robin",
+						TypedConfig: typedRoundRobin,
+					},
+				}},
+			}
+		case args.loadBalancer.Random != nil:
+			cluster.LbPolicy = clusterv3.Cluster_RANDOM
+			random := &randomv3.Random{
+				LocalityLbConfig: localityLbConfig,
+			}
+			typeRandom, err := proto.ToAnyWithValidation(random)
+			if err != nil {
+				return nil, err
+			}
+			cluster.LoadBalancingPolicy = &clusterv3.LoadBalancingPolicy{
+				Policies: []*clusterv3.LoadBalancingPolicy_Policy{{
+					TypedExtensionConfig: &corev3.TypedExtensionConfig{
+						Name:        "envoy.load_balancing_policies.random",
+						TypedConfig: typeRandom,
+					},
+				}},
+			}
+		case args.loadBalancer.ConsistentHash != nil:
+			cluster.LbPolicy = clusterv3.Cluster_MAGLEV
+			consistentHash := &maglevv3.Maglev{}
+			if args.loadBalancer.ConsistentHash.TableSize != nil {
+				consistentHash.TableSize = wrapperspb.UInt64(*args.loadBalancer.ConsistentHash.TableSize)
+			}
+			typedConsistentHash, err := proto.ToAnyWithValidation(consistentHash)
+			if err != nil {
+				return nil, err
+			}
+			cluster.LoadBalancingPolicy = &clusterv3.LoadBalancingPolicy{
+				Policies: []*clusterv3.LoadBalancingPolicy_Policy{{
+					TypedExtensionConfig: &corev3.TypedExtensionConfig{
+						Name:        "envoy.load_balancing_policies.maglev",
+						TypedConfig: typedConsistentHash,
+					},
+				}},
+			}
 		}
 	}
 
@@ -1194,4 +1215,147 @@ func buildHTTP2Settings(opts *ir.HTTP2Settings) *corev3.Http2ProtocolOptions {
 	}
 
 	return out
+}
+
+// buildEndpointOverrideLoadBalancingPolicy builds the Envoy LoadBalancingPolicy for EndpointOverride
+func buildEndpointOverrideLoadBalancingPolicy(loadBalancer *ir.LoadBalancer) (*clusterv3.LoadBalancingPolicy, error) {
+	// Build override host sources from EndpointOverride
+	var overrideHostSources []*override_hostv3.OverrideHost_OverrideHostSource
+
+	for _, source := range loadBalancer.EndpointOverride.ExtractFrom {
+		overrideSource := &override_hostv3.OverrideHost_OverrideHostSource{}
+
+		if source.Header != nil {
+			overrideSource.Header = *source.Header
+		}
+
+		if source.Metadata != nil {
+			metadataKey := &metadatav3.MetadataKey{
+				Key: source.Metadata.Key,
+			}
+
+			// Convert path if present
+			for _, pathElement := range source.Metadata.Path {
+				metadataKey.Path = append(metadataKey.Path, &metadatav3.MetadataKey_PathSegment{
+					Segment: &metadatav3.MetadataKey_PathSegment_Key{
+						Key: pathElement.Key,
+					},
+				})
+			}
+
+			overrideSource.Metadata = metadataKey
+		}
+
+		overrideHostSources = append(overrideHostSources, overrideSource)
+	}
+
+	// Determine fallback policy based on the configured load balancer type
+	var fallbackType ir.LoadBalancerType
+	switch {
+	case loadBalancer.LeastRequest != nil:
+		fallbackType = ir.LeastRequestLoadBalancer
+	case loadBalancer.RoundRobin != nil:
+		fallbackType = ir.RoundRobinLoadBalancer
+	case loadBalancer.Random != nil:
+		fallbackType = ir.RandomLoadBalancer
+	case loadBalancer.ConsistentHash != nil:
+		fallbackType = ir.ConsistentHashLoadBalancer
+	default:
+		// Default to LeastRequest if no specific type is set
+		fallbackType = ir.LeastRequestLoadBalancer
+	}
+
+	// Build fallback policy
+	fallbackPolicy, err := buildFallbackLoadBalancingPolicy(fallbackType)
+	if err != nil {
+		return nil, fmt.Errorf("failed to build fallback policy: %w", err)
+	}
+
+	// Build override host policy
+	overrideHostPolicy := &override_hostv3.OverrideHost{
+		OverrideHostSources: overrideHostSources,
+		FallbackPolicy:      fallbackPolicy,
+	}
+
+	typedOverrideHostPolicy, err := anypb.New(overrideHostPolicy)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal override host policy: %w", err)
+	}
+
+	return &clusterv3.LoadBalancingPolicy{
+		Policies: []*clusterv3.LoadBalancingPolicy_Policy{{
+			TypedExtensionConfig: &corev3.TypedExtensionConfig{
+				Name:        "envoy.load_balancing_policies.override_host",
+				TypedConfig: typedOverrideHostPolicy,
+			},
+		}},
+	}, nil
+}
+
+// buildFallbackLoadBalancingPolicy builds a fallback LoadBalancingPolicy for HostOverride
+func buildFallbackLoadBalancingPolicy(fallbackType ir.LoadBalancerType) (*clusterv3.LoadBalancingPolicy, error) {
+	switch fallbackType {
+	case ir.LeastRequestLoadBalancer:
+		fallbackPolicyAny, err := anypb.New(&least_requestv3.LeastRequest{})
+		if err != nil {
+			return nil, fmt.Errorf("failed to marshal LeastRequest policy: %w", err)
+		}
+		return &clusterv3.LoadBalancingPolicy{
+			Policies: []*clusterv3.LoadBalancingPolicy_Policy{
+				{
+					TypedExtensionConfig: &corev3.TypedExtensionConfig{
+						Name:        "envoy.load_balancing_policies.least_request",
+						TypedConfig: fallbackPolicyAny,
+					},
+				},
+			},
+		}, nil
+	case ir.RoundRobinLoadBalancer:
+		fallbackPolicyAny, err := anypb.New(&round_robinv3.RoundRobin{})
+		if err != nil {
+			return nil, fmt.Errorf("failed to marshal RoundRobin policy: %w", err)
+		}
+		return &clusterv3.LoadBalancingPolicy{
+			Policies: []*clusterv3.LoadBalancingPolicy_Policy{
+				{
+					TypedExtensionConfig: &corev3.TypedExtensionConfig{
+						Name:        "envoy.load_balancing_policies.round_robin",
+						TypedConfig: fallbackPolicyAny,
+					},
+				},
+			},
+		}, nil
+	case ir.RandomLoadBalancer:
+		fallbackPolicyAny, err := anypb.New(&randomv3.Random{})
+		if err != nil {
+			return nil, fmt.Errorf("failed to marshal Random policy: %w", err)
+		}
+		return &clusterv3.LoadBalancingPolicy{
+			Policies: []*clusterv3.LoadBalancingPolicy_Policy{
+				{
+					TypedExtensionConfig: &corev3.TypedExtensionConfig{
+						Name:        "envoy.load_balancing_policies.random",
+						TypedConfig: fallbackPolicyAny,
+					},
+				},
+			},
+		}, nil
+	case ir.ConsistentHashLoadBalancer:
+		fallbackPolicyAny, err := anypb.New(&maglevv3.Maglev{})
+		if err != nil {
+			return nil, fmt.Errorf("failed to marshal Maglev policy: %w", err)
+		}
+		return &clusterv3.LoadBalancingPolicy{
+			Policies: []*clusterv3.LoadBalancingPolicy_Policy{
+				{
+					TypedExtensionConfig: &corev3.TypedExtensionConfig{
+						Name:        "envoy.load_balancing_policies.maglev",
+						TypedConfig: fallbackPolicyAny,
+					},
+				},
+			},
+		}, nil
+	default:
+		return nil, fmt.Errorf("unsupported fallback policy: %s", fallbackType)
+	}
 }
