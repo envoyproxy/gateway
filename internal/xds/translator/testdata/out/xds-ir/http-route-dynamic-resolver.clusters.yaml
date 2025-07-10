@@ -12,6 +12,7 @@
   commonLbConfig: {}
   connectTimeout: 10s
   dnsLookupFamily: V4_PREFERRED
+  ignoreHealthOnHostRemoval: true
   lbPolicy: CLUSTER_PROVIDED
   loadBalancingPolicy:
     policies:
