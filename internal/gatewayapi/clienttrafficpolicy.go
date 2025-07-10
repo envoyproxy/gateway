@@ -603,6 +603,16 @@ func buildClientTimeout(clientTimeout *egv1a1.ClientTimeout) (*ir.ClientTimeout,
 				Duration: d,
 			}
 		}
+
+		if clientTimeout.HTTP.DrainTimeout != nil {
+			d, err := time.ParseDuration(string(*clientTimeout.HTTP.DrainTimeout))
+			if err != nil {
+				return nil, fmt.Errorf("invalid HTTP DrainTimeout value %s", *clientTimeout.HTTP.DrainTimeout)
+			}
+			irHTTPTimeout.DrainTimeout = &metav1.Duration{
+				Duration: d,
+			}
+		}
 		irClientTimeout.HTTP = irHTTPTimeout
 	}
 
