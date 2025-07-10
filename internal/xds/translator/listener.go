@@ -378,7 +378,9 @@ func (t *Translator) addHCMToXDSListener(xdsListener *listenerv3.Listener, irLis
 		if irListener.Timeout.HTTP.RequestReceivedTimeout != nil {
 			mgr.RequestTimeout = durationpb.New(irListener.Timeout.HTTP.RequestReceivedTimeout.Duration)
 		}
-
+		if irListener.Timeout.HTTP.RequestHeadersTimeout != nil {
+			mgr.RequestHeadersTimeout = durationpb.New(irListener.Timeout.HTTP.RequestHeadersTimeout.Duration)
+		}
 		if irListener.Timeout.HTTP.IdleTimeout != nil {
 			mgr.CommonHttpProtocolOptions.IdleTimeout = durationpb.New(irListener.Timeout.HTTP.IdleTimeout.Duration)
 		}

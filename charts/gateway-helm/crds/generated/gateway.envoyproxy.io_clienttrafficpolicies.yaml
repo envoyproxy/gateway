@@ -719,6 +719,12 @@ spec:
                           Default: 1 hour.
                         pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                         type: string
+                      requestHeadersTimeout:
+                        description: |-
+                          RequestHeadersTimeout is the duration envoy waits for the complete request reception. This timer starts upon request
+                          initiation and stops when either the last byte of the request is sent upstream or when the response begins.
+                        pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                        type: string
                       requestReceivedTimeout:
                         description: |-
                           RequestReceivedTimeout is the duration envoy waits for the complete request reception. This timer starts upon request
