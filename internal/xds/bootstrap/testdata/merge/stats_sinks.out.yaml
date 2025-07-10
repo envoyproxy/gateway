@@ -9,7 +9,7 @@ admin:
       address: 127.0.0.1
       portValue: 19000
 clusterManager:
-  localClusterName: local_cluster
+  localClusterName: $(ENVOY_PROXY_INFRA_NAME)
 dynamicResources:
   adsConfig:
     apiType: DELTA_GRPC
@@ -57,7 +57,7 @@ staticResources:
     type: STATIC
   - connectTimeout: 10s
     loadAssignment:
-      clusterName: local_cluster
+      clusterName: $(ENVOY_PROXY_INFRA_NAME)
       endpoints:
       - lbEndpoints:
         - endpoint:
@@ -69,7 +69,7 @@ staticResources:
         loadBalancingWeight: 1
         locality:
           zone: $(ENVOY_SERVICE_ZONE)
-    name: local_cluster
+    name: $(ENVOY_PROXY_INFRA_NAME)
     type: STATIC
   - connectTimeout: 10s
     loadAssignment:

@@ -33,6 +33,8 @@ const (
 	envoyPodEnvVar = "ENVOY_POD_NAME"
 	// envoyZoneEnvVar is the Envoy pod locality zone name
 	envoyZoneEnvVar = "ENVOY_SERVICE_ZONE"
+	// envoyInfraNameEnvVar is the name of the envoy proxy infrastructure
+	envoyInfraNameEnvVar = "ENVOY_PROXY_INFRA_NAME"
 )
 
 // ExpectedResourceHashedName returns expected resource hashed name including up to the 48 characters of the original name.
@@ -128,7 +130,7 @@ func expectedProxyContainers(infra *ir.ProxyInfra,
 			ImagePullPolicy:          corev1.PullIfNotPresent,
 			Command:                  []string{"envoy"},
 			Args:                     args,
-			Env:                      expectedContainerEnv(containerSpec),
+			Env:                      expectedContainerEnv(infra, containerSpec),
 			Resources:                *containerSpec.Resources,
 			SecurityContext:          expectedEnvoySecurityContext(containerSpec),
 			Ports:                    ports,
@@ -190,7 +192,7 @@ func expectedProxyContainers(infra *ir.ProxyInfra,
 			ImagePullPolicy:          corev1.PullIfNotPresent,
 			Command:                  []string{"envoy-gateway"},
 			Args:                     expectedShutdownManagerArgs(shutdownConfig),
-			Env:                      expectedContainerEnv(nil),
+			Env:                      expectedContainerEnv(infra, nil),
 			Resources:                *egv1a1.DefaultShutdownManagerContainerResourceRequirements(),
 			TerminationMessagePolicy: corev1.TerminationMessageReadFile,
 			TerminationMessagePath:   "/dev/termination-log",
@@ -400,7 +402,7 @@ func sdsConfigMapItems(gatewayNamespaceMode bool) []corev1.KeyToPath {
 }
 
 // expectedContainerEnv returns expected proxy container envs.
-func expectedContainerEnv(containerSpec *egv1a1.KubernetesContainerSpec) []corev1.EnvVar {
+func expectedContainerEnv(infra *ir.ProxyInfra, containerSpec *egv1a1.KubernetesContainerSpec) []corev1.EnvVar {
 	env := []corev1.EnvVar{
 		{
 			Name: envoyNsEnvVar,
@@ -428,6 +430,10 @@ func expectedContainerEnv(containerSpec *egv1a1.KubernetesContainerSpec) []corev
 					FieldPath:  fmt.Sprintf("metadata.annotations['%s']", corev1.LabelTopologyZone),
 				},
 			},
+		},
+		{
+			Name:  envoyInfraNameEnvVar,
+			Value: ExpectedResourceHashedName(infra.Name),
 		},
 	}
 
