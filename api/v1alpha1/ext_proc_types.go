@@ -86,9 +86,9 @@ type ExtProc struct {
 	// an HTTP 5xx error.
 	//
 	// If set to true, the ExtProc extension will also be bypassed if the configuration is invalid.
-	// Default: false
 	//
 	// +optional
+	// +kubebuilder:default=false
 	FailOpen *bool `json:"failOpen,omitempty"`
 
 	// ProcessingMode defines how request and response body is processed

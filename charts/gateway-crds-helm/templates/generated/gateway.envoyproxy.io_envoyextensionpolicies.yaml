@@ -982,6 +982,7 @@ spec:
                           type: object
                       type: object
                     failOpen:
+                      default: false
                       description: |-
                         FailOpen is a switch used to control the behavior when failing to call the external processor.
 
@@ -991,7 +992,6 @@ spec:
                         an HTTP 5xx error.
 
                         If set to true, the ExtProc extension will also be bypassed if the configuration is invalid.
-                        Default: false
                       type: boolean
                     messageTimeout:
                       description: |-
