@@ -324,6 +324,7 @@ xdsIR:
                 protocol: GRPC
                 weight: 1
             name: envoyextensionpolicy/default/policy-for-route-1/extproc/0
+            stage: Route
         hostname: gateway.envoyproxy.io
         isHTTP2: false
         metadata:
@@ -372,6 +373,7 @@ xdsIR:
                 protocol: GRPC
                 weight: 1
             name: envoyextensionpolicy/envoy-gateway/policy-for-gateway-1/extproc/0
+            stage: Route
         hostname: gateway.envoyproxy.io
         isHTTP2: false
         metadata:

@@ -36,10 +36,13 @@ import (
 	"google.golang.org/protobuf/types/known/durationpb"
 	"google.golang.org/protobuf/types/known/structpb"
 	"google.golang.org/protobuf/types/known/wrapperspb"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/utils/ptr"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	extensionTypes "github.com/envoyproxy/gateway/internal/extension/types"
 	"github.com/envoyproxy/gateway/internal/ir"
+	"github.com/envoyproxy/gateway/internal/logging"
 	"github.com/envoyproxy/gateway/internal/utils/proto"
 )
 
@@ -70,6 +73,10 @@ type xdsClusterArgs struct {
 	ipFamily          *egv1a1.IPFamily
 	metadata          *ir.ResourceMetadata
 	statName          *string
+	unstructuredRefs  []*unstructured.Unstructured
+	extensionMgr      *extensionTypes.Manager
+	logger            logging.Logger
+	extProcs          []ir.ExtProc // ExtProc configs for Backend and All stages
 }
 
 type EndpointType int
@@ -762,7 +769,8 @@ func buildTypedExtensionProtocolOptions(args *xdsClusterArgs) (map[string]*anypb
 	requiresHTTP1Options := args.http1Settings != nil &&
 		(args.http1Settings.EnableTrailers || args.http1Settings.PreserveHeaderCase || args.http1Settings.HTTP10 != nil)
 
-	requiresHTTPFilters := len(args.settings) > 0 && args.settings[0].Filters != nil && args.settings[0].Filters.CredentialInjection != nil
+	requiresHTTPFilters := (len(args.settings) > 0 && args.settings[0].Filters != nil && args.settings[0].Filters.CredentialInjection != nil) ||
+		len(args.extProcs) > 0
 
 	if !requiresCommonHTTPOptions && !requiresHTTP1Options && !requiresHTTP2Options && !args.useClientProtocol && !requiresHTTPFilters {
 		return nil, nil, nil
@@ -884,6 +892,16 @@ func buildTypedExtensionProtocolOptions(args *xdsClusterArgs) (map[string]*anypb
 func buildClusterHTTPFilters(args *xdsClusterArgs) ([]*hcmv3.HttpFilter, []*tlsv3.Secret, error) {
 	filters := make([]*hcmv3.HttpFilter, 0)
 	secrets := make([]*tlsv3.Secret, 0)
+
+	// Add ExtProc filters for Backend and All stages
+	for _, extProc := range args.extProcs {
+		filter, err := buildClusterExtProcFilter(extProc)
+		if err != nil {
+			return nil, nil, err
+		}
+		filters = append(filters, filter)
+	}
+
 	if len(args.settings) > 0 {
 		// There is only one setting in the settings slice because EG creates one cluster per backendRef
 		// if there are backend filters.
@@ -923,6 +941,19 @@ func buildUpstreamCodecFilter() (*hcmv3.HttpFilter, error) {
 			TypedConfig: codecAny,
 		},
 	}, nil
+}
+
+// buildClusterExtProcFilter creates an ExtProc filter configuration for cluster-level processing
+func buildClusterExtProcFilter(extProcIR ir.ExtProc) (*hcmv3.HttpFilter, error) {
+	// Create an instance of the extProc filter translator
+	extProcTranslator := &extProc{}
+	filter, err := extProcTranslator.buildXdsExtProc(extProcIR)
+	if err != nil {
+		return nil, err
+	}
+
+	// The filter is already properly configured for the extProc IR
+	return filter, nil
 }
 
 // buildProxyProtocolSocket builds the ProxyProtocol transport socket.
@@ -1131,6 +1162,15 @@ func (httpRoute *HTTPRouteTranslator) asClusterArgs(name string,
 		clusterArgs.tcpkeepalive = bt.TCPKeepalive
 		clusterArgs.backendConnection = bt.BackendConnection
 		clusterArgs.dns = bt.DNS
+	}
+
+	// Add ExtProc configurations for Backend and All stages
+	if httpRoute.EnvoyExtensions != nil {
+		for _, extProc := range httpRoute.EnvoyExtensions.ExtProcs {
+			if extProc.Stage == string(egv1a1.ExtProcStageBackend) || extProc.Stage == string(egv1a1.ExtProcStageAll) {
+				clusterArgs.extProcs = append(clusterArgs.extProcs, extProc)
+			}
+		}
 	}
 
 	return clusterArgs

@@ -49,17 +49,20 @@ func (*extProc) patchHCM(mgr *hcmv3.HttpConnectionManager, irListener *ir.HTTPLi
 		}
 
 		for _, ep := range route.EnvoyExtensions.ExtProcs {
-			if hcmContainsFilter(mgr, extProcFilterName(ep)) {
-				continue
-			}
+			// Only add HCM filters for Route and All stages (not Backend stage)
+			if ep.Stage != string(egv1a1.ExtProcStageBackend) {
+				if hcmContainsFilter(mgr, extProcFilterName(ep)) {
+					continue
+				}
 
-			filter, err := buildHCMExtProcFilter(ep)
-			if err != nil {
-				errs = errors.Join(errs, err)
-				continue
-			}
+				filter, err := buildHCMExtProcFilter(ep)
+				if err != nil {
+					errs = errors.Join(errs, err)
+					continue
+				}
 
-			mgr.HttpFilters = append(mgr.HttpFilters, filter)
+				mgr.HttpFilters = append(mgr.HttpFilters, filter)
+			}
 		}
 	}
 
@@ -153,6 +156,22 @@ func grpcExtProcService(extProc ir.ExtProc) *corev3.GrpcService_EnvoyGrpc {
 	}
 }
 
+// buildXdsExtProc builds a complete ExtProc filter configuration (used for cluster-level processing)
+func (*extProc) buildXdsExtProc(extProc ir.ExtProc) (*hcmv3.HttpFilter, error) {
+	extProcProto := extProcConfig(extProc)
+	extProcAny, err := anypb.New(extProcProto)
+	if err != nil {
+		return nil, err
+	}
+
+	return &hcmv3.HttpFilter{
+		Name: extProcFilterName(extProc),
+		ConfigType: &hcmv3.HttpFilter_TypedConfig{
+			TypedConfig: extProcAny,
+		},
+	}, nil
+}
+
 // routeContainsExtProc returns true if ExtProcs exists for the provided route.
 func routeContainsExtProc(irRoute *ir.HTTPRoute) bool {
 	if irRoute == nil {
@@ -202,9 +221,12 @@ func (*extProc) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute, _ *ir.HT
 	}
 
 	for _, ep := range irRoute.EnvoyExtensions.ExtProcs {
-		filterName := extProcFilterName(ep)
-		if err := enableFilterOnRoute(route, filterName); err != nil {
-			return err
+		// Only enable route filters for Route and All stages (not Backend stage)
+		if ep.Stage != string(egv1a1.ExtProcStageBackend) {
+			filterName := extProcFilterName(ep)
+			if err := enableFilterOnRoute(route, filterName); err != nil {
+				return err
+			}
 		}
 	}
 	return nil

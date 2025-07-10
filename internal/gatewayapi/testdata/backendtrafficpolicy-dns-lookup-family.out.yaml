@@ -434,6 +434,7 @@ xdsIR:
                 protocol: GRPC
                 weight: 1
             name: envoyextensionpolicy/default/policy-for-httproute/extproc/0
+            stage: Route
             traffic:
               dns:
                 dnsRefreshRate: 5s

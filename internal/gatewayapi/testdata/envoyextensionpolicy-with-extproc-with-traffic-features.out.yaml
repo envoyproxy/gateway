@@ -412,6 +412,7 @@ xdsIR:
                   sni: ip-backend
                 weight: 1
             name: envoyextensionpolicy/default/policy-for-http-route/extproc/0
+            stage: Route
             traffic:
               backendConnection:
                 bufferLimit: 20971520

@@ -549,6 +549,12 @@ func (t *Translator) buildExtProc(
 		Destination: *rd,
 		Traffic:     traffic,
 		Authority:   authority,
+		Stage:       string(egv1a1.ExtProcStageRoute), // Default to Route
+	}
+
+	// Set stage if specified
+	if extProc.Stage != nil {
+		extProcIR.Stage = string(*extProc.Stage)
 	}
 
 	if extProc.MessageTimeout != nil {

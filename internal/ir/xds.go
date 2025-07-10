@@ -3059,6 +3059,10 @@ type ExtProc struct {
 
 	// AllowModeOverride allows the external processor to modify the processing mode.
 	AllowModeOverride bool `json:"allowModeOverride,omitempty" yaml:"allowModeOverride,omitempty"`
+
+	// Stage determines where in the request/response pipeline the ExtProc is applied.
+	// Can be "Route", "Backend", or "All". Defaults to "Route".
+	Stage string `json:"stage,omitempty" yaml:"stage,omitempty"`
 }
 
 // Lua holds the information associated with Lua extensions

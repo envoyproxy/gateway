@@ -383,6 +383,7 @@ xdsIR:
                   sni: ip-backend
                 weight: 1
             name: envoyextensionpolicy/default/policy-for-http-route/extproc/0
+            stage: Route
         hostname: www.foo.com
         isHTTP2: false
         metadata:
