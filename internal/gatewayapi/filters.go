@@ -557,10 +557,8 @@ func isModifiableHeader(headerName string) bool {
 }
 
 func (t *Translator) processResponseHeaderModifierFilter(
-	headerModifier *gwapiv1.HTTPHeaderFilter,
-	filterContext *HTTPFiltersContext,
+	headerModifier *gwapiv1.HTTPHeaderFilter, filterContext *HTTPFiltersContext,
 ) {
-	// Make sure the header modifier config actually exists
 	if headerModifier == nil {
 		return
 	}
@@ -572,7 +570,6 @@ func (t *Translator) processResponseHeaderModifierFilter(
 			emptyFilterConfig = false
 		}
 		for _, addHeader := range headersToAdd {
-			emptyFilterConfig = false
 			if addHeader.Name == "" {
 				updateRouteStatusForFilter(
 					filterContext,
@@ -630,7 +627,6 @@ func (t *Translator) processResponseHeaderModifierFilter(
 			emptyFilterConfig = false
 		}
 		for _, setHeader := range headersToSet {
-
 			if setHeader.Name == "" {
 				updateRouteStatusForFilter(
 					filterContext,
@@ -846,6 +842,15 @@ func (t *Translator) processExtensionRefHTTPFilter(extFilter *gwapiv1.LocalObjec
 						filterContext.AddResponseHeaders = append(filterContext.AddResponseHeaders, newHeader)
 					}
 
+					if hrf.Spec.DirectResponse.ResponseHeaderModifier != nil {
+						// Pass the ResponseHeaderModifier directly to the DirectResponse IR
+						dr.ResponseHeaderModifier = hrf.Spec.DirectResponse.ResponseHeaderModifier
+
+						// Also process the ResponseHeaderModifier to populate the filter context headers
+						// This ensures headers are also applied at the route level
+						headerModifier := hrf.Spec.DirectResponse.ResponseHeaderModifier
+						t.processResponseHeaderModifierFilter(headerModifier, filterContext)
+					}
 					filterContext.DirectResponse = dr
 				}
 

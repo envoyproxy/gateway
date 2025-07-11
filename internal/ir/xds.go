@@ -24,6 +24,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/validation"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	"sigs.k8s.io/yaml"
 
@@ -638,6 +639,13 @@ type CustomResponse struct {
 
 	// StatusCode will be used for the response's status code.
 	StatusCode *uint32 `json:"statusCode,omitempty"`
+
+	// ResponseHeaderModifier defines headers to add, set or remove from the response.
+	// This allows the response policy to append, add or override headers
+	// of the original response before it is sent to a downstream client.
+	//
+	// +optional
+	ResponseHeaderModifier *gwapiv1.HTTPHeaderFilter `json:"responseHeaderModifier,omitempty"`
 }
 
 // Validate the fields within the CustomResponse structure
@@ -1791,7 +1799,13 @@ type Redirect struct {
 	// Port configures the replacement of the request's port.
 	Port *uint32 `json:"port,omitempty" yaml:"port,omitempty"`
 	// Status code configures the redirection response's status code.
-	StatusCode *int32 `json:"statusCode,omitempty" yaml:"statusCode,omitempty"`
+	StatusCode *int32 `json:"statusCode" yaml:"statusCode,omitempty"`
+	// ResponseHeaderModifier defines headers to add, set or remove from the response.
+	// This allows the response policy to append, add or override headers
+	// of the original response before it is sent to a downstream client.
+	//
+	// +optional
+	ResponseHeaderModifier *gwapiv1.HTTPHeaderFilter `json:"responseHeaderModifier,omitempty"`
 }
 
 // Validate the fields within the Redirect structure
