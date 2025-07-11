@@ -63,12 +63,15 @@ services:
         - port: 80
           name: http
           protocol: TCP
-  - apiVersion: v1
-    kind: Service
+serviceImports:
+  - apiVersion: multicluster.x-k8s.io/v1alpha1
+    kind: ServiceImport
     metadata:
-      namespace: default
       name: grpc-backend
+      namespace: default
     spec:
+      ips:
+        - 8.8.8.8
       ports:
         - port: 9000
           name: grpc
@@ -97,7 +100,7 @@ endpointSlices:
       name: endpointslice-grpc-backend
       namespace: default
       labels:
-        kubernetes.io/service-name: grpc-backend
+        multicluster.kubernetes.io/service-name: grpc-backend
     addressType: IPv4
     ports:
       - name: grpc
@@ -200,8 +203,8 @@ backendTLSPolicies:
       namespace: default
     spec:
       targetRefs:
-        - group: ""
-          kind: Service
+        - group: multicluster.x-k8s.io
+          kind: ServiceImport
           name: grpc-backend
           sectionName: grpc
       validation:
@@ -248,6 +251,8 @@ securityPolicies:
           - header2
         grpc:
           backendRefs:
-            - name: grpc-backend
+            - group: multicluster.x-k8s.io
+              kind: ServiceImport
+              name: grpc-backend
               port: 9000
         failOpen: true

@@ -1509,7 +1509,7 @@ func backendRefAuthority(resources *resource.Resources, backendRef *gwapiv1.Back
 	}
 
 	// Port is mandatory for Kubernetes services
-	if backendKind == resource.KindService {
+	if backendKind == resource.KindService || backendKind == resource.KindServiceImport {
 		return net.JoinHostPort(
 			fmt.Sprintf("%s.%s", backendRef.Name, backendNamespace),
 			strconv.Itoa(int(*backendRef.Port)),
