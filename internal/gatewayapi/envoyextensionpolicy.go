@@ -522,19 +522,23 @@ func (t *Translator) buildExtProcs(policy *egv1a1.EnvoyExtensionPolicy, resource
 		return nil, nil, failOpen
 	}
 
-	// If any failed ExtProcs are not fail open, the whole policy is not fail open.
-	failOpen = true
+	hasFailClose := false
 	for idx, ep := range policy.Spec.ExtProc {
 		name := irConfigNameForExtProc(policy, idx)
 		extProcIR, err := t.buildExtProc(name, policy, ep, idx, resources, envoyProxy)
 		if err != nil {
 			errs = errors.Join(errs, err)
 			if ep.FailOpen == nil || !*ep.FailOpen {
-				failOpen = false
+				hasFailClose = true
 			}
 			continue
 		}
 		extProcIRList = append(extProcIRList, *extProcIR)
+	}
+
+	// If any failed ExtProcs are not fail open, the whole policy is not fail open.
+	if errs != nil && !hasFailClose {
+		failOpen = true
 	}
 	return extProcIRList, errs, failOpen
 }
@@ -670,19 +674,23 @@ func (t *Translator) buildWasms(
 		return nil, nil, failOpen
 	}
 
-	// If any failed Wasms are not fail open, the whole policy is not fail open.
-	failOpen = true
+	hasFailClose := false
 	for idx, wasm := range policy.Spec.Wasm {
 		name := irConfigNameForWasm(policy, idx)
 		wasmIR, err := t.buildWasm(name, wasm, policy, idx, resources)
 		if err != nil {
 			errs = errors.Join(errs, err)
 			if wasm.FailOpen == nil || !*wasm.FailOpen {
-				failOpen = false
+				hasFailClose = true
 			}
 			continue
 		}
 		wasmIRList = append(wasmIRList, *wasmIR)
+	}
+
+	// If any failed ExtProcs are not fail open, the whole policy is not fail open.
+	if errs != nil && !hasFailClose {
+		failOpen = true
 	}
 
 	return wasmIRList, errs, failOpen
