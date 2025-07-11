@@ -850,10 +850,7 @@ func (t *Translator) processExtensionRefHTTPFilter(extFilter *gwapiv1.LocalObjec
 						// This ensures headers are also applied at the route level
 						headerModifier := hrf.Spec.DirectResponse.ResponseHeaderModifier
 						t.processResponseHeaderModifierFilter(headerModifier, filterContext)
-					} else {
-						// No ResponseHeaderModifier found in DirectResponse
 					}
-
 					filterContext.DirectResponse = dr
 				}
 

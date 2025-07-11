@@ -1027,7 +1027,7 @@ func buildRequestBuffer(spec *egv1a1.RequestBuffer) (*ir.RequestBuffer, error) {
 }
 
 func buildResponseOverride(policy *egv1a1.BackendTrafficPolicy, resources *resource.Resources) (*ir.ResponseOverride, error) {
-	if policy.Spec.ResponseOverride == nil || len(policy.Spec.ResponseOverride) == 0 {
+	if len(policy.Spec.ResponseOverride) == 0 {
 		return nil, nil
 	}
 
