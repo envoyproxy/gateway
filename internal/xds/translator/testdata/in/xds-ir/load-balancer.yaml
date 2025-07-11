@@ -142,3 +142,57 @@ http:
         - host: "1.2.3.4"
           port: 50000
         name: "tenth-route-dest/backend/0"
+  - name: "eleventh-route"
+    hostname: "*"
+    traffic:
+      loadBalancer:
+        roundRobin: {}
+        endpointOverride:
+          extractFrom:
+          - header: "x-custom-host"
+    destination:
+      name: "eleventh-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
+        name: "eleventh-route-dest/backend/0"
+  - name: "twelfth-route"
+    hostname: "*"
+    traffic:
+      loadBalancer:
+        leastRequest: {}
+        endpointOverride:
+          extractFrom:
+          - metadata:
+              key: "custom.host"
+              path:
+              - key: "service"
+              - key: "host"
+          - header: "x-fallback-host"
+    destination:
+      name: "twelfth-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
+        name: "twelfth-route-dest/backend/0"
+  - name: "thirteen-route"
+    hostname: "*"
+    traffic:
+      loadBalancer:
+        leastRequest: {}
+        endpointOverride:
+          extractFrom:
+          - metadata:
+              key: "custom.host"
+              path:
+              - key: "service"
+              - key: "host"
+    destination:
+      name: "thirteen-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
+        name: "thirteen-route-dest/backend/0"
