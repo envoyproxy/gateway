@@ -1692,7 +1692,7 @@ _Appears in:_
 
 
 
-ExtAuthAccessibleMetadata defines options related to the sending of dynamic metadata to and from the
+ExtAuthAccessibleMetadata defines options related to the sending of dynamic and static (xds) metadata to and from the
 external authorization service.
 
 _Appears in:_

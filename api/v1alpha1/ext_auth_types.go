@@ -117,7 +117,7 @@ type BodyToExtAuth struct {
 	MaxRequestBytes uint32 `json:"maxRequestBytes"`
 }
 
-// ExtAuthAccessibleMetadata defines options related to the sending of dynamic metadata to and from the
+// ExtAuthAccessibleMetadata defines options related to the sending of dynamic and static (xds) metadata to and from the
 // external authorization service.
 type ExtAuthAccessibleMetadata struct {
 	// Namespaces are metadata namespaces that are sent to the external authorization server as context.
