@@ -23,7 +23,6 @@ import (
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
-	log "github.com/envoyproxy/gateway/internal/logging"
 	"github.com/envoyproxy/gateway/internal/metrics/restclient"
 	"github.com/envoyproxy/gateway/internal/metrics/workqueue"
 )
@@ -32,39 +31,61 @@ const (
 	defaultEndpoint = "/metrics"
 )
 
-var metricsLogger log.Logger
+type Runner struct {
+	cfg    *config.Server
+	server *http.Server
+}
 
-// Init initializes and registers the global metrics server.
-func Init(cfg *config.Server) error {
-	metricsLogger = cfg.Logger.WithName("metrics")
+func New(cfg *config.Server) *Runner {
+	return &Runner{
+		cfg: cfg,
+	}
+}
+
+func (r *Runner) Start(ctx context.Context) error {
+	metricsLogger := r.cfg.Logger.WithName("metrics")
 	otel.SetLogger(metricsLogger.Logger)
 
-	options, err := newOptions(cfg)
+	options, err := r.newOptions()
 	if err != nil {
 		return err
 	}
 
-	handler, err := registerForHandler(options)
+	handler, err := r.registerForHandler(options)
 	if err != nil {
 		return err
 	}
 
 	if !options.pullOptions.disable {
-		return start(options.address, handler)
+		return r.start(options.address, handler)
 	}
 
 	return nil
 }
 
-func start(address string, handler http.Handler) error {
+func (r *Runner) Name() string {
+	return "metrics"
+}
+
+func (r *Runner) Close() error {
+	if r.server != nil {
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		return r.server.Shutdown(ctx)
+	}
+	return nil
+}
+
+func (r *Runner) start(address string, handler http.Handler) error {
 	handlers := http.NewServeMux()
 
+	metricsLogger := r.cfg.Logger.WithName("metrics")
 	metricsLogger.Info("starting metrics server", "address", address)
 	if handler != nil {
 		handlers.Handle(defaultEndpoint, handler)
 	}
 
-	metricsServer := &http.Server{
+	r.server = &http.Server{
 		Handler:           handlers,
 		Addr:              address,
 		ReadTimeout:       5 * time.Second,
@@ -75,7 +96,7 @@ func start(address string, handler http.Handler) error {
 
 	// Listen And Serve Metrics Server.
 	go func() {
-		if err := metricsServer.ListenAndServe(); err != nil {
+		if err := r.server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			metricsLogger.Error(err, "start metrics server failed")
 		}
 	}()
@@ -83,11 +104,11 @@ func start(address string, handler http.Handler) error {
 	return nil
 }
 
-func newOptions(svr *config.Server) (registerOptions, error) {
+func (r *Runner) newOptions() (registerOptions, error) {
 	newOpts := registerOptions{}
 	newOpts.address = net.JoinHostPort(egv1a1.GatewayMetricsHost, fmt.Sprint(egv1a1.GatewayMetricsPort))
 
-	if svr.EnvoyGateway.DisablePrometheus() {
+	if r.cfg.EnvoyGateway.DisablePrometheus() {
 		newOpts.pullOptions.disable = true
 	} else {
 		newOpts.pullOptions.disable = false
@@ -101,7 +122,7 @@ func newOptions(svr *config.Server) (registerOptions, error) {
 		}
 	}
 
-	for _, config := range svr.EnvoyGateway.GetEnvoyGatewayTelemetry().Metrics.Sinks {
+	for _, config := range r.cfg.EnvoyGateway.GetEnvoyGatewayTelemetry().Metrics.Sinks {
 		sink := metricsSink{
 			host:     config.OpenTelemetry.Host,
 			port:     config.OpenTelemetry.Port,
@@ -113,6 +134,7 @@ func newOptions(svr *config.Server) (registerOptions, error) {
 		if config.OpenTelemetry.ExportInterval != nil && len(*config.OpenTelemetry.ExportInterval) != 0 {
 			interval, err := time.ParseDuration(string(*config.OpenTelemetry.ExportInterval))
 			if err != nil {
+				metricsLogger := r.cfg.Logger.WithName("metrics")
 				metricsLogger.Error(err, "failed to parse exporter interval time format")
 				return newOpts, err
 			}
@@ -122,6 +144,7 @@ func newOptions(svr *config.Server) (registerOptions, error) {
 		if config.OpenTelemetry.ExportTimeout != nil && len(*config.OpenTelemetry.ExportTimeout) != 0 {
 			timeout, err := time.ParseDuration(string(*config.OpenTelemetry.ExportTimeout))
 			if err != nil {
+				metricsLogger := r.cfg.Logger.WithName("metrics")
 				metricsLogger.Error(err, "failed to parse exporter timeout time format")
 				return newOpts, err
 			}
@@ -137,16 +160,16 @@ func newOptions(svr *config.Server) (registerOptions, error) {
 
 // registerForHandler sets the global metrics registry to the provided Prometheus registerer.
 // if enables prometheus, it will return a prom http handler.
-func registerForHandler(opts registerOptions) (http.Handler, error) {
+func (r *Runner) registerForHandler(opts registerOptions) (http.Handler, error) {
 	otelOpts := []metric.Option{}
 
-	if err := registerOTELPromExporter(&otelOpts, opts); err != nil {
+	if err := r.registerOTELPromExporter(&otelOpts, opts); err != nil {
 		return nil, err
 	}
-	if err := registerOTELHTTPexporter(&otelOpts, opts); err != nil {
+	if err := r.registerOTELHTTPexporter(&otelOpts, opts); err != nil {
 		return nil, err
 	}
-	if err := registerOTELgRPCexporter(&otelOpts, opts); err != nil {
+	if err := r.registerOTELgRPCexporter(&otelOpts, opts); err != nil {
 		return nil, err
 	}
 	otelOpts = append(otelOpts, stores.preAddOptions()...)
@@ -161,7 +184,7 @@ func registerForHandler(opts registerOptions) (http.Handler, error) {
 }
 
 // registerOTELPromExporter registers OTEL prometheus exporter (PULL mode).
-func registerOTELPromExporter(otelOpts *[]metric.Option, opts registerOptions) error {
+func (r *Runner) registerOTELPromExporter(otelOpts *[]metric.Option, opts registerOptions) error {
 	if !opts.pullOptions.disable {
 		promOpts := []otelprom.Option{
 			otelprom.WithoutScopeInfo(),
@@ -176,6 +199,7 @@ func registerOTELPromExporter(otelOpts *[]metric.Option, opts registerOptions) e
 		}
 
 		*otelOpts = append(*otelOpts, metric.WithReader(promreader))
+		metricsLogger := r.cfg.Logger.WithName("metrics")
 		metricsLogger.Info("initialized metrics pull endpoint", "address", opts.address, "endpoint", defaultEndpoint)
 	}
 
@@ -183,7 +207,7 @@ func registerOTELPromExporter(otelOpts *[]metric.Option, opts registerOptions) e
 }
 
 // registerOTELHTTPexporter registers OTEL HTTP metrics exporter (PUSH mode).
-func registerOTELHTTPexporter(otelOpts *[]metric.Option, opts registerOptions) error {
+func (r *Runner) registerOTELHTTPexporter(otelOpts *[]metric.Option, opts registerOptions) error {
 	for _, sink := range opts.pushOptions.sinks {
 		if sink.protocol == egv1a1.HTTPProtocol {
 			address := net.JoinHostPort(sink.host, fmt.Sprint(sink.port))
@@ -208,6 +232,7 @@ func registerOTELHTTPexporter(otelOpts *[]metric.Option, opts registerOptions) e
 
 			otelreader := metric.NewPeriodicReader(httpexporter, periodOpts...)
 			*otelOpts = append(*otelOpts, metric.WithReader(otelreader))
+			metricsLogger := r.cfg.Logger.WithName("metrics")
 			metricsLogger.Info("initialized otel http metrics push endpoint", "address", address)
 		}
 	}
@@ -216,7 +241,7 @@ func registerOTELHTTPexporter(otelOpts *[]metric.Option, opts registerOptions) e
 }
 
 // registerOTELgRPCexporter registers OTEL gRPC metrics exporter (PUSH mode).
-func registerOTELgRPCexporter(otelOpts *[]metric.Option, opts registerOptions) error {
+func (r *Runner) registerOTELgRPCexporter(otelOpts *[]metric.Option, opts registerOptions) error {
 	for _, sink := range opts.pushOptions.sinks {
 		if sink.protocol == egv1a1.GRPCProtocol {
 			address := net.JoinHostPort(sink.host, fmt.Sprint(sink.port))
@@ -241,6 +266,7 @@ func registerOTELgRPCexporter(otelOpts *[]metric.Option, opts registerOptions) e
 
 			otelreader := metric.NewPeriodicReader(httpexporter, periodOpts...)
 			*otelOpts = append(*otelOpts, metric.WithReader(otelreader))
+			metricsLogger := r.cfg.Logger.WithName("metrics")
 			metricsLogger.Info("initialized otel grpc metrics push endpoint", "address", address)
 		}
 	}

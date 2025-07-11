@@ -3,7 +3,7 @@
 // The full text of the Apache license is available in the LICENSE file at
 // the root of the repo.
 
-package admin
+package metrics
 
 import (
 	"context"
@@ -17,15 +17,15 @@ import (
 	"github.com/envoyproxy/gateway/internal/logging"
 )
 
-func TestInitAdminServer(t *testing.T) {
-	svrConfig := &config.Server{
+func TestMetricServer(t *testing.T) {
+	cfg := &config.Server{
 		EnvoyGateway: &egv1a1.EnvoyGateway{
 			EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{},
 		},
+		Logger: logging.NewLogger(os.Stdout, egv1a1.DefaultEnvoyGatewayLogging()),
 	}
 
-	svrConfig.Logger = logging.NewLogger(os.Stdout, egv1a1.DefaultEnvoyGatewayLogging())
-	runner := New(svrConfig)
+	runner := New(cfg)
 	err := runner.Start(context.Background())
 	require.NoError(t, err)
 
