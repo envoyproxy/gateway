@@ -10,6 +10,7 @@ import (
 	"reflect"
 
 	"golang.org/x/exp/slices"
+	certificatesv1b1 "k8s.io/api/certificates/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -65,6 +66,8 @@ type Resources struct {
 	ExtensionServerPolicies []unstructured.Unstructured    `json:"extensionServerPolicies,omitempty" yaml:"extensionServerPolicies,omitempty"`
 	Backends                []*egv1a1.Backend              `json:"backends,omitempty" yaml:"backends,omitempty"`
 	HTTPRouteFilters        []*egv1a1.HTTPRouteFilter      `json:"httpFilters,omitempty" yaml:"httpFilters,omitempty"`
+
+	ClusterTrustBundles []*certificatesv1b1.ClusterTrustBundle `json:"clusterTrustBundles,omitempty" yaml:"clusterTrustBundles,omitempty"`
 
 	serviceMap map[types.NamespacedName]*corev1.Service
 }
@@ -154,6 +157,16 @@ func (r *Resources) GetSecret(namespace, name string) *corev1.Secret {
 	for _, secret := range r.Secrets {
 		if secret.Namespace == namespace && secret.Name == name {
 			return secret
+		}
+	}
+
+	return nil
+}
+
+func (r *Resources) GetClusterTrustBundle(name string) *certificatesv1b1.ClusterTrustBundle {
+	for _, ctb := range r.ClusterTrustBundles {
+		if ctb.Name == name {
+			return ctb
 		}
 	}
 

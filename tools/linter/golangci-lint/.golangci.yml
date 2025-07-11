@@ -120,6 +120,8 @@ linters:
           alias: apiextensionsv1
         - pkg: sigs.k8s.io/mcs-api/pkg/apis/v1alpha1
           alias: mcsapiv1a1
+        - pkg: k8s.io/api/certificates/v1beta1
+          alias: certificatesv1b1
         - pkg: k8s.io/api/(\w+)/(v[\w\d]+)
           alias: $1$2
       # Do not allow unaliased imports of aliased packages.
