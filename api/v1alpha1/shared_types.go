@@ -654,6 +654,10 @@ const (
 
 // HTTP2Settings provides HTTP/2 configuration for listeners and backends.
 type HTTP2Settings struct {
+	// AllowConnect specifies whether the CONNECT method is allowed.
+	//
+	// +optional
+	AllowConnect *bool `json:"allowConnect,omitempty"`
 	// InitialStreamWindowSize sets the initial window size for HTTP/2 streams.
 	// If not set, the default value is 64 KiB(64*1024).
 	//
