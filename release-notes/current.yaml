@@ -36,7 +36,7 @@ new features: |
   Added support for SecurityPolicy and EnvoyExtensionPolicy to target ServiceImport via BackendRefs.
   Introduce validation strictness levels for Lua scripts in EnvoyExtensionPolicies.
   Added metric `watchable_publish_total` counting store events in watchable message queues.
-
+  Accessloggers of type ALS now have http2 enabled on the cluster by default.
 
 bug fixes: |
   Handle integer zone annotation values
