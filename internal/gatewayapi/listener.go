@@ -620,7 +620,7 @@ func (t *Translator) processAccessLog(envoyproxy *egv1a1.EnvoyProxy, resources *
 				}
 				// ALS should always use GRPC protocol. Setting this adds http2 by default to the cluster.
 				for _, setting := range ds {
-						setting.Protocol = ir.GRPC
+					setting.Protocol = ir.GRPC
 				}
 
 				al := &ir.ALSAccessLog{
