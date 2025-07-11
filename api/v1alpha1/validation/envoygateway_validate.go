@@ -167,6 +167,13 @@ func validateEnvoyGatewayRateLimit(rateLimit *egv1a1.RateLimit) error {
 	if rateLimit.Backend.Redis == nil || rateLimit.Backend.Redis.URL == "" {
 		return fmt.Errorf("empty ratelimit redis settings")
 	}
+	/**
+	_ 表示我们忽略第一个返回值（*url.URL）。
+	err 是接收的第二个返回值
+	url.Parse() 函数接受一个 URL 字符串作为参数，并返回一个 URL 结构体和一个错误。
+	为什么忽略第一个返回值，因为我们不需要这个 URL 结构体，只需要错误信息。
+	若写成 u, err := url.Parse(...)： 但 u 没被使用，Go 编译器就会报错
+	*/
 	if _, err := url.Parse(rateLimit.Backend.Redis.URL); err != nil {
 		return fmt.Errorf("unknown ratelimit redis url format: %w", err)
 	}

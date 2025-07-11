@@ -370,6 +370,12 @@ type RateLimit struct {
 	// If not set, timeout is 20ms.
 	// +optional
 	// +kubebuilder:validation:Format=duration
+	/**
+		类型： *metav1.Duration（K8s 通用的时间格式封装）
+	 * 1. 默认值：20ms
+	 * 2. 代理访问 ratelimit 服务的超时时间。
+	 * 3. 允许设置最小值：0ms
+	*/
 	Timeout *metav1.Duration `json:"timeout,omitempty"`
 
 	// FailClosed is a switch used to control the flow of traffic
@@ -450,6 +456,7 @@ type RateLimitDatabaseBackend struct {
 // +kubebuilder:validation:Enum=Redis
 type RateLimitDatabaseBackendType string
 
+// 创建命名常量
 const (
 	// RedisBackendType uses a redis database for the rate limit service.
 	RedisBackendType RateLimitDatabaseBackendType = "Redis"

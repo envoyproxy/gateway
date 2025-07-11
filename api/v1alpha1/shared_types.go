@@ -51,6 +51,7 @@ type GroupVersionKind struct {
 // +kubebuilder:validation:Enum=Kubernetes;Custom
 type ProviderType string
 
+// Go 中使用 首字母大写 的标识符表示该变量、常量、函数等是导出的（exported），可以被其他包访问。
 const (
 	// ProviderTypeKubernetes defines the "Kubernetes" provider.
 	ProviderTypeKubernetes ProviderType = "Kubernetes"
