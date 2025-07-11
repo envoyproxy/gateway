@@ -63,12 +63,15 @@ services:
     - port: 8000
       name: grpc
       protocol: TCP
-- apiVersion: v1
-  kind: Service
+serviceImports:
+- apiVersion: multicluster.x-k8s.io/v1alpha1
+  kind: ServiceImport
   metadata:
     namespace: default
     name: grpc-backend-2
   spec:
+    ips:
+    - 8.8.8.8
     ports:
     - port: 9000
       name: grpc
@@ -97,7 +100,7 @@ endpointSlices:
     name: endpointslice-grpc-backend-2
     namespace: default
     labels:
-      kubernetes.io/service-name: grpc-backend-2
+      multicluster.kubernetes.io/service-name: grpc-backend-2
   addressType: IPv4
   ports:
   - name: grpc
@@ -201,8 +204,10 @@ envoyExtensionPolicies:
       - Name: grpc-backend
         Namespace: envoy-gateway
         Port: 8000
-      - Name: grpc-backend-2
-        Port: 9000
+      - group: multicluster.x-k8s.io
+        kind: ServiceImport
+        name: grpc-backend-2
+        port: 9000
       - Name: backend-ip
         Kind: Backend
         Group: gateway.envoyproxy.io
