@@ -92,7 +92,11 @@ func extAuthFilterName(extAuth *ir.ExtAuth) string {
 
 func extAuthConfig(extAuth *ir.ExtAuth) *extauthv3.ExtAuthz {
 	config := &extauthv3.ExtAuthz{
-		TransportApiVersion: corev3.ApiVersion_V3,
+		TransportApiVersion:                 corev3.ApiVersion_V3,
+		MetadataContextNamespaces:           extAuth.MetadataContextNamespaces,
+		TypedMetadataContextNamespaces:      extAuth.TypedMetadataContextNamespaces,
+		RouteMetadataContextNamespaces:      extAuth.RouteMetadataContextNamespaces,
+		RouteTypedMetadataContextNamespaces: extAuth.RouteTypedMetadataContextNamespaces,
 	}
 
 	if extAuth.FailOpen != nil {

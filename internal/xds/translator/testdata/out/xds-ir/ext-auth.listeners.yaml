@@ -48,7 +48,15 @@
                 cluster: securitypolicy/default/policy-for-gateway-1/envoy-gateway/http-backend
                 timeout: 10s
                 uri: http://http-backend.envoy-gateway:80/auth
+            metadataContextNamespaces:
+            - envoy.filters.http.custom1
+            routeMetadataContextNamespaces:
+            - envoy.filters.http.custom3
+            routeTypedMetadataContextNamespaces:
+            - envoy.filters.http.custom4
             transportApiVersion: V3
+            typedMetadataContextNamespaces:
+            - envoy.filters.http.custom2
         - name: envoy.filters.http.router
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
