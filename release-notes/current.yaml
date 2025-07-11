@@ -53,7 +53,7 @@ bug fixes: |
   Fixed validation errors when the rateLimit url for Redis in the EnvoyGateway API includes multiple comma separated hosts.
   Fixes addresses in status of DualStack NodePort Gateways.
   Fixed issue that not able to override the prometheus annotation in EnvoyProxy CRD.
-
+  Skipped ExtProc, Wasm, and ExtAuth when they are configured FailOpen and the configuration is invalid, e.g. missing backendRefs or invalid port.
 
 # Enhancements that improve performance.
 performance improvements: |
