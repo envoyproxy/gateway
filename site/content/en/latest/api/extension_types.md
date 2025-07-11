@@ -1635,7 +1635,7 @@ _Appears in:_
 | `backendTLS` | _[BackendTLSConfig](#backendtlsconfig)_ |  false  |  | BackendTLS is the TLS configuration for the Envoy proxy to use when connecting to backends.<br />These settings are applied on backends for which TLS policies are specified. |
 | `ipFamily` | _[IPFamily](#ipfamily)_ |  false  |  | IPFamily specifies the IP family for the EnvoyProxy fleet.<br />This setting only affects the Gateway listener port and does not impact<br />other aspects of the Envoy proxy configuration.<br />If not specified, the system will operate as follows:<br />- It defaults to IPv4 only.<br />- IPv6 and dual-stack environments are not supported in this default configuration.<br />Note: To enable IPv6 or dual-stack functionality, explicit configuration is required. |
 | `preserveRouteOrder` | _boolean_ |  false  |  | PreserveRouteOrder determines if the order of matching for HTTPRoutes is determined by Gateway-API<br />specification (https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.HTTPRouteRule)<br />or preserves the order defined by users in the HTTPRoute's HTTPRouteRule list.<br />Default: False |
-| `disableLuaValidation` | _boolean_ |  false  | false | DisableLuaValidation disables the Lua script validation for Lua EnvoyExtensionPolicies |
+| `luaValidation` | _[LuaValidation](#luavalidation)_ |  false  |  | LuaValidation determines strictness of the Lua script validation for Lua EnvoyExtensionPolicies<br />Default: Strict |
 
 
 #### EnvoyProxyStatus
@@ -1721,7 +1721,7 @@ _Appears in:_
 | `backendRefs` | _[BackendRef](#backendref) array_ |  false  |  | BackendRefs references a Kubernetes object that represents the<br />backend server to which the authorization request will be sent. |
 | `backendSettings` | _[ClusterSettings](#clustersettings)_ |  false  |  | BackendSettings holds configuration for managing the connection<br />to the backend. |
 | `messageTimeout` | _[Duration](https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.Duration)_ |  false  |  | MessageTimeout is the timeout for a response to be returned from the external processor<br />Default: 200ms |
-| `failOpen` | _boolean_ |  false  |  | FailOpen defines if requests or responses that cannot be processed due to connectivity to the<br />external processor are terminated or passed-through.<br />Default: false |
+| `failOpen` | _boolean_ |  false  | false | FailOpen is a switch used to control the behavior when failing to call the external processor.<br />If FailOpen is set to true, the system bypasses the ExtProc extension and<br />allows the traffic to pass through. If it is set to false or<br />not set (defaulting to false), the system blocks the traffic and returns<br />an HTTP 5xx error.<br />If set to true, the ExtProc extension will also be bypassed if the configuration is invalid. |
 | `processingMode` | _[ExtProcProcessingMode](#extprocprocessingmode)_ |  false  |  | ProcessingMode defines how request and response body is processed<br />Default: header and body are not sent to the external processor |
 | `metadata` | _[ExtProcMetadata](#extprocmetadata)_ |  false  |  | Refer to Kubernetes API documentation for fields of `metadata`. |
 
@@ -2188,6 +2188,7 @@ _Appears in:_
 | ---   | ---  | ---      | ---     | ---         |
 | `requestReceivedTimeout` | _[Duration](https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.Duration)_ |  false  |  | RequestReceivedTimeout is the duration envoy waits for the complete request reception. This timer starts upon request<br />initiation and stops when either the last byte of the request is sent upstream or when the response begins. |
 | `idleTimeout` | _[Duration](https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.Duration)_ |  false  |  | IdleTimeout for an HTTP connection. Idle time is defined as a period in which there are no active requests in the connection.<br />Default: 1 hour. |
+| `streamIdleTimeout` | _[Duration](https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.Duration)_ |  false  |  |  The stream idle timeout defines the amount of time a stream can exist without any upstream or downstream activity.<br /> Default: 5 minutes. |
 
 
 #### HTTPCredentialInjectionFilter
@@ -3171,6 +3172,22 @@ _Appears in:_
 | `type` | _[LuaValueType](#luavaluetype)_ |  true  | Inline | Type is the type of method to use to read the Lua value.<br />Valid values are Inline and ValueRef, default is Inline. |
 | `inline` | _string_ |  false  |  | Inline contains the source code as an inline string. |
 | `valueRef` | _[LocalObjectReference](#localobjectreference)_ |  false  |  | ValueRef has the source code specified as a local object reference.<br />Only a reference to ConfigMap is supported.<br />The value of key `lua` in the ConfigMap will be used.<br />If the key is not found, the first value in the ConfigMap will be used. |
+
+
+#### LuaValidation
+
+_Underlying type:_ _string_
+
+
+
+_Appears in:_
+- [EnvoyProxySpec](#envoyproxyspec)
+
+| Value | Description |
+| ----- | ----------- |
+| `Strict` | LuaValidationStrict is the default level and checks for issues during script execution.<br />Recommended if your scripts only use the standard Envoy Lua stream handle API.<br />For supported APIs, see: https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_filters/lua_filter#stream-handle-api<br /> | 
+| `Syntax` | LuaValidationSyntax checks for syntax errors in the Lua script.<br />Note that this is not a full runtime validation and does not check for issues during script execution.<br />This is recommended if your scripts use external libraries that are not supported by Lua runtime validation.<br /> | 
+| `Disabled` | LuaValidationDisabled disables all validations of Lua scripts.<br />Scripts will be accepted and executed without any validation checks.<br />This is not recommended unless both runtime and syntax validations are failing unexpectedly.<br /> | 
 
 
 #### LuaValueType
@@ -4946,7 +4963,7 @@ _Appears in:_
 | `rootID` | _string_ |  true  |  | RootID is a unique ID for a set of extensions in a VM which will share a<br />RootContext and Contexts if applicable (e.g., an Wasm HttpFilter and an Wasm AccessLog).<br />If left blank, all extensions with a blank root_id with the same vm_id will share Context(s).<br />Note: RootID must match the root_id parameter used to register the Context in the Wasm code. |
 | `code` | _[WasmCodeSource](#wasmcodesource)_ |  true  |  | Code is the Wasm code for the extension. |
 | `config` | _[JSON](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.29/#json-v1-apiextensions-k8s-io)_ |  false  |  | Config is the configuration for the Wasm extension.<br />This configuration will be passed as a JSON string to the Wasm extension. |
-| `failOpen` | _boolean_ |  false  | false | FailOpen is a switch used to control the behavior when a fatal error occurs<br />during the initialization or the execution of the Wasm extension.<br />If FailOpen is set to true, the system bypasses the Wasm extension and<br />allows the traffic to pass through. Otherwise, if it is set to false or<br />not set (defaulting to false), the system blocks the traffic and returns<br />an HTTP 5xx error. |
+| `failOpen` | _boolean_ |  false  | false | FailOpen is a switch used to control the behavior when a fatal error occurs<br />during the initialization or the execution of the Wasm extension.<br />If FailOpen is set to true, the system bypasses the Wasm extension and<br />allows the traffic to pass through. If it is set to false or<br />not set (defaulting to false), the system blocks the traffic and returns<br />an HTTP 5xx error.<br />If set to true, the Wasm extension will also be bypassed if the configuration is invalid. |
 | `env` | _[WasmEnv](#wasmenv)_ |  false  |  | Env configures the environment for the Wasm extension |
 
 

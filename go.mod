@@ -12,7 +12,7 @@ require (
 	github.com/cncf/xds/go v0.0.0-20250326154945-ae57f3c0d45f
 	github.com/containers/image/v5 v5.35.0
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc
-	github.com/docker/cli v28.3.0+incompatible
+	github.com/docker/cli v28.3.1+incompatible
 	github.com/docker/docker v28.2.2+incompatible
 	github.com/dominikbraun/graph v0.23.0
 	github.com/envoyproxy/go-control-plane v0.13.5-0.20250622153809-434b6986176d
@@ -40,13 +40,13 @@ require (
 	github.com/prometheus/client_golang v1.22.0
 	github.com/prometheus/client_model v0.6.2
 	github.com/prometheus/common v0.65.0
-	github.com/replicatedhq/troubleshoot v0.119.1
+	github.com/replicatedhq/troubleshoot v0.120.0
 	github.com/shopspring/decimal v1.4.0
 	github.com/spf13/cobra v1.9.1
 	github.com/spf13/pflag v1.0.6
 	github.com/stretchr/testify v1.10.0
 	github.com/telepresenceio/watchable v0.0.0-20220726211108-9bb86f92afa7
-	github.com/tetratelabs/func-e v1.1.5-0.20250618051429-6a0f4e478076
+	github.com/tetratelabs/func-e v1.1.5
 	github.com/tsaarni/certyaml v0.10.0
 	github.com/yuin/gopher-lua v1.1.1
 	go.opentelemetry.io/otel v1.37.0
@@ -67,16 +67,16 @@ require (
 	google.golang.org/grpc/security/advancedtls v1.0.0
 	google.golang.org/protobuf v1.36.6
 	gopkg.in/yaml.v3 v3.0.1
-	helm.sh/helm/v3 v3.18.3
-	k8s.io/api v0.33.1
-	k8s.io/apiextensions-apiserver v0.33.1
+	helm.sh/helm/v3 v3.18.4
+	k8s.io/api v0.33.2
+	k8s.io/apiextensions-apiserver v0.33.2
 	k8s.io/apimachinery v0.34.0-alpha.0
-	k8s.io/apiserver v0.33.1
-	k8s.io/cli-runtime v0.33.1
-	k8s.io/client-go v0.33.1
+	k8s.io/apiserver v0.33.2
+	k8s.io/cli-runtime v0.33.2
+	k8s.io/client-go v0.33.2
 	k8s.io/klog/v2 v2.130.1
 	k8s.io/kube-openapi v0.0.0-20250318190949-c8a335a9a2ff
-	k8s.io/kubectl v0.33.1
+	k8s.io/kubectl v0.33.2
 	k8s.io/utils v0.0.0-20241210054802-24370beab758
 	sigs.k8s.io/controller-runtime v0.21.0
 	sigs.k8s.io/gateway-api v1.3.1-0.20250527223622-54df0a899c1c
@@ -492,8 +492,8 @@ require (
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	honnef.co/go/tools v0.6.1 // indirect
-	k8s.io/component-base v0.33.1 // indirect
-	k8s.io/metrics v0.33.1 // indirect
+	k8s.io/component-base v0.33.2 // indirect
+	k8s.io/metrics v0.33.2 // indirect
 	mvdan.cc/gofumpt v0.7.0 // indirect
 	mvdan.cc/unparam v0.0.0-20250301125049-0df0534333a4 // indirect
 	oras.land/oras-go/v2 v2.6.0 // indirect

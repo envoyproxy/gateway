@@ -20684,6 +20684,12 @@ spec:
                           initiation and stops when either the last byte of the request is sent upstream or when the response begins.
                         pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                         type: string
+                      streamIdleTimeout:
+                        description: |2-
+                           The stream idle timeout defines the amount of time a stream can exist without any upstream or downstream activity.
+                           Default: 5 minutes.
+                        pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                        type: string
                     type: object
                   tcp:
                     description: Timeout settings for TCP.
@@ -22356,10 +22362,16 @@ spec:
                           type: object
                       type: object
                     failOpen:
+                      default: false
                       description: |-
-                        FailOpen defines if requests or responses that cannot be processed due to connectivity to the
-                        external processor are terminated or passed-through.
-                        Default: false
+                        FailOpen is a switch used to control the behavior when failing to call the external processor.
+
+                        If FailOpen is set to true, the system bypasses the ExtProc extension and
+                        allows the traffic to pass through. If it is set to false or
+                        not set (defaulting to false), the system blocks the traffic and returns
+                        an HTTP 5xx error.
+
+                        If set to true, the ExtProc extension will also be bypassed if the configuration is invalid.
                       type: boolean
                     messageTimeout:
                       description: |-
@@ -22457,13 +22469,16 @@ spec:
                   x-kubernetes-validations:
                   - message: BackendRefs must be used, backendRef is not supported.
                     rule: '!has(self.backendRef)'
-                  - message: BackendRefs only supports Service and Backend kind.
+                  - message: BackendRefs only supports Service, ServiceImport, and
+                      Backend kind.
                     rule: 'has(self.backendRefs) ? self.backendRefs.all(f, f.kind
-                      == ''Service'' || f.kind == ''Backend'') : true'
-                  - message: BackendRefs only supports Core and gateway.envoyproxy.io
-                      group.
+                      == ''Service'' || f.kind == ''ServiceImport'' || f.kind == ''Backend'')
+                      : true'
+                  - message: BackendRefs only supports Core, multicluster.x-k8s.io,
+                      and gateway.envoyproxy.io groups.
                     rule: 'has(self.backendRefs) ? (self.backendRefs.all(f, f.group
-                      == "" || f.group == ''gateway.envoyproxy.io'')) : true'
+                      == "" || f.group == ''multicluster.x-k8s.io'' || f.group ==
+                      ''gateway.envoyproxy.io'')) : true'
                   - message: If FullDuplexStreamed body processing mode is used, FailOpen
                       must be false.
                     rule: '!(has(self.failOpen) && self.failOpen == true && ((has(self.processingMode.request.body)
@@ -22978,10 +22993,13 @@ spec:
                       description: |-
                         FailOpen is a switch used to control the behavior when a fatal error occurs
                         during the initialization or the execution of the Wasm extension.
+
                         If FailOpen is set to true, the system bypasses the Wasm extension and
-                        allows the traffic to pass through. Otherwise, if it is set to false or
+                        allows the traffic to pass through. If it is set to false or
                         not set (defaulting to false), the system blocks the traffic and returns
                         an HTTP 5xx error.
+
+                        If set to true, the Wasm extension will also be bypassed if the configuration is invalid.
                       type: boolean
                     name:
                       description: |-
@@ -24078,11 +24096,6 @@ spec:
                   the number of cpuset threads on the platform.
                 format: int32
                 type: integer
-              disableLuaValidation:
-                default: false
-                description: DisableLuaValidation disables the Lua script validation
-                  for Lua EnvoyExtensionPolicies
-                type: boolean
               extraArgs:
                 description: |-
                   ExtraArgs defines additional command line options that are provided to Envoy.
@@ -24250,6 +24263,14 @@ spec:
                       and the log level is the value. If unspecified, defaults to "default: warn".
                     type: object
                 type: object
+              luaValidation:
+                description: |-
+                  LuaValidation determines strictness of the Lua script validation for Lua EnvoyExtensionPolicies
+                  Default: Strict
+                enum:
+                - Strict
+                - Disabled
+                type: string
               mergeGateways:
                 description: |-
                   MergeGateways defines if Gateway resources should be merged onto the same Envoy Proxy Infrastructure.
@@ -40612,13 +40633,16 @@ spec:
                     x-kubernetes-validations:
                     - message: backendRef or backendRefs needs to be set
                       rule: has(self.backendRef) || self.backendRefs.size() > 0
-                    - message: BackendRefs only supports Service and Backend kind.
+                    - message: BackendRefs only supports Service, ServiceImport, and
+                        Backend kind.
                       rule: 'has(self.backendRefs) ? self.backendRefs.all(f, f.kind
-                        == ''Service'' || f.kind == ''Backend'') : true'
-                    - message: BackendRefs only supports Core and gateway.envoyproxy.io
-                        group.
+                        == ''Service'' || f.kind == ''ServiceImport'' || f.kind ==
+                        ''Backend'') : true'
+                    - message: BackendRefs only supports Core, multicluster.x-k8s.io,
+                        and gateway.envoyproxy.io groups.
                       rule: 'has(self.backendRefs) ? (self.backendRefs.all(f, f.group
-                        == "" || f.group == ''gateway.envoyproxy.io'')) : true'
+                        == "" || f.group == ''multicluster.x-k8s.io'' || f.group ==
+                        ''gateway.envoyproxy.io'')) : true'
                   headersToExtAuth:
                     description: |-
                       HeadersToExtAuth defines the client request headers that will be included
@@ -41600,13 +41624,16 @@ spec:
                     x-kubernetes-validations:
                     - message: backendRef or backendRefs needs to be set
                       rule: has(self.backendRef) || self.backendRefs.size() > 0
-                    - message: BackendRefs only supports Service and Backend kind.
+                    - message: BackendRefs only supports Service, ServiceImport, and
+                        Backend kind.
                       rule: 'has(self.backendRefs) ? self.backendRefs.all(f, f.kind
-                        == ''Service'' || f.kind == ''Backend'') : true'
-                    - message: BackendRefs only supports Core and gateway.envoyproxy.io
-                        group.
+                        == ''Service'' || f.kind == ''ServiceImport'' || f.kind ==
+                        ''Backend'') : true'
+                    - message: BackendRefs only supports Core, multicluster.x-k8s.io,
+                        and gateway.envoyproxy.io groups.
                       rule: 'has(self.backendRefs) ? (self.backendRefs.all(f, f.group
-                        == "" || f.group == ''gateway.envoyproxy.io'')) : true'
+                        == "" || f.group == ''multicluster.x-k8s.io'' || f.group ==
+                        ''gateway.envoyproxy.io'')) : true'
                   recomputeRoute:
                     description: |-
                       RecomputeRoute clears the route cache and recalculates the routing decision.
