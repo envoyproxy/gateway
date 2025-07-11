@@ -6,7 +6,8 @@
 package message
 
 import (
-	"github.com/telepresenceio/watchable"
+	"context"
+
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
@@ -22,7 +23,7 @@ import (
 type ProviderResources struct {
 	// GatewayAPIResources is a map from a GatewayClass name to
 	// a group of gateway API and other related resources.
-	GatewayAPIResources watchable.Map[string, *resource.ControllerResources]
+	GatewayAPIResources *preSubscribedWatchableMap[string, *resource.ControllerResources]
 
 	// GatewayAPIStatuses is a group of gateway api
 	// resource statuses maps.
@@ -33,6 +34,35 @@ type ProviderResources struct {
 
 	// ExtensionStatuses is a group of gw-api extension resource statuses map.
 	ExtensionStatuses
+}
+
+// NewSubscribedProviderResources creates a new ProviderResources with the given context and required subscriptions.
+// Update subscription count here if more subscriptions are needed.
+func NewSubscribedProviderResources(ctx context.Context) *ProviderResources {
+	return &ProviderResources{
+		GatewayAPIResources: newPreSubscribedWatchableMap[string, *resource.ControllerResources](ctx, 1),
+		GatewayAPIStatuses: GatewayAPIStatuses{
+			GatewayClassStatuses: newPreSubscribedWatchableMap[types.NamespacedName, *gwapiv1.GatewayClassStatus](ctx, 1),
+			GatewayStatuses:      newPreSubscribedWatchableMap[types.NamespacedName, *gwapiv1.GatewayStatus](ctx, 1),
+			HTTPRouteStatuses:    newPreSubscribedWatchableMap[types.NamespacedName, *gwapiv1.HTTPRouteStatus](ctx, 1),
+			GRPCRouteStatuses:    newPreSubscribedWatchableMap[types.NamespacedName, *gwapiv1.GRPCRouteStatus](ctx, 1),
+			TLSRouteStatuses:     newPreSubscribedWatchableMap[types.NamespacedName, *gwapiv1a2.TLSRouteStatus](ctx, 1),
+			TCPRouteStatuses:     newPreSubscribedWatchableMap[types.NamespacedName, *gwapiv1a2.TCPRouteStatus](ctx, 1),
+			UDPRouteStatuses:     newPreSubscribedWatchableMap[types.NamespacedName, *gwapiv1a2.UDPRouteStatus](ctx, 1),
+		},
+		PolicyStatuses: PolicyStatuses{
+			ClientTrafficPolicyStatuses:  newPreSubscribedWatchableMap[types.NamespacedName, *gwapiv1a2.PolicyStatus](ctx, 1),
+			BackendTrafficPolicyStatuses: newPreSubscribedWatchableMap[types.NamespacedName, *gwapiv1a2.PolicyStatus](ctx, 1),
+			EnvoyPatchPolicyStatuses:     newPreSubscribedWatchableMap[types.NamespacedName, *gwapiv1a2.PolicyStatus](ctx, 1),
+			SecurityPolicyStatuses:       newPreSubscribedWatchableMap[types.NamespacedName, *gwapiv1a2.PolicyStatus](ctx, 1),
+			BackendTLSPolicyStatuses:     newPreSubscribedWatchableMap[types.NamespacedName, *gwapiv1a2.PolicyStatus](ctx, 1),
+			EnvoyExtensionPolicyStatuses: newPreSubscribedWatchableMap[types.NamespacedName, *gwapiv1a2.PolicyStatus](ctx, 1),
+			ExtensionPolicyStatuses:      newPreSubscribedWatchableMap[NamespacedNameAndGVK, *gwapiv1a2.PolicyStatus](ctx, 1),
+		},
+		ExtensionStatuses: ExtensionStatuses{
+			BackendStatuses: newPreSubscribedWatchableMap[types.NamespacedName, *egv1a1.BackendStatus](ctx, 1),
+		},
+	}
 }
 
 func (p *ProviderResources) GetResources() []*resource.Resources {
@@ -75,13 +105,13 @@ func (p *ProviderResources) Close() {
 
 // GatewayAPIStatuses contains gateway API resources statuses
 type GatewayAPIStatuses struct {
-	GatewayClassStatuses watchable.Map[types.NamespacedName, *gwapiv1.GatewayClassStatus]
-	GatewayStatuses      watchable.Map[types.NamespacedName, *gwapiv1.GatewayStatus]
-	HTTPRouteStatuses    watchable.Map[types.NamespacedName, *gwapiv1.HTTPRouteStatus]
-	GRPCRouteStatuses    watchable.Map[types.NamespacedName, *gwapiv1.GRPCRouteStatus]
-	TLSRouteStatuses     watchable.Map[types.NamespacedName, *gwapiv1a2.TLSRouteStatus]
-	TCPRouteStatuses     watchable.Map[types.NamespacedName, *gwapiv1a2.TCPRouteStatus]
-	UDPRouteStatuses     watchable.Map[types.NamespacedName, *gwapiv1a2.UDPRouteStatus]
+	GatewayClassStatuses *preSubscribedWatchableMap[types.NamespacedName, *gwapiv1.GatewayClassStatus]
+	GatewayStatuses      *preSubscribedWatchableMap[types.NamespacedName, *gwapiv1.GatewayStatus]
+	HTTPRouteStatuses    *preSubscribedWatchableMap[types.NamespacedName, *gwapiv1.HTTPRouteStatus]
+	GRPCRouteStatuses    *preSubscribedWatchableMap[types.NamespacedName, *gwapiv1.GRPCRouteStatus]
+	TLSRouteStatuses     *preSubscribedWatchableMap[types.NamespacedName, *gwapiv1a2.TLSRouteStatus]
+	TCPRouteStatuses     *preSubscribedWatchableMap[types.NamespacedName, *gwapiv1a2.TCPRouteStatus]
+	UDPRouteStatuses     *preSubscribedWatchableMap[types.NamespacedName, *gwapiv1a2.UDPRouteStatus]
 }
 
 func (s *GatewayAPIStatuses) Close() {
@@ -100,18 +130,18 @@ type NamespacedNameAndGVK struct {
 
 // PolicyStatuses contains policy related resources statuses
 type PolicyStatuses struct {
-	ClientTrafficPolicyStatuses  watchable.Map[types.NamespacedName, *gwapiv1a2.PolicyStatus]
-	BackendTrafficPolicyStatuses watchable.Map[types.NamespacedName, *gwapiv1a2.PolicyStatus]
-	EnvoyPatchPolicyStatuses     watchable.Map[types.NamespacedName, *gwapiv1a2.PolicyStatus]
-	SecurityPolicyStatuses       watchable.Map[types.NamespacedName, *gwapiv1a2.PolicyStatus]
-	BackendTLSPolicyStatuses     watchable.Map[types.NamespacedName, *gwapiv1a2.PolicyStatus]
-	EnvoyExtensionPolicyStatuses watchable.Map[types.NamespacedName, *gwapiv1a2.PolicyStatus]
-	ExtensionPolicyStatuses      watchable.Map[NamespacedNameAndGVK, *gwapiv1a2.PolicyStatus]
+	ClientTrafficPolicyStatuses  *preSubscribedWatchableMap[types.NamespacedName, *gwapiv1a2.PolicyStatus]
+	BackendTrafficPolicyStatuses *preSubscribedWatchableMap[types.NamespacedName, *gwapiv1a2.PolicyStatus]
+	EnvoyPatchPolicyStatuses     *preSubscribedWatchableMap[types.NamespacedName, *gwapiv1a2.PolicyStatus]
+	SecurityPolicyStatuses       *preSubscribedWatchableMap[types.NamespacedName, *gwapiv1a2.PolicyStatus]
+	BackendTLSPolicyStatuses     *preSubscribedWatchableMap[types.NamespacedName, *gwapiv1a2.PolicyStatus]
+	EnvoyExtensionPolicyStatuses *preSubscribedWatchableMap[types.NamespacedName, *gwapiv1a2.PolicyStatus]
+	ExtensionPolicyStatuses      *preSubscribedWatchableMap[NamespacedNameAndGVK, *gwapiv1a2.PolicyStatus]
 }
 
 // ExtensionStatuses contains statuses related to gw-api extension resources
 type ExtensionStatuses struct {
-	BackendStatuses watchable.Map[types.NamespacedName, *egv1a1.BackendStatus]
+	BackendStatuses *preSubscribedWatchableMap[types.NamespacedName, *egv1a1.BackendStatus]
 }
 
 func (p *PolicyStatuses) Close() {
@@ -124,18 +154,30 @@ func (p *PolicyStatuses) Close() {
 }
 
 // XdsIR message
-type XdsIR struct {
-	watchable.Map[string, *ir.Xds]
+type XdsIR = preSubscribedWatchableMap[string, *ir.Xds]
+
+// NewSubscribedXdsIR creates a new XdsIR with the given context and required subscriptions.
+// Update subscription count here if more subscriptions are needed.
+func NewSubscribedXdsIR(ctx context.Context) *XdsIR {
+	return newPreSubscribedWatchableMap[string, *ir.Xds](ctx, 2)
 }
 
 // InfraIR message
-type InfraIR struct {
-	watchable.Map[string, *ir.Infra]
+type InfraIR = preSubscribedWatchableMap[string, *ir.Infra]
+
+// NewSubscribedInfraIR creates a new InfraIR with the given context and required subscriptions.
+// Update subscription count here if more subscriptions are needed.
+func NewSubscribedInfraIR(ctx context.Context) *InfraIR {
+	return newPreSubscribedWatchableMap[string, *ir.Infra](ctx, 1)
 }
 
 // Xds message
-type Xds struct {
-	watchable.Map[string, *xdstypes.ResourceVersionTable]
+type Xds = preSubscribedWatchableMap[string, *xdstypes.ResourceVersionTable]
+
+// NewSubscribedXds creates a new Xds with the given context and required subscriptions.
+// Update subscription count here if more subscriptions are needed.
+func NewSubscribedXds(ctx context.Context) *Xds {
+	return newPreSubscribedWatchableMap[string, *xdstypes.ResourceVersionTable](ctx, 1)
 }
 
 type MessageName string
