@@ -43,21 +43,25 @@ func TestValidate(t *testing.T) {
 		{
 			name: "empty namespace",
 			cfg: &Server{
-				EnvoyGateway: &egv1a1.EnvoyGateway{
-					EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
-						Gateway:  egv1a1.DefaultGateway(),
-						Provider: egv1a1.DefaultEnvoyGatewayProvider(),
+				ServerConfiguration: ServerConfiguration{
+					EnvoyGateway: &egv1a1.EnvoyGateway{
+						EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
+							Gateway:  egv1a1.DefaultGateway(),
+							Provider: egv1a1.DefaultEnvoyGatewayProvider(),
+						},
 					},
+					ControllerNamespace: "",
 				},
-				ControllerNamespace: "",
 			},
 			expect: false,
 		},
 		{
 			name: "unspecified envoy gateway",
 			cfg: &Server{
-				ControllerNamespace: "test-ns",
-				Logger:              logging.DefaultLogger(os.Stdout, egv1a1.LogLevelInfo),
+				ServerConfiguration: ServerConfiguration{
+					ControllerNamespace: "test-ns",
+				},
+				Logger: logging.DefaultLogger(os.Stdout, egv1a1.LogLevelInfo),
 			},
 			expect: false,
 		},
