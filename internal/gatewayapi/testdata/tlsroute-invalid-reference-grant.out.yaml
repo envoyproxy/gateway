@@ -48,7 +48,7 @@ infraIR:
       - address: null
         name: gateway-conformance-infra/gateway-tlsroute-referencegrant/https
         ports:
-        - containerPort: 10443
+        - containerPort: 443
           name: tls-443
           protocol: TLS
           servicePort: 443
@@ -108,4 +108,4 @@ xdsIR:
     tcp:
     - address: 0.0.0.0
       name: gateway-conformance-infra/gateway-tlsroute-referencegrant/https
-      port: 10443
+      port: 443

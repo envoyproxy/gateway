@@ -792,6 +792,8 @@ func TestServicePortToContainerPort(t *testing.T) {
 		servicePort               int32
 		containerPort             int32
 		envoyProxy                *egv1a1.EnvoyProxy
+		isTLSPassthrough          bool
+		hasProxyProtocol          bool
 		listenerPortShiftDisabled bool
 	}{
 		{
@@ -858,10 +860,20 @@ func TestServicePortToContainerPort(t *testing.T) {
 			containerPort:             99,
 			listenerPortShiftDisabled: true,
 		},
+		{
+			servicePort:      443,
+			containerPort:    443,
+			isTLSPassthrough: true,
+		},
+		{
+			servicePort:      80,
+			containerPort:    80,
+			hasProxyProtocol: true,
+		},
 	}
 	for _, tc := range testCases {
 		translator := &Translator{ListenerPortShiftDisabled: tc.listenerPortShiftDisabled}
-		got := translator.servicePortToContainerPort(tc.servicePort, tc.envoyProxy)
+		got := translator.servicePortToContainerPort(tc.servicePort, tc.envoyProxy, tc.isTLSPassthrough, tc.hasProxyProtocol)
 		assert.Equal(t, tc.containerPort, got)
 	}
 }

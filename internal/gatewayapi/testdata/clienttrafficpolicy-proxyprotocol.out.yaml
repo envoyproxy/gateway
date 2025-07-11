@@ -104,7 +104,7 @@ infraIR:
       - address: null
         name: envoy-gateway/gateway-1/http-1
         ports:
-        - containerPort: 10080
+        - containerPort: 80
           name: http-80
           protocol: HTTP
           servicePort: 80
@@ -144,7 +144,7 @@ xdsIR:
       path:
         escapedSlashesAction: UnescapeAndRedirect
         mergeSlashes: true
-      port: 10080
+      port: 80
     - address: 0.0.0.0
       hostnames:
       - '*'
