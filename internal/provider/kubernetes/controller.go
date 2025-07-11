@@ -579,7 +579,8 @@ func (r *gatewayAPIReconciler) processBackendRefs(ctx context.Context, gwcResour
 
 		case egv1a1.KindBackend:
 			if !r.backendCRDExists {
-				r.log.Info("Backend CRD does not exist, skipping processing BackendRef")
+				r.log.V(6).Info("skipping Backend processing as Backend CRD is not installed")
+				continue
 			}
 			backend := new(egv1a1.Backend)
 			err := r.client.Get(ctx, types.NamespacedName{Namespace: string(*backendRef.Namespace), Name: string(backendRef.Name)}, backend)
