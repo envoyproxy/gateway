@@ -102,7 +102,7 @@ func buildXdsRoute(httpRoute *ir.HTTPRoute, httpListener *ir.HTTPListener) (*rou
 
 	// Timeouts
 	if router.GetRoute() != nil {
-		rt := getEffectiveRequestTimeout(httpRoute)
+		rt := getEffectiveTimeout(httpRoute)
 		if rt != nil {
 			router.GetRoute().Timeout = durationpb.New(rt.Duration)
 		}
@@ -363,8 +363,23 @@ func getEffectiveRequestTimeout(httpRoute *ir.HTTPRoute) *metav1.Duration {
 	return nil
 }
 
+func getEffectiveTimeout(httpRoute *ir.HTTPRoute) *metav1.Duration {
+	// For gRPC routes (IsHTTP2), check if streaming timeout is configured
+	if httpRoute.IsHTTP2 &&
+		httpRoute.Traffic != nil &&
+		httpRoute.Traffic.Timeout != nil &&
+		httpRoute.Traffic.Timeout.HTTP != nil &&
+		httpRoute.Traffic.Timeout.HTTP.StreamTimeout != nil {
+		// StreamTimeout takes precedence for gRPC/HTTP2 routes
+		return httpRoute.Traffic.Timeout.HTTP.StreamTimeout
+	}
+
+	// Fall back to regular request timeout for non-gRPC routes or when no StreamTimeout is configured
+	return getEffectiveRequestTimeout(httpRoute)
+}
+
 func idleTimeout(httpRoute *ir.HTTPRoute) *durationpb.Duration {
-	rt := getEffectiveRequestTimeout(httpRoute)
+	rt := getEffectiveTimeout(httpRoute)
 	timeout := time.Hour // Default to 1 hour
 	if rt != nil {
 		// Ensure is not less than the request timeout
