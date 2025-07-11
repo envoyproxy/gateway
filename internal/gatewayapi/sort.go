@@ -96,7 +96,17 @@ func (x XdsIRRoutes) Less(i, j int) bool {
 
 	qExtNumberI := numberOfExactMatches(x[i].QueryParamMatches)
 	qExtNumberJ := numberOfExactMatches(x[j].QueryParamMatches)
-	return qExtNumberI < qExtNumberJ
+	if qExtNumberI < qExtNumberJ {
+		return true
+	}
+	if qExtNumberI > qExtNumberJ {
+		return false
+	}
+	// Equal case
+
+	// 5. Default sort logic based on route name (Alphabetically).
+	// ns1/route1/rule/0/match/0/domain > ns1/route2/rule/0/match/0/domain
+	return x[i].Name > x[j].Name
 }
 
 // sortXdsIR sorts the xdsIR based on the match precedence

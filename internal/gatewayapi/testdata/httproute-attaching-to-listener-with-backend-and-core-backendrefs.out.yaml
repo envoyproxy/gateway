@@ -224,59 +224,6 @@ xdsIR:
       - destination:
           metadata:
             kind: HTTPRoute
-            name: httproute-static
-            namespace: default
-          name: httproute/default/httproute-static/rule/0
-          settings:
-          - addressType: IP
-            endpoints:
-            - host: 1.1.1.1
-              port: 3001
-            metadata:
-              kind: Backend
-              name: backend-ip
-              namespace: default
-            name: httproute/default/httproute-static/rule/0/backend/0
-            protocol: HTTP
-            weight: 1
-          - addressType: IP
-            endpoints:
-            - host: 4.3.2.1
-              port: 8080
-            metadata:
-              kind: Service
-              name: service-ip
-              namespace: default
-              sectionName: "8080"
-            name: httproute/default/httproute-static/rule/0/backend/1
-            protocol: HTTP
-            weight: 1
-          - addressType: IP
-            endpoints:
-            - host: 1.2.3.4
-              port: 8081
-            metadata:
-              kind: ServiceImport
-              name: service-import-ip
-              namespace: default
-              sectionName: "8081"
-            name: httproute/default/httproute-static/rule/0/backend/2
-            protocol: HTTP
-            weight: 1
-        hostname: '*'
-        isHTTP2: false
-        metadata:
-          kind: HTTPRoute
-          name: httproute-static
-          namespace: default
-        name: httproute/default/httproute-static/rule/0/match/0/*
-        pathMatch:
-          distinct: false
-          name: ""
-          prefix: /1
-      - destination:
-          metadata:
-            kind: HTTPRoute
             name: httproute-fqdn
             namespace: default
           name: httproute/default/httproute-fqdn/rule/0
@@ -327,6 +274,59 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /2
+      - destination:
+          metadata:
+            kind: HTTPRoute
+            name: httproute-static
+            namespace: default
+          name: httproute/default/httproute-static/rule/0
+          settings:
+          - addressType: IP
+            endpoints:
+            - host: 1.1.1.1
+              port: 3001
+            metadata:
+              kind: Backend
+              name: backend-ip
+              namespace: default
+            name: httproute/default/httproute-static/rule/0/backend/0
+            protocol: HTTP
+            weight: 1
+          - addressType: IP
+            endpoints:
+            - host: 4.3.2.1
+              port: 8080
+            metadata:
+              kind: Service
+              name: service-ip
+              namespace: default
+              sectionName: "8080"
+            name: httproute/default/httproute-static/rule/0/backend/1
+            protocol: HTTP
+            weight: 1
+          - addressType: IP
+            endpoints:
+            - host: 1.2.3.4
+              port: 8081
+            metadata:
+              kind: ServiceImport
+              name: service-import-ip
+              namespace: default
+              sectionName: "8081"
+            name: httproute/default/httproute-static/rule/0/backend/2
+            protocol: HTTP
+            weight: 1
+        hostname: '*'
+        isHTTP2: false
+        metadata:
+          kind: HTTPRoute
+          name: httproute-static
+          namespace: default
+        name: httproute/default/httproute-static/rule/0/match/0/*
+        pathMatch:
+          distinct: false
+          name: ""
+          prefix: /1
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4
