@@ -56,13 +56,13 @@ infraIR:
             accessLog:
               settings:
               - sinks:
-                  - type: ALS
-                    als:
-                      backendRefs:
-                        - name: access-logger
-                          namespace: default
-                          port: 50051
-                      type: HTTP
+                - type: ALS
+                  als:
+                    backendRefs:
+                    - name: access-logger
+                      namespace: default
+                      port: 50051
+                    type: HTTP
         status: {}
       listeners:
       - address: null
@@ -84,7 +84,7 @@ infraIR:
 xdsIR:
   envoy-gateway/gateway-1:
     accessLog:
-      als: 
+      als:
         - name: envoy-gateway-system/als-backend
           destination: 
             name: accesslog_als_0_0
