@@ -85,22 +85,22 @@ xdsIR:
   envoy-gateway/gateway-1:
     accessLog:
       als:
-        - name: envoy-gateway-system/als-backend
-          destination: 
-            name: accesslog_als_0_0
-            settings:
-              - name: accesslog_als_0_0/backend/-1
-                protocol: GRPC
-                metadata:
-                  kind: Service
-                  name: access-logger
-                  namespace: default
-                  sectionName: "50051"
+      - name: envoy-gateway-system/als-backend
+        destination:
+          name: accesslog_als_0_0
+          settings:
+          - name: accesslog_als_0_0/backend/-1
+            protocol: GRPC
             metadata:
-              kind: EnvoyProxy
-              name: als-backend
-              namespace: envoy-gateway-system
-          type: HTTP
+              kind: Service
+              name: access-logger
+              namespace: default
+              sectionName: "50051"
+          metadata:
+            kind: EnvoyProxy
+            name: als-backend
+            namespace: envoy-gateway-system
+        type: HTTP
     http:
     - address: 0.0.0.0
       hostnames:
