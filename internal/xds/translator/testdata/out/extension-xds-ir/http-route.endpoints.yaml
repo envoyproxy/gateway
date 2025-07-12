@@ -6,6 +6,7 @@
           socketAddress:
             address: 1.2.3.4
             portValue: 50000
+        hostname: example.com
       loadBalancingWeight: 1
     loadBalancingWeight: 1
     locality:

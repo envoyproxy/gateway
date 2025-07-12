@@ -1640,7 +1640,9 @@ type DestinationSetting struct {
 	// Lower priority endpoints will be used only if higher priority levels are unavailable.
 	Priority *uint32 `json:"priority,omitempty"`
 	// Protocol associated with this destination/port.
-	Protocol  AppProtocol            `json:"protocol,omitempty" yaml:"protocol,omitempty"`
+	Protocol AppProtocol `json:"protocol,omitempty" yaml:"protocol,omitempty"`
+	// Hostname refers to the endpoint's hostname
+	Hostname  *string                `json:"hostname,omitempty" yaml:"hostname,omitempty"`
 	Endpoints []*DestinationEndpoint `json:"endpoints,omitempty" yaml:"endpoints,omitempty"`
 	// AddressTypeState specifies the state of DestinationEndpoint address type.
 	AddressType *DestinationAddressType `json:"addressType,omitempty" yaml:"addressType,omitempty"`

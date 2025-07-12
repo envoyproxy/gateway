@@ -22,8 +22,9 @@ import (
 )
 
 const (
-	envoyGatewayXdsServerHost = "envoy-gateway"
-	xdsClusterName            = "xds_cluster"
+	envoyGatewayXdsServerHostname = "envoy-gateway-hostname"
+	envoyGatewayXdsServerHost     = "envoy-gateway"
+	xdsClusterName                = "xds_cluster"
 )
 
 func TestBuildXdsCluster(t *testing.T) {

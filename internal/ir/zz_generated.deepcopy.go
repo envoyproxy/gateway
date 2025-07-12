@@ -908,6 +908,11 @@ func (in *DestinationSetting) DeepCopyInto(out *DestinationSetting) {
 		*out = new(uint32)
 		**out = **in
 	}
+	if in.Hostname != nil {
+		in, out := &in.Hostname, &out.Hostname
+		*out = new(string)
+		**out = **in
+	}
 	if in.Endpoints != nil {
 		in, out := &in.Endpoints, &out.Endpoints
 		*out = make([]*DestinationEndpoint, len(*in))

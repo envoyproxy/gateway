@@ -1973,7 +1973,13 @@ func (t *Translator) processBackendDestinationSetting(
 		return ds
 	}
 
+	var hostname *string
 	for _, bep := range backend.Spec.Endpoints {
+		// Set first not nil bep.Hostname
+		if hostname == nil && bep.Hostname != nil {
+			hostname = bep.Hostname
+		}
+
 		var irde *ir.DestinationEndpoint
 		switch {
 		case bep.IP != nil:
@@ -2007,6 +2013,7 @@ func (t *Translator) processBackendDestinationSetting(
 		dstAddrType = ptr.To(ir.MIXED)
 	}
 
+	ds.Hostname = hostname
 	ds.Endpoints = dstEndpoints
 	ds.AddressType = dstAddrType
 	ds.Protocol = protocol
