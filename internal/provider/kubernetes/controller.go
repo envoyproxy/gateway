@@ -745,20 +745,22 @@ func (r *gatewayAPIReconciler) processSecurityPolicyObjectRefs(
 					"policy", policy, "secretRef", oidc.ClientSecret)
 			}
 
-			var backendRef gwapiv1.BackendObjectReference
+			var backendRefs []gwapiv1.BackendObjectReference
 			if oidc.Provider.BackendRef != nil {
-				backendRef = *oidc.Provider.BackendRef
+				backendRefs = append(backendRefs, *oidc.Provider.BackendRef)
 			}
 			if len(oidc.Provider.BackendRefs) > 0 {
-				backendRef = oidc.Provider.BackendRefs[0].BackendObjectReference
+				backendRefs = append(backendRefs, oidc.Provider.BackendRefs[0].BackendObjectReference)
 			}
 
-			if err := r.processBackendRef(
-				ctx, resourceMap, resourceTree,
-				resource.KindSecurityPolicy, policy.Namespace, policy.Name,
-				backendRef); err != nil {
-				r.log.Error(err, "failed to process OIDC BackendRef for SecurityPolicy",
-					"policy", policy, "backendRef", backendRef)
+			for _, backendRef := range backendRefs {
+				if err := r.processBackendRef(
+					ctx, resourceMap, resourceTree,
+					resource.KindSecurityPolicy, policy.Namespace, policy.Name,
+					backendRef); err != nil {
+					r.log.Error(err, "failed to process OIDC BackendRef for SecurityPolicy",
+						"policy", policy, "backendRef", backendRef)
+				}
 			}
 		}
 
