@@ -39,7 +39,6 @@ gateways:
         kind: HTTPRoute
       - group: gateway.networking.k8s.io
         kind: GRPCRoute
-
 infraIR:
   envoy-gateway/gateway-1:
     proxy:
@@ -56,13 +55,13 @@ infraIR:
             accessLog:
               settings:
               - sinks:
-                - type: ALS
-                  als:
+                - als:
                     backendRefs:
                     - name: access-logger
                       namespace: default
                       port: 50051
                     type: HTTP
+                  type: ALS
         status: {}
       listeners:
       - address: null
@@ -85,21 +84,21 @@ xdsIR:
   envoy-gateway/gateway-1:
     accessLog:
       als:
-      - name: envoy-gateway-system/als-backend
-        destination:
-          name: accesslog_als_0_0
-          settings:
-          - name: accesslog_als_0_0/backend/-1
-            protocol: GRPC
-            metadata:
-              kind: Service
-              name: access-logger
-              namespace: default
-              sectionName: "50051"
+      - destination:
           metadata:
             kind: EnvoyProxy
             name: als-backend
             namespace: envoy-gateway-system
+          name: accesslog_als_0_0
+          settings:
+          - metadata:
+              kind: Service
+              name: access-logger
+              namespace: default
+              sectionName: "50051"
+            name: accesslog_als_0_0/backend/-1
+            protocol: GRPC
+        name: envoy-gateway-system/als-backend
         type: HTTP
     http:
     - address: 0.0.0.0
