@@ -92,6 +92,12 @@ spec:
                       - hostname
                       - port
                       type: object
+                    hostname:
+                      description: Hostname defines a hostname endpoint.
+                      maxLength: 253
+                      minLength: 1
+                      pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                      type: string
                     ip:
                       description: IP defines an IP endpoint. Supports both IPv4 and
                         IPv6 addresses.
