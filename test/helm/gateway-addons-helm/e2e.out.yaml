@@ -9747,6 +9747,10 @@ spec:
   type: ClusterIP
   ports:
     
+    - name: datadog
+      port: 8126
+      targetPort: 8126
+      protocol: TCP
     - name: envoy-als
       port: 9000
       targetPort: 9000
@@ -9997,6 +10001,9 @@ spec:
           imagePullPolicy: IfNotPresent
           ports:
             
+            - name: datadog
+              containerPort: 8126
+              protocol: TCP
             - name: envoy-als
               containerPort: 9000
               protocol: TCP

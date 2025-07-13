@@ -143,7 +143,7 @@ func (t *Translator) ProcessEnvoyExtensionPolicies(envoyExtensionPolicies []*egv
 				}
 
 				// Set Accepted condition if it is unset
-				status.SetAcceptedForPolicyAncestors(&policy.Status, ancestorRefs, t.GatewayControllerName)
+				status.SetAcceptedForPolicyAncestors(&policy.Status, ancestorRefs, t.GatewayControllerName, policy.Generation)
 			}
 		}
 	}
@@ -197,7 +197,7 @@ func (t *Translator) ProcessEnvoyExtensionPolicies(envoyExtensionPolicies []*egv
 				}
 
 				// Set Accepted condition if it is unset
-				status.SetAcceptedForPolicyAncestors(&policy.Status, ancestorRefs, t.GatewayControllerName)
+				status.SetAcceptedForPolicyAncestors(&policy.Status, ancestorRefs, t.GatewayControllerName, policy.Generation)
 
 				// Check if this policy is overridden by other policies targeting at
 				// route level
@@ -294,14 +294,16 @@ func (t *Translator) translateEnvoyExtensionPolicyForRoute(
 	resources *resource.Resources,
 ) error {
 	var (
-		wasms     []ir.Wasm
-		luas      []ir.Lua
-		err, errs error
+		wasms                             []ir.Wasm
+		luas                              []ir.Lua
+		wasmFailOpen, extProcFailOpen     bool
+		wasmError, luaError, extProcError error
+		errs                              error
 	)
 
-	if wasms, err = t.buildWasms(policy, resources); err != nil {
-		err = perr.WithMessage(err, "Wasm")
-		errs = errors.Join(errs, err)
+	if wasms, wasmError, wasmFailOpen = t.buildWasms(policy, resources); wasmError != nil {
+		wasmError = perr.WithMessage(wasmError, "Wasm")
+		errs = errors.Join(errs, wasmError)
 	}
 
 	// Apply IR to all relevant routes
@@ -314,26 +316,35 @@ func (t *Translator) translateEnvoyExtensionPolicyForRoute(
 			continue
 		}
 
-		if luas, err = t.buildLuas(policy, resources, gtwCtx.envoyProxy); err != nil {
-			err = perr.WithMessage(err, "Lua")
-			errs = errors.Join(errs, err)
+		if luas, luaError = t.buildLuas(policy, resources, gtwCtx.envoyProxy); luaError != nil {
+			luaError = perr.WithMessage(luaError, "Lua")
+			errs = errors.Join(errs, luaError)
 		}
 
 		var extProcs []ir.ExtProc
-		if extProcs, err = t.buildExtProcs(policy, resources, gtwCtx.envoyProxy); err != nil {
-			err = perr.WithMessage(err, "ExtProc")
-			errs = errors.Join(errs, err)
+		if extProcs, extProcError, extProcFailOpen = t.buildExtProcs(policy, resources, gtwCtx.envoyProxy); extProcError != nil {
+			extProcError = perr.WithMessage(extProcError, "ExtProc")
+			errs = errors.Join(errs, extProcError)
 		}
+
 		irKey := t.getIRKey(gtwCtx.Gateway)
 		for _, listener := range parentRefCtx.listeners {
 			irListener := xdsIR[irKey].GetHTTPListener(irListenerName(listener))
 			if irListener != nil {
 				for _, r := range irListener.Routes {
 					if strings.HasPrefix(r.Name, prefix) {
-						// return 500 and do not configure EnvoyExtensions in this case
-						if errs != nil {
-							r.DirectResponse = &ir.CustomResponse{
-								StatusCode: ptr.To(uint32(500)),
+						if wasmError != nil || luaError != nil || extProcError != nil {
+							switch {
+							case (extProcError != nil && extProcFailOpen) && (luaError == nil && wasmError == nil):
+								// skip the extProc application where the extProc is failing open and no other errors
+							case (wasmError != nil && wasmFailOpen) && (luaError == nil && extProcError == nil):
+								// skip the wasm application where the wasm is failing open and no other errors
+							case (extProcError != nil && extProcFailOpen) && (wasmError != nil && wasmFailOpen) && luaError == nil:
+								// skip the wasm and extProc application where both are failing open and no lua errors
+							default:
+								r.DirectResponse = &ir.CustomResponse{
+									StatusCode: ptr.To(uint32(500)),
+								}
 							}
 							continue
 						}
@@ -359,23 +370,25 @@ func (t *Translator) translateEnvoyExtensionPolicyForGateway(
 	resources *resource.Resources,
 ) error {
 	var (
-		extProcs  []ir.ExtProc
-		wasms     []ir.Wasm
-		luas      []ir.Lua
-		err, errs error
+		extProcs                          []ir.ExtProc
+		wasms                             []ir.Wasm
+		luas                              []ir.Lua
+		wasmFailOpen, extProcFailOpen     bool
+		wasmError, luaError, extProcError error
+		errs                              error
 	)
 
-	if extProcs, err = t.buildExtProcs(policy, resources, gateway.envoyProxy); err != nil {
-		err = perr.WithMessage(err, "ExtProc")
-		errs = errors.Join(errs, err)
+	if extProcs, extProcError, extProcFailOpen = t.buildExtProcs(policy, resources, gateway.envoyProxy); extProcError != nil {
+		extProcError = perr.WithMessage(extProcError, "ExtProc")
+		errs = errors.Join(errs, extProcError)
 	}
-	if wasms, err = t.buildWasms(policy, resources); err != nil {
-		err = perr.WithMessage(err, "Wasm")
-		errs = errors.Join(errs, err)
+	if wasms, wasmError, wasmFailOpen = t.buildWasms(policy, resources); wasmError != nil {
+		wasmError = perr.WithMessage(wasmError, "Wasm")
+		errs = errors.Join(errs, wasmError)
 	}
-	if luas, err = t.buildLuas(policy, resources, gateway.envoyProxy); err != nil {
-		err = perr.WithMessage(err, "Lua")
-		errs = errors.Join(errs, err)
+	if luas, luaError = t.buildLuas(policy, resources, gateway.envoyProxy); luaError != nil {
+		luaError = perr.WithMessage(luaError, "Lua")
+		errs = errors.Join(errs, luaError)
 	}
 
 	irKey := t.getIRKey(gateway.Gateway)
@@ -398,10 +411,18 @@ func (t *Translator) translateEnvoyExtensionPolicyForGateway(
 				continue
 			}
 
-			// return 500 and do not configure EnvoyExtensions in this case
 			if errs != nil {
-				r.DirectResponse = &ir.CustomResponse{
-					StatusCode: ptr.To(uint32(500)),
+				switch {
+				case (extProcError != nil && extProcFailOpen) && (luaError == nil && wasmError == nil):
+					// skip the extProc application where the extProc is failing open and no other errors
+				case (wasmError != nil && wasmFailOpen) && (luaError == nil && extProcError == nil):
+					// skip the wasm application where the wasm is failing open and no other errors
+				case (extProcError != nil && extProcFailOpen) && (wasmError != nil && wasmFailOpen) && luaError == nil:
+					// skip the wasm and extProc application where both are failing open and no lua errors
+				default:
+					r.DirectResponse = &ir.CustomResponse{
+						StatusCode: ptr.To(uint32(500)),
+					}
 				}
 				continue
 			}
@@ -443,6 +464,7 @@ func (t *Translator) buildLua(
 	envoyProxy *egv1a1.EnvoyProxy,
 ) (*ir.Lua, error) {
 	var luaCode *string
+	var luaValidation egv1a1.LuaValidation
 	var err error
 	if lua.Type == egv1a1.LuaValueTypeValueRef {
 		luaCode, err = getLuaBodyFromLocalObjectReference(lua.ValueRef, resources, policy.Namespace)
@@ -452,13 +474,12 @@ func (t *Translator) buildLua(
 	if err != nil {
 		return nil, err
 	}
-	if envoyProxy != nil && envoyProxy.Spec.DisableLuaValidation != nil && *envoyProxy.Spec.DisableLuaValidation {
-		return &ir.Lua{
-			Name: name,
-			Code: luaCode,
-		}, nil
+	if envoyProxy != nil && envoyProxy.Spec.LuaValidation != nil {
+		luaValidation = *envoyProxy.Spec.LuaValidation
+	} else {
+		luaValidation = egv1a1.LuaValidationStrict
 	}
-	if err = luavalidator.NewLuaValidator(*luaCode).Validate(); err != nil {
+	if err = luavalidator.NewLuaValidator(*luaCode, luaValidation).Validate(); err != nil {
 		return nil, fmt.Errorf("validation failed for lua body in policy with name %v: %w", name, err)
 	}
 	return &ir.Lua{
@@ -490,22 +511,36 @@ func getLuaBodyFromLocalObjectReference(valueRef *gwapiv1.LocalObjectReference, 
 	}
 }
 
-func (t *Translator) buildExtProcs(policy *egv1a1.EnvoyExtensionPolicy, resources *resource.Resources, envoyProxy *egv1a1.EnvoyProxy) ([]ir.ExtProc, error) {
-	var extProcIRList []ir.ExtProc
+func (t *Translator) buildExtProcs(policy *egv1a1.EnvoyExtensionPolicy, resources *resource.Resources, envoyProxy *egv1a1.EnvoyProxy) ([]ir.ExtProc, error, bool) {
+	var (
+		extProcIRList []ir.ExtProc
+		failOpen      bool
+		errs          error
+	)
 
 	if policy == nil {
-		return nil, nil
+		return nil, nil, failOpen
 	}
 
+	hasFailClose := false
 	for idx, ep := range policy.Spec.ExtProc {
 		name := irConfigNameForExtProc(policy, idx)
 		extProcIR, err := t.buildExtProc(name, policy, ep, idx, resources, envoyProxy)
 		if err != nil {
-			return nil, err
+			errs = errors.Join(errs, err)
+			if ep.FailOpen == nil || !*ep.FailOpen {
+				hasFailClose = true
+			}
+			continue
 		}
 		extProcIRList = append(extProcIRList, *extProcIR)
 	}
-	return extProcIRList, nil
+
+	// If any failed ExtProcs are not fail open, the whole policy is not fail open.
+	if errs != nil && !hasFailClose {
+		failOpen = true
+	}
+	return extProcIRList, errs, failOpen
 }
 
 func (t *Translator) buildExtProc(
@@ -620,30 +655,45 @@ func irConfigNameForLua(policy *egv1a1.EnvoyExtensionPolicy, index int) string {
 func (t *Translator) buildWasms(
 	policy *egv1a1.EnvoyExtensionPolicy,
 	resources *resource.Resources,
-) ([]ir.Wasm, error) {
-	var wasmIRList []ir.Wasm
+) ([]ir.Wasm, error, bool) {
+	var (
+		wasmIRList []ir.Wasm
+		failOpen   bool
+		errs       error
+	)
 
 	if len(policy.Spec.Wasm) == 0 {
-		return wasmIRList, nil
+		return wasmIRList, nil, failOpen
 	}
 
 	if t.WasmCache == nil {
-		return nil, fmt.Errorf("wasm cache is not initialized")
+		return nil, fmt.Errorf("wasm cache is not initialized"), failOpen
 	}
 
 	if policy == nil {
-		return nil, nil
+		return nil, nil, failOpen
 	}
 
+	hasFailClose := false
 	for idx, wasm := range policy.Spec.Wasm {
 		name := irConfigNameForWasm(policy, idx)
 		wasmIR, err := t.buildWasm(name, wasm, policy, idx, resources)
 		if err != nil {
-			return nil, err
+			errs = errors.Join(errs, err)
+			if wasm.FailOpen == nil || !*wasm.FailOpen {
+				hasFailClose = true
+			}
+			continue
 		}
 		wasmIRList = append(wasmIRList, *wasmIR)
 	}
-	return wasmIRList, nil
+
+	// If any failed ExtProcs are not fail open, the whole policy is not fail open.
+	if errs != nil && !hasFailClose {
+		failOpen = true
+	}
+
+	return wasmIRList, errs, failOpen
 }
 
 func (t *Translator) buildWasm(

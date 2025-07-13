@@ -1,8 +1,7 @@
 - circuitBreakers:
     thresholds:
     - maxRetries: 1024
-  commonLbConfig:
-    localityWeightedLbConfig: {}
+  commonLbConfig: {}
   connectTimeout: 10s
   dnsLookupFamily: V4_PREFERRED
   edsClusterConfig:
@@ -12,17 +11,25 @@
     serviceName: third-route-dest
   ignoreHealthOnHostRemoval: true
   lbPolicy: LEAST_REQUEST
+  loadBalancingPolicy:
+    policies:
+    - typedExtensionConfig:
+        name: envoy.load_balancing_policies.least_request
+        typedConfig:
+          '@type': type.googleapis.com/envoy.extensions.load_balancing_policies.least_request.v3.LeastRequest
+          localityLbConfig:
+            localityWeightedLbConfig: {}
   name: third-route-dest
   perConnectionBufferLimitBytes: 32768
   type: EDS
 - circuitBreakers:
     thresholds:
     - maxRetries: 1024
-  commonLbConfig:
-    localityWeightedLbConfig: {}
+  commonLbConfig: {}
   connectTimeout: 10s
   dnsLookupFamily: V4_PREFERRED
   dnsRefreshRate: 30s
+  ignoreHealthOnHostRemoval: true
   lbPolicy: LEAST_REQUEST
   loadAssignment:
     clusterName: securitypolicy/envoy-gateway/policy-for-gateway/0
@@ -41,6 +48,14 @@
       loadBalancingWeight: 1
       locality:
         region: securitypolicy/envoy-gateway/policy-for-gateway/0/backend/0
+  loadBalancingPolicy:
+    policies:
+    - typedExtensionConfig:
+        name: envoy.load_balancing_policies.least_request
+        typedConfig:
+          '@type': type.googleapis.com/envoy.extensions.load_balancing_policies.least_request.v3.LeastRequest
+          localityLbConfig:
+            localityWeightedLbConfig: {}
   name: securitypolicy/envoy-gateway/policy-for-gateway/0
   perConnectionBufferLimitBytes: 32768
   respectDnsTtl: true

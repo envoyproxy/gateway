@@ -70,7 +70,7 @@ func (f *fakeKubernetesInfraProvider) GetEnvoyGateway() *egv1a1.EnvoyGateway {
 	return f.EnvoyGateway
 }
 
-func (f *fakeKubernetesInfraProvider) GetOwnerReferenceUID(ctx context.Context, infra *ir.Infra) (map[string]types.UID, error) {
+func (f *fakeKubernetesInfraProvider) GetOwnerReferenceUID(_ context.Context, _ *ir.Infra) (map[string]types.UID, error) {
 	if f.EnvoyGateway.GatewayNamespaceMode() {
 		return map[string]types.UID{
 			gwapiresource.KindGateway: "test-owner-reference-uid-for-gateway",
@@ -101,6 +101,19 @@ func newTestInfraWithNamespacedName(gwNN types.NamespacedName) *ir.Infra {
 	i.Proxy.GetProxyMetadata().OwnerReference = &ir.ResourceMetadata{
 		Kind: gwapiresource.KindGateway,
 		Name: gwNN.Name,
+	}
+
+	return i
+}
+
+func newTestInfraWithCustomServiceAccount(gwNN types.NamespacedName) *ir.Infra {
+	i := newTestInfraWithNamespacedName(gwNN)
+	i.Proxy.Config = new(egv1a1.EnvoyProxy)
+	i.Proxy.Config.Spec.Provider = egv1a1.DefaultEnvoyProxyProvider()
+	i.Proxy.Config.Spec.Provider.Kubernetes = &egv1a1.EnvoyProxyKubernetesProvider{
+		EnvoyServiceAccount: &egv1a1.KubernetesServiceAccountSpec{
+			Name: ptr.To("custom-sa"),
+		},
 	}
 
 	return i
@@ -457,6 +470,26 @@ func TestDeployment(t *testing.T) {
 			},
 		},
 		{
+			caseName: "override-prometheus-annotations",
+			infra: newTestInfraWithAnnotations(map[string]string{
+				"prometheus.io/scrape": "true",
+			}),
+			deploy: &egv1a1.KubernetesDeploymentSpec{
+				Pod: &egv1a1.KubernetesPodSpec{
+					Annotations: map[string]string{
+						"prometheus.io/scrape": "false",
+					},
+				},
+			},
+			telemetry: &egv1a1.ProxyTelemetry{
+				Metrics: &egv1a1.ProxyMetrics{
+					Prometheus: &egv1a1.ProxyPrometheusProvider{
+						Disable: false,
+					},
+				},
+			},
+		},
+		{
 			caseName:    "with-concurrency",
 			infra:       newTestInfra(),
 			deploy:      nil,
@@ -629,6 +662,12 @@ func TestDeployment(t *testing.T) {
 		{
 			caseName:             "gateway-namespace-mode",
 			infra:                newTestInfraWithNamespacedName(types.NamespacedName{Namespace: "ns1", Name: "gateway-1"}),
+			deploy:               nil,
+			gatewayNamespaceMode: true,
+		},
+		{
+			caseName:             "custom-sa",
+			infra:                newTestInfraWithCustomServiceAccount(types.NamespacedName{Namespace: "ns1", Name: "gateway-1"}),
 			deploy:               nil,
 			gatewayNamespaceMode: true,
 		},
@@ -981,6 +1020,24 @@ func TestDaemonSet(t *testing.T) {
 			},
 		},
 		{
+			caseName: "override-prometheus-annotations",
+			infra:    newTestInfra(),
+			daemonset: &egv1a1.KubernetesDaemonSetSpec{
+				Pod: &egv1a1.KubernetesPodSpec{
+					Annotations: map[string]string{
+						"prometheus.io/scrape": "false",
+					},
+				},
+			},
+			telemetry: &egv1a1.ProxyTelemetry{
+				Metrics: &egv1a1.ProxyMetrics{
+					Prometheus: &egv1a1.ProxyPrometheusProvider{
+						Disable: false,
+					},
+				},
+			},
+		},
+		{
 			caseName:    "with-concurrency",
 			infra:       newTestInfra(),
 			daemonset:   nil,
@@ -1140,9 +1197,6 @@ func TestDaemonSet(t *testing.T) {
 			ds, err := r.DaemonSet()
 			require.NoError(t, err)
 
-			expected, err := loadDaemonSet(tc.caseName)
-			require.NoError(t, err)
-
 			sortEnv := func(env []corev1.EnvVar) {
 				sort.Slice(env, func(i, j int) bool {
 					return env[i].Name > env[j].Name
@@ -1158,8 +1212,12 @@ func TestDaemonSet(t *testing.T) {
 				return
 			}
 
+			expected, err := loadDaemonSet(tc.caseName)
+			require.NoError(t, err)
+
 			sortEnv(ds.Spec.Template.Spec.Containers[0].Env)
 			sortEnv(expected.Spec.Template.Spec.Containers[0].Env)
+
 			assert.Equal(t, expected, ds)
 		})
 	}
@@ -1442,6 +1500,11 @@ func TestServiceAccount(t *testing.T) {
 			infra:                newTestInfraWithNamespacedName(types.NamespacedName{Namespace: "ns1", Name: "gateway-1"}),
 			gatewayNamespaceMode: true,
 		},
+		{
+			name:                 "custom-sa",
+			infra:                newTestInfraWithCustomServiceAccount(types.NamespacedName{Namespace: "ns1", Name: "gateway-1"}),
+			gatewayNamespaceMode: false,
+		},
 	}
 
 	for _, tc := range cases {
@@ -1562,6 +1625,14 @@ func TestPDB(t *testing.T) {
 						Raw: []byte("{\"metadata\":{\"name\":\"foo\"}, \"spec\": {\"minAvailable\": 1, \"selector\": {\"matchLabels\": {\"app\": \"bar\"}}}}"),
 					},
 				},
+			},
+		},
+		{
+			caseName: "with-name",
+			infra:    newTestInfra(),
+			pdb: &egv1a1.KubernetesPodDisruptionBudgetSpec{
+				MinAvailable: ptr.To(intstr.IntOrString{Type: intstr.Int, IntVal: 1}),
+				Name:         ptr.To("custom-pdb-name"),
 			},
 		},
 		{
@@ -1704,6 +1775,14 @@ func TestHorizontalPodAutoscaler(t *testing.T) {
 			},
 			deploy: &egv1a1.KubernetesDeploymentSpec{
 				Name: ptr.To("custom-deployment-name"),
+			},
+		},
+		{
+			caseName: "with-name",
+			infra:    newTestInfra(),
+			hpa: &egv1a1.KubernetesHorizontalPodAutoscalerSpec{
+				MaxReplicas: ptr.To[int32](1),
+				Name:        ptr.To("custom-hpa-name"),
 			},
 		},
 		{
@@ -2018,8 +2097,8 @@ func TestGatewayNamespaceModeMultipleResources(t *testing.T) {
 
 func writeTestDataToFile(filename string, resources []any) error {
 	var combinedYAML []byte
-	for i, resource := range resources {
-		resourceYAML, err := yaml.Marshal(resource)
+	for i, res := range resources {
+		resourceYAML, err := yaml.Marshal(res)
 		if err != nil {
 			return err
 		}

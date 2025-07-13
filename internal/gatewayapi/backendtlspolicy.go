@@ -151,7 +151,7 @@ func (t *Translator) processBackendTLSPolicy(
 		return nil, err
 	}
 
-	status.SetAcceptedForPolicyAncestors(&policy.Status, ancestorRefs, t.GatewayControllerName)
+	status.SetAcceptedForPolicyAncestors(&policy.Status, ancestorRefs, t.GatewayControllerName, policy.Generation)
 	return tlsBundle, nil
 }
 
@@ -291,7 +291,7 @@ func getCaCertsFromCARefs(namespace string, caCertificates []gwapiv1.LocalObject
 		case resource.KindConfigMap:
 			cm := resources.GetConfigMap(namespace, string(caRef.Name))
 			if cm != nil {
-				if crt, dataOk := cm.Data[caCertKey]; dataOk {
+				if crt, dataOk := getCaCertFromConfigMap(cm); dataOk {
 					if ca != "" {
 						ca += "\n"
 					}
@@ -305,7 +305,7 @@ func getCaCertsFromCARefs(namespace string, caCertificates []gwapiv1.LocalObject
 		case resource.KindSecret:
 			secret := resources.GetSecret(namespace, string(caRef.Name))
 			if secret != nil {
-				if crt, dataOk := secret.Data[caCertKey]; dataOk {
+				if crt, dataOk := getCaCertFromSecret(secret); dataOk {
 					if ca != "" {
 						ca += "\n"
 					}

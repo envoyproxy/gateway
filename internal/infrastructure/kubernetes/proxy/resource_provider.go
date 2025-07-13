@@ -78,21 +78,32 @@ type KubernetesInfraProvider interface {
 	GetResourceNamespace(ir *ir.Infra) string
 }
 
-func NewResourceRender(ctx context.Context, kubernetesInfra KubernetesInfraProvider, infra *ir.Infra) (*ResourceRender, error) {
-	ownerReference, err := kubernetesInfra.GetOwnerReferenceUID(ctx, infra)
+func NewResourceRender(ctx context.Context, kubeInfra KubernetesInfraProvider, infra *ir.Infra) (*ResourceRender, error) {
+	ownerReference, err := kubeInfra.GetOwnerReferenceUID(ctx, infra)
 	if err != nil {
 		return nil, err
 	}
 
 	return &ResourceRender{
-		envoyNamespace:       kubernetesInfra.GetResourceNamespace(infra),
-		controllerNamespace:  kubernetesInfra.GetControllerNamespace(),
-		DNSDomain:            kubernetesInfra.GetDNSDomain(),
+		envoyNamespace:       kubeInfra.GetResourceNamespace(infra),
+		controllerNamespace:  kubeInfra.GetControllerNamespace(),
+		DNSDomain:            kubeInfra.GetDNSDomain(),
 		infra:                infra.GetProxyInfra(),
-		ShutdownManager:      kubernetesInfra.GetEnvoyGateway().GetEnvoyGatewayProvider().GetEnvoyGatewayKubeProvider().ShutdownManager,
-		GatewayNamespaceMode: kubernetesInfra.GetEnvoyGateway().GatewayNamespaceMode(),
+		ShutdownManager:      kubeInfra.GetEnvoyGateway().GetEnvoyGatewayProvider().GetEnvoyGatewayKubeProvider().ShutdownManager,
+		GatewayNamespaceMode: kubeInfra.GetEnvoyGateway().GatewayNamespaceMode(),
 		ownerReferenceUID:    ownerReference,
 	}, nil
+}
+
+func (r *ResourceRender) serviceAccountName() string {
+	prov := r.infra.GetProxyConfig().GetEnvoyProxyProvider().GetEnvoyProxyKubeProvider()
+	if prov != nil &&
+		prov.EnvoyServiceAccount != nil &&
+		prov.EnvoyServiceAccount.Name != nil {
+		return *prov.EnvoyServiceAccount.Name
+	}
+
+	return r.Name()
 }
 
 func (r *ResourceRender) Name() string {
@@ -147,9 +158,10 @@ func (r *ResourceRender) ServiceAccount() (*corev1.ServiceAccount, error) {
 			Kind:       "ServiceAccount",
 			APIVersion: "v1",
 		},
+		AutomountServiceAccountToken: ptr.To(false),
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace:       r.Namespace(),
-			Name:            r.Name(),
+			Name:            r.serviceAccountName(),
 			Labels:          saLabels,
 			Annotations:     r.infra.GetProxyMetadata().Annotations,
 			OwnerReferences: r.OwnerReferences(),
@@ -389,9 +401,10 @@ func (r *ResourceRender) Deployment() (*appsv1.Deployment, error) {
 					Annotations: podAnnotations,
 				},
 				Spec: corev1.PodSpec{
+					AutomountServiceAccountToken:  ptr.To(false),
 					Containers:                    containers,
 					InitContainers:                deploymentConfig.InitContainers,
-					ServiceAccountName:            r.Name(),
+					ServiceAccountName:            r.serviceAccountName(),
 					TerminationGracePeriodSeconds: expectedTerminationGracePeriodSeconds(proxyConfig.Spec.Shutdown),
 					DNSPolicy:                     corev1.DNSClusterFirst,
 					RestartPolicy:                 corev1.RestartPolicyAlways,
@@ -531,15 +544,23 @@ func (r *ResourceRender) PodDisruptionBudget() (*policyv1.PodDisruptionBudget, e
 
 	podDisruptionBudget := &policyv1.PodDisruptionBudget{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:            r.Name(),
 			Namespace:       r.Namespace(),
 			OwnerReferences: r.OwnerReferences(),
+			Annotations:     r.infra.GetProxyMetadata().Annotations,
+			Labels:          r.stableSelector().MatchLabels,
 		},
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "policy/v1",
 			Kind:       "PodDisruptionBudget",
 		},
 		Spec: pdbSpec,
+	}
+
+	// set name
+	if pdb.Name != nil {
+		podDisruptionBudget.Name = *pdb.Name
+	} else {
+		podDisruptionBudget.Name = r.Name()
 	}
 
 	// apply merge patch to PodDisruptionBudget
@@ -568,9 +589,8 @@ func (r *ResourceRender) HorizontalPodAutoscaler() (*autoscalingv2.HorizontalPod
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace:       r.Namespace(),
-			Name:            r.Name(),
 			Annotations:     r.infra.GetProxyMetadata().Annotations,
-			Labels:          r.infra.GetProxyMetadata().Labels,
+			Labels:          r.stableSelector().MatchLabels,
 			OwnerReferences: r.OwnerReferences(),
 		},
 		Spec: autoscalingv2.HorizontalPodAutoscalerSpec{
@@ -591,6 +611,13 @@ func (r *ResourceRender) HorizontalPodAutoscaler() (*autoscalingv2.HorizontalPod
 		hpa.Spec.ScaleTargetRef.Name = *deploymentConfig.Name
 	} else {
 		hpa.Spec.ScaleTargetRef.Name = r.Name()
+	}
+
+	// set name
+	if hpaConfig.Name != nil {
+		hpa.Name = *hpaConfig.Name
+	} else {
+		hpa.Name = r.Name()
 	}
 
 	var err error
@@ -615,6 +642,7 @@ func (r *ResourceRender) getPodSpec(
 	proxyConfig *egv1a1.EnvoyProxy,
 ) corev1.PodSpec {
 	return corev1.PodSpec{
+		AutomountServiceAccountToken:  ptr.To(false),
 		Containers:                    containers,
 		InitContainers:                initContainers,
 		ServiceAccountName:            r.Name(),
@@ -634,14 +662,13 @@ func (r *ResourceRender) getPodSpec(
 
 func (r *ResourceRender) getPodAnnotations(resourceAnnotation map[string]string, pod *egv1a1.KubernetesPodSpec) map[string]string {
 	podAnnotations := map[string]string{}
-	maps.Copy(podAnnotations, resourceAnnotation)
-	maps.Copy(podAnnotations, pod.Annotations)
-
 	if enablePrometheus(r.infra) {
 		podAnnotations["prometheus.io/path"] = "/stats/prometheus" // TODO: make this configurable
 		podAnnotations["prometheus.io/scrape"] = "true"
 		podAnnotations["prometheus.io/port"] = strconv.Itoa(bootstrap.EnvoyStatsPort)
 	}
+	maps.Copy(podAnnotations, resourceAnnotation)
+	maps.Copy(podAnnotations, pod.Annotations)
 
 	if len(podAnnotations) == 0 {
 		podAnnotations = nil

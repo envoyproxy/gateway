@@ -254,6 +254,16 @@ type EnvoyGatewayKubernetesProvider struct {
 	// TopologyInjector defines the configuration for topology injector MutatatingWebhookConfiguration
 	// +optional
 	TopologyInjector *EnvoyGatewayTopologyInjector `json:"proxyTopologyInjector,omitempty"`
+
+	// CacheSyncPeriod determines the minimum frequency at which watched resources are synced.
+	// Note that a sync in the provider layer will not lead to a full reconciliation (including translation),
+	// unless there are actual changes in the provider resources.
+	// This option can be used to protect against missed events or issues in Envoy Gateway where resources
+	// are not requeued when they should be, at the cost of increased resource consumption.
+	// Learn more about the implications of this option: https://pkg.go.dev/sigs.k8s.io/controller-runtime/pkg/cache#Options
+	// Default: 10 hours
+	// +optional
+	CacheSyncPeriod *gwapiv1.Duration `json:"cacheSyncPeriod,omitempty"`
 }
 
 const (
@@ -495,6 +505,7 @@ type RedisTLSSettings struct {
 // RateLimitRedisSettings defines the configuration for connecting to redis database.
 type RateLimitRedisSettings struct {
 	// URL of the Redis Database.
+	// This can reference a single Redis host or a comma delimited list for Sentinel and Cluster deployments of Redis.
 	URL string `json:"url"`
 
 	// TLS defines TLS configuration for connecting to redis database.
@@ -517,6 +528,14 @@ type ExtensionManager struct {
 	//
 	// +optional
 	PolicyResources []GroupVersionKind `json:"policyResources,omitempty"`
+
+	// BackendResources defines the set of K8s resources the extension will handle as
+	// custom backendRef resources. These resources can be referenced in HTTPRoute
+	// backendRefs to enable support for custom backend types (e.g., S3, Lambda, etc.)
+	// that are not natively supported by Envoy Gateway.
+	//
+	// +optional
+	BackendResources []GroupVersionKind `json:"backendResources,omitempty"`
 
 	// Hooks defines the set of hooks the extension supports
 	//

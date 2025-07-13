@@ -1018,6 +1018,34 @@ spec:
                     - Random
                     - RoundRobin
                     type: string
+                  zoneAware:
+                    description: ZoneAware defines the configuration related to the
+                      distribution of requests between locality zones.
+                    properties:
+                      preferLocal:
+                        description: PreferLocalZone configures zone-aware routing
+                          to prefer sending traffic to the local locality zone.
+                        properties:
+                          force:
+                            description: |-
+                              ForceLocalZone defines override configuration for forcing all traffic to stay within the local zone instead of the default behavior
+                              which maintains equal distribution among upstream endpoints while sending as much traffic as possible locally.
+                            properties:
+                              minEndpointsInZoneThreshold:
+                                description: |-
+                                  MinEndpointsInZoneThreshold is the minimum number of upstream endpoints in the local zone required to honor the forceLocalZone
+                                  override. This is useful for protecting zones with fewer endpoints.
+                                format: int32
+                                type: integer
+                            type: object
+                          minEndpointsThreshold:
+                            description: MinEndpointsThreshold is the minimum number
+                              of total upstream endpoints across all zones required
+                              to enable zone-aware routing.
+                            format: int64
+                            type: integer
+                        type: object
+                    type: object
                 required:
                 - type
                 type: object
@@ -1030,6 +1058,10 @@ spec:
                     LeastRequest load balancers.
                   rule: 'self.type in [''Random'', ''ConsistentHash''] ? !has(self.slowStart)
                     : true '
+                - message: Currently ZoneAware is only supported for LeastRequest,
+                    Random, and RoundRobin load balancers.
+                  rule: 'self.type == ''ConsistentHash'' ? !has(self.zoneAware) :
+                    true '
               mergeType:
                 description: |-
                   MergeType determines how this configuration is merged with existing BackendTrafficPolicy
@@ -2767,6 +2799,15 @@ spec:
                     required:
                     - value
                     type: object
+                  maxAcceptPerSocketEvent:
+                    default: 1
+                    description: |-
+                      MaxAcceptPerSocketEvent provides configuration for the maximum number of connections to accept from the kernel
+                      per socket event. If there are more than MaxAcceptPerSocketEvent connections pending accept, connections over
+                      this threshold will be accepted in later event loop iterations.
+                      Defaults to 1 and can be disabled by setting to 0 for allowing unlimited accepted connections.
+                    format: int32
+                    type: integer
                   socketBufferLimit:
                     allOf:
                     - pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
@@ -3331,6 +3372,12 @@ spec:
                           initiation and stops when either the last byte of the request is sent upstream or when the response begins.
                         pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                         type: string
+                      streamIdleTimeout:
+                        description: |2-
+                           The stream idle timeout defines the amount of time a stream can exist without any upstream or downstream activity.
+                           Default: 5 minutes.
+                        pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                        type: string
                     type: object
                   tcp:
                     description: Timeout settings for TCP.
@@ -3458,11 +3505,174 @@ spec:
                           type: object
                         maxItems: 8
                         type: array
+                      certificateHashes:
+                        description: |-
+                          An optional list of hex-encoded SHA-256 hashes. If specified, Envoy will
+                          verify that the SHA-256 of the DER-encoded presented certificate matches
+                          one of the specified values.
+                        items:
+                          type: string
+                        type: array
                       optional:
                         description: |-
                           Optional set to true accepts connections even when a client doesn't present a certificate.
                           Defaults to false, which rejects connections without a valid client certificate.
                         type: boolean
+                      spkiHashes:
+                        description: |-
+                          An optional list of base64-encoded SHA-256 hashes. If specified, Envoy will
+                          verify that the SHA-256 of the DER-encoded Subject Public Key Information
+                          (SPKI) of the presented certificate matches one of the specified values.
+                        items:
+                          type: string
+                        type: array
+                      subjectAltNames:
+                        description: |-
+                          An optional list of Subject Alternative name matchers. If specified, Envoy
+                          will verify that the Subject Alternative Name of the presented certificate
+                          matches one of the specified matchers
+                        properties:
+                          dnsNames:
+                            description: DNS names matchers
+                            items:
+                              description: |-
+                                StringMatch defines how to match any strings.
+                                This is a general purpose match condition that can be used by other EG APIs
+                                that need to match against a string.
+                              properties:
+                                type:
+                                  default: Exact
+                                  description: Type specifies how to match against
+                                    a string.
+                                  enum:
+                                  - Exact
+                                  - Prefix
+                                  - Suffix
+                                  - RegularExpression
+                                  type: string
+                                value:
+                                  description: Value specifies the string value that
+                                    the match must have.
+                                  maxLength: 1024
+                                  minLength: 1
+                                  type: string
+                              required:
+                              - value
+                              type: object
+                            type: array
+                          emailAddresses:
+                            description: Email addresses matchers
+                            items:
+                              description: |-
+                                StringMatch defines how to match any strings.
+                                This is a general purpose match condition that can be used by other EG APIs
+                                that need to match against a string.
+                              properties:
+                                type:
+                                  default: Exact
+                                  description: Type specifies how to match against
+                                    a string.
+                                  enum:
+                                  - Exact
+                                  - Prefix
+                                  - Suffix
+                                  - RegularExpression
+                                  type: string
+                                value:
+                                  description: Value specifies the string value that
+                                    the match must have.
+                                  maxLength: 1024
+                                  minLength: 1
+                                  type: string
+                              required:
+                              - value
+                              type: object
+                            type: array
+                          ipAddresses:
+                            description: IP addresses matchers
+                            items:
+                              description: |-
+                                StringMatch defines how to match any strings.
+                                This is a general purpose match condition that can be used by other EG APIs
+                                that need to match against a string.
+                              properties:
+                                type:
+                                  default: Exact
+                                  description: Type specifies how to match against
+                                    a string.
+                                  enum:
+                                  - Exact
+                                  - Prefix
+                                  - Suffix
+                                  - RegularExpression
+                                  type: string
+                                value:
+                                  description: Value specifies the string value that
+                                    the match must have.
+                                  maxLength: 1024
+                                  minLength: 1
+                                  type: string
+                              required:
+                              - value
+                              type: object
+                            type: array
+                          otherNames:
+                            description: Other names matchers
+                            items:
+                              properties:
+                                oid:
+                                  description: OID Value
+                                  type: string
+                                type:
+                                  default: Exact
+                                  description: Type specifies how to match against
+                                    a string.
+                                  enum:
+                                  - Exact
+                                  - Prefix
+                                  - Suffix
+                                  - RegularExpression
+                                  type: string
+                                value:
+                                  description: Value specifies the string value that
+                                    the match must have.
+                                  maxLength: 1024
+                                  minLength: 1
+                                  type: string
+                              required:
+                              - oid
+                              - value
+                              type: object
+                            type: array
+                          uris:
+                            description: URIs matchers
+                            items:
+                              description: |-
+                                StringMatch defines how to match any strings.
+                                This is a general purpose match condition that can be used by other EG APIs
+                                that need to match against a string.
+                              properties:
+                                type:
+                                  default: Exact
+                                  description: Type specifies how to match against
+                                    a string.
+                                  enum:
+                                  - Exact
+                                  - Prefix
+                                  - Suffix
+                                  - RegularExpression
+                                  type: string
+                                value:
+                                  description: Value specifies the string value that
+                                    the match must have.
+                                  maxLength: 1024
+                                  minLength: 1
+                                  type: string
+                              required:
+                              - value
+                              type: object
+                            type: array
+                        type: object
                     type: object
                   ecdhCurves:
                     description: |-
@@ -4627,6 +4837,35 @@ spec:
                               - Random
                               - RoundRobin
                               type: string
+                            zoneAware:
+                              description: ZoneAware defines the configuration related
+                                to the distribution of requests between locality zones.
+                              properties:
+                                preferLocal:
+                                  description: PreferLocalZone configures zone-aware
+                                    routing to prefer sending traffic to the local
+                                    locality zone.
+                                  properties:
+                                    force:
+                                      description: |-
+                                        ForceLocalZone defines override configuration for forcing all traffic to stay within the local zone instead of the default behavior
+                                        which maintains equal distribution among upstream endpoints while sending as much traffic as possible locally.
+                                      properties:
+                                        minEndpointsInZoneThreshold:
+                                          description: |-
+                                            MinEndpointsInZoneThreshold is the minimum number of upstream endpoints in the local zone required to honor the forceLocalZone
+                                            override. This is useful for protecting zones with fewer endpoints.
+                                          format: int32
+                                          type: integer
+                                      type: object
+                                    minEndpointsThreshold:
+                                      description: MinEndpointsThreshold is the minimum
+                                        number of total upstream endpoints across
+                                        all zones required to enable zone-aware routing.
+                                      format: int64
+                                      type: integer
+                                  type: object
+                              type: object
                           required:
                           - type
                           type: object
@@ -4639,6 +4878,10 @@ spec:
                               and LeastRequest load balancers.
                             rule: 'self.type in [''Random'', ''ConsistentHash''] ?
                               !has(self.slowStart) : true '
+                          - message: Currently ZoneAware is only supported for LeastRequest,
+                              Random, and RoundRobin load balancers.
+                            rule: 'self.type == ''ConsistentHash'' ? !has(self.zoneAware)
+                              : true '
                         proxyProtocol:
                           description: ProxyProtocol enables the Proxy Protocol when
                             communicating with the backend.
@@ -4807,10 +5050,16 @@ spec:
                           type: object
                       type: object
                     failOpen:
+                      default: false
                       description: |-
-                        FailOpen defines if requests or responses that cannot be processed due to connectivity to the
-                        external processor are terminated or passed-through.
-                        Default: false
+                        FailOpen is a switch used to control the behavior when failing to call the external processor.
+
+                        If FailOpen is set to true, the system bypasses the ExtProc extension and
+                        allows the traffic to pass through. If it is set to false or
+                        not set (defaulting to false), the system blocks the traffic and returns
+                        an HTTP 5xx error.
+
+                        If set to true, the ExtProc extension will also be bypassed if the configuration is invalid.
                       type: boolean
                     messageTimeout:
                       description: |-
@@ -4908,13 +5157,22 @@ spec:
                   x-kubernetes-validations:
                   - message: BackendRefs must be used, backendRef is not supported.
                     rule: '!has(self.backendRef)'
-                  - message: BackendRefs only supports Service and Backend kind.
+                  - message: BackendRefs only supports Service, ServiceImport, and
+                      Backend kind.
                     rule: 'has(self.backendRefs) ? self.backendRefs.all(f, f.kind
-                      == ''Service'' || f.kind == ''Backend'') : true'
-                  - message: BackendRefs only supports Core and gateway.envoyproxy.io
-                      group.
+                      == ''Service'' || f.kind == ''ServiceImport'' || f.kind == ''Backend'')
+                      : true'
+                  - message: BackendRefs only supports Core, multicluster.x-k8s.io,
+                      and gateway.envoyproxy.io groups.
                     rule: 'has(self.backendRefs) ? (self.backendRefs.all(f, f.group
-                      == "" || f.group == ''gateway.envoyproxy.io'')) : true'
+                      == "" || f.group == ''multicluster.x-k8s.io'' || f.group ==
+                      ''gateway.envoyproxy.io'')) : true'
+                  - message: If FullDuplexStreamed body processing mode is used, FailOpen
+                      must be false.
+                    rule: '!(has(self.failOpen) && self.failOpen == true && ((has(self.processingMode.request.body)
+                      && self.processingMode.request.body == ''FullDuplexStreamed'')
+                      || (has(self.processingMode.response.body) && self.processingMode.response.body
+                      == ''FullDuplexStreamed'')))'
                 maxItems: 16
                 type: array
               lua:
@@ -5423,10 +5681,13 @@ spec:
                       description: |-
                         FailOpen is a switch used to control the behavior when a fatal error occurs
                         during the initialization or the execution of the Wasm extension.
+
                         If FailOpen is set to true, the system bypasses the Wasm extension and
-                        allows the traffic to pass through. Otherwise, if it is set to false or
+                        allows the traffic to pass through. If it is set to false or
                         not set (defaulting to false), the system blocks the traffic and returns
                         an HTTP 5xx error.
+
+                        If set to true, the Wasm extension will also be bypassed if the configuration is invalid.
                       type: boolean
                     name:
                       description: |-
@@ -6523,11 +6784,6 @@ spec:
                   the number of cpuset threads on the platform.
                 format: int32
                 type: integer
-              disableLuaValidation:
-                default: false
-                description: DisableLuaValidation disables the Lua script validation
-                  for Lua EnvoyExtensionPolicies
-                type: boolean
               extraArgs:
                 description: |-
                   ExtraArgs defines additional command line options that are provided to Envoy.
@@ -6695,6 +6951,14 @@ spec:
                       and the log level is the value. If unspecified, defaults to "default: warn".
                     type: object
                 type: object
+              luaValidation:
+                description: |-
+                  LuaValidation determines strictness of the Lua script validation for Lua EnvoyExtensionPolicies
+                  Default: Strict
+                enum:
+                - Strict
+                - Disabled
+                type: string
               mergeGateways:
                 description: |-
                   MergeGateways defines if Gateway resources should be merged onto the same Envoy Proxy Infrastructure.
@@ -6857,9 +7121,24 @@ spec:
                                   type: object
                                 type: array
                               image:
-                                description: Image specifies the EnvoyProxy container
-                                  image to be used, instead of the default image.
+                                description: |-
+                                  Image specifies the EnvoyProxy container image to be used including a tag, instead of the default image.
+                                  This field is mutually exclusive with ImageRepository.
                                 type: string
+                                x-kubernetes-validations:
+                                - message: Image must include a tag and allowed characters
+                                    only (e.g., 'repo:tag').
+                                  rule: self.matches('^[a-zA-Z0-9._/-]+:[a-zA-Z0-9._-]+$')
+                              imageRepository:
+                                description: |-
+                                  ImageRepository specifies the container image repository to be used without specifying a tag.
+                                  The default tag will be used.
+                                  This field is mutually exclusive with Image.
+                                type: string
+                                x-kubernetes-validations:
+                                - message: ImageRepository must contain only allowed
+                                    characters and must not include a tag or any colons.
+                                  rule: self.matches('^[a-zA-Z0-9._/-]+$')
                               resources:
                                 description: |-
                                   Resources required by this container.
@@ -7184,6 +7463,9 @@ spec:
                                   type: object
                                 type: array
                             type: object
+                            x-kubernetes-validations:
+                            - message: Either image or imageRepository can be set.
+                              rule: '!has(self.image) || !has(self.imageRepository)'
                           name:
                             description: |-
                               Name of the daemonSet.
@@ -10684,9 +10966,24 @@ spec:
                                   type: object
                                 type: array
                               image:
-                                description: Image specifies the EnvoyProxy container
-                                  image to be used, instead of the default image.
+                                description: |-
+                                  Image specifies the EnvoyProxy container image to be used including a tag, instead of the default image.
+                                  This field is mutually exclusive with ImageRepository.
                                 type: string
+                                x-kubernetes-validations:
+                                - message: Image must include a tag and allowed characters
+                                    only (e.g., 'repo:tag').
+                                  rule: self.matches('^[a-zA-Z0-9._/-]+:[a-zA-Z0-9._-]+$')
+                              imageRepository:
+                                description: |-
+                                  ImageRepository specifies the container image repository to be used without specifying a tag.
+                                  The default tag will be used.
+                                  This field is mutually exclusive with Image.
+                                type: string
+                                x-kubernetes-validations:
+                                - message: ImageRepository must contain only allowed
+                                    characters and must not include a tag or any colons.
+                                  rule: self.matches('^[a-zA-Z0-9._/-]+$')
                               resources:
                                 description: |-
                                   Resources required by this container.
@@ -11011,6 +11308,9 @@ spec:
                                   type: object
                                 type: array
                             type: object
+                            x-kubernetes-validations:
+                            - message: Either image or imageRepository can be set.
+                              rule: '!has(self.image) || !has(self.imageRepository)'
                           initContainers:
                             description: |-
                               List of initialization containers belonging to the pod.
@@ -16489,6 +16789,11 @@ spec:
                             x-kubernetes-validations:
                             - message: minReplicas must be greater than 0
                               rule: self > 0
+                          name:
+                            description: |-
+                              Name of the horizontalPodAutoScaler.
+                              When unset, this defaults to an autogenerated name.
+                            type: string
                           patch:
                             description: Patch defines how to perform the patch operation
                               to the HorizontalPodAutoscaler
@@ -16534,6 +16839,11 @@ spec:
                               such as node drains or updates. This setting ensures that your envoy proxy maintains a certain level of availability
                               and resilience during maintenance operations. Cannot be combined with maxUnavailable.
                             x-kubernetes-int-or-string: true
+                          name:
+                            description: |-
+                              Name of the podDisruptionBudget.
+                              When unset, this defaults to an autogenerated name.
+                            type: string
                           patch:
                             description: Patch defines how to perform the patch operation
                               to the PodDisruptionBudget
@@ -16668,6 +16978,16 @@ spec:
                         - message: loadBalancerIP can only be set for LoadBalancer
                             type
                           rule: '!has(self.loadBalancerIP) || self.type == ''LoadBalancer'''
+                      envoyServiceAccount:
+                        description: EnvoyServiceAccount defines the desired state
+                          of the Envoy service account resource.
+                        properties:
+                          name:
+                            description: |-
+                              Name of the Service Account.
+                              When unset, this defaults to an autogenerated name.
+                            type: string
+                        type: object
                       useListenerPortAsContainerPort:
                         description: |-
                           UseListenerPortAsContainerPort disables the port shifting feature in the Envoy Proxy.
@@ -17558,6 +17878,39 @@ spec:
                                                 - Random
                                                 - RoundRobin
                                                 type: string
+                                              zoneAware:
+                                                description: ZoneAware defines the
+                                                  configuration related to the distribution
+                                                  of requests between locality zones.
+                                                properties:
+                                                  preferLocal:
+                                                    description: PreferLocalZone configures
+                                                      zone-aware routing to prefer
+                                                      sending traffic to the local
+                                                      locality zone.
+                                                    properties:
+                                                      force:
+                                                        description: |-
+                                                          ForceLocalZone defines override configuration for forcing all traffic to stay within the local zone instead of the default behavior
+                                                          which maintains equal distribution among upstream endpoints while sending as much traffic as possible locally.
+                                                        properties:
+                                                          minEndpointsInZoneThreshold:
+                                                            description: |-
+                                                              MinEndpointsInZoneThreshold is the minimum number of upstream endpoints in the local zone required to honor the forceLocalZone
+                                                              override. This is useful for protecting zones with fewer endpoints.
+                                                            format: int32
+                                                            type: integer
+                                                        type: object
+                                                      minEndpointsThreshold:
+                                                        description: MinEndpointsThreshold
+                                                          is the minimum number of
+                                                          total upstream endpoints
+                                                          across all zones required
+                                                          to enable zone-aware routing.
+                                                        format: int64
+                                                        type: integer
+                                                    type: object
+                                                type: object
                                             required:
                                             - type
                                             type: object
@@ -17571,6 +17924,11 @@ spec:
                                                 load balancers.
                                               rule: 'self.type in [''Random'', ''ConsistentHash'']
                                                 ? !has(self.slowStart) : true '
+                                            - message: Currently ZoneAware is only
+                                                supported for LeastRequest, Random,
+                                                and RoundRobin load balancers.
+                                              rule: 'self.type == ''ConsistentHash''
+                                                ? !has(self.zoneAware) : true '
                                           proxyProtocol:
                                             description: ProxyProtocol enables the
                                               Proxy Protocol when communicating with
@@ -18592,6 +18950,39 @@ spec:
                                                 - Random
                                                 - RoundRobin
                                                 type: string
+                                              zoneAware:
+                                                description: ZoneAware defines the
+                                                  configuration related to the distribution
+                                                  of requests between locality zones.
+                                                properties:
+                                                  preferLocal:
+                                                    description: PreferLocalZone configures
+                                                      zone-aware routing to prefer
+                                                      sending traffic to the local
+                                                      locality zone.
+                                                    properties:
+                                                      force:
+                                                        description: |-
+                                                          ForceLocalZone defines override configuration for forcing all traffic to stay within the local zone instead of the default behavior
+                                                          which maintains equal distribution among upstream endpoints while sending as much traffic as possible locally.
+                                                        properties:
+                                                          minEndpointsInZoneThreshold:
+                                                            description: |-
+                                                              MinEndpointsInZoneThreshold is the minimum number of upstream endpoints in the local zone required to honor the forceLocalZone
+                                                              override. This is useful for protecting zones with fewer endpoints.
+                                                            format: int32
+                                                            type: integer
+                                                        type: object
+                                                      minEndpointsThreshold:
+                                                        description: MinEndpointsThreshold
+                                                          is the minimum number of
+                                                          total upstream endpoints
+                                                          across all zones required
+                                                          to enable zone-aware routing.
+                                                        format: int64
+                                                        type: integer
+                                                    type: object
+                                                type: object
                                             required:
                                             - type
                                             type: object
@@ -18605,6 +18996,11 @@ spec:
                                                 load balancers.
                                               rule: 'self.type in [''Random'', ''ConsistentHash'']
                                                 ? !has(self.slowStart) : true '
+                                            - message: Currently ZoneAware is only
+                                                supported for LeastRequest, Random,
+                                                and RoundRobin load balancers.
+                                              rule: 'self.type == ''ConsistentHash''
+                                                ? !has(self.zoneAware) : true '
                                           proxyProtocol:
                                             description: ProxyProtocol enables the
                                               Proxy Protocol when communicating with
@@ -19711,6 +20107,38 @@ spec:
                                           - Random
                                           - RoundRobin
                                           type: string
+                                        zoneAware:
+                                          description: ZoneAware defines the configuration
+                                            related to the distribution of requests
+                                            between locality zones.
+                                          properties:
+                                            preferLocal:
+                                              description: PreferLocalZone configures
+                                                zone-aware routing to prefer sending
+                                                traffic to the local locality zone.
+                                              properties:
+                                                force:
+                                                  description: |-
+                                                    ForceLocalZone defines override configuration for forcing all traffic to stay within the local zone instead of the default behavior
+                                                    which maintains equal distribution among upstream endpoints while sending as much traffic as possible locally.
+                                                  properties:
+                                                    minEndpointsInZoneThreshold:
+                                                      description: |-
+                                                        MinEndpointsInZoneThreshold is the minimum number of upstream endpoints in the local zone required to honor the forceLocalZone
+                                                        override. This is useful for protecting zones with fewer endpoints.
+                                                      format: int32
+                                                      type: integer
+                                                  type: object
+                                                minEndpointsThreshold:
+                                                  description: MinEndpointsThreshold
+                                                    is the minimum number of total
+                                                    upstream endpoints across all
+                                                    zones required to enable zone-aware
+                                                    routing.
+                                                  format: int64
+                                                  type: integer
+                                              type: object
+                                          type: object
                                       required:
                                       - type
                                       type: object
@@ -19723,6 +20151,11 @@ spec:
                                           for RoundRobin and LeastRequest load balancers.
                                         rule: 'self.type in [''Random'', ''ConsistentHash'']
                                           ? !has(self.slowStart) : true '
+                                      - message: Currently ZoneAware is only supported
+                                          for LeastRequest, Random, and RoundRobin
+                                          load balancers.
+                                        rule: 'self.type == ''ConsistentHash'' ? !has(self.zoneAware)
+                                          : true '
                                     proxyProtocol:
                                       description: ProxyProtocol enables the Proxy
                                         Protocol when communicating with the backend.
@@ -20749,6 +21182,37 @@ spec:
                                     - Random
                                     - RoundRobin
                                     type: string
+                                  zoneAware:
+                                    description: ZoneAware defines the configuration
+                                      related to the distribution of requests between
+                                      locality zones.
+                                    properties:
+                                      preferLocal:
+                                        description: PreferLocalZone configures zone-aware
+                                          routing to prefer sending traffic to the
+                                          local locality zone.
+                                        properties:
+                                          force:
+                                            description: |-
+                                              ForceLocalZone defines override configuration for forcing all traffic to stay within the local zone instead of the default behavior
+                                              which maintains equal distribution among upstream endpoints while sending as much traffic as possible locally.
+                                            properties:
+                                              minEndpointsInZoneThreshold:
+                                                description: |-
+                                                  MinEndpointsInZoneThreshold is the minimum number of upstream endpoints in the local zone required to honor the forceLocalZone
+                                                  override. This is useful for protecting zones with fewer endpoints.
+                                                format: int32
+                                                type: integer
+                                            type: object
+                                          minEndpointsThreshold:
+                                            description: MinEndpointsThreshold is
+                                              the minimum number of total upstream
+                                              endpoints across all zones required
+                                              to enable zone-aware routing.
+                                            format: int64
+                                            type: integer
+                                        type: object
+                                    type: object
                                 required:
                                 - type
                                 type: object
@@ -20761,6 +21225,10 @@ spec:
                                     RoundRobin and LeastRequest load balancers.
                                   rule: 'self.type in [''Random'', ''ConsistentHash'']
                                     ? !has(self.slowStart) : true '
+                                - message: Currently ZoneAware is only supported for
+                                    LeastRequest, Random, and RoundRobin load balancers.
+                                  rule: 'self.type == ''ConsistentHash'' ? !has(self.zoneAware)
+                                    : true '
                               proxyProtocol:
                                 description: ProxyProtocol enables the Proxy Protocol
                                   when communicating with the backend.
@@ -22600,6 +23068,37 @@ spec:
                                 - Random
                                 - RoundRobin
                                 type: string
+                              zoneAware:
+                                description: ZoneAware defines the configuration related
+                                  to the distribution of requests between locality
+                                  zones.
+                                properties:
+                                  preferLocal:
+                                    description: PreferLocalZone configures zone-aware
+                                      routing to prefer sending traffic to the local
+                                      locality zone.
+                                    properties:
+                                      force:
+                                        description: |-
+                                          ForceLocalZone defines override configuration for forcing all traffic to stay within the local zone instead of the default behavior
+                                          which maintains equal distribution among upstream endpoints while sending as much traffic as possible locally.
+                                        properties:
+                                          minEndpointsInZoneThreshold:
+                                            description: |-
+                                              MinEndpointsInZoneThreshold is the minimum number of upstream endpoints in the local zone required to honor the forceLocalZone
+                                              override. This is useful for protecting zones with fewer endpoints.
+                                            format: int32
+                                            type: integer
+                                        type: object
+                                      minEndpointsThreshold:
+                                        description: MinEndpointsThreshold is the
+                                          minimum number of total upstream endpoints
+                                          across all zones required to enable zone-aware
+                                          routing.
+                                        format: int64
+                                        type: integer
+                                    type: object
+                                type: object
                             required:
                             - type
                             type: object
@@ -22612,6 +23111,10 @@ spec:
                                 and LeastRequest load balancers.
                               rule: 'self.type in [''Random'', ''ConsistentHash'']
                                 ? !has(self.slowStart) : true '
+                            - message: Currently ZoneAware is only supported for LeastRequest,
+                                Random, and RoundRobin load balancers.
+                              rule: 'self.type == ''ConsistentHash'' ? !has(self.zoneAware)
+                                : true '
                           proxyProtocol:
                             description: ProxyProtocol enables the Proxy Protocol
                               when communicating with the backend.
@@ -22784,13 +23287,16 @@ spec:
                     x-kubernetes-validations:
                     - message: backendRef or backendRefs needs to be set
                       rule: has(self.backendRef) || self.backendRefs.size() > 0
-                    - message: BackendRefs only supports Service and Backend kind.
+                    - message: BackendRefs only supports Service, ServiceImport, and
+                        Backend kind.
                       rule: 'has(self.backendRefs) ? self.backendRefs.all(f, f.kind
-                        == ''Service'' || f.kind == ''Backend'') : true'
-                    - message: BackendRefs only supports Core and gateway.envoyproxy.io
-                        group.
+                        == ''Service'' || f.kind == ''ServiceImport'' || f.kind ==
+                        ''Backend'') : true'
+                    - message: BackendRefs only supports Core, multicluster.x-k8s.io,
+                        and gateway.envoyproxy.io groups.
                       rule: 'has(self.backendRefs) ? (self.backendRefs.all(f, f.group
-                        == "" || f.group == ''gateway.envoyproxy.io'')) : true'
+                        == "" || f.group == ''multicluster.x-k8s.io'' || f.group ==
+                        ''gateway.envoyproxy.io'')) : true'
                   headersToExtAuth:
                     description: |-
                       HeadersToExtAuth defines the client request headers that will be included
@@ -23532,6 +24038,37 @@ spec:
                                 - Random
                                 - RoundRobin
                                 type: string
+                              zoneAware:
+                                description: ZoneAware defines the configuration related
+                                  to the distribution of requests between locality
+                                  zones.
+                                properties:
+                                  preferLocal:
+                                    description: PreferLocalZone configures zone-aware
+                                      routing to prefer sending traffic to the local
+                                      locality zone.
+                                    properties:
+                                      force:
+                                        description: |-
+                                          ForceLocalZone defines override configuration for forcing all traffic to stay within the local zone instead of the default behavior
+                                          which maintains equal distribution among upstream endpoints while sending as much traffic as possible locally.
+                                        properties:
+                                          minEndpointsInZoneThreshold:
+                                            description: |-
+                                              MinEndpointsInZoneThreshold is the minimum number of upstream endpoints in the local zone required to honor the forceLocalZone
+                                              override. This is useful for protecting zones with fewer endpoints.
+                                            format: int32
+                                            type: integer
+                                        type: object
+                                      minEndpointsThreshold:
+                                        description: MinEndpointsThreshold is the
+                                          minimum number of total upstream endpoints
+                                          across all zones required to enable zone-aware
+                                          routing.
+                                        format: int64
+                                        type: integer
+                                    type: object
+                                type: object
                             required:
                             - type
                             type: object
@@ -23544,6 +24081,10 @@ spec:
                                 and LeastRequest load balancers.
                               rule: 'self.type in [''Random'', ''ConsistentHash'']
                                 ? !has(self.slowStart) : true '
+                            - message: Currently ZoneAware is only supported for LeastRequest,
+                                Random, and RoundRobin load balancers.
+                              rule: 'self.type == ''ConsistentHash'' ? !has(self.zoneAware)
+                                : true '
                           proxyProtocol:
                             description: ProxyProtocol enables the Proxy Protocol
                               when communicating with the backend.
@@ -23737,13 +24278,16 @@ spec:
                     x-kubernetes-validations:
                     - message: backendRef or backendRefs needs to be set
                       rule: has(self.backendRef) || self.backendRefs.size() > 0
-                    - message: BackendRefs only supports Service and Backend kind.
+                    - message: BackendRefs only supports Service, ServiceImport, and
+                        Backend kind.
                       rule: 'has(self.backendRefs) ? self.backendRefs.all(f, f.kind
-                        == ''Service'' || f.kind == ''Backend'') : true'
-                    - message: BackendRefs only supports Core and gateway.envoyproxy.io
-                        group.
+                        == ''Service'' || f.kind == ''ServiceImport'' || f.kind ==
+                        ''Backend'') : true'
+                    - message: BackendRefs only supports Core, multicluster.x-k8s.io,
+                        and gateway.envoyproxy.io groups.
                       rule: 'has(self.backendRefs) ? (self.backendRefs.all(f, f.group
-                        == "" || f.group == ''gateway.envoyproxy.io'')) : true'
+                        == "" || f.group == ''multicluster.x-k8s.io'' || f.group ==
+                        ''gateway.envoyproxy.io'')) : true'
                   recomputeRoute:
                     description: |-
                       RecomputeRoute clears the route cache and recalculates the routing decision.
@@ -24670,6 +25214,37 @@ spec:
                                       - Random
                                       - RoundRobin
                                       type: string
+                                    zoneAware:
+                                      description: ZoneAware defines the configuration
+                                        related to the distribution of requests between
+                                        locality zones.
+                                      properties:
+                                        preferLocal:
+                                          description: PreferLocalZone configures
+                                            zone-aware routing to prefer sending traffic
+                                            to the local locality zone.
+                                          properties:
+                                            force:
+                                              description: |-
+                                                ForceLocalZone defines override configuration for forcing all traffic to stay within the local zone instead of the default behavior
+                                                which maintains equal distribution among upstream endpoints while sending as much traffic as possible locally.
+                                              properties:
+                                                minEndpointsInZoneThreshold:
+                                                  description: |-
+                                                    MinEndpointsInZoneThreshold is the minimum number of upstream endpoints in the local zone required to honor the forceLocalZone
+                                                    override. This is useful for protecting zones with fewer endpoints.
+                                                  format: int32
+                                                  type: integer
+                                              type: object
+                                            minEndpointsThreshold:
+                                              description: MinEndpointsThreshold is
+                                                the minimum number of total upstream
+                                                endpoints across all zones required
+                                                to enable zone-aware routing.
+                                              format: int64
+                                              type: integer
+                                          type: object
+                                      type: object
                                   required:
                                   - type
                                   type: object
@@ -24682,6 +25257,11 @@ spec:
                                       for RoundRobin and LeastRequest load balancers.
                                     rule: 'self.type in [''Random'', ''ConsistentHash'']
                                       ? !has(self.slowStart) : true '
+                                  - message: Currently ZoneAware is only supported
+                                      for LeastRequest, Random, and RoundRobin load
+                                      balancers.
+                                    rule: 'self.type == ''ConsistentHash'' ? !has(self.zoneAware)
+                                      : true '
                                 proxyProtocol:
                                   description: ProxyProtocol enables the Proxy Protocol
                                     when communicating with the backend.
@@ -24943,6 +25523,19 @@ spec:
                         type: string
                     required:
                     - name
+                    type: object
+                  cookieConfig:
+                    description: |-
+                      CookieConfigs allows setting the SameSite attribute for OIDC cookies.
+                      By default, its unset.
+                    properties:
+                      sameSite:
+                        default: Strict
+                        enum:
+                        - Lax
+                        - Strict
+                        - None
+                        type: string
                     type: object
                   cookieDomain:
                     description: |-
@@ -25783,6 +26376,37 @@ spec:
                                 - Random
                                 - RoundRobin
                                 type: string
+                              zoneAware:
+                                description: ZoneAware defines the configuration related
+                                  to the distribution of requests between locality
+                                  zones.
+                                properties:
+                                  preferLocal:
+                                    description: PreferLocalZone configures zone-aware
+                                      routing to prefer sending traffic to the local
+                                      locality zone.
+                                    properties:
+                                      force:
+                                        description: |-
+                                          ForceLocalZone defines override configuration for forcing all traffic to stay within the local zone instead of the default behavior
+                                          which maintains equal distribution among upstream endpoints while sending as much traffic as possible locally.
+                                        properties:
+                                          minEndpointsInZoneThreshold:
+                                            description: |-
+                                              MinEndpointsInZoneThreshold is the minimum number of upstream endpoints in the local zone required to honor the forceLocalZone
+                                              override. This is useful for protecting zones with fewer endpoints.
+                                            format: int32
+                                            type: integer
+                                        type: object
+                                      minEndpointsThreshold:
+                                        description: MinEndpointsThreshold is the
+                                          minimum number of total upstream endpoints
+                                          across all zones required to enable zone-aware
+                                          routing.
+                                        format: int64
+                                        type: integer
+                                    type: object
+                                type: object
                             required:
                             - type
                             type: object
@@ -25795,6 +26419,10 @@ spec:
                                 and LeastRequest load balancers.
                               rule: 'self.type in [''Random'', ''ConsistentHash'']
                                 ? !has(self.slowStart) : true '
+                            - message: Currently ZoneAware is only supported for LeastRequest,
+                                Random, and RoundRobin load balancers.
+                              rule: 'self.type == ''ConsistentHash'' ? !has(self.zoneAware)
+                                : true '
                           proxyProtocol:
                             description: ProxyProtocol enables the Proxy Protocol
                               when communicating with the backend.
@@ -25963,6 +26591,13 @@ spec:
                                 type: object
                             type: object
                         type: object
+                      endSessionEndpoint:
+                        description: |-
+                          The OIDC Provider's [end session endpoint](https://openid.net/specs/openid-connect-core-1_0.html#RPLogout).
+
+                          If the end session endpoint is provided, EG will use it to log out the user from the OIDC Provider when the user accesses the logout path.
+                          EG will also try to discover the end session endpoint from the provider's [Well-Known Configuration Endpoint](https://openid.net/specs/openid-connect-discovery-1_0.html#ProviderConfigurationResponse) when authorizationEndpoint or tokenEndpoint is not provided.
+                        type: string
                       issuer:
                         description: |-
                           The OIDC Provider's [issuer identifier](https://openid.net/specs/openid-connect-discovery-1_0.html#IssuerDiscovery).

@@ -17,7 +17,8 @@ const (
 	StreamedExtProcBodyProcessingMode ExtProcBodyProcessingMode = "Streamed"
 	// BufferedExtProcBodyProcessingMode will buffer the message body in memory and send the entire body at once. If the body exceeds the configured buffer limit, then the downstream system will receive an error.
 	BufferedExtProcBodyProcessingMode ExtProcBodyProcessingMode = "Buffered"
-	// FullDuplexStreamedExtBodyProcessingMode will send the body in pieces, to be read in a stream. Full details here: https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/http/ext_proc/v3/processing_mode.proto.html#enum-extensions-filters-http-ext-proc-v3-processingmode-bodysendmode
+	// FullDuplexStreamedExtBodyProcessingMode will send the body in pieces, to be read in a stream. When enabled, trailers are also sent, and failOpen must be false.
+	// Full details here: https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/http/ext_proc/v3/processing_mode.proto.html#enum-extensions-filters-http-ext-proc-v3-processingmode-bodysendmode
 	FullDuplexStreamedExtBodyProcessingMode ExtProcBodyProcessingMode = "FullDuplexStreamed"
 	// BufferedPartialExtBodyHeaderProcessingMode will buffer the message body in memory and send the entire body in one chunk. If the body exceeds the configured buffer limit, then the body contents up to the buffer limit will be sent.
 	BufferedPartialExtBodyHeaderProcessingMode ExtProcBodyProcessingMode = "BufferedPartial"
@@ -65,8 +66,9 @@ type ExtProcProcessingMode struct {
 
 // ExtProc defines the configuration for External Processing filter.
 // +kubebuilder:validation:XValidation:message="BackendRefs must be used, backendRef is not supported.",rule="!has(self.backendRef)"
-// +kubebuilder:validation:XValidation:message="BackendRefs only supports Service and Backend kind.",rule="has(self.backendRefs) ? self.backendRefs.all(f, f.kind == 'Service' || f.kind == 'Backend') : true"
-// +kubebuilder:validation:XValidation:message="BackendRefs only supports Core and gateway.envoyproxy.io group.",rule="has(self.backendRefs) ? (self.backendRefs.all(f, f.group == \"\" || f.group == 'gateway.envoyproxy.io')) : true"
+// +kubebuilder:validation:XValidation:message="BackendRefs only supports Service, ServiceImport, and Backend kind.",rule="has(self.backendRefs) ? self.backendRefs.all(f, f.kind == 'Service' || f.kind == 'ServiceImport' || f.kind == 'Backend') : true"
+// +kubebuilder:validation:XValidation:message="BackendRefs only supports Core, multicluster.x-k8s.io, and gateway.envoyproxy.io groups.",rule="has(self.backendRefs) ? (self.backendRefs.all(f, f.group == \"\" || f.group == 'multicluster.x-k8s.io' || f.group == 'gateway.envoyproxy.io')) : true"
+// +kubebuilder:validation:XValidation:message="If FullDuplexStreamed body processing mode is used, FailOpen must be false.",rule="!(has(self.failOpen) && self.failOpen == true && ((has(self.processingMode.request.body) && self.processingMode.request.body == 'FullDuplexStreamed') || (has(self.processingMode.response.body) && self.processingMode.response.body == 'FullDuplexStreamed')))"
 type ExtProc struct {
 	BackendCluster `json:",inline"`
 
@@ -76,11 +78,17 @@ type ExtProc struct {
 	// +optional
 	MessageTimeout *gwapiv1.Duration `json:"messageTimeout,omitempty"`
 
-	// FailOpen defines if requests or responses that cannot be processed due to connectivity to the
-	// external processor are terminated or passed-through.
-	// Default: false
+	// FailOpen is a switch used to control the behavior when failing to call the external processor.
+	//
+	// If FailOpen is set to true, the system bypasses the ExtProc extension and
+	// allows the traffic to pass through. If it is set to false or
+	// not set (defaulting to false), the system blocks the traffic and returns
+	// an HTTP 5xx error.
+	//
+	// If set to true, the ExtProc extension will also be bypassed if the configuration is invalid.
 	//
 	// +optional
+	// +kubebuilder:default=false
 	FailOpen *bool `json:"failOpen,omitempty"`
 
 	// ProcessingMode defines how request and response body is processed

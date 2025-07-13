@@ -3,6 +3,7 @@ clientTrafficPolicies:
   kind: ClientTrafficPolicy
   metadata:
     creationTimestamp: null
+    generation: 20
     name: target-gateway-1-section-http-1
     namespace: envoy-gateway
   spec:
@@ -24,6 +25,7 @@ clientTrafficPolicies:
       conditions:
       - lastTransitionTime: null
         message: Policy has been accepted.
+        observedGeneration: 20
         reason: Accepted
         status: "True"
         type: Accepted
@@ -32,6 +34,7 @@ clientTrafficPolicies:
   kind: ClientTrafficPolicy
   metadata:
     creationTimestamp: null
+    generation: 10
     name: target-gateway-1
     namespace: envoy-gateway
   spec:
@@ -51,11 +54,13 @@ clientTrafficPolicies:
       - lastTransitionTime: null
         message: There are existing ClientTrafficPolicies that are overriding these
           sections [http-1]
+        observedGeneration: 10
         reason: Overridden
         status: "True"
         type: Overridden
       - lastTransitionTime: null
         message: Policy has been accepted.
+        observedGeneration: 10
         reason: Accepted
         status: "True"
         type: Accepted

@@ -24,6 +24,7 @@ tracing:
       - endpoints:
           - host: "datadog-agent.default.svc.cluster.local"
             port: 8126
+        addressType: FQDN
         name: "tracing-0/backend/0"
   provider:
     type: Datadog

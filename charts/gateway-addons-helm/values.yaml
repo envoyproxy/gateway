@@ -1,5 +1,6 @@
 dashboard:
   labels: {}
+  annotations: {}
 
 # Values for Grafana dependency
 grafana:
@@ -814,6 +815,12 @@ opentelemetry-collector:
       hostPort: 9000
       protocol: TCP
       appProtocol: grpc
+    datadog:
+      enabled: true
+      containerPort: 8126
+      servicePort: 8126
+      hostPort: 8126
+      protocol: TCP
   fullnameOverride: otel-collector
   mode: deployment
   image:

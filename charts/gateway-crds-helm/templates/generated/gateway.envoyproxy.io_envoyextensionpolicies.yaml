@@ -769,6 +769,35 @@ spec:
                               - Random
                               - RoundRobin
                               type: string
+                            zoneAware:
+                              description: ZoneAware defines the configuration related
+                                to the distribution of requests between locality zones.
+                              properties:
+                                preferLocal:
+                                  description: PreferLocalZone configures zone-aware
+                                    routing to prefer sending traffic to the local
+                                    locality zone.
+                                  properties:
+                                    force:
+                                      description: |-
+                                        ForceLocalZone defines override configuration for forcing all traffic to stay within the local zone instead of the default behavior
+                                        which maintains equal distribution among upstream endpoints while sending as much traffic as possible locally.
+                                      properties:
+                                        minEndpointsInZoneThreshold:
+                                          description: |-
+                                            MinEndpointsInZoneThreshold is the minimum number of upstream endpoints in the local zone required to honor the forceLocalZone
+                                            override. This is useful for protecting zones with fewer endpoints.
+                                          format: int32
+                                          type: integer
+                                      type: object
+                                    minEndpointsThreshold:
+                                      description: MinEndpointsThreshold is the minimum
+                                        number of total upstream endpoints across
+                                        all zones required to enable zone-aware routing.
+                                      format: int64
+                                      type: integer
+                                  type: object
+                              type: object
                           required:
                           - type
                           type: object
@@ -781,6 +810,10 @@ spec:
                               and LeastRequest load balancers.
                             rule: 'self.type in [''Random'', ''ConsistentHash''] ?
                               !has(self.slowStart) : true '
+                          - message: Currently ZoneAware is only supported for LeastRequest,
+                              Random, and RoundRobin load balancers.
+                            rule: 'self.type == ''ConsistentHash'' ? !has(self.zoneAware)
+                              : true '
                         proxyProtocol:
                           description: ProxyProtocol enables the Proxy Protocol when
                             communicating with the backend.
@@ -949,10 +982,16 @@ spec:
                           type: object
                       type: object
                     failOpen:
+                      default: false
                       description: |-
-                        FailOpen defines if requests or responses that cannot be processed due to connectivity to the
-                        external processor are terminated or passed-through.
-                        Default: false
+                        FailOpen is a switch used to control the behavior when failing to call the external processor.
+
+                        If FailOpen is set to true, the system bypasses the ExtProc extension and
+                        allows the traffic to pass through. If it is set to false or
+                        not set (defaulting to false), the system blocks the traffic and returns
+                        an HTTP 5xx error.
+
+                        If set to true, the ExtProc extension will also be bypassed if the configuration is invalid.
                       type: boolean
                     messageTimeout:
                       description: |-
@@ -1050,13 +1089,22 @@ spec:
                   x-kubernetes-validations:
                   - message: BackendRefs must be used, backendRef is not supported.
                     rule: '!has(self.backendRef)'
-                  - message: BackendRefs only supports Service and Backend kind.
+                  - message: BackendRefs only supports Service, ServiceImport, and
+                      Backend kind.
                     rule: 'has(self.backendRefs) ? self.backendRefs.all(f, f.kind
-                      == ''Service'' || f.kind == ''Backend'') : true'
-                  - message: BackendRefs only supports Core and gateway.envoyproxy.io
-                      group.
+                      == ''Service'' || f.kind == ''ServiceImport'' || f.kind == ''Backend'')
+                      : true'
+                  - message: BackendRefs only supports Core, multicluster.x-k8s.io,
+                      and gateway.envoyproxy.io groups.
                     rule: 'has(self.backendRefs) ? (self.backendRefs.all(f, f.group
-                      == "" || f.group == ''gateway.envoyproxy.io'')) : true'
+                      == "" || f.group == ''multicluster.x-k8s.io'' || f.group ==
+                      ''gateway.envoyproxy.io'')) : true'
+                  - message: If FullDuplexStreamed body processing mode is used, FailOpen
+                      must be false.
+                    rule: '!(has(self.failOpen) && self.failOpen == true && ((has(self.processingMode.request.body)
+                      && self.processingMode.request.body == ''FullDuplexStreamed'')
+                      || (has(self.processingMode.response.body) && self.processingMode.response.body
+                      == ''FullDuplexStreamed'')))'
                 maxItems: 16
                 type: array
               lua:
@@ -1565,10 +1613,13 @@ spec:
                       description: |-
                         FailOpen is a switch used to control the behavior when a fatal error occurs
                         during the initialization or the execution of the Wasm extension.
+
                         If FailOpen is set to true, the system bypasses the Wasm extension and
-                        allows the traffic to pass through. Otherwise, if it is set to false or
+                        allows the traffic to pass through. If it is set to false or
                         not set (defaulting to false), the system blocks the traffic and returns
                         an HTTP 5xx error.
+
+                        If set to true, the Wasm extension will also be bypassed if the configuration is invalid.
                       type: boolean
                     name:
                       description: |-
