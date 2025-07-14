@@ -1703,8 +1703,8 @@ spec:
                       x-kubernetes-validations:
                       - message: responseHeaderModifier.remove is not supported for
                           responseOverride - header removal is not supported by LocalResponsePolicy
-                        rule: '!has(self.responseHeaderModifier) || !has(self.responseHeaderModifier.remove)
-                          || size(self.responseHeaderModifier.remove) == 0'
+                        rule: '!(has(self.responseHeaderModifier) && has(self.responseHeaderModifier.remove)
+                          && size(self.responseHeaderModifier.remove) != 0)'
                   required:
                   - match
                   type: object

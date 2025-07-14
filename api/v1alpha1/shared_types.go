@@ -749,7 +749,7 @@ type StatusCodeRange struct {
 }
 
 // CustomResponse defines the configuration for returning a custom response.
-// +kubebuilder:validation:XValidation:rule="!has(self.responseHeaderModifier) || !has(self.responseHeaderModifier.remove) || size(self.responseHeaderModifier.remove) == 0",message="responseHeaderModifier.remove is not supported for responseOverride - header removal is not supported by LocalResponsePolicy"
+// +kubebuilder:validation:XValidation:rule="!(has(self.responseHeaderModifier) && has(self.responseHeaderModifier.remove) && size(self.responseHeaderModifier.remove) != 0)",message="responseHeaderModifier.remove is not supported for responseOverride - header removal is not supported by LocalResponsePolicy"
 type CustomResponse struct {
 	// Content Type of the response. This will be set in the Content-Type header.
 	//
