@@ -613,7 +613,7 @@ func buildTCPFilterChain(
 			StatPrefix: "tcp_rbac_",
 			Rules: &rbacv3.RBAC{
 				Action:   rbacv3.RBAC_ALLOW,
-				Policies: convertRules(irRoute.Security.Authorization.Rules),
+				Policies: convertTCPAuthRules(irRoute.Security.Authorization.Rules),
 			},
 		}
 
@@ -1171,8 +1171,8 @@ func buildSetCurrentClientCertDetails(in *ir.HeaderSettings) *hcmv3.HttpConnecti
 	return clientCertDetails
 }
 
-// convertRules converts IR authorization rules to Envoy RBAC policies
-func convertRules(rules []*ir.AuthorizationRule) map[string]*rbacv3.Policy {
+// convertTCPAuthRules converts IR authorization rules to Envoy RBAC policies
+func convertTCPAuthRules(rules []*ir.AuthorizationRule) map[string]*rbacv3.Policy {
 	policies := make(map[string]*rbacv3.Policy)
 
 	for _, rule := range rules {
