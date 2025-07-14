@@ -204,18 +204,32 @@ func (t *Translator) notifyExtensionServerAboutListeners(
 	var errs error
 	for _, l := range tCtx.XdsResources[resourcev3.ListenerType] {
 		listener := l.(*listenerv3.Listener)
-		policies := []*ir.UnstructuredRef{}
+		customResources := []*ir.UnstructuredRef{}
 		alreadyIncludedPolicies := sets.New[utils.NamespacedNameWithGroupKind]()
+		customBackendResources := []*ir.UnstructuredRef{}
+		alreadyIncludedBackendPolicies := sets.New[utils.NamespacedNameWithGroupKind]()
 		for _, irListener := range findIRListenersByXDSListener(xdsIR, listener) {
-			for _, pol := range irListener.GetExtensionRefs() {
-				key := utils.GetNamespacedNameWithGroupKind(pol.Object)
+			if httpListener, ok := irListener.(*ir.HTTPListener); ok {
+				// passing custom backend resources to the extension server
+				for _, route := range httpListener.Routes {
+					for _, pool := range route.ExtensionRefs {
+						key := utils.GetNamespacedNameWithGroupKind(pool.Object)
+						if !alreadyIncludedBackendPolicies.Has(key) {
+							customBackendResources = append(customBackendResources, pool)
+							alreadyIncludedBackendPolicies.Insert(key)
+						}
+					}
+				}
+			}
+			for _, pool := range irListener.GetExtensionRefs() {
+				key := utils.GetNamespacedNameWithGroupKind(pool.Object)
 				if !alreadyIncludedPolicies.Has(key) {
-					policies = append(policies, pol)
+					customResources = append(customResources, pool)
 					alreadyIncludedPolicies.Insert(key)
 				}
 			}
 		}
-		if err := processExtensionPostListenerHook(tCtx, listener, policies, t.ExtensionManager); err != nil {
+		if err := processExtensionPostListenerHook(tCtx, listener, customResources, customBackendResources, t.ExtensionManager); err != nil {
 			// If the extension server returns an error, and the extension server is not configured to fail open,
 			// then propagate the error
 			if !(*t.ExtensionManager).FailOpen() {
@@ -453,10 +467,14 @@ func (t *Translator) addRouteToRouteConfig(
 		err       error
 	)
 
+	var customResources []*unstructured.Unstructured
 	// Check if an extension is loaded that wants to modify xDS Routes after they have been generated
 	for _, httpRoute := range httpListener.Routes {
 		// 1:1 between IR HTTPRoute Hostname and xDS VirtualHost.
 		vHost := vHosts[httpRoute.Hostname]
+		for _, ref := range httpRoute.ExtensionRefs {
+			customResources = append(customResources, ref.Object)
+		}
 		if vHost == nil {
 			// Remove dots from the hostname before appending it to the virtualHost name
 			// since dots are special chars used in stats tag extraction in Envoy
@@ -600,7 +618,7 @@ func (t *Translator) addRouteToRouteConfig(
 	for _, vHost := range vHostList {
 		// Check if an extension want to modify the Virtual Host we just generated
 		// If no extension exists (or it doesn't subscribe to this hook) then this is a quick no-op.
-		if err = processExtensionPostVHostHook(vHost, t.ExtensionManager); err != nil {
+		if err = processExtensionPostVHostHook(vHost, customResources, t.ExtensionManager); err != nil {
 			// If the extension server returns an error, and the extension server is not configured to fail open,
 			// then propagate the error
 			if !(*t.ExtensionManager).FailOpen() {

@@ -269,6 +269,6 @@ type xdsHookClientMock struct {
 	types.XDSHookClient
 }
 
-func (c *xdsHookClientMock) PostHTTPListenerModifyHook(*listenerv3.Listener, []*unstructured.Unstructured) (*listenerv3.Listener, error) {
+func (c *xdsHookClientMock) PostHTTPListenerModifyHook(*listenerv3.Listener, []*unstructured.Unstructured, []*unstructured.Unstructured) (*listenerv3.Listener, error) {
 	return nil, fmt.Errorf("assuming a network error during the call")
 }

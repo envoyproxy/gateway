@@ -21,11 +21,11 @@ message PostRouteExtensionContext {
 }
 
 
-// Empty for now but we can add fields to the context as use-cases are discovered without
-// breaking any clients that use the API
+// PostVirtualHostExtensionContext provides context information for VirtualHost modification
 // additional context information can be added to this message as more use-cases are discovered
 message PostVirtualHostExtensionContext {
-
+    // Resources introduced by the extension that were used as custom backendRefs
+    repeated ExtensionResource backend_extension_resources = 1;
 }
 
 
@@ -44,6 +44,8 @@ message PostHTTPListenerExtensionContext {
     // Resources introduced by the extension that were used as extension server
     // policies targeting the listener
     repeated ExtensionResource extension_resources = 1;
+    // Resources introduced by the extension that were used as custom backendRefs
+    repeated ExtensionResource backend_extension_resources = 2;
 }
 
 

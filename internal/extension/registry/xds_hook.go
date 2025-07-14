@@ -92,13 +92,20 @@ func (h *XDSHook) PostClusterModifyHook(cluster *cluster.Cluster, extensionResou
 	return resp.Cluster, nil
 }
 
-func (h *XDSHook) PostVirtualHostModifyHook(vh *route.VirtualHost) (*route.VirtualHost, error) {
+func (h *XDSHook) PostVirtualHostModifyHook(vh *route.VirtualHost, extensionResources []*unstructured.Unstructured) (*route.VirtualHost, error) {
+	// Take all of the unstructured resources for the extension and package them into bytes
+	extensionResourceBytes, err := translateUnstructuredToUnstructuredBytes(extensionResources)
+	if err != nil {
+		return vh, err
+	}
 	// Make the request to the extension server
 	ctx := context.Background()
 	resp, err := h.grpcClient.PostVirtualHostModify(ctx,
 		&extension.PostVirtualHostModifyRequest{
-			VirtualHost:            vh,
-			PostVirtualHostContext: &extension.PostVirtualHostExtensionContext{},
+			VirtualHost: vh,
+			PostVirtualHostContext: &extension.PostVirtualHostExtensionContext{
+				BackendExtensionResources: extensionResourceBytes,
+			},
 		})
 	if err != nil {
 		return nil, err
@@ -107,9 +114,18 @@ func (h *XDSHook) PostVirtualHostModifyHook(vh *route.VirtualHost) (*route.Virtu
 	return resp.VirtualHost, nil
 }
 
-func (h *XDSHook) PostHTTPListenerModifyHook(l *listener.Listener, extensionResources []*unstructured.Unstructured) (*listener.Listener, error) {
+func (h *XDSHook) PostHTTPListenerModifyHook(
+	l *listener.Listener,
+	extensionResources []*unstructured.Unstructured,
+	backendExtensionResources []*unstructured.Unstructured,
+) (*listener.Listener, error) {
 	// Take all of the unstructured resources for the extension and package them into bytes
 	extensionResourceBytes, err := translateUnstructuredToUnstructuredBytes(extensionResources)
+	if err != nil {
+		return l, err
+	}
+	// Take all of the unstructured resources for the extension and package them into bytes
+	backendExtensionResourceBytes, err := translateUnstructuredToUnstructuredBytes(backendExtensionResources)
 	if err != nil {
 		return l, err
 	}
@@ -119,7 +135,8 @@ func (h *XDSHook) PostHTTPListenerModifyHook(l *listener.Listener, extensionReso
 		&extension.PostHTTPListenerModifyRequest{
 			Listener: l,
 			PostListenerContext: &extension.PostHTTPListenerExtensionContext{
-				ExtensionResources: extensionResourceBytes,
+				ExtensionResources:        extensionResourceBytes,
+				BackendExtensionResources: backendExtensionResourceBytes,
 			},
 		})
 	if err != nil {

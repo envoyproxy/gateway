@@ -102,7 +102,7 @@ func processExtensionPostClusterHook(cluster *clusterv3.Cluster, extensionResour
 	return nil
 }
 
-func processExtensionPostVHostHook(vHost *routev3.VirtualHost, em *extensionTypes.Manager) error {
+func processExtensionPostVHostHook(vHost *routev3.VirtualHost, extensionResources []*unstructured.Unstructured, em *extensionTypes.Manager) error {
 	// Do nothing unless there is an extension manager
 	if em == nil {
 		return nil
@@ -117,7 +117,7 @@ func processExtensionPostVHostHook(vHost *routev3.VirtualHost, em *extensionType
 	if extVHHookClient == nil {
 		return nil
 	}
-	modifiedVH, err := extVHHookClient.PostVirtualHostModifyHook(vHost)
+	modifiedVH, err := extVHHookClient.PostVirtualHostModifyHook(vHost, extensionResources)
 	if err != nil {
 		// Maybe logging the error is better here, but this only happens when an extension is in-use
 		// so if modification fails then we should probably treat that as a serious problem.
@@ -134,7 +134,13 @@ func processExtensionPostVHostHook(vHost *routev3.VirtualHost, em *extensionType
 	return nil
 }
 
-func processExtensionPostListenerHook(tCtx *types.ResourceVersionTable, xdsListener *listenerv3.Listener, extensionRefs []*ir.UnstructuredRef, em *extensionTypes.Manager) error {
+func processExtensionPostListenerHook(
+	tCtx *types.ResourceVersionTable,
+	xdsListener *listenerv3.Listener,
+	extensionRefs []*ir.UnstructuredRef,
+	backendExtensionRefs []*ir.UnstructuredRef,
+	em *extensionTypes.Manager,
+) error {
 	// Do nothing unless there is an extension manager
 	if em == nil {
 		return nil
@@ -151,7 +157,11 @@ func processExtensionPostListenerHook(tCtx *types.ResourceVersionTable, xdsListe
 		for refIdx, ref := range extensionRefs {
 			unstructuredResources[refIdx] = ref.Object
 		}
-		modifiedListener, err := extListenerHookClient.PostHTTPListenerModifyHook(xdsListener, unstructuredResources)
+		backendUnstructuredResources := make([]*unstructured.Unstructured, len(backendExtensionRefs))
+		for refIdx, ref := range backendExtensionRefs {
+			backendUnstructuredResources[refIdx] = ref.Object
+		}
+		modifiedListener, err := extListenerHookClient.PostHTTPListenerModifyHook(xdsListener, unstructuredResources, backendUnstructuredResources)
 		if err != nil {
 			return err
 		} else if modifiedListener != nil {
