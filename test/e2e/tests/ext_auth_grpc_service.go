@@ -66,6 +66,34 @@ var GRPCExtAuthTest = suite.ConformanceTest{
 			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
 		})
 
+		t.Run("http route with ext auth authentication, verify route metadata sent to ext auth server", func(t *testing.T) {
+			expectedResponse := http.ExpectedResponse{
+				Request: http.Request{
+					Host: "www.example.com",
+					Path: "/myapp",
+					Headers: map[string]string{
+						"Authorization": "Bearer token1",
+					},
+				},
+				Response: http.Response{
+					StatusCode: 200,
+				},
+				ExpectedRequest: &http.ExpectedRequest{
+					Request: http.Request{
+						Host: "www.example.com",
+						Path: "/myapp",
+						Headers: map[string]string{
+							"x-current-user":             "user1",
+							"x-e2e-conformance-metadata": "static-untyped-route",
+						},
+					},
+				},
+				Namespace: ns,
+			}
+
+			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
+		})
+
 		t.Run("without Authorization header", func(t *testing.T) {
 			expectedResponse := http.ExpectedResponse{
 				Request: http.Request{

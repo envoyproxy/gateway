@@ -19,11 +19,11 @@ import (
 
 	envoy_api_v3_core "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	envoy_service_auth_v3 "github.com/envoyproxy/go-control-plane/envoy/service/auth/v3"
-	"github.com/golang/protobuf/ptypes/wrappers"
 	"google.golang.org/genproto/googleapis/rpc/code"
 	"google.golang.org/genproto/googleapis/rpc/status"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
+	"google.golang.org/protobuf/types/known/structpb"
 )
 
 var (
@@ -99,17 +99,30 @@ func (s *authServer) Check(
 	if len(extracted) == 2 && extracted[0] == "Bearer" {
 		valid, user := s.users.Check(extracted[1])
 		if valid {
+			routeMetadata, err := extractE2ETestMetadata(req)
+			if err != nil {
+				log.Printf("Warning: Could not extract e2e-conformance-metadata: %v", err)
+				routeMetadata = "unknown"
+			}
+
 			return &envoy_service_auth_v3.CheckResponse{
 				HttpResponse: &envoy_service_auth_v3.CheckResponse_OkResponse{
 					OkResponse: &envoy_service_auth_v3.OkHttpResponse{
 						Headers: []*envoy_api_v3_core.HeaderValueOption{
 							{
-								Append: &wrappers.BoolValue{Value: false},
+								AppendAction: envoy_api_v3_core.HeaderValueOption_OVERWRITE_IF_EXISTS_OR_ADD,
 								Header: &envoy_api_v3_core.HeaderValue{
 									// For a successful request, the authorization server sets the
 									// x-current-user value.
 									Key:   "x-current-user",
 									Value: user,
+								},
+							},
+							{
+								AppendAction: envoy_api_v3_core.HeaderValueOption_OVERWRITE_IF_EXISTS_OR_ADD,
+								Header: &envoy_api_v3_core.HeaderValue{
+									Key:   "x-e2e-conformance-metadata",
+									Value: routeMetadata,
 								},
 							},
 						},
@@ -127,6 +140,56 @@ func (s *authServer) Check(
 			Code: int32(code.Code_PERMISSION_DENIED),
 		},
 	}, nil
+}
+
+// extractE2ETestMetadata extracts the e2e-conformance-metadata static untyped route metadata.
+// This metadata was set on the HTTPRoute via the https://gateway.envoyproxy.io/contributions/design/metadata/ feature,
+// and sent to the authorization server in the CheckRequest via the SecurityPolicy accessibleMetadata field.
+func extractE2ETestMetadata(req *envoy_service_auth_v3.CheckRequest) (string, error) {
+	routeMetadata := req.GetAttributes().GetRouteMetadataContext().GetFilterMetadata()
+	egMetadata, ok := routeMetadata["envoy-gateway"]
+	if !ok {
+		return "", fmt.Errorf("envoy-gateway namespace not found in untyped route metadata, found: %v", routeMetadata)
+	}
+
+	resources, ok := egMetadata.GetFields()["resources"]
+	if !ok {
+		return "", fmt.Errorf("resources not found in envoy-gateway metadata, found: %v", egMetadata.GetFields())
+	}
+
+	resourcesList, ok := resources.GetKind().(*structpb.Value_ListValue)
+	if !ok {
+		return "", fmt.Errorf("resources is not a list, found: %T", resources.GetKind())
+	}
+	if len(resourcesList.ListValue.GetValues()) == 0 {
+		return "", fmt.Errorf("resources list is empty, found: %v", resourcesList.ListValue.GetValues())
+	}
+
+	resourcesStruct, ok := resourcesList.ListValue.GetValues()[0].GetKind().(*structpb.Value_StructValue)
+	if !ok {
+		return "", fmt.Errorf("resources is not a struct, found: %T", resources.GetKind())
+	}
+
+	annotations, ok := resourcesStruct.StructValue.GetFields()["annotations"]
+	if !ok {
+		return "", fmt.Errorf("annotations not found in resources, found: %v", resourcesStruct.StructValue.GetFields())
+	}
+
+	annotationsStruct, ok := annotations.GetKind().(*structpb.Value_StructValue)
+	if !ok {
+		return "", fmt.Errorf("annotations is not a struct, found: %T", annotations.GetKind())
+	}
+
+	testMetadata, ok := annotationsStruct.StructValue.GetFields()["e2e-conformance-metadata"]
+	if !ok {
+		return "", fmt.Errorf("e2e-conformance-metadata not found in annotations, found: %v", annotationsStruct.StructValue.GetFields())
+	}
+
+	testMetadataString, ok := testMetadata.GetKind().(*structpb.Value_StringValue)
+	if !ok {
+		return "", fmt.Errorf("e2e-conformance-metadata is not a string, found: %T", testMetadata.GetKind())
+	}
+	return testMetadataString.StringValue, nil
 }
 
 // Users holds a list of users.
