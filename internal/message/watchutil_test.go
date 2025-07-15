@@ -3,7 +3,7 @@
 // The full text of the Apache license is available in the LICENSE file at
 // the root of the repo.
 
-package message_test
+package message
 
 import (
 	"context"
@@ -14,7 +14,6 @@ import (
 	"github.com/telepresenceio/watchable"
 
 	"github.com/envoyproxy/gateway/internal/ir"
-	"github.com/envoyproxy/gateway/internal/message"
 )
 
 func TestHandleSubscriptionAlreadyClosed(t *testing.T) {
@@ -22,10 +21,10 @@ func TestHandleSubscriptionAlreadyClosed(t *testing.T) {
 	close(ch)
 
 	var calls int
-	message.HandleSubscription[string, any](
-		message.Metadata{Runner: "demo", Message: "demo"},
+	HandleSubscription[string, any](
+		Metadata{Runner: "demo", Message: "demo"},
 		ch,
-		func(update message.Update[string, any], errChans chan error) { calls++ },
+		func(update Update[string, any], errChans chan error) { calls++ },
 	)
 	assert.Equal(t, 0, calls)
 }
@@ -36,7 +35,7 @@ func TestPanicInSubscriptionHandler(t *testing.T) {
 			assert.Fail(t, "recovered from an unexpected panic")
 		}
 	}()
-	var m watchable.Map[string, any]
+	m := newPreSubscribedWatchableMap[string, any](context.Background(), 1)
 	m.Store("foo", "bar")
 
 	go func() {
@@ -47,10 +46,10 @@ func TestPanicInSubscriptionHandler(t *testing.T) {
 	}()
 
 	numCalls := 0
-	message.HandleSubscription[string, any](
-		message.Metadata{Runner: "demo", Message: "demo"},
-		m.Subscribe(context.Background()),
-		func(update message.Update[string, any], errChans chan error) {
+	HandleSubscription[string, any](
+		Metadata{Runner: "demo", Message: "demo"},
+		m.GetSubscription(),
+		func(update Update[string, any], errChans chan error) {
 			numCalls++
 			panic("oops " + update.Key)
 		},
@@ -59,7 +58,7 @@ func TestPanicInSubscriptionHandler(t *testing.T) {
 }
 
 func TestHandleSubscriptionAlreadyInitialized(t *testing.T) {
-	var m watchable.Map[string, any]
+	m := newPreSubscribedWatchableMap[string, any](context.Background(), 1)
 	m.Store("foo", "bar")
 
 	endCtx, end := context.WithCancel(context.Background())
@@ -75,10 +74,10 @@ func TestHandleSubscriptionAlreadyInitialized(t *testing.T) {
 
 	var storeCalls int
 	var deleteCalls int
-	message.HandleSubscription[string, any](
-		message.Metadata{Runner: "demo", Message: "demo"},
-		m.Subscribe(context.Background()),
-		func(update message.Update[string, any], errChans chan error) {
+	HandleSubscription[string, any](
+		Metadata{Runner: "demo", Message: "demo"},
+		m.GetSubscription(),
+		func(update Update[string, any], errChans chan error) {
 			end()
 			if update.Delete {
 				deleteCalls++
@@ -92,15 +91,15 @@ func TestHandleSubscriptionAlreadyInitialized(t *testing.T) {
 }
 
 func TestHandleStore(t *testing.T) {
-	var m watchable.Map[string, any]
-	message.HandleStore(message.Metadata{Runner: "demo", Message: "demo"}, "foo", "bar", &m)
+	m := newPreSubscribedWatchableMap[string, any](context.Background(), 1)
+	HandleStore(Metadata{Runner: "demo", Message: "demo"}, "foo", "bar", m)
 
 	endCtx, end := context.WithCancel(context.Background())
 	go func() {
 		<-endCtx.Done()
-		message.HandleStore(message.Metadata{Runner: "demo", Message: "demo"}, "baz", "qux", &m)
-		m.Delete("qux")                                                                          // no-op
-		message.HandleStore(message.Metadata{Runner: "demo", Message: "demo"}, "foo", "bar", &m) // no-op
+		HandleStore(Metadata{Runner: "demo", Message: "demo"}, "baz", "qux", m)
+		m.Delete("qux")                                                         // no-op
+		HandleStore(Metadata{Runner: "demo", Message: "demo"}, "foo", "bar", m) // no-op
 		m.Delete("baz")
 		time.Sleep(100 * time.Millisecond)
 		m.Close()
@@ -108,10 +107,10 @@ func TestHandleStore(t *testing.T) {
 
 	var storeCalls int
 	var deleteCalls int
-	message.HandleSubscription[string, any](
-		message.Metadata{Runner: "demo", Message: "demo"},
-		m.Subscribe(context.Background()),
-		func(update message.Update[string, any], errChans chan error) {
+	HandleSubscription[string, any](
+		Metadata{Runner: "demo", Message: "demo"},
+		m.GetSubscription(),
+		func(update Update[string, any], errChans chan error) {
 			end()
 			if update.Delete {
 				deleteCalls++
@@ -169,9 +168,9 @@ func TestXdsIRUpdates(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.desc, func(t *testing.T) {
 			ctx := context.Background()
-			m := new(message.XdsIR)
+			m := NewSubscribedXdsIR(ctx)
 
-			snapshotC := m.Subscribe(ctx)
+			snapshotC := m.GetSubscription()
 			endCtx, end := context.WithCancel(ctx)
 			m.Store("start", &ir.Xds{})
 
@@ -184,7 +183,7 @@ func TestXdsIRUpdates(t *testing.T) {
 			}()
 
 			updates := 0
-			message.HandleSubscription(message.Metadata{Runner: "demo", Message: "demo"}, snapshotC, func(u message.Update[string, *ir.Xds], errChans chan error) {
+			HandleSubscription(Metadata{Runner: "demo", Message: "demo"}, snapshotC, func(u Update[string, *ir.Xds], errChans chan error) {
 				end()
 				if u.Key == "test" {
 					updates += 1

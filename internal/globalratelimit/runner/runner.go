@@ -138,7 +138,7 @@ func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 
 	// Subscribe to resources.
 
-	message.HandleSubscription(message.Metadata{Runner: r.Name(), Message: message.XDSIRMessageName}, r.XdsIR.Subscribe(ctx),
+	message.HandleSubscription(message.Metadata{Runner: r.Name(), Message: message.XDSIRMessageName}, r.XdsIR.GetSubscription(),
 		func(update message.Update[string, *ir.Xds], errChan chan error) {
 			r.Logger.Info("received a notification")
 

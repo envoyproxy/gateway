@@ -15,7 +15,6 @@ import (
 	"reflect"
 
 	"github.com/docker/docker/pkg/fileutils"
-	"github.com/telepresenceio/watchable"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -86,8 +85,7 @@ func (r *Runner) Start(ctx context.Context) (err error) {
 	r.Logger = r.Logger.WithName(r.Name()).WithValues("runner", r.Name())
 
 	go r.startWasmCache(ctx)
-	c := r.ProviderResources.GatewayAPIResources.Subscribe(ctx)
-	go r.subscribeAndTranslate(c)
+	go r.subscribeAndTranslate()
 	r.Logger.Info("started")
 	return
 }
@@ -123,8 +121,9 @@ func (r *Runner) startWasmCache(ctx context.Context) {
 	r.wasmCache.Start(ctx)
 }
 
-func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *resource.ControllerResources]) {
-	message.HandleSubscription(message.Metadata{Runner: r.Name(), Message: message.ProviderResourcesMessageName}, sub,
+func (r *Runner) subscribeAndTranslate() {
+	message.HandleSubscription(message.Metadata{Runner: r.Name(), Message: message.ProviderResourcesMessageName},
+		r.ProviderResources.GatewayAPIResources.GetSubscription(),
 		func(update message.Update[string, *resource.ControllerResources], errChan chan error) {
 			r.Logger.Info("received an update")
 			val := update.Value
@@ -196,7 +195,7 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *re
 							Runner:  r.Name(),
 							Message: message.InfraIRMessageName,
 						},
-							key, val, &r.InfraIR.Map)
+							key, val, r.InfraIR)
 						newIRKeys = append(newIRKeys, key)
 					}
 				}
@@ -211,7 +210,7 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *re
 							Runner:  r.Name(),
 							Message: message.XDSIRMessageName,
 						},
-							key, val, &r.XdsIR.Map)
+							key, val, r.XdsIR)
 					}
 				}
 
@@ -222,7 +221,7 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *re
 						Runner:  r.Name(),
 						Message: message.GatewayStatusMessageName,
 					},
-						key, &gateway.Status, &r.ProviderResources.GatewayStatuses)
+						key, &gateway.Status, r.ProviderResources.GatewayStatuses)
 					delete(statusesToDelete.GatewayStatusKeys, key)
 				}
 				for _, httpRoute := range result.HTTPRoutes {
@@ -231,7 +230,7 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *re
 						Runner:  r.Name(),
 						Message: message.HTTPRouteStatusMessageName,
 					},
-						key, &httpRoute.Status, &r.ProviderResources.HTTPRouteStatuses)
+						key, &httpRoute.Status, r.ProviderResources.HTTPRouteStatuses)
 					delete(statusesToDelete.HTTPRouteStatusKeys, key)
 				}
 				for _, grpcRoute := range result.GRPCRoutes {
@@ -240,7 +239,7 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *re
 						Runner:  r.Name(),
 						Message: message.GRPCRouteStatusMessageName,
 					},
-						key, &grpcRoute.Status, &r.ProviderResources.GRPCRouteStatuses)
+						key, &grpcRoute.Status, r.ProviderResources.GRPCRouteStatuses)
 					delete(statusesToDelete.GRPCRouteStatusKeys, key)
 				}
 				for _, tlsRoute := range result.TLSRoutes {
@@ -249,7 +248,7 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *re
 						Runner:  r.Name(),
 						Message: message.TLSRouteStatusMessageName,
 					},
-						key, &tlsRoute.Status, &r.ProviderResources.TLSRouteStatuses)
+						key, &tlsRoute.Status, r.ProviderResources.TLSRouteStatuses)
 					delete(statusesToDelete.TLSRouteStatusKeys, key)
 				}
 				for _, tcpRoute := range result.TCPRoutes {
@@ -258,7 +257,7 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *re
 						Runner:  r.Name(),
 						Message: message.TCPRouteStatusMessageName,
 					},
-						key, &tcpRoute.Status, &r.ProviderResources.TCPRouteStatuses)
+						key, &tcpRoute.Status, r.ProviderResources.TCPRouteStatuses)
 					delete(statusesToDelete.TCPRouteStatusKeys, key)
 				}
 				for _, udpRoute := range result.UDPRoutes {
@@ -267,7 +266,7 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *re
 						Runner:  r.Name(),
 						Message: message.UDPRouteStatusMessageName,
 					},
-						key, &udpRoute.Status, &r.ProviderResources.UDPRouteStatuses)
+						key, &udpRoute.Status, r.ProviderResources.UDPRouteStatuses)
 					delete(statusesToDelete.UDPRouteStatusKeys, key)
 				}
 
@@ -282,7 +281,7 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *re
 							Runner:  r.Name(),
 							Message: message.BackendTLSPolicyStatusMessageName,
 						},
-							key, &backendTLSPolicy.Status, &r.ProviderResources.BackendTLSPolicyStatuses)
+							key, &backendTLSPolicy.Status, r.ProviderResources.BackendTLSPolicyStatuses)
 					}
 					delete(statusesToDelete.BackendTLSPolicyStatusKeys, key)
 				}
@@ -294,7 +293,7 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *re
 							Runner:  r.Name(),
 							Message: message.ClientTrafficPolicyStatusMessageName,
 						},
-							key, &clientTrafficPolicy.Status, &r.ProviderResources.ClientTrafficPolicyStatuses)
+							key, &clientTrafficPolicy.Status, r.ProviderResources.ClientTrafficPolicyStatuses)
 					}
 					delete(statusesToDelete.ClientTrafficPolicyStatusKeys, key)
 				}
@@ -305,7 +304,7 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *re
 							Runner:  r.Name(),
 							Message: message.BackendTrafficPolicyStatusMessageName,
 						},
-							key, &backendTrafficPolicy.Status, &r.ProviderResources.BackendTrafficPolicyStatuses)
+							key, &backendTrafficPolicy.Status, r.ProviderResources.BackendTrafficPolicyStatuses)
 					}
 					delete(statusesToDelete.BackendTrafficPolicyStatusKeys, key)
 				}
@@ -316,7 +315,7 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *re
 							Runner:  r.Name(),
 							Message: message.SecurityPolicyStatusMessageName,
 						},
-							key, &securityPolicy.Status, &r.ProviderResources.SecurityPolicyStatuses)
+							key, &securityPolicy.Status, r.ProviderResources.SecurityPolicyStatuses)
 					}
 					delete(statusesToDelete.SecurityPolicyStatusKeys, key)
 				}
@@ -327,7 +326,7 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *re
 							Runner:  r.Name(),
 							Message: message.EnvoyExtensionPolicyStatusMessageName,
 						},
-							key, &envoyExtensionPolicy.Status, &r.ProviderResources.EnvoyExtensionPolicyStatuses)
+							key, &envoyExtensionPolicy.Status, r.ProviderResources.EnvoyExtensionPolicyStatuses)
 					}
 					delete(statusesToDelete.EnvoyExtensionPolicyStatusKeys, key)
 				}
@@ -338,7 +337,7 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *re
 							Runner:  r.Name(),
 							Message: message.BackendStatusMessageName,
 						},
-							key, &backend.Status, &r.ProviderResources.BackendStatuses)
+							key, &backend.Status, r.ProviderResources.BackendStatuses)
 					}
 					delete(statusesToDelete.BackendStatusKeys, key)
 				}
@@ -353,7 +352,7 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *re
 							Runner:  r.Name(),
 							Message: message.ExtensionServerPoliciesStatusMessageName,
 						},
-							key, &policyStatus, &r.ProviderResources.ExtensionPolicyStatuses)
+							key, &policyStatus, r.ProviderResources.ExtensionPolicyStatuses)
 					}
 					delete(statusesToDelete.ExtensionServerPolicyStatusKeys, key)
 				}
