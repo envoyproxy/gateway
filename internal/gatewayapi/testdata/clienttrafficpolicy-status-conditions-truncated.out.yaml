@@ -255,8 +255,8 @@ envoyExtensionPolicies:
         status: "True"
         type: Accepted
       - lastTransitionTime: null
-        message: Ancestors have been aggregated because the number of policy ancestors
-          exceeds 16.
+        message: 'Ancestors have been aggregated because the number of policy ancestors
+          exceeds 16. The aggregated ancestors: gateway-8, gateway-9'
         reason: Aggregated
         status: "True"
         type: Aggregated
@@ -533,8 +533,8 @@ envoyExtensionPolicies:
         status: "False"
         type: Accepted
       - lastTransitionTime: null
-        message: Ancestors have been aggregated because the number of policy ancestors
-          exceeds 16.
+        message: 'Ancestors have been aggregated because the number of policy ancestors
+          exceeds 16. The aggregated ancestors: gateway-8, gateway-9'
         reason: Aggregated
         status: "True"
         type: Aggregated

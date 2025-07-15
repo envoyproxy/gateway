@@ -7,6 +7,7 @@ package status
 
 import (
 	"cmp"
+	"fmt"
 	"slices"
 	"strings"
 	"time"
@@ -17,6 +18,10 @@ import (
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+)
+
+const (
+	conditionMessageMaxLength = 32768
 )
 
 type PolicyResolveError struct {
@@ -115,6 +120,16 @@ func TruncatePolicyAncestors(policyStatus *gwapiv1a2.PolicyStatus, controllerNam
 		return strings.Compare(string(a.AncestorRef.Name), string(b.AncestorRef.Name))
 	})
 
+	aggregated := make([]string, len(policyStatus.Ancestors)-16)
+	for i, ancestor := range policyStatus.Ancestors[16:] {
+		aggregated[i] = string(ancestor.AncestorRef.Name)
+	}
+	aggregatedMessage := fmt.Sprintf("Ancestors have been aggregated because the number of policy ancestors exceeds 16. "+
+		"The aggregated ancestors: %s", strings.Join(aggregated, ", "))
+	if len(aggregatedMessage) > conditionMessageMaxLength {
+		aggregatedMessage = aggregatedMessage[:conditionMessageMaxLength]
+	}
+
 	policyStatus.Ancestors = policyStatus.Ancestors[:16]
 	SetConditionForPolicyAncestor(policyStatus,
 		policyStatus.Ancestors[15].AncestorRef,
@@ -122,7 +137,7 @@ func TruncatePolicyAncestors(policyStatus *gwapiv1a2.PolicyStatus, controllerNam
 		egv1a1.PolicyConditionAggregated,
 		metav1.ConditionTrue,
 		egv1a1.PolicyReasonAggregated,
-		"Ancestors have been aggregated because the number of policy ancestors exceeds 16.",
+		aggregatedMessage,
 		generation,
 	)
 }
