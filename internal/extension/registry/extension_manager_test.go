@@ -712,12 +712,12 @@ func Test_Integration_ClusterUpdateExtensionServer(t *testing.T) {
 			require.NoError(t, err)
 			require.NotNil(t, hook)
 
-			_, _, err = hook.PostTranslateModifyHook(
+			_, _, _, _, err = hook.PostTranslateModifyHook(
 				[]*clusterv3.Cluster{
 					{
 						Name: "test-cluster",
 					},
-				}, nil, tt.extensionPolicies)
+				}, nil, nil, nil, tt.extensionPolicies)
 
 			if (err != nil) != tt.errorExpected {
 				t.Errorf("PostRouteModifyHook() error = %v, errorExpected %v", err, tt.errorExpected)

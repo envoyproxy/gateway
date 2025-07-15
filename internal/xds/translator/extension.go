@@ -180,7 +180,7 @@ func processExtensionPostTranslationHook(tCtx *types.ResourceVersionTable, em *e
 	if em == nil {
 		return nil
 	}
-	// If there is a loaded extension that wants to inject clusters/secrets, then call it
+	// If there is a loaded extension that wants to inject clusters/secrets/listeners/routes, then call it
 	// while clusters can by statically added with bootstrap configuration, an extension may need to add clusters with a configuration
 	// that is non-static. If a cluster definition is unlikely to change over the course of an extension's lifetime then the custom bootstrap config
 	// is the preferred way of adding it.
@@ -205,7 +205,19 @@ func processExtensionPostTranslationHook(tCtx *types.ResourceVersionTable, em *e
 		oldSecrets[idx] = secret.(*tlsv3.Secret)
 	}
 
-	newClusters, newSecrets, err := extensionInsertHookClient.PostTranslateModifyHook(oldClusters, oldSecrets, policies)
+	listeners := tCtx.XdsResources[resourcev3.ListenerType]
+	oldListeners := make([]*listenerv3.Listener, len(listeners))
+	for idx, listener := range listeners {
+		oldListeners[idx] = listener.(*listenerv3.Listener)
+	}
+
+	routes := tCtx.XdsResources[resourcev3.RouteType]
+	oldRoutes := make([]*routev3.RouteConfiguration, len(routes))
+	for idx, route := range routes {
+		oldRoutes[idx] = route.(*routev3.RouteConfiguration)
+	}
+
+	newClusters, newSecrets, newListeners, newRoutes, err := extensionInsertHookClient.PostTranslateModifyHook(oldClusters, oldSecrets, oldListeners, oldRoutes, policies)
 	if err != nil {
 		return err
 	}
@@ -220,8 +232,19 @@ func processExtensionPostTranslationHook(tCtx *types.ResourceVersionTable, em *e
 	for idx, secret := range newSecrets {
 		secretResources[idx] = secret
 	}
-
 	tCtx.SetResources(resourcev3.SecretType, secretResources)
+
+	listenerResources := make([]resourceTypes.Resource, len(newListeners))
+	for idx, listener := range newListeners {
+		listenerResources[idx] = listener
+	}
+	tCtx.SetResources(resourcev3.ListenerType, listenerResources)
+
+	routeResources := make([]resourceTypes.Resource, len(newRoutes))
+	for idx, route := range newRoutes {
+		routeResources[idx] = route
+	}
+	tCtx.SetResources(resourcev3.RouteType, routeResources)
 
 	return nil
 }

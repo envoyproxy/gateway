@@ -259,21 +259,25 @@ func (t *testingExtensionServer) PostHTTPListenerModify(_ context.Context, req *
 	}, nil
 }
 
-// PostTranslateModifyHook inserts and overrides some clusters/secrets
+// PostTranslateModifyHook inserts and overrides some clusters/secrets/listeners/routes
 func (t *testingExtensionServer) PostTranslateModify(_ context.Context, req *pb.PostTranslateModifyRequest) (*pb.PostTranslateModifyResponse, error) {
 	for _, cluster := range req.Clusters {
 		if cluster.Name == "custom-backend-dest" {
 			return &pb.PostTranslateModifyResponse{
-				Clusters: req.Clusters,
-				Secrets:  req.Secrets,
+				Clusters:  req.Clusters,
+				Secrets:   req.Secrets,
+				Listeners: req.Listeners,
+				Routes:    req.Routes,
 			}, nil
 		}
 		// This simulates an extension server that returns an error. It allows verifying that fail-close is working.
 		if edsConfig := cluster.GetEdsClusterConfig(); edsConfig != nil {
 			if strings.Contains(edsConfig.ServiceName, "fail-close-error") {
 				return &pb.PostTranslateModifyResponse{
-					Clusters: req.Clusters,
-					Secrets:  req.Secrets,
+					Clusters:  req.Clusters,
+					Secrets:   req.Secrets,
+					Listeners: req.Listeners,
+					Routes:    req.Routes,
 				}, fmt.Errorf("cluster hook resource error: %s", edsConfig.ServiceName)
 			}
 		}
@@ -296,8 +300,10 @@ func (t *testingExtensionServer) PostTranslateModify(_ context.Context, req *pb.
 	}
 
 	response := &pb.PostTranslateModifyResponse{
-		Clusters: make([]*clusterV3.Cluster, len(req.Clusters)),
-		Secrets:  make([]*tlsV3.Secret, len(req.Secrets)),
+		Clusters:  make([]*clusterV3.Cluster, len(req.Clusters)),
+		Secrets:   make([]*tlsV3.Secret, len(req.Secrets)),
+		Listeners: make([]*listenerV3.Listener, len(req.Listeners)),
+		Routes:    make([]*routeV3.RouteConfiguration, len(req.Routes)),
 	}
 	for idx, cluster := range req.Clusters {
 		response.Clusters[idx] = proto.Clone(cluster).(*clusterV3.Cluster)
@@ -396,6 +402,16 @@ func (t *testingExtensionServer) PostTranslateModify(_ context.Context, req *pb.
 			},
 		},
 	})
+
+	// Process listeners - just clone them for now
+	for idx, listener := range req.Listeners {
+		response.Listeners[idx] = proto.Clone(listener).(*listenerV3.Listener)
+	}
+
+	// Process routes - just clone them for now
+	for idx, route := range req.Routes {
+		response.Routes[idx] = proto.Clone(route).(*routeV3.RouteConfiguration)
+	}
 
 	return response, nil
 }
