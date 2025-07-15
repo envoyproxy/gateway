@@ -36,6 +36,7 @@ new features: |
   Added support for SecurityPolicy and EnvoyExtensionPolicy to target ServiceImport via BackendRefs.
   Introduce validation strictness levels for Lua scripts in EnvoyExtensionPolicies.
   Added metric `watchable_publish_total` counting store events in watchable message queues.
+  Added support for setting `initialJitter` in the BackendTrafficPolicy active health check.
 
 
 bug fixes: |
