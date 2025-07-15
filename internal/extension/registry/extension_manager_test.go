@@ -19,7 +19,9 @@ import (
 	"testing"
 
 	clusterv3 "github.com/envoyproxy/go-control-plane/envoy/config/cluster/v3"
-	v3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
+	listenerv3 "github.com/envoyproxy/go-control-plane/envoy/config/listener/v3"
+	routev3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
+	tlsv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/transport_sockets/tls/v3"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -205,6 +207,15 @@ func (s *testServer) PostRouteModify(ctx context.Context, req *extension.PostRou
 	}, nil
 }
 
+func (s *testServer) PostTranslateModify(ctx context.Context, req *extension.PostTranslateModifyRequest) (*extension.PostTranslateModifyResponse, error) {
+	return &extension.PostTranslateModifyResponse{
+		Clusters:  req.Clusters,
+		Secrets:   req.Secrets,
+		Listeners: req.Listeners,
+		Routes:    req.Routes,
+	}, nil
+}
+
 func Test_TLS(t *testing.T) {
 	testDir := "testdata"
 	caFile := testDir + "/ca.pem"
@@ -280,7 +291,7 @@ func Test_TLS(t *testing.T) {
 	require.NotNil(t, client)
 
 	response, err := client.PostRouteModify(context.Background(), &extension.PostRouteModifyRequest{
-		Route: &v3.Route{
+		Route: &routev3.Route{
 			Name: "test-route",
 		},
 	})
@@ -539,7 +550,7 @@ func Test_Integration_RetryPolicy_MaxAttempts(t *testing.T) {
 			require.NotNil(t, hook)
 
 			_, err = hook.PostRouteModifyHook(
-				&v3.Route{
+				&routev3.Route{
 					Name: "test-route",
 				}, nil, nil)
 
@@ -573,15 +584,19 @@ func (s *clusterUpdateTestServer) PostTranslateModify(ctx context.Context, req *
 	clusters := req.GetClusters()
 	if clusters == nil {
 		return &extension.PostTranslateModifyResponse{
-			Clusters: clusters,
-			Secrets:  req.GetSecrets(),
+			Clusters:  clusters,
+			Secrets:   req.GetSecrets(),
+			Listeners: req.GetListeners(),
+			Routes:    req.GetRoutes(),
 		}, errors.New("No clusters found")
 	}
 
 	if len(req.PostTranslateContext.ExtensionResources) == 0 {
 		return &extension.PostTranslateModifyResponse{
-			Clusters: clusters,
-			Secrets:  req.GetSecrets(),
+			Clusters:  clusters,
+			Secrets:   req.GetSecrets(),
+			Listeners: req.GetListeners(),
+			Routes:    req.GetRoutes(),
 		}, errors.New("No policy found")
 	}
 
@@ -589,23 +604,29 @@ func (s *clusterUpdateTestServer) PostTranslateModify(ctx context.Context, req *
 		extensionResource := unstructured.Unstructured{}
 		if err := extensionResource.UnmarshalJSON(extensionResourceBytes.UnstructuredBytes); err != nil {
 			return &extension.PostTranslateModifyResponse{
-				Clusters: clusters,
-				Secrets:  req.GetSecrets(),
+				Clusters:  clusters,
+				Secrets:   req.GetSecrets(),
+				Listeners: req.GetListeners(),
+				Routes:    req.GetRoutes(),
 			}, err
 		}
 
 		targetKind, err := getTargetRefKind(&extensionResource)
 		if err != nil || extensionResource.GetObjectKind().GroupVersionKind().Kind != "ExampleExtPolicy" || targetKind != "Gateway" {
 			return &extension.PostTranslateModifyResponse{
-				Clusters: clusters,
-				Secrets:  req.GetSecrets(),
+				Clusters:  clusters,
+				Secrets:   req.GetSecrets(),
+				Listeners: req.GetListeners(),
+				Routes:    req.GetRoutes(),
 			}, errors.New("No matching policy found")
 		}
 	}
 
 	ret := &extension.PostTranslateModifyResponse{
-		Clusters: clusters,
-		Secrets:  req.GetSecrets(),
+		Clusters:  clusters,
+		Secrets:   req.GetSecrets(),
+		Listeners: req.GetListeners(),
+		Routes:    req.GetRoutes(),
 	}
 
 	return ret, nil
@@ -712,12 +733,46 @@ func Test_Integration_ClusterUpdateExtensionServer(t *testing.T) {
 			require.NoError(t, err)
 			require.NotNil(t, hook)
 
-			_, _, _, _, err = hook.PostTranslateModifyHook(
+			clusters, secrets, listeners, routes, err := hook.PostTranslateModifyHook(
 				[]*clusterv3.Cluster{
 					{
 						Name: "test-cluster",
 					},
-				}, nil, nil, nil, tt.extensionPolicies)
+				},
+				[]*tlsv3.Secret{
+					{
+						Name: "test-secret",
+					},
+				},
+				[]*listenerv3.Listener{
+					{
+						Name: "test-listener",
+					},
+				},
+				[]*routev3.RouteConfiguration{
+					{
+						Name: "test-route",
+					},
+				},
+				tt.extensionPolicies)
+
+			// Verify that all resource types are returned when successful
+			if err == nil && !tt.errorExpected {
+				require.NotNil(t, clusters, "clusters should not be nil")
+				require.NotNil(t, secrets, "secrets should not be nil")
+				require.NotNil(t, listeners, "listeners should not be nil")
+				require.NotNil(t, routes, "routes should not be nil")
+
+				// Verify basic functionality - resources should be passed through
+				require.Len(t, clusters, 1, "should have 1 cluster")
+				require.Equal(t, "test-cluster", clusters[0].Name)
+				require.Len(t, secrets, 1, "should have 1 secret")
+				require.Equal(t, "test-secret", secrets[0].Name)
+				require.Len(t, listeners, 1, "should have 1 listener")
+				require.Equal(t, "test-listener", listeners[0].Name)
+				require.Len(t, routes, 1, "should have 1 route")
+				require.Equal(t, "test-route", routes[0].Name)
+			}
 
 			if (err != nil) != tt.errorExpected {
 				t.Errorf("PostRouteModifyHook() error = %v, errorExpected %v", err, tt.errorExpected)
@@ -725,4 +780,79 @@ func Test_Integration_ClusterUpdateExtensionServer(t *testing.T) {
 			}
 		})
 	}
+}
+
+// TestPostTranslateModifyHookWithListenersAndRoutes tests the new functionality
+// of PostTranslateModifyHook that supports listeners and routes in addition to clusters and secrets
+func TestPostTranslateModifyHookWithListenersAndRoutes(t *testing.T) {
+	extManager := egv1a1.ExtensionManager{
+		Hooks: &egv1a1.ExtensionHooks{
+			XDSTranslator: &egv1a1.XDSTranslatorHooks{
+				Post: []egv1a1.XDSTranslatorHook{
+					egv1a1.XDSTranslation,
+				},
+			},
+		},
+		Service: &egv1a1.ExtensionService{
+			BackendEndpoint: egv1a1.BackendEndpoint{
+				FQDN: &egv1a1.FQDNEndpoint{
+					Hostname: "foo.bar",
+					Port:     44344,
+				},
+			},
+		},
+	}
+
+	mgr, _, err := NewInMemoryManager(extManager, &testServer{})
+	require.NoError(t, err)
+
+	hook, err := mgr.GetPostXDSHookClient(egv1a1.XDSTranslation)
+	require.NoError(t, err)
+	require.NotNil(t, hook)
+
+	// Test with all resource types
+	inputClusters := []*clusterv3.Cluster{
+		{Name: "cluster-1"},
+		{Name: "cluster-2"},
+	}
+	inputSecrets := []*tlsv3.Secret{
+		{Name: "secret-1"},
+		{Name: "secret-2"},
+	}
+	inputListeners := []*listenerv3.Listener{
+		{Name: "listener-1"},
+		{Name: "listener-2"},
+	}
+	inputRoutes := []*routev3.RouteConfiguration{
+		{Name: "route-1"},
+		{Name: "route-2"},
+	}
+
+	clusters, secrets, listeners, routes, err := hook.PostTranslateModifyHook(
+		inputClusters, inputSecrets, inputListeners, inputRoutes, nil)
+
+	require.NoError(t, err)
+
+	// Verify all resource types are returned
+	require.NotNil(t, clusters)
+	require.NotNil(t, secrets)
+	require.NotNil(t, listeners)
+	require.NotNil(t, routes)
+
+	// Verify the resources are passed through correctly
+	require.Len(t, clusters, 2)
+	require.Equal(t, "cluster-1", clusters[0].Name)
+	require.Equal(t, "cluster-2", clusters[1].Name)
+
+	require.Len(t, secrets, 2)
+	require.Equal(t, "secret-1", secrets[0].Name)
+	require.Equal(t, "secret-2", secrets[1].Name)
+
+	require.Len(t, listeners, 2)
+	require.Equal(t, "listener-1", listeners[0].Name)
+	require.Equal(t, "listener-2", listeners[1].Name)
+
+	require.Len(t, routes, 2)
+	require.Equal(t, "route-1", routes[0].Name)
+	require.Equal(t, "route-2", routes[1].Name)
 }

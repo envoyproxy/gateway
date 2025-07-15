@@ -403,14 +403,59 @@ func (t *testingExtensionServer) PostTranslateModify(_ context.Context, req *pb.
 		},
 	})
 
-	// Process listeners - just clone them for now
+	// Process listeners - clone and potentially modify them
 	for idx, listener := range req.Listeners {
 		response.Listeners[idx] = proto.Clone(listener).(*listenerV3.Listener)
+		// Example: Modify listener for testing - add a stat prefix if listener name matches
+		if listener.Name == "test-listener-modify" {
+			response.Listeners[idx].StatPrefix = "extension-modified-listener"
+		}
 	}
 
-	// Process routes - just clone them for now
+	// Process routes - clone and potentially modify them
 	for idx, route := range req.Routes {
 		response.Routes[idx] = proto.Clone(route).(*routeV3.RouteConfiguration)
+		// Example: Modify route for testing - add metadata if route name matches
+		if route.Name == "test-route-modify" {
+			if response.Routes[idx].ResponseHeadersToAdd == nil {
+				response.Routes[idx].ResponseHeadersToAdd = []*coreV3.HeaderValueOption{}
+			}
+			response.Routes[idx].ResponseHeadersToAdd = append(response.Routes[idx].ResponseHeadersToAdd,
+				&coreV3.HeaderValueOption{
+					Header: &coreV3.HeaderValue{
+						Key:   "x-extension-modified",
+						Value: "true",
+					},
+				})
+		}
+	}
+
+	// Only inject new resources for specific test cases to avoid breaking existing tests
+	for _, policy := range req.PostTranslateContext.ExtensionResources {
+		extensionResource := unstructured.Unstructured{}
+		if err := extensionResource.UnmarshalJSON(policy.UnstructuredBytes); err == nil {
+			if extensionResource.GetObjectKind().GroupVersionKind().Kind == "ExampleExtPolicy" {
+				// Example: Add a new listener for testing
+				response.Listeners = append(response.Listeners, &listenerV3.Listener{
+					Name:       "extension-injected-listener",
+					StatPrefix: "extension-injected",
+				})
+
+				// Example: Add a new route for testing
+				response.Routes = append(response.Routes, &routeV3.RouteConfiguration{
+					Name: "extension-injected-route",
+					ResponseHeadersToAdd: []*coreV3.HeaderValueOption{
+						{
+							Header: &coreV3.HeaderValue{
+								Key:   "x-extension-injected",
+								Value: "route",
+							},
+						},
+					},
+				})
+				break
+			}
+		}
 	}
 
 	return response, nil
