@@ -1,68 +1,3 @@
-backendTLSPolicies:
-- apiVersion: gateway.networking.k8s.io/v1alpha2
-  kind: BackendTLSPolicy
-  metadata:
-    creationTimestamp: null
-    name: policy-btls-http
-    namespace: envoy-gateway
-  spec:
-    targetRefs:
-    - group: ""
-      kind: Service
-      name: http-backend
-      sectionName: http
-    validation:
-      caCertificateRefs:
-      - group: ""
-        kind: ConfigMap
-        name: ca-cmap
-      hostname: http-backend
-  status:
-    ancestors:
-    - ancestorRef:
-        group: gateway.envoyproxy.io
-        kind: SecurityPolicy
-        name: policy-for-gateway
-        namespace: default
-      conditions:
-      - lastTransitionTime: null
-        message: Policy has been accepted.
-        reason: Accepted
-        status: "True"
-        type: Accepted
-      controllerName: gateway.envoyproxy.io/gatewayclass-controller
-- apiVersion: gateway.networking.k8s.io/v1alpha2
-  kind: BackendTLSPolicy
-  metadata:
-    creationTimestamp: null
-    name: policy-btls-grpc
-    namespace: default
-  spec:
-    targetRefs:
-    - group: multicluster.x-k8s.io
-      kind: ServiceImport
-      name: grpc-backend
-      sectionName: grpc
-    validation:
-      caCertificateRefs:
-      - group: ""
-        kind: ConfigMap
-        name: ca-cmap
-      hostname: grpc-backend
-  status:
-    ancestors:
-    - ancestorRef:
-        group: gateway.envoyproxy.io
-        kind: SecurityPolicy
-        name: policy-for-http-route
-        namespace: default
-      conditions:
-      - lastTransitionTime: null
-        message: Policy has been accepted.
-        reason: Accepted
-        status: "True"
-        type: Accepted
-      controllerName: gateway.envoyproxy.io/gatewayclass-controller
 gateways:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: Gateway
@@ -124,7 +59,13 @@ httpRoutes:
         port: 8080
       matches:
       - path:
-          value: /foo
+          value: /foo1
+    - backendRefs:
+      - name: service-2
+        port: 8080
+      matches:
+      - path:
+          value: /foo2
   status:
     parents:
     - conditions:
@@ -158,7 +99,7 @@ httpRoutes:
       sectionName: http
     rules:
     - backendRefs:
-      - name: service-1
+      - name: service-3
         port: 8080
       matches:
       - path:
@@ -206,7 +147,7 @@ securityPolicies:
   kind: SecurityPolicy
   metadata:
     creationTimestamp: null
-    name: policy-for-http-route
+    name: policy-for-http-route-1
     namespace: default
   spec:
     extAuth:
@@ -243,14 +184,16 @@ securityPolicies:
   kind: SecurityPolicy
   metadata:
     creationTimestamp: null
-    name: policy-for-gateway
+    name: policy-for-gateway-1
     namespace: default
   spec:
     extAuth:
       failOpen: false
       http:
         backendRefs:
-        - name: http-backend
+        - group: multicluster.x-k8s.io
+          kind: ServiceImport
+          name: http-backend
           namespace: envoy-gateway
           port: 80
         headersToBackend:
@@ -330,7 +273,7 @@ xdsIR:
         pathMatch:
           distinct: false
           name: ""
-          prefix: /foo
+          prefix: /foo1
         security:
           extAuth:
             failOpen: true
@@ -339,9 +282,9 @@ xdsIR:
               destination:
                 metadata:
                   kind: SecurityPolicy
-                  name: policy-for-http-route
+                  name: policy-for-http-route-1
                   namespace: default
-                name: securitypolicy/default/policy-for-http-route/extauth/0
+                name: securitypolicy/default/policy-for-http-route-1/extauth/0
                 settings:
                 - addressType: IP
                   endpoints:
@@ -352,19 +295,70 @@ xdsIR:
                     name: grpc-backend
                     namespace: default
                     sectionName: "9000"
-                  name: securitypolicy/default/policy-for-http-route/extauth/0/backend/0
+                  name: securitypolicy/default/policy-for-http-route-1/extauth/0/backend/0
                   protocol: GRPC
-                  tls:
-                    alpnProtocols: null
-                    caCertificate:
-                      certificate: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSURKekNDQWcrZ0F3SUJBZ0lVQWw2VUtJdUttenRlODFjbGx6NVBmZE4ySWxJd0RRWUpLb1pJaHZjTkFRRUwKQlFBd0l6RVFNQTRHQTFVRUF3d0hiWGxqYVdWdWRERVBNQTBHQTFVRUNnd0dhM1ZpWldSaU1CNFhEVEl6TVRBdwpNakExTkRFMU4xb1hEVEkwTVRBd01UQTFOREUxTjFvd0l6RVFNQTRHQTFVRUF3d0hiWGxqYVdWdWRERVBNQTBHCkExVUVDZ3dHYTNWaVpXUmlNSUlCSWpBTkJna3Foa2lHOXcwQkFRRUZBQU9DQVE4QU1JSUJDZ0tDQVFFQXdTVGMKMXlqOEhXNjJueW5rRmJYbzRWWEt2MmpDMFBNN2RQVmt5ODdGd2VaY1RLTG9XUVZQUUUycDJrTERLNk9Fc3ptTQp5eXIreHhXdHlpdmVyZW1yV3FuS2tOVFloTGZZUGhnUWtjemliN2VVYWxtRmpVYmhXZEx2SGFrYkVnQ29kbjNiCmt6NTdtSW5YMlZwaURPS2c0a3lIZml1WFdwaUJxckN4MEtOTHB4bzNERVFjRmNzUVRlVEh6aDQ3NTJHVjA0UlUKVGkvR0VXeXpJc2w0Umc3dEd0QXdtY0lQZ1VOVWZZMlEzOTBGR3FkSDRhaG4rbXcvNmFGYlczMVc2M2Q5WUpWcQppb3lPVmNhTUlwTTVCL2M3UWM4U3VoQ0kxWUdoVXlnNGNSSExFdzVWdGlraW95RTNYMDRrbmEzalFBajU0WWJSCmJwRWhjMzVhcEtMQjIxSE9VUUlEQVFBQm8xTXdVVEFkQmdOVkhRNEVGZ1FVeXZsMFZJNXZKVlN1WUZYdTdCNDgKNlBiTUVBb3dId1lEVlIwakJCZ3dGb0FVeXZsMFZJNXZKVlN1WUZYdTdCNDg2UGJNRUFvd0R3WURWUjBUQVFILwpCQVV3QXdFQi96QU5CZ2txaGtpRzl3MEJBUXNGQUFPQ0FRRUFNTHhyZ0ZWTXVOUnEyd0F3Y0J0N1NuTlI1Q2Z6CjJNdlhxNUVVbXVhd0lVaTlrYVlqd2RWaURSRUdTams3SlcxN3ZsNTc2SGpEa2RmUndpNEUyOFN5ZFJJblpmNkoKaThIWmNaN2NhSDZEeFIzMzVmZ0hWekxpNU5pVGNlL09qTkJRelEyTUpYVkRkOERCbUc1ZnlhdEppT0pRNGJXRQpBN0ZsUDBSZFAzQ08zR1dFME01aVhPQjJtMXFXa0UyZXlPNFVIdndUcU5RTGRyZEFYZ0RRbGJhbTllNEJHM0dnCmQvNnRoQWtXRGJ0L1FOVCtFSkhEQ3ZoRFJLaDFSdUdIeWcrWSsvbmViVFdXckZXc2t0UnJiT29IQ1ppQ3BYSTEKM2VYRTZudDBZa2d0RHhHMjJLcW5ocEFnOWdVU3MyaGxob3h5dmt6eUYwbXU2TmhQbHdBZ25xNysvUT09Ci0tLS0tRU5EIENFUlRJRklDQVRFLS0tLS0K
-                      name: policy-btls-grpc/default-ca
-                    sni: grpc-backend
                   weight: 1
             headersToExtAuth:
             - header1
             - header2
-            name: securitypolicy/default/policy-for-http-route
+            name: securitypolicy/default/policy-for-http-route-1
+      - destination:
+          metadata:
+            kind: HTTPRoute
+            name: httproute-1
+            namespace: default
+          name: httproute/default/httproute-1/rule/1
+          settings:
+          - addressType: IP
+            endpoints:
+            - host: 7.7.7.7
+              port: 8080
+            metadata:
+              name: service-2
+              namespace: default
+              sectionName: "8080"
+            name: httproute/default/httproute-1/rule/1/backend/0
+            protocol: HTTP
+            weight: 1
+        hostname: www.foo.com
+        isHTTP2: false
+        metadata:
+          kind: HTTPRoute
+          name: httproute-1
+          namespace: default
+        name: httproute/default/httproute-1/rule/1/match/0/www_foo_com
+        pathMatch:
+          distinct: false
+          name: ""
+          prefix: /foo2
+        security:
+          extAuth:
+            failOpen: true
+            grpc:
+              authority: grpc-backend.default:9000
+              destination:
+                metadata:
+                  kind: SecurityPolicy
+                  name: policy-for-http-route-1
+                  namespace: default
+                name: securitypolicy/default/policy-for-http-route-1/extauth/0
+                settings:
+                - addressType: IP
+                  endpoints:
+                  - host: 8.8.8.8
+                    port: 9000
+                  metadata:
+                    kind: ServiceImport
+                    name: grpc-backend
+                    namespace: default
+                    sectionName: "9000"
+                  name: securitypolicy/default/policy-for-http-route-1/extauth/0/backend/0
+                  protocol: GRPC
+                  weight: 1
+            headersToExtAuth:
+            - header1
+            - header2
+            name: securitypolicy/default/policy-for-http-route-1
       - destination:
           metadata:
             kind: HTTPRoute
@@ -377,7 +371,7 @@ xdsIR:
             - host: 7.7.7.7
               port: 8080
             metadata:
-              name: service-1
+              name: service-3
               namespace: default
               sectionName: "8080"
             name: httproute/default/httproute-2/rule/0/backend/0
@@ -402,33 +396,24 @@ xdsIR:
               destination:
                 metadata:
                   kind: SecurityPolicy
-                  name: policy-for-gateway
+                  name: policy-for-gateway-1
                   namespace: default
-                name: securitypolicy/default/policy-for-gateway/extauth/0
+                name: securitypolicy/default/policy-for-gateway-1/extauth/0
                 settings:
                 - addressType: IP
-                  endpoints:
-                  - host: 7.7.7.7
-                    port: 80
                   metadata:
-                    kind: Service
+                    kind: ServiceImport
                     name: http-backend
                     namespace: envoy-gateway
                     sectionName: "80"
-                  name: securitypolicy/default/policy-for-gateway/extauth/0/backend/0
+                  name: securitypolicy/default/policy-for-gateway-1/extauth/0/backend/0
                   protocol: HTTP
-                  tls:
-                    alpnProtocols: null
-                    caCertificate:
-                      certificate: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSURKekNDQWcrZ0F3SUJBZ0lVQWw2VUtJdUttenRlODFjbGx6NVBmZE4ySWxJd0RRWUpLb1pJaHZjTkFRRUwKQlFBd0l6RVFNQTRHQTFVRUF3d0hiWGxqYVdWdWRERVBNQTBHQTFVRUNnd0dhM1ZpWldSaU1CNFhEVEl6TVRBdwpNakExTkRFMU4xb1hEVEkwTVRBd01UQTFOREUxTjFvd0l6RVFNQTRHQTFVRUF3d0hiWGxqYVdWdWRERVBNQTBHCkExVUVDZ3dHYTNWaVpXUmlNSUlCSWpBTkJna3Foa2lHOXcwQkFRRUZBQU9DQVE4QU1JSUJDZ0tDQVFFQXdTVGMKMXlqOEhXNjJueW5rRmJYbzRWWEt2MmpDMFBNN2RQVmt5ODdGd2VaY1RLTG9XUVZQUUUycDJrTERLNk9Fc3ptTQp5eXIreHhXdHlpdmVyZW1yV3FuS2tOVFloTGZZUGhnUWtjemliN2VVYWxtRmpVYmhXZEx2SGFrYkVnQ29kbjNiCmt6NTdtSW5YMlZwaURPS2c0a3lIZml1WFdwaUJxckN4MEtOTHB4bzNERVFjRmNzUVRlVEh6aDQ3NTJHVjA0UlUKVGkvR0VXeXpJc2w0Umc3dEd0QXdtY0lQZ1VOVWZZMlEzOTBGR3FkSDRhaG4rbXcvNmFGYlczMVc2M2Q5WUpWcQppb3lPVmNhTUlwTTVCL2M3UWM4U3VoQ0kxWUdoVXlnNGNSSExFdzVWdGlraW95RTNYMDRrbmEzalFBajU0WWJSCmJwRWhjMzVhcEtMQjIxSE9VUUlEQVFBQm8xTXdVVEFkQmdOVkhRNEVGZ1FVeXZsMFZJNXZKVlN1WUZYdTdCNDgKNlBiTUVBb3dId1lEVlIwakJCZ3dGb0FVeXZsMFZJNXZKVlN1WUZYdTdCNDg2UGJNRUFvd0R3WURWUjBUQVFILwpCQVV3QXdFQi96QU5CZ2txaGtpRzl3MEJBUXNGQUFPQ0FRRUFNTHhyZ0ZWTXVOUnEyd0F3Y0J0N1NuTlI1Q2Z6CjJNdlhxNUVVbXVhd0lVaTlrYVlqd2RWaURSRUdTams3SlcxN3ZsNTc2SGpEa2RmUndpNEUyOFN5ZFJJblpmNkoKaThIWmNaN2NhSDZEeFIzMzVmZ0hWekxpNU5pVGNlL09qTkJRelEyTUpYVkRkOERCbUc1ZnlhdEppT0pRNGJXRQpBN0ZsUDBSZFAzQ08zR1dFME01aVhPQjJtMXFXa0UyZXlPNFVIdndUcU5RTGRyZEFYZ0RRbGJhbTllNEJHM0dnCmQvNnRoQWtXRGJ0L1FOVCtFSkhEQ3ZoRFJLaDFSdUdIeWcrWSsvbmViVFdXckZXc2t0UnJiT29IQ1ppQ3BYSTEKM2VYRTZudDBZa2d0RHhHMjJLcW5ocEFnOWdVU3MyaGxob3h5dmt6eUYwbXU2TmhQbHdBZ25xNysvUT09Ci0tLS0tRU5EIENFUlRJRklDQVRFLS0tLS0K
-                      name: policy-btls-http/envoy-gateway-ca
-                    sni: http-backend
                   weight: 1
               headersToBackend:
               - header1
               - header2
               path: /auth
-            name: securitypolicy/default/policy-for-gateway
+            name: securitypolicy/default/policy-for-gateway-1
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4
