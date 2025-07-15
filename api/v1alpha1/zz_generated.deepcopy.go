@@ -4554,6 +4554,11 @@ func (in *Lua) DeepCopy() *Lua {
 func (in *OIDC) DeepCopyInto(out *OIDC) {
 	*out = *in
 	in.Provider.DeepCopyInto(&out.Provider)
+	if in.ClientIDRef != nil {
+		in, out := &in.ClientIDRef, &out.ClientIDRef
+		*out = new(v1.SecretObjectReference)
+		(*in).DeepCopyInto(*out)
+	}
 	in.ClientSecret.DeepCopyInto(&out.ClientSecret)
 	if in.CookieNames != nil {
 		in, out := &in.CookieNames, &out.CookieNames
