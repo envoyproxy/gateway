@@ -1728,18 +1728,6 @@ footer {
   position: relative;
   overflow: hidden;
 
-  // Subtle background pattern
-  &::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: url('data:image/svg+xml,<svg width="60" height="60" viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg"><g fill="none" fill-rule="evenodd"><g fill="%23ffffff" fill-opacity="0.03"><circle cx="30" cy="30" r="1.5"/></g></svg>');
-    pointer-events: none;
-  }
-
   .container {
     position: relative;
     z-index: 1;
@@ -1747,11 +1735,6 @@ footer {
 
   h2 {
     color: $white !important;
-    font-size: 2.5rem;
-    font-weight: 700;
-    margin-bottom: 3rem;
-    text-align: center;
-    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 
     &::after {
       content: '';
@@ -1766,18 +1749,14 @@ footer {
   }
 
   h3 {
+    font-size: 1.25rem;
+    margin-bottom: 1rem;
     color: $white !important;
-    font-size: 1.75rem;
-    font-weight: 600;
-    margin-bottom: 1.5rem;
     text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
   }
 
   p {
     color: rgba($white, 0.9) !important;
-    font-size: 1.1rem;
-    line-height: 1.7;
-    margin-bottom: 1.5rem;
   }
 
   a {
