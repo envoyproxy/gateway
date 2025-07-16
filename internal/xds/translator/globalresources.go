@@ -83,7 +83,7 @@ func (t *Translator) createRateLimitServiceCluster(tCtx *types.ResourceVersionTa
 	ds := &ir.DestinationSetting{
 		Weight:    ptr.To[uint32](1),
 		Protocol:  ir.GRPC,
-		Endpoints: []*ir.DestinationEndpoint{ir.NewDestEndpoint(host, port, false, nil)},
+		Endpoints: []*ir.DestinationEndpoint{ir.NewDestEndpoint(nil, host, port, false, nil)},
 		Name:      destinationSettingName(clusterName),
 	}
 
@@ -153,7 +153,7 @@ func (t *Translator) createWasmHTTPServiceCluster(tCtx *types.ResourceVersionTab
 	ds := &ir.DestinationSetting{
 		Weight:    ptr.To[uint32](1),
 		Protocol:  ir.GRPC,
-		Endpoints: []*ir.DestinationEndpoint{ir.NewDestEndpoint(wasmHTTPServiceFQDN(t.ControllerNamespace), wasmHTTPServicePort, false, nil)},
+		Endpoints: []*ir.DestinationEndpoint{ir.NewDestEndpoint(nil, wasmHTTPServiceFQDN(t.ControllerNamespace), wasmHTTPServicePort, false, nil)},
 		Name:      destinationSettingName(wasmHTTPServiceClusterName),
 	}
 

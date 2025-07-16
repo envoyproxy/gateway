@@ -357,6 +357,7 @@ _Appears in:_
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
+| `hostname` | _string_ |  false  |  | Hostname defines a hostname endpoint. |
 | `fqdn` | _[FQDNEndpoint](#fqdnendpoint)_ |  false  |  | FQDN defines a FQDN endpoint |
 | `ip` | _[IPEndpoint](#ipendpoint)_ |  false  |  | IP defines an IP endpoint. Supports both IPv4 and IPv6 addresses. |
 | `unix` | _[UnixSocket](#unixsocket)_ |  false  |  | Unix defines the unix domain socket endpoint |
@@ -1820,6 +1821,7 @@ _Appears in:_
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
+| `hostname` | _string_ |  false  |  | Hostname defines a hostname endpoint. |
 | `fqdn` | _[FQDNEndpoint](#fqdnendpoint)_ |  false  |  | FQDN defines a FQDN endpoint |
 | `ip` | _[IPEndpoint](#ipendpoint)_ |  false  |  | IP defines an IP endpoint. Supports both IPv4 and IPv6 addresses. |
 | `unix` | _[UnixSocket](#unixsocket)_ |  false  |  | Unix defines the unix domain socket endpoint |
