@@ -54,6 +54,7 @@ bug fixes: |
   Fixes addresses in status of DualStack NodePort Gateways.
   Fixed issue that not able to override the prometheus annotation in EnvoyProxy CRD.
   Skipped ExtProc, Wasm, and ExtAuth when they are configured FailOpen and the configuration is invalid, e.g. missing backendRefs or invalid port.
+  Fixed issue that failed to update policy status when there are more than 16 ancestors.
 
 # Enhancements that improve performance.
 performance improvements: |
