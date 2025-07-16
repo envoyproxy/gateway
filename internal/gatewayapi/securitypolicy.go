@@ -621,6 +621,7 @@ func (t *Translator) translateSecurityPolicyForRoute(
 		oidc               *ir.OIDC
 		extAuth            *ir.ExtAuth
 		err, errs          error
+		extAuthErr         error
 		hasNonExtAuthError bool
 	)
 
@@ -668,7 +669,6 @@ func (t *Translator) translateSecurityPolicyForRoute(
 
 		// Build HTTP-specific features that need gateway context
 		if protocol == ir.HTTP {
-			var extAuthErr error
 			if policy.Spec.ExtAuth != nil {
 				if extAuth, extAuthErr = t.buildExtAuth(policy, resources, gtwCtx.envoyProxy); extAuthErr != nil {
 					extAuthErr = perr.WithMessage(extAuthErr, "ExtAuth")
@@ -762,15 +762,16 @@ func (t *Translator) translateSecurityPolicyForGateway(
 
 	// Build IR
 	var (
-		cors                  *ir.CORS
-		jwt                   *ir.JWT
-		oidc                  *ir.OIDC
-		apiKeyAuth            *ir.APIKeyAuth
-		basicAuth             *ir.BasicAuth
-		extAuth               *ir.ExtAuth
-		authorization         *ir.Authorization
-		extAuthErr, err, errs error
-		hasNonExtAuthError    bool
+		cors               *ir.CORS
+		jwt                *ir.JWT
+		oidc               *ir.OIDC
+		apiKeyAuth         *ir.APIKeyAuth
+		basicAuth          *ir.BasicAuth
+		extAuth            *ir.ExtAuth
+		authorization      *ir.Authorization
+		err, errs          error
+		extAuthErr         error
+		hasNonExtAuthError bool
 	)
 
 	if policy.Spec.CORS != nil {
