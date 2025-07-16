@@ -118,6 +118,36 @@ no_list: true
   </div>
 </section>
 
+<section class="ai-gateway-feature">
+  <div class="container">
+    <h2 class="text-center mb-5">Envoy Gateway for GenAI Traffic</h2>
+    <div class="row justify-content-center">
+      <div class="col-md-10">
+        <article>
+          <div class="feature-icon">
+            <i class="fas fa-brain"></i>
+          </div>
+          <h3>Traffic Management for AI Workloads</h3>
+          <p>
+            <span class="text-highlight"><strong>Envoy AI Gateway</strong></span> expands on the functionality of <span class="text-highlight"><strong>Envoy Gateway</strong></span> and provides capabilities for managing GenAI traffic. Features include LLM Proivder integrations, token-based rate limiting, a unified OpenAI compliant API for LLM provider integrations, provider fallback, and much more.
+          </p>
+          <p>
+            Built for the unique patterns and requirements of GenAI traffic. Get involved in the Envoy AI Gateway community. Join the <code>#envoy-ai-gateway</code> channel on <a href="https://communityinviter.com/apps/envoyproxy/envoy" target="_blank">Envoy Slack</a>.
+          </p>
+          <div class="mt-5">
+            <a class="btn btn-lg btn-glass me-3" href="https://aigateway.envoyproxy.io/">
+              <i class="fas fa-rocket me-2"></i>Get Started with Envoy AI Gateway
+            </a>
+            <a class="btn btn-lg btn-glass" href="https://github.com/envoyproxy/aigateway">
+              <i class="fab fa-github me-2"></i>View on GitHub
+            </a>
+          </div>
+        </article>
+      </div>
+    </div>
+  </div>
+</section>
+
 {{< adopters >}}
 
 {{< ecosystem >}}
