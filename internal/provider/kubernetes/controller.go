@@ -396,16 +396,6 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 			r.log.Error(err, fmt.Sprintf("failed processExtensionServerPolicies for gatewayClass %s", managedGC.Name))
 		}
 
-		if r.backendCRDExists {
-			if err = r.processBackends(ctx, gwcResource); err != nil {
-				if isTransientError(err) {
-					r.log.Error(err, "transient error processing Backends", "gatewayClass", managedGC.Name)
-					return reconcile.Result{}, err
-				}
-				r.log.Error(err, fmt.Sprintf("failed processBackends for gatewayClass %s", managedGC.Name))
-			}
-		}
-
 		// Add the referenced services, ServiceImports, and EndpointSlices in
 		// the collected BackendRefs to the resourceTree.
 		// BackendRefs are referred by various Route objects and the ExtAuth in SecurityPolicies.
@@ -588,13 +578,18 @@ func (r *gatewayAPIReconciler) processBackendRefs(ctx context.Context, gwcResour
 			endpointSliceLabelKey = mcsapiv1a1.LabelServiceName
 
 		case egv1a1.KindBackend:
+			if !r.backendCRDExists {
+				r.log.V(6).Info("skipping Backend processing as Backend CRD is not installed")
+				continue
+			}
 			backend := new(egv1a1.Backend)
 			err := r.client.Get(ctx, types.NamespacedName{Namespace: string(*backendRef.Namespace), Name: string(backendRef.Name)}, backend)
 			if err != nil {
 				if isTransientError(err) {
 					return err
 				}
-				r.log.Error(err, "failed to get Backend", "namespace", string(*backendRef.Namespace),
+				r.log.Error(err, "failed to get Backend",
+					"namespace", string(*backendRef.Namespace),
 					"name", string(backendRef.Name))
 			} else {
 				resourceMappings.allAssociatedNamespaces.Insert(backend.Namespace)
@@ -602,7 +597,8 @@ func (r *gatewayAPIReconciler) processBackendRefs(ctx context.Context, gwcResour
 				if !resourceMappings.allAssociatedBackends.Has(key) {
 					resourceMappings.allAssociatedBackends.Insert(key)
 					gwcResource.Backends = append(gwcResource.Backends, backend)
-					r.log.Info("added Backend to resource tree", "namespace", string(*backendRef.Namespace),
+					r.log.Info("added Backend to resource tree",
+						"namespace", string(*backendRef.Namespace),
 						"name", string(backendRef.Name))
 				}
 			}
@@ -714,7 +710,8 @@ func (r *gatewayAPIReconciler) processBackendRefs(ctx context.Context, gwcResour
 
 // processSecurityPolicyObjectRefs adds the referenced resources in SecurityPolicies
 // to the resourceTree
-// - Secrets for OIDC and BasicAuth
+// - BackendRefs and Secrets for OIDC
+// - Secrets for BasicAuth
 // - BackendRefs for ExAuth
 func (r *gatewayAPIReconciler) processSecurityPolicyObjectRefs(
 	ctx context.Context, resourceTree *resource.Resources, resourceMap *resourceMappings,
@@ -746,6 +743,24 @@ func (r *gatewayAPIReconciler) processSecurityPolicyObjectRefs(
 				r.log.Error(err,
 					"failed to process OIDC SecretRef for SecurityPolicy",
 					"policy", policy, "secretRef", oidc.ClientSecret)
+			}
+
+			var backendRefs []gwapiv1.BackendObjectReference
+			if oidc.Provider.BackendRef != nil {
+				backendRefs = append(backendRefs, *oidc.Provider.BackendRef)
+			}
+			if len(oidc.Provider.BackendRefs) > 0 {
+				backendRefs = append(backendRefs, oidc.Provider.BackendRefs[0].BackendObjectReference)
+			}
+
+			for _, backendRef := range backendRefs {
+				if err := r.processBackendRef(
+					ctx, resourceMap, resourceTree,
+					resource.KindSecurityPolicy, policy.Namespace, policy.Name,
+					backendRef); err != nil {
+					r.log.Error(err, "failed to process OIDC BackendRef for SecurityPolicy",
+						"policy", policy, "backendRef", backendRef)
+				}
 			}
 		}
 
@@ -1485,24 +1500,7 @@ func (r *gatewayAPIReconciler) processBackendTLSPolicies(
 	return r.processBackendTLSPolicyRefs(ctx, resourceTree, resourceMap)
 }
 
-// processBackends adds Backends to the resourceTree
-func (r *gatewayAPIReconciler) processBackends(ctx context.Context, resourceTree *resource.Resources) error {
-	backends := egv1a1.BackendList{}
-	if err := r.client.List(ctx, &backends); err != nil {
-		return fmt.Errorf("error listing Backends: %w", err)
-	}
-
-	for _, backend := range backends.Items {
-		backend := backend //nolint:copyloopvar
-		// Discard Status to reduce memory consumption in watchable
-		// It will be recomputed by the gateway-api layer
-		backend.Status = egv1a1.BackendStatus{}
-		resourceTree.Backends = append(resourceTree.Backends, &backend)
-	}
-	return nil
-}
-
-// removeFinalizer removes the gatewayclass finalizer from the provided gc, if it exists.
+// removeFinalizer removes the GatewayClass finalizer from the provided gc, if it exists.
 func (r *gatewayAPIReconciler) removeFinalizer(ctx context.Context, gc *gwapiv1.GatewayClass) error {
 	if slice.ContainsString(gc.Finalizers, gatewayClassFinalizer) {
 		base := client.MergeFrom(gc.DeepCopy())
