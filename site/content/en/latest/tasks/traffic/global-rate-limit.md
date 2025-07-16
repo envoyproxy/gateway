@@ -1213,7 +1213,7 @@ server: envoy
 
 ```
 
-### Rate Limit Policy Merging
+## Rate Limit Policy Merging
 
 This example demonstrates how to implement a layered rate limiting strategy using BackendTrafficPolicy merging. This approach allows platform teams to set global abuse prevention limits at the Gateway level, while application teams can define more specific rate limits for their individual routes.
 
@@ -1432,7 +1432,7 @@ The global abuse limit would activate if traffic across all routes in the Gatewa
 
 This layered approach ensures both infrastructure protection and application-specific controls work together effectively.
 
-## (Optional) Editing Kubernetes Resources settings for the Rate Limit Service
+### (Optional) Editing Kubernetes Resources settings for the Rate Limit Service
 
 * The default installation of Envoy Gateway installs a default [EnvoyGateway][] configuration and provides the initial rate
 limit kubernetes resources settings. such as `replicas` is 1, requests resources cpu is `100m`, memory is `512Mi`. the others
