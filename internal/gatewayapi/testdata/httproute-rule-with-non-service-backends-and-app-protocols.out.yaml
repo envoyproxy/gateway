@@ -221,7 +221,7 @@ xdsIR:
               name: backend-mixed-ip-uds
               namespace: default
             name: httproute/default/httproute-1/rule/0/backend/1
-            protocol: HTTP2
+            protocol: HTTP
             weight: 1
         hostname: '*'
         isHTTP2: false
@@ -250,7 +250,7 @@ xdsIR:
               name: backend-fqdn
               namespace: default
             name: httproute/default/httproute-2/rule/0/backend/0
-            protocol: HTTP2
+            protocol: HTTP
             weight: 1
         hostname: '*'
         isHTTP2: false

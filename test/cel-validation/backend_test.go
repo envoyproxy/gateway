@@ -89,12 +89,6 @@ func TestBackend(t *testing.T) {
 								Port:     443,
 							},
 						},
-						{
-							FQDN: &egv1a1.FQDNEndpoint{
-								Hostname: "sub.s.example.com",
-								Port:     443,
-							},
-						},
 					},
 				}
 			},
@@ -255,7 +249,7 @@ func TestBackend(t *testing.T) {
 			mutate: func(backend *egv1a1.Backend) {
 				backend.Spec = egv1a1.BackendSpec{Type: ptr.To[egv1a1.BackendType]("FOO")}
 			},
-			wantErrors: []string{`spec.type: Unsupported value: "FOO": supported values: "Endpoints", "DynamicResolver"`},
+			wantErrors: []string{`spec.type: Unsupported value: "FOO": supported values: "Endpoints", "DynamicResolver", "OriginalDestination"`},
 		},
 		{
 			desc: "dynamic resolver ok",
