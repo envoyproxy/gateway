@@ -226,6 +226,12 @@ func (t *Translator) ProcessSecurityPolicies(securityPolicies []*egv1a1.Security
 		}
 	}
 
+	for _, policy := range res {
+		// Truncate Ancestor list of longer than 16
+		if len(policy.Status.Ancestors) > 16 {
+			status.TruncatePolicyAncestors(&policy.Status, t.GatewayControllerName, policy.Generation)
+		}
+	}
 	return res
 }
 
@@ -1509,7 +1515,7 @@ func backendRefAuthority(resources *resource.Resources, backendRef *gwapiv1.Back
 	}
 
 	// Port is mandatory for Kubernetes services
-	if backendKind == resource.KindService {
+	if backendKind == resource.KindService || backendKind == resource.KindServiceImport {
 		return net.JoinHostPort(
 			fmt.Sprintf("%s.%s", backendRef.Name, backendNamespace),
 			strconv.Itoa(int(*backendRef.Port)),

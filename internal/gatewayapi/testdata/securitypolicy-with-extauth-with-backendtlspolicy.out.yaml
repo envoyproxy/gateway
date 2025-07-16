@@ -39,8 +39,8 @@ backendTLSPolicies:
     namespace: default
   spec:
     targetRefs:
-    - group: ""
-      kind: Service
+    - group: multicluster.x-k8s.io
+      kind: ServiceImport
       name: grpc-backend
       sectionName: grpc
     validation:
@@ -213,7 +213,9 @@ securityPolicies:
       failOpen: true
       grpc:
         backendRefs:
-        - name: grpc-backend
+        - group: multicluster.x-k8s.io
+          kind: ServiceImport
+          name: grpc-backend
           port: 9000
       headersToExtAuth:
       - header1
@@ -346,7 +348,7 @@ xdsIR:
                   - host: 8.8.8.8
                     port: 9000
                   metadata:
-                    kind: Service
+                    kind: ServiceImport
                     name: grpc-backend
                     namespace: default
                     sectionName: "9000"

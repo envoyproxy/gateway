@@ -269,11 +269,6 @@ spec:
                   the number of cpuset threads on the platform.
                 format: int32
                 type: integer
-              disableLuaValidation:
-                default: false
-                description: DisableLuaValidation disables the Lua script validation
-                  for Lua EnvoyExtensionPolicies
-                type: boolean
               extraArgs:
                 description: |-
                   ExtraArgs defines additional command line options that are provided to Envoy.
@@ -441,6 +436,14 @@ spec:
                       and the log level is the value. If unspecified, defaults to "default: warn".
                     type: object
                 type: object
+              luaValidation:
+                description: |-
+                  LuaValidation determines strictness of the Lua script validation for Lua EnvoyExtensionPolicies
+                  Default: Strict
+                enum:
+                - Strict
+                - Disabled
+                type: string
               mergeGateways:
                 description: |-
                   MergeGateways defines if Gateway resources should be merged onto the same Envoy Proxy Infrastructure.

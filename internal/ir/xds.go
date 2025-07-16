@@ -740,6 +740,12 @@ type HTTPClientTimeout struct {
 	RequestReceivedTimeout *metav1.Duration `json:"requestReceivedTimeout,omitempty" yaml:"requestReceivedTimeout,omitempty"`
 	// IdleTimeout for an HTTP connection. Idle time is defined as a period in which there are no active requests in the connection.
 	IdleTimeout *metav1.Duration `json:"idleTimeout,omitempty" yaml:"idleTimeout,omitempty"`
+	// The stream idle timeout for connections managed by the connection manager.
+	// If not specified, this defaults to 5 minutes. The default value was selected
+	// so as not to interfere with any smaller configured timeouts that may have
+	// existed in configurations prior to the introduction of this feature, while
+	// introducing robustness to TCP connections that terminate without a FIN.
+	StreamIdleTimeout *metav1.Duration `json:"streamIdleTimeout,omitempty" yaml:"streamIdleTimeout,omitempty"`
 }
 
 // HTTPRoute holds the route information associated with the HTTP Route
@@ -1600,6 +1606,8 @@ func (r *RouteDestination) ToBackendWeights() *BackendWeights {
 		switch {
 		case s.IsDynamicResolver: // Dynamic resolver has no endpoints
 			w.Valid += *s.Weight
+		case s.IsCustomBackend: // Custom backends has no endpoints
+			w.Valid += *s.Weight
 		case len(s.Endpoints) > 0:
 			w.Valid += *s.Weight
 		default:
@@ -1619,6 +1627,9 @@ type DestinationSetting struct {
 	// IsDynamicResolver specifies whether the destination is a dynamic resolver.
 	// A dynamic resolver is a destination that is resolved dynamically using the request's host header.
 	IsDynamicResolver bool `json:"isDynamicResolver,omitempty" yaml:"isDynamicResolver,omitempty"`
+
+	// IsCustomBackend specifies whether the destination is a custom backend.
+	IsCustomBackend bool `json:"isCustomBackend,omitempty" yaml:"isCustomBackend,omitempty"`
 
 	// Weight associated with this destination,
 	// invalid endpoints are represents with a

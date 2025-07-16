@@ -318,18 +318,8 @@ func TestProcessBackendRefsWithCustomBackends(t *testing.T) {
 
 			// Call the function under test
 			require.NoError(t, r.processBackendRefs(ctx, gwcResource, resourceMappings))
-
-			// Verify results
-			// Note: Due to a bug in the current implementation (line 542 in controller.go),
-			// custom backends are not properly added to ExtensionRefFilters when they exist
-			// in the extensionRefFilters map. The logic should be `exists` instead of `!exists`.
-			// For now, we test the current (buggy) behavior.
-			if tc.name == "skip non-custom backends" {
-				require.Len(t, gwcResource.ExtensionRefFilters, tc.expectedExtFiltersCount)
-			} else {
-				// Current buggy behavior: custom backends are not added to ExtensionRefFilters
-				require.Empty(t, gwcResource.ExtensionRefFilters)
-			}
+			// Compare the results
+			require.Len(t, gwcResource.ExtensionRefFilters, tc.expectedExtFiltersCount)
 
 			for _, expectedNS := range tc.expectedNamespaces {
 				require.True(t, resourceMappings.allAssociatedNamespaces.Has(expectedNS))

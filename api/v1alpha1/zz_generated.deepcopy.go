@@ -2412,9 +2412,9 @@ func (in *EnvoyProxySpec) DeepCopyInto(out *EnvoyProxySpec) {
 		*out = new(bool)
 		**out = **in
 	}
-	if in.DisableLuaValidation != nil {
-		in, out := &in.DisableLuaValidation, &out.DisableLuaValidation
-		*out = new(bool)
+	if in.LuaValidation != nil {
+		in, out := &in.LuaValidation, &out.LuaValidation
+		*out = new(LuaValidation)
 		**out = **in
 	}
 }
@@ -3170,6 +3170,11 @@ func (in *HTTPClientTimeout) DeepCopyInto(out *HTTPClientTimeout) {
 	}
 	if in.IdleTimeout != nil {
 		in, out := &in.IdleTimeout, &out.IdleTimeout
+		*out = new(v1.Duration)
+		**out = **in
+	}
+	if in.StreamIdleTimeout != nil {
+		in, out := &in.StreamIdleTimeout, &out.StreamIdleTimeout
 		*out = new(v1.Duration)
 		**out = **in
 	}
@@ -4543,6 +4548,11 @@ func (in *Lua) DeepCopy() *Lua {
 func (in *OIDC) DeepCopyInto(out *OIDC) {
 	*out = *in
 	in.Provider.DeepCopyInto(&out.Provider)
+	if in.ClientIDRef != nil {
+		in, out := &in.ClientIDRef, &out.ClientIDRef
+		*out = new(v1.SecretObjectReference)
+		(*in).DeepCopyInto(*out)
+	}
 	in.ClientSecret.DeepCopyInto(&out.ClientSecret)
 	if in.CookieNames != nil {
 		in, out := &in.CookieNames, &out.CookieNames
