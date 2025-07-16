@@ -113,21 +113,10 @@ _Appears in:_
 | ---   | ---  | ---      | ---     | ---         |
 | `credentialRefs` | _[SecretObjectReference](https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1.SecretObjectReference) array_ |  true  |  | CredentialRefs is the Kubernetes secret which contains the API keys.<br />This is an Opaque secret.<br />Each API key is stored in the key representing the client id.<br />If the secrets have a key for a duplicated client, the first one will be used. |
 | `extractFrom` | _[ExtractFrom](#extractfrom) array_ |  true  |  | ExtractFrom is where to fetch the key from the coming request.<br />The value from the first source that has a key will be used. |
+| `forwardClientIDHeader` | _string_ |  false  |  | ForwardClientIDHeader is the name of the header to forward the client identity to the backend<br />service. The header will be added to the request with the client id as the value. |
+| `sanitizeAPIKey` | _boolean_ |  false  |  | SanitizeAPIKey indicates whether to remove the API key from the request<br />before forwarding it to the backend service. |
 
 
-#### APIKeyAuthHeaderForwarding
-
-
-
-
-
-_Appears in:_
-- [ExtractFrom](#extractfrom)
-
-| Field | Type | Required | Default | Description |
-| ---   | ---  | ---      | ---     | ---         |
-| `clientIdentityHeader` | _string_ |  false  |  | ClientIdentityHeader is the name of the header to forward the client identity to the backend<br />service. The header will be added to the request with the client id as the value. |
-| `suppressCredentials` | _boolean_ |  false  |  | SuppressCredentials indicates whether to remove the API key credential from the request<br />before forwarding it to the backend service. |
 
 
 #### ActiveHealthCheck
@@ -1892,7 +1881,6 @@ _Appears in:_
 | `headers` | _string array_ |  false  |  | Headers is the names of the header to fetch the key from.<br />If multiple headers are specified, envoy will look for the api key in the order of the list.<br />This field is optional, but only one of headers, params or cookies is supposed to be specified. |
 | `params` | _string array_ |  false  |  | Params is the names of the query parameter to fetch the key from.<br />If multiple params are specified, envoy will look for the api key in the order of the list.<br />This field is optional, but only one of headers, params or cookies is supposed to be specified. |
 | `cookies` | _string array_ |  false  |  | Cookies is the names of the cookie to fetch the key from.<br />If multiple cookies are specified, envoy will look for the api key in the order of the list.<br />This field is optional, but only one of headers, params or cookies is supposed to be specified. |
-| `forwarding` | _[APIKeyAuthHeaderForwarding](#apikeyauthheaderforwarding)_ |  false  |  | Forwarding defines how to forward the client identity to the backend service.<br />If not specified, the client identity will not be forwarded. |
 
 
 #### FQDNEndpoint

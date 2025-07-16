@@ -128,22 +128,6 @@ spec:
                           items:
                             type: string
                           type: array
-                        forwarding:
-                          description: |-
-                            Forwarding defines how to forward the client identity to the backend service.
-                            If not specified, the client identity will not be forwarded.
-                          properties:
-                            clientIdentityHeader:
-                              description: |-
-                                ClientIdentityHeader is the name of the header to forward the client identity to the backend
-                                service. The header will be added to the request with the client id as the value.
-                              type: string
-                            suppressCredentials:
-                              description: |-
-                                SuppressCredentials indicates whether to remove the API key credential from the request
-                                before forwarding it to the backend service.
-                              type: boolean
-                          type: object
                         headers:
                           description: |-
                             Headers is the names of the header to fetch the key from.
@@ -162,6 +146,16 @@ spec:
                           type: array
                       type: object
                     type: array
+                  forwardClientIDHeader:
+                    description: |-
+                      ForwardClientIDHeader is the name of the header to forward the client identity to the backend
+                      service. The header will be added to the request with the client id as the value.
+                    type: string
+                  sanitizeAPIKey:
+                    description: |-
+                      SanitizeAPIKey indicates whether to remove the API key from the request
+                      before forwarding it to the backend service.
+                    type: boolean
                 required:
                 - credentialRefs
                 - extractFrom
