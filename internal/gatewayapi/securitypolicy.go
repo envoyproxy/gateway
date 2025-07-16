@@ -611,10 +611,8 @@ func (t *Translator) translateSecurityPolicyForRoute(
 							// If there is only error for ext auth and ext auth is set to fail open, then skip the ext auth
 							// and allow the request to go through.
 							// Otherwise, return a 500 direct response to avoid unauthorized access.
-							if extAuthErr != nil &&
-								ptr.Deref(policy.Spec.ExtAuth.FailOpen, false) &&
-								!hasNonExtAuthError {
-							} else {
+							shouldFailOpen := extAuthErr != nil && !hasNonExtAuthError && ptr.Deref(policy.Spec.ExtAuth.FailOpen, false)
+							if !shouldFailOpen {
 								// Return a 500 direct response to avoid unauthorized access
 								r.DirectResponse = &ir.CustomResponse{
 									StatusCode: ptr.To(uint32(500)),
@@ -753,10 +751,8 @@ func (t *Translator) translateSecurityPolicyForGateway(
 				// If there is only error for ext auth and ext auth is set to fail open, then skip the ext auth
 				// and allow the request to go through.
 				// Otherwise, return a 500 direct response to avoid unauthorized access.
-				if extAuthErr != nil &&
-					ptr.Deref(policy.Spec.ExtAuth.FailOpen, false) &&
-					!hasNonExtAuthError {
-				} else {
+				shouldFailOpen := extAuthErr != nil && !hasNonExtAuthError && ptr.Deref(policy.Spec.ExtAuth.FailOpen, false)
+				if !shouldFailOpen {
 					r.DirectResponse = &ir.CustomResponse{
 						StatusCode: ptr.To(uint32(500)),
 					}
