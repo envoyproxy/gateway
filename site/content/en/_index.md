@@ -129,7 +129,7 @@ no_list: true
           </div>
           <h3>Using Envoy Gateway to handle GenAI Traffic</h3>
           <p>
-            As part of the Envoy ecosystem, <span class="text-highlight"></span><strong>Envoy AI Gateway</strong></span> expands on the functionality of <span class="text-highlight"><strong>Envoy Gateway</strong></span> and provides capabilities for managing GenAI traffic. Features include LLM Proivder integrations, token-based rate limiting, a unified OpenAI compliant API for LLM provider integrations, provider fallback, and much more.
+            As part of the Envoy ecosystem, <span class="text-highlight"><strong>Envoy AI Gateway</strong></span> expands on the functionality of <span class="text-highlight"><strong>Envoy Gateway</strong></span> and provides capabilities for managing GenAI traffic. Features include LLM Proivder integrations, token-based rate limiting, a unified OpenAI compliant API for LLM provider integrations, provider fallback, and much more.
           </p>
           <p>
             Built for the unique patterns and requirements of GenAI traffic. Get involved in the Envoy AI Gateway community. Join the <code>#envoy-ai-gateway</code> channel on <a href="https://communityinviter.com/apps/envoyproxy/envoy" target="_blank">Envoy Slack</a>.
