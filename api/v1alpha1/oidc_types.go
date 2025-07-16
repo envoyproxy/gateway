@@ -23,6 +23,17 @@ type OIDC struct {
 	// +kubebuilder:validation:MinLength=1
 	ClientID string `json:"clientID"`
 
+	// TODO zhaohuabing make ClientID optional in the implementation PR
+
+	// The Kubernetes secret which contains the client ID to be used in the
+	// [Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest).
+	// Exactly one of clientID or clientIDRef must be set.
+	// This is an Opaque secret. The client ID should be stored in the key "client-id".
+	//
+	// +optional
+	// +notImplementedHide
+	ClientIDRef *gwapiv1.SecretObjectReference `json:"clientIDRef,omitempty"`
+
 	// The Kubernetes secret which contains the OIDC client secret to be used in the
 	// [Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest).
 	//
