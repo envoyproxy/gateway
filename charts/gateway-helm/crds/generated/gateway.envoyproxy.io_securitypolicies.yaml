@@ -3677,6 +3677,8 @@ spec:
                     description: |-
                       The client ID to be used in the OIDC
                       [Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest).
+
+                      Only one of clientID or clientIDRef must be set.
                     minLength: 1
                     type: string
                   clientIDRef:
@@ -3685,6 +3687,8 @@ spec:
                       [Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest).
                       Exactly one of clientID or clientIDRef must be set.
                       This is an Opaque secret. The client ID should be stored in the key "client-id".
+
+                      Only one of clientID or clientIDRef must be set.
                     properties:
                       group:
                         default: ""
@@ -4901,10 +4905,13 @@ spec:
                       type: string
                     type: array
                 required:
-                - clientID
                 - clientSecret
                 - provider
                 type: object
+                x-kubernetes-validations:
+                - message: only one of clientID or clientIDRef must be set
+                  rule: (has(self.clientID) && !has(self.clientIDRef)) || (!has(self.clientID)
+                    && has(self.clientIDRef))
               targetRef:
                 description: |-
                   TargetRef is the name of the resource this policy is being attached to.
