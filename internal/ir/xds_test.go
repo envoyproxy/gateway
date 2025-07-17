@@ -17,6 +17,7 @@ import (
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 )
@@ -1579,6 +1580,27 @@ func TestValidateHealthCheck(t *testing.T) {
 				ptr.To[uint32](10),
 			},
 			want: ErrHealthCheckIntervalInvalid,
+		},
+		{
+			name: "invalid initial jitter",
+			input: HealthCheck{
+				&ActiveHealthCheck{
+					Timeout:            &metav1.Duration{Duration: time.Second},
+					Interval:           &metav1.Duration{Duration: time.Second},
+					InitialJitter:      ptr.To(gwapiv1.Duration("-1s")),
+					UnhealthyThreshold: ptr.To[uint32](3),
+					HealthyThreshold:   ptr.To[uint32](3),
+					HTTP: &HTTPHealthChecker{
+						Host:             "*",
+						Path:             "/healthz",
+						Method:           ptr.To(http.MethodGet),
+						ExpectedStatuses: []HTTPStatus{200, 400},
+					},
+				},
+				&OutlierDetection{},
+				ptr.To[uint32](10),
+			},
+			want: ErrHealthCheckInitialJitterInvalid,
 		},
 		{
 			name: "invalid unhealthy threshold",
