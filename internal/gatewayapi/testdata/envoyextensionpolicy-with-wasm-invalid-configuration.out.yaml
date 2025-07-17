@@ -169,8 +169,8 @@ envoyExtensionPolicies:
       - lastTransitionTime: null
         message: "Wasm: secret default/my-pull-secret-1 does not exist\nLua: validation
           failed for lua body in policy with name envoyextensionpolicy/default/policy-for-httproute-4/lua/0:
-          failed to validate with envoy_on_response: <string>:614: attempt to call
-          a non-function object\nstack traceback:\n\t<string>:614: in function 'envoy_on_response'\n\t<string>:615:
+          failed to validate with envoy_on_response: <string>:612: attempt to call
+          a non-function object\nstack traceback:\n\t<string>:612: in function 'envoy_on_response'\n\t<string>:613:
           in main chunk\n\t[G]: ?."
         reason: Invalid
         status: "False"
