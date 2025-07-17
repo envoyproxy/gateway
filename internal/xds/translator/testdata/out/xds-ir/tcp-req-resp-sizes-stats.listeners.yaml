@@ -10,5 +10,5 @@
         cluster: tcp-route-simple-dest
         statPrefix: tcp-10080
   maxConnectionsToAcceptPerSocketEvent: 1
-  name: tcp-route-enable-req-resp-sizes-stats
+  name: ::-10080
   perConnectionBufferLimitBytes: 32768

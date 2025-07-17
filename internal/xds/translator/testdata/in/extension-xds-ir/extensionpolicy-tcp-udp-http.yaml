@@ -34,7 +34,7 @@ http:
   path:
     escapedSlashesAction: UnescapeAndRedirect
     mergeSlashes: true
-  port: 10080
+  port: 10184
   routes:
   - name: "http-route"
     hostname: "*"
@@ -75,7 +75,7 @@ tcp:
             type: Accepted
           controllerName: gateway.envoyproxy.io/gatewayclass-controller
   name: envoy-gateway/gateway-1/tcp1
-  port: 10080
+  port: 10185
   routes:
   - destination:
       name: "tcp-route-dest"

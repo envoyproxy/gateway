@@ -34,4 +34,4 @@ http:
   path:
     escapedSlashesAction: UnescapeAndRedirect
     mergeSlashes: true
-  port: 10081
+  port: 10183

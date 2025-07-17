@@ -9,8 +9,8 @@
         namespace: default
       conditions:
       - lastTransitionTime: null
-        message: Patches have been successfully applied.
-        reason: Programmed
-        status: "True"
+        message: 'Unable to find xds resources: type.googleapis.com/envoy.config.listener.v3.Listener/first-listener,type.googleapis.com/envoy.config.listener.v3.Listener/first-listener'
+        reason: ResourceNotFound
+        status: "False"
         type: Programmed
       controllerName: ""

@@ -31,5 +31,5 @@
         useRemoteAddress: true
     name: extension-post-xdstranslate-hook-error
   maxConnectionsToAcceptPerSocketEvent: 1
-  name: extension-post-xdstranslate-hook-error
+  name: 0.0.0.0-10080
   perConnectionBufferLimitBytes: 32768

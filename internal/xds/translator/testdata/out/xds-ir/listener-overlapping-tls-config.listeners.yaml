@@ -96,7 +96,7 @@
     typedConfig:
       '@type': type.googleapis.com/envoy.extensions.filters.listener.tls_inspector.v3.TlsInspector
   maxConnectionsToAcceptPerSocketEvent: 1
-  name: envoy-gateway/gateway-1/https-1
+  name: 0.0.0.0-10443
   perConnectionBufferLimitBytes: 32768
 - address:
     socketAddress:
@@ -152,5 +152,5 @@
     typedConfig:
       '@type': type.googleapis.com/envoy.extensions.filters.listener.tls_inspector.v3.TlsInspector
   maxConnectionsToAcceptPerSocketEvent: 1
-  name: envoy-gateway/gateway-1/https-1
+  name: 0.0.0.0-8443
   perConnectionBufferLimitBytes: 32768

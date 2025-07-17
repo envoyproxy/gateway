@@ -31,7 +31,7 @@
         useRemoteAddress: true
     name: first-listener
   maxConnectionsToAcceptPerSocketEvent: 1
-  name: first-listener
+  name: ::-10080
   perConnectionBufferLimitBytes: 1500
 - address:
     socketAddress:
@@ -46,5 +46,5 @@
         statPrefix: tcp-10081
     name: tcp-route-dest
   maxConnectionsToAcceptPerSocketEvent: 1
-  name: second-listener
+  name: ::-10081
   perConnectionBufferLimitBytes: 1500

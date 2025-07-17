@@ -7,6 +7,7 @@ package translator
 
 import (
 	"errors"
+	"fmt"
 	"net"
 	"strconv"
 	"strings"
@@ -185,7 +186,7 @@ func originalIPDetectionExtensions(clientIPDetection *ir.ClientIPDetectionSettin
 // buildXdsTCPListener creates a xds Listener resource
 // TODO: Improve function parameters
 func buildXdsTCPListener(
-	name, address string,
+	address string,
 	port uint32,
 	ipFamily *egv1a1.IPFamily,
 	keepalive *ir.TCPKeepalive,
@@ -200,7 +201,7 @@ func buildXdsTCPListener(
 	bufferLimitBytes := buildPerConnectionBufferLimitBytes(connection)
 	maxAcceptPerSocketEvent := buildMaxAcceptPerSocketEvent(connection)
 	listener := &listenerv3.Listener{
-		Name:                                 name,
+		Name:                                 tcpListenerName(address, port),
 		AccessLog:                            al,
 		SocketOptions:                        socketOptions,
 		PerConnectionBufferLimitBytes:        bufferLimitBytes,
@@ -224,6 +225,10 @@ func buildXdsTCPListener(
 	}
 
 	return listener, nil
+}
+
+func tcpListenerName(address string, port uint32) string {
+	return fmt.Sprintf("%s-%d", address, port)
 }
 
 func buildPerConnectionBufferLimitBytes(connection *ir.ClientConnection) *wrapperspb.UInt32Value {

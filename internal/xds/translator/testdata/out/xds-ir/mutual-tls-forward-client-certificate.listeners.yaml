@@ -56,7 +56,7 @@
         disableStatelessSessionResumption: true
         requireClientCertificate: false
   maxConnectionsToAcceptPerSocketEvent: 1
-  name: first-listener
+  name: ::-10001
   perConnectionBufferLimitBytes: 32768
 - address:
     socketAddress:
@@ -117,7 +117,7 @@
         disableStatelessSessionResumption: true
         requireClientCertificate: false
   maxConnectionsToAcceptPerSocketEvent: 1
-  name: second-listener
+  name: ::-10002
   perConnectionBufferLimitBytes: 32768
 - address:
     socketAddress:
@@ -178,7 +178,7 @@
         disableStatelessSessionResumption: true
         requireClientCertificate: false
   maxConnectionsToAcceptPerSocketEvent: 1
-  name: third-listener
+  name: ::-10003
   perConnectionBufferLimitBytes: 32768
 - address:
     socketAddress:
@@ -239,7 +239,7 @@
         disableStatelessSessionResumption: true
         requireClientCertificate: false
   maxConnectionsToAcceptPerSocketEvent: 1
-  name: fourth-listener
+  name: ::-10004
   perConnectionBufferLimitBytes: 32768
 - address:
     socketAddress:
@@ -300,5 +300,5 @@
         disableStatelessSessionResumption: true
         requireClientCertificate: false
   maxConnectionsToAcceptPerSocketEvent: 1
-  name: fifth-listener
+  name: ::-10005
   perConnectionBufferLimitBytes: 32768

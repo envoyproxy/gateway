@@ -11,5 +11,5 @@
         statPrefix: tcp-10080
     name: EmptyCluster
   maxConnectionsToAcceptPerSocketEvent: 1
-  name: tcp-listener-with-no-routes
+  name: ::-10080
   perConnectionBufferLimitBytes: 32768
