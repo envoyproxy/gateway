@@ -125,7 +125,7 @@ no_list: true
             <a class="btn me-3 btn-sm btn-light-purple" href="https://aigateway.envoyproxy.io/">
               <i class="fas fa-rocket"></i>Get Started with Envoy AI Gateway
             </a>
-            <a class="btn btn-sm btn-light-purple" href="https://github.com/envoyproxy/aigateway">
+            <a class="btn btn-sm btn-light-purple" href="https://github.com/envoyproxy/ai-gateway">
               <i class="fab fa-github"></i>View on GitHub
             </a>
           </div>
