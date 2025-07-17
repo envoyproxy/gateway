@@ -960,15 +960,12 @@ func (t *Translator) validateExtServiceBackendReference(
 ) error {
 	// These are sanity checks, they should never happen because the API server
 	// should have caught them
-	if backendRef.Group != nil && *backendRef.Group != "" && *backendRef.Group != egv1a1.GroupName {
-		return errors.New(
-			"group is invalid, only the core API group (specified by omitting" +
-				" the group field or setting it to an empty string) and the" +
-				" gateway.envoyproxy.io API group are supported")
+	if backendRef.Group != nil && *backendRef.Group != "" && *backendRef.Group != GroupMultiClusterService && *backendRef.Group != egv1a1.GroupName {
+		return fmt.Errorf("group is invalid, only the core API group (specified by omitting the group field or setting it to an empty string), the %s API group, and the %s API group are supported", GroupMultiClusterService, egv1a1.GroupName)
 	}
-	if backendRef.Kind != nil && *backendRef.Kind != resource.KindService && *backendRef.Kind != egv1a1.KindBackend {
+	if backendRef.Kind != nil && *backendRef.Kind != resource.KindService && *backendRef.Kind != resource.KindServiceImport && *backendRef.Kind != egv1a1.KindBackend {
 		return errors.New("kind is invalid, only Service (specified by omitting " +
-			"the kind field or setting it to 'Service') and Backend are supported")
+			"the kind field or setting it to 'Service'), ServiceImport, and Backend are supported")
 	}
 	if backendRef.Port == nil && (backendRef.Kind == nil || *backendRef.Kind != egv1a1.KindBackend) {
 		return errors.New("a valid port number corresponding to a port on the Service must be specified")
@@ -1000,6 +997,32 @@ func (t *Translator) validateExtServiceBackendReference(
 			return fmt.Errorf(
 				"TCP Port %d not found on service %s/%s",
 				*backendRef.Port, serviceNamespace, string(backendRef.Name),
+			)
+		}
+	case resource.KindServiceImport:
+		// check if the service import is valid
+		serviceImportNamespace := NamespaceDerefOr(backendRef.Namespace, ownerNamespace)
+		serviceImport := resources.GetServiceImport(serviceImportNamespace, string(backendRef.Name))
+		if serviceImport == nil {
+			return fmt.Errorf("serviceimport %s/%s not found", serviceImportNamespace, backendRef.Name)
+		}
+		var portFound bool
+		for _, port := range serviceImport.Spec.Ports {
+			portProtocol := port.Protocol
+			if port.Protocol == "" { // Default protocol is TCP
+				portProtocol = corev1.ProtocolTCP
+			}
+			// currently only HTTP and GRPC are supported, both of which are TCP
+			if port.Port == int32(*backendRef.Port) && portProtocol == corev1.ProtocolTCP {
+				portFound = true
+				break
+			}
+		}
+
+		if !portFound {
+			return fmt.Errorf(
+				"TCP Port %d not found on service %s/%s",
+				*backendRef.Port, serviceImportNamespace, string(backendRef.Name),
 			)
 		}
 	case egv1a1.KindBackend:
