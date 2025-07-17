@@ -205,33 +205,45 @@ func processExtensionPostTranslationHook(tCtx *types.ResourceVersionTable, em *e
 		oldSecrets[idx] = secret.(*tlsv3.Secret)
 	}
 
-	listeners := tCtx.XdsResources[resourcev3.ListenerType]
-	oldListeners := make([]*listenerv3.Listener, len(listeners))
-	for idx, listener := range listeners {
-		oldListeners[idx] = listener.(*listenerv3.Listener)
-	}
-
-	routes := tCtx.XdsResources[resourcev3.RouteType]
-	oldRoutes := make([]*routev3.RouteConfiguration, len(routes))
-	for idx, route := range routes {
-		oldRoutes[idx] = route.(*routev3.RouteConfiguration)
-	}
-
 	var newClusters []*clusterv3.Cluster
 	var newSecrets []*tlsv3.Secret
 	var newListeners []*listenerv3.Listener
 	var newRoutes []*routev3.RouteConfiguration
 
 	// Check if the extension manager is configured to include listeners and routes
-	if extManager.EnablePostTranslateListenersAndRoutes() {
+	translationConfig := extManager.GetTranslationHookConfig()
+	includeAll := translationConfig != nil && translationConfig.IncludeAll != nil && *translationConfig.IncludeAll
+
+	if includeAll {
 		// New behavior: include all four resource types
+		listeners := tCtx.XdsResources[resourcev3.ListenerType]
+		oldListeners := make([]*listenerv3.Listener, len(listeners))
+		for idx, listener := range listeners {
+			oldListeners[idx] = listener.(*listenerv3.Listener)
+		}
+
+		routes := tCtx.XdsResources[resourcev3.RouteType]
+		oldRoutes := make([]*routev3.RouteConfiguration, len(routes))
+		for idx, route := range routes {
+			oldRoutes[idx] = route.(*routev3.RouteConfiguration)
+		}
+
 		newClusters, newSecrets, newListeners, newRoutes, err = extensionInsertHookClient.PostTranslateModifyHook(oldClusters, oldSecrets, oldListeners, oldRoutes, policies)
 	} else {
 		// Legacy behavior: only include clusters and secrets
 		newClusters, newSecrets, _, _, err = extensionInsertHookClient.PostTranslateModifyHook(oldClusters, oldSecrets, nil, nil, policies)
-		// Keep the original listeners and routes unchanged
-		newListeners = oldListeners
-		newRoutes = oldRoutes
+		// Keep the original listeners and routes unchanged - copy them from the original resources
+		listeners := tCtx.XdsResources[resourcev3.ListenerType]
+		newListeners = make([]*listenerv3.Listener, len(listeners))
+		for idx, listener := range listeners {
+			newListeners[idx] = listener.(*listenerv3.Listener)
+		}
+
+		routes := tCtx.XdsResources[resourcev3.RouteType]
+		newRoutes = make([]*routev3.RouteConfiguration, len(routes))
+		for idx, route := range routes {
+			newRoutes[idx] = route.(*routev3.RouteConfiguration)
+		}
 	}
 
 	if err != nil {

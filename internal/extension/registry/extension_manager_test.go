@@ -858,24 +858,24 @@ func TestPostTranslateModifyHookWithListenersAndRoutes(t *testing.T) {
 	require.Equal(t, "route-2", routes[1].Name)
 }
 
-// TestEnablePostTranslateListenersAndRoutes tests the configuration option
-func TestEnablePostTranslateListenersAndRoutes(t *testing.T) {
+// TestGetTranslationHookConfig tests the configuration option
+func TestGetTranslationHookConfig(t *testing.T) {
 	tests := []struct {
 		name     string
 		config   *egv1a1.ExtensionManager
-		expected bool
+		expected *egv1a1.TranslationConfig
 	}{
 		{
 			name:     "default behavior when config is nil",
 			config:   nil,
-			expected: false,
+			expected: nil,
 		},
 		{
 			name: "default behavior when hooks is nil",
 			config: &egv1a1.ExtensionManager{
 				Hooks: nil,
 			},
-			expected: false,
+			expected: nil,
 		},
 		{
 			name: "default behavior when field is nil",
@@ -888,7 +888,9 @@ func TestEnablePostTranslateListenersAndRoutes(t *testing.T) {
 					},
 				},
 			},
-			expected: false,
+			expected: &egv1a1.TranslationConfig{
+				IncludeAll: nil,
+			},
 		},
 		{
 			name: "explicitly enabled",
@@ -901,7 +903,9 @@ func TestEnablePostTranslateListenersAndRoutes(t *testing.T) {
 					},
 				},
 			},
-			expected: true,
+			expected: &egv1a1.TranslationConfig{
+				IncludeAll: ptr.To(true),
+			},
 		},
 		{
 			name: "explicitly disabled",
@@ -914,7 +918,9 @@ func TestEnablePostTranslateListenersAndRoutes(t *testing.T) {
 					},
 				},
 			},
-			expected: false,
+			expected: &egv1a1.TranslationConfig{
+				IncludeAll: ptr.To(false),
+			},
 		},
 	}
 
@@ -930,7 +936,7 @@ func TestEnablePostTranslateListenersAndRoutes(t *testing.T) {
 			}
 
 			require.NoError(t, err)
-			require.Equal(t, tt.expected, mgr.EnablePostTranslateListenersAndRoutes())
+			require.Equal(t, tt.expected, mgr.GetTranslationHookConfig())
 		})
 	}
 }

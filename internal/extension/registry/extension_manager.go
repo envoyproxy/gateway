@@ -135,17 +135,14 @@ func (m *Manager) FailOpen() bool {
 	return m.extension.FailOpen
 }
 
-// EnablePostTranslateListenersAndRoutes returns whether the extension manager should
-// include listeners and routes in PostTranslateModifyHook calls.
-func (m *Manager) EnablePostTranslateListenersAndRoutes() bool {
-	// Default to false if not specified for backward compatibility
+// GetTranslationHookConfig returns the translation hook configuration.
+func (m *Manager) GetTranslationHookConfig() *egv1a1.TranslationConfig {
 	if m.extension.Hooks == nil ||
 		m.extension.Hooks.XDSTranslator == nil ||
-		m.extension.Hooks.XDSTranslator.Translation == nil ||
-		m.extension.Hooks.XDSTranslator.Translation.IncludeAll == nil {
-		return false
+		m.extension.Hooks.XDSTranslator.Translation == nil {
+		return nil
 	}
-	return *m.extension.Hooks.XDSTranslator.Translation.IncludeAll
+	return m.extension.Hooks.XDSTranslator.Translation
 }
 
 // HasExtension checks to see whether a given Group and Kind has an

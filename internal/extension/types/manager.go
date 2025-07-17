@@ -36,7 +36,6 @@ type Manager interface {
 	// FailOpen returns true if the extension manager is configured to fail open, and false otherwise.
 	FailOpen() bool
 
-	// EnablePostTranslateListenersAndRoutes returns whether the extension manager should
-	// include listeners and routes in PostTranslateModifyHook calls.
-	EnablePostTranslateListenersAndRoutes() bool
+	// GetTranslationHookConfig returns the translation hook configuration.
+	GetTranslationHookConfig() *egv1a1.TranslationConfig
 }
