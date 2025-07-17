@@ -56,7 +56,7 @@ func (t *Translator) ProcessHTTPRoutes(httpRoutes []*gwapiv1.HTTPRoute, gateways
 	var relevantHTTPRoutes []*HTTPRouteContext
 
 	// Initially, httpRoutes sort by creation timestamp
-	// or sort alphabetically by “{namespace}/{name}” if multiple route share same timestamp.
+	// or sort alphabetically by “{namespace}/{name}” if multiple routes share same timestamp.
 	// Later on, additional sorting based on matcher type and match length may occur.
 	sort.Slice(httpRoutes, func(i, j int) bool {
 		if httpRoutes[i].CreationTimestamp.Equal(&(httpRoutes[j].CreationTimestamp)) {
