@@ -419,8 +419,10 @@ func (t *Translator) translateClientTrafficPolicyForListener(policy *egv1a1.Clie
 	// Translate Proxy Protocol
 	if policy.Spec.ProxyProtocol != nil {
 		// New ProxyProtocol field takes precedence
-		enableProxyProtocol = true
+		// If Enabled is explicitly set, use it; otherwise default to true when ProxyProtocol is configured
+		enableProxyProtocol = ptr.Deref(policy.Spec.ProxyProtocol.Enabled, true)
 		proxyProtocol = &ir.ProxyProtocolSettings{
+			Enabled:                           enableProxyProtocol,
 			AllowRequestsWithoutProxyProtocol: policy.Spec.ProxyProtocol.AllowRequestsWithoutProxyProtocol != nil && *policy.Spec.ProxyProtocol.AllowRequestsWithoutProxyProtocol,
 		}
 	} else {

@@ -6,7 +6,9 @@ clientTrafficPolicies:
     name: target-gateway-1-section-http-1
     namespace: envoy-gateway
   spec:
-    enableProxyProtocol: true
+    proxyProtocol:
+      allowRequestsWithoutProxyProtocol: true
+      enabled: true
     targetRef:
       group: gateway.networking.k8s.io
       kind: Gateway
@@ -145,6 +147,9 @@ xdsIR:
         escapedSlashesAction: UnescapeAndRedirect
         mergeSlashes: true
       port: 10080
+      proxyProtocol:
+        allowRequestsWithoutProxyProtocol: true
+        enabled: true
     - address: 0.0.0.0
       hostnames:
       - '*'

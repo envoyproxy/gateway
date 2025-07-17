@@ -766,7 +766,7 @@ _Appears in:_
 | `targetRefs` | _[LocalPolicyTargetReferenceWithSectionName](https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1alpha2.LocalPolicyTargetReferenceWithSectionName) array_ |  true  |  | TargetRefs are the names of the Gateway resources this policy<br />is being attached to. |
 | `targetSelectors` | _[TargetSelector](#targetselector) array_ |  true  |  | TargetSelectors allow targeting resources for this policy based on labels |
 | `tcpKeepalive` | _[TCPKeepalive](#tcpkeepalive)_ |  false  |  | TcpKeepalive settings associated with the downstream client connection.<br />If defined, sets SO_KEEPALIVE on the listener socket to enable TCP Keepalives.<br />Disabled by default. |
-| `enableProxyProtocol` | _boolean_ |  false  |  | EnableProxyProtocol interprets the ProxyProtocol header and adds the<br />Client Address into the X-Forwarded-For header.<br />Note Proxy Protocol must be present when this field is set, else the connection<br />is closed. |
+| `enableProxyProtocol` | _boolean_ |  false  |  | EnableProxyProtocol interprets the ProxyProtocol header and adds the<br />Client Address into the X-Forwarded-For header.<br />Note Proxy Protocol must be present when this field is set, else the connection<br />is closed.<br />Deprecated: Use ProxyProtocol.Enabled instead. |
 | `proxyProtocol` | _[ProxyProtocolSettings](#proxyprotocolsettings)_ |  false  |  | ProxyProtocol configures the Proxy Protocol settings. When configured,<br />the Proxy Protocol header will be interpreted and the Client Address<br />will be added into the X-Forwarded-For header.<br />If both EnableProxyProtocol and ProxyProtocol are set, ProxyProtocol takes precedence. |
 | `clientIPDetection` | _[ClientIPDetectionSettings](#clientipdetectionsettings)_ |  false  |  | ClientIPDetectionSettings provides configuration for determining the original client IP address for requests. |
 | `tls` | _[ClientTLSSettings](#clienttlssettings)_ |  false  |  | TLS settings configure TLS termination settings with the downstream client. |
@@ -3529,7 +3529,7 @@ _Appears in:_
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `clientCIDRs` | _[CIDR](#cidr) array_ |  false  |  | ClientCIDRs are the IP CIDR ranges of the client.<br />Valid examples are "192.168.1.0/24" or "2001:db8::/64"<br />If multiple CIDR ranges are specified, one of the CIDR ranges must match<br />the client IP for the rule to match.<br />The client IP is inferred from the X-Forwarded-For header, a custom header,<br />or the proxy protocol.<br />You can use the `ClientIPDetection` or the `EnableProxyProtocol` field in<br />the `ClientTrafficPolicy` to configure how the client IP is detected. |
+| `clientCIDRs` | _[CIDR](#cidr) array_ |  false  |  | ClientCIDRs are the IP CIDR ranges of the client.<br />Valid examples are "192.168.1.0/24" or "2001:db8::/64"<br />If multiple CIDR ranges are specified, one of the CIDR ranges must match<br />the client IP for the rule to match.<br />The client IP is inferred from the X-Forwarded-For header, a custom header,<br />or the proxy protocol.<br />You can use the `ClientIPDetection` or the `ProxyProtocol` field in<br />the `ClientTrafficPolicy` to configure how the client IP is detected. |
 | `jwt` | _[JWTPrincipal](#jwtprincipal)_ |  false  |  | JWT authorize the request based on the JWT claims and scopes.<br />Note: in order to use JWT claims for authorization, you must configure the<br />JWT authentication in the same `SecurityPolicy`. |
 | `headers` | _[AuthorizationHeaderMatch](#authorizationheadermatch) array_ |  false  |  | Headers authorize the request based on user identity extracted from custom headers.<br />If multiple headers are specified, all headers must match for the rule to match. |
 
@@ -3846,6 +3846,7 @@ _Appears in:_
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
 | `allowRequestsWithoutProxyProtocol` | _boolean_ |  false  |  | AllowRequestsWithoutProxyProtocol allows requests without a Proxy Protocol header to be proxied.<br />If set to true, the listener will accept requests without a Proxy Protocol header.<br />If set to false, the listener will reject requests without a Proxy Protocol header.<br />If not set, the default behavior is to reject requests without a Proxy Protocol header. |
+| `enabled` | _boolean_ |  false  |  | Enabled controls whether the Proxy Protocol header is enabled. |
 
 
 #### ProxyProtocolVersion

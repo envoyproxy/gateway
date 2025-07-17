@@ -82,7 +82,7 @@ type Principal struct {
 	//
 	// The client IP is inferred from the X-Forwarded-For header, a custom header,
 	// or the proxy protocol.
-	// You can use the `ClientIPDetection` or the `EnableProxyProtocol` field in
+	// You can use the `ClientIPDetection` or the `ProxyProtocol` field in
 	// the `ClientTrafficPolicy` to configure how the client IP is detected.
 	//
 	// +optional

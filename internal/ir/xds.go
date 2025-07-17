@@ -518,6 +518,8 @@ type PathSettings struct {
 // ProxyProtocolSettings holds configuration for proxy protocol
 // +k8s:deepcopy-gen=true
 type ProxyProtocolSettings struct {
+	// Enabled controls whether the Proxy Protocol header is enabled.
+	Enabled bool `json:"enabled,omitempty" yaml:"enabled,omitempty"`
 	// AllowRequestsWithoutProxyProtocol allows requests without a Proxy Protocol header to be proxied.
 	// If set to true, the listener will accept requests without a Proxy Protocol header.
 	// If set to false, the listener will reject requests without a Proxy Protocol header.

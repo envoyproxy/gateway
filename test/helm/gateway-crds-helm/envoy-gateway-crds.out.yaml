@@ -2834,6 +2834,8 @@ spec:
                   Client Address into the X-Forwarded-For header.
                   Note Proxy Protocol must be present when this field is set, else the connection
                   is closed.
+
+                  Deprecated: Use ProxyProtocol.Enabled instead.
                 type: boolean
               headers:
                 description: HeaderSettings provides configuration for header management.
@@ -3165,6 +3167,25 @@ spec:
                     - UnescapeAndForward
                     - UnescapeAndRedirect
                     type: string
+                type: object
+              proxyProtocol:
+                description: |-
+                  ProxyProtocol configures the Proxy Protocol settings. When configured,
+                  the Proxy Protocol header will be interpreted and the Client Address
+                  will be added into the X-Forwarded-For header.
+                  If both EnableProxyProtocol and ProxyProtocol are set, ProxyProtocol takes precedence.
+                properties:
+                  allowRequestsWithoutProxyProtocol:
+                    description: |-
+                      AllowRequestsWithoutProxyProtocol allows requests without a Proxy Protocol header to be proxied.
+                      If set to true, the listener will accept requests without a Proxy Protocol header.
+                      If set to false, the listener will reject requests without a Proxy Protocol header.
+                      If not set, the default behavior is to reject requests without a Proxy Protocol header.
+                    type: boolean
+                  enabled:
+                    description: Enabled controls whether the Proxy Protocol header
+                      is enabled.
+                    type: boolean
                 type: object
               targetRef:
                 description: |-
@@ -22050,7 +22071,7 @@ spec:
 
                                 The client IP is inferred from the X-Forwarded-For header, a custom header,
                                 or the proxy protocol.
-                                You can use the `ClientIPDetection` or the `EnableProxyProtocol` field in
+                                You can use the `ClientIPDetection` or the `ProxyProtocol` field in
                                 the `ClientTrafficPolicy` to configure how the client IP is detected.
                               items:
                                 description: |-
