@@ -15,4 +15,4 @@
               '@type': type.googleapis.com/envoy.extensions.filters.udp.udp_proxy.v3.Route
               cluster: udproute/default/udproute-1/rule/-1
       statPrefix: service
-  name: udp-route
+  name: 0.0.0.0-10162

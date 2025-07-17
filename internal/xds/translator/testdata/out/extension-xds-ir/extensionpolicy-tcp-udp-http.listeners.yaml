@@ -65,5 +65,5 @@
               '@type': type.googleapis.com/envoy.extensions.filters.udp.udp_proxy.v3.Route
               cluster: udp-route-dest
       statPrefix: service
-  name: envoy-gateway/gateway-1/udp1
-  statPrefix: envoy-gateway/gateway-1/udp1
+  name: 0.0.0.0-10162
+  statPrefix: 0.0.0.0-10162

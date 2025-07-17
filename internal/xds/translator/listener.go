@@ -201,7 +201,7 @@ func buildXdsTCPListener(
 	bufferLimitBytes := buildPerConnectionBufferLimitBytes(connection)
 	maxAcceptPerSocketEvent := buildMaxAcceptPerSocketEvent(connection)
 	listener := &listenerv3.Listener{
-		Name:                                 tcpListenerName(address, port),
+		Name:                                 xdsListenerName(address, port),
 		AccessLog:                            al,
 		SocketOptions:                        socketOptions,
 		PerConnectionBufferLimitBytes:        bufferLimitBytes,
@@ -227,7 +227,7 @@ func buildXdsTCPListener(
 	return listener, nil
 }
 
-func tcpListenerName(address string, port uint32) string {
+func xdsListenerName(address string, port uint32) string {
 	return fmt.Sprintf("%s-%d", address, port)
 }
 
@@ -972,7 +972,7 @@ func buildXdsUDPListener(clusterName string, udpListener *ir.UDPListener, access
 		return nil, err
 	}
 	xdsListener := &listenerv3.Listener{
-		Name:      udpListener.Name,
+		Name:      xdsListenerName(udpListener.Address, udpListener.Port),
 		AccessLog: al,
 		Address: &corev3.Address{
 			Address: &corev3.Address_SocketAddress{
