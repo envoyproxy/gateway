@@ -352,7 +352,7 @@ xds:
                   useRemoteAddress: true
               name: envoy-gateway-system/eg/http
             maxConnectionsToAcceptPerSocketEvent: 1
-            name: envoy-gateway-system/eg/http
+            name: 0.0.0.0-10080
             perConnectionBufferLimitBytes: 32768
     - '@type': type.googleapis.com/envoy.admin.v3.RoutesConfigDump
       dynamicRouteConfigs:

@@ -35,7 +35,7 @@
         useRemoteAddress: false
     name: first-listener
   maxConnectionsToAcceptPerSocketEvent: 1
-  name: first-listener
+  name: ::-8081
   perConnectionBufferLimitBytes: 32768
 - address:
     socketAddress:
@@ -74,7 +74,7 @@
         useRemoteAddress: false
     name: second-listener
   maxConnectionsToAcceptPerSocketEvent: 1
-  name: second-listener
+  name: ::-8082
   perConnectionBufferLimitBytes: 32768
 - address:
     socketAddress:
@@ -115,7 +115,7 @@
         useRemoteAddress: false
     name: third-listener
   maxConnectionsToAcceptPerSocketEvent: 1
-  name: third-listener
+  name: ::-8083
   perConnectionBufferLimitBytes: 32768
 - address:
     socketAddress:
@@ -161,5 +161,5 @@
         useRemoteAddress: false
     name: fourth-listener
   maxConnectionsToAcceptPerSocketEvent: 1
-  name: fourth-listener
+  name: ::-8084
   perConnectionBufferLimitBytes: 32768

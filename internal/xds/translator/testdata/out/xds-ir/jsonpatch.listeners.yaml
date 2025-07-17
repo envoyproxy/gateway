@@ -14,17 +14,6 @@
           initialStreamWindowSize: 65536
           maxConcurrentStreams: 100
         httpFilters:
-        - name: envoy.filters.http.ratelimit
-          typedConfig:
-            '@type': type.googleapis.com/envoy.extensions.filters.http.ratelimit.v3.RateLimit
-            domain: eg-ratelimit
-            failureModeDeny: true
-            rateLimitService:
-              grpcService:
-                envoyGrpc:
-                  clusterName: rate-limit-cluster
-              transportApiVersion: V3
-            timeout: 1s
         - name: envoy.filters.http.router
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
@@ -32,7 +21,6 @@
         mergeSlashes: true
         normalizePath: true
         pathWithEscapedSlashesAction: UNESCAPE_AND_REDIRECT
-        preserveExternalRequestId: true
         rds:
           configSource:
             ads: {}
@@ -62,5 +50,5 @@
         disableStatefulSessionResumption: true
         disableStatelessSessionResumption: true
   maxConnectionsToAcceptPerSocketEvent: 1
-  name: first-listener
+  name: ::-10080
   perConnectionBufferLimitBytes: 32768

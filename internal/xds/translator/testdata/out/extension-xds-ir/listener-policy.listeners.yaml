@@ -1,7 +1,7 @@
 - address:
     socketAddress:
       address: 0.0.0.0
-      portValue: 10081
+      portValue: 10183
   defaultFilterChain:
     filters:
     - name: envoy.filters.network.http_connection_manager
@@ -27,10 +27,10 @@
             resourceApiVersion: V3
           routeConfigName: policyextension-listener
         serverHeaderTransformation: PASS_THROUGH
-        statPrefix: http-10081
+        statPrefix: http-10183
         useRemoteAddress: true
     name: policyextension-listener
   maxConnectionsToAcceptPerSocketEvent: 1
-  name: policyextension-listener
+  name: 0.0.0.0-10183
   perConnectionBufferLimitBytes: 32768
   statPrefix: from-the-policy

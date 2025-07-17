@@ -12,5 +12,5 @@
         statPrefix: tcp-8082
     name: tcp-route-dual
   maxConnectionsToAcceptPerSocketEvent: 1
-  name: tcp-listener-dual
+  name: 0.0.0.0-8082
   perConnectionBufferLimitBytes: 32768

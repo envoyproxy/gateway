@@ -31,5 +31,5 @@
         useRemoteAddress: true
     name: listener-enable-req-resp-sizes-stats
   maxConnectionsToAcceptPerSocketEvent: 1
-  name: listener-enable-req-resp-sizes-stats
+  name: ::-10080
   perConnectionBufferLimitBytes: 32768

@@ -31,5 +31,5 @@
         useRemoteAddress: true
     name: listener-enable-endpoint-stats
   maxConnectionsToAcceptPerSocketEvent: 1
-  name: listener-enable-endpoint-stats
+  name: ::-10080
   perConnectionBufferLimitBytes: 32768

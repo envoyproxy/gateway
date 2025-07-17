@@ -31,7 +31,7 @@
         useRemoteAddress: true
     name: envoy-gateway/gateway-btls/http
   maxConnectionsToAcceptPerSocketEvent: 1
-  name: envoy-gateway/gateway-btls/http
+  name: 0.0.0.0-10080
   perConnectionBufferLimitBytes: 32768
 - address:
     socketAddress:
@@ -66,5 +66,5 @@
         useRemoteAddress: true
     name: envoy-gateway/gateway-btls-2/http
   maxConnectionsToAcceptPerSocketEvent: 1
-  name: envoy-gateway/gateway-btls-2/http
+  name: 0.0.0.0-10081
   perConnectionBufferLimitBytes: 32768

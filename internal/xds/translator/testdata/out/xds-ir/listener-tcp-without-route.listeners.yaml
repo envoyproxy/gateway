@@ -22,7 +22,7 @@
     typedConfig:
       '@type': type.googleapis.com/envoy.extensions.filters.listener.proxy_protocol.v3.ProxyProtocol
   maxConnectionsToAcceptPerSocketEvent: 1
-  name: envoy-gateway/gateway-1/tls-1
+  name: 0.0.0.0-10443
   perConnectionBufferLimitBytes: 50000000
   socketOptions:
   - description: socket option to enable tcp keep alive

@@ -146,5 +146,5 @@
     typedConfig:
       '@type': type.googleapis.com/envoy.extensions.filters.listener.tls_inspector.v3.TlsInspector
   maxConnectionsToAcceptPerSocketEvent: 1
-  name: first-listener
+  name: ::-10080
   perConnectionBufferLimitBytes: 32768

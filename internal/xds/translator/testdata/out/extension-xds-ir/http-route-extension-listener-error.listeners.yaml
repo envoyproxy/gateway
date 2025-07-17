@@ -1,7 +1,7 @@
 - address:
     socketAddress:
       address: 0.0.0.0
-      portValue: 10080
+      portValue: 10181
   defaultFilterChain:
     filters:
     - name: envoy.filters.network.http_connection_manager
@@ -27,9 +27,9 @@
             resourceApiVersion: V3
           routeConfigName: extension-post-xdslistener-hook-error
         serverHeaderTransformation: PASS_THROUGH
-        statPrefix: http-10080
+        statPrefix: http-10181
         useRemoteAddress: true
     name: extension-post-xdslistener-hook-error
   maxConnectionsToAcceptPerSocketEvent: 1
-  name: extension-post-xdslistener-hook-error
+  name: 0.0.0.0-10181
   perConnectionBufferLimitBytes: 32768

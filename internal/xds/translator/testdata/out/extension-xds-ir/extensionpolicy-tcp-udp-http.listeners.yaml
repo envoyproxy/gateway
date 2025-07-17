@@ -1,7 +1,7 @@
 - address:
     socketAddress:
       address: 0.0.0.0
-      portValue: 10080
+      portValue: 10184
   defaultFilterChain:
     filters:
     - name: envoy.filters.network.http_connection_manager
@@ -27,20 +27,27 @@
             resourceApiVersion: V3
           routeConfigName: envoy-gateway/gateway-1/http1
         serverHeaderTransformation: PASS_THROUGH
-        statPrefix: http-10080
+        statPrefix: http-10184
         useRemoteAddress: true
     name: envoy-gateway/gateway-1/http1
+  maxConnectionsToAcceptPerSocketEvent: 1
+  name: 0.0.0.0-10184
+  perConnectionBufferLimitBytes: 32768
+  statPrefix: 0.0.0.0-10184
+- address:
+    socketAddress:
+      address: 0.0.0.0
+      portValue: 10185
   filterChains:
   - filters:
     - name: envoy.filters.network.tcp_proxy
       typedConfig:
         '@type': type.googleapis.com/envoy.extensions.filters.network.tcp_proxy.v3.TcpProxy
         cluster: tcp-route-dest
-        statPrefix: tcp-10080
+        statPrefix: tcp-10185
   maxConnectionsToAcceptPerSocketEvent: 1
-  name: envoy-gateway/gateway-1/http1
+  name: 0.0.0.0-10185
   perConnectionBufferLimitBytes: 32768
-  statPrefix: envoy-gateway/gateway-1/http1
 - address:
     socketAddress:
       address: 0.0.0.0

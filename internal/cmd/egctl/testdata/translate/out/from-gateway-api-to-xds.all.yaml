@@ -579,7 +579,7 @@ xds:
                   useRemoteAddress: true
               name: default/eg/http
             maxConnectionsToAcceptPerSocketEvent: 1
-            name: default/eg/http
+            name: 0.0.0.0-10080
             perConnectionBufferLimitBytes: 32768
       - activeState:
           listener:
@@ -691,7 +691,7 @@ xds:
                   useRemoteAddress: true
               name: default/eg/grpc
             maxConnectionsToAcceptPerSocketEvent: 1
-            name: default/eg/grpc
+            name: 0.0.0.0-8080
             perConnectionBufferLimitBytes: 32768
       - activeState:
           listener:
@@ -775,7 +775,7 @@ xds:
                   statPrefix: tcp-1234
               name: tcproute/default/backend
             maxConnectionsToAcceptPerSocketEvent: 1
-            name: default/eg/tcp
+            name: 0.0.0.0-1234
             perConnectionBufferLimitBytes: 32768
       - activeState:
           listener:
@@ -866,7 +866,7 @@ xds:
               typedConfig:
                 '@type': type.googleapis.com/envoy.extensions.filters.listener.tls_inspector.v3.TlsInspector
             maxConnectionsToAcceptPerSocketEvent: 1
-            name: default/eg/tls-passthrough
+            name: 0.0.0.0-8443
             perConnectionBufferLimitBytes: 32768
       - activeState:
           listener:
