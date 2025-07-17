@@ -52,6 +52,7 @@ const (
 // +kubebuilder:validation:XValidation:message="BackendRefs must be used, backendRef is not supported.",rule="!has(self.backendRef)"
 // +kubebuilder:validation:XValidation:message="BackendRefs only support Service and Backend kind.",rule="has(self.backendRefs) ? self.backendRefs.all(f, f.kind == 'Service' || f.kind == 'Backend') : true"
 // +kubebuilder:validation:XValidation:message="BackendRefs only support Core and gateway.envoyproxy.io group.",rule="has(self.backendRefs) ? (self.backendRefs.all(f, f.group == \"\" || f.group == 'gateway.envoyproxy.io')) : true"
+// +kubebuilder:validation:XValidation:message="serviceName cannot be empty if provided",rule="!has(self.serviceName) || self.serviceName != ”"
 type TracingProvider struct {
 	BackendCluster `json:",inline"`
 	// Type defines the tracing provider type.
@@ -70,6 +71,11 @@ type TracingProvider struct {
 	// +kubebuilder:validation:Minimum=0
 	// +kubebuilder:default=4317
 	Port int32 `json:"port,omitempty"`
+	// ServiceName defines the service name to use in tracing configuration.
+	// If not set, Envoy Gateway will use a default service name based on the Gateway.
+	//
+	// +optional
+	ServiceName *string `json:"serviceName,omitempty"`
 	// Zipkin defines the Zipkin tracing provider configuration
 	// +optional
 	Zipkin *ZipkinTracingProvider `json:"zipkin,omitempty"`

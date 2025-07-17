@@ -21466,6 +21466,11 @@ spec:
                             format: int32
                             minimum: 0
                             type: integer
+                          serviceName:
+                            description: |-
+                              ServiceName defines the service name to use in tracing configuration.
+                              If not set, Envoy Gateway will use a default service name based on the Gateway.
+                            type: string
                           type:
                             default: OpenTelemetry
                             description: Type defines the tracing provider type.
@@ -21506,6 +21511,8 @@ spec:
                           rule: 'has(self.backendRefs) ? (self.backendRefs.all(f,
                             f.group == "" || f.group == ''gateway.envoyproxy.io''))
                             : true'
+                        - message: serviceName cannot be empty if provided
+                          rule: '!has(self.serviceName) || self.serviceName != ”'
                       samplingFraction:
                         description: |-
                           SamplingFraction represents the fraction of requests that should be
