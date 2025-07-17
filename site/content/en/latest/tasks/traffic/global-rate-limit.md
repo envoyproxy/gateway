@@ -1213,6 +1213,225 @@ server: envoy
 
 ```
 
+## Rate Limit Policy Merging
+
+This example demonstrates how to implement a layered rate limiting strategy using BackendTrafficPolicy merging. This approach allows platform teams to set global abuse prevention limits at the Gateway level, while application teams can define more specific rate limits for their individual routes.
+
+In this scenario:
+- **Platform Team**: Manages a Gateway-level BackendTrafficPolicy that applies a global abuse rate limit (100 requests/second) across all traffic
+- **Application Team**: Manages a Route-level BackendTrafficPolicy that applies a more restrictive limit (5 requests/minute) for their specific signup service
+
+The route-level policy uses `mergeType: StrategicMerge` to combine with the gateway-level policy, ensuring both limits are enforced. The global limit acts as an abuse prevention mechanism, while the route-specific limit protects the signup service from overload.
+
+{{< tabpane text=true >}}
+{{% tab header="Apply from stdin" %}}
+
+```shell
+cat <<EOF | kubectl apply -f -
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: BackendTrafficPolicy
+metadata:
+  name: global-backendtrafficpolicy
+spec:
+  rateLimit:
+    type: Global
+    global:
+      rules:
+      - clientSelectors:
+        - sourceCIDR:
+            type: Distinct
+            value: 0.0.0.0/0
+        limit:
+          requests: 100
+          unit: Second
+        shared: true
+  targetRefs:
+  - group: gateway.networking.k8s.io
+    kind: Gateway
+    name: eg
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: BackendTrafficPolicy
+metadata:
+  name: route-backendtrafficpolicy
+spec:
+  mergeType: StrategicMerge
+  rateLimit:
+    type: Global
+    global:
+      rules:
+      - clientSelectors:
+        - sourceCIDR:
+            type: Distinct
+            value: 0.0.0.0/0
+        limit:
+          requests: 5
+          unit: Minute
+        shared: false
+  targetRefs:
+  - group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: signup-service-httproute
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: signup-service-httproute
+spec:
+  parentRefs:
+  - name: eg
+  hostnames:
+  - signup.example
+  rules:
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /signup
+    backendRefs:
+    - group: ""
+      kind: Service
+      name: backend
+      port: 3000
+EOF
+```
+
+{{% /tab %}}
+{{% tab header="Apply from file" %}}
+Save and apply the following resources to your cluster:
+
+```yaml
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: BackendTrafficPolicy
+metadata:
+  name: global-backendtrafficpolicy
+spec:
+  rateLimit:
+    type: Global
+    global:
+      rules:
+      - clientSelectors:
+        - sourceCIDR:
+            type: Distinct
+            value: 0.0.0.0/0
+        limit:
+          requests: 100
+          unit: Second
+        shared: true
+  targetRefs:
+  - group: gateway.networking.k8s.io
+    kind: Gateway
+    name: eg
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: BackendTrafficPolicy
+metadata:
+  name: route-backendtrafficpolicy
+spec:
+  mergeType: StrategicMerge
+  rateLimit:
+    type: Global
+    global:
+      rules:
+      - clientSelectors:
+        - sourceCIDR:
+            type: Distinct
+            value: 0.0.0.0/0
+        limit:
+          requests: 5
+          unit: Minute
+        shared: false
+  targetRefs:
+  - group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: signup-service-httproute
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: signup-service-httproute
+spec:
+  parentRefs:
+  - name: eg
+  hostnames:
+  - signup.example
+  rules:
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /signup
+    backendRefs:
+    - group: ""
+      kind: Service
+      name: backend
+      port: 3000
+```
+
+{{% /tab %}}
+{{< /tabpane >}}
+
+### Key Configuration Details
+
+- **Gateway-level Policy**: Uses `shared: true` to create a shared rate limit bucket that applies across all routes in the Gateway
+- **Route-level Policy**: Uses `shared: false` to create a dedicated rate limit bucket for this specific route
+- **Merge Type**: The `mergeType: StrategicMerge` field enables the route policy to merge with the gateway policy rather than override it
+
+### Testing the Merged Rate Limits
+
+Let's verify that both rate limits are enforced. The signup service should be limited to 5 requests per minute, but also subject to the global 100 requests/second abuse limit.
+
+First, let's test the route-specific limit by sending 6 requests within a minute:
+
+```shell
+for i in {1..6}; do curl -I --header "Host: signup.example" http://${GATEWAY_HOST}/signup ; sleep 1; done
+```
+
+You should see the first 5 requests succeed and the 6th request receive a `429 Too Many Requests` response:
+
+```console
+HTTP/1.1 200 OK
+content-type: application/json
+x-content-type-options: nosniff
+date: Wed, 08 Feb 2023 02:33:31 GMT
+content-length: 460
+x-envoy-upstream-service-time: 4
+server: envoy
+
+HTTP/1.1 200 OK
+content-type: application/json
+x-content-type-options: nosniff
+date: Wed, 08 Feb 2023 02:33:32 GMT
+content-length: 460
+x-envoy-upstream-service-time: 2
+server: envoy
+
+...
+
+HTTP/1.1 429 Too Many Requests
+x-envoy-ratelimited: true
+date: Wed, 08 Feb 2023 02:33:36 GMT
+server: envoy
+transfer-encoding: chunked
+```
+
+The global abuse limit would activate if traffic across all routes in the Gateway exceeds 100 requests/second, providing an additional layer of protection managed by the platform team.
+
+### Use Cases and Team Responsibilities
+
+**Platform Team Responsibilities:**
+- Define Gateway-level policies with global abuse rate limits
+- Set reasonable baseline protections that apply to all applications
+- Use `shared: true` for limits that should be enforced across multiple routes
+- Monitor and adjust global limits based on infrastructure capacity
+
+**Application Team Responsibilities:**  
+- Define Route-level policies with application-specific rate limits
+- Use `mergeType: StrategicMerge` to combine with platform policies
+- Set `shared: false` for limits specific to their application's requirements
+- Implement rate limits that protect their specific service from overload
+
+This layered approach ensures both infrastructure protection and application-specific controls work together effectively.
+
 ### (Optional) Editing Kubernetes Resources settings for the Rate Limit Service
 
 * The default installation of Envoy Gateway installs a default [EnvoyGateway][] configuration and provides the initial rate

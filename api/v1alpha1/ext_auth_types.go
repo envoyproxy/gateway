@@ -43,6 +43,8 @@ type ExtAuth struct {
 	// the system blocks the traffic and returns a HTTP 5xx error, reflecting a fail-closed approach.
 	// This setting determines whether to prioritize accessibility over strict security in case of authorization service failure.
 	//
+	// If set to true, the External Authorization will also be bypassed if its configuration is invalid.
+	//
 	// +optional
 	// +kubebuilder:default=false
 	FailOpen *bool `json:"failOpen,omitempty"`
