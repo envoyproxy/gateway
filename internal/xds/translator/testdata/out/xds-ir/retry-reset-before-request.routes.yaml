@@ -7,21 +7,21 @@
     routes:
     - match:
         prefix: /
-      name: first-route
+      name: reset-before-request-route
       route:
         cluster: first-route-dest
         retryPolicy:
           hostSelectionRetryMaxAttempts: "5"
           numRetries: 3
-          retriableStatusCodes:
-          - 500
+          perTryTimeout: 0.250s
           retryBackOff:
-            baseInterval: 0.200s
+            baseInterval: 0.100s
+            maxInterval: 10s
           retryHostPredicate:
           - name: envoy.retry_host_predicates.previous_hosts
             typedConfig:
               '@type': type.googleapis.com/envoy.extensions.retry.host.previous_hosts.v3.PreviousHostsPredicate
-          retryOn: connect-failure,refused-stream,unavailable,cancelled,retriable-status-codes
+          retryOn: reset-before-request
         upgradeConfigs:
         - upgradeType: websocket
   - domains:
@@ -30,24 +30,7 @@
     routes:
     - match:
         prefix: /
-      name: second-route-defaults
-      route:
-        cluster: first-route-dest
-        retryPolicy:
-          hostSelectionRetryMaxAttempts: "5"
-          numRetries: 2
-          retriableStatusCodes:
-          - 503
-          retryHostPredicate:
-          - name: envoy.retry_host_predicates.previous_hosts
-            typedConfig:
-              '@type': type.googleapis.com/envoy.extensions.retry.host.previous_hosts.v3.PreviousHostsPredicate
-          retryOn: connect-failure,refused-stream,unavailable,cancelled,retriable-status-codes
-        upgradeConfigs:
-        - upgradeType: websocket
-    - match:
-        prefix: /
-      name: third-route-only-triggers
+      name: mixed-triggers-route
       route:
         cluster: first-route-dest
         retryPolicy:
@@ -58,10 +41,5 @@
             typedConfig:
               '@type': type.googleapis.com/envoy.extensions.retry.host.previous_hosts.v3.PreviousHostsPredicate
           retryOn: reset,reset-before-request,connect-failure
-          retryPriority:
-            name: envoy.retry_priorities.previous_priorities
-            typedConfig:
-              '@type': type.googleapis.com/envoy.extensions.retry.priority.previous_priorities.v3.PreviousPrioritiesConfig
-              updateFrequency: 3
         upgradeConfigs:
         - upgradeType: websocket

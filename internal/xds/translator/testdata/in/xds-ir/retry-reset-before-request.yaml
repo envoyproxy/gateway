@@ -8,28 +8,14 @@ http:
     mergeSlashes: true
     escapedSlashesAction: UnescapeAndRedirect
   routes:
-  - name: "first-route"
+  - name: "reset-before-request-route"
     hostname: "*"
-    retry:
-      numRetries: 3
-      perRetry:
-        backOff:
-          baseInterval: 200ms
-      retryOn:
-        httpStatusCodes:
-        - 500
     traffic:
       retry:
-        numRetries: 5
-        numAttemptsPerPriority: 0
+        numRetries: 3
         retryOn:
-          httpStatusCodes:
-          - 429
-          - 503
           triggers:
-          - reset
-          - connect-failure
-          - retriable-status-codes
+          - reset-before-request
         perRetry:
           timeout: 250ms
           backoff:
@@ -42,23 +28,11 @@ http:
         - host: "1.2.3.4"
           port: 50000
         name: "first-route-dest/backend/0"
-  - name: "second-route-defaults"
-    hostname: "foo"
-    traffic:
-      retry: {}
-    destination:
-      name: "first-route-dest"
-      settings:
-      - endpoints:
-        - host: "1.2.3.4"
-          port: 50000
-        name: "first-route-dest/backend/0"
-  - name: "third-route-only-triggers"
+  - name: "mixed-triggers-route"
     hostname: "foo"
     traffic:
       retry:
         numRetries: 5
-        numAttemptsPerPriority: 3
         retryOn:
           triggers:
           - reset
