@@ -51,3 +51,6 @@ extensionServerPolicies:
         group: gateway.networking.k8s.io
         kind: Gateway
         name: test-gateway
+extensionManagerConfig:
+  hooks:
+    enablePostTranslateListenersAndRoutes: true

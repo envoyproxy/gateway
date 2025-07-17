@@ -37,6 +37,7 @@ import (
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/envoygateway"
+	extTypes "github.com/envoyproxy/gateway/internal/extension/types"
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/proto/extension"
 )
@@ -855,4 +856,69 @@ func TestPostTranslateModifyHookWithListenersAndRoutes(t *testing.T) {
 	require.Len(t, routes, 2)
 	require.Equal(t, "route-1", routes[0].Name)
 	require.Equal(t, "route-2", routes[1].Name)
+}
+
+// TestEnablePostTranslateListenersAndRoutes tests the configuration option
+func TestEnablePostTranslateListenersAndRoutes(t *testing.T) {
+	tests := []struct {
+		name     string
+		config   *egv1a1.ExtensionManager
+		expected bool
+	}{
+		{
+			name:     "default behavior when config is nil",
+			config:   nil,
+			expected: false,
+		},
+		{
+			name: "default behavior when hooks is nil",
+			config: &egv1a1.ExtensionManager{
+				Hooks: nil,
+			},
+			expected: false,
+		},
+		{
+			name: "default behavior when field is nil",
+			config: &egv1a1.ExtensionManager{
+				Hooks: &egv1a1.ExtensionHooks{
+					EnablePostTranslateListenersAndRoutes: nil,
+				},
+			},
+			expected: false,
+		},
+		{
+			name: "explicitly enabled",
+			config: &egv1a1.ExtensionManager{
+				Hooks: &egv1a1.ExtensionHooks{
+					EnablePostTranslateListenersAndRoutes: ptr.To(true),
+				},
+			},
+			expected: true,
+		},
+		{
+			name: "explicitly disabled",
+			config: &egv1a1.ExtensionManager{
+				Hooks: &egv1a1.ExtensionHooks{
+					EnablePostTranslateListenersAndRoutes: ptr.To(false),
+				},
+			},
+			expected: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var mgr extTypes.Manager
+			var err error
+
+			if tt.config == nil {
+				mgr, _, err = NewInMemoryManager(egv1a1.ExtensionManager{}, &testServer{})
+			} else {
+				mgr, _, err = NewInMemoryManager(*tt.config, &testServer{})
+			}
+
+			require.NoError(t, err)
+			require.Equal(t, tt.expected, mgr.EnablePostTranslateListenersAndRoutes())
+		})
+	}
 }

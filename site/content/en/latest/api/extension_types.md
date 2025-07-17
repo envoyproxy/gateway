@@ -1786,6 +1786,7 @@ _Appears in:_
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
 | `xdsTranslator` | _[XDSTranslatorHooks](#xdstranslatorhooks)_ |  true  |  | XDSTranslator defines all the supported extension hooks for the xds-translator runner |
+| `enablePostTranslateListenersAndRoutes` | _boolean_ |  false  |  | EnablePostTranslateListenersAndRoutes controls whether listeners and routes<br />are included in the PostTranslateModifyHook. When enabled, the hook will<br />receive all four resource types (clusters, secrets, listeners, routes).<br />When disabled, only clusters and secrets are sent for backward compatibility.<br />Default: false |
 
 
 #### ExtensionManager

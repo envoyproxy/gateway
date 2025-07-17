@@ -576,6 +576,15 @@ type ExtensionManager struct {
 type ExtensionHooks struct {
 	// XDSTranslator defines all the supported extension hooks for the xds-translator runner
 	XDSTranslator *XDSTranslatorHooks `json:"xdsTranslator,omitempty"`
+
+	// EnablePostTranslateListenersAndRoutes controls whether listeners and routes
+	// are included in the PostTranslateModifyHook. When enabled, the hook will
+	// receive all four resource types (clusters, secrets, listeners, routes).
+	// When disabled, only clusters and secrets are sent for backward compatibility.
+	// Default: false
+	//
+	// +optional
+	EnablePostTranslateListenersAndRoutes *bool `json:"enablePostTranslateListenersAndRoutes,omitempty"`
 }
 
 // XDSTranslatorHooks contains all the pre and post hooks for the xds-translator runner.

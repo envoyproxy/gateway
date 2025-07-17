@@ -217,7 +217,23 @@ func processExtensionPostTranslationHook(tCtx *types.ResourceVersionTable, em *e
 		oldRoutes[idx] = route.(*routev3.RouteConfiguration)
 	}
 
-	newClusters, newSecrets, newListeners, newRoutes, err := extensionInsertHookClient.PostTranslateModifyHook(oldClusters, oldSecrets, oldListeners, oldRoutes, policies)
+	var newClusters []*clusterv3.Cluster
+	var newSecrets []*tlsv3.Secret
+	var newListeners []*listenerv3.Listener
+	var newRoutes []*routev3.RouteConfiguration
+
+	// Check if the extension manager is configured to include listeners and routes
+	if extManager.EnablePostTranslateListenersAndRoutes() {
+		// New behavior: include all four resource types
+		newClusters, newSecrets, newListeners, newRoutes, err = extensionInsertHookClient.PostTranslateModifyHook(oldClusters, oldSecrets, oldListeners, oldRoutes, policies)
+	} else {
+		// Legacy behavior: only include clusters and secrets
+		newClusters, newSecrets, _, _, err = extensionInsertHookClient.PostTranslateModifyHook(oldClusters, oldSecrets, nil, nil, policies)
+		// Keep the original listeners and routes unchanged
+		newListeners = oldListeners
+		newRoutes = oldRoutes
+	}
+
 	if err != nil {
 		return err
 	}

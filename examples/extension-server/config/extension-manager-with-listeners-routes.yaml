@@ -1,0 +1,36 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: envoy-gateway-config
+  namespace: envoy-gateway-system
+data:
+  envoy-gateway.yaml: |
+    apiVersion: gateway.envoyproxy.io/v1alpha1
+    kind: EnvoyGateway
+    provider:
+      type: Kubernetes
+    gateway:
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+    extensionManager:
+      # Envoy Gateway will watch these resource kinds and use them as extension policies
+      # which can be attached to Gateway resources.
+      policyResources:
+      - group: example.extensions.io
+        version: v1alpha1
+        kind: ListenerContextExample
+      hooks:
+        # The type of hooks that should be invoked
+        xdsTranslator:
+          post:
+          - HTTPListener
+          - Translation
+        # Enable listeners and routes in PostTranslateModifyHook
+        # This allows the extension server to receive and modify all four resource types:
+        # clusters, secrets, listeners, and routes
+        # Default: false (for backward compatibility)
+        enablePostTranslateListenersAndRoutes: true
+      service:
+        # The service that is hosting the extension server
+        fqdn:
+          hostname: extension-server.envoy-gateway-system.svc.cluster.local
+          port: 5005

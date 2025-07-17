@@ -135,6 +135,16 @@ func (m *Manager) FailOpen() bool {
 	return m.extension.FailOpen
 }
 
+// EnablePostTranslateListenersAndRoutes returns whether the extension manager should
+// include listeners and routes in PostTranslateModifyHook calls.
+func (m *Manager) EnablePostTranslateListenersAndRoutes() bool {
+	// Default to false if not specified for backward compatibility
+	if m.extension.Hooks == nil || m.extension.Hooks.EnablePostTranslateListenersAndRoutes == nil {
+		return false
+	}
+	return *m.extension.Hooks.EnablePostTranslateListenersAndRoutes
+}
+
 // HasExtension checks to see whether a given Group and Kind has an
 // associated extension registered for it.
 func (m *Manager) HasExtension(g gwapiv1.Group, k gwapiv1.Kind) bool {

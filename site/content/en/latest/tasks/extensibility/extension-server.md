@@ -106,6 +106,11 @@ extensionManager:
         - HTTPListener   # Enable HTTP listener modification hook
         - Cluster        # Enable cluster modification hook
         - Translation    # Enable global translation hook
+    # Enable listeners and routes in PostTranslateModifyHook
+    # When enabled, the Translation hook receives all four resource types:
+    # clusters, secrets, listeners, and routes
+    # Default: false (for backward compatibility)
+    enablePostTranslateListenersAndRoutes: true
 ```
 
 This task sets up an example extension server that adds the Envoy Proxy Basic Authentication
