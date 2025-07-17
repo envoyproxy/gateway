@@ -881,7 +881,11 @@ func TestEnablePostTranslateListenersAndRoutes(t *testing.T) {
 			name: "default behavior when field is nil",
 			config: &egv1a1.ExtensionManager{
 				Hooks: &egv1a1.ExtensionHooks{
-					EnablePostTranslateListenersAndRoutes: nil,
+					XDSTranslator: &egv1a1.XDSTranslatorHooks{
+						Translation: &egv1a1.TranslationConfig{
+							IncludeAll: nil,
+						},
+					},
 				},
 			},
 			expected: false,
@@ -890,7 +894,11 @@ func TestEnablePostTranslateListenersAndRoutes(t *testing.T) {
 			name: "explicitly enabled",
 			config: &egv1a1.ExtensionManager{
 				Hooks: &egv1a1.ExtensionHooks{
-					EnablePostTranslateListenersAndRoutes: ptr.To(true),
+					XDSTranslator: &egv1a1.XDSTranslatorHooks{
+						Translation: &egv1a1.TranslationConfig{
+							IncludeAll: ptr.To(true),
+						},
+					},
 				},
 			},
 			expected: true,
@@ -899,7 +907,11 @@ func TestEnablePostTranslateListenersAndRoutes(t *testing.T) {
 			name: "explicitly disabled",
 			config: &egv1a1.ExtensionManager{
 				Hooks: &egv1a1.ExtensionHooks{
-					EnablePostTranslateListenersAndRoutes: ptr.To(false),
+					XDSTranslator: &egv1a1.XDSTranslatorHooks{
+						Translation: &egv1a1.TranslationConfig{
+							IncludeAll: ptr.To(false),
+						},
+					},
 				},
 			},
 			expected: false,

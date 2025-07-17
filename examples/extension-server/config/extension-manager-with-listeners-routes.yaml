@@ -24,11 +24,12 @@ data:
           post:
           - HTTPListener
           - Translation
-        # Enable listeners and routes in PostTranslateModifyHook
-        # This allows the extension server to receive and modify all four resource types:
-        # clusters, secrets, listeners, and routes
-        # Default: false (for backward compatibility)
-        enablePostTranslateListenersAndRoutes: true
+          # Enable listeners and routes in PostTranslateModifyHook
+          # This allows the extension server to receive and modify all four resource types:
+          # clusters, secrets, listeners, and routes
+          # Default: false (for backward compatibility)
+          translation:
+            includeAll: true
       service:
         # The service that is hosting the extension server
         fqdn:

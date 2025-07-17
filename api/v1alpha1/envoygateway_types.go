@@ -576,21 +576,24 @@ type ExtensionManager struct {
 type ExtensionHooks struct {
 	// XDSTranslator defines all the supported extension hooks for the xds-translator runner
 	XDSTranslator *XDSTranslatorHooks `json:"xdsTranslator,omitempty"`
-
-	// EnablePostTranslateListenersAndRoutes controls whether listeners and routes
-	// are included in the PostTranslateModifyHook. When enabled, the hook will
-	// receive all four resource types (clusters, secrets, listeners, routes).
-	// When disabled, only clusters and secrets are sent for backward compatibility.
-	// Default: false
-	//
-	// +optional
-	EnablePostTranslateListenersAndRoutes *bool `json:"enablePostTranslateListenersAndRoutes,omitempty"`
 }
 
 // XDSTranslatorHooks contains all the pre and post hooks for the xds-translator runner.
 type XDSTranslatorHooks struct {
 	Pre  []XDSTranslatorHook `json:"pre,omitempty"`
 	Post []XDSTranslatorHook `json:"post,omitempty"`
+
+	// Translation defines the configuration for the translation hook.
+	Translation *TranslationConfig `json:"translation,omitempty"`
+}
+
+// TranslationConfig defines the configuration for the translation hook.
+type TranslationConfig struct {
+	// IncludeAll defines whether all resources should be included in the translation hook.
+	// Default resources are clusters and secrets. When enabled, listeners and routes are also included.
+	//
+	// +optional
+	IncludeAll *bool `json:"includeAll,omitempty"`
 }
 
 // ExtensionService defines the configuration for connecting to a registered extension service.

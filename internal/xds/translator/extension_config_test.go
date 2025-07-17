@@ -79,8 +79,10 @@ func TestProcessExtensionPostTranslationHookConfig(t *testing.T) {
 				Hooks: &egv1a1.ExtensionHooks{
 					XDSTranslator: &egv1a1.XDSTranslatorHooks{
 						Post: []egv1a1.XDSTranslatorHook{egv1a1.XDSTranslation},
+						Translation: &egv1a1.TranslationConfig{
+							IncludeAll: tt.enableListenersAndRoutes,
+						},
 					},
-					EnablePostTranslateListenersAndRoutes: tt.enableListenersAndRoutes,
 				},
 				Service: &egv1a1.ExtensionService{
 					BackendEndpoint: egv1a1.BackendEndpoint{

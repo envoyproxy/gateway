@@ -139,10 +139,13 @@ func (m *Manager) FailOpen() bool {
 // include listeners and routes in PostTranslateModifyHook calls.
 func (m *Manager) EnablePostTranslateListenersAndRoutes() bool {
 	// Default to false if not specified for backward compatibility
-	if m.extension.Hooks == nil || m.extension.Hooks.EnablePostTranslateListenersAndRoutes == nil {
+	if m.extension.Hooks == nil ||
+		m.extension.Hooks.XDSTranslator == nil ||
+		m.extension.Hooks.XDSTranslator.Translation == nil ||
+		m.extension.Hooks.XDSTranslator.Translation.IncludeAll == nil {
 		return false
 	}
-	return *m.extension.Hooks.EnablePostTranslateListenersAndRoutes
+	return *m.extension.Hooks.XDSTranslator.Translation.IncludeAll
 }
 
 // HasExtension checks to see whether a given Group and Kind has an

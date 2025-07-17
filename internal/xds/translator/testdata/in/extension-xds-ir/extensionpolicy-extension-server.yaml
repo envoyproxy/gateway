@@ -13,4 +13,6 @@ extensionServerPolicies:
         name: gateway-1
 extensionManagerConfig:
   hooks:
-    enablePostTranslateListenersAndRoutes: true
+    xdsTranslator:
+      translation:
+        includeAll: true

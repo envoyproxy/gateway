@@ -1786,7 +1786,6 @@ _Appears in:_
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
 | `xdsTranslator` | _[XDSTranslatorHooks](#xdstranslatorhooks)_ |  true  |  | XDSTranslator defines all the supported extension hooks for the xds-translator runner |
-| `enablePostTranslateListenersAndRoutes` | _boolean_ |  false  |  | EnablePostTranslateListenersAndRoutes controls whether listeners and routes<br />are included in the PostTranslateModifyHook. When enabled, the hook will<br />receive all four resource types (clusters, secrets, listeners, routes).<br />When disabled, only clusters and secrets are sent for backward compatibility.<br />Default: false |
 
 
 #### ExtensionManager
@@ -4888,6 +4887,20 @@ _Appears in:_
 | `Datadog` |  | 
 
 
+#### TranslationConfig
+
+
+
+TranslationConfig defines the configuration for the translation hook.
+
+_Appears in:_
+- [XDSTranslatorHooks](#xdstranslatorhooks)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `includeAll` | _boolean_ |  false  |  | IncludeAll defines whether all resources should be included in the translation hook.<br />Default resources are clusters and secrets. When enabled, listeners and routes are also included. |
+
+
 #### TriggerEnum
 
 _Underlying type:_ _string_
@@ -5061,6 +5074,7 @@ _Appears in:_
 | ---   | ---  | ---      | ---     | ---         |
 | `pre` | _[XDSTranslatorHook](#xdstranslatorhook) array_ |  true  |  |  |
 | `post` | _[XDSTranslatorHook](#xdstranslatorhook) array_ |  true  |  |  |
+| `translation` | _[TranslationConfig](#translationconfig)_ |  true  |  | Translation defines the configuration for the translation hook. |
 
 
 #### XFCCCertData

@@ -317,9 +317,11 @@ func TestTranslateXdsWithExtensionErrorsWhenFailOpen(t *testing.T) {
 							egv1a1.XDSCluster,
 							egv1a1.XDSTranslation,
 						},
+						// Enable listeners and routes for PostTranslateModifyHook for these tests
+						Translation: &egv1a1.TranslationConfig{
+							IncludeAll: ptr.To(true),
+						},
 					},
-					// Enable listeners and routes for PostTranslateModifyHook for these tests
-					EnablePostTranslateListenersAndRoutes: ptr.To(true),
 				},
 			}
 
@@ -451,9 +453,11 @@ func TestTranslateXdsWithExtensionErrorsWhenFailClosed(t *testing.T) {
 							egv1a1.XDSHTTPListener,
 							egv1a1.XDSTranslation,
 						},
+						// Enable listeners and routes for PostTranslateModifyHook for these tests
+						Translation: &egv1a1.TranslationConfig{
+							IncludeAll: ptr.To(true),
+						},
 					},
-					// Enable listeners and routes for PostTranslateModifyHook for these tests
-					EnablePostTranslateListenersAndRoutes: ptr.To(true),
 				},
 			}
 
