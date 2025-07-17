@@ -9,7 +9,7 @@ admin:
       address: 127.0.0.1
       port_value: 2222
 cluster_manager:
-  local_cluster_name: local_cluster
+  local_cluster_name: $(ENVOY_PROXY_INFRA_NAME)
 node:
   locality:
     zone: $(ENVOY_SERVICE_ZONE)
@@ -86,7 +86,7 @@ static_resources:
   - connect_timeout: 10s
     lb_policy: ROUND_ROBIN
     load_assignment:
-      cluster_name: local_cluster
+      cluster_name: $(ENVOY_PROXY_INFRA_NAME)
       endpoints:
       - lb_endpoints:
         - endpoint:
@@ -98,7 +98,7 @@ static_resources:
         load_balancing_weight: 1
         locality:
           zone: $(ENVOY_SERVICE_ZONE)
-    name: local_cluster
+    name: $(ENVOY_PROXY_INFRA_NAME)
     type: STATIC
   - connect_timeout: 10s
     load_assignment:
