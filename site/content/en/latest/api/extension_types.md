@@ -117,8 +117,6 @@ _Appears in:_
 | `sanitizeAPIKey` | _boolean_ |  false  |  | SanitizeAPIKey indicates whether to remove the API key from the request<br />before forwarding it to the backend service. |
 
 
-
-
 #### ActiveHealthCheck
 
 
