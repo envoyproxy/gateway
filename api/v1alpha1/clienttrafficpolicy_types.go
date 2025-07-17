@@ -58,6 +58,13 @@ type ClientTrafficPolicySpec struct {
 	//
 	// +optional
 	EnableProxyProtocol *bool `json:"enableProxyProtocol,omitempty"`
+	// ProxyProtocol configures the Proxy Protocol settings. When configured,
+	// the Proxy Protocol header will be interpreted and the Client Address
+	// will be added into the X-Forwarded-For header.
+	// If both EnableProxyProtocol and ProxyProtocol are set, ProxyProtocol takes precedence.
+	//
+	// +optional
+	ProxyProtocol *ProxyProtocolSettings `json:"proxyProtocol,omitempty"`
 	// ClientIPDetectionSettings provides configuration for determining the original client IP address for requests.
 	//
 	// +optional
@@ -342,6 +349,20 @@ type HealthCheckSettings struct {
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=1024
 	Path string `json:"path"`
+}
+
+// ProxyProtocolSettings configures the Proxy Protocol settings. When configured,
+// the Proxy Protocol header will be interpreted and the Client Address
+// will be added into the X-Forwarded-For header.
+// If both EnableProxyProtocol and ProxyProtocol are set, ProxyProtocol takes precedence.
+type ProxyProtocolSettings struct {
+	// AllowRequestsWithoutProxyProtocol allows requests without a Proxy Protocol header to be proxied.
+	// If set to true, the listener will accept requests without a Proxy Protocol header.
+	// If set to false, the listener will reject requests without a Proxy Protocol header.
+	// If not set, the default behavior is to reject requests without a Proxy Protocol header.
+	//
+	// +optional
+	AllowRequestsWithoutProxyProtocol *bool `json:"allowRequestsWithoutProxyProtocol,omitempty"`
 }
 
 //+kubebuilder:object:root=true

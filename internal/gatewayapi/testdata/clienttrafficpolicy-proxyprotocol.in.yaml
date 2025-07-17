@@ -6,6 +6,8 @@ clientTrafficPolicies:
     name: target-gateway-1-section-http-1
   spec:
     enableProxyProtocol: true
+    proxyProtocol:
+      allowRequestsWithoutProxyProtocol: true
     targetRef:
       group: gateway.networking.k8s.io
       kind: Gateway

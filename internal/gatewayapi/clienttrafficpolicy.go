@@ -396,6 +396,7 @@ func (t *Translator) translateClientTrafficPolicyForListener(policy *egv1a1.Clie
 		connection          *ir.ClientConnection
 		tlsConfig           *ir.TLSConfig
 		enableProxyProtocol bool
+		proxyProtocol       *ir.ProxyProtocolSettings
 		timeout             *ir.ClientTimeout
 		err, errs           error
 	)
@@ -416,7 +417,16 @@ func (t *Translator) translateClientTrafficPolicyForListener(policy *egv1a1.Clie
 	}
 
 	// Translate Proxy Protocol
-	enableProxyProtocol = ptr.Deref(policy.Spec.EnableProxyProtocol, false)
+	if policy.Spec.ProxyProtocol != nil {
+		// New ProxyProtocol field takes precedence
+		enableProxyProtocol = true
+		proxyProtocol = &ir.ProxyProtocolSettings{
+			AllowRequestsWithoutProxyProtocol: policy.Spec.ProxyProtocol.AllowRequestsWithoutProxyProtocol != nil && *policy.Spec.ProxyProtocol.AllowRequestsWithoutProxyProtocol,
+		}
+	} else {
+		// Fallback to legacy EnableProxyProtocol field
+		enableProxyProtocol = ptr.Deref(policy.Spec.EnableProxyProtocol, false)
+	}
 
 	// Translate Client Timeout Settings
 	timeout, err = buildClientTimeout(policy.Spec.Timeout)
@@ -493,6 +503,7 @@ func (t *Translator) translateClientTrafficPolicyForListener(policy *egv1a1.Clie
 		httpIR.TCPKeepalive = keepalive
 		httpIR.Connection = connection
 		httpIR.EnableProxyProtocol = enableProxyProtocol
+		httpIR.ProxyProtocol = proxyProtocol
 		httpIR.Timeout = timeout
 		httpIR.TLS = tlsConfig
 	}
@@ -516,6 +527,7 @@ func (t *Translator) translateClientTrafficPolicyForListener(policy *egv1a1.Clie
 		tcpIR.TCPKeepalive = keepalive
 		tcpIR.Connection = connection
 		tcpIR.EnableProxyProtocol = enableProxyProtocol
+		tcpIR.ProxyProtocol = proxyProtocol
 		tcpIR.TLS = tlsConfig
 		tcpIR.Timeout = timeout
 	}
