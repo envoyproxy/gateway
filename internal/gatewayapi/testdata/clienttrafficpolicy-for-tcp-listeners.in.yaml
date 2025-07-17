@@ -31,7 +31,7 @@ clientTrafficPolicies:
       - sig1
       - sig2
     proxyProtocol:
-      enabled: true      
+      enabled: true
     targetRef:
       group: gateway.networking.k8s.io
       kind: Gateway
