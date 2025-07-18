@@ -11,7 +11,8 @@ clientTrafficPolicies:
       connectionLimit:
         closeDelay: 10s
         value: 3
-    enableProxyProtocol: true
+    proxyProtocol:
+      allowRequestsWithoutProxyProtocol: false
     targetRef:
       group: gateway.networking.k8s.io
       kind: Gateway
@@ -202,6 +203,7 @@ xdsIR:
       enableProxyProtocol: true
       name: envoy-gateway/gateway-1/tls-1
       port: 10443
+      proxyProtocol: {}
       routes:
       - destination:
           metadata:
@@ -273,6 +275,7 @@ xdsIR:
       enableProxyProtocol: true
       name: envoy-gateway/gateway-1/tcp-1
       port: 8080
+      proxyProtocol: {}
       routes:
       - destination:
           metadata:
