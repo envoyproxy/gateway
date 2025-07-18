@@ -689,6 +689,20 @@
                     "name": "envoy-gateway-system/eg/http"
                   },
                   "maxConnectionsToAcceptPerSocketEvent": 1,
+                  "metadata": {
+                    "filterMetadata": {
+                      "envoy-gateway": {
+                        "resources": [
+                          {
+                            "kind": "Gateway",
+                            "name": "eg",
+                            "namespace": "envoy-gateway-system",
+                            "sectionName": "http"
+                          }
+                        ]
+                      }
+                    }
+                  },
                   "name": "0.0.0.0-10080",
                   "perConnectionBufferLimitBytes": 32768
                 }

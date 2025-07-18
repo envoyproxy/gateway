@@ -4,7 +4,7 @@ envoyPatchPolicies:
   namespace: "default"
   jsonPatches:
   - type: "type.googleapis.com/envoy.config.listener.v3.Listener"
-    name: "first-listener"
+    name: "0.0.0.0-10080"
     operation:
       op: "add"
       path: "/default_filter_chain/filters/0/typed_config/http_filters/0"
