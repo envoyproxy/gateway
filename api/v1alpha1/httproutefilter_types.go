@@ -72,6 +72,13 @@ type HTTPDirectResponseFilter struct {
 	// If unset, defaults to 200.
 	// +optional
 	StatusCode *int `json:"statusCode,omitempty"`
+
+	// ResponseHeaderModifier defines headers to add, set or remove from the response.
+	// This allows the response policy to append, add or override headers
+	// of the final response before it is sent to a downstream client.
+	//
+	// +optional
+	ResponseHeaderModifier *gwapiv1.HTTPHeaderFilter `json:"responseHeaderModifier,omitempty"`
 }
 
 // HTTPPathModifierType defines the type of path redirect or rewrite.
