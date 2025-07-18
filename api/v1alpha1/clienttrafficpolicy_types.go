@@ -56,7 +56,7 @@ type ClientTrafficPolicySpec struct {
 	// Note Proxy Protocol must be present when this field is set, else the connection
 	// is closed.
 	//
-	// Deprecated: Use ProxyProtocol.Enabled instead.
+	// Deprecated: Use ProxyProtocol instead.
 	//
 	// +optional
 	EnableProxyProtocol *bool `json:"enableProxyProtocol,omitempty"`
@@ -365,9 +365,6 @@ type ProxyProtocolSettings struct {
 	//
 	// +optional
 	AllowRequestsWithoutProxyProtocol *bool `json:"allowRequestsWithoutProxyProtocol,omitempty"`
-	// Enabled controls whether the Proxy Protocol header is enabled.
-	// +optional
-	Enabled *bool `json:"enabled,omitempty"`
 }
 
 //+kubebuilder:object:root=true

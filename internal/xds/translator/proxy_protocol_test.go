@@ -42,63 +42,51 @@ func TestPatchProxyProtocolFilter(t *testing.T) {
 			expectedFilterCount:   0,
 		},
 		{
-			name:                "proxyProtocolSettings.Enabled=true only",
+			name:                "proxyProtocolSettings configured (always enabled)",
 			listener:            &listenerv3.Listener{},
 			enableProxyProtocol: false,
 			proxyProtocolSettings: &ir.ProxyProtocolSettings{
-				Enabled: true,
-			},
-			expectedFilterName:  "envoy.filters.listener.proxy_protocol",
-			expectedFilterCount: 1,
-		},
-		{
-			name:                "proxyProtocolSettings.Enabled=false only",
-			listener:            &listenerv3.Listener{},
-			enableProxyProtocol: false,
-			proxyProtocolSettings: &ir.ProxyProtocolSettings{
-				Enabled: false,
-			},
-			expectedFilterName:  "",
-			expectedFilterCount: 0,
-		},
-		{
-			name:                "proxyProtocolSettings with Enabled=true and AllowRequestsWithoutProxyProtocol=false",
-			listener:            &listenerv3.Listener{},
-			enableProxyProtocol: false,
-			proxyProtocolSettings: &ir.ProxyProtocolSettings{
-				Enabled:                           true,
 				AllowRequestsWithoutProxyProtocol: false,
 			},
 			expectedFilterName:  "envoy.filters.listener.proxy_protocol",
 			expectedFilterCount: 1,
 		},
 		{
-			name:                "proxyProtocolSettings with Enabled=true and AllowRequestsWithoutProxyProtocol=true",
+			name:                "proxyProtocolSettings with AllowRequestsWithoutProxyProtocol=false",
 			listener:            &listenerv3.Listener{},
 			enableProxyProtocol: false,
 			proxyProtocolSettings: &ir.ProxyProtocolSettings{
-				Enabled:                           true,
+				AllowRequestsWithoutProxyProtocol: false,
+			},
+			expectedFilterName:  "envoy.filters.listener.proxy_protocol",
+			expectedFilterCount: 1,
+		},
+		{
+			name:                "proxyProtocolSettings with AllowRequestsWithoutProxyProtocol=true",
+			listener:            &listenerv3.Listener{},
+			enableProxyProtocol: false,
+			proxyProtocolSettings: &ir.ProxyProtocolSettings{
 				AllowRequestsWithoutProxyProtocol: true,
 			},
 			expectedFilterName:  "envoy.filters.listener.proxy_protocol",
 			expectedFilterCount: 1,
 		},
 		{
-			name:                "precedence test: enableProxyProtocol=true, proxyProtocolSettings.Enabled=false",
-			listener:            &listenerv3.Listener{},
-			enableProxyProtocol: true,
-			proxyProtocolSettings: &ir.ProxyProtocolSettings{
-				Enabled: false,
-			},
-			expectedFilterName:  "",
-			expectedFilterCount: 0,
-		},
-		{
-			name:                "precedence test: enableProxyProtocol=false, proxyProtocolSettings.Enabled=true",
+			name:                "precedence test: proxyProtocolSettings overrides enableProxyProtocol=false",
 			listener:            &listenerv3.Listener{},
 			enableProxyProtocol: false,
 			proxyProtocolSettings: &ir.ProxyProtocolSettings{
-				Enabled: true,
+				AllowRequestsWithoutProxyProtocol: false,
+			},
+			expectedFilterName:  "envoy.filters.listener.proxy_protocol",
+			expectedFilterCount: 1,
+		},
+		{
+			name:                "precedence test: proxyProtocolSettings overrides enableProxyProtocol=true",
+			listener:            &listenerv3.Listener{},
+			enableProxyProtocol: true,
+			proxyProtocolSettings: &ir.ProxyProtocolSettings{
+				AllowRequestsWithoutProxyProtocol: true,
 			},
 			expectedFilterName:  "envoy.filters.listener.proxy_protocol",
 			expectedFilterCount: 1,

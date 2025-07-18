@@ -8,7 +8,6 @@ clientTrafficPolicies:
   spec:
     proxyProtocol:
       allowRequestsWithoutProxyProtocol: true
-      enabled: true
     targetRef:
       group: gateway.networking.k8s.io
       kind: Gateway
@@ -149,7 +148,6 @@ xdsIR:
       port: 10080
       proxyProtocol:
         allowRequestsWithoutProxyProtocol: true
-        enabled: true
     - address: 0.0.0.0
       hostnames:
       - '*'

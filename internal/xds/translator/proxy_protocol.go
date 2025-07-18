@@ -25,8 +25,8 @@ func patchProxyProtocolFilter(xdsListener *listenerv3.Listener, enableProxyProto
 	// Determine if proxy protocol is enabled
 	isEnabled := enableProxyProtocol
 	if proxyProtocolSettings != nil {
-		// ProxyProtocolSettings takes precedence when provided
-		isEnabled = proxyProtocolSettings.Enabled
+		// ProxyProtocolSettings takes precedence when provided and is always enabled
+		isEnabled = true
 	}
 
 	// Early return if proxy protocol is not enabled

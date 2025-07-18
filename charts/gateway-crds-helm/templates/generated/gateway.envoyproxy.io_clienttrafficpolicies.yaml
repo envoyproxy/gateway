@@ -183,7 +183,7 @@ spec:
                   Note Proxy Protocol must be present when this field is set, else the connection
                   is closed.
 
-                  Deprecated: Use ProxyProtocol.Enabled instead.
+                  Deprecated: Use ProxyProtocol instead.
                 type: boolean
               headers:
                 description: HeaderSettings provides configuration for header management.
@@ -529,10 +529,6 @@ spec:
                       If set to true, the listener will accept requests without a Proxy Protocol header.
                       If set to false, the listener will reject requests without a Proxy Protocol header.
                       If not set, the default behavior is to reject requests without a Proxy Protocol header.
-                    type: boolean
-                  enabled:
-                    description: Enabled controls whether the Proxy Protocol header
-                      is enabled.
                     type: boolean
                 type: object
               targetRef:
