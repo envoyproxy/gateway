@@ -15,4 +15,7 @@ extensionManagerConfig:
   hooks:
     xdsTranslator:
       translation:
-        includeAll: true
+        listener:
+          includeAll: true
+        route:
+          includeAll: true

@@ -882,44 +882,48 @@ func TestGetTranslationHookConfig(t *testing.T) {
 			config: &egv1a1.ExtensionManager{
 				Hooks: &egv1a1.ExtensionHooks{
 					XDSTranslator: &egv1a1.XDSTranslatorHooks{
-						Translation: &egv1a1.TranslationConfig{
-							IncludeAll: nil,
-						},
+						Translation: &egv1a1.TranslationConfig{},
 					},
 				},
 			},
-			expected: &egv1a1.TranslationConfig{
-				IncludeAll: nil,
-			},
+			expected: &egv1a1.TranslationConfig{},
 		},
 		{
-			name: "explicitly enabled",
+			name: "explicitly configured with listeners enabled",
 			config: &egv1a1.ExtensionManager{
 				Hooks: &egv1a1.ExtensionHooks{
 					XDSTranslator: &egv1a1.XDSTranslatorHooks{
 						Translation: &egv1a1.TranslationConfig{
-							IncludeAll: ptr.To(true),
+							Listener: &egv1a1.ListenerTranslationConfig{
+								IncludeAll: ptr.To(true),
+							},
 						},
 					},
 				},
 			},
 			expected: &egv1a1.TranslationConfig{
-				IncludeAll: ptr.To(true),
+				Listener: &egv1a1.ListenerTranslationConfig{
+					IncludeAll: ptr.To(true),
+				},
 			},
 		},
 		{
-			name: "explicitly disabled",
+			name: "explicitly configured with routes enabled",
 			config: &egv1a1.ExtensionManager{
 				Hooks: &egv1a1.ExtensionHooks{
 					XDSTranslator: &egv1a1.XDSTranslatorHooks{
 						Translation: &egv1a1.TranslationConfig{
-							IncludeAll: ptr.To(false),
+							Route: &egv1a1.RouteTranslationConfig{
+								IncludeAll: ptr.To(true),
+							},
 						},
 					},
 				},
 			},
 			expected: &egv1a1.TranslationConfig{
-				IncludeAll: ptr.To(false),
+				Route: &egv1a1.RouteTranslationConfig{
+					IncludeAll: ptr.To(true),
+				},
 			},
 		},
 	}

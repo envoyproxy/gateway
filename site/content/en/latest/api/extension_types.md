@@ -833,6 +833,20 @@ _Appears in:_
 | `http2` | _[HTTP2Settings](#http2settings)_ |  false  |  | HTTP2 provides HTTP/2 configuration for backend connections. |
 
 
+#### ClusterTranslationConfig
+
+
+
+
+
+_Appears in:_
+- [TranslationConfig](#translationconfig)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `includeAll` | _boolean_ |  false  |  | IncludeAll defines whether all clusters should be included in the translation hook.<br />Default is true for backward compatibility. |
+
+
 #### Compression
 
 
@@ -3028,6 +3042,20 @@ _Appears in:_
 | `disable` | _boolean_ |  true  |  | Disable provides the option to turn off leader election, which is enabled by default. |
 
 
+#### ListenerTranslationConfig
+
+
+
+
+
+_Appears in:_
+- [TranslationConfig](#translationconfig)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `includeAll` | _boolean_ |  false  |  | IncludeAll defines whether all listeners should be included in the translation hook.<br />Default is false. |
+
+
 #### LiteralCustomTag
 
 
@@ -4369,6 +4397,20 @@ _Appears in:_
 
 
 
+#### RouteTranslationConfig
+
+
+
+
+
+_Appears in:_
+- [TranslationConfig](#translationconfig)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `includeAll` | _boolean_ |  false  |  | IncludeAll defines whether all routes should be included in the translation hook.<br />Default is false. |
+
+
 #### RoutingType
 
 _Underlying type:_ _string_
@@ -4384,6 +4426,20 @@ _Appears in:_
 | `Endpoint` | EndpointRoutingType is the RoutingType for Endpoint routing.<br /> | 
 
 
+
+
+#### SecretTranslationConfig
+
+
+
+
+
+_Appears in:_
+- [TranslationConfig](#translationconfig)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `includeAll` | _boolean_ |  false  |  | IncludeAll defines whether all secrets should be included in the translation hook.<br />Default is true for backward compatibility. |
 
 
 #### SecurityPolicy
@@ -4898,7 +4954,10 @@ _Appears in:_
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `includeAll` | _boolean_ |  false  |  | IncludeAll defines whether all resources should be included in the translation hook.<br />Default resources are clusters and secrets. When enabled, listeners and routes are also included. |
+| `listener` | _[ListenerTranslationConfig](#listenertranslationconfig)_ |  false  |  | Listener defines the configuration for the listener translation hook. |
+| `route` | _[RouteTranslationConfig](#routetranslationconfig)_ |  false  |  | Route defines the configuration for the route translation hook. |
+| `cluster` | _[ClusterTranslationConfig](#clustertranslationconfig)_ |  false  |  | Cluster defines the configuration for the cluster translation hook. |
+| `secret` | _[SecretTranslationConfig](#secrettranslationconfig)_ |  false  |  | Secret defines the configuration for the secret translation hook. |
 
 
 #### TriggerEnum

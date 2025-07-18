@@ -193,77 +193,88 @@ func processExtensionPostTranslationHook(tCtx *types.ResourceVersionTable, em *e
 		return nil
 	}
 
-	clusters := tCtx.XdsResources[resourcev3.ClusterType]
-	oldClusters := make([]*clusterv3.Cluster, len(clusters))
-	for idx, cluster := range clusters {
-		oldClusters[idx] = cluster.(*clusterv3.Cluster)
-	}
-
-	secrets := tCtx.XdsResources[resourcev3.SecretType]
-	oldSecrets := make([]*tlsv3.Secret, len(secrets))
-	for idx, secret := range secrets {
-		oldSecrets[idx] = secret.(*tlsv3.Secret)
-	}
-
-	var newClusters []*clusterv3.Cluster
-	var newSecrets []*tlsv3.Secret
-	var newListeners []*listenerv3.Listener
-	var newRoutes []*routev3.RouteConfiguration
-
-	// Check if the extension manager is configured to include listeners and routes
+	// Get translation configuration and determine which resources to include
 	translationConfig := extManager.GetTranslationHookConfig()
-	includeAll := translationConfig != nil && translationConfig.IncludeAll != nil && *translationConfig.IncludeAll
 
-	if includeAll {
-		// New behavior: include all four resource types
+	// Determine which resources to include based on configuration
+	includeClusters := translationConfig.ShouldIncludeClusters()
+	includeSecrets := translationConfig.ShouldIncludeSecrets()
+	includeListeners := translationConfig.ShouldIncludeListeners()
+	includeRoutes := translationConfig.ShouldIncludeRoutes()
+
+	// Prepare resources based on configuration
+	var oldClusters []*clusterv3.Cluster
+	var oldSecrets []*tlsv3.Secret
+	var oldListeners []*listenerv3.Listener
+	var oldRoutes []*routev3.RouteConfiguration
+
+	if includeClusters {
+		clusters := tCtx.XdsResources[resourcev3.ClusterType]
+		oldClusters = make([]*clusterv3.Cluster, len(clusters))
+		for idx, cluster := range clusters {
+			oldClusters[idx] = cluster.(*clusterv3.Cluster)
+		}
+	}
+	if includeSecrets {
+		secrets := tCtx.XdsResources[resourcev3.SecretType]
+		oldSecrets = make([]*tlsv3.Secret, len(secrets))
+		for idx, secret := range secrets {
+			oldSecrets[idx] = secret.(*tlsv3.Secret)
+		}
+	}
+	if includeListeners {
 		listeners := tCtx.XdsResources[resourcev3.ListenerType]
-		oldListeners := make([]*listenerv3.Listener, len(listeners))
+		oldListeners = make([]*listenerv3.Listener, len(listeners))
 		for idx, listener := range listeners {
 			oldListeners[idx] = listener.(*listenerv3.Listener)
 		}
-
+	}
+	if includeRoutes {
 		routes := tCtx.XdsResources[resourcev3.RouteType]
-		oldRoutes := make([]*routev3.RouteConfiguration, len(routes))
+		oldRoutes = make([]*routev3.RouteConfiguration, len(routes))
 		for idx, route := range routes {
 			oldRoutes[idx] = route.(*routev3.RouteConfiguration)
 		}
+	}
 
-		newClusters, newSecrets, newListeners, newRoutes, err = extensionInsertHookClient.PostTranslateModifyHook(oldClusters, oldSecrets, oldListeners, oldRoutes, policies)
-		if err != nil {
-			return err
-		}
+	// Call the extension hook
+	newClusters, newSecrets, newListeners, newRoutes, err := extensionInsertHookClient.PostTranslateModifyHook(oldClusters, oldSecrets, oldListeners, oldRoutes, policies)
+	if err != nil {
+		return err
+	}
 
-		// Update the resource table with the new listeners and routes
+	// Update the resource table with the new resources
+	if includeListeners {
 		listenerResources := make([]resourceTypes.Resource, len(newListeners))
 		for idx, listener := range newListeners {
 			listenerResources[idx] = listener
 		}
 		tCtx.SetResources(resourcev3.ListenerType, listenerResources)
+	}
 
+	if includeRoutes {
 		routeResources := make([]resourceTypes.Resource, len(newRoutes))
 		for idx, route := range newRoutes {
 			routeResources[idx] = route
 		}
 		tCtx.SetResources(resourcev3.RouteType, routeResources)
-	} else {
-		// Legacy behavior: only include clusters and secrets
-		newClusters, newSecrets, _, _, err = extensionInsertHookClient.PostTranslateModifyHook(oldClusters, oldSecrets, nil, nil, policies)
-		if err != nil {
-			return err
+	}
+
+	if includeClusters {
+		clusterResources := make([]resourceTypes.Resource, len(newClusters))
+		for idx, cluster := range newClusters {
+			clusterResources[idx] = cluster
 		}
+		tCtx.SetResources(resourcev3.ClusterType, clusterResources)
 	}
 
-	clusterResources := make([]resourceTypes.Resource, len(newClusters))
-	for idx, cluster := range newClusters {
-		clusterResources[idx] = cluster
+	if includeSecrets {
+		secretResources := make([]resourceTypes.Resource, len(newSecrets))
+		for idx, secret := range newSecrets {
+			secretResources[idx] = secret
+		}
+		tCtx.SetResources(resourcev3.SecretType, secretResources)
 	}
-	tCtx.SetResources(resourcev3.ClusterType, clusterResources)
-
-	secretResources := make([]resourceTypes.Resource, len(newSecrets))
-	for idx, secret := range newSecrets {
-		secretResources[idx] = secret
-	}
-	tCtx.SetResources(resourcev3.SecretType, secretResources)
 
 	return nil
 }

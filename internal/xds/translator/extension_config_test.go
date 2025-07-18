@@ -80,7 +80,12 @@ func TestProcessExtensionPostTranslationHookConfig(t *testing.T) {
 					XDSTranslator: &egv1a1.XDSTranslatorHooks{
 						Post: []egv1a1.XDSTranslatorHook{egv1a1.XDSTranslation},
 						Translation: &egv1a1.TranslationConfig{
-							IncludeAll: tt.enableListenersAndRoutes,
+							Listener: &egv1a1.ListenerTranslationConfig{
+								IncludeAll: tt.enableListenersAndRoutes,
+							},
+							Route: &egv1a1.RouteTranslationConfig{
+								IncludeAll: tt.enableListenersAndRoutes,
+							},
 						},
 					},
 				},
