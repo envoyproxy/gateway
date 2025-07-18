@@ -104,8 +104,8 @@ func (in *APIKeyAuth) DeepCopyInto(out *APIKeyAuth) {
 		*out = new(string)
 		**out = **in
 	}
-	if in.SanitizeAPIKey != nil {
-		in, out := &in.SanitizeAPIKey, &out.SanitizeAPIKey
+	if in.Sanitize != nil {
+		in, out := &in.Sanitize, &out.Sanitize
 		*out = new(bool)
 		**out = **in
 	}

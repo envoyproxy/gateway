@@ -29,11 +29,10 @@ type APIKeyAuth struct {
 	// +optional
 	ForwardClientIDHeader *string `json:"forwardClientIDHeader,omitempty"`
 
-	// SanitizeAPIKey indicates whether to remove the API key from the request
-	// before forwarding it to the backend service.
+	// Sanitize indicates whether to remove the API key from the request before forwarding it to the backend service.
 	//
 	// +optional
-	SanitizeAPIKey *bool `json:"sanitizeAPIKey,omitempty"`
+	Sanitize *bool `json:"sanitize,omitempty"`
 }
 
 // ExtractFrom is where to fetch the key from the coming request.
