@@ -31,9 +31,12 @@
         useRemoteAddress: true
     name: test-listener-modify
   maxConnectionsToAcceptPerSocketEvent: 1
-  name: test-listener-modify
+  metadata:
+    filterMetadata:
+      envoy-gateway:
+        resources: []
+  name: 0.0.0.0-10080
   perConnectionBufferLimitBytes: 32768
-  statPrefix: extension-modified-listener
 - address:
     socketAddress:
       address: 0.0.0.0
@@ -67,7 +70,11 @@
         useRemoteAddress: true
     name: second-listener
   maxConnectionsToAcceptPerSocketEvent: 1
-  name: second-listener
+  metadata:
+    filterMetadata:
+      envoy-gateway:
+        resources: []
+  name: 0.0.0.0-10081
   perConnectionBufferLimitBytes: 32768
 - name: extension-injected-listener
   statPrefix: extension-injected

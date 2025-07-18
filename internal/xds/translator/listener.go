@@ -7,6 +7,7 @@ package translator
 
 import (
 	"errors"
+	"fmt"
 	"net"
 	"strconv"
 	"strings"
@@ -185,7 +186,7 @@ func originalIPDetectionExtensions(clientIPDetection *ir.ClientIPDetectionSettin
 // buildXdsTCPListener creates a xds Listener resource
 // TODO: Improve function parameters
 func buildXdsTCPListener(
-	name, address string,
+	address string,
 	port uint32,
 	ipFamily *egv1a1.IPFamily,
 	keepalive *ir.TCPKeepalive,
@@ -200,7 +201,7 @@ func buildXdsTCPListener(
 	bufferLimitBytes := buildPerConnectionBufferLimitBytes(connection)
 	maxAcceptPerSocketEvent := buildMaxAcceptPerSocketEvent(connection)
 	listener := &listenerv3.Listener{
-		Name:                                 name,
+		Name:                                 xdsListenerName(address, port),
 		AccessLog:                            al,
 		SocketOptions:                        socketOptions,
 		PerConnectionBufferLimitBytes:        bufferLimitBytes,
@@ -226,6 +227,14 @@ func buildXdsTCPListener(
 	return listener, nil
 }
 
+func xdsListenerName(address string, port uint32) string {
+	return fmt.Sprintf("%s-%d", address, port)
+}
+
+func quicXDSListenerName(tcpListenerName string) string {
+	return fmt.Sprintf("%s-quic", tcpListenerName)
+}
+
 func buildPerConnectionBufferLimitBytes(connection *ir.ClientConnection) *wrapperspb.UInt32Value {
 	if connection != nil && connection.BufferLimitBytes != nil {
 		return wrapperspb.UInt32(*connection.BufferLimitBytes)
@@ -244,13 +253,13 @@ func buildMaxAcceptPerSocketEvent(connection *ir.ClientConnection) *wrapperspb.U
 }
 
 // buildXdsQuicListener creates a xds Listener resource for quic
-func buildXdsQuicListener(name, address string, port uint32, ipFamily *egv1a1.IPFamily, accesslog *ir.AccessLog) (*listenerv3.Listener, error) {
+func buildXdsQuicListener(address string, port uint32, ipFamily *egv1a1.IPFamily, accesslog *ir.AccessLog) (*listenerv3.Listener, error) {
 	log, err := buildXdsAccessLog(accesslog, ir.ProxyAccessLogTypeListener)
 	if err != nil {
 		return nil, err
 	}
 	xdsListener := &listenerv3.Listener{
-		Name:      name + "-quic",
+		Name:      quicXDSListenerName(xdsListenerName(address, port)),
 		AccessLog: log,
 		Address: &corev3.Address{
 			Address: &corev3.Address_SocketAddress{
@@ -967,7 +976,7 @@ func buildXdsUDPListener(clusterName string, udpListener *ir.UDPListener, access
 		return nil, err
 	}
 	xdsListener := &listenerv3.Listener{
-		Name:      udpListener.Name,
+		Name:      xdsListenerName(udpListener.Address, udpListener.Port),
 		AccessLog: al,
 		Address: &corev3.Address{
 			Address: &corev3.Address_SocketAddress{

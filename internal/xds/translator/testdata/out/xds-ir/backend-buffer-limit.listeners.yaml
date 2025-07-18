@@ -31,7 +31,11 @@
         useRemoteAddress: true
     name: first-listener
   maxConnectionsToAcceptPerSocketEvent: 1
-  name: first-listener
+  metadata:
+    filterMetadata:
+      envoy-gateway:
+        resources: []
+  name: ::-10080
   perConnectionBufferLimitBytes: 32768
 - address:
     socketAddress:
@@ -46,7 +50,11 @@
         statPrefix: tcp-10081
     name: tcp-route-dest
   maxConnectionsToAcceptPerSocketEvent: 1
-  name: second-listener
+  metadata:
+    filterMetadata:
+      envoy-gateway:
+        resources: []
+  name: ::-10081
   perConnectionBufferLimitBytes: 1500
 - address:
     socketAddress:
@@ -65,4 +73,4 @@
               '@type': type.googleapis.com/envoy.extensions.filters.udp.udp_proxy.v3.Route
               cluster: udp-route-dest
       statPrefix: service
-  name: udp-route
+  name: ::-10080

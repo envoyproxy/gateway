@@ -31,7 +31,11 @@
         useRemoteAddress: true
     name: first-listener
   maxConnectionsToAcceptPerSocketEvent: 2
-  name: first-listener
+  metadata:
+    filterMetadata:
+      envoy-gateway:
+        resources: []
+  name: ::-10080
   perConnectionBufferLimitBytes: 32768
 - address:
     socketAddress:
@@ -45,7 +49,11 @@
         cluster: max-accept-disabled
         statPrefix: tcp-10081
     name: max-accept-disabled
-  name: second-listener
+  metadata:
+    filterMetadata:
+      envoy-gateway:
+        resources: []
+  name: ::-10081
   perConnectionBufferLimitBytes: 32768
 - address:
     socketAddress:
@@ -60,5 +68,9 @@
         statPrefix: tcp-10082
     name: max-accept-default
   maxConnectionsToAcceptPerSocketEvent: 1
-  name: third-listener
+  metadata:
+    filterMetadata:
+      envoy-gateway:
+        resources: []
+  name: ::-10082
   perConnectionBufferLimitBytes: 32768

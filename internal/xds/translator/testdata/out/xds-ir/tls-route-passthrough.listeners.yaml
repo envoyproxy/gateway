@@ -18,7 +18,11 @@
     typedConfig:
       '@type': type.googleapis.com/envoy.extensions.filters.listener.tls_inspector.v3.TlsInspector
   maxConnectionsToAcceptPerSocketEvent: 1
-  name: tls-passthrough-foo
+  metadata:
+    filterMetadata:
+      envoy-gateway:
+        resources: []
+  name: ::-10080
   perConnectionBufferLimitBytes: 32768
 - address:
     socketAddress:
@@ -40,5 +44,9 @@
     typedConfig:
       '@type': type.googleapis.com/envoy.extensions.filters.listener.tls_inspector.v3.TlsInspector
   maxConnectionsToAcceptPerSocketEvent: 1
-  name: tls-passthrough-bar
+  metadata:
+    filterMetadata:
+      envoy-gateway:
+        resources: []
+  name: ::-10081
   perConnectionBufferLimitBytes: 32768

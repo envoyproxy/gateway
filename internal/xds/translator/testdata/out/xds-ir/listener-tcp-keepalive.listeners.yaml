@@ -31,7 +31,11 @@
         useRemoteAddress: true
     name: first-listener
   maxConnectionsToAcceptPerSocketEvent: 1
-  name: first-listener
+  metadata:
+    filterMetadata:
+      envoy-gateway:
+        resources: []
+  name: ::-10080
   perConnectionBufferLimitBytes: 32768
   socketOptions:
   - description: socket option to enable tcp keep alive
@@ -71,7 +75,11 @@
         useRemoteAddress: true
     name: second-listener
   maxConnectionsToAcceptPerSocketEvent: 1
-  name: second-listener
+  metadata:
+    filterMetadata:
+      envoy-gateway:
+        resources: []
+  name: ::-10081
   perConnectionBufferLimitBytes: 32768
   socketOptions:
   - description: socket option to enable tcp keep alive
@@ -109,7 +117,11 @@
     typedConfig:
       '@type': type.googleapis.com/envoy.extensions.filters.listener.tls_inspector.v3.TlsInspector
   maxConnectionsToAcceptPerSocketEvent: 1
-  name: third-listener
+  metadata:
+    filterMetadata:
+      envoy-gateway:
+        resources: []
+  name: ::-10082
   perConnectionBufferLimitBytes: 32768
   socketOptions:
   - description: socket option to enable tcp keep alive
@@ -128,7 +140,11 @@
         cluster: tcp-route-dest
         statPrefix: tcp-10083
   maxConnectionsToAcceptPerSocketEvent: 1
-  name: fourth-listener
+  metadata:
+    filterMetadata:
+      envoy-gateway:
+        resources: []
+  name: ::-10083
   perConnectionBufferLimitBytes: 32768
   socketOptions:
   - description: socket option to enable tcp keep alive

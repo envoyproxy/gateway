@@ -56,7 +56,11 @@
         disableStatelessSessionResumption: true
         requireClientCertificate: false
   maxConnectionsToAcceptPerSocketEvent: 1
-  name: first-listener
+  metadata:
+    filterMetadata:
+      envoy-gateway:
+        resources: []
+  name: ::-10001
   perConnectionBufferLimitBytes: 32768
 - address:
     socketAddress:
@@ -117,7 +121,11 @@
         disableStatelessSessionResumption: true
         requireClientCertificate: false
   maxConnectionsToAcceptPerSocketEvent: 1
-  name: second-listener
+  metadata:
+    filterMetadata:
+      envoy-gateway:
+        resources: []
+  name: ::-10002
   perConnectionBufferLimitBytes: 32768
 - address:
     socketAddress:
@@ -180,7 +188,11 @@
         disableStatelessSessionResumption: true
         requireClientCertificate: false
   maxConnectionsToAcceptPerSocketEvent: 1
-  name: third-listener
+  metadata:
+    filterMetadata:
+      envoy-gateway:
+        resources: []
+  name: ::-10003
   perConnectionBufferLimitBytes: 32768
 - address:
     socketAddress:
@@ -245,7 +257,11 @@
         disableStatelessSessionResumption: true
         requireClientCertificate: false
   maxConnectionsToAcceptPerSocketEvent: 1
-  name: fourth-listener
+  metadata:
+    filterMetadata:
+      envoy-gateway:
+        resources: []
+  name: ::-10004
   perConnectionBufferLimitBytes: 32768
 - address:
     socketAddress:
@@ -312,5 +328,9 @@
         disableStatelessSessionResumption: true
         requireClientCertificate: false
   maxConnectionsToAcceptPerSocketEvent: 1
-  name: fifth-listener
+  metadata:
+    filterMetadata:
+      envoy-gateway:
+        resources: []
+  name: ::-10005
   perConnectionBufferLimitBytes: 32768
