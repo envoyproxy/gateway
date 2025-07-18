@@ -485,7 +485,8 @@ type policyTargetRouteKey struct {
 
 type policyRouteTargetContext struct {
 	RouteContext
-	attached bool
+	attached             bool
+	attachedToRouteRules sets.Set[string]
 }
 
 type policyGatewayTargetContext struct {
