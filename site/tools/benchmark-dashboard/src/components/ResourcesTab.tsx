@@ -315,19 +315,17 @@ const ResourcesTab = ({ resourceTrends, benchmarkResults }: ResourcesTabProps) =
                   />
                   <Area
                     dataKey="gateway"
-                    stackId="memory"
                     type="monotone"
                     fill="#a855f7"
-                    fillOpacity={0.6}
+                    fillOpacity={0.4}
                     stroke="#a855f7"
                     strokeWidth={2}
                   />
                   <Area
                     dataKey="proxy"
-                    stackId="memory"
                     type="monotone"
                     fill="#4f46e5"
-                    fillOpacity={0.6}
+                    fillOpacity={0.4}
                     stroke="#4f46e5"
                     strokeWidth={2}
                   />
