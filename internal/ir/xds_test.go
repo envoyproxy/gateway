@@ -1124,8 +1124,10 @@ func TestRouteDestination_NeedsClusterPerSetting(t *testing.T) {
 								Port: 8080,
 							},
 						},
-						AddressType:      ptr.To(FQDN),
-						ZoneAwareRouting: &ZoneAwareRouting{MinSize: 1},
+						AddressType: ptr.To(FQDN),
+						PreferLocal: &PreferLocalZone{
+							Force: &ForceLocalZone{MinEndpointsInZoneThreshold: ptr.To[uint32](1)},
+						},
 					},
 					{
 						Endpoints: []*DestinationEndpoint{
@@ -1152,8 +1154,10 @@ func TestRouteDestination_NeedsClusterPerSetting(t *testing.T) {
 								Port: 8080,
 							},
 						},
-						AddressType:      ptr.To(FQDN),
-						ZoneAwareRouting: &ZoneAwareRouting{MinSize: 1},
+						AddressType: ptr.To(FQDN),
+						PreferLocal: &PreferLocalZone{
+							Force: &ForceLocalZone{MinEndpointsInZoneThreshold: ptr.To[uint32](1)},
+						},
 					},
 				},
 			},
