@@ -4974,6 +4974,7 @@ _Appears in:_
 | `5xx` | The upstream server responds with any 5xx response code, or does not respond at all (disconnect/reset/read timeout).<br />Includes connect-failure and refused-stream.<br /> | 
 | `gateway-error` | The response is a gateway error (502,503 or 504).<br /> | 
 | `reset` | The upstream server does not respond at all (disconnect/reset/read timeout.)<br /> | 
+| `reset-before-request` | Like reset, but only retry if the request headers have not been sent to the upstream server.<br /> | 
 | `connect-failure` | Connection failure to the upstream server (connect timeout, etc.). (Included in *5xx*)<br /> | 
 | `retriable-4xx` | The upstream server responds with a retriable 4xx response code.<br />Currently, the only response code in this category is 409.<br /> | 
 | `refused-stream` | The upstream server resets the stream with a REFUSED_STREAM error code.<br /> | 
