@@ -254,7 +254,10 @@ func (t *Translator) processHTTPListenerXdsTranslation(
 ) error {
 	// The XDS translation is done in a best-effort manner, so we collect all
 	// errors and return them at the end.
-	var errs error
+	var (
+		ownerGatewayListeners = map[string]sets.Set[*ir.ResourceMetadata]{} // The set of Gateway HTTPListeners that own the xDS Listener
+		errs                  error
+	)
 	for _, httpListener := range httpListeners {
 		var (
 			http3Enabled                       = httpListener.HTTP3 != nil // Whether HTTP3 is enabled
@@ -277,7 +280,7 @@ func (t *Translator) processHTTPListenerXdsTranslation(
 		case !xdsListenerOnSameAddressPortExists:
 			// Create a new UDP(QUIC) listener for HTTP3 traffic if HTTP3 is enabled
 			if http3Enabled {
-				if quicXDSListener, err = buildXdsQuicListener(httpListener.Name, httpListener.Address,
+				if quicXDSListener, err = buildXdsQuicListener(httpListener.Address,
 					httpListener.Port, httpListener.IPFamily, accessLog); err != nil {
 					errs = errors.Join(errs, err)
 					continue
@@ -287,6 +290,7 @@ func (t *Translator) processHTTPListenerXdsTranslation(
 					errs = errors.Join(errs, err)
 					continue
 				}
+				ownerGatewayListeners[quicXDSListener.Name] = sets.New[*ir.ResourceMetadata]()
 			}
 
 			// Create a new TCP listener for HTTP1/HTTP2 traffic.
@@ -301,6 +305,7 @@ func (t *Translator) processHTTPListenerXdsTranslation(
 				errs = errors.Join(errs, err)
 				continue
 			}
+			ownerGatewayListeners[tcpXDSListener.Name] = sets.New[*ir.ResourceMetadata]()
 
 			// We need to add an HCM to the newly created listener.
 			addHCM = true
@@ -373,6 +378,16 @@ func (t *Translator) processHTTPListenerXdsTranslation(
 			}
 		}
 
+		// Collect the metadata for the HTTPListener.
+		if _, ok := ownerGatewayListeners[tcpXDSListener.Name]; ok {
+			ownerGatewayListeners[tcpXDSListener.Name].Insert(httpListener.Metadata)
+		}
+		if http3Enabled {
+			if _, ok := ownerGatewayListeners[quicXDSListener.Name]; ok {
+				ownerGatewayListeners[quicXDSListener.Name].Insert(httpListener.Metadata)
+			}
+		}
+
 		// Add the secrets referenced by the listener's TLS configuration to the
 		// resource version table.
 		// 1:1 between IR TLSListenerConfig and xDS Secret
@@ -434,6 +449,17 @@ func (t *Translator) processHTTPListenerXdsTranslation(
 		}
 	}
 
+	// Add the owner Gateway Listeners to the xDS listeners' metadata.
+	for listenerName, ownerGatewayListeners := range ownerGatewayListeners {
+		xdsListener := findXdsListener(tCtx, listenerName, corev3.SocketAddress_TCP)
+		if xdsListener != nil {
+			xdsListener.Metadata = buildXdsMetadataFromMultiple(ownerGatewayListeners.UnsortedList())
+		}
+		quicXDSListener := findXdsListener(tCtx, quicXDSListenerName(listenerName), corev3.SocketAddress_UDP)
+		if quicXDSListener != nil {
+			quicXDSListener.Metadata = buildXdsMetadataFromMultiple(ownerGatewayListeners.UnsortedList())
+		}
+	}
 	return errs
 }
 
@@ -683,7 +709,10 @@ func (t *Translator) processTCPListenerXdsTranslation(
 ) error {
 	// The XDS translation is done in a best-effort manner, so we collect all
 	// errors and return them at the end.
-	var errs, err error
+	var (
+		ownerGatewayListeners = map[string]sets.Set[*ir.ResourceMetadata]{} // The set of Gateway Listeners that own the xDS Listener
+		errs, err             error
+	)
 	for _, tcpListener := range tcpListeners {
 		// Search for an existing listener, if it does not exist, create one.
 		xdsListener := findXdsListenerByHostPort(tCtx, tcpListener.Address, tcpListener.Port, corev3.SocketAddress_TCP)
@@ -701,6 +730,13 @@ func (t *Translator) processTCPListenerXdsTranslation(
 				errs = errors.Join(errs, err)
 				continue
 			}
+
+			ownerGatewayListeners[xdsListener.Name] = sets.New[*ir.ResourceMetadata]()
+		}
+
+		// Collect the owner Gateway Listeners for the xDS Listener.
+		if _, ok := ownerGatewayListeners[xdsListener.Name]; ok {
+			ownerGatewayListeners[xdsListener.Name].Insert(tcpListener.Metadata)
 		}
 
 		// Add the proxy protocol filter if needed
@@ -766,6 +802,15 @@ func (t *Translator) processTCPListenerXdsTranslation(
 			}
 		}
 	}
+
+	// Add the owner Gateway Listeners to the xDS listeners' metadata.
+	for listenerName, ownerGatewayListeners := range ownerGatewayListeners {
+		xdsListener := findXdsListener(tCtx, listenerName, corev3.SocketAddress_TCP)
+		if xdsListener != nil {
+			xdsListener.Metadata = buildXdsMetadataFromMultiple(ownerGatewayListeners.UnsortedList())
+		}
+	}
+
 	return errs
 }
 
@@ -819,6 +864,7 @@ func processUDPListenerXdsTranslation(
 			errs = errors.Join(errs, err)
 			continue
 		}
+		xdsListener.Metadata = buildXdsMetadata(udpListener.Metadata)
 	}
 	return errs
 }
@@ -844,14 +890,14 @@ func findXdsListenerByHostPort(tCtx *types.ResourceVersionTable, address string,
 }
 
 // findXdsListener finds a xds listener with the same name and returns nil if there is no match.
-func findXdsListener(tCtx *types.ResourceVersionTable, name string) *listenerv3.Listener {
+func findXdsListener(tCtx *types.ResourceVersionTable, name string, protocol corev3.SocketAddress_Protocol) *listenerv3.Listener {
 	if tCtx == nil || tCtx.XdsResources == nil || tCtx.XdsResources[resourcev3.ListenerType] == nil {
 		return nil
 	}
 
 	for _, r := range tCtx.XdsResources[resourcev3.ListenerType] {
 		listener := r.(*listenerv3.Listener)
-		if listener.Name == name {
+		if listener.Name == name && listener.GetAddress().GetSocketAddress().Protocol == protocol {
 			return listener
 		}
 	}

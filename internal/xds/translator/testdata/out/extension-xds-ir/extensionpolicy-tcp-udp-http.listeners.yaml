@@ -31,6 +31,14 @@
         useRemoteAddress: true
     name: envoy-gateway/gateway-1/http1
   maxConnectionsToAcceptPerSocketEvent: 1
+  metadata:
+    filterMetadata:
+      envoy-gateway:
+        resources:
+        - kind: Gateway
+          name: gateway-1
+          namespace: envoy-gateway
+          sectionName: http1
   name: 0.0.0.0-10184
   perConnectionBufferLimitBytes: 32768
   statPrefix: 0.0.0.0-10184
@@ -46,6 +54,14 @@
         cluster: tcp-route-dest
         statPrefix: tcp-10185
   maxConnectionsToAcceptPerSocketEvent: 1
+  metadata:
+    filterMetadata:
+      envoy-gateway:
+        resources:
+        - kind: Gateway
+          name: gateway-1
+          namespace: envoy-gateway
+          sectionName: tcp1
   name: 0.0.0.0-10185
   perConnectionBufferLimitBytes: 32768
 - address:
@@ -65,5 +81,13 @@
               '@type': type.googleapis.com/envoy.extensions.filters.udp.udp_proxy.v3.Route
               cluster: udp-route-dest
       statPrefix: service
+  metadata:
+    filterMetadata:
+      envoy-gateway:
+        resources:
+        - kind: Gateway
+          name: gateway-1
+          namespace: envoy-gateway
+          sectionName: udp1
   name: 0.0.0.0-10162
   statPrefix: 0.0.0.0-10162

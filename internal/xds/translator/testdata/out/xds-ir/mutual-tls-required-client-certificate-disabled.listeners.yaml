@@ -56,6 +56,10 @@
         disableStatelessSessionResumption: true
         requireClientCertificate: false
   maxConnectionsToAcceptPerSocketEvent: 1
+  metadata:
+    filterMetadata:
+      envoy-gateway:
+        resources: []
   name: ::-10080
   perConnectionBufferLimitBytes: 32768
 - address:
@@ -89,5 +93,9 @@
         disableStatelessSessionResumption: true
         requireClientCertificate: false
   maxConnectionsToAcceptPerSocketEvent: 1
+  metadata:
+    filterMetadata:
+      envoy-gateway:
+        resources: []
   name: ::-10081
   perConnectionBufferLimitBytes: 32768

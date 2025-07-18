@@ -1,5 +1,10 @@
 http:
-- name: "custom-backend-listener"
+- name: envoy-gateway/gateway-1/http1
+  metadata:
+    kind: Gateway
+    name: gateway-1
+    namespace: envoy-gateway
+    sectionName: http1
   address: "0.0.0.0"
   port: 10080
   hostnames:

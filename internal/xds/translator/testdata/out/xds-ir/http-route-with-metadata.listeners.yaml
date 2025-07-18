@@ -31,5 +31,15 @@
         useRemoteAddress: true
     name: first-listener
   maxConnectionsToAcceptPerSocketEvent: 1
+  metadata:
+    filterMetadata:
+      envoy-gateway:
+        resources:
+        - annotations:
+            foo: bar
+          kind: Gateway
+          name: first-gateway
+          namespace: first-gateway
+          sectionName: first-listener
   name: 0.0.0.0-10080
   perConnectionBufferLimitBytes: 32768

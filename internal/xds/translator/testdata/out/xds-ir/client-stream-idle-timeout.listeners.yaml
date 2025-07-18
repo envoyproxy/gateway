@@ -34,6 +34,10 @@
         useRemoteAddress: true
     name: first-listener
   maxConnectionsToAcceptPerSocketEvent: 1
+  metadata:
+    filterMetadata:
+      envoy-gateway:
+        resources: []
   name: ::-10080
   perConnectionBufferLimitBytes: 32768
 - address:
@@ -50,5 +54,9 @@
         statPrefix: tcp-10081
     name: second-route
   maxConnectionsToAcceptPerSocketEvent: 1
+  metadata:
+    filterMetadata:
+      envoy-gateway:
+        resources: []
   name: ::-10081
   perConnectionBufferLimitBytes: 32768

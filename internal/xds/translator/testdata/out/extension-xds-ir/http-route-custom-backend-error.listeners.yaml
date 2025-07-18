@@ -25,11 +25,19 @@
           configSource:
             ads: {}
             resourceApiVersion: V3
-          routeConfigName: custom-backend-listener
+          routeConfigName: envoy-gateway/gateway-1/http1
         serverHeaderTransformation: PASS_THROUGH
         statPrefix: http-10080
         useRemoteAddress: true
-    name: custom-backend-listener
+    name: envoy-gateway/gateway-1/http1
   maxConnectionsToAcceptPerSocketEvent: 1
+  metadata:
+    filterMetadata:
+      envoy-gateway:
+        resources:
+        - kind: Gateway
+          name: gateway-1
+          namespace: envoy-gateway
+          sectionName: http1
   name: 0.0.0.0-10080
   perConnectionBufferLimitBytes: 32768

@@ -59,7 +59,11 @@
         useRemoteAddress: true
     name: default/gateway-1/http
   drainType: MODIFY_ONLY
-  name: default/gateway-1/http-quic
+  metadata:
+    filterMetadata:
+      envoy-gateway:
+        resources: []
+  name: 0.0.0.0-10080-quic
   udpListenerConfig:
     downstreamSocketConfig: {}
     quicOptions: {}
@@ -164,5 +168,9 @@
         useRemoteAddress: true
     name: default/gateway-1/http
   maxConnectionsToAcceptPerSocketEvent: 1
+  metadata:
+    filterMetadata:
+      envoy-gateway:
+        resources: []
   name: 0.0.0.0-10080
   perConnectionBufferLimitBytes: 32768

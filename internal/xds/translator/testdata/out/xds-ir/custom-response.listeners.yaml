@@ -167,5 +167,13 @@
         useRemoteAddress: true
     name: default/gateway-1/http
   maxConnectionsToAcceptPerSocketEvent: 1
+  metadata:
+    filterMetadata:
+      envoy-gateway:
+        resources:
+        - kind: Gateway
+          name: gateway-1
+          namespace: default
+          sectionName: http
   name: 0.0.0.0-10080
   perConnectionBufferLimitBytes: 32768
