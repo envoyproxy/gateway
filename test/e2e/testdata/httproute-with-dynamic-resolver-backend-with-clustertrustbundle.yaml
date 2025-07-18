@@ -1,0 +1,58 @@
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: httproute-clustertrustbundle
+  namespace: gateway-conformance-infra
+spec:
+  parentRefs:
+    - name: all-namespaces
+  rules:
+    - backendRefs:
+        - group: gateway.envoyproxy.io
+          kind: Backend
+          name: backend-clustertrustbundle
+      matches:
+        - path:
+            type: PathPrefix
+            value: /with-clustertrustbundle
+---
+# keep this same as configmap backend-ca-certificate
+apiVersion: certificates.k8s.io/v1beta1
+kind: ClusterTrustBundle
+metadata:
+  name: backend-ca-certificate
+spec:
+  trustBundle: |
+    -----BEGIN CERTIFICATE-----
+    MIIDPTCCAiWgAwIBAgIUcpXGG2fJigPwvq46BxmVmgxlGxQwDQYJKoZIhvcNAQEL
+    BQAwLTEVMBMGA1UECgwMZXhhbXBsZSBJbmMuMRQwEgYDVQQDDAtleGFtcGxlLmNv
+    bTAgFw0yNTA1MDIwNzQwMTdaGA8yMTI1MDQwODA3NDAxN1owLTEVMBMGA1UECgwM
+    ZXhhbXBsZSBJbmMuMRQwEgYDVQQDDAtleGFtcGxlLmNvbTCCASIwDQYJKoZIhvcN
+    AQEBBQADggEPADCCAQoCggEBAKJufjXwrd+NYesqHU96eWDDTdTHzPTwIw7u3PVd
+    +lMY+aKHS4yJNOO9uA8mHilFlfXJOqBj8JU4zgWRrUWKmdd4sQuuoQczZzTScyjc
+    OKk/uIhvp0n5HTjR2q1gaCYS223fJ90e2WChZeokPXkTcKTAQm/5aizGQ5rzlZSk
+    CNTAgdKK80UXDkOHxx3gkmodGhcRW4BsmXEyCm1jkUYrkIQm9K9cZQKeeyIDbTA8
+    Y3Y9v5dubbrLOmEOeEIN2uJpru706zhTcCj142hlDwgh1I4z9et5BcdN0Mi2eQDs
+    R0wwE5/UKmQpA9i9rsurSN+vzKlh3v+YWjv/493AWOs/VFUCAwEAAaNTMFEwHQYD
+    VR0OBBYEFG6yHRlAqWAIyCj9YmiViR1z9vgnMB8GA1UdIwQYMBaAFG6yHRlAqWAI
+    yCj9YmiViR1z9vgnMA8GA1UdEwEB/wQFMAMBAf8wDQYJKoZIhvcNAQELBQADggEB
+    AHe6SKBHOK9Fv0UzxaX98JhI6kOr1pR08RAR/pr1t2oeHm0tdWOvdrukRAq9AOng
+    OVBQBcMKz+PRQQ6dA2Gzh3UE5lorQ+jkbon5DY6oTZnMCPo5b3Dy/sN6hl3/w2Yi
+    uTv8iMcU5VloeDRqUbKTtNX3o6LymkIJ+S3tLutQr8xzNt6SnJAnZ4PcgrZY5Xlq
+    Othq6aXaCOfvH/yoQoSIxVMhl1QbcI8EgjY7z9523nKlOvYc36Qe6z7zqqLvVfk7
+    iFlA2NThEl+N/7SOn37++sOhFvA85X7WQ92jWi2Cz5s1Z6AZRoWz703+GxyzEyk3
+    gFEPoFIv6ijfvPhUytPUBr4=
+    -----END CERTIFICATE-----
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: Backend
+metadata:
+  name: backend-clustertrustbundle
+  namespace: gateway-conformance-infra
+spec:
+  type: DynamicResolver
+  tls:
+    caCertificateRefs:
+      - name: backend-ca-certificate
+        group: ""
+        kind: ClusterTrustBundle
