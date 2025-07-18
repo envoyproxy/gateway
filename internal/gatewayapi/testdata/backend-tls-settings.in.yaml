@@ -1,0 +1,196 @@
+envoyProxyForGatewayClass:
+  apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: EnvoyProxy
+  metadata:
+    namespace: envoy-gateway-system
+    name: test
+  spec:
+    backendTLS:
+      clientCertificateRef:
+        group: ""
+        kind: Secret
+        namespace: envoy-gateway-system
+        name: client-auth
+      ciphers:
+        - ECDHE-RSA-AES128-GCM-SHA256
+        - ECDHE-ECDSA-AES256-GCM-SHA384
+      ecdhCurves:
+        - ECDHE-RSA-AES128-GCM-SHA256
+        - ECDHE-ECDSA-AES256-GCM-SHA384
+      maxVersion: tls1.3
+      minVersion: tls1.2
+      SignatureAlgorithms:
+        - RSA-PSS-RSAE-SHA256
+        - ECDSA-SECP256R1-SHA256
+      alpnProtocols:
+        - HTTP/1.1
+        - HTTP/2
+
+gateways:
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: Gateway
+    metadata:
+      namespace: envoy-gateway
+      name: gateway-1
+    spec:
+      gatewayClassName: envoy-gateway-class
+      listeners:
+        - name: http
+          protocol: HTTP
+          port: 80
+          allowedRoutes:
+            namespaces:
+              from: All
+httpRoutes:
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: HTTPRoute
+    metadata:
+      namespace: default
+      name: httproute-1
+    spec:
+      parentRefs:
+        - namespace: envoy-gateway
+          name: gateway-1
+      rules:
+        - matches:
+            - path:
+                value: "/"
+          backendRefs:
+            - group: gateway.envoyproxy.io
+              kind: Backend
+              name: backend-1
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: HTTPRoute
+    metadata:
+      namespace: default
+      name: httproute-2
+    spec:
+      parentRefs:
+        - namespace: envoy-gateway
+          name: gateway-1
+      rules:
+        - matches:
+            - path:
+                value: "/"
+          backendRefs:
+            - group: gateway.envoyproxy.io
+              kind: Backend
+              name: backend-2
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: HTTPRoute
+    metadata:
+      namespace: default
+      name: httproute-3
+    spec:
+      parentRefs:
+        - namespace: envoy-gateway
+          name: gateway-1
+      rules:
+        - matches:
+            - path:
+                value: "/"
+          backendRefs:
+            - group: gateway.envoyproxy.io
+              kind: Backend
+              name: backend-3
+configMaps:
+  - apiVersion: v1
+    kind: ConfigMap
+    metadata:
+      name: ca-cmap
+      namespace: default
+    data:
+      ca.crt: |
+        -----BEGIN CERTIFICATE-----
+        MIIDJzCCAg+gAwIBAgIUAl6UKIuKmzte81cllz5PfdN2IlIwDQYJKoZIhvcNAQEL
+        BQAwIzEQMA4GA1UEAwwHbXljaWVudDEPMA0GA1UECgwGa3ViZWRiMB4XDTIzMTAw
+        MjA1NDE1N1oXDTI0MTAwMTA1NDE1N1owIzEQMA4GA1UEAwwHbXljaWVudDEPMA0G
+        A1UECgwGa3ViZWRiMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAwSTc
+        1yj8HW62nynkFbXo4VXKv2jC0PM7dPVky87FweZcTKLoWQVPQE2p2kLDK6OEszmM
+        yyr+xxWtyiveremrWqnKkNTYhLfYPhgQkczib7eUalmFjUbhWdLvHakbEgCodn3b
+        kz57mInX2VpiDOKg4kyHfiuXWpiBqrCx0KNLpxo3DEQcFcsQTeTHzh4752GV04RU
+        Ti/GEWyzIsl4Rg7tGtAwmcIPgUNUfY2Q390FGqdH4ahn+mw/6aFbW31W63d9YJVq
+        ioyOVcaMIpM5B/c7Qc8SuhCI1YGhUyg4cRHLEw5VtikioyE3X04kna3jQAj54YbR
+        bpEhc35apKLB21HOUQIDAQABo1MwUTAdBgNVHQ4EFgQUyvl0VI5vJVSuYFXu7B48
+        6PbMEAowHwYDVR0jBBgwFoAUyvl0VI5vJVSuYFXu7B486PbMEAowDwYDVR0TAQH/
+        BAUwAwEB/zANBgkqhkiG9w0BAQsFAAOCAQEAMLxrgFVMuNRq2wAwcBt7SnNR5Cfz
+        2MvXq5EUmuawIUi9kaYjwdViDREGSjk7JW17vl576HjDkdfRwi4E28SydRInZf6J
+        i8HZcZ7caH6DxR335fgHVzLi5NiTce/OjNBQzQ2MJXVDd8DBmG5fyatJiOJQ4bWE
+        A7FlP0RdP3CO3GWE0M5iXOB2m1qWkE2eyO4UHvwTqNQLdrdAXgDQlbam9e4BG3Gg
+        d/6thAkWDbt/QNT+EJHDCvhDRKh1RuGHyg+Y+/nebTWWrFWsktRrbOoHCZiCpXI1
+        3eXE6nt0YkgtDxG22KqnhpAg9gUSs2hlhoxyvkzyF0mu6NhPlwAgnq7+/Q==
+        -----END CERTIFICATE-----
+backendTLSPolicies:
+  - apiVersion: gateway.networking.k8s.io/v1alpha2
+    kind: BackendTLSPolicy
+    metadata:
+      name: policy-btls
+      namespace: default
+    spec:
+      targetRefs:
+        - group: gateway.envoyproxy.io
+          kind: Backend
+          name: backend-1
+      validation:
+        wellKnownCACertificates: System
+        hostname: example.com
+        subjectAltNames:
+          - type: URI
+            uri: spiffe://cluster.local/ns/istio-demo/sa/echo-v1
+          - type: Hostname
+            hostname: subdomain.secondexample.com
+secrets:
+  - apiVersion: v1
+    kind: Secret
+    metadata:
+      name: client-auth
+      namespace: envoy-gateway-system
+    type: kubernetes.io/tls
+    data:
+      tls.crt: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSURKRENDQWd5Z0F3SUJBZ0lVU3JTYktMZjBiTEVHb2dXeC9nQ3cyR0N0dnhFd0RRWUpLb1pJaHZjTkFRRUwKQlFBd0V6RVJNQThHQTFVRUF3d0lWR1Z6ZENCSmJtTXdIaGNOTWpRd01qSTVNRGt6TURFd1doY05NelF3TWpJMgpNRGt6TURFd1dqQVRNUkV3RHdZRFZRUUREQWhVWlhOMElFbHVZekNDQVNJd0RRWUpLb1pJaHZjTkFRRUJCUUFECmdnRVBBRENDQVFvQ2dnRUJBSzFKempQSWlXZzNxb0hTckFkZGtlSmphTVA5aXlNVGkvQlBvOWNKUG9SRThaaTcKV2FwVXJYTC85QTlyK2pITXlHSVpOWk5kY1o1Y1kyWHYwTFA4WnhWeTJsazArM3d0WXpIbnBHWUdWdHlxMnRldApEaEZzaVBsODJZUmpDMG16V2E0UU16NFNYekZITmdJRHBSZGhmcm92bXNldVdHUUU4cFY0VWQ5VUsvU0tpbE1PCnF0QjVKaXJMUDJWczVUMW9XaWNXTFF2ZmJHd3Y3c0ZEZHI5YkcwWHRTUXAxN0hTZ281MFNERTUrQmpTbXB0RncKMVZjS0xscWFoTVhCRERpb3Jnd2hJaEdHS3BFU2VNMFA3YkZoVm1rTTNhc2gyeFNUQnVGVUJEbEU0Sk9haHp3cwpEWHJ1cFVoRGRTMWhkYzJmUHJqaEZBbEpmV0VZWjZCbFpqeXNpVlVDQXdFQUFhTndNRzR3SFFZRFZSME9CQllFCkZCUXVmSzFMaWJ1Vm05VHMvVmpCeDhMM3VpTmVNQjhHQTFVZEl3UVlNQmFBRkJRdWZLMUxpYnVWbTlUcy9WakIKeDhMM3VpTmVNQThHQTFVZEV3RUIvd1FGTUFNQkFmOHdHd1lEVlIwUkJCUXdFb0lCS29JTktpNWxlR0Z0Y0d4bApMbU52YlRBTkJna3Foa2lHOXcwQkFRc0ZBQU9DQVFFQWZQUzQxYWdldldNVjNaWHQwQ09GRzN1WWZQRlhuVnc2ClA0MXA5TzZHa2RZc3VxRnZQZVR5eUgyL2RBSUtLd1N6TS9wdGhnOEtuOExabG1KeUZObkExc3RKeG41WGRiVjEKcFBxajhVdllDQnp5ak1JcW1SeW9peUxpUWxib2hNYTBVZEVCS2NIL1BkTEU5SzhUR0pyWmdvR1hxcTFXbWl0RAozdmNQalNlUEtFaVVKVlM5bENoeVNzMEtZNUIraFVRRDBKajZucEZENFprMHhxZHhoMHJXdWVDcXE3dmpxRVl6CnBqNFB3cnVmbjFQQlRtZnhNdVYvVUpWNWViaWtldVpQMzVrV3pMUjdaV0FMN3d1RGRXcC82bzR5azNRTGFuRFEKQ3dnQ0ZjWCtzcyswVnl1TTNZZXJUT1VVOFFWSkp4NFVaQU5aeDYrNDNwZEpaT2NudFBaNENBPT0KLS0tLS1FTkQgQ0VSVElGSUNBVEUtLS0tLQo=
+      tls.key: LS0tLS1CRUdJTiBQUklWQVRFIEtFWS0tLS0tCk1JSUV1Z0lCQURBTkJna3Foa2lHOXcwQkFRRUZBQVNDQktRd2dnU2dBZ0VBQW9JQkFRQ1pTT21NUlBXWkFqN08KcVFrTVc2d3Bub3NmVCtRMzhmVWJ1U3crRXlablZ1eUNuYlVGZjhIeTVyYkx1K2dmbWszUW8xbnRBVTMzamprUQpXMGQzRHdCdWhKVUM0bkpVRks3cDk2dm9MQ2FTdmlPM0NQbytjUENPdkZ4K1ZrTzYxVkxXOEI2YW04UG5GWndhCmlGRGk0aUdyWXlIK3lsK2RUTmJoZlhIeEJ4T0E1M0IrcTI2K2ZmMFJXUWJKSWNiT1RzOENTSDZJWk1yeGNIcmsKOE1TdjFhWXlQdXpuT1BBQVFsNlRUdlEvNmhJZnF6bXJvd0RIRjRCMENFNUFvb2xFM0ZLT2kwaC9ieTJUN1dxbgo4NkdhdXA0VEtxVnV1Uk5hUU1CZDQ4azA4V3VTUENYSDBoWTVJbm1kdEMxRURKK3pQRk9NUjQycVA0THg5QWdICjNRZTBTMU5yQWdNQkFBRUNnZjk2Zy9QWXh2YVp5NEJuMU5ySkJkOExaT2djYlpjMmdueDZJa3YvVVhaME5obHgKRVlpS2plRmpWNkhXNW9FWHJaKy9tUGY0ZHVzVmFMNzRVOVZvanVQSmNlQWVScmpMM2VPaGJIdGN4KzBnY0dMZwpYeEY5VFJhcDY1VHVVZDFhaTA0aEd3WWY3NXNiUDdSS2JQaXZ3WmdVQWUwQ3BWdWZjaG5YcXJzWXI4cEpZNTFPCldWa1NxejRSWTlXbTBrNUcxSkZ5SXlFQzl1bURsdWpjSE50UlZtYWZrTmZBdENsaVByRktjL245bkpmTzZSRlAKN2c3Vi9JdnFudUlyN1BFM0duNlBhVCtCZ2c0NDh0ZDVKelBwVEE1WkJjQm8yb3J6L2t4WVBGcHIvZ1BVQnFRZApvNm5XcXc3Nlp4d1BsZHdMaEorWFlOWDdvdWN0VVNDTDl1NzdmeUVDZ1lFQXl2N0RseGYrS1FsZkR3bW8vcjFUCjBMMVpuSDQ3MmhpSWVkU2hleVZCSGJFVlRTbXI0MkJSbGpXNERiUmNRTTRWY3h4RGtHclI3NlJHZTlvZzZtemMKUnY4K1ZsQ1gyK3F5OXA1bTZaWHJiQXczMHpDLzVtUGtSV3ViaFVoaSs5ZUNNWmEvaEFJL1JGdjI2OURyQkQyLwo2a2cwRjhYME8vNndJK1dwYXRLM1cwY0NnWUVBd1U5QTZiSnBmYVhLS1hQR21PRy9uVXhUeXp5cVlqS05aSmQvCjlHaEVudUdqSzVDQUVWUEphOGtadmZRemxXbXdaYWZxMERocUk4dkxhRkNEZjhZOEU5OU1hbjNHV2hVYjNWL0oKcU5RUVMzNTZOQ2ZadzdseG9LS0JJdlQ2Y3dpaFRuc0UvUjRIQ3NhbDJ3d040Wmw5SFdOQmdhbVM3VExrejFMaApmd1JEa0wwQ2dZQlo0OWorNW53QTlncG5JVkw1Z3lORGN5WGtlNjNMVlVQU0YwdHV1YitOQTJhNFpiU2RHb0RtCmNHRlJpRVcxMk14OHpjNUpmRlA4dDVVU3NUUVVPeUtNT2VrRDFlcDVVd1B1MjVRYzZldDNUQzNJVW5VWDg3SVkKMzU3ZHRZRkhubFlqMldwemJYOVFxUnk5cmlUMEd0Z0tTZkR2ZWhRK0lQa2szRVZhYlhjT2J3S0JnR0d4QzcwTwp6UUVTcC9nSzZuS1lvNTE2MVY0QWFwcjFzVDhFMFVWUzdGcmU3UGMzTDRHU05saWlhTC8yaVpzWXJteXhUNW1xCjZQanVKUDJ5c3NJQURKeCtYTC8wa0NrMlFiNitpY3NvWUpQR2R6dWthQWpoenVxL05VUFZTanlZUCt6SmZ0dnMKTU9MaFFUQlNCekhidjc3NlNrQ2MwZ1BObEpTeDdnT2l4QUtCQW9HQUpCR1VuM2U1QWZDb21BMUUxRHhSeUxaagpUMFBrQUNlUGpEK3hrRkpod0RoQ2dzd2htNFVKZzFmQW8xaEJRUkZ0dHBWQy91QkxjazE4TUVBSTF2ZGZTeVB2CmtTZzVrVnFQanUzc2czOVRNZ09WZXdqUDNFM0FNUUd1ZzFQNzFZazJ6WUpQbGg5NWRMVTVISlZubzZvdkIrUG0KTHF5K016eDN3a0YwZDhlUFhRND0KLS0tLS1FTkQgUFJJVkFURSBLRVktLS0tLQo=
+
+backends:
+  - apiVersion: gateway.envoyproxy.io/v1alpha1
+    kind: Backend
+    metadata:
+      name: backend-1
+      namespace: default
+    spec:
+      tls:     # the generated ir tls settings should contain the tls settings from Backend, BackendTLSPolicy and EnvoyProxy
+               # the BackendTLSPolicy should override the one from Backend
+        caCertificateRefs:
+          - name: ca-cmap
+            group: ""
+            kind: ConfigMap
+      endpoints:
+        - ip:
+            address: 1.1.1.1
+            port: 3001
+  - apiVersion: gateway.envoyproxy.io/v1alpha1
+    kind: Backend
+    metadata:
+      name: backend-2
+      namespace: default
+    spec:
+      tls:
+        caCertificateRefs:
+          - name: ca-cmap
+            group: ""
+            kind: ConfigMap
+      endpoints:
+        - ip:
+            address: 2.2.2.2
+            port: 3001
+  - apiVersion: gateway.envoyproxy.io/v1alpha1
+    kind: Backend
+    metadata:
+      name: backend-3
+      namespace: default
+    spec:
+      tls:
+        insecureSkipVerify: false
+      endpoints:
+        - ip:
+            address: 3.3.3.3
+            port: 3001

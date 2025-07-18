@@ -161,8 +161,9 @@ type BackendSpec struct {
 	Fallback *bool `json:"fallback,omitempty"`
 
 	// TLS defines the TLS settings for the backend.
-	// TLS.CACertificateRefs and TLS.WellKnownCACertificates can only be specified for DynamicResolver backends.
-	// TLS.InsecureSkipVerify can be specified for any Backends
+	// If TLS is specified here and a BackendTLSPolicy is also configured for the backend, the final TLS settings will
+	// be a merge of both configurations. In case of overlapping fields, the values defined in the BackendTLSPolicy will
+	// take precedence.
 	//
 	// +optional
 	TLS *BackendTLSSettings `json:"tls,omitempty"`
@@ -183,8 +184,6 @@ type BackendTLSSettings struct {
 	// specified. Only one of CACertificateRefs or WellKnownCACertificates may be specified,
 	// not both.
 	//
-	// Only used for DynamicResolver backends.
-	//
 	// +kubebuilder:validation:MaxItems=8
 	// +optional
 	CACertificateRefs []gwapiv1.LocalObjectReference `json:"caCertificateRefs,omitempty"`
@@ -195,8 +194,6 @@ type BackendTLSSettings struct {
 	// If WellKnownCACertificates is unspecified or empty (""), then CACertificateRefs
 	// must be specified with at least one entry for a valid configuration. Only one of
 	// CACertificateRefs or WellKnownCACertificates may be specified, not both.
-	//
-	// Only used for DynamicResolver backends.
 	//
 	// +optional
 	WellKnownCACertificates *gwapiv1a3.WellKnownCACertificatesType `json:"wellKnownCACertificates,omitempty"`
