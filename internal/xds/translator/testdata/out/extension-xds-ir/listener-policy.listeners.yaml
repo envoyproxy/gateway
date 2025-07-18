@@ -31,6 +31,10 @@
         useRemoteAddress: true
     name: policyextension-listener
   maxConnectionsToAcceptPerSocketEvent: 1
+  metadata:
+    filterMetadata:
+      envoy-gateway:
+        resources: []
   name: 0.0.0.0-10183
   perConnectionBufferLimitBytes: 32768
   statPrefix: from-the-policy

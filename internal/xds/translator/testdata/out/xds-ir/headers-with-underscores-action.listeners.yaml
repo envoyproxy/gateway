@@ -29,6 +29,10 @@
         useRemoteAddress: true
     name: first-listener
   maxConnectionsToAcceptPerSocketEvent: 1
+  metadata:
+    filterMetadata:
+      envoy-gateway:
+        resources: []
   name: ::-8081
   perConnectionBufferLimitBytes: 32768
 - address:
@@ -61,6 +65,10 @@
         useRemoteAddress: true
     name: second-listener
   maxConnectionsToAcceptPerSocketEvent: 1
+  metadata:
+    filterMetadata:
+      envoy-gateway:
+        resources: []
   name: ::-8082
   perConnectionBufferLimitBytes: 32768
 - address:
@@ -94,6 +102,10 @@
         useRemoteAddress: true
     name: third-listener
   maxConnectionsToAcceptPerSocketEvent: 1
+  metadata:
+    filterMetadata:
+      envoy-gateway:
+        resources: []
   name: ::-8083
   perConnectionBufferLimitBytes: 32768
 - address:
@@ -127,5 +139,9 @@
         useRemoteAddress: true
     name: fourth-listener
   maxConnectionsToAcceptPerSocketEvent: 1
+  metadata:
+    filterMetadata:
+      envoy-gateway:
+        resources: []
   name: ::-8084
   perConnectionBufferLimitBytes: 32768

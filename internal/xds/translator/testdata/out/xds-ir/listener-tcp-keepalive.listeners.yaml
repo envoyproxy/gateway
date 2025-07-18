@@ -31,6 +31,10 @@
         useRemoteAddress: true
     name: first-listener
   maxConnectionsToAcceptPerSocketEvent: 1
+  metadata:
+    filterMetadata:
+      envoy-gateway:
+        resources: []
   name: ::-10080
   perConnectionBufferLimitBytes: 32768
   socketOptions:
@@ -71,6 +75,10 @@
         useRemoteAddress: true
     name: second-listener
   maxConnectionsToAcceptPerSocketEvent: 1
+  metadata:
+    filterMetadata:
+      envoy-gateway:
+        resources: []
   name: ::-10081
   perConnectionBufferLimitBytes: 32768
   socketOptions:
@@ -109,6 +117,10 @@
     typedConfig:
       '@type': type.googleapis.com/envoy.extensions.filters.listener.tls_inspector.v3.TlsInspector
   maxConnectionsToAcceptPerSocketEvent: 1
+  metadata:
+    filterMetadata:
+      envoy-gateway:
+        resources: []
   name: ::-10082
   perConnectionBufferLimitBytes: 32768
   socketOptions:
@@ -128,6 +140,10 @@
         cluster: tcp-route-dest
         statPrefix: tcp-10083
   maxConnectionsToAcceptPerSocketEvent: 1
+  metadata:
+    filterMetadata:
+      envoy-gateway:
+        resources: []
   name: ::-10083
   perConnectionBufferLimitBytes: 32768
   socketOptions:

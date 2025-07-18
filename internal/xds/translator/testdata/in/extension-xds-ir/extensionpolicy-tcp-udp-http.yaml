@@ -30,6 +30,11 @@ http:
   hostnames:
   - '*'
   isHTTP2: false
+  metadata:
+    kind: Gateway
+    name: gateway-1
+    namespace: envoy-gateway
+    sectionName: http1
   name: envoy-gateway/gateway-1/http1
   path:
     escapedSlashesAction: UnescapeAndRedirect
@@ -75,6 +80,11 @@ tcp:
             type: Accepted
           controllerName: gateway.envoyproxy.io/gatewayclass-controller
   name: envoy-gateway/gateway-1/tcp1
+  metadata:
+    kind: Gateway
+    name: gateway-1
+    namespace: envoy-gateway
+    sectionName: tcp1
   port: 10185
   routes:
   - destination:
@@ -123,4 +133,9 @@ udp:
             type: Accepted
           controllerName: gateway.envoyproxy.io/gatewayclass-controller
   name: envoy-gateway/gateway-1/udp1
+  metadata:
+    kind: Gateway
+    name: gateway-1
+    namespace: envoy-gateway
+    sectionName: udp1
   port: 10162

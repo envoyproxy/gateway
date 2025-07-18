@@ -49,7 +49,11 @@
                 resourceApiVersion: V3
           disableStatefulSessionResumption: true
           disableStatelessSessionResumption: true
-  name: envoy-gateway/gateway-1/tls-quic
+  metadata:
+    filterMetadata:
+      envoy-gateway:
+        resources: []
+  name: 0.0.0.0-10443-quic
   udpListenerConfig:
     downstreamSocketConfig: {}
     quicOptions: {}
@@ -101,5 +105,9 @@
         disableStatefulSessionResumption: true
         disableStatelessSessionResumption: true
   maxConnectionsToAcceptPerSocketEvent: 1
+  metadata:
+    filterMetadata:
+      envoy-gateway:
+        resources: []
   name: 0.0.0.0-10443
   perConnectionBufferLimitBytes: 32768
