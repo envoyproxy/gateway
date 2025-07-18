@@ -4,9 +4,6 @@
   - domains:
     - '*'
     name: first-listener/*
-    rateLimits:
-    - actions:
-      - remoteAddress: {}
     routes:
     - match:
         headers:
@@ -32,5 +29,4 @@
       route:
         cluster: second-route-dest
         upgradeConfigs:
-        - connectConfig: {}
-          upgradeType: CONNECT
+        - upgradeType: websocket

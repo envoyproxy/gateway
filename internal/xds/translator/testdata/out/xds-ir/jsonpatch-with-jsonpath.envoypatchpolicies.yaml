@@ -9,7 +9,7 @@
         namespace: default
       conditions:
       - lastTransitionTime: null
-        message: 'Unable to find xds resources: type.googleapis.com/envoy.config.listener.v3.Listener/first-listener,type.googleapis.com/envoy.config.listener.v3.Listener/first-listener'
+        message: 'Unable to find xds resources: type.googleapis.com/envoy.config.route.v3.RouteConfiguration/::-10080,type.googleapis.com/envoy.config.route.v3.RouteConfiguration/::-10080'
         reason: ResourceNotFound
         status: "False"
         type: Programmed
