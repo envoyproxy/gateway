@@ -5177,10 +5177,11 @@ spec:
                       ''gateway.envoyproxy.io'')) : true'
                   - message: If FullDuplexStreamed body processing mode is used, FailOpen
                       must be false.
-                    rule: '!(has(self.failOpen) && self.failOpen == true && ((has(self.processingMode.request.body)
-                      && self.processingMode.request.body == ''FullDuplexStreamed'')
-                      || (has(self.processingMode.response.body) && self.processingMode.response.body
-                      == ''FullDuplexStreamed'')))'
+                    rule: '!(has(self.failOpen) && self.failOpen == true && has(self.processingMode)
+                      && (has(self.processingMode.request) && ((has(self.processingMode.request.body)
+                      && self.processingMode.request.body == ''FullDuplexStreamed''))
+                      || (has(self.processingMode.response) && has(self.processingMode.response.body)
+                      && self.processingMode.response.body == ''FullDuplexStreamed'')))'
                 maxItems: 16
                 type: array
               lua:
