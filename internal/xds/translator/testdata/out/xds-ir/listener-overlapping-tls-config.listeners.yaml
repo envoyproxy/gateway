@@ -103,11 +103,11 @@
         - kind: Gateway
           name: gateway-1
           namespace: envoy-gateway
-          sectionName: https-2
+          sectionName: https-1
         - kind: Gateway
           name: gateway-1
           namespace: envoy-gateway
-          sectionName: https-1
+          sectionName: https-2
   name: 0.0.0.0-10443
   perConnectionBufferLimitBytes: 32768
 - address:
