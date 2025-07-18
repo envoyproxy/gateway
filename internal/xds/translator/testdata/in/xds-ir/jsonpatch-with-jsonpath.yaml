@@ -34,7 +34,7 @@ envoyPatchPolicies:
                 cluster_name: rate-limit-cluster
             transport_api_version: V3
   - type: "type.googleapis.com/envoy.config.route.v3.RouteConfiguration"
-    name: "::-10080"
+    name: "first-listener"
     operation:
       op: "add"
       jsonPath: "virtual_hosts[0]"
@@ -43,7 +43,7 @@ envoyPatchPolicies:
       - actions:
         - remote_address: {}
   - type: "type.googleapis.com/envoy.config.route.v3.RouteConfiguration"
-    name: "::-10080"
+    name: "first-listener"
     operation:
       op: "replace"
       jsonPath: "..routes[?(@.name=='second-route')].route.upgrade_configs"
