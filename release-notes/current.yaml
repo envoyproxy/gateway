@@ -36,6 +36,7 @@ new features: |
   Added support for SecurityPolicy and EnvoyExtensionPolicy to target ServiceImport via BackendRefs.
   Introduce validation strictness levels for Lua scripts in EnvoyExtensionPolicies.
   Added metric `watchable_publish_total` counting store events in watchable message queues.
+  Added support for forwarding client ID header and sanitizing API keys for API Key authentication in SecurityPolicy.
 
 
 bug fixes: |

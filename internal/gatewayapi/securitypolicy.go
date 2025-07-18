@@ -1320,8 +1320,10 @@ func (t *Translator) buildAPIKeyAuth(
 	}
 
 	return &ir.APIKeyAuth{
-		Credentials: credentials,
-		ExtractFrom: extractFrom,
+		Credentials:           credentials,
+		ExtractFrom:           extractFrom,
+		ForwardClientIDHeader: policy.Spec.APIKeyAuth.ForwardClientIDHeader,
+		Sanitize:              policy.Spec.APIKeyAuth.Sanitize,
 	}, nil
 }
 
