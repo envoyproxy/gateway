@@ -37,7 +37,7 @@ new features: |
   Introduce validation strictness levels for Lua scripts in EnvoyExtensionPolicies.
   Added metric `watchable_publish_total` counting store events in watchable message queues.
   Added support for forwarding client ID header and sanitizing API keys for API Key authentication in SecurityPolicy.
-
+  Accessloggers of type ALS now have http2 enabled on the cluster by default.
 
 bug fixes: |
   Handle integer zone annotation values
@@ -54,6 +54,7 @@ bug fixes: |
   Fixed validation errors when the rateLimit url for Redis in the EnvoyGateway API includes multiple comma separated hosts.
   Fixes addresses in status of DualStack NodePort Gateways.
   Fixed issue that not able to override the prometheus annotation in EnvoyProxy CRD.
+  Skipped ExtProc, Wasm, and ExtAuth when they are configured FailOpen and the configuration is invalid, e.g. missing backendRefs or invalid port.
   Fixed issue that failed to update policy status when there are more than 16 ancestors.
 
 # Enhancements that improve performance.

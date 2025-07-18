@@ -17405,6 +17405,12 @@ spec:
                       - hostname
                       - port
                       type: object
+                    hostname:
+                      description: Hostname defines a hostname endpoint.
+                      maxLength: 253
+                      minLength: 1
+                      pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                      type: string
                     ip:
                       description: IP defines an IP endpoint. Supports both IPv4 and
                         IPv6 addresses.
@@ -39663,6 +39669,8 @@ spec:
                       Otherwise, if it is set to false or not set (defaulting to false),
                       the system blocks the traffic and returns a HTTP 5xx error, reflecting a fail-closed approach.
                       This setting determines whether to prioritize accessibility over strict security in case of authorization service failure.
+
+                      If set to true, the External Authorization will also be bypassed if its configuration is invalid.
                     type: boolean
                   grpc:
                     description: |-

@@ -582,6 +582,61 @@ type ExtensionHooks struct {
 type XDSTranslatorHooks struct {
 	Pre  []XDSTranslatorHook `json:"pre,omitempty"`
 	Post []XDSTranslatorHook `json:"post,omitempty"`
+
+	// Translation defines the configuration for the translation hook.
+	Translation *TranslationConfig `json:"translation,omitempty"`
+}
+
+// TranslationConfig defines the configuration for the translation hook.
+type TranslationConfig struct {
+	// Listener defines the configuration for the listener translation hook.
+	//
+	// +optional
+	Listener *ListenerTranslationConfig `json:"listener,omitempty"`
+	// Route defines the configuration for the route translation hook.
+	//
+	// +optional
+	Route *RouteTranslationConfig `json:"route,omitempty"`
+	// Cluster defines the configuration for the cluster translation hook.
+	//
+	// +optional
+	Cluster *ClusterTranslationConfig `json:"cluster,omitempty"`
+	// Secret defines the configuration for the secret translation hook.
+	//
+	// +optional
+	Secret *SecretTranslationConfig `json:"secret,omitempty"`
+}
+
+type ListenerTranslationConfig struct {
+	// IncludeAll defines whether all listeners should be included in the translation hook.
+	// Default is false.
+	//
+	// +optional
+	IncludeAll *bool `json:"includeAll,omitempty"`
+}
+
+type RouteTranslationConfig struct {
+	// IncludeAll defines whether all routes should be included in the translation hook.
+	// Default is false.
+	//
+	// +optional
+	IncludeAll *bool `json:"includeAll,omitempty"`
+}
+
+type ClusterTranslationConfig struct {
+	// IncludeAll defines whether all clusters should be included in the translation hook.
+	// Default is true for backward compatibility.
+	//
+	// +optional
+	IncludeAll *bool `json:"includeAll,omitempty"`
+}
+
+type SecretTranslationConfig struct {
+	// IncludeAll defines whether all secrets should be included in the translation hook.
+	// Default is true for backward compatibility.
+	//
+	// +optional
+	IncludeAll *bool `json:"includeAll,omitempty"`
 }
 
 // ExtensionService defines the configuration for connecting to a registered extension service.

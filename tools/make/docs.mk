@@ -174,7 +174,7 @@ docs-release-gen:
 .PHONY: docs-check-links
 docs-check-links: # Check for broken links in the docs
 	@$(LOG_TARGET)
-	linkinator site/public/ -r --concurrency 25 --skip $(LINKINATOR_IGNORE) --verbosity error
+	linkinator site/public/ -r --concurrency 25 --retry-errors --retry --retry-errors-jitter --retry-errors-count 5 --skip $(LINKINATOR_IGNORE) --verbosity error
 
 docs-markdown-lint:
 	markdownlint -c .github/markdown_lint_config.json site/content/*

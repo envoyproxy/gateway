@@ -395,7 +395,7 @@ func GetEndpointSlice(nsName types.NamespacedName, svcName string, isServiceImpo
 			{
 				Addresses: []string{"10.0.0.1"},
 				Conditions: discoveryv1.EndpointConditions{
-					Ready: &[]bool{true}[0],
+					Ready: ptr.To(true),
 				},
 			},
 		},
