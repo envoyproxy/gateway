@@ -69,6 +69,77 @@ In this example `my-route` and `my-gateway` would both affect the route. However
 
 Lastly, it's important to note that even when you apply a policy to a Gateway, the policy's effects are tracked separately for each backend service referenced in your routes. For example, if you set up circuit breaking on a Gateway with multiple backend services, each backend service will have its own independent circuit breaker counter. This ensures that issues with one backend service don't affect the others.
 
+## Policy Merging
+
+BackendTrafficPolicy supports merging configurations using the `mergeType` field, which allows route-level policies to combine with gateway-level policies rather than completely overriding them. This enables layered policy strategies where platform teams can set baseline configurations at the Gateway level, while application teams can add specific policies for their routes.
+
+### Merge Types
+
+- **StrategicMerge**: Uses Kubernetes strategic merge patch semantics, providing intelligent merging for complex data structures including arrays
+- **JSONMerge**: Uses RFC 7396 JSON Merge Patch semantics, with simple replacement strategy where arrays are completely replaced
+
+### Example Usage
+
+Here's an example demonstrating policy merging for rate limiting:
+
+```yaml
+# Platform team: Gateway-level policy with global abuse prevention
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: BackendTrafficPolicy
+metadata:
+  name: global-backendtrafficpolicy
+spec:
+  rateLimit:
+    type: Global
+    global:
+      rules:
+      - clientSelectors:
+        - sourceCIDR:
+            type: Distinct
+            value: 0.0.0.0/0
+        limit:
+          requests: 100
+          unit: Second
+        shared: true
+  targetRefs:
+  - group: gateway.networking.k8s.io
+    kind: Gateway
+    name: eg
+
+---
+# Application team: Route-level policy with specific limits
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: BackendTrafficPolicy
+metadata:
+  name: route-backendtrafficpolicy
+spec:
+  mergeType: StrategicMerge  # Enables merging with gateway policy
+  rateLimit:
+    type: Global
+    global:
+      rules:
+      - clientSelectors:
+        - sourceCIDR:
+            type: Distinct
+            value: 0.0.0.0/0
+        limit:
+          requests: 5
+          unit: Minute
+        shared: false
+  targetRefs:
+  - group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: signup-service-httproute
+```
+
+In this example, the route-level policy merges with the gateway-level policy, resulting in both rate limits being enforced: the global 100 requests/second abuse limit and the route-specific 5 requests/minute limit.
+
+### Key Constraints
+
+- The `mergeType` field can only be set on policies targeting child resources (like HTTPRoute), not parent resources (like Gateway)
+- When `mergeType` is unset, no merging occurs - only the most specific policy takes effect
+- The merged configuration combines both policies, enabling layered protection strategies
+
 ## Related Resources
 
 - [Circuit Breakers](../../../tasks/traffic/circuit-breaker.md)
