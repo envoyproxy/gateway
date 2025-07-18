@@ -333,6 +333,8 @@ xdsIR:
           name: ""
           prefix: /header-host-and-path
         urlRewrite:
+          host:
+            header: my-host
           path:
             fullReplace: null
             prefixMatchReplace: /rewrite
