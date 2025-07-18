@@ -994,6 +994,67 @@ spec:
                     - message: If consistent hash type is cookie, the cookie field
                         must be set.
                       rule: 'self.type == ''Cookie'' ? has(self.cookie) : !has(self.cookie)'
+                  endpointOverride:
+                    description: |-
+                      EndpointOverride defines the configuration for endpoint override.
+                      When specified, the load balancer will attempt to route requests to endpoints
+                      based on the override information extracted from request headers or metadata.
+                      If no valid override endpoint is found, the configured load balancer policy will be used as fallback.
+                    properties:
+                      extractFrom:
+                        description: ExtractFrom defines the sources to extract endpoint
+                          override information from.
+                        items:
+                          description: EndpointOverrideExtractFrom defines a source
+                            to extract endpoint override information from.
+                          properties:
+                            header:
+                              description: |-
+                                Header defines the header to get the override endpoint addresses.
+                                The header value must specify at least one endpoint in `IP:Port` format or multiple endpoints in `IP:Port,IP:Port,...` format.
+                                For example `10.0.0.5:8080` or `[2600:4040:5204::1574:24ae]:80`.
+                                The IPv6 address is enclosed in square brackets.
+                              type: string
+                            metadata:
+                              description: |-
+                                Metadata defines the metadata key to get the override endpoint addresses from the request dynamic metadata.
+                                If set this field then it will take precedence over the header field.
+                              properties:
+                                key:
+                                  description: Key defines the metadata key.
+                                  minLength: 1
+                                  type: string
+                                path:
+                                  description: |-
+                                    Path defines the path within the metadata to extract the endpoint addresses.
+                                    Each path element represents a key in nested metadata structure.
+                                  items:
+                                    description: EndpointOverrideMetadataKeyPath defines
+                                      a path element in the metadata structure.
+                                    properties:
+                                      key:
+                                        description: Key defines the key name in the
+                                          metadata structure.
+                                        minLength: 1
+                                        type: string
+                                    required:
+                                    - key
+                                    type: object
+                                  type: array
+                              required:
+                              - key
+                              type: object
+                          type: object
+                          x-kubernetes-validations:
+                          - message: Exactly one of header or metadata must be set.
+                            rule: (has(self.header) && !has(self.metadata)) || (!has(self.header)
+                              && has(self.metadata))
+                        maxItems: 10
+                        minItems: 1
+                        type: array
+                    required:
+                    - extractFrom
+                    type: object
                   slowStart:
                     description: |-
                       SlowStart defines the configuration related to the slow start load balancer policy.
@@ -1066,8 +1127,8 @@ spec:
                     : true '
                 - message: Currently ZoneAware is only supported for LeastRequest,
                     Random, and RoundRobin load balancers.
-                  rule: 'self.type == ''ConsistentHash'' ? !has(self.zoneAware) :
-                    true '
+                  rule: 'self.type in [''ConsistentHash''] ? !has(self.zoneAware)
+                    : true '
               mergeType:
                 description: |-
                   MergeType determines how this configuration is merged with existing BackendTrafficPolicy
@@ -4814,6 +4875,71 @@ spec:
                                   field must be set.
                                 rule: 'self.type == ''Cookie'' ? has(self.cookie)
                                   : !has(self.cookie)'
+                            endpointOverride:
+                              description: |-
+                                EndpointOverride defines the configuration for endpoint override.
+                                When specified, the load balancer will attempt to route requests to endpoints
+                                based on the override information extracted from request headers or metadata.
+                                If no valid override endpoint is found, the configured load balancer policy will be used as fallback.
+                              properties:
+                                extractFrom:
+                                  description: ExtractFrom defines the sources to
+                                    extract endpoint override information from.
+                                  items:
+                                    description: EndpointOverrideExtractFrom defines
+                                      a source to extract endpoint override information
+                                      from.
+                                    properties:
+                                      header:
+                                        description: |-
+                                          Header defines the header to get the override endpoint addresses.
+                                          The header value must specify at least one endpoint in `IP:Port` format or multiple endpoints in `IP:Port,IP:Port,...` format.
+                                          For example `10.0.0.5:8080` or `[2600:4040:5204::1574:24ae]:80`.
+                                          The IPv6 address is enclosed in square brackets.
+                                        type: string
+                                      metadata:
+                                        description: |-
+                                          Metadata defines the metadata key to get the override endpoint addresses from the request dynamic metadata.
+                                          If set this field then it will take precedence over the header field.
+                                        properties:
+                                          key:
+                                            description: Key defines the metadata
+                                              key.
+                                            minLength: 1
+                                            type: string
+                                          path:
+                                            description: |-
+                                              Path defines the path within the metadata to extract the endpoint addresses.
+                                              Each path element represents a key in nested metadata structure.
+                                            items:
+                                              description: EndpointOverrideMetadataKeyPath
+                                                defines a path element in the metadata
+                                                structure.
+                                              properties:
+                                                key:
+                                                  description: Key defines the key
+                                                    name in the metadata structure.
+                                                  minLength: 1
+                                                  type: string
+                                              required:
+                                              - key
+                                              type: object
+                                            type: array
+                                        required:
+                                        - key
+                                        type: object
+                                    type: object
+                                    x-kubernetes-validations:
+                                    - message: Exactly one of header or metadata must
+                                        be set.
+                                      rule: (has(self.header) && !has(self.metadata))
+                                        || (!has(self.header) && has(self.metadata))
+                                  maxItems: 10
+                                  minItems: 1
+                                  type: array
+                              required:
+                              - extractFrom
+                              type: object
                             slowStart:
                               description: |-
                                 SlowStart defines the configuration related to the slow start load balancer policy.
@@ -4887,7 +5013,7 @@ spec:
                               !has(self.slowStart) : true '
                           - message: Currently ZoneAware is only supported for LeastRequest,
                               Random, and RoundRobin load balancers.
-                            rule: 'self.type == ''ConsistentHash'' ? !has(self.zoneAware)
+                            rule: 'self.type in [''ConsistentHash''] ? !has(self.zoneAware)
                               : true '
                         proxyProtocol:
                           description: ProxyProtocol enables the Proxy Protocol when
@@ -17856,6 +17982,78 @@ spec:
                                                     be set.
                                                   rule: 'self.type == ''Cookie'' ?
                                                     has(self.cookie) : !has(self.cookie)'
+                                              endpointOverride:
+                                                description: |-
+                                                  EndpointOverride defines the configuration for endpoint override.
+                                                  When specified, the load balancer will attempt to route requests to endpoints
+                                                  based on the override information extracted from request headers or metadata.
+                                                  If no valid override endpoint is found, the configured load balancer policy will be used as fallback.
+                                                properties:
+                                                  extractFrom:
+                                                    description: ExtractFrom defines
+                                                      the sources to extract endpoint
+                                                      override information from.
+                                                    items:
+                                                      description: EndpointOverrideExtractFrom
+                                                        defines a source to extract
+                                                        endpoint override information
+                                                        from.
+                                                      properties:
+                                                        header:
+                                                          description: |-
+                                                            Header defines the header to get the override endpoint addresses.
+                                                            The header value must specify at least one endpoint in `IP:Port` format or multiple endpoints in `IP:Port,IP:Port,...` format.
+                                                            For example `10.0.0.5:8080` or `[2600:4040:5204::1574:24ae]:80`.
+                                                            The IPv6 address is enclosed in square brackets.
+                                                          type: string
+                                                        metadata:
+                                                          description: |-
+                                                            Metadata defines the metadata key to get the override endpoint addresses from the request dynamic metadata.
+                                                            If set this field then it will take precedence over the header field.
+                                                          properties:
+                                                            key:
+                                                              description: Key defines
+                                                                the metadata key.
+                                                              minLength: 1
+                                                              type: string
+                                                            path:
+                                                              description: |-
+                                                                Path defines the path within the metadata to extract the endpoint addresses.
+                                                                Each path element represents a key in nested metadata structure.
+                                                              items:
+                                                                description: EndpointOverrideMetadataKeyPath
+                                                                  defines a path element
+                                                                  in the metadata
+                                                                  structure.
+                                                                properties:
+                                                                  key:
+                                                                    description: Key
+                                                                      defines the
+                                                                      key name in
+                                                                      the metadata
+                                                                      structure.
+                                                                    minLength: 1
+                                                                    type: string
+                                                                required:
+                                                                - key
+                                                                type: object
+                                                              type: array
+                                                          required:
+                                                          - key
+                                                          type: object
+                                                      type: object
+                                                      x-kubernetes-validations:
+                                                      - message: Exactly one of header
+                                                          or metadata must be set.
+                                                        rule: (has(self.header) &&
+                                                          !has(self.metadata)) ||
+                                                          (!has(self.header) && has(self.metadata))
+                                                    maxItems: 10
+                                                    minItems: 1
+                                                    type: array
+                                                required:
+                                                - extractFrom
+                                                type: object
                                               slowStart:
                                                 description: |-
                                                   SlowStart defines the configuration related to the slow start load balancer policy.
@@ -17935,7 +18133,7 @@ spec:
                                             - message: Currently ZoneAware is only
                                                 supported for LeastRequest, Random,
                                                 and RoundRobin load balancers.
-                                              rule: 'self.type == ''ConsistentHash''
+                                              rule: 'self.type in [''ConsistentHash'']
                                                 ? !has(self.zoneAware) : true '
                                           proxyProtocol:
                                             description: ProxyProtocol enables the
@@ -18929,6 +19127,78 @@ spec:
                                                     be set.
                                                   rule: 'self.type == ''Cookie'' ?
                                                     has(self.cookie) : !has(self.cookie)'
+                                              endpointOverride:
+                                                description: |-
+                                                  EndpointOverride defines the configuration for endpoint override.
+                                                  When specified, the load balancer will attempt to route requests to endpoints
+                                                  based on the override information extracted from request headers or metadata.
+                                                  If no valid override endpoint is found, the configured load balancer policy will be used as fallback.
+                                                properties:
+                                                  extractFrom:
+                                                    description: ExtractFrom defines
+                                                      the sources to extract endpoint
+                                                      override information from.
+                                                    items:
+                                                      description: EndpointOverrideExtractFrom
+                                                        defines a source to extract
+                                                        endpoint override information
+                                                        from.
+                                                      properties:
+                                                        header:
+                                                          description: |-
+                                                            Header defines the header to get the override endpoint addresses.
+                                                            The header value must specify at least one endpoint in `IP:Port` format or multiple endpoints in `IP:Port,IP:Port,...` format.
+                                                            For example `10.0.0.5:8080` or `[2600:4040:5204::1574:24ae]:80`.
+                                                            The IPv6 address is enclosed in square brackets.
+                                                          type: string
+                                                        metadata:
+                                                          description: |-
+                                                            Metadata defines the metadata key to get the override endpoint addresses from the request dynamic metadata.
+                                                            If set this field then it will take precedence over the header field.
+                                                          properties:
+                                                            key:
+                                                              description: Key defines
+                                                                the metadata key.
+                                                              minLength: 1
+                                                              type: string
+                                                            path:
+                                                              description: |-
+                                                                Path defines the path within the metadata to extract the endpoint addresses.
+                                                                Each path element represents a key in nested metadata structure.
+                                                              items:
+                                                                description: EndpointOverrideMetadataKeyPath
+                                                                  defines a path element
+                                                                  in the metadata
+                                                                  structure.
+                                                                properties:
+                                                                  key:
+                                                                    description: Key
+                                                                      defines the
+                                                                      key name in
+                                                                      the metadata
+                                                                      structure.
+                                                                    minLength: 1
+                                                                    type: string
+                                                                required:
+                                                                - key
+                                                                type: object
+                                                              type: array
+                                                          required:
+                                                          - key
+                                                          type: object
+                                                      type: object
+                                                      x-kubernetes-validations:
+                                                      - message: Exactly one of header
+                                                          or metadata must be set.
+                                                        rule: (has(self.header) &&
+                                                          !has(self.metadata)) ||
+                                                          (!has(self.header) && has(self.metadata))
+                                                    maxItems: 10
+                                                    minItems: 1
+                                                    type: array
+                                                required:
+                                                - extractFrom
+                                                type: object
                                               slowStart:
                                                 description: |-
                                                   SlowStart defines the configuration related to the slow start load balancer policy.
@@ -19008,7 +19278,7 @@ spec:
                                             - message: Currently ZoneAware is only
                                                 supported for LeastRequest, Random,
                                                 and RoundRobin load balancers.
-                                              rule: 'self.type == ''ConsistentHash''
+                                              rule: 'self.type in [''ConsistentHash'']
                                                 ? !has(self.zoneAware) : true '
                                           proxyProtocol:
                                             description: ProxyProtocol enables the
@@ -20087,6 +20357,73 @@ spec:
                                               the cookie field must be set.
                                             rule: 'self.type == ''Cookie'' ? has(self.cookie)
                                               : !has(self.cookie)'
+                                        endpointOverride:
+                                          description: |-
+                                            EndpointOverride defines the configuration for endpoint override.
+                                            When specified, the load balancer will attempt to route requests to endpoints
+                                            based on the override information extracted from request headers or metadata.
+                                            If no valid override endpoint is found, the configured load balancer policy will be used as fallback.
+                                          properties:
+                                            extractFrom:
+                                              description: ExtractFrom defines the
+                                                sources to extract endpoint override
+                                                information from.
+                                              items:
+                                                description: EndpointOverrideExtractFrom
+                                                  defines a source to extract endpoint
+                                                  override information from.
+                                                properties:
+                                                  header:
+                                                    description: |-
+                                                      Header defines the header to get the override endpoint addresses.
+                                                      The header value must specify at least one endpoint in `IP:Port` format or multiple endpoints in `IP:Port,IP:Port,...` format.
+                                                      For example `10.0.0.5:8080` or `[2600:4040:5204::1574:24ae]:80`.
+                                                      The IPv6 address is enclosed in square brackets.
+                                                    type: string
+                                                  metadata:
+                                                    description: |-
+                                                      Metadata defines the metadata key to get the override endpoint addresses from the request dynamic metadata.
+                                                      If set this field then it will take precedence over the header field.
+                                                    properties:
+                                                      key:
+                                                        description: Key defines the
+                                                          metadata key.
+                                                        minLength: 1
+                                                        type: string
+                                                      path:
+                                                        description: |-
+                                                          Path defines the path within the metadata to extract the endpoint addresses.
+                                                          Each path element represents a key in nested metadata structure.
+                                                        items:
+                                                          description: EndpointOverrideMetadataKeyPath
+                                                            defines a path element
+                                                            in the metadata structure.
+                                                          properties:
+                                                            key:
+                                                              description: Key defines
+                                                                the key name in the
+                                                                metadata structure.
+                                                              minLength: 1
+                                                              type: string
+                                                          required:
+                                                          - key
+                                                          type: object
+                                                        type: array
+                                                    required:
+                                                    - key
+                                                    type: object
+                                                type: object
+                                                x-kubernetes-validations:
+                                                - message: Exactly one of header or
+                                                    metadata must be set.
+                                                  rule: (has(self.header) && !has(self.metadata))
+                                                    || (!has(self.header) && has(self.metadata))
+                                              maxItems: 10
+                                              minItems: 1
+                                              type: array
+                                          required:
+                                          - extractFrom
+                                          type: object
                                         slowStart:
                                           description: |-
                                             SlowStart defines the configuration related to the slow start load balancer policy.
@@ -20164,8 +20501,8 @@ spec:
                                       - message: Currently ZoneAware is only supported
                                           for LeastRequest, Random, and RoundRobin
                                           load balancers.
-                                        rule: 'self.type == ''ConsistentHash'' ? !has(self.zoneAware)
-                                          : true '
+                                        rule: 'self.type in [''ConsistentHash''] ?
+                                          !has(self.zoneAware) : true '
                                     proxyProtocol:
                                       description: ProxyProtocol enables the Proxy
                                         Protocol when communicating with the backend.
@@ -21163,6 +21500,73 @@ spec:
                                         the cookie field must be set.
                                       rule: 'self.type == ''Cookie'' ? has(self.cookie)
                                         : !has(self.cookie)'
+                                  endpointOverride:
+                                    description: |-
+                                      EndpointOverride defines the configuration for endpoint override.
+                                      When specified, the load balancer will attempt to route requests to endpoints
+                                      based on the override information extracted from request headers or metadata.
+                                      If no valid override endpoint is found, the configured load balancer policy will be used as fallback.
+                                    properties:
+                                      extractFrom:
+                                        description: ExtractFrom defines the sources
+                                          to extract endpoint override information
+                                          from.
+                                        items:
+                                          description: EndpointOverrideExtractFrom
+                                            defines a source to extract endpoint override
+                                            information from.
+                                          properties:
+                                            header:
+                                              description: |-
+                                                Header defines the header to get the override endpoint addresses.
+                                                The header value must specify at least one endpoint in `IP:Port` format or multiple endpoints in `IP:Port,IP:Port,...` format.
+                                                For example `10.0.0.5:8080` or `[2600:4040:5204::1574:24ae]:80`.
+                                                The IPv6 address is enclosed in square brackets.
+                                              type: string
+                                            metadata:
+                                              description: |-
+                                                Metadata defines the metadata key to get the override endpoint addresses from the request dynamic metadata.
+                                                If set this field then it will take precedence over the header field.
+                                              properties:
+                                                key:
+                                                  description: Key defines the metadata
+                                                    key.
+                                                  minLength: 1
+                                                  type: string
+                                                path:
+                                                  description: |-
+                                                    Path defines the path within the metadata to extract the endpoint addresses.
+                                                    Each path element represents a key in nested metadata structure.
+                                                  items:
+                                                    description: EndpointOverrideMetadataKeyPath
+                                                      defines a path element in the
+                                                      metadata structure.
+                                                    properties:
+                                                      key:
+                                                        description: Key defines the
+                                                          key name in the metadata
+                                                          structure.
+                                                        minLength: 1
+                                                        type: string
+                                                    required:
+                                                    - key
+                                                    type: object
+                                                  type: array
+                                              required:
+                                              - key
+                                              type: object
+                                          type: object
+                                          x-kubernetes-validations:
+                                          - message: Exactly one of header or metadata
+                                              must be set.
+                                            rule: (has(self.header) && !has(self.metadata))
+                                              || (!has(self.header) && has(self.metadata))
+                                        maxItems: 10
+                                        minItems: 1
+                                        type: array
+                                    required:
+                                    - extractFrom
+                                    type: object
                                   slowStart:
                                     description: |-
                                       SlowStart defines the configuration related to the slow start load balancer policy.
@@ -21238,7 +21642,7 @@ spec:
                                     ? !has(self.slowStart) : true '
                                 - message: Currently ZoneAware is only supported for
                                     LeastRequest, Random, and RoundRobin load balancers.
-                                  rule: 'self.type == ''ConsistentHash'' ? !has(self.zoneAware)
+                                  rule: 'self.type in [''ConsistentHash''] ? !has(self.zoneAware)
                                     : true '
                               proxyProtocol:
                                 description: ProxyProtocol enables the Proxy Protocol
@@ -23052,6 +23456,71 @@ spec:
                                     cookie field must be set.
                                   rule: 'self.type == ''Cookie'' ? has(self.cookie)
                                     : !has(self.cookie)'
+                              endpointOverride:
+                                description: |-
+                                  EndpointOverride defines the configuration for endpoint override.
+                                  When specified, the load balancer will attempt to route requests to endpoints
+                                  based on the override information extracted from request headers or metadata.
+                                  If no valid override endpoint is found, the configured load balancer policy will be used as fallback.
+                                properties:
+                                  extractFrom:
+                                    description: ExtractFrom defines the sources to
+                                      extract endpoint override information from.
+                                    items:
+                                      description: EndpointOverrideExtractFrom defines
+                                        a source to extract endpoint override information
+                                        from.
+                                      properties:
+                                        header:
+                                          description: |-
+                                            Header defines the header to get the override endpoint addresses.
+                                            The header value must specify at least one endpoint in `IP:Port` format or multiple endpoints in `IP:Port,IP:Port,...` format.
+                                            For example `10.0.0.5:8080` or `[2600:4040:5204::1574:24ae]:80`.
+                                            The IPv6 address is enclosed in square brackets.
+                                          type: string
+                                        metadata:
+                                          description: |-
+                                            Metadata defines the metadata key to get the override endpoint addresses from the request dynamic metadata.
+                                            If set this field then it will take precedence over the header field.
+                                          properties:
+                                            key:
+                                              description: Key defines the metadata
+                                                key.
+                                              minLength: 1
+                                              type: string
+                                            path:
+                                              description: |-
+                                                Path defines the path within the metadata to extract the endpoint addresses.
+                                                Each path element represents a key in nested metadata structure.
+                                              items:
+                                                description: EndpointOverrideMetadataKeyPath
+                                                  defines a path element in the metadata
+                                                  structure.
+                                                properties:
+                                                  key:
+                                                    description: Key defines the key
+                                                      name in the metadata structure.
+                                                    minLength: 1
+                                                    type: string
+                                                required:
+                                                - key
+                                                type: object
+                                              type: array
+                                          required:
+                                          - key
+                                          type: object
+                                      type: object
+                                      x-kubernetes-validations:
+                                      - message: Exactly one of header or metadata
+                                          must be set.
+                                        rule: (has(self.header) && !has(self.metadata))
+                                          || (!has(self.header) && has(self.metadata))
+                                    maxItems: 10
+                                    minItems: 1
+                                    type: array
+                                required:
+                                - extractFrom
+                                type: object
                               slowStart:
                                 description: |-
                                   SlowStart defines the configuration related to the slow start load balancer policy.
@@ -23127,7 +23596,7 @@ spec:
                                 ? !has(self.slowStart) : true '
                             - message: Currently ZoneAware is only supported for LeastRequest,
                                 Random, and RoundRobin load balancers.
-                              rule: 'self.type == ''ConsistentHash'' ? !has(self.zoneAware)
+                              rule: 'self.type in [''ConsistentHash''] ? !has(self.zoneAware)
                                 : true '
                           proxyProtocol:
                             description: ProxyProtocol enables the Proxy Protocol
@@ -24023,6 +24492,71 @@ spec:
                                     cookie field must be set.
                                   rule: 'self.type == ''Cookie'' ? has(self.cookie)
                                     : !has(self.cookie)'
+                              endpointOverride:
+                                description: |-
+                                  EndpointOverride defines the configuration for endpoint override.
+                                  When specified, the load balancer will attempt to route requests to endpoints
+                                  based on the override information extracted from request headers or metadata.
+                                  If no valid override endpoint is found, the configured load balancer policy will be used as fallback.
+                                properties:
+                                  extractFrom:
+                                    description: ExtractFrom defines the sources to
+                                      extract endpoint override information from.
+                                    items:
+                                      description: EndpointOverrideExtractFrom defines
+                                        a source to extract endpoint override information
+                                        from.
+                                      properties:
+                                        header:
+                                          description: |-
+                                            Header defines the header to get the override endpoint addresses.
+                                            The header value must specify at least one endpoint in `IP:Port` format or multiple endpoints in `IP:Port,IP:Port,...` format.
+                                            For example `10.0.0.5:8080` or `[2600:4040:5204::1574:24ae]:80`.
+                                            The IPv6 address is enclosed in square brackets.
+                                          type: string
+                                        metadata:
+                                          description: |-
+                                            Metadata defines the metadata key to get the override endpoint addresses from the request dynamic metadata.
+                                            If set this field then it will take precedence over the header field.
+                                          properties:
+                                            key:
+                                              description: Key defines the metadata
+                                                key.
+                                              minLength: 1
+                                              type: string
+                                            path:
+                                              description: |-
+                                                Path defines the path within the metadata to extract the endpoint addresses.
+                                                Each path element represents a key in nested metadata structure.
+                                              items:
+                                                description: EndpointOverrideMetadataKeyPath
+                                                  defines a path element in the metadata
+                                                  structure.
+                                                properties:
+                                                  key:
+                                                    description: Key defines the key
+                                                      name in the metadata structure.
+                                                    minLength: 1
+                                                    type: string
+                                                required:
+                                                - key
+                                                type: object
+                                              type: array
+                                          required:
+                                          - key
+                                          type: object
+                                      type: object
+                                      x-kubernetes-validations:
+                                      - message: Exactly one of header or metadata
+                                          must be set.
+                                        rule: (has(self.header) && !has(self.metadata))
+                                          || (!has(self.header) && has(self.metadata))
+                                    maxItems: 10
+                                    minItems: 1
+                                    type: array
+                                required:
+                                - extractFrom
+                                type: object
                               slowStart:
                                 description: |-
                                   SlowStart defines the configuration related to the slow start load balancer policy.
@@ -24098,7 +24632,7 @@ spec:
                                 ? !has(self.slowStart) : true '
                             - message: Currently ZoneAware is only supported for LeastRequest,
                                 Random, and RoundRobin load balancers.
-                              rule: 'self.type == ''ConsistentHash'' ? !has(self.zoneAware)
+                              rule: 'self.type in [''ConsistentHash''] ? !has(self.zoneAware)
                                 : true '
                           proxyProtocol:
                             description: ProxyProtocol enables the Proxy Protocol
@@ -25200,6 +25734,73 @@ spec:
                                           the cookie field must be set.
                                         rule: 'self.type == ''Cookie'' ? has(self.cookie)
                                           : !has(self.cookie)'
+                                    endpointOverride:
+                                      description: |-
+                                        EndpointOverride defines the configuration for endpoint override.
+                                        When specified, the load balancer will attempt to route requests to endpoints
+                                        based on the override information extracted from request headers or metadata.
+                                        If no valid override endpoint is found, the configured load balancer policy will be used as fallback.
+                                      properties:
+                                        extractFrom:
+                                          description: ExtractFrom defines the sources
+                                            to extract endpoint override information
+                                            from.
+                                          items:
+                                            description: EndpointOverrideExtractFrom
+                                              defines a source to extract endpoint
+                                              override information from.
+                                            properties:
+                                              header:
+                                                description: |-
+                                                  Header defines the header to get the override endpoint addresses.
+                                                  The header value must specify at least one endpoint in `IP:Port` format or multiple endpoints in `IP:Port,IP:Port,...` format.
+                                                  For example `10.0.0.5:8080` or `[2600:4040:5204::1574:24ae]:80`.
+                                                  The IPv6 address is enclosed in square brackets.
+                                                type: string
+                                              metadata:
+                                                description: |-
+                                                  Metadata defines the metadata key to get the override endpoint addresses from the request dynamic metadata.
+                                                  If set this field then it will take precedence over the header field.
+                                                properties:
+                                                  key:
+                                                    description: Key defines the metadata
+                                                      key.
+                                                    minLength: 1
+                                                    type: string
+                                                  path:
+                                                    description: |-
+                                                      Path defines the path within the metadata to extract the endpoint addresses.
+                                                      Each path element represents a key in nested metadata structure.
+                                                    items:
+                                                      description: EndpointOverrideMetadataKeyPath
+                                                        defines a path element in
+                                                        the metadata structure.
+                                                      properties:
+                                                        key:
+                                                          description: Key defines
+                                                            the key name in the metadata
+                                                            structure.
+                                                          minLength: 1
+                                                          type: string
+                                                      required:
+                                                      - key
+                                                      type: object
+                                                    type: array
+                                                required:
+                                                - key
+                                                type: object
+                                            type: object
+                                            x-kubernetes-validations:
+                                            - message: Exactly one of header or metadata
+                                                must be set.
+                                              rule: (has(self.header) && !has(self.metadata))
+                                                || (!has(self.header) && has(self.metadata))
+                                          maxItems: 10
+                                          minItems: 1
+                                          type: array
+                                      required:
+                                      - extractFrom
+                                      type: object
                                     slowStart:
                                       description: |-
                                         SlowStart defines the configuration related to the slow start load balancer policy.
@@ -25276,7 +25877,7 @@ spec:
                                   - message: Currently ZoneAware is only supported
                                       for LeastRequest, Random, and RoundRobin load
                                       balancers.
-                                    rule: 'self.type == ''ConsistentHash'' ? !has(self.zoneAware)
+                                    rule: 'self.type in [''ConsistentHash''] ? !has(self.zoneAware)
                                       : true '
                                 proxyProtocol:
                                   description: ProxyProtocol enables the Proxy Protocol
@@ -26408,6 +27009,71 @@ spec:
                                     cookie field must be set.
                                   rule: 'self.type == ''Cookie'' ? has(self.cookie)
                                     : !has(self.cookie)'
+                              endpointOverride:
+                                description: |-
+                                  EndpointOverride defines the configuration for endpoint override.
+                                  When specified, the load balancer will attempt to route requests to endpoints
+                                  based on the override information extracted from request headers or metadata.
+                                  If no valid override endpoint is found, the configured load balancer policy will be used as fallback.
+                                properties:
+                                  extractFrom:
+                                    description: ExtractFrom defines the sources to
+                                      extract endpoint override information from.
+                                    items:
+                                      description: EndpointOverrideExtractFrom defines
+                                        a source to extract endpoint override information
+                                        from.
+                                      properties:
+                                        header:
+                                          description: |-
+                                            Header defines the header to get the override endpoint addresses.
+                                            The header value must specify at least one endpoint in `IP:Port` format or multiple endpoints in `IP:Port,IP:Port,...` format.
+                                            For example `10.0.0.5:8080` or `[2600:4040:5204::1574:24ae]:80`.
+                                            The IPv6 address is enclosed in square brackets.
+                                          type: string
+                                        metadata:
+                                          description: |-
+                                            Metadata defines the metadata key to get the override endpoint addresses from the request dynamic metadata.
+                                            If set this field then it will take precedence over the header field.
+                                          properties:
+                                            key:
+                                              description: Key defines the metadata
+                                                key.
+                                              minLength: 1
+                                              type: string
+                                            path:
+                                              description: |-
+                                                Path defines the path within the metadata to extract the endpoint addresses.
+                                                Each path element represents a key in nested metadata structure.
+                                              items:
+                                                description: EndpointOverrideMetadataKeyPath
+                                                  defines a path element in the metadata
+                                                  structure.
+                                                properties:
+                                                  key:
+                                                    description: Key defines the key
+                                                      name in the metadata structure.
+                                                    minLength: 1
+                                                    type: string
+                                                required:
+                                                - key
+                                                type: object
+                                              type: array
+                                          required:
+                                          - key
+                                          type: object
+                                      type: object
+                                      x-kubernetes-validations:
+                                      - message: Exactly one of header or metadata
+                                          must be set.
+                                        rule: (has(self.header) && !has(self.metadata))
+                                          || (!has(self.header) && has(self.metadata))
+                                    maxItems: 10
+                                    minItems: 1
+                                    type: array
+                                required:
+                                - extractFrom
+                                type: object
                               slowStart:
                                 description: |-
                                   SlowStart defines the configuration related to the slow start load balancer policy.
@@ -26483,7 +27149,7 @@ spec:
                                 ? !has(self.slowStart) : true '
                             - message: Currently ZoneAware is only supported for LeastRequest,
                                 Random, and RoundRobin load balancers.
-                              rule: 'self.type == ''ConsistentHash'' ? !has(self.zoneAware)
+                              rule: 'self.type in [''ConsistentHash''] ? !has(self.zoneAware)
                                 : true '
                           proxyProtocol:
                             description: ProxyProtocol enables the Proxy Protocol
