@@ -21,6 +21,9 @@
             credentials:
             - client: client-1
               key: key1
+            forwarding:
+              header: X-API-KEY-CLIENT-ID
+              hideCredentials: true
             keySources:
             - header: X-API-KEY
             - header: X-API-KEY-2

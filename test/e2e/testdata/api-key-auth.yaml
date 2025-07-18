@@ -86,6 +86,8 @@ spec:
     credentialRefs:
       - name: "api-key-auth-users-secret-1"
       - name: "api-key-auth-users-secret-2"
+    forwardClientIDHeader: "X-API-KEY-CLIENT-ID"
+    sanitize: true
 ---
 apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: SecurityPolicy

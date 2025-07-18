@@ -51,6 +51,15 @@ var APIKeyAuthTest = suite.ConformanceTest{
 						"X-API-KEY": "key1",
 					},
 				},
+				ExpectedRequest: &http.ExpectedRequest{
+					Request: http.Request{
+						Path: "/api-key-auth-header",
+						Headers: map[string]string{
+							"X-API-KEY-CLIENT-ID": "client1",
+						},
+					},
+					AbsentHeaders: []string{"X-API-KEY"},
+				},
 				Response: http.Response{
 					StatusCode: 200,
 				},
