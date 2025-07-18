@@ -400,6 +400,7 @@ func buildActiveHealthCheck(policy egv1a1.HealthCheck) *ir.ActiveHealthCheck {
 	irHC := &ir.ActiveHealthCheck{
 		Timeout:            hc.Timeout,
 		Interval:           hc.Interval,
+		InitialJitter:      hc.InitialJitter,
 		UnhealthyThreshold: hc.UnhealthyThreshold,
 		HealthyThreshold:   hc.HealthyThreshold,
 	}

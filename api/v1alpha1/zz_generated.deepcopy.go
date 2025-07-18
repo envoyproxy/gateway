@@ -124,6 +124,11 @@ func (in *ActiveHealthCheck) DeepCopyInto(out *ActiveHealthCheck) {
 		*out = new(metav1.Duration)
 		**out = **in
 	}
+	if in.InitialJitter != nil {
+		in, out := &in.InitialJitter, &out.InitialJitter
+		*out = new(v1.Duration)
+		**out = **in
+	}
 	if in.UnhealthyThreshold != nil {
 		in, out := &in.UnhealthyThreshold, &out.UnhealthyThreshold
 		*out = new(uint32)
