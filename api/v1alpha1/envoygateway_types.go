@@ -93,6 +93,19 @@ type EnvoyGatewaySpec struct {
 	//
 	// +optional
 	ExtensionAPIs *ExtensionAPISettings `json:"extensionApis,omitempty"`
+
+	// FeatureFlags defines the feature flags for Envoy Gateway.
+	// Unlike ExtensionAPIs, these flags are temporary and will be removed in future releases once the features are stable.
+	FeatureFlags *FeatureFlags `json:"featureFlags,omitempty"`
+}
+
+// FeatureFlags provide a mechanism to gate breaking changes or experimental features in new Envoy Gateway releases.
+// Each flag may be enabled or disabled by default and can be toggled through the EnvoyGateway resource.
+// The names of these flags will be included in the release notes alongside an explanation of the change.
+// Please note that these flags are temporary and will be removed in future releases once the features are stable.
+type FeatureFlags struct {
+	Enabled  []string `json:"enabled,omitempty"`
+	Disabled []string `json:"disabled,omitempty"`
 }
 
 type KubernetesClient struct {
