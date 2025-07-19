@@ -23,3 +23,21 @@ http:
     urlRewrite:
       path:
         fullReplace: /rewrite
+  - name: "rewrite-route-timeout"
+    pathMatch:
+      prefix: "/origin"
+    hostname: gateway.envoyproxy.io
+    destination:
+      name: "rewrite-route"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
+        name: "rewrite-route/backend/0"
+    urlRewrite:
+      path:
+        fullReplace: /rewrite
+    traffic:
+      timeout:
+        http:
+          requestTimeout: 5s
