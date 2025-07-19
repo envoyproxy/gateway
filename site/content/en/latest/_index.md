@@ -12,4 +12,11 @@ gateway. [Gateway API](https://gateway-api.sigs.k8s.io/) resources are used to d
 
 ![architecture](/img/traffic.png)
 
+## Evaluating Envoy Gateway?
+
+If you're assessing Envoy Gateway for production use, check out our [**Evaluator Guide**](./evaluator-guide/) which covers:
+- Project maturity and production readiness
+- Comparison with alternatives like NGINX
+- Decision framework and migration considerations
+
 ## Ready to get started?
