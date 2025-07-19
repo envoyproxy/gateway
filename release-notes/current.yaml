@@ -64,3 +64,4 @@ deprecations: |
 
 # Other notable changes not covered by the above sections.
 Other changes: |
+  Added comprehensive evaluator guide for organizations assessing Envoy Gateway for production use, including production readiness indicators, NGINX comparison, and decision frameworks.
