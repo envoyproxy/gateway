@@ -771,6 +771,7 @@ func buildRetryOn(triggers []ir.TriggerEnum) (string, error) {
 		ir.Error5XX:             "5xx",
 		ir.GatewayError:         "gateway-error",
 		ir.Reset:                "reset",
+		ir.ResetBeforeRequest:   "reset-before-request",
 		ir.ConnectFailure:       "connect-failure",
 		ir.Retriable4XX:         "retriable-4xx",
 		ir.RefusedStream:        "refused-stream",

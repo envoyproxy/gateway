@@ -2911,6 +2911,7 @@ const (
 	Error5XX             = TriggerEnum(egv1a1.Error5XX)
 	GatewayError         = TriggerEnum(egv1a1.GatewayError)
 	Reset                = TriggerEnum(egv1a1.Reset)
+	ResetBeforeRequest   = TriggerEnum(egv1a1.ResetBeforeRequest)
 	ConnectFailure       = TriggerEnum(egv1a1.ConnectFailure)
 	Retriable4XX         = TriggerEnum(egv1a1.Retriable4XX)
 	RefusedStream        = TriggerEnum(egv1a1.RefusedStream)

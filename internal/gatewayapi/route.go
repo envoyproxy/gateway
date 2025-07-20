@@ -55,9 +55,17 @@ type RoutesTranslator interface {
 func (t *Translator) ProcessHTTPRoutes(httpRoutes []*gwapiv1.HTTPRoute, gateways []*GatewayContext, resources *resource.Resources, xdsIR resource.XdsIRMap) []*HTTPRouteContext {
 	var relevantHTTPRoutes []*HTTPRouteContext
 
-	// always sort initially by creation time stamp. Later on, additional sorting based on matcher type and
-	// match length may occur.
+	// Initially, httpRoutes sort by creation timestamp
+	// or sort alphabetically by “{namespace}/{name}” if multiple routes share same timestamp.
+	// Later on, additional sorting based on matcher type and match length may occur.
 	sort.Slice(httpRoutes, func(i, j int) bool {
+		if httpRoutes[i].CreationTimestamp.Equal(&(httpRoutes[j].CreationTimestamp)) {
+			routeKeyI := fmt.Sprintf("%s/%s", httpRoutes[i].Namespace, httpRoutes[i].Name)
+			routeKeyJ := fmt.Sprintf("%s/%s", httpRoutes[j].Namespace, httpRoutes[j].Name)
+			return routeKeyI < routeKeyJ
+		}
+		// Not identical CreationTimestamps
+
 		return httpRoutes[i].CreationTimestamp.Before(&(httpRoutes[j].CreationTimestamp))
 	})
 
