@@ -18,21 +18,112 @@ especially when using the same extension server across different Envoy Gateway v
 
 ## Introduction
 
-One of the Envoy Gateway project goals is to "provide a common foundation for vendors to 
+One of the Envoy Gateway project goals is to "provide a common foundation for vendors to
 build value-added products without having to re-engineer fundamental interactions". The
 Envoy Gateway Extension Server provides a mechanism where Envoy Gateway tracks all provider
 resources and then calls a set of hooks that allow the generated xDS configuration to be
 modified before it is sent to Envoy Proxy. See the [design documentation][] for full details.
 
+## Extension Hooks Overview
+
+Envoy Gateway provides several extension hooks that are called at different stages of the xDS translation process. These hooks allow extensions to modify various aspects of the generated xDS configuration:
+
+### Available Hooks
+
+| Hook Type | Hook Method Name | Purpose | Resources Modified | Execution Context |
+|-----------|------------------|---------|-------------------|-------------------|
+| `Route` | `PostRouteModifyHook` | Modify individual routes | Single `envoy.config.route.v3.Route` | Per-route, only for routes with extension filters |
+| `Cluster` | `PostClusterModifyHook` | Modify clusters for custom backends | Single `envoy.config.cluster.v3.Cluster` | Per-cluster, only for custom backend clusters |
+| `VirtualHost` | `PostVirtualHostModifyHook` | Modify virtual hosts and add custom routes | Single `envoy.config.route.v3.VirtualHost` | Per-virtual-host |
+| `HTTPListener` | `PostHTTPListenerModifyHook` | Modify HTTP listeners | Single `envoy.config.listener.v3.Listener` | Per-listener |
+| `Translation` | `PostTranslateModifyHook` | Global modification of all xDS resources | All clusters, secrets, listeners, and routes | Once per translation cycle |
+
+### Hook Execution Order
+
+The hooks are executed in the following order during xDS translation:
+
+1. **Route Processing Phase**
+   - `Route` hook (`PostRouteModifyHook`): Called for each route that has extension filters attached
+   - `Cluster` hook (`PostClusterModifyHook`): Called for each cluster generated from custom backend references
+
+2. **Virtual Host Processing Phase**
+   - `VirtualHost` hook (`PostVirtualHostModifyHook`): Called for each virtual host after all routes are processed
+
+3. **Listener Processing Phase**
+   - `HTTPListener` hook (`PostHTTPListenerModifyHook`): Called for each HTTP listener after virtual hosts are configured
+
+4. **Final Translation Phase**
+   - `Translation` hook (`PostTranslateModifyHook`): Called once with all generated clusters, secrets, listeners, and routes
+
+### Hook Details
+
+#### Route Hook (`PostRouteModifyHook`)
+
+- **When called**: After each individual route is generated from an HTTPRoute with extension filters
+- **Input**: Single route, hostnames, and extension resources from the HTTPRoute
+- **Output**: Modified route
+- **Use cases**: Add route-specific filters, modify route configuration, add typed per-filter config
+
+#### Cluster Hook (`PostClusterModifyHook`)
+
+- **When called**: During cluster generation for custom backend references only
+- **Input**: Single cluster and extension resources from the backend reference
+- **Output**: Modified cluster
+- **Use cases**: Configure custom backend clusters, add health checks, modify load balancing
+
+#### VirtualHost Hook (`PostVirtualHostModifyHook`)
+
+- **When called**: After all routes for a virtual host are processed
+- **Input**: Complete virtual host with all its routes
+- **Output**: Modified virtual host (can add/remove/modify routes)
+- **Use cases**: Add virtual host-level configuration, inject additional routes
+
+#### HTTPListener Hook (`PostHTTPListenerModifyHook`)
+
+- **When called**: After listener is fully configured with all virtual hosts
+- **Input**: Complete HTTP listener and associated extension policies
+- **Output**: Modified listener
+- **Use cases**: Add listener filters, modify listener configuration, add authentication
+
+#### Translation Hook (`PostTranslateModifyHook`)
+
+- **When called**: After all individual resources are generated and processed
+- **Input**: All clusters, secrets, listeners, and routes, plus extension policies
+- **Output**: Complete set of modified resources
+- **Use cases**: Global resource injection, cross-resource modifications, cleanup operations
+
+### Configuration
+
+Extensions must specify which hooks they want to use in the `extensionManager.hooks` configuration:
+
+```yaml
+extensionManager:
+  hooks:
+    xdsTranslator:
+      post:
+        - Route          # Enable route modification hook
+        - VirtualHost    # Enable virtual host modification hook
+        - HTTPListener   # Enable HTTP listener modification hook
+        - Cluster        # Enable cluster modification hook
+        - Translation    # Enable global translation hook
+      # Configure which resources to include in PostTranslateModifyHook
+      # Default: true for clusters and secrets (for backward compatibility)
+      # Default: false for listeners and routes (for backward compatibility)
+      translation:
+        listener:
+          includeAll: true
+        route:
+          includeAll: true
+```
+
 This task sets up an example extension server that adds the Envoy Proxy Basic Authentication
-HTTP filter to all the listeners generated by Envoy Gateway. The example extension server 
+HTTP filter to all the listeners generated by Envoy Gateway. The example extension server
 includes its own CRD which allows defining username/password pairs that will be accepted by
-the Envoy Proxy. 
+the Envoy Proxy.
 
 **Note:** Envoy Gateway supports adding Basic Authentication to routes using a [SecurityPolicy][].
 See [this task](../security/basic-auth) for the preferred way to configure Basic 
 Authentication.
-
 
 ## Quickstart
 

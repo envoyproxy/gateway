@@ -57,7 +57,7 @@
           - name: envoy.retry_host_predicates.previous_hosts
             typedConfig:
               '@type': type.googleapis.com/envoy.extensions.retry.host.previous_hosts.v3.PreviousHostsPredicate
-          retryOn: reset,connect-failure
+          retryOn: reset,reset-before-request,connect-failure
           retryPriority:
             name: envoy.retry_priorities.previous_priorities
             typedConfig:
