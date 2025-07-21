@@ -38,7 +38,8 @@ spec:
         backendRefs:
           - name: otel-collector
             namespace: monitoring
-            port: 9411       serviceName: my-custom-service"
+            port: 9411
+        serviceName: "my-custom-service"
         zipkin:
           enable128BitTraceId: true
       customTags:
