@@ -357,6 +357,7 @@ _Appears in:_
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
+| `hostname` | _string_ |  false  |  | Hostname defines a hostname endpoint. |
 | `fqdn` | _[FQDNEndpoint](#fqdnendpoint)_ |  false  |  | FQDN defines a FQDN endpoint |
 | `ip` | _[IPEndpoint](#ipendpoint)_ |  false  |  | IP defines an IP endpoint. Supports both IPv4 and IPv6 addresses. |
 | `unix` | _[UnixSocket](#unixsocket)_ |  false  |  | Unix defines the unix domain socket endpoint |
@@ -830,6 +831,20 @@ _Appears in:_
 | `connection` | _[BackendConnection](#backendconnection)_ |  false  |  | Connection includes backend connection settings. |
 | `dns` | _[DNS](#dns)_ |  false  |  | DNS includes dns resolution settings. |
 | `http2` | _[HTTP2Settings](#http2settings)_ |  false  |  | HTTP2 provides HTTP/2 configuration for backend connections. |
+
+
+#### ClusterTranslationConfig
+
+
+
+
+
+_Appears in:_
+- [TranslationConfig](#translationconfig)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `includeAll` | _boolean_ |  false  |  | IncludeAll defines whether all clusters should be included in the translation hook.<br />Default is true for backward compatibility. |
 
 
 #### Compression
@@ -1683,7 +1698,7 @@ _Appears in:_
 | `http` | _[HTTPExtAuthService](#httpextauthservice)_ |  true  |  | HTTP defines the HTTP External Authorization service.<br />Either GRPCService or HTTPService must be specified,<br />and only one of them can be provided. |
 | `headersToExtAuth` | _string array_ |  false  |  | HeadersToExtAuth defines the client request headers that will be included<br />in the request to the external authorization service.<br />Note: If not specified, the default behavior for gRPC and HTTP external<br />authorization services is different due to backward compatibility reasons.<br />All headers will be included in the check request to a gRPC authorization server.<br />Only the following headers will be included in the check request to an HTTP<br />authorization server: Host, Method, Path, Content-Length, and Authorization.<br />And these headers will always be included to the check request to an HTTP<br />authorization server by default, no matter whether they are specified<br />in HeadersToExtAuth or not. |
 | `bodyToExtAuth` | _[BodyToExtAuth](#bodytoextauth)_ |  false  |  | BodyToExtAuth defines the Body to Ext Auth configuration. |
-| `failOpen` | _boolean_ |  false  | false | FailOpen is a switch used to control the behavior when a response from the External Authorization service cannot be obtained.<br />If FailOpen is set to true, the system allows the traffic to pass through.<br />Otherwise, if it is set to false or not set (defaulting to false),<br />the system blocks the traffic and returns a HTTP 5xx error, reflecting a fail-closed approach.<br />This setting determines whether to prioritize accessibility over strict security in case of authorization service failure. |
+| `failOpen` | _boolean_ |  false  | false | FailOpen is a switch used to control the behavior when a response from the External Authorization service cannot be obtained.<br />If FailOpen is set to true, the system allows the traffic to pass through.<br />Otherwise, if it is set to false or not set (defaulting to false),<br />the system blocks the traffic and returns a HTTP 5xx error, reflecting a fail-closed approach.<br />This setting determines whether to prioritize accessibility over strict security in case of authorization service failure.<br />If set to true, the External Authorization will also be bypassed if its configuration is invalid. |
 | `recomputeRoute` | _boolean_ |  false  |  | RecomputeRoute clears the route cache and recalculates the routing decision.<br />This field must be enabled if the headers added or modified by the ExtAuth are used for<br />route matching decisions. If the recomputation selects a new route, features targeting<br />the new matched route will be applied. |
 
 
@@ -1820,6 +1835,7 @@ _Appears in:_
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
+| `hostname` | _string_ |  false  |  | Hostname defines a hostname endpoint. |
 | `fqdn` | _[FQDNEndpoint](#fqdnendpoint)_ |  false  |  | FQDN defines a FQDN endpoint |
 | `ip` | _[IPEndpoint](#ipendpoint)_ |  false  |  | IP defines an IP endpoint. Supports both IPv4 and IPv6 addresses. |
 | `unix` | _[UnixSocket](#unixsocket)_ |  false  |  | Unix defines the unix domain socket endpoint |
@@ -3024,6 +3040,20 @@ _Appears in:_
 | `renewDeadline` | _[Duration](https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.Duration)_ |  true  |  | RenewDeadline represents the time frame within which the current leader will attempt to renew its leadership<br />status before relinquishing its position. The default setting is 10 seconds. |
 | `retryPeriod` | _[Duration](https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.Duration)_ |  true  |  | RetryPeriod denotes the interval at which LeaderElector clients should perform action retries.<br />The default setting is 2 seconds. |
 | `disable` | _boolean_ |  true  |  | Disable provides the option to turn off leader election, which is enabled by default. |
+
+
+#### ListenerTranslationConfig
+
+
+
+
+
+_Appears in:_
+- [TranslationConfig](#translationconfig)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `includeAll` | _boolean_ |  false  |  | IncludeAll defines whether all listeners should be included in the translation hook.<br />Default is false. |
 
 
 #### LiteralCustomTag
@@ -4367,6 +4397,20 @@ _Appears in:_
 
 
 
+#### RouteTranslationConfig
+
+
+
+
+
+_Appears in:_
+- [TranslationConfig](#translationconfig)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `includeAll` | _boolean_ |  false  |  | IncludeAll defines whether all routes should be included in the translation hook.<br />Default is false. |
+
+
 #### RoutingType
 
 _Underlying type:_ _string_
@@ -4382,6 +4426,20 @@ _Appears in:_
 | `Endpoint` | EndpointRoutingType is the RoutingType for Endpoint routing.<br /> | 
 
 
+
+
+#### SecretTranslationConfig
+
+
+
+
+
+_Appears in:_
+- [TranslationConfig](#translationconfig)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `includeAll` | _boolean_ |  false  |  | IncludeAll defines whether all secrets should be included in the translation hook.<br />Default is true for backward compatibility. |
 
 
 #### SecurityPolicy
@@ -4885,6 +4943,23 @@ _Appears in:_
 | `Datadog` |  | 
 
 
+#### TranslationConfig
+
+
+
+TranslationConfig defines the configuration for the translation hook.
+
+_Appears in:_
+- [XDSTranslatorHooks](#xdstranslatorhooks)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `listener` | _[ListenerTranslationConfig](#listenertranslationconfig)_ |  false  |  | Listener defines the configuration for the listener translation hook. |
+| `route` | _[RouteTranslationConfig](#routetranslationconfig)_ |  false  |  | Route defines the configuration for the route translation hook. |
+| `cluster` | _[ClusterTranslationConfig](#clustertranslationconfig)_ |  false  |  | Cluster defines the configuration for the cluster translation hook. |
+| `secret` | _[SecretTranslationConfig](#secrettranslationconfig)_ |  false  |  | Secret defines the configuration for the secret translation hook. |
+
+
 #### TriggerEnum
 
 _Underlying type:_ _string_
@@ -4899,6 +4974,7 @@ _Appears in:_
 | `5xx` | The upstream server responds with any 5xx response code, or does not respond at all (disconnect/reset/read timeout).<br />Includes connect-failure and refused-stream.<br /> | 
 | `gateway-error` | The response is a gateway error (502,503 or 504).<br /> | 
 | `reset` | The upstream server does not respond at all (disconnect/reset/read timeout.)<br /> | 
+| `reset-before-request` | Like reset, but only retry if the request headers have not been sent to the upstream server.<br /> | 
 | `connect-failure` | Connection failure to the upstream server (connect timeout, etc.). (Included in *5xx*)<br /> | 
 | `retriable-4xx` | The upstream server responds with a retriable 4xx response code.<br />Currently, the only response code in this category is 409.<br /> | 
 | `refused-stream` | The upstream server resets the stream with a REFUSED_STREAM error code.<br /> | 
@@ -5058,6 +5134,7 @@ _Appears in:_
 | ---   | ---  | ---      | ---     | ---         |
 | `pre` | _[XDSTranslatorHook](#xdstranslatorhook) array_ |  true  |  |  |
 | `post` | _[XDSTranslatorHook](#xdstranslatorhook) array_ |  true  |  |  |
+| `translation` | _[TranslationConfig](#translationconfig)_ |  true  |  | Translation defines the configuration for the translation hook. |
 
 
 #### XFCCCertData

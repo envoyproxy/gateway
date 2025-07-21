@@ -1683,6 +1683,8 @@ const (
 // DestinationEndpoint holds the endpoint details associated with the destination
 // +kubebuilder:object:generate=true
 type DestinationEndpoint struct {
+	// Hostname refers to the endpoint's hostname
+	Hostname *string `json:"hostname,omitempty" yaml:"hostname,omitempty"`
 	// Host refers to the FQDN or IP address of the backend service.
 	Host string `json:"host" yaml:"host"`
 	// Port on the service to forward the request to.
@@ -1724,8 +1726,9 @@ func (d DestinationEndpoint) Validate() error {
 }
 
 // NewDestEndpoint creates a new DestinationEndpoint.
-func NewDestEndpoint(host string, port uint32, draining bool, zone *string) *DestinationEndpoint {
+func NewDestEndpoint(hostname *string, host string, port uint32, draining bool, zone *string) *DestinationEndpoint {
 	return &DestinationEndpoint{
+		Hostname: hostname,
 		Host:     host,
 		Port:     port,
 		Draining: draining,
@@ -2898,6 +2901,7 @@ const (
 	Error5XX             = TriggerEnum(egv1a1.Error5XX)
 	GatewayError         = TriggerEnum(egv1a1.GatewayError)
 	Reset                = TriggerEnum(egv1a1.Reset)
+	ResetBeforeRequest   = TriggerEnum(egv1a1.ResetBeforeRequest)
 	ConnectFailure       = TriggerEnum(egv1a1.ConnectFailure)
 	Retriable4XX         = TriggerEnum(egv1a1.Retriable4XX)
 	RefusedStream        = TriggerEnum(egv1a1.RefusedStream)

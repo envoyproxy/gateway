@@ -166,6 +166,12 @@ func (t *Translator) ProcessSecurityPolicies(securityPolicies []*egv1a1.Security
 		}
 	}
 
+	for _, policy := range res {
+		// Truncate Ancestor list of longer than 16
+		if len(policy.Status.Ancestors) > 16 {
+			status.TruncatePolicyAncestors(&policy.Status, t.GatewayControllerName, policy.Generation)
+		}
+	}
 	return res
 }
 
@@ -603,11 +609,12 @@ func (t *Translator) translateSecurityPolicyForRoute(
 ) error {
 	// Build IR
 	var (
-		cors          *ir.CORS
-		apiKeyAuth    *ir.APIKeyAuth
-		basicAuth     *ir.BasicAuth
-		authorization *ir.Authorization
-		err, errs     error
+		cors               *ir.CORS
+		apiKeyAuth         *ir.APIKeyAuth
+		basicAuth          *ir.BasicAuth
+		authorization      *ir.Authorization
+		err, errs          error
+		hasNonExtAuthError bool
 	)
 
 	if policy.Spec.CORS != nil {
@@ -634,9 +641,12 @@ func (t *Translator) translateSecurityPolicyForRoute(
 
 	if policy.Spec.Authorization != nil {
 		if authorization, err = t.buildAuthorization(policy); err != nil {
+			err = perr.WithMessage(err, "Authorization")
 			errs = errors.Join(errs, err)
 		}
 	}
+
+	hasNonExtAuthError = errs != nil
 
 	// Apply IR to all relevant routes
 	prefix := irRoutePrefix(route)
@@ -649,13 +659,14 @@ func (t *Translator) translateSecurityPolicyForRoute(
 		}
 
 		var extAuth *ir.ExtAuth
+		var extAuthErr error
 		if policy.Spec.ExtAuth != nil {
-			if extAuth, err = t.buildExtAuth(
+			if extAuth, extAuthErr = t.buildExtAuth(
 				policy,
 				resources,
-				gtwCtx.envoyProxy); err != nil {
-				err = perr.WithMessage(err, "ExtAuth")
-				errs = errors.Join(errs, err)
+				gtwCtx.envoyProxy); extAuthErr != nil {
+				extAuthErr = perr.WithMessage(extAuthErr, "ExtAuth")
+				errs = errors.Join(errs, extAuthErr)
 			}
 		}
 
@@ -667,6 +678,7 @@ func (t *Translator) translateSecurityPolicyForRoute(
 				gtwCtx.envoyProxy); err != nil {
 				err = perr.WithMessage(err, "OIDC")
 				errs = errors.Join(errs, err)
+				hasNonExtAuthError = true
 			}
 		}
 
@@ -678,6 +690,7 @@ func (t *Translator) translateSecurityPolicyForRoute(
 				gtwCtx.envoyProxy); err != nil {
 				err = perr.WithMessage(err, "JWT")
 				errs = errors.Join(errs, err)
+				hasNonExtAuthError = true
 			}
 		}
 
@@ -703,9 +716,15 @@ func (t *Translator) translateSecurityPolicyForRoute(
 							Authorization: authorization,
 						}
 						if errs != nil {
-							// Return a 500 direct response to avoid unauthorized access
-							r.DirectResponse = &ir.CustomResponse{
-								StatusCode: ptr.To(uint32(500)),
+							// If there is only error for ext auth and ext auth is set to fail open, then skip the ext auth
+							// and allow the request to go through.
+							// Otherwise, return a 500 direct response to avoid unauthorized access.
+							shouldFailOpen := extAuthErr != nil && !hasNonExtAuthError && ptr.Deref(policy.Spec.ExtAuth.FailOpen, false)
+							if !shouldFailOpen {
+								// Return a 500 direct response to avoid unauthorized access
+								r.DirectResponse = &ir.CustomResponse{
+									StatusCode: ptr.To(uint32(500)),
+								}
 							}
 						}
 					}
@@ -725,14 +744,15 @@ func (t *Translator) translateSecurityPolicyForGateway(
 ) error {
 	// Build IR
 	var (
-		cors          *ir.CORS
-		jwt           *ir.JWT
-		oidc          *ir.OIDC
-		apiKeyAuth    *ir.APIKeyAuth
-		basicAuth     *ir.BasicAuth
-		extAuth       *ir.ExtAuth
-		authorization *ir.Authorization
-		err, errs     error
+		cors                  *ir.CORS
+		jwt                   *ir.JWT
+		oidc                  *ir.OIDC
+		apiKeyAuth            *ir.APIKeyAuth
+		basicAuth             *ir.BasicAuth
+		extAuth               *ir.ExtAuth
+		authorization         *ir.Authorization
+		extAuthErr, err, errs error
+		hasNonExtAuthError    bool
 	)
 
 	if policy.Spec.CORS != nil {
@@ -777,21 +797,24 @@ func (t *Translator) translateSecurityPolicyForGateway(
 		}
 	}
 
-	if policy.Spec.ExtAuth != nil {
-		if extAuth, err = t.buildExtAuth(
-			policy,
-			resources,
-			gateway.envoyProxy); err != nil {
-			err = perr.WithMessage(err, "ExtAuth")
-			errs = errors.Join(errs, err)
-		}
-	}
-
 	if policy.Spec.Authorization != nil {
 		if authorization, err = t.buildAuthorization(policy); err != nil {
 			errs = errors.Join(errs, err)
 		}
 	}
+
+	hasNonExtAuthError = errs != nil
+
+	if policy.Spec.ExtAuth != nil {
+		if extAuth, extAuthErr = t.buildExtAuth(
+			policy,
+			resources,
+			gateway.envoyProxy); extAuthErr != nil {
+			extAuthErr = perr.WithMessage(extAuthErr, "ExtAuth")
+			errs = errors.Join(errs, extAuthErr)
+		}
+	}
+
 	// Apply IR to all the routes within the specific Gateway that originated
 	// from the gateway to which this security policy was attached.
 	// If the feature is already set, then skip it, since it must have be
@@ -833,9 +856,14 @@ func (t *Translator) translateSecurityPolicyForGateway(
 				Authorization: authorization,
 			}
 			if errs != nil {
-				// Return a 500 direct response to avoid unauthorized access
-				r.DirectResponse = &ir.CustomResponse{
-					StatusCode: ptr.To(uint32(500)),
+				// If there is only error for ext auth and ext auth is set to fail open, then skip the ext auth
+				// and allow the request to go through.
+				// Otherwise, return a 500 direct response to avoid unauthorized access.
+				shouldFailOpen := extAuthErr != nil && !hasNonExtAuthError && ptr.Deref(policy.Spec.ExtAuth.FailOpen, false)
+				if !shouldFailOpen {
+					r.DirectResponse = &ir.CustomResponse{
+						StatusCode: ptr.To(uint32(500)),
+					}
 				}
 			}
 		}

@@ -1,0 +1,60 @@
+gateways:
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: Gateway
+    metadata:
+      namespace: envoy-gateway
+      name: gateway-1
+    spec:
+      gatewayClassName: envoy-gateway-class
+      listeners:
+        - name: http
+          protocol: HTTP
+          port: 80
+          allowedRoutes:
+            namespaces:
+              from: All
+httpRoutes:
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: HTTPRoute
+    metadata:
+      namespace: default
+      name: httproute-1
+    spec:
+      parentRefs:
+        - namespace: envoy-gateway
+          name: gateway-1
+      rules:
+        - matches:
+            - path:
+                value: "/"
+          backendRefs:
+            - group: gateway.envoyproxy.io
+              kind: Backend
+              name: backend-1
+            - group: gateway.envoyproxy.io
+              kind: Backend
+              name: backend-2
+backends:
+  - apiVersion: gateway.envoyproxy.io/v1alpha1
+    kind: Backend
+    metadata:
+      name: backend-1
+      namespace: default
+    spec:
+      endpoints:
+        - hostname: "example.com"
+          ip:
+            address: 1.1.1.1
+            port: 3001
+          zone: zone1
+  - apiVersion: gateway.envoyproxy.io/v1alpha1
+    kind: Backend
+    metadata:
+      name: backend-2
+      namespace: default
+    spec:
+      endpoints:
+        - ip:
+            address: 2.2.2.2
+            port: 3001
+          zone: zone2
