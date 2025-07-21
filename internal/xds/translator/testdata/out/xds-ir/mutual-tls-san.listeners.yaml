@@ -143,9 +143,5 @@
         disableStatelessSessionResumption: true
         requireClientCertificate: true
   maxConnectionsToAcceptPerSocketEvent: 1
-  metadata:
-    filterMetadata:
-      envoy-gateway:
-        resources: []
   name: second-listener
   perConnectionBufferLimitBytes: 32768

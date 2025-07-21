@@ -58,13 +58,5 @@
         statPrefix: tcp-10081
     name: second-route
   maxConnectionsToAcceptPerSocketEvent: 1
-  metadata:
-    filterMetadata:
-      envoy-gateway:
-        resources:
-        - kind: Gateway
-          name: gateway-1
-          namespace: envoy-gateway
-          sectionName: tcp
   name: second-listener
   perConnectionBufferLimitBytes: 32768

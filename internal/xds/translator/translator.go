@@ -713,10 +713,8 @@ func (t *Translator) processTCPListenerXdsTranslation(
 ) error {
 	// The XDS translation is done in a best-effort manner, so we collect all
 	// errors and return them at the end.
-	var (
-		ownerGatewayListeners = map[string]sets.Set[*ir.ResourceMetadata]{} // The set of Gateway Listeners that own the xDS Listener
-		errs, err             error
-	)
+	var errs, err error
+
 	for _, tcpListener := range tcpListeners {
 		// Search for an existing listener, if it does not exist, create one.
 		xdsListener := findXdsListenerByHostPort(tCtx, tcpListener.Address, tcpListener.Port, corev3.SocketAddress_TCP)
@@ -734,13 +732,6 @@ func (t *Translator) processTCPListenerXdsTranslation(
 				errs = errors.Join(errs, err)
 				continue
 			}
-
-			ownerGatewayListeners[xdsListener.Name] = sets.New[*ir.ResourceMetadata]()
-		}
-
-		// Collect the owner Gateway Listeners for the xDS Listener.
-		if _, ok := ownerGatewayListeners[xdsListener.Name]; ok {
-			ownerGatewayListeners[xdsListener.Name].Insert(tcpListener.Metadata)
 		}
 
 		// Add the proxy protocol filter if needed
@@ -807,14 +798,6 @@ func (t *Translator) processTCPListenerXdsTranslation(
 		}
 	}
 
-	// Add the owner Gateway Listeners to the xDS listeners' metadata.
-	for listenerName, ownerGatewayListeners := range ownerGatewayListeners {
-		xdsListener := findXdsListener(tCtx, listenerName, corev3.SocketAddress_TCP)
-		if xdsListener != nil {
-			xdsListener.Metadata = buildXdsMetadataFromMultiple(ownerGatewayListeners.UnsortedList())
-		}
-	}
-
 	return errs
 }
 
@@ -868,7 +851,6 @@ func (t *Translator) processUDPListenerXdsTranslation(
 			errs = errors.Join(errs, err)
 			continue
 		}
-		xdsListener.Metadata = buildXdsMetadata(udpListener.Metadata)
 	}
 	return errs
 }

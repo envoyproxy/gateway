@@ -49,10 +49,6 @@
         cluster: max-accept-disabled
         statPrefix: tcp-10081
     name: max-accept-disabled
-  metadata:
-    filterMetadata:
-      envoy-gateway:
-        resources: []
   name: second-listener
   perConnectionBufferLimitBytes: 32768
 - address:
@@ -68,9 +64,5 @@
         statPrefix: tcp-10082
     name: max-accept-default
   maxConnectionsToAcceptPerSocketEvent: 1
-  metadata:
-    filterMetadata:
-      envoy-gateway:
-        resources: []
   name: third-listener
   perConnectionBufferLimitBytes: 32768

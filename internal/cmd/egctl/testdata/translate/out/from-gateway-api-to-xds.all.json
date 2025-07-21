@@ -1270,13 +1270,6 @@
                     }
                   ],
                   "maxConnectionsToAcceptPerSocketEvent": 1,
-                  "metadata": {
-                    "filterMetadata": {
-                      "envoy-gateway": {
-                        "resources": []
-                      }
-                    }
-                  },
                   "name": "default/eg/tcp",
                   "perConnectionBufferLimitBytes": 32768
                 }
@@ -1402,13 +1395,6 @@
                     }
                   ],
                   "maxConnectionsToAcceptPerSocketEvent": 1,
-                  "metadata": {
-                    "filterMetadata": {
-                      "envoy-gateway": {
-                        "resources": []
-                      }
-                    }
-                  },
                   "name": "default/eg/tls-passthrough",
                   "perConnectionBufferLimitBytes": 32768
                 }

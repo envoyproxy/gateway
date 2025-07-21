@@ -11,9 +11,5 @@
         statPrefix: tcp-10080
     name: EmptyCluster
   maxConnectionsToAcceptPerSocketEvent: 1
-  metadata:
-    filterMetadata:
-      envoy-gateway:
-        resources: []
   name: tcp-listener-with-no-routes
   perConnectionBufferLimitBytes: 32768

@@ -83,9 +83,5 @@
     typedConfig:
       '@type': type.googleapis.com/envoy.extensions.filters.listener.proxy_protocol.v3.ProxyProtocol
   maxConnectionsToAcceptPerSocketEvent: 1
-  metadata:
-    filterMetadata:
-      envoy-gateway:
-        resources: []
   name: second-listener
   perConnectionBufferLimitBytes: 32768

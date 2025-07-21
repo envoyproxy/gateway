@@ -791,10 +791,6 @@ xds:
                   statPrefix: tcp-1234
               name: tcproute/default/backend
             maxConnectionsToAcceptPerSocketEvent: 1
-            metadata:
-              filterMetadata:
-                envoy-gateway:
-                  resources: []
             name: default/eg/tcp
             perConnectionBufferLimitBytes: 32768
       - activeState:
@@ -886,10 +882,6 @@ xds:
               typedConfig:
                 '@type': type.googleapis.com/envoy.extensions.filters.listener.tls_inspector.v3.TlsInspector
             maxConnectionsToAcceptPerSocketEvent: 1
-            metadata:
-              filterMetadata:
-                envoy-gateway:
-                  resources: []
             name: default/eg/tls-passthrough
             perConnectionBufferLimitBytes: 32768
       - activeState:

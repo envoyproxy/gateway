@@ -54,10 +54,6 @@
         statPrefix: tcp-10081
     name: tcp-route-dest
   maxConnectionsToAcceptPerSocketEvent: 1
-  metadata:
-    filterMetadata:
-      envoy-gateway:
-        resources: []
   name: second-listener
   perConnectionBufferLimitBytes: 1500
 - address:

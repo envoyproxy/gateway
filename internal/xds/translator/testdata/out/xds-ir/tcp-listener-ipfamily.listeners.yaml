@@ -12,9 +12,5 @@
         statPrefix: tcp-8082
     name: tcp-route-dual
   maxConnectionsToAcceptPerSocketEvent: 1
-  metadata:
-    filterMetadata:
-      envoy-gateway:
-        resources: []
   name: tcp-listener-dual
   perConnectionBufferLimitBytes: 32768

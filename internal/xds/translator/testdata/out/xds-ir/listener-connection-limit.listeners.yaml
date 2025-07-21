@@ -105,10 +105,6 @@
     typedConfig:
       '@type': type.googleapis.com/envoy.extensions.filters.listener.tls_inspector.v3.TlsInspector
   maxConnectionsToAcceptPerSocketEvent: 1
-  metadata:
-    filterMetadata:
-      envoy-gateway:
-        resources: []
   name: third-listener
   perConnectionBufferLimitBytes: 32768
 - address:
@@ -129,9 +125,5 @@
         cluster: tcp-route-dest
         statPrefix: tcp-10083
   maxConnectionsToAcceptPerSocketEvent: 1
-  metadata:
-    filterMetadata:
-      envoy-gateway:
-        resources: []
   name: fourth-listener
   perConnectionBufferLimitBytes: 32768

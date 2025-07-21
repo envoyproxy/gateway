@@ -11,9 +11,5 @@
         statPrefix: tcp-10080
     name: tcp-route-simple
   maxConnectionsToAcceptPerSocketEvent: 1
-  metadata:
-    filterMetadata:
-      envoy-gateway:
-        resources: []
   name: tcp-listener-simple
   perConnectionBufferLimitBytes: 32768

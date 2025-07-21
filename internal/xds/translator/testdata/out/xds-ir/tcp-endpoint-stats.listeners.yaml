@@ -10,9 +10,5 @@
         cluster: tcp-route-simple-dest
         statPrefix: tcp-10080
   maxConnectionsToAcceptPerSocketEvent: 1
-  metadata:
-    filterMetadata:
-      envoy-gateway:
-        resources: []
   name: tcp-route-enable-endpoint-stats
   perConnectionBufferLimitBytes: 32768
