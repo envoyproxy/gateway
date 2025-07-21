@@ -2897,12 +2897,12 @@ func (in *FeatureFlags) DeepCopyInto(out *FeatureFlags) {
 	*out = *in
 	if in.Enabled != nil {
 		in, out := &in.Enabled, &out.Enabled
-		*out = make([]string, len(*in))
+		*out = make([]FeatureFlag, len(*in))
 		copy(*out, *in)
 	}
 	if in.Disabled != nil {
 		in, out := &in.Disabled, &out.Disabled
-		*out = make([]string, len(*in))
+		*out = make([]FeatureFlag, len(*in))
 		copy(*out, *in)
 	}
 }

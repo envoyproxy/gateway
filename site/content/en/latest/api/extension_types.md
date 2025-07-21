@@ -1961,6 +1961,20 @@ _Appears in:_
 | `percentage` | _float_ |  false  | 100 | Percentage specifies the percentage of requests to be delayed. Default 100%, if set 0, no requests will be delayed. Accuracy to 0.0001%. |
 
 
+#### FeatureFlag
+
+_Underlying type:_ _string_
+
+FeatureFlag defines a feature flag for Envoy Gateway.
+
+_Appears in:_
+- [FeatureFlags](#featureflags)
+
+| Value | Description |
+| ----- | ----------- |
+| `UseAddressAsListenerName` | FeatureUseAddressAsListenerName indicates that the listener name should be derived from the address and port.<br /> | 
+
+
 #### FeatureFlags
 
 
@@ -1976,8 +1990,8 @@ _Appears in:_
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `enabled` | _string array_ |  true  |  |  |
-| `disabled` | _string array_ |  true  |  |  |
+| `enabled` | _[FeatureFlag](#featureflag) array_ |  true  |  |  |
+| `disabled` | _[FeatureFlag](#featureflag) array_ |  true  |  |  |
 
 
 #### FileEnvoyProxyAccessLog
