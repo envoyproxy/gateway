@@ -20,7 +20,7 @@ envoyPatchPolicies:
       name: gateway-1
     jsonPatches:
     - type: "type.googleapis.com/envoy.config.listener.v3.Listener"
-      name: "0.0.0.0-80"
+      name: "envoy-gateway-gateway-1-http"
       operation:
         op: replace
         path: "/per_connection_buffer_limit_bytes"
