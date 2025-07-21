@@ -156,5 +156,51 @@ var APIKeyAuthTest = suite.ConformanceTest{
 
 			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
 		})
+		t.Run("section scoped api-key auth with header", func(t *testing.T) {
+			ns := "gateway-conformance-infra"
+			routeNN := types.NamespacedName{Name: "http-with-api-key-auth-header-section-scoped", Namespace: ns}
+			gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
+			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
+
+			ancestorRef := gwapiv1a2.ParentReference{
+				Group:     gatewayapi.GroupPtr(gwapiv1.GroupName),
+				Kind:      gatewayapi.KindPtr(resource.KindGateway),
+				Namespace: gatewayapi.NamespacePtr(gwNN.Namespace),
+				Name:      gwapiv1.ObjectName(gwNN.Name),
+			}
+			SecurityPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "api-key-auth-header-section-scoped", Namespace: ns}, suite.ControllerName, ancestorRef)
+
+			// Invalid key request for a route rule with policy attached will fail.
+			expectedResponse := http.ExpectedResponse{
+				Request: http.Request{
+					Path: "/api-key-auth-header-attached",
+					Headers: map[string]string{
+						"X-API-KEY": "invalid",
+					},
+				},
+				Response: http.Response{
+					StatusCode: 401,
+				},
+				Namespace: ns,
+			}
+
+			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
+
+			// Invalid key request for a route rule with policy not attached will success.
+			expectedResponse = http.ExpectedResponse{
+				Request: http.Request{
+					Path: "/api-key-auth-header-non-attached",
+					Headers: map[string]string{
+						"X-API-KEY": "invalid",
+					},
+				},
+				Response: http.Response{
+					StatusCode: 200,
+				},
+				Namespace: ns,
+			}
+
+			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
+		})
 	},
 }
