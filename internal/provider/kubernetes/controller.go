@@ -1807,11 +1807,6 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 			return r.handleNode(node)
 		}),
 	}
-	if r.namespaceLabel != nil {
-		nPredicates = append(nPredicates, predicate.NewTypedPredicateFuncs(func(node *corev1.Node) bool {
-			return r.hasMatchingNamespaceLabels(node)
-		}))
-	}
 	// resource address.
 	if err := c.Watch(
 		source.Kind(mgr.GetCache(), &corev1.Node{},
