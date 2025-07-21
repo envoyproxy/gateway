@@ -4,6 +4,7 @@ date: Pending
 breaking changes: |
   Use gateway name as proxy fleet name for gateway namespace mode.
   Endpoints that are absent from service discovery are removed even if their active health checks succeed.
+  The xDS listener name are now renamed based on its listening address and port, instead of the Gateway name and section name. This change is gated by the `UseAddressAsListenerName` feature flag. This flag is disabled by default in v1.5, and it will be enabled in v1.6.
 
 # Updates addressing vulnerabilities, security flaws, or compliance requirements.
 security updates: |
