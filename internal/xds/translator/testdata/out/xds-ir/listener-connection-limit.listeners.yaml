@@ -34,7 +34,11 @@
   metadata:
     filterMetadata:
       envoy-gateway:
-        resources: []
+        resources:
+        - kind: Gateway
+          name: gateway-1
+          namespace: envoy-gateway
+          sectionName: http1
   name: first-listener
   perConnectionBufferLimitBytes: 32768
 - address:
@@ -78,7 +82,11 @@
   metadata:
     filterMetadata:
       envoy-gateway:
-        resources: []
+        resources:
+        - kind: Gateway
+          name: gateway-1
+          namespace: envoy-gateway
+          sectionName: http2
   name: second-listener
   perConnectionBufferLimitBytes: 32768
 - address:

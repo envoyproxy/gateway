@@ -3,6 +3,11 @@ http:
     hostnames:
       - '*'
     isHTTP2: false
+    metadata:
+      kind: Gateway
+      name: gateway-1
+      namespace: envoy-gateway
+      sectionName: http
     name: envoy-gateway/gateway-btls/http
     path:
       escapedSlashesAction: UnescapeAndRedirect

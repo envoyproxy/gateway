@@ -3,6 +3,11 @@ http:
     address: "::"
     hostnames:
       - '*'
+    metadata:
+      kind: Gateway
+      name: gateway-1
+      namespace: envoy-gateway
+      sectionName: http
     path:
       escapedSlashesAction: UnescapeAndRedirect
       mergeSlashes: true

@@ -34,7 +34,11 @@
   metadata:
     filterMetadata:
       envoy-gateway:
-        resources: []
+        resources:
+        - kind: Gateway
+          name: gateway-1
+          namespace: envoy-gateway
+          sectionName: http
   name: policyextension-listener
   perConnectionBufferLimitBytes: 32768
   statPrefix: from-the-policy

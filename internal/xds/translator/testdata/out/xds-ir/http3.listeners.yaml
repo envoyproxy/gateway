@@ -52,7 +52,11 @@
   metadata:
     filterMetadata:
       envoy-gateway:
-        resources: []
+        resources:
+        - kind: Gateway
+          name: gateway-1
+          namespace: envoy-gateway
+          sectionName: http3
   name: envoy-gateway/gateway-1/tls-quic
   udpListenerConfig:
     downstreamSocketConfig: {}
@@ -108,6 +112,10 @@
   metadata:
     filterMetadata:
       envoy-gateway:
-        resources: []
+        resources:
+        - kind: Gateway
+          name: gateway-1
+          namespace: envoy-gateway
+          sectionName: http3
   name: envoy-gateway/gateway-1/tls
   perConnectionBufferLimitBytes: 32768

@@ -29,8 +29,6 @@ http:
   port: 10081
   hostnames:
   - "example.com"
-  hostnames:
-  - "*"
   metadata:
     kind: Gateway
     name: gateway-1

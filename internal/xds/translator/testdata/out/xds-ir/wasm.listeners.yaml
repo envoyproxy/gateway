@@ -116,6 +116,10 @@
   metadata:
     filterMetadata:
       envoy-gateway:
-        resources: []
+        resources:
+        - kind: Gateway
+          name: gateway-1
+          namespace: envoy-gateway
+          sectionName: http
   name: envoy-gateway/gateway-1/http
   perConnectionBufferLimitBytes: 32768
