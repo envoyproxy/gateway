@@ -171,5 +171,5 @@ xds:
                   name: eg
                   namespace: envoy-gateway-system
                   sectionName: http
-          name: 0.0.0.0-10080
+          name: envoy-gateway-system/eg/http
           perConnectionBufferLimitBytes: 32768

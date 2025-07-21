@@ -992,7 +992,7 @@
                       }
                     }
                   },
-                  "name": "0.0.0.0-10080",
+                  "name": "default/eg/http",
                   "perConnectionBufferLimitBytes": 32768
                 }
               }
@@ -1158,7 +1158,7 @@
                       }
                     }
                   },
-                  "name": "0.0.0.0-8080",
+                  "name": "default/eg/grpc",
                   "perConnectionBufferLimitBytes": 32768
                 }
               }
@@ -1277,7 +1277,7 @@
                       }
                     }
                   },
-                  "name": "0.0.0.0-1234",
+                  "name": "default/eg/tcp",
                   "perConnectionBufferLimitBytes": 32768
                 }
               }
@@ -1409,7 +1409,7 @@
                       }
                     }
                   },
-                  "name": "0.0.0.0-8443",
+                  "name": "default/eg/tls-passthrough",
                   "perConnectionBufferLimitBytes": 32768
                 }
               }
@@ -1526,7 +1526,7 @@
                       }
                     }
                   ],
-                  "name": "0.0.0.0-1234"
+                  "name": "default/eg/udp"
                 }
               }
             }

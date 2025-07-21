@@ -1219,6 +1219,7 @@ EnvoyGateway is the schema for the envoygateways API.
 | `rateLimit` | _[RateLimit](#ratelimit)_ |  false  |  | RateLimit defines the configuration associated with the Rate Limit service<br />deployed by Envoy Gateway required to implement the Global Rate limiting<br />functionality. The specific rate limit service used here is the reference<br />implementation in Envoy. For more details visit https://github.com/envoyproxy/ratelimit.<br />This configuration is unneeded for "Local" rate limiting. |
 | `extensionManager` | _[ExtensionManager](#extensionmanager)_ |  false  |  | ExtensionManager defines an extension manager to register for the Envoy Gateway Control Plane. |
 | `extensionApis` | _[ExtensionAPISettings](#extensionapisettings)_ |  false  |  | ExtensionAPIs defines the settings related to specific Gateway API Extensions<br />implemented by Envoy Gateway |
+| `featureFlags` | _[FeatureFlags](#featureflags)_ |  true  |  | FeatureFlags defines the feature flags for Envoy Gateway.<br />Unlike ExtensionAPIs, these flags are temporary and will be removed in future releases once the features are stable. |
 
 
 #### EnvoyGatewayAdmin
@@ -1478,6 +1479,7 @@ _Appears in:_
 | `rateLimit` | _[RateLimit](#ratelimit)_ |  false  |  | RateLimit defines the configuration associated with the Rate Limit service<br />deployed by Envoy Gateway required to implement the Global Rate limiting<br />functionality. The specific rate limit service used here is the reference<br />implementation in Envoy. For more details visit https://github.com/envoyproxy/ratelimit.<br />This configuration is unneeded for "Local" rate limiting. |
 | `extensionManager` | _[ExtensionManager](#extensionmanager)_ |  false  |  | ExtensionManager defines an extension manager to register for the Envoy Gateway Control Plane. |
 | `extensionApis` | _[ExtensionAPISettings](#extensionapisettings)_ |  false  |  | ExtensionAPIs defines the settings related to specific Gateway API Extensions<br />implemented by Envoy Gateway |
+| `featureFlags` | _[FeatureFlags](#featureflags)_ |  true  |  | FeatureFlags defines the feature flags for Envoy Gateway.<br />Unlike ExtensionAPIs, these flags are temporary and will be removed in future releases once the features are stable. |
 
 
 #### EnvoyGatewayTelemetry
@@ -1960,6 +1962,39 @@ _Appears in:_
 | ---   | ---  | ---      | ---     | ---         |
 | `fixedDelay` | _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.29/#duration-v1-meta)_ |  true  |  | FixedDelay specifies the fixed delay duration |
 | `percentage` | _float_ |  false  | 100 | Percentage specifies the percentage of requests to be delayed. Default 100%, if set 0, no requests will be delayed. Accuracy to 0.0001%. |
+
+
+#### FeatureFlag
+
+_Underlying type:_ _string_
+
+FeatureFlag defines a feature flag for Envoy Gateway.
+
+_Appears in:_
+- [FeatureFlags](#featureflags)
+
+| Value | Description |
+| ----- | ----------- |
+| `UseAddressAsListenerName` | FeatureUseAddressAsListenerName indicates that the listener name should be derived from the address and port.<br /> | 
+
+
+#### FeatureFlags
+
+
+
+FeatureFlags provide a mechanism to gate breaking changes or experimental features in new Envoy Gateway releases.
+Each flag may be enabled or disabled by default and can be toggled through the EnvoyGateway resource.
+The names of these flags will be included in the release notes alongside an explanation of the change.
+Please note that these flags are temporary and will be removed in future releases once the features are stable.
+
+_Appears in:_
+- [EnvoyGateway](#envoygateway)
+- [EnvoyGatewaySpec](#envoygatewayspec)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `enabled` | _[FeatureFlag](#featureflag) array_ |  true  |  |  |
+| `disabled` | _[FeatureFlag](#featureflag) array_ |  true  |  |  |
 
 
 #### FileEnvoyProxyAccessLog

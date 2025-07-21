@@ -1,9 +1,19 @@
 http:
 - name: "extension-post-xdslistener-hook-error"
   address: "0.0.0.0"
-  port: 10181
+  port: 10080
   hostnames:
   - "*"
+  metadata:
+    kind: Gateway
+    name: gateway-1
+    namespace: envoy-gateway
+    sectionName: http
+  metadata:
+    kind: Gateway
+    name: gateway-1
+    namespace: envoy-gateway
+    sectionName: http
   path:
     mergeSlashes: true
     escapedSlashesAction: UnescapeAndRedirect

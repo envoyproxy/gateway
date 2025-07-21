@@ -44,7 +44,7 @@
           name: gateway-1
           namespace: envoy-gateway
           sectionName: http
-  name: 0.0.0.0-10080
+  name: envoy-gateway/gateway-1/http
   perConnectionBufferLimitBytes: 32768
 - address:
     socketAddress:
@@ -92,5 +92,5 @@
           name: gateway-2
           namespace: envoy-gateway
           sectionName: http
-  name: 0.0.0.0-10081
+  name: envoy-gateway/gateway-2/http
   perConnectionBufferLimitBytes: 32768

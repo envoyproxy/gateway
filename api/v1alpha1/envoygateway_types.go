@@ -93,6 +93,27 @@ type EnvoyGatewaySpec struct {
 	//
 	// +optional
 	ExtensionAPIs *ExtensionAPISettings `json:"extensionApis,omitempty"`
+
+	// FeatureFlags defines the feature flags for Envoy Gateway.
+	// Unlike ExtensionAPIs, these flags are temporary and will be removed in future releases once the features are stable.
+	FeatureFlags *FeatureFlags `json:"featureFlags,omitempty"`
+}
+
+// FeatureFlag defines a feature flag for Envoy Gateway.
+type FeatureFlag string
+
+const (
+	// FeatureUseAddressAsListenerName indicates that the listener name should be derived from the address and port.
+	FeatureUseAddressAsListenerName FeatureFlag = "UseAddressAsListenerName"
+)
+
+// FeatureFlags provide a mechanism to gate breaking changes or experimental features in new Envoy Gateway releases.
+// Each flag may be enabled or disabled by default and can be toggled through the EnvoyGateway resource.
+// The names of these flags will be included in the release notes alongside an explanation of the change.
+// Please note that these flags are temporary and will be removed in future releases once the features are stable.
+type FeatureFlags struct {
+	Enabled  []FeatureFlag `json:"enabled,omitempty"`
+	Disabled []FeatureFlag `json:"disabled,omitempty"`
 }
 
 type KubernetesClient struct {

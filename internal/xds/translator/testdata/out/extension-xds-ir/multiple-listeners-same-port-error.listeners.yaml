@@ -1,7 +1,7 @@
 - address:
     socketAddress:
       address: '::'
-      portValue: 10186
+      portValue: 10080
   filterChains:
   - filterChainMatch:
       serverNames:
@@ -30,7 +30,7 @@
             resourceApiVersion: V3
           routeConfigName: first-listener-error
         serverHeaderTransformation: PASS_THROUGH
-        statPrefix: https-10186
+        statPrefix: https-10080
         useRemoteAddress: true
     name: first-listener-error
     transportSocket:
@@ -48,22 +48,6 @@
               resourceApiVersion: V3
         disableStatefulSessionResumption: true
         disableStatelessSessionResumption: true
-  listenerFilters:
-  - name: envoy.filters.listener.tls_inspector
-    typedConfig:
-      '@type': type.googleapis.com/envoy.extensions.filters.listener.tls_inspector.v3.TlsInspector
-  maxConnectionsToAcceptPerSocketEvent: 1
-  metadata:
-    filterMetadata:
-      envoy-gateway:
-        resources: []
-  name: ::-10186
-  perConnectionBufferLimitBytes: 32768
-- address:
-    socketAddress:
-      address: '::'
-      portValue: 10080
-  filterChains:
   - filterChainMatch:
       serverNames:
       - foo.net
@@ -118,5 +102,5 @@
     filterMetadata:
       envoy-gateway:
         resources: []
-  name: ::-10080
+  name: first-listener-error
   perConnectionBufferLimitBytes: 32768

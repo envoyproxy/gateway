@@ -3,6 +3,14 @@
   virtualHosts:
   - domains:
     - gateway.envoyproxy.io
+    metadata:
+      filterMetadata:
+        envoy-gateway:
+          resources:
+          - kind: Gateway
+            name: gateway-1
+            namespace: envoy-gateway
+            sectionName: http
     name: envoy-gateway/gateway-1/http/gateway_envoyproxy_io
     routes:
     - match:
@@ -32,6 +40,14 @@
           config: {}
   - domains:
     - ""
+    metadata:
+      filterMetadata:
+        envoy-gateway:
+          resources:
+          - kind: Gateway
+            name: gateway-1
+            namespace: envoy-gateway
+            sectionName: http
     name: envoy-gateway/gateway-1/http/
     routes:
     - match:

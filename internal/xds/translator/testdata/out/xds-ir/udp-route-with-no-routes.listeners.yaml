@@ -15,4 +15,4 @@
               '@type': type.googleapis.com/envoy.extensions.filters.udp.udp_proxy.v3.Route
               cluster: EmptyCluster
       statPrefix: service
-  name: ::-10080
+  name: udp-route-with-no-routes

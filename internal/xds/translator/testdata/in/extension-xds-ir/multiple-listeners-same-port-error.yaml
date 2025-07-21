@@ -1,7 +1,7 @@
 http:
 - name: "first-listener-error"
   address: "::"
-  port: 10186
+  port: 10080
   hostnames:
   - "foo.com"
   path:

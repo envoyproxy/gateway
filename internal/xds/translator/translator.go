@@ -64,7 +64,11 @@ type Translator struct {
 
 	// FilterOrder holds the custom order of the HTTP filters
 	FilterOrder []egv1a1.FilterPosition
-	Logger      logging.Logger
+
+	// FeatureFlag holds the feature flags for the translator.
+	FeatureFlag *egv1a1.FeatureFlags
+
+	Logger logging.Logger
 }
 
 type GlobalRateLimitSettings struct {
@@ -113,7 +117,7 @@ func (t *Translator) Translate(xdsIR *ir.Xds) (*types.ResourceVersionTable, erro
 		errs = errors.Join(errs, err)
 	}
 
-	if err := processUDPListenerXdsTranslation(tCtx, xdsIR.UDP, xdsIR.AccessLog, xdsIR.Metrics); err != nil {
+	if err := t.processUDPListenerXdsTranslation(tCtx, xdsIR.UDP, xdsIR.AccessLog, xdsIR.Metrics); err != nil {
 		errs = errors.Join(errs, err)
 	}
 
@@ -280,8 +284,8 @@ func (t *Translator) processHTTPListenerXdsTranslation(
 		case !xdsListenerOnSameAddressPortExists:
 			// Create a new UDP(QUIC) listener for HTTP3 traffic if HTTP3 is enabled
 			if http3Enabled {
-				if quicXDSListener, err = buildXdsQuicListener(httpListener.Address,
-					httpListener.Port, httpListener.IPFamily, accessLog); err != nil {
+				if quicXDSListener, err = buildXdsQuicListener(httpListener.Name, httpListener.Address,
+					httpListener.Port, httpListener.IPFamily, accessLog, t.FeatureFlag); err != nil {
 					errs = errors.Join(errs, err)
 					continue
 				}
@@ -295,8 +299,8 @@ func (t *Translator) processHTTPListenerXdsTranslation(
 
 			// Create a new TCP listener for HTTP1/HTTP2 traffic.
 			if tcpXDSListener, err = buildXdsTCPListener(
-				httpListener.Address, httpListener.Port, httpListener.IPFamily,
-				httpListener.TCPKeepalive, httpListener.Connection, accessLog); err != nil {
+				httpListener.Name, httpListener.Address, httpListener.Port, httpListener.IPFamily,
+				httpListener.TCPKeepalive, httpListener.Connection, accessLog, t.FeatureFlag); err != nil {
 				errs = errors.Join(errs, err)
 				continue
 			}
@@ -718,8 +722,8 @@ func (t *Translator) processTCPListenerXdsTranslation(
 		xdsListener := findXdsListenerByHostPort(tCtx, tcpListener.Address, tcpListener.Port, corev3.SocketAddress_TCP)
 		if xdsListener == nil {
 			if xdsListener, err = buildXdsTCPListener(
-				tcpListener.Address, tcpListener.Port, tcpListener.IPFamily,
-				tcpListener.TCPKeepalive, tcpListener.Connection, accesslog); err != nil {
+				tcpListener.Name, tcpListener.Address, tcpListener.Port, tcpListener.IPFamily,
+				tcpListener.TCPKeepalive, tcpListener.Connection, accesslog, t.FeatureFlag); err != nil {
 				// skip this listener if failed to build xds listener
 				errs = errors.Join(errs, err)
 				continue
@@ -814,7 +818,7 @@ func (t *Translator) processTCPListenerXdsTranslation(
 	return errs
 }
 
-func processUDPListenerXdsTranslation(
+func (t *Translator) processUDPListenerXdsTranslation(
 	tCtx *types.ResourceVersionTable,
 	udpListeners []*ir.UDPListener,
 	accesslog *ir.AccessLog,
@@ -853,7 +857,7 @@ func processUDPListenerXdsTranslation(
 			}
 		}
 
-		xdsListener, err := buildXdsUDPListener(udpListener.Route.Destination.Name, udpListener, accesslog)
+		xdsListener, err := buildXdsUDPListener(udpListener.Route.Destination.Name, udpListener, accesslog, t.FeatureFlag)
 		if err != nil {
 			// skip this listener if failed to build xds listener
 			errs = errors.Join(errs, err)

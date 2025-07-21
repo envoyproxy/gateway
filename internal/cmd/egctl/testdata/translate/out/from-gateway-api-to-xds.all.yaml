@@ -587,7 +587,7 @@ xds:
                     name: eg
                     namespace: default
                     sectionName: http
-            name: 0.0.0.0-10080
+            name: default/eg/http
             perConnectionBufferLimitBytes: 32768
       - activeState:
           listener:
@@ -707,7 +707,7 @@ xds:
                     name: eg
                     namespace: default
                     sectionName: grpc
-            name: 0.0.0.0-8080
+            name: default/eg/grpc
             perConnectionBufferLimitBytes: 32768
       - activeState:
           listener:
@@ -795,7 +795,7 @@ xds:
               filterMetadata:
                 envoy-gateway:
                   resources: []
-            name: 0.0.0.0-1234
+            name: default/eg/tcp
             perConnectionBufferLimitBytes: 32768
       - activeState:
           listener:
@@ -890,7 +890,7 @@ xds:
               filterMetadata:
                 envoy-gateway:
                   resources: []
-            name: 0.0.0.0-8443
+            name: default/eg/tls-passthrough
             perConnectionBufferLimitBytes: 32768
       - activeState:
           listener:
@@ -978,7 +978,7 @@ xds:
                         '@type': type.googleapis.com/envoy.extensions.filters.udp.udp_proxy.v3.Route
                         cluster: udproute/default/backend/rule/-1
                 statPrefix: service
-            name: 0.0.0.0-1234
+            name: default/eg/udp
     - '@type': type.googleapis.com/envoy.admin.v3.RoutesConfigDump
       dynamicRouteConfigs:
       - routeConfig:

@@ -4,6 +4,11 @@ http:
   port: 10080
   hostnames:
   - "*"
+  metadata:
+    kind: Gateway
+    name: gateway-1
+    namespace: envoy-gateway
+    sectionName: http1
   http1:
     preserveHeaderCase: true
   path:
@@ -24,6 +29,11 @@ http:
   port: 10081
   hostnames:
   - "*"
+  metadata:
+    kind: Gateway
+    name: gateway-1
+    namespace: envoy-gateway
+    sectionName: http2
   headers:
     earlyAddRequestHeaders:
     - name: "some-header"

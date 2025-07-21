@@ -16,5 +16,5 @@
     filterMetadata:
       envoy-gateway:
         resources: []
-  name: 0.0.0.0-8082
+  name: tcp-listener-dual
   perConnectionBufferLimitBytes: 32768

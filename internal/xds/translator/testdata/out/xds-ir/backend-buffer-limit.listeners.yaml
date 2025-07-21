@@ -34,8 +34,12 @@
   metadata:
     filterMetadata:
       envoy-gateway:
-        resources: []
-  name: ::-10080
+        resources:
+        - kind: Gateway
+          name: gateway-1
+          namespace: envoy-gateway
+          sectionName: http
+  name: first-listener
   perConnectionBufferLimitBytes: 32768
 - address:
     socketAddress:
@@ -54,7 +58,7 @@
     filterMetadata:
       envoy-gateway:
         resources: []
-  name: ::-10081
+  name: second-listener
   perConnectionBufferLimitBytes: 1500
 - address:
     socketAddress:
@@ -73,4 +77,4 @@
               '@type': type.googleapis.com/envoy.extensions.filters.udp.udp_proxy.v3.Route
               cluster: udp-route-dest
       statPrefix: service
-  name: ::-10080
+  name: udp-route

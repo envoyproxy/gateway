@@ -34,9 +34,14 @@
   metadata:
     filterMetadata:
       envoy-gateway:
-        resources: []
-  name: 0.0.0.0-10080
+        resources:
+        - kind: Gateway
+          name: gateway-1
+          namespace: envoy-gateway
+          sectionName: http1
+  name: test-listener-modify
   perConnectionBufferLimitBytes: 32768
+  statPrefix: extension-modified-listener
 - address:
     socketAddress:
       address: 0.0.0.0
@@ -73,8 +78,12 @@
   metadata:
     filterMetadata:
       envoy-gateway:
-        resources: []
-  name: 0.0.0.0-10081
+        resources:
+        - kind: Gateway
+          name: gateway-1
+          namespace: envoy-gateway
+          sectionName: http2
+  name: second-listener
   perConnectionBufferLimitBytes: 32768
 - name: extension-injected-listener
   statPrefix: extension-injected

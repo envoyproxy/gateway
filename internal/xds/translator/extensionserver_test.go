@@ -180,11 +180,11 @@ func (t *testingExtensionServer) PostHTTPListenerModify(_ context.Context, req *
 	// Only make the change when the listener's name matches the expected testdata
 	// This prevents us from having to update every single testfile.out
 	switch req.Listener.Name {
-	case "0.0.0.0-10181": // "extension-post-xdslistener-hook-error"
+	case "extension-post-xdslistener-hook-error":
 		return &pb.PostHTTPListenerModifyResponse{
 			Listener: req.Listener,
 		}, fmt.Errorf("extension post xds listener hook error")
-	case "0.0.0.0-10182": // "extension-listener"
+	case "extension-listener":
 		// Setup a new Listener to avoid operating directly on the passed in pointer for better test coverage that the
 		// Listener we are returning gets used properly
 		modifiedListener := proto.Clone(req.Listener).(*listenerV3.Listener)
@@ -192,7 +192,7 @@ func (t *testingExtensionServer) PostHTTPListenerModify(_ context.Context, req *
 		return &pb.PostHTTPListenerModifyResponse{
 			Listener: modifiedListener,
 		}, nil
-	case "0.0.0.0-10183": // "policyextension-listener"
+	case "policyextension-listener":
 		if len(req.PostListenerContext.ExtensionResources) == 0 {
 			return nil, fmt.Errorf("expected a policy in the ext array")
 		}
@@ -219,7 +219,7 @@ func (t *testingExtensionServer) PostHTTPListenerModify(_ context.Context, req *
 		return &pb.PostHTTPListenerModifyResponse{
 			Listener: modifiedListener,
 		}, nil
-	case "0.0.0.0-10184": // "envoy-gateway/gateway-1/http1"
+	case "envoy-gateway/gateway-1/http1":
 		if len(req.PostListenerContext.ExtensionResources) != 1 {
 			return &pb.PostHTTPListenerModifyResponse{
 					Listener: req.Listener,
@@ -231,11 +231,11 @@ func (t *testingExtensionServer) PostHTTPListenerModify(_ context.Context, req *
 		return &pb.PostHTTPListenerModifyResponse{
 			Listener: modifiedListener,
 		}, nil
-	case "0.0.0.0-10185": // "envoy-gateway/gateway-1/tcp1"
+	case "envoy-gateway/gateway-1/tcp1":
 		return &pb.PostHTTPListenerModifyResponse{
 			Listener: req.Listener,
 		}, fmt.Errorf("should not be called for this listener, test 'extensionpolicy-tcp-and-http' should merge tcp and http gateways to one listener")
-	case "0.0.0.0-10162":
+	case "envoy-gateway/gateway-1/udp1":
 		if len(req.PostListenerContext.ExtensionResources) != 1 {
 			return &pb.PostHTTPListenerModifyResponse{
 					Listener: req.Listener,
@@ -247,7 +247,7 @@ func (t *testingExtensionServer) PostHTTPListenerModify(_ context.Context, req *
 		return &pb.PostHTTPListenerModifyResponse{
 			Listener: modifiedListener,
 		}, nil
-	case "::-10186": // "first-listener-error"
+	case "first-listener-error":
 		modifiedListener := proto.Clone(req.Listener).(*listenerV3.Listener)
 		modifiedListener.StatPrefix = req.Listener.Name
 		return &pb.PostHTTPListenerModifyResponse{

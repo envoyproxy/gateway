@@ -71,6 +71,21 @@ func TestE2E(t *testing.T) {
 		)
 	}
 
+	if tests.UseAddressAsListenerName() {
+		skipTests = append(skipTests,
+			tests.EnvoyPatchPolicyTest.ShortName,
+		)
+		if tests.IPFamily == "ipv6" {
+			skipTests = append(skipTests,
+				tests.EnvoyPatchPolicyIPv4Test.ShortName,
+			)
+		} else {
+			skipTests = append(skipTests,
+				tests.EnvoyPatchPolicyIPv6Test.ShortName,
+			)
+		}
+	}
+
 	cSuite, err := suite.NewConformanceTestSuite(suite.ConformanceOptions{
 		Client:               c,
 		RestConfig:           cfg,

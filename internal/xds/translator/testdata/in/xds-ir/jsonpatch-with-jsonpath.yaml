@@ -10,14 +10,14 @@ envoyPatchPolicies:
   namespace: "default"
   jsonPatches:
   - type: "type.googleapis.com/envoy.config.listener.v3.Listener"
-    name: "::-10080"
+    name: first-listener
     operation:
       op: "add"
       jsonPath: "$.filter_chains[0].filters[0].typed_config"
       path: "/preserve_external_request_id"
       value: true
   - type: "type.googleapis.com/envoy.config.listener.v3.Listener"
-    name: "::-10080"
+    name: "first-listener"
     operation:
       op: "add"
       jsonPath: "filter_chains[0].filters[0].typed_config.http_filters[0]"
@@ -124,6 +124,11 @@ http:
   port: 10080
   hostnames:
   - "*"
+  metadata:
+    kind: Gateway
+    name: gateway-1
+    namespace: envoy-gateway
+    sectionName: http
   path:
     mergeSlashes: true
     escapedSlashesAction: UnescapeAndRedirect

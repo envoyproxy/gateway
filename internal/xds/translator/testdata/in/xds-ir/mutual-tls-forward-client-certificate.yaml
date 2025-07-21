@@ -4,6 +4,11 @@ http:
   port: 10001
   hostnames:
   - "*"
+  metadata:
+    kind: Gateway
+    name: gateway-1
+    namespace: envoy-gateway
+    sectionName: http1
   path:
     mergeSlashes: true
     escapedSlashesAction: UnescapeAndRedirect
@@ -41,6 +46,11 @@ http:
   port: 10002
   hostnames:
   - "*"
+  metadata:
+    kind: Gateway
+    name: gateway-1
+    namespace: envoy-gateway
+    sectionName: http2
   path:
     mergeSlashes: true
     escapedSlashesAction: UnescapeAndRedirect
@@ -78,6 +88,11 @@ http:
   port: 10003
   hostnames:
   - "*"
+  metadata:
+    kind: Gateway
+    name: gateway-1
+    namespace: envoy-gateway
+    sectionName: http3
   path:
     mergeSlashes: true
     escapedSlashesAction: UnescapeAndRedirect
@@ -115,6 +130,11 @@ http:
   port: 10004
   hostnames:
   - "*"
+  metadata:
+    kind: Gateway
+    name: gateway-1
+    namespace: envoy-gateway
+    sectionName: http4
   path:
     mergeSlashes: true
     escapedSlashesAction: UnescapeAndRedirect
@@ -152,6 +172,11 @@ http:
   port: 10005
   hostnames:
   - "*"
+  metadata:
+    kind: Gateway
+    name: gateway-1
+    namespace: envoy-gateway
+    sectionName: http5
   path:
     mergeSlashes: true
     escapedSlashesAction: UnescapeAndRedirect

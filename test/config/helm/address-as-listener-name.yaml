@@ -1,0 +1,5 @@
+config:
+  envoyGateway:
+    featureFlags:
+      enabled:
+      - UseAddressAsListenerName

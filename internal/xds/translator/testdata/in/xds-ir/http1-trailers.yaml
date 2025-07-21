@@ -4,6 +4,11 @@ http:
   port: 10080
   hostnames:
   - "*"
+  metadata:
+    kind: Gateway
+    name: gateway-1
+    namespace: envoy-gateway
+    sectionName: http
   http1:
     enableTrailers: true
   path:

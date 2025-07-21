@@ -34,6 +34,10 @@
   metadata:
     filterMetadata:
       envoy-gateway:
-        resources: []
-  name: 0.0.0.0-10080
+        resources:
+        - kind: Gateway
+          name: gateway-1
+          namespace: envoy-gateway
+          sectionName: http
+  name: extension-post-xdstranslate-hook-error
   perConnectionBufferLimitBytes: 32768

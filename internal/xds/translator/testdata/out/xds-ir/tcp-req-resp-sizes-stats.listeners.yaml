@@ -14,5 +14,5 @@
     filterMetadata:
       envoy-gateway:
         resources: []
-  name: ::-10080
+  name: tcp-route-enable-req-resp-sizes-stats
   perConnectionBufferLimitBytes: 32768

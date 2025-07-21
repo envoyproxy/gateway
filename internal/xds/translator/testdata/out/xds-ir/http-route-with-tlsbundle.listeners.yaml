@@ -35,5 +35,5 @@
     filterMetadata:
       envoy-gateway:
         resources: []
-  name: 0.0.0.0-10080
+  name: envoy-gateway/gateway-btls/http
   perConnectionBufferLimitBytes: 32768

@@ -175,5 +175,5 @@
           name: gateway-1
           namespace: default
           sectionName: http
-  name: 0.0.0.0-10080
+  name: default/gateway-1/http
   perConnectionBufferLimitBytes: 32768

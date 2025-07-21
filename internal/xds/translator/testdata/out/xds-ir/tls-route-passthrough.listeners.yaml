@@ -22,7 +22,7 @@
     filterMetadata:
       envoy-gateway:
         resources: []
-  name: ::-10080
+  name: tls-passthrough-foo
   perConnectionBufferLimitBytes: 32768
 - address:
     socketAddress:
@@ -48,5 +48,5 @@
     filterMetadata:
       envoy-gateway:
         resources: []
-  name: ::-10081
+  name: tls-passthrough-bar
   perConnectionBufferLimitBytes: 32768

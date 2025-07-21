@@ -35,7 +35,7 @@
     filterMetadata:
       envoy-gateway:
         resources: []
-  name: ::-10080
+  name: first-listener
   perConnectionBufferLimitBytes: 32768
 - address:
     socketAddress:
@@ -79,7 +79,7 @@
     filterMetadata:
       envoy-gateway:
         resources: []
-  name: ::-10081
+  name: second-listener
   perConnectionBufferLimitBytes: 32768
 - address:
     socketAddress:
@@ -109,7 +109,7 @@
     filterMetadata:
       envoy-gateway:
         resources: []
-  name: ::-10082
+  name: third-listener
   perConnectionBufferLimitBytes: 32768
 - address:
     socketAddress:
@@ -133,5 +133,5 @@
     filterMetadata:
       envoy-gateway:
         resources: []
-  name: ::-10083
+  name: fourth-listener
   perConnectionBufferLimitBytes: 32768

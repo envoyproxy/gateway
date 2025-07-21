@@ -1,7 +1,7 @@
 - address:
     socketAddress:
       address: 0.0.0.0
-      portValue: 10182
+      portValue: 10080
   defaultFilterChain:
     filters:
     - name: envoy.filters.network.http_connection_manager
@@ -27,14 +27,18 @@
             resourceApiVersion: V3
           routeConfigName: extension-listener
         serverHeaderTransformation: PASS_THROUGH
-        statPrefix: http-10182
+        statPrefix: http-10080
         useRemoteAddress: true
     name: extension-listener
   maxConnectionsToAcceptPerSocketEvent: 1
   metadata:
     filterMetadata:
       envoy-gateway:
-        resources: []
-  name: 0.0.0.0-10182
+        resources:
+        - kind: Gateway
+          name: gateway-1
+          namespace: envoy-gateway
+          sectionName: http
+  name: extension-listener
   perConnectionBufferLimitBytes: 32768
   statPrefix: mock-extension-inserted-prefix

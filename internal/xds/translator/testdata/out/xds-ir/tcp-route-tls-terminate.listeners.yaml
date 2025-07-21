@@ -54,5 +54,5 @@
     filterMetadata:
       envoy-gateway:
         resources: []
-  name: ::-10080
+  name: tls-listener-terminate
   perConnectionBufferLimitBytes: 32768

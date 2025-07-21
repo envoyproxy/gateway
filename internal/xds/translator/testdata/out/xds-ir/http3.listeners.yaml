@@ -53,7 +53,7 @@
     filterMetadata:
       envoy-gateway:
         resources: []
-  name: 0.0.0.0-10443-quic
+  name: envoy-gateway/gateway-1/tls-quic
   udpListenerConfig:
     downstreamSocketConfig: {}
     quicOptions: {}
@@ -109,5 +109,5 @@
     filterMetadata:
       envoy-gateway:
         resources: []
-  name: 0.0.0.0-10443
+  name: envoy-gateway/gateway-1/tls
   perConnectionBufferLimitBytes: 32768

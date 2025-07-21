@@ -109,6 +109,32 @@ func (e *EnvoyGateway) GatewayNamespaceMode() bool {
 		*e.Provider.Kubernetes.Deploy.Type == KubernetesDeployModeTypeGatewayNamespace
 }
 
+// featureFlags are the default feature flags for Envoy Gateway.
+var featureFlags = map[FeatureFlag]bool{
+	FeatureUseAddressAsListenerName: false,
+}
+
+// IsFeatureEnabled checks if a feature is enabled in the EnvoyGateway configuration.
+func (f *FeatureFlags) IsFeatureEnabled(feature FeatureFlag) bool {
+	if f != nil {
+		for _, disable := range f.Disabled {
+			if disable == feature {
+				return false
+			}
+		}
+		for _, enable := range f.Enabled {
+			if enable == feature {
+				return true
+			}
+		}
+	}
+
+	if enabled, found := featureFlags[feature]; found {
+		return enabled
+	}
+	return false
+}
+
 // DefaultLeaderElection returns a new LeaderElection with default configuration parameters.
 func DefaultLeaderElection() *LeaderElection {
 	return &LeaderElection{

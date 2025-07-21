@@ -60,5 +60,5 @@
     filterMetadata:
       envoy-gateway:
         resources: []
-  name: ::-10080
+  name: first-listener
   perConnectionBufferLimitBytes: 32768

@@ -41,5 +41,5 @@
           name: first-gateway
           namespace: first-gateway
           sectionName: first-listener
-  name: 0.0.0.0-10080
+  name: first-listener
   perConnectionBufferLimitBytes: 32768

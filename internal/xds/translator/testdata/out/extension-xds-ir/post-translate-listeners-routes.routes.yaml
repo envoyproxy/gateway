@@ -3,6 +3,14 @@
   virtualHosts:
   - domains:
     - '*'
+    metadata:
+      filterMetadata:
+        envoy-gateway:
+          resources:
+          - kind: Gateway
+            name: gateway-1
+            namespace: envoy-gateway
+            sectionName: http1
     name: test-listener-modify/*
     routes:
     - match:
@@ -17,6 +25,14 @@
   virtualHosts:
   - domains:
     - example.com
+    metadata:
+      filterMetadata:
+        envoy-gateway:
+          resources:
+          - kind: Gateway
+            name: gateway-1
+            namespace: envoy-gateway
+            sectionName: http2
     name: second-listener/example_com
     routes:
     - match:

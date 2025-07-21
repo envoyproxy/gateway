@@ -1,5 +1,5 @@
 - ignorePortInHostMatching: true
-  name: envoy-gateway/gateway-1/http1
+  name: custom-backend-listener
   virtualHosts:
   - domains:
     - '*'
@@ -10,8 +10,8 @@
           - kind: Gateway
             name: gateway-1
             namespace: envoy-gateway
-            sectionName: http1
-    name: envoy-gateway/gateway-1/http1/*
+            sectionName: http
+    name: custom-backend-listener/*
     routes:
     - match:
         prefix: /

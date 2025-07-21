@@ -158,7 +158,7 @@ func processJSONPatches(tCtx *types.ResourceVersionTable, envoyPatchPolicies []*
 
 			// Find the resource to patch and convert it to JSON
 			switch p.Type {
-			case resourcev3.ListenerType: // TODO(huabing): add support for QUIC listeners
+			case resourcev3.ListenerType:
 				if listener = findXdsListener(tCtx, p.Name, corev3.SocketAddress_TCP); listener == nil {
 					tn := typedName{p.Type, p.Name}
 					notFoundResources = append(notFoundResources, tn.String())
