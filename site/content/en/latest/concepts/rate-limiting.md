@@ -102,6 +102,6 @@ spec:
 This configuration limits traffic to 50 requests per minute per Envoy instance for the my-api route. If there are two Envoy replicas, up to 100 total requests per minute may be allowed (50 per replica).
 
 ## Related Resources
-- [BackendTrafficPolicy](../introduction/gateway_api_extensions/backend-traffic-policy.md)
-- [Task: Global Rate Limit](../../tasks/traffic/global-rate-limit.md)
-- [Task: Local Rate Limit](../../tasks/traffic/local-rate-limit.md)
+- [BackendTrafficPolicy](backend-traffic-policy.md)
+- [Task: Global Rate Limit](../tasks/traffic/global-rate-limit.md)
+- [Task: Local Rate Limit](../tasks/traffic/local-rate-limit.md)

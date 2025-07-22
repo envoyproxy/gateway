@@ -66,5 +66,5 @@ spec:
 In this setup, traffic matching /round is distributed evenly across all available backend service instances. For example, if there are four replicas of the backend service, each one should receive roughly 25% of the requests.
 
 ## Related Resources
-- [BackendTrafficPolicy](../introduction/gateway_api_extensions/backend-traffic-policy.md)
+- [BackendTrafficPolicy](gateway_api_extensions/backend-traffic-policy.md)
 - [Task: Load Balancing](../../tasks/traffic/load-balancing.md)

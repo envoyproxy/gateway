@@ -10,9 +10,9 @@ Load balancing distributes incoming requests across multiple backend services to
 
 Use load balancing to:
 
-- Handle high traffic by distributing it across multiple service instances  
-- Keep services available even if one or more backends go down  
-- Improve response time by routing to less busy or closer backends  
+- Handle high traffic by distributing it across multiple service instances
+- Keep services available even if one or more backends go down
+- Improve response time by routing to less busy or closer backends
 
 ## Load Balancing in Envoy Gateway
 
@@ -66,5 +66,5 @@ spec:
 In this setup, traffic matching /round is distributed evenly across all available backend service instances. For example, if there are four replicas of the backend service, each one should receive roughly 25% of the requests.
 
 ## Related Resources
-- [BackendTrafficPolicy](../introduction/gateway_api_extensions/backend-traffic-policy.md)
+- [BackendTrafficPolicy](gateway_api_extensions/backend-traffic-policy.md)
 - [Task: Load Balancing](../../tasks/traffic/load-balancing.md)
