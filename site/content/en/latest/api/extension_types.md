@@ -129,6 +129,7 @@ _Appears in:_
 | ---   | ---  | ---      | ---     | ---         |
 | `timeout` | _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.29/#duration-v1-meta)_ |  false  | 1s | Timeout defines the time to wait for a health check response. |
 | `interval` | _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.29/#duration-v1-meta)_ |  false  | 3s | Interval defines the time between active health checks. |
+| `initialJitter` | _[Duration](https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.Duration)_ |  false  |  | InitialJitter defines the maximum time Envoy will wait before the first health check.<br />Envoy will randomly select a value between 0 and the initial jitter value. |
 | `unhealthyThreshold` | _integer_ |  false  | 3 | UnhealthyThreshold defines the number of unhealthy health checks required before a backend host is marked unhealthy. |
 | `healthyThreshold` | _integer_ |  false  | 1 | HealthyThreshold defines the number of healthy health checks required before a backend host is marked healthy. |
 | `type` | _[ActiveHealthCheckerType](#activehealthcheckertype)_ |  true  |  | Type defines the type of health checker. |
