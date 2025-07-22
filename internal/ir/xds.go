@@ -1208,6 +1208,17 @@ type APIKeyAuth struct {
 	// ExtractFrom is where to fetch the key from the coming request.
 	// The value from the first source that has a key will be used.
 	ExtractFrom []*ExtractFrom `json:"extractFrom"`
+
+	// ForwardClientIDHeader is the name of the header to forward the client identity to the backend
+	// service. The header will be added to the request with the client id as the value.
+	//
+	// +optional
+	ForwardClientIDHeader *string `json:"forwardClientIDHeader,omitempty"`
+
+	// Sanitize indicates whether to remove the API key from the request before forwarding it to the backend service.
+	//
+	// +optional
+	Sanitize *bool `json:"sanitize,omitempty"`
 }
 
 // ExtractFrom defines the source of the key.

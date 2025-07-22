@@ -39313,6 +39313,15 @@ spec:
                           type: array
                       type: object
                     type: array
+                  forwardClientIDHeader:
+                    description: |-
+                      ForwardClientIDHeader is the name of the header to forward the client identity to the backend
+                      service. The header will be added to the request with the client id as the value.
+                    type: string
+                  sanitize:
+                    description: Sanitize indicates whether to remove the API key
+                      from the request before forwarding it to the backend service.
+                    type: boolean
                 required:
                 - credentialRefs
                 - extractFrom
