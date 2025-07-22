@@ -13,17 +13,26 @@ import (
 
 	"github.com/davecgh/go-spew/spew"
 
+	"github.com/envoyproxy/gateway/internal/admin/console"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
+	"github.com/envoyproxy/gateway/internal/message"
 )
 
-type Runner struct {
-	cfg    *config.Server
-	server *http.Server
+type Config struct {
+	Server            config.Server
+	ProviderResources *message.ProviderResources
 }
 
-func New(cfg *config.Server) *Runner {
+type Runner struct {
+	cfg               *config.Server
+	server            *http.Server
+	providerResources *message.ProviderResources
+}
+
+func New(cfg *Config) *Runner {
 	return &Runner{
-		cfg: cfg,
+		cfg:               &cfg.Server,
+		providerResources: cfg.ProviderResources,
 	}
 }
 
@@ -53,10 +62,15 @@ func (r *Runner) Close() error {
 func (r *Runner) start() error {
 	handlers := http.NewServeMux()
 	address := r.cfg.EnvoyGateway.GetEnvoyGatewayAdminAddress()
-	enablePprof := r.cfg.EnvoyGateway.GetEnvoyGatewayAdmin().EnablePprof
+	adminConfig := r.cfg.EnvoyGateway.GetEnvoyGatewayAdmin()
+	enablePprof := adminConfig.EnablePprof
 
 	adminLogger := r.cfg.Logger.WithName("admin")
-	adminLogger.Info("starting admin server", "address", address, "enablePprof", enablePprof)
+	adminLogger.Info("starting admin server", "address", address, "enablePprof", enablePprof, "enableConsole", true)
+
+	// Register console handlers (always enabled)
+	consoleHandler := console.NewHandler(r.cfg, r.providerResources)
+	consoleHandler.RegisterRoutes(handlers)
 
 	if enablePprof {
 		// Serve pprof endpoints to aid in live debugging.

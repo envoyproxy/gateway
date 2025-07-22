@@ -215,7 +215,10 @@ func startRunners(ctx context.Context, cfg *config.Server) (err error) {
 		{
 			// Start the Admin Server
 			// It provides admin endpoints including pprof for debugging.
-			runner: admin.New(cfg),
+			runner: admin.New(&admin.Config{
+				Server:            *cfg,
+				ProviderResources: channels.pResources,
+			}),
 		},
 		{
 			// Start the Metrics Server

@@ -1,0 +1,110 @@
+{{template "base.html" .}}
+
+{{define "index-content"}}
+<div class="card">
+    <div class="card-header">
+        <h1 class="card-title">{{.Title}}</h1>
+        <div style="display: flex; align-items: center; gap: 1rem;">
+            <label>
+                <input type="checkbox" id="auto-refresh"> Auto-refresh (30s)
+            </label>
+            <button class="btn btn-secondary" onclick="EnvoyGatewayAdmin.refresh()">
+                Refresh
+            </button>
+        </div>
+    </div>
+    <div class="card-body">
+        <p>Welcome to the Envoy Gateway Admin Console. This interface provides access to various administrative functions and monitoring capabilities.</p>
+        
+        <div id="system-info">
+            <div class="loading"></div> Loading system information...
+        </div>
+    </div>
+</div>
+
+<div class="dashboard-grid">
+    <div class="card">
+        <div class="card-header">
+            <h2 class="card-title">🖥️ Server Information</h2>
+        </div>
+        <div class="card-body">
+            <p>View detailed information about the Envoy Gateway server status, components, and runtime information.</p>
+            <a href="/server_info" class="btn">View Server Info</a>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <h2 class="card-title">⚙️ Configuration Dump</h2>
+        </div>
+        <div class="card-body">
+            <p>Access the current configuration state including Gateways, HTTPRoutes, and other resources.</p>
+            <a href="/config_dump" class="btn">View Config Dump</a>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <h2 class="card-title">📊 Statistics</h2>
+        </div>
+        <div class="card-body">
+            <p>Monitor performance metrics and statistics from the Envoy Gateway control plane.</p>
+            <a href="/stats" class="btn">View Statistics</a>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <h2 class="card-title">🔍 Performance Profiling</h2>
+        </div>
+        <div class="card-body">
+            <p>Access pprof endpoints for performance analysis and debugging.</p>
+            <a href="/pprof" class="btn">View Profiling</a>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h2 class="card-title">📚 Quick Links</h2>
+    </div>
+    <div class="card-body">
+        <div class="quick-links-grid">
+            <div class="quick-links-section">
+                <h3>📖 Documentation</h3>
+                <div class="quick-links-list">
+                    <a href="https://gateway.envoyproxy.io/" target="_blank" class="quick-link">
+                        <span class="quick-link-icon">📚</span>
+                        <span class="quick-link-text">Envoy Gateway Docs</span>
+                    </a>
+                    <a href="https://gateway.envoyproxy.io/latest/api/" target="_blank" class="quick-link">
+                        <span class="quick-link-icon">🔧</span>
+                        <span class="quick-link-text">API Reference</span>
+                    </a>
+                    <a href="https://gateway.envoyproxy.io/latest/tasks/" target="_blank" class="quick-link">
+                        <span class="quick-link-icon">📝</span>
+                        <span class="quick-link-text">Tasks & Tutorials</span>
+                    </a>
+                </div>
+            </div>
+            <div class="quick-links-section">
+                <h3>👥 Community</h3>
+                <div class="quick-links-list">
+                    <a href="https://github.com/envoyproxy/gateway" target="_blank" class="quick-link">
+                        <span class="quick-link-icon">🐙</span>
+                        <span class="quick-link-text">GitHub Repository</span>
+                    </a>
+                    <a href="https://github.com/envoyproxy/gateway/issues" target="_blank" class="quick-link">
+                        <span class="quick-link-icon">🐛</span>
+                        <span class="quick-link-text">Issue Tracker</span>
+                    </a>
+                    <a href="https://envoyproxy.slack.com/" target="_blank" class="quick-link">
+                        <span class="quick-link-icon">💬</span>
+                        <span class="quick-link-text">Slack Community</span>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{{end}}
