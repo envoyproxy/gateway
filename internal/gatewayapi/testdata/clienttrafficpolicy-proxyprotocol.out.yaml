@@ -132,7 +132,6 @@ xdsIR:
       - path: /dev/stdout
     http:
     - address: 0.0.0.0
-      enableProxyProtocol: true
       hostnames:
       - '*'
       isHTTP2: false

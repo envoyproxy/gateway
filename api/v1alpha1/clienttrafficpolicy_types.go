@@ -357,6 +357,8 @@ type HealthCheckSettings struct {
 // the Proxy Protocol header will be interpreted and the Client Address
 // will be added into the X-Forwarded-For header.
 // If both EnableProxyProtocol and ProxyProtocol are set, ProxyProtocol takes precedence.
+//
+// +kubebuilder:validation:MinProperties=0
 type ProxyProtocolSettings struct {
 	// AllowRequestsWithoutProxyProtocol allows requests without a Proxy Protocol header to be proxied.
 	// If set to true, the listener will accept requests without a Proxy Protocol header.

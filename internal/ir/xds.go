@@ -306,10 +306,7 @@ type HTTPListener struct {
 	TCPKeepalive *TCPKeepalive `json:"tcpKeepalive,omitempty" yaml:"tcpKeepalive,omitempty"`
 	// Headers configures special header management for the listener
 	Headers *HeaderSettings `json:"headers,omitempty" yaml:"headers,omitempty"`
-	// EnableProxyProtocol enables the listener to interpret proxy protocol header
-	EnableProxyProtocol bool `json:"enableProxyProtocol,omitempty" yaml:"enableProxyProtocol,omitempty"`
-	// ProxyProtocol provides more advanced proxy protocol configuration.
-	// If both EnableProxyProtocol and ProxyProtocol are set, ProxyProtocol takes precedence.
+	// ProxyProtocol provides proxy protocol configuration.
 	ProxyProtocol *ProxyProtocolSettings `json:"proxyProtocol,omitempty" yaml:"proxyProtocol,omitempty"`
 	// ClientIPDetection controls how the original client IP address is determined for requests.
 	ClientIPDetection *ClientIPDetectionSettings `json:"clientIPDetection,omitempty" yaml:"clientIPDetection,omitempty"`
@@ -1985,10 +1982,7 @@ type TCPListener struct {
 	TLS *TLSConfig `json:"tls,omitempty" yaml:"tls,omitempty"`
 	// TCPKeepalive configuration for the listener
 	TCPKeepalive *TCPKeepalive `json:"tcpKeepalive,omitempty" yaml:"tcpKeepalive,omitempty"`
-	// EnableProxyProtocol enables the listener to interpret proxy protocol header
-	EnableProxyProtocol bool `json:"enableProxyProtocol,omitempty" yaml:"enableProxyProtocol,omitempty"`
-	// ProxyProtocol provides more advanced proxy protocol configuration.
-	// If both EnableProxyProtocol and ProxyProtocol are set, ProxyProtocol takes precedence.
+	// ProxyProtocol provides proxy protocol configuration.
 	ProxyProtocol *ProxyProtocolSettings `json:"proxyProtocol,omitempty" yaml:"proxyProtocol,omitempty"`
 	// ClientTimeout sets the timeout configuration for downstream connections.
 	Timeout *ClientTimeout `json:"timeout,omitempty" yaml:"clientTimeout,omitempty"`

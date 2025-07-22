@@ -521,6 +521,7 @@ spec:
                   the Proxy Protocol header will be interpreted and the Client Address
                   will be added into the X-Forwarded-For header.
                   If both EnableProxyProtocol and ProxyProtocol are set, ProxyProtocol takes precedence.
+                minProperties: 0
                 properties:
                   allowRequestsWithoutProxyProtocol:
                     description: |-

@@ -392,13 +392,12 @@ func (t *Translator) translateClientTrafficPolicyForListener(policy *egv1a1.Clie
 
 	// HTTP and TCP listeners can both be configured by common fields below.
 	var (
-		keepalive           *ir.TCPKeepalive
-		connection          *ir.ClientConnection
-		tlsConfig           *ir.TLSConfig
-		enableProxyProtocol bool
-		proxyProtocol       *ir.ProxyProtocolSettings
-		timeout             *ir.ClientTimeout
-		err, errs           error
+		keepalive     *ir.TCPKeepalive
+		connection    *ir.ClientConnection
+		tlsConfig     *ir.TLSConfig
+		proxyProtocol *ir.ProxyProtocolSettings
+		timeout       *ir.ClientTimeout
+		err, errs     error
 	)
 
 	// Build common IR shared by HTTP and TCP listeners, return early if some field is invalid.
@@ -418,14 +417,16 @@ func (t *Translator) translateClientTrafficPolicyForListener(policy *egv1a1.Clie
 
 	// Translate Proxy Protocol
 	if policy.Spec.ProxyProtocol != nil {
-		// New ProxyProtocol field takes precedence and is always enabled when configured
-		enableProxyProtocol = true
+		// ProxyProtocol field takes precedence when configured
+		// Even if it's an empty object {}, we should enable proxy protocol with default settings
 		proxyProtocol = &ir.ProxyProtocolSettings{
-			AllowRequestsWithoutProxyProtocol: policy.Spec.ProxyProtocol.AllowRequestsWithoutProxyProtocol != nil && *policy.Spec.ProxyProtocol.AllowRequestsWithoutProxyProtocol,
+			AllowRequestsWithoutProxyProtocol: ptr.Deref(policy.Spec.ProxyProtocol.AllowRequestsWithoutProxyProtocol, false),
 		}
-	} else {
+	} else if ptr.Deref(policy.Spec.EnableProxyProtocol, false) {
 		// Fallback to legacy EnableProxyProtocol field
-		enableProxyProtocol = ptr.Deref(policy.Spec.EnableProxyProtocol, false)
+		proxyProtocol = &ir.ProxyProtocolSettings{
+			AllowRequestsWithoutProxyProtocol: false, // Default behavior for legacy field
+		}
 	}
 
 	// Translate Client Timeout Settings
@@ -502,7 +503,6 @@ func (t *Translator) translateClientTrafficPolicyForListener(policy *egv1a1.Clie
 
 		httpIR.TCPKeepalive = keepalive
 		httpIR.Connection = connection
-		httpIR.EnableProxyProtocol = enableProxyProtocol
 		httpIR.ProxyProtocol = proxyProtocol
 		httpIR.Timeout = timeout
 		httpIR.TLS = tlsConfig
@@ -526,7 +526,6 @@ func (t *Translator) translateClientTrafficPolicyForListener(policy *egv1a1.Clie
 
 		tcpIR.TCPKeepalive = keepalive
 		tcpIR.Connection = connection
-		tcpIR.EnableProxyProtocol = enableProxyProtocol
 		tcpIR.ProxyProtocol = proxyProtocol
 		tcpIR.TLS = tlsConfig
 		tcpIR.Timeout = timeout

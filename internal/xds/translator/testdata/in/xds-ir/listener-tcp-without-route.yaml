@@ -5,7 +5,8 @@ tcp:
     limit:
       closeDelay: 10s
       value: 3
-  enableProxyProtocol: true
+  proxyProtocol:
+    allowRequestsWithoutProxyProtocol: false
   name: envoy-gateway/gateway-1/tls-1
   port: 10443
   tcpKeepalive:
