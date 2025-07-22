@@ -46,7 +46,6 @@ func (h *Handler) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("/api/info", h.handleAPIInfo)
 	mux.HandleFunc("/api/server_info", h.handleAPIServerInfo)
 	mux.HandleFunc("/api/config_dump", h.handleAPIConfigDump)
-	mux.HandleFunc("/api/config_dump_all", h.handleAPIConfigDumpAll)
 	mux.HandleFunc("/api/metrics", h.handleAPIMetrics)
 
 	// Static files
