@@ -66,7 +66,7 @@ type Translator struct {
 	FilterOrder []egv1a1.FilterPosition
 
 	// FeatureFlag holds the feature flags for the translator.
-	FeatureFlag *egv1a1.FeatureFlags
+	FeatureFlag *egv1a1.RuntimeFlags
 
 	Logger logging.Logger
 }
@@ -285,7 +285,8 @@ func (t *Translator) processHTTPListenerXdsTranslation(
 			// Create a new UDP(QUIC) listener for HTTP3 traffic if HTTP3 is enabled
 			if http3Enabled {
 				if quicXDSListener, err = buildXdsQuicListener(httpListener.Name, httpListener.Address,
-					httpListener.Port, httpListener.IPFamily, accessLog, t.FeatureFlag); err != nil {
+					httpListener.Port, httpListener.IPFamily, accessLog,
+					t.FeatureFlag.IsEnabled(egv1a1.UseAddressAsListenerName)); err != nil {
 					errs = errors.Join(errs, err)
 					continue
 				}
@@ -300,7 +301,8 @@ func (t *Translator) processHTTPListenerXdsTranslation(
 			// Create a new TCP listener for HTTP1/HTTP2 traffic.
 			if tcpXDSListener, err = buildXdsTCPListener(
 				httpListener.Name, httpListener.Address, httpListener.Port, httpListener.IPFamily,
-				httpListener.TCPKeepalive, httpListener.Connection, accessLog, t.FeatureFlag); err != nil {
+				httpListener.TCPKeepalive, httpListener.Connection, accessLog,
+				t.FeatureFlag.IsEnabled(egv1a1.UseAddressAsListenerName)); err != nil {
 				errs = errors.Join(errs, err)
 				continue
 			}
@@ -721,7 +723,8 @@ func (t *Translator) processTCPListenerXdsTranslation(
 		if xdsListener == nil {
 			if xdsListener, err = buildXdsTCPListener(
 				tcpListener.Name, tcpListener.Address, tcpListener.Port, tcpListener.IPFamily,
-				tcpListener.TCPKeepalive, tcpListener.Connection, accesslog, t.FeatureFlag); err != nil {
+				tcpListener.TCPKeepalive, tcpListener.Connection, accesslog,
+				t.FeatureFlag.IsEnabled(egv1a1.UseAddressAsListenerName)); err != nil {
 				// skip this listener if failed to build xds listener
 				errs = errors.Join(errs, err)
 				continue
@@ -840,7 +843,9 @@ func (t *Translator) processUDPListenerXdsTranslation(
 			}
 		}
 
-		xdsListener, err := buildXdsUDPListener(udpListener.Route.Destination.Name, udpListener, accesslog, t.FeatureFlag)
+		xdsListener, err := buildXdsUDPListener(
+			udpListener.Route.Destination.Name, udpListener, accesslog,
+			t.FeatureFlag.IsEnabled(egv1a1.UseAddressAsListenerName))
 		if err != nil {
 			// skip this listener if failed to build xds listener
 			errs = errors.Join(errs, err)
