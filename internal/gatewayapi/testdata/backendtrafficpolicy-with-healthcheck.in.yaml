@@ -147,6 +147,25 @@ httpRoutes:
       backendRefs:
       - name: service-2
         port: 8080
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    namespace: default
+    name: httproute-5
+  spec:
+    hostnames:
+    - gateway.envoyproxy.io
+    parentRefs:
+    - namespace: envoy-gateway
+      name: gateway-2
+      sectionName: http
+    rules:
+    - matches:
+      - path:
+          value: "/v5"
+      backendRefs:
+      - name: service-4
+        port: 8080
 backendTrafficPolicies:
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: BackendTrafficPolicy
@@ -308,6 +327,25 @@ backendTrafficPolicies:
   kind: BackendTrafficPolicy
   metadata:
     namespace: default
+    name: policy-for-route-5
+  spec:
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: httproute-5
+    healthCheck:
+      active:
+        timeout: "10s"
+        interval: "30s"
+        initialJitter: "15s"
+        unhealthyThreshold: 2
+        healthyThreshold: 2
+        type: TCP
+        tcp: {}
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: BackendTrafficPolicy
+  metadata:
+    namespace: default
     name: policy-for-grpc-route
   spec:
     targetRef:
@@ -340,4 +378,3 @@ backendTrafficPolicies:
         type: GRPC
         grpc:
           service: foo-service
-

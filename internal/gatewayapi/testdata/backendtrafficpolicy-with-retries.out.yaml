@@ -118,6 +118,7 @@ backendTrafficPolicies:
       retryOn:
         triggers:
         - cancelled
+        - reset-before-request
     targetRef:
       group: gateway.networking.k8s.io
       kind: Gateway
@@ -461,6 +462,7 @@ xdsIR:
             retryOn:
               triggers:
               - cancelled
+              - reset-before-request
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4
