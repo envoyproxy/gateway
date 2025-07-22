@@ -677,61 +677,108 @@ window.EnvoyGatewayAdmin = {
         const container = document.getElementById('config-summary');
         if (!container) return;
 
-        const totalResources = (data.gateways?.length || 0) +
-                              (data.httpRoutes?.length || 0) +
-                              (data.grpcRoutes?.length || 0) +
-                              (data.tlsRoutes?.length || 0) +
-                              (data.tcpRoutes?.length || 0) +
-                              (data.udpRoutes?.length || 0) +
-                              (data.gatewayClass?.length || 0) +
-                              (data.clientTrafficPolicies?.length || 0) +
-                              (data.backendTrafficPolicies?.length || 0) +
-                              (data.backendTLSPolicies?.length || 0) +
-                              (data.securityPolicies?.length || 0) +
-                              (data.envoyPatchPolicies?.length || 0) +
-                              (data.envoyExtensionPolicies?.length || 0) +
-                              (data.services?.length || 0) +
-                              (data.secrets?.length || 0) +
-                              (data.configMaps?.length || 0) +
-                              (data.namespaces?.length || 0) +
-                              (data.endpointSlices?.length || 0) +
-                              (data.referenceGrants?.length || 0) +
-                              (data.httpRouteFilters?.length || 0) +
-                              (data.envoyProxies?.length || 0) +
-                              (data.backends?.length || 0) +
-                              (data.serviceImports?.length || 0);
+        // Collect all resource types and their counts
+        const resourceStats = [
+            { name: 'Gateways', count: data.gateways?.length || 0 },
+            { name: 'HTTP Routes', count: data.httpRoutes?.length || 0 },
+            { name: 'GRPC Routes', count: data.grpcRoutes?.length || 0 },
+            { name: 'TLS Routes', count: data.tlsRoutes?.length || 0 },
+            { name: 'TCP Routes', count: data.tcpRoutes?.length || 0 },
+            { name: 'UDP Routes', count: data.udpRoutes?.length || 0 },
+            { name: 'Gateway Classes', count: data.gatewayClass?.length || 0 },
+            { name: 'Client Traffic Policies', count: data.clientTrafficPolicies?.length || 0 },
+            { name: 'Backend Traffic Policies', count: data.backendTrafficPolicies?.length || 0 },
+            { name: 'Backend TLS Policies', count: data.backendTLSPolicies?.length || 0 },
+            { name: 'Security Policies', count: data.securityPolicies?.length || 0 },
+            { name: 'Envoy Patch Policies', count: data.envoyPatchPolicies?.length || 0 },
+            { name: 'Envoy Extension Policies', count: data.envoyExtensionPolicies?.length || 0 },
+            { name: 'Services', count: data.services?.length || 0 },
+            { name: 'Secrets', count: data.secrets?.length || 0 },
+            { name: 'ConfigMaps', count: data.configMaps?.length || 0 },
+            { name: 'Namespaces', count: data.namespaces?.length || 0 },
+            { name: 'Endpoint Slices', count: data.endpointSlices?.length || 0 },
+            { name: 'Reference Grants', count: data.referenceGrants?.length || 0 },
+            { name: 'HTTP Route Filters', count: data.httpRouteFilters?.length || 0 },
+            { name: 'Envoy Proxies', count: data.envoyProxies?.length || 0 },
+            { name: 'Backends', count: data.backends?.length || 0 },
+            { name: 'Service Imports', count: data.serviceImports?.length || 0 }
+        ];
+
+        // Filter out resources with 0 count and sort by count (descending)
+        const filteredStats = resourceStats
+            .filter(stat => stat.count > 0)
+            .sort((a, b) => b.count - a.count);
+
+        // Calculate total resources
+        const totalResources = resourceStats.reduce((sum, stat) => sum + stat.count, 0);
+
+        // Generate bar chart HTML
+        const maxCount = filteredStats.length > 0 ? filteredStats[0].count : 1;
+        const chartHTML = this.generateBarChart(filteredStats, maxCount);
 
         container.innerHTML = `
-            <div class="config-summary-grid">
-                <div class="summary-item">
-                    <h3>${data.gateways?.length || 0}</h3>
-                    <p>Gateways</p>
-                </div>
-                <div class="summary-item">
-                    <h3>${data.httpRoutes?.length || 0}</h3>
-                    <p>HTTP Routes</p>
-                </div>
-                <div class="summary-item">
-                    <h3>${data.gatewayClass?.length || 0}</h3>
-                    <p>Gateway Classes</p>
-                </div>
-                <div class="summary-item">
-                    <h3>${(data.clientTrafficPolicies?.length || 0) + (data.backendTrafficPolicies?.length || 0) + (data.securityPolicies?.length || 0)}</h3>
-                    <p>Policies</p>
-                </div>
-                <div class="summary-item">
-                    <h3>${data.services?.length || 0}</h3>
-                    <p>Services</p>
-                </div>
-                <div class="summary-item">
-                    <h3>${totalResources}</h3>
-                    <p>Total Resources</p>
-                </div>
+            <div class="config-summary-chart">
+                ${chartHTML}
+            </div>
+            <div class="config-summary-total">
+                <strong>Total Resources: ${totalResources}</strong>
             </div>
             <div style="margin-top: 1rem; text-align: center; color: #6c757d; font-size: 0.875rem;">
                 Last updated: ${new Date(data.lastUpdated).toLocaleString()}
             </div>
         `;
+    },
+
+    // Generate bar chart HTML
+    generateBarChart: function(stats, maxCount) {
+        if (stats.length === 0) {
+            return '<div class="empty-chart">No resources found</div>';
+        }
+
+        // Calculate grid lines (5 horizontal lines for Y-axis)
+        const gridLines = [];
+        const step = maxCount / 5;
+        for (let i = 1; i <= 5; i++) {
+            const value = Math.ceil(step * i);
+            const percentage = (value / maxCount) * 100;
+            gridLines.push({ value, percentage: 100 - percentage });
+        }
+
+        let chartHTML = '<div class="bar-chart">';
+
+        // Add grid lines and Y-axis labels
+        chartHTML += '<div class="bar-chart-grid">';
+        gridLines.forEach(line => {
+            chartHTML += `
+                <div class="grid-line" style="bottom: ${100 - line.percentage}%"></div>
+                <div class="y-axis-label" style="bottom: ${100 - line.percentage}%">${line.value}</div>
+            `;
+        });
+        // Add zero line
+        chartHTML += `
+            <div class="grid-line" style="bottom: 0%"></div>
+            <div class="y-axis-label" style="bottom: 0%">0</div>
+        `;
+        chartHTML += '</div>';
+
+        // Add bars (X-axis items)
+        stats.forEach(stat => {
+            const heightPercentage = (stat.count / maxCount) * 100;
+            const maxHeight = 250; // Maximum height in pixels
+            const actualHeight = (heightPercentage / 100) * maxHeight;
+
+            chartHTML += `
+                <div class="bar-item">
+                    <div class="bar-container" style="height: ${actualHeight}px;">
+                        <div class="bar-value">${stat.count}</div>
+                    </div>
+                    <div class="bar-label">${stat.name}</div>
+                </div>
+            `;
+        });
+
+        chartHTML += '</div>';
+        return chartHTML;
     },
 
     // Update resources container with new layout
@@ -741,7 +788,7 @@ window.EnvoyGatewayAdmin = {
 
         const resourceCategories = [
             {
-                title: 'Gateway API Core',
+                title: 'Gateway API Resources',
                 icon: '🚪',
                 resources: [
                     { name: 'Gateways', data: data.gateways || [], id: 'gateways' },
