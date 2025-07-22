@@ -21,6 +21,7 @@ import (
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/yaml"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
@@ -316,6 +317,15 @@ func TestTranslateXdsWithExtensionErrorsWhenFailOpen(t *testing.T) {
 							egv1a1.XDSCluster,
 							egv1a1.XDSTranslation,
 						},
+						// Enable listeners and routes for PostTranslateModifyHook for these tests
+						Translation: &egv1a1.TranslationConfig{
+							Listener: &egv1a1.ListenerTranslationConfig{
+								IncludeAll: ptr.To(true),
+							},
+							Route: &egv1a1.RouteTranslationConfig{
+								IncludeAll: ptr.To(true),
+							},
+						},
 					},
 				},
 			}
@@ -447,6 +457,15 @@ func TestTranslateXdsWithExtensionErrorsWhenFailClosed(t *testing.T) {
 							egv1a1.XDSVirtualHost,
 							egv1a1.XDSHTTPListener,
 							egv1a1.XDSTranslation,
+						},
+						// Enable listeners and routes for PostTranslateModifyHook for these tests
+						Translation: &egv1a1.TranslationConfig{
+							Listener: &egv1a1.ListenerTranslationConfig{
+								IncludeAll: ptr.To(true),
+							},
+							Route: &egv1a1.RouteTranslationConfig{
+								IncludeAll: ptr.To(true),
+							},
 						},
 					},
 				},

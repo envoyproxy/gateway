@@ -70,6 +70,7 @@ func NewOfflineGatewayAPIController(
 		namespace:         cfg.ControllerNamespace,
 		statusUpdater:     su,
 		resources:         resources,
+		subscriptions:     &subscriptions{},
 		extGVKs:           extGVKs,
 		store:             newProviderStore(),
 		envoyGateway:      cfg.EnvoyGateway,
@@ -89,12 +90,15 @@ func NewOfflineGatewayAPIController(
 		tcpRouteCRDExists:      true,
 		tlsRouteCRDExists:      true,
 		udpRouteCRDExists:      true,
-		// TODO: enable this for consistency after the foundamental fix is available https://github.com/envoyproxy/gateway/pull/6021.
-		// In practice, this won't affect any user-facing reconciliation logic for now but it might in the future.
-		backendCRDExists: false,
+		backendCRDExists:       true,
 	}
 
 	r.log.Info("created offline gatewayapi controller")
+
+	// Do not call .Subscribe() inside Goroutine since it is supposed to be called from the same
+	// Goroutine where Close() is called.
+	r.subscribeToResources(ctx)
+
 	if su != nil {
 		r.subscribeAndUpdateStatus(ctx, cfg.EnvoyGateway.ExtensionManager != nil)
 	}

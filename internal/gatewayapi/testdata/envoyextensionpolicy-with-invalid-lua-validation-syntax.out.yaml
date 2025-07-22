@@ -77,7 +77,7 @@ envoyExtensionPolicies:
       conditions:
       - lastTransitionTime: null
         message: |-
-          Lua: validation failed for lua body in policy with name envoyextensionpolicy/default/policy-for-http-route-2/lua/0: failed to validate with envoy_on_response: <string> line:617(column:9) near 'print':   syntax error
+          Lua: validation failed for lua body in policy with name envoyextensionpolicy/default/policy-for-http-route-2/lua/0: failed to validate with envoy_on_response: <string> line:615(column:9) near 'print':   syntax error
           .
         reason: Invalid
         status: "False"
