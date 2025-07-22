@@ -5,7 +5,7 @@
     <div class="card-header">
         <h1 class="card-title">{{.Title}}</h1>
         <div style="display: flex; align-items: center; gap: 1rem;">
-            <a href="/api/config_dump_all" class="btn btn-primary" target="_blank">
+            <a href="/api/config_dump?resource=all" class="btn btn-primary" target="_blank">
                 🔍 View Complete Config (JSON)
             </a>
             <label>
@@ -33,7 +33,24 @@
     </div>
 </div>
 
-<div class="config-resources-grid">
+<div class="card">
+    <div class="card-header">
+        <h2 class="card-title">🔍 Resource Explorer</h2>
+    </div>
+    <div class="card-body">
+        <p>Browse and search through all Gateway API resources and policies. Click on category headers to expand/collapse sections.</p>
+
+        <div class="resource-search">
+            <input type="text" id="resource-search-input" placeholder="🔍 Search resources by name or namespace..." />
+        </div>
+
+        <div class="config-resources-container" id="config-resources-container">
+            <div class="loading"></div> Loading resources...
+        </div>
+    </div>
+</div>
+
+<div style="display: none;" class="config-resources-grid-old">
     <div class="card">
         <div class="card-header">
             <h2 class="card-title">🚪 Gateways</h2>
@@ -315,9 +332,80 @@
 
 </div>
 
-
-
 <script>
+// Resource category toggle functionality
+document.addEventListener('DOMContentLoaded', function() {
+    // Toggle category sections
+    document.addEventListener('click', function(e) {
+        if (e.target.closest('.resource-category-header')) {
+            const category = e.target.closest('.resource-category');
+            category.classList.toggle('collapsed');
+        }
+    });
 
+    // Search functionality
+    const searchInput = document.getElementById('resource-search-input');
+    if (searchInput) {
+        searchInput.addEventListener('input', function(e) {
+            const searchTerm = e.target.value.toLowerCase();
+            const categories = document.querySelectorAll('.resource-category');
+
+            categories.forEach(category => {
+                const subcategories = category.querySelectorAll('.resource-subcategory');
+                let categoryHasVisibleCards = false;
+                let categoryTotalVisible = 0;
+
+                subcategories.forEach(subcategory => {
+                    const cards = subcategory.querySelectorAll('.resource-card');
+                    let subcategoryVisibleCount = 0;
+
+                    cards.forEach(card => {
+                        const name = card.querySelector('.resource-card-name')?.textContent.toLowerCase() || '';
+                        const namespace = card.querySelector('.resource-card-namespace')?.textContent.toLowerCase() || '';
+
+                        if (!searchTerm || name.includes(searchTerm) || namespace.includes(searchTerm)) {
+                            card.style.display = 'block';
+                            subcategoryVisibleCount++;
+                            categoryHasVisibleCards = true;
+                        } else {
+                            card.style.display = 'none';
+                        }
+                    });
+
+                    // Update subcategory count
+                    const countSpan = subcategory.querySelector('.resource-count');
+                    if (countSpan) {
+                        countSpan.textContent = subcategoryVisibleCount;
+                    }
+
+                    // Show/hide subcategory based on visible cards
+                    if (searchTerm && subcategoryVisibleCount === 0) {
+                        subcategory.style.display = 'none';
+                    } else {
+                        subcategory.style.display = 'block';
+                        categoryTotalVisible += subcategoryVisibleCount;
+                    }
+                });
+
+                // Update category badge count
+                const categoryBadge = category.querySelector('.resource-count-badge');
+                if (categoryBadge) {
+                    categoryBadge.textContent = categoryTotalVisible;
+                }
+
+                // Show/hide category based on whether it has visible cards
+                if (searchTerm && !categoryHasVisibleCards) {
+                    category.style.display = 'none';
+                } else {
+                    category.style.display = 'block';
+                    // Auto-expand categories when searching
+                    if (searchTerm && categoryHasVisibleCards) {
+                        category.classList.remove('collapsed');
+                    }
+                }
+            });
+        });
+    }
+});
 </script>
 {{end}}

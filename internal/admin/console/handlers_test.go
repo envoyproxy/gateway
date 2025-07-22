@@ -194,7 +194,7 @@ func TestRegisterRoutes(t *testing.T) {
 		{"/api/info", http.StatusOK},
 		{"/api/server_info", http.StatusOK},
 		{"/api/config_dump", http.StatusOK},
-		{"/api/config_dump_all", http.StatusOK},
+		{"/api/config_dump?resource=all", http.StatusOK},
 		{"/api/metrics", http.StatusOK}, // Now uses Prometheus registry directly
 	}
 

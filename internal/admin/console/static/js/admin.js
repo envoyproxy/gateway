@@ -329,14 +329,26 @@ window.EnvoyGatewayAdmin = {
     
     // Load configuration dump
     loadConfigDump: function() {
-        this.showLoading('config-dump');
+        // Load config summary
+        this.showLoading('config-summary');
         this.apiCall('/api/config_dump', (error, data) => {
-            this.hideLoading('config-dump');
+            this.hideLoading('config-summary');
             if (error) {
-                this.showError('config-dump', 'Failed to load configuration dump: ' + error.message);
+                this.showError('config-summary', 'Failed to load configuration summary: ' + error.message);
                 return;
             }
-            this.updateConfigDump(data);
+            this.updateConfigSummary(data);
+        });
+
+        // Load resources with new layout
+        this.showLoading('config-resources-container');
+        this.apiCall('/api/config_dump', (error, data) => {
+            this.hideLoading('config-resources-container');
+            if (error) {
+                this.showError('config-resources-container', 'Failed to load resources: ' + error.message);
+                return;
+            }
+            this.updateResourcesContainer(data);
         });
     },
     
@@ -660,6 +672,194 @@ window.EnvoyGatewayAdmin = {
         }
     },
     
+    // Update configuration summary
+    updateConfigSummary: function(data) {
+        const container = document.getElementById('config-summary');
+        if (!container) return;
+
+        const totalResources = (data.gateways?.length || 0) +
+                              (data.httpRoutes?.length || 0) +
+                              (data.grpcRoutes?.length || 0) +
+                              (data.tlsRoutes?.length || 0) +
+                              (data.tcpRoutes?.length || 0) +
+                              (data.udpRoutes?.length || 0) +
+                              (data.gatewayClass?.length || 0) +
+                              (data.clientTrafficPolicies?.length || 0) +
+                              (data.backendTrafficPolicies?.length || 0) +
+                              (data.backendTLSPolicies?.length || 0) +
+                              (data.securityPolicies?.length || 0) +
+                              (data.envoyPatchPolicies?.length || 0) +
+                              (data.envoyExtensionPolicies?.length || 0) +
+                              (data.services?.length || 0) +
+                              (data.secrets?.length || 0) +
+                              (data.configMaps?.length || 0) +
+                              (data.namespaces?.length || 0) +
+                              (data.endpointSlices?.length || 0) +
+                              (data.referenceGrants?.length || 0) +
+                              (data.httpRouteFilters?.length || 0) +
+                              (data.envoyProxies?.length || 0) +
+                              (data.backends?.length || 0) +
+                              (data.serviceImports?.length || 0);
+
+        container.innerHTML = `
+            <div class="config-summary-grid">
+                <div class="summary-item">
+                    <h3>${data.gateways?.length || 0}</h3>
+                    <p>Gateways</p>
+                </div>
+                <div class="summary-item">
+                    <h3>${data.httpRoutes?.length || 0}</h3>
+                    <p>HTTP Routes</p>
+                </div>
+                <div class="summary-item">
+                    <h3>${data.gatewayClass?.length || 0}</h3>
+                    <p>Gateway Classes</p>
+                </div>
+                <div class="summary-item">
+                    <h3>${(data.clientTrafficPolicies?.length || 0) + (data.backendTrafficPolicies?.length || 0) + (data.securityPolicies?.length || 0)}</h3>
+                    <p>Policies</p>
+                </div>
+                <div class="summary-item">
+                    <h3>${data.services?.length || 0}</h3>
+                    <p>Services</p>
+                </div>
+                <div class="summary-item">
+                    <h3>${totalResources}</h3>
+                    <p>Total Resources</p>
+                </div>
+            </div>
+            <div style="margin-top: 1rem; text-align: center; color: #6c757d; font-size: 0.875rem;">
+                Last updated: ${new Date(data.lastUpdated).toLocaleString()}
+            </div>
+        `;
+    },
+
+    // Update resources container with new layout
+    updateResourcesContainer: function(data) {
+        const container = document.getElementById('config-resources-container');
+        if (!container) return;
+
+        const resourceCategories = [
+            {
+                title: 'Gateway API Core',
+                icon: '🚪',
+                resources: [
+                    { name: 'Gateways', data: data.gateways || [], id: 'gateways' },
+                    { name: 'Gateway Classes', data: data.gatewayClass || [], id: 'gatewayclass' },
+                    { name: 'HTTP Routes', data: data.httpRoutes || [], id: 'httproutes' },
+                    { name: 'GRPC Routes', data: data.grpcRoutes || [], id: 'grpcroutes' },
+                    { name: 'TLS Routes', data: data.tlsRoutes || [], id: 'tlsroutes' },
+                    { name: 'TCP Routes', data: data.tcpRoutes || [], id: 'tcproutes' },
+                    { name: 'UDP Routes', data: data.udpRoutes || [], id: 'udproutes' },
+                    { name: 'Reference Grants', data: data.referenceGrants || [], id: 'referencegrants' }
+                ]
+            },
+            {
+                title: 'Envoy Gateway Policies',
+                icon: '🛡️',
+                resources: [
+                    { name: 'Client Traffic Policies', data: data.clientTrafficPolicies || [], id: 'clienttrafficpolicies' },
+                    { name: 'Backend Traffic Policies', data: data.backendTrafficPolicies || [], id: 'backendtrafficpolicies' },
+                    { name: 'Backend TLS Policies', data: data.backendTLSPolicies || [], id: 'backendtlspolicies' },
+                    { name: 'Security Policies', data: data.securityPolicies || [], id: 'securitypolicies' },
+                    { name: 'Envoy Patch Policies', data: data.envoyPatchPolicies || [], id: 'envoypatchpolicies' },
+                    { name: 'Envoy Extension Policies', data: data.envoyExtensionPolicies || [], id: 'envoyextensionpolicies' }
+                ]
+            },
+            {
+                title: 'Envoy Gateway Resources',
+                icon: '⚙️',
+                resources: [
+                    { name: 'HTTP Route Filters', data: data.httpRouteFilters || [], id: 'httproutefilters' },
+                    { name: 'Envoy Proxies', data: data.envoyProxies || [], id: 'envoyproxies' },
+                    { name: 'Backends', data: data.backends || [], id: 'backends' }
+                ]
+            },
+            {
+                title: 'Kubernetes Resources',
+                icon: '☸️',
+                resources: [
+                    { name: 'Services', data: data.services || [], id: 'services' },
+                    { name: 'Secrets', data: data.secrets || [], id: 'secrets' },
+                    { name: 'ConfigMaps', data: data.configMaps || [], id: 'configmaps' },
+                    { name: 'Namespaces', data: data.namespaces || [], id: 'namespaces' },
+                    { name: 'Endpoint Slices', data: data.endpointSlices || [], id: 'endpointslices' },
+                    { name: 'Service Imports', data: data.serviceImports || [], id: 'serviceimports' }
+                ]
+            }
+        ];
+
+        let html = '';
+        resourceCategories.forEach(category => {
+            const totalCount = category.resources.reduce((sum, resource) => sum + resource.data.length, 0);
+
+            html += `
+                <div class="resource-category collapsed" data-category="${category.id}">
+                    <div class="resource-category-header">
+                        <div class="resource-category-title">
+                            <span>${category.icon}</span>
+                            <span>${category.title}</span>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 0.5rem;">
+                            <span class="resource-count-badge">${totalCount}</span>
+                            <span class="resource-category-toggle">▼</span>
+                        </div>
+                    </div>
+                    <div class="resource-category-content">
+                        ${this.renderResourceSubcategories(category.resources)}
+                    </div>
+                </div>
+            `;
+        });
+
+        container.innerHTML = html;
+    },
+
+    // Render resource subcategories
+    renderResourceSubcategories: function(resources) {
+        let html = '';
+
+        resources.forEach(resource => {
+            if (resource.data.length > 0) {
+                html += `
+                    <div class="resource-subcategory" data-resource-type="${resource.id}" style="margin-bottom: 1.5rem;">
+                        <h4 class="resource-subcategory-title" style="margin-bottom: 0.75rem; color: #495057; font-size: 1rem; font-weight: 600;">
+                            ${resource.name} (<span class="resource-count">${resource.data.length}</span>)
+                        </h4>
+                        <div class="resource-grid">
+                            ${resource.data.map(item => this.renderResourceCard(item)).join('')}
+                        </div>
+                    </div>
+                `;
+            } else {
+                html += `
+                    <div class="resource-subcategory" data-resource-type="${resource.id}" style="margin-bottom: 1.5rem;">
+                        <h4 class="resource-subcategory-title" style="margin-bottom: 0.75rem; color: #6c757d; font-size: 1rem; font-weight: 600;">
+                            ${resource.name} (<span class="resource-count">0</span>)
+                        </h4>
+                        <div class="empty-state">No ${resource.name.toLowerCase()} found</div>
+                    </div>
+                `;
+            }
+        });
+
+        return html;
+    },
+
+    // Render individual resource card
+    renderResourceCard: function(resource) {
+        const namespaceDisplay = resource.namespace
+            ? `<span class="resource-card-namespace">ns: ${resource.namespace}</span>`
+            : `<span class="resource-card-cluster-scoped">cluster-scoped</span>`;
+
+        return `
+            <div class="resource-card">
+                <div class="resource-card-name">${resource.name}</div>
+                ${namespaceDisplay}
+            </div>
+        `;
+    },
+
     // Manual refresh
     refresh: function() {
         this.loadPageData();

@@ -314,7 +314,7 @@ func TestGetGatewayStatus(t *testing.T) {
 	}
 }
 
-func TestHandleAPIConfigDumpAll(t *testing.T) {
+func TestHandleAPIConfigDumpWithResourceAll(t *testing.T) {
 	cfg := &config.Server{
 		Logger: logging.NewLogger(os.Stdout, egv1a1.DefaultEnvoyGatewayLogging()),
 	}
@@ -322,10 +322,10 @@ func TestHandleAPIConfigDumpAll(t *testing.T) {
 	providerRes := &message.ProviderResources{}
 	handler := NewHandler(cfg, providerRes)
 
-	req := httptest.NewRequest(http.MethodGet, "/api/config_dump_all", nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/config_dump?resource=all", nil)
 	resp := httptest.NewRecorder()
 
-	handler.handleAPIConfigDumpAll(resp, req)
+	handler.handleAPIConfigDump(resp, req)
 
 	assert.Equal(t, http.StatusOK, resp.Code)
 	assert.Equal(t, "application/json; charset=utf-8", resp.Header().Get("Content-Type"))
@@ -360,17 +360,17 @@ func TestHandleAPIConfigDumpAll(t *testing.T) {
 	assert.Equal(t, float64(0), totalCount)
 }
 
-func TestHandleAPIConfigDumpAllMethodNotAllowed(t *testing.T) {
+func TestHandleAPIConfigDumpWithResourceAllMethodNotAllowed(t *testing.T) {
 	cfg := &config.Server{
 		Logger: logging.NewLogger(os.Stdout, egv1a1.DefaultEnvoyGatewayLogging()),
 	}
 
 	handler := NewHandler(cfg, (*message.ProviderResources)(nil))
 
-	req := httptest.NewRequest(http.MethodPost, "/api/config_dump_all", nil)
+	req := httptest.NewRequest(http.MethodPost, "/api/config_dump?resource=all", nil)
 	resp := httptest.NewRecorder()
 
-	handler.handleAPIConfigDumpAll(resp, req)
+	handler.handleAPIConfigDump(resp, req)
 
 	assert.Equal(t, http.StatusMethodNotAllowed, resp.Code)
 }
