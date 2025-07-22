@@ -70,6 +70,32 @@ spec:
         - name: infra-backend-v1
           port: 8080
 ---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: http-with-api-key-auth-header-section-scoped
+  namespace: gateway-conformance-infra
+spec:
+  parentRefs:
+    - name: same-namespace
+  rules:
+    - name: policy-attached
+      matches:
+        - path:
+            type: Exact
+            value: /api-key-auth-header-attached
+      backendRefs:
+        - name: infra-backend-v1
+          port: 8080
+    - name: policy-non-attached
+      matches:
+        - path:
+            type: Exact
+            value: /api-key-auth-header-non-attached
+      backendRefs:
+        - name: infra-backend-v1
+          port: 8080
+---
 apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: SecurityPolicy
 metadata:
@@ -86,6 +112,8 @@ spec:
     credentialRefs:
       - name: "api-key-auth-users-secret-1"
       - name: "api-key-auth-users-secret-2"
+    forwardClientIDHeader: "X-API-KEY-CLIENT-ID"
+    sanitize: true
 ---
 apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: SecurityPolicy
@@ -118,6 +146,24 @@ spec:
   apiKeyAuth:
     extractFrom:
       - params: ["X-API-KEY"]
+    credentialRefs:
+      - name: "api-key-auth-users-secret-1"
+      - name: "api-key-auth-users-secret-2"
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: SecurityPolicy
+metadata:
+  name: api-key-auth-header-section-scoped
+  namespace: gateway-conformance-infra
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: http-with-api-key-auth-header-section-scoped
+      sectionName: policy-attached
+  apiKeyAuth:
+    extractFrom:
+      - headers: ["X-API-KEY"]
     credentialRefs:
       - name: "api-key-auth-users-secret-1"
       - name: "api-key-auth-users-secret-2"
