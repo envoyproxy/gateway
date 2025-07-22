@@ -1342,8 +1342,9 @@ func TestProcessBackendRefs(t *testing.T) {
 			logger := logging.DefaultLogger(os.Stdout, egv1a1.LogLevelInfo)
 
 			r := &gatewayAPIReconciler{
-				log:             logger,
-				classController: "some-gateway-class",
+				log:              logger,
+				classController:  "some-gateway-class",
+				backendCRDExists: true,
 			}
 
 			r.client = fakeclient.NewClientBuilder().
