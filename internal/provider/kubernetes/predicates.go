@@ -221,7 +221,7 @@ func (r *gatewayAPIReconciler) validateClusterTrustBundleForReconcile(ctb *certi
 func (r *gatewayAPIReconciler) isCtpReferencingClusterTrustBundle(ctb *certificatesv1b1.ClusterTrustBundle) bool {
 	ctpList := &egv1a1.ClientTrafficPolicyList{}
 	if err := r.client.List(context.Background(), ctpList, &client.ListOptions{
-		FieldSelector: fields.OneTermEqualSelector(clusterTrustBundlerCtpIndex, ctb.Name),
+		FieldSelector: fields.OneTermEqualSelector(clusterTrustBundleCtpIndex, ctb.Name),
 	}); err != nil {
 		r.log.Error(err, "unable to find associated ClientTrafficPolicies")
 		return false
