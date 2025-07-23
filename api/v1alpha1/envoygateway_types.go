@@ -193,6 +193,9 @@ const (
 	// LogComponentXdsServerRunner defines the "xds-server" runner component.
 	LogComponentXdsServerRunner EnvoyGatewayLogComponent = "xds-server"
 
+	// LogComponentXdsRunner defines the "xds" runner component.
+	LogComponentXdsRunner EnvoyGatewayLogComponent = "xds"
+
 	// LogComponentInfrastructureRunner defines the "infrastructure" runner component.
 	LogComponentInfrastructureRunner EnvoyGatewayLogComponent = "infrastructure"
 
