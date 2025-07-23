@@ -246,30 +246,27 @@ const LatencyTab = ({ latencyPercentileComparison, benchmarkResults }: LatencyTa
                     />
                     <Area
                       dataKey="p99"
-                      stackId="latency"
                       type="monotone"
                       fill="#4f46e5"
-                      fillOpacity={0.3}
+                      fillOpacity={0.2}
                       stroke="#4f46e5"
-                      strokeWidth={1}
+                      strokeWidth={2}
                     />
                     <Area
                       dataKey="p95"
-                      stackId="latency"
                       type="monotone"
                       fill="#6366f1"
-                      fillOpacity={0.4}
+                      fillOpacity={0.3}
                       stroke="#6366f1"
                       strokeWidth={2}
                     />
                     <Area
                       dataKey="p50"
-                      stackId="latency"
                       type="monotone"
                       fill="#8b5cf6"
-                      fillOpacity={0.6}
+                      fillOpacity={0.4}
                       stroke="#8b5cf6"
-                      strokeWidth={3}
+                      strokeWidth={2}
                     />
                   </AreaChart>
                 </ChartContainer>

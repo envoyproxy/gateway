@@ -107,7 +107,7 @@ func sortXdsIRMap(xdsIR resource.XdsIRMap) {
 		for _, http := range irItem.HTTP {
 			if !http.PreserveRouteOrder {
 				// descending order
-				sort.Sort(sort.Reverse(XdsIRRoutes(http.Routes)))
+				sort.Stable(sort.Reverse(XdsIRRoutes(http.Routes)))
 			}
 		}
 	}

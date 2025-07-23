@@ -10,6 +10,7 @@ package envoygateway.extension;
 import "envoy/config/cluster/v3/cluster.proto";
 import "envoy/config/listener/v3/listener.proto";
 import "envoy/config/route/v3/route_components.proto";
+import "envoy/config/route/v3/route.proto";
 import "envoy/extensions/transport_sockets/tls/v3/secret.proto";
 
 import "proto/extension/context.proto";
@@ -106,18 +107,22 @@ message PostHTTPListenerModifyResponse {
 }
 
 
-// PostTranslateModifyRequest currently sends only clusters and secrets to an extension.
+// PostTranslateModifyRequest sends clusters, secrets, listeners, and routes to an extension.
 // The extension is free to add/modify/remove the resources it received.
 message PostTranslateModifyRequest {
     PostTranslateExtensionContext post_translate_context = 1;
     repeated envoy.config.cluster.v3.Cluster clusters = 2;
     repeated envoy.extensions.transport_sockets.tls.v3.Secret secrets = 3;
+    repeated envoy.config.listener.v3.Listener listeners = 4;
+    repeated envoy.config.route.v3.RouteConfiguration routes = 5;
 }
 
 
 // PostTranslateModifyResponse is the expected response from an extension and contains
-// the full list of xDS clusters and secrets to be used for the xDS config.
+// the full list of xDS clusters, secrets, listeners, and routes to be used for the xDS config.
 message PostTranslateModifyResponse {
     repeated envoy.config.cluster.v3.Cluster clusters = 1;
     repeated envoy.extensions.transport_sockets.tls.v3.Secret secrets = 2;
+    repeated envoy.config.listener.v3.Listener listeners = 3;
+    repeated envoy.config.route.v3.RouteConfiguration routes = 4;
 }

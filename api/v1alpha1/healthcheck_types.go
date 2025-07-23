@@ -5,7 +5,10 @@
 
 package v1alpha1
 
-import metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+import (
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
+)
 
 // HealthCheck configuration to decide which endpoints
 // are healthy and can be used for routing.
@@ -98,6 +101,13 @@ type ActiveHealthCheck struct {
 	// +kubebuilder:default="3s"
 	// +optional
 	Interval *metav1.Duration `json:"interval"`
+
+	// InitialJitter defines the maximum time Envoy will wait before the first health check.
+	// Envoy will randomly select a value between 0 and the initial jitter value.
+	//
+	// +kubebuilder:validation:Format=duration
+	// +optional
+	InitialJitter *gwapiv1.Duration `json:"initialJitter,omitempty"`
 
 	// UnhealthyThreshold defines the number of unhealthy health checks required before a backend host is marked unhealthy.
 	//

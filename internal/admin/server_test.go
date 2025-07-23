@@ -25,7 +25,9 @@ func TestInitAdminServer(t *testing.T) {
 	}
 
 	svrConfig.Logger = logging.NewLogger(os.Stdout, egv1a1.DefaultEnvoyGatewayLogging())
-	runner := New(svrConfig)
+	runner := New(&Config{
+		Server: *svrConfig,
+	})
 	err := runner.Start(context.Background())
 	require.NoError(t, err)
 

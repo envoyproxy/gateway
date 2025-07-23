@@ -145,6 +145,15 @@ spec:
                           type: array
                       type: object
                     type: array
+                  forwardClientIDHeader:
+                    description: |-
+                      ForwardClientIDHeader is the name of the header to forward the client identity to the backend
+                      service. The header will be added to the request with the client id as the value.
+                    type: string
+                  sanitize:
+                    description: Sanitize indicates whether to remove the API key
+                      from the request before forwarding it to the backend service.
+                    type: boolean
                 required:
                 - credentialRefs
                 - extractFrom
@@ -937,6 +946,13 @@ spec:
                                     required:
                                     - path
                                     type: object
+                                  initialJitter:
+                                    description: |-
+                                      InitialJitter defines the maximum time Envoy will wait before the first health check.
+                                      Envoy will randomly select a value between 0 and the initial jitter value.
+                                    format: duration
+                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                    type: string
                                   interval:
                                     default: 3s
                                     description: Interval defines the time between
@@ -1408,6 +1424,7 @@ spec:
                                       - 5xx
                                       - gateway-error
                                       - reset
+                                      - reset-before-request
                                       - connect-failure
                                       - retriable-4xx
                                       - refused-stream
@@ -1907,6 +1924,13 @@ spec:
                                     required:
                                     - path
                                     type: object
+                                  initialJitter:
+                                    description: |-
+                                      InitialJitter defines the maximum time Envoy will wait before the first health check.
+                                      Envoy will randomly select a value between 0 and the initial jitter value.
+                                    format: duration
+                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                    type: string
                                   interval:
                                     default: 3s
                                     description: Interval defines the time between
@@ -2378,6 +2402,7 @@ spec:
                                       - 5xx
                                       - gateway-error
                                       - reset
+                                      - reset-before-request
                                       - connect-failure
                                       - retriable-4xx
                                       - refused-stream
@@ -3073,6 +3098,13 @@ spec:
                                           required:
                                           - path
                                           type: object
+                                        initialJitter:
+                                          description: |-
+                                            InitialJitter defines the maximum time Envoy will wait before the first health check.
+                                            Envoy will randomly select a value between 0 and the initial jitter value.
+                                          format: duration
+                                          pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                          type: string
                                         interval:
                                           default: 3s
                                           description: Interval defines the time between
@@ -3555,6 +3587,7 @@ spec:
                                             - 5xx
                                             - gateway-error
                                             - reset
+                                            - reset-before-request
                                             - connect-failure
                                             - retriable-4xx
                                             - refused-stream
@@ -3677,6 +3710,8 @@ spec:
                     description: |-
                       The client ID to be used in the OIDC
                       [Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest).
+
+                      Only one of clientID or clientIDRef must be set.
                     minLength: 1
                     type: string
                   clientIDRef:
@@ -3685,6 +3720,8 @@ spec:
                       [Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest).
                       Exactly one of clientID or clientIDRef must be set.
                       This is an Opaque secret. The client ID should be stored in the key "client-id".
+
+                      Only one of clientID or clientIDRef must be set.
                     properties:
                       group:
                         default: ""
@@ -4290,6 +4327,13 @@ spec:
                                     required:
                                     - path
                                     type: object
+                                  initialJitter:
+                                    description: |-
+                                      InitialJitter defines the maximum time Envoy will wait before the first health check.
+                                      Envoy will randomly select a value between 0 and the initial jitter value.
+                                    format: duration
+                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                    type: string
                                   interval:
                                     default: 3s
                                     description: Interval defines the time between
@@ -4761,6 +4805,7 @@ spec:
                                       - 5xx
                                       - gateway-error
                                       - reset
+                                      - reset-before-request
                                       - connect-failure
                                       - retriable-4xx
                                       - refused-stream
@@ -4901,10 +4946,13 @@ spec:
                       type: string
                     type: array
                 required:
-                - clientID
                 - clientSecret
                 - provider
                 type: object
+                x-kubernetes-validations:
+                - message: only one of clientID or clientIDRef must be set
+                  rule: (has(self.clientID) && !has(self.clientIDRef)) || (!has(self.clientID)
+                    && has(self.clientIDRef))
               targetRef:
                 description: |-
                   TargetRef is the name of the resource this policy is being attached to.
@@ -5083,18 +5131,12 @@ spec:
             - message: this policy can only have a targetRef.kind of Gateway/HTTPRoute/GRPCRoute
               rule: 'has(self.targetRef) ? self.targetRef.kind in [''Gateway'', ''HTTPRoute'',
                 ''GRPCRoute''] : true'
-            - message: this policy supports the sectionName field only for kind Gateway
-              rule: 'has(self.targetRef) ? self.targetRef.kind == ''Gateway'' || !has(self.targetRef.sectionName)
-                : true'
             - message: this policy can only have a targetRefs[*].group of gateway.networking.k8s.io
               rule: 'has(self.targetRefs) ? self.targetRefs.all(ref, ref.group ==
                 ''gateway.networking.k8s.io'') : true '
             - message: this policy can only have a targetRefs[*].kind of Gateway/HTTPRoute/GRPCRoute
               rule: 'has(self.targetRefs) ? self.targetRefs.all(ref, ref.kind in [''Gateway'',
                 ''HTTPRoute'', ''GRPCRoute'']) : true '
-            - message: this policy supports the sectionName field only for kind Gateway
-              rule: 'has(self.targetRefs) ? self.targetRefs.all(ref, ref.kind == ''Gateway''
-                || !has(ref.sectionName)) : true'
             - message: if authorization.rules.principal.jwt is used, jwt must be defined
               rule: '(has(self.authorization) && has(self.authorization.rules) &&
                 self.authorization.rules.exists(r, has(r.principal.jwt))) ? has(self.jwt)

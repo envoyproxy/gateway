@@ -72,6 +72,7 @@ func buildXdsRoute(httpRoute *ir.HTTPRoute, httpListener *ir.HTTPListener) (*rou
 		router.Action = &routev3.Route_Redirect{Redirect: buildXdsRedirectAction(httpRoute)}
 	case httpRoute.URLRewrite != nil:
 		routeAction := buildXdsURLRewriteAction(httpRoute.Destination.Name, httpRoute.URLRewrite, httpRoute.PathMatch)
+		routeAction.IdleTimeout = idleTimeout(httpRoute)
 		if httpRoute.Mirrors != nil {
 			routeAction.RequestMirrorPolicies = buildXdsRequestMirrorPolicies(httpRoute.Mirrors)
 		}
@@ -771,6 +772,7 @@ func buildRetryOn(triggers []ir.TriggerEnum) (string, error) {
 		ir.Error5XX:             "5xx",
 		ir.GatewayError:         "gateway-error",
 		ir.Reset:                "reset",
+		ir.ResetBeforeRequest:   "reset-before-request",
 		ir.ConnectFailure:       "connect-failure",
 		ir.Retriable4XX:         "retriable-4xx",
 		ir.RefusedStream:        "refused-stream",
