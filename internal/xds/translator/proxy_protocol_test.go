@@ -18,7 +18,6 @@ func TestPatchProxyProtocolFilter(t *testing.T) {
 	type testCase struct {
 		name                  string
 		listener              *listenerv3.Listener
-		enableProxyProtocol   bool
 		proxyProtocolSettings *ir.ProxyProtocolSettings
 		expectedFilterName    string
 		expectedFilterCount   int
@@ -26,25 +25,15 @@ func TestPatchProxyProtocolFilter(t *testing.T) {
 
 	testCases := []testCase{
 		{
-			name:                  "enableProxyProtocol=true only",
+			name:                  "proxyProtocolSettings=nil (disabled)",
 			listener:              &listenerv3.Listener{},
-			enableProxyProtocol:   true,
-			proxyProtocolSettings: nil,
-			expectedFilterName:    "envoy.filters.listener.proxy_protocol",
-			expectedFilterCount:   1,
-		},
-		{
-			name:                  "enableProxyProtocol=false only",
-			listener:              &listenerv3.Listener{},
-			enableProxyProtocol:   false,
 			proxyProtocolSettings: nil,
 			expectedFilterName:    "",
 			expectedFilterCount:   0,
 		},
 		{
-			name:                "proxyProtocolSettings configured (always enabled)",
-			listener:            &listenerv3.Listener{},
-			enableProxyProtocol: false,
+			name:     "proxyProtocolSettings configured with Optional=false",
+			listener: &listenerv3.Listener{},
 			proxyProtocolSettings: &ir.ProxyProtocolSettings{
 				Optional: false,
 			},
@@ -52,58 +41,19 @@ func TestPatchProxyProtocolFilter(t *testing.T) {
 			expectedFilterCount: 1,
 		},
 		{
-			name:                "proxyProtocolSettings with Optional=false",
-			listener:            &listenerv3.Listener{},
-			enableProxyProtocol: false,
-			proxyProtocolSettings: &ir.ProxyProtocolSettings{
-				Optional: false,
-			},
-			expectedFilterName:  "envoy.filters.listener.proxy_protocol",
-			expectedFilterCount: 1,
-		},
-		{
-			name:                "proxyProtocolSettings with Optional=true",
-			listener:            &listenerv3.Listener{},
-			enableProxyProtocol: false,
+			name:     "proxyProtocolSettings configured with Optional=true",
+			listener: &listenerv3.Listener{},
 			proxyProtocolSettings: &ir.ProxyProtocolSettings{
 				Optional: true,
 			},
 			expectedFilterName:  "envoy.filters.listener.proxy_protocol",
 			expectedFilterCount: 1,
-		},
-		{
-			name:                "precedence test: proxyProtocolSettings overrides enableProxyProtocol=false",
-			listener:            &listenerv3.Listener{},
-			enableProxyProtocol: false,
-			proxyProtocolSettings: &ir.ProxyProtocolSettings{
-				Optional: false,
-			},
-			expectedFilterName:  "envoy.filters.listener.proxy_protocol",
-			expectedFilterCount: 1,
-		},
-		{
-			name:                "precedence test: proxyProtocolSettings overrides enableProxyProtocol=true",
-			listener:            &listenerv3.Listener{},
-			enableProxyProtocol: true,
-			proxyProtocolSettings: &ir.ProxyProtocolSettings{
-				Optional: true,
-			},
-			expectedFilterName:  "envoy.filters.listener.proxy_protocol",
-			expectedFilterCount: 1,
-		},
-		{
-			name:                  "both disabled: enableProxyProtocol=false, proxyProtocolSettings=nil",
-			listener:              &listenerv3.Listener{},
-			enableProxyProtocol:   false,
-			proxyProtocolSettings: nil,
-			expectedFilterName:    "",
-			expectedFilterCount:   0,
 		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			patchProxyProtocolFilter(tc.listener, tc.enableProxyProtocol, tc.proxyProtocolSettings)
+			patchProxyProtocolFilter(tc.listener, tc.proxyProtocolSettings)
 
 			assert.Len(t, tc.listener.ListenerFilters, tc.expectedFilterCount)
 

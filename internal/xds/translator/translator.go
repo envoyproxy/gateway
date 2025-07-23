@@ -708,7 +708,7 @@ func (t *Translator) processTCPListenerXdsTranslation(
 		// same proxy protocol configuration, otherwise listeners with proxy protocol disabled will
 		// never accept connection, because listeners with proxy protocol enabled have configured
 		// proxy protocol listener filter for xDS listener, all connection must have ProxyProtocol header.
-		patchProxyProtocolFilter(xdsListener, tcpListener.ProxyProtocol != nil, tcpListener.ProxyProtocol)
+		patchProxyProtocolFilter(xdsListener, tcpListener.ProxyProtocol)
 
 		for _, route := range tcpListener.Routes {
 			if err := processXdsCluster(tCtx,

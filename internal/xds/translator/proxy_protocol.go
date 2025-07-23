@@ -46,7 +46,7 @@ func buildProxyProtocolFilter(proxyProtocolSettings *ir.ProxyProtocolSettings) *
 	pp := &proxyprotocolv3.ProxyProtocol{}
 
 	// Configure allow_requests_without_proxy_protocol if ProxyProtocolSettings are provided
-	if proxyProtocolSettings != nil {
+	if proxyProtocolSettings.Optional == true {
 		pp.AllowRequestsWithoutProxyProtocol = proxyProtocolSettings.Optional
 	}
 
