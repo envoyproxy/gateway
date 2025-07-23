@@ -569,11 +569,6 @@ xdsIR:
     globalResources:
       proxyInfraCluster:
         destination:
-          addressType: IP
-          endpoints:
-          - host: 7.6.5.4
-            port: 8080
-            zone: zone1
           name: envoy-default-gateway-1-bfd08ef4
           preferLocal:
             minEndpointsThreshold: 1
@@ -698,6 +693,14 @@ xdsIR:
     accessLog:
       json:
       - path: /dev/stdout
+    globalResources:
+      proxyInfraCluster:
+        destination:
+          name: envoy-default-gateway-2-5e70ed84
+          preferLocal:
+            minEndpointsThreshold: 1
+          protocol: HTTP
+        name: envoy-default-gateway-2-5e70ed84
     http:
     - address: 0.0.0.0
       hostnames:
@@ -753,6 +756,25 @@ xdsIR:
     accessLog:
       json:
       - path: /dev/stdout
+    globalResources:
+      proxyInfraCluster:
+        destination:
+          addressType: IP
+          endpoints:
+          - host: 7.6.5.4
+            port: 8080
+            zone: zone1
+          - host: 7.6.5.4
+            port: 8080
+            zone: zone1
+          - host: 7.6.5.4
+            port: 8080
+            zone: zone1
+          name: envoy-default-gateway-3-206418d2
+          preferLocal:
+            minEndpointsThreshold: 1
+          protocol: HTTP
+        name: envoy-default-gateway-3-206418d2
     http:
     - address: 0.0.0.0
       hostnames:
