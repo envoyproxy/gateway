@@ -203,7 +203,7 @@ func buildXdsTCPListener(
 	bufferLimitBytes := buildPerConnectionBufferLimitBytes(connection)
 	maxAcceptPerSocketEvent := buildMaxAcceptPerSocketEvent(connection)
 	listener := &listenerv3.Listener{
-		Name:                                 xdsListenerName(name, address, port, ir.TCPProtocolType, useAddressAsListenerName),
+		Name:                                 xdsListenerName(name, address, port, corev3.SocketAddress_TCP, useAddressAsListenerName),
 		AccessLog:                            al,
 		SocketOptions:                        socketOptions,
 		PerConnectionBufferLimitBytes:        bufferLimitBytes,
@@ -229,10 +229,10 @@ func buildXdsTCPListener(
 	return listener, nil
 }
 
-func xdsListenerName(name, address string, port uint32, protocol ir.ProtocolType, useAddressAsListenerName bool) string {
+func xdsListenerName(name, address string, port uint32, protocol corev3.SocketAddress_Protocol, useAddressAsListenerName bool) string {
 	if useAddressAsListenerName {
 		protocolType := "tcp"
-		if protocol == ir.UDPProtocolType {
+		if protocol == corev3.SocketAddress_UDP {
 			protocolType = "udp"
 		}
 		return fmt.Sprintf("%s-%s-%d", protocolType, address, port)
@@ -273,7 +273,7 @@ func buildXdsQuicListener(
 	}
 	listenerName := name + "-quic"
 	if useAddressAsListenerName {
-		listenerName = xdsListenerName(name, address, port, ir.UDPProtocolType, true)
+		listenerName = xdsListenerName(name, address, port, corev3.SocketAddress_UDP, true)
 	}
 	xdsListener := &listenerv3.Listener{
 		Name:      listenerName,
@@ -998,7 +998,7 @@ func buildXdsUDPListener(
 		return nil, err
 	}
 	xdsListener := &listenerv3.Listener{
-		Name:      xdsListenerName(udpListener.Name, udpListener.Address, udpListener.Port, ir.UDPProtocolType, useAddressAsListenerName),
+		Name:      xdsListenerName(udpListener.Name, udpListener.Address, udpListener.Port, corev3.SocketAddress_UDP, useAddressAsListenerName),
 		AccessLog: al,
 		Address: &corev3.Address{
 			Address: &corev3.Address_SocketAddress{

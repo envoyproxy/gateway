@@ -3186,6 +3186,7 @@ type ResourceMetadata struct {
 	SectionName string `json:"sectionName,omitempty" yaml:"sectionName,omitempty"`
 }
 
+
 // RequestBuffer holds the information for the Buffer filter
 // +k8s:deepcopy-gen=true
 type RequestBuffer struct {

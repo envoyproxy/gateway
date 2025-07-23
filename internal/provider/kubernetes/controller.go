@@ -789,6 +789,25 @@ func (r *gatewayAPIReconciler) processSecurityPolicyObjectRefs(
 					"policy", policy, "secretRef", oidc.ClientSecret)
 			}
 
+			if oidc.ClientIDRef != nil {
+				if err := r.processSecretRef(
+					ctx,
+					resourceMap,
+					resourceTree,
+					resource.KindSecurityPolicy,
+					policy.Namespace,
+					policy.Name,
+					*oidc.ClientIDRef); err != nil {
+					// If the error is transient, we return it to allow Reconcile to retry.
+					if isTransientError(err) {
+						return err
+					}
+					r.log.Error(err,
+						"failed to process OIDC ClientIDRef for SecurityPolicy",
+						"policy", policy, "secretRef", oidc.ClientIDRef)
+				}
+			}
+
 			var backendRefs []gwapiv1.BackendObjectReference
 			if oidc.Provider.BackendRef != nil {
 				backendRefs = append(backendRefs, *oidc.Provider.BackendRef)

@@ -4613,6 +4613,11 @@ func (in *Lua) DeepCopy() *Lua {
 func (in *OIDC) DeepCopyInto(out *OIDC) {
 	*out = *in
 	in.Provider.DeepCopyInto(&out.Provider)
+	if in.ClientID != nil {
+		in, out := &in.ClientID, &out.ClientID
+		*out = new(string)
+		**out = **in
+	}
 	if in.ClientIDRef != nil {
 		in, out := &in.ClientIDRef, &out.ClientIDRef
 		*out = new(v1.SecretObjectReference)

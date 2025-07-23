@@ -1120,6 +1120,7 @@ func (t *Translator) buildOIDC(
 	var (
 		oidc                  = policy.Spec.OIDC
 		provider              *ir.OIDCProvider
+		clientID              string
 		clientSecret          *corev1.Secret
 		redirectURL           = defaultRedirectURL
 		redirectPath          = defaultRedirectPath
@@ -1138,6 +1139,25 @@ func (t *Translator) buildOIDC(
 		group:     egv1a1.GroupName,
 		kind:      resource.KindSecurityPolicy,
 		namespace: policy.Namespace,
+	}
+
+	// Client ID can be specified either as a string or as a reference to a secret.
+	switch {
+	case oidc.ClientID != nil:
+		clientID = *oidc.ClientID
+	case oidc.ClientIDRef != nil:
+		var clientIDSecret *corev1.Secret
+		if clientIDSecret, err = t.validateSecretRef(false, from, *oidc.ClientIDRef, resources); err != nil {
+			return nil, err
+		}
+		clientIDBytes, ok := clientIDSecret.Data[egv1a1.OIDCClientIDKey]
+		if !ok || len(clientIDBytes) == 0 {
+			return nil, fmt.Errorf("client ID not found in secret %s/%s", clientIDSecret.Namespace, clientIDSecret.Name)
+		}
+		clientID = string(clientIDBytes)
+	default:
+		// This is just a sanity check - the CRD validation should have caught this.
+		return nil, fmt.Errorf("client ID must be specified in OIDC policy %s/%s", policy.Namespace, policy.Name)
 	}
 
 	if clientSecret, err = t.validateSecretRef(
@@ -1198,7 +1218,7 @@ func (t *Translator) buildOIDC(
 	return &ir.OIDC{
 		Name:                   irConfigName(policy),
 		Provider:               *provider,
-		ClientID:               oidc.ClientID,
+		ClientID:               clientID,
 		ClientSecret:           clientSecretBytes,
 		Scopes:                 scopes,
 		Resources:              oidc.Resources,

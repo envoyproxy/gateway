@@ -13,13 +13,7 @@ secrets:
     name: client2-secret
   data:
     client-secret: Y2xpZW50MTpzZWNyZXQK
-- apiVersion: v1
-  kind: Secret
-  metadata:
-    namespace: default
-    name: client3-secret
-  data:
-    client-secret: Y2xpZW50MTpzZWNyZXQK
+    client-id: Y2xpZW50Mi5vYXV0aC5mb28uY29t
 - apiVersion: v1
   kind: Secret
   metadata:
@@ -121,7 +115,8 @@ securityPolicies:
         issuer: "https://oauth.foo.com"
         authorizationEndpoint: "https://oauth.foo.com/oauth2/v2/auth"
         tokenEndpoint: "https://oauth.foo.com/token"
-      clientID: "client2.oauth.foo.com"
+      clientIDRef:
+        name: "client2-secret"
       clientSecret:
         name: "client2-secret"
       scopes: ["openid", "email", "profile"]

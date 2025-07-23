@@ -6,9 +6,11 @@
 package translator
 
 import (
+	"cmp"
 	"errors"
 	"fmt"
 	"runtime"
+	"slices"
 	"strings"
 	"time"
 
@@ -459,7 +461,21 @@ func (t *Translator) processHTTPListenerXdsTranslation(
 	for listenerName, ownerGatewayListeners := range ownerGatewayListeners {
 		xdsListener := findXdsListener(tCtx, listenerName)
 		if xdsListener != nil {
-			xdsListener.Metadata = buildXdsMetadataFromMultiple(ownerGatewayListeners.UnsortedList())
+			sortedListeners := ownerGatewayListeners.UnsortedList()
+			// Sort by name, namespace, and section name ascending
+			slices.SortFunc(sortedListeners, func(a, b *ir.ResourceMetadata) int {
+				if a == nil && b == nil {
+					return 0
+				}
+				if a == nil {
+					return -1
+				}
+				if b == nil {
+					return 1
+				}
+				return cmp.Compare(a.Name+a.Namespace+a.SectionName, b.Name+b.Namespace+b.SectionName)
+			})
+			xdsListener.Metadata = buildXdsMetadataFromMultiple(sortedListeners)
 		}
 	}
 	return errs
