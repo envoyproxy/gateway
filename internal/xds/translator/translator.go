@@ -65,8 +65,8 @@ type Translator struct {
 	// FilterOrder holds the custom order of the HTTP filters
 	FilterOrder []egv1a1.FilterPosition
 
-	// FeatureFlag holds the feature flags for the translator.
-	FeatureFlag *egv1a1.RuntimeFlags
+	// RuntimeFlag holds the feature flags for the translator.
+	RuntimeFlags *egv1a1.RuntimeFlags
 
 	Logger logging.Logger
 }
@@ -275,7 +275,7 @@ func (t *Translator) processHTTPListenerXdsTranslation(
 		)
 
 		// Search for an existing TCP listener on the same address + port combination.
-		tcpXDSListener = findXdsListenerByHostPort(tCtx, httpListener.Address, httpListener.Port, corev3.SocketAddress_TCP)
+		tcpXDSListener = findXdsListenerByHostPort(tCtx, httpListener.Address, httpListener.Port)
 		xdsListenerOnSameAddressPortExists = tcpXDSListener != nil
 		tlsEnabled = httpListener.TLS != nil
 
@@ -286,7 +286,7 @@ func (t *Translator) processHTTPListenerXdsTranslation(
 			if http3Enabled {
 				if quicXDSListener, err = buildXdsQuicListener(httpListener.Name, httpListener.Address,
 					httpListener.Port, httpListener.IPFamily, accessLog,
-					t.FeatureFlag.IsEnabled(egv1a1.UseAddressAsListenerName)); err != nil {
+					t.RuntimeFlags.IsEnabled(egv1a1.UseAddressAsListenerName)); err != nil {
 					errs = errors.Join(errs, err)
 					continue
 				}
@@ -302,7 +302,7 @@ func (t *Translator) processHTTPListenerXdsTranslation(
 			if tcpXDSListener, err = buildXdsTCPListener(
 				httpListener.Name, httpListener.Address, httpListener.Port, httpListener.IPFamily,
 				httpListener.TCPKeepalive, httpListener.Connection, accessLog,
-				t.FeatureFlag.IsEnabled(egv1a1.UseAddressAsListenerName)); err != nil {
+				t.RuntimeFlags.IsEnabled(egv1a1.UseAddressAsListenerName)); err != nil {
 				errs = errors.Join(errs, err)
 				continue
 			}
@@ -457,13 +457,9 @@ func (t *Translator) processHTTPListenerXdsTranslation(
 
 	// Add the owner Gateway Listeners to the xDS listeners' metadata.
 	for listenerName, ownerGatewayListeners := range ownerGatewayListeners {
-		xdsListener := findXdsListener(tCtx, listenerName, corev3.SocketAddress_TCP)
+		xdsListener := findXdsListener(tCtx, listenerName)
 		if xdsListener != nil {
 			xdsListener.Metadata = buildXdsMetadataFromMultiple(ownerGatewayListeners.UnsortedList())
-		}
-		quicXDSListener := findXdsListener(tCtx, quicXDSListenerName(listenerName), corev3.SocketAddress_UDP)
-		if quicXDSListener != nil {
-			quicXDSListener.Metadata = buildXdsMetadataFromMultiple(ownerGatewayListeners.UnsortedList())
 		}
 	}
 	return errs
@@ -719,12 +715,12 @@ func (t *Translator) processTCPListenerXdsTranslation(
 
 	for _, tcpListener := range tcpListeners {
 		// Search for an existing listener, if it does not exist, create one.
-		xdsListener := findXdsListenerByHostPort(tCtx, tcpListener.Address, tcpListener.Port, corev3.SocketAddress_TCP)
+		xdsListener := findXdsListenerByHostPort(tCtx, tcpListener.Address, tcpListener.Port)
 		if xdsListener == nil {
 			if xdsListener, err = buildXdsTCPListener(
 				tcpListener.Name, tcpListener.Address, tcpListener.Port, tcpListener.IPFamily,
 				tcpListener.TCPKeepalive, tcpListener.Connection, accesslog,
-				t.FeatureFlag.IsEnabled(egv1a1.UseAddressAsListenerName)); err != nil {
+				t.RuntimeFlags.IsEnabled(egv1a1.UseAddressAsListenerName)); err != nil {
 				// skip this listener if failed to build xds listener
 				errs = errors.Join(errs, err)
 				continue
@@ -845,7 +841,7 @@ func (t *Translator) processUDPListenerXdsTranslation(
 
 		xdsListener, err := buildXdsUDPListener(
 			udpListener.Route.Destination.Name, udpListener, accesslog,
-			t.FeatureFlag.IsEnabled(egv1a1.UseAddressAsListenerName))
+			t.RuntimeFlags.IsEnabled(egv1a1.UseAddressAsListenerName))
 		if err != nil {
 			// skip this listener if failed to build xds listener
 			errs = errors.Join(errs, err)
@@ -860,10 +856,8 @@ func (t *Translator) processUDPListenerXdsTranslation(
 	return errs
 }
 
-// findXdsListenerByHostPort finds a xds listener with the same address, port and protocol, and returns nil if there is no match.
-func findXdsListenerByHostPort(tCtx *types.ResourceVersionTable, address string, port uint32,
-	protocol corev3.SocketAddress_Protocol,
-) *listenerv3.Listener {
+// findXdsListenerByHostPort finds a xds listener with the same address and port, and returns nil if there is no match.
+func findXdsListenerByHostPort(tCtx *types.ResourceVersionTable, address string, port uint32) *listenerv3.Listener {
 	if tCtx == nil || tCtx.XdsResources == nil || tCtx.XdsResources[resourcev3.ListenerType] == nil {
 		return nil
 	}
@@ -871,8 +865,7 @@ func findXdsListenerByHostPort(tCtx *types.ResourceVersionTable, address string,
 	for _, r := range tCtx.XdsResources[resourcev3.ListenerType] {
 		listener := r.(*listenerv3.Listener)
 		addr := listener.GetAddress()
-		if addr.GetSocketAddress().GetPortValue() == port && addr.GetSocketAddress().Address == address && addr.
-			GetSocketAddress().Protocol == protocol {
+		if addr.GetSocketAddress().GetPortValue() == port && addr.GetSocketAddress().Address == address {
 			return listener
 		}
 	}
@@ -881,14 +874,14 @@ func findXdsListenerByHostPort(tCtx *types.ResourceVersionTable, address string,
 }
 
 // findXdsListener finds a xds listener with the same name and returns nil if there is no match.
-func findXdsListener(tCtx *types.ResourceVersionTable, name string, protocol corev3.SocketAddress_Protocol) *listenerv3.Listener {
+func findXdsListener(tCtx *types.ResourceVersionTable, name string) *listenerv3.Listener {
 	if tCtx == nil || tCtx.XdsResources == nil || tCtx.XdsResources[resourcev3.ListenerType] == nil {
 		return nil
 	}
 
 	for _, r := range tCtx.XdsResources[resourcev3.ListenerType] {
 		listener := r.(*listenerv3.Listener)
-		if listener.Name == name && listener.GetAddress().GetSocketAddress().Protocol == protocol {
+		if listener.Name == name {
 			return listener
 		}
 	}

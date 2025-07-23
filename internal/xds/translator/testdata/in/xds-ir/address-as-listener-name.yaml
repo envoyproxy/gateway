@@ -1,0 +1,214 @@
+http:
+- name: "envoy-gateway/gateway-1/http"
+  address: 0.0.0.0
+  port: 10080
+  hostnames:
+  - "foo.com"
+  metadata:
+    kind: Gateway
+    name: gateway-1
+    namespace: envoy-gateway
+    sectionName: http
+  path:
+    mergeSlashes: true
+    escapedSlashesAction: UnescapeAndRedirect
+  tls:
+    alpnProtocols:
+    - h2
+    - http/1.1
+    certificates:
+    - name: first-listener
+      # byte slice representation of "cert-data"
+      certificate: [99, 101, 114, 116, 45, 100, 97, 116, 97]
+      # byte slice representation of "key-data"
+      privateKey: [107, 101, 121, 45, 100, 97, 116, 97]
+  routes:
+  - name: "first-route"
+    hostname: "*"
+    destination:
+      name: "first-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
+        name: "first-route-dest/backend/0"
+- name: "envoy-gateway/gateway-1/http-ipv6"
+  address: "::"
+  port: 10080
+  hostnames:
+  - "foo.net"
+  path:
+    mergeSlashes: true
+    escapedSlashesAction: UnescapeAndRedirect
+  tls:
+    alpnProtocols:
+    - h2
+    - http/1.1
+    certificates:
+    - name: second-listener
+      # byte slice representation of "cert-data"
+      certificate: [99, 101, 114, 116, 45, 100, 97, 116, 97]
+      # byte slice representation of "key-data"
+      privateKey: [107, 101, 121, 45, 100, 97, 116, 97]
+  routes:
+  - name: "second-route"
+    hostname: "*"
+    destination:
+      name: "second-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
+        name: "second-route-dest/backend/0"
+- name: envoy-gateway/gateway-1/https-http3
+  address: 0.0.0.0
+  hostnames:
+  - '*'
+  http3:
+    quicPort: 443
+  isHTTP2: false
+  metadata:
+    kind: Gateway
+    name: gateway-1
+    namespace: envoy-gateway
+    sectionName: https
+  path:
+    escapedSlashesAction: UnescapeAndRedirect
+    mergeSlashes: true
+  port: 10443
+  routes:
+  - destination:
+      metadata:
+        kind: HTTPRoute
+        name: httproute-1
+        namespace: default
+      name: httproute/default/httproute-1/rule/0
+      settings:
+      - addressType: IP
+        endpoints:
+        - host: 7.7.7.7
+          port: 8080
+        metadata:
+          name: service-1
+          namespace: default
+          sectionName: "8080"
+        name: httproute/default/httproute-1/rule/0/backend/0
+        protocol: HTTP
+        weight: 1
+    hostname: '*'
+    isHTTP2: false
+    metadata:
+      kind: HTTPRoute
+      name: httproute-1
+      namespace: default
+    name: httproute/default/httproute-1/rule/0/match/0/*
+    pathMatch:
+      distinct: false
+      name: ""
+      prefix: /
+  tls:
+    alpnProtocols: null
+    certificates:
+    - certificate: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUREVENDQWZXZ0F3SUJBZ0lVRUZNaFA5ZUo5WEFCV3NRNVptNmJSazJjTE5Rd0RRWUpLb1pJaHZjTkFRRUwKQlFBd0ZqRVVNQklHQTFVRUF3d0xabTl2TG1KaGNpNWpiMjB3SGhjTk1qUXdNakk1TURrek1ERXdXaGNOTXpRdwpNakkyTURrek1ERXdXakFXTVJRd0VnWURWUVFEREF0bWIyOHVZbUZ5TG1OdmJUQ0NBU0l3RFFZSktvWklodmNOCkFRRUJCUUFEZ2dFUEFEQ0NBUW9DZ2dFQkFKbEk2WXhFOVprQ1BzNnBDUXhickNtZWl4OVA1RGZ4OVJ1NUxENFQKSm1kVzdJS2R0UVYvd2ZMbXRzdTc2QithVGRDaldlMEJUZmVPT1JCYlIzY1BBRzZFbFFMaWNsUVVydW4zcStncwpKcEsrSTdjSStqNXc4STY4WEg1V1E3clZVdGJ3SHBxYncrY1ZuQnFJVU9MaUlhdGpJZjdLWDUxTTF1RjljZkVICkU0RG5jSDZyYnI1OS9SRlpCc2toeHM1T3p3Sklmb2hreXZGd2V1VHd4Sy9WcGpJKzdPYzQ4QUJDWHBOTzlEL3EKRWgrck9hdWpBTWNYZ0hRSVRrQ2lpVVRjVW82TFNIOXZMWlB0YXFmem9acTZuaE1xcFc2NUUxcEF3RjNqeVRUeAphNUk4SmNmU0Zqa2llWjIwTFVRTW43TThVNHhIamFvL2d2SDBDQWZkQjdSTFUyc0NBd0VBQWFOVE1GRXdIUVlEClZSME9CQllFRk9SQ0U4dS8xRERXN2loWnA3Y3g5dFNtUG02T01COEdBMVVkSXdRWU1CYUFGT1JDRTh1LzFERFcKN2loWnA3Y3g5dFNtUG02T01BOEdBMVVkRXdFQi93UUZNQU1CQWY4d0RRWUpLb1pJaHZjTkFRRUxCUUFEZ2dFQgpBRnQ1M3pqc3FUYUg1YThFMmNodm1XQWdDcnhSSzhiVkxNeGl3TkdqYm1FUFJ6K3c2TngrazBBOEtFY0lEc0tjClNYY2k1OHU0b1didFZKQmx6YS9adWpIUjZQMUJuT3BsK2FveTc4NGJiZDRQMzl3VExvWGZNZmJCQ20xdmV2aDkKQUpLbncyWnRxcjRta2JMY3hFcWxxM3NCTEZBUzlzUUxuS05DZTJjR0xkVHAyYm9HK3FjZ3lRZ0NJTTZmOEVNdgpXUGlmQ01NR3V6Sy9HUkY0YlBPL1lGNDhld0R1M1VlaWgwWFhkVUFPRTlDdFVhOE5JaGMxVVBhT3pQcnRZVnFyClpPR2t2L0t1K0I3OGg4U0VzTzlYclFjdXdiT25KeDZLdFIrYWV5a3ZBcFhDUTNmWkMvYllLQUFSK1A4QUpvUVoKYndJVW1YaTRnajVtK2JLUGhlK2lyK0U9Ci0tLS0tRU5EIENFUlRJRklDQVRFLS0tLS0=
+      name: envoy-gateway/tls-secret-1
+      privateKey: '[redacted]'
+    maxVersion: "1.3"
+    minVersion: "1.2"
+tcp:
+- name: "envoy-gateway/gateway-1/tls"
+  address: 0.0.0.0
+  port: 10090
+  routes:
+  - destination:
+      metadata:
+        kind: TLSRoute
+        name: tlsroute-1
+        namespace: default
+      name: tlsroute/default/tlsroute-1/rule/-1
+      settings:
+      - addressType: IP
+        endpoints:
+        - host: 7.7.7.7
+          port: 8080
+        metadata:
+          name: service-1
+          namespace: default
+          sectionName: "8080"
+        name: tlsroute/default/tlsroute-1/rule/-1/backend/0
+        protocol: HTTPS
+        weight: 1
+    name: tlsroute/default/tlsroute-1
+    tls:
+      inspector:
+        snis:
+        - foo.com
+  - destination:
+      metadata:
+        kind: TLSRoute
+        name: tlsroute-2
+        namespace: default
+      name: tlsroute/default/tlsroute-2/rule/-1
+      settings:
+      - addressType: IP
+        endpoints:
+        - host: 7.7.7.7
+          port: 8080
+        metadata:
+          name: service-1
+          namespace: default
+          sectionName: "8080"
+        name: tlsroute/default/tlsroute-2/rule/-1/backend/0
+        protocol: HTTPS
+        weight: 1
+    name: tlsroute/default/tlsroute-2
+    tls:
+      inspector:
+        snis:
+        - bar.com
+- name: envoy-gateway/gateway-1/tcp
+  address: 0.0.0.0
+  port: 10091
+  routes:
+  - destination:
+      metadata:
+        kind: TCPRoute
+        name: tcproute-1
+        namespace: default
+      name: tcproute/default/tcproute
+      settings:
+      - addressType: IP
+        endpoints:
+        - host: 1.1.1.1
+          port: 3001
+        metadata:
+          kind: Backend
+          name: backend-ip
+          namespace: default
+        name: tcproute/default/tcprou
+        protocol: TCP
+        weight: 1
+    name: tcproute/default/tcproute-1
+udp:
+- name: envoy-gateway/gateway-1/udp
+  address: 0.0.0.0
+  port: 10090
+  route:
+    destination:
+      metadata:
+        kind: UDPRoute
+        name: udproute-1
+        namespace: default
+      name: udproute/default/udproute
+      settings:
+      - addressType: IP
+        endpoints:
+        - host: 1.1.1.1
+          port: 3001
+        metadata:
+          kind: Backend
+          name: backend-ip
+          namespace: default
+        name: udproute/default/udprou
+        protocol: UDP
+        weight: 1
+    name: udproute/default/udproute-1

@@ -203,7 +203,7 @@ func buildXdsTCPListener(
 	bufferLimitBytes := buildPerConnectionBufferLimitBytes(connection)
 	maxAcceptPerSocketEvent := buildMaxAcceptPerSocketEvent(connection)
 	listener := &listenerv3.Listener{
-		Name:                                 xdsListenerName(name, address, port, useAddressAsListenerName),
+		Name:                                 xdsListenerName(name, address, port, ir.TCPProtocolType, useAddressAsListenerName),
 		AccessLog:                            al,
 		SocketOptions:                        socketOptions,
 		PerConnectionBufferLimitBytes:        bufferLimitBytes,
@@ -229,16 +229,16 @@ func buildXdsTCPListener(
 	return listener, nil
 }
 
-func xdsListenerName(name, address string, port uint32, useAddressAsListenerName bool) string {
+func xdsListenerName(name, address string, port uint32, protocol ir.ProtocolType, useAddressAsListenerName bool) string {
 	if useAddressAsListenerName {
-		return fmt.Sprintf("%s-%d", address, port)
+		protocolType := "tcp"
+		if protocol == ir.UDPProtocolType {
+			protocolType = "udp"
+		}
+		return fmt.Sprintf("%s-%s-%d", protocolType, address, port)
 	}
 
 	return name
-}
-
-func quicXDSListenerName(tcpListenerName string) string {
-	return fmt.Sprintf("%s-quic", tcpListenerName)
 }
 
 func buildPerConnectionBufferLimitBytes(connection *ir.ClientConnection) *wrapperspb.UInt32Value {
@@ -271,8 +271,12 @@ func buildXdsQuicListener(
 	if err != nil {
 		return nil, err
 	}
+	listenerName := name + "-quic"
+	if useAddressAsListenerName {
+		listenerName = xdsListenerName(name, address, port, ir.UDPProtocolType, true)
+	}
 	xdsListener := &listenerv3.Listener{
-		Name:      quicXDSListenerName(xdsListenerName(name, address, port, useAddressAsListenerName)),
+		Name:      listenerName,
 		AccessLog: log,
 		Address: &corev3.Address{
 			Address: &corev3.Address_SocketAddress{
@@ -994,7 +998,7 @@ func buildXdsUDPListener(
 		return nil, err
 	}
 	xdsListener := &listenerv3.Listener{
-		Name:      xdsListenerName(udpListener.Name, udpListener.Address, udpListener.Port, useAddressAsListenerName),
+		Name:      xdsListenerName(udpListener.Name, udpListener.Address, udpListener.Port, ir.UDPProtocolType, useAddressAsListenerName),
 		AccessLog: al,
 		Address: &corev3.Address{
 			Address: &corev3.Address_SocketAddress{

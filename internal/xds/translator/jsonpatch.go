@@ -11,7 +11,6 @@ import (
 	"strings"
 
 	clusterv3 "github.com/envoyproxy/go-control-plane/envoy/config/cluster/v3"
-	corev3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	endpointv3 "github.com/envoyproxy/go-control-plane/envoy/config/endpoint/v3"
 	listenerv3 "github.com/envoyproxy/go-control-plane/envoy/config/listener/v3"
 	routev3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
@@ -159,7 +158,7 @@ func processJSONPatches(tCtx *types.ResourceVersionTable, envoyPatchPolicies []*
 			// Find the resource to patch and convert it to JSON
 			switch p.Type {
 			case resourcev3.ListenerType:
-				if listener = findXdsListener(tCtx, p.Name, corev3.SocketAddress_TCP); listener == nil {
+				if listener = findXdsListener(tCtx, p.Name); listener == nil {
 					tn := typedName{p.Type, p.Name}
 					notFoundResources = append(notFoundResources, tn.String())
 					continue
