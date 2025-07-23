@@ -62,6 +62,7 @@ http:
         retryOn:
           triggers:
           - reset
+          - reset-before-request
           - connect-failure
     destination:
       name: "first-route-dest"

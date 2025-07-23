@@ -1,0 +1,399 @@
+gateways:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: Gateway
+  metadata:
+    creationTimestamp: null
+    name: gateway-1
+    namespace: envoy-gateway
+  spec:
+    gatewayClassName: envoy-gateway-class
+    listeners:
+    - allowedRoutes:
+        namespaces:
+          from: All
+      hostname: '*.envoyproxy.io'
+      name: http
+      port: 80
+      protocol: HTTP
+  status:
+    listeners:
+    - attachedRoutes: 4
+      conditions:
+      - lastTransitionTime: null
+        message: Sending translated listener configuration to the data plane
+        reason: Programmed
+        status: "True"
+        type: Programmed
+      - lastTransitionTime: null
+        message: Listener has been successfully translated
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Listener references have been resolved
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      name: http
+      supportedKinds:
+      - group: gateway.networking.k8s.io
+        kind: HTTPRoute
+      - group: gateway.networking.k8s.io
+        kind: GRPCRoute
+httpRoutes:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    creationTimestamp: "2025-04-04T20:47:53Z"
+    name: httproute-4
+    namespace: test-ns2
+  spec:
+    hostnames:
+    - gateway.envoyproxy.io
+    parentRefs:
+    - name: gateway-1
+      namespace: envoy-gateway
+      sectionName: http
+    rules:
+    - backendRefs:
+      - name: test-service
+        port: 8080
+      matches:
+      - path:
+          type: PathPrefix
+          value: /route4
+  status:
+    parents:
+    - conditions:
+      - lastTransitionTime: null
+        message: Route is accepted
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Resolved all the Object references for the Route
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+      parentRef:
+        name: gateway-1
+        namespace: envoy-gateway
+        sectionName: http
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    creationTimestamp: "2025-07-01T20:47:53Z"
+    name: httproute-3
+    namespace: default
+  spec:
+    hostnames:
+    - gateway.envoyproxy.io
+    parentRefs:
+    - name: gateway-1
+      namespace: envoy-gateway
+      sectionName: http
+    rules:
+    - backendRefs:
+      - name: service-1
+        port: 8080
+      matches:
+      - path:
+          type: PathPrefix
+          value: /route3
+  status:
+    parents:
+    - conditions:
+      - lastTransitionTime: null
+        message: Route is accepted
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Resolved all the Object references for the Route
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+      parentRef:
+        name: gateway-1
+        namespace: envoy-gateway
+        sectionName: http
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    creationTimestamp: "2025-07-02T10:47:53Z"
+    name: httproute-1
+    namespace: default
+  spec:
+    hostnames:
+    - gateway.envoyproxy.io
+    parentRefs:
+    - name: gateway-1
+      namespace: envoy-gateway
+      sectionName: http
+    rules:
+    - backendRefs:
+      - name: service-1
+        port: 8080
+      matches:
+      - path:
+          type: PathPrefix
+          value: /route1
+    - backendRefs:
+      - name: service-2
+        port: 8080
+      matches:
+      - path:
+          type: PathPrefix
+          value: /foobar
+  status:
+    parents:
+    - conditions:
+      - lastTransitionTime: null
+        message: Route is accepted
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Resolved all the Object references for the Route
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+      parentRef:
+        name: gateway-1
+        namespace: envoy-gateway
+        sectionName: http
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    creationTimestamp: "2025-07-03T20:47:53Z"
+    name: httproute-2
+    namespace: test-ns
+  spec:
+    hostnames:
+    - gateway.envoyproxy.io
+    parentRefs:
+    - name: gateway-1
+      namespace: envoy-gateway
+      sectionName: http
+    rules:
+    - backendRefs:
+      - name: test-service
+        port: 8080
+      matches:
+      - path:
+          type: PathPrefix
+          value: /route2
+  status:
+    parents:
+    - conditions:
+      - lastTransitionTime: null
+        message: Route is accepted
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Resolved all the Object references for the Route
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+      parentRef:
+        name: gateway-1
+        namespace: envoy-gateway
+        sectionName: http
+infraIR:
+  envoy-gateway/gateway-1:
+    proxy:
+      listeners:
+      - address: null
+        name: envoy-gateway/gateway-1/http
+        ports:
+        - containerPort: 10080
+          name: http-80
+          protocol: HTTP
+          servicePort: 80
+      metadata:
+        labels:
+          gateway.envoyproxy.io/owning-gateway-name: gateway-1
+          gateway.envoyproxy.io/owning-gateway-namespace: envoy-gateway
+        ownerReference:
+          kind: GatewayClass
+          name: envoy-gateway-class
+      name: envoy-gateway/gateway-1
+      namespace: envoy-gateway-system
+xdsIR:
+  envoy-gateway/gateway-1:
+    accessLog:
+      json:
+      - path: /dev/stdout
+    http:
+    - address: 0.0.0.0
+      hostnames:
+      - '*.envoyproxy.io'
+      isHTTP2: false
+      metadata:
+        kind: Gateway
+        name: gateway-1
+        namespace: envoy-gateway
+        sectionName: http
+      name: envoy-gateway/gateway-1/http
+      path:
+        escapedSlashesAction: UnescapeAndRedirect
+        mergeSlashes: true
+      port: 10080
+      routes:
+      - destination:
+          metadata:
+            kind: HTTPRoute
+            name: httproute-4
+            namespace: test-ns2
+          name: httproute/test-ns2/httproute-4/rule/0
+          settings:
+          - addressType: IP
+            endpoints:
+            - host: 8.8.8.8
+              port: 8080
+            metadata:
+              kind: Service
+              name: test-service
+              namespace: test-ns2
+              sectionName: "8080"
+            name: httproute/test-ns2/httproute-4/rule/0/backend/0
+            protocol: HTTP
+            weight: 1
+        hostname: gateway.envoyproxy.io
+        isHTTP2: false
+        metadata:
+          kind: HTTPRoute
+          name: httproute-4
+          namespace: test-ns2
+        name: httproute/test-ns2/httproute-4/rule/0/match/0/gateway_envoyproxy_io
+        pathMatch:
+          distinct: false
+          name: ""
+          prefix: /route4
+      - destination:
+          metadata:
+            kind: HTTPRoute
+            name: httproute-3
+            namespace: default
+          name: httproute/default/httproute-3/rule/0
+          settings:
+          - addressType: IP
+            endpoints:
+            - host: 7.7.7.7
+              port: 8080
+            metadata:
+              name: service-1
+              namespace: default
+              sectionName: "8080"
+            name: httproute/default/httproute-3/rule/0/backend/0
+            protocol: HTTP
+            weight: 1
+        hostname: gateway.envoyproxy.io
+        isHTTP2: false
+        metadata:
+          kind: HTTPRoute
+          name: httproute-3
+          namespace: default
+        name: httproute/default/httproute-3/rule/0/match/0/gateway_envoyproxy_io
+        pathMatch:
+          distinct: false
+          name: ""
+          prefix: /route3
+      - destination:
+          metadata:
+            kind: HTTPRoute
+            name: httproute-1
+            namespace: default
+          name: httproute/default/httproute-1/rule/0
+          settings:
+          - addressType: IP
+            endpoints:
+            - host: 7.7.7.7
+              port: 8080
+            metadata:
+              name: service-1
+              namespace: default
+              sectionName: "8080"
+            name: httproute/default/httproute-1/rule/0/backend/0
+            protocol: HTTP
+            weight: 1
+        hostname: gateway.envoyproxy.io
+        isHTTP2: false
+        metadata:
+          kind: HTTPRoute
+          name: httproute-1
+          namespace: default
+        name: httproute/default/httproute-1/rule/0/match/0/gateway_envoyproxy_io
+        pathMatch:
+          distinct: false
+          name: ""
+          prefix: /route1
+      - destination:
+          metadata:
+            kind: HTTPRoute
+            name: httproute-1
+            namespace: default
+          name: httproute/default/httproute-1/rule/1
+          settings:
+          - addressType: IP
+            endpoints:
+            - host: 7.7.7.7
+              port: 8080
+            metadata:
+              name: service-2
+              namespace: default
+              sectionName: "8080"
+            name: httproute/default/httproute-1/rule/1/backend/0
+            protocol: HTTP
+            weight: 1
+        hostname: gateway.envoyproxy.io
+        isHTTP2: false
+        metadata:
+          kind: HTTPRoute
+          name: httproute-1
+          namespace: default
+        name: httproute/default/httproute-1/rule/1/match/0/gateway_envoyproxy_io
+        pathMatch:
+          distinct: false
+          name: ""
+          prefix: /foobar
+      - destination:
+          metadata:
+            kind: HTTPRoute
+            name: httproute-2
+            namespace: test-ns
+          name: httproute/test-ns/httproute-2/rule/0
+          settings:
+          - addressType: IP
+            endpoints:
+            - host: 8.8.8.8
+              port: 8080
+            metadata:
+              kind: Service
+              name: test-service
+              namespace: test-ns
+              sectionName: "8080"
+            name: httproute/test-ns/httproute-2/rule/0/backend/0
+            protocol: HTTP
+            weight: 1
+        hostname: gateway.envoyproxy.io
+        isHTTP2: false
+        metadata:
+          kind: HTTPRoute
+          name: httproute-2
+          namespace: test-ns
+        name: httproute/test-ns/httproute-2/rule/0/match/0/gateway_envoyproxy_io
+        pathMatch:
+          distinct: false
+          name: ""
+          prefix: /route2
+    readyListener:
+      address: 0.0.0.0
+      ipFamily: IPv4
+      path: /ready
+      port: 19003

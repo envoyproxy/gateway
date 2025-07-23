@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/telepresenceio/watchable"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
@@ -68,6 +69,7 @@ type gatewayAPIReconciler struct {
 	envoyGateway         *egv1a1.EnvoyGateway
 	mergeGateways        sets.Set[string]
 	resources            *message.ProviderResources
+	subscriptions        *subscriptions
 	extGVKs              []schema.GroupVersionKind
 	extServerPolicies    []schema.GroupVersionKind
 	extBackendGVKs       []schema.GroupVersionKind
@@ -87,6 +89,24 @@ type gatewayAPIReconciler struct {
 	tcpRouteCRDExists      bool
 	tlsRouteCRDExists      bool
 	udpRouteCRDExists      bool
+}
+
+type subscriptions struct {
+	gatewayClassStatuses         <-chan watchable.Snapshot[types.NamespacedName, *gwapiv1.GatewayClassStatus]
+	gatewayStatuses              <-chan watchable.Snapshot[types.NamespacedName, *gwapiv1.GatewayStatus]
+	httpRouteStatuses            <-chan watchable.Snapshot[types.NamespacedName, *gwapiv1.HTTPRouteStatus]
+	grpcRouteStatuses            <-chan watchable.Snapshot[types.NamespacedName, *gwapiv1.GRPCRouteStatus]
+	tlsRouteStatuses             <-chan watchable.Snapshot[types.NamespacedName, *gwapiv1a2.TLSRouteStatus]
+	tcpRouteStatuses             <-chan watchable.Snapshot[types.NamespacedName, *gwapiv1a2.TCPRouteStatus]
+	udpRouteStatuses             <-chan watchable.Snapshot[types.NamespacedName, *gwapiv1a2.UDPRouteStatus]
+	backendTLSPolicyStatuses     <-chan watchable.Snapshot[types.NamespacedName, *gwapiv1a2.PolicyStatus]
+	backendTrafficPolicyStatuses <-chan watchable.Snapshot[types.NamespacedName, *gwapiv1a2.PolicyStatus]
+	envoyExtensionPolicyStatuses <-chan watchable.Snapshot[types.NamespacedName, *gwapiv1a2.PolicyStatus]
+	envoyPatchPolicyStatuses     <-chan watchable.Snapshot[types.NamespacedName, *gwapiv1a2.PolicyStatus]
+	clientTrafficPolicyStatuses  <-chan watchable.Snapshot[types.NamespacedName, *gwapiv1a2.PolicyStatus]
+	securityPolicyStatuses       <-chan watchable.Snapshot[types.NamespacedName, *gwapiv1a2.PolicyStatus]
+	backendStatuses              <-chan watchable.Snapshot[types.NamespacedName, *egv1a1.BackendStatus]
+	extensionPolicyStatuses      <-chan watchable.Snapshot[message.NamespacedNameAndGVK, *gwapiv1a2.PolicyStatus]
 }
 
 // newGatewayAPIController
@@ -119,6 +139,7 @@ func newGatewayAPIController(ctx context.Context, mgr manager.Manager, cfg *conf
 		namespace:            cfg.ControllerNamespace,
 		statusUpdater:        su,
 		resources:            resources,
+		subscriptions:        &subscriptions{},
 		extGVKs:              extGVKs,
 		store:                newProviderStore(),
 		envoyGateway:         cfg.EnvoyGateway,
@@ -155,6 +176,10 @@ func newGatewayAPIController(ctx context.Context, mgr manager.Manager, cfg *conf
 		return fmt.Errorf("error watching resources: %w", err)
 	}
 
+	// Do not call .Subscribe() inside Goroutine since it is supposed to be called from the same
+	// Goroutine where Close() is called.
+	r.subscribeToResources(ctx)
+
 	// When leader election is enabled, only subscribe to status updates upon acquiring leadership.
 	if cfg.EnvoyGateway.Provider.Type == egv1a1.ProviderTypeKubernetes &&
 		!ptr.Deref(cfg.EnvoyGateway.Provider.Kubernetes.LeaderElection.Disable, false) {
@@ -170,6 +195,25 @@ func newGatewayAPIController(ctx context.Context, mgr manager.Manager, cfg *conf
 		r.subscribeAndUpdateStatus(ctx, cfg.EnvoyGateway.ExtensionManager != nil)
 	}
 	return nil
+}
+
+func (r *gatewayAPIReconciler) subscribeToResources(ctx context.Context) {
+	// Subscribe to all resources.
+	r.subscriptions.gatewayClassStatuses = r.resources.GatewayClassStatuses.Subscribe(ctx)
+	r.subscriptions.gatewayStatuses = r.resources.GatewayStatuses.Subscribe(ctx)
+	r.subscriptions.httpRouteStatuses = r.resources.HTTPRouteStatuses.Subscribe(ctx)
+	r.subscriptions.grpcRouteStatuses = r.resources.GRPCRouteStatuses.Subscribe(ctx)
+	r.subscriptions.tlsRouteStatuses = r.resources.TLSRouteStatuses.Subscribe(ctx)
+	r.subscriptions.tcpRouteStatuses = r.resources.TCPRouteStatuses.Subscribe(ctx)
+	r.subscriptions.udpRouteStatuses = r.resources.UDPRouteStatuses.Subscribe(ctx)
+	r.subscriptions.backendTLSPolicyStatuses = r.resources.BackendTLSPolicyStatuses.Subscribe(ctx)
+	r.subscriptions.backendTrafficPolicyStatuses = r.resources.BackendTrafficPolicyStatuses.Subscribe(ctx)
+	r.subscriptions.envoyExtensionPolicyStatuses = r.resources.EnvoyExtensionPolicyStatuses.Subscribe(ctx)
+	r.subscriptions.envoyPatchPolicyStatuses = r.resources.EnvoyPatchPolicyStatuses.Subscribe(ctx)
+	r.subscriptions.clientTrafficPolicyStatuses = r.resources.ClientTrafficPolicyStatuses.Subscribe(ctx)
+	r.subscriptions.securityPolicyStatuses = r.resources.SecurityPolicyStatuses.Subscribe(ctx)
+	r.subscriptions.backendStatuses = r.resources.BackendStatuses.Subscribe(ctx)
+	r.subscriptions.extensionPolicyStatuses = r.resources.ExtensionPolicyStatuses.Subscribe(ctx)
 }
 
 func byNamespaceSelectorEnabled(eg *egv1a1.EnvoyGateway) bool {
@@ -247,14 +291,18 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 					return reconcile.Result{}, err
 				}
 
-				r.log.Error(err, fmt.Sprintf("failed processGatewayClassParamsRef for gatewayClass %s, skipping it", managedGC.Name))
+				r.log.Error(err, fmt.Sprintf("failed processGatewayClassParamsRef for gatewayClass %s", managedGC.Name))
 				msg := fmt.Sprintf("%s: %v", status.MsgGatewayClassInvalidParams, err)
 				gc := status.SetGatewayClassAccepted(
 					managedGC.DeepCopy(),
 					false,
 					string(gwapiv1.GatewayClassReasonInvalidParameters),
 					msg)
-				r.resources.GatewayClassStatuses.Store(utils.NamespacedName(gc), &gc.Status)
+				message.HandleStore(message.Metadata{
+					Runner:  string(egv1a1.LogComponentProviderRunner),
+					Message: message.GatewayClassStatusMessageName,
+				},
+					utils.NamespacedName(gc), &gc.Status, &r.resources.GatewayClassStatuses)
 				failToProcessGCParamsRef = true
 			}
 		}
@@ -266,13 +314,17 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 				return reconcile.Result{}, err
 			}
 
-			r.log.Error(err, fmt.Sprintf("failed process TLS SecretRef for EnvoyProxy for gatewayClass %s, skipping it", managedGC.Name))
+			r.log.Error(err, fmt.Sprintf("failed process TLS SecretRef for EnvoyProxy for gatewayClass %s", managedGC.Name))
 			gc := status.SetGatewayClassAccepted(
 				managedGC.DeepCopy(),
 				false,
 				string(gwapiv1.GatewayClassReasonAccepted),
 				fmt.Sprintf("%s: %v", status.MsgGatewayClassInvalidParams, err))
-			r.resources.GatewayClassStatuses.Store(utils.NamespacedName(gc), &gc.Status)
+			message.HandleStore(message.Metadata{
+				Runner:  string(egv1a1.LogComponentProviderRunner),
+				Message: message.GatewayClassStatusMessageName,
+			},
+				utils.NamespacedName(gc), &gc.Status, &r.resources.GatewayClassStatuses)
 			failToProcessGCParamsRef = true
 		}
 
@@ -295,7 +347,7 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 				r.log.Error(err, "transient error processing OIDC HMAC Secret", "gatewayClass", managedGC.Name)
 				return reconcile.Result{}, err
 			}
-			r.log.Error(err, fmt.Sprintf("failed processOIDCHMACSecret for gatewayClass %s, skipping it", managedGC.Name))
+			r.log.Error(err, fmt.Sprintf("failed processOIDCHMACSecret for gatewayClass %s", managedGC.Name))
 		}
 
 		// add the Envoy TLS Secret to the resourceTree
@@ -304,7 +356,7 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 				r.log.Error(err, "transient error processing Envoy TLS Secret", "gatewayClass", managedGC.Name)
 				return reconcile.Result{}, err
 			}
-			r.log.Error(err, fmt.Sprintf("failed processEnvoyTLSSecret for gatewayClass %s, skipping it", managedGC.Name))
+			r.log.Error(err, fmt.Sprintf("failed processEnvoyTLSSecret for gatewayClass %s", managedGC.Name))
 		}
 
 		// Add all Gateways, their associated Routes, and referenced resources to the resourceTree
@@ -313,7 +365,7 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 				r.log.Error(err, "transient error processing gateways", "gatewayClass", managedGC.Name)
 				return reconcile.Result{}, err
 			}
-			r.log.Error(err, fmt.Sprintf("failed processGateways for gatewayClass %s, skipping it", managedGC.Name))
+			r.log.Error(err, fmt.Sprintf("failed processGateways for gatewayClass %s", managedGC.Name))
 		}
 
 		if r.eppCRDExists {
@@ -323,7 +375,7 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 					r.log.Error(err, "transient error processing EnvoyPatchPolicies", "gatewayClass", managedGC.Name)
 					return reconcile.Result{}, err
 				}
-				r.log.Error(err, fmt.Sprintf("failed processEnvoyPatchPolicies for gatewayClass %s, skipping it", managedGC.Name))
+				r.log.Error(err, fmt.Sprintf("failed processEnvoyPatchPolicies for gatewayClass %s", managedGC.Name))
 			}
 		}
 
@@ -334,7 +386,7 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 					r.log.Error(err, "transient error processing ClientTrafficPolicies", "gatewayClass", managedGC.Name)
 					return reconcile.Result{}, err
 				}
-				r.log.Error(err, fmt.Sprintf("failed processClientTrafficPolicies for gatewayClass %s, skipping it", managedGC.Name))
+				r.log.Error(err, fmt.Sprintf("failed processClientTrafficPolicies for gatewayClass %s", managedGC.Name))
 			}
 		}
 
@@ -345,7 +397,7 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 					r.log.Error(err, "transient error processing BackendTrafficPolicies", "gatewayClass", managedGC.Name)
 					return reconcile.Result{}, err
 				}
-				r.log.Error(err, fmt.Sprintf("failed processBackendTrafficPolicies for gatewayClass %s, skipping it", managedGC.Name))
+				r.log.Error(err, fmt.Sprintf("failed processBackendTrafficPolicies for gatewayClass %s", managedGC.Name))
 			}
 		}
 
@@ -356,7 +408,7 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 					r.log.Error(err, "transient error processing SecurityPolicies", "gatewayClass", managedGC.Name)
 					return reconcile.Result{}, err
 				}
-				r.log.Error(err, fmt.Sprintf("failed processSecurityPolicies for gatewayClass %s, skipping it", managedGC.Name))
+				r.log.Error(err, fmt.Sprintf("failed processSecurityPolicies for gatewayClass %s", managedGC.Name))
 			}
 		}
 
@@ -367,7 +419,7 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 					r.log.Error(err, "transient error processing BackendTLSPolicies", "gatewayClass", managedGC.Name)
 					return reconcile.Result{}, err
 				}
-				r.log.Error(err, fmt.Sprintf("failed processBackendTLSPolicies for gatewayClass %s, skipping it", managedGC.Name))
+				r.log.Error(err, fmt.Sprintf("failed processBackendTLSPolicies for gatewayClass %s", managedGC.Name))
 			}
 		}
 
@@ -378,7 +430,7 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 					r.log.Error(err, "transient error processing EnvoyExtensionPolicies", "gatewayClass", managedGC.Name)
 					return reconcile.Result{}, err
 				}
-				r.log.Error(err, fmt.Sprintf("failed processEnvoyExtensionPolicies for gatewayClass %s, skipping it", managedGC.Name))
+				r.log.Error(err, fmt.Sprintf("failed processEnvoyExtensionPolicies for gatewayClass %s", managedGC.Name))
 			}
 		}
 
@@ -387,17 +439,7 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 				r.log.Error(err, "transient error processing ExtensionServerPolicies", "gatewayClass", managedGC.Name)
 				return reconcile.Result{}, err
 			}
-			r.log.Error(err, fmt.Sprintf("failed processExtensionServerPolicies for gatewayClass %s, skipping it", managedGC.Name))
-		}
-
-		if r.backendCRDExists {
-			if err = r.processBackends(ctx, gwcResource); err != nil {
-				if isTransientError(err) {
-					r.log.Error(err, "transient error processing Backends", "gatewayClass", managedGC.Name)
-					return reconcile.Result{}, err
-				}
-				r.log.Error(err, fmt.Sprintf("failed processBackends for gatewayClass %s, skipping it", managedGC.Name))
-			}
+			r.log.Error(err, fmt.Sprintf("failed processExtensionServerPolicies for gatewayClass %s", managedGC.Name))
 		}
 
 		// Add the referenced services, ServiceImports, and EndpointSlices in
@@ -409,7 +451,7 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 				return reconcile.Result{}, err
 			}
 
-			r.log.Error(err, fmt.Sprintf("failed  processBackendRefs for gatewayClass %s, skipping it", managedGC.Name))
+			r.log.Error(err, fmt.Sprintf("failed  processBackendRefs for gatewayClass %s", managedGC.Name))
 		}
 
 		// For this particular Gateway, and all associated objects, check whether the
@@ -468,7 +510,11 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 	// The Store is triggered even when there are no Gateways associated to the
 	// GatewayClass. This would happen in case the last Gateway is removed and the
 	// Store will be required to trigger a cleanup of envoy infra resources.
-	r.resources.GatewayAPIResources.Store(string(r.classController), &gwcResources)
+	message.HandleStore(message.Metadata{
+		Runner:  string(egv1a1.LogComponentProviderRunner),
+		Message: message.ProviderResourcesMessageName,
+	},
+		string(r.classController), &gwcResources, &r.resources.GatewayAPIResources)
 
 	r.log.Info("reconciled gateways successfully")
 	return reconcile.Result{}, nil
@@ -578,13 +624,18 @@ func (r *gatewayAPIReconciler) processBackendRefs(ctx context.Context, gwcResour
 			endpointSliceLabelKey = mcsapiv1a1.LabelServiceName
 
 		case egv1a1.KindBackend:
+			if !r.backendCRDExists {
+				r.log.V(6).Info("skipping Backend processing as Backend CRD is not installed")
+				continue
+			}
 			backend := new(egv1a1.Backend)
 			err := r.client.Get(ctx, types.NamespacedName{Namespace: string(*backendRef.Namespace), Name: string(backendRef.Name)}, backend)
 			if err != nil {
 				if isTransientError(err) {
 					return err
 				}
-				r.log.Error(err, "failed to get Backend", "namespace", string(*backendRef.Namespace),
+				r.log.Error(err, "failed to get Backend",
+					"namespace", string(*backendRef.Namespace),
 					"name", string(backendRef.Name))
 			} else {
 				resourceMappings.allAssociatedNamespaces.Insert(backend.Namespace)
@@ -592,7 +643,8 @@ func (r *gatewayAPIReconciler) processBackendRefs(ctx context.Context, gwcResour
 				if !resourceMappings.allAssociatedBackends.Has(key) {
 					resourceMappings.allAssociatedBackends.Insert(key)
 					gwcResource.Backends = append(gwcResource.Backends, backend)
-					r.log.Info("added Backend to resource tree", "namespace", string(*backendRef.Namespace),
+					r.log.Info("added Backend to resource tree",
+						"namespace", string(*backendRef.Namespace),
 						"name", string(backendRef.Name))
 				}
 			}
@@ -704,7 +756,8 @@ func (r *gatewayAPIReconciler) processBackendRefs(ctx context.Context, gwcResour
 
 // processSecurityPolicyObjectRefs adds the referenced resources in SecurityPolicies
 // to the resourceTree
-// - Secrets for OIDC and BasicAuth
+// - BackendRefs and Secrets for OIDC
+// - Secrets for BasicAuth
 // - BackendRefs for ExAuth
 func (r *gatewayAPIReconciler) processSecurityPolicyObjectRefs(
 	ctx context.Context, resourceTree *resource.Resources, resourceMap *resourceMappings,
@@ -736,6 +789,24 @@ func (r *gatewayAPIReconciler) processSecurityPolicyObjectRefs(
 				r.log.Error(err,
 					"failed to process OIDC SecretRef for SecurityPolicy",
 					"policy", policy, "secretRef", oidc.ClientSecret)
+			}
+
+			var backendRefs []gwapiv1.BackendObjectReference
+			if oidc.Provider.BackendRef != nil {
+				backendRefs = append(backendRefs, *oidc.Provider.BackendRef)
+			}
+			if len(oidc.Provider.BackendRefs) > 0 {
+				backendRefs = append(backendRefs, oidc.Provider.BackendRefs[0].BackendObjectReference)
+			}
+
+			for _, backendRef := range backendRefs {
+				if err := r.processBackendRef(
+					ctx, resourceMap, resourceTree,
+					resource.KindSecurityPolicy, policy.Namespace, policy.Name,
+					backendRef); err != nil {
+					r.log.Error(err, "failed to process OIDC BackendRef for SecurityPolicy",
+						"policy", policy, "backendRef", backendRef)
+				}
 			}
 		}
 
@@ -1527,24 +1598,7 @@ func (r *gatewayAPIReconciler) processBackendTLSPolicies(
 	return r.processBackendTLSPolicyRefs(ctx, resourceTree, resourceMap)
 }
 
-// processBackends adds Backends to the resourceTree
-func (r *gatewayAPIReconciler) processBackends(ctx context.Context, resourceTree *resource.Resources) error {
-	backends := egv1a1.BackendList{}
-	if err := r.client.List(ctx, &backends); err != nil {
-		return fmt.Errorf("error listing Backends: %w", err)
-	}
-
-	for _, backend := range backends.Items {
-		backend := backend //nolint:copyloopvar
-		// Discard Status to reduce memory consumption in watchable
-		// It will be recomputed by the gateway-api layer
-		backend.Status = egv1a1.BackendStatus{}
-		resourceTree.Backends = append(resourceTree.Backends, &backend)
-	}
-	return nil
-}
-
-// removeFinalizer removes the gatewayclass finalizer from the provided gc, if it exists.
+// removeFinalizer removes the GatewayClass finalizer from the provided gc, if it exists.
 func (r *gatewayAPIReconciler) removeFinalizer(ctx context.Context, gc *gwapiv1.GatewayClass) error {
 	if slice.ContainsString(gc.Finalizers, gatewayClassFinalizer) {
 		base := client.MergeFrom(gc.DeepCopy())
@@ -1850,11 +1904,6 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 		predicate.NewTypedPredicateFuncs(func(node *corev1.Node) bool {
 			return r.handleNode(node)
 		}),
-	}
-	if r.namespaceLabel != nil {
-		nPredicates = append(nPredicates, predicate.NewTypedPredicateFuncs(func(node *corev1.Node) bool {
-			return r.hasMatchingNamespaceLabels(node)
-		}))
 	}
 	// resource address.
 	if err := c.Watch(

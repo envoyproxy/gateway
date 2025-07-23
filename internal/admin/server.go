@@ -6,32 +6,71 @@
 package admin
 
 import (
+	"context"
 	"net/http"
 	"net/http/pprof"
 	"time"
 
 	"github.com/davecgh/go-spew/spew"
 
+	"github.com/envoyproxy/gateway/internal/admin/console"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
+	"github.com/envoyproxy/gateway/internal/message"
 )
 
-func Init(cfg *config.Server) error {
-	if cfg.EnvoyGateway.GetEnvoyGatewayAdmin().EnableDumpConfig {
-		spewConfig := spew.NewDefaultConfig()
-		spewConfig.DisableMethods = true
-		spewConfig.Dump(cfg)
-	}
-
-	return start(cfg)
+type Config struct {
+	Server            config.Server
+	ProviderResources *message.ProviderResources
 }
 
-func start(cfg *config.Server) error {
-	handlers := http.NewServeMux()
-	address := cfg.EnvoyGateway.GetEnvoyGatewayAdminAddress()
-	enablePprof := cfg.EnvoyGateway.GetEnvoyGatewayAdmin().EnablePprof
+type Runner struct {
+	cfg               *config.Server
+	server            *http.Server
+	providerResources *message.ProviderResources
+}
 
-	adminLogger := cfg.Logger.WithName("admin")
-	adminLogger.Info("starting admin server", "address", address, "enablePprof", enablePprof)
+func New(cfg *Config) *Runner {
+	return &Runner{
+		cfg:               &cfg.Server,
+		providerResources: cfg.ProviderResources,
+	}
+}
+
+func (r *Runner) Start(ctx context.Context) error {
+	if r.cfg.EnvoyGateway.GetEnvoyGatewayAdmin().EnableDumpConfig {
+		spewConfig := spew.NewDefaultConfig()
+		spewConfig.DisableMethods = true
+		spewConfig.Dump(r.cfg)
+	}
+
+	return r.start()
+}
+
+func (r *Runner) Name() string {
+	return "admin"
+}
+
+func (r *Runner) Close() error {
+	if r.server != nil {
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		return r.server.Shutdown(ctx)
+	}
+	return nil
+}
+
+func (r *Runner) start() error {
+	handlers := http.NewServeMux()
+	address := r.cfg.EnvoyGateway.GetEnvoyGatewayAdminAddress()
+	adminConfig := r.cfg.EnvoyGateway.GetEnvoyGatewayAdmin()
+	enablePprof := adminConfig.EnablePprof
+
+	adminLogger := r.cfg.Logger.WithName("admin")
+	adminLogger.Info("starting admin server", "address", address, "enablePprof", enablePprof, "enableConsole", true)
+
+	// Register console handlers (always enabled)
+	consoleHandler := console.NewHandler(r.cfg, r.providerResources)
+	consoleHandler.RegisterRoutes(handlers)
 
 	if enablePprof {
 		// Serve pprof endpoints to aid in live debugging.
@@ -42,7 +81,7 @@ func start(cfg *config.Server) error {
 		handlers.HandleFunc("/debug/pprof/cmdline", pprof.Cmdline)
 	}
 
-	adminServer := &http.Server{
+	r.server = &http.Server{
 		Handler:           handlers,
 		Addr:              address,
 		ReadTimeout:       5 * time.Second,
@@ -53,7 +92,7 @@ func start(cfg *config.Server) error {
 
 	// Listen And Serve Admin Server.
 	go func() {
-		if err := adminServer.ListenAndServe(); err != nil {
+		if err := r.server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			adminLogger.Error(err, "start admin server failed")
 		}
 	}()

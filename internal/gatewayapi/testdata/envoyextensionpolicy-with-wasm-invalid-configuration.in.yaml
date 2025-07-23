@@ -1,0 +1,318 @@
+gateways:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: Gateway
+  metadata:
+    namespace: default
+    name: gateway-1
+  spec:
+    gatewayClassName: envoy-gateway-class
+    listeners:
+    - name: http
+      protocol: HTTP
+      port: 80
+      allowedRoutes:
+        namespaces:
+          from: All
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: Gateway
+  metadata:
+    namespace: default
+    name: gateway-2
+  spec:
+    gatewayClassName: envoy-gateway-class
+    listeners:
+    - name: http
+      protocol: HTTP
+      port: 80
+      allowedRoutes:
+        namespaces:
+          from: All
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: Gateway
+  metadata:
+    namespace: default
+    name: gateway-3
+  spec:
+    gatewayClassName: envoy-gateway-class
+    listeners:
+    - name: http
+      protocol: HTTP
+      port: 80
+      allowedRoutes:
+        namespaces:
+          from: All
+httpRoutes:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    namespace: default
+    name: httproute-1   # should return 500 because the Wasm in the attached policy is failclose.
+  spec:
+    hostnames:
+    - www.foo.com
+    parentRefs:
+    - namespace: default
+      name: gateway-1
+      sectionName: http
+    rules:
+    - matches:
+      - path:
+          value: /foo
+      backendRefs:
+      - name: service-1
+        port: 8080
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    namespace: default
+    name: httproute-2    # should not return 500 because the Wasm in the attached policy is failopen.
+  spec:
+    hostnames:
+    - www.bar.com
+    parentRefs:
+    - namespace: default
+      name: gateway-1
+      sectionName: http
+    rules:
+    - matches:
+      - path:
+          value: /bar
+      backendRefs:
+      - name: service-1
+        port: 8080
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    namespace: default
+    name: httproute-3   # should return 500 because there are two Wasms in the attached policy, one failopen and one failclose.
+  spec:
+    hostnames:
+    - www.baz.com
+    parentRefs:
+    - namespace: default
+      name: gateway-1
+      sectionName: http
+    rules:
+    - matches:
+      - path:
+          value: /baz
+      backendRefs:
+      - name: service-1
+        port: 8080
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    namespace: default
+    name: httproute-4   # should return 500 because there are one invalid Wasm with failopen and one invalid lua in the attached policy.
+  spec:
+    hostnames:
+    - www.qux.com
+    parentRefs:
+    - namespace: default
+      name: gateway-1
+      sectionName: http
+    rules:
+    - matches:
+      - path:
+          value: /qux
+      backendRefs:
+      - name: service-1
+        port: 8080
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    namespace: default
+    name: httproute-5   # should not return 500 because the Wasm in the attached policy is failopen.
+  spec:
+    hostnames:
+    - www.foo.com
+    parentRefs:
+    - namespace: default
+      name: gateway-2
+      sectionName: http
+    rules:
+    - matches:
+      - path:
+          value: /foo
+      backendRefs:
+      - name: service-1
+        port: 8080
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    namespace: default
+    name: httproute-6   # should not return 500 because the Wasm in the attached policy is failopen.
+  spec:
+    hostnames:
+    - www.bar.com
+    parentRefs:
+    - namespace: default
+      name: gateway-2
+      sectionName: http
+    rules:
+    - matches:
+      - path:
+          value: /bar
+      backendRefs:
+      - name: service-1
+        port: 8080
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    namespace: default
+    name: httproute-6   # should return 500 because the Wasm in the attached policy is failclose.
+  spec:
+    hostnames:
+    - www.bar.com
+    parentRefs:
+    - namespace: default
+      name: gateway-3
+      sectionName: http
+    rules:
+    - matches:
+      - path:
+          value: /bar
+      backendRefs:
+      - name: service-1
+        port: 8080
+
+envoyExtensionPolicies:
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: EnvoyExtensionPolicy
+  metadata:
+    namespace: default
+    name: policy-for-httproute-1
+  spec:
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: httproute-1
+    wasm:
+    - name: wasm-filter-1
+      rootID: "my-root-id"
+      code:
+        type: Image
+        image:
+          url: oci://www.example.com/wasm-filter-1:v1.0.0
+          pullSecretRef:
+            name: my-pull-secret-1
+          sha256: 314100af781b98a8ca175d5bf90a8bf76576e20a2f397a88223404edc6ebfd46
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: EnvoyExtensionPolicy
+  metadata:
+    namespace: default
+    name: policy-for-httproute-2
+  spec:
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: httproute-2
+    wasm:
+    - name: wasm-filter-1
+      failOpen: true
+      rootID: "my-root-id"
+      code:
+        type: Image
+        image:
+          url: oci://www.example.com/wasm-filter-1:v1.0.0
+          pullSecretRef:
+            name: my-pull-secret-1
+          sha256: 314100af781b98a8ca175d5bf90a8bf76576e20a2f397a88223404edc6ebfd46
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: EnvoyExtensionPolicy
+  metadata:
+    namespace: default
+    name: policy-for-httproute-3
+  spec:
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: httproute-3
+    wasm:
+    - name: wasm-filter-1
+      failOpen: true
+      rootID: "my-root-id"
+      code:
+        type: Image
+        image:
+          url: oci://www.example.com/wasm-filter-1:v1.0.0
+          pullSecretRef:
+            name: my-pull-secret-1
+          sha256: 314100af781b98a8ca175d5bf90a8bf76576e20a2f397a88223404edc6ebfd46
+    - name: wasm-filter-1
+      failOpen: false
+      rootID: "my-root-id"
+      code:
+        type: Image
+        image:
+          url: oci://www.example.com/wasm-filter-2:v1.0.0
+          pullSecretRef:
+            name: my-pull-secret-2
+          sha256: 314100af781b98a8ca175d5bf90a8bf76576e20a2f397a88223404edc6ebfd46
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: EnvoyExtensionPolicy
+  metadata:
+    namespace: default
+    name: policy-for-httproute-4
+  spec:
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: httproute-4
+    wasm:
+    - name: wasm-filter-1
+      failOpen: true
+      rootID: "my-root-id"
+      code:
+        type: Image
+        image:
+          url: oci://www.example.com/wasm-filter-1:v1.0.0
+          pullSecretRef:
+            name: my-pull-secret-1
+          sha256: 314100af781b98a8ca175d5bf90a8bf76576e20a2f397a88223404edc6ebfd46
+    lua:
+    - type: Inline
+      inline: "function envoy_on_response(response_handle)
+    response_handle:UnknownApi()
+    end"
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: EnvoyExtensionPolicy
+  metadata:
+    namespace: default
+    name: policy-for-gateway-2
+  spec:
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: Gateway
+      name: gateway-2
+    wasm:
+    - name: wasm-filter-1
+      failOpen: true
+      rootID: "my-root-id"
+      code:
+        type: Image
+        image:
+          url: oci://www.example.com/wasm-filter-1:v1.0.0
+          pullSecretRef:
+            name: my-pull-secret-1
+          sha256: 314100af781b98a8ca175d5bf90a8bf76576e20a2f397a88223404edc6ebfd46
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: EnvoyExtensionPolicy
+  metadata:
+    namespace: default
+    name: policy-for-gateway-3
+  spec:
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: Gateway
+      name: gateway-3
+    wasm:
+    - name: wasm-filter-1
+      rootID: "my-root-id"
+      code:
+        type: Image
+        image:
+          url: oci://www.example.com/wasm-filter-1:v1.0.0
+          pullSecretRef:
+            name: my-pull-secret-1
+          sha256: 314100af781b98a8ca175d5bf90a8bf76576e20a2f397a88223404edc6ebfd46

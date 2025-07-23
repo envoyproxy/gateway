@@ -383,6 +383,12 @@ xdsIR:
         urlRewrite:
           host:
             name: rewrite.com
+          path:
+            fullReplace: null
+            prefixMatchReplace: null
+            regexMatchReplace:
+              pattern: .*
+              substitution: foo
       - destination:
           metadata:
             kind: HTTPRoute

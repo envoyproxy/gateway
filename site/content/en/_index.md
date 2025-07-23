@@ -114,6 +114,23 @@ no_list: true
           <p>Envoy Gateway provides a rich set of observability features including metrics, access logging, distributed tracing, and more.</p>
         </div>
       </article>
+      <article class="col-md-12 mb-4">
+        <div class="feature-card">
+          <div class="icon-container">
+            <i class="fas fa-brain"></i>
+          </div>
+          <h3>GenAI Traffic Management</h3>
+          <p>As part of the Envoy ecosystem, <strong>Envoy AI Gateway</strong> builds on <strong>Envoy Gateway</strong> to manage GenAI traffic adding features like LLM provider integrations, token-based rate limiting, an OpenAI-compatible API, and provider fallback support, and more. Click the links below to learn more and get involved.</p>
+          <div class="mt-4">
+            <a class="btn me-3 btn-sm btn-light-purple" href="https://aigateway.envoyproxy.io/">
+              <i class="fas fa-rocket"></i>Get Started with Envoy AI Gateway
+            </a>
+            <a class="btn btn-sm btn-light-purple" href="https://github.com/envoyproxy/ai-gateway">
+              <i class="fab fa-github"></i>View on GitHub
+            </a>
+          </div>
+        </div>
+      </article>
     </div>
   </div>
 </section>

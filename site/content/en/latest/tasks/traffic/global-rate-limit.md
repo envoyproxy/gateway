@@ -42,7 +42,7 @@ cat <<EOF | kubectl apply -f -
 kind: Namespace
 apiVersion: v1
 metadata:
-  name: redis-system 
+  name: redis-system
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -77,7 +77,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: redis
-  namespace: redis-system 
+  namespace: redis-system
   labels:
     app: redis
   annotations:
@@ -101,7 +101,7 @@ Save and apply the following resources to your cluster:
 kind: Namespace
 apiVersion: v1
 metadata:
-  name: redis-system 
+  name: redis-system
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -136,7 +136,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: redis
-  namespace: redis-system 
+  namespace: redis-system
   labels:
     app: redis
   annotations:
@@ -156,41 +156,12 @@ spec:
 ### Enable Global Rate limit in Envoy Gateway
 
 * The default installation of Envoy Gateway installs a default [EnvoyGateway][] configuration and attaches it
-using a `ConfigMap`. In the next step, we will update this resource to enable rate limit in Envoy Gateway
-as well as configure the URL for the Redis instance used for Global rate limiting.
+using a `ConfigMap`. To enable global rate limit, we need to update this configuration to configure the Redis service
+as the backend for rate limit.
 
-{{< tabpane text=true >}}
-{{% tab header="Apply from stdin" %}}
-
-```shell
-cat <<EOF | kubectl apply -f -
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: envoy-gateway-config
-  namespace: envoy-gateway-system
-data:
-  envoy-gateway.yaml: |
-    apiVersion: gateway.envoyproxy.io/v1alpha1
-    kind: EnvoyGateway
-    provider:
-      type: Kubernetes
-    gateway:
-      controllerName: gateway.envoyproxy.io/gatewayclass-controller
-    rateLimit:
-      backend:
-        type: Redis
-        redis:
-          url: redis.redis-system.svc.cluster.local:6379
-EOF
-```
-
-{{% /tab %}}
-{{% tab header="Apply from file" %}}
-Save and apply the following resource to your cluster:
+You can manually edit the `ConfigMap`:
 
 ```yaml
----
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -200,10 +171,7 @@ data:
   envoy-gateway.yaml: |
     apiVersion: gateway.envoyproxy.io/v1alpha1
     kind: EnvoyGateway
-    provider:
-      type: Kubernetes
-    gateway:
-      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+    ... keep the existing configuration ...
     rateLimit:
       backend:
         type: Redis
@@ -211,12 +179,19 @@ data:
           url: redis.redis-system.svc.cluster.local:6379
 ```
 
-{{% /tab %}}
-{{< /tabpane >}}
+Or use the `helm upgrade` command to update the configuration if you have installed Envoy Gateway using Helm:
+
+```bash
+helm upgrade eg oci://docker.io/envoyproxy/gateway-helm \
+  --set config.envoyGateway.rateLimit.backend.type=Redis \
+  --set config.envoyGateway.rateLimit.backend.redis.url="redis.redis-system.svc.cluster.local:6379" \
+  --reuse-values \
+  -n envoy-gateway-system
+```
 
 {{< boilerplate rollout-envoy-gateway >}}
 
-## Rate Limit Specific User 
+## Rate Limit Specific User
 
 Here is an example of a rate limit implemented by the application developer to limit a specific user by matching on a custom `x-user-id` header
 with a value set to `one`.
@@ -227,7 +202,7 @@ with a value set to `one`.
 ```shell
 cat <<EOF | kubectl apply -f -
 apiVersion: gateway.envoyproxy.io/v1alpha1
-kind: BackendTrafficPolicy 
+kind: BackendTrafficPolicy
 metadata:
   name: policy-httproute
 spec:
@@ -256,7 +231,7 @@ Save and apply the following resource to your cluster:
 ```yaml
 ---
 apiVersion: gateway.envoyproxy.io/v1alpha1
-kind: BackendTrafficPolicy 
+kind: BackendTrafficPolicy
 metadata:
   name: policy-httproute
 spec:
@@ -295,7 +270,7 @@ spec:
   parentRefs:
   - name: eg
   hostnames:
-  - ratelimit.example 
+  - ratelimit.example
   rules:
   - matches:
     - path:
@@ -323,7 +298,7 @@ spec:
   parentRefs:
   - name: eg
   hostnames:
-  - ratelimit.example 
+  - ratelimit.example
   rules:
   - matches:
     - path:
@@ -351,7 +326,7 @@ Get the Gateway's address:
 export GATEWAY_HOST=$(kubectl get gateway/eg -o jsonpath='{.status.addresses[0].value}')
 ```
 
-Let's query `ratelimit.example/get` 4 times. We should receive a `200` response from the example Gateway for the first 3 requests 
+Let's query `ratelimit.example/get` 4 times. We should receive a `200` response from the example Gateway for the first 3 requests
 and then receive a `429` status code for the 4th request since the limit is set at 3 requests/Hour for the request which contains the header `x-user-id`
 and value `one`.
 
@@ -433,9 +408,9 @@ server: envoy
 
 ```
 
-## Rate Limit Distinct Users Except Admin 
+## Rate Limit Distinct Users Except Admin
 
-Here is an example of a rate limit implemented by the application developer to limit distinct users who can be differentiated based on the 
+Here is an example of a rate limit implemented by the application developer to limit distinct users who can be differentiated based on the
 value in the `x-user-id` header. Here, user `one` (recognised from the traffic flow using the header `x-user-id` and value `one`) will be rate limited at 3 requests/hour
 and so will user `two` (recognised from the traffic flow using the header `x-user-id` and value `two`). But if `x-user-id` is `admin`, it will not be rate limited even beyond 3 requests/hour.
 
@@ -445,7 +420,7 @@ and so will user `two` (recognised from the traffic flow using the header `x-use
 ```shell
 cat <<EOF | kubectl apply -f -
 apiVersion: gateway.envoyproxy.io/v1alpha1
-kind: BackendTrafficPolicy 
+kind: BackendTrafficPolicy
 metadata:
   name: policy-httproute
 spec:
@@ -477,7 +452,7 @@ Save and apply the following resource to your cluster:
 ```yaml
 ---
 apiVersion: gateway.envoyproxy.io/v1alpha1
-kind: BackendTrafficPolicy 
+kind: BackendTrafficPolicy
 metadata:
   name: policy-httproute
 spec:
@@ -519,7 +494,7 @@ spec:
   parentRefs:
   - name: eg
   hostnames:
-  - ratelimit.example 
+  - ratelimit.example
   rules:
   - matches:
     - path:
@@ -547,7 +522,7 @@ spec:
   parentRefs:
   - name: eg
   hostnames:
-  - ratelimit.example 
+  - ratelimit.example
   rules:
   - matches:
     - path:
@@ -683,7 +658,7 @@ server: envoy
 
 ```
 
-## Rate Limit All Requests 
+## Rate Limit All Requests
 
 This example shows you how to rate limit all requests matching the HTTPRoute rule at 3 requests/Hour by leaving the `clientSelectors` field unset.
 
@@ -693,7 +668,7 @@ This example shows you how to rate limit all requests matching the HTTPRoute rul
 ```shell
 cat <<EOF | kubectl apply -f -
 apiVersion: gateway.envoyproxy.io/v1alpha1
-kind: BackendTrafficPolicy 
+kind: BackendTrafficPolicy
 metadata:
   name: policy-httproute
 spec:
@@ -718,7 +693,7 @@ Save and apply the following resource to your cluster:
 ```yaml
 ---
 apiVersion: gateway.envoyproxy.io/v1alpha1
-kind: BackendTrafficPolicy 
+kind: BackendTrafficPolicy
 metadata:
   name: policy-httproute
 spec:
@@ -753,7 +728,7 @@ spec:
   parentRefs:
   - name: eg
   hostnames:
-  - ratelimit.example 
+  - ratelimit.example
   rules:
   - matches:
     - path:
@@ -781,7 +756,7 @@ spec:
   parentRefs:
   - name: eg
   hostnames:
-  - ratelimit.example 
+  - ratelimit.example
   rules:
   - matches:
     - path:
@@ -849,7 +824,7 @@ Note: EG supports two kinds of rate limit for the IP address: Exact and Distinct
 ```shell
 cat <<EOF | kubectl apply -f -
 apiVersion: gateway.envoyproxy.io/v1alpha1
-kind: BackendTrafficPolicy 
+kind: BackendTrafficPolicy
 metadata:
   name: policy-httproute
 spec:
@@ -862,7 +837,7 @@ spec:
     global:
       rules:
       - clientSelectors:
-        - sourceCIDR: 
+        - sourceCIDR:
             value: 0.0.0.0/0
             type: Distinct
         limit:
@@ -877,7 +852,7 @@ spec:
   parentRefs:
   - name: eg
   hostnames:
-  - ratelimit.example 
+  - ratelimit.example
   rules:
   - matches:
     - path:
@@ -898,7 +873,7 @@ Save and apply the following resources to your cluster:
 ```yaml
 ---
 apiVersion: gateway.envoyproxy.io/v1alpha1
-kind: BackendTrafficPolicy 
+kind: BackendTrafficPolicy
 metadata:
   name: policy-httproute
 spec:
@@ -911,7 +886,7 @@ spec:
     global:
       rules:
       - clientSelectors:
-        - sourceCIDR: 
+        - sourceCIDR:
             value: 0.0.0.0/0
             type: Distinct
         limit:
@@ -926,7 +901,7 @@ spec:
   parentRefs:
   - name: eg
   hostnames:
-  - ratelimit.example 
+  - ratelimit.example
   rules:
   - matches:
     - path:
@@ -1007,14 +982,14 @@ spec:
         header: x-claim-name
 ---
 apiVersion: gateway.envoyproxy.io/v1alpha1
-kind: BackendTrafficPolicy 
+kind: BackendTrafficPolicy
 metadata:
   name: policy-httproute
 spec:
   targetRefs:
   - group: gateway.networking.k8s.io
     kind: HTTPRoute
-    name: example 
+    name: example
   rateLimit:
     type: Global
     global:
@@ -1075,14 +1050,14 @@ spec:
         header: x-claim-name
 ---
 apiVersion: gateway.envoyproxy.io/v1alpha1
-kind: BackendTrafficPolicy 
+kind: BackendTrafficPolicy
 metadata:
   name: policy-httproute
 spec:
   targetRefs:
   - group: gateway.networking.k8s.io
     kind: HTTPRoute
-    name: example 
+    name: example
   rateLimit:
     type: Global
     global:
@@ -1212,6 +1187,225 @@ x-envoy-upstream-service-time: 0
 server: envoy
 
 ```
+
+## Rate Limit Policy Merging
+
+This example demonstrates how to implement a layered rate limiting strategy using BackendTrafficPolicy merging. This approach allows platform teams to set global abuse prevention limits at the Gateway level, while application teams can define more specific rate limits for their individual routes.
+
+In this scenario:
+- **Platform Team**: Manages a Gateway-level BackendTrafficPolicy that applies a global abuse rate limit (100 requests/second) across all traffic
+- **Application Team**: Manages a Route-level BackendTrafficPolicy that applies a more restrictive limit (5 requests/minute) for their specific signup service
+
+The route-level policy uses `mergeType: StrategicMerge` to combine with the gateway-level policy, ensuring both limits are enforced. The global limit acts as an abuse prevention mechanism, while the route-specific limit protects the signup service from overload.
+
+{{< tabpane text=true >}}
+{{% tab header="Apply from stdin" %}}
+
+```shell
+cat <<EOF | kubectl apply -f -
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: BackendTrafficPolicy
+metadata:
+  name: global-backendtrafficpolicy
+spec:
+  rateLimit:
+    type: Global
+    global:
+      rules:
+      - clientSelectors:
+        - sourceCIDR:
+            type: Distinct
+            value: 0.0.0.0/0
+        limit:
+          requests: 100
+          unit: Second
+        shared: true
+  targetRefs:
+  - group: gateway.networking.k8s.io
+    kind: Gateway
+    name: eg
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: BackendTrafficPolicy
+metadata:
+  name: route-backendtrafficpolicy
+spec:
+  mergeType: StrategicMerge
+  rateLimit:
+    type: Global
+    global:
+      rules:
+      - clientSelectors:
+        - sourceCIDR:
+            type: Distinct
+            value: 0.0.0.0/0
+        limit:
+          requests: 5
+          unit: Minute
+        shared: false
+  targetRefs:
+  - group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: signup-service-httproute
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: signup-service-httproute
+spec:
+  parentRefs:
+  - name: eg
+  hostnames:
+  - signup.example
+  rules:
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /signup
+    backendRefs:
+    - group: ""
+      kind: Service
+      name: backend
+      port: 3000
+EOF
+```
+
+{{% /tab %}}
+{{% tab header="Apply from file" %}}
+Save and apply the following resources to your cluster:
+
+```yaml
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: BackendTrafficPolicy
+metadata:
+  name: global-backendtrafficpolicy
+spec:
+  rateLimit:
+    type: Global
+    global:
+      rules:
+      - clientSelectors:
+        - sourceCIDR:
+            type: Distinct
+            value: 0.0.0.0/0
+        limit:
+          requests: 100
+          unit: Second
+        shared: true
+  targetRefs:
+  - group: gateway.networking.k8s.io
+    kind: Gateway
+    name: eg
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: BackendTrafficPolicy
+metadata:
+  name: route-backendtrafficpolicy
+spec:
+  mergeType: StrategicMerge
+  rateLimit:
+    type: Global
+    global:
+      rules:
+      - clientSelectors:
+        - sourceCIDR:
+            type: Distinct
+            value: 0.0.0.0/0
+        limit:
+          requests: 5
+          unit: Minute
+        shared: false
+  targetRefs:
+  - group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: signup-service-httproute
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: signup-service-httproute
+spec:
+  parentRefs:
+  - name: eg
+  hostnames:
+  - signup.example
+  rules:
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /signup
+    backendRefs:
+    - group: ""
+      kind: Service
+      name: backend
+      port: 3000
+```
+
+{{% /tab %}}
+{{< /tabpane >}}
+
+### Key Configuration Details
+
+- **Gateway-level Policy**: Uses `shared: true` to create a shared rate limit bucket that applies across all routes in the Gateway
+- **Route-level Policy**: Uses `shared: false` to create a dedicated rate limit bucket for this specific route
+- **Merge Type**: The `mergeType: StrategicMerge` field enables the route policy to merge with the gateway policy rather than override it
+
+### Testing the Merged Rate Limits
+
+Let's verify that both rate limits are enforced. The signup service should be limited to 5 requests per minute, but also subject to the global 100 requests/second abuse limit.
+
+First, let's test the route-specific limit by sending 6 requests within a minute:
+
+```shell
+for i in {1..6}; do curl -I --header "Host: signup.example" http://${GATEWAY_HOST}/signup ; sleep 1; done
+```
+
+You should see the first 5 requests succeed and the 6th request receive a `429 Too Many Requests` response:
+
+```console
+HTTP/1.1 200 OK
+content-type: application/json
+x-content-type-options: nosniff
+date: Wed, 08 Feb 2023 02:33:31 GMT
+content-length: 460
+x-envoy-upstream-service-time: 4
+server: envoy
+
+HTTP/1.1 200 OK
+content-type: application/json
+x-content-type-options: nosniff
+date: Wed, 08 Feb 2023 02:33:32 GMT
+content-length: 460
+x-envoy-upstream-service-time: 2
+server: envoy
+
+...
+
+HTTP/1.1 429 Too Many Requests
+x-envoy-ratelimited: true
+date: Wed, 08 Feb 2023 02:33:36 GMT
+server: envoy
+transfer-encoding: chunked
+```
+
+The global abuse limit would activate if traffic across all routes in the Gateway exceeds 100 requests/second, providing an additional layer of protection managed by the platform team.
+
+### Use Cases and Team Responsibilities
+
+**Platform Team Responsibilities:**
+- Define Gateway-level policies with global abuse rate limits
+- Set reasonable baseline protections that apply to all applications
+- Use `shared: true` for limits that should be enforced across multiple routes
+- Monitor and adjust global limits based on infrastructure capacity
+
+**Application Team Responsibilities:**
+- Define Route-level policies with application-specific rate limits
+- Use `mergeType: StrategicMerge` to combine with platform policies
+- Set `shared: false` for limits specific to their application's requirements
+- Implement rate limits that protect their specific service from overload
+
+This layered approach ensures both infrastructure protection and application-specific controls work together effectively.
 
 ### (Optional) Editing Kubernetes Resources settings for the Rate Limit Service
 

@@ -118,6 +118,7 @@ envoyExtensionPolicies:
         kind: Service
         name: grpc-ext-proc
         port: 9002
+      failOpen: false
       processingMode:
         request: {}
         response:
@@ -169,7 +170,6 @@ envoyProxyForGatewayClass:
     name: example
     namespace: default
   spec:
-    disableLuaValidation: false
     logging:
       level:
         default: warn

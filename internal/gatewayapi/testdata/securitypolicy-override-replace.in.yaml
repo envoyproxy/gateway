@@ -111,9 +111,17 @@ httpRoutes:
     - namespace: envoy-gateway
       name: gateway-1
     rules:
-    - matches:
+    - name: rule-1
+      matches:
       - path:
-          value: "/httproute-5"
+          value: "/httproute-5-rule-1"
+      backendRefs:
+      - name: service-1
+        port: 8080
+    - name: rule-2
+      matches:
+      - path:
+          value: "/httproute-5-rule-2"
       backendRefs:
       - name: service-1
         port: 8080
@@ -238,3 +246,17 @@ securityPolicies:
     cors:
       allowHeaders:
       - "x-httproute-5"
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: SecurityPolicy
+  metadata:
+    namespace: default
+    name: policy-for-route-5-rule-2
+  spec:
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: httproute-5
+      sectionName: rule-2
+    cors:
+      allowHeaders:
+      - "x-httproute-5-rule-2"

@@ -269,11 +269,6 @@ spec:
                   the number of cpuset threads on the platform.
                 format: int32
                 type: integer
-              disableLuaValidation:
-                default: false
-                description: DisableLuaValidation disables the Lua script validation
-                  for Lua EnvoyExtensionPolicies
-                type: boolean
               extraArgs:
                 description: |-
                   ExtraArgs defines additional command line options that are provided to Envoy.
@@ -441,6 +436,14 @@ spec:
                       and the log level is the value. If unspecified, defaults to "default: warn".
                     type: object
                 type: object
+              luaValidation:
+                description: |-
+                  LuaValidation determines strictness of the Lua script validation for Lua EnvoyExtensionPolicies
+                  Default: Strict
+                enum:
+                - Strict
+                - Disabled
+                type: string
               mergeGateways:
                 description: |-
                   MergeGateways defines if Gateway resources should be merged onto the same Envoy Proxy Infrastructure.
@@ -10999,6 +11002,13 @@ spec:
                                                     required:
                                                     - path
                                                     type: object
+                                                  initialJitter:
+                                                    description: |-
+                                                      InitialJitter defines the maximum time Envoy will wait before the first health check.
+                                                      Envoy will randomly select a value between 0 and the initial jitter value.
+                                                    format: duration
+                                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                                    type: string
                                                   interval:
                                                     default: 3s
                                                     description: Interval defines
@@ -11507,6 +11517,7 @@ spec:
                                                       - 5xx
                                                       - gateway-error
                                                       - reset
+                                                      - reset-before-request
                                                       - connect-failure
                                                       - retriable-4xx
                                                       - refused-stream
@@ -12071,6 +12082,13 @@ spec:
                                                     required:
                                                     - path
                                                     type: object
+                                                  initialJitter:
+                                                    description: |-
+                                                      InitialJitter defines the maximum time Envoy will wait before the first health check.
+                                                      Envoy will randomly select a value between 0 and the initial jitter value.
+                                                    format: duration
+                                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                                    type: string
                                                   interval:
                                                     default: 3s
                                                     description: Interval defines
@@ -12579,6 +12597,7 @@ spec:
                                                       - 5xx
                                                       - gateway-error
                                                       - reset
+                                                      - reset-before-request
                                                       - connect-failure
                                                       - retriable-4xx
                                                       - refused-stream
@@ -13246,6 +13265,13 @@ spec:
                                               required:
                                               - path
                                               type: object
+                                            initialJitter:
+                                              description: |-
+                                                InitialJitter defines the maximum time Envoy will wait before the first health check.
+                                                Envoy will randomly select a value between 0 and the initial jitter value.
+                                              format: duration
+                                              pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                              type: string
                                             interval:
                                               default: 3s
                                               description: Interval defines the time
@@ -13730,6 +13756,7 @@ spec:
                                                 - 5xx
                                                 - gateway-error
                                                 - reset
+                                                - reset-before-request
                                                 - connect-failure
                                                 - retriable-4xx
                                                 - refused-stream
@@ -14323,6 +14350,13 @@ spec:
                                         required:
                                         - path
                                         type: object
+                                      initialJitter:
+                                        description: |-
+                                          InitialJitter defines the maximum time Envoy will wait before the first health check.
+                                          Envoy will randomly select a value between 0 and the initial jitter value.
+                                        format: duration
+                                        pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                        type: string
                                       interval:
                                         default: 3s
                                         description: Interval defines the time between
@@ -14803,6 +14837,7 @@ spec:
                                           - 5xx
                                           - gateway-error
                                           - reset
+                                          - reset-before-request
                                           - connect-failure
                                           - retriable-4xx
                                           - refused-stream

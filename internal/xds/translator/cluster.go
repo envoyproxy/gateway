@@ -150,6 +150,9 @@ func buildXdsCluster(args *xdsClusterArgs) (*buildClusterResult, error) {
 		CommonLbConfig:                &clusterv3.Cluster_CommonLbConfig{},
 		PerConnectionBufferLimitBytes: buildBackandConnectionBufferLimitBytes(args.backendConnection),
 		Metadata:                      buildXdsMetadata(args.metadata),
+		// Dont wait for a health check to determine health and remove these endpoints
+		// if the endpoint has been removed via EDS by the control plane or removed from DNS query results
+		IgnoreHealthOnHostRemoval: true,
 	}
 
 	if args.statName != nil {
@@ -396,9 +399,6 @@ func buildXdsCluster(args *xdsClusterArgs) (*buildClusterResult, error) {
 				},
 			},
 		}
-		// Dont wait for a health check to determine health and remove these endpoints
-		// if the endpoint has been removed via EDS by the control plane
-		cluster.IgnoreHealthOnHostRemoval = true
 	default:
 		cluster.ClusterDiscoveryType = &clusterv3.Cluster_Type{Type: clusterv3.Cluster_STRICT_DNS}
 		cluster.DnsRefreshRate = durationpb.New(30 * time.Second)
@@ -470,6 +470,11 @@ func buildXdsHealthCheck(healthcheck *ir.ActiveHealthCheck) []*corev3.HealthChec
 	hc := &corev3.HealthCheck{
 		Timeout:  durationpb.New(healthcheck.Timeout.Duration),
 		Interval: durationpb.New(healthcheck.Interval.Duration),
+	}
+	if healthcheck.InitialJitter != nil {
+		if d, err := time.ParseDuration(string(*healthcheck.InitialJitter)); err == nil {
+			hc.InitialJitter = durationpb.New(d)
+		}
 	}
 	if healthcheck.UnhealthyThreshold != nil {
 		hc.UnhealthyThreshold = wrapperspb.UInt32(*healthcheck.UnhealthyThreshold)
@@ -693,7 +698,8 @@ func buildZonalLocalities(metadata *corev3.Metadata, ds *ir.DestinationSetting) 
 			Metadata: metadata,
 			HostIdentifier: &endpointv3.LbEndpoint_Endpoint{
 				Endpoint: &endpointv3.Endpoint{
-					Address: buildAddress(irEp),
+					Hostname: ptr.Deref(irEp.Hostname, ""),
+					Address:  buildAddress(irEp),
 				},
 			},
 			LoadBalancingWeight: wrapperspb.UInt32(1),
@@ -735,7 +741,8 @@ func buildWeightedLocalities(metadata *corev3.Metadata, ds *ir.DestinationSettin
 			Metadata: metadata,
 			HostIdentifier: &endpointv3.LbEndpoint_Endpoint{
 				Endpoint: &endpointv3.Endpoint{
-					Address: buildAddress(irEp),
+					Hostname: ptr.Deref(irEp.Hostname, ""),
+					Address:  buildAddress(irEp),
 				},
 			},
 			HealthStatus: healthStatus,

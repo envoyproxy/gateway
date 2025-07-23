@@ -48,10 +48,13 @@ type Wasm struct {
 
 	// FailOpen is a switch used to control the behavior when a fatal error occurs
 	// during the initialization or the execution of the Wasm extension.
+	//
 	// If FailOpen is set to true, the system bypasses the Wasm extension and
-	// allows the traffic to pass through. Otherwise, if it is set to false or
+	// allows the traffic to pass through. If it is set to false or
 	// not set (defaulting to false), the system blocks the traffic and returns
 	// an HTTP 5xx error.
+	//
+	// If set to true, the Wasm extension will also be bypassed if the configuration is invalid.
 	//
 	// +optional
 	// +kubebuilder:default=false

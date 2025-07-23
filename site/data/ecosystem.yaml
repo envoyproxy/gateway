@@ -23,3 +23,7 @@ adopters:
     url: "https://k0rdent.io/"
     logo: /logos/k0rdent.svg
     description: "k0rdent integrates with Envoy Gateway to offer advanced, high-performance traffic management within Kubernetes. k0rdent simplifies Envoy configuration, enabling users to easily define routing, security, and observability policies. This integration provides a robust, scalable, and secure ingress solution for applications deployed within the k0rdent-managed cluster."
+  - name: "KEDA"
+    logo: "/logos/keda.svg"
+    url: "https://keda.sh"
+    description: "KEDA integrates with Envoy Gateway through http-add-on for autoscaling workloads based on real-time HTTP traffic metrics. This integration allows users to leverage Envoy Gateway's capabilities for scaling behavior shaping desired traffic patterns."

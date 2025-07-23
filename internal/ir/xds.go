@@ -16,6 +16,7 @@ import (
 	"net/http"
 	"net/netip"
 	"reflect"
+	"time"
 
 	"golang.org/x/exp/slices"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
@@ -24,6 +25,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/validation"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	"sigs.k8s.io/yaml"
 
@@ -65,6 +67,7 @@ var (
 	ErrLoadBalancerInvalid                      = errors.New("loadBalancer setting is invalid, only one setting can be set")
 	ErrHealthCheckTimeoutInvalid                = errors.New("field HealthCheck.Timeout must be specified")
 	ErrHealthCheckIntervalInvalid               = errors.New("field HealthCheck.Interval must be specified")
+	ErrHealthCheckInitialJitterInvalid          = errors.New("field HealthCheck.InitialJitter should be greater than or equal to 0")
 	ErrHealthCheckUnhealthyThresholdInvalid     = errors.New("field HealthCheck.UnhealthyThreshold should be greater than 0")
 	ErrHealthCheckHealthyThresholdInvalid       = errors.New("field HealthCheck.HealthyThreshold should be greater than 0")
 	ErrHealthCheckerInvalid                     = errors.New("health checker setting is invalid, only one health checker can be set")
@@ -740,6 +743,12 @@ type HTTPClientTimeout struct {
 	RequestReceivedTimeout *metav1.Duration `json:"requestReceivedTimeout,omitempty" yaml:"requestReceivedTimeout,omitempty"`
 	// IdleTimeout for an HTTP connection. Idle time is defined as a period in which there are no active requests in the connection.
 	IdleTimeout *metav1.Duration `json:"idleTimeout,omitempty" yaml:"idleTimeout,omitempty"`
+	// The stream idle timeout for connections managed by the connection manager.
+	// If not specified, this defaults to 5 minutes. The default value was selected
+	// so as not to interfere with any smaller configured timeouts that may have
+	// existed in configurations prior to the introduction of this feature, while
+	// introducing robustness to TCP connections that terminate without a FIN.
+	StreamIdleTimeout *metav1.Duration `json:"streamIdleTimeout,omitempty" yaml:"streamIdleTimeout,omitempty"`
 }
 
 // HTTPRoute holds the route information associated with the HTTP Route
@@ -1209,6 +1218,17 @@ type APIKeyAuth struct {
 	// ExtractFrom is where to fetch the key from the coming request.
 	// The value from the first source that has a key will be used.
 	ExtractFrom []*ExtractFrom `json:"extractFrom"`
+
+	// ForwardClientIDHeader is the name of the header to forward the client identity to the backend
+	// service. The header will be added to the request with the client id as the value.
+	//
+	// +optional
+	ForwardClientIDHeader *string `json:"forwardClientIDHeader,omitempty"`
+
+	// Sanitize indicates whether to remove the API key from the request before forwarding it to the backend service.
+	//
+	// +optional
+	Sanitize *bool `json:"sanitize,omitempty"`
 }
 
 // ExtractFrom defines the source of the key.
@@ -1687,6 +1707,8 @@ const (
 // DestinationEndpoint holds the endpoint details associated with the destination
 // +kubebuilder:object:generate=true
 type DestinationEndpoint struct {
+	// Hostname refers to the endpoint's hostname
+	Hostname *string `json:"hostname,omitempty" yaml:"hostname,omitempty"`
 	// Host refers to the FQDN or IP address of the backend service.
 	Host string `json:"host" yaml:"host"`
 	// Port on the service to forward the request to.
@@ -1728,8 +1750,9 @@ func (d DestinationEndpoint) Validate() error {
 }
 
 // NewDestEndpoint creates a new DestinationEndpoint.
-func NewDestEndpoint(host string, port uint32, draining bool, zone *string) *DestinationEndpoint {
+func NewDestEndpoint(hostname *string, host string, port uint32, draining bool, zone *string) *DestinationEndpoint {
 	return &DestinationEndpoint{
+		Hostname: hostname,
 		Host:     host,
 		Port:     port,
 		Draining: draining,
@@ -2654,6 +2677,8 @@ type ActiveHealthCheck struct {
 	Timeout *metav1.Duration `json:"timeout"`
 	// Interval defines the time between active health checks.
 	Interval *metav1.Duration `json:"interval"`
+	// InitialJitter defines the initial jitter to apply to the health check interval.
+	InitialJitter *gwapiv1.Duration `json:"initialJitter,omitempty"`
 	// UnhealthyThreshold defines the number of unhealthy health checks required before a backend host is marked unhealthy.
 	UnhealthyThreshold *uint32 `json:"unhealthyThreshold"`
 	// HealthyThreshold defines the number of healthy health checks required before a backend host is marked healthy.
@@ -2681,6 +2706,11 @@ func (h *HealthCheck) Validate() error {
 		}
 		if h.Active.Interval != nil && h.Active.Interval.Duration == 0 {
 			errs = errors.Join(errs, ErrHealthCheckIntervalInvalid)
+		}
+		if h.Active.InitialJitter != nil {
+			if d, err := time.ParseDuration(string(*h.Active.InitialJitter)); err != nil || d < 0 {
+				errs = errors.Join(errs, ErrHealthCheckInitialJitterInvalid)
+			}
 		}
 		if h.Active.UnhealthyThreshold != nil && *h.Active.UnhealthyThreshold == 0 {
 			errs = errors.Join(errs, ErrHealthCheckUnhealthyThresholdInvalid)
@@ -2908,6 +2938,7 @@ const (
 	Error5XX             = TriggerEnum(egv1a1.Error5XX)
 	GatewayError         = TriggerEnum(egv1a1.GatewayError)
 	Reset                = TriggerEnum(egv1a1.Reset)
+	ResetBeforeRequest   = TriggerEnum(egv1a1.ResetBeforeRequest)
 	ConnectFailure       = TriggerEnum(egv1a1.ConnectFailure)
 	Retriable4XX         = TriggerEnum(egv1a1.Retriable4XX)
 	RefusedStream        = TriggerEnum(egv1a1.RefusedStream)

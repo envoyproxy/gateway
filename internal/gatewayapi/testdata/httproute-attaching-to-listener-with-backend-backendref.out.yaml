@@ -174,7 +174,7 @@ httpRoutes:
   kind: HTTPRoute
   metadata:
     creationTimestamp: null
-    name: httproute-3
+    name: httproute-2
     namespace: default
   spec:
     parentRefs:
@@ -185,10 +185,10 @@ httpRoutes:
     - backendRefs:
       - group: gateway.envoyproxy.io
         kind: Backend
-        name: backend-fqdn
+        name: backend-ip
       matches:
       - path:
-          value: /3
+          value: /2
   status:
     parents:
     - conditions:
@@ -211,7 +211,7 @@ httpRoutes:
   kind: HTTPRoute
   metadata:
     creationTimestamp: null
-    name: httproute-2
+    name: httproute-3
     namespace: default
   spec:
     parentRefs:
@@ -222,10 +222,10 @@ httpRoutes:
     - backendRefs:
       - group: gateway.envoyproxy.io
         kind: Backend
-        name: backend-ip
+        name: backend-fqdn
       matches:
       - path:
-          value: /2
+          value: /3
   status:
     parents:
     - conditions:
@@ -390,35 +390,6 @@ xdsIR:
       - destination:
           metadata:
             kind: HTTPRoute
-            name: httproute-3
-            namespace: default
-          name: httproute/default/httproute-3/rule/0
-          settings:
-          - addressType: FQDN
-            endpoints:
-            - host: primary.foo.com
-              port: 3000
-            metadata:
-              kind: Backend
-              name: backend-fqdn
-              namespace: default
-            name: httproute/default/httproute-3/rule/0/backend/0
-            protocol: HTTP
-            weight: 1
-        hostname: '*'
-        isHTTP2: false
-        metadata:
-          kind: HTTPRoute
-          name: httproute-3
-          namespace: default
-        name: httproute/default/httproute-3/rule/0/match/0/*
-        pathMatch:
-          distinct: false
-          name: ""
-          prefix: /3
-      - destination:
-          metadata:
-            kind: HTTPRoute
             name: httproute-2
             namespace: default
           name: httproute/default/httproute-2/rule/0
@@ -445,6 +416,35 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /2
+      - destination:
+          metadata:
+            kind: HTTPRoute
+            name: httproute-3
+            namespace: default
+          name: httproute/default/httproute-3/rule/0
+          settings:
+          - addressType: FQDN
+            endpoints:
+            - host: primary.foo.com
+              port: 3000
+            metadata:
+              kind: Backend
+              name: backend-fqdn
+              namespace: default
+            name: httproute/default/httproute-3/rule/0/backend/0
+            protocol: HTTP
+            weight: 1
+        hostname: '*'
+        isHTTP2: false
+        metadata:
+          kind: HTTPRoute
+          name: httproute-3
+          namespace: default
+        name: httproute/default/httproute-3/rule/0/match/0/*
+        pathMatch:
+          distinct: false
+          name: ""
+          prefix: /3
       - directResponse:
           statusCode: 500
         hostname: '*'

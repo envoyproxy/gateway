@@ -282,6 +282,12 @@ func (t *Translator) ProcessClientTrafficPolicies(
 		}
 	}
 
+	for _, policy := range res {
+		// Truncate Ancestor list of longer than 16
+		if len(policy.Status.Ancestors) > 16 {
+			status.TruncatePolicyAncestors(&policy.Status, t.GatewayControllerName, policy.Generation)
+		}
+	}
 	return res
 }
 
@@ -600,6 +606,16 @@ func buildClientTimeout(clientTimeout *egv1a1.ClientTimeout) (*ir.ClientTimeout,
 				return nil, fmt.Errorf("invalid HTTP IdleTimeout value %s", *clientTimeout.HTTP.IdleTimeout)
 			}
 			irHTTPTimeout.IdleTimeout = &metav1.Duration{
+				Duration: d,
+			}
+		}
+
+		if clientTimeout.HTTP.StreamIdleTimeout != nil {
+			d, err := time.ParseDuration(string(*clientTimeout.HTTP.StreamIdleTimeout))
+			if err != nil {
+				return nil, fmt.Errorf("invalid HTTP StreamIdleTimeout value %s", *clientTimeout.HTTP.StreamIdleTimeout)
+			}
+			irHTTPTimeout.StreamIdleTimeout = &metav1.Duration{
 				Duration: d,
 			}
 		}

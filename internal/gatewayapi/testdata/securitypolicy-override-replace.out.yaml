@@ -242,7 +242,15 @@ httpRoutes:
         port: 8080
       matches:
       - path:
-          value: /httproute-5
+          value: /httproute-5-rule-1
+      name: rule-1
+    - backendRefs:
+      - name: service-1
+        port: 8080
+      matches:
+      - path:
+          value: /httproute-5-rule-2
+      name: rule-2
   status:
     parents:
     - conditions:
@@ -318,6 +326,35 @@ infraIR:
       name: envoy-gateway/gateway-1
       namespace: envoy-gateway-system
 securityPolicies:
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: SecurityPolicy
+  metadata:
+    creationTimestamp: null
+    name: policy-for-route-5-rule-2
+    namespace: default
+  spec:
+    cors:
+      allowHeaders:
+      - x-httproute-5-rule-2
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: httproute-5
+      sectionName: rule-2
+  status:
+    ancestors:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: gateway-1
+        namespace: envoy-gateway
+      conditions:
+      - lastTransitionTime: null
+        message: Policy has been accepted.
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: SecurityPolicy
   metadata:
@@ -415,6 +452,12 @@ securityPolicies:
         reason: Accepted
         status: "True"
         type: Accepted
+      - lastTransitionTime: null
+        message: 'This policy is being overridden by other securityPolicies for these
+          routes: [rule-2]'
+        reason: Overridden
+        status: "True"
+        type: Overridden
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: SecurityPolicy
@@ -549,6 +592,7 @@ xdsIR:
             kind: HTTPRoute
             name: httproute-5
             namespace: default
+            sectionName: rule-1
           name: httproute/default/httproute-5/rule/0
           settings:
           - addressType: IP
@@ -568,15 +612,51 @@ xdsIR:
           kind: HTTPRoute
           name: httproute-5
           namespace: default
+          sectionName: rule-1
         name: httproute/default/httproute-5/rule/0/match/0/listener-1_gateway-1_envoyproxy_io
         pathMatch:
           distinct: false
           name: ""
-          prefix: /httproute-5
+          prefix: /httproute-5-rule-1
         security:
           cors:
             allowHeaders:
             - x-httproute-5
+      - destination:
+          metadata:
+            kind: HTTPRoute
+            name: httproute-5
+            namespace: default
+            sectionName: rule-2
+          name: httproute/default/httproute-5/rule/1
+          settings:
+          - addressType: IP
+            endpoints:
+            - host: 7.7.7.7
+              port: 8080
+            metadata:
+              name: service-1
+              namespace: default
+              sectionName: "8080"
+            name: httproute/default/httproute-5/rule/1/backend/0
+            protocol: HTTP
+            weight: 1
+        hostname: listener-1.gateway-1.envoyproxy.io
+        isHTTP2: false
+        metadata:
+          kind: HTTPRoute
+          name: httproute-5
+          namespace: default
+          sectionName: rule-2
+        name: httproute/default/httproute-5/rule/1/match/0/listener-1_gateway-1_envoyproxy_io
+        pathMatch:
+          distinct: false
+          name: ""
+          prefix: /httproute-5-rule-2
+        security:
+          cors:
+            allowHeaders:
+            - x-httproute-5-rule-2
       - destination:
           metadata:
             kind: HTTPRoute
@@ -767,6 +847,76 @@ xdsIR:
       - destination:
           metadata:
             kind: HTTPRoute
+            name: httproute-5
+            namespace: default
+            sectionName: rule-1
+          name: httproute/default/httproute-5/rule/0
+          settings:
+          - addressType: IP
+            endpoints:
+            - host: 7.7.7.7
+              port: 8080
+            metadata:
+              name: service-1
+              namespace: default
+              sectionName: "8080"
+            name: httproute/default/httproute-5/rule/0/backend/0
+            protocol: HTTP
+            weight: 1
+        hostname: listener-2.gateway-1.envoyproxy.io
+        isHTTP2: false
+        metadata:
+          kind: HTTPRoute
+          name: httproute-5
+          namespace: default
+          sectionName: rule-1
+        name: httproute/default/httproute-5/rule/0/match/0/listener-2_gateway-1_envoyproxy_io
+        pathMatch:
+          distinct: false
+          name: ""
+          prefix: /httproute-5-rule-1
+        security:
+          cors:
+            allowHeaders:
+            - x-httproute-5
+      - destination:
+          metadata:
+            kind: HTTPRoute
+            name: httproute-5
+            namespace: default
+            sectionName: rule-2
+          name: httproute/default/httproute-5/rule/1
+          settings:
+          - addressType: IP
+            endpoints:
+            - host: 7.7.7.7
+              port: 8080
+            metadata:
+              name: service-1
+              namespace: default
+              sectionName: "8080"
+            name: httproute/default/httproute-5/rule/1/backend/0
+            protocol: HTTP
+            weight: 1
+        hostname: listener-2.gateway-1.envoyproxy.io
+        isHTTP2: false
+        metadata:
+          kind: HTTPRoute
+          name: httproute-5
+          namespace: default
+          sectionName: rule-2
+        name: httproute/default/httproute-5/rule/1/match/0/listener-2_gateway-1_envoyproxy_io
+        pathMatch:
+          distinct: false
+          name: ""
+          prefix: /httproute-5-rule-2
+        security:
+          cors:
+            allowHeaders:
+            - x-httproute-5-rule-2
+      - destination:
+          metadata:
+            kind: HTTPRoute
             name: httproute-4
             namespace: default
           name: httproute/default/httproute-4/rule/0
@@ -797,39 +947,6 @@ xdsIR:
           cors:
             allowHeaders:
             - x-listener-2
-      - destination:
-          metadata:
-            kind: HTTPRoute
-            name: httproute-5
-            namespace: default
-          name: httproute/default/httproute-5/rule/0
-          settings:
-          - addressType: IP
-            endpoints:
-            - host: 7.7.7.7
-              port: 8080
-            metadata:
-              name: service-1
-              namespace: default
-              sectionName: "8080"
-            name: httproute/default/httproute-5/rule/0/backend/0
-            protocol: HTTP
-            weight: 1
-        hostname: listener-2.gateway-1.envoyproxy.io
-        isHTTP2: false
-        metadata:
-          kind: HTTPRoute
-          name: httproute-5
-          namespace: default
-        name: httproute/default/httproute-5/rule/0/match/0/listener-2_gateway-1_envoyproxy_io
-        pathMatch:
-          distinct: false
-          name: ""
-          prefix: /httproute-5
-        security:
-          cors:
-            allowHeaders:
-            - x-httproute-5
       - destination:
           metadata:
             kind: HTTPRoute

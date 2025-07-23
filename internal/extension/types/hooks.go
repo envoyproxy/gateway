@@ -47,11 +47,12 @@ type XDSHookClient interface {
 	// in order to not make any changes to it.
 	PostHTTPListenerModifyHook(listener *listener.Listener, extensionResources []*unstructured.Unstructured) (*listener.Listener, error)
 
-	// PostTranslateModifyHook allows an extension to modify the clusters and secrets in the xDS config.
-	// This allows for inserting clusters that may change along with extension specific configuration to be dynamically created rather than
-	// using custom bootstrap config which would be sufficient for clusters that are static and not prone to have their configurations changed.
-	// An example of how this may be used is to inject a cluster that will be used by an ext_authz http filter created by the extension.
-	// The list of clusters and secrets returned by the extension are used as the final list of all clusters and secrets
+	// PostTranslateModifyHook allows an extension to modify the clusters, secrets, listeners, and routes in the xDS config.
+	// This allows for inserting clusters, listeners, and routes that may change along with extension specific configuration to be dynamically created rather than
+	// using custom bootstrap config which would be sufficient for resources that are static and not prone to have their configurations changed.
+	// An example of how this may be used is to inject a cluster that will be used by an ext_authz http filter created by the extension,
+	// or to modify listeners to add custom filters, or to modify routes for advanced routing logic.
+	// The list of clusters, secrets, listeners, and routes returned by the extension are used as the final list of all these resources
 	// PostTranslateModifyHook is always executed when an extension is loaded
-	PostTranslateModifyHook([]*cluster.Cluster, []*tls.Secret, []*ir.UnstructuredRef) ([]*cluster.Cluster, []*tls.Secret, error)
+	PostTranslateModifyHook([]*cluster.Cluster, []*tls.Secret, []*listener.Listener, []*route.RouteConfiguration, []*ir.UnstructuredRef) ([]*cluster.Cluster, []*tls.Secret, []*listener.Listener, []*route.RouteConfiguration, error)
 }

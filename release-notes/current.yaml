@@ -3,6 +3,7 @@ date: Pending
 # Changes that are expected to cause an incompatibility with previous versions, such as deletions or modifications to existing APIs.
 breaking changes: |
   Use gateway name as proxy fleet name for gateway namespace mode.
+  Endpoints that are absent from service discovery are removed even if their active health checks succeed.
 
 # Updates addressing vulnerabilities, security flaws, or compliance requirements.
 security updates: |
@@ -11,6 +12,7 @@ security updates: |
 # New features or capabilities added in this release.
 new features: |
   Added support for percentage-based request mirroring
+  Added support for setting `initialJitter` in the BackendTrafficPolicy active health check.
   Add an option to OIDC authentication to bypass it and defer to JWT when the request contains an "Authorization: Bearer ..." header.
   Added support for configuring Subject Alternative Names (SANs) for upstream TLS validation via `BackendTLSPolicy.validation.subjectAltNames`.
   Added support for local rate limit header.
@@ -32,7 +34,13 @@ new features: |
   Added support for specifying deployment annotations through the helm chart.
   Added support for customizing the name of the ServiceAccount used by the Proxy.
   Added support for custom backendRefs via extension server using PostClusterModify hook.
-
+  Added support for SecurityPolicy and EnvoyExtensionPolicy to target ServiceImport via BackendRefs.
+  Introduce validation strictness levels for Lua scripts in EnvoyExtensionPolicies.
+  Added metric `watchable_publish_total` counting store events in watchable message queues.
+  Added support for forwarding client ID header and sanitizing API keys for API Key authentication in SecurityPolicy.
+  Accessloggers of type ALS now have http2 enabled on the cluster by default.
+  Added support for listeners and routes in PostTranslateModifyHook extension hook.
+  Added admin console support with web UI for the Envoy Gateway admin server.
 
 bug fixes: |
   Handle integer zone annotation values
@@ -49,7 +57,9 @@ bug fixes: |
   Fixed validation errors when the rateLimit url for Redis in the EnvoyGateway API includes multiple comma separated hosts.
   Fixes addresses in status of DualStack NodePort Gateways.
   Fixed issue that not able to override the prometheus annotation in EnvoyProxy CRD.
-
+  Skipped ExtProc, Wasm, and ExtAuth when they are configured FailOpen and the configuration is invalid, e.g. missing backendRefs or invalid port.
+  Fixed issue that failed to update policy status when there are more than 16 ancestors.
+  Fixed race condition in watchable.Map Snapshot subscription.
 
 # Enhancements that improve performance.
 performance improvements: |

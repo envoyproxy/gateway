@@ -129,7 +129,7 @@ func (h *XDSHook) PostHTTPListenerModifyHook(l *listener.Listener, extensionReso
 	return resp.Listener, nil
 }
 
-func (h *XDSHook) PostTranslateModifyHook(clusters []*cluster.Cluster, secrets []*tls.Secret, extensionPolicies []*ir.UnstructuredRef) ([]*cluster.Cluster, []*tls.Secret, error) {
+func (h *XDSHook) PostTranslateModifyHook(clusters []*cluster.Cluster, secrets []*tls.Secret, listeners []*listener.Listener, routes []*route.RouteConfiguration, extensionPolicies []*ir.UnstructuredRef) ([]*cluster.Cluster, []*tls.Secret, []*listener.Listener, []*route.RouteConfiguration, error) {
 	// Make the request to the extension server
 	// Take all of the unstructured resources for the extension and package them into bytes
 	unstructuredPolicies := make([]*unstructured.Unstructured, len(extensionPolicies))
@@ -139,7 +139,7 @@ func (h *XDSHook) PostTranslateModifyHook(clusters []*cluster.Cluster, secrets [
 	// Convert the unstructured policies to bytes
 	extensionPoliciesBytes, err := translateUnstructuredToUnstructuredBytes(unstructuredPolicies)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, nil, err
 	}
 
 	ctx := context.Background()
@@ -148,12 +148,14 @@ func (h *XDSHook) PostTranslateModifyHook(clusters []*cluster.Cluster, secrets [
 			PostTranslateContext: &extension.PostTranslateExtensionContext{
 				ExtensionResources: extensionPoliciesBytes,
 			},
-			Clusters: clusters,
-			Secrets:  secrets,
+			Clusters:  clusters,
+			Secrets:   secrets,
+			Listeners: listeners,
+			Routes:    routes,
 		})
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, nil, err
 	}
 
-	return resp.Clusters, resp.Secrets, nil
+	return resp.Clusters, resp.Secrets, resp.Listeners, resp.Routes, nil
 }
