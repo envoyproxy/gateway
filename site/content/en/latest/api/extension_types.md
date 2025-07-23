@@ -113,6 +113,8 @@ _Appears in:_
 | ---   | ---  | ---      | ---     | ---         |
 | `credentialRefs` | _[SecretObjectReference](https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1.SecretObjectReference) array_ |  true  |  | CredentialRefs is the Kubernetes secret which contains the API keys.<br />This is an Opaque secret.<br />Each API key is stored in the key representing the client id.<br />If the secrets have a key for a duplicated client, the first one will be used. |
 | `extractFrom` | _[ExtractFrom](#extractfrom) array_ |  true  |  | ExtractFrom is where to fetch the key from the coming request.<br />The value from the first source that has a key will be used. |
+| `forwardClientIDHeader` | _string_ |  false  |  | ForwardClientIDHeader is the name of the header to forward the client identity to the backend<br />service. The header will be added to the request with the client id as the value. |
+| `sanitize` | _boolean_ |  false  |  | Sanitize indicates whether to remove the API key from the request before forwarding it to the backend service. |
 
 
 #### ActiveHealthCheck
@@ -129,6 +131,7 @@ _Appears in:_
 | ---   | ---  | ---      | ---     | ---         |
 | `timeout` | _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.29/#duration-v1-meta)_ |  false  | 1s | Timeout defines the time to wait for a health check response. |
 | `interval` | _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.29/#duration-v1-meta)_ |  false  | 3s | Interval defines the time between active health checks. |
+| `initialJitter` | _[Duration](https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.Duration)_ |  false  |  | InitialJitter defines the maximum time Envoy will wait before the first health check.<br />Envoy will randomly select a value between 0 and the initial jitter value. |
 | `unhealthyThreshold` | _integer_ |  false  | 3 | UnhealthyThreshold defines the number of unhealthy health checks required before a backend host is marked unhealthy. |
 | `healthyThreshold` | _integer_ |  false  | 1 | HealthyThreshold defines the number of healthy health checks required before a backend host is marked healthy. |
 | `type` | _[ActiveHealthCheckerType](#activehealthcheckertype)_ |  true  |  | Type defines the type of health checker. |
@@ -833,6 +836,20 @@ _Appears in:_
 | `http2` | _[HTTP2Settings](#http2settings)_ |  false  |  | HTTP2 provides HTTP/2 configuration for backend connections. |
 
 
+#### ClusterTranslationConfig
+
+
+
+
+
+_Appears in:_
+- [TranslationConfig](#translationconfig)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `includeAll` | _boolean_ |  false  |  | IncludeAll defines whether all clusters should be included in the translation hook.<br />Default is true for backward compatibility. |
+
+
 #### Compression
 
 
@@ -1202,6 +1219,7 @@ EnvoyGateway is the schema for the envoygateways API.
 | `rateLimit` | _[RateLimit](#ratelimit)_ |  false  |  | RateLimit defines the configuration associated with the Rate Limit service<br />deployed by Envoy Gateway required to implement the Global Rate limiting<br />functionality. The specific rate limit service used here is the reference<br />implementation in Envoy. For more details visit https://github.com/envoyproxy/ratelimit.<br />This configuration is unneeded for "Local" rate limiting. |
 | `extensionManager` | _[ExtensionManager](#extensionmanager)_ |  false  |  | ExtensionManager defines an extension manager to register for the Envoy Gateway Control Plane. |
 | `extensionApis` | _[ExtensionAPISettings](#extensionapisettings)_ |  false  |  | ExtensionAPIs defines the settings related to specific Gateway API Extensions<br />implemented by Envoy Gateway |
+| `runtimeFlags` | _[RuntimeFlags](#runtimeflags)_ |  true  |  | RuntimeFlags defines the runtime flags for Envoy Gateway.<br />Unlike ExtensionAPIs, these flags are temporary and will be removed in future releases once the related features are stable. |
 
 
 #### EnvoyGatewayAdmin
@@ -1461,6 +1479,7 @@ _Appears in:_
 | `rateLimit` | _[RateLimit](#ratelimit)_ |  false  |  | RateLimit defines the configuration associated with the Rate Limit service<br />deployed by Envoy Gateway required to implement the Global Rate limiting<br />functionality. The specific rate limit service used here is the reference<br />implementation in Envoy. For more details visit https://github.com/envoyproxy/ratelimit.<br />This configuration is unneeded for "Local" rate limiting. |
 | `extensionManager` | _[ExtensionManager](#extensionmanager)_ |  false  |  | ExtensionManager defines an extension manager to register for the Envoy Gateway Control Plane. |
 | `extensionApis` | _[ExtensionAPISettings](#extensionapisettings)_ |  false  |  | ExtensionAPIs defines the settings related to specific Gateway API Extensions<br />implemented by Envoy Gateway |
+| `runtimeFlags` | _[RuntimeFlags](#runtimeflags)_ |  true  |  | RuntimeFlags defines the runtime flags for Envoy Gateway.<br />Unlike ExtensionAPIs, these flags are temporary and will be removed in future releases once the related features are stable. |
 
 
 #### EnvoyGatewayTelemetry
@@ -3028,6 +3047,20 @@ _Appears in:_
 | `disable` | _boolean_ |  true  |  | Disable provides the option to turn off leader election, which is enabled by default. |
 
 
+#### ListenerTranslationConfig
+
+
+
+
+
+_Appears in:_
+- [TranslationConfig](#translationconfig)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `includeAll` | _boolean_ |  false  |  | IncludeAll defines whether all listeners should be included in the translation hook.<br />Default is false. |
+
+
 #### LiteralCustomTag
 
 
@@ -4369,6 +4402,20 @@ _Appears in:_
 
 
 
+#### RouteTranslationConfig
+
+
+
+
+
+_Appears in:_
+- [TranslationConfig](#translationconfig)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `includeAll` | _boolean_ |  false  |  | IncludeAll defines whether all routes should be included in the translation hook.<br />Default is false. |
+
+
 #### RoutingType
 
 _Underlying type:_ _string_
@@ -4384,6 +4431,54 @@ _Appears in:_
 | `Endpoint` | EndpointRoutingType is the RoutingType for Endpoint routing.<br /> | 
 
 
+#### RuntimeFlag
+
+_Underlying type:_ _string_
+
+RuntimeFlag defines a runtime flag used to guard breaking changes or risky experimental features in new Envoy Gateway releases.
+A runtime flag may be enabled or disabled by default and can be toggled through the EnvoyGateway resource.
+
+_Appears in:_
+- [RuntimeFlags](#runtimeflags)
+
+| Value | Description |
+| ----- | ----------- |
+| `UseAddressAsListenerName` | UseAddressAsListenerName indicates that the listener name should be derived from the address and port.<br /> | 
+
+
+#### RuntimeFlags
+
+
+
+RuntimeFlags provide a mechanism to guard breaking changes or risky experimental features in new Envoy Gateway releases.
+Each flag may be enabled or disabled by default and can be toggled through the EnvoyGateway resource.
+The names of these flags will be included in the release notes alongside an explanation of the change.
+Please note that these flags are temporary and will be removed in future releases once the related features are stable.
+
+_Appears in:_
+- [EnvoyGateway](#envoygateway)
+- [EnvoyGatewaySpec](#envoygatewayspec)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `enabled` | _[RuntimeFlag](#runtimeflag) array_ |  true  |  |  |
+| `disabled` | _[RuntimeFlag](#runtimeflag) array_ |  true  |  |  |
+
+
+
+
+#### SecretTranslationConfig
+
+
+
+
+
+_Appears in:_
+- [TranslationConfig](#translationconfig)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `includeAll` | _boolean_ |  false  |  | IncludeAll defines whether all secrets should be included in the translation hook.<br />Default is true for backward compatibility. |
 
 
 #### SecurityPolicy
@@ -4887,6 +4982,23 @@ _Appears in:_
 | `Datadog` |  | 
 
 
+#### TranslationConfig
+
+
+
+TranslationConfig defines the configuration for the translation hook.
+
+_Appears in:_
+- [XDSTranslatorHooks](#xdstranslatorhooks)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `listener` | _[ListenerTranslationConfig](#listenertranslationconfig)_ |  false  |  | Listener defines the configuration for the listener translation hook. |
+| `route` | _[RouteTranslationConfig](#routetranslationconfig)_ |  false  |  | Route defines the configuration for the route translation hook. |
+| `cluster` | _[ClusterTranslationConfig](#clustertranslationconfig)_ |  false  |  | Cluster defines the configuration for the cluster translation hook. |
+| `secret` | _[SecretTranslationConfig](#secrettranslationconfig)_ |  false  |  | Secret defines the configuration for the secret translation hook. |
+
+
 #### TriggerEnum
 
 _Underlying type:_ _string_
@@ -4901,6 +5013,7 @@ _Appears in:_
 | `5xx` | The upstream server responds with any 5xx response code, or does not respond at all (disconnect/reset/read timeout).<br />Includes connect-failure and refused-stream.<br /> | 
 | `gateway-error` | The response is a gateway error (502,503 or 504).<br /> | 
 | `reset` | The upstream server does not respond at all (disconnect/reset/read timeout.)<br /> | 
+| `reset-before-request` | Like reset, but only retry if the request headers have not been sent to the upstream server.<br /> | 
 | `connect-failure` | Connection failure to the upstream server (connect timeout, etc.). (Included in *5xx*)<br /> | 
 | `retriable-4xx` | The upstream server responds with a retriable 4xx response code.<br />Currently, the only response code in this category is 409.<br /> | 
 | `refused-stream` | The upstream server resets the stream with a REFUSED_STREAM error code.<br /> | 
@@ -5060,6 +5173,7 @@ _Appears in:_
 | ---   | ---  | ---      | ---     | ---         |
 | `pre` | _[XDSTranslatorHook](#xdstranslatorhook) array_ |  true  |  |  |
 | `post` | _[XDSTranslatorHook](#xdstranslatorhook) array_ |  true  |  |  |
+| `translation` | _[TranslationConfig](#translationconfig)_ |  true  |  | Translation defines the configuration for the translation hook. |
 
 
 #### XFCCCertData

@@ -6,9 +6,10 @@ import {
   LatencyComparison,
   ResourceComparison
 } from './types';
-import { benchmarkData as v133TestSuite } from './versions/v1.3.3';
-import { benchmarkData as v140TestSuite } from './versions/v1.4.0';
+import { benchmarkData as v142TestSuite } from './versions/v1.4.2';
 import { benchmarkData as v141TestSuite } from './versions/v1.4.1';
+import { benchmarkData as v140TestSuite } from './versions/v1.4.0';
+import { benchmarkData as v133TestSuite } from './versions/v1.3.3';
 import { benchmarkData as v132TestSuite } from './versions/v1.3.2';
 import { benchmarkData as v131TestSuite } from './versions/v1.3.1';
 import { benchmarkData as v130TestSuite } from './versions/v1.3.0';
@@ -29,6 +30,7 @@ import { benchmarkData as v110TestSuite } from './versions/v1.1.0';
 
 // Import all version data
 export const allTestSuites: TestSuite[] = [
+  v142TestSuite,
   v141TestSuite,
   v140TestSuite,
   v133TestSuite,

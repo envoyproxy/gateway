@@ -316,3 +316,51 @@ func (kcr *KubernetesClientRateLimit) GetQPSAndBurst() (float32, int) {
 	burst := ptr.Deref(kcr.Burst, DefaultKubernetesClientBurst)
 	return float32(qps), int(burst)
 }
+
+// ShouldIncludeClusters returns true if clusters should be included in the translation hook.
+// When TranslationConfig is nil, defaults to true for backward compatibility.
+// When TranslationConfig is explicitly set, uses the configuration.
+func (tc *TranslationConfig) ShouldIncludeClusters() bool {
+	if tc == nil || tc.Cluster == nil {
+		// Default behavior: include clusters for backward compatibility
+		return true
+	}
+
+	return ptr.Deref(tc.Cluster.IncludeAll, true)
+}
+
+// ShouldIncludeSecrets returns true if secrets should be included in the translation hook.
+// When TranslationConfig is nil, defaults to true for backward compatibility.
+// When TranslationConfig is explicitly set, uses the configuration.
+func (tc *TranslationConfig) ShouldIncludeSecrets() bool {
+	if tc == nil || tc.Secret == nil {
+		// Default behavior: include secrets for backward compatibility
+		return true
+	}
+
+	return ptr.Deref(tc.Secret.IncludeAll, true)
+}
+
+// ShouldIncludeListeners returns true if listeners should be included in the translation hook.
+// When TranslationConfig is nil, defaults to false for backward compatibility.
+// When TranslationConfig is explicitly set, uses the configuration.
+func (tc *TranslationConfig) ShouldIncludeListeners() bool {
+	if tc == nil || tc.Listener == nil {
+		// Default behavior: exclude listeners for backward compatibility
+		return false
+	}
+
+	return ptr.Deref(tc.Listener.IncludeAll, false)
+}
+
+// ShouldIncludeRoutes returns true if routes should be included in the translation hook.
+// When TranslationConfig is nil, defaults to false for backward compatibility.
+// When TranslationConfig is explicitly set, uses the configuration.
+func (tc *TranslationConfig) ShouldIncludeRoutes() bool {
+	if tc == nil || tc.Route == nil {
+		// Default behavior: exclude routes for backward compatibility
+		return false
+	}
+
+	return ptr.Deref(tc.Route.IncludeAll, false)
+}

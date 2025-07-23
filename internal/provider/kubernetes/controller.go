@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/telepresenceio/watchable"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
@@ -66,6 +67,7 @@ type gatewayAPIReconciler struct {
 	envoyGateway         *egv1a1.EnvoyGateway
 	mergeGateways        sets.Set[string]
 	resources            *message.ProviderResources
+	subscriptions        *subscriptions
 	extGVKs              []schema.GroupVersionKind
 	extServerPolicies    []schema.GroupVersionKind
 	extBackendGVKs       []schema.GroupVersionKind
@@ -85,6 +87,24 @@ type gatewayAPIReconciler struct {
 	tcpRouteCRDExists      bool
 	tlsRouteCRDExists      bool
 	udpRouteCRDExists      bool
+}
+
+type subscriptions struct {
+	gatewayClassStatuses         <-chan watchable.Snapshot[types.NamespacedName, *gwapiv1.GatewayClassStatus]
+	gatewayStatuses              <-chan watchable.Snapshot[types.NamespacedName, *gwapiv1.GatewayStatus]
+	httpRouteStatuses            <-chan watchable.Snapshot[types.NamespacedName, *gwapiv1.HTTPRouteStatus]
+	grpcRouteStatuses            <-chan watchable.Snapshot[types.NamespacedName, *gwapiv1.GRPCRouteStatus]
+	tlsRouteStatuses             <-chan watchable.Snapshot[types.NamespacedName, *gwapiv1a2.TLSRouteStatus]
+	tcpRouteStatuses             <-chan watchable.Snapshot[types.NamespacedName, *gwapiv1a2.TCPRouteStatus]
+	udpRouteStatuses             <-chan watchable.Snapshot[types.NamespacedName, *gwapiv1a2.UDPRouteStatus]
+	backendTLSPolicyStatuses     <-chan watchable.Snapshot[types.NamespacedName, *gwapiv1a2.PolicyStatus]
+	backendTrafficPolicyStatuses <-chan watchable.Snapshot[types.NamespacedName, *gwapiv1a2.PolicyStatus]
+	envoyExtensionPolicyStatuses <-chan watchable.Snapshot[types.NamespacedName, *gwapiv1a2.PolicyStatus]
+	envoyPatchPolicyStatuses     <-chan watchable.Snapshot[types.NamespacedName, *gwapiv1a2.PolicyStatus]
+	clientTrafficPolicyStatuses  <-chan watchable.Snapshot[types.NamespacedName, *gwapiv1a2.PolicyStatus]
+	securityPolicyStatuses       <-chan watchable.Snapshot[types.NamespacedName, *gwapiv1a2.PolicyStatus]
+	backendStatuses              <-chan watchable.Snapshot[types.NamespacedName, *egv1a1.BackendStatus]
+	extensionPolicyStatuses      <-chan watchable.Snapshot[message.NamespacedNameAndGVK, *gwapiv1a2.PolicyStatus]
 }
 
 // newGatewayAPIController
@@ -117,6 +137,7 @@ func newGatewayAPIController(ctx context.Context, mgr manager.Manager, cfg *conf
 		namespace:            cfg.ControllerNamespace,
 		statusUpdater:        su,
 		resources:            resources,
+		subscriptions:        &subscriptions{},
 		extGVKs:              extGVKs,
 		store:                newProviderStore(),
 		envoyGateway:         cfg.EnvoyGateway,
@@ -153,6 +174,10 @@ func newGatewayAPIController(ctx context.Context, mgr manager.Manager, cfg *conf
 		return fmt.Errorf("error watching resources: %w", err)
 	}
 
+	// Do not call .Subscribe() inside Goroutine since it is supposed to be called from the same
+	// Goroutine where Close() is called.
+	r.subscribeToResources(ctx)
+
 	// When leader election is enabled, only subscribe to status updates upon acquiring leadership.
 	if cfg.EnvoyGateway.Provider.Type == egv1a1.ProviderTypeKubernetes &&
 		!ptr.Deref(cfg.EnvoyGateway.Provider.Kubernetes.LeaderElection.Disable, false) {
@@ -168,6 +193,25 @@ func newGatewayAPIController(ctx context.Context, mgr manager.Manager, cfg *conf
 		r.subscribeAndUpdateStatus(ctx, cfg.EnvoyGateway.ExtensionManager != nil)
 	}
 	return nil
+}
+
+func (r *gatewayAPIReconciler) subscribeToResources(ctx context.Context) {
+	// Subscribe to all resources.
+	r.subscriptions.gatewayClassStatuses = r.resources.GatewayClassStatuses.Subscribe(ctx)
+	r.subscriptions.gatewayStatuses = r.resources.GatewayStatuses.Subscribe(ctx)
+	r.subscriptions.httpRouteStatuses = r.resources.HTTPRouteStatuses.Subscribe(ctx)
+	r.subscriptions.grpcRouteStatuses = r.resources.GRPCRouteStatuses.Subscribe(ctx)
+	r.subscriptions.tlsRouteStatuses = r.resources.TLSRouteStatuses.Subscribe(ctx)
+	r.subscriptions.tcpRouteStatuses = r.resources.TCPRouteStatuses.Subscribe(ctx)
+	r.subscriptions.udpRouteStatuses = r.resources.UDPRouteStatuses.Subscribe(ctx)
+	r.subscriptions.backendTLSPolicyStatuses = r.resources.BackendTLSPolicyStatuses.Subscribe(ctx)
+	r.subscriptions.backendTrafficPolicyStatuses = r.resources.BackendTrafficPolicyStatuses.Subscribe(ctx)
+	r.subscriptions.envoyExtensionPolicyStatuses = r.resources.EnvoyExtensionPolicyStatuses.Subscribe(ctx)
+	r.subscriptions.envoyPatchPolicyStatuses = r.resources.EnvoyPatchPolicyStatuses.Subscribe(ctx)
+	r.subscriptions.clientTrafficPolicyStatuses = r.resources.ClientTrafficPolicyStatuses.Subscribe(ctx)
+	r.subscriptions.securityPolicyStatuses = r.resources.SecurityPolicyStatuses.Subscribe(ctx)
+	r.subscriptions.backendStatuses = r.resources.BackendStatuses.Subscribe(ctx)
+	r.subscriptions.extensionPolicyStatuses = r.resources.ExtensionPolicyStatuses.Subscribe(ctx)
 }
 
 func byNamespaceSelectorEnabled(eg *egv1a1.EnvoyGateway) bool {
@@ -1806,11 +1850,6 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 		predicate.NewTypedPredicateFuncs(func(node *corev1.Node) bool {
 			return r.handleNode(node)
 		}),
-	}
-	if r.namespaceLabel != nil {
-		nPredicates = append(nPredicates, predicate.NewTypedPredicateFuncs(func(node *corev1.Node) bool {
-			return r.hasMatchingNamespaceLabels(node)
-		}))
 	}
 	// resource address.
 	if err := c.Watch(

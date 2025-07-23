@@ -135,6 +135,16 @@ func (m *Manager) FailOpen() bool {
 	return m.extension.FailOpen
 }
 
+// GetTranslationHookConfig returns the translation hook configuration.
+func (m *Manager) GetTranslationHookConfig() *egv1a1.TranslationConfig {
+	if m.extension.Hooks == nil ||
+		m.extension.Hooks.XDSTranslator == nil ||
+		m.extension.Hooks.XDSTranslator.Translation == nil {
+		return nil
+	}
+	return m.extension.Hooks.XDSTranslator.Translation
+}
+
 // HasExtension checks to see whether a given Group and Kind has an
 // associated extension registered for it.
 func (m *Manager) HasExtension(g gwapiv1.Group, k gwapiv1.Kind) bool {
