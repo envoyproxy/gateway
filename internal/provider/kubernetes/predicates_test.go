@@ -1567,7 +1567,7 @@ func TestValidateClusterTrustBundleForReconcile(t *testing.T) {
 			WithObjects(tc.configs...).
 			WithIndex(&egv1a1.Backend{}, clusterTrustBundleBackendIndex, clusterTrustBundleBackendIndexFunc).
 			WithIndex(&gwapiv1a3.BackendTLSPolicy{}, clusterTrustBundleBtlsIndex, clusterTrustBundleBtlsIndexFunc).
-			WithIndex(&egv1a1.ClientTrafficPolicy{}, clusterTrustBundlerCtpIndex, clusterTrustBundleCtpIndexFunc).
+			WithIndex(&egv1a1.ClientTrafficPolicy{}, clusterTrustBundleCtpIndex, clusterTrustBundleCtpIndexFunc).
 			Build()
 		t.Run(tc.name, func(t *testing.T) {
 			res := r.validateClusterTrustBundleForReconcile(tc.ctb)
