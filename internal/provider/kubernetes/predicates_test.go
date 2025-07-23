@@ -373,7 +373,7 @@ func TestValidateSecretForReconcile(t *testing.T) {
 								AuthorizationEndpoint: ptr.To("https://accounts.google.com/o/oauth2/v2/auth"),
 								TokenEndpoint:         ptr.To("https://oauth2.googleapis.com/token"),
 							},
-							ClientID: "client-id",
+							ClientID: ptr.To("client-id"),
 							ClientSecret: gwapiv1.SecretObjectReference{
 								Name: "secret",
 							},

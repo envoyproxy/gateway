@@ -11,12 +11,13 @@ gateways:
     - allowedRoutes:
         namespaces:
           from: All
-      name: http
+      hostname: listener-1.gateway-1.envoyproxy.io
+      name: listener-1
       port: 80
       protocol: HTTP
   status:
     listeners:
-    - attachedRoutes: 2
+    - attachedRoutes: 1
       conditions:
       - lastTransitionTime: null
         message: Sending translated listener configuration to the data plane
@@ -33,7 +34,7 @@ gateways:
         reason: ResolvedRefs
         status: "True"
         type: ResolvedRefs
-      name: http
+      name: listener-1
       supportedKinds:
       - group: gateway.networking.k8s.io
         kind: HTTPRoute
@@ -48,11 +49,11 @@ httpRoutes:
     namespace: default
   spec:
     hostnames:
-    - www.example.com
+    - listener-1.gateway-1.envoyproxy.io
     parentRefs:
     - name: gateway-1
       namespace: envoy-gateway
-      sectionName: http
+      sectionName: listener-1
     rules:
     - backendRefs:
       - name: service-1
@@ -60,44 +61,14 @@ httpRoutes:
       matches:
       - path:
           value: /foo
-  status:
-    parents:
-    - conditions:
-      - lastTransitionTime: null
-        message: Route is accepted
-        reason: Accepted
-        status: "True"
-        type: Accepted
-      - lastTransitionTime: null
-        message: Resolved all the Object references for the Route
-        reason: ResolvedRefs
-        status: "True"
-        type: ResolvedRefs
-      controllerName: gateway.envoyproxy.io/gatewayclass-controller
-      parentRef:
-        name: gateway-1
-        namespace: envoy-gateway
-        sectionName: http
-- apiVersion: gateway.networking.k8s.io/v1
-  kind: HTTPRoute
-  metadata:
-    creationTimestamp: null
-    name: httproute-2
-    namespace: default
-  spec:
-    hostnames:
-    - www.example.com
-    parentRefs:
-    - name: gateway-1
-      namespace: envoy-gateway
-      sectionName: http
-    rules:
+      name: rule-1
     - backendRefs:
-      - name: service-1
+      - name: service-2
         port: 8080
       matches:
       - path:
           value: /bar
+      name: rule-2
   status:
     parents:
     - conditions:
@@ -115,13 +86,13 @@ httpRoutes:
       parentRef:
         name: gateway-1
         namespace: envoy-gateway
-        sectionName: http
+        sectionName: listener-1
 infraIR:
   envoy-gateway/gateway-1:
     proxy:
       listeners:
       - address: null
-        name: envoy-gateway/gateway-1/http
+        name: envoy-gateway/gateway-1/listener-1
         ports:
         - containerPort: 10080
           name: http-80
@@ -141,40 +112,17 @@ securityPolicies:
   kind: SecurityPolicy
   metadata:
     creationTimestamp: null
-    name: policy-for-http-route
+    name: policy-for-route-1-section-name
     namespace: default
-    uid: 08335a80-83ba-4592-888f-6ac0bba44ce4
   spec:
-    oidc:
-      clientIDRef:
-        group: null
-        kind: null
-        name: client2-secret
-      clientSecret:
-        group: null
-        kind: null
-        name: client2-secret
-      cookieDomain: example.com
-      defaultRefreshTokenTTL: 48h0m0s
-      defaultTokenTTL: 1h0m0s
-      forwardAccessToken: true
-      logoutPath: /foo/logout
-      provider:
-        authorizationEndpoint: https://oauth.foo.com/oauth2/v2/auth
-        issuer: https://oauth.foo.com
-        tokenEndpoint: https://oauth.foo.com/token
-      redirectURL: https://www.example.com/foo/oauth2/callback
-      refreshToken: true
-      resources:
-      - api
-      scopes:
-      - openid
-      - email
-      - profile
+    cors:
+      allowHeaders:
+      - x-httproute-1-rule-1
     targetRef:
       group: gateway.networking.k8s.io
       kind: HTTPRoute
       name: httproute-1
+      sectionName: rule-1
   status:
     ancestors:
     - ancestorRef:
@@ -182,7 +130,7 @@ securityPolicies:
         kind: Gateway
         name: gateway-1
         namespace: envoy-gateway
-        sectionName: http
+        sectionName: listener-1
       conditions:
       - lastTransitionTime: null
         message: Policy has been accepted.
@@ -194,28 +142,17 @@ securityPolicies:
   kind: SecurityPolicy
   metadata:
     creationTimestamp: null
-    name: policy-for-gateway
-    namespace: envoy-gateway
-    uid: b8284d0f-de82-4c65-b204-96a0d3f258a1
+    name: policy-for-route-1-section-name-as-well
+    namespace: default
   spec:
-    oidc:
-      clientID: client1.apps.googleusercontent.com
-      clientSecret:
-        group: null
-        kind: null
-        name: client1-secret
-      defaultRefreshTokenTTL: 24h0m0s
-      defaultTokenTTL: 30m0s
-      forwardAccessToken: true
-      logoutPath: /bar/logout
-      provider:
-        issuer: https://accounts.google.com
-      redirectURL: https://www.example.com/bar/oauth2/callback
-      refreshToken: true
+    cors:
+      allowHeaders:
+      - x-httproute-1-rule-1
     targetRef:
       group: gateway.networking.k8s.io
-      kind: Gateway
-      name: gateway-1
+      kind: HTTPRoute
+      name: httproute-1
+      sectionName: rule-1
   status:
     ancestors:
     - ancestorRef:
@@ -223,6 +160,37 @@ securityPolicies:
         kind: Gateway
         name: gateway-1
         namespace: envoy-gateway
+        sectionName: listener-1
+      conditions:
+      - lastTransitionTime: null
+        message: Unable to target RouteRule httproute-1/rule-1, another SecurityPolicy
+          has already attached to it
+        reason: Conflicted
+        status: "False"
+        type: Accepted
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: SecurityPolicy
+  metadata:
+    creationTimestamp: null
+    name: policy-for-route-1
+    namespace: default
+  spec:
+    cors:
+      allowHeaders:
+      - x-httproute-1
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: httproute-1
+  status:
+    ancestors:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: gateway-1
+        namespace: envoy-gateway
+        sectionName: listener-1
       conditions:
       - lastTransitionTime: null
         message: Policy has been accepted.
@@ -231,10 +199,40 @@ securityPolicies:
         type: Accepted
       - lastTransitionTime: null
         message: 'This policy is being overridden by other securityPolicies for these
-          routes: [default/httproute-1]'
+          routes: [rule-1]'
         reason: Overridden
         status: "True"
         type: Overridden
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: SecurityPolicy
+  metadata:
+    creationTimestamp: null
+    name: policy-for-route-1-as-well
+    namespace: default
+  spec:
+    cors:
+      allowHeaders:
+      - x-httproute-1
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: httproute-1
+  status:
+    ancestors:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: gateway-1
+        namespace: envoy-gateway
+        sectionName: listener-1
+      conditions:
+      - lastTransitionTime: null
+        message: Unable to target HTTPRoute httproute-1, another SecurityPolicy has
+          already attached to it
+        reason: Conflicted
+        status: "False"
+        type: Accepted
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
 xdsIR:
   envoy-gateway/gateway-1:
@@ -244,14 +242,14 @@ xdsIR:
     http:
     - address: 0.0.0.0
       hostnames:
-      - '*'
+      - listener-1.gateway-1.envoyproxy.io
       isHTTP2: false
       metadata:
         kind: Gateway
         name: gateway-1
         namespace: envoy-gateway
-        sectionName: http
-      name: envoy-gateway/gateway-1/http
+        sectionName: listener-1
+      name: envoy-gateway/gateway-1/listener-1
       path:
         escapedSlashesAction: UnescapeAndRedirect
         mergeSlashes: true
@@ -262,6 +260,7 @@ xdsIR:
             kind: HTTPRoute
             name: httproute-1
             namespace: default
+            sectionName: rule-1
           name: httproute/default/httproute-1/rule/0
           settings:
           - addressType: IP
@@ -275,89 +274,57 @@ xdsIR:
             name: httproute/default/httproute-1/rule/0/backend/0
             protocol: HTTP
             weight: 1
-        hostname: www.example.com
+        hostname: listener-1.gateway-1.envoyproxy.io
         isHTTP2: false
         metadata:
           kind: HTTPRoute
           name: httproute-1
           namespace: default
-        name: httproute/default/httproute-1/rule/0/match/0/www_example_com
+          sectionName: rule-1
+        name: httproute/default/httproute-1/rule/0/match/0/listener-1_gateway-1_envoyproxy_io
         pathMatch:
           distinct: false
           name: ""
           prefix: /foo
         security:
-          oidc:
-            clientID: client2.oauth.foo.com
-            clientSecret: '[redacted]'
-            cookieDomain: example.com
-            cookieSuffix: 5f93c2e4
-            defaultRefreshTokenTTL: 48h0m0s
-            defaultTokenTTL: 1h0m0s
-            forwardAccessToken: true
-            hmacSecret: '[redacted]'
-            logoutPath: /foo/logout
-            name: securitypolicy/default/policy-for-http-route
-            provider:
-              authorizationEndpoint: https://oauth.foo.com/oauth2/v2/auth
-              tokenEndpoint: https://oauth.foo.com/token
-            redirectPath: /foo/oauth2/callback
-            redirectURL: https://www.example.com/foo/oauth2/callback
-            refreshToken: true
-            resources:
-            - api
-            scopes:
-            - openid
-            - email
-            - profile
+          cors:
+            allowHeaders:
+            - x-httproute-1-rule-1
       - destination:
           metadata:
             kind: HTTPRoute
-            name: httproute-2
+            name: httproute-1
             namespace: default
-          name: httproute/default/httproute-2/rule/0
+            sectionName: rule-2
+          name: httproute/default/httproute-1/rule/1
           settings:
           - addressType: IP
             endpoints:
             - host: 7.7.7.7
               port: 8080
             metadata:
-              name: service-1
+              name: service-2
               namespace: default
               sectionName: "8080"
-            name: httproute/default/httproute-2/rule/0/backend/0
+            name: httproute/default/httproute-1/rule/1/backend/0
             protocol: HTTP
             weight: 1
-        hostname: www.example.com
+        hostname: listener-1.gateway-1.envoyproxy.io
         isHTTP2: false
         metadata:
           kind: HTTPRoute
-          name: httproute-2
+          name: httproute-1
           namespace: default
-        name: httproute/default/httproute-2/rule/0/match/0/www_example_com
+          sectionName: rule-2
+        name: httproute/default/httproute-1/rule/1/match/0/listener-1_gateway-1_envoyproxy_io
         pathMatch:
           distinct: false
           name: ""
           prefix: /bar
         security:
-          oidc:
-            clientID: client1.apps.googleusercontent.com
-            clientSecret: '[redacted]'
-            cookieSuffix: b0a1b740
-            defaultRefreshTokenTTL: 24h0m0s
-            defaultTokenTTL: 30m0s
-            forwardAccessToken: true
-            hmacSecret: '[redacted]'
-            logoutPath: /bar/logout
-            name: securitypolicy/envoy-gateway/policy-for-gateway
-            provider:
-              authorizationEndpoint: https://accounts.google.com/o/oauth2/v2/auth
-              tokenEndpoint: https://oauth2.googleapis.com/token
-            redirectPath: /bar/oauth2/callback
-            redirectURL: https://www.example.com/bar/oauth2/callback
-            refreshToken: true
-            scopes:
-            - openid
+          cors:
+            allowHeaders:
+            - x-httproute-1
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4
