@@ -88,7 +88,7 @@ spec:
           image: custom-cr.internal.io/envoyproxy/envoy:distroless-v1.34.1
 ```
 
-For comprehensive EnvoyProxy configuration options including deployment settings, resource limits, annotations, and other customizations, see [Customize EnvoyProxy](../customize-envoyproxy).
+For comprehensive EnvoyProxy configuration options including deployment settings, resource limits, annotations, and other customizations, see [Customize EnvoyProxy](customize-envoyproxy).
 
 ## Default LoadBalancer Service Type
 
@@ -96,4 +96,4 @@ By default, Envoy uses a Service of type `LoadBalancer`. In air-gapped environme
 you may need to configure service annotations or change the service type depending 
 on your Kubernetes environment and network restrictions.
 
-For detailed service configuration options including annotations, service types, and other networking customizations, see [Customize EnvoyProxy](../customize-envoyproxy).
+For detailed service configuration options including annotations, service types, and other networking customizations, see [Customize EnvoyProxy](customize-envoyproxy).
