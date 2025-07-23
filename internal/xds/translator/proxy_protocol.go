@@ -16,21 +16,14 @@ import (
 
 // patchProxyProtocolFilter builds and appends the Proxy Protocol Filter to the
 // HTTP Listener's Listener Filters if applicable.
-func patchProxyProtocolFilter(xdsListener *listenerv3.Listener, enableProxyProtocol bool, proxyProtocolSettings *ir.ProxyProtocolSettings) {
+func patchProxyProtocolFilter(xdsListener *listenerv3.Listener, proxyProtocolSettings *ir.ProxyProtocolSettings) {
 	// Early return if listener is nil
 	if xdsListener == nil {
 		return
 	}
 
-	// Determine if proxy protocol is enabled
-	isEnabled := enableProxyProtocol
-	if proxyProtocolSettings != nil {
-		// ProxyProtocolSettings takes precedence when provided and is always enabled
-		isEnabled = true
-	}
-
 	// Early return if proxy protocol is not enabled
-	if !isEnabled {
+	if proxyProtocolSettings == nil {
 		return
 	}
 
