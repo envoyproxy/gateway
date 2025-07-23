@@ -1,0 +1,45 @@
+- ignorePortInHostMatching: true
+  name: first-listener
+  virtualHosts:
+  - domains:
+    - '*'
+    name: first-listener/*
+    routes:
+    - match:
+        prefix: /
+      name: reset-before-request-route
+      route:
+        cluster: first-route-dest
+        retryPolicy:
+          hostSelectionRetryMaxAttempts: "5"
+          numRetries: 3
+          perTryTimeout: 0.250s
+          retryBackOff:
+            baseInterval: 0.100s
+            maxInterval: 10s
+          retryHostPredicate:
+          - name: envoy.retry_host_predicates.previous_hosts
+            typedConfig:
+              '@type': type.googleapis.com/envoy.extensions.retry.host.previous_hosts.v3.PreviousHostsPredicate
+          retryOn: reset-before-request
+        upgradeConfigs:
+        - upgradeType: websocket
+  - domains:
+    - foo
+    name: first-listener/foo
+    routes:
+    - match:
+        prefix: /
+      name: mixed-triggers-route
+      route:
+        cluster: first-route-dest
+        retryPolicy:
+          hostSelectionRetryMaxAttempts: "5"
+          numRetries: 5
+          retryHostPredicate:
+          - name: envoy.retry_host_predicates.previous_hosts
+            typedConfig:
+              '@type': type.googleapis.com/envoy.extensions.retry.host.previous_hosts.v3.PreviousHostsPredicate
+          retryOn: reset,reset-before-request,connect-failure
+        upgradeConfigs:
+        - upgradeType: websocket

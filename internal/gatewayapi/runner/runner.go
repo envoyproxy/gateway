@@ -86,6 +86,8 @@ func (r *Runner) Start(ctx context.Context) (err error) {
 	r.Logger = r.Logger.WithName(r.Name()).WithValues("runner", r.Name())
 
 	go r.startWasmCache(ctx)
+	// Do not call .Subscribe() inside Goroutine since it is supposed to be called from the same
+	// Goroutine where Close() is called.
 	c := r.ProviderResources.GatewayAPIResources.Subscribe(ctx)
 	go r.subscribeAndTranslate(c)
 	r.Logger.Info("started")

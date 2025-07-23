@@ -113,6 +113,8 @@ _Appears in:_
 | ---   | ---  | ---      | ---     | ---         |
 | `credentialRefs` | _[SecretObjectReference](https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1.SecretObjectReference) array_ |  true  |  | CredentialRefs is the Kubernetes secret which contains the API keys.<br />This is an Opaque secret.<br />Each API key is stored in the key representing the client id.<br />If the secrets have a key for a duplicated client, the first one will be used. |
 | `extractFrom` | _[ExtractFrom](#extractfrom) array_ |  true  |  | ExtractFrom is where to fetch the key from the coming request.<br />The value from the first source that has a key will be used. |
+| `forwardClientIDHeader` | _string_ |  false  |  | ForwardClientIDHeader is the name of the header to forward the client identity to the backend<br />service. The header will be added to the request with the client id as the value. |
+| `sanitize` | _boolean_ |  false  |  | Sanitize indicates whether to remove the API key from the request before forwarding it to the backend service. |
 
 
 #### ActiveHealthCheck
@@ -129,6 +131,7 @@ _Appears in:_
 | ---   | ---  | ---      | ---     | ---         |
 | `timeout` | _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.29/#duration-v1-meta)_ |  false  | 1s | Timeout defines the time to wait for a health check response. |
 | `interval` | _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.29/#duration-v1-meta)_ |  false  | 3s | Interval defines the time between active health checks. |
+| `initialJitter` | _[Duration](https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.Duration)_ |  false  |  | InitialJitter defines the maximum time Envoy will wait before the first health check.<br />Envoy will randomly select a value between 0 and the initial jitter value. |
 | `unhealthyThreshold` | _integer_ |  false  | 3 | UnhealthyThreshold defines the number of unhealthy health checks required before a backend host is marked unhealthy. |
 | `healthyThreshold` | _integer_ |  false  | 1 | HealthyThreshold defines the number of healthy health checks required before a backend host is marked healthy. |
 | `type` | _[ActiveHealthCheckerType](#activehealthcheckertype)_ |  true  |  | Type defines the type of health checker. |
@@ -4975,6 +4978,7 @@ _Appears in:_
 | `5xx` | The upstream server responds with any 5xx response code, or does not respond at all (disconnect/reset/read timeout).<br />Includes connect-failure and refused-stream.<br /> | 
 | `gateway-error` | The response is a gateway error (502,503 or 504).<br /> | 
 | `reset` | The upstream server does not respond at all (disconnect/reset/read timeout.)<br /> | 
+| `reset-before-request` | Like reset, but only retry if the request headers have not been sent to the upstream server.<br /> | 
 | `connect-failure` | Connection failure to the upstream server (connect timeout, etc.). (Included in *5xx*)<br /> | 
 | `retriable-4xx` | The upstream server responds with a retriable 4xx response code.<br />Currently, the only response code in this category is 409.<br /> | 
 | `refused-stream` | The upstream server resets the stream with a REFUSED_STREAM error code.<br /> | 

@@ -13,7 +13,8 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	funcE "github.com/tetratelabs/func-e/api"
+	func_e "github.com/tetratelabs/func-e"
+	"github.com/tetratelabs/func-e/api"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/crypto"
@@ -91,7 +92,7 @@ func TestInfraCreateProxy(t *testing.T) {
 func TestInfra_runEnvoy_stopEnvoy(t *testing.T) {
 	tmpdir := t.TempDir()
 	// Ensures that all the required binaries are available.
-	err := funcE.Run(context.Background(), []string{"--version"}, funcE.HomeDir(tmpdir))
+	err := func_e.Run(context.Background(), []string{"--version"}, api.HomeDir(tmpdir))
 	require.NoError(t, err)
 
 	i := &Infra{proxyContextMap: make(map[string]*proxyContext), HomeDir: tmpdir}
