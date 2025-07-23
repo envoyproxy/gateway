@@ -290,7 +290,4 @@ jobs:
     steps:
     - run: |
         echo "CI checks completed"
-        [ "${{
-            contains(needs.*.result, 'failure') ||
-            contains(needs.*.result, 'cancelled')
-          }}" == "false" ] || exit 1
+        [ "${{ contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') }}" == "false" ] || exit 1
