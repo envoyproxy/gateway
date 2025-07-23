@@ -93,6 +93,28 @@ type EnvoyGatewaySpec struct {
 	//
 	// +optional
 	ExtensionAPIs *ExtensionAPISettings `json:"extensionApis,omitempty"`
+
+	// RuntimeFlags defines the runtime flags for Envoy Gateway.
+	// Unlike ExtensionAPIs, these flags are temporary and will be removed in future releases once the related features are stable.
+	RuntimeFlags *RuntimeFlags `json:"runtimeFlags,omitempty"`
+}
+
+// RuntimeFlag defines a runtime flag used to guard breaking changes or risky experimental features in new Envoy Gateway releases.
+// A runtime flag may be enabled or disabled by default and can be toggled through the EnvoyGateway resource.
+type RuntimeFlag string
+
+const (
+	// UseAddressAsListenerName indicates that the listener name should be derived from the address and port.
+	UseAddressAsListenerName RuntimeFlag = "UseAddressAsListenerName"
+)
+
+// RuntimeFlags provide a mechanism to guard breaking changes or risky experimental features in new Envoy Gateway releases.
+// Each flag may be enabled or disabled by default and can be toggled through the EnvoyGateway resource.
+// The names of these flags will be included in the release notes alongside an explanation of the change.
+// Please note that these flags are temporary and will be removed in future releases once the related features are stable.
+type RuntimeFlags struct {
+	Enabled  []RuntimeFlag `json:"enabled,omitempty"`
+	Disabled []RuntimeFlag `json:"disabled,omitempty"`
 }
 
 type KubernetesClient struct {
