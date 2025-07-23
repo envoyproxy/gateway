@@ -71,10 +71,11 @@ type TracingProvider struct {
 	// +kubebuilder:default=4317
 	Port int32 `json:"port,omitempty"`
 	// ServiceName defines the service name to use in tracing configuration.
-	// If not set, Envoy Gateway will use a default service name based on the Gateway.
-	// Note: This field is not supported for Zipkin.
+	// If not set, Envoy Gateway will use a default service name set as
+	// "name.namespace" (e.g., "my-gateway.default").
+	// Note: This field is only supported for OpenTelemetry and Datadog tracing providers.
 	// For Zipkin, the service name in traces is always derived from the Envoy --service-cluster flag
-	// (typically "namespace/name"). Setting this field has no effect for Zipkin.
+	// (typically "namespace/name" format). Setting this field has no effect for Zipkin.
 	//
 	// +optional
 	// +kubebuilder:validation:XValidation:message="serviceName cannot be empty if provided",rule="self != \"\""
