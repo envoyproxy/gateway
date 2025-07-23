@@ -81,7 +81,7 @@ In this case:
 
 ## Related Resources
 
-- [Connection Limit](../tasks/traffic/connection-limit.md)
+- [Connection Limit](../../tasks/traffic/connection-limit.md)
 - [HTTP Request Headers](../../tasks/traffic/http-request-headers)
 - [HTTP/3](../../tasks/traffic/http3)
 - [Mutual TLS: External Clients to the Gateway](../../tasks/security/mutual-tls/)
