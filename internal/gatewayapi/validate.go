@@ -355,6 +355,15 @@ func (t *Translator) validateAllowedNamespaces(listener *ListenerContext) {
 	}
 }
 
+func getHost(listener *ListenerContext) *gwapiv1.Hostname {
+	value, exists := listener.TLS.Options["gateway.envoyproxy.io/tls-hostname-override"]
+	if exists {
+		host := gwapiv1.Hostname(value)
+		return &host
+	}
+	return listener.Hostname
+}
+
 func (t *Translator) validateTerminateModeAndGetTLSSecrets(listener *ListenerContext, resources *resource.Resources) ([]*corev1.Secret, []*x509.Certificate) {
 	if len(listener.TLS.CertificateRefs) == 0 {
 		status.SetGatewayListenerStatusCondition(listener.gateway.Gateway,
@@ -460,7 +469,7 @@ func (t *Translator) validateTerminateModeAndGetTLSSecrets(listener *ListenerCon
 		secrets = append(secrets, secret)
 	}
 
-	certs, err := validateTLSSecretsData(secrets, listener.Hostname)
+	certs, err := validateTLSSecretsData(secrets, getHost(listener))
 	if err != nil {
 		status.SetGatewayListenerStatusCondition(listener.gateway.Gateway,
 			listener.listenerStatusIdx,
