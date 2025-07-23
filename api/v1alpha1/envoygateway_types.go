@@ -101,6 +101,8 @@ type EnvoyGatewaySpec struct {
 
 // RuntimeFlag defines a runtime flag used to guard breaking changes or risky experimental features in new Envoy Gateway releases.
 // A runtime flag may be enabled or disabled by default and can be toggled through the EnvoyGateway resource.
+// +enum
+// +kubebuilder:validation:Enum=UseAddressAsListenerName
 type RuntimeFlag string
 
 const (
