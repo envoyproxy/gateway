@@ -58,7 +58,7 @@ const (
 	// ClusterTrustBundle related indexers
 	clusterTrustBundleBackendIndex = "clusterTrustBundleBackendIndex"
 	clusterTrustBundleBtlsIndex    = "clusterTrustBundleBtlsIndex"
-	clusterTrustBundlerCtpIndex    = "clusterTrustBundlerCtpIndex"
+	clusterTrustBundleCtpIndex     = "clusterTrustBundleCtpIndex"
 )
 
 func addReferenceGrantIndexers(ctx context.Context, mgr manager.Manager) error {
@@ -691,7 +691,7 @@ func addCtpIndexers(ctx context.Context, mgr manager.Manager) error {
 	if err := mgr.GetFieldIndexer().IndexField(ctx, &egv1a1.ClientTrafficPolicy{}, secretCtpIndex, secretCtpIndexFunc); err != nil {
 		return err
 	}
-	if err := mgr.GetFieldIndexer().IndexField(ctx, &egv1a1.ClientTrafficPolicy{}, clusterTrustBundlerCtpIndex, clusterTrustBundleCtpIndexFunc); err != nil {
+	if err := mgr.GetFieldIndexer().IndexField(ctx, &egv1a1.ClientTrafficPolicy{}, clusterTrustBundleCtpIndex, clusterTrustBundleCtpIndexFunc); err != nil {
 		return err
 	}
 
