@@ -364,6 +364,9 @@ type ProxyProtocolSettings struct {
 	// If set to true, the listener will accept requests without a Proxy Protocol header.
 	// If set to false, the listener will reject requests without a Proxy Protocol header.
 	// If not set, the default behavior is to reject requests without a Proxy Protocol header.
+	// Warning: AllowRequestsWithoutProxyProtocol breaks conformance with the specification. Only enable if ALL traffic to the listener comes from a trusted source.
+	// For more information on security implications, see haproxy.org/download/2.1/doc/proxy-protocol.txt
+	//
 	//
 	// +optional
 	AllowRequestsWithoutProxyProtocol *bool `json:"allowRequestsWithoutProxyProtocol,omitempty"`
