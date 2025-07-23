@@ -142,12 +142,12 @@ In this example, the route-level policy merges with the gateway-level policy, re
 
 ## Related Resources
 
-- [Circuit Breakers](../../tasks/traffic/circuit-breaker.md)
-- [Failover](../../tasks/traffic/failover)
-- [Fault Injection](../../tasks/traffic/fault-injection)
-- [Global Rate Limit](../../tasks/traffic/global-rate-limit)
-- [Local Rate Limit](../../tasks/traffic/local-rate-limit)
-- [Load Balancing](../../tasks/traffic/load-balancing)
-- [Response Compression](../../tasks/traffic/response-compression)
-- [Response Override](../../tasks/traffic/response-override)
-- [BackendTrafficPolicy API Reference](../../api/extension_types#backendtrafficpolicy)
+- [Circuit Breakers](../tasks/traffic/circuit-breaker.md)
+- [Failover](../tasks/traffic/failover)
+- [Fault Injection](../tasks/traffic/fault-injection)
+- [Global Rate Limit](../tasks/traffic/global-rate-limit)
+- [Local Rate Limit](../tasks/traffic/local-rate-limit)
+- [Load Balancing](../tasks/traffic/load-balancing)
+- [Response Compression](../tasks/traffic/response-compression)
+- [Response Override](../tasks/traffic/response-override)
+- [BackendTrafficPolicy API Reference](../api/extension_types#backendtrafficpolicy)

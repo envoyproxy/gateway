@@ -30,6 +30,6 @@ One of the Gateway API's key strengths is that implementers can extend it. While
 Envoy Gateway leverages this model by introducing a suite of Gateway API extensions—implemented as Kubernetes Custom Resource Definitions (CRDs)—to expose powerful features from Envoy Proxy. These features include enhanced support for rate limiting, authentication, traffic shaping, and more. By utilizing these extensions, users can access production-grade functionality in a Kubernetes-native and declarative manner, without needing to write a low-level Envoy configuration.
 
 ## Related Resources
-- [Getting Started with Envoy Gateway](../../tasks/quickstart.md)
-- [Envoy Gateway API Reference](../../api/extension_types)
-- [Extensibility Tasks](../../tasks/extensibility/_index.md)
+- [Getting Started with Envoy Gateway](../tasks/quickstart.md)
+- [Envoy Gateway API Reference](../api/extension_types)
+- [Extensibility Tasks](../tasks/extensibility/_index.md)

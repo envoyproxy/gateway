@@ -103,5 +103,5 @@ This configuration limits traffic to 50 requests per minute per Envoy instance f
 
 ## Related Resources
 - [BackendTrafficPolicy](gateway_api_extensions/backend-traffic-policy.md)
-- [Task: Global Rate Limit](../../tasks/traffic/global-rate-limit.md)
-- [Task: Local Rate Limit](../../tasks/traffic/local-rate-limit.md)
+- [Task: Global Rate Limit](../tasks/traffic/global-rate-limit.md)
+- [Task: Local Rate Limit](../tasks/traffic/local-rate-limit.md)
