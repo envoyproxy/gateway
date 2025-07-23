@@ -329,14 +329,26 @@ window.EnvoyGatewayAdmin = {
     
     // Load configuration dump
     loadConfigDump: function() {
-        this.showLoading('config-dump');
+        // Load config summary
+        this.showLoading('config-summary');
         this.apiCall('/api/config_dump', (error, data) => {
-            this.hideLoading('config-dump');
+            this.hideLoading('config-summary');
             if (error) {
-                this.showError('config-dump', 'Failed to load configuration dump: ' + error.message);
+                this.showError('config-summary', 'Failed to load configuration summary: ' + error.message);
                 return;
             }
-            this.updateConfigDump(data);
+            this.updateConfigSummary(data);
+        });
+
+        // Load resources with new layout
+        this.showLoading('config-resources-container');
+        this.apiCall('/api/config_dump', (error, data) => {
+            this.hideLoading('config-resources-container');
+            if (error) {
+                this.showError('config-resources-container', 'Failed to load resources: ' + error.message);
+                return;
+            }
+            this.updateResourcesContainer(data);
         });
     },
     
@@ -660,6 +672,241 @@ window.EnvoyGatewayAdmin = {
         }
     },
     
+    // Update configuration summary
+    updateConfigSummary: function(data) {
+        const container = document.getElementById('config-summary');
+        if (!container) return;
+
+        // Collect all resource types and their counts
+        const resourceStats = [
+            { name: 'Gateways', count: data.gateways?.length || 0 },
+            { name: 'HTTP Routes', count: data.httpRoutes?.length || 0 },
+            { name: 'GRPC Routes', count: data.grpcRoutes?.length || 0 },
+            { name: 'TLS Routes', count: data.tlsRoutes?.length || 0 },
+            { name: 'TCP Routes', count: data.tcpRoutes?.length || 0 },
+            { name: 'UDP Routes', count: data.udpRoutes?.length || 0 },
+            { name: 'Gateway Classes', count: data.gatewayClass?.length || 0 },
+            { name: 'Client Traffic Policies', count: data.clientTrafficPolicies?.length || 0 },
+            { name: 'Backend Traffic Policies', count: data.backendTrafficPolicies?.length || 0 },
+            { name: 'Backend TLS Policies', count: data.backendTLSPolicies?.length || 0 },
+            { name: 'Security Policies', count: data.securityPolicies?.length || 0 },
+            { name: 'Envoy Patch Policies', count: data.envoyPatchPolicies?.length || 0 },
+            { name: 'Envoy Extension Policies', count: data.envoyExtensionPolicies?.length || 0 },
+            { name: 'Services', count: data.services?.length || 0 },
+            { name: 'Secrets', count: data.secrets?.length || 0 },
+            { name: 'ConfigMaps', count: data.configMaps?.length || 0 },
+            { name: 'Namespaces', count: data.namespaces?.length || 0 },
+            { name: 'Endpoint Slices', count: data.endpointSlices?.length || 0 },
+            { name: 'Reference Grants', count: data.referenceGrants?.length || 0 },
+            { name: 'HTTP Route Filters', count: data.httpRouteFilters?.length || 0 },
+            { name: 'Envoy Proxies', count: data.envoyProxies?.length || 0 },
+            { name: 'Backends', count: data.backends?.length || 0 },
+            { name: 'Service Imports', count: data.serviceImports?.length || 0 }
+        ];
+
+        // Filter out resources with 0 count and sort by count (descending)
+        const filteredStats = resourceStats
+            .filter(stat => stat.count > 0)
+            .sort((a, b) => b.count - a.count);
+
+        // Calculate total resources
+        const totalResources = resourceStats.reduce((sum, stat) => sum + stat.count, 0);
+
+        // Generate bar chart HTML
+        const maxCount = filteredStats.length > 0 ? filteredStats[0].count : 1;
+        const chartHTML = this.generateBarChart(filteredStats, maxCount);
+
+        container.innerHTML = `
+            <div class="config-summary-chart">
+                ${chartHTML}
+            </div>
+            <div class="config-summary-total">
+                <strong>Total Resources: ${totalResources}</strong>
+            </div>
+            <div style="margin-top: 1rem; text-align: center; color: #6c757d; font-size: 0.875rem;">
+                Last updated: ${new Date(data.lastUpdated).toLocaleString()}
+            </div>
+        `;
+    },
+
+    // Generate bar chart HTML
+    generateBarChart: function(stats, maxCount) {
+        if (stats.length === 0) {
+            return '<div class="empty-chart">No resources found</div>';
+        }
+
+        // Calculate grid lines (5 horizontal lines for Y-axis)
+        const gridLines = [];
+        const step = maxCount / 5;
+        for (let i = 1; i <= 5; i++) {
+            const value = Math.ceil(step * i);
+            const percentage = (value / maxCount) * 100;
+            gridLines.push({ value, percentage: 100 - percentage });
+        }
+
+        let chartHTML = '<div class="bar-chart">';
+
+        // Add grid lines and Y-axis labels
+        chartHTML += '<div class="bar-chart-grid">';
+        gridLines.forEach(line => {
+            chartHTML += `
+                <div class="grid-line" style="bottom: ${100 - line.percentage}%"></div>
+                <div class="y-axis-label" style="bottom: ${100 - line.percentage}%">${line.value}</div>
+            `;
+        });
+        // Add zero line
+        chartHTML += `
+            <div class="grid-line" style="bottom: 0%"></div>
+            <div class="y-axis-label" style="bottom: 0%">0</div>
+        `;
+        chartHTML += '</div>';
+
+        // Add bars (X-axis items)
+        stats.forEach(stat => {
+            const heightPercentage = (stat.count / maxCount) * 100;
+            const maxHeight = 250; // Maximum height in pixels
+            const actualHeight = (heightPercentage / 100) * maxHeight;
+
+            chartHTML += `
+                <div class="bar-item">
+                    <div class="bar-container" style="height: ${actualHeight}px;">
+                        <div class="bar-value">${stat.count}</div>
+                    </div>
+                    <div class="bar-label">${stat.name}</div>
+                </div>
+            `;
+        });
+
+        chartHTML += '</div>';
+        return chartHTML;
+    },
+
+    // Update resources container with new layout
+    updateResourcesContainer: function(data) {
+        const container = document.getElementById('config-resources-container');
+        if (!container) return;
+
+        const resourceCategories = [
+            {
+                title: 'Gateway API Resources',
+                icon: '🚪',
+                resources: [
+                    { name: 'Gateways', data: data.gateways || [], id: 'gateways' },
+                    { name: 'Gateway Classes', data: data.gatewayClass || [], id: 'gatewayclass' },
+                    { name: 'HTTP Routes', data: data.httpRoutes || [], id: 'httproutes' },
+                    { name: 'GRPC Routes', data: data.grpcRoutes || [], id: 'grpcroutes' },
+                    { name: 'TLS Routes', data: data.tlsRoutes || [], id: 'tlsroutes' },
+                    { name: 'TCP Routes', data: data.tcpRoutes || [], id: 'tcproutes' },
+                    { name: 'UDP Routes', data: data.udpRoutes || [], id: 'udproutes' },
+                    { name: 'Reference Grants', data: data.referenceGrants || [], id: 'referencegrants' }
+                ]
+            },
+            {
+                title: 'Envoy Gateway Policies',
+                icon: '🛡️',
+                resources: [
+                    { name: 'Client Traffic Policies', data: data.clientTrafficPolicies || [], id: 'clienttrafficpolicies' },
+                    { name: 'Backend Traffic Policies', data: data.backendTrafficPolicies || [], id: 'backendtrafficpolicies' },
+                    { name: 'Backend TLS Policies', data: data.backendTLSPolicies || [], id: 'backendtlspolicies' },
+                    { name: 'Security Policies', data: data.securityPolicies || [], id: 'securitypolicies' },
+                    { name: 'Envoy Patch Policies', data: data.envoyPatchPolicies || [], id: 'envoypatchpolicies' },
+                    { name: 'Envoy Extension Policies', data: data.envoyExtensionPolicies || [], id: 'envoyextensionpolicies' }
+                ]
+            },
+            {
+                title: 'Envoy Gateway Resources',
+                icon: '⚙️',
+                resources: [
+                    { name: 'HTTP Route Filters', data: data.httpRouteFilters || [], id: 'httproutefilters' },
+                    { name: 'Envoy Proxies', data: data.envoyProxies || [], id: 'envoyproxies' },
+                    { name: 'Backends', data: data.backends || [], id: 'backends' }
+                ]
+            },
+            {
+                title: 'Kubernetes Resources',
+                icon: '☸️',
+                resources: [
+                    { name: 'Services', data: data.services || [], id: 'services' },
+                    { name: 'Secrets', data: data.secrets || [], id: 'secrets' },
+                    { name: 'ConfigMaps', data: data.configMaps || [], id: 'configmaps' },
+                    { name: 'Namespaces', data: data.namespaces || [], id: 'namespaces' },
+                    { name: 'Endpoint Slices', data: data.endpointSlices || [], id: 'endpointslices' },
+                    { name: 'Service Imports', data: data.serviceImports || [], id: 'serviceimports' }
+                ]
+            }
+        ];
+
+        let html = '';
+        resourceCategories.forEach(category => {
+            const totalCount = category.resources.reduce((sum, resource) => sum + resource.data.length, 0);
+
+            html += `
+                <div class="resource-category collapsed" data-category="${category.id}">
+                    <div class="resource-category-header">
+                        <div class="resource-category-title">
+                            <span>${category.icon}</span>
+                            <span>${category.title}</span>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 0.5rem;">
+                            <span class="resource-count-badge">${totalCount}</span>
+                            <span class="resource-category-toggle">▼</span>
+                        </div>
+                    </div>
+                    <div class="resource-category-content">
+                        ${this.renderResourceSubcategories(category.resources)}
+                    </div>
+                </div>
+            `;
+        });
+
+        container.innerHTML = html;
+    },
+
+    // Render resource subcategories
+    renderResourceSubcategories: function(resources) {
+        let html = '';
+
+        resources.forEach(resource => {
+            if (resource.data.length > 0) {
+                html += `
+                    <div class="resource-subcategory" data-resource-type="${resource.id}" style="margin-bottom: 1.5rem;">
+                        <h4 class="resource-subcategory-title" style="margin-bottom: 0.75rem; color: #495057; font-size: 1rem; font-weight: 600;">
+                            ${resource.name} (<span class="resource-count">${resource.data.length}</span>)
+                        </h4>
+                        <div class="resource-grid">
+                            ${resource.data.map(item => this.renderResourceCard(item)).join('')}
+                        </div>
+                    </div>
+                `;
+            } else {
+                html += `
+                    <div class="resource-subcategory" data-resource-type="${resource.id}" style="margin-bottom: 1.5rem;">
+                        <h4 class="resource-subcategory-title" style="margin-bottom: 0.75rem; color: #6c757d; font-size: 1rem; font-weight: 600;">
+                            ${resource.name} (<span class="resource-count">0</span>)
+                        </h4>
+                        <div class="empty-state">No ${resource.name.toLowerCase()} found</div>
+                    </div>
+                `;
+            }
+        });
+
+        return html;
+    },
+
+    // Render individual resource card
+    renderResourceCard: function(resource) {
+        const namespaceDisplay = resource.namespace
+            ? `<span class="resource-card-namespace">ns: ${resource.namespace}</span>`
+            : `<span class="resource-card-cluster-scoped">cluster-scoped</span>`;
+
+        return `
+            <div class="resource-card">
+                <div class="resource-card-name">${resource.name}</div>
+                ${namespaceDisplay}
+            </div>
+        `;
+    },
+
     // Manual refresh
     refresh: function() {
         this.loadPageData();

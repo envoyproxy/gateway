@@ -171,12 +171,52 @@ func (h *Handler) handleAPIConfigDump(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Load provider resources from watchable
+	// Check if resource=all parameter is provided
+	resourceParam := r.URL.Query().Get("resource")
+	if resourceParam == "all" {
+		// Return complete provider resources dump
+		h.handleCompleteConfigDump(w, r)
+		return
+	}
+
+	// Load provider resources from watchable (summary view)
 	configDump := h.loadConfigDump()
 
 	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(configDump); err != nil {
 		http.Error(w, "Failed to encode response", http.StatusInternalServerError)
+		return
+	}
+}
+
+// handleCompleteConfigDump handles requests for complete provider resources dump
+func (h *Handler) handleCompleteConfigDump(w http.ResponseWriter, _ *http.Request) {
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+
+	if h.providerResources == nil {
+		// Return empty structure if no provider resources
+		emptyResponse := map[string]interface{}{
+			"message":   "No provider resources available",
+			"timestamp": time.Now(),
+		}
+		if err := json.NewEncoder(w).Encode(emptyResponse); err != nil {
+			http.Error(w, "Failed to encode response", http.StatusInternalServerError)
+		}
+		return
+	}
+
+	// Get the actual resources using GetResources() method
+	resources := h.providerResources.GetResources()
+
+	// Create a structured response with the actual resource data
+	response := map[string]interface{}{
+		"resources":  resources,
+		"timestamp":  time.Now(),
+		"totalCount": len(resources),
+	}
+
+	if err := json.NewEncoder(w).Encode(response); err != nil {
+		http.Error(w, "Failed to encode provider resources", http.StatusInternalServerError)
 		return
 	}
 }
@@ -460,43 +500,6 @@ func (h *Handler) loadConfigDump() ConfigDumpInfo {
 	}
 
 	return configDump
-}
-
-// handleAPIConfigDumpAll handles requests for complete provider resources dump
-func (h *Handler) handleAPIConfigDumpAll(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodGet {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-
-	w.Header().Set("Content-Type", "application/json; charset=utf-8")
-
-	if h.providerResources == nil {
-		// Return empty structure if no provider resources
-		emptyResponse := map[string]interface{}{
-			"message":   "No provider resources available",
-			"timestamp": time.Now(),
-		}
-		if err := json.NewEncoder(w).Encode(emptyResponse); err != nil {
-			http.Error(w, "Failed to encode response", http.StatusInternalServerError)
-		}
-		return
-	}
-
-	// Get the actual resources using GetResources() method
-	resources := h.providerResources.GetResources()
-
-	// Create a structured response with the actual resource data
-	response := map[string]interface{}{
-		"resources":  resources,
-		"timestamp":  time.Now(),
-		"totalCount": len(resources),
-	}
-
-	if err := json.NewEncoder(w).Encode(response); err != nil {
-		http.Error(w, "Failed to encode provider resources", http.StatusInternalServerError)
-		return
-	}
 }
 
 // handleAPIMetrics handles requests for metrics using the Prometheus registry

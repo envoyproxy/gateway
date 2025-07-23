@@ -55,3 +55,19 @@
         prefixRewrite: /rewrite
         upgradeConfigs:
         - upgradeType: websocket
+    - match:
+        headers:
+        - name: :authority
+          stringMatch:
+            exact: gateway.envoyproxy.io
+        pathSeparatedPrefix: /origin
+      name: rewrite-route-timeout
+      route:
+        appendXForwardedHost: true
+        cluster: rewrite-route-dest
+        hostRewriteLiteral: 3.3.3.3
+        idleTimeout: 3600s
+        prefixRewrite: /rewrite
+        timeout: 5s
+        upgradeConfigs:
+        - upgradeType: websocket
