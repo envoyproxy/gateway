@@ -22,6 +22,13 @@ func patchProxyProtocolFilter(xdsListener *listenerv3.Listener, proxyProtocolSet
 		return
 	}
 
+	// Return early if filter already exists.
+	for _, filter := range xdsListener.ListenerFilters {
+		if filter.Name == wellknown.ProxyProtocol {
+			return
+		}
+	}
+
 	// Early return if proxy protocol is not enabled
 	if proxyProtocolSettings == nil {
 		return
