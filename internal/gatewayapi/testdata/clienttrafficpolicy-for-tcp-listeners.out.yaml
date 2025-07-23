@@ -12,7 +12,7 @@ clientTrafficPolicies:
         closeDelay: 10s
         value: 3
     proxyProtocol:
-      allowRequestsWithoutProxyProtocol: false
+      optional: false
     targetRef:
       group: gateway.networking.k8s.io
       kind: Gateway

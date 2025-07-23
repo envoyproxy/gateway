@@ -9,7 +9,7 @@ clientTrafficPolicies:
     enableProxyProtocol: false
     # New API - should take precedence
     proxyProtocol:
-      allowRequestsWithoutProxyProtocol: true
+      optional: true
     targetRef:
       group: gateway.networking.k8s.io
       kind: Gateway
@@ -34,7 +34,7 @@ clientTrafficPolicies:
   spec:
     # New API only - no legacy field
     proxyProtocol:
-      allowRequestsWithoutProxyProtocol: false
+      optional: false
     targetRef:
       group: gateway.networking.k8s.io
       kind: Gateway

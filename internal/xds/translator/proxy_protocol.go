@@ -10,6 +10,7 @@ import (
 	proxyprotocolv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/listener/proxy_protocol/v3"
 	"github.com/envoyproxy/go-control-plane/pkg/wellknown"
 	"google.golang.org/protobuf/types/known/anypb"
+	"google.golang.org/protobuf/types/known/wrapperspb"
 
 	"github.com/envoyproxy/gateway/internal/ir"
 )
@@ -47,7 +48,7 @@ func buildProxyProtocolFilter(proxyProtocolSettings *ir.ProxyProtocolSettings) *
 
 	// Configure allow_requests_without_proxy_protocol if ProxyProtocolSettings are provided
 	if proxyProtocolSettings != nil {
-		pp.AllowRequestsWithoutProxyProtocol = proxyProtocolSettings.AllowRequestsWithoutProxyProtocol
+		pp.AllowRequestsWithoutProxyProtocol = &wrapperspb.BoolValue{Value: proxyProtocolSettings.Optional}
 	}
 
 	ppAny, err := anypb.New(pp)

@@ -420,12 +420,12 @@ func (t *Translator) translateClientTrafficPolicyForListener(policy *egv1a1.Clie
 		// ProxyProtocol field takes precedence when configured
 		// Even if it's an empty object {}, we should enable proxy protocol with default settings
 		proxyProtocol = &ir.ProxyProtocolSettings{
-			AllowRequestsWithoutProxyProtocol: ptr.Deref(policy.Spec.ProxyProtocol.AllowRequestsWithoutProxyProtocol, false),
+			Optional: ptr.Deref(policy.Spec.ProxyProtocol.Optional, false),
 		}
 	} else if ptr.Deref(policy.Spec.EnableProxyProtocol, false) {
 		// Fallback to legacy EnableProxyProtocol field
 		proxyProtocol = &ir.ProxyProtocolSettings{
-			AllowRequestsWithoutProxyProtocol: false, // Default behavior for legacy field
+			Optional: false, // Default behavior for legacy field
 		}
 	}
 

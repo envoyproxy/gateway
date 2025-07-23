@@ -46,27 +46,27 @@ func TestPatchProxyProtocolFilter(t *testing.T) {
 			listener:            &listenerv3.Listener{},
 			enableProxyProtocol: false,
 			proxyProtocolSettings: &ir.ProxyProtocolSettings{
-				AllowRequestsWithoutProxyProtocol: false,
+				Optional: false,
 			},
 			expectedFilterName:  "envoy.filters.listener.proxy_protocol",
 			expectedFilterCount: 1,
 		},
 		{
-			name:                "proxyProtocolSettings with AllowRequestsWithoutProxyProtocol=false",
+			name:                "proxyProtocolSettings with Optional=false",
 			listener:            &listenerv3.Listener{},
 			enableProxyProtocol: false,
 			proxyProtocolSettings: &ir.ProxyProtocolSettings{
-				AllowRequestsWithoutProxyProtocol: false,
+				Optional: false,
 			},
 			expectedFilterName:  "envoy.filters.listener.proxy_protocol",
 			expectedFilterCount: 1,
 		},
 		{
-			name:                "proxyProtocolSettings with AllowRequestsWithoutProxyProtocol=true",
+			name:                "proxyProtocolSettings with Optional=true",
 			listener:            &listenerv3.Listener{},
 			enableProxyProtocol: false,
 			proxyProtocolSettings: &ir.ProxyProtocolSettings{
-				AllowRequestsWithoutProxyProtocol: true,
+				Optional: true,
 			},
 			expectedFilterName:  "envoy.filters.listener.proxy_protocol",
 			expectedFilterCount: 1,
@@ -76,7 +76,7 @@ func TestPatchProxyProtocolFilter(t *testing.T) {
 			listener:            &listenerv3.Listener{},
 			enableProxyProtocol: false,
 			proxyProtocolSettings: &ir.ProxyProtocolSettings{
-				AllowRequestsWithoutProxyProtocol: false,
+				Optional: false,
 			},
 			expectedFilterName:  "envoy.filters.listener.proxy_protocol",
 			expectedFilterCount: 1,
@@ -86,7 +86,7 @@ func TestPatchProxyProtocolFilter(t *testing.T) {
 			listener:            &listenerv3.Listener{},
 			enableProxyProtocol: true,
 			proxyProtocolSettings: &ir.ProxyProtocolSettings{
-				AllowRequestsWithoutProxyProtocol: true,
+				Optional: true,
 			},
 			expectedFilterName:  "envoy.filters.listener.proxy_protocol",
 			expectedFilterCount: 1,

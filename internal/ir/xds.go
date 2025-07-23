@@ -518,11 +518,11 @@ type PathSettings struct {
 // ProxyProtocolSettings holds configuration for proxy protocol
 // +k8s:deepcopy-gen=true
 type ProxyProtocolSettings struct {
-	// AllowRequestsWithoutProxyProtocol allows requests without a Proxy Protocol header to be proxied.
+	// Optional allows requests without a Proxy Protocol header to be proxied.
 	// If set to true, the listener will accept requests without a Proxy Protocol header.
 	// If set to false, the listener will reject requests without a Proxy Protocol header.
 	// If not set, the default behavior is to reject requests without a Proxy Protocol header.
-	AllowRequestsWithoutProxyProtocol bool `json:"allowRequestsWithoutProxyProtocol,omitempty" yaml:"allowRequestsWithoutProxyProtocol,omitempty"`
+	Optional bool `json:"optional,omitempty" yaml:"optional,omitempty"`
 }
 
 type WithUnderscoresAction egv1a1.WithUnderscoresAction

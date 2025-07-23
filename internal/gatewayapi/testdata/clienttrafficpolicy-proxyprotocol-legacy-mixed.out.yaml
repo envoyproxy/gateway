@@ -8,7 +8,7 @@ clientTrafficPolicies:
   spec:
     enableProxyProtocol: false
     proxyProtocol:
-      allowRequestsWithoutProxyProtocol: true
+      optional: true
     targetRef:
       group: gateway.networking.k8s.io
       kind: Gateway
@@ -61,7 +61,7 @@ clientTrafficPolicies:
     namespace: envoy-gateway
   spec:
     proxyProtocol:
-      allowRequestsWithoutProxyProtocol: false
+      optional: false
     targetRef:
       group: gateway.networking.k8s.io
       kind: Gateway
@@ -355,7 +355,7 @@ xdsIR:
         mergeSlashes: true
       port: 10080
       proxyProtocol:
-        allowRequestsWithoutProxyProtocol: true
+        optional: true
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4

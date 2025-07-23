@@ -523,13 +523,13 @@ spec:
                   If both EnableProxyProtocol and ProxyProtocol are set, ProxyProtocol takes precedence.
                 minProperties: 0
                 properties:
-                  allowRequestsWithoutProxyProtocol:
+                  optional:
                     description: |-
-                      AllowRequestsWithoutProxyProtocol allows requests without a Proxy Protocol header to be proxied.
+                      Optional allows requests without a Proxy Protocol header to be proxied.
                       If set to true, the listener will accept requests without a Proxy Protocol header.
                       If set to false, the listener will reject requests without a Proxy Protocol header.
                       If not set, the default behavior is to reject requests without a Proxy Protocol header.
-                      Warning: AllowRequestsWithoutProxyProtocol breaks conformance with the specification. Only enable if ALL traffic to the listener comes from a trusted source.
+                      Warning: Optional breaks conformance with the specification. Only enable if ALL traffic to the listener comes from a trusted source.
                       For more information on security implications, see haproxy.org/download/2.1/doc/proxy-protocol.txt
                     type: boolean
                 type: object
