@@ -429,14 +429,11 @@ func buildLocalityLbConfig(args *xdsClusterArgs) *commonv3.LocalityLbConfig {
 		},
 	}
 
-	// Check for LoadBalancer.ZoneAware configuration or if backendRef enables
+	// Check for LoadBalancer.PreferLocal configuration or if backendRef enables
 	// PreferLocal (such as Topology Aware Routing or Traffic Distribution)
-	if zoneAware := ptr.Deref(args.loadBalancer, ir.LoadBalancer{}).ZoneAware; zoneAware != nil {
-		// Will later include additional case for weighted localities
-		if zoneAware.PreferLocal != nil {
-			if cfg := buildZoneAwareLbConfig(zoneAware.PreferLocal); cfg != nil {
-				localityLbConfig.LocalityConfigSpecifier = cfg
-			}
+	if preferLocal := ptr.Deref(args.loadBalancer, ir.LoadBalancer{}).PreferLocal; preferLocal != nil {
+		if cfg := buildZoneAwareLbConfig(preferLocal); cfg != nil {
+			localityLbConfig.LocalityConfigSpecifier = cfg
 		}
 		// Zone aware enabled backendRefs use weighted clusters and
 		// always have a single DestinationSetting per-cluster.

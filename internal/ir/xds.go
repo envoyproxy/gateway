@@ -825,8 +825,7 @@ func (h *HTTPRoute) GetRetry() *Retry {
 func (h *HTTPRoute) NeedsClusterPerSetting() bool {
 	if h.Traffic != nil &&
 		h.Traffic.LoadBalancer != nil &&
-		h.Traffic.LoadBalancer.ZoneAware != nil &&
-		h.Traffic.LoadBalancer.ZoneAware.PreferLocal != nil {
+		h.Traffic.LoadBalancer.PreferLocal != nil {
 		return true
 	}
 	return h.Destination.NeedsClusterPerSetting()
@@ -2521,8 +2520,8 @@ type LoadBalancer struct {
 	Random *Random `json:"random,omitempty" yaml:"random,omitempty"`
 	// ConsistentHash load balancer policy
 	ConsistentHash *ConsistentHash `json:"consistentHash,omitempty" yaml:"consistentHash,omitempty"`
-	// ZoneAware defines the configuration related to the distribution of requests between locality zones.
-	ZoneAware *ZoneAware `json:"zoneAware,omitempty" yaml:"zoneAware,omitempty"`
+	// PreferLocal defines the configuration related to the distribution of requests between locality zones.
+	PreferLocal *PreferLocalZone `json:"preferLocal,omitempty" yaml:"preferLocal,omitempty"`
 }
 
 // Validate the fields within the LoadBalancer structure
@@ -3201,13 +3200,6 @@ type ResourceMetadata struct {
 type RequestBuffer struct {
 	// Limit defines the maximum buffer size for requests
 	Limit resource.Quantity `json:"limit" yaml:"limit"`
-}
-
-// ZoneAware defines the configuration related to the distribution of requests between locality zones.
-// +k8s:deepcopy-gen=true
-type ZoneAware struct {
-	// PreferLocal configures zone-aware routing to prefer sending traffic to the local locality zone.
-	PreferLocal *PreferLocalZone `json:"preferLocal,omitempty" yaml:"preferLocal,omitempty"`
 }
 
 // PreferLocalZone configures zone-aware routing to prefer sending traffic to the local locality zone.

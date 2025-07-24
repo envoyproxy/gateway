@@ -40,9 +40,8 @@ http:
     traffic:
       loadBalancer:
         leastRequest: {}
-        zoneAware:
-          preferLocal:
-            minEndpointsThreshold: 3
+        preferLocal:
+          minEndpointsThreshold: 3
   - name: "route-with-lb-and-settings-preferlocal"
     hostname: "*"
     destination:
@@ -64,6 +63,5 @@ http:
     traffic:
       loadBalancer:
         leastRequest: {}
-        zoneAware:
-          preferLocal:
-            minEndpointsThreshold: 3
+        preferLocal:
+          minEndpointsThreshold: 3
