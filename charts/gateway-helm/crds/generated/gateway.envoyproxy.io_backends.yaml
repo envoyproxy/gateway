@@ -93,7 +93,8 @@ spec:
                       - port
                       type: object
                     hostname:
-                      description: Hostname defines a hostname endpoint.
+                      description: Hostname defines an optional hostname for the backend
+                        endpoint.
                       maxLength: 253
                       minLength: 1
                       pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$

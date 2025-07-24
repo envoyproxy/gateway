@@ -68,6 +68,10 @@ func (t *Translator) applyBackendTLSSetting(
 	// If both backend TLS settings and backend TLS policy are defined, we merge them.
 	upstreamConfig = mergeBackendTLSConfigs(backendTLSSettingsConfig, backendTLSPolicyConfig)
 
+	if upstreamConfig != nil && !upstreamConfig.InsecureSkipVerify && upstreamConfig.CACertificate == nil {
+		return nil, fmt.Errorf("CACertificate must be specified when InsecureSkipVerify is false")
+	}
+
 	// Apply the Client Certificate and common TLS settings from the EnvoyProxy resource.
 	return t.applyEnvoyProxyBackendTLSSetting(upstreamConfig, resources, envoyProxy)
 }
@@ -120,7 +124,7 @@ func (t *Translator) processBackendTLSSettings(
 			tlsConfig.CACertificate = &ir.TLSCACertificate{
 				Name: fmt.Sprintf("%s/%s-ca", backend.Name, backend.Namespace),
 			}
-		} else {
+		} else if len(backend.Spec.TLS.CACertificateRefs) > 0 {
 			caCert, err := getCaCertsFromCARefs(backend.Namespace, backend.Spec.TLS.CACertificateRefs, resources)
 			if err != nil {
 				return nil, err

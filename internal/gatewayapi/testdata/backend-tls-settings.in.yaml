@@ -93,6 +93,59 @@ httpRoutes:
             - group: gateway.envoyproxy.io
               kind: Backend
               name: backend-3
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: HTTPRoute
+    metadata:
+      namespace: default
+      name: httproute-4
+    spec:
+      parentRefs:
+        - namespace: envoy-gateway
+          name: gateway-1
+      rules:
+        - matches:
+            - path:
+                value: "/"
+          backendRefs:
+            - group: gateway.envoyproxy.io
+              kind: Backend
+              name: backend-4
+              port: 3001
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: HTTPRoute
+    metadata:
+      namespace: default
+      name: httproute-5
+    spec:
+      parentRefs:
+        - namespace: envoy-gateway
+          name: gateway-1
+      rules:
+        - matches:
+            - path:
+                value: "/"
+          backendRefs:
+            - group: gateway.envoyproxy.io
+              kind: Backend
+              name: backend-5
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: HTTPRoute
+    metadata:
+      namespace: default
+      name: httproute-6
+    spec:
+      parentRefs:
+        - namespace: envoy-gateway
+          name: gateway-1
+      rules:
+        - matches:
+            - path:
+                value: "/"
+          backendRefs:
+            - group: gateway.envoyproxy.io
+              kind: Backend
+              name: backend-6
+              port: 3001
 configMaps:
   - apiVersion: v1
     kind: ConfigMap
@@ -124,7 +177,7 @@ backendTLSPolicies:
   - apiVersion: gateway.networking.k8s.io/v1alpha2
     kind: BackendTLSPolicy
     metadata:
-      name: policy-btls
+      name: policy-btls-for-backend-1
       namespace: default
     spec:
       targetRefs:
@@ -139,6 +192,47 @@ backendTLSPolicies:
             uri: spiffe://cluster.local/ns/istio-demo/sa/echo-v1
           - type: Hostname
             hostname: subdomain.secondexample.com
+  - apiVersion: gateway.networking.k8s.io/v1alpha2
+    kind: BackendTLSPolicy
+    metadata:
+      name: policy-btls-for-backend-3
+      namespace: default
+    spec:
+      targetRefs:
+        - group: gateway.envoyproxy.io
+          kind: Backend
+          name: backend-3
+      validation:
+        wellKnownCACertificates: System
+        hostname: example.com
+  - apiVersion: gateway.networking.k8s.io/v1alpha2
+    kind: BackendTLSPolicy
+    metadata:
+      name: policy-btls-for-backend-4
+      namespace: default
+    spec:
+      targetRefs:
+        - group: gateway.envoyproxy.io
+          kind: Backend
+          name: backend-4
+          sectionName: "3001"
+      validation:
+        wellKnownCACertificates: System
+        hostname: example.com
+  - apiVersion: gateway.networking.k8s.io/v1alpha2
+    kind: BackendTLSPolicy
+    metadata:
+      name: policy-btls-for-backend-6
+      namespace: default
+    spec:
+      targetRefs:
+        - group: gateway.envoyproxy.io
+          kind: Backend
+          name: backend-6
+          sectionName: "3002"
+      validation:
+        wellKnownCACertificates: System
+        hostname: example.com
 secrets:
   - apiVersion: v1
     kind: Secret
@@ -185,11 +279,45 @@ backends:
   - apiVersion: gateway.envoyproxy.io/v1alpha1
     kind: Backend
     metadata:
-      name: backend-3
+      name: backend-3         # this backend should be accepted because its associated BackendTLSPolicy has a wellKnownCACertificates validation
       namespace: default
     spec:
       tls:
         insecureSkipVerify: false
+      endpoints:
+        - ip:
+            address: 3.3.3.3
+            port: 3001
+  - apiVersion: gateway.envoyproxy.io/v1alpha1
+    kind: Backend
+    metadata:
+      name: backend-4      # this backend should be accepted because its associated BackendTLSPolicy with sectionName has a wellKnownCACertificates validation
+      namespace: default
+    spec:
+      tls:
+        insecureSkipVerify: false
+      endpoints:
+        - ip:
+            address: 3.3.3.3
+            port: 3001
+  - apiVersion: gateway.envoyproxy.io/v1alpha1
+    kind: Backend
+    metadata:
+      name: backend-5      # this backend should not be accepted because no CACertificateRefs are specified
+      namespace: default
+    spec:
+      tls: {}
+      endpoints:
+        - ip:
+            address: 3.3.3.3
+            port: 3001
+  - apiVersion: gateway.envoyproxy.io/v1alpha1
+    kind: Backend
+    metadata:
+      name: backend-6      # this backend should not be accepted because the BackendTLSPolicy sectionName does not match the HTTPRoute backendRef port
+      namespace: default
+    spec:
+      tls: {}
       endpoints:
         - ip:
             address: 3.3.3.3
