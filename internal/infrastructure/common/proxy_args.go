@@ -8,6 +8,8 @@ package common
 import (
 	"fmt"
 
+	"k8s.io/utils/ptr"
+
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/xds/bootstrap"
@@ -29,6 +31,13 @@ func BuildProxyArgs(
 	serviceNode string,
 	gatewayNamespaceMode bool,
 ) ([]string, error) {
+	serviceCluster := infra.Name
+	if gatewayNamespaceMode {
+		serviceCluster = fmt.Sprintf("%s/%s", infra.Namespace, infra.Name)
+	}
+
+	bootstrapConfigOptions.ServiceClusterName = ptr.To(serviceCluster)
+
 	// If IPFamily is not set, try to determine it from the infrastructure.
 	if bootstrapConfigOptions != nil && bootstrapConfigOptions.IPFamily == nil {
 		bootstrapConfigOptions.IPFamily = getIPFamily(infra)
@@ -50,11 +59,6 @@ func BuildProxyArgs(
 	}
 
 	logging := infra.Config.Spec.Logging
-
-	serviceCluster := infra.Name
-	if gatewayNamespaceMode {
-		serviceCluster = fmt.Sprintf("%s/%s", infra.Namespace, infra.Name)
-	}
 
 	args := []string{
 		fmt.Sprintf("--service-cluster %s", serviceCluster),

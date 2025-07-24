@@ -8,7 +8,6 @@ package host
 import (
 	"context"
 	"errors"
-	"fmt"
 	"io"
 	"os"
 	"path/filepath"
@@ -18,7 +17,6 @@ import (
 	"k8s.io/utils/ptr"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
-	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/infrastructure/common"
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/utils"
@@ -71,10 +69,9 @@ func (i *Infra) CreateOrUpdateProxyInfra(ctx context.Context, infra *ir.Infra) e
 			Certificate: filepath.Join(i.sdsConfigPath, common.SdsCertFilename),
 			TrustedCA:   filepath.Join(i.sdsConfigPath, common.SdsCAFilename),
 		},
-		XdsServerHost:    ptr.To("0.0.0.0"),
-		AdminServerPort:  ptr.To(int32(0)),
-		StatsServerPort:  ptr.To(int32(0)),
-		LocalClusterName: ptr.To(fmt.Sprintf("%s-%s", config.EnvoyPrefix, proxyName)),
+		XdsServerHost:   ptr.To("0.0.0.0"),
+		AdminServerPort: ptr.To(int32(0)),
+		StatsServerPort: ptr.To(int32(0)),
 	}
 
 	args, err := common.BuildProxyArgs(proxyInfra, proxyConfig.Spec.Shutdown, bootstrapConfigOptions, proxyName, false)

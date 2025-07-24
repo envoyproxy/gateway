@@ -50,7 +50,7 @@ spec:
                 address: 127.0.0.1
                 port_value: 19000
           cluster_manager:
-            local_cluster_name: envoy-default-37a8eec1
+            local_cluster_name: default
           node:
             locality:
               zone: $(ENVOY_SERVICE_ZONE)
@@ -80,7 +80,7 @@ spec:
             - connect_timeout: 10s
               lb_policy: ROUND_ROBIN
               load_assignment:
-                cluster_name: envoy-default-37a8eec1
+                cluster_name: default
                 endpoints:
                 - lb_endpoints:
                   - endpoint:
@@ -92,7 +92,7 @@ spec:
                   load_balancing_weight: 1
                   locality:
                     zone: $(ENVOY_SERVICE_ZONE)
-              name: envoy-default-37a8eec1
+              name: default
               type: STATIC
             - connect_timeout: 10s
               load_assignment:
