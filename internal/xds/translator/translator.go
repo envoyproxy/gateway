@@ -260,21 +260,22 @@ func (t *Translator) processHTTPListenerXdsTranslation(
 	// The XDS translation is done in a best-effort manner, so we collect all
 	// errors and return them at the end.
 	var (
-		supportHTTP3 = make(map[listenerKey]bool) // Map to track if HTTP3 is supported for a given listener
-		errs         error
+		http3EnabledListeners = make(map[listenerKey]*ir.HTTP3Settings) // Map to track HTTP3 settings for listeners by address and port
+		errs                  error
 	)
 
 	// HTTP3 is enabled for a xDS listener if one of the HTTPListeners on the same address + port combination has HTTP3 enabled.
 	for _, httpListener := range httpListeners {
 		// If HTTP3 is enabled, we need to track it for the listener
 		if httpListener.HTTP3 != nil {
-			supportHTTP3[listenerKey{Address: httpListener.Address, Port: httpListener.Port}] = true
+			http3EnabledListeners[listenerKey{Address: httpListener.Address, Port: httpListener.Port}] = httpListener.HTTP3
 		}
 	}
 
 	for _, httpListener := range httpListeners {
 		var (
-			http3Enabled                       = supportHTTP3[listenerKey{Address: httpListener.Address, Port: httpListener.Port}]
+			http3Settings                      *ir.HTTP3Settings // HTTP3 settings for the listener, if any
+			http3Enabled                       bool
 			tcpXDSListener                     *listenerv3.Listener        // TCP Listener for HTTP1/HTTP2 traffic
 			quicXDSListener                    *listenerv3.Listener        // UDP(QUIC) Listener for HTTP3 traffic
 			xdsListenerOnSameAddressPortExists bool                        // Whether a listener already exists on the same address + port combination
@@ -283,6 +284,8 @@ func (t *Translator) processHTTPListenerXdsTranslation(
 			addHCM                             bool                        // Whether to add an HCM(HTTP Connection Manager filter) to the listener's TCP filter chain
 			err                                error
 		)
+
+		http3Settings, http3Enabled = http3EnabledListeners[listenerKey{Address: httpListener.Address, Port: httpListener.Port}]
 
 		// Search for an existing TCP listener on the same address + port combination.
 		tcpXDSListener = findXdsListenerByHostPort(tCtx, httpListener.Address, httpListener.Port, corev3.SocketAddress_TCP)
@@ -441,7 +444,7 @@ func (t *Translator) processHTTPListenerXdsTranslation(
 
 		// Generate xDS virtual hosts and routes for the given HTTPListener,
 		// and add them to the xDS route config.
-		if err = t.addRouteToRouteConfig(tCtx, xdsRouteCfg, httpListener, metrics, http3Enabled); err != nil {
+		if err = t.addRouteToRouteConfig(tCtx, xdsRouteCfg, httpListener, metrics, http3Settings); err != nil {
 			errs = errors.Join(errs, err)
 		}
 
@@ -462,7 +465,7 @@ func (t *Translator) addRouteToRouteConfig(
 	xdsRouteCfg *routev3.RouteConfiguration,
 	httpListener *ir.HTTPListener,
 	metrics *ir.Metrics,
-	http3Enabled bool,
+	http3Settings *ir.HTTP3Settings,
 ) error {
 	var (
 		vHosts    = map[string]*routev3.VirtualHost{} // store virtual hosts by domain
@@ -529,8 +532,8 @@ func (t *Translator) addRouteToRouteConfig(
 			}
 		}
 
-		if http3Enabled && httpListener.HTTP3 != nil {
-			http3AltSvcHeader := buildHTTP3AltSvcHeader(int(httpListener.HTTP3.QUICPort))
+		if http3Settings != nil {
+			http3AltSvcHeader := buildHTTP3AltSvcHeader(int(http3Settings.QUICPort))
 			if xdsRoute.ResponseHeadersToAdd == nil {
 				xdsRoute.ResponseHeadersToAdd = make([]*corev3.HeaderValueOption, 0)
 			}
