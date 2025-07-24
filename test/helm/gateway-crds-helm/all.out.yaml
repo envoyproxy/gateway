@@ -17405,6 +17405,12 @@ spec:
                       - hostname
                       - port
                       type: object
+                    hostname:
+                      description: Hostname defines a hostname endpoint.
+                      maxLength: 253
+                      minLength: 1
+                      pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                      type: string
                     ip:
                       description: IP defines an IP endpoint. Supports both IPv4 and
                         IPv6 addresses.
@@ -17984,6 +17990,13 @@ spec:
                         required:
                         - path
                         type: object
+                      initialJitter:
+                        description: |-
+                          InitialJitter defines the maximum time Envoy will wait before the first health check.
+                          Envoy will randomly select a value between 0 and the initial jitter value.
+                        format: duration
+                        pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                        type: string
                       interval:
                         default: 3s
                         description: Interval defines the time between active health
@@ -19287,6 +19300,7 @@ spec:
                           - 5xx
                           - gateway-error
                           - reset
+                          - reset-before-request
                           - connect-failure
                           - retriable-4xx
                           - refused-stream
@@ -20112,13 +20126,12 @@ spec:
                     - value
                     type: object
                   maxAcceptPerSocketEvent:
+                    default: 1
                     description: |-
                       MaxAcceptPerSocketEvent provides configuration for the maximum number of connections to accept from the kernel
                       per socket event. If there are more than MaxAcceptPerSocketEvent connections pending accept, connections over
-                      this threshold will be accepted in later event loop iterations. If no value is provided Envoy will accept
-                      all connections pending accept from the kernel.
-                      It is recommended to lower this value for better overload management and reduced per-event cost.
-                      Setting it to 1 is a viable option with no noticeable impact on performance.
+                      this threshold will be accepted in later event loop iterations.
+                      Defaults to 1 and can be disabled by setting to 0 for allowing unlimited accepted connections.
                     format: int32
                     type: integer
                   socketBufferLimit:
@@ -20141,6 +20154,8 @@ spec:
                   Client Address into the X-Forwarded-For header.
                   Note Proxy Protocol must be present when this field is set, else the connection
                   is closed.
+
+                  Deprecated: Use ProxyProtocol instead.
                 type: boolean
               headers:
                 description: HeaderSettings provides configuration for header management.
@@ -20473,6 +20488,24 @@ spec:
                     - UnescapeAndRedirect
                     type: string
                 type: object
+              proxyProtocol:
+                description: |-
+                  ProxyProtocol configures the Proxy Protocol settings. When configured,
+                  the Proxy Protocol header will be interpreted and the Client Address
+                  will be added into the X-Forwarded-For header.
+                  If both EnableProxyProtocol and ProxyProtocol are set, ProxyProtocol takes precedence.
+                minProperties: 0
+                properties:
+                  optional:
+                    description: |-
+                      Optional allows requests without a Proxy Protocol header to be proxied.
+                      If set to true, the listener will accept requests without a Proxy Protocol header.
+                      If set to false, the listener will reject requests without a Proxy Protocol header.
+                      If not set, the default behavior is to reject requests without a Proxy Protocol header.
+                      Warning: Optional breaks conformance with the specification. Only enable if ALL traffic to the listener comes from a trusted source.
+                      For more information on security implications, see haproxy.org/download/2.1/doc/proxy-protocol.txt
+                    type: boolean
+                type: object
               targetRef:
                 description: |-
                   TargetRef is the name of the resource this policy is being attached to.
@@ -20683,6 +20716,12 @@ spec:
                         description: |-
                           RequestReceivedTimeout is the duration envoy waits for the complete request reception. This timer starts upon request
                           initiation and stops when either the last byte of the request is sent upstream or when the response begins.
+                        pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                        type: string
+                      streamIdleTimeout:
+                        description: |2-
+                           The stream idle timeout defines the amount of time a stream can exist without any upstream or downstream activity.
+                           Default: 5 minutes.
                         pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                         type: string
                     type: object
@@ -21818,6 +21857,13 @@ spec:
                                   required:
                                   - path
                                   type: object
+                                initialJitter:
+                                  description: |-
+                                    InitialJitter defines the maximum time Envoy will wait before the first health check.
+                                    Envoy will randomly select a value between 0 and the initial jitter value.
+                                  format: duration
+                                  pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                  type: string
                                 interval:
                                   default: 3s
                                   description: Interval defines the time between active
@@ -22280,6 +22326,7 @@ spec:
                                     - 5xx
                                     - gateway-error
                                     - reset
+                                    - reset-before-request
                                     - connect-failure
                                     - retriable-4xx
                                     - refused-stream
@@ -22357,10 +22404,16 @@ spec:
                           type: object
                       type: object
                     failOpen:
+                      default: false
                       description: |-
-                        FailOpen defines if requests or responses that cannot be processed due to connectivity to the
-                        external processor are terminated or passed-through.
-                        Default: false
+                        FailOpen is a switch used to control the behavior when failing to call the external processor.
+
+                        If FailOpen is set to true, the system bypasses the ExtProc extension and
+                        allows the traffic to pass through. If it is set to false or
+                        not set (defaulting to false), the system blocks the traffic and returns
+                        an HTTP 5xx error.
+
+                        If set to true, the ExtProc extension will also be bypassed if the configuration is invalid.
                       type: boolean
                     messageTimeout:
                       description: |-
@@ -22458,19 +22511,23 @@ spec:
                   x-kubernetes-validations:
                   - message: BackendRefs must be used, backendRef is not supported.
                     rule: '!has(self.backendRef)'
-                  - message: BackendRefs only supports Service and Backend kind.
+                  - message: BackendRefs only supports Service, ServiceImport, and
+                      Backend kind.
                     rule: 'has(self.backendRefs) ? self.backendRefs.all(f, f.kind
-                      == ''Service'' || f.kind == ''Backend'') : true'
-                  - message: BackendRefs only supports Core and gateway.envoyproxy.io
-                      group.
+                      == ''Service'' || f.kind == ''ServiceImport'' || f.kind == ''Backend'')
+                      : true'
+                  - message: BackendRefs only supports Core, multicluster.x-k8s.io,
+                      and gateway.envoyproxy.io groups.
                     rule: 'has(self.backendRefs) ? (self.backendRefs.all(f, f.group
-                      == "" || f.group == ''gateway.envoyproxy.io'')) : true'
+                      == "" || f.group == ''multicluster.x-k8s.io'' || f.group ==
+                      ''gateway.envoyproxy.io'')) : true'
                   - message: If FullDuplexStreamed body processing mode is used, FailOpen
                       must be false.
-                    rule: '!(has(self.failOpen) && self.failOpen == true && ((has(self.processingMode.request.body)
+                    rule: '!(has(self.failOpen) && self.failOpen == true && has(self.processingMode)
+                      && ((has(self.processingMode.request) && has(self.processingMode.request.body)
                       && self.processingMode.request.body == ''FullDuplexStreamed'')
-                      || (has(self.processingMode.response.body) && self.processingMode.response.body
-                      == ''FullDuplexStreamed'')))'
+                      || (has(self.processingMode.response) && has(self.processingMode.response.body)
+                      && self.processingMode.response.body == ''FullDuplexStreamed'')))'
                 maxItems: 16
                 type: array
               lua:
@@ -22979,10 +23036,13 @@ spec:
                       description: |-
                         FailOpen is a switch used to control the behavior when a fatal error occurs
                         during the initialization or the execution of the Wasm extension.
+
                         If FailOpen is set to true, the system bypasses the Wasm extension and
-                        allows the traffic to pass through. Otherwise, if it is set to false or
+                        allows the traffic to pass through. If it is set to false or
                         not set (defaulting to false), the system blocks the traffic and returns
                         an HTTP 5xx error.
+
+                        If set to true, the Wasm extension will also be bypassed if the configuration is invalid.
                       type: boolean
                     name:
                       description: |-
@@ -24079,11 +24139,6 @@ spec:
                   the number of cpuset threads on the platform.
                 format: int32
                 type: integer
-              disableLuaValidation:
-                default: false
-                description: DisableLuaValidation disables the Lua script validation
-                  for Lua EnvoyExtensionPolicies
-                type: boolean
               extraArgs:
                 description: |-
                   ExtraArgs defines additional command line options that are provided to Envoy.
@@ -24251,6 +24306,14 @@ spec:
                       and the log level is the value. If unspecified, defaults to "default: warn".
                     type: object
                 type: object
+              luaValidation:
+                description: |-
+                  LuaValidation determines strictness of the Lua script validation for Lua EnvoyExtensionPolicies
+                  Default: Strict
+                enum:
+                - Strict
+                - Disabled
+                type: string
               mergeGateways:
                 description: |-
                   MergeGateways defines if Gateway resources should be merged onto the same Envoy Proxy Infrastructure.
@@ -34809,6 +34872,13 @@ spec:
                                                     required:
                                                     - path
                                                     type: object
+                                                  initialJitter:
+                                                    description: |-
+                                                      InitialJitter defines the maximum time Envoy will wait before the first health check.
+                                                      Envoy will randomly select a value between 0 and the initial jitter value.
+                                                    format: duration
+                                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                                    type: string
                                                   interval:
                                                     default: 3s
                                                     description: Interval defines
@@ -35317,6 +35387,7 @@ spec:
                                                       - 5xx
                                                       - gateway-error
                                                       - reset
+                                                      - reset-before-request
                                                       - connect-failure
                                                       - retriable-4xx
                                                       - refused-stream
@@ -35881,6 +35952,13 @@ spec:
                                                     required:
                                                     - path
                                                     type: object
+                                                  initialJitter:
+                                                    description: |-
+                                                      InitialJitter defines the maximum time Envoy will wait before the first health check.
+                                                      Envoy will randomly select a value between 0 and the initial jitter value.
+                                                    format: duration
+                                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                                    type: string
                                                   interval:
                                                     default: 3s
                                                     description: Interval defines
@@ -36389,6 +36467,7 @@ spec:
                                                       - 5xx
                                                       - gateway-error
                                                       - reset
+                                                      - reset-before-request
                                                       - connect-failure
                                                       - retriable-4xx
                                                       - refused-stream
@@ -37056,6 +37135,13 @@ spec:
                                               required:
                                               - path
                                               type: object
+                                            initialJitter:
+                                              description: |-
+                                                InitialJitter defines the maximum time Envoy will wait before the first health check.
+                                                Envoy will randomly select a value between 0 and the initial jitter value.
+                                              format: duration
+                                              pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                              type: string
                                             interval:
                                               default: 3s
                                               description: Interval defines the time
@@ -37540,6 +37626,7 @@ spec:
                                                 - 5xx
                                                 - gateway-error
                                                 - reset
+                                                - reset-before-request
                                                 - connect-failure
                                                 - retriable-4xx
                                                 - refused-stream
@@ -38133,6 +38220,13 @@ spec:
                                         required:
                                         - path
                                         type: object
+                                      initialJitter:
+                                        description: |-
+                                          InitialJitter defines the maximum time Envoy will wait before the first health check.
+                                          Envoy will randomly select a value between 0 and the initial jitter value.
+                                        format: duration
+                                        pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                        type: string
                                       interval:
                                         default: 3s
                                         description: Interval defines the time between
@@ -38613,6 +38707,7 @@ spec:
                                           - 5xx
                                           - gateway-error
                                           - reset
+                                          - reset-before-request
                                           - connect-failure
                                           - retriable-4xx
                                           - refused-stream
@@ -38703,6 +38798,18 @@ spec:
                             format: int32
                             minimum: 0
                             type: integer
+                          serviceName:
+                            description: |-
+                              ServiceName defines the service name to use in tracing configuration.
+                              If not set, Envoy Gateway will use a default service name set as
+                              "name.namespace" (e.g., "my-gateway.default").
+                              Note: This field is only supported for OpenTelemetry and Datadog tracing providers.
+                              For Zipkin, the service name in traces is always derived from the Envoy --service-cluster flag
+                              (typically "namespace/name" format). Setting this field has no effect for Zipkin.
+                            type: string
+                            x-kubernetes-validations:
+                            - message: serviceName cannot be empty if provided
+                              rule: self != ""
                           type:
                             default: OpenTelemetry
                             description: Type defines the tracing provider type.
@@ -39238,6 +39345,15 @@ spec:
                           type: array
                       type: object
                     type: array
+                  forwardClientIDHeader:
+                    description: |-
+                      ForwardClientIDHeader is the name of the header to forward the client identity to the backend
+                      service. The header will be added to the request with the client id as the value.
+                    type: string
+                  sanitize:
+                    description: Sanitize indicates whether to remove the API key
+                      from the request before forwarding it to the backend service.
+                    type: boolean
                 required:
                 - credentialRefs
                 - extractFrom
@@ -39336,7 +39452,7 @@ spec:
 
                                 The client IP is inferred from the X-Forwarded-For header, a custom header,
                                 or the proxy protocol.
-                                You can use the `ClientIPDetection` or the `EnableProxyProtocol` field in
+                                You can use the `ClientIPDetection` or the `ProxyProtocol` field in
                                 the `ClientTrafficPolicy` to configure how the client IP is detected.
                               items:
                                 description: |-
@@ -39633,6 +39749,8 @@ spec:
                       Otherwise, if it is set to false or not set (defaulting to false),
                       the system blocks the traffic and returns a HTTP 5xx error, reflecting a fail-closed approach.
                       This setting determines whether to prioritize accessibility over strict security in case of authorization service failure.
+
+                      If set to true, the External Authorization will also be bypassed if its configuration is invalid.
                     type: boolean
                   grpc:
                     description: |-
@@ -40028,6 +40146,13 @@ spec:
                                     required:
                                     - path
                                     type: object
+                                  initialJitter:
+                                    description: |-
+                                      InitialJitter defines the maximum time Envoy will wait before the first health check.
+                                      Envoy will randomly select a value between 0 and the initial jitter value.
+                                    format: duration
+                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                    type: string
                                   interval:
                                     default: 3s
                                     description: Interval defines the time between
@@ -40499,6 +40624,7 @@ spec:
                                       - 5xx
                                       - gateway-error
                                       - reset
+                                      - reset-before-request
                                       - connect-failure
                                       - retriable-4xx
                                       - refused-stream
@@ -40579,13 +40705,16 @@ spec:
                     x-kubernetes-validations:
                     - message: backendRef or backendRefs needs to be set
                       rule: has(self.backendRef) || self.backendRefs.size() > 0
-                    - message: BackendRefs only supports Service and Backend kind.
+                    - message: BackendRefs only supports Service, ServiceImport, and
+                        Backend kind.
                       rule: 'has(self.backendRefs) ? self.backendRefs.all(f, f.kind
-                        == ''Service'' || f.kind == ''Backend'') : true'
-                    - message: BackendRefs only supports Core and gateway.envoyproxy.io
-                        group.
+                        == ''Service'' || f.kind == ''ServiceImport'' || f.kind ==
+                        ''Backend'') : true'
+                    - message: BackendRefs only supports Core, multicluster.x-k8s.io,
+                        and gateway.envoyproxy.io groups.
                       rule: 'has(self.backendRefs) ? (self.backendRefs.all(f, f.group
-                        == "" || f.group == ''gateway.envoyproxy.io'')) : true'
+                        == "" || f.group == ''multicluster.x-k8s.io'' || f.group ==
+                        ''gateway.envoyproxy.io'')) : true'
                   headersToExtAuth:
                     description: |-
                       HeadersToExtAuth defines the client request headers that will be included
@@ -40995,6 +41124,13 @@ spec:
                                     required:
                                     - path
                                     type: object
+                                  initialJitter:
+                                    description: |-
+                                      InitialJitter defines the maximum time Envoy will wait before the first health check.
+                                      Envoy will randomly select a value between 0 and the initial jitter value.
+                                    format: duration
+                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                    type: string
                                   interval:
                                     default: 3s
                                     description: Interval defines the time between
@@ -41466,6 +41602,7 @@ spec:
                                       - 5xx
                                       - gateway-error
                                       - reset
+                                      - reset-before-request
                                       - connect-failure
                                       - retriable-4xx
                                       - refused-stream
@@ -41567,13 +41704,16 @@ spec:
                     x-kubernetes-validations:
                     - message: backendRef or backendRefs needs to be set
                       rule: has(self.backendRef) || self.backendRefs.size() > 0
-                    - message: BackendRefs only supports Service and Backend kind.
+                    - message: BackendRefs only supports Service, ServiceImport, and
+                        Backend kind.
                       rule: 'has(self.backendRefs) ? self.backendRefs.all(f, f.kind
-                        == ''Service'' || f.kind == ''Backend'') : true'
-                    - message: BackendRefs only supports Core and gateway.envoyproxy.io
-                        group.
+                        == ''Service'' || f.kind == ''ServiceImport'' || f.kind ==
+                        ''Backend'') : true'
+                    - message: BackendRefs only supports Core, multicluster.x-k8s.io,
+                        and gateway.envoyproxy.io groups.
                       rule: 'has(self.backendRefs) ? (self.backendRefs.all(f, f.group
-                        == "" || f.group == ''gateway.envoyproxy.io'')) : true'
+                        == "" || f.group == ''multicluster.x-k8s.io'' || f.group ==
+                        ''gateway.envoyproxy.io'')) : true'
                   recomputeRoute:
                     description: |-
                       RecomputeRoute clears the route cache and recalculates the routing decision.
@@ -42158,6 +42298,13 @@ spec:
                                           required:
                                           - path
                                           type: object
+                                        initialJitter:
+                                          description: |-
+                                            InitialJitter defines the maximum time Envoy will wait before the first health check.
+                                            Envoy will randomly select a value between 0 and the initial jitter value.
+                                          format: duration
+                                          pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                          type: string
                                         interval:
                                           default: 3s
                                           description: Interval defines the time between
@@ -42640,6 +42787,7 @@ spec:
                                             - 5xx
                                             - gateway-error
                                             - reset
+                                            - reset-before-request
                                             - connect-failure
                                             - retriable-4xx
                                             - refused-stream
@@ -42762,8 +42910,57 @@ spec:
                     description: |-
                       The client ID to be used in the OIDC
                       [Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest).
+
+                      Only one of clientID or clientIDRef must be set.
                     minLength: 1
                     type: string
+                  clientIDRef:
+                    description: |-
+                      The Kubernetes secret which contains the client ID to be used in the
+                      [Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest).
+                      Exactly one of clientID or clientIDRef must be set.
+                      This is an Opaque secret. The client ID should be stored in the key "client-id".
+
+                      Only one of clientID or clientIDRef must be set.
+                    properties:
+                      group:
+                        default: ""
+                        description: |-
+                          Group is the group of the referent. For example, "gateway.networking.k8s.io".
+                          When unspecified or empty string, core API group is inferred.
+                        maxLength: 253
+                        pattern: ^$|^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                        type: string
+                      kind:
+                        default: Secret
+                        description: Kind is kind of the referent. For example "Secret".
+                        maxLength: 63
+                        minLength: 1
+                        pattern: ^[a-zA-Z]([-a-zA-Z0-9]*[a-zA-Z0-9])?$
+                        type: string
+                      name:
+                        description: Name is the name of the referent.
+                        maxLength: 253
+                        minLength: 1
+                        type: string
+                      namespace:
+                        description: |-
+                          Namespace is the namespace of the referenced object. When unspecified, the local
+                          namespace is inferred.
+
+                          Note that when a namespace different than the local namespace is specified,
+                          a ReferenceGrant object is required in the referent namespace to allow that
+                          namespace's owner to accept the reference. See the ReferenceGrant
+                          documentation for details.
+
+                          Support: Core
+                        maxLength: 63
+                        minLength: 1
+                        pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
+                        type: string
+                    required:
+                    - name
+                    type: object
                   clientSecret:
                     description: |-
                       The Kubernetes secret which contains the OIDC client secret to be used in the
@@ -43330,6 +43527,13 @@ spec:
                                     required:
                                     - path
                                     type: object
+                                  initialJitter:
+                                    description: |-
+                                      InitialJitter defines the maximum time Envoy will wait before the first health check.
+                                      Envoy will randomly select a value between 0 and the initial jitter value.
+                                    format: duration
+                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                    type: string
                                   interval:
                                     default: 3s
                                     description: Interval defines the time between
@@ -43801,6 +44005,7 @@ spec:
                                       - 5xx
                                       - gateway-error
                                       - reset
+                                      - reset-before-request
                                       - connect-failure
                                       - retriable-4xx
                                       - refused-stream
@@ -43941,10 +44146,13 @@ spec:
                       type: string
                     type: array
                 required:
-                - clientID
                 - clientSecret
                 - provider
                 type: object
+                x-kubernetes-validations:
+                - message: only one of clientID or clientIDRef must be set
+                  rule: (has(self.clientID) && !has(self.clientIDRef)) || (!has(self.clientID)
+                    && has(self.clientIDRef))
               targetRef:
                 description: |-
                   TargetRef is the name of the resource this policy is being attached to.
@@ -44123,18 +44331,12 @@ spec:
             - message: this policy can only have a targetRef.kind of Gateway/HTTPRoute/GRPCRoute
               rule: 'has(self.targetRef) ? self.targetRef.kind in [''Gateway'', ''HTTPRoute'',
                 ''GRPCRoute''] : true'
-            - message: this policy supports the sectionName field only for kind Gateway
-              rule: 'has(self.targetRef) ? self.targetRef.kind == ''Gateway'' || !has(self.targetRef.sectionName)
-                : true'
             - message: this policy can only have a targetRefs[*].group of gateway.networking.k8s.io
               rule: 'has(self.targetRefs) ? self.targetRefs.all(ref, ref.group ==
                 ''gateway.networking.k8s.io'') : true '
             - message: this policy can only have a targetRefs[*].kind of Gateway/HTTPRoute/GRPCRoute
               rule: 'has(self.targetRefs) ? self.targetRefs.all(ref, ref.kind in [''Gateway'',
                 ''HTTPRoute'', ''GRPCRoute'']) : true '
-            - message: this policy supports the sectionName field only for kind Gateway
-              rule: 'has(self.targetRefs) ? self.targetRefs.all(ref, ref.kind == ''Gateway''
-                || !has(ref.sectionName)) : true'
             - message: if authorization.rules.principal.jwt is used, jwt must be defined
               rule: '(has(self.authorization) && has(self.authorization.rules) &&
                 self.authorization.rules.exists(r, has(r.principal.jwt))) ? has(self.jwt)

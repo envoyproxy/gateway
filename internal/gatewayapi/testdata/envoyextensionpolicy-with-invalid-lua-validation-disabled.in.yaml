@@ -5,7 +5,7 @@ envoyProxyForGatewayClass:
     namespace: envoy-gateway-system
     name: test
   spec:
-    disableLuaValidation: true
+    luaValidation: Disabled
 gateways:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: Gateway
@@ -46,14 +46,18 @@ envoyextensionpolicies:
   kind: EnvoyExtensionPolicy
   metadata:
     namespace: default
-    name: policy-for-http-route   # Invalid Lua but still gets accepted
+    name: policy-for-http-route
   spec:
     targetRef:
       group: gateway.networking.k8s.io
       kind: HTTPRoute
       name: httproute-1
     lua:
-    - type: Inline
-      inline: "function envoy_on_response(response_handle)
-    response_handle:UnknownApi()
-    end"
+    - type: Inline  # Invalid Lua syntax (missing then keyword in if statement) but should be accepted
+      inline: |
+        function envoy_on_response(response_handle)
+          local value = 10
+          if value > 5
+            print("Value is greater than 5")
+          end
+        end

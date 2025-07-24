@@ -25,6 +25,7 @@ import (
 	protobuf "google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/anypb"
 	"google.golang.org/protobuf/types/known/wrapperspb"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/util/sets"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
@@ -520,11 +521,23 @@ func (t *Translator) addRouteToRouteConfig(
 		vHost.Routes = append(vHost.Routes, xdsRoute)
 
 		if httpRoute.Destination != nil {
+			// Prepare extension resources for hook calls
+			var extensionResources []*unstructured.Unstructured
+			if len(httpRoute.ExtensionRefs) > 0 {
+				extensionResources = make([]*unstructured.Unstructured, len(httpRoute.ExtensionRefs))
+				for refIdx, ref := range httpRoute.ExtensionRefs {
+					extensionResources[refIdx] = ref.Object
+				}
+			}
+
 			ea := &ExtraArgs{
-				metrics:       metrics,
-				http1Settings: httpListener.HTTP1,
-				ipFamily:      determineIPFamily(httpRoute.Destination.Settings),
-				statName:      httpRoute.Destination.StatName,
+				metrics:          metrics,
+				http1Settings:    httpListener.HTTP1,
+				ipFamily:         determineIPFamily(httpRoute.Destination.Settings),
+				statName:         httpRoute.Destination.StatName,
+				unstructuredRefs: extensionResources,
+				extensionMgr:     t.ExtensionManager,
+				logger:           t.Logger,
 			}
 
 			if httpRoute.Traffic != nil && httpRoute.Traffic.HTTP2 != nil {
@@ -564,9 +577,6 @@ func (t *Translator) addRouteToRouteConfig(
 				}
 			}
 
-			if err != nil {
-				errs = errors.Join(errs, err)
-			}
 		}
 
 		if httpRoute.Mirrors != nil {
@@ -695,10 +705,10 @@ func (t *Translator) processTCPListenerXdsTranslation(
 
 		// Add the proxy protocol filter if needed
 		// TODO: should make sure all listeners that will be translated into same xDS listener have
-		// same EnableProxyProtocol value, otherwise listeners with EnableProxyProtocol=false will
-		// never accept connection, because listeners with EnableProxyProtocol=true has configured
+		// same proxy protocol configuration, otherwise listeners with proxy protocol disabled will
+		// never accept connection, because listeners with proxy protocol enabled have configured
 		// proxy protocol listener filter for xDS listener, all connection must have ProxyProtocol header.
-		patchProxyProtocolFilter(xdsListener, tcpListener.EnableProxyProtocol)
+		patchProxyProtocolFilter(xdsListener, tcpListener.ProxyProtocol)
 
 		for _, route := range tcpListener.Routes {
 			if err := processXdsCluster(tCtx,
@@ -976,6 +986,16 @@ func addXdsCluster(tCtx *types.ResourceVersionTable, args *xdsClusterArgs) error
 		// Dynamic resolver has no endpoints
 		// This assignment is not necessary, but it is added for clarity.
 		xdsCluster.LoadAssignment = nil
+	}
+
+	if err := processExtensionPostClusterHook(xdsCluster, args.unstructuredRefs, args.extensionMgr); err != nil {
+		// If the extension server returns an error, and the extension server is not configured to fail open,
+		// then propagate the error
+		if args.extensionMgr != nil && !(*args.extensionMgr).FailOpen() {
+			return err
+		} else {
+			args.logger.Error(err, "Extension Manager PostCluster failure")
+		}
 	}
 
 	if err := tCtx.AddXdsResource(resourcev3.ClusterType, xdsCluster); err != nil {

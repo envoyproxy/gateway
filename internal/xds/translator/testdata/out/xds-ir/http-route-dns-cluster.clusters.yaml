@@ -1,11 +1,11 @@
 - circuitBreakers:
     thresholds:
     - maxRetries: 1024
-  commonLbConfig:
-    localityWeightedLbConfig: {}
+  commonLbConfig: {}
   connectTimeout: 10s
   dnsLookupFamily: V4_PREFERRED
   dnsRefreshRate: 30s
+  ignoreHealthOnHostRemoval: true
   lbPolicy: LEAST_REQUEST
   loadAssignment:
     clusterName: first-route-dest
@@ -26,6 +26,14 @@
       loadBalancingWeight: 1
       locality:
         region: first-route-dest/backend/0
+  loadBalancingPolicy:
+    policies:
+    - typedExtensionConfig:
+        name: envoy.load_balancing_policies.least_request
+        typedConfig:
+          '@type': type.googleapis.com/envoy.extensions.load_balancing_policies.least_request.v3.LeastRequest
+          localityLbConfig:
+            localityWeightedLbConfig: {}
   name: first-route-dest
   perConnectionBufferLimitBytes: 32768
   respectDnsTtl: true

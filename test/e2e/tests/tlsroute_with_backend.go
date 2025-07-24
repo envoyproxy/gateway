@@ -91,7 +91,7 @@ func testTLSRouteWithBackend(t *testing.T, suite *suite.ConformanceTestSuite, ro
 
 	// This test uses the same key/cert pair as both a client cert and server cert
 	// Both backend and client treat the self-signed cert as a trusted CA
-	cPem, keyPem, err := GetTLSSecret(suite.Client, certNN)
+	cPem, keyPem, _, err := GetTLSSecret(suite.Client, certNN)
 	if err != nil {
 		t.Fatalf("unexpected error finding TLS secret: %v", err)
 	}

@@ -10,11 +10,12 @@ $dark: #1E1B4B;
 $gray-100: #F5F3FF;
 $gray-200: #E9E8FF;
 $white: #ffffff;
+$light-purple: #8c87ec;
 
 
 // Gradient colors
-$gradient-start: #9333EA;  // Purple
-$gradient-end: #4F46E5;    // Indigo
+$gradient-start: #9333EA; // Purple
+$gradient-end: #4F46E5; // Indigo
 
 // Enhanced gradient mixin
 @mixin gradient-text {
@@ -110,6 +111,51 @@ $gradient-end: #4F46E5;    // Indigo
   }
 }
 
+
+
+.btn-light-purple {
+  background: $light-purple;
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  color: $white !important;
+  padding: 0.625rem 1.5rem;
+  font-size: 1rem;
+  font-weight: 500;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  text-decoration: none;
+  letter-spacing: 0.02em;
+  border-radius: 9999px;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+
+  &:hover {
+    background: $primary;
+    border-color: rgba(255, 255, 255, 0.4);
+    color: $white !important;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    text-decoration: none !important;
+  }
+
+  &:active {
+    transform: translateY(0);
+    background: rgba(255, 255, 255, 0.25);
+    color: $white !important;
+  }
+
+  &:focus {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.3);
+    color: $white !important;
+  }
+
+  &:visited {
+    color: $white !important;
+  }
+}
+
 // Override Docsy variables
 $enable-gradients: false;
 $enable-shadows: false;
@@ -135,9 +181,37 @@ body {
     .td-navbar-nav-scroll {
       max-width: 100%;
       font-size: 0.9rem;
-  }
+    }
   }
 }
+
+@media(min-width: 992px) {
+
+  .td-max-width-on-larger-screens,
+  .td-card.card,
+  .td-card-group.card-group,
+  .td-content>.tab-content .tab-pane,
+  .td-content .footnotes,
+  .td-content>.alert,
+  .td-content>.highlight,
+  .td-content>.lead,
+  .td-content>.td-table,
+  .td-box .td-content>table,
+  .td-content>table,
+  .td-content>blockquote,
+  .td-content>dl dd,
+  .td-content>h1,
+  .td-content>.h1,
+  .td-content>h2,
+  .td-content>.h2,
+  .td-content>ol,
+  .td-content>p,
+  .td-content>pre,
+  .td-content>ul {
+    max-width: 100%;
+  }
+}
+
 .td-navbar {
   background-color: rgba($white, 0.95);
   backdrop-filter: blur(8px);
@@ -161,6 +235,7 @@ body {
     .td-navbar-logo-regular {
       display: block;
     }
+
     .td-navbar-logo-white {
       display: none;
     }
@@ -203,6 +278,7 @@ body {
       .td-navbar-logo-regular {
         display: none;
       }
+
       .td-navbar-logo-white {
         display: block;
       }
@@ -249,7 +325,7 @@ nav.foldable-nav {
     margin: 0;
   }
 
-  .ul-1 > li {
+  .ul-1>li {
     padding-left: 1em;
   }
 
@@ -257,7 +333,7 @@ nav.foldable-nav {
     display: none;
   }
 
-  input:checked ~ ul.foldable {
+  input:checked~ul.foldable {
     display: block;
   }
 
@@ -271,13 +347,13 @@ nav.foldable-nav {
     padding-left: 1em;
   }
 
-  .ul-1 .with-child > label:before {
+  .ul-1 .with-child>label:before {
     top: 0.1em;
     font-size: 1em;
     color: var(--bs-secondary-color);
   }
 
-  .ul-1 .with-child > input:checked ~ label:before {
+  .ul-1 .with-child>input:checked~label:before {
     color: var(--bs-secondary-color);
     transform: rotate(90deg);
     transition: transform 0.5s;
@@ -356,7 +432,7 @@ nav.foldable-nav {
         }
       }
 
-      &.active-path > label > .td-sidebar-link {
+      &.active-path>label>.td-sidebar-link {
         color: $primary;
         font-weight: 500;
       }
@@ -378,7 +454,7 @@ nav.foldable-nav {
     }
 
     // Show nested items when checkbox is checked
-    input:checked ~ ul.foldable {
+    input:checked~ul.foldable {
       display: block;
     }
 
@@ -418,7 +494,13 @@ nav.foldable-nav {
 
 // Container
 
-.container, .container-fluid, .container-xxl, .container-xl, .container-lg, .container-md, .container-sm {
+.container,
+.container-fluid,
+.container-xxl,
+.container-xl,
+.container-lg,
+.container-md,
+.container-sm {
   --bs-gutter-x: 1.5rem;
   --bs-gutter-y: 0;
   padding-right: 0;
@@ -432,7 +514,8 @@ nav.foldable-nav {
   padding-bottom: 2rem;
   // @include media-breakpoint-up(md) {
   //   padding-top: 5.5rem;
- }
+}
+
 .td-main {
   padding-top: 4.5rem;
 
@@ -440,7 +523,12 @@ nav.foldable-nav {
     padding-top: 0;
   }
 
-  h1, h2, h3, h4, h5, h6 {
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
     font-weight: 600;
     margin-bottom: 1.5rem;
     color: $dark;
@@ -578,6 +666,11 @@ nav.foldable-nav {
       color: $white;
     }
   }
+}
+
+.btn-sm {
+  padding: 0.4rem 0.8rem;
+  font-size: 0.8rem;
 }
 
 // Alert boxes
@@ -1048,6 +1141,7 @@ footer {
 
 // About page styling
 .td-content {
+
   // Main heading styles
   h1 {
     font-size: 3.5rem;
@@ -1395,7 +1489,8 @@ footer {
       }
     }
 
-    .fa, .fas {
+    .fa,
+    .fas {
       color: rgba($white, 0.9);
     }
   }
@@ -1463,13 +1558,15 @@ footer {
       }
     }
 
-    .fa, .fas {
+    .fa,
+    .fas {
       color: $primary;
     }
   }
 
   // Icon styling
-  .fa, .fas {
+  .fa,
+  .fas {
     font-size: 2.5rem;
     margin-bottom: 1rem;
   }
@@ -1672,5 +1769,41 @@ footer {
     max-width: 800px;
     margin-left: auto;
     margin-right: auto;
+  }
+}
+
+// AI Chat Container Styling
+.ai-chat-container {
+  width: 80vw;
+  max-width: 1400px;
+  height: 80vh;
+  border: none;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  margin: 2rem auto;
+  transition: box-shadow 0.3s ease;
+
+  &:hover {
+    box-shadow: 0 8px 12px rgba(0, 0, 0, 0.15);
+  }
+
+  iframe {
+    width: 100%;
+    height: 100%;
+    border: none;
+  }
+
+  // Responsive adjustments
+  @media (max-width: 768px) {
+    width: 95vw;
+    height: 70vh;
+  }
+
+  @media (max-width: 480px) {
+    width: 100vw;
+    height: 60vh;
+    border-radius: 0;
+    margin: 0 -1rem;
   }
 }

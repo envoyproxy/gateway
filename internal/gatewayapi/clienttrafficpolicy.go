@@ -282,6 +282,12 @@ func (t *Translator) ProcessClientTrafficPolicies(
 		}
 	}
 
+	for _, policy := range res {
+		// Truncate Ancestor list of longer than 16
+		if len(policy.Status.Ancestors) > 16 {
+			status.TruncatePolicyAncestors(&policy.Status, t.GatewayControllerName, policy.Generation)
+		}
+	}
 	return res
 }
 
@@ -386,12 +392,12 @@ func (t *Translator) translateClientTrafficPolicyForListener(policy *egv1a1.Clie
 
 	// HTTP and TCP listeners can both be configured by common fields below.
 	var (
-		keepalive           *ir.TCPKeepalive
-		connection          *ir.ClientConnection
-		tlsConfig           *ir.TLSConfig
-		enableProxyProtocol bool
-		timeout             *ir.ClientTimeout
-		err, errs           error
+		keepalive     *ir.TCPKeepalive
+		connection    *ir.ClientConnection
+		tlsConfig     *ir.TLSConfig
+		proxyProtocol *ir.ProxyProtocolSettings
+		timeout       *ir.ClientTimeout
+		err, errs     error
 	)
 
 	// Build common IR shared by HTTP and TCP listeners, return early if some field is invalid.
@@ -410,7 +416,18 @@ func (t *Translator) translateClientTrafficPolicyForListener(policy *egv1a1.Clie
 	}
 
 	// Translate Proxy Protocol
-	enableProxyProtocol = ptr.Deref(policy.Spec.EnableProxyProtocol, false)
+	if policy.Spec.ProxyProtocol != nil {
+		// ProxyProtocol field takes precedence when configured
+		// Even if it's an empty object {}, we should enable proxy protocol with default settings
+		proxyProtocol = &ir.ProxyProtocolSettings{
+			Optional: ptr.Deref(policy.Spec.ProxyProtocol.Optional, false),
+		}
+	} else if ptr.Deref(policy.Spec.EnableProxyProtocol, false) {
+		// Fallback to legacy EnableProxyProtocol field
+		proxyProtocol = &ir.ProxyProtocolSettings{
+			Optional: false, // Default behavior for legacy field
+		}
+	}
 
 	// Translate Client Timeout Settings
 	timeout, err = buildClientTimeout(policy.Spec.Timeout)
@@ -486,7 +503,7 @@ func (t *Translator) translateClientTrafficPolicyForListener(policy *egv1a1.Clie
 
 		httpIR.TCPKeepalive = keepalive
 		httpIR.Connection = connection
-		httpIR.EnableProxyProtocol = enableProxyProtocol
+		httpIR.ProxyProtocol = proxyProtocol
 		httpIR.Timeout = timeout
 		httpIR.TLS = tlsConfig
 	}
@@ -509,7 +526,7 @@ func (t *Translator) translateClientTrafficPolicyForListener(policy *egv1a1.Clie
 
 		tcpIR.TCPKeepalive = keepalive
 		tcpIR.Connection = connection
-		tcpIR.EnableProxyProtocol = enableProxyProtocol
+		tcpIR.ProxyProtocol = proxyProtocol
 		tcpIR.TLS = tlsConfig
 		tcpIR.Timeout = timeout
 	}
@@ -600,6 +617,16 @@ func buildClientTimeout(clientTimeout *egv1a1.ClientTimeout) (*ir.ClientTimeout,
 				return nil, fmt.Errorf("invalid HTTP IdleTimeout value %s", *clientTimeout.HTTP.IdleTimeout)
 			}
 			irHTTPTimeout.IdleTimeout = &metav1.Duration{
+				Duration: d,
+			}
+		}
+
+		if clientTimeout.HTTP.StreamIdleTimeout != nil {
+			d, err := time.ParseDuration(string(*clientTimeout.HTTP.StreamIdleTimeout))
+			if err != nil {
+				return nil, fmt.Errorf("invalid HTTP StreamIdleTimeout value %s", *clientTimeout.HTTP.StreamIdleTimeout)
+			}
+			irHTTPTimeout.StreamIdleTimeout = &metav1.Duration{
 				Duration: d,
 			}
 		}
@@ -819,47 +846,49 @@ func (t *Translator) buildListenerTLSParameters(policy *egv1a1.ClientTrafficPoli
 		}
 
 		for _, caCertRef := range tlsParams.ClientValidation.CACertificateRefs {
-			if caCertRef.Kind == nil || string(*caCertRef.Kind) == resource.KindSecret { // nolint
+			caCertRefKind := string(ptr.Deref(caCertRef.Kind, resource.KindSecret))
+			var caCertBytes []byte
+			switch caCertRefKind {
+			case resource.KindSecret:
 				secret, err := t.validateSecretRef(false, from, caCertRef, resources)
 				if err != nil {
 					return irTLSConfig, err
 				}
 
-				secretBytes, ok := getCaCertFromSecret(secret)
-				if !ok || len(secretBytes) == 0 {
+				secretCertBytes, ok := getCaCertFromSecret(secret)
+				if !ok || len(secretCertBytes) == 0 {
 					return irTLSConfig, fmt.Errorf(
-						"caCertificateRef not found in secret %s", caCertRef.Name)
+						"caCertificateRef secret [%s] not found", caCertRef.Name)
 				}
-
-				if err := validateCertificate(secretBytes); err != nil {
-					return irTLSConfig, fmt.Errorf(
-						"invalid certificate in secret %s: %w", caCertRef.Name, err)
-				}
-
-				irCACert.Certificate = append(irCACert.Certificate, secretBytes...)
-
-			} else if string(*caCertRef.Kind) == resource.KindConfigMap {
+				caCertBytes = secretCertBytes
+			case resource.KindConfigMap:
 				configMap, err := t.validateConfigMapRef(false, from, caCertRef, resources)
 				if err != nil {
 					return irTLSConfig, err
 				}
 
-				configMapBytes, ok := getCaCertFromConfigMap(configMap)
-				if !ok || len(configMapBytes) == 0 {
+				configMapData, ok := getCaCertFromConfigMap(configMap)
+				if !ok || len(configMapData) == 0 {
 					return irTLSConfig, fmt.Errorf(
-						"caCertificateRef not found in configMap %s", caCertRef.Name)
+						"caCertificateRef configmap [%s] not found", caCertRef.Name)
 				}
-
-				if err := validateCertificate([]byte(configMapBytes)); err != nil {
+				caCertBytes = []byte(configMapData)
+			case resource.KindClusterTrustBundle:
+				trustBundle := resources.GetClusterTrustBundle(string(caCertRef.Name))
+				if trustBundle == nil {
 					return irTLSConfig, fmt.Errorf(
-						"invalid certificate in configmap %s: %w", caCertRef.Name, err)
+						"caCertificateRef ClusterTrustBundle [%s] not found", caCertRef.Name)
 				}
-
-				irCACert.Certificate = append(irCACert.Certificate, configMapBytes...)
-			} else {
-				return irTLSConfig, fmt.Errorf(
-					"unsupported caCertificateRef kind:%s", string(*caCertRef.Kind))
+				caCertBytes = []byte(trustBundle.Spec.TrustBundle)
+			default:
+				return irTLSConfig, fmt.Errorf("unsupported caCertificateRef kind:%s", caCertRefKind)
 			}
+
+			if err := validateCertificate(caCertBytes); err != nil {
+				return irTLSConfig, fmt.Errorf(
+					"invalid certificate in %s %s: %w", caCertRefKind, caCertRef.Name, err)
+			}
+			irCACert.Certificate = append(irCACert.Certificate, caCertBytes...)
 		}
 
 		if len(irCACert.Certificate) > 0 {

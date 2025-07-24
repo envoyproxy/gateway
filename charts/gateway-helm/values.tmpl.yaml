@@ -31,6 +31,7 @@ podDisruptionBudget:
   # maxUnavailable: 1
 
 deployment:
+  annotations: {}
   envoyGateway:
     image:
       # if both this and global.imageRegistry are specified, this has to include both registry and repository explicitly, eg docker.io/envoyproxy/gateway

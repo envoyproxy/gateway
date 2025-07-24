@@ -11,6 +11,21 @@ import (
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 )
 
+const (
+	// PolicyConditionAggregated indicates whether the policy has been aggregated
+	// to satisfy CEL constraints in PolicyAncestorStatus (not exceeding 16).
+	//
+	// Possible reasons for this condition to be True are:
+	//
+	// * "Aggregated"
+	//
+	PolicyConditionAggregated gwapiv1a2.PolicyConditionType = "Aggregated"
+
+	// PolicyReasonAggregated is used with the "Aggregated" condition when the policy
+	// is aggregated to satisfy CEL constraints in PolicyAncestorStatus (not exceeding 16).
+	PolicyReasonAggregated gwapiv1a2.PolicyConditionReason = "Aggregated"
+)
+
 type PolicyTargetReferences struct {
 	// TargetRef is the name of the resource this policy is being attached to.
 	// This policy and the TargetRef MUST be in the same namespace for this

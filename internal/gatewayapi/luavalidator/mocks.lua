@@ -544,18 +544,16 @@ function StreamHandle:headers()
 end
 
 function StreamHandle:body(always_wrap_body)
-  return "body"
+  return Buffer
 end
 
 function StreamHandle:bodyChunks()
   local index = 0
-  local chunks = self.data or {}
 
   return function()
     index = index + 1
-    local chunk = chunks[index]
-    if chunk then
-      return chunk
+    if index <= 3 then
+      return Buffer
     end
   end
 end

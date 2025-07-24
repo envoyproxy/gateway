@@ -7,6 +7,7 @@ package status
 
 import (
 	"fmt"
+	"slices"
 	"time"
 
 	appsv1 "k8s.io/api/apps/v1"
@@ -43,10 +44,15 @@ func GatewayAccepted(gw *gwapiv1.Gateway) bool {
 	return !GatewayNotAccepted(gw)
 }
 
+type NodeAddresses struct {
+	IPv4 []string
+	IPv6 []string
+}
+
 // UpdateGatewayStatusProgrammedCondition updates the status addresses for the provided gateway
 // based on the status IP/Hostname of svc and updates the Programmed condition based on the
 // service and deployment or daemonset state.
-func UpdateGatewayStatusProgrammedCondition(gw *gwapiv1.Gateway, svc *corev1.Service, envoyObj client.Object, nodeAddresses ...string) {
+func UpdateGatewayStatusProgrammedCondition(gw *gwapiv1.Gateway, svc *corev1.Service, envoyObj client.Object, nodeAddresses NodeAddresses) {
 	var addresses, hostnames []string
 	// Update the status addresses field.
 	if svc != nil {
@@ -92,7 +98,14 @@ func UpdateGatewayStatusProgrammedCondition(gw *gwapiv1.Gateway, svc *corev1.Ser
 			}
 
 			if svc.Spec.Type == corev1.ServiceTypeNodePort {
-				addresses = nodeAddresses
+				var relevantAddresses []string
+				if slices.Contains(svc.Spec.IPFamilies, corev1.IPv4Protocol) {
+					relevantAddresses = append(relevantAddresses, nodeAddresses.IPv4...)
+				}
+				if slices.Contains(svc.Spec.IPFamilies, corev1.IPv6Protocol) {
+					relevantAddresses = append(relevantAddresses, nodeAddresses.IPv6...)
+				}
+				addresses = relevantAddresses
 			}
 		}
 

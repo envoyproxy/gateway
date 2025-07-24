@@ -18,7 +18,7 @@ clientTrafficPolicies:
     tls:
       clientValidation:
         caCertificateRefs:
-        - group: null
+        - group: ""
           kind: null
           name: tls-secret-1
           namespace: default
@@ -32,8 +32,86 @@ clientTrafficPolicies:
       conditions:
       - lastTransitionTime: null
         message: |-
-          TLS: caCertificateRef not found in secret tls-secret-1
-          TLS: caCertificateRef not found in secret tls-secret-1.
+          TLS: caCertificateRef secret [tls-secret-1] not found
+          TLS: caCertificateRef secret [tls-secret-1] not found.
+        reason: Invalid
+        status: "False"
+        type: Accepted
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: ClientTrafficPolicy
+  metadata:
+    creationTimestamp: null
+    name: target-gateway-2
+    namespace: default
+  spec:
+    headers:
+      xForwardedClientCert:
+        certDetailsToAdd:
+        - Cert
+        mode: Sanitize
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: Gateway
+      name: gateway-2
+    tls:
+      clientValidation:
+        caCertificateRefs:
+        - group: ""
+          kind: ConfigMap
+          name: tls-cm-1
+          namespace: default
+  status:
+    ancestors:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: gateway-2
+        namespace: default
+      conditions:
+      - lastTransitionTime: null
+        message: |-
+          TLS: configmap default/tls-cm-1 does not exist
+          TLS: configmap default/tls-cm-1 does not exist.
+        reason: Invalid
+        status: "False"
+        type: Accepted
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: ClientTrafficPolicy
+  metadata:
+    creationTimestamp: null
+    name: target-gateway-3
+    namespace: default
+  spec:
+    headers:
+      xForwardedClientCert:
+        certDetailsToAdd:
+        - Cert
+        mode: Sanitize
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: Gateway
+      name: gateway-3
+    tls:
+      clientValidation:
+        caCertificateRefs:
+        - group: ""
+          kind: ClusterTrustBundle
+          name: tls-ctb-1
+          namespace: default
+  status:
+    ancestors:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: gateway-3
+        namespace: default
+      conditions:
+      - lastTransitionTime: null
+        message: |-
+          TLS: caCertificateRef ClusterTrustBundle [tls-ctb-1] not found
+          TLS: caCertificateRef ClusterTrustBundle [tls-ctb-1] not found.
         reason: Invalid
         status: "False"
         type: Accepted
@@ -156,6 +234,280 @@ gateways:
       - group: gateway.networking.k8s.io
         kind: TCPRoute
     - attachedRoutes: 1
+      conditions:
+      - lastTransitionTime: null
+        message: Sending translated listener configuration to the data plane
+        reason: Programmed
+        status: "True"
+        type: Programmed
+      - lastTransitionTime: null
+        message: Listener has been successfully translated
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Listener references have been resolved
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      name: tcp-2
+      supportedKinds:
+      - group: gateway.networking.k8s.io
+        kind: TCPRoute
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: Gateway
+  metadata:
+    creationTimestamp: null
+    name: gateway-2
+    namespace: default
+  spec:
+    gatewayClassName: envoy-gateway-class
+    listeners:
+    - allowedRoutes:
+        namespaces:
+          from: Same
+      name: http-1
+      port: 443
+      protocol: HTTPS
+      tls:
+        certificateRefs:
+        - group: null
+          kind: null
+          name: tls-secret-1
+          namespace: default
+        mode: Terminate
+    - allowedRoutes:
+        namespaces:
+          from: Same
+      name: http-2
+      port: 8080
+      protocol: HTTP
+    - allowedRoutes:
+        namespaces:
+          from: Same
+      name: tcp-1
+      port: 8443
+      protocol: TLS
+      tls:
+        certificateRefs:
+        - group: null
+          kind: null
+          name: tls-secret-1
+          namespace: default
+        mode: Terminate
+    - allowedRoutes:
+        namespaces:
+          from: Same
+      name: tcp-2
+      port: 5000
+      protocol: TCP
+  status:
+    listeners:
+    - attachedRoutes: 0
+      conditions:
+      - lastTransitionTime: null
+        message: Sending translated listener configuration to the data plane
+        reason: Programmed
+        status: "True"
+        type: Programmed
+      - lastTransitionTime: null
+        message: Listener has been successfully translated
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Listener references have been resolved
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      name: http-1
+      supportedKinds:
+      - group: gateway.networking.k8s.io
+        kind: HTTPRoute
+      - group: gateway.networking.k8s.io
+        kind: GRPCRoute
+    - attachedRoutes: 0
+      conditions:
+      - lastTransitionTime: null
+        message: Sending translated listener configuration to the data plane
+        reason: Programmed
+        status: "True"
+        type: Programmed
+      - lastTransitionTime: null
+        message: Listener has been successfully translated
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Listener references have been resolved
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      name: http-2
+      supportedKinds:
+      - group: gateway.networking.k8s.io
+        kind: HTTPRoute
+      - group: gateway.networking.k8s.io
+        kind: GRPCRoute
+    - attachedRoutes: 0
+      conditions:
+      - lastTransitionTime: null
+        message: Sending translated listener configuration to the data plane
+        reason: Programmed
+        status: "True"
+        type: Programmed
+      - lastTransitionTime: null
+        message: Listener has been successfully translated
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Listener references have been resolved
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      name: tcp-1
+      supportedKinds:
+      - group: gateway.networking.k8s.io
+        kind: TCPRoute
+    - attachedRoutes: 0
+      conditions:
+      - lastTransitionTime: null
+        message: Sending translated listener configuration to the data plane
+        reason: Programmed
+        status: "True"
+        type: Programmed
+      - lastTransitionTime: null
+        message: Listener has been successfully translated
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Listener references have been resolved
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      name: tcp-2
+      supportedKinds:
+      - group: gateway.networking.k8s.io
+        kind: TCPRoute
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: Gateway
+  metadata:
+    creationTimestamp: null
+    name: gateway-3
+    namespace: default
+  spec:
+    gatewayClassName: envoy-gateway-class
+    listeners:
+    - allowedRoutes:
+        namespaces:
+          from: Same
+      name: http-1
+      port: 443
+      protocol: HTTPS
+      tls:
+        certificateRefs:
+        - group: null
+          kind: null
+          name: tls-secret-1
+          namespace: default
+        mode: Terminate
+    - allowedRoutes:
+        namespaces:
+          from: Same
+      name: http-2
+      port: 8080
+      protocol: HTTP
+    - allowedRoutes:
+        namespaces:
+          from: Same
+      name: tcp-1
+      port: 8443
+      protocol: TLS
+      tls:
+        certificateRefs:
+        - group: null
+          kind: null
+          name: tls-secret-1
+          namespace: default
+        mode: Terminate
+    - allowedRoutes:
+        namespaces:
+          from: Same
+      name: tcp-2
+      port: 5000
+      protocol: TCP
+  status:
+    listeners:
+    - attachedRoutes: 0
+      conditions:
+      - lastTransitionTime: null
+        message: Sending translated listener configuration to the data plane
+        reason: Programmed
+        status: "True"
+        type: Programmed
+      - lastTransitionTime: null
+        message: Listener has been successfully translated
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Listener references have been resolved
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      name: http-1
+      supportedKinds:
+      - group: gateway.networking.k8s.io
+        kind: HTTPRoute
+      - group: gateway.networking.k8s.io
+        kind: GRPCRoute
+    - attachedRoutes: 0
+      conditions:
+      - lastTransitionTime: null
+        message: Sending translated listener configuration to the data plane
+        reason: Programmed
+        status: "True"
+        type: Programmed
+      - lastTransitionTime: null
+        message: Listener has been successfully translated
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Listener references have been resolved
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      name: http-2
+      supportedKinds:
+      - group: gateway.networking.k8s.io
+        kind: HTTPRoute
+      - group: gateway.networking.k8s.io
+        kind: GRPCRoute
+    - attachedRoutes: 0
+      conditions:
+      - lastTransitionTime: null
+        message: Sending translated listener configuration to the data plane
+        reason: Programmed
+        status: "True"
+        type: Programmed
+      - lastTransitionTime: null
+        message: Listener has been successfully translated
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Listener references have been resolved
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      name: tcp-1
+      supportedKinds:
+      - group: gateway.networking.k8s.io
+        kind: TCPRoute
+    - attachedRoutes: 0
       conditions:
       - lastTransitionTime: null
         message: Sending translated listener configuration to the data plane
@@ -316,6 +668,86 @@ infraIR:
           kind: GatewayClass
           name: envoy-gateway-class
       name: default/gateway-1
+      namespace: envoy-gateway-system
+  default/gateway-2:
+    proxy:
+      listeners:
+      - address: null
+        name: default/gateway-2/http-1
+        ports:
+        - containerPort: 10443
+          name: https-443
+          protocol: HTTPS
+          servicePort: 443
+      - address: null
+        name: default/gateway-2/http-2
+        ports:
+        - containerPort: 8080
+          name: http-8080
+          protocol: HTTP
+          servicePort: 8080
+      - address: null
+        name: default/gateway-2/tcp-1
+        ports:
+        - containerPort: 8443
+          name: tls-8443
+          protocol: TLS
+          servicePort: 8443
+      - address: null
+        name: default/gateway-2/tcp-2
+        ports:
+        - containerPort: 5000
+          name: tcp-5000
+          protocol: TCP
+          servicePort: 5000
+      metadata:
+        labels:
+          gateway.envoyproxy.io/owning-gateway-name: gateway-2
+          gateway.envoyproxy.io/owning-gateway-namespace: default
+        ownerReference:
+          kind: GatewayClass
+          name: envoy-gateway-class
+      name: default/gateway-2
+      namespace: envoy-gateway-system
+  default/gateway-3:
+    proxy:
+      listeners:
+      - address: null
+        name: default/gateway-3/http-1
+        ports:
+        - containerPort: 10443
+          name: https-443
+          protocol: HTTPS
+          servicePort: 443
+      - address: null
+        name: default/gateway-3/http-2
+        ports:
+        - containerPort: 8080
+          name: http-8080
+          protocol: HTTP
+          servicePort: 8080
+      - address: null
+        name: default/gateway-3/tcp-1
+        ports:
+        - containerPort: 8443
+          name: tls-8443
+          protocol: TLS
+          servicePort: 8443
+      - address: null
+        name: default/gateway-3/tcp-2
+        ports:
+        - containerPort: 5000
+          name: tcp-5000
+          protocol: TCP
+          servicePort: 5000
+      metadata:
+        labels:
+          gateway.envoyproxy.io/owning-gateway-name: gateway-3
+          gateway.envoyproxy.io/owning-gateway-namespace: default
+        ownerReference:
+          kind: GatewayClass
+          name: envoy-gateway-class
+      name: default/gateway-3
       namespace: envoy-gateway-system
 tcpRoutes:
 - apiVersion: gateway.networking.k8s.io/v1alpha2
@@ -555,3 +987,141 @@ xdsIR:
             protocol: TCP
             weight: 1
         name: tcproute/default/tcp-route-1
+  default/gateway-2:
+    accessLog:
+      json:
+      - path: /dev/stdout
+    http:
+    - address: 0.0.0.0
+      headers:
+        withUnderscoresAction: RejectRequest
+        xForwardedClientCert:
+          mode: Sanitize
+      hostnames:
+      - '*'
+      isHTTP2: false
+      metadata:
+        kind: Gateway
+        name: gateway-2
+        namespace: default
+        sectionName: http-1
+      name: default/gateway-2/http-1
+      path:
+        escapedSlashesAction: UnescapeAndRedirect
+        mergeSlashes: true
+      port: 10443
+      tls:
+        alpnProtocols: null
+        certificates:
+        - certificate: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUR6akNDQXJhZ0F3SUJBZ0lVT0dKOUx1VGtKWkU0NmNVaUpGYmJ2bm10elFvd0RRWUpLb1pJaHZjTkFRRUwKQlFBd2J6RUxNQWtHQTFVRUJoTUNWVk14Q3pBSkJnTlZCQWdNQWxaQk1SRXdEd1lEVlFRSERBaFRiMjFsUTJsMAplVEVUTUJFR0ExVUVDZ3dLUlc1MmIzbFFjbTk0ZVRFUU1BNEdBMVVFQ3d3SFIyRjBaWGRoZVRFWk1CY0dBMVVFCkF3d1FiWFJzY3k1bGVHRnRjR3hsTG1OdmJUQWdGdzB5TkRBM01UWXlNalV4TWpOYUdBOHlNVEkwTURZeU1qSXkKTlRFeU0xb3diekVMTUFrR0ExVUVCaE1DVlZNeEN6QUpCZ05WQkFnTUFsWkJNUkV3RHdZRFZRUUhEQWhUYjIxbApRMmwwZVRFVE1CRUdBMVVFQ2d3S1JXNTJiM2xRY205NGVURVFNQTRHQTFVRUN3d0hSMkYwWlhkaGVURVpNQmNHCkExVUVBd3dRYlhSc2N5NWxlR0Z0Y0d4bExtTnZiVENDQVNJd0RRWUpLb1pJaHZjTkFRRUJCUUFEZ2dFUEFEQ0MKQVFvQ2dnRUJBS3kwZnp5NWFaVnRNajAxVWJPRGtsU1IxbTI1Mkt0QTJ2L2tmT05vNTZkNEJQbGdqVXdXUVZNUgpTclUxZzd4T2tWdjZiL0czdG5tQVhwWWY2VlIxODIyak96cCsxQ0c4ZWlGSEpjT2ZxV2lZMjh1NnFSV2VKUFZlCnpYdUFsMmd4cWJpTzZLdDZwbnI0aXFoVGhIK3ZqV3NXTnBDSVhrbDFydVlYbnhWLzRCOENxY1JJeTZHaEp6bloKRjR3NHJBNkRlRlJmZHl0MWd1bWtkN25PVVhYKzRZMzJrd0xGRU8zR3NnUTh1aVpEQmN1UEs5RjRHRDUydDZYTgowT2tlNTU0eEl2VldvZ1M1Vzl4UFIvcU5kQlpIQ1pid05jZzRRTVllbWZva0pkUXo4elVJcnZ6VUltM3ZvOUs3CnE4MmI1eTVFSm4yWEU5OVMycDZUZnJlSG1sUHpKNHNDQXdFQUFhTmdNRjR3Q3dZRFZSMFBCQVFEQWdTd01CTUcKQTFVZEpRUU1NQW9HQ0NzR0FRVUZCd01CTUJzR0ExVWRFUVFVTUJLQ0VHMTBiSE11WlhoaGJYQnNaUzVqYjIwdwpIUVlEVlIwT0JCWUVGRm1FTjBqRVFpckpYeGlLRHFlK2tTMVV3Q2gyTUEwR0NTcUdTSWIzRFFFQkN3VUFBNElCCkFRQ0NTVlluRVJPbHJpWDM2M0VtRzd1b091Nm54ajU1eWVmOXRKbnRubFVMVFZsMjlqc205Z3d5VnFUVCtUcXMKdzFPYW01TExmMEpjSWNRdmFUM203b0RpMElDUUo5eTlRQkNwMTh1TDBUeElDaFdVRTVnRUIxM3MyTzEwWWNFMQp1K2ozSzM0MStQNStoaEJpQnJ1d0dncStkVVRGRTZTYVVMY0xMVlB1RjdTeG1KbTRHK0Q0NVlqM1NDVy9aMzU2CkFXZzB4L0prZGFKSVVLVFJaUDVJTEZKQ1lJTUM3QWI1RmdWeGRCVW5kNWxheUZGb2NVMzRQaDlwZUxiYW00alYKdGt0SGNTSFJ6OERNTm1PNHpHTEZYNzlQR0lsaTZzTDU3V0N6bkw5RFFtajRyajFIS2tyeEdnMVExbUcwbDhOTQo5cXQyWEZNNUttWkVOb2E1MmFWSklHYWoKLS0tLS1FTkQgQ0VSVElGSUNBVEUtLS0tLQo=
+          name: default/tls-secret-1
+          privateKey: '[redacted]'
+        maxVersion: "1.3"
+        minVersion: "1.2"
+    - address: 0.0.0.0
+      headers:
+        withUnderscoresAction: RejectRequest
+        xForwardedClientCert:
+          mode: Sanitize
+      hostnames:
+      - '*'
+      isHTTP2: false
+      metadata:
+        kind: Gateway
+        name: gateway-2
+        namespace: default
+        sectionName: http-2
+      name: default/gateway-2/http-2
+      path:
+        escapedSlashesAction: UnescapeAndRedirect
+        mergeSlashes: true
+      port: 8080
+    readyListener:
+      address: 0.0.0.0
+      ipFamily: IPv4
+      path: /ready
+      port: 19003
+    tcp:
+    - address: 0.0.0.0
+      name: default/gateway-2/tcp-1
+      port: 8443
+      tls:
+        alpnProtocols: []
+        certificates:
+        - certificate: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUR6akNDQXJhZ0F3SUJBZ0lVT0dKOUx1VGtKWkU0NmNVaUpGYmJ2bm10elFvd0RRWUpLb1pJaHZjTkFRRUwKQlFBd2J6RUxNQWtHQTFVRUJoTUNWVk14Q3pBSkJnTlZCQWdNQWxaQk1SRXdEd1lEVlFRSERBaFRiMjFsUTJsMAplVEVUTUJFR0ExVUVDZ3dLUlc1MmIzbFFjbTk0ZVRFUU1BNEdBMVVFQ3d3SFIyRjBaWGRoZVRFWk1CY0dBMVVFCkF3d1FiWFJzY3k1bGVHRnRjR3hsTG1OdmJUQWdGdzB5TkRBM01UWXlNalV4TWpOYUdBOHlNVEkwTURZeU1qSXkKTlRFeU0xb3diekVMTUFrR0ExVUVCaE1DVlZNeEN6QUpCZ05WQkFnTUFsWkJNUkV3RHdZRFZRUUhEQWhUYjIxbApRMmwwZVRFVE1CRUdBMVVFQ2d3S1JXNTJiM2xRY205NGVURVFNQTRHQTFVRUN3d0hSMkYwWlhkaGVURVpNQmNHCkExVUVBd3dRYlhSc2N5NWxlR0Z0Y0d4bExtTnZiVENDQVNJd0RRWUpLb1pJaHZjTkFRRUJCUUFEZ2dFUEFEQ0MKQVFvQ2dnRUJBS3kwZnp5NWFaVnRNajAxVWJPRGtsU1IxbTI1Mkt0QTJ2L2tmT05vNTZkNEJQbGdqVXdXUVZNUgpTclUxZzd4T2tWdjZiL0czdG5tQVhwWWY2VlIxODIyak96cCsxQ0c4ZWlGSEpjT2ZxV2lZMjh1NnFSV2VKUFZlCnpYdUFsMmd4cWJpTzZLdDZwbnI0aXFoVGhIK3ZqV3NXTnBDSVhrbDFydVlYbnhWLzRCOENxY1JJeTZHaEp6bloKRjR3NHJBNkRlRlJmZHl0MWd1bWtkN25PVVhYKzRZMzJrd0xGRU8zR3NnUTh1aVpEQmN1UEs5RjRHRDUydDZYTgowT2tlNTU0eEl2VldvZ1M1Vzl4UFIvcU5kQlpIQ1pid05jZzRRTVllbWZva0pkUXo4elVJcnZ6VUltM3ZvOUs3CnE4MmI1eTVFSm4yWEU5OVMycDZUZnJlSG1sUHpKNHNDQXdFQUFhTmdNRjR3Q3dZRFZSMFBCQVFEQWdTd01CTUcKQTFVZEpRUU1NQW9HQ0NzR0FRVUZCd01CTUJzR0ExVWRFUVFVTUJLQ0VHMTBiSE11WlhoaGJYQnNaUzVqYjIwdwpIUVlEVlIwT0JCWUVGRm1FTjBqRVFpckpYeGlLRHFlK2tTMVV3Q2gyTUEwR0NTcUdTSWIzRFFFQkN3VUFBNElCCkFRQ0NTVlluRVJPbHJpWDM2M0VtRzd1b091Nm54ajU1eWVmOXRKbnRubFVMVFZsMjlqc205Z3d5VnFUVCtUcXMKdzFPYW01TExmMEpjSWNRdmFUM203b0RpMElDUUo5eTlRQkNwMTh1TDBUeElDaFdVRTVnRUIxM3MyTzEwWWNFMQp1K2ozSzM0MStQNStoaEJpQnJ1d0dncStkVVRGRTZTYVVMY0xMVlB1RjdTeG1KbTRHK0Q0NVlqM1NDVy9aMzU2CkFXZzB4L0prZGFKSVVLVFJaUDVJTEZKQ1lJTUM3QWI1RmdWeGRCVW5kNWxheUZGb2NVMzRQaDlwZUxiYW00alYKdGt0SGNTSFJ6OERNTm1PNHpHTEZYNzlQR0lsaTZzTDU3V0N6bkw5RFFtajRyajFIS2tyeEdnMVExbUcwbDhOTQo5cXQyWEZNNUttWkVOb2E1MmFWSklHYWoKLS0tLS1FTkQgQ0VSVElGSUNBVEUtLS0tLQo=
+          name: default/tls-secret-1
+          privateKey: '[redacted]'
+        maxVersion: "1.3"
+        minVersion: "1.2"
+    - address: 0.0.0.0
+      name: default/gateway-2/tcp-2
+      port: 5000
+  default/gateway-3:
+    accessLog:
+      json:
+      - path: /dev/stdout
+    http:
+    - address: 0.0.0.0
+      headers:
+        withUnderscoresAction: RejectRequest
+        xForwardedClientCert:
+          mode: Sanitize
+      hostnames:
+      - '*'
+      isHTTP2: false
+      metadata:
+        kind: Gateway
+        name: gateway-3
+        namespace: default
+        sectionName: http-1
+      name: default/gateway-3/http-1
+      path:
+        escapedSlashesAction: UnescapeAndRedirect
+        mergeSlashes: true
+      port: 10443
+      tls:
+        alpnProtocols: null
+        certificates:
+        - certificate: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUR6akNDQXJhZ0F3SUJBZ0lVT0dKOUx1VGtKWkU0NmNVaUpGYmJ2bm10elFvd0RRWUpLb1pJaHZjTkFRRUwKQlFBd2J6RUxNQWtHQTFVRUJoTUNWVk14Q3pBSkJnTlZCQWdNQWxaQk1SRXdEd1lEVlFRSERBaFRiMjFsUTJsMAplVEVUTUJFR0ExVUVDZ3dLUlc1MmIzbFFjbTk0ZVRFUU1BNEdBMVVFQ3d3SFIyRjBaWGRoZVRFWk1CY0dBMVVFCkF3d1FiWFJzY3k1bGVHRnRjR3hsTG1OdmJUQWdGdzB5TkRBM01UWXlNalV4TWpOYUdBOHlNVEkwTURZeU1qSXkKTlRFeU0xb3diekVMTUFrR0ExVUVCaE1DVlZNeEN6QUpCZ05WQkFnTUFsWkJNUkV3RHdZRFZRUUhEQWhUYjIxbApRMmwwZVRFVE1CRUdBMVVFQ2d3S1JXNTJiM2xRY205NGVURVFNQTRHQTFVRUN3d0hSMkYwWlhkaGVURVpNQmNHCkExVUVBd3dRYlhSc2N5NWxlR0Z0Y0d4bExtTnZiVENDQVNJd0RRWUpLb1pJaHZjTkFRRUJCUUFEZ2dFUEFEQ0MKQVFvQ2dnRUJBS3kwZnp5NWFaVnRNajAxVWJPRGtsU1IxbTI1Mkt0QTJ2L2tmT05vNTZkNEJQbGdqVXdXUVZNUgpTclUxZzd4T2tWdjZiL0czdG5tQVhwWWY2VlIxODIyak96cCsxQ0c4ZWlGSEpjT2ZxV2lZMjh1NnFSV2VKUFZlCnpYdUFsMmd4cWJpTzZLdDZwbnI0aXFoVGhIK3ZqV3NXTnBDSVhrbDFydVlYbnhWLzRCOENxY1JJeTZHaEp6bloKRjR3NHJBNkRlRlJmZHl0MWd1bWtkN25PVVhYKzRZMzJrd0xGRU8zR3NnUTh1aVpEQmN1UEs5RjRHRDUydDZYTgowT2tlNTU0eEl2VldvZ1M1Vzl4UFIvcU5kQlpIQ1pid05jZzRRTVllbWZva0pkUXo4elVJcnZ6VUltM3ZvOUs3CnE4MmI1eTVFSm4yWEU5OVMycDZUZnJlSG1sUHpKNHNDQXdFQUFhTmdNRjR3Q3dZRFZSMFBCQVFEQWdTd01CTUcKQTFVZEpRUU1NQW9HQ0NzR0FRVUZCd01CTUJzR0ExVWRFUVFVTUJLQ0VHMTBiSE11WlhoaGJYQnNaUzVqYjIwdwpIUVlEVlIwT0JCWUVGRm1FTjBqRVFpckpYeGlLRHFlK2tTMVV3Q2gyTUEwR0NTcUdTSWIzRFFFQkN3VUFBNElCCkFRQ0NTVlluRVJPbHJpWDM2M0VtRzd1b091Nm54ajU1eWVmOXRKbnRubFVMVFZsMjlqc205Z3d5VnFUVCtUcXMKdzFPYW01TExmMEpjSWNRdmFUM203b0RpMElDUUo5eTlRQkNwMTh1TDBUeElDaFdVRTVnRUIxM3MyTzEwWWNFMQp1K2ozSzM0MStQNStoaEJpQnJ1d0dncStkVVRGRTZTYVVMY0xMVlB1RjdTeG1KbTRHK0Q0NVlqM1NDVy9aMzU2CkFXZzB4L0prZGFKSVVLVFJaUDVJTEZKQ1lJTUM3QWI1RmdWeGRCVW5kNWxheUZGb2NVMzRQaDlwZUxiYW00alYKdGt0SGNTSFJ6OERNTm1PNHpHTEZYNzlQR0lsaTZzTDU3V0N6bkw5RFFtajRyajFIS2tyeEdnMVExbUcwbDhOTQo5cXQyWEZNNUttWkVOb2E1MmFWSklHYWoKLS0tLS1FTkQgQ0VSVElGSUNBVEUtLS0tLQo=
+          name: default/tls-secret-1
+          privateKey: '[redacted]'
+        maxVersion: "1.3"
+        minVersion: "1.2"
+    - address: 0.0.0.0
+      headers:
+        withUnderscoresAction: RejectRequest
+        xForwardedClientCert:
+          mode: Sanitize
+      hostnames:
+      - '*'
+      isHTTP2: false
+      metadata:
+        kind: Gateway
+        name: gateway-3
+        namespace: default
+        sectionName: http-2
+      name: default/gateway-3/http-2
+      path:
+        escapedSlashesAction: UnescapeAndRedirect
+        mergeSlashes: true
+      port: 8080
+    readyListener:
+      address: 0.0.0.0
+      ipFamily: IPv4
+      path: /ready
+      port: 19003
+    tcp:
+    - address: 0.0.0.0
+      name: default/gateway-3/tcp-1
+      port: 8443
+      tls:
+        alpnProtocols: []
+        certificates:
+        - certificate: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUR6akNDQXJhZ0F3SUJBZ0lVT0dKOUx1VGtKWkU0NmNVaUpGYmJ2bm10elFvd0RRWUpLb1pJaHZjTkFRRUwKQlFBd2J6RUxNQWtHQTFVRUJoTUNWVk14Q3pBSkJnTlZCQWdNQWxaQk1SRXdEd1lEVlFRSERBaFRiMjFsUTJsMAplVEVUTUJFR0ExVUVDZ3dLUlc1MmIzbFFjbTk0ZVRFUU1BNEdBMVVFQ3d3SFIyRjBaWGRoZVRFWk1CY0dBMVVFCkF3d1FiWFJzY3k1bGVHRnRjR3hsTG1OdmJUQWdGdzB5TkRBM01UWXlNalV4TWpOYUdBOHlNVEkwTURZeU1qSXkKTlRFeU0xb3diekVMTUFrR0ExVUVCaE1DVlZNeEN6QUpCZ05WQkFnTUFsWkJNUkV3RHdZRFZRUUhEQWhUYjIxbApRMmwwZVRFVE1CRUdBMVVFQ2d3S1JXNTJiM2xRY205NGVURVFNQTRHQTFVRUN3d0hSMkYwWlhkaGVURVpNQmNHCkExVUVBd3dRYlhSc2N5NWxlR0Z0Y0d4bExtTnZiVENDQVNJd0RRWUpLb1pJaHZjTkFRRUJCUUFEZ2dFUEFEQ0MKQVFvQ2dnRUJBS3kwZnp5NWFaVnRNajAxVWJPRGtsU1IxbTI1Mkt0QTJ2L2tmT05vNTZkNEJQbGdqVXdXUVZNUgpTclUxZzd4T2tWdjZiL0czdG5tQVhwWWY2VlIxODIyak96cCsxQ0c4ZWlGSEpjT2ZxV2lZMjh1NnFSV2VKUFZlCnpYdUFsMmd4cWJpTzZLdDZwbnI0aXFoVGhIK3ZqV3NXTnBDSVhrbDFydVlYbnhWLzRCOENxY1JJeTZHaEp6bloKRjR3NHJBNkRlRlJmZHl0MWd1bWtkN25PVVhYKzRZMzJrd0xGRU8zR3NnUTh1aVpEQmN1UEs5RjRHRDUydDZYTgowT2tlNTU0eEl2VldvZ1M1Vzl4UFIvcU5kQlpIQ1pid05jZzRRTVllbWZva0pkUXo4elVJcnZ6VUltM3ZvOUs3CnE4MmI1eTVFSm4yWEU5OVMycDZUZnJlSG1sUHpKNHNDQXdFQUFhTmdNRjR3Q3dZRFZSMFBCQVFEQWdTd01CTUcKQTFVZEpRUU1NQW9HQ0NzR0FRVUZCd01CTUJzR0ExVWRFUVFVTUJLQ0VHMTBiSE11WlhoaGJYQnNaUzVqYjIwdwpIUVlEVlIwT0JCWUVGRm1FTjBqRVFpckpYeGlLRHFlK2tTMVV3Q2gyTUEwR0NTcUdTSWIzRFFFQkN3VUFBNElCCkFRQ0NTVlluRVJPbHJpWDM2M0VtRzd1b091Nm54ajU1eWVmOXRKbnRubFVMVFZsMjlqc205Z3d5VnFUVCtUcXMKdzFPYW01TExmMEpjSWNRdmFUM203b0RpMElDUUo5eTlRQkNwMTh1TDBUeElDaFdVRTVnRUIxM3MyTzEwWWNFMQp1K2ozSzM0MStQNStoaEJpQnJ1d0dncStkVVRGRTZTYVVMY0xMVlB1RjdTeG1KbTRHK0Q0NVlqM1NDVy9aMzU2CkFXZzB4L0prZGFKSVVLVFJaUDVJTEZKQ1lJTUM3QWI1RmdWeGRCVW5kNWxheUZGb2NVMzRQaDlwZUxiYW00alYKdGt0SGNTSFJ6OERNTm1PNHpHTEZYNzlQR0lsaTZzTDU3V0N6bkw5RFFtajRyajFIS2tyeEdnMVExbUcwbDhOTQo5cXQyWEZNNUttWkVOb2E1MmFWSklHYWoKLS0tLS1FTkQgQ0VSVElGSUNBVEUtLS0tLQo=
+          name: default/tls-secret-1
+          privateKey: '[redacted]'
+        maxVersion: "1.3"
+        minVersion: "1.2"
+    - address: 0.0.0.0
+      name: default/gateway-3/tcp-2
+      port: 5000

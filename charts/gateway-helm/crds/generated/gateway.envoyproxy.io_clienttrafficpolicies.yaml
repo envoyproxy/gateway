@@ -153,13 +153,12 @@ spec:
                     - value
                     type: object
                   maxAcceptPerSocketEvent:
+                    default: 1
                     description: |-
                       MaxAcceptPerSocketEvent provides configuration for the maximum number of connections to accept from the kernel
                       per socket event. If there are more than MaxAcceptPerSocketEvent connections pending accept, connections over
-                      this threshold will be accepted in later event loop iterations. If no value is provided Envoy will accept
-                      all connections pending accept from the kernel.
-                      It is recommended to lower this value for better overload management and reduced per-event cost.
-                      Setting it to 1 is a viable option with no noticeable impact on performance.
+                      this threshold will be accepted in later event loop iterations.
+                      Defaults to 1 and can be disabled by setting to 0 for allowing unlimited accepted connections.
                     format: int32
                     type: integer
                   socketBufferLimit:
@@ -182,6 +181,8 @@ spec:
                   Client Address into the X-Forwarded-For header.
                   Note Proxy Protocol must be present when this field is set, else the connection
                   is closed.
+
+                  Deprecated: Use ProxyProtocol instead.
                 type: boolean
               headers:
                 description: HeaderSettings provides configuration for header management.
@@ -514,6 +515,24 @@ spec:
                     - UnescapeAndRedirect
                     type: string
                 type: object
+              proxyProtocol:
+                description: |-
+                  ProxyProtocol configures the Proxy Protocol settings. When configured,
+                  the Proxy Protocol header will be interpreted and the Client Address
+                  will be added into the X-Forwarded-For header.
+                  If both EnableProxyProtocol and ProxyProtocol are set, ProxyProtocol takes precedence.
+                minProperties: 0
+                properties:
+                  optional:
+                    description: |-
+                      Optional allows requests without a Proxy Protocol header to be proxied.
+                      If set to true, the listener will accept requests without a Proxy Protocol header.
+                      If set to false, the listener will reject requests without a Proxy Protocol header.
+                      If not set, the default behavior is to reject requests without a Proxy Protocol header.
+                      Warning: Optional breaks conformance with the specification. Only enable if ALL traffic to the listener comes from a trusted source.
+                      For more information on security implications, see haproxy.org/download/2.1/doc/proxy-protocol.txt
+                    type: boolean
+                type: object
               targetRef:
                 description: |-
                   TargetRef is the name of the resource this policy is being attached to.
@@ -724,6 +743,12 @@ spec:
                         description: |-
                           RequestReceivedTimeout is the duration envoy waits for the complete request reception. This timer starts upon request
                           initiation and stops when either the last byte of the request is sent upstream or when the response begins.
+                        pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                        type: string
+                      streamIdleTimeout:
+                        description: |2-
+                           The stream idle timeout defines the amount of time a stream can exist without any upstream or downstream activity.
+                           Default: 5 minutes.
                         pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                         type: string
                     type: object

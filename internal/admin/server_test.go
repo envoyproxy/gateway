@@ -6,6 +6,7 @@
 package admin
 
 import (
+	"context"
 	"os"
 	"testing"
 
@@ -24,6 +25,13 @@ func TestInitAdminServer(t *testing.T) {
 	}
 
 	svrConfig.Logger = logging.NewLogger(os.Stdout, egv1a1.DefaultEnvoyGatewayLogging())
-	err := Init(svrConfig)
+	runner := New(&Config{
+		Server: *svrConfig,
+	})
+	err := runner.Start(context.Background())
+	require.NoError(t, err)
+
+	// Clean up
+	err = runner.Close()
 	require.NoError(t, err)
 }

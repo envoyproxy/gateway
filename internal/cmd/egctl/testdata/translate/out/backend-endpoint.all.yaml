@@ -60,6 +60,7 @@ envoyExtensionPolicies:
         kind: Service
         name: grpc-ext-proc
         port: 9002
+      failOpen: false
       processingMode:
         request: {}
         response:

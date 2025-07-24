@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	certificatesv1b1 "k8s.io/api/certificates/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -20,6 +21,7 @@ import (
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+	gwapiv1a3 "sigs.k8s.io/gateway-api/apis/v1alpha3"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/envoygateway"
@@ -371,7 +373,7 @@ func TestValidateSecretForReconcile(t *testing.T) {
 								AuthorizationEndpoint: ptr.To("https://accounts.google.com/o/oauth2/v2/auth"),
 								TokenEndpoint:         ptr.To("https://oauth2.googleapis.com/token"),
 							},
-							ClientID: "client-id",
+							ClientID: ptr.To("client-id"),
 							ClientSecret: gwapiv1.SecretObjectReference{
 								Name: "secret",
 							},
@@ -1446,6 +1448,129 @@ func TestValidateHTTPRouteFilerForReconcile(t *testing.T) {
 			Build()
 		t.Run(tc.name, func(t *testing.T) {
 			res := r.validateHTTPRouteFilterForReconcile(tc.httpRouteFilter)
+			require.Equal(t, tc.expect, res)
+		})
+	}
+}
+
+func TestValidateClusterTrustBundleForReconcile(t *testing.T) {
+	gc := test.GetGatewayClass("test-gc", egv1a1.GatewayControllerName, nil)
+	gtw := test.GetGateway(types.NamespacedName{Namespace: "default", Name: "scheduled-status-test"}, "test-gc", 8080)
+	ctb := test.GetClusterTrustBundle("fake-ctb")
+	backend := &egv1a1.Backend{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "backend-dynamic-resolver-clustertrustbundle",
+			Namespace: "default",
+		},
+		Spec: egv1a1.BackendSpec{
+			Type: ptr.To(egv1a1.BackendTypeDynamicResolver),
+			TLS: &egv1a1.BackendTLSSettings{
+				CACertificateRefs: []gwapiv1.LocalObjectReference{
+					{
+						Kind: gwapiv1.Kind("ClusterTrustBundle"),
+						Name: gwapiv1.ObjectName(ctb.Name),
+					},
+				},
+			},
+		},
+	}
+	btp := &gwapiv1a3.BackendTLSPolicy{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "backend-tls-policy-dynamic-resolver-clustertrustbundle",
+			Namespace: "default",
+		},
+		Spec: gwapiv1a3.BackendTLSPolicySpec{
+			Validation: gwapiv1a3.BackendTLSPolicyValidation{
+				CACertificateRefs: []gwapiv1.LocalObjectReference{
+					{
+						Kind: gwapiv1.Kind("ClusterTrustBundle"),
+						Name: gwapiv1.ObjectName(ctb.Name),
+					},
+				},
+			},
+		},
+	}
+	ctp := test.GetClientTrafficPolicy(
+		types.NamespacedName{Name: "fake-ctp", Namespace: "default"},
+		&egv1a1.ClientTLSSettings{
+			ClientValidation: &egv1a1.ClientValidationContext{
+				CACertificateRefs: []gwapiv1.SecretObjectReference{
+					{
+						Kind: ptr.To[gwapiv1.Kind]("ClusterTrustBundle"),
+						Name: gwapiv1.ObjectName(ctb.Name),
+					},
+				},
+			},
+		})
+
+	testCases := []struct {
+		name    string
+		configs []client.Object
+		ctb     *certificatesv1b1.ClusterTrustBundle
+		expect  bool
+	}{
+		{
+			name: "referenced by Backend",
+			configs: []client.Object{
+				gc,
+				gtw,
+				backend,
+			},
+			ctb:    ctb,
+			expect: true,
+		},
+		{
+			name: "referenced by BackendTLSPolicy",
+			configs: []client.Object{
+				gc,
+				gtw,
+				btp,
+			},
+			ctb:    ctb,
+			expect: true,
+		},
+		{
+			name: "referenced by ClientTrafficPolicy",
+			configs: []client.Object{
+				gc,
+				gtw,
+				ctp,
+			},
+			ctb:    ctb,
+			expect: true,
+		},
+		{
+			name: "ClusterTrustBundle not referenced",
+			configs: []client.Object{
+				gc,
+				gtw,
+			},
+			ctb:    ctb,
+			expect: false,
+		},
+	}
+
+	// Create the reconciler.
+	logger := logging.DefaultLogger(os.Stdout, egv1a1.LogLevelInfo)
+
+	r := gatewayAPIReconciler{
+		classController:     egv1a1.GatewayControllerName,
+		log:                 logger,
+		backendCRDExists:    true,
+		bTLSPolicyCRDExists: true,
+		ctpCRDExists:        true,
+	}
+
+	for _, tc := range testCases {
+		r.client = fakeclient.NewClientBuilder().
+			WithScheme(envoygateway.GetScheme()).
+			WithObjects(tc.configs...).
+			WithIndex(&egv1a1.Backend{}, clusterTrustBundleBackendIndex, clusterTrustBundleBackendIndexFunc).
+			WithIndex(&gwapiv1a3.BackendTLSPolicy{}, clusterTrustBundleBtlsIndex, clusterTrustBundleBtlsIndexFunc).
+			WithIndex(&egv1a1.ClientTrafficPolicy{}, clusterTrustBundleCtpIndex, clusterTrustBundleCtpIndexFunc).
+			Build()
+		t.Run(tc.name, func(t *testing.T) {
+			res := r.validateClusterTrustBundleForReconcile(tc.ctb)
 			require.Equal(t, tc.expect, res)
 		})
 	}

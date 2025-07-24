@@ -21,6 +21,7 @@ import (
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/yaml"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
@@ -242,11 +243,16 @@ func TestTranslateRateLimitConfig(t *testing.T) {
 // when configured to failOpen
 func TestTranslateXdsWithExtensionErrorsWhenFailOpen(t *testing.T) {
 	testConfigs := map[string]testFileConfig{
-		"http-route-extension-route-error":       {},
-		"http-route-extension-virtualhost-error": {},
-		"http-route-extension-listener-error":    {},
-		"http-route-extension-translate-error":   {},
-		"multiple-listeners-same-port-error":     {},
+		"http-route-extension-route-error":                 {},
+		"http-route-extension-virtualhost-error":           {},
+		"http-route-extension-listener-error":              {},
+		"http-route-extension-translate-error":             {},
+		"multiple-listeners-same-port-error":               {},
+		"http-route-custom-backend":                        {},
+		"http-route-custom-backends-multiple":              {},
+		"http-route-custom-backends-partial":               {},
+		"http-route-custom-backend-error":                  {},
+		"http-route-custom-backend-multiple-backend-error": {},
 	}
 
 	inputFiles, err := filepath.Glob(filepath.Join("testdata", "in", "extension-xds-ir", "*.yaml"))
@@ -277,6 +283,13 @@ func TestTranslateXdsWithExtensionErrorsWhenFailOpen(t *testing.T) {
 						Kind:    "examplefilter",
 					},
 				},
+				BackendResources: []egv1a1.GroupVersionKind{
+					{
+						Group:   "inference.networking.x-k8s.io",
+						Version: "v1alpha2",
+						Kind:    "InferencePool",
+					},
+				},
 				PolicyResources: []egv1a1.GroupVersionKind{
 					{
 						Group:   "bar.example.io",
@@ -297,10 +310,21 @@ func TestTranslateXdsWithExtensionErrorsWhenFailOpen(t *testing.T) {
 				Hooks: &egv1a1.ExtensionHooks{
 					XDSTranslator: &egv1a1.XDSTranslatorHooks{
 						Post: []egv1a1.XDSTranslatorHook{
+							egv1a1.XDSCluster,
 							egv1a1.XDSRoute,
 							egv1a1.XDSVirtualHost,
 							egv1a1.XDSHTTPListener,
+							egv1a1.XDSCluster,
 							egv1a1.XDSTranslation,
+						},
+						// Enable listeners and routes for PostTranslateModifyHook for these tests
+						Translation: &egv1a1.TranslationConfig{
+							Listener: &egv1a1.ListenerTranslationConfig{
+								IncludeAll: ptr.To(true),
+							},
+							Route: &egv1a1.RouteTranslationConfig{
+								IncludeAll: ptr.To(true),
+							},
 						},
 					},
 				},
@@ -365,6 +389,12 @@ func TestTranslateXdsWithExtensionErrorsWhenFailClosed(t *testing.T) {
 		"extensionpolicy-extension-server-error": {
 			errMsg: "rpc error: code = Unknown desc = invalid extension policy : ext-server-policy-invalid-test",
 		},
+		"http-route-custom-backend-error": {
+			errMsg: "rpc error: code = Unknown desc = inference pool target port number is 0",
+		},
+		"http-route-custom-backend-multiple-backend-error": {
+			errMsg: "rpc error: code = Unknown desc = inference pool only support one per rule",
+		},
 	}
 
 	inputFiles, err := filepath.Glob(filepath.Join("testdata", "in", "extension-xds-ir", "*-error.yaml"))
@@ -395,6 +425,13 @@ func TestTranslateXdsWithExtensionErrorsWhenFailClosed(t *testing.T) {
 						Kind:    "examplefilter",
 					},
 				},
+				BackendResources: []egv1a1.GroupVersionKind{
+					{
+						Group:   "inference.networking.x-k8s.io",
+						Version: "v1alpha2",
+						Kind:    "InferencePool",
+					},
+				},
 				PolicyResources: []egv1a1.GroupVersionKind{
 					{
 						Group:   "bar.example.io",
@@ -415,10 +452,20 @@ func TestTranslateXdsWithExtensionErrorsWhenFailClosed(t *testing.T) {
 				Hooks: &egv1a1.ExtensionHooks{
 					XDSTranslator: &egv1a1.XDSTranslatorHooks{
 						Post: []egv1a1.XDSTranslatorHook{
+							egv1a1.XDSCluster,
 							egv1a1.XDSRoute,
 							egv1a1.XDSVirtualHost,
 							egv1a1.XDSHTTPListener,
 							egv1a1.XDSTranslation,
+						},
+						// Enable listeners and routes for PostTranslateModifyHook for these tests
+						Translation: &egv1a1.TranslationConfig{
+							Listener: &egv1a1.ListenerTranslationConfig{
+								IncludeAll: ptr.To(true),
+							},
+							Route: &egv1a1.RouteTranslationConfig{
+								IncludeAll: ptr.To(true),
+							},
 						},
 					},
 				},
