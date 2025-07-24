@@ -14,7 +14,6 @@ clientTrafficPolicies:
       connectionLimit:
         value: 3
         closeDelay: 10s
-    enableProxyProtocol: true
     timeout:
       tcp:
         idleTimeout: 1200s
@@ -31,6 +30,8 @@ clientTrafficPolicies:
       signatureAlgorithms:
       - sig1
       - sig2
+    proxyProtocol:
+      optional: false
     targetRef:
       group: gateway.networking.k8s.io
       kind: Gateway

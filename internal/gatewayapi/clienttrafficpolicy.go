@@ -392,12 +392,12 @@ func (t *Translator) translateClientTrafficPolicyForListener(policy *egv1a1.Clie
 
 	// HTTP and TCP listeners can both be configured by common fields below.
 	var (
-		keepalive           *ir.TCPKeepalive
-		connection          *ir.ClientConnection
-		tlsConfig           *ir.TLSConfig
-		enableProxyProtocol bool
-		timeout             *ir.ClientTimeout
-		err, errs           error
+		keepalive     *ir.TCPKeepalive
+		connection    *ir.ClientConnection
+		tlsConfig     *ir.TLSConfig
+		proxyProtocol *ir.ProxyProtocolSettings
+		timeout       *ir.ClientTimeout
+		err, errs     error
 	)
 
 	// Build common IR shared by HTTP and TCP listeners, return early if some field is invalid.
@@ -416,7 +416,18 @@ func (t *Translator) translateClientTrafficPolicyForListener(policy *egv1a1.Clie
 	}
 
 	// Translate Proxy Protocol
-	enableProxyProtocol = ptr.Deref(policy.Spec.EnableProxyProtocol, false)
+	if policy.Spec.ProxyProtocol != nil {
+		// ProxyProtocol field takes precedence when configured
+		// Even if it's an empty object {}, we should enable proxy protocol with default settings
+		proxyProtocol = &ir.ProxyProtocolSettings{
+			Optional: ptr.Deref(policy.Spec.ProxyProtocol.Optional, false),
+		}
+	} else if ptr.Deref(policy.Spec.EnableProxyProtocol, false) {
+		// Fallback to legacy EnableProxyProtocol field
+		proxyProtocol = &ir.ProxyProtocolSettings{
+			Optional: false, // Default behavior for legacy field
+		}
+	}
 
 	// Translate Client Timeout Settings
 	timeout, err = buildClientTimeout(policy.Spec.Timeout)
@@ -492,7 +503,7 @@ func (t *Translator) translateClientTrafficPolicyForListener(policy *egv1a1.Clie
 
 		httpIR.TCPKeepalive = keepalive
 		httpIR.Connection = connection
-		httpIR.EnableProxyProtocol = enableProxyProtocol
+		httpIR.ProxyProtocol = proxyProtocol
 		httpIR.Timeout = timeout
 		httpIR.TLS = tlsConfig
 	}
@@ -515,7 +526,7 @@ func (t *Translator) translateClientTrafficPolicyForListener(policy *egv1a1.Clie
 
 		tcpIR.TCPKeepalive = keepalive
 		tcpIR.Connection = connection
-		tcpIR.EnableProxyProtocol = enableProxyProtocol
+		tcpIR.ProxyProtocol = proxyProtocol
 		tcpIR.TLS = tlsConfig
 		tcpIR.Timeout = timeout
 	}
