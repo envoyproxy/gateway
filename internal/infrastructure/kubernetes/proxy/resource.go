@@ -109,7 +109,7 @@ func expectedProxyContainers(infra *ir.ProxyInfra,
 		},
 		MaxHeapSizeBytes: maxHeapSizeBytes,
 		XdsServerHost:    ptr.To(fmt.Sprintf("%s.%s.svc.%s", config.EnvoyGatewayServiceName, controllerNamespace, dnsDomain)),
-		ProxyInfraName:   ptr.To(ExpectedResourceHashedName(infra.Name)),
+		LocalClusterName: ptr.To(fmt.Sprintf("%s-%s", config.EnvoyPrefix, utils.GetHashedName(infra.Name, 64))),
 	}
 
 	args, err := common.BuildProxyArgs(infra, shutdownConfig, bootstrapConfigOptions, fmt.Sprintf("$(%s)", envoyPodEnvVar), gatewayNamespaceMode)

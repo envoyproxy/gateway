@@ -97,8 +97,8 @@ type bootstrapParameters struct {
 	IPFamily string
 	// GatewayNamespaceMode defines whether to use the Envoy Gateway namespace mode.
 	GatewayNamespaceMode bool
-	// ProxyInfraName is the name of the ProxyInfra and used as the internal local_cluster name.
-	ProxyInfraName string
+	// LocalClusterName is the generated name of the Envoy ProxyInfra.
+	LocalClusterName string
 }
 
 type serverParameters struct {
@@ -139,7 +139,7 @@ type RenderBootstrapConfigOptions struct {
 	IPFamily             *egv1a1.IPFamily
 	ProxyMetrics         *egv1a1.ProxyMetrics
 	SdsConfig            SdsConfigPath
-	ProxyInfraName       *string
+	LocalClusterName     *string
 	XdsServerHost        *string
 	XdsServerPort        *int32
 	AdminServerPort      *int32
@@ -259,7 +259,7 @@ func GetRenderedBootstrapConfig(opts *RenderBootstrapConfigOptions) (string, err
 			EnablePrometheusCompression:  enablePrometheusCompression,
 			PrometheusCompressionLibrary: prometheusCompressionLibrary,
 			OtelMetricSinks:              metricSinks,
-			ProxyInfraName:               defaultLocalClusterName,
+			LocalClusterName:             defaultLocalClusterName,
 		},
 	}
 
@@ -304,8 +304,8 @@ func GetRenderedBootstrapConfig(opts *RenderBootstrapConfigOptions) (string, err
 		}
 		cfg.parameters.GatewayNamespaceMode = opts.GatewayNamespaceMode
 		cfg.parameters.OverloadManager.MaxHeapSizeBytes = opts.MaxHeapSizeBytes
-		if opts.ProxyInfraName != nil {
-			cfg.parameters.ProxyInfraName = *opts.ProxyInfraName
+		if opts.LocalClusterName != nil {
+			cfg.parameters.LocalClusterName = *opts.LocalClusterName
 		}
 	}
 

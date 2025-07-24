@@ -9,7 +9,7 @@ admin:
       address: {{ .AdminServer.Address }}
       port_value: {{ .AdminServer.Port }}
 cluster_manager:
-  local_cluster_name: {{ .ProxyInfraName }}
+  local_cluster_name: {{ .LocalClusterName }}
 node:
   locality:
     zone: $(ENVOY_SERVICE_ZONE)
@@ -174,7 +174,7 @@ static_resources:
   - connect_timeout: 10s
     lb_policy: ROUND_ROBIN
     load_assignment:
-      cluster_name: {{ .ProxyInfraName }}
+      cluster_name: {{ .LocalClusterName }}
       endpoints:
       - lb_endpoints:
         - endpoint:
@@ -187,7 +187,7 @@ static_resources:
         load_balancing_weight: 1
         locality:
           zone: $(ENVOY_SERVICE_ZONE)
-    name: {{ .ProxyInfraName }}
+    name: {{ .LocalClusterName }}
     type: STATIC
   - connect_timeout: 10s
     load_assignment:
