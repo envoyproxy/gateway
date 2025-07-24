@@ -55,6 +55,10 @@ const (
 	configMapEepIndex                = "configMapEepIndex"
 	configMapHTTPRouteFilterIndex    = "configMapHTTPRouteFilterIndex"
 	secretHTTPRouteFilterIndex       = "secretHTTPRouteFilterIndex"
+	// ClusterTrustBundle related indexers
+	clusterTrustBundleBackendIndex = "clusterTrustBundleBackendIndex"
+	clusterTrustBundleBtlsIndex    = "clusterTrustBundleBtlsIndex"
+	clusterTrustBundleCtpIndex     = "clusterTrustBundleCtpIndex"
 )
 
 func addReferenceGrantIndexers(ctx context.Context, mgr manager.Manager) error {
@@ -690,6 +694,9 @@ func addCtpIndexers(ctx context.Context, mgr manager.Manager) error {
 	if err := mgr.GetFieldIndexer().IndexField(ctx, &egv1a1.ClientTrafficPolicy{}, secretCtpIndex, secretCtpIndexFunc); err != nil {
 		return err
 	}
+	if err := mgr.GetFieldIndexer().IndexField(ctx, &egv1a1.ClientTrafficPolicy{}, clusterTrustBundleCtpIndex, clusterTrustBundleCtpIndexFunc); err != nil {
+		return err
+	}
 
 	return nil
 }
@@ -734,13 +741,31 @@ func secretCtpIndexFunc(rawObj client.Object) []string {
 	return secretReferences
 }
 
+func clusterTrustBundleCtpIndexFunc(rawObj client.Object) []string {
+	ctp := rawObj.(*egv1a1.ClientTrafficPolicy)
+	var refs []string
+	if ctp.Spec.TLS != nil && ctp.Spec.TLS.ClientValidation != nil {
+		for _, caCertRef := range ctp.Spec.TLS.ClientValidation.CACertificateRefs {
+			if caCertRef.Kind != nil || (string(*caCertRef.Kind) == resource.KindClusterTrustBundle) {
+				refs = append(refs, string(caCertRef.Name))
+			}
+		}
+	}
+	return refs
+}
+
 // addBackendIndexers adds indexing on Backend, for ConfigMap or Secret objects that are
 // referenced in Backend objects.
 func addBackendIndexers(ctx context.Context, mgr manager.Manager) error {
 	if err := mgr.GetFieldIndexer().IndexField(ctx, &egv1a1.Backend{}, configMapBackendIndex, configMapBackendIndexFunc); err != nil {
 		return err
 	}
+
 	if err := mgr.GetFieldIndexer().IndexField(ctx, &egv1a1.Backend{}, secretBackendIndex, secretBackendIndexFunc); err != nil {
+		return err
+	}
+
+	if err := mgr.GetFieldIndexer().IndexField(ctx, &egv1a1.Backend{}, clusterTrustBundleBackendIndex, clusterTrustBundleBackendIndexFunc); err != nil {
 		return err
 	}
 
@@ -781,6 +806,19 @@ func secretBackendIndexFunc(rawObj client.Object) []string {
 		}
 	}
 	return secretReferences
+}
+
+func clusterTrustBundleBackendIndexFunc(rawObj client.Object) []string {
+	backend := rawObj.(*egv1a1.Backend)
+	var ctbReferences []string
+	if backend.Spec.TLS != nil && backend.Spec.TLS.CACertificateRefs != nil {
+		for _, caCertRef := range backend.Spec.TLS.CACertificateRefs {
+			if caCertRef.Kind == resource.KindClusterTrustBundle {
+				ctbReferences = append(ctbReferences, string(caCertRef.Name))
+			}
+		}
+	}
+	return ctbReferences
 }
 
 // addBtpIndexers adds indexing on BackendTrafficPolicy, for ConfigMap objects that are
@@ -896,6 +934,11 @@ func addBtlsIndexers(ctx context.Context, mgr manager.Manager) error {
 	if err := mgr.GetFieldIndexer().IndexField(ctx, &gwapiv1a3.BackendTLSPolicy{}, secretBtlsIndex, secretBtlsIndexFunc); err != nil {
 		return err
 	}
+
+	if err := mgr.GetFieldIndexer().IndexField(ctx, &gwapiv1a3.BackendTLSPolicy{}, clusterTrustBundleBtlsIndex, clusterTrustBundleBtlsIndexFunc); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -933,6 +976,17 @@ func secretBtlsIndexFunc(rawObj client.Object) []string {
 		}
 	}
 	return secretReferences
+}
+
+func clusterTrustBundleBtlsIndexFunc(rawObj client.Object) []string {
+	btls := rawObj.(*gwapiv1a3.BackendTLSPolicy)
+	var refs []string
+	for _, caCertRef := range btls.Spec.Validation.CACertificateRefs {
+		if string(caCertRef.Kind) == resource.KindClusterTrustBundle {
+			refs = append(refs, string(caCertRef.Name))
+		}
+	}
+	return refs
 }
 
 // addEnvoyExtensionPolicyIndexers adds indexing on EnvoyExtensionPolicy.

@@ -86,6 +86,12 @@ func TestE2E(t *testing.T) {
 		}
 	}
 
+	enabledFeatures := sets.New(features.SupportGateway)
+	if tests.EnabledClusterTrustBundle() {
+		tlog.Logf(t, "ClusterTrustBundle feature is enabled")
+		enabledFeatures.Insert(tests.ClusterTrustBundleFeature)
+	}
+
 	cSuite, err := suite.NewConformanceTestSuite(suite.ConformanceOptions{
 		Client:               c,
 		RestConfig:           cfg,
@@ -96,7 +102,7 @@ func TestE2E(t *testing.T) {
 		RunTest:              *flags.RunTest,
 		// SupportedFeatures cannot be empty, so we set it to SupportGateway
 		// All e2e tests should leave Features empty.
-		SupportedFeatures: sets.New(features.SupportGateway),
+		SupportedFeatures: enabledFeatures,
 		SkipTests:         skipTests,
 		AllowCRDsMismatch: *flags.AllowCRDsMismatch,
 		Hook:              Hook,

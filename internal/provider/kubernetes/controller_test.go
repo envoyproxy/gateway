@@ -12,6 +12,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -30,6 +31,7 @@ import (
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 	"github.com/envoyproxy/gateway/internal/logging"
+	"github.com/envoyproxy/gateway/internal/provider/kubernetes/test"
 	"github.com/envoyproxy/gateway/internal/utils"
 )
 
@@ -1240,6 +1242,142 @@ func TestProcessSecurityPolicyObjectRefs(t *testing.T) {
 				require.Contains(t, resourceTree.ReferenceGrants, tc.referenceGrant)
 			} else {
 				require.NotContains(t, resourceTree.ReferenceGrants, tc.referenceGrant)
+			}
+		})
+	}
+}
+
+func TestProcessBackendRefs(t *testing.T) {
+	ns := "default"
+	ctb := test.GetClusterTrustBundle("fake-ctb")
+	secret := test.GetSecret(types.NamespacedName{Namespace: ns, Name: "fake-secret"})
+	cm := &corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: ns,
+			Name:      "fake-cm",
+		},
+		Data: map[string]string{
+			"ca.crt": "fake-ca-cert",
+		},
+	}
+
+	testCases := []struct {
+		name                   string
+		backend                *egv1a1.Backend
+		ctpShouldBeAdded       bool
+		secretShouldBeAdded    bool
+		configmapShouldBeAdded bool
+	}{
+		{
+			name: "DynamicResolver with ClusterTrustBundle",
+			backend: &egv1a1.Backend{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: ns,
+					Name:      "test-backend",
+				},
+				Spec: egv1a1.BackendSpec{
+					Type: ptr.To(egv1a1.BackendTypeDynamicResolver),
+					TLS: &egv1a1.BackendTLSSettings{
+						CACertificateRefs: []gwapiv1.LocalObjectReference{
+							{
+								Kind: gwapiv1.Kind("ClusterTrustBundle"),
+								Name: gwapiv1.ObjectName("fake-ctb"),
+							},
+						},
+					},
+				},
+			},
+			ctpShouldBeAdded: true,
+		},
+		{
+			name: "DynamicResolver with ConfigMap",
+			backend: &egv1a1.Backend{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: ns,
+					Name:      "test-backend",
+				},
+				Spec: egv1a1.BackendSpec{
+					Type: ptr.To(egv1a1.BackendTypeDynamicResolver),
+					TLS: &egv1a1.BackendTLSSettings{
+						CACertificateRefs: []gwapiv1.LocalObjectReference{
+							{
+								Kind: gwapiv1.Kind("ConfigMap"),
+								Name: gwapiv1.ObjectName("fake-cm"),
+							},
+						},
+					},
+				},
+			},
+			configmapShouldBeAdded: true,
+		},
+		{
+			name: "DynamicResolver with Secret",
+			backend: &egv1a1.Backend{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: ns,
+					Name:      "test-backend",
+				},
+				Spec: egv1a1.BackendSpec{
+					Type: ptr.To(egv1a1.BackendTypeDynamicResolver),
+					TLS: &egv1a1.BackendTLSSettings{
+						CACertificateRefs: []gwapiv1.LocalObjectReference{
+							{
+								Kind: gwapiv1.Kind("Secret"),
+								Name: gwapiv1.ObjectName("fake-secret"),
+							},
+						},
+					},
+				},
+			},
+			secretShouldBeAdded: true,
+		},
+	}
+
+	for i := range testCases {
+		tc := testCases[i]
+		// Run the test cases.
+		t.Run(tc.name, func(t *testing.T) {
+			// Add objects referenced by test cases.
+			objs := []client.Object{tc.backend, ctb, secret, cm}
+			logger := logging.DefaultLogger(os.Stdout, egv1a1.LogLevelInfo)
+
+			r := &gatewayAPIReconciler{
+				log:              logger,
+				classController:  "some-gateway-class",
+				backendCRDExists: true,
+			}
+
+			r.client = fakeclient.NewClientBuilder().
+				WithScheme(envoygateway.GetScheme()).
+				WithObjects(objs...).
+				Build()
+
+			resourceTree := resource.NewResources()
+			resourceMap := newResourceMapping()
+			backend := tc.backend
+			resourceMap.allAssociatedBackendRefs.Insert(gwapiv1.BackendObjectReference{
+				Kind:      gatewayapi.KindPtr(resource.KindBackend),
+				Namespace: gatewayapi.NamespacePtr(backend.Namespace),
+				Name:      gwapiv1.ObjectName(backend.Name),
+			})
+
+			require.NoError(t, r.processBackendRefs(t.Context(), resourceTree, resourceMap))
+			if tc.ctpShouldBeAdded {
+				require.Contains(t, resourceTree.ClusterTrustBundles, ctb)
+			} else {
+				require.NotContains(t, resourceTree.ClusterTrustBundles, ctb)
+			}
+
+			if tc.secretShouldBeAdded {
+				require.Contains(t, resourceTree.Secrets, secret)
+			} else {
+				require.NotContains(t, resourceTree.Secrets, secret)
+			}
+
+			if tc.configmapShouldBeAdded {
+				require.Contains(t, resourceTree.ConfigMaps, cm)
+			} else {
+				require.NotContains(t, resourceTree.ConfigMaps, cm)
 			}
 		})
 	}

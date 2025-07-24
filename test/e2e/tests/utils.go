@@ -42,6 +42,7 @@ import (
 	k8sutils "sigs.k8s.io/gateway-api/conformance/utils/kubernetes"
 	"sigs.k8s.io/gateway-api/conformance/utils/suite"
 	"sigs.k8s.io/gateway-api/conformance/utils/tlog"
+	"sigs.k8s.io/gateway-api/pkg/features"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/kubernetes"
@@ -49,8 +50,9 @@ import (
 )
 
 var (
-	IPFamily      = os.Getenv("IP_FAMILY")
-	DeployProfile = os.Getenv("KUBE_DEPLOY_PROFILE")
+	IPFamily                  = os.Getenv("IP_FAMILY")
+	DeployProfile             = os.Getenv("KUBE_DEPLOY_PROFILE")
+	enabledClusterTrustBundle = os.Getenv("ENABLE_CLUSTER_TRUST_BUNDLE")
 
 	SameNamespaceGateway    = types.NamespacedName{Name: "same-namespace", Namespace: ConformanceInfraNamespace}
 	SameNamespaceGatewayRef = k8sutils.NewGatewayRef(SameNamespaceGateway)
@@ -59,7 +61,11 @@ var (
 )
 
 const (
+	ClusterTrustBundleFeature features.FeatureName = "ClusterTrustBundle"
+
 	ConformanceInfraNamespace = "gateway-conformance-infra"
+
+	AllNamespacesGateway = "all-namespaces"
 
 	defaultServiceStartupTimeout = 5 * time.Minute
 )
@@ -769,4 +775,9 @@ func ExpectRequestTimeout(t *testing.T, suite *suite.ConformanceTestSuite, gwAdd
 				return false
 			}
 		})
+}
+
+// TODO: remove this when the min version EG supported is v1.33
+func EnabledClusterTrustBundle() bool {
+	return enabledClusterTrustBundle == "true"
 }

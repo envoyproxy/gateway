@@ -13,6 +13,7 @@ import (
 
 	"github.com/telepresenceio/watchable"
 	appsv1 "k8s.io/api/apps/v1"
+	certificatesv1b1 "k8s.io/api/certificates/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
@@ -87,6 +88,8 @@ type gatewayAPIReconciler struct {
 	tcpRouteCRDExists      bool
 	tlsRouteCRDExists      bool
 	udpRouteCRDExists      bool
+
+	clusterTrustBundleExits bool
 }
 
 type subscriptions struct {
@@ -649,47 +652,35 @@ func (r *gatewayAPIReconciler) processBackendRefs(ctx context.Context, gwcResour
 
 			if backend.Spec.TLS != nil && backend.Spec.TLS.CACertificateRefs != nil {
 				for _, caCertRef := range backend.Spec.TLS.CACertificateRefs {
-					// if kind is not Secret or ConfigMap, we skip early to avoid further calculation overhead
-					if string(caCertRef.Kind) == resource.KindConfigMap ||
-						string(caCertRef.Kind) == resource.KindSecret {
-
-						var err error
-						caRefNew := gwapiv1.SecretObjectReference{
-							Group:     gatewayapi.GroupPtr(string(caCertRef.Group)),
-							Kind:      gatewayapi.KindPtr(string(caCertRef.Kind)),
-							Name:      caCertRef.Name,
-							Namespace: gatewayapi.NamespacePtr(backend.Namespace),
+					var err error
+					caRefNew := gwapiv1.SecretObjectReference{
+						Group:     gatewayapi.GroupPtr(string(caCertRef.Group)),
+						Kind:      gatewayapi.KindPtr(string(caCertRef.Kind)),
+						Name:      caCertRef.Name,
+						Namespace: gatewayapi.NamespacePtr(backend.Namespace),
+					}
+					switch string(caCertRef.Kind) {
+					case resource.KindConfigMap:
+						err = r.processConfigMapRef(
+							ctx, resourceMappings, gwcResource,
+							resource.KindBackendTLSPolicy, backend.Namespace, backend.Name,
+							caRefNew)
+					case resource.KindSecret:
+						err = r.processSecretRef(
+							ctx, resourceMappings, gwcResource,
+							resource.KindBackendTLSPolicy, backend.Namespace, backend.Name,
+							caRefNew)
+					case resource.KindClusterTrustBundle:
+						err = r.processClusterTrustBundleRef(ctx, resourceMappings, gwcResource, caRefNew)
+					}
+					if err != nil {
+						// If the error is transient, we return it to allow Reconcile to retry.
+						if isTransientError(err) {
+							return err
 						}
-						switch string(caCertRef.Kind) {
-						case resource.KindConfigMap:
-							err = r.processConfigMapRef(
-								ctx,
-								resourceMappings,
-								gwcResource,
-								resource.KindBackendTLSPolicy,
-								backend.Namespace,
-								backend.Name,
-								caRefNew)
-
-						case resource.KindSecret:
-							err = r.processSecretRef(
-								ctx,
-								resourceMappings,
-								gwcResource,
-								resource.KindBackendTLSPolicy,
-								backend.Namespace,
-								backend.Name,
-								caRefNew)
-						}
-						if err != nil {
-							// If the error is transient, we return it to allow Reconcile to retry.
-							if isTransientError(err) {
-								return err
-							}
-							r.log.Error(err,
-								"failed to process CACertificateRef for Backend",
-								"backend", backend, "caCertificateRef", caCertRef.Name)
-						}
+						r.log.Error(err,
+							"failed to process CACertificateRef for Backend",
+							"backend", backend, "caCertificateRef", caCertRef.Name)
 					}
 				}
 			}
@@ -1071,7 +1062,7 @@ func (r *gatewayAPIReconciler) processSecretRef(
 	if err := r.client.Get(ctx,
 		types.NamespacedName{Namespace: secretNS, Name: string(secretRef.Name)},
 		secret); err != nil {
-		return err
+		return fmt.Errorf("unable to find the Secret %s/%s: %w", secretNS, string(secretRef.Name), err)
 	}
 
 	if secretNS != ownerNS {
@@ -1113,9 +1104,30 @@ func (r *gatewayAPIReconciler) processSecretRef(
 	return nil
 }
 
+func (r *gatewayAPIReconciler) processClusterTrustBundleRef(
+	ctx context.Context,
+	resourceMap *resourceMappings,
+	resourceTree *resource.Resources,
+	ref gwapiv1.SecretObjectReference,
+) error {
+	trustBundle := &certificatesv1b1.ClusterTrustBundle{}
+	err := r.client.Get(ctx, types.NamespacedName{Name: string(ref.Name)}, trustBundle)
+	if err != nil {
+		return fmt.Errorf("unable to find the ClusterTrustBundle %s: %w", string(ref.Name), err)
+	}
+
+	key := trustBundle.Name
+	if !resourceMap.allAssociatedClusterTrustBundles.Has(key) {
+		resourceMap.allAssociatedClusterTrustBundles.Insert(key)
+		resourceTree.ClusterTrustBundles = append(resourceTree.ClusterTrustBundles, trustBundle)
+		r.log.Info("processing ClusterTrustBundle", "name", string(ref.Name))
+	}
+	return nil
+}
+
 // processCtpConfigMapRefs adds the referenced ConfigMaps in ClientTrafficPolicies
 // to the resourceTree
-func (r *gatewayAPIReconciler) processCtpConfigMapRefs(
+func (r *gatewayAPIReconciler) processCTPCACertificateRefs(
 	ctx context.Context, resourceTree *resource.Resources, resourceMap *resourceMappings,
 ) error {
 	for _, policy := range resourceTree.ClientTrafficPolicies {
@@ -1123,45 +1135,46 @@ func (r *gatewayAPIReconciler) processCtpConfigMapRefs(
 
 		if tls != nil && tls.ClientValidation != nil {
 			for _, caCertRef := range tls.ClientValidation.CACertificateRefs {
-				if caCertRef.Kind != nil && string(*caCertRef.Kind) == resource.KindConfigMap {
-					if err := r.processConfigMapRef(
+				caCertRefKind := ptr.Deref(caCertRef.Kind, resource.KindSecret)
+				var err error
+				switch caCertRefKind {
+				case resource.KindConfigMap:
+					err = r.processConfigMapRef(
 						ctx,
 						resourceMap,
 						resourceTree,
 						resource.KindClientTrafficPolicy,
 						policy.Namespace,
 						policy.Name,
-						caCertRef); err != nil {
-						// If the error is transient, we return it to allow Reconcile to retry.
-						if isTransientError(err) {
-							return err
-						}
-						// we don't return an error here, because we want to continue
-						// reconciling the rest of the ClientTrafficPolicies despite that this
-						// reference is invalid.
-						// This ClientTrafficPolicy will be marked as invalid in its status
-						// when translating to IR because the referenced configmap can't be
-						// found.
-						r.log.Error(err,
-							"failed to process CACertificateRef for ClientTrafficPolicy",
-							"policy", policy, "caCertificateRef", caCertRef.Name)
-					}
-				} else if caCertRef.Kind == nil || string(*caCertRef.Kind) == resource.KindSecret {
-					if err := r.processSecretRef(
+						caCertRef)
+				case resource.KindSecret:
+					err = r.processSecretRef(
 						ctx,
 						resourceMap,
 						resourceTree,
 						resource.KindClientTrafficPolicy,
 						policy.Namespace,
 						policy.Name,
-						caCertRef); err != nil {
-						if isTransientError(err) {
-							return err
-						}
-						r.log.Error(err,
-							"failed to process CACertificateRef for ClientTrafficPolicy",
-							"policy", policy, "caCertificateRef", caCertRef.Name)
+						caCertRef)
+				case resource.KindClusterTrustBundle:
+					err = r.processClusterTrustBundleRef(ctx, resourceMap, resourceTree, caCertRef)
+				}
+
+				if err != nil {
+					// we don't return an error here, because we want to continue
+					// reconciling the rest of the ClientTrafficPolicies despite that this
+					// reference is invalid.
+					// This ClientTrafficPolicy will be marked as invalid in its status
+					// when translating to IR because the referenced configmap can't be
+					// found.
+
+					// If the error is transient, we return it to allow Reconcile to retry.
+					if isTransientError(err) {
+						return err
 					}
+					r.log.Error(err,
+						"failed to process CACertificateRef for ClientTrafficPolicy",
+						"policy", policy, "caCertificateRef", caCertRef.Name, "kind", caCertRefKind)
 				}
 			}
 		}
@@ -1491,7 +1504,7 @@ func (r *gatewayAPIReconciler) processClientTrafficPolicies(
 		}
 	}
 
-	return r.processCtpConfigMapRefs(ctx, resourceTree, resourceMap)
+	return r.processCTPCACertificateRefs(ctx, resourceTree, resourceMap)
 }
 
 // processBackendTrafficPolicies adds BackendTrafficPolicies to the resourceTree
@@ -2221,6 +2234,11 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 			return err
 		}
 	}
+
+	if err := r.watchClusterTrustBundle(c, mgr); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -2404,53 +2422,49 @@ func (r *gatewayAPIReconciler) processBackendTLSPolicyRefs(
 
 		if tls.CACertificateRefs != nil {
 			for _, caCertRef := range tls.CACertificateRefs {
-				// if kind is not Secret or ConfigMap, we skip early to avoid further calculation overhead
-				if string(caCertRef.Kind) == resource.KindConfigMap ||
-					string(caCertRef.Kind) == resource.KindSecret {
-
-					var err error
-					caRefNew := gwapiv1.SecretObjectReference{
-						Group:     gatewayapi.GroupPtr(string(caCertRef.Group)),
-						Kind:      gatewayapi.KindPtr(string(caCertRef.Kind)),
-						Name:      caCertRef.Name,
-						Namespace: gatewayapi.NamespacePtr(policy.Namespace),
+				var err error
+				caRefNew := gwapiv1.SecretObjectReference{
+					Group:     gatewayapi.GroupPtr(string(caCertRef.Group)),
+					Kind:      gatewayapi.KindPtr(string(caCertRef.Kind)),
+					Name:      caCertRef.Name,
+					Namespace: gatewayapi.NamespacePtr(policy.Namespace),
+				}
+				switch string(caCertRef.Kind) {
+				case resource.KindConfigMap:
+					err = r.processConfigMapRef(
+						ctx,
+						resourceMap,
+						resourceTree,
+						resource.KindBackendTLSPolicy,
+						policy.Namespace,
+						policy.Name,
+						caRefNew)
+				case resource.KindSecret:
+					err = r.processSecretRef(
+						ctx,
+						resourceMap,
+						resourceTree,
+						resource.KindBackendTLSPolicy,
+						policy.Namespace,
+						policy.Name,
+						caRefNew)
+				case resource.KindClusterTrustBundle:
+					err = r.processClusterTrustBundleRef(ctx, resourceMap, resourceTree, caRefNew)
+				}
+				if err != nil {
+					// if the error is transient, we return it to retry later
+					if isTransientError(err) {
+						return err
 					}
-					switch string(caCertRef.Kind) {
-					case resource.KindConfigMap:
-						err = r.processConfigMapRef(
-							ctx,
-							resourceMap,
-							resourceTree,
-							resource.KindBackendTLSPolicy,
-							policy.Namespace,
-							policy.Name,
-							caRefNew)
-
-					case resource.KindSecret:
-						err = r.processSecretRef(
-							ctx,
-							resourceMap,
-							resourceTree,
-							resource.KindBackendTLSPolicy,
-							policy.Namespace,
-							policy.Name,
-							caRefNew)
-					}
-					if err != nil {
-						// if the error is transient, we return it to retry later
-						if isTransientError(err) {
-							return err
-						}
-						// we don't return an error here, because we want to continue
-						// reconciling the rest of the ClientTrafficPolicies despite that this
-						// reference is invalid.
-						// This ClientTrafficPolicy will be marked as invalid in its status
-						// when translating to IR because the referenced configmap can't be
-						// found.
-						r.log.Error(err,
-							"failed to process CACertificateRef for BackendTLSPolicy",
-							"policy", policy, "caCertificateRef", caCertRef.Name)
-					}
+					// we don't return an error here, because we want to continue
+					// reconciling the rest of the ClientTrafficPolicies despite that this
+					// reference is invalid.
+					// This ClientTrafficPolicy will be marked as invalid in its status
+					// when translating to IR because the referenced configmap can't be
+					// found.
+					r.log.Error(err,
+						"failed to process CACertificateRef for BackendTLSPolicy",
+						"policy", policy, "caCertificateRef", caCertRef.Name)
 				}
 			}
 		}
@@ -2473,7 +2487,6 @@ func (r *gatewayAPIReconciler) processEnvoyExtensionPolicies(
 		// It will be recomputed by the gateway-api layer
 		envoyExtensionPolicy.Status = gwapiv1a2.PolicyStatus{}
 		if !resourceMap.allAssociatedEnvoyExtensionPolicies.Has(utils.NamespacedName(&envoyExtensionPolicy).String()) {
-			r.log.Info("processing EnvoyExtensionPolicy", "namespace", policy.Namespace, "name", policy.Name)
 			resourceMap.allAssociatedEnvoyExtensionPolicies.Insert(utils.NamespacedName(&envoyExtensionPolicy).String())
 			resourceTree.EnvoyExtensionPolicies = append(resourceTree.EnvoyExtensionPolicies, &envoyExtensionPolicy)
 		}
