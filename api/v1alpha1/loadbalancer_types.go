@@ -12,7 +12,7 @@ import metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 //
 // +kubebuilder:validation:XValidation:rule="self.type == 'ConsistentHash' ? has(self.consistentHash) : !has(self.consistentHash)",message="If LoadBalancer type is consistentHash, consistentHash field needs to be set."
 // +kubebuilder:validation:XValidation:rule="self.type in ['Random', 'ConsistentHash'] ? !has(self.slowStart) : true ",message="Currently SlowStart is only supported for RoundRobin and LeastRequest load balancers."
-// +kubebuilder:validation:XValidation:rule="self.type == 'ConsistentHash' ? !has(self.zoneAware) : true ",message="Currently ZoneAware is only supported for LeastRequest, Random, and RoundRobin load balancers."
+// +kubebuilder:validation:XValidation:rule="self.type in ['ConsistentHash'] ? !has(self.zoneAware) : true ",message="Currently ZoneAware is only supported for LeastRequest, Random, and RoundRobin load balancers."
 type LoadBalancer struct {
 	// Type decides the type of Load Balancer policy.
 	// Valid LoadBalancerType values are
@@ -28,6 +28,14 @@ type LoadBalancer struct {
 	//
 	// +optional
 	ConsistentHash *ConsistentHash `json:"consistentHash,omitempty"`
+
+	// EndpointOverride defines the configuration for endpoint override.
+	// When specified, the load balancer will attempt to route requests to endpoints
+	// based on the override information extracted from request headers or metadata.
+	// If no valid override endpoint is found, the configured load balancer policy will be used as fallback.
+	//
+	// +optional
+	EndpointOverride *EndpointOverride `json:"endpointOverride,omitempty"`
 
 	// SlowStart defines the configuration related to the slow start load balancer policy.
 	// If set, during slow start window, traffic sent to the newly added hosts will gradually increase.
@@ -177,4 +185,58 @@ type ForceLocalZone struct {
 	// +optional
 	// +notImplementedHide
 	MinEndpointsInZoneThreshold *uint32 `json:"minEndpointsInZoneThreshold,omitempty"`
+}
+
+// EndpointOverride defines the configuration for endpoint override.
+// This allows endpoint picking to be implemented based on request headers or metadata.
+// It extracts selected override endpoints from the specified sources (request headers, metadata, etc.).
+// If no valid endpoint in the override list, then the configured load balancing policy is used as fallback.
+type EndpointOverride struct {
+	// ExtractFrom defines the sources to extract endpoint override information from.
+	//
+	// +kubebuilder:validation:MinItems=1
+	// +kubebuilder:validation:MaxItems=10
+	ExtractFrom []EndpointOverrideExtractFrom `json:"extractFrom"`
+}
+
+// EndpointOverrideExtractFrom defines a source to extract endpoint override information from.
+// +union
+//
+// +kubebuilder:validation:XValidation:rule="(has(self.header) && !has(self.metadata)) || (!has(self.header) && has(self.metadata))",message="Exactly one of header or metadata must be set."
+type EndpointOverrideExtractFrom struct {
+	// Header defines the header to get the override endpoint addresses.
+	// The header value must specify at least one endpoint in `IP:Port` format or multiple endpoints in `IP:Port,IP:Port,...` format.
+	// For example `10.0.0.5:8080` or `[2600:4040:5204::1574:24ae]:80`.
+	// The IPv6 address is enclosed in square brackets.
+	//
+	// +optional
+	Header *string `json:"header,omitempty"`
+
+	// Metadata defines the metadata key to get the override endpoint addresses from the request dynamic metadata.
+	// If set this field then it will take precedence over the header field.
+	//
+	// +optional
+	Metadata *EndpointOverrideMetadataKey `json:"metadata,omitempty"`
+}
+
+// EndpointOverrideMetadataKey defines the metadata key configuration for endpoint override.
+type EndpointOverrideMetadataKey struct {
+	// Key defines the metadata key.
+	//
+	// +kubebuilder:validation:MinLength=1
+	Key string `json:"key"`
+
+	// Path defines the path within the metadata to extract the endpoint addresses.
+	// Each path element represents a key in nested metadata structure.
+	//
+	// +optional
+	Path []EndpointOverrideMetadataKeyPath `json:"path,omitempty"`
+}
+
+// EndpointOverrideMetadataKeyPath defines a path element in the metadata structure.
+type EndpointOverrideMetadataKeyPath struct {
+	// Key defines the key name in the metadata structure.
+	//
+	// +kubebuilder:validation:MinLength=1
+	Key string `json:"key"`
 }
