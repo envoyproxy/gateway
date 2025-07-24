@@ -7,12 +7,18 @@ package kubernetes
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	corev1 "k8s.io/api/core/v1"
+	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -25,6 +31,8 @@ import (
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 	"github.com/envoyproxy/gateway/internal/logging"
+	"github.com/envoyproxy/gateway/internal/provider/kubernetes/test"
+	"github.com/envoyproxy/gateway/internal/utils"
 )
 
 func TestAddGatewayClassFinalizer(t *testing.T) {
@@ -86,6 +94,238 @@ func TestAddGatewayClassFinalizer(t *testing.T) {
 			err = r.client.Get(ctx, key, tc.gc)
 			require.NoError(t, err)
 			require.Equal(t, tc.expect, tc.gc.Finalizers)
+		})
+	}
+}
+
+func TestIsCustomBackendResource(t *testing.T) {
+	testCases := []struct {
+		name           string
+		extBackendGVKs []schema.GroupVersionKind
+		group          *gwapiv1.Group
+		kind           string
+		expected       bool
+	}{
+		{
+			name:           "no extension backend GVKs configured",
+			extBackendGVKs: []schema.GroupVersionKind{},
+			group:          ptr.To(gwapiv1.Group("storage.example.io")),
+			kind:           "S3Backend",
+			expected:       false,
+		},
+		{
+			name: "matching group and kind",
+			extBackendGVKs: []schema.GroupVersionKind{
+				{Group: "storage.example.io", Version: "v1alpha1", Kind: "S3Backend"},
+				{Group: "compute.example.io", Version: "v1alpha1", Kind: "LambdaBackend"},
+			},
+			group:    ptr.To(gwapiv1.Group("storage.example.io")),
+			kind:     "S3Backend",
+			expected: true,
+		},
+		{
+			name: "matching kind but different group",
+			extBackendGVKs: []schema.GroupVersionKind{
+				{Group: "storage.example.io", Version: "v1alpha1", Kind: "S3Backend"},
+			},
+			group:    ptr.To(gwapiv1.Group("compute.example.io")),
+			kind:     "S3Backend",
+			expected: false,
+		},
+		{
+			name: "matching group but different kind",
+			extBackendGVKs: []schema.GroupVersionKind{
+				{Group: "storage.example.io", Version: "v1alpha1", Kind: "S3Backend"},
+			},
+			group:    ptr.To(gwapiv1.Group("storage.example.io")),
+			kind:     "LambdaBackend",
+			expected: false,
+		},
+		{
+			name: "nil group with empty string group in GVK",
+			extBackendGVKs: []schema.GroupVersionKind{
+				{Group: "", Version: "v1", Kind: "Service"},
+			},
+			group:    nil,
+			kind:     "Service",
+			expected: true,
+		},
+		{
+			name: "nil group with non-empty group in GVK",
+			extBackendGVKs: []schema.GroupVersionKind{
+				{Group: "storage.example.io", Version: "v1alpha1", Kind: "S3Backend"},
+			},
+			group:    nil,
+			kind:     "S3Backend",
+			expected: false,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			r := &gatewayAPIReconciler{
+				extBackendGVKs: tc.extBackendGVKs,
+			}
+			result := r.isCustomBackendResource(tc.group, tc.kind)
+			require.Equal(t, tc.expected, result)
+		})
+	}
+}
+
+func TestProcessBackendRefsWithCustomBackends(t *testing.T) {
+	ctx := context.Background()
+
+	// Create test custom backend resources
+	s3Backend := &unstructured.Unstructured{
+		Object: map[string]interface{}{
+			"apiVersion": "storage.example.io/v1alpha1",
+			"kind":       "S3Backend",
+			"metadata": map[string]interface{}{
+				"name":      "s3-backend",
+				"namespace": "default",
+			},
+			"spec": map[string]interface{}{
+				"bucket": "my-s3-bucket",
+				"region": "us-west-2",
+			},
+		},
+	}
+
+	lambdaBackend := &unstructured.Unstructured{
+		Object: map[string]interface{}{
+			"apiVersion": "compute.example.io/v1alpha1",
+			"kind":       "LambdaBackend",
+			"metadata": map[string]interface{}{
+				"name":      "lambda-backend",
+				"namespace": "default",
+			},
+			"spec": map[string]interface{}{
+				"functionName": "my-function",
+				"region":       "us-west-2",
+			},
+		},
+	}
+
+	testCases := []struct {
+		name                    string
+		extBackendGVKs          []schema.GroupVersionKind
+		backendRefs             []gwapiv1.BackendObjectReference
+		existingExtFilters      map[utils.NamespacedNameWithGroupKind]unstructured.Unstructured
+		expectedExtFiltersCount int
+		expectedNamespaces      []string
+	}{
+		{
+			name: "process custom S3 backend",
+			extBackendGVKs: []schema.GroupVersionKind{
+				{Group: "storage.example.io", Version: "v1alpha1", Kind: "S3Backend"},
+			},
+			backendRefs: []gwapiv1.BackendObjectReference{
+				{
+					Group:     ptr.To(gwapiv1.Group("storage.example.io")),
+					Kind:      ptr.To(gwapiv1.Kind("S3Backend")),
+					Name:      "s3-backend",
+					Namespace: ptr.To(gwapiv1.Namespace("default")),
+				},
+			},
+			existingExtFilters: map[utils.NamespacedNameWithGroupKind]unstructured.Unstructured{
+				{
+					NamespacedName: types.NamespacedName{Namespace: "default", Name: "s3-backend"},
+					GroupKind:      schema.GroupKind{Group: "storage.example.io", Kind: "S3Backend"},
+				}: *s3Backend,
+			},
+			expectedExtFiltersCount: 1,
+			expectedNamespaces:      []string{"default"},
+		},
+		{
+			name: "process multiple custom backends",
+			extBackendGVKs: []schema.GroupVersionKind{
+				{Group: "storage.example.io", Version: "v1alpha1", Kind: "S3Backend"},
+				{Group: "compute.example.io", Version: "v1alpha1", Kind: "LambdaBackend"},
+			},
+			backendRefs: []gwapiv1.BackendObjectReference{
+				{
+					Group:     ptr.To(gwapiv1.Group("storage.example.io")),
+					Kind:      ptr.To(gwapiv1.Kind("S3Backend")),
+					Name:      "s3-backend",
+					Namespace: ptr.To(gwapiv1.Namespace("default")),
+				},
+				{
+					Group:     ptr.To(gwapiv1.Group("compute.example.io")),
+					Kind:      ptr.To(gwapiv1.Kind("LambdaBackend")),
+					Name:      "lambda-backend",
+					Namespace: ptr.To(gwapiv1.Namespace("default")),
+				},
+			},
+			existingExtFilters: map[utils.NamespacedNameWithGroupKind]unstructured.Unstructured{
+				{
+					NamespacedName: types.NamespacedName{Namespace: "default", Name: "s3-backend"},
+					GroupKind:      schema.GroupKind{Group: "storage.example.io", Kind: "S3Backend"},
+				}: *s3Backend,
+				{
+					NamespacedName: types.NamespacedName{Namespace: "default", Name: "lambda-backend"},
+					GroupKind:      schema.GroupKind{Group: "compute.example.io", Kind: "LambdaBackend"},
+				}: *lambdaBackend,
+			},
+			expectedExtFiltersCount: 2,
+			expectedNamespaces:      []string{"default"},
+		},
+		{
+			name: "skip non-custom backends",
+			extBackendGVKs: []schema.GroupVersionKind{
+				{Group: "storage.example.io", Version: "v1alpha1", Kind: "S3Backend"},
+			},
+			backendRefs: []gwapiv1.BackendObjectReference{
+				{
+					// Standard Service backend - should be skipped
+					Kind:      ptr.To(gwapiv1.Kind("Service")),
+					Name:      "my-service",
+					Namespace: ptr.To(gwapiv1.Namespace("default")),
+				},
+			},
+			existingExtFilters:      map[utils.NamespacedNameWithGroupKind]unstructured.Unstructured{},
+			expectedExtFiltersCount: 0,
+			expectedNamespaces:      []string{},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			// Create fake client
+			fakeClient := fakeclient.NewClientBuilder().Build()
+
+			// Create reconciler with test configuration
+			r := &gatewayAPIReconciler{
+				extBackendGVKs: tc.extBackendGVKs,
+				log:            logging.DefaultLogger(os.Stdout, egv1a1.LogLevelInfo),
+				client:         fakeClient,
+			}
+
+			// Create resource mappings
+			resourceMappings := &resourceMappings{
+				allAssociatedBackendRefs:                sets.New[gwapiv1.BackendObjectReference](),
+				allAssociatedNamespaces:                 sets.New[string](),
+				allAssociatedBackendRefExtensionFilters: sets.New[utils.NamespacedNameWithGroupKind](),
+				extensionRefFilters:                     tc.existingExtFilters,
+			}
+
+			// Add backend refs to the mapping
+			for _, backendRef := range tc.backendRefs {
+				resourceMappings.allAssociatedBackendRefs.Insert(backendRef)
+			}
+
+			// Create empty resource tree
+			gwcResource := &resource.Resources{
+				ExtensionRefFilters: []unstructured.Unstructured{},
+			}
+
+			// Call the function under test
+			require.NoError(t, r.processBackendRefs(ctx, gwcResource, resourceMappings))
+			// Compare the results
+			require.Len(t, gwcResource.ExtensionRefFilters, tc.expectedExtFiltersCount)
+
+			for _, expectedNS := range tc.expectedNamespaces {
+				require.True(t, resourceMappings.allAssociatedNamespaces.Has(expectedNS))
+			}
 		})
 	}
 }
@@ -281,7 +521,7 @@ func TestProcessGatewayClassParamsRef(t *testing.T) {
 			},
 			gatewayNamespaceMode: true,
 			expected:             false,
-			expectedError:        "using Merged Gateways with Gateway Namespace Mode is not supported.",
+			expectedError:        "using Merged Gateways with Gateway Namespace Mode is not supported",
 		},
 		{
 			name: "valid merged gateways enabled configuration",
@@ -1007,6 +1247,142 @@ func TestProcessSecurityPolicyObjectRefs(t *testing.T) {
 	}
 }
 
+func TestProcessBackendRefs(t *testing.T) {
+	ns := "default"
+	ctb := test.GetClusterTrustBundle("fake-ctb")
+	secret := test.GetSecret(types.NamespacedName{Namespace: ns, Name: "fake-secret"})
+	cm := &corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: ns,
+			Name:      "fake-cm",
+		},
+		Data: map[string]string{
+			"ca.crt": "fake-ca-cert",
+		},
+	}
+
+	testCases := []struct {
+		name                   string
+		backend                *egv1a1.Backend
+		ctpShouldBeAdded       bool
+		secretShouldBeAdded    bool
+		configmapShouldBeAdded bool
+	}{
+		{
+			name: "DynamicResolver with ClusterTrustBundle",
+			backend: &egv1a1.Backend{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: ns,
+					Name:      "test-backend",
+				},
+				Spec: egv1a1.BackendSpec{
+					Type: ptr.To(egv1a1.BackendTypeDynamicResolver),
+					TLS: &egv1a1.BackendTLSSettings{
+						CACertificateRefs: []gwapiv1.LocalObjectReference{
+							{
+								Kind: gwapiv1.Kind("ClusterTrustBundle"),
+								Name: gwapiv1.ObjectName("fake-ctb"),
+							},
+						},
+					},
+				},
+			},
+			ctpShouldBeAdded: true,
+		},
+		{
+			name: "DynamicResolver with ConfigMap",
+			backend: &egv1a1.Backend{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: ns,
+					Name:      "test-backend",
+				},
+				Spec: egv1a1.BackendSpec{
+					Type: ptr.To(egv1a1.BackendTypeDynamicResolver),
+					TLS: &egv1a1.BackendTLSSettings{
+						CACertificateRefs: []gwapiv1.LocalObjectReference{
+							{
+								Kind: gwapiv1.Kind("ConfigMap"),
+								Name: gwapiv1.ObjectName("fake-cm"),
+							},
+						},
+					},
+				},
+			},
+			configmapShouldBeAdded: true,
+		},
+		{
+			name: "DynamicResolver with Secret",
+			backend: &egv1a1.Backend{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: ns,
+					Name:      "test-backend",
+				},
+				Spec: egv1a1.BackendSpec{
+					Type: ptr.To(egv1a1.BackendTypeDynamicResolver),
+					TLS: &egv1a1.BackendTLSSettings{
+						CACertificateRefs: []gwapiv1.LocalObjectReference{
+							{
+								Kind: gwapiv1.Kind("Secret"),
+								Name: gwapiv1.ObjectName("fake-secret"),
+							},
+						},
+					},
+				},
+			},
+			secretShouldBeAdded: true,
+		},
+	}
+
+	for i := range testCases {
+		tc := testCases[i]
+		// Run the test cases.
+		t.Run(tc.name, func(t *testing.T) {
+			// Add objects referenced by test cases.
+			objs := []client.Object{tc.backend, ctb, secret, cm}
+			logger := logging.DefaultLogger(os.Stdout, egv1a1.LogLevelInfo)
+
+			r := &gatewayAPIReconciler{
+				log:              logger,
+				classController:  "some-gateway-class",
+				backendCRDExists: true,
+			}
+
+			r.client = fakeclient.NewClientBuilder().
+				WithScheme(envoygateway.GetScheme()).
+				WithObjects(objs...).
+				Build()
+
+			resourceTree := resource.NewResources()
+			resourceMap := newResourceMapping()
+			backend := tc.backend
+			resourceMap.allAssociatedBackendRefs.Insert(gwapiv1.BackendObjectReference{
+				Kind:      gatewayapi.KindPtr(resource.KindBackend),
+				Namespace: gatewayapi.NamespacePtr(backend.Namespace),
+				Name:      gwapiv1.ObjectName(backend.Name),
+			})
+
+			require.NoError(t, r.processBackendRefs(t.Context(), resourceTree, resourceMap))
+			if tc.ctpShouldBeAdded {
+				require.Contains(t, resourceTree.ClusterTrustBundles, ctb)
+			} else {
+				require.NotContains(t, resourceTree.ClusterTrustBundles, ctb)
+			}
+
+			if tc.secretShouldBeAdded {
+				require.Contains(t, resourceTree.Secrets, secret)
+			} else {
+				require.NotContains(t, resourceTree.Secrets, secret)
+			}
+
+			if tc.configmapShouldBeAdded {
+				require.Contains(t, resourceTree.ConfigMaps, cm)
+			} else {
+				require.NotContains(t, resourceTree.ConfigMaps, cm)
+			}
+		})
+	}
+}
+
 func setupReferenceGrantReconciler(objs []client.Object) *gatewayAPIReconciler {
 	logger := logging.DefaultLogger(os.Stdout, egv1a1.LogLevelInfo)
 
@@ -1021,4 +1397,33 @@ func setupReferenceGrantReconciler(objs []client.Object) *gatewayAPIReconciler {
 		WithIndex(&gwapiv1b1.ReferenceGrant{}, targetRefGrantRouteIndex, getReferenceGrantIndexerFunc).
 		Build()
 	return r
+}
+
+func TestIsTransientError(t *testing.T) {
+	serverTimeoutErr := kerrors.NewServerTimeout(
+		schema.GroupResource{Group: "core", Resource: "pods"}, "list", 10)
+	timeoutErr := kerrors.NewTimeoutError("request timeout", 1)
+	wrappedTooManyRequestsErr := fmt.Errorf("wrapping: %w", kerrors.NewTooManyRequests("too many requests", 1))
+	serviceUnavailableErr := kerrors.NewServiceUnavailable("service unavailable")
+	badRequestErr := kerrors.NewBadRequest("bad request")
+
+	testCases := []struct {
+		name     string
+		err      error
+		expected bool
+	}{
+		{"ServerTimeout", serverTimeoutErr, true},
+		{"Timeout", timeoutErr, true},
+		{"TooManyRequests", wrappedTooManyRequestsErr, true},
+		{"ServiceUnavailable", serviceUnavailableErr, true},
+		{"BadRequest", badRequestErr, false},
+		{"NilError", nil, false},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			actual := isTransientError(tc.err)
+			require.Equal(t, tc.expected, actual)
+		})
+	}
 }

@@ -203,6 +203,7 @@ verbs:
   verbs:
   - create
   - get
+  - list
   - delete
   - deletecollection
   - patch
@@ -226,9 +227,18 @@ verbs:
   verbs:
   - create
   - get
+  - list
   - delete
   - deletecollection
   - patch
+- apiGroups:
+  - certificates.k8s.io
+  resources:
+  - clustertrustbundles
+  verbs:
+  - list
+  - get
+  - watch
 {{- end }}
 
 {{- define "eg.rbac.infra.tokenreview" -}}

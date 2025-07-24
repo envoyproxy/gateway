@@ -4,7 +4,7 @@ RELEASE_VERSIONS ?= $(foreach v,$(wildcard ${ROOT_DIR}/docs/*),$(notdir ${v}))
 #       find a way to remove github.com from ignore list
 # TODO: example.com is not a valid domain, we should remove it from ignore list
 # TODO: https://www.gnu.org/software/make became unstable, we should remove it from ignore list later
-LINKINATOR_IGNORE := "opentelemetry.io github.com jwt.io githubusercontent.com example.com github.io gnu.org _print canva.com sched.co sap.com httpbin.org nemlig.com"
+LINKINATOR_IGNORE := "opentelemetry.io github.com jwt.io githubusercontent.com example.com github.io gnu.org _print canva.com sched.co sap.com httpbin.org nemlig.com verve.com"
 CLEAN_NODE_MODULES ?= true
 
 ##@ Docs
@@ -174,7 +174,7 @@ docs-release-gen:
 .PHONY: docs-check-links
 docs-check-links: # Check for broken links in the docs
 	@$(LOG_TARGET)
-	linkinator site/public/ -r --concurrency 25 --skip $(LINKINATOR_IGNORE) --verbosity error
+	linkinator site/public/ -r --concurrency 25 --retry-errors --retry --retry-errors-jitter --retry-errors-count 5 --skip $(LINKINATOR_IGNORE) --verbosity error
 
 docs-markdown-lint:
 	markdownlint -c .github/markdown_lint_config.json site/content/*

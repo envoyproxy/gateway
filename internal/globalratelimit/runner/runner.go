@@ -18,6 +18,7 @@ import (
 	cachev3 "github.com/envoyproxy/go-control-plane/pkg/cache/v3"
 	resourcev3 "github.com/envoyproxy/go-control-plane/pkg/resource/v3"
 	serverv3 "github.com/envoyproxy/go-control-plane/pkg/server/v3"
+	"github.com/telepresenceio/watchable"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 
@@ -97,8 +98,11 @@ func (r *Runner) Start(ctx context.Context) (err error) {
 	// Start and listen xDS gRPC config Server.
 	go r.serveXdsConfigServer(ctx)
 
-	// Start message Subscription.
-	go r.subscribeAndTranslate(ctx)
+	// Start message subscription.
+	// Do not call .Subscribe() inside Goroutine since it is supposed to be called from the same
+	// Goroutine where Close() is called.
+	c := r.XdsIR.Subscribe(ctx)
+	go r.subscribeAndTranslate(ctx, c)
 
 	r.Logger.Info("started")
 	return
@@ -132,12 +136,11 @@ func buildXDSResourceFromCache(rateLimitConfigsCache map[string][]cachetype.Reso
 	return xdsResourcesToUpdate
 }
 
-func (r *Runner) subscribeAndTranslate(ctx context.Context) {
+func (r *Runner) subscribeAndTranslate(ctx context.Context, c <-chan watchable.Snapshot[string, *ir.Xds]) {
 	// rateLimitConfigsCache is a cache of the rate limit config, which is keyed by the xdsIR key.
 	rateLimitConfigsCache := map[string][]cachetype.Resource{}
 
-	// Subscribe to resources.
-	message.HandleSubscription(message.Metadata{Runner: string(egv1a1.LogComponentGlobalRateLimitRunner), Message: "xds-ir"}, r.XdsIR.Subscribe(ctx),
+	message.HandleSubscription(message.Metadata{Runner: r.Name(), Message: message.XDSIRMessageName}, c,
 		func(update message.Update[string, *ir.Xds], errChan chan error) {
 			r.Logger.Info("received a notification")
 

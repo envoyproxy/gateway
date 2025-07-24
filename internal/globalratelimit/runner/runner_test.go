@@ -219,7 +219,8 @@ func Test_subscribeAndTranslate(t *testing.T) {
 				cache:  cachev3.NewSnapshotCache(false, cachev3.IDHash{}, nil),
 			})
 
-			go r.subscribeAndTranslate(ctx)
+			c := xdsIR.Subscribe(ctx)
+			go r.subscribeAndTranslate(ctx, c)
 
 			for _, xds := range tt.xdsIRs {
 				if xds.Delete {

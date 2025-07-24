@@ -36,6 +36,14 @@ apiVersion: v1
 kind: Secret
 metadata:
   namespace: gateway-conformance-infra
+  name: oidctest-client-id
+data:
+  client-id: b2lkY3Rlc3Q=     # base64 encoding of "oidctest"
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  namespace: gateway-conformance-infra
   name: oidctest-secret
 data:
   client-secret: b2lkY3Rlc3QtY2xpZW50LXNlY3JldA==   # base64 encoding of "oidctest-client-secret"
@@ -67,7 +75,8 @@ spec:
           retryOn:
             triggers: ["5xx", "gateway-error", "reset"]
       issuer: "https://keycloak.gateway-conformance-infra/realms/master"   # Test fetching auth endpoint from the issuer url
-    clientID: "oidctest"
+    clientIDRef:
+      name: "oidctest-client-id"
     clientSecret:
       name: "oidctest-secret"
     redirectURL: "http://www.example.com/myapp/oauth2/callback"

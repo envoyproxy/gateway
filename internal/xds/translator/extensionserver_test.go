@@ -122,6 +122,57 @@ func (t *testingExtensionServer) PostVirtualHostModify(_ context.Context, req *p
 	}, nil
 }
 
+// PostClusterModifyHook modifies clusters for custom backend support
+func (t *testingExtensionServer) PostClusterModify(_ context.Context, req *pb.PostClusterModifyRequest) (*pb.PostClusterModifyResponse, error) {
+	// Clone the cluster to avoid modifying the original
+	modifiedCluster := proto.Clone(req.Cluster).(*clusterV3.Cluster)
+	var poolCount int
+	// Check if this cluster should be modified based on extension resources
+	for _, extensionResourceBytes := range req.PostClusterContext.BackendExtensionResources {
+		if poolCount == 1 {
+			return &pb.PostClusterModifyResponse{
+				Cluster: req.Cluster,
+			}, errors.New("inference pool only support one per rule")
+		}
+
+		extensionResource := unstructured.Unstructured{}
+		if err := extensionResource.UnmarshalJSON(extensionResourceBytes.UnstructuredBytes); err != nil {
+			return &pb.PostClusterModifyResponse{
+				Cluster: req.Cluster,
+			}, err
+		}
+
+		if extensionResource.GetKind() == "InferencePool" {
+			extensionSpec := extensionResource.Object["spec"].(map[string]any)
+			targetPortNumber := int(extensionSpec["targetPortNumber"].(int64))
+			if targetPortNumber == 0 {
+				return &pb.PostClusterModifyResponse{
+					Cluster: req.Cluster,
+				}, errors.New("inference pool target port number is 0")
+			}
+
+			modifiedCluster.ClusterDiscoveryType = &clusterV3.Cluster_Type{Type: clusterV3.Cluster_LOGICAL_DNS}
+			modifiedCluster.LbConfig = &clusterV3.Cluster_OriginalDstLbConfig_{
+				OriginalDstLbConfig: &clusterV3.Cluster_OriginalDstLbConfig{
+					UseHttpHeader:  true,
+					HttpHeaderName: "x-gateway-destination-endpoint",
+				},
+			}
+
+			modifiedCluster.EdsClusterConfig = nil
+			modifiedCluster.LoadAssignment = nil
+			modifiedCluster.LbPolicy = clusterV3.Cluster_CLUSTER_PROVIDED
+			modifiedCluster.CommonLbConfig = nil
+			modifiedCluster.ClusterDiscoveryType = &clusterV3.Cluster_Type{Type: clusterV3.Cluster_ORIGINAL_DST}
+			poolCount++
+		}
+	}
+
+	return &pb.PostClusterModifyResponse{
+		Cluster: modifiedCluster,
+	}, nil
+}
+
 // PostHTTPListenerModifyHook returns a modified version of the listener with a changed statprefix of the listener
 // A more useful use-case for an extension would be looping through the FilterChains to find the
 // HTTPConnectionManager(s) and inject a custom HTTPFilter, but that for testing purposes we don't need to make a complex change
@@ -208,15 +259,25 @@ func (t *testingExtensionServer) PostHTTPListenerModify(_ context.Context, req *
 	}, nil
 }
 
-// PostTranslateModifyHook inserts and overrides some clusters/secrets
+// PostTranslateModifyHook inserts and overrides some clusters/secrets/listeners/routes
 func (t *testingExtensionServer) PostTranslateModify(_ context.Context, req *pb.PostTranslateModifyRequest) (*pb.PostTranslateModifyResponse, error) {
 	for _, cluster := range req.Clusters {
+		if cluster.Name == "custom-backend-dest" {
+			return &pb.PostTranslateModifyResponse{
+				Clusters:  req.Clusters,
+				Secrets:   req.Secrets,
+				Listeners: req.Listeners,
+				Routes:    req.Routes,
+			}, nil
+		}
 		// This simulates an extension server that returns an error. It allows verifying that fail-close is working.
 		if edsConfig := cluster.GetEdsClusterConfig(); edsConfig != nil {
 			if strings.Contains(edsConfig.ServiceName, "fail-close-error") {
 				return &pb.PostTranslateModifyResponse{
-					Clusters: req.Clusters,
-					Secrets:  req.Secrets,
+					Clusters:  req.Clusters,
+					Secrets:   req.Secrets,
+					Listeners: req.Listeners,
+					Routes:    req.Routes,
 				}, fmt.Errorf("cluster hook resource error: %s", edsConfig.ServiceName)
 			}
 		}
@@ -239,8 +300,10 @@ func (t *testingExtensionServer) PostTranslateModify(_ context.Context, req *pb.
 	}
 
 	response := &pb.PostTranslateModifyResponse{
-		Clusters: make([]*clusterV3.Cluster, len(req.Clusters)),
-		Secrets:  make([]*tlsV3.Secret, len(req.Secrets)),
+		Clusters:  make([]*clusterV3.Cluster, len(req.Clusters)),
+		Secrets:   make([]*tlsV3.Secret, len(req.Secrets)),
+		Listeners: make([]*listenerV3.Listener, len(req.Listeners)),
+		Routes:    make([]*routeV3.RouteConfiguration, len(req.Routes)),
 	}
 	for idx, cluster := range req.Clusters {
 		response.Clusters[idx] = proto.Clone(cluster).(*clusterV3.Cluster)
@@ -339,6 +402,61 @@ func (t *testingExtensionServer) PostTranslateModify(_ context.Context, req *pb.
 			},
 		},
 	})
+
+	// Process listeners - clone and potentially modify them
+	for idx, listener := range req.Listeners {
+		response.Listeners[idx] = proto.Clone(listener).(*listenerV3.Listener)
+		// Example: Modify listener for testing - add a stat prefix if listener name matches
+		if listener.Name == "test-listener-modify" {
+			response.Listeners[idx].StatPrefix = "extension-modified-listener"
+		}
+	}
+
+	// Process routes - clone and potentially modify them
+	for idx, route := range req.Routes {
+		response.Routes[idx] = proto.Clone(route).(*routeV3.RouteConfiguration)
+		// Example: Modify route for testing - add metadata if route name matches
+		if route.Name == "test-route-modify" {
+			if response.Routes[idx].ResponseHeadersToAdd == nil {
+				response.Routes[idx].ResponseHeadersToAdd = []*coreV3.HeaderValueOption{}
+			}
+			response.Routes[idx].ResponseHeadersToAdd = append(response.Routes[idx].ResponseHeadersToAdd,
+				&coreV3.HeaderValueOption{
+					Header: &coreV3.HeaderValue{
+						Key:   "x-extension-modified",
+						Value: "true",
+					},
+				})
+		}
+	}
+
+	// Only inject new resources for specific test cases to avoid breaking existing tests
+	for _, policy := range req.PostTranslateContext.ExtensionResources {
+		extensionResource := unstructured.Unstructured{}
+		if err := extensionResource.UnmarshalJSON(policy.UnstructuredBytes); err == nil {
+			if extensionResource.GetObjectKind().GroupVersionKind().Kind == "ExampleExtPolicy" {
+				// Example: Add a new listener for testing
+				response.Listeners = append(response.Listeners, &listenerV3.Listener{
+					Name:       "extension-injected-listener",
+					StatPrefix: "extension-injected",
+				})
+
+				// Example: Add a new route for testing
+				response.Routes = append(response.Routes, &routeV3.RouteConfiguration{
+					Name: "extension-injected-route",
+					ResponseHeadersToAdd: []*coreV3.HeaderValueOption{
+						{
+							Header: &coreV3.HeaderValue{
+								Key:   "x-extension-injected",
+								Value: "route",
+							},
+						},
+					},
+				})
+				break
+			}
+		}
+	}
 
 	return response, nil
 }

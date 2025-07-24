@@ -345,6 +345,13 @@ spec:
                         required:
                         - path
                         type: object
+                      initialJitter:
+                        description: |-
+                          InitialJitter defines the maximum time Envoy will wait before the first health check.
+                          Envoy will randomly select a value between 0 and the initial jitter value.
+                        format: duration
+                        pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                        type: string
                       interval:
                         default: 3s
                         description: Interval defines the time between active health
@@ -691,6 +698,34 @@ spec:
                     - Random
                     - RoundRobin
                     type: string
+                  zoneAware:
+                    description: ZoneAware defines the configuration related to the
+                      distribution of requests between locality zones.
+                    properties:
+                      preferLocal:
+                        description: PreferLocalZone configures zone-aware routing
+                          to prefer sending traffic to the local locality zone.
+                        properties:
+                          force:
+                            description: |-
+                              ForceLocalZone defines override configuration for forcing all traffic to stay within the local zone instead of the default behavior
+                              which maintains equal distribution among upstream endpoints while sending as much traffic as possible locally.
+                            properties:
+                              minEndpointsInZoneThreshold:
+                                description: |-
+                                  MinEndpointsInZoneThreshold is the minimum number of upstream endpoints in the local zone required to honor the forceLocalZone
+                                  override. This is useful for protecting zones with fewer endpoints.
+                                format: int32
+                                type: integer
+                            type: object
+                          minEndpointsThreshold:
+                            description: MinEndpointsThreshold is the minimum number
+                              of total upstream endpoints across all zones required
+                              to enable zone-aware routing.
+                            format: int64
+                            type: integer
+                        type: object
+                    type: object
                 required:
                 - type
                 type: object
@@ -703,6 +738,10 @@ spec:
                     LeastRequest load balancers.
                   rule: 'self.type in [''Random'', ''ConsistentHash''] ? !has(self.slowStart)
                     : true '
+                - message: Currently ZoneAware is only supported for LeastRequest,
+                    Random, and RoundRobin load balancers.
+                  rule: 'self.type == ''ConsistentHash'' ? !has(self.zoneAware) :
+                    true '
               mergeType:
                 description: |-
                   MergeType determines how this configuration is merged with existing BackendTrafficPolicy
@@ -1616,6 +1655,7 @@ spec:
                           - 5xx
                           - gateway-error
                           - reset
+                          - reset-before-request
                           - connect-failure
                           - retriable-4xx
                           - refused-stream

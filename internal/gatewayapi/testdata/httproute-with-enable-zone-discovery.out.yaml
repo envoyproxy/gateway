@@ -159,7 +159,8 @@ xdsIR:
             name: httproute/default/httproute-1/rule/1/backend/0
             protocol: HTTP
             weight: 1
-            zoneAwareRoutingEnabled: true
+            zoneAwareRouting:
+              minSize: 1
         headerMatches:
         - distinct: false
           exact: bar
@@ -196,7 +197,8 @@ xdsIR:
             name: httproute/default/httproute-1/rule/0/backend/0
             protocol: HTTP
             weight: 1
-            zoneAwareRoutingEnabled: true
+            zoneAwareRouting:
+              minSize: 1
         hostname: '*'
         isHTTP2: false
         metadata:

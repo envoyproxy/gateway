@@ -137,3 +137,46 @@ type InfraIR struct {
 type Xds struct {
 	watchable.Map[string, *xdstypes.ResourceVersionTable]
 }
+
+type MessageName string
+
+const (
+	// XDSMessageName is a message containing xds translated from xds-ir
+	XDSMessageName MessageName = "xds"
+	// XDSIRMessageName is a message containing xds-ir translated from provider-resources
+	XDSIRMessageName MessageName = "xds-ir"
+	// InfraIRMessageName is a message containing infra-ir translated from provider-resources
+	InfraIRMessageName MessageName = "infra-ir"
+	// ProviderResourcesMessageName is a message containing gw-api and envoy gateway resources from the provider
+	ProviderResourcesMessageName MessageName = "provider-resources"
+	// BackendStatusMessageName is a message containing updates to Backend status
+	BackendStatusMessageName MessageName = "backend-status"
+	// ExtensionServerPoliciesStatusMessageName is a message containing updates to ExtensionServerPolicy status
+	ExtensionServerPoliciesStatusMessageName MessageName = "extensionserverpolicies-status"
+	// EnvoyExtensionPolicyStatusMessageName is a message containing updates to EnvoyExtensionPolicy status
+	EnvoyExtensionPolicyStatusMessageName MessageName = "envoyextensionpolicy-status"
+	// EnvoyPatchPolicyStatusMessageName is a message containing updates to EnvoyPatchPolicy status
+	EnvoyPatchPolicyStatusMessageName MessageName = "envoypatchpolicy-status"
+	// SecurityPolicyStatusMessageName is a message containing updates to SecurityPolicy status
+	SecurityPolicyStatusMessageName MessageName = "securitypolicy-status"
+	// BackendTrafficPolicyStatusMessageName is a message containing updates to BackendTrafficPolicy status
+	BackendTrafficPolicyStatusMessageName MessageName = "backendtrafficpolicy-status"
+	// ClientTrafficPolicyStatusMessageName is a message containing updates to ClientTrafficPolicy status
+	ClientTrafficPolicyStatusMessageName MessageName = "clienttrafficpolicy-status"
+	// BackendTLSPolicyStatusMessageName is a message containing updates to BackendTLSPolicy status
+	BackendTLSPolicyStatusMessageName MessageName = "backendtlspolicy-status"
+	// UDPRouteStatusMessageName is a message containing updates to UDPRoute status
+	UDPRouteStatusMessageName MessageName = "udproute-status"
+	// TCPRouteStatusMessageName is a message containing updates to TCPRoute status
+	TCPRouteStatusMessageName MessageName = "tcproute-status"
+	// TLSRouteStatusMessageName is a message containing updates to TLSRoute status
+	TLSRouteStatusMessageName MessageName = "tlsroute-status"
+	// GRPCRouteStatusMessageName is a message containing updates to GRPCRoute status
+	GRPCRouteStatusMessageName MessageName = "grpcroute-status"
+	// HTTPRouteStatusMessageName is a message containing updates to HTTPRoute status
+	HTTPRouteStatusMessageName MessageName = "httproute-status"
+	// GatewayStatusMessageName is a message containing updates to Gateway status
+	GatewayStatusMessageName MessageName = "gateway-status"
+	// GatewayClassStatusMessageName is a message containing updates to GatewayClass status
+	GatewayClassStatusMessageName MessageName = "gatewayclass-status"
+)

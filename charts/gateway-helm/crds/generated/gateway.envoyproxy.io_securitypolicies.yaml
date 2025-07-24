@@ -145,6 +145,15 @@ spec:
                           type: array
                       type: object
                     type: array
+                  forwardClientIDHeader:
+                    description: |-
+                      ForwardClientIDHeader is the name of the header to forward the client identity to the backend
+                      service. The header will be added to the request with the client id as the value.
+                    type: string
+                  sanitize:
+                    description: Sanitize indicates whether to remove the API key
+                      from the request before forwarding it to the backend service.
+                    type: boolean
                 required:
                 - credentialRefs
                 - extractFrom
@@ -243,7 +252,7 @@ spec:
 
                                 The client IP is inferred from the X-Forwarded-For header, a custom header,
                                 or the proxy protocol.
-                                You can use the `ClientIPDetection` or the `EnableProxyProtocol` field in
+                                You can use the `ClientIPDetection` or the `ProxyProtocol` field in
                                 the `ClientTrafficPolicy` to configure how the client IP is detected.
                               items:
                                 description: |-
@@ -540,6 +549,8 @@ spec:
                       Otherwise, if it is set to false or not set (defaulting to false),
                       the system blocks the traffic and returns a HTTP 5xx error, reflecting a fail-closed approach.
                       This setting determines whether to prioritize accessibility over strict security in case of authorization service failure.
+
+                      If set to true, the External Authorization will also be bypassed if its configuration is invalid.
                     type: boolean
                   grpc:
                     description: |-
@@ -935,6 +946,13 @@ spec:
                                     required:
                                     - path
                                     type: object
+                                  initialJitter:
+                                    description: |-
+                                      InitialJitter defines the maximum time Envoy will wait before the first health check.
+                                      Envoy will randomly select a value between 0 and the initial jitter value.
+                                    format: duration
+                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                    type: string
                                   interval:
                                     default: 3s
                                     description: Interval defines the time between
@@ -1267,6 +1285,37 @@ spec:
                                 - Random
                                 - RoundRobin
                                 type: string
+                              zoneAware:
+                                description: ZoneAware defines the configuration related
+                                  to the distribution of requests between locality
+                                  zones.
+                                properties:
+                                  preferLocal:
+                                    description: PreferLocalZone configures zone-aware
+                                      routing to prefer sending traffic to the local
+                                      locality zone.
+                                    properties:
+                                      force:
+                                        description: |-
+                                          ForceLocalZone defines override configuration for forcing all traffic to stay within the local zone instead of the default behavior
+                                          which maintains equal distribution among upstream endpoints while sending as much traffic as possible locally.
+                                        properties:
+                                          minEndpointsInZoneThreshold:
+                                            description: |-
+                                              MinEndpointsInZoneThreshold is the minimum number of upstream endpoints in the local zone required to honor the forceLocalZone
+                                              override. This is useful for protecting zones with fewer endpoints.
+                                            format: int32
+                                            type: integer
+                                        type: object
+                                      minEndpointsThreshold:
+                                        description: MinEndpointsThreshold is the
+                                          minimum number of total upstream endpoints
+                                          across all zones required to enable zone-aware
+                                          routing.
+                                        format: int64
+                                        type: integer
+                                    type: object
+                                type: object
                             required:
                             - type
                             type: object
@@ -1279,6 +1328,10 @@ spec:
                                 and LeastRequest load balancers.
                               rule: 'self.type in [''Random'', ''ConsistentHash'']
                                 ? !has(self.slowStart) : true '
+                            - message: Currently ZoneAware is only supported for LeastRequest,
+                                Random, and RoundRobin load balancers.
+                              rule: 'self.type == ''ConsistentHash'' ? !has(self.zoneAware)
+                                : true '
                           proxyProtocol:
                             description: ProxyProtocol enables the Proxy Protocol
                               when communicating with the backend.
@@ -1371,6 +1424,7 @@ spec:
                                       - 5xx
                                       - gateway-error
                                       - reset
+                                      - reset-before-request
                                       - connect-failure
                                       - retriable-4xx
                                       - refused-stream
@@ -1451,13 +1505,16 @@ spec:
                     x-kubernetes-validations:
                     - message: backendRef or backendRefs needs to be set
                       rule: has(self.backendRef) || self.backendRefs.size() > 0
-                    - message: BackendRefs only supports Service and Backend kind.
+                    - message: BackendRefs only supports Service, ServiceImport, and
+                        Backend kind.
                       rule: 'has(self.backendRefs) ? self.backendRefs.all(f, f.kind
-                        == ''Service'' || f.kind == ''Backend'') : true'
-                    - message: BackendRefs only supports Core and gateway.envoyproxy.io
-                        group.
+                        == ''Service'' || f.kind == ''ServiceImport'' || f.kind ==
+                        ''Backend'') : true'
+                    - message: BackendRefs only supports Core, multicluster.x-k8s.io,
+                        and gateway.envoyproxy.io groups.
                       rule: 'has(self.backendRefs) ? (self.backendRefs.all(f, f.group
-                        == "" || f.group == ''gateway.envoyproxy.io'')) : true'
+                        == "" || f.group == ''multicluster.x-k8s.io'' || f.group ==
+                        ''gateway.envoyproxy.io'')) : true'
                   headersToExtAuth:
                     description: |-
                       HeadersToExtAuth defines the client request headers that will be included
@@ -1867,6 +1924,13 @@ spec:
                                     required:
                                     - path
                                     type: object
+                                  initialJitter:
+                                    description: |-
+                                      InitialJitter defines the maximum time Envoy will wait before the first health check.
+                                      Envoy will randomly select a value between 0 and the initial jitter value.
+                                    format: duration
+                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                    type: string
                                   interval:
                                     default: 3s
                                     description: Interval defines the time between
@@ -2199,6 +2263,37 @@ spec:
                                 - Random
                                 - RoundRobin
                                 type: string
+                              zoneAware:
+                                description: ZoneAware defines the configuration related
+                                  to the distribution of requests between locality
+                                  zones.
+                                properties:
+                                  preferLocal:
+                                    description: PreferLocalZone configures zone-aware
+                                      routing to prefer sending traffic to the local
+                                      locality zone.
+                                    properties:
+                                      force:
+                                        description: |-
+                                          ForceLocalZone defines override configuration for forcing all traffic to stay within the local zone instead of the default behavior
+                                          which maintains equal distribution among upstream endpoints while sending as much traffic as possible locally.
+                                        properties:
+                                          minEndpointsInZoneThreshold:
+                                            description: |-
+                                              MinEndpointsInZoneThreshold is the minimum number of upstream endpoints in the local zone required to honor the forceLocalZone
+                                              override. This is useful for protecting zones with fewer endpoints.
+                                            format: int32
+                                            type: integer
+                                        type: object
+                                      minEndpointsThreshold:
+                                        description: MinEndpointsThreshold is the
+                                          minimum number of total upstream endpoints
+                                          across all zones required to enable zone-aware
+                                          routing.
+                                        format: int64
+                                        type: integer
+                                    type: object
+                                type: object
                             required:
                             - type
                             type: object
@@ -2211,6 +2306,10 @@ spec:
                                 and LeastRequest load balancers.
                               rule: 'self.type in [''Random'', ''ConsistentHash'']
                                 ? !has(self.slowStart) : true '
+                            - message: Currently ZoneAware is only supported for LeastRequest,
+                                Random, and RoundRobin load balancers.
+                              rule: 'self.type == ''ConsistentHash'' ? !has(self.zoneAware)
+                                : true '
                           proxyProtocol:
                             description: ProxyProtocol enables the Proxy Protocol
                               when communicating with the backend.
@@ -2303,6 +2402,7 @@ spec:
                                       - 5xx
                                       - gateway-error
                                       - reset
+                                      - reset-before-request
                                       - connect-failure
                                       - retriable-4xx
                                       - refused-stream
@@ -2404,13 +2504,16 @@ spec:
                     x-kubernetes-validations:
                     - message: backendRef or backendRefs needs to be set
                       rule: has(self.backendRef) || self.backendRefs.size() > 0
-                    - message: BackendRefs only supports Service and Backend kind.
+                    - message: BackendRefs only supports Service, ServiceImport, and
+                        Backend kind.
                       rule: 'has(self.backendRefs) ? self.backendRefs.all(f, f.kind
-                        == ''Service'' || f.kind == ''Backend'') : true'
-                    - message: BackendRefs only supports Core and gateway.envoyproxy.io
-                        group.
+                        == ''Service'' || f.kind == ''ServiceImport'' || f.kind ==
+                        ''Backend'') : true'
+                    - message: BackendRefs only supports Core, multicluster.x-k8s.io,
+                        and gateway.envoyproxy.io groups.
                       rule: 'has(self.backendRefs) ? (self.backendRefs.all(f, f.group
-                        == "" || f.group == ''gateway.envoyproxy.io'')) : true'
+                        == "" || f.group == ''multicluster.x-k8s.io'' || f.group ==
+                        ''gateway.envoyproxy.io'')) : true'
                   recomputeRoute:
                     description: |-
                       RecomputeRoute clears the route cache and recalculates the routing decision.
@@ -2995,6 +3098,13 @@ spec:
                                           required:
                                           - path
                                           type: object
+                                        initialJitter:
+                                          description: |-
+                                            InitialJitter defines the maximum time Envoy will wait before the first health check.
+                                            Envoy will randomly select a value between 0 and the initial jitter value.
+                                          format: duration
+                                          pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                          type: string
                                         interval:
                                           default: 3s
                                           description: Interval defines the time between
@@ -3337,6 +3447,37 @@ spec:
                                       - Random
                                       - RoundRobin
                                       type: string
+                                    zoneAware:
+                                      description: ZoneAware defines the configuration
+                                        related to the distribution of requests between
+                                        locality zones.
+                                      properties:
+                                        preferLocal:
+                                          description: PreferLocalZone configures
+                                            zone-aware routing to prefer sending traffic
+                                            to the local locality zone.
+                                          properties:
+                                            force:
+                                              description: |-
+                                                ForceLocalZone defines override configuration for forcing all traffic to stay within the local zone instead of the default behavior
+                                                which maintains equal distribution among upstream endpoints while sending as much traffic as possible locally.
+                                              properties:
+                                                minEndpointsInZoneThreshold:
+                                                  description: |-
+                                                    MinEndpointsInZoneThreshold is the minimum number of upstream endpoints in the local zone required to honor the forceLocalZone
+                                                    override. This is useful for protecting zones with fewer endpoints.
+                                                  format: int32
+                                                  type: integer
+                                              type: object
+                                            minEndpointsThreshold:
+                                              description: MinEndpointsThreshold is
+                                                the minimum number of total upstream
+                                                endpoints across all zones required
+                                                to enable zone-aware routing.
+                                              format: int64
+                                              type: integer
+                                          type: object
+                                      type: object
                                   required:
                                   - type
                                   type: object
@@ -3349,6 +3490,11 @@ spec:
                                       for RoundRobin and LeastRequest load balancers.
                                     rule: 'self.type in [''Random'', ''ConsistentHash'']
                                       ? !has(self.slowStart) : true '
+                                  - message: Currently ZoneAware is only supported
+                                      for LeastRequest, Random, and RoundRobin load
+                                      balancers.
+                                    rule: 'self.type == ''ConsistentHash'' ? !has(self.zoneAware)
+                                      : true '
                                 proxyProtocol:
                                   description: ProxyProtocol enables the Proxy Protocol
                                     when communicating with the backend.
@@ -3441,6 +3587,7 @@ spec:
                                             - 5xx
                                             - gateway-error
                                             - reset
+                                            - reset-before-request
                                             - connect-failure
                                             - retriable-4xx
                                             - refused-stream
@@ -3563,8 +3710,57 @@ spec:
                     description: |-
                       The client ID to be used in the OIDC
                       [Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest).
+
+                      Only one of clientID or clientIDRef must be set.
                     minLength: 1
                     type: string
+                  clientIDRef:
+                    description: |-
+                      The Kubernetes secret which contains the client ID to be used in the
+                      [Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest).
+                      Exactly one of clientID or clientIDRef must be set.
+                      This is an Opaque secret. The client ID should be stored in the key "client-id".
+
+                      Only one of clientID or clientIDRef must be set.
+                    properties:
+                      group:
+                        default: ""
+                        description: |-
+                          Group is the group of the referent. For example, "gateway.networking.k8s.io".
+                          When unspecified or empty string, core API group is inferred.
+                        maxLength: 253
+                        pattern: ^$|^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                        type: string
+                      kind:
+                        default: Secret
+                        description: Kind is kind of the referent. For example "Secret".
+                        maxLength: 63
+                        minLength: 1
+                        pattern: ^[a-zA-Z]([-a-zA-Z0-9]*[a-zA-Z0-9])?$
+                        type: string
+                      name:
+                        description: Name is the name of the referent.
+                        maxLength: 253
+                        minLength: 1
+                        type: string
+                      namespace:
+                        description: |-
+                          Namespace is the namespace of the referenced object. When unspecified, the local
+                          namespace is inferred.
+
+                          Note that when a namespace different than the local namespace is specified,
+                          a ReferenceGrant object is required in the referent namespace to allow that
+                          namespace's owner to accept the reference. See the ReferenceGrant
+                          documentation for details.
+
+                          Support: Core
+                        maxLength: 63
+                        minLength: 1
+                        pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
+                        type: string
+                    required:
+                    - name
+                    type: object
                   clientSecret:
                     description: |-
                       The Kubernetes secret which contains the OIDC client secret to be used in the
@@ -4131,6 +4327,13 @@ spec:
                                     required:
                                     - path
                                     type: object
+                                  initialJitter:
+                                    description: |-
+                                      InitialJitter defines the maximum time Envoy will wait before the first health check.
+                                      Envoy will randomly select a value between 0 and the initial jitter value.
+                                    format: duration
+                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                    type: string
                                   interval:
                                     default: 3s
                                     description: Interval defines the time between
@@ -4463,6 +4666,37 @@ spec:
                                 - Random
                                 - RoundRobin
                                 type: string
+                              zoneAware:
+                                description: ZoneAware defines the configuration related
+                                  to the distribution of requests between locality
+                                  zones.
+                                properties:
+                                  preferLocal:
+                                    description: PreferLocalZone configures zone-aware
+                                      routing to prefer sending traffic to the local
+                                      locality zone.
+                                    properties:
+                                      force:
+                                        description: |-
+                                          ForceLocalZone defines override configuration for forcing all traffic to stay within the local zone instead of the default behavior
+                                          which maintains equal distribution among upstream endpoints while sending as much traffic as possible locally.
+                                        properties:
+                                          minEndpointsInZoneThreshold:
+                                            description: |-
+                                              MinEndpointsInZoneThreshold is the minimum number of upstream endpoints in the local zone required to honor the forceLocalZone
+                                              override. This is useful for protecting zones with fewer endpoints.
+                                            format: int32
+                                            type: integer
+                                        type: object
+                                      minEndpointsThreshold:
+                                        description: MinEndpointsThreshold is the
+                                          minimum number of total upstream endpoints
+                                          across all zones required to enable zone-aware
+                                          routing.
+                                        format: int64
+                                        type: integer
+                                    type: object
+                                type: object
                             required:
                             - type
                             type: object
@@ -4475,6 +4709,10 @@ spec:
                                 and LeastRequest load balancers.
                               rule: 'self.type in [''Random'', ''ConsistentHash'']
                                 ? !has(self.slowStart) : true '
+                            - message: Currently ZoneAware is only supported for LeastRequest,
+                                Random, and RoundRobin load balancers.
+                              rule: 'self.type == ''ConsistentHash'' ? !has(self.zoneAware)
+                                : true '
                           proxyProtocol:
                             description: ProxyProtocol enables the Proxy Protocol
                               when communicating with the backend.
@@ -4567,6 +4805,7 @@ spec:
                                       - 5xx
                                       - gateway-error
                                       - reset
+                                      - reset-before-request
                                       - connect-failure
                                       - retriable-4xx
                                       - refused-stream
@@ -4643,6 +4882,13 @@ spec:
                                 type: object
                             type: object
                         type: object
+                      endSessionEndpoint:
+                        description: |-
+                          The OIDC Provider's [end session endpoint](https://openid.net/specs/openid-connect-core-1_0.html#RPLogout).
+
+                          If the end session endpoint is provided, EG will use it to log out the user from the OIDC Provider when the user accesses the logout path.
+                          EG will also try to discover the end session endpoint from the provider's [Well-Known Configuration Endpoint](https://openid.net/specs/openid-connect-discovery-1_0.html#ProviderConfigurationResponse) when authorizationEndpoint or tokenEndpoint is not provided.
+                        type: string
                       issuer:
                         description: |-
                           The OIDC Provider's [issuer identifier](https://openid.net/specs/openid-connect-discovery-1_0.html#IssuerDiscovery).
@@ -4700,10 +4946,13 @@ spec:
                       type: string
                     type: array
                 required:
-                - clientID
                 - clientSecret
                 - provider
                 type: object
+                x-kubernetes-validations:
+                - message: only one of clientID or clientIDRef must be set
+                  rule: (has(self.clientID) && !has(self.clientIDRef)) || (!has(self.clientID)
+                    && has(self.clientIDRef))
               targetRef:
                 description: |-
                   TargetRef is the name of the resource this policy is being attached to.
@@ -4882,18 +5131,12 @@ spec:
             - message: this policy can only have a targetRef.kind of Gateway/HTTPRoute/GRPCRoute
               rule: 'has(self.targetRef) ? self.targetRef.kind in [''Gateway'', ''HTTPRoute'',
                 ''GRPCRoute''] : true'
-            - message: this policy supports the sectionName field only for kind Gateway
-              rule: 'has(self.targetRef) ? self.targetRef.kind == ''Gateway'' || !has(self.targetRef.sectionName)
-                : true'
             - message: this policy can only have a targetRefs[*].group of gateway.networking.k8s.io
               rule: 'has(self.targetRefs) ? self.targetRefs.all(ref, ref.group ==
                 ''gateway.networking.k8s.io'') : true '
             - message: this policy can only have a targetRefs[*].kind of Gateway/HTTPRoute/GRPCRoute
               rule: 'has(self.targetRefs) ? self.targetRefs.all(ref, ref.kind in [''Gateway'',
                 ''HTTPRoute'', ''GRPCRoute'']) : true '
-            - message: this policy supports the sectionName field only for kind Gateway
-              rule: 'has(self.targetRefs) ? self.targetRefs.all(ref, ref.kind == ''Gateway''
-                || !has(ref.sectionName)) : true'
             - message: if authorization.rules.principal.jwt is used, jwt must be defined
               rule: '(has(self.authorization) && has(self.authorization.rules) &&
                 self.authorization.rules.exists(r, has(r.principal.jwt))) ? has(self.jwt)

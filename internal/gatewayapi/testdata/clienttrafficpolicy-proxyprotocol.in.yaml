@@ -5,7 +5,8 @@ clientTrafficPolicies:
     namespace: envoy-gateway
     name: target-gateway-1-section-http-1
   spec:
-    enableProxyProtocol: true
+    proxyProtocol:
+      optional: true
     targetRef:
       group: gateway.networking.k8s.io
       kind: Gateway

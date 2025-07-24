@@ -21,6 +21,9 @@
             credentials:
             - client: client-1
               key: key1
+            forwarding:
+              header: X-API-KEY-CLIENT-ID
+              hideCredentials: true
             keySources:
             - header: X-API-KEY
             - header: X-API-KEY-2
@@ -40,5 +43,6 @@
         statPrefix: http-10080
         useRemoteAddress: true
     name: default/gateway-1/http
+  maxConnectionsToAcceptPerSocketEvent: 1
   name: default/gateway-1/http
   perConnectionBufferLimitBytes: 32768

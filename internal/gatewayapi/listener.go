@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"net"
 	"strings"
 
 	"github.com/google/cel-go/cel"
@@ -24,7 +25,7 @@ import (
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/utils"
 	"github.com/envoyproxy/gateway/internal/utils/naming"
-	"github.com/envoyproxy/gateway/internal/utils/net"
+	netutils "github.com/envoyproxy/gateway/internal/utils/net"
 	"github.com/envoyproxy/gateway/internal/xds/bootstrap"
 )
 
@@ -105,10 +106,10 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR resource
 				continue
 			}
 
-			address := net.IPv4ListenerAddress
+			address := netutils.IPv4ListenerAddress
 			ipFamily := getEnvoyIPFamily(gateway.envoyProxy)
 			if ipFamily != nil && (*ipFamily == egv1a1.IPv6 || *ipFamily == egv1a1.DualStack) {
-				address = net.IPv6ListenerAddress
+				address = netutils.IPv6ListenerAddress
 			}
 
 			// Add the listener to the Xds IR
@@ -434,14 +435,14 @@ func buildListenerMetadata(listener *ListenerContext, gateway *GatewayContext) *
 func (t *Translator) processProxyReadyListener(xdsIR *ir.Xds, envoyProxy *egv1a1.EnvoyProxy) {
 	var (
 		ipFamily = egv1a1.IPv4
-		address  = net.IPv4ListenerAddress
+		address  = netutils.IPv4ListenerAddress
 	)
 
 	if envoyProxy != nil && envoyProxy.Spec.IPFamily != nil {
 		ipFamily = *envoyProxy.Spec.IPFamily
 	}
 	if ipFamily == egv1a1.IPv6 || ipFamily == egv1a1.DualStack {
-		address = net.IPv6ListenerAddress
+		address = netutils.IPv6ListenerAddress
 	}
 
 	xdsIR.ReadyListener = &ir.ReadyListener{
@@ -590,11 +591,6 @@ func (t *Translator) processAccessLog(envoyproxy *egv1a1.EnvoyProxy, resources *
 					}
 					irAccessLog.Text = append(irAccessLog.Text, al)
 				case egv1a1.ProxyAccessLogFormatTypeJSON:
-					if len(format.JSON) == 0 {
-						// TODO: use a default JSON format if not specified?
-						continue
-					}
-
 					al := &ir.JSONAccessLog{
 						JSON:       format.JSON,
 						Path:       sink.File.Path,
@@ -622,6 +618,10 @@ func (t *Translator) processAccessLog(envoyproxy *egv1a1.EnvoyProxy, resources *
 				ds, traffic, err := t.processBackendRefs(settingName, sink.ALS.BackendCluster, envoyproxy.Namespace, resources, envoyproxy)
 				if err != nil {
 					return nil, err
+				}
+				// ALS should always use GRPC protocol. Setting this adds http2 by default to the cluster.
+				for _, setting := range ds {
+					setting.Protocol = ir.GRPC
 				}
 
 				al := &ir.ALSAccessLog{
@@ -742,6 +742,11 @@ func (t *Translator) processTracing(gw *gwapiv1.Gateway, envoyproxy *egv1a1.Envo
 		serviceName = string(gw.Spec.GatewayClassName)
 	}
 
+	// Use configured service name if provided
+	if tracing.Provider.ServiceName != nil {
+		serviceName = *tracing.Provider.ServiceName
+	}
+
 	return &ir.Tracing{
 		Authority:    authority,
 		ServiceName:  serviceName,
@@ -840,12 +845,19 @@ func (t *Translator) processBackendRefs(name string, backendCluster egv1a1.Backe
 }
 
 func destinationSettingFromHostAndPort(name, host string, port uint32) []*ir.DestinationSetting {
+	// check if host is an IP address or a hostname
+	addressType := ir.FQDN
+	if net.ParseIP(host) != nil {
+		addressType = ir.IP
+	}
+
 	return []*ir.DestinationSetting{
 		{
-			Name:      name,
-			Weight:    ptr.To[uint32](1),
-			Protocol:  ir.GRPC,
-			Endpoints: []*ir.DestinationEndpoint{ir.NewDestEndpoint(host, port, false, nil)},
+			Name:        name,
+			Weight:      ptr.To[uint32](1),
+			Protocol:    ir.GRPC,
+			AddressType: ptr.To(addressType),
+			Endpoints:   []*ir.DestinationEndpoint{ir.NewDestEndpoint(nil, host, port, false, nil)},
 		},
 	}
 }

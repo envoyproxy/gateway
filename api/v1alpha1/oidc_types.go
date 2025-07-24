@@ -10,9 +10,13 @@ import (
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 )
 
-const OIDCClientSecretKey = "client-secret"
+const (
+	OIDCClientSecretKey = "client-secret"
+	OIDCClientIDKey     = "client-id"
+)
 
 // OIDC defines the configuration for the OpenID Connect (OIDC) authentication.
+// +kubebuilder:validation:XValidation:rule="(has(self.clientID) && !has(self.clientIDRef)) || (!has(self.clientID) && has(self.clientIDRef))", message="only one of clientID or clientIDRef must be set"
 type OIDC struct {
 	// The OIDC Provider configuration.
 	Provider OIDCProvider `json:"provider"`
@@ -20,8 +24,20 @@ type OIDC struct {
 	// The client ID to be used in the OIDC
 	// [Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest).
 	//
+	// Only one of clientID or clientIDRef must be set.
+	// +optional
 	// +kubebuilder:validation:MinLength=1
-	ClientID string `json:"clientID"`
+	ClientID *string `json:"clientID,omitempty"`
+
+	// The Kubernetes secret which contains the client ID to be used in the
+	// [Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest).
+	// Exactly one of clientID or clientIDRef must be set.
+	// This is an Opaque secret. The client ID should be stored in the key "client-id".
+	//
+	// Only one of clientID or clientIDRef must be set.
+	//
+	// +optional
+	ClientIDRef *gwapiv1.SecretObjectReference `json:"clientIDRef,omitempty"`
 
 	// The Kubernetes secret which contains the OIDC client secret to be used in the
 	// [Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest).
@@ -162,6 +178,13 @@ type OIDCProvider struct {
 	//
 	// +optional
 	TokenEndpoint *string `json:"tokenEndpoint,omitempty"`
+
+	// The OIDC Provider's [end session endpoint](https://openid.net/specs/openid-connect-core-1_0.html#RPLogout).
+	//
+	// If the end session endpoint is provided, EG will use it to log out the user from the OIDC Provider when the user accesses the logout path.
+	// EG will also try to discover the end session endpoint from the provider's [Well-Known Configuration Endpoint](https://openid.net/specs/openid-connect-discovery-1_0.html#ProviderConfigurationResponse) when authorizationEndpoint or tokenEndpoint is not provided.
+	// +optional
+	EndSessionEndpoint *string `json:"endSessionEndpoint,omitempty"`
 }
 
 // OIDCDenyRedirect defines headers to match against the request to deny redirect to the OIDC Provider.

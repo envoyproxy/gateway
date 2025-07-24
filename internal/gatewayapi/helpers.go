@@ -485,7 +485,8 @@ type policyTargetRouteKey struct {
 
 type policyRouteTargetContext struct {
 	RouteContext
-	attached bool
+	attached             bool
+	attachedToRouteRules sets.Set[string]
 }
 
 type policyGatewayTargetContext struct {
@@ -706,5 +707,24 @@ func getCaCertFromSecret(s *corev1.Secret) ([]byte, bool) {
 		return data, true
 	default:
 		return nil, false
+	}
+}
+
+func irStringMatch(name string, match egv1a1.StringMatch) *ir.StringMatch {
+	matchType := egv1a1.StringMatchExact
+	if match.Type != nil {
+		matchType = *match.Type
+	}
+	switch matchType {
+	case egv1a1.StringMatchExact:
+		return &ir.StringMatch{Name: name, Exact: &match.Value}
+	case egv1a1.StringMatchPrefix:
+		return &ir.StringMatch{Name: name, Prefix: &match.Value}
+	case egv1a1.StringMatchSuffix:
+		return &ir.StringMatch{Name: name, Suffix: &match.Value}
+	case egv1a1.StringMatchRegularExpression:
+		return &ir.StringMatch{Name: name, SafeRegex: &match.Value}
+	default:
+		return nil
 	}
 }

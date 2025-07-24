@@ -231,6 +231,7 @@ type KubernetesContainerSpec struct {
 	// Image specifies the EnvoyProxy container image to be used including a tag, instead of the default image.
 	// This field is mutually exclusive with ImageRepository.
 	//
+	// +kubebuilder:validation:XValidation:rule="self.matches('^[a-zA-Z0-9._/-]+:[a-zA-Z0-9._-]+$')",message="Image must include a tag and allowed characters only (e.g., 'repo:tag')."
 	// +optional
 	Image *string `json:"image,omitempty"`
 
@@ -238,6 +239,7 @@ type KubernetesContainerSpec struct {
 	// The default tag will be used.
 	// This field is mutually exclusive with Image.
 	//
+	// +kubebuilder:validation:XValidation:rule="self.matches('^[a-zA-Z0-9._/-]+$')",message="ImageRepository must contain only allowed characters and must not include a tag or any colons."
 	// +optional
 	ImageRepository *string `json:"imageRepository,omitempty"`
 
@@ -385,7 +387,7 @@ const (
 // XDSTranslatorHook defines the types of hooks that an Envoy Gateway extension may support
 // for the xds-translator
 //
-// +kubebuilder:validation:Enum=VirtualHost;Route;HTTPListener;Translation
+// +kubebuilder:validation:Enum=VirtualHost;Route;HTTPListener;Translation;Cluster
 type XDSTranslatorHook string
 
 const (
@@ -393,6 +395,7 @@ const (
 	XDSRoute        XDSTranslatorHook = "Route"
 	XDSHTTPListener XDSTranslatorHook = "HTTPListener"
 	XDSTranslation  XDSTranslatorHook = "Translation"
+	XDSCluster      XDSTranslatorHook = "Cluster"
 )
 
 // StringMatch defines how to match any strings.

@@ -146,7 +146,10 @@ securityPolicies:
     uid: 08335a80-83ba-4592-888f-6ac0bba44ce4
   spec:
     oidc:
-      clientID: client2.oauth.foo.com
+      clientIDRef:
+        group: null
+        kind: null
+        name: client2-secret
       clientSecret:
         group: null
         kind: null

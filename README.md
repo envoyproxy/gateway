@@ -45,7 +45,7 @@ face scheduling difficulties for the weekly meetings. Please refer to the meetin
 
 * [Meeting details][meeting]
 
-[meeting]: https://docs.google.com/document/d/1leqwsHX8N-XxNEyTflYjRur462ukFxd19Rnk3Uzy55I/edit?usp=sharing
+[meeting]: https://docs.google.com/document/d/1i5wa1VsxIbQw7jbWvGmvy8C4Zpp7SGV1aVViSLgqU4M/edit?usp=sharing
 [blog]: https://blog.envoyproxy.io/introducing-envoy-gateway-ad385cc59532
 [Envoy Slack workspace]: https://communityinviter.com/apps/envoyproxy/envoy
 [Envoy Gateway channel]: https://envoyproxy.slack.com/archives/C03E6NHLESV
