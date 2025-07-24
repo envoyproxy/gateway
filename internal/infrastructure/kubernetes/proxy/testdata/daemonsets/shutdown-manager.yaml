@@ -54,7 +54,7 @@ spec:
                 address: 127.0.0.1
                 port_value: 19000
           cluster_manager:
-            local_cluster_name: $(ENVOY_PROXY_INFRA_NAME)
+            local_cluster_name: envoy-default-37a8eec1
           node:
             locality:
               zone: $(ENVOY_SERVICE_ZONE)
@@ -131,7 +131,7 @@ spec:
             - connect_timeout: 10s
               lb_policy: ROUND_ROBIN
               load_assignment:
-                cluster_name: $(ENVOY_PROXY_INFRA_NAME)
+                cluster_name: envoy-default-37a8eec1
                 endpoints:
                 - lb_endpoints:
                   - endpoint:
@@ -143,7 +143,7 @@ spec:
                   load_balancing_weight: 1
                   locality:
                     zone: $(ENVOY_SERVICE_ZONE)
-              name: $(ENVOY_PROXY_INFRA_NAME)
+              name: envoy-default-37a8eec1
               type: STATIC
             - connect_timeout: 10s
               load_assignment:
@@ -216,8 +216,6 @@ spec:
             fieldRef:
               apiVersion: v1
               fieldPath: metadata.annotations['topology.kubernetes.io/zone']
-        - name: ENVOY_PROXY_INFRA_NAME
-          value: envoy-default-37a8eec1
         image: docker.io/envoyproxy/envoy:distroless-dev
         imagePullPolicy: IfNotPresent
         lifecycle:
@@ -310,8 +308,6 @@ spec:
             fieldRef:
               apiVersion: v1
               fieldPath: metadata.annotations['topology.kubernetes.io/zone']
-        - name: ENVOY_PROXY_INFRA_NAME
-          value: envoy-default-37a8eec1
         image: envoyproxy/gateway-dev:v1.2.3
         imagePullPolicy: IfNotPresent
         lifecycle:

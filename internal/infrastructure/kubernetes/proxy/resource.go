@@ -33,8 +33,6 @@ const (
 	envoyPodEnvVar = "ENVOY_POD_NAME"
 	// envoyZoneEnvVar is the Envoy pod locality zone name
 	envoyZoneEnvVar = "ENVOY_SERVICE_ZONE"
-	// envoyInfraNameEnvVar is the name of the envoy proxy infrastructure
-	envoyInfraNameEnvVar = "ENVOY_PROXY_INFRA_NAME"
 )
 
 // ExpectedResourceHashedName returns expected resource hashed name including up to the 48 characters of the original name.
@@ -111,6 +109,7 @@ func expectedProxyContainers(infra *ir.ProxyInfra,
 		},
 		MaxHeapSizeBytes: maxHeapSizeBytes,
 		XdsServerHost:    ptr.To(fmt.Sprintf("%s.%s.svc.%s", config.EnvoyGatewayServiceName, controllerNamespace, dnsDomain)),
+		ProxyInfraName:   ptr.To(ExpectedResourceHashedName(infra.Name)),
 	}
 
 	args, err := common.BuildProxyArgs(infra, shutdownConfig, bootstrapConfigOptions, fmt.Sprintf("$(%s)", envoyPodEnvVar), gatewayNamespaceMode)
@@ -130,7 +129,7 @@ func expectedProxyContainers(infra *ir.ProxyInfra,
 			ImagePullPolicy:          corev1.PullIfNotPresent,
 			Command:                  []string{"envoy"},
 			Args:                     args,
-			Env:                      expectedContainerEnv(infra, containerSpec),
+			Env:                      expectedContainerEnv(containerSpec),
 			Resources:                *containerSpec.Resources,
 			SecurityContext:          expectedEnvoySecurityContext(containerSpec),
 			Ports:                    ports,
@@ -192,7 +191,7 @@ func expectedProxyContainers(infra *ir.ProxyInfra,
 			ImagePullPolicy:          corev1.PullIfNotPresent,
 			Command:                  []string{"envoy-gateway"},
 			Args:                     expectedShutdownManagerArgs(shutdownConfig),
-			Env:                      expectedContainerEnv(infra, nil),
+			Env:                      expectedContainerEnv(nil),
 			Resources:                *egv1a1.DefaultShutdownManagerContainerResourceRequirements(),
 			TerminationMessagePolicy: corev1.TerminationMessageReadFile,
 			TerminationMessagePath:   "/dev/termination-log",
@@ -402,7 +401,7 @@ func sdsConfigMapItems(gatewayNamespaceMode bool) []corev1.KeyToPath {
 }
 
 // expectedContainerEnv returns expected proxy container envs.
-func expectedContainerEnv(infra *ir.ProxyInfra, containerSpec *egv1a1.KubernetesContainerSpec) []corev1.EnvVar {
+func expectedContainerEnv(containerSpec *egv1a1.KubernetesContainerSpec) []corev1.EnvVar {
 	env := []corev1.EnvVar{
 		{
 			Name: envoyNsEnvVar,
@@ -430,10 +429,6 @@ func expectedContainerEnv(infra *ir.ProxyInfra, containerSpec *egv1a1.Kubernetes
 					FieldPath:  fmt.Sprintf("metadata.annotations['%s']", corev1.LabelTopologyZone),
 				},
 			},
-		},
-		{
-			Name:  envoyInfraNameEnvVar,
-			Value: ExpectedResourceHashedName(infra.Name),
 		},
 	}
 

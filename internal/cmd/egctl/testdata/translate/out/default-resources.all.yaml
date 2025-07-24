@@ -20,7 +20,7 @@ envoyProxyForGatewayClass:
               address: 127.0.0.1
               port_value: 19000
         cluster_manager:
-          local_cluster_name: $(ENVOY_PROXY_INFRA_NAME)
+          local_cluster_name: local_cluster
         node:
           locality:
             zone: $(ENVOY_SERVICE_ZONE)
@@ -97,7 +97,7 @@ envoyProxyForGatewayClass:
           - connect_timeout: 10s
             lb_policy: ROUND_ROBIN
             load_assignment:
-              cluster_name: $(ENVOY_PROXY_INFRA_NAME)
+              cluster_name: local_cluster
               endpoints:
               - lb_endpoints:
                 - endpoint:
@@ -109,7 +109,7 @@ envoyProxyForGatewayClass:
                 load_balancing_weight: 1
                 locality:
                   zone: $(ENVOY_SERVICE_ZONE)
-            name: $(ENVOY_PROXY_INFRA_NAME)
+            name: local_cluster
             type: STATIC
           - connect_timeout: 10s
             load_assignment:
@@ -560,7 +560,7 @@ xds:
               address: 127.0.0.1
               portValue: 19000
         clusterManager:
-          localClusterName: $(ENVOY_PROXY_INFRA_NAME)
+          localClusterName: local_cluster
         dynamicResources:
           adsConfig:
             apiType: DELTA_GRPC
@@ -608,7 +608,7 @@ xds:
             type: STATIC
           - connectTimeout: 10s
             loadAssignment:
-              clusterName: $(ENVOY_PROXY_INFRA_NAME)
+              clusterName: local_cluster
               endpoints:
               - lbEndpoints:
                 - endpoint:
@@ -620,7 +620,7 @@ xds:
                 loadBalancingWeight: 1
                 locality:
                   zone: $(ENVOY_SERVICE_ZONE)
-            name: $(ENVOY_PROXY_INFRA_NAME)
+            name: local_cluster
             type: STATIC
           - connectTimeout: 10s
             loadAssignment:
