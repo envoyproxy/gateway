@@ -20154,6 +20154,8 @@ spec:
                   Client Address into the X-Forwarded-For header.
                   Note Proxy Protocol must be present when this field is set, else the connection
                   is closed.
+
+                  Deprecated: Use ProxyProtocol instead.
                 type: boolean
               headers:
                 description: HeaderSettings provides configuration for header management.
@@ -20485,6 +20487,24 @@ spec:
                     - UnescapeAndForward
                     - UnescapeAndRedirect
                     type: string
+                type: object
+              proxyProtocol:
+                description: |-
+                  ProxyProtocol configures the Proxy Protocol settings. When configured,
+                  the Proxy Protocol header will be interpreted and the Client Address
+                  will be added into the X-Forwarded-For header.
+                  If both EnableProxyProtocol and ProxyProtocol are set, ProxyProtocol takes precedence.
+                minProperties: 0
+                properties:
+                  optional:
+                    description: |-
+                      Optional allows requests without a Proxy Protocol header to be proxied.
+                      If set to true, the listener will accept requests without a Proxy Protocol header.
+                      If set to false, the listener will reject requests without a Proxy Protocol header.
+                      If not set, the default behavior is to reject requests without a Proxy Protocol header.
+                      Warning: Optional breaks conformance with the specification. Only enable if ALL traffic to the listener comes from a trusted source.
+                      For more information on security implications, see haproxy.org/download/2.1/doc/proxy-protocol.txt
+                    type: boolean
                 type: object
               targetRef:
                 description: |-
@@ -38778,6 +38798,18 @@ spec:
                             format: int32
                             minimum: 0
                             type: integer
+                          serviceName:
+                            description: |-
+                              ServiceName defines the service name to use in tracing configuration.
+                              If not set, Envoy Gateway will use a default service name set as
+                              "name.namespace" (e.g., "my-gateway.default").
+                              Note: This field is only supported for OpenTelemetry and Datadog tracing providers.
+                              For Zipkin, the service name in traces is always derived from the Envoy --service-cluster flag
+                              (typically "namespace/name" format). Setting this field has no effect for Zipkin.
+                            type: string
+                            x-kubernetes-validations:
+                            - message: serviceName cannot be empty if provided
+                              rule: self != ""
                           type:
                             default: OpenTelemetry
                             description: Type defines the tracing provider type.
@@ -39420,7 +39452,7 @@ spec:
 
                                 The client IP is inferred from the X-Forwarded-For header, a custom header,
                                 or the proxy protocol.
-                                You can use the `ClientIPDetection` or the `EnableProxyProtocol` field in
+                                You can use the `ClientIPDetection` or the `ProxyProtocol` field in
                                 the `ClientTrafficPolicy` to configure how the client IP is detected.
                               items:
                                 description: |-
