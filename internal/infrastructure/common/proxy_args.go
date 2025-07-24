@@ -36,11 +36,14 @@ func BuildProxyArgs(
 		serviceCluster = fmt.Sprintf("%s/%s", infra.Namespace, infra.Name)
 	}
 
-	bootstrapConfigOptions.ServiceClusterName = ptr.To(serviceCluster)
+	if bootstrapConfigOptions != nil {
+		// Configure local Envoy ServiceCluster
+		bootstrapConfigOptions.ServiceClusterName = ptr.To(serviceCluster)
 
-	// If IPFamily is not set, try to determine it from the infrastructure.
-	if bootstrapConfigOptions != nil && bootstrapConfigOptions.IPFamily == nil {
-		bootstrapConfigOptions.IPFamily = getIPFamily(infra)
+		// If IPFamily is not set, try to determine it from the infrastructure.
+		if bootstrapConfigOptions.IPFamily == nil {
+			bootstrapConfigOptions.IPFamily = getIPFamily(infra)
+		}
 	}
 
 	bootstrapConfigOptions.GatewayNamespaceMode = gatewayNamespaceMode
