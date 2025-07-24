@@ -6697,6 +6697,11 @@ func (in *TracingProvider) DeepCopyInto(out *TracingProvider) {
 		*out = new(string)
 		**out = **in
 	}
+	if in.ServiceName != nil {
+		in, out := &in.ServiceName, &out.ServiceName
+		*out = new(string)
+		**out = **in
+	}
 	if in.Zipkin != nil {
 		in, out := &in.Zipkin, &out.Zipkin
 		*out = new(ZipkinTracingProvider)

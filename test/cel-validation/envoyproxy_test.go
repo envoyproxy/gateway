@@ -1162,6 +1162,59 @@ func TestEnvoyProxyProvider(t *testing.T) {
 			wantErrors: []string{"host or backendRefs needs to be set"},
 		},
 		{
+			desc: "valid-tracing-service-name",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					Telemetry: &egv1a1.ProxyTelemetry{
+						Tracing: &egv1a1.ProxyTracing{
+							Provider: egv1a1.TracingProvider{
+								Type: egv1a1.TracingProviderTypeOpenTelemetry,
+								BackendCluster: egv1a1.BackendCluster{
+									BackendRefs: []egv1a1.BackendRef{
+										{
+											BackendObjectReference: gwapiv1.BackendObjectReference{
+												Name: "fake-service",
+												Kind: ptr.To(gwapiv1.Kind("Service")),
+												Port: ptr.To(gwapiv1.PortNumber(880)),
+											},
+										},
+									},
+								},
+								ServiceName: ptr.To("my-custom-service"),
+							},
+						},
+					},
+				}
+			},
+		},
+		{
+			desc: "invalid-tracing-empty-service-name",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					Telemetry: &egv1a1.ProxyTelemetry{
+						Tracing: &egv1a1.ProxyTracing{
+							Provider: egv1a1.TracingProvider{
+								Type: egv1a1.TracingProviderTypeOpenTelemetry,
+								BackendCluster: egv1a1.BackendCluster{
+									BackendRefs: []egv1a1.BackendRef{
+										{
+											BackendObjectReference: gwapiv1.BackendObjectReference{
+												Name: "fake-service",
+												Kind: ptr.To(gwapiv1.Kind("Service")),
+												Port: ptr.To(gwapiv1.PortNumber(880)),
+											},
+										},
+									},
+								},
+								ServiceName: ptr.To(""),
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{"serviceName cannot be empty if provided"},
+		},
+		{
 			desc: "ProxyHpa-maxReplicas-is-required",
 			mutate: func(envoy *egv1a1.EnvoyProxy) {
 				envoy.Spec = egv1a1.EnvoyProxySpec{
