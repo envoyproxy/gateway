@@ -179,6 +179,7 @@ xdsIR:
     accessLog:
       json:
       - path: /dev/stdout
+    globalResources: {}
     http:
     - address: 0.0.0.0
       hostnames:
@@ -253,6 +254,18 @@ xdsIR:
           name: envoy-gateway/tls-secret-bar-example-com
           privateKey: '[redacted]'
       tlsOverlaps: true
+    proxyServiceCluster:
+      destination:
+        addressType: IP
+        endpoints:
+        - host: 7.6.5.4
+          port: 8080
+          zone: zone1
+        name: envoy-envoy-gateway-class-3b1df594
+        preferLocal:
+          minEndpointsThreshold: 1
+        protocol: HTTP
+      name: envoy-envoy-gateway-class-3b1df594
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4

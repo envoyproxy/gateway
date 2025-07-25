@@ -108,6 +108,7 @@ xdsIR:
     accessLog:
       json:
       - path: /dev/stdout
+    globalResources: {}
     http:
     - address: 0.0.0.0
       hostnames:
@@ -162,6 +163,18 @@ xdsIR:
         - certificate: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUJ5RENDQVU2Z0F3SUJBZ0lVUWltVUFlSExNdHo0dEdSdG5oNG9qWHRhVXpzd0NnWUlLb1pJemowRUF3SXcKR3pFWk1CY0dBMVVFQXd3UWRHVnpkQzVsZUdGdGNHeGxMbU52YlRBZUZ3MHlOREExTWpVd09URXhNemRhRncwegpOREExTWpNd09URXhNemRhTUJzeEdUQVhCZ05WQkFNTUVIUmxjM1F1WlhoaGJYQnNaUzVqYjIwd2RqQVFCZ2NxCmhrak9QUUlCQmdVcmdRUUFJZ05pQUFSNHkwY0xlRWg2clpDeDJTMUtMOWsxSDh3bzFxOUtiY2MyZnUwYWlCK3AKcXFmd0JLQWNocnZKUlQ3NCt5Z01QcVIvNzRKN3U2eDNTWkE3VktkMWdoYVBaQXVJalBRMWtmd0g5Q3ZpTHNuUQpnckN4Q1ZTZTZkbXEva3BqMU10QnJTZWpVekJSTUIwR0ExVWREZ1FXQkJUYVNlb1RtY3JlRU5Kd0t5ZmlZS3JnCjlIdnFVREFmQmdOVkhTTUVHREFXZ0JUYVNlb1RtY3JlRU5Kd0t5ZmlZS3JnOUh2cVVEQVBCZ05WSFJNQkFmOEUKQlRBREFRSC9NQW9HQ0NxR1NNNDlCQU1DQTJnQU1HVUNNRzFPSlUrRTlEaCt4TjdJMFZVTXIwdmt3S0h6V2Q3NwpTQXFXQjJVcG4vNThQTzd3eWNvWHZNMjlwREU0SkUvRzVRSXhBT2FhemxKZ1M3Z081eU50aW1tZ0llWFJ1K2pwCkNXb3kxb3hZU2ZSMmh1YkJ1Q1RUUkFqNkhPODBjTUVrZHFrMWp3PT0KLS0tLS1FTkQgQ0VSVElGSUNBVEUtLS0tLQo=
           name: envoy-gateway/tls-secret-ecdsa-2
           privateKey: '[redacted]'
+    proxyServiceCluster:
+      destination:
+        addressType: IP
+        endpoints:
+        - host: 7.6.5.4
+          port: 8080
+          zone: zone1
+        name: envoy-envoy-gateway-gateway-1-196ae069
+        preferLocal:
+          minEndpointsThreshold: 1
+        protocol: HTTP
+      name: envoy-envoy-gateway-gateway-1-196ae069
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4

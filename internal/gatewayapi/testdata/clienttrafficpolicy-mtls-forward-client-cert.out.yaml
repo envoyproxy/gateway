@@ -550,6 +550,7 @@ xdsIR:
     accessLog:
       json:
       - path: /dev/stdout
+    globalResources: {}
     http:
     - address: 0.0.0.0
       headers:
@@ -599,6 +600,13 @@ xdsIR:
         escapedSlashesAction: UnescapeAndRedirect
         mergeSlashes: true
       port: 8080
+    proxyServiceCluster:
+      destination:
+        name: envoy-envoy-gateway-gateway-1-196ae069
+        preferLocal:
+          minEndpointsThreshold: 1
+        protocol: HTTP
+      name: envoy-envoy-gateway-gateway-1-196ae069
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4
@@ -608,6 +616,7 @@ xdsIR:
     accessLog:
       json:
       - path: /dev/stdout
+    globalResources: {}
     http:
     - address: 0.0.0.0
       headers:
@@ -639,6 +648,13 @@ xdsIR:
         maxVersion: "1.3"
         minVersion: "1.2"
         requireClientCertificate: true
+    proxyServiceCluster:
+      destination:
+        name: envoy-envoy-gateway-gateway-2-4a0e4eb9
+        preferLocal:
+          minEndpointsThreshold: 1
+        protocol: HTTP
+      name: envoy-envoy-gateway-gateway-2-4a0e4eb9
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4
@@ -648,6 +664,7 @@ xdsIR:
     accessLog:
       json:
       - path: /dev/stdout
+    globalResources: {}
     http:
     - address: 0.0.0.0
       headers:
@@ -679,6 +696,13 @@ xdsIR:
         maxVersion: "1.3"
         minVersion: "1.2"
         requireClientCertificate: true
+    proxyServiceCluster:
+      destination:
+        name: envoy-envoy-gateway-gateway-3-32e857a6
+        preferLocal:
+          minEndpointsThreshold: 1
+        protocol: HTTP
+      name: envoy-envoy-gateway-gateway-3-32e857a6
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4
@@ -688,6 +712,7 @@ xdsIR:
     accessLog:
       json:
       - path: /dev/stdout
+    globalResources: {}
     http:
     - address: 0.0.0.0
       headers:
@@ -719,6 +744,13 @@ xdsIR:
         maxVersion: "1.3"
         minVersion: "1.2"
         requireClientCertificate: true
+    proxyServiceCluster:
+      destination:
+        name: envoy-envoy-gateway-gateway-4-a293650b
+        preferLocal:
+          minEndpointsThreshold: 1
+        protocol: HTTP
+      name: envoy-envoy-gateway-gateway-4-a293650b
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4
@@ -728,6 +760,7 @@ xdsIR:
     accessLog:
       json:
       - path: /dev/stdout
+    globalResources: {}
     http:
     - address: 0.0.0.0
       headers:
@@ -759,6 +792,30 @@ xdsIR:
         maxVersion: "1.3"
         minVersion: "1.2"
         requireClientCertificate: true
+    proxyServiceCluster:
+      destination:
+        addressType: IP
+        endpoints:
+        - host: 7.6.5.4
+          port: 8080
+          zone: zone1
+        - host: 7.6.5.4
+          port: 8080
+          zone: zone1
+        - host: 7.6.5.4
+          port: 8080
+          zone: zone1
+        - host: 7.6.5.4
+          port: 8080
+          zone: zone1
+        - host: 7.6.5.4
+          port: 8080
+          zone: zone1
+        name: envoy-envoy-gateway-gateway-5-e35ee57f
+        preferLocal:
+          minEndpointsThreshold: 1
+        protocol: HTTP
+      name: envoy-envoy-gateway-gateway-5-e35ee57f
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4

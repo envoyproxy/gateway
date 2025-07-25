@@ -273,6 +273,7 @@ xdsIR:
     accessLog:
       json:
       - path: /dev/stdout
+    globalResources: {}
     http:
     - address: 0.0.0.0
       hostnames:
@@ -342,6 +343,21 @@ xdsIR:
           distinct: false
           exact: /exact
           name: ""
+    proxyServiceCluster:
+      destination:
+        addressType: IP
+        endpoints:
+        - host: 7.6.5.4
+          port: 8080
+          zone: zone1
+        - host: 7.6.5.4
+          port: 8080
+          zone: zone1
+        name: envoy-envoy-gateway-gateway-btls-a945b5bb
+        preferLocal:
+          minEndpointsThreshold: 1
+        protocol: HTTP
+      name: envoy-envoy-gateway-gateway-btls-a945b5bb
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4
@@ -351,6 +367,7 @@ xdsIR:
     accessLog:
       json:
       - path: /dev/stdout
+    globalResources: {}
     http:
     - address: 0.0.0.0
       hostnames:
@@ -420,6 +437,13 @@ xdsIR:
           distinct: false
           exact: /exact
           name: ""
+    proxyServiceCluster:
+      destination:
+        name: envoy-envoy-gateway-gateway-btls2-41698b8b
+        preferLocal:
+          minEndpointsThreshold: 1
+        protocol: HTTP
+      name: envoy-envoy-gateway-gateway-btls2-41698b8b
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4

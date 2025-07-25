@@ -183,6 +183,7 @@ xdsIR:
     accessLog:
       json:
       - path: /dev/stdout
+    globalResources: {}
     http:
     - address: 0.0.0.0
       hostnames:
@@ -216,6 +217,13 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /toy
+    proxyServiceCluster:
+      destination:
+        name: envoy-envoy-gateway-gateway-a-37c12ef1
+        preferLocal:
+          minEndpointsThreshold: 1
+        protocol: HTTP
+      name: envoy-envoy-gateway-gateway-a-37c12ef1
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4
@@ -225,6 +233,7 @@ xdsIR:
     accessLog:
       json:
       - path: /dev/stdout
+    globalResources: {}
     http:
     - address: 0.0.0.0
       hostnames:
@@ -258,6 +267,21 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /toy
+    proxyServiceCluster:
+      destination:
+        addressType: IP
+        endpoints:
+        - host: 7.6.5.4
+          port: 8080
+          zone: zone1
+        - host: 7.6.5.4
+          port: 8080
+          zone: zone1
+        name: envoy-envoy-gateway-gateway-b-3a004b3a
+        preferLocal:
+          minEndpointsThreshold: 1
+        protocol: HTTP
+      name: envoy-envoy-gateway-gateway-b-3a004b3a
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4

@@ -138,6 +138,7 @@ xdsIR:
     accessLog:
       json:
       - path: /dev/stdout
+    globalResources: {}
     http:
     - address: 0.0.0.0
       hostnames:
@@ -163,6 +164,18 @@ xdsIR:
           name: grpcroute
           namespace: default
         name: grpcroute/default/grpcroute/rule/0/match/-1/*
+    proxyServiceCluster:
+      destination:
+        addressType: IP
+        endpoints:
+        - host: 7.6.5.4
+          port: 8080
+          zone: zone1
+        name: envoy-envoy-gateway-gateway-966d2c13
+        preferLocal:
+          minEndpointsThreshold: 1
+        protocol: HTTP
+      name: envoy-envoy-gateway-gateway-966d2c13
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4

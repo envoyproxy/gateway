@@ -304,6 +304,7 @@ xdsIR:
     accessLog:
       json:
       - path: /dev/stdout
+    globalResources: {}
     http:
     - address: 0.0.0.0
       hostnames:
@@ -383,6 +384,13 @@ xdsIR:
               maxConnectionDuration: 17s
             tcp:
               connectTimeout: 10s
+    proxyServiceCluster:
+      destination:
+        name: envoy-envoy-gateway-gateway-1-196ae069
+        preferLocal:
+          minEndpointsThreshold: 1
+        protocol: HTTP
+      name: envoy-envoy-gateway-gateway-1-196ae069
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4
@@ -392,6 +400,7 @@ xdsIR:
     accessLog:
       json:
       - path: /dev/stdout
+    globalResources: {}
     http:
     - address: 0.0.0.0
       hostnames:
@@ -459,6 +468,21 @@ xdsIR:
           timeout:
             tcp:
               connectTimeout: 10s
+    proxyServiceCluster:
+      destination:
+        addressType: IP
+        endpoints:
+        - host: 7.6.5.4
+          port: 8080
+          zone: zone1
+        - host: 7.6.5.4
+          port: 8080
+          zone: zone1
+        name: envoy-envoy-gateway-gateway-2-4a0e4eb9
+        preferLocal:
+          minEndpointsThreshold: 1
+        protocol: HTTP
+      name: envoy-envoy-gateway-gateway-2-4a0e4eb9
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4

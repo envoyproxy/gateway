@@ -315,6 +315,69 @@ func TestTranslate(t *testing.T) {
 				},
 			)
 
+			svc := corev1.Service{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      translator.expectedServiceName(string(translator.GatewayClassName)),
+					Namespace: translator.ControllerNamespace,
+				},
+				Spec: corev1.ServiceSpec{
+					ClusterIP: "6.7.8.9",
+					Ports: []corev1.ServicePort{
+						{
+							Name:       "http",
+							Port:       8080,
+							TargetPort: intstr.IntOrString{IntVal: 8080},
+							Protocol:   corev1.ProtocolTCP,
+						},
+					},
+				},
+			}
+
+			endPtSlice := discoveryv1.EndpointSlice{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      svc.Name,
+					Namespace: svc.Namespace,
+					Labels: map[string]string{
+						discoveryv1.LabelServiceName: svc.Name,
+					},
+				},
+				AddressType: discoveryv1.AddressTypeIPv4,
+				Ports: []discoveryv1.EndpointPort{
+					{
+						Name:     ptr.To("http"),
+						Port:     ptr.To[int32](8080),
+						Protocol: ptr.To(corev1.ProtocolTCP),
+					},
+				},
+				Endpoints: []discoveryv1.Endpoint{
+					{
+						Addresses: []string{
+							"7.6.5.4",
+						},
+						Conditions: discoveryv1.EndpointConditions{
+							Ready: ptr.To(true),
+						},
+						Zone: ptr.To("zone1"),
+					},
+				},
+			}
+
+			if translator.MergeGateways {
+
+				resources.Services = append(resources.Services, &svc)
+				resources.EndpointSlices = append(resources.EndpointSlices, &endPtSlice)
+			} else {
+				for _, g := range resources.Gateways {
+					gSvc := svc
+					gSvc.Name = translator.expectedServiceName(fmt.Sprintf("%s/%s", g.Namespace, g.Name))
+					gEndPtSlice := endPtSlice
+					gEndPtSlice.Name = gSvc.Name
+					gEndPtSlice.Labels[discoveryv1.LabelServiceName] = gSvc.Name
+					resources.Services = append(resources.Services, &gSvc)
+					resources.EndpointSlices = append(resources.EndpointSlices, &gEndPtSlice)
+				}
+			}
+
 			resources.Namespaces = append(resources.Namespaces, &corev1.Namespace{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "envoy-gateway",
@@ -513,6 +576,69 @@ func TestTranslateWithExtensionKinds(t *testing.T) {
 					},
 				},
 			)
+
+			svc := corev1.Service{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      translator.expectedServiceName(string(translator.GatewayClassName)),
+					Namespace: translator.ControllerNamespace,
+				},
+				Spec: corev1.ServiceSpec{
+					ClusterIP: "6.7.8.9",
+					Ports: []corev1.ServicePort{
+						{
+							Name:       "http",
+							Port:       8080,
+							TargetPort: intstr.IntOrString{IntVal: 8080},
+							Protocol:   corev1.ProtocolTCP,
+						},
+					},
+				},
+			}
+
+			endPtSlice := discoveryv1.EndpointSlice{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      svc.Name,
+					Namespace: svc.Namespace,
+					Labels: map[string]string{
+						discoveryv1.LabelServiceName: svc.Name,
+					},
+				},
+				AddressType: discoveryv1.AddressTypeIPv4,
+				Ports: []discoveryv1.EndpointPort{
+					{
+						Name:     ptr.To("http"),
+						Port:     ptr.To[int32](8080),
+						Protocol: ptr.To(corev1.ProtocolTCP),
+					},
+				},
+				Endpoints: []discoveryv1.Endpoint{
+					{
+						Addresses: []string{
+							"7.6.5.4",
+						},
+						Conditions: discoveryv1.EndpointConditions{
+							Ready: ptr.To(true),
+						},
+						Zone: ptr.To("zone1"),
+					},
+				},
+			}
+
+			if translator.MergeGateways {
+				resources.Services = append(resources.Services, &svc)
+				resources.EndpointSlices = append(resources.EndpointSlices, &endPtSlice)
+			} else {
+				for _, g := range resources.Gateways {
+					gSvc := svc
+					gSvc.Name = translator.expectedServiceName(fmt.Sprintf("%s/%s", g.Namespace, g.Name))
+					fmt.Fprintln(os.Stderr, "service name adding: "+gSvc.Namespace+"/"+gSvc.Name)
+					gEndPtSlice := endPtSlice
+					gEndPtSlice.Name = gSvc.Name
+					gEndPtSlice.Labels[discoveryv1.LabelServiceName] = gSvc.Name
+					resources.Services = append(resources.Services, &gSvc)
+					resources.EndpointSlices = append(resources.EndpointSlices, &gEndPtSlice)
+				}
+			}
 
 			resources.Namespaces = append(resources.Namespaces, &corev1.Namespace{
 				ObjectMeta: metav1.ObjectMeta{
