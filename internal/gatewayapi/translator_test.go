@@ -1031,6 +1031,7 @@ func xdsWithoutEqual(a *ir.Xds) any {
 		FilterOrder             []egv1a1.FilterPosition
 		GlobalResources         *ir.GlobalResources
 		ExtensionServerPolicies []*ir.UnstructuredRef
+		ProxyServiceCluster     *ir.ProxyServiceCluster
 	}{
 		ReadyListener:           a.ReadyListener,
 		AccessLog:               a.AccessLog,
@@ -1043,6 +1044,7 @@ func xdsWithoutEqual(a *ir.Xds) any {
 		FilterOrder:             a.FilterOrder,
 		GlobalResources:         a.GlobalResources,
 		ExtensionServerPolicies: a.ExtensionServerPolicies,
+		ProxyServiceCluster:     a.ProxyServiceCluster,
 	}
 
 	// Ensure we didn't drop an exported field.
