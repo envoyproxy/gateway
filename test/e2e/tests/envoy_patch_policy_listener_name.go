@@ -14,13 +14,13 @@ import (
 )
 
 func init() {
-	ConformanceTests = append(ConformanceTests, EnvoyPatchPolicyTest)
+	ConformanceTests = append(ConformanceTests, EnvoyPatchPolicyUseProtocolPortAsListenerNameTest)
 }
 
-var EnvoyPatchPolicyIPv4Test = suite.ConformanceTest{
-	ShortName:   "EnvoyPatchPolicyIPv4",
+var EnvoyPatchPolicyUseProtocolPortAsListenerNameTest = suite.ConformanceTest{
+	ShortName:   "EnvoyPatchPolicyUseProtocolPortAsListenerName",
 	Description: "update xds using EnvoyPatchPolicy",
-	Manifests:   []string{"testdata/envoy-patch-policy-ipv4.yaml"},
+	Manifests:   []string{"testdata/envoy-patch-policy-use-protocol-port-as-listener-name.yaml"},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
 		t.Run("envoy patch policy", func(t *testing.T) {
 			testEnvoyPatchPolicy(t, suite)

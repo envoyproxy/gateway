@@ -109,8 +109,8 @@ func (e *EnvoyGateway) GatewayNamespaceMode() bool {
 		*e.Provider.Kubernetes.Deploy.Type == KubernetesDeployModeTypeGatewayNamespace
 }
 
-// runtimeFlags are the default runtime flags for Envoy Gateway.
-var runtimeFlags = map[RuntimeFlag]bool{
+// defaultRuntimeFlags are the default runtime flags for Envoy Gateway.
+var defaultRuntimeFlags = map[RuntimeFlag]bool{
 	UseProtocolPortAsListenerName: false,
 }
 
@@ -129,8 +129,8 @@ func (f *RuntimeFlags) IsEnabled(flag RuntimeFlag) bool {
 		}
 	}
 
-	if enabled, found := runtimeFlags[flag]; found {
-		return enabled
+	if defaultValue, found := defaultRuntimeFlags[flag]; found {
+		return defaultValue
 	}
 	return false
 }

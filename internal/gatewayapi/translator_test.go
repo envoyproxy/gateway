@@ -47,10 +47,11 @@ func mustUnmarshal(t *testing.T, val []byte, out any) {
 
 func TestTranslate(t *testing.T) {
 	testCasesConfig := []struct {
-		name                    string
-		EnvoyPatchPolicyEnabled bool
-		BackendEnabled          bool
-		GatewayNamespaceMode    bool
+		name                          string
+		EnvoyPatchPolicyEnabled       bool
+		BackendEnabled                bool
+		GatewayNamespaceMode          bool
+		UseProtocolPortAsListenerName bool
 	}{
 		{
 			name:                    "envoypatchpolicy-invalid-feature-disabled",
@@ -63,6 +64,10 @@ func TestTranslate(t *testing.T) {
 		{
 			name:                 "gateway-namespace-mode-infra-httproute",
 			GatewayNamespaceMode: true,
+		},
+		{
+			name:                          "protocol-port-as-listener-name",
+			UseProtocolPortAsListenerName: true,
 		},
 	}
 

@@ -75,15 +75,10 @@ func TestE2E(t *testing.T) {
 		skipTests = append(skipTests,
 			tests.EnvoyPatchPolicyTest.ShortName,
 		)
-		if tests.IPFamily == "ipv6" {
-			skipTests = append(skipTests,
-				tests.EnvoyPatchPolicyIPv4Test.ShortName,
-			)
-		} else {
-			skipTests = append(skipTests,
-				tests.EnvoyPatchPolicyIPv6Test.ShortName,
-			)
-		}
+	} else {
+		skipTests = append(skipTests,
+			tests.EnvoyPatchPolicyUseProtocolPortAsListenerNameTest.ShortName,
+		)
 	}
 
 	enabledFeatures := sets.New(features.SupportGateway)

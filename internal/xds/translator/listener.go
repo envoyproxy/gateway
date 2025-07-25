@@ -314,8 +314,12 @@ func buildXdsQuicListener(
 //     The newly created TCP filter chain is configured with a filter chain match to
 //     match the server names(SNI) based on the listener's hostnames.
 func (t *Translator) addHCMToXDSListener(
-	xdsListener *listenerv3.Listener, irListener *ir.HTTPListener, accesslog *ir.AccessLog,
-	tracing *ir.Tracing, http3Listener bool, connection *ir.ClientConnection,
+	xdsListener *listenerv3.Listener,
+	irListener *ir.HTTPListener,
+	accesslog *ir.AccessLog,
+	tracing *ir.Tracing,
+	http3Listener bool,
+	connection *ir.ClientConnection,
 ) error {
 	al, err := buildXdsAccessLog(accesslog, ir.ProxyAccessLogTypeRoute)
 	if err != nil {
@@ -353,7 +357,7 @@ func (t *Translator) addHCMToXDSListener(
 			Rds: &hcmv3.Rds{
 				ConfigSource: makeConfigSource(),
 				// Configure route name to be found via RDS.
-				RouteConfigName: routeConfigName(xdsListener, irListener, t.RuntimeFlags.IsEnabled(egv1a1.UseProtocolPortAsListenerName)),
+				RouteConfigName: routeConfigName(xdsListener, irListener, t.useProtocolPortAsListenerName()),
 			},
 		},
 		HttpProtocolOptions: http1ProtocolOptions(irListener.HTTP1),
@@ -450,7 +454,7 @@ func (t *Translator) addHCMToXDSListener(
 
 	filterChain := &listenerv3.FilterChain{
 		Filters: filters,
-		Name:    httpListenerFilterChainName(xdsListener, irListener, t.RuntimeFlags.IsEnabled(egv1a1.UseProtocolPortAsListenerName)),
+		Name:    httpListenerFilterChainName(xdsListener, irListener, t.useProtocolPortAsListenerName()),
 	}
 
 	if irListener.TLS != nil {
@@ -474,9 +478,9 @@ func (t *Translator) addHCMToXDSListener(
 			}
 		}
 		filterChain.TransportSocket = tSocket
-		if err := addServerNamesMatch(
-			xdsListener, filterChain, irListener.Hostnames,
-			t.RuntimeFlags.IsEnabled(egv1a1.UseProtocolPortAsListenerName)); err != nil {
+
+		err := addServerNamesMatch(xdsListener, filterChain, irListener.Hostnames, t.useProtocolPortAsListenerName())
+		if err != nil {
 			return err
 		}
 
@@ -579,8 +583,11 @@ func buildEarlyHeaderMutation(headers *ir.HeaderSettings) []*corev3.TypedExtensi
 }
 
 func addServerNamesMatch(
-	xdsListener *listenerv3.Listener, filterChain *listenerv3.FilterChain,
-	hostnames []string, useProtocolPortAsListenerName bool) error {
+	xdsListener *listenerv3.Listener,
+	filterChain *listenerv3.FilterChain,
+	hostnames []string,
+	useProtocolPortAsListenerName bool,
+) error {
 	// Skip adding ServerNames match for:
 	// 1. nil listeners
 	// 2. UDP (QUIC) listeners used for HTTP3
@@ -636,7 +643,8 @@ func findXdsHTTPRouteConfigName(xdsListener *listenerv3.Listener) string {
 
 func (t *Translator) addXdsTCPFilterChain(
 	xdsListener *listenerv3.Listener, irRoute *ir.TCPRoute, clusterName string,
-	accesslog *ir.AccessLog, timeout *ir.ClientTimeout, connection *ir.ClientConnection) error {
+	accesslog *ir.AccessLog, timeout *ir.ClientTimeout, connection *ir.ClientConnection,
+) error {
 	if irRoute == nil {
 		return errors.New("tcp listener is nil")
 	}
@@ -694,7 +702,7 @@ func (t *Translator) addXdsTCPFilterChain(
 		Name: tcpListenerFilterChainName(
 			xdsListener,
 			irRoute,
-			t.RuntimeFlags.IsEnabled(egv1a1.UseProtocolPortAsListenerName),
+			t.useProtocolPortAsListenerName(),
 		),
 		Filters: filters,
 	}
@@ -704,7 +712,7 @@ func (t *Translator) addXdsTCPFilterChain(
 			xdsListener,
 			filterChain,
 			irRoute.TLS.TLSInspectorConfig.SNIs,
-			t.RuntimeFlags.IsEnabled(egv1a1.UseProtocolPortAsListenerName),
+			t.useProtocolPortAsListenerName(),
 		)
 		if err != nil {
 			return err
@@ -720,7 +728,7 @@ func (t *Translator) addXdsTCPFilterChain(
 			xdsListener,
 			filterChain,
 			snis,
-			t.RuntimeFlags.IsEnabled(egv1a1.UseProtocolPortAsListenerName),
+			t.useProtocolPortAsListenerName(),
 		)
 		if err != nil {
 			return err
