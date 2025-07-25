@@ -5081,6 +5081,7 @@ _Appears in:_
 | `config` | _[JSON](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.29/#json-v1-apiextensions-k8s-io)_ |  false  |  | Config is the configuration for the Wasm extension.<br />This configuration will be passed as a JSON string to the Wasm extension. |
 | `failOpen` | _boolean_ |  false  | false | FailOpen is a switch used to control the behavior when a fatal error occurs<br />during the initialization or the execution of the Wasm extension.<br />If FailOpen is set to true, the system bypasses the Wasm extension and<br />allows the traffic to pass through. If it is set to false or<br />not set (defaulting to false), the system blocks the traffic and returns<br />an HTTP 5xx error.<br />If set to true, the Wasm extension will also be bypassed if the configuration is invalid. |
 | `env` | _[WasmEnv](#wasmenv)_ |  false  |  | Env configures the environment for the Wasm extension |
+| `allowOnHeadersStopIteration` | _boolean_ |  false  | false | AllowOnHeadersStopIteration configures whether or not to allow plugin<br />onRequestHeaders and onResponseHeaders callbacks to return FilterHeadersStatus::StopIteration.<br />This is useful when the plugin needs to process headers asynchronously. |
 
 
 #### WasmCodeSource

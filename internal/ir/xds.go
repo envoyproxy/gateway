@@ -3158,6 +3158,10 @@ type Wasm struct {
 	// HostKeys is a list of keys for environment variables from the host envoy process
 	// that should be passed into the Wasm VM.
 	HostKeys []string `json:"hostKeys,omitempty"`
+
+	// AllowOnHeadersStopIteration configures whether or not to allow plugin
+	// onRequestHeaders and onResponseHeaders callbacks to return FilterHeadersStatus::StopIteration.
+	AllowOnHeadersStopIteration bool `json:"allowOnHeadersStopIteration"`
 }
 
 // HTTPWasmCode holds the information associated with the HTTP Wasm code source.

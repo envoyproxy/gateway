@@ -67,6 +67,14 @@ type Wasm struct {
 	// Env configures the environment for the Wasm extension
 	// +optional
 	Env *WasmEnv `json:"env,omitempty"`
+
+	// AllowOnHeadersStopIteration configures whether or not to allow plugin
+	// onRequestHeaders and onResponseHeaders callbacks to return FilterHeadersStatus::StopIteration.
+	// This is useful when the plugin needs to process headers asynchronously.
+	//
+	// +optional
+	// +kubebuilder:default=false
+	AllowOnHeadersStopIteration *bool `json:"allowOnHeadersStopIteration,omitempty"`
 }
 
 // WasmCodeSource defines the source of the Wasm code.
