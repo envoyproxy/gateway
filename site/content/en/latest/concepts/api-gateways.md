@@ -23,5 +23,5 @@ Envoy Gateway makes configuring Envoy Proxy simple by implementing and extending
 
 ## Related Resources
 
-- [Getting Started with Envoy Gateway](../../tasks/quickstart.md)
+- [Getting Started with Envoy Gateway](../tasks/quickstart.md)
 - [Kubernetes Gateway API](https://gateway-api.sigs.k8s.io/)

@@ -13,21 +13,21 @@ Think of it as a traffic controller between your gateway and backend services. I
 
 `BackendTrafficPolicy` is particularly useful in scenarios where you need to:
 
-1. **Protect your services:** 
+1. **Protect your services:**
    Limit connections and reject excess traffic when necessary
 
-2. **Build resilient systems:** 
+2. **Build resilient systems:**
    Detect failing services and redirect traffic
 
-3. **Improve performance:** 
+3. **Improve performance:**
    Optimize how requests are distributed and responses are handled
 
-4. **Test system behavior:** 
+4. **Test system behavior:**
    Inject faults and validate your recovery mechanisms
 
 ## BackendTrafficPolicy in Envoy Gateway
 
-`BackendTrafficPolicy` is part of the Envoy Gateway API suite, which extends the Kubernetes Gateway API with additional capabilities. It's implemented as a Custom Resource Definition (CRD) that you can use to configure how Envoy Gateway manages traffic to your backend services. 
+`BackendTrafficPolicy` is part of the Envoy Gateway API suite, which extends the Kubernetes Gateway API with additional capabilities. It's implemented as a Custom Resource Definition (CRD) that you can use to configure how Envoy Gateway manages traffic to your backend services.
 
 You can attach it to Gateway API resources in two ways:
 
@@ -142,12 +142,12 @@ In this example, the route-level policy merges with the gateway-level policy, re
 
 ## Related Resources
 
-- [Circuit Breakers](../../../tasks/traffic/circuit-breaker.md)
-- [Failover](../../../tasks/traffic/failover)
-- [Fault Injection](../../../tasks/traffic/fault-injection)
-- [Global Rate Limit](../../../tasks/traffic/global-rate-limit)
-- [Local Rate Limit](../../../tasks/traffic/local-rate-limit)
-- [Load Balancing](../../../tasks/traffic/load-balancing)
-- [Response Compression](../../../tasks/traffic/response-compression)
-- [Response Override](../../../tasks/traffic/response-override)
-- [BackendTrafficPolicy API Reference](../../../api/extension_types#backendtrafficpolicy)
+- [Circuit Breakers](../../tasks/traffic/circuit-breaker.md)
+- [Failover](../../tasks/traffic/failover)
+- [Fault Injection](../../tasks/traffic/fault-injection)
+- [Global Rate Limit](../../tasks/traffic/global-rate-limit)
+- [Local Rate Limit](../../tasks/traffic/local-rate-limit)
+- [Load Balancing](../../tasks/traffic/load-balancing)
+- [Response Compression](../../tasks/traffic/response-compression)
+- [Response Override](../../tasks/traffic/response-override)
+- [BackendTrafficPolicy API Reference](../../api/extension_types#backendtrafficpolicy)
