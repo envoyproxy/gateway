@@ -29,5 +29,5 @@ Envoy Proxy is a high-performance, open-source proxy designed for cloud-native a
 The control plane uses the Kubernetes Gateway API to understand your settings and then translates them into the format Envoy Proxy needs (called _xDS configuration_). It also runs and updates the Envoy Proxy instances inside your Kubernetes cluster.
 
 ## Related Resources
-- [Getting Started with Envoy Gateway](../../tasks/quickstart.md)
+- [Getting Started with Envoy Gateway](../tasks/quickstart.md)
 - [Envoy Proxy](https://www.envoyproxy.io/)
