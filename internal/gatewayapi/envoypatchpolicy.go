@@ -20,8 +20,21 @@ import (
 )
 
 func (t *Translator) ProcessEnvoyPatchPolicies(envoyPatchPolicies []*egv1a1.EnvoyPatchPolicy, xdsIR resource.XdsIRMap) {
-	// Sort based on priority
+
+	// Initially, envoyPatchPolicies sort by priority
+	// if the priority is equal, they sort based on creation timestamp
+	// or sort alphabetically by “{namespace}/{name}” if multiple policies share same timestamp.
 	sort.Slice(envoyPatchPolicies, func(i, j int) bool {
+		if envoyPatchPolicies[i].Spec.Priority == envoyPatchPolicies[j].Spec.Priority {
+			if envoyPatchPolicies[i].CreationTimestamp.Equal(&(envoyPatchPolicies[j].CreationTimestamp)) {
+				policyKeyI := fmt.Sprintf("%s/%s", envoyPatchPolicies[i].Namespace, envoyPatchPolicies[i].Name)
+				policyKeyJ := fmt.Sprintf("%s/%s", envoyPatchPolicies[j].Namespace, envoyPatchPolicies[j].Name)
+				return policyKeyI < policyKeyJ
+			}
+			// Not identical CreationTimestamps
+			return envoyPatchPolicies[i].CreationTimestamp.Before(&(envoyPatchPolicies[j].CreationTimestamp))
+		}
+		// Not identical Priorities
 		return envoyPatchPolicies[i].Spec.Priority < envoyPatchPolicies[j].Spec.Priority
 	})
 
