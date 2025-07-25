@@ -268,6 +268,7 @@ func buildXdsQuicListener(
 	if err != nil {
 		return nil, err
 	}
+	// Keep the listener name compatible with the old naming scheme
 	listenerName := listenerDetails.Name + "-quic"
 	if useProtocolPortAsListenerName {
 		listenerName = xdsListenerName(listenerDetails.Name, listenerDetails.ExternalPort, corev3.SocketAddress_UDP, true)
