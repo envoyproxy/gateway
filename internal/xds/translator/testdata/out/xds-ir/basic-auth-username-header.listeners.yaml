@@ -15,19 +15,19 @@
           maxConcurrentStreams: 100
         httpFilters:
         - disabled: true
-          name: envoy.filters.http.basic_auth/securitypolicy/default/policy-for-http-route-1
-          typedConfig:
-            '@type': type.googleapis.com/envoy.extensions.filters.http.basic_auth.v3.BasicAuth
-            forwardUsernameHeader: x-username
-            users:
-              inlineBytes: dXNlcjE6e1NIQX10RVNzQm1FL3lOWTNsYjZhMEw2dlZRRVpOcXc9CnVzZXIyOntTSEF9RUo5TFBGRFhzTjl5blNtYnh2anA3NUJtbHg4PQo=
-        - disabled: true
           name: envoy.filters.http.basic_auth/securitypolicy/default/policy-for-gateway-1
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.basic_auth.v3.BasicAuth
             forwardUsernameHeader: x-user-id
             users:
               inlineBytes: Zm9vOntTSEF9WXMyM0FnLzVJT1dxWkN3OVFHYVZEZEh3SDAwPQpmb28xOntTSEF9ZGpaMTFxSFkwS09pamV5bUs3YUt2WXV2aHZNPQo=
+        - disabled: true
+          name: envoy.filters.http.basic_auth/securitypolicy/default/policy-for-http-route-1
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.basic_auth.v3.BasicAuth
+            forwardUsernameHeader: x-username
+            users:
+              inlineBytes: dXNlcjE6e1NIQX10RVNzQm1FL3lOWTNsYjZhMEw2dlZRRVpOcXc9CnVzZXIyOntTSEF9RUo5TFBGRFhzTjl5blNtYnh2anA3NUJtbHg4PQo=
         - name: envoy.filters.http.router
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
