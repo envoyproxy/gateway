@@ -228,25 +228,7 @@ func buildXdsCluster(args *xdsClusterArgs) (*buildClusterResult, error) {
 		cluster.TypedExtensionProtocolOptions = epo
 	}
 
-	// Set default localityLbConfig
-	localityLbConfig := &commonv3.LocalityLbConfig{
-		LocalityConfigSpecifier: &commonv3.LocalityLbConfig_LocalityWeightedLbConfig_{
-			LocalityWeightedLbConfig: &commonv3.LocalityLbConfig_LocalityWeightedLbConfig{},
-		},
-	}
-
-	// Override LocalityWeightedLbConfig if zone aware routing is enabled.
-	// Zone aware enabled backendRefs always have a single DestinationSetting per-cluster.
-	if len(args.settings) == 1 && args.settings[0].ZoneAwareRouting != nil {
-		localityLbConfig.LocalityConfigSpecifier = &commonv3.LocalityLbConfig_ZoneAwareLbConfig_{
-			ZoneAwareLbConfig: &commonv3.LocalityLbConfig_ZoneAwareLbConfig{
-				MinClusterSize: wrapperspb.UInt64(1),
-				ForceLocalZone: &commonv3.LocalityLbConfig_ZoneAwareLbConfig_ForceLocalZone{
-					MinSize: wrapperspb.UInt32(uint32(args.settings[0].ZoneAwareRouting.MinSize)),
-				},
-			},
-		}
-	}
+	localityLbConfig := buildLocalityLbConfig(args)
 
 	// Set Load Balancer policy
 	//nolint:gocritic
@@ -437,6 +419,48 @@ func buildXdsCluster(args *xdsClusterArgs) (*buildClusterResult, error) {
 		cluster: cluster,
 		secrets: secrets,
 	}, nil
+}
+
+func buildLocalityLbConfig(args *xdsClusterArgs) *commonv3.LocalityLbConfig {
+	// Default to LocalityWeightedLbConfig
+	localityLbConfig := &commonv3.LocalityLbConfig{
+		LocalityConfigSpecifier: &commonv3.LocalityLbConfig_LocalityWeightedLbConfig_{
+			LocalityWeightedLbConfig: &commonv3.LocalityLbConfig_LocalityWeightedLbConfig{},
+		},
+	}
+
+	// Check for LoadBalancer.PreferLocal configuration or if backendRef enables
+	// PreferLocal (such as Topology Aware Routing or Traffic Distribution)
+	if preferLocal := ptr.Deref(args.loadBalancer, ir.LoadBalancer{}).PreferLocal; preferLocal != nil {
+		if cfg := buildZoneAwareLbConfig(preferLocal); cfg != nil {
+			localityLbConfig.LocalityConfigSpecifier = cfg
+		}
+		// Zone aware enabled backendRefs use weighted clusters and
+		// always have a single DestinationSetting per-cluster.
+	} else if len(args.settings) == 1 && args.settings[0].PreferLocal != nil {
+		if cfg := buildZoneAwareLbConfig(args.settings[0].PreferLocal); cfg != nil {
+			localityLbConfig.LocalityConfigSpecifier = cfg
+		}
+	}
+
+	return localityLbConfig
+}
+
+func buildZoneAwareLbConfig(preferLocal *ir.PreferLocalZone) *commonv3.LocalityLbConfig_ZoneAwareLbConfig_ {
+	if preferLocal == nil {
+		return nil
+	}
+	lbConfig := &commonv3.LocalityLbConfig_ZoneAwareLbConfig_{
+		ZoneAwareLbConfig: &commonv3.LocalityLbConfig_ZoneAwareLbConfig{
+			MinClusterSize: wrapperspb.UInt64(ptr.Deref(preferLocal.MinEndpointsThreshold, 6)),
+		},
+	}
+	if preferLocal.Force != nil {
+		lbConfig.ZoneAwareLbConfig.ForceLocalZone = &commonv3.LocalityLbConfig_ZoneAwareLbConfig_ForceLocalZone{
+			MinSize: wrapperspb.UInt32(ptr.Deref(preferLocal.Force.MinEndpointsInZoneThreshold, 1)),
+		}
+	}
+	return lbConfig
 }
 
 func buildXdsHealthCheck(healthcheck *ir.ActiveHealthCheck) []*corev3.HealthCheck {
@@ -650,7 +674,7 @@ func buildXdsClusterLoadAssignment(clusterName string, destSettings []*ir.Destin
 		// if multiple backendRefs exist. This pushes part of the routing logic higher up the stack which can
 		// limit host selection controls during retries and session affinity.
 		// For more details see https://github.com/envoyproxy/gateway/issues/5307#issuecomment-2688767482
-		if ds.ZoneAwareRouting != nil {
+		if ds.PreferLocal != nil {
 			localities = append(localities, buildZonalLocalities(metadata, ds)...)
 		} else {
 			localities = append(localities, buildWeightedLocalities(metadata, ds))

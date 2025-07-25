@@ -157,10 +157,12 @@ xdsIR:
               namespace: default
               sectionName: "8080"
             name: httproute/default/httproute-1/rule/1/backend/0
+            preferLocal:
+              force:
+                minEndpointsInZoneThreshold: 1
+              minEndpointsThreshold: 1
             protocol: HTTP
             weight: 1
-            zoneAwareRouting:
-              minSize: 1
         headerMatches:
         - distinct: false
           exact: bar
@@ -195,10 +197,12 @@ xdsIR:
               namespace: default
               sectionName: "8080"
             name: httproute/default/httproute-1/rule/0/backend/0
+            preferLocal:
+              force:
+                minEndpointsInZoneThreshold: 1
+              minEndpointsThreshold: 1
             protocol: HTTP
             weight: 1
-            zoneAwareRouting:
-              minSize: 1
         hostname: '*'
         isHTTP2: false
         metadata:

@@ -83,8 +83,7 @@ func buildXdsRoute(httpRoute *ir.HTTPRoute, httpListener *ir.HTTPListener) (*rou
 
 		router.Action = &routev3.Route_Route{Route: routeAction}
 	default:
-		backendWeights := httpRoute.Destination.ToBackendWeights()
-		routeAction := buildXdsRouteAction(backendWeights, httpRoute.Destination)
+		routeAction := buildXdsRouteAction(httpRoute)
 		routeAction.IdleTimeout = idleTimeout(httpRoute)
 
 		if httpRoute.Mirrors != nil {
@@ -290,10 +289,11 @@ func buildXdsStringMatcher(irMatch *ir.StringMatch) *matcherv3.StringMatcher {
 	return stringMatcher
 }
 
-func buildXdsRouteAction(backendWeights *ir.BackendWeights, dest *ir.RouteDestination) *routev3.RouteAction {
+func buildXdsRouteAction(route *ir.HTTPRoute) *routev3.RouteAction {
+	backendWeights := route.Destination.ToBackendWeights()
 	// only use weighted cluster when there are invalid weights
-	if dest.NeedsClusterPerSetting() || backendWeights.Invalid != 0 {
-		return buildXdsWeightedRouteAction(backendWeights, dest.Settings)
+	if route.NeedsClusterPerSetting() || backendWeights.Invalid != 0 {
+		return buildXdsWeightedRouteAction(backendWeights, route.Destination.Settings)
 	}
 
 	return &routev3.RouteAction{
