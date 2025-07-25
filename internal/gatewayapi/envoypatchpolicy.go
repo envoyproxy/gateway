@@ -20,7 +20,6 @@ import (
 )
 
 func (t *Translator) ProcessEnvoyPatchPolicies(envoyPatchPolicies []*egv1a1.EnvoyPatchPolicy, xdsIR resource.XdsIRMap) {
-
 	// Initially, envoyPatchPolicies sort by priority
 	// if the priority is equal, they sort based on creation timestamp
 	// or sort alphabetically by “{namespace}/{name}” if multiple policies share same timestamp.
