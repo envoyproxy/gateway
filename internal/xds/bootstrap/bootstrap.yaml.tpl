@@ -179,13 +179,13 @@ static_resources:
       service_name: {{ .ServiceClusterName }}
     load_balancing_policy:
       policies:
-        - typed_extension_config:
-            name: 'envoy.load_balancing_policies.least_request'
-            typed_config:
-              '@type': 'type.googleapis.com/envoy.extensions.load_balancing_policies.least_request.v3.LeastRequest'
-              locality_lb_config:
-                zone_aware_lb_config:
-                  min_cluster_size: '1'
+      - typed_extension_config:
+          name: 'envoy.load_balancing_policies.least_request'
+          typed_config:
+            '@type': 'type.googleapis.com/envoy.extensions.load_balancing_policies.least_request.v3.LeastRequest'
+            locality_lb_config:
+              zone_aware_lb_config:
+                min_cluster_size: '1'
     name: {{ .ServiceClusterName }}
     type: EDS
   - connect_timeout: 10s
