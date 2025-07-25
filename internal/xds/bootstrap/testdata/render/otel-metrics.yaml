@@ -1,9 +1,9 @@
 admin:
   access_log:
-    - name: envoy.access_loggers.file
-      typed_config:
-        "@type": type.googleapis.com/envoy.extensions.access_loggers.file.v3.FileAccessLog
-        path: /dev/null
+  - name: envoy.access_loggers.file
+    typed_config:
+      "@type": type.googleapis.com/envoy.extensions.access_loggers.file.v3.FileAccessLog
+      path: /dev/null
   address:
     socket_address:
       address: 127.0.0.1
@@ -15,18 +15,18 @@ node:
     zone: $(ENVOY_SERVICE_ZONE)
 layered_runtime:
   layers:
-    - name: global_config
-      static_layer:
-        envoy.restart_features.use_eds_cache_for_ads: true
-        re2.max_program_size.error_level: 4294967295
-        re2.max_program_size.warn_level: 1000
+  - name: global_config
+    static_layer:
+      envoy.restart_features.use_eds_cache_for_ads: true
+      re2.max_program_size.error_level: 4294967295
+      re2.max_program_size.warn_level: 1000
 dynamic_resources:
   ads_config:
     api_type: DELTA_GRPC
     transport_api_version: V3
     grpc_services:
-      - envoy_grpc:
-          cluster_name: xds_cluster
+    - envoy_grpc:
+        cluster_name: xds_cluster
     set_node_on_first_message_only: true
   lds_config:
     ads: {}
@@ -35,94 +35,94 @@ dynamic_resources:
     ads: {}
     resource_api_version: V3
 stats_sinks:
-  - name: "envoy.stat_sinks.open_telemetry"
-    typed_config:
-      "@type": type.googleapis.com/envoy.extensions.stat_sinks.open_telemetry.v3.SinkConfig
-      grpc_service:
-        envoy_grpc:
-          cluster_name: otel_metric_sink_0
+- name: "envoy.stat_sinks.open_telemetry"
+  typed_config:
+    "@type": type.googleapis.com/envoy.extensions.stat_sinks.open_telemetry.v3.SinkConfig
+    grpc_service:
+      envoy_grpc:
+        cluster_name: otel_metric_sink_0
 static_resources:
   clusters:
-    - name: otel_metric_sink_0
-      connect_timeout: 0.250s
-      type: STRICT_DNS
-      typed_extension_protocol_options:
-        envoy.extensions.upstreams.http.v3.HttpProtocolOptions:
-          "@type": "type.googleapis.com/envoy.extensions.upstreams.http.v3.HttpProtocolOptions"
-          explicit_http_config:
-            http2_protocol_options: {}
-      lb_policy: ROUND_ROBIN
-      load_assignment:
-        cluster_name: otel_metric_sink_0
-        endpoints:
-          - lb_endpoints:
-              - endpoint:
-                  address:
-                    socket_address:
-                      address: otel-collector.monitoring.svc
-                      port_value: 4317
-    - connect_timeout: 10s
-      eds_cluster_config:
-        eds_config:
-          ads: {}
-          resource_api_version: "V3"
-        service_name: local_cluster
-      load_balancing_policy:
-        policies:
-          - typed_extension_config:
-              name: "envoy.load_balancing_policies.least_request"
-              typed_config:
-                "@type": "type.googleapis.com/envoy.extensions.load_balancing_policies.least_request.v3.LeastRequest"
-                locality_lb_config:
-                  zone_aware_lb_config:
-                    min_cluster_size: "1"
-      name: local_cluster
-      type: EDS
-    - connect_timeout: 10s
-      load_assignment:
-        cluster_name: xds_cluster
-        endpoints:
-          - load_balancing_weight: 1
-            lb_endpoints:
-              - load_balancing_weight: 1
-                endpoint:
-                  address:
-                    socket_address:
-                      address: envoy-gateway
-                      port_value: 18000
-      typed_extension_protocol_options:
-        envoy.extensions.upstreams.http.v3.HttpProtocolOptions:
-          "@type": "type.googleapis.com/envoy.extensions.upstreams.http.v3.HttpProtocolOptions"
-          explicit_http_config:
-            http2_protocol_options:
-              connection_keepalive:
-                interval: 30s
-                timeout: 5s
-      name: xds_cluster
-      type: STRICT_DNS
-      transport_socket:
-        name: envoy.transport_sockets.tls
-        typed_config:
-          "@type": type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.UpstreamTlsContext
-          common_tls_context:
-            tls_params:
-              tls_maximum_protocol_version: TLSv1_3
-            tls_certificate_sds_secret_configs:
-              - name: xds_certificate
-                sds_config:
-                  path_config_source:
-                    path: /sds/xds-certificate.json
-                  resource_api_version: V3
-            validation_context_sds_secret_config:
-              name: xds_trusted_ca
-              sds_config:
-                path_config_source:
-                  path: /sds/xds-trusted-ca.json
-                resource_api_version: V3
+  - name: otel_metric_sink_0
+    connect_timeout: 0.250s
+    type: STRICT_DNS
+    typed_extension_protocol_options:
+      envoy.extensions.upstreams.http.v3.HttpProtocolOptions:
+        "@type": "type.googleapis.com/envoy.extensions.upstreams.http.v3.HttpProtocolOptions"
+        explicit_http_config:
+          http2_protocol_options: {}
+    lb_policy: ROUND_ROBIN
+    load_assignment:
+      cluster_name: otel_metric_sink_0
+      endpoints:
+      - lb_endpoints:
+        - endpoint:
+            address:
+              socket_address:
+                address: otel-collector.monitoring.svc
+                port_value: 4317
+  - connect_timeout: 10s
+    eds_cluster_config:
+      eds_config:
+        ads: {}
+        resource_api_version: 'V3'
+      service_name: local_cluster
+    load_balancing_policy:
+      policies:
+        - typed_extension_config:
+            name: 'envoy.load_balancing_policies.least_request'
+            typed_config:
+              '@type': 'type.googleapis.com/envoy.extensions.load_balancing_policies.least_request.v3.LeastRequest'
+              locality_lb_config:
+                zone_aware_lb_config:
+                  min_cluster_size: '1'
+    name: local_cluster
+    type: EDS
+  - connect_timeout: 10s
+    load_assignment:
+      cluster_name: xds_cluster
+      endpoints:
+      - load_balancing_weight: 1
+        lb_endpoints:
+        - load_balancing_weight: 1
+          endpoint:
+            address:
+              socket_address:
+                address: envoy-gateway
+                port_value: 18000
+    typed_extension_protocol_options:
+      envoy.extensions.upstreams.http.v3.HttpProtocolOptions:
+        "@type": "type.googleapis.com/envoy.extensions.upstreams.http.v3.HttpProtocolOptions"
+        explicit_http_config:
+          http2_protocol_options:
+            connection_keepalive:
+              interval: 30s
+              timeout: 5s
+    name: xds_cluster
+    type: STRICT_DNS
+    transport_socket:
+      name: envoy.transport_sockets.tls
+      typed_config:
+        "@type": type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.UpstreamTlsContext
+        common_tls_context:
+          tls_params:
+            tls_maximum_protocol_version: TLSv1_3
+          tls_certificate_sds_secret_configs:
+          - name: xds_certificate
+            sds_config:
+              path_config_source:
+                path: /sds/xds-certificate.json
+              resource_api_version: V3
+          validation_context_sds_secret_config:
+            name: xds_trusted_ca
+            sds_config:
+              path_config_source:
+                path: /sds/xds-trusted-ca.json
+              resource_api_version: V3
 overload_manager:
   refresh_interval: 0.25s
   resource_monitors:
-    - name: "envoy.resource_monitors.global_downstream_max_connections"
-      typed_config:
-        "@type": type.googleapis.com/envoy.extensions.resource_monitors.downstream_connections.v3.DownstreamConnectionsConfig
-        max_active_downstream_connections: 50000
+  - name: "envoy.resource_monitors.global_downstream_max_connections"
+    typed_config:
+      "@type": type.googleapis.com/envoy.extensions.resource_monitors.downstream_connections.v3.DownstreamConnectionsConfig
+      max_active_downstream_connections: 50000
