@@ -3,6 +3,59 @@ envoyExtensionPolicies:
   kind: EnvoyExtensionPolicy
   metadata:
     creationTimestamp: null
+    name: also-target-httproute-rule-in-httproute-2
+    namespace: envoy-gateway
+  spec:
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: httproute-2
+      sectionName: rule-1
+  status:
+    ancestors:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: gateway-1
+        namespace: envoy-gateway
+      conditions:
+      - lastTransitionTime: null
+        message: Policy has been accepted.
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: EnvoyExtensionPolicy
+  metadata:
+    creationTimestamp: null
+    name: target-httproute-rule-in-httproute-2
+    namespace: envoy-gateway
+  spec:
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: httproute-2
+      sectionName: rule-1
+  status:
+    ancestors:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: gateway-1
+        namespace: envoy-gateway
+      conditions:
+      - lastTransitionTime: null
+        message: Unable to target RouteRule httproute-2/rule-1, another EnvoyExtensionPolicy
+          has already attached to it
+        reason: Conflicted
+        status: "False"
+        type: Accepted
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: EnvoyExtensionPolicy
+  metadata:
+    creationTimestamp: null
     name: also-target-httproute-in-gateway-1
     namespace: envoy-gateway
   spec:
@@ -140,7 +193,7 @@ envoyExtensionPolicies:
         type: Accepted
       - lastTransitionTime: null
         message: 'This policy is being overridden by other envoyExtensionPolicies
-          for these routes: [envoy-gateway/httproute-1]'
+          for these routes: [envoy-gateway/httproute-1 envoy-gateway/httproute-2]'
         reason: Overridden
         status: "True"
         type: Overridden
@@ -242,7 +295,7 @@ gateways:
       protocol: HTTP
   status:
     listeners:
-    - attachedRoutes: 1
+    - attachedRoutes: 2
       conditions:
       - lastTransitionTime: null
         message: Sending translated listener configuration to the data plane
@@ -462,6 +515,41 @@ httpRoutes:
       parentRef:
         name: gateway-1
         namespace: envoy-gateway
+- apiVersion: gateway.networking.k8s.io/v1beta1
+  kind: HTTPRoute
+  metadata:
+    creationTimestamp: null
+    name: httproute-2
+    namespace: envoy-gateway
+  spec:
+    parentRefs:
+    - name: gateway-1
+      namespace: envoy-gateway
+    rules:
+    - backendRefs:
+      - name: service-1
+        port: 8080
+      matches:
+      - path:
+          value: /
+      name: rule-1
+  status:
+    parents:
+    - conditions:
+      - lastTransitionTime: null
+        message: Route is accepted
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Resolved all the Object references for the Route
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+      parentRef:
+        name: gateway-1
+        namespace: envoy-gateway
 infraIR:
   another-namespace/not-same-namespace-gateway:
     proxy:
@@ -599,6 +687,39 @@ xdsIR:
           name: httproute-1
           namespace: envoy-gateway
         name: httproute/envoy-gateway/httproute-1/rule/0/match/0/*
+        pathMatch:
+          distinct: false
+          name: ""
+          prefix: /
+      - destination:
+          metadata:
+            kind: HTTPRoute
+            name: httproute-2
+            namespace: envoy-gateway
+            sectionName: rule-1
+          name: httproute/envoy-gateway/httproute-2/rule/0
+          settings:
+          - addressType: IP
+            endpoints:
+            - host: 7.7.7.7
+              port: 8080
+            metadata:
+              kind: Service
+              name: service-1
+              namespace: envoy-gateway
+              sectionName: "8080"
+            name: httproute/envoy-gateway/httproute-2/rule/0/backend/0
+            protocol: HTTP
+            weight: 1
+        envoyExtensions: {}
+        hostname: '*'
+        isHTTP2: false
+        metadata:
+          kind: HTTPRoute
+          name: httproute-2
+          namespace: envoy-gateway
+          sectionName: rule-1
+        name: httproute/envoy-gateway/httproute-2/rule/0/match/0/*
         pathMatch:
           distinct: false
           name: ""

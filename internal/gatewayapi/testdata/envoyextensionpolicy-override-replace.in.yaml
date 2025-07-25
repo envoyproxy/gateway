@@ -92,6 +92,13 @@ httpRoutes:
       backendRefs:
       - name: service-1
         port: 8080
+    - matches:
+      - path:
+          value: "/fooz"
+      name: rule-2
+      backendRefs:
+      - name: service-1
+        port: 8080
 envoyExtensionPolicies:
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: EnvoyExtensionPolicy
@@ -131,3 +138,14 @@ envoyExtensionPolicies:
       group: gateway.networking.k8s.io
       kind: HTTPRoute
       name: httproute-3
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: EnvoyExtensionPolicy
+  metadata:
+    namespace: default
+    name: policy-for-route-3-rule-2
+  spec:
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: httproute-3
+      sectionname: rule-2

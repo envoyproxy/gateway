@@ -93,6 +93,13 @@ var ExtProcTest = suite.ConformanceTest{
 			}
 
 			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
+
+			// now check policy attached to a route rule which adds one additional header
+			EnvoyExtensionPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "ext-proc-test-route-rule", Namespace: ns}, suite.ControllerName, ancestorRef)
+			expectedResponse.Request.Path = "/processor-route-rule-name"
+			expectedResponse.Response.Headers["x-response-upstream-port"] = "8080"
+
+			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
 		})
 
 		t.Run("http route without proc mode", func(t *testing.T) {

@@ -284,11 +284,15 @@ func (s *extProcServer) Process(srv envoy_service_proc_v3.ExternalProcessor_Proc
 		case *envoy_service_proc_v3.ProcessingRequest_ResponseHeaders:
 
 			respXDSRouteName := ""
+			respUpstreamPort := ""
 
 			if req.Attributes != nil {
 				if epa, ok := req.Attributes["envoy.filters.http.ext_proc"]; ok {
 					if rsa, ok := epa.Fields["xds.route_name"]; ok {
 						respXDSRouteName = rsa.GetStringValue()
+					}
+					if rsa, ok := epa.Fields["upstream.port"]; ok {
+						respUpstreamPort = rsa.GetStringValue()
 					}
 				}
 			}
@@ -322,6 +326,12 @@ func (s *extProcServer) Process(srv envoy_service_proc_v3.ExternalProcessor_Proc
 								Header: &envoy_api_v3_core.HeaderValue{
 									Key:      "x-response-rbac-result-metadata",
 									RawValue: []byte(forwardedDynamicMetadata),
+								},
+							},
+							{
+								Header: &envoy_api_v3_core.HeaderValue{
+									Key:      "x-response-upstream-port",
+									RawValue: []byte(respUpstreamPort),
 								},
 							},
 						},
