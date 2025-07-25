@@ -153,6 +153,12 @@ func (o OrderedHTTPFilters) Len() int {
 }
 
 func (o OrderedHTTPFilters) Less(i, j int) bool {
+	// Sort on name if the order is equal
+	if o[i].order == o[j].order {
+		return o[i].filter.Name < o[j].filter.Name
+	}
+
+	// Sort on order
 	return o[i].order < o[j].order
 }
 
@@ -171,6 +177,7 @@ func sortHTTPFilters(filters []*hcmv3.HttpFilter, filterOrder []egv1a1.FilterPos
 	for i := 0; i < len(filters); i++ {
 		orderedFilters[i] = newOrderedHTTPFilter(filters[i])
 	}
+
 	sort.Sort(orderedFilters)
 
 	// Use a linked list to sort the filters in the custom order.
