@@ -58,9 +58,9 @@ consideration when debugging.
 ## Installing CRDs separately
 
 The [Envoy Gateway Helm Chart](https://hub.docker.com/r/envoyproxy/gateway-helm/tags) includes two types of CRDs under its crds/ directory:
-* [Gateway API CRDs](../concepts/introduction/#gateway-api/) (from the *experimental* channel): This channel includes additional `alpha` resources
+* [Gateway API CRDs](../concepts/#gateway-api) (from the *experimental* channel): This channel includes additional `alpha` resources
 such as `TCPRoute` and `BackendTLSPolicy`, which are commonly used by Envoy Gateway users.
-* [Envoy Gateway CRDs](../concepts/introduction/#gateway_api_extensions): These are custom CRDs that extend the Gateway API to support additional
+* [Envoy Gateway CRDs](../concepts/gateway_api_extensions/): These are custom CRDs that extend the Gateway API to support additional
 Envoy Gateway-specific features.
 
 If you prefer to manage CRDs separately, the [Envoy Gateway CRDs Helm Chart](https://hub.docker.com/r/envoyproxy/gateway-crds-helm/tags) allows you
