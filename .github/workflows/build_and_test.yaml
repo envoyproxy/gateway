@@ -104,10 +104,10 @@ jobs:
           profile: gateway-namespace-mode
         - version: v1.33.1
           ipFamily: ipv4
-          profile: address-as-listener-name
+          profile: port-as-listener-name
         - version: v1.32.5
           ipFamily: ipv6
-          profile: address-as-listener-name
+          profile: port-as-listener-name
     steps:
     - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
     - uses: ./tools/github-actions/setup-deps
@@ -157,10 +157,10 @@ jobs:
           profile: gateway-namespace-mode
         - version: v1.33.1
           ipFamily: ipv4
-          profile: address-as-listener-name
+          profile: port-as-listener-name
         - version: v1.32.5
           ipFamily: ipv6
-          profile: address-as-listener-name
+          profile: port-as-listener-name
     steps:
     - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
     - uses: ./tools/github-actions/setup-deps

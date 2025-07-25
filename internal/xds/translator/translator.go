@@ -266,8 +266,8 @@ func (t *Translator) processHTTPListenerXdsTranslation(
 	// The XDS translation is done in a best-effort manner, so we collect all
 	// errors and return them at the end.
 	var (
-		ownerGatewayListeners = map[string]sets.Set[*ir.ResourceMetadata]{} // The set of Gateway HTTPListeners that own the xDS Listener
-		http3EnabledListeners = make(map[listenerKey]*ir.HTTP3Settings)     // Map to track HTTP3 settings for listeners by address and port
+		ownerGatewayListeners = make(map[string]sets.Set[*ir.ResourceMetadata]) // The set of Gateway HTTPListeners that own the xDS Listener
+		http3EnabledListeners = make(map[listenerKey]*ir.HTTP3Settings)         // Map to track HTTP3 settings for listeners by address and port
 		errs                  error
 	)
 
@@ -405,13 +405,9 @@ func (t *Translator) processHTTPListenerXdsTranslation(
 		}
 
 		// Collect the metadata for the HTTPListener.
-		if _, ok := ownerGatewayListeners[tcpXDSListener.Name]; ok {
-			ownerGatewayListeners[tcpXDSListener.Name].Insert(httpListener.Metadata)
-		}
+		ownerGatewayListeners[tcpXDSListener.Name].Insert(httpListener.Metadata)
 		if http3Enabled {
-			if _, ok := ownerGatewayListeners[quicXDSListener.Name]; ok {
-				ownerGatewayListeners[quicXDSListener.Name].Insert(httpListener.Metadata)
-			}
+			ownerGatewayListeners[quicXDSListener.Name].Insert(httpListener.Metadata)
 		}
 
 		// Add the secrets referenced by the listener's TLS configuration to the
