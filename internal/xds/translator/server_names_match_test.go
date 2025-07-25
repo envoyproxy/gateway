@@ -97,7 +97,7 @@ func TestAddServerNamesMatch(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			filterChain := &listenerv3.FilterChain{}
 
-			err := addServerNamesMatch(tt.xdsListener, filterChain, tt.hostnames)
+			err := addServerNamesMatch(tt.xdsListener, filterChain, tt.hostnames, false)
 			require.NoError(t, err)
 
 			// Check if filter chain match was added
