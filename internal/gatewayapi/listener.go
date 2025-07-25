@@ -745,6 +745,11 @@ func (t *Translator) processTracing(gw *gwapiv1.Gateway, envoyproxy *egv1a1.Envo
 		serviceName = string(gw.Spec.GatewayClassName)
 	}
 
+	// Use configured service name if provided
+	if tracing.Provider.ServiceName != nil {
+		serviceName = *tracing.Provider.ServiceName
+	}
+
 	return &ir.Tracing{
 		Authority:    authority,
 		ServiceName:  serviceName,

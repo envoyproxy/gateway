@@ -26,7 +26,8 @@ http:
     - name: secret-2
       certificate: [99, 101, 114, 116, 45, 100, 97, 116, 97]
       privateKey: [107, 101, 121, 45, 100, 97, 116, 97]
-  enableProxyProtocol: true
+  proxyProtocol:
+    optional: false
   routes:
   - name: "first-route"
     hostname: "*"
@@ -42,7 +43,8 @@ tcp:
   address: "::"
   port: 10081
   externalPort: 81
-  enableProxyProtocol: true
+  proxyProtocol:
+    optional: false
   routes:
   - name: "tcp-route-dest"
     destination:

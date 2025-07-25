@@ -1,0 +1,366 @@
+clientTrafficPolicies:
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: ClientTrafficPolicy
+  metadata:
+    creationTimestamp: null
+    name: target-gateway-precedence-test
+    namespace: envoy-gateway
+  spec:
+    enableProxyProtocol: false
+    proxyProtocol:
+      optional: true
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: Gateway
+      name: gateway-precedence-test
+  status:
+    ancestors:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: gateway-precedence-test
+        namespace: envoy-gateway
+      conditions:
+      - lastTransitionTime: null
+        message: Policy has been accepted.
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: ClientTrafficPolicy
+  metadata:
+    creationTimestamp: null
+    name: target-gateway-legacy-only
+    namespace: envoy-gateway
+  spec:
+    enableProxyProtocol: true
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: Gateway
+      name: gateway-legacy-only
+  status:
+    ancestors:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: gateway-legacy-only
+        namespace: envoy-gateway
+      conditions:
+      - lastTransitionTime: null
+        message: Policy has been accepted.
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: ClientTrafficPolicy
+  metadata:
+    creationTimestamp: null
+    name: target-gateway-new-api-only
+    namespace: envoy-gateway
+  spec:
+    proxyProtocol:
+      optional: false
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: Gateway
+      name: gateway-new-api-only
+  status:
+    ancestors:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: gateway-new-api-only
+        namespace: envoy-gateway
+      conditions:
+      - lastTransitionTime: null
+        message: Policy has been accepted.
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+gateways:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: Gateway
+  metadata:
+    creationTimestamp: null
+    name: gateway-precedence-test
+    namespace: envoy-gateway
+  spec:
+    gatewayClassName: envoy-gateway-class
+    listeners:
+    - allowedRoutes:
+        namespaces:
+          from: Same
+      name: http-1
+      port: 80
+      protocol: HTTP
+  status:
+    listeners:
+    - attachedRoutes: 0
+      conditions:
+      - lastTransitionTime: null
+        message: Sending translated listener configuration to the data plane
+        reason: Programmed
+        status: "True"
+        type: Programmed
+      - lastTransitionTime: null
+        message: Listener has been successfully translated
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Listener references have been resolved
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      name: http-1
+      supportedKinds:
+      - group: gateway.networking.k8s.io
+        kind: HTTPRoute
+      - group: gateway.networking.k8s.io
+        kind: GRPCRoute
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: Gateway
+  metadata:
+    creationTimestamp: null
+    name: gateway-legacy-only
+    namespace: envoy-gateway
+  spec:
+    gatewayClassName: envoy-gateway-class
+    listeners:
+    - allowedRoutes:
+        namespaces:
+          from: Same
+      name: tcp-1
+      port: 9090
+      protocol: TCP
+  status:
+    listeners:
+    - attachedRoutes: 1
+      conditions:
+      - lastTransitionTime: null
+        message: Sending translated listener configuration to the data plane
+        reason: Programmed
+        status: "True"
+        type: Programmed
+      - lastTransitionTime: null
+        message: Listener has been successfully translated
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Listener references have been resolved
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      name: tcp-1
+      supportedKinds:
+      - group: gateway.networking.k8s.io
+        kind: TCPRoute
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: Gateway
+  metadata:
+    creationTimestamp: null
+    name: gateway-new-api-only
+    namespace: envoy-gateway
+  spec:
+    gatewayClassName: envoy-gateway-class
+    listeners:
+    - allowedRoutes:
+        namespaces:
+          from: Same
+      name: http-2
+      port: 8080
+      protocol: HTTP
+  status:
+    listeners:
+    - attachedRoutes: 0
+      conditions:
+      - lastTransitionTime: null
+        message: Sending translated listener configuration to the data plane
+        reason: Programmed
+        status: "True"
+        type: Programmed
+      - lastTransitionTime: null
+        message: Listener has been successfully translated
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Listener references have been resolved
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      name: http-2
+      supportedKinds:
+      - group: gateway.networking.k8s.io
+        kind: HTTPRoute
+      - group: gateway.networking.k8s.io
+        kind: GRPCRoute
+infraIR:
+  envoy-gateway/gateway-legacy-only:
+    proxy:
+      listeners:
+      - address: null
+        name: envoy-gateway/gateway-legacy-only/tcp-1
+        ports:
+        - containerPort: 9090
+          name: tcp-9090
+          protocol: TCP
+          servicePort: 9090
+      metadata:
+        labels:
+          gateway.envoyproxy.io/owning-gateway-name: gateway-legacy-only
+          gateway.envoyproxy.io/owning-gateway-namespace: envoy-gateway
+        ownerReference:
+          kind: GatewayClass
+          name: envoy-gateway-class
+      name: envoy-gateway/gateway-legacy-only
+      namespace: envoy-gateway-system
+  envoy-gateway/gateway-new-api-only:
+    proxy:
+      listeners:
+      - address: null
+        name: envoy-gateway/gateway-new-api-only/http-2
+        ports:
+        - containerPort: 8080
+          name: http-8080
+          protocol: HTTP
+          servicePort: 8080
+      metadata:
+        labels:
+          gateway.envoyproxy.io/owning-gateway-name: gateway-new-api-only
+          gateway.envoyproxy.io/owning-gateway-namespace: envoy-gateway
+        ownerReference:
+          kind: GatewayClass
+          name: envoy-gateway-class
+      name: envoy-gateway/gateway-new-api-only
+      namespace: envoy-gateway-system
+  envoy-gateway/gateway-precedence-test:
+    proxy:
+      listeners:
+      - address: null
+        name: envoy-gateway/gateway-precedence-test/http-1
+        ports:
+        - containerPort: 10080
+          name: http-80
+          protocol: HTTP
+          servicePort: 80
+      metadata:
+        labels:
+          gateway.envoyproxy.io/owning-gateway-name: gateway-precedence-test
+          gateway.envoyproxy.io/owning-gateway-namespace: envoy-gateway
+        ownerReference:
+          kind: GatewayClass
+          name: envoy-gateway-class
+      name: envoy-gateway/gateway-precedence-test
+      namespace: envoy-gateway-system
+tcpRoutes:
+- apiVersion: gateway.networking.k8s.io/v1alpha2
+  kind: TCPRoute
+  metadata:
+    creationTimestamp: null
+    name: tcproute-1
+    namespace: envoy-gateway
+  spec:
+    parentRefs:
+    - name: gateway-legacy-only
+    rules:
+    - backendRefs:
+      - name: tcp-backend
+        port: 3000
+  status:
+    parents:
+    - conditions:
+      - lastTransitionTime: null
+        message: Route is accepted
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: service envoy-gateway/tcp-backend not found
+        reason: BackendNotFound
+        status: "False"
+        type: ResolvedRefs
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+      parentRef:
+        name: gateway-legacy-only
+xdsIR:
+  envoy-gateway/gateway-legacy-only:
+    accessLog:
+      json:
+      - path: /dev/stdout
+    readyListener:
+      address: 0.0.0.0
+      ipFamily: IPv4
+      path: /ready
+      port: 19003
+    tcp:
+    - address: 0.0.0.0
+      externalPort: 9090
+      name: envoy-gateway/gateway-legacy-only/tcp-1
+      port: 9090
+      proxyProtocol: {}
+      routes:
+      - destination:
+          metadata:
+            kind: TCPRoute
+            name: tcproute-1
+            namespace: envoy-gateway
+          name: tcproute/envoy-gateway/tcproute-1/rule/-1
+        name: tcproute/envoy-gateway/tcproute-1
+  envoy-gateway/gateway-new-api-only:
+    accessLog:
+      json:
+      - path: /dev/stdout
+    http:
+    - address: 0.0.0.0
+      externalPort: 8080
+      hostnames:
+      - '*'
+      isHTTP2: false
+      metadata:
+        kind: Gateway
+        name: gateway-new-api-only
+        namespace: envoy-gateway
+        sectionName: http-2
+      name: envoy-gateway/gateway-new-api-only/http-2
+      path:
+        escapedSlashesAction: UnescapeAndRedirect
+        mergeSlashes: true
+      port: 8080
+      proxyProtocol: {}
+    readyListener:
+      address: 0.0.0.0
+      ipFamily: IPv4
+      path: /ready
+      port: 19003
+  envoy-gateway/gateway-precedence-test:
+    accessLog:
+      json:
+      - path: /dev/stdout
+    http:
+    - address: 0.0.0.0
+      externalPort: 80
+      hostnames:
+      - '*'
+      isHTTP2: false
+      metadata:
+        kind: Gateway
+        name: gateway-precedence-test
+        namespace: envoy-gateway
+        sectionName: http-1
+      name: envoy-gateway/gateway-precedence-test/http-1
+      path:
+        escapedSlashesAction: UnescapeAndRedirect
+        mergeSlashes: true
+      port: 10080
+      proxyProtocol:
+        optional: true
+    readyListener:
+      address: 0.0.0.0
+      ipFamily: IPv4
+      path: /ready
+      port: 19003

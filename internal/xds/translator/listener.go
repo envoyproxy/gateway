@@ -413,7 +413,7 @@ func (t *Translator) addHCMToXDSListener(
 	}
 
 	// Add the proxy protocol filter if needed
-	patchProxyProtocolFilter(xdsListener, irListener.EnableProxyProtocol)
+	patchProxyProtocolFilter(xdsListener, irListener.ProxyProtocol)
 
 	if irListener.IsHTTP2 {
 		mgr.HttpFilters = append(mgr.HttpFilters, xdsfilters.GRPCWeb)

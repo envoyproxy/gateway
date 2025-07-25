@@ -311,8 +311,8 @@ type HTTPListener struct {
 	TCPKeepalive *TCPKeepalive `json:"tcpKeepalive,omitempty" yaml:"tcpKeepalive,omitempty"`
 	// Headers configures special header management for the listener
 	Headers *HeaderSettings `json:"headers,omitempty" yaml:"headers,omitempty"`
-	// EnableProxyProtocol enables the listener to interpret proxy protocol header
-	EnableProxyProtocol bool `json:"enableProxyProtocol,omitempty" yaml:"enableProxyProtocol,omitempty"`
+	// ProxyProtocol provides proxy protocol configuration.
+	ProxyProtocol *ProxyProtocolSettings `json:"proxyProtocol,omitempty" yaml:"proxyProtocol,omitempty"`
 	// ClientIPDetection controls how the original client IP address is determined for requests.
 	ClientIPDetection *ClientIPDetectionSettings `json:"clientIPDetection,omitempty" yaml:"clientIPDetection,omitempty"`
 	// Path contains settings for path URI manipulations
@@ -515,6 +515,16 @@ const (
 type PathSettings struct {
 	MergeSlashes         bool                   `json:"mergeSlashes" yaml:"mergeSlashes"`
 	EscapedSlashesAction PathEscapedSlashAction `json:"escapedSlashesAction" yaml:"escapedSlashesAction"`
+}
+
+// ProxyProtocolSettings holds configuration for proxy protocol
+// +k8s:deepcopy-gen=true
+type ProxyProtocolSettings struct {
+	// Optional allows requests without a Proxy Protocol header to be proxied.
+	// If set to true, the listener will accept requests without a Proxy Protocol header.
+	// If set to false, the listener will reject requests without a Proxy Protocol header.
+	// If not set, the default behavior is to reject requests without a Proxy Protocol header.
+	Optional bool `json:"optional,omitempty" yaml:"optional,omitempty"`
 }
 
 type WithUnderscoresAction egv1a1.WithUnderscoresAction
@@ -1155,7 +1165,7 @@ type OIDC struct {
 	// may not be able to handle OIDC redirects and wish to directly supply a token instead.
 	PassThroughAuthHeader bool `json:"passThroughAuthHeader,omitempty"`
 
-	// Any request that matches any of the provided matchers won’t be redirected to OAuth server when tokens are not valid.
+	// Any request that matches any of the provided matchers won't be redirected to OAuth server when tokens are not valid.
 	// Automatic access token refresh will be performed for these requests, if enabled.
 	// This behavior can be useful for AJAX requests.
 	DenyRedirect *egv1a1.OIDCDenyRedirect `json:"denyRedirect,omitempty"`
@@ -1988,8 +1998,8 @@ type TCPListener struct {
 	TLS *TLSConfig `json:"tls,omitempty" yaml:"tls,omitempty"`
 	// TCPKeepalive configuration for the listener
 	TCPKeepalive *TCPKeepalive `json:"tcpKeepalive,omitempty" yaml:"tcpKeepalive,omitempty"`
-	// EnableProxyProtocol enables the listener to interpret proxy protocol header
-	EnableProxyProtocol bool `json:"enableProxyProtocol,omitempty" yaml:"enableProxyProtocol,omitempty"`
+	// ProxyProtocol provides proxy protocol configuration.
+	ProxyProtocol *ProxyProtocolSettings `json:"proxyProtocol,omitempty" yaml:"proxyProtocol,omitempty"`
 	// ClientTimeout sets the timeout configuration for downstream connections.
 	Timeout *ClientTimeout `json:"timeout,omitempty" yaml:"clientTimeout,omitempty"`
 	// Connection settings for clients

@@ -6,7 +6,8 @@ clientTrafficPolicies:
     name: target-gateway-1-section-http-1
     namespace: envoy-gateway
   spec:
-    enableProxyProtocol: true
+    proxyProtocol:
+      optional: true
     targetRef:
       group: gateway.networking.k8s.io
       kind: Gateway
@@ -131,7 +132,6 @@ xdsIR:
       - path: /dev/stdout
     http:
     - address: 0.0.0.0
-      enableProxyProtocol: true
       externalPort: 80
       hostnames:
       - '*'
@@ -146,6 +146,8 @@ xdsIR:
         escapedSlashesAction: UnescapeAndRedirect
         mergeSlashes: true
       port: 10080
+      proxyProtocol:
+        optional: true
     - address: 0.0.0.0
       externalPort: 8080
       hostnames:
