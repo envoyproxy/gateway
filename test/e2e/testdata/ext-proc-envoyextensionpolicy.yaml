@@ -16,6 +16,14 @@ spec:
     backendRefs:
     - name: infra-backend-v1
       port: 8080
+  - matches:
+      - path:
+          type: PathPrefix
+          value: /processor-route-rule-name
+    name: rule-name
+    backendRefs:
+      - name: infra-backend-v1
+        port: 8080
     filters:
     - type: RequestHeaderModifier
       requestHeaderModifier:
@@ -60,6 +68,7 @@ spec:
       request:
         attributes:
         - xds.route_name
+        - xds.filter_chain_name
       response:
         attributes:
         - xds.route_name
@@ -69,6 +78,36 @@ spec:
       - envoy.filters.http.rbac
       writableNamespaces:
       - io.envoyproxy.gateway.e2e
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyExtensionPolicy
+metadata:
+  name: ext-proc-test
+  namespace: gateway-conformance-infra
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: http-with-ext-proc
+      sectionName: rule-name
+  extProc:
+    - backendRefs:
+        - name: grpc-ext-proc
+          namespace: gateway-conformance-infra
+          port: 9002
+      processingMode:
+        request:
+          attributes:
+            - xds.route_name
+        response:
+          attributes:
+            - xds.route_name
+      metadata:
+        accessibleNamespaces:
+          - io.envoyproxy.gateway.e2e
+          - envoy.filters.http.rbac
+        writableNamespaces:
+          - io.envoyproxy.gateway.e2e
 ---
 apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: SecurityPolicy
