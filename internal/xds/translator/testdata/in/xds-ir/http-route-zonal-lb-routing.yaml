@@ -1,0 +1,67 @@
+http:
+- name: "first-listener"
+  address: "::"
+  port: 10080
+  hostnames:
+  - "*"
+  routes:
+  - name: "route-with-settings-preferlocal"
+    hostname: "*"
+    destination:
+      name: "route-with-settings-preferlocal-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 8080
+          zone: us-east-1a
+        - host: "2.3.4.5"
+          port: 8080
+          zone: us-east-1b
+        name: "route-with-settings-preferlocal/backend/0"
+        weight: 30
+        preferLocal:
+          minEndpointsThreshold: 1
+          force:
+            minEndpointsInZoneThreshold: 1
+  - name: "route-with-lb-preferlocal"
+    hostname: "*"
+    destination:
+      name: "route-with-lb-preferlocal-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 8080
+          zone: us-east-1a
+        - host: "2.3.4.5"
+          port: 8080
+          zone: us-east-1b
+        name: "route-with-lb-preferlocal-dest/backend/0"
+        weight: 30
+    traffic:
+      loadBalancer:
+        leastRequest: {}
+        preferLocal:
+          minEndpointsThreshold: 3
+  - name: "route-with-lb-and-settings-preferlocal"
+    hostname: "*"
+    destination:
+      name: "route-with-lb-and-settings-preferlocal-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 8080
+          zone: us-east-1a
+        - host: "2.3.4.5"
+          port: 8080
+          zone: us-east-1b
+        name: "route-with-lb-and-settings-preferlocal-dest/backend/0"
+        weight: 30
+        preferLocal:
+          minEndpointsThreshold: 1
+          force:
+            minEndpointsInZoneThreshold: 1
+    traffic:
+      loadBalancer:
+        leastRequest: {}
+        preferLocal:
+          minEndpointsThreshold: 3

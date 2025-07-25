@@ -832,6 +832,15 @@ func (h *HTTPRoute) GetRetry() *Retry {
 	return nil
 }
 
+func (h *HTTPRoute) NeedsClusterPerSetting() bool {
+	if h.Traffic != nil &&
+		h.Traffic.LoadBalancer != nil &&
+		h.Traffic.LoadBalancer.PreferLocal != nil {
+		return true
+	}
+	return h.Destination.NeedsClusterPerSetting()
+}
+
 // DNS contains configuration options for DNS resolution.
 // +k8s:deepcopy-gen=true
 type DNS struct {
@@ -1582,7 +1591,7 @@ func (r *RouteDestination) Validate() error {
 func (r *RouteDestination) NeedsClusterPerSetting() bool {
 	return r.HasMixedEndpoints() ||
 		r.HasFiltersInSettings() ||
-		(len(r.Settings) > 1 && r.HasZoneAwareRouting())
+		(len(r.Settings) > 1 && r.HasPreferLocalZone())
 }
 
 // HasMixedEndpoints returns true if the RouteDestination has endpoints of multiple types
@@ -1607,10 +1616,10 @@ func (r *RouteDestination) HasFiltersInSettings() bool {
 	return false
 }
 
-// HasZoneAwareRouting returns true if any setting in the destination has ZoneAwareRoutingEnabled set
-func (r *RouteDestination) HasZoneAwareRouting() bool {
+// HasPreferLocalZone returns true if any setting in the destination has PreferLocalZone set
+func (r *RouteDestination) HasPreferLocalZone() bool {
 	for _, setting := range r.Settings {
-		if setting.ZoneAwareRouting != nil {
+		if setting.PreferLocal != nil {
 			return true
 		}
 	}
@@ -1673,11 +1682,9 @@ type DestinationSetting struct {
 	IPFamily *egv1a1.IPFamily    `json:"ipFamily,omitempty" yaml:"ipFamily,omitempty"`
 	TLS      *TLSUpstreamConfig  `json:"tls,omitempty" yaml:"tls,omitempty"`
 	Filters  *DestinationFilters `json:"filters,omitempty" yaml:"filters,omitempty"`
-	// ZoneAwareRouting specifies whether to enable Zone Aware Routing for this destination's endpoints.
+	// PreferLocal specifies whether to enable Zone Aware Routing for this destination's endpoints.
 	// This is derived from the backend service and depends on having Kubernetes Topology Aware Routing or Traffic Distribution enabled.
-	//
-	// +optional
-	ZoneAwareRouting *ZoneAwareRouting `json:"zoneAwareRouting,omitempty" yaml:"zoneAwareRouting,omitempty"`
+	PreferLocal *PreferLocalZone `json:"preferLocal,omitempty" yaml:"preferLocal,omitempty"`
 	// Metadata is used to enrich envoy route metadata with user and provider-specific information
 	// The primary metadata for DestinationSettings comes from the Backend resource reference in BackendRef
 	Metadata *ResourceMetadata `json:"metadata,omitempty" yaml:"metadata,omitempty"`
@@ -2523,6 +2530,8 @@ type LoadBalancer struct {
 	Random *Random `json:"random,omitempty" yaml:"random,omitempty"`
 	// ConsistentHash load balancer policy
 	ConsistentHash *ConsistentHash `json:"consistentHash,omitempty" yaml:"consistentHash,omitempty"`
+	// PreferLocal defines the configuration related to the distribution of requests between locality zones.
+	PreferLocal *PreferLocalZone `json:"preferLocal,omitempty" yaml:"preferLocal,omitempty"`
 }
 
 // Validate the fields within the LoadBalancer structure
@@ -3203,8 +3212,21 @@ type RequestBuffer struct {
 	Limit resource.Quantity `json:"limit" yaml:"limit"`
 }
 
-// ZoneAwareRouting holds the zone aware routing configuration
+// PreferLocalZone configures zone-aware routing to prefer sending traffic to the local locality zone.
 // +k8s:deepcopy-gen=true
-type ZoneAwareRouting struct {
-	MinSize int `json:"minSize" yaml:"minSize"`
+type PreferLocalZone struct {
+	// ForceLocalZone defines override configuration for forcing all traffic to stay within the local zone instead of the default behavior
+	// which maintains equal distribution among upstream endpoints while sending as much traffic as possible locally.
+	Force *ForceLocalZone `json:"force,omitempty" yaml:"force,omitempty"`
+	// MinEndpointsThreshold is the minimum number of total upstream endpoints across all zones required to enable zone-aware routing.
+	MinEndpointsThreshold *uint64 `json:"minEndpointsThreshold,omitempty" yaml:"minEndpointsThreshold,omitempty"`
+}
+
+// ForceLocalZone defines override configuration for forcing all traffic to stay within the local zone instead of the default behavior
+// which maintains equal distribution among upstream endpoints while sending as much traffic as possible locally.
+// +k8s:deepcopy-gen=true
+type ForceLocalZone struct {
+	// MinEndpointsInZoneThreshold is the minimum number of upstream endpoints in the local zone required to honor the forceLocalZone
+	// override. This is useful for protecting zones with fewer endpoints.
+	MinEndpointsInZoneThreshold *uint32 `json:"minEndpointsInZoneThreshold,omitempty" yaml:"minEndpointsInZoneThreshold,omitempty"`
 }
