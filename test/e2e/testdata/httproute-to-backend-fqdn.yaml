@@ -14,7 +14,7 @@ spec:
     backendRefs:
     - group: gateway.envoyproxy.io
       kind: Backend
-      name: backend-fqdn-http2
+      name: backend-fqdn
 ---
 apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: Backend

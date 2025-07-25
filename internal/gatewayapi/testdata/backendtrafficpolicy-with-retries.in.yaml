@@ -115,6 +115,7 @@ backendTrafficPolicies:
       retryOn:
         triggers:
         - cancelled
+        - reset-before-request
       perRetry:
         timeout: 250ms
         backoff:

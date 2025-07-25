@@ -259,21 +259,25 @@ func (t *testingExtensionServer) PostHTTPListenerModify(_ context.Context, req *
 	}, nil
 }
 
-// PostTranslateModifyHook inserts and overrides some clusters/secrets
+// PostTranslateModifyHook inserts and overrides some clusters/secrets/listeners/routes
 func (t *testingExtensionServer) PostTranslateModify(_ context.Context, req *pb.PostTranslateModifyRequest) (*pb.PostTranslateModifyResponse, error) {
 	for _, cluster := range req.Clusters {
 		if cluster.Name == "custom-backend-dest" {
 			return &pb.PostTranslateModifyResponse{
-				Clusters: req.Clusters,
-				Secrets:  req.Secrets,
+				Clusters:  req.Clusters,
+				Secrets:   req.Secrets,
+				Listeners: req.Listeners,
+				Routes:    req.Routes,
 			}, nil
 		}
 		// This simulates an extension server that returns an error. It allows verifying that fail-close is working.
 		if edsConfig := cluster.GetEdsClusterConfig(); edsConfig != nil {
 			if strings.Contains(edsConfig.ServiceName, "fail-close-error") {
 				return &pb.PostTranslateModifyResponse{
-					Clusters: req.Clusters,
-					Secrets:  req.Secrets,
+					Clusters:  req.Clusters,
+					Secrets:   req.Secrets,
+					Listeners: req.Listeners,
+					Routes:    req.Routes,
 				}, fmt.Errorf("cluster hook resource error: %s", edsConfig.ServiceName)
 			}
 		}
@@ -296,8 +300,10 @@ func (t *testingExtensionServer) PostTranslateModify(_ context.Context, req *pb.
 	}
 
 	response := &pb.PostTranslateModifyResponse{
-		Clusters: make([]*clusterV3.Cluster, len(req.Clusters)),
-		Secrets:  make([]*tlsV3.Secret, len(req.Secrets)),
+		Clusters:  make([]*clusterV3.Cluster, len(req.Clusters)),
+		Secrets:   make([]*tlsV3.Secret, len(req.Secrets)),
+		Listeners: make([]*listenerV3.Listener, len(req.Listeners)),
+		Routes:    make([]*routeV3.RouteConfiguration, len(req.Routes)),
 	}
 	for idx, cluster := range req.Clusters {
 		response.Clusters[idx] = proto.Clone(cluster).(*clusterV3.Cluster)
@@ -396,6 +402,61 @@ func (t *testingExtensionServer) PostTranslateModify(_ context.Context, req *pb.
 			},
 		},
 	})
+
+	// Process listeners - clone and potentially modify them
+	for idx, listener := range req.Listeners {
+		response.Listeners[idx] = proto.Clone(listener).(*listenerV3.Listener)
+		// Example: Modify listener for testing - add a stat prefix if listener name matches
+		if listener.Name == "test-listener-modify" {
+			response.Listeners[idx].StatPrefix = "extension-modified-listener"
+		}
+	}
+
+	// Process routes - clone and potentially modify them
+	for idx, route := range req.Routes {
+		response.Routes[idx] = proto.Clone(route).(*routeV3.RouteConfiguration)
+		// Example: Modify route for testing - add metadata if route name matches
+		if route.Name == "test-route-modify" {
+			if response.Routes[idx].ResponseHeadersToAdd == nil {
+				response.Routes[idx].ResponseHeadersToAdd = []*coreV3.HeaderValueOption{}
+			}
+			response.Routes[idx].ResponseHeadersToAdd = append(response.Routes[idx].ResponseHeadersToAdd,
+				&coreV3.HeaderValueOption{
+					Header: &coreV3.HeaderValue{
+						Key:   "x-extension-modified",
+						Value: "true",
+					},
+				})
+		}
+	}
+
+	// Only inject new resources for specific test cases to avoid breaking existing tests
+	for _, policy := range req.PostTranslateContext.ExtensionResources {
+		extensionResource := unstructured.Unstructured{}
+		if err := extensionResource.UnmarshalJSON(policy.UnstructuredBytes); err == nil {
+			if extensionResource.GetObjectKind().GroupVersionKind().Kind == "ExampleExtPolicy" {
+				// Example: Add a new listener for testing
+				response.Listeners = append(response.Listeners, &listenerV3.Listener{
+					Name:       "extension-injected-listener",
+					StatPrefix: "extension-injected",
+				})
+
+				// Example: Add a new route for testing
+				response.Routes = append(response.Routes, &routeV3.RouteConfiguration{
+					Name: "extension-injected-route",
+					ResponseHeadersToAdd: []*coreV3.HeaderValueOption{
+						{
+							Header: &coreV3.HeaderValue{
+								Key:   "x-extension-injected",
+								Value: "route",
+							},
+						},
+					},
+				})
+				break
+			}
+		}
+	}
 
 	return response, nil
 }

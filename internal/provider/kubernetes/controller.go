@@ -11,7 +11,9 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/telepresenceio/watchable"
 	appsv1 "k8s.io/api/apps/v1"
+	certificatesv1b1 "k8s.io/api/certificates/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
@@ -66,6 +68,7 @@ type gatewayAPIReconciler struct {
 	envoyGateway         *egv1a1.EnvoyGateway
 	mergeGateways        sets.Set[string]
 	resources            *message.ProviderResources
+	subscriptions        *subscriptions
 	extGVKs              []schema.GroupVersionKind
 	extServerPolicies    []schema.GroupVersionKind
 	extBackendGVKs       []schema.GroupVersionKind
@@ -85,6 +88,26 @@ type gatewayAPIReconciler struct {
 	tcpRouteCRDExists      bool
 	tlsRouteCRDExists      bool
 	udpRouteCRDExists      bool
+
+	clusterTrustBundleExits bool
+}
+
+type subscriptions struct {
+	gatewayClassStatuses         <-chan watchable.Snapshot[types.NamespacedName, *gwapiv1.GatewayClassStatus]
+	gatewayStatuses              <-chan watchable.Snapshot[types.NamespacedName, *gwapiv1.GatewayStatus]
+	httpRouteStatuses            <-chan watchable.Snapshot[types.NamespacedName, *gwapiv1.HTTPRouteStatus]
+	grpcRouteStatuses            <-chan watchable.Snapshot[types.NamespacedName, *gwapiv1.GRPCRouteStatus]
+	tlsRouteStatuses             <-chan watchable.Snapshot[types.NamespacedName, *gwapiv1a2.TLSRouteStatus]
+	tcpRouteStatuses             <-chan watchable.Snapshot[types.NamespacedName, *gwapiv1a2.TCPRouteStatus]
+	udpRouteStatuses             <-chan watchable.Snapshot[types.NamespacedName, *gwapiv1a2.UDPRouteStatus]
+	backendTLSPolicyStatuses     <-chan watchable.Snapshot[types.NamespacedName, *gwapiv1a2.PolicyStatus]
+	backendTrafficPolicyStatuses <-chan watchable.Snapshot[types.NamespacedName, *gwapiv1a2.PolicyStatus]
+	envoyExtensionPolicyStatuses <-chan watchable.Snapshot[types.NamespacedName, *gwapiv1a2.PolicyStatus]
+	envoyPatchPolicyStatuses     <-chan watchable.Snapshot[types.NamespacedName, *gwapiv1a2.PolicyStatus]
+	clientTrafficPolicyStatuses  <-chan watchable.Snapshot[types.NamespacedName, *gwapiv1a2.PolicyStatus]
+	securityPolicyStatuses       <-chan watchable.Snapshot[types.NamespacedName, *gwapiv1a2.PolicyStatus]
+	backendStatuses              <-chan watchable.Snapshot[types.NamespacedName, *egv1a1.BackendStatus]
+	extensionPolicyStatuses      <-chan watchable.Snapshot[message.NamespacedNameAndGVK, *gwapiv1a2.PolicyStatus]
 }
 
 // newGatewayAPIController
@@ -117,6 +140,7 @@ func newGatewayAPIController(ctx context.Context, mgr manager.Manager, cfg *conf
 		namespace:            cfg.ControllerNamespace,
 		statusUpdater:        su,
 		resources:            resources,
+		subscriptions:        &subscriptions{},
 		extGVKs:              extGVKs,
 		store:                newProviderStore(),
 		envoyGateway:         cfg.EnvoyGateway,
@@ -153,6 +177,10 @@ func newGatewayAPIController(ctx context.Context, mgr manager.Manager, cfg *conf
 		return fmt.Errorf("error watching resources: %w", err)
 	}
 
+	// Do not call .Subscribe() inside Goroutine since it is supposed to be called from the same
+	// Goroutine where Close() is called.
+	r.subscribeToResources(ctx)
+
 	// When leader election is enabled, only subscribe to status updates upon acquiring leadership.
 	if cfg.EnvoyGateway.Provider.Type == egv1a1.ProviderTypeKubernetes &&
 		!ptr.Deref(cfg.EnvoyGateway.Provider.Kubernetes.LeaderElection.Disable, false) {
@@ -168,6 +196,25 @@ func newGatewayAPIController(ctx context.Context, mgr manager.Manager, cfg *conf
 		r.subscribeAndUpdateStatus(ctx, cfg.EnvoyGateway.ExtensionManager != nil)
 	}
 	return nil
+}
+
+func (r *gatewayAPIReconciler) subscribeToResources(ctx context.Context) {
+	// Subscribe to all resources.
+	r.subscriptions.gatewayClassStatuses = r.resources.GatewayClassStatuses.Subscribe(ctx)
+	r.subscriptions.gatewayStatuses = r.resources.GatewayStatuses.Subscribe(ctx)
+	r.subscriptions.httpRouteStatuses = r.resources.HTTPRouteStatuses.Subscribe(ctx)
+	r.subscriptions.grpcRouteStatuses = r.resources.GRPCRouteStatuses.Subscribe(ctx)
+	r.subscriptions.tlsRouteStatuses = r.resources.TLSRouteStatuses.Subscribe(ctx)
+	r.subscriptions.tcpRouteStatuses = r.resources.TCPRouteStatuses.Subscribe(ctx)
+	r.subscriptions.udpRouteStatuses = r.resources.UDPRouteStatuses.Subscribe(ctx)
+	r.subscriptions.backendTLSPolicyStatuses = r.resources.BackendTLSPolicyStatuses.Subscribe(ctx)
+	r.subscriptions.backendTrafficPolicyStatuses = r.resources.BackendTrafficPolicyStatuses.Subscribe(ctx)
+	r.subscriptions.envoyExtensionPolicyStatuses = r.resources.EnvoyExtensionPolicyStatuses.Subscribe(ctx)
+	r.subscriptions.envoyPatchPolicyStatuses = r.resources.EnvoyPatchPolicyStatuses.Subscribe(ctx)
+	r.subscriptions.clientTrafficPolicyStatuses = r.resources.ClientTrafficPolicyStatuses.Subscribe(ctx)
+	r.subscriptions.securityPolicyStatuses = r.resources.SecurityPolicyStatuses.Subscribe(ctx)
+	r.subscriptions.backendStatuses = r.resources.BackendStatuses.Subscribe(ctx)
+	r.subscriptions.extensionPolicyStatuses = r.resources.ExtensionPolicyStatuses.Subscribe(ctx)
 }
 
 func byNamespaceSelectorEnabled(eg *egv1a1.EnvoyGateway) bool {
@@ -396,16 +443,6 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 			r.log.Error(err, fmt.Sprintf("failed processExtensionServerPolicies for gatewayClass %s", managedGC.Name))
 		}
 
-		if r.backendCRDExists {
-			if err = r.processBackends(ctx, gwcResource); err != nil {
-				if isTransientError(err) {
-					r.log.Error(err, "transient error processing Backends", "gatewayClass", managedGC.Name)
-					return reconcile.Result{}, err
-				}
-				r.log.Error(err, fmt.Sprintf("failed processBackends for gatewayClass %s", managedGC.Name))
-			}
-		}
-
 		// Add the referenced services, ServiceImports, and EndpointSlices in
 		// the collected BackendRefs to the resourceTree.
 		// BackendRefs are referred by various Route objects and the ExtAuth in SecurityPolicies.
@@ -588,13 +625,18 @@ func (r *gatewayAPIReconciler) processBackendRefs(ctx context.Context, gwcResour
 			endpointSliceLabelKey = mcsapiv1a1.LabelServiceName
 
 		case egv1a1.KindBackend:
+			if !r.backendCRDExists {
+				r.log.V(6).Info("skipping Backend processing as Backend CRD is not installed")
+				continue
+			}
 			backend := new(egv1a1.Backend)
 			err := r.client.Get(ctx, types.NamespacedName{Namespace: string(*backendRef.Namespace), Name: string(backendRef.Name)}, backend)
 			if err != nil {
 				if isTransientError(err) {
 					return err
 				}
-				r.log.Error(err, "failed to get Backend", "namespace", string(*backendRef.Namespace),
+				r.log.Error(err, "failed to get Backend",
+					"namespace", string(*backendRef.Namespace),
 					"name", string(backendRef.Name))
 			} else {
 				resourceMappings.allAssociatedNamespaces.Insert(backend.Namespace)
@@ -602,54 +644,43 @@ func (r *gatewayAPIReconciler) processBackendRefs(ctx context.Context, gwcResour
 				if !resourceMappings.allAssociatedBackends.Has(key) {
 					resourceMappings.allAssociatedBackends.Insert(key)
 					gwcResource.Backends = append(gwcResource.Backends, backend)
-					r.log.Info("added Backend to resource tree", "namespace", string(*backendRef.Namespace),
+					r.log.Info("added Backend to resource tree",
+						"namespace", string(*backendRef.Namespace),
 						"name", string(backendRef.Name))
 				}
 			}
 
 			if backend.Spec.TLS != nil && backend.Spec.TLS.CACertificateRefs != nil {
 				for _, caCertRef := range backend.Spec.TLS.CACertificateRefs {
-					// if kind is not Secret or ConfigMap, we skip early to avoid further calculation overhead
-					if string(caCertRef.Kind) == resource.KindConfigMap ||
-						string(caCertRef.Kind) == resource.KindSecret {
-
-						var err error
-						caRefNew := gwapiv1.SecretObjectReference{
-							Group:     gatewayapi.GroupPtr(string(caCertRef.Group)),
-							Kind:      gatewayapi.KindPtr(string(caCertRef.Kind)),
-							Name:      caCertRef.Name,
-							Namespace: gatewayapi.NamespacePtr(backend.Namespace),
+					var err error
+					caRefNew := gwapiv1.SecretObjectReference{
+						Group:     gatewayapi.GroupPtr(string(caCertRef.Group)),
+						Kind:      gatewayapi.KindPtr(string(caCertRef.Kind)),
+						Name:      caCertRef.Name,
+						Namespace: gatewayapi.NamespacePtr(backend.Namespace),
+					}
+					switch string(caCertRef.Kind) {
+					case resource.KindConfigMap:
+						err = r.processConfigMapRef(
+							ctx, resourceMappings, gwcResource,
+							resource.KindBackendTLSPolicy, backend.Namespace, backend.Name,
+							caRefNew)
+					case resource.KindSecret:
+						err = r.processSecretRef(
+							ctx, resourceMappings, gwcResource,
+							resource.KindBackendTLSPolicy, backend.Namespace, backend.Name,
+							caRefNew)
+					case resource.KindClusterTrustBundle:
+						err = r.processClusterTrustBundleRef(ctx, resourceMappings, gwcResource, caRefNew)
+					}
+					if err != nil {
+						// If the error is transient, we return it to allow Reconcile to retry.
+						if isTransientError(err) {
+							return err
 						}
-						switch string(caCertRef.Kind) {
-						case resource.KindConfigMap:
-							err = r.processConfigMapRef(
-								ctx,
-								resourceMappings,
-								gwcResource,
-								resource.KindBackendTLSPolicy,
-								backend.Namespace,
-								backend.Name,
-								caRefNew)
-
-						case resource.KindSecret:
-							err = r.processSecretRef(
-								ctx,
-								resourceMappings,
-								gwcResource,
-								resource.KindBackendTLSPolicy,
-								backend.Namespace,
-								backend.Name,
-								caRefNew)
-						}
-						if err != nil {
-							// If the error is transient, we return it to allow Reconcile to retry.
-							if isTransientError(err) {
-								return err
-							}
-							r.log.Error(err,
-								"failed to process CACertificateRef for Backend",
-								"backend", backend, "caCertificateRef", caCertRef.Name)
-						}
+						r.log.Error(err,
+							"failed to process CACertificateRef for Backend",
+							"backend", backend, "caCertificateRef", caCertRef.Name)
 					}
 				}
 			}
@@ -714,7 +745,8 @@ func (r *gatewayAPIReconciler) processBackendRefs(ctx context.Context, gwcResour
 
 // processSecurityPolicyObjectRefs adds the referenced resources in SecurityPolicies
 // to the resourceTree
-// - Secrets for OIDC and BasicAuth
+// - BackendRefs and Secrets for OIDC
+// - Secrets for BasicAuth
 // - BackendRefs for ExAuth
 func (r *gatewayAPIReconciler) processSecurityPolicyObjectRefs(
 	ctx context.Context, resourceTree *resource.Resources, resourceMap *resourceMappings,
@@ -746,6 +778,43 @@ func (r *gatewayAPIReconciler) processSecurityPolicyObjectRefs(
 				r.log.Error(err,
 					"failed to process OIDC SecretRef for SecurityPolicy",
 					"policy", policy, "secretRef", oidc.ClientSecret)
+			}
+
+			if oidc.ClientIDRef != nil {
+				if err := r.processSecretRef(
+					ctx,
+					resourceMap,
+					resourceTree,
+					resource.KindSecurityPolicy,
+					policy.Namespace,
+					policy.Name,
+					*oidc.ClientIDRef); err != nil {
+					// If the error is transient, we return it to allow Reconcile to retry.
+					if isTransientError(err) {
+						return err
+					}
+					r.log.Error(err,
+						"failed to process OIDC ClientIDRef for SecurityPolicy",
+						"policy", policy, "secretRef", oidc.ClientIDRef)
+				}
+			}
+
+			var backendRefs []gwapiv1.BackendObjectReference
+			if oidc.Provider.BackendRef != nil {
+				backendRefs = append(backendRefs, *oidc.Provider.BackendRef)
+			}
+			if len(oidc.Provider.BackendRefs) > 0 {
+				backendRefs = append(backendRefs, oidc.Provider.BackendRefs[0].BackendObjectReference)
+			}
+
+			for _, backendRef := range backendRefs {
+				if err := r.processBackendRef(
+					ctx, resourceMap, resourceTree,
+					resource.KindSecurityPolicy, policy.Namespace, policy.Name,
+					backendRef); err != nil {
+					r.log.Error(err, "failed to process OIDC BackendRef for SecurityPolicy",
+						"policy", policy, "backendRef", backendRef)
+				}
 			}
 		}
 
@@ -993,7 +1062,7 @@ func (r *gatewayAPIReconciler) processSecretRef(
 	if err := r.client.Get(ctx,
 		types.NamespacedName{Namespace: secretNS, Name: string(secretRef.Name)},
 		secret); err != nil {
-		return err
+		return fmt.Errorf("unable to find the Secret %s/%s: %w", secretNS, string(secretRef.Name), err)
 	}
 
 	if secretNS != ownerNS {
@@ -1035,9 +1104,30 @@ func (r *gatewayAPIReconciler) processSecretRef(
 	return nil
 }
 
+func (r *gatewayAPIReconciler) processClusterTrustBundleRef(
+	ctx context.Context,
+	resourceMap *resourceMappings,
+	resourceTree *resource.Resources,
+	ref gwapiv1.SecretObjectReference,
+) error {
+	trustBundle := &certificatesv1b1.ClusterTrustBundle{}
+	err := r.client.Get(ctx, types.NamespacedName{Name: string(ref.Name)}, trustBundle)
+	if err != nil {
+		return fmt.Errorf("unable to find the ClusterTrustBundle %s: %w", string(ref.Name), err)
+	}
+
+	key := trustBundle.Name
+	if !resourceMap.allAssociatedClusterTrustBundles.Has(key) {
+		resourceMap.allAssociatedClusterTrustBundles.Insert(key)
+		resourceTree.ClusterTrustBundles = append(resourceTree.ClusterTrustBundles, trustBundle)
+		r.log.Info("processing ClusterTrustBundle", "name", string(ref.Name))
+	}
+	return nil
+}
+
 // processCtpConfigMapRefs adds the referenced ConfigMaps in ClientTrafficPolicies
 // to the resourceTree
-func (r *gatewayAPIReconciler) processCtpConfigMapRefs(
+func (r *gatewayAPIReconciler) processCTPCACertificateRefs(
 	ctx context.Context, resourceTree *resource.Resources, resourceMap *resourceMappings,
 ) error {
 	for _, policy := range resourceTree.ClientTrafficPolicies {
@@ -1045,45 +1135,46 @@ func (r *gatewayAPIReconciler) processCtpConfigMapRefs(
 
 		if tls != nil && tls.ClientValidation != nil {
 			for _, caCertRef := range tls.ClientValidation.CACertificateRefs {
-				if caCertRef.Kind != nil && string(*caCertRef.Kind) == resource.KindConfigMap {
-					if err := r.processConfigMapRef(
+				caCertRefKind := ptr.Deref(caCertRef.Kind, resource.KindSecret)
+				var err error
+				switch caCertRefKind {
+				case resource.KindConfigMap:
+					err = r.processConfigMapRef(
 						ctx,
 						resourceMap,
 						resourceTree,
 						resource.KindClientTrafficPolicy,
 						policy.Namespace,
 						policy.Name,
-						caCertRef); err != nil {
-						// If the error is transient, we return it to allow Reconcile to retry.
-						if isTransientError(err) {
-							return err
-						}
-						// we don't return an error here, because we want to continue
-						// reconciling the rest of the ClientTrafficPolicies despite that this
-						// reference is invalid.
-						// This ClientTrafficPolicy will be marked as invalid in its status
-						// when translating to IR because the referenced configmap can't be
-						// found.
-						r.log.Error(err,
-							"failed to process CACertificateRef for ClientTrafficPolicy",
-							"policy", policy, "caCertificateRef", caCertRef.Name)
-					}
-				} else if caCertRef.Kind == nil || string(*caCertRef.Kind) == resource.KindSecret {
-					if err := r.processSecretRef(
+						caCertRef)
+				case resource.KindSecret:
+					err = r.processSecretRef(
 						ctx,
 						resourceMap,
 						resourceTree,
 						resource.KindClientTrafficPolicy,
 						policy.Namespace,
 						policy.Name,
-						caCertRef); err != nil {
-						if isTransientError(err) {
-							return err
-						}
-						r.log.Error(err,
-							"failed to process CACertificateRef for ClientTrafficPolicy",
-							"policy", policy, "caCertificateRef", caCertRef.Name)
+						caCertRef)
+				case resource.KindClusterTrustBundle:
+					err = r.processClusterTrustBundleRef(ctx, resourceMap, resourceTree, caCertRef)
+				}
+
+				if err != nil {
+					// we don't return an error here, because we want to continue
+					// reconciling the rest of the ClientTrafficPolicies despite that this
+					// reference is invalid.
+					// This ClientTrafficPolicy will be marked as invalid in its status
+					// when translating to IR because the referenced configmap can't be
+					// found.
+
+					// If the error is transient, we return it to allow Reconcile to retry.
+					if isTransientError(err) {
+						return err
 					}
+					r.log.Error(err,
+						"failed to process CACertificateRef for ClientTrafficPolicy",
+						"policy", policy, "caCertificateRef", caCertRef.Name, "kind", caCertRefKind)
 				}
 			}
 		}
@@ -1413,7 +1504,7 @@ func (r *gatewayAPIReconciler) processClientTrafficPolicies(
 		}
 	}
 
-	return r.processCtpConfigMapRefs(ctx, resourceTree, resourceMap)
+	return r.processCTPCACertificateRefs(ctx, resourceTree, resourceMap)
 }
 
 // processBackendTrafficPolicies adds BackendTrafficPolicies to the resourceTree
@@ -1485,24 +1576,7 @@ func (r *gatewayAPIReconciler) processBackendTLSPolicies(
 	return r.processBackendTLSPolicyRefs(ctx, resourceTree, resourceMap)
 }
 
-// processBackends adds Backends to the resourceTree
-func (r *gatewayAPIReconciler) processBackends(ctx context.Context, resourceTree *resource.Resources) error {
-	backends := egv1a1.BackendList{}
-	if err := r.client.List(ctx, &backends); err != nil {
-		return fmt.Errorf("error listing Backends: %w", err)
-	}
-
-	for _, backend := range backends.Items {
-		backend := backend //nolint:copyloopvar
-		// Discard Status to reduce memory consumption in watchable
-		// It will be recomputed by the gateway-api layer
-		backend.Status = egv1a1.BackendStatus{}
-		resourceTree.Backends = append(resourceTree.Backends, &backend)
-	}
-	return nil
-}
-
-// removeFinalizer removes the gatewayclass finalizer from the provided gc, if it exists.
+// removeFinalizer removes the GatewayClass finalizer from the provided gc, if it exists.
 func (r *gatewayAPIReconciler) removeFinalizer(ctx context.Context, gc *gwapiv1.GatewayClass) error {
 	if slice.ContainsString(gc.Finalizers, gatewayClassFinalizer) {
 		base := client.MergeFrom(gc.DeepCopy())
@@ -1808,11 +1882,6 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 		predicate.NewTypedPredicateFuncs(func(node *corev1.Node) bool {
 			return r.handleNode(node)
 		}),
-	}
-	if r.namespaceLabel != nil {
-		nPredicates = append(nPredicates, predicate.NewTypedPredicateFuncs(func(node *corev1.Node) bool {
-			return r.hasMatchingNamespaceLabels(node)
-		}))
 	}
 	// resource address.
 	if err := c.Watch(
@@ -2165,6 +2234,11 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 			return err
 		}
 	}
+
+	if err := r.watchClusterTrustBundle(c, mgr); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -2348,53 +2422,49 @@ func (r *gatewayAPIReconciler) processBackendTLSPolicyRefs(
 
 		if tls.CACertificateRefs != nil {
 			for _, caCertRef := range tls.CACertificateRefs {
-				// if kind is not Secret or ConfigMap, we skip early to avoid further calculation overhead
-				if string(caCertRef.Kind) == resource.KindConfigMap ||
-					string(caCertRef.Kind) == resource.KindSecret {
-
-					var err error
-					caRefNew := gwapiv1.SecretObjectReference{
-						Group:     gatewayapi.GroupPtr(string(caCertRef.Group)),
-						Kind:      gatewayapi.KindPtr(string(caCertRef.Kind)),
-						Name:      caCertRef.Name,
-						Namespace: gatewayapi.NamespacePtr(policy.Namespace),
+				var err error
+				caRefNew := gwapiv1.SecretObjectReference{
+					Group:     gatewayapi.GroupPtr(string(caCertRef.Group)),
+					Kind:      gatewayapi.KindPtr(string(caCertRef.Kind)),
+					Name:      caCertRef.Name,
+					Namespace: gatewayapi.NamespacePtr(policy.Namespace),
+				}
+				switch string(caCertRef.Kind) {
+				case resource.KindConfigMap:
+					err = r.processConfigMapRef(
+						ctx,
+						resourceMap,
+						resourceTree,
+						resource.KindBackendTLSPolicy,
+						policy.Namespace,
+						policy.Name,
+						caRefNew)
+				case resource.KindSecret:
+					err = r.processSecretRef(
+						ctx,
+						resourceMap,
+						resourceTree,
+						resource.KindBackendTLSPolicy,
+						policy.Namespace,
+						policy.Name,
+						caRefNew)
+				case resource.KindClusterTrustBundle:
+					err = r.processClusterTrustBundleRef(ctx, resourceMap, resourceTree, caRefNew)
+				}
+				if err != nil {
+					// if the error is transient, we return it to retry later
+					if isTransientError(err) {
+						return err
 					}
-					switch string(caCertRef.Kind) {
-					case resource.KindConfigMap:
-						err = r.processConfigMapRef(
-							ctx,
-							resourceMap,
-							resourceTree,
-							resource.KindBackendTLSPolicy,
-							policy.Namespace,
-							policy.Name,
-							caRefNew)
-
-					case resource.KindSecret:
-						err = r.processSecretRef(
-							ctx,
-							resourceMap,
-							resourceTree,
-							resource.KindBackendTLSPolicy,
-							policy.Namespace,
-							policy.Name,
-							caRefNew)
-					}
-					if err != nil {
-						// if the error is transient, we return it to retry later
-						if isTransientError(err) {
-							return err
-						}
-						// we don't return an error here, because we want to continue
-						// reconciling the rest of the ClientTrafficPolicies despite that this
-						// reference is invalid.
-						// This ClientTrafficPolicy will be marked as invalid in its status
-						// when translating to IR because the referenced configmap can't be
-						// found.
-						r.log.Error(err,
-							"failed to process CACertificateRef for BackendTLSPolicy",
-							"policy", policy, "caCertificateRef", caCertRef.Name)
-					}
+					// we don't return an error here, because we want to continue
+					// reconciling the rest of the ClientTrafficPolicies despite that this
+					// reference is invalid.
+					// This ClientTrafficPolicy will be marked as invalid in its status
+					// when translating to IR because the referenced configmap can't be
+					// found.
+					r.log.Error(err,
+						"failed to process CACertificateRef for BackendTLSPolicy",
+						"policy", policy, "caCertificateRef", caCertRef.Name)
 				}
 			}
 		}
@@ -2417,7 +2487,6 @@ func (r *gatewayAPIReconciler) processEnvoyExtensionPolicies(
 		// It will be recomputed by the gateway-api layer
 		envoyExtensionPolicy.Status = gwapiv1a2.PolicyStatus{}
 		if !resourceMap.allAssociatedEnvoyExtensionPolicies.Has(utils.NamespacedName(&envoyExtensionPolicy).String()) {
-			r.log.Info("processing EnvoyExtensionPolicy", "namespace", policy.Namespace, "name", policy.Name)
 			resourceMap.allAssociatedEnvoyExtensionPolicies.Insert(utils.NamespacedName(&envoyExtensionPolicy).String())
 			resourceTree.EnvoyExtensionPolicies = append(resourceTree.EnvoyExtensionPolicies, &envoyExtensionPolicy)
 		}

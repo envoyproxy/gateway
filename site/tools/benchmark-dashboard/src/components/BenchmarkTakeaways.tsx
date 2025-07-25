@@ -26,7 +26,7 @@ interface BenchmarkTakeawaysProps {
 }
 
 export const BenchmarkTakeaways: React.FC<BenchmarkTakeawaysProps> = ({
-  version = '1.4.1'
+  version = '1.4.2'
 }) => {
   const performanceInsights = [
     {

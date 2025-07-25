@@ -11003,6 +11003,13 @@ spec:
                                                     required:
                                                     - path
                                                     type: object
+                                                  initialJitter:
+                                                    description: |-
+                                                      InitialJitter defines the maximum time Envoy will wait before the first health check.
+                                                      Envoy will randomly select a value between 0 and the initial jitter value.
+                                                    format: duration
+                                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                                    type: string
                                                   interval:
                                                     default: 3s
                                                     description: Interval defines
@@ -11511,6 +11518,7 @@ spec:
                                                       - 5xx
                                                       - gateway-error
                                                       - reset
+                                                      - reset-before-request
                                                       - connect-failure
                                                       - retriable-4xx
                                                       - refused-stream
@@ -12083,6 +12091,13 @@ spec:
                                                     required:
                                                     - path
                                                     type: object
+                                                  initialJitter:
+                                                    description: |-
+                                                      InitialJitter defines the maximum time Envoy will wait before the first health check.
+                                                      Envoy will randomly select a value between 0 and the initial jitter value.
+                                                    format: duration
+                                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                                    type: string
                                                   interval:
                                                     default: 3s
                                                     description: Interval defines
@@ -12591,6 +12606,7 @@ spec:
                                                       - 5xx
                                                       - gateway-error
                                                       - reset
+                                                      - reset-before-request
                                                       - connect-failure
                                                       - retriable-4xx
                                                       - refused-stream
@@ -13266,6 +13282,13 @@ spec:
                                               required:
                                               - path
                                               type: object
+                                            initialJitter:
+                                              description: |-
+                                                InitialJitter defines the maximum time Envoy will wait before the first health check.
+                                                Envoy will randomly select a value between 0 and the initial jitter value.
+                                              format: duration
+                                              pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                              type: string
                                             interval:
                                               default: 3s
                                               description: Interval defines the time
@@ -13750,6 +13773,7 @@ spec:
                                                 - 5xx
                                                 - gateway-error
                                                 - reset
+                                                - reset-before-request
                                                 - connect-failure
                                                 - retriable-4xx
                                                 - refused-stream
@@ -14351,6 +14375,13 @@ spec:
                                         required:
                                         - path
                                         type: object
+                                      initialJitter:
+                                        description: |-
+                                          InitialJitter defines the maximum time Envoy will wait before the first health check.
+                                          Envoy will randomly select a value between 0 and the initial jitter value.
+                                        format: duration
+                                        pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                        type: string
                                       interval:
                                         default: 3s
                                         description: Interval defines the time between
@@ -14831,6 +14862,7 @@ spec:
                                           - 5xx
                                           - gateway-error
                                           - reset
+                                          - reset-before-request
                                           - connect-failure
                                           - retriable-4xx
                                           - refused-stream
@@ -14929,6 +14961,18 @@ spec:
                             format: int32
                             minimum: 0
                             type: integer
+                          serviceName:
+                            description: |-
+                              ServiceName defines the service name to use in tracing configuration.
+                              If not set, Envoy Gateway will use a default service name set as
+                              "name.namespace" (e.g., "my-gateway.default").
+                              Note: This field is only supported for OpenTelemetry and Datadog tracing providers.
+                              For Zipkin, the service name in traces is always derived from the Envoy --service-cluster flag
+                              (typically "namespace/name" format). Setting this field has no effect for Zipkin.
+                            type: string
+                            x-kubernetes-validations:
+                            - message: serviceName cannot be empty if provided
+                              rule: self != ""
                           type:
                             default: OpenTelemetry
                             description: Type defines the tracing provider type.

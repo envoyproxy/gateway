@@ -619,6 +619,10 @@ func (t *Translator) processAccessLog(envoyproxy *egv1a1.EnvoyProxy, resources *
 				if err != nil {
 					return nil, err
 				}
+				// ALS should always use GRPC protocol. Setting this adds http2 by default to the cluster.
+				for _, setting := range ds {
+					setting.Protocol = ir.GRPC
+				}
 
 				al := &ir.ALSAccessLog{
 					LogName: logName,
@@ -738,6 +742,11 @@ func (t *Translator) processTracing(gw *gwapiv1.Gateway, envoyproxy *egv1a1.Envo
 		serviceName = string(gw.Spec.GatewayClassName)
 	}
 
+	// Use configured service name if provided
+	if tracing.Provider.ServiceName != nil {
+		serviceName = *tracing.Provider.ServiceName
+	}
+
 	return &ir.Tracing{
 		Authority:    authority,
 		ServiceName:  serviceName,
@@ -848,7 +857,7 @@ func destinationSettingFromHostAndPort(name, host string, port uint32) []*ir.Des
 			Weight:      ptr.To[uint32](1),
 			Protocol:    ir.GRPC,
 			AddressType: ptr.To(addressType),
-			Endpoints:   []*ir.DestinationEndpoint{ir.NewDestEndpoint(host, port, false, nil)},
+			Endpoints:   []*ir.DestinationEndpoint{ir.NewDestEndpoint(nil, host, port, false, nil)},
 		},
 	}
 }
