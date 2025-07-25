@@ -29,7 +29,7 @@ spec:
   type: JSONPatch
   jsonPatches:
   - type: "type.googleapis.com/envoy.config.listener.v3.Listener"
-    name: "tcp-0.0.0.0-10080"
+    name: "tcp-80"
     operation:
       op: add
       path: "/default_filter_chain/filters/0/typed_config/local_reply_config"

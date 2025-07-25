@@ -12,6 +12,7 @@ http:
     sectionName: http3
   name: envoy-gateway/gateway-1/tls
   port: 10443
+  externalPort: 443
   path:
     mergeSlashes: true
     escapedSlashesAction: UnescapeAndRedirect

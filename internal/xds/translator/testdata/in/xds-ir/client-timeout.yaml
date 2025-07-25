@@ -2,6 +2,7 @@ http:
   - name: "first-listener"
     address: "::"
     port: 10080
+    externalPort: 80
     hostnames:
       - "*"
     metadata:
@@ -30,6 +31,7 @@ tcp:
   - name: "second-listener"
     address: "::"
     port: 10081
+    externalPort: 81
     metadata:
       kind: Gateway
       name: gateway-1

@@ -2,6 +2,7 @@ http:
 - name: "extension-post-xdstranslate-hook-error"
   address: "0.0.0.0"
   port: 10080
+  externalPort: 80
   hostnames:
   - "*"
 

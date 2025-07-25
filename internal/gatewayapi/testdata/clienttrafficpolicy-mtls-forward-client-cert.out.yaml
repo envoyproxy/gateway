@@ -552,6 +552,7 @@ xdsIR:
       - path: /dev/stdout
     http:
     - address: 0.0.0.0
+      externalPort: 443
       headers:
         withUnderscoresAction: RejectRequest
         xForwardedClientCert:
@@ -582,6 +583,7 @@ xdsIR:
         minVersion: "1.2"
         requireClientCertificate: true
     - address: 0.0.0.0
+      externalPort: 8080
       headers:
         withUnderscoresAction: RejectRequest
         xForwardedClientCert:
@@ -610,6 +612,7 @@ xdsIR:
       - path: /dev/stdout
     http:
     - address: 0.0.0.0
+      externalPort: 443
       headers:
         withUnderscoresAction: RejectRequest
         xForwardedClientCert:
@@ -650,6 +653,7 @@ xdsIR:
       - path: /dev/stdout
     http:
     - address: 0.0.0.0
+      externalPort: 443
       headers:
         withUnderscoresAction: RejectRequest
         xForwardedClientCert:
@@ -690,6 +694,7 @@ xdsIR:
       - path: /dev/stdout
     http:
     - address: 0.0.0.0
+      externalPort: 443
       headers:
         withUnderscoresAction: RejectRequest
         xForwardedClientCert:
@@ -730,6 +735,7 @@ xdsIR:
       - path: /dev/stdout
     http:
     - address: 0.0.0.0
+      externalPort: 443
       headers:
         withUnderscoresAction: RejectRequest
         xForwardedClientCert:

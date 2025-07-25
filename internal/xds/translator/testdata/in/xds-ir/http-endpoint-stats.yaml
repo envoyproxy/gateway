@@ -5,6 +5,7 @@ http:
   - name: "listener-enable-endpoint-stats"
     address: "::"
     port: 10080
+    externalPort: 80
     hostnames:
       - "*"
     metadata:

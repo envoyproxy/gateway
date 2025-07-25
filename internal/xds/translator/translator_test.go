@@ -137,7 +137,7 @@ func TestTranslateXds(t *testing.T) {
 		},
 		"address-as-listener-name": {
 			runtimeFlags: &egv1a1.RuntimeFlags{
-				Enabled: []egv1a1.RuntimeFlag{egv1a1.UseAddressAsListenerName},
+				Enabled: []egv1a1.RuntimeFlag{egv1a1.UseProtocolPortAsListenerName},
 			},
 		},
 	}

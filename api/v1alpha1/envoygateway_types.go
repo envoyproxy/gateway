@@ -102,12 +102,12 @@ type EnvoyGatewaySpec struct {
 // RuntimeFlag defines a runtime flag used to guard breaking changes or risky experimental features in new Envoy Gateway releases.
 // A runtime flag may be enabled or disabled by default and can be toggled through the EnvoyGateway resource.
 // +enum
-// +kubebuilder:validation:Enum=UseAddressAsListenerName
+// +kubebuilder:validation:Enum=UseProtocolPortAsListenerName
 type RuntimeFlag string
 
 const (
-	// UseAddressAsListenerName indicates that the listener name should be derived from the address and port.
-	UseAddressAsListenerName RuntimeFlag = "UseAddressAsListenerName"
+	// UseProtocolPortAsListenerName indicates that the listener name should be derived from the protocol and port.
+	UseProtocolPortAsListenerName RuntimeFlag = "UseProtocolPortAsListenerName"
 )
 
 // RuntimeFlags provide a mechanism to guard breaking changes or risky experimental features in new Envoy Gateway releases.

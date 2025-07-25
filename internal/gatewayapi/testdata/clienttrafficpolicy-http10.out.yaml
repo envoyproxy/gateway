@@ -459,6 +459,7 @@ xdsIR:
       - path: /dev/stdout
     http:
     - address: 0.0.0.0
+      externalPort: 80
       hostnames:
       - '*'
       http1:
@@ -475,6 +476,7 @@ xdsIR:
         mergeSlashes: true
       port: 10080
     - address: 0.0.0.0
+      externalPort: 8080
       hostnames:
       - www.example.com
       http1:
@@ -492,6 +494,7 @@ xdsIR:
         mergeSlashes: true
       port: 8080
     - address: 0.0.0.0
+      externalPort: 8081
       hostnames:
       - '*'
       http1: {}
@@ -507,6 +510,7 @@ xdsIR:
         mergeSlashes: true
       port: 8081
     - address: 0.0.0.0
+      externalPort: 8082
       hostnames:
       - '*'
       http1:
@@ -555,6 +559,7 @@ xdsIR:
           name: ""
           prefix: /
     - address: 0.0.0.0
+      externalPort: 8083
       hostnames:
       - '*'
       http1: {}

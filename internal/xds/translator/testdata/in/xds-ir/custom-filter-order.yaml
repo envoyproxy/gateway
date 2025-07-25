@@ -18,6 +18,7 @@ http:
     escapedSlashesAction: UnescapeAndRedirect
     mergeSlashes: true
   port: 10080
+  externalPort: 80
   routes:
   - backendWeights:
       invalid: 1

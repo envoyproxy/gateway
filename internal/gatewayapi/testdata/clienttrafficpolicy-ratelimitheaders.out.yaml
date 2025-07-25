@@ -131,6 +131,7 @@ xdsIR:
       - path: /dev/stdout
     http:
     - address: 0.0.0.0
+      externalPort: 80
       headers:
         disableRateLimitHeaders: true
         enableEnvoyHeaders: true
@@ -149,6 +150,7 @@ xdsIR:
         mergeSlashes: true
       port: 10080
     - address: 0.0.0.0
+      externalPort: 8080
       headers:
         disableRateLimitHeaders: true
         enableEnvoyHeaders: true

@@ -312,6 +312,7 @@ xdsIR:
       - path: /dev/stdout
     http:
     - address: 0.0.0.0
+      externalPort: 80
       hostnames:
       - foo.com
       isHTTP2: false
@@ -356,6 +357,7 @@ xdsIR:
           name: ""
           prefix: /
     - address: 0.0.0.0
+      externalPort: 80
       hostnames:
       - bar.com
       isHTTP2: false
@@ -400,6 +402,7 @@ xdsIR:
           name: ""
           prefix: /
     - address: 0.0.0.0
+      externalPort: 80
       hostnames:
       - foo1.com
       isHTTP2: false
@@ -444,6 +447,7 @@ xdsIR:
           name: ""
           prefix: /
     - address: 0.0.0.0
+      externalPort: 80
       hostnames:
       - bar1.com
       isHTTP2: false
@@ -488,6 +492,7 @@ xdsIR:
           name: ""
           prefix: /
     - address: 0.0.0.0
+      externalPort: 80
       hostnames:
       - foo2.com
       isHTTP2: false
@@ -532,6 +537,7 @@ xdsIR:
           name: ""
           prefix: /
     - address: 0.0.0.0
+      externalPort: 80
       hostnames:
       - bar2.com
       isHTTP2: false
@@ -576,6 +582,7 @@ xdsIR:
           name: ""
           prefix: /
     - address: 0.0.0.0
+      externalPort: 80
       hostnames:
       - foo3.com
       isHTTP2: false
@@ -620,6 +627,7 @@ xdsIR:
           name: ""
           prefix: /
     - address: 0.0.0.0
+      externalPort: 80
       hostnames:
       - bar3.com
       isHTTP2: false

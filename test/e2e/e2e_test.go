@@ -71,7 +71,7 @@ func TestE2E(t *testing.T) {
 		)
 	}
 
-	if tests.UseAddressAsListenerName() {
+	if tests.UseProtocolPortAsListenerName() {
 		skipTests = append(skipTests,
 			tests.EnvoyPatchPolicyTest.ShortName,
 		)

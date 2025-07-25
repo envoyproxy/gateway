@@ -735,7 +735,7 @@ func IsGatewayNamespaceMode() bool {
 }
 
 // TODO(zhaohuabing) remove this after the feature flag is removed.
-func UseAddressAsListenerName() bool {
+func UseProtocolPortAsListenerName() bool {
 	return DeployProfile == "address-as-listener-name"
 }
 

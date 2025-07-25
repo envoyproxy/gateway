@@ -141,6 +141,7 @@ xdsIR:
       - path: /dev/stdout
     http:
     - address: 0.0.0.0
+      externalPort: 80
       hostnames:
       - '*'
       isHTTP2: false
@@ -161,5 +162,6 @@ xdsIR:
       port: 19003
     udp:
     - address: 0.0.0.0
+      externalPort: 80
       name: envoy-gateway/gateway-2/udp
       port: 10080

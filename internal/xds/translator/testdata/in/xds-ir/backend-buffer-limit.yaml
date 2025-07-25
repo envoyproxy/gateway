@@ -2,6 +2,7 @@ http:
   - name: "first-listener"
     address: "::"
     port: 10080
+    externalPort: 80
     hostnames:
       - "*"
     metadata:
@@ -31,6 +32,7 @@ tcp:
     connection:
       bufferLimit: 1500
     port: 10081
+    externalPort: 81
     routes:
       - name: "tcp-route-dest"
         destination:
@@ -46,6 +48,7 @@ udp:
   - name: "udp-route"
     address: "::"
     port: 10080
+    externalPort: 80
     route:
       name: "udp-route"
       destination:

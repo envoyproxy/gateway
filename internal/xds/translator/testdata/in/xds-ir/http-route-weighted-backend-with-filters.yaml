@@ -12,6 +12,7 @@ http:
       escapedSlashesAction: UnescapeAndRedirect
       mergeSlashes: true
     port: 10080
+    externalPort: 80
     routes:
       - destination:
           name: "first-route-dest"

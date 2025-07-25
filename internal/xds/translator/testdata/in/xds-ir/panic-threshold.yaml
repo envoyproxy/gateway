@@ -5,6 +5,7 @@ http:
     mergeSlashes: true
     escapedSlashesAction: UnescapeAndRedirect
   port: 10080
+  externalPort: 80
   hostnames:
   - "*"
   metadata:

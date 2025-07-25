@@ -261,6 +261,8 @@ type CoreListenerDetails struct {
 	Address string `json:"address" yaml:"address"`
 	// Port on which the service can be expected to be accessed by clients.
 	Port uint32 `json:"port" yaml:"port"`
+	// ExternalPort is the port on which the listener can be accessed by clients.
+	ExternalPort uint32 `json:"externalPort,omitempty" yaml:"externalPort,omitempty"`
 	// ExtensionRefs holds unstructured resources that were introduced by an extension policy
 	ExtensionRefs []*UnstructuredRef `json:"extensionRefs,omitempty" yaml:"extensionRefs,omitempty"`
 	// Metadata is used to enrich envoy resource metadata with user and provider-specific information
@@ -3185,7 +3187,6 @@ type ResourceMetadata struct {
 	// SectionName is the name of a section of a resource
 	SectionName string `json:"sectionName,omitempty" yaml:"sectionName,omitempty"`
 }
-
 
 // RequestBuffer holds the information for the Buffer filter
 // +k8s:deepcopy-gen=true

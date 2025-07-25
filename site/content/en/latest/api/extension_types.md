@@ -4444,7 +4444,7 @@ _Appears in:_
 
 | Value | Description |
 | ----- | ----------- |
-| `UseAddressAsListenerName` | UseAddressAsListenerName indicates that the listener name should be derived from the address and port.<br /> | 
+| `UseProtocolPortAsListenerName` | UseProtocolPortAsListenerName indicates that the listener name should be derived from the protocol and port.<br /> | 
 
 
 #### RuntimeFlags

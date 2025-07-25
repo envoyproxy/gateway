@@ -2,6 +2,7 @@ http:
 - name: "envoy-gateway/gateway-1/http"
   address: 0.0.0.0
   port: 10080
+  externalPort: 80
   hostnames:
   - "foo.com"
   metadata:
@@ -35,6 +36,7 @@ http:
 - name: "envoy-gateway/gateway-1/http-ipv6"
   address: "::"
   port: 10080
+  externalPort: 80
   hostnames:
   - "foo.net"
   path:
@@ -76,6 +78,7 @@ http:
     escapedSlashesAction: UnescapeAndRedirect
     mergeSlashes: true
   port: 10443
+  externalPort: 443
   routes:
   - destination:
       metadata:
@@ -118,6 +121,7 @@ tcp:
 - name: "envoy-gateway/gateway-1/tls"
   address: 0.0.0.0
   port: 10090
+  externalPort: 90
   routes:
   - destination:
       metadata:
@@ -168,6 +172,7 @@ tcp:
 - name: envoy-gateway/gateway-1/tcp
   address: 0.0.0.0
   port: 10091
+  externalPort: 91
   routes:
   - destination:
       metadata:
@@ -192,6 +197,7 @@ udp:
 - name: envoy-gateway/gateway-1/udp
   address: 0.0.0.0
   port: 10090
+  externalPort: 90
   route:
     destination:
       metadata:

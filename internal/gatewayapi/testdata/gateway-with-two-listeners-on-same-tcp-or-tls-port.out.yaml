@@ -125,6 +125,7 @@ xdsIR:
       port: 19003
     tcp:
     - address: 0.0.0.0
+      externalPort: 162
       name: envoy-gateway/gateway-1/tcp1
       port: 10162
       routes:

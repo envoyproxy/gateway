@@ -5,6 +5,7 @@ http:
     escapedSlashesAction: UnescapeAndRedirect
     mergeSlashes: true
   port: 10080
+  externalPort: 80
   hostnames:
   - "foo.com"
   metadata:
@@ -59,6 +60,7 @@ tcp:
 - name: "second-listener"
   address: "::"
   port: 10081
+  externalPort: 81
   tls:
     ciphers:
     - ECDHE-ECDSA-AES128-GCM-SHA256

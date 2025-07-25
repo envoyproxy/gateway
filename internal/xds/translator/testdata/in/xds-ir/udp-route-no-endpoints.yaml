@@ -3,6 +3,7 @@ udp:
 - name: "udp-route"
   address: "0.0.0.0"
   port: 10162
+  externalPort: 162
   route:
     destination:
       metadata:

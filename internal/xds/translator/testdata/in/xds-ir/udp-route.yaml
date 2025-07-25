@@ -2,6 +2,7 @@ udp:
 - name: "udp-route"
   address: "::"
   port: 10080
+  externalPort: 80
   route:
     name: "udp-route"
     destination:

@@ -2,6 +2,7 @@ http:
 - name: "first-listener"
   address: "0.0.0.0"
   port: 10080
+  externalPort: 80
   hostnames:
   - "*"
   metadata:
@@ -37,6 +38,7 @@ http:
 - name: "second-listener"
   address: "0.0.0.0"
   port: 10081
+  externalPort: 81
   hostnames:
   - "*"
   metadata:

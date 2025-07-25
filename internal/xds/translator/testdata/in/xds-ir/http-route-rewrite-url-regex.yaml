@@ -3,6 +3,7 @@ http:
 - name: "first-listener"
   address: "::"
   port: 10080
+  externalPort: 80
   hostnames:
   - "*"
   metadata:
@@ -50,4 +51,3 @@ http:
       timeout:
         http:
           requestTimeout: 5s
-

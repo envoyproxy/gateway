@@ -21,4 +21,4 @@ data:
           url: redis.redis-system.svc.cluster.local:6379
     runtimeFlags:
       enabled:
-      - UseAddressAsListenerName
+      - useProtocolPortAsListenerName

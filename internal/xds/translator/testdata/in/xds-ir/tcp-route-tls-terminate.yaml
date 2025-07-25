@@ -2,6 +2,7 @@ tcp:
 - name: "tls-listener-terminate"
   address: "::"
   port: 10080
+  externalPort: 80
   routes:
   - name: "tls-route-terminate"
     tls:
@@ -23,6 +24,7 @@ tcp:
   - name: "tls-terminate-hostname"
     address: "::"
     port: 10080
+    externalPort: 80
     tls:
       inspector:
         snis:

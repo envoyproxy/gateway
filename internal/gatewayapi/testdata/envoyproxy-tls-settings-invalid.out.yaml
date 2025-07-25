@@ -234,6 +234,7 @@ xdsIR:
       - path: /dev/stdout
     http:
     - address: 0.0.0.0
+      externalPort: 443
       hostnames:
       - '*'
       isHTTP2: false
@@ -269,6 +270,7 @@ xdsIR:
       port: 19003
     tcp:
     - address: 0.0.0.0
+      externalPort: 445
       name: envoy-gateway/gateway-tls/
       port: 10445
       routes:
