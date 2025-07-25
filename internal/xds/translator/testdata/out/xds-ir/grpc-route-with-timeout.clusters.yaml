@@ -1,0 +1,41 @@
+- circuitBreakers:
+    thresholds:
+    - maxRetries: 1024
+  commonLbConfig: {}
+  connectTimeout: 15s
+  dnsLookupFamily: V4_PREFERRED
+  edsClusterConfig:
+    edsConfig:
+      ads: {}
+      resourceApiVersion: V3
+    serviceName: grpcroute/default/grpcroute-1/rule/0
+  ignoreHealthOnHostRemoval: true
+  lbPolicy: LEAST_REQUEST
+  loadBalancingPolicy:
+    policies:
+    - typedExtensionConfig:
+        name: envoy.load_balancing_policies.least_request
+        typedConfig:
+          '@type': type.googleapis.com/envoy.extensions.load_balancing_policies.least_request.v3.LeastRequest
+          localityLbConfig:
+            localityWeightedLbConfig: {}
+  metadata:
+    filterMetadata:
+      envoy-gateway:
+        resources:
+        - kind: GRPCRoute
+          name: grpcroute-1
+          namespace: default
+  name: grpcroute/default/grpcroute-1/rule/0
+  perConnectionBufferLimitBytes: 32768
+  type: EDS
+  typedExtensionProtocolOptions:
+    envoy.extensions.upstreams.http.v3.HttpProtocolOptions:
+      '@type': type.googleapis.com/envoy.extensions.upstreams.http.v3.HttpProtocolOptions
+      commonHttpProtocolOptions:
+        idleTimeout: 16s
+        maxConnectionDuration: 17s
+      explicitHttpConfig:
+        http2ProtocolOptions:
+          initialConnectionWindowSize: 1048576
+          initialStreamWindowSize: 65536

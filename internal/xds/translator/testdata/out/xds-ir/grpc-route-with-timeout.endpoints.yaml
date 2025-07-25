@@ -1,0 +1,20 @@
+- clusterName: grpcroute/default/grpcroute-1/rule/0
+  endpoints:
+  - lbEndpoints:
+    - endpoint:
+        address:
+          socketAddress:
+            address: 7.7.7.7
+            portValue: 8080
+      loadBalancingWeight: 1
+    loadBalancingWeight: 1
+    locality:
+      region: grpcroute/default/grpcroute-1/rule/0/backend/0
+    metadata:
+      filterMetadata:
+        envoy-gateway:
+          resources:
+          - kind: ""
+            name: service-1
+            namespace: default
+            sectionName: "8080"

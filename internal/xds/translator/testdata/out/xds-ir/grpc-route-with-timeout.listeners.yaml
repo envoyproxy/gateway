@@ -1,0 +1,79 @@
+- address:
+    socketAddress:
+      address: 0.0.0.0
+      portValue: 19003
+  bypassOverloadManager: true
+  filterChains:
+  - filters:
+    - name: envoy.filters.network.http_connection_manager
+      typedConfig:
+        '@type': type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
+        httpFilters:
+        - name: envoy.filters.http.health_check
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.health_check.v3.HealthCheck
+            headers:
+            - name: :path
+              stringMatch:
+                exact: /ready
+            passThroughMode: false
+        - name: envoy.filters.http.router
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+            suppressEnvoyHeaders: true
+        routeConfig:
+          name: ready_route
+          virtualHosts:
+          - domains:
+            - '*'
+            name: ready_route
+            routes:
+            - directResponse:
+                status: 500
+              match:
+                prefix: /
+        statPrefix: eg-ready-http
+  name: envoy-gateway-proxy-ready-0.0.0.0-19003
+- address:
+    socketAddress:
+      address: 0.0.0.0
+      portValue: 10080
+  defaultFilterChain:
+    filters:
+    - name: envoy.filters.network.http_connection_manager
+      typedConfig:
+        '@type': type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
+        commonHttpProtocolOptions:
+          headersWithUnderscoresAction: REJECT_REQUEST
+        http2ProtocolOptions:
+          initialConnectionWindowSize: 1048576
+          initialStreamWindowSize: 65536
+          maxConcurrentStreams: 100
+        httpFilters:
+        - name: envoy.filters.http.grpc_web
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.grpc_web.v3.GrpcWeb
+        - name: envoy.filters.http.grpc_stats
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.grpc_stats.v3.FilterConfig
+            emitFilterState: true
+            statsForAllMethods: true
+        - name: envoy.filters.http.router
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+            suppressEnvoyHeaders: true
+        mergeSlashes: true
+        normalizePath: true
+        pathWithEscapedSlashesAction: UNESCAPE_AND_REDIRECT
+        rds:
+          configSource:
+            ads: {}
+            resourceApiVersion: V3
+          routeConfigName: envoy-gateway/gateway-1/http
+        serverHeaderTransformation: PASS_THROUGH
+        statPrefix: http-10080
+        useRemoteAddress: true
+    name: envoy-gateway/gateway-1/http
+  maxConnectionsToAcceptPerSocketEvent: 1
+  name: envoy-gateway/gateway-1/http
+  perConnectionBufferLimitBytes: 32768

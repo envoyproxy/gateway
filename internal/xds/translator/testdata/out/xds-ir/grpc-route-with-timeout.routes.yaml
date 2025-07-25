@@ -1,0 +1,29 @@
+- ignorePortInHostMatching: true
+  name: envoy-gateway/gateway-1/http
+  virtualHosts:
+  - domains:
+    - '*'
+    metadata:
+      filterMetadata:
+        envoy-gateway:
+          resources:
+          - kind: Gateway
+            name: gateway-1
+            namespace: envoy-gateway
+            sectionName: http
+    name: envoy-gateway/gateway-1/http/*
+    routes:
+    - match:
+        prefix: /
+      metadata:
+        filterMetadata:
+          envoy-gateway:
+            resources:
+            - kind: GRPCRoute
+              name: grpcroute-1
+              namespace: default
+      name: grpcroute/default/grpcroute-1/rule/0/match/-1/*
+      route:
+        cluster: grpcroute/default/grpcroute-1/rule/0
+        idleTimeout: 3600s
+        timeout: 18s

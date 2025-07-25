@@ -45,6 +45,7 @@ backendTrafficPolicies:
       http:
         connectionIdleTimeout: 16s
         maxConnectionDuration: 17s
+        requestTimeout: 18s
       tcp:
         connectTimeout: 15s
   status:
@@ -307,6 +308,7 @@ xdsIR:
             http:
               connectionIdleTimeout: 16s
               maxConnectionDuration: 17s
+              requestTimeout: 18s
             tcp:
               connectTimeout: 15s
     readyListener:
