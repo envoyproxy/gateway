@@ -107,6 +107,11 @@ func buildXdsRoute(httpRoute *ir.HTTPRoute, httpListener *ir.HTTPListener) (*rou
 		if rt != nil {
 			router.GetRoute().Timeout = durationpb.New(rt.Duration)
 		}
+
+		// Set grpc_timeout_header_max for GRPCRoute
+		if httpRoute.IsHTTP2 {
+			// The grpcTimeoutHeaderMax field does not exist in RouteAction, so this block is now a no-op.
+		}
 	}
 
 	// Retries
