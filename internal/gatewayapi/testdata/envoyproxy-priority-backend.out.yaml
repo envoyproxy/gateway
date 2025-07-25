@@ -49,19 +49,7 @@ backendTLSPolicies:
         name: ca-cmap
       hostname: ip-backend
   status:
-    ancestors:
-    - ancestorRef:
-        group: gateway.envoyproxy.io
-        kind: EnvoyExtensionPolicy
-        name: policy-for-http-route
-        namespace: default
-      conditions:
-      - lastTransitionTime: null
-        message: Policy has been accepted.
-        reason: Accepted
-        status: "True"
-        type: Accepted
-      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+    ancestors: null
 backends:
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: Backend
@@ -123,7 +111,11 @@ envoyExtensionPolicies:
         group: gateway.envoyproxy.io
         kind: Backend
         name: backend-ip-tls
+      - group: gateway.envoyproxy.io
+        kind: Backend
+        name: grpc-backend-2
         namespace: envoy-gateway
+        port: 9000
     targetRef:
       group: gateway.networking.k8s.io
       kind: HTTPRoute
@@ -138,9 +130,9 @@ envoyExtensionPolicies:
         sectionName: http
       conditions:
       - lastTransitionTime: null
-        message: Policy has been accepted.
-        reason: Accepted
-        status: "True"
+        message: 'ExtProc: backend envoy-gateway/grpc-backend-2 not found.'
+        reason: Invalid
+        status: "False"
         type: Accepted
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
 gateways:
@@ -320,75 +312,8 @@ xdsIR:
             name: httproute/default/httproute-1/rule/0/backend/0
             protocol: HTTP
             weight: 1
-        envoyExtensions:
-          extProcs:
-          - authority: grpc-backend.envoy-gateway:8000
-            destination:
-              metadata:
-                kind: EnvoyExtensionPolicy
-                name: policy-for-http-route
-                namespace: default
-              name: envoyextensionpolicy/default/policy-for-http-route/extproc/0
-              settings:
-              - addressType: IP
-                metadata:
-                  kind: Service
-                  name: grpc-backend
-                  namespace: envoy-gateway
-                  sectionName: "8000"
-                name: envoyextensionpolicy/default/policy-for-http-route/extproc/0/backend/0
-                protocol: GRPC
-                tls:
-                  alpnProtocols: null
-                  caCertificate:
-                    certificate: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSURKekNDQWcrZ0F3SUJBZ0lVQWw2VUtJdUttenRlODFjbGx6NVBmZE4ySWxJd0RRWUpLb1pJaHZjTkFRRUwKQlFBd0l6RVFNQTRHQTFVRUF3d0hiWGxqYVdWdWRERVBNQTBHQTFVRUNnd0dhM1ZpWldSaU1CNFhEVEl6TVRBdwpNakExTkRFMU4xb1hEVEkwTVRBd01UQTFOREUxTjFvd0l6RVFNQTRHQTFVRUF3d0hiWGxqYVdWdWRERVBNQTBHCkExVUVDZ3dHYTNWaVpXUmlNSUlCSWpBTkJna3Foa2lHOXcwQkFRRUZBQU9DQVE4QU1JSUJDZ0tDQVFFQXdTVGMKMXlqOEhXNjJueW5rRmJYbzRWWEt2MmpDMFBNN2RQVmt5ODdGd2VaY1RLTG9XUVZQUUUycDJrTERLNk9Fc3ptTQp5eXIreHhXdHlpdmVyZW1yV3FuS2tOVFloTGZZUGhnUWtjemliN2VVYWxtRmpVYmhXZEx2SGFrYkVnQ29kbjNiCmt6NTdtSW5YMlZwaURPS2c0a3lIZml1WFdwaUJxckN4MEtOTHB4bzNERVFjRmNzUVRlVEh6aDQ3NTJHVjA0UlUKVGkvR0VXeXpJc2w0Umc3dEd0QXdtY0lQZ1VOVWZZMlEzOTBGR3FkSDRhaG4rbXcvNmFGYlczMVc2M2Q5WUpWcQppb3lPVmNhTUlwTTVCL2M3UWM4U3VoQ0kxWUdoVXlnNGNSSExFdzVWdGlraW95RTNYMDRrbmEzalFBajU0WWJSCmJwRWhjMzVhcEtMQjIxSE9VUUlEQVFBQm8xTXdVVEFkQmdOVkhRNEVGZ1FVeXZsMFZJNXZKVlN1WUZYdTdCNDgKNlBiTUVBb3dId1lEVlIwakJCZ3dGb0FVeXZsMFZJNXZKVlN1WUZYdTdCNDg2UGJNRUFvd0R3WURWUjBUQVFILwpCQVV3QXdFQi96QU5CZ2txaGtpRzl3MEJBUXNGQUFPQ0FRRUFNTHhyZ0ZWTXVOUnEyd0F3Y0J0N1NuTlI1Q2Z6CjJNdlhxNUVVbXVhd0lVaTlrYVlqd2RWaURSRUdTams3SlcxN3ZsNTc2SGpEa2RmUndpNEUyOFN5ZFJJblpmNkoKaThIWmNaN2NhSDZEeFIzMzVmZ0hWekxpNU5pVGNlL09qTkJRelEyTUpYVkRkOERCbUc1ZnlhdEppT0pRNGJXRQpBN0ZsUDBSZFAzQ08zR1dFME01aVhPQjJtMXFXa0UyZXlPNFVIdndUcU5RTGRyZEFYZ0RRbGJhbTllNEJHM0dnCmQvNnRoQWtXRGJ0L1FOVCtFSkhEQ3ZoRFJLaDFSdUdIeWcrWSsvbmViVFdXckZXc2t0UnJiT29IQ1ppQ3BYSTEKM2VYRTZudDBZa2d0RHhHMjJLcW5ocEFnOWdVU3MyaGxob3h5dmt6eUYwbXU2TmhQbHdBZ25xNysvUT09Ci0tLS0tRU5EIENFUlRJRklDQVRFLS0tLS0K
-                    name: policy-btls-grpc/envoy-gateway-ca
-                  sni: grpc-backend
-                weight: 1
-              - addressType: IP
-                endpoints:
-                - host: 8.8.8.8
-                  port: 9000
-                metadata:
-                  kind: Service
-                  name: grpc-backend-2
-                  namespace: default
-                  sectionName: "9000"
-                name: envoyextensionpolicy/default/policy-for-http-route/extproc/0/backend/1
-                priority: 1
-                protocol: GRPC
-                weight: 1
-              - addressType: IP
-                endpoints:
-                - host: 1.1.1.1
-                  port: 3001
-                metadata:
-                  kind: Backend
-                  name: backend-ip
-                  namespace: default
-                name: envoyextensionpolicy/default/policy-for-http-route/extproc/0/backend/2
-                priority: 1
-                protocol: GRPC
-                weight: 1
-              - addressType: IP
-                endpoints:
-                - host: 2.2.2.2
-                  port: 3443
-                metadata:
-                  kind: Backend
-                  name: backend-ip-tls
-                  namespace: envoy-gateway
-                name: envoyextensionpolicy/default/policy-for-http-route/extproc/0/backend/3
-                priority: 1
-                protocol: GRPC
-                tls:
-                  alpnProtocols: null
-                  caCertificate:
-                    certificate: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSURKekNDQWcrZ0F3SUJBZ0lVQWw2VUtJdUttenRlODFjbGx6NVBmZE4ySWxJd0RRWUpLb1pJaHZjTkFRRUwKQlFBd0l6RVFNQTRHQTFVRUF3d0hiWGxqYVdWdWRERVBNQTBHQTFVRUNnd0dhM1ZpWldSaU1CNFhEVEl6TVRBdwpNakExTkRFMU4xb1hEVEkwTVRBd01UQTFOREUxTjFvd0l6RVFNQTRHQTFVRUF3d0hiWGxqYVdWdWRERVBNQTBHCkExVUVDZ3dHYTNWaVpXUmlNSUlCSWpBTkJna3Foa2lHOXcwQkFRRUZBQU9DQVE4QU1JSUJDZ0tDQVFFQXdTVGMKMXlqOEhXNjJueW5rRmJYbzRWWEt2MmpDMFBNN2RQVmt5ODdGd2VaY1RLTG9XUVZQUUUycDJrTERLNk9Fc3ptTQp5eXIreHhXdHlpdmVyZW1yV3FuS2tOVFloTGZZUGhnUWtjemliN2VVYWxtRmpVYmhXZEx2SGFrYkVnQ29kbjNiCmt6NTdtSW5YMlZwaURPS2c0a3lIZml1WFdwaUJxckN4MEtOTHB4bzNERVFjRmNzUVRlVEh6aDQ3NTJHVjA0UlUKVGkvR0VXeXpJc2w0Umc3dEd0QXdtY0lQZ1VOVWZZMlEzOTBGR3FkSDRhaG4rbXcvNmFGYlczMVc2M2Q5WUpWcQppb3lPVmNhTUlwTTVCL2M3UWM4U3VoQ0kxWUdoVXlnNGNSSExFdzVWdGlraW95RTNYMDRrbmEzalFBajU0WWJSCmJwRWhjMzVhcEtMQjIxSE9VUUlEQVFBQm8xTXdVVEFkQmdOVkhRNEVGZ1FVeXZsMFZJNXZKVlN1WUZYdTdCNDgKNlBiTUVBb3dId1lEVlIwakJCZ3dGb0FVeXZsMFZJNXZKVlN1WUZYdTdCNDg2UGJNRUFvd0R3WURWUjBUQVFILwpCQVV3QXdFQi96QU5CZ2txaGtpRzl3MEJBUXNGQUFPQ0FRRUFNTHhyZ0ZWTXVOUnEyd0F3Y0J0N1NuTlI1Q2Z6CjJNdlhxNUVVbXVhd0lVaTlrYVlqd2RWaURSRUdTams3SlcxN3ZsNTc2SGpEa2RmUndpNEUyOFN5ZFJJblpmNkoKaThIWmNaN2NhSDZEeFIzMzVmZ0hWekxpNU5pVGNlL09qTkJRelEyTUpYVkRkOERCbUc1ZnlhdEppT0pRNGJXRQpBN0ZsUDBSZFAzQ08zR1dFME01aVhPQjJtMXFXa0UyZXlPNFVIdndUcU5RTGRyZEFYZ0RRbGJhbTllNEJHM0dnCmQvNnRoQWtXRGJ0L1FOVCtFSkhEQ3ZoRFJLaDFSdUdIeWcrWSsvbmViVFdXckZXc2t0UnJiT29IQ1ppQ3BYSTEKM2VYRTZudDBZa2d0RHhHMjJLcW5ocEFnOWdVU3MyaGxob3h5dmt6eUYwbXU2TmhQbHdBZ25xNysvUT09Ci0tLS0tRU5EIENFUlRJRklDQVRFLS0tLS0K
-                    name: policy-btls-backend-ip/envoy-gateway-ca
-                  sni: ip-backend
-                weight: 1
-            name: envoyextensionpolicy/default/policy-for-http-route/extproc/0
+        directResponse:
+          statusCode: 500
         hostname: www.foo.com
         isHTTP2: false
         metadata:

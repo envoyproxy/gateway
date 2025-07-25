@@ -484,17 +484,15 @@ func (in *BackendSpec) DeepCopyInto(out *BackendSpec) {
 		*out = new(BackendType)
 		**out = **in
 	}
-	if in.Endpoints != nil {
-		in, out := &in.Endpoints, &out.Endpoints
-		*out = make([]BackendEndpoint, len(*in))
-		for i := range *in {
-			(*in)[i].DeepCopyInto(&(*out)[i])
-		}
-	}
 	if in.AppProtocols != nil {
 		in, out := &in.AppProtocols, &out.AppProtocols
 		*out = make([]AppProtocolType, len(*in))
 		copy(*out, *in)
+	}
+	if in.FQDN != nil {
+		in, out := &in.FQDN, &out.FQDN
+		*out = new(string)
+		**out = **in
 	}
 	if in.Fallback != nil {
 		in, out := &in.Fallback, &out.Fallback

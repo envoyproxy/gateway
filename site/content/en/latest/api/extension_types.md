@@ -355,7 +355,6 @@ BackendEndpoint describes a backend endpoint, which can be either a fully-qualif
 corresponding to Envoy's Address: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/core/v3/address.proto#config-core-v3-address
 
 _Appears in:_
-- [BackendSpec](#backendspec)
 - [ExtensionService](#extensionservice)
 
 | Field | Type | Required | Default | Description |
@@ -407,10 +406,15 @@ _Appears in:_
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
 | `type` | _[BackendType](#backendtype)_ |  false  | Endpoints | Type defines the type of the backend. Defaults to "Endpoints" |
-| `endpoints` | _[BackendEndpoint](#backendendpoint) array_ |  true  |  | Endpoints defines the endpoints to be used when connecting to the backend. |
 | `appProtocols` | _[AppProtocolType](#appprotocoltype) array_ |  false  |  | AppProtocols defines the application protocols to be supported when connecting to the backend. |
+| `fqdn` | _string_ |  false  |  | FQDN defines the FQDN used to contact the backend. |
 | `fallback` | _boolean_ |  false  |  | Fallback indicates whether the backend is designated as a fallback.<br />It is highly recommended to configure active or passive health checks to ensure that failover can be detected<br />when the active backends become unhealthy and to automatically readjust once the primary backends are healthy again.<br />The overprovisioning factor is set to 1.4, meaning the fallback backends will only start receiving traffic when<br />the health of the active backends falls below 72%. |
-| `tls` | _[BackendTLSSettings](#backendtlssettings)_ |  false  |  | TLS defines the TLS settings for the backend.<br />TLS.CACertificateRefs and TLS.WellKnownCACertificates can only be specified for DynamicResolver backends.<br />TLS.InsecureSkipVerify can be specified for any Backends |
+| `appProtocols` | _[AppProtocolType](#appprotocoltype) array_ |  false  |  | TLS defines the TLS configuration for the backend.	// |
+| `fallback` | _boolean_ |  false  |  | Fallback indicates whether the backend is designated as a fallback.<br />It is highly recommended to configure active or passive health checks to ensure that failover can be detected<br />when the active backends become unhealthy and to automatically readjust once the primary backends are healthy again.<br />The overprovisioning factor is set to 1.4, meaning the fallback backends will only start receiving traffic when<br />the health of the active backends falls below 72%. |
+| `appProtocols` | _[AppProtocolType](#appprotocoltype) array_ |  false  |  |  |
+| `fqdn` | _string_ |  false  |  | FQDN defines the FQDN used to contact the backend. |
+| `fallback` | _boolean_ |  false  |  | Fallback indicates whether the backend is designated as a fallback.<br />It is highly recommended to configure active or passive health checks to ensure that failover can be detected<br />when the active backends become unhealthy and to automatically readjust once the primary backends are healthy again.<br />The overprovisioning factor is set to 1.4, meaning the fallback backends will only start receiving traffic when<br />the health of the active backends falls below 72%. |
+| `tls` | _[BackendTLSSettings](#backendtlssettings)_ |  false  |  | TLS defines the TLS configuration for the backend.	// |
 
 
 #### BackendStatus

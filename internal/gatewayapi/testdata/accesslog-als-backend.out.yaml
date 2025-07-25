@@ -183,7 +183,7 @@ xdsIR:
               name: backend-fqdn
               namespace: envoy-gateway
             name: accesslog_otel_0_0/backend/-1
-            protocol: HTTP2
+            protocol: TCP
           - addressType: IP
             endpoints:
             - host: 1.1.1.1

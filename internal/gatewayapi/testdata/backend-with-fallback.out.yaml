@@ -184,7 +184,6 @@ xdsIR:
               name: backend-2
               namespace: default
             name: httproute/default/httproute-1/rule/0/backend/1
-            priority: 1
             protocol: HTTP
             weight: 1
         hostname: '*'
