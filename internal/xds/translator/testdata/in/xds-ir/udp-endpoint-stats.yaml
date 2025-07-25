@@ -5,7 +5,6 @@ udp:
 - name: "udp-route-enable-endpoint-stats"
   address: "::"
   port: 10080
-  externalPort: 80
   route:
     name: "udp-route"
     destination:

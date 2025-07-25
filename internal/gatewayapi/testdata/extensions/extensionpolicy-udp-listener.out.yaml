@@ -237,8 +237,11 @@ xdsIR:
                 status: "True"
                 type: Accepted
               controllerName: gateway.envoyproxy.io/gatewayclass-controller
-      externalPort: 162
       name: envoy-gateway/gateway-1/udp1
+      owner:
+        gateway: gateway-1
+        listener: udp1
+        namespace: envoy-gateway
       port: 10162
     - address: 0.0.0.0
       extensionRefs:
@@ -268,6 +271,9 @@ xdsIR:
                 status: "True"
                 type: Accepted
               controllerName: gateway.envoyproxy.io/gatewayclass-controller
-      externalPort: 163
       name: envoy-gateway/gateway-1/udp2
+      owner:
+        gateway: gateway-1
+        listener: udp2
+        namespace: envoy-gateway
       port: 10163

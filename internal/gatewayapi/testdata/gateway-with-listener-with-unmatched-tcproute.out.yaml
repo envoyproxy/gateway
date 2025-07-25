@@ -69,6 +69,9 @@ xdsIR:
       port: 19003
     tcp:
     - address: 0.0.0.0
-      externalPort: 80
       name: envoy-gateway/gateway-1/tcp
+      owner:
+        gateway: gateway-1
+        listener: tcp
+        namespace: envoy-gateway
       port: 10080

@@ -404,7 +404,7 @@ func (t *Translator) translateEnvoyExtensionPolicyForGateway(
 	policyTarget := irStringKey(policy.Namespace, string(target.Name))
 
 	for _, http := range x.HTTP {
-		gatewayName := http.Name[0:strings.LastIndex(http.Name, "/")]
+		gatewayName := http.Owner.Gateway
 		if t.MergeGateways && gatewayName != policyTarget {
 			continue
 		}

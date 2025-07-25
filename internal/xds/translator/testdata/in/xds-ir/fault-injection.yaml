@@ -2,17 +2,11 @@ http:
 - name: "first-listener"
   address: "::"
   port: 10080
-  externalPort: 80
   path:
     mergeSlashes: true
     escapedSlashesAction: UnescapeAndRedirect
   hostnames:
   - "*"
-  metadata:
-    kind: Gateway
-    name: gateway-1
-    namespace: envoy-gateway
-    sectionName: http
   routes:
   - name: "first-route"
     hostname: "*"

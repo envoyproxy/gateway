@@ -107,6 +107,9 @@ xdsIR:
       port: 19003
     tcp:
     - address: 0.0.0.0
-      externalPort: 443
       name: gateway-conformance-infra/gateway-tlsroute-referencegrant/https
+      owner:
+        gateway: gateway-tlsroute-referencegrant
+        listener: https
+        namespace: gateway-conformance-infra
       port: 10443

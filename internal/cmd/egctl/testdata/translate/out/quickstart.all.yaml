@@ -109,7 +109,6 @@ xdsIR:
       - path: /dev/stdout
     http:
     - address: 0.0.0.0
-      externalPort: 80
       hostnames:
       - '*'
       isHTTP2: false
@@ -119,6 +118,10 @@ xdsIR:
         namespace: envoy-gateway-system
         sectionName: http
       name: envoy-gateway-system/eg/http
+      owner:
+        gateway: eg
+        listener: http
+        namespace: envoy-gateway-system
       path:
         escapedSlashesAction: UnescapeAndRedirect
         mergeSlashes: true

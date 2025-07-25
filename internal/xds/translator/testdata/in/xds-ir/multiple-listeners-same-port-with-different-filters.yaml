@@ -7,18 +7,12 @@ http:
     hostnames:
       - 'www.foo.com'
     isHTTP2: false
-    metadata:
-      kind: Gateway
-      name: gateway-1
-      namespace: envoy-gateway
-      sectionName: http
     http3:
       quicPort: 443
     path:
       escapedSlashesAction: UnescapeAndRedirect
       mergeSlashes: true
     port: 10080
-    externalPort: 80
     routes:
       - name: httproute/default/httproute-1/rule/0/match/0/www_foo_com
         hostname: www.foo.com
@@ -93,7 +87,6 @@ http:
       escapedSlashesAction: UnescapeAndRedirect
       mergeSlashes: true
     port: 10080
-    externalPort: 80
     routes:
       - name: httproute/default/httproute-3/rule/0/match/0/www_bar_com
         hostname: www.bar.com

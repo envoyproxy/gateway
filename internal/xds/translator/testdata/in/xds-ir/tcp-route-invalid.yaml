@@ -2,7 +2,6 @@ tcp:
 - name: "tcp-listener-invalid"
   address: ""
   port: 10080
-  externalPort: 80
   routes:
   - name: "tcp-route-invalid"
     destination:

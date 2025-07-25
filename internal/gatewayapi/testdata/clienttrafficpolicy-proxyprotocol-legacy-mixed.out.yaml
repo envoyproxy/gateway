@@ -299,8 +299,11 @@ xdsIR:
       port: 19003
     tcp:
     - address: 0.0.0.0
-      externalPort: 9090
       name: envoy-gateway/gateway-legacy-only/tcp-1
+      owner:
+        gateway: gateway-legacy-only
+        listener: tcp-1
+        namespace: envoy-gateway
       port: 9090
       proxyProtocol: {}
       routes:
@@ -317,7 +320,6 @@ xdsIR:
       - path: /dev/stdout
     http:
     - address: 0.0.0.0
-      externalPort: 8080
       hostnames:
       - '*'
       isHTTP2: false
@@ -327,6 +329,10 @@ xdsIR:
         namespace: envoy-gateway
         sectionName: http-2
       name: envoy-gateway/gateway-new-api-only/http-2
+      owner:
+        gateway: gateway-new-api-only
+        listener: http-2
+        namespace: envoy-gateway
       path:
         escapedSlashesAction: UnescapeAndRedirect
         mergeSlashes: true
@@ -343,7 +349,6 @@ xdsIR:
       - path: /dev/stdout
     http:
     - address: 0.0.0.0
-      externalPort: 80
       hostnames:
       - '*'
       isHTTP2: false
@@ -353,6 +358,10 @@ xdsIR:
         namespace: envoy-gateway
         sectionName: http-1
       name: envoy-gateway/gateway-precedence-test/http-1
+      owner:
+        gateway: gateway-precedence-test
+        listener: http-1
+        namespace: envoy-gateway
       path:
         escapedSlashesAction: UnescapeAndRedirect
         mergeSlashes: true

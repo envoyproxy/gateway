@@ -450,7 +450,6 @@ xdsIR:
       - path: /dev/stdout
     http:
     - address: 0.0.0.0
-      externalPort: 80
       hostnames:
       - '*'
       isHTTP2: true
@@ -460,6 +459,10 @@ xdsIR:
         namespace: default
         sectionName: http
       name: default/gateway-1/http
+      owner:
+        gateway: gateway-1
+        listener: http
+        namespace: default
       path:
         escapedSlashesAction: UnescapeAndRedirect
         mergeSlashes: true
@@ -525,7 +528,6 @@ xdsIR:
       - path: /dev/stdout
     http:
     - address: 0.0.0.0
-      externalPort: 80
       hostnames:
       - '*'
       isHTTP2: false
@@ -535,6 +537,10 @@ xdsIR:
         namespace: default
         sectionName: http
       name: default/gateway-2/http
+      owner:
+        gateway: gateway-2
+        listener: http
+        namespace: default
       path:
         escapedSlashesAction: UnescapeAndRedirect
         mergeSlashes: true

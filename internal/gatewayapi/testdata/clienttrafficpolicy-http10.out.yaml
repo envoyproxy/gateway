@@ -459,7 +459,6 @@ xdsIR:
       - path: /dev/stdout
     http:
     - address: 0.0.0.0
-      externalPort: 80
       hostnames:
       - '*'
       http1:
@@ -471,12 +470,15 @@ xdsIR:
         namespace: envoy-gateway
         sectionName: http-1
       name: envoy-gateway/gateway-1/http-1
+      owner:
+        gateway: gateway-1
+        listener: http-1
+        namespace: envoy-gateway
       path:
         escapedSlashesAction: UnescapeAndRedirect
         mergeSlashes: true
       port: 10080
     - address: 0.0.0.0
-      externalPort: 8080
       hostnames:
       - www.example.com
       http1:
@@ -489,12 +491,15 @@ xdsIR:
         namespace: envoy-gateway
         sectionName: http-2
       name: envoy-gateway/gateway-1/http-2
+      owner:
+        gateway: gateway-1
+        listener: http-2
+        namespace: envoy-gateway
       path:
         escapedSlashesAction: UnescapeAndRedirect
         mergeSlashes: true
       port: 8080
     - address: 0.0.0.0
-      externalPort: 8081
       hostnames:
       - '*'
       http1: {}
@@ -505,12 +510,15 @@ xdsIR:
         namespace: envoy-gateway
         sectionName: http-3
       name: envoy-gateway/gateway-1/http-3
+      owner:
+        gateway: gateway-1
+        listener: http-3
+        namespace: envoy-gateway
       path:
         escapedSlashesAction: UnescapeAndRedirect
         mergeSlashes: true
       port: 8081
     - address: 0.0.0.0
-      externalPort: 8082
       hostnames:
       - '*'
       http1:
@@ -523,6 +531,10 @@ xdsIR:
         namespace: envoy-gateway
         sectionName: http-4
       name: envoy-gateway/gateway-1/http-4
+      owner:
+        gateway: gateway-1
+        listener: http-4
+        namespace: envoy-gateway
       path:
         escapedSlashesAction: UnescapeAndRedirect
         mergeSlashes: true
@@ -559,7 +571,6 @@ xdsIR:
           name: ""
           prefix: /
     - address: 0.0.0.0
-      externalPort: 8083
       hostnames:
       - '*'
       http1: {}
@@ -570,6 +581,10 @@ xdsIR:
         namespace: envoy-gateway
         sectionName: http-5
       name: envoy-gateway/gateway-1/http-5
+      owner:
+        gateway: gateway-1
+        listener: http-5
+        namespace: envoy-gateway
       path:
         escapedSlashesAction: UnescapeAndRedirect
         mergeSlashes: true

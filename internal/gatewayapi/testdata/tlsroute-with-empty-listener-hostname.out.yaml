@@ -105,8 +105,11 @@ xdsIR:
       port: 19003
     tcp:
     - address: 0.0.0.0
-      externalPort: 91
       name: envoy-gateway/gateway-1/tls
+      owner:
+        gateway: gateway-1
+        listener: tls
+        namespace: envoy-gateway
       port: 10091
       routes:
       - destination:

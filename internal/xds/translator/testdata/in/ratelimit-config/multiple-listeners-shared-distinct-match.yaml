@@ -2,14 +2,8 @@ http:
 - name: "first-listener"
   address: "0.0.0.0"
   port: 10080
-  externalPort: 80
   hostnames:
   - "*"
-  metadata:
-    kind: Gateway
-    name: gateway-1
-    namespace: envoy-gateway
-    sectionName: http1
   path:
     mergeSlashes: true
     escapedSlashesAction: UnescapeAndRedirect
@@ -38,14 +32,8 @@ http:
 - name: "second-listener"
   address: "0.0.0.0"
   port: 10081
-  externalPort: 81
   hostnames:
   - "*"
-  metadata:
-    kind: Gateway
-    name: gateway-1
-    namespace: envoy-gateway
-    sectionName: http2
   path:
     mergeSlashes: true
     escapedSlashesAction: UnescapeAndRedirect

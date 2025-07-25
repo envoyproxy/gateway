@@ -185,7 +185,6 @@ xdsIR:
       - path: /dev/stdout
     http:
     - address: 0.0.0.0
-      externalPort: 80
       hostnames:
       - '*.a.example.com'
       isHTTP2: false
@@ -195,6 +194,10 @@ xdsIR:
         namespace: envoy-gateway
         sectionName: default
       name: envoy-gateway/gateway-a/default
+      owner:
+        gateway: gateway-a
+        listener: default
+        namespace: envoy-gateway
       path:
         escapedSlashesAction: UnescapeAndRedirect
         mergeSlashes: true
@@ -228,7 +231,6 @@ xdsIR:
       - path: /dev/stdout
     http:
     - address: 0.0.0.0
-      externalPort: 80
       hostnames:
       - '*.b.example.com'
       isHTTP2: false
@@ -238,6 +240,10 @@ xdsIR:
         namespace: envoy-gateway
         sectionName: default
       name: envoy-gateway/gateway-b/default
+      owner:
+        gateway: gateway-b
+        listener: default
+        namespace: envoy-gateway
       path:
         escapedSlashesAction: UnescapeAndRedirect
         mergeSlashes: true

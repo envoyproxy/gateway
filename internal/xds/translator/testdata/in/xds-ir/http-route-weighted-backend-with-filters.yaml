@@ -3,16 +3,10 @@ http:
     address: "::"
     hostnames:
       - '*'
-    metadata:
-      kind: Gateway
-      name: gateway-1
-      namespace: envoy-gateway
-      sectionName: http
     path:
       escapedSlashesAction: UnescapeAndRedirect
       mergeSlashes: true
     port: 10080
-    externalPort: 80
     routes:
       - destination:
           name: "first-route-dest"

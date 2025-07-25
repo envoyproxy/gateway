@@ -2,14 +2,8 @@ http:
 - name: "first-listener-error"
   address: "::"
   port: 10080
-  externalPort: 80
   hostnames:
   - "foo.com"
-  metadata:
-    kind: Gateway
-    name: gateway-1
-    namespace: envoy-gateway
-    sectionName: http1
   path:
     mergeSlashes: true
     escapedSlashesAction: UnescapeAndRedirect
@@ -36,14 +30,8 @@ http:
 - name: "second-listener"
   address: "::"
   port: 10080
-  externalPort: 80
   hostnames:
   - "foo.net"
-  metadata:
-    kind: Gateway
-    name: gateway-1
-    namespace: envoy-gateway
-    sectionName: http2
   path:
     mergeSlashes: true
     escapedSlashesAction: UnescapeAndRedirect

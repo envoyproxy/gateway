@@ -194,7 +194,6 @@ xdsIR:
       - path: /dev/stdout
     http:
     - address: 0.0.0.0
-      externalPort: 443
       hostnames:
       - foo.example.com
       isHTTP2: false
@@ -204,6 +203,10 @@ xdsIR:
         namespace: envoy-gateway
         sectionName: https-1
       name: envoy-gateway/gateway-1/https-1
+      owner:
+        gateway: gateway-1
+        listener: https-1
+        namespace: envoy-gateway
       path:
         escapedSlashesAction: UnescapeAndRedirect
         mergeSlashes: true
@@ -247,7 +250,6 @@ xdsIR:
           privateKey: '[redacted]'
       tlsOverlaps: true
     - address: 0.0.0.0
-      externalPort: 443
       hostnames:
       - bar.example.com
       isHTTP2: false
@@ -257,6 +259,10 @@ xdsIR:
         namespace: envoy-gateway
         sectionName: https-2
       name: envoy-gateway/gateway-1/https-2
+      owner:
+        gateway: gateway-1
+        listener: https-2
+        namespace: envoy-gateway
       path:
         escapedSlashesAction: UnescapeAndRedirect
         mergeSlashes: true
@@ -300,7 +306,6 @@ xdsIR:
           privateKey: '[redacted]'
       tlsOverlaps: true
     - address: 0.0.0.0
-      externalPort: 443
       hostnames:
       - foo.bar.com
       isHTTP2: false
@@ -310,6 +315,10 @@ xdsIR:
         namespace: envoy-gateway
         sectionName: https-3
       name: envoy-gateway/gateway-1/https-3
+      owner:
+        gateway: gateway-1
+        listener: https-3
+        namespace: envoy-gateway
       path:
         escapedSlashesAction: UnescapeAndRedirect
         mergeSlashes: true

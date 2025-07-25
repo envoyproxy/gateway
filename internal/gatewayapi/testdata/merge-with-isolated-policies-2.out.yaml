@@ -83,9 +83,11 @@ clientTrafficPolicies:
         namespace: default
       conditions:
       - lastTransitionTime: null
-        message: Policy has been accepted.
-        reason: Accepted
-        status: "True"
+        message: |-
+          ClientTrafficPolicy is being applied to multiple http (non https) listeners (default/gateway-1/http-2) on the same port, which is not allowed
+          ClientTrafficPolicy is being applied to multiple http (non https) listeners (default/gateway-1/http) on the same port, which is not allowed.
+        reason: Invalid
+        status: "False"
         type: Accepted
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
 gateways:
@@ -506,7 +508,6 @@ xdsIR:
       - path: /dev/stdout
     http:
     - address: 0.0.0.0
-      externalPort: 80
       hostnames:
       - bar.example.com
       isHTTP2: false
@@ -516,6 +517,10 @@ xdsIR:
         namespace: default
         sectionName: http
       name: default/gateway-1/http
+      owner:
+        gateway: gateway-1
+        listener: http
+        namespace: default
       path:
         escapedSlashesAction: UnescapeAndRedirect
         mergeSlashes: true
@@ -550,32 +555,7 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /
-        security:
-          cors:
-            allowHeaders:
-            - x-header-5
-            - x-header-6
-            allowMethods:
-            - GET
-            - POST
-            allowOrigins:
-            - distinct: false
-              name: ""
-              safeRegex: .*
-            exposeHeaders:
-            - x-header-7
-            - x-header-8
-            maxAge: 33m20s
-        traffic:
-          tcpKeepalive:
-            idleTime: 1200
-            interval: 60
-            probes: 3
-      timeout:
-        http:
-          requestReceivedTimeout: 5s
     - address: 0.0.0.0
-      externalPort: 80
       hostnames:
       - foo.example.com
       isHTTP2: false
@@ -585,6 +565,10 @@ xdsIR:
         namespace: default
         sectionName: http-2
       name: default/gateway-1/http-2
+      owner:
+        gateway: gateway-1
+        listener: http-2
+        namespace: default
       path:
         escapedSlashesAction: UnescapeAndRedirect
         mergeSlashes: true
@@ -619,32 +603,7 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /
-        security:
-          cors:
-            allowHeaders:
-            - x-header-5
-            - x-header-6
-            allowMethods:
-            - GET
-            - POST
-            allowOrigins:
-            - distinct: false
-              name: ""
-              safeRegex: .*
-            exposeHeaders:
-            - x-header-7
-            - x-header-8
-            maxAge: 33m20s
-        traffic:
-          tcpKeepalive:
-            idleTime: 1200
-            interval: 60
-            probes: 3
-      timeout:
-        http:
-          requestReceivedTimeout: 5s
     - address: 0.0.0.0
-      externalPort: 81
       hostnames:
       - bar.example.com
       isHTTP2: false
@@ -654,6 +613,10 @@ xdsIR:
         namespace: default
         sectionName: http
       name: default/gateway-2/http
+      owner:
+        gateway: gateway-2
+        listener: http
+        namespace: default
       path:
         escapedSlashesAction: UnescapeAndRedirect
         mergeSlashes: true
@@ -705,7 +668,6 @@ xdsIR:
             - x-header-8
             maxAge: 33m20s
     - address: 0.0.0.0
-      externalPort: 81
       hostnames:
       - foo.example.com
       isHTTP2: false
@@ -715,6 +677,10 @@ xdsIR:
         namespace: default
         sectionName: http-2
       name: default/gateway-2/http-2
+      owner:
+        gateway: gateway-2
+        listener: http-2
+        namespace: default
       path:
         escapedSlashesAction: UnescapeAndRedirect
         mergeSlashes: true

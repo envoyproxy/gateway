@@ -270,7 +270,6 @@ xdsIR:
       - path: /dev/stdout
     http:
     - address: 0.0.0.0
-      externalPort: 80
       hostnames:
       - '*.192.168.0.15.nip.io'
       isHTTP2: false
@@ -280,6 +279,10 @@ xdsIR:
         namespace: default
         sectionName: http
       name: default/gateway-1/http
+      owner:
+        gateway: gateway-1
+        listener: http
+        namespace: default
       path:
         escapedSlashesAction: UnescapeAndRedirect
         mergeSlashes: true
@@ -315,7 +318,6 @@ xdsIR:
           name: ""
           prefix: /
     - address: 0.0.0.0
-      externalPort: 80
       hostnames:
       - qccbahgo.qccbahgo
       isHTTP2: false
@@ -325,6 +327,10 @@ xdsIR:
         namespace: default
         sectionName: http
       name: default/mfqjpuycbgjrtdww/http
+      owner:
+        gateway: mfqjpuycbgjrtdww
+        listener: http
+        namespace: default
       path:
         escapedSlashesAction: UnescapeAndRedirect
         mergeSlashes: true
@@ -359,21 +365,6 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /
-        security:
-          cors:
-            allowCredentials: true
-            allowMethods:
-            - PUT
-            - GET
-            - POST
-            - DELETE
-            - PATCH
-            - OPTIONS
-            allowOrigins:
-            - distinct: false
-              name: ""
-              safeRegex: http://.*\.foo\.com
-            maxAge: 10m0s
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4

@@ -5,14 +5,8 @@ http:
     mergeSlashes: true
     escapedSlashesAction: UnescapeAndRedirect
   port: 10080
-  externalPort: 80
   hostnames:
   - "*"
-  metadata:
-    kind: Gateway
-    name: gateway-1
-    namespace: envoy-gateway
-    sectionName: http
   routes:
   - name: "first-route"
     hostname: "*"

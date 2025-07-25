@@ -5,14 +5,8 @@ http:
   hostnames:
   - '*'
   isHTTP2: false
-  metadata:
-    kind: Gateway
-    name: gateway-1
-    namespace: envoy-gateway
-    sectionName: http3
   name: envoy-gateway/gateway-1/tls
   port: 10443
-  externalPort: 443
   path:
     mergeSlashes: true
     escapedSlashesAction: UnescapeAndRedirect

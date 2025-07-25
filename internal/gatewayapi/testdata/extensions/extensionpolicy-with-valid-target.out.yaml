@@ -208,7 +208,6 @@ xdsIR:
                 status: "True"
                 type: Accepted
               controllerName: gateway.envoyproxy.io/gatewayclass-controller
-      externalPort: 81
       hostnames:
       - '*'
       isHTTP2: false
@@ -218,6 +217,10 @@ xdsIR:
         namespace: envoy-gateway
         sectionName: http1
       name: envoy-gateway/gateway-1/http1
+      owner:
+        gateway: gateway-1
+        listener: http1
+        namespace: envoy-gateway
       path:
         escapedSlashesAction: UnescapeAndRedirect
         mergeSlashes: true
@@ -278,7 +281,6 @@ xdsIR:
                 status: "True"
                 type: Accepted
               controllerName: gateway.envoyproxy.io/gatewayclass-controller
-      externalPort: 80
       hostnames:
       - '*'
       isHTTP2: false
@@ -288,6 +290,10 @@ xdsIR:
         namespace: envoy-gateway
         sectionName: http2
       name: envoy-gateway/gateway-1/http2
+      owner:
+        gateway: gateway-1
+        listener: http2
+        namespace: envoy-gateway
       path:
         escapedSlashesAction: UnescapeAndRedirect
         mergeSlashes: true

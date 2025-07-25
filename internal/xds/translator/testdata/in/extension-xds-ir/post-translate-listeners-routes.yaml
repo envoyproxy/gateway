@@ -2,14 +2,8 @@ http:
 - name: "test-listener-modify"
   address: "0.0.0.0"
   port: 10080
-  externalPort: 80
   hostnames:
   - "*"
-  metadata:
-    kind: Gateway
-    name: gateway-1
-    namespace: envoy-gateway
-    sectionName: http1
   path:
     mergeSlashes: true
     escapedSlashesAction: UnescapeAndRedirect
@@ -30,11 +24,6 @@ http:
   port: 10081
   hostnames:
   - "example.com"
-  metadata:
-    kind: Gateway
-    name: gateway-1
-    namespace: envoy-gateway
-    sectionName: http2
   path:
     mergeSlashes: true
     escapedSlashesAction: UnescapeAndRedirect

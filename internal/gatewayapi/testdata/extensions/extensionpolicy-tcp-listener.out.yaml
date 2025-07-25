@@ -237,8 +237,11 @@ xdsIR:
                 status: "True"
                 type: Accepted
               controllerName: gateway.envoyproxy.io/gatewayclass-controller
-      externalPort: 80
       name: envoy-gateway/gateway-1/tcp1
+      owner:
+        gateway: gateway-1
+        listener: tcp1
+        namespace: envoy-gateway
       port: 10080
     - address: 0.0.0.0
       extensionRefs:
@@ -268,6 +271,9 @@ xdsIR:
                 status: "True"
                 type: Accepted
               controllerName: gateway.envoyproxy.io/gatewayclass-controller
-      externalPort: 81
       name: envoy-gateway/gateway-1/tcp2
+      owner:
+        gateway: gateway-1
+        listener: tcp2
+        namespace: envoy-gateway
       port: 10081

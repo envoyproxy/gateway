@@ -98,17 +98,5 @@
     typedConfig:
       '@type': type.googleapis.com/envoy.extensions.filters.listener.tls_inspector.v3.TlsInspector
   maxConnectionsToAcceptPerSocketEvent: 1
-  metadata:
-    filterMetadata:
-      envoy-gateway:
-        resources:
-        - kind: Gateway
-          name: gateway-1
-          namespace: envoy-gateway
-          sectionName: http1
-        - kind: Gateway
-          name: gateway-1
-          namespace: envoy-gateway
-          sectionName: http2
   name: first-listener-error
   perConnectionBufferLimitBytes: 32768

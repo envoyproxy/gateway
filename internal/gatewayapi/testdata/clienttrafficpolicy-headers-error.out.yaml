@@ -122,7 +122,6 @@ xdsIR:
       - path: /dev/stdout
     http:
     - address: 0.0.0.0
-      externalPort: 80
       headers:
         enableEnvoyHeaders: true
         requestID: Preserve
@@ -136,6 +135,10 @@ xdsIR:
         namespace: envoy-gateway
         sectionName: http-1
       name: envoy-gateway/gateway-1/http-1
+      owner:
+        gateway: gateway-1
+        listener: http-1
+        namespace: envoy-gateway
       path:
         escapedSlashesAction: UnescapeAndRedirect
         mergeSlashes: true

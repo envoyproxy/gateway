@@ -2,14 +2,8 @@ http:
 - name: "first-listener"
   address: "::"
   port: 10001
-  externalPort: 10001
   hostnames:
   - "*"
-  metadata:
-    kind: Gateway
-    name: gateway-1
-    namespace: envoy-gateway
-    sectionName: http
   path:
     mergeSlashes: true
     escapedSlashesAction: UnescapeAndRedirect
@@ -45,14 +39,8 @@ http:
 - name: "second-listener"
   address: "::"
   port: 10002
-  externalPort: 10002
   hostnames:
   - "*"
-  metadata:
-    kind: Gateway
-    name: gateway-1
-    namespace: envoy-gateway
-    sectionName: http
   path:
     mergeSlashes: true
     escapedSlashesAction: UnescapeAndRedirect
@@ -89,14 +77,8 @@ http:
 - name: "third-listener"
   address: "::"
   port: 10003
-  externalPort: 10003
   hostnames:
   - "*"
-  metadata:
-    kind: Gateway
-    name: gateway-1
-    namespace: envoy-gateway
-    sectionName: http
   path:
     mergeSlashes: true
     escapedSlashesAction: UnescapeAndRedirect
@@ -134,14 +116,8 @@ http:
 - name: "fourth-listener"
   address: "::"
   port: 10004
-  externalPort: 10004
   hostnames:
   - "*"
-  metadata:
-    kind: Gateway
-    name: gateway-1
-    namespace: envoy-gateway
-    sectionName: http
   path:
     mergeSlashes: true
     escapedSlashesAction: UnescapeAndRedirect
@@ -181,14 +157,8 @@ http:
 - name: "fifth-listener"
   address: "::"
   port: 10005
-  externalPort: 10005
   hostnames:
   - "*"
-  metadata:
-    kind: Gateway
-    name: gateway-1
-    namespace: envoy-gateway
-    sectionName: http
   path:
     mergeSlashes: true
     escapedSlashesAction: UnescapeAndRedirect

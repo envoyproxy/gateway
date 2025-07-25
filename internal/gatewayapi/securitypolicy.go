@@ -828,14 +828,13 @@ func (t *Translator) translateSecurityPolicyForGateway(
 
 	policyTarget := irStringKey(policy.Namespace, string(target.Name))
 	for _, h := range x.HTTP {
-		// A HTTPListener name has the format namespace/gatewayName/listenerName
-		gatewayNameEnd := strings.LastIndex(h.Name, "/")
-		gatewayName := h.Name[0:gatewayNameEnd]
+		gatewayName := h.Owner.Gateway
+		listenerName := h.Owner.Listener
 		if t.MergeGateways && gatewayName != policyTarget {
 			continue
 		}
-		// If specified the sectionName must match the listenerName part of the HTTPListener name
-		if target.SectionName != nil && string(*target.SectionName) != h.Name[gatewayNameEnd+1:] {
+		// If specified the sectionName must match the listener Name
+		if target.SectionName != nil && string(*target.SectionName) != listenerName {
 			continue
 		}
 		// A Policy targeting the most specific scope(xRoute) wins over a policy

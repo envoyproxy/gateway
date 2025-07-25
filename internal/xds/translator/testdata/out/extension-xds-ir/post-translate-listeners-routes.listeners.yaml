@@ -31,14 +31,6 @@
         useRemoteAddress: true
     name: test-listener-modify
   maxConnectionsToAcceptPerSocketEvent: 1
-  metadata:
-    filterMetadata:
-      envoy-gateway:
-        resources:
-        - kind: Gateway
-          name: gateway-1
-          namespace: envoy-gateway
-          sectionName: http1
   name: test-listener-modify
   perConnectionBufferLimitBytes: 32768
   statPrefix: extension-modified-listener
@@ -75,14 +67,6 @@
         useRemoteAddress: true
     name: second-listener
   maxConnectionsToAcceptPerSocketEvent: 1
-  metadata:
-    filterMetadata:
-      envoy-gateway:
-        resources:
-        - kind: Gateway
-          name: gateway-1
-          namespace: envoy-gateway
-          sectionName: http2
   name: second-listener
   perConnectionBufferLimitBytes: 32768
 - name: extension-injected-listener

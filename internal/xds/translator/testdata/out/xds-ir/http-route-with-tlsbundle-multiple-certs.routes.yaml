@@ -3,14 +3,6 @@
   virtualHosts:
   - domains:
     - '*'
-    metadata:
-      filterMetadata:
-        envoy-gateway:
-          resources:
-          - kind: Gateway
-            name: gateway-1
-            namespace: envoy-gateway
-            sectionName: http1
     name: envoy-gateway/gateway-btls/http/*
     routes:
     - match:
@@ -25,14 +17,6 @@
   virtualHosts:
   - domains:
     - '*'
-    metadata:
-      filterMetadata:
-        envoy-gateway:
-          resources:
-          - kind: Gateway
-            name: gateway-1
-            namespace: envoy-gateway
-            sectionName: http2
     name: envoy-gateway/gateway-btls-2/http/*
     routes:
     - match:

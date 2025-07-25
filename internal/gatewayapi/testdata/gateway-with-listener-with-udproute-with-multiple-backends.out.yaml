@@ -105,8 +105,11 @@ xdsIR:
       port: 19003
     udp:
     - address: 0.0.0.0
-      externalPort: 80
       name: envoy-gateway/gateway-1/udp
+      owner:
+        gateway: gateway-1
+        listener: udp
+        namespace: envoy-gateway
       port: 10080
       route:
         destination:

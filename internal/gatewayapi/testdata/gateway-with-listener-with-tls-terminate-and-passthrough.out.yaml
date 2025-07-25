@@ -177,7 +177,6 @@ xdsIR:
       - path: /dev/stdout
     http:
     - address: 0.0.0.0
-      externalPort: 443
       hostnames:
       - foo.bar.com
       isHTTP2: false
@@ -187,6 +186,10 @@ xdsIR:
         namespace: envoy-gateway
         sectionName: tls-terminate
       name: envoy-gateway/gateway-1/tls-terminate
+      owner:
+        gateway: gateway-1
+        listener: tls-terminate
+        namespace: envoy-gateway
       path:
         escapedSlashesAction: UnescapeAndRedirect
         mergeSlashes: true
@@ -234,8 +237,11 @@ xdsIR:
       port: 19003
     tcp:
     - address: 0.0.0.0
-      externalPort: 90
       name: envoy-gateway/gateway-1/tls-passthrough
+      owner:
+        gateway: gateway-1
+        listener: tls-passthrough
+        namespace: envoy-gateway
       port: 10090
       routes:
       - destination:

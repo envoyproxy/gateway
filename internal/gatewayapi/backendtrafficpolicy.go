@@ -674,7 +674,7 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(
 	policyTarget := irStringKey(policy.Namespace, string(target.Name))
 
 	for _, tcp := range x.TCP {
-		gatewayName := tcp.Name[0:strings.LastIndex(tcp.Name, "/")]
+		gatewayName := tcp.Owner.Gateway
 		if t.MergeGateways && gatewayName != policyTarget {
 			continue
 		}
@@ -693,7 +693,7 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(
 	}
 
 	for _, udp := range x.UDP {
-		gatewayName := udp.Name[0:strings.LastIndex(udp.Name, "/")]
+		gatewayName := udp.Owner.Gateway
 		if t.MergeGateways && gatewayName != policyTarget {
 			continue
 		}
@@ -711,7 +711,7 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(
 	}
 
 	for _, http := range x.HTTP {
-		gatewayName := http.Name[0:strings.LastIndex(http.Name, "/")]
+		gatewayName := http.Owner.Gateway
 		if t.MergeGateways && gatewayName != policyTarget {
 			continue
 		}

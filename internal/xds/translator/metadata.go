@@ -27,20 +27,8 @@ func buildXdsMetadata(metadata *ir.ResourceMetadata) *corev3.Metadata {
 		return nil
 	}
 
-	return buildXdsMetadataFromMultiple([]*ir.ResourceMetadata{metadata})
-}
-
-func buildXdsMetadataFromMultiple(metadata []*ir.ResourceMetadata) *corev3.Metadata {
-	if metadata == nil {
-		return nil
-	}
-
 	resourcesList := &structpb.ListValue{}
-	for _, md := range metadata {
-		if md != nil {
-			resourcesList.Values = append(resourcesList.Values, buildResourceMetadata(md))
-		}
-	}
+	resourcesList.Values = append(resourcesList.Values, buildResourceMetadata(metadata))
 
 	return &corev3.Metadata{
 		FilterMetadata: map[string]*structpb.Struct{

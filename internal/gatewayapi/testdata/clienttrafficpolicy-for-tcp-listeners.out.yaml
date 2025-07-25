@@ -200,8 +200,11 @@ xdsIR:
         limit:
           closeDelay: 10s
           value: 3
-      externalPort: 443
       name: envoy-gateway/gateway-1/tls-1
+      owner:
+        gateway: gateway-1
+        listener: tls-1
+        namespace: envoy-gateway
       port: 10443
       proxyProtocol: {}
       routes:
@@ -272,8 +275,11 @@ xdsIR:
         limit:
           closeDelay: 10s
           value: 3
-      externalPort: 8080
       name: envoy-gateway/gateway-1/tcp-1
+      owner:
+        gateway: gateway-1
+        listener: tcp-1
+        namespace: envoy-gateway
       port: 8080
       proxyProtocol: {}
       routes:

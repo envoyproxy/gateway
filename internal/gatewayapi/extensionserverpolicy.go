@@ -10,7 +10,6 @@ import (
 	"errors"
 	"fmt"
 	"sort"
-	"strings"
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/types"
@@ -151,7 +150,7 @@ func (t *Translator) translateExtServerPolicyForGateway(
 	gwIR := xdsIR[irKey]
 	found := false
 	for _, currListener := range gwIR.HTTP {
-		listenerName := currListener.Name[strings.LastIndex(currListener.Name, "/")+1:]
+		listenerName := currListener.Owner.Listener
 		if target.SectionName != nil && string(*target.SectionName) != listenerName {
 			continue
 		}
@@ -161,7 +160,7 @@ func (t *Translator) translateExtServerPolicyForGateway(
 		found = true
 	}
 	for _, currListener := range gwIR.TCP {
-		listenerName := currListener.Name[strings.LastIndex(currListener.Name, "/")+1:]
+		listenerName := currListener.Owner.Listener
 		if target.SectionName != nil && string(*target.SectionName) != listenerName {
 			continue
 		}
@@ -171,7 +170,7 @@ func (t *Translator) translateExtServerPolicyForGateway(
 		found = true
 	}
 	for _, currListener := range gwIR.UDP {
-		listenerName := currListener.Name[strings.LastIndex(currListener.Name, "/")+1:]
+		listenerName := currListener.Owner.Listener
 		if target.SectionName != nil && string(*target.SectionName) != listenerName {
 			continue
 		}

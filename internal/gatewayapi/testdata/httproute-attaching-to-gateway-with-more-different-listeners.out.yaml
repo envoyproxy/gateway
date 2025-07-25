@@ -361,7 +361,6 @@ xdsIR:
       - path: /dev/stdout
     http:
     - address: 0.0.0.0
-      externalPort: 81
       hostnames:
       - foo.com
       isHTTP2: false
@@ -371,6 +370,10 @@ xdsIR:
         namespace: envoy-gateway
         sectionName: http-1
       name: envoy-gateway/gateway-1/http-1
+      owner:
+        gateway: gateway-1
+        listener: http-1
+        namespace: envoy-gateway
       path:
         escapedSlashesAction: UnescapeAndRedirect
         mergeSlashes: true
@@ -406,7 +409,6 @@ xdsIR:
           name: ""
           prefix: /
     - address: 0.0.0.0
-      externalPort: 82
       hostnames:
       - bar.com
       isHTTP2: false
@@ -416,6 +418,10 @@ xdsIR:
         namespace: envoy-gateway
         sectionName: http-2
       name: envoy-gateway/gateway-1/http-2
+      owner:
+        gateway: gateway-1
+        listener: http-2
+        namespace: envoy-gateway
       path:
         escapedSlashesAction: UnescapeAndRedirect
         mergeSlashes: true
@@ -451,7 +457,6 @@ xdsIR:
           name: ""
           prefix: /
     - address: 0.0.0.0
-      externalPort: 83
       hostnames:
       - foo1.com
       isHTTP2: false
@@ -461,6 +466,10 @@ xdsIR:
         namespace: envoy-gateway
         sectionName: http-3
       name: envoy-gateway/gateway-1/http-3
+      owner:
+        gateway: gateway-1
+        listener: http-3
+        namespace: envoy-gateway
       path:
         escapedSlashesAction: UnescapeAndRedirect
         mergeSlashes: true
@@ -496,7 +505,6 @@ xdsIR:
           name: ""
           prefix: /
     - address: 0.0.0.0
-      externalPort: 84
       hostnames:
       - bar1.com
       isHTTP2: false
@@ -506,6 +514,10 @@ xdsIR:
         namespace: envoy-gateway
         sectionName: http-4
       name: envoy-gateway/gateway-1/http-4
+      owner:
+        gateway: gateway-1
+        listener: http-4
+        namespace: envoy-gateway
       path:
         escapedSlashesAction: UnescapeAndRedirect
         mergeSlashes: true
@@ -541,7 +553,6 @@ xdsIR:
           name: ""
           prefix: /
     - address: 0.0.0.0
-      externalPort: 85
       hostnames:
       - foo2.com
       isHTTP2: false
@@ -551,6 +562,10 @@ xdsIR:
         namespace: envoy-gateway
         sectionName: http-5
       name: envoy-gateway/gateway-1/http-5
+      owner:
+        gateway: gateway-1
+        listener: http-5
+        namespace: envoy-gateway
       path:
         escapedSlashesAction: UnescapeAndRedirect
         mergeSlashes: true
@@ -586,7 +601,6 @@ xdsIR:
           name: ""
           prefix: /
     - address: 0.0.0.0
-      externalPort: 86
       hostnames:
       - bar2.com
       isHTTP2: false
@@ -596,6 +610,10 @@ xdsIR:
         namespace: envoy-gateway
         sectionName: http-6
       name: envoy-gateway/gateway-1/http-6
+      owner:
+        gateway: gateway-1
+        listener: http-6
+        namespace: envoy-gateway
       path:
         escapedSlashesAction: UnescapeAndRedirect
         mergeSlashes: true
@@ -631,7 +649,6 @@ xdsIR:
           name: ""
           prefix: /
     - address: 0.0.0.0
-      externalPort: 87
       hostnames:
       - foo3.com
       isHTTP2: false
@@ -641,6 +658,10 @@ xdsIR:
         namespace: envoy-gateway
         sectionName: http-7
       name: envoy-gateway/gateway-1/http-7
+      owner:
+        gateway: gateway-1
+        listener: http-7
+        namespace: envoy-gateway
       path:
         escapedSlashesAction: UnescapeAndRedirect
         mergeSlashes: true
@@ -676,7 +697,6 @@ xdsIR:
           name: ""
           prefix: /
     - address: 0.0.0.0
-      externalPort: 88
       hostnames:
       - bar3.com
       isHTTP2: false
@@ -686,6 +706,10 @@ xdsIR:
         namespace: envoy-gateway
         sectionName: http-8
       name: envoy-gateway/gateway-1/http-8
+      owner:
+        gateway: gateway-1
+        listener: http-8
+        namespace: envoy-gateway
       path:
         escapedSlashesAction: UnescapeAndRedirect
         mergeSlashes: true

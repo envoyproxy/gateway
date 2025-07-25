@@ -2,14 +2,8 @@ http:
   - name: "first-listener"
     address: "::"
     port: 10080
-    externalPort: 80
     hostnames:
       - "*"
-    metadata:
-      kind: Gateway
-      name: gateway-1
-      namespace: envoy-gateway
-      sectionName: http
     path:
       mergeSlashes: true
       escapedSlashesAction: UnescapeAndRedirect
@@ -31,7 +25,6 @@ tcp:
     connection:
       maxAcceptPerSocketEvent: 0
     port: 10081
-    externalPort: 81
     routes:
       - name: "max-accept-disabled"
         destination:
@@ -44,7 +37,6 @@ tcp:
   - name: "third-listener"
     address: "::"
     port: 10082
-    externalPort: 82
     routes:
       - name: "max-accept-default"
         destination:

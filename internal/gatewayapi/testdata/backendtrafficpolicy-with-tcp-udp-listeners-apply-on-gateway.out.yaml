@@ -243,8 +243,11 @@ xdsIR:
       port: 19003
     tcp:
     - address: 0.0.0.0
-      externalPort: 8089
       name: default/tcp-gateway/bar
+      owner:
+        gateway: tcp-gateway
+        listener: bar
+        namespace: default
       port: 8089
       routes:
       - circuitBreaker:
@@ -312,8 +315,11 @@ xdsIR:
             connectTimeout: 15s
     udp:
     - address: 0.0.0.0
-      externalPort: 8162
       name: default/tcp-gateway/foo
+      owner:
+        gateway: tcp-gateway
+        listener: foo
+        namespace: default
       port: 8162
       route:
         destination:

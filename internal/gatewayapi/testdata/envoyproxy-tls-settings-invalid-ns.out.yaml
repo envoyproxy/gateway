@@ -235,7 +235,6 @@ xdsIR:
       - path: /dev/stdout
     http:
     - address: 0.0.0.0
-      externalPort: 443
       hostnames:
       - '*'
       isHTTP2: false
@@ -244,6 +243,10 @@ xdsIR:
         name: gateway-tls
         namespace: envoy-gateway
       name: envoy-gateway/gateway-tls/
+      owner:
+        gateway: gateway-tls
+        listener: ""
+        namespace: envoy-gateway
       path:
         escapedSlashesAction: UnescapeAndRedirect
         mergeSlashes: true
@@ -271,8 +274,11 @@ xdsIR:
       port: 19003
     tcp:
     - address: 0.0.0.0
-      externalPort: 445
       name: envoy-gateway/gateway-tls/
+      owner:
+        gateway: gateway-tls
+        listener: ""
+        namespace: envoy-gateway
       port: 10445
       routes:
       - destination:

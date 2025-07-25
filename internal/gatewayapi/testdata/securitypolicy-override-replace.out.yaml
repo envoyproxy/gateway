@@ -560,7 +560,6 @@ xdsIR:
       - path: /dev/stdout
     http:
     - address: 0.0.0.0
-      externalPort: 80
       hostnames:
       - listener-1.gateway-1.envoyproxy.io
       isHTTP2: false
@@ -570,6 +569,10 @@ xdsIR:
         namespace: envoy-gateway
         sectionName: listener-1
       name: envoy-gateway/gateway-1/listener-1
+      owner:
+        gateway: gateway-1
+        listener: listener-1
+        namespace: envoy-gateway
       path:
         escapedSlashesAction: UnescapeAndRedirect
         mergeSlashes: true
@@ -818,7 +821,6 @@ xdsIR:
               remoteJWKS:
                 uri: https://one.example.com/jwt/public-key/jwks.json
     - address: 0.0.0.0
-      externalPort: 80
       hostnames:
       - listener-2.gateway-1.envoyproxy.io
       isHTTP2: false
@@ -828,6 +830,10 @@ xdsIR:
         namespace: envoy-gateway
         sectionName: listener-2
       name: envoy-gateway/gateway-1/listener-2
+      owner:
+        gateway: gateway-1
+        listener: listener-2
+        namespace: envoy-gateway
       path:
         escapedSlashesAction: UnescapeAndRedirect
         mergeSlashes: true

@@ -3,17 +3,11 @@ http:
     hostnames:
       - '*'
     isHTTP2: false
-    metadata:
-      kind: Gateway
-      name: gateway-1
-      namespace: envoy-gateway
-      sectionName: http1
     name: envoy-gateway/gateway-btls/http
     path:
       escapedSlashesAction: UnescapeAndRedirect
       mergeSlashes: true
     port: 10080
-    externalPort: 80
     routes:
       - backendWeights:
           invalid: 0
@@ -65,17 +59,11 @@ http:
     hostnames:
       - 'example.com'
     isHTTP2: false
-    metadata:
-      kind: Gateway
-      name: gateway-1
-      namespace: envoy-gateway
-      sectionName: http2
     name: envoy-gateway/gateway-btls-2/http
     path:
       escapedSlashesAction: UnescapeAndRedirect
       mergeSlashes: true
     port: 10081
-    externalPort: 81
     routes:
       - backendWeights:
           invalid: 0

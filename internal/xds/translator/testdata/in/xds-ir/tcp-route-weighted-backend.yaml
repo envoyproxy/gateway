@@ -2,7 +2,6 @@ tcp:
 - name: "tcp-listener-weighted-backend"
   address: "::"
   port: 10080
-  externalPort: 80
   routes:
   - name: "tcp-route-weighted-backend"
     tls:

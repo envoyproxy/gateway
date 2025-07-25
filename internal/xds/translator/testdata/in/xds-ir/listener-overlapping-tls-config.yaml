@@ -13,7 +13,6 @@ http:
     escapedSlashesAction: UnescapeAndRedirect
     mergeSlashes: true
   port: 10443
-  externalPort: 443
   routes:
   - destination:
       name: httproute/envoy-gateway/httproute-1/rule/0
@@ -57,7 +56,6 @@ http:
     escapedSlashesAction: UnescapeAndRedirect
     mergeSlashes: true
   port: 10443
-  externalPort: 443
   routes:
   - destination:
       name: httproute/envoy-gateway/httproute-1/rule/0

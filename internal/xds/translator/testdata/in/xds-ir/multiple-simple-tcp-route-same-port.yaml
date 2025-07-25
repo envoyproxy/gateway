@@ -2,7 +2,6 @@ tcp:
 - name: "tcp-listener-simple"
   address: "::"
   port: 10080
-  externalPort: 80
   routes:
   - name: "tcp-route-simple"
     destination:
@@ -17,7 +16,6 @@ tcp:
 - name: "tcp-listener-simple-1"
   address: "::"
   port: 10080
-  externalPort: 80
   routes:
   - name: "tcp-route-simple-1"
     destination:
@@ -32,7 +30,6 @@ tcp:
 - name: "tcp-listener-simple-2"
   address: "::"
   port: 10080
-  externalPort: 80
   routes:
   - name: "tcp-route-simple-2"
     destination:
@@ -47,7 +44,6 @@ tcp:
 - name: "tcp-listener-simple-3"
   address: "::"
   port: 10080
-  externalPort: 80
   routes:
   - name: "tcp-route-simple-3"
     destination:
@@ -62,7 +58,6 @@ tcp:
 - name: "tcp-listener-simple-4"
   address: "::"
   port: 10080
-  externalPort: 80
   routes:
   - name: "tcp-route-simple-4"
     destination:

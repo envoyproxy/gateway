@@ -177,7 +177,6 @@ xdsIR:
       - path: /dev/stdout
     http:
     - address: 0.0.0.0
-      externalPort: 80
       hostnames:
       - '*'
       isHTTP2: false
@@ -187,6 +186,10 @@ xdsIR:
         namespace: envoy-gateway
         sectionName: empty-hostname
       name: envoy-gateway/gateway-1/empty-hostname
+      owner:
+        gateway: gateway-1
+        listener: empty-hostname
+        namespace: envoy-gateway
       path:
         escapedSlashesAction: UnescapeAndRedirect
         mergeSlashes: true
@@ -223,7 +226,6 @@ xdsIR:
           name: ""
           prefix: /empty-hostname
     - address: 0.0.0.0
-      externalPort: 80
       hostnames:
       - '*.example.com'
       isHTTP2: false
@@ -233,6 +235,10 @@ xdsIR:
         namespace: envoy-gateway
         sectionName: wildcard-example-com
       name: envoy-gateway/gateway-1/wildcard-example-com
+      owner:
+        gateway: gateway-1
+        listener: wildcard-example-com
+        namespace: envoy-gateway
       path:
         escapedSlashesAction: UnescapeAndRedirect
         mergeSlashes: true

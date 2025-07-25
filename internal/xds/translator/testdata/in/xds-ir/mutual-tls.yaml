@@ -2,14 +2,8 @@ http:
 - name: "first-listener"
   address: "::"
   port: 10080
-  externalPort: 80
   hostnames:
   - "*"
-  metadata:
-    kind: Gateway
-    name: gateway-1
-    namespace: envoy-gateway
-    sectionName: http
   path:
     mergeSlashes: true
     escapedSlashesAction: UnescapeAndRedirect
@@ -44,7 +38,6 @@ tcp:
 - name: "second-listener"
   address: "::"
   port: 10081
-  externalPort: 81
   tls:
     certificates:
     - name: secret-3

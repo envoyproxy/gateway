@@ -13,7 +13,6 @@ http:
       escapedSlashesAction: UnescapeAndRedirect
       mergeSlashes: true
     port: 10080
-    externalPort: 80
     routes:
       - destination:
           name: httproute/default/httproute-1/rule/0
@@ -53,7 +52,6 @@ http:
       escapedSlashesAction: UnescapeAndRedirect
       mergeSlashes: true
     port: 10081
-    externalPort: 81
     routes:
       - destination:
           name: httproute/default/httproute-2/rule/0

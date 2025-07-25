@@ -3,14 +3,6 @@
   virtualHosts:
   - domains:
     - www.foo.com
-    metadata:
-      filterMetadata:
-        envoy-gateway:
-          resources:
-          - kind: Gateway
-            name: gateway-1
-            namespace: envoy-gateway
-            sectionName: http
     name: default/gateway-1/http/www_foo_com
     routes:
     - match:
@@ -37,14 +29,6 @@
           config: {}
   - domains:
     - www.bar.com
-    metadata:
-      filterMetadata:
-        envoy-gateway:
-          resources:
-          - kind: Gateway
-            name: gateway-1
-            namespace: envoy-gateway
-            sectionName: http
     name: default/gateway-1/http/www_bar_com
     routes:
     - match:

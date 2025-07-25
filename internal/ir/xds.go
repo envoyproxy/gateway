@@ -253,16 +253,22 @@ type Listener interface {
 	GetExtensionRefs() []*UnstructuredRef
 }
 
+type GatewayListener struct{
+	Namespace string `json:"namespace" yaml:"namespace"`
+	Gateway string `json:"gateway" yaml:"gateway"`
+	Listener string `json:"listener" yaml:"listener"`
+}
+
 // +k8s:deepcopy-gen=true
 type CoreListenerDetails struct {
+	// Owner is the Gateway Listener that owns this listener.
+	Owner *GatewayListener `json:"owner,omitempty" yaml:"owner,omitempty"`
 	// Name of the HttpListener
 	Name string `json:"name" yaml:"name"`
 	// Address that the listener should listen on.
 	Address string `json:"address" yaml:"address"`
 	// Port on which the service can be expected to be accessed by clients.
 	Port uint32 `json:"port" yaml:"port"`
-	// ExternalPort is the port on which the listener can be accessed by clients.
-	ExternalPort uint32 `json:"externalPort,omitempty" yaml:"externalPort,omitempty"`
 	// ExtensionRefs holds unstructured resources that were introduced by an extension policy
 	ExtensionRefs []*UnstructuredRef `json:"extensionRefs,omitempty" yaml:"extensionRefs,omitempty"`
 	// Metadata is used to enrich envoy resource metadata with user and provider-specific information

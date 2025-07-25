@@ -176,8 +176,11 @@ xdsIR:
       port: 19003
     tcp:
     - address: 0.0.0.0
-      externalPort: 90
       name: envoy-gateway/gateway-1/tls
+      owner:
+        gateway: gateway-1
+        listener: tls
+        namespace: envoy-gateway
       port: 10090
       routes:
       - destination:
@@ -213,8 +216,11 @@ xdsIR:
           name: envoy-gateway/tls-secret-1
           privateKey: '[redacted]'
     - address: 0.0.0.0
-      externalPort: 90
       name: envoy-gateway/gateway-1/tls-hostname
+      owner:
+        gateway: gateway-1
+        listener: tls-hostname
+        namespace: envoy-gateway
       port: 10090
       routes:
       - destination:

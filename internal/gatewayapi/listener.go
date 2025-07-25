@@ -119,10 +119,14 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR resource
 			case gwapiv1.HTTPProtocolType, gwapiv1.HTTPSProtocolType:
 				irListener := &ir.HTTPListener{
 					CoreListenerDetails: ir.CoreListenerDetails{
+						Owner: &ir.GatewayListener{
+							Namespace: gateway.Gateway.Namespace,
+							Gateway:  gateway.Gateway.Name,
+							Listener: string(listener.Name),
+						},
 						Name:         irListenerName(listener),
 						Address:      address,
 						Port:         uint32(containerPort),
-						ExternalPort: uint32(listener.Port),
 						Metadata:     buildListenerMetadata(listener, gateway),
 						IPFamily:     ipFamily,
 					},
@@ -131,6 +135,7 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR resource
 						MergeSlashes:         true,
 						EscapedSlashesAction: ir.UnescapeAndRedirect,
 					},
+
 				}
 				if listener.Hostname != nil {
 					irListener.Hostnames = append(irListener.Hostnames, string(*listener.Hostname))
@@ -147,10 +152,14 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR resource
 			case gwapiv1.TCPProtocolType, gwapiv1.TLSProtocolType:
 				irListener := &ir.TCPListener{
 					CoreListenerDetails: ir.CoreListenerDetails{
+						Owner: &ir.GatewayListener{
+							Namespace: gateway.Gateway.Namespace,
+							Gateway:  gateway.Gateway.Name,
+							Listener: string(listener.Name),
+						},
 						Name:         irListenerName(listener),
 						Address:      address,
 						Port:         uint32(containerPort),
-						ExternalPort: uint32(listener.Port),
 						IPFamily:     ipFamily,
 					},
 
@@ -164,10 +173,14 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR resource
 			case gwapiv1.UDPProtocolType:
 				irListener := &ir.UDPListener{
 					CoreListenerDetails: ir.CoreListenerDetails{
+						Owner: &ir.GatewayListener{
+							Namespace: gateway.Gateway.Namespace,
+							Gateway:  gateway.Gateway.Name,
+							Listener: string(listener.Name),
+						},
 						Name:         irListenerName(listener),
 						Address:      address,
 						Port:         uint32(containerPort),
-						ExternalPort: uint32(listener.Port),
 					},
 				}
 				xdsIR[irKey].UDP = append(xdsIR[irKey].UDP, irListener)

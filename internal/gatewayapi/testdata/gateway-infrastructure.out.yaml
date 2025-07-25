@@ -119,7 +119,6 @@ xdsIR:
       - path: /dev/stdout
     http:
     - address: 0.0.0.0
-      externalPort: 443
       hostnames:
       - '*'
       isHTTP2: false
@@ -129,6 +128,10 @@ xdsIR:
         namespace: default
         sectionName: https
       name: default/gateway-1/https
+      owner:
+        gateway: gateway-1
+        listener: https
+        namespace: default
       path:
         escapedSlashesAction: UnescapeAndRedirect
         mergeSlashes: true

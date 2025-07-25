@@ -31,13 +31,5 @@
         useRemoteAddress: true
     name: multiple-custom-backends-listener
   maxConnectionsToAcceptPerSocketEvent: 1
-  metadata:
-    filterMetadata:
-      envoy-gateway:
-        resources:
-        - kind: Gateway
-          name: gateway-1
-          namespace: envoy-gateway
-          sectionName: http
   name: multiple-custom-backends-listener
   perConnectionBufferLimitBytes: 32768

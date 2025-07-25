@@ -162,7 +162,6 @@ xdsIR:
       - path: /dev/stdout
     http:
     - address: 0.0.0.0
-      externalPort: 80
       hostnames:
       - '*'
       isHTTP2: false
@@ -172,6 +171,10 @@ xdsIR:
         namespace: envoy-gateway
         sectionName: http-preserve-order
       name: envoy-gateway/gateway-1/http-preserve-order
+      owner:
+        gateway: gateway-1
+        listener: http-preserve-order
+        namespace: envoy-gateway
       path:
         escapedSlashesAction: UnescapeAndRedirect
         mergeSlashes: true

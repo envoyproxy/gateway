@@ -46,7 +46,6 @@ type testFileConfig struct {
 	requireEnvoyPatchPolicies bool
 	dnsDomain                 string
 	errMsg                    string
-	runtimeFlags              *egv1a1.RuntimeFlags
 }
 
 func TestTranslateXds(t *testing.T) {
@@ -135,11 +134,6 @@ func TestTranslateXds(t *testing.T) {
 		"tracing-unknown-provider-type": {
 			errMsg: "unknown tracing provider type: AwesomeTelemetry",
 		},
-		"port-as-listener-name": {
-			runtimeFlags: &egv1a1.RuntimeFlags{
-				Enabled: []egv1a1.RuntimeFlag{egv1a1.UseProtocolPortAsListenerName},
-			},
-		},
 	}
 
 	inputFiles, err := filepath.Glob(filepath.Join("testdata", "in", "xds-ir", "*.yaml"))
@@ -168,8 +162,7 @@ func TestTranslateXds(t *testing.T) {
 				GlobalRateLimit: &GlobalRateLimitSettings{
 					ServiceURL: ratelimit.GetServiceURL("envoy-gateway-system", dnsDomain),
 				},
-				FilterOrder:  x.FilterOrder,
-				RuntimeFlags: cfg.runtimeFlags,
+				FilterOrder: x.FilterOrder,
 			}
 			tCtx, err := tr.Translate(x)
 			if !strings.HasSuffix(inputFileName, "partial-invalid") && len(cfg.errMsg) == 0 {

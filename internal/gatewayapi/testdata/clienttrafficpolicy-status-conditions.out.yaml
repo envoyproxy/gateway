@@ -519,7 +519,6 @@ xdsIR:
       - path: /dev/stdout
     http:
     - address: 0.0.0.0
-      externalPort: 80
       hostnames:
       - '*'
       isHTTP2: false
@@ -529,6 +528,10 @@ xdsIR:
         namespace: envoy-gateway
         sectionName: http
       name: envoy-gateway/gateway-1/http
+      owner:
+        gateway: gateway-1
+        listener: http
+        namespace: envoy-gateway
       path:
         escapedSlashesAction: UnescapeAndRedirect
         mergeSlashes: true
@@ -544,7 +547,6 @@ xdsIR:
       - path: /dev/stdout
     http:
     - address: 0.0.0.0
-      externalPort: 80
       hostnames:
       - '*'
       isHTTP2: false
@@ -554,6 +556,10 @@ xdsIR:
         namespace: envoy-gateway
         sectionName: http
       name: envoy-gateway/gateway-2/http
+      owner:
+        gateway: gateway-2
+        listener: http
+        namespace: envoy-gateway
       path:
         escapedSlashesAction: UnescapeAndRedirect
         mergeSlashes: true
@@ -565,8 +571,11 @@ xdsIR:
       port: 19003
     tcp:
     - address: 0.0.0.0
-      externalPort: 53
       name: envoy-gateway/gateway-2/tcp
+      owner:
+        gateway: gateway-2
+        listener: tcp
+        namespace: envoy-gateway
       port: 10053
   envoy-gateway/gateway-3:
     accessLog:
@@ -574,7 +583,6 @@ xdsIR:
       - path: /dev/stdout
     http:
     - address: 0.0.0.0
-      externalPort: 80
       hostnames:
       - '*'
       isHTTP2: false
@@ -584,6 +592,10 @@ xdsIR:
         namespace: envoy-gateway
         sectionName: bar-foo
       name: envoy-gateway/gateway-3/bar-foo
+      owner:
+        gateway: gateway-3
+        listener: bar-foo
+        namespace: envoy-gateway
       path:
         escapedSlashesAction: UnescapeAndRedirect
         mergeSlashes: true
@@ -599,7 +611,6 @@ xdsIR:
       - path: /dev/stdout
     http:
     - address: 0.0.0.0
-      externalPort: 80
       hostnames:
       - '*'
       isHTTP2: false
@@ -609,6 +620,10 @@ xdsIR:
         namespace: not-same-namespace
         sectionName: http
       name: not-same-namespace/not-same-namespace-gateway/http
+      owner:
+        gateway: not-same-namespace-gateway
+        listener: http
+        namespace: not-same-namespace
       path:
         escapedSlashesAction: UnescapeAndRedirect
         mergeSlashes: true

@@ -2,14 +2,8 @@ http:
 - name: "first-listener"
   address: "::"
   port: 10080
-  externalPort: 80
   hostnames:
   - "foo.com"
-  metadata:
-    kind: Gateway
-    name: gateway-1
-    namespace: envoy-gateway
-    sectionName: http1
   connection: {}
   path:
     mergeSlashes: true
@@ -27,14 +21,8 @@ http:
 - name: "second-listener"
   address: "::"
   port: 10081
-  externalPort: 81
   hostnames:
   - "foo.net"
-  metadata:
-    kind: Gateway
-    name: gateway-1
-    namespace: envoy-gateway
-    sectionName: http2
   connection:
     limit:
       value: 5
@@ -55,7 +43,6 @@ tcp:
 - name: "third-listener"
   address: "::"
   port: 10082
-  externalPort: 82
   connection:
     limit:
       value: 3
@@ -78,7 +65,6 @@ tcp:
       value: 10
       closeDelay: 3s
   port: 10083
-  externalPort: 83
   routes:
   - destination:
       name: "tcp-route-dest"
