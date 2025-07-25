@@ -203,7 +203,7 @@ func buildRBACPerRoute(authorization *ir.Authorization) (*rbacv3.RBACPerRoute, e
 		}
 
 		if len(rule.Principal.ClientCIDRs) > 0 {
-			if ipPredicate, err = buildIPPredicate(rule.Principal.ClientCIDRs); err != nil {
+			if ipPredicate, err = buildIPPredicate(rule.Principal); err != nil {
 				return nil, err
 			}
 		}
@@ -320,7 +320,8 @@ func buildRBACPerRoute(authorization *ir.Authorization) (*rbacv3.RBACPerRoute, e
 	return rbac, nil
 }
 
-func buildIPPredicate(clientCIDRs []*ir.CIDRMatch) (*matcherv3.Matcher_MatcherList_Predicate, error) {
+// Change line ~151 and the function implementation
+func buildIPPredicate(principal ir.Principal) (*matcherv3.Matcher_MatcherList_Predicate, error) {
 	var (
 		sourceIPInput *anypb.Any
 		ipMatcher     *anypb.Any
@@ -332,7 +333,7 @@ func buildIPPredicate(clientCIDRs []*ir.CIDRMatch) (*matcherv3.Matcher_MatcherLi
 		StatPrefix: "client_ip",
 	}
 
-	for _, cidr := range clientCIDRs {
+	for _, cidr := range principal.ClientCIDRs {
 		ipRangeMatcher.CidrRanges = append(ipRangeMatcher.CidrRanges, &configv3.CidrRange{
 			AddressPrefix: cidr.IP,
 			PrefixLen: &wrapperspb.UInt32Value{
@@ -345,8 +346,17 @@ func buildIPPredicate(clientCIDRs []*ir.CIDRMatch) (*matcherv3.Matcher_MatcherLi
 		return nil, err
 	}
 
-	if sourceIPInput, err = proto.ToAnyWithValidation(&networkinput.SourceIPInput{}); err != nil {
-		return nil, err
+	// Choose the correct input based on UseDownstreamSourceIP
+	if principal.UseDownstreamSourceIP {
+		// Use downstream source IP for TCP routes
+		if sourceIPInput, err = proto.ToAnyWithValidation(&networkinput.DirectSourceIPInput{}); err != nil {
+			return nil, err
+		}
+	} else {
+		// Use source IP (can extract from headers) for HTTP routes
+		if sourceIPInput, err = proto.ToAnyWithValidation(&networkinput.SourceIPInput{}); err != nil {
+			return nil, err
+		}
 	}
 
 	return &matcherv3.Matcher_MatcherList_Predicate{
