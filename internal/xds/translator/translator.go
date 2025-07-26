@@ -441,7 +441,7 @@ func (t *Translator) processHTTPListenerXdsTranslation(
 			}
 		}
 
-		// For backward compatibility, we firt try to get the route config name from the xDS listener.
+		// For backward compatibility, we first try to get the route config name from the xDS listener.
 		// This is because the legacy rout config name is named after the first ir listener name on the same port(which is not ideal),
 		// and the current ir Listener has a different name.
 		//
