@@ -292,6 +292,13 @@ xdsIR:
     accessLog:
       json:
       - path: /dev/stdout
+    proxyServiceCluster:
+      destination:
+        name: envoy-gateway/gateway-legacy-only
+        preferLocal:
+          minEndpointsThreshold: 1
+        protocol: HTTP
+      name: envoy-gateway/gateway-legacy-only
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4
@@ -330,6 +337,24 @@ xdsIR:
         mergeSlashes: true
       port: 8080
       proxyProtocol: {}
+    proxyServiceCluster:
+      destination:
+        addressType: IP
+        endpoints:
+        - host: 7.6.5.4
+          port: 8080
+          zone: zone1
+        - host: 7.6.5.4
+          port: 8080
+          zone: zone1
+        - host: 7.6.5.4
+          port: 8080
+          zone: zone1
+        name: envoy-gateway/gateway-new-api-only
+        preferLocal:
+          minEndpointsThreshold: 1
+        protocol: HTTP
+      name: envoy-gateway/gateway-new-api-only
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4
@@ -356,6 +381,13 @@ xdsIR:
       port: 10080
       proxyProtocol:
         optional: true
+    proxyServiceCluster:
+      destination:
+        name: envoy-gateway/gateway-precedence-test
+        preferLocal:
+          minEndpointsThreshold: 1
+        protocol: HTTP
+      name: envoy-gateway/gateway-precedence-test
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4
