@@ -617,9 +617,10 @@ func (t *Translator) addRouteToRouteConfig(
 			}
 
 			var err error
-			// If there are no filters in the destination settings we create
-			// a regular xds Cluster
-			if !httpRoute.Destination.NeedsClusterPerSetting() {
+			// If there are no filters in the destination
+			// settings and ZoneAware routing isn't
+			// enabled we create a regular xds Cluster
+			if !httpRoute.NeedsClusterPerSetting() {
 				err = processXdsCluster(
 					tCtx,
 					httpRoute.Destination.Name,
