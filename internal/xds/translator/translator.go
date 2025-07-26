@@ -294,7 +294,7 @@ func (t *Translator) processHTTPListenerXdsTranslation(
 			quicXDSListener                    *listenerv3.Listener // UDP(QUIC) Listener for HTTP3 traffic
 			xdsListenerOnSameAddressPortExists bool                 // Whether a listener already exists on the same address + port combination
 			tlsEnabled                         bool                 // Whether TLS is enabled for the listener
-			routeConfig                        string
+			routeCfgName                       string
 			xdsRouteCfg                        *routev3.RouteConfiguration // The route config is used by both the TCP and QUIC listeners
 			addHCM                             bool                        // Whether to add an HCM(HTTP Connection Manager filter) to the listener's TCP filter chain
 			err                                error
@@ -303,6 +303,8 @@ func (t *Translator) processHTTPListenerXdsTranslation(
 		http3Settings, http3Enabled = http3EnabledListeners[listenerKey{Address: httpListener.Address, Port: httpListener.Port}]
 
 		// Search for an existing TCP listener on the same address + port combination.
+		// Right now, the address is always 0.0.0.0/::, and we need to revisit the logic in the method if we want to support
+		// listeners on specific addresses.
 		tcpXDSListener = findXdsListenerByHostPort(tCtx, httpListener.Address, httpListener.Port, corev3.SocketAddress_TCP)
 		quicXDSListener = findXdsListenerByHostPort(tCtx, httpListener.Address, httpListener.Port, corev3.SocketAddress_UDP)
 
@@ -314,11 +316,11 @@ func (t *Translator) processHTTPListenerXdsTranslation(
 		case !xdsListenerOnSameAddressPortExists:
 			// Create a new UDP(QUIC) listener for HTTP3 traffic if HTTP3 is enabled
 			if http3Enabled {
-				if quicXDSListener, err = buildXdsQuicListener(
+				if quicXDSListener, err = t.buildXdsQuicListener(
 					httpListener.CoreListenerDetails,
 					httpListener.IPFamily,
 					accessLog,
-					t.useProtocolPortAsListenerName()); err != nil {
+				); err != nil {
 					errs = errors.Join(errs, err)
 					continue
 				}
@@ -331,12 +333,12 @@ func (t *Translator) processHTTPListenerXdsTranslation(
 			}
 
 			// Create a new TCP listener for HTTP1/HTTP2 traffic.
-			if tcpXDSListener, err = buildXdsTCPListener(
+			if tcpXDSListener, err = t.buildXdsTCPListener(
 				httpListener.CoreListenerDetails,
 				httpListener.TCPKeepalive,
 				httpListener.Connection,
 				accessLog,
-				t.useProtocolPortAsListenerName()); err != nil {
+			); err != nil {
 				errs = errors.Join(errs, err)
 				continue
 			}
@@ -448,22 +450,22 @@ func (t *Translator) processHTTPListenerXdsTranslation(
 		// For example, the route config name is named after the ir Listener name "default/eg/http1", but the current
 		// ir Listener is "default/eg/http2".
 		if !t.useProtocolPortAsListenerName() {
-			routeConfig = findXdsHTTPRouteConfigName(tcpXDSListener)
+			routeCfgName = findXdsHTTPRouteConfigName(tcpXDSListener)
 			// If the route config name is not found, we use the current ir Listener name as the route config name to create a new route config.
-			if routeConfig == "" {
-				routeConfig = routeConfigName(httpListener, false)
+			if routeCfgName == "" {
+				routeCfgName = routeConfigName(httpListener, false)
 			}
 		} else {
 			// The new rout config is named after the xDS listener port, for example "80".
-			routeConfig = routeConfigName(httpListener, true)
+			routeCfgName = routeConfigName(httpListener, true)
 		}
 
 		// Create a route config if we have not found one yet
-		xdsRouteCfg = findXdsRouteConfig(tCtx, routeConfig)
+		xdsRouteCfg = findXdsRouteConfig(tCtx, routeCfgName)
 		if xdsRouteCfg == nil {
 			xdsRouteCfg = &routev3.RouteConfiguration{
 				IgnorePortInHostMatching: true,
-				Name:                     routeConfig,
+				Name:                     routeCfgName,
 			}
 
 			if err = tCtx.AddXdsResource(resourcev3.RouteType, xdsRouteCfg); err != nil {
@@ -772,12 +774,12 @@ func (t *Translator) processTCPListenerXdsTranslation(
 		// Search for an existing listener, if it does not exist, create one.
 		xdsListener := findXdsListenerByHostPort(tCtx, tcpListener.Address, tcpListener.Port, corev3.SocketAddress_TCP)
 		if xdsListener == nil {
-			if xdsListener, err = buildXdsTCPListener(
+			if xdsListener, err = t.buildXdsTCPListener(
 				tcpListener.CoreListenerDetails,
 				tcpListener.TCPKeepalive,
 				tcpListener.Connection,
 				accesslog,
-				t.useProtocolPortAsListenerName()); err != nil {
+			); err != nil {
 				// skip this listener if failed to build xds listener
 				errs = errors.Join(errs, err)
 				continue

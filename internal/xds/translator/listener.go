@@ -184,13 +184,11 @@ func originalIPDetectionExtensions(clientIPDetection *ir.ClientIPDetectionSettin
 }
 
 // buildXdsTCPListener creates a xds Listener resource
-// TODO: Improve function parameters
-func buildXdsTCPListener(
+func (t *Translator) buildXdsTCPListener(
 	listenerDetails ir.CoreListenerDetails,
 	keepalive *ir.TCPKeepalive,
 	connection *ir.ClientConnection,
 	accesslog *ir.AccessLog,
-	useProtocolPortAsListenerName bool,
 ) (*listenerv3.Listener, error) {
 	socketOptions := buildTCPSocketOptions(keepalive)
 	al, err := buildXdsAccessLog(accesslog, ir.ProxyAccessLogTypeListener)
@@ -202,7 +200,7 @@ func buildXdsTCPListener(
 	listener := &listenerv3.Listener{
 		Name: xdsListenerName(
 			listenerDetails.Name, listenerDetails.ExternalPort,
-			corev3.SocketAddress_TCP, useProtocolPortAsListenerName),
+			corev3.SocketAddress_TCP, t.useProtocolPortAsListenerName()),
 		AccessLog:                            al,
 		SocketOptions:                        socketOptions,
 		PerConnectionBufferLimitBytes:        bufferLimitBytes,
@@ -228,6 +226,11 @@ func buildXdsTCPListener(
 	return listener, nil
 }
 
+// xdsListenerName returns the name of the xDS listener in two formats:
+// 1. "tcp-80" if useProtocolPortAsListenerName is true.
+// 2. "default/gateway-1/http" if useProtocolPortAsListenerName is false.
+// The second format can cause unnecessary listener drains and will be removed in the future.
+// https://github.com/envoyproxy/gateway/issues/6534
 func xdsListenerName(name string, externalPort uint32, protocol corev3.SocketAddress_Protocol, useProtocolPortAsListenerName bool) string {
 	if useProtocolPortAsListenerName {
 		protocolType := "tcp"
@@ -258,11 +261,10 @@ func buildMaxAcceptPerSocketEvent(connection *ir.ClientConnection) *wrapperspb.U
 }
 
 // buildXdsQuicListener creates a xds Listener resource for quic
-func buildXdsQuicListener(
+func (t *Translator) buildXdsQuicListener(
 	listenerDetails ir.CoreListenerDetails,
 	ipFamily *egv1a1.IPFamily,
 	accesslog *ir.AccessLog,
-	useProtocolPortAsListenerName bool,
 ) (*listenerv3.Listener, error) {
 	log, err := buildXdsAccessLog(accesslog, ir.ProxyAccessLogTypeListener)
 	if err != nil {
@@ -270,7 +272,7 @@ func buildXdsQuicListener(
 	}
 	// Keep the listener name compatible with the old naming scheme
 	listenerName := listenerDetails.Name + "-quic"
-	if useProtocolPortAsListenerName {
+	if t.useProtocolPortAsListenerName() {
 		listenerName = xdsListenerName(listenerDetails.Name, listenerDetails.ExternalPort, corev3.SocketAddress_UDP, true)
 	}
 	xdsListener := &listenerv3.Listener{
