@@ -425,6 +425,18 @@ xdsIR:
                 maxParallelRequests: 1022
                 maxParallelRetries: 1023
                 maxPendingRequests: 1024
+    proxyServiceCluster:
+      destination:
+        addressType: IP
+        endpoints:
+        - host: 7.6.5.4
+          port: 8080
+          zone: zone1
+        name: default/gateway-1
+        preferLocal:
+          minEndpointsThreshold: 1
+        protocol: HTTP
+      name: default/gateway-1
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4

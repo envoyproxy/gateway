@@ -242,6 +242,8 @@ func (t *Translator) Translate(resources *resource.Resources) (*TranslateResult,
 		errs = errors.Join(errs, err)
 	}
 
+	t.ProcessServiceCluster(acceptedGateways, resources, xdsIR)
+
 	// Process global resources that are not tied to a specific listener or route
 	if err := t.ProcessGlobalResources(resources, xdsIR); err != nil {
 		errs = errors.Join(errs, err)

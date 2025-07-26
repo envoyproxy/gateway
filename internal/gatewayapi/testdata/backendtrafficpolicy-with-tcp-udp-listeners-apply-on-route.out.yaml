@@ -309,6 +309,18 @@ xdsIR:
     accessLog:
       json:
       - path: /dev/stdout
+    proxyServiceCluster:
+      destination:
+        addressType: IP
+        endpoints:
+        - host: 7.6.5.4
+          port: 8080
+          zone: zone1
+        name: default/tcp-gateway
+        preferLocal:
+          minEndpointsThreshold: 1
+        protocol: HTTP
+      name: default/tcp-gateway
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4

@@ -891,6 +891,13 @@ xdsIR:
               interval: 3s
               timeout: 1s
               unhealthyThreshold: 3
+    proxyServiceCluster:
+      destination:
+        name: envoy-gateway/gateway-1
+        preferLocal:
+          minEndpointsThreshold: 1
+        protocol: HTTP
+      name: envoy-gateway/gateway-1
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4
@@ -1149,6 +1156,21 @@ xdsIR:
               interval: 1s
               maxEjectionPercent: 100
               splitExternalLocalOriginErrors: false
+    proxyServiceCluster:
+      destination:
+        addressType: IP
+        endpoints:
+        - host: 7.6.5.4
+          port: 8080
+          zone: zone1
+        - host: 7.6.5.4
+          port: 8080
+          zone: zone1
+        name: envoy-gateway/gateway-2
+        preferLocal:
+          minEndpointsThreshold: 1
+        protocol: HTTP
+      name: envoy-gateway/gateway-2
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4

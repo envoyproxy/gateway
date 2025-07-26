@@ -100,6 +100,18 @@ xdsIR:
     accessLog:
       json:
       - path: /dev/stdout
+    proxyServiceCluster:
+      destination:
+        addressType: IP
+        endpoints:
+        - host: 7.6.5.4
+          port: 8080
+          zone: zone1
+        name: gateway-conformance-infra/gateway-tlsroute-referencegrant
+        preferLocal:
+          minEndpointsThreshold: 1
+        protocol: HTTP
+      name: gateway-conformance-infra/gateway-tlsroute-referencegrant
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4
