@@ -19,5 +19,8 @@ func (i *Infra) CreateOrUpdateRateLimitInfra(ctx context.Context) error {
 
 // DeleteRateLimitInfra removes the managed host rate limit process, if it doesn't exist.
 func (i *Infra) DeleteRateLimitInfra(ctx context.Context) error {
-	return fmt.Errorf("delete ratelimit infrastructure is not supported yet for host infrastructure")
+	// Currently, nothing to do here while this is unconditionally called due to the abstraction over k8s vs. host infra.
+	// We need to do something once the CreateOrUpdateRateLimitInfra is actually implemented.
+	// Meanwhile, this being called is not an error.
+	return nil
 }
