@@ -359,26 +359,7 @@ func (t *Translator) processHTTPListenerXdsTranslation(
 			// The HCM is configured with a RouteConfiguration, which is used to
 			// route HTTP traffic to the correct virtual host for all the domains
 			// specified in the Gateway HTTP Listener's routes.
-			var (
-				routeConfigName            string
-				hasHCMInDefaultFilterChain bool
-			)
-
-			// Find the route config associated with this listener that
-			// maps to the default filter chain for http traffic
-			// Routes for this listener will be added to this route config
-			routeConfigName = findXdsHTTPRouteConfigName(tcpXDSListener)
-			hasHCMInDefaultFilterChain = routeConfigName != ""
-			addHCM = !hasHCMInDefaultFilterChain
-
-			if routeConfigName != "" {
-				xdsRouteCfg = findXdsRouteConfig(tCtx, routeConfigName)
-				if xdsRouteCfg == nil {
-					// skip this listener if failed to find xds route config
-					errs = errors.Join(errs, errors.New("unable to find xds route config"))
-					continue
-				}
-			}
+			addHCM = !hasHCMInDefaultFilterChain(tcpXDSListener)
 		case xdsListenerOnSameAddressPortExists && tlsEnabled:
 			// If an existing xds listener exists, and Gateway HTTP Listener enables
 			// TLS, we need to create an HCM.
@@ -460,10 +441,12 @@ func (t *Translator) processHTTPListenerXdsTranslation(
 		}
 
 		// Create a route config if we have not found one yet
+		routeConfigName := routeConfigName(httpListener, t.useProtocolPortAsListenerName())
+		xdsRouteCfg = findXdsRouteConfig(tCtx, routeConfigName)
 		if xdsRouteCfg == nil {
 			xdsRouteCfg = &routev3.RouteConfiguration{
 				IgnorePortInHostMatching: true,
-				Name:                     routeConfigName(httpListener, t.useProtocolPortAsListenerName()),
+				Name:                     routeConfigName,
 			}
 
 			if err = tCtx.AddXdsResource(resourcev3.RouteType, xdsRouteCfg); err != nil {
