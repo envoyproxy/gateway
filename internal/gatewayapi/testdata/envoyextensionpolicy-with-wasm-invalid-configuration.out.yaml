@@ -702,7 +702,6 @@ xdsIR:
     accessLog:
       json:
       - path: /dev/stdout
-    globalResources: {}
     http:
     - address: 0.0.0.0
       hostnames:
@@ -843,11 +842,11 @@ xdsIR:
           prefix: /qux
     proxyServiceCluster:
       destination:
-        name: envoy-default-gateway-1-bfd08ef4
+        name: default/gateway-1
         preferLocal:
           minEndpointsThreshold: 1
         protocol: HTTP
-      name: envoy-default-gateway-1-bfd08ef4
+      name: default/gateway-1
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4
@@ -857,7 +856,6 @@ xdsIR:
     accessLog:
       json:
       - path: /dev/stdout
-    globalResources: {}
     http:
     - address: 0.0.0.0
       hostnames:
@@ -934,11 +932,11 @@ xdsIR:
           prefix: /bar
     proxyServiceCluster:
       destination:
-        name: envoy-default-gateway-2-5e70ed84
+        name: default/gateway-2
         preferLocal:
           minEndpointsThreshold: 1
         protocol: HTTP
-      name: envoy-default-gateway-2-5e70ed84
+      name: default/gateway-2
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4
@@ -948,7 +946,6 @@ xdsIR:
     accessLog:
       json:
       - path: /dev/stdout
-    globalResources: {}
     http:
     - address: 0.0.0.0
       hostnames:
@@ -1009,11 +1006,11 @@ xdsIR:
         - host: 7.6.5.4
           port: 8080
           zone: zone1
-        name: envoy-default-gateway-3-206418d2
+        name: default/gateway-3
         preferLocal:
           minEndpointsThreshold: 1
         protocol: HTTP
-      name: envoy-default-gateway-3-206418d2
+      name: default/gateway-3
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4

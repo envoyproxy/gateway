@@ -296,7 +296,6 @@ xdsIR:
     accessLog:
       json:
       - path: /dev/stdout
-    globalResources: {}
     http:
     - address: 0.0.0.0
       hostnames:
@@ -417,11 +416,11 @@ xdsIR:
         - host: 7.6.5.4
           port: 8080
           zone: zone1
-        name: envoy-envoy-gateway-class-3b1df594
+        name: envoy-gateway-class
         preferLocal:
           minEndpointsThreshold: 1
         protocol: HTTP
-      name: envoy-envoy-gateway-class-3b1df594
+      name: envoy-gateway-class
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4

@@ -30,10 +30,14 @@ func (t *Translator) ProcessServiceCluster(acceptedGateways []*GatewayContext, r
 		}
 
 		var svcName string
+		var serviceClusterName string
 		if t.MergeGateways {
 			svcName = t.expectedServiceName(string(t.GatewayClassName))
+			serviceClusterName = string(t.GatewayClassName)
+
 		} else {
 			svcName = t.expectedServiceName(fmt.Sprintf("%s/%s", g.Namespace, g.Name))
+			serviceClusterName = fmt.Sprintf("%s/%s", g.Namespace, g.Name)
 		}
 
 		svc := resources.GetService(t.ControllerNamespace, svcName)
@@ -41,14 +45,10 @@ func (t *Translator) ProcessServiceCluster(acceptedGateways []*GatewayContext, r
 			return
 		}
 
-		ds := t.processServiceClusterDestinationSetting(svc.Name, svc, resources)
+		ds := t.processServiceClusterDestinationSetting(serviceClusterName, svc, resources)
 		ds.IPFamily = getServiceIPFamily(svc)
-
-		if xdsIR[irKey].GlobalResources == nil {
-			xdsIR[irKey].GlobalResources = &ir.GlobalResources{}
-		}
 		xdsIR[irKey].ProxyServiceCluster = &ir.ProxyServiceCluster{
-			Name:        svc.Name,
+			Name:        serviceClusterName,
 			Destination: ds,
 		}
 

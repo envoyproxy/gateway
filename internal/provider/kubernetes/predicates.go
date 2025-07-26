@@ -634,7 +634,6 @@ func (r *gatewayAPIReconciler) validateObjectForReconcile(obj client.Object) boo
 		gtw := r.findOwningGateway(ctx, labels)
 		if gtw != nil {
 			r.updateGatewayStatus(gtw)
-			// may need to come back here
 			return false
 		}
 	}
@@ -646,7 +645,6 @@ func (r *gatewayAPIReconciler) validateObjectForReconcile(obj client.Object) boo
 			r.log.Info("no Gateways found under GatewayClass", "name", gcName)
 			return false
 		}
-		// may need to come back here
 		return false
 	}
 

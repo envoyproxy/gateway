@@ -350,11 +350,11 @@ xdsIR:
                 name: envoy-gateway/policy-for-gateway/rule/0
     proxyServiceCluster:
       destination:
-        name: envoy-envoy-gateway-gateway-1-196ae069
+        name: envoy-gateway/gateway-1
         preferLocal:
           minEndpointsThreshold: 1
         protocol: HTTP
-      name: envoy-envoy-gateway-gateway-1-196ae069
+      name: envoy-gateway/gateway-1
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4
@@ -443,11 +443,11 @@ xdsIR:
         - host: 7.6.5.4
           port: 8080
           zone: zone1
-        name: envoy-envoy-gateway-gateway-2-4a0e4eb9
+        name: envoy-gateway/gateway-2
         preferLocal:
           minEndpointsThreshold: 1
         protocol: HTTP
-      name: envoy-envoy-gateway-gateway-2-4a0e4eb9
+      name: envoy-gateway/gateway-2
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4

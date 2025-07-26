@@ -236,7 +236,6 @@ xdsIR:
     accessLog:
       json:
       - path: /dev/stdout
-    globalResources: {}
     proxyServiceCluster:
       destination:
         addressType: IP
@@ -244,11 +243,11 @@ xdsIR:
         - host: 7.6.5.4
           port: 8080
           zone: zone1
-        name: envoy-default-tcp-gateway-1ec60381
+        name: default/tcp-gateway
         preferLocal:
           minEndpointsThreshold: 1
         protocol: HTTP
-      name: envoy-default-tcp-gateway-1ec60381
+      name: default/tcp-gateway
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4

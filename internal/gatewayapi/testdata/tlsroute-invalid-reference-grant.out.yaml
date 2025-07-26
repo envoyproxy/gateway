@@ -100,7 +100,6 @@ xdsIR:
     accessLog:
       json:
       - path: /dev/stdout
-    globalResources: {}
     proxyServiceCluster:
       destination:
         addressType: IP
@@ -108,11 +107,11 @@ xdsIR:
         - host: 7.6.5.4
           port: 8080
           zone: zone1
-        name: envoy-gateway-conformance-infra-gateway-tlsroute-refer-1a02781b
+        name: gateway-conformance-infra/gateway-tlsroute-referencegrant
         preferLocal:
           minEndpointsThreshold: 1
         protocol: HTTP
-      name: envoy-gateway-conformance-infra-gateway-tlsroute-refer-1a02781b
+      name: gateway-conformance-infra/gateway-tlsroute-referencegrant
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4
