@@ -210,11 +210,15 @@ func (s *extProcServer) Process(srv envoy_service_proc_v3.ExternalProcessor_Proc
 		switch v := req.Request.(type) {
 		case *envoy_service_proc_v3.ProcessingRequest_RequestHeaders:
 			xdsRouteName := ""
+			xdsFilterChainName := ""
 
 			if req.Attributes != nil {
 				if epa, ok := req.Attributes["envoy.filters.http.ext_proc"]; ok {
 					if rqa, ok := epa.Fields["xds.route_name"]; ok {
 						xdsRouteName = rqa.GetStringValue()
+					}
+					if rqa, ok := epa.Fields["xds.filter_chain_name"]; ok {
+						xdsFilterChainName = rqa.GetStringValue()
 					}
 				}
 			}
@@ -249,6 +253,12 @@ func (s *extProcServer) Process(srv envoy_service_proc_v3.ExternalProcessor_Proc
 								Header: &envoy_api_v3_core.HeaderValue{
 									Key:      "x-request-xds-route-name",
 									RawValue: []byte(xdsRouteName),
+								},
+							},
+							{
+								Header: &envoy_api_v3_core.HeaderValue{
+									Key:      "x-request-xds-filter-chain-name",
+									RawValue: []byte(xdsFilterChainName),
 								},
 							},
 						},

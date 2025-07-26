@@ -89,6 +89,28 @@ EnvoyExtensionPolicies:
       group: gateway.networking.k8s.io
       kind: HTTPRoute
       name: not-same-namespace-httproute
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: EnvoyExtensionPolicy
+  metadata:
+    namespace: envoy-gateway
+    name: target-httproute-rule-in-httproute-2
+  spec:
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: httproute-2
+      sectionName: rule-1
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: EnvoyExtensionPolicy
+  metadata:
+    namespace: envoy-gateway
+    name: also-target-httproute-rule-in-httproute-2
+  spec:
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: httproute-2
+      sectionName: rule-1
 httpRoutes:
 - apiVersion: gateway.networking.k8s.io/v1beta1
   kind: HTTPRoute
@@ -122,6 +144,23 @@ httpRoutes:
       backendRefs:
       - name: service-1
         port: 8080
+- apiVersion: gateway.networking.k8s.io/v1beta1
+  kind: HTTPRoute
+  metadata:
+    namespace: envoy-gateway
+    name: httproute-2
+  spec:
+    parentRefs:
+      - namespace: envoy-gateway
+        name: gateway-1
+    rules:
+      - matches:
+        - path:
+              value: "/"
+        name: rule-1
+        backendRefs:
+          - name: service-1
+            port: 8080
 grpcRoutes:
 - apiVersion: gateway.networking.k8s.io/v1alpha2
   kind: GRPCRoute

@@ -234,7 +234,7 @@ func TestEnvoyExtensionPolicyTarget(t *testing.T) {
 			},
 		},
 		{
-			desc: "sectionName disabled until supported -targetRef",
+			desc: "sectionName disabled for Gateway until supported -targetRef",
 			mutate: func(eep *egv1a1.EnvoyExtensionPolicy) {
 				eep.Spec = egv1a1.EnvoyExtensionPolicySpec{
 					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
@@ -254,7 +254,25 @@ func TestEnvoyExtensionPolicyTarget(t *testing.T) {
 			},
 		},
 		{
-			desc: "sectionName disabled until supported - targetRefs",
+			desc: "sectionName enabled for xRoute - targetRef",
+			mutate: func(eep *egv1a1.EnvoyExtensionPolicy) {
+				eep.Spec = egv1a1.EnvoyExtensionPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
+								Group: gwapiv1a2.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1a2.Kind("HTTPRoute"),
+								Name:  gwapiv1a2.ObjectName("eg"),
+							},
+							SectionName: &sectionName,
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "sectionName enabled for xRoute - targetRefs",
 			mutate: func(eep *egv1a1.EnvoyExtensionPolicy) {
 				eep.Spec = egv1a1.EnvoyExtensionPolicySpec{
 					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
@@ -262,7 +280,7 @@ func TestEnvoyExtensionPolicyTarget(t *testing.T) {
 							{
 								LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
 									Group: gwapiv1a2.Group("gateway.networking.k8s.io"),
-									Kind:  gwapiv1a2.Kind("Gateway"),
+									Kind:  gwapiv1a2.Kind("HTTPRoute"),
 									Name:  gwapiv1a2.ObjectName("eg"),
 								},
 								SectionName: &sectionName,
@@ -271,9 +289,7 @@ func TestEnvoyExtensionPolicyTarget(t *testing.T) {
 					},
 				}
 			},
-			wantErrors: []string{
-				"spec: Invalid value: \"object\": this policy does not yet support the sectionName field",
-			},
+			wantErrors: []string{},
 		},
 
 		// ExtProc

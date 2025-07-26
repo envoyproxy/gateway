@@ -93,6 +93,12 @@ var ExtProcTest = suite.ConformanceTest{
 			}
 
 			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
+
+			// now check policy attached to a route rule which adds one additional header
+			expectedResponse.Request.Path = "/processor-route-rule-name"
+			expectedResponse.ExpectedRequest.Headers["x-request-xds-filter-chain-name"] = "httproute/gateway-conformance-infra/http-with-ext-proc"
+
+			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
 		})
 
 		t.Run("http route without proc mode", func(t *testing.T) {
