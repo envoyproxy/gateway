@@ -3,6 +3,14 @@
   virtualHosts:
   - domains:
     - '*'
+    metadata:
+      filterMetadata:
+        envoy-gateway:
+          resources:
+          - kind: Gateway
+            name: gateway-1
+            namespace: envoy-gateway
+            sectionName: http1
     name: first-listener/*
     routes:
     - match:
@@ -17,6 +25,14 @@
   virtualHosts:
   - domains:
     - '*'
+    metadata:
+      filterMetadata:
+        envoy-gateway:
+          resources:
+          - kind: Gateway
+            name: gateway-1
+            namespace: envoy-gateway
+            sectionName: http2
     name: second-listener/*
     routes:
     - match:
@@ -31,6 +47,14 @@
   virtualHosts:
   - domains:
     - '*'
+    metadata:
+      filterMetadata:
+        envoy-gateway:
+          resources:
+          - kind: Gateway
+            name: gateway-1
+            namespace: envoy-gateway
+            sectionName: http3
     name: third-listener/*
     routes:
     - match:
@@ -45,6 +69,14 @@
   virtualHosts:
   - domains:
     - '*'
+    metadata:
+      filterMetadata:
+        envoy-gateway:
+          resources:
+          - kind: Gateway
+            name: gateway-1
+            namespace: envoy-gateway
+            sectionName: http4
     name: fourth-listener/*
     routes:
     - match:

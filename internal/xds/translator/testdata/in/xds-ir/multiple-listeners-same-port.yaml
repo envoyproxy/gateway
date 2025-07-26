@@ -2,8 +2,14 @@ http:
 - name: "first-listener"
   address: "::"
   port: 10080
+  externalPort: 80
   hostnames:
   - "foo.com"
+  metadata:
+    kind: Gateway
+    name: gateway-1
+    namespace: envoy-gateway
+    sectionName: http
   path:
     mergeSlashes: true
     escapedSlashesAction: UnescapeAndRedirect
@@ -30,6 +36,7 @@ http:
 - name: "second-listener"
   address: "::"
   port: 10080
+  externalPort: 80
   hostnames:
   - "foo.net"
   path:
@@ -58,6 +65,7 @@ http:
 - name: "third-listener"
   address: "::"
   port: 10080
+  externalPort: 80
   hostnames:
   - "example.com"
   path:
@@ -76,6 +84,7 @@ http:
 - name: "fourth-listener"
   address: "::"
   port: 10080
+  externalPort: 80
   hostnames:
   - "example.net"
   path:
@@ -95,6 +104,7 @@ tcp:
 - name: "fifth-listener"
   address: "::"
   port: 10080
+  externalPort: 80
   routes:
   - name: "fifth-route"
     tls:
@@ -111,6 +121,7 @@ tcp:
 - name: "sixth-listener"
   address: "::"
   port: 10080
+  externalPort: 80
   routes:
   - name: "sixth-route"
     tls:

@@ -171,6 +171,7 @@ xdsIR:
     - address: 0.0.0.0
       connection:
         bufferLimit: 50000000
+      externalPort: 80
       hostnames:
       - '*'
       isHTTP2: false
@@ -186,6 +187,7 @@ xdsIR:
       port: 10080
     - address: 0.0.0.0
       connection: {}
+      externalPort: 8080
       hostnames:
       - '*'
       isHTTP2: false

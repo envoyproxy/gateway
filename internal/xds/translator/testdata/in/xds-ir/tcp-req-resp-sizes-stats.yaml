@@ -5,6 +5,7 @@ tcp:
 - name: "tcp-route-enable-req-resp-sizes-stats"
   address: "::"
   port: 10080
+  externalPort: 80
   routes:
   - destination:
       name: "tcp-route-simple-dest"

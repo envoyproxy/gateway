@@ -2,6 +2,7 @@ tcp:
 - name: "tcp-listener-simple"
   address: "::"
   port: 10080
+  externalPort: 80
   routes:
   - name: "tcp-route-simple"
     destination:

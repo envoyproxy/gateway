@@ -49,15 +49,15 @@
           envoy-gateway:
             resources:
             - kind: HTTPRoute
-              name: httproute-1
+              name: httproute-2
               namespace: envoy-gateway
-      name: httproute/envoy-gateway/httproute-1/rule/0/match/0/*_example_com
+      name: httproute/envoy-gateway/httproute-2/rule/0/match/0/*_example_com
       route:
-        cluster: httproute/envoy-gateway/httproute-1/rule/0
+        cluster: httproute/envoy-gateway/httproute-2/rule/0
         upgradeConfigs:
         - upgradeType: websocket
 - ignorePortInHostMatching: true
-  name: envoy-gateway/gateway-1/https-1
+  name: envoy-gateway/gateway-1/https-3
   virtualHosts:
   - domains:
     - foo.example.com
@@ -68,8 +68,8 @@
           - kind: Gateway
             name: gateway-1
             namespace: envoy-gateway
-            sectionName: https-1
-    name: envoy-gateway/gateway-1/https-1/foo_example_com
+            sectionName: https-3
+    name: envoy-gateway/gateway-1/https-3/foo_example_com
     routes:
     - match:
         prefix: /
@@ -78,10 +78,10 @@
           envoy-gateway:
             resources:
             - kind: HTTPRoute
-              name: httproute-1
+              name: httproute-3
               namespace: envoy-gateway
-      name: httproute/envoy-gateway/httproute-1/rule/0/match/0/foo_example_com
+      name: httproute/envoy-gateway/httproute-3/rule/0/match/0/foo_example_com
       route:
-        cluster: httproute/envoy-gateway/httproute-1/rule/0
+        cluster: httproute/envoy-gateway/httproute-3/rule/0
         upgradeConfigs:
         - upgradeType: websocket

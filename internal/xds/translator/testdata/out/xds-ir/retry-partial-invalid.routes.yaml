@@ -3,6 +3,14 @@
   virtualHosts:
   - domains:
     - '*'
+    metadata:
+      filterMetadata:
+        envoy-gateway:
+          resources:
+          - kind: Gateway
+            name: gateway-1
+            namespace: envoy-gateway
+            sectionName: http
     name: first-listener/*
     routes:
     - match:
@@ -29,6 +37,14 @@
         - upgradeType: websocket
   - domains:
     - foo
+    metadata:
+      filterMetadata:
+        envoy-gateway:
+          resources:
+          - kind: Gateway
+            name: gateway-1
+            namespace: envoy-gateway
+            sectionName: http
     name: first-listener/foo
     routes:
     - match:
@@ -50,4 +66,12 @@
         - upgradeType: websocket
   - domains:
     - bar
+    metadata:
+      filterMetadata:
+        envoy-gateway:
+          resources:
+          - kind: Gateway
+            name: gateway-1
+            namespace: envoy-gateway
+            sectionName: http
     name: first-listener/bar

@@ -132,6 +132,7 @@ xdsIR:
       - path: /dev/stdout
     http:
     - address: 0.0.0.0
+      externalPort: 80
       hostnames:
       - foo.com
       isHTTP2: false
@@ -176,6 +177,7 @@ xdsIR:
           name: ""
           prefix: /
     - address: 0.0.0.0
+      externalPort: 80
       hostnames:
       - bar.com
       isHTTP2: false

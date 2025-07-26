@@ -71,6 +71,16 @@ func TestE2E(t *testing.T) {
 		)
 	}
 
+	if tests.UseProtocolPortAsListenerName() {
+		skipTests = append(skipTests,
+			tests.EnvoyPatchPolicyTest.ShortName,
+		)
+	} else {
+		skipTests = append(skipTests,
+			tests.EnvoyPatchPolicyUseProtocolPortAsListenerNameTest.ShortName,
+		)
+	}
+
 	enabledFeatures := sets.New(features.SupportGateway)
 	if tests.EnabledClusterTrustBundle() {
 		tlog.Logf(t, "ClusterTrustBundle feature is enabled")

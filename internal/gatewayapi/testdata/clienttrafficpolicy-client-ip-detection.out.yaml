@@ -270,6 +270,7 @@ xdsIR:
       clientIPDetection:
         xForwardedFor:
           numTrustedHops: 2
+      externalPort: 8081
       hostnames:
       - '*'
       isHTTP2: false
@@ -288,6 +289,7 @@ xdsIR:
         customHeader:
           failClosed: false
           name: x-client-ip-address
+      externalPort: 8082
       hostnames:
       - '*'
       isHTTP2: false
@@ -306,6 +308,7 @@ xdsIR:
         customHeader:
           failClosed: true
           name: x-client-ip-address
+      externalPort: 8083
       hostnames:
       - '*'
       isHTTP2: false
@@ -320,6 +323,7 @@ xdsIR:
         mergeSlashes: true
       port: 8083
     - address: 0.0.0.0
+      externalPort: 8084
       hostnames:
       - '*'
       isHTTP2: false

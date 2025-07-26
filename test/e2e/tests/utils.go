@@ -734,6 +734,11 @@ func IsGatewayNamespaceMode() bool {
 	return DeployProfile == "gateway-namespace-mode"
 }
 
+// TODO(zhaohuabing) remove this after the feature flag is removed.
+func UseProtocolPortAsListenerName() bool {
+	return DeployProfile == "port-as-listener-name"
+}
+
 func GetGatewayResourceNamespace() string {
 	if IsGatewayNamespaceMode() {
 		return "gateway-conformance-infra"

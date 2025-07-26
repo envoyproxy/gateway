@@ -243,6 +243,7 @@ xdsIR:
       port: 19003
     tcp:
     - address: 0.0.0.0
+      externalPort: 8089
       name: default/tcp-gateway/bar
       port: 8089
       routes:
@@ -311,6 +312,7 @@ xdsIR:
             connectTimeout: 15s
     udp:
     - address: 0.0.0.0
+      externalPort: 8162
       name: default/tcp-gateway/foo
       port: 8162
       route:

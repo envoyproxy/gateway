@@ -85,6 +85,9 @@ var ConnectionLimitTest = suite.ConformanceTest{
 			}
 
 			prefix := "http-10080"
+			if UseProtocolPortAsListenerName() {
+				prefix = "http-80"
+			}
 			gtwName := "connection-limit-gateway"
 			promQL := fmt.Sprintf(`envoy_connection_limit_limited_connections{envoy_connection_limit_prefix="%s",gateway_envoyproxy_io_owning_gateway_name="%s"}`, prefix, gtwName)
 

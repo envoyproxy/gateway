@@ -3,6 +3,14 @@
   virtualHosts:
   - domains:
     - '*'
+    metadata:
+      filterMetadata:
+        envoy-gateway:
+          resources:
+          - kind: Gateway
+            name: gateway-1
+            namespace: envoy-gateway
+            sectionName: http
     name: extension-post-xdstranslate-hook-error/*
     routes:
     - match:

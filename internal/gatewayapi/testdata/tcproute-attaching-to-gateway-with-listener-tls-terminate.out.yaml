@@ -176,6 +176,7 @@ xdsIR:
       port: 19003
     tcp:
     - address: 0.0.0.0
+      externalPort: 90
       name: envoy-gateway/gateway-1/tls
       port: 10090
       routes:
@@ -212,6 +213,7 @@ xdsIR:
           name: envoy-gateway/tls-secret-1
           privateKey: '[redacted]'
     - address: 0.0.0.0
+      externalPort: 90
       name: envoy-gateway/gateway-1/tls-hostname
       port: 10090
       routes:

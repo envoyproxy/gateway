@@ -71,6 +71,7 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *ir
 				t := &translator.Translator{
 					ControllerNamespace: r.ControllerNamespace,
 					FilterOrder:         val.FilterOrder,
+					RuntimeFlags:        r.EnvoyGateway.RuntimeFlags,
 					Logger:              r.Logger,
 				}
 
