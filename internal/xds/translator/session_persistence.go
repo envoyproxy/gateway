@@ -17,12 +17,13 @@ import (
 	cookiev3 "github.com/envoyproxy/go-control-plane/envoy/extensions/http/stateful_session/cookie/v3"
 	headerv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/http/stateful_session/header/v3"
 	httpv3 "github.com/envoyproxy/go-control-plane/envoy/type/http/v3"
-	"google.golang.org/protobuf/proto"
+	protobuf "google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/anypb"
 	"google.golang.org/protobuf/types/known/durationpb"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/ir"
+	"github.com/envoyproxy/gateway/internal/utils/proto"
 	"github.com/envoyproxy/gateway/internal/xds/types"
 )
 
@@ -46,72 +47,112 @@ func (s *sessionPersistence) patchHCM(mgr *hcmv3.HttpConnectionManager, irListen
 	if mgr == nil {
 		return errors.New("hcm is nil")
 	}
-
 	if irListener == nil {
 		return errors.New("ir listener is nil")
 	}
-
-	for _, route := range irListener.Routes {
-		sp := route.SessionPersistence
-		if sp == nil {
-			continue
-		}
-
-		if hcmContainsFilter(mgr, perRouteFilterName(egv1a1.EnvoyFilterSessionPersistence, route.Name)) {
-			continue
-		}
-
-		var sessionCfg proto.Message
-		var configName string
-		switch {
-		case sp.Cookie != nil:
-			configName = cookieConfigName
-			cookieCfg := &cookiev3.CookieBasedSessionState{
-				Cookie: &httpv3.Cookie{
-					Name: sp.Cookie.Name,
-					Path: routePathToCookiePath(route.PathMatch),
-				},
-			}
-
-			if sp.Cookie.TTL != nil {
-				cookieCfg.Cookie.Ttl = durationpb.New(sp.Cookie.TTL.Duration)
-			}
-
-			sessionCfg = cookieCfg
-		case sp.Header != nil:
-			configName = headerConfigName
-			sessionCfg = &headerv3.HeaderBasedSessionState{
-				Name: sp.Header.Name,
-			}
-		}
-
-		sessionCfgAny, err := anypb.New(sessionCfg)
-		if err != nil {
-			return fmt.Errorf("failed to marshal %s config: %w", egv1a1.EnvoyFilterSessionPersistence.String(), err)
-		}
-
-		cfg := &statefulsessionv3.StatefulSession{
-			SessionState: &corev3.TypedExtensionConfig{
-				Name:        configName,
-				TypedConfig: sessionCfgAny,
-			},
-		}
-
-		cfgAny, err := anypb.New(cfg)
-		if err != nil {
-			return fmt.Errorf("failed to marshal %s config: %w", egv1a1.EnvoyFilterSessionPersistence.String(), err)
-		}
-
-		mgr.HttpFilters = append(mgr.HttpFilters, &hcmv3.HttpFilter{
-			Name:     perRouteFilterName(egv1a1.EnvoyFilterSessionPersistence, route.Name),
-			Disabled: true,
-			ConfigType: &hcmv3.HttpFilter_TypedConfig{
-				TypedConfig: cfgAny,
-			},
-		})
+	if hcmContainsFilter(mgr, egv1a1.EnvoyFilterSessionPersistence.String()) {
+		return nil
 	}
 
+	var (
+		routeWithSessionPersistence *ir.HTTPRoute
+		filter                      *hcmv3.HttpFilter
+		err                         error
+	)
+
+	for _, route := range irListener.Routes {
+		if route.SessionPersistence != nil {
+			routeWithSessionPersistence = route
+			break
+		}
+	}
+
+	if routeWithSessionPersistence == nil {
+		return nil
+	}
+
+	// We use the first route that contains the session persistence config to build the filter.
+	// The HCM-level filter config doesn't matter since it is overridden at the route level.
+	if filter, err = buildHCMStatefulSessionFilter(routeWithSessionPersistence); err != nil {
+		return err
+	}
+	mgr.HttpFilters = append(mgr.HttpFilters, filter)
 	return nil
+}
+
+// buildHCMStatefulSessionFilter returns a stateful_session HTTP filter from the provided IR SessionPersistence.
+func buildHCMStatefulSessionFilter(route *ir.HTTPRoute) (*hcmv3.HttpFilter, error) {
+	statefulSessionProto, err := buildStatefulSessionFilterConfig(route)
+	if err != nil {
+		return nil, fmt.Errorf("failed to build stateful session filter config: %w",
+			err)
+	}
+	statefulSessionAny, err := proto.ToAnyWithValidation(statefulSessionProto)
+	if err != nil {
+		return nil, err
+	}
+
+	return &hcmv3.HttpFilter{
+		Name: egv1a1.EnvoyFilterSessionPersistence.String(),
+		ConfigType: &hcmv3.HttpFilter_TypedConfig{
+			TypedConfig: statefulSessionAny,
+		},
+		Disabled: true,
+	}, nil
+}
+
+func buildStatefulSessionFilterConfig(route *ir.HTTPRoute) (*statefulsessionv3.StatefulSession, error) {
+	var (
+		sessionCfg protobuf.Message
+		configName string
+		sp         = route.SessionPersistence
+	)
+
+	switch {
+	case sp.Cookie != nil:
+		configName = cookieConfigName
+		cookieCfg := &cookiev3.CookieBasedSessionState{
+			Cookie: &httpv3.Cookie{
+				Name: sp.Cookie.Name,
+				Path: routePathToCookiePath(route.PathMatch),
+			},
+		}
+
+		if sp.Cookie.TTL != nil {
+			cookieCfg.Cookie.Ttl = durationpb.New(sp.Cookie.TTL.Duration)
+		}
+
+		sessionCfg = cookieCfg
+	case sp.Header != nil:
+		configName = headerConfigName
+		sessionCfg = &headerv3.HeaderBasedSessionState{
+			Name: sp.Header.Name,
+		}
+	}
+
+	sessionCfgAny, err := anypb.New(sessionCfg)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal %s config: %w", egv1a1.EnvoyFilterSessionPersistence.String(), err)
+	}
+
+	return &statefulsessionv3.StatefulSession{
+		SessionState: &corev3.TypedExtensionConfig{
+			Name:        configName,
+			TypedConfig: sessionCfgAny,
+		},
+	}, nil
+}
+
+func buildStatefulSessionFilterPerRouteConfig(route *ir.HTTPRoute) (*statefulsessionv3.StatefulSessionPerRoute, error) {
+	statefulSession, err := buildStatefulSessionFilterConfig(route)
+	if err != nil {
+		return nil, err
+	}
+	return &statefulsessionv3.StatefulSessionPerRoute{
+		Override: &statefulsessionv3.StatefulSessionPerRoute_StatefulSession{
+			StatefulSession: statefulSession,
+		},
+	}, nil
 }
 
 func routePathToCookiePath(path *ir.StringMatch) string {
@@ -160,9 +201,28 @@ func (s *sessionPersistence) patchRoute(route *routev3.Route, irRoute *ir.HTTPRo
 		return nil
 	}
 
-	if err := enableFilterOnRoute(route, perRouteFilterName(egv1a1.EnvoyFilterSessionPersistence, route.Name)); err != nil {
+	perFilterCfg := route.GetTypedPerFilterConfig()
+	if _, ok := perFilterCfg[egv1a1.EnvoyFilterSessionPersistence.String()]; ok {
+		// This should not happen since this is the only place where the filter
+		// config is added in a route.
+		return fmt.Errorf("route already contains filter config: %s, %+v",
+			egv1a1.EnvoyFilterSessionPersistence.String(), route)
+	}
+
+	// Overwrite the HCM level filter config with the per route filter config.
+	statefulSessionProto, err := buildStatefulSessionFilterPerRouteConfig(irRoute)
+	if err != nil {
+		return fmt.Errorf("failed to build stateful session filter config: %w", err)
+	}
+	statefulSessionAny, err := proto.ToAnyWithValidation(statefulSessionProto)
+	if err != nil {
 		return err
 	}
+
+	if perFilterCfg == nil {
+		route.TypedPerFilterConfig = make(map[string]*anypb.Any)
+	}
+	route.TypedPerFilterConfig[egv1a1.EnvoyFilterSessionPersistence.String()] = statefulSessionAny
 
 	return nil
 }
