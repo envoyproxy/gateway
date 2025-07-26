@@ -138,14 +138,14 @@
             transportApiVersion: V3
             withRequestBody:
               maxRequestBytes: 8192
-        - name: envoy.filters.http.grpc_web
-          typedConfig:
-            '@type': type.googleapis.com/envoy.extensions.filters.http.grpc_web.v3.GrpcWeb
         - name: envoy.filters.http.grpc_stats
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.grpc_stats.v3.FilterConfig
             emitFilterState: true
             statsForAllMethods: true
+        - name: envoy.filters.http.grpc_web
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.grpc_web.v3.GrpcWeb
         - disabled: true
           name: envoy.filters.http.ext_proc/envoyextensionpolicy/default/policy-for-httproute/extproc/0
           typedConfig:
