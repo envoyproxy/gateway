@@ -134,6 +134,18 @@ xdsIR:
         escapedSlashesAction: UnescapeAndRedirect
         mergeSlashes: true
       port: 10080
+    proxyServiceCluster:
+      destination:
+        addressType: IP
+        endpoints:
+        - host: 7.6.5.4
+          port: 8080
+          zone: zone1
+        name: envoy-gateway-class
+        preferLocal:
+          minEndpointsThreshold: 1
+        protocol: HTTP
+      name: envoy-gateway-class
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4

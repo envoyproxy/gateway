@@ -1,0 +1,30 @@
+- clusterName: first-route-dest
+  endpoints:
+  - lbEndpoints:
+    - endpoint:
+        address:
+          socketAddress:
+            address: 1.2.3.4
+            portValue: 8080
+      loadBalancingWeight: 1
+    - endpoint:
+        address:
+          socketAddress:
+            address: 2.3.4.5
+            portValue: 8080
+      loadBalancingWeight: 1
+    loadBalancingWeight: 30
+    locality:
+      region: first-route-dest/backend/0
+- clusterName: envoy-gateway-gateway-1-196ae069
+  endpoints:
+  - lbEndpoints:
+    - endpoint:
+        address:
+          socketAddress:
+            address: 7.6.5.4
+            portValue: 8080
+      loadBalancingWeight: 1
+    loadBalancingWeight: 1
+    locality:
+      region: envoy-envoy-gateway-gateway-1-196ae069

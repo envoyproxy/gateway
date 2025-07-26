@@ -2453,6 +2453,13 @@ xdsIR:
           name: ""
           prefix: /
         traffic: {}
+    proxyServiceCluster:
+      destination:
+        name: envoy-gateway/gateway-1
+        preferLocal:
+          minEndpointsThreshold: 1
+        protocol: HTTP
+      name: envoy-gateway/gateway-1
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4
@@ -2506,6 +2513,13 @@ xdsIR:
           name: ""
           prefix: /
         traffic: {}
+    proxyServiceCluster:
+      destination:
+        name: envoy-gateway/gateway-2
+        preferLocal:
+          minEndpointsThreshold: 1
+        protocol: HTTP
+      name: envoy-gateway/gateway-2
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4
@@ -2559,6 +2573,13 @@ xdsIR:
           name: ""
           prefix: /
         traffic: {}
+    proxyServiceCluster:
+      destination:
+        name: envoy-gateway/gateway-3
+        preferLocal:
+          minEndpointsThreshold: 1
+        protocol: HTTP
+      name: envoy-gateway/gateway-3
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4
@@ -2612,6 +2633,13 @@ xdsIR:
           name: ""
           prefix: /
         traffic: {}
+    proxyServiceCluster:
+      destination:
+        name: envoy-gateway/gateway-4
+        preferLocal:
+          minEndpointsThreshold: 1
+        protocol: HTTP
+      name: envoy-gateway/gateway-4
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4
@@ -2665,6 +2693,13 @@ xdsIR:
           name: ""
           prefix: /
         traffic: {}
+    proxyServiceCluster:
+      destination:
+        name: envoy-gateway/gateway-5
+        preferLocal:
+          minEndpointsThreshold: 1
+        protocol: HTTP
+      name: envoy-gateway/gateway-5
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4
@@ -2718,6 +2753,13 @@ xdsIR:
           name: ""
           prefix: /
         traffic: {}
+    proxyServiceCluster:
+      destination:
+        name: envoy-gateway/gateway-6
+        preferLocal:
+          minEndpointsThreshold: 1
+        protocol: HTTP
+      name: envoy-gateway/gateway-6
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4
@@ -2771,6 +2813,13 @@ xdsIR:
           name: ""
           prefix: /
         traffic: {}
+    proxyServiceCluster:
+      destination:
+        name: envoy-gateway/gateway-7
+        preferLocal:
+          minEndpointsThreshold: 1
+        protocol: HTTP
+      name: envoy-gateway/gateway-7
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4
@@ -2824,6 +2873,13 @@ xdsIR:
           name: ""
           prefix: /
         traffic: {}
+    proxyServiceCluster:
+      destination:
+        name: envoy-gateway/gateway-8
+        preferLocal:
+          minEndpointsThreshold: 1
+        protocol: HTTP
+      name: envoy-gateway/gateway-8
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4
@@ -2877,6 +2933,13 @@ xdsIR:
           name: ""
           prefix: /
         traffic: {}
+    proxyServiceCluster:
+      destination:
+        name: envoy-gateway/gateway-9
+        preferLocal:
+          minEndpointsThreshold: 1
+        protocol: HTTP
+      name: envoy-gateway/gateway-9
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4
@@ -2930,6 +2993,13 @@ xdsIR:
           name: ""
           prefix: /
         traffic: {}
+    proxyServiceCluster:
+      destination:
+        name: envoy-gateway/gateway-10
+        preferLocal:
+          minEndpointsThreshold: 1
+        protocol: HTTP
+      name: envoy-gateway/gateway-10
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4
@@ -2983,6 +3053,13 @@ xdsIR:
           name: ""
           prefix: /
         traffic: {}
+    proxyServiceCluster:
+      destination:
+        name: envoy-gateway/gateway-11
+        preferLocal:
+          minEndpointsThreshold: 1
+        protocol: HTTP
+      name: envoy-gateway/gateway-11
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4
@@ -3036,6 +3113,13 @@ xdsIR:
           name: ""
           prefix: /
         traffic: {}
+    proxyServiceCluster:
+      destination:
+        name: envoy-gateway/gateway-12
+        preferLocal:
+          minEndpointsThreshold: 1
+        protocol: HTTP
+      name: envoy-gateway/gateway-12
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4
@@ -3089,6 +3173,13 @@ xdsIR:
           name: ""
           prefix: /
         traffic: {}
+    proxyServiceCluster:
+      destination:
+        name: envoy-gateway/gateway-13
+        preferLocal:
+          minEndpointsThreshold: 1
+        protocol: HTTP
+      name: envoy-gateway/gateway-13
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4
@@ -3142,6 +3233,13 @@ xdsIR:
           name: ""
           prefix: /
         traffic: {}
+    proxyServiceCluster:
+      destination:
+        name: envoy-gateway/gateway-14
+        preferLocal:
+          minEndpointsThreshold: 1
+        protocol: HTTP
+      name: envoy-gateway/gateway-14
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4
@@ -3195,6 +3293,13 @@ xdsIR:
           name: ""
           prefix: /
         traffic: {}
+    proxyServiceCluster:
+      destination:
+        name: envoy-gateway/gateway-15
+        preferLocal:
+          minEndpointsThreshold: 1
+        protocol: HTTP
+      name: envoy-gateway/gateway-15
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4
@@ -3248,6 +3353,13 @@ xdsIR:
           name: ""
           prefix: /
         traffic: {}
+    proxyServiceCluster:
+      destination:
+        name: envoy-gateway/gateway-16
+        preferLocal:
+          minEndpointsThreshold: 1
+        protocol: HTTP
+      name: envoy-gateway/gateway-16
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4
@@ -3301,6 +3413,13 @@ xdsIR:
           name: ""
           prefix: /
         traffic: {}
+    proxyServiceCluster:
+      destination:
+        name: envoy-gateway/gateway-17
+        preferLocal:
+          minEndpointsThreshold: 1
+        protocol: HTTP
+      name: envoy-gateway/gateway-17
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4
@@ -3354,6 +3473,69 @@ xdsIR:
           name: ""
           prefix: /
         traffic: {}
+    proxyServiceCluster:
+      destination:
+        addressType: IP
+        endpoints:
+        - host: 7.6.5.4
+          port: 8080
+          zone: zone1
+        - host: 7.6.5.4
+          port: 8080
+          zone: zone1
+        - host: 7.6.5.4
+          port: 8080
+          zone: zone1
+        - host: 7.6.5.4
+          port: 8080
+          zone: zone1
+        - host: 7.6.5.4
+          port: 8080
+          zone: zone1
+        - host: 7.6.5.4
+          port: 8080
+          zone: zone1
+        - host: 7.6.5.4
+          port: 8080
+          zone: zone1
+        - host: 7.6.5.4
+          port: 8080
+          zone: zone1
+        - host: 7.6.5.4
+          port: 8080
+          zone: zone1
+        - host: 7.6.5.4
+          port: 8080
+          zone: zone1
+        - host: 7.6.5.4
+          port: 8080
+          zone: zone1
+        - host: 7.6.5.4
+          port: 8080
+          zone: zone1
+        - host: 7.6.5.4
+          port: 8080
+          zone: zone1
+        - host: 7.6.5.4
+          port: 8080
+          zone: zone1
+        - host: 7.6.5.4
+          port: 8080
+          zone: zone1
+        - host: 7.6.5.4
+          port: 8080
+          zone: zone1
+        - host: 7.6.5.4
+          port: 8080
+          zone: zone1
+        - host: 7.6.5.4
+          port: 8080
+          zone: zone1
+        name: envoy-gateway/gateway-18
+        preferLocal:
+          minEndpointsThreshold: 1
+        protocol: HTTP
+      name: envoy-gateway/gateway-18
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4
