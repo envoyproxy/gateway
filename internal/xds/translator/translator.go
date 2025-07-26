@@ -6,9 +6,11 @@
 package translator
 
 import (
+	"cmp"
 	"errors"
 	"fmt"
 	"runtime"
+	"slices"
 	"strings"
 	"time"
 
@@ -455,6 +457,12 @@ func (t *Translator) processHTTPListenerXdsTranslation(
 		}
 	}
 
+	// Sort the virtual hosts in the route configurations to ensure that
+	// the most specific virtual host is matched first and the order is deterministic.
+	xdsRouteCfgs := tCtx.XdsResources[resourcev3.RouteType]
+	for _, xdsRouteCfg := range xdsRouteCfgs {
+		sortVirtualHosts(xdsRouteCfg.(*routev3.RouteConfiguration).VirtualHosts)
+	}
 	return errs
 }
 
@@ -635,6 +643,45 @@ func (t *Translator) addRouteToRouteConfig(
 	xdsRouteCfg.VirtualHosts = append(xdsRouteCfg.VirtualHosts, vHostList...)
 
 	return errs
+}
+
+// SortVirtualHosts sorts the virtual hosts by domain, so:
+// * the most specific virtual host is matched first.
+// * the order of the virtual hosts is deterministic.
+func sortVirtualHosts(vHosts []*routev3.VirtualHost) {
+	slices.SortFunc(vHosts, func(a, b *routev3.VirtualHost) int {
+		if a == nil && b == nil {
+			return 0
+		}
+		if a == nil {
+			return 1
+		}
+		if b == nil {
+			return -1
+		}
+
+		domainA := a.Domains[0]
+		domainB := b.Domains[0]
+
+		// Wildcards are less specific, so they should come after exact matches
+		aIsWildcard := strings.HasPrefix(domainA, "*")
+		bIsWildcard := strings.HasPrefix(domainB, "*")
+
+		if aIsWildcard && !bIsWildcard {
+			return 1 // a (wildcard) is less specific, comes after b
+		}
+		if !aIsWildcard && bIsWildcard {
+			return -1 // a (exact) is more specific, comes before b
+		}
+
+		// If both are wildcards, or both are exact matches, compare their lengths
+		if len(domainA) != len(domainB) {
+			return len(domainB) - len(domainA) // longer comes first
+		}
+
+		// Same length or both wildcards with same length, sort alphabetically
+		return cmp.Compare(domainA, domainB)
+	})
 }
 
 func (t *Translator) addHTTPFiltersToHCM(filterChain *listenerv3.FilterChain, httpListener *ir.HTTPListener) error {

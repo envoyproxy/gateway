@@ -14,11 +14,13 @@ import (
 	"testing"
 	"time"
 
+	routev3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
 	"github.com/envoyproxy/go-control-plane/pkg/cache/types"
 	resourcev3 "github.com/envoyproxy/go-control-plane/pkg/resource/v3"
 	ratelimitv3 "github.com/envoyproxy/go-control-plane/ratelimit/config/ratelimit/v3"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
@@ -557,4 +559,76 @@ func requireResourcesToYAMLString(t *testing.T, resources []types.Resource) stri
 	data, err := yaml.JSONToYAML(jsonBytes)
 	require.NoError(t, err)
 	return string(data)
+}
+
+func TestSortVirtualHosts(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    []*routev3.VirtualHost
+		expected []*routev3.VirtualHost
+	}{
+		{
+			name: "sorts virtual hosts by domain",
+			input: []*routev3.VirtualHost{
+				{
+					Domains: []string{"*"},
+				},
+				{
+					Domains: []string{"*.foo.com"},
+				},
+				{
+					Domains: []string{"www.foo.com"},
+				},
+				{
+					Domains: []string{"*.www.foo.com"},
+				},
+				{
+					Domains: []string{"test.www.foo.com"},
+				},
+				{
+					Domains: []string{"api.foo.com"},
+				},
+				{
+					Domains: []string{"test.api.foo.com"},
+				},
+			},
+			expected: []*routev3.VirtualHost{
+				{
+					Domains: []string{"test.api.foo.com"},
+				},
+				{
+					Domains: []string{"test.www.foo.com"},
+				},
+				{
+					Domains: []string{"api.foo.com"},
+				},
+				{
+					Domains: []string{"www.foo.com"},
+				},
+				{
+					Domains: []string{"*.www.foo.com"},
+				},
+				{
+					Domains: []string{"*.foo.com"},
+				},
+				{
+					Domains: []string{"*"},
+				},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Make a copy of the input to avoid modifying the test data
+			input := make([]*routev3.VirtualHost, len(tt.input))
+			copy(input, tt.input)
+
+			// Sort the input
+			sortVirtualHosts(input)
+
+			// Assert the result matches expected
+			assert.Equal(t, tt.expected, input, "SortVirtualHosts did not produce expected result")
+		})
+	}
 }
