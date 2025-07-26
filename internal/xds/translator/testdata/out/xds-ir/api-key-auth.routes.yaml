@@ -2,45 +2,6 @@
   name: default/gateway-1/http
   virtualHosts:
   - domains:
-    - www.foo.com
-    name: default/gateway-1/http/www_foo_com
-    routes:
-    - match:
-        pathSeparatedPrefix: /foo1
-      name: httproute/default/httproute-1/rule/0/match/0/www_foo_com
-      route:
-        cluster: httproute/default/httproute-1/rule/0
-        upgradeConfigs:
-        - upgradeType: websocket
-      typedPerFilterConfig:
-        envoy.filters.http.api_key_auth:
-          '@type': type.googleapis.com/envoy.extensions.filters.http.api_key_auth.v3.ApiKeyAuthPerRoute
-          credentials:
-          - client: client-1
-            key: key1
-          forwarding:
-            header: X-API-KEY-CLIENT-ID
-            hideCredentials: true
-          keySources:
-          - header: X-API-KEY
-          - header: X-API-KEY-2
-    - match:
-        pathSeparatedPrefix: /foo2
-      name: httproute/default/httproute-1/rule/1/match/0/www_foo_com
-      route:
-        cluster: httproute/default/httproute-1/rule/1
-        upgradeConfigs:
-        - upgradeType: websocket
-      typedPerFilterConfig:
-        envoy.filters.http.api_key_auth:
-          '@type': type.googleapis.com/envoy.extensions.filters.http.api_key_auth.v3.ApiKeyAuthPerRoute
-          credentials:
-          - client: client-2
-            key: key2
-          keySources:
-          - query: X-API-KEY
-          - query: X-API-KEY-2
-  - domains:
     - www.bar.com
     name: default/gateway-1/http/www_bar_com
     routes:
@@ -78,5 +39,44 @@
           - cookie: X-API-KEY-2
           - header: X-API-KEY
           - header: X-API-KEY-2
+          - query: X-API-KEY
+          - query: X-API-KEY-2
+  - domains:
+    - www.foo.com
+    name: default/gateway-1/http/www_foo_com
+    routes:
+    - match:
+        pathSeparatedPrefix: /foo1
+      name: httproute/default/httproute-1/rule/0/match/0/www_foo_com
+      route:
+        cluster: httproute/default/httproute-1/rule/0
+        upgradeConfigs:
+        - upgradeType: websocket
+      typedPerFilterConfig:
+        envoy.filters.http.api_key_auth:
+          '@type': type.googleapis.com/envoy.extensions.filters.http.api_key_auth.v3.ApiKeyAuthPerRoute
+          credentials:
+          - client: client-1
+            key: key1
+          forwarding:
+            header: X-API-KEY-CLIENT-ID
+            hideCredentials: true
+          keySources:
+          - header: X-API-KEY
+          - header: X-API-KEY-2
+    - match:
+        pathSeparatedPrefix: /foo2
+      name: httproute/default/httproute-1/rule/1/match/0/www_foo_com
+      route:
+        cluster: httproute/default/httproute-1/rule/1
+        upgradeConfigs:
+        - upgradeType: websocket
+      typedPerFilterConfig:
+        envoy.filters.http.api_key_auth:
+          '@type': type.googleapis.com/envoy.extensions.filters.http.api_key_auth.v3.ApiKeyAuthPerRoute
+          credentials:
+          - client: client-2
+            key: key2
+          keySources:
           - query: X-API-KEY
           - query: X-API-KEY-2
