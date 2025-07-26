@@ -223,6 +223,217 @@ backendTrafficPolicies:
   kind: BackendTrafficPolicy
   metadata:
     creationTimestamp: null
+    name: target-httproute-with-accepted-truncated-ancestors
+    namespace: envoy-gateway
+  spec:
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: httproute-1
+  status:
+    ancestors:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: gateway-1
+        namespace: envoy-gateway
+      conditions:
+      - lastTransitionTime: null
+        message: Policy has been accepted.
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: gateway-10
+        namespace: envoy-gateway
+      conditions:
+      - lastTransitionTime: null
+        message: Policy has been accepted.
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: gateway-11
+        namespace: envoy-gateway
+      conditions:
+      - lastTransitionTime: null
+        message: Policy has been accepted.
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: gateway-12
+        namespace: envoy-gateway
+      conditions:
+      - lastTransitionTime: null
+        message: Policy has been accepted.
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: gateway-13
+        namespace: envoy-gateway
+      conditions:
+      - lastTransitionTime: null
+        message: Policy has been accepted.
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: gateway-14
+        namespace: envoy-gateway
+      conditions:
+      - lastTransitionTime: null
+        message: Policy has been accepted.
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: gateway-15
+        namespace: envoy-gateway
+      conditions:
+      - lastTransitionTime: null
+        message: Policy has been accepted.
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: gateway-16
+        namespace: envoy-gateway
+      conditions:
+      - lastTransitionTime: null
+        message: Policy has been accepted.
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: gateway-17
+        namespace: envoy-gateway
+      conditions:
+      - lastTransitionTime: null
+        message: Policy has been accepted.
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: gateway-18
+        namespace: envoy-gateway
+      conditions:
+      - lastTransitionTime: null
+        message: Policy has been accepted.
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: gateway-2
+        namespace: envoy-gateway
+      conditions:
+      - lastTransitionTime: null
+        message: Policy has been accepted.
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: gateway-3
+        namespace: envoy-gateway
+      conditions:
+      - lastTransitionTime: null
+        message: Policy has been accepted.
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: gateway-4
+        namespace: envoy-gateway
+      conditions:
+      - lastTransitionTime: null
+        message: Policy has been accepted.
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: gateway-5
+        namespace: envoy-gateway
+      conditions:
+      - lastTransitionTime: null
+        message: Policy has been accepted.
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: gateway-6
+        namespace: envoy-gateway
+      conditions:
+      - lastTransitionTime: null
+        message: Policy has been accepted.
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: gateway-7
+        namespace: envoy-gateway
+      conditions:
+      - lastTransitionTime: null
+        message: Policy has been accepted.
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: 'Ancestors have been aggregated because the number of policy ancestors
+          exceeds 16. The aggregated ancestors: gateway-8, gateway-9'
+        reason: Aggregated
+        status: "True"
+        type: Aggregated
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: BackendTrafficPolicy
+  metadata:
+    creationTimestamp: null
     name: target-httproute-with-attachment-conflict-truncated-ancestors
     namespace: envoy-gateway
   spec:
@@ -446,543 +657,12 @@ backendTrafficPolicies:
         status: "True"
         type: Aggregated
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
-- apiVersion: gateway.envoyproxy.io/v1alpha1
-  kind: BackendTrafficPolicy
-  metadata:
-    creationTimestamp: null
-    name: target-httproute-with-accepted-truncated-ancestors
-    namespace: envoy-gateway
-  spec:
-    targetRef:
-      group: gateway.networking.k8s.io
-      kind: HTTPRoute
-      name: httproute-1
-  status:
-    ancestors:
-    - ancestorRef:
-        group: gateway.networking.k8s.io
-        kind: Gateway
-        name: gateway-1
-        namespace: envoy-gateway
-      conditions:
-      - lastTransitionTime: null
-        message: Policy has been accepted.
-        reason: Accepted
-        status: "True"
-        type: Accepted
-      controllerName: gateway.envoyproxy.io/gatewayclass-controller
-    - ancestorRef:
-        group: gateway.networking.k8s.io
-        kind: Gateway
-        name: gateway-10
-        namespace: envoy-gateway
-      conditions:
-      - lastTransitionTime: null
-        message: Policy has been accepted.
-        reason: Accepted
-        status: "True"
-        type: Accepted
-      controllerName: gateway.envoyproxy.io/gatewayclass-controller
-    - ancestorRef:
-        group: gateway.networking.k8s.io
-        kind: Gateway
-        name: gateway-11
-        namespace: envoy-gateway
-      conditions:
-      - lastTransitionTime: null
-        message: Policy has been accepted.
-        reason: Accepted
-        status: "True"
-        type: Accepted
-      controllerName: gateway.envoyproxy.io/gatewayclass-controller
-    - ancestorRef:
-        group: gateway.networking.k8s.io
-        kind: Gateway
-        name: gateway-12
-        namespace: envoy-gateway
-      conditions:
-      - lastTransitionTime: null
-        message: Policy has been accepted.
-        reason: Accepted
-        status: "True"
-        type: Accepted
-      controllerName: gateway.envoyproxy.io/gatewayclass-controller
-    - ancestorRef:
-        group: gateway.networking.k8s.io
-        kind: Gateway
-        name: gateway-13
-        namespace: envoy-gateway
-      conditions:
-      - lastTransitionTime: null
-        message: Policy has been accepted.
-        reason: Accepted
-        status: "True"
-        type: Accepted
-      controllerName: gateway.envoyproxy.io/gatewayclass-controller
-    - ancestorRef:
-        group: gateway.networking.k8s.io
-        kind: Gateway
-        name: gateway-14
-        namespace: envoy-gateway
-      conditions:
-      - lastTransitionTime: null
-        message: Policy has been accepted.
-        reason: Accepted
-        status: "True"
-        type: Accepted
-      controllerName: gateway.envoyproxy.io/gatewayclass-controller
-    - ancestorRef:
-        group: gateway.networking.k8s.io
-        kind: Gateway
-        name: gateway-15
-        namespace: envoy-gateway
-      conditions:
-      - lastTransitionTime: null
-        message: Policy has been accepted.
-        reason: Accepted
-        status: "True"
-        type: Accepted
-      controllerName: gateway.envoyproxy.io/gatewayclass-controller
-    - ancestorRef:
-        group: gateway.networking.k8s.io
-        kind: Gateway
-        name: gateway-16
-        namespace: envoy-gateway
-      conditions:
-      - lastTransitionTime: null
-        message: Policy has been accepted.
-        reason: Accepted
-        status: "True"
-        type: Accepted
-      controllerName: gateway.envoyproxy.io/gatewayclass-controller
-    - ancestorRef:
-        group: gateway.networking.k8s.io
-        kind: Gateway
-        name: gateway-17
-        namespace: envoy-gateway
-      conditions:
-      - lastTransitionTime: null
-        message: Policy has been accepted.
-        reason: Accepted
-        status: "True"
-        type: Accepted
-      controllerName: gateway.envoyproxy.io/gatewayclass-controller
-    - ancestorRef:
-        group: gateway.networking.k8s.io
-        kind: Gateway
-        name: gateway-18
-        namespace: envoy-gateway
-      conditions:
-      - lastTransitionTime: null
-        message: Policy has been accepted.
-        reason: Accepted
-        status: "True"
-        type: Accepted
-      controllerName: gateway.envoyproxy.io/gatewayclass-controller
-    - ancestorRef:
-        group: gateway.networking.k8s.io
-        kind: Gateway
-        name: gateway-2
-        namespace: envoy-gateway
-      conditions:
-      - lastTransitionTime: null
-        message: Policy has been accepted.
-        reason: Accepted
-        status: "True"
-        type: Accepted
-      controllerName: gateway.envoyproxy.io/gatewayclass-controller
-    - ancestorRef:
-        group: gateway.networking.k8s.io
-        kind: Gateway
-        name: gateway-3
-        namespace: envoy-gateway
-      conditions:
-      - lastTransitionTime: null
-        message: Policy has been accepted.
-        reason: Accepted
-        status: "True"
-        type: Accepted
-      controllerName: gateway.envoyproxy.io/gatewayclass-controller
-    - ancestorRef:
-        group: gateway.networking.k8s.io
-        kind: Gateway
-        name: gateway-4
-        namespace: envoy-gateway
-      conditions:
-      - lastTransitionTime: null
-        message: Policy has been accepted.
-        reason: Accepted
-        status: "True"
-        type: Accepted
-      controllerName: gateway.envoyproxy.io/gatewayclass-controller
-    - ancestorRef:
-        group: gateway.networking.k8s.io
-        kind: Gateway
-        name: gateway-5
-        namespace: envoy-gateway
-      conditions:
-      - lastTransitionTime: null
-        message: Policy has been accepted.
-        reason: Accepted
-        status: "True"
-        type: Accepted
-      controllerName: gateway.envoyproxy.io/gatewayclass-controller
-    - ancestorRef:
-        group: gateway.networking.k8s.io
-        kind: Gateway
-        name: gateway-6
-        namespace: envoy-gateway
-      conditions:
-      - lastTransitionTime: null
-        message: Policy has been accepted.
-        reason: Accepted
-        status: "True"
-        type: Accepted
-      controllerName: gateway.envoyproxy.io/gatewayclass-controller
-    - ancestorRef:
-        group: gateway.networking.k8s.io
-        kind: Gateway
-        name: gateway-7
-        namespace: envoy-gateway
-      conditions:
-      - lastTransitionTime: null
-        message: Policy has been accepted.
-        reason: Accepted
-        status: "True"
-        type: Accepted
-      - lastTransitionTime: null
-        message: 'Ancestors have been aggregated because the number of policy ancestors
-          exceeds 16. The aggregated ancestors: gateway-8, gateway-9'
-        reason: Aggregated
-        status: "True"
-        type: Aggregated
-      controllerName: gateway.envoyproxy.io/gatewayclass-controller
 gateways:
 - apiVersion: gateway.networking.k8s.io/v1beta1
   kind: Gateway
   metadata:
     creationTimestamp: null
     name: gateway-1
-    namespace: envoy-gateway
-  spec:
-    gatewayClassName: envoy-gateway-class
-    listeners:
-    - allowedRoutes:
-        namespaces:
-          from: Same
-      name: http
-      port: 80
-      protocol: HTTP
-  status:
-    listeners:
-    - attachedRoutes: 2
-      conditions:
-      - lastTransitionTime: null
-        message: Sending translated listener configuration to the data plane
-        reason: Programmed
-        status: "True"
-        type: Programmed
-      - lastTransitionTime: null
-        message: Listener has been successfully translated
-        reason: Accepted
-        status: "True"
-        type: Accepted
-      - lastTransitionTime: null
-        message: Listener references have been resolved
-        reason: ResolvedRefs
-        status: "True"
-        type: ResolvedRefs
-      name: http
-      supportedKinds:
-      - group: gateway.networking.k8s.io
-        kind: HTTPRoute
-      - group: gateway.networking.k8s.io
-        kind: GRPCRoute
-- apiVersion: gateway.networking.k8s.io/v1beta1
-  kind: Gateway
-  metadata:
-    creationTimestamp: null
-    name: gateway-2
-    namespace: envoy-gateway
-  spec:
-    gatewayClassName: envoy-gateway-class
-    listeners:
-    - allowedRoutes:
-        namespaces:
-          from: Same
-      name: http
-      port: 80
-      protocol: HTTP
-  status:
-    listeners:
-    - attachedRoutes: 2
-      conditions:
-      - lastTransitionTime: null
-        message: Sending translated listener configuration to the data plane
-        reason: Programmed
-        status: "True"
-        type: Programmed
-      - lastTransitionTime: null
-        message: Listener has been successfully translated
-        reason: Accepted
-        status: "True"
-        type: Accepted
-      - lastTransitionTime: null
-        message: Listener references have been resolved
-        reason: ResolvedRefs
-        status: "True"
-        type: ResolvedRefs
-      name: http
-      supportedKinds:
-      - group: gateway.networking.k8s.io
-        kind: HTTPRoute
-      - group: gateway.networking.k8s.io
-        kind: GRPCRoute
-- apiVersion: gateway.networking.k8s.io/v1beta1
-  kind: Gateway
-  metadata:
-    creationTimestamp: null
-    name: gateway-3
-    namespace: envoy-gateway
-  spec:
-    gatewayClassName: envoy-gateway-class
-    listeners:
-    - allowedRoutes:
-        namespaces:
-          from: Same
-      name: http
-      port: 80
-      protocol: HTTP
-  status:
-    listeners:
-    - attachedRoutes: 2
-      conditions:
-      - lastTransitionTime: null
-        message: Sending translated listener configuration to the data plane
-        reason: Programmed
-        status: "True"
-        type: Programmed
-      - lastTransitionTime: null
-        message: Listener has been successfully translated
-        reason: Accepted
-        status: "True"
-        type: Accepted
-      - lastTransitionTime: null
-        message: Listener references have been resolved
-        reason: ResolvedRefs
-        status: "True"
-        type: ResolvedRefs
-      name: http
-      supportedKinds:
-      - group: gateway.networking.k8s.io
-        kind: HTTPRoute
-      - group: gateway.networking.k8s.io
-        kind: GRPCRoute
-- apiVersion: gateway.networking.k8s.io/v1beta1
-  kind: Gateway
-  metadata:
-    creationTimestamp: null
-    name: gateway-4
-    namespace: envoy-gateway
-  spec:
-    gatewayClassName: envoy-gateway-class
-    listeners:
-    - allowedRoutes:
-        namespaces:
-          from: Same
-      name: http
-      port: 80
-      protocol: HTTP
-  status:
-    listeners:
-    - attachedRoutes: 2
-      conditions:
-      - lastTransitionTime: null
-        message: Sending translated listener configuration to the data plane
-        reason: Programmed
-        status: "True"
-        type: Programmed
-      - lastTransitionTime: null
-        message: Listener has been successfully translated
-        reason: Accepted
-        status: "True"
-        type: Accepted
-      - lastTransitionTime: null
-        message: Listener references have been resolved
-        reason: ResolvedRefs
-        status: "True"
-        type: ResolvedRefs
-      name: http
-      supportedKinds:
-      - group: gateway.networking.k8s.io
-        kind: HTTPRoute
-      - group: gateway.networking.k8s.io
-        kind: GRPCRoute
-- apiVersion: gateway.networking.k8s.io/v1beta1
-  kind: Gateway
-  metadata:
-    creationTimestamp: null
-    name: gateway-5
-    namespace: envoy-gateway
-  spec:
-    gatewayClassName: envoy-gateway-class
-    listeners:
-    - allowedRoutes:
-        namespaces:
-          from: Same
-      name: http
-      port: 80
-      protocol: HTTP
-  status:
-    listeners:
-    - attachedRoutes: 2
-      conditions:
-      - lastTransitionTime: null
-        message: Sending translated listener configuration to the data plane
-        reason: Programmed
-        status: "True"
-        type: Programmed
-      - lastTransitionTime: null
-        message: Listener has been successfully translated
-        reason: Accepted
-        status: "True"
-        type: Accepted
-      - lastTransitionTime: null
-        message: Listener references have been resolved
-        reason: ResolvedRefs
-        status: "True"
-        type: ResolvedRefs
-      name: http
-      supportedKinds:
-      - group: gateway.networking.k8s.io
-        kind: HTTPRoute
-      - group: gateway.networking.k8s.io
-        kind: GRPCRoute
-- apiVersion: gateway.networking.k8s.io/v1beta1
-  kind: Gateway
-  metadata:
-    creationTimestamp: null
-    name: gateway-6
-    namespace: envoy-gateway
-  spec:
-    gatewayClassName: envoy-gateway-class
-    listeners:
-    - allowedRoutes:
-        namespaces:
-          from: Same
-      name: http
-      port: 80
-      protocol: HTTP
-  status:
-    listeners:
-    - attachedRoutes: 2
-      conditions:
-      - lastTransitionTime: null
-        message: Sending translated listener configuration to the data plane
-        reason: Programmed
-        status: "True"
-        type: Programmed
-      - lastTransitionTime: null
-        message: Listener has been successfully translated
-        reason: Accepted
-        status: "True"
-        type: Accepted
-      - lastTransitionTime: null
-        message: Listener references have been resolved
-        reason: ResolvedRefs
-        status: "True"
-        type: ResolvedRefs
-      name: http
-      supportedKinds:
-      - group: gateway.networking.k8s.io
-        kind: HTTPRoute
-      - group: gateway.networking.k8s.io
-        kind: GRPCRoute
-- apiVersion: gateway.networking.k8s.io/v1beta1
-  kind: Gateway
-  metadata:
-    creationTimestamp: null
-    name: gateway-7
-    namespace: envoy-gateway
-  spec:
-    gatewayClassName: envoy-gateway-class
-    listeners:
-    - allowedRoutes:
-        namespaces:
-          from: Same
-      name: http
-      port: 80
-      protocol: HTTP
-  status:
-    listeners:
-    - attachedRoutes: 2
-      conditions:
-      - lastTransitionTime: null
-        message: Sending translated listener configuration to the data plane
-        reason: Programmed
-        status: "True"
-        type: Programmed
-      - lastTransitionTime: null
-        message: Listener has been successfully translated
-        reason: Accepted
-        status: "True"
-        type: Accepted
-      - lastTransitionTime: null
-        message: Listener references have been resolved
-        reason: ResolvedRefs
-        status: "True"
-        type: ResolvedRefs
-      name: http
-      supportedKinds:
-      - group: gateway.networking.k8s.io
-        kind: HTTPRoute
-      - group: gateway.networking.k8s.io
-        kind: GRPCRoute
-- apiVersion: gateway.networking.k8s.io/v1beta1
-  kind: Gateway
-  metadata:
-    creationTimestamp: null
-    name: gateway-8
-    namespace: envoy-gateway
-  spec:
-    gatewayClassName: envoy-gateway-class
-    listeners:
-    - allowedRoutes:
-        namespaces:
-          from: Same
-      name: http
-      port: 80
-      protocol: HTTP
-  status:
-    listeners:
-    - attachedRoutes: 2
-      conditions:
-      - lastTransitionTime: null
-        message: Sending translated listener configuration to the data plane
-        reason: Programmed
-        status: "True"
-        type: Programmed
-      - lastTransitionTime: null
-        message: Listener has been successfully translated
-        reason: Accepted
-        status: "True"
-        type: Accepted
-      - lastTransitionTime: null
-        message: Listener references have been resolved
-        reason: ResolvedRefs
-        status: "True"
-        type: ResolvedRefs
-      name: http
-      supportedKinds:
-      - group: gateway.networking.k8s.io
-        kind: HTTPRoute
-      - group: gateway.networking.k8s.io
-        kind: GRPCRoute
-- apiVersion: gateway.networking.k8s.io/v1beta1
-  kind: Gateway
-  metadata:
-    creationTimestamp: null
-    name: gateway-9
     namespace: envoy-gateway
   spec:
     gatewayClassName: envoy-gateway-class
@@ -1343,6 +1023,326 @@ gateways:
   metadata:
     creationTimestamp: null
     name: gateway-18
+    namespace: envoy-gateway
+  spec:
+    gatewayClassName: envoy-gateway-class
+    listeners:
+    - allowedRoutes:
+        namespaces:
+          from: Same
+      name: http
+      port: 80
+      protocol: HTTP
+  status:
+    listeners:
+    - attachedRoutes: 2
+      conditions:
+      - lastTransitionTime: null
+        message: Sending translated listener configuration to the data plane
+        reason: Programmed
+        status: "True"
+        type: Programmed
+      - lastTransitionTime: null
+        message: Listener has been successfully translated
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Listener references have been resolved
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      name: http
+      supportedKinds:
+      - group: gateway.networking.k8s.io
+        kind: HTTPRoute
+      - group: gateway.networking.k8s.io
+        kind: GRPCRoute
+- apiVersion: gateway.networking.k8s.io/v1beta1
+  kind: Gateway
+  metadata:
+    creationTimestamp: null
+    name: gateway-2
+    namespace: envoy-gateway
+  spec:
+    gatewayClassName: envoy-gateway-class
+    listeners:
+    - allowedRoutes:
+        namespaces:
+          from: Same
+      name: http
+      port: 80
+      protocol: HTTP
+  status:
+    listeners:
+    - attachedRoutes: 2
+      conditions:
+      - lastTransitionTime: null
+        message: Sending translated listener configuration to the data plane
+        reason: Programmed
+        status: "True"
+        type: Programmed
+      - lastTransitionTime: null
+        message: Listener has been successfully translated
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Listener references have been resolved
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      name: http
+      supportedKinds:
+      - group: gateway.networking.k8s.io
+        kind: HTTPRoute
+      - group: gateway.networking.k8s.io
+        kind: GRPCRoute
+- apiVersion: gateway.networking.k8s.io/v1beta1
+  kind: Gateway
+  metadata:
+    creationTimestamp: null
+    name: gateway-3
+    namespace: envoy-gateway
+  spec:
+    gatewayClassName: envoy-gateway-class
+    listeners:
+    - allowedRoutes:
+        namespaces:
+          from: Same
+      name: http
+      port: 80
+      protocol: HTTP
+  status:
+    listeners:
+    - attachedRoutes: 2
+      conditions:
+      - lastTransitionTime: null
+        message: Sending translated listener configuration to the data plane
+        reason: Programmed
+        status: "True"
+        type: Programmed
+      - lastTransitionTime: null
+        message: Listener has been successfully translated
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Listener references have been resolved
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      name: http
+      supportedKinds:
+      - group: gateway.networking.k8s.io
+        kind: HTTPRoute
+      - group: gateway.networking.k8s.io
+        kind: GRPCRoute
+- apiVersion: gateway.networking.k8s.io/v1beta1
+  kind: Gateway
+  metadata:
+    creationTimestamp: null
+    name: gateway-4
+    namespace: envoy-gateway
+  spec:
+    gatewayClassName: envoy-gateway-class
+    listeners:
+    - allowedRoutes:
+        namespaces:
+          from: Same
+      name: http
+      port: 80
+      protocol: HTTP
+  status:
+    listeners:
+    - attachedRoutes: 2
+      conditions:
+      - lastTransitionTime: null
+        message: Sending translated listener configuration to the data plane
+        reason: Programmed
+        status: "True"
+        type: Programmed
+      - lastTransitionTime: null
+        message: Listener has been successfully translated
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Listener references have been resolved
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      name: http
+      supportedKinds:
+      - group: gateway.networking.k8s.io
+        kind: HTTPRoute
+      - group: gateway.networking.k8s.io
+        kind: GRPCRoute
+- apiVersion: gateway.networking.k8s.io/v1beta1
+  kind: Gateway
+  metadata:
+    creationTimestamp: null
+    name: gateway-5
+    namespace: envoy-gateway
+  spec:
+    gatewayClassName: envoy-gateway-class
+    listeners:
+    - allowedRoutes:
+        namespaces:
+          from: Same
+      name: http
+      port: 80
+      protocol: HTTP
+  status:
+    listeners:
+    - attachedRoutes: 2
+      conditions:
+      - lastTransitionTime: null
+        message: Sending translated listener configuration to the data plane
+        reason: Programmed
+        status: "True"
+        type: Programmed
+      - lastTransitionTime: null
+        message: Listener has been successfully translated
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Listener references have been resolved
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      name: http
+      supportedKinds:
+      - group: gateway.networking.k8s.io
+        kind: HTTPRoute
+      - group: gateway.networking.k8s.io
+        kind: GRPCRoute
+- apiVersion: gateway.networking.k8s.io/v1beta1
+  kind: Gateway
+  metadata:
+    creationTimestamp: null
+    name: gateway-6
+    namespace: envoy-gateway
+  spec:
+    gatewayClassName: envoy-gateway-class
+    listeners:
+    - allowedRoutes:
+        namespaces:
+          from: Same
+      name: http
+      port: 80
+      protocol: HTTP
+  status:
+    listeners:
+    - attachedRoutes: 2
+      conditions:
+      - lastTransitionTime: null
+        message: Sending translated listener configuration to the data plane
+        reason: Programmed
+        status: "True"
+        type: Programmed
+      - lastTransitionTime: null
+        message: Listener has been successfully translated
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Listener references have been resolved
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      name: http
+      supportedKinds:
+      - group: gateway.networking.k8s.io
+        kind: HTTPRoute
+      - group: gateway.networking.k8s.io
+        kind: GRPCRoute
+- apiVersion: gateway.networking.k8s.io/v1beta1
+  kind: Gateway
+  metadata:
+    creationTimestamp: null
+    name: gateway-7
+    namespace: envoy-gateway
+  spec:
+    gatewayClassName: envoy-gateway-class
+    listeners:
+    - allowedRoutes:
+        namespaces:
+          from: Same
+      name: http
+      port: 80
+      protocol: HTTP
+  status:
+    listeners:
+    - attachedRoutes: 2
+      conditions:
+      - lastTransitionTime: null
+        message: Sending translated listener configuration to the data plane
+        reason: Programmed
+        status: "True"
+        type: Programmed
+      - lastTransitionTime: null
+        message: Listener has been successfully translated
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Listener references have been resolved
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      name: http
+      supportedKinds:
+      - group: gateway.networking.k8s.io
+        kind: HTTPRoute
+      - group: gateway.networking.k8s.io
+        kind: GRPCRoute
+- apiVersion: gateway.networking.k8s.io/v1beta1
+  kind: Gateway
+  metadata:
+    creationTimestamp: null
+    name: gateway-8
+    namespace: envoy-gateway
+  spec:
+    gatewayClassName: envoy-gateway-class
+    listeners:
+    - allowedRoutes:
+        namespaces:
+          from: Same
+      name: http
+      port: 80
+      protocol: HTTP
+  status:
+    listeners:
+    - attachedRoutes: 2
+      conditions:
+      - lastTransitionTime: null
+        message: Sending translated listener configuration to the data plane
+        reason: Programmed
+        status: "True"
+        type: Programmed
+      - lastTransitionTime: null
+        message: Listener has been successfully translated
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Listener references have been resolved
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      name: http
+      supportedKinds:
+      - group: gateway.networking.k8s.io
+        kind: HTTPRoute
+      - group: gateway.networking.k8s.io
+        kind: GRPCRoute
+- apiVersion: gateway.networking.k8s.io/v1beta1
+  kind: Gateway
+  metadata:
+    creationTimestamp: null
+    name: gateway-9
     namespace: envoy-gateway
   spec:
     gatewayClassName: envoy-gateway-class

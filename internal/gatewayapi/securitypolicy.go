@@ -59,8 +59,16 @@ func (t *Translator) ProcessSecurityPolicies(securityPolicies []*egv1a1.Security
 ) []*egv1a1.SecurityPolicy {
 	var res []*egv1a1.SecurityPolicy
 
-	// Sort based on timestamp
+	// Initially, policies sort by creation timestamp
+	// or sort alphabetically by “{namespace}/{name}” if multiple policies share same timestamp.
 	sort.Slice(securityPolicies, func(i, j int) bool {
+		if securityPolicies[i].CreationTimestamp.Equal(&(securityPolicies[j].CreationTimestamp)) {
+			policyKeyI := fmt.Sprintf("%s/%s", securityPolicies[i].Namespace, securityPolicies[i].Name)
+			policyKeyJ := fmt.Sprintf("%s/%s", securityPolicies[j].Namespace, securityPolicies[j].Name)
+			return policyKeyI < policyKeyJ
+		}
+		// Not identical CreationTimestamps
+
 		return securityPolicies[i].CreationTimestamp.Before(&(securityPolicies[j].CreationTimestamp))
 	})
 

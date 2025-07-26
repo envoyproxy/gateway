@@ -46,8 +46,17 @@ func (t *Translator) ProcessClientTrafficPolicies(
 	var res []*egv1a1.ClientTrafficPolicy
 
 	clientTrafficPolicies := resources.ClientTrafficPolicies
-	// Sort based on timestamp
+
+	// Initially, clientTrafficPolicies sort by creation timestamp
+	// or sort alphabetically by “{namespace}/{name}” if multiple policies share same timestamp.
 	sort.Slice(clientTrafficPolicies, func(i, j int) bool {
+		if clientTrafficPolicies[i].CreationTimestamp.Equal(&(clientTrafficPolicies[j].CreationTimestamp)) {
+			policyKeyI := fmt.Sprintf("%s/%s", clientTrafficPolicies[i].Namespace, clientTrafficPolicies[i].Name)
+			policyKeyJ := fmt.Sprintf("%s/%s", clientTrafficPolicies[j].Namespace, clientTrafficPolicies[j].Name)
+			return policyKeyI < policyKeyJ
+		}
+		// Not identical CreationTimestamps
+
 		return clientTrafficPolicies[i].CreationTimestamp.Before(&(clientTrafficPolicies[j].CreationTimestamp))
 	})
 
