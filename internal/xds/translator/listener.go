@@ -341,7 +341,11 @@ func (t *Translator) addHCMToXDSListener(
 	}
 
 	// Append port to the statPrefix.
-	statPrefix = strings.Join([]string{statPrefix, strconv.Itoa(int(irListener.Port))}, "-")
+	if t.useProtocolPortAsListenerName() {
+		statPrefix = strings.Join([]string{statPrefix, strconv.Itoa(int(irListener.ExternalPort))}, "-")
+	} else {
+		statPrefix = strings.Join([]string{statPrefix, strconv.Itoa(int(irListener.Port))}, "-")
+	}
 
 	// Client IP detection
 	useRemoteAddress := true
