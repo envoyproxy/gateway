@@ -1457,7 +1457,6 @@ func (t *Translator) processDestination(name string, backendRefContext BackendRe
 		},
 		resources,
 		envoyProxy,
-		ds.IsDynamicResolver,
 	)
 	if tlsErr != nil {
 		return nil, nil, status.NewRouteStatusError(tlsErr, status.RouteReasonInvalidBackendTLS)
