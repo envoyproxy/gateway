@@ -28,11 +28,11 @@
           configSource:
             ads: {}
             resourceApiVersion: V3
-          routeConfigName: tcp-80
+          routeConfigName: "80"
         serverHeaderTransformation: PASS_THROUGH
-        statPrefix: https-10080
+        statPrefix: https-80
         useRemoteAddress: true
-    name: tcp-80/foo_com
+    name: 80/foo_com
     transportSocket:
       name: envoy.transport_sockets.tls
       typedConfig:
@@ -73,11 +73,11 @@
           configSource:
             ads: {}
             resourceApiVersion: V3
-          routeConfigName: tcp-80
+          routeConfigName: "80"
         serverHeaderTransformation: PASS_THROUGH
-        statPrefix: https-10080
+        statPrefix: https-80
         useRemoteAddress: true
-    name: tcp-80/bar_com
+    name: 80/bar_com
     transportSocket:
       name: envoy.transport_sockets.tls
       typedConfig:
@@ -142,11 +142,11 @@
           configSource:
             ads: {}
             resourceApiVersion: V3
-          routeConfigName: tcp-81
+          routeConfigName: "81"
         serverHeaderTransformation: PASS_THROUGH
-        statPrefix: https-10081
+        statPrefix: https-81
         useRemoteAddress: true
-    name: tcp-81/foo_net
+    name: 81/foo_net
     transportSocket:
       name: envoy.transport_sockets.tls
       typedConfig:
@@ -208,11 +208,11 @@
           configSource:
             ads: {}
             resourceApiVersion: V3
-          routeConfigName: udp-443
+          routeConfigName: "443"
         serverHeaderTransformation: PASS_THROUGH
-        statPrefix: https-10443
+        statPrefix: https-443
         useRemoteAddress: true
-    name: udp-443
+    name: "443"
     transportSocket:
       name: envoy.transport_sockets.quic
       typedConfig:
@@ -270,11 +270,11 @@
           configSource:
             ads: {}
             resourceApiVersion: V3
-          routeConfigName: tcp-443
+          routeConfigName: "443"
         serverHeaderTransformation: PASS_THROUGH
-        statPrefix: https-10443
+        statPrefix: https-443
         useRemoteAddress: true
-    name: tcp-443
+    name: "443"
     transportSocket:
       name: envoy.transport_sockets.tls
       typedConfig:

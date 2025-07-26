@@ -1,5 +1,5 @@
 - ignorePortInHostMatching: true
-  name: tcp-80
+  name: "80"
   virtualHosts:
   - domains:
     - '*'
@@ -11,7 +11,7 @@
             name: gateway-1
             namespace: envoy-gateway
             sectionName: http1
-    name: tcp-80/*
+    name: 80/*
     routes:
     - match:
         prefix: /
@@ -21,7 +21,7 @@
         upgradeConfigs:
         - upgradeType: websocket
 - ignorePortInHostMatching: true
-  name: tcp-80
+  name: "80"
   virtualHosts:
   - domains:
     - '*'
@@ -33,7 +33,7 @@
             name: gateway-1
             namespace: envoy-gateway
             sectionName: http2
-    name: tcp-80/*
+    name: 80/*
     routes:
     - match:
         prefix: /
@@ -43,7 +43,7 @@
         upgradeConfigs:
         - upgradeType: websocket
 - ignorePortInHostMatching: true
-  name: tcp-81
+  name: "81"
   virtualHosts:
   - domains:
     - '*'
@@ -55,7 +55,7 @@
             name: gateway-1
             namespace: envoy-gateway
             sectionName: http-ipv6
-    name: tcp-81/*
+    name: 81/*
     routes:
     - match:
         prefix: /
@@ -65,7 +65,7 @@
         upgradeConfigs:
         - upgradeType: websocket
 - ignorePortInHostMatching: true
-  name: tcp-443
+  name: "443"
   virtualHosts:
   - domains:
     - '*'
@@ -77,7 +77,7 @@
             name: gateway-1
             namespace: envoy-gateway
             sectionName: https-http3
-    name: tcp-443/*
+    name: 443/*
     routes:
     - match:
         prefix: /

@@ -362,7 +362,7 @@ func (t *Translator) addHCMToXDSListener(
 			Rds: &hcmv3.Rds{
 				ConfigSource: makeConfigSource(),
 				// Configure route name to be found via RDS.
-				RouteConfigName: routeConfigName(xdsListener, irListener, t.useProtocolPortAsListenerName()),
+				RouteConfigName: routeConfigName(irListener, t.useProtocolPortAsListenerName()),
 			},
 		},
 		HttpProtocolOptions: http1ProtocolOptions(irListener.HTTP1),
@@ -459,7 +459,7 @@ func (t *Translator) addHCMToXDSListener(
 
 	filterChain := &listenerv3.FilterChain{
 		Filters: filters,
-		Name:    httpListenerFilterChainName(xdsListener, irListener, t.useProtocolPortAsListenerName()),
+		Name:    httpListenerFilterChainName(irListener, t.useProtocolPortAsListenerName()),
 	}
 
 	if irListener.TLS != nil {
@@ -502,15 +502,15 @@ func (t *Translator) addHCMToXDSListener(
 	return nil
 }
 
-func routeConfigName(xdsListener *listenerv3.Listener, irListener *ir.HTTPListener, useProtocolPortAsListenerName bool) string {
+func routeConfigName(irListener *ir.HTTPListener, useProtocolPortAsListenerName bool) string {
 	if useProtocolPortAsListenerName {
-		return xdsListener.Name
+		return strconv.Itoa(int(irListener.ExternalPort))
 	}
 	return irListener.Name
 }
 
-func httpListenerFilterChainName(xdsListener *listenerv3.Listener, irListener *ir.HTTPListener, useProtocolPortAsListenerName bool) string {
-	return routeConfigName(xdsListener, irListener, useProtocolPortAsListenerName)
+func httpListenerFilterChainName(irListener *ir.HTTPListener, useProtocolPortAsListenerName bool) string {
+	return routeConfigName(irListener, useProtocolPortAsListenerName)
 }
 
 func tcpListenerFilterChainName(xdsListener *listenerv3.Listener, irRoute *ir.TCPRoute, useProtocolPortAsListenerName bool) string {

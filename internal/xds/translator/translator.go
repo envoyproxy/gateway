@@ -463,7 +463,7 @@ func (t *Translator) processHTTPListenerXdsTranslation(
 		if xdsRouteCfg == nil {
 			xdsRouteCfg = &routev3.RouteConfiguration{
 				IgnorePortInHostMatching: true,
-				Name:                     routeConfigName(tcpXDSListener, httpListener, t.useProtocolPortAsListenerName()),
+				Name:                     routeConfigName(httpListener, t.useProtocolPortAsListenerName()),
 			}
 
 			if err = tCtx.AddXdsResource(resourcev3.RouteType, xdsRouteCfg); err != nil {
