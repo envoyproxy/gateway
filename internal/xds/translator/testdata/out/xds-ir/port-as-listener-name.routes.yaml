@@ -20,9 +20,6 @@
         cluster: first-route-dest
         upgradeConfigs:
         - upgradeType: websocket
-- ignorePortInHostMatching: true
-  name: "80"
-  virtualHosts:
   - domains:
     - '*'
     metadata:

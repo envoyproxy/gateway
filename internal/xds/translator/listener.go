@@ -622,12 +622,34 @@ func addServerNamesMatch(
 	return nil
 }
 
-// hasHCMInDefaultFilterChain checks if the default filter chain of the xdsListener has a HTTP Connection Manager (HCM) filter.
+// findXdsHTTPRouteConfigName finds the name of the route config associated with the
+// http connection manager within the default filter chain and returns an empty string if
+// not found.
+func findXdsHTTPRouteConfigName(xdsListener *listenerv3.Listener) string {
+	if xdsListener == nil || xdsListener.DefaultFilterChain == nil || xdsListener.DefaultFilterChain.Filters == nil {
+		return ""
+	}
+
+	for _, filter := range xdsListener.DefaultFilterChain.Filters {
+		if filter.Name == wellknown.HTTPConnectionManager {
+			m := new(hcmv3.HttpConnectionManager)
+			if err := filter.GetTypedConfig().UnmarshalTo(m); err != nil {
+				return ""
+			}
+			rds := m.GetRds()
+			if rds == nil {
+				return ""
+			}
+			return rds.GetRouteConfigName()
+		}
+	}
+	return ""
+}
+
 func hasHCMInDefaultFilterChain(xdsListener *listenerv3.Listener) bool {
 	if xdsListener == nil || xdsListener.DefaultFilterChain == nil || xdsListener.DefaultFilterChain.Filters == nil {
 		return false
 	}
-
 	for _, filter := range xdsListener.DefaultFilterChain.Filters {
 		if filter.Name == wellknown.HTTPConnectionManager {
 			return true

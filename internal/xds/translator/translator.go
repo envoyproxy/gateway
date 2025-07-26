@@ -290,10 +290,11 @@ func (t *Translator) processHTTPListenerXdsTranslation(
 		var (
 			http3Settings                      *ir.HTTP3Settings // HTTP3 settings for the listener, if any
 			http3Enabled                       bool
-			tcpXDSListener                     *listenerv3.Listener        // TCP Listener for HTTP1/HTTP2 traffic
-			quicXDSListener                    *listenerv3.Listener        // UDP(QUIC) Listener for HTTP3 traffic
-			xdsListenerOnSameAddressPortExists bool                        // Whether a listener already exists on the same address + port combination
-			tlsEnabled                         bool                        // Whether TLS is enabled for the listener
+			tcpXDSListener                     *listenerv3.Listener // TCP Listener for HTTP1/HTTP2 traffic
+			quicXDSListener                    *listenerv3.Listener // UDP(QUIC) Listener for HTTP3 traffic
+			xdsListenerOnSameAddressPortExists bool                 // Whether a listener already exists on the same address + port combination
+			tlsEnabled                         bool                 // Whether TLS is enabled for the listener
+			routeConfig                        string
 			xdsRouteCfg                        *routev3.RouteConfiguration // The route config is used by both the TCP and QUIC listeners
 			addHCM                             bool                        // Whether to add an HCM(HTTP Connection Manager filter) to the listener's TCP filter chain
 			err                                error
@@ -440,13 +441,29 @@ func (t *Translator) processHTTPListenerXdsTranslation(
 			}
 		}
 
+		// For backward compatibility, we firt try to get the route config name from the xDS listener.
+		// This is because the legacy rout config name is named after the first ir listener name on the same port(which is not ideal),
+		// and the current ir Listener has a different name.
+		//
+		// For example, the route config name is named after the ir Listener name "default/eg/http1", but the current
+		// ir Listener is "default/eg/http2".
+		if !t.useProtocolPortAsListenerName() {
+			routeConfig = findXdsHTTPRouteConfigName(tcpXDSListener)
+			// If the route config name is not found, we use the current ir Listener name as the route config name to create a new route config.
+			if routeConfig == "" {
+				routeConfig = routeConfigName(httpListener, false)
+			}
+		} else {
+			// The new rout config is named after the xDS listener port, for example "80".
+			routeConfig = routeConfigName(httpListener, true)
+		}
+
 		// Create a route config if we have not found one yet
-		routeConfigName := routeConfigName(httpListener, t.useProtocolPortAsListenerName())
-		xdsRouteCfg = findXdsRouteConfig(tCtx, routeConfigName)
+		xdsRouteCfg = findXdsRouteConfig(tCtx, routeConfig)
 		if xdsRouteCfg == nil {
 			xdsRouteCfg = &routev3.RouteConfiguration{
 				IgnorePortInHostMatching: true,
-				Name:                     routeConfigName,
+				Name:                     routeConfig,
 			}
 
 			if err = tCtx.AddXdsResource(resourcev3.RouteType, xdsRouteCfg); err != nil {
@@ -666,7 +683,8 @@ func (t *Translator) addRouteToRouteConfig(
 		}
 	}
 	xdsRouteCfg.VirtualHosts = append(xdsRouteCfg.VirtualHosts, vHostList...)
-
+	// TODO(zhaohuabing) we need to sort the virtual hosts from the most specific to the least specific
+	// to ensure that the most specific virtual host is matched first.
 	return errs
 }
 
