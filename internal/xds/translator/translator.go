@@ -520,11 +520,18 @@ func (t *Translator) addRouteToRouteConfig(
 	http3Settings *ir.HTTP3Settings,
 ) error {
 	var (
-		vHosts    = map[string]*routev3.VirtualHost{} // store virtual hosts by domain
-		vHostList []*routev3.VirtualHost              // keep track of order by using a list as well as the map
-		errs      error                               // the accumulated errors
-		err       error
+		vHosts            = map[string]*routev3.VirtualHost{} // store virtual hosts by domain
+		virtualHostsToAdd []*routev3.VirtualHost              // newly created virtual hosts to be added to the route config
+		errs              error                               // the accumulated errors
+		err               error
 	)
+
+	// If the virtual host already exists, we can skip it.
+	for _, vHost := range xdsRouteCfg.VirtualHosts {
+		if vHost.Name == virtualHostName(xdsRouteCfg, httpListener, vHost.Domains[0], t.useProtocolPortAsListenerName()) {
+			vHosts[vHost.Domains[0]] = vHost
+		}
+	}
 
 	// Check if an extension is loaded that wants to modify xDS Routes after they have been generated
 	for _, httpRoute := range httpListener.Routes {
@@ -561,7 +568,7 @@ func (t *Translator) addRouteToRouteConfig(
 				}
 			}
 			vHosts[httpRoute.Hostname] = vHost
-			vHostList = append(vHostList, vHost)
+			virtualHostsToAdd = append(virtualHostsToAdd, vHost)
 		}
 
 		var xdsRoute *routev3.Route
@@ -672,7 +679,7 @@ func (t *Translator) addRouteToRouteConfig(
 		}
 	}
 
-	for _, vHost := range vHostList {
+	for _, vHost := range virtualHostsToAdd {
 		// Check if an extension want to modify the Virtual Host we just generated
 		// If no extension exists (or it doesn't subscribe to this hook) then this is a quick no-op.
 		if err = processExtensionPostVHostHook(vHost, t.ExtensionManager); err != nil {
@@ -685,7 +692,7 @@ func (t *Translator) addRouteToRouteConfig(
 			}
 		}
 	}
-	xdsRouteCfg.VirtualHosts = append(xdsRouteCfg.VirtualHosts, vHostList...)
+	xdsRouteCfg.VirtualHosts = append(xdsRouteCfg.VirtualHosts, virtualHostsToAdd...)
 	// TODO(zhaohuabing) we need to sort the virtual hosts from the most specific to the least specific
 	// to ensure that the most specific virtual host is matched first.
 	return errs

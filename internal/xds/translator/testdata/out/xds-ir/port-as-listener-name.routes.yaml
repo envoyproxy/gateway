@@ -2,7 +2,7 @@
   name: "80"
   virtualHosts:
   - domains:
-    - '*'
+    - foo.com
     metadata:
       filterMetadata:
         envoy-gateway:
@@ -11,7 +11,7 @@
             name: gateway-1
             namespace: envoy-gateway
             sectionName: http1
-    name: 80/*
+    name: 80/foo_com
     routes:
     - match:
         prefix: /
@@ -21,7 +21,7 @@
         upgradeConfigs:
         - upgradeType: websocket
   - domains:
-    - '*'
+    - bar.com
     metadata:
       filterMetadata:
         envoy-gateway:
@@ -30,13 +30,13 @@
             name: gateway-1
             namespace: envoy-gateway
             sectionName: http2
-    name: 80/*
+    name: 80/bar_com
     routes:
     - match:
         prefix: /
-      name: first-route
+      name: second-route
       route:
-        cluster: first-route-dest
+        cluster: second-route-dest
         upgradeConfigs:
         - upgradeType: websocket
 - ignorePortInHostMatching: true
