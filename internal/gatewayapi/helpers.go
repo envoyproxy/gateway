@@ -742,7 +742,7 @@ func getOverriddenTargetsMessageForRoute(
 	}
 	if len(routes) > 0 {
 		sort.Strings(routes)
-		return fmt.Sprintf("these routes: %v", routes)
+		return fmt.Sprintf("these route rules: %v", routes)
 	}
 	return ""
 }

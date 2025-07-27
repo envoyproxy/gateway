@@ -59,7 +59,7 @@ envoyExtensionPolicies:
         type: Accepted
       - lastTransitionTime: null
         message: 'This policy is being overridden by other envoyExtensionPolicies
-          for these routes: [rule-1]'
+          for these route rules: [rule-1]'
         reason: Overridden
         status: "True"
         type: Overridden
