@@ -133,15 +133,15 @@ func validateBackendTLSSettings(backend *egv1a1.Backend, backendTLSPolicies []*g
 			}
 			// If any port has no BackendTLSPolicy with CACertificates, then the backend is invalid
 			if !backendTLSPoliciesHasCACerts && len(ports) > 0 {
-				i := 0
+				portsWithCert := 0
 				for _, hasCACert := range ports {
 					if !hasCACert {
 						break
 					}
-					i++
+					portsWithCert++
 				}
 				// If all ports have BackendTLSPolicy with CACertificates, then the backend is valid
-				if i == len(ports) {
+				if portsWithCert == len(ports) {
 					backendTLSPoliciesHasCACerts = true
 				}
 			}
