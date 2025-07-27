@@ -271,7 +271,7 @@ func (t *Translator) processSecurityPolicyForHTTPRoute(
 		Name:      string(currTarget.Name),
 		Namespace: policy.Namespace,
 	}
-	overriddenTargetsMessage := getOverriddenTargetsMessageForHTTPRoute(routeMap[key], currTarget.SectionName)
+	overriddenTargetsMessage := getOverriddenTargetsMessageForRoute(routeMap[key], currTarget.SectionName)
 	if overriddenTargetsMessage != "" {
 		status.SetConditionForPolicyAncestors(&policy.Status,
 			parentGateways,
@@ -351,59 +351,6 @@ func (t *Translator) processSecurityPolicyForGateway(
 			policy.Generation,
 		)
 	}
-}
-
-func getOverriddenTargetsMessageForHTTPRoute(
-	targetContext *policyRouteTargetContext,
-	sectionName *gwapiv1.SectionName,
-) string {
-	var routes []string
-	if sectionName == nil {
-		if targetContext != nil {
-			routes = targetContext.attachedToRouteRules.UnsortedList()
-		}
-	}
-	if len(routes) > 0 {
-		sort.Strings(routes)
-		return fmt.Sprintf("these routes: %v", routes)
-	}
-	return ""
-}
-
-func getOverriddenTargetsMessageForGateway(
-	targetContext *policyGatewayTargetContext,
-	listenerRouteMap map[string]sets.Set[string],
-	sectionName *gwapiv1.SectionName,
-) string {
-	var listeners, routes []string
-	if sectionName == nil {
-		if targetContext != nil {
-			listeners = targetContext.attachedToListeners.UnsortedList()
-		}
-		for _, routeSet := range listenerRouteMap {
-			routes = append(routes, routeSet.UnsortedList()...)
-		}
-	} else if listenerRouteMap != nil {
-		if routeSet, ok := listenerRouteMap[string(*sectionName)]; ok {
-			routes = routeSet.UnsortedList()
-		}
-		if routeSet, ok := listenerRouteMap[""]; ok {
-			routes = append(routes, routeSet.UnsortedList()...)
-		}
-	}
-	if len(listeners) > 0 {
-		sort.Strings(listeners)
-		if len(routes) > 0 {
-			sort.Strings(routes)
-			return fmt.Sprintf("these listeners: %v and these routes: %v", listeners, routes)
-		} else {
-			return fmt.Sprintf("these listeners: %v", listeners)
-		}
-	} else if len(routes) > 0 {
-		sort.Strings(routes)
-		return fmt.Sprintf("these routes: %v", routes)
-	}
-	return ""
 }
 
 // validateSecurityPolicy validates the SecurityPolicy.
