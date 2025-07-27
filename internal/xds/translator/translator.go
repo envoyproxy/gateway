@@ -457,8 +457,7 @@ func (t *Translator) processHTTPListenerXdsTranslation(
 		}
 	}
 
-	// Sort the virtual hosts in the route configurations to ensure that
-	// the most specific virtual host is matched first and the order is deterministic.
+	// Sort the virtual hosts in the route configurations to ensure the order is deterministic.
 	xdsRouteCfgs := tCtx.XdsResources[resourcev3.RouteType]
 	for _, xdsRouteCfg := range xdsRouteCfgs {
 		sortVirtualHosts(xdsRouteCfg.(*routev3.RouteConfiguration).VirtualHosts)
@@ -645,9 +644,7 @@ func (t *Translator) addRouteToRouteConfig(
 	return errs
 }
 
-// SortVirtualHosts sorts the virtual hosts by domain, so:
-// * the most specific virtual host is matched first.
-// * the order of the virtual hosts is deterministic.
+// SortVirtualHosts sorts the virtual hosts by domain so the order is deterministic.
 func sortVirtualHosts(vHosts []*routev3.VirtualHost) {
 	slices.SortFunc(vHosts, func(a, b *routev3.VirtualHost) int {
 		if a == nil && b == nil {
