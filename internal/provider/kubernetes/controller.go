@@ -803,8 +803,9 @@ func (r *gatewayAPIReconciler) processSecurityPolicyObjectRefs(
 			if oidc.Provider.BackendRef != nil {
 				backendRefs = append(backendRefs, *oidc.Provider.BackendRef)
 			}
-			if len(oidc.Provider.BackendRefs) > 0 {
-				backendRefs = append(backendRefs, oidc.Provider.BackendRefs[0].BackendObjectReference)
+			// there's CEL validation to ensure that backendRefs and backendRef can not be both set
+			for _, ref := range oidc.Provider.BackendRefs {
+				backendRefs = append(backendRefs, ref.BackendObjectReference)
 			}
 
 			for _, backendRef := range backendRefs {
@@ -865,37 +866,33 @@ func (r *gatewayAPIReconciler) processSecurityPolicyObjectRefs(
 		// Add the referenced BackendRefs and ReferenceGrants in ExtAuth to Maps for later processing
 		extAuth := policy.Spec.ExtAuth
 		if extAuth != nil {
-			var backendRef gwapiv1.BackendObjectReference
+			var backendRefs []gwapiv1.BackendObjectReference
 			if extAuth.GRPC != nil {
 				if extAuth.GRPC.BackendRef != nil {
-					backendRef = *extAuth.GRPC.BackendRef
+					backendRefs = append(backendRefs, *extAuth.GRPC.BackendRef)
 				}
-				if len(extAuth.GRPC.BackendRefs) > 0 {
-					if len(extAuth.GRPC.BackendRefs) != 0 {
-						backendRef = extAuth.GRPC.BackendRefs[0].BackendObjectReference
-					}
+				// there's CEL validation to ensure that backendRefs and backendRef can not be both set
+				for _, ref := range extAuth.GRPC.BackendRefs {
+					backendRefs = append(backendRefs, ref.BackendObjectReference)
 				}
 			} else if extAuth.HTTP != nil {
-				if extAuth.HTTP.BackendRef != nil {
-					backendRef = *extAuth.HTTP.BackendRef
+				if extAuth.GRPC.BackendRef != nil {
+					backendRefs = append(backendRefs, *extAuth.HTTP.BackendRef)
 				}
-				if len(extAuth.HTTP.BackendRefs) > 0 {
-					if len(extAuth.HTTP.BackendRefs) != 0 {
-						backendRef = extAuth.HTTP.BackendRefs[0].BackendObjectReference
-					}
+				// there's CEL validation to ensure that backendRefs and backendRef can not be both set
+				for _, ref := range extAuth.HTTP.BackendRefs {
+					backendRefs = append(backendRefs, ref.BackendObjectReference)
 				}
 			}
-			if err := r.processBackendRef(
-				ctx,
-				resourceMap,
-				resourceTree,
-				resource.KindSecurityPolicy,
-				policy.Namespace,
-				policy.Name,
-				backendRef); err != nil {
-				r.log.Error(err,
-					"failed to process ExtAuth BackendRef for SecurityPolicy",
-					"policy", policy, "backendRef", backendRef)
+
+			for _, backendRef := range backendRefs {
+				if err := r.processBackendRef(
+					ctx, resourceMap, resourceTree,
+					resource.KindSecurityPolicy, policy.Namespace, policy.Name,
+					backendRef); err != nil {
+					r.log.Error(err, "failed to process ExtAuth BackendRef for SecurityPolicy",
+						"policy", policy, "backendRef", backendRef)
+				}
 			}
 		}
 
