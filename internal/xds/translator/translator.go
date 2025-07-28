@@ -693,8 +693,6 @@ func (t *Translator) addRouteToRouteConfig(
 		}
 	}
 	xdsRouteCfg.VirtualHosts = append(xdsRouteCfg.VirtualHosts, virtualHostsToAdd...)
-	// TODO(zhaohuabing) we need to sort the virtual hosts from the most specific to the least specific
-	// to ensure that the most specific virtual host is matched first.
 	return errs
 }
 
