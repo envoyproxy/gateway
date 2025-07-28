@@ -22,6 +22,7 @@ envoyExtensionPolicies:
         kind: Gateway
         name: gateway-1
         namespace: envoy-gateway
+        sectionName: listener-1
       conditions:
       - lastTransitionTime: null
         message: Policy has been accepted.
@@ -51,6 +52,7 @@ envoyExtensionPolicies:
         kind: Gateway
         name: gateway-1
         namespace: envoy-gateway
+        sectionName: listener-1
       conditions:
       - lastTransitionTime: null
         message: Policy has been accepted.
@@ -160,7 +162,7 @@ gateways:
       protocol: HTTP
   status:
     listeners:
-    - attachedRoutes: 1
+    - attachedRoutes: 2
       conditions:
       - lastTransitionTime: null
         message: Sending translated listener configuration to the data plane
@@ -219,6 +221,7 @@ httpRoutes:
     parentRefs:
     - name: gateway-1
       namespace: envoy-gateway
+      sectionName: listener-1
     rules:
     - backendRefs:
       - name: service-1
@@ -234,6 +237,44 @@ httpRoutes:
       - path:
           value: /bar
       name: rule-2
+  status:
+    parents:
+    - conditions:
+      - lastTransitionTime: null
+        message: Route is accepted
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Resolved all the Object references for the Route
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+      parentRef:
+        name: gateway-1
+        namespace: envoy-gateway
+        sectionName: listener-1
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    creationTimestamp: null
+    name: httproute-2
+    namespace: default
+  spec:
+    hostnames:
+    - gateway.envoyproxy.io
+    parentRefs:
+    - name: gateway-1
+      namespace: envoy-gateway
+    rules:
+    - backendRefs:
+      - name: service-1
+        port: 8080
+      matches:
+      - path:
+          value: /foo
+      name: rule
   status:
     parents:
     - conditions:
@@ -399,6 +440,56 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /bar
+      - destination:
+          metadata:
+            kind: HTTPRoute
+            name: httproute-2
+            namespace: default
+            sectionName: rule
+          name: httproute/default/httproute-2/rule/0
+          settings:
+          - addressType: IP
+            endpoints:
+            - host: 7.7.7.7
+              port: 8080
+            metadata:
+              name: service-1
+              namespace: default
+              sectionName: "8080"
+            name: httproute/default/httproute-2/rule/0/backend/0
+            protocol: HTTP
+            weight: 1
+        envoyExtensions:
+          extProcs:
+          - authority: grpc-backend-2.envoy-gateway:8002
+            destination:
+              metadata:
+                kind: EnvoyExtensionPolicy
+                name: policy-for-gateway-1-listener-1
+                namespace: envoy-gateway
+              name: envoyextensionpolicy/envoy-gateway/policy-for-gateway-1-listener-1/extproc/0
+              settings:
+              - metadata:
+                  kind: Service
+                  name: grpc-backend-2
+                  namespace: envoy-gateway
+                  sectionName: "8002"
+                name: envoyextensionpolicy/envoy-gateway/policy-for-gateway-1-listener-1/extproc/0/backend/0
+                protocol: GRPC
+                weight: 1
+            name: envoyextensionpolicy/envoy-gateway/policy-for-gateway-1-listener-1/extproc/0
+        hostname: gateway.envoyproxy.io
+        isHTTP2: false
+        metadata:
+          kind: HTTPRoute
+          name: httproute-2
+          namespace: default
+          sectionName: rule
+        name: httproute/default/httproute-2/rule/0/match/0/gateway_envoyproxy_io
+        pathMatch:
+          distinct: false
+          name: ""
+          prefix: /foo
     - address: 0.0.0.0
       hostnames:
       - '*'
@@ -417,10 +508,10 @@ xdsIR:
       - destination:
           metadata:
             kind: HTTPRoute
-            name: httproute-1
+            name: httproute-2
             namespace: default
-            sectionName: rule-1
-          name: httproute/default/httproute-1/rule/0
+            sectionName: rule
+          name: httproute/default/httproute-2/rule/0
           settings:
           - addressType: IP
             endpoints:
@@ -430,90 +521,40 @@ xdsIR:
               name: service-1
               namespace: default
               sectionName: "8080"
-            name: httproute/default/httproute-1/rule/0/backend/0
+            name: httproute/default/httproute-2/rule/0/backend/0
             protocol: HTTP
             weight: 1
         envoyExtensions:
           extProcs:
-          - authority: grpc-backend-4.default:8004
+          - authority: grpc-backend-1.envoy-gateway:8001
             destination:
               metadata:
                 kind: EnvoyExtensionPolicy
-                name: policy-for-route-1-rule-1
-                namespace: default
-              name: envoyextensionpolicy/default/policy-for-route-1-rule-1/extproc/0
+                name: policy-for-gateway-1
+                namespace: envoy-gateway
+              name: envoyextensionpolicy/envoy-gateway/policy-for-gateway-1/extproc/0
               settings:
               - metadata:
                   kind: Service
-                  name: grpc-backend-4
-                  namespace: default
-                  sectionName: "8004"
-                name: envoyextensionpolicy/default/policy-for-route-1-rule-1/extproc/0/backend/0
+                  name: grpc-backend-1
+                  namespace: envoy-gateway
+                  sectionName: "8001"
+                name: envoyextensionpolicy/envoy-gateway/policy-for-gateway-1/extproc/0/backend/0
                 protocol: GRPC
                 weight: 1
-            name: envoyextensionpolicy/default/policy-for-route-1-rule-1/extproc/0
+            name: envoyextensionpolicy/envoy-gateway/policy-for-gateway-1/extproc/0
         hostname: gateway.envoyproxy.io
         isHTTP2: false
         metadata:
           kind: HTTPRoute
-          name: httproute-1
+          name: httproute-2
           namespace: default
-          sectionName: rule-1
-        name: httproute/default/httproute-1/rule/0/match/0/gateway_envoyproxy_io
+          sectionName: rule
+        name: httproute/default/httproute-2/rule/0/match/0/gateway_envoyproxy_io
         pathMatch:
           distinct: false
           name: ""
           prefix: /foo
-      - destination:
-          metadata:
-            kind: HTTPRoute
-            name: httproute-1
-            namespace: default
-            sectionName: rule-2
-          name: httproute/default/httproute-1/rule/1
-          settings:
-          - addressType: IP
-            endpoints:
-            - host: 7.7.7.7
-              port: 8080
-            metadata:
-              name: service-1
-              namespace: default
-              sectionName: "8080"
-            name: httproute/default/httproute-1/rule/1/backend/0
-            protocol: HTTP
-            weight: 1
-        envoyExtensions:
-          extProcs:
-          - authority: grpc-backend-3.default:8003
-            destination:
-              metadata:
-                kind: EnvoyExtensionPolicy
-                name: policy-for-route-1
-                namespace: default
-              name: envoyextensionpolicy/default/policy-for-route-1/extproc/0
-              settings:
-              - metadata:
-                  kind: Service
-                  name: grpc-backend-3
-                  namespace: default
-                  sectionName: "8003"
-                name: envoyextensionpolicy/default/policy-for-route-1/extproc/0/backend/0
-                protocol: GRPC
-                weight: 1
-            name: envoyextensionpolicy/default/policy-for-route-1/extproc/0
-        hostname: gateway.envoyproxy.io
-        isHTTP2: false
-        metadata:
-          kind: HTTPRoute
-          name: httproute-1
-          namespace: default
-          sectionName: rule-2
-        name: httproute/default/httproute-1/rule/1/match/0/gateway_envoyproxy_io
-        pathMatch:
-          distinct: false
-          name: ""
-          prefix: /bar
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4

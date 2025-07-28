@@ -72,6 +72,7 @@ httpRoutes:
     parentRefs:
     - namespace: envoy-gateway
       name: gateway-1
+      sectionName: listener-1
     rules:
     - name: rule-1
       matches:
@@ -84,6 +85,25 @@ httpRoutes:
       matches:
       - path:
           value: "/bar"
+      backendRefs:
+      - name: service-1
+        port: 8080
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    namespace: default
+    name: httproute-2
+  spec:
+    hostnames:
+    - gateway.envoyproxy.io
+    parentRefs:
+    - namespace: envoy-gateway
+      name: gateway-1
+    rules:
+    - name: rule
+      matches:
+      - path:
+          value: "/foo"
       backendRefs:
       - name: service-1
         port: 8080
