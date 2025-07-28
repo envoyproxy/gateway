@@ -154,6 +154,8 @@ func (o OrderedHTTPFilters) Len() int {
 
 func (o OrderedHTTPFilters) Less(i, j int) bool {
 	// Sort on name if the order is equal
+	// to keep the order stable and avoiding
+	// listener drains
 	if o[i].order == o[j].order {
 		return o[i].filter.Name < o[j].filter.Name
 	}
