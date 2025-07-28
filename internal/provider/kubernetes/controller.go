@@ -799,15 +799,7 @@ func (r *gatewayAPIReconciler) processSecurityPolicyObjectRefs(
 				}
 			}
 
-			var backendRefs []gwapiv1.BackendObjectReference
-			if oidc.Provider.BackendRef != nil {
-				backendRefs = append(backendRefs, *oidc.Provider.BackendRef)
-			}
-			// there's CEL validation to ensure that backendRefs and backendRef can not be both set
-			for _, ref := range oidc.Provider.BackendRefs {
-				backendRefs = append(backendRefs, ref.BackendObjectReference)
-			}
-
+			backendRefs := getBackendRefs(oidc.Provider.BackendCluster)
 			for _, backendRef := range backendRefs {
 				if err := r.processBackendRef(
 					ctx, resourceMap, resourceTree,
@@ -866,32 +858,26 @@ func (r *gatewayAPIReconciler) processSecurityPolicyObjectRefs(
 		// Add the referenced BackendRefs and ReferenceGrants in ExtAuth to Maps for later processing
 		extAuth := policy.Spec.ExtAuth
 		if extAuth != nil {
-			var backendRefs []gwapiv1.BackendObjectReference
-			if extAuth.GRPC != nil {
-				if extAuth.GRPC.BackendRef != nil {
-					backendRefs = append(backendRefs, *extAuth.GRPC.BackendRef)
-				}
-				// there's CEL validation to ensure that backendRefs and backendRef can not be both set
-				for _, ref := range extAuth.GRPC.BackendRefs {
-					backendRefs = append(backendRefs, ref.BackendObjectReference)
-				}
-			} else if extAuth.HTTP != nil {
-				if extAuth.GRPC.BackendRef != nil {
-					backendRefs = append(backendRefs, *extAuth.HTTP.BackendRef)
-				}
-				// there's CEL validation to ensure that backendRefs and backendRef can not be both set
-				for _, ref := range extAuth.HTTP.BackendRefs {
-					backendRefs = append(backendRefs, ref.BackendObjectReference)
-				}
+			var backendCluster *egv1a1.BackendCluster
+			switch {
+			case extAuth.GRPC != nil:
+				backendCluster = &extAuth.GRPC.BackendCluster
+			case extAuth.HTTP != nil:
+				backendCluster = &extAuth.HTTP.BackendCluster
+			default:
+				// this should not happen as the ExtAuth is validated in the CEL validation
+				r.log.Info("ExtAuth is not configured for SecurityPolicy, skipping BackendRefs processing")
 			}
-
-			for _, backendRef := range backendRefs {
-				if err := r.processBackendRef(
-					ctx, resourceMap, resourceTree,
-					resource.KindSecurityPolicy, policy.Namespace, policy.Name,
-					backendRef); err != nil {
-					r.log.Error(err, "failed to process ExtAuth BackendRef for SecurityPolicy",
-						"policy", policy, "backendRef", backendRef)
+			if backendCluster != nil {
+				backendRefs := getBackendRefs(*backendCluster)
+				for _, backendRef := range backendRefs {
+					if err := r.processBackendRef(
+						ctx, resourceMap, resourceTree,
+						resource.KindSecurityPolicy, policy.Namespace, policy.Name,
+						backendRef); err != nil {
+						r.log.Error(err, "failed to process ExtAuth BackendRef for SecurityPolicy",
+							"policy", policy, "backendRef", backendRef)
+					}
 				}
 			}
 		}
@@ -943,6 +929,18 @@ func (r *gatewayAPIReconciler) processSecurityPolicyObjectRefs(
 		}
 	}
 	return nil
+}
+
+func getBackendRefs(backendCluster egv1a1.BackendCluster) []gwapiv1.BackendObjectReference {
+	var backendRefs []gwapiv1.BackendObjectReference
+	if backendCluster.BackendRef != nil {
+		backendRefs = append(backendRefs, *backendCluster.BackendRef)
+	}
+	// there's CEL validation to ensure that backendRefs and backendRef can not be both set
+	for _, ref := range backendCluster.BackendRefs {
+		backendRefs = append(backendRefs, ref.BackendObjectReference)
+	}
+	return backendRefs
 }
 
 // processBackendRef adds the referenced BackendRef to the resourceMap for later processBackendRefs.
