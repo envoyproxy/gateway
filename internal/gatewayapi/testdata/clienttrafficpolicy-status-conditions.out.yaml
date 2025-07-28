@@ -3,6 +3,33 @@ clientTrafficPolicies:
   kind: ClientTrafficPolicy
   metadata:
     creationTimestamp: null
+    name: not-found-section-name
+    namespace: envoy-gateway
+  spec:
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: Gateway
+      name: gateway-3
+      sectionName: foo-bar
+  status:
+    ancestors:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: gateway-3
+        namespace: envoy-gateway
+        sectionName: foo-bar
+      conditions:
+      - lastTransitionTime: null
+        message: No section name foo-bar found for Gateway envoy-gateway/gateway-3
+        reason: TargetNotFound
+        status: "False"
+        type: Accepted
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: ClientTrafficPolicy
+  metadata:
+    creationTimestamp: null
     name: target-gateway-2-http
     namespace: envoy-gateway
   spec:
@@ -85,29 +112,15 @@ clientTrafficPolicies:
   kind: ClientTrafficPolicy
   metadata:
     creationTimestamp: null
-    name: not-found-section-name
+    name: not-same-namespace-with-gateway
     namespace: envoy-gateway
   spec:
     targetRef:
       group: gateway.networking.k8s.io
       kind: Gateway
-      name: gateway-3
-      sectionName: foo-bar
+      name: not-same-namespace-gateway
   status:
-    ancestors:
-    - ancestorRef:
-        group: gateway.networking.k8s.io
-        kind: Gateway
-        name: gateway-3
-        namespace: envoy-gateway
-        sectionName: foo-bar
-      conditions:
-      - lastTransitionTime: null
-        message: No section name foo-bar found for Gateway envoy-gateway/gateway-3
-        reason: TargetNotFound
-        status: "False"
-        type: Accepted
-      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+    ancestors: null
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: ClientTrafficPolicy
   metadata:
@@ -201,19 +214,6 @@ clientTrafficPolicies:
       group: gateway.networking.k8s.io
       kind: Gateway
       name: unknown-gateway
-  status:
-    ancestors: null
-- apiVersion: gateway.envoyproxy.io/v1alpha1
-  kind: ClientTrafficPolicy
-  metadata:
-    creationTimestamp: null
-    name: not-same-namespace-with-gateway
-    namespace: envoy-gateway
-  spec:
-    targetRef:
-      group: gateway.networking.k8s.io
-      kind: Gateway
-      name: not-same-namespace-gateway
   status:
     ancestors: null
 gateways:

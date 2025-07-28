@@ -4,7 +4,7 @@ gateways:
   metadata:
     creationTimestamp: null
     name: gateway-1
-    namespace: envoy-gateway
+    namespace: default
   spec:
     gatewayClassName: envoy-gateway-class
     listeners:
@@ -16,7 +16,7 @@ gateways:
       protocol: HTTP
   status:
     listeners:
-    - attachedRoutes: 0
+    - attachedRoutes: 1
       conditions:
       - lastTransitionTime: null
         message: Sending translated listener configuration to the data plane
@@ -44,7 +44,7 @@ gateways:
   metadata:
     creationTimestamp: null
     name: gateway-1
-    namespace: default
+    namespace: envoy-gateway
   spec:
     gatewayClassName: envoy-gateway-class
     listeners:
@@ -56,7 +56,7 @@ gateways:
       protocol: HTTP
   status:
     listeners:
-    - attachedRoutes: 1
+    - attachedRoutes: 0
       conditions:
       - lastTransitionTime: null
         message: Sending translated listener configuration to the data plane
