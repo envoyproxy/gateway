@@ -94,7 +94,8 @@ spec:
                       - port
                       type: object
                     hostname:
-                      description: Hostname defines a hostname endpoint.
+                      description: Hostname defines an optional hostname for the backend
+                        endpoint.
                       maxLength: 253
                       minLength: 1
                       pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
@@ -163,8 +164,9 @@ spec:
               tls:
                 description: |-
                   TLS defines the TLS settings for the backend.
-                  TLS.CACertificateRefs and TLS.WellKnownCACertificates can only be specified for DynamicResolver backends.
-                  TLS.InsecureSkipVerify can be specified for any Backends
+                  If TLS is specified here and a BackendTLSPolicy is also configured for the backend, the final TLS settings will
+                  be a merge of both configurations. In case of overlapping fields, the values defined in the BackendTLSPolicy will
+                  take precedence.
                 properties:
                   caCertificateRefs:
                     description: |-
@@ -178,8 +180,6 @@ spec:
                       If CACertificateRefs is empty or unspecified, then WellKnownCACertificates must be
                       specified. Only one of CACertificateRefs or WellKnownCACertificates may be specified,
                       not both.
-
-                      Only used for DynamicResolver backends.
                     items:
                       description: |-
                         LocalObjectReference identifies an API object within the namespace of the
@@ -231,8 +231,6 @@ spec:
                       If WellKnownCACertificates is unspecified or empty (""), then CACertificateRefs
                       must be specified with at least one entry for a valid configuration. Only one of
                       CACertificateRefs or WellKnownCACertificates may be specified, not both.
-
-                      Only used for DynamicResolver backends.
                     enum:
                     - System
                     type: string
