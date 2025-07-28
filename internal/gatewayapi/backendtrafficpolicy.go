@@ -41,8 +41,17 @@ func (t *Translator) ProcessBackendTrafficPolicies(resources *resource.Resources
 	res := make([]*egv1a1.BackendTrafficPolicy, 0, len(resources.BackendTrafficPolicies))
 
 	backendTrafficPolicies := resources.BackendTrafficPolicies
-	// Sort based on timestamp
+
+	// Initially, backendTrafficPolicies sort by creation timestamp
+	// or sort alphabetically by “{namespace}/{name}” if multiple policies share same timestamp.
 	sort.Slice(backendTrafficPolicies, func(i, j int) bool {
+		if backendTrafficPolicies[i].CreationTimestamp.Equal(&(backendTrafficPolicies[j].CreationTimestamp)) {
+			policyKeyI := fmt.Sprintf("%s/%s", backendTrafficPolicies[i].Namespace, backendTrafficPolicies[i].Name)
+			policyKeyJ := fmt.Sprintf("%s/%s", backendTrafficPolicies[j].Namespace, backendTrafficPolicies[j].Name)
+			return policyKeyI < policyKeyJ
+		}
+		// Not identical CreationTimestamps
+
 		return backendTrafficPolicies[i].CreationTimestamp.Before(&(backendTrafficPolicies[j].CreationTimestamp))
 	})
 
