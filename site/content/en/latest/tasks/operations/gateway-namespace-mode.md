@@ -16,8 +16,12 @@ In standard deployment mode, Envoy Gateway creates all data plane resources in t
 
 Gateway Namespace Mode changes this behavior by placing Envoy Proxy data plane resources like Deployments, Services and ServiceAccounts in each Gateway's namespace, providing stronger isolation and multi-tenancy.
 
-Traditional deployment mode uses mTLS where both the client and server authenticate each other. However, in Gateway Namespace Mode, we've shifted to server-side TLS and JWT token validation between infra and control-plane.
+The default (Controller Namespace) deployment mode uses mTLS where both the client and server authenticate each other.
 
+However, in Gateway Namespace Mode, we've shifted to server-side TLS and JWT token validation between infra and control-plane.
+
+* **Envoy proxy pods** (running in Gateway namespaces) act as clients and authenticate using JWT tokens
+* **Envoy Gateway controller pod** (running in controller namespace) acts as the server and validates JWT tokens
 * Only the CA certificate is available in pods running in Gateway namespaces
 * Client certificates are not mounted in these namespaces
 * The Envoy proxy still validates server certificates using the CA certificate
