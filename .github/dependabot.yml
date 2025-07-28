@@ -58,7 +58,6 @@ updates:
       k8s.io:
         patterns:
           - "k8s.io/*"
-          - "sigs.k8s.io/*"
   - package-ecosystem: pip
     directories:
       - /tools/src/codespell
