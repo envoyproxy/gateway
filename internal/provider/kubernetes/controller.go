@@ -936,7 +936,8 @@ func getBackendRefs(backendCluster egv1a1.BackendCluster) []gwapiv1.BackendObjec
 	if backendCluster.BackendRef != nil {
 		backendRefs = append(backendRefs, *backendCluster.BackendRef)
 	}
-	// there's CEL validation to ensure that backendRefs and backendRef can not be both set
+	// There is a CEL validation rule to ensure that backendRefs and backendRef
+	// cannot both be set at the same time.
 	for _, ref := range backendCluster.BackendRefs {
 		backendRefs = append(backendRefs, ref.BackendObjectReference)
 	}
