@@ -29,14 +29,6 @@
         useRemoteAddress: true
     name: first-listener
   maxConnectionsToAcceptPerSocketEvent: 1
-  metadata:
-    filterMetadata:
-      envoy-gateway:
-        resources:
-        - kind: Gateway
-          name: gateway-1
-          namespace: envoy-gateway
-          sectionName: http1
   name: first-listener
   perConnectionBufferLimitBytes: 32768
 - address:
@@ -69,14 +61,6 @@
         useRemoteAddress: true
     name: second-listener
   maxConnectionsToAcceptPerSocketEvent: 1
-  metadata:
-    filterMetadata:
-      envoy-gateway:
-        resources:
-        - kind: Gateway
-          name: gateway-1
-          namespace: envoy-gateway
-          sectionName: http2
   name: second-listener
   perConnectionBufferLimitBytes: 32768
 - address:
@@ -110,14 +94,6 @@
         useRemoteAddress: true
     name: third-listener
   maxConnectionsToAcceptPerSocketEvent: 1
-  metadata:
-    filterMetadata:
-      envoy-gateway:
-        resources:
-        - kind: Gateway
-          name: gateway-1
-          namespace: envoy-gateway
-          sectionName: http3
   name: third-listener
   perConnectionBufferLimitBytes: 32768
 - address:
@@ -151,13 +127,5 @@
         useRemoteAddress: true
     name: fourth-listener
   maxConnectionsToAcceptPerSocketEvent: 1
-  metadata:
-    filterMetadata:
-      envoy-gateway:
-        resources:
-        - kind: Gateway
-          name: gateway-1
-          namespace: envoy-gateway
-          sectionName: http4
   name: fourth-listener
   perConnectionBufferLimitBytes: 32768

@@ -38,14 +38,6 @@
         cluster: tcp-route-dest
         statPrefix: tcp-10080
   maxConnectionsToAcceptPerSocketEvent: 1
-  metadata:
-    filterMetadata:
-      envoy-gateway:
-        resources:
-        - kind: Gateway
-          name: gateway-1
-          namespace: envoy-gateway
-          sectionName: http
   name: envoy-gateway/gateway-1/http1
   perConnectionBufferLimitBytes: 32768
   statPrefix: envoy-gateway/gateway-1/http1

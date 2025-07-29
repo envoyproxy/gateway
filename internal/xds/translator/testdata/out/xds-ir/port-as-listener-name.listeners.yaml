@@ -31,18 +31,6 @@
         useRemoteAddress: true
     name: default-80
   maxConnectionsToAcceptPerSocketEvent: 1
-  metadata:
-    filterMetadata:
-      envoy-gateway:
-        resources:
-        - kind: Gateway
-          name: gateway-1
-          namespace: envoy-gateway
-          sectionName: http-ipv6
-        - kind: Gateway
-          name: gateway-1
-          namespace: envoy-gateway
-          sectionName: http-ipv6
   name: tcp-80
   perConnectionBufferLimitBytes: 32768
 - address:
@@ -145,18 +133,6 @@
     typedConfig:
       '@type': type.googleapis.com/envoy.extensions.filters.listener.tls_inspector.v3.TlsInspector
   maxConnectionsToAcceptPerSocketEvent: 1
-  metadata:
-    filterMetadata:
-      envoy-gateway:
-        resources:
-        - kind: Gateway
-          name: gateway-1
-          namespace: envoy-gateway
-          sectionName: http1
-        - kind: Gateway
-          name: gateway-1
-          namespace: envoy-gateway
-          sectionName: http2
   name: tcp-443
   perConnectionBufferLimitBytes: 32768
 - address:
@@ -213,14 +189,6 @@
               tlsMinimumProtocolVersion: TLSv1_2
           disableStatefulSessionResumption: true
           disableStatelessSessionResumption: true
-  metadata:
-    filterMetadata:
-      envoy-gateway:
-        resources:
-        - kind: Gateway
-          name: gateway-2
-          namespace: envoy-gateway
-          sectionName: https-http3
   name: udp-1443
   udpListenerConfig:
     downstreamSocketConfig: {}
@@ -276,14 +244,6 @@
         disableStatefulSessionResumption: true
         disableStatelessSessionResumption: true
   maxConnectionsToAcceptPerSocketEvent: 1
-  metadata:
-    filterMetadata:
-      envoy-gateway:
-        resources:
-        - kind: Gateway
-          name: gateway-2
-          namespace: envoy-gateway
-          sectionName: https-http3
   name: tcp-1443
   perConnectionBufferLimitBytes: 32768
 - address:

@@ -31,13 +31,5 @@
         useRemoteAddress: true
     name: extension-post-xdsvirtualhost-hook-error
   maxConnectionsToAcceptPerSocketEvent: 1
-  metadata:
-    filterMetadata:
-      envoy-gateway:
-        resources:
-        - kind: Gateway
-          name: gateway-1
-          namespace: envoy-gateway
-          sectionName: http
   name: extension-post-xdsvirtualhost-hook-error
   perConnectionBufferLimitBytes: 32768

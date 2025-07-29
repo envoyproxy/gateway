@@ -31,13 +31,5 @@
         useRemoteAddress: true
     name: listener-enable-endpoint-stats
   maxConnectionsToAcceptPerSocketEvent: 1
-  metadata:
-    filterMetadata:
-      envoy-gateway:
-        resources:
-        - kind: Gateway
-          name: gateway-1
-          namespace: envoy-gateway
-          sectionName: http
   name: listener-enable-endpoint-stats
   perConnectionBufferLimitBytes: 32768
