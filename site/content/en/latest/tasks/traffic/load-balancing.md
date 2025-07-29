@@ -919,10 +919,7 @@ curl -v --header "Host: www.example.com" http://${GATEWAY_HOST}/cookie
 
 This example will create a Load Balancer with Endpoint Override functionality via [BackendTrafficPolicy][].
 
-The Endpoint Override feature allows endpoint selection based on headers or metadata. It can derive the target endpoint from the following sources:
-
-- **Header**: Extract target endpoint from HTTP request headers
-- **Metadata**: Extract target endpoint from request metadata
+The Endpoint Override feature allows endpoint selection based on headers. It can derive the target endpoint from HTTP request headers.
 
 When the specified override endpoint is not available or invalid, the load balancer will fall back to the configured load balancing policy.
 
@@ -1045,116 +1042,6 @@ done
 ```
 
 You should see requests distributed across different pods using the round robin fallback policy.
-
-### Metadata-based Endpoint Override
-
-This example will create a Load Balancer with Metadata-based Endpoint Override functionality.
-
-{{< tabpane text=true >}}
-{{% tab header="Apply from stdin" %}}
-
-```shell
-cat <<EOF | kubectl apply -f -
-apiVersion: gateway.envoyproxy.io/v1alpha1
-kind: BackendTrafficPolicy
-metadata:
-  name: endpoint-override-metadata-policy
-  namespace: default
-spec:
-  targetRefs:
-    - group: gateway.networking.k8s.io
-      kind: HTTPRoute
-      name: endpoint-override-metadata-route
-  loadBalancer:
-    type: LeastRequest
-    endpointOverride:
-      extractFrom:
-        - metadata:
-            key: envoy.lb
-            path:
-              - key: override_host
----
-apiVersion: gateway.networking.k8s.io/v1
-kind: HTTPRoute
-metadata:
-  name: endpoint-override-metadata-route
-  namespace: default
-spec:
-  parentRefs:
-    - name: eg
-  hostnames:
-    - "www.example.com"
-  rules:
-    - matches:
-        - path:
-            type: PathPrefix
-            value: /endpoint-override-metadata
-      backendRefs:
-        - name: backend
-          port: 3000
-EOF
-```
-
-{{% /tab %}}
-{{% tab header="Apply from file" %}}
-Save and apply the following resource to your cluster:
-
-```yaml
----
-apiVersion: gateway.envoyproxy.io/v1alpha1
-kind: BackendTrafficPolicy
-metadata:
-  name: endpoint-override-metadata-policy
-  namespace: default
-spec:
-  targetRefs:
-    - group: gateway.networking.k8s.io
-      kind: HTTPRoute
-      name: endpoint-override-metadata-route
-  loadBalancer:
-    type: LeastRequest
-    endpointOverride:
-      extractFrom:
-        - metadata:
-            key: envoy.lb
-            path:
-              - key: override_host
----
-apiVersion: gateway.networking.k8s.io/v1
-kind: HTTPRoute
-metadata:
-  name: endpoint-override-metadata-route
-  namespace: default
-spec:
-  parentRefs:
-    - name: eg
-  hostnames:
-    - "www.example.com"
-  rules:
-    - matches:
-        - path:
-            type: PathPrefix
-            value: /endpoint-override-metadata
-      backendRefs:
-        - name: backend
-          port: 3000
-```
-
-{{% /tab %}}
-{{< /tabpane >}}
-
-The metadata-based endpoint override extracts the target endpoint from request metadata using the specified key path. In this example, it looks for the override endpoint in the metadata path `envoy.lb.override_host`. When no valid override endpoint is found in the metadata, requests fall back to the Least Request load balancing policy.
-
-Test the metadata-based endpoint override:
-
-```shell
-for i in {1..10}; do
-  curl -s -H "Host: www.example.com" \
-    http://${GATEWAY_HOST}/endpoint-override-metadata | jq -r '.pod'
-done
-```
-
-Since no metadata is provided in this example, all requests will use the Least Request fallback policy, distributing traffic to the pod with the fewest active requests.
 
 [Envoy load balancing]: https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/upstream/load_balancing/overview
 [BackendTrafficPolicy]: ../../../api/extension_types#backendtrafficpolicy
