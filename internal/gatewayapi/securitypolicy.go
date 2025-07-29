@@ -133,7 +133,6 @@ func (t *Translator) ProcessSecurityPolicies(securityPolicies []*egv1a1.Security
 		}
 	}
 	// Process the policies targeting xRoutes
-	// Process the policies targeting xRoutes
 	for _, currPolicy := range securityPolicies {
 		policyName := utils.NamespacedName(currPolicy)
 		targetRefs := getPolicyTargetRefs(currPolicy.Spec.PolicyTargetReferences, routes)
