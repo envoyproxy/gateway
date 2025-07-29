@@ -51,15 +51,17 @@ const (
 	oidcHMACSecretKey  = "hmac-secret"
 )
 
-// Determines if a route is HTTP or TCP based on its type.Add a comment on lines R434 to R440Add diff commentMarkdown input: edit mode selected.WritePreviewAdd a suggestionHeadingBoldItalicQuoteCodeLinkUnordered listNumbered listTask listMentionReferenceSaved repliesAdd FilesPaste, drop, or click to add filesCancelCommentStart a review
 func getRouteProtocol(route RouteContext) ir.AppProtocol {
 	if route == nil {
-		return ir.HTTP // default to HTTP for nil routes
+		return ir.HTTP
 	}
 
-	if r, ok := route.(*TCPRouteContext); ok && r != nil {
+	// Use the existing GetRouteType function to determine protocol
+	routeType := GetRouteType(route)
+	if routeType == resource.KindTCPRoute {
 		return ir.TCP
 	}
+
 	return ir.HTTP
 }
 
