@@ -26,11 +26,6 @@ tcp:
   - name: "second-listener"
     address: "::"
     port: 10081
-    metadata:
-      kind: Gateway
-      name: gateway-1
-      namespace: envoy-gateway
-      sectionName: tcp
     routes:
       - name: "second-route"
         destination:

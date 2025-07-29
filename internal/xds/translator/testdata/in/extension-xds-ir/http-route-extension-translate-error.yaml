@@ -4,7 +4,6 @@ http:
   port: 10080
   hostnames:
   - "*"
-
   path:
     mergeSlashes: true
     escapedSlashesAction: UnescapeAndRedirect
