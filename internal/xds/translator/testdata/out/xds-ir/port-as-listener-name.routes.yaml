@@ -1,5 +1,46 @@
 - ignorePortInHostMatching: true
-  name: "80"
+  name: default-80
+  virtualHosts:
+  - domains:
+    - foo.net
+    metadata:
+      filterMetadata:
+        envoy-gateway:
+          resources:
+          - kind: Gateway
+            name: gateway-1
+            namespace: envoy-gateway
+            sectionName: http-ipv6
+    name: foo_net
+    routes:
+    - match:
+        prefix: /
+      name: first-route
+      route:
+        cluster: first-route-dest
+        upgradeConfigs:
+        - upgradeType: websocket
+  - domains:
+    - bar.net
+    metadata:
+      filterMetadata:
+        envoy-gateway:
+          resources:
+          - kind: Gateway
+            name: gateway-1
+            namespace: envoy-gateway
+            sectionName: http-ipv6
+    name: bar_net
+    routes:
+    - match:
+        prefix: /
+      name: second-route
+      route:
+        cluster: second-route-dest
+        upgradeConfigs:
+        - upgradeType: websocket
+- ignorePortInHostMatching: true
+  name: envoy-gateway/gateway-1/https1
   virtualHosts:
   - domains:
     - foo.com
@@ -11,7 +52,7 @@
             name: gateway-1
             namespace: envoy-gateway
             sectionName: http1
-    name: 80/foo_com
+    name: foo_com
     routes:
     - match:
         prefix: /
@@ -20,6 +61,9 @@
         cluster: first-route-dest
         upgradeConfigs:
         - upgradeType: websocket
+- ignorePortInHostMatching: true
+  name: envoy-gateway/gateway-1/https2
+  virtualHosts:
   - domains:
     - bar.com
     metadata:
@@ -30,7 +74,7 @@
             name: gateway-1
             namespace: envoy-gateway
             sectionName: http2
-    name: 80/bar_com
+    name: bar_com
     routes:
     - match:
         prefix: /
@@ -40,7 +84,7 @@
         upgradeConfigs:
         - upgradeType: websocket
 - ignorePortInHostMatching: true
-  name: "81"
+  name: envoy-gateway/gateway-2/https-http3
   virtualHosts:
   - domains:
     - '*'
@@ -49,32 +93,10 @@
         envoy-gateway:
           resources:
           - kind: Gateway
-            name: gateway-1
-            namespace: envoy-gateway
-            sectionName: http-ipv6
-    name: 81/*
-    routes:
-    - match:
-        prefix: /
-      name: second-route
-      route:
-        cluster: second-route-dest
-        upgradeConfigs:
-        - upgradeType: websocket
-- ignorePortInHostMatching: true
-  name: "443"
-  virtualHosts:
-  - domains:
-    - '*'
-    metadata:
-      filterMetadata:
-        envoy-gateway:
-          resources:
-          - kind: Gateway
-            name: gateway-1
+            name: gateway-2
             namespace: envoy-gateway
             sectionName: https-http3
-    name: 443/*
+    name: '*'
     routes:
     - match:
         prefix: /

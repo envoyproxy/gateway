@@ -505,9 +505,12 @@ func (t *Translator) addHCMToXDSListener(
 }
 
 func routeConfigName(irListener *ir.HTTPListener, useProtocolPortAsListenerName bool) string {
-	if useProtocolPortAsListenerName {
-		return strconv.Itoa(int(irListener.ExternalPort))
+	// If the ir Listener is HTTP, then the route is merged on the same port.
+	if useProtocolPortAsListenerName && irListener.TLS == nil {
+		return fmt.Sprintf("default-%d", irListener.ExternalPort)
 	}
+	// If the ir Listener is HTTPS, then each Listener has its own route config because we build a separate
+	// filter chain for each SNI.
 	return irListener.Name
 }
 
@@ -599,6 +602,7 @@ func addServerNamesMatch(
 	// 1. nil listeners
 	// 2. UDP (QUIC) listeners used for HTTP3
 	// 3. wildcard hostnames
+	// TODO(zhaohuabing): https://github.com/envoyproxy/gateway/issues/5660#issuecomment-3130314740
 	if xdsListener == nil || (xdsListener.GetAddress() != nil &&
 		xdsListener.GetAddress().GetSocketAddress() != nil &&
 		xdsListener.GetAddress().GetSocketAddress().GetProtocol() == corev3.SocketAddress_UDP) {

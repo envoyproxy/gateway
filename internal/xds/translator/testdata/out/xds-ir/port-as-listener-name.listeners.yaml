@@ -1,7 +1,54 @@
 - address:
     socketAddress:
-      address: 0.0.0.0
+      address: '::'
       portValue: 10080
+  defaultFilterChain:
+    filters:
+    - name: envoy.filters.network.http_connection_manager
+      typedConfig:
+        '@type': type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
+        commonHttpProtocolOptions:
+          headersWithUnderscoresAction: REJECT_REQUEST
+        http2ProtocolOptions:
+          initialConnectionWindowSize: 1048576
+          initialStreamWindowSize: 65536
+          maxConcurrentStreams: 100
+        httpFilters:
+        - name: envoy.filters.http.router
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+            suppressEnvoyHeaders: true
+        mergeSlashes: true
+        normalizePath: true
+        pathWithEscapedSlashesAction: UNESCAPE_AND_REDIRECT
+        rds:
+          configSource:
+            ads: {}
+            resourceApiVersion: V3
+          routeConfigName: default-80
+        serverHeaderTransformation: PASS_THROUGH
+        statPrefix: http-80
+        useRemoteAddress: true
+    name: default-80
+  maxConnectionsToAcceptPerSocketEvent: 1
+  metadata:
+    filterMetadata:
+      envoy-gateway:
+        resources:
+        - kind: Gateway
+          name: gateway-1
+          namespace: envoy-gateway
+          sectionName: http-ipv6
+        - kind: Gateway
+          name: gateway-1
+          namespace: envoy-gateway
+          sectionName: http-ipv6
+  name: tcp-80
+  perConnectionBufferLimitBytes: 32768
+- address:
+    socketAddress:
+      address: 0.0.0.0
+      portValue: 10443
   filterChains:
   - filterChainMatch:
       serverNames:
@@ -28,11 +75,11 @@
           configSource:
             ads: {}
             resourceApiVersion: V3
-          routeConfigName: "80"
+          routeConfigName: envoy-gateway/gateway-1/https1
         serverHeaderTransformation: PASS_THROUGH
-        statPrefix: https-80
+        statPrefix: https-443
         useRemoteAddress: true
-    name: 80/foo_com
+    name: envoy-gateway/gateway-1/https1/foo_com
     transportSocket:
       name: envoy.transport_sockets.tls
       typedConfig:
@@ -73,11 +120,11 @@
           configSource:
             ads: {}
             resourceApiVersion: V3
-          routeConfigName: "80"
+          routeConfigName: envoy-gateway/gateway-1/https2
         serverHeaderTransformation: PASS_THROUGH
-        statPrefix: https-80
+        statPrefix: https-443
         useRemoteAddress: true
-    name: 80/bar_com
+    name: envoy-gateway/gateway-1/https2/bar_com
     transportSocket:
       name: envoy.transport_sockets.tls
       typedConfig:
@@ -110,77 +157,12 @@
           name: gateway-1
           namespace: envoy-gateway
           sectionName: http2
-  name: tcp-80
-  perConnectionBufferLimitBytes: 32768
-- address:
-    socketAddress:
-      address: '::'
-      portValue: 10081
-  filterChains:
-  - filterChainMatch:
-      serverNames:
-      - foo.net
-    filters:
-    - name: envoy.filters.network.http_connection_manager
-      typedConfig:
-        '@type': type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
-        commonHttpProtocolOptions:
-          headersWithUnderscoresAction: REJECT_REQUEST
-        http2ProtocolOptions:
-          initialConnectionWindowSize: 1048576
-          initialStreamWindowSize: 65536
-          maxConcurrentStreams: 100
-        httpFilters:
-        - name: envoy.filters.http.router
-          typedConfig:
-            '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
-            suppressEnvoyHeaders: true
-        mergeSlashes: true
-        normalizePath: true
-        pathWithEscapedSlashesAction: UNESCAPE_AND_REDIRECT
-        rds:
-          configSource:
-            ads: {}
-            resourceApiVersion: V3
-          routeConfigName: "81"
-        serverHeaderTransformation: PASS_THROUGH
-        statPrefix: https-81
-        useRemoteAddress: true
-    name: 81/foo_net
-    transportSocket:
-      name: envoy.transport_sockets.tls
-      typedConfig:
-        '@type': type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.DownstreamTlsContext
-        commonTlsContext:
-          alpnProtocols:
-          - h2
-          - http/1.1
-          tlsCertificateSdsSecretConfigs:
-          - name: second-listener
-            sdsConfig:
-              ads: {}
-              resourceApiVersion: V3
-        disableStatefulSessionResumption: true
-        disableStatelessSessionResumption: true
-  listenerFilters:
-  - name: envoy.filters.listener.tls_inspector
-    typedConfig:
-      '@type': type.googleapis.com/envoy.extensions.filters.listener.tls_inspector.v3.TlsInspector
-  maxConnectionsToAcceptPerSocketEvent: 1
-  metadata:
-    filterMetadata:
-      envoy-gateway:
-        resources:
-        - kind: Gateway
-          name: gateway-1
-          namespace: envoy-gateway
-          sectionName: http-ipv6
-  name: tcp-81
+  name: tcp-443
   perConnectionBufferLimitBytes: 32768
 - address:
     socketAddress:
       address: 0.0.0.0
-      portValue: 10443
+      portValue: 11443
       protocol: UDP
   drainType: MODIFY_ONLY
   filterChains:
@@ -208,11 +190,11 @@
           configSource:
             ads: {}
             resourceApiVersion: V3
-          routeConfigName: "443"
+          routeConfigName: envoy-gateway/gateway-2/https-http3
         serverHeaderTransformation: PASS_THROUGH
-        statPrefix: https-443
+        statPrefix: https-1443
         useRemoteAddress: true
-    name: "443"
+    name: envoy-gateway/gateway-2/https-http3
     transportSocket:
       name: envoy.transport_sockets.quic
       typedConfig:
@@ -236,17 +218,17 @@
       envoy-gateway:
         resources:
         - kind: Gateway
-          name: gateway-1
+          name: gateway-2
           namespace: envoy-gateway
           sectionName: https-http3
-  name: udp-443
+  name: udp-1443
   udpListenerConfig:
     downstreamSocketConfig: {}
     quicOptions: {}
 - address:
     socketAddress:
       address: 0.0.0.0
-      portValue: 10443
+      portValue: 11443
   filterChains:
   - filters:
     - name: envoy.filters.network.http_connection_manager
@@ -270,11 +252,11 @@
           configSource:
             ads: {}
             resourceApiVersion: V3
-          routeConfigName: "443"
+          routeConfigName: envoy-gateway/gateway-2/https-http3
         serverHeaderTransformation: PASS_THROUGH
-        statPrefix: https-443
+        statPrefix: https-1443
         useRemoteAddress: true
-    name: "443"
+    name: envoy-gateway/gateway-2/https-http3
     transportSocket:
       name: envoy.transport_sockets.tls
       typedConfig:
@@ -299,10 +281,10 @@
       envoy-gateway:
         resources:
         - kind: Gateway
-          name: gateway-1
+          name: gateway-2
           namespace: envoy-gateway
           sectionName: https-http3
-  name: tcp-443
+  name: tcp-1443
   perConnectionBufferLimitBytes: 32768
 - address:
     socketAddress:

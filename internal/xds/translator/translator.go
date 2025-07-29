@@ -528,7 +528,7 @@ func (t *Translator) addRouteToRouteConfig(
 
 	// If the virtual host already exists, we can skip it.
 	for _, vHost := range xdsRouteCfg.VirtualHosts {
-		if vHost.Name == virtualHostName(xdsRouteCfg, httpListener, vHost.Domains[0], t.useProtocolPortAsListenerName()) {
+		if vHost.Name == virtualHostName(httpListener, vHost.Domains[0], t.useProtocolPortAsListenerName()) {
 			vHosts[vHost.Domains[0]] = vHost
 		}
 	}
@@ -543,8 +543,7 @@ func (t *Translator) addRouteToRouteConfig(
 			underscoredHostname := strings.ReplaceAll(httpRoute.Hostname, ".", "_")
 			// Allocate virtual host for this httpRoute.
 			vHost = &routev3.VirtualHost{
-				Name: virtualHostName(xdsRouteCfg, httpListener, underscoredHostname,
-					t.useProtocolPortAsListenerName()),
+				Name:     virtualHostName(httpListener, underscoredHostname, t.useProtocolPortAsListenerName()),
 				Domains:  []string{httpRoute.Hostname},
 				Metadata: buildXdsMetadata(httpListener.Metadata),
 			}
@@ -696,11 +695,11 @@ func (t *Translator) addRouteToRouteConfig(
 	return errs
 }
 
-func virtualHostName(xdsRouteCfg *routev3.RouteConfiguration, httpListener *ir.HTTPListener,
+func virtualHostName(httpListener *ir.HTTPListener,
 	underscoredHostname string, useProtocolPortAsListenerName bool,
 ) string {
 	if useProtocolPortAsListenerName {
-		return fmt.Sprintf("%s/%s", xdsRouteCfg.Name, underscoredHostname)
+		return underscoredHostname // Just use the hostname as it is unique inside the route config
 	}
 	return fmt.Sprintf("%s/%s", httpListener.Name, underscoredHostname)
 }

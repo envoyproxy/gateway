@@ -1,8 +1,56 @@
 http:
 - name: "envoy-gateway/gateway-1/http1"
-  address: 0.0.0.0
+  address: "::"
   port: 10080
   externalPort: 80
+  hostnames:
+  - "foo.net"
+  metadata:
+    kind: Gateway
+    name: gateway-1
+    namespace: envoy-gateway
+    sectionName: http-ipv6
+  path:
+    mergeSlashes: true
+    escapedSlashesAction: UnescapeAndRedirect
+  routes:
+  - name: "first-route"
+    hostname: "foo.net"
+    destination:
+      name: "first-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
+        name: "first-route-dest/backend/0"
+- name: "envoy-gateway/gateway-1/http2"
+  address: "::"
+  port: 10080
+  externalPort: 80
+  hostnames:
+  - "bar.net"
+  metadata:
+    kind: Gateway
+    name: gateway-1
+    namespace: envoy-gateway
+    sectionName: http-ipv6
+  path:
+    mergeSlashes: true
+    escapedSlashesAction: UnescapeAndRedirect
+  routes:
+  - name: "second-route"
+    hostname: "bar.net"
+    destination:
+      name: "second-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
+        name: "second-route-dest/backend/0"
+- name: "envoy-gateway/gateway-1/https1"
+  address: 0.0.0.0
+  port: 10443
+  externalPort: 443
   hostnames:
   - "foo.com"
   metadata:
@@ -33,10 +81,10 @@ http:
         - host: "1.2.3.4"
           port: 50000
         name: "first-route-dest/backend/0"
-- name: "envoy-gateway/gateway-1/http2"
+- name: "envoy-gateway/gateway-1/https2"
   address: 0.0.0.0
-  port: 10080
-  externalPort: 80
+  port: 10443
+  externalPort: 443
   hostnames:
   - "bar.com"
   metadata:
@@ -67,41 +115,7 @@ http:
         - host: "1.2.3.4"
           port: 50000
         name: "second-route-dest/backend/0"
-- name: "envoy-gateway/gateway-1/http-ipv6"
-  address: "::"
-  port: 10081
-  externalPort: 81
-  hostnames:
-  - "foo.net"
-  metadata:
-    kind: Gateway
-    name: gateway-1
-    namespace: envoy-gateway
-    sectionName: http-ipv6
-  path:
-    mergeSlashes: true
-    escapedSlashesAction: UnescapeAndRedirect
-  tls:
-    alpnProtocols:
-    - h2
-    - http/1.1
-    certificates:
-    - name: second-listener
-      # byte slice representation of "cert-data"
-      certificate: [99, 101, 114, 116, 45, 100, 97, 116, 97]
-      # byte slice representation of "key-data"
-      privateKey: [107, 101, 121, 45, 100, 97, 116, 97]
-  routes:
-  - name: "second-route"
-    hostname: "*"
-    destination:
-      name: "second-route-dest"
-      settings:
-      - endpoints:
-        - host: "1.2.3.4"
-          port: 50000
-        name: "second-route-dest/backend/0"
-- name: envoy-gateway/gateway-1/https-http3
+- name: envoy-gateway/gateway-2/https-http3
   address: 0.0.0.0
   hostnames:
   - '*'
@@ -110,14 +124,14 @@ http:
   isHTTP2: false
   metadata:
     kind: Gateway
-    name: gateway-1
+    name: gateway-2
     namespace: envoy-gateway
     sectionName: https-http3
   path:
     escapedSlashesAction: UnescapeAndRedirect
     mergeSlashes: true
-  port: 10443
-  externalPort: 443
+  port: 11443
+  externalPort: 1443
   routes:
   - destination:
       metadata:
