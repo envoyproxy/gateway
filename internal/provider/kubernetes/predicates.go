@@ -613,11 +613,6 @@ func (r *gatewayAPIReconciler) validateEndpointSliceForReconcile(obj client.Obje
 			return true
 		}
 	}
-
-	if r.isProxyServiceCluster(&nsName) {
-		return true
-	}
-
 	return false
 }
 
@@ -939,30 +934,6 @@ func (r *gatewayAPIReconciler) isRouteReferencingHTTPRouteFilter(nsName *types.N
 	}
 
 	return len(httpRouteList.Items) != 0
-}
-
-func (r *gatewayAPIReconciler) isProxyServiceCluster(nn *types.NamespacedName) bool {
-	ctx := context.Background()
-	svc := &corev1.Service{}
-	if err := r.client.Get(ctx, *nn, svc); err != nil {
-		r.log.Error(err, "unable to find associated proxy ServiceCluster")
-		return false
-	}
-
-	svcLabels := svc.GetLabels()
-
-	// Check if service belongs to a Gateway
-	if gtw := r.findOwningGateway(ctx, svcLabels); gtw != nil {
-		return true
-	}
-
-	// Check if service belongs to a GatewayClass
-	gcName, ok := svcLabels[gatewayapi.OwningGatewayClassLabel]
-	if ok && r.mergeGateways.Has(gcName) {
-		return true
-	}
-
-	return false
 }
 
 // validateHTTPRouteFilterForReconcile tries finding the referencing HTTPRoute of the filter

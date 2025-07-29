@@ -741,7 +741,7 @@ func TestValidateServiceForReconcile(t *testing.T) {
 				gatewayapi.OwningGatewayNameLabel:      "scheduled-status-test",
 				gatewayapi.OwningGatewayNamespaceLabel: "default",
 			}, nil),
-			expect: true,
+			expect: false,
 		},
 		{
 			name: "gateway service deployment also exist",
@@ -754,7 +754,9 @@ func TestValidateServiceForReconcile(t *testing.T) {
 				gatewayapi.OwningGatewayNameLabel:      "scheduled-status-test",
 				gatewayapi.OwningGatewayNamespaceLabel: "default",
 			}, nil),
-			expect: true,
+			// Note that in case when a envoyObjects exists, the Service is just processed for Gateway status
+			// updates and not reconciled further.
+			expect: false,
 		},
 		{
 			name: "gateway service daemonset also exist",
@@ -767,7 +769,9 @@ func TestValidateServiceForReconcile(t *testing.T) {
 				gatewayapi.OwningGatewayNameLabel:      "scheduled-status-test",
 				gatewayapi.OwningGatewayNamespaceLabel: "default",
 			}, nil),
-			expect: true,
+			// Note that in case when a envoyObjects exists, the Service is just processed for Gateway status
+			// updates and not reconciled further.
+			expect: false,
 		},
 		{
 			name: "route service but no routes exist",
