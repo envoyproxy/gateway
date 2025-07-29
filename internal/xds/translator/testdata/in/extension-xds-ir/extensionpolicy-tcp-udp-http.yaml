@@ -29,11 +29,6 @@ http:
           controllerName: gateway.envoyproxy.io/gatewayclass-controller
   hostnames:
   - '*'
-  metadata:
-    kind: Gateway
-    name: gateway-1
-    namespace: envoy-gateway
-    sectionName: http
   isHTTP2: false
   name: envoy-gateway/gateway-1/http1
   path:

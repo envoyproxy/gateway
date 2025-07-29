@@ -129,13 +129,6 @@
           '@type': type.googleapis.com/envoy.extensions.load_balancing_policies.least_request.v3.LeastRequest
           localityLbConfig:
             localityWeightedLbConfig: {}
-  metadata:
-    filterMetadata:
-      envoy-gateway:
-        resources:
-        - kind: TLSRoute
-          name: tlsroute-2
-          namespace: default
   name: tlsroute/default/tlsroute-2/rule/-1
   perConnectionBufferLimitBytes: 32768
   type: EDS

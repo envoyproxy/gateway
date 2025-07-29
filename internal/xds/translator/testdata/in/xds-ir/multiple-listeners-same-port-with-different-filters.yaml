@@ -7,11 +7,6 @@ http:
     hostnames:
       - 'www.foo.com'
     isHTTP2: false
-    metadata:
-      kind: Gateway
-      name: gateway-1
-      namespace: envoy-gateway
-      sectionName: http
     http3:
       quicPort: 443
     path:

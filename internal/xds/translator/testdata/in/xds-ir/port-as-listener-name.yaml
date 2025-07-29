@@ -5,11 +5,6 @@ http:
   externalPort: 80
   hostnames:
   - "foo.net"
-  metadata:
-    kind: Gateway
-    name: gateway-1
-    namespace: envoy-gateway
-    sectionName: http-ipv6
   path:
     mergeSlashes: true
     escapedSlashesAction: UnescapeAndRedirect
@@ -29,11 +24,6 @@ http:
   externalPort: 80
   hostnames:
   - "bar.net"
-  metadata:
-    kind: Gateway
-    name: gateway-1
-    namespace: envoy-gateway
-    sectionName: http-ipv6
   path:
     mergeSlashes: true
     escapedSlashesAction: UnescapeAndRedirect
@@ -53,11 +43,6 @@ http:
   externalPort: 443
   hostnames:
   - "foo.com"
-  metadata:
-    kind: Gateway
-    name: gateway-1
-    namespace: envoy-gateway
-    sectionName: http1
   path:
     mergeSlashes: true
     escapedSlashesAction: UnescapeAndRedirect
@@ -87,11 +72,6 @@ http:
   externalPort: 443
   hostnames:
   - "bar.com"
-  metadata:
-    kind: Gateway
-    name: gateway-1
-    namespace: envoy-gateway
-    sectionName: http2
   path:
     mergeSlashes: true
     escapedSlashesAction: UnescapeAndRedirect
@@ -122,11 +102,6 @@ http:
   http3:
     quicPort: 443
   isHTTP2: false
-  metadata:
-    kind: Gateway
-    name: gateway-2
-    namespace: envoy-gateway
-    sectionName: https-http3
   path:
     escapedSlashesAction: UnescapeAndRedirect
     mergeSlashes: true
@@ -153,10 +128,6 @@ http:
         weight: 1
     hostname: '*'
     isHTTP2: false
-    metadata:
-      kind: HTTPRoute
-      name: httproute-1
-      namespace: default
     name: httproute/default/httproute-1/rule/0/match/0/*
     pathMatch:
       distinct: false
@@ -175,11 +146,6 @@ tcp:
   address: 0.0.0.0
   port: 10090
   externalPort: 90
-  metadata:
-    kind: Gateway
-    name: gateway-1
-    namespace: envoy-gateway
-    sectionName: tls
   routes:
   - destination:
       metadata:
@@ -205,10 +171,6 @@ tcp:
         snis:
         - foo.com
   - destination:
-      metadata:
-        kind: TLSRoute
-        name: tlsroute-2
-        namespace: default
       name: tlsroute/default/tlsroute-2/rule/-1
       settings:
       - addressType: IP
@@ -231,11 +193,6 @@ tcp:
   address: 0.0.0.0
   port: 10091
   externalPort: 91
-  metadata:
-    kind: Gateway
-    name: gateway-1
-    namespace: envoy-gateway
-    sectionName: tcp
   routes:
   - destination:
       metadata:
@@ -261,11 +218,6 @@ udp:
   address: 0.0.0.0
   port: 10090
   externalPort: 90
-  metadata:
-    kind: Gateway
-    name: gateway-1
-    namespace: envoy-gateway
-    sectionName: udp
   route:
     destination:
       metadata:

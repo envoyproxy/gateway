@@ -5,11 +5,6 @@ http:
   externalPort: 80
   hostnames:
   - "foo.com"
-  metadata:
-    kind: Gateway
-    name: gateway-1
-    namespace: envoy-gateway
-    sectionName: http1
   connection: {}
   path:
     mergeSlashes: true
@@ -30,11 +25,6 @@ http:
   externalPort: 81
   hostnames:
   - "foo.net"
-  metadata:
-    kind: Gateway
-    name: gateway-1
-    namespace: envoy-gateway
-    sectionName: http2
   connection:
     limit:
       value: 5

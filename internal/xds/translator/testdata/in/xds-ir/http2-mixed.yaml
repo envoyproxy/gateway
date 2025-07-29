@@ -5,11 +5,6 @@ http:
   externalPort: 80
   hostnames:
   - "foo.com"
-  metadata:
-    kind: Gateway
-    name: gateway-1
-    namespace: envoy-gateway
-    sectionName: http
   path:
     mergeSlashes: true
     escapedSlashesAction: UnescapeAndRedirect

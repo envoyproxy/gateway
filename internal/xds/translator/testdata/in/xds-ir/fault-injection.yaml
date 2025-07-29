@@ -8,11 +8,6 @@ http:
     escapedSlashesAction: UnescapeAndRedirect
   hostnames:
   - "*"
-  metadata:
-    kind: Gateway
-    name: gateway-1
-    namespace: envoy-gateway
-    sectionName: http
   routes:
   - name: "first-route"
     hostname: "*"

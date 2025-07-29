@@ -3,14 +3,6 @@
   virtualHosts:
   - domains:
     - foo.net
-    metadata:
-      filterMetadata:
-        envoy-gateway:
-          resources:
-          - kind: Gateway
-            name: gateway-1
-            namespace: envoy-gateway
-            sectionName: http-ipv6
     name: foo_net
     routes:
     - match:
@@ -22,14 +14,6 @@
         - upgradeType: websocket
   - domains:
     - bar.net
-    metadata:
-      filterMetadata:
-        envoy-gateway:
-          resources:
-          - kind: Gateway
-            name: gateway-1
-            namespace: envoy-gateway
-            sectionName: http-ipv6
     name: bar_net
     routes:
     - match:
@@ -44,14 +28,6 @@
   virtualHosts:
   - domains:
     - foo.com
-    metadata:
-      filterMetadata:
-        envoy-gateway:
-          resources:
-          - kind: Gateway
-            name: gateway-1
-            namespace: envoy-gateway
-            sectionName: http1
     name: foo_com
     routes:
     - match:
@@ -66,14 +42,6 @@
   virtualHosts:
   - domains:
     - bar.com
-    metadata:
-      filterMetadata:
-        envoy-gateway:
-          resources:
-          - kind: Gateway
-            name: gateway-1
-            namespace: envoy-gateway
-            sectionName: http2
     name: bar_com
     routes:
     - match:
@@ -88,25 +56,10 @@
   virtualHosts:
   - domains:
     - '*'
-    metadata:
-      filterMetadata:
-        envoy-gateway:
-          resources:
-          - kind: Gateway
-            name: gateway-2
-            namespace: envoy-gateway
-            sectionName: https-http3
     name: '*'
     routes:
     - match:
         prefix: /
-      metadata:
-        filterMetadata:
-          envoy-gateway:
-            resources:
-            - kind: HTTPRoute
-              name: httproute-1
-              namespace: default
       name: httproute/default/httproute-1/rule/0/match/0/*
       responseHeadersToAdd:
       - append: true

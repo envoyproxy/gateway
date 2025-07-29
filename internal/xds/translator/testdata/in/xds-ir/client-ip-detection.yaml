@@ -4,11 +4,6 @@ http:
   port: 8081
   hostnames:
   - "*"
-  metadata:
-    kind: Gateway
-    name: gateway-1
-    namespace: envoy-gateway
-    sectionName: http1
   routes:
   - name: "first-route"
     hostname: "*"
@@ -27,11 +22,6 @@ http:
   port: 8082
   hostnames:
   - "*"
-  metadata:
-    kind: Gateway
-    name: gateway-1
-    namespace: envoy-gateway
-    sectionName: http2
   routes:
   - name: "second-route"
     hostname: "*"
@@ -51,11 +41,6 @@ http:
   port: 8083
   hostnames:
   - "*"
-  metadata:
-    kind: Gateway
-    name: gateway-1
-    namespace: envoy-gateway
-    sectionName: http3
   routes:
   - name: "third-route"
     hostname: "*"
@@ -75,11 +60,6 @@ http:
   port: 8084
   hostnames:
   - "*"
-  metadata:
-    kind: Gateway
-    name: gateway-1
-    namespace: envoy-gateway
-    sectionName: http4
   routes:
   - name: "fourth-route"
     hostname: "*"

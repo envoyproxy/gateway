@@ -8,11 +8,6 @@ http:
   externalPort: 80
   hostnames:
   - "foo.com"
-  metadata:
-    kind: Gateway
-    name: gateway-1
-    namespace: envoy-gateway
-    sectionName: http
   tls:
     ciphers:
     - ECDHE-ECDSA-AES128-GCM-SHA256

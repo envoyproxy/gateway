@@ -3,11 +3,6 @@ http:
     hostnames:
       - '*'
     isHTTP2: false
-    metadata:
-      kind: Gateway
-      name: gateway-1
-      namespace: envoy-gateway
-      sectionName: http1
     name: envoy-gateway/gateway-btls/http
     path:
       escapedSlashesAction: UnescapeAndRedirect
@@ -65,11 +60,6 @@ http:
     hostnames:
       - 'example.com'
     isHTTP2: false
-    metadata:
-      kind: Gateway
-      name: gateway-1
-      namespace: envoy-gateway
-      sectionName: http2
     name: envoy-gateway/gateway-btls-2/http
     path:
       escapedSlashesAction: UnescapeAndRedirect

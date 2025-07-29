@@ -3,14 +3,6 @@
   virtualHosts:
   - domains:
     - gateway.envoyproxy.io
-    metadata:
-      filterMetadata:
-        envoy-gateway:
-          resources:
-          - kind: Gateway
-            name: gateway-1
-            namespace: envoy-gateway
-            sectionName: http
     name: first-listener/gateway_envoyproxy_io
     routes:
     - match:
