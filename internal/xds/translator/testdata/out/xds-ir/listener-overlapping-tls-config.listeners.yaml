@@ -128,11 +128,11 @@
           configSource:
             ads: {}
             resourceApiVersion: V3
-          routeConfigName: envoy-gateway/gateway-1/https-3
+          routeConfigName: envoy-gateway/gateway-1/https-1
         serverHeaderTransformation: PASS_THROUGH
         statPrefix: https-8443
         useRemoteAddress: true
-    name: envoy-gateway/gateway-1/https-3
+    name: envoy-gateway/gateway-1/https-1
     transportSocket:
       name: envoy.transport_sockets.tls
       typedConfig:
@@ -152,5 +152,5 @@
     typedConfig:
       '@type': type.googleapis.com/envoy.extensions.filters.listener.tls_inspector.v3.TlsInspector
   maxConnectionsToAcceptPerSocketEvent: 1
-  name: envoy-gateway/gateway-1/https-3
+  name: envoy-gateway/gateway-1/https-1
   perConnectionBufferLimitBytes: 32768
