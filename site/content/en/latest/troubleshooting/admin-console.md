@@ -36,6 +36,8 @@ http://localhost:19000
 
 ### Method 2: Using egctl dashboard command
 
+You can install egctl by following the [installation guide](../install/install-egctl).
+
 ```shell
 egctl x dashboard eg
 ```
