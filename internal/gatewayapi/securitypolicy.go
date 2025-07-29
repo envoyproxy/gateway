@@ -59,9 +59,12 @@ func getRouteProtocol(route RouteContext) ir.AppProtocol {
 	// Use the existing GetRouteType function to determine protocol
 	routeType := GetRouteType(route)
 	if routeType == resource.KindTCPRoute {
+		// Add debug logging here
+		fmt.Printf("DEBUG: Route %s/%s detected as TCP\n", route.GetNamespace(), route.GetName())
 		return ir.TCP
 	}
 
+	fmt.Printf("DEBUG: Route %s/%s detected as HTTP (type: %s)\n", route.GetNamespace(), route.GetName(), routeType)
 	return ir.HTTP
 }
 
@@ -860,12 +863,16 @@ func (t *Translator) translateSecurityPolicyForRoute(
 
 		// Handle TCP routes differently from HTTP routes
 		if getRouteProtocol(route) == ir.TCP {
+			fmt.Printf("DEBUG: Processing TCP route security policy for route %s/%s\n", route.GetNamespace(), route.GetName())
+			// For TCP routes, apply to TCP listeners
 			// For TCP routes, apply to TCP listeners
 			for _, listener := range parentRefCtx.listeners {
 				irListener := xdsIR[irKey].GetTCPListener(irListenerName(listener))
 				if irListener != nil {
+					fmt.Printf("DEBUG: Found TCP listener %s, applying authorization\n", irListener.Name)
 					for _, r := range irListener.Routes {
 						if strings.HasPrefix(r.Name, prefix) && r.Security == nil {
+							fmt.Printf("DEBUG: Setting authorization on TCP route %s\n", r.Name)
 							r.Security = &ir.SecurityFeatures{
 								Authorization: authorization,
 							}
@@ -880,6 +887,7 @@ func (t *Translator) translateSecurityPolicyForRoute(
 			}
 		} else {
 			// Existing HTTP route logic
+			fmt.Printf("DEBUG: Processing HTTP route security policy for route %s/%s\n", route.GetNamespace(), route.GetName())
 			for _, listener := range parentRefCtx.listeners {
 				irListener := xdsIR[irKey].GetHTTPListener(irListenerName(listener))
 				if irListener != nil {
