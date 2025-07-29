@@ -32,7 +32,7 @@ type LoadBalancer struct {
 	// EndpointOverride defines the configuration for endpoint override.
 	// When specified, the load balancer will attempt to route requests to endpoints
 	// based on the override information extracted from request headers or metadata.
-	// If no valid override endpoint is found, the configured load balancer policy will be used as fallback.
+	//  If the override endpoints are not available, the configured load balancer policy will be used as fallback.
 	//
 	// +optional
 	EndpointOverride *EndpointOverride `json:"endpointOverride,omitempty"`

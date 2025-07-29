@@ -750,7 +750,7 @@ spec:
                                 EndpointOverride defines the configuration for endpoint override.
                                 When specified, the load balancer will attempt to route requests to endpoints
                                 based on the override information extracted from request headers or metadata.
-                                If no valid override endpoint is found, the configured load balancer policy will be used as fallback.
+                                 If the override endpoints are not available, the configured load balancer policy will be used as fallback.
                               properties:
                                 extractFrom:
                                   description: ExtractFrom defines the sources to
@@ -847,7 +847,7 @@ spec:
                               !has(self.slowStart) : true '
                           - message: Currently ZoneAware is only supported for LeastRequest,
                               Random, and RoundRobin load balancers.
-                            rule: 'self.type in [''ConsistentHash''] ? !has(self.zoneAware)
+                            rule: 'self.type == ''ConsistentHash'' ? !has(self.zoneAware)
                               : true '
                         proxyProtocol:
                           description: ProxyProtocol enables the Proxy Protocol when

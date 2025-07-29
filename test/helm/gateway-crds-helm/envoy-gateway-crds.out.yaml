@@ -1004,7 +1004,7 @@ spec:
                       EndpointOverride defines the configuration for endpoint override.
                       When specified, the load balancer will attempt to route requests to endpoints
                       based on the override information extracted from request headers or metadata.
-                      If no valid override endpoint is found, the configured load balancer policy will be used as fallback.
+                       If the override endpoints are not available, the configured load balancer policy will be used as fallback.
                     properties:
                       extractFrom:
                         description: ExtractFrom defines the sources to extract endpoint
@@ -1099,8 +1099,8 @@ spec:
                     : true '
                 - message: Currently ZoneAware is only supported for LeastRequest,
                     Random, and RoundRobin load balancers.
-                  rule: 'self.type in [''ConsistentHash''] ? !has(self.zoneAware)
-                    : true '
+                  rule: 'self.type == ''ConsistentHash'' ? !has(self.zoneAware) :
+                    true '
               mergeType:
                 description: |-
                   MergeType determines how this configuration is merged with existing BackendTrafficPolicy
@@ -4879,7 +4879,7 @@ spec:
                                 EndpointOverride defines the configuration for endpoint override.
                                 When specified, the load balancer will attempt to route requests to endpoints
                                 based on the override information extracted from request headers or metadata.
-                                If no valid override endpoint is found, the configured load balancer policy will be used as fallback.
+                                 If the override endpoints are not available, the configured load balancer policy will be used as fallback.
                               properties:
                                 extractFrom:
                                   description: ExtractFrom defines the sources to
@@ -4976,7 +4976,7 @@ spec:
                               !has(self.slowStart) : true '
                           - message: Currently ZoneAware is only supported for LeastRequest,
                               Random, and RoundRobin load balancers.
-                            rule: 'self.type in [''ConsistentHash''] ? !has(self.zoneAware)
+                            rule: 'self.type == ''ConsistentHash'' ? !has(self.zoneAware)
                               : true '
                         proxyProtocol:
                           description: ProxyProtocol enables the Proxy Protocol when
@@ -17958,7 +17958,7 @@ spec:
                                                   EndpointOverride defines the configuration for endpoint override.
                                                   When specified, the load balancer will attempt to route requests to endpoints
                                                   based on the override information extracted from request headers or metadata.
-                                                  If no valid override endpoint is found, the configured load balancer policy will be used as fallback.
+                                                   If the override endpoints are not available, the configured load balancer policy will be used as fallback.
                                                 properties:
                                                   extractFrom:
                                                     description: ExtractFrom defines
@@ -18063,7 +18063,7 @@ spec:
                                             - message: Currently ZoneAware is only
                                                 supported for LeastRequest, Random,
                                                 and RoundRobin load balancers.
-                                              rule: 'self.type in [''ConsistentHash'']
+                                              rule: 'self.type == ''ConsistentHash''
                                                 ? !has(self.zoneAware) : true '
                                           proxyProtocol:
                                             description: ProxyProtocol enables the
@@ -19069,7 +19069,7 @@ spec:
                                                   EndpointOverride defines the configuration for endpoint override.
                                                   When specified, the load balancer will attempt to route requests to endpoints
                                                   based on the override information extracted from request headers or metadata.
-                                                  If no valid override endpoint is found, the configured load balancer policy will be used as fallback.
+                                                   If the override endpoints are not available, the configured load balancer policy will be used as fallback.
                                                 properties:
                                                   extractFrom:
                                                     description: ExtractFrom defines
@@ -19174,7 +19174,7 @@ spec:
                                             - message: Currently ZoneAware is only
                                                 supported for LeastRequest, Random,
                                                 and RoundRobin load balancers.
-                                              rule: 'self.type in [''ConsistentHash'']
+                                              rule: 'self.type == ''ConsistentHash''
                                                 ? !has(self.zoneAware) : true '
                                           proxyProtocol:
                                             description: ProxyProtocol enables the
@@ -20265,7 +20265,7 @@ spec:
                                             EndpointOverride defines the configuration for endpoint override.
                                             When specified, the load balancer will attempt to route requests to endpoints
                                             based on the override information extracted from request headers or metadata.
-                                            If no valid override endpoint is found, the configured load balancer policy will be used as fallback.
+                                             If the override endpoints are not available, the configured load balancer policy will be used as fallback.
                                           properties:
                                             extractFrom:
                                               description: ExtractFrom defines the
@@ -20367,8 +20367,8 @@ spec:
                                       - message: Currently ZoneAware is only supported
                                           for LeastRequest, Random, and RoundRobin
                                           load balancers.
-                                        rule: 'self.type in [''ConsistentHash''] ?
-                                          !has(self.zoneAware) : true '
+                                        rule: 'self.type == ''ConsistentHash'' ? !has(self.zoneAware)
+                                          : true '
                                     proxyProtocol:
                                       description: ProxyProtocol enables the Proxy
                                         Protocol when communicating with the backend.
@@ -21378,7 +21378,7 @@ spec:
                                       EndpointOverride defines the configuration for endpoint override.
                                       When specified, the load balancer will attempt to route requests to endpoints
                                       based on the override information extracted from request headers or metadata.
-                                      If no valid override endpoint is found, the configured load balancer policy will be used as fallback.
+                                       If the override endpoints are not available, the configured load balancer policy will be used as fallback.
                                     properties:
                                       extractFrom:
                                         description: ExtractFrom defines the sources
@@ -21478,7 +21478,7 @@ spec:
                                     ? !has(self.slowStart) : true '
                                 - message: Currently ZoneAware is only supported for
                                     LeastRequest, Random, and RoundRobin load balancers.
-                                  rule: 'self.type in [''ConsistentHash''] ? !has(self.zoneAware)
+                                  rule: 'self.type == ''ConsistentHash'' ? !has(self.zoneAware)
                                     : true '
                               proxyProtocol:
                                 description: ProxyProtocol enables the Proxy Protocol
@@ -23325,7 +23325,7 @@ spec:
                                   EndpointOverride defines the configuration for endpoint override.
                                   When specified, the load balancer will attempt to route requests to endpoints
                                   based on the override information extracted from request headers or metadata.
-                                  If no valid override endpoint is found, the configured load balancer policy will be used as fallback.
+                                   If the override endpoints are not available, the configured load balancer policy will be used as fallback.
                                 properties:
                                   extractFrom:
                                     description: ExtractFrom defines the sources to
@@ -23424,7 +23424,7 @@ spec:
                                 ? !has(self.slowStart) : true '
                             - message: Currently ZoneAware is only supported for LeastRequest,
                                 Random, and RoundRobin load balancers.
-                              rule: 'self.type in [''ConsistentHash''] ? !has(self.zoneAware)
+                              rule: 'self.type == ''ConsistentHash'' ? !has(self.zoneAware)
                                 : true '
                           proxyProtocol:
                             description: ProxyProtocol enables the Proxy Protocol
@@ -24332,7 +24332,7 @@ spec:
                                   EndpointOverride defines the configuration for endpoint override.
                                   When specified, the load balancer will attempt to route requests to endpoints
                                   based on the override information extracted from request headers or metadata.
-                                  If no valid override endpoint is found, the configured load balancer policy will be used as fallback.
+                                   If the override endpoints are not available, the configured load balancer policy will be used as fallback.
                                 properties:
                                   extractFrom:
                                     description: ExtractFrom defines the sources to
@@ -24431,7 +24431,7 @@ spec:
                                 ? !has(self.slowStart) : true '
                             - message: Currently ZoneAware is only supported for LeastRequest,
                                 Random, and RoundRobin load balancers.
-                              rule: 'self.type in [''ConsistentHash''] ? !has(self.zoneAware)
+                              rule: 'self.type == ''ConsistentHash'' ? !has(self.zoneAware)
                                 : true '
                           proxyProtocol:
                             description: ProxyProtocol enables the Proxy Protocol
@@ -25545,7 +25545,7 @@ spec:
                                         EndpointOverride defines the configuration for endpoint override.
                                         When specified, the load balancer will attempt to route requests to endpoints
                                         based on the override information extracted from request headers or metadata.
-                                        If no valid override endpoint is found, the configured load balancer policy will be used as fallback.
+                                         If the override endpoints are not available, the configured load balancer policy will be used as fallback.
                                       properties:
                                         extractFrom:
                                           description: ExtractFrom defines the sources
@@ -25646,7 +25646,7 @@ spec:
                                   - message: Currently ZoneAware is only supported
                                       for LeastRequest, Random, and RoundRobin load
                                       balancers.
-                                    rule: 'self.type in [''ConsistentHash''] ? !has(self.zoneAware)
+                                    rule: 'self.type == ''ConsistentHash'' ? !has(self.zoneAware)
                                       : true '
                                 proxyProtocol:
                                   description: ProxyProtocol enables the Proxy Protocol
@@ -26794,7 +26794,7 @@ spec:
                                   EndpointOverride defines the configuration for endpoint override.
                                   When specified, the load balancer will attempt to route requests to endpoints
                                   based on the override information extracted from request headers or metadata.
-                                  If no valid override endpoint is found, the configured load balancer policy will be used as fallback.
+                                   If the override endpoints are not available, the configured load balancer policy will be used as fallback.
                                 properties:
                                   extractFrom:
                                     description: ExtractFrom defines the sources to
@@ -26893,7 +26893,7 @@ spec:
                                 ? !has(self.slowStart) : true '
                             - message: Currently ZoneAware is only supported for LeastRequest,
                                 Random, and RoundRobin load balancers.
-                              rule: 'self.type in [''ConsistentHash''] ? !has(self.zoneAware)
+                              rule: 'self.type == ''ConsistentHash'' ? !has(self.zoneAware)
                                 : true '
                           proxyProtocol:
                             description: ProxyProtocol enables the Proxy Protocol
