@@ -56,15 +56,10 @@ func getRouteProtocol(route RouteContext) ir.AppProtocol {
 		return ir.HTTP
 	}
 
-	// Use the existing GetRouteType function to determine protocol
-	routeType := GetRouteType(route)
-	if routeType == resource.KindTCPRoute {
-		// Add debug logging here
-		fmt.Printf("DEBUG: Route %s/%s detected as TCP\n", route.GetNamespace(), route.GetName())
+	if GetRouteType(route) == resource.KindTCPRoute {
 		return ir.TCP
 	}
 
-	fmt.Printf("DEBUG: Route %s/%s detected as HTTP (type: %s)\n", route.GetNamespace(), route.GetName(), routeType)
 	return ir.HTTP
 }
 
@@ -815,7 +810,6 @@ func (t *Translator) translateSecurityPolicyForRoute(
 
 	// Apply IR to all relevant routes
 	prefix := irRoutePrefix(route)
-	fmt.Printf("DEBUG: Route prefix from irRoutePrefix: '%s'\n", prefix)
 	parentRefs := GetParentReferences(route)
 	for _, p := range parentRefs {
 		parentRefCtx := GetRouteParentContext(route, p)
