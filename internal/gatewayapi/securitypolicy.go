@@ -148,7 +148,6 @@ func (t *Translator) ProcessSecurityPolicies(securityPolicies []*egv1a1.Security
 				// Handle route based on its type
 				switch currTarget.Kind {
 				case resource.KindTCPRoute:
-					fmt.Printf("DEBUG: Processing TCP route policy for %s/%s\n", policy.Namespace, currTarget.Name)
 					var (
 						targetedRoute  RouteContext
 						parentGateways []gwapiv1a2.ParentReference
@@ -211,7 +210,6 @@ func (t *Translator) ProcessSecurityPolicies(securityPolicies []*egv1a1.Security
 					status.SetAcceptedForPolicyAncestors(&policy.Status, parentGateways, t.GatewayControllerName, policy.Generation)
 
 				default: // HTTP routes
-					fmt.Printf("DEBUG: Processing HTTP route policy for %s/%s (kind: %s)\n", policy.Namespace, currTarget.Name, currTarget.Kind)
 					t.processSecurityPolicyForHTTPRoute(resources, xdsIR,
 						routeMap, gatewayRouteMap, policy, currTarget)
 				}
@@ -272,8 +270,6 @@ func (t *Translator) processSecurityPolicyForHTTPRoute(
 	policy *egv1a1.SecurityPolicy,
 	currTarget gwapiv1a2.LocalPolicyTargetReferenceWithSectionName,
 ) {
-	fmt.Printf("DEBUG: Inside processSecurityPolicyForHTTPRoute for policy %s/%s targeting %s\n",
-		policy.Namespace, policy.Name, currTarget.Name)
 	var (
 		targetedRoute  RouteContext
 		parentGateways []gwapiv1a2.ParentReference
@@ -281,7 +277,6 @@ func (t *Translator) processSecurityPolicyForHTTPRoute(
 	)
 
 	targetedRoute, resolveErr = resolveSecurityPolicyRouteTargetRef(policy, currTarget, routeMap)
-	fmt.Printf("DEBUG: Route resolution result: route=%v, err=%v\n", targetedRoute != nil, resolveErr)
 	// Skip if the route is not found
 	// It's not necessarily an error because the SecurityPolicy may be
 	// reconciled by multiple controllers. And the other controller may
@@ -881,24 +876,18 @@ func (t *Translator) translateSecurityPolicyForRoute(
 				}
 			}
 		} else {
-			fmt.Printf("DEBUG: Processing HTTP route security policy for route %s/%s\n", route.GetNamespace(), route.GetName())
-			fmt.Printf("DEBUG: Route prefix: %s\n", prefix)
 			for _, listener := range parentRefCtx.listeners {
 				irListener := xdsIR[irKey].GetHTTPListener(irListenerName(listener))
 				if irListener != nil {
-					fmt.Printf("DEBUG: Found HTTP listener %s with %d routes\n", irListener.Name, len(irListener.Routes))
-					for i, r := range irListener.Routes {
+					for _, r := range irListener.Routes {
 						// If policy target has a sectionName, check if equal from ir metadata.
 						// If not, apply all routes with the same prefix.
 						sectionMatch := true
 						if target.SectionName != nil {
 							sectionMatch = (string(*target.SectionName) == r.Metadata.SectionName)
 						}
-						fmt.Printf("DEBUG: HTTP route %d: name=%s, hasPrefix=%v, sectionMatch=%v, security=%v\n",
-							i, r.Name, strings.HasPrefix(r.Name, prefix), sectionMatch, r.Security != nil)
 
 						if strings.HasPrefix(r.Name, prefix) && sectionMatch && r.Security == nil {
-							fmt.Printf("DEBUG: Setting security on HTTP route %s\n", r.Name)
 							r.Security = &ir.SecurityFeatures{
 								CORS:          cors,
 								JWT:           jwt,
@@ -920,13 +909,8 @@ func (t *Translator) translateSecurityPolicyForRoute(
 									}
 								}
 							}
-						} else {
-							fmt.Printf("DEBUG: Skipping HTTP route %s (hasPrefix=%v, sectionMatch=%v, hasSecurity=%v)\n",
-								r.Name, strings.HasPrefix(r.Name, prefix), sectionMatch, r.Security != nil)
 						}
 					}
-				} else {
-					fmt.Printf("DEBUG: No HTTP listener found for %s\n", irListenerName(listener))
 				}
 			}
 		}
