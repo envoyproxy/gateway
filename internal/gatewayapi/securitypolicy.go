@@ -863,37 +863,25 @@ func (t *Translator) translateSecurityPolicyForRoute(
 		irKey := t.getIRKey(gtwCtx.Gateway)
 
 		// Handle TCP routes differently from HTTP routes
-		// Handle TCP routes differently from HTTP routes
+
 		if getRouteProtocol(route) == ir.TCP {
-			fmt.Printf("DEBUG: Processing TCP route security policy for route %s/%s\n", route.GetNamespace(), route.GetName())
 			// For TCP routes, apply to TCP listeners
 			for _, listener := range parentRefCtx.listeners {
 				irListener := xdsIR[irKey].GetTCPListener(irListenerName(listener))
 				if irListener != nil {
-					fmt.Printf("DEBUG: Found TCP listener %s, applying authorization\n", irListener.Name)
-					fmt.Printf("DEBUG: TCP listener has %d routes\n", len(irListener.Routes))
-
 					// For TCP routes, we need exact route name matching (not prefix)
 					expectedRouteName := strings.TrimSuffix(prefix, "/")
 
-					for i, r := range irListener.Routes {
-						fmt.Printf("DEBUG: TCP route %d: name=%s, expected=%s, matches=%v, security=%v\n",
-							i, r.Name, expectedRouteName, r.Name == expectedRouteName, r.Security != nil)
-
+					for _, r := range irListener.Routes {
 						if r.Name == expectedRouteName && r.Security == nil {
-							fmt.Printf("DEBUG: Setting authorization on TCP route %s\n", r.Name)
 							r.Security = &ir.SecurityFeatures{
 								Authorization: authorization,
 							}
 						}
 					}
-				} else {
-					fmt.Printf("DEBUG: No TCP listener found for %s\n", irListenerName(listener))
 				}
 			}
 		} else {
-			// Existing HTTP route logic
-			fmt.Printf("DEBUG: Processing HTTP route security policy for route %s/%s\n", route.GetNamespace(), route.GetName())
 			for _, listener := range parentRefCtx.listeners {
 				irListener := xdsIR[irKey].GetHTTPListener(irListenerName(listener))
 				if irListener != nil {
