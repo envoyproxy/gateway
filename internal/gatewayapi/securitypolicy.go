@@ -863,37 +863,28 @@ func (t *Translator) translateSecurityPolicyForRoute(
 		irKey := t.getIRKey(gtwCtx.Gateway)
 
 		// Handle TCP routes differently from HTTP routes
+		// Handle TCP routes differently from HTTP routes
 		if getRouteProtocol(route) == ir.TCP {
 			fmt.Printf("DEBUG: Processing TCP route security policy for route %s/%s\n", route.GetNamespace(), route.GetName())
-			fmt.Printf("DEBUG: Expected prefix: %s\n", prefix)
 			// For TCP routes, apply to TCP listeners
 			for _, listener := range parentRefCtx.listeners {
 				irListener := xdsIR[irKey].GetTCPListener(irListenerName(listener))
 				if irListener != nil {
 					fmt.Printf("DEBUG: Found TCP listener %s, applying authorization\n", irListener.Name)
 					fmt.Printf("DEBUG: TCP listener has %d routes\n", len(irListener.Routes))
+
+					// For TCP routes, we need exact route name matching (not prefix)
+					expectedRouteName := strings.TrimSuffix(prefix, "/")
+
 					for i, r := range irListener.Routes {
-						fmt.Printf("DEBUG: TCP route %d: name=%s, prefix=%s, hasPrefix=%v, security=%v\n",
-							i, r.Name, prefix, strings.HasPrefix(r.Name, prefix), r.Security != nil)
+						fmt.Printf("DEBUG: TCP route %d: name=%s, expected=%s, matches=%v, security=%v\n",
+							i, r.Name, expectedRouteName, r.Name == expectedRouteName, r.Security != nil)
 
-						// For TCP routes, use exact name matching instead of prefix matching
-						routeMatches := false
-						if strings.HasSuffix(prefix, "/") {
-							// Remove trailing slash for exact matching
-							exactName := strings.TrimSuffix(prefix, "/")
-							routeMatches = r.Name == exactName
-						} else {
-							routeMatches = r.Name == prefix
-						}
-
-						if routeMatches && r.Security == nil {
+						if r.Name == expectedRouteName && r.Security == nil {
 							fmt.Printf("DEBUG: Setting authorization on TCP route %s\n", r.Name)
 							r.Security = &ir.SecurityFeatures{
 								Authorization: authorization,
 							}
-						} else {
-							fmt.Printf("DEBUG: Skipping TCP route %s (matches=%v, hasSecurity=%v)\n",
-								r.Name, routeMatches, r.Security != nil)
 						}
 					}
 				} else {
