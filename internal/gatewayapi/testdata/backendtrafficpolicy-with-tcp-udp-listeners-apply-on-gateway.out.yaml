@@ -237,8 +237,8 @@ xdsIR:
       json:
       - path: /dev/stdout
     globalResources:
-      proxyServiceClusters:
-      - name: default/tcp-gateway
+      proxyServiceCluster:
+        name: default/tcp-gateway
         settings:
         - addressType: IP
           endpoints:

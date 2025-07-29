@@ -27,6 +27,5 @@
             address: 7.6.5.4
             portValue: 8080
       loadBalancingWeight: 1
-    loadBalancingWeight: 1
     locality:
-      region: envoy-envoy-gateway-gateway-1-196ae069
+      zone: zone1

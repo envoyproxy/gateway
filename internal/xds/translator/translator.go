@@ -855,25 +855,23 @@ func processServiceCluster(tCtx *types.ResourceVersionTable, xdsIR *ir.Xds) erro
 		return nil
 	}
 
-	var errs error
-	for _, svcCluster := range xdsIR.GlobalResources.ProxyServiceClusters {
-		if svcCluster != nil {
-			if err := addXdsCluster(tCtx, &xdsClusterArgs{
-				name:         svcCluster.Name,
-				settings:     svcCluster.Settings,
-				endpointType: EndpointTypeStatic,
-				loadBalancer: &ir.LoadBalancer{
-					LeastRequest: &ir.LeastRequest{},
-					PreferLocal: &ir.PreferLocalZone{
-						MinEndpointsThreshold: ptr.To[uint64](1),
-					},
+	svcCluster := xdsIR.GlobalResources.ProxyServiceCluster
+	if svcCluster != nil {
+		if err := addXdsCluster(tCtx, &xdsClusterArgs{
+			name:         svcCluster.Name,
+			settings:     svcCluster.Settings,
+			endpointType: EndpointTypeStatic,
+			loadBalancer: &ir.LoadBalancer{
+				LeastRequest: &ir.LeastRequest{},
+				PreferLocal: &ir.PreferLocalZone{
+					MinEndpointsThreshold: ptr.To[uint64](1),
 				},
-			}); err != nil {
-				errs = errors.Join(errs, err)
-			}
+			},
+		}); err != nil {
+			return err
 		}
 	}
-	return errs
+	return nil
 }
 
 // findXdsListenerByHostPort finds a xds listener with the same address, port and protocol, and returns nil if there is no match.
@@ -1017,7 +1015,8 @@ func addXdsCluster(tCtx *types.ResourceVersionTable, args *xdsClusterArgs) error
 		return err
 	}
 	xdsCluster := result.cluster
-	xdsEndpoints := buildXdsClusterLoadAssignment(args.name, args.settings)
+	preferLocal := ptr.Deref(args.loadBalancer, ir.LoadBalancer{}).PreferLocal
+	xdsEndpoints := buildXdsClusterLoadAssignment(args.name, args.settings, preferLocal)
 	for _, ds := range args.settings {
 		if ds.TLS != nil {
 			// Create an SDS secret for the CA certificate - either with inline bytes or with a filesystem ref

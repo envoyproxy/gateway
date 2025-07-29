@@ -116,12 +116,14 @@ xdsIR:
       json:
       - path: /dev/stdout
     globalResources:
-      proxyServiceClusters:
-      - name: envoy-gateway/gateway-1
+      proxyServiceCluster:
+        name: envoy-gateway/gateway-1
         settings:
-        - endpoints:
-          - host: 6.7.8.9
+        - addressType: IP
+          endpoints:
+          - host: 7.6.5.4
             port: 8080
+            zone: zone1
           metadata:
             name: envoy-envoy-gateway-gateway-1-196ae069
             namespace: envoy-gateway-system

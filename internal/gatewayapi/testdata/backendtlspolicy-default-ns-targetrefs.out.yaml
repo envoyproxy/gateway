@@ -274,22 +274,14 @@ xdsIR:
       json:
       - path: /dev/stdout
     globalResources:
-      proxyServiceClusters:
-      - name: envoy-gateway/gateway-btls
+      proxyServiceCluster:
+        name: envoy-gateway/gateway-btls
         settings:
         - metadata:
             name: envoy-envoy-gateway-gateway-btls2-41698b8b
             namespace: envoy-gateway-system
             sectionName: "8080"
           name: envoy-gateway/gateway-btls
-          protocol: TCP
-      - name: envoy-gateway/gateway-btls2
-        settings:
-        - metadata:
-            name: envoy-envoy-gateway-gateway-btls2-41698b8b
-            namespace: envoy-gateway-system
-            sectionName: "8080"
-          name: envoy-gateway/gateway-btls2
           protocol: TCP
     http:
     - address: 0.0.0.0
@@ -369,24 +361,6 @@ xdsIR:
     accessLog:
       json:
       - path: /dev/stdout
-    globalResources:
-      proxyServiceClusters:
-      - name: envoy-gateway/gateway-btls
-        settings:
-        - metadata:
-            name: envoy-envoy-gateway-gateway-btls2-41698b8b
-            namespace: envoy-gateway-system
-            sectionName: "8080"
-          name: envoy-gateway/gateway-btls
-          protocol: TCP
-      - name: envoy-gateway/gateway-btls2
-        settings:
-        - metadata:
-            name: envoy-envoy-gateway-gateway-btls2-41698b8b
-            namespace: envoy-gateway-system
-            sectionName: "8080"
-          name: envoy-gateway/gateway-btls2
-          protocol: TCP
     http:
     - address: 0.0.0.0
       hostnames:

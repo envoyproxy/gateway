@@ -139,12 +139,16 @@ func (r *Resources) GetServiceByLabels(labels map[string]string, namespace strin
 		if (namespace != "" && svc.Namespace != namespace) || svc.Labels == nil {
 			continue
 		}
+		match := true
 		for k, v := range labels {
 			if svc.Labels[k] != v {
-				continue
+				match = false
+				break
 			}
 		}
-		return svc
+		if match {
+			return svc
+		}
 	}
 	return nil
 }

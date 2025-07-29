@@ -1,6 +1,6 @@
 globalResources:
-  proxyServiceClusters:
-  - name: envoy-gateway-gateway-1-196ae069
+  proxyServiceCluster:
+    name: envoy-gateway-gateway-1-196ae069
     settings:
     - addressType: IP
       endpoints:

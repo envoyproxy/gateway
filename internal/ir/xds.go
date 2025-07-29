@@ -2211,7 +2211,7 @@ type GlobalResources struct {
 	// control plane components. For example, the rate limit service, WASM HTTP server, etc.
 	EnvoyClientCertificate *TLSCertificate `json:"envoyClientCertificate,omitempty" yaml:"envoyClientCertificate,omitempty"`
 	// ProxyServiceCluster holds the local cluster of EnvoyProxy instances
-	ProxyServiceClusters []*RouteDestination `json:"proxyServiceClusters,omitempty" yaml:"proxyServiceClusters,omitempty"`
+	ProxyServiceCluster *RouteDestination `json:"proxyServiceCluster,omitempty" yaml:"proxyServiceCluster,omitempty"`
 	// HMACSecret holds the HMAC Secret used by the OIDC.
 	// TODO: zhaohuabing move HMACSecret here
 	// HMACSecret PrivateBytes

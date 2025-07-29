@@ -84,8 +84,8 @@ xdsIR:
             type: Accepted
           controllerName: gateway.envoyproxy.io/gatewayclass-controller
     globalResources:
-      proxyServiceClusters:
-      - name: envoy-gateway/gateway-1
+      proxyServiceCluster:
+        name: envoy-gateway/gateway-1
         settings:
         - addressType: IP
           endpoints:

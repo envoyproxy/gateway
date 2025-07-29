@@ -1397,16 +1397,10 @@ func (in *GlobalResources) DeepCopyInto(out *GlobalResources) {
 		*out = new(TLSCertificate)
 		(*in).DeepCopyInto(*out)
 	}
-	if in.ProxyServiceClusters != nil {
-		in, out := &in.ProxyServiceClusters, &out.ProxyServiceClusters
-		*out = make([]*RouteDestination, len(*in))
-		for i := range *in {
-			if (*in)[i] != nil {
-				in, out := &(*in)[i], &(*out)[i]
-				*out = new(RouteDestination)
-				(*in).DeepCopyInto(*out)
-			}
-		}
+	if in.ProxyServiceCluster != nil {
+		in, out := &in.ProxyServiceCluster, &out.ProxyServiceCluster
+		*out = new(RouteDestination)
+		(*in).DeepCopyInto(*out)
 	}
 }
 

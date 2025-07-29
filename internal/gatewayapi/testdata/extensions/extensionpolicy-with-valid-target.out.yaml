@@ -180,8 +180,8 @@ xdsIR:
             name: gateway-1
             sectionName: http2
     globalResources:
-      proxyServiceClusters:
-      - name: envoy-gateway/gateway-1
+      proxyServiceCluster:
+        name: envoy-gateway/gateway-1
         settings:
         - addressType: IP
           endpoints:

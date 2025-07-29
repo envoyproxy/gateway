@@ -101,8 +101,8 @@ xdsIR:
       json:
       - path: /dev/stdout
     globalResources:
-      proxyServiceClusters:
-      - name: gateway-conformance-infra/gateway-tlsroute-referencegrant
+      proxyServiceCluster:
+        name: gateway-conformance-infra/gateway-tlsroute-referencegrant
         settings:
         - addressType: IP
           endpoints:

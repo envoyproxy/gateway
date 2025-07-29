@@ -144,8 +144,8 @@ xdsIR:
       json:
       - path: /dev/stdout
     globalResources:
-      proxyServiceClusters:
-      - name: envoy-gateway/gateway-btls
+      proxyServiceCluster:
+        name: envoy-gateway/gateway-btls
         settings:
         - addressType: IP
           endpoints:
