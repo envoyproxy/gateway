@@ -229,6 +229,12 @@ const (
 	// EnvoyFilterHealthCheck defines the Envoy HTTP health check filter.
 	EnvoyFilterHealthCheck EnvoyFilter = "envoy.filters.http.health_check"
 
+	// EnvoyFilterGRPCWeb defines the Envoy HTTP gRPC-web filter.
+	EnvoyFilterGRPCWeb EnvoyFilter = "envoy.filters.http.grpc_web"
+
+	// EnvoyFilterGRPCStats defines the Envoy HTTP gRPC stats filter.
+	EnvoyFilterGRPCStats EnvoyFilter = "envoy.filters.http.grpc_stats"
+
 	// EnvoyFilterFault defines the Envoy HTTP fault filter.
 	EnvoyFilterFault EnvoyFilter = "envoy.filters.http.fault"
 
