@@ -864,25 +864,28 @@ func (t *Translator) translateSecurityPolicyForRoute(
 		// Handle TCP routes differently from HTTP routes
 		if getRouteProtocol(route) == ir.TCP {
 			fmt.Printf("DEBUG: Processing TCP route security policy for route %s/%s\n", route.GetNamespace(), route.GetName())
-			// For TCP routes, apply to TCP listeners
+			fmt.Printf("DEBUG: Expected prefix: %s\n", prefix)
 			// For TCP routes, apply to TCP listeners
 			for _, listener := range parentRefCtx.listeners {
 				irListener := xdsIR[irKey].GetTCPListener(irListenerName(listener))
 				if irListener != nil {
 					fmt.Printf("DEBUG: Found TCP listener %s, applying authorization\n", irListener.Name)
-					for _, r := range irListener.Routes {
+					fmt.Printf("DEBUG: TCP listener has %d routes\n", len(irListener.Routes))
+					for i, r := range irListener.Routes {
+						fmt.Printf("DEBUG: TCP route %d: name=%s, prefix=%s, hasPrefix=%v, security=%v\n",
+							i, r.Name, prefix, strings.HasPrefix(r.Name, prefix), r.Security != nil)
 						if strings.HasPrefix(r.Name, prefix) && r.Security == nil {
 							fmt.Printf("DEBUG: Setting authorization on TCP route %s\n", r.Name)
 							r.Security = &ir.SecurityFeatures{
 								Authorization: authorization,
 							}
-							if errs != nil {
-								// For TCP routes, we don't return direct responses like HTTP
-								// The error will be handled at the validation layer
-								continue
-							}
+						} else {
+							fmt.Printf("DEBUG: Skipping TCP route %s (hasPrefix=%v, hasSecurity=%v)\n",
+								r.Name, strings.HasPrefix(r.Name, prefix), r.Security != nil)
 						}
 					}
+				} else {
+					fmt.Printf("DEBUG: No TCP listener found for %s\n", irListenerName(listener))
 				}
 			}
 		} else {
@@ -928,6 +931,7 @@ func (t *Translator) translateSecurityPolicyForRoute(
 	}
 	return errs
 }
+
 func (t *Translator) translateSecurityPolicyForGateway(
 	policy *egv1a1.SecurityPolicy,
 	gateway *GatewayContext,
