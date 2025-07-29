@@ -875,17 +875,24 @@ func (t *Translator) translateSecurityPolicyForRoute(
 				}
 			}
 		} else {
+			fmt.Printf("DEBUG: Processing HTTP route security policy for route %s/%s\n", route.GetNamespace(), route.GetName())
+			fmt.Printf("DEBUG: Route prefix: %s\n", prefix)
 			for _, listener := range parentRefCtx.listeners {
 				irListener := xdsIR[irKey].GetHTTPListener(irListenerName(listener))
 				if irListener != nil {
-					for _, r := range irListener.Routes {
+					fmt.Printf("DEBUG: Found HTTP listener %s with %d routes\n", irListener.Name, len(irListener.Routes))
+					for i, r := range irListener.Routes {
 						// If policy target has a sectionName, check if equal from ir metadata.
 						// If not, apply all routes with the same prefix.
 						sectionMatch := true
 						if target.SectionName != nil {
 							sectionMatch = (string(*target.SectionName) == r.Metadata.SectionName)
 						}
+						fmt.Printf("DEBUG: HTTP route %d: name=%s, hasPrefix=%v, sectionMatch=%v, security=%v\n",
+							i, r.Name, strings.HasPrefix(r.Name, prefix), sectionMatch, r.Security != nil)
+
 						if strings.HasPrefix(r.Name, prefix) && sectionMatch && r.Security == nil {
+							fmt.Printf("DEBUG: Setting security on HTTP route %s\n", r.Name)
 							r.Security = &ir.SecurityFeatures{
 								CORS:          cors,
 								JWT:           jwt,
@@ -907,8 +914,13 @@ func (t *Translator) translateSecurityPolicyForRoute(
 									}
 								}
 							}
+						} else {
+							fmt.Printf("DEBUG: Skipping HTTP route %s (hasPrefix=%v, sectionMatch=%v, hasSecurity=%v)\n",
+								r.Name, strings.HasPrefix(r.Name, prefix), sectionMatch, r.Security != nil)
 						}
 					}
+				} else {
+					fmt.Printf("DEBUG: No HTTP listener found for %s\n", irListenerName(listener))
 				}
 			}
 		}
