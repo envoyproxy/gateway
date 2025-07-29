@@ -40,6 +40,7 @@ new features: |
   Added metric `watchable_publish_total` counting store events in watchable message queues.
   Added support for forwarding client ID header and sanitizing API keys for API Key authentication in SecurityPolicy.
   Accessloggers of type ALS now have http2 enabled on the cluster by default.
+  Extends BackendTLSSettings support to all Backend types.
   Added support for using ClusterTrustBundle as CA.
   Added support for using Secret as a source of the OIDC client ID.
   Added support for listeners and routes in PostTranslateModifyHook extension hook.

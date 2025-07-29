@@ -1104,17 +1104,17 @@
                           },
                           "httpFilters": [
                             {
-                              "name": "envoy.filters.http.grpc_web",
-                              "typedConfig": {
-                                "@type": "type.googleapis.com/envoy.extensions.filters.http.grpc_web.v3.GrpcWeb"
-                              }
-                            },
-                            {
                               "name": "envoy.filters.http.grpc_stats",
                               "typedConfig": {
                                 "@type": "type.googleapis.com/envoy.extensions.filters.http.grpc_stats.v3.FilterConfig",
                                 "emitFilterState": true,
                                 "statsForAllMethods": true
+                              }
+                            },
+                            {
+                              "name": "envoy.filters.http.grpc_web",
+                              "typedConfig": {
+                                "@type": "type.googleapis.com/envoy.extensions.filters.http.grpc_web.v3.GrpcWeb"
                               }
                             },
                             {

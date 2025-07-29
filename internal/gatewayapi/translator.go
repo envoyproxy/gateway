@@ -7,6 +7,7 @@ package gatewayapi
 
 import (
 	"errors"
+	"fmt"
 	"sort"
 
 	"golang.org/x/exp/maps"
@@ -169,7 +170,16 @@ func (t *Translator) Translate(resources *resource.Resources) (*TranslateResult,
 	acceptedGateways, failedGateways := t.GetRelevantGateways(resources)
 
 	// Sort gateways based on timestamp.
+	// Initially, acceptedGateways sort by creation timestamp
+	// or sort alphabetically by “{namespace}/{name}” if multiple gateways share same timestamp.
 	sort.Slice(acceptedGateways, func(i, j int) bool {
+		if acceptedGateways[i].CreationTimestamp.Equal(&(acceptedGateways[j].CreationTimestamp)) {
+			gatewayKeyI := fmt.Sprintf("%s/%s", acceptedGateways[i].Namespace, acceptedGateways[i].Name)
+			gatewayKeyJ := fmt.Sprintf("%s/%s", acceptedGateways[j].Namespace, acceptedGateways[j].Name)
+			return gatewayKeyI < gatewayKeyJ
+		}
+		// Not identical CreationTimestamps
+
 		return acceptedGateways[i].CreationTimestamp.Before(&(acceptedGateways[j].CreationTimestamp))
 	})
 
@@ -186,7 +196,7 @@ func (t *Translator) Translate(resources *resource.Resources) (*TranslateResult,
 	t.ProcessAddresses(acceptedGateways, xdsIR, infraIR)
 
 	// process all Backends
-	backends := t.ProcessBackends(resources.Backends)
+	backends := t.ProcessBackends(resources.Backends, resources.BackendTLSPolicies)
 
 	// Process all relevant HTTPRoutes.
 	httpRoutes := t.ProcessHTTPRoutes(resources.HTTPRoutes, acceptedGateways, resources, xdsIR)
