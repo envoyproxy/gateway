@@ -148,6 +148,7 @@ func (t *Translator) ProcessSecurityPolicies(securityPolicies []*egv1a1.Security
 				// Handle route based on its type
 				switch currTarget.Kind {
 				case resource.KindTCPRoute:
+					fmt.Printf("DEBUG: Processing TCP route policy for %s/%s\n", policy.Namespace, currTarget.Name)
 					var (
 						targetedRoute  RouteContext
 						parentGateways []gwapiv1a2.ParentReference
@@ -210,6 +211,7 @@ func (t *Translator) ProcessSecurityPolicies(securityPolicies []*egv1a1.Security
 					status.SetAcceptedForPolicyAncestors(&policy.Status, parentGateways, t.GatewayControllerName, policy.Generation)
 
 				default: // HTTP routes
+					fmt.Printf("DEBUG: Processing HTTP route policy for %s/%s (kind: %s)\n", policy.Namespace, currTarget.Name, currTarget.Kind)
 					t.processSecurityPolicyForHTTPRoute(resources, xdsIR,
 						routeMap, gatewayRouteMap, policy, currTarget)
 				}
@@ -270,6 +272,8 @@ func (t *Translator) processSecurityPolicyForHTTPRoute(
 	policy *egv1a1.SecurityPolicy,
 	currTarget gwapiv1a2.LocalPolicyTargetReferenceWithSectionName,
 ) {
+	fmt.Printf("DEBUG: Inside processSecurityPolicyForHTTPRoute for policy %s/%s targeting %s\n",
+		policy.Namespace, policy.Name, currTarget.Name)
 	var (
 		targetedRoute  RouteContext
 		parentGateways []gwapiv1a2.ParentReference
@@ -277,6 +281,7 @@ func (t *Translator) processSecurityPolicyForHTTPRoute(
 	)
 
 	targetedRoute, resolveErr = resolveSecurityPolicyRouteTargetRef(policy, currTarget, routeMap)
+	fmt.Printf("DEBUG: Route resolution result: route=%v, err=%v\n", targetedRoute != nil, resolveErr)
 	// Skip if the route is not found
 	// It's not necessarily an error because the SecurityPolicy may be
 	// reconciled by multiple controllers. And the other controller may
