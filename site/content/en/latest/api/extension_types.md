@@ -1145,36 +1145,6 @@ _Appears in:_
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
 | `header` | _string_ |  false  |  | Header defines the header to get the override endpoint addresses.<br />The header value must specify at least one endpoint in `IP:Port` format or multiple endpoints in `IP:Port,IP:Port,...` format.<br />For example `10.0.0.5:8080` or `[2600:4040:5204::1574:24ae]:80`.<br />The IPv6 address is enclosed in square brackets. |
-| `metadata` | _[EndpointOverrideMetadataKey](#endpointoverridemetadatakey)_ |  false  |  | Refer to Kubernetes API documentation for fields of `metadata`. |
-
-
-#### EndpointOverrideMetadataKey
-
-
-
-EndpointOverrideMetadataKey defines the metadata key configuration for endpoint override.
-
-_Appears in:_
-- [EndpointOverrideExtractFrom](#endpointoverrideextractfrom)
-
-| Field | Type | Required | Default | Description |
-| ---   | ---  | ---      | ---     | ---         |
-| `key` | _string_ |  true  |  | Key defines the metadata key. |
-| `path` | _[EndpointOverrideMetadataKeyPath](#endpointoverridemetadatakeypath) array_ |  false  |  | Path defines the path within the metadata to extract the endpoint addresses.<br />Each path element represents a key in nested metadata structure. |
-
-
-#### EndpointOverrideMetadataKeyPath
-
-
-
-EndpointOverrideMetadataKeyPath defines a path element in the metadata structure.
-
-_Appears in:_
-- [EndpointOverrideMetadataKey](#endpointoverridemetadatakey)
-
-| Field | Type | Required | Default | Description |
-| ---   | ---  | ---      | ---     | ---         |
-| `key` | _string_ |  true  |  | Key defines the key name in the metadata structure. |
 
 
 #### EnvironmentCustomTag

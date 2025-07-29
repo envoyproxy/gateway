@@ -164,11 +164,6 @@ http:
         leastRequest: {}
         endpointOverride:
           extractFrom:
-          - metadata:
-              key: "custom.host"
-              path:
-              - key: "service"
-              - key: "host"
           - header: "x-fallback-host"
     destination:
       name: "twelfth-route-dest"
@@ -184,11 +179,7 @@ http:
         leastRequest: {}
         endpointOverride:
           extractFrom:
-          - metadata:
-              key: "custom.host"
-              path:
-              - key: "service"
-              - key: "host"
+          - header: "x-custom-host"
     destination:
       name: "thirteen-route-dest"
       settings:

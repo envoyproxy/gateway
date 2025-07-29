@@ -3248,24 +3248,6 @@ type EndpointOverride struct {
 type EndpointOverrideExtractFrom struct {
 	// Header defines the header to get the override endpoint addresses.
 	Header *string `json:"header,omitempty" yaml:"header,omitempty"`
-	// Metadata defines the metadata key to get the override endpoint addresses from the request dynamic metadata.
-	Metadata *EndpointOverrideMetadataKey `json:"metadata,omitempty" yaml:"metadata,omitempty"`
-}
-
-// EndpointOverrideMetadataKey defines the metadata key configuration for endpoint override.
-// +k8s:deepcopy-gen=true
-type EndpointOverrideMetadataKey struct {
-	// Key defines the metadata key.
-	Key string `json:"key" yaml:"key"`
-	// Path defines the path within the metadata to extract the endpoint addresses.
-	Path []EndpointOverrideMetadataKeyPath `json:"path,omitempty" yaml:"path,omitempty"`
-}
-
-// EndpointOverrideMetadataKeyPath defines a path element in the metadata structure.
-// +k8s:deepcopy-gen=true
-type EndpointOverrideMetadataKeyPath struct {
-	// Key defines the key name in the metadata structure.
-	Key string `json:"key" yaml:"key"`
 }
 
 // LoadBalancerType defines the type of load balancer for IR.

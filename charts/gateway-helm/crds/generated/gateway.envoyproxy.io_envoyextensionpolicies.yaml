@@ -767,43 +767,7 @@ spec:
                                           For example `10.0.0.5:8080` or `[2600:4040:5204::1574:24ae]:80`.
                                           The IPv6 address is enclosed in square brackets.
                                         type: string
-                                      metadata:
-                                        description: |-
-                                          Metadata defines the metadata key to get the override endpoint addresses from the request dynamic metadata.
-                                          If set this field then it will take precedence over the header field.
-                                        properties:
-                                          key:
-                                            description: Key defines the metadata
-                                              key.
-                                            minLength: 1
-                                            type: string
-                                          path:
-                                            description: |-
-                                              Path defines the path within the metadata to extract the endpoint addresses.
-                                              Each path element represents a key in nested metadata structure.
-                                            items:
-                                              description: EndpointOverrideMetadataKeyPath
-                                                defines a path element in the metadata
-                                                structure.
-                                              properties:
-                                                key:
-                                                  description: Key defines the key
-                                                    name in the metadata structure.
-                                                  minLength: 1
-                                                  type: string
-                                              required:
-                                              - key
-                                              type: object
-                                            type: array
-                                        required:
-                                        - key
-                                        type: object
                                     type: object
-                                    x-kubernetes-validations:
-                                    - message: Exactly one of header or metadata must
-                                        be set.
-                                      rule: (has(self.header) && !has(self.metadata))
-                                        || (!has(self.header) && has(self.metadata))
                                   maxItems: 10
                                   minItems: 1
                                   type: array

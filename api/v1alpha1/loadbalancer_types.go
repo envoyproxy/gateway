@@ -200,9 +200,6 @@ type EndpointOverride struct {
 }
 
 // EndpointOverrideExtractFrom defines a source to extract endpoint override information from.
-// +union
-//
-// +kubebuilder:validation:XValidation:rule="(has(self.header) && !has(self.metadata)) || (!has(self.header) && has(self.metadata))",message="Exactly one of header or metadata must be set."
 type EndpointOverrideExtractFrom struct {
 	// Header defines the header to get the override endpoint addresses.
 	// The header value must specify at least one endpoint in `IP:Port` format or multiple endpoints in `IP:Port,IP:Port,...` format.
@@ -211,32 +208,4 @@ type EndpointOverrideExtractFrom struct {
 	//
 	// +optional
 	Header *string `json:"header,omitempty"`
-
-	// Metadata defines the metadata key to get the override endpoint addresses from the request dynamic metadata.
-	// If set this field then it will take precedence over the header field.
-	//
-	// +optional
-	Metadata *EndpointOverrideMetadataKey `json:"metadata,omitempty"`
-}
-
-// EndpointOverrideMetadataKey defines the metadata key configuration for endpoint override.
-type EndpointOverrideMetadataKey struct {
-	// Key defines the metadata key.
-	//
-	// +kubebuilder:validation:MinLength=1
-	Key string `json:"key"`
-
-	// Path defines the path within the metadata to extract the endpoint addresses.
-	// Each path element represents a key in nested metadata structure.
-	//
-	// +optional
-	Path []EndpointOverrideMetadataKeyPath `json:"path,omitempty"`
-}
-
-// EndpointOverrideMetadataKeyPath defines a path element in the metadata structure.
-type EndpointOverrideMetadataKeyPath struct {
-	// Key defines the key name in the metadata structure.
-	//
-	// +kubebuilder:validation:MinLength=1
-	Key string `json:"key"`
 }
