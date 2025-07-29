@@ -10,8 +10,6 @@ package tests
 import (
 	"testing"
 
-	"github.com/envoyproxy/gateway/test/e2e/utils"
-
 	"k8s.io/apimachinery/pkg/types"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
@@ -21,6 +19,7 @@ import (
 
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
+	"github.com/envoyproxy/gateway/test/e2e/utils"
 )
 
 func init() {

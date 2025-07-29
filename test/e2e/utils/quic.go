@@ -35,6 +35,7 @@ type QuicRoundTripper struct {
 
 func (q *QuicRoundTripper) CaptureRoundTrip(request roundtripper.Request) (*roundtripper.CapturedRequest, *roundtripper.CapturedResponse, error) {
 	tlsConfig := &tls.Config{
+		//nolint:gosec
 		InsecureSkipVerify: true,           // Skip verification of server certificate
 		NextProtos:         []string{"h3"}, // Required for HTTP/3
 	}
@@ -44,17 +45,17 @@ func (q *QuicRoundTripper) CaptureRoundTrip(request roundtripper.Request) (*roun
 		TLSClientConfig: tlsConfig,
 	}
 	if request.Server != "" && len(request.CertPem) != 0 && len(request.KeyPem) != 0 {
-		clientTls, err := tlsClientConfig(request.Server, request.CertPem, request.KeyPem)
+		clientTLS, err := tlsClientConfig(request.Server, request.CertPem, request.KeyPem)
 		if err != nil {
 			return nil, nil, err
 		}
-		transport.TLSClientConfig = clientTls
+		transport.TLSClientConfig = clientTLS
 	}
 
 	return q.defaultRoundTrip(request, transport)
 }
 
-func tlsClientConfig(server string, certPem []byte, keyPem []byte) (*tls.Config, error) {
+func tlsClientConfig(server string, certPem, keyPem []byte) (*tls.Config, error) {
 	// Create a certificate from the provided cert and key
 	cert, err := tls.X509KeyPair(certPem, keyPem)
 	if err != nil {
