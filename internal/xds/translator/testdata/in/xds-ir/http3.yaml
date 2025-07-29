@@ -7,7 +7,6 @@ http:
   isHTTP2: false
   name: envoy-gateway/gateway-1/tls
   port: 10443
-  externalPort: 443
   path:
     mergeSlashes: true
     escapedSlashesAction: UnescapeAndRedirect

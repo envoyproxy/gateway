@@ -8,7 +8,6 @@ http:
     escapedSlashesAction: UnescapeAndRedirect
     mergeSlashes: true
   port: 10080
-  externalPort: 80
   routes:
   - name: httproute/default/httproute-1/rule/0/match/0/www_foo_com
     hostname: www.foo.com

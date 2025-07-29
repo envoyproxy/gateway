@@ -5,7 +5,6 @@ http:
   - name: "listener-enable-req-resp-sizes-stats"
     address: "::"
     port: 10080
-    externalPort: 80
     hostnames:
       - "*"
     path:

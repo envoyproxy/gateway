@@ -2,7 +2,6 @@ tcp:
 - name: "tls-passthrough-foo"
   address: "::"
   port: 10080
-  externalPort: 80
   routes:
   - name: "tls-route-passthrough-foo"
     tls:
@@ -21,7 +20,6 @@ tcp:
 - name: "tls-passthrough-bar"
   address: "::"
   port: 10081
-  externalPort: 81
   routes:
   - name: "tls-route-passthrough-bar"
     tls:

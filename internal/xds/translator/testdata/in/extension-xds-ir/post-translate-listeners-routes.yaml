@@ -2,7 +2,6 @@ http:
 - name: "test-listener-modify"
   address: "0.0.0.0"
   port: 10080
-  externalPort: 80
   hostnames:
   - "*"
   path:

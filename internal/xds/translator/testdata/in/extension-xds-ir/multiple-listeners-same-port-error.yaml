@@ -2,7 +2,6 @@ http:
 - name: "first-listener-error"
   address: "::"
   port: 10080
-  externalPort: 80
   hostnames:
   - "foo.com"
   path:
@@ -31,7 +30,6 @@ http:
 - name: "second-listener"
   address: "::"
   port: 10080
-  externalPort: 80
   hostnames:
   - "foo.net"
   path:

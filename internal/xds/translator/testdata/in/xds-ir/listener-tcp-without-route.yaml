@@ -9,7 +9,6 @@ tcp:
     optional: false
   name: envoy-gateway/gateway-1/tls-1
   port: 10443
-  externalPort: 443
   tcpKeepalive:
     idleTime: 1200
     interval: 60

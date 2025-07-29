@@ -2,7 +2,6 @@ http:
 - name: "first-listener"
   address: "::"
   port: 10080
-  externalPort: 80
   hostnames:
   - "foo.com"
   tcpKeepalive: {}
@@ -22,7 +21,6 @@ http:
 - name: "second-listener"
   address: "::"
   port: 10081
-  externalPort: 81
   hostnames:
   - "foo.net"
   tcpKeepalive:
@@ -46,7 +44,6 @@ tcp:
 - name: "third-listener"
   address: "::"
   port: 10082
-  externalPort: 82
   tcpKeepalive: {}
   routes:
   - tls:
@@ -65,7 +62,6 @@ tcp:
   tcpKeepalive:
     probes: 10
   port: 10083
-  externalPort: 83
   routes:
   - destination:
       name: "tcp-route-dest"
