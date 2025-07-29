@@ -815,6 +815,7 @@ func (t *Translator) translateSecurityPolicyForRoute(
 
 	// Apply IR to all relevant routes
 	prefix := irRoutePrefix(route)
+	fmt.Printf("DEBUG: Route prefix from irRoutePrefix: '%s'\n", prefix)
 	parentRefs := GetParentReferences(route)
 	for _, p := range parentRefs {
 		parentRefCtx := GetRouteParentContext(route, p)
@@ -874,14 +875,25 @@ func (t *Translator) translateSecurityPolicyForRoute(
 					for i, r := range irListener.Routes {
 						fmt.Printf("DEBUG: TCP route %d: name=%s, prefix=%s, hasPrefix=%v, security=%v\n",
 							i, r.Name, prefix, strings.HasPrefix(r.Name, prefix), r.Security != nil)
-						if strings.HasPrefix(r.Name, prefix) && r.Security == nil {
+
+						// For TCP routes, use exact name matching instead of prefix matching
+						routeMatches := false
+						if strings.HasSuffix(prefix, "/") {
+							// Remove trailing slash for exact matching
+							exactName := strings.TrimSuffix(prefix, "/")
+							routeMatches = r.Name == exactName
+						} else {
+							routeMatches = r.Name == prefix
+						}
+
+						if routeMatches && r.Security == nil {
 							fmt.Printf("DEBUG: Setting authorization on TCP route %s\n", r.Name)
 							r.Security = &ir.SecurityFeatures{
 								Authorization: authorization,
 							}
 						} else {
-							fmt.Printf("DEBUG: Skipping TCP route %s (hasPrefix=%v, hasSecurity=%v)\n",
-								r.Name, strings.HasPrefix(r.Name, prefix), r.Security != nil)
+							fmt.Printf("DEBUG: Skipping TCP route %s (matches=%v, hasSecurity=%v)\n",
+								r.Name, routeMatches, r.Security != nil)
 						}
 					}
 				} else {
