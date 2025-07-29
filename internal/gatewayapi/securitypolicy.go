@@ -670,6 +670,7 @@ func resolveSecurityPolicyRouteTargetRef(
 		Kind:      string(target.Kind),
 		Name:      string(target.Name),
 		Namespace: policy.Namespace,
+		Protocol:  ir.HTTP,
 	}
 	route, ok := routes[key]
 
