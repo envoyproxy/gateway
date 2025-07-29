@@ -287,11 +287,6 @@
                 typedConfig:
                   '@type': type.googleapis.com/envoy.extensions.load_balancing_policies.least_request.v3.LeastRequest
           overrideHostSources:
-          - metadata:
-              key: custom.host
-              path:
-              - key: service
-              - key: host
           - header: x-fallback-host
   name: twelfth-route-dest
   perConnectionBufferLimitBytes: 32768
@@ -322,11 +317,7 @@
                 typedConfig:
                   '@type': type.googleapis.com/envoy.extensions.load_balancing_policies.least_request.v3.LeastRequest
           overrideHostSources:
-          - metadata:
-              key: custom.host
-              path:
-              - key: service
-              - key: host
+          - header: x-custom-host
   name: thirteen-route-dest
   perConnectionBufferLimitBytes: 32768
   type: EDS

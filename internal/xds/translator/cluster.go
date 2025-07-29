@@ -30,7 +30,6 @@ import (
 	rawbufferv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/transport_sockets/raw_buffer/v3"
 	tlsv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/transport_sockets/tls/v3"
 	httpv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/upstreams/http/v3"
-	metadatav3 "github.com/envoyproxy/go-control-plane/envoy/type/metadata/v3"
 	xdstype "github.com/envoyproxy/go-control-plane/envoy/type/v3"
 	"github.com/envoyproxy/go-control-plane/pkg/resource/v3"
 	"github.com/envoyproxy/go-control-plane/pkg/wellknown"
@@ -1227,23 +1226,6 @@ func buildEndpointOverrideLoadBalancingPolicy(loadBalancer *ir.LoadBalancer) (*c
 
 		if source.Header != nil {
 			overrideSource.Header = *source.Header
-		}
-
-		if source.Metadata != nil {
-			metadataKey := &metadatav3.MetadataKey{
-				Key: source.Metadata.Key,
-			}
-
-			// Convert path if present
-			for _, pathElement := range source.Metadata.Path {
-				metadataKey.Path = append(metadataKey.Path, &metadatav3.MetadataKey_PathSegment{
-					Segment: &metadatav3.MetadataKey_PathSegment_Key{
-						Key: pathElement.Key,
-					},
-				})
-			}
-
-			overrideSource.Metadata = metadataKey
 		}
 
 		overrideHostSources = append(overrideHostSources, overrideSource)

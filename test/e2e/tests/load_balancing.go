@@ -371,7 +371,6 @@ var EndpointOverrideLoadBalancingTest = suite.ConformanceTest{
 
 		ns := "gateway-conformance-infra"
 		headerRouteNN := types.NamespacedName{Name: "endpoint-override-header-lb-route", Namespace: ns}
-		metadataRouteNN := types.NamespacedName{Name: "endpoint-override-metadata-lb-route", Namespace: ns}
 		gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
 
 		ancestorRef := gwapiv1a2.ParentReference{
@@ -381,10 +380,9 @@ var EndpointOverrideLoadBalancingTest = suite.ConformanceTest{
 			Name:      gwapiv1.ObjectName(gwNN.Name),
 		}
 		BackendTrafficPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "endpoint-override-header-lb-policy", Namespace: ns}, suite.ControllerName, ancestorRef)
-		BackendTrafficPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "endpoint-override-metadata-lb-policy", Namespace: ns}, suite.ControllerName, ancestorRef)
 		WaitForPods(t, suite.Client, ns, map[string]string{"app": "lb-backend-endpointoverride"}, corev1.PodRunning, PodReady)
 
-		gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), headerRouteNN, metadataRouteNN)
+		gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), headerRouteNN)
 
 		// Get pods associated with the service to find valid pod IPs and names
 		ctx, cancel := context.WithTimeout(context.Background(), suite.TimeoutConfig.GetTimeout)
@@ -516,33 +514,6 @@ var EndpointOverrideLoadBalancingTest = suite.ConformanceTest{
 			}
 
 			t.Logf("All %d requests without override header got 200 response (fallback working)", sendRequests)
-		})
-
-		t.Run("metadata-based endpoint override should fallback to LeastRequest", func(t *testing.T) {
-			expectedResponse := http.ExpectedResponse{
-				Request: http.Request{
-					Path: "/endpoint-override-metadata",
-					// No metadata available, should use fallback
-				},
-				Response: http.Response{
-					StatusCode: 200,
-				},
-				Namespace: ns,
-			}
-
-			req := http.MakeRequest(t, &expectedResponse, gwAddr, "HTTP", "http")
-
-			// Make multiple requests and verify fallback behavior (just check 200 response)
-			for i := 0; i < sendRequests; i++ {
-				cReq, cResp, err := suite.RoundTripper.CaptureRoundTrip(req)
-				require.NoError(t, err, "failed to get expected response")
-				require.NoError(t, http.CompareRequest(t, &req, cReq, cResp, expectedResponse), "failed to compare request and response")
-
-				// For metadata-based route without metadata, we just verify the response is 200 (fallback works)
-				// No need to check specific pod routing since it should use LeastRequest fallback policy
-			}
-
-			t.Logf("All %d requests for metadata-based route got 200 response (LeastRequest fallback working)", sendRequests)
 		})
 	},
 }

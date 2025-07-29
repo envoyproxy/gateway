@@ -33,25 +33,7 @@ httpRoutes:
       backendRefs:
       - name: service-1
         port: 8080
-- apiVersion: gateway.networking.k8s.io/v1
-  kind: HTTPRoute
-  metadata:
-    namespace: default
-    name: httproute-2
-  spec:
-    hostnames:
-    - gateway.envoyproxy.io
-    parentRefs:
-    - namespace: envoy-gateway
-      name: gateway-1
-      sectionName: http
-    rules:
-    - matches:
-      - path:
-          value: "/metadata-override"
-      backendRefs:
-      - name: service-2
-        port: 8080
+
 backendTrafficPolicies:
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: BackendTrafficPolicy
@@ -67,32 +49,8 @@ backendTrafficPolicies:
       type: RoundRobin
       endpointOverride:
         extractFrom:
-        - metadata:
-            key: "custom.host"
-            path:
-            - key: "service"
-            - key: "host"
         - header: "x-fallback-host"
-- apiVersion: gateway.envoyproxy.io/v1alpha1
-  kind: BackendTrafficPolicy
-  metadata:
-    namespace: default
-    name: policy-for-metadata-override
-  spec:
-    targetRef:
-      group: gateway.networking.k8s.io
-      kind: HTTPRoute
-      name: httproute-2
-    loadBalancer:
-      type: LeastRequest
-      endpointOverride:
-        extractFrom:
-        - metadata:
-            key: "custom.host"
-            path:
-            - key: "service"
-            - key: "host"
-        - header: "x-fallback-host"
+
 services:
 - apiVersion: v1
   kind: Service
