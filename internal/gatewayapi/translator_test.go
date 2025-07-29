@@ -33,8 +33,10 @@ import (
 	"sigs.k8s.io/yaml"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 	"github.com/envoyproxy/gateway/internal/ir"
+	"github.com/envoyproxy/gateway/internal/utils"
 	"github.com/envoyproxy/gateway/internal/utils/field"
 	"github.com/envoyproxy/gateway/internal/utils/file"
 	"github.com/envoyproxy/gateway/internal/utils/test"
@@ -317,8 +319,10 @@ func TestTranslate(t *testing.T) {
 
 			svc := corev1.Service{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      translator.expectedServiceName(string(translator.GatewayClassName)),
+					// Matches proxy.ExpectedResourceHashedName()
+					Name:      fmt.Sprintf("%s-%s", config.EnvoyPrefix, utils.GetHashedName(string(translator.GatewayClassName), 48)),
 					Namespace: translator.ControllerNamespace,
+					Labels:    make(map[string]string),
 				},
 				Spec: corev1.ServiceSpec{
 					ClusterIP: "6.7.8.9",
@@ -363,16 +367,21 @@ func TestTranslate(t *testing.T) {
 			}
 
 			if translator.MergeGateways {
-
+				svc.Labels[OwningGatewayClassLabel] = string(translator.GatewayClassName)
 				resources.Services = append(resources.Services, &svc)
 				resources.EndpointSlices = append(resources.EndpointSlices, &endPtSlice)
 			} else {
 				for _, g := range resources.Gateways {
 					gSvc := svc
-					gSvc.Name = translator.expectedServiceName(fmt.Sprintf("%s/%s", g.Namespace, g.Name))
+					// Matches proxy.ExpectedResourceHashedName()
+					gSvc.Name = fmt.Sprintf("%s-%s", config.EnvoyPrefix, utils.GetHashedName(fmt.Sprintf("%s/%s", g.Namespace, g.Name), 48))
+					gSvc.Labels[OwningGatewayNameLabel] = g.Name
+					gSvc.Labels[OwningGatewayNamespaceLabel] = g.Namespace
 					gEndPtSlice := endPtSlice
 					gEndPtSlice.Name = gSvc.Name
 					gEndPtSlice.Labels[discoveryv1.LabelServiceName] = gSvc.Name
+					gEndPtSlice.Labels[OwningGatewayNameLabel] = g.Name
+					gEndPtSlice.Labels[OwningGatewayNamespaceLabel] = g.Namespace
 					resources.Services = append(resources.Services, &gSvc)
 					resources.EndpointSlices = append(resources.EndpointSlices, &gEndPtSlice)
 				}
@@ -579,8 +588,10 @@ func TestTranslateWithExtensionKinds(t *testing.T) {
 
 			svc := corev1.Service{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      translator.expectedServiceName(string(translator.GatewayClassName)),
+					// Matches proxy.ExpectedResourceHashedName()
+					Name:      fmt.Sprintf("%s-%s", config.EnvoyPrefix, utils.GetHashedName(string(translator.GatewayClassName), 48)),
 					Namespace: translator.ControllerNamespace,
+					Labels:    make(map[string]string),
 				},
 				Spec: corev1.ServiceSpec{
 					ClusterIP: "6.7.8.9",
@@ -625,16 +636,27 @@ func TestTranslateWithExtensionKinds(t *testing.T) {
 			}
 
 			if translator.MergeGateways {
+				svc.Labels[OwningGatewayClassLabel] = string(translator.GatewayClassName)
 				resources.Services = append(resources.Services, &svc)
 				resources.EndpointSlices = append(resources.EndpointSlices, &endPtSlice)
 			} else {
 				for _, g := range resources.Gateways {
+					if g == nil {
+						panic("nil Gateway")
+					}
 					gSvc := svc
-					gSvc.Name = translator.expectedServiceName(fmt.Sprintf("%s/%s", g.Namespace, g.Name))
-					fmt.Fprintln(os.Stderr, "service name adding: "+gSvc.Namespace+"/"+gSvc.Name)
+					gSvc.
+						Labels[OwningGatewayNameLabel] = g.
+						Name
+					gSvc.Labels[OwningGatewayNamespaceLabel] = g.
+						Namespace
+					// Matches proxy.ExpectedResourceHashedName()
+					gSvc.Name = fmt.Sprintf("%s-%s", config.EnvoyPrefix, utils.GetHashedName(fmt.Sprintf("%s/%s", g.Namespace, g.Name), 48))
 					gEndPtSlice := endPtSlice
 					gEndPtSlice.Name = gSvc.Name
 					gEndPtSlice.Labels[discoveryv1.LabelServiceName] = gSvc.Name
+					gEndPtSlice.Labels[OwningGatewayNameLabel] = g.Name
+					gEndPtSlice.Labels[OwningGatewayNamespaceLabel] = g.Namespace
 					resources.Services = append(resources.Services, &gSvc)
 					resources.EndpointSlices = append(resources.EndpointSlices, &gEndPtSlice)
 				}
@@ -1031,7 +1053,6 @@ func xdsWithoutEqual(a *ir.Xds) any {
 		FilterOrder             []egv1a1.FilterPosition
 		GlobalResources         *ir.GlobalResources
 		ExtensionServerPolicies []*ir.UnstructuredRef
-		ProxyServiceCluster     *ir.ProxyServiceCluster
 	}{
 		ReadyListener:           a.ReadyListener,
 		AccessLog:               a.AccessLog,
@@ -1044,7 +1065,6 @@ func xdsWithoutEqual(a *ir.Xds) any {
 		FilterOrder:             a.FilterOrder,
 		GlobalResources:         a.GlobalResources,
 		ExtensionServerPolicies: a.ExtensionServerPolicies,
-		ProxyServiceCluster:     a.ProxyServiceCluster,
 	}
 
 	// Ensure we didn't drop an exported field.

@@ -158,15 +158,6 @@ type Xds struct {
 	GlobalResources *GlobalResources `json:"globalResources,omitempty" yaml:"globalResources,omitempty"`
 	// ExtensionServerPolicies is the intermediate representation of the ExtensionServerPolicy resource
 	ExtensionServerPolicies []*UnstructuredRef `json:"extensionServerPolicies,omitempty" yaml:"extensionServerPolicies,omitempty"`
-	// ProxyServiceCluster holds the local cluster of EnvoyProxy instances
-	ProxyServiceCluster *ProxyServiceCluster `json:"proxyServiceCluster,omitempty" yaml:"proxyServiceCluster,omitempty"`
-}
-
-// ProxyServiceCluster holds the local cluster of EnvoyProxy instances
-// +k8s:deepcopy-gen=true
-type ProxyServiceCluster struct {
-	Name        string              `json:"name" yaml:"name"`
-	Destination *DestinationSetting `json:"destination,omitempty" yaml:"destination,omitempty"`
 }
 
 // Equal implements the Comparable interface used by watchable.DeepEqual to skip unnecessary updates.
@@ -2219,6 +2210,8 @@ type GlobalResources struct {
 	// EnvoyClientCertificate holds the client certificate secret for envoy to use when establishing a TLS connection to
 	// control plane components. For example, the rate limit service, WASM HTTP server, etc.
 	EnvoyClientCertificate *TLSCertificate `json:"envoyClientCertificate,omitempty" yaml:"envoyClientCertificate,omitempty"`
+	// ProxyServiceCluster holds the local cluster of EnvoyProxy instances
+	ProxyServiceClusters []*RouteDestination `json:"proxyServiceClusters,omitempty" yaml:"proxyServiceClusters,omitempty"`
 	// HMACSecret holds the HMAC Secret used by the OIDC.
 	// TODO: zhaohuabing move HMACSecret here
 	// HMACSecret PrivateBytes

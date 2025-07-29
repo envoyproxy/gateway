@@ -215,6 +215,21 @@ xdsIR:
     accessLog:
       json:
       - path: /dev/stdout
+    globalResources:
+      proxyServiceClusters:
+      - name: envoy-gateway-class
+        settings:
+        - addressType: IP
+          endpoints:
+          - host: 7.6.5.4
+            port: 8080
+            zone: zone1
+          metadata:
+            name: envoy-envoy-gateway-class-3b1df594
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway-class
+          protocol: TCP
     http:
     - address: 0.0.0.0
       hostnames:
@@ -309,18 +324,6 @@ xdsIR:
         - certificate: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUMxakNDQWI0Q0FRQXdEUVlKS29aSWh2Y05BUUVMQlFBd0xURVZNQk1HQTFVRUNnd01aWGhoYlhCc1pTQkoKYm1NdU1SUXdFZ1lEVlFRRERBdGxlR0Z0Y0d4bExtTnZiVEFlRncweU5UQTBNakV3T1RFNU1qWmFGdzB6TlRBMApNVGt3T1RFNU1qWmFNRFV4RkRBU0JnTlZCQU1NQzJadmJ5NWlZWEl1WTI5dE1SMHdHd1lEVlFRS0RCUmxlR0Z0CmNHeGxJRzl5WjJGdWFYcGhkR2x2YmpDQ0FTSXdEUVlKS29aSWh2Y05BUUVCQlFBRGdnRVBBRENDQVFvQ2dnRUIKQU5JZzRNWUMvVlV6ZVRMN3Z1ai9pSXNwYTVrd0dyZTFvVGVCd2JYTFk1dmlxRXlicjRraWRQbTVXaFdPdm9GTwpuK0t6QlIzdjRaT20vdzNzMllwTEJjdWtsa3FlQnYzN2kxZFpOOTBrRzR5YitDV01tT3Z3UXFPbkNDV1BvZHBTCitNL0JPbHk2VDRGQ09hT3MwRVFBeDIzb2hxU2h3U0hvVlNLVWdIWTBPTlpLaS8xTjZnVHExb252ajNSM1Z3WHoKb1N0VGl4ODFVUzN0RkZBcnUwaHlOSmJWV3dhMjhMczBLRDJUQlhDMWZTblV3U0VVUzBIQWlIRDFHeE9HT011Twp0SG96ZDkzUGlxNkFJQUIyZEZhdmI5Ujh3azdnU2ZrekV5SFlUT2NaVkFMdFd5Tmx6TnVDQ09uSDFkcWtISUpsClhMcTg5VVNDRDlLeFBoeVN2ODNFN0VrQ0F3RUFBVEFOQmdrcWhraUc5dzBCQVFzRkFBT0NBUUVBWGJ1Z29EenYKVWYwQS91bTNJd1dKUksxWHZFN01jaVUxU08xUHhnOXZ0SXJPclFqZVQ3dGZzajAzQnJObjQxbWVPQkhESzNrdwp0ZHB6SUxoNjJEL1JwM0tPM2UxNDRtZGw4V1BmelBtdmJOdCtlWThNdEo0UlZMT0R4ZVEvTVhGVUQ3aFlXMklWCnJOVnY5aFJrZCt6QmpjSlppRmV0NTlzU2VxR3NZNFdQSnlQVk5sMHBDSlBSM3AwVEZhTm4rclRSUjVhdmVzY3cKRlhqTUpYUHpYRU5ZYXM3TVJxSitVaTZ6Sm9UdVVaTHBPTEtlOFNkeGtoU3IrdkdqYnNPT25yb1I0bXYrRmdvcwo4T1d4RHA4UnpRRUZyeDhBa0tkMzJrRGJCMS9ZWDA0Z3Z0dklzemUwdWx1SEIvY0NSd1ZGZG45WHdOZXVpRmFvCmVUK3BZNVZ1S1Nubkx3PT0KLS0tLS1FTkQgQ0VSVElGSUNBVEUtLS0tLQo=
           name: envoy-gateway/tls-secret-foo-bar-com
           privateKey: '[redacted]'
-    proxyServiceCluster:
-      destination:
-        addressType: IP
-        endpoints:
-        - host: 7.6.5.4
-          port: 8080
-          zone: zone1
-        name: envoy-gateway-class
-        preferLocal:
-          minEndpointsThreshold: 1
-        protocol: HTTP
-      name: envoy-gateway-class
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4

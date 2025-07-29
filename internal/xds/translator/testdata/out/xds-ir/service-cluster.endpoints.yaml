@@ -7,15 +7,17 @@
             address: 1.2.3.4
             portValue: 8080
       loadBalancingWeight: 1
+    locality:
+      zone: us-east-1a
+  - lbEndpoints:
     - endpoint:
         address:
           socketAddress:
             address: 2.3.4.5
             portValue: 8080
       loadBalancingWeight: 1
-    loadBalancingWeight: 30
     locality:
-      region: first-route-dest/backend/0
+      zone: us-east-1b
 - clusterName: envoy-gateway-gateway-1-196ae069
   endpoints:
   - lbEndpoints:

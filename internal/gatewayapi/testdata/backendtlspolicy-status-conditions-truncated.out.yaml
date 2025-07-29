@@ -2105,6 +2105,152 @@ xdsIR:
     accessLog:
       json:
       - path: /dev/stdout
+    globalResources:
+      proxyServiceClusters:
+      - name: envoy-gateway/gateway-1
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-1
+          protocol: TCP
+      - name: envoy-gateway/gateway-10
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-10
+          protocol: TCP
+      - name: envoy-gateway/gateway-11
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-11
+          protocol: TCP
+      - name: envoy-gateway/gateway-12
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-12
+          protocol: TCP
+      - name: envoy-gateway/gateway-13
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-13
+          protocol: TCP
+      - name: envoy-gateway/gateway-14
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-14
+          protocol: TCP
+      - name: envoy-gateway/gateway-15
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-15
+          protocol: TCP
+      - name: envoy-gateway/gateway-16
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-16
+          protocol: TCP
+      - name: envoy-gateway/gateway-17
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-17
+          protocol: TCP
+      - name: envoy-gateway/gateway-18
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-18
+          protocol: TCP
+      - name: envoy-gateway/gateway-2
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-2
+          protocol: TCP
+      - name: envoy-gateway/gateway-3
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-3
+          protocol: TCP
+      - name: envoy-gateway/gateway-4
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-4
+          protocol: TCP
+      - name: envoy-gateway/gateway-5
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-5
+          protocol: TCP
+      - name: envoy-gateway/gateway-6
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-6
+          protocol: TCP
+      - name: envoy-gateway/gateway-7
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-7
+          protocol: TCP
+      - name: envoy-gateway/gateway-8
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-8
+          protocol: TCP
+      - name: envoy-gateway/gateway-9
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-9
+          protocol: TCP
     http:
     - address: 0.0.0.0
       hostnames:
@@ -2147,13 +2293,6 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /
-    proxyServiceCluster:
-      destination:
-        name: envoy-gateway/gateway-1
-        preferLocal:
-          minEndpointsThreshold: 1
-        protocol: HTTP
-      name: envoy-gateway/gateway-1
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4
@@ -2163,6 +2302,152 @@ xdsIR:
     accessLog:
       json:
       - path: /dev/stdout
+    globalResources:
+      proxyServiceClusters:
+      - name: envoy-gateway/gateway-1
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-1
+          protocol: TCP
+      - name: envoy-gateway/gateway-10
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-10
+          protocol: TCP
+      - name: envoy-gateway/gateway-11
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-11
+          protocol: TCP
+      - name: envoy-gateway/gateway-12
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-12
+          protocol: TCP
+      - name: envoy-gateway/gateway-13
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-13
+          protocol: TCP
+      - name: envoy-gateway/gateway-14
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-14
+          protocol: TCP
+      - name: envoy-gateway/gateway-15
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-15
+          protocol: TCP
+      - name: envoy-gateway/gateway-16
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-16
+          protocol: TCP
+      - name: envoy-gateway/gateway-17
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-17
+          protocol: TCP
+      - name: envoy-gateway/gateway-18
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-18
+          protocol: TCP
+      - name: envoy-gateway/gateway-2
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-2
+          protocol: TCP
+      - name: envoy-gateway/gateway-3
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-3
+          protocol: TCP
+      - name: envoy-gateway/gateway-4
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-4
+          protocol: TCP
+      - name: envoy-gateway/gateway-5
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-5
+          protocol: TCP
+      - name: envoy-gateway/gateway-6
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-6
+          protocol: TCP
+      - name: envoy-gateway/gateway-7
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-7
+          protocol: TCP
+      - name: envoy-gateway/gateway-8
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-8
+          protocol: TCP
+      - name: envoy-gateway/gateway-9
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-9
+          protocol: TCP
     http:
     - address: 0.0.0.0
       hostnames:
@@ -2205,13 +2490,6 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /
-    proxyServiceCluster:
-      destination:
-        name: envoy-gateway/gateway-2
-        preferLocal:
-          minEndpointsThreshold: 1
-        protocol: HTTP
-      name: envoy-gateway/gateway-2
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4
@@ -2221,6 +2499,152 @@ xdsIR:
     accessLog:
       json:
       - path: /dev/stdout
+    globalResources:
+      proxyServiceClusters:
+      - name: envoy-gateway/gateway-1
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-1
+          protocol: TCP
+      - name: envoy-gateway/gateway-10
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-10
+          protocol: TCP
+      - name: envoy-gateway/gateway-11
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-11
+          protocol: TCP
+      - name: envoy-gateway/gateway-12
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-12
+          protocol: TCP
+      - name: envoy-gateway/gateway-13
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-13
+          protocol: TCP
+      - name: envoy-gateway/gateway-14
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-14
+          protocol: TCP
+      - name: envoy-gateway/gateway-15
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-15
+          protocol: TCP
+      - name: envoy-gateway/gateway-16
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-16
+          protocol: TCP
+      - name: envoy-gateway/gateway-17
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-17
+          protocol: TCP
+      - name: envoy-gateway/gateway-18
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-18
+          protocol: TCP
+      - name: envoy-gateway/gateway-2
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-2
+          protocol: TCP
+      - name: envoy-gateway/gateway-3
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-3
+          protocol: TCP
+      - name: envoy-gateway/gateway-4
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-4
+          protocol: TCP
+      - name: envoy-gateway/gateway-5
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-5
+          protocol: TCP
+      - name: envoy-gateway/gateway-6
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-6
+          protocol: TCP
+      - name: envoy-gateway/gateway-7
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-7
+          protocol: TCP
+      - name: envoy-gateway/gateway-8
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-8
+          protocol: TCP
+      - name: envoy-gateway/gateway-9
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-9
+          protocol: TCP
     http:
     - address: 0.0.0.0
       hostnames:
@@ -2263,13 +2687,6 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /
-    proxyServiceCluster:
-      destination:
-        name: envoy-gateway/gateway-3
-        preferLocal:
-          minEndpointsThreshold: 1
-        protocol: HTTP
-      name: envoy-gateway/gateway-3
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4
@@ -2279,6 +2696,152 @@ xdsIR:
     accessLog:
       json:
       - path: /dev/stdout
+    globalResources:
+      proxyServiceClusters:
+      - name: envoy-gateway/gateway-1
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-1
+          protocol: TCP
+      - name: envoy-gateway/gateway-10
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-10
+          protocol: TCP
+      - name: envoy-gateway/gateway-11
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-11
+          protocol: TCP
+      - name: envoy-gateway/gateway-12
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-12
+          protocol: TCP
+      - name: envoy-gateway/gateway-13
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-13
+          protocol: TCP
+      - name: envoy-gateway/gateway-14
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-14
+          protocol: TCP
+      - name: envoy-gateway/gateway-15
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-15
+          protocol: TCP
+      - name: envoy-gateway/gateway-16
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-16
+          protocol: TCP
+      - name: envoy-gateway/gateway-17
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-17
+          protocol: TCP
+      - name: envoy-gateway/gateway-18
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-18
+          protocol: TCP
+      - name: envoy-gateway/gateway-2
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-2
+          protocol: TCP
+      - name: envoy-gateway/gateway-3
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-3
+          protocol: TCP
+      - name: envoy-gateway/gateway-4
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-4
+          protocol: TCP
+      - name: envoy-gateway/gateway-5
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-5
+          protocol: TCP
+      - name: envoy-gateway/gateway-6
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-6
+          protocol: TCP
+      - name: envoy-gateway/gateway-7
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-7
+          protocol: TCP
+      - name: envoy-gateway/gateway-8
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-8
+          protocol: TCP
+      - name: envoy-gateway/gateway-9
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-9
+          protocol: TCP
     http:
     - address: 0.0.0.0
       hostnames:
@@ -2321,13 +2884,6 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /
-    proxyServiceCluster:
-      destination:
-        name: envoy-gateway/gateway-4
-        preferLocal:
-          minEndpointsThreshold: 1
-        protocol: HTTP
-      name: envoy-gateway/gateway-4
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4
@@ -2337,6 +2893,152 @@ xdsIR:
     accessLog:
       json:
       - path: /dev/stdout
+    globalResources:
+      proxyServiceClusters:
+      - name: envoy-gateway/gateway-1
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-1
+          protocol: TCP
+      - name: envoy-gateway/gateway-10
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-10
+          protocol: TCP
+      - name: envoy-gateway/gateway-11
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-11
+          protocol: TCP
+      - name: envoy-gateway/gateway-12
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-12
+          protocol: TCP
+      - name: envoy-gateway/gateway-13
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-13
+          protocol: TCP
+      - name: envoy-gateway/gateway-14
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-14
+          protocol: TCP
+      - name: envoy-gateway/gateway-15
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-15
+          protocol: TCP
+      - name: envoy-gateway/gateway-16
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-16
+          protocol: TCP
+      - name: envoy-gateway/gateway-17
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-17
+          protocol: TCP
+      - name: envoy-gateway/gateway-18
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-18
+          protocol: TCP
+      - name: envoy-gateway/gateway-2
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-2
+          protocol: TCP
+      - name: envoy-gateway/gateway-3
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-3
+          protocol: TCP
+      - name: envoy-gateway/gateway-4
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-4
+          protocol: TCP
+      - name: envoy-gateway/gateway-5
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-5
+          protocol: TCP
+      - name: envoy-gateway/gateway-6
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-6
+          protocol: TCP
+      - name: envoy-gateway/gateway-7
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-7
+          protocol: TCP
+      - name: envoy-gateway/gateway-8
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-8
+          protocol: TCP
+      - name: envoy-gateway/gateway-9
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-9
+          protocol: TCP
     http:
     - address: 0.0.0.0
       hostnames:
@@ -2379,13 +3081,6 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /
-    proxyServiceCluster:
-      destination:
-        name: envoy-gateway/gateway-5
-        preferLocal:
-          minEndpointsThreshold: 1
-        protocol: HTTP
-      name: envoy-gateway/gateway-5
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4
@@ -2395,6 +3090,152 @@ xdsIR:
     accessLog:
       json:
       - path: /dev/stdout
+    globalResources:
+      proxyServiceClusters:
+      - name: envoy-gateway/gateway-1
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-1
+          protocol: TCP
+      - name: envoy-gateway/gateway-10
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-10
+          protocol: TCP
+      - name: envoy-gateway/gateway-11
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-11
+          protocol: TCP
+      - name: envoy-gateway/gateway-12
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-12
+          protocol: TCP
+      - name: envoy-gateway/gateway-13
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-13
+          protocol: TCP
+      - name: envoy-gateway/gateway-14
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-14
+          protocol: TCP
+      - name: envoy-gateway/gateway-15
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-15
+          protocol: TCP
+      - name: envoy-gateway/gateway-16
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-16
+          protocol: TCP
+      - name: envoy-gateway/gateway-17
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-17
+          protocol: TCP
+      - name: envoy-gateway/gateway-18
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-18
+          protocol: TCP
+      - name: envoy-gateway/gateway-2
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-2
+          protocol: TCP
+      - name: envoy-gateway/gateway-3
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-3
+          protocol: TCP
+      - name: envoy-gateway/gateway-4
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-4
+          protocol: TCP
+      - name: envoy-gateway/gateway-5
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-5
+          protocol: TCP
+      - name: envoy-gateway/gateway-6
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-6
+          protocol: TCP
+      - name: envoy-gateway/gateway-7
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-7
+          protocol: TCP
+      - name: envoy-gateway/gateway-8
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-8
+          protocol: TCP
+      - name: envoy-gateway/gateway-9
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-9
+          protocol: TCP
     http:
     - address: 0.0.0.0
       hostnames:
@@ -2437,13 +3278,6 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /
-    proxyServiceCluster:
-      destination:
-        name: envoy-gateway/gateway-6
-        preferLocal:
-          minEndpointsThreshold: 1
-        protocol: HTTP
-      name: envoy-gateway/gateway-6
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4
@@ -2453,6 +3287,152 @@ xdsIR:
     accessLog:
       json:
       - path: /dev/stdout
+    globalResources:
+      proxyServiceClusters:
+      - name: envoy-gateway/gateway-1
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-1
+          protocol: TCP
+      - name: envoy-gateway/gateway-10
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-10
+          protocol: TCP
+      - name: envoy-gateway/gateway-11
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-11
+          protocol: TCP
+      - name: envoy-gateway/gateway-12
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-12
+          protocol: TCP
+      - name: envoy-gateway/gateway-13
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-13
+          protocol: TCP
+      - name: envoy-gateway/gateway-14
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-14
+          protocol: TCP
+      - name: envoy-gateway/gateway-15
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-15
+          protocol: TCP
+      - name: envoy-gateway/gateway-16
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-16
+          protocol: TCP
+      - name: envoy-gateway/gateway-17
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-17
+          protocol: TCP
+      - name: envoy-gateway/gateway-18
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-18
+          protocol: TCP
+      - name: envoy-gateway/gateway-2
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-2
+          protocol: TCP
+      - name: envoy-gateway/gateway-3
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-3
+          protocol: TCP
+      - name: envoy-gateway/gateway-4
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-4
+          protocol: TCP
+      - name: envoy-gateway/gateway-5
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-5
+          protocol: TCP
+      - name: envoy-gateway/gateway-6
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-6
+          protocol: TCP
+      - name: envoy-gateway/gateway-7
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-7
+          protocol: TCP
+      - name: envoy-gateway/gateway-8
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-8
+          protocol: TCP
+      - name: envoy-gateway/gateway-9
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-9
+          protocol: TCP
     http:
     - address: 0.0.0.0
       hostnames:
@@ -2495,13 +3475,6 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /
-    proxyServiceCluster:
-      destination:
-        name: envoy-gateway/gateway-7
-        preferLocal:
-          minEndpointsThreshold: 1
-        protocol: HTTP
-      name: envoy-gateway/gateway-7
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4
@@ -2511,6 +3484,152 @@ xdsIR:
     accessLog:
       json:
       - path: /dev/stdout
+    globalResources:
+      proxyServiceClusters:
+      - name: envoy-gateway/gateway-1
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-1
+          protocol: TCP
+      - name: envoy-gateway/gateway-10
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-10
+          protocol: TCP
+      - name: envoy-gateway/gateway-11
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-11
+          protocol: TCP
+      - name: envoy-gateway/gateway-12
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-12
+          protocol: TCP
+      - name: envoy-gateway/gateway-13
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-13
+          protocol: TCP
+      - name: envoy-gateway/gateway-14
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-14
+          protocol: TCP
+      - name: envoy-gateway/gateway-15
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-15
+          protocol: TCP
+      - name: envoy-gateway/gateway-16
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-16
+          protocol: TCP
+      - name: envoy-gateway/gateway-17
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-17
+          protocol: TCP
+      - name: envoy-gateway/gateway-18
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-18
+          protocol: TCP
+      - name: envoy-gateway/gateway-2
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-2
+          protocol: TCP
+      - name: envoy-gateway/gateway-3
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-3
+          protocol: TCP
+      - name: envoy-gateway/gateway-4
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-4
+          protocol: TCP
+      - name: envoy-gateway/gateway-5
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-5
+          protocol: TCP
+      - name: envoy-gateway/gateway-6
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-6
+          protocol: TCP
+      - name: envoy-gateway/gateway-7
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-7
+          protocol: TCP
+      - name: envoy-gateway/gateway-8
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-8
+          protocol: TCP
+      - name: envoy-gateway/gateway-9
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-9
+          protocol: TCP
     http:
     - address: 0.0.0.0
       hostnames:
@@ -2553,13 +3672,6 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /
-    proxyServiceCluster:
-      destination:
-        name: envoy-gateway/gateway-8
-        preferLocal:
-          minEndpointsThreshold: 1
-        protocol: HTTP
-      name: envoy-gateway/gateway-8
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4
@@ -2569,6 +3681,152 @@ xdsIR:
     accessLog:
       json:
       - path: /dev/stdout
+    globalResources:
+      proxyServiceClusters:
+      - name: envoy-gateway/gateway-1
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-1
+          protocol: TCP
+      - name: envoy-gateway/gateway-10
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-10
+          protocol: TCP
+      - name: envoy-gateway/gateway-11
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-11
+          protocol: TCP
+      - name: envoy-gateway/gateway-12
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-12
+          protocol: TCP
+      - name: envoy-gateway/gateway-13
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-13
+          protocol: TCP
+      - name: envoy-gateway/gateway-14
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-14
+          protocol: TCP
+      - name: envoy-gateway/gateway-15
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-15
+          protocol: TCP
+      - name: envoy-gateway/gateway-16
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-16
+          protocol: TCP
+      - name: envoy-gateway/gateway-17
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-17
+          protocol: TCP
+      - name: envoy-gateway/gateway-18
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-18
+          protocol: TCP
+      - name: envoy-gateway/gateway-2
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-2
+          protocol: TCP
+      - name: envoy-gateway/gateway-3
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-3
+          protocol: TCP
+      - name: envoy-gateway/gateway-4
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-4
+          protocol: TCP
+      - name: envoy-gateway/gateway-5
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-5
+          protocol: TCP
+      - name: envoy-gateway/gateway-6
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-6
+          protocol: TCP
+      - name: envoy-gateway/gateway-7
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-7
+          protocol: TCP
+      - name: envoy-gateway/gateway-8
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-8
+          protocol: TCP
+      - name: envoy-gateway/gateway-9
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-9
+          protocol: TCP
     http:
     - address: 0.0.0.0
       hostnames:
@@ -2611,13 +3869,6 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /
-    proxyServiceCluster:
-      destination:
-        name: envoy-gateway/gateway-9
-        preferLocal:
-          minEndpointsThreshold: 1
-        protocol: HTTP
-      name: envoy-gateway/gateway-9
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4
@@ -2627,6 +3878,152 @@ xdsIR:
     accessLog:
       json:
       - path: /dev/stdout
+    globalResources:
+      proxyServiceClusters:
+      - name: envoy-gateway/gateway-1
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-1
+          protocol: TCP
+      - name: envoy-gateway/gateway-10
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-10
+          protocol: TCP
+      - name: envoy-gateway/gateway-11
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-11
+          protocol: TCP
+      - name: envoy-gateway/gateway-12
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-12
+          protocol: TCP
+      - name: envoy-gateway/gateway-13
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-13
+          protocol: TCP
+      - name: envoy-gateway/gateway-14
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-14
+          protocol: TCP
+      - name: envoy-gateway/gateway-15
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-15
+          protocol: TCP
+      - name: envoy-gateway/gateway-16
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-16
+          protocol: TCP
+      - name: envoy-gateway/gateway-17
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-17
+          protocol: TCP
+      - name: envoy-gateway/gateway-18
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-18
+          protocol: TCP
+      - name: envoy-gateway/gateway-2
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-2
+          protocol: TCP
+      - name: envoy-gateway/gateway-3
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-3
+          protocol: TCP
+      - name: envoy-gateway/gateway-4
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-4
+          protocol: TCP
+      - name: envoy-gateway/gateway-5
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-5
+          protocol: TCP
+      - name: envoy-gateway/gateway-6
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-6
+          protocol: TCP
+      - name: envoy-gateway/gateway-7
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-7
+          protocol: TCP
+      - name: envoy-gateway/gateway-8
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-8
+          protocol: TCP
+      - name: envoy-gateway/gateway-9
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-9
+          protocol: TCP
     http:
     - address: 0.0.0.0
       hostnames:
@@ -2669,13 +4066,6 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /
-    proxyServiceCluster:
-      destination:
-        name: envoy-gateway/gateway-10
-        preferLocal:
-          minEndpointsThreshold: 1
-        protocol: HTTP
-      name: envoy-gateway/gateway-10
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4
@@ -2685,6 +4075,152 @@ xdsIR:
     accessLog:
       json:
       - path: /dev/stdout
+    globalResources:
+      proxyServiceClusters:
+      - name: envoy-gateway/gateway-1
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-1
+          protocol: TCP
+      - name: envoy-gateway/gateway-10
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-10
+          protocol: TCP
+      - name: envoy-gateway/gateway-11
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-11
+          protocol: TCP
+      - name: envoy-gateway/gateway-12
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-12
+          protocol: TCP
+      - name: envoy-gateway/gateway-13
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-13
+          protocol: TCP
+      - name: envoy-gateway/gateway-14
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-14
+          protocol: TCP
+      - name: envoy-gateway/gateway-15
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-15
+          protocol: TCP
+      - name: envoy-gateway/gateway-16
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-16
+          protocol: TCP
+      - name: envoy-gateway/gateway-17
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-17
+          protocol: TCP
+      - name: envoy-gateway/gateway-18
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-18
+          protocol: TCP
+      - name: envoy-gateway/gateway-2
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-2
+          protocol: TCP
+      - name: envoy-gateway/gateway-3
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-3
+          protocol: TCP
+      - name: envoy-gateway/gateway-4
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-4
+          protocol: TCP
+      - name: envoy-gateway/gateway-5
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-5
+          protocol: TCP
+      - name: envoy-gateway/gateway-6
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-6
+          protocol: TCP
+      - name: envoy-gateway/gateway-7
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-7
+          protocol: TCP
+      - name: envoy-gateway/gateway-8
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-8
+          protocol: TCP
+      - name: envoy-gateway/gateway-9
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-9
+          protocol: TCP
     http:
     - address: 0.0.0.0
       hostnames:
@@ -2727,13 +4263,6 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /
-    proxyServiceCluster:
-      destination:
-        name: envoy-gateway/gateway-11
-        preferLocal:
-          minEndpointsThreshold: 1
-        protocol: HTTP
-      name: envoy-gateway/gateway-11
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4
@@ -2743,6 +4272,152 @@ xdsIR:
     accessLog:
       json:
       - path: /dev/stdout
+    globalResources:
+      proxyServiceClusters:
+      - name: envoy-gateway/gateway-1
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-1
+          protocol: TCP
+      - name: envoy-gateway/gateway-10
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-10
+          protocol: TCP
+      - name: envoy-gateway/gateway-11
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-11
+          protocol: TCP
+      - name: envoy-gateway/gateway-12
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-12
+          protocol: TCP
+      - name: envoy-gateway/gateway-13
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-13
+          protocol: TCP
+      - name: envoy-gateway/gateway-14
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-14
+          protocol: TCP
+      - name: envoy-gateway/gateway-15
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-15
+          protocol: TCP
+      - name: envoy-gateway/gateway-16
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-16
+          protocol: TCP
+      - name: envoy-gateway/gateway-17
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-17
+          protocol: TCP
+      - name: envoy-gateway/gateway-18
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-18
+          protocol: TCP
+      - name: envoy-gateway/gateway-2
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-2
+          protocol: TCP
+      - name: envoy-gateway/gateway-3
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-3
+          protocol: TCP
+      - name: envoy-gateway/gateway-4
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-4
+          protocol: TCP
+      - name: envoy-gateway/gateway-5
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-5
+          protocol: TCP
+      - name: envoy-gateway/gateway-6
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-6
+          protocol: TCP
+      - name: envoy-gateway/gateway-7
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-7
+          protocol: TCP
+      - name: envoy-gateway/gateway-8
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-8
+          protocol: TCP
+      - name: envoy-gateway/gateway-9
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-9
+          protocol: TCP
     http:
     - address: 0.0.0.0
       hostnames:
@@ -2785,13 +4460,6 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /
-    proxyServiceCluster:
-      destination:
-        name: envoy-gateway/gateway-12
-        preferLocal:
-          minEndpointsThreshold: 1
-        protocol: HTTP
-      name: envoy-gateway/gateway-12
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4
@@ -2801,6 +4469,152 @@ xdsIR:
     accessLog:
       json:
       - path: /dev/stdout
+    globalResources:
+      proxyServiceClusters:
+      - name: envoy-gateway/gateway-1
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-1
+          protocol: TCP
+      - name: envoy-gateway/gateway-10
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-10
+          protocol: TCP
+      - name: envoy-gateway/gateway-11
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-11
+          protocol: TCP
+      - name: envoy-gateway/gateway-12
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-12
+          protocol: TCP
+      - name: envoy-gateway/gateway-13
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-13
+          protocol: TCP
+      - name: envoy-gateway/gateway-14
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-14
+          protocol: TCP
+      - name: envoy-gateway/gateway-15
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-15
+          protocol: TCP
+      - name: envoy-gateway/gateway-16
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-16
+          protocol: TCP
+      - name: envoy-gateway/gateway-17
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-17
+          protocol: TCP
+      - name: envoy-gateway/gateway-18
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-18
+          protocol: TCP
+      - name: envoy-gateway/gateway-2
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-2
+          protocol: TCP
+      - name: envoy-gateway/gateway-3
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-3
+          protocol: TCP
+      - name: envoy-gateway/gateway-4
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-4
+          protocol: TCP
+      - name: envoy-gateway/gateway-5
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-5
+          protocol: TCP
+      - name: envoy-gateway/gateway-6
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-6
+          protocol: TCP
+      - name: envoy-gateway/gateway-7
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-7
+          protocol: TCP
+      - name: envoy-gateway/gateway-8
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-8
+          protocol: TCP
+      - name: envoy-gateway/gateway-9
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-9
+          protocol: TCP
     http:
     - address: 0.0.0.0
       hostnames:
@@ -2843,13 +4657,6 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /
-    proxyServiceCluster:
-      destination:
-        name: envoy-gateway/gateway-13
-        preferLocal:
-          minEndpointsThreshold: 1
-        protocol: HTTP
-      name: envoy-gateway/gateway-13
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4
@@ -2859,6 +4666,152 @@ xdsIR:
     accessLog:
       json:
       - path: /dev/stdout
+    globalResources:
+      proxyServiceClusters:
+      - name: envoy-gateway/gateway-1
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-1
+          protocol: TCP
+      - name: envoy-gateway/gateway-10
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-10
+          protocol: TCP
+      - name: envoy-gateway/gateway-11
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-11
+          protocol: TCP
+      - name: envoy-gateway/gateway-12
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-12
+          protocol: TCP
+      - name: envoy-gateway/gateway-13
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-13
+          protocol: TCP
+      - name: envoy-gateway/gateway-14
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-14
+          protocol: TCP
+      - name: envoy-gateway/gateway-15
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-15
+          protocol: TCP
+      - name: envoy-gateway/gateway-16
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-16
+          protocol: TCP
+      - name: envoy-gateway/gateway-17
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-17
+          protocol: TCP
+      - name: envoy-gateway/gateway-18
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-18
+          protocol: TCP
+      - name: envoy-gateway/gateway-2
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-2
+          protocol: TCP
+      - name: envoy-gateway/gateway-3
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-3
+          protocol: TCP
+      - name: envoy-gateway/gateway-4
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-4
+          protocol: TCP
+      - name: envoy-gateway/gateway-5
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-5
+          protocol: TCP
+      - name: envoy-gateway/gateway-6
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-6
+          protocol: TCP
+      - name: envoy-gateway/gateway-7
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-7
+          protocol: TCP
+      - name: envoy-gateway/gateway-8
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-8
+          protocol: TCP
+      - name: envoy-gateway/gateway-9
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-9
+          protocol: TCP
     http:
     - address: 0.0.0.0
       hostnames:
@@ -2901,13 +4854,6 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /
-    proxyServiceCluster:
-      destination:
-        name: envoy-gateway/gateway-14
-        preferLocal:
-          minEndpointsThreshold: 1
-        protocol: HTTP
-      name: envoy-gateway/gateway-14
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4
@@ -2917,6 +4863,152 @@ xdsIR:
     accessLog:
       json:
       - path: /dev/stdout
+    globalResources:
+      proxyServiceClusters:
+      - name: envoy-gateway/gateway-1
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-1
+          protocol: TCP
+      - name: envoy-gateway/gateway-10
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-10
+          protocol: TCP
+      - name: envoy-gateway/gateway-11
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-11
+          protocol: TCP
+      - name: envoy-gateway/gateway-12
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-12
+          protocol: TCP
+      - name: envoy-gateway/gateway-13
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-13
+          protocol: TCP
+      - name: envoy-gateway/gateway-14
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-14
+          protocol: TCP
+      - name: envoy-gateway/gateway-15
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-15
+          protocol: TCP
+      - name: envoy-gateway/gateway-16
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-16
+          protocol: TCP
+      - name: envoy-gateway/gateway-17
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-17
+          protocol: TCP
+      - name: envoy-gateway/gateway-18
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-18
+          protocol: TCP
+      - name: envoy-gateway/gateway-2
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-2
+          protocol: TCP
+      - name: envoy-gateway/gateway-3
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-3
+          protocol: TCP
+      - name: envoy-gateway/gateway-4
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-4
+          protocol: TCP
+      - name: envoy-gateway/gateway-5
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-5
+          protocol: TCP
+      - name: envoy-gateway/gateway-6
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-6
+          protocol: TCP
+      - name: envoy-gateway/gateway-7
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-7
+          protocol: TCP
+      - name: envoy-gateway/gateway-8
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-8
+          protocol: TCP
+      - name: envoy-gateway/gateway-9
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-9
+          protocol: TCP
     http:
     - address: 0.0.0.0
       hostnames:
@@ -2959,13 +5051,6 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /
-    proxyServiceCluster:
-      destination:
-        name: envoy-gateway/gateway-15
-        preferLocal:
-          minEndpointsThreshold: 1
-        protocol: HTTP
-      name: envoy-gateway/gateway-15
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4
@@ -2975,6 +5060,152 @@ xdsIR:
     accessLog:
       json:
       - path: /dev/stdout
+    globalResources:
+      proxyServiceClusters:
+      - name: envoy-gateway/gateway-1
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-1
+          protocol: TCP
+      - name: envoy-gateway/gateway-10
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-10
+          protocol: TCP
+      - name: envoy-gateway/gateway-11
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-11
+          protocol: TCP
+      - name: envoy-gateway/gateway-12
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-12
+          protocol: TCP
+      - name: envoy-gateway/gateway-13
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-13
+          protocol: TCP
+      - name: envoy-gateway/gateway-14
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-14
+          protocol: TCP
+      - name: envoy-gateway/gateway-15
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-15
+          protocol: TCP
+      - name: envoy-gateway/gateway-16
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-16
+          protocol: TCP
+      - name: envoy-gateway/gateway-17
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-17
+          protocol: TCP
+      - name: envoy-gateway/gateway-18
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-18
+          protocol: TCP
+      - name: envoy-gateway/gateway-2
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-2
+          protocol: TCP
+      - name: envoy-gateway/gateway-3
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-3
+          protocol: TCP
+      - name: envoy-gateway/gateway-4
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-4
+          protocol: TCP
+      - name: envoy-gateway/gateway-5
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-5
+          protocol: TCP
+      - name: envoy-gateway/gateway-6
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-6
+          protocol: TCP
+      - name: envoy-gateway/gateway-7
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-7
+          protocol: TCP
+      - name: envoy-gateway/gateway-8
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-8
+          protocol: TCP
+      - name: envoy-gateway/gateway-9
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-9
+          protocol: TCP
     http:
     - address: 0.0.0.0
       hostnames:
@@ -3017,13 +5248,6 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /
-    proxyServiceCluster:
-      destination:
-        name: envoy-gateway/gateway-16
-        preferLocal:
-          minEndpointsThreshold: 1
-        protocol: HTTP
-      name: envoy-gateway/gateway-16
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4
@@ -3033,6 +5257,152 @@ xdsIR:
     accessLog:
       json:
       - path: /dev/stdout
+    globalResources:
+      proxyServiceClusters:
+      - name: envoy-gateway/gateway-1
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-1
+          protocol: TCP
+      - name: envoy-gateway/gateway-10
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-10
+          protocol: TCP
+      - name: envoy-gateway/gateway-11
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-11
+          protocol: TCP
+      - name: envoy-gateway/gateway-12
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-12
+          protocol: TCP
+      - name: envoy-gateway/gateway-13
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-13
+          protocol: TCP
+      - name: envoy-gateway/gateway-14
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-14
+          protocol: TCP
+      - name: envoy-gateway/gateway-15
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-15
+          protocol: TCP
+      - name: envoy-gateway/gateway-16
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-16
+          protocol: TCP
+      - name: envoy-gateway/gateway-17
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-17
+          protocol: TCP
+      - name: envoy-gateway/gateway-18
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-18
+          protocol: TCP
+      - name: envoy-gateway/gateway-2
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-2
+          protocol: TCP
+      - name: envoy-gateway/gateway-3
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-3
+          protocol: TCP
+      - name: envoy-gateway/gateway-4
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-4
+          protocol: TCP
+      - name: envoy-gateway/gateway-5
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-5
+          protocol: TCP
+      - name: envoy-gateway/gateway-6
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-6
+          protocol: TCP
+      - name: envoy-gateway/gateway-7
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-7
+          protocol: TCP
+      - name: envoy-gateway/gateway-8
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-8
+          protocol: TCP
+      - name: envoy-gateway/gateway-9
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-9
+          protocol: TCP
     http:
     - address: 0.0.0.0
       hostnames:
@@ -3075,13 +5445,6 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /
-    proxyServiceCluster:
-      destination:
-        name: envoy-gateway/gateway-17
-        preferLocal:
-          minEndpointsThreshold: 1
-        protocol: HTTP
-      name: envoy-gateway/gateway-17
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4
@@ -3091,6 +5454,152 @@ xdsIR:
     accessLog:
       json:
       - path: /dev/stdout
+    globalResources:
+      proxyServiceClusters:
+      - name: envoy-gateway/gateway-1
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-1
+          protocol: TCP
+      - name: envoy-gateway/gateway-10
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-10
+          protocol: TCP
+      - name: envoy-gateway/gateway-11
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-11
+          protocol: TCP
+      - name: envoy-gateway/gateway-12
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-12
+          protocol: TCP
+      - name: envoy-gateway/gateway-13
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-13
+          protocol: TCP
+      - name: envoy-gateway/gateway-14
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-14
+          protocol: TCP
+      - name: envoy-gateway/gateway-15
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-15
+          protocol: TCP
+      - name: envoy-gateway/gateway-16
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-16
+          protocol: TCP
+      - name: envoy-gateway/gateway-17
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-17
+          protocol: TCP
+      - name: envoy-gateway/gateway-18
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-18
+          protocol: TCP
+      - name: envoy-gateway/gateway-2
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-2
+          protocol: TCP
+      - name: envoy-gateway/gateway-3
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-3
+          protocol: TCP
+      - name: envoy-gateway/gateway-4
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-4
+          protocol: TCP
+      - name: envoy-gateway/gateway-5
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-5
+          protocol: TCP
+      - name: envoy-gateway/gateway-6
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-6
+          protocol: TCP
+      - name: envoy-gateway/gateway-7
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-7
+          protocol: TCP
+      - name: envoy-gateway/gateway-8
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-8
+          protocol: TCP
+      - name: envoy-gateway/gateway-9
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-9
+          protocol: TCP
     http:
     - address: 0.0.0.0
       hostnames:
@@ -3133,69 +5642,6 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /
-    proxyServiceCluster:
-      destination:
-        addressType: IP
-        endpoints:
-        - host: 7.6.5.4
-          port: 8080
-          zone: zone1
-        - host: 7.6.5.4
-          port: 8080
-          zone: zone1
-        - host: 7.6.5.4
-          port: 8080
-          zone: zone1
-        - host: 7.6.5.4
-          port: 8080
-          zone: zone1
-        - host: 7.6.5.4
-          port: 8080
-          zone: zone1
-        - host: 7.6.5.4
-          port: 8080
-          zone: zone1
-        - host: 7.6.5.4
-          port: 8080
-          zone: zone1
-        - host: 7.6.5.4
-          port: 8080
-          zone: zone1
-        - host: 7.6.5.4
-          port: 8080
-          zone: zone1
-        - host: 7.6.5.4
-          port: 8080
-          zone: zone1
-        - host: 7.6.5.4
-          port: 8080
-          zone: zone1
-        - host: 7.6.5.4
-          port: 8080
-          zone: zone1
-        - host: 7.6.5.4
-          port: 8080
-          zone: zone1
-        - host: 7.6.5.4
-          port: 8080
-          zone: zone1
-        - host: 7.6.5.4
-          port: 8080
-          zone: zone1
-        - host: 7.6.5.4
-          port: 8080
-          zone: zone1
-        - host: 7.6.5.4
-          port: 8080
-          zone: zone1
-        - host: 7.6.5.4
-          port: 8080
-          zone: zone1
-        name: envoy-gateway/gateway-18
-        preferLocal:
-          minEndpointsThreshold: 1
-        protocol: HTTP
-      name: envoy-gateway/gateway-18
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4

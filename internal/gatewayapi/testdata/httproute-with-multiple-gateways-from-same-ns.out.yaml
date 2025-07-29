@@ -183,6 +183,24 @@ xdsIR:
     accessLog:
       json:
       - path: /dev/stdout
+    globalResources:
+      proxyServiceClusters:
+      - name: envoy-gateway/gateway-a
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-a-37c12ef1
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-a
+          protocol: TCP
+      - name: envoy-gateway/gateway-b
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-a-37c12ef1
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-b
+          protocol: TCP
     http:
     - address: 0.0.0.0
       hostnames:
@@ -216,13 +234,6 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /toy
-    proxyServiceCluster:
-      destination:
-        name: envoy-gateway/gateway-a
-        preferLocal:
-          minEndpointsThreshold: 1
-        protocol: HTTP
-      name: envoy-gateway/gateway-a
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4
@@ -232,6 +243,24 @@ xdsIR:
     accessLog:
       json:
       - path: /dev/stdout
+    globalResources:
+      proxyServiceClusters:
+      - name: envoy-gateway/gateway-a
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-a-37c12ef1
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-a
+          protocol: TCP
+      - name: envoy-gateway/gateway-b
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-a-37c12ef1
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-b
+          protocol: TCP
     http:
     - address: 0.0.0.0
       hostnames:
@@ -265,21 +294,6 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /toy
-    proxyServiceCluster:
-      destination:
-        addressType: IP
-        endpoints:
-        - host: 7.6.5.4
-          port: 8080
-          zone: zone1
-        - host: 7.6.5.4
-          port: 8080
-          zone: zone1
-        name: envoy-gateway/gateway-b
-        preferLocal:
-          minEndpointsThreshold: 1
-        protocol: HTTP
-      name: envoy-gateway/gateway-b
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4

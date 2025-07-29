@@ -27,6 +27,7 @@ import (
 	"google.golang.org/protobuf/types/known/wrapperspb"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/util/sets"
+	"k8s.io/utils/ptr"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	extensionTypes "github.com/envoyproxy/gateway/internal/extension/types"
@@ -844,6 +845,32 @@ func processUDPListenerXdsTranslation(
 			// skip this listener if failed to add xds listener to the resource version table
 			errs = errors.Join(errs, err)
 			continue
+		}
+	}
+	return errs
+}
+
+func processServiceCluster(tCtx *types.ResourceVersionTable, xdsIR *ir.Xds) error {
+	if xdsIR == nil || xdsIR.GlobalResources == nil {
+		return nil
+	}
+
+	var errs error
+	for _, svcCluster := range xdsIR.GlobalResources.ProxyServiceClusters {
+		if svcCluster != nil {
+			if err := addXdsCluster(tCtx, &xdsClusterArgs{
+				name:         svcCluster.Name,
+				settings:     svcCluster.Settings,
+				endpointType: EndpointTypeStatic,
+				loadBalancer: &ir.LoadBalancer{
+					LeastRequest: &ir.LeastRequest{},
+					PreferLocal: &ir.PreferLocalZone{
+						MinEndpointsThreshold: ptr.To[uint64](1),
+					},
+				},
+			}); err != nil {
+				errs = errors.Join(errs, err)
+			}
 		}
 	}
 	return errs
