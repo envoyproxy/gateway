@@ -335,23 +335,13 @@ func (t *Translator) addHCMToXDSListener(
 	}
 
 	// HTTP filter configuration
-	var statPrefix string
-	if irListener.TLS != nil {
-		statPrefix = "https"
-	} else {
-		statPrefix = "http"
-	}
-
-	// Append port to the statPrefix.
-	statPrefix = strings.Join([]string{statPrefix, strconv.Itoa(int(irListener.Port))}, "-")
-
 	// Client IP detection
 	useRemoteAddress := true
 	originalIPDetectionExtensions := originalIPDetectionExtensions(irListener.ClientIPDetection)
 	if originalIPDetectionExtensions != nil {
 		useRemoteAddress = false
 	}
-
+    statPrefix := hcmStatPrefix(irListener, t.xdsNameSchemeV2())
 	mgr := &hcmv3.HttpConnectionManager{
 		AccessLog:  al,
 		CodecType:  hcmv3.HttpConnectionManager_AUTO,
@@ -507,6 +497,17 @@ func routeConfigName(irListener *ir.HTTPListener, nameSchemeV2 bool) string {
 	return httpListenerRouteConfigName(irListener, nameSchemeV2)
 }
 
+func hcmStatPrefix(irListener *ir.HTTPListener, nameSchemeV2 bool) string {
+	statPrefix := "http"
+	if irListener.TLS != nil {
+		statPrefix = "https"
+	}
+
+	if nameSchemeV2 {
+		return fmt.Sprintf("%s-%d", statPrefix, irListener.ExternalPort)
+	}
+	return fmt.Sprintf("%s-%d", statPrefix, irListener.Port)
+}
 
 // port value is used for the route config name for HTTP listeners. as multiple HTTP listeners on the same port are
 // using the same route config.
