@@ -29,6 +29,14 @@ type LoadBalancer struct {
 	// +optional
 	ConsistentHash *ConsistentHash `json:"consistentHash,omitempty"`
 
+	// EndpointOverride defines the configuration for endpoint override.
+	// When specified, the load balancer will attempt to route requests to endpoints
+	// based on the override information extracted from request headers or metadata.
+	//  If the override endpoints are not available, the configured load balancer policy will be used as fallback.
+	//
+	// +optional
+	EndpointOverride *EndpointOverride `json:"endpointOverride,omitempty"`
+
 	// SlowStart defines the configuration related to the slow start load balancer policy.
 	// If set, during slow start window, traffic sent to the newly added hosts will gradually increase.
 	// Currently this is only supported for RoundRobin and LeastRequest load balancers
@@ -177,4 +185,27 @@ type ForceLocalZone struct {
 	// +optional
 	// +notImplementedHide
 	MinEndpointsInZoneThreshold *uint32 `json:"minEndpointsInZoneThreshold,omitempty"`
+}
+
+// EndpointOverride defines the configuration for endpoint override.
+// This allows endpoint picking to be implemented based on request headers or metadata.
+// It extracts selected override endpoints from the specified sources (request headers, metadata, etc.).
+// If no valid endpoint in the override list, then the configured load balancing policy is used as fallback.
+type EndpointOverride struct {
+	// ExtractFrom defines the sources to extract endpoint override information from.
+	//
+	// +kubebuilder:validation:MinItems=1
+	// +kubebuilder:validation:MaxItems=10
+	ExtractFrom []EndpointOverrideExtractFrom `json:"extractFrom"`
+}
+
+// EndpointOverrideExtractFrom defines a source to extract endpoint override information from.
+type EndpointOverrideExtractFrom struct {
+	// Header defines the header to get the override endpoint addresses.
+	// The header value must specify at least one endpoint in `IP:Port` format or multiple endpoints in `IP:Port,IP:Port,...` format.
+	// For example `10.0.0.5:8080` or `[2600:4040:5204::1574:24ae]:80`.
+	// The IPv6 address is enclosed in square brackets.
+	//
+	// +optional
+	Header *string `json:"header,omitempty"`
 }

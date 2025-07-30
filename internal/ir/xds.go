@@ -2536,6 +2536,11 @@ type LoadBalancer struct {
 	ConsistentHash *ConsistentHash `json:"consistentHash,omitempty" yaml:"consistentHash,omitempty"`
 	// PreferLocal defines the configuration related to the distribution of requests between locality zones.
 	PreferLocal *PreferLocalZone `json:"preferLocal,omitempty" yaml:"preferLocal,omitempty"`
+	// EndpointOverride defines the configuration for endpoint override.
+	// When specified, the load balancer will attempt to route requests to endpoints
+	// based on the override information extracted from request headers or metadata.
+	//  If the override endpoints are not available, the configured load balancer policy will be used as fallback.
+	EndpointOverride *EndpointOverride `json:"endpointOverride,omitempty" yaml:"endpointOverride,omitempty"`
 }
 
 // Validate the fields within the LoadBalancer structure
@@ -3234,3 +3239,31 @@ type ForceLocalZone struct {
 	// override. This is useful for protecting zones with fewer endpoints.
 	MinEndpointsInZoneThreshold *uint32 `json:"minEndpointsInZoneThreshold,omitempty" yaml:"minEndpointsInZoneThreshold,omitempty"`
 }
+
+// EndpointOverride defines the configuration for endpoint override.
+// +k8s:deepcopy-gen=true
+type EndpointOverride struct {
+	// ExtractFrom defines the sources to extract endpoint override information from.
+	ExtractFrom []EndpointOverrideExtractFrom `json:"extractFrom" yaml:"extractFrom"`
+}
+
+// EndpointOverrideExtractFrom defines a source to extract endpoint override information from.
+// +k8s:deepcopy-gen=true
+type EndpointOverrideExtractFrom struct {
+	// Header defines the header to get the override endpoint addresses.
+	Header *string `json:"header,omitempty" yaml:"header,omitempty"`
+}
+
+// LoadBalancerType defines the type of load balancer for IR.
+type LoadBalancerType string
+
+const (
+	// LeastRequestLoadBalancer is the least request load balancer type.
+	LeastRequestLoadBalancer LoadBalancerType = "LeastRequest"
+	// RoundRobinLoadBalancer is the round robin load balancer type.
+	RoundRobinLoadBalancer LoadBalancerType = "RoundRobin"
+	// RandomLoadBalancer is the random load balancer type.
+	RandomLoadBalancer LoadBalancerType = "Random"
+	// ConsistentHashLoadBalancer is the consistent hash load balancer type.
+	ConsistentHashLoadBalancer LoadBalancerType = "ConsistentHash"
+)
