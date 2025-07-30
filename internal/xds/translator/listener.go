@@ -493,7 +493,7 @@ func (t *Translator) addHCMToXDSListener(
 		if xdsListener.DefaultFilterChain != nil {
 			return errors.New("default filter chain already exists")
 		}
-		filterChain.Name = httpListenerDefaultFilterChainName(irListener, t.xdsNameSchemeV2() )
+		filterChain.Name = httpListenerDefaultFilterChainName(irListener, t.xdsNameSchemeV2())
 		xdsListener.DefaultFilterChain = filterChain
 	}
 
