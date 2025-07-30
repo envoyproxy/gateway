@@ -43,12 +43,13 @@ func (t *Translator) ProcessGlobalResources(resources *resource.Resources, xdsIR
 
 	for _, xdsIR := range xdsIRs {
 		if containsGlobalRateLimit(xdsIR.HTTP) || containsWasm(xdsIR.HTTP) {
-			xdsIR.GlobalResources = &ir.GlobalResources{
-				EnvoyClientCertificate: &ir.TLSCertificate{
-					Name:        irGlobalConfigName(envoyTLSSecret),
-					Certificate: envoyTLSSecret.Data[corev1.TLSCertKey],
-					PrivateKey:  envoyTLSSecret.Data[corev1.TLSPrivateKeyKey],
-				},
+			if xdsIR.GlobalResources == nil {
+				xdsIR.GlobalResources = &ir.GlobalResources{}
+			}
+			xdsIR.GlobalResources.EnvoyClientCertificate = &ir.TLSCertificate{
+				Name:        irGlobalConfigName(envoyTLSSecret),
+				Certificate: envoyTLSSecret.Data[corev1.TLSCertKey],
+				PrivateKey:  envoyTLSSecret.Data[corev1.TLSPrivateKeyKey],
 			}
 		}
 	}
