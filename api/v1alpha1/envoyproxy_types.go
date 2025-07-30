@@ -139,6 +139,11 @@ type EnvoyProxySpec struct {
 	// +optional
 	BackendTLS *BackendTLSConfig `json:"backendTLS,omitempty"`
 
+	// FrontendTLS is the TLS configuration for the Envoy proxy to use when recieving connections from clients.
+	// These settings are applied on listeners for which TLS termination is specified.
+	// +optional
+	FrontendTLS *FrontendTLSConfig `json:"frontendTLS,omitempty"`
+
 	// IPFamily specifies the IP family for the EnvoyProxy fleet.
 	// This setting only affects the Gateway listener port and does not impact
 	// other aspects of the Envoy proxy configuration.
@@ -203,6 +208,15 @@ type BackendTLSConfig struct {
 	// +optional
 	ClientCertificateRef *gwapiv1.SecretObjectReference `json:"clientCertificateRef,omitempty"`
 	TLSSettings          `json:",inline"`
+}
+
+// FrontendTLSConfig describes the FrontendTLS configuration for Envoy Proxy.
+type FrontendTLSConfig struct {
+	// SkipHostnameValidation, if true, will instruct the translator to not validate
+	// referenced certificates will match the hostname of an associated listener.
+	// +kubebuilder:default=false
+	// +optional
+	SkipHostnameValidation bool `json:"skipHostnameValidation,omitempty"`
 }
 
 // FilterPosition defines the position of an Envoy HTTP filter in the filter chain.

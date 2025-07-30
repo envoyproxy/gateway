@@ -7,6 +7,11 @@ gateways:
     namespace: envoy-gateway
   spec:
     gatewayClassName: envoy-gateway-class
+    infrastructure:
+      parametersRef:
+        group: gateway.envoyproxy.io
+        kind: EnvoyProxy
+        name: test
     listeners:
     - allowedRoutes:
         namespaces:
@@ -51,6 +56,18 @@ gateways:
 infraIR:
   envoy-gateway/gateway-1:
     proxy:
+      config:
+        apiVersion: gateway.envoyproxy.io/v1alpha1
+        kind: EnvoyProxy
+        metadata:
+          creationTimestamp: null
+          name: test
+          namespace: envoy-gateway
+        spec:
+          frontendTLS:
+            skipHostnameValidation: true
+          logging: {}
+        status: {}
       listeners:
       - address: null
         name: envoy-gateway/gateway-1/https-hostname-override

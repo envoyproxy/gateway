@@ -355,13 +355,23 @@ func (t *Translator) validateAllowedNamespaces(listener *ListenerContext) {
 	}
 }
 
-func getHost(listener *ListenerContext) *gwapiv1.Hostname {
-	value, exists := listener.TLS.Options["gateway.envoyproxy.io/tls-hostname-override"]
-	if exists {
-		host := gwapiv1.Hostname(value)
-		return &host
+func shouldSkipHostnameValidationEnvoyProxy(envoyProxy *egv1a1.EnvoyProxy) bool {
+	if envoyProxy.Spec.FrontendTLS != nil {
+		return envoyProxy.Spec.FrontendTLS.SkipHostnameValidation
 	}
-	return listener.Hostname
+	return false
+}
+
+func shouldSkipHostnameValidation(listener *ListenerContext, resources *resource.Resources) bool {
+	if listener.gateway.envoyProxy != nil {
+		return shouldSkipHostnameValidationEnvoyProxy(listener.gateway.envoyProxy)
+	}
+
+	if resources.EnvoyProxyForGatewayClass != nil {
+		return shouldSkipHostnameValidationEnvoyProxy(resources.EnvoyProxyForGatewayClass)
+	}
+
+	return false
 }
 
 func (t *Translator) validateTerminateModeAndGetTLSSecrets(listener *ListenerContext, resources *resource.Resources) ([]*corev1.Secret, []*x509.Certificate) {
@@ -469,7 +479,12 @@ func (t *Translator) validateTerminateModeAndGetTLSSecrets(listener *ListenerCon
 		secrets = append(secrets, secret)
 	}
 
-	certs, err := validateTLSSecretsData(secrets, getHost(listener))
+	certs, err := validateTLSSecretsData(
+		secrets,
+		listener.Hostname,
+		shouldSkipHostnameValidation(listener, resources),
+	)
+
 	if err != nil {
 		status.SetGatewayListenerStatusCondition(listener.gateway.Gateway,
 			listener.listenerStatusIdx,
