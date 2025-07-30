@@ -17,7 +17,7 @@ import (
 
 // validateTLSSecretData ensures the cert and key provided in a secret
 // is not malformed and can be properly parsed
-func validateTLSSecretsData(secrets []*corev1.Secret, host *gwapiv1.Hostname) ([]*x509.Certificate, error) {
+func validateTLSSecretsData(secrets []*corev1.Secret, host *gwapiv1.Hostname, skipHostnameValidation bool) ([]*x509.Certificate, error) {
 	var publicKeyAlgorithm string
 	var certs []*x509.Certificate
 	var parseErr error
@@ -48,7 +48,7 @@ func validateTLSSecretsData(secrets []*corev1.Secret, host *gwapiv1.Hostname) ([
 			return nil, fmt.Errorf("%s/%s must contain valid %s and %s, unable to decode pem data in %s", secret.Namespace, secret.Name, corev1.TLSCertKey, corev1.TLSPrivateKeyKey, corev1.TLSPrivateKeyKey)
 		}
 
-		matchedFQDN, err := verifyHostname(cert, host)
+		matchedFQDN, err := verifyHostname(cert, host, skipHostnameValidation)
 		if err != nil {
 			return nil, fmt.Errorf("%s/%s must contain valid %s and %s, hostname %s does not match Common Name or DNS Names in the certificate %s", secret.Namespace, secret.Name, corev1.TLSCertKey, corev1.TLSPrivateKeyKey, string(*host), corev1.TLSCertKey)
 		}
@@ -86,18 +86,27 @@ func validateTLSSecretsData(secrets []*corev1.Secret, host *gwapiv1.Hostname) ([
 	return certs, parseErr
 }
 
-// verifyHostname checks if the listener Hostname matches any domain in the certificate, returns a list of matched hosts.
-func verifyHostname(cert *x509.Certificate, host *gwapiv1.Hostname) ([]string, error) {
-	var matchedHosts []string
+// collectHostnames consumes a certificate object and returns a list of hostnames that could be authenticated with that cert.
+func collectHostnames(cert *x509.Certificate) []string {
+	if len(cert.DNSNames) > 0 {
+		return cert.DNSNames
+	}
+	return []string{cert.Subject.CommonName}
+}
 
+// verifyHostname checks if the listener Hostname matches any domain in the certificate, returns a list of matched hosts.
+func verifyHostname(cert *x509.Certificate, host *gwapiv1.Hostname, skipHostnameValidation bool) ([]string, error) {
 	listenerContext := ListenerContext{
 		Listener: &gwapiv1.Listener{Hostname: host},
 	}
-	if len(cert.DNSNames) > 0 {
-		matchedHosts = computeHosts(cert.DNSNames, &listenerContext)
-	} else {
-		matchedHosts = computeHosts([]string{cert.Subject.CommonName}, &listenerContext)
+
+	hostnames := collectHostnames(cert)
+
+	if skipHostnameValidation {
+		return hostnames, nil
 	}
+
+	matchedHosts := computeHosts(hostnames, &listenerContext)
 
 	if len(matchedHosts) > 0 {
 		return matchedHosts, nil

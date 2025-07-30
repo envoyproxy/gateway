@@ -399,6 +399,18 @@ spec:
                     rule: (has(self.before) && !has(self.after)) || (!has(self.before)
                       && has(self.after))
                 type: array
+              frontendTLS:
+                description: |-
+                  FrontendTLS is the TLS configuration for the Envoy proxy to use when recieving connections from clients.
+                  These settings are applied on listeners for which TLS termination is specified.
+                properties:
+                  skipHostnameValidation:
+                    default: false
+                    description: |-
+                      SkipHostnameValidation, if true, will instruct the translator to not validate
+                      referenced certificates will match the hostname of an associated listener.
+                    type: boolean
+                type: object
               ipFamily:
                 description: |-
                   IPFamily specifies the IP family for the EnvoyProxy fleet.
