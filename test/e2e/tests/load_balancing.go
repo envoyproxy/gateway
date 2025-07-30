@@ -420,7 +420,11 @@ var EndpointOverrideLoadBalancingTest = suite.ConformanceTest{
 		t.Run("header-based endpoint override with valid pod IP should route to specific pod", func(t *testing.T) {
 			// Use the first valid pod IP as override host
 			targetPodIP := validPodIPs[0]
-			overrideHost := fmt.Sprintf("%s:%d", targetPodIP, servicePort)
+			format := "%s:%d"
+			if IPFamily == "ipv6" {
+				format = "[%s]:%d"
+			}
+			overrideHost := fmt.Sprintf(format, targetPodIP, servicePort)
 
 			// Get the expected pod name from our mapping
 			expectPodName := podIPToName[targetPodIP]
