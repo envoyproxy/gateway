@@ -100,30 +100,26 @@ func newOrderedHTTPFilter(filter *hcmv3.HttpFilter) *OrderedHTTPFilter {
 	switch {
 	case isFilterType(filter, egv1a1.EnvoyFilterHealthCheck):
 		order = 0
-	case isFilterType(filter, egv1a1.EnvoyFilterGRPCWeb):
-		order = 1
-	case isFilterType(filter, egv1a1.EnvoyFilterGRPCStats):
-		order = 2
 	case isFilterType(filter, egv1a1.EnvoyFilterFault):
-		order = 3
+		order = 1
 	case isFilterType(filter, egv1a1.EnvoyFilterCORS):
-		order = 4
+		order = 2
 	case isFilterType(filter, egv1a1.EnvoyFilterExtAuthz):
-		order = 5
+		order = 3
 	case isFilterType(filter, egv1a1.EnvoyFilterAPIKeyAuth):
-		order = 6
+		order = 4
 	case isFilterType(filter, egv1a1.EnvoyFilterBasicAuth):
-		order = 7
+		order = 5
 	case isFilterType(filter, egv1a1.EnvoyFilterOAuth2):
-		order = 8
+		order = 6
 	case isFilterType(filter, egv1a1.EnvoyFilterJWTAuthn):
-		order = 9
+		order = 7
 	case isFilterType(filter, egv1a1.EnvoyFilterSessionPersistence):
-		order = 10
+		order = 8
 	case isFilterType(filter, egv1a1.EnvoyFilterBuffer):
-		order = 11
+		order = 9
 	case isFilterType(filter, egv1a1.EnvoyFilterLua):
-		order = 12 + mustGetFilterIndex(filter.Name)
+		order = 10 + mustGetFilterIndex(filter.Name)
 	case isFilterType(filter, egv1a1.EnvoyFilterExtProc):
 		order = 100 + mustGetFilterIndex(filter.Name)
 	case isFilterType(filter, egv1a1.EnvoyFilterWasm):
@@ -134,14 +130,18 @@ func newOrderedHTTPFilter(filter *hcmv3.HttpFilter) *OrderedHTTPFilter {
 		order = 302
 	case isFilterType(filter, egv1a1.EnvoyFilterRateLimit):
 		order = 303
-	case isFilterType(filter, egv1a1.EnvoyFilterCustomResponse):
+	case isFilterType(filter, egv1a1.EnvoyFilterGRPCWeb):
 		order = 304
-	case isFilterType(filter, egv1a1.EnvoyFilterCredentialInjector):
+	case isFilterType(filter, egv1a1.EnvoyFilterGRPCStats):
 		order = 305
-	case isFilterType(filter, egv1a1.EnvoyFilterCompressor):
+	case isFilterType(filter, egv1a1.EnvoyFilterCustomResponse):
 		order = 306
-	case isFilterType(filter, egv1a1.EnvoyFilterRouter):
+	case isFilterType(filter, egv1a1.EnvoyFilterCredentialInjector):
 		order = 307
+	case isFilterType(filter, egv1a1.EnvoyFilterCompressor):
+		order = 308
+	case isFilterType(filter, egv1a1.EnvoyFilterRouter):
+		order = 309
 	}
 
 	return &OrderedHTTPFilter{
