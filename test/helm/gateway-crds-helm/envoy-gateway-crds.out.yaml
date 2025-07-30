@@ -855,6 +855,10 @@ spec:
               http2:
                 description: HTTP2 provides HTTP/2 configuration for backend connections.
                 properties:
+                  allowConnect:
+                    description: AllowConnect specifies whether the CONNECT method
+                      is allowed.
+                    type: boolean
                   initialConnectionWindowSize:
                     allOf:
                     - pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
@@ -3111,6 +3115,10 @@ spec:
               http2:
                 description: HTTP2 provides HTTP/2 configuration on the listener.
                 properties:
+                  allowConnect:
+                    description: AllowConnect specifies whether the CONNECT method
+                      is allowed.
+                    type: boolean
                   initialConnectionWindowSize:
                     allOf:
                     - pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
@@ -3151,6 +3159,11 @@ spec:
                 type: object
               http3:
                 description: HTTP3 provides HTTP/3 configuration on the listener.
+                properties:
+                  allowConnect:
+                    description: AllowConnect specifies whether the CONNECT method
+                      is allowed.
+                    type: boolean
                 type: object
               path:
                 description: Path enables managing how the incoming path set by clients
@@ -4731,6 +4744,10 @@ spec:
                           description: HTTP2 provides HTTP/2 configuration for backend
                             connections.
                           properties:
+                            allowConnect:
+                              description: AllowConnect specifies whether the CONNECT
+                                method is allowed.
+                              type: boolean
                             initialConnectionWindowSize:
                               allOf:
                               - pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
@@ -17772,6 +17789,10 @@ spec:
                                             description: HTTP2 provides HTTP/2 configuration
                                               for backend connections.
                                             properties:
+                                              allowConnect:
+                                                description: AllowConnect specifies
+                                                  whether the CONNECT method is allowed.
+                                                type: boolean
                                               initialConnectionWindowSize:
                                                 allOf:
                                                 - pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
@@ -18852,6 +18873,10 @@ spec:
                                             description: HTTP2 provides HTTP/2 configuration
                                               for backend connections.
                                             properties:
+                                              allowConnect:
+                                                description: AllowConnect specifies
+                                                  whether the CONNECT method is allowed.
+                                                type: boolean
                                               initialConnectionWindowSize:
                                                 allOf:
                                                 - pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
@@ -20022,6 +20047,10 @@ spec:
                                       description: HTTP2 provides HTTP/2 configuration
                                         for backend connections.
                                       properties:
+                                        allowConnect:
+                                          description: AllowConnect specifies whether
+                                            the CONNECT method is allowed.
+                                          type: boolean
                                         initialConnectionWindowSize:
                                           allOf:
                                           - pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
@@ -21106,6 +21135,10 @@ spec:
                                 description: HTTP2 provides HTTP/2 configuration for
                                   backend connections.
                                 properties:
+                                  allowConnect:
+                                    description: AllowConnect specifies whether the
+                                      CONNECT method is allowed.
+                                    type: boolean
                                   initialConnectionWindowSize:
                                     allOf:
                                     - pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
@@ -23024,6 +23057,10 @@ spec:
                             description: HTTP2 provides HTTP/2 configuration for backend
                               connections.
                             properties:
+                              allowConnect:
+                                description: AllowConnect specifies whether the CONNECT
+                                  method is allowed.
+                                type: boolean
                               initialConnectionWindowSize:
                                 allOf:
                                 - pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
@@ -24002,6 +24039,10 @@ spec:
                             description: HTTP2 provides HTTP/2 configuration for backend
                               connections.
                             properties:
+                              allowConnect:
+                                description: AllowConnect specifies whether the CONNECT
+                                  method is allowed.
+                                type: boolean
                               initialConnectionWindowSize:
                                 allOf:
                                 - pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
@@ -25185,6 +25226,10 @@ spec:
                                   description: HTTP2 provides HTTP/2 configuration
                                     for backend connections.
                                   properties:
+                                    allowConnect:
+                                      description: AllowConnect specifies whether
+                                        the CONNECT method is allowed.
+                                      type: boolean
                                     initialConnectionWindowSize:
                                       allOf:
                                       - pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
@@ -26405,6 +26450,10 @@ spec:
                             description: HTTP2 provides HTTP/2 configuration for backend
                               connections.
                             properties:
+                              allowConnect:
+                                description: AllowConnect specifies whether the CONNECT
+                                  method is allowed.
+                                type: boolean
                               initialConnectionWindowSize:
                                 allOf:
                                 - pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$

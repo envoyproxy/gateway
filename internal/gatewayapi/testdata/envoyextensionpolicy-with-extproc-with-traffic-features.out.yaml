@@ -440,6 +440,7 @@ xdsIR:
                   consecutiveGatewayErrors: 4
                   interval: 5s
               http2:
+                allowConnect: false
                 initialConnectionWindowSize: 131072
                 initialStreamWindowSize: 2097152
                 maxConcurrentStreams: 200
