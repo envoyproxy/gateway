@@ -180,8 +180,9 @@ func startRunners(ctx context.Context, cfg *config.Server) (err error) {
 			}),
 		},
 		{
-			// Start the Xds Translator Service
-			// It subscribes to the xdsIR, translates it into xds Resources and publishes it.
+			// Start the Xds Service
+			// It subscribes to the xdsIR, translates it into xds Resources
+			// and publishes it into the xDS Cache.
 			// It also computes the EnvoyPatchPolicy statuses and publishes it.
 			runner: xdsrunner.New(&xdsrunner.Config{
 				Server:            *cfg,

@@ -10,6 +10,7 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"errors"
+	"fmt"
 	"io"
 	"net"
 	"os"
@@ -18,14 +19,20 @@ import (
 	"testing"
 	"time"
 
+	listenerv3 "github.com/envoyproxy/go-control-plane/envoy/config/listener/v3"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/tsaarni/certyaml"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
+	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/crypto"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
+	"github.com/envoyproxy/gateway/internal/extension/types"
+	"github.com/envoyproxy/gateway/internal/ir"
+	"github.com/envoyproxy/gateway/internal/message"
 	"github.com/envoyproxy/gateway/internal/xds/bootstrap"
 )
 
@@ -188,6 +195,35 @@ func peekError(conn net.Conn) error {
 	return nil
 }
 
+// setupTLSCerts creates temporary TLS certificates for testing
+func setupTLSCerts(t *testing.T) (caFile, certFile, keyFile string, cleanup func()) {
+	configDir, err := os.MkdirTemp("", "eg-runner-test-")
+	require.NoError(t, err)
+
+	caFile = filepath.Join(configDir, "ca.crt")
+	certFile = filepath.Join(configDir, "tls.crt")
+	keyFile = filepath.Join(configDir, "tls.key")
+
+	// Create certificates
+	trustedCACert := certyaml.Certificate{
+		Subject: "cn=test-ca",
+	}
+	serverCert := certyaml.Certificate{
+		Subject:         "cn=test-server",
+		SubjectAltNames: []string{"DNS:localhost"},
+		Issuer:          &trustedCACert,
+	}
+
+	err = trustedCACert.WritePEM(caFile, keyFile)
+	require.NoError(t, err)
+	err = serverCert.WritePEM(certFile, keyFile)
+	require.NoError(t, err)
+
+	return caFile, certFile, keyFile, func() {
+		os.RemoveAll(configDir)
+	}
+}
+
 func TestServeXdsServerListenFailed(t *testing.T) {
 	// Occupy the address to make listening failed
 	addr := net.JoinHostPort(XdsServerAddress, strconv.Itoa(bootstrap.DefaultXdsServerPort))
@@ -202,4 +238,276 @@ func TestServeXdsServerListenFailed(t *testing.T) {
 	r.Logger = r.Logger.WithName(r.Name()).WithValues("runner", r.Name())
 	// Don't crash in this function
 	r.serveXdsServer(context.Background())
+}
+
+func TestRunner(t *testing.T) {
+	// Setup TLS certificates
+	caFile, certFile, keyFile, cleanup := setupTLSCerts(t)
+	defer cleanup()
+
+	// Setup
+	xdsIR := new(message.XdsIR)
+	pResource := new(message.ProviderResources)
+	cfg, err := config.New(os.Stdout)
+	require.NoError(t, err)
+	r := New(&Config{
+		Server:            *cfg,
+		ProviderResources: pResource,
+		XdsIR:             xdsIR,
+		TLSCertPath:       certFile,
+		TLSKeyPath:        keyFile,
+		TLSCaPath:         caFile,
+	})
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	// Start
+	err = r.Start(ctx)
+	require.NoError(t, err)
+	defer func() {
+		cancel()
+		time.Sleep(100 * time.Millisecond) // Allow graceful shutdown
+	}()
+
+	// xDS is nil at start
+	require.Equal(t, map[string]*ir.Xds{}, xdsIR.LoadAll())
+
+	// test translation
+	path := "example"
+	res := ir.Xds{
+		HTTP: []*ir.HTTPListener{
+			{
+				CoreListenerDetails: ir.CoreListenerDetails{
+					Name:    "test",
+					Address: "0.0.0.0",
+					Port:    80,
+				},
+				Hostnames: []string{"example.com"},
+				Routes: []*ir.HTTPRoute{
+					{
+						Name: "test-route",
+						PathMatch: &ir.StringMatch{
+							Exact: &path,
+						},
+						Destination: &ir.RouteDestination{
+							Name: "test-dest",
+							Settings: []*ir.DestinationSetting{
+								{
+									Endpoints: []*ir.DestinationEndpoint{
+										{
+											Host: "10.11.12.13",
+											Port: 8080,
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+	xdsIR.Store("test", &res)
+	require.Eventually(t, func() bool {
+		// Check that the cache has the snapshot for our test key
+		return r.cache.SnapshotHasIrKey("test")
+	}, time.Second*5, time.Millisecond*50)
+
+	// Delete the IR triggering an xds delete
+	xdsIR.Delete("test")
+	require.Eventually(t, func() bool {
+		// Wait for the IR to be empty after deletion
+		return len(xdsIR.LoadAll()) == 0
+	}, time.Second*5, time.Millisecond*50)
+}
+
+func TestRunner_withExtensionManager_FailOpen(t *testing.T) {
+	// Setup TLS certificates
+	caFile, certFile, keyFile, cleanup := setupTLSCerts(t)
+	defer cleanup()
+
+	// Setup
+	xdsIR := new(message.XdsIR)
+	pResource := new(message.ProviderResources)
+
+	cfg, err := config.New(os.Stdout)
+	require.NoError(t, err)
+	require.NotNil(t, cfg)
+
+	extMgr := &extManagerMock{}
+	extMgr.ShouldFailOpen = true
+
+	r := New(&Config{
+		Server:            *cfg,
+		ProviderResources: pResource,
+		XdsIR:             xdsIR,
+		ExtensionManager:  extMgr,
+		TLSCertPath:       certFile,
+		TLSKeyPath:        keyFile,
+		TLSCaPath:         caFile,
+	})
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	// Start
+	err = r.Start(ctx)
+	require.NoError(t, err)
+	defer func() {
+		cancel()
+		time.Sleep(100 * time.Millisecond) // Allow graceful shutdown
+	}()
+
+	// xDS is nil at start
+	require.Equal(t, map[string]*ir.Xds{}, xdsIR.LoadAll())
+
+	// test translation
+	path := "example"
+	res := ir.Xds{
+		HTTP: []*ir.HTTPListener{
+			{
+				CoreListenerDetails: ir.CoreListenerDetails{
+					Name:    "test",
+					Address: "0.0.0.0",
+					Port:    80,
+				},
+				Hostnames: []string{"example.com"},
+				Routes: []*ir.HTTPRoute{
+					{
+						Name: "test-route",
+						PathMatch: &ir.StringMatch{
+							Exact: &path,
+						},
+						Destination: &ir.RouteDestination{
+							Name: "test-dest",
+							Settings: []*ir.DestinationSetting{
+								{
+									Endpoints: []*ir.DestinationEndpoint{
+										{
+											Host: "10.11.12.13",
+											Port: 8080,
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+	xdsIR.Store("test", &res)
+	require.Eventually(t, func() bool {
+		// Since the extension manager is configured to fail open, in an event of an error
+		// from the extension manager hooks, xds update should be published.
+		return r.cache.SnapshotHasIrKey("test")
+	}, time.Second*5, time.Millisecond*50)
+}
+
+func TestRunner_withExtensionManager_FailClosed(t *testing.T) {
+	// Setup TLS certificates
+	caFile, certFile, keyFile, cleanup := setupTLSCerts(t)
+	defer cleanup()
+
+	// Setup
+	xdsIR := new(message.XdsIR)
+	pResource := new(message.ProviderResources)
+
+	cfg, err := config.New(os.Stdout)
+	require.NoError(t, err)
+	require.NotNil(t, cfg)
+
+	extMgr := &extManagerMock{}
+
+	r := New(&Config{
+		Server:            *cfg,
+		ProviderResources: pResource,
+		XdsIR:             xdsIR,
+		ExtensionManager:  extMgr,
+		TLSCertPath:       certFile,
+		TLSKeyPath:        keyFile,
+		TLSCaPath:         caFile,
+	})
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	// Start
+	err = r.Start(ctx)
+	require.NoError(t, err)
+	defer func() {
+		cancel()
+		time.Sleep(100 * time.Millisecond) // Allow graceful shutdown
+	}()
+
+	// xDS is nil at start
+	require.Equal(t, map[string]*ir.Xds{}, xdsIR.LoadAll())
+
+	// test translation
+	path := "example"
+	res := ir.Xds{
+		HTTP: []*ir.HTTPListener{
+			{
+				CoreListenerDetails: ir.CoreListenerDetails{
+					Name:    "test",
+					Address: "0.0.0.0",
+					Port:    80,
+				},
+				Hostnames: []string{"example.com"},
+				Routes: []*ir.HTTPRoute{
+					{
+						Name: "test-route",
+						PathMatch: &ir.StringMatch{
+							Exact: &path,
+						},
+						Destination: &ir.RouteDestination{
+							Name: "test-dest",
+							Settings: []*ir.DestinationSetting{
+								{
+									Endpoints: []*ir.DestinationEndpoint{
+										{
+											Host: "10.11.12.13",
+											Port: 8080,
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+	xdsIR.Store("test", &res)
+	require.Never(t, func() bool {
+		// Since the extension manager is configured to fail closed, in an event of an error
+		// from the extension manager hooks, xds update should not be published.
+		return r.cache.SnapshotHasIrKey("test")
+	}, time.Second*5, time.Millisecond*50)
+}
+
+type extManagerMock struct {
+	types.Manager
+	ShouldFailOpen bool
+}
+
+func (m *extManagerMock) GetPostXDSHookClient(xdsHookType egv1a1.XDSTranslatorHook) (types.XDSHookClient, error) {
+	if xdsHookType == egv1a1.XDSHTTPListener {
+		return &xdsHookClientMock{}, nil
+	}
+
+	return nil, nil
+}
+
+func (m *extManagerMock) FailOpen() bool {
+	return m.ShouldFailOpen
+}
+
+type xdsHookClientMock struct {
+	types.XDSHookClient
+}
+
+func (c *xdsHookClientMock) PostHTTPListenerModifyHook(*listenerv3.Listener, []*unstructured.Unstructured) (*listenerv3.Listener, error) {
+	return nil, fmt.Errorf("assuming a network error during the call")
 }
