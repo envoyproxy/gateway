@@ -251,8 +251,9 @@ backends:
       name: backend-1
       namespace: default
     spec:
-      tls:     # the generated ir tls settings should contain the tls settings from Backend, BackendTLSPolicy and EnvoyProxy
-               # the BackendTLSPolicy should override the one from Backend
+      # the BackendTLSPolicy should override the one from Backend
+      # the generated ir tls settings should contain the tls settings from Backend, BackendTLSPolicy and EnvoyProxy
+      tls:
         caCertificateRefs:
           - name: ca-cmap
             group: ""
