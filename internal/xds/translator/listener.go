@@ -360,7 +360,7 @@ func (t *Translator) addHCMToXDSListener(
 			Rds: &hcmv3.Rds{
 				ConfigSource: makeConfigSource(),
 				// Configure route name to be found via RDS.
-				RouteConfigName: routeConfigName(irListener),
+				RouteConfigName: routeConfigName(irListener, t.xdsNameSchemeV2()),
 			},
 		},
 		HttpProtocolOptions: http1ProtocolOptions(irListener.HTTP1),
@@ -500,8 +500,28 @@ func (t *Translator) addHCMToXDSListener(
 	return nil
 }
 
-func routeConfigName(irListener *ir.HTTPListener) string {
-	// TODO(zhaohuabing): change the routeConfig name for HTTP listeners because they are merged into one route config
+func routeConfigName(irListener *ir.HTTPListener, nameSchemeV2 bool) string {
+	if irListener.TLS != nil {
+		return httpsListenerRouteConfigName(irListener)
+	}
+	return httpListenerRouteConfigName(irListener, nameSchemeV2)
+}
+
+
+// port value is used for the route config name for HTTP listeners. as multiple HTTP listeners on the same port are
+// using the same route config.
+func httpListenerRouteConfigName(irListener *ir.HTTPListener, nameSchemeV2 bool) string {
+	if nameSchemeV2 {
+		return fmt.Sprint(irListener.ExternalPort)
+	}
+	// For backward compatibility, we use the listener name as the route config name.
+	return irListener.Name
+}
+
+// irListener name is used as the route config name for HTTPS listener, as HTTPS Listener is 1:1 mapping to the filter chain,
+// and the HCM in each filter chain uses a unique route config.
+// The Gateway API layer ensures that each listener has a unique combination of hostname and port.
+func httpsListenerRouteConfigName(irListener *ir.HTTPListener) string {
 	return irListener.Name
 }
 
@@ -515,7 +535,7 @@ func httpListenerDefaultFilterChainName(irListener *ir.HTTPListener, nameSchemeV
 	return irListener.Name
 }
 
-// irListener name is used as the filter chain name for HTTPS listener, as Listener is 1:1 mapping to the filter chain
+// irListener name is used as the filter chain name for HTTPS listener, as HTTPS Listener is 1:1 mapping to the filter chain.
 // The Gateway API layer ensures that each listener has a unique combination of hostname and port.
 func httpsListenerFilterChainName(irListener *ir.HTTPListener) string {
 	return irListener.Name

@@ -25,7 +25,7 @@
           configSource:
             ads: {}
             resourceApiVersion: V3
-          routeConfigName: envoy-gateway/gateway-1/http1
+          routeConfigName: "80"
         serverHeaderTransformation: PASS_THROUGH
         statPrefix: http-10080
         useRemoteAddress: true

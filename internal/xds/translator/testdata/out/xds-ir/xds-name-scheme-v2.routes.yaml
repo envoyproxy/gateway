@@ -1,5 +1,5 @@
 - ignorePortInHostMatching: true
-  name: envoy-gateway/gateway-1/http1
+  name: "80"
   virtualHosts:
   - domains:
     - foo.net

@@ -446,7 +446,7 @@ func (t *Translator) processHTTPListenerXdsTranslation(
 		routeCfgName = findXdsHTTPRouteConfigName(tcpXDSListener)
 		// If the route config name is not found, we use the current ir Listener name as the route config name to create a new route config.
 		if routeCfgName == "" {
-			routeCfgName = routeConfigName(httpListener)
+			routeCfgName = routeConfigName(httpListener, t.xdsNameSchemeV2())
 		}
 
 		// Create a route config if we have not found one yet
