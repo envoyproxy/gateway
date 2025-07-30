@@ -281,6 +281,8 @@ xdsIR:
               issuer: https://foo.bar.com
               name: foobar
               remoteJWKS:
+                asyncFetch: null
+                cacheDuration: null
                 destination:
                   metadata:
                     kind: SecurityPolicy
