@@ -22,6 +22,9 @@ http:
           remoteJWKS:
             uri: https://localhost/jwt/public-key/jwks.json
             cacheDuration: 300s
+            asyncFetch:
+              fastListener: true
+              failedRefetchDuration: 2s
     destination:
       name: "first-route-dest"
       settings:
