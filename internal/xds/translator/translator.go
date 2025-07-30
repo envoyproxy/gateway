@@ -483,10 +483,10 @@ func (t *Translator) addRouteToRouteConfig(
 	http3Settings *ir.HTTP3Settings,
 ) error {
 	var (
-		vHosts            = map[string]*routev3.VirtualHost{} // store virtual hosts by domain
-		virtualHostsToAdd []*routev3.VirtualHost              // newly created virtual hosts to be added to the route config
-		errs              error                               // the accumulated errors
-		err               error
+		vHosts    = map[string]*routev3.VirtualHost{} // store virtual hosts by domain
+		vHostList []*routev3.VirtualHost              // keep track of order by using a list as well as the map
+		errs      error                               // the accumulated errors
+		err       error
 	)
 
 	// Check if an extension is loaded that wants to modify xDS Routes after they have been generated
@@ -523,7 +523,7 @@ func (t *Translator) addRouteToRouteConfig(
 				}
 			}
 			vHosts[httpRoute.Hostname] = vHost
-			virtualHostsToAdd = append(virtualHostsToAdd, vHost)
+			vHostList = append(vHostList, vHost)
 		}
 
 		var xdsRoute *routev3.Route
@@ -634,7 +634,7 @@ func (t *Translator) addRouteToRouteConfig(
 		}
 	}
 
-	for _, vHost := range virtualHostsToAdd {
+	for _, vHost := range vHostList {
 		// Check if an extension want to modify the Virtual Host we just generated
 		// If no extension exists (or it doesn't subscribe to this hook) then this is a quick no-op.
 		if err = processExtensionPostVHostHook(vHost, t.ExtensionManager); err != nil {
@@ -647,7 +647,7 @@ func (t *Translator) addRouteToRouteConfig(
 			}
 		}
 	}
-	xdsRouteCfg.VirtualHosts = append(xdsRouteCfg.VirtualHosts, virtualHostsToAdd...)
+	xdsRouteCfg.VirtualHosts = append(xdsRouteCfg.VirtualHosts, vHostList...)
 	return errs
 }
 

@@ -505,10 +505,13 @@ func routeConfigName(irListener *ir.HTTPListener) string {
 	return irListener.Name
 }
 
+// irListener name is used as the filter chain name for HTTPS listener, as Listener is 1:1 mapping to the filter chain
+// The Gateway API layer ensures that each listener has a unique combination of hostname and port.
 func httpsListenerFilterChainName(irListener *ir.HTTPListener) string {
 	return irListener.Name
 }
 
+// irRoute name is used as the filter chain name for TLS listener, as TLSRoute is 1:1 mapping to the filter chain.
 func tlsListenerFilterChainName(irRoute *ir.TCPRoute) string {
 	return irRoute.Name
 }
