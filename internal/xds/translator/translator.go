@@ -27,6 +27,7 @@ import (
 	"google.golang.org/protobuf/types/known/wrapperspb"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/util/sets"
+	"k8s.io/utils/ptr"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	extensionTypes "github.com/envoyproxy/gateway/internal/extension/types"
@@ -137,6 +138,10 @@ func (t *Translator) Translate(xdsIR *ir.Xds) (*types.ResourceVersionTable, erro
 	}
 
 	if err := processClusterForTracing(tCtx, xdsIR.Tracing, xdsIR.Metrics); err != nil {
+		errs = errors.Join(errs, err)
+	}
+
+	if err := processServiceCluster(tCtx, xdsIR); err != nil {
 		errs = errors.Join(errs, err)
 	}
 
@@ -887,6 +892,30 @@ func (t *Translator) processUDPListenerXdsTranslation(
 	return errs
 }
 
+func processServiceCluster(tCtx *types.ResourceVersionTable, xdsIR *ir.Xds) error {
+	if xdsIR == nil || xdsIR.GlobalResources == nil {
+		return nil
+	}
+
+	svcCluster := xdsIR.GlobalResources.ProxyServiceCluster
+	if svcCluster != nil {
+		if err := addXdsCluster(tCtx, &xdsClusterArgs{
+			name:         svcCluster.Name,
+			settings:     svcCluster.Settings,
+			endpointType: EndpointTypeStatic,
+			loadBalancer: &ir.LoadBalancer{
+				LeastRequest: &ir.LeastRequest{},
+				PreferLocal: &ir.PreferLocalZone{
+					MinEndpointsThreshold: ptr.To[uint64](1),
+				},
+			},
+		}); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 // findXdsListenerByHostPort finds a xds listener with the same address, port and protocol, and returns nil if there is no match.
 func findXdsListenerByHostPort(tCtx *types.ResourceVersionTable, address string, port uint32,
 	protocol corev3.SocketAddress_Protocol,
@@ -1028,7 +1057,8 @@ func addXdsCluster(tCtx *types.ResourceVersionTable, args *xdsClusterArgs) error
 		return err
 	}
 	xdsCluster := result.cluster
-	xdsEndpoints := buildXdsClusterLoadAssignment(args.name, args.settings)
+	preferLocal := ptr.Deref(args.loadBalancer, ir.LoadBalancer{}).PreferLocal
+	xdsEndpoints := buildXdsClusterLoadAssignment(args.name, args.settings, preferLocal)
 	for _, ds := range args.settings {
 		if ds.TLS != nil {
 			// Create an SDS secret for the CA certificate - either with inline bytes or with a filesystem ref

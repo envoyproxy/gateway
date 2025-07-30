@@ -532,6 +532,16 @@ xdsIR:
     accessLog:
       json:
       - path: /dev/stdout
+    globalResources:
+      proxyServiceCluster:
+        name: another-namespace/not-same-namespace-gateway
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: another-namespace/not-same-namespace-gateway
+          protocol: TCP
     http:
     - address: 0.0.0.0
       externalPort: 80

@@ -45,6 +45,7 @@ new features: |
   Added support for using Secret as a source of the OIDC client ID.
   Added support for listeners and routes in PostTranslateModifyHook extension hook.
   Added admin console support with web UI for the Envoy Gateway admin server.
+  Added support for configuring Zone Aware Routing via BackendTrafficPolicy
 
 bug fixes: |
   Handle integer zone annotation values
