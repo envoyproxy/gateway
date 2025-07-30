@@ -341,7 +341,7 @@ func (t *Translator) addHCMToXDSListener(
 	if originalIPDetectionExtensions != nil {
 		useRemoteAddress = false
 	}
-    statPrefix := hcmStatPrefix(irListener, t.xdsNameSchemeV2())
+	statPrefix := hcmStatPrefix(irListener, t.xdsNameSchemeV2())
 	mgr := &hcmv3.HttpConnectionManager{
 		AccessLog:  al,
 		CodecType:  hcmv3.HttpConnectionManager_AUTO,
