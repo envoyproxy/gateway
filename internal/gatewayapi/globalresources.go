@@ -7,6 +7,7 @@ package gatewayapi
 
 import (
 	"fmt"
+
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
@@ -41,7 +42,7 @@ func (t *Translator) ProcessGlobalResources(resources *resource.Resources, xdsIR
 	}
 
 	for _, xdsIR := range xdsIRs {
-		if (containsGlobalRateLimit(xdsIR.HTTP) || containsWasm(xdsIR.HTTP)) && envoyTLSSecret != nil {
+		if containsGlobalRateLimit(xdsIR.HTTP) || containsWasm(xdsIR.HTTP) {
 			xdsIR.GlobalResources = &ir.GlobalResources{
 				EnvoyClientCertificate: &ir.TLSCertificate{
 					Name:        irGlobalConfigName(envoyTLSSecret),
