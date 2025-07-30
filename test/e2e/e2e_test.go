@@ -71,13 +71,13 @@ func TestE2E(t *testing.T) {
 		)
 	}
 
-	if tests.UseProtocolPortAsListenerName() {
+	if tests.XDSNameSchemeV2() {
 		skipTests = append(skipTests,
 			tests.EnvoyPatchPolicyTest.ShortName,
 		)
 	} else {
 		skipTests = append(skipTests,
-			tests.EnvoyPatchPolicyUseProtocolPortAsListenerNameTest.ShortName,
+			tests.EnvoyPatchPolicyXDSNameSchemeV2Test.ShortName,
 		)
 	}
 

@@ -111,7 +111,7 @@ func (e *EnvoyGateway) GatewayNamespaceMode() bool {
 
 // defaultRuntimeFlags are the default runtime flags for Envoy Gateway.
 var defaultRuntimeFlags = map[RuntimeFlag]bool{
-	UseProtocolPortAsListenerName: false,
+	XDSNameSchemeV2: false,
 }
 
 // IsEnabled checks if a runtime flag is enabled in the EnvoyGateway configuration.

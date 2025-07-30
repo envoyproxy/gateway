@@ -100,7 +100,7 @@ http:
   hostnames:
   - '*'
   http3:
-    quicPort: 443
+    quicPort: 1443
   isHTTP2: false
   path:
     escapedSlashesAction: UnescapeAndRedirect

@@ -71,11 +71,11 @@ type Translator struct {
 	Logger logging.Logger
 }
 
-func (t *Translator) useProtocolPortAsListenerName() bool {
+func (t *Translator) xdsNameSchemeV2() bool {
 	if t.RuntimeFlags == nil {
 		return false
 	}
-	return t.RuntimeFlags.IsEnabled(egv1a1.UseProtocolPortAsListenerName)
+	return t.RuntimeFlags.IsEnabled(egv1a1.XDSNameSchemeV2)
 }
 
 type GlobalRateLimitSettings struct {
@@ -438,15 +438,10 @@ func (t *Translator) processHTTPListenerXdsTranslation(
 		//
 		// For example, the route config name is named after the ir Listener name "default/eg/http1", but the current
 		// ir Listener is "default/eg/http2".
-		if !t.useProtocolPortAsListenerName() {
-			routeCfgName = findXdsHTTPRouteConfigName(tcpXDSListener)
-			// If the route config name is not found, we use the current ir Listener name as the route config name to create a new route config.
-			if routeCfgName == "" {
-				routeCfgName = routeConfigName(httpListener, false)
-			}
-		} else {
-			// The new rout config is named after the xDS listener port, for example "80".
-			routeCfgName = routeConfigName(httpListener, true)
+		routeCfgName = findXdsHTTPRouteConfigName(tcpXDSListener)
+		// If the route config name is not found, we use the current ir Listener name as the route config name to create a new route config.
+		if routeCfgName == "" {
+			routeCfgName = routeConfigName(httpListener)
 		}
 
 		// Create a route config if we have not found one yet
@@ -496,7 +491,7 @@ func (t *Translator) addRouteToRouteConfig(
 
 	// If the virtual host already exists, we can skip it.
 	for _, vHost := range xdsRouteCfg.VirtualHosts {
-		if vHost.Name == virtualHostName(httpListener, vHost.Domains[0], t.useProtocolPortAsListenerName()) {
+		if vHost.Name == virtualHostName(httpListener, vHost.Domains[0]) {
 			vHosts[vHost.Domains[0]] = vHost
 		}
 	}
@@ -511,7 +506,7 @@ func (t *Translator) addRouteToRouteConfig(
 			underscoredHostname := strings.ReplaceAll(httpRoute.Hostname, ".", "_")
 			// Allocate virtual host for this httpRoute.
 			vHost = &routev3.VirtualHost{
-				Name:     virtualHostName(httpListener, underscoredHostname, t.useProtocolPortAsListenerName()),
+				Name:     virtualHostName(httpListener, underscoredHostname),
 				Domains:  []string{httpRoute.Hostname},
 				Metadata: buildXdsMetadata(httpListener.Metadata),
 			}
@@ -663,12 +658,7 @@ func (t *Translator) addRouteToRouteConfig(
 	return errs
 }
 
-func virtualHostName(httpListener *ir.HTTPListener,
-	underscoredHostname string, useProtocolPortAsListenerName bool,
-) string {
-	if useProtocolPortAsListenerName {
-		return underscoredHostname // Just use the hostname as it is unique inside the route config
-	}
+func virtualHostName(httpListener *ir.HTTPListener, underscoredHostname string) string {
 	return fmt.Sprintf("%s/%s", httpListener.Name, underscoredHostname)
 }
 
@@ -878,7 +868,7 @@ func (t *Translator) processUDPListenerXdsTranslation(
 			udpListener.Route.Destination.Name,
 			udpListener,
 			accesslog,
-			t.useProtocolPortAsListenerName(),
+			t.xdsNameSchemeV2(),
 		)
 		if err != nil {
 			// skip this listener if failed to build xds listener

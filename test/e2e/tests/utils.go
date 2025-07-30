@@ -735,8 +735,8 @@ func IsGatewayNamespaceMode() bool {
 }
 
 // TODO(zhaohuabing) remove this after the feature flag is removed.
-func UseProtocolPortAsListenerName() bool {
-	return DeployProfile == "port-as-listener-name"
+func XDSNameSchemeV2() bool {
+	return DeployProfile == "pxds-name-scheme-v2"
 }
 
 func GetGatewayResourceNamespace() string {

@@ -4,7 +4,7 @@ date: Pending
 breaking changes: |
   Use gateway name as proxy fleet name for gateway namespace mode.
   Endpoints that are absent from service discovery are removed even if their active health checks succeed.
-  The xDS listener name are now renamed based on its listening port and protocol, instead of the Gateway name and section name. This breaks existing EnvoyPatchPolicies and ExtensionManagers as they depend on the old naming scheme. This change is guarded by the `UseProtocolPortAsListenerName` runtime flag. This flag is disabled by default in v1.5, and it will be enabled in v1.6. We recommend users to migrate their EnvoyPatchPolicies and ExtensionManagers to use the new listener names before v1.6.
+  The xDS listener name are now renamed based on its listening port and protocol, instead of the Gateway name and section name. This breaks existing EnvoyPatchPolicies and ExtensionManagers as they depend on the old naming scheme. This change is guarded by the `XDSNameSchemeV2` runtime flag. This flag is disabled by default in v1.5, and it will be enabled in v1.6. We recommend users to migrate their EnvoyPatchPolicies and ExtensionManagers to use the new listener names before v1.6.
 
 # Updates addressing vulnerabilities, security flaws, or compliance requirements.
 security updates: |

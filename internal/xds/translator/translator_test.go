@@ -135,9 +135,9 @@ func TestTranslateXds(t *testing.T) {
 		"tracing-unknown-provider-type": {
 			errMsg: "unknown tracing provider type: AwesomeTelemetry",
 		},
-		"port-as-listener-name": {
+		"xds-name-scheme-v2": {
 			runtimeFlags: &egv1a1.RuntimeFlags{
-				Enabled: []egv1a1.RuntimeFlag{egv1a1.UseProtocolPortAsListenerName},
+				Enabled: []egv1a1.RuntimeFlag{egv1a1.XDSNameSchemeV2},
 			},
 		},
 	}
