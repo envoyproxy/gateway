@@ -122,6 +122,7 @@ xdsIR:
           protocol: TCP
     http:
     - address: 0.0.0.0
+      externalPort: 443
       hostnames:
       - '*'
       isHTTP2: false

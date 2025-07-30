@@ -264,6 +264,7 @@ xdsIR:
       - path: /dev/stdout
     http:
     - address: 0.0.0.0
+      externalPort: 80
       hostnames:
       - '*.envoyproxy.io'
       isHTTP2: false
@@ -350,6 +351,7 @@ xdsIR:
           protocol: TCP
     http:
     - address: 0.0.0.0
+      externalPort: 8888
       hostnames:
       - '*'
       isHTTP2: false
@@ -364,6 +366,7 @@ xdsIR:
         mergeSlashes: true
       port: 8888
     - address: 0.0.0.0
+      externalPort: 8888
       hostnames:
       - example.com
       isHTTP2: false

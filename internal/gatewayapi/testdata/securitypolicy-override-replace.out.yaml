@@ -575,6 +575,7 @@ xdsIR:
           protocol: TCP
     http:
     - address: 0.0.0.0
+      externalPort: 80
       hostnames:
       - listener-1.gateway-1.envoyproxy.io
       isHTTP2: false
@@ -832,6 +833,7 @@ xdsIR:
               remoteJWKS:
                 uri: https://one.example.com/jwt/public-key/jwks.json
     - address: 0.0.0.0
+      externalPort: 80
       hostnames:
       - listener-2.gateway-1.envoyproxy.io
       isHTTP2: false

@@ -192,6 +192,7 @@ xdsIR:
           protocol: TCP
     http:
     - address: 0.0.0.0
+      externalPort: 443
       hostnames:
       - foo.bar.com
       isHTTP2: false
@@ -248,6 +249,7 @@ xdsIR:
       port: 19003
     tcp:
     - address: 0.0.0.0
+      externalPort: 90
       name: envoy-gateway/gateway-1/tls-passthrough
       port: 10090
       routes:

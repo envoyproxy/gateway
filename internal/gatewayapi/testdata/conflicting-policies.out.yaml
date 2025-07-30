@@ -285,6 +285,7 @@ xdsIR:
           protocol: TCP
     http:
     - address: 0.0.0.0
+      externalPort: 80
       hostnames:
       - '*.192.168.0.15.nip.io'
       isHTTP2: false
@@ -329,6 +330,7 @@ xdsIR:
           name: ""
           prefix: /
     - address: 0.0.0.0
+      externalPort: 80
       hostnames:
       - qccbahgo.qccbahgo
       isHTTP2: false

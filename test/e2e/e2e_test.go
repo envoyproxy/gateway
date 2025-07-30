@@ -71,6 +71,16 @@ func TestE2E(t *testing.T) {
 		)
 	}
 
+	if tests.XDSNameSchemeV2() {
+		skipTests = append(skipTests,
+			tests.EnvoyPatchPolicyTest.ShortName,
+		)
+	} else {
+		skipTests = append(skipTests,
+			tests.EnvoyPatchPolicyXDSNameSchemeV2Test.ShortName,
+		)
+	}
+
 	enabledFeatures := sets.New(features.SupportGateway)
 	if tests.EnabledClusterTrustBundle() {
 		tlog.Logf(t, "ClusterTrustBundle feature is enabled")

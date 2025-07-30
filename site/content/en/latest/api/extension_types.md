@@ -4462,7 +4462,7 @@ _Appears in:_
 
 | Value | Description |
 | ----- | ----------- |
-| `UseAddressAsListenerName` | UseAddressAsListenerName indicates that the listener name should be derived from the address and port.<br /> | 
+| `XDSNameSchemeV2` | XDSNameSchemeV2 indicates that the xds name scheme v2 is used.<br />* The listener name will be generated using the protocol and port of the listener.<br /> | 
 
 
 #### RuntimeFlags

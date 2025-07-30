@@ -190,6 +190,7 @@ xdsIR:
       - path: /dev/stdout
     http:
     - address: 0.0.0.0
+      externalPort: 80
       hostnames:
       - '*.a.example.com'
       isHTTP2: false
@@ -259,6 +260,7 @@ xdsIR:
           protocol: TCP
     http:
     - address: 0.0.0.0
+      externalPort: 80
       hostnames:
       - '*.b.example.com'
       isHTTP2: false

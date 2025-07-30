@@ -185,6 +185,7 @@ xdsIR:
       port: 19003
     tcp:
     - address: 0.0.0.0
+      externalPort: 162
       name: envoy-gateway/gateway-1/tcp1
       port: 10162
       routes:
@@ -208,6 +209,7 @@ xdsIR:
             weight: 1
         name: tcproute/default/tcproute-1
     - address: 0.0.0.0
+      externalPort: 163
       name: envoy-gateway/gateway-1/tcp2
       port: 10163
       routes:

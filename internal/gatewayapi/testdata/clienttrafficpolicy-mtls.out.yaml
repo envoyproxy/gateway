@@ -240,6 +240,7 @@ xdsIR:
       - path: /dev/stdout
     http:
     - address: 0.0.0.0
+      externalPort: 443
       hostnames:
       - '*'
       isHTTP2: false
@@ -266,6 +267,7 @@ xdsIR:
         minVersion: "1.2"
         requireClientCertificate: true
     - address: 0.0.0.0
+      externalPort: 8080
       hostnames:
       - '*'
       isHTTP2: false
@@ -300,6 +302,7 @@ xdsIR:
           protocol: TCP
     http:
     - address: 0.0.0.0
+      externalPort: 443
       hostnames:
       - '*'
       isHTTP2: false

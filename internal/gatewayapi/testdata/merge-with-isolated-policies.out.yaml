@@ -313,6 +313,7 @@ xdsIR:
           protocol: TCP
     http:
     - address: 0.0.0.0
+      externalPort: 80
       hostnames:
       - '*'
       isHTTP2: false
@@ -378,6 +379,7 @@ xdsIR:
             interval: 60
             probes: 3
     - address: 0.0.0.0
+      externalPort: 8888
       hostnames:
       - '*'
       isHTTP2: false

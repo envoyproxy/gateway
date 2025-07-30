@@ -143,6 +143,7 @@ xdsIR:
       port: 19003
     udp:
     - address: 0.0.0.0
+      externalPort: 162
       name: envoy-gateway/gateway-1/udp1
       port: 10162
       route:

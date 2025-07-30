@@ -299,6 +299,7 @@ xdsIR:
       port: 19003
     tcp:
     - address: 0.0.0.0
+      externalPort: 9090
       name: envoy-gateway/gateway-legacy-only/tcp-1
       port: 9090
       proxyProtocol: {}
@@ -326,6 +327,7 @@ xdsIR:
           protocol: TCP
     http:
     - address: 0.0.0.0
+      externalPort: 8080
       hostnames:
       - '*'
       isHTTP2: false
@@ -351,6 +353,7 @@ xdsIR:
       - path: /dev/stdout
     http:
     - address: 0.0.0.0
+      externalPort: 80
       hostnames:
       - '*'
       isHTTP2: false
