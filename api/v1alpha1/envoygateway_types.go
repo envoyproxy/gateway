@@ -173,7 +173,7 @@ type EnvoyGatewayLogging struct {
 }
 
 // EnvoyGatewayLogComponent defines a component that supports a configured logging level.
-// +kubebuilder:validation:Enum=default;provider;gateway-api;xds-translator;xds-server;infrastructure;global-ratelimit
+// +kubebuilder:validation:Enum=default;provider;gateway-api;xds-translator;xds-server;xds;infrastructure;global-ratelimit
 type EnvoyGatewayLogComponent string
 
 const (
