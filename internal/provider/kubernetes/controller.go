@@ -45,6 +45,7 @@ import (
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/status"
+	"github.com/envoyproxy/gateway/internal/infrastructure/kubernetes/proxy"
 	"github.com/envoyproxy/gateway/internal/logging"
 	"github.com/envoyproxy/gateway/internal/message"
 	workqueuemetrics "github.com/envoyproxy/gateway/internal/metrics/workqueue"
@@ -1355,6 +1356,12 @@ func (r *gatewayAPIReconciler) processGateways(ctx context.Context, managedGC *g
 		return err
 	}
 
+	mergedGateways := false
+	if r.mergeGateways.Has(managedGC.Name) {
+		mergedGateways = true
+		r.processServiceCluster(managedGC.Name, resourceMap)
+	}
+
 	for _, gtw := range gatewayList.Items {
 		gtw := gtw //nolint:copyloopvar
 		if r.namespaceLabel != nil {
@@ -1399,6 +1406,11 @@ func (r *gatewayAPIReconciler) processGateways(ctx context.Context, managedGC *g
 		}
 
 		gtwNamespacedName := utils.NamespacedName(&gtw).String()
+
+		if !mergedGateways {
+			r.processServiceCluster(gtwNamespacedName, resourceMap)
+		}
+
 		// Route Processing
 
 		if r.tlsRouteCRDExists {
@@ -1458,6 +1470,15 @@ func (r *gatewayAPIReconciler) processGateways(ctx context.Context, managedGC *g
 	}
 
 	return nil
+}
+
+func (r *gatewayAPIReconciler) processServiceCluster(resourceName string, resourceMap *resourceMappings) {
+	proxySvcName := proxy.ExpectedResourceHashedName(resourceName)
+	resourceMap.allAssociatedBackendRefs.Insert(gwapiv1.BackendObjectReference{
+		Kind:      ptr.To(gwapiv1.Kind("Service")),
+		Namespace: gatewayapi.NamespacePtr(r.namespace),
+		Name:      gwapiv1.ObjectName(proxySvcName),
+	})
 }
 
 // processEnvoyPatchPolicies adds EnvoyPatchPolicies to the resourceTree
