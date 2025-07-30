@@ -734,6 +734,11 @@ func IsGatewayNamespaceMode() bool {
 	return DeployProfile == "gateway-namespace-mode"
 }
 
+// TODO(zhaohuabing) remove this after the feature flag is removed.
+func XDSNameSchemeV2() bool {
+	return DeployProfile == "xds-name-scheme-v2"
+}
+
 func GetGatewayResourceNamespace() string {
 	if IsGatewayNamespaceMode() {
 		return "gateway-conformance-infra"

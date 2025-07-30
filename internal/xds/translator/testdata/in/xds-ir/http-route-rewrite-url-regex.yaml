@@ -45,4 +45,3 @@ http:
       timeout:
         http:
           requestTimeout: 5s
-

@@ -12,6 +12,8 @@ Envoy Gateway supports the following load balancing policies:
 - **Least Request**: load balancer uses different algorithms depending on whether hosts have the same or different weights.
 - **Consistent Hash**: load balancer implements consistent hashing to upstream hosts.
 
+Additionally, Envoy Gateway supports **Endpoint Override** functionality that allows endpoint selection based on headers or metadata, which can be used with any of the above load balancing policies as a fallback.
+
 Envoy Gateway introduces a new CRD called [BackendTrafficPolicy][] that allows the user to describe their desired load balancing polices.
 This instantiated resource can be linked to a [Gateway][], [HTTPRoute][] or [GRPCRoute][] resource. If `loadBalancer` is not specified in [BackendTrafficPolicy][], the default load balancing policy is `Least Request`.
 
@@ -913,6 +915,133 @@ curl -v --header "Host: www.example.com" http://${GATEWAY_HOST}/cookie
  "pod": "backend-69fcff487f-5dxz9"
 ```
 
+## Endpoint Override
+
+This example will create a Load Balancer with Endpoint Override functionality via [BackendTrafficPolicy][].
+
+The Endpoint Override feature allows endpoint selection based on headers. It can derive the target endpoint from HTTP request headers.
+
+When the specified override endpoint is not available or invalid, the load balancer will fall back to the configured load balancing policy.
+
+### Header-based Endpoint Override
+
+This example will create a Load Balancer with Header-based Endpoint Override functionality.
+
+{{< tabpane text=true >}}
+{{% tab header="Apply from stdin" %}}
+
+```shell
+cat <<EOF | kubectl apply -f -
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: BackendTrafficPolicy
+metadata:
+  name: endpoint-override-header-policy
+  namespace: default
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: endpoint-override-header-route
+  loadBalancer:
+    type: RoundRobin
+    endpointOverride:
+      extractFrom:
+        - header: x-custom-host
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: endpoint-override-header-route
+  namespace: default
+spec:
+  parentRefs:
+    - name: eg
+  hostnames:
+    - "www.example.com"
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /endpoint-override-header
+      backendRefs:
+        - name: backend
+          port: 3000
+EOF
+```
+
+{{% /tab %}}
+{{% tab header="Apply from file" %}}
+Save and apply the following resource to your cluster:
+
+```yaml
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: BackendTrafficPolicy
+metadata:
+  name: endpoint-override-header-policy
+  namespace: default
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: endpoint-override-header-route
+  loadBalancer:
+    type: RoundRobin
+    endpointOverride:
+      extractFrom:
+        - header: x-custom-host
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: endpoint-override-header-route
+  namespace: default
+spec:
+  parentRefs:
+    - name: eg
+  hostnames:
+    - "www.example.com"
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /endpoint-override-header
+      backendRefs:
+        - name: backend
+          port: 3000
+```
+
+{{% /tab %}}
+{{< /tabpane >}}
+
+First, get one of the backend pod IPs to use as the override endpoint:
+
+```shell
+BACKEND_POD_IP=$(kubectl get pods -l app=backend -o jsonpath='{.items[0].status.podIP}')
+echo "Backend Pod IP: $BACKEND_POD_IP"
+```
+
+Test with a valid pod IP in the header - all requests should go to the specific pod:
+
+```shell
+for i in {1..10}; do
+  curl -s -H "Host: www.example.com" -H "x-custom-host: $BACKEND_POD_IP:3000" \
+    http://${GATEWAY_HOST}/endpoint-override-header | jq -r '.pod'
+done
+```
+
+All requests should return the same pod name, demonstrating that the endpoint override is working.
+
+Test with an invalid IP in the header - requests should fall back to round robin:
+
+```shell
+for i in {1..10}; do
+  curl -s -H "Host: www.example.com" -H "x-custom-host: 192.168.1.100:3000" \
+    http://${GATEWAY_HOST}/endpoint-override-header | jq -r '.pod'
+done
+```
+
+You should see requests distributed across different pods using the round robin fallback policy.
 
 [Envoy load balancing]: https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/upstream/load_balancing/overview
 [BackendTrafficPolicy]: ../../../api/extension_types#backendtrafficpolicy

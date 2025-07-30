@@ -147,6 +147,7 @@ xdsIR:
           protocol: TCP
     http:
     - address: 0.0.0.0
+      externalPort: 80
       hostnames:
       - '*'
       isHTTP2: false
@@ -163,6 +164,7 @@ xdsIR:
       proxyProtocol:
         optional: true
     - address: 0.0.0.0
+      externalPort: 8080
       hostnames:
       - '*'
       isHTTP2: false

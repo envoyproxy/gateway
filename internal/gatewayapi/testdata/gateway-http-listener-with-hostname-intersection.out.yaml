@@ -192,6 +192,7 @@ xdsIR:
           protocol: TCP
     http:
     - address: 0.0.0.0
+      externalPort: 80
       hostnames:
       - '*'
       isHTTP2: false
@@ -237,6 +238,7 @@ xdsIR:
           name: ""
           prefix: /empty-hostname
     - address: 0.0.0.0
+      externalPort: 80
       hostnames:
       - '*.example.com'
       isHTTP2: false

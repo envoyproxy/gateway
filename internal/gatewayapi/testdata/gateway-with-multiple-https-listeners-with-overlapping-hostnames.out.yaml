@@ -209,6 +209,7 @@ xdsIR:
           protocol: TCP
     http:
     - address: 0.0.0.0
+      externalPort: 443
       hostnames:
       - foo.example.com
       isHTTP2: false
@@ -261,6 +262,7 @@ xdsIR:
           privateKey: '[redacted]'
       tlsOverlaps: true
     - address: 0.0.0.0
+      externalPort: 443
       hostnames:
       - '*.example.com'
       isHTTP2: false
@@ -313,6 +315,7 @@ xdsIR:
           privateKey: '[redacted]'
       tlsOverlaps: true
     - address: 0.0.0.0
+      externalPort: 443
       hostnames:
       - foo.bar.com
       isHTTP2: false

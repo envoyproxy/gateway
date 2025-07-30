@@ -222,6 +222,7 @@ xdsIR:
                 status: "True"
                 type: Accepted
               controllerName: gateway.envoyproxy.io/gatewayclass-controller
+      externalPort: 81
       hostnames:
       - '*'
       isHTTP2: false
@@ -291,6 +292,7 @@ xdsIR:
                 status: "True"
                 type: Accepted
               controllerName: gateway.envoyproxy.io/gatewayclass-controller
+      externalPort: 80
       hostnames:
       - '*'
       isHTTP2: false

@@ -145,6 +145,7 @@ xdsIR:
           protocol: TCP
     http:
     - address: 0.0.0.0
+      externalPort: 80
       hostnames:
       - '*'
       http1:
@@ -161,6 +162,7 @@ xdsIR:
         mergeSlashes: true
       port: 10080
     - address: 0.0.0.0
+      externalPort: 8080
       hostnames:
       - '*'
       http1:
