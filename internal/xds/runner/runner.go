@@ -73,6 +73,10 @@ type Config struct {
 	XdsIR             *message.XdsIR
 	ExtensionManager  extension.Manager
 	ProviderResources *message.ProviderResources
+	// Test-configurable TLS paths
+	TLSCertPath string
+	TLSKeyPath  string
+	TLSCaPath   string
 }
 
 type Runner struct {
@@ -297,21 +301,32 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *ir
 }
 
 func (r *Runner) loadTLSConfig() (tlsConfig *tls.Config, err error) {
-	switch {
-	case r.EnvoyGateway.Provider.IsRunningOnKubernetes():
-		tlsConfig, err = crypto.LoadTLSConfig(xdsTLSCertFilepath, xdsTLSKeyFilepath, xdsTLSCaFilepath)
-		if err != nil {
-			return nil, fmt.Errorf("failed to create tls config: %w", err)
-		}
+	var certPath, keyPath, caPath string
 
-	case r.EnvoyGateway.Provider.IsRunningOnHost():
-		tlsConfig, err = crypto.LoadTLSConfig(localTLSCertFilepath, localTLSKeyFilepath, localTLSCaFilepath)
-		if err != nil {
-			return nil, fmt.Errorf("failed to create tls config: %w", err)
+	// Use test-configurable paths if provided
+	if r.TLSCertPath != "" && r.TLSKeyPath != "" && r.TLSCaPath != "" {
+		certPath = r.TLSCertPath
+		keyPath = r.TLSKeyPath
+		caPath = r.TLSCaPath
+	} else {
+		// Use default paths based on provider type
+		switch {
+		case r.EnvoyGateway.Provider.IsRunningOnKubernetes():
+			certPath = xdsTLSCertFilepath
+			keyPath = xdsTLSKeyFilepath
+			caPath = xdsTLSCaFilepath
+		case r.EnvoyGateway.Provider.IsRunningOnHost():
+			certPath = localTLSCertFilepath
+			keyPath = localTLSKeyFilepath
+			caPath = localTLSCaFilepath
+		default:
+			return nil, fmt.Errorf("no valid tls certificates")
 		}
+	}
 
-	default:
-		return nil, fmt.Errorf("no valid tls certificates")
+	tlsConfig, err = crypto.LoadTLSConfig(certPath, keyPath, caPath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create tls config: %w", err)
 	}
 	return
 }
