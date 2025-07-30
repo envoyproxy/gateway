@@ -457,7 +457,7 @@ func (t *Translator) addHCMToXDSListener(
 
 	filterChain := &listenerv3.FilterChain{
 		Filters: filters,
-		Name:    httpListenerFilterChainName(irListener),
+		Name:    httpsListenerFilterChainName(irListener),
 	}
 
 	if irListener.TLS != nil {
@@ -490,6 +490,7 @@ func (t *Translator) addHCMToXDSListener(
 	} else {
 		// Add the HTTP filter chain as the default filter chain
 		// Make sure one does not exist
+		// TODO(zhaohuabing): this branch never gets called, clean the code
 		if xdsListener.DefaultFilterChain != nil {
 			return errors.New("default filter chain already exists")
 		}
@@ -504,11 +505,11 @@ func routeConfigName(irListener *ir.HTTPListener) string {
 	return irListener.Name
 }
 
-func httpListenerFilterChainName(irListener *ir.HTTPListener) string {
+func httpsListenerFilterChainName(irListener *ir.HTTPListener) string {
 	return irListener.Name
 }
 
-func tcpListenerFilterChainName(irRoute *ir.TCPRoute) string {
+func tlsListenerFilterChainName(irRoute *ir.TCPRoute) string {
 	return irRoute.Name
 }
 
@@ -699,7 +700,7 @@ func (t *Translator) addXdsTCPFilterChain(
 	}
 
 	filterChain := &listenerv3.FilterChain{
-		Name:    tcpListenerFilterChainName(irRoute),
+		Name:    tlsListenerFilterChainName(irRoute),
 		Filters: filters,
 	}
 
