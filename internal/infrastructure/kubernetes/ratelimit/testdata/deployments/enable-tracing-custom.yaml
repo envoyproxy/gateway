@@ -101,7 +101,7 @@ spec:
           value: "0.6"
         - name: OTEL_EXPORTER_OTLP_ENDPOINT
           value: http://trace-collector.envoy-gateway-system.svc.cluster.local:4317
-        image: docker.io/envoyproxy/ratelimit:master
+        image: docker.io/envoyproxy/ratelimit:a90e0e5d
         imagePullPolicy: IfNotPresent
         livenessProbe:
           failureThreshold: 3

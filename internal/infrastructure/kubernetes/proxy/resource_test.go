@@ -65,7 +65,7 @@ func TestExpectedShutdownManagerSecurityContext(t *testing.T) {
 
 func TestResolveProxyImage(t *testing.T) {
 	defaultImage := egv1a1.DefaultEnvoyProxyImage
-	defaultTag := "distroless-dev"
+	defaultTag := "distroless-v1.35.0"
 
 	tests := []struct {
 		name        string
