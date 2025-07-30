@@ -457,7 +457,6 @@ func (t *Translator) addHCMToXDSListener(
 
 	filterChain := &listenerv3.FilterChain{
 		Filters: filters,
-		Name:    httpsListenerFilterChainName(irListener),
 	}
 
 	if irListener.TLS != nil {
@@ -481,6 +480,7 @@ func (t *Translator) addHCMToXDSListener(
 			}
 		}
 		filterChain.TransportSocket = tSocket
+		filterChain.Name = httpsListenerFilterChainName(irListener)
 
 		if err := addServerNamesMatch(xdsListener, filterChain, irListener.Hostnames); err != nil {
 			return err
@@ -490,10 +490,10 @@ func (t *Translator) addHCMToXDSListener(
 	} else {
 		// Add the HTTP filter chain as the default filter chain
 		// Make sure one does not exist
-		// TODO(zhaohuabing): this branch never gets called, clean the code
 		if xdsListener.DefaultFilterChain != nil {
 			return errors.New("default filter chain already exists")
 		}
+		filterChain.Name = httpListenerDefaultFilterChainName(irListener, t.xdsNameSchemeV2() )
 		xdsListener.DefaultFilterChain = filterChain
 	}
 
@@ -502,6 +502,16 @@ func (t *Translator) addHCMToXDSListener(
 
 func routeConfigName(irListener *ir.HTTPListener) string {
 	// TODO(zhaohuabing): change the routeConfig name for HTTP listeners because they are merged into one route config
+	return irListener.Name
+}
+
+// port value is used for the default filter chain name for HTTP listeners, as multiple HTTP listeners are merged into
+// one filter chain.
+func httpListenerDefaultFilterChainName(irListener *ir.HTTPListener, nameSchemeV2 bool) string {
+	if nameSchemeV2 {
+		return fmt.Sprint("http-", irListener.ExternalPort)
+	}
+	// For backward compatibility, we use the listener name as the filter chain name.
 	return irListener.Name
 }
 

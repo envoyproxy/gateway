@@ -29,7 +29,7 @@
         serverHeaderTransformation: PASS_THROUGH
         statPrefix: http-10080
         useRemoteAddress: true
-    name: envoy-gateway/gateway-1/http1
+    name: http-80
   maxConnectionsToAcceptPerSocketEvent: 1
   name: tcp-80
   perConnectionBufferLimitBytes: 32768
