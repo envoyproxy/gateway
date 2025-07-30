@@ -1357,7 +1357,7 @@ func (r *gatewayAPIReconciler) processGateways(ctx context.Context, managedGC *g
 	}
 
 	mergedGateways := false
-	if resourceTree.EnvoyProxyForGatewayClass != nil && resourceTree.EnvoyProxyForGatewayClass.Spec.MergeGateways != nil && *resourceTree.EnvoyProxyForGatewayClass.Spec.MergeGateways {
+	if r.mergeGateways.Has(managedGC.Name) {
 		mergedGateways = true
 		r.processServiceCluster(managedGC.Name, resourceMap)
 	}

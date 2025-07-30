@@ -59,21 +59,14 @@ func (t *Translator) ProcessGlobalResources(resources *resource.Resources, xdsIR
 
 // processServiceClusterForGateway returns the matching IR key for a gateway and builds a RouteDestination to represent the ProxyServiceCluster
 func (t *Translator) processServiceClusterForGateway(gateway *GatewayContext, resources *resource.Resources) (string, *ir.RouteDestination) {
-	var (
-		labels = make(map[string]string)
-		irKey  string
-	)
+	irKey := t.getIRKey(gateway.Gateway)
+	labels := OwnerLabels(gateway.Gateway, t.MergeGateways)
 
-	if t.MergeGateways {
-		irKey = string(t.GatewayClassName)
-		labels[OwningGatewayClassLabel] = string(t.GatewayClassName)
-	} else {
-		irKey = irStringKey(gateway.Namespace, gateway.Name)
-		labels[OwningGatewayNamespaceLabel] = gateway.Namespace
-		labels[OwningGatewayNameLabel] = gateway.Name
+	svcClusterNamespace := t.ControllerNamespace
+	if t.GatewayNamespaceMode {
+		svcClusterNamespace = gateway.Namespace
 	}
-
-	svcCluster := resources.GetServiceByLabels(labels, t.ControllerNamespace)
+	svcCluster := resources.GetServiceByLabels(labels, svcClusterNamespace)
 
 	// Service lookup fails on first iteration
 	if svcCluster == nil {
