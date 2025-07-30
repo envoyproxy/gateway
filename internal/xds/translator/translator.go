@@ -6,9 +6,11 @@
 package translator
 
 import (
+	"cmp"
 	"errors"
 	"fmt"
 	"runtime"
+	"slices"
 	"strings"
 	"time"
 
@@ -276,7 +278,8 @@ func (t *Translator) processHTTPListenerXdsTranslation(
 	// The XDS translation is done in a best-effort manner, so we collect all
 	// errors and return them at the end.
 	var (
-		http3EnabledListeners = make(map[listenerKey]*ir.HTTP3Settings) // Map to track HTTP3 settings for listeners by address and port
+		ownerGatewayListeners = make(map[string]sets.Set[*ir.ResourceMetadata]) // The set of Gateway HTTPListeners that own the xDS Listener
+		http3EnabledListeners = make(map[listenerKey]*ir.HTTP3Settings)         // Map to track HTTP3 settings for listeners by address and port
 		errs                  error
 	)
 
@@ -331,6 +334,7 @@ func (t *Translator) processHTTPListenerXdsTranslation(
 					errs = errors.Join(errs, err)
 					continue
 				}
+				ownerGatewayListeners[quicXDSListener.Name] = sets.New[*ir.ResourceMetadata]()
 			}
 
 			// Create a new TCP listener for HTTP1/HTTP2 traffic.
@@ -348,6 +352,7 @@ func (t *Translator) processHTTPListenerXdsTranslation(
 				errs = errors.Join(errs, err)
 				continue
 			}
+			ownerGatewayListeners[tcpXDSListener.Name] = sets.New[*ir.ResourceMetadata]()
 
 			// We need to add an HCM to the newly created listener.
 			addHCM = true
@@ -399,6 +404,12 @@ func (t *Translator) processHTTPListenerXdsTranslation(
 					continue
 				}
 			}
+		}
+
+		// Collect the metadata for the HTTPListener.
+		ownerGatewayListeners[tcpXDSListener.Name].Insert(httpListener.Metadata)
+		if http3Enabled {
+			ownerGatewayListeners[quicXDSListener.Name].Insert(httpListener.Metadata)
 		}
 
 		// Add the secrets referenced by the listener's TLS configuration to the
@@ -472,6 +483,28 @@ func (t *Translator) processHTTPListenerXdsTranslation(
 		// resource version table.
 		if err = patchResources(tCtx, httpListener.Routes); err != nil {
 			errs = errors.Join(errs, err)
+		}
+	}
+
+	// Add the owner Gateway Listeners to the xDS listeners' metadata.
+	for listenerName, ownerGatewayListeners := range ownerGatewayListeners {
+		xdsListener := findXdsListener(tCtx, listenerName)
+		if xdsListener != nil {
+			sortedListeners := ownerGatewayListeners.UnsortedList()
+			// Sort by namespace, name, and section name ascending
+			slices.SortFunc(sortedListeners, func(a, b *ir.ResourceMetadata) int {
+				if a == nil && b == nil {
+					return 0
+				}
+				if a == nil {
+					return -1
+				}
+				if b == nil {
+					return 1
+				}
+				return cmp.Compare(a.Namespace+a.Name+a.SectionName, b.Namespace+b.Name+b.SectionName)
+			})
+			xdsListener.Metadata = buildXdsMetadataFromMultiple(sortedListeners)
 		}
 	}
 

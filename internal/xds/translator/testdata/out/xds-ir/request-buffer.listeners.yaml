@@ -36,6 +36,14 @@
         useRemoteAddress: true
     name: envoy-gateway/gateway-1/http
   maxConnectionsToAcceptPerSocketEvent: 1
+  metadata:
+    filterMetadata:
+      envoy-gateway:
+        resources:
+        - kind: Gateway
+          name: gateway-1
+          namespace: envoy-gateway
+          sectionName: http
   name: envoy-gateway/gateway-1/http
   perConnectionBufferLimitBytes: 32768
 - address:
@@ -76,5 +84,13 @@
         useRemoteAddress: true
     name: envoy-gateway/gateway-2/http
   maxConnectionsToAcceptPerSocketEvent: 1
+  metadata:
+    filterMetadata:
+      envoy-gateway:
+        resources:
+        - kind: Gateway
+          name: gateway-2
+          namespace: envoy-gateway
+          sectionName: http
   name: envoy-gateway/gateway-2/http
   perConnectionBufferLimitBytes: 32768

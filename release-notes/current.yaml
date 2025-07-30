@@ -47,6 +47,7 @@ new features: |
   Added admin console support with web UI for the Envoy Gateway admin server.
   Added support for configuring Zone Aware Routing via BackendTrafficPolicy.
   Added support for endpoint override policy based on Header.
+  Added Gateway Listeners to the xDS listener metadata.
 
 bug fixes: |
   Handle integer zone annotation values
