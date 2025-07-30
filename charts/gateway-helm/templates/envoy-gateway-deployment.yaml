@@ -57,6 +57,10 @@ spec:
               fieldPath: metadata.namespace
         - name: KUBERNETES_CLUSTER_DOMAIN
           value: {{ .Values.kubernetesClusterDomain }}
+        {{- if .Values.deployment.envoyProxy.image }}
+        - name: CUSTOM_DEFAULT_PROXY_IMAGE
+          value: {{ .Values.deployment.envoyProxy.image }}
+        {{- end }}
         image: {{ include "eg.image" . }}
         imagePullPolicy: {{ include "eg.image.pullPolicy" . }}
         livenessProbe:
