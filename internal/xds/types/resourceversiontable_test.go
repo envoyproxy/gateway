@@ -21,65 +21,8 @@ import (
 	"google.golang.org/protobuf/testing/protocmp"
 )
 
-var (
-	testListener = &listenerv3.Listener{
-		Name: "test-listener",
-	}
-	testSecret = &tlsv3.Secret{
-		Name: "test-secret",
-	}
-)
-
-func TestDeepCopy(t *testing.T) {
-	testCases := []struct {
-		name string
-		in   *ResourceVersionTable
-		out  *ResourceVersionTable
-	}{
-		{
-			name: "nil",
-			in:   nil,
-			out:  nil,
-		},
-		{
-			name: "listener",
-			in: &ResourceVersionTable{
-				XdsResources: XdsResources{
-					resourcev3.ListenerType: []types.Resource{testListener},
-				},
-			},
-			out: &ResourceVersionTable{
-				XdsResources: XdsResources{
-					resourcev3.ListenerType: []types.Resource{testListener},
-				},
-			},
-		},
-		{
-			name: "kitchen-sink",
-			in: &ResourceVersionTable{
-				XdsResources: XdsResources{
-					resourcev3.ListenerType: []types.Resource{testListener},
-					resourcev3.SecretType:   []types.Resource{testSecret},
-				},
-			},
-			out: &ResourceVersionTable{
-				XdsResources: XdsResources{
-					resourcev3.ListenerType: []types.Resource{testListener},
-					resourcev3.SecretType:   []types.Resource{testSecret},
-				},
-			},
-		},
-	}
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			if tc.out == nil {
-				require.Nil(t, tc.in.DeepCopy())
-			} else {
-				diff := cmp.Diff(tc.out, tc.in.DeepCopy(), protocmp.Transform())
-				require.Empty(t, diff)
-			}
-		})
-	}
+var testListener = &listenerv3.Listener{
+	Name: "test-listener",
 }
 
 func TestAddOrReplaceXdsResource(t *testing.T) {
@@ -533,7 +476,7 @@ func TestAddOrReplaceXdsResource(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			err := tc.tableIn.AddOrReplaceXdsResource(tc.typeIn, tc.resourceIn, tc.funcIn)
 			require.NoError(t, err)
-			diff := cmp.Diff(tc.tableOut, tc.tableIn.DeepCopy(), protocmp.Transform())
+			diff := cmp.Diff(tc.tableOut, tc.tableIn, protocmp.Transform())
 			require.Empty(t, diff)
 		})
 	}

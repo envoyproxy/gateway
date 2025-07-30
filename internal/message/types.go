@@ -15,7 +15,6 @@ import (
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 	"github.com/envoyproxy/gateway/internal/ir"
-	xdstypes "github.com/envoyproxy/gateway/internal/xds/types"
 )
 
 // ProviderResources message
@@ -133,16 +132,9 @@ type InfraIR struct {
 	watchable.Map[string, *ir.Infra]
 }
 
-// Xds message
-type Xds struct {
-	watchable.Map[string, *xdstypes.ResourceVersionTable]
-}
-
 type MessageName string
 
 const (
-	// XDSMessageName is a message containing xds translated from xds-ir
-	XDSMessageName MessageName = "xds"
 	// XDSIRMessageName is a message containing xds-ir translated from provider-resources
 	XDSIRMessageName MessageName = "xds-ir"
 	// InfraIRMessageName is a message containing infra-ir translated from provider-resources
