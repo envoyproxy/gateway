@@ -1116,6 +1116,37 @@ _Appears in:_
 | `IPv4AndIPv6` | IPv4AndIPv6DNSLookupFamily mean the DNS resolver will perform a lookup for both IPv4 and IPv6 families, and return all resolved<br />addresses. When this is used, Happy Eyeballs will be enabled for upstream connections.<br /> | 
 
 
+#### EndpointOverride
+
+
+
+EndpointOverride defines the configuration for endpoint override.
+This allows endpoint picking to be implemented based on request headers or metadata.
+It extracts selected override endpoints from the specified sources (request headers, metadata, etc.).
+If no valid endpoint in the override list, then the configured load balancing policy is used as fallback.
+
+_Appears in:_
+- [LoadBalancer](#loadbalancer)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `extractFrom` | _[EndpointOverrideExtractFrom](#endpointoverrideextractfrom) array_ |  true  |  | ExtractFrom defines the sources to extract endpoint override information from. |
+
+
+#### EndpointOverrideExtractFrom
+
+
+
+EndpointOverrideExtractFrom defines a source to extract endpoint override information from.
+
+_Appears in:_
+- [EndpointOverride](#endpointoverride)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `header` | _string_ |  false  |  | Header defines the header to get the override endpoint addresses.<br />The header value must specify at least one endpoint in `IP:Port` format or multiple endpoints in `IP:Port,IP:Port,...` format.<br />For example `10.0.0.5:8080` or `[2600:4040:5204::1574:24ae]:80`.<br />The IPv6 address is enclosed in square brackets. |
+
+
 #### EnvironmentCustomTag
 
 
@@ -3090,6 +3121,7 @@ _Appears in:_
 | ---   | ---  | ---      | ---     | ---         |
 | `type` | _[LoadBalancerType](#loadbalancertype)_ |  true  |  | Type decides the type of Load Balancer policy.<br />Valid LoadBalancerType values are<br />"ConsistentHash",<br />"LeastRequest",<br />"Random",<br />"RoundRobin". |
 | `consistentHash` | _[ConsistentHash](#consistenthash)_ |  false  |  | ConsistentHash defines the configuration when the load balancer type is<br />set to ConsistentHash |
+| `endpointOverride` | _[EndpointOverride](#endpointoverride)_ |  false  |  | EndpointOverride defines the configuration for endpoint override.<br />When specified, the load balancer will attempt to route requests to endpoints<br />based on the override information extracted from request headers or metadata.<br /> If the override endpoints are not available, the configured load balancer policy will be used as fallback. |
 | `slowStart` | _[SlowStart](#slowstart)_ |  false  |  | SlowStart defines the configuration related to the slow start load balancer policy.<br />If set, during slow start window, traffic sent to the newly added hosts will gradually increase.<br />Currently this is only supported for RoundRobin and LeastRequest load balancers |
 
 
@@ -4462,7 +4494,7 @@ _Appears in:_
 
 | Value | Description |
 | ----- | ----------- |
-| `UseAddressAsListenerName` | UseAddressAsListenerName indicates that the listener name should be derived from the address and port.<br /> | 
+| `XDSNameSchemeV2` | XDSNameSchemeV2 indicates that the xds name scheme v2 is used.<br />* The listener name will be generated using the protocol and port of the listener.<br /> | 
 
 
 #### RuntimeFlags

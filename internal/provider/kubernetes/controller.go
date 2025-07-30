@@ -45,6 +45,7 @@ import (
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/status"
+	"github.com/envoyproxy/gateway/internal/infrastructure/kubernetes/proxy"
 	"github.com/envoyproxy/gateway/internal/logging"
 	"github.com/envoyproxy/gateway/internal/message"
 	workqueuemetrics "github.com/envoyproxy/gateway/internal/metrics/workqueue"
@@ -799,14 +800,7 @@ func (r *gatewayAPIReconciler) processSecurityPolicyObjectRefs(
 				}
 			}
 
-			var backendRefs []gwapiv1.BackendObjectReference
-			if oidc.Provider.BackendRef != nil {
-				backendRefs = append(backendRefs, *oidc.Provider.BackendRef)
-			}
-			if len(oidc.Provider.BackendRefs) > 0 {
-				backendRefs = append(backendRefs, oidc.Provider.BackendRefs[0].BackendObjectReference)
-			}
-
+			backendRefs := getBackendRefs(oidc.Provider.BackendCluster)
 			for _, backendRef := range backendRefs {
 				if err := r.processBackendRef(
 					ctx, resourceMap, resourceTree,
@@ -865,37 +859,27 @@ func (r *gatewayAPIReconciler) processSecurityPolicyObjectRefs(
 		// Add the referenced BackendRefs and ReferenceGrants in ExtAuth to Maps for later processing
 		extAuth := policy.Spec.ExtAuth
 		if extAuth != nil {
-			var backendRef gwapiv1.BackendObjectReference
-			if extAuth.GRPC != nil {
-				if extAuth.GRPC.BackendRef != nil {
-					backendRef = *extAuth.GRPC.BackendRef
-				}
-				if len(extAuth.GRPC.BackendRefs) > 0 {
-					if len(extAuth.GRPC.BackendRefs) != 0 {
-						backendRef = extAuth.GRPC.BackendRefs[0].BackendObjectReference
-					}
-				}
-			} else if extAuth.HTTP != nil {
-				if extAuth.HTTP.BackendRef != nil {
-					backendRef = *extAuth.HTTP.BackendRef
-				}
-				if len(extAuth.HTTP.BackendRefs) > 0 {
-					if len(extAuth.HTTP.BackendRefs) != 0 {
-						backendRef = extAuth.HTTP.BackendRefs[0].BackendObjectReference
-					}
-				}
+			var backendCluster *egv1a1.BackendCluster
+			switch {
+			case extAuth.GRPC != nil:
+				backendCluster = &extAuth.GRPC.BackendCluster
+			case extAuth.HTTP != nil:
+				backendCluster = &extAuth.HTTP.BackendCluster
+			default:
+				// this should not happen as the ExtAuth is validated in the CEL validation
+				r.log.Info("ExtAuth is not configured for SecurityPolicy, skipping BackendRefs processing")
 			}
-			if err := r.processBackendRef(
-				ctx,
-				resourceMap,
-				resourceTree,
-				resource.KindSecurityPolicy,
-				policy.Namespace,
-				policy.Name,
-				backendRef); err != nil {
-				r.log.Error(err,
-					"failed to process ExtAuth BackendRef for SecurityPolicy",
-					"policy", policy, "backendRef", backendRef)
+			if backendCluster != nil {
+				backendRefs := getBackendRefs(*backendCluster)
+				for _, backendRef := range backendRefs {
+					if err := r.processBackendRef(
+						ctx, resourceMap, resourceTree,
+						resource.KindSecurityPolicy, policy.Namespace, policy.Name,
+						backendRef); err != nil {
+						r.log.Error(err, "failed to process ExtAuth BackendRef for SecurityPolicy",
+							"policy", policy, "backendRef", backendRef)
+					}
+				}
 			}
 		}
 
@@ -946,6 +930,19 @@ func (r *gatewayAPIReconciler) processSecurityPolicyObjectRefs(
 		}
 	}
 	return nil
+}
+
+func getBackendRefs(backendCluster egv1a1.BackendCluster) []gwapiv1.BackendObjectReference {
+	var backendRefs []gwapiv1.BackendObjectReference
+	if backendCluster.BackendRef != nil {
+		backendRefs = append(backendRefs, *backendCluster.BackendRef)
+	}
+	// There is a CEL validation rule to ensure that backendRefs and backendRef
+	// cannot both be set at the same time.
+	for _, ref := range backendCluster.BackendRefs {
+		backendRefs = append(backendRefs, ref.BackendObjectReference)
+	}
+	return backendRefs
 }
 
 // processBackendRef adds the referenced BackendRef to the resourceMap for later processBackendRefs.
@@ -1359,6 +1356,12 @@ func (r *gatewayAPIReconciler) processGateways(ctx context.Context, managedGC *g
 		return err
 	}
 
+	mergedGateways := false
+	if r.mergeGateways.Has(managedGC.Name) {
+		mergedGateways = true
+		r.processServiceCluster(managedGC.Name, resourceMap)
+	}
+
 	for _, gtw := range gatewayList.Items {
 		gtw := gtw //nolint:copyloopvar
 		if r.namespaceLabel != nil {
@@ -1403,6 +1406,11 @@ func (r *gatewayAPIReconciler) processGateways(ctx context.Context, managedGC *g
 		}
 
 		gtwNamespacedName := utils.NamespacedName(&gtw).String()
+
+		if !mergedGateways {
+			r.processServiceCluster(gtwNamespacedName, resourceMap)
+		}
+
 		// Route Processing
 
 		if r.tlsRouteCRDExists {
@@ -1462,6 +1470,15 @@ func (r *gatewayAPIReconciler) processGateways(ctx context.Context, managedGC *g
 	}
 
 	return nil
+}
+
+func (r *gatewayAPIReconciler) processServiceCluster(resourceName string, resourceMap *resourceMappings) {
+	proxySvcName := proxy.ExpectedResourceHashedName(resourceName)
+	resourceMap.allAssociatedBackendRefs.Insert(gwapiv1.BackendObjectReference{
+		Kind:      ptr.To(gwapiv1.Kind("Service")),
+		Namespace: gatewayapi.NamespacePtr(r.namespace),
+		Name:      gwapiv1.ObjectName(proxySvcName),
+	})
 }
 
 // processEnvoyPatchPolicies adds EnvoyPatchPolicies to the resourceTree

@@ -159,6 +159,21 @@ xdsIR:
     accessLog:
       json:
       - path: /dev/stdout
+    globalResources:
+      proxyServiceCluster:
+        name: envoy-gateway/gateway-1
+        settings:
+        - addressType: IP
+          endpoints:
+          - host: 7.6.5.4
+            port: 8080
+            zone: zone1
+          metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-1
+          protocol: TCP
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4
@@ -166,6 +181,7 @@ xdsIR:
       port: 19003
     udp:
     - address: 0.0.0.0
+      externalPort: 161
       name: envoy-gateway/gateway-1/udp1
       port: 10161
       route:
@@ -189,6 +205,7 @@ xdsIR:
             weight: 1
         name: udproute/default/udproute-1
     - address: 0.0.0.0
+      externalPort: 162
       name: envoy-gateway/gateway-1/udp2
       port: 10162
       route:
