@@ -342,23 +342,27 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 
 		// it's safe here to append gwcResource to gwcResources
 		gwcResources = append(gwcResources, gwcResource)
-		// process global resources
-		// add the OIDC HMAC Secret to the resourceTree
-		if err = r.processOIDCHMACSecret(ctx, gwcResource, gwcResourceMapping); err != nil {
-			if isTransientError(err) {
-				r.log.Error(err, "transient error processing OIDC HMAC Secret", "gatewayClass", managedGC.Name)
-				return reconcile.Result{}, err
-			}
-			r.log.Error(err, fmt.Sprintf("failed processOIDCHMACSecret for gatewayClass %s", managedGC.Name))
-		}
 
-		// add the Envoy TLS Secret to the resourceTree
-		if err = r.processEnvoyTLSSecret(ctx, gwcResource, gwcResourceMapping); err != nil {
-			if isTransientError(err) {
-				r.log.Error(err, "transient error processing Envoy TLS Secret", "gatewayClass", managedGC.Name)
-				return reconcile.Result{}, err
+		// Only logs for Kubernetes mode
+		if r.envoyGateway.Provider.Type == egv1a1.ProviderTypeKubernetes {
+			// process global resources
+			// add the OIDC HMAC Secret to the resourceTree
+			if err = r.processOIDCHMACSecret(ctx, gwcResource, gwcResourceMapping); err != nil {
+				if isTransientError(err) {
+					r.log.Error(err, "transient error processing OIDC HMAC Secret", "gatewayClass", managedGC.Name)
+					return reconcile.Result{}, err
+				}
+				r.log.Error(err, fmt.Sprintf("failed processOIDCHMACSecret for gatewayClass %s", managedGC.Name))
 			}
-			r.log.Error(err, fmt.Sprintf("failed processEnvoyTLSSecret for gatewayClass %s", managedGC.Name))
+
+			// add the Envoy TLS Secret to the resourceTree
+			if err = r.processEnvoyTLSSecret(ctx, gwcResource, gwcResourceMapping); err != nil {
+				if isTransientError(err) {
+					r.log.Error(err, "transient error processing Envoy TLS Secret", "gatewayClass", managedGC.Name)
+					return reconcile.Result{}, err
+				}
+				r.log.Error(err, fmt.Sprintf("failed processEnvoyTLSSecret for gatewayClass %s", managedGC.Name))
+			}
 		}
 
 		// Add all Gateways, their associated Routes, and referenced resources to the resourceTree

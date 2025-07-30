@@ -67,6 +67,7 @@ bug fixes: |
   Fixed issue that failed to update policy status when there are more than 16 ancestors.
   Fixed race condition in watchable.Map Snapshot subscription.
   Fixed issue where HTTPRoutes with sessionPersistence caused the Envoy listeners to drain.
+  Fixed issue where standalone mode was always emitting non-actionable error logs.
 
 # Enhancements that improve performance.
 performance improvements: |
