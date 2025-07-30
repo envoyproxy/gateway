@@ -482,8 +482,7 @@ func (t *Translator) addHCMToXDSListener(
 		}
 		filterChain.TransportSocket = tSocket
 
-		err := addServerNamesMatch(xdsListener, filterChain, irListener.Hostnames)
-		if err != nil {
+		if err := addServerNamesMatch(xdsListener, filterChain, irListener.Hostnames); err != nil {
 			return err
 		}
 
@@ -705,12 +704,7 @@ func (t *Translator) addXdsTCPFilterChain(
 	}
 
 	if isTLSPassthrough {
-		err := addServerNamesMatch(
-			xdsListener,
-			filterChain,
-			irRoute.TLS.TLSInspectorConfig.SNIs,
-		)
-		if err != nil {
+		if err := addServerNamesMatch(xdsListener, filterChain, irRoute.TLS.TLSInspectorConfig.SNIs); err != nil {
 			return err
 		}
 	}
@@ -720,12 +714,7 @@ func (t *Translator) addXdsTCPFilterChain(
 		if cfg := irRoute.TLS.TLSInspectorConfig; cfg != nil {
 			snis = cfg.SNIs
 		}
-		err := addServerNamesMatch(
-			xdsListener,
-			filterChain,
-			snis,
-		)
-		if err != nil {
+		if err := addServerNamesMatch(xdsListener, filterChain, snis); err != nil {
 			return err
 		}
 		tSocket, err := buildXdsDownstreamTLSSocket(irRoute.TLS.Terminate)

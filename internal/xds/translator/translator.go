@@ -489,13 +489,6 @@ func (t *Translator) addRouteToRouteConfig(
 		err               error
 	)
 
-	// If the virtual host already exists, we can skip it.
-	for _, vHost := range xdsRouteCfg.VirtualHosts {
-		if vHost.Name == virtualHostName(httpListener, vHost.Domains[0]) {
-			vHosts[vHost.Domains[0]] = vHost
-		}
-	}
-
 	// Check if an extension is loaded that wants to modify xDS Routes after they have been generated
 	for _, httpRoute := range httpListener.Routes {
 		// 1:1 between IR HTTPRoute Hostname and xDS VirtualHost.
@@ -793,8 +786,13 @@ func (t *Translator) processTCPListenerXdsTranslation(
 				}
 			}
 			if err := t.addXdsTCPFilterChain(
-				xdsListener, route, route.Destination.Name, accesslog,
-				tcpListener.Timeout, tcpListener.Connection); err != nil {
+				xdsListener,
+				route,
+				route.Destination.Name,
+				accesslog,
+				tcpListener.Timeout,
+				tcpListener.Connection,
+			); err != nil {
 				errs = errors.Join(errs, err)
 			}
 		}
@@ -815,8 +813,13 @@ func (t *Translator) processTCPListenerXdsTranslation(
 				},
 			}
 			if err := t.addXdsTCPFilterChain(
-				xdsListener, emptyRoute, emptyClusterName, accesslog,
-				tcpListener.Timeout, tcpListener.Connection); err != nil {
+				xdsListener,
+				emptyRoute,
+				emptyClusterName,
+				accesslog,
+				tcpListener.Timeout,
+				tcpListener.Connection,
+			); err != nil {
 				errs = errors.Join(errs, err)
 			}
 		}
