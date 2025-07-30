@@ -1077,6 +1077,23 @@ type RemoteJWKS struct {
 	// URI is the HTTPS URI to fetch the JWKS. Envoy's system trust bundle is used to validate the server certificate.
 	// If a custom trust bundle is needed, it can be specified in a BackendTLSConfig resource and target the BackendRefs.
 	URI string `json:"uri"`
+
+	//Duration after which the cached JWKS should be expired. If not specified, default cache duration is 5 minutes.
+	CacheDuration *metav1.Duration `json:"cacheDuration,omitempty"`
+
+	//Fetch Jwks asynchronously in the main thread before the listener is activated. Fetched Jwks can be used by all worker threads.
+	AsyncFetch *JwksAsyncFetch `json:"asyncFetch,omitempty"`
+}
+
+// JwksAsyncFetch is used to Fetch Jwks asynchronously in the main thread before the listener is activated.
+//
+// +k8s:deepcopy-gen=true
+type JwksAsyncFetch struct {
+	//If false, the listener is activated after the initial fetch is completed. The initial fetch result can be either successful or failed.
+	//If true, it is activated without waiting for the initial fetch to complete.
+	FastListener bool `json:"fastListener,omitempty"`
+	// The duration to refetch after a failed fetch.
+	FailedRefetchDuration *metav1.Duration `json:"failedRefetchDuration,omitempty"`
 }
 
 // OIDC defines the schema for authenticating HTTP requests using

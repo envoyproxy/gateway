@@ -315,6 +315,8 @@ xdsIR:
               issuer: https://one.example.com
               name: example1
               remoteJWKS:
+                asyncFetch: null
+                cacheDuration: null
                 uri: https://one.example.com/jwt/public-key/jwks.json
       - destination:
           metadata:
@@ -358,6 +360,8 @@ xdsIR:
               issuer: https://two.example.com
               name: example2
               remoteJWKS:
+                asyncFetch: null
+                cacheDuration: null
                 uri: https://one.example.com/jwt/public-key/jwks.json
     readyListener:
       address: 0.0.0.0

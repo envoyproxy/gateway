@@ -12,6 +12,10 @@ spec:
     - name: example
       remoteJWKS:
         uri: https://raw.githubusercontent.com/envoyproxy/gateway/main/examples/kubernetes/jwt/jwks.json
+        cacheDuration: 60s
+        asyncFetch:
+          fastListener: true
+          failedRefetchDuration: 2s
 ---
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute

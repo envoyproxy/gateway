@@ -42584,6 +42584,13 @@ spec:
                             RemoteJWKS defines how to fetch and cache JSON Web Key Sets (JWKS) from a remote
                             HTTP/HTTPS endpoint.
                           properties:
+                            asyncFetch:
+                              properties:
+                                failedRefetchDuration:
+                                  type: string
+                                fastListener:
+                                  type: boolean
+                              type: object
                             backendRef:
                               description: |-
                                 BackendRef references a Kubernetes object that represents the
@@ -43575,6 +43582,10 @@ spec:
                                       type: object
                                   type: object
                               type: object
+                            cacheDuration:
+                              default: 300s
+                              format: duration
+                              type: string
                             uri:
                               description: |-
                                 URI is the HTTPS URI to fetch the JWKS. Envoy's system trust bundle is used to validate the server certificate.

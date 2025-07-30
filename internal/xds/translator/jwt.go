@@ -19,6 +19,7 @@ import (
 	"google.golang.org/protobuf/types/known/anypb"
 	"google.golang.org/protobuf/types/known/durationpb"
 	"google.golang.org/protobuf/types/known/emptypb"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
@@ -150,6 +151,20 @@ func buildJWTAuthn(irListener *ir.HTTPListener) (*jwtauthnv3.JwtAuthentication, 
 					jwksCluster = cluster.name
 				}
 
+				var duration *metav1.Duration
+				if jwks.CacheDuration != nil {
+					duration = jwks.CacheDuration
+				}
+
+				var asyncFetch jwtauthnv3.JwksAsyncFetch
+
+				if jwks.AsyncFetch != nil {
+					asyncFetch = jwtauthnv3.JwksAsyncFetch{
+						FastListener:          jwks.AsyncFetch.FastListener,
+						FailedRefetchDuration: durationpb.New(jwks.AsyncFetch.FailedRefetchDuration.Duration),
+					}
+				}
+
 				remote := &jwtauthnv3.JwtProvider_RemoteJwks{
 					RemoteJwks: &jwtauthnv3.RemoteJwks{
 						HttpUri: &corev3.HttpUri{
@@ -159,7 +174,7 @@ func buildJWTAuthn(irListener *ir.HTTPListener) (*jwtauthnv3.JwtAuthentication, 
 							},
 							Timeout: durationpb.New(defaultExtServiceRequestTimeout),
 						},
-						CacheDuration: durationpb.New(5 * time.Minute),
+						CacheDuration: &durationpb.Duration{Seconds: 5 * 60},
 						AsyncFetch:    &jwtauthnv3.JwksAsyncFetch{},
 					},
 				}
