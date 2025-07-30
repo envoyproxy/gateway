@@ -219,8 +219,6 @@ xdsIR:
             - issuer: https://oauth.foo.com
               name: example1
               remoteJWKS:
-                asyncFetch: null
-                cacheDuration: null
                 uri: https://oauth.foo.com/jwt/public-key/jwks.json
           oidc:
             clientID: client.oauth.foo.com

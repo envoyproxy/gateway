@@ -25273,8 +25273,13 @@ spec:
                             HTTP/HTTPS endpoint.
                           properties:
                             asyncFetch:
+                              description: Fetch Jwks asynchronously in the main thread
+                                before the listener is activated. Fetched Jwks can
+                                be used by all worker threads.
                               properties:
                                 failedRefetchDuration:
+                                  description: The duration to refetch after a failed
+                                    fetch.
                                   type: string
                                 fastListener:
                                   type: boolean

@@ -725,8 +725,6 @@ xdsIR:
               issuer: https://one.example.com
               name: example1
               remoteJWKS:
-                asyncFetch: null
-                cacheDuration: null
                 uri: https://one.example.com/jwt/public-key/jwks.json
       - destination:
           metadata:
@@ -837,8 +835,6 @@ xdsIR:
               issuer: https://one.example.com
               name: example1
               remoteJWKS:
-                asyncFetch: null
-                cacheDuration: null
                 uri: https://one.example.com/jwt/public-key/jwks.json
     - address: 0.0.0.0
       externalPort: 80

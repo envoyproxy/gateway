@@ -340,8 +340,6 @@ xdsIR:
               issuer: https://one.example.com
               name: example1
               remoteJWKS:
-                asyncFetch: null
-                cacheDuration: null
                 uri: https://one.example.com/jwt/public-key/jwks.json
             - audiences:
               - two.foo.com
@@ -351,8 +349,6 @@ xdsIR:
               issuer: https://two.example.com
               name: example2
               remoteJWKS:
-                asyncFetch: null
-                cacheDuration: null
                 uri: https://two.example.com/jwt/public-key/jwks.json
     readyListener:
       address: 0.0.0.0
@@ -442,8 +438,6 @@ xdsIR:
               issuer: https://three.example.com
               name: example3
               remoteJWKS:
-                asyncFetch: null
-                cacheDuration: null
                 uri: https://three.example.com/jwt/public-key/jwks.json
     readyListener:
       address: 0.0.0.0

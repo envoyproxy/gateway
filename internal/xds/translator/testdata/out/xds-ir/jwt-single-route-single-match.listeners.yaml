@@ -28,7 +28,9 @@
                   - scope
                 payloadInMetadata: example
                 remoteJwks:
-                  asyncFetch: {}
+                  asyncFetch:
+                    failedRefetchDuration: 2s
+                    fastListener: true
                   cacheDuration: 300s
                   httpUri:
                     cluster: localhost_443
