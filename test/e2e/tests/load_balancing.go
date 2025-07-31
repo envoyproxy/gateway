@@ -20,8 +20,10 @@ import (
 
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	"sigs.k8s.io/gateway-api/conformance/utils/http"
@@ -40,6 +42,7 @@ func init() {
 		ConsistentHashSourceIPLoadBalancingTest,
 		ConsistentHashHeaderLoadBalancingTest,
 		ConsistentHashCookieLoadBalancingTest,
+		EndpointOverrideLoadBalancingTest,
 	)
 }
 
@@ -355,6 +358,166 @@ var ConsistentHashCookieLoadBalancingTest = suite.ConformanceTest{
 				return false, nil
 			})
 			require.NoError(t, waitErr)
+		})
+	},
+}
+
+var EndpointOverrideLoadBalancingTest = suite.ConformanceTest{
+	ShortName:   "EndpointOverrideLoadBalancing",
+	Description: "Test for endpoint override load balancing functionality",
+	Manifests:   []string{"testdata/load_balancing_endpoint_override.yaml"},
+	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
+		const sendRequests = 10
+
+		ns := "gateway-conformance-infra"
+		headerRouteNN := types.NamespacedName{Name: "endpoint-override-header-lb-route", Namespace: ns}
+		gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
+
+		ancestorRef := gwapiv1a2.ParentReference{
+			Group:     gatewayapi.GroupPtr(gwapiv1.GroupName),
+			Kind:      gatewayapi.KindPtr(resource.KindGateway),
+			Namespace: gatewayapi.NamespacePtr(gwNN.Namespace),
+			Name:      gwapiv1.ObjectName(gwNN.Name),
+		}
+		BackendTrafficPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "endpoint-override-header-lb-policy", Namespace: ns}, suite.ControllerName, ancestorRef)
+		WaitForPods(t, suite.Client, ns, map[string]string{"app": "lb-backend-endpointoverride"}, corev1.PodRunning, PodReady)
+
+		gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), headerRouteNN)
+
+		// Get pods associated with the service to find valid pod IPs and names
+		ctx, cancel := context.WithTimeout(context.Background(), suite.TimeoutConfig.GetTimeout)
+		defer cancel()
+
+		// Get pods by label selector
+		podList := &corev1.PodList{}
+		err := suite.Client.List(ctx, podList, &client.ListOptions{
+			Namespace:     ns,
+			LabelSelector: labels.SelectorFromSet(map[string]string{"app": "lb-backend-endpointoverride"}),
+		})
+		require.NoError(t, err, "failed to list pods")
+		require.NotEmpty(t, podList.Items, "should have pods")
+
+		// Create mapping of pod IP to pod name
+		podIPToName := make(map[string]string)
+		var validPodIPs []string
+		for _, pod := range podList.Items {
+			if pod.Status.Phase == corev1.PodRunning && pod.Status.PodIP != "" {
+				podIPToName[pod.Status.PodIP] = pod.Name
+				validPodIPs = append(validPodIPs, pod.Status.PodIP)
+			}
+		}
+		require.NotEmpty(t, validPodIPs, "should have valid pod IPs")
+
+		// Get service port
+		svc := &corev1.Service{}
+		err = suite.Client.Get(ctx, types.NamespacedName{Name: "lb-backend-endpointoverride", Namespace: ns}, svc)
+		require.NoError(t, err, "failed to get service")
+		require.NotEmpty(t, svc.Spec.Ports, "service should have ports")
+		servicePort := svc.Spec.Ports[0].TargetPort.IntValue()
+
+		t.Logf("Found %d valid pods: %v, service port: %d", len(validPodIPs), podIPToName, servicePort)
+
+		t.Run("header-based endpoint override with valid pod IP should route to specific pod", func(t *testing.T) {
+			// Use the first valid pod IP as override host
+			targetPodIP := validPodIPs[0]
+			format := "%s:%d"
+			if IPFamily == "ipv6" {
+				format = "[%s]:%d"
+			}
+			overrideHost := fmt.Sprintf(format, targetPodIP, servicePort)
+
+			// Get the expected pod name from our mapping
+			expectPodName := podIPToName[targetPodIP]
+			require.NotEmpty(t, expectPodName, "failed to get expected pod name for IP %s", targetPodIP)
+
+			t.Logf("Testing endpoint override with valid pod IP: %s, expecting pod: %s", overrideHost, expectPodName)
+
+			expectedResponse := http.ExpectedResponse{
+				Request: http.Request{
+					Path: "/endpoint-override-header",
+					Headers: map[string]string{
+						"x-custom-host": overrideHost,
+					},
+				},
+				Response: http.Response{
+					StatusCode: 200,
+				},
+				Namespace: ns,
+			}
+
+			req := http.MakeRequest(t, &expectedResponse, gwAddr, "HTTP", "http")
+
+			// Test that all requests go to the expected pod
+			for i := 0; i < sendRequests; i++ {
+				cReq, cResp, err := suite.RoundTripper.CaptureRoundTrip(req)
+				require.NoError(t, err, "failed to get expected response")
+				require.NoError(t, http.CompareRequest(t, &req, cReq, cResp, expectedResponse), "failed to compare request and response")
+
+				actualPodName := cReq.Pod
+				require.Equal(t, expectPodName, actualPodName, "request %d: expected pod %s but got %s", i+1, expectPodName, actualPodName)
+			}
+
+			t.Logf("All %d requests with valid override host %s routed to expected pod: %s", sendRequests, overrideHost, expectPodName)
+		})
+		t.Run("header-based endpoint override with invalid pod IP should fallback to load balancer policy", func(t *testing.T) {
+			// Use an invalid pod IP that's not in the service endpoints
+			invalidOverrideHost := "192.168.99.99:8080"
+
+			t.Logf("Testing endpoint override with invalid pod IP: %s (should fallback to load balancer policy)", invalidOverrideHost)
+
+			expectedResponse := http.ExpectedResponse{
+				Request: http.Request{
+					Path: "/endpoint-override-header",
+					Headers: map[string]string{
+						"x-custom-host": invalidOverrideHost,
+					},
+				},
+				Response: http.Response{
+					StatusCode: 200,
+				},
+				Namespace: ns,
+			}
+
+			req := http.MakeRequest(t, &expectedResponse, gwAddr, "HTTP", "http")
+
+			// Make multiple requests and verify fallback behavior (just check 200 response)
+			for i := 0; i < sendRequests; i++ {
+				cReq, cResp, err := suite.RoundTripper.CaptureRoundTrip(req)
+				require.NoError(t, err, "failed to get expected response")
+				require.NoError(t, http.CompareRequest(t, &req, cReq, cResp, expectedResponse), "failed to compare request and response")
+
+				// For invalid override host, we just verify the response is 200 (fallback works)
+				// No need to check specific pod routing since it should use fallback policy
+			}
+
+			t.Logf("All %d requests with invalid override host %s got 200 response (fallback working)", sendRequests, invalidOverrideHost)
+		})
+
+		t.Run("header-based endpoint override without header should fallback to load balancer policy", func(t *testing.T) {
+			expectedResponse := http.ExpectedResponse{
+				Request: http.Request{
+					Path: "/endpoint-override-header",
+					// No x-custom-host header
+				},
+				Response: http.Response{
+					StatusCode: 200,
+				},
+				Namespace: ns,
+			}
+
+			req := http.MakeRequest(t, &expectedResponse, gwAddr, "HTTP", "http")
+
+			// Make multiple requests and verify fallback behavior (just check 200 response)
+			for i := 0; i < sendRequests; i++ {
+				cReq, cResp, err := suite.RoundTripper.CaptureRoundTrip(req)
+				require.NoError(t, err, "failed to get expected response")
+				require.NoError(t, http.CompareRequest(t, &req, cReq, cResp, expectedResponse), "failed to compare request and response")
+
+				// For missing header, we just verify the response is 200 (fallback works)
+				// No need to check specific pod routing since it should use fallback policy
+			}
+
+			t.Logf("All %d requests without override header got 200 response (fallback working)", sendRequests)
 		})
 	},
 }

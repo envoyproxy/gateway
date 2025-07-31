@@ -29,11 +29,19 @@ func (t *Translator) ProcessExtensionServerPolicies(policies []unstructured.Unst
 ) ([]unstructured.Unstructured, error) {
 	res := []unstructured.Unstructured{}
 
-	// Sort based on timestamp
+	// Initially, policies sort by creation timestamp
+	// or sort alphabetically by “{namespace}/{name}” if multiple gateways share same timestamp.
 	sort.Slice(policies, func(i, j int) bool {
-		iTime := policies[i].GetCreationTimestamp()
-		jTime := policies[j].GetCreationTimestamp()
-		return iTime.Before(&jTime)
+		tsI := policies[i].GetCreationTimestamp()
+		tsJ := policies[j].GetCreationTimestamp()
+		if tsI.Equal(&tsJ) {
+			policyKeyI := fmt.Sprintf("%s/%s", policies[i].GetNamespace(), policies[i].GetName())
+			policyKeyJ := fmt.Sprintf("%s/%s", policies[j].GetNamespace(), policies[j].GetName())
+			return policyKeyI < policyKeyJ
+		}
+		// Not identical CreationTimestamps
+
+		return tsI.Before(&tsJ)
 	})
 
 	// First build a map out of the gateways for faster lookup

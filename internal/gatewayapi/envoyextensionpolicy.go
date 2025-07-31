@@ -43,8 +43,16 @@ func (t *Translator) ProcessEnvoyExtensionPolicies(envoyExtensionPolicies []*egv
 ) []*egv1a1.EnvoyExtensionPolicy {
 	var res []*egv1a1.EnvoyExtensionPolicy
 
-	// Sort based on timestamp
+	// Initially, policies sort by creation timestamp
+	// or sort alphabetically by “{namespace}/{name}” if multiple gateways share same timestamp.
 	sort.Slice(envoyExtensionPolicies, func(i, j int) bool {
+		if envoyExtensionPolicies[i].CreationTimestamp.Equal(&(envoyExtensionPolicies[j].CreationTimestamp)) {
+			policyKeyI := fmt.Sprintf("%s/%s", envoyExtensionPolicies[i].Namespace, envoyExtensionPolicies[i].Name)
+			policyKeyJ := fmt.Sprintf("%s/%s", envoyExtensionPolicies[j].Namespace, envoyExtensionPolicies[j].Name)
+			return policyKeyI < policyKeyJ
+		}
+		// Not identical CreationTimestamps
+
 		return envoyExtensionPolicies[i].CreationTimestamp.Before(&(envoyExtensionPolicies[j].CreationTimestamp))
 	})
 

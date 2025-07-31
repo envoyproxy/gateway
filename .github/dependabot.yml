@@ -37,6 +37,8 @@ updates:
       - dependency-name: "github.com/docker/docker"
       # Ignore github.com/google/go-containerregistry, since it should be updated alongside github.com/replicatedhq/troubleshoot
       - dependency-name: "github.com/google/go-containerregistry"
+      # Ignore k8s.io/apimachinery, since it should be updated alongside k8s.io/api
+      - dependency-name: "k8s.io/apimachinery"
     groups:
       gomod:
         patterns:
@@ -56,7 +58,6 @@ updates:
       k8s.io:
         patterns:
           - "k8s.io/*"
-          - "sigs.k8s.io/*"
   - package-ecosystem: pip
     directories:
       - /tools/src/codespell

@@ -8,16 +8,18 @@ package gatewayapi
 import (
 	"fmt"
 	"net/netip"
+	"strconv"
 	"strings"
 
 	"k8s.io/apimachinery/pkg/util/validation"
 	"k8s.io/utils/ptr"
+	gwapiv1a3 "sigs.k8s.io/gateway-api/apis/v1alpha3"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/status"
 )
 
-func (t *Translator) ProcessBackends(backends []*egv1a1.Backend) []*egv1a1.Backend {
+func (t *Translator) ProcessBackends(backends []*egv1a1.Backend, backendTLSPolicies []*gwapiv1a3.BackendTLSPolicy) []*egv1a1.Backend {
 	var res []*egv1a1.Backend
 	for _, backend := range backends {
 		backend := backend.DeepCopy()
@@ -27,7 +29,7 @@ func (t *Translator) ProcessBackends(backends []*egv1a1.Backend) []*egv1a1.Backe
 			status.UpdateBackendStatusAcceptedCondition(backend, false,
 				"The Backend was not accepted since Backend is not enabled in Envoy Gateway Config")
 		} else {
-			if err := validateBackend(backend); err != nil {
+			if err := validateBackend(backend, backendTLSPolicies); err != nil {
 				status.UpdateBackendStatusAcceptedCondition(backend, false, fmt.Sprintf("The Backend was not accepted: %s", err.Error()))
 			} else {
 				status.UpdateBackendStatusAcceptedCondition(backend, true, "The Backend was accepted")
@@ -40,39 +42,19 @@ func (t *Translator) ProcessBackends(backends []*egv1a1.Backend) []*egv1a1.Backe
 	return res
 }
 
-func validateBackend(backend *egv1a1.Backend) status.Error {
-	if backend.Spec.Type != nil &&
-		*backend.Spec.Type == egv1a1.BackendTypeDynamicResolver {
+func validateBackend(backend *egv1a1.Backend, backendTLSPolicies []*gwapiv1a3.BackendTLSPolicy) status.Error {
+	if backend.Spec.Type != nil && *backend.Spec.Type == egv1a1.BackendTypeDynamicResolver {
 		if len(backend.Spec.Endpoints) > 0 {
 			return status.NewRouteStatusError(
 				fmt.Errorf("DynamicResolver type cannot have endpoints specified"),
 				status.RouteReasonInvalidBackendRef,
 			)
 		}
+	}
 
-		if backend.Spec.TLS != nil &&
-			!ptr.Deref(backend.Spec.TLS.InsecureSkipVerify, false) &&
-			backend.Spec.TLS.WellKnownCACertificates == nil &&
-			len(backend.Spec.TLS.CACertificateRefs) == 0 {
-			return status.NewRouteStatusError(
-				fmt.Errorf("must specify either CACertificateRefs or WellKnownCACertificates for DynamicResolver type when InsecureSkipVerify is unset or false"),
-				status.RouteReasonInvalidBackendRef,
-			)
-		}
-
-	} else if backend.Spec.TLS != nil {
-		if backend.Spec.TLS.WellKnownCACertificates != nil {
-			return status.NewRouteStatusError(
-				fmt.Errorf("TLS.WellKnownCACertificates settings can only be specified for DynamicResolver backends"),
-				status.RouteReasonInvalidBackendRef,
-			)
-		}
-		if len(backend.Spec.TLS.CACertificateRefs) > 0 {
-			return status.NewRouteStatusError(
-				fmt.Errorf("TLS.CACertificateRefs settings can only be specified for DynamicResolver backends"),
-				status.RouteReasonInvalidBackendRef,
-			)
-		}
+	// Validate CACert is specified if InsecureSkipVerify is false
+	if err := validateBackendTLSSettings(backend, backendTLSPolicies); err != nil {
+		return err
 	}
 
 	for _, ep := range backend.Spec.Endpoints {
@@ -98,6 +80,76 @@ func validateBackend(backend *egv1a1.Backend) status.Error {
 				return status.NewRouteStatusError(
 					fmt.Errorf("IP address %s in the loopback range is not supported", ep.IP.Address),
 					status.RouteReasonInvalidAddress,
+				)
+			}
+		}
+	}
+	return nil
+}
+
+// validateBackendTLSSettings validates CACert is specified if InsecureSkipVerify is false
+func validateBackendTLSSettings(backend *egv1a1.Backend, backendTLSPolicies []*gwapiv1a3.BackendTLSPolicy) status.Error {
+	if backend.Spec.TLS != nil && !ptr.Deref(backend.Spec.TLS.InsecureSkipVerify, false) {
+		var (
+			backendTLSHasCACerts         bool
+			backendTLSPoliciesHasCACerts bool
+			ports                        = make(map[string]bool, len(backend.Spec.Endpoints))
+		)
+
+		// Check if the backend has WellKnownCACertificates or CACertificateRefs
+		backendTLSHasCACerts = backend.Spec.TLS.WellKnownCACertificates != nil || len(backend.Spec.TLS.CACertificateRefs) > 0
+
+		// If the backend has no CACert, check if any associated BackendTLSPolicy has CACert
+		if !backendTLSHasCACerts {
+			// Collect all ports from the backend endpoints
+			for _, endpoint := range backend.Spec.Endpoints {
+				switch {
+				case endpoint.FQDN != nil:
+					ports[strconv.Itoa(int(endpoint.FQDN.Port))] = false
+				case endpoint.IP != nil:
+					ports[strconv.Itoa(int(endpoint.IP.Port))] = false
+				}
+			}
+
+			for _, policy := range backendTLSPolicies {
+				for _, target := range policy.Spec.TargetRefs {
+					if string(target.Group) == egv1a1.GroupName &&
+						string(target.Kind) == egv1a1.KindBackend &&
+						string(target.Name) == backend.Name {
+						// If a BackendTLSPolicy without a SectionName is found and it has CACertificates, then the backend is valid
+						if target.SectionName == nil {
+							if policy.Spec.Validation.WellKnownCACertificates != nil ||
+								len(policy.Spec.Validation.CACertificateRefs) > 0 {
+								backendTLSPoliciesHasCACerts = true
+								break
+							}
+						} else {
+							if _, ok := ports[string(*target.SectionName)]; ok {
+								ports[string(*target.SectionName)] = true
+							}
+						}
+					}
+				}
+			}
+			// If any port has no BackendTLSPolicy with CACertificates, then the backend is invalid
+			if !backendTLSPoliciesHasCACerts && len(ports) > 0 {
+				portsWithCert := 0
+				for _, hasCACert := range ports {
+					if !hasCACert {
+						break
+					}
+					portsWithCert++
+				}
+				// If all ports have BackendTLSPolicy with CACertificates, then the backend is valid
+				if portsWithCert == len(ports) {
+					backendTLSPoliciesHasCACerts = true
+				}
+			}
+
+			if !backendTLSPoliciesHasCACerts {
+				return status.NewRouteStatusError(
+					fmt.Errorf("must specify either CACertificateRefs or WellKnownCACertificates when InsecureSkipVerify is unset or false"),
+					status.RouteReasonInvalidBackendRef,
 				)
 			}
 		}

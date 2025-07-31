@@ -133,6 +133,26 @@ func (r *Resources) GetService(namespace, name string) *corev1.Service {
 	return r.serviceMap[types.NamespacedName{Namespace: namespace, Name: name}]
 }
 
+// GetServiceByLabels returns the Service matching the given labels and namespace target.
+func (r *Resources) GetServiceByLabels(labels map[string]string, namespace string) *corev1.Service {
+	for _, svc := range r.Services {
+		if (namespace != "" && svc.Namespace != namespace) || svc.Labels == nil {
+			continue
+		}
+		match := true
+		for k, v := range labels {
+			if svc.Labels[k] != v {
+				match = false
+				break
+			}
+		}
+		if match {
+			return svc
+		}
+	}
+	return nil
+}
+
 func (r *Resources) GetServiceImport(namespace, name string) *mcsapiv1a1.ServiceImport {
 	for _, svcImp := range r.ServiceImports {
 		if svcImp.Namespace == namespace && svcImp.Name == name {
