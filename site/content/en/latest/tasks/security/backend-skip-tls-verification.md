@@ -15,8 +15,9 @@ attacks. This setting is typically used only for development or testing and is n
 ## Installation
 
 Follow the steps from [Backend Routing][] to enable the [Backend][] API in the [EnvoyGateway][] startup configuration.
-Follow the steps from the [Backend TLS][] to install the `tls-backend` service. For this task, you don’t need to create the
-[BackendTLSPolicy][] in the [Backend TLS][] task, as we will skip TLS verification.
+
+Next, follow the instructions from the [Backend TLS][] guide to install the `tls-backend` service.
+**For this task, you don’t need to create a [BackendTLSPolicy][]**—since we’re skipping TLS verification, you can simply install the `tls-backend` service and skip the policy creation step.
 
 ## Skip TLS Verification
 
