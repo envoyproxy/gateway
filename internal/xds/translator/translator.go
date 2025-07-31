@@ -1060,7 +1060,8 @@ func addXdsCluster(tCtx *types.ResourceVersionTable, args *xdsClusterArgs) error
 	preferLocal := ptr.Deref(args.loadBalancer, ir.LoadBalancer{}).PreferLocal
 	xdsEndpoints := buildXdsClusterLoadAssignment(args.name, args.settings, preferLocal)
 	for _, ds := range args.settings {
-		if ds.TLS != nil {
+		shouldValidateTLS := ds.TLS != nil && !ds.TLS.InsecureSkipVerify
+		if shouldValidateTLS {
 			// Create an SDS secret for the CA certificate - either with inline bytes or with a filesystem ref
 			secret := buildXdsUpstreamTLSCASecret(ds.TLS)
 			if err := tCtx.AddXdsResource(resourcev3.SecretType, secret); err != nil {
