@@ -2339,6 +2339,14 @@ spec:
                           response is received from the upstream.
                         pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                         type: string
+                      streamTimeout:
+                        description: |-
+                          StreamTimeout is the timeout for streaming requests. This timeout does not apply to non-streaming requests.
+                          When set to "0s", the timeout is disabled for streaming requests, allowing them to run indefinitely.
+                          This is particularly useful for gRPC streaming calls.
+                          Default: inherited from RequestTimeout.
+                        pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                        type: string
                     type: object
                   tcp:
                     description: Timeout settings for TCP.
@@ -5131,6 +5139,14 @@ spec:
                                 requestTimeout:
                                   description: RequestTimeout is the time until which
                                     entire response is received from the upstream.
+                                  pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                  type: string
+                                streamTimeout:
+                                  description: |-
+                                    StreamTimeout is the timeout for streaming requests. This timeout does not apply to non-streaming requests.
+                                    When set to "0s", the timeout is disabled for streaming requests, allowing them to run indefinitely.
+                                    This is particularly useful for gRPC streaming calls.
+                                    Default: inherited from RequestTimeout.
                                   pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                   type: string
                               type: object
@@ -18229,6 +18245,14 @@ spec:
                                                       upstream.
                                                     pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                                     type: string
+                                                  streamTimeout:
+                                                    description: |-
+                                                      StreamTimeout is the timeout for streaming requests. This timeout does not apply to non-streaming requests.
+                                                      When set to "0s", the timeout is disabled for streaming requests, allowing them to run indefinitely.
+                                                      This is particularly useful for gRPC streaming calls.
+                                                      Default: inherited from RequestTimeout.
+                                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                                    type: string
                                                 type: object
                                               tcp:
                                                 description: Timeout settings for
@@ -19338,6 +19362,14 @@ spec:
                                                       the time until which entire
                                                       response is received from the
                                                       upstream.
+                                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                                    type: string
+                                                  streamTimeout:
+                                                    description: |-
+                                                      StreamTimeout is the timeout for streaming requests. This timeout does not apply to non-streaming requests.
+                                                      When set to "0s", the timeout is disabled for streaming requests, allowing them to run indefinitely.
+                                                      This is particularly useful for gRPC streaming calls.
+                                                      Default: inherited from RequestTimeout.
                                                     pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                                     type: string
                                                 type: object
@@ -20527,6 +20559,14 @@ spec:
                                                 from the upstream.
                                               pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                               type: string
+                                            streamTimeout:
+                                              description: |-
+                                                StreamTimeout is the timeout for streaming requests. This timeout does not apply to non-streaming requests.
+                                                When set to "0s", the timeout is disabled for streaming requests, allowing them to run indefinitely.
+                                                This is particularly useful for gRPC streaming calls.
+                                                Default: inherited from RequestTimeout.
+                                              pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                              type: string
                                           type: object
                                         tcp:
                                           description: Timeout settings for TCP.
@@ -21635,6 +21675,14 @@ spec:
                                         description: RequestTimeout is the time until
                                           which entire response is received from the
                                           upstream.
+                                        pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                        type: string
+                                      streamTimeout:
+                                        description: |-
+                                          StreamTimeout is the timeout for streaming requests. This timeout does not apply to non-streaming requests.
+                                          When set to "0s", the timeout is disabled for streaming requests, allowing them to run indefinitely.
+                                          This is particularly useful for gRPC streaming calls.
+                                          Default: inherited from RequestTimeout.
                                         pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                         type: string
                                     type: object
@@ -23582,6 +23630,14 @@ spec:
                                       which entire response is received from the upstream.
                                     pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                     type: string
+                                  streamTimeout:
+                                    description: |-
+                                      StreamTimeout is the timeout for streaming requests. This timeout does not apply to non-streaming requests.
+                                      When set to "0s", the timeout is disabled for streaming requests, allowing them to run indefinitely.
+                                      This is particularly useful for gRPC streaming calls.
+                                      Default: inherited from RequestTimeout.
+                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                    type: string
                                 type: object
                               tcp:
                                 description: Timeout settings for TCP.
@@ -24587,6 +24643,14 @@ spec:
                                   requestTimeout:
                                     description: RequestTimeout is the time until
                                       which entire response is received from the upstream.
+                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                    type: string
+                                  streamTimeout:
+                                    description: |-
+                                      StreamTimeout is the timeout for streaming requests. This timeout does not apply to non-streaming requests.
+                                      When set to "0s", the timeout is disabled for streaming requests, allowing them to run indefinitely.
+                                      This is particularly useful for gRPC streaming calls.
+                                      Default: inherited from RequestTimeout.
                                     pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                     type: string
                                 type: object
@@ -25803,6 +25867,14 @@ spec:
                                           description: RequestTimeout is the time
                                             until which entire response is received
                                             from the upstream.
+                                          pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                          type: string
+                                        streamTimeout:
+                                          description: |-
+                                            StreamTimeout is the timeout for streaming requests. This timeout does not apply to non-streaming requests.
+                                            When set to "0s", the timeout is disabled for streaming requests, allowing them to run indefinitely.
+                                            This is particularly useful for gRPC streaming calls.
+                                            Default: inherited from RequestTimeout.
                                           pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                           type: string
                                       type: object
@@ -27049,6 +27121,14 @@ spec:
                                   requestTimeout:
                                     description: RequestTimeout is the time until
                                       which entire response is received from the upstream.
+                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                    type: string
+                                  streamTimeout:
+                                    description: |-
+                                      StreamTimeout is the timeout for streaming requests. This timeout does not apply to non-streaming requests.
+                                      When set to "0s", the timeout is disabled for streaming requests, allowing them to run indefinitely.
+                                      This is particularly useful for gRPC streaming calls.
+                                      Default: inherited from RequestTimeout.
                                     pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                     type: string
                                 type: object
