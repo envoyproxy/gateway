@@ -614,7 +614,7 @@ func (r *gatewayAPIReconciler) validateEndpointSliceForReconcile(obj client.Obje
 		}
 	}
 
-	if r.isProxyServiceCluster(&nsName) {
+	if r.isProxyServiceCluster(ep.GetLabels()) {
 		return true
 	}
 	return false
@@ -940,23 +940,13 @@ func (r *gatewayAPIReconciler) isRouteReferencingHTTPRouteFilter(nsName *types.N
 	return len(httpRouteList.Items) != 0
 }
 
-func (r *gatewayAPIReconciler) isProxyServiceCluster(nn *types.NamespacedName) bool {
-	ctx := context.Background()
-	svc := &corev1.Service{}
-	if err := r.client.Get(ctx, *nn, svc); err != nil {
-		r.log.Error(err, "unable to find associated proxy ServiceCluster")
-		return false
-	}
-
-	svcLabels := svc.GetLabels()
-
-	// Check if service belongs to a Gateway
-	if gtw := r.findOwningGateway(ctx, svcLabels); gtw != nil {
+// isProxyServiceCluster returns true if the provided labels reference an owning Gateway or GatewayClass
+func (r *gatewayAPIReconciler) isProxyServiceCluster(labels map[string]string) bool {
+	if gtw := r.findOwningGateway(context.Background(), labels); gtw != nil {
 		return true
 	}
 
-	// Check if service belongs to a GatewayClass
-	gcName, ok := svcLabels[gatewayapi.OwningGatewayClassLabel]
+	gcName, ok := labels[gatewayapi.OwningGatewayClassLabel]
 	if ok && r.mergeGateways.Has(gcName) {
 		return true
 	}
