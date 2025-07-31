@@ -82,6 +82,35 @@ data:
 
 {{< boilerplate rollout-envoy-gateway >}}
 
+## XDS Name Scheme V2
+
+Starting from v1.5, Envoy Gateway uses version 2 of the xDS name scheme when generating xDS resources.
+Because [EnvoyPatchPolicy][] relies on specific xDS resource names, it’s important to use the correct naming format when authoring a patch policy.
+
+The name format in the old version of scheme:
+* Listener name: `<GatewayNamespace>/<GatewayName>/<GatewayListenerName>`, example: `default/eg/http`
+* RouteConfig/FilterChain name: `<GatewayNamespace>/<GatewayName>/<GatewayListenerName>`, example: `default/eg/http`
+* FilterChain name: `<GatewayNamespace>/<GatewayName>/<GatewayListenerName>`, example: `default/eg/http`
+* VirtualHost name: `<GatewayNamespace>/<GatewayName>/<GatewayListenerName>/<VirtualHost>`, example: `default/ef/http/www_example_com`
+* HCM StatPrefix: `<ApplicationProtocol>/<ContainerPort>`, example: `http-10080` or `https-10443`
+
+Name format in version 2 of the scheme:
+* Listener name: `<Protocol>-<Port>`, example: `tcp-80`
+* RouteConfig name:
+   * HTTP Listener RouteConfig name: `<Port>`, example: `80`
+   * HTTPS Listener RouteConfig name: `<GatewayNamespace>/<GatewayName>/<GatewayListenerName>`, example: `default/eg/http` (same as the old version)
+* FilterChain name:
+   * HTTP Listener FilterChain name: `http-<Port>`, example: `http-80`
+   * HTTPS Listener FilterChain name: `<GatewayNamespace>/<GatewayName>/<GatewayListenerName>`, example: `default/eg/http` (same as the old version)
+* VirtualHost name: `<VirtualHost>`, example: `www_example_com`
+* HCM StatPrefix: `<ApplicationProtocol>/<Port>`, example: `http-80` or `https-443`
+
+This change is gated by the XDSNameSchemeV2 runtime flag. The flag is disabled by default in v1.5 and will be enabled by default starting in v1.6.
+
+We recommend users begin migrating their [EnvoyPatchPolicy][] resources to use the version 2 naming scheme before upgrading to v1.6.
+
+To opt in to the new naming scheme early, add the`XDSNameSchemeV2` runtime flag to the `runtimeFlags.enabled` field in your [EnvoyGateway][] configuration.
+
 ## Testing
 
 ### Customize Response
