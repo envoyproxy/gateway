@@ -85,7 +85,7 @@ var ConnectionLimitTest = suite.ConformanceTest{
 			}
 
 			prefix := "http-10080"
-			if XDSNameSchemeV2(){
+			if XDSNameSchemeV2() {
 				prefix = "http-80"
 			}
 			gtwName := "connection-limit-gateway"

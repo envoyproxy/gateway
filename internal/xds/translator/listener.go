@@ -490,13 +490,6 @@ func (t *Translator) addHCMToXDSListener(
 	return nil
 }
 
-func routeConfigName(irListener *ir.HTTPListener, nameSchemeV2 bool) string {
-	if irListener.TLS != nil {
-		return httpsListenerRouteConfigName(irListener)
-	}
-	return httpListenerRouteConfigName(irListener, nameSchemeV2)
-}
-
 func hcmStatPrefix(irListener *ir.HTTPListener, nameSchemeV2 bool) string {
 	statPrefix := "http"
 	if irListener.TLS != nil {
@@ -507,6 +500,13 @@ func hcmStatPrefix(irListener *ir.HTTPListener, nameSchemeV2 bool) string {
 		return fmt.Sprintf("%s-%d", statPrefix, irListener.ExternalPort)
 	}
 	return fmt.Sprintf("%s-%d", statPrefix, irListener.Port)
+}
+
+func routeConfigName(irListener *ir.HTTPListener, nameSchemeV2 bool) string {
+	if irListener.TLS != nil {
+		return httpsListenerRouteConfigName(irListener)
+	}
+	return httpListenerRouteConfigName(irListener, nameSchemeV2)
 }
 
 // port value is used for the route config name for HTTP listeners. as multiple HTTP listeners on the same port are
