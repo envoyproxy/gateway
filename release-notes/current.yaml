@@ -8,7 +8,7 @@ security updates: |
 
 # New features or capabilities added in this release.
 new features: |
-Added max connection/stream duration and max requests per connection to ClientTrafficPolicy
+  Added max connection/stream duration and max requests per connection to ClientTrafficPolicy
 
 bug fixes: |
 

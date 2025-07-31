@@ -89,18 +89,15 @@ type ConnectionLimit struct {
 	// before being drained and/or closed.
 	//
 	// +optional
-	// +notImplementedHide
 	MaxConnectionDuration *gwapiv1.Duration `json:"maxConnectionDuration,omitempty"`
 	// MaxRequestsPerConnection defines the maximum number of requests allowed over a single connection.
 	// If not specified, there is no limit. Setting this parameter to 1 will effectively disable keep alive.
 	//
 	// +optional
-	// +notImplementedHide
 	MaxRequestsPerConnection *uint32 `json:"maxRequestsPerConnection,omitempty"`
 	// MaxStreamDuration is the maximum amount of time to keep alive an http stream. When the limit is reached
 	// the stream will be reset independent of any other timeouts. If not specified, no value is set.
 	//
 	// +optional
-	// +notImplementedHide
 	MaxStreamDuration *gwapiv1.Duration `json:"maxStreamDuration,omitempty"`
 }

@@ -339,7 +339,6 @@ type HTTP1Settings struct {
 	// Has no effect unless maxConnectionDuration is set.
 	//
 	// +optional
-	// +notImplementedHide
 	DisableSafeMaxConnectionDuration bool `json:"disableSafeMaxConnectionDuration,omitempty"`
 }
 

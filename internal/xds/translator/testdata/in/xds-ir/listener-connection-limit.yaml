@@ -46,7 +46,7 @@ http:
   address: "::"
   port: 10082
   hostnames:
-    - "foo.io"
+  - "foo.io"
   connection:
     limit:
       value: 5
@@ -59,15 +59,15 @@ http:
     mergeSlashes: true
     escapedSlashesAction: UnescapeAndRedirect
   routes:
-    - name: "third-route"
-      hostname: "*"
-      destination:
-        name: "third-route-dest"
-        settings:
-          - endpoints:
-              - host: "1.2.3.4"
-                port: 50000
-            name: "third-route-dest/backend/0"
+  - name: "third-route"
+    hostname: "*"
+    destination:
+      name: "third-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
+        name: "third-route-dest/backend/0"
 tcp:
 - name: "fourth-listener"
   address: "::"
