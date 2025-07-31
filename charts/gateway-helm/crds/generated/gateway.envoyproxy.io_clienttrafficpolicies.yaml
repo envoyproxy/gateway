@@ -444,6 +444,14 @@ spec:
               http1:
                 description: HTTP1 provides HTTP/1 configuration on the listener.
                 properties:
+                  disableSafeMaxConnectionDuration:
+                    description: |-
+                      DisableSafeMaxConnectionDuration controls the close behavior for HTTP/1 connections.
+                      By default, connection closure is delayed until the next request arrives after maxConnectionDuration is exceeded.
+                      It then adds a Connection: close header and gracefully closes the connection after the response completes.
+                      When set to true (disabled), Envoy uses its default drain behavior, closing the connection shortly after maxConnectionDuration elapses.
+                      Has no effect unless maxConnectionDuration is set.
+                    type: boolean
                   enableTrailers:
                     description: EnableTrailers defines if HTTP/1 trailers should
                       be proxied by Envoy.
@@ -465,14 +473,6 @@ spec:
                     description: |-
                       PreserveHeaderCase defines if Envoy should preserve the letter case of headers.
                       By default, Envoy will lowercase all the headers.
-                    type: boolean
-                  safeMaxConnectionDuration:
-                    description: |-
-                      DisableSafeMaxConnectionDuration controls the close behavior for HTTP/1 connections.
-                      By default, connection closure is delayed until the next request arrives after maxConnectionDuration is exceeded.
-                      It then adds a Connection: close header and gracefully closes the connection after the response completes.
-                      When set to true (disabled), Envoy uses its default drain behavior, closing the connection shortly after maxConnectionDuration elapses.
-                      Has no effect unless maxConnectionDuration is set.
                     type: boolean
                 type: object
               http2:
