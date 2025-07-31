@@ -239,7 +239,7 @@ type KubernetesContainerSpec struct {
 	// The default tag will be used.
 	// This field is mutually exclusive with Image.
 	//
-	// +kubebuilder:validation:XValidation:rule="self.matches('^[a-zA-Z0-9._/-]+$')",message="ImageRepository must contain only allowed characters and must not include a tag or any colons."
+	// +kubebuilder:validation:XValidation:rule="self.matches('^[a-zA-Z0-9._-]+(:[0-9]+)?[a-zA-Z0-9._/-]+$')",message="ImageRepository must contain only allowed characters and must not include a tag."
 	// +optional
 	ImageRepository *string `json:"imageRepository,omitempty"`
 
