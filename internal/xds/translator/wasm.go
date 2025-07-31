@@ -147,8 +147,9 @@ func wasmConfig(wasm ir.Wasm) (*wasmfilterv3.Wasm, error) {
 			Vm: &wasmv3.PluginConfig_VmConfig{
 				VmConfig: vmConfig,
 			},
-			Configuration: configAny,
-			FailOpen:      wasm.FailOpen,
+			Configuration:               configAny,
+			FailOpen:                    wasm.FailOpen,
+			AllowOnHeadersStopIteration: wrapperspb.Bool(wasm.AllowOnHeadersStopIteration),
 		},
 	}
 

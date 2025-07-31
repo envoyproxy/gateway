@@ -719,6 +719,7 @@ func (t *Translator) buildWasm(
 ) (*ir.Wasm, error) {
 	var (
 		failOpen   = false
+		allowOnHeadersStopIteration = false
 		code       *ir.HTTPWasmCode
 		pullPolicy wasm.PullPolicy
 		// the checksum provided by the user, it's used to validate the wasm module
@@ -850,13 +851,18 @@ func (t *Translator) buildWasm(
 	if config.Name != nil {
 		wasmName = *config.Name
 	}
+	if config.AllowOnHeadersStopIteration != nil {
+		allowOnHeadersStopIteration = *config.AllowOnHeadersStopIteration
+	}
+
 	wasmIR := &ir.Wasm{
-		Name:     name,
-		RootID:   config.RootID,
-		WasmName: wasmName,
-		Config:   config.Config,
-		FailOpen: failOpen,
-		Code:     code,
+		Name:                        name,
+		RootID:                      config.RootID,
+		WasmName:                    wasmName,
+		Config:                      config.Config,
+		FailOpen:                    failOpen,
+		Code:                        code,
+		AllowOnHeadersStopIteration: allowOnHeadersStopIteration,
 	}
 
 	if config.Env != nil && len(config.Env.HostKeys) > 0 {
