@@ -36,14 +36,67 @@ Think of `ClientTrafficPolicy` as a set of rules for your Gateway's entry points
 
 `ClientTrafficPolicy` is part of the Envoy Gateway API suite, which extends the Kubernetes Gateway API with additional capabilities. It's implemented as a Custom Resource Definition (CRD) that you can use to configure how Envoy Gateway manages incoming client traffic.
 
-You can attach it to Gateway API resources in two ways:
+### Targets
 
-1. Using `targetRefs` to directly reference specific Gateway resources
-2. Using `targetSelectors` to match Gateway resources based on labels
+ClientTrafficPolicy can be attached to Gateway API resources using two targeting mechanisms:
 
-The policy applies to all Gateway resources that match either targeting method. When multiple policies target the same resource, the most specific configuration wins.
+1. **Direct Reference (`targetRefs`)**: Explicitly reference specific Gateway resources by name and kind.
+2. **Label Selection (`targetSelectors`)**: Match Gateway resources based on their labels (see [targetSelectors API reference](../../api/extension_types#targetselectors))
 
-For example, consider these policies targeting the same Gateway Listener:
+The policy applies to all Gateway resources that match either targeting method.
+
+**Important**: A ClientTrafficPolicy can only target Gateway resources in the same namespace as the policy itself.
+
+### Precedence
+
+When multiple ClientTrafficPolicies apply to the same resource, Envoy Gateway resolves conflicts using section-level specificity and creation-time priority:
+
+1. **Section-specific policies** (targeting specific listeners via `sectionName`) - Highest precedence
+2. **Gateway-wide policies** (targeting entire Gateway) - Lower precedence
+
+#### Multiple Policies at the Same Level
+
+When multiple ClientTrafficPolicies target the same resource at the same specificity level (e.g., multiple policies targeting the same Gateway listener section), Envoy Gateway uses the following tie-breaking rules:
+
+1. **Creation Time Priority**: The oldest policy (earliest `creationTimestamp`) takes precedence
+2. **Name-based Sorting**: If policies have identical creation timestamps, they are sorted alphabetically by namespaced name, with the first policy taking precedence
+
+```yaml
+# Policy created first - takes precedence
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: ClientTrafficPolicy
+metadata:
+  name: alpha-policy
+  creationTimestamp: "2023-01-01T10:00:00Z"
+spec:
+  targetRefs:
+    - kind: Gateway
+      name: my-gateway
+      sectionName: https-listener
+  timeout:
+    http:
+      idleTimeout: 30s
+
+---
+# Policy created later - lower precedence
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: ClientTrafficPolicy
+metadata:
+  name: beta-policy
+  creationTimestamp: "2023-01-01T11:00:00Z"
+spec:
+  targetRefs:
+    - kind: Gateway
+      name: my-gateway
+      sectionName: https-listener
+  timeout:
+    http:
+      idleTimeout: 40s
+```
+
+In this example, `alpha-policy` would take precedence due to its earlier creation time, so the listener would use `idleTimeout: 30s`.
+
+For example, consider these policies with different specificity levels targeting the same Gateway:
 
 ```yaml
 # Policy A: Targets a specific listener in the gateway

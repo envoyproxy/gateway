@@ -88,12 +88,29 @@ var BackendTLSTest = suite.ConformanceTest{
 		})
 
 		t.Run("with CA mismatch and skip tls verify", func(t *testing.T) {
-			routeNN := types.NamespacedName{Name: "http-with-backend-insecure-skip-verify", Namespace: ConformanceInfraNamespace}
+			routeNN := types.NamespacedName{Name: "http-with-backend-insecure-skip-verify-and-mismatch-ca", Namespace: ConformanceInfraNamespace}
 			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
 
 			expectedResponse := http.ExpectedResponse{
 				Request: http.Request{
-					Path: "/backend-tls-skip-verify",
+					Path: "/backend-tls-skip-verify-and-mismatch-ca",
+				},
+				Response: http.Response{
+					StatusCode: 200, // Bad Request: Client sent an HTTP request to an HTTPS server
+				},
+				Namespace: ConformanceInfraNamespace,
+			}
+
+			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
+		})
+
+		t.Run("without BackendTLSPolicy and skip tls verify", func(t *testing.T) {
+			routeNN := types.NamespacedName{Name: "http-with-backend-insecure-skip-verify-without-backend-tls-policy", Namespace: ConformanceInfraNamespace}
+			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
+
+			expectedResponse := http.ExpectedResponse{
+				Request: http.Request{
+					Path: "/backend-tls-skip-verify-without-backend-tls-policy",
 				},
 				Response: http.Response{
 					StatusCode: 200, // Bad Request: Client sent an HTTP request to an HTTPS server

@@ -6,7 +6,7 @@ Envoy Gateway provides a built-in web-based admin console that offers a comprehe
 
 ## Prerequisites
 
-{{< boilerplate o11y_prerequisites >}}
+{{< boilerplate prerequisites >}}
 
 ## Overview
 

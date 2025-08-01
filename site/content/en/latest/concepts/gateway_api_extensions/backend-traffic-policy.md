@@ -29,17 +29,58 @@ Think of it as a traffic controller between your gateway and backend services. I
 
 `BackendTrafficPolicy` is part of the Envoy Gateway API suite, which extends the Kubernetes Gateway API with additional capabilities. It's implemented as a Custom Resource Definition (CRD) that you can use to configure how Envoy Gateway manages traffic to your backend services.
 
-You can attach it to Gateway API resources in two ways:
+### Targets
 
-1. Using `targetRefs` to directly reference specific Gateway resources
-2. Using `targetSelectors` to match Gateway resources based on labels
+BackendTrafficPolicy can be attached to Gateway API resources using two targeting mechanisms:
 
-The policy applies to all resources that match either targeting method. When multiple policies target the same resource, the most specific configuration wins.
-
-For example, consider these two policies:
+1. **Direct Reference (`targetRefs`)**: Explicitly reference specific resources by name and kind.
+2. **Label Selection (`targetSelectors`)**: Match resources based on their labels (see [targetSelectors API reference](../../api/extension_types#targetselectors))
 
 ```yaml
-# Policy 1: Applies to all routes in the gateway
+# Direct reference targeting
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: BackendTrafficPolicy
+metadata:
+  name: direct-policy
+spec:
+  targetRefs:
+    - kind: HTTPRoute
+      name: my-route
+  circuitBreaker:
+    maxConnections: 50
+
+---
+# Label-based targeting
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: BackendTrafficPolicy
+metadata:
+  name: selector-policy
+spec:
+  targetSelectors:
+    - kind: HTTPRoute
+      matchLabels:
+        app: payment-service
+  rateLimit:
+    type: Local
+    local:
+      requests: 10
+      unit: Second
+```
+
+The policy applies to all resources that match either targeting method. You can target various Gateway API resource types including
+`Gateway`, `HTTPRoute`, `GRPCRoute`, `TCPRoute`, `UDPRoute`, `TLSRoute`.
+
+**Important**: A BackendTrafficPolicy can only target resources in the same namespace as the policy itself.
+
+### Precedence
+
+When multiple BackendTrafficPolicies apply to the same resource, Envoy Gateway resolves conflicts using a precedence hierarchy based on the target resource type, regardless of how the policy was attached:
+
+1. **Route-level policies** (HTTPRoute, GRPCRoute, etc.) - Highest precedence
+2. **Gateway-level policies** - Lower precedence
+
+```yaml
+# Gateway-level policy (lower precedence) - Applies to all routes in the gateway
 apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: BackendTrafficPolicy
 metadata:
@@ -52,7 +93,7 @@ spec:
     maxConnections: 100
 
 ---
-# Policy 2: Applies to a specific route
+# Route-level policy (higher precedence)
 apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: BackendTrafficPolicy
 metadata:
@@ -65,9 +106,47 @@ spec:
     maxConnections: 50
 ```
 
-In this example `my-route` and `my-gateway` would both affect the route. However, since Policy 2 targets the route directly while Policy 1 targets the gateway, Policy 2's configuration (`maxConnections: 50`) will take precedence for that specific route.
+In this example, the HTTPRoute `my-route` would use `maxConnections: 50` from the route-level policy, overriding the gateway-level setting of 100.
 
-Lastly, it's important to note that even when you apply a policy to a Gateway, the policy's effects are tracked separately for each backend service referenced in your routes. For example, if you set up circuit breaking on a Gateway with multiple backend services, each backend service will have its own independent circuit breaker counter. This ensures that issues with one backend service don't affect the others.
+#### Multiple Policies at the Same Level
+
+When multiple BackendTrafficPolicies target the same resource at the same hierarchy level (e.g., multiple policies targeting the same HTTPRoute), Envoy Gateway uses the following tie-breaking rules:
+
+1. **Creation Time Priority**: The oldest policy (earliest `creationTimestamp`) takes precedence
+2. **Name-based Sorting**: If policies have identical creation timestamps, they are sorted alphabetically by namespaced name, with the first policy taking precedence
+
+```yaml
+# Policy created first - takes precedence
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: BackendTrafficPolicy
+metadata:
+  name: alpha-policy
+  creationTimestamp: "2023-01-01T10:00:00Z"
+spec:
+  targetRefs:
+    - kind: HTTPRoute
+      name: my-route
+  circuitBreaker:
+    maxConnections: 30
+
+---
+# Policy created later - lower precedence
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: BackendTrafficPolicy
+metadata:
+  name: beta-policy
+  creationTimestamp: "2023-01-01T11:00:00Z"
+spec:
+  targetRefs:
+    - kind: HTTPRoute
+      name: my-route
+  circuitBreaker:
+    maxConnections: 40
+```
+
+In this example, `alpha-policy` would take precedence due to its earlier creation time, so the HTTPRoute would use `maxConnections: 30`.
+
+When the `mergeType` field is unset, no merging occurs and only the most specific configuration takes effect. However, policies can be configured to merge with parent policies using the `mergeType` field (see [Policy Merging](#policy-merging) section below).
 
 ## Policy Merging
 

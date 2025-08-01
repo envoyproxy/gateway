@@ -623,8 +623,8 @@ spec:
                                 type: string
                                 x-kubernetes-validations:
                                 - message: ImageRepository must contain only allowed
-                                    characters and must not include a tag or any colons.
-                                  rule: self.matches('^[a-zA-Z0-9._/-]+$')
+                                    characters and must not include a tag.
+                                  rule: self.matches('^[a-zA-Z0-9._-]+(:[0-9]+)?[a-zA-Z0-9._/-]+$')
                               resources:
                                 description: |-
                                   Resources required by this container.
@@ -4468,8 +4468,8 @@ spec:
                                 type: string
                                 x-kubernetes-validations:
                                 - message: ImageRepository must contain only allowed
-                                    characters and must not include a tag or any colons.
-                                  rule: self.matches('^[a-zA-Z0-9._/-]+$')
+                                    characters and must not include a tag.
+                                  rule: self.matches('^[a-zA-Z0-9._-]+(:[0-9]+)?[a-zA-Z0-9._/-]+$')
                               resources:
                                 description: |-
                                   Resources required by this container.
