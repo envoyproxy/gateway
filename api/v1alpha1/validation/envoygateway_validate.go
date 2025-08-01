@@ -215,6 +215,18 @@ func validateEnvoyGatewayExtensionManager(extensionManager *egv1a1.ExtensionMana
 		if *certificateRefKind != "Secret" {
 			return fmt.Errorf("unsupported extension server TLS certificateRef %v", certificateRefKind)
 		}
+
+		if extensionManager.Service.TLS.ClientCertificateRef != nil {
+			clientCertificateRefKind := extensionManager.Service.TLS.ClientCertificateRef.Kind
+
+			if clientCertificateRefKind == nil {
+				return fmt.Errorf("clientCertificateRef empty in extension service mTLS settings")
+			}
+
+			if *clientCertificateRefKind != "Secret" {
+				return fmt.Errorf("unsupported extension server mTLS clientCertificateRef %v", clientCertificateRefKind)
+			}
+		}
 	}
 	return nil
 }
