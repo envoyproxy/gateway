@@ -14,11 +14,12 @@ For status updates or to provide feedback, please follow our [GitHub issues](htt
 
 In standard deployment mode, Envoy Gateway creates all data plane resources in the controller namespace (typically `envoy-gateway-system`).
 
-Gateway Namespace Mode changes this behavior by placing Envoy Proxy data plane resources like Deployments, Services and ServiceAccounts in each Gateway's namespace, providing stronger isolation and multi-tenancy.
+The motivation behind this was to operate with minimum permissions needed to be given for Envoy Gateway controller, as the control plane and data plane was deployed in the same namespace.
 
-The default (Controller Namespace) deployment mode uses mTLS where both the client and server authenticate each other.
+Gateway Namespace Mode changes this behavior by placing Envoy Proxy data plane resources like Deployments, Services and ServiceAccounts in each Gateway's namespace, which provides stronger isolation and multi-tenancy compared to the Controller Namespace mode, as it isolates Envoy proxy data plane across different tenants.
+This distributed architecture requires additional RBAC permissions for the Envoy Gateway controller to manage Kubernetes resources across multiple namespaces.
 
-However, in Gateway Namespace Mode, we've shifted to server-side TLS and JWT token validation between infra and control-plane.
+The default (Controller Namespace) deployment mode uses mTLS where both the client and server authenticate each other. However, in Gateway Namespace Mode, we've shifted to server-side TLS and JWT token validation between infra and control-plane.
 
 * **Envoy proxy pods** (running in Gateway namespaces) act as clients and authenticate using JWT tokens
 * **Envoy Gateway controller pod** (running in controller namespace) acts as the server and validates JWT tokens
