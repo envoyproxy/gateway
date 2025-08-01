@@ -82,6 +82,89 @@ data:
 
 {{< boilerplate rollout-envoy-gateway >}}
 
+## XDS Name Scheme V2
+
+Starting from v1.5, Envoy Gateway uses version 2 of the xDS name scheme when generating xDS resources.
+Because [EnvoyPatchPolicy][] relies on specific xDS resource names, it’s important to use the correct naming format when authoring a patch policy.
+
+| Component            | Scheme Version | Format Description                                                          | Example                          |
+|----------------------|----------------|------------------------------------------------------------------------------|----------------------------------|
+| **Listener name**    | Old            | `<GatewayNamespace>/<GatewayName>/<GatewayListenerName>`                    | `default/eg/http`               |
+|                      | V2             | `<Protocol>-<Port>`                                                         | `tcp-80`                         |
+| **RouteConfig name** | Old            | `<GatewayNamespace>/<GatewayName>/<GatewayListenerName>`                    | `default/eg/http`               |
+|                      | V2 (HTTP)      | `http-<Port>`                                                               | `http-80`                       |
+|                      | V2 (HTTPS)     | `<GatewayNamespace>/<GatewayName>/<GatewayListenerName>`                    | `default/eg/https`               |
+| **FilterChain name** | Old            | `<GatewayNamespace>/<GatewayName>/<GatewayListenerName>`                    | `default/eg/http`               |
+|                      | V2 (HTTP)      | `http-<Port>`                                                               | `http-80`                        |
+|                      | V2 (HTTPS)     | `<GatewayNamespace>/<GatewayName>/<GatewayListenerName>`                    | `default/eg/https`               |
+| **VirtualHost name** | Old            | `<GatewayNamespace>/<GatewayName>/<GatewayListenerName>/<VirtualHost>`      | `default/eg/http/www_example_com` |
+|                      | V2             | `<VirtualHost>`                                                             | `www_example_com`               |
+| **HCM StatPrefix**   | Old            | `<ApplicationProtocol>/<ContainerPort>`                                     | `http-10080`, `https-10443`     |
+|                      | V2 (HTTP)      | `http-<Port>`                                                               | `http-80`                        |
+|                      | V2 (HTTPS)     | `https-<Port>`                                                              | `https-443`                      |
+
+
+This change is gated by the XDSNameSchemeV2 runtime flag. The flag is disabled by default in v1.5 and will be enabled by default starting in v1.6.
+
+We recommend users begin migrating their [EnvoyPatchPolicy][] resources to use the version 2 naming scheme before upgrading to v1.6.
+
+To opt in to the new naming scheme early, add the`XDSNameSchemeV2` runtime flag to the `runtimeFlags.enabled` field in your [EnvoyGateway][] configuration.
+
+{{< tabpane text=true >}}
+{{% tab header="Apply from stdin" %}}
+
+```shell
+cat <<EOF | kubectl apply -f -
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: envoy-gateway-config
+  namespace: envoy-gateway-system
+data:
+  envoy-gateway.yaml: |
+    apiVersion: gateway.envoyproxy.io/v1alpha1
+    kind: EnvoyGateway
+    provider:
+      type: Kubernetes
+    gateway:
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+    extensionApis:
+      enableEnvoyPatchPolicy: true
+    runtimeFlags:
+      enabled:
+      - XDSNameSchemeV2
+EOF
+```
+
+{{% /tab %}}
+{{% tab header="Apply from file" %}}
+Save and apply the following resource to your cluster:
+
+```yaml
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: envoy-gateway-config
+  namespace: envoy-gateway-system
+data:
+  envoy-gateway.yaml: |
+    apiVersion: gateway.envoyproxy.io/v1alpha1
+    kind: EnvoyGateway
+    provider:
+      type: Kubernetes
+    gateway:
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+    extensionApis:
+      enableEnvoyPatchPolicy: true
+    runtimeFlags:
+      enabled:
+      - XDSNameSchemeV2
+```
+
+{{% /tab %}}
+{{< /tabpane >}}
+
 ## Testing
 
 ### Customize Response
