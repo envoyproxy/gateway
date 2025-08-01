@@ -460,7 +460,7 @@ func (t *Translator) translateClientTrafficPolicyForListener(policy *egv1a1.Clie
 		translatePathSettings(policy.Spec.Path, httpIR)
 
 		// Translate HTTP1 Settings
-		if err = translateHTTP1Settings(policy.Spec.HTTP1, httpIR); err != nil {
+		if err = translateHTTP1Settings(policy.Spec.HTTP1, ptr.Deref(connection, ir.ClientConnection{}).ConnectionLimit, httpIR); err != nil {
 			err = perr.WithMessage(err, "HTTP1")
 			errs = errors.Join(errs, err)
 		}
@@ -691,7 +691,7 @@ func translateListenerHeaderSettings(headerSettings *egv1a1.HeaderSettings, http
 	return nil
 }
 
-func translateHTTP1Settings(http1Settings *egv1a1.HTTP1Settings, httpIR *ir.HTTPListener) error {
+func translateHTTP1Settings(http1Settings *egv1a1.HTTP1Settings, connLimitSettings *ir.ConnectionLimit, httpIR *ir.HTTPListener) error {
 	if http1Settings == nil {
 		return nil
 	}
@@ -699,6 +699,12 @@ func translateHTTP1Settings(http1Settings *egv1a1.HTTP1Settings, httpIR *ir.HTTP
 		EnableTrailers:     ptr.Deref(http1Settings.EnableTrailers, false),
 		PreserveHeaderCase: ptr.Deref(http1Settings.PreserveHeaderCase, false),
 	}
+	if connLimitSettings != nil {
+		if connLimitSettings.MaxConnectionDuration != nil {
+			httpIR.HTTP1.DisableSafeMaxConnectionDuration = http1Settings.DisableSafeMaxConnectionDuration
+		}
+	}
+
 	if http1Settings.HTTP10 != nil {
 		var defaultHost *string
 		if ptr.Deref(http1Settings.HTTP10.UseDefaultHost, false) {
@@ -963,6 +969,26 @@ func buildConnection(connection *egv1a1.ClientConnection) (*ir.ClientConnection,
 				return nil, fmt.Errorf("invalid CloseDelay value %s", *connection.ConnectionLimit.CloseDelay)
 			}
 			irConnectionLimit.CloseDelay = ptr.To(metav1.Duration{Duration: d})
+		}
+
+		if connection.ConnectionLimit.MaxConnectionDuration != nil {
+			d, err := time.ParseDuration(string(*connection.ConnectionLimit.MaxConnectionDuration))
+			if err != nil {
+				return nil, fmt.Errorf("invalid MaxConnectionDuration value %s", *connection.ConnectionLimit.MaxConnectionDuration)
+			}
+			irConnectionLimit.MaxConnectionDuration = ptr.To(metav1.Duration{Duration: d})
+		}
+
+		if connection.ConnectionLimit.MaxRequestsPerConnection != nil {
+			irConnectionLimit.MaxRequestsPerConnection = connection.ConnectionLimit.MaxRequestsPerConnection
+		}
+
+		if connection.ConnectionLimit.MaxStreamDuration != nil {
+			d, err := time.ParseDuration(string(*connection.ConnectionLimit.MaxStreamDuration))
+			if err != nil {
+				return nil, fmt.Errorf("invalid MaxStreamDuration value %s", *connection.ConnectionLimit.MaxStreamDuration)
+			}
+			irConnectionLimit.MaxStreamDuration = ptr.To(metav1.Duration{Duration: d})
 		}
 
 		irConnection.ConnectionLimit = irConnectionLimit
