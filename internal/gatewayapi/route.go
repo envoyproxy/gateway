@@ -350,7 +350,7 @@ func processRouteTimeout(irRoute *ir.HTTPRoute, rule gwapiv1.HTTPRouteRule) {
 			if err != nil {
 				d, _ = time.ParseDuration(HTTPRequestTimeout)
 			}
-			irRoute.Timeout = ptr.To(d)
+			irRoute.Timeout = ir.MetaV1DurationPtr(d)
 		}
 
 		// Only set the IR Route Timeout to the backend request timeout
@@ -361,7 +361,7 @@ func processRouteTimeout(irRoute *ir.HTTPRoute, rule gwapiv1.HTTPRouteRule) {
 			if err != nil {
 				d, _ = time.ParseDuration(HTTPRequestTimeout)
 			}
-			irRoute.Timeout = &d
+			irRoute.Timeout = ir.MetaV1DurationPtr(d)
 		}
 	}
 }
@@ -381,14 +381,14 @@ func processRouteRetry(irRoute *ir.HTTPRoute, rule gwapiv1.HTTPRouteRule) {
 		if err == nil {
 			res.PerRetry = &ir.PerRetryPolicy{
 				BackOff: &ir.BackOffPolicy{
-					BaseInterval: &backoff,
+					BaseInterval: ir.MetaV1DurationPtr(backoff),
 				},
 			}
 			// xref: https://gateway-api.sigs.k8s.io/geps/gep-1742/#timeout-values
 			if rule.Timeouts != nil && rule.Timeouts.BackendRequest != nil {
 				backendRequestTimeout, err := time.ParseDuration(string(*rule.Timeouts.BackendRequest))
 				if err == nil {
-					res.PerRetry.Timeout = &backendRequestTimeout
+					res.PerRetry.Timeout = ir.MetaV1DurationPtr(backendRequestTimeout)
 				}
 			}
 		}
@@ -460,7 +460,7 @@ func (t *Translator) processHTTPRouteRule(
 				if err != nil {
 					return nil, status.NewRouteStatusError(err, gwapiv1.RouteReasonUnsupportedValue)
 				}
-				sessionPersistence.Cookie.TTL = &ttl
+				sessionPersistence.Cookie.TTL = ir.MetaV1DurationPtr(ttl)
 			}
 		case *rule.SessionPersistence.Type == gwapiv1.HeaderBasedSessionPersistence:
 			sessionPersistence = &ir.SessionPersistence{

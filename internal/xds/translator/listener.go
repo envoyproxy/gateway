@@ -397,15 +397,15 @@ func (t *Translator) addHCMToXDSListener(
 
 	if irListener.Timeout != nil && irListener.Timeout.HTTP != nil {
 		if irListener.Timeout.HTTP.RequestReceivedTimeout != nil {
-			mgr.RequestTimeout = durationpb.New(*irListener.Timeout.HTTP.RequestReceivedTimeout)
+			mgr.RequestTimeout = durationpb.New(irListener.Timeout.HTTP.RequestReceivedTimeout.Duration)
 		}
 
 		if irListener.Timeout.HTTP.IdleTimeout != nil {
-			mgr.CommonHttpProtocolOptions.IdleTimeout = durationpb.New(*irListener.Timeout.HTTP.IdleTimeout)
+			mgr.CommonHttpProtocolOptions.IdleTimeout = durationpb.New(irListener.Timeout.HTTP.IdleTimeout.Duration)
 		}
 
 		if irListener.Timeout.HTTP.StreamIdleTimeout != nil {
-			mgr.StreamIdleTimeout = durationpb.New(*irListener.Timeout.HTTP.StreamIdleTimeout)
+			mgr.StreamIdleTimeout = durationpb.New(irListener.Timeout.HTTP.StreamIdleTimeout.Duration)
 		}
 	}
 
@@ -696,7 +696,7 @@ func (t *Translator) addXdsTCPFilterChain(
 
 	if timeout != nil && timeout.TCP != nil {
 		if timeout.TCP.IdleTimeout != nil {
-			mgr.IdleTimeout = durationpb.New(*timeout.TCP.IdleTimeout)
+			mgr.IdleTimeout = durationpb.New(timeout.TCP.IdleTimeout.Duration)
 		}
 	}
 
@@ -755,7 +755,7 @@ func buildConnectionLimitFilter(statPrefix string, connection *ir.ClientConnecti
 	}
 
 	if connection.ConnectionLimit.CloseDelay != nil {
-		cl.Delay = durationpb.New(*connection.ConnectionLimit.CloseDelay)
+		cl.Delay = durationpb.New(connection.ConnectionLimit.CloseDelay.Duration)
 	}
 	return cl
 }

@@ -905,7 +905,7 @@ func (t *Translator) buildCORS(cors *egv1a1.CORS) *ir.CORS {
 
 	if cors.MaxAge != nil {
 		if d, err := time.ParseDuration(string(*cors.MaxAge)); err == nil {
-			irCORS.MaxAge = &d
+			irCORS.MaxAge = ir.MetaV1DurationPtr(d)
 		}
 	}
 
@@ -1253,13 +1253,13 @@ func (t *Translator) buildOIDC(
 
 	if oidc.DefaultTokenTTL != nil {
 		if d, err := time.ParseDuration(string(*oidc.DefaultTokenTTL)); err == nil {
-			irOIDC.DefaultTokenTTL = &d
+			irOIDC.DefaultTokenTTL = ir.MetaV1DurationPtr(d)
 		}
 	}
 
 	if oidc.DefaultRefreshTokenTTL != nil {
 		if d, err := time.ParseDuration(string(*oidc.DefaultRefreshTokenTTL)); err == nil {
-			irOIDC.DefaultRefreshTokenTTL = &d
+			irOIDC.DefaultRefreshTokenTTL = ir.MetaV1DurationPtr(d)
 		}
 	}
 

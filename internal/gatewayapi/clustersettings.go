@@ -16,6 +16,7 @@ import (
 	"time"
 
 	perr "github.com/pkg/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/utils/ptr"
 
@@ -103,22 +104,22 @@ func buildClusterSettingsTimeout(policy egv1a1.ClusterSettings) (*ir.Timeout, er
 			errs = errors.Join(errs, fmt.Errorf("invalid ConnectTimeout value %s", *pto.TCP.ConnectTimeout))
 		} else {
 			to.TCP = &ir.TCPTimeout{
-				ConnectTimeout: &d,
+				ConnectTimeout: ir.MetaV1DurationPtr(d),
 			}
 		}
 	}
 
 	if pto.HTTP != nil {
-		var cit *time.Duration
-		var mcd *time.Duration
-		var rt *time.Duration
+		var cit *metav1.Duration
+		var mcd *metav1.Duration
+		var rt *metav1.Duration
 
 		if pto.HTTP.ConnectionIdleTimeout != nil {
 			d, err := time.ParseDuration(string(*pto.HTTP.ConnectionIdleTimeout))
 			if err != nil {
 				errs = errors.Join(errs, fmt.Errorf("invalid ConnectionIdleTimeout value %s", *pto.HTTP.ConnectionIdleTimeout))
 			} else {
-				cit = &d
+				cit = ir.MetaV1DurationPtr(d)
 			}
 		}
 
@@ -127,7 +128,7 @@ func buildClusterSettingsTimeout(policy egv1a1.ClusterSettings) (*ir.Timeout, er
 			if err != nil {
 				errs = errors.Join(errs, fmt.Errorf("invalid MaxConnectionDuration value %s", *pto.HTTP.MaxConnectionDuration))
 			} else {
-				mcd = &d
+				mcd = ir.MetaV1DurationPtr(d)
 			}
 		}
 
@@ -136,7 +137,7 @@ func buildClusterSettingsTimeout(policy egv1a1.ClusterSettings) (*ir.Timeout, er
 			if err != nil {
 				errs = errors.Join(errs, fmt.Errorf("invalid RequestTimeout value %s", *pto.HTTP.RequestTimeout))
 			} else {
-				rt = &d
+				rt = ir.MetaV1DurationPtr(d)
 			}
 		}
 
@@ -297,7 +298,7 @@ func buildLoadBalancer(policy egv1a1.ClusterSettings) (*ir.LoadBalancer, error) 
 				return nil, err
 			}
 			lb.LeastRequest.SlowStart = &ir.SlowStart{
-				Window: &d,
+				Window: ir.MetaV1DurationPtr(d),
 			}
 		}
 	case egv1a1.RandomLoadBalancerType:
@@ -314,7 +315,7 @@ func buildLoadBalancer(policy egv1a1.ClusterSettings) (*ir.LoadBalancer, error) 
 				return nil, err
 			}
 			lb.RoundRobin.SlowStart = &ir.SlowStart{
-				Window: &d,
+				Window: ir.MetaV1DurationPtr(d),
 			}
 		}
 	}
@@ -434,7 +435,7 @@ func buildPassiveHealthCheck(policy egv1a1.HealthCheck) *ir.OutlierDetection {
 		if err != nil {
 			return nil
 		}
-		irOD.Interval = &d
+		irOD.Interval = ir.MetaV1DurationPtr(d)
 	}
 
 	if hc.BaseEjectionTime != nil {
@@ -442,7 +443,7 @@ func buildPassiveHealthCheck(policy egv1a1.HealthCheck) *ir.OutlierDetection {
 		if err != nil {
 			return nil
 		}
-		irOD.BaseEjectionTime = &d
+		irOD.BaseEjectionTime = ir.MetaV1DurationPtr(d)
 	}
 	return irOD
 }
@@ -461,13 +462,13 @@ func buildActiveHealthCheck(policy egv1a1.HealthCheck) *ir.ActiveHealthCheck {
 
 	if hc.Timeout != nil {
 		if d, err := time.ParseDuration(string(*hc.Timeout)); err == nil {
-			irHC.Timeout = &d
+			irHC.Timeout = ir.MetaV1DurationPtr(d)
 		}
 	}
 
 	if hc.Interval != nil {
 		if d, err := time.ParseDuration(string(*hc.Interval)); err == nil {
-			irHC.Interval = &d
+			irHC.Interval = ir.MetaV1DurationPtr(d)
 		}
 	}
 	switch hc.Type {
@@ -560,7 +561,7 @@ func translateDNS(policy egv1a1.ClusterSettings) *ir.DNS {
 
 	if policy.DNS.DNSRefreshRate != nil {
 		if d, err := time.ParseDuration(string(*policy.DNS.DNSRefreshRate)); err == nil {
-			irDNS.DNSRefreshRate = &d
+			irDNS.DNSRefreshRate = ir.MetaV1DurationPtr(d)
 		}
 	}
 
@@ -607,7 +608,7 @@ func buildRetry(r *egv1a1.Retry) (*ir.Retry, error) {
 			if err != nil {
 				return nil, err
 			}
-			pr.Timeout = &d
+			pr.Timeout = ir.MetaV1DurationPtr(d)
 			bpr = true
 		}
 
@@ -616,19 +617,19 @@ func buildRetry(r *egv1a1.Retry) (*ir.Retry, error) {
 				bop := &ir.BackOffPolicy{}
 				if r.PerRetry.BackOff.BaseInterval != nil {
 					if d, err := time.ParseDuration(string(*r.PerRetry.BackOff.BaseInterval)); err == nil {
-						bop.BaseInterval = &d
-						if *bop.BaseInterval == 0 {
+						bop.BaseInterval = ir.MetaV1DurationPtr(d)
+						if bop.BaseInterval.Duration == 0 {
 							return nil, fmt.Errorf("baseInterval cannot be set to 0s")
 						}
 					}
 				}
 				if r.PerRetry.BackOff.MaxInterval != nil {
 					if d, err := time.ParseDuration(string(*r.PerRetry.BackOff.MaxInterval)); err == nil {
-						bop.MaxInterval = &d
-						if *bop.MaxInterval == 0 {
+						bop.MaxInterval = ir.MetaV1DurationPtr(d)
+						if bop.MaxInterval.Duration == 0 {
 							return nil, fmt.Errorf("maxInterval cannot be set to 0s")
 						}
-						if bop.BaseInterval != nil && *bop.BaseInterval > *bop.MaxInterval {
+						if bop.BaseInterval != nil && bop.BaseInterval.Duration > bop.MaxInterval.Duration {
 							return nil, fmt.Errorf("maxInterval cannot be less than baseInterval")
 						}
 					}
