@@ -290,10 +290,7 @@ func (t *Translator) processHTTPListenerXdsTranslation(
 
 	for _, httpListener := range httpListeners {
 		var (
-			http3Settings                      *ir.HTTP3Settings // HTTP3 settings for the listener, if any
-			http3Enabled                       bool
 			tcpXDSListener                     *listenerv3.Listener // TCP Listener for HTTP1/HTTP2 traffic
-			quicXDSListener                    *listenerv3.Listener // UDP(QUIC) Listener for HTTP3 traffic
 			xdsListenerOnSameAddressPortExists bool                 // Whether a listener already exists on the same address + port combination
 			tlsEnabled                         bool                 // Whether TLS is enabled for the listener
 			routeCfgName                       string
@@ -301,38 +298,16 @@ func (t *Translator) processHTTPListenerXdsTranslation(
 			addHCM                             bool                        // Whether to add an HCM(HTTP Connection Manager filter) to the listener's TCP filter chain
 			err                                error
 		)
-
-		http3Settings, http3Enabled = http3EnabledListeners[listenerKey{Address: httpListener.Address, Port: httpListener.Port}]
-
 		// Search for an existing TCP listener on the same address + port combination.
 		// Right now, the address is always 0.0.0.0/::, and we need to revisit the logic in the method if we want to support
 		// listeners on specific addresses.
 		tcpXDSListener = findXdsListenerByHostPort(tCtx, httpListener.Address, httpListener.Port, corev3.SocketAddress_TCP)
-		quicXDSListener = findXdsListenerByHostPort(tCtx, httpListener.Address, httpListener.Port, corev3.SocketAddress_UDP)
-
 		xdsListenerOnSameAddressPortExists = tcpXDSListener != nil
 		tlsEnabled = httpListener.TLS != nil
 
 		switch {
 		// If no existing listener exists, create a new one.
 		case !xdsListenerOnSameAddressPortExists:
-			// Create a new UDP(QUIC) listener for HTTP3 traffic if HTTP3 is enabled
-			if http3Enabled {
-				if quicXDSListener, err = t.buildXdsQuicListener(
-					httpListener.CoreListenerDetails,
-					httpListener.IPFamily,
-					accessLog,
-				); err != nil {
-					errs = errors.Join(errs, err)
-					continue
-				}
-
-				if err = tCtx.AddXdsResource(resourcev3.ListenerType, quicXDSListener); err != nil {
-					errs = errors.Join(errs, err)
-					continue
-				}
-			}
-
 			// Create a new TCP listener for HTTP1/HTTP2 traffic.
 			if tcpXDSListener, err = t.buildXdsTCPListener(
 				httpListener.CoreListenerDetails,
@@ -379,12 +354,6 @@ func (t *Translator) processHTTPListenerXdsTranslation(
 				errs = errors.Join(errs, err)
 				continue
 			}
-			if http3Enabled {
-				if err = t.addHCMToXDSListener(quicXDSListener, httpListener, accessLog, tracing, true, httpListener.Connection); err != nil {
-					errs = errors.Join(errs, err)
-					continue
-				}
-			}
 		} else {
 			// When the DefaultFilterChain is shared by multiple Gateway HTTP
 			// Listeners, we need to add the HTTP filters associated with the
@@ -393,11 +362,90 @@ func (t *Translator) processHTTPListenerXdsTranslation(
 				errs = errors.Join(errs, err)
 				continue
 			}
-			if http3Enabled {
+		}
+
+		// For backward compatibility, we first try to get the route config name from the xDS listener.
+		// This is because the legacy rout config name is named after the first ir listener name on the same port(which is not ideal),
+		// and the current ir Listener has a different name.
+		//
+		// For example, the route config name is named after the ir Listener name "default/eg/http1", but the current
+		// ir Listener is "default/eg/http2".
+		routeCfgName = findXdsHTTPRouteConfigName(tcpXDSListener)
+		// If the route config name is not found, we use the current ir Listener name as the route config name to create a new route config.
+		if routeCfgName == "" {
+			routeCfgName = routeConfigName(httpListener, false, t.xdsNameSchemeV2())
+		}
+
+		// Create a route config if we have not found one yet
+		xdsRouteCfg = findXdsRouteConfig(tCtx, routeCfgName)
+		if xdsRouteCfg == nil {
+			xdsRouteCfg = &routev3.RouteConfiguration{
+				IgnorePortInHostMatching: true,
+				Name:                     routeCfgName,
+			}
+
+			if err = tCtx.AddXdsResource(resourcev3.RouteType, xdsRouteCfg); err != nil {
+				errs = errors.Join(errs, err)
+			}
+		}
+
+		// Generate xDS virtual hosts and routes for the given HTTPListener,
+		// and add them to the xDS route config.
+		if err = t.addRouteToRouteConfig(tCtx, xdsRouteCfg, httpListener, metrics, nil); err != nil {
+			errs = errors.Join(errs, err)
+		}
+
+		// If HTTP3 is enabled for the ir listener, we need to create a UDP(QUIC) xds listener
+		http3Settings, http3Enabled := http3EnabledListeners[listenerKey{Address: httpListener.Address, Port: httpListener.Port}]
+		if http3Enabled {
+			quicXDSListener := findXdsListenerByHostPort(tCtx, httpListener.Address, httpListener.Port, corev3.SocketAddress_UDP)
+
+			if quicXDSListener == nil {
+				if quicXDSListener, err = t.buildXdsQuicListener(
+					httpListener.CoreListenerDetails,
+					httpListener.IPFamily,
+					accessLog,
+				); err != nil {
+					errs = errors.Join(errs, err)
+					continue
+				}
+
+				if err = tCtx.AddXdsResource(resourcev3.ListenerType, quicXDSListener); err != nil {
+					errs = errors.Join(errs, err)
+					continue
+				}
+
+				if err = t.addHCMToXDSListener(quicXDSListener, httpListener, accessLog, tracing, true, httpListener.Connection); err != nil {
+					errs = errors.Join(errs, err)
+					continue
+				}
+			} else {
+				// There must be only the default filter chain in the QUIC listener, as TLSInspector doesn't work for UDP.
 				if err = t.addHTTPFiltersToHCM(quicXDSListener.DefaultFilterChain, httpListener); err != nil {
 					errs = errors.Join(errs, err)
 					continue
 				}
+			}
+
+			routeCfgName := routeConfigName(httpListener, true, t.xdsNameSchemeV2())
+
+			// Create a route config if we have not found one yet
+			xdsRouteCfg = findXdsRouteConfig(tCtx, routeCfgName)
+			if xdsRouteCfg == nil {
+				xdsRouteCfg = &routev3.RouteConfiguration{
+					IgnorePortInHostMatching: true,
+					Name:                     routeCfgName,
+				}
+
+				if err = tCtx.AddXdsResource(resourcev3.RouteType, xdsRouteCfg); err != nil {
+					errs = errors.Join(errs, err)
+				}
+			}
+
+			// Generate xDS virtual hosts and routes for the given HTTPListener,
+			// and add them to the xDS route config.
+			if err = t.addRouteToRouteConfig(tCtx, xdsRouteCfg, httpListener, metrics, http3Settings); err != nil {
+				errs = errors.Join(errs, err)
 			}
 		}
 
@@ -435,37 +483,6 @@ func (t *Translator) processHTTPListenerXdsTranslation(
 					}
 				}
 			}
-		}
-
-		// For backward compatibility, we first try to get the route config name from the xDS listener.
-		// This is because the legacy rout config name is named after the first ir listener name on the same port(which is not ideal),
-		// and the current ir Listener has a different name.
-		//
-		// For example, the route config name is named after the ir Listener name "default/eg/http1", but the current
-		// ir Listener is "default/eg/http2".
-		routeCfgName = findXdsHTTPRouteConfigName(tcpXDSListener)
-		// If the route config name is not found, we use the current ir Listener name as the route config name to create a new route config.
-		if routeCfgName == "" {
-			routeCfgName = routeConfigName(httpListener, t.xdsNameSchemeV2())
-		}
-
-		// Create a route config if we have not found one yet
-		xdsRouteCfg = findXdsRouteConfig(tCtx, routeCfgName)
-		if xdsRouteCfg == nil {
-			xdsRouteCfg = &routev3.RouteConfiguration{
-				IgnorePortInHostMatching: true,
-				Name:                     routeCfgName,
-			}
-
-			if err = tCtx.AddXdsResource(resourcev3.RouteType, xdsRouteCfg); err != nil {
-				errs = errors.Join(errs, err)
-			}
-		}
-
-		// Generate xDS virtual hosts and routes for the given HTTPListener,
-		// and add them to the xDS route config.
-		if err = t.addRouteToRouteConfig(tCtx, xdsRouteCfg, httpListener, metrics, http3Settings); err != nil {
-			errs = errors.Join(errs, err)
 		}
 
 		// Add all the other needed resources referenced by this filter to the

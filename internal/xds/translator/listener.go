@@ -350,7 +350,7 @@ func (t *Translator) addHCMToXDSListener(
 			Rds: &hcmv3.Rds{
 				ConfigSource: makeConfigSource(),
 				// Configure route name to be found via RDS.
-				RouteConfigName: routeConfigName(irListener, t.xdsNameSchemeV2()),
+				RouteConfigName: routeConfigName(irListener, http3Listener, t.xdsNameSchemeV2()),
 			},
 		},
 		HttpProtocolOptions: http1ProtocolOptions(irListener.HTTP1),
@@ -470,21 +470,26 @@ func (t *Translator) addHCMToXDSListener(
 			}
 		}
 		filterChain.TransportSocket = tSocket
-		filterChain.Name = httpsListenerFilterChainName(irListener)
+	}
 
-		if err := addServerNamesMatch(xdsListener, filterChain, irListener.Hostnames); err != nil {
-			return err
-		}
+	httpsListener := irListener.TLS != nil
+	httpListener := !httpsListener && !http3Listener
 
-		xdsListener.FilterChains = append(xdsListener.FilterChains, filterChain)
-	} else {
+	switch {
+	case httpListener || http3Listener:
 		// Add the HTTP filter chain as the default filter chain
 		// Make sure one does not exist
 		if xdsListener.DefaultFilterChain != nil {
 			return errors.New("default filter chain already exists")
 		}
-		filterChain.Name = httpListenerDefaultFilterChainName(irListener, t.xdsNameSchemeV2())
+		filterChain.Name = httpListenerDefaultFilterChainName(irListener, http3Listener, t.xdsNameSchemeV2())
 		xdsListener.DefaultFilterChain = filterChain
+	case httpsListener:
+		filterChain.Name = httpsListenerFilterChainName(irListener)
+		if err := addServerNamesMatch(xdsListener, filterChain, irListener.Hostnames); err != nil {
+			return err
+		}
+		xdsListener.FilterChains = append(xdsListener.FilterChains, filterChain)
 	}
 
 	return nil
@@ -503,17 +508,21 @@ func hcmStatPrefix(irListener *ir.HTTPListener, nameSchemeV2 bool) string {
 }
 
 // use the same name for the route config as the filter chain name, as they're 1:1 mapping.
-func routeConfigName(irListener *ir.HTTPListener, nameSchemeV2 bool) string {
+func routeConfigName(irListener *ir.HTTPListener, http3, nameSchemeV2 bool) string {
+	if http3 {
+		return httpListenerDefaultFilterChainName(irListener, true, nameSchemeV2)
+	}
 	if irListener.TLS != nil {
 		return httpsListenerFilterChainName(irListener)
 	}
-	return httpListenerDefaultFilterChainName(irListener, nameSchemeV2)
+	return httpListenerDefaultFilterChainName(irListener, false, nameSchemeV2)
 }
 
 // port value is used for the default filter chain name for HTTP listeners, as multiple HTTP listeners are merged into
 // one filter chain.
-func httpListenerDefaultFilterChainName(irListener *ir.HTTPListener, nameSchemeV2 bool) string {
-	if nameSchemeV2 {
+func httpListenerDefaultFilterChainName(irListener *ir.HTTPListener, http3, nameSchemeV2 bool) string {
+	// If HTTP3 is enabled, there must be only the default filter chain in the listener, as TLSInspector doesn't work for UDP.
+	if nameSchemeV2 || http3 {
 		return fmt.Sprint("http-", irListener.ExternalPort)
 	}
 	// For backward compatibility, we use the listener name as the filter chain name.
