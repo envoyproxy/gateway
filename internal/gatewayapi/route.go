@@ -1488,6 +1488,18 @@ func (t *Translator) processDestination(name string, backendRefContext BackendRe
 		if t.isCustomBackendResource(backendRef.Group, KindDerefOr(backendRef.Kind, resource.KindService)) {
 			// Add the custom backend resource to ExtensionRefFilters so it can be processed by the extension system
 			unstructuredRef = t.processBackendExtensions(backendRef.BackendObjectReference, backendNamespace, resources)
+
+			// Check if the custom backend resource was found
+			if unstructuredRef == nil {
+				return nil, nil, status.NewRouteStatusError(
+					fmt.Errorf("custom backend %s %s/%s not found",
+						KindDerefOr(backendRef.Kind, resource.KindService),
+						backendNamespace,
+						backendRef.Name),
+					gwapiv1.RouteReasonBackendNotFound,
+				).WithType(gwapiv1.RouteConditionResolvedRefs)
+			}
+
 			return &ir.DestinationSetting{
 				Name:            name,
 				Weight:          &weight,
