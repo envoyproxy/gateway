@@ -59,29 +59,29 @@ export GITHUB_REMOTE=origin
  Please note that the tags should be updated in both the source code and the Helm chart. Reference [PR #2098][]
    for additional details on updating the image tag.
 9. Sign, commit, and push your changes to your fork.
-10. Submit a [Pull Request][] to merge the changes into the `release/v${MAJOR_VERSION}.${MINOR_VERSION}` branch. Do not
-    proceed until your PR has merged into the release branch and the [Build and Test][] has completed for your PR.
-11. Ensure your release branch is up-to-date and tag the head of your release branch with the release candidate number.
+10. Submit a [Pull Request][] to merge the changes into the `release/v${MAJOR_VERSION}.${MINOR_VERSION}` branch. 
+11. Do not proceed until your PR has merged into the release branch and the [Build and Test][] has completed for your PR.
+12. Ensure your release branch is up-to-date and tag the head of your release branch with the release candidate number.
 
     ```shell
     git tag -a v${MAJOR_VERSION}.${MINOR_VERSION}.0-rc.${RELEASE_CANDIDATE_NUMBER} -m 'Envoy Gateway v${MAJOR_VERSION}.${MINOR_VERSION}.0-rc.${RELEASE_CANDIDATE_NUMBER} Release Candidate'
     ```
 
-12. Push the tag to the Envoy Gateway repository.
+13. Push the tag to the Envoy Gateway repository.
 
     ```shell
     git push ${GITHUB_REMOTE} v${MAJOR_VERSION}.${MINOR_VERSION}.0-rc.${RELEASE_CANDIDATE_NUMBER}
     ```
 
-13. This will trigger the [release GitHub action][] that generates the release, release artifacts, etc.
-14. Confirm that the [release workflow][] completed successfully.
-15. Confirm that the Envoy Gateway [image][] with the correct release tag was published to Docker Hub.
-16. Confirm that the [release][] was created.
-17. Note that the [Quickstart][] references are __not__ updated for release candidates. However, test
+14. This will trigger the [release GitHub action][] that generates the release, release artifacts, etc.
+15. Confirm that the [release workflow][] completed successfully.
+16. Confirm that the Envoy Gateway [image][] with the correct release tag was published to Docker Hub.
+17. Confirm that the [release][] was created.
+18. Note that the [Quickstart][] references are __not__ updated for release candidates. However, test
     the quickstart steps using the release candidate by manually updating the links.
-18. [Generate][] the GitHub changelog.
-19. Ensure you check the "This is a pre-release" checkbox when editing the GitHub release.
-20. If you find any bugs in this process, please create an issue.
+19. [Generate][] the GitHub changelog.
+20. Ensure you check the "This is a pre-release" checkbox when editing the GitHub release.
+21. If you find any bugs in this process, please create an issue.
 
 ## Minor Release
 
