@@ -1,5 +1,5 @@
 - ignorePortInHostMatching: true
-  name: "80"
+  name: http-80
   virtualHosts:
   - domains:
     - foo.net

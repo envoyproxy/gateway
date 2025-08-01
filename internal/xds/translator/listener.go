@@ -502,28 +502,12 @@ func hcmStatPrefix(irListener *ir.HTTPListener, nameSchemeV2 bool) string {
 	return fmt.Sprintf("%s-%d", statPrefix, irListener.Port)
 }
 
+// use the same name for the route config as the filter chain name, as they're 1:1 mapping.
 func routeConfigName(irListener *ir.HTTPListener, nameSchemeV2 bool) string {
 	if irListener.TLS != nil {
-		return httpsListenerRouteConfigName(irListener)
+		return httpsListenerFilterChainName(irListener)
 	}
-	return httpListenerRouteConfigName(irListener, nameSchemeV2)
-}
-
-// port value is used for the route config name for HTTP listeners. as multiple HTTP listeners on the same port are
-// using the same route config.
-func httpListenerRouteConfigName(irListener *ir.HTTPListener, nameSchemeV2 bool) string {
-	if nameSchemeV2 {
-		return fmt.Sprint(irListener.ExternalPort)
-	}
-	// For backward compatibility, we use the listener name as the route config name.
-	return irListener.Name
-}
-
-// irListener name is used as the route config name for HTTPS listener, as HTTPS Listener is 1:1 mapping to the filter chain,
-// and the HCM in each filter chain uses a unique route config.
-// The Gateway API layer ensures that each listener has a unique combination of hostname and port.
-func httpsListenerRouteConfigName(irListener *ir.HTTPListener) string {
-	return irListener.Name
+	return httpListenerDefaultFilterChainName(irListener, nameSchemeV2)
 }
 
 // port value is used for the default filter chain name for HTTP listeners, as multiple HTTP listeners are merged into

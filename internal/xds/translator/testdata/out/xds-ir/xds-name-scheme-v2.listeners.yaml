@@ -25,7 +25,7 @@
           configSource:
             ads: {}
             resourceApiVersion: V3
-          routeConfigName: "80"
+          routeConfigName: http-80
         serverHeaderTransformation: PASS_THROUGH
         statPrefix: http-80
         useRemoteAddress: true
