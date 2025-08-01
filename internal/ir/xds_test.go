@@ -15,7 +15,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
@@ -1533,8 +1532,8 @@ func TestValidateHealthCheck(t *testing.T) {
 			name: "invalid timeout",
 			input: HealthCheck{
 				&ActiveHealthCheck{
-					Timeout:            &metav1.Duration{Duration: time.Duration(0)},
-					Interval:           &metav1.Duration{Duration: time.Second},
+					Timeout:            ptr.To(time.Duration(0)),
+					Interval:           ptr.To(time.Second),
 					UnhealthyThreshold: ptr.To[uint32](3),
 					HealthyThreshold:   ptr.To[uint32](3),
 					HTTP: &HTTPHealthChecker{
@@ -1551,8 +1550,8 @@ func TestValidateHealthCheck(t *testing.T) {
 			name: "invalid panic threshold",
 			input: HealthCheck{
 				&ActiveHealthCheck{
-					Timeout:            &metav1.Duration{Duration: time.Duration(3)},
-					Interval:           &metav1.Duration{Duration: time.Second},
+					Timeout:            ptr.To(time.Duration(3)),
+					Interval:           ptr.To(time.Second),
 					UnhealthyThreshold: ptr.To[uint32](3),
 					HealthyThreshold:   ptr.To[uint32](3),
 					HTTP: &HTTPHealthChecker{
@@ -1569,8 +1568,8 @@ func TestValidateHealthCheck(t *testing.T) {
 			name: "invalid interval",
 			input: HealthCheck{
 				&ActiveHealthCheck{
-					Timeout:            &metav1.Duration{Duration: time.Second},
-					Interval:           &metav1.Duration{Duration: time.Duration(0)},
+					Timeout:            ptr.To(time.Second),
+					Interval:           ptr.To(time.Duration(0)),
 					UnhealthyThreshold: ptr.To[uint32](3),
 					HealthyThreshold:   ptr.To[uint32](3),
 					HTTP: &HTTPHealthChecker{
@@ -1589,8 +1588,8 @@ func TestValidateHealthCheck(t *testing.T) {
 			name: "invalid initial jitter",
 			input: HealthCheck{
 				&ActiveHealthCheck{
-					Timeout:            &metav1.Duration{Duration: time.Second},
-					Interval:           &metav1.Duration{Duration: time.Second},
+					Timeout:            ptr.To(time.Second),
+					Interval:           ptr.To(time.Second),
 					InitialJitter:      ptr.To(gwapiv1.Duration("-1s")),
 					UnhealthyThreshold: ptr.To[uint32](3),
 					HealthyThreshold:   ptr.To[uint32](3),
@@ -1610,8 +1609,8 @@ func TestValidateHealthCheck(t *testing.T) {
 			name: "invalid unhealthy threshold",
 			input: HealthCheck{
 				&ActiveHealthCheck{
-					Timeout:            &metav1.Duration{Duration: time.Second},
-					Interval:           &metav1.Duration{Duration: time.Second},
+					Timeout:            ptr.To(time.Second),
+					Interval:           ptr.To(time.Second),
 					UnhealthyThreshold: ptr.To[uint32](0),
 					HealthyThreshold:   ptr.To[uint32](3),
 					HTTP: &HTTPHealthChecker{
@@ -1630,8 +1629,8 @@ func TestValidateHealthCheck(t *testing.T) {
 			name: "invalid healthy threshold",
 			input: HealthCheck{
 				&ActiveHealthCheck{
-					Timeout:            &metav1.Duration{Duration: time.Second},
-					Interval:           &metav1.Duration{Duration: time.Second},
+					Timeout:            ptr.To(time.Second),
+					Interval:           ptr.To(time.Second),
 					UnhealthyThreshold: ptr.To[uint32](3),
 					HealthyThreshold:   ptr.To[uint32](0),
 					HTTP: &HTTPHealthChecker{
@@ -1650,8 +1649,8 @@ func TestValidateHealthCheck(t *testing.T) {
 			name: "http-health-check: invalid host",
 			input: HealthCheck{
 				&ActiveHealthCheck{
-					Timeout:            &metav1.Duration{Duration: time.Second},
-					Interval:           &metav1.Duration{Duration: time.Second},
+					Timeout:            ptr.To(time.Second),
+					Interval:           ptr.To(time.Second),
 					UnhealthyThreshold: ptr.To[uint32](3),
 					HealthyThreshold:   ptr.To[uint32](3),
 					HTTP: &HTTPHealthChecker{
@@ -1669,8 +1668,8 @@ func TestValidateHealthCheck(t *testing.T) {
 			name: "http-health-check: invalid path",
 			input: HealthCheck{
 				&ActiveHealthCheck{
-					Timeout:            &metav1.Duration{Duration: time.Second},
-					Interval:           &metav1.Duration{Duration: time.Second},
+					Timeout:            ptr.To(time.Second),
+					Interval:           ptr.To(time.Second),
 					UnhealthyThreshold: ptr.To[uint32](3),
 					HealthyThreshold:   ptr.To[uint32](3),
 					HTTP: &HTTPHealthChecker{
@@ -1689,8 +1688,8 @@ func TestValidateHealthCheck(t *testing.T) {
 			name: "http-health-check: invalid method",
 			input: HealthCheck{
 				&ActiveHealthCheck{
-					Timeout:            &metav1.Duration{Duration: time.Second},
-					Interval:           &metav1.Duration{Duration: time.Second},
+					Timeout:            ptr.To(time.Second),
+					Interval:           ptr.To(time.Second),
 					UnhealthyThreshold: ptr.To(uint32(3)),
 					HealthyThreshold:   ptr.To(uint32(3)),
 					HTTP: &HTTPHealthChecker{
@@ -1709,8 +1708,8 @@ func TestValidateHealthCheck(t *testing.T) {
 			name: "http-health-check: invalid expected-statuses",
 			input: HealthCheck{
 				&ActiveHealthCheck{
-					Timeout:            &metav1.Duration{Duration: time.Second},
-					Interval:           &metav1.Duration{Duration: time.Second},
+					Timeout:            ptr.To(time.Second),
+					Interval:           ptr.To(time.Second),
 					UnhealthyThreshold: ptr.To(uint32(3)),
 					HealthyThreshold:   ptr.To(uint32(3)),
 					HTTP: &HTTPHealthChecker{
@@ -1729,8 +1728,8 @@ func TestValidateHealthCheck(t *testing.T) {
 			name: "http-health-check: invalid range",
 			input: HealthCheck{
 				&ActiveHealthCheck{
-					Timeout:            &metav1.Duration{Duration: time.Second},
-					Interval:           &metav1.Duration{Duration: time.Second},
+					Timeout:            ptr.To(time.Second),
+					Interval:           ptr.To(time.Second),
 					UnhealthyThreshold: ptr.To(uint32(3)),
 					HealthyThreshold:   ptr.To(uint32(3)),
 					HTTP: &HTTPHealthChecker{
@@ -1749,8 +1748,8 @@ func TestValidateHealthCheck(t *testing.T) {
 			name: "http-health-check: invalid expected-responses",
 			input: HealthCheck{
 				&ActiveHealthCheck{
-					Timeout:            &metav1.Duration{Duration: time.Second},
-					Interval:           &metav1.Duration{Duration: time.Second},
+					Timeout:            ptr.To(time.Second),
+					Interval:           ptr.To(time.Second),
 					UnhealthyThreshold: ptr.To(uint32(3)),
 					HealthyThreshold:   ptr.To(uint32(3)),
 					HTTP: &HTTPHealthChecker{
@@ -1773,8 +1772,8 @@ func TestValidateHealthCheck(t *testing.T) {
 			name: "tcp-health-check: invalid send payload",
 			input: HealthCheck{
 				&ActiveHealthCheck{
-					Timeout:            &metav1.Duration{Duration: time.Second},
-					Interval:           &metav1.Duration{Duration: time.Second},
+					Timeout:            ptr.To(time.Second),
+					Interval:           ptr.To(time.Second),
 					UnhealthyThreshold: ptr.To(uint32(3)),
 					HealthyThreshold:   ptr.To(uint32(3)),
 					TCP: &TCPHealthChecker{
@@ -1796,8 +1795,8 @@ func TestValidateHealthCheck(t *testing.T) {
 			name: "tcp-health-check: invalid receive payload",
 			input: HealthCheck{
 				&ActiveHealthCheck{
-					Timeout:            &metav1.Duration{Duration: time.Second},
-					Interval:           &metav1.Duration{Duration: time.Second},
+					Timeout:            ptr.To(time.Second),
+					Interval:           ptr.To(time.Second),
 					UnhealthyThreshold: ptr.To(uint32(3)),
 					HealthyThreshold:   ptr.To(uint32(3)),
 					TCP: &TCPHealthChecker{
@@ -1820,8 +1819,8 @@ func TestValidateHealthCheck(t *testing.T) {
 			input: HealthCheck{
 				&ActiveHealthCheck{},
 				&OutlierDetection{
-					Interval:         &metav1.Duration{Duration: time.Duration(0)},
-					BaseEjectionTime: &metav1.Duration{Duration: time.Second},
+					Interval:         ptr.To(time.Duration(0)),
+					BaseEjectionTime: ptr.To(time.Second),
 				},
 				ptr.To[uint32](10),
 			},
@@ -1832,8 +1831,8 @@ func TestValidateHealthCheck(t *testing.T) {
 			input: HealthCheck{
 				&ActiveHealthCheck{},
 				&OutlierDetection{
-					Interval:         &metav1.Duration{Duration: time.Second},
-					BaseEjectionTime: &metav1.Duration{Duration: time.Duration(0)},
+					Interval:         ptr.To(time.Second),
+					BaseEjectionTime: ptr.To(time.Duration(0)),
 				},
 				ptr.To[uint32](10),
 			},

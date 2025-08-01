@@ -18,7 +18,6 @@ import (
 	matcherv3 "github.com/envoyproxy/go-control-plane/envoy/type/matcher/v3"
 	"google.golang.org/protobuf/types/known/durationpb"
 	"google.golang.org/protobuf/types/known/wrapperspb"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/utils/proto"
@@ -104,7 +103,7 @@ func buildXdsRoute(httpRoute *ir.HTTPRoute, httpListener *ir.HTTPListener) (*rou
 	if router.GetRoute() != nil {
 		rt := getEffectiveRequestTimeout(httpRoute)
 		if rt != nil {
-			router.GetRoute().Timeout = durationpb.New(rt.Duration)
+			router.GetRoute().Timeout = durationpb.New(*rt)
 		}
 	}
 
@@ -348,7 +347,7 @@ func buildXdsWeightedRouteAction(backendWeights *ir.BackendWeights, settings []*
 	}
 }
 
-func getEffectiveRequestTimeout(httpRoute *ir.HTTPRoute) *metav1.Duration {
+func getEffectiveRequestTimeout(httpRoute *ir.HTTPRoute) *time.Duration {
 	// gateway-api timeout takes precedence
 	if httpRoute.Timeout != nil {
 		return httpRoute.Timeout
@@ -369,12 +368,12 @@ func idleTimeout(httpRoute *ir.HTTPRoute) *durationpb.Duration {
 	timeout := time.Hour // Default to 1 hour
 	if rt != nil {
 		// Ensure is not less than the request timeout
-		if timeout < rt.Duration {
-			timeout = rt.Duration
+		if timeout < *rt {
+			timeout = *rt
 		}
 
 		// Disable idle timeout when request timeout is disabled
-		if rt.Duration == 0 {
+		if *rt == 0 {
 			timeout = 0
 		}
 
@@ -626,7 +625,11 @@ func buildHashPolicy(httpRoute *ir.HTTPRoute) []*routev3.RouteAction_HashPolicy 
 			},
 		}
 		if ch.Cookie.TTL != nil {
-			hashPolicy.GetCookie().Ttl = durationpb.New(ch.Cookie.TTL.Duration)
+			d, err := time.ParseDuration(string(*ch.Cookie.TTL))
+			if err != nil {
+				return nil
+			}
+			hashPolicy.GetCookie().Ttl = durationpb.New(d)
 		}
 		if ch.Cookie.Attributes != nil {
 			attributes := make([]*routev3.RouteAction_HashPolicy_CookieAttribute, 0, len(ch.Cookie.Attributes))
@@ -710,19 +713,19 @@ func buildRetryPolicy(route *ir.HTTPRoute) (*routev3.RetryPolicy, error) {
 
 	if rr.PerRetry != nil {
 		if rr.PerRetry.Timeout != nil {
-			rp.PerTryTimeout = durationpb.New(rr.PerRetry.Timeout.Duration)
+			rp.PerTryTimeout = durationpb.New(*rr.PerRetry.Timeout)
 		}
 
 		if rr.PerRetry.BackOff != nil {
 			bbo := false
 			rbo := &routev3.RetryPolicy_RetryBackOff{}
 			if rr.PerRetry.BackOff.BaseInterval != nil {
-				rbo.BaseInterval = durationpb.New(rr.PerRetry.BackOff.BaseInterval.Duration)
+				rbo.BaseInterval = durationpb.New(*rr.PerRetry.BackOff.BaseInterval)
 				bbo = true
 			}
 
 			if rr.PerRetry.BackOff.MaxInterval != nil {
-				rbo.MaxInterval = durationpb.New(rr.PerRetry.BackOff.MaxInterval.Duration)
+				rbo.MaxInterval = durationpb.New(*rr.PerRetry.BackOff.MaxInterval)
 				bbo = true
 			}
 

@@ -8,6 +8,7 @@ package runner
 import (
 	"context"
 	"reflect"
+	"time"
 
 	"github.com/telepresenceio/watchable"
 	ktypes "k8s.io/apimachinery/pkg/types"
@@ -87,7 +88,13 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *ir
 						FailClosed: r.EnvoyGateway.RateLimit.FailClosed,
 					}
 					if r.EnvoyGateway.RateLimit.Timeout != nil {
-						t.GlobalRateLimit.Timeout = r.EnvoyGateway.RateLimit.Timeout.Duration
+						d, err := time.ParseDuration(string(*r.EnvoyGateway.RateLimit.Timeout))
+						if err != nil {
+							r.Logger.Error(err, "invalid rateLimit timeout")
+							errChan <- err
+						} else {
+							t.GlobalRateLimit.Timeout = d
+						}
 					}
 				}
 

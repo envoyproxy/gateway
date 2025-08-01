@@ -601,9 +601,7 @@ func buildClientTimeout(clientTimeout *egv1a1.ClientTimeout) (*ir.ClientTimeout,
 			if err != nil {
 				return nil, fmt.Errorf("invalid TCP IdleTimeout value %s", *clientTimeout.TCP.IdleTimeout)
 			}
-			irTCPTimeout.IdleTimeout = &metav1.Duration{
-				Duration: d,
-			}
+			irTCPTimeout.IdleTimeout = &d
 		}
 		irClientTimeout.TCP = irTCPTimeout
 	}
@@ -615,9 +613,7 @@ func buildClientTimeout(clientTimeout *egv1a1.ClientTimeout) (*ir.ClientTimeout,
 			if err != nil {
 				return nil, fmt.Errorf("invalid HTTP RequestReceivedTimeout value %s", *clientTimeout.HTTP.RequestReceivedTimeout)
 			}
-			irHTTPTimeout.RequestReceivedTimeout = &metav1.Duration{
-				Duration: d,
-			}
+			irHTTPTimeout.RequestReceivedTimeout = &d
 		}
 
 		if clientTimeout.HTTP.IdleTimeout != nil {
@@ -625,9 +621,7 @@ func buildClientTimeout(clientTimeout *egv1a1.ClientTimeout) (*ir.ClientTimeout,
 			if err != nil {
 				return nil, fmt.Errorf("invalid HTTP IdleTimeout value %s", *clientTimeout.HTTP.IdleTimeout)
 			}
-			irHTTPTimeout.IdleTimeout = &metav1.Duration{
-				Duration: d,
-			}
+			irHTTPTimeout.IdleTimeout = &d
 		}
 
 		if clientTimeout.HTTP.StreamIdleTimeout != nil {
@@ -635,9 +629,7 @@ func buildClientTimeout(clientTimeout *egv1a1.ClientTimeout) (*ir.ClientTimeout,
 			if err != nil {
 				return nil, fmt.Errorf("invalid HTTP StreamIdleTimeout value %s", *clientTimeout.HTTP.StreamIdleTimeout)
 			}
-			irHTTPTimeout.StreamIdleTimeout = &metav1.Duration{
-				Duration: d,
-			}
+			irHTTPTimeout.StreamIdleTimeout = &d
 		}
 		irClientTimeout.HTTP = irHTTPTimeout
 	}
@@ -962,7 +954,7 @@ func buildConnection(connection *egv1a1.ClientConnection) (*ir.ClientConnection,
 			if err != nil {
 				return nil, fmt.Errorf("invalid CloseDelay value %s", *connection.ConnectionLimit.CloseDelay)
 			}
-			irConnectionLimit.CloseDelay = ptr.To(metav1.Duration{Duration: d})
+			irConnectionLimit.CloseDelay = &d
 		}
 
 		irConnection.ConnectionLimit = irConnectionLimit

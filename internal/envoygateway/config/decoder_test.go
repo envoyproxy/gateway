@@ -195,9 +195,7 @@ func TestDecode(t *testing.T) {
 					Provider: egv1a1.DefaultEnvoyGatewayProvider(),
 					Gateway:  egv1a1.DefaultGateway(),
 					RateLimit: &egv1a1.RateLimit{
-						Timeout: &metav1.Duration{
-							Duration: 10000000,
-						},
+						Timeout:    ptr.To(gwapiv1.Duration("10ms")),
 						FailClosed: true,
 						Backend: egv1a1.RateLimitDatabaseBackend{
 							Type: egv1a1.RedisBackendType,

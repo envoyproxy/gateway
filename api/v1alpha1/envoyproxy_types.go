@@ -350,12 +350,12 @@ type ShutdownConfig struct {
 	// If unspecified, defaults to 60 seconds.
 	//
 	// +optional
-	DrainTimeout *metav1.Duration `json:"drainTimeout,omitempty"`
+	DrainTimeout *gwapiv1.Duration `json:"drainTimeout,omitempty"`
 	// MinDrainDuration defines the minimum drain duration allowing time for endpoint deprogramming to complete.
 	// If unspecified, defaults to 10 seconds.
 	//
 	// +optional
-	MinDrainDuration *metav1.Duration `json:"minDrainDuration,omitempty"`
+	MinDrainDuration *gwapiv1.Duration `json:"minDrainDuration,omitempty"`
 }
 
 // +kubebuilder:validation:XValidation:rule="((has(self.envoyDeployment) && !has(self.envoyDaemonSet)) || (!has(self.envoyDeployment) && has(self.envoyDaemonSet))) || (!has(self.envoyDeployment) && !has(self.envoyDaemonSet))",message="only one of envoyDeployment or envoyDaemonSet can be specified"

@@ -11,7 +11,6 @@ import (
 	"os"
 	"sort"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -25,6 +24,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/utils/ptr"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	"sigs.k8s.io/yaml"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
@@ -293,12 +293,8 @@ func TestDeployment(t *testing.T) {
 				},
 			},
 			shutdown: &egv1a1.ShutdownConfig{
-				DrainTimeout: &metav1.Duration{
-					Duration: 30 * time.Second,
-				},
-				MinDrainDuration: &metav1.Duration{
-					Duration: 15 * time.Second,
-				},
+				DrainTimeout:     ptr.To(gwapiv1.Duration("30s")),
+				MinDrainDuration: ptr.To(gwapiv1.Duration("15s")),
 			},
 			shutdownManager: &egv1a1.ShutdownManager{
 				Image: ptr.To("privaterepo/envoyproxy/gateway-dev:v1.2.3"),
@@ -865,12 +861,8 @@ func TestDaemonSet(t *testing.T) {
 				},
 			},
 			shutdown: &egv1a1.ShutdownConfig{
-				DrainTimeout: &metav1.Duration{
-					Duration: 30 * time.Second,
-				},
-				MinDrainDuration: &metav1.Duration{
-					Duration: 15 * time.Second,
-				},
+				DrainTimeout:     ptr.To(gwapiv1.Duration("30s")),
+				MinDrainDuration: ptr.To(gwapiv1.Duration("15s")),
 			},
 		},
 		{

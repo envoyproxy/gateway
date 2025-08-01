@@ -12,6 +12,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"time"
 
 	perr "github.com/pkg/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -974,14 +975,24 @@ func int64ToUint32(in int64) (uint32, bool) {
 }
 
 func (t *Translator) buildFaultInjection(policy *egv1a1.BackendTrafficPolicy) *ir.FaultInjection {
-	var fi *ir.FaultInjection
+	var (
+		fi  *ir.FaultInjection
+		d   time.Duration
+		err error
+	)
 	if policy.Spec.FaultInjection != nil {
 		fi = &ir.FaultInjection{}
 
 		if policy.Spec.FaultInjection.Delay != nil {
+			if policy.Spec.FaultInjection.Delay.FixedDelay != nil {
+				d, err = time.ParseDuration(string(*policy.Spec.FaultInjection.Delay.FixedDelay))
+				if err != nil {
+					return nil
+				}
+			}
 			fi.Delay = &ir.FaultInjectionDelay{
 				Percentage: policy.Spec.FaultInjection.Delay.Percentage,
-				FixedDelay: policy.Spec.FaultInjection.Delay.FixedDelay,
+				FixedDelay: &d,
 			}
 		}
 		if policy.Spec.FaultInjection.Abort != nil {
