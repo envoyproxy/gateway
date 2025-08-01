@@ -12,12 +12,155 @@ To do this, you can use the [Backend][] API and set the `tls.insecureSkipVerify`
 Warning: Skipping TLS verification disables certificate validation, which can expose your connection to man-in-the-middle
 attacks. This setting is typically used only for development or testing and is not recommended in production environments.
 
+## Prerequisites
+
+- OpenSSL to generate TLS assets.
+
 ## Installation
 
-Follow the steps from [Backend Routing][] to enable the [Backend][] API in the [EnvoyGateway][] startup configuration.
+{{< boilerplate prerequisites >}}
 
-Next, follow the instructions from the [Backend TLS][] guide to install the `tls-backend` service.
-**For this task, you don’t need to create a [BackendTLSPolicy][]**—since we’re skipping TLS verification, you can simply install the `tls-backend` service and skip the policy creation step.
+## Enable Backend
+
+The [Backend][] API is disabled by default in Envoy Gateway. To enable it, follow the steps outlined in [Backend Routing][] to configure the [EnvoyGateway][] startup settings accordingly.
+
+## TLS Certificates
+
+Generate the certificates and keys used by the backend to terminate TLS connections from the Gateways.
+
+Create a root certificate and private key to sign certificates:
+
+```shell
+openssl req -x509 -sha256 -nodes -days 365 -newkey rsa:2048 -subj '/O=example Inc./CN=example.com' -keyout ca.key -out ca.crt
+```
+
+Create a certificate and a private key for `www.example.com`.
+
+First, create an openssl configuration file:
+
+```shell
+cat > openssl.conf  <<EOF
+[req]
+req_extensions = v3_req
+prompt = no
+
+[v3_req]
+keyUsage = keyEncipherment, digitalSignature
+extendedKeyUsage = serverAuth
+subjectAltName = @alt_names
+[alt_names]
+DNS.1 = www.example.com
+EOF
+```
+
+Then create a certificate using this openssl configuration file:
+
+```shell
+openssl req -out www.example.com.csr -newkey rsa:2048 -nodes -keyout www.example.com.key -subj "/CN=www.example.com/O=example organization"
+openssl x509 -req -days 365 -CA ca.crt -CAkey ca.key -set_serial 0 -in www.example.com.csr -out www.example.com.crt -extfile openssl.conf -extensions v3_req
+```
+
+Note that the certificate must contain a DNS SAN for the relevant domain.
+
+Store the cert/key in a Secret:
+
+```shell
+kubectl create secret tls example-cert --key=www.example.com.key --cert=www.example.com.crt
+```
+
+Store the CA Cert in another Secret:
+
+```shell
+kubectl create configmap example-ca --from-file=ca.crt
+```
+
+## Setup TLS on the backend
+
+Patch the existing quickstart backend to enable TLS. The patch will mount the TLS certificate secret into the backend as volume.
+
+```shell
+kubectl patch deployment backend --type=json --patch '
+  - op: add
+    path: /spec/template/spec/containers/0/volumeMounts
+    value:
+    - name: secret-volume
+      mountPath: /etc/secret-volume
+  - op: add
+    path: /spec/template/spec/volumes
+    value:
+    - name: secret-volume
+      secret:
+        secretName: example-cert
+        items:
+        - key: tls.crt
+          path: crt
+        - key: tls.key
+          path: key
+  - op: add
+    path: /spec/template/spec/containers/0/env/-
+    value:
+      name: TLS_SERVER_CERT
+      value: /etc/secret-volume/crt
+  - op: add
+    path: /spec/template/spec/containers/0/env/-
+    value:
+      name: TLS_SERVER_PRIVKEY
+      value: /etc/secret-volume/key
+  '
+```
+
+Create a service that exposes port 443 on the backend service.
+
+{{< tabpane text=true >}}
+{{% tab header="Apply from stdin" %}}
+
+```shell
+cat <<EOF | kubectl apply -f -
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: backend
+    service: backend
+  name: tls-backend
+  namespace: default
+spec:
+  selector:
+    app: backend
+  ports:
+  - name: https
+    port: 443
+    protocol: TCP
+    targetPort: 8443
+EOF
+```
+
+{{% /tab %}}
+{{% tab header="Apply from file" %}}
+Save and apply the following resource to your cluster:
+
+```yaml
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: backend
+    service: backend
+  name: tls-backend
+  namespace: default
+spec:
+  selector:
+    app: backend
+  ports:
+  - name: https
+    port: 443
+    protocol: TCP
+    targetPort: 8443
+```
+
+{{% /tab %}}
+{{< /tabpane >}}
 
 ## Skip TLS Verification
 
@@ -193,7 +336,6 @@ version and cipher suite used for the connection.
 
 [Backend Routing]: ../traffic/backend/#enable-backend
 [Backend]: ../../../api/extension_types#backend
-[Backend TLS]: ./backend-tls
 [EnvoyGateway]: ../../../api/extension_types#envoygateway
 [HTTPRoute]: https://gateway-api.sigs.k8s.io/api-types/httproute
 [BackendTLSPolicy]: https://gateway-api.sigs.k8s.io/api-types/backendtlspolicy/
