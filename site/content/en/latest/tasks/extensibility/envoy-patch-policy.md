@@ -87,23 +87,22 @@ data:
 Starting from v1.5, Envoy Gateway uses version 2 of the xDS name scheme when generating xDS resources.
 Because [EnvoyPatchPolicy][] relies on specific xDS resource names, it’s important to use the correct naming format when authoring a patch policy.
 
-The name format in the old version of scheme:
-* Listener name: `<GatewayNamespace>/<GatewayName>/<GatewayListenerName>`, example: `default/eg/http`
-* RouteConfig/FilterChain name: `<GatewayNamespace>/<GatewayName>/<GatewayListenerName>`, example: `default/eg/http`
-* FilterChain name: `<GatewayNamespace>/<GatewayName>/<GatewayListenerName>`, example: `default/eg/http`
-* VirtualHost name: `<GatewayNamespace>/<GatewayName>/<GatewayListenerName>/<VirtualHost>`, example: `default/ef/http/www_example_com`
-* HCM StatPrefix: `<ApplicationProtocol>/<ContainerPort>`, example: `http-10080` or `https-10443`
+| Component            | Scheme Version | Format Description                                                          | Example                          |
+|----------------------|----------------|------------------------------------------------------------------------------|----------------------------------|
+| **Listener name**    | Old            | `<GatewayNamespace>/<GatewayName>/<GatewayListenerName>`                    | `default/eg/http`               |
+|                      | V2             | `<Protocol>-<Port>`                                                         | `tcp-80`                         |
+| **RouteConfig name** | Old            | `<GatewayNamespace>/<GatewayName>/<GatewayListenerName>`                    | `default/eg/http`               |
+|                      | V2 (HTTP)      | `http-<Port>`                                                               | `http-80`                       |
+|                      | V2 (HTTPS)     | `<GatewayNamespace>/<GatewayName>/<GatewayListenerName>`                    | `default/eg/https`               |
+| **FilterChain name** | Old            | `<GatewayNamespace>/<GatewayName>/<GatewayListenerName>`                    | `default/eg/http`               |
+|                      | V2 (HTTP)      | `http-<Port>`                                                               | `http-80`                        |
+|                      | V2 (HTTPS)     | `<GatewayNamespace>/<GatewayName>/<GatewayListenerName>`                    | `default/eg/https`               |
+| **VirtualHost name** | Old            | `<GatewayNamespace>/<GatewayName>/<GatewayListenerName>/<VirtualHost>`      | `default/eg/http/www_example_com` |
+|                      | V2             | `<VirtualHost>`                                                             | `www_example_com`               |
+| **HCM StatPrefix**   | Old            | `<ApplicationProtocol>/<ContainerPort>`                                     | `http-10080`, `https-10443`     |
+|                      | V2 (HTTP)      | `http-<Port>`                                                               | `http-80`                        |
+|                      | V2 (HTTPS)     | `https-<Port>`                                                              | `https-443`                      |
 
-Name format in version 2 of the scheme:
-* Listener name: `<Protocol>-<Port>`, example: `tcp-80`
-* RouteConfig name:
-   * HTTP Listener RouteConfig name: `<Port>`, example: `80`
-   * HTTPS Listener RouteConfig name: `<GatewayNamespace>/<GatewayName>/<GatewayListenerName>`, example: `default/eg/http` (same as the old version)
-* FilterChain name:
-   * HTTP Listener FilterChain name: `http-<Port>`, example: `http-80`
-   * HTTPS Listener FilterChain name: `<GatewayNamespace>/<GatewayName>/<GatewayListenerName>`, example: `default/eg/http` (same as the old version)
-* VirtualHost name: `<VirtualHost>`, example: `www_example_com`
-* HCM StatPrefix: `<ApplicationProtocol>/<Port>`, example: `http-80` or `https-443`
 
 This change is gated by the XDSNameSchemeV2 runtime flag. The flag is disabled by default in v1.5 and will be enabled by default starting in v1.6.
 
