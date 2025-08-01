@@ -2,10 +2,111 @@
     socketAddress:
       address: 0.0.0.0
       portValue: 10443
-      protocol: UDP
-  drainType: MODIFY_ONLY
   filterChains:
-  - filters:
+  - filterChainMatch:
+      serverNames:
+      - '*.example.com'
+    filters:
+    - name: envoy.filters.network.http_connection_manager
+      typedConfig:
+        '@type': type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
+        commonHttpProtocolOptions:
+          headersWithUnderscoresAction: REJECT_REQUEST
+        http2ProtocolOptions:
+          initialConnectionWindowSize: 1048576
+          initialStreamWindowSize: 65536
+          maxConcurrentStreams: 100
+        httpFilters:
+        - name: envoy.filters.http.router
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+            suppressEnvoyHeaders: true
+        mergeSlashes: true
+        normalizePath: true
+        pathWithEscapedSlashesAction: UNESCAPE_AND_REDIRECT
+        rds:
+          configSource:
+            ads: {}
+            resourceApiVersion: V3
+          routeConfigName: envoy-gateway/gateway-1/https1
+        serverHeaderTransformation: PASS_THROUGH
+        statPrefix: https-10443
+        useRemoteAddress: true
+    name: envoy-gateway/gateway-1/https1
+    transportSocket:
+      name: envoy.transport_sockets.tls
+      typedConfig:
+        '@type': type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.DownstreamTlsContext
+        commonTlsContext:
+          alpnProtocols:
+          - h2
+          - http/1.1
+          tlsCertificateSdsSecretConfigs:
+          - name: envoy-gateway-tls-secret-1
+            sdsConfig:
+              ads: {}
+              resourceApiVersion: V3
+        disableStatefulSessionResumption: true
+        disableStatelessSessionResumption: true
+  - filterChainMatch:
+      serverNames:
+      - '*.api.com'
+    filters:
+    - name: envoy.filters.network.http_connection_manager
+      typedConfig:
+        '@type': type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
+        commonHttpProtocolOptions:
+          headersWithUnderscoresAction: REJECT_REQUEST
+        http2ProtocolOptions:
+          initialConnectionWindowSize: 1048576
+          initialStreamWindowSize: 65536
+          maxConcurrentStreams: 100
+        httpFilters:
+        - name: envoy.filters.http.router
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+            suppressEnvoyHeaders: true
+        mergeSlashes: true
+        normalizePath: true
+        pathWithEscapedSlashesAction: UNESCAPE_AND_REDIRECT
+        rds:
+          configSource:
+            ads: {}
+            resourceApiVersion: V3
+          routeConfigName: envoy-gateway/gateway-1/https2
+        serverHeaderTransformation: PASS_THROUGH
+        statPrefix: https-10443
+        useRemoteAddress: true
+    name: envoy-gateway/gateway-1/https2
+    transportSocket:
+      name: envoy.transport_sockets.tls
+      typedConfig:
+        '@type': type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.DownstreamTlsContext
+        commonTlsContext:
+          alpnProtocols:
+          - h2
+          - http/1.1
+          tlsCertificateSdsSecretConfigs:
+          - name: envoy-gateway-tls-secret-1
+            sdsConfig:
+              ads: {}
+              resourceApiVersion: V3
+        disableStatefulSessionResumption: true
+        disableStatelessSessionResumption: true
+  listenerFilters:
+  - name: envoy.filters.listener.tls_inspector
+    typedConfig:
+      '@type': type.googleapis.com/envoy.extensions.filters.listener.tls_inspector.v3.TlsInspector
+  maxConnectionsToAcceptPerSocketEvent: 1
+  name: envoy-gateway/gateway-1/https1
+  perConnectionBufferLimitBytes: 32768
+- address:
+    socketAddress:
+      address: 0.0.0.0
+      portValue: 10443
+      protocol: UDP
+  defaultFilterChain:
+    filters:
     - name: envoy.filters.network.http_connection_manager
       typedConfig:
         '@type': type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
@@ -29,11 +130,11 @@
           configSource:
             ads: {}
             resourceApiVersion: V3
-          routeConfigName: envoy-gateway/gateway-1/tls
+          routeConfigName: http-443
         serverHeaderTransformation: PASS_THROUGH
         statPrefix: https-10443
         useRemoteAddress: true
-    name: envoy-gateway/gateway-1/tls
+    name: http-443
     transportSocket:
       name: envoy.transport_sockets.quic
       typedConfig:
@@ -49,57 +150,8 @@
                 resourceApiVersion: V3
           disableStatefulSessionResumption: true
           disableStatelessSessionResumption: true
-  name: envoy-gateway/gateway-1/tls-quic
+  drainType: MODIFY_ONLY
+  name: envoy-gateway/gateway-1/https1-quic
   udpListenerConfig:
     downstreamSocketConfig: {}
     quicOptions: {}
-- address:
-    socketAddress:
-      address: 0.0.0.0
-      portValue: 10443
-  filterChains:
-  - filters:
-    - name: envoy.filters.network.http_connection_manager
-      typedConfig:
-        '@type': type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
-        commonHttpProtocolOptions:
-          headersWithUnderscoresAction: REJECT_REQUEST
-        http2ProtocolOptions:
-          initialConnectionWindowSize: 1048576
-          initialStreamWindowSize: 65536
-          maxConcurrentStreams: 100
-        httpFilters:
-        - name: envoy.filters.http.router
-          typedConfig:
-            '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
-            suppressEnvoyHeaders: true
-        mergeSlashes: true
-        normalizePath: true
-        pathWithEscapedSlashesAction: UNESCAPE_AND_REDIRECT
-        rds:
-          configSource:
-            ads: {}
-            resourceApiVersion: V3
-          routeConfigName: envoy-gateway/gateway-1/tls
-        serverHeaderTransformation: PASS_THROUGH
-        statPrefix: https-10443
-        useRemoteAddress: true
-    name: envoy-gateway/gateway-1/tls
-    transportSocket:
-      name: envoy.transport_sockets.tls
-      typedConfig:
-        '@type': type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.DownstreamTlsContext
-        commonTlsContext:
-          alpnProtocols:
-          - h2
-          - http/1.1
-          tlsCertificateSdsSecretConfigs:
-          - name: envoy-gateway-tls-secret-1
-            sdsConfig:
-              ads: {}
-              resourceApiVersion: V3
-        disableStatefulSessionResumption: true
-        disableStatelessSessionResumption: true
-  maxConnectionsToAcceptPerSocketEvent: 1
-  name: envoy-gateway/gateway-1/tls
-  perConnectionBufferLimitBytes: 32768
