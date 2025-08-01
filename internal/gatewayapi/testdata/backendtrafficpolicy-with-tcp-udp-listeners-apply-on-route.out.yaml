@@ -29,7 +29,7 @@ backendTrafficPolicies:
         type: HTTP
         unhealthyThreshold: 3
       passive:
-        baseEjectionTime: 2m40s
+        baseEjectionTime: 160s
         consecutive5XxErrors: 5
         consecutiveGatewayErrors: 0
         consecutiveLocalOriginFailures: 5
@@ -101,7 +101,7 @@ backendTrafficPolicies:
         type: HTTP
         unhealthyThreshold: 3
       passive:
-        baseEjectionTime: 2m40s
+        baseEjectionTime: 160s
         consecutive5XxErrors: 5
         consecutiveGatewayErrors: 0
         consecutiveLocalOriginFailures: 5

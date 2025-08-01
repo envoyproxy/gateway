@@ -992,7 +992,7 @@ func (t *Translator) buildFaultInjection(policy *egv1a1.BackendTrafficPolicy) *i
 			}
 			fi.Delay = &ir.FaultInjectionDelay{
 				Percentage: policy.Spec.FaultInjection.Delay.Percentage,
-				FixedDelay: &d,
+				FixedDelay: ir.MetaV1DurationPtr(d),
 			}
 		}
 		if policy.Spec.FaultInjection.Abort != nil {

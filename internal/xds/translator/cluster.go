@@ -275,7 +275,7 @@ func buildXdsCluster(args *xdsClusterArgs) (*buildClusterResult, error) {
 		}
 		if args.loadBalancer.LeastRequest.SlowStart != nil && args.loadBalancer.LeastRequest.SlowStart.Window != nil {
 			leastRequest.SlowStartConfig = &commonv3.SlowStartConfig{
-				SlowStartWindow: durationpb.New(*args.loadBalancer.LeastRequest.SlowStart.Window),
+				SlowStartWindow: durationpb.New(args.loadBalancer.LeastRequest.SlowStart.Window.Duration),
 			}
 		}
 		typedLeastRequest, err := proto.ToAnyWithValidation(leastRequest)
@@ -297,7 +297,7 @@ func buildXdsCluster(args *xdsClusterArgs) (*buildClusterResult, error) {
 		}
 		if args.loadBalancer.RoundRobin.SlowStart != nil && args.loadBalancer.RoundRobin.SlowStart.Window != nil {
 			roundRobin.SlowStartConfig = &commonv3.SlowStartConfig{
-				SlowStartWindow: durationpb.New(*args.loadBalancer.RoundRobin.SlowStart.Window),
+				SlowStartWindow: durationpb.New(args.loadBalancer.RoundRobin.SlowStart.Window.Duration),
 			}
 		}
 		typedRoundRobin, err := proto.ToAnyWithValidation(roundRobin)
@@ -372,8 +372,8 @@ func buildXdsCluster(args *xdsClusterArgs) (*buildClusterResult, error) {
 		dnsCacheConfig.DnsRefreshRate = durationpb.New(30 * time.Second)
 		if args.dns != nil {
 			if args.dns.DNSRefreshRate != nil {
-				if *args.dns.DNSRefreshRate > 0 {
-					dnsCacheConfig.DnsRefreshRate = durationpb.New(*args.dns.DNSRefreshRate)
+				if args.dns.DNSRefreshRate.Duration > 0 {
+					dnsCacheConfig.DnsRefreshRate = durationpb.New(args.dns.DNSRefreshRate.Duration)
 				}
 			}
 		}
@@ -422,7 +422,7 @@ func buildXdsCluster(args *xdsClusterArgs) (*buildClusterResult, error) {
 		cluster.RespectDnsTtl = true
 		if args.dns != nil {
 			if args.dns.DNSRefreshRate != nil {
-				cluster.DnsRefreshRate = durationpb.New(*args.dns.DNSRefreshRate)
+				cluster.DnsRefreshRate = durationpb.New(args.dns.DNSRefreshRate.Duration)
 			}
 			if args.dns.RespectDNSTTL != nil {
 				cluster.RespectDnsTtl = ptr.Deref(args.dns.RespectDNSTTL, true)
@@ -480,8 +480,8 @@ func buildZoneAwareLbConfig(preferLocal *ir.PreferLocalZone) *commonv3.LocalityL
 
 func buildXdsHealthCheck(healthcheck *ir.ActiveHealthCheck) []*corev3.HealthCheck {
 	hc := &corev3.HealthCheck{
-		Timeout:  durationpb.New(*healthcheck.Timeout),
-		Interval: durationpb.New(*healthcheck.Interval),
+		Timeout:  durationpb.New(healthcheck.Timeout.Duration),
+		Interval: durationpb.New(healthcheck.Interval.Duration),
 	}
 	if healthcheck.InitialJitter != nil {
 		if d, err := time.ParseDuration(string(*healthcheck.InitialJitter)); err == nil {
@@ -532,8 +532,8 @@ func buildXdsHealthCheck(healthcheck *ir.ActiveHealthCheck) []*corev3.HealthChec
 
 func buildXdsOutlierDetection(outlierDetection *ir.OutlierDetection) *clusterv3.OutlierDetection {
 	od := &clusterv3.OutlierDetection{
-		BaseEjectionTime: durationpb.New(*outlierDetection.BaseEjectionTime),
-		Interval:         durationpb.New(*outlierDetection.Interval),
+		BaseEjectionTime: durationpb.New(outlierDetection.BaseEjectionTime.Duration),
+		Interval:         durationpb.New(outlierDetection.Interval.Duration),
 	}
 	if outlierDetection.SplitExternalLocalOriginErrors != nil {
 		od.SplitExternalLocalOriginErrors = *outlierDetection.SplitExternalLocalOriginErrors
@@ -814,11 +814,11 @@ func buildTypedExtensionProtocolOptions(args *xdsClusterArgs) (map[string]*anypb
 
 		if args.timeout != nil && args.timeout.HTTP != nil {
 			if args.timeout.HTTP.ConnectionIdleTimeout != nil {
-				protocolOptions.CommonHttpProtocolOptions.IdleTimeout = durationpb.New(*args.timeout.HTTP.ConnectionIdleTimeout)
+				protocolOptions.CommonHttpProtocolOptions.IdleTimeout = durationpb.New(args.timeout.HTTP.ConnectionIdleTimeout.Duration)
 			}
 
 			if args.timeout.HTTP.MaxConnectionDuration != nil {
-				protocolOptions.CommonHttpProtocolOptions.MaxConnectionDuration = durationpb.New(*args.timeout.HTTP.MaxConnectionDuration)
+				protocolOptions.CommonHttpProtocolOptions.MaxConnectionDuration = durationpb.New(args.timeout.HTTP.MaxConnectionDuration.Duration)
 			}
 		}
 
@@ -1016,7 +1016,7 @@ func buildProxyProtocolSocket(proxyProtocol *ir.ProxyProtocol, tSocket *corev3.T
 
 func buildConnectTimeout(to *ir.Timeout) *durationpb.Duration {
 	if to != nil && to.TCP != nil && to.TCP.ConnectTimeout != nil {
-		return durationpb.New(*to.TCP.ConnectTimeout)
+		return durationpb.New(to.TCP.ConnectTimeout.Duration)
 	}
 	return durationpb.New(tcpClusterPerConnectTimeout)
 }

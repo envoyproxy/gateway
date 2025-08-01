@@ -286,7 +286,7 @@ securityPolicies:
     cors:
       allowOrigins:
       - http://*.example.com
-      maxAge: 16m40s
+      maxAge: 1000s
     targetRef:
       group: gateway.networking.k8s.io
       kind: GRPCRoute
@@ -315,7 +315,7 @@ securityPolicies:
     cors:
       allowOrigins:
       - http://*.example.com
-      maxAge: 16m40s
+      maxAge: 1000s
     targetRef:
       group: gateway.networking.k8s.io
       kind: HTTPRoute

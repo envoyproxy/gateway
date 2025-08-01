@@ -155,8 +155,8 @@ securityPolicies:
         kind: null
         name: client2-secret
       cookieDomain: example.com
-      defaultRefreshTokenTTL: 48h0m0s
-      defaultTokenTTL: 1h0m0s
+      defaultRefreshTokenTTL: 48h
+      defaultTokenTTL: 1h
       forwardAccessToken: true
       logoutPath: /foo/logout
       provider:
@@ -204,8 +204,8 @@ securityPolicies:
         group: null
         kind: null
         name: client1-secret
-      defaultRefreshTokenTTL: 24h0m0s
-      defaultTokenTTL: 30m0s
+      defaultRefreshTokenTTL: 24h
+      defaultTokenTTL: 30m
       forwardAccessToken: true
       logoutPath: /bar/logout
       provider:

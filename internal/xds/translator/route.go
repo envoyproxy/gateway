@@ -12,6 +12,7 @@ import (
 	"time"
 
 	corev3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	routev3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
 	previoushost "github.com/envoyproxy/go-control-plane/envoy/extensions/retry/host/previous_hosts/v3"
 	previouspriority "github.com/envoyproxy/go-control-plane/envoy/extensions/retry/priority/previous_priorities/v3"
@@ -103,7 +104,7 @@ func buildXdsRoute(httpRoute *ir.HTTPRoute, httpListener *ir.HTTPListener) (*rou
 	if router.GetRoute() != nil {
 		rt := getEffectiveRequestTimeout(httpRoute)
 		if rt != nil {
-			router.GetRoute().Timeout = durationpb.New(*rt)
+			router.GetRoute().Timeout = durationpb.New(rt.Duration)
 		}
 	}
 
@@ -347,7 +348,7 @@ func buildXdsWeightedRouteAction(backendWeights *ir.BackendWeights, settings []*
 	}
 }
 
-func getEffectiveRequestTimeout(httpRoute *ir.HTTPRoute) *time.Duration {
+func getEffectiveRequestTimeout(httpRoute *ir.HTTPRoute) *metav1.Duration {
 	// gateway-api timeout takes precedence
 	if httpRoute.Timeout != nil {
 		return httpRoute.Timeout
@@ -368,12 +369,12 @@ func idleTimeout(httpRoute *ir.HTTPRoute) *durationpb.Duration {
 	timeout := time.Hour // Default to 1 hour
 	if rt != nil {
 		// Ensure is not less than the request timeout
-		if timeout < *rt {
-			timeout = *rt
+		if timeout < rt.Duration {
+			timeout = rt.Duration
 		}
 
 		// Disable idle timeout when request timeout is disabled
-		if *rt == 0 {
+		if rt.Duration == 0 {
 			timeout = 0
 		}
 
@@ -713,19 +714,19 @@ func buildRetryPolicy(route *ir.HTTPRoute) (*routev3.RetryPolicy, error) {
 
 	if rr.PerRetry != nil {
 		if rr.PerRetry.Timeout != nil {
-			rp.PerTryTimeout = durationpb.New(*rr.PerRetry.Timeout)
+			rp.PerTryTimeout = durationpb.New(rr.PerRetry.Timeout.Duration)
 		}
 
 		if rr.PerRetry.BackOff != nil {
 			bbo := false
 			rbo := &routev3.RetryPolicy_RetryBackOff{}
 			if rr.PerRetry.BackOff.BaseInterval != nil {
-				rbo.BaseInterval = durationpb.New(*rr.PerRetry.BackOff.BaseInterval)
+				rbo.BaseInterval = durationpb.New(rr.PerRetry.BackOff.BaseInterval.Duration)
 				bbo = true
 			}
 
 			if rr.PerRetry.BackOff.MaxInterval != nil {
-				rbo.MaxInterval = durationpb.New(*rr.PerRetry.BackOff.MaxInterval)
+				rbo.MaxInterval = durationpb.New(rr.PerRetry.BackOff.MaxInterval.Duration)
 				bbo = true
 			}
 
