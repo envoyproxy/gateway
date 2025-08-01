@@ -1740,7 +1740,43 @@ func TestEnvoyProxyProvider(t *testing.T) {
 					},
 				}
 			},
-			wantErrors: []string{"ImageRepository must contain only allowed characters and must not include a tag or any colons."},
+			wantErrors: []string{"ImageRepository must contain only allowed characters and must not include a tag."},
+		},
+		{
+			desc: "valid: imageRepository set with port",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					Provider: &egv1a1.EnvoyProxyProvider{
+						Type: egv1a1.ProviderTypeKubernetes,
+						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
+							EnvoyDeployment: &egv1a1.KubernetesDeploymentSpec{
+								Container: &egv1a1.KubernetesContainerSpec{
+									ImageRepository: ptr.To("docker.io:443/envoyproxy/envoy"),
+								},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "invalid: imageRepository set with port and tag",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					Provider: &egv1a1.EnvoyProxyProvider{
+						Type: egv1a1.ProviderTypeKubernetes,
+						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
+							EnvoyDeployment: &egv1a1.KubernetesDeploymentSpec{
+								Container: &egv1a1.KubernetesContainerSpec{
+									ImageRepository: ptr.To("docker.io:443/envoyproxy/envoy:v1.2.3"),
+								},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{"ImageRepository must contain only allowed characters and must not include a tag."},
 		},
 	}
 
