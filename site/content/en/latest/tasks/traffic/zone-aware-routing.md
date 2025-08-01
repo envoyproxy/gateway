@@ -2,9 +2,14 @@
 title: "Zone Aware Routing"
 ---
 
-EnvoyGateway makes use of [Envoy Zone Aware Routing][Envoy Zone Aware Routing] to support Kubernetes [Traffic Distribution][Traffic Distribution] 
-and [Topology Aware Routing][Topology Aware Routing] which are useful for keeping network traffic in the originating zone.
-Preferring same-zone traffic between Pods in your cluster can help with reliability, performance (network latency and throughput), or cost.
+EnvoyGateway makes use of [Envoy Zone Aware Routing][Envoy Zone Aware Routing] to keep network traffic in the originating zone.
+Preferring same-zone traffic between Pods in your cluster can help with reliability, performance (network latency and throughput), or cost. 
+
+Zone-aware routing may be enabled in one of two ways:
+1. Configuring a [BackendTrafficPolicy][BackendTrafficPolicy] with the `loadbalancer.zoneAware` field
+2. Configuring a backendRef Kubernetes `Service` with  [Traffic Distribution][Traffic Distribution] or [Topology Aware Routing][Topology Aware Routing]
+
+When both a backendRef and a [BackendTrafficPolicy][BackendTrafficPolicy] include a configuration for zone awareness, the [BackendTrafficPolicy][BackendTrafficPolicy] takes precedence.
 
 ## Prerequisites
 * The Kubernetes cluster's nodes must indicate topology information via the `topology.kubernetes.io/zone` [well-known label][Kubernetes well-known metadata].
@@ -13,7 +18,9 @@ Preferring same-zone traffic between Pods in your cluster can help with reliabil
 
 ## Configuration
 
-### Kubernetes Service
+Choose one of the following configuration options.
+
+### Option 1: Kubernetes Service
 Create the example Kubernetes Service with either topology aware routing or traffic distribution enabled.
 
 #### Topology Aware Routing
@@ -110,12 +117,64 @@ spec:
 {{% /tab %}}
 {{< /tabpane >}}
 
+### Option 2: BackendTrafficPolicy
+Zone aware routing can also be enabled directly with a [BackendTrafficPolicy][BackendTrafficPolicy].
+The example below configures similar behavior to Kubernetes Traffic Distribution and forces all traffic to the local zone via the `force` field instead
+of Envoy's default behavior which _prefers_ routing locally as much as possible while still achieving overall equal request distribution across all endpoints.
+
+{{< tabpane text=true >}}
+{{% tab header="Apply from stdin" %}}
+```shell
+cat <<EOF | kubectl apply -f -
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: BackendTrafficPolicy
+metadata:
+  name: zone-aware-routing
+spec:
+  targetRefs:
+  - group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: zone-aware-routing
+  loadBalancer:
+    type: RoundRobin
+    zoneAware:
+      preferLocal: # Enables Envoy to prefer local zone endpoints while maintaining overall traffic balance across zones
+        minEndpointsThreshold: 1 # Zone-aware routing is disabled if total number of endpoints is less than this threshold
+        force: # Forces all traffic to stay within the local zone, regardless of upstream endpoint distribution between zones
+          minEndpointsInZoneThreshold: 1  # If fewer local endpoints exist than this threshold, fallback to standard zone-aware routing behavior
+EOF
+```
+{{% /tab %}}
+{{% tab header="Apply from file" %}}
+Save and apply the following resource to your cluster:
+```yaml
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: BackendTrafficPolicy
+metadata:
+  name: zone-aware-routing
+spec:
+  targetRefs:
+  - group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: zone-aware-routing
+  loadBalancer:
+    type: RoundRobin
+    zoneAware:
+      preferLocal: # Enables Envoy to prefer local zone endpoints while maintaining overall traffic balance across zones
+        minEndpointsThreshold: 1 # Zone-aware routing is disabled if total number of endpoints is less than this threshold
+        force: # Forces all traffic to stay within the local zone, regardless of upstream endpoint distribution between zones
+          minEndpointsInZoneThreshold: 1  # If fewer local endpoints exist than this threshold, fallback to standard zone-aware routing behavior
+```
+{{% /tab %}}
+{{< /tabpane >}}
+
 
 ### Example deployments and HTTPRoute
 Next apply the example manifests to create two Deployments and an HTTPRoute. For the test configuration one Deployment
 (zone-aware-routing-backend-local) includes affinity for EnvoyProxy Pods to ensure its Pods are scheduled in the same
-zone and the second Deployment (zone-aware-routing-backend-nonlocal) uses anti-affinity to ensure its Pods _don't_ 
-schedule to the same zone in order to demonstrate functionality. 
+zone and the second Deployment (zone-aware-routing-backend-nonlocal) uses anti-affinity to ensure its Pods _don't_
+schedule to the same zone in order to demonstrate functionality.
 ```shell
 kubectl apply -f https://raw.githubusercontent.com/envoyproxy/gateway/latest/examples/kubernetes/zone-aware-routing.yaml -n default
 ```
@@ -129,13 +188,19 @@ zone-aware-routing-backend-nonlocal   3/3     3            3           9m1s
 
 ```
 
-An HTTPRoute resource is created for the `/zone-aware-routing` path prefix along with two example Deployment resources that 
+An HTTPRoute resource is created for the `/zone-aware-routing` path prefix along with two example Deployment resources that
 are respectively configured with pod affinity/anti-affinity targeting the Envoy Proxy Pods for testing.
 
 Verify the HTTPRoute configuration and status:
 
 ```shell
 kubectl get httproute/zone-aware-routing -o yaml
+```
+
+If used during configuration, verify the [BackendTrafficPolicy][BackendTrafficPolicy]:
+
+```shell
+kubectl get backendtrafficpolicy/zone-aware-routing -o yaml
 ```
 
 ## Testing
@@ -204,9 +269,11 @@ kubectl delete service/zone-aware-routing-backend
 kubectl delete deployment/zone-aware-routing-backend-local
 kubectl delete deployment/zone-aware-routing-backend-nonlocal
 kubectl delete httproute/zone-aware-routing
+kubectl delete backendtrafficpolicy/zone-aware-routing
 ```
 
 [Traffic Distribution]: https://kubernetes.io/docs/concepts/services-networking/service/#traffic-distribution
 [Topology Aware Routing]: https://kubernetes.io/docs/concepts/services-networking/topology-aware-routing/
 [Kubernetes well-known metadata]: https://kubernetes.io/docs/reference/labels-annotations-taints/#topologykubernetesiozone
 [Envoy Zone Aware Routing]: https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/upstream/load_balancing/zone_aware
+[BackendTrafficPolicy]: ../../../api/extension_types#backendtrafficpolicy

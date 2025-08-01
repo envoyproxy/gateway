@@ -19,17 +19,26 @@ func init() {
 
 var ZoneAwareRoutingTest = suite.ConformanceTest{
 	ShortName:   "ZoneAwareRouting",
-	Description: "Resource with Zone Aware Routing enabled",
-	Manifests:   []string{"testdata/zone-aware-routing.yaml"},
+	Description: "Test Zone Aware Routing is working",
+	Manifests:   []string{"test/e2e/testdata/zone-aware-routing-backendref-enabled.yaml", "test/e2e/testdata/zone-aware-routing-btp-enabled.yaml", "test/e2e/testdata/zone-aware-routing-deployments.yaml"},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
-		t.Run("only local zone should get requests", func(t *testing.T) {
+		t.Run("topology aware routing - only local zone should get requests", func(t *testing.T) {
 			// Pods from the backend-local deployment have affinity
 			// for the Envoy Proxy pods so should receive all requests.
 			expected := map[string]int{
 				"zone-aware-backend-local":    sendRequests,
 				"zone-aware-backend-nonlocal": 0,
 			}
-			runWeightedBackendTest(t, suite, "zone-aware-http-route", "/", "zone-aware-backend", expected)
+			runWeightedBackendTest(t, suite, "topology-aware-routing", "/topology-aware-routing", "topology-aware-routing", expected)
+		})
+		t.Run("BackendTrafficPolicy - only local zone should get requests", func(t *testing.T) {
+			// Pods from the backend-local deployment have affinity
+			// for the Envoy Proxy pods so should receive all requests.
+			expected := map[string]int{
+				"zone-aware-backend-local":    sendRequests,
+				"zone-aware-backend-nonlocal": 0,
+			}
+			runWeightedBackendTest(t, suite, "btp-zone-aware", "/btp-zone-aware", "btp-zone-aware", expected)
 		})
 	},
 }
