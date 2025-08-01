@@ -27,14 +27,146 @@ title: "SecurityPolicy"
 
 ## SecurityPolicy in Envoy Gateway
 
-`SecurityPolicy` is implemented as a Kubernetes Custom Resource Definition (CRD) and follows the policy attachment model. You can attach it to Gateway API resources in two ways:
+`SecurityPolicy` is implemented as a Kubernetes Custom Resource Definition (CRD) and follows the policy attachment model. 
 
-1. Using `targetRefs` to directly reference specific Gateway resources
-2. Using `targetSelectors` to match Gateway resources based on labels
+### Targets
 
-The policy applies to all resources that match either targeting method. When multiple policies target the same resource, the most specific configuration wins.
+SecurityPolicy can be attached to Gateway API resources using two targeting mechanisms:
 
-For example, consider these policies targeting the same Gateway Listener:
+1. **Direct Reference (`targetRefs`)**: Explicitly reference specific resources by name and kind.
+2. **Label Selection (`targetSelectors`)**: Match resources based on their labels (see [targetSelectors API reference](../../api/extension_types#targetselectors))
+
+The policy applies to all resources that match either targeting method. You can target various Gateway API resource types including `Gateway`, `HTTPRoute`, and `GRPCRoute`.
+
+**Important**: A SecurityPolicy can only target resources in the same namespace as the policy itself.
+
+### Precedence
+
+When multiple SecurityPolicies apply to the same resource, Envoy Gateway resolves conflicts using a precedence hierarchy based on the target resource type and section-level specificity:
+
+1. **Route rule-level policies** (HTTPRoute/GRPCRoute with `sectionName` targeting specific rules) - Highest precedence
+2. **Route-level policies** (HTTPRoute, GRPCRoute without `sectionName`) - High precedence  
+3. **Listener-level policies** (Gateway with `sectionName` targeting specific listeners) - Medium precedence
+4. **Gateway-level policies** (Gateway without `sectionName`) - Lowest precedence
+
+#### Multiple Policies at the Same Level
+
+When multiple SecurityPolicies target the same resource at the same hierarchy level (e.g., multiple policies targeting the same HTTPRoute), Envoy Gateway uses the following tie-breaking rules:
+
+1. **Creation Time Priority**: The oldest policy (earliest `creationTimestamp`) takes precedence
+2. **Name-based Sorting**: If policies have identical creation timestamps, they are sorted alphabetically by namespaced name, with the first policy taking precedence
+
+```yaml
+# Policy created first - takes precedence
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: SecurityPolicy
+metadata:
+  name: alpha-policy
+  creationTimestamp: "2023-01-01T10:00:00Z"
+spec:
+  targetRefs:
+    - kind: HTTPRoute
+      name: my-route
+  cors:
+    allowOrigins:
+      - exact: https://example.com
+
+---
+# Policy created later - lower precedence
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: SecurityPolicy
+metadata:
+  name: beta-policy
+  creationTimestamp: "2023-01-01T11:00:00Z"
+spec:
+  targetRefs:
+    - kind: HTTPRoute
+      name: my-route
+  cors:
+    allowOrigins:
+      - exact: https://different.com
+```
+
+In this example, `alpha-policy` would take precedence due to its earlier creation time, so the HTTPRoute would use the CORS setting from `alpha-policy`.
+
+```yaml
+# HTTPRoute with named rules
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: my-route
+spec:
+  rules:
+  - name: rule-1  # Named rule for sectionName targeting
+    matches:
+    - path:
+        value: "/api"
+    backendRefs:
+    - name: api-service
+      port: 80
+
+---
+# Route rule-level policy (highest precedence)
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: SecurityPolicy
+metadata:
+  name: rule-policy
+spec:
+  targetRef:
+    kind: HTTPRoute
+    name: my-route
+    sectionName: rule-1  # Targets specific named rule
+  cors:
+    allowOrigins:
+    - exact: https://rule.example.com
+
+---
+# Route-level policy (high precedence)
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: SecurityPolicy
+metadata:
+  name: route-policy
+spec:
+  targetRef:
+    kind: HTTPRoute
+    name: my-route  # No sectionName = entire route
+  cors:
+    allowOrigins:
+    - exact: https://route.example.com
+
+---
+# Listener-level policy (medium precedence)
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: SecurityPolicy
+metadata:
+  name: listener-policy
+spec:
+  targetRef:
+    kind: Gateway
+    name: my-gateway
+    sectionName: https-listener  # Targets specific listener
+  cors:
+    allowOrigins:
+    - exact: https://listener.example.com
+
+---
+# Gateway-level policy (lowest precedence)
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: SecurityPolicy
+metadata:
+  name: gateway-policy
+spec:
+  targetRef:
+    kind: Gateway
+    name: my-gateway  # No sectionName = entire gateway
+  cors:
+    allowOrigins:
+    - exact: https://gateway.example.com
+```
+
+In this example, the specific rule `rule-1` within HTTPRoute `my-route` would use the CORS settings from the route rule-level policy (`https://rule.example.com`), overriding the route-level, listener-level, and gateway-level settings.
+
+For section-specific targeting, consider these policies with different hierarchy levels targeting the same Gateway:
 
 ```yaml
 # Policy A: Applies to a specific listener
