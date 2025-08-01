@@ -1032,7 +1032,7 @@ func (t *Translator) processCORSFilter(
 		AllowMethods:     allowMethods,
 		AllowHeaders:     allowHeaders,
 		ExposeHeaders:    exposeHeaders,
-		MaxAge:           ptr.To(metav1.Duration{Duration: time.Duration(corsFilter.MaxAge) * time.Second}),
+		MaxAge:           ptr.To(time.Duration(corsFilter.MaxAge) * time.Second),
 		AllowCredentials: bool(corsFilter.AllowCredentials),
 	}
 }

@@ -8,6 +8,7 @@ package proxy
 import (
 	"fmt"
 	"path/filepath"
+	"time"
 
 	"github.com/containers/image/v5/docker/reference"
 	corev1 "k8s.io/api/core/v1"
@@ -257,7 +258,11 @@ func expectedShutdownManagerImage(shutdownManager *egv1a1.ShutdownManager) strin
 func expectedShutdownManagerArgs(cfg *egv1a1.ShutdownConfig) []string {
 	args := []string{"envoy", "shutdown-manager"}
 	if cfg != nil && cfg.DrainTimeout != nil {
-		args = append(args, fmt.Sprintf("--ready-timeout=%.0fs", cfg.DrainTimeout.Seconds()+10))
+		d, err := time.ParseDuration(string(*cfg.DrainTimeout))
+		if err != nil {
+			return nil
+		}
+		args = append(args, fmt.Sprintf("--ready-timeout=%.0fs", d.Seconds()+10))
 	}
 	return args
 }
@@ -270,11 +275,19 @@ func expectedShutdownPreStopCommand(cfg *egv1a1.ShutdownConfig) []string {
 	}
 
 	if cfg.DrainTimeout != nil {
-		command = append(command, fmt.Sprintf("--drain-timeout=%.0fs", cfg.DrainTimeout.Seconds()))
+		d, err := time.ParseDuration(string(*cfg.DrainTimeout))
+		if err != nil {
+			return nil
+		}
+		command = append(command, fmt.Sprintf("--drain-timeout=%.0fs", d.Seconds()))
 	}
 
 	if cfg.MinDrainDuration != nil {
-		command = append(command, fmt.Sprintf("--min-drain-duration=%.0fs", cfg.MinDrainDuration.Seconds()))
+		d, err := time.ParseDuration(string(*cfg.MinDrainDuration))
+		if err != nil {
+			return nil
+		}
+		command = append(command, fmt.Sprintf("--min-drain-duration=%.0fs", d.Seconds()))
 	}
 
 	return command

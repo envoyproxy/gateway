@@ -119,7 +119,7 @@ func buildStatefulSessionFilterConfig(route *ir.HTTPRoute) (*statefulsessionv3.S
 		}
 
 		if sp.Cookie.TTL != nil {
-			cookieCfg.Cookie.Ttl = durationpb.New(sp.Cookie.TTL.Duration)
+			cookieCfg.Cookie.Ttl = durationpb.New(*sp.Cookie.TTL)
 		}
 
 		sessionCfg = cookieCfg
