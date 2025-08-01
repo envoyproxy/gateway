@@ -20,7 +20,7 @@ func init() {
 var ZoneAwareRoutingTest = suite.ConformanceTest{
 	ShortName:   "ZoneAwareRouting",
 	Description: "Test Zone Aware Routing is working",
-	Manifests:   []string{"test/e2e/testdata/zone-aware-routing-backendref-enabled.yaml", "test/e2e/testdata/zone-aware-routing-btp-enabled.yaml", "test/e2e/testdata/zone-aware-routing-deployments.yaml"},
+	Manifests:   []string{"testdata/zone-aware-routing-backendref-enabled.yaml", "testdata/zone-aware-routing-btp-enabled.yaml", "testdata/zone-aware-routing-deployments.yaml"},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
 		t.Run("topology aware routing - only local zone should get requests", func(t *testing.T) {
 			// Pods from the backend-local deployment have affinity
