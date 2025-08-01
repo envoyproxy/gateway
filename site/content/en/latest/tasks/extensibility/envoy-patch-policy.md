@@ -110,6 +110,61 @@ We recommend users begin migrating their [EnvoyPatchPolicy][] resources to use t
 
 To opt in to the new naming scheme early, add the`XDSNameSchemeV2` runtime flag to the `runtimeFlags.enabled` field in your [EnvoyGateway][] configuration.
 
+{{< tabpane text=true >}}
+{{% tab header="Apply from stdin" %}}
+
+```shell
+cat <<EOF | kubectl apply -f -
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: envoy-gateway-config
+  namespace: envoy-gateway-system
+data:
+  envoy-gateway.yaml: |
+    apiVersion: gateway.envoyproxy.io/v1alpha1
+    kind: EnvoyGateway
+    provider:
+      type: Kubernetes
+    gateway:
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+    extensionApis:
+      enableEnvoyPatchPolicy: true
+    runtimeFlags:
+      enabled:
+      - XDSNameSchemeV2
+EOF
+```
+
+{{% /tab %}}
+{{% tab header="Apply from file" %}}
+Save and apply the following resource to your cluster:
+
+```yaml
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: envoy-gateway-config
+  namespace: envoy-gateway-system
+data:
+  envoy-gateway.yaml: |
+    apiVersion: gateway.envoyproxy.io/v1alpha1
+    kind: EnvoyGateway
+    provider:
+      type: Kubernetes
+    gateway:
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+    extensionApis:
+      enableEnvoyPatchPolicy: true
+    runtimeFlags:
+      enabled:
+      - XDSNameSchemeV2
+```
+
+{{% /tab %}}
+{{< /tabpane >}}
+
 ## Testing
 
 ### Customize Response
