@@ -34,55 +34,75 @@ var LocalRateLimitDistinctCIDRTest = suite.ConformanceTest{
 		routeNN := types.NamespacedName{Name: "http-ratelimit-distinct-cidr", Namespace: ns}
 		gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
 		gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
+		ancestorRef := gwapiv1a2.ParentReference{
+			Group:     gatewayapi.GroupPtr(gwapiv1.GroupName),
+			Kind:      gatewayapi.KindPtr(resource.KindGateway),
+			Namespace: gatewayapi.NamespacePtr(gwNN.Namespace),
+			Name:      gwapiv1.ObjectName(gwNN.Name),
+		}
 
 		t.Run("requests with x-forwarded-for header should be limited per IP", func(t *testing.T) {
-			ancestorRef := gwapiv1a2.ParentReference{
-				Group:     gatewayapi.GroupPtr(gwapiv1.GroupName),
-				Kind:      gatewayapi.KindPtr(resource.KindGateway),
-				Namespace: gatewayapi.NamespacePtr(gwNN.Namespace),
-				Name:      gwapiv1.ObjectName(gwNN.Name),
-			}
 			BackendTrafficPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "ratelimit-distinct-cidr", Namespace: ns}, suite.ControllerName, ancestorRef)
 			path := "/ratelimit-distinct-cidr"
-			testDistinctCIDRRatelimit(t, "192.168.1.1", "", ns, gwAddr, path, true, suite)
-			testDistinctCIDRRatelimit(t, "192.168.1.2", "", ns, gwAddr, path, true, suite)
+			testRatelimit(t, suite, map[string]string{
+				"X-Forwarded-For": "192.168.1.1",
+				"x-org-id":        "",
+			}, ns, gwAddr, path)
+			testRatelimit(t, suite, map[string]string{
+				"X-Forwarded-For": "192.168.1.2",
+				"x-org-id":        "",
+			}, ns, gwAddr, path)
 		})
 
 		t.Run("requests with x-forwarded-for header and matching x-org-id header should be limited per IP", func(t *testing.T) {
-			ancestorRef := gwapiv1a2.ParentReference{
-				Group:     gatewayapi.GroupPtr(gwapiv1.GroupName),
-				Kind:      gatewayapi.KindPtr(resource.KindGateway),
-				Namespace: gatewayapi.NamespacePtr(gwNN.Namespace),
-				Name:      gwapiv1.ObjectName(gwNN.Name),
-			}
 			BackendTrafficPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "ratelimit-distinct-cidr-and-exact-header", Namespace: ns}, suite.ControllerName, ancestorRef)
 			path := "/ratelimit-distinct-cidr-and-exact-header"
-			testDistinctCIDRRatelimit(t, "192.168.1.1", "foo", ns, gwAddr, path, true, suite)
-			testDistinctCIDRRatelimit(t, "192.168.1.2", "foo", ns, gwAddr, path, true, suite)
+			testRatelimit(t, suite, map[string]string{
+				"X-Forwarded-For": "192.168.1.1",
+				"x-org-id":        "foo",
+			}, ns, gwAddr, path)
+			testRatelimit(t, suite, map[string]string{
+				"X-Forwarded-For": "192.168.1.2",
+				"x-org-id":        "foo",
+			}, ns, gwAddr, path)
 		})
 
-		t.Run("requests with with x-forwarded-for header but no matching x-org-id header should not be limited", func(t *testing.T) {
-			ancestorRef := gwapiv1a2.ParentReference{
-				Group:     gatewayapi.GroupPtr(gwapiv1.GroupName),
-				Kind:      gatewayapi.KindPtr(resource.KindGateway),
-				Namespace: gatewayapi.NamespacePtr(gwNN.Namespace),
-				Name:      gwapiv1.ObjectName(gwNN.Name),
-			}
+		t.Run("requests with with x-forwarded-for header but no matching x-org-id header will hit default bucket", func(t *testing.T) {
 			BackendTrafficPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "ratelimit-distinct-cidr-and-exact-header", Namespace: ns}, suite.ControllerName, ancestorRef)
 			path := "/ratelimit-distinct-cidr-and-exact-header"
-			testDistinctCIDRRatelimit(t, "192.168.1.1", "bar", ns, gwAddr, path, false, suite)
+
+			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, http.ExpectedResponse{
+				Request: http.Request{
+					Path: path,
+					Headers: map[string]string{
+						"X-Forwarded-For": "192.168.1.1",
+						"x-org-id":        "bar",
+					},
+				},
+				ExpectedRequest: &http.ExpectedRequest{
+					Request: http.Request{
+						Path:    path,
+						Headers: nil, // don't check headers since Envoy will append the client IP to the X-Forwarded-For header
+					},
+				},
+				Response: http.Response{
+					StatusCode: 429,
+					Headers: map[string]string{
+						RatelimitLimitHeaderName:     "10", // this means it hit the default bucket
+						RatelimitRemainingHeaderName: "0",
+					},
+				},
+				Namespace: ns,
+			})
 		})
 	},
 }
 
-func testDistinctCIDRRatelimit(t *testing.T, clientIP, org, ns, gwAddr, path string, limited bool, suite *suite.ConformanceTestSuite) {
-	expectOkResp := http.ExpectedResponse{
+func testRatelimit(t *testing.T, suite *suite.ConformanceTestSuite, headers map[string]string, ns, gwAddr, path string) {
+	http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, http.ExpectedResponse{
 		Request: http.Request{
-			Path: path,
-			Headers: map[string]string{
-				"X-Forwarded-For": clientIP,
-				"x-org-id":        org,
-			},
+			Path:    path,
+			Headers: headers,
 		},
 		ExpectedRequest: &http.ExpectedRequest{
 			Request: http.Request{
@@ -92,45 +112,32 @@ func testDistinctCIDRRatelimit(t *testing.T, clientIP, org, ns, gwAddr, path str
 		},
 		Response: http.Response{
 			StatusCode: 200,
+			Headers: map[string]string{
+				RatelimitLimitHeaderName:     "3",
+				RatelimitRemainingHeaderName: "1",
+			},
 		},
 		Namespace: ns,
-	}
+	})
 
-	expectOkReq := http.MakeRequest(t, &expectOkResp, gwAddr, "HTTP", "http")
-
-	expectLimitResp := http.ExpectedResponse{
+	http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, http.ExpectedResponse{
 		Request: http.Request{
-			Path: path,
-			Headers: map[string]string{
-				"X-Forwarded-For": clientIP,
-				"x-org-id":        org,
+			Path:    path,
+			Headers: headers,
+		},
+		ExpectedRequest: &http.ExpectedRequest{
+			Request: http.Request{
+				Path:    path,
+				Headers: nil, // don't check headers since Envoy will append the client IP to the X-Forwarded-For header
 			},
 		},
 		Response: http.Response{
 			StatusCode: 429,
+			Headers: map[string]string{
+				RatelimitLimitHeaderName:     "3",
+				RatelimitRemainingHeaderName: "0", // at the end the remaining should be 0
+			},
 		},
 		Namespace: ns,
-	}
-	expectLimitReq := http.MakeRequest(t, &expectLimitResp, gwAddr, "HTTP", "http")
-
-	// should just send exactly 4 requests, and expect 429
-
-	// keep sending requests till get 200 first, that will cost one 200
-	http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectOkResp)
-
-	// fire the rest request
-	if err := GotExactExpectedResponse(t, 2, suite.RoundTripper, expectOkReq, expectOkResp); err != nil {
-		t.Errorf("fail to get expected response at first three request: %v", err)
-	}
-
-	if limited {
-		// this request should be limited because the limit is 3
-		if err := GotExactExpectedResponse(t, 1, suite.RoundTripper, expectLimitReq, expectLimitResp); err != nil {
-			t.Errorf("fail to get expected response at the fourth request: %v", err)
-		}
-	} else {
-		if err := GotExactExpectedResponse(t, 1, suite.RoundTripper, expectLimitReq, expectOkResp); err != nil {
-			t.Errorf("fail to get expected response at the fourth request: %v", err)
-		}
-	}
+	})
 }

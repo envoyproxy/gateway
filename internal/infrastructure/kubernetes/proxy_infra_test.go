@@ -20,6 +20,8 @@ import (
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/intstr"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
@@ -29,8 +31,14 @@ import (
 	"github.com/envoyproxy/gateway/internal/envoygateway"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
+	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 	"github.com/envoyproxy/gateway/internal/infrastructure/kubernetes/proxy"
 	"github.com/envoyproxy/gateway/internal/ir"
+)
+
+const (
+	testGatewayClass = "envoy-gateway-class"
+	testResourceUID  = "foo.bar"
 )
 
 func newTestInfra(t *testing.T) *Infra {
@@ -108,11 +116,42 @@ func newTestInfraWithClient(t *testing.T, cli client.Client) *Infra {
 }
 
 func TestCreateProxyInfra(t *testing.T) {
+	infra := ir.NewInfra()
+	infra.GetProxyInfra().GetProxyMetadata().OwnerReference = &ir.ResourceMetadata{
+		Kind: resource.KindGateway,
+		Name: testGatewayClass,
+	}
+
 	// Infra with Gateway owner labels.
-	infraWithLabels := ir.NewInfra()
+	infraWithLabels := infra.DeepCopy()
 	infraWithLabels.GetProxyInfra().GetProxyMetadata().Labels = proxy.EnvoyAppLabel()
+	infraWithLabels.GetProxyInfra().GetProxyMetadata().Labels[gatewayapi.OwningGatewayClassLabel] = "testGatewayClass"
 	infraWithLabels.GetProxyInfra().GetProxyMetadata().Labels[gatewayapi.OwningGatewayNamespaceLabel] = "default"
 	infraWithLabels.GetProxyInfra().GetProxyMetadata().Labels[gatewayapi.OwningGatewayNameLabel] = "test-gw"
+	infraWithLabels.GetProxyInfra().GetProxyMetadata().OwnerReference = &ir.ResourceMetadata{
+		Kind: resource.KindGateway,
+		Name: testGatewayClass,
+	}
+
+	ep := &egv1a1.EnvoyProxy{
+		Spec: egv1a1.EnvoyProxySpec{
+			Provider: &egv1a1.EnvoyProxyProvider{
+				Type:       egv1a1.ProviderTypeKubernetes,
+				Kubernetes: egv1a1.DefaultEnvoyProxyKubeProvider(),
+			},
+		},
+	}
+	infraWithPDB := infraWithLabels.DeepCopy()
+	infraWithPDB.GetProxyInfra().Config = ep.DeepCopy()
+	infraWithPDB.GetProxyInfra().Config.Spec.Provider.Kubernetes.EnvoyPDB = &egv1a1.KubernetesPodDisruptionBudgetSpec{
+		MinAvailable: ptr.To(intstr.IntOrString{Type: intstr.Int, IntVal: 1}),
+	}
+
+	infraWithHPA := infraWithLabels.DeepCopy()
+	infraWithHPA.GetProxyInfra().Config = ep.DeepCopy()
+	infraWithHPA.GetProxyInfra().Config.Spec.Provider.Kubernetes.EnvoyHpa = &egv1a1.KubernetesHorizontalPodAutoscalerSpec{
+		MinReplicas: ptr.To[int32](1),
+	}
 
 	testCases := []struct {
 		name   string
@@ -126,7 +165,7 @@ func TestCreateProxyInfra(t *testing.T) {
 		},
 		{
 			name:   "default infra without Gateway owner labels",
-			in:     ir.NewInfra(),
+			in:     infra,
 			expect: false,
 		},
 		{
@@ -141,12 +180,23 @@ func TestCreateProxyInfra(t *testing.T) {
 			},
 			expect: false,
 		},
+		{
+			name:   "pdb enabled",
+			in:     infraWithPDB,
+			expect: true,
+		},
+		{
+			name:   "hpa enabled",
+			in:     infraWithHPA,
+			expect: true,
+		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 			kube := newTestInfra(t)
+			require.NoError(t, setupOwnerReferenceResources(context.Background(), kube.Client))
 			// Create or update the proxy infra.
 			err := kube.CreateOrUpdateProxyInfra(context.Background(), tc.in)
 			if !tc.expect {
@@ -157,32 +207,32 @@ func TestCreateProxyInfra(t *testing.T) {
 				// Verify all resources were created via the fake kube client.
 				sa := &corev1.ServiceAccount{
 					ObjectMeta: metav1.ObjectMeta{
-						Namespace: kube.Namespace,
-						Name:      proxy.ExpectedResourceHashedName(tc.in.Proxy.Name),
+						Namespace: kube.ControllerNamespace,
+						Name:      expectedName(tc.in.Proxy, false),
 					},
 				}
 				require.NoError(t, kube.Client.Get(context.Background(), client.ObjectKeyFromObject(sa), sa))
 
 				cm := &corev1.ConfigMap{
 					ObjectMeta: metav1.ObjectMeta{
-						Namespace: kube.Namespace,
-						Name:      proxy.ExpectedResourceHashedName(tc.in.Proxy.Name),
+						Namespace: kube.ControllerNamespace,
+						Name:      expectedName(tc.in.Proxy, false),
 					},
 				}
 				require.NoError(t, kube.Client.Get(context.Background(), client.ObjectKeyFromObject(cm), cm))
 
 				deploy := &appsv1.Deployment{
 					ObjectMeta: metav1.ObjectMeta{
-						Namespace: kube.Namespace,
-						Name:      proxy.ExpectedResourceHashedName(tc.in.Proxy.Name),
+						Namespace: kube.ControllerNamespace,
+						Name:      expectedName(tc.in.Proxy, false),
 					},
 				}
 				require.NoError(t, kube.Client.Get(context.Background(), client.ObjectKeyFromObject(deploy), deploy))
 
 				svc := &corev1.Service{
 					ObjectMeta: metav1.ObjectMeta{
-						Namespace: kube.Namespace,
-						Name:      proxy.ExpectedResourceHashedName(tc.in.Proxy.Name),
+						Namespace: kube.ControllerNamespace,
+						Name:      expectedName(tc.in.Proxy, false),
 					},
 				}
 				require.NoError(t, kube.Client.Get(context.Background(), client.ObjectKeyFromObject(svc), svc))
@@ -192,6 +242,12 @@ func TestCreateProxyInfra(t *testing.T) {
 }
 
 func TestDeleteProxyInfra(t *testing.T) {
+	infra := ir.NewInfra()
+	infra.GetProxyInfra().GetProxyMetadata().OwnerReference = &ir.ResourceMetadata{
+		Kind: resource.KindGatewayClass,
+		Name: testGatewayClass,
+	}
+
 	testCases := []struct {
 		name   string
 		in     *ir.Infra
@@ -204,7 +260,7 @@ func TestDeleteProxyInfra(t *testing.T) {
 		},
 		{
 			name:   "default infra",
-			in:     ir.NewInfra(),
+			in:     infra,
 			expect: true,
 		},
 	}
@@ -213,6 +269,7 @@ func TestDeleteProxyInfra(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 			kube := newTestInfra(t)
+			require.NoError(t, setupOwnerReferenceResources(context.Background(), kube.Client))
 
 			err := kube.DeleteProxyInfra(context.Background(), tc.in)
 			if !tc.expect {
@@ -222,4 +279,27 @@ func TestDeleteProxyInfra(t *testing.T) {
 			}
 		})
 	}
+}
+
+// This function uses setup creating Resources for OwnerReference.
+// When the default case, ProxyInfra Get OwnerReference from GatewayClass.
+// When enable GatewayNamespace mode, ProxyInfra Get OwnerReference from Gateway.
+func setupOwnerReferenceResources(ctx context.Context, client *InfraClient) error {
+	gwc := &gwapiv1.GatewayClass{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: testGatewayClass,
+			UID:  testResourceUID,
+		},
+	}
+	if err := client.Create(ctx, gwc); err != nil {
+		return err
+	}
+	gw := &gwapiv1.Gateway{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: "ns1",
+			Name:      "gateway-1",
+			UID:       testResourceUID,
+		},
+	}
+	return client.Create(ctx, gw)
 }

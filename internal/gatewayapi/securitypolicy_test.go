@@ -534,3 +534,183 @@ func Test_APIKeyAuth(t *testing.T) {
 		})
 	}
 }
+
+func Test_OIDC_PassThroughAuthHeader(t *testing.T) {
+	tests := []struct {
+		name      string
+		OIDC      egv1a1.OIDC
+		JWT       *egv1a1.JWT
+		wantError bool
+	}{
+		{
+			name: "oidc and jwt with PassThroughAuthHeader configured",
+			OIDC: egv1a1.OIDC{
+				PassThroughAuthHeader: ToPointer(true),
+			},
+			JWT: &egv1a1.JWT{
+				Providers: []egv1a1.JWTProvider{
+					{
+						Name: "test",
+					},
+				},
+			},
+			wantError: false,
+		},
+		{
+			name: "jwt configured to read a non-standard header is ok",
+			OIDC: egv1a1.OIDC{
+				PassThroughAuthHeader: ToPointer(true),
+			},
+			JWT: &egv1a1.JWT{
+				Providers: []egv1a1.JWTProvider{
+					{
+						Name: "test",
+						ExtractFrom: &egv1a1.JWTExtractor{
+							Headers: []egv1a1.JWTHeaderExtractor{{Name: "SomeHeader", ValuePrefix: ToPointer("Bearer ")}},
+						},
+					},
+				},
+			},
+			wantError: false,
+		},
+		{
+			name: "jwt configured to read a non-standard header without valuePrefix is ok",
+			OIDC: egv1a1.OIDC{
+				PassThroughAuthHeader: ToPointer(true),
+			},
+			JWT: &egv1a1.JWT{
+				Providers: []egv1a1.JWTProvider{
+					{
+						Name: "test",
+						ExtractFrom: &egv1a1.JWTExtractor{
+							Headers: []egv1a1.JWTHeaderExtractor{{Name: "SomeHeader", ValuePrefix: nil}},
+						},
+					},
+				},
+			},
+			wantError: false,
+		},
+		{
+			name: "oidc with PassThroughAuthHeader configured requires jwt configured too",
+			OIDC: egv1a1.OIDC{
+				PassThroughAuthHeader: ToPointer(true),
+			},
+			JWT:       nil,
+			wantError: true,
+		},
+		{
+			name: "jwt configured to read cookie only is not ok",
+			OIDC: egv1a1.OIDC{
+				PassThroughAuthHeader: ToPointer(true),
+			},
+			JWT: &egv1a1.JWT{
+				Providers: []egv1a1.JWTProvider{
+					{
+						Name: "test",
+						ExtractFrom: &egv1a1.JWTExtractor{
+							Cookies: []string{"SomeCookie"},
+						},
+					},
+				},
+			},
+			wantError: true,
+		},
+		{
+			name: "jwt configured with multiple providers is ok",
+			OIDC: egv1a1.OIDC{
+				PassThroughAuthHeader: ToPointer(true),
+			},
+			JWT: &(egv1a1.JWT{
+				Providers: []egv1a1.JWTProvider{
+					{
+						Name: "test",
+						ExtractFrom: &egv1a1.JWTExtractor{
+							Headers: []egv1a1.JWTHeaderExtractor{{Name: "Blah"}},
+						},
+					},
+					{
+						Name: "test2",
+						ExtractFrom: &egv1a1.JWTExtractor{
+							Cookies: []string{"SomeCookie"},
+						},
+					},
+				},
+			}),
+			wantError: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			securityPolicy := egv1a1.SecurityPolicy{
+				Spec: egv1a1.SecurityPolicySpec{
+					OIDC: &tt.OIDC,
+					JWT:  tt.JWT,
+				},
+			}
+			err := validateSecurityPolicy(&securityPolicy)
+			if (err != nil) != tt.wantError {
+				t.Errorf("validateSecurityPolicy() error = %v, wantErr %v", err, tt.wantError)
+				return
+			}
+		})
+	}
+}
+
+func ToPointer[T any](v T) *T {
+	return &v
+}
+
+func Test_validateHtpasswdFormat(t *testing.T) {
+	tests := []struct {
+		name      string
+		htpasswd  string
+		wantError bool
+	}{
+		{
+			name:      "valid htpasswd with SHA format",
+			htpasswd:  "user1:{SHA}hashed_user1_password\nuser2:{SHA}hashed_user2_password",
+			wantError: false,
+		},
+		{
+			name:      "valid htpasswd with SHA format and empty lines",
+			htpasswd:  "user1:{SHA}hashed_user1_password\n\nuser2:{SHA}hashed_user2_password\n",
+			wantError: false,
+		},
+		{
+			name:      "invalid htpasswd with missing SHA prefix",
+			htpasswd:  "user1:hashed_user1_password",
+			wantError: true,
+		},
+		{
+			name:      "invalid htpasswd with MD5 format",
+			htpasswd:  "user1:$apr1$hashed_user1_password",
+			wantError: true,
+		},
+		{
+			name:      "invalid htpasswd with bcrypt format",
+			htpasswd:  "user1:$2y$hashed_user1_password",
+			wantError: true,
+		},
+		{
+			name:      "invalid htpasswd with missing colon",
+			htpasswd:  "user1{SHA}hashed_user1_password",
+			wantError: true,
+		},
+		{
+			name:      "mixed valid and invalid formats",
+			htpasswd:  "user1:{SHA}hashed_user1_password\nuser2:$apr1$hashed_user2_password",
+			wantError: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := validateHtpasswdFormat([]byte(tt.htpasswd))
+			if (err != nil) != tt.wantError {
+				t.Errorf("validateHtpasswdFormat() error = %v, wantErr %v", err, tt.wantError)
+				return
+			}
+		})
+	}
+}

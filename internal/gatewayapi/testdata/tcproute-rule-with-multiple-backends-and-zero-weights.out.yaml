@@ -52,6 +52,9 @@ infraIR:
         labels:
           gateway.envoyproxy.io/owning-gateway-name: gateway-1
           gateway.envoyproxy.io/owning-gateway-namespace: envoy-gateway
+        ownerReference:
+          kind: GatewayClass
+          name: envoy-gateway-class
       name: envoy-gateway/gateway-1
       namespace: envoy-gateway-system
 tcpRoutes:
@@ -101,6 +104,21 @@ xdsIR:
     accessLog:
       json:
       - path: /dev/stdout
+    globalResources:
+      proxyServiceCluster:
+        name: envoy-gateway/gateway-1
+        settings:
+        - addressType: IP
+          endpoints:
+          - host: 7.6.5.4
+            port: 8080
+            zone: zone1
+          metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-1
+          protocol: TCP
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4
@@ -108,16 +126,25 @@ xdsIR:
       port: 19003
     tcp:
     - address: 0.0.0.0
+      externalPort: 90
       name: envoy-gateway/gateway-1/tcp
       port: 10090
       routes:
       - destination:
+          metadata:
+            kind: TCPRoute
+            name: tcproute-1
+            namespace: default
           name: tcproute/default/tcproute-1/rule/-1
           settings:
           - addressType: IP
             endpoints:
             - host: 7.7.7.7
               port: 8080
+            metadata:
+              name: service-1
+              namespace: default
+              sectionName: "8080"
             name: tcproute/default/tcproute-1/rule/-1/backend/0
             protocol: TCP
             weight: 1
@@ -125,6 +152,10 @@ xdsIR:
             endpoints:
             - host: 7.7.7.7
               port: 8080
+            metadata:
+              name: service-2
+              namespace: default
+              sectionName: "8080"
             name: tcproute/default/tcproute-1/rule/-1/backend/1
             protocol: TCP
             weight: 2
@@ -132,6 +163,10 @@ xdsIR:
             endpoints:
             - host: 7.7.7.7
               port: 8080
+            metadata:
+              name: service-3
+              namespace: default
+              sectionName: "8080"
             name: tcproute/default/tcproute-1/rule/-1/backend/2
             protocol: TCP
             weight: 3

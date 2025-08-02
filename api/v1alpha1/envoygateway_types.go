@@ -93,6 +93,31 @@ type EnvoyGatewaySpec struct {
 	//
 	// +optional
 	ExtensionAPIs *ExtensionAPISettings `json:"extensionApis,omitempty"`
+
+	// RuntimeFlags defines the runtime flags for Envoy Gateway.
+	// Unlike ExtensionAPIs, these flags are temporary and will be removed in future releases once the related features are stable.
+	RuntimeFlags *RuntimeFlags `json:"runtimeFlags,omitempty"`
+}
+
+// RuntimeFlag defines a runtime flag used to guard breaking changes or risky experimental features in new Envoy Gateway releases.
+// A runtime flag may be enabled or disabled by default and can be toggled through the EnvoyGateway resource.
+// +enum
+// +kubebuilder:validation:Enum=XDSNameSchemeV2
+type RuntimeFlag string
+
+const (
+	// XDSNameSchemeV2 indicates that the xds name scheme v2 is used.
+	// * The listener name will be generated using the protocol and port of the listener.
+	XDSNameSchemeV2 RuntimeFlag = "XDSNameSchemeV2"
+)
+
+// RuntimeFlags provide a mechanism to guard breaking changes or risky experimental features in new Envoy Gateway releases.
+// Each flag may be enabled or disabled by default and can be toggled through the EnvoyGateway resource.
+// The names of these flags will be included in the release notes alongside an explanation of the change.
+// Please note that these flags are temporary and will be removed in future releases once the related features are stable.
+type RuntimeFlags struct {
+	Enabled  []RuntimeFlag `json:"enabled,omitempty"`
+	Disabled []RuntimeFlag `json:"disabled,omitempty"`
 }
 
 type KubernetesClient struct {
@@ -254,6 +279,16 @@ type EnvoyGatewayKubernetesProvider struct {
 	// TopologyInjector defines the configuration for topology injector MutatatingWebhookConfiguration
 	// +optional
 	TopologyInjector *EnvoyGatewayTopologyInjector `json:"proxyTopologyInjector,omitempty"`
+
+	// CacheSyncPeriod determines the minimum frequency at which watched resources are synced.
+	// Note that a sync in the provider layer will not lead to a full reconciliation (including translation),
+	// unless there are actual changes in the provider resources.
+	// This option can be used to protect against missed events or issues in Envoy Gateway where resources
+	// are not requeued when they should be, at the cost of increased resource consumption.
+	// Learn more about the implications of this option: https://pkg.go.dev/sigs.k8s.io/controller-runtime/pkg/cache#Options
+	// Default: 10 hours
+	// +optional
+	CacheSyncPeriod *gwapiv1.Duration `json:"cacheSyncPeriod,omitempty"`
 }
 
 const (
@@ -290,10 +325,10 @@ type KubernetesWatchMode struct {
 
 const (
 	// KubernetesDeployModeTypeControllerNamespace indicates that the controller namespace is used for the infra proxy deployments.
-	KubernetesDeployModeTypeControllerNamespace = "ControllerNamespace"
+	KubernetesDeployModeTypeControllerNamespace KubernetesDeployModeType = "ControllerNamespace"
 
 	// KubernetesDeployModeTypeGatewayNamespace indicates that the gateway namespace is used for the infra proxy deployments.
-	KubernetesDeployModeTypeGatewayNamespace = "GatewayNamespace"
+	KubernetesDeployModeTypeGatewayNamespace KubernetesDeployModeType = "GatewayNamespace"
 )
 
 // KubernetesDeployModeType defines the type of KubernetesDeployMode
@@ -495,6 +530,7 @@ type RedisTLSSettings struct {
 // RateLimitRedisSettings defines the configuration for connecting to redis database.
 type RateLimitRedisSettings struct {
 	// URL of the Redis Database.
+	// This can reference a single Redis host or a comma delimited list for Sentinel and Cluster deployments of Redis.
 	URL string `json:"url"`
 
 	// TLS defines TLS configuration for connecting to redis database.
@@ -517,6 +553,14 @@ type ExtensionManager struct {
 	//
 	// +optional
 	PolicyResources []GroupVersionKind `json:"policyResources,omitempty"`
+
+	// BackendResources defines the set of K8s resources the extension will handle as
+	// custom backendRef resources. These resources can be referenced in HTTPRoute
+	// backendRefs to enable support for custom backend types (e.g., S3, Lambda, etc.)
+	// that are not natively supported by Envoy Gateway.
+	//
+	// +optional
+	BackendResources []GroupVersionKind `json:"backendResources,omitempty"`
 
 	// Hooks defines the set of hooks the extension supports
 	//
@@ -563,6 +607,61 @@ type ExtensionHooks struct {
 type XDSTranslatorHooks struct {
 	Pre  []XDSTranslatorHook `json:"pre,omitempty"`
 	Post []XDSTranslatorHook `json:"post,omitempty"`
+
+	// Translation defines the configuration for the translation hook.
+	Translation *TranslationConfig `json:"translation,omitempty"`
+}
+
+// TranslationConfig defines the configuration for the translation hook.
+type TranslationConfig struct {
+	// Listener defines the configuration for the listener translation hook.
+	//
+	// +optional
+	Listener *ListenerTranslationConfig `json:"listener,omitempty"`
+	// Route defines the configuration for the route translation hook.
+	//
+	// +optional
+	Route *RouteTranslationConfig `json:"route,omitempty"`
+	// Cluster defines the configuration for the cluster translation hook.
+	//
+	// +optional
+	Cluster *ClusterTranslationConfig `json:"cluster,omitempty"`
+	// Secret defines the configuration for the secret translation hook.
+	//
+	// +optional
+	Secret *SecretTranslationConfig `json:"secret,omitempty"`
+}
+
+type ListenerTranslationConfig struct {
+	// IncludeAll defines whether all listeners should be included in the translation hook.
+	// Default is false.
+	//
+	// +optional
+	IncludeAll *bool `json:"includeAll,omitempty"`
+}
+
+type RouteTranslationConfig struct {
+	// IncludeAll defines whether all routes should be included in the translation hook.
+	// Default is false.
+	//
+	// +optional
+	IncludeAll *bool `json:"includeAll,omitempty"`
+}
+
+type ClusterTranslationConfig struct {
+	// IncludeAll defines whether all clusters should be included in the translation hook.
+	// Default is true for backward compatibility.
+	//
+	// +optional
+	IncludeAll *bool `json:"includeAll,omitempty"`
+}
+
+type SecretTranslationConfig struct {
+	// IncludeAll defines whether all secrets should be included in the translation hook.
+	// Default is true for backward compatibility.
+	//
+	// +optional
+	IncludeAll *bool `json:"includeAll,omitempty"`
 }
 
 // ExtensionService defines the configuration for connecting to a registered extension service.

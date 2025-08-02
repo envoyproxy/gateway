@@ -21,6 +21,7 @@ import (
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/yaml"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
@@ -45,6 +46,7 @@ type testFileConfig struct {
 	requireEnvoyPatchPolicies bool
 	dnsDomain                 string
 	errMsg                    string
+	runtimeFlags              *egv1a1.RuntimeFlags
 }
 
 func TestTranslateXds(t *testing.T) {
@@ -133,6 +135,11 @@ func TestTranslateXds(t *testing.T) {
 		"tracing-unknown-provider-type": {
 			errMsg: "unknown tracing provider type: AwesomeTelemetry",
 		},
+		"xds-name-scheme-v2": {
+			runtimeFlags: &egv1a1.RuntimeFlags{
+				Enabled: []egv1a1.RuntimeFlag{egv1a1.XDSNameSchemeV2},
+			},
+		},
 	}
 
 	inputFiles, err := filepath.Glob(filepath.Join("testdata", "in", "xds-ir", "*.yaml"))
@@ -157,10 +164,12 @@ func TestTranslateXds(t *testing.T) {
 
 			x := requireXdsIRFromInputTestData(t, inputFile)
 			tr := &Translator{
+				ControllerNamespace: "envoy-gateway-system",
 				GlobalRateLimit: &GlobalRateLimitSettings{
 					ServiceURL: ratelimit.GetServiceURL("envoy-gateway-system", dnsDomain),
 				},
-				FilterOrder: x.FilterOrder,
+				FilterOrder:  x.FilterOrder,
+				RuntimeFlags: cfg.runtimeFlags,
 			}
 			tCtx, err := tr.Translate(x)
 			if !strings.HasSuffix(inputFileName, "partial-invalid") && len(cfg.errMsg) == 0 {
@@ -241,11 +250,16 @@ func TestTranslateRateLimitConfig(t *testing.T) {
 // when configured to failOpen
 func TestTranslateXdsWithExtensionErrorsWhenFailOpen(t *testing.T) {
 	testConfigs := map[string]testFileConfig{
-		"http-route-extension-route-error":       {},
-		"http-route-extension-virtualhost-error": {},
-		"http-route-extension-listener-error":    {},
-		"http-route-extension-translate-error":   {},
-		"multiple-listeners-same-port-error":     {},
+		"http-route-extension-route-error":                 {},
+		"http-route-extension-virtualhost-error":           {},
+		"http-route-extension-listener-error":              {},
+		"http-route-extension-translate-error":             {},
+		"multiple-listeners-same-port-error":               {},
+		"http-route-custom-backend":                        {},
+		"http-route-custom-backends-multiple":              {},
+		"http-route-custom-backends-partial":               {},
+		"http-route-custom-backend-error":                  {},
+		"http-route-custom-backend-multiple-backend-error": {},
 	}
 
 	inputFiles, err := filepath.Glob(filepath.Join("testdata", "in", "extension-xds-ir", "*.yaml"))
@@ -276,6 +290,13 @@ func TestTranslateXdsWithExtensionErrorsWhenFailOpen(t *testing.T) {
 						Kind:    "examplefilter",
 					},
 				},
+				BackendResources: []egv1a1.GroupVersionKind{
+					{
+						Group:   "inference.networking.x-k8s.io",
+						Version: "v1alpha2",
+						Kind:    "InferencePool",
+					},
+				},
 				PolicyResources: []egv1a1.GroupVersionKind{
 					{
 						Group:   "bar.example.io",
@@ -287,14 +308,30 @@ func TestTranslateXdsWithExtensionErrorsWhenFailOpen(t *testing.T) {
 						Version: "v1alpha1",
 						Kind:    "Bar",
 					},
+					{
+						Group:   "security.example.io",
+						Version: "v1alpha1",
+						Kind:    "ExampleExtPolicy",
+					},
 				},
 				Hooks: &egv1a1.ExtensionHooks{
 					XDSTranslator: &egv1a1.XDSTranslatorHooks{
 						Post: []egv1a1.XDSTranslatorHook{
+							egv1a1.XDSCluster,
 							egv1a1.XDSRoute,
 							egv1a1.XDSVirtualHost,
 							egv1a1.XDSHTTPListener,
+							egv1a1.XDSCluster,
 							egv1a1.XDSTranslation,
+						},
+						// Enable listeners and routes for PostTranslateModifyHook for these tests
+						Translation: &egv1a1.TranslationConfig{
+							Listener: &egv1a1.ListenerTranslationConfig{
+								IncludeAll: ptr.To(true),
+							},
+							Route: &egv1a1.RouteTranslationConfig{
+								IncludeAll: ptr.To(true),
+							},
 						},
 					},
 				},
@@ -356,6 +393,15 @@ func TestTranslateXdsWithExtensionErrorsWhenFailClosed(t *testing.T) {
 		"multiple-listeners-same-port-error": {
 			errMsg: "rpc error: code = Unknown desc = simulate error when there is no default filter chain in the original resources",
 		},
+		"extensionpolicy-extension-server-error": {
+			errMsg: "rpc error: code = Unknown desc = invalid extension policy : ext-server-policy-invalid-test",
+		},
+		"http-route-custom-backend-error": {
+			errMsg: "rpc error: code = Unknown desc = inference pool target port number is 0",
+		},
+		"http-route-custom-backend-multiple-backend-error": {
+			errMsg: "rpc error: code = Unknown desc = inference pool only support one per rule",
+		},
 	}
 
 	inputFiles, err := filepath.Glob(filepath.Join("testdata", "in", "extension-xds-ir", "*-error.yaml"))
@@ -386,6 +432,13 @@ func TestTranslateXdsWithExtensionErrorsWhenFailClosed(t *testing.T) {
 						Kind:    "examplefilter",
 					},
 				},
+				BackendResources: []egv1a1.GroupVersionKind{
+					{
+						Group:   "inference.networking.x-k8s.io",
+						Version: "v1alpha2",
+						Kind:    "InferencePool",
+					},
+				},
 				PolicyResources: []egv1a1.GroupVersionKind{
 					{
 						Group:   "bar.example.io",
@@ -397,14 +450,29 @@ func TestTranslateXdsWithExtensionErrorsWhenFailClosed(t *testing.T) {
 						Version: "v1alpha1",
 						Kind:    "Bar",
 					},
+					{
+						Group:   "security.example.io",
+						Version: "v1alpha1",
+						Kind:    "ExampleExtPolicy",
+					},
 				},
 				Hooks: &egv1a1.ExtensionHooks{
 					XDSTranslator: &egv1a1.XDSTranslatorHooks{
 						Post: []egv1a1.XDSTranslatorHook{
+							egv1a1.XDSCluster,
 							egv1a1.XDSRoute,
 							egv1a1.XDSVirtualHost,
 							egv1a1.XDSHTTPListener,
 							egv1a1.XDSTranslation,
+						},
+						// Enable listeners and routes for PostTranslateModifyHook for these tests
+						Translation: &egv1a1.TranslationConfig{
+							Listener: &egv1a1.ListenerTranslationConfig{
+								IncludeAll: ptr.To(true),
+							},
+							Route: &egv1a1.RouteTranslationConfig{
+								IncludeAll: ptr.To(true),
+							},
 						},
 					},
 				},

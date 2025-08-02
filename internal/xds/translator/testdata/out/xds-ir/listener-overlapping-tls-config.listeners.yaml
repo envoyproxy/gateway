@@ -41,7 +41,7 @@
           alpnProtocols:
           - http/1.1
           tlsCertificateSdsSecretConfigs:
-          - name: envoy-gateway/tls-secret-example-com
+          - name: envoy-gateway/tls-secret-foo-example-com
             sdsConfig:
               ads: {}
               resourceApiVersion: V3
@@ -95,5 +95,62 @@
   - name: envoy.filters.listener.tls_inspector
     typedConfig:
       '@type': type.googleapis.com/envoy.extensions.filters.listener.tls_inspector.v3.TlsInspector
+  maxConnectionsToAcceptPerSocketEvent: 1
   name: envoy-gateway/gateway-1/https-1
+  perConnectionBufferLimitBytes: 32768
+- address:
+    socketAddress:
+      address: 0.0.0.0
+      portValue: 8443
+  filterChains:
+  - filterChainMatch:
+      serverNames:
+      - bar.example.com
+    filters:
+    - name: envoy.filters.network.http_connection_manager
+      typedConfig:
+        '@type': type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
+        commonHttpProtocolOptions:
+          headersWithUnderscoresAction: REJECT_REQUEST
+        http2ProtocolOptions:
+          initialConnectionWindowSize: 1048576
+          initialStreamWindowSize: 65536
+          maxConcurrentStreams: 100
+        httpFilters:
+        - name: envoy.filters.http.router
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+            suppressEnvoyHeaders: true
+        mergeSlashes: true
+        normalizePath: true
+        pathWithEscapedSlashesAction: UNESCAPE_AND_REDIRECT
+        rds:
+          configSource:
+            ads: {}
+            resourceApiVersion: V3
+          routeConfigName: envoy-gateway/gateway-1/https-3
+        serverHeaderTransformation: PASS_THROUGH
+        statPrefix: https-8443
+        useRemoteAddress: true
+    name: envoy-gateway/gateway-1/https-3
+    transportSocket:
+      name: envoy.transport_sockets.tls
+      typedConfig:
+        '@type': type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.DownstreamTlsContext
+        commonTlsContext:
+          alpnProtocols:
+          - h2
+          tlsCertificateSdsSecretConfigs:
+          - name: envoy-gateway/tls-secret-bar-example-com
+            sdsConfig:
+              ads: {}
+              resourceApiVersion: V3
+        disableStatefulSessionResumption: true
+        disableStatelessSessionResumption: true
+  listenerFilters:
+  - name: envoy.filters.listener.tls_inspector
+    typedConfig:
+      '@type': type.googleapis.com/envoy.extensions.filters.listener.tls_inspector.v3.TlsInspector
+  maxConnectionsToAcceptPerSocketEvent: 1
+  name: envoy-gateway/gateway-1/https-3
   perConnectionBufferLimitBytes: 32768

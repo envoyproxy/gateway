@@ -8,6 +8,8 @@ package common
 import (
 	"fmt"
 
+	"k8s.io/utils/ptr"
+
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/xds/bootstrap"
@@ -29,10 +31,21 @@ func BuildProxyArgs(
 	serviceNode string,
 	gatewayNamespaceMode bool,
 ) ([]string, error) {
-	// If IPFamily is not set, try to determine it from the infrastructure.
-	if bootstrapConfigOptions != nil && bootstrapConfigOptions.IPFamily == nil {
-		bootstrapConfigOptions.IPFamily = getIPFamily(infra)
+	serviceCluster := infra.Name
+	if gatewayNamespaceMode {
+		serviceCluster = fmt.Sprintf("%s/%s", infra.Namespace, infra.Name)
 	}
+
+	if bootstrapConfigOptions != nil {
+		// Configure local Envoy ServiceCluster
+		bootstrapConfigOptions.ServiceClusterName = ptr.To(serviceCluster)
+
+		// If IPFamily is not set, try to determine it from the infrastructure.
+		if bootstrapConfigOptions.IPFamily == nil {
+			bootstrapConfigOptions.IPFamily = getIPFamily(infra)
+		}
+	}
+
 	bootstrapConfigOptions.GatewayNamespaceMode = gatewayNamespaceMode
 	bootstrapConfigurations, err := bootstrap.GetRenderedBootstrapConfig(bootstrapConfigOptions)
 	if err != nil {
@@ -51,7 +64,7 @@ func BuildProxyArgs(
 	logging := infra.Config.Spec.Logging
 
 	args := []string{
-		fmt.Sprintf("--service-cluster %s", infra.Name),
+		fmt.Sprintf("--service-cluster %s", serviceCluster),
 		fmt.Sprintf("--service-node %s", serviceNode),
 		fmt.Sprintf("--config-yaml %s", bootstrapConfigurations),
 		fmt.Sprintf("--log-level %s", logging.DefaultEnvoyProxyLoggingLevel()),

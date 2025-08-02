@@ -18,6 +18,13 @@ type Retry struct {
 	// +kubebuilder:default=2
 	NumRetries *int32 `json:"numRetries,omitempty"`
 
+	// NumAttemptsPerPriority defines the number of requests (initial attempt + retries)
+	// that should be sent to the same priority before switching to a different one.
+	// If not specified or set to 0, all requests are sent to the highest priority that is healthy.
+	//
+	// +optional
+	NumAttemptsPerPriority *int32 `json:"numAttemptsPerPriority,omitempty"`
+
 	// RetryOn specifies the retry trigger condition.
 	//
 	// If not specified, the default is to retry on connect-failure,refused-stream,unavailable,cancelled,retriable-status-codes(503).
@@ -44,7 +51,7 @@ type RetryOn struct {
 }
 
 // TriggerEnum specifies the conditions that trigger retries.
-// +kubebuilder:validation:Enum={"5xx","gateway-error","reset","connect-failure","retriable-4xx","refused-stream","retriable-status-codes","cancelled","deadline-exceeded","internal","resource-exhausted","unavailable"}
+// +kubebuilder:validation:Enum={"5xx","gateway-error","reset","reset-before-request","connect-failure","retriable-4xx","refused-stream","retriable-status-codes","cancelled","deadline-exceeded","internal","resource-exhausted","unavailable"}
 type TriggerEnum string
 
 const (
@@ -58,6 +65,8 @@ const (
 	GatewayError TriggerEnum = "gateway-error"
 	// The upstream server does not respond at all (disconnect/reset/read timeout.)
 	Reset TriggerEnum = "reset"
+	// Like reset, but only retry if the request headers have not been sent to the upstream server.
+	ResetBeforeRequest TriggerEnum = "reset-before-request"
 	// Connection failure to the upstream server (connect timeout, etc.). (Included in *5xx*)
 	ConnectFailure TriggerEnum = "connect-failure"
 	// The upstream server responds with a retriable 4xx response code.

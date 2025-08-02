@@ -56,7 +56,7 @@ type httpFilter interface {
 	patchHCM(mgr *hcmv3.HttpConnectionManager, irListener *ir.HTTPListener) error
 
 	// patchRoute patches the provide Route with a filter's Route level configuration.
-	patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute) error
+	patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute, httpListener *ir.HTTPListener) error
 
 	// patchResources adds all the other needed resources referenced by this
 	// filter to the resource version table.
@@ -130,14 +130,18 @@ func newOrderedHTTPFilter(filter *hcmv3.HttpFilter) *OrderedHTTPFilter {
 		order = 302
 	case isFilterType(filter, egv1a1.EnvoyFilterRateLimit):
 		order = 303
-	case isFilterType(filter, egv1a1.EnvoyFilterCustomResponse):
+	case isFilterType(filter, egv1a1.EnvoyFilterGRPCWeb):
 		order = 304
-	case isFilterType(filter, egv1a1.EnvoyFilterCredentialInjector):
+	case isFilterType(filter, egv1a1.EnvoyFilterGRPCStats):
 		order = 305
-	case isFilterType(filter, egv1a1.EnvoyFilterCompressor):
+	case isFilterType(filter, egv1a1.EnvoyFilterCustomResponse):
 		order = 306
-	case isFilterType(filter, egv1a1.EnvoyFilterRouter):
+	case isFilterType(filter, egv1a1.EnvoyFilterCredentialInjector):
 		order = 307
+	case isFilterType(filter, egv1a1.EnvoyFilterCompressor):
+		order = 308
+	case isFilterType(filter, egv1a1.EnvoyFilterRouter):
+		order = 309
 	}
 
 	return &OrderedHTTPFilter{
@@ -153,6 +157,14 @@ func (o OrderedHTTPFilters) Len() int {
 }
 
 func (o OrderedHTTPFilters) Less(i, j int) bool {
+	// Sort on name if the order is equal
+	// to keep the order stable and avoiding
+	// listener drains
+	if o[i].order == o[j].order {
+		return o[i].filter.Name < o[j].filter.Name
+	}
+
+	// Sort on order
 	return o[i].order < o[j].order
 }
 
@@ -171,6 +183,7 @@ func sortHTTPFilters(filters []*hcmv3.HttpFilter, filterOrder []egv1a1.FilterPos
 	for i := 0; i < len(filters); i++ {
 		orderedFilters[i] = newOrderedHTTPFilter(filters[i])
 	}
+
 	sort.Sort(orderedFilters)
 
 	// Use a linked list to sort the filters in the custom order.
@@ -296,12 +309,9 @@ func (t *Translator) patchHCMWithFilters(
 
 // patchRouteWithPerRouteConfig appends per-route filter configuration to the
 // provided route.
-func patchRouteWithPerRouteConfig(
-	route *routev3.Route,
-	irRoute *ir.HTTPRoute,
-) error {
+func patchRouteWithPerRouteConfig(route *routev3.Route, irRoute *ir.HTTPRoute, httpListener *ir.HTTPListener) error {
 	for _, filter := range httpFilters {
-		if err := filter.patchRoute(route, irRoute); err != nil {
+		if err := filter.patchRoute(route, irRoute, httpListener); err != nil {
 			return err
 		}
 	}

@@ -33,15 +33,17 @@ import (
 	"sigs.k8s.io/yaml"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 	"github.com/envoyproxy/gateway/internal/ir"
+	"github.com/envoyproxy/gateway/internal/utils"
 	"github.com/envoyproxy/gateway/internal/utils/field"
 	"github.com/envoyproxy/gateway/internal/utils/file"
 	"github.com/envoyproxy/gateway/internal/utils/test"
 	"github.com/envoyproxy/gateway/internal/wasm"
 )
 
-func mustUnmarshal(t *testing.T, val []byte, out interface{}) {
+func mustUnmarshal(t *testing.T, val []byte, out any) {
 	require.NoError(t, yaml.UnmarshalStrict(val, out, yaml.DisallowUnknownFields))
 }
 
@@ -68,6 +70,10 @@ func TestTranslate(t *testing.T) {
 
 	inputFiles, err := filepath.Glob(filepath.Join("testdata", "*.in.yaml"))
 	require.NoError(t, err)
+	base, err := os.ReadFile("testdata/base/base.yaml")
+	require.NoError(t, err)
+	baseResources := &resource.Resources{}
+	mustUnmarshal(t, base, baseResources)
 
 	for _, inputFile := range inputFiles {
 		t.Run(testName(inputFile), func(t *testing.T) {
@@ -76,6 +82,9 @@ func TestTranslate(t *testing.T) {
 
 			resources := &resource.Resources{}
 			mustUnmarshal(t, input, resources)
+			// Merge base resources with test resources
+			// Only secrets are in the base resources, we may have more in the future
+			resources.Secrets = append(resources.Secrets, baseResources.Secrets...)
 			envoyPatchPolicyEnabled := true
 			backendEnabled := true
 			gatewayNamespaceMode := false
@@ -308,6 +317,76 @@ func TestTranslate(t *testing.T) {
 				},
 			)
 
+			svc := corev1.Service{
+				ObjectMeta: metav1.ObjectMeta{
+					// Matches proxy.ExpectedResourceHashedName()
+					Name:      fmt.Sprintf("%s-%s", config.EnvoyPrefix, utils.GetHashedName(string(translator.GatewayClassName), 48)),
+					Namespace: translator.ControllerNamespace,
+					Labels:    make(map[string]string),
+				},
+				Spec: corev1.ServiceSpec{
+					ClusterIP: "6.7.8.9",
+					Ports: []corev1.ServicePort{
+						{
+							Name:       "http",
+							Port:       8080,
+							TargetPort: intstr.IntOrString{IntVal: 8080},
+							Protocol:   corev1.ProtocolTCP,
+						},
+					},
+				},
+			}
+
+			endPtSlice := discoveryv1.EndpointSlice{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      svc.Name,
+					Namespace: svc.Namespace,
+					Labels: map[string]string{
+						discoveryv1.LabelServiceName: svc.Name,
+					},
+				},
+				AddressType: discoveryv1.AddressTypeIPv4,
+				Ports: []discoveryv1.EndpointPort{
+					{
+						Name:     ptr.To("http"),
+						Port:     ptr.To[int32](8080),
+						Protocol: ptr.To(corev1.ProtocolTCP),
+					},
+				},
+				Endpoints: []discoveryv1.Endpoint{
+					{
+						Addresses: []string{
+							"7.6.5.4",
+						},
+						Conditions: discoveryv1.EndpointConditions{
+							Ready: ptr.To(true),
+						},
+						Zone: ptr.To("zone1"),
+					},
+				},
+			}
+
+			if translator.MergeGateways {
+				svc.Labels[OwningGatewayClassLabel] = string(translator.GatewayClassName)
+				resources.Services = append(resources.Services, &svc)
+				resources.EndpointSlices = append(resources.EndpointSlices, &endPtSlice)
+			} else {
+				for _, g := range resources.Gateways {
+					gSvc := svc
+					// Matches proxy.ExpectedResourceHashedName()
+					gSvc.Name = fmt.Sprintf("%s-%s", config.EnvoyPrefix, utils.GetHashedName(fmt.Sprintf("%s/%s", g.Namespace, g.Name), 48))
+					gSvc.Labels[OwningGatewayNameLabel] = g.Name
+					gSvc.Labels[OwningGatewayNamespaceLabel] = g.Namespace
+					gEndPtSlice := endPtSlice
+					gEndPtSlice.Name = gSvc.Name
+					gEndPtSlice.Labels[discoveryv1.LabelServiceName] = gSvc.Name
+					gEndPtSlice.Labels[OwningGatewayNameLabel] = g.Name
+					gEndPtSlice.Labels[OwningGatewayNamespaceLabel] = g.Namespace
+					resources.Services = append(resources.Services, &gSvc)
+					resources.EndpointSlices = append(resources.EndpointSlices, &gEndPtSlice)
+				}
+			}
+
 			resources.Namespaces = append(resources.Namespaces, &corev1.Namespace{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "envoy-gateway",
@@ -326,6 +405,7 @@ func TestTranslate(t *testing.T) {
 
 			if test.OverrideTestData() {
 				overrideOutputConfig(t, string(out), outputFilePath)
+				return
 			}
 
 			output, err := os.ReadFile(outputFilePath)
@@ -365,6 +445,8 @@ func TestTranslateWithExtensionKinds(t *testing.T) {
 				ExtensionGroupKinds: []schema.GroupKind{
 					{Group: "foo.example.io", Kind: "Foo"},
 					{Group: "bar.example.io", Kind: "Bar"},
+					{Group: "storage.example.io", Kind: "S3Backend"},
+					{Group: "compute.example.io", Kind: "LambdaBackend"},
 				},
 				MergeGateways: IsMergeGatewaysEnabled(resources),
 			}
@@ -503,6 +585,82 @@ func TestTranslateWithExtensionKinds(t *testing.T) {
 					},
 				},
 			)
+
+			svc := corev1.Service{
+				ObjectMeta: metav1.ObjectMeta{
+					// Matches proxy.ExpectedResourceHashedName()
+					Name:      fmt.Sprintf("%s-%s", config.EnvoyPrefix, utils.GetHashedName(string(translator.GatewayClassName), 48)),
+					Namespace: translator.ControllerNamespace,
+					Labels:    make(map[string]string),
+				},
+				Spec: corev1.ServiceSpec{
+					ClusterIP: "6.7.8.9",
+					Ports: []corev1.ServicePort{
+						{
+							Name:       "http",
+							Port:       8080,
+							TargetPort: intstr.IntOrString{IntVal: 8080},
+							Protocol:   corev1.ProtocolTCP,
+						},
+					},
+				},
+			}
+
+			endPtSlice := discoveryv1.EndpointSlice{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      svc.Name,
+					Namespace: svc.Namespace,
+					Labels: map[string]string{
+						discoveryv1.LabelServiceName: svc.Name,
+					},
+				},
+				AddressType: discoveryv1.AddressTypeIPv4,
+				Ports: []discoveryv1.EndpointPort{
+					{
+						Name:     ptr.To("http"),
+						Port:     ptr.To[int32](8080),
+						Protocol: ptr.To(corev1.ProtocolTCP),
+					},
+				},
+				Endpoints: []discoveryv1.Endpoint{
+					{
+						Addresses: []string{
+							"7.6.5.4",
+						},
+						Conditions: discoveryv1.EndpointConditions{
+							Ready: ptr.To(true),
+						},
+						Zone: ptr.To("zone1"),
+					},
+				},
+			}
+
+			if translator.MergeGateways {
+				svc.Labels[OwningGatewayClassLabel] = string(translator.GatewayClassName)
+				resources.Services = append(resources.Services, &svc)
+				resources.EndpointSlices = append(resources.EndpointSlices, &endPtSlice)
+			} else {
+				for _, g := range resources.Gateways {
+					if g == nil {
+						panic("nil Gateway")
+					}
+					gSvc := svc
+					gSvc.
+						Labels[OwningGatewayNameLabel] = g.
+						Name
+					gSvc.Labels[OwningGatewayNamespaceLabel] = g.
+						Namespace
+					// Matches proxy.ExpectedResourceHashedName()
+					gSvc.Name = fmt.Sprintf("%s-%s", config.EnvoyPrefix, utils.GetHashedName(fmt.Sprintf("%s/%s", g.Namespace, g.Name), 48))
+					gEndPtSlice := endPtSlice
+					gEndPtSlice.Name = gSvc.Name
+					gEndPtSlice.Labels[discoveryv1.LabelServiceName] = gSvc.Name
+					gEndPtSlice.Labels[OwningGatewayNameLabel] = g.Name
+					gEndPtSlice.Labels[OwningGatewayNamespaceLabel] = g.Namespace
+					resources.Services = append(resources.Services, &gSvc)
+					resources.EndpointSlices = append(resources.EndpointSlices, &gEndPtSlice)
+				}
+			}
 
 			resources.Namespaces = append(resources.Namespaces, &corev1.Namespace{
 				ObjectMeta: metav1.ObjectMeta{
@@ -873,7 +1031,7 @@ func (m *mockWasmCache) Get(downloadURL string, options wasm.GetOptions) (url, c
 	if options.Checksum != "" && checksum != options.Checksum {
 		return "", "", fmt.Errorf("module downloaded from %v has checksum %v, which does not match: %v", downloadURL, checksum, options.Checksum)
 	}
-	return fmt.Sprintf("https://envoy-gateway:18002/%s.wasm", hashedName), checksum, nil
+	return fmt.Sprintf("https://envoy-gateway.envoy-gateway-system.svc.cluster.local:18002/%s.wasm", hashedName), checksum, nil
 }
 
 func (m *mockWasmCache) Cleanup() {}
@@ -884,25 +1042,29 @@ func (m *mockWasmCache) Cleanup() {}
 // This allows us to use cmp.Diff to compare the types with field-level cmpopts.
 func xdsWithoutEqual(a *ir.Xds) any {
 	ret := struct {
-		ReadyListener      *ir.ReadyListener
-		AccessLog          *ir.AccessLog
-		Tracing            *ir.Tracing
-		Metrics            *ir.Metrics
-		HTTP               []*ir.HTTPListener
-		TCP                []*ir.TCPListener
-		UDP                []*ir.UDPListener
-		EnvoyPatchPolicies []*ir.EnvoyPatchPolicy
-		FilterOrder        []egv1a1.FilterPosition
+		ReadyListener           *ir.ReadyListener
+		AccessLog               *ir.AccessLog
+		Tracing                 *ir.Tracing
+		Metrics                 *ir.Metrics
+		HTTP                    []*ir.HTTPListener
+		TCP                     []*ir.TCPListener
+		UDP                     []*ir.UDPListener
+		EnvoyPatchPolicies      []*ir.EnvoyPatchPolicy
+		FilterOrder             []egv1a1.FilterPosition
+		GlobalResources         *ir.GlobalResources
+		ExtensionServerPolicies []*ir.UnstructuredRef
 	}{
-		ReadyListener:      a.ReadyListener,
-		AccessLog:          a.AccessLog,
-		Tracing:            a.Tracing,
-		Metrics:            a.Metrics,
-		HTTP:               a.HTTP,
-		TCP:                a.TCP,
-		UDP:                a.UDP,
-		EnvoyPatchPolicies: a.EnvoyPatchPolicies,
-		FilterOrder:        a.FilterOrder,
+		ReadyListener:           a.ReadyListener,
+		AccessLog:               a.AccessLog,
+		Tracing:                 a.Tracing,
+		Metrics:                 a.Metrics,
+		HTTP:                    a.HTTP,
+		TCP:                     a.TCP,
+		UDP:                     a.UDP,
+		EnvoyPatchPolicies:      a.EnvoyPatchPolicies,
+		FilterOrder:             a.FilterOrder,
+		GlobalResources:         a.GlobalResources,
+		ExtensionServerPolicies: a.ExtensionServerPolicies,
 	}
 
 	// Ensure we didn't drop an exported field.

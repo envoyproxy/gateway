@@ -6,8 +6,7 @@
       maxPendingRequests: 1
       maxRequests: 1
       maxRetries: 2
-  commonLbConfig:
-    localityWeightedLbConfig: {}
+  commonLbConfig: {}
   connectTimeout: 10s
   dnsLookupFamily: V4_PREFERRED
   edsClusterConfig:
@@ -17,6 +16,14 @@
     serviceName: first-route-dest
   ignoreHealthOnHostRemoval: true
   lbPolicy: LEAST_REQUEST
+  loadBalancingPolicy:
+    policies:
+    - typedExtensionConfig:
+        name: envoy.load_balancing_policies.least_request
+        typedConfig:
+          '@type': type.googleapis.com/envoy.extensions.load_balancing_policies.least_request.v3.LeastRequest
+          localityLbConfig:
+            localityWeightedLbConfig: {}
   name: first-route-dest
   perConnectionBufferLimitBytes: 32768
   type: EDS

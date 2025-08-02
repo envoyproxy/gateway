@@ -21,6 +21,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/envoyproxy/gateway/internal/infrastructure/kubernetes/proxy"
 	"github.com/envoyproxy/gateway/internal/metrics"
 )
 
@@ -37,11 +38,6 @@ func (i *Infra) createOrUpdateServiceAccount(ctx context.Context, r ResourceRend
 		}
 	)
 
-	if sa, err = r.ServiceAccount(); err != nil {
-		resourceApplyTotal.WithFailure(metrics.ReasonError, labels...).Increment()
-		return err
-	}
-
 	defer func() {
 		if err == nil {
 			resourceApplyDurationSeconds.With(labels...).Record(time.Since(startTime).Seconds())
@@ -49,7 +45,26 @@ func (i *Infra) createOrUpdateServiceAccount(ctx context.Context, r ResourceRend
 		} else {
 			resourceApplyTotal.WithFailure(metrics.ReasonError, labels...).Increment()
 		}
+
+		if sa != nil {
+			deleteErr := i.Client.DeleteAllExcept(ctx, &corev1.ServiceAccountList{}, client.ObjectKey{
+				Namespace: sa.Namespace,
+				Name:      sa.Name,
+			}, &client.ListOptions{
+				Namespace:     sa.Namespace,
+				LabelSelector: r.LabelSelector(),
+			})
+
+			if deleteErr != nil {
+				i.logger.Error(deleteErr, "failed to delete all except serviceaccount", "name", sa.Name)
+			}
+		}
 	}()
+
+	if sa, err = r.ServiceAccount(); err != nil {
+		resourceApplyTotal.WithFailure(metrics.ReasonError, labels...).Increment()
+		return err
+	}
 
 	return i.Client.ServerSideApply(ctx, sa)
 }
@@ -286,6 +301,29 @@ func (i *Infra) createOrUpdatePodDisruptionBudget(ctx context.Context, r Resourc
 		}
 	)
 
+	defer func() {
+		if err == nil {
+			resourceApplyDurationSeconds.With(labels...).Record(time.Since(startTime).Seconds())
+			resourceApplyTotal.WithSuccess(labels...).Increment()
+		} else {
+			resourceApplyTotal.WithFailure(metrics.ReasonError, labels...).Increment()
+		}
+
+		if pdb != nil {
+			deleteErr := i.Client.DeleteAllExcept(ctx, &policyv1.PodDisruptionBudgetList{}, client.ObjectKey{
+				Namespace: pdb.Namespace,
+				Name:      pdb.Name,
+			}, &client.ListOptions{
+				Namespace:     pdb.Namespace,
+				LabelSelector: r.LabelSelector(),
+			})
+			if deleteErr != nil {
+				i.logger.Error(deleteErr, "failed to delete all except PodDisruptionBudget",
+					"name", r.Name(), "namespace", r.Namespace())
+			}
+		}
+	}()
+
 	if pdb, err = r.PodDisruptionBudget(); err != nil {
 		resourceApplyTotal.WithFailure(metrics.ReasonError, labels...).Increment()
 		return err
@@ -296,15 +334,6 @@ func (i *Infra) createOrUpdatePodDisruptionBudget(ctx context.Context, r Resourc
 	if pdb == nil {
 		return i.deletePDB(ctx, r)
 	}
-
-	defer func() {
-		if err == nil {
-			resourceApplyDurationSeconds.With(labels...).Record(time.Since(startTime).Seconds())
-			resourceApplyTotal.WithSuccess(labels...).Increment()
-		} else {
-			resourceApplyTotal.WithFailure(metrics.ReasonError, labels...).Increment()
-		}
-	}()
 
 	return i.Client.ServerSideApply(ctx, pdb)
 }
@@ -323,8 +352,30 @@ func (i *Infra) createOrUpdateHPA(ctx context.Context, r ResourceRender) (err er
 		}
 	)
 
+	defer func() {
+		if err == nil {
+			resourceApplyDurationSeconds.With(labels...).Record(time.Since(startTime).Seconds())
+			resourceApplyTotal.WithSuccess(labels...).Increment()
+		} else {
+			resourceApplyTotal.WithFailure(metrics.ReasonError, labels...).Increment()
+		}
+
+		if hpa != nil {
+			deleteErr := i.Client.DeleteAllExcept(ctx, &autoscalingv2.HorizontalPodAutoscalerList{}, client.ObjectKey{
+				Namespace: hpa.Namespace,
+				Name:      hpa.Name,
+			}, &client.ListOptions{
+				Namespace:     hpa.Namespace,
+				LabelSelector: r.LabelSelector(),
+			})
+			if deleteErr != nil {
+				i.logger.Error(deleteErr, "failed to delete all except HorizontalPodAutoscaler",
+					"name", r.Name(), "namespace", r.Namespace())
+			}
+		}
+	}()
+
 	if hpa, err = r.HorizontalPodAutoscaler(); err != nil {
-		resourceApplyTotal.WithFailure(metrics.ReasonError, labels...).Increment()
 		return err
 	}
 
@@ -333,15 +384,6 @@ func (i *Infra) createOrUpdateHPA(ctx context.Context, r ResourceRender) (err er
 	if hpa == nil {
 		return i.deleteHPA(ctx, r)
 	}
-
-	defer func() {
-		if err == nil {
-			resourceApplyDurationSeconds.With(labels...).Record(time.Since(startTime).Seconds())
-			resourceApplyTotal.WithSuccess(labels...).Increment()
-		} else {
-			resourceApplyTotal.WithFailure(metrics.ReasonError, labels...).Increment()
-		}
-	}()
 
 	return i.Client.ServerSideApply(ctx, hpa)
 }
@@ -636,10 +678,10 @@ func (i *Infra) getEnvoyGatewayCA(ctx context.Context) string {
 	secret := &corev1.Secret{}
 	err := i.Client.Get(ctx, types.NamespacedName{
 		Name:      "envoy",
-		Namespace: "envoy-gateway-system",
+		Namespace: i.ControllerNamespace,
 	}, secret)
 	if err != nil {
 		return ""
 	}
-	return string(secret.Data["ca.crt"])
+	return string(secret.Data[proxy.XdsTLSCaFileName])
 }

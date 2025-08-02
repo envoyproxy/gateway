@@ -25,7 +25,7 @@ backendTLSPolicies:
         sectionName: http
       conditions:
       - lastTransitionTime: null
-        message: No ca found in configmap no-ca-cmap.
+        message: Configmap no-ca-cmap not found in namespace backends.
         reason: Invalid
         status: "False"
         type: Accepted
@@ -101,8 +101,8 @@ httpRoutes:
         status: "True"
         type: Accepted
       - lastTransitionTime: null
-        message: 'Failed to process route rule 0 backendRef 0: no ca found in configmap
-          no-ca-cmap.'
+        message: 'Failed to process route rule 0 backendRef 0: configmap no-ca-cmap
+          not found in namespace backends.'
         reason: InvalidBackendTLS
         status: "False"
         type: ResolvedRefs
@@ -126,6 +126,9 @@ infraIR:
         labels:
           gateway.envoyproxy.io/owning-gateway-name: gateway-btls
           gateway.envoyproxy.io/owning-gateway-namespace: envoy-gateway
+        ownerReference:
+          kind: GatewayClass
+          name: envoy-gateway-class
       name: envoy-gateway/gateway-btls
       namespace: envoy-gateway-system
 xdsIR:
@@ -133,8 +136,24 @@ xdsIR:
     accessLog:
       json:
       - path: /dev/stdout
+    globalResources:
+      proxyServiceCluster:
+        name: envoy-gateway/gateway-btls
+        settings:
+        - addressType: IP
+          endpoints:
+          - host: 7.6.5.4
+            port: 8080
+            zone: zone1
+          metadata:
+            name: envoy-envoy-gateway-gateway-btls-a945b5bb
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-btls
+          protocol: TCP
     http:
     - address: 0.0.0.0
+      externalPort: 80
       hostnames:
       - '*'
       isHTTP2: false

@@ -154,6 +154,9 @@ infraIR:
         labels:
           gateway.envoyproxy.io/owning-gateway-name: gateway-a
           gateway.envoyproxy.io/owning-gateway-namespace: envoy-gateway
+        ownerReference:
+          kind: GatewayClass
+          name: envoy-gateway-class
       name: envoy-gateway/gateway-a
       namespace: envoy-gateway-system
   envoy-gateway/gateway-b:
@@ -170,6 +173,9 @@ infraIR:
         labels:
           gateway.envoyproxy.io/owning-gateway-name: gateway-b
           gateway.envoyproxy.io/owning-gateway-namespace: envoy-gateway
+        ownerReference:
+          kind: GatewayClass
+          name: envoy-gateway-class
       name: envoy-gateway/gateway-b
       namespace: envoy-gateway-system
 xdsIR:
@@ -179,6 +185,7 @@ xdsIR:
       - path: /dev/stdout
     http:
     - address: 0.0.0.0
+      externalPort: 80
       hostnames:
       - '*.a.example.com'
       isHTTP2: false
@@ -219,8 +226,19 @@ xdsIR:
     accessLog:
       json:
       - path: /dev/stdout
+    globalResources:
+      proxyServiceCluster:
+        name: envoy-gateway/gateway-b
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-a-37c12ef1
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-b
+          protocol: TCP
     http:
     - address: 0.0.0.0
+      externalPort: 80
       hostnames:
       - '*.b.example.com'
       isHTTP2: false

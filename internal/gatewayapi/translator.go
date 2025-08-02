@@ -6,6 +6,8 @@
 package gatewayapi
 
 import (
+	"errors"
+	"fmt"
 	"sort"
 
 	"golang.org/x/exp/maps"
@@ -33,6 +35,8 @@ const (
 	// OwningGatewayNameLabel is the owner reference label used for managed infra.
 	// The value should be the name of the accepted Envoy Gateway.
 	OwningGatewayNameLabel = "gateway.envoyproxy.io/owning-gateway-name"
+
+	GatewayNameLabel = "gateway.networking.k8s.io/gateway-name"
 
 	// minEphemeralPort is the first port in the ephemeral port range.
 	minEphemeralPort = 1024
@@ -160,11 +164,22 @@ func newTranslateResult(gateways []*GatewayContext,
 }
 
 func (t *Translator) Translate(resources *resource.Resources) (*TranslateResult, error) {
+	var errs error
+
 	// Get Gateways belonging to our GatewayClass.
 	acceptedGateways, failedGateways := t.GetRelevantGateways(resources)
 
 	// Sort gateways based on timestamp.
+	// Initially, acceptedGateways sort by creation timestamp
+	// or sort alphabetically by “{namespace}/{name}” if multiple gateways share same timestamp.
 	sort.Slice(acceptedGateways, func(i, j int) bool {
+		if acceptedGateways[i].CreationTimestamp.Equal(&(acceptedGateways[j].CreationTimestamp)) {
+			gatewayKeyI := fmt.Sprintf("%s/%s", acceptedGateways[i].Namespace, acceptedGateways[i].Name)
+			gatewayKeyJ := fmt.Sprintf("%s/%s", acceptedGateways[j].Namespace, acceptedGateways[j].Name)
+			return gatewayKeyI < gatewayKeyJ
+		}
+		// Not identical CreationTimestamps
+
 		return acceptedGateways[i].CreationTimestamp.Before(&(acceptedGateways[j].CreationTimestamp))
 	})
 
@@ -181,7 +196,7 @@ func (t *Translator) Translate(resources *resource.Resources) (*TranslateResult,
 	t.ProcessAddresses(acceptedGateways, xdsIR, infraIR)
 
 	// process all Backends
-	backends := t.ProcessBackends(resources.Backends)
+	backends := t.ProcessBackends(resources.Backends, resources.BackendTLSPolicies)
 
 	// Process all relevant HTTPRoutes.
 	httpRoutes := t.ProcessHTTPRoutes(resources.HTTPRoutes, acceptedGateways, resources, xdsIR)
@@ -231,8 +246,19 @@ func (t *Translator) Translate(resources *resource.Resources) (*TranslateResult,
 	envoyExtensionPolicies := t.ProcessEnvoyExtensionPolicies(
 		resources.EnvoyExtensionPolicies, acceptedGateways, routes, resources, xdsIR)
 
-	extServerPolicies, translateErrs := t.ProcessExtensionServerPolicies(
+	extServerPolicies, err := t.ProcessExtensionServerPolicies(
 		resources.ExtensionServerPolicies, acceptedGateways, xdsIR)
+	if err != nil {
+		errs = errors.Join(errs, err)
+	}
+
+	// Process global resources that are not tied to a specific listener or route
+	if err := t.ProcessGlobalResources(resources, xdsIR, acceptedGateways); err != nil {
+		errs = errors.Join(errs, err)
+	}
+
+	// Update status of Backend TLS Policies after translating all resources
+	t.ProcessBackendTLSPolicyStatus(resources.BackendTLSPolicies)
 
 	// Sort xdsIR based on the Gateway API spec
 	sortXdsIRMap(xdsIR)
@@ -253,7 +279,7 @@ func (t *Translator) Translate(resources *resource.Resources) (*TranslateResult,
 	return newTranslateResult(allGateways, httpRoutes, grpcRoutes, tlsRoutes,
 		tcpRoutes, udpRoutes, clientTrafficPolicies, backendTrafficPolicies,
 		securityPolicies, resources.BackendTLSPolicies, envoyExtensionPolicies,
-		extServerPolicies, backends, xdsIR, infraIR), translateErrs
+		extServerPolicies, backends, xdsIR, infraIR), errs
 }
 
 // GetRelevantGateways returns GatewayContexts, containing a copy of the original
@@ -306,8 +332,17 @@ func (t *Translator) InitIRs(gateways []*GatewayContext) (map[string]*ir.Xds, ma
 
 		gwInfraIR.Proxy.Name = irKey
 		gwInfraIR.Proxy.Namespace = t.ControllerNamespace
+		gwInfraIR.Proxy.GetProxyMetadata().OwnerReference = &ir.ResourceMetadata{
+			Kind: resource.KindGatewayClass,
+			Name: string(t.GatewayClassName),
+		}
 		if t.GatewayNamespaceMode {
+			gwInfraIR.Proxy.Name = gateway.Name
 			gwInfraIR.Proxy.Namespace = gateway.Namespace
+			gwInfraIR.Proxy.GetProxyMetadata().OwnerReference = &ir.ResourceMetadata{
+				Kind: resource.KindGateway,
+				Name: gateway.Name,
+			}
 		}
 		// save the IR references in the map before the translation starts
 		xdsIR[irKey] = gwXdsIR

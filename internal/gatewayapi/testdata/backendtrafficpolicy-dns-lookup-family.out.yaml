@@ -303,6 +303,9 @@ infraIR:
         labels:
           gateway.envoyproxy.io/owning-gateway-name: gateway-1
           gateway.envoyproxy.io/owning-gateway-namespace: envoy-gateway
+        ownerReference:
+          kind: GatewayClass
+          name: envoy-gateway-class
       name: envoy-gateway/gateway-1
       namespace: envoy-gateway-system
 securityPolicies:
@@ -350,9 +353,18 @@ xdsIR:
     accessLog:
       openTelemetry:
       - destination:
+          metadata:
+            kind: EnvoyProxy
+            name: config-for-gateway-class
+            namespace: envoy-gateway
           name: accesslog_otel_0_1
           settings:
-          - name: accesslog_otel_0_1/backend/-1
+          - metadata:
+              kind: Service
+              name: logs
+              namespace: default
+              sectionName: "8080"
+            name: accesslog_otel_0_1/backend/-1
             protocol: TCP
         resources:
           k8s.cluster.name: cluster-1
@@ -366,8 +378,24 @@ xdsIR:
       - format: |
           [%START_TIME%] "%REQ(:METHOD)% %PROTOCOL%" %RESPONSE_CODE% %RESPONSE_FLAGS% %BYTES_RECEIVED% %BYTES_SENT% %DURATION% %RESP(X-ENVOY-UPSTREAM-SERVICE-TIME)% "%REQ(X-FORWARDED-FOR)%" "%REQ(USER-AGENT)%" "%REQ(X-REQUEST-ID)%" "%REQ(:AUTHORITY)%" "%UPSTREAM_HOST%"\n
         path: /dev/stdout
+    globalResources:
+      proxyServiceCluster:
+        name: envoy-gateway/gateway-1
+        settings:
+        - addressType: IP
+          endpoints:
+          - host: 7.6.5.4
+            port: 8080
+            zone: zone1
+          metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-1
+          protocol: TCP
     http:
     - address: 0.0.0.0
+      externalPort: 80
       hostnames:
       - '*'
       isHTTP2: true
@@ -383,12 +411,20 @@ xdsIR:
       port: 10080
       routes:
       - destination:
+          metadata:
+            kind: HTTPRoute
+            name: httproute-1
+            namespace: default
           name: httproute/default/httproute-1/rule/0
           settings:
           - addressType: FQDN
             endpoints:
             - host: grpc-infra-backend.gateway-conformance-infra.svc.cluster.local
               port: 8080
+            metadata:
+              kind: Backend
+              name: backend-fqdn
+              namespace: default
             name: httproute/default/httproute-1/rule/0/backend/0
             protocol: HTTP
             weight: 1
@@ -396,12 +432,20 @@ xdsIR:
           extProcs:
           - authority: backend-fqdn2.default:9090
             destination:
+              metadata:
+                kind: EnvoyExtensionPolicy
+                name: policy-for-httproute
+                namespace: default
               name: envoyextensionpolicy/default/policy-for-httproute/extproc/0
               settings:
               - addressType: FQDN
                 endpoints:
                 - host: backend-v2.gateway-conformance-infra.svc.cluster.local
                   port: 9090
+                metadata:
+                  kind: Backend
+                  name: backend-fqdn2
+                  namespace: default
                 name: envoyextensionpolicy/default/policy-for-httproute/extproc/0/backend/0
                 protocol: GRPC
                 weight: 1
@@ -429,12 +473,20 @@ xdsIR:
             http:
               authority: backend-v3.gateway-conformance-infra.svc.cluster.local:8080
               destination:
+                metadata:
+                  kind: SecurityPolicy
+                  name: policy-for-gateway-1
+                  namespace: envoy-gateway
                 name: securitypolicy/envoy-gateway/policy-for-gateway-1/extauth/0
                 settings:
                 - addressType: FQDN
                   endpoints:
                   - host: backend-v3.gateway-conformance-infra.svc.cluster.local
                     port: 8080
+                  metadata:
+                    kind: Backend
+                    name: backend-fqdn3
+                    namespace: default
                   name: securitypolicy/envoy-gateway/policy-for-gateway-1/extauth/0/backend/0
                   protocol: HTTP
                   weight: 1
@@ -449,14 +501,21 @@ xdsIR:
             dnsRefreshRate: 5s
             lookupFamily: IPv6
             respectDnsTtl: false
-          name: default/backend-traffic-policy
       - destination:
+          metadata:
+            kind: GRPCRoute
+            name: grpcroute-1
+            namespace: default
           name: grpcroute/default/grpcroute-1/rule/0
           settings:
           - addressType: FQDN
             endpoints:
             - host: grpc-infra-backend.gateway-conformance-infra.svc.cluster.local
               port: 8080
+            metadata:
+              kind: Backend
+              name: backend-fqdn
+              namespace: default
             name: grpcroute/default/grpcroute-1/rule/0/backend/0
             protocol: GRPC
             weight: 1
@@ -475,12 +534,20 @@ xdsIR:
             http:
               authority: backend-v3.gateway-conformance-infra.svc.cluster.local:8080
               destination:
+                metadata:
+                  kind: SecurityPolicy
+                  name: policy-for-gateway-1
+                  namespace: envoy-gateway
                 name: securitypolicy/envoy-gateway/policy-for-gateway-1/extauth/0
                 settings:
                 - addressType: FQDN
                   endpoints:
                   - host: backend-v3.gateway-conformance-infra.svc.cluster.local
                     port: 8080
+                  metadata:
+                    kind: Backend
+                    name: backend-fqdn3
+                    namespace: default
                   name: securitypolicy/envoy-gateway/policy-for-gateway-1/extauth/0/backend/0
                   protocol: HTTP
                   weight: 1
@@ -495,7 +562,6 @@ xdsIR:
             dnsRefreshRate: 5s
             lookupFamily: IPv6
             respectDnsTtl: false
-          name: default/backend-traffic-policy
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4

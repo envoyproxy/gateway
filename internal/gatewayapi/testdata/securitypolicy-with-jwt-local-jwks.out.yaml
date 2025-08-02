@@ -207,6 +207,9 @@ infraIR:
         labels:
           gateway.envoyproxy.io/owning-gateway-name: gateway-1
           gateway.envoyproxy.io/owning-gateway-namespace: envoy-gateway
+        ownerReference:
+          kind: GatewayClass
+          name: envoy-gateway-class
       name: envoy-gateway/gateway-1
       namespace: envoy-gateway-system
 securityPolicies:
@@ -293,42 +296,6 @@ securityPolicies:
   kind: SecurityPolicy
   metadata:
     creationTimestamp: null
-    name: securitypolicy-with-jwt-local-jwks-valueref-missing-key
-    namespace: default
-  spec:
-    jwt:
-      providers:
-      - issuer: https://one.example.com
-        localJWKS:
-          type: ValueRef
-          valueRef:
-            group: ""
-            kind: ConfigMap
-            name: example2-jwks
-        name: example2
-    targetRef:
-      group: gateway.networking.k8s.io
-      kind: HTTPRoute
-      name: httproute-3
-  status:
-    ancestors:
-    - ancestorRef:
-        group: gateway.networking.k8s.io
-        kind: Gateway
-        name: gateway-1
-        namespace: envoy-gateway
-        sectionName: http
-      conditions:
-      - lastTransitionTime: null
-        message: Policy has been accepted.
-        reason: Accepted
-        status: "True"
-        type: Accepted
-      controllerName: gateway.envoyproxy.io/gatewayclass-controller
-- apiVersion: gateway.envoyproxy.io/v1alpha1
-  kind: SecurityPolicy
-  metadata:
-    creationTimestamp: null
     name: securitypolicy-with-jwt-local-jwks-valueref-missing-configmap
     namespace: default
   spec:
@@ -361,13 +328,65 @@ securityPolicies:
         status: "False"
         type: Accepted
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: SecurityPolicy
+  metadata:
+    creationTimestamp: null
+    name: securitypolicy-with-jwt-local-jwks-valueref-missing-key
+    namespace: default
+  spec:
+    jwt:
+      providers:
+      - issuer: https://one.example.com
+        localJWKS:
+          type: ValueRef
+          valueRef:
+            group: ""
+            kind: ConfigMap
+            name: example2-jwks
+        name: example2
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: httproute-3
+  status:
+    ancestors:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: gateway-1
+        namespace: envoy-gateway
+        sectionName: http
+      conditions:
+      - lastTransitionTime: null
+        message: Policy has been accepted.
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
 xdsIR:
   envoy-gateway/gateway-1:
     accessLog:
       json:
       - path: /dev/stdout
+    globalResources:
+      proxyServiceCluster:
+        name: envoy-gateway/gateway-1
+        settings:
+        - addressType: IP
+          endpoints:
+          - host: 7.6.5.4
+            port: 8080
+            zone: zone1
+          metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-1
+          protocol: TCP
     http:
     - address: 0.0.0.0
+      externalPort: 80
       hostnames:
       - '*'
       isHTTP2: false
@@ -383,12 +402,20 @@ xdsIR:
       port: 10080
       routes:
       - destination:
+          metadata:
+            kind: HTTPRoute
+            name: httproute-1
+            namespace: default
           name: httproute/default/httproute-1/rule/0
           settings:
           - addressType: IP
             endpoints:
             - host: 7.7.7.7
               port: 8080
+            metadata:
+              name: service-1
+              namespace: default
+              sectionName: "8080"
             name: httproute/default/httproute-1/rule/0/backend/0
             protocol: HTTP
             weight: 1
@@ -420,12 +447,20 @@ xdsIR:
                 }
               name: example1
       - destination:
+          metadata:
+            kind: HTTPRoute
+            name: httproute-2
+            namespace: default
           name: httproute/default/httproute-2/rule/0
           settings:
           - addressType: IP
             endpoints:
             - host: 7.7.7.7
               port: 8080
+            metadata:
+              name: service-1
+              namespace: default
+              sectionName: "8080"
             name: httproute/default/httproute-2/rule/0/backend/0
             protocol: HTTP
             weight: 1
@@ -457,12 +492,20 @@ xdsIR:
                 }
               name: example1
       - destination:
+          metadata:
+            kind: HTTPRoute
+            name: httproute-3
+            namespace: default
           name: httproute/default/httproute-3/rule/0
           settings:
           - addressType: IP
             endpoints:
             - host: 7.7.7.7
               port: 8080
+            metadata:
+              name: service-1
+              namespace: default
+              sectionName: "8080"
             name: httproute/default/httproute-3/rule/0/backend/0
             protocol: HTTP
             weight: 1
@@ -494,12 +537,20 @@ xdsIR:
                 }
               name: example2
       - destination:
+          metadata:
+            kind: HTTPRoute
+            name: httproute-4
+            namespace: default
           name: httproute/default/httproute-4/rule/0
           settings:
           - addressType: IP
             endpoints:
             - host: 7.7.7.7
               port: 8080
+            metadata:
+              name: service-1
+              namespace: default
+              sectionName: "8080"
             name: httproute/default/httproute-4/rule/0/backend/0
             protocol: HTTP
             weight: 1

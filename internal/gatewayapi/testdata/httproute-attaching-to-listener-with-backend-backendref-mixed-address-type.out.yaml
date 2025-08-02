@@ -165,44 +165,6 @@ httpRoutes:
   kind: HTTPRoute
   metadata:
     creationTimestamp: null
-    name: httproute-3
-    namespace: default
-  spec:
-    parentRefs:
-    - name: gateway-1
-      namespace: envoy-gateway
-      sectionName: http
-    rules:
-    - backendRefs:
-      - group: gateway.envoyproxy.io
-        kind: Backend
-        name: backend-mixed-ip-fqdn
-      matches:
-      - path:
-          value: /3
-  status:
-    parents:
-    - conditions:
-      - lastTransitionTime: null
-        message: Route is accepted
-        reason: Accepted
-        status: "True"
-        type: Accepted
-      - lastTransitionTime: null
-        message: 'Failed to process route rule 0 backendRef 0: mixed FQDN and IP or
-          Unix address type for the same backendRef is not supported.'
-        reason: UnsupportedAddressType
-        status: "False"
-        type: ResolvedRefs
-      controllerName: gateway.envoyproxy.io/gatewayclass-controller
-      parentRef:
-        name: gateway-1
-        namespace: envoy-gateway
-        sectionName: http
-- apiVersion: gateway.networking.k8s.io/v1
-  kind: HTTPRoute
-  metadata:
-    creationTimestamp: null
     name: httproute-2
     namespace: default
   spec:
@@ -237,6 +199,44 @@ httpRoutes:
         name: gateway-1
         namespace: envoy-gateway
         sectionName: http
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    creationTimestamp: null
+    name: httproute-3
+    namespace: default
+  spec:
+    parentRefs:
+    - name: gateway-1
+      namespace: envoy-gateway
+      sectionName: http
+    rules:
+    - backendRefs:
+      - group: gateway.envoyproxy.io
+        kind: Backend
+        name: backend-mixed-ip-fqdn
+      matches:
+      - path:
+          value: /3
+  status:
+    parents:
+    - conditions:
+      - lastTransitionTime: null
+        message: Route is accepted
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: 'Failed to process route rule 0 backendRef 0: mixed FQDN and IP or
+          Unix address type for the same backendRef is not supported.'
+        reason: UnsupportedAddressType
+        status: "False"
+        type: ResolvedRefs
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+      parentRef:
+        name: gateway-1
+        namespace: envoy-gateway
+        sectionName: http
 infraIR:
   envoy-gateway/gateway-1:
     proxy:
@@ -252,6 +252,9 @@ infraIR:
         labels:
           gateway.envoyproxy.io/owning-gateway-name: gateway-1
           gateway.envoyproxy.io/owning-gateway-namespace: envoy-gateway
+        ownerReference:
+          kind: GatewayClass
+          name: envoy-gateway-class
       name: envoy-gateway/gateway-1
       namespace: envoy-gateway-system
 xdsIR:
@@ -259,8 +262,24 @@ xdsIR:
     accessLog:
       json:
       - path: /dev/stdout
+    globalResources:
+      proxyServiceCluster:
+        name: envoy-gateway/gateway-1
+        settings:
+        - addressType: IP
+          endpoints:
+          - host: 7.6.5.4
+            port: 8080
+            zone: zone1
+          metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-1
+          protocol: TCP
     http:
     - address: 0.0.0.0
+      externalPort: 80
       hostnames:
       - '*'
       isHTTP2: false
@@ -294,19 +313,6 @@ xdsIR:
         isHTTP2: false
         metadata:
           kind: HTTPRoute
-          name: httproute-3
-          namespace: default
-        name: httproute/default/httproute-3/rule/0/match/0/*
-        pathMatch:
-          distinct: false
-          name: ""
-          prefix: /3
-      - directResponse:
-          statusCode: 500
-        hostname: '*'
-        isHTTP2: false
-        metadata:
-          kind: HTTPRoute
           name: httproute-2
           namespace: default
         name: httproute/default/httproute-2/rule/0/match/0/*
@@ -314,6 +320,19 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /2
+      - directResponse:
+          statusCode: 500
+        hostname: '*'
+        isHTTP2: false
+        metadata:
+          kind: HTTPRoute
+          name: httproute-3
+          namespace: default
+        name: httproute/default/httproute-3/rule/0/match/0/*
+        pathMatch:
+          distinct: false
+          name: ""
+          prefix: /3
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4

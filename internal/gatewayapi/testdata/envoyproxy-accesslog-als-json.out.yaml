@@ -143,6 +143,9 @@ infraIR:
         labels:
           gateway.envoyproxy.io/owning-gateway-name: gateway-1
           gateway.envoyproxy.io/owning-gateway-namespace: envoy-gateway
+        ownerReference:
+          kind: GatewayClass
+          name: envoy-gateway-class
       name: envoy-gateway/gateway-1
       namespace: envoy-gateway-system
 xdsIR:
@@ -153,12 +156,21 @@ xdsIR:
           attr1: val1
           attr2: val2
         destination:
+          metadata:
+            kind: EnvoyProxy
+            name: test
+            namespace: envoy-gateway-system
           name: accesslog_als_0_0
           settings:
           - addressType: IP
             endpoints:
             - host: 10.240.0.10
               port: 9090
+            metadata:
+              kind: Service
+              name: envoy-als
+              namespace: monitoring
+              sectionName: "9000"
             name: accesslog_als_0_0/backend/-1
             protocol: GRPC
         http:
@@ -174,18 +186,43 @@ xdsIR:
           attr1: val1
           attr2: val2
         destination:
+          metadata:
+            kind: EnvoyProxy
+            name: test
+            namespace: envoy-gateway-system
           name: accesslog_als_0_1
           settings:
           - addressType: IP
             endpoints:
             - host: 10.240.0.10
               port: 9090
+            metadata:
+              kind: Service
+              name: envoy-als
+              namespace: monitoring
+              sectionName: "9000"
             name: accesslog_als_0_1/backend/-1
             protocol: GRPC
         name: envoy-gateway-system/test
         type: TCP
+    globalResources:
+      proxyServiceCluster:
+        name: envoy-gateway/gateway-1
+        settings:
+        - addressType: IP
+          endpoints:
+          - host: 7.6.5.4
+            port: 8080
+            zone: zone1
+          metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-1
+          protocol: TCP
     http:
     - address: 0.0.0.0
+      externalPort: 80
       hostnames:
       - '*'
       isHTTP2: false

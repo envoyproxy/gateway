@@ -12,7 +12,8 @@ import (
 	"os"
 	"path/filepath"
 
-	funcE "github.com/tetratelabs/func-e/api"
+	func_e "github.com/tetratelabs/func-e"
+	"github.com/tetratelabs/func-e/api"
 	"k8s.io/utils/ptr"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
@@ -69,7 +70,6 @@ func (i *Infra) CreateOrUpdateProxyInfra(ctx context.Context, infra *ir.Infra) e
 			TrustedCA:   filepath.Join(i.sdsConfigPath, common.SdsCAFilename),
 		},
 		XdsServerHost:   ptr.To("0.0.0.0"),
-		WasmServerPort:  ptr.To(int32(0)),
 		AdminServerPort: ptr.To(int32(0)),
 		StatsServerPort: ptr.To(int32(0)),
 	}
@@ -93,7 +93,7 @@ func (i *Infra) runEnvoy(ctx context.Context, out io.Writer, name string, args [
 		defer func() {
 			exit <- struct{}{}
 		}()
-		err := funcE.Run(pCtx, args, funcE.HomeDir(i.HomeDir), funcE.Out(out))
+		err := func_e.Run(pCtx, args, api.HomeDir(i.HomeDir), api.Out(out))
 		if err != nil {
 			i.Logger.Error(err, "failed to run envoy")
 		}

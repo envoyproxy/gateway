@@ -1,0 +1,34 @@
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  creationTimestamp: null
+  labels:
+    app.kubernetes.io/component: proxy
+    app.kubernetes.io/managed-by: envoy-gateway
+    app.kubernetes.io/name: envoy
+    gateway.envoyproxy.io/owning-gateway-name: gateway-1
+    gateway.envoyproxy.io/owning-gateway-namespace: ns1
+    gateway.networking.k8s.io/gateway-name: gateway-1
+  name: gateway-1
+  namespace: ns1
+  ownerReferences:
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: Gateway
+    name: gateway-1
+    uid: test-owner-reference-uid-for-gateway
+spec:
+  maxReplicas: 1
+  metrics:
+  - resource:
+      name: cpu
+      target:
+        averageUtilization: 80
+        type: Utilization
+    type: Resource
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: gateway-1
+status:
+  currentMetrics: null
+  desiredReplicas: 0

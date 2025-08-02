@@ -1,16 +1,18 @@
 # ENVTEST_K8S_VERSION refers to the version of kubebuilder assets to be downloaded by envtest binary.
 # To know the available versions check:
 # - https://github.com/kubernetes-sigs/controller-tools/blob/main/envtest-releases.yaml
-ENVTEST_K8S_VERSION ?= 1.29.4
+ENVTEST_K8S_VERSION ?= 1.29.5
 # Need run cel validation across multiple versions of k8s
 # TODO: zhaohuabing update kubebuilder assets to 1.33.0 when available
-ENVTEST_K8S_VERSIONS ?= 1.29.4 1.30.3 1.31.0 1.32.0
+ENVTEST_K8S_VERSIONS ?= 1.29.5 1.30.3 1.31.0 1.32.0
 
 # GATEWAY_API_VERSION refers to the version of Gateway API CRDs.
 # For more details, see https://gateway-api.sigs.k8s.io/guides/getting-started/#installing-gateway-api
-GATEWAY_API_VERSION ?= $(shell go list -m -f '{{.Version}}' sigs.k8s.io/gateway-api)
+GATEWAY_API_VERSION ?= v1.3.0
 
-GATEWAY_RELEASE_URL ?= https://github.com/kubernetes-sigs/gateway-api/releases/download/${GATEWAY_API_VERSION}/experimental-install.yaml
+GATEWAY_API_RELEASE_URL ?= https://github.com/kubernetes-sigs/gateway-api/releases/download/${GATEWAY_API_VERSION}
+EXPERIMENTAL_GATEWAY_API_RELEASE_URL ?= ${GATEWAY_API_RELEASE_URL}/experimental-install.yaml
+STANDARD_GATEWAY_API_RELEASE_URL ?= ${GATEWAY_API_RELEASE_URL}/standard-install.yaml
 
 WAIT_TIMEOUT ?= 15m
 
@@ -23,10 +25,17 @@ BENCHMARK_CONNECTIONS ?= 100
 BENCHMARK_DURATION ?= 60
 BENCHMARK_REPORT_DIR ?= benchmark_report
 
+CONFORMANCE_RUN_TEST ?=
+
 E2E_RUN_TEST ?=
 E2E_CLEANUP ?= true
 E2E_TIMEOUT ?= 20m
+# E2E_REDIRECT allow you specified a redirect when run e2e test locally, e.g. `>> test_output.out 2>&1`
+E2E_REDIRECT ?=
 E2E_TEST_ARGS ?= -v -tags e2e -timeout $(E2E_TIMEOUT)
+
+DOCKER_MAC_NET_CONNECT ?= true
+HOMEBREW_GOPROXY ?=
 
 KUBE_DEPLOY_PROFILE ?= default
 KUBE_DEPLOY_HELM_VALUES_FILE = $(ROOT_DIR)/test/config/helm/$(KUBE_DEPLOY_PROFILE).yaml
@@ -78,16 +87,21 @@ manifests: generate-gwapi-manifests ## Generate WebhookConfiguration and CustomR
 	done
 
 .PHONY: generate-gwapi-manifests
-generate-gwapi-manifests: ## Generate GWAPI manifests and make it consistent with the go mod version.
+generate-gwapi-manifests: ## Generate Gateway API manifests and make it consistent with the go mod version.
 	@$(LOG_TARGET)
 	@echo "Generating Gateway API CRDs"
 	@mkdir -p $(OUTPUT_DIR)/
-	@curl -sLo $(OUTPUT_DIR)/gatewayapi-crds.yaml ${GATEWAY_RELEASE_URL}
-	cp $(OUTPUT_DIR)/gatewayapi-crds.yaml charts/gateway-helm/crds/gatewayapi-crds.yaml
-	@sed -i.bak '1s/^/{{- if .Values.crds.gatewayAPI.enabled }}\n/' $(OUTPUT_DIR)/gatewayapi-crds.yaml && \
-	echo '{{- end }}' >> $(OUTPUT_DIR)/gatewayapi-crds.yaml && \
-	rm -f $(OUTPUT_DIR)/gatewayapi-crds.yaml.bak
-	@mv $(OUTPUT_DIR)/gatewayapi-crds.yaml charts/gateway-crds-helm/templates/gatewayapi-crds.yaml
+	@curl -sLo $(OUTPUT_DIR)/experimental-gatewayapi-crds.yaml ${EXPERIMENTAL_GATEWAY_API_RELEASE_URL}
+	@curl -sLo $(OUTPUT_DIR)/standard-gatewayapi-crds.yaml ${STANDARD_GATEWAY_API_RELEASE_URL}
+	cp $(OUTPUT_DIR)/experimental-gatewayapi-crds.yaml charts/gateway-helm/crds/gatewayapi-crds.yaml
+	@sed -i.bak '1s/^/{{- if and .Values.crds.gatewayAPI.enabled (eq .Values.crds.gatewayAPI.channel "standard") }}\n/' $(OUTPUT_DIR)/standard-gatewayapi-crds.yaml && \
+	echo '{{- end }}' >> $(OUTPUT_DIR)/standard-gatewayapi-crds.yaml && \
+	sed -i.bak '1s/^/{{- if and .Values.crds.gatewayAPI.enabled (or (eq .Values.crds.gatewayAPI.channel "experimental") (eq .Values.crds.gatewayAPI.channel "")) }}\n/' $(OUTPUT_DIR)/experimental-gatewayapi-crds.yaml && \
+	echo '{{- end }}' >> $(OUTPUT_DIR)/experimental-gatewayapi-crds.yaml && \
+	rm -f $(OUTPUT_DIR)/standard-gatewayapi-crds.yaml.bak && \
+	rm -f $(OUTPUT_DIR)/experimental-gatewayapi-crds.yaml.bak
+	@mv $(OUTPUT_DIR)/experimental-gatewayapi-crds.yaml charts/gateway-crds-helm/templates/experimental-gatewayapi-crds.yaml
+	@mv $(OUTPUT_DIR)/standard-gatewayapi-crds.yaml charts/gateway-crds-helm/templates/standard-gatewayapi-crds.yaml
 
 .PHONY: kube-generate
 kube-generate: ## Generate code containing DeepCopy, DeepCopyInto, and DeepCopyObject method implementations.
@@ -179,7 +193,7 @@ resilience: create-cluster kube-install-image kube-install-examples-image kube-d
 .PHONY: e2e
 e2e: create-cluster kube-install-image kube-deploy \
 	install-ratelimit install-eg-addons kube-install-examples-image \
-	e2e-prepare run-e2e delete-cluster
+	e2e-prepare setup-mac-net-connect run-e2e delete-cluster
 
 .PHONY: install-ratelimit
 install-ratelimit:
@@ -204,17 +218,22 @@ e2e-prepare: prepare-ip-family ## Prepare the environment for running e2e tests
 	kubectl apply -f $(KUBE_DEPLOY_EG_CONFIG_FILE)
 	kubectl apply -f test/config/gatewayclass.yaml
 
+.PHONY: setup-mac-net-connect
+setup-mac-net-connect:
+	@$(LOG_TARGET)
+	DOCKER_MAC_NET_CONNECT=$(DOCKER_MAC_NET_CONNECT) HOMEBREW_GOPROXY=$(HOMEBREW_GOPROXY) tools/hack/manage-mac-net-connect.sh setup
+
 .PHONY: run-e2e
 run-e2e: ## Run e2e tests
 	@$(LOG_TARGET)
 ifeq ($(E2E_RUN_TEST),)
-	go test $(E2E_TEST_ARGS) ./test/e2e --gateway-class=envoy-gateway --debug=true --cleanup-base-resources=false
+	go test $(E2E_TEST_ARGS) ./test/e2e --gateway-class=envoy-gateway --debug=true --cleanup-base-resources=false $(E2E_REDIRECT)
 	go test $(E2E_TEST_ARGS) ./test/e2e/merge_gateways --gateway-class=merge-gateways --debug=true --cleanup-base-resources=false
 	go test $(E2E_TEST_ARGS) ./test/e2e/multiple_gc --debug=true --cleanup-base-resources=true
 	LAST_VERSION_TAG=$(shell cat VERSION) go test $(E2E_TEST_ARGS) ./test/e2e/upgrade --gateway-class=upgrade --debug=true --cleanup-base-resources=$(E2E_CLEANUP)
 else
 	go test $(E2E_TEST_ARGS) ./test/e2e --gateway-class=envoy-gateway --debug=true --cleanup-base-resources=$(E2E_CLEANUP) \
-		--run-test $(E2E_RUN_TEST)
+		--run-test $(E2E_RUN_TEST) $(E2E_REDIRECT)
 endif
 
 run-e2e-upgrade:
@@ -286,7 +305,11 @@ run-conformance: prepare-ip-family ## Run Gateway API conformance.
 	@$(LOG_TARGET)
 	kubectl wait --timeout=$(WAIT_TIMEOUT) -n envoy-gateway-system deployment/envoy-gateway --for=condition=Available
 	kubectl apply -f test/config/gatewayclass.yaml
+ifeq ($(CONFORMANCE_RUN_TEST),)
 	go test -v -tags conformance ./test/conformance --gateway-class=envoy-gateway --debug=true
+else
+	go test -v -tags conformance ./test/conformance --gateway-class=envoy-gateway --debug=true --run-test $(CONFORMANCE_RUN_TEST)
+endif
 
 CONFORMANCE_REPORT_PATH ?=
 

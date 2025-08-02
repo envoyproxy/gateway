@@ -69,7 +69,7 @@ go.testdata.complete: ## Override test ouputdata
 go.test.coverage: go.test.cel ## Run go unit and integration tests in GitHub Actions
 	@$(LOG_TARGET)
 	KUBEBUILDER_ASSETS="$(shell go tool setup-envtest use $(ENVTEST_K8S_VERSION) -p path)" \
-		go test ./... --tags=integration -race -coverprofile=coverage.xml -covermode=atomic
+		go test ./... --tags=integration -race -coverprofile=coverage.xml -covermode=atomic -coverpkg=./...
 
 .PHONY: go.test.cel
 go.test.cel: manifests # Run the CEL validation tests
@@ -78,7 +78,7 @@ go.test.cel: manifests # Run the CEL validation tests
   		echo "Run CEL Validation on k8s $$ver"; \
         go clean -testcache; \
         KUBEBUILDER_ASSETS="$$(go tool setup-envtest use $$ver -p path)" \
-         go test ./test/cel-validation --tags celvalidation -race; \
+         go test ./test/cel-validation --tags celvalidation -race || exit 1; \
     done
 
 .PHONY: go.clean
@@ -107,7 +107,7 @@ go.mod.lint: go.mod.tidy go.mod.tidy.examples ## Check if go.mod is clean
 .PHONY: go.lint.fmt
 go.lint.fmt:
 	@$(LOG_TARGET)
-	@go tool golangci-lint fmt --build-tags=$(LINT_BUILD_TAGS) --config=tools/linter/golangci-lint/.golangci.yml
+	@go tool golangci-lint fmt --config=tools/linter/golangci-lint/.golangci.yml
 
 .PHONY: go.generate
 go.generate: ## Generate code from templates

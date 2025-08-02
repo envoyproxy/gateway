@@ -38,10 +38,6 @@ const (
 	// DefaultXdsServerPort is the default listening port of the xds-server.
 	DefaultXdsServerPort = 18000
 
-	wasmServerHost = envoyGatewayXdsServerHost
-	// DefaultWasmServerPort is the default listening port of the wasm HTTP server.
-	wasmServerPort = 18002
-
 	EnvoyStatsPort = 19001
 
 	EnvoyReadinessPort = 19003
@@ -49,6 +45,8 @@ const (
 
 	defaultSdsTrustedCAPath   = "/sds/xds-trusted-ca.json"
 	defaultSdsCertificatePath = "/sds/xds-certificate.json"
+
+	defaultServiceClusterName = "local_cluster"
 )
 
 //go:embed bootstrap.yaml.tpl
@@ -68,8 +66,6 @@ type bootstrapConfig struct {
 type bootstrapParameters struct {
 	// XdsServer defines the configuration of the XDS server.
 	XdsServer serverParameters
-	// WasmServer defines the configuration of the Wasm HTTP server.
-	WasmServer serverParameters
 	// AdminServer defines the configuration of the Envoy admin interface.
 	AdminServer adminServerParameters
 	// StatsServer defines the configuration for stats listener
@@ -98,8 +94,11 @@ type bootstrapParameters struct {
 	OverloadManager overloadManagerParameters
 
 	// IPFamily of the Listener
-	IPFamily             string
+	IPFamily string
+	// GatewayNamespaceMode defines whether to use the Envoy Gateway namespace mode.
 	GatewayNamespaceMode bool
+	// ServiceClusterName is the generated name of the Envoy ServiceCluster.
+	ServiceClusterName string
 }
 
 type serverParameters struct {
@@ -140,9 +139,9 @@ type RenderBootstrapConfigOptions struct {
 	IPFamily             *egv1a1.IPFamily
 	ProxyMetrics         *egv1a1.ProxyMetrics
 	SdsConfig            SdsConfigPath
+	ServiceClusterName   *string
 	XdsServerHost        *string
 	XdsServerPort        *int32
-	WasmServerPort       *int32
 	AdminServerPort      *int32
 	StatsServerPort      *int32
 	MaxHeapSizeBytes     uint64
@@ -245,10 +244,6 @@ func GetRenderedBootstrapConfig(opts *RenderBootstrapConfigOptions) (string, err
 				Address: envoyGatewayXdsServerHost,
 				Port:    DefaultXdsServerPort,
 			},
-			WasmServer: serverParameters{
-				Address: wasmServerHost,
-				Port:    wasmServerPort,
-			},
 			AdminServer: adminServerParameters{
 				Address:       EnvoyAdminAddress,
 				Port:          EnvoyAdminPort,
@@ -264,6 +259,7 @@ func GetRenderedBootstrapConfig(opts *RenderBootstrapConfigOptions) (string, err
 			EnablePrometheusCompression:  enablePrometheusCompression,
 			PrometheusCompressionLibrary: prometheusCompressionLibrary,
 			OtelMetricSinks:              metricSinks,
+			ServiceClusterName:           defaultServiceClusterName,
 		},
 	}
 
@@ -295,9 +291,6 @@ func GetRenderedBootstrapConfig(opts *RenderBootstrapConfigOptions) (string, err
 		if opts.StatsServerPort != nil {
 			cfg.parameters.StatsServer.Port = *opts.StatsServerPort
 		}
-		if opts.WasmServerPort != nil {
-			cfg.parameters.WasmServer.Port = *opts.WasmServerPort
-		}
 
 		if opts.IPFamily != nil {
 			cfg.parameters.IPFamily = string(*opts.IPFamily)
@@ -311,6 +304,9 @@ func GetRenderedBootstrapConfig(opts *RenderBootstrapConfigOptions) (string, err
 		}
 		cfg.parameters.GatewayNamespaceMode = opts.GatewayNamespaceMode
 		cfg.parameters.OverloadManager.MaxHeapSizeBytes = opts.MaxHeapSizeBytes
+		if opts.ServiceClusterName != nil {
+			cfg.parameters.ServiceClusterName = *opts.ServiceClusterName
+		}
 	}
 
 	if err := cfg.render(); err != nil {

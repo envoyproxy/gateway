@@ -15,22 +15,6 @@
           maxConcurrentStreams: 100
         httpFilters:
         - disabled: true
-          name: envoy.filters.http.ext_authz/securitypolicy/default/policy-for-http-route-1
-          typedConfig:
-            '@type': type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthz
-            allowedHeaders:
-              patterns:
-              - exact: header1
-                ignoreCase: true
-              - exact: header2
-                ignoreCase: true
-            grpcService:
-              envoyGrpc:
-                authority: grpc-backend.default:9000
-                clusterName: securitypolicy/default/policy-for-http-route-1/default/grpc-backend
-              timeout: 10s
-            transportApiVersion: V3
-        - disabled: true
           name: envoy.filters.http.ext_authz/securitypolicy/default/policy-for-gateway-1
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthz
@@ -49,6 +33,22 @@
                 timeout: 10s
                 uri: http://http-backend.envoy-gateway:80/auth
             transportApiVersion: V3
+        - disabled: true
+          name: envoy.filters.http.ext_authz/securitypolicy/default/policy-for-http-route-1
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthz
+            allowedHeaders:
+              patterns:
+              - exact: header1
+                ignoreCase: true
+              - exact: header2
+                ignoreCase: true
+            grpcService:
+              envoyGrpc:
+                authority: grpc-backend.default:9000
+                clusterName: securitypolicy/default/policy-for-http-route-1/default/grpc-backend
+              timeout: 10s
+            transportApiVersion: V3
         - name: envoy.filters.http.router
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
@@ -65,5 +65,6 @@
         statPrefix: http-10080
         useRemoteAddress: true
     name: default/gateway-1/http
+  maxConnectionsToAcceptPerSocketEvent: 1
   name: default/gateway-1/http
   perConnectionBufferLimitBytes: 32768

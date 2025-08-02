@@ -416,6 +416,9 @@ infraIR:
       metadata:
         labels:
           gateway.envoyproxy.io/owning-gatewayclass: envoy-gateway-class
+        ownerReference:
+          kind: GatewayClass
+          name: envoy-gateway-class
       name: envoy-gateway-class
       namespace: envoy-gateway-system
 securityPolicies:
@@ -501,8 +504,24 @@ xdsIR:
     accessLog:
       json:
       - path: /dev/stdout
+    globalResources:
+      proxyServiceCluster:
+        name: envoy-gateway-class
+        settings:
+        - addressType: IP
+          endpoints:
+          - host: 7.6.5.4
+            port: 8080
+            zone: zone1
+          metadata:
+            name: envoy-envoy-gateway-class-3b1df594
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway-class
+          protocol: TCP
     http:
     - address: 0.0.0.0
+      externalPort: 80
       hostnames:
       - bar.example.com
       isHTTP2: false
@@ -518,12 +537,20 @@ xdsIR:
       port: 10080
       routes:
       - destination:
+          metadata:
+            kind: HTTPRoute
+            name: httproute-1
+            namespace: default
           name: httproute/default/httproute-1/rule/0
           settings:
           - addressType: IP
             endpoints:
             - host: 7.7.7.7
               port: 8080
+            metadata:
+              name: service-1
+              namespace: default
+              sectionName: "8080"
             name: httproute/default/httproute-1/rule/0/backend/0
             protocol: HTTP
             weight: 1
@@ -555,7 +582,6 @@ xdsIR:
             - x-header-8
             maxAge: 33m20s
         traffic:
-          name: default/policy-for-gateway
           tcpKeepalive:
             idleTime: 1200
             interval: 60
@@ -564,6 +590,7 @@ xdsIR:
         http:
           requestReceivedTimeout: 5s
     - address: 0.0.0.0
+      externalPort: 80
       hostnames:
       - foo.example.com
       isHTTP2: false
@@ -579,12 +606,20 @@ xdsIR:
       port: 10080
       routes:
       - destination:
+          metadata:
+            kind: HTTPRoute
+            name: httproute-2
+            namespace: default
           name: httproute/default/httproute-2/rule/0
           settings:
           - addressType: IP
             endpoints:
             - host: 7.7.7.7
               port: 8080
+            metadata:
+              name: service-2
+              namespace: default
+              sectionName: "8080"
             name: httproute/default/httproute-2/rule/0/backend/0
             protocol: HTTP
             weight: 1
@@ -616,7 +651,6 @@ xdsIR:
             - x-header-8
             maxAge: 33m20s
         traffic:
-          name: default/policy-for-gateway
           tcpKeepalive:
             idleTime: 1200
             interval: 60
@@ -625,6 +659,7 @@ xdsIR:
         http:
           requestReceivedTimeout: 5s
     - address: 0.0.0.0
+      externalPort: 81
       hostnames:
       - bar.example.com
       isHTTP2: false
@@ -640,12 +675,20 @@ xdsIR:
       port: 10081
       routes:
       - destination:
+          metadata:
+            kind: HTTPRoute
+            name: httproute-3
+            namespace: default
           name: httproute/default/httproute-3/rule/0
           settings:
           - addressType: IP
             endpoints:
             - host: 7.7.7.7
               port: 8080
+            metadata:
+              name: service-1
+              namespace: default
+              sectionName: "8080"
             name: httproute/default/httproute-3/rule/0/backend/0
             protocol: HTTP
             weight: 1
@@ -677,6 +720,7 @@ xdsIR:
             - x-header-8
             maxAge: 33m20s
     - address: 0.0.0.0
+      externalPort: 81
       hostnames:
       - foo.example.com
       isHTTP2: false
@@ -692,12 +736,20 @@ xdsIR:
       port: 10081
       routes:
       - destination:
+          metadata:
+            kind: HTTPRoute
+            name: httproute-4
+            namespace: default
           name: httproute/default/httproute-4/rule/0
           settings:
           - addressType: IP
             endpoints:
             - host: 7.7.7.7
               port: 8080
+            metadata:
+              name: service-2
+              namespace: default
+              sectionName: "8080"
             name: httproute/default/httproute-4/rule/0/backend/0
             protocol: HTTP
             weight: 1

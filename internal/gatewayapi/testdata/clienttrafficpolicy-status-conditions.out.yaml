@@ -3,6 +3,33 @@ clientTrafficPolicies:
   kind: ClientTrafficPolicy
   metadata:
     creationTimestamp: null
+    name: not-found-section-name
+    namespace: envoy-gateway
+  spec:
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: Gateway
+      name: gateway-3
+      sectionName: foo-bar
+  status:
+    ancestors:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: gateway-3
+        namespace: envoy-gateway
+        sectionName: foo-bar
+      conditions:
+      - lastTransitionTime: null
+        message: No section name foo-bar found for Gateway envoy-gateway/gateway-3
+        reason: TargetNotFound
+        status: "False"
+        type: Accepted
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: ClientTrafficPolicy
+  metadata:
+    creationTimestamp: null
     name: target-gateway-2-http
     namespace: envoy-gateway
   spec:
@@ -85,29 +112,15 @@ clientTrafficPolicies:
   kind: ClientTrafficPolicy
   metadata:
     creationTimestamp: null
-    name: not-found-section-name
+    name: not-same-namespace-with-gateway
     namespace: envoy-gateway
   spec:
     targetRef:
       group: gateway.networking.k8s.io
       kind: Gateway
-      name: gateway-3
-      sectionName: foo-bar
+      name: not-same-namespace-gateway
   status:
-    ancestors:
-    - ancestorRef:
-        group: gateway.networking.k8s.io
-        kind: Gateway
-        name: gateway-3
-        namespace: envoy-gateway
-        sectionName: foo-bar
-      conditions:
-      - lastTransitionTime: null
-        message: No section name foo-bar found for envoy-gateway/gateway-3
-        reason: Invalid
-        status: "False"
-        type: Accepted
-      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+    ancestors: null
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: ClientTrafficPolicy
   metadata:
@@ -201,19 +214,6 @@ clientTrafficPolicies:
       group: gateway.networking.k8s.io
       kind: Gateway
       name: unknown-gateway
-  status:
-    ancestors: null
-- apiVersion: gateway.envoyproxy.io/v1alpha1
-  kind: ClientTrafficPolicy
-  metadata:
-    creationTimestamp: null
-    name: not-same-namespace-with-gateway
-    namespace: envoy-gateway
-  spec:
-    targetRef:
-      group: gateway.networking.k8s.io
-      kind: Gateway
-      name: not-same-namespace-gateway
   status:
     ancestors: null
 gateways:
@@ -443,6 +443,9 @@ infraIR:
         labels:
           gateway.envoyproxy.io/owning-gateway-name: gateway-1
           gateway.envoyproxy.io/owning-gateway-namespace: envoy-gateway
+        ownerReference:
+          kind: GatewayClass
+          name: envoy-gateway-class
       name: envoy-gateway/gateway-1
       namespace: envoy-gateway-system
   envoy-gateway/gateway-2:
@@ -466,6 +469,9 @@ infraIR:
         labels:
           gateway.envoyproxy.io/owning-gateway-name: gateway-2
           gateway.envoyproxy.io/owning-gateway-namespace: envoy-gateway
+        ownerReference:
+          kind: GatewayClass
+          name: envoy-gateway-class
       name: envoy-gateway/gateway-2
       namespace: envoy-gateway-system
   envoy-gateway/gateway-3:
@@ -482,6 +488,9 @@ infraIR:
         labels:
           gateway.envoyproxy.io/owning-gateway-name: gateway-3
           gateway.envoyproxy.io/owning-gateway-namespace: envoy-gateway
+        ownerReference:
+          kind: GatewayClass
+          name: envoy-gateway-class
       name: envoy-gateway/gateway-3
       namespace: envoy-gateway-system
   not-same-namespace/not-same-namespace-gateway:
@@ -498,6 +507,9 @@ infraIR:
         labels:
           gateway.envoyproxy.io/owning-gateway-name: not-same-namespace-gateway
           gateway.envoyproxy.io/owning-gateway-namespace: not-same-namespace
+        ownerReference:
+          kind: GatewayClass
+          name: envoy-gateway-class
       name: not-same-namespace/not-same-namespace-gateway
       namespace: envoy-gateway-system
 xdsIR:
@@ -507,6 +519,7 @@ xdsIR:
       - path: /dev/stdout
     http:
     - address: 0.0.0.0
+      externalPort: 80
       hostnames:
       - '*'
       isHTTP2: false
@@ -531,6 +544,7 @@ xdsIR:
       - path: /dev/stdout
     http:
     - address: 0.0.0.0
+      externalPort: 80
       hostnames:
       - '*'
       isHTTP2: false
@@ -551,6 +565,7 @@ xdsIR:
       port: 19003
     tcp:
     - address: 0.0.0.0
+      externalPort: 53
       name: envoy-gateway/gateway-2/tcp
       port: 10053
   envoy-gateway/gateway-3:
@@ -559,6 +574,7 @@ xdsIR:
       - path: /dev/stdout
     http:
     - address: 0.0.0.0
+      externalPort: 80
       hostnames:
       - '*'
       isHTTP2: false
@@ -581,8 +597,19 @@ xdsIR:
     accessLog:
       json:
       - path: /dev/stdout
+    globalResources:
+      proxyServiceCluster:
+        name: not-same-namespace/not-same-namespace-gateway
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: not-same-namespace/not-same-namespace-gateway
+          protocol: TCP
     http:
     - address: 0.0.0.0
+      externalPort: 80
       hostnames:
       - '*'
       isHTTP2: false

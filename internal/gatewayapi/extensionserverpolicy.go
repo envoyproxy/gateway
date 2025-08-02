@@ -29,11 +29,19 @@ func (t *Translator) ProcessExtensionServerPolicies(policies []unstructured.Unst
 ) ([]unstructured.Unstructured, error) {
 	res := []unstructured.Unstructured{}
 
-	// Sort based on timestamp
+	// Initially, policies sort by creation timestamp
+	// or sort alphabetically by “{namespace}/{name}” if multiple gateways share same timestamp.
 	sort.Slice(policies, func(i, j int) bool {
-		iTime := policies[i].GetCreationTimestamp()
-		jTime := policies[j].GetCreationTimestamp()
-		return iTime.Before(&jTime)
+		tsI := policies[i].GetCreationTimestamp()
+		tsJ := policies[j].GetCreationTimestamp()
+		if tsI.Equal(&tsJ) {
+			policyKeyI := fmt.Sprintf("%s/%s", policies[i].GetNamespace(), policies[i].GetName())
+			policyKeyJ := fmt.Sprintf("%s/%s", policies[j].GetNamespace(), policies[j].GetName())
+			return policyKeyI < policyKeyJ
+		}
+		// Not identical CreationTimestamps
+
+		return tsI.Before(&tsJ)
 	})
 
 	// First build a map out of the gateways for faster lookup
@@ -46,7 +54,7 @@ func (t *Translator) ProcessExtensionServerPolicies(policies []unstructured.Unst
 	var errs error
 	// Process the policies targeting Gateways. Only update the policy status if it was accepted.
 	// A policy is considered accepted if at least one targetRef contained inside matched a listener.
-	for _, policy := range policies {
+	for policyIndex, policy := range policies {
 		policy := policy.DeepCopy()
 		var policyStatus gwapiv1a2.PolicyStatus
 		accepted := false
@@ -68,6 +76,13 @@ func (t *Translator) ProcessExtensionServerPolicies(policies []unstructured.Unst
 				continue
 			}
 
+			// Append policy extension server policy list for related gateway.
+			gatewayKey := t.getIRKey(gateway.Gateway)
+			unstructuredPolicy := &ir.UnstructuredRef{
+				Object: &policies[policyIndex],
+			}
+			xdsIR[gatewayKey].ExtensionServerPolicies = append(xdsIR[gatewayKey].ExtensionServerPolicies, unstructuredPolicy)
+
 			// Set conditions for translation if it got any
 			if t.translateExtServerPolicyForGateway(policy, gateway, currTarget, xdsIR) {
 				// Set Accepted condition if it is unset
@@ -77,7 +92,7 @@ func (t *Translator) ProcessExtensionServerPolicies(policies []unstructured.Unst
 				ancestorRefs := []gwapiv1a2.ParentReference{
 					getAncestorRefForPolicy(gatewayNN, currTarget.SectionName),
 				}
-				status.SetAcceptedForPolicyAncestors(&policyStatus, ancestorRefs, t.GatewayControllerName)
+				status.SetAcceptedForPolicyAncestors(&policyStatus, ancestorRefs, t.GatewayControllerName, policy.GetGeneration())
 				accepted = true
 			}
 		}

@@ -23,8 +23,7 @@ import (
 )
 
 const (
-	vmRuntimeV8           = "envoy.wasm.runtime.v8"
-	wasmHTTPServerCluster = "wasm_cluster"
+	vmRuntimeV8 = "envoy.wasm.runtime.v8"
 )
 
 func init() {
@@ -124,7 +123,7 @@ func wasmConfig(wasm ir.Wasm) (*wasmfilterv3.Wasm, error) {
 					HttpUri: &corev3.HttpUri{
 						Uri: wasm.Code.ServingURL,
 						HttpUpstreamType: &corev3.HttpUri_Cluster{
-							Cluster: wasmHTTPServerCluster,
+							Cluster: wasmHTTPServiceClusterName,
 						},
 						Timeout: &durationpb.Duration{
 							Seconds: defaultExtServiceRequestTimeout,
@@ -179,7 +178,7 @@ func (*wasm) patchResources(_ *types.ResourceVersionTable, _ []*ir.HTTPRoute) er
 
 // patchRoute patches the provided route with the wasm config if applicable.
 // Note: this method enables the corresponding wasm filter for the provided route.
-func (*wasm) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute) error {
+func (*wasm) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute, _ *ir.HTTPListener) error {
 	if route == nil {
 		return errors.New("xds route is nil")
 	}

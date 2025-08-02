@@ -41,8 +41,17 @@ func (t *Translator) ProcessBackendTrafficPolicies(resources *resource.Resources
 	res := make([]*egv1a1.BackendTrafficPolicy, 0, len(resources.BackendTrafficPolicies))
 
 	backendTrafficPolicies := resources.BackendTrafficPolicies
-	// Sort based on timestamp
+
+	// Initially, backendTrafficPolicies sort by creation timestamp
+	// or sort alphabetically by “{namespace}/{name}” if multiple policies share same timestamp.
 	sort.Slice(backendTrafficPolicies, func(i, j int) bool {
+		if backendTrafficPolicies[i].CreationTimestamp.Equal(&(backendTrafficPolicies[j].CreationTimestamp)) {
+			policyKeyI := fmt.Sprintf("%s/%s", backendTrafficPolicies[i].Namespace, backendTrafficPolicies[i].Name)
+			policyKeyJ := fmt.Sprintf("%s/%s", backendTrafficPolicies[j].Namespace, backendTrafficPolicies[j].Name)
+			return policyKeyI < policyKeyJ
+		}
+		// Not identical CreationTimestamps
+
 		return backendTrafficPolicies[i].CreationTimestamp.Before(&(backendTrafficPolicies[j].CreationTimestamp))
 	})
 
@@ -165,7 +174,7 @@ func (t *Translator) ProcessBackendTrafficPolicies(resources *resource.Resources
 
 				if policy.Spec.MergeType == nil {
 					// Set conditions for translation error if it got any
-					if err := t.translateBackendTrafficPolicyForRoute(policy, route, xdsIR, resources); err != nil {
+					if err := t.translateBackendTrafficPolicyForRoute(policy, route, xdsIR, resources, nil); err != nil {
 						status.SetTranslationErrorForPolicyAncestors(&policy.Status,
 							ancestorRefs,
 							t.GatewayControllerName,
@@ -176,28 +185,34 @@ func (t *Translator) ProcessBackendTrafficPolicies(resources *resource.Resources
 				} else {
 					// merge with parent target policy if exists
 					for _, gwNN := range routeParents.UnsortedList() {
+						ancestorRef := getAncestorRefForPolicy(gwNN, nil)
 						// find policy for Gateway
 						gwPolicy := gatewayPolicyMap[gwNN]
 						if gwPolicy == nil {
 							// not found, fall back to the current policy
-							if err := t.translateBackendTrafficPolicyForRoute(policy, route, xdsIR, resources); err != nil {
-								status.SetTranslationErrorForPolicyAncestors(&policy.Status,
-									ancestorRefs,
+							if err := t.translateBackendTrafficPolicyForRoute(policy, route, xdsIR, resources, &gwNN); err != nil {
+								status.SetConditionForPolicyAncestor(&policy.Status,
+									ancestorRef,
 									t.GatewayControllerName,
-									policy.Generation,
+									gwapiv1a2.PolicyConditionAccepted, metav1.ConditionFalse,
+									egv1a1.PolicyReasonInvalid,
 									status.Error2ConditionMsg(err),
+									policy.Generation,
 								)
 							}
+
 							continue
 						}
 
 						// merge with parent policy
 						if err := t.translateBackendTrafficPolicyForRouteWithMerge(policy, gwNN, gwPolicy, route, xdsIR, resources); err != nil {
-							status.SetTranslationErrorForPolicyAncestors(&policy.Status,
-								ancestorRefs,
+							status.SetConditionForPolicyAncestor(&policy.Status,
+								ancestorRef,
 								t.GatewayControllerName,
-								policy.Generation,
+								gwapiv1a2.PolicyConditionAccepted, metav1.ConditionFalse,
+								egv1a1.PolicyReasonInvalid,
 								status.Error2ConditionMsg(err),
+								policy.Generation,
 							)
 							continue
 						}
@@ -207,8 +222,8 @@ func (t *Translator) ProcessBackendTrafficPolicies(resources *resource.Resources
 						}
 						gatewayPolicyMerged[gwNN].Insert(utils.NamespacedName(route).String())
 
-						status.SetConditionForPolicyAncestors(&policy.Status,
-							ancestorRefs,
+						status.SetConditionForPolicyAncestor(&policy.Status,
+							ancestorRef,
 							t.GatewayControllerName,
 							egv1a1.PolicyConditionMerged,
 							metav1.ConditionTrue,
@@ -220,7 +235,7 @@ func (t *Translator) ProcessBackendTrafficPolicies(resources *resource.Resources
 				}
 
 				// Set Accepted condition if it is unset
-				status.SetAcceptedForPolicyAncestors(&policy.Status, ancestorRefs, t.GatewayControllerName)
+				status.SetAcceptedForPolicyAncestors(&policy.Status, ancestorRefs, t.GatewayControllerName, policy.Generation)
 			}
 		}
 	}
@@ -274,7 +289,7 @@ func (t *Translator) ProcessBackendTrafficPolicies(resources *resource.Resources
 				}
 
 				// Set Accepted condition if it is unset
-				status.SetAcceptedForPolicyAncestors(&policy.Status, ancestorRefs, t.GatewayControllerName)
+				status.SetAcceptedForPolicyAncestors(&policy.Status, ancestorRefs, t.GatewayControllerName, policy.Generation)
 
 				// Check if this policy is overridden by other policies targeting at
 				// route level
@@ -322,6 +337,12 @@ func (t *Translator) ProcessBackendTrafficPolicies(resources *resource.Resources
 		}
 	}
 
+	for _, policy := range res {
+		// Truncate Ancestor list of longer than 16
+		if len(policy.Status.Ancestors) > 16 {
+			status.TruncatePolicyAncestors(&policy.Status, t.GatewayControllerName, policy.Generation)
+		}
+	}
 	return res
 }
 
@@ -393,6 +414,7 @@ func (t *Translator) translateBackendTrafficPolicyForRoute(
 	route RouteContext,
 	xdsIR resource.XdsIRMap,
 	resources *resource.Resources,
+	gatewayNN *types.NamespacedName,
 ) error {
 	tf, errs := t.buildTrafficFeatures(policy, resources)
 	if tf == nil {
@@ -401,7 +423,12 @@ func (t *Translator) translateBackendTrafficPolicyForRoute(
 	}
 
 	// Apply IR to all relevant routes
-	for _, x := range xdsIR {
+	for key, x := range xdsIR {
+		// if gatewayNN is not nil, only apply to the specific gateway
+		if gatewayNN != nil && key != t.IRKey(*gatewayNN) {
+			// Skip if not the gateway wanted
+			continue
+		}
 		applyTrafficFeatureToRoute(route, tf, errs, policy, x)
 	}
 
@@ -417,13 +444,47 @@ func (t *Translator) translateBackendTrafficPolicyForRouteWithMerge(
 	if err != nil {
 		return fmt.Errorf("error merging policies: %w", err)
 	}
+
+	// Build traffic features from the merged policy
 	tf, errs := t.buildTrafficFeatures(mergedPolicy, resources)
 	if tf == nil {
 		// should not happen
 		return nil
 	}
 
-	// Apply IR to relevant gateway routes
+	// Since GlobalRateLimit merge relies on IR auto-generated key: (<policy-ns>/<policy-name>/rule/<rule-index>)
+	// We can't simply merge the BTP's using utils.Merge() we need to specifically merge the GlobalRateLimit.Rules using IR fields.
+	// Since ir.TrafficFeatures is not a built-in Kubernetes API object with defined merging strategies and it does not support a deep merge (for lists/maps).
+
+	// Handle rate limit merging cases:
+	// 1. Both policies have rate limits - merge them
+	// 2. Only gateway policy has rate limits - preserve gateway policy's rule names
+	// 3. Only route policy has rate limits - use route policy's rule names (default behavior)
+	if policy.Spec.RateLimit != nil && gwPolicy.Spec.RateLimit != nil {
+		// Case 1: Both policies have rate limits - merge them
+		tfGW, _ := t.buildTrafficFeatures(gwPolicy, resources)
+		tfRoute, _ := t.buildTrafficFeatures(policy, resources)
+
+		if tfGW != nil && tfRoute != nil &&
+			tfGW.RateLimit != nil && tfRoute.RateLimit != nil {
+
+			mergedRL, err := utils.Merge(tfGW.RateLimit, tfRoute.RateLimit, *policy.Spec.MergeType)
+			if err != nil {
+				return fmt.Errorf("error merging rate limits: %w", err)
+			}
+			// Replace the rate limit in the merged features if successful
+			tf.RateLimit = mergedRL
+		}
+	} else if policy.Spec.RateLimit == nil && gwPolicy.Spec.RateLimit != nil {
+		// Case 2: Only gateway policy has rate limits - preserve gateway policy's rule names
+		tfGW, _ := t.buildTrafficFeatures(gwPolicy, resources)
+		if tfGW != nil && tfGW.RateLimit != nil {
+			// Use the gateway policy's rate limit with its original rule names
+			tf.RateLimit = tfGW.RateLimit
+		}
+	}
+	// Case 3: Only route policy has rate limits or neither has rate limits - use default behavior (tf already built from merged policy)
+
 	x, ok := xdsIR[t.IRKey(gatewayNN)]
 	if !ok {
 		// should not happen.
@@ -477,7 +538,6 @@ func applyTrafficFeatureToRoute(route RouteContext,
 				}
 
 				r.Traffic = tf.DeepCopy()
-				r.Traffic.Name = irTrafficName(policy)
 
 				if localTo, err := buildClusterSettingsTimeout(policy.Spec.ClusterSettings); err == nil {
 					r.Traffic.Timeout = localTo
@@ -519,7 +579,7 @@ func (t *Translator) buildTrafficFeatures(policy *egv1a1.BackendTrafficPolicy, r
 		ro          *ir.ResponseOverride
 		rb          *ir.RequestBuffer
 		cp          []*ir.Compression
-		httpUpgrade []string
+		httpUpgrade []ir.HTTPUpgradeConfig
 		err, errs   error
 	)
 
@@ -683,7 +743,6 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(
 			}
 
 			r.Traffic = tf.DeepCopy()
-			r.Traffic.Name = irTrafficName(policy)
 
 			// Update the Host field in HealthCheck, now that we have access to the Route Hostname.
 			r.Traffic.HealthCheck.SetHTTPHostIfAbsent(r.Hostname)
@@ -757,7 +816,7 @@ func (t *Translator) buildLocalRateLimit(policy *egv1a1.BackendTrafficPolicy) (*
 	var err error
 	var irRule *ir.RateLimitRule
 	irRules := make([]*ir.RateLimitRule, 0)
-	for _, rule := range local.Rules {
+	for i, rule := range local.Rules {
 		// We don't process the rule without clientSelectors here because it's
 		// previously used as the default route-level limit.
 		if len(rule.ClientSelectors) == 0 {
@@ -768,6 +827,8 @@ func (t *Translator) buildLocalRateLimit(policy *egv1a1.BackendTrafficPolicy) (*
 		if err != nil {
 			return nil, err
 		}
+		// Set the Name field as <policy-ns>/<policy-name>/rule/<rule-index>
+		irRule.Name = irRuleName(policy.Namespace, policy.Name, i)
 		irRules = append(irRules, irRule)
 	}
 
@@ -792,8 +853,7 @@ func (t *Translator) buildGlobalRateLimit(policy *egv1a1.BackendTrafficPolicy) (
 	global := policy.Spec.RateLimit.Global
 	rateLimit := &ir.RateLimit{
 		Global: &ir.GlobalRateLimit{
-			Rules:  make([]*ir.RateLimitRule, len(global.Rules)),
-			Shared: global.Shared,
+			Rules: make([]*ir.RateLimitRule, len(global.Rules)),
 		},
 	}
 
@@ -804,6 +864,8 @@ func (t *Translator) buildGlobalRateLimit(policy *egv1a1.BackendTrafficPolicy) (
 		if err != nil {
 			return nil, err
 		}
+		// Set the Name field as <policy-ns>/<policy-name>/rule/<rule-index>
+		irRules[i].Name = irRuleName(policy.Namespace, policy.Name, i)
 	}
 
 	return rateLimit, nil
@@ -816,6 +878,7 @@ func buildRateLimitRule(rule egv1a1.RateLimitRule) (*ir.RateLimitRule, error) {
 			Unit:     ir.RateLimitUnit(rule.Limit.Unit),
 		},
 		HeaderMatches: make([]*ir.StringMatch, 0),
+		Shared:        rule.Shared,
 	}
 
 	for _, match := range rule.ClientSelectors {
@@ -1003,25 +1066,52 @@ func buildResponseOverride(policy *egv1a1.BackendTrafficPolicy, resources *resou
 			}
 		}
 
-		response := ir.CustomResponse{
-			ContentType: ro.Response.ContentType,
-		}
+		if ro.Redirect != nil {
+			redirect := &ir.Redirect{
+				Scheme: ro.Redirect.Scheme,
+			}
+			if ro.Redirect.Path != nil {
+				redirect.Path = &ir.HTTPPathModifier{
+					FullReplace:        ro.Redirect.Path.ReplaceFullPath,
+					PrefixMatchReplace: ro.Redirect.Path.ReplacePrefixMatch,
+				}
+			}
+			if ro.Redirect.Hostname != nil {
+				redirect.Hostname = ptr.To(string(*ro.Redirect.Hostname))
+			}
+			if ro.Redirect.Port != nil {
+				redirect.Port = ptr.To(uint32(*ro.Redirect.Port))
+			}
+			if ro.Redirect.StatusCode != nil {
+				redirect.StatusCode = ptr.To(int32(*ro.Redirect.StatusCode))
+			}
 
-		if ro.Response.StatusCode != nil {
-			response.StatusCode = ptr.To(uint32(*ro.Response.StatusCode))
-		}
+			rules = append(rules, ir.ResponseOverrideRule{
+				Name:     defaultResponseOverrideRuleName(policy, index),
+				Match:    match,
+				Redirect: redirect,
+			})
+		} else {
+			response := &ir.CustomResponse{
+				ContentType: ro.Response.ContentType,
+			}
 
-		var err error
-		response.Body, err = getCustomResponseBody(ro.Response.Body, resources, policy.Namespace)
-		if err != nil {
-			return nil, err
-		}
+			if ro.Response.StatusCode != nil {
+				response.StatusCode = ptr.To(uint32(*ro.Response.StatusCode))
+			}
 
-		rules = append(rules, ir.ResponseOverrideRule{
-			Name:     defaultResponseOverrideRuleName(policy, index),
-			Match:    match,
-			Response: response,
-		})
+			var err error
+			response.Body, err = getCustomResponseBody(ro.Response.Body, resources, policy.Namespace)
+			if err != nil {
+				return nil, err
+			}
+
+			rules = append(rules, ir.ResponseOverrideRule{
+				Name:     defaultResponseOverrideRuleName(policy, index),
+				Match:    match,
+				Response: response,
+			})
+		}
 	}
 	return &ir.ResponseOverride{
 		Name:  irConfigName(policy),
@@ -1099,14 +1189,22 @@ func buildCompression(compression []*egv1a1.Compression) []*ir.Compression {
 	return irCompression
 }
 
-func buildHTTPProtocolUpgradeConfig(cfgs []*egv1a1.ProtocolUpgradeConfig) []string {
+func buildHTTPProtocolUpgradeConfig(cfgs []*egv1a1.ProtocolUpgradeConfig) []ir.HTTPUpgradeConfig {
 	if len(cfgs) == 0 {
 		return nil
 	}
 
-	result := make([]string, 0, len(cfgs))
+	result := make([]ir.HTTPUpgradeConfig, 0, len(cfgs))
 	for _, cfg := range cfgs {
-		result = append(result, cfg.Type)
+		upgrade := ir.HTTPUpgradeConfig{
+			Type: cfg.Type,
+		}
+		if cfg.Connect != nil {
+			upgrade.Connect = &ir.ConnectConfig{
+				Terminate: ptr.Deref(cfg.Connect.Terminate, false),
+			}
+		}
+		result = append(result, upgrade)
 	}
 
 	return result

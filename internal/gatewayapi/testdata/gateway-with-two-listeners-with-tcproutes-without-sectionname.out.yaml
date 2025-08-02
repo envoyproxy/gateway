@@ -86,6 +86,9 @@ infraIR:
         labels:
           gateway.envoyproxy.io/owning-gateway-name: gateway-1
           gateway.envoyproxy.io/owning-gateway-namespace: envoy-gateway
+        ownerReference:
+          kind: GatewayClass
+          name: envoy-gateway-class
       name: envoy-gateway/gateway-1
       namespace: envoy-gateway-system
 tcpRoutes:
@@ -156,6 +159,21 @@ xdsIR:
     accessLog:
       json:
       - path: /dev/stdout
+    globalResources:
+      proxyServiceCluster:
+        name: envoy-gateway/gateway-1
+        settings:
+        - addressType: IP
+          endpoints:
+          - host: 7.6.5.4
+            port: 8080
+            zone: zone1
+          metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-1
+          protocol: TCP
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4
@@ -163,31 +181,49 @@ xdsIR:
       port: 19003
     tcp:
     - address: 0.0.0.0
+      externalPort: 161
       name: envoy-gateway/gateway-1/tcp1
       port: 10161
       routes:
       - destination:
+          metadata:
+            kind: TCPRoute
+            name: tcproute-1
+            namespace: default
           name: tcproute/default/tcproute-1/rule/-1
           settings:
           - addressType: IP
             endpoints:
             - host: 7.7.7.7
               port: 8163
+            metadata:
+              name: service-1
+              namespace: default
+              sectionName: "8163"
             name: tcproute/default/tcproute-1/rule/-1/backend/0
             protocol: TCP
             weight: 1
         name: tcproute/default/tcproute-1
     - address: 0.0.0.0
+      externalPort: 162
       name: envoy-gateway/gateway-1/tcp2
       port: 10162
       routes:
       - destination:
+          metadata:
+            kind: TCPRoute
+            name: tcproute-1
+            namespace: default
           name: tcproute/default/tcproute-1/rule/-1
           settings:
           - addressType: IP
             endpoints:
             - host: 7.7.7.7
               port: 8163
+            metadata:
+              name: service-1
+              namespace: default
+              sectionName: "8163"
             name: tcproute/default/tcproute-1/rule/-1/backend/0
             protocol: TCP
             weight: 1

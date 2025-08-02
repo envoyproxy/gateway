@@ -1,8 +1,7 @@
 - circuitBreakers:
     thresholds:
     - maxRetries: 1024
-  commonLbConfig:
-    localityWeightedLbConfig: {}
+  commonLbConfig: {}
   connectTimeout: 10s
   dnsLookupFamily: V4_PREFERRED
   edsClusterConfig:
@@ -12,14 +11,21 @@
     serviceName: httproute/default/httproute-1/rule/0
   ignoreHealthOnHostRemoval: true
   lbPolicy: LEAST_REQUEST
+  loadBalancingPolicy:
+    policies:
+    - typedExtensionConfig:
+        name: envoy.load_balancing_policies.least_request
+        typedConfig:
+          '@type': type.googleapis.com/envoy.extensions.load_balancing_policies.least_request.v3.LeastRequest
+          localityLbConfig:
+            localityWeightedLbConfig: {}
   name: httproute/default/httproute-1/rule/0
   perConnectionBufferLimitBytes: 32768
   type: EDS
 - circuitBreakers:
     thresholds:
     - maxRetries: 1024
-  commonLbConfig:
-    localityWeightedLbConfig: {}
+  commonLbConfig: {}
   connectTimeout: 10s
   dnsLookupFamily: V4_PREFERRED
   edsClusterConfig:
@@ -29,6 +35,70 @@
     serviceName: httproute/default/httproute-2/rule/0
   ignoreHealthOnHostRemoval: true
   lbPolicy: LEAST_REQUEST
+  loadBalancingPolicy:
+    policies:
+    - typedExtensionConfig:
+        name: envoy.load_balancing_policies.least_request
+        typedConfig:
+          '@type': type.googleapis.com/envoy.extensions.load_balancing_policies.least_request.v3.LeastRequest
+          localityLbConfig:
+            localityWeightedLbConfig: {}
   name: httproute/default/httproute-2/rule/0
   perConnectionBufferLimitBytes: 32768
   type: EDS
+- circuitBreakers:
+    thresholds:
+    - maxRetries: 1024
+  commonLbConfig: {}
+  connectTimeout: 10s
+  dnsLookupFamily: V4_PREFERRED
+  dnsRefreshRate: 30s
+  ignoreHealthOnHostRemoval: true
+  lbPolicy: LEAST_REQUEST
+  loadAssignment:
+    clusterName: wasm_cluster
+    endpoints:
+    - lbEndpoints:
+      - endpoint:
+          address:
+            socketAddress:
+              address: envoy-gateway.envoy-gateway-system.svc.cluster.local
+              portValue: 18002
+        loadBalancingWeight: 1
+      loadBalancingWeight: 1
+      locality:
+        region: wasm_cluster/backend/-1
+  loadBalancingPolicy:
+    policies:
+    - typedExtensionConfig:
+        name: envoy.load_balancing_policies.least_request
+        typedConfig:
+          '@type': type.googleapis.com/envoy.extensions.load_balancing_policies.least_request.v3.LeastRequest
+          localityLbConfig:
+            localityWeightedLbConfig: {}
+  name: wasm_cluster
+  perConnectionBufferLimitBytes: 32768
+  respectDnsTtl: true
+  transportSocket:
+    name: envoy.transport_sockets.tls
+    typedConfig:
+      '@type': type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.UpstreamTlsContext
+      commonTlsContext:
+        tlsCertificateSdsSecretConfigs:
+        - name: envoy-gateway-system/envoy
+          sdsConfig:
+            ads: {}
+            resourceApiVersion: V3
+        tlsParams:
+          tlsMaximumProtocolVersion: TLSv1_3
+        validationContext:
+          trustedCa:
+            filename: /certs/ca.crt
+  type: STRICT_DNS
+  typedExtensionProtocolOptions:
+    envoy.extensions.upstreams.http.v3.HttpProtocolOptions:
+      '@type': type.googleapis.com/envoy.extensions.upstreams.http.v3.HttpProtocolOptions
+      explicitHttpConfig:
+        http2ProtocolOptions:
+          initialConnectionWindowSize: 1048576
+          initialStreamWindowSize: 65536

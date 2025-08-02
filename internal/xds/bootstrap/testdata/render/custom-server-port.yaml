@@ -12,7 +12,7 @@ cluster_manager:
   local_cluster_name: local_cluster
 node:
   locality:
-    zone: "$(ENVOY_SERVICE_ZONE)"
+    zone: $(ENVOY_SERVICE_ZONE)
 layered_runtime:
   layers:
   - name: global_config
@@ -84,22 +84,22 @@ static_resources:
                 address: 127.0.0.1
                 port_value: 2222
   - connect_timeout: 10s
-    lb_policy: ROUND_ROBIN
-    load_assignment:
-      cluster_name: local_cluster
-      endpoints:
-      - lb_endpoints:
-        - endpoint:
-            address:
-              socket_address:
-                address: 127.0.0.1
-                port_value: 10080
-          load_balancing_weight: 1
-        load_balancing_weight: 1
-        locality:
-          zone: "$(ENVOY_SERVICE_ZONE)"
+    eds_cluster_config:
+      eds_config:
+        ads: {}
+        resource_api_version: 'V3'
+      service_name: local_cluster
+    load_balancing_policy:
+      policies:
+      - typed_extension_config:
+          name: 'envoy.load_balancing_policies.least_request'
+          typed_config:
+            '@type': 'type.googleapis.com/envoy.extensions.load_balancing_policies.least_request.v3.LeastRequest'
+            locality_lb_config:
+              zone_aware_lb_config:
+                min_cluster_size: '1'
     name: local_cluster
-    type: STATIC
+    type: EDS
   - connect_timeout: 10s
     load_assignment:
       cluster_name: xds_cluster
@@ -122,44 +122,6 @@ static_resources:
               timeout: 5s
     name: xds_cluster
     type: STRICT_DNS
-    transport_socket:
-      name: envoy.transport_sockets.tls
-      typed_config:
-        "@type": type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.UpstreamTlsContext
-        common_tls_context:
-          tls_params:
-            tls_maximum_protocol_version: TLSv1_3
-          tls_certificate_sds_secret_configs:
-          - name: xds_certificate
-            sds_config:
-              path_config_source:
-                path: /sds/xds-certificate.json
-              resource_api_version: V3
-          validation_context_sds_secret_config:
-            name: xds_trusted_ca
-            sds_config:
-              path_config_source:
-                path: /sds/xds-trusted-ca.json
-              resource_api_version: V3
-  - name: wasm_cluster
-    type: STRICT_DNS
-    connect_timeout: 10s
-    load_assignment:
-      cluster_name: wasm_cluster
-      endpoints:
-      - load_balancing_weight: 1
-        lb_endpoints:
-        - load_balancing_weight: 1
-          endpoint:
-            address:
-              socket_address:
-                address: envoy-gateway
-                port_value: 1111
-    typed_extension_protocol_options:
-      envoy.extensions.upstreams.http.v3.HttpProtocolOptions:
-        "@type": "type.googleapis.com/envoy.extensions.upstreams.http.v3.HttpProtocolOptions"
-        explicit_http_config:
-          http2_protocol_options: {}
     transport_socket:
       name: envoy.transport_sockets.tls
       typed_config:

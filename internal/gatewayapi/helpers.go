@@ -408,6 +408,10 @@ func irDestinationSettingName(destName string, backendIdx int) string {
 	return fmt.Sprintf("%s/backend/%d", destName, backendIdx)
 }
 
+func irRuleName(policyNamespace, policyName string, ruleIndex int) string {
+	return fmt.Sprintf("%s/%s/rule/%d", policyNamespace, policyName, ruleIndex)
+}
+
 // irTLSConfigs produces a defaulted IR TLSConfig
 func irTLSConfigs(tlsSecrets ...*corev1.Secret) *ir.TLSConfig {
 	if len(tlsSecrets) == 0 {
@@ -450,11 +454,6 @@ func irTLSCACertName(namespace, name string) string {
 	return fmt.Sprintf("%s/%s/%s", namespace, name, caCertKey)
 }
 
-// Helper function to format the policy name and namespace
-func irTrafficName(policy *egv1a1.BackendTrafficPolicy) string {
-	return fmt.Sprintf("%s/%s", policy.Namespace, policy.Name)
-}
-
 func IsMergeGatewaysEnabled(resources *resource.Resources) bool {
 	return resources.EnvoyProxyForGatewayClass != nil && resources.EnvoyProxyForGatewayClass.Spec.MergeGateways != nil && *resources.EnvoyProxyForGatewayClass.Spec.MergeGateways
 }
@@ -486,12 +485,14 @@ type policyTargetRouteKey struct {
 
 type policyRouteTargetContext struct {
 	RouteContext
-	attached bool
+	attached             bool
+	attachedToRouteRules sets.Set[string]
 }
 
 type policyGatewayTargetContext struct {
 	*GatewayContext
-	attached bool
+	attached            bool
+	attachedToListeners sets.Set[string]
 }
 
 // listenersWithSameHTTPPort returns a list of the names of all other HTTP listeners
@@ -673,4 +674,57 @@ func getPreserveRouteOrder(envoyProxy *egv1a1.EnvoyProxy) bool {
 		return true
 	}
 	return false
+}
+
+func getCaCertFromConfigMap(cm *corev1.ConfigMap) (string, bool) {
+	var data string
+	data, exits := cm.Data[caCertKey]
+	switch {
+	case exits:
+		return data, true
+	case len(cm.Data) == 1: // Fallback to the first key if ca.crt is not found
+		for _, value := range cm.Data {
+			data = value
+			break
+		}
+		return data, true
+	default:
+		return "", false
+	}
+}
+
+func getCaCertFromSecret(s *corev1.Secret) ([]byte, bool) {
+	var data []byte
+	data, exits := s.Data[caCertKey]
+	switch {
+	case exits:
+		return data, true
+	case len(s.Data) == 1: // Fallback to the first key if ca.crt is not found
+		for _, value := range s.Data {
+			data = value
+			break
+		}
+		return data, true
+	default:
+		return nil, false
+	}
+}
+
+func irStringMatch(name string, match egv1a1.StringMatch) *ir.StringMatch {
+	matchType := egv1a1.StringMatchExact
+	if match.Type != nil {
+		matchType = *match.Type
+	}
+	switch matchType {
+	case egv1a1.StringMatchExact:
+		return &ir.StringMatch{Name: name, Exact: &match.Value}
+	case egv1a1.StringMatchPrefix:
+		return &ir.StringMatch{Name: name, Prefix: &match.Value}
+	case egv1a1.StringMatchSuffix:
+		return &ir.StringMatch{Name: name, Suffix: &match.Value}
+	case egv1a1.StringMatchRegularExpression:
+		return &ir.StringMatch{Name: name, SafeRegex: &match.Value}
+	default:
+		return nil
+	}
 }

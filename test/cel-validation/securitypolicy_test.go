@@ -149,7 +149,7 @@ func TestSecurityPolicyTarget(t *testing.T) {
 		},
 
 		{
-			desc: "sectionName disabled until supported - targetRef",
+			desc: "sectionName supported for kind Gateway - targetRef",
 			mutate: func(sp *egv1a1.SecurityPolicy) {
 				sp.Spec = egv1a1.SecurityPolicySpec{
 					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
@@ -164,12 +164,10 @@ func TestSecurityPolicyTarget(t *testing.T) {
 					},
 				}
 			},
-			wantErrors: []string{
-				"spec: Invalid value: \"object\": this policy does not yet support the sectionName field",
-			},
+			wantErrors: []string{},
 		},
 		{
-			desc: "sectionName disabled until supported - targetRefs",
+			desc: "sectionName supported for kind Gateway - targetRefs",
 			mutate: func(sp *egv1a1.SecurityPolicy) {
 				sp.Spec = egv1a1.SecurityPolicySpec{
 					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
@@ -186,9 +184,45 @@ func TestSecurityPolicyTarget(t *testing.T) {
 					},
 				}
 			},
-			wantErrors: []string{
-				"spec: Invalid value: \"object\": this policy does not yet support the sectionName field",
+			wantErrors: []string{},
+		},
+		{
+			desc: "sectionName supported for kind xRoute - targetRef",
+			mutate: func(sp *egv1a1.SecurityPolicy) {
+				sp.Spec = egv1a1.SecurityPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
+								Group: gwapiv1a2.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1a2.Kind("HTTPRoute"),
+								Name:  gwapiv1a2.ObjectName("backend"),
+							},
+							SectionName: &sectionName,
+						},
+					},
+				}
 			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "sectionName supported for kind xRoute - targetRefs",
+			mutate: func(sp *egv1a1.SecurityPolicy) {
+				sp.Spec = egv1a1.SecurityPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRefs: []gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
+							{
+								LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
+									Group: gwapiv1a2.Group("gateway.networking.k8s.io"),
+									Kind:  gwapiv1a2.Kind("HTTPRoute"),
+									Name:  gwapiv1a2.ObjectName("backend"),
+								},
+								SectionName: &sectionName,
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
 		},
 
 		// cors
@@ -484,6 +518,39 @@ func TestSecurityPolicyTarget(t *testing.T) {
 			wantErrors: []string{},
 		},
 		{
+			desc: "GRPC external auth service with backendRefs to ServiceImport",
+			mutate: func(sp *egv1a1.SecurityPolicy) {
+				sp.Spec = egv1a1.SecurityPolicySpec{
+					ExtAuth: &egv1a1.ExtAuth{
+						GRPC: &egv1a1.GRPCExtAuthService{
+							BackendCluster: egv1a1.BackendCluster{
+								BackendRefs: []egv1a1.BackendRef{
+									{
+										BackendObjectReference: gwapiv1.BackendObjectReference{
+											Group: ptr.To(gwapiv1.Group("multicluster.x-k8s.io")),
+											Name:  "grpc-auth-service",
+											Kind:  ptr.To(gwapiv1a2.Kind("ServiceImport")),
+											Port:  ptr.To(gwapiv1.PortNumber(80)),
+										},
+									},
+								},
+							},
+						},
+					},
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
+								Group: "gateway.networking.k8s.io",
+								Kind:  "Gateway",
+								Name:  "eg",
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
 			desc: "empty GRPC external auth service",
 			mutate: func(sp *egv1a1.SecurityPolicy) {
 				sp.Spec = egv1a1.SecurityPolicySpec{
@@ -547,6 +614,39 @@ func TestSecurityPolicyTarget(t *testing.T) {
 											Name: "grpc-auth-service",
 											Kind: ptr.To(gwapiv1a2.Kind("Service")),
 											Port: ptr.To(gwapiv1.PortNumber(80)),
+										},
+									},
+								},
+							},
+						},
+					},
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
+								Group: "gateway.networking.k8s.io",
+								Kind:  "Gateway",
+								Name:  "eg",
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "HTTP external auth service with backendRefs to ServiceImport",
+			mutate: func(sp *egv1a1.SecurityPolicy) {
+				sp.Spec = egv1a1.SecurityPolicySpec{
+					ExtAuth: &egv1a1.ExtAuth{
+						HTTP: &egv1a1.HTTPExtAuthService{
+							BackendCluster: egv1a1.BackendCluster{
+								BackendRefs: []egv1a1.BackendRef{
+									{
+										BackendObjectReference: gwapiv1.BackendObjectReference{
+											Group: ptr.To(gwapiv1.Group("multicluster.x-k8s.io")),
+											Name:  "grpc-auth-service",
+											Kind:  ptr.To(gwapiv1a2.Kind("ServiceImport")),
+											Port:  ptr.To(gwapiv1.PortNumber(80)),
 										},
 									},
 								},
@@ -674,7 +774,7 @@ func TestSecurityPolicyTarget(t *testing.T) {
 				}
 			},
 			wantErrors: []string{
-				" BackendRefs only supports Core and gateway.envoyproxy.io group.",
+				" BackendRefs only supports Core, multicluster.x-k8s.io, and gateway.envoyproxy.io groups.",
 			},
 		},
 		{
@@ -707,7 +807,7 @@ func TestSecurityPolicyTarget(t *testing.T) {
 					},
 				}
 			},
-			wantErrors: []string{"BackendRefs only supports Service and Backend kind."},
+			wantErrors: []string{"BackendRefs only supports Service, ServiceImport, and Backend kind."},
 		},
 		{
 			desc: "grpc extAuth service invalid Group",
@@ -740,7 +840,7 @@ func TestSecurityPolicyTarget(t *testing.T) {
 				}
 			},
 			wantErrors: []string{
-				"BackendRefs only supports Core and gateway.envoyproxy.io group.",
+				"BackendRefs only supports Core, multicluster.x-k8s.io, and gateway.envoyproxy.io groups.",
 			},
 		},
 		{
@@ -774,7 +874,7 @@ func TestSecurityPolicyTarget(t *testing.T) {
 				}
 			},
 			wantErrors: []string{
-				"spec.extAuth.grpc: Invalid value: \"object\": BackendRefs only supports Service and Backend kind.",
+				"spec.extAuth.grpc: Invalid value: \"object\": BackendRefs only supports Service, ServiceImport, and Backend kind.",
 			},
 		},
 
@@ -1235,7 +1335,7 @@ func TestSecurityPolicyTarget(t *testing.T) {
 							AuthorizationEndpoint: ptr.To("https://accounts.google.com/o/oauth2/v2/auth"),
 							TokenEndpoint:         ptr.To("https://oauth2.googleapis.com/token"),
 						},
-						ClientID: "client-id",
+						ClientID: ptr.To("client-id"),
 						ClientSecret: gwapiv1b1.SecretObjectReference{
 							Name: "secret",
 						},
@@ -1280,7 +1380,7 @@ func TestSecurityPolicyTarget(t *testing.T) {
 							AuthorizationEndpoint: ptr.To("https://accounts.google.com/o/oauth2/v2/auth"),
 							TokenEndpoint:         ptr.To("https://oauth2.googleapis.com/token"),
 						},
-						ClientID: "client-id",
+						ClientID: ptr.To("client-id"),
 						ClientSecret: gwapiv1b1.SecretObjectReference{
 							Name: "secret",
 						},
@@ -1288,6 +1388,68 @@ func TestSecurityPolicyTarget(t *testing.T) {
 				}
 			},
 			wantErrors: []string{"Retry timeout is not supported", "HTTPStatusCodes is not supported"},
+		},
+		{
+			desc: "oidc-without-clientid",
+			mutate: func(sp *egv1a1.SecurityPolicy) {
+				sp.Spec = egv1a1.SecurityPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetSelectors: []egv1a1.TargetSelector{
+							{
+								Group: ptr.To(gwapiv1a2.Group("gateway.networking.k8s.io")),
+								Kind:  "HTTPRoute",
+								MatchLabels: map[string]string{
+									"eg/namespace": "reference-apps",
+								},
+							},
+						},
+					},
+					OIDC: &egv1a1.OIDC{
+						Provider: egv1a1.OIDCProvider{
+							Issuer:                "https://accounts.google.com",
+							AuthorizationEndpoint: ptr.To("https://accounts.google.com/o/oauth2/v2/auth"),
+							TokenEndpoint:         ptr.To("https://oauth2.googleapis.com/token"),
+						},
+						ClientSecret: gwapiv1b1.SecretObjectReference{
+							Name: "secret",
+						},
+					},
+				}
+			},
+			wantErrors: []string{"only one of clientID or clientIDRef must be set"},
+		},
+		{
+			desc: "oidc-two-clientids",
+			mutate: func(sp *egv1a1.SecurityPolicy) {
+				sp.Spec = egv1a1.SecurityPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetSelectors: []egv1a1.TargetSelector{
+							{
+								Group: ptr.To(gwapiv1a2.Group("gateway.networking.k8s.io")),
+								Kind:  "HTTPRoute",
+								MatchLabels: map[string]string{
+									"eg/namespace": "reference-apps",
+								},
+							},
+						},
+					},
+					OIDC: &egv1a1.OIDC{
+						Provider: egv1a1.OIDCProvider{
+							Issuer:                "https://accounts.google.com",
+							AuthorizationEndpoint: ptr.To("https://accounts.google.com/o/oauth2/v2/auth"),
+							TokenEndpoint:         ptr.To("https://oauth2.googleapis.com/token"),
+						},
+						ClientID: ptr.To("client-id"),
+						ClientIDRef: &gwapiv1b1.SecretObjectReference{
+							Name: "secret",
+						},
+						ClientSecret: gwapiv1b1.SecretObjectReference{
+							Name: "secret",
+						},
+					},
+				}
+			},
+			wantErrors: []string{"only one of clientID or clientIDRef must be set"},
 		},
 	}
 

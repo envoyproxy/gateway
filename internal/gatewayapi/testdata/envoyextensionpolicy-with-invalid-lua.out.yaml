@@ -7,7 +7,23 @@ envoyExtensionPolicies:
     namespace: default
   spec:
     lua:
-    - inline: function envoy_on_response(response_handle) response_handle:UnknownApi()
+    - inline: |
+        function envoy_on_response(response_handle)
+            local content_type = response_handle:headers():get("content-type")
+            if content_type and string.find(content_type, "application/json", 1, true) then
+                response_handle:body():setBytes(0, response_handle:body():length())
+                response_handle:UnknownApi()
+                local response_body = response_handle:body():getBytes(0, response_handle:body():length())
+                if response_body and #response_body > 0 then
+                    local parsed_json = json.decode(response_body)
+                    if type(parsed_json) == "table" then
+                        response_handle:logInfo("Successfully parsed JSON response.")
+                    else
+                        response_handle:logWarn("Parsed JSON is not a table, or unexpected format.")
+                    end
+                end
+            end
+            return envoy.lua.ResponseStatus.Continue
         end
       type: Inline
     targetRef:
@@ -25,9 +41,9 @@ envoyExtensionPolicies:
       conditions:
       - lastTransitionTime: null
         message: "Lua: validation failed for lua body in policy with name envoyextensionpolicy/default/policy-for-http-route/lua/0:
-          failed to mock run envoy_on_response: <string>:614: attempt to call a non-function
-          object\nstack traceback:\n\t<string>:614: in function 'envoy_on_response'\n\t<string>:615:
-          in main chunk\n\t[G]: ?."
+          failed to validate with envoy_on_response: <string>:627: attempt to index
+          a non-table object(nil) with key 'lua'\nstack traceback:\n\t<string>:627:
+          in function 'envoy_on_response'\n\t<string>:630: in main chunk\n\t[G]: ?."
         reason: Invalid
         status: "False"
         type: Accepted
@@ -200,6 +216,9 @@ infraIR:
         labels:
           gateway.envoyproxy.io/owning-gateway-name: gateway-1
           gateway.envoyproxy.io/owning-gateway-namespace: envoy-gateway
+        ownerReference:
+          kind: GatewayClass
+          name: envoy-gateway-class
       name: envoy-gateway/gateway-1
       namespace: envoy-gateway-system
 xdsIR:
@@ -207,8 +226,24 @@ xdsIR:
     accessLog:
       json:
       - path: /dev/stdout
+    globalResources:
+      proxyServiceCluster:
+        name: envoy-gateway/gateway-1
+        settings:
+        - addressType: IP
+          endpoints:
+          - host: 7.6.5.4
+            port: 8080
+            zone: zone1
+          metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-1
+          protocol: TCP
     http:
     - address: 0.0.0.0
+      externalPort: 80
       hostnames:
       - '*'
       isHTTP2: false
@@ -224,12 +259,20 @@ xdsIR:
       port: 10080
       routes:
       - destination:
+          metadata:
+            kind: HTTPRoute
+            name: httproute-1
+            namespace: default
           name: httproute/default/httproute-1/rule/0
           settings:
           - addressType: IP
             endpoints:
             - host: 7.7.7.7
               port: 8080
+            metadata:
+              name: service-1
+              namespace: default
+              sectionName: "8080"
             name: httproute/default/httproute-1/rule/0/backend/0
             protocol: HTTP
             weight: 1
@@ -252,12 +295,20 @@ xdsIR:
           name: ""
           prefix: /foo
       - destination:
+          metadata:
+            kind: HTTPRoute
+            name: httproute-2
+            namespace: default
           name: httproute/default/httproute-2/rule/0
           settings:
           - addressType: IP
             endpoints:
             - host: 7.7.7.7
               port: 8080
+            metadata:
+              name: service-1
+              namespace: default
+              sectionName: "8080"
             name: httproute/default/httproute-2/rule/0/backend/0
             protocol: HTTP
             weight: 1

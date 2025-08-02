@@ -1,0 +1,72 @@
+- ignorePortInHostMatching: true
+  name: http-80
+  virtualHosts:
+  - domains:
+    - foo.net
+    name: foo_net
+    routes:
+    - match:
+        prefix: /
+      name: first-route
+      route:
+        cluster: first-route-dest
+        upgradeConfigs:
+        - upgradeType: websocket
+  - domains:
+    - bar.net
+    name: bar_net
+    routes:
+    - match:
+        prefix: /
+      name: second-route
+      route:
+        cluster: second-route-dest
+        upgradeConfigs:
+        - upgradeType: websocket
+- ignorePortInHostMatching: true
+  name: envoy-gateway/gateway-1/https1
+  virtualHosts:
+  - domains:
+    - foo.com
+    name: foo_com
+    routes:
+    - match:
+        prefix: /
+      name: first-route
+      route:
+        cluster: first-route-dest
+        upgradeConfigs:
+        - upgradeType: websocket
+- ignorePortInHostMatching: true
+  name: envoy-gateway/gateway-1/https2
+  virtualHosts:
+  - domains:
+    - bar.com
+    name: bar_com
+    routes:
+    - match:
+        prefix: /
+      name: second-route
+      route:
+        cluster: second-route-dest
+        upgradeConfigs:
+        - upgradeType: websocket
+- ignorePortInHostMatching: true
+  name: envoy-gateway/gateway-2/https-http3
+  virtualHosts:
+  - domains:
+    - '*'
+    name: '*'
+    routes:
+    - match:
+        prefix: /
+      name: httproute/default/httproute-1/rule/0/match/0/*
+      responseHeadersToAdd:
+      - append: true
+        header:
+          key: alt-svc
+          value: h3=":1443"; ma=86400
+      route:
+        cluster: httproute/default/httproute-1/rule/0
+        upgradeConfigs:
+        - upgradeType: websocket

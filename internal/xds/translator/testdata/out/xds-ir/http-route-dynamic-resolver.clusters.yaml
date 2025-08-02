@@ -9,11 +9,17 @@
         dnsLookupFamily: V4_PREFERRED
         dnsRefreshRate: 30s
         name: httproute/default/httproute-1/rule/0
-  commonLbConfig:
-    localityWeightedLbConfig: {}
+  commonLbConfig: {}
   connectTimeout: 10s
   dnsLookupFamily: V4_PREFERRED
+  ignoreHealthOnHostRemoval: true
   lbPolicy: CLUSTER_PROVIDED
+  loadBalancingPolicy:
+    policies:
+    - typedExtensionConfig:
+        name: envoy.load_balancing_policies.cluster_provided
+        typedConfig:
+          '@type': type.googleapis.com/envoy.extensions.load_balancing_policies.cluster_provided.v3.ClusterProvided
   name: httproute/default/httproute-1/rule/0
   perConnectionBufferLimitBytes: 32768
   transportSocket:
@@ -28,3 +34,13 @@
             sdsConfig:
               ads: {}
               resourceApiVersion: V3
+  typedExtensionProtocolOptions:
+    envoy.extensions.upstreams.http.v3.HttpProtocolOptions:
+      '@type': type.googleapis.com/envoy.extensions.upstreams.http.v3.HttpProtocolOptions
+      explicitHttpConfig:
+        http2ProtocolOptions:
+          initialConnectionWindowSize: 1048576
+          initialStreamWindowSize: 65536
+      upstreamHttpProtocolOptions:
+        autoSanValidation: true
+        autoSni: true

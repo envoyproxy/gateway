@@ -116,6 +116,9 @@ infraIR:
         labels:
           gateway.envoyproxy.io/owning-gateway-name: gateway-1
           gateway.envoyproxy.io/owning-gateway-namespace: envoy-gateway
+        ownerReference:
+          kind: GatewayClass
+          name: envoy-gateway-class
       name: envoy-gateway/gateway-1
       namespace: envoy-gateway-system
 xdsIR:
@@ -123,8 +126,24 @@ xdsIR:
     accessLog:
       json:
       - path: /dev/stdout
+    globalResources:
+      proxyServiceCluster:
+        name: envoy-gateway/gateway-1
+        settings:
+        - addressType: IP
+          endpoints:
+          - host: 7.6.5.4
+            port: 8080
+            zone: zone1
+          metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-1
+          protocol: TCP
     http:
     - address: 0.0.0.0
+      externalPort: 80
       hostnames:
       - '*'
       isHTTP2: true
@@ -140,12 +159,21 @@ xdsIR:
       port: 10080
       routes:
       - destination:
+          metadata:
+            kind: GRPCRoute
+            name: grpcroute-1
+            namespace: default
+            sectionName: grpcrule-1
           name: grpcroute/default/grpcroute-1/rule/0
           settings:
           - addressType: IP
             endpoints:
             - host: 1.1.1.1
               port: 3001
+            metadata:
+              kind: Backend
+              name: backend-ip
+              namespace: default
             name: grpcroute/default/grpcroute-1/rule/0/backend/0
             protocol: GRPC
             weight: 1
@@ -162,12 +190,21 @@ xdsIR:
           name: ""
           safeRegex: /com.[A-Z]+/[A-Za-z_][A-Za-z_0-9]*
       - destination:
+          metadata:
+            kind: GRPCRoute
+            name: grpcroute-1
+            namespace: default
+            sectionName: grpcrule-1
           name: grpcroute/default/grpcroute-1/rule/0
           settings:
           - addressType: IP
             endpoints:
             - host: 1.1.1.1
               port: 3001
+            metadata:
+              kind: Backend
+              name: backend-ip
+              namespace: default
             name: grpcroute/default/grpcroute-1/rule/0/backend/0
             protocol: GRPC
             weight: 1

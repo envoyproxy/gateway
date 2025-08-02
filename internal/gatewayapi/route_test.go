@@ -232,6 +232,7 @@ func TestGetIREndpointsFromEndpointSlices(t *testing.T) {
 
 func TestValidateDestinationSettings(t *testing.T) {
 	svcKind := gwapiv1.Kind(resource.KindService)
+	hostname := "www.gateway-test.com"
 
 	tests := []struct {
 		name                    string
@@ -257,6 +258,16 @@ func TestValidateDestinationSettings(t *testing.T) {
 			ds: &ir.DestinationSetting{
 				Name:      "normal",
 				Endpoints: []*ir.DestinationEndpoint{{Host: "10.0.0.1"}},
+			},
+			endpointRoutingDisabled: true,
+			kind:                    &svcKind,
+			wantErr:                 false,
+		},
+		{
+			name: "normal service allowed with hostname",
+			ds: &ir.DestinationSetting{
+				Name:      "normal with hostname",
+				Endpoints: []*ir.DestinationEndpoint{{Hostname: &hostname, Host: "10.0.0.1"}},
 			},
 			endpointRoutingDisabled: true,
 			kind:                    &svcKind,

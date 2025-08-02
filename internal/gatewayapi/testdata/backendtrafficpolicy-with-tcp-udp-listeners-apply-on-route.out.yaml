@@ -233,6 +233,9 @@ infraIR:
         labels:
           gateway.envoyproxy.io/owning-gateway-name: tcp-gateway
           gateway.envoyproxy.io/owning-gateway-namespace: default
+        ownerReference:
+          kind: GatewayClass
+          name: envoy-gateway-class
       name: default/tcp-gateway
       namespace: envoy-gateway-system
 tcpRoutes:
@@ -306,6 +309,21 @@ xdsIR:
     accessLog:
       json:
       - path: /dev/stdout
+    globalResources:
+      proxyServiceCluster:
+        name: default/tcp-gateway
+        settings:
+        - addressType: IP
+          endpoints:
+          - host: 7.6.5.4
+            port: 8080
+            zone: zone1
+          metadata:
+            name: envoy-default-tcp-gateway-1ec60381
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: default/tcp-gateway
+          protocol: TCP
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4
@@ -313,6 +331,7 @@ xdsIR:
       port: 19003
     tcp:
     - address: 0.0.0.0
+      externalPort: 8089
       name: default/tcp-gateway/bar
       port: 8089
       routes:
@@ -323,12 +342,20 @@ xdsIR:
           maxPendingRequests: 1
           maxRequestsPerConnection: 1
         destination:
+          metadata:
+            kind: TCPRoute
+            name: tcp-app-1
+            namespace: default
           name: tcproute/default/tcp-app-1/rule/-1
           settings:
           - addressType: IP
             endpoints:
             - host: 7.7.7.7
               port: 8163
+            metadata:
+              name: service-1
+              namespace: default
+              sectionName: "8163"
             name: tcproute/default/tcp-app-1/rule/-1/backend/0
             protocol: TCP
             weight: 1
@@ -373,16 +400,25 @@ xdsIR:
             connectTimeout: 15s
     udp:
     - address: 0.0.0.0
+      externalPort: 8162
       name: default/tcp-gateway/foo
       port: 8162
       route:
         destination:
+          metadata:
+            kind: UDPRoute
+            name: udp-app-1
+            namespace: default
           name: udproute/default/udp-app-1/rule/-1
           settings:
           - addressType: IP
             endpoints:
             - host: 7.7.7.7
               port: 8162
+            metadata:
+              name: service-1
+              namespace: default
+              sectionName: "8162"
             name: udproute/default/udp-app-1/rule/-1/backend/0
             protocol: UDP
             weight: 1

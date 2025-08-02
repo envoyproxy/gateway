@@ -9,11 +9,16 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/utils/ptr"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/status"
 )
 
@@ -174,6 +179,12 @@ func TestIsOverlappingHostname(t *testing.T) {
 			hostname2: ptr.To(gwapiv1.Hostname("*.test.com")),
 			want:      false,
 		},
+		{
+			name:      "different sub domains of same domain",
+			hostname1: ptr.To(gwapiv1.Hostname("api.foo.dev")),
+			hostname2: ptr.To(gwapiv1.Hostname("testing-api.foo.dev")),
+			want:      false,
+		},
 	}
 
 	for _, tt := range tests {
@@ -307,30 +318,6 @@ func TestCheckOverlappingHostnames(t *testing.T) {
 			},
 		},
 		{
-			name: "non-HTTPS listeners",
-			gateway: &GatewayContext{
-				listeners: []*ListenerContext{
-					{
-						Listener: &gwapiv1.Listener{
-							Name:     "listener-1",
-							Protocol: gwapiv1.HTTPProtocolType,
-							Port:     80,
-							Hostname: ptr.To(gwapiv1.Hostname("example.com")),
-						},
-					},
-					{
-						Listener: &gwapiv1.Listener{
-							Name:     "listener-2",
-							Protocol: gwapiv1.HTTPProtocolType,
-							Port:     80,
-							Hostname: ptr.To(gwapiv1.Hostname("example.com")),
-						},
-					},
-				},
-			},
-			expected: map[int]string{},
-		},
-		{
 			name: "nil hostnames",
 			gateway: &GatewayContext{
 				listeners: []*ListenerContext{
@@ -369,13 +356,14 @@ func TestCheckOverlappingHostnames(t *testing.T) {
 			}
 			for i := range tt.gateway.listeners {
 				tt.gateway.listeners[i].listenerStatusIdx = i
+				tt.gateway.listeners[i].gateway = tt.gateway
 				tt.gateway.Status.Listeners[i] = gwapiv1.ListenerStatus{
 					Name:       tt.gateway.listeners[i].Name,
 					Conditions: []metav1.Condition{},
 				}
 			}
 
-			checkOverlappingHostnames(tt.gateway)
+			checkOverlappingHostnames(tt.gateway.listeners)
 
 			// Verify the status conditions
 			for idx, expectedHostname := range tt.expected {
@@ -476,14 +464,14 @@ func TestCheckOverlappingCertificates(t *testing.T) {
 					condition:    gwapiv1.ListenerConditionOverlappingTLSConfig,
 					status:       metav1.ConditionTrue,
 					reason:       gwapiv1.ListenerReasonOverlappingCertificates,
-					message:      "The certificate san foo.example.com overlaps with the certificate san foo.example.com in listener listener-2. ALPN is set to HTTP/1.1 to prevent HTTP/2 connection coalescing",
+					message:      "The certificate SAN foo.example.com overlaps with the certificate SAN foo.example.com in listener listener-2. ALPN will default to HTTP/1.1 to prevent HTTP/2 connection coalescing, unless explicitly configured via ClientTrafficPolicy",
 				},
 				{
 					listenerName: "listener-2",
 					condition:    gwapiv1.ListenerConditionOverlappingTLSConfig,
 					status:       metav1.ConditionTrue,
 					reason:       gwapiv1.ListenerReasonOverlappingCertificates,
-					message:      "The certificate san foo.example.com overlaps with the certificate san foo.example.com in listener listener-1. ALPN is set to HTTP/1.1 to prevent HTTP/2 connection coalescing",
+					message:      "The certificate SAN foo.example.com overlaps with the certificate SAN foo.example.com in listener listener-1. ALPN will default to HTTP/1.1 to prevent HTTP/2 connection coalescing, unless explicitly configured via ClientTrafficPolicy",
 				},
 			},
 		},
@@ -539,14 +527,14 @@ func TestCheckOverlappingCertificates(t *testing.T) {
 					condition:    gwapiv1.ListenerConditionOverlappingTLSConfig,
 					status:       metav1.ConditionTrue,
 					reason:       gwapiv1.ListenerReasonOverlappingCertificates,
-					message:      "The certificate san *.example.com overlaps with the certificate san foo.example.com in listener listener-2. ALPN is set to HTTP/1.1 to prevent HTTP/2 connection coalescing",
+					message:      "The certificate SAN *.example.com overlaps with the certificate SAN foo.example.com in listener listener-2. ALPN will default to HTTP/1.1 to prevent HTTP/2 connection coalescing, unless explicitly configured via ClientTrafficPolicy",
 				},
 				{
 					listenerName: "listener-2",
 					condition:    gwapiv1.ListenerConditionOverlappingTLSConfig,
 					status:       metav1.ConditionTrue,
 					reason:       gwapiv1.ListenerReasonOverlappingCertificates,
-					message:      "The certificate san foo.example.com overlaps with the certificate san *.example.com in listener listener-1. ALPN is set to HTTP/1.1 to prevent HTTP/2 connection coalescing",
+					message:      "The certificate SAN foo.example.com overlaps with the certificate SAN *.example.com in listener listener-1. ALPN will default to HTTP/1.1 to prevent HTTP/2 connection coalescing, unless explicitly configured via ClientTrafficPolicy",
 				},
 			},
 		},
@@ -578,14 +566,14 @@ func TestCheckOverlappingCertificates(t *testing.T) {
 					condition:    gwapiv1.ListenerConditionOverlappingTLSConfig,
 					status:       metav1.ConditionTrue,
 					reason:       gwapiv1.ListenerReasonOverlappingCertificates,
-					message:      "The certificate san bar.example.org overlaps with the certificate san *.example.org in listener listener-2. ALPN is set to HTTP/1.1 to prevent HTTP/2 connection coalescing",
+					message:      "The certificate SAN bar.example.org overlaps with the certificate SAN *.example.org in listener listener-2. ALPN will default to HTTP/1.1 to prevent HTTP/2 connection coalescing, unless explicitly configured via ClientTrafficPolicy",
 				},
 				{
 					listenerName: "listener-2",
 					condition:    gwapiv1.ListenerConditionOverlappingTLSConfig,
 					status:       metav1.ConditionTrue,
 					reason:       gwapiv1.ListenerReasonOverlappingCertificates,
-					message:      "The certificate san *.example.org overlaps with the certificate san bar.example.org in listener listener-1. ALPN is set to HTTP/1.1 to prevent HTTP/2 connection coalescing",
+					message:      "The certificate SAN *.example.org overlaps with the certificate SAN bar.example.org in listener listener-1. ALPN will default to HTTP/1.1 to prevent HTTP/2 connection coalescing, unless explicitly configured via ClientTrafficPolicy",
 				},
 			},
 		},
@@ -603,16 +591,18 @@ func TestCheckOverlappingCertificates(t *testing.T) {
 				listeners: tt.listeners,
 			}
 
-			// Initialize listener status indices
+			// Initialize listener
 			for i := range gateway.Status.Listeners {
 				gateway.Status.Listeners[i] = gwapiv1.ListenerStatus{
 					Name:       tt.listeners[i].Name,
 					Conditions: []metav1.Condition{},
 				}
+				gateway.listeners[i].listenerStatusIdx = i
+				gateway.listeners[i].gateway = gateway
 			}
 
 			// Process overlapping certificates
-			checkOverlappingCertificates(gateway)
+			checkOverlappingCertificates(tt.listeners)
 
 			// Verify the status conditions
 			for _, expected := range tt.expectedStatus {
@@ -662,6 +652,234 @@ func TestCheckOverlappingCertificates(t *testing.T) {
 					}
 				}
 			}
+		})
+	}
+}
+
+func TestProcessTracingServiceName(t *testing.T) {
+	cases := []struct {
+		name                string
+		gateway             *gwapiv1.Gateway
+		envoyProxy          *egv1a1.EnvoyProxy
+		mergeGateways       bool
+		expectedServiceName string
+		expectError         bool
+	}{
+		{
+			name: "no tracing configuration",
+			gateway: &gwapiv1.Gateway{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-gateway",
+					Namespace: "test-namespace",
+				},
+			},
+			envoyProxy: &egv1a1.EnvoyProxy{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-proxy",
+					Namespace: "test-namespace",
+				},
+			},
+			expectedServiceName: "",
+		},
+		{
+			name: "tracing with default service name",
+			gateway: &gwapiv1.Gateway{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-gateway",
+					Namespace: "test-namespace",
+				},
+			},
+			envoyProxy: &egv1a1.EnvoyProxy{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-proxy",
+					Namespace: "test-namespace",
+				},
+				Spec: egv1a1.EnvoyProxySpec{
+					Telemetry: &egv1a1.ProxyTelemetry{
+						Tracing: &egv1a1.ProxyTracing{
+							Provider: egv1a1.TracingProvider{
+								Type: egv1a1.TracingProviderTypeOpenTelemetry,
+								BackendCluster: egv1a1.BackendCluster{
+									BackendRefs: []egv1a1.BackendRef{
+										{
+											BackendObjectReference: gwapiv1.BackendObjectReference{
+												Name:      "otel-collector",
+												Port:      ptr.To(gwapiv1.PortNumber(4317)),
+												Namespace: ptr.To(gwapiv1.Namespace("monitoring")),
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			expectedServiceName: "test-gateway.test-namespace",
+		},
+		{
+			name: "tracing with custom service name",
+			gateway: &gwapiv1.Gateway{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-gateway",
+					Namespace: "test-namespace",
+				},
+			},
+			envoyProxy: &egv1a1.EnvoyProxy{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-proxy",
+					Namespace: "test-namespace",
+				},
+				Spec: egv1a1.EnvoyProxySpec{
+					Telemetry: &egv1a1.ProxyTelemetry{
+						Tracing: &egv1a1.ProxyTracing{
+							Provider: egv1a1.TracingProvider{
+								Type: egv1a1.TracingProviderTypeOpenTelemetry,
+								BackendCluster: egv1a1.BackendCluster{
+									BackendRefs: []egv1a1.BackendRef{
+										{
+											BackendObjectReference: gwapiv1.BackendObjectReference{
+												Name:      "otel-collector",
+												Port:      ptr.To(gwapiv1.PortNumber(4317)),
+												Namespace: ptr.To(gwapiv1.Namespace("monitoring")),
+											},
+										},
+									},
+								},
+								ServiceName: ptr.To("my-custom-service"),
+							},
+						},
+					},
+				},
+			},
+			expectedServiceName: "my-custom-service",
+		},
+		{
+			name: "tracing with merge gateways and custom service name",
+			gateway: &gwapiv1.Gateway{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-gateway",
+					Namespace: "test-namespace",
+				},
+				Spec: gwapiv1.GatewaySpec{
+					GatewayClassName: "test-gateway-class",
+				},
+			},
+			envoyProxy: &egv1a1.EnvoyProxy{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-proxy",
+					Namespace: "test-namespace",
+				},
+				Spec: egv1a1.EnvoyProxySpec{
+					Telemetry: &egv1a1.ProxyTelemetry{
+						Tracing: &egv1a1.ProxyTracing{
+							Provider: egv1a1.TracingProvider{
+								Type: egv1a1.TracingProviderTypeOpenTelemetry,
+								BackendCluster: egv1a1.BackendCluster{
+									BackendRefs: []egv1a1.BackendRef{
+										{
+											BackendObjectReference: gwapiv1.BackendObjectReference{
+												Name:      "otel-collector",
+												Port:      ptr.To(gwapiv1.PortNumber(4317)),
+												Namespace: ptr.To(gwapiv1.Namespace("monitoring")),
+											},
+										},
+									},
+								},
+								ServiceName: ptr.To("custom-service"),
+							},
+						},
+					},
+				},
+			},
+			mergeGateways:       true,
+			expectedServiceName: "custom-service", // Custom service name should override merge logic
+		},
+		{
+			name: "tracing with merge gateways without custom service name",
+			gateway: &gwapiv1.Gateway{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-gateway",
+					Namespace: "test-namespace",
+				},
+				Spec: gwapiv1.GatewaySpec{
+					GatewayClassName: "test-gateway-class",
+				},
+			},
+			envoyProxy: &egv1a1.EnvoyProxy{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-proxy",
+					Namespace: "test-namespace",
+				},
+				Spec: egv1a1.EnvoyProxySpec{
+					Telemetry: &egv1a1.ProxyTelemetry{
+						Tracing: &egv1a1.ProxyTracing{
+							Provider: egv1a1.TracingProvider{
+								Type: egv1a1.TracingProviderTypeOpenTelemetry,
+								BackendCluster: egv1a1.BackendCluster{
+									BackendRefs: []egv1a1.BackendRef{
+										{
+											BackendObjectReference: gwapiv1.BackendObjectReference{
+												Name:      "otel-collector",
+												Port:      ptr.To(gwapiv1.PortNumber(4317)),
+												Namespace: ptr.To(gwapiv1.Namespace("monitoring")),
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			mergeGateways:       true,
+			expectedServiceName: "test-gateway-class", // Should use gateway class name when merging
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			translator := &Translator{}
+			resources := &resource.Resources{}
+
+			// Mock service to resolve BackendRefs
+			resources.Services = append(resources.Services,
+				&corev1.Service{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "monitoring",
+						Name:      "otel-collector",
+					},
+					Spec: corev1.ServiceSpec{
+						ClusterIP: "3.3.3.3",
+						Ports: []corev1.ServicePort{
+							{
+								Name:        "grpc",
+								Port:        4317,
+								TargetPort:  intstr.IntOrString{IntVal: 4317},
+								Protocol:    corev1.ProtocolTCP,
+								AppProtocol: ptr.To("grpc"),
+							},
+						},
+					},
+				},
+			)
+
+			result, err := translator.processTracing(tc.gateway, tc.envoyProxy, tc.mergeGateways, resources)
+
+			if tc.expectError {
+				assert.Error(t, err)
+				return
+			}
+
+			require.NoError(t, err)
+
+			if tc.expectedServiceName == "" {
+				assert.Nil(t, result)
+				return
+			}
+
+			assert.NotNil(t, result)
+			assert.Equal(t, tc.expectedServiceName, result.ServiceName)
 		})
 	}
 }

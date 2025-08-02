@@ -5,7 +5,10 @@
 
 package v1alpha1
 
-import metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+import (
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
+)
 
 // HealthCheck configuration to decide which endpoints
 // are healthy and can be used for routing.
@@ -99,6 +102,13 @@ type ActiveHealthCheck struct {
 	// +optional
 	Interval *metav1.Duration `json:"interval"`
 
+	// InitialJitter defines the maximum time Envoy will wait before the first health check.
+	// Envoy will randomly select a value between 0 and the initial jitter value.
+	//
+	// +kubebuilder:validation:Format=duration
+	// +optional
+	InitialJitter *gwapiv1.Duration `json:"initialJitter,omitempty"`
+
 	// UnhealthyThreshold defines the number of unhealthy health checks required before a backend host is marked unhealthy.
 	//
 	// +kubebuilder:validation:Minimum=1
@@ -149,6 +159,14 @@ const (
 
 // HTTPActiveHealthChecker defines the settings of http health check.
 type HTTPActiveHealthChecker struct {
+	// Hostname defines the HTTP host that will be requested during health checking.
+	// Default: HTTPRoute or GRPCRoute hostname.
+	//
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:Pattern=`^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$`
+	// +optional
+	Hostname *string `json:"hostname,omitempty" yaml:"hostname,omitempty"`
 	// Path defines the HTTP path that will be requested during health checking.
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=1024

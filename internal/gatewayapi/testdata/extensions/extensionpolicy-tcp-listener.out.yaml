@@ -139,6 +139,9 @@ infraIR:
         labels:
           gateway.envoyproxy.io/owning-gateway-name: gateway-1
           gateway.envoyproxy.io/owning-gateway-namespace: envoy-gateway
+        ownerReference:
+          kind: GatewayClass
+          name: envoy-gateway-class
       name: envoy-gateway/gateway-1
       namespace: ""
 xdsIR:
@@ -146,6 +149,46 @@ xdsIR:
     accessLog:
       json:
       - path: /dev/stdout
+    extensionServerPolicies:
+    - object:
+        apiVersion: foo.example.io/v1alpha1
+        kind: Bar
+        metadata:
+          name: test1
+          namespace: envoy-gateway
+        spec:
+          data: attached to all listeners
+          targetRef:
+            group: gateway.networking.k8s.io
+            kind: Gateway
+            name: gateway-1
+    - object:
+        apiVersion: foo.example.io/v1alpha1
+        kind: Bar
+        metadata:
+          name: test2
+          namespace: envoy-gateway
+        spec:
+          data: attached only to listener on port 80
+          targetRef:
+            group: gateway.networking.k8s.io
+            kind: Gateway
+            name: gateway-1
+            sectionName: tcp1
+    globalResources:
+      proxyServiceCluster:
+        name: envoy-gateway/gateway-1
+        settings:
+        - addressType: IP
+          endpoints:
+          - host: 7.6.5.4
+            port: 8080
+            zone: zone1
+          metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            sectionName: "8080"
+          name: envoy-gateway/gateway-1
+          protocol: TCP
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4
@@ -208,6 +251,7 @@ xdsIR:
                 status: "True"
                 type: Accepted
               controllerName: gateway.envoyproxy.io/gatewayclass-controller
+      externalPort: 80
       name: envoy-gateway/gateway-1/tcp1
       port: 10080
     - address: 0.0.0.0
@@ -238,5 +282,6 @@ xdsIR:
                 status: "True"
                 type: Accepted
               controllerName: gateway.envoyproxy.io/gatewayclass-controller
+      externalPort: 81
       name: envoy-gateway/gateway-1/tcp2
       port: 10081

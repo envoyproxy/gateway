@@ -312,6 +312,11 @@ func buildLoadBalancer(policy egv1a1.ClusterSettings) (*ir.LoadBalancer, error) 
 		}
 	}
 
+	// Add EndpointOverride if specified
+	if policy.LoadBalancer.EndpointOverride != nil {
+		lb.EndpointOverride = buildEndpointOverride(*policy.LoadBalancer.EndpointOverride)
+	}
+
 	return lb, nil
 }
 
@@ -340,6 +345,23 @@ func buildConsistentHashLoadBalancer(policy egv1a1.LoadBalancer) (*ir.Consistent
 	}
 
 	return consistentHash, nil
+}
+
+func buildEndpointOverride(policy egv1a1.EndpointOverride) *ir.EndpointOverride {
+	endpointOverride := &ir.EndpointOverride{}
+
+	// Convert extract from sources
+	for _, source := range policy.ExtractFrom {
+		irSource := ir.EndpointOverrideExtractFrom{}
+
+		if source.Header != nil {
+			irSource.Header = source.Header
+		}
+
+		endpointOverride.ExtractFrom = append(endpointOverride.ExtractFrom, irSource)
+	}
+
+	return endpointOverride
 }
 
 func buildProxyProtocol(policy egv1a1.ClusterSettings) *ir.ProxyProtocol {
@@ -400,6 +422,7 @@ func buildActiveHealthCheck(policy egv1a1.HealthCheck) *ir.ActiveHealthCheck {
 	irHC := &ir.ActiveHealthCheck{
 		Timeout:            hc.Timeout,
 		Interval:           hc.Interval,
+		InitialJitter:      hc.InitialJitter,
 		UnhealthyThreshold: hc.UnhealthyThreshold,
 		HealthyThreshold:   hc.HealthyThreshold,
 	}
@@ -428,6 +451,9 @@ func buildHTTPActiveHealthChecker(h *egv1a1.HTTPActiveHealthChecker) *ir.HTTPHea
 	}
 	if irHTTP.Method != nil {
 		*irHTTP.Method = strings.ToUpper(*irHTTP.Method)
+	}
+	if h.Hostname != nil {
+		irHTTP.Host = *h.Hostname
 	}
 
 	// deduplicate http statuses
@@ -500,6 +526,8 @@ func buildRetry(r *egv1a1.Retry) (*ir.Retry, error) {
 	if r.NumRetries != nil {
 		rt.NumRetries = ptr.To(uint32(*r.NumRetries))
 	}
+
+	rt.NumAttemptsPerPriority = r.NumAttemptsPerPriority
 
 	if r.RetryOn != nil {
 		ro := &ir.RetryOn{}

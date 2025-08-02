@@ -10,6 +10,7 @@ import (
 	"fmt"
 
 	appsv1 "k8s.io/api/apps/v1"
+	certificatesv1b1 "k8s.io/api/certificates/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
@@ -31,7 +32,10 @@ import (
 )
 
 // nolint: gosec
-const oidcHMACSecretName = "envoy-oidc-hmac"
+const (
+	oidcHMACSecretName = "envoy-oidc-hmac"
+	envoyTLSSecretName = "envoy"
+)
 
 // hasMatchingController returns true if the provided object is a GatewayClass
 // with a Spec.Controller string matching this Envoy Gateway's controller string,
@@ -161,6 +165,10 @@ func (r *gatewayAPIReconciler) validateSecretForReconcile(obj client.Object) boo
 		return true
 	}
 
+	if r.isEnvoyTLSSecret(&nsName) {
+		return true
+	}
+
 	if r.epCRDExists {
 		if r.isEnvoyProxyReferencingSecret(&nsName) {
 			return true
@@ -183,6 +191,68 @@ func (r *gatewayAPIReconciler) validateSecretForReconcile(obj client.Object) boo
 		if r.isHTTPRouteFilterReferencingSecret(&nsName) {
 			return true
 		}
+	}
+
+	return false
+}
+
+func (r *gatewayAPIReconciler) validateClusterTrustBundleForReconcile(ctb *certificatesv1b1.ClusterTrustBundle) bool {
+	if r.backendCRDExists {
+		if r.isBackendReferencingClusterTrustBundle(ctb) {
+			return true
+		}
+	}
+
+	if r.bTLSPolicyCRDExists {
+		if r.isBackendTLSPolicyReferencingClusterTrustBundle(ctb) {
+			return true
+		}
+	}
+
+	if r.ctpCRDExists {
+		if r.isCtpReferencingClusterTrustBundle(ctb) {
+			return true
+		}
+	}
+
+	return false
+}
+
+func (r *gatewayAPIReconciler) isCtpReferencingClusterTrustBundle(ctb *certificatesv1b1.ClusterTrustBundle) bool {
+	ctpList := &egv1a1.ClientTrafficPolicyList{}
+	if err := r.client.List(context.Background(), ctpList, &client.ListOptions{
+		FieldSelector: fields.OneTermEqualSelector(clusterTrustBundleCtpIndex, ctb.Name),
+	}); err != nil {
+		r.log.Error(err, "unable to find associated ClientTrafficPolicies")
+		return false
+	}
+
+	return len(ctpList.Items) > 0
+}
+
+func (r *gatewayAPIReconciler) isBackendReferencingClusterTrustBundle(ctb *certificatesv1b1.ClusterTrustBundle) bool {
+	backendList := &egv1a1.BackendList{}
+	if err := r.client.List(context.Background(), backendList, &client.ListOptions{
+		FieldSelector: fields.OneTermEqualSelector(clusterTrustBundleBackendIndex, ctb.Name),
+	}); err != nil {
+		r.log.Error(err, "unable to find associated Backend")
+		return false
+	}
+
+	return len(backendList.Items) > 0
+}
+
+func (r *gatewayAPIReconciler) isBackendTLSPolicyReferencingClusterTrustBundle(ctb *certificatesv1b1.ClusterTrustBundle) bool {
+	btlsList := &gwapiv1a3.BackendTLSPolicyList{}
+	if err := r.client.List(context.Background(), btlsList, &client.ListOptions{
+		FieldSelector: fields.OneTermEqualSelector(clusterTrustBundleBtlsIndex, ctb.Name),
+	}); err != nil {
+		r.log.Error(err, "unable to find associated BackendTLSPolicy")
+		return false
+	}
+
+	if len(btlsList.Items) > 0 {
+		return true
 	}
 
 	return false
@@ -300,6 +370,14 @@ func (r *gatewayAPIReconciler) isOIDCHMACSecret(nsName *types.NamespacedName) bo
 		Name:      oidcHMACSecretName,
 	}
 	return *nsName == oidcHMACSecret
+}
+
+func (r *gatewayAPIReconciler) isEnvoyTLSSecret(nsName *types.NamespacedName) bool {
+	envoyTLSSecret := types.NamespacedName{
+		Namespace: r.namespace,
+		Name:      envoyTLSSecretName,
+	}
+	return *nsName == envoyTLSSecret
 }
 
 // validateServiceForReconcile tries finding the owning Gateway of the Service
@@ -536,6 +614,9 @@ func (r *gatewayAPIReconciler) validateEndpointSliceForReconcile(obj client.Obje
 		}
 	}
 
+	if r.isProxyServiceCluster(ep.GetLabels()) {
+		return true
+	}
 	return false
 }
 
@@ -764,6 +845,20 @@ func (r *gatewayAPIReconciler) validateConfigMapForReconcile(obj client.Object) 
 		}
 	}
 
+	if r.eepCRDExists {
+		eepList := &egv1a1.EnvoyExtensionPolicyList{}
+		if err := r.client.List(context.Background(), eepList, &client.ListOptions{
+			FieldSelector: fields.OneTermEqualSelector(configMapEepIndex, utils.NamespacedName(configMap).String()),
+		}); err != nil {
+			r.log.Error(err, "unable to find associated EnvoyExtensionPolicy")
+			return false
+		}
+
+		if len(eepList.Items) > 0 {
+			return true
+		}
+	}
+
 	if r.hrfCRDExists {
 		routeFilterList := &egv1a1.HTTPRouteFilterList{}
 		if err := r.client.List(context.Background(), routeFilterList, &client.ListOptions{
@@ -843,6 +938,20 @@ func (r *gatewayAPIReconciler) isRouteReferencingHTTPRouteFilter(nsName *types.N
 	}
 
 	return len(httpRouteList.Items) != 0
+}
+
+// isProxyServiceCluster returns true if the provided labels reference an owning Gateway or GatewayClass
+func (r *gatewayAPIReconciler) isProxyServiceCluster(labels map[string]string) bool {
+	if gtw := r.findOwningGateway(context.Background(), labels); gtw != nil {
+		return true
+	}
+
+	gcName, ok := labels[gatewayapi.OwningGatewayClassLabel]
+	if ok && r.mergeGateways.Has(gcName) {
+		return true
+	}
+
+	return false
 }
 
 // validateHTTPRouteFilterForReconcile tries finding the referencing HTTPRoute of the filter

@@ -2,8 +2,7 @@
     thresholds:
     - maxConnections: 2048
       maxRetries: 1024
-  commonLbConfig:
-    localityWeightedLbConfig: {}
+  commonLbConfig: {}
   connectTimeout: 15s
   dnsLookupFamily: V4_PREFERRED
   edsClusterConfig:
@@ -13,6 +12,14 @@
     serviceName: accesslog/monitoring/envoy-als/port/9000
   ignoreHealthOnHostRemoval: true
   lbPolicy: LEAST_REQUEST
+  loadBalancingPolicy:
+    policies:
+    - typedExtensionConfig:
+        name: envoy.load_balancing_policies.least_request
+        typedConfig:
+          '@type': type.googleapis.com/envoy.extensions.load_balancing_policies.least_request.v3.LeastRequest
+          localityLbConfig:
+            localityWeightedLbConfig: {}
   name: accesslog/monitoring/envoy-als/port/9000
   outlierDetection:
     baseEjectionTime: 30s

@@ -77,15 +77,6 @@ func server(ctx context.Context, logOut io.Writer) error {
 		return err
 	}
 
-	// Init eg admin servers.
-	if err := admin.Init(cfg); err != nil {
-		return err
-	}
-	// Init eg metrics servers.
-	if err := metrics.Init(cfg); err != nil {
-		return err
-	}
-
 	// Wait for the context to be done, which usually happens the process receives a SIGTERM or SIGINT.
 	<-ctx.Done()
 
@@ -161,10 +152,8 @@ func startRunners(ctx context.Context, cfg *config.Server) (err error) {
 
 	// Setup the Extension Manager
 	var extMgr types.Manager
-	if cfg.EnvoyGateway.Provider.Type == egv1a1.ProviderTypeKubernetes {
-		if extMgr, err = extensionregistry.NewManager(cfg); err != nil {
-			return err
-		}
+	if extMgr, err = extensionregistry.NewManager(cfg, cfg.EnvoyGateway.Provider.Type == egv1a1.ProviderTypeKubernetes); err != nil {
+		return err
 	}
 
 	runners := []struct {
@@ -222,6 +211,19 @@ func startRunners(ctx context.Context, cfg *config.Server) (err error) {
 				Server: *cfg,
 				Xds:    channels.xds,
 			}),
+		},
+		{
+			// Start the Admin Server
+			// It provides admin endpoints including pprof for debugging.
+			runner: admin.New(&admin.Config{
+				Server:            *cfg,
+				ProviderResources: channels.pResources,
+			}),
+		},
+		{
+			// Start the Metrics Server
+			// It provides metrics endpoints for monitoring.
+			runner: metrics.New(cfg),
 		},
 	}
 

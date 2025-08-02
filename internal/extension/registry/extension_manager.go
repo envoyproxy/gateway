@@ -59,10 +59,14 @@ type Manager struct {
 }
 
 // NewManager returns a new Manager
-func NewManager(cfg *config.Server) (extTypes.Manager, error) {
-	cli, err := k8scli.New(k8sclicfg.GetConfigOrDie(), k8scli.Options{Scheme: envoygateway.GetScheme()})
-	if err != nil {
-		return nil, err
+func NewManager(cfg *config.Server, inK8s bool) (extTypes.Manager, error) {
+	var cli k8scli.Client
+	var err error
+	if inK8s {
+		cli, err = k8scli.New(k8sclicfg.GetConfigOrDie(), k8scli.Options{Scheme: envoygateway.GetScheme()})
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	var extension *egv1a1.ExtensionManager
@@ -131,12 +135,28 @@ func (m *Manager) FailOpen() bool {
 	return m.extension.FailOpen
 }
 
+// GetTranslationHookConfig returns the translation hook configuration.
+func (m *Manager) GetTranslationHookConfig() *egv1a1.TranslationConfig {
+	if m.extension.Hooks == nil ||
+		m.extension.Hooks.XDSTranslator == nil ||
+		m.extension.Hooks.XDSTranslator.Translation == nil {
+		return nil
+	}
+	return m.extension.Hooks.XDSTranslator.Translation
+}
+
 // HasExtension checks to see whether a given Group and Kind has an
 // associated extension registered for it.
 func (m *Manager) HasExtension(g gwapiv1.Group, k gwapiv1.Kind) bool {
 	extension := m.extension
 	// TODO: not currently checking the version since extensionRef only supports group and kind.
 	for _, gvk := range extension.Resources {
+		if g == gwapiv1.Group(gvk.Group) && k == gwapiv1.Kind(gvk.Kind) {
+			return true
+		}
+	}
+	// Also check backend resources for custom backend support
+	for _, gvk := range extension.BackendResources {
 		if g == gwapiv1.Group(gvk.Group) && k == gwapiv1.Kind(gvk.Kind) {
 			return true
 		}
@@ -270,6 +290,9 @@ func setupGRPCOpts(ctx context.Context, client k8scli.Client, ext *egv1a1.Extens
 	}
 	if ext.Service == nil {
 		return nil, errors.New("the registered extension doesn't have a service config")
+	}
+	if ext.Service.TLS != nil && client == nil {
+		return nil, errors.New("the registered extension's service config has TLS enabled but no k8s client was provided")
 	}
 
 	var opts []grpc.DialOption

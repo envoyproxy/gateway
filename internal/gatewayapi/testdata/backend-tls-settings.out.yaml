@@ -1,0 +1,815 @@
+backendTLSPolicies:
+- apiVersion: gateway.networking.k8s.io/v1alpha2
+  kind: BackendTLSPolicy
+  metadata:
+    creationTimestamp: null
+    name: policy-btls-for-backend-1
+    namespace: default
+  spec:
+    targetRefs:
+    - group: gateway.envoyproxy.io
+      kind: Backend
+      name: backend-1
+    validation:
+      hostname: example.com
+      subjectAltNames:
+      - type: URI
+        uri: spiffe://cluster.local/ns/istio-demo/sa/echo-v1
+      - hostname: subdomain.secondexample.com
+        type: Hostname
+      wellKnownCACertificates: System
+  status:
+    ancestors:
+    - ancestorRef:
+        name: gateway-1
+        namespace: envoy-gateway
+      conditions:
+      - lastTransitionTime: null
+        message: Policy has been accepted.
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+- apiVersion: gateway.networking.k8s.io/v1alpha2
+  kind: BackendTLSPolicy
+  metadata:
+    creationTimestamp: null
+    name: policy-btls-for-backend-3
+    namespace: default
+  spec:
+    targetRefs:
+    - group: gateway.envoyproxy.io
+      kind: Backend
+      name: backend-3
+    validation:
+      hostname: example.com
+      wellKnownCACertificates: System
+  status:
+    ancestors:
+    - ancestorRef:
+        name: gateway-1
+        namespace: envoy-gateway
+      conditions:
+      - lastTransitionTime: null
+        message: Policy has been accepted.
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+- apiVersion: gateway.networking.k8s.io/v1alpha2
+  kind: BackendTLSPolicy
+  metadata:
+    creationTimestamp: null
+    name: policy-btls-for-backend-4
+    namespace: default
+  spec:
+    targetRefs:
+    - group: gateway.envoyproxy.io
+      kind: Backend
+      name: backend-4
+      sectionName: "3001"
+    validation:
+      hostname: example.com
+      wellKnownCACertificates: System
+  status:
+    ancestors:
+    - ancestorRef:
+        name: gateway-1
+        namespace: envoy-gateway
+      conditions:
+      - lastTransitionTime: null
+        message: Policy has been accepted.
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+- apiVersion: gateway.networking.k8s.io/v1alpha2
+  kind: BackendTLSPolicy
+  metadata:
+    creationTimestamp: null
+    name: policy-btls-for-backend-6
+    namespace: default
+  spec:
+    targetRefs:
+    - group: gateway.envoyproxy.io
+      kind: Backend
+      name: backend-6
+      sectionName: "3002"
+    validation:
+      hostname: example.com
+      wellKnownCACertificates: System
+  status:
+    ancestors: null
+backends:
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: Backend
+  metadata:
+    creationTimestamp: null
+    name: backend-1
+    namespace: default
+  spec:
+    endpoints:
+    - ip:
+        address: 1.1.1.1
+        port: 3001
+    tls:
+      caCertificateRefs:
+      - group: ""
+        kind: ConfigMap
+        name: ca-cmap
+  status:
+    conditions:
+    - lastTransitionTime: null
+      message: The Backend was accepted
+      reason: Accepted
+      status: "True"
+      type: Accepted
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: Backend
+  metadata:
+    creationTimestamp: null
+    name: backend-2
+    namespace: default
+  spec:
+    endpoints:
+    - ip:
+        address: 2.2.2.2
+        port: 3001
+    tls:
+      caCertificateRefs:
+      - group: ""
+        kind: ConfigMap
+        name: ca-cmap
+  status:
+    conditions:
+    - lastTransitionTime: null
+      message: The Backend was accepted
+      reason: Accepted
+      status: "True"
+      type: Accepted
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: Backend
+  metadata:
+    creationTimestamp: null
+    name: backend-3
+    namespace: default
+  spec:
+    endpoints:
+    - ip:
+        address: 3.3.3.3
+        port: 3001
+    tls:
+      insecureSkipVerify: false
+  status:
+    conditions:
+    - lastTransitionTime: null
+      message: The Backend was accepted
+      reason: Accepted
+      status: "True"
+      type: Accepted
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: Backend
+  metadata:
+    creationTimestamp: null
+    name: backend-4
+    namespace: default
+  spec:
+    endpoints:
+    - ip:
+        address: 3.3.3.3
+        port: 3001
+    tls:
+      insecureSkipVerify: false
+  status:
+    conditions:
+    - lastTransitionTime: null
+      message: The Backend was accepted
+      reason: Accepted
+      status: "True"
+      type: Accepted
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: Backend
+  metadata:
+    creationTimestamp: null
+    name: backend-5
+    namespace: default
+  spec:
+    endpoints:
+    - ip:
+        address: 3.3.3.3
+        port: 3001
+    tls: {}
+  status:
+    conditions:
+    - lastTransitionTime: null
+      message: 'The Backend was not accepted: must specify either CACertificateRefs
+        or WellKnownCACertificates when InsecureSkipVerify is unset or false'
+      reason: Accepted
+      status: "False"
+      type: Invalid
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: Backend
+  metadata:
+    creationTimestamp: null
+    name: backend-6
+    namespace: default
+  spec:
+    endpoints:
+    - ip:
+        address: 3.3.3.3
+        port: 3001
+    tls: {}
+  status:
+    conditions:
+    - lastTransitionTime: null
+      message: 'The Backend was not accepted: must specify either CACertificateRefs
+        or WellKnownCACertificates when InsecureSkipVerify is unset or false'
+      reason: Accepted
+      status: "False"
+      type: Invalid
+gateways:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: Gateway
+  metadata:
+    creationTimestamp: null
+    name: gateway-1
+    namespace: envoy-gateway
+  spec:
+    gatewayClassName: envoy-gateway-class
+    listeners:
+    - allowedRoutes:
+        namespaces:
+          from: All
+      name: http
+      port: 80
+      protocol: HTTP
+  status:
+    listeners:
+    - attachedRoutes: 6
+      conditions:
+      - lastTransitionTime: null
+        message: Sending translated listener configuration to the data plane
+        reason: Programmed
+        status: "True"
+        type: Programmed
+      - lastTransitionTime: null
+        message: Listener has been successfully translated
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Listener references have been resolved
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      name: http
+      supportedKinds:
+      - group: gateway.networking.k8s.io
+        kind: HTTPRoute
+      - group: gateway.networking.k8s.io
+        kind: GRPCRoute
+httpRoutes:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    creationTimestamp: null
+    name: httproute-1
+    namespace: default
+  spec:
+    parentRefs:
+    - name: gateway-1
+      namespace: envoy-gateway
+    rules:
+    - backendRefs:
+      - group: gateway.envoyproxy.io
+        kind: Backend
+        name: backend-1
+      matches:
+      - path:
+          value: /
+  status:
+    parents:
+    - conditions:
+      - lastTransitionTime: null
+        message: Route is accepted
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Resolved all the Object references for the Route
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+      parentRef:
+        name: gateway-1
+        namespace: envoy-gateway
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    creationTimestamp: null
+    name: httproute-2
+    namespace: default
+  spec:
+    parentRefs:
+    - name: gateway-1
+      namespace: envoy-gateway
+    rules:
+    - backendRefs:
+      - group: gateway.envoyproxy.io
+        kind: Backend
+        name: backend-2
+      matches:
+      - path:
+          value: /
+  status:
+    parents:
+    - conditions:
+      - lastTransitionTime: null
+        message: Route is accepted
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Resolved all the Object references for the Route
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+      parentRef:
+        name: gateway-1
+        namespace: envoy-gateway
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    creationTimestamp: null
+    name: httproute-3
+    namespace: default
+  spec:
+    parentRefs:
+    - name: gateway-1
+      namespace: envoy-gateway
+    rules:
+    - backendRefs:
+      - group: gateway.envoyproxy.io
+        kind: Backend
+        name: backend-3
+      matches:
+      - path:
+          value: /
+  status:
+    parents:
+    - conditions:
+      - lastTransitionTime: null
+        message: Route is accepted
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Resolved all the Object references for the Route
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+      parentRef:
+        name: gateway-1
+        namespace: envoy-gateway
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    creationTimestamp: null
+    name: httproute-4
+    namespace: default
+  spec:
+    parentRefs:
+    - name: gateway-1
+      namespace: envoy-gateway
+    rules:
+    - backendRefs:
+      - group: gateway.envoyproxy.io
+        kind: Backend
+        name: backend-4
+        port: 3001
+      matches:
+      - path:
+          value: /
+  status:
+    parents:
+    - conditions:
+      - lastTransitionTime: null
+        message: Route is accepted
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Resolved all the Object references for the Route
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+      parentRef:
+        name: gateway-1
+        namespace: envoy-gateway
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    creationTimestamp: null
+    name: httproute-5
+    namespace: default
+  spec:
+    parentRefs:
+    - name: gateway-1
+      namespace: envoy-gateway
+    rules:
+    - backendRefs:
+      - group: gateway.envoyproxy.io
+        kind: Backend
+        name: backend-5
+      matches:
+      - path:
+          value: /
+  status:
+    parents:
+    - conditions:
+      - lastTransitionTime: null
+        message: Route is accepted
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: 'Failed to process route rule 0 backendRef 0: must specify either
+          CACertificateRefs or WellKnownCACertificates when InsecureSkipVerify is
+          unset or false.'
+        reason: InvalidBackendRef
+        status: "False"
+        type: ResolvedRefs
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+      parentRef:
+        name: gateway-1
+        namespace: envoy-gateway
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    creationTimestamp: null
+    name: httproute-6
+    namespace: default
+  spec:
+    parentRefs:
+    - name: gateway-1
+      namespace: envoy-gateway
+    rules:
+    - backendRefs:
+      - group: gateway.envoyproxy.io
+        kind: Backend
+        name: backend-6
+        port: 3001
+      matches:
+      - path:
+          value: /
+  status:
+    parents:
+    - conditions:
+      - lastTransitionTime: null
+        message: Route is accepted
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: 'Failed to process route rule 0 backendRef 0: must specify either
+          CACertificateRefs or WellKnownCACertificates when InsecureSkipVerify is
+          unset or false.'
+        reason: InvalidBackendRef
+        status: "False"
+        type: ResolvedRefs
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+      parentRef:
+        name: gateway-1
+        namespace: envoy-gateway
+infraIR:
+  envoy-gateway/gateway-1:
+    proxy:
+      config:
+        apiVersion: gateway.envoyproxy.io/v1alpha1
+        kind: EnvoyProxy
+        metadata:
+          creationTimestamp: null
+          name: test
+          namespace: envoy-gateway-system
+        spec:
+          backendTLS:
+            alpnProtocols:
+            - HTTP/1.1
+            - HTTP/2
+            ciphers:
+            - ECDHE-RSA-AES128-GCM-SHA256
+            - ECDHE-ECDSA-AES256-GCM-SHA384
+            clientCertificateRef:
+              group: ""
+              kind: Secret
+              name: client-auth
+              namespace: envoy-gateway-system
+            ecdhCurves:
+            - ECDHE-RSA-AES128-GCM-SHA256
+            - ECDHE-ECDSA-AES256-GCM-SHA384
+            maxVersion: tls1.3
+            minVersion: tls1.2
+            signatureAlgorithms:
+            - RSA-PSS-RSAE-SHA256
+            - ECDSA-SECP256R1-SHA256
+          logging: {}
+        status: {}
+      listeners:
+      - address: null
+        name: envoy-gateway/gateway-1/http
+        ports:
+        - containerPort: 10080
+          name: http-80
+          protocol: HTTP
+          servicePort: 80
+      metadata:
+        labels:
+          gateway.envoyproxy.io/owning-gateway-name: gateway-1
+          gateway.envoyproxy.io/owning-gateway-namespace: envoy-gateway
+        ownerReference:
+          kind: GatewayClass
+          name: envoy-gateway-class
+      name: envoy-gateway/gateway-1
+      namespace: envoy-gateway-system
+xdsIR:
+  envoy-gateway/gateway-1:
+    accessLog:
+      json:
+      - path: /dev/stdout
+    globalResources:
+      proxyServiceCluster:
+        name: envoy-gateway/gateway-1
+        settings:
+        - addressType: IP
+          endpoints:
+          - host: 7.6.5.4
+            port: 8080
+            zone: zone1
+          metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-1
+          protocol: TCP
+    http:
+    - address: 0.0.0.0
+      externalPort: 80
+      hostnames:
+      - '*'
+      isHTTP2: false
+      metadata:
+        kind: Gateway
+        name: gateway-1
+        namespace: envoy-gateway
+        sectionName: http
+      name: envoy-gateway/gateway-1/http
+      path:
+        escapedSlashesAction: UnescapeAndRedirect
+        mergeSlashes: true
+      port: 10080
+      routes:
+      - destination:
+          metadata:
+            kind: HTTPRoute
+            name: httproute-1
+            namespace: default
+          name: httproute/default/httproute-1/rule/0
+          settings:
+          - addressType: IP
+            endpoints:
+            - host: 1.1.1.1
+              port: 3001
+            metadata:
+              kind: Backend
+              name: backend-1
+              namespace: default
+            name: httproute/default/httproute-1/rule/0/backend/0
+            protocol: HTTP
+            tls:
+              alpnProtocols:
+              - HTTP/1.1
+              - HTTP/2
+              caCertificate:
+                name: policy-btls-for-backend-1/default-ca
+              ciphers:
+              - ECDHE-RSA-AES128-GCM-SHA256
+              - ECDHE-ECDSA-AES256-GCM-SHA384
+              clientCertificates:
+              - certificate: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSURKRENDQWd5Z0F3SUJBZ0lVU3JTYktMZjBiTEVHb2dXeC9nQ3cyR0N0dnhFd0RRWUpLb1pJaHZjTkFRRUwKQlFBd0V6RVJNQThHQTFVRUF3d0lWR1Z6ZENCSmJtTXdIaGNOTWpRd01qSTVNRGt6TURFd1doY05NelF3TWpJMgpNRGt6TURFd1dqQVRNUkV3RHdZRFZRUUREQWhVWlhOMElFbHVZekNDQVNJd0RRWUpLb1pJaHZjTkFRRUJCUUFECmdnRVBBRENDQVFvQ2dnRUJBSzFKempQSWlXZzNxb0hTckFkZGtlSmphTVA5aXlNVGkvQlBvOWNKUG9SRThaaTcKV2FwVXJYTC85QTlyK2pITXlHSVpOWk5kY1o1Y1kyWHYwTFA4WnhWeTJsazArM3d0WXpIbnBHWUdWdHlxMnRldApEaEZzaVBsODJZUmpDMG16V2E0UU16NFNYekZITmdJRHBSZGhmcm92bXNldVdHUUU4cFY0VWQ5VUsvU0tpbE1PCnF0QjVKaXJMUDJWczVUMW9XaWNXTFF2ZmJHd3Y3c0ZEZHI5YkcwWHRTUXAxN0hTZ281MFNERTUrQmpTbXB0RncKMVZjS0xscWFoTVhCRERpb3Jnd2hJaEdHS3BFU2VNMFA3YkZoVm1rTTNhc2gyeFNUQnVGVUJEbEU0Sk9haHp3cwpEWHJ1cFVoRGRTMWhkYzJmUHJqaEZBbEpmV0VZWjZCbFpqeXNpVlVDQXdFQUFhTndNRzR3SFFZRFZSME9CQllFCkZCUXVmSzFMaWJ1Vm05VHMvVmpCeDhMM3VpTmVNQjhHQTFVZEl3UVlNQmFBRkJRdWZLMUxpYnVWbTlUcy9WakIKeDhMM3VpTmVNQThHQTFVZEV3RUIvd1FGTUFNQkFmOHdHd1lEVlIwUkJCUXdFb0lCS29JTktpNWxlR0Z0Y0d4bApMbU52YlRBTkJna3Foa2lHOXcwQkFRc0ZBQU9DQVFFQWZQUzQxYWdldldNVjNaWHQwQ09GRzN1WWZQRlhuVnc2ClA0MXA5TzZHa2RZc3VxRnZQZVR5eUgyL2RBSUtLd1N6TS9wdGhnOEtuOExabG1KeUZObkExc3RKeG41WGRiVjEKcFBxajhVdllDQnp5ak1JcW1SeW9peUxpUWxib2hNYTBVZEVCS2NIL1BkTEU5SzhUR0pyWmdvR1hxcTFXbWl0RAozdmNQalNlUEtFaVVKVlM5bENoeVNzMEtZNUIraFVRRDBKajZucEZENFprMHhxZHhoMHJXdWVDcXE3dmpxRVl6CnBqNFB3cnVmbjFQQlRtZnhNdVYvVUpWNWViaWtldVpQMzVrV3pMUjdaV0FMN3d1RGRXcC82bzR5azNRTGFuRFEKQ3dnQ0ZjWCtzcyswVnl1TTNZZXJUT1VVOFFWSkp4NFVaQU5aeDYrNDNwZEpaT2NudFBaNENBPT0KLS0tLS1FTkQgQ0VSVElGSUNBVEUtLS0tLQo=
+                name: envoy-gateway-system/client-auth
+                privateKey: '[redacted]'
+              ecdhCurves:
+              - ECDHE-RSA-AES128-GCM-SHA256
+              - ECDHE-ECDSA-AES256-GCM-SHA384
+              maxVersion: tls1.3
+              minVersion: tls1.2
+              signatureAlgorithms:
+              - RSA-PSS-RSAE-SHA256
+              - ECDSA-SECP256R1-SHA256
+              sni: example.com
+              subjectAltNames:
+              - uri: spiffe://cluster.local/ns/istio-demo/sa/echo-v1
+              - hostname: subdomain.secondexample.com
+              useSystemTrustStore: true
+            weight: 1
+        hostname: '*'
+        isHTTP2: false
+        metadata:
+          kind: HTTPRoute
+          name: httproute-1
+          namespace: default
+        name: httproute/default/httproute-1/rule/0/match/0/*
+        pathMatch:
+          distinct: false
+          name: ""
+          prefix: /
+      - destination:
+          metadata:
+            kind: HTTPRoute
+            name: httproute-2
+            namespace: default
+          name: httproute/default/httproute-2/rule/0
+          settings:
+          - addressType: IP
+            endpoints:
+            - host: 2.2.2.2
+              port: 3001
+            metadata:
+              kind: Backend
+              name: backend-2
+              namespace: default
+            name: httproute/default/httproute-2/rule/0/backend/0
+            protocol: HTTP
+            tls:
+              alpnProtocols:
+              - HTTP/1.1
+              - HTTP/2
+              caCertificate:
+                certificate: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSURKekNDQWcrZ0F3SUJBZ0lVQWw2VUtJdUttenRlODFjbGx6NVBmZE4ySWxJd0RRWUpLb1pJaHZjTkFRRUwKQlFBd0l6RVFNQTRHQTFVRUF3d0hiWGxqYVdWdWRERVBNQTBHQTFVRUNnd0dhM1ZpWldSaU1CNFhEVEl6TVRBdwpNakExTkRFMU4xb1hEVEkwTVRBd01UQTFOREUxTjFvd0l6RVFNQTRHQTFVRUF3d0hiWGxqYVdWdWRERVBNQTBHCkExVUVDZ3dHYTNWaVpXUmlNSUlCSWpBTkJna3Foa2lHOXcwQkFRRUZBQU9DQVE4QU1JSUJDZ0tDQVFFQXdTVGMKMXlqOEhXNjJueW5rRmJYbzRWWEt2MmpDMFBNN2RQVmt5ODdGd2VaY1RLTG9XUVZQUUUycDJrTERLNk9Fc3ptTQp5eXIreHhXdHlpdmVyZW1yV3FuS2tOVFloTGZZUGhnUWtjemliN2VVYWxtRmpVYmhXZEx2SGFrYkVnQ29kbjNiCmt6NTdtSW5YMlZwaURPS2c0a3lIZml1WFdwaUJxckN4MEtOTHB4bzNERVFjRmNzUVRlVEh6aDQ3NTJHVjA0UlUKVGkvR0VXeXpJc2w0Umc3dEd0QXdtY0lQZ1VOVWZZMlEzOTBGR3FkSDRhaG4rbXcvNmFGYlczMVc2M2Q5WUpWcQppb3lPVmNhTUlwTTVCL2M3UWM4U3VoQ0kxWUdoVXlnNGNSSExFdzVWdGlraW95RTNYMDRrbmEzalFBajU0WWJSCmJwRWhjMzVhcEtMQjIxSE9VUUlEQVFBQm8xTXdVVEFkQmdOVkhRNEVGZ1FVeXZsMFZJNXZKVlN1WUZYdTdCNDgKNlBiTUVBb3dId1lEVlIwakJCZ3dGb0FVeXZsMFZJNXZKVlN1WUZYdTdCNDg2UGJNRUFvd0R3WURWUjBUQVFILwpCQVV3QXdFQi96QU5CZ2txaGtpRzl3MEJBUXNGQUFPQ0FRRUFNTHhyZ0ZWTXVOUnEyd0F3Y0J0N1NuTlI1Q2Z6CjJNdlhxNUVVbXVhd0lVaTlrYVlqd2RWaURSRUdTams3SlcxN3ZsNTc2SGpEa2RmUndpNEUyOFN5ZFJJblpmNkoKaThIWmNaN2NhSDZEeFIzMzVmZ0hWekxpNU5pVGNlL09qTkJRelEyTUpYVkRkOERCbUc1ZnlhdEppT0pRNGJXRQpBN0ZsUDBSZFAzQ08zR1dFME01aVhPQjJtMXFXa0UyZXlPNFVIdndUcU5RTGRyZEFYZ0RRbGJhbTllNEJHM0dnCmQvNnRoQWtXRGJ0L1FOVCtFSkhEQ3ZoRFJLaDFSdUdIeWcrWSsvbmViVFdXckZXc2t0UnJiT29IQ1ppQ3BYSTEKM2VYRTZudDBZa2d0RHhHMjJLcW5ocEFnOWdVU3MyaGxob3h5dmt6eUYwbXU2TmhQbHdBZ25xNysvUT09Ci0tLS0tRU5EIENFUlRJRklDQVRFLS0tLS0K
+                name: backend-2/default-ca
+              ciphers:
+              - ECDHE-RSA-AES128-GCM-SHA256
+              - ECDHE-ECDSA-AES256-GCM-SHA384
+              clientCertificates:
+              - certificate: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSURKRENDQWd5Z0F3SUJBZ0lVU3JTYktMZjBiTEVHb2dXeC9nQ3cyR0N0dnhFd0RRWUpLb1pJaHZjTkFRRUwKQlFBd0V6RVJNQThHQTFVRUF3d0lWR1Z6ZENCSmJtTXdIaGNOTWpRd01qSTVNRGt6TURFd1doY05NelF3TWpJMgpNRGt6TURFd1dqQVRNUkV3RHdZRFZRUUREQWhVWlhOMElFbHVZekNDQVNJd0RRWUpLb1pJaHZjTkFRRUJCUUFECmdnRVBBRENDQVFvQ2dnRUJBSzFKempQSWlXZzNxb0hTckFkZGtlSmphTVA5aXlNVGkvQlBvOWNKUG9SRThaaTcKV2FwVXJYTC85QTlyK2pITXlHSVpOWk5kY1o1Y1kyWHYwTFA4WnhWeTJsazArM3d0WXpIbnBHWUdWdHlxMnRldApEaEZzaVBsODJZUmpDMG16V2E0UU16NFNYekZITmdJRHBSZGhmcm92bXNldVdHUUU4cFY0VWQ5VUsvU0tpbE1PCnF0QjVKaXJMUDJWczVUMW9XaWNXTFF2ZmJHd3Y3c0ZEZHI5YkcwWHRTUXAxN0hTZ281MFNERTUrQmpTbXB0RncKMVZjS0xscWFoTVhCRERpb3Jnd2hJaEdHS3BFU2VNMFA3YkZoVm1rTTNhc2gyeFNUQnVGVUJEbEU0Sk9haHp3cwpEWHJ1cFVoRGRTMWhkYzJmUHJqaEZBbEpmV0VZWjZCbFpqeXNpVlVDQXdFQUFhTndNRzR3SFFZRFZSME9CQllFCkZCUXVmSzFMaWJ1Vm05VHMvVmpCeDhMM3VpTmVNQjhHQTFVZEl3UVlNQmFBRkJRdWZLMUxpYnVWbTlUcy9WakIKeDhMM3VpTmVNQThHQTFVZEV3RUIvd1FGTUFNQkFmOHdHd1lEVlIwUkJCUXdFb0lCS29JTktpNWxlR0Z0Y0d4bApMbU52YlRBTkJna3Foa2lHOXcwQkFRc0ZBQU9DQVFFQWZQUzQxYWdldldNVjNaWHQwQ09GRzN1WWZQRlhuVnc2ClA0MXA5TzZHa2RZc3VxRnZQZVR5eUgyL2RBSUtLd1N6TS9wdGhnOEtuOExabG1KeUZObkExc3RKeG41WGRiVjEKcFBxajhVdllDQnp5ak1JcW1SeW9peUxpUWxib2hNYTBVZEVCS2NIL1BkTEU5SzhUR0pyWmdvR1hxcTFXbWl0RAozdmNQalNlUEtFaVVKVlM5bENoeVNzMEtZNUIraFVRRDBKajZucEZENFprMHhxZHhoMHJXdWVDcXE3dmpxRVl6CnBqNFB3cnVmbjFQQlRtZnhNdVYvVUpWNWViaWtldVpQMzVrV3pMUjdaV0FMN3d1RGRXcC82bzR5azNRTGFuRFEKQ3dnQ0ZjWCtzcyswVnl1TTNZZXJUT1VVOFFWSkp4NFVaQU5aeDYrNDNwZEpaT2NudFBaNENBPT0KLS0tLS1FTkQgQ0VSVElGSUNBVEUtLS0tLQo=
+                name: envoy-gateway-system/client-auth
+                privateKey: '[redacted]'
+              ecdhCurves:
+              - ECDHE-RSA-AES128-GCM-SHA256
+              - ECDHE-ECDSA-AES256-GCM-SHA384
+              maxVersion: tls1.3
+              minVersion: tls1.2
+              signatureAlgorithms:
+              - RSA-PSS-RSAE-SHA256
+              - ECDSA-SECP256R1-SHA256
+            weight: 1
+        hostname: '*'
+        isHTTP2: false
+        metadata:
+          kind: HTTPRoute
+          name: httproute-2
+          namespace: default
+        name: httproute/default/httproute-2/rule/0/match/0/*
+        pathMatch:
+          distinct: false
+          name: ""
+          prefix: /
+      - destination:
+          metadata:
+            kind: HTTPRoute
+            name: httproute-3
+            namespace: default
+          name: httproute/default/httproute-3/rule/0
+          settings:
+          - addressType: IP
+            endpoints:
+            - host: 3.3.3.3
+              port: 3001
+            metadata:
+              kind: Backend
+              name: backend-3
+              namespace: default
+            name: httproute/default/httproute-3/rule/0/backend/0
+            protocol: HTTP
+            tls:
+              alpnProtocols:
+              - HTTP/1.1
+              - HTTP/2
+              caCertificate:
+                name: policy-btls-for-backend-3/default-ca
+              ciphers:
+              - ECDHE-RSA-AES128-GCM-SHA256
+              - ECDHE-ECDSA-AES256-GCM-SHA384
+              clientCertificates:
+              - certificate: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSURKRENDQWd5Z0F3SUJBZ0lVU3JTYktMZjBiTEVHb2dXeC9nQ3cyR0N0dnhFd0RRWUpLb1pJaHZjTkFRRUwKQlFBd0V6RVJNQThHQTFVRUF3d0lWR1Z6ZENCSmJtTXdIaGNOTWpRd01qSTVNRGt6TURFd1doY05NelF3TWpJMgpNRGt6TURFd1dqQVRNUkV3RHdZRFZRUUREQWhVWlhOMElFbHVZekNDQVNJd0RRWUpLb1pJaHZjTkFRRUJCUUFECmdnRVBBRENDQVFvQ2dnRUJBSzFKempQSWlXZzNxb0hTckFkZGtlSmphTVA5aXlNVGkvQlBvOWNKUG9SRThaaTcKV2FwVXJYTC85QTlyK2pITXlHSVpOWk5kY1o1Y1kyWHYwTFA4WnhWeTJsazArM3d0WXpIbnBHWUdWdHlxMnRldApEaEZzaVBsODJZUmpDMG16V2E0UU16NFNYekZITmdJRHBSZGhmcm92bXNldVdHUUU4cFY0VWQ5VUsvU0tpbE1PCnF0QjVKaXJMUDJWczVUMW9XaWNXTFF2ZmJHd3Y3c0ZEZHI5YkcwWHRTUXAxN0hTZ281MFNERTUrQmpTbXB0RncKMVZjS0xscWFoTVhCRERpb3Jnd2hJaEdHS3BFU2VNMFA3YkZoVm1rTTNhc2gyeFNUQnVGVUJEbEU0Sk9haHp3cwpEWHJ1cFVoRGRTMWhkYzJmUHJqaEZBbEpmV0VZWjZCbFpqeXNpVlVDQXdFQUFhTndNRzR3SFFZRFZSME9CQllFCkZCUXVmSzFMaWJ1Vm05VHMvVmpCeDhMM3VpTmVNQjhHQTFVZEl3UVlNQmFBRkJRdWZLMUxpYnVWbTlUcy9WakIKeDhMM3VpTmVNQThHQTFVZEV3RUIvd1FGTUFNQkFmOHdHd1lEVlIwUkJCUXdFb0lCS29JTktpNWxlR0Z0Y0d4bApMbU52YlRBTkJna3Foa2lHOXcwQkFRc0ZBQU9DQVFFQWZQUzQxYWdldldNVjNaWHQwQ09GRzN1WWZQRlhuVnc2ClA0MXA5TzZHa2RZc3VxRnZQZVR5eUgyL2RBSUtLd1N6TS9wdGhnOEtuOExabG1KeUZObkExc3RKeG41WGRiVjEKcFBxajhVdllDQnp5ak1JcW1SeW9peUxpUWxib2hNYTBVZEVCS2NIL1BkTEU5SzhUR0pyWmdvR1hxcTFXbWl0RAozdmNQalNlUEtFaVVKVlM5bENoeVNzMEtZNUIraFVRRDBKajZucEZENFprMHhxZHhoMHJXdWVDcXE3dmpxRVl6CnBqNFB3cnVmbjFQQlRtZnhNdVYvVUpWNWViaWtldVpQMzVrV3pMUjdaV0FMN3d1RGRXcC82bzR5azNRTGFuRFEKQ3dnQ0ZjWCtzcyswVnl1TTNZZXJUT1VVOFFWSkp4NFVaQU5aeDYrNDNwZEpaT2NudFBaNENBPT0KLS0tLS1FTkQgQ0VSVElGSUNBVEUtLS0tLQo=
+                name: envoy-gateway-system/client-auth
+                privateKey: '[redacted]'
+              ecdhCurves:
+              - ECDHE-RSA-AES128-GCM-SHA256
+              - ECDHE-ECDSA-AES256-GCM-SHA384
+              maxVersion: tls1.3
+              minVersion: tls1.2
+              signatureAlgorithms:
+              - RSA-PSS-RSAE-SHA256
+              - ECDSA-SECP256R1-SHA256
+              sni: example.com
+              useSystemTrustStore: true
+            weight: 1
+        hostname: '*'
+        isHTTP2: false
+        metadata:
+          kind: HTTPRoute
+          name: httproute-3
+          namespace: default
+        name: httproute/default/httproute-3/rule/0/match/0/*
+        pathMatch:
+          distinct: false
+          name: ""
+          prefix: /
+      - destination:
+          metadata:
+            kind: HTTPRoute
+            name: httproute-4
+            namespace: default
+          name: httproute/default/httproute-4/rule/0
+          settings:
+          - addressType: IP
+            endpoints:
+            - host: 3.3.3.3
+              port: 3001
+            metadata:
+              kind: Backend
+              name: backend-4
+              namespace: default
+            name: httproute/default/httproute-4/rule/0/backend/0
+            protocol: HTTP
+            tls:
+              alpnProtocols:
+              - HTTP/1.1
+              - HTTP/2
+              caCertificate:
+                name: policy-btls-for-backend-4/default-ca
+              ciphers:
+              - ECDHE-RSA-AES128-GCM-SHA256
+              - ECDHE-ECDSA-AES256-GCM-SHA384
+              clientCertificates:
+              - certificate: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSURKRENDQWd5Z0F3SUJBZ0lVU3JTYktMZjBiTEVHb2dXeC9nQ3cyR0N0dnhFd0RRWUpLb1pJaHZjTkFRRUwKQlFBd0V6RVJNQThHQTFVRUF3d0lWR1Z6ZENCSmJtTXdIaGNOTWpRd01qSTVNRGt6TURFd1doY05NelF3TWpJMgpNRGt6TURFd1dqQVRNUkV3RHdZRFZRUUREQWhVWlhOMElFbHVZekNDQVNJd0RRWUpLb1pJaHZjTkFRRUJCUUFECmdnRVBBRENDQVFvQ2dnRUJBSzFKempQSWlXZzNxb0hTckFkZGtlSmphTVA5aXlNVGkvQlBvOWNKUG9SRThaaTcKV2FwVXJYTC85QTlyK2pITXlHSVpOWk5kY1o1Y1kyWHYwTFA4WnhWeTJsazArM3d0WXpIbnBHWUdWdHlxMnRldApEaEZzaVBsODJZUmpDMG16V2E0UU16NFNYekZITmdJRHBSZGhmcm92bXNldVdHUUU4cFY0VWQ5VUsvU0tpbE1PCnF0QjVKaXJMUDJWczVUMW9XaWNXTFF2ZmJHd3Y3c0ZEZHI5YkcwWHRTUXAxN0hTZ281MFNERTUrQmpTbXB0RncKMVZjS0xscWFoTVhCRERpb3Jnd2hJaEdHS3BFU2VNMFA3YkZoVm1rTTNhc2gyeFNUQnVGVUJEbEU0Sk9haHp3cwpEWHJ1cFVoRGRTMWhkYzJmUHJqaEZBbEpmV0VZWjZCbFpqeXNpVlVDQXdFQUFhTndNRzR3SFFZRFZSME9CQllFCkZCUXVmSzFMaWJ1Vm05VHMvVmpCeDhMM3VpTmVNQjhHQTFVZEl3UVlNQmFBRkJRdWZLMUxpYnVWbTlUcy9WakIKeDhMM3VpTmVNQThHQTFVZEV3RUIvd1FGTUFNQkFmOHdHd1lEVlIwUkJCUXdFb0lCS29JTktpNWxlR0Z0Y0d4bApMbU52YlRBTkJna3Foa2lHOXcwQkFRc0ZBQU9DQVFFQWZQUzQxYWdldldNVjNaWHQwQ09GRzN1WWZQRlhuVnc2ClA0MXA5TzZHa2RZc3VxRnZQZVR5eUgyL2RBSUtLd1N6TS9wdGhnOEtuOExabG1KeUZObkExc3RKeG41WGRiVjEKcFBxajhVdllDQnp5ak1JcW1SeW9peUxpUWxib2hNYTBVZEVCS2NIL1BkTEU5SzhUR0pyWmdvR1hxcTFXbWl0RAozdmNQalNlUEtFaVVKVlM5bENoeVNzMEtZNUIraFVRRDBKajZucEZENFprMHhxZHhoMHJXdWVDcXE3dmpxRVl6CnBqNFB3cnVmbjFQQlRtZnhNdVYvVUpWNWViaWtldVpQMzVrV3pMUjdaV0FMN3d1RGRXcC82bzR5azNRTGFuRFEKQ3dnQ0ZjWCtzcyswVnl1TTNZZXJUT1VVOFFWSkp4NFVaQU5aeDYrNDNwZEpaT2NudFBaNENBPT0KLS0tLS1FTkQgQ0VSVElGSUNBVEUtLS0tLQo=
+                name: envoy-gateway-system/client-auth
+                privateKey: '[redacted]'
+              ecdhCurves:
+              - ECDHE-RSA-AES128-GCM-SHA256
+              - ECDHE-ECDSA-AES256-GCM-SHA384
+              maxVersion: tls1.3
+              minVersion: tls1.2
+              signatureAlgorithms:
+              - RSA-PSS-RSAE-SHA256
+              - ECDSA-SECP256R1-SHA256
+              sni: example.com
+              useSystemTrustStore: true
+            weight: 1
+        hostname: '*'
+        isHTTP2: false
+        metadata:
+          kind: HTTPRoute
+          name: httproute-4
+          namespace: default
+        name: httproute/default/httproute-4/rule/0/match/0/*
+        pathMatch:
+          distinct: false
+          name: ""
+          prefix: /
+      - directResponse:
+          statusCode: 500
+        hostname: '*'
+        isHTTP2: false
+        metadata:
+          kind: HTTPRoute
+          name: httproute-5
+          namespace: default
+        name: httproute/default/httproute-5/rule/0/match/0/*
+        pathMatch:
+          distinct: false
+          name: ""
+          prefix: /
+      - directResponse:
+          statusCode: 500
+        hostname: '*'
+        isHTTP2: false
+        metadata:
+          kind: HTTPRoute
+          name: httproute-6
+          namespace: default
+        name: httproute/default/httproute-6/rule/0/match/0/*
+        pathMatch:
+          distinct: false
+          name: ""
+          prefix: /
+    readyListener:
+      address: 0.0.0.0
+      ipFamily: IPv4
+      path: /ready
+      port: 19003

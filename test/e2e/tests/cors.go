@@ -30,7 +30,7 @@ var CORSFromSecurityPolicyTest = suite.ConformanceTest{
 	Description: "Test CORS from SecurityPolicy",
 	Manifests:   []string{"testdata/cors-security-policy.yaml"},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
-		testCORS(t, suite, true)
+		runCORStest(t, suite, true)
 	},
 }
 
@@ -39,27 +39,31 @@ var CORSFromHTTPCORSFilterTest = suite.ConformanceTest{
 	Description: "Test CORS from HTTP CORS Filter",
 	Manifests:   []string{"testdata/cors-http-cors-filter.yaml"},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
-		testCORS(t, suite, false)
+		runCORStest(t, suite, false)
 	},
 }
 
-func testCORS(t *testing.T, suite *suite.ConformanceTestSuite, isSP bool) {
+func runCORStest(t *testing.T, suite *suite.ConformanceTestSuite, withSecurityPolicy bool) {
+	ns := "gateway-conformance-infra"
+	routeNN := types.NamespacedName{Name: "http-with-cors-exact", Namespace: ns}
+	gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
+	gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
+
+	ancestorRef := gwapiv1a2.ParentReference{
+		Group:     gatewayapi.GroupPtr(gwapiv1.GroupName),
+		Kind:      gatewayapi.KindPtr(resource.KindGateway),
+		Namespace: gatewayapi.NamespacePtr(gwNN.Namespace),
+		Name:      gwapiv1.ObjectName(gwNN.Name),
+	}
+
+	if withSecurityPolicy {
+		SecurityPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "cors-exact", Namespace: ns}, suite.ControllerName, ancestorRef)
+	}
+	if withSecurityPolicy {
+		SecurityPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "cors-exact", Namespace: ns}, suite.ControllerName, ancestorRef)
+	}
+
 	t.Run("should enable cors with Allow Origin Exact", func(t *testing.T) {
-		ns := "gateway-conformance-infra"
-		routeNN := types.NamespacedName{Name: "http-with-cors-exact", Namespace: ns}
-		gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
-		gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
-
-		ancestorRef := gwapiv1a2.ParentReference{
-			Group:     gatewayapi.GroupPtr(gwapiv1.GroupName),
-			Kind:      gatewayapi.KindPtr(resource.KindGateway),
-			Namespace: gatewayapi.NamespacePtr(gwNN.Namespace),
-			Name:      gwapiv1.ObjectName(gwNN.Name),
-		}
-		if isSP {
-			SecurityPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "cors-exact", Namespace: ns}, suite.ControllerName, ancestorRef)
-		}
-
 		expectedResponse := http.ExpectedResponse{
 			Request: http.Request{
 				Path:   "/cors-exact",
@@ -92,35 +96,10 @@ func testCORS(t *testing.T, suite *suite.ConformanceTestSuite, isSP bool) {
 			},
 			Namespace: "",
 		}
-
-		req := http.MakeRequest(t, &expectedResponse, gwAddr, "HTTP", "http")
-		cReq, cResp, err := suite.RoundTripper.CaptureRoundTrip(req)
-		if err != nil {
-			t.Errorf("failed to get expected response: %v", err)
-		}
-
-		if err := http.CompareRequest(t, &req, cReq, cResp, expectedResponse); err != nil {
-			t.Errorf("failed to compare request and response: %v", err)
-		}
+		http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
 	})
 
 	t.Run("should enable cors with Allow Origin Regex", func(t *testing.T) {
-		ns := "gateway-conformance-infra"
-		routeNN := types.NamespacedName{Name: "http-with-cors-exact", Namespace: ns}
-		gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
-		gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
-
-		ancestorRef := gwapiv1a2.ParentReference{
-			Group:     gatewayapi.GroupPtr(gwapiv1.GroupName),
-			Kind:      gatewayapi.KindPtr(resource.KindGateway),
-			Namespace: gatewayapi.NamespacePtr(gwNN.Namespace),
-			Name:      gwapiv1.ObjectName(gwNN.Name),
-		}
-
-		if isSP {
-			SecurityPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "cors-exact", Namespace: ns}, suite.ControllerName, ancestorRef)
-		}
-
 		expectedResponse := http.ExpectedResponse{
 			Request: http.Request{
 				Path:   "/cors-exact",
@@ -154,34 +133,10 @@ func testCORS(t *testing.T, suite *suite.ConformanceTestSuite, isSP bool) {
 			Namespace: "",
 		}
 
-		req := http.MakeRequest(t, &expectedResponse, gwAddr, "HTTP", "http")
-		cReq, cResp, err := suite.RoundTripper.CaptureRoundTrip(req)
-		if err != nil {
-			t.Errorf("failed to get expected response: %v", err)
-		}
-
-		if err := http.CompareRequest(t, &req, cReq, cResp, expectedResponse); err != nil {
-			t.Errorf("failed to compare request and response: %v", err)
-		}
+		http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
 	})
 
 	t.Run("should not contain cors headers when Origin not registered", func(t *testing.T) {
-		ns := "gateway-conformance-infra"
-		routeNN := types.NamespacedName{Name: "http-with-cors-exact", Namespace: ns}
-		gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
-		gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
-
-		ancestorRef := gwapiv1a2.ParentReference{
-			Group:     gatewayapi.GroupPtr(gwapiv1.GroupName),
-			Kind:      gatewayapi.KindPtr(resource.KindGateway),
-			Namespace: gatewayapi.NamespacePtr(gwNN.Namespace),
-			Name:      gwapiv1.ObjectName(gwNN.Name),
-		}
-
-		if isSP {
-			SecurityPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "cors-exact", Namespace: ns}, suite.ControllerName, ancestorRef)
-		}
-
 		expectedResponse := http.ExpectedResponse{
 			Request: http.Request{
 				Path:   "/cors-exact",
@@ -209,34 +164,10 @@ func testCORS(t *testing.T, suite *suite.ConformanceTestSuite, isSP bool) {
 			Namespace: "",
 		}
 
-		req := http.MakeRequest(t, &expectedResponse, gwAddr, "HTTP", "http")
-		cReq, cResp, err := suite.RoundTripper.CaptureRoundTrip(req)
-		if err != nil {
-			t.Errorf("failed to get expected response: %v", err)
-		}
-
-		if err := http.CompareRequest(t, &req, cReq, cResp, expectedResponse); err != nil {
-			t.Errorf("failed to compare request and response: %v", err)
-		}
+		http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
 	})
 
 	t.Run("should enable cors with wildcard matching", func(t *testing.T) {
-		ns := "gateway-conformance-infra"
-		routeNN := types.NamespacedName{Name: "http-with-cors-wildcard", Namespace: ns}
-		gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
-		gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
-
-		ancestorRef := gwapiv1a2.ParentReference{
-			Group:     gatewayapi.GroupPtr(gwapiv1.GroupName),
-			Kind:      gatewayapi.KindPtr(resource.KindGateway),
-			Namespace: gatewayapi.NamespacePtr(gwNN.Namespace),
-			Name:      gwapiv1.ObjectName(gwNN.Name),
-		}
-
-		if isSP {
-			SecurityPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "cors-wildcard", Namespace: ns}, suite.ControllerName, ancestorRef)
-		}
-
 		expectedResponse := http.ExpectedResponse{
 			Request: http.Request{
 				Path:   "/cors-wildcard",
@@ -270,14 +201,6 @@ func testCORS(t *testing.T, suite *suite.ConformanceTestSuite, isSP bool) {
 			Namespace: "",
 		}
 
-		req := http.MakeRequest(t, &expectedResponse, gwAddr, "HTTP", "http")
-		cReq, cResp, err := suite.RoundTripper.CaptureRoundTrip(req)
-		if err != nil {
-			t.Errorf("failed to get expected response: %v", err)
-		}
-
-		if err := http.CompareRequest(t, &req, cReq, cResp, expectedResponse); err != nil {
-			t.Errorf("failed to compare request and response: %v", err)
-		}
+		http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
 	})
 }

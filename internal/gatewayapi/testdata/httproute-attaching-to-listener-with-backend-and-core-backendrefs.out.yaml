@@ -98,49 +98,6 @@ httpRoutes:
   kind: HTTPRoute
   metadata:
     creationTimestamp: null
-    name: httproute-static
-    namespace: default
-  spec:
-    parentRefs:
-    - name: gateway-1
-      namespace: envoy-gateway
-      sectionName: http
-    rules:
-    - backendRefs:
-      - group: gateway.envoyproxy.io
-        kind: Backend
-        name: backend-ip
-      - name: service-ip
-        port: 8080
-      - group: multicluster.x-k8s.io
-        kind: ServiceImport
-        name: service-import-ip
-        port: 8081
-      matches:
-      - path:
-          value: /1
-  status:
-    parents:
-    - conditions:
-      - lastTransitionTime: null
-        message: Route is accepted
-        reason: Accepted
-        status: "True"
-        type: Accepted
-      - lastTransitionTime: null
-        message: Resolved all the Object references for the Route
-        reason: ResolvedRefs
-        status: "True"
-        type: ResolvedRefs
-      controllerName: gateway.envoyproxy.io/gatewayclass-controller
-      parentRef:
-        name: gateway-1
-        namespace: envoy-gateway
-        sectionName: http
-- apiVersion: gateway.networking.k8s.io/v1
-  kind: HTTPRoute
-  metadata:
-    creationTimestamp: null
     name: httproute-fqdn
     namespace: default
   spec:
@@ -180,6 +137,49 @@ httpRoutes:
         name: gateway-1
         namespace: envoy-gateway
         sectionName: http
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    creationTimestamp: null
+    name: httproute-static
+    namespace: default
+  spec:
+    parentRefs:
+    - name: gateway-1
+      namespace: envoy-gateway
+      sectionName: http
+    rules:
+    - backendRefs:
+      - group: gateway.envoyproxy.io
+        kind: Backend
+        name: backend-ip
+      - name: service-ip
+        port: 8080
+      - group: multicluster.x-k8s.io
+        kind: ServiceImport
+        name: service-import-ip
+        port: 8081
+      matches:
+      - path:
+          value: /1
+  status:
+    parents:
+    - conditions:
+      - lastTransitionTime: null
+        message: Route is accepted
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Resolved all the Object references for the Route
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+      parentRef:
+        name: gateway-1
+        namespace: envoy-gateway
+        sectionName: http
 infraIR:
   envoy-gateway/gateway-1:
     proxy:
@@ -195,6 +195,9 @@ infraIR:
         labels:
           gateway.envoyproxy.io/owning-gateway-name: gateway-1
           gateway.envoyproxy.io/owning-gateway-namespace: envoy-gateway
+        ownerReference:
+          kind: GatewayClass
+          name: envoy-gateway-class
       name: envoy-gateway/gateway-1
       namespace: envoy-gateway-system
 xdsIR:
@@ -202,8 +205,24 @@ xdsIR:
     accessLog:
       json:
       - path: /dev/stdout
+    globalResources:
+      proxyServiceCluster:
+        name: envoy-gateway/gateway-1
+        settings:
+        - addressType: IP
+          endpoints:
+          - host: 7.6.5.4
+            port: 8080
+            zone: zone1
+          metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-1
+          protocol: TCP
     http:
     - address: 0.0.0.0
+      externalPort: 80
       hostnames:
       - '*'
       isHTTP2: false
@@ -219,47 +238,20 @@ xdsIR:
       port: 10080
       routes:
       - destination:
-          name: httproute/default/httproute-static/rule/0
-          settings:
-          - addressType: IP
-            endpoints:
-            - host: 1.1.1.1
-              port: 3001
-            name: httproute/default/httproute-static/rule/0/backend/0
-            protocol: HTTP
-            weight: 1
-          - addressType: IP
-            endpoints:
-            - host: 4.3.2.1
-              port: 8080
-            name: httproute/default/httproute-static/rule/0/backend/1
-            protocol: HTTP
-            weight: 1
-          - addressType: IP
-            endpoints:
-            - host: 1.2.3.4
-              port: 8081
-            name: httproute/default/httproute-static/rule/0/backend/2
-            protocol: HTTP
-            weight: 1
-        hostname: '*'
-        isHTTP2: false
-        metadata:
-          kind: HTTPRoute
-          name: httproute-static
-          namespace: default
-        name: httproute/default/httproute-static/rule/0/match/0/*
-        pathMatch:
-          distinct: false
-          name: ""
-          prefix: /1
-      - destination:
+          metadata:
+            kind: HTTPRoute
+            name: httproute-fqdn
+            namespace: default
           name: httproute/default/httproute-fqdn/rule/0
           settings:
           - addressType: FQDN
             endpoints:
             - host: primary.foo.com
               port: 3000
+            metadata:
+              kind: Backend
+              name: backend-fqdn
+              namespace: default
             name: httproute/default/httproute-fqdn/rule/0/backend/0
             protocol: HTTP
             weight: 1
@@ -267,6 +259,11 @@ xdsIR:
             endpoints:
             - host: bar.foo
               port: 8080
+            metadata:
+              kind: Service
+              name: service-fqdn
+              namespace: default
+              sectionName: "8080"
             name: httproute/default/httproute-fqdn/rule/0/backend/1
             protocol: HTTP
             weight: 1
@@ -274,6 +271,11 @@ xdsIR:
             endpoints:
             - host: foo.bar
               port: 8080
+            metadata:
+              kind: ServiceImport
+              name: service-import-fqdn
+              namespace: default
+              sectionName: "8081"
             name: httproute/default/httproute-fqdn/rule/0/backend/2
             protocol: HTTP
             weight: 1
@@ -288,6 +290,59 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /2
+      - destination:
+          metadata:
+            kind: HTTPRoute
+            name: httproute-static
+            namespace: default
+          name: httproute/default/httproute-static/rule/0
+          settings:
+          - addressType: IP
+            endpoints:
+            - host: 1.1.1.1
+              port: 3001
+            metadata:
+              kind: Backend
+              name: backend-ip
+              namespace: default
+            name: httproute/default/httproute-static/rule/0/backend/0
+            protocol: HTTP
+            weight: 1
+          - addressType: IP
+            endpoints:
+            - host: 4.3.2.1
+              port: 8080
+            metadata:
+              kind: Service
+              name: service-ip
+              namespace: default
+              sectionName: "8080"
+            name: httproute/default/httproute-static/rule/0/backend/1
+            protocol: HTTP
+            weight: 1
+          - addressType: IP
+            endpoints:
+            - host: 1.2.3.4
+              port: 8081
+            metadata:
+              kind: ServiceImport
+              name: service-import-ip
+              namespace: default
+              sectionName: "8081"
+            name: httproute/default/httproute-static/rule/0/backend/2
+            protocol: HTTP
+            weight: 1
+        hostname: '*'
+        isHTTP2: false
+        metadata:
+          kind: HTTPRoute
+          name: httproute-static
+          namespace: default
+        name: httproute/default/httproute-static/rule/0/match/0/*
+        pathMatch:
+          distinct: false
+          name: ""
+          prefix: /1
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4

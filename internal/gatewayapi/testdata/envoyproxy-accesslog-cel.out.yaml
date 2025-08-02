@@ -139,6 +139,9 @@ infraIR:
         labels:
           gateway.envoyproxy.io/owning-gateway-name: gateway-1
           gateway.envoyproxy.io/owning-gateway-namespace: envoy-gateway
+        ownerReference:
+          kind: GatewayClass
+          name: envoy-gateway-class
       name: envoy-gateway/gateway-1
       namespace: envoy-gateway-system
 xdsIR:
@@ -146,12 +149,21 @@ xdsIR:
     accessLog:
       als:
       - destination:
+          metadata:
+            kind: EnvoyProxy
+            name: test
+            namespace: envoy-gateway-system
           name: accesslog_als_1_0
           settings:
           - addressType: IP
             endpoints:
             - host: 10.240.0.10
               port: 9090
+            metadata:
+              kind: Service
+              name: envoy-als
+              namespace: monitoring
+              sectionName: "9000"
             name: accesslog_als_1_0/backend/-1
             protocol: GRPC
         name: envoy-gateway-system/test
@@ -161,9 +173,14 @@ xdsIR:
         celMatches:
         - response.code >= 400
         destination:
+          metadata:
+            kind: EnvoyProxy
+            name: test
+            namespace: envoy-gateway-system
           name: accesslog_otel_0_1
           settings:
-          - endpoints:
+          - addressType: FQDN
+            endpoints:
             - host: otel-collector.monitoring.svc.cluster.local
               port: 4317
             name: accesslog_otel_0_1/backend/-1
@@ -179,8 +196,24 @@ xdsIR:
         format: |
           [%START_TIME%] "%REQ(:METHOD)% %PROTOCOL%" %RESPONSE_CODE% %RESPONSE_FLAGS% %BYTES_RECEIVED% %BYTES_SENT% %DURATION% %RESP(X-ENVOY-UPSTREAM-SERVICE-TIME)% "%REQ(X-FORWARDED-FOR)%" "%REQ(USER-AGENT)%" "%REQ(X-REQUEST-ID)%" "%REQ(:AUTHORITY)%" "%UPSTREAM_HOST%"\n
         path: /dev/stdout
+    globalResources:
+      proxyServiceCluster:
+        name: envoy-gateway/gateway-1
+        settings:
+        - addressType: IP
+          endpoints:
+          - host: 7.6.5.4
+            port: 8080
+            zone: zone1
+          metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-1
+          protocol: TCP
     http:
     - address: 0.0.0.0
+      externalPort: 80
       hostnames:
       - '*'
       isHTTP2: false

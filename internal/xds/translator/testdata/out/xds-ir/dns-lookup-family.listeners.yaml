@@ -58,7 +58,7 @@
         values:
         - key: k8s.namespace.name
           value:
-            stringValue: '%ENVIRONMENT(ENVOY_GATEWAY_NAMESPACE)%'
+            stringValue: '%ENVIRONMENT(ENVOY_POD_NAMESPACE)%'
         - key: k8s.pod.name
           value:
             stringValue: '%ENVIRONMENT(ENVOY_POD_NAME)%'
@@ -101,7 +101,7 @@
               values:
               - key: k8s.namespace.name
                 value:
-                  stringValue: '%ENVIRONMENT(ENVOY_GATEWAY_NAMESPACE)%'
+                  stringValue: '%ENVIRONMENT(ENVOY_POD_NAMESPACE)%'
               - key: k8s.pod.name
                 value:
                   stringValue: '%ENVIRONMENT(ENVOY_POD_NAME)%'
@@ -138,14 +138,6 @@
             transportApiVersion: V3
             withRequestBody:
               maxRequestBytes: 8192
-        - name: envoy.filters.http.grpc_web
-          typedConfig:
-            '@type': type.googleapis.com/envoy.extensions.filters.http.grpc_web.v3.GrpcWeb
-        - name: envoy.filters.http.grpc_stats
-          typedConfig:
-            '@type': type.googleapis.com/envoy.extensions.filters.http.grpc_stats.v3.FilterConfig
-            emitFilterState: true
-            statsForAllMethods: true
         - disabled: true
           name: envoy.filters.http.ext_proc/envoyextensionpolicy/default/policy-for-httproute/extproc/0
           typedConfig:
@@ -160,6 +152,14 @@
               requestTrailerMode: SKIP
               responseHeaderMode: SKIP
               responseTrailerMode: SKIP
+        - name: envoy.filters.http.grpc_web
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.grpc_web.v3.GrpcWeb
+        - name: envoy.filters.http.grpc_stats
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.grpc_stats.v3.FilterConfig
+            emitFilterState: true
+            statsForAllMethods: true
         - name: envoy.filters.http.router
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
@@ -176,5 +176,6 @@
         statPrefix: http-10080
         useRemoteAddress: true
     name: envoy-gateway/gateway-1/http
+  maxConnectionsToAcceptPerSocketEvent: 1
   name: envoy-gateway/gateway-1/http
   perConnectionBufferLimitBytes: 32768

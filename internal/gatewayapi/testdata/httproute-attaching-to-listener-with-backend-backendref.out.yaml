@@ -174,7 +174,7 @@ httpRoutes:
   kind: HTTPRoute
   metadata:
     creationTimestamp: null
-    name: httproute-3
+    name: httproute-2
     namespace: default
   spec:
     parentRefs:
@@ -185,10 +185,10 @@ httpRoutes:
     - backendRefs:
       - group: gateway.envoyproxy.io
         kind: Backend
-        name: backend-fqdn
+        name: backend-ip
       matches:
       - path:
-          value: /3
+          value: /2
   status:
     parents:
     - conditions:
@@ -211,7 +211,7 @@ httpRoutes:
   kind: HTTPRoute
   metadata:
     creationTimestamp: null
-    name: httproute-2
+    name: httproute-3
     namespace: default
   spec:
     parentRefs:
@@ -222,10 +222,10 @@ httpRoutes:
     - backendRefs:
       - group: gateway.envoyproxy.io
         kind: Backend
-        name: backend-ip
+        name: backend-fqdn
       matches:
       - path:
-          value: /2
+          value: /3
   status:
     parents:
     - conditions:
@@ -335,6 +335,9 @@ infraIR:
         labels:
           gateway.envoyproxy.io/owning-gateway-name: gateway-1
           gateway.envoyproxy.io/owning-gateway-namespace: envoy-gateway
+        ownerReference:
+          kind: GatewayClass
+          name: envoy-gateway-class
       name: envoy-gateway/gateway-1
       namespace: envoy-gateway-system
 xdsIR:
@@ -342,8 +345,24 @@ xdsIR:
     accessLog:
       json:
       - path: /dev/stdout
+    globalResources:
+      proxyServiceCluster:
+        name: envoy-gateway/gateway-1
+        settings:
+        - addressType: IP
+          endpoints:
+          - host: 7.6.5.4
+            port: 8080
+            zone: zone1
+          metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-1
+          protocol: TCP
     http:
     - address: 0.0.0.0
+      externalPort: 80
       hostnames:
       - '*'
       isHTTP2: false
@@ -372,33 +391,20 @@ xdsIR:
           name: ""
           prefix: /1
       - destination:
-          name: httproute/default/httproute-3/rule/0
-          settings:
-          - addressType: FQDN
-            endpoints:
-            - host: primary.foo.com
-              port: 3000
-            name: httproute/default/httproute-3/rule/0/backend/0
-            protocol: HTTP
-            weight: 1
-        hostname: '*'
-        isHTTP2: false
-        metadata:
-          kind: HTTPRoute
-          name: httproute-3
-          namespace: default
-        name: httproute/default/httproute-3/rule/0/match/0/*
-        pathMatch:
-          distinct: false
-          name: ""
-          prefix: /3
-      - destination:
+          metadata:
+            kind: HTTPRoute
+            name: httproute-2
+            namespace: default
           name: httproute/default/httproute-2/rule/0
           settings:
           - addressType: IP
             endpoints:
             - host: 1.1.1.1
               port: 3001
+            metadata:
+              kind: Backend
+              name: backend-ip
+              namespace: default
             name: httproute/default/httproute-2/rule/0/backend/0
             protocol: HTTP
             weight: 1
@@ -413,6 +419,35 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /2
+      - destination:
+          metadata:
+            kind: HTTPRoute
+            name: httproute-3
+            namespace: default
+          name: httproute/default/httproute-3/rule/0
+          settings:
+          - addressType: FQDN
+            endpoints:
+            - host: primary.foo.com
+              port: 3000
+            metadata:
+              kind: Backend
+              name: backend-fqdn
+              namespace: default
+            name: httproute/default/httproute-3/rule/0/backend/0
+            protocol: HTTP
+            weight: 1
+        hostname: '*'
+        isHTTP2: false
+        metadata:
+          kind: HTTPRoute
+          name: httproute-3
+          namespace: default
+        name: httproute/default/httproute-3/rule/0/match/0/*
+        pathMatch:
+          distinct: false
+          name: ""
+          prefix: /3
       - directResponse:
           statusCode: 500
         hostname: '*'

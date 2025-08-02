@@ -40,6 +40,7 @@ new features: |
   Added support for request buffering using the Envoy Buffer filter
   Added support for merge type in BackendTrafficPolicy
   Added support for `OverlappingTLSConfig` condition in Gateway status. This condition is set if there are overlapping hostnames or certificates between listeners. The ALPN protocol is set to HTTP/1.1 for the overlapping listeners to avoid HTTP/2 Connection Coalescing.
+  Added support for running Envoy infrastructure proxies in the Gateway namespace.
 
 bug fixes: |
   Fix traffic splitting when filters are attached to the backendRef.

@@ -55,7 +55,36 @@ func TestE2E(t *testing.T) {
 	if tests.IPFamily == "ipv6" {
 		skipTests = append(skipTests,
 			tests.DynamicResolverBackendTest.ShortName,
+			tests.DynamicResolverBackendWithTLSTest.ShortName,
+			tests.RateLimitCIDRMatchTest.ShortName,
+			tests.RateLimitMultipleListenersTest.ShortName,
+			tests.RateLimitGlobalSharedCidrMatchTest.ShortName,
 		)
+	}
+
+	// TODO: make these tests work in GatewayNamespaceMode
+	if tests.IsGatewayNamespaceMode() {
+		skipTests = append(skipTests,
+			tests.HTTPWasmTest.ShortName,
+			tests.OCIWasmTest.ShortName,
+			tests.ZoneAwareRoutingTest.ShortName,
+		)
+	}
+
+	if tests.XDSNameSchemeV2() {
+		skipTests = append(skipTests,
+			tests.EnvoyPatchPolicyTest.ShortName,
+		)
+	} else {
+		skipTests = append(skipTests,
+			tests.EnvoyPatchPolicyXDSNameSchemeV2Test.ShortName,
+		)
+	}
+
+	enabledFeatures := sets.New(features.SupportGateway)
+	if tests.EnabledClusterTrustBundle() {
+		tlog.Logf(t, "ClusterTrustBundle feature is enabled")
+		enabledFeatures.Insert(tests.ClusterTrustBundleFeature)
 	}
 
 	cSuite, err := suite.NewConformanceTestSuite(suite.ConformanceOptions{
@@ -68,9 +97,10 @@ func TestE2E(t *testing.T) {
 		RunTest:              *flags.RunTest,
 		// SupportedFeatures cannot be empty, so we set it to SupportGateway
 		// All e2e tests should leave Features empty.
-		SupportedFeatures: sets.New[features.FeatureName](features.SupportGateway),
+		SupportedFeatures: enabledFeatures,
 		SkipTests:         skipTests,
 		AllowCRDsMismatch: *flags.AllowCRDsMismatch,
+		Hook:              Hook,
 	})
 	if err != nil {
 		t.Fatalf("Failed to create ConformanceTestSuite: %v", err)

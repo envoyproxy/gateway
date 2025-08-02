@@ -1,0 +1,54 @@
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: myapp
+spec:
+  parentRefs:
+  - name: eg
+  hostnames:
+  - "www.example.com"
+  rules:
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /myapp
+    backendRefs:
+    - name: backend
+      port: 3000
+
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyExtensionPolicy
+metadata:
+  name: ext-proc-example
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: myapp
+  extProc:
+    - backendRefs:
+        - name: grpc-ext-proc
+          port: 9002
+      processingMode:
+        request: {}
+        response:
+          body: Streamed
+
+---
+apiVersion: gateway.networking.k8s.io/v1alpha3
+kind: BackendTLSPolicy
+metadata:
+  name: grpc-ext-proc-btls
+spec:
+  targetRefs:
+    - group: ''
+      kind: Service
+      name: grpc-ext-proc
+  validation:
+    caCertificateRefs:
+      - name: grpc-ext-proc-ca
+        group: ''
+        kind: ConfigMap
+    hostname: grpc-ext-proc.envoygateway

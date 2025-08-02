@@ -7,6 +7,7 @@ package test
 
 import (
 	appsv1 "k8s.io/api/apps/v1"
+	certificatesv1b1 "k8s.io/api/certificates/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -364,6 +365,18 @@ func GetService(nsName types.NamespacedName, labels map[string]string, ports map
 	return service
 }
 
+// GetConfigMap returns a sample ConfigMap with labels and data
+func GetConfigMap(nsName types.NamespacedName, labels, data map[string]string) *corev1.ConfigMap {
+	return &corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      nsName.Name,
+			Namespace: nsName.Namespace,
+			Labels:    labels,
+		},
+		Data: data,
+	}
+}
+
 // GetEndpointSlice returns a sample EndpointSlice.
 func GetEndpointSlice(nsName types.NamespacedName, svcName string, isServiceImport bool) *discoveryv1.EndpointSlice {
 	var labels map[string]string
@@ -383,7 +396,7 @@ func GetEndpointSlice(nsName types.NamespacedName, svcName string, isServiceImpo
 			{
 				Addresses: []string{"10.0.0.1"},
 				Conditions: discoveryv1.EndpointConditions{
-					Ready: &[]bool{true}[0],
+					Ready: ptr.To(true),
 				},
 			},
 		},
@@ -414,6 +427,29 @@ func GetHTTPRouteFilter(nsName types.NamespacedName) *egv1a1.HTTPRouteFilter {
 					},
 				},
 			},
+		},
+	}
+}
+
+func GetClusterTrustBundle(name string) *certificatesv1b1.ClusterTrustBundle {
+	return &certificatesv1b1.ClusterTrustBundle{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: name,
+		},
+		Spec: certificatesv1b1.ClusterTrustBundleSpec{
+			TrustBundle: "fake-trust-bundle",
+		},
+	}
+}
+
+func GetClientTrafficPolicy(nn types.NamespacedName, tls *egv1a1.ClientTLSSettings) *egv1a1.ClientTrafficPolicy {
+	return &egv1a1.ClientTrafficPolicy{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      nn.Name,
+			Namespace: nn.Namespace,
+		},
+		Spec: egv1a1.ClientTrafficPolicySpec{
+			TLS: tls,
 		},
 	}
 }

@@ -447,6 +447,9 @@ infraIR:
         labels:
           gateway.envoyproxy.io/owning-gateway-name: gateway-1
           gateway.envoyproxy.io/owning-gateway-namespace: envoy-gateway
+        ownerReference:
+          kind: GatewayClass
+          name: envoy-gateway-class
       name: envoy-gateway/gateway-1
       namespace: envoy-gateway-system
 xdsIR:
@@ -454,8 +457,24 @@ xdsIR:
     accessLog:
       json:
       - path: /dev/stdout
+    globalResources:
+      proxyServiceCluster:
+        name: envoy-gateway/gateway-1
+        settings:
+        - addressType: IP
+          endpoints:
+          - host: 7.6.5.4
+            port: 8080
+            zone: zone1
+          metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-1
+          protocol: TCP
     http:
     - address: 0.0.0.0
+      externalPort: 80
       hostnames:
       - '*'
       http1:
@@ -472,6 +491,7 @@ xdsIR:
         mergeSlashes: true
       port: 10080
     - address: 0.0.0.0
+      externalPort: 8080
       hostnames:
       - www.example.com
       http1:
@@ -489,6 +509,7 @@ xdsIR:
         mergeSlashes: true
       port: 8080
     - address: 0.0.0.0
+      externalPort: 8081
       hostnames:
       - '*'
       http1: {}
@@ -504,6 +525,7 @@ xdsIR:
         mergeSlashes: true
       port: 8081
     - address: 0.0.0.0
+      externalPort: 8082
       hostnames:
       - '*'
       http1:
@@ -522,12 +544,21 @@ xdsIR:
       port: 8082
       routes:
       - destination:
+          metadata:
+            kind: HTTPRoute
+            name: httproute-1
+            namespace: envoy-gateway
           name: httproute/envoy-gateway/httproute-1/rule/0
           settings:
           - addressType: IP
             endpoints:
             - host: 7.7.7.7
               port: 8080
+            metadata:
+              kind: Service
+              name: service-1
+              namespace: envoy-gateway
+              sectionName: "8080"
             name: httproute/envoy-gateway/httproute-1/rule/0/backend/0
             protocol: HTTP
             weight: 1
@@ -543,6 +574,7 @@ xdsIR:
           name: ""
           prefix: /
     - address: 0.0.0.0
+      externalPort: 8083
       hostnames:
       - '*'
       http1: {}
@@ -559,12 +591,21 @@ xdsIR:
       port: 8083
       routes:
       - destination:
+          metadata:
+            kind: HTTPRoute
+            name: httproute-1
+            namespace: envoy-gateway
           name: httproute/envoy-gateway/httproute-1/rule/0
           settings:
           - addressType: IP
             endpoints:
             - host: 7.7.7.7
               port: 8080
+            metadata:
+              kind: Service
+              name: service-1
+              namespace: envoy-gateway
+              sectionName: "8080"
             name: httproute/envoy-gateway/httproute-1/rule/0/backend/0
             protocol: HTTP
             weight: 1
@@ -582,12 +623,21 @@ xdsIR:
           name: ""
           prefix: /
       - destination:
+          metadata:
+            kind: HTTPRoute
+            name: httproute-2
+            namespace: envoy-gateway
           name: httproute/envoy-gateway/httproute-2/rule/0
           settings:
           - addressType: IP
             endpoints:
             - host: 7.7.7.7
               port: 8080
+            metadata:
+              kind: Service
+              name: service-1
+              namespace: envoy-gateway
+              sectionName: "8080"
             name: httproute/envoy-gateway/httproute-2/rule/0/backend/0
             protocol: HTTP
             weight: 1

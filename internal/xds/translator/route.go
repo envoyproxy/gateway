@@ -14,6 +14,7 @@ import (
 	corev3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	routev3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
 	previoushost "github.com/envoyproxy/go-control-plane/envoy/extensions/retry/host/previous_hosts/v3"
+	previouspriority "github.com/envoyproxy/go-control-plane/envoy/extensions/retry/priority/previous_priorities/v3"
 	matcherv3 "github.com/envoyproxy/go-control-plane/envoy/type/matcher/v3"
 	"google.golang.org/protobuf/types/known/durationpb"
 	"google.golang.org/protobuf/types/known/wrapperspb"
@@ -30,6 +31,8 @@ const (
 	retryDefaultNumRetries          = 2
 
 	websocketUpgradeType = "websocket"
+
+	ConnectProtocol = "CONNECT"
 )
 
 // Allow websocket upgrades for HTTP 1.1
@@ -40,10 +43,11 @@ var defaultUpgradeConfig = []*routev3.RouteAction_UpgradeConfig{
 	},
 }
 
-func buildXdsRoute(httpRoute *ir.HTTPRoute) (*routev3.Route, error) {
+func buildXdsRoute(httpRoute *ir.HTTPRoute, httpListener *ir.HTTPListener) (*routev3.Route, error) {
+	connectMatch := trafficUpgradeConnect(httpRoute.Traffic)
 	router := &routev3.Route{
 		Name:     httpRoute.Name,
-		Match:    buildXdsRouteMatch(httpRoute.PathMatch, httpRoute.HeaderMatches, httpRoute.QueryParamMatches),
+		Match:    buildXdsRouteMatch(connectMatch, httpRoute.PathMatch, httpRoute.HeaderMatches, httpRoute.QueryParamMatches),
 		Metadata: buildXdsMetadata(httpRoute.Metadata),
 	}
 
@@ -68,6 +72,7 @@ func buildXdsRoute(httpRoute *ir.HTTPRoute) (*routev3.Route, error) {
 		router.Action = &routev3.Route_Redirect{Redirect: buildXdsRedirectAction(httpRoute)}
 	case httpRoute.URLRewrite != nil:
 		routeAction := buildXdsURLRewriteAction(httpRoute.Destination.Name, httpRoute.URLRewrite, httpRoute.PathMatch)
+		routeAction.IdleTimeout = idleTimeout(httpRoute)
 		if httpRoute.Mirrors != nil {
 			routeAction.RequestMirrorPolicies = buildXdsRequestMirrorPolicies(httpRoute.Mirrors)
 		}
@@ -78,8 +83,7 @@ func buildXdsRoute(httpRoute *ir.HTTPRoute) (*routev3.Route, error) {
 
 		router.Action = &routev3.Route_Route{Route: routeAction}
 	default:
-		backendWeights := httpRoute.Destination.ToBackendWeights()
-		routeAction := buildXdsRouteAction(backendWeights, httpRoute.Destination)
+		routeAction := buildXdsRouteAction(httpRoute)
 		routeAction.IdleTimeout = idleTimeout(httpRoute)
 
 		if httpRoute.Mirrors != nil {
@@ -124,11 +128,25 @@ func buildXdsRoute(httpRoute *ir.HTTPRoute) (*routev3.Route, error) {
 	}
 
 	// Add per route filter configs to the route, if needed.
-	if err := patchRouteWithPerRouteConfig(router, httpRoute); err != nil {
+	if err := patchRouteWithPerRouteConfig(router, httpRoute, httpListener); err != nil {
 		return nil, err
 	}
 
 	return router, nil
+}
+
+func trafficUpgradeConnect(trafficFeatures *ir.TrafficFeatures) bool {
+	if trafficFeatures == nil || trafficFeatures.HTTPUpgrade == nil {
+		return false
+	}
+
+	for _, protocol := range trafficFeatures.HTTPUpgrade {
+		if strings.EqualFold(protocol.Type, ConnectProtocol) {
+			return true
+		}
+	}
+
+	return false
 }
 
 func buildUpgradeConfig(trafficFeatures *ir.TrafficFeatures) []*routev3.RouteAction_UpgradeConfig {
@@ -138,15 +156,60 @@ func buildUpgradeConfig(trafficFeatures *ir.TrafficFeatures) []*routev3.RouteAct
 
 	upgradeConfigs := make([]*routev3.RouteAction_UpgradeConfig, 0, len(trafficFeatures.HTTPUpgrade))
 	for _, protocol := range trafficFeatures.HTTPUpgrade {
-		upgradeConfigs = append(upgradeConfigs, &routev3.RouteAction_UpgradeConfig{
-			UpgradeType: protocol,
-		})
+		cfg := &routev3.RouteAction_UpgradeConfig{
+			UpgradeType: protocol.Type,
+		}
+		if protocol.Type == ConnectProtocol && protocol.Connect != nil && protocol.Connect.Terminate {
+			cfg.ConnectConfig = &routev3.RouteAction_UpgradeConfig_ConnectConfig{}
+		}
+		upgradeConfigs = append(upgradeConfigs, cfg)
 	}
 
 	return upgradeConfigs
 }
 
-func buildXdsRouteMatch(pathMatch *ir.StringMatch, headerMatches, queryParamMatches []*ir.StringMatch) *routev3.RouteMatch {
+func buildXdsRouteMatch(connectMatch bool, pathMatch *ir.StringMatch, headerMatches, queryParamMatches []*ir.StringMatch) *routev3.RouteMatch {
+	var outMatch *routev3.RouteMatch
+	if connectMatch {
+		outMatch = &routev3.RouteMatch{
+			PathSpecifier: &routev3.RouteMatch_ConnectMatcher_{
+				ConnectMatcher: &routev3.RouteMatch_ConnectMatcher{},
+			},
+		}
+	} else {
+		outMatch = buildPathMatch(pathMatch)
+	}
+
+	// Header matches
+	for _, headerMatch := range headerMatches {
+		stringMatcher := buildXdsStringMatcher(headerMatch)
+
+		headerMatcher := &routev3.HeaderMatcher{
+			Name: headerMatch.Name,
+			HeaderMatchSpecifier: &routev3.HeaderMatcher_StringMatch{
+				StringMatch: stringMatcher,
+			},
+		}
+		outMatch.Headers = append(outMatch.Headers, headerMatcher)
+	}
+
+	// Query param matches
+	for _, queryParamMatch := range queryParamMatches {
+		stringMatcher := buildXdsStringMatcher(queryParamMatch)
+
+		queryParamMatcher := &routev3.QueryParameterMatcher{
+			Name: queryParamMatch.Name,
+			QueryParameterMatchSpecifier: &routev3.QueryParameterMatcher_StringMatch{
+				StringMatch: stringMatcher,
+			},
+		}
+		outMatch.QueryParameters = append(outMatch.QueryParameters, queryParamMatcher)
+	}
+
+	return outMatch
+}
+
+func buildPathMatch(pathMatch *ir.StringMatch) *routev3.RouteMatch {
 	outMatch := &routev3.RouteMatch{}
 
 	// Add a prefix match to '/' if no matches are specified
@@ -181,31 +244,6 @@ func buildXdsRouteMatch(pathMatch *ir.StringMatch, headerMatches, queryParamMatc
 				},
 			}
 		}
-	}
-	// Header matches
-	for _, headerMatch := range headerMatches {
-		stringMatcher := buildXdsStringMatcher(headerMatch)
-
-		headerMatcher := &routev3.HeaderMatcher{
-			Name: headerMatch.Name,
-			HeaderMatchSpecifier: &routev3.HeaderMatcher_StringMatch{
-				StringMatch: stringMatcher,
-			},
-		}
-		outMatch.Headers = append(outMatch.Headers, headerMatcher)
-	}
-
-	// Query param matches
-	for _, queryParamMatch := range queryParamMatches {
-		stringMatcher := buildXdsStringMatcher(queryParamMatch)
-
-		queryParamMatcher := &routev3.QueryParameterMatcher{
-			Name: queryParamMatch.Name,
-			QueryParameterMatchSpecifier: &routev3.QueryParameterMatcher_StringMatch{
-				StringMatch: stringMatcher,
-			},
-		}
-		outMatch.QueryParameters = append(outMatch.QueryParameters, queryParamMatcher)
 	}
 
 	return outMatch
@@ -246,10 +284,11 @@ func buildXdsStringMatcher(irMatch *ir.StringMatch) *matcherv3.StringMatcher {
 	return stringMatcher
 }
 
-func buildXdsRouteAction(backendWeights *ir.BackendWeights, dest *ir.RouteDestination) *routev3.RouteAction {
+func buildXdsRouteAction(route *ir.HTTPRoute) *routev3.RouteAction {
+	backendWeights := route.Destination.ToBackendWeights()
 	// only use weighted cluster when there are invalid weights
-	if dest.NeedsClusterPerSetting() || backendWeights.Invalid != 0 {
-		return buildXdsWeightedRouteAction(backendWeights, dest.Settings)
+	if route.NeedsClusterPerSetting() || backendWeights.Invalid != 0 {
+		return buildXdsWeightedRouteAction(backendWeights, route.Destination.Settings)
 	}
 
 	return &routev3.RouteAction{
@@ -521,7 +560,7 @@ func mirrorPercentByPolicy(mirror *ir.MirrorPolicy) *corev3.RuntimeFractionalPer
 }
 
 func buildXdsAddedHeaders(headersToAdd []ir.AddHeader) []*corev3.HeaderValueOption {
-	headerValueOptions := []*corev3.HeaderValueOption{}
+	headerValueOptions := make([]*corev3.HeaderValueOption, 0, len(headersToAdd))
 
 	for _, header := range headersToAdd {
 		var appendAction corev3.HeaderValueOption_HeaderAppendAction
@@ -642,6 +681,21 @@ func buildRetryPolicy(route *ir.HTTPRoute) (*routev3.RetryPolicy, error) {
 		rp.NumRetries = &wrapperspb.UInt32Value{Value: *rr.NumRetries}
 	}
 
+	if rr.NumAttemptsPerPriority != nil && *rr.NumAttemptsPerPriority > 0 {
+		anyCfgPriority, err := proto.ToAnyWithValidation(&previouspriority.PreviousPrioritiesConfig{
+			UpdateFrequency: *rr.NumAttemptsPerPriority,
+		})
+		if err != nil {
+			return nil, err
+		}
+		rp.RetryPriority = &routev3.RetryPolicy_RetryPriority{
+			Name: "envoy.retry_priorities.previous_priorities",
+			ConfigType: &routev3.RetryPolicy_RetryPriority_TypedConfig{
+				TypedConfig: anyCfgPriority,
+			},
+		}
+	}
+
 	if rr.RetryOn != nil {
 		if len(rr.RetryOn.Triggers) > 0 {
 			if ro, err := buildRetryOn(rr.RetryOn.Triggers); err == nil {
@@ -718,6 +772,7 @@ func buildRetryOn(triggers []ir.TriggerEnum) (string, error) {
 		ir.Error5XX:             "5xx",
 		ir.GatewayError:         "gateway-error",
 		ir.Reset:                "reset",
+		ir.ResetBeforeRequest:   "reset-before-request",
 		ir.ConnectFailure:       "connect-failure",
 		ir.Retriable4XX:         "retriable-4xx",
 		ir.RefusedStream:        "refused-stream",
