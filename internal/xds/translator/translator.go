@@ -446,7 +446,7 @@ func (t *Translator) processHTTPListenerXdsTranslation(
 		routeCfgName = findXdsHTTPRouteConfigName(tcpXDSListener)
 		// If the route config name is not found, we use the current ir Listener name as the route config name to create a new route config.
 		if routeCfgName == "" {
-			routeCfgName = routeConfigName(httpListener)
+			routeCfgName = routeConfigName(httpListener, t.xdsNameSchemeV2())
 		}
 
 		// Create a route config if we have not found one yet
@@ -504,7 +504,7 @@ func (t *Translator) addRouteToRouteConfig(
 			underscoredHostname := strings.ReplaceAll(httpRoute.Hostname, ".", "_")
 			// Allocate virtual host for this httpRoute.
 			vHost = &routev3.VirtualHost{
-				Name:     virtualHostName(httpListener, underscoredHostname),
+				Name:     virtualHostName(httpListener, underscoredHostname, t.xdsNameSchemeV2()),
 				Domains:  []string{httpRoute.Hostname},
 				Metadata: buildXdsMetadata(httpListener.Metadata),
 			}
@@ -656,7 +656,10 @@ func (t *Translator) addRouteToRouteConfig(
 	return errs
 }
 
-func virtualHostName(httpListener *ir.HTTPListener, underscoredHostname string) string {
+func virtualHostName(httpListener *ir.HTTPListener, underscoredHostname string, xdsNameSchemeV2 bool) string {
+	if xdsNameSchemeV2 {
+		return underscoredHostname
+	}
 	return fmt.Sprintf("%s/%s", httpListener.Name, underscoredHostname)
 }
 
