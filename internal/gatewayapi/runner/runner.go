@@ -194,11 +194,11 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *re
 						r.Logger.Error(err, "unable to validate infra ir, skipped sending it")
 						errChan <- err
 					} else {
-						message.HandleStore(message.Metadata{
+						r.InfraIR.Store(key, val)
+						message.PublishMetric(message.Metadata{
 							Runner:  r.Name(),
 							Message: message.InfraIRMessageName,
-						},
-							key, val, &r.InfraIR.Map)
+						})
 						newIRKeys = append(newIRKeys, key)
 					}
 				}
@@ -209,67 +209,67 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *re
 						r.Logger.Error(err, "unable to validate xds ir, skipped sending it")
 						errChan <- err
 					} else {
-						message.HandleStore(message.Metadata{
+						r.XdsIR.Store(key, val)
+						message.PublishMetric(message.Metadata{
 							Runner:  r.Name(),
 							Message: message.XDSIRMessageName,
-						},
-							key, val, &r.XdsIR.Map)
+						})
 					}
 				}
 
 				// Update Status
 				for _, gateway := range result.Gateways {
 					key := utils.NamespacedName(gateway)
-					message.HandleStore(message.Metadata{
+					r.ProviderResources.GatewayStatuses.Store(key, &gateway.Status)
+					message.PublishMetric(message.Metadata{
 						Runner:  r.Name(),
 						Message: message.GatewayStatusMessageName,
-					},
-						key, &gateway.Status, &r.ProviderResources.GatewayStatuses)
+					})
 					delete(statusesToDelete.GatewayStatusKeys, key)
 				}
 				for _, httpRoute := range result.HTTPRoutes {
 					key := utils.NamespacedName(httpRoute)
-					message.HandleStore(message.Metadata{
+					r.ProviderResources.HTTPRouteStatuses.Store(key, &httpRoute.Status)
+					message.PublishMetric(message.Metadata{
 						Runner:  r.Name(),
 						Message: message.HTTPRouteStatusMessageName,
-					},
-						key, &httpRoute.Status, &r.ProviderResources.HTTPRouteStatuses)
+					})
 					delete(statusesToDelete.HTTPRouteStatusKeys, key)
 				}
 				for _, grpcRoute := range result.GRPCRoutes {
 					key := utils.NamespacedName(grpcRoute)
-					message.HandleStore(message.Metadata{
+					r.ProviderResources.GRPCRouteStatuses.Store(key, &grpcRoute.Status)
+					message.PublishMetric(message.Metadata{
 						Runner:  r.Name(),
 						Message: message.GRPCRouteStatusMessageName,
-					},
-						key, &grpcRoute.Status, &r.ProviderResources.GRPCRouteStatuses)
+					})
 					delete(statusesToDelete.GRPCRouteStatusKeys, key)
 				}
 				for _, tlsRoute := range result.TLSRoutes {
 					key := utils.NamespacedName(tlsRoute)
-					message.HandleStore(message.Metadata{
+					r.ProviderResources.TLSRouteStatuses.Store(key, &tlsRoute.Status)
+					message.PublishMetric(message.Metadata{
 						Runner:  r.Name(),
 						Message: message.TLSRouteStatusMessageName,
-					},
-						key, &tlsRoute.Status, &r.ProviderResources.TLSRouteStatuses)
+					})
 					delete(statusesToDelete.TLSRouteStatusKeys, key)
 				}
 				for _, tcpRoute := range result.TCPRoutes {
 					key := utils.NamespacedName(tcpRoute)
-					message.HandleStore(message.Metadata{
+					r.ProviderResources.TCPRouteStatuses.Store(key, &tcpRoute.Status)
+					message.PublishMetric(message.Metadata{
 						Runner:  r.Name(),
 						Message: message.TCPRouteStatusMessageName,
-					},
-						key, &tcpRoute.Status, &r.ProviderResources.TCPRouteStatuses)
+					})
 					delete(statusesToDelete.TCPRouteStatusKeys, key)
 				}
 				for _, udpRoute := range result.UDPRoutes {
 					key := utils.NamespacedName(udpRoute)
-					message.HandleStore(message.Metadata{
+					r.ProviderResources.UDPRouteStatuses.Store(key, &udpRoute.Status)
+					message.PublishMetric(message.Metadata{
 						Runner:  r.Name(),
 						Message: message.UDPRouteStatusMessageName,
-					},
-						key, &udpRoute.Status, &r.ProviderResources.UDPRouteStatuses)
+					})
 					delete(statusesToDelete.UDPRouteStatusKeys, key)
 				}
 
@@ -280,11 +280,11 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *re
 				for _, backendTLSPolicy := range result.BackendTLSPolicies {
 					key := utils.NamespacedName(backendTLSPolicy)
 					if !(reflect.ValueOf(backendTLSPolicy.Status).IsZero()) {
-						message.HandleStore(message.Metadata{
+						r.ProviderResources.BackendTLSPolicyStatuses.Store(key, &backendTLSPolicy.Status)
+						message.PublishMetric(message.Metadata{
 							Runner:  r.Name(),
 							Message: message.BackendTLSPolicyStatusMessageName,
-						},
-							key, &backendTLSPolicy.Status, &r.ProviderResources.BackendTLSPolicyStatuses)
+						})
 					}
 					delete(statusesToDelete.BackendTLSPolicyStatusKeys, key)
 				}
@@ -292,55 +292,55 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *re
 				for _, clientTrafficPolicy := range result.ClientTrafficPolicies {
 					key := utils.NamespacedName(clientTrafficPolicy)
 					if !(reflect.ValueOf(clientTrafficPolicy.Status).IsZero()) {
-						message.HandleStore(message.Metadata{
+						r.ProviderResources.ClientTrafficPolicyStatuses.Store(key, &clientTrafficPolicy.Status)
+						message.PublishMetric(message.Metadata{
 							Runner:  r.Name(),
 							Message: message.ClientTrafficPolicyStatusMessageName,
-						},
-							key, &clientTrafficPolicy.Status, &r.ProviderResources.ClientTrafficPolicyStatuses)
+						})
 					}
 					delete(statusesToDelete.ClientTrafficPolicyStatusKeys, key)
 				}
 				for _, backendTrafficPolicy := range result.BackendTrafficPolicies {
 					key := utils.NamespacedName(backendTrafficPolicy)
 					if !(reflect.ValueOf(backendTrafficPolicy.Status).IsZero()) {
-						message.HandleStore(message.Metadata{
+						r.ProviderResources.BackendTrafficPolicyStatuses.Store(key, &backendTrafficPolicy.Status)
+						message.PublishMetric(message.Metadata{
 							Runner:  r.Name(),
 							Message: message.BackendTrafficPolicyStatusMessageName,
-						},
-							key, &backendTrafficPolicy.Status, &r.ProviderResources.BackendTrafficPolicyStatuses)
+						})
 					}
 					delete(statusesToDelete.BackendTrafficPolicyStatusKeys, key)
 				}
 				for _, securityPolicy := range result.SecurityPolicies {
 					key := utils.NamespacedName(securityPolicy)
 					if !(reflect.ValueOf(securityPolicy.Status).IsZero()) {
-						message.HandleStore(message.Metadata{
+						r.ProviderResources.SecurityPolicyStatuses.Store(key, &securityPolicy.Status)
+						message.PublishMetric(message.Metadata{
 							Runner:  r.Name(),
 							Message: message.SecurityPolicyStatusMessageName,
-						},
-							key, &securityPolicy.Status, &r.ProviderResources.SecurityPolicyStatuses)
+						})
 					}
 					delete(statusesToDelete.SecurityPolicyStatusKeys, key)
 				}
 				for _, envoyExtensionPolicy := range result.EnvoyExtensionPolicies {
 					key := utils.NamespacedName(envoyExtensionPolicy)
 					if !(reflect.ValueOf(envoyExtensionPolicy.Status).IsZero()) {
-						message.HandleStore(message.Metadata{
+						r.ProviderResources.EnvoyExtensionPolicyStatuses.Store(key, &envoyExtensionPolicy.Status)
+						message.PublishMetric(message.Metadata{
 							Runner:  r.Name(),
 							Message: message.EnvoyExtensionPolicyStatusMessageName,
-						},
-							key, &envoyExtensionPolicy.Status, &r.ProviderResources.EnvoyExtensionPolicyStatuses)
+						})
 					}
 					delete(statusesToDelete.EnvoyExtensionPolicyStatusKeys, key)
 				}
 				for _, backend := range result.Backends {
 					key := utils.NamespacedName(backend)
 					if !(reflect.ValueOf(backend.Status).IsZero()) {
-						message.HandleStore(message.Metadata{
+						r.ProviderResources.BackendStatuses.Store(key, &backend.Status)
+						message.PublishMetric(message.Metadata{
 							Runner:  r.Name(),
 							Message: message.BackendStatusMessageName,
-						},
-							key, &backend.Status, &r.ProviderResources.BackendStatuses)
+						})
 					}
 					delete(statusesToDelete.BackendStatusKeys, key)
 				}
@@ -351,11 +351,11 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *re
 					}
 					if !(reflect.ValueOf(extServerPolicy.Object["status"]).IsZero()) {
 						policyStatus := unstructuredToPolicyStatus(extServerPolicy.Object["status"].(map[string]any))
-						message.HandleStore(message.Metadata{
+						r.ProviderResources.ExtensionPolicyStatuses.Store(key, &policyStatus)
+						message.PublishMetric(message.Metadata{
 							Runner:  r.Name(),
 							Message: message.ExtensionServerPoliciesStatusMessageName,
-						},
-							key, &policyStatus, &r.ProviderResources.ExtensionPolicyStatuses)
+						})
 					}
 					delete(statusesToDelete.ExtensionServerPolicyStatusKeys, key)
 				}
