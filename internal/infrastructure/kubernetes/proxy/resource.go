@@ -7,6 +7,7 @@ package proxy
 
 import (
 	"fmt"
+	"os"
 	"path/filepath"
 
 	"github.com/containers/image/v5/docker/reference"
@@ -486,6 +487,8 @@ func expectedShutdownManagerSecurityContext(containerSpec *egv1a1.KubernetesCont
 	return sc
 }
 
+var CustomDefaultProxyImage = os.Getenv("CUSTOM_DEFAULT_PROXY_IMAGE")
+
 func resolveProxyImage(containerSpec *egv1a1.KubernetesContainerSpec) (string, error) {
 	if containerSpec == nil {
 		return "", fmt.Errorf("containerSpec is nil")
@@ -503,6 +506,10 @@ func resolveProxyImage(containerSpec *egv1a1.KubernetesContainerSpec) (string, e
 	image := ptr.Deref(containerSpec.Image, "")
 	if image != "" {
 		return image, nil
+	}
+
+	if CustomDefaultProxyImage != "" {
+		return CustomDefaultProxyImage, nil
 	}
 
 	return egv1a1.DefaultEnvoyProxyImage, nil
