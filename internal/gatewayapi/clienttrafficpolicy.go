@@ -472,9 +472,7 @@ func (t *Translator) translateClientTrafficPolicyForListener(policy *egv1a1.Clie
 
 		// enable http3 if set and TLS is enabled
 		if httpIR.TLS != nil && policy.Spec.HTTP3 != nil {
-			http3 := &ir.HTTP3Settings{
-				QUICPort: int32(l.Port),
-			}
+			http3 := &ir.HTTP3Settings{}
 			httpIR.HTTP3 = http3
 			var proxyListenerIR *ir.ProxyListener
 			for _, proxyListener := range infraIR[irKey].Proxy.Listeners {
