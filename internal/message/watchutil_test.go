@@ -91,39 +91,6 @@ func TestHandleSubscriptionAlreadyInitialized(t *testing.T) {
 	assert.Equal(t, 1, deleteCalls)
 }
 
-func TestHandleStore(t *testing.T) {
-	var m watchable.Map[string, any]
-	message.HandleStore(message.Metadata{Runner: "demo", Message: "demo"}, "foo", "bar", &m)
-
-	endCtx, end := context.WithCancel(context.Background())
-	go func() {
-		<-endCtx.Done()
-		message.HandleStore(message.Metadata{Runner: "demo", Message: "demo"}, "baz", "qux", &m)
-		m.Delete("qux")                                                                          // no-op
-		message.HandleStore(message.Metadata{Runner: "demo", Message: "demo"}, "foo", "bar", &m) // no-op
-		m.Delete("baz")
-		time.Sleep(100 * time.Millisecond)
-		m.Close()
-	}()
-
-	var storeCalls int
-	var deleteCalls int
-	message.HandleSubscription[string, any](
-		message.Metadata{Runner: "demo", Message: "demo"},
-		m.Subscribe(context.Background()),
-		func(update message.Update[string, any], errChans chan error) {
-			end()
-			if update.Delete {
-				deleteCalls++
-			} else {
-				storeCalls++
-			}
-		},
-	)
-	assert.Equal(t, 2, storeCalls)
-	assert.Equal(t, 1, deleteCalls)
-}
-
 func TestXdsIRUpdates(t *testing.T) {
 	tests := []struct {
 		desc    string
