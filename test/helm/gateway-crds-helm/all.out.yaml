@@ -20242,7 +20242,7 @@ spec:
                           - name
                           - value
                           type: object
-                        maxItems: 16
+                        maxItems: 64
                         type: array
                         x-kubernetes-list-map-keys:
                         - name
@@ -20268,7 +20268,7 @@ spec:
                             my-header2: bar
                         items:
                           type: string
-                        maxItems: 16
+                        maxItems: 64
                         type: array
                         x-kubernetes-list-type: set
                       set:
@@ -20316,7 +20316,7 @@ spec:
                           - name
                           - value
                           type: object
-                        maxItems: 16
+                        maxItems: 64
                         type: array
                         x-kubernetes-list-map-keys:
                         - name
