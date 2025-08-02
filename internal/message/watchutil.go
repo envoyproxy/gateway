@@ -28,6 +28,10 @@ type Metadata struct {
 	Message MessageName
 }
 
+func PublishMetric(meta Metadata) {
+	watchablePublishTotal.WithSuccess(meta.LabelValues()...).Increment()
+}
+
 func (m Metadata) LabelValues() []metrics.LabelValue {
 	labels := make([]metrics.LabelValue, 0, 2)
 	if m.Runner != "" {
@@ -99,9 +103,4 @@ func HandleSubscription[K comparable, V any](
 			handleWithCrashRecovery(handle, Update[K, V](update), meta, errChans)
 		}
 	}
-}
-
-func HandleStore[K comparable, V any](meta Metadata, key K, value V, publish *watchable.Map[K, V]) {
-	publish.Store(key, value)
-	watchablePublishTotal.WithSuccess(meta.LabelValues()...).Increment()
 }
