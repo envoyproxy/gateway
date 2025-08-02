@@ -1,9 +1,34 @@
 - ignorePortInHostMatching: true
-  name: envoy-gateway/gateway-1/tls
+  name: envoy-gateway/gateway-1/https1
   virtualHosts:
   - domains:
-    - '*'
-    name: envoy-gateway/gateway-1/tls/*
+    - foo.example.com
+    name: envoy-gateway/gateway-1/https1/foo_example_com
+    routes:
+    - match:
+        prefix: /
+      name: httproute/default/httproute-1/rule/0/match/0/*
+      route:
+        cluster: httproute/default/httproute-1/rule/0
+        upgradeConfigs:
+        - upgradeType: websocket
+  - domains:
+    - bar.example.com
+    name: envoy-gateway/gateway-1/https1/bar_example_com
+    routes:
+    - match:
+        prefix: /
+      name: httproute/default/httproute-2/rule/0/match/0/*
+      route:
+        cluster: httproute/default/httproute-2/rule/0
+        upgradeConfigs:
+        - upgradeType: websocket
+- ignorePortInHostMatching: true
+  name: http-443
+  virtualHosts:
+  - domains:
+    - foo.example.com
+    name: envoy-gateway/gateway-1/https1/foo_example_com
     routes:
     - match:
         prefix: /
@@ -15,5 +40,78 @@
           value: h3=":443"; ma=86400
       route:
         cluster: httproute/default/httproute-1/rule/0
+        upgradeConfigs:
+        - upgradeType: websocket
+  - domains:
+    - bar.example.com
+    name: envoy-gateway/gateway-1/https1/bar_example_com
+    routes:
+    - match:
+        prefix: /
+      name: httproute/default/httproute-2/rule/0/match/0/*
+      responseHeadersToAdd:
+      - append: true
+        header:
+          key: alt-svc
+          value: h3=":443"; ma=86400
+      route:
+        cluster: httproute/default/httproute-2/rule/0
+        upgradeConfigs:
+        - upgradeType: websocket
+  - domains:
+    - foo.api.com
+    name: envoy-gateway/gateway-1/https2/foo_api_com
+    routes:
+    - match:
+        prefix: /
+      name: httproute/default/httproute-3/rule/0/match/0/*
+      responseHeadersToAdd:
+      - append: true
+        header:
+          key: alt-svc
+          value: h3=":443"; ma=86400
+      route:
+        cluster: httproute/default/httproute-3/rule/0
+        upgradeConfigs:
+        - upgradeType: websocket
+  - domains:
+    - bar.api.com
+    name: envoy-gateway/gateway-1/https2/bar_api_com
+    routes:
+    - match:
+        prefix: /
+      name: httproute/default/httproute-4/rule/0/match/0/*
+      responseHeadersToAdd:
+      - append: true
+        header:
+          key: alt-svc
+          value: h3=":443"; ma=86400
+      route:
+        cluster: httproute/default/httproute-4/rule/0
+        upgradeConfigs:
+        - upgradeType: websocket
+- ignorePortInHostMatching: true
+  name: envoy-gateway/gateway-1/https2
+  virtualHosts:
+  - domains:
+    - foo.api.com
+    name: envoy-gateway/gateway-1/https2/foo_api_com
+    routes:
+    - match:
+        prefix: /
+      name: httproute/default/httproute-3/rule/0/match/0/*
+      route:
+        cluster: httproute/default/httproute-3/rule/0
+        upgradeConfigs:
+        - upgradeType: websocket
+  - domains:
+    - bar.api.com
+    name: envoy-gateway/gateway-1/https2/bar_api_com
+    routes:
+    - match:
+        prefix: /
+      name: httproute/default/httproute-4/rule/0/match/0/*
+      route:
+        cluster: httproute/default/httproute-4/rule/0
         upgradeConfigs:
         - upgradeType: websocket

@@ -61,6 +61,20 @@
     - match:
         prefix: /
       name: httproute/default/httproute-1/rule/0/match/0/*
+      route:
+        cluster: httproute/default/httproute-1/rule/0
+        upgradeConfigs:
+        - upgradeType: websocket
+- ignorePortInHostMatching: true
+  name: http-1443
+  virtualHosts:
+  - domains:
+    - '*'
+    name: envoy-gateway/gateway-2/https-http3/*
+    routes:
+    - match:
+        prefix: /
+      name: httproute/default/httproute-1/rule/0/match/0/*
       responseHeadersToAdd:
       - append: true
         header:
