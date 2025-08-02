@@ -335,23 +335,13 @@ func (t *Translator) addHCMToXDSListener(
 	}
 
 	// HTTP filter configuration
-	var statPrefix string
-	if irListener.TLS != nil {
-		statPrefix = "https"
-	} else {
-		statPrefix = "http"
-	}
-
-	// Append port to the statPrefix.
-	statPrefix = strings.Join([]string{statPrefix, strconv.Itoa(int(irListener.Port))}, "-")
-
 	// Client IP detection
 	useRemoteAddress := true
 	originalIPDetectionExtensions := originalIPDetectionExtensions(irListener.ClientIPDetection)
 	if originalIPDetectionExtensions != nil {
 		useRemoteAddress = false
 	}
-
+	statPrefix := hcmStatPrefix(irListener, t.xdsNameSchemeV2())
 	mgr := &hcmv3.HttpConnectionManager{
 		AccessLog:  al,
 		CodecType:  hcmv3.HttpConnectionManager_AUTO,
@@ -360,7 +350,7 @@ func (t *Translator) addHCMToXDSListener(
 			Rds: &hcmv3.Rds{
 				ConfigSource: makeConfigSource(),
 				// Configure route name to be found via RDS.
-				RouteConfigName: routeConfigName(irListener),
+				RouteConfigName: routeConfigName(irListener, t.xdsNameSchemeV2()),
 			},
 		},
 		HttpProtocolOptions: http1ProtocolOptions(irListener.HTTP1),
@@ -500,9 +490,24 @@ func (t *Translator) addHCMToXDSListener(
 	return nil
 }
 
-func routeConfigName(irListener *ir.HTTPListener) string {
-	// TODO(zhaohuabing): change the routeConfig name for HTTP listeners because they are merged into one route config
-	return irListener.Name
+func hcmStatPrefix(irListener *ir.HTTPListener, nameSchemeV2 bool) string {
+	statPrefix := "http"
+	if irListener.TLS != nil {
+		statPrefix = "https"
+	}
+
+	if nameSchemeV2 {
+		return fmt.Sprintf("%s-%d", statPrefix, irListener.ExternalPort)
+	}
+	return fmt.Sprintf("%s-%d", statPrefix, irListener.Port)
+}
+
+// use the same name for the route config as the filter chain name, as they're 1:1 mapping.
+func routeConfigName(irListener *ir.HTTPListener, nameSchemeV2 bool) string {
+	if irListener.TLS != nil {
+		return httpsListenerFilterChainName(irListener)
+	}
+	return httpListenerDefaultFilterChainName(irListener, nameSchemeV2)
 }
 
 // port value is used for the default filter chain name for HTTP listeners, as multiple HTTP listeners are merged into
@@ -515,7 +520,7 @@ func httpListenerDefaultFilterChainName(irListener *ir.HTTPListener, nameSchemeV
 	return irListener.Name
 }
 
-// irListener name is used as the filter chain name for HTTPS listener, as Listener is 1:1 mapping to the filter chain
+// irListener name is used as the filter chain name for HTTPS listener, as HTTPS Listener is 1:1 mapping to the filter chain.
 // The Gateway API layer ensures that each listener has a unique combination of hostname and port.
 func httpsListenerFilterChainName(irListener *ir.HTTPListener) string {
 	return irListener.Name

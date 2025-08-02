@@ -1,9 +1,9 @@
 - ignorePortInHostMatching: true
-  name: envoy-gateway/gateway-1/http1
+  name: http-80
   virtualHosts:
   - domains:
     - foo.net
-    name: envoy-gateway/gateway-1/http1/foo_net
+    name: foo_net
     routes:
     - match:
         prefix: /
@@ -14,7 +14,7 @@
         - upgradeType: websocket
   - domains:
     - bar.net
-    name: envoy-gateway/gateway-1/http2/bar_net
+    name: bar_net
     routes:
     - match:
         prefix: /
@@ -28,7 +28,7 @@
   virtualHosts:
   - domains:
     - foo.com
-    name: envoy-gateway/gateway-1/https1/foo_com
+    name: foo_com
     routes:
     - match:
         prefix: /
@@ -42,7 +42,7 @@
   virtualHosts:
   - domains:
     - bar.com
-    name: envoy-gateway/gateway-1/https2/bar_com
+    name: bar_com
     routes:
     - match:
         prefix: /
@@ -56,7 +56,7 @@
   virtualHosts:
   - domains:
     - '*'
-    name: envoy-gateway/gateway-2/https-http3/*
+    name: '*'
     routes:
     - match:
         prefix: /

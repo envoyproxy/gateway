@@ -2280,6 +2280,27 @@ _Appears in:_
 | `headersToBackend` | _string array_ |  false  |  | HeadersToBackend are the authorization response headers that will be added<br />to the original client request before sending it to the backend server.<br />Note that coexisting headers will be overridden.<br />If not specified, no authorization response headers will be added to the<br />original client request. |
 
 
+#### HTTPHeaderFilter
+
+
+
+HTTPHeaderFilter defines a filter that modifies the headers of an HTTP
+request or response. Only one action for a given header name is
+permitted. Filters specifying multiple actions of the same or different
+type for any one header name are invalid. Configuration to set or add
+multiple values for a header must use RFC 7230 header value formatting,
+separating each value with a comma.
+
+_Appears in:_
+- [HeaderSettings](#headersettings)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `set` | _HTTPHeader array_ |  false  |  | Set overwrites the request with the given header (name, value)<br />before the action.<br />Input:<br />  GET /foo HTTP/1.1<br />  my-header: foo<br />Config:<br />  set:<br />  - name: "my-header"<br />    value: "bar"<br />Output:<br />  GET /foo HTTP/1.1<br />  my-header: bar |
+| `add` | _HTTPHeader array_ |  false  |  | Add adds the given header(s) (name, value) to the request<br />before the action. It appends to any existing values associated<br />with the header name.<br />Input:<br />  GET /foo HTTP/1.1<br />  my-header: foo<br />Config:<br />  add:<br />  - name: "my-header"<br />    value: "bar,baz"<br />Output:<br />  GET /foo HTTP/1.1<br />  my-header: foo,bar,baz |
+| `remove` | _string array_ |  false  |  | Remove the given header(s) from the HTTP request before the action. The<br />value of Remove is a list of HTTP header names. Note that the header<br />names are case-insensitive (see<br />https://datatracker.ietf.org/doc/html/rfc2616#section-4.2).<br />Input:<br />  GET /foo HTTP/1.1<br />  my-header1: foo<br />  my-header2: bar<br />  my-header3: baz<br />Config:<br />  remove: ["my-header1", "my-header3"]<br />Output:<br />  GET /foo HTTP/1.1<br />  my-header2: bar |
+
+
 #### HTTPHostnameModifier
 
 

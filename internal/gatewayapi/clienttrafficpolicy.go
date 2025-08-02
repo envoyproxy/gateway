@@ -18,7 +18,6 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/utils/ptr"
-	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
@@ -983,7 +982,7 @@ func buildConnection(connection *egv1a1.ClientConnection) (*ir.ClientConnection,
 	return irConnection, nil
 }
 
-func translateEarlyRequestHeaders(headerModifier *gwapiv1.HTTPHeaderFilter) ([]ir.AddHeader, []string, error) {
+func translateEarlyRequestHeaders(headerModifier *egv1a1.HTTPHeaderFilter) ([]ir.AddHeader, []string, error) {
 	// Make sure the header modifier config actually exists
 	if headerModifier == nil {
 		return nil, nil, nil
