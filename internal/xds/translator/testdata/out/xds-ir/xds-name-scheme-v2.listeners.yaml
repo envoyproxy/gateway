@@ -25,9 +25,9 @@
           configSource:
             ads: {}
             resourceApiVersion: V3
-          routeConfigName: envoy-gateway/gateway-1/http1
+          routeConfigName: http-80
         serverHeaderTransformation: PASS_THROUGH
-        statPrefix: http-10080
+        statPrefix: http-80
         useRemoteAddress: true
     name: http-80
   maxConnectionsToAcceptPerSocketEvent: 1
@@ -65,7 +65,7 @@
             resourceApiVersion: V3
           routeConfigName: envoy-gateway/gateway-1/https1
         serverHeaderTransformation: PASS_THROUGH
-        statPrefix: https-10443
+        statPrefix: https-443
         useRemoteAddress: true
     name: envoy-gateway/gateway-1/https1
     transportSocket:
@@ -110,7 +110,7 @@
             resourceApiVersion: V3
           routeConfigName: envoy-gateway/gateway-1/https2
         serverHeaderTransformation: PASS_THROUGH
-        statPrefix: https-10443
+        statPrefix: https-443
         useRemoteAddress: true
     name: envoy-gateway/gateway-1/https2
     transportSocket:
@@ -168,7 +168,7 @@
             resourceApiVersion: V3
           routeConfigName: envoy-gateway/gateway-2/https-http3
         serverHeaderTransformation: PASS_THROUGH
-        statPrefix: https-11443
+        statPrefix: https-1443
         useRemoteAddress: true
     name: envoy-gateway/gateway-2/https-http3
     transportSocket:
@@ -222,7 +222,7 @@
             resourceApiVersion: V3
           routeConfigName: envoy-gateway/gateway-2/https-http3
         serverHeaderTransformation: PASS_THROUGH
-        statPrefix: https-11443
+        statPrefix: https-1443
         useRemoteAddress: true
     name: envoy-gateway/gateway-2/https-http3
     transportSocket:
