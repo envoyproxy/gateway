@@ -1127,6 +1127,14 @@ xds:
                   useRemoteAddress: true
               name: default/eg/http
             maxConnectionsToAcceptPerSocketEvent: 1
+            metadata:
+              filterMetadata:
+                envoy-gateway:
+                  resources:
+                  - kind: Gateway
+                    name: eg
+                    namespace: default
+                    sectionName: http
             name: default/eg/http
             perConnectionBufferLimitBytes: 32768
       - activeState:
@@ -1239,6 +1247,14 @@ xds:
                   useRemoteAddress: true
               name: default/eg/grpc
             maxConnectionsToAcceptPerSocketEvent: 1
+            metadata:
+              filterMetadata:
+                envoy-gateway:
+                  resources:
+                  - kind: Gateway
+                    name: eg
+                    namespace: default
+                    sectionName: grpc
             name: default/eg/grpc
             perConnectionBufferLimitBytes: 32768
       - activeState:

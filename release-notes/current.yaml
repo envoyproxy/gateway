@@ -8,6 +8,7 @@ security updates: |
 
 # New features or capabilities added in this release.
 new features: |
+  Added Gateway Listeners to the xDS listener metadata.
 
 bug fixes: |
 
