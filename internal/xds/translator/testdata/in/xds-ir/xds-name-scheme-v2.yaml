@@ -99,8 +99,7 @@ http:
   address: 0.0.0.0
   hostnames:
   - '*'
-  http3:
-    quicPort: 1443
+  http3: {}
   isHTTP2: false
   path:
     escapedSlashesAction: UnescapeAndRedirect
