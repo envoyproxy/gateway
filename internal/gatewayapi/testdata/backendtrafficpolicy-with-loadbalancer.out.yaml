@@ -130,6 +130,11 @@ backendTrafficPolicies:
       slowStart:
         window: 5m0s
       type: RoundRobin
+      zoneAware:
+        preferLocal:
+          force:
+            minEndpointsInZoneThreshold: 1
+          minEndpointsThreshold: 1
     targetRef:
       group: gateway.networking.k8s.io
       kind: Gateway
