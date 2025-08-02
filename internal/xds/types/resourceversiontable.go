@@ -53,6 +53,15 @@ func (t *ResourceVersionTable) DeepCopyInto(out *ResourceVersionTable) {
 			(*out)[key] = outVal
 		}
 	}
+	if t.EnvoyPatchPolicyStatuses != nil {
+		in, out := &t.EnvoyPatchPolicyStatuses, &out.EnvoyPatchPolicyStatuses
+		*out = make([]*ir.EnvoyPatchPolicyStatus, len(*in))
+		for i := range *in {
+			if (*in)[i] != nil {
+				(*out)[i] = (*in)[i].DeepCopy()
+			}
+		}
+	}
 }
 
 // DeepCopy generates a deep copy of the ResourceVersionTable object.
