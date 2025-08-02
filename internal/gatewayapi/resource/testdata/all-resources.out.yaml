@@ -45,7 +45,7 @@ backendTrafficPolicies:
           attributes:
             SameSite: Strict
           name: Lb-Test-Cookie
-          ttl: 1m0s
+          ttl: 60s
         tableSize: 65537
         type: Cookie
       type: ConsistentHash

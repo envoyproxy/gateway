@@ -375,7 +375,7 @@ securityPolicies:
       exposeHeaders:
       - x-header-7
       - x-header-8
-      maxAge: 33m20s
+      maxAge: 2000s
     targetRef:
       group: gateway.networking.k8s.io
       kind: HTTPRoute
@@ -405,7 +405,7 @@ securityPolicies:
     cors:
       allowOrigins:
       - http://*.example.com
-      maxAge: 16m40s
+      maxAge: 1000s
     targetRef:
       group: gateway.networking.k8s.io
       kind: HTTPRoute
@@ -516,7 +516,7 @@ securityPolicies:
       exposeHeaders:
       - x-header-3
       - x-header-4
-      maxAge: 16m40s
+      maxAge: 1000s
     jwt:
       providers:
       - audiences:

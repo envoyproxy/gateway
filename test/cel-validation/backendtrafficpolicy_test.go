@@ -432,9 +432,7 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 						LoadBalancer: &egv1a1.LoadBalancer{
 							Type: egv1a1.LeastRequestLoadBalancerType,
 							SlowStart: &egv1a1.SlowStart{
-								Window: &metav1.Duration{
-									Duration: 10000000,
-								},
+								Window: ptr.To(gwapiv1.Duration("10ms")),
 							},
 						},
 					},
@@ -459,9 +457,7 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 						LoadBalancer: &egv1a1.LoadBalancer{
 							Type: egv1a1.RoundRobinLoadBalancerType,
 							SlowStart: &egv1a1.SlowStart{
-								Window: &metav1.Duration{
-									Duration: 10000000,
-								},
+								Window: ptr.To(gwapiv1.Duration("10ms")),
 							},
 						},
 					},
@@ -486,9 +482,7 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 						LoadBalancer: &egv1a1.LoadBalancer{
 							Type: egv1a1.RandomLoadBalancerType,
 							SlowStart: &egv1a1.SlowStart{
-								Window: &metav1.Duration{
-									Duration: 10000000,
-								},
+								Window: ptr.To(gwapiv1.Duration("10ms")),
 							},
 						},
 					},
@@ -515,9 +509,7 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 						LoadBalancer: &egv1a1.LoadBalancer{
 							Type: egv1a1.ConsistentHashLoadBalancerType,
 							SlowStart: &egv1a1.SlowStart{
-								Window: &metav1.Duration{
-									Duration: 10000000,
-								},
+								Window: ptr.To(gwapiv1.Duration("10ms")),
 							},
 						},
 					},
@@ -653,9 +645,7 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 					},
 					FaultInjection: &egv1a1.FaultInjection{
 						Delay: &egv1a1.FaultInjectionDelay{
-							FixedDelay: &metav1.Duration{
-								Duration: 10000000,
-							},
+							FixedDelay: ptr.To(gwapiv1.Duration("10ms")),
 						},
 					},
 				}
