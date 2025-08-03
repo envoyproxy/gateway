@@ -300,11 +300,11 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 					false,
 					string(gwapiv1.GatewayClassReasonInvalidParameters),
 					msg)
-				message.HandleStore(message.Metadata{
+				r.resources.GatewayClassStatuses.Store(utils.NamespacedName(gc), &gc.Status)
+				message.PublishMetric(message.Metadata{
 					Runner:  string(egv1a1.LogComponentProviderRunner),
 					Message: message.GatewayClassStatusMessageName,
-				},
-					utils.NamespacedName(gc), &gc.Status, &r.resources.GatewayClassStatuses)
+				})
 				failToProcessGCParamsRef = true
 			}
 		}
@@ -322,11 +322,11 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 				false,
 				string(gwapiv1.GatewayClassReasonAccepted),
 				fmt.Sprintf("%s: %v", status.MsgGatewayClassInvalidParams, err))
-			message.HandleStore(message.Metadata{
+			r.resources.GatewayClassStatuses.Store(utils.NamespacedName(gc), &gc.Status)
+			message.PublishMetric(message.Metadata{
 				Runner:  string(egv1a1.LogComponentProviderRunner),
 				Message: message.GatewayClassStatusMessageName,
-			},
-				utils.NamespacedName(gc), &gc.Status, &r.resources.GatewayClassStatuses)
+			})
 			failToProcessGCParamsRef = true
 		}
 
@@ -512,11 +512,11 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 	// The Store is triggered even when there are no Gateways associated to the
 	// GatewayClass. This would happen in case the last Gateway is removed and the
 	// Store will be required to trigger a cleanup of envoy infra resources.
-	message.HandleStore(message.Metadata{
+	r.resources.GatewayAPIResources.Store(string(r.classController), &gwcResources)
+	message.PublishMetric(message.Metadata{
 		Runner:  string(egv1a1.LogComponentProviderRunner),
 		Message: message.ProviderResourcesMessageName,
-	},
-		string(r.classController), &gwcResources, &r.resources.GatewayAPIResources)
+	})
 
 	r.log.Info("reconciled gateways successfully")
 	return reconcile.Result{}, nil
