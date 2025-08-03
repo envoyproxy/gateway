@@ -47,7 +47,6 @@ type LoadBalancer struct {
 	// ZoneAware defines the configuration related to the distribution of requests between locality zones.
 	//
 	// +optional
-	// +notImplementedHide
 	ZoneAware *ZoneAware `json:"zoneAware,omitempty"`
 }
 
@@ -156,7 +155,6 @@ type ZoneAware struct {
 	// PreferLocalZone configures zone-aware routing to prefer sending traffic to the local locality zone.
 	//
 	// +optional
-	// +notImplementedHide
 	PreferLocal *PreferLocalZone `json:"preferLocal,omitempty"`
 }
 
@@ -166,13 +164,11 @@ type PreferLocalZone struct {
 	// which maintains equal distribution among upstream endpoints while sending as much traffic as possible locally.
 	//
 	// +optional
-	// +notImplementedHide
 	Force *ForceLocalZone `json:"force,omitempty"`
 
 	// MinEndpointsThreshold is the minimum number of total upstream endpoints across all zones required to enable zone-aware routing.
 	//
 	// +optional
-	// +notImplementedHide
 	MinEndpointsThreshold *uint64 `json:"minEndpointsThreshold,omitempty"`
 }
 
