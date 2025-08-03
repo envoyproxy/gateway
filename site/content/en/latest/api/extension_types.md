@@ -3146,6 +3146,7 @@ _Appears in:_
 | `consistentHash` | _[ConsistentHash](#consistenthash)_ |  false  |  | ConsistentHash defines the configuration when the load balancer type is<br />set to ConsistentHash |
 | `endpointOverride` | _[EndpointOverride](#endpointoverride)_ |  false  |  | EndpointOverride defines the configuration for endpoint override.<br />When specified, the load balancer will attempt to route requests to endpoints<br />based on the override information extracted from request headers or metadata.<br /> If the override endpoints are not available, the configured load balancer policy will be used as fallback. |
 | `slowStart` | _[SlowStart](#slowstart)_ |  false  |  | SlowStart defines the configuration related to the slow start load balancer policy.<br />If set, during slow start window, traffic sent to the newly added hosts will gradually increase.<br />Currently this is only supported for RoundRobin and LeastRequest load balancers |
+| `zoneAware` | _[ZoneAware](#zoneaware)_ |  false  |  | ZoneAware defines the configuration related to the distribution of requests between locality zones. |
 
 
 #### LoadBalancerType
@@ -3602,6 +3603,8 @@ _Appears in:_
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
+| `force` | _[ForceLocalZone](#forcelocalzone)_ |  false  |  | ForceLocalZone defines override configuration for forcing all traffic to stay within the local zone instead of the default behavior<br />which maintains equal distribution among upstream endpoints while sending as much traffic as possible locally. |
+| `minEndpointsThreshold` | _integer_ |  false  |  | MinEndpointsThreshold is the minimum number of total upstream endpoints across all zones required to enable zone-aware routing. |
 
 
 #### Principal
@@ -5345,5 +5348,6 @@ _Appears in:_
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
+| `preferLocal` | _[PreferLocalZone](#preferlocalzone)_ |  false  |  | PreferLocalZone configures zone-aware routing to prefer sending traffic to the local locality zone. |
 
 
