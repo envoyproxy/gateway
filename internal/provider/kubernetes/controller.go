@@ -1363,7 +1363,6 @@ func (r *gatewayAPIReconciler) processGateways(ctx context.Context, managedGC *g
 	}
 
 	for _, gtw := range gatewayList.Items {
-		gtw := gtw //nolint:copyloopvar
 		if r.namespaceLabel != nil {
 			if ok, err := r.checkObjectNamespaceLabels(&gtw); err != nil {
 				// If the error is transient, we return it to allow Reconcile to retry.
@@ -1385,19 +1384,14 @@ func (r *gatewayAPIReconciler) processGateways(ctx context.Context, managedGC *g
 			if terminatesTLS(&listener) {
 				for _, certRef := range listener.TLS.CertificateRefs {
 					if refsSecret(&certRef) {
-						if err := r.processSecretRef(
-							ctx,
-							resourceMap,
-							resourceTree,
-							resource.KindGateway,
-							gtw.Namespace,
-							gtw.Name,
+						if err := r.processSecretRef(ctx,
+							resourceMap, resourceTree,
+							resource.KindGateway, gtw.Namespace, gtw.Name,
 							certRef); err != nil {
 							if isTransientError(err) {
 								return err
 							}
-							r.log.Error(err,
-								"failed to process TLS SecretRef for gateway",
+							r.log.Error(err, "failed to process TLS SecretRef for gateway",
 								"gateway", gtw, "secretRef", certRef)
 						}
 					}
@@ -1455,11 +1449,6 @@ func (r *gatewayAPIReconciler) processGateways(ctx context.Context, managedGC *g
 			if isTransientError(err) {
 				return err
 			}
-			// Update the Gateway status to not accepted if there is an error processing the parametersRef.
-			// These not-accepted gateways will not be processed by the gateway-api layer, but their status will be
-			// updated in the gateway-api layer along with other gateways. This is to avoid the potential race condition
-			// of updating the status in both the controller and the gateway-api layer.
-			status.UpdateGatewayStatusNotAccepted(&gtw, gwapiv1.GatewayReasonInvalidParameters, err.Error())
 			r.log.Error(err, "failed to process infrastructure.parametersRef for gateway", "namespace", gtw.Namespace, "name", gtw.Name)
 		}
 
@@ -2294,15 +2283,10 @@ func (r *gatewayAPIReconciler) processGatewayParamsRef(ctx context.Context, gtw 
 	if ep.Spec.BackendTLS != nil && ep.Spec.BackendTLS.ClientCertificateRef != nil {
 		certRef := ep.Spec.BackendTLS.ClientCertificateRef
 		if refsSecret(certRef) {
-			if err := r.processSecretRef(
-				ctx,
-				resourceMap,
-				resourceTree,
-				resource.KindGateway,
-				gtw.Namespace,
-				gtw.Name,
-				*certRef); err != nil {
-				return fmt.Errorf("failed to process TLS SecretRef for gateway %s/%s: %w", gtw.Namespace, gtw.Name, err)
+			if err := r.processSecretRef(ctx,
+				resourceMap, resourceTree, resource.KindGateway,
+				gtw.Namespace, gtw.Name, *certRef); err != nil {
+				r.log.Error(err, "failed to process ClientCertificateRef for EnvoyProxy", "namespace", gtw.Namespace, "name", gtw.Name)
 			}
 		}
 	}
