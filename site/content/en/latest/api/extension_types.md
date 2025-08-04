@@ -129,8 +129,8 @@ _Appears in:_
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `timeout` | _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.29/#duration-v1-meta)_ |  false  | 1s | Timeout defines the time to wait for a health check response. |
-| `interval` | _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.29/#duration-v1-meta)_ |  false  | 3s | Interval defines the time between active health checks. |
+| `timeout` | _[Duration](https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.Duration)_ |  false  | 1s | Timeout defines the time to wait for a health check response. |
+| `interval` | _[Duration](https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.Duration)_ |  false  | 3s | Interval defines the time between active health checks. |
 | `initialJitter` | _[Duration](https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.Duration)_ |  false  |  | InitialJitter defines the maximum time Envoy will wait before the first health check.<br />Envoy will randomly select a value between 0 and the initial jitter value. |
 | `unhealthyThreshold` | _integer_ |  false  | 3 | UnhealthyThreshold defines the number of unhealthy health checks required before a backend host is marked unhealthy. |
 | `healthyThreshold` | _integer_ |  false  | 1 | HealthyThreshold defines the number of healthy health checks required before a backend host is marked healthy. |
@@ -280,8 +280,8 @@ _Appears in:_
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `baseInterval` | _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.29/#duration-v1-meta)_ |  true  |  | BaseInterval is the base interval between retries. |
-| `maxInterval` | _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.29/#duration-v1-meta)_ |  false  |  | MaxInterval is the maximum interval between retries. This parameter is optional, but must be greater than or equal to the base_interval if set.<br />The default is 10 times the base_interval |
+| `baseInterval` | _[Duration](https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.Duration)_ |  false  |  | BaseInterval is the base interval between retries. |
+| `maxInterval` | _[Duration](https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.Duration)_ |  false  |  | MaxInterval is the maximum interval between retries. This parameter is optional, but must be greater than or equal to the base_interval if set.<br />The default is 10 times the base_interval |
 
 
 #### Backend
@@ -630,7 +630,7 @@ _Appears in:_
 | `allowMethods` | _string array_ |  false  |  | AllowMethods defines the methods that are allowed to make requests.<br />It specifies the allowed methods in the Access-Control-Allow-Methods CORS response header..<br />The value "*" allows any method to be used. |
 | `allowHeaders` | _string array_ |  false  |  | AllowHeaders defines the headers that are allowed to be sent with requests.<br />It specifies the allowed headers in the Access-Control-Allow-Headers CORS response header..<br />The value "*" allows any header to be sent. |
 | `exposeHeaders` | _string array_ |  false  |  | ExposeHeaders defines which response headers should be made accessible to<br />scripts running in the browser.<br />It specifies the headers in the Access-Control-Expose-Headers CORS response header..<br />The value "*" allows any header to be exposed. |
-| `maxAge` | _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.29/#duration-v1-meta)_ |  false  |  | MaxAge defines how long the results of a preflight request can be cached.<br />It specifies the value in the Access-Control-Max-Age CORS response header.. |
+| `maxAge` | _[Duration](https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.Duration)_ |  false  |  | MaxAge defines how long the results of a preflight request can be cached.<br />It specifies the value in the Access-Control-Max-Age CORS response header.. |
 | `allowCredentials` | _boolean_ |  false  |  | AllowCredentials indicates whether a request can include user credentials<br />like cookies, authentication headers, or TLS client certificates.<br />It specifies the value in the Access-Control-Allow-Credentials CORS response header. |
 
 
@@ -960,7 +960,7 @@ _Appears in:_
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
 | `name` | _string_ |  true  |  | Name of the cookie to hash.<br />If this cookie does not exist in the request, Envoy will generate a cookie and set<br />the TTL on the response back to the client based on Layer 4<br />attributes of the backend endpoint, to ensure that these future requests<br />go to the same backend endpoint. Make sure to set the TTL field for this case. |
-| `ttl` | _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.29/#duration-v1-meta)_ |  false  |  | TTL of the generated cookie if the cookie is not present. This value sets the<br />Max-Age attribute value. |
+| `ttl` | _[Duration](https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.Duration)_ |  false  |  | TTL of the generated cookie if the cookie is not present. This value sets the<br />Max-Age attribute value. |
 | `attributes` | _object (keys:string, values:string)_ |  false  |  | Additional Attributes to set for the generated cookie. |
 
 
@@ -1093,8 +1093,8 @@ _Appears in:_
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `dnsRefreshRate` | _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.29/#duration-v1-meta)_ |  true  |  | DNSRefreshRate specifies the rate at which DNS records should be refreshed.<br />Defaults to 30 seconds. |
-| `respectDnsTtl` | _boolean_ |  true  |  | RespectDNSTTL indicates whether the DNS Time-To-Live (TTL) should be respected.<br />If the value is set to true, the DNS refresh rate will be set to the resource record’s TTL.<br />Defaults to true. |
+| `dnsRefreshRate` | _[Duration](https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.Duration)_ |  false  |  | DNSRefreshRate specifies the rate at which DNS records should be refreshed.<br />Defaults to 30 seconds. |
+| `respectDnsTtl` | _boolean_ |  false  |  | RespectDNSTTL indicates whether the DNS Time-To-Live (TTL) should be respected.<br />If the value is set to true, the DNS refresh rate will be set to the resource record’s TTL.<br />Defaults to true. |
 | `lookupFamily` | _[DNSLookupFamily](#dnslookupfamily)_ |  false  |  | LookupFamily determines how Envoy would resolve DNS for Routes where the backend is specified as a fully qualified domain name (FQDN).<br />If set, this configuration overrides other defaults. |
 
 
@@ -1995,7 +1995,7 @@ _Appears in:_
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `fixedDelay` | _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.29/#duration-v1-meta)_ |  true  |  | FixedDelay specifies the fixed delay duration |
+| `fixedDelay` | _[Duration](https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.Duration)_ |  true  |  | FixedDelay specifies the fixed delay duration |
 | `percentage` | _float_ |  false  | 100 | Percentage specifies the percentage of requests to be delayed. Default 100%, if set 0, no requests will be delayed. Accuracy to 0.0001%. |
 
 
@@ -3097,9 +3097,9 @@ _Appears in:_
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `leaseDuration` | _[Duration](https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.Duration)_ |  true  |  | LeaseDuration defines the time non-leader contenders will wait before attempting to claim leadership.<br />It's based on the timestamp of the last acknowledged signal. The default setting is 15 seconds. |
-| `renewDeadline` | _[Duration](https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.Duration)_ |  true  |  | RenewDeadline represents the time frame within which the current leader will attempt to renew its leadership<br />status before relinquishing its position. The default setting is 10 seconds. |
-| `retryPeriod` | _[Duration](https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.Duration)_ |  true  |  | RetryPeriod denotes the interval at which LeaderElector clients should perform action retries.<br />The default setting is 2 seconds. |
+| `leaseDuration` | _[Duration](https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.Duration)_ |  false  |  | LeaseDuration defines the time non-leader contenders will wait before attempting to claim leadership.<br />It's based on the timestamp of the last acknowledged signal.<br />The default setting is 15 seconds. |
+| `renewDeadline` | _[Duration](https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.Duration)_ |  false  |  | RenewDeadline represents the time frame within which the current leader will attempt to renew its leadership<br />status before relinquishing its position.<br />The default setting is 10 seconds. |
+| `retryPeriod` | _[Duration](https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.Duration)_ |  false  |  | RetryPeriod denotes the interval at which LeaderElector clients should perform action retries.<br />The default setting is 2 seconds. |
 | `disable` | _boolean_ |  true  |  | Disable provides the option to turn off leader election, which is enabled by default. |
 
 
@@ -3334,9 +3334,9 @@ _Appears in:_
 | `denyRedirect` | _[OIDCDenyRedirect](#oidcdenyredirect)_ |  false  |  | Any request that matches any of the provided matchers (with either tokens that are expired or missing tokens) will not be redirected to the OIDC Provider.<br />This behavior can be useful for AJAX or machine requests. |
 | `logoutPath` | _string_ |  true  |  | The path to log a user out, clearing their credential cookies.<br />If not specified, uses a default logout path "/logout" |
 | `forwardAccessToken` | _boolean_ |  false  |  | ForwardAccessToken indicates whether the Envoy should forward the access token<br />via the Authorization header Bearer scheme to the upstream.<br />If not specified, defaults to false. |
-| `defaultTokenTTL` | _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.29/#duration-v1-meta)_ |  false  |  | DefaultTokenTTL is the default lifetime of the id token and access token.<br />Please note that Envoy will always use the expiry time from the response<br />of the authorization server if it is provided. This field is only used when<br />the expiry time is not provided by the authorization.<br />If not specified, defaults to 0. In this case, the "expires_in" field in<br />the authorization response must be set by the authorization server, or the<br />OAuth flow will fail. |
+| `defaultTokenTTL` | _[Duration](https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.Duration)_ |  false  |  | DefaultTokenTTL is the default lifetime of the id token and access token.<br />Please note that Envoy will always use the expiry time from the response<br />of the authorization server if it is provided. This field is only used when<br />the expiry time is not provided by the authorization.<br />If not specified, defaults to 0. In this case, the "expires_in" field in<br />the authorization response must be set by the authorization server, or the<br />OAuth flow will fail. |
 | `refreshToken` | _boolean_ |  false  |  | RefreshToken indicates whether the Envoy should automatically refresh the<br />id token and access token when they expire.<br />When set to true, the Envoy will use the refresh token to get a new id token<br />and access token when they expire.<br />If not specified, defaults to false. |
-| `defaultRefreshTokenTTL` | _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.29/#duration-v1-meta)_ |  false  |  | DefaultRefreshTokenTTL is the default lifetime of the refresh token.<br />This field is only used when the exp (expiration time) claim is omitted in<br />the refresh token or the refresh token is not JWT.<br />If not specified, defaults to 604800s (one week).<br />Note: this field is only applicable when the "refreshToken" field is set to true. |
+| `defaultRefreshTokenTTL` | _[Duration](https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.Duration)_ |  false  |  | DefaultRefreshTokenTTL is the default lifetime of the refresh token.<br />This field is only used when the exp (expiration time) claim is omitted in<br />the refresh token or the refresh token is not JWT.<br />If not specified, defaults to 604800s (one week).<br />Note: this field is only applicable when the "refreshToken" field is set to true. |
 | `passThroughAuthHeader` | _boolean_ |  false  |  | Skips OIDC authentication when the request contains a header that will be extracted by the JWT filter. Unless<br />explicitly stated otherwise in the extractFrom field, this will be the "Authorization: Bearer ..." header.<br />The passThroughAuthHeader option is typically used for non-browser clients that may not be able to handle OIDC<br />redirects and wish to directly supply a token instead.<br />If not specified, defaults to false. |
 
 
@@ -3504,11 +3504,11 @@ _Appears in:_
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
 | `splitExternalLocalOriginErrors` | _boolean_ |  false  | false | SplitExternalLocalOriginErrors enables splitting of errors between external and local origin. |
-| `interval` | _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.29/#duration-v1-meta)_ |  false  | 3s | Interval defines the time between passive health checks. |
+| `interval` | _[Duration](https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.Duration)_ |  false  | 3s | Interval defines the time between passive health checks. |
 | `consecutiveLocalOriginFailures` | _integer_ |  false  | 5 | ConsecutiveLocalOriginFailures sets the number of consecutive local origin failures triggering ejection.<br />Parameter takes effect only when split_external_local_origin_errors is set to true. |
 | `consecutiveGatewayErrors` | _integer_ |  false  | 0 | ConsecutiveGatewayErrors sets the number of consecutive gateway errors triggering ejection. |
 | `consecutive5XxErrors` | _integer_ |  false  | 5 | Consecutive5xxErrors sets the number of consecutive 5xx errors triggering ejection. |
-| `baseEjectionTime` | _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.29/#duration-v1-meta)_ |  false  | 30s | BaseEjectionTime defines the base duration for which a host will be ejected on consecutive failures. |
+| `baseEjectionTime` | _[Duration](https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.Duration)_ |  false  | 30s | BaseEjectionTime defines the base duration for which a host will be ejected on consecutive failures. |
 | `maxEjectionPercent` | _integer_ |  false  | 10 | MaxEjectionPercent sets the maximum percentage of hosts in a cluster that can be ejected. |
 
 
@@ -3570,7 +3570,7 @@ _Appears in:_
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `timeout` | _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.29/#duration-v1-meta)_ |  false  |  | Timeout is the timeout per retry attempt. |
+| `timeout` | _[Duration](https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.Duration)_ |  false  |  | Timeout is the timeout per retry attempt. |
 | `backOff` | _[BackOffPolicy](#backoffpolicy)_ |  false  |  | Backoff is the backoff policy to be applied per retry attempt. gateway uses a fully jittered exponential<br />back-off algorithm for retries. For additional details,<br />see https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_filters/router_filter#config-http-filters-router-x-envoy-max-retries |
 
 
@@ -4003,7 +4003,7 @@ _Appears in:_
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
 | `backend` | _[RateLimitDatabaseBackend](#ratelimitdatabasebackend)_ |  true  |  | Backend holds the configuration associated with the<br />database backend used by the rate limit service to store<br />state associated with global ratelimiting. |
-| `timeout` | _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.29/#duration-v1-meta)_ |  false  |  | Timeout specifies the timeout period for the proxy to access the ratelimit server<br />If not set, timeout is 20ms. |
+| `timeout` | _[Duration](https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.Duration)_ |  false  |  | Timeout specifies the timeout period for the proxy to access the ratelimit server<br />If not set, timeout is 20ms. |
 | `failClosed` | _boolean_ |  true  |  | FailClosed is a switch used to control the flow of traffic<br />when the response from the ratelimit server cannot be obtained.<br />If FailClosed is false, let the traffic pass,<br />otherwise, don't let the traffic pass and return 500.<br />If not set, FailClosed is False. |
 | `telemetry` | _[RateLimitTelemetry](#ratelimittelemetry)_ |  false  |  | Telemetry defines telemetry configuration for RateLimit. |
 
@@ -4673,8 +4673,8 @@ _Appears in:_
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `drainTimeout` | _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.29/#duration-v1-meta)_ |  false  |  | DrainTimeout defines the graceful drain timeout. This should be less than the pod's terminationGracePeriodSeconds.<br />If unspecified, defaults to 60 seconds. |
-| `minDrainDuration` | _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.29/#duration-v1-meta)_ |  false  |  | MinDrainDuration defines the minimum drain duration allowing time for endpoint deprogramming to complete.<br />If unspecified, defaults to 10 seconds. |
+| `drainTimeout` | _[Duration](https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.Duration)_ |  false  |  | DrainTimeout defines the graceful drain timeout. This should be less than the pod's terminationGracePeriodSeconds.<br />If unspecified, defaults to 60 seconds. |
+| `minDrainDuration` | _[Duration](https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.Duration)_ |  false  |  | MinDrainDuration defines the minimum drain duration allowing time for endpoint deprogramming to complete.<br />If unspecified, defaults to 10 seconds. |
 
 
 #### ShutdownManager
@@ -4702,7 +4702,7 @@ _Appears in:_
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `window` | _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.29/#duration-v1-meta)_ |  true  |  | Window defines the duration of the warm up period for newly added host.<br />During slow start window, traffic sent to the newly added hosts will gradually increase.<br />Currently only supports linear growth of traffic. For additional details,<br />see https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/cluster/v3/cluster.proto#config-cluster-v3-cluster-slowstartconfig |
+| `window` | _[Duration](https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.Duration)_ |  true  |  | Window defines the duration of the warm up period for newly added host.<br />During slow start window, traffic sent to the newly added hosts will gradually increase.<br />Currently only supports linear growth of traffic. For additional details,<br />see https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/cluster/v3/cluster.proto#config-cluster-v3-cluster-slowstartconfig |
 
 
 #### SourceMatch

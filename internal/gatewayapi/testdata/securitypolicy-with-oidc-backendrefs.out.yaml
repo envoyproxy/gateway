@@ -150,8 +150,8 @@ securityPolicies:
         group: null
         kind: null
         name: client1-secret
-      defaultRefreshTokenTTL: 24h0m0s
-      defaultTokenTTL: 30m0s
+      defaultRefreshTokenTTL: 24h
+      defaultTokenTTL: 30m
       forwardAccessToken: true
       logoutPath: /bar/logout
       provider:

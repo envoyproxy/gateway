@@ -132,6 +132,11 @@ func (p *PrivateBytes) UnmarshalJSON(data []byte) error {
 	return err
 }
 
+// MetaV1DurationPtr converts a time.Duration to a *metav1.Duration
+func MetaV1DurationPtr(d time.Duration) *metav1.Duration {
+	return &metav1.Duration{Duration: d}
+}
+
 // Xds holds the intermediate representation of a Gateway and is
 // used by the xDS Translator to convert it into xDS resources.
 // +k8s:deepcopy-gen=true
