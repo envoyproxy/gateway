@@ -568,7 +568,7 @@ func (t *Translator) addRouteToRouteConfig(
 		}
 
 		if http3Settings != nil {
-			http3AltSvcHeader := buildHTTP3AltSvcHeader(int(http3Settings.QUICPort))
+			http3AltSvcHeader := buildHTTP3AltSvcHeader(int(httpListener.ExternalPort))
 			if xdsRoute.ResponseHeadersToAdd == nil {
 				xdsRoute.ResponseHeadersToAdd = make([]*corev3.HeaderValueOption, 0)
 			}
