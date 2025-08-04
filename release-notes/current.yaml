@@ -11,6 +11,7 @@ new features: |
   Added Gateway Listeners to the xDS listener metadata.
 
 bug fixes: |
+  Fixed an issue that controller panic when reloading configuration.
 
 # Enhancements that improve performance.
 performance improvements: |
