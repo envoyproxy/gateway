@@ -1390,6 +1390,13 @@ spec:
                     Note: at the moment, Envoy Gateway does not support configuring Wasm runtime.
                     v8 is used as the VM runtime for the Wasm extensions.
                   properties:
+                    allowOnHeadersStopIteration:
+                      default: false
+                      description: |-
+                        AllowOnHeadersStopIteration configures whether or not to allow plugin
+                        onRequestHeaders and onResponseHeaders callbacks to return FilterHeadersStatus::StopIteration.
+                        This is useful when the plugin needs to process headers asynchronously.
+                      type: boolean
                     code:
                       description: Code is the Wasm code for the extension.
                       properties:
