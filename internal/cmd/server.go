@@ -24,8 +24,7 @@ import (
 	"github.com/envoyproxy/gateway/internal/message"
 	"github.com/envoyproxy/gateway/internal/metrics"
 	providerrunner "github.com/envoyproxy/gateway/internal/provider/runner"
-	xdsserverrunner "github.com/envoyproxy/gateway/internal/xds/server/runner"
-	xdstranslatorrunner "github.com/envoyproxy/gateway/internal/xds/translator/runner"
+	xdsrunner "github.com/envoyproxy/gateway/internal/xds/runner"
 )
 
 type Runner interface {
@@ -138,12 +137,10 @@ func startRunners(ctx context.Context, cfg *config.Server) (err error) {
 		pResources *message.ProviderResources
 		xdsIR      *message.XdsIR
 		infraIR    *message.InfraIR
-		xds        *message.Xds
 	}{
 		pResources: new(message.ProviderResources),
 		xdsIR:      new(message.XdsIR),
 		infraIR:    new(message.InfraIR),
-		xds:        new(message.Xds),
 	}
 
 	// The Elected channel is used to block the tasks that are waiting for the leader to be elected.
@@ -183,13 +180,13 @@ func startRunners(ctx context.Context, cfg *config.Server) (err error) {
 			}),
 		},
 		{
-			// Start the Xds Translator Service
-			// It subscribes to the xdsIR, translates it into xds Resources and publishes it.
+			// Start the Xds Service
+			// It subscribes to the xdsIR, translates it into xds Resources
+			// and publishes it into the xDS Cache.
 			// It also computes the EnvoyPatchPolicy statuses and publishes it.
-			runner: xdstranslatorrunner.New(&xdstranslatorrunner.Config{
+			runner: xdsrunner.New(&xdsrunner.Config{
 				Server:            *cfg,
 				XdsIR:             channels.xdsIR,
-				Xds:               channels.xds,
 				ExtensionManager:  extMgr,
 				ProviderResources: channels.pResources,
 			}),
@@ -201,15 +198,6 @@ func startRunners(ctx context.Context, cfg *config.Server) (err error) {
 			runner: infrarunner.New(&infrarunner.Config{
 				Server:  *cfg,
 				InfraIR: channels.infraIR,
-			}),
-		},
-		{
-			// Start the xDS Server
-			// It subscribes to the xds Resources and configures the remote Envoy Proxy
-			// via the xDS Protocol.
-			runner: xdsserverrunner.New(&xdsserverrunner.Config{
-				Server: *cfg,
-				Xds:    channels.xds,
 			}),
 		},
 		{
@@ -254,7 +242,6 @@ func startRunners(ctx context.Context, cfg *config.Server) (err error) {
 		channels.pResources,
 		channels.xdsIR,
 		channels.infraIR,
-		channels.xds,
 	}
 	for _, ch := range closeChannels {
 		ch.Close()

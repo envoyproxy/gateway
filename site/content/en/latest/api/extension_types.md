@@ -1380,6 +1380,7 @@ _Appears in:_
 | `gateway-api` | LogComponentGatewayAPIRunner defines the "gateway-api" runner component.<br /> | 
 | `xds-translator` | LogComponentXdsTranslatorRunner defines the "xds-translator" runner component.<br /> | 
 | `xds-server` | LogComponentXdsServerRunner defines the "xds-server" runner component.<br /> | 
+| `xds` | LogComponentXdsRunner defines the "xds" runner component.<br /> | 
 | `infrastructure` | LogComponentInfrastructureRunner defines the "infrastructure" runner component.<br /> | 
 | `global-ratelimit` | LogComponentGlobalRateLimitRunner defines the "global-ratelimit" runner component.<br /> | 
 

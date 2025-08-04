@@ -2,6 +2,7 @@ date: Pending
 
 # Changes that are expected to cause an incompatibility with previous versions, such as deletions or modifications to existing APIs.
 breaking changes: |
+  Removed `xds-translator` and `xds-server` values from the `runner` label in `watchable_subscribe_total`. Use `xds` instead
 
 # Updates addressing vulnerabilities, security flaws, or compliance requirements.
 security updates: |
