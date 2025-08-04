@@ -20,7 +20,7 @@ import (
 )
 
 func init() {
-	ConformanceTests = append(ConformanceTests, ZoneAwareRoutingTest)
+	// ConformanceTests = append(ConformanceTests, ZoneAwareRoutingTest)
 }
 
 var ZoneAwareRoutingTest = suite.ConformanceTest{

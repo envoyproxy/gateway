@@ -23,12 +23,12 @@ func init() {
 var TCPAuthorizationInvalidTest = suite.ConformanceTest{
 	ShortName:   "TCPAuthzInvalid",
 	Description: "TCP authorization with invalid configurations should be rejected",
-	Manifests:   []string{"testdata/tcp-authorization-invalid.yaml"},
+	Manifests:   []string{"testdata/tcproute-authorization-invalid.yaml"},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
 		ns := "gateway-conformance-infra"
 
 		t.Run("SecurityPolicy with JWT should be rejected for TCP", func(t *testing.T) {
-			policyNN := types.NamespacedName{Name: "tcp-authorization-invalid-jwt", Namespace: ns}
+			policyNN := types.NamespacedName{Name: "tcproute-authorization-invalid-jwt", Namespace: ns}
 
 			// Wait for the SecurityPolicy to be rejected
 			waitErr := wait.PollImmediate(1*time.Second, 30*time.Second, func() (bool, error) {
