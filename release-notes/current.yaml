@@ -8,7 +8,39 @@ security updates: |
 
 # New features or capabilities added in this release.
 new features: |
+  Added support for percentage-based request mirroring
+  Added support for setting `initialJitter` in the BackendTrafficPolicy active health check.
+  Add an option to OIDC authentication to bypass it and defer to JWT when the request contains an "Authorization: Bearer ..." header.
+  Added support for configuring Subject Alternative Names (SANs) for upstream TLS validation via `BackendTLSPolicy.validation.subjectAltNames`.
+  Added support for local rate limit header.
+  Added XDS metadata for clusters and endpoints from xRoutes and referenced backend resources (Backend, Service, ServiceImport).
+  Added support for setting ownerreference to infra resources when enable gateway namespace mode.
+  Added support for configuring hostname in active HTTP healthchecks.
+  Added support for GatewayInfrastructure in gateway namespace mode.
+  Added support for configuring maxConnectionsToAcceptPerSocketEvent in listener via ClientTrafficPolicy.
+  Added support for setting GatewayClass ownerreference to infra resources when all cases except gateway namespace mode.
+  Added support for setting previous priorities retry predicate.
+  Added support for using extension server policies to in PostTranslateModify hook.
+  Added support for configuring cluster stat name for HTTPRoute and GRPCRoute in EnvoyProxy CRD.
+  Added support for configuring `SameSite` attribute for Oauth cookies for OIDC authentication.
+  Added support for configuring the cache sync period for K8s provider.
+  Added support for fallback to first key when load ca certificate from Secret or ConfigMap.
+  Added support for configuring user provided name to generated HorizontalPodAutoscaler and PodDisruptionBudget resources.
+  Added support for client certificate validation (SPKI, hash, SAN) in ClientTrafficPolicy.
+  Added support for OIDC RP initialized logout. If the end session endpoint is explicitly specified or discovered from the issuer's well-known url, the end session endpoint will be invoked when the user logs out.
+  Added support for specifying deployment annotations through the helm chart.
+  Added support for customizing the name of the ServiceAccount used by the Proxy.
+  Added support for custom backendRefs via extension server using PostClusterModify hook.
+  Added support for SecurityPolicy and EnvoyExtensionPolicy to target ServiceImport via BackendRefs.
+  Introduce validation strictness levels for Lua scripts in EnvoyExtensionPolicies.
+  Added metric `watchable_publish_total` counting store events in watchable message queues.
+  Added support for forwarding client ID header and sanitizing API keys for API Key authentication in SecurityPolicy.
+  Accessloggers of type ALS now have http2 enabled on the cluster by default.
+  Added support for using Secret as a source of the OIDC client ID.
+  Added support for listeners and routes in PostTranslateModifyHook extension hook.
+  Added admin console support with web UI for the Envoy Gateway admin server.
   Added Gateway Listeners to the xDS listener metadata.
+  Added support for skipping hostname validation when using TLS certificates with listeners.
 
 bug fixes: |
 
