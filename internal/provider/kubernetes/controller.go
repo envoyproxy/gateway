@@ -1449,6 +1449,11 @@ func (r *gatewayAPIReconciler) processGateways(ctx context.Context, managedGC *g
 			if isTransientError(err) {
 				return err
 			}
+			// Update the Gateway status to not accepted if there is an error processing the parametersRef.
+			// These not-accepted gateways will not be processed by the gateway-api layer, but their status will be
+			// updated in the gateway-api layer along with other gateways. This is to avoid the potential race condition
+			// of updating the status in both the controller and the gateway-api layer.
+			status.UpdateGatewayStatusNotAccepted(&gtw, gwapiv1.GatewayReasonInvalidParameters, err.Error())
 			r.log.Error(err, "failed to process infrastructure.parametersRef for gateway", "namespace", gtw.Namespace, "name", gtw.Name)
 		}
 
@@ -2280,6 +2285,7 @@ func (r *gatewayAPIReconciler) processGatewayParamsRef(ctx context.Context, gtw 
 		return err
 	}
 
+	// Missing secret shouldn't stop the Gateway infrastructure from coming up
 	if ep.Spec.BackendTLS != nil && ep.Spec.BackendTLS.ClientCertificateRef != nil {
 		certRef := ep.Spec.BackendTLS.ClientCertificateRef
 		if refsSecret(certRef) {
