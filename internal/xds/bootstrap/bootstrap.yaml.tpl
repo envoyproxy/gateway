@@ -9,7 +9,7 @@ admin:
       address: {{ .AdminServer.Address }}
       port_value: {{ .AdminServer.Port }}
 cluster_manager:
-  local_cluster_name: local_cluster
+  local_cluster_name: {{ .ServiceClusterName }}
 node:
   locality:
     zone: $(ENVOY_SERVICE_ZONE)
@@ -172,23 +172,22 @@ static_resources:
                 port_value: {{ $sink.Port }}
   {{- end }}
   - connect_timeout: 10s
-    lb_policy: ROUND_ROBIN
-    load_assignment:
-      cluster_name: local_cluster
-      endpoints:
-      - lb_endpoints:
-        - endpoint:
-            address:
-              socket_address:
-                {{- /* fake lb_endpoint to satisfy zone aware routing requirements */}}
-                address: 127.0.0.1
-                port_value: 10080
-          load_balancing_weight: 1
-        load_balancing_weight: 1
-        locality:
-          zone: $(ENVOY_SERVICE_ZONE)
-    name: local_cluster
-    type: STATIC
+    eds_cluster_config:
+      eds_config:
+        ads: {}
+        resource_api_version: 'V3'
+      service_name: {{ .ServiceClusterName }}
+    load_balancing_policy:
+      policies:
+      - typed_extension_config:
+          name: 'envoy.load_balancing_policies.least_request'
+          typed_config:
+            '@type': 'type.googleapis.com/envoy.extensions.load_balancing_policies.least_request.v3.LeastRequest'
+            locality_lb_config:
+              zone_aware_lb_config:
+                min_cluster_size: '1'
+    name: {{ .ServiceClusterName }}
+    type: EDS
   - connect_timeout: 10s
     load_assignment:
       cluster_name: xds_cluster

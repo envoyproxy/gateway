@@ -45,6 +45,8 @@ const (
 
 	defaultSdsTrustedCAPath   = "/sds/xds-trusted-ca.json"
 	defaultSdsCertificatePath = "/sds/xds-certificate.json"
+
+	defaultServiceClusterName = "local_cluster"
 )
 
 //go:embed bootstrap.yaml.tpl
@@ -95,6 +97,8 @@ type bootstrapParameters struct {
 	IPFamily string
 	// GatewayNamespaceMode defines whether to use the Envoy Gateway namespace mode.
 	GatewayNamespaceMode bool
+	// ServiceClusterName is the generated name of the Envoy ServiceCluster.
+	ServiceClusterName string
 }
 
 type serverParameters struct {
@@ -135,6 +139,7 @@ type RenderBootstrapConfigOptions struct {
 	IPFamily             *egv1a1.IPFamily
 	ProxyMetrics         *egv1a1.ProxyMetrics
 	SdsConfig            SdsConfigPath
+	ServiceClusterName   *string
 	XdsServerHost        *string
 	XdsServerPort        *int32
 	AdminServerPort      *int32
@@ -254,6 +259,7 @@ func GetRenderedBootstrapConfig(opts *RenderBootstrapConfigOptions) (string, err
 			EnablePrometheusCompression:  enablePrometheusCompression,
 			PrometheusCompressionLibrary: prometheusCompressionLibrary,
 			OtelMetricSinks:              metricSinks,
+			ServiceClusterName:           defaultServiceClusterName,
 		},
 	}
 
@@ -298,6 +304,9 @@ func GetRenderedBootstrapConfig(opts *RenderBootstrapConfigOptions) (string, err
 		}
 		cfg.parameters.GatewayNamespaceMode = opts.GatewayNamespaceMode
 		cfg.parameters.OverloadManager.MaxHeapSizeBytes = opts.MaxHeapSizeBytes
+		if opts.ServiceClusterName != nil {
+			cfg.parameters.ServiceClusterName = *opts.ServiceClusterName
+		}
 	}
 
 	if err := cfg.render(); err != nil {

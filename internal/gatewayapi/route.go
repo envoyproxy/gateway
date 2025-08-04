@@ -97,6 +97,20 @@ func (t *Translator) ProcessHTTPRoutes(httpRoutes []*gwapiv1.HTTPRoute, gateways
 func (t *Translator) ProcessGRPCRoutes(grpcRoutes []*gwapiv1.GRPCRoute, gateways []*GatewayContext, resources *resource.Resources, xdsIR resource.XdsIRMap) []*GRPCRouteContext {
 	var relevantGRPCRoutes []*GRPCRouteContext
 
+	// Initially, grpcRoutes sort by creation timestamp
+	// or sort alphabetically by “{namespace}/{name}” if multiple routes share same timestamp.
+	// Later on, additional sorting based on matcher type and match length may occur.
+	sort.Slice(grpcRoutes, func(i, j int) bool {
+		if grpcRoutes[i].CreationTimestamp.Equal(&(grpcRoutes[j].CreationTimestamp)) {
+			routeKeyI := fmt.Sprintf("%s/%s", grpcRoutes[i].Namespace, grpcRoutes[i].Name)
+			routeKeyJ := fmt.Sprintf("%s/%s", grpcRoutes[j].Namespace, grpcRoutes[j].Name)
+			return routeKeyI < routeKeyJ
+		}
+		// Not identical CreationTimestamps
+
+		return grpcRoutes[i].CreationTimestamp.Before(&(grpcRoutes[j].CreationTimestamp))
+	})
+
 	for _, g := range grpcRoutes {
 		if g == nil {
 			panic("received nil grpcroute")
@@ -928,6 +942,19 @@ func filterEGPrefix(in map[string]string) map[string]string {
 func (t *Translator) ProcessTLSRoutes(tlsRoutes []*gwapiv1a2.TLSRoute, gateways []*GatewayContext, resources *resource.Resources, xdsIR resource.XdsIRMap) []*TLSRouteContext {
 	var relevantTLSRoutes []*TLSRouteContext
 
+	// Initially, tlsRoutes sort by creation timestamp
+	// or sort alphabetically by “{namespace}/{name}” if multiple routes share same timestamp.
+	sort.Slice(tlsRoutes, func(i, j int) bool {
+		if tlsRoutes[i].CreationTimestamp.Equal(&(tlsRoutes[j].CreationTimestamp)) {
+			routeKeyI := fmt.Sprintf("%s/%s", tlsRoutes[i].Namespace, tlsRoutes[i].Name)
+			routeKeyJ := fmt.Sprintf("%s/%s", tlsRoutes[j].Namespace, tlsRoutes[j].Name)
+			return routeKeyI < routeKeyJ
+		}
+		// Not identical CreationTimestamps
+
+		return tlsRoutes[i].CreationTimestamp.Before(&(tlsRoutes[j].CreationTimestamp))
+	})
+
 	for _, tls := range tlsRoutes {
 		if tls == nil {
 			panic("received nil tlsroute")
@@ -1073,6 +1100,19 @@ func (t *Translator) ProcessUDPRoutes(udpRoutes []*gwapiv1a2.UDPRoute, gateways 
 	xdsIR resource.XdsIRMap,
 ) []*UDPRouteContext {
 	var relevantUDPRoutes []*UDPRouteContext
+
+	// Initially, udpRoutes sort by creation timestamp
+	// or sort alphabetically by “{namespace}/{name}” if multiple routes share same timestamp.
+	sort.Slice(udpRoutes, func(i, j int) bool {
+		if udpRoutes[i].CreationTimestamp.Equal(&(udpRoutes[j].CreationTimestamp)) {
+			routeKeyI := fmt.Sprintf("%s/%s", udpRoutes[i].Namespace, udpRoutes[i].Name)
+			routeKeyJ := fmt.Sprintf("%s/%s", udpRoutes[j].Namespace, udpRoutes[j].Name)
+			return routeKeyI < routeKeyJ
+		}
+		// Not identical CreationTimestamps
+
+		return udpRoutes[i].CreationTimestamp.Before(&(udpRoutes[j].CreationTimestamp))
+	})
 
 	for _, u := range udpRoutes {
 		if u == nil {
@@ -1223,6 +1263,19 @@ func (t *Translator) ProcessTCPRoutes(tcpRoutes []*gwapiv1a2.TCPRoute, gateways 
 	xdsIR resource.XdsIRMap,
 ) []*TCPRouteContext {
 	var relevantTCPRoutes []*TCPRouteContext
+
+	// Initially, tcpRoutes sort by creation timestamp
+	// or sort alphabetically by “{namespace}/{name}” if multiple routes share same timestamp.
+	sort.Slice(tcpRoutes, func(i, j int) bool {
+		if tcpRoutes[i].CreationTimestamp.Equal(&(tcpRoutes[j].CreationTimestamp)) {
+			routeKeyI := fmt.Sprintf("%s/%s", tcpRoutes[i].Namespace, tcpRoutes[i].Name)
+			routeKeyJ := fmt.Sprintf("%s/%s", tcpRoutes[j].Namespace, tcpRoutes[j].Name)
+			return routeKeyI < routeKeyJ
+		}
+		// Not identical CreationTimestamps
+
+		return tcpRoutes[i].CreationTimestamp.Before(&(tcpRoutes[j].CreationTimestamp))
+	})
 
 	for _, tcp := range tcpRoutes {
 		if tcp == nil {
@@ -1426,7 +1479,7 @@ func (t *Translator) processDestination(name string, backendRefContext BackendRe
 		ds = t.processServiceDestinationSetting(name, backendRef.BackendObjectReference, backendNamespace, protocol, resources, envoyProxy)
 		svc := resources.GetService(backendNamespace, string(backendRef.Name))
 		ds.IPFamily = getServiceIPFamily(svc)
-		ds.ZoneAwareRouting = processZoneAwareRouting(svc)
+		ds.PreferLocal = processPreferLocalZone(svc)
 
 	case egv1a1.KindBackend:
 		ds = t.processBackendDestinationSetting(name, backendRef.BackendObjectReference, backendNamespace, protocol, resources)
@@ -1435,6 +1488,18 @@ func (t *Translator) processDestination(name string, backendRefContext BackendRe
 		if t.isCustomBackendResource(backendRef.Group, KindDerefOr(backendRef.Kind, resource.KindService)) {
 			// Add the custom backend resource to ExtensionRefFilters so it can be processed by the extension system
 			unstructuredRef = t.processBackendExtensions(backendRef.BackendObjectReference, backendNamespace, resources)
+
+			// Check if the custom backend resource was found
+			if unstructuredRef == nil {
+				return nil, nil, status.NewRouteStatusError(
+					fmt.Errorf("custom backend %s %s/%s not found",
+						KindDerefOr(backendRef.Kind, resource.KindService),
+						backendNamespace,
+						backendRef.Name),
+					gwapiv1.RouteReasonBackendNotFound,
+				).WithType(gwapiv1.RouteConditionResolvedRefs)
+			}
+
 			return &ir.DestinationSetting{
 				Name:            name,
 				Weight:          &weight,
@@ -1457,7 +1522,6 @@ func (t *Translator) processDestination(name string, backendRefContext BackendRe
 		},
 		resources,
 		envoyProxy,
-		ds.IsDynamicResolver,
 	)
 	if tlsErr != nil {
 		return nil, nil, status.NewRouteStatusError(tlsErr, status.RouteReasonInvalidBackendTLS)
@@ -1599,12 +1663,12 @@ func (t *Translator) processServiceDestinationSetting(
 	}
 
 	return &ir.DestinationSetting{
-		Name:             name,
-		Protocol:         protocol,
-		Endpoints:        endpoints,
-		AddressType:      addrType,
-		ZoneAwareRouting: processZoneAwareRouting(service),
-		Metadata:         buildResourceMetadata(service, ptr.To(gwapiv1.SectionName(strconv.Itoa(int(*backendRef.Port))))),
+		Name:        name,
+		Protocol:    protocol,
+		Endpoints:   endpoints,
+		AddressType: addrType,
+		PreferLocal: processPreferLocalZone(service),
+		Metadata:    buildResourceMetadata(service, ptr.To(gwapiv1.SectionName(strconv.Itoa(int(*backendRef.Port))))),
 	}
 }
 
@@ -1624,14 +1688,17 @@ func getBackendFilters(routeType gwapiv1.Kind, backendRefContext BackendRefConte
 	return nil
 }
 
-func processZoneAwareRouting(svc *corev1.Service) *ir.ZoneAwareRouting {
+func processPreferLocalZone(svc *corev1.Service) *ir.PreferLocalZone {
 	if svc == nil {
 		return nil
 	}
 
 	if trafficDist := svc.Spec.TrafficDistribution; trafficDist != nil {
-		return &ir.ZoneAwareRouting{
-			MinSize: 1,
+		return &ir.PreferLocalZone{
+			MinEndpointsThreshold: ptr.To[uint64](1),
+			Force: &ir.ForceLocalZone{
+				MinEndpointsInZoneThreshold: ptr.To[uint32](1),
+			},
 		}
 	}
 
@@ -1640,8 +1707,11 @@ func processZoneAwareRouting(svc *corev1.Service) *ir.ZoneAwareRouting {
 	// https://kubernetes.io/docs/concepts/services-networking/topology-aware-routing/#enabling-topology-aware-routing
 	// https://github.com/kubernetes/kubernetes/blob/9d9e1afdf78bce0a517cc22557457f942040ca19/staging/src/k8s.io/endpointslice/utils.go#L355-L368
 	if val, ok := svc.Annotations[corev1.AnnotationTopologyMode]; ok && val == "Auto" || val == "auto" {
-		return &ir.ZoneAwareRouting{
-			MinSize: 3,
+		return &ir.PreferLocalZone{
+			MinEndpointsThreshold: ptr.To[uint64](3),
+			Force: &ir.ForceLocalZone{
+				MinEndpointsInZoneThreshold: ptr.To[uint32](3),
+			},
 		}
 	}
 

@@ -312,6 +312,24 @@ func buildLoadBalancer(policy egv1a1.ClusterSettings) (*ir.LoadBalancer, error) 
 		}
 	}
 
+	// Add ZoneAware loadbalancer settings
+	if policy.LoadBalancer.ZoneAware != nil && policy.LoadBalancer.ZoneAware.PreferLocal != nil {
+		preferLocal := policy.LoadBalancer.ZoneAware.PreferLocal
+		lb.PreferLocal = &ir.PreferLocalZone{
+			MinEndpointsThreshold: preferLocal.MinEndpointsThreshold,
+		}
+		if preferLocal.Force != nil {
+			lb.PreferLocal.Force = &ir.ForceLocalZone{
+				MinEndpointsInZoneThreshold: preferLocal.Force.MinEndpointsInZoneThreshold,
+			}
+		}
+	}
+
+	// Add EndpointOverride if specified
+	if policy.LoadBalancer.EndpointOverride != nil {
+		lb.EndpointOverride = buildEndpointOverride(*policy.LoadBalancer.EndpointOverride)
+	}
+
 	return lb, nil
 }
 
@@ -340,6 +358,23 @@ func buildConsistentHashLoadBalancer(policy egv1a1.LoadBalancer) (*ir.Consistent
 	}
 
 	return consistentHash, nil
+}
+
+func buildEndpointOverride(policy egv1a1.EndpointOverride) *ir.EndpointOverride {
+	endpointOverride := &ir.EndpointOverride{}
+
+	// Convert extract from sources
+	for _, source := range policy.ExtractFrom {
+		irSource := ir.EndpointOverrideExtractFrom{}
+
+		if source.Header != nil {
+			irSource.Header = source.Header
+		}
+
+		endpointOverride.ExtractFrom = append(endpointOverride.ExtractFrom, irSource)
+	}
+
+	return endpointOverride
 }
 
 func buildProxyProtocol(policy egv1a1.ClusterSettings) *ir.ProxyProtocol {

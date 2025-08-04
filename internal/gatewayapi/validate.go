@@ -256,7 +256,7 @@ func (t *Translator) validateBackendRefBackend(backendRef gwapiv1a2.BackendObjec
 		)
 	}
 
-	if err := validateBackend(backend); err != nil {
+	if err := validateBackend(backend, resources.BackendTLSPolicies); err != nil {
 		return err
 	}
 

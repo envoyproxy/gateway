@@ -119,11 +119,12 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR resource
 			case gwapiv1.HTTPProtocolType, gwapiv1.HTTPSProtocolType:
 				irListener := &ir.HTTPListener{
 					CoreListenerDetails: ir.CoreListenerDetails{
-						Name:     irListenerName(listener),
-						Address:  address,
-						Port:     uint32(containerPort),
-						Metadata: buildListenerMetadata(listener, gateway),
-						IPFamily: ipFamily,
+						Name:         irListenerName(listener),
+						Address:      address,
+						Port:         uint32(containerPort),
+						ExternalPort: uint32(listener.Port),
+						Metadata:     buildListenerMetadata(listener, gateway),
+						IPFamily:     ipFamily,
 					},
 					TLS: irTLSConfigs(listener.tlsSecrets...),
 					Path: ir.PathSettings{
@@ -146,10 +147,11 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR resource
 			case gwapiv1.TCPProtocolType, gwapiv1.TLSProtocolType:
 				irListener := &ir.TCPListener{
 					CoreListenerDetails: ir.CoreListenerDetails{
-						Name:     irListenerName(listener),
-						Address:  address,
-						Port:     uint32(containerPort),
-						IPFamily: ipFamily,
+						Name:         irListenerName(listener),
+						Address:      address,
+						Port:         uint32(containerPort),
+						ExternalPort: uint32(listener.Port),
+						IPFamily:     ipFamily,
 					},
 
 					// Gateway is processed firstly, then ClientTrafficPolicy, then xRoute.
@@ -162,9 +164,10 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR resource
 			case gwapiv1.UDPProtocolType:
 				irListener := &ir.UDPListener{
 					CoreListenerDetails: ir.CoreListenerDetails{
-						Name:    irListenerName(listener),
-						Address: address,
-						Port:    uint32(containerPort),
+						Name:         irListenerName(listener),
+						Address:      address,
+						Port:         uint32(containerPort),
+						ExternalPort: uint32(listener.Port),
 					},
 				}
 				xdsIR[irKey].UDP = append(xdsIR[irKey].UDP, irListener)
@@ -740,6 +743,11 @@ func (t *Translator) processTracing(gw *gwapiv1.Gateway, envoyproxy *egv1a1.Envo
 	serviceName := naming.ServiceName(utils.NamespacedName(gw))
 	if mergeGateways {
 		serviceName = string(gw.Spec.GatewayClassName)
+	}
+
+	// Use configured service name if provided
+	if tracing.Provider.ServiceName != nil {
+		serviceName = *tracing.Provider.ServiceName
 	}
 
 	return &ir.Tracing{

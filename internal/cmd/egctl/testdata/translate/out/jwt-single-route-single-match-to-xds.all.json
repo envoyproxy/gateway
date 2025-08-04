@@ -104,32 +104,32 @@
                 },
                 {
                   "connectTimeout": "10s",
-                  "loadAssignment": {
-                    "clusterName": "local_cluster",
-                    "endpoints": [
+                  "edsClusterConfig": {
+                    "edsConfig": {
+                      "ads": {},
+                      "resourceApiVersion": "V3"
+                    },
+                    "serviceName": "local_cluster"
+                  },
+                  "loadBalancingPolicy": {
+                    "policies": [
                       {
-                        "lbEndpoints": [
-                          {
-                            "endpoint": {
-                              "address": {
-                                "socketAddress": {
-                                  "address": "127.0.0.1",
-                                  "portValue": 10080
-                                }
+                        "typedExtensionConfig": {
+                          "name": "envoy.load_balancing_policies.least_request",
+                          "typedConfig": {
+                            "@type": "type.googleapis.com/envoy.extensions.load_balancing_policies.least_request.v3.LeastRequest",
+                            "localityLbConfig": {
+                              "zoneAwareLbConfig": {
+                                "minClusterSize": "1"
                               }
-                            },
-                            "loadBalancingWeight": 1
+                            }
                           }
-                        ],
-                        "loadBalancingWeight": 1,
-                        "locality": {
-                          "zone": "$(ENVOY_SERVICE_ZONE)"
                         }
                       }
                     ]
                   },
                   "name": "local_cluster",
-                  "type": "STATIC"
+                  "type": "EDS"
                 },
                 {
                   "connectTimeout": "10s",
@@ -689,6 +689,20 @@
                     "name": "envoy-gateway-system/eg/http"
                   },
                   "maxConnectionsToAcceptPerSocketEvent": 1,
+                  "metadata": {
+                    "filterMetadata": {
+                      "envoy-gateway": {
+                        "resources": [
+                          {
+                            "kind": "Gateway",
+                            "name": "eg",
+                            "namespace": "envoy-gateway-system",
+                            "sectionName": "http"
+                          }
+                        ]
+                      }
+                    }
+                  },
                   "name": "envoy-gateway-system/eg/http",
                   "perConnectionBufferLimitBytes": 32768
                 }

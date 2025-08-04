@@ -1,3 +1,31 @@
+apiVersion: v1
+data:
+  ca.crt: |
+    -----BEGIN CERTIFICATE-----
+    MIIDQzCCAiugAwIBAgIBATANBgkqhkiG9w0BAQsFADBCMRMwEQYDVQQKEwpFbnZv
+    eVByb3h5MRAwDgYDVQQLEwdHYXRld2F5MRkwFwYDVQQDExBFbnZveSBHYXRld2F5
+    IENBMCAXDTI0MDMxMDE1MzIxN1oYDzIxMjQwMzEwMTYzMjE3WjBCMRMwEQYDVQQK
+    EwpFbnZveVByb3h5MRAwDgYDVQQLEwdHYXRld2F5MRkwFwYDVQQDExBFbnZveSBH
+    YXRld2F5IENBMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA7ZFmGB4e
+    m1KdGEohAZBfqydAEGLDHJ1YyfHWdd+vBAevdW64bZx3pggJOtgCnePuFd02rDQS
+    dlsJlX/6mFtoQilo6wvxDSJRfaTDbtfTjw+7k8yfd/Jsmh0RWG+UeyI7Na9sXAz7
+    b57mpxsCoNowzeK5ETiOGGNWPcjENJkSnBarz5muN00xIZWBU+yN5PLJNxZvxpZJ
+    Ol/SSI8sno0e0PxAmp3fe7QaXiZj/TAGJPGuTJkUxrHqyZGJtYUxsS8A0dT1zBjj
+    izA5Dp+b5yzYo23Hh7BgpbZ7X4gsDThFuwCD6fHyepuv2zHPqvSsdqg2hAhDp91R
+    zrn7a9GxG2VSIwIDAQABo0IwQDAOBgNVHQ8BAf8EBAMCAQYwDwYDVR0TAQH/BAUw
+    AwEB/zAdBgNVHQ4EFgQUUpP1aZ1M2KIuPPWrNPDV2c5CngowDQYJKoZIhvcNAQEL
+    BQADggEBAGSEkAVz+Z0qS4FmA0q4SCpIIq64bsdEjiUzev7pK1LEK0/Y28QBPixV
+    cUXfax18VPR9pls1JgXto9qY+C0hnRZic6611QTJlWK1p6dinQ/eDdYCBC+nv5xx
+    ssASwmplIxMvj3S1qF6dr7sMI2ZVD5HElTWdO19UBLyhiKKZW2KxDsYj+5NRwGFe
+    G+JuDgq7njUM8mdyYk0NehefdBUEUUCQtnwUtW95/429XwqQROuRDteGT9kjD+Y5
+    ea5mW4mfqLeuGJXZs9bdWjKKdLQPrn9IshPysWqz2Hz8dQ1f7N9/g8UWVSjd4cyx
+    S5EAolzVv0yB7wHCWCgfG/ckdOTUNnE=
+    -----END CERTIFICATE-----
+kind: ConfigMap
+metadata:
+  name: backend-tls-ca
+  namespace: gateway-conformance-infra
+---
 apiVersion: gateway.networking.k8s.io/v1alpha3
 kind: BackendTLSPolicy
 metadata:
@@ -11,7 +39,7 @@ spec:
       sectionName: https
   validation:
     caCertificateRefs:
-      - name: backend-tls-checks-certificate
+      - name: backend-tls-ca
         group: ""
         kind: ConfigMap
     hostname: example.com
@@ -125,7 +153,7 @@ spec:
 apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: Backend
 metadata:
-  name: backend-insecure-tls-verify
+  name: backend-insecure-tls-verify-and-mismatch-ca
   namespace: gateway-conformance-infra
 spec:
   endpoints:
@@ -138,7 +166,7 @@ spec:
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
-  name: http-with-backend-insecure-skip-verify
+  name: http-with-backend-insecure-skip-verify-and-mismatch-ca
   namespace: gateway-conformance-infra
 spec:
   parentRefs:
@@ -147,8 +175,40 @@ spec:
     - matches:
         - path:
             type: PathPrefix
-            value: /backend-tls-skip-verify
+            value: /backend-tls-skip-verify-and-mismatch-ca
       backendRefs:
-        - name: backend-insecure-tls-verify
+        - name: backend-insecure-tls-verify-and-mismatch-ca
           group: gateway.envoyproxy.io
           kind: Backend
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: Backend
+metadata:
+  name: backend-insecure-tls-verify-without-backend-tls-policy
+  namespace: gateway-conformance-infra
+spec:
+  endpoints:
+    - fqdn:
+        hostname: tls-backend-2.gateway-conformance-infra.svc.cluster.local
+        port: 443
+  tls:
+    insecureSkipVerify: true
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: http-with-backend-insecure-skip-verify-without-backend-tls-policy
+  namespace: gateway-conformance-infra
+spec:
+  parentRefs:
+    - name: same-namespace
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /backend-tls-skip-verify-without-backend-tls-policy
+      backendRefs:
+        - name: backend-insecure-tls-verify-without-backend-tls-policy
+          group: gateway.envoyproxy.io
+          kind: Backend
+---

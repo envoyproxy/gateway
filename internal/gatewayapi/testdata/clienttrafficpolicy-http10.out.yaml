@@ -457,8 +457,24 @@ xdsIR:
     accessLog:
       json:
       - path: /dev/stdout
+    globalResources:
+      proxyServiceCluster:
+        name: envoy-gateway/gateway-1
+        settings:
+        - addressType: IP
+          endpoints:
+          - host: 7.6.5.4
+            port: 8080
+            zone: zone1
+          metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-1
+          protocol: TCP
     http:
     - address: 0.0.0.0
+      externalPort: 80
       hostnames:
       - '*'
       http1:
@@ -475,6 +491,7 @@ xdsIR:
         mergeSlashes: true
       port: 10080
     - address: 0.0.0.0
+      externalPort: 8080
       hostnames:
       - www.example.com
       http1:
@@ -492,6 +509,7 @@ xdsIR:
         mergeSlashes: true
       port: 8080
     - address: 0.0.0.0
+      externalPort: 8081
       hostnames:
       - '*'
       http1: {}
@@ -507,6 +525,7 @@ xdsIR:
         mergeSlashes: true
       port: 8081
     - address: 0.0.0.0
+      externalPort: 8082
       hostnames:
       - '*'
       http1:
@@ -555,6 +574,7 @@ xdsIR:
           name: ""
           prefix: /
     - address: 0.0.0.0
+      externalPort: 8083
       hostnames:
       - '*'
       http1: {}

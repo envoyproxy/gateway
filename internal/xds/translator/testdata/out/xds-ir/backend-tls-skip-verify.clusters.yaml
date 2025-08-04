@@ -30,5 +30,4 @@
       typedConfig:
         '@type': type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.UpstreamTlsContext
         commonTlsContext: {}
-        sni: example.com
   type: EDS

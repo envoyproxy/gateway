@@ -286,6 +286,12 @@ const (
 	// EnvoyFilterRateLimit defines the Envoy HTTP rate limit filter.
 	EnvoyFilterRateLimit EnvoyFilter = "envoy.filters.http.ratelimit"
 
+	// EnvoyFilterGRPCWeb defines the Envoy HTTP gRPC-web filter.
+	EnvoyFilterGRPCWeb EnvoyFilter = "envoy.filters.http.grpc_web"
+
+	// EnvoyFilterGRPCStats defines the Envoy HTTP gRPC stats filter.
+	EnvoyFilterGRPCStats EnvoyFilter = "envoy.filters.http.grpc_stats"
+
 	// EnvoyFilterCustomResponse defines the Envoy HTTP custom response filter.
 	EnvoyFilterCustomResponse EnvoyFilter = "envoy.filters.http.custom_response"
 

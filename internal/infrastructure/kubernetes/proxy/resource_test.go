@@ -105,6 +105,13 @@ func TestResolveProxyImage(t *testing.T) {
 			},
 			expected: fmt.Sprintf("envoyproxy/envoy:%s", defaultTag),
 		},
+		{
+			name: "imageRepository with port",
+			container: &egv1a1.KubernetesContainerSpec{
+				ImageRepository: ptr.To("docker.io:443/envoyproxy/envoy"),
+			},
+			expected: fmt.Sprintf("docker.io:443/envoyproxy/envoy:%s", defaultTag),
+		},
 	}
 
 	for _, tc := range tests {

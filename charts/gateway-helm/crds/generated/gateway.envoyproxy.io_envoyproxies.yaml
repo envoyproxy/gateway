@@ -634,8 +634,8 @@ spec:
                                 type: string
                                 x-kubernetes-validations:
                                 - message: ImageRepository must contain only allowed
-                                    characters and must not include a tag or any colons.
-                                  rule: self.matches('^[a-zA-Z0-9._/-]+$')
+                                    characters and must not include a tag.
+                                  rule: self.matches('^[a-zA-Z0-9._-]+(:[0-9]+)?[a-zA-Z0-9._/-]+$')
                               resources:
                                 description: |-
                                   Resources required by this container.
@@ -4479,8 +4479,8 @@ spec:
                                 type: string
                                 x-kubernetes-validations:
                                 - message: ImageRepository must contain only allowed
-                                    characters and must not include a tag or any colons.
-                                  rule: self.matches('^[a-zA-Z0-9._/-]+$')
+                                    characters and must not include a tag.
+                                  rule: self.matches('^[a-zA-Z0-9._-]+(:[0-9]+)?[a-zA-Z0-9._/-]+$')
                               resources:
                                 description: |-
                                   Resources required by this container.
@@ -11352,6 +11352,37 @@ spec:
                                                     be set.
                                                   rule: 'self.type == ''Cookie'' ?
                                                     has(self.cookie) : !has(self.cookie)'
+                                              endpointOverride:
+                                                description: |-
+                                                  EndpointOverride defines the configuration for endpoint override.
+                                                  When specified, the load balancer will attempt to route requests to endpoints
+                                                  based on the override information extracted from request headers or metadata.
+                                                   If the override endpoints are not available, the configured load balancer policy will be used as fallback.
+                                                properties:
+                                                  extractFrom:
+                                                    description: ExtractFrom defines
+                                                      the sources to extract endpoint
+                                                      override information from.
+                                                    items:
+                                                      description: EndpointOverrideExtractFrom
+                                                        defines a source to extract
+                                                        endpoint override information
+                                                        from.
+                                                      properties:
+                                                        header:
+                                                          description: |-
+                                                            Header defines the header to get the override endpoint addresses.
+                                                            The header value must specify at least one endpoint in `IP:Port` format or multiple endpoints in `IP:Port,IP:Port,...` format.
+                                                            For example `10.0.0.5:8080` or `[2600:4040:5204::1574:24ae]:80`.
+                                                            The IPv6 address is enclosed in square brackets.
+                                                          type: string
+                                                      type: object
+                                                    maxItems: 10
+                                                    minItems: 1
+                                                    type: array
+                                                required:
+                                                - extractFrom
+                                                type: object
                                               slowStart:
                                                 description: |-
                                                   SlowStart defines the configuration related to the slow start load balancer policy.
@@ -12432,6 +12463,37 @@ spec:
                                                     be set.
                                                   rule: 'self.type == ''Cookie'' ?
                                                     has(self.cookie) : !has(self.cookie)'
+                                              endpointOverride:
+                                                description: |-
+                                                  EndpointOverride defines the configuration for endpoint override.
+                                                  When specified, the load balancer will attempt to route requests to endpoints
+                                                  based on the override information extracted from request headers or metadata.
+                                                   If the override endpoints are not available, the configured load balancer policy will be used as fallback.
+                                                properties:
+                                                  extractFrom:
+                                                    description: ExtractFrom defines
+                                                      the sources to extract endpoint
+                                                      override information from.
+                                                    items:
+                                                      description: EndpointOverrideExtractFrom
+                                                        defines a source to extract
+                                                        endpoint override information
+                                                        from.
+                                                      properties:
+                                                        header:
+                                                          description: |-
+                                                            Header defines the header to get the override endpoint addresses.
+                                                            The header value must specify at least one endpoint in `IP:Port` format or multiple endpoints in `IP:Port,IP:Port,...` format.
+                                                            For example `10.0.0.5:8080` or `[2600:4040:5204::1574:24ae]:80`.
+                                                            The IPv6 address is enclosed in square brackets.
+                                                          type: string
+                                                      type: object
+                                                    maxItems: 10
+                                                    minItems: 1
+                                                    type: array
+                                                required:
+                                                - extractFrom
+                                                type: object
                                               slowStart:
                                                 description: |-
                                                   SlowStart defines the configuration related to the slow start load balancer policy.
@@ -13597,6 +13659,36 @@ spec:
                                               the cookie field must be set.
                                             rule: 'self.type == ''Cookie'' ? has(self.cookie)
                                               : !has(self.cookie)'
+                                        endpointOverride:
+                                          description: |-
+                                            EndpointOverride defines the configuration for endpoint override.
+                                            When specified, the load balancer will attempt to route requests to endpoints
+                                            based on the override information extracted from request headers or metadata.
+                                             If the override endpoints are not available, the configured load balancer policy will be used as fallback.
+                                          properties:
+                                            extractFrom:
+                                              description: ExtractFrom defines the
+                                                sources to extract endpoint override
+                                                information from.
+                                              items:
+                                                description: EndpointOverrideExtractFrom
+                                                  defines a source to extract endpoint
+                                                  override information from.
+                                                properties:
+                                                  header:
+                                                    description: |-
+                                                      Header defines the header to get the override endpoint addresses.
+                                                      The header value must specify at least one endpoint in `IP:Port` format or multiple endpoints in `IP:Port,IP:Port,...` format.
+                                                      For example `10.0.0.5:8080` or `[2600:4040:5204::1574:24ae]:80`.
+                                                      The IPv6 address is enclosed in square brackets.
+                                                    type: string
+                                                type: object
+                                              maxItems: 10
+                                              minItems: 1
+                                              type: array
+                                          required:
+                                          - extractFrom
+                                          type: object
                                         slowStart:
                                           description: |-
                                             SlowStart defines the configuration related to the slow start load balancer policy.
@@ -14680,6 +14772,36 @@ spec:
                                         the cookie field must be set.
                                       rule: 'self.type == ''Cookie'' ? has(self.cookie)
                                         : !has(self.cookie)'
+                                  endpointOverride:
+                                    description: |-
+                                      EndpointOverride defines the configuration for endpoint override.
+                                      When specified, the load balancer will attempt to route requests to endpoints
+                                      based on the override information extracted from request headers or metadata.
+                                       If the override endpoints are not available, the configured load balancer policy will be used as fallback.
+                                    properties:
+                                      extractFrom:
+                                        description: ExtractFrom defines the sources
+                                          to extract endpoint override information
+                                          from.
+                                        items:
+                                          description: EndpointOverrideExtractFrom
+                                            defines a source to extract endpoint override
+                                            information from.
+                                          properties:
+                                            header:
+                                              description: |-
+                                                Header defines the header to get the override endpoint addresses.
+                                                The header value must specify at least one endpoint in `IP:Port` format or multiple endpoints in `IP:Port,IP:Port,...` format.
+                                                For example `10.0.0.5:8080` or `[2600:4040:5204::1574:24ae]:80`.
+                                                The IPv6 address is enclosed in square brackets.
+                                              type: string
+                                          type: object
+                                        maxItems: 10
+                                        minItems: 1
+                                        type: array
+                                    required:
+                                    - extractFrom
+                                    type: object
                                   slowStart:
                                     description: |-
                                       SlowStart defines the configuration related to the slow start load balancer policy.
@@ -14940,6 +15062,18 @@ spec:
                             format: int32
                             minimum: 0
                             type: integer
+                          serviceName:
+                            description: |-
+                              ServiceName defines the service name to use in tracing configuration.
+                              If not set, Envoy Gateway will use a default service name set as
+                              "name.namespace" (e.g., "my-gateway.default").
+                              Note: This field is only supported for OpenTelemetry and Datadog tracing providers.
+                              For Zipkin, the service name in traces is always derived from the Envoy --service-cluster flag
+                              (typically "namespace/name" format). Setting this field has no effect for Zipkin.
+                            type: string
+                            x-kubernetes-validations:
+                            - message: serviceName cannot be empty if provided
+                              rule: self != ""
                           type:
                             default: OpenTelemetry
                             description: Type defines the tracing provider type.

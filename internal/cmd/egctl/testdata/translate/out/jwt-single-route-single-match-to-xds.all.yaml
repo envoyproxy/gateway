@@ -61,21 +61,22 @@ xds:
             name: prometheus_stats
             type: STATIC
           - connectTimeout: 10s
-            loadAssignment:
-              clusterName: local_cluster
-              endpoints:
-              - lbEndpoints:
-                - endpoint:
-                    address:
-                      socketAddress:
-                        address: 127.0.0.1
-                        portValue: 10080
-                  loadBalancingWeight: 1
-                loadBalancingWeight: 1
-                locality:
-                  zone: $(ENVOY_SERVICE_ZONE)
+            edsClusterConfig:
+              edsConfig:
+                ads: {}
+                resourceApiVersion: V3
+              serviceName: local_cluster
+            loadBalancingPolicy:
+              policies:
+              - typedExtensionConfig:
+                  name: envoy.load_balancing_policies.least_request
+                  typedConfig:
+                    '@type': type.googleapis.com/envoy.extensions.load_balancing_policies.least_request.v3.LeastRequest
+                    localityLbConfig:
+                      zoneAwareLbConfig:
+                        minClusterSize: "1"
             name: local_cluster
-            type: STATIC
+            type: EDS
           - connectTimeout: 10s
             loadAssignment:
               clusterName: xds_cluster
@@ -417,6 +418,14 @@ xds:
                   useRemoteAddress: true
               name: envoy-gateway-system/eg/http
             maxConnectionsToAcceptPerSocketEvent: 1
+            metadata:
+              filterMetadata:
+                envoy-gateway:
+                  resources:
+                  - kind: Gateway
+                    name: eg
+                    namespace: envoy-gateway-system
+                    sectionName: http
             name: envoy-gateway-system/eg/http
             perConnectionBufferLimitBytes: 32768
     - '@type': type.googleapis.com/envoy.admin.v3.RoutesConfigDump
