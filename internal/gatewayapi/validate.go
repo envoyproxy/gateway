@@ -484,7 +484,6 @@ func (t *Translator) validateTerminateModeAndGetTLSSecrets(listener *ListenerCon
 		listener.Hostname,
 		shouldSkipHostnameValidation(listener, resources),
 	)
-
 	if err != nil {
 		status.SetGatewayListenerStatusCondition(listener.gateway.Gateway,
 			listener.listenerStatusIdx,

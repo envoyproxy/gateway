@@ -139,7 +139,7 @@ type EnvoyProxySpec struct {
 	// +optional
 	BackendTLS *BackendTLSConfig `json:"backendTLS,omitempty"`
 
-	// FrontendTLS is the TLS configuration for the Envoy proxy to use when recieving connections from clients.
+	// FrontendTLS is the TLS configuration for the Envoy proxy to use when receiving connections from clients.
 	// These settings are applied on listeners for which TLS termination is specified.
 	// +optional
 	FrontendTLS *FrontendTLSConfig `json:"frontendTLS,omitempty"`

@@ -6938,7 +6938,7 @@ spec:
                 type: array
               frontendTLS:
                 description: |-
-                  FrontendTLS is the TLS configuration for the Envoy proxy to use when recieving connections from clients.
+                  FrontendTLS is the TLS configuration for the Envoy proxy to use when receiving connections from clients.
                   These settings are applied on listeners for which TLS termination is specified.
                 properties:
                   skipHostnameValidation:
