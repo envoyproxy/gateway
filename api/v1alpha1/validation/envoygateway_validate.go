@@ -144,6 +144,7 @@ func validateEnvoyGatewayLogging(logging *egv1a1.EnvoyGatewayLogging) error {
 			egv1a1.LogComponentGatewayAPIRunner,
 			egv1a1.LogComponentXdsTranslatorRunner,
 			egv1a1.LogComponentXdsServerRunner,
+			egv1a1.LogComponentXdsRunner,
 			egv1a1.LogComponentInfrastructureRunner,
 			egv1a1.LogComponentGlobalRateLimitRunner:
 			switch logLevel {
@@ -152,7 +153,7 @@ func validateEnvoyGatewayLogging(logging *egv1a1.EnvoyGatewayLogging) error {
 				return fmt.Errorf("envoy gateway logging level invalid. valid options: info/debug/warn/error")
 			}
 		default:
-			return fmt.Errorf("envoy gateway logging components invalid. valid options: system/provider/gateway-api/xds-translator/xds-server/infrastructure")
+			return fmt.Errorf("envoy gateway logging components invalid. valid options: system/provider/gateway-api/xds-translator/xds-server/xds/infrastructure")
 		}
 	}
 	return nil
