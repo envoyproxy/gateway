@@ -626,7 +626,11 @@ func buildHashPolicy(httpRoute *ir.HTTPRoute) []*routev3.RouteAction_HashPolicy 
 			},
 		}
 		if ch.Cookie.TTL != nil {
-			hashPolicy.GetCookie().Ttl = durationpb.New(ch.Cookie.TTL.Duration)
+			d, err := time.ParseDuration(string(*ch.Cookie.TTL))
+			if err != nil {
+				return nil
+			}
+			hashPolicy.GetCookie().Ttl = durationpb.New(d)
 		}
 		if ch.Cookie.Attributes != nil {
 			attributes := make([]*routev3.RouteAction_HashPolicy_CookieAttribute, 0, len(ch.Cookie.Attributes))
