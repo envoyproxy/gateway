@@ -59,6 +59,23 @@ httpRoutes:
             - group: gateway.envoyproxy.io
               kind: Backend
               name: backend-1
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: HTTPRoute
+    metadata:
+      namespace: default
+      name: httproute-2
+    spec:
+      parentRefs:
+        - namespace: envoy-gateway
+          name: gateway-1
+      rules:
+        - matches:
+            - path:
+                value: "/"
+          backendRefs:
+            - group: gateway.envoyproxy.io
+              kind: Backend
+              name: backend-2
 
 configMaps:
   - apiVersion: v1
@@ -102,7 +119,7 @@ backendTLSPolicies:
         caCertificateRefs:
           - kind: ConfigMap
             group: ""
-            name: istio-ca-root-cert
+            name: ca-cmap
         hostname: example.com
         subjectAltNames:
           - type: URI
@@ -127,4 +144,14 @@ backends:
       endpoints:
         - ip:
             address: 1.1.1.1
+            port: 3001
+  - apiVersion: gateway.envoyproxy.io/v1alpha1
+    kind: Backend
+    metadata:
+      name: backend-2
+      namespace: default
+    spec:
+      endpoints:
+        - ip:
+            address: 2.2.2.2
             port: 3001

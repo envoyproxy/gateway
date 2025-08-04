@@ -14,7 +14,7 @@ backendTLSPolicies:
       caCertificateRefs:
       - group: ""
         kind: ConfigMap
-        name: istio-ca-root-cert
+        name: ca-cmap
       hostname: example.com
       subjectAltNames:
       - type: URI
@@ -28,9 +28,9 @@ backendTLSPolicies:
         namespace: envoy-gateway
       conditions:
       - lastTransitionTime: null
-        message: Configmap istio-ca-root-cert not found in namespace default.
-        reason: Invalid
-        status: "False"
+        message: Policy has been accepted.
+        reason: Accepted
+        status: "True"
         type: Accepted
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
 backends:
@@ -57,6 +57,24 @@ backends:
       reason: Accepted
       status: "True"
       type: Accepted
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: Backend
+  metadata:
+    creationTimestamp: null
+    name: backend-2
+    namespace: default
+  spec:
+    endpoints:
+    - ip:
+        address: 2.2.2.2
+        port: 3001
+  status:
+    conditions:
+    - lastTransitionTime: null
+      message: The Backend was accepted
+      reason: Accepted
+      status: "True"
+      type: Accepted
 gateways:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: Gateway
@@ -75,7 +93,7 @@ gateways:
       protocol: HTTP
   status:
     listeners:
-    - attachedRoutes: 1
+    - attachedRoutes: 2
       conditions:
       - lastTransitionTime: null
         message: Sending translated listener configuration to the data plane
@@ -126,10 +144,46 @@ httpRoutes:
         status: "True"
         type: Accepted
       - lastTransitionTime: null
-        message: 'Failed to process route rule 0 backendRef 0: configmap istio-ca-root-cert
-          not found in namespace default.'
+        message: 'Failed to process route rule 0 backendRef 0: failed to locate TLS
+          secret for client auth: envoy-gateway-system/client-auth specified in EnvoyProxy
+          envoy-gateway-system/test.'
         reason: InvalidBackendTLS
         status: "False"
+        type: ResolvedRefs
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+      parentRef:
+        name: gateway-1
+        namespace: envoy-gateway
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    creationTimestamp: null
+    name: httproute-2
+    namespace: default
+  spec:
+    parentRefs:
+    - name: gateway-1
+      namespace: envoy-gateway
+    rules:
+    - backendRefs:
+      - group: gateway.envoyproxy.io
+        kind: Backend
+        name: backend-2
+      matches:
+      - path:
+          value: /
+  status:
+    parents:
+    - conditions:
+      - lastTransitionTime: null
+        message: Route is accepted
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Resolved all the Object references for the Route
+        reason: ResolvedRefs
+        status: "True"
         type: ResolvedRefs
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
@@ -231,6 +285,35 @@ xdsIR:
           name: httproute-1
           namespace: default
         name: httproute/default/httproute-1/rule/0/match/0/*
+        pathMatch:
+          distinct: false
+          name: ""
+          prefix: /
+      - destination:
+          metadata:
+            kind: HTTPRoute
+            name: httproute-2
+            namespace: default
+          name: httproute/default/httproute-2/rule/0
+          settings:
+          - addressType: IP
+            endpoints:
+            - host: 2.2.2.2
+              port: 3001
+            metadata:
+              kind: Backend
+              name: backend-2
+              namespace: default
+            name: httproute/default/httproute-2/rule/0/backend/0
+            protocol: HTTP
+            weight: 1
+        hostname: '*'
+        isHTTP2: false
+        metadata:
+          kind: HTTPRoute
+          name: httproute-2
+          namespace: default
+        name: httproute/default/httproute-2/rule/0/match/0/*
         pathMatch:
           distinct: false
           name: ""
