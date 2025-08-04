@@ -34,7 +34,7 @@ var ESResilience = suite.ResilienceTest{
 	Test: func(t *testing.T, suite *suite.ResilienceTestSuite) {
 		const (
 			namespace                              = "envoy-gateway-system"
-			PrometheusXDSTranslatorErrors          = `watchable_subscribe_total{runner="xds-translator", status="failure"}`
+			PrometheusXDSTranslatorErrors          = `watchable_subscribe_total{runner="xds", status="failure"}`
 			PrometheusEnvoyConnectedToControlPlane = `envoy_control_plane_connected_state`
 		)
 
