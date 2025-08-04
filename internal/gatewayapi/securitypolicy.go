@@ -51,6 +51,18 @@ const (
 	oidcHMACSecretKey  = "hmac-secret"
 )
 
+// Determines if a route is HTTP or TCP based on its type.Add a comment on lines R434 to R440Add diff commentMarkdown input: edit mode selected.WritePreviewAdd a suggestionHeadingBoldItalicQuoteCodeLinkUnordered listNumbered listTask listMentionReferenceSaved repliesAdd FilesPaste, drop, or click to add filesCancelCommentStart a review
+func getRouteProtocol(route RouteContext) ir.AppProtocol {
+	if route == nil {
+		return ir.HTTP // default to HTTP for nil routes
+	}
+
+	if r, ok := route.(*TCPRouteContext); ok && r != nil {
+		return ir.TCP
+	}
+	return ir.HTTP
+}
+
 func (t *Translator) ProcessSecurityPolicies(securityPolicies []*egv1a1.SecurityPolicy,
 	gateways []*GatewayContext,
 	routes []RouteContext,
@@ -80,6 +92,7 @@ func (t *Translator) ProcessSecurityPolicies(securityPolicies []*egv1a1.Security
 			Kind:      string(GetRouteType(route)),
 			Name:      route.GetName(),
 			Namespace: route.GetNamespace(),
+			Protocol:  getRouteProtocol(route),
 		}
 		routeMap[key] = &policyRouteTargetContext{RouteContext: route, attachedToRouteRules: make(sets.Set[string])}
 	}
@@ -120,6 +133,7 @@ func (t *Translator) ProcessSecurityPolicies(securityPolicies []*egv1a1.Security
 		}
 	}
 	// Process the policies targeting xRoutes
+	// Process the policies targeting xRoutes
 	for _, currPolicy := range securityPolicies {
 		policyName := utils.NamespacedName(currPolicy)
 		targetRefs := getPolicyTargetRefs(currPolicy.Spec.PolicyTargetReferences, routes)
@@ -132,8 +146,74 @@ func (t *Translator) ProcessSecurityPolicies(securityPolicies []*egv1a1.Security
 					res = append(res, policy)
 				}
 
-				t.processSecurityPolicyForHTTPRoute(resources, xdsIR,
-					routeMap, gatewayRouteMap, policy, currTarget)
+				// Handle route based on its type
+				switch currTarget.Kind {
+				case resource.KindTCPRoute:
+					var (
+						targetedRoute  RouteContext
+						parentGateways []gwapiv1a2.ParentReference
+						resolveErr     *status.PolicyResolveError
+					)
+
+					targetedRoute, resolveErr = resolveSecurityPolicyTCPRouteTargetRef(policy, currTarget, routeMap)
+					if targetedRoute == nil {
+						continue
+					}
+
+					// Find the parent Gateways for the route
+					parentRefs := GetParentReferences(targetedRoute)
+					for _, p := range parentRefs {
+						if p.Kind == nil || *p.Kind == resource.KindGateway {
+							namespace := targetedRoute.GetNamespace()
+							if p.Namespace != nil {
+								namespace = string(*p.Namespace)
+							}
+							gwNN := types.NamespacedName{
+								Namespace: namespace,
+								Name:      string(p.Name),
+							}
+							parentGateways = append(parentGateways, getAncestorRefForPolicy(gwNN, p.SectionName))
+						}
+					}
+
+					if resolveErr != nil {
+						status.SetResolveErrorForPolicyAncestors(&policy.Status,
+							parentGateways,
+							t.GatewayControllerName,
+							policy.Generation,
+							resolveErr,
+						)
+						continue
+					}
+
+					// Validate the security policy for TCP routes
+					if err := validateSecurityPolicyForTCP(policy); err != nil {
+						status.SetTranslationErrorForPolicyAncestors(&policy.Status,
+							parentGateways,
+							t.GatewayControllerName,
+							policy.Generation,
+							status.Error2ConditionMsg(fmt.Errorf("invalid SecurityPolicy for TCP route: %w", err)),
+						)
+						continue
+					}
+
+					if err := t.translateSecurityPolicyForRoute(policy, targetedRoute, currTarget, resources, xdsIR); err != nil {
+						status.SetTranslationErrorForPolicyAncestors(&policy.Status,
+							parentGateways,
+							t.GatewayControllerName,
+							policy.Generation,
+							status.Error2ConditionMsg(err),
+						)
+						continue
+					}
+
+					// Set Accepted condition if it is unset
+					status.SetAcceptedForPolicyAncestors(&policy.Status, parentGateways, t.GatewayControllerName, policy.Generation)
+
+				default: // HTTP routes
+					t.processSecurityPolicyForHTTPRoute(resources, xdsIR,
+						routeMap, gatewayRouteMap, policy, currTarget)
+				}
 			}
 		}
 	}
@@ -453,6 +533,45 @@ func validateSecurityPolicy(p *egv1a1.SecurityPolicy) error {
 	return nil
 }
 
+// validateSecurityPolicyForTCP validates that the SecurityPolicy is valid for TCP routes.
+// Only authorization is allowed for TCP routes.
+func validateSecurityPolicyForTCP(p *egv1a1.SecurityPolicy) error {
+	// For TCP routes, only authorization is supported
+	if p.Spec.CORS != nil ||
+		p.Spec.JWT != nil ||
+		p.Spec.OIDC != nil ||
+		p.Spec.APIKeyAuth != nil ||
+		p.Spec.BasicAuth != nil ||
+		p.Spec.ExtAuth != nil {
+		return fmt.Errorf("only authorization is supported for TCP routes")
+	}
+	// Additionally, verify that authorization is actually specified
+	if p.Spec.Authorization == nil {
+		return fmt.Errorf("authorization must be specified for TCP routes")
+	}
+	// For TCP routes, we need at least one rule with ClientCIDRs
+	if len(p.Spec.Authorization.Rules) == 0 {
+		return fmt.Errorf("at least one authorization rule must be specified for TCP routes")
+	}
+
+	// Check that each rule has at least one CIDR specified and no unsupported features
+	for i, rule := range p.Spec.Authorization.Rules {
+		if rule.Action == egv1a1.AuthorizationActionAllow && len(rule.Principal.ClientCIDRs) == 0 {
+			return fmt.Errorf("rule %d with Allow action must specify at least one ClientCIDR for TCP routes", i)
+		}
+
+		// JWT and Headers are not supported for TCP routes
+		if rule.Principal.JWT != nil {
+			return fmt.Errorf("rule %d: JWT is not supported for TCP routes", i)
+		}
+
+		if len(rule.Principal.Headers) > 0 {
+			return fmt.Errorf("rule %d: Headers are not supported for TCP routes", i)
+		}
+	}
+	return nil
+}
+
 func validateAPIKeyAuth(apiKeyAuth *egv1a1.APIKeyAuth) error {
 	for _, keySource := range apiKeyAuth.ExtractFrom {
 		// only one of headers, params or cookies is supposed to be specified.
@@ -608,6 +727,39 @@ func resolveSecurityPolicyRouteTargetRef(
 	return route.RouteContext, nil
 }
 
+func resolveSecurityPolicyTCPRouteTargetRef(
+	policy *egv1a1.SecurityPolicy,
+	target gwapiv1a2.LocalPolicyTargetReferenceWithSectionName,
+	routes map[policyTargetRouteKey]*policyRouteTargetContext,
+) (RouteContext, *status.PolicyResolveError) {
+	key := policyTargetRouteKey{
+		Kind:      string(target.Kind),
+		Name:      string(target.Name),
+		Namespace: policy.Namespace,
+		Protocol:  ir.TCP,
+	}
+	route, ok := routes[key]
+	if !ok {
+		return nil, nil
+	}
+
+	if route.attached {
+		message := fmt.Sprintf(
+			"Unable to target TCPRoute %s, another SecurityPolicy has already attached to it",
+			string(target.Name),
+		)
+		return route.RouteContext, &status.PolicyResolveError{
+			Reason:  gwapiv1a2.PolicyReasonConflicted,
+			Message: message,
+		}
+	}
+
+	route.attached = true
+	routes[key] = route
+
+	return route.RouteContext, nil
+}
+
 func (t *Translator) translateSecurityPolicyForRoute(
 	policy *egv1a1.SecurityPolicy,
 	route RouteContext,
@@ -703,35 +855,59 @@ func (t *Translator) translateSecurityPolicyForRoute(
 		}
 
 		irKey := t.getIRKey(gtwCtx.Gateway)
-		for _, listener := range parentRefCtx.listeners {
-			irListener := xdsIR[irKey].GetHTTPListener(irListenerName(listener))
-			if irListener != nil {
-				for _, r := range irListener.Routes {
-					// If policy target has a sectionName, check if equal from ir metadata.
-					// If not, apply all routes with the same prefix.
-					sectionMatch := true
-					if target.SectionName != nil {
-						sectionMatch = (string(*target.SectionName) == r.Metadata.SectionName)
-					}
-					if strings.HasPrefix(r.Name, prefix) && sectionMatch && r.Security == nil {
-						r.Security = &ir.SecurityFeatures{
-							CORS:          cors,
-							JWT:           jwt,
-							OIDC:          oidc,
-							APIKeyAuth:    apiKeyAuth,
-							BasicAuth:     basicAuth,
-							ExtAuth:       extAuth,
-							Authorization: authorization,
+
+		// Handle TCP routes differently from HTTP routes
+		if getRouteProtocol(route) == ir.TCP {
+			// For TCP routes, apply to TCP listeners
+			for _, listener := range parentRefCtx.listeners {
+				irListener := xdsIR[irKey].GetTCPListener(irListenerName(listener))
+				if irListener != nil {
+					for _, r := range irListener.Routes {
+						if strings.HasPrefix(r.Name, prefix) && r.Security == nil {
+							r.Security = &ir.SecurityFeatures{
+								Authorization: authorization,
+							}
+							if errs != nil {
+								// For TCP routes, we don't return direct responses like HTTP
+								// The error will be handled at the validation layer
+								continue
+							}
 						}
-						if errs != nil {
-							// If there is only error for ext auth and ext auth is set to fail open, then skip the ext auth
-							// and allow the request to go through.
-							// Otherwise, return a 500 direct response to avoid unauthorized access.
-							shouldFailOpen := extAuthErr != nil && !hasNonExtAuthError && ptr.Deref(policy.Spec.ExtAuth.FailOpen, false)
-							if !shouldFailOpen {
-								// Return a 500 direct response to avoid unauthorized access
-								r.DirectResponse = &ir.CustomResponse{
-									StatusCode: ptr.To(uint32(500)),
+					}
+				}
+			}
+		} else {
+			// Existing HTTP route logic
+			for _, listener := range parentRefCtx.listeners {
+				irListener := xdsIR[irKey].GetHTTPListener(irListenerName(listener))
+				if irListener != nil {
+					for _, r := range irListener.Routes {
+						// If policy target has a sectionName, check if equal from ir metadata.
+						// If not, apply all routes with the same prefix.
+						sectionMatch := true
+						if target.SectionName != nil {
+							sectionMatch = (string(*target.SectionName) == r.Metadata.SectionName)
+						}
+						if strings.HasPrefix(r.Name, prefix) && sectionMatch && r.Security == nil {
+							r.Security = &ir.SecurityFeatures{
+								CORS:          cors,
+								JWT:           jwt,
+								OIDC:          oidc,
+								APIKeyAuth:    apiKeyAuth,
+								BasicAuth:     basicAuth,
+								ExtAuth:       extAuth,
+								Authorization: authorization,
+							}
+							if errs != nil {
+								// If there is only error for ext auth and ext auth is set to fail open, then skip the ext auth
+								// and allow the request to go through.
+								// Otherwise, return a 500 direct response to avoid unauthorized access.
+								shouldFailOpen := extAuthErr != nil && !hasNonExtAuthError && ptr.Deref(policy.Spec.ExtAuth.FailOpen, false)
+								if !shouldFailOpen {
+									// Return a 500 direct response to avoid unauthorized access
+									r.DirectResponse = &ir.CustomResponse{
+										StatusCode: ptr.To(uint32(500)),
+									}
 								}
 							}
 						}
@@ -742,7 +918,6 @@ func (t *Translator) translateSecurityPolicyForRoute(
 	}
 	return errs
 }
-
 func (t *Translator) translateSecurityPolicyForGateway(
 	policy *egv1a1.SecurityPolicy,
 	gateway *GatewayContext,
