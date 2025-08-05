@@ -272,6 +272,12 @@ const (
 	// EnvoyFilterRateLimit defines the Envoy HTTP rate limit filter.
 	EnvoyFilterRateLimit EnvoyFilter = "envoy.filters.http.ratelimit"
 
+	// EnvoyFilterGRPCWeb defines the Envoy HTTP gRPC-web filter.
+	EnvoyFilterGRPCWeb EnvoyFilter = "envoy.filters.http.grpc_web"
+
+	// EnvoyFilterGRPCStats defines the Envoy HTTP gRPC stats filter.
+	EnvoyFilterGRPCStats EnvoyFilter = "envoy.filters.http.grpc_stats"
+
 	// EnvoyFilterCustomResponse defines the Envoy HTTP custom response filter.
 	EnvoyFilterCustomResponse EnvoyFilter = "envoy.filters.http.custom_response"
 
@@ -344,12 +350,12 @@ type ShutdownConfig struct {
 	// If unspecified, defaults to 60 seconds.
 	//
 	// +optional
-	DrainTimeout *metav1.Duration `json:"drainTimeout,omitempty"`
+	DrainTimeout *gwapiv1.Duration `json:"drainTimeout,omitempty"`
 	// MinDrainDuration defines the minimum drain duration allowing time for endpoint deprogramming to complete.
 	// If unspecified, defaults to 10 seconds.
 	//
 	// +optional
-	MinDrainDuration *metav1.Duration `json:"minDrainDuration,omitempty"`
+	MinDrainDuration *gwapiv1.Duration `json:"minDrainDuration,omitempty"`
 }
 
 // +kubebuilder:validation:XValidation:rule="((has(self.envoyDeployment) && !has(self.envoyDaemonSet)) || (!has(self.envoyDeployment) && has(self.envoyDaemonSet))) || (!has(self.envoyDeployment) && !has(self.envoyDaemonSet))",message="only one of envoyDeployment or envoyDaemonSet can be specified"

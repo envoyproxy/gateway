@@ -112,9 +112,8 @@ func (r *Runner) newOptions() (registerOptions, error) {
 		newOpts.pullOptions.disable = true
 	} else {
 		newOpts.pullOptions.disable = false
-		restclient.RegisterClientMetricsWithoutRequestTotal(metricsserver.Registry)
-		// Workqueue metrics are already registered in controller-runtime. Use another registry.
 		reg := prometheus.NewRegistry()
+		restclient.RegisterClientMetricsWithoutRequestTotal(reg)
 		workqueue.RegisterMetrics(reg)
 		newOpts.pullOptions.registry = metricsserver.Registry
 		newOpts.pullOptions.gatherer = prometheus.Gatherers{

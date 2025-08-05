@@ -300,11 +300,11 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 					false,
 					string(gwapiv1.GatewayClassReasonInvalidParameters),
 					msg)
-				message.HandleStore(message.Metadata{
+				r.resources.GatewayClassStatuses.Store(utils.NamespacedName(gc), &gc.Status)
+				message.PublishMetric(message.Metadata{
 					Runner:  string(egv1a1.LogComponentProviderRunner),
 					Message: message.GatewayClassStatusMessageName,
-				},
-					utils.NamespacedName(gc), &gc.Status, &r.resources.GatewayClassStatuses)
+				})
 				failToProcessGCParamsRef = true
 			}
 		}
@@ -322,11 +322,11 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 				false,
 				string(gwapiv1.GatewayClassReasonAccepted),
 				fmt.Sprintf("%s: %v", status.MsgGatewayClassInvalidParams, err))
-			message.HandleStore(message.Metadata{
+			r.resources.GatewayClassStatuses.Store(utils.NamespacedName(gc), &gc.Status)
+			message.PublishMetric(message.Metadata{
 				Runner:  string(egv1a1.LogComponentProviderRunner),
 				Message: message.GatewayClassStatusMessageName,
-			},
-				utils.NamespacedName(gc), &gc.Status, &r.resources.GatewayClassStatuses)
+			})
 			failToProcessGCParamsRef = true
 		}
 
@@ -512,11 +512,11 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 	// The Store is triggered even when there are no Gateways associated to the
 	// GatewayClass. This would happen in case the last Gateway is removed and the
 	// Store will be required to trigger a cleanup of envoy infra resources.
-	message.HandleStore(message.Metadata{
+	r.resources.GatewayAPIResources.Store(string(r.classController), &gwcResources)
+	message.PublishMetric(message.Metadata{
 		Runner:  string(egv1a1.LogComponentProviderRunner),
 		Message: message.ProviderResourcesMessageName,
-	},
-		string(r.classController), &gwcResources, &r.resources.GatewayAPIResources)
+	})
 
 	r.log.Info("reconciled gateways successfully")
 	return reconcile.Result{}, nil
@@ -1363,7 +1363,6 @@ func (r *gatewayAPIReconciler) processGateways(ctx context.Context, managedGC *g
 	}
 
 	for _, gtw := range gatewayList.Items {
-		gtw := gtw //nolint:copyloopvar
 		if r.namespaceLabel != nil {
 			if ok, err := r.checkObjectNamespaceLabels(&gtw); err != nil {
 				// If the error is transient, we return it to allow Reconcile to retry.
@@ -1385,19 +1384,14 @@ func (r *gatewayAPIReconciler) processGateways(ctx context.Context, managedGC *g
 			if terminatesTLS(&listener) {
 				for _, certRef := range listener.TLS.CertificateRefs {
 					if refsSecret(&certRef) {
-						if err := r.processSecretRef(
-							ctx,
-							resourceMap,
-							resourceTree,
-							resource.KindGateway,
-							gtw.Namespace,
-							gtw.Name,
+						if err := r.processSecretRef(ctx,
+							resourceMap, resourceTree,
+							resource.KindGateway, gtw.Namespace, gtw.Name,
 							certRef); err != nil {
 							if isTransientError(err) {
 								return err
 							}
-							r.log.Error(err,
-								"failed to process TLS SecretRef for gateway",
+							r.log.Error(err, "failed to process TLS SecretRef for gateway",
 								"gateway", gtw, "secretRef", certRef)
 						}
 					}
@@ -2291,18 +2285,14 @@ func (r *gatewayAPIReconciler) processGatewayParamsRef(ctx context.Context, gtw 
 		return err
 	}
 
+	// Missing secret shouldn't stop the Gateway infrastructure from coming up
 	if ep.Spec.BackendTLS != nil && ep.Spec.BackendTLS.ClientCertificateRef != nil {
 		certRef := ep.Spec.BackendTLS.ClientCertificateRef
 		if refsSecret(certRef) {
-			if err := r.processSecretRef(
-				ctx,
-				resourceMap,
-				resourceTree,
-				resource.KindGateway,
-				gtw.Namespace,
-				gtw.Name,
-				*certRef); err != nil {
-				return fmt.Errorf("failed to process TLS SecretRef for gateway %s/%s: %w", gtw.Namespace, gtw.Name, err)
+			if err := r.processSecretRef(ctx,
+				resourceMap, resourceTree, resource.KindGateway,
+				gtw.Namespace, gtw.Name, *certRef); err != nil {
+				r.log.Error(err, "failed to process ClientCertificateRef for EnvoyProxy", "namespace", gtw.Namespace, "name", gtw.Name)
 			}
 		}
 	}
