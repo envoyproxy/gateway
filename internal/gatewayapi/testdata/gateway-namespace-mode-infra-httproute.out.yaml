@@ -398,6 +398,16 @@ xdsIR:
     accessLog:
       json:
       - path: /dev/stdout
+    globalResources:
+      proxyServiceCluster:
+        name: test-ns/gateway-3
+        settings:
+        - metadata:
+            name: gateway-3
+            namespace: test-ns
+            sectionName: "8080"
+          name: test-ns/gateway-3
+          protocol: TCP
     http:
     - address: 0.0.0.0
       externalPort: 80
