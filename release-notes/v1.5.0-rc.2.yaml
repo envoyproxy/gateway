@@ -14,6 +14,7 @@ new features: |
 
 bug fixes: |
   Fixed an issue that controller panic when reloading configuration.
+  Reverted to use Store directly instead of HandleStore wrapper to improve GC cleanup.
 
 # Enhancements that improve performance.
 performance improvements: |
