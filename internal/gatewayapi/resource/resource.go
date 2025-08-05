@@ -240,251 +240,255 @@ func (c ControllerResources) Sort() {
 
 	// Then, run Sort for each item
 	for idx := range c {
-		// Sort gateways based on timestamp.
-		// Initially, gateways sort by creation timestamp
-		// or sort alphabetically by “{namespace}/{name}” if multiple gateways share same timestamp.
-		sort.Slice(c[idx].Gateways, func(i, j int) bool {
-			if c[idx].Gateways[i].CreationTimestamp.Equal(&(c[idx].Gateways[j].CreationTimestamp)) {
-				gatewayKeyI := fmt.Sprintf("%s/%s", c[idx].Gateways[i].Namespace, c[idx].Gateways[i].Name)
-				gatewayKeyJ := fmt.Sprintf("%s/%s", c[idx].Gateways[j].Namespace, c[idx].Gateways[j].Name)
-				return gatewayKeyI < gatewayKeyJ
-			}
-			// Not identical CreationTimestamps
-
-			return c[idx].Gateways[i].CreationTimestamp.Before(&(c[idx].Gateways[j].CreationTimestamp))
-		})
-
-		// Sort HTTPRoutes by creation timestamp, then namespace/name
-		sort.Slice(c[idx].HTTPRoutes, func(i, j int) bool {
-			if c[idx].HTTPRoutes[i].CreationTimestamp.Equal(&(c[idx].HTTPRoutes[j].CreationTimestamp)) {
-				keyI := fmt.Sprintf("%s/%s", c[idx].HTTPRoutes[i].Namespace, c[idx].HTTPRoutes[i].Name)
-				keyJ := fmt.Sprintf("%s/%s", c[idx].HTTPRoutes[j].Namespace, c[idx].HTTPRoutes[j].Name)
-				return keyI < keyJ
-			}
-			return c[idx].HTTPRoutes[i].CreationTimestamp.Before(&(c[idx].HTTPRoutes[j].CreationTimestamp))
-		})
-
-		// Sort GRPCRoutes by creation timestamp, then namespace/name
-		sort.Slice(c[idx].GRPCRoutes, func(i, j int) bool {
-			if c[idx].GRPCRoutes[i].CreationTimestamp.Equal(&(c[idx].GRPCRoutes[j].CreationTimestamp)) {
-				keyI := fmt.Sprintf("%s/%s", c[idx].GRPCRoutes[i].Namespace, c[idx].GRPCRoutes[i].Name)
-				keyJ := fmt.Sprintf("%s/%s", c[idx].GRPCRoutes[j].Namespace, c[idx].GRPCRoutes[j].Name)
-				return keyI < keyJ
-			}
-			return c[idx].GRPCRoutes[i].CreationTimestamp.Before(&(c[idx].GRPCRoutes[j].CreationTimestamp))
-		})
-
-		// Sort TLSRoutes by creation timestamp, then namespace/name
-		sort.Slice(c[idx].TLSRoutes, func(i, j int) bool {
-			if c[idx].TLSRoutes[i].CreationTimestamp.Equal(&(c[idx].TLSRoutes[j].CreationTimestamp)) {
-				keyI := fmt.Sprintf("%s/%s", c[idx].TLSRoutes[i].Namespace, c[idx].TLSRoutes[i].Name)
-				keyJ := fmt.Sprintf("%s/%s", c[idx].TLSRoutes[j].Namespace, c[idx].TLSRoutes[j].Name)
-				return keyI < keyJ
-			}
-			return c[idx].TLSRoutes[i].CreationTimestamp.Before(&(c[idx].TLSRoutes[j].CreationTimestamp))
-		})
-
-		// Sort TCPRoutes by creation timestamp, then namespace/name
-		sort.Slice(c[idx].TCPRoutes, func(i, j int) bool {
-			if c[idx].TCPRoutes[i].CreationTimestamp.Equal(&(c[idx].TCPRoutes[j].CreationTimestamp)) {
-				keyI := fmt.Sprintf("%s/%s", c[idx].TCPRoutes[i].Namespace, c[idx].TCPRoutes[i].Name)
-				keyJ := fmt.Sprintf("%s/%s", c[idx].TCPRoutes[j].Namespace, c[idx].TCPRoutes[j].Name)
-				return keyI < keyJ
-			}
-			return c[idx].TCPRoutes[i].CreationTimestamp.Before(&(c[idx].TCPRoutes[j].CreationTimestamp))
-		})
-
-		// Sort UDPRoutes by creation timestamp, then namespace/name
-		sort.Slice(c[idx].UDPRoutes, func(i, j int) bool {
-			if c[idx].UDPRoutes[i].CreationTimestamp.Equal(&(c[idx].UDPRoutes[j].CreationTimestamp)) {
-				keyI := fmt.Sprintf("%s/%s", c[idx].UDPRoutes[i].Namespace, c[idx].UDPRoutes[i].Name)
-				keyJ := fmt.Sprintf("%s/%s", c[idx].UDPRoutes[j].Namespace, c[idx].UDPRoutes[j].Name)
-				return keyI < keyJ
-			}
-			return c[idx].UDPRoutes[i].CreationTimestamp.Before(&(c[idx].UDPRoutes[j].CreationTimestamp))
-		})
-
-		// Sort ReferenceGrants by creation timestamp, then namespace/name
-		sort.Slice(c[idx].ReferenceGrants, func(i, j int) bool {
-			if c[idx].ReferenceGrants[i].CreationTimestamp.Equal(&(c[idx].ReferenceGrants[j].CreationTimestamp)) {
-				keyI := fmt.Sprintf("%s/%s", c[idx].ReferenceGrants[i].Namespace, c[idx].ReferenceGrants[i].Name)
-				keyJ := fmt.Sprintf("%s/%s", c[idx].ReferenceGrants[j].Namespace, c[idx].ReferenceGrants[j].Name)
-				return keyI < keyJ
-			}
-			return c[idx].ReferenceGrants[i].CreationTimestamp.Before(&(c[idx].ReferenceGrants[j].CreationTimestamp))
-		})
-
-		// Sort Namespaces by creation timestamp, then name
-		sort.Slice(c[idx].Namespaces, func(i, j int) bool {
-			if c[idx].Namespaces[i].CreationTimestamp.Equal(&(c[idx].Namespaces[j].CreationTimestamp)) {
-				return c[idx].Namespaces[i].Name < c[idx].Namespaces[j].Name
-			}
-			return c[idx].Namespaces[i].CreationTimestamp.Before(&(c[idx].Namespaces[j].CreationTimestamp))
-		})
-
-		// Sort Services by creation timestamp, then namespace/name
-		sort.Slice(c[idx].Services, func(i, j int) bool {
-			if c[idx].Services[i].CreationTimestamp.Equal(&(c[idx].Services[j].CreationTimestamp)) {
-				keyI := fmt.Sprintf("%s/%s", c[idx].Services[i].Namespace, c[idx].Services[i].Name)
-				keyJ := fmt.Sprintf("%s/%s", c[idx].Services[j].Namespace, c[idx].Services[j].Name)
-				return keyI < keyJ
-			}
-			return c[idx].Services[i].CreationTimestamp.Before(&(c[idx].Services[j].CreationTimestamp))
-		})
-
-		// Sort ServiceImports by creation timestamp, then namespace/name
-		sort.Slice(c[idx].ServiceImports, func(i, j int) bool {
-			if c[idx].ServiceImports[i].CreationTimestamp.Equal(&(c[idx].ServiceImports[j].CreationTimestamp)) {
-				keyI := fmt.Sprintf("%s/%s", c[idx].ServiceImports[i].Namespace, c[idx].ServiceImports[i].Name)
-				keyJ := fmt.Sprintf("%s/%s", c[idx].ServiceImports[j].Namespace, c[idx].ServiceImports[j].Name)
-				return keyI < keyJ
-			}
-			return c[idx].ServiceImports[i].CreationTimestamp.Before(&(c[idx].ServiceImports[j].CreationTimestamp))
-		})
-
-		// Sort EndpointSlices by creation timestamp, then namespace/name
-		sort.Slice(c[idx].EndpointSlices, func(i, j int) bool {
-			if c[idx].EndpointSlices[i].CreationTimestamp.Equal(&(c[idx].EndpointSlices[j].CreationTimestamp)) {
-				keyI := fmt.Sprintf("%s/%s", c[idx].EndpointSlices[i].Namespace, c[idx].EndpointSlices[i].Name)
-				keyJ := fmt.Sprintf("%s/%s", c[idx].EndpointSlices[j].Namespace, c[idx].EndpointSlices[j].Name)
-				return keyI < keyJ
-			}
-			return c[idx].EndpointSlices[i].CreationTimestamp.Before(&(c[idx].EndpointSlices[j].CreationTimestamp))
-		})
-
-		// Sort Secrets by creation timestamp, then namespace/name
-		sort.Slice(c[idx].Secrets, func(i, j int) bool {
-			if c[idx].Secrets[i].CreationTimestamp.Equal(&(c[idx].Secrets[j].CreationTimestamp)) {
-				keyI := fmt.Sprintf("%s/%s", c[idx].Secrets[i].Namespace, c[idx].Secrets[i].Name)
-				keyJ := fmt.Sprintf("%s/%s", c[idx].Secrets[j].Namespace, c[idx].Secrets[j].Name)
-				return keyI < keyJ
-			}
-			return c[idx].Secrets[i].CreationTimestamp.Before(&(c[idx].Secrets[j].CreationTimestamp))
-		})
-
-		// Sort ConfigMaps by creation timestamp, then namespace/name
-		sort.Slice(c[idx].ConfigMaps, func(i, j int) bool {
-			if c[idx].ConfigMaps[i].CreationTimestamp.Equal(&(c[idx].ConfigMaps[j].CreationTimestamp)) {
-				keyI := fmt.Sprintf("%s/%s", c[idx].ConfigMaps[i].Namespace, c[idx].ConfigMaps[i].Name)
-				keyJ := fmt.Sprintf("%s/%s", c[idx].ConfigMaps[j].Namespace, c[idx].ConfigMaps[j].Name)
-				return keyI < keyJ
-			}
-			return c[idx].ConfigMaps[i].CreationTimestamp.Before(&(c[idx].ConfigMaps[j].CreationTimestamp))
-		})
-
-		// Sort EnvoyPatchPolicies by priority first, then creation timestamp, then namespace/name
-		sort.Slice(c[idx].EnvoyPatchPolicies, func(i, j int) bool {
-			if c[idx].EnvoyPatchPolicies[i].Spec.Priority == c[idx].EnvoyPatchPolicies[j].Spec.Priority {
-				if c[idx].EnvoyPatchPolicies[i].CreationTimestamp.Equal(&(c[idx].EnvoyPatchPolicies[j].CreationTimestamp)) {
-					keyI := fmt.Sprintf("%s/%s", c[idx].EnvoyPatchPolicies[i].Namespace, c[idx].EnvoyPatchPolicies[i].Name)
-					keyJ := fmt.Sprintf("%s/%s", c[idx].EnvoyPatchPolicies[j].Namespace, c[idx].EnvoyPatchPolicies[j].Name)
-					return keyI < keyJ
-				}
-				return c[idx].EnvoyPatchPolicies[i].CreationTimestamp.Before(&(c[idx].EnvoyPatchPolicies[j].CreationTimestamp))
-			}
-			return c[idx].EnvoyPatchPolicies[i].Spec.Priority < c[idx].EnvoyPatchPolicies[j].Spec.Priority
-		})
-
-		// Sort ClientTrafficPolicies by creation timestamp, then namespace/name
-		sort.Slice(c[idx].ClientTrafficPolicies, func(i, j int) bool {
-			if c[idx].ClientTrafficPolicies[i].CreationTimestamp.Equal(&(c[idx].ClientTrafficPolicies[j].CreationTimestamp)) {
-				keyI := fmt.Sprintf("%s/%s", c[idx].ClientTrafficPolicies[i].Namespace, c[idx].ClientTrafficPolicies[i].Name)
-				keyJ := fmt.Sprintf("%s/%s", c[idx].ClientTrafficPolicies[j].Namespace, c[idx].ClientTrafficPolicies[j].Name)
-				return keyI < keyJ
-			}
-			return c[idx].ClientTrafficPolicies[i].CreationTimestamp.Before(&(c[idx].ClientTrafficPolicies[j].CreationTimestamp))
-		})
-
-		// Sort BackendTrafficPolicies by creation timestamp, then namespace/name
-		sort.Slice(c[idx].BackendTrafficPolicies, func(i, j int) bool {
-			if c[idx].BackendTrafficPolicies[i].CreationTimestamp.Equal(&(c[idx].BackendTrafficPolicies[j].CreationTimestamp)) {
-				keyI := fmt.Sprintf("%s/%s", c[idx].BackendTrafficPolicies[i].Namespace, c[idx].BackendTrafficPolicies[i].Name)
-				keyJ := fmt.Sprintf("%s/%s", c[idx].BackendTrafficPolicies[j].Namespace, c[idx].BackendTrafficPolicies[j].Name)
-				return keyI < keyJ
-			}
-			return c[idx].BackendTrafficPolicies[i].CreationTimestamp.Before(&(c[idx].BackendTrafficPolicies[j].CreationTimestamp))
-		})
-
-		// Sort SecurityPolicies by creation timestamp, then namespace/name
-		sort.Slice(c[idx].SecurityPolicies, func(i, j int) bool {
-			if c[idx].SecurityPolicies[i].CreationTimestamp.Equal(&(c[idx].SecurityPolicies[j].CreationTimestamp)) {
-				keyI := fmt.Sprintf("%s/%s", c[idx].SecurityPolicies[i].Namespace, c[idx].SecurityPolicies[i].Name)
-				keyJ := fmt.Sprintf("%s/%s", c[idx].SecurityPolicies[j].Namespace, c[idx].SecurityPolicies[j].Name)
-				return keyI < keyJ
-			}
-			return c[idx].SecurityPolicies[i].CreationTimestamp.Before(&(c[idx].SecurityPolicies[j].CreationTimestamp))
-		})
-
-		// Sort BackendTLSPolicies by creation timestamp, then namespace/name
-		sort.Slice(c[idx].BackendTLSPolicies, func(i, j int) bool {
-			if c[idx].BackendTLSPolicies[i].CreationTimestamp.Equal(&(c[idx].BackendTLSPolicies[j].CreationTimestamp)) {
-				keyI := fmt.Sprintf("%s/%s", c[idx].BackendTLSPolicies[i].Namespace, c[idx].BackendTLSPolicies[i].Name)
-				keyJ := fmt.Sprintf("%s/%s", c[idx].BackendTLSPolicies[j].Namespace, c[idx].BackendTLSPolicies[j].Name)
-				return keyI < keyJ
-			}
-			return c[idx].BackendTLSPolicies[i].CreationTimestamp.Before(&(c[idx].BackendTLSPolicies[j].CreationTimestamp))
-		})
-
-		// Sort EnvoyExtensionPolicies by creation timestamp, then namespace/name
-		sort.Slice(c[idx].EnvoyExtensionPolicies, func(i, j int) bool {
-			if c[idx].EnvoyExtensionPolicies[i].CreationTimestamp.Equal(&(c[idx].EnvoyExtensionPolicies[j].CreationTimestamp)) {
-				keyI := fmt.Sprintf("%s/%s", c[idx].EnvoyExtensionPolicies[i].Namespace, c[idx].EnvoyExtensionPolicies[i].Name)
-				keyJ := fmt.Sprintf("%s/%s", c[idx].EnvoyExtensionPolicies[j].Namespace, c[idx].EnvoyExtensionPolicies[j].Name)
-				return keyI < keyJ
-			}
-			return c[idx].EnvoyExtensionPolicies[i].CreationTimestamp.Before(&(c[idx].EnvoyExtensionPolicies[j].CreationTimestamp))
-		})
-
-		// Sort Backends by creation timestamp, then namespace/name
-		sort.Slice(c[idx].Backends, func(i, j int) bool {
-			if c[idx].Backends[i].CreationTimestamp.Equal(&(c[idx].Backends[j].CreationTimestamp)) {
-				keyI := fmt.Sprintf("%s/%s", c[idx].Backends[i].Namespace, c[idx].Backends[i].Name)
-				keyJ := fmt.Sprintf("%s/%s", c[idx].Backends[j].Namespace, c[idx].Backends[j].Name)
-				return keyI < keyJ
-			}
-			return c[idx].Backends[i].CreationTimestamp.Before(&(c[idx].Backends[j].CreationTimestamp))
-		})
-
-		// Sort HTTPRouteFilters by creation timestamp, then namespace/name
-		sort.Slice(c[idx].HTTPRouteFilters, func(i, j int) bool {
-			if c[idx].HTTPRouteFilters[i].CreationTimestamp.Equal(&(c[idx].HTTPRouteFilters[j].CreationTimestamp)) {
-				keyI := fmt.Sprintf("%s/%s", c[idx].HTTPRouteFilters[i].Namespace, c[idx].HTTPRouteFilters[i].Name)
-				keyJ := fmt.Sprintf("%s/%s", c[idx].HTTPRouteFilters[j].Namespace, c[idx].HTTPRouteFilters[j].Name)
-				return keyI < keyJ
-			}
-			return c[idx].HTTPRouteFilters[i].CreationTimestamp.Before(&(c[idx].HTTPRouteFilters[j].CreationTimestamp))
-		})
-
-		// Sort ClusterTrustBundles by creation timestamp, then name (cluster-scoped)
-		sort.Slice(c[idx].ClusterTrustBundles, func(i, j int) bool {
-			if c[idx].ClusterTrustBundles[i].CreationTimestamp.Equal(&(c[idx].ClusterTrustBundles[j].CreationTimestamp)) {
-				return c[idx].ClusterTrustBundles[i].Name < c[idx].ClusterTrustBundles[j].Name
-			}
-			return c[idx].ClusterTrustBundles[i].CreationTimestamp.Before(&(c[idx].ClusterTrustBundles[j].CreationTimestamp))
-		})
-
-		// Sort ExtensionRefFilters by creation timestamp, then namespace/name (unstructured resources)
-		sort.Slice(c[idx].ExtensionRefFilters, func(i, j int) bool {
-			tsI := c[idx].ExtensionRefFilters[i].GetCreationTimestamp()
-			tsJ := c[idx].ExtensionRefFilters[j].GetCreationTimestamp()
-			if tsI.Equal(&tsJ) {
-				keyI := fmt.Sprintf("%s/%s", c[idx].ExtensionRefFilters[i].GetNamespace(), c[idx].ExtensionRefFilters[i].GetName())
-				keyJ := fmt.Sprintf("%s/%s", c[idx].ExtensionRefFilters[j].GetNamespace(), c[idx].ExtensionRefFilters[j].GetName())
-				return keyI < keyJ
-			}
-			return tsI.Before(&tsJ)
-		})
-
-		// Sort ExtensionServerPolicies by creation timestamp, then namespace/name (unstructured resources)
-		sort.Slice(c[idx].ExtensionServerPolicies, func(i, j int) bool {
-			tsI := c[idx].ExtensionServerPolicies[i].GetCreationTimestamp()
-			tsJ := c[idx].ExtensionServerPolicies[j].GetCreationTimestamp()
-			if tsI.Equal(&tsJ) {
-				keyI := fmt.Sprintf("%s/%s", c[idx].ExtensionServerPolicies[i].GetNamespace(), c[idx].ExtensionServerPolicies[i].GetName())
-				keyJ := fmt.Sprintf("%s/%s", c[idx].ExtensionServerPolicies[j].GetNamespace(), c[idx].ExtensionServerPolicies[j].GetName())
-				return keyI < keyJ
-			}
-			return tsI.Before(&tsJ)
-		})
+		c[idx].Sort()
 	}
+}
+
+func (r *Resources) Sort() {
+	// Sort gateways based on timestamp.
+	// Initially, gateways sort by creation timestamp
+	// or sort alphabetically by “{namespace}/{name}” if multiple gateways share same timestamp.
+	sort.Slice(r.Gateways, func(i, j int) bool {
+		if r.Gateways[i].CreationTimestamp.Equal(&(r.Gateways[j].CreationTimestamp)) {
+			gatewayKeyI := fmt.Sprintf("%s/%s", r.Gateways[i].Namespace, r.Gateways[i].Name)
+			gatewayKeyJ := fmt.Sprintf("%s/%s", r.Gateways[j].Namespace, r.Gateways[j].Name)
+			return gatewayKeyI < gatewayKeyJ
+		}
+		// Not identical CreationTimestamps
+
+		return r.Gateways[i].CreationTimestamp.Before(&(r.Gateways[j].CreationTimestamp))
+	})
+
+	// Sort HTTPRoutes by creation timestamp, then namespace/name
+	sort.Slice(r.HTTPRoutes, func(i, j int) bool {
+		if r.HTTPRoutes[i].CreationTimestamp.Equal(&(r.HTTPRoutes[j].CreationTimestamp)) {
+			keyI := fmt.Sprintf("%s/%s", r.HTTPRoutes[i].Namespace, r.HTTPRoutes[i].Name)
+			keyJ := fmt.Sprintf("%s/%s", r.HTTPRoutes[j].Namespace, r.HTTPRoutes[j].Name)
+			return keyI < keyJ
+		}
+		return r.HTTPRoutes[i].CreationTimestamp.Before(&(r.HTTPRoutes[j].CreationTimestamp))
+	})
+
+	// Sort GRPCRoutes by creation timestamp, then namespace/name
+	sort.Slice(r.GRPCRoutes, func(i, j int) bool {
+		if r.GRPCRoutes[i].CreationTimestamp.Equal(&(r.GRPCRoutes[j].CreationTimestamp)) {
+			keyI := fmt.Sprintf("%s/%s", r.GRPCRoutes[i].Namespace, r.GRPCRoutes[i].Name)
+			keyJ := fmt.Sprintf("%s/%s", r.GRPCRoutes[j].Namespace, r.GRPCRoutes[j].Name)
+			return keyI < keyJ
+		}
+		return r.GRPCRoutes[i].CreationTimestamp.Before(&(r.GRPCRoutes[j].CreationTimestamp))
+	})
+
+	// Sort TLSRoutes by creation timestamp, then namespace/name
+	sort.Slice(r.TLSRoutes, func(i, j int) bool {
+		if r.TLSRoutes[i].CreationTimestamp.Equal(&(r.TLSRoutes[j].CreationTimestamp)) {
+			keyI := fmt.Sprintf("%s/%s", r.TLSRoutes[i].Namespace, r.TLSRoutes[i].Name)
+			keyJ := fmt.Sprintf("%s/%s", r.TLSRoutes[j].Namespace, r.TLSRoutes[j].Name)
+			return keyI < keyJ
+		}
+		return r.TLSRoutes[i].CreationTimestamp.Before(&(r.TLSRoutes[j].CreationTimestamp))
+	})
+
+	// Sort TCPRoutes by creation timestamp, then namespace/name
+	sort.Slice(r.TCPRoutes, func(i, j int) bool {
+		if r.TCPRoutes[i].CreationTimestamp.Equal(&(r.TCPRoutes[j].CreationTimestamp)) {
+			keyI := fmt.Sprintf("%s/%s", r.TCPRoutes[i].Namespace, r.TCPRoutes[i].Name)
+			keyJ := fmt.Sprintf("%s/%s", r.TCPRoutes[j].Namespace, r.TCPRoutes[j].Name)
+			return keyI < keyJ
+		}
+		return r.TCPRoutes[i].CreationTimestamp.Before(&(r.TCPRoutes[j].CreationTimestamp))
+	})
+
+	// Sort UDPRoutes by creation timestamp, then namespace/name
+	sort.Slice(r.UDPRoutes, func(i, j int) bool {
+		if r.UDPRoutes[i].CreationTimestamp.Equal(&(r.UDPRoutes[j].CreationTimestamp)) {
+			keyI := fmt.Sprintf("%s/%s", r.UDPRoutes[i].Namespace, r.UDPRoutes[i].Name)
+			keyJ := fmt.Sprintf("%s/%s", r.UDPRoutes[j].Namespace, r.UDPRoutes[j].Name)
+			return keyI < keyJ
+		}
+		return r.UDPRoutes[i].CreationTimestamp.Before(&(r.UDPRoutes[j].CreationTimestamp))
+	})
+
+	// Sort ReferenceGrants by creation timestamp, then namespace/name
+	sort.Slice(r.ReferenceGrants, func(i, j int) bool {
+		if r.ReferenceGrants[i].CreationTimestamp.Equal(&(r.ReferenceGrants[j].CreationTimestamp)) {
+			keyI := fmt.Sprintf("%s/%s", r.ReferenceGrants[i].Namespace, r.ReferenceGrants[i].Name)
+			keyJ := fmt.Sprintf("%s/%s", r.ReferenceGrants[j].Namespace, r.ReferenceGrants[j].Name)
+			return keyI < keyJ
+		}
+		return r.ReferenceGrants[i].CreationTimestamp.Before(&(r.ReferenceGrants[j].CreationTimestamp))
+	})
+
+	// Sort Namespaces by creation timestamp, then name
+	sort.Slice(r.Namespaces, func(i, j int) bool {
+		if r.Namespaces[i].CreationTimestamp.Equal(&(r.Namespaces[j].CreationTimestamp)) {
+			return r.Namespaces[i].Name < r.Namespaces[j].Name
+		}
+		return r.Namespaces[i].CreationTimestamp.Before(&(r.Namespaces[j].CreationTimestamp))
+	})
+
+	// Sort Services by creation timestamp, then namespace/name
+	sort.Slice(r.Services, func(i, j int) bool {
+		if r.Services[i].CreationTimestamp.Equal(&(r.Services[j].CreationTimestamp)) {
+			keyI := fmt.Sprintf("%s/%s", r.Services[i].Namespace, r.Services[i].Name)
+			keyJ := fmt.Sprintf("%s/%s", r.Services[j].Namespace, r.Services[j].Name)
+			return keyI < keyJ
+		}
+		return r.Services[i].CreationTimestamp.Before(&(r.Services[j].CreationTimestamp))
+	})
+
+	// Sort ServiceImports by creation timestamp, then namespace/name
+	sort.Slice(r.ServiceImports, func(i, j int) bool {
+		if r.ServiceImports[i].CreationTimestamp.Equal(&(r.ServiceImports[j].CreationTimestamp)) {
+			keyI := fmt.Sprintf("%s/%s", r.ServiceImports[i].Namespace, r.ServiceImports[i].Name)
+			keyJ := fmt.Sprintf("%s/%s", r.ServiceImports[j].Namespace, r.ServiceImports[j].Name)
+			return keyI < keyJ
+		}
+		return r.ServiceImports[i].CreationTimestamp.Before(&(r.ServiceImports[j].CreationTimestamp))
+	})
+
+	// Sort EndpointSlices by creation timestamp, then namespace/name
+	sort.Slice(r.EndpointSlices, func(i, j int) bool {
+		if r.EndpointSlices[i].CreationTimestamp.Equal(&(r.EndpointSlices[j].CreationTimestamp)) {
+			keyI := fmt.Sprintf("%s/%s", r.EndpointSlices[i].Namespace, r.EndpointSlices[i].Name)
+			keyJ := fmt.Sprintf("%s/%s", r.EndpointSlices[j].Namespace, r.EndpointSlices[j].Name)
+			return keyI < keyJ
+		}
+		return r.EndpointSlices[i].CreationTimestamp.Before(&(r.EndpointSlices[j].CreationTimestamp))
+	})
+
+	// Sort Secrets by creation timestamp, then namespace/name
+	sort.Slice(r.Secrets, func(i, j int) bool {
+		if r.Secrets[i].CreationTimestamp.Equal(&(r.Secrets[j].CreationTimestamp)) {
+			keyI := fmt.Sprintf("%s/%s", r.Secrets[i].Namespace, r.Secrets[i].Name)
+			keyJ := fmt.Sprintf("%s/%s", r.Secrets[j].Namespace, r.Secrets[j].Name)
+			return keyI < keyJ
+		}
+		return r.Secrets[i].CreationTimestamp.Before(&(r.Secrets[j].CreationTimestamp))
+	})
+
+	// Sort ConfigMaps by creation timestamp, then namespace/name
+	sort.Slice(r.ConfigMaps, func(i, j int) bool {
+		if r.ConfigMaps[i].CreationTimestamp.Equal(&(r.ConfigMaps[j].CreationTimestamp)) {
+			keyI := fmt.Sprintf("%s/%s", r.ConfigMaps[i].Namespace, r.ConfigMaps[i].Name)
+			keyJ := fmt.Sprintf("%s/%s", r.ConfigMaps[j].Namespace, r.ConfigMaps[j].Name)
+			return keyI < keyJ
+		}
+		return r.ConfigMaps[i].CreationTimestamp.Before(&(r.ConfigMaps[j].CreationTimestamp))
+	})
+
+	// Sort EnvoyPatchPolicies by priority first, then creation timestamp, then namespace/name
+	sort.Slice(r.EnvoyPatchPolicies, func(i, j int) bool {
+		if r.EnvoyPatchPolicies[i].Spec.Priority == r.EnvoyPatchPolicies[j].Spec.Priority {
+			if r.EnvoyPatchPolicies[i].CreationTimestamp.Equal(&(r.EnvoyPatchPolicies[j].CreationTimestamp)) {
+				keyI := fmt.Sprintf("%s/%s", r.EnvoyPatchPolicies[i].Namespace, r.EnvoyPatchPolicies[i].Name)
+				keyJ := fmt.Sprintf("%s/%s", r.EnvoyPatchPolicies[j].Namespace, r.EnvoyPatchPolicies[j].Name)
+				return keyI < keyJ
+			}
+			return r.EnvoyPatchPolicies[i].CreationTimestamp.Before(&(r.EnvoyPatchPolicies[j].CreationTimestamp))
+		}
+		return r.EnvoyPatchPolicies[i].Spec.Priority < r.EnvoyPatchPolicies[j].Spec.Priority
+	})
+
+	// Sort ClientTrafficPolicies by creation timestamp, then namespace/name
+	sort.Slice(r.ClientTrafficPolicies, func(i, j int) bool {
+		if r.ClientTrafficPolicies[i].CreationTimestamp.Equal(&(r.ClientTrafficPolicies[j].CreationTimestamp)) {
+			keyI := fmt.Sprintf("%s/%s", r.ClientTrafficPolicies[i].Namespace, r.ClientTrafficPolicies[i].Name)
+			keyJ := fmt.Sprintf("%s/%s", r.ClientTrafficPolicies[j].Namespace, r.ClientTrafficPolicies[j].Name)
+			return keyI < keyJ
+		}
+		return r.ClientTrafficPolicies[i].CreationTimestamp.Before(&(r.ClientTrafficPolicies[j].CreationTimestamp))
+	})
+
+	// Sort BackendTrafficPolicies by creation timestamp, then namespace/name
+	sort.Slice(r.BackendTrafficPolicies, func(i, j int) bool {
+		if r.BackendTrafficPolicies[i].CreationTimestamp.Equal(&(r.BackendTrafficPolicies[j].CreationTimestamp)) {
+			keyI := fmt.Sprintf("%s/%s", r.BackendTrafficPolicies[i].Namespace, r.BackendTrafficPolicies[i].Name)
+			keyJ := fmt.Sprintf("%s/%s", r.BackendTrafficPolicies[j].Namespace, r.BackendTrafficPolicies[j].Name)
+			return keyI < keyJ
+		}
+		return r.BackendTrafficPolicies[i].CreationTimestamp.Before(&(r.BackendTrafficPolicies[j].CreationTimestamp))
+	})
+
+	// Sort SecurityPolicies by creation timestamp, then namespace/name
+	sort.Slice(r.SecurityPolicies, func(i, j int) bool {
+		if r.SecurityPolicies[i].CreationTimestamp.Equal(&(r.SecurityPolicies[j].CreationTimestamp)) {
+			keyI := fmt.Sprintf("%s/%s", r.SecurityPolicies[i].Namespace, r.SecurityPolicies[i].Name)
+			keyJ := fmt.Sprintf("%s/%s", r.SecurityPolicies[j].Namespace, r.SecurityPolicies[j].Name)
+			return keyI < keyJ
+		}
+		return r.SecurityPolicies[i].CreationTimestamp.Before(&(r.SecurityPolicies[j].CreationTimestamp))
+	})
+
+	// Sort BackendTLSPolicies by creation timestamp, then namespace/name
+	sort.Slice(r.BackendTLSPolicies, func(i, j int) bool {
+		if r.BackendTLSPolicies[i].CreationTimestamp.Equal(&(r.BackendTLSPolicies[j].CreationTimestamp)) {
+			keyI := fmt.Sprintf("%s/%s", r.BackendTLSPolicies[i].Namespace, r.BackendTLSPolicies[i].Name)
+			keyJ := fmt.Sprintf("%s/%s", r.BackendTLSPolicies[j].Namespace, r.BackendTLSPolicies[j].Name)
+			return keyI < keyJ
+		}
+		return r.BackendTLSPolicies[i].CreationTimestamp.Before(&(r.BackendTLSPolicies[j].CreationTimestamp))
+	})
+
+	// Sort EnvoyExtensionPolicies by creation timestamp, then namespace/name
+	sort.Slice(r.EnvoyExtensionPolicies, func(i, j int) bool {
+		if r.EnvoyExtensionPolicies[i].CreationTimestamp.Equal(&(r.EnvoyExtensionPolicies[j].CreationTimestamp)) {
+			keyI := fmt.Sprintf("%s/%s", r.EnvoyExtensionPolicies[i].Namespace, r.EnvoyExtensionPolicies[i].Name)
+			keyJ := fmt.Sprintf("%s/%s", r.EnvoyExtensionPolicies[j].Namespace, r.EnvoyExtensionPolicies[j].Name)
+			return keyI < keyJ
+		}
+		return r.EnvoyExtensionPolicies[i].CreationTimestamp.Before(&(r.EnvoyExtensionPolicies[j].CreationTimestamp))
+	})
+
+	// Sort Backends by creation timestamp, then namespace/name
+	sort.Slice(r.Backends, func(i, j int) bool {
+		if r.Backends[i].CreationTimestamp.Equal(&(r.Backends[j].CreationTimestamp)) {
+			keyI := fmt.Sprintf("%s/%s", r.Backends[i].Namespace, r.Backends[i].Name)
+			keyJ := fmt.Sprintf("%s/%s", r.Backends[j].Namespace, r.Backends[j].Name)
+			return keyI < keyJ
+		}
+		return r.Backends[i].CreationTimestamp.Before(&(r.Backends[j].CreationTimestamp))
+	})
+
+	// Sort HTTPRouteFilters by creation timestamp, then namespace/name
+	sort.Slice(r.HTTPRouteFilters, func(i, j int) bool {
+		if r.HTTPRouteFilters[i].CreationTimestamp.Equal(&(r.HTTPRouteFilters[j].CreationTimestamp)) {
+			keyI := fmt.Sprintf("%s/%s", r.HTTPRouteFilters[i].Namespace, r.HTTPRouteFilters[i].Name)
+			keyJ := fmt.Sprintf("%s/%s", r.HTTPRouteFilters[j].Namespace, r.HTTPRouteFilters[j].Name)
+			return keyI < keyJ
+		}
+		return r.HTTPRouteFilters[i].CreationTimestamp.Before(&(r.HTTPRouteFilters[j].CreationTimestamp))
+	})
+
+	// Sort ClusterTrustBundles by creation timestamp, then name (cluster-scoped)
+	sort.Slice(r.ClusterTrustBundles, func(i, j int) bool {
+		if r.ClusterTrustBundles[i].CreationTimestamp.Equal(&(r.ClusterTrustBundles[j].CreationTimestamp)) {
+			return r.ClusterTrustBundles[i].Name < r.ClusterTrustBundles[j].Name
+		}
+		return r.ClusterTrustBundles[i].CreationTimestamp.Before(&(r.ClusterTrustBundles[j].CreationTimestamp))
+	})
+
+	// Sort ExtensionRefFilters by creation timestamp, then namespace/name (unstructured resources)
+	sort.Slice(r.ExtensionRefFilters, func(i, j int) bool {
+		tsI := r.ExtensionRefFilters[i].GetCreationTimestamp()
+		tsJ := r.ExtensionRefFilters[j].GetCreationTimestamp()
+		if tsI.Equal(&tsJ) {
+			keyI := fmt.Sprintf("%s/%s", r.ExtensionRefFilters[i].GetNamespace(), r.ExtensionRefFilters[i].GetName())
+			keyJ := fmt.Sprintf("%s/%s", r.ExtensionRefFilters[j].GetNamespace(), r.ExtensionRefFilters[j].GetName())
+			return keyI < keyJ
+		}
+		return tsI.Before(&tsJ)
+	})
+
+	// Sort ExtensionServerPolicies by creation timestamp, then namespace/name (unstructured resources)
+	sort.Slice(r.ExtensionServerPolicies, func(i, j int) bool {
+		tsI := r.ExtensionServerPolicies[i].GetCreationTimestamp()
+		tsJ := r.ExtensionServerPolicies[j].GetCreationTimestamp()
+		if tsI.Equal(&tsJ) {
+			keyI := fmt.Sprintf("%s/%s", r.ExtensionServerPolicies[i].GetNamespace(), r.ExtensionServerPolicies[i].GetName())
+			keyJ := fmt.Sprintf("%s/%s", r.ExtensionServerPolicies[j].GetNamespace(), r.ExtensionServerPolicies[j].GetName())
+			return keyI < keyJ
+		}
+		return tsI.Before(&tsJ)
+	})
 }
