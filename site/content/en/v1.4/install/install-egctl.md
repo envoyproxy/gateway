@@ -22,7 +22,7 @@ The Envoy Gateway project provides two ways to fetch and install egctl. These ar
 Every [release](https://github.com/envoyproxy/gateway/releases) of egctl provides binary releases for a variety of OSes. These binary versions can be manually downloaded and installed.
 
 1. Download your [desired version](https://github.com/envoyproxy/gateway/releases)
-2. Unpack it (tar -zxvf egctl_latest_linux_amd64.tar.gz)
+2. Unpack it (tar -zxvf egctl_{{< yaml-version >}}_linux_amd64.tar.gz)
 3. Find the egctl binary in the unpacked directory, and move it to its desired destination (mv bin/linux/amd64/egctl /usr/local/bin/egctl)
 
 From there, you should be able to run: `egctl help`.
@@ -41,15 +41,12 @@ chmod +x get-egctl.sh
 
 # get help info of the 
 bash get-egctl.sh --help
-
-# install the latest development version of egctl
-bash VERSION=latest get-egctl.sh
 ```
 
 Yes, you can just use the below command if you want to live on the edge.
 
 ```shell
-curl -fsSL https://gateway.envoyproxy.io/get-egctl.sh | VERSION=latest bash 
+curl -fsSL https://gateway.envoyproxy.io/get-egctl.sh | VERSION={{< yaml-version >}} bash
 ```
 
 {{% /tab %}}
