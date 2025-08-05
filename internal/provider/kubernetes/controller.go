@@ -1363,7 +1363,6 @@ func (r *gatewayAPIReconciler) processGateways(ctx context.Context, managedGC *g
 	}
 
 	for _, gtw := range gatewayList.Items {
-		gtw := gtw //nolint:copyloopvar
 		if r.namespaceLabel != nil {
 			if ok, err := r.checkObjectNamespaceLabels(&gtw); err != nil {
 				// If the error is transient, we return it to allow Reconcile to retry.
@@ -1385,19 +1384,14 @@ func (r *gatewayAPIReconciler) processGateways(ctx context.Context, managedGC *g
 			if terminatesTLS(&listener) {
 				for _, certRef := range listener.TLS.CertificateRefs {
 					if refsSecret(&certRef) {
-						if err := r.processSecretRef(
-							ctx,
-							resourceMap,
-							resourceTree,
-							resource.KindGateway,
-							gtw.Namespace,
-							gtw.Name,
+						if err := r.processSecretRef(ctx,
+							resourceMap, resourceTree,
+							resource.KindGateway, gtw.Namespace, gtw.Name,
 							certRef); err != nil {
 							if isTransientError(err) {
 								return err
 							}
-							r.log.Error(err,
-								"failed to process TLS SecretRef for gateway",
+							r.log.Error(err, "failed to process TLS SecretRef for gateway",
 								"gateway", gtw, "secretRef", certRef)
 						}
 					}
@@ -2291,18 +2285,14 @@ func (r *gatewayAPIReconciler) processGatewayParamsRef(ctx context.Context, gtw 
 		return err
 	}
 
+	// Missing secret shouldn't stop the Gateway infrastructure from coming up
 	if ep.Spec.BackendTLS != nil && ep.Spec.BackendTLS.ClientCertificateRef != nil {
 		certRef := ep.Spec.BackendTLS.ClientCertificateRef
 		if refsSecret(certRef) {
-			if err := r.processSecretRef(
-				ctx,
-				resourceMap,
-				resourceTree,
-				resource.KindGateway,
-				gtw.Namespace,
-				gtw.Name,
-				*certRef); err != nil {
-				return fmt.Errorf("failed to process TLS SecretRef for gateway %s/%s: %w", gtw.Namespace, gtw.Name, err)
+			if err := r.processSecretRef(ctx,
+				resourceMap, resourceTree, resource.KindGateway,
+				gtw.Namespace, gtw.Name, *certRef); err != nil {
+				r.log.Error(err, "failed to process ClientCertificateRef for EnvoyProxy", "namespace", gtw.Namespace, "name", gtw.Name)
 			}
 		}
 	}
