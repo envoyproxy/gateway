@@ -1070,14 +1070,21 @@ func (t *Translator) buildCORS(cors *egv1a1.CORS) *ir.CORS {
 		}
 	}
 
-	return &ir.CORS{
+	irCORS := &ir.CORS{
 		AllowOrigins:     allowOrigins,
 		AllowMethods:     cors.AllowMethods,
 		AllowHeaders:     cors.AllowHeaders,
 		ExposeHeaders:    cors.ExposeHeaders,
-		MaxAge:           cors.MaxAge,
 		AllowCredentials: cors.AllowCredentials != nil && *cors.AllowCredentials,
 	}
+
+	if cors.MaxAge != nil {
+		if d, err := time.ParseDuration(string(*cors.MaxAge)); err == nil {
+			irCORS.MaxAge = ir.MetaV1DurationPtr(d)
+		}
+	}
+
+	return irCORS
 }
 
 func containsWildcard(s string) bool {
@@ -1398,28 +1405,40 @@ func (t *Translator) buildOIDC(
 			"HMAC secret not found in secret %s/%s", t.ControllerNamespace, oidcHMACSecretName)
 	}
 
-	return &ir.OIDC{
-		Name:                   irConfigName(policy),
-		Provider:               *provider,
-		ClientID:               clientID,
-		ClientSecret:           clientSecretBytes,
-		Scopes:                 scopes,
-		Resources:              oidc.Resources,
-		RedirectURL:            redirectURL,
-		RedirectPath:           redirectPath,
-		LogoutPath:             logoutPath,
-		ForwardAccessToken:     forwardAccessToken,
-		DefaultTokenTTL:        oidc.DefaultTokenTTL,
-		RefreshToken:           refreshToken,
-		DefaultRefreshTokenTTL: oidc.DefaultRefreshTokenTTL,
-		CookieSuffix:           suffix,
-		CookieNameOverrides:    policy.Spec.OIDC.CookieNames,
-		CookieDomain:           policy.Spec.OIDC.CookieDomain,
-		CookieConfig:           policy.Spec.OIDC.CookieConfig,
-		HMACSecret:             hmacData,
-		PassThroughAuthHeader:  passThroughAuthHeader,
-		DenyRedirect:           oidc.DenyRedirect,
-	}, nil
+	irOIDC := &ir.OIDC{
+		Name:                  irConfigName(policy),
+		Provider:              *provider,
+		ClientID:              clientID,
+		ClientSecret:          clientSecretBytes,
+		Scopes:                scopes,
+		Resources:             oidc.Resources,
+		RedirectURL:           redirectURL,
+		RedirectPath:          redirectPath,
+		LogoutPath:            logoutPath,
+		ForwardAccessToken:    forwardAccessToken,
+		RefreshToken:          refreshToken,
+		CookieSuffix:          suffix,
+		CookieNameOverrides:   policy.Spec.OIDC.CookieNames,
+		CookieDomain:          policy.Spec.OIDC.CookieDomain,
+		CookieConfig:          policy.Spec.OIDC.CookieConfig,
+		HMACSecret:            hmacData,
+		PassThroughAuthHeader: passThroughAuthHeader,
+		DenyRedirect:          oidc.DenyRedirect,
+	}
+
+	if oidc.DefaultTokenTTL != nil {
+		if d, err := time.ParseDuration(string(*oidc.DefaultTokenTTL)); err == nil {
+			irOIDC.DefaultTokenTTL = ir.MetaV1DurationPtr(d)
+		}
+	}
+
+	if oidc.DefaultRefreshTokenTTL != nil {
+		if d, err := time.ParseDuration(string(*oidc.DefaultRefreshTokenTTL)); err == nil {
+			irOIDC.DefaultRefreshTokenTTL = ir.MetaV1DurationPtr(d)
+		}
+	}
+
+	return irOIDC, nil
 }
 
 func (t *Translator) buildOIDCProvider(policy *egv1a1.SecurityPolicy, resources *resource.Resources, envoyProxy *egv1a1.EnvoyProxy) (*ir.OIDCProvider, error) {

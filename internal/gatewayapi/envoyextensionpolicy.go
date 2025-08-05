@@ -605,7 +605,7 @@ func (t *Translator) buildExtProc(
 		if err != nil {
 			return nil, fmt.Errorf("invalid ExtProc MessageTimeout value %v", extProc.MessageTimeout)
 		}
-		extProcIR.MessageTimeout = ptr.To(metav1.Duration{Duration: d})
+		extProcIR.MessageTimeout = ir.MetaV1DurationPtr(d)
 	}
 
 	if extProc.FailOpen != nil {
