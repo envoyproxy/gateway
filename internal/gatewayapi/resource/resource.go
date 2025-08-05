@@ -21,6 +21,7 @@ import (
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/ir"
+	labelsutil "github.com/envoyproxy/gateway/internal/utils/labels"
 )
 
 type (
@@ -129,13 +130,7 @@ func (r *Resources) GetServiceByLabels(labels map[string]string, namespace strin
 		if (namespace != "" && svc.Namespace != namespace) || svc.Labels == nil {
 			continue
 		}
-		match := true
-		for k, v := range labels {
-			if svc.Labels[k] != v {
-				match = false
-				break
-			}
-		}
+		match, _ := labelsutil.Matches(svc.Labels, labels)
 		if match {
 			return svc
 		}
