@@ -32,10 +32,12 @@ jobs:
       with:
         filters: |
           run_test_workflow:
+            - '.github/**'
             - 'api/**'
             - 'charts/**'
             - 'internal/**'
             - 'test/**'
+            - 'tools/**'
             - 'go.mod'
             - "embedded/.*\\.go"
             - "Makefile"
