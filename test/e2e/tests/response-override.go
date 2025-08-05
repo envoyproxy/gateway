@@ -52,6 +52,7 @@ var ResponseOverrideTest = suite.ConformanceTest{
 			verifyCustomResponse(t, suite.TimeoutConfig, gwAddr, "/status/404", "text/plain", "404 Oops! Your request is not found.", 404)
 			verifyCustomResponse(t, suite.TimeoutConfig, gwAddr, "/status/500", "application/json", `{"error": "Internal Server Error"}`, 500)
 			verifyCustomResponse(t, suite.TimeoutConfig, gwAddr, "/status/403", "", "", 404)
+			verifyCustomResponse(t, suite.TimeoutConfig, gwAddr, "/status/401", "", "", 301)
 		})
 	},
 }
