@@ -422,9 +422,7 @@ func buildXdsCluster(args *xdsClusterArgs) (*buildClusterResult, error) {
 		cluster.RespectDnsTtl = true
 		if args.dns != nil {
 			if args.dns.DNSRefreshRate != nil {
-				if args.dns.DNSRefreshRate.Duration > 0 {
-					cluster.DnsRefreshRate = durationpb.New(args.dns.DNSRefreshRate.Duration)
-				}
+				cluster.DnsRefreshRate = durationpb.New(args.dns.DNSRefreshRate.Duration)
 			}
 			if args.dns.RespectDNSTTL != nil {
 				cluster.RespectDnsTtl = ptr.Deref(args.dns.RespectDNSTTL, true)

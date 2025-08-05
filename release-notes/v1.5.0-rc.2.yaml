@@ -1,0 +1,26 @@
+date: August 5, 2025
+
+# Changes that are expected to cause an incompatibility with previous versions, such as deletions or modifications to existing APIs.
+breaking changes: |
+  Removed `xds-translator` and `xds-server` values from the `runner` label in `watchable_subscribe_total`. Use `xds` instead.
+
+# Updates addressing vulnerabilities, security flaws, or compliance requirements.
+security updates: |
+  Disable automountServiceAccountToken for proxy and ratelimit deployments and serviceAccounts
+
+# New features or capabilities added in this release.
+new features: |
+  Added Gateway Listeners to the xDS listener metadata.
+
+bug fixes: |
+  Fixed an issue that controller panic when reloading configuration.
+  Reverted to use Store directly instead of HandleStore wrapper to improve GC cleanup.
+
+# Enhancements that improve performance.
+performance improvements: |
+
+# Deprecated features or APIs.
+deprecations: |
+
+# Other notable changes not covered by the above sections.
+Other changes: |

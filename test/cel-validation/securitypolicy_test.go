@@ -1315,12 +1315,8 @@ func TestSecurityPolicyTarget(t *testing.T) {
 										NumRetries: ptr.To(int32(3)),
 										PerRetry: &egv1a1.PerRetryPolicy{
 											BackOff: &egv1a1.BackOffPolicy{
-												BaseInterval: &metav1.Duration{
-													Duration: time.Second * 1,
-												},
-												MaxInterval: &metav1.Duration{
-													Duration: time.Second * 10,
-												},
+												BaseInterval: ptr.To(gwapiv1.Duration("1s")),
+												MaxInterval:  ptr.To(gwapiv1.Duration("10s")),
 											},
 										},
 										RetryOn: &egv1a1.RetryOn{
@@ -1366,9 +1362,7 @@ func TestSecurityPolicyTarget(t *testing.T) {
 									Retry: &egv1a1.Retry{
 										NumRetries: ptr.To(int32(3)),
 										PerRetry: &egv1a1.PerRetryPolicy{
-											Timeout: &metav1.Duration{
-												Duration: time.Second * 10,
-											},
+											Timeout: ptr.To(gwapiv1.Duration("10s")),
 										},
 										RetryOn: &egv1a1.RetryOn{
 											HTTPStatusCodes: []egv1a1.HTTPStatus{500},

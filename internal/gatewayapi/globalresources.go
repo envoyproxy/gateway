@@ -32,6 +32,11 @@ func (t *Translator) ProcessGlobalResources(resources *resource.Resources, xdsIR
 			xdsIRs[irKey].GlobalResources = &ir.GlobalResources{}
 		}
 		xdsIRs[irKey].GlobalResources.ProxyServiceCluster = rDest
+
+		// For merged gateways we only need to process once
+		if t.MergeGateways {
+			break
+		}
 	}
 
 	// Get the envoy client TLS secret. It is used for envoy to establish a TLS connection with control plane components,

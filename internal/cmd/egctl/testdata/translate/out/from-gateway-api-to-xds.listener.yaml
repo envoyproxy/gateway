@@ -143,6 +143,14 @@ xds:
                 useRemoteAddress: true
             name: default/eg/http
           maxConnectionsToAcceptPerSocketEvent: 1
+          metadata:
+            filterMetadata:
+              envoy-gateway:
+                resources:
+                - kind: Gateway
+                  name: eg
+                  namespace: default
+                  sectionName: http
           name: default/eg/http
           perConnectionBufferLimitBytes: 32768
     - activeState:
@@ -230,14 +238,14 @@ xds:
                   initialStreamWindowSize: 65536
                   maxConcurrentStreams: 100
                 httpFilters:
+                - name: envoy.filters.http.grpc_web
+                  typedConfig:
+                    '@type': type.googleapis.com/envoy.extensions.filters.http.grpc_web.v3.GrpcWeb
                 - name: envoy.filters.http.grpc_stats
                   typedConfig:
                     '@type': type.googleapis.com/envoy.extensions.filters.http.grpc_stats.v3.FilterConfig
                     emitFilterState: true
                     statsForAllMethods: true
-                - name: envoy.filters.http.grpc_web
-                  typedConfig:
-                    '@type': type.googleapis.com/envoy.extensions.filters.http.grpc_web.v3.GrpcWeb
                 - name: envoy.filters.http.router
                   typedConfig:
                     '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
@@ -255,6 +263,14 @@ xds:
                 useRemoteAddress: true
             name: default/eg/grpc
           maxConnectionsToAcceptPerSocketEvent: 1
+          metadata:
+            filterMetadata:
+              envoy-gateway:
+                resources:
+                - kind: Gateway
+                  name: eg
+                  namespace: default
+                  sectionName: grpc
           name: default/eg/grpc
           perConnectionBufferLimitBytes: 32768
     - activeState:

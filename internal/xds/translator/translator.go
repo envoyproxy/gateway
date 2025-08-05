@@ -276,6 +276,7 @@ func (t *Translator) processHTTPListenerXdsTranslation(
 	// The XDS translation is done in a best-effort manner, so we collect all
 	// errors and return them at the end.
 	var (
+		ownerGatewayListeners = make(map[string][]*ir.ResourceMetadata) // The set of Gateway HTTPListeners that own the xDS Listener
 		http3EnabledListeners = make(map[listenerKey]*ir.HTTP3Settings) // Map to track HTTP3 settings for listeners by address and port
 		errs                  error
 	)
@@ -401,6 +402,12 @@ func (t *Translator) processHTTPListenerXdsTranslation(
 			}
 		}
 
+		// Collect the metadata for the HTTPListener.
+		ownerGatewayListeners[tcpXDSListener.Name] = append(ownerGatewayListeners[tcpXDSListener.Name], httpListener.Metadata)
+		if http3Enabled {
+			ownerGatewayListeners[quicXDSListener.Name] = append(ownerGatewayListeners[quicXDSListener.Name], httpListener.Metadata)
+		}
+
 		// Add the secrets referenced by the listener's TLS configuration to the
 		// resource version table.
 		// 1:1 between IR TLSListenerConfig and xDS Secret
@@ -446,7 +453,7 @@ func (t *Translator) processHTTPListenerXdsTranslation(
 		routeCfgName = findXdsHTTPRouteConfigName(tcpXDSListener)
 		// If the route config name is not found, we use the current ir Listener name as the route config name to create a new route config.
 		if routeCfgName == "" {
-			routeCfgName = routeConfigName(httpListener)
+			routeCfgName = routeConfigName(httpListener, t.xdsNameSchemeV2())
 		}
 
 		// Create a route config if we have not found one yet
@@ -472,6 +479,14 @@ func (t *Translator) processHTTPListenerXdsTranslation(
 		// resource version table.
 		if err = patchResources(tCtx, httpListener.Routes); err != nil {
 			errs = errors.Join(errs, err)
+		}
+	}
+
+	// Add the owner Gateway Listeners to the xDS listeners' metadata.
+	for listenerName, ownerGatewayListeners := range ownerGatewayListeners {
+		xdsListener := findXdsListener(tCtx, listenerName)
+		if xdsListener != nil {
+			xdsListener.Metadata = buildXdsMetadataFromMultiple(ownerGatewayListeners)
 		}
 	}
 
@@ -504,7 +519,7 @@ func (t *Translator) addRouteToRouteConfig(
 			underscoredHostname := strings.ReplaceAll(httpRoute.Hostname, ".", "_")
 			// Allocate virtual host for this httpRoute.
 			vHost = &routev3.VirtualHost{
-				Name:     virtualHostName(httpListener, underscoredHostname),
+				Name:     virtualHostName(httpListener, underscoredHostname, t.xdsNameSchemeV2()),
 				Domains:  []string{httpRoute.Hostname},
 				Metadata: buildXdsMetadata(httpListener.Metadata),
 			}
@@ -656,7 +671,10 @@ func (t *Translator) addRouteToRouteConfig(
 	return errs
 }
 
-func virtualHostName(httpListener *ir.HTTPListener, underscoredHostname string) string {
+func virtualHostName(httpListener *ir.HTTPListener, underscoredHostname string, xdsNameSchemeV2 bool) string {
+	if xdsNameSchemeV2 {
+		return underscoredHostname
+	}
 	return fmt.Sprintf("%s/%s", httpListener.Name, underscoredHostname)
 }
 
@@ -1060,7 +1078,8 @@ func addXdsCluster(tCtx *types.ResourceVersionTable, args *xdsClusterArgs) error
 	preferLocal := ptr.Deref(args.loadBalancer, ir.LoadBalancer{}).PreferLocal
 	xdsEndpoints := buildXdsClusterLoadAssignment(args.name, args.settings, preferLocal)
 	for _, ds := range args.settings {
-		if ds.TLS != nil {
+		shouldValidateTLS := ds.TLS != nil && !ds.TLS.InsecureSkipVerify
+		if shouldValidateTLS {
 			// Create an SDS secret for the CA certificate - either with inline bytes or with a filesystem ref
 			secret := buildXdsUpstreamTLSCASecret(ds.TLS)
 			if err := tCtx.AddXdsResource(resourcev3.SecretType, secret); err != nil {
