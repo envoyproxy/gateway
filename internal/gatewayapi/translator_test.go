@@ -373,8 +373,15 @@ func TestTranslate(t *testing.T) {
 			} else {
 				for _, g := range resources.Gateways {
 					gSvc := svc
-					// Matches proxy.ExpectedResourceHashedName()
-					gSvc.Name = fmt.Sprintf("%s-%s", config.EnvoyPrefix, utils.GetHashedName(fmt.Sprintf("%s/%s", g.Namespace, g.Name), 48))
+					if gatewayNamespaceMode {
+						// In gateway namespace mode, the service name is the same as the gateway name
+						// and the namespace is the gateway namespace.
+						gSvc.Name = g.Name
+						gSvc.Namespace = g.Namespace
+					} else {
+						gSvc.Name = fmt.Sprintf("%s-%s", config.EnvoyPrefix, utils.GetHashedName(fmt.Sprintf("%s/%s", g.Namespace, g.Name), 48))
+					}
+
 					gSvc.Labels[OwningGatewayNameLabel] = g.Name
 					gSvc.Labels[OwningGatewayNamespaceLabel] = g.Namespace
 					gEndPtSlice := endPtSlice
