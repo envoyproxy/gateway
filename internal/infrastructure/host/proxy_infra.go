@@ -85,6 +85,8 @@ func (i *Infra) CreateOrUpdateProxyInfra(ctx context.Context, infra *ir.Infra) e
 // getTopologyInjectorDisabled checks whether the provided EnvoyGateway disables TopologyInjector
 func getTopologyInjectorDisabled(gw *egv1a1.EnvoyGateway) bool {
 	if gw == nil ||
+		gw.GetEnvoyGatewayProvider() == nil ||
+		gw.GetEnvoyGatewayProvider().GetEnvoyGatewayKubeProvider() == nil ||
 		gw.GetEnvoyGatewayProvider().GetEnvoyGatewayKubeProvider().TopologyInjector == nil ||
 		gw.GetEnvoyGatewayProvider().GetEnvoyGatewayKubeProvider().TopologyInjector.Disable == nil {
 		return false
