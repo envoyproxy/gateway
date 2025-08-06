@@ -171,6 +171,7 @@ static_resources:
                 address: {{ $sink.Address }}
                 port_value: {{ $sink.Port }}
   {{- end }}
+  {{- if not .TopologyInjectorDisabled }}
   - connect_timeout: 10s
     eds_cluster_config:
       eds_config:
@@ -188,6 +189,7 @@ static_resources:
                 min_cluster_size: '1'
     name: {{ .ServiceClusterName }}
     type: EDS
+  {{- end }}
   - connect_timeout: 10s
     load_assignment:
       cluster_name: xds_cluster

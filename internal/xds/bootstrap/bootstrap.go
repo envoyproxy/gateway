@@ -99,6 +99,8 @@ type bootstrapParameters struct {
 	GatewayNamespaceMode bool
 	// ServiceClusterName is the generated name of the Envoy ServiceCluster.
 	ServiceClusterName string
+	// TopologyInjectorDisabled controls whether to render the local cluster for use with zone aware routing
+	TopologyInjectorDisabled bool
 }
 
 type serverParameters struct {
@@ -136,16 +138,17 @@ type overloadManagerParameters struct {
 }
 
 type RenderBootstrapConfigOptions struct {
-	IPFamily             *egv1a1.IPFamily
-	ProxyMetrics         *egv1a1.ProxyMetrics
-	SdsConfig            SdsConfigPath
-	ServiceClusterName   *string
-	XdsServerHost        *string
-	XdsServerPort        *int32
-	AdminServerPort      *int32
-	StatsServerPort      *int32
-	MaxHeapSizeBytes     uint64
-	GatewayNamespaceMode bool
+	IPFamily                 *egv1a1.IPFamily
+	ProxyMetrics             *egv1a1.ProxyMetrics
+	SdsConfig                SdsConfigPath
+	ServiceClusterName       *string
+	XdsServerHost            *string
+	XdsServerPort            *int32
+	AdminServerPort          *int32
+	StatsServerPort          *int32
+	MaxHeapSizeBytes         uint64
+	GatewayNamespaceMode     bool
+	TopologyInjectorDisabled bool
 }
 
 type SdsConfigPath struct {
@@ -307,6 +310,7 @@ func GetRenderedBootstrapConfig(opts *RenderBootstrapConfigOptions) (string, err
 		if opts.ServiceClusterName != nil {
 			cfg.parameters.ServiceClusterName = *opts.ServiceClusterName
 		}
+		cfg.parameters.TopologyInjectorDisabled = opts.TopologyInjectorDisabled
 	}
 
 	if err := cfg.render(); err != nil {
