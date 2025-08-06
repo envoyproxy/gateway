@@ -218,6 +218,10 @@ func (r *gatewayAPIReconciler) subscribeToResources(ctx context.Context) {
 	r.subscriptions.extensionPolicyStatuses = r.resources.ExtensionPolicyStatuses.Subscribe(ctx)
 }
 
+func (r *gatewayAPIReconciler) backendAPIEnabled() bool {
+	return r.envoyGateway.ExtensionAPIs != nil && r.envoyGateway.ExtensionAPIs.EnableBackend
+}
+
 func byNamespaceSelectorEnabled(eg *egv1a1.EnvoyGateway) bool {
 	if eg.Provider == nil ||
 		eg.Provider.Kubernetes == nil ||
@@ -1866,7 +1870,7 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 	r.backendCRDExists = r.crdExists(mgr, resource.KindBackend, egv1a1.GroupVersion.String())
 	if !r.backendCRDExists {
 		r.log.Info("Backend CRD not found, skipping Backend watch")
-	} else if r.envoyGateway.ExtensionAPIs != nil && r.envoyGateway.ExtensionAPIs.EnableBackend {
+	} else if r.backendAPIEnabled() {
 		// Watch Backend CRUDs and process affected *Route objects.
 		backendPredicates := []predicate.TypedPredicate[*egv1a1.Backend]{
 			predicate.TypedGenerationChangedPredicate[*egv1a1.Backend]{},
