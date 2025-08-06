@@ -8,7 +8,6 @@ package gatewayapi
 import (
 	"fmt"
 	"net"
-	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -55,19 +54,7 @@ type RoutesTranslator interface {
 func (t *Translator) ProcessHTTPRoutes(httpRoutes []*gwapiv1.HTTPRoute, gateways []*GatewayContext, resources *resource.Resources, xdsIR resource.XdsIRMap) []*HTTPRouteContext {
 	var relevantHTTPRoutes []*HTTPRouteContext
 
-	// Initially, httpRoutes sort by creation timestamp
-	// or sort alphabetically by “{namespace}/{name}” if multiple routes share same timestamp.
-	// Later on, additional sorting based on matcher type and match length may occur.
-	sort.Slice(httpRoutes, func(i, j int) bool {
-		if httpRoutes[i].CreationTimestamp.Equal(&(httpRoutes[j].CreationTimestamp)) {
-			routeKeyI := fmt.Sprintf("%s/%s", httpRoutes[i].Namespace, httpRoutes[i].Name)
-			routeKeyJ := fmt.Sprintf("%s/%s", httpRoutes[j].Namespace, httpRoutes[j].Name)
-			return routeKeyI < routeKeyJ
-		}
-		// Not identical CreationTimestamps
-
-		return httpRoutes[i].CreationTimestamp.Before(&(httpRoutes[j].CreationTimestamp))
-	})
+	// HTTPRoutes are already sorted by the provider layer
 
 	for _, h := range httpRoutes {
 		if h == nil {
@@ -97,19 +84,7 @@ func (t *Translator) ProcessHTTPRoutes(httpRoutes []*gwapiv1.HTTPRoute, gateways
 func (t *Translator) ProcessGRPCRoutes(grpcRoutes []*gwapiv1.GRPCRoute, gateways []*GatewayContext, resources *resource.Resources, xdsIR resource.XdsIRMap) []*GRPCRouteContext {
 	var relevantGRPCRoutes []*GRPCRouteContext
 
-	// Initially, grpcRoutes sort by creation timestamp
-	// or sort alphabetically by “{namespace}/{name}” if multiple routes share same timestamp.
-	// Later on, additional sorting based on matcher type and match length may occur.
-	sort.Slice(grpcRoutes, func(i, j int) bool {
-		if grpcRoutes[i].CreationTimestamp.Equal(&(grpcRoutes[j].CreationTimestamp)) {
-			routeKeyI := fmt.Sprintf("%s/%s", grpcRoutes[i].Namespace, grpcRoutes[i].Name)
-			routeKeyJ := fmt.Sprintf("%s/%s", grpcRoutes[j].Namespace, grpcRoutes[j].Name)
-			return routeKeyI < routeKeyJ
-		}
-		// Not identical CreationTimestamps
-
-		return grpcRoutes[i].CreationTimestamp.Before(&(grpcRoutes[j].CreationTimestamp))
-	})
+	// GRPCRoutes are already sorted by the provider layer
 
 	for _, g := range grpcRoutes {
 		if g == nil {
@@ -941,19 +916,7 @@ func filterEGPrefix(in map[string]string) map[string]string {
 
 func (t *Translator) ProcessTLSRoutes(tlsRoutes []*gwapiv1a2.TLSRoute, gateways []*GatewayContext, resources *resource.Resources, xdsIR resource.XdsIRMap) []*TLSRouteContext {
 	var relevantTLSRoutes []*TLSRouteContext
-
-	// Initially, tlsRoutes sort by creation timestamp
-	// or sort alphabetically by “{namespace}/{name}” if multiple routes share same timestamp.
-	sort.Slice(tlsRoutes, func(i, j int) bool {
-		if tlsRoutes[i].CreationTimestamp.Equal(&(tlsRoutes[j].CreationTimestamp)) {
-			routeKeyI := fmt.Sprintf("%s/%s", tlsRoutes[i].Namespace, tlsRoutes[i].Name)
-			routeKeyJ := fmt.Sprintf("%s/%s", tlsRoutes[j].Namespace, tlsRoutes[j].Name)
-			return routeKeyI < routeKeyJ
-		}
-		// Not identical CreationTimestamps
-
-		return tlsRoutes[i].CreationTimestamp.Before(&(tlsRoutes[j].CreationTimestamp))
-	})
+	// TLSRoutes are already sorted by the provider layer
 
 	for _, tls := range tlsRoutes {
 		if tls == nil {
@@ -1100,19 +1063,7 @@ func (t *Translator) ProcessUDPRoutes(udpRoutes []*gwapiv1a2.UDPRoute, gateways 
 	xdsIR resource.XdsIRMap,
 ) []*UDPRouteContext {
 	var relevantUDPRoutes []*UDPRouteContext
-
-	// Initially, udpRoutes sort by creation timestamp
-	// or sort alphabetically by “{namespace}/{name}” if multiple routes share same timestamp.
-	sort.Slice(udpRoutes, func(i, j int) bool {
-		if udpRoutes[i].CreationTimestamp.Equal(&(udpRoutes[j].CreationTimestamp)) {
-			routeKeyI := fmt.Sprintf("%s/%s", udpRoutes[i].Namespace, udpRoutes[i].Name)
-			routeKeyJ := fmt.Sprintf("%s/%s", udpRoutes[j].Namespace, udpRoutes[j].Name)
-			return routeKeyI < routeKeyJ
-		}
-		// Not identical CreationTimestamps
-
-		return udpRoutes[i].CreationTimestamp.Before(&(udpRoutes[j].CreationTimestamp))
-	})
+	// UDPRoutes are already sorted by the provider layer
 
 	for _, u := range udpRoutes {
 		if u == nil {
@@ -1263,19 +1214,7 @@ func (t *Translator) ProcessTCPRoutes(tcpRoutes []*gwapiv1a2.TCPRoute, gateways 
 	xdsIR resource.XdsIRMap,
 ) []*TCPRouteContext {
 	var relevantTCPRoutes []*TCPRouteContext
-
-	// Initially, tcpRoutes sort by creation timestamp
-	// or sort alphabetically by “{namespace}/{name}” if multiple routes share same timestamp.
-	sort.Slice(tcpRoutes, func(i, j int) bool {
-		if tcpRoutes[i].CreationTimestamp.Equal(&(tcpRoutes[j].CreationTimestamp)) {
-			routeKeyI := fmt.Sprintf("%s/%s", tcpRoutes[i].Namespace, tcpRoutes[i].Name)
-			routeKeyJ := fmt.Sprintf("%s/%s", tcpRoutes[j].Namespace, tcpRoutes[j].Name)
-			return routeKeyI < routeKeyJ
-		}
-		// Not identical CreationTimestamps
-
-		return tcpRoutes[i].CreationTimestamp.Before(&(tcpRoutes[j].CreationTimestamp))
-	})
+	// TCPRoutes are already sorted by the provider layer
 
 	for _, tcp := range tcpRoutes {
 		if tcp == nil {

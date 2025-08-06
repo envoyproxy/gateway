@@ -7,8 +7,6 @@ package gatewayapi
 
 import (
 	"errors"
-	"fmt"
-	"sort"
 
 	"golang.org/x/exp/maps"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -169,19 +167,7 @@ func (t *Translator) Translate(resources *resource.Resources) (*TranslateResult,
 	// Get Gateways belonging to our GatewayClass.
 	acceptedGateways, failedGateways := t.GetRelevantGateways(resources)
 
-	// Sort gateways based on timestamp.
-	// Initially, acceptedGateways sort by creation timestamp
-	// or sort alphabetically by “{namespace}/{name}” if multiple gateways share same timestamp.
-	sort.Slice(acceptedGateways, func(i, j int) bool {
-		if acceptedGateways[i].CreationTimestamp.Equal(&(acceptedGateways[j].CreationTimestamp)) {
-			gatewayKeyI := fmt.Sprintf("%s/%s", acceptedGateways[i].Namespace, acceptedGateways[i].Name)
-			gatewayKeyJ := fmt.Sprintf("%s/%s", acceptedGateways[j].Namespace, acceptedGateways[j].Name)
-			return gatewayKeyI < gatewayKeyJ
-		}
-		// Not identical CreationTimestamps
-
-		return acceptedGateways[i].CreationTimestamp.Before(&(acceptedGateways[j].CreationTimestamp))
-	})
+	// Gateways are already sorted by the provider layer
 
 	// Build IR maps.
 	xdsIR, infraIR := t.InitIRs(acceptedGateways)

@@ -79,10 +79,10 @@ xdsIR:
       - name: envoy-gateway-gateway-1-http
         operation:
           op: replace
-          path: /ignore_global_conn_limit
-          value: "true"
+          path: /per_connection_buffer_limit_bytes
+          value: "1024"
         type: type.googleapis.com/envoy.config.listener.v3.Listener
-      name: edit-ignore-global-limit
+      name: edit-conn-buffer-bytes
       namespace: envoy-gateway
       status:
         ancestors:
@@ -101,10 +101,10 @@ xdsIR:
       - name: envoy-gateway-gateway-1-http
         operation:
           op: replace
-          path: /per_connection_buffer_limit_bytes
-          value: "1024"
+          path: /ignore_global_conn_limit
+          value: "true"
         type: type.googleapis.com/envoy.config.listener.v3.Listener
-      name: edit-conn-buffer-bytes
+      name: edit-ignore-global-limit
       namespace: envoy-gateway
       status:
         ancestors:
