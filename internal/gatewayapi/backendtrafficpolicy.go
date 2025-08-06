@@ -42,19 +42,7 @@ func (t *Translator) ProcessBackendTrafficPolicies(resources *resource.Resources
 	res := make([]*egv1a1.BackendTrafficPolicy, 0, len(resources.BackendTrafficPolicies))
 
 	backendTrafficPolicies := resources.BackendTrafficPolicies
-
-	// Initially, backendTrafficPolicies sort by creation timestamp
-	// or sort alphabetically by “{namespace}/{name}” if multiple policies share same timestamp.
-	sort.Slice(backendTrafficPolicies, func(i, j int) bool {
-		if backendTrafficPolicies[i].CreationTimestamp.Equal(&(backendTrafficPolicies[j].CreationTimestamp)) {
-			policyKeyI := fmt.Sprintf("%s/%s", backendTrafficPolicies[i].Namespace, backendTrafficPolicies[i].Name)
-			policyKeyJ := fmt.Sprintf("%s/%s", backendTrafficPolicies[j].Namespace, backendTrafficPolicies[j].Name)
-			return policyKeyI < policyKeyJ
-		}
-		// Not identical CreationTimestamps
-
-		return backendTrafficPolicies[i].CreationTimestamp.Before(&(backendTrafficPolicies[j].CreationTimestamp))
-	})
+	// BackendTrafficPolicies are already sorted by the provider layer
 
 	// First build a map out of the routes and gateways for faster lookup since users might have thousands of routes or more.
 	routeMap := map[policyTargetRouteKey]*policyRouteTargetContext{}

@@ -508,6 +508,13 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 		}
 	}
 
+	// Sort before storing to:
+	// 1. ensure identical resources are not retranslated
+	//    and updates are avoided by the watchable layer
+	// 2. ensure gateway-api layer receives resources in order
+	//    which impacts translation output
+	gwcResources.Sort()
+
 	// Store the Gateway Resources for the GatewayClass.
 	// The Store is triggered even when there are no Gateways associated to the
 	// GatewayClass. This would happen in case the last Gateway is removed and the

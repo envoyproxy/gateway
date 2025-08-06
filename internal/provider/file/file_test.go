@@ -290,7 +290,6 @@ func mustUnmarshal(t *testing.T, path string, out interface{}) {
 
 func cmpResources(t *testing.T, x, y interface{}) {
 	opts := []cmp.Option{
-		cmpopts.IgnoreFields(resource.Resources{}, "serviceMap"),
 		cmpopts.IgnoreFields(metav1.ObjectMeta{}, "ResourceVersion"),
 		cmpopts.EquateEmpty(),
 	}
