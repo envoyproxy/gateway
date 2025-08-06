@@ -1616,6 +1616,24 @@ func TestEnvoyProxyProvider(t *testing.T) {
 			wantErrors: []string{},
 		},
 		{
+			desc: "valid: image set with digest, imageRepository not set",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					Provider: &egv1a1.EnvoyProxyProvider{
+						Type: egv1a1.ProviderTypeKubernetes,
+						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
+							EnvoyDeployment: &egv1a1.KubernetesDeploymentSpec{
+								Container: &egv1a1.KubernetesContainerSpec{
+									Image: ptr.To("envoyproxy/envoy:v1.2.3@sha256:da99c47f08546492d19973920dc76334c592f59ad5b732a514320d959db9fa40"),
+								},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
 			desc: "valid: imageRepository set without tag, image not set",
 			mutate: func(envoy *egv1a1.EnvoyProxy) {
 				envoy.Spec = egv1a1.EnvoyProxySpec{
