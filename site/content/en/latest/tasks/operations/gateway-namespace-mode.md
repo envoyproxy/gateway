@@ -2,14 +2,6 @@
 title: "Gateway Namespace Mode"
 ---
 
-{{% alert title="Notice" color="warning" %}}
-
-Gateway Namespace Mode is currently an **alpha** feature. We recommend against using it in production workloads until it reaches beta status.
-
-For status updates or to provide feedback, please follow our [GitHub issues](https://github.com/envoyproxy/gateway/issues).
-
-{{% /alert %}}
-
 ## Overview
 
 In standard deployment mode, Envoy Gateway creates all data plane resources in the controller namespace (typically `envoy-gateway-system`).
