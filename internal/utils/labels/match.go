@@ -21,7 +21,8 @@ func SelectorMatch(selector *metav1.LabelSelector, labels map[string]string) (bo
 	return s.Matches(klabels.Set(labels)), nil
 }
 
-func Matches(left, right map[string]string) (bool, error) {
-	s := metav1.SetAsLabelSelector(left)
-	return SelectorMatch(s, right)
+// Matches return when target labels match the selector
+func Matches(selector, target map[string]string) (bool, error) {
+	s := metav1.SetAsLabelSelector(selector)
+	return SelectorMatch(s, target)
 }
