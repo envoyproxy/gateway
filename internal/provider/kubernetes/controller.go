@@ -225,7 +225,11 @@ func (r *gatewayAPIReconciler) backendAPIDisabled() bool {
 		return true
 	}
 
-	return r.envoyGateway.ExtensionAPIs == nil || !r.envoyGateway.ExtensionAPIs.EnableBackend
+	if r.envoyGateway == nil || r.envoyGateway.ExtensionAPIs == nil {
+		return true
+	}
+
+	return !r.envoyGateway.ExtensionAPIs.EnableBackend
 }
 
 func byNamespaceSelectorEnabled(eg *egv1a1.EnvoyGateway) bool {
