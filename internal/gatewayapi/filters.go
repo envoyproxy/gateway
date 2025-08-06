@@ -51,7 +51,8 @@ type HTTPFilterIR struct {
 	RedirectResponse    *ir.Redirect
 	CredentialInjection *ir.CredentialInjection
 
-	URLRewrite *ir.URLRewrite
+	URLRewrite    *ir.URLRewrite
+	HeaderMatches []*ir.StringMatch
 
 	AddRequestHeaders    []ir.AddHeader
 	RemoveRequestHeaders []string
@@ -893,6 +894,15 @@ func (t *Translator) processExtensionRefHTTPFilter(extFilter *gwapiv1.LocalObjec
 						Credential: secretBytes,
 					}
 					filterContext.CredentialInjection = injection
+				}
+
+				if hrf.Spec.HeaderMatches != nil {
+					for _, headerMatch := range hrf.Spec.HeaderMatches {
+						filterContext.HeaderMatches = append(filterContext.HeaderMatches, &ir.StringMatch{
+							Name:      headerMatch.Name,
+							SafeRegex: headerMatch.SafeRegex,
+						})
+					}
 				}
 			}
 		}

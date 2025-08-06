@@ -544,6 +544,9 @@ func applyHTTPFiltersContextToIRRoute(httpFiltersContext *HTTPFiltersContext, ir
 	if httpFiltersContext.CredentialInjection != nil {
 		irRoute.CredentialInjection = httpFiltersContext.CredentialInjection
 	}
+	if httpFiltersContext.HeaderMatches != nil {
+		irRoute.HeaderMatches = append(irRoute.HeaderMatches, httpFiltersContext.HeaderMatches...)
+	}
 	if len(httpFiltersContext.AddRequestHeaders) > 0 {
 		irRoute.AddRequestHeaders = httpFiltersContext.AddRequestHeaders
 	}

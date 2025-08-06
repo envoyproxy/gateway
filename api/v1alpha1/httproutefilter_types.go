@@ -41,6 +41,18 @@ type HTTPRouteFilterSpec struct {
 	DirectResponse *HTTPDirectResponseFilter `json:"directResponse,omitempty"`
 	// +optional
 	CredentialInjection *HTTPCredentialInjectionFilter `json:"credentialInjection,omitempty"`
+	// +optional
+	HeaderMatches []HTTPHeaderMatchFilter `json:"headerMatches,omitempty"`
+}
+
+// HTTPHeaderMatchFilter defines the configuration to match the request header.
+type HTTPHeaderMatchFilter struct {
+	// Name is the name of the header to match.
+	// +kubebuilder:validation:Required
+	Name string `json:"name"`
+	// SafeRegex is the regex to match the header value.
+	// +optional
+	SafeRegex *string `json:"safeRegex,omitempty"`
 }
 
 // HTTPURLRewriteFilter define rewrites of HTTP URL components such as path and host

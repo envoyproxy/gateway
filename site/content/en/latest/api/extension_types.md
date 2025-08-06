@@ -2302,6 +2302,21 @@ _Appears in:_
 | `remove` | _string array_ |  false  |  | Remove the given header(s) from the HTTP request before the action. The<br />value of Remove is a list of HTTP header names. Note that the header<br />names are case-insensitive (see<br />https://datatracker.ietf.org/doc/html/rfc2616#section-4.2).<br />Input:<br />  GET /foo HTTP/1.1<br />  my-header1: foo<br />  my-header2: bar<br />  my-header3: baz<br />Config:<br />  remove: ["my-header1", "my-header3"]<br />Output:<br />  GET /foo HTTP/1.1<br />  my-header2: bar |
 
 
+#### HTTPHeaderMatchFilter
+
+
+
+HTTPHeaderMatchFilter defines the configuration to match the request header.
+
+_Appears in:_
+- [HTTPRouteFilterSpec](#httproutefilterspec)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `name` | _string_ |  true  |  | Name is the name of the header to match. |
+| `safeRegex` | _string_ |  false  |  | SafeRegex is the regex to match the header value. |
+
+
 #### HTTPHostnameModifier
 
 
@@ -2392,6 +2407,7 @@ _Appears in:_
 | `urlRewrite` | _[HTTPURLRewriteFilter](#httpurlrewritefilter)_ |  false  |  |  |
 | `directResponse` | _[HTTPDirectResponseFilter](#httpdirectresponsefilter)_ |  false  |  |  |
 | `credentialInjection` | _[HTTPCredentialInjectionFilter](#httpcredentialinjectionfilter)_ |  false  |  |  |
+| `headerMatches` | _[HTTPHeaderMatchFilter](#httpheadermatchfilter) array_ |  false  |  |  |
 
 
 #### HTTPStatus

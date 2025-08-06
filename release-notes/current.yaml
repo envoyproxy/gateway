@@ -8,6 +8,7 @@ security updates: |
 
 # New features or capabilities added in this release.
 new features: |
+  Added support for header matches in HTTPRouteFilter.
 
 bug fixes: |
 

@@ -202,6 +202,21 @@ spec:
                       If unset, defaults to 200.
                     type: integer
                 type: object
+              headerMatches:
+                items:
+                  description: HTTPHeaderMatchFilter defines the configuration to
+                    match the request header.
+                  properties:
+                    name:
+                      description: Name is the name of the header to match.
+                      type: string
+                    safeRegex:
+                      description: SafeRegex is the regex to match the header value.
+                      type: string
+                  required:
+                  - name
+                  type: object
+                type: array
               urlRewrite:
                 description: HTTPURLRewriteFilter define rewrites of HTTP URL components
                   such as path and host
