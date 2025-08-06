@@ -72,7 +72,7 @@ func (i *Infra) CreateOrUpdateProxyInfra(ctx context.Context, infra *ir.Infra) e
 		XdsServerHost:            ptr.To("0.0.0.0"),
 		AdminServerPort:          ptr.To(int32(0)),
 		StatsServerPort:          ptr.To(int32(0)),
-		TopologyInjectorDisabled: getTopologyInjectorDisabled(i.EnvoyGateway),
+		TopologyInjectorDisabled: i.EnvoyGateway.TopologyInjectorDisabled(),
 	}
 	args, err := common.BuildProxyArgs(proxyInfra, proxyConfig.Spec.Shutdown, bootstrapConfigOptions, proxyName, false)
 	if err != nil {
@@ -80,18 +80,6 @@ func (i *Infra) CreateOrUpdateProxyInfra(ctx context.Context, infra *ir.Infra) e
 	}
 	i.runEnvoy(ctx, os.Stdout, proxyName, args)
 	return nil
-}
-
-// getTopologyInjectorDisabled checks whether the provided EnvoyGateway disables TopologyInjector
-func getTopologyInjectorDisabled(gw *egv1a1.EnvoyGateway) bool {
-	if gw == nil ||
-		gw.GetEnvoyGatewayProvider() == nil ||
-		gw.GetEnvoyGatewayProvider().GetEnvoyGatewayKubeProvider() == nil ||
-		gw.GetEnvoyGatewayProvider().GetEnvoyGatewayKubeProvider().TopologyInjector == nil ||
-		gw.GetEnvoyGatewayProvider().GetEnvoyGatewayKubeProvider().TopologyInjector.Disable == nil {
-		return false
-	}
-	return *gw.GetEnvoyGatewayProvider().GetEnvoyGatewayKubeProvider().TopologyInjector.Disable
 }
 
 // runEnvoy runs the Envoy process with the given arguments and name in a separate goroutine.

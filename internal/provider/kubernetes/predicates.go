@@ -943,10 +943,7 @@ func (r *gatewayAPIReconciler) isRouteReferencingHTTPRouteFilter(nsName *types.N
 // isProxyServiceCluster returns true if the provided labels reference an owning Gateway or GatewayClass
 func (r *gatewayAPIReconciler) isProxyServiceCluster(labels map[string]string) bool {
 	// Skip processing if topology injector is disabled
-	if r.envoyGateway == nil ||
-		r.envoyGateway.GetEnvoyGatewayProvider() == nil ||
-		r.envoyGateway.GetEnvoyGatewayProvider().GetEnvoyGatewayKubeProvider() == nil ||
-		r.envoyGateway.GetEnvoyGatewayProvider().GetEnvoyGatewayKubeProvider().TopologyInjector == nil {
+	if r.envoyGateway.TopologyInjectorDisabled() {
 		return false
 	}
 

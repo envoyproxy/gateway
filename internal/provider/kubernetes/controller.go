@@ -1475,10 +1475,7 @@ func (r *gatewayAPIReconciler) processGateways(ctx context.Context, managedGC *g
 
 func (r *gatewayAPIReconciler) processServiceCluster(resourceName string, resourceMap *resourceMappings) {
 	// Skip processing if topology injector is disabled
-	if r.envoyGateway == nil ||
-		r.envoyGateway.GetEnvoyGatewayProvider() == nil ||
-		r.envoyGateway.GetEnvoyGatewayProvider().GetEnvoyGatewayKubeProvider() == nil ||
-		r.envoyGateway.GetEnvoyGatewayProvider().GetEnvoyGatewayKubeProvider().TopologyInjector == nil {
+	if r.envoyGateway.TopologyInjectorDisabled() {
 		return
 	}
 
