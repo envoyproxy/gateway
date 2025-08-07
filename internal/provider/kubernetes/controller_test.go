@@ -1247,6 +1247,21 @@ func TestProcessSecurityPolicyObjectRefs(t *testing.T) {
 	}
 }
 
+func newGatewayAPIReconciler(logger logging.Logger) *gatewayAPIReconciler {
+	return &gatewayAPIReconciler{
+		log:              logger,
+		classController:  "some-gateway-class",
+		backendCRDExists: true,
+		envoyGateway: &egv1a1.EnvoyGateway{
+			EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
+				ExtensionAPIs: &egv1a1.ExtensionAPISettings{
+					EnableBackend: true,
+				},
+			},
+		},
+	}
+}
+
 func TestProcessBackendRefs(t *testing.T) {
 	ns := "default"
 	ctb := test.GetClusterTrustBundle("fake-ctb")
@@ -1341,12 +1356,7 @@ func TestProcessBackendRefs(t *testing.T) {
 			objs := []client.Object{tc.backend, ctb, secret, cm}
 			logger := logging.DefaultLogger(os.Stdout, egv1a1.LogLevelInfo)
 
-			r := &gatewayAPIReconciler{
-				log:              logger,
-				classController:  "some-gateway-class",
-				backendCRDExists: true,
-			}
-
+			r := newGatewayAPIReconciler(logger)
 			r.client = fakeclient.NewClientBuilder().
 				WithScheme(envoygateway.GetScheme()).
 				WithObjects(objs...).
