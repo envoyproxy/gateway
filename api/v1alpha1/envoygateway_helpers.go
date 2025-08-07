@@ -109,6 +109,16 @@ func (e *EnvoyGateway) GatewayNamespaceMode() bool {
 		*e.Provider.Kubernetes.Deploy.Type == KubernetesDeployModeTypeGatewayNamespace
 }
 
+// TopologyInjectorDisabled checks whether the provided EnvoyGateway disables TopologyInjector
+func (e *EnvoyGateway) TopologyInjectorDisabled() bool {
+	if e.Provider != nil &&
+		e.Provider.Kubernetes != nil &&
+		e.Provider.Kubernetes.TopologyInjector != nil {
+		return ptr.Deref(e.Provider.Kubernetes.TopologyInjector.Disable, false)
+	}
+	return false
+}
+
 // defaultRuntimeFlags are the default runtime flags for Envoy Gateway.
 var defaultRuntimeFlags = map[RuntimeFlag]bool{
 	XDSNameSchemeV2: false,
