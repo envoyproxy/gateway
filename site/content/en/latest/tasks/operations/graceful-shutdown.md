@@ -24,11 +24,16 @@ The shutdown manager sidecar coordinates graceful connection draining during pod
 
 ## Configuration
 
-Graceful shutdown behavior includes default values that can be overridden using the EnvoyProxy resource referenced from a Gateway via `infrastructure.parametersRef`.
+Graceful shutdown behavior includes default values that can be overridden using the EnvoyProxy resource. The EnvoyProxy resource can be referenced in two ways:
+1. **Gateway-level**: Referenced from a Gateway via `infrastructure.parametersRef`
+2. **GatewayClass-level**: Referenced from a GatewayClass via `parametersRef`
 
 **Default Values:**
 - `drainTimeout`: 60 seconds - Maximum time for connection draining
 - `minDrainDuration`: 10 seconds - Minimum wait before allowing exit
+
+{{< tabpane text=true >}}
+{{% tab header="Gateway-Level Configuration" %}}
 
 ```yaml
 apiVersion: gateway.networking.k8s.io/v1
@@ -56,3 +61,31 @@ spec:
     drainTimeout: "90s"      # Override default 60s
     minDrainDuration: "15s"  # Override default 10s
 ```
+
+{{% /tab %}}
+{{% tab header="GatewayClass-Level Configuration" %}}
+
+```yaml
+apiVersion: gateway.networking.k8s.io/v1
+kind: GatewayClass
+metadata:
+  name: eg
+spec:
+  controllerName: gateway.envoyproxy.io/gatewayclass-controller
+  parametersRef:
+    group: gateway.envoyproxy.io
+    kind: EnvoyProxy
+    name: graceful-shutdown-config
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyProxy
+metadata:
+  name: graceful-shutdown-config
+spec:
+  shutdown:
+    drainTimeout: "90s"      # Override default 60s
+    minDrainDuration: "15s"  # Override default 10s
+```
+
+{{% /tab %}}
+{{< /tabpane >}}
