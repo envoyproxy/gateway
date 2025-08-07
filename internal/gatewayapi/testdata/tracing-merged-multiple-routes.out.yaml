@@ -255,9 +255,8 @@ xdsIR:
       - '*.envoyproxy.io'
       isHTTP2: false
       metadata:
-        kind: Gateway
-        name: gateway-1
-        namespace: envoy-gateway
+        kind: GatewayClass
+        name: envoy-gateway-class
         sectionName: http
       name: envoy-gateway/gateway-1/http
       path:
@@ -300,9 +299,8 @@ xdsIR:
       - '*'
       isHTTP2: false
       metadata:
-        kind: Gateway
-        name: gateway-2
-        namespace: envoy-gateway
+        kind: GatewayClass
+        name: envoy-gateway-class
         sectionName: http-2
       name: envoy-gateway/gateway-2/http-2
       path:
@@ -315,9 +313,8 @@ xdsIR:
       - example.com
       isHTTP2: false
       metadata:
-        kind: Gateway
-        name: gateway-2
-        namespace: envoy-gateway
+        kind: GatewayClass
+        name: envoy-gateway-class
         sectionName: http-3
       name: envoy-gateway/gateway-2/http-3
       path:

@@ -63,7 +63,7 @@ type Translator struct {
 
 	// GatewayClassName is the name of the GatewayClass
 	// to process Gateways for.
-	GatewayClassName gwapiv1.ObjectName
+	GatewayClass *gwapiv1.GatewayClass
 
 	// GlobalRateLimitEnabled is true when global
 	// ratelimiting has been configured by the admin.
@@ -100,7 +100,7 @@ type Translator struct {
 	WasmCache wasm.Cache
 
 	// ListenerPortShiftDisabled disables translating the
-	// gateway listener port into a non privileged port
+	// gateway listener port into a non-privileged port
 	// and reuses the specified value.
 	ListenerPortShiftDisabled bool
 }
@@ -203,7 +203,7 @@ func (t *Translator) Translate(resources *resource.Resources) (*TranslateResult,
 	clientTrafficPolicies := t.ProcessClientTrafficPolicies(resources, acceptedGateways, xdsIR, infraIR)
 
 	// Process BackendTrafficPolicies
-	routes := []RouteContext{}
+	var routes []RouteContext
 	for _, h := range httpRoutes {
 		routes = append(routes, h)
 	}
@@ -278,7 +278,7 @@ func (t *Translator) GetRelevantGateways(resources *resource.Resources) (
 			panic("received nil gateway")
 		}
 
-		if gateway.Spec.GatewayClassName == t.GatewayClassName {
+		if string(gateway.Spec.GatewayClassName) == t.GatewayClass.Name {
 			gc := &GatewayContext{
 				Gateway: gateway.DeepCopy(),
 			}
@@ -309,7 +309,7 @@ func (t *Translator) InitIRs(gateways []*GatewayContext) (map[string]*ir.Xds, ma
 
 		irKey := t.IRKey(types.NamespacedName{Namespace: gateway.Namespace, Name: gateway.Name})
 		if t.MergeGateways {
-			maps.Copy(labels, GatewayClassOwnerLabel(string(t.GatewayClassName)))
+			maps.Copy(labels, GatewayClassOwnerLabel(t.GatewayClass.Name))
 			gwInfraIR.Proxy.GetProxyMetadata().Labels = labels
 		} else {
 			maps.Copy(labels, GatewayOwnerLabels(gateway.Namespace, gateway.Name))
@@ -320,7 +320,7 @@ func (t *Translator) InitIRs(gateways []*GatewayContext) (map[string]*ir.Xds, ma
 		gwInfraIR.Proxy.Namespace = t.ControllerNamespace
 		gwInfraIR.Proxy.GetProxyMetadata().OwnerReference = &ir.ResourceMetadata{
 			Kind: resource.KindGatewayClass,
-			Name: string(t.GatewayClassName),
+			Name: t.GatewayClass.Name,
 		}
 		if t.GatewayNamespaceMode {
 			gwInfraIR.Proxy.Name = gateway.Name
@@ -340,7 +340,7 @@ func (t *Translator) InitIRs(gateways []*GatewayContext) (map[string]*ir.Xds, ma
 
 func (t *Translator) IRKey(gatewayNN types.NamespacedName) string {
 	if t.MergeGateways {
-		return string(t.GatewayClassName)
+		return t.GatewayClass.Name
 	}
 	return irStringKey(gatewayNN.Namespace, gatewayNN.Name)
 }
@@ -387,11 +387,6 @@ func infrastructureLabels(gtw *gwapiv1.Gateway) map[string]string {
 }
 
 // XdsIR and InfraIR map keys by default are {GatewayNamespace}/{GatewayName}, but if mergeGateways is set, they are merged under {GatewayClassName} key.
-func (t *Translator) getIRKey(gateway *gwapiv1.Gateway) string {
-	irKey := irStringKey(gateway.Namespace, gateway.Name)
-	if t.MergeGateways {
-		return string(t.GatewayClassName)
-	}
-
-	return irKey
+func (t *Translator) getIRKey(gtw *gwapiv1.Gateway) string {
+	return t.IRKey(types.NamespacedName{Namespace: gtw.Namespace, Name: gtw.Name})
 }

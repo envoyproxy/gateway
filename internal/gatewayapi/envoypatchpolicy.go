@@ -32,7 +32,7 @@ func (t *Translator) ProcessEnvoyPatchPolicies(envoyPatchPolicies []*egv1a1.Envo
 
 		if t.MergeGateways {
 			targetKind = resource.KindGatewayClass
-			irKey = string(t.GatewayClassName)
+			irKey = t.GatewayClass.Name
 
 			ancestorRefs = []gwapiv1a2.ParentReference{
 				{

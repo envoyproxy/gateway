@@ -5,7 +5,6 @@ envoyProxyForGatewayClass:
     namespace: envoy-gateway
     name: test
   spec:
-    mergeGateways: true
     telemetry:
       tracing:
         samplingFraction:

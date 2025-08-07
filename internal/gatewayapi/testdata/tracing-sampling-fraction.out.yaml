@@ -185,7 +185,7 @@ httpRoutes:
         namespace: envoy-gateway
         sectionName: http-3
 infraIR:
-  envoy-gateway-class:
+  envoy-gateway/gateway-1:
     proxy:
       config:
         apiVersion: gateway.envoyproxy.io/v1alpha1
@@ -196,7 +196,6 @@ infraIR:
           namespace: envoy-gateway
         spec:
           logging: {}
-          mergeGateways: true
           telemetry:
             tracing:
               provider:
@@ -215,6 +214,37 @@ infraIR:
           name: http-80
           protocol: HTTP
           servicePort: 80
+      metadata:
+        labels:
+          gateway.envoyproxy.io/owning-gateway-name: gateway-1
+          gateway.envoyproxy.io/owning-gateway-namespace: envoy-gateway
+        ownerReference:
+          kind: GatewayClass
+          name: envoy-gateway-class
+      name: envoy-gateway/gateway-1
+      namespace: envoy-gateway-system
+  envoy-gateway/gateway-2:
+    proxy:
+      config:
+        apiVersion: gateway.envoyproxy.io/v1alpha1
+        kind: EnvoyProxy
+        metadata:
+          creationTimestamp: null
+          name: test
+          namespace: envoy-gateway
+        spec:
+          logging: {}
+          telemetry:
+            tracing:
+              provider:
+                host: otel-collector.monitoring.svc.cluster.local
+                port: 4317
+                type: OpenTelemetry
+              samplingFraction:
+                denominator: 100
+                numerator: 1
+        status: {}
+      listeners:
       - address: null
         name: envoy-gateway/gateway-2/http-2
         ports:
@@ -224,32 +254,18 @@ infraIR:
           servicePort: 8888
       metadata:
         labels:
-          gateway.envoyproxy.io/owning-gatewayclass: envoy-gateway-class
+          gateway.envoyproxy.io/owning-gateway-name: gateway-2
+          gateway.envoyproxy.io/owning-gateway-namespace: envoy-gateway
         ownerReference:
           kind: GatewayClass
           name: envoy-gateway-class
-      name: envoy-gateway-class
+      name: envoy-gateway/gateway-2
       namespace: envoy-gateway-system
 xdsIR:
-  envoy-gateway-class:
+  envoy-gateway/gateway-1:
     accessLog:
       json:
       - path: /dev/stdout
-    globalResources:
-      proxyServiceCluster:
-        name: envoy-gateway-class
-        settings:
-        - addressType: IP
-          endpoints:
-          - host: 7.6.5.4
-            port: 8080
-            zone: zone1
-          metadata:
-            name: envoy-envoy-gateway-class-3b1df594
-            namespace: envoy-gateway-system
-            sectionName: "8080"
-          name: envoy-gateway-class
-          protocol: TCP
     http:
     - address: 0.0.0.0
       externalPort: 80
@@ -296,6 +312,48 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /
+    readyListener:
+      address: 0.0.0.0
+      ipFamily: IPv4
+      path: /ready
+      port: 19003
+    tracing:
+      authority: otel-collector.monitoring.svc.cluster.local
+      destination:
+        metadata:
+          kind: EnvoyProxy
+          name: test
+          namespace: envoy-gateway
+        name: tracing
+        settings:
+        - addressType: FQDN
+          endpoints:
+          - host: otel-collector.monitoring.svc.cluster.local
+            port: 4317
+          name: tracing/backend/-1
+          protocol: GRPC
+          weight: 1
+      provider:
+        host: otel-collector.monitoring.svc.cluster.local
+        port: 4317
+        type: OpenTelemetry
+      samplingRate: 0.01
+      serviceName: gateway-1.envoy-gateway
+  envoy-gateway/gateway-2:
+    accessLog:
+      json:
+      - path: /dev/stdout
+    globalResources:
+      proxyServiceCluster:
+        name: envoy-gateway/gateway-2
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-2
+          protocol: TCP
+    http:
     - address: 0.0.0.0
       externalPort: 8888
       hostnames:
@@ -382,4 +440,4 @@ xdsIR:
         port: 4317
         type: OpenTelemetry
       samplingRate: 0.01
-      serviceName: envoy-gateway-class
+      serviceName: gateway-2.envoy-gateway

@@ -290,9 +290,8 @@ xdsIR:
       - '*.192.168.0.15.nip.io'
       isHTTP2: false
       metadata:
-        kind: Gateway
-        name: gateway-1
-        namespace: default
+        kind: GatewayClass
+        name: envoy-gateway-class
         sectionName: http
       name: default/gateway-1/http
       path:
@@ -335,9 +334,8 @@ xdsIR:
       - qccbahgo.qccbahgo
       isHTTP2: false
       metadata:
-        kind: Gateway
-        name: mfqjpuycbgjrtdww
-        namespace: default
+        kind: GatewayClass
+        name: envoy-gateway-class
         sectionName: http
       name: default/mfqjpuycbgjrtdww/http
       path:

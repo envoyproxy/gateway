@@ -29,6 +29,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/utils/ptr"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 	"sigs.k8s.io/yaml"
 
@@ -45,6 +46,12 @@ import (
 
 func mustUnmarshal(t *testing.T, val []byte, out any) {
 	require.NoError(t, yaml.UnmarshalStrict(val, out, yaml.DisallowUnknownFields))
+}
+
+var testGC = &gwapiv1.GatewayClass{
+	ObjectMeta: metav1.ObjectMeta{
+		Name: "envoy-gateway-class",
+	},
 }
 
 func TestTranslate(t *testing.T) {
@@ -99,7 +106,7 @@ func TestTranslate(t *testing.T) {
 
 			translator := &Translator{
 				GatewayControllerName:   egv1a1.GatewayControllerName,
-				GatewayClassName:        "envoy-gateway-class",
+				GatewayClass:            testGC,
 				GlobalRateLimitEnabled:  true,
 				EnvoyPatchPolicyEnabled: envoyPatchPolicyEnabled,
 				BackendEnabled:          backendEnabled,
@@ -319,8 +326,7 @@ func TestTranslate(t *testing.T) {
 
 			svc := corev1.Service{
 				ObjectMeta: metav1.ObjectMeta{
-					// Matches proxy.ExpectedResourceHashedName()
-					Name:      fmt.Sprintf("%s-%s", config.EnvoyPrefix, utils.GetHashedName(string(translator.GatewayClassName), 48)),
+					Name:      fmt.Sprintf("%s-%s", config.EnvoyPrefix, utils.GetHashedName(translator.GatewayClass.Name, 48)),
 					Namespace: translator.ControllerNamespace,
 					Labels:    make(map[string]string),
 				},
@@ -367,7 +373,7 @@ func TestTranslate(t *testing.T) {
 			}
 
 			if translator.MergeGateways {
-				svc.Labels[OwningGatewayClassLabel] = string(translator.GatewayClassName)
+				svc.Labels[OwningGatewayClassLabel] = translator.GatewayClass.Name
 				resources.Services = append(resources.Services, &svc)
 				resources.EndpointSlices = append(resources.EndpointSlices, &endPtSlice)
 			} else {
@@ -446,7 +452,7 @@ func TestTranslateWithExtensionKinds(t *testing.T) {
 
 			translator := &Translator{
 				GatewayControllerName:  egv1a1.GatewayControllerName,
-				GatewayClassName:       "envoy-gateway-class",
+				GatewayClass:           testGC,
 				GlobalRateLimitEnabled: true,
 				ExtensionGroupKinds: []schema.GroupKind{
 					{Group: "foo.example.io", Kind: "Foo"},
@@ -595,7 +601,7 @@ func TestTranslateWithExtensionKinds(t *testing.T) {
 			svc := corev1.Service{
 				ObjectMeta: metav1.ObjectMeta{
 					// Matches proxy.ExpectedResourceHashedName()
-					Name:      fmt.Sprintf("%s-%s", config.EnvoyPrefix, utils.GetHashedName(string(translator.GatewayClassName), 48)),
+					Name:      fmt.Sprintf("%s-%s", config.EnvoyPrefix, utils.GetHashedName(translator.GatewayClass.Name, 48)),
 					Namespace: translator.ControllerNamespace,
 					Labels:    make(map[string]string),
 				},
@@ -642,7 +648,7 @@ func TestTranslateWithExtensionKinds(t *testing.T) {
 			}
 
 			if translator.MergeGateways {
-				svc.Labels[OwningGatewayClassLabel] = string(translator.GatewayClassName)
+				svc.Labels[OwningGatewayClassLabel] = translator.GatewayClass.Name
 				resources.Services = append(resources.Services, &svc)
 				resources.EndpointSlices = append(resources.EndpointSlices, &endPtSlice)
 			} else {

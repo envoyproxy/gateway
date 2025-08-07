@@ -23,7 +23,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/client-go/kubernetes"
 	ctrl "sigs.k8s.io/controller-runtime"
-	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
@@ -155,7 +154,7 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *re
 				// Translate and publish IRs.
 				t := &gatewayapi.Translator{
 					GatewayControllerName:     r.EnvoyGateway.Gateway.ControllerName,
-					GatewayClassName:          gwapiv1.ObjectName(resources.GatewayClass.Name),
+					GatewayClass:              resources.GatewayClass,
 					GlobalRateLimitEnabled:    r.EnvoyGateway.RateLimit != nil,
 					EnvoyPatchPolicyEnabled:   r.EnvoyGateway.ExtensionAPIs != nil && r.EnvoyGateway.ExtensionAPIs.EnableEnvoyPatchPolicy,
 					BackendEnabled:            r.EnvoyGateway.ExtensionAPIs != nil && r.EnvoyGateway.ExtensionAPIs.EnableBackend,

@@ -141,9 +141,8 @@ xdsIR:
       - '*'
       isHTTP2: false
       metadata:
-        kind: Gateway
-        name: gateway-1
-        namespace: envoy-gateway
+        kind: GatewayClass
+        name: envoy-gateway-class
         sectionName: http
       name: envoy-gateway/gateway-1/http
       path:

@@ -123,7 +123,7 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR resource
 						Address:      address,
 						Port:         uint32(containerPort),
 						ExternalPort: uint32(listener.Port),
-						Metadata:     buildListenerMetadata(listener, gateway),
+						Metadata:     t.buildListenerMetadata(listener, gateway),
 						IPFamily:     ipFamily,
 					},
 					TLS: irTLSConfigs(listener.tlsSecrets...),
@@ -425,7 +425,15 @@ func isSubdomain(subDomain, domain string) bool {
 	return strings.HasSuffix(subDomain, fmt.Sprintf(".%s", domain))
 }
 
-func buildListenerMetadata(listener *ListenerContext, gateway *GatewayContext) *ir.ResourceMetadata {
+func (t *Translator) buildListenerMetadata(listener *ListenerContext, gateway *GatewayContext) *ir.ResourceMetadata {
+	if t.MergeGateways {
+		return &ir.ResourceMetadata{
+			Kind:        "GatewayClass",
+			Name:        t.GatewayClass.Name,
+			Annotations: filterEGPrefix(t.GatewayClass.Annotations),
+			SectionName: string(listener.Name),
+		}
+	}
 	return &ir.ResourceMetadata{
 		Kind:        gateway.GetObjectKind().GroupVersionKind().Kind,
 		Name:        gateway.GetName(),

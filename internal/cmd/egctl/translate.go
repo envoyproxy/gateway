@@ -272,7 +272,7 @@ func translateGatewayAPIToIR(resources *resource.Resources) (*gatewayapi.Transla
 
 	t := &gatewayapi.Translator{
 		GatewayControllerName:   string(resources.GatewayClass.Spec.ControllerName),
-		GatewayClassName:        gwapiv1.ObjectName(resources.GatewayClass.Name),
+		GatewayClass:            resources.GatewayClass,
 		GlobalRateLimitEnabled:  true,
 		EndpointRoutingDisabled: true,
 		EnvoyPatchPolicyEnabled: true,
@@ -300,7 +300,7 @@ func translateGatewayAPIToGatewayAPI(resources *resource.Resources) (resource.Re
 	// Translate from Gateway API to Xds IR
 	gTranslator := &gatewayapi.Translator{
 		GatewayControllerName:   string(resources.GatewayClass.Spec.ControllerName),
-		GatewayClassName:        gwapiv1.ObjectName(resources.GatewayClass.Name),
+		GatewayClass:            resources.GatewayClass,
 		GlobalRateLimitEnabled:  true,
 		EndpointRoutingDisabled: true,
 		EnvoyPatchPolicyEnabled: true,
@@ -339,7 +339,7 @@ func TranslateGatewayAPIToXds(namespace, dnsDomain, resourceType string, resourc
 	// Translate from Gateway API to Xds IR
 	gTranslator := &gatewayapi.Translator{
 		GatewayControllerName:   string(resources.GatewayClass.Spec.ControllerName),
-		GatewayClassName:        gwapiv1.ObjectName(resources.GatewayClass.Name),
+		GatewayClass:            resources.GatewayClass,
 		GlobalRateLimitEnabled:  true,
 		EndpointRoutingDisabled: true,
 		EnvoyPatchPolicyEnabled: true,

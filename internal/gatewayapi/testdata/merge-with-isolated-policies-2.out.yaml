@@ -526,9 +526,8 @@ xdsIR:
       - bar.example.com
       isHTTP2: false
       metadata:
-        kind: Gateway
-        name: gateway-1
-        namespace: default
+        kind: GatewayClass
+        name: envoy-gateway-class
         sectionName: http
       name: default/gateway-1/http
       path:
@@ -595,9 +594,8 @@ xdsIR:
       - foo.example.com
       isHTTP2: false
       metadata:
-        kind: Gateway
-        name: gateway-1
-        namespace: default
+        kind: GatewayClass
+        name: envoy-gateway-class
         sectionName: http-2
       name: default/gateway-1/http-2
       path:
@@ -664,9 +662,8 @@ xdsIR:
       - bar.example.com
       isHTTP2: false
       metadata:
-        kind: Gateway
-        name: gateway-2
-        namespace: default
+        kind: GatewayClass
+        name: envoy-gateway-class
         sectionName: http
       name: default/gateway-2/http
       path:
@@ -725,9 +722,8 @@ xdsIR:
       - foo.example.com
       isHTTP2: false
       metadata:
-        kind: Gateway
-        name: gateway-2
-        namespace: default
+        kind: GatewayClass
+        name: envoy-gateway-class
         sectionName: http-2
       name: default/gateway-2/http-2
       path:
