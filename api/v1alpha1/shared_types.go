@@ -231,7 +231,7 @@ type KubernetesContainerSpec struct {
 	// Image specifies the EnvoyProxy container image to be used including a tag, instead of the default image.
 	// This field is mutually exclusive with ImageRepository.
 	//
-	// +kubebuilder:validation:XValidation:rule="self.matches('^[a-zA-Z0-9._/-]+:[a-zA-Z0-9._-]+$')",message="Image must include a tag and allowed characters only (e.g., 'repo:tag')."
+	// +kubebuilder:validation:XValidation:rule="self.matches('^[a-zA-Z0-9._/-]+(:[a-zA-Z0-9._-]+)?(@sha256:[a-z0-9]+)?$')",message="Image must include a tag and allowed characters only (e.g., 'repo:tag')."
 	// +optional
 	Image *string `json:"image,omitempty"`
 
