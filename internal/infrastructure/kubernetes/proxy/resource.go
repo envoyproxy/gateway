@@ -77,7 +77,7 @@ func enablePrometheus(infra *ir.ProxyInfra) bool {
 func expectedProxyContainers(infra *ir.ProxyInfra,
 	containerSpec *egv1a1.KubernetesContainerSpec,
 	shutdownConfig *egv1a1.ShutdownConfig, shutdownManager *egv1a1.ShutdownManager,
-	topologyInjector *egv1a1.EnvoyGatewayTopologyInjector,
+	topologyInjectorDisabled bool,
 	controllerNamespace, dnsDomain string, gatewayNamespaceMode bool,
 ) ([]corev1.Container, error) {
 	ports := make([]corev1.ContainerPort, 0, 2)
@@ -102,10 +102,7 @@ func expectedProxyContainers(infra *ir.ProxyInfra,
 	}
 
 	maxHeapSizeBytes := calculateMaxHeapSizeBytes(containerSpec.Resources)
-	topologyInjectorDisabled := false
-	if topologyInjector != nil && topologyInjector.Disable != nil {
-		topologyInjectorDisabled = *topologyInjector.Disable
-	}
+
 	// Get the default Bootstrap
 	bootstrapConfigOptions := &bootstrap.RenderBootstrapConfigOptions{
 		ProxyMetrics: proxyMetrics,
