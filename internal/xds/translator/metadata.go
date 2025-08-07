@@ -6,8 +6,11 @@
 package translator
 
 import (
+	"fmt"
+
 	corev3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	"google.golang.org/protobuf/types/known/structpb"
+	"k8s.io/apimachinery/pkg/util/sets"
 
 	"github.com/envoyproxy/gateway/internal/ir"
 )
@@ -36,10 +39,19 @@ func buildXdsMetadataFromMultiple(metadata []*ir.ResourceMetadata) *corev3.Metad
 	}
 
 	resourcesList := &structpb.ListValue{}
+	mdSets := sets.New[string]()
 	for _, md := range metadata {
-		if md != nil {
-			resourcesList.Values = append(resourcesList.Values, buildResourceMetadata(md))
+		if md == nil {
+			continue
 		}
+
+		mdKey := fmt.Sprintf("%s/ns-%s/%s/section-%s", md.Kind, md.Namespace, md.Name, md.SectionName)
+		if mdSets.Has(mdKey) {
+			continue
+		}
+		mdSets.Insert(mdKey)
+
+		resourcesList.Values = append(resourcesList.Values, buildResourceMetadata(md))
 	}
 	if len(resourcesList.Values) == 0 {
 		return nil
@@ -72,25 +84,27 @@ func buildResourceMetadata(metadata *ir.ResourceMetadata) *structpb.Value {
 				StringValue: metadata.Name,
 			},
 		},
-		envoyGatewayXdsMetadataKeyNamespace: {
+	}
+
+	if metadata.Namespace != "" {
+		routeResourceFields[envoyGatewayXdsMetadataKeyNamespace] = &structpb.Value{
 			Kind: &structpb.Value_StringValue{
 				StringValue: metadata.Namespace,
 			},
-		},
+		}
+	}
+	if metadata.SectionName != "" {
+		routeResourceFields[envoyGatewayXdsMetadataKeySectionName] = &structpb.Value{
+			Kind: &structpb.Value_StringValue{
+				StringValue: metadata.SectionName,
+			},
+		}
 	}
 
 	if len(metadata.Annotations) > 0 {
 		routeResourceFields[envoyGatewayXdsMetadataKeyAnnotations] = &structpb.Value{
 			Kind: &structpb.Value_StructValue{
 				StructValue: mapToStruct(metadata.Annotations),
-			},
-		}
-	}
-
-	if metadata.SectionName != "" {
-		routeResourceFields[envoyGatewayXdsMetadataKeySectionName] = &structpb.Value{
-			Kind: &structpb.Value_StringValue{
-				StringValue: metadata.SectionName,
 			},
 		}
 	}

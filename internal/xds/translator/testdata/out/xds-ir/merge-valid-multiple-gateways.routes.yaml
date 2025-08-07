@@ -1,0 +1,4 @@
+- ignorePortInHostMatching: true
+  name: envoy-gateway/gateway-1/http
+- ignorePortInHostMatching: true
+  name: envoy-gateway/gateway-2/http-2
