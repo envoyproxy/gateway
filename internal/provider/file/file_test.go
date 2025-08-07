@@ -84,6 +84,10 @@ func newFileProviderConfig(paths []string) (*config.Server, error) {
 			},
 		},
 	}
+	cfg.EnvoyGateway.ExtensionAPIs = &egv1a1.ExtensionAPISettings{
+		EnableBackend:          true,
+		EnableEnvoyPatchPolicy: true,
+	}
 	return cfg, nil
 }
 

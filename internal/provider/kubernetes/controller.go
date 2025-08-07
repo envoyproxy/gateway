@@ -218,6 +218,20 @@ func (r *gatewayAPIReconciler) subscribeToResources(ctx context.Context) {
 	r.subscriptions.extensionPolicyStatuses = r.resources.ExtensionPolicyStatuses.Subscribe(ctx)
 }
 
+func (r *gatewayAPIReconciler) backendAPIDisabled() bool {
+	// we didn't check if the backend CRD exists every time for performance,
+	// please make sure r.backendCRDExists is setting correctly before calling this
+	if !r.backendCRDExists {
+		return true
+	}
+
+	if r.envoyGateway == nil || r.envoyGateway.ExtensionAPIs == nil {
+		return true
+	}
+
+	return !r.envoyGateway.ExtensionAPIs.EnableBackend
+}
+
 func byNamespaceSelectorEnabled(eg *egv1a1.EnvoyGateway) bool {
 	if eg.Provider == nil ||
 		eg.Provider.Kubernetes == nil ||
@@ -633,8 +647,8 @@ func (r *gatewayAPIReconciler) processBackendRefs(ctx context.Context, gwcResour
 			endpointSliceLabelKey = mcsapiv1a1.LabelServiceName
 
 		case egv1a1.KindBackend:
-			if !r.backendCRDExists {
-				r.log.V(6).Info("skipping Backend processing as Backend CRD is not installed")
+			if r.backendAPIDisabled() {
+				r.log.V(6).Info("skipping Backend processing as Backend API is disabled.")
 				continue
 			}
 			backend := new(egv1a1.Backend)
@@ -1868,10 +1882,16 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 		return err
 	}
 
+	// we didn't check if the backend CRD exists every time for performance,
+	// please make sure r.backendCRDExists is setting correctly before calling this
 	r.backendCRDExists = r.crdExists(mgr, resource.KindBackend, egv1a1.GroupVersion.String())
-	if !r.backendCRDExists {
-		r.log.Info("Backend CRD not found, skipping Backend watch")
-	} else if r.envoyGateway.ExtensionAPIs != nil && r.envoyGateway.ExtensionAPIs.EnableBackend {
+	if r.backendAPIDisabled() {
+		if !r.backendCRDExists {
+			r.log.Info("Backend CRD not found, skipping Backend watch")
+		} else {
+			r.log.Info("Backend API disabled, skipping Backend watch")
+		}
+	} else {
 		// Watch Backend CRUDs and process affected *Route objects.
 		backendPredicates := []predicate.TypedPredicate[*egv1a1.Backend]{
 			predicate.TypedGenerationChangedPredicate[*egv1a1.Backend]{},

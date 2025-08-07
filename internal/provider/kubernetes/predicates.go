@@ -197,7 +197,7 @@ func (r *gatewayAPIReconciler) validateSecretForReconcile(obj client.Object) boo
 }
 
 func (r *gatewayAPIReconciler) validateClusterTrustBundleForReconcile(ctb *certificatesv1b1.ClusterTrustBundle) bool {
-	if r.backendCRDExists {
+	if !r.backendAPIDisabled() {
 		if r.isBackendReferencingClusterTrustBundle(ctb) {
 			return true
 		}
