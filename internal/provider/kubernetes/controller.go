@@ -1474,6 +1474,11 @@ func (r *gatewayAPIReconciler) processGateways(ctx context.Context, managedGC *g
 }
 
 func (r *gatewayAPIReconciler) processServiceCluster(resourceName string, resourceMap *resourceMappings) {
+	// Skip processing if topology injector is disabled
+	if r.envoyGateway != nil && r.envoyGateway.TopologyInjectorDisabled() {
+		return
+	}
+
 	proxySvcName := proxy.ExpectedResourceHashedName(resourceName)
 	resourceMap.allAssociatedBackendRefs.Insert(gwapiv1.BackendObjectReference{
 		Kind:      ptr.To(gwapiv1.Kind("Service")),
