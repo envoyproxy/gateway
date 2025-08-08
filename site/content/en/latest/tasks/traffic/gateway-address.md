@@ -63,7 +63,6 @@ this will __require__ the address to be of type `IPAddress` and the [ServiceType
 
 
 [Gateway API]: https://gateway-api.sigs.k8s.io/
-[Gateway]: https://gateway-api.sigs.k8s.io/api-types/gateway/
 [Addresses]: https://gateway-api.sigs.k8s.io/reference/spec#gateway.networking.k8s.io/v1.GatewayAddress
 [External IPs]: https://kubernetes.io/docs/concepts/services-networking/service/#external-ips
 [Cluster IP]: https://kubernetes.io/docs/concepts/services-networking/service/#type-clusterip

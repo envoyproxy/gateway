@@ -618,5 +618,4 @@ $ curl -vvv --header "Host: headers.example" "http://${GATEWAY_HOST}/get" --head
 [Gateway API documentation]: https://gateway-api.sigs.k8s.io/
 [req_filter]: https://gateway-api.sigs.k8s.io/reference/spec#gateway.networking.k8s.io/v1.HTTPHeaderFilter
 [Gateway]: https://gateway-api.sigs.k8s.io/api-types/gateway/
-[Service]: https://kubernetes.io/docs/concepts/services-networking/service/
 [ClientTrafficPolicy]: ../../../api/extension_types#clienttrafficpolicy
