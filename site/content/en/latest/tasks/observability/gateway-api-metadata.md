@@ -11,7 +11,7 @@ Gateway API Metadata includes:
 - K8s Resource SectionNames (when applicable, e.g. for Route rules and Listeners).
 
 Gateway API Metadata is added to XDS resources using envoy's [Static Metadata][] under `metadata.filter_metadata.envoy-gateway.resources`. Currently, `resources` only contains the primary origin resource. 
-However, in the future, additioanl relevant resources (e.g. policies, filters attached to the primary origin resources) may be added. 
+However, in the future, additional relevant resources (e.g. policies, filters attached to the primary origin resources) may be added. 
 
 ## Supported Resources 
 Currently, the following mapping of Gateway API metadata to XDS metadata are supported:
