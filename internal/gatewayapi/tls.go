@@ -12,17 +12,16 @@ import (
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
-	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 )
 
 // validateTLSSecretData ensures the cert and key provided in a secret
 // is not malformed and can be properly parsed
-func validateTLSSecretsData(secrets []*corev1.Secret, host *gwapiv1.Hostname) ([]*x509.Certificate, error) {
+func validateTLSSecretsData(secrets []*corev1.Secret) ([]*x509.Certificate, error) {
 	var publicKeyAlgorithm string
 	var certs []*x509.Certificate
 	var parseErr error
 
-	pkaSecretSet := make(map[string][]string)
+	pkaSecretSet := make(map[string]string)
 	for _, secret := range secrets {
 		certData := secret.Data[corev1.TLSCertKey]
 
@@ -48,18 +47,29 @@ func validateTLSSecretsData(secrets []*corev1.Secret, host *gwapiv1.Hostname) ([
 			return nil, fmt.Errorf("%s/%s must contain valid %s and %s, unable to decode pem data in %s", secret.Namespace, secret.Name, corev1.TLSCertKey, corev1.TLSPrivateKeyKey, corev1.TLSPrivateKeyKey)
 		}
 
-		matchedFQDN, err := verifyHostname(cert, host)
-		if err != nil {
-			return nil, fmt.Errorf("%s/%s must contain valid %s and %s, hostname %s does not match Common Name or DNS Names in the certificate %s", secret.Namespace, secret.Name, corev1.TLSCertKey, corev1.TLSPrivateKeyKey, string(*host), corev1.TLSCertKey)
-		}
-		pkaSecretKey := fmt.Sprintf("%s/%s", publicKeyAlgorithm, matchedFQDN)
+		// SNI and SAN/Cert Domain mismatch is allowed
+		// Consider converting this into a warning once
+		// https://github.com/envoyproxy/gateway/issues/6717 is in
 
-		// Check whether the public key algorithm and matched certificate FQDN in the referenced secrets are unique.
-		if matchedFQDN, ok := pkaSecretSet[pkaSecretKey]; ok {
-			return nil, fmt.Errorf("%s/%s public key algorithm must be unique, matched certificate FQDN %s has a conflicting algorithm [%s]",
-				secret.Namespace, secret.Name, matchedFQDN, publicKeyAlgorithm)
+		// Extract certificate domains (SANs or CN) for uniqueness checking
+		var certDomains []string
+		if len(cert.DNSNames) > 0 {
+			certDomains = cert.DNSNames
+		} else if cert.Subject.CommonName != "" {
+			certDomains = []string{cert.Subject.CommonName}
 		}
-		pkaSecretSet[pkaSecretKey] = matchedFQDN
+
+		// Check uniqueness for each domain in the certificate with this algorithm
+		for _, domain := range certDomains {
+			pkaSecretKey := fmt.Sprintf("%s/%s", publicKeyAlgorithm, domain)
+
+			// Check whether the public key algorithm and certificate domain are unique
+			if _, ok := pkaSecretSet[pkaSecretKey]; ok {
+				return nil, fmt.Errorf("%s/%s public key algorithm must be unique, certificate domain %s has a conflicting algorithm [%s]",
+					secret.Namespace, secret.Name, domain, publicKeyAlgorithm)
+			}
+			pkaSecretSet[pkaSecretKey] = domain
+		}
 
 		switch keyBlock.Type {
 		case "PRIVATE KEY":
@@ -84,26 +94,6 @@ func validateTLSSecretsData(secrets []*corev1.Secret, host *gwapiv1.Hostname) ([
 	}
 
 	return certs, parseErr
-}
-
-// verifyHostname checks if the listener Hostname matches any domain in the certificate, returns a list of matched hosts.
-func verifyHostname(cert *x509.Certificate, host *gwapiv1.Hostname) ([]string, error) {
-	var matchedHosts []string
-
-	listenerContext := ListenerContext{
-		Listener: &gwapiv1.Listener{Hostname: host},
-	}
-	if len(cert.DNSNames) > 0 {
-		matchedHosts = computeHosts(cert.DNSNames, &listenerContext)
-	} else {
-		matchedHosts = computeHosts([]string{cert.Subject.CommonName}, &listenerContext)
-	}
-
-	if len(matchedHosts) > 0 {
-		return matchedHosts, nil
-	}
-
-	return nil, x509.HostnameError{Certificate: cert, Host: string(*host)}
 }
 
 func validateCertificate(data []byte) error {

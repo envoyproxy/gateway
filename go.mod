@@ -1,6 +1,6 @@
 module github.com/envoyproxy/gateway
 
-go 1.24.4
+go 1.24.6
 
 // Replace the otelgrpc version because of k8s.io/client-go v0.33.3
 replace go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc v0.61.0 => go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc v0.58.0
@@ -21,7 +21,7 @@ require (
 	github.com/envoyproxy/go-control-plane v0.13.5-0.20250622153809-434b6986176d
 	github.com/envoyproxy/go-control-plane/contrib v1.32.5-0.20250430092421-68a532e11403
 	github.com/envoyproxy/go-control-plane/envoy v1.32.5-0.20250622153809-434b6986176d
-	github.com/envoyproxy/go-control-plane/ratelimit v0.1.0
+	github.com/envoyproxy/go-control-plane/ratelimit v0.1.1-0.20250805143705-d51f8590a549
 	github.com/envoyproxy/ratelimit v1.4.1-0.20230427142404-e2a87f41d3a7
 	github.com/evanphx/json-patch v5.9.11+incompatible
 	github.com/evanphx/json-patch/v5 v5.9.11

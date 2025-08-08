@@ -62,7 +62,6 @@ func TestLoadAllSupportedResourcesFromYAMLBytes(t *testing.T) {
 	mustUnmarshal(t, outFile, want)
 
 	opts := []cmp.Option{
-		cmpopts.IgnoreFields(Resources{}, "serviceMap"),
 		cmpopts.EquateEmpty(),
 	}
 	require.Empty(t, cmp.Diff(want, got, opts...))

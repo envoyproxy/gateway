@@ -70,19 +70,7 @@ func (t *Translator) ProcessSecurityPolicies(securityPolicies []*egv1a1.Security
 	xdsIR resource.XdsIRMap,
 ) []*egv1a1.SecurityPolicy {
 	var res []*egv1a1.SecurityPolicy
-
-	// Initially, policies sort by creation timestamp
-	// or sort alphabetically by “{namespace}/{name}” if multiple policies share same timestamp.
-	sort.Slice(securityPolicies, func(i, j int) bool {
-		if securityPolicies[i].CreationTimestamp.Equal(&(securityPolicies[j].CreationTimestamp)) {
-			policyKeyI := fmt.Sprintf("%s/%s", securityPolicies[i].Namespace, securityPolicies[i].Name)
-			policyKeyJ := fmt.Sprintf("%s/%s", securityPolicies[j].Namespace, securityPolicies[j].Name)
-			return policyKeyI < policyKeyJ
-		}
-		// Not identical CreationTimestamps
-
-		return securityPolicies[i].CreationTimestamp.Before(&(securityPolicies[j].CreationTimestamp))
-	})
+	// SecurityPolicies are already sorted by the provider layer
 
 	// First build a map out of the routes and gateways for faster lookup since users might have thousands of routes or more.
 	// For gateways this probably isn't quite as necessary.

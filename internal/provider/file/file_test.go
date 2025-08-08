@@ -84,6 +84,10 @@ func newFileProviderConfig(paths []string) (*config.Server, error) {
 			},
 		},
 	}
+	cfg.EnvoyGateway.ExtensionAPIs = &egv1a1.ExtensionAPISettings{
+		EnableBackend:          true,
+		EnableEnvoyPatchPolicy: true,
+	}
 	return cfg, nil
 }
 
@@ -290,7 +294,6 @@ func mustUnmarshal(t *testing.T, path string, out interface{}) {
 
 func cmpResources(t *testing.T, x, y interface{}) {
 	opts := []cmp.Option{
-		cmpopts.IgnoreFields(resource.Resources{}, "serviceMap"),
 		cmpopts.IgnoreFields(metav1.ObjectMeta{}, "ResourceVersion"),
 		cmpopts.EquateEmpty(),
 	}
