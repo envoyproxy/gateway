@@ -125,9 +125,14 @@ func extAuthConfig(extAuth *ir.ExtAuth) *extauthv3.ExtAuthz {
 		}
 	}
 
+	var timeout int64 = defaultExtServiceRequestTimeout
+	if extAuth.Timeout != nil {
+		timeout = int64(extAuth.Timeout.Seconds())
+	}
+
 	if extAuth.HTTP != nil {
 		config.Services = &extauthv3.ExtAuthz_HttpService{
-			HttpService: httpService(extAuth.HTTP),
+			HttpService: httpService(extAuth.HTTP, timeout),
 		}
 	} else if extAuth.GRPC != nil {
 		config.Services = &extauthv3.ExtAuthz_GrpcService{
@@ -136,7 +141,7 @@ func extAuthConfig(extAuth *ir.ExtAuth) *extauthv3.ExtAuthz {
 					EnvoyGrpc: grpcService(extAuth.GRPC),
 				},
 				Timeout: &durationpb.Duration{
-					Seconds: defaultExtServiceRequestTimeout,
+					Seconds: timeout,
 				},
 			},
 		}
@@ -145,7 +150,7 @@ func extAuthConfig(extAuth *ir.ExtAuth) *extauthv3.ExtAuthz {
 	return config
 }
 
-func httpService(http *ir.HTTPExtAuthService) *extauthv3.HttpService {
+func httpService(http *ir.HTTPExtAuthService, timeout int64) *extauthv3.HttpService {
 	var (
 		uri              string
 		headersToBackend []*matcherv3.StringMatcher
@@ -172,7 +177,7 @@ func httpService(http *ir.HTTPExtAuthService) *extauthv3.HttpService {
 			Cluster: http.Destination.Name,
 		},
 		Timeout: &durationpb.Duration{
-			Seconds: defaultExtServiceRequestTimeout,
+			Seconds: timeout,
 		},
 	}
 
