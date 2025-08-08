@@ -24,7 +24,7 @@ If something happens with the primary backend, the backup can take over immediat
 
 ## Test
 
-* We'll first create two services & deployments, called `active` and `passive`, representing an `active` and `passive` backend application.
+* We'll first create two [services][Service] & [deployments][Deployment], called `active` and `passive`, representing an `active` and `passive` backend application.
 
 {{< tabpane text=true >}}
 {{% tab header="Apply from stdin" %}}
@@ -233,7 +233,7 @@ spec:
 
 * Follow the instructions [here](./../../tasks/traffic/backend/#enable-backend) to enable the Backend API
 
-* Create two Backend resources that are used to represent the `active` backend and `passive` backend.
+* Create two [Backend][] resources that are used to represent the `active` backend and `passive` backend.
 Note, we've set `fallback: true` for the `passive` backend to indicate its a passive backend
 
 
@@ -299,7 +299,7 @@ spec:
 {{% /tab %}}
 {{< /tabpane >}}
 
-* Lets create an HTTPRoute that can route to both these backends
+* Lets create an [HTTPRoute][] that can route to both these backends
 
 {{< tabpane text=true >}}
 {{% tab header="Apply from stdin" %}}
@@ -379,7 +379,7 @@ spec:
 {{% /tab %}}
 {{< /tabpane >}}
 
-* Lets configure a `BackendTrafficPolicy` with a passive health check setting to detect an transient errors.
+* Lets configure a [BackendTrafficPolicy][] with a passive health check setting to detect an transient errors.
 
 {{< tabpane text=true >}}
 {{% tab header="Apply from stdin" %}}
@@ -564,3 +564,10 @@ parse error: Invalid numeric literal at line 1, column 9
 ```
 
 The first error can be avoided by configuring [retries](./../../tasks/traffic/retry.md).
+
+[Backend]: ../../../api/extension_types#backend
+[BackendTrafficPolicy]: ../../../api/extension_types#backendtrafficpolicy
+[HTTPRoute]: https://gateway-api.sigs.k8s.io/api-types/httproute/
+[Gateway]: https://gateway-api.sigs.k8s.io/api-types/gateway/
+[Service]: https://kubernetes.io/docs/concepts/services-networking/service/
+[Deployment]: https://kubernetes.io/docs/concepts/workloads/controllers/deployment/

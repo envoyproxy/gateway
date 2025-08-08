@@ -220,7 +220,7 @@ kubectl delete securitypolicy/authorization-jwt-claim
 
 Checkout the [Developer Guide](../../../contributions/develop) to get involved in the project.
 
-[SecurityPolicy]: ../../../contributions/design/security-policy
+[SecurityPolicy]: ../../../api/extension_types#securitypolicy
 [Gateway]: https://gateway-api.sigs.k8s.io/api-types/gateway
 [HTTPRoute]: https://gateway-api.sigs.k8s.io/api-types/httproute
 [GRPCRoute]: https://gateway-api.sigs.k8s.io/api-types/grpcroute

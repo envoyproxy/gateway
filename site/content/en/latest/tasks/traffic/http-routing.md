@@ -3,9 +3,9 @@ title: "HTTP Routing"
 ---
 
 The [HTTPRoute][] resource allows users to configure HTTP routing by matching HTTP traffic and forwarding it to
-Kubernetes backends. Currently, the only supported backend supported by Envoy Gateway is a Service resource. This task
+Kubernetes backends. Currently, the only supported backend supported by Envoy Gateway is a [Service](https://kubernetes.io/docs/concepts/services-networking/service/) resource. This task
 shows how to route traffic based on host, header, and path fields and forward the traffic to different Kubernetes
-Services. To learn more about HTTP routing, refer to the [Gateway API documentation][].
+[Services](https://kubernetes.io/docs/concepts/services-networking/service/). To learn more about HTTP routing, refer to the [Gateway API documentation][].
 
 ## Prerequisites
 
@@ -19,8 +19,8 @@ Install the HTTP routing example resources:
 kubectl apply -f https://raw.githubusercontent.com/envoyproxy/gateway/latest/examples/kubernetes/http-routing.yaml
 ```
 
-The manifest installs a [GatewayClass][], [Gateway][], four Deployments, four Services, and three HTTPRoute resources.
-The GatewayClass is a cluster-scoped resource that represents a class of Gateways that can be instantiated.
+The manifest installs a [GatewayClass][], [Gateway][], four [Deployments](https://kubernetes.io/docs/concepts/workloads/controllers/deployment/), four [Services](https://kubernetes.io/docs/concepts/services-networking/service/), and three [HTTPRoute][] resources.
+The [GatewayClass][] is a cluster-scoped resource that represents a class of [Gateways][] that can be instantiated.
 
 __Note:__ Envoy Gateway is configured by default to manage a GatewayClass with
 `controllerName: gateway.envoyproxy.io/gatewayclass-controller`.
@@ -35,9 +35,9 @@ kubectl get gc --selector=example=http-routing
 
 The status should reflect "Accepted=True", indicating Envoy Gateway is managing the GatewayClass.
 
-A Gateway represents configuration of infrastructure. When a Gateway is created, [Envoy proxy][] infrastructure is
-provisioned or configured by Envoy Gateway. The `gatewayClassName` defines the name of a GatewayClass used by this
-Gateway. Check the status of the Gateway:
+A [Gateway][] represents configuration of infrastructure. When a [Gateway][] is created, [Envoy proxy][] infrastructure is
+provisioned or configured by Envoy Gateway. The `gatewayClassName` defines the name of a [GatewayClass][] used by this
+[Gateway][]. Check the status of the [Gateway][]:
 
 ```shell
 kubectl get gateways --selector=example=http-routing
@@ -122,7 +122,7 @@ traffic was routed to the foo backend service.
 ### JWT Claims Based Routing
 
 Users can route to a specific backend by matching on JWT claims.
-This can be achieved, by defining a SecurityPolicy with a jwt configuration that does the following
+This can be achieved, by defining a [SecurityPolicy](../../../api/extension_types#securitypolicy) with a jwt configuration that does the following
 * Converts jwt claims to headers, which can be used for header based routing
 * Sets the recomputeRoute field to `true`. This is required so that the incoming request matches on a fallback/catch all route where the JWT can be authenticated, the claims from the JWT can be converted to headers, and then the route match can be recomputed to match based on the updated headers.
 
@@ -301,3 +301,4 @@ The request should return the pod name, for example `bar-backend-6688b8944c-s8ht
 [Gateway]: https://gateway-api.sigs.k8s.io/api-types/gateway/
 [Envoy proxy]: https://www.envoyproxy.io/
 [spec]: https://gateway-api.sigs.k8s.io/reference/spec#gateway.networking.k8s.io/v1.HTTPRouteSpec
+[Gateways]: https://gateway-api.sigs.k8s.io/api-types/gateway/
