@@ -77,6 +77,7 @@ func enablePrometheus(infra *ir.ProxyInfra) bool {
 func expectedProxyContainers(infra *ir.ProxyInfra,
 	containerSpec *egv1a1.KubernetesContainerSpec,
 	shutdownConfig *egv1a1.ShutdownConfig, shutdownManager *egv1a1.ShutdownManager,
+	topologyInjectorDisabled bool,
 	controllerNamespace, dnsDomain string, gatewayNamespaceMode bool,
 ) ([]corev1.Container, error) {
 	ports := make([]corev1.ContainerPort, 0, 2)
@@ -101,6 +102,7 @@ func expectedProxyContainers(infra *ir.ProxyInfra,
 	}
 
 	maxHeapSizeBytes := calculateMaxHeapSizeBytes(containerSpec.Resources)
+
 	// Get the default Bootstrap
 	bootstrapConfigOptions := &bootstrap.RenderBootstrapConfigOptions{
 		ProxyMetrics: proxyMetrics,
@@ -108,8 +110,9 @@ func expectedProxyContainers(infra *ir.ProxyInfra,
 			Certificate: filepath.Join("/sds", common.SdsCertFilename),
 			TrustedCA:   filepath.Join("/sds", common.SdsCAFilename),
 		},
-		MaxHeapSizeBytes: maxHeapSizeBytes,
-		XdsServerHost:    ptr.To(fmt.Sprintf("%s.%s.svc.%s.", config.EnvoyGatewayServiceName, controllerNamespace, dnsDomain)),
+		MaxHeapSizeBytes:         maxHeapSizeBytes,
+		XdsServerHost:            ptr.To(fmt.Sprintf("%s.%s.svc.%s.", config.EnvoyGatewayServiceName, controllerNamespace, dnsDomain)),
+		TopologyInjectorDisabled: topologyInjectorDisabled,
 	}
 
 	args, err := common.BuildProxyArgs(infra, shutdownConfig, bootstrapConfigOptions, fmt.Sprintf("$(%s)", envoyPodEnvVar), gatewayNamespaceMode)

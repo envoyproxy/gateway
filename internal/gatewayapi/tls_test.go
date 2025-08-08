@@ -149,20 +149,13 @@ func TestValidateTLSSecretsData(t *testing.T) {
 			Domain:      "*",
 			ExpectedErr: errors.New("test/secret must contain valid tls.crt and tls.key, FOO key format found in tls.key, supported formats are PKCS1, PKCS8 or EC"),
 		},
-		{
-			Name:        "invalid-domain-cert",
-			CertFile:    "rsa-cert-san.pem",
-			KeyFile:     "rsa-pkcs8-san.key",
-			Domain:      "*.example.com",
-			ExpectedErr: errors.New("test/secret must contain valid tls.crt and tls.key, hostname *.example.com does not match Common Name or DNS Names in the certificate tls.crt"),
-		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.Name, func(t *testing.T) {
 			secrets := createTestSecrets(t, tc.CertFile, tc.KeyFile)
 			require.NotNil(t, secrets)
-			_, err := validateTLSSecretsData(secrets, &tc.Domain)
+			_, err := validateTLSSecretsData(secrets)
 			if tc.ExpectedErr == nil {
 				require.NoError(t, err)
 			} else {
