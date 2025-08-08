@@ -2,7 +2,7 @@
 title: "Circuit Breakers"
 ---
 
-[Envoy Circuit Breakers] can be used to fail quickly and apply back-pressure in response to upstream service degradation. 
+[Envoy Circuit Breakers][] can be used to fail quickly and apply back-pressure in response to upstream service degradation. 
 
 Envoy Gateway supports the following circuit breaker thresholds:
 - **Concurrent Connections**: limit the connections that Envoy can establish to the upstream service. When this threshold is met, new connections will not be established, and some requests will be queued until an existing connection becomes available. 

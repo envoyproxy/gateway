@@ -95,19 +95,19 @@ spec:
 {{< /tabpane >}}
 
 
-The [`HTTPRoute`][HTTPRoute] status should indicate that it has been accepted and is bound to the example [`Gateway`][Gateway].
+The `HTTPRoute]` status should indicate that it has been accepted and is bound to the example `Gateway`.
 
 ```shell
 kubectl get httproute/http-headers -o yaml
 ```
 
-Get the [`Gateway`][Gateway]'s address:
+Get the `Gateway`'s address:
 
 ```shell
 export GATEWAY_HOST=$(kubectl get gateway/eg -o jsonpath='{.status.addresses[0].value}')
 ```
 
-Querying `headers.example/get` should result in a `200` response from the example [`Gateway`][Gateway] and the output from the
+Querying `headers.example/get` should result in a `200` response from the example `Gateway` and the output from the
 example app should indicate that the upstream example app received the header `add-header` with the value:
 `something,foo`
 
@@ -218,7 +218,7 @@ spec:
 {{% /tab %}}
 {{< /tabpane >}}
 
-Querying `headers.example/get` should result in a `200` response from the example [`Gateway`][Gateway] and the output from the
+Querying `headers.example/get` should result in a `200` response from the example `Gateway` and the output from the
 example app should indicate that the upstream example app received the header `add-header` with the original value
 `something` replaced by `foo`.
 
@@ -325,7 +325,7 @@ spec:
 {{% /tab %}}
 {{< /tabpane >}}
 
-Querying `headers.example/get` should result in a `200` response from the example [`Gateway`][Gateway] and the output from the
+Querying `headers.example/get` should result in a `200` response from the example `Gateway` and the output from the
 example app should indicate that the upstream example app received the header `add-header`, but the header
 `remove-header` that was sent by curl was removed before the upstream received the request.
 
@@ -446,7 +446,7 @@ spec:
 
 In some cases, it could be necessary to modify headers before the proxy performs any sort of processing, routing or tracing. Envoy Gateway supports this functionality using the [ClientTrafficPolicy][] API.
 
-A [`ClientTrafficPolicy`][ClientTrafficPolicy] resource can be attached to a [`Gateway`][Gateway] resource to configure early header modifications for all its routes. In the following example we will demonstrate how early header modification can be configured.
+A [ClientTrafficPolicy][] resource can be attached to a [Gateway][] resource to configure early header modifications for all its routes. In the following example we will demonstrate how early header modification can be configured.
 
 {{< tabpane text=true >}}
 {{% tab header="Apply from stdin" %}}
@@ -570,7 +570,7 @@ spec:
 {{< /tabpane >}}
 
 
-Querying `headers.example/get` should result in a `200` response from the example [`Gateway`][Gateway] and the output from the
+Querying `headers.example/get` should result in a `200` response from the example `Gateway` and the output from the
 example app should indicate that the upstream example app received the following headers:
 - `early-added-header` contains early (ClientTrafficPolicy) and late (RouteFilter) values
 - `early-set-header` contains only early (ClientTrafficPolicy) and late (RouteFilter) values, since the early modification overwritten the client value.

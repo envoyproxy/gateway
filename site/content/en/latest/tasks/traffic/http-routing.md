@@ -20,7 +20,7 @@ kubectl apply -f https://raw.githubusercontent.com/envoyproxy/gateway/latest/exa
 ```
 
 The manifest installs a [GatewayClass][], [Gateway][], four [Deployments](https://kubernetes.io/docs/concepts/workloads/controllers/deployment/), four [Services](https://kubernetes.io/docs/concepts/services-networking/service/), and three [HTTPRoute][] resources.
-The [GatewayClass][] is a cluster-scoped resource that represents a class of [Gateways][] that can be instantiated.
+The [GatewayClass][] is a cluster-scoped resource that represents a class of [Gateway][]s that can be instantiated.
 
 __Note:__ Envoy Gateway is configured by default to manage a GatewayClass with
 `controllerName: gateway.envoyproxy.io/gatewayclass-controller`.
@@ -301,4 +301,3 @@ The request should return the pod name, for example `bar-backend-6688b8944c-s8ht
 [Gateway]: https://gateway-api.sigs.k8s.io/api-types/gateway/
 [Envoy proxy]: https://www.envoyproxy.io/
 [spec]: https://gateway-api.sigs.k8s.io/reference/spec#gateway.networking.k8s.io/v1.HTTPRouteSpec
-[Gateways]: https://gateway-api.sigs.k8s.io/api-types/gateway/
