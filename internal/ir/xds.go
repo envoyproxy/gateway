@@ -6,7 +6,6 @@
 package ir
 
 import (
-	"cmp"
 	"crypto/tls"
 	"crypto/x509"
 	"encoding"
@@ -15,10 +14,8 @@ import (
 	"fmt"
 	"net/http"
 	"net/netip"
-	"reflect"
 	"time"
 
-	"golang.org/x/exp/slices"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -163,34 +160,6 @@ type Xds struct {
 	GlobalResources *GlobalResources `json:"globalResources,omitempty" yaml:"globalResources,omitempty"`
 	// ExtensionServerPolicies is the intermediate representation of the ExtensionServerPolicy resource
 	ExtensionServerPolicies []*UnstructuredRef `json:"extensionServerPolicies,omitempty" yaml:"extensionServerPolicies,omitempty"`
-}
-
-// Equal implements the Comparable interface used by watchable.DeepEqual to skip unnecessary updates.
-func (x *Xds) Equal(y *Xds) bool {
-	// Deep copy to avoid modifying the original ordering.
-	x = x.DeepCopy()
-	x.sort()
-	y = y.DeepCopy()
-	y.sort()
-	return reflect.DeepEqual(x, y)
-}
-
-// sort ensures the listeners are in a consistent order.
-func (x *Xds) sort() {
-	slices.SortFunc(x.HTTP, func(l1, l2 *HTTPListener) int {
-		return cmp.Compare(l1.Name, l2.Name)
-	})
-	for _, l := range x.HTTP {
-		slices.SortFunc(l.Routes, func(r1, r2 *HTTPRoute) int {
-			return cmp.Compare(r1.Name, r2.Name)
-		})
-	}
-	slices.SortFunc(x.TCP, func(l1, l2 *TCPListener) int {
-		return cmp.Compare(l1.Name, l2.Name)
-	})
-	slices.SortFunc(x.UDP, func(l1, l2 *UDPListener) int {
-		return cmp.Compare(l1.Name, l2.Name)
-	})
 }
 
 // Validate the fields within the Xds structure.

@@ -62,6 +62,8 @@ type ResourceRender struct {
 
 	ShutdownManager *egv1a1.ShutdownManager
 
+	TopologyInjectorDisabled bool
+
 	GatewayNamespaceMode bool
 
 	// ownerReferenceUID store the uid of its owner reference. Key is the kind of owner resource.
@@ -86,13 +88,14 @@ func NewResourceRender(ctx context.Context, kubeInfra KubernetesInfraProvider, i
 	}
 
 	return &ResourceRender{
-		envoyNamespace:       kubeInfra.GetResourceNamespace(infra),
-		controllerNamespace:  kubeInfra.GetControllerNamespace(),
-		DNSDomain:            kubeInfra.GetDNSDomain(),
-		infra:                infra.GetProxyInfra(),
-		ShutdownManager:      kubeInfra.GetEnvoyGateway().GetEnvoyGatewayProvider().GetEnvoyGatewayKubeProvider().ShutdownManager,
-		GatewayNamespaceMode: kubeInfra.GetEnvoyGateway().GatewayNamespaceMode(),
-		ownerReferenceUID:    ownerReference,
+		envoyNamespace:           kubeInfra.GetResourceNamespace(infra),
+		controllerNamespace:      kubeInfra.GetControllerNamespace(),
+		DNSDomain:                kubeInfra.GetDNSDomain(),
+		infra:                    infra.GetProxyInfra(),
+		ShutdownManager:          kubeInfra.GetEnvoyGateway().GetEnvoyGatewayProvider().GetEnvoyGatewayKubeProvider().ShutdownManager,
+		TopologyInjectorDisabled: kubeInfra.GetEnvoyGateway().TopologyInjectorDisabled(),
+		GatewayNamespaceMode:     kubeInfra.GetEnvoyGateway().GatewayNamespaceMode(),
+		ownerReferenceUID:        ownerReference,
 	}, nil
 }
 
@@ -366,7 +369,7 @@ func (r *ResourceRender) Deployment() (*appsv1.Deployment, error) {
 	}
 
 	// Get expected bootstrap configurations rendered ProxyContainers
-	containers, err := expectedProxyContainers(r.infra, deploymentConfig.Container, proxyConfig.Spec.Shutdown, r.ShutdownManager, r.ControllerNamespace(), r.DNSDomain, r.GatewayNamespaceMode)
+	containers, err := expectedProxyContainers(r.infra, deploymentConfig.Container, proxyConfig.Spec.Shutdown, r.ShutdownManager, r.TopologyInjectorDisabled, r.ControllerNamespace(), r.DNSDomain, r.GatewayNamespaceMode)
 	if err != nil {
 		return nil, err
 	}
@@ -456,7 +459,7 @@ func (r *ResourceRender) DaemonSet() (*appsv1.DaemonSet, error) {
 	}
 
 	// Get expected bootstrap configurations rendered ProxyContainers
-	containers, err := expectedProxyContainers(r.infra, daemonSetConfig.Container, proxyConfig.Spec.Shutdown, r.ShutdownManager, r.ControllerNamespace(), r.DNSDomain, r.GatewayNamespaceMode)
+	containers, err := expectedProxyContainers(r.infra, daemonSetConfig.Container, proxyConfig.Spec.Shutdown, r.ShutdownManager, r.TopologyInjectorDisabled, r.ControllerNamespace(), r.DNSDomain, r.GatewayNamespaceMode)
 	if err != nil {
 		return nil, err
 	}

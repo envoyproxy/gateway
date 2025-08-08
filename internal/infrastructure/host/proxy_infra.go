@@ -73,7 +73,9 @@ func (i *Infra) CreateOrUpdateProxyInfra(ctx context.Context, infra *ir.Infra) e
 		AdminServerPort: ptr.To(int32(0)),
 		StatsServerPort: ptr.To(int32(0)),
 	}
-
+	if i.EnvoyGateway != nil {
+		bootstrapConfigOptions.TopologyInjectorDisabled = i.EnvoyGateway.TopologyInjectorDisabled()
+	}
 	args, err := common.BuildProxyArgs(proxyInfra, proxyConfig.Spec.Shutdown, bootstrapConfigOptions, proxyName, false)
 	if err != nil {
 		return err

@@ -1030,12 +1030,14 @@ spec:
                                 unit:
                                   description: |-
                                     RateLimitUnit specifies the intervals for setting rate limits.
-                                    Valid RateLimitUnit values are "Second", "Minute", "Hour", and "Day".
+                                    Valid RateLimitUnit values are "Second", "Minute", "Hour", "Day", "Month" and "Year".
                                   enum:
                                   - Second
                                   - Minute
                                   - Hour
                                   - Day
+                                  - Month
+                                  - Year
                                   type: string
                               required:
                               - requests
@@ -1279,12 +1281,14 @@ spec:
                                 unit:
                                   description: |-
                                     RateLimitUnit specifies the intervals for setting rate limits.
-                                    Valid RateLimitUnit values are "Second", "Minute", "Hour", and "Day".
+                                    Valid RateLimitUnit values are "Second", "Minute", "Hour", "Day", "Month" and "Year".
                                   enum:
                                   - Second
                                   - Minute
                                   - Hour
                                   - Day
+                                  - Month
+                                  - Year
                                   type: string
                               required:
                               - requests

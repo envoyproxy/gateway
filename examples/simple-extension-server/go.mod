@@ -1,6 +1,6 @@
 module github.com/envoyproxy/gateway-simple-extension-server
 
-go 1.24.4
+go 1.24.6
 
 require (
 	github.com/envoyproxy/gateway v1.4.2
