@@ -59,11 +59,34 @@ Store the cert/key in a Secret:
 kubectl create secret tls example-cert --key=www.example.com.key --cert=www.example.com.crt
 ```
 
-Store the CA Cert in another Secret:
+Store the CA Cert in different ways:
+
+{{< tabpane text=true >}}
+{{% tab header="ConfigMap" %}}
 
 ```shell
 kubectl create configmap example-ca --from-file=ca.crt
 ```
+
+{{% /tab %}}
+
+{{% tab header="ClusterTrustBundle" %}}
+
+Save and apply the following resource to your cluster:
+
+```shell
+apiVersion: certificates.k8s.io/v1beta1
+kind: ClusterTrustBundle
+metadata:
+  name: example-ca
+spec:
+  trustBundle: |
+    [content from ca.crt]
+```
+
+{{% /tab %}}
+
+{{< /tabpane >}}
 
 ## Setup TLS on the backend
 
@@ -159,7 +182,7 @@ Note: SectionName is an optional field that specifies the name of the port in th
 If the target is a [Backend] resource, the `sectionName` field should be set to the port number of the backend.
 
 {{< tabpane text=true >}}
-{{% tab header="Apply from stdin" %}}
+{{% tab header="ConfigMap" %}}
 
 ```shell
 cat <<EOF | kubectl apply -f -
@@ -184,11 +207,11 @@ EOF
 ```
 
 {{% /tab %}}
-{{% tab header="Apply from file" %}}
-Save and apply the following resource to your cluster:
 
-```yaml
----
+{{% tab header="ClusterTrustBundle" %}}
+
+```shell
+cat <<EOF | kubectl apply -f -
 apiVersion: gateway.networking.k8s.io/v1alpha3
 kind: BackendTLSPolicy
 metadata:
@@ -204,8 +227,9 @@ spec:
     caCertificateRefs:
     - name: example-ca
       group: ''
-      kind: ConfigMap
+      kind: ClusterTrustBundle
     hostname: www.example.com
+EOF
 ```
 
 {{% /tab %}}
