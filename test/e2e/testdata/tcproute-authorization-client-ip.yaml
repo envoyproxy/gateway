@@ -1,58 +1,101 @@
 apiVersion: gateway.networking.k8s.io/v1beta1
 kind: Gateway
 metadata:
-  name: tcproute-with-authorization-client-ip
+  name: tcp-authorization-backend
   namespace: gateway-conformance-infra
 spec:
   gatewayClassName: "{GATEWAY_CLASS_NAME}"
   listeners:
-  - name: foo
-    protocol: TCP
-    port: 8080
-    allowedRoutes:
-      kinds:
-      - kind: TCPRoute
-  - name: bar
-    protocol: TCP
-    port: 8090
-    allowedRoutes:
-      kinds:
-      - kind: TCPRoute
+    - name: ip
+      protocol: TCP
+      port: 8080
+      allowedRoutes:
+        kinds:
+          - kind: TCPRoute
+    - name: fqdn
+      protocol: TCP
+      port: 8090
+      allowedRoutes:
+        kinds:
+          - kind: TCPRoute
 ---
 apiVersion: gateway.networking.k8s.io/v1alpha2
 kind: TCPRoute
 metadata:
-  name: tcproute-with-authorization-client-ip
+  name: tcp-backend-authorization-ip
   namespace: gateway-conformance-infra
 spec:
   parentRefs:
-  - name: tcproute-with-authorization-client-ip
+    - name: tcp-authorization-backend
+      sectionName: ip
   rules:
-  - backendRefs:
-    - name: infra-backend-v1
-      port: 8080
+    - backendRefs:
+        - group: gateway.envoyproxy.io
+          kind: Backend
+          name: backend-ip
+          port: 8080
+---
+apiVersion: gateway.networking.k8s.io/v1alpha2
+kind: TCPRoute
+metadata:
+  name: tcp-backend-authorization-fqdn
+  namespace: gateway-conformance-infra
+spec:
+  parentRefs:
+    - name: tcp-authorization-backend
+      sectionName: fqdn
+  rules:
+    - backendRefs:
+        - group: gateway.envoyproxy.io
+          kind: Backend
+          name: backend-fqdn
+          port: 8080
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: Backend
+metadata:
+  name: backend-fqdn
+  namespace: gateway-conformance-infra
+spec:
+  endpoints:
+    - fqdn:
+        hostname: infra-backend-v1.gateway-conformance-infra.svc.cluster.local
+        port: 8080
 ---
 apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: SecurityPolicy
 metadata:
-  name: tcproute-with-authorization-client-ip
+  name: tcp-backend-authorization-ip-security-policy
+  namespace: gateway-conformance-infra
+spec: 
+  targetRefs:
+  - group: gateway.networking.k8s.io
+    kind: TCPRoute
+    name: tcp-backend-authorization-ip
+  authorization:
+    defaultAction: Deny
+    rules:
+    - action: Allow
+      principal:
+        clientCIDRs:
+        - 192.168.254.0/24
+        # - 172.18.0.0/24
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: SecurityPolicy
+metadata:
+  name: tcp-backend-authorization-fqdn-security-policy
   namespace: gateway-conformance-infra
 spec:
   targetRefs:
   - group: gateway.networking.k8s.io
     kind: TCPRoute
-    name: tcproute-with-authorization-client-ip
+    name: tcp-backend-authorization-fqdn
   authorization:
-    defaultAction: Allow
+    defaultAction: Deny
     rules:
-    - name: "deny-location-1"
-      action: Deny
+    - action: Allow
       principal:
         clientCIDRs:
-        - 192.168.1.0/24
-    - name: "allow-location-2"
-      action: Allow
-      principal:
-        clientCIDRs:
-        - 10.0.1.0/24
-        - 172.18.0.0/16
+        - 0.0.0.0/0
+ 
