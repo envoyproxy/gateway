@@ -95,7 +95,7 @@ curl --verbose --header "Host: www.example.com" http://localhost:8888/get
 In this quickstart, you have:
 - Installed Envoy Gateway
 - Deployed a backend service, and a gateway
-- Configured the gateway using Kubernetes Gateway API resources [Gateway][] and [HttpRoute][] to direct incoming requests over HTTP to the backend service.
+- Configured the gateway using Kubernetes Gateway API resources [Gateway][] and [HTTPRoute][] to direct incoming requests over HTTP to the backend service.
 
 Here is a suggested list of follow-on tasks to guide you in your exploration of Envoy Gateway:
 
@@ -126,4 +126,3 @@ helm uninstall eg -n envoy-gateway-system
 [GatewayClass]: https://gateway-api.sigs.k8s.io/api-types/gatewayclass/
 [Gateway]: https://gateway-api.sigs.k8s.io/api-types/gateway/
 [HTTPRoute]: https://gateway-api.sigs.k8s.io/api-types/httproute/
-[HttpRoute]: https://gateway-api.sigs.k8s.io/api-types/httproute/

@@ -4,9 +4,9 @@ title: "JWT Claim-Based Authorization"
 
 This task provides instructions for configuring JWT claim-based authorization. JWT claim-based authorization checks if an incoming request has the required JWT claims before routing the request to a backend service.
 
-Envoy Gateway introduces a new CRD called [SecurityPolicy][SecurityPolicy] that allows the user to configure JWT claim-based authorization.
+Envoy Gateway introduces a new CRD called [SecurityPolicy][] that allows the user to configure JWT claim-based authorization.
 
-This instantiated resource can be linked to a [Gateway][Gateway], [HTTPRoute][HTTPRoute] or [GRPCRoute][GRPCRoute] resource.
+This instantiated resource can be linked to a [Gateway][], [HTTPRoute][] or [GRPCRoute][] resource.
 
 ## Prerequisites
 

@@ -6,9 +6,9 @@ This task provides instructions for configuring API Key Authentication.
 API Key Authentication verifies whether an incoming request includes a valid API key in the header, parameter, or cookie before routing the request to 
 a backend service.
 
-Envoy Gateway introduces a new CRD called [SecurityPolicy][SecurityPolicy] that allows the user to configure Api Key 
+Envoy Gateway introduces a new CRD called [SecurityPolicy][] that allows the user to configure Api Key 
 authentication. 
-This instantiated resource can be linked to a [Gateway][Gateway], [HTTPRoute][HTTPRoute] or [GRPCRoute][GRPCRoute] resource.
+This instantiated resource can be linked to a [Gateway][], [HTTPRoute][] or [GRPCRoute][] resource.
 
 ## Prerequisites
 
@@ -16,7 +16,7 @@ This instantiated resource can be linked to a [Gateway][Gateway], [HTTPRoute][HT
 
 ## Configuration
 
-API Key must be stored in a kubernetes secret and referenced in the [SecurityPolicy][SecurityPolicy] configuration.
+API Key must be stored in a kubernetes secret and referenced in the [SecurityPolicy][] configuration.
 The secret is an Opaque secret, with each API key stored under a key corresponding to the client ID.
 
 ### Create a API Key Secret
