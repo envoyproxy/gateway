@@ -142,7 +142,7 @@ $ curl -kv -HHost:www.example.com https://127.0.0.1/get
 
 In the interaction between the two, cert-manager does all the heavy lifting.
 It subscribes to changes to Gateway resources (using the [`gateway-shim` component](https://github.com/cert-manager/cert-manager/tree/master/pkg/controller/certificate-shim/gateways).)
-For any Gateway it finds, it looks for any [TLS listeners](https://gateway-api.sigs.k8s.io/guides/tls/#listeners-and-tls), and the associated `tls.certificateRefs`.
+For any Gateway it finds, it looks for any [TLS listeners][], and the associated `tls.certificateRefs`.
 Note that while Gateway API supports multiple refs here, Envoy Gateway only uses one.
 cert-manager also looks at the `hostname` of the listener to figure out which hosts the certificate is expected to cover.
 More than one listener can use the same certificate Secret, which means cert-manager needs to find all listeners using the same Secret before deciding what to do.
@@ -155,7 +155,7 @@ Once a matching ClusterIssuer is found, that plugin does what needs to be done t
 
 In the case of the ACME protocol (used by Let's Encrypt), cert-manager can also use an HTTP Gateway to solve the HTTP-01 challenge type.
 This is the other side of cert-manager's Gateway API support:
-the [ACME issuer](https://github.com/cert-manager/cert-manager/tree/master/pkg/issuer/acme/http/httproute.go) creates a temporary [HTTPRoute](https://gateway-api.sigs.k8s.io/api-types/httproute/), lets the ACME server(s) query it, and deletes it again.
+the [ACME issuer](https://github.com/cert-manager/cert-manager/tree/master/pkg/issuer/acme/http/httproute.go) creates a temporary [HTTPRoute][], lets the ACME server(s) query it, and deletes it again.
 
 cert-manager then updates the Secret that the Gateway's listener points to in `tls.certificateRefs`.
 Envoy Gateway picks up that the Secret has changed, and reloads the corresponding Envoy Proxy Deployments with the new private key and certificate.
@@ -439,3 +439,6 @@ eg-https   kubernetes.io/tls   3      42m
 
 * [Secure Gateways](secure-gateways.md)
 * [Securing gateway.networking.k8s.io Gateway Resources](https://cert-manager.io/docs/usage/gateway/)
+
+[TLS listeners]: https://gateway-api.sigs.k8s.io/guides/tls/#listeners-and-tls
+[HTTPRoute]: https://gateway-api.sigs.k8s.io/api-types/httproute/

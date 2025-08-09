@@ -6,9 +6,9 @@ This task provides instructions for configuring [HTTP Basic authentication][http
 HTTP Basic authentication checks if an incoming request has a valid username and password before routing the request to 
 a backend service.
 
-Envoy Gateway introduces a new CRD called [SecurityPolicy][SecurityPolicy] that allows the user to configure HTTP Basic 
+Envoy Gateway introduces a new CRD called [SecurityPolicy][] that allows the user to configure HTTP Basic 
 authentication. 
-This instantiated resource can be linked to a [Gateway][Gateway], [HTTPRoute][HTTPRoute] or [GRPCRoute][GRPCRoute] resource.
+This instantiated resource can be linked to a [Gateway][], [HTTPRoute][] or [GRPCRoute][] resource.
 
 ## Prerequisites
 
@@ -17,7 +17,7 @@ This instantiated resource can be linked to a [Gateway][Gateway], [HTTPRoute][HT
 ## Configuration
 
 Envoy Gateway uses [.htpasswd][.htpasswd] format to store the username-password pairs for authentication.
-The file must be stored in a kubernetes secret and referenced in the [SecurityPolicy][SecurityPolicy] configuration. 
+The file must be stored in a kubernetes secret and referenced in the [SecurityPolicy][] configuration. 
 The secret is an Opaque secret, and the username-password pairs must be stored in the key ".htpasswd".
 
 ### Create a root certificate
@@ -65,7 +65,7 @@ kubectl patch gateway eg --type=json --patch '
 ```
 
 ### Create a .htpasswd file
-First, create a [.htpasswd][.htpasswd] file with the username and password you want to use for authentication. 
+First, create a [.htpasswd][] file with the username and password you want to use for authentication. 
 
 Note: Please always use HTTPS with Basic Authentication. This prevents credentials from being transmitted in plain text.
 
@@ -211,7 +211,7 @@ kubectl delete secret/example-cert
 
 Checkout the [Developer Guide](../../../contributions/develop) to get involved in the project.
 
-[SecurityPolicy]: ../../../contributions/design/security-policy
+[SecurityPolicy]: ../../../api/extension_types#securitypolicy
 [http Basic authentication]: https://tools.ietf.org/html/rfc2617
 [Gateway]: https://gateway-api.sigs.k8s.io/api-types/gateway
 [HTTPRoute]: https://gateway-api.sigs.k8s.io/api-types/httproute

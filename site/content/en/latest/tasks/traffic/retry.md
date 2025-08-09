@@ -3,7 +3,7 @@ title: Retry
 ---
 
 {{% alert color="warning" %}}
-Starting from `v1.3`, Envoy Gateway supports [HTTPRoute Retries(GEP-1731)](https://gateway-api.sigs.k8s.io/geps/gep-1731/), 
+Starting from `v1.3`, Envoy Gateway supports [HTTPRoute Retries(GEP-1731)][], 
 this setting in the core Gateway API takes precedence over the BackendTrafficPolicy configuration.
 {{% /alert %}}
 
@@ -14,7 +14,7 @@ Envoy Gateway supports the following retry settings:
 - **RetryOn**: specifies the retry trigger condition.
 - **PerRetryPolicy**: is the retry policy to be applied per retry attempt.
 
-Envoy Gateway introduces a new CRD called [BackendTrafficPolicy](../../../api/extension_types#backendtrafficpolicy) that allows the user to describe their desired retry settings. This instantiated resource can be linked to a [Gateway](https://gateway-api.sigs.k8s.io/api-types/gateway/), [HTTPRoute](https://gateway-api.sigs.k8s.io/api-types/httproute/) or [GRPCRoute](https://gateway-api.sigs.k8s.io/api-types/grpcroute/) resource.
+Envoy Gateway introduces a new CRD called [BackendTrafficPolicy][] that allows the user to describe their desired retry settings. This instantiated resource can be linked to a [Gateway][], [HTTPRoute][] or [GRPCRoute][] resource.
 
 **Note**: There are distinct circuit breaker counters for each `BackendReference` in an `xRoute` rule. Even if a `BackendTrafficPolicy` targets a `Gateway`, each `BackendReference` in that gateway still has separate circuit breaker counter.
 
@@ -148,3 +148,9 @@ You will expect to see the stats.
 ```console
 envoy_cluster_upstream_rq_retry{envoy_cluster_name="httproute/default/backend/rule/0"} 5
 ```
+
+[HTTPRoute Retries(GEP-1731)]: https://gateway-api.sigs.k8s.io/geps/gep-1731/
+[BackendTrafficPolicy]: ../../../api/extension_types#backendtrafficpolicy
+[Gateway]: https://gateway-api.sigs.k8s.io/api-types/gateway/
+[HTTPRoute]: https://gateway-api.sigs.k8s.io/api-types/httproute/
+[GRPCRoute]: https://gateway-api.sigs.k8s.io/api-types/grpcroute/

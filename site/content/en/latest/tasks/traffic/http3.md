@@ -36,8 +36,8 @@ Store the cert/key in a Secret:
 kubectl create secret tls example-cert --key=www.example.com.key --cert=www.example.com.crt
 ```
 
-Update the Gateway from the Quickstart to include an HTTPS listener that listens on port `443` and references the
-`example-cert` Secret:
+Update the [Gateway][] from the Quickstart to include an HTTPS listener that listens on port `443` and references the
+`example-cert` [Secret][]:
 
 ```shell
 kubectl patch gateway eg --type=json --patch '
@@ -56,7 +56,7 @@ kubectl patch gateway eg --type=json --patch '
   '
 ```
 
-Apply the following ClientTrafficPolicy to enable HTTP3
+Apply the following [ClientTrafficPolicy][] to enable HTTP3
 
 {{< tabpane text=true >}}
 {{% tab header="Apply from stdin" %}}
@@ -97,7 +97,7 @@ spec:
 {{% /tab %}}
 {{< /tabpane >}}
 
-Verify the Gateway status:
+Verify the [Gateway][] status:
 
 ```shell
 kubectl get gateway/eg -o yaml
@@ -108,13 +108,13 @@ kubectl get gateway/eg -o yaml
 {{< tabpane text=true >}}
 {{% tab header="With External LoadBalancer Support" %}}
 
-Get the External IP of the Gateway:
+Get the External IP of the [Gateway][]:
 
 ```shell
 export GATEWAY_HOST=$(kubectl get gateway/eg -o jsonpath='{.status.addresses[0].value}')
 ```
 
-Query the example app through the Gateway:
+Query the example app through the [Gateway][]:
 
 The below example uses a custom docker image with custom `curl` binary with built-in http3.
 
@@ -131,3 +131,7 @@ Hence we need external loadbalancer to test this feature out.
 
 {{% /tab %}}
 {{< /tabpane >}}
+
+[Gateway]: https://gateway-api.sigs.k8s.io/api-types/gateway/
+[ClientTrafficPolicy]: ../../../api/extension_types#clienttrafficpolicy
+[Secret]: https://kubernetes.io/docs/concepts/configuration/secret/

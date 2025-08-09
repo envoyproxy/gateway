@@ -8,8 +8,8 @@ External authorization calls an external HTTP or gRPC service to check whether a
 or not. If the request is deemed unauthorized, then the request will be denied with a 403 (Forbidden) response. If the
 request is authorized, then the request will be allowed to proceed to the backend service. 
 
-Envoy Gateway introduces a new CRD called [SecurityPolicy][SecurityPolicy] that allows the user to configure external authorization.
-This instantiated resource can be linked to a [Gateway][Gateway] and [HTTPRoute][HTTPRoute] resource.
+Envoy Gateway introduces a new CRD called [SecurityPolicy][] that allows the user to configure external authorization.
+This instantiated resource can be linked to a [Gateway][] and [HTTPRoute][] resource.
 
 ## Prerequisites
 
@@ -446,6 +446,6 @@ kubectl delete backendtlspolicy/grpc-ext-auth-btls
 
 Checkout the [Developer Guide](../../../contributions/develop) to get involved in the project.
 
-[SecurityPolicy]: ../../../contributions/design/security-policy
+[SecurityPolicy]: ../../../api/extension_types#securitypolicy
 [Gateway]: https://gateway-api.sigs.k8s.io/api-types/gateway
 [HTTPRoute]: https://gateway-api.sigs.k8s.io/api-types/httproute
