@@ -454,7 +454,7 @@ securityPolicies:
         type: Accepted
       - lastTransitionTime: null
         message: 'This policy is being overridden by other securityPolicies for these
-          routes: [rule-2]'
+          route rules: [rule-2]'
         reason: Overridden
         status: "True"
         type: Overridden
