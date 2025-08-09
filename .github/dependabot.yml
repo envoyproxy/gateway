@@ -58,6 +58,11 @@ updates:
       k8s.io:
         patterns:
           - "k8s.io/*"
+  - package-ecosystem: npm
+    directories:
+      - /site
+    schedule:
+      interval: weekly
   - package-ecosystem: pip
     directories:
       - /tools/src/codespell
