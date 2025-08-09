@@ -20,6 +20,7 @@ jobs:
   # Check if there are changes that require running the test jobs
   changes:
     runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
     # Required permissions
     permissions:
       pull-requests: read
