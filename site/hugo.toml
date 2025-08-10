@@ -242,7 +242,7 @@ enable = true
 [[params.versions]]
   version = "v1.5"
   url = "/v1.5"
-  eol = "2025-02-13"
+  eol = "2026-02-13"
 
 [[params.versions]]
   version = "v1.4"
