@@ -8,7 +8,6 @@ package gatewayapi
 import (
 	"errors"
 	"fmt"
-	"sort"
 	"strconv"
 	"strings"
 	"time"
