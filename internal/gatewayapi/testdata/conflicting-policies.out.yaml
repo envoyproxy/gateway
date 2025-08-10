@@ -244,7 +244,7 @@ securityPolicies:
       - OPTIONS
       allowOrigins:
       - http://*.foo.com
-      maxAge: 10m0s
+      maxAge: 600s
     targetRef:
       group: gateway.networking.k8s.io
       kind: Gateway

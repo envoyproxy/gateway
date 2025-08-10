@@ -45,7 +45,7 @@ backendTrafficPolicies:
           attributes:
             SameSite: Strict
           name: Lb-Test-Cookie
-          ttl: 1m0s
+          ttl: 60s
         tableSize: 65537
         type: Cookie
       type: ConsistentHash
@@ -286,14 +286,14 @@ namespaces:
   kind: Namespace
   metadata:
     creationTimestamp: null
-    name: envoy-gateway-system
+    name: default
   spec: {}
   status: {}
 - apiVersion: v1
   kind: Namespace
   metadata:
     creationTimestamp: null
-    name: default
+    name: envoy-gateway-system
   spec: {}
   status: {}
 - apiVersion: v1
@@ -334,18 +334,18 @@ secrets:
   kind: Secret
   metadata:
     creationTimestamp: null
-    name: secret-with-data-and-string-data
+    name: secret-with-data
     namespace: default
-  stringData:
-    secret: literal value
 - apiVersion: v1
   data:
     .secret-file: dmFsdWUtMg0KDQo=
   kind: Secret
   metadata:
     creationTimestamp: null
-    name: secret-with-data
+    name: secret-with-data-and-string-data
     namespace: default
+  stringData:
+    secret: literal value
 - apiVersion: v1
   kind: Secret
   metadata:

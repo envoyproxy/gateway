@@ -313,7 +313,7 @@ securityPolicies:
       exposeHeaders:
       - x-header-3
       - x-header-4
-      maxAge: 16m40s
+      maxAge: 1000s
     targetRefs:
     - group: gateway.networking.k8s.io
       kind: Gateway

@@ -1559,6 +1559,13 @@ func TestValidateClusterTrustBundleForReconcile(t *testing.T) {
 		backendCRDExists:    true,
 		bTLSPolicyCRDExists: true,
 		ctpCRDExists:        true,
+		envoyGateway: &egv1a1.EnvoyGateway{
+			EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
+				ExtensionAPIs: &egv1a1.ExtensionAPISettings{
+					EnableBackend: true,
+				},
+			},
+		},
 	}
 
 	for _, tc := range testCases {

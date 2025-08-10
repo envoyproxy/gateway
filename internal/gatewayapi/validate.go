@@ -460,7 +460,7 @@ func (t *Translator) validateTerminateModeAndGetTLSSecrets(listener *ListenerCon
 		secrets = append(secrets, secret)
 	}
 
-	certs, err := validateTLSSecretsData(secrets, listener.Hostname)
+	certs, err := validateTLSSecretsData(secrets)
 	if err != nil {
 		status.SetGatewayListenerStatusCondition(listener.gateway.Gateway,
 			listener.listenerStatusIdx,

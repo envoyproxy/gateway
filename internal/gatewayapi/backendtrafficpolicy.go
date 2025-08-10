@@ -12,6 +12,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"time"
 
 	perr "github.com/pkg/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -41,19 +42,7 @@ func (t *Translator) ProcessBackendTrafficPolicies(resources *resource.Resources
 	res := make([]*egv1a1.BackendTrafficPolicy, 0, len(resources.BackendTrafficPolicies))
 
 	backendTrafficPolicies := resources.BackendTrafficPolicies
-
-	// Initially, backendTrafficPolicies sort by creation timestamp
-	// or sort alphabetically by “{namespace}/{name}” if multiple policies share same timestamp.
-	sort.Slice(backendTrafficPolicies, func(i, j int) bool {
-		if backendTrafficPolicies[i].CreationTimestamp.Equal(&(backendTrafficPolicies[j].CreationTimestamp)) {
-			policyKeyI := fmt.Sprintf("%s/%s", backendTrafficPolicies[i].Namespace, backendTrafficPolicies[i].Name)
-			policyKeyJ := fmt.Sprintf("%s/%s", backendTrafficPolicies[j].Namespace, backendTrafficPolicies[j].Name)
-			return policyKeyI < policyKeyJ
-		}
-		// Not identical CreationTimestamps
-
-		return backendTrafficPolicies[i].CreationTimestamp.Before(&(backendTrafficPolicies[j].CreationTimestamp))
-	})
+	// BackendTrafficPolicies are already sorted by the provider layer
 
 	// First build a map out of the routes and gateways for faster lookup since users might have thousands of routes or more.
 	routeMap := map[policyTargetRouteKey]*policyRouteTargetContext{}
@@ -974,14 +963,24 @@ func int64ToUint32(in int64) (uint32, bool) {
 }
 
 func (t *Translator) buildFaultInjection(policy *egv1a1.BackendTrafficPolicy) *ir.FaultInjection {
-	var fi *ir.FaultInjection
+	var (
+		fi  *ir.FaultInjection
+		d   time.Duration
+		err error
+	)
 	if policy.Spec.FaultInjection != nil {
 		fi = &ir.FaultInjection{}
 
 		if policy.Spec.FaultInjection.Delay != nil {
+			if policy.Spec.FaultInjection.Delay.FixedDelay != nil {
+				d, err = time.ParseDuration(string(*policy.Spec.FaultInjection.Delay.FixedDelay))
+				if err != nil {
+					return nil
+				}
+			}
 			fi.Delay = &ir.FaultInjectionDelay{
 				Percentage: policy.Spec.FaultInjection.Delay.Percentage,
-				FixedDelay: policy.Spec.FaultInjection.Delay.FixedDelay,
+				FixedDelay: ir.MetaV1DurationPtr(d),
 			}
 		}
 		if policy.Spec.FaultInjection.Abort != nil {

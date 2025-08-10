@@ -5,7 +5,7 @@
 
 package v1alpha1
 
-import metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+import gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 // LoadBalancer defines the load balancer policy to be applied.
 // +union
@@ -47,7 +47,6 @@ type LoadBalancer struct {
 	// ZoneAware defines the configuration related to the distribution of requests between locality zones.
 	//
 	// +optional
-	// +notImplementedHide
 	ZoneAware *ZoneAware `json:"zoneAware,omitempty"`
 }
 
@@ -120,7 +119,7 @@ type Cookie struct {
 	// Max-Age attribute value.
 	//
 	// +optional
-	TTL *metav1.Duration `json:"ttl,omitempty"`
+	TTL *gwapiv1.Duration `json:"ttl,omitempty"`
 	// Additional Attributes to set for the generated cookie.
 	//
 	// +optional
@@ -147,7 +146,7 @@ type SlowStart struct {
 	// Currently only supports linear growth of traffic. For additional details,
 	// see https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/cluster/v3/cluster.proto#config-cluster-v3-cluster-slowstartconfig
 	// +kubebuilder:validation:Required
-	Window *metav1.Duration `json:"window"`
+	Window *gwapiv1.Duration `json:"window"`
 	// TODO: Add support for non-linear traffic increases based on user usage.
 }
 
@@ -156,7 +155,6 @@ type ZoneAware struct {
 	// PreferLocalZone configures zone-aware routing to prefer sending traffic to the local locality zone.
 	//
 	// +optional
-	// +notImplementedHide
 	PreferLocal *PreferLocalZone `json:"preferLocal,omitempty"`
 }
 
@@ -166,13 +164,11 @@ type PreferLocalZone struct {
 	// which maintains equal distribution among upstream endpoints while sending as much traffic as possible locally.
 	//
 	// +optional
-	// +notImplementedHide
 	Force *ForceLocalZone `json:"force,omitempty"`
 
 	// MinEndpointsThreshold is the minimum number of total upstream endpoints across all zones required to enable zone-aware routing.
 	//
 	// +optional
-	// +notImplementedHide
 	MinEndpointsThreshold *uint64 `json:"minEndpointsThreshold,omitempty"`
 }
 

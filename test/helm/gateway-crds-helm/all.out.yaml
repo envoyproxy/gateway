@@ -17820,6 +17820,7 @@ spec:
                     description: |-
                       DNSRefreshRate specifies the rate at which DNS records should be refreshed.
                       Defaults to 30 seconds.
+                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                     type: string
                   lookupFamily:
                     description: |-
@@ -17878,6 +17879,7 @@ spec:
                     properties:
                       fixedDelay:
                         description: FixedDelay specifies the fixed delay duration
+                        pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                         type: string
                       percentage:
                         default: 100
@@ -17992,14 +17994,13 @@ spec:
                         description: |-
                           InitialJitter defines the maximum time Envoy will wait before the first health check.
                           Envoy will randomly select a value between 0 and the initial jitter value.
-                        format: duration
                         pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                         type: string
                       interval:
                         default: 3s
                         description: Interval defines the time between active health
                           checks.
-                        format: duration
+                        pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                         type: string
                       tcp:
                         description: |-
@@ -18073,7 +18074,7 @@ spec:
                         default: 1s
                         description: Timeout defines the time to wait for a health
                           check response.
-                        format: duration
+                        pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                         type: string
                       type:
                         allOf:
@@ -18124,7 +18125,7 @@ spec:
                         default: 30s
                         description: BaseEjectionTime defines the base duration for
                           which a host will be ejected on consecutive failures.
-                        format: duration
+                        pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                         type: string
                       consecutive5XxErrors:
                         default: 5
@@ -18149,7 +18150,7 @@ spec:
                         default: 3s
                         description: Interval defines the time between passive health
                           checks.
-                        format: duration
+                        pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                         type: string
                       maxEjectionPercent:
                         default: 10
@@ -18268,6 +18269,7 @@ spec:
                             description: |-
                               TTL of the generated cookie if the cookie is not present. This value sets the
                               Max-Age attribute value.
+                            pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                             type: string
                         required:
                         - name
@@ -18351,6 +18353,7 @@ spec:
                           During slow start window, traffic sent to the newly added hosts will gradually increase.
                           Currently only supports linear growth of traffic. For additional details,
                           see https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/cluster/v3/cluster.proto#config-cluster-v3-cluster-slowstartconfig
+                        pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                         type: string
                     required:
                     - window
@@ -18671,12 +18674,14 @@ spec:
                                 unit:
                                   description: |-
                                     RateLimitUnit specifies the intervals for setting rate limits.
-                                    Valid RateLimitUnit values are "Second", "Minute", "Hour", and "Day".
+                                    Valid RateLimitUnit values are "Second", "Minute", "Hour", "Day", "Month" and "Year".
                                   enum:
                                   - Second
                                   - Minute
                                   - Hour
                                   - Day
+                                  - Month
+                                  - Year
                                   type: string
                               required:
                               - requests
@@ -18920,12 +18925,14 @@ spec:
                                 unit:
                                   description: |-
                                     RateLimitUnit specifies the intervals for setting rate limits.
-                                    Valid RateLimitUnit values are "Second", "Minute", "Hour", and "Day".
+                                    Valid RateLimitUnit values are "Second", "Minute", "Hour", "Day", "Month" and "Year".
                                   enum:
                                   - Second
                                   - Minute
                                   - Hour
                                   - Day
+                                  - Month
+                                  - Year
                                   type: string
                               required:
                               - requests
@@ -19286,18 +19293,18 @@ spec:
                           baseInterval:
                             description: BaseInterval is the base interval between
                               retries.
-                            format: duration
+                            pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                             type: string
                           maxInterval:
                             description: |-
                               MaxInterval is the maximum interval between retries. This parameter is optional, but must be greater than or equal to the base_interval if set.
                               The default is 10 times the base_interval
-                            format: duration
+                            pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                             type: string
                         type: object
                       timeout:
                         description: Timeout is the timeout per retry attempt.
-                        format: duration
+                        pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                         type: string
                     type: object
                   retryOn:
@@ -20242,7 +20249,7 @@ spec:
                           - name
                           - value
                           type: object
-                        maxItems: 16
+                        maxItems: 64
                         type: array
                         x-kubernetes-list-map-keys:
                         - name
@@ -20268,7 +20275,7 @@ spec:
                             my-header2: bar
                         items:
                           type: string
-                        maxItems: 16
+                        maxItems: 64
                         type: array
                         x-kubernetes-list-type: set
                       set:
@@ -20316,7 +20323,7 @@ spec:
                           - name
                           - value
                           type: object
-                        maxItems: 16
+                        maxItems: 64
                         type: array
                         x-kubernetes-list-map-keys:
                         - name
@@ -21764,6 +21771,7 @@ spec:
                               description: |-
                                 DNSRefreshRate specifies the rate at which DNS records should be refreshed.
                                 Defaults to 30 seconds.
+                              pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                               type: string
                             lookupFamily:
                               description: |-
@@ -21887,14 +21895,13 @@ spec:
                                   description: |-
                                     InitialJitter defines the maximum time Envoy will wait before the first health check.
                                     Envoy will randomly select a value between 0 and the initial jitter value.
-                                  format: duration
                                   pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                   type: string
                                 interval:
                                   default: 3s
                                   description: Interval defines the time between active
                                     health checks.
-                                  format: duration
+                                  pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                   type: string
                                 tcp:
                                   description: |-
@@ -21973,7 +21980,7 @@ spec:
                                   default: 1s
                                   description: Timeout defines the time to wait for
                                     a health check response.
-                                  format: duration
+                                  pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                   type: string
                                 type:
                                   allOf:
@@ -22026,7 +22033,7 @@ spec:
                                   description: BaseEjectionTime defines the base duration
                                     for which a host will be ejected on consecutive
                                     failures.
-                                  format: duration
+                                  pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                   type: string
                                 consecutive5XxErrors:
                                   default: 5
@@ -22051,7 +22058,7 @@ spec:
                                   default: 3s
                                   description: Interval defines the time between passive
                                     health checks.
-                                  format: duration
+                                  pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                   type: string
                                 maxEjectionPercent:
                                   default: 10
@@ -22141,6 +22148,7 @@ spec:
                                       description: |-
                                         TTL of the generated cookie if the cookie is not present. This value sets the
                                         Max-Age attribute value.
+                                      pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                       type: string
                                   required:
                                   - name
@@ -22227,6 +22235,7 @@ spec:
                                     During slow start window, traffic sent to the newly added hosts will gradually increase.
                                     Currently only supports linear growth of traffic. For additional details,
                                     see https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/cluster/v3/cluster.proto#config-cluster-v3-cluster-slowstartconfig
+                                  pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                   type: string
                               required:
                               - window
@@ -22339,18 +22348,18 @@ spec:
                                     baseInterval:
                                       description: BaseInterval is the base interval
                                         between retries.
-                                      format: duration
+                                      pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                       type: string
                                     maxInterval:
                                       description: |-
                                         MaxInterval is the maximum interval between retries. This parameter is optional, but must be greater than or equal to the base_interval if set.
                                         The default is 10 times the base_interval
-                                      format: duration
+                                      pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                       type: string
                                   type: object
                                 timeout:
                                   description: Timeout is the timeout per retry attempt.
-                                  format: duration
+                                  pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                   type: string
                               type: object
                             retryOn:
@@ -24533,7 +24542,7 @@ spec:
                                 x-kubernetes-validations:
                                 - message: Image must include a tag and allowed characters
                                     only (e.g., 'repo:tag').
-                                  rule: self.matches('^[a-zA-Z0-9._/-]+:[a-zA-Z0-9._-]+$')
+                                  rule: self.matches('^[a-zA-Z0-9._/-]+(:[a-zA-Z0-9._-]+)?(@sha256:[a-z0-9]+)?$')
                               imageRepository:
                                 description: |-
                                   ImageRepository specifies the container image repository to be used without specifying a tag.
@@ -24542,8 +24551,8 @@ spec:
                                 type: string
                                 x-kubernetes-validations:
                                 - message: ImageRepository must contain only allowed
-                                    characters and must not include a tag or any colons.
-                                  rule: self.matches('^[a-zA-Z0-9._/-]+$')
+                                    characters and must not include a tag.
+                                  rule: self.matches('^[a-zA-Z0-9._-]+(:[0-9]+)?[a-zA-Z0-9._/-]+$')
                               resources:
                                 description: |-
                                   Resources required by this container.
@@ -28378,7 +28387,7 @@ spec:
                                 x-kubernetes-validations:
                                 - message: Image must include a tag and allowed characters
                                     only (e.g., 'repo:tag').
-                                  rule: self.matches('^[a-zA-Z0-9._/-]+:[a-zA-Z0-9._-]+$')
+                                  rule: self.matches('^[a-zA-Z0-9._/-]+(:[a-zA-Z0-9._-]+)?(@sha256:[a-z0-9]+)?$')
                               imageRepository:
                                 description: |-
                                   ImageRepository specifies the container image repository to be used without specifying a tag.
@@ -28387,8 +28396,8 @@ spec:
                                 type: string
                                 x-kubernetes-validations:
                                 - message: ImageRepository must contain only allowed
-                                    characters and must not include a tag or any colons.
-                                  rule: self.matches('^[a-zA-Z0-9._/-]+$')
+                                    characters and must not include a tag.
+                                  rule: self.matches('^[a-zA-Z0-9._-]+(:[0-9]+)?[a-zA-Z0-9._/-]+$')
                               resources:
                                 description: |-
                                   Resources required by this container.
@@ -34435,11 +34444,13 @@ spec:
                     description: |-
                       DrainTimeout defines the graceful drain timeout. This should be less than the pod's terminationGracePeriodSeconds.
                       If unspecified, defaults to 60 seconds.
+                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                     type: string
                   minDrainDuration:
                     description: |-
                       MinDrainDuration defines the minimum drain duration allowing time for endpoint deprogramming to complete.
                       If unspecified, defaults to 10 seconds.
+                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                     type: string
                 type: object
               telemetry:
@@ -34793,6 +34804,7 @@ spec:
                                                 description: |-
                                                   DNSRefreshRate specifies the rate at which DNS records should be refreshed.
                                                   Defaults to 30 seconds.
+                                                pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                                 type: string
                                               lookupFamily:
                                                 description: |-
@@ -34926,7 +34938,6 @@ spec:
                                                     description: |-
                                                       InitialJitter defines the maximum time Envoy will wait before the first health check.
                                                       Envoy will randomly select a value between 0 and the initial jitter value.
-                                                    format: duration
                                                     pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                                     type: string
                                                   interval:
@@ -34934,7 +34945,7 @@ spec:
                                                     description: Interval defines
                                                       the time between active health
                                                       checks.
-                                                    format: duration
+                                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                                     type: string
                                                   tcp:
                                                     description: |-
@@ -35023,7 +35034,7 @@ spec:
                                                     description: Timeout defines the
                                                       time to wait for a health check
                                                       response.
-                                                    format: duration
+                                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                                     type: string
                                                   type:
                                                     allOf:
@@ -35086,7 +35097,7 @@ spec:
                                                       defines the base duration for
                                                       which a host will be ejected
                                                       on consecutive failures.
-                                                    format: duration
+                                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                                     type: string
                                                   consecutive5XxErrors:
                                                     default: 5
@@ -35114,7 +35125,7 @@ spec:
                                                     description: Interval defines
                                                       the time between passive health
                                                       checks.
-                                                    format: duration
+                                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                                     type: string
                                                   maxEjectionPercent:
                                                     default: 10
@@ -35209,6 +35220,7 @@ spec:
                                                         description: |-
                                                           TTL of the generated cookie if the cookie is not present. This value sets the
                                                           Max-Age attribute value.
+                                                        pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                                         type: string
                                                     required:
                                                     - name
@@ -35303,6 +35315,7 @@ spec:
                                                       During slow start window, traffic sent to the newly added hosts will gradually increase.
                                                       Currently only supports linear growth of traffic. For additional details,
                                                       see https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/cluster/v3/cluster.proto#config-cluster-v3-cluster-slowstartconfig
+                                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                                     type: string
                                                 required:
                                                 - window
@@ -35424,19 +35437,19 @@ spec:
                                                         description: BaseInterval
                                                           is the base interval between
                                                           retries.
-                                                        format: duration
+                                                        pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                                         type: string
                                                       maxInterval:
                                                         description: |-
                                                           MaxInterval is the maximum interval between retries. This parameter is optional, but must be greater than or equal to the base_interval if set.
                                                           The default is 10 times the base_interval
-                                                        format: duration
+                                                        pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                                         type: string
                                                     type: object
                                                   timeout:
                                                     description: Timeout is the timeout
                                                       per retry attempt.
-                                                    format: duration
+                                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                                     type: string
                                                 type: object
                                               retryOn:
@@ -35904,6 +35917,7 @@ spec:
                                                 description: |-
                                                   DNSRefreshRate specifies the rate at which DNS records should be refreshed.
                                                   Defaults to 30 seconds.
+                                                pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                                 type: string
                                               lookupFamily:
                                                 description: |-
@@ -36037,7 +36051,6 @@ spec:
                                                     description: |-
                                                       InitialJitter defines the maximum time Envoy will wait before the first health check.
                                                       Envoy will randomly select a value between 0 and the initial jitter value.
-                                                    format: duration
                                                     pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                                     type: string
                                                   interval:
@@ -36045,7 +36058,7 @@ spec:
                                                     description: Interval defines
                                                       the time between active health
                                                       checks.
-                                                    format: duration
+                                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                                     type: string
                                                   tcp:
                                                     description: |-
@@ -36134,7 +36147,7 @@ spec:
                                                     description: Timeout defines the
                                                       time to wait for a health check
                                                       response.
-                                                    format: duration
+                                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                                     type: string
                                                   type:
                                                     allOf:
@@ -36197,7 +36210,7 @@ spec:
                                                       defines the base duration for
                                                       which a host will be ejected
                                                       on consecutive failures.
-                                                    format: duration
+                                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                                     type: string
                                                   consecutive5XxErrors:
                                                     default: 5
@@ -36225,7 +36238,7 @@ spec:
                                                     description: Interval defines
                                                       the time between passive health
                                                       checks.
-                                                    format: duration
+                                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                                     type: string
                                                   maxEjectionPercent:
                                                     default: 10
@@ -36320,6 +36333,7 @@ spec:
                                                         description: |-
                                                           TTL of the generated cookie if the cookie is not present. This value sets the
                                                           Max-Age attribute value.
+                                                        pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                                         type: string
                                                     required:
                                                     - name
@@ -36414,6 +36428,7 @@ spec:
                                                       During slow start window, traffic sent to the newly added hosts will gradually increase.
                                                       Currently only supports linear growth of traffic. For additional details,
                                                       see https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/cluster/v3/cluster.proto#config-cluster-v3-cluster-slowstartconfig
+                                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                                     type: string
                                                 required:
                                                 - window
@@ -36535,19 +36550,19 @@ spec:
                                                         description: BaseInterval
                                                           is the base interval between
                                                           retries.
-                                                        format: duration
+                                                        pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                                         type: string
                                                       maxInterval:
                                                         description: |-
                                                           MaxInterval is the maximum interval between retries. This parameter is optional, but must be greater than or equal to the base_interval if set.
                                                           The default is 10 times the base_interval
-                                                        format: duration
+                                                        pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                                         type: string
                                                     type: object
                                                   timeout:
                                                     description: Timeout is the timeout
                                                       per retry attempt.
-                                                    format: duration
+                                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                                     type: string
                                                 type: object
                                               retryOn:
@@ -37123,6 +37138,7 @@ spec:
                                           description: |-
                                             DNSRefreshRate specifies the rate at which DNS records should be refreshed.
                                             Defaults to 30 seconds.
+                                          pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                           type: string
                                         lookupFamily:
                                           description: |-
@@ -37251,14 +37267,13 @@ spec:
                                               description: |-
                                                 InitialJitter defines the maximum time Envoy will wait before the first health check.
                                                 Envoy will randomly select a value between 0 and the initial jitter value.
-                                              format: duration
                                               pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                               type: string
                                             interval:
                                               default: 3s
                                               description: Interval defines the time
                                                 between active health checks.
-                                              format: duration
+                                              pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                               type: string
                                             tcp:
                                               description: |-
@@ -37342,7 +37357,7 @@ spec:
                                               default: 1s
                                               description: Timeout defines the time
                                                 to wait for a health check response.
-                                              format: duration
+                                              pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                               type: string
                                             type:
                                               allOf:
@@ -37400,7 +37415,7 @@ spec:
                                               description: BaseEjectionTime defines
                                                 the base duration for which a host
                                                 will be ejected on consecutive failures.
-                                              format: duration
+                                              pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                               type: string
                                             consecutive5XxErrors:
                                               default: 5
@@ -37427,7 +37442,7 @@ spec:
                                               default: 3s
                                               description: Interval defines the time
                                                 between passive health checks.
-                                              format: duration
+                                              pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                               type: string
                                             maxEjectionPercent:
                                               default: 10
@@ -37519,6 +37534,7 @@ spec:
                                                   description: |-
                                                     TTL of the generated cookie if the cookie is not present. This value sets the
                                                     Max-Age attribute value.
+                                                  pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                                   type: string
                                               required:
                                               - name
@@ -37609,6 +37625,7 @@ spec:
                                                 During slow start window, traffic sent to the newly added hosts will gradually increase.
                                                 Currently only supports linear growth of traffic. For additional details,
                                                 see https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/cluster/v3/cluster.proto#config-cluster-v3-cluster-slowstartconfig
+                                              pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                               type: string
                                           required:
                                           - window
@@ -37725,19 +37742,19 @@ spec:
                                                 baseInterval:
                                                   description: BaseInterval is the
                                                     base interval between retries.
-                                                  format: duration
+                                                  pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                                   type: string
                                                 maxInterval:
                                                   description: |-
                                                     MaxInterval is the maximum interval between retries. This parameter is optional, but must be greater than or equal to the base_interval if set.
                                                     The default is 10 times the base_interval
-                                                  format: duration
+                                                  pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                                   type: string
                                               type: object
                                             timeout:
                                               description: Timeout is the timeout
                                                 per retry attempt.
-                                              format: duration
+                                              pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                               type: string
                                           type: object
                                         retryOn:
@@ -38239,6 +38256,7 @@ spec:
                                     description: |-
                                       DNSRefreshRate specifies the rate at which DNS records should be refreshed.
                                       Defaults to 30 seconds.
+                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                     type: string
                                   lookupFamily:
                                     description: |-
@@ -38366,14 +38384,13 @@ spec:
                                         description: |-
                                           InitialJitter defines the maximum time Envoy will wait before the first health check.
                                           Envoy will randomly select a value between 0 and the initial jitter value.
-                                        format: duration
                                         pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                         type: string
                                       interval:
                                         default: 3s
                                         description: Interval defines the time between
                                           active health checks.
-                                        format: duration
+                                        pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                         type: string
                                       tcp:
                                         description: |-
@@ -38457,7 +38474,7 @@ spec:
                                         default: 1s
                                         description: Timeout defines the time to wait
                                           for a health check response.
-                                        format: duration
+                                        pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                         type: string
                                       type:
                                         allOf:
@@ -38514,7 +38531,7 @@ spec:
                                         description: BaseEjectionTime defines the
                                           base duration for which a host will be ejected
                                           on consecutive failures.
-                                        format: duration
+                                        pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                         type: string
                                       consecutive5XxErrors:
                                         default: 5
@@ -38541,7 +38558,7 @@ spec:
                                         default: 3s
                                         description: Interval defines the time between
                                           passive health checks.
-                                        format: duration
+                                        pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                         type: string
                                       maxEjectionPercent:
                                         default: 10
@@ -38633,6 +38650,7 @@ spec:
                                             description: |-
                                               TTL of the generated cookie if the cookie is not present. This value sets the
                                               Max-Age attribute value.
+                                            pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                             type: string
                                         required:
                                         - name
@@ -38722,6 +38740,7 @@ spec:
                                           During slow start window, traffic sent to the newly added hosts will gradually increase.
                                           Currently only supports linear growth of traffic. For additional details,
                                           see https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/cluster/v3/cluster.proto#config-cluster-v3-cluster-slowstartconfig
+                                        pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                         type: string
                                     required:
                                     - window
@@ -38836,19 +38855,19 @@ spec:
                                           baseInterval:
                                             description: BaseInterval is the base
                                               interval between retries.
-                                            format: duration
+                                            pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                             type: string
                                           maxInterval:
                                             description: |-
                                               MaxInterval is the maximum interval between retries. This parameter is optional, but must be greater than or equal to the base_interval if set.
                                               The default is 10 times the base_interval
-                                            format: duration
+                                            pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                             type: string
                                         type: object
                                       timeout:
                                         description: Timeout is the timeout per retry
                                           attempt.
-                                        format: duration
+                                        pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                         type: string
                                     type: object
                                   retryOn:
@@ -39893,6 +39912,7 @@ spec:
                     description: |-
                       MaxAge defines how long the results of a preflight request can be cached.
                       It specifies the value in the Access-Control-Max-Age CORS response header..
+                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                     type: string
                 type: object
               extAuth:
@@ -40199,6 +40219,7 @@ spec:
                                 description: |-
                                   DNSRefreshRate specifies the rate at which DNS records should be refreshed.
                                   Defaults to 30 seconds.
+                                pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                 type: string
                               lookupFamily:
                                 description: |-
@@ -40322,14 +40343,13 @@ spec:
                                     description: |-
                                       InitialJitter defines the maximum time Envoy will wait before the first health check.
                                       Envoy will randomly select a value between 0 and the initial jitter value.
-                                    format: duration
                                     pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                     type: string
                                   interval:
                                     default: 3s
                                     description: Interval defines the time between
                                       active health checks.
-                                    format: duration
+                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                     type: string
                                   tcp:
                                     description: |-
@@ -40408,7 +40428,7 @@ spec:
                                     default: 1s
                                     description: Timeout defines the time to wait
                                       for a health check response.
-                                    format: duration
+                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                     type: string
                                   type:
                                     allOf:
@@ -40463,7 +40483,7 @@ spec:
                                     description: BaseEjectionTime defines the base
                                       duration for which a host will be ejected on
                                       consecutive failures.
-                                    format: duration
+                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                     type: string
                                   consecutive5XxErrors:
                                     default: 5
@@ -40489,7 +40509,7 @@ spec:
                                     default: 3s
                                     description: Interval defines the time between
                                       passive health checks.
-                                    format: duration
+                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                     type: string
                                   maxEjectionPercent:
                                     default: 10
@@ -40581,6 +40601,7 @@ spec:
                                         description: |-
                                           TTL of the generated cookie if the cookie is not present. This value sets the
                                           Max-Age attribute value.
+                                        pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                         type: string
                                     required:
                                     - name
@@ -40668,6 +40689,7 @@ spec:
                                       During slow start window, traffic sent to the newly added hosts will gradually increase.
                                       Currently only supports linear growth of traffic. For additional details,
                                       see https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/cluster/v3/cluster.proto#config-cluster-v3-cluster-slowstartconfig
+                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                     type: string
                                 required:
                                 - window
@@ -40782,19 +40804,19 @@ spec:
                                       baseInterval:
                                         description: BaseInterval is the base interval
                                           between retries.
-                                        format: duration
+                                        pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                         type: string
                                       maxInterval:
                                         description: |-
                                           MaxInterval is the maximum interval between retries. This parameter is optional, but must be greater than or equal to the base_interval if set.
                                           The default is 10 times the base_interval
-                                        format: duration
+                                        pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                         type: string
                                     type: object
                                   timeout:
                                     description: Timeout is the timeout per retry
                                       attempt.
-                                    format: duration
+                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                     type: string
                                 type: object
                               retryOn:
@@ -41206,6 +41228,7 @@ spec:
                                 description: |-
                                   DNSRefreshRate specifies the rate at which DNS records should be refreshed.
                                   Defaults to 30 seconds.
+                                pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                 type: string
                               lookupFamily:
                                 description: |-
@@ -41329,14 +41352,13 @@ spec:
                                     description: |-
                                       InitialJitter defines the maximum time Envoy will wait before the first health check.
                                       Envoy will randomly select a value between 0 and the initial jitter value.
-                                    format: duration
                                     pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                     type: string
                                   interval:
                                     default: 3s
                                     description: Interval defines the time between
                                       active health checks.
-                                    format: duration
+                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                     type: string
                                   tcp:
                                     description: |-
@@ -41415,7 +41437,7 @@ spec:
                                     default: 1s
                                     description: Timeout defines the time to wait
                                       for a health check response.
-                                    format: duration
+                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                     type: string
                                   type:
                                     allOf:
@@ -41470,7 +41492,7 @@ spec:
                                     description: BaseEjectionTime defines the base
                                       duration for which a host will be ejected on
                                       consecutive failures.
-                                    format: duration
+                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                     type: string
                                   consecutive5XxErrors:
                                     default: 5
@@ -41496,7 +41518,7 @@ spec:
                                     default: 3s
                                     description: Interval defines the time between
                                       passive health checks.
-                                    format: duration
+                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                     type: string
                                   maxEjectionPercent:
                                     default: 10
@@ -41588,6 +41610,7 @@ spec:
                                         description: |-
                                           TTL of the generated cookie if the cookie is not present. This value sets the
                                           Max-Age attribute value.
+                                        pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                         type: string
                                     required:
                                     - name
@@ -41675,6 +41698,7 @@ spec:
                                       During slow start window, traffic sent to the newly added hosts will gradually increase.
                                       Currently only supports linear growth of traffic. For additional details,
                                       see https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/cluster/v3/cluster.proto#config-cluster-v3-cluster-slowstartconfig
+                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                     type: string
                                 required:
                                 - window
@@ -41789,19 +41813,19 @@ spec:
                                       baseInterval:
                                         description: BaseInterval is the base interval
                                           between retries.
-                                        format: duration
+                                        pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                         type: string
                                       maxInterval:
                                         description: |-
                                           MaxInterval is the maximum interval between retries. This parameter is optional, but must be greater than or equal to the base_interval if set.
                                           The default is 10 times the base_interval
-                                        format: duration
+                                        pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                         type: string
                                     type: object
                                   timeout:
                                     description: Timeout is the timeout per retry
                                       attempt.
-                                    format: duration
+                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                     type: string
                                 type: object
                               retryOn:
@@ -42405,6 +42429,7 @@ spec:
                                       description: |-
                                         DNSRefreshRate specifies the rate at which DNS records should be refreshed.
                                         Defaults to 30 seconds.
+                                      pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                       type: string
                                     lookupFamily:
                                       description: |-
@@ -42532,14 +42557,13 @@ spec:
                                           description: |-
                                             InitialJitter defines the maximum time Envoy will wait before the first health check.
                                             Envoy will randomly select a value between 0 and the initial jitter value.
-                                          format: duration
                                           pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                           type: string
                                         interval:
                                           default: 3s
                                           description: Interval defines the time between
                                             active health checks.
-                                          format: duration
+                                          pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                           type: string
                                         tcp:
                                           description: |-
@@ -42623,7 +42647,7 @@ spec:
                                           default: 1s
                                           description: Timeout defines the time to
                                             wait for a health check response.
-                                          format: duration
+                                          pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                           type: string
                                         type:
                                           allOf:
@@ -42681,7 +42705,7 @@ spec:
                                           description: BaseEjectionTime defines the
                                             base duration for which a host will be
                                             ejected on consecutive failures.
-                                          format: duration
+                                          pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                           type: string
                                         consecutive5XxErrors:
                                           default: 5
@@ -42708,7 +42732,7 @@ spec:
                                           default: 3s
                                           description: Interval defines the time between
                                             passive health checks.
-                                          format: duration
+                                          pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                           type: string
                                         maxEjectionPercent:
                                           default: 10
@@ -42800,6 +42824,7 @@ spec:
                                               description: |-
                                                 TTL of the generated cookie if the cookie is not present. This value sets the
                                                 Max-Age attribute value.
+                                              pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                               type: string
                                           required:
                                           - name
@@ -42889,6 +42914,7 @@ spec:
                                             During slow start window, traffic sent to the newly added hosts will gradually increase.
                                             Currently only supports linear growth of traffic. For additional details,
                                             see https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/cluster/v3/cluster.proto#config-cluster-v3-cluster-slowstartconfig
+                                          pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                           type: string
                                       required:
                                       - window
@@ -43004,19 +43030,19 @@ spec:
                                             baseInterval:
                                               description: BaseInterval is the base
                                                 interval between retries.
-                                              format: duration
+                                              pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                               type: string
                                             maxInterval:
                                               description: |-
                                                 MaxInterval is the maximum interval between retries. This parameter is optional, but must be greater than or equal to the base_interval if set.
                                                 The default is 10 times the base_interval
-                                              format: duration
+                                              pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                               type: string
                                           type: object
                                         timeout:
                                           description: Timeout is the timeout per
                                             retry attempt.
-                                          format: duration
+                                          pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                           type: string
                                       type: object
                                     retryOn:
@@ -43315,6 +43341,7 @@ spec:
 
                       If not specified, defaults to 604800s (one week).
                       Note: this field is only applicable when the "refreshToken" field is set to true.
+                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                     type: string
                   defaultTokenTTL:
                     description: |-
@@ -43326,6 +43353,7 @@ spec:
                       If not specified, defaults to 0. In this case, the "expires_in" field in
                       the authorization response must be set by the authorization server, or the
                       OAuth flow will fail.
+                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                     type: string
                   denyRedirect:
                     description: |-
@@ -43668,6 +43696,7 @@ spec:
                                 description: |-
                                   DNSRefreshRate specifies the rate at which DNS records should be refreshed.
                                   Defaults to 30 seconds.
+                                pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                 type: string
                               lookupFamily:
                                 description: |-
@@ -43791,14 +43820,13 @@ spec:
                                     description: |-
                                       InitialJitter defines the maximum time Envoy will wait before the first health check.
                                       Envoy will randomly select a value between 0 and the initial jitter value.
-                                    format: duration
                                     pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                     type: string
                                   interval:
                                     default: 3s
                                     description: Interval defines the time between
                                       active health checks.
-                                    format: duration
+                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                     type: string
                                   tcp:
                                     description: |-
@@ -43877,7 +43905,7 @@ spec:
                                     default: 1s
                                     description: Timeout defines the time to wait
                                       for a health check response.
-                                    format: duration
+                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                     type: string
                                   type:
                                     allOf:
@@ -43932,7 +43960,7 @@ spec:
                                     description: BaseEjectionTime defines the base
                                       duration for which a host will be ejected on
                                       consecutive failures.
-                                    format: duration
+                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                     type: string
                                   consecutive5XxErrors:
                                     default: 5
@@ -43958,7 +43986,7 @@ spec:
                                     default: 3s
                                     description: Interval defines the time between
                                       passive health checks.
-                                    format: duration
+                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                     type: string
                                   maxEjectionPercent:
                                     default: 10
@@ -44050,6 +44078,7 @@ spec:
                                         description: |-
                                           TTL of the generated cookie if the cookie is not present. This value sets the
                                           Max-Age attribute value.
+                                        pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                         type: string
                                     required:
                                     - name
@@ -44137,6 +44166,7 @@ spec:
                                       During slow start window, traffic sent to the newly added hosts will gradually increase.
                                       Currently only supports linear growth of traffic. For additional details,
                                       see https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/cluster/v3/cluster.proto#config-cluster-v3-cluster-slowstartconfig
+                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                     type: string
                                 required:
                                 - window
@@ -44251,19 +44281,19 @@ spec:
                                       baseInterval:
                                         description: BaseInterval is the base interval
                                           between retries.
-                                        format: duration
+                                        pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                         type: string
                                       maxInterval:
                                         description: |-
                                           MaxInterval is the maximum interval between retries. This parameter is optional, but must be greater than or equal to the base_interval if set.
                                           The default is 10 times the base_interval
-                                        format: duration
+                                        pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                         type: string
                                     type: object
                                   timeout:
                                     description: Timeout is the timeout per retry
                                       attempt.
-                                    format: duration
+                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                     type: string
                                 type: object
                               retryOn:

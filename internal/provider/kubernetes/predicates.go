@@ -197,7 +197,7 @@ func (r *gatewayAPIReconciler) validateSecretForReconcile(obj client.Object) boo
 }
 
 func (r *gatewayAPIReconciler) validateClusterTrustBundleForReconcile(ctb *certificatesv1b1.ClusterTrustBundle) bool {
-	if r.backendCRDExists {
+	if !r.backendAPIDisabled() {
 		if r.isBackendReferencingClusterTrustBundle(ctb) {
 			return true
 		}
@@ -942,6 +942,11 @@ func (r *gatewayAPIReconciler) isRouteReferencingHTTPRouteFilter(nsName *types.N
 
 // isProxyServiceCluster returns true if the provided labels reference an owning Gateway or GatewayClass
 func (r *gatewayAPIReconciler) isProxyServiceCluster(labels map[string]string) bool {
+	// Skip processing if topology injector is disabled
+	if r.envoyGateway != nil && r.envoyGateway.TopologyInjectorDisabled() {
+		return false
+	}
+
 	if gtw := r.findOwningGateway(context.Background(), labels); gtw != nil {
 		return true
 	}

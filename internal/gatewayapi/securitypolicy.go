@@ -58,19 +58,7 @@ func (t *Translator) ProcessSecurityPolicies(securityPolicies []*egv1a1.Security
 	xdsIR resource.XdsIRMap,
 ) []*egv1a1.SecurityPolicy {
 	var res []*egv1a1.SecurityPolicy
-
-	// Initially, policies sort by creation timestamp
-	// or sort alphabetically by “{namespace}/{name}” if multiple policies share same timestamp.
-	sort.Slice(securityPolicies, func(i, j int) bool {
-		if securityPolicies[i].CreationTimestamp.Equal(&(securityPolicies[j].CreationTimestamp)) {
-			policyKeyI := fmt.Sprintf("%s/%s", securityPolicies[i].Namespace, securityPolicies[i].Name)
-			policyKeyJ := fmt.Sprintf("%s/%s", securityPolicies[j].Namespace, securityPolicies[j].Name)
-			return policyKeyI < policyKeyJ
-		}
-		// Not identical CreationTimestamps
-
-		return securityPolicies[i].CreationTimestamp.Before(&(securityPolicies[j].CreationTimestamp))
-	})
+	// SecurityPolicies are already sorted by the provider layer
 
 	// First build a map out of the routes and gateways for faster lookup since users might have thousands of routes or more.
 	// For gateways this probably isn't quite as necessary.
@@ -834,14 +822,21 @@ func (t *Translator) buildCORS(cors *egv1a1.CORS) *ir.CORS {
 		}
 	}
 
-	return &ir.CORS{
+	irCORS := &ir.CORS{
 		AllowOrigins:     allowOrigins,
 		AllowMethods:     cors.AllowMethods,
 		AllowHeaders:     cors.AllowHeaders,
 		ExposeHeaders:    cors.ExposeHeaders,
-		MaxAge:           cors.MaxAge,
 		AllowCredentials: cors.AllowCredentials != nil && *cors.AllowCredentials,
 	}
+
+	if cors.MaxAge != nil {
+		if d, err := time.ParseDuration(string(*cors.MaxAge)); err == nil {
+			irCORS.MaxAge = ir.MetaV1DurationPtr(d)
+		}
+	}
+
+	return irCORS
 }
 
 func containsWildcard(s string) bool {
@@ -1162,28 +1157,40 @@ func (t *Translator) buildOIDC(
 			"HMAC secret not found in secret %s/%s", t.ControllerNamespace, oidcHMACSecretName)
 	}
 
-	return &ir.OIDC{
-		Name:                   irConfigName(policy),
-		Provider:               *provider,
-		ClientID:               clientID,
-		ClientSecret:           clientSecretBytes,
-		Scopes:                 scopes,
-		Resources:              oidc.Resources,
-		RedirectURL:            redirectURL,
-		RedirectPath:           redirectPath,
-		LogoutPath:             logoutPath,
-		ForwardAccessToken:     forwardAccessToken,
-		DefaultTokenTTL:        oidc.DefaultTokenTTL,
-		RefreshToken:           refreshToken,
-		DefaultRefreshTokenTTL: oidc.DefaultRefreshTokenTTL,
-		CookieSuffix:           suffix,
-		CookieNameOverrides:    policy.Spec.OIDC.CookieNames,
-		CookieDomain:           policy.Spec.OIDC.CookieDomain,
-		CookieConfig:           policy.Spec.OIDC.CookieConfig,
-		HMACSecret:             hmacData,
-		PassThroughAuthHeader:  passThroughAuthHeader,
-		DenyRedirect:           oidc.DenyRedirect,
-	}, nil
+	irOIDC := &ir.OIDC{
+		Name:                  irConfigName(policy),
+		Provider:              *provider,
+		ClientID:              clientID,
+		ClientSecret:          clientSecretBytes,
+		Scopes:                scopes,
+		Resources:             oidc.Resources,
+		RedirectURL:           redirectURL,
+		RedirectPath:          redirectPath,
+		LogoutPath:            logoutPath,
+		ForwardAccessToken:    forwardAccessToken,
+		RefreshToken:          refreshToken,
+		CookieSuffix:          suffix,
+		CookieNameOverrides:   policy.Spec.OIDC.CookieNames,
+		CookieDomain:          policy.Spec.OIDC.CookieDomain,
+		CookieConfig:          policy.Spec.OIDC.CookieConfig,
+		HMACSecret:            hmacData,
+		PassThroughAuthHeader: passThroughAuthHeader,
+		DenyRedirect:          oidc.DenyRedirect,
+	}
+
+	if oidc.DefaultTokenTTL != nil {
+		if d, err := time.ParseDuration(string(*oidc.DefaultTokenTTL)); err == nil {
+			irOIDC.DefaultTokenTTL = ir.MetaV1DurationPtr(d)
+		}
+	}
+
+	if oidc.DefaultRefreshTokenTTL != nil {
+		if d, err := time.ParseDuration(string(*oidc.DefaultRefreshTokenTTL)); err == nil {
+			irOIDC.DefaultRefreshTokenTTL = ir.MetaV1DurationPtr(d)
+		}
+	}
+
+	return irOIDC, nil
 }
 
 func (t *Translator) buildOIDCProvider(policy *egv1a1.SecurityPolicy, resources *resource.Resources, envoyProxy *egv1a1.EnvoyProxy) (*ir.OIDCProvider, error) {
