@@ -20,7 +20,6 @@ jobs:
   # Check if there are changes that require running the test jobs
   changes:
     runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request'
     # Required permissions
     permissions:
       pull-requests: read
@@ -30,6 +29,9 @@ jobs:
     steps:
     - uses: dorny/paths-filter@de90cc6fb38fc0963ad72b210f1f284cd68cea36  # v3.0.2
       id: check-changes
+      # A dependent job will be automatically skipped if its parent job is skipped.
+      # So we skip this step in pull_request event if the changes are not relevant.
+      if: github.event_name == 'pull_request'
       with:
         filters: |
           run_test_workflow:
