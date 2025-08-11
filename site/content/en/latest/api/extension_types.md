@@ -5354,3 +5354,5 @@ _Appears in:_
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
 | `preferLocal` | _[PreferLocalZone](#preferlocalzone)_ |  false  |  | PreferLocalZone configures zone-aware routing to prefer sending traffic to the local locality zone. |
+
+
