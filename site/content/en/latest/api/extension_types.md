@@ -1917,7 +1917,6 @@ _Appears in:_
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
 | `certificateRef` | _[SecretObjectReference](https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1.SecretObjectReference)_ |  true  |  | CertificateRef is a reference to a Kubernetes Secret with a CA certificate in a key named "tls.crt".<br />The CA certificate is used by Envoy Gateway to verify the server certificate presented by the extension server. |
-| `clientCertificateRef` | _[SecretObjectReference](https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1.SecretObjectReference)_ |  false  |  | ClientCertificateRef is a reference to a Kubernetes Secret with a client certificate and key<br />for client certificate authentication (mTLS). The secret must contain both "tls.crt" and "tls.key" keys.<br />When specified, Envoy Gateway will present this client certificate to the extension server<br />for mutual TLS authentication. If not specified, only server certificate validation is performed. |
 
 
 #### ExtractFrom

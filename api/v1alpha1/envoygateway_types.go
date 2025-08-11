@@ -723,6 +723,7 @@ type ExtensionTLS struct {
 	// for mTLS authentication. If not specified, only server certificate validation is performed.
 	//
 	// +optional
+	// +notImplementedHide
 	ClientCertificateRef *gwapiv1.SecretObjectReference `json:"clientCertificateRef,omitempty"`
 }
 
