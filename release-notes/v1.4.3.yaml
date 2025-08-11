@@ -6,3 +6,6 @@ bug fixes: |
   Fixed issue where http filter was not being added for HTTP3 listeners.
   Fixed issue where http filters unstable order caused the Envoy listeners to drain.
   Fixed issue where missing secret in EnvoyProxy caused deployment not to be created.
+
+other changes: |
+  Updated Envoy Proxy to v1.34.4.
