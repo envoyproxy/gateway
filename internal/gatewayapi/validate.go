@@ -1087,3 +1087,29 @@ func validateGatewayListenerSectionName(
 	}
 	return nil
 }
+
+// validateRouteRuleSectionName check:
+// if the section name exists in the target Route rules.
+func validateRouteRuleSectionName(
+	sectionName gwapiv1.SectionName,
+	targetKey policyTargetRouteKey,
+	route *policyRouteTargetContext,
+) *status.PolicyResolveError {
+	found := false
+	for _, name := range GetRuleNames(route.RouteContext) {
+		if name == sectionName {
+			found = true
+			break
+		}
+	}
+	if !found {
+		message := fmt.Sprintf("No section name %s found for %s %s/%s",
+			string(sectionName), targetKey.Kind, targetKey.Namespace, targetKey.Name)
+
+		return &status.PolicyResolveError{
+			Reason:  gwapiv1a2.PolicyReasonTargetNotFound,
+			Message: message,
+		}
+	}
+	return nil
+}
