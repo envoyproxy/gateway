@@ -17,12 +17,12 @@ import (
 	"k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	klabels "k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/envoyproxy/gateway/internal/infrastructure/kubernetes/proxy"
 	"github.com/envoyproxy/gateway/internal/metrics"
+	labelsutil "github.com/envoyproxy/gateway/internal/utils/labels"
 )
 
 // createOrUpdateServiceAccount creates a ServiceAccount in the kube api server based on the
@@ -176,7 +176,7 @@ func (i *Infra) createOrUpdateDeployment(ctx context.Context, r ResourceRender) 
 		// so that the update can be always applied successfully.
 		deployment.Spec.Selector = old.Spec.Selector
 
-		match, err := isSelectorMatch(deployment.Spec.Selector, deployment.Spec.Template.Labels)
+		match, err := labelsutil.SelectorMatch(deployment.Spec.Selector, deployment.Spec.Template.Labels)
 		if err != nil {
 			return err
 		}
@@ -262,7 +262,7 @@ func (i *Infra) createOrUpdateDaemonSet(ctx context.Context, r ResourceRender) (
 		// Here, as a workaround, we always copy the selector from the old daemonset to the new daemonset
 		// so that the update can be always applied successfully.
 		daemonSet.Spec.Selector = old.Spec.Selector
-		match, err := isSelectorMatch(daemonSet.Spec.Selector, daemonSet.Spec.Template.Labels)
+		match, err := labelsutil.SelectorMatch(daemonSet.Spec.Selector, daemonSet.Spec.Template.Labels)
 		if err != nil {
 			return err
 		}
@@ -279,15 +279,6 @@ func (i *Infra) createOrUpdateDaemonSet(ctx context.Context, r ResourceRender) (
 	}
 
 	return i.Client.ServerSideApply(ctx, daemonSet)
-}
-
-func isSelectorMatch(labelselector *metav1.LabelSelector, l map[string]string) (bool, error) {
-	selector, err := metav1.LabelSelectorAsSelector(labelselector)
-	if err != nil {
-		return false, fmt.Errorf("invalid label selector is generated: %w", err)
-	}
-
-	return selector.Matches(klabels.Set(l)), nil
 }
 
 func (i *Infra) createOrUpdatePodDisruptionBudget(ctx context.Context, r ResourceRender) (err error) {
