@@ -98,4 +98,3 @@ spec:
       principal:
         clientCIDRs:
         - 0.0.0.0/0
- 
