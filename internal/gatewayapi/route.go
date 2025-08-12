@@ -2083,7 +2083,7 @@ func getStatPattern(routeContext RouteContext, parentRef *RouteParentContext) st
 func buildStatName(pattern string, route RouteContext, ruleName *gwapiv1.SectionName, idx int, refs []string) string {
 	statName := strings.ReplaceAll(pattern, egv1a1.StatFormatterRouteName, route.GetName())
 	statName = strings.ReplaceAll(statName, egv1a1.StatFormatterRouteNamespace, route.GetNamespace())
-	statName = strings.ReplaceAll(statName, egv1a1.StatFormatterRouteKind, route.GetObjectKind().GroupVersionKind().Kind)
+	statName = strings.ReplaceAll(statName, egv1a1.StatFormatterRouteKind, strings.ToLower(route.GetObjectKind().GroupVersionKind().Kind))
 	if ruleName == nil {
 		statName = strings.ReplaceAll(statName, egv1a1.StatFormatterRouteRuleName, "-")
 	} else {
