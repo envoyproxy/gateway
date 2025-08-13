@@ -223,7 +223,7 @@ xdsIR:
           namespace: envoy-gateway-system
         name: tracing
         settings:
-        - addressType: IP
+        - addressType: UDS
           endpoints:
           - host: ""
             path: /var/run/envoy-uds/dsd.socket
