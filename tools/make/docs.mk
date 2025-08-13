@@ -181,6 +181,6 @@ docs-markdown-lint:
 
 release-notes-docs: $(tools/release-notes-docs)
 	@$(LOG_TARGET)
-	@for file in $(wildcard release-notes/v*.yaml); do \
+	@for file in $(wildcard release-notes/$(shell cat VERSION).yaml); do \
 		$(tools/release-notes-docs) $$file site/content/en/news/releases/notes; \
 	done
