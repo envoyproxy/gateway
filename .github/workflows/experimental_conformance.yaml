@@ -8,9 +8,11 @@ on:
       - "charts/gateway-helm/crds/gatewayapi-crds.yaml"
       - "test/conformance/experimental_conformance_test.go"
   pull_request:
-    paths:
-      - "charts/gateway-helm/crds/gatewayapi-crds.yaml"
-      - "test/conformance/experimental_conformance_test.go"
+    branches:
+      - "main"
+#    paths:
+#      - "charts/gateway-helm/crds/gatewayapi-crds.yaml"
+#      - "test/conformance/experimental_conformance_test.go"
   # Add workflow_dispatch to trigger this workflow manually by maintainers.
   workflow_dispatch:
 
