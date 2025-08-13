@@ -163,7 +163,7 @@ xdsIR:
             namespace: envoy-gateway-system
           name: accesslog_otel_0_0
           settings:
-          - addressType: IP
+          - addressType: UDS
             endpoints:
             - host: ""
               path: /var/run/backend.sock

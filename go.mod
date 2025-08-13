@@ -518,7 +518,6 @@ require (
 
 tool (
 	github.com/bufbuild/buf/cmd/buf
-	github.com/daixiang0/gci/cmd/gci
 	github.com/elastic/crd-ref-docs
 	github.com/golangci/golangci-lint/v2/cmd/golangci-lint
 	github.com/google/go-jsonnet/cmd/jsonnet

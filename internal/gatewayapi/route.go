@@ -2003,7 +2003,7 @@ func (t *Translator) processBackendDestinationSetting(
 			addrTypeMap[ir.FQDN]++
 			irde = ir.NewDestEndpoint(bep.Hostname, bep.FQDN.Hostname, uint32(bep.FQDN.Port), false, bep.Zone)
 		case bep.Unix != nil:
-			addrTypeMap[ir.IP]++
+			addrTypeMap[ir.UDS]++
 			irde = &ir.DestinationEndpoint{
 				Path: ptr.To(bep.Unix.Path),
 				Zone: bep.Zone,
@@ -2083,7 +2083,7 @@ func getStatPattern(routeContext RouteContext, parentRef *RouteParentContext) st
 func buildStatName(pattern string, route RouteContext, ruleName *gwapiv1.SectionName, idx int, refs []string) string {
 	statName := strings.ReplaceAll(pattern, egv1a1.StatFormatterRouteName, route.GetName())
 	statName = strings.ReplaceAll(statName, egv1a1.StatFormatterRouteNamespace, route.GetNamespace())
-	statName = strings.ReplaceAll(statName, egv1a1.StatFormatterRouteKind, route.GetObjectKind().GroupVersionKind().Kind)
+	statName = strings.ReplaceAll(statName, egv1a1.StatFormatterRouteKind, strings.ToLower(route.GetObjectKind().GroupVersionKind().Kind))
 	if ruleName == nil {
 		statName = strings.ReplaceAll(statName, egv1a1.StatFormatterRouteRuleName, "-")
 	} else {

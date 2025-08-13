@@ -212,6 +212,21 @@ func GetRouteType(route RouteContext) gwapiv1.Kind {
 	return gwapiv1.Kind(rv.FieldByName("Kind").String())
 }
 
+// GetRuleNames returns the rule names targeted by the Route object.
+func GetRuleNames(route RouteContext) []gwapiv1.SectionName {
+	rv := reflect.ValueOf(route).Elem()
+
+	rs := rv.FieldByName("Spec").FieldByName("Rules")
+	ruleNames := make([]gwapiv1.SectionName, 0, rs.Len())
+	for i := 0; i < rs.Len(); i++ {
+		nameField := rs.Index(i).FieldByName("Name")
+		if !nameField.IsNil() {
+			ruleNames = append(ruleNames, nameField.Elem().Interface().(gwapiv1.SectionName))
+		}
+	}
+	return ruleNames
+}
+
 // GetHostnames returns the hosts targeted by the Route object.
 func GetHostnames(route RouteContext) []string {
 	rv := reflect.ValueOf(route).Elem()
