@@ -209,15 +209,15 @@ func validateEnvoyGatewayExtensionManager(extensionManager *egv1a1.ExtensionMana
 
 	if extensionManager.Service.TLS != nil {
 		certRef := &extensionManager.Service.TLS.CertificateRef
-		if !((certRef.Group == nil || *certRef.Group == corev1.GroupName) &&
-			(certRef.Kind == nil || *certRef.Kind == "Secret")) {
+		if (certRef.Group != nil && *certRef.Group != corev1.GroupName) ||
+			(certRef.Kind != nil && *certRef.Kind != "Secret") {
 			return fmt.Errorf("unsupported extension server TLS certificateRef group/kind")
 		}
 
 		if extensionManager.Service.TLS.ClientCertificateRef != nil {
 			clientCertRef := extensionManager.Service.TLS.ClientCertificateRef
-			if !((clientCertRef.Group == nil || *clientCertRef.Group == corev1.GroupName) &&
-				(clientCertRef.Kind == nil || *clientCertRef.Kind == "Secret")) {
+			if (clientCertRef.Group != nil && *clientCertRef.Group != corev1.GroupName) ||
+				(clientCertRef.Kind != nil && *clientCertRef.Kind != "Secret") {
 				return fmt.Errorf("unsupported extension server mTLS clientCertificateRef group/kind")
 			}
 		}
