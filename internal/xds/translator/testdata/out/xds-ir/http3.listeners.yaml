@@ -2,6 +2,61 @@
     socketAddress:
       address: 0.0.0.0
       portValue: 10443
+      protocol: UDP
+  defaultFilterChain:
+    filters:
+    - name: envoy.filters.network.http_connection_manager
+      typedConfig:
+        '@type': type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
+        codecType: HTTP3
+        commonHttpProtocolOptions:
+          headersWithUnderscoresAction: REJECT_REQUEST
+        http2ProtocolOptions:
+          initialConnectionWindowSize: 1048576
+          initialStreamWindowSize: 65536
+          maxConcurrentStreams: 100
+        http3ProtocolOptions: {}
+        httpFilters:
+        - name: envoy.filters.http.router
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+            suppressEnvoyHeaders: true
+        mergeSlashes: true
+        normalizePath: true
+        pathWithEscapedSlashesAction: UNESCAPE_AND_REDIRECT
+        rds:
+          configSource:
+            ads: {}
+            resourceApiVersion: V3
+          routeConfigName: http-443
+        serverHeaderTransformation: PASS_THROUGH
+        statPrefix: https-10443
+        useRemoteAddress: true
+    name: http-443
+    transportSocket:
+      name: envoy.transport_sockets.quic
+      typedConfig:
+        '@type': type.googleapis.com/envoy.extensions.transport_sockets.quic.v3.QuicDownstreamTransport
+        downstreamTlsContext:
+          commonTlsContext:
+            alpnProtocols:
+            - h3
+            tlsCertificateSdsSecretConfigs:
+            - name: envoy-gateway-tls-secret-1
+              sdsConfig:
+                ads: {}
+                resourceApiVersion: V3
+          disableStatefulSessionResumption: true
+          disableStatelessSessionResumption: true
+  drainType: MODIFY_ONLY
+  name: envoy-gateway/gateway-1/https1-quic
+  udpListenerConfig:
+    downstreamSocketConfig: {}
+    quicOptions: {}
+- address:
+    socketAddress:
+      address: 0.0.0.0
+      portValue: 10443
   filterChains:
   - filterChainMatch:
       serverNames:
@@ -100,58 +155,3 @@
   maxConnectionsToAcceptPerSocketEvent: 1
   name: envoy-gateway/gateway-1/https1
   perConnectionBufferLimitBytes: 32768
-- address:
-    socketAddress:
-      address: 0.0.0.0
-      portValue: 10443
-      protocol: UDP
-  defaultFilterChain:
-    filters:
-    - name: envoy.filters.network.http_connection_manager
-      typedConfig:
-        '@type': type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
-        codecType: HTTP3
-        commonHttpProtocolOptions:
-          headersWithUnderscoresAction: REJECT_REQUEST
-        http2ProtocolOptions:
-          initialConnectionWindowSize: 1048576
-          initialStreamWindowSize: 65536
-          maxConcurrentStreams: 100
-        http3ProtocolOptions: {}
-        httpFilters:
-        - name: envoy.filters.http.router
-          typedConfig:
-            '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
-            suppressEnvoyHeaders: true
-        mergeSlashes: true
-        normalizePath: true
-        pathWithEscapedSlashesAction: UNESCAPE_AND_REDIRECT
-        rds:
-          configSource:
-            ads: {}
-            resourceApiVersion: V3
-          routeConfigName: http-443
-        serverHeaderTransformation: PASS_THROUGH
-        statPrefix: https-10443
-        useRemoteAddress: true
-    name: http-443
-    transportSocket:
-      name: envoy.transport_sockets.quic
-      typedConfig:
-        '@type': type.googleapis.com/envoy.extensions.transport_sockets.quic.v3.QuicDownstreamTransport
-        downstreamTlsContext:
-          commonTlsContext:
-            alpnProtocols:
-            - h3
-            tlsCertificateSdsSecretConfigs:
-            - name: envoy-gateway-tls-secret-1
-              sdsConfig:
-                ads: {}
-                resourceApiVersion: V3
-          disableStatefulSessionResumption: true
-          disableStatelessSessionResumption: true
-  drainType: MODIFY_ONLY
-  name: envoy-gateway/gateway-1/https1-quic
-  udpListenerConfig:
-    downstreamSocketConfig: {}
-    quicOptions: {}

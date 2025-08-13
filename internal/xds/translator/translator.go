@@ -298,6 +298,61 @@ func (t *Translator) processHTTPListenerXdsTranslation(
 			addHCM                             bool                        // Whether to add an HCM(HTTP Connection Manager filter) to the listener's TCP filter chain
 			err                                error
 		)
+
+		// If HTTP3 is enabled for the ir listener, we need to create a UDP(QUIC) xds listener
+		http3Settings, http3Enabled := http3EnabledListeners[listenerKey{Address: httpListener.Address, Port: httpListener.Port}]
+		if http3Enabled {
+			quicXDSListener := findXdsListenerByHostPort(tCtx, httpListener.Address, httpListener.Port, corev3.SocketAddress_UDP)
+
+			if quicXDSListener == nil {
+				if quicXDSListener, err = t.buildXdsQuicListener(
+					httpListener.CoreListenerDetails,
+					httpListener.IPFamily,
+					accessLog,
+				); err != nil {
+					errs = errors.Join(errs, err)
+					continue
+				}
+
+				if err = tCtx.AddXdsResource(resourcev3.ListenerType, quicXDSListener); err != nil {
+					errs = errors.Join(errs, err)
+					continue
+				}
+
+				if err = t.addHCMToXDSListener(quicXDSListener, httpListener, accessLog, tracing, true, httpListener.Connection); err != nil {
+					errs = errors.Join(errs, err)
+					continue
+				}
+			} else {
+				// There must be only the default filter chain in the QUIC listener, as TLSInspector doesn't work for UDP.
+				if err = t.addHTTPFiltersToHCM(quicXDSListener.DefaultFilterChain, httpListener); err != nil {
+					errs = errors.Join(errs, err)
+					continue
+				}
+			}
+
+			routeCfgName := routeConfigName(httpListener, true, t.xdsNameSchemeV2())
+
+			// Create a route config if we have not found one yet
+			xdsRouteCfg = findXdsRouteConfig(tCtx, routeCfgName)
+			if xdsRouteCfg == nil {
+				xdsRouteCfg = &routev3.RouteConfiguration{
+					IgnorePortInHostMatching: true,
+					Name:                     routeCfgName,
+				}
+
+				if err = tCtx.AddXdsResource(resourcev3.RouteType, xdsRouteCfg); err != nil {
+					errs = errors.Join(errs, err)
+				}
+			}
+
+			// Generate xDS virtual hosts and routes for the given HTTPListener,
+			// and add them to the xDS route config.
+			if err = t.addRouteToRouteConfig(tCtx, xdsRouteCfg, httpListener, metrics, http3Settings); err != nil {
+				errs = errors.Join(errs, err)
+			}
+		}
+
 		// Search for an existing TCP listener on the same address + port combination.
 		// Right now, the address is always 0.0.0.0/::, and we need to revisit the logic in the method if we want to support
 		// listeners on specific addresses.
@@ -393,60 +448,6 @@ func (t *Translator) processHTTPListenerXdsTranslation(
 		// and add them to the xDS route config.
 		if err = t.addRouteToRouteConfig(tCtx, xdsRouteCfg, httpListener, metrics, nil); err != nil {
 			errs = errors.Join(errs, err)
-		}
-
-		// If HTTP3 is enabled for the ir listener, we need to create a UDP(QUIC) xds listener
-		http3Settings, http3Enabled := http3EnabledListeners[listenerKey{Address: httpListener.Address, Port: httpListener.Port}]
-		if http3Enabled {
-			quicXDSListener := findXdsListenerByHostPort(tCtx, httpListener.Address, httpListener.Port, corev3.SocketAddress_UDP)
-
-			if quicXDSListener == nil {
-				if quicXDSListener, err = t.buildXdsQuicListener(
-					httpListener.CoreListenerDetails,
-					httpListener.IPFamily,
-					accessLog,
-				); err != nil {
-					errs = errors.Join(errs, err)
-					continue
-				}
-
-				if err = tCtx.AddXdsResource(resourcev3.ListenerType, quicXDSListener); err != nil {
-					errs = errors.Join(errs, err)
-					continue
-				}
-
-				if err = t.addHCMToXDSListener(quicXDSListener, httpListener, accessLog, tracing, true, httpListener.Connection); err != nil {
-					errs = errors.Join(errs, err)
-					continue
-				}
-			} else {
-				// There must be only the default filter chain in the QUIC listener, as TLSInspector doesn't work for UDP.
-				if err = t.addHTTPFiltersToHCM(quicXDSListener.DefaultFilterChain, httpListener); err != nil {
-					errs = errors.Join(errs, err)
-					continue
-				}
-			}
-
-			routeCfgName := routeConfigName(httpListener, true, t.xdsNameSchemeV2())
-
-			// Create a route config if we have not found one yet
-			xdsRouteCfg = findXdsRouteConfig(tCtx, routeCfgName)
-			if xdsRouteCfg == nil {
-				xdsRouteCfg = &routev3.RouteConfiguration{
-					IgnorePortInHostMatching: true,
-					Name:                     routeCfgName,
-				}
-
-				if err = tCtx.AddXdsResource(resourcev3.RouteType, xdsRouteCfg); err != nil {
-					errs = errors.Join(errs, err)
-				}
-			}
-
-			// Generate xDS virtual hosts and routes for the given HTTPListener,
-			// and add them to the xDS route config.
-			if err = t.addRouteToRouteConfig(tCtx, xdsRouteCfg, httpListener, metrics, http3Settings); err != nil {
-				errs = errors.Join(errs, err)
-			}
 		}
 
 		// Add the secrets referenced by the listener's TLS configuration to the
