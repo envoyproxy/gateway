@@ -1685,6 +1685,7 @@ const (
 	IP    DestinationAddressType = "IP"
 	FQDN  DestinationAddressType = "FQDN"
 	MIXED DestinationAddressType = "Mixed"
+	UDS   DestinationAddressType = "UDS"
 )
 
 // DestinationEndpoint holds the endpoint details associated with the destination

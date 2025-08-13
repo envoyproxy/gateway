@@ -619,7 +619,7 @@ xdsIR:
                   namespace: default
                 name: securitypolicy/default/policy-for-http-route-3-http-backendref/extauth/0
                 settings:
-                - addressType: IP
+                - addressType: UDS
                   endpoints:
                   - host: ""
                     path: /var/run/uds.sock

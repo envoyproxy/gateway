@@ -234,7 +234,7 @@ func TestEnvoyExtensionPolicyTarget(t *testing.T) {
 			},
 		},
 		{
-			desc: "sectionName disabled until supported -targetRef",
+			desc: "sectionName supported -targetRef",
 			mutate: func(eep *egv1a1.EnvoyExtensionPolicy) {
 				eep.Spec = egv1a1.EnvoyExtensionPolicySpec{
 					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
@@ -249,12 +249,10 @@ func TestEnvoyExtensionPolicyTarget(t *testing.T) {
 					},
 				}
 			},
-			wantErrors: []string{
-				"spec: Invalid value: \"object\": this policy does not yet support the sectionName field",
-			},
+			wantErrors: []string{},
 		},
 		{
-			desc: "sectionName disabled until supported - targetRefs",
+			desc: "sectionName - targetRefs",
 			mutate: func(eep *egv1a1.EnvoyExtensionPolicy) {
 				eep.Spec = egv1a1.EnvoyExtensionPolicySpec{
 					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
@@ -271,9 +269,7 @@ func TestEnvoyExtensionPolicyTarget(t *testing.T) {
 					},
 				}
 			},
-			wantErrors: []string{
-				"spec: Invalid value: \"object\": this policy does not yet support the sectionName field",
-			},
+			wantErrors: []string{},
 		},
 
 		// ExtProc
