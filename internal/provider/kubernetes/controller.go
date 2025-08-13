@@ -1380,7 +1380,8 @@ func (r *gatewayAPIReconciler) processGateways(ctx context.Context, managedGC *g
 	mergedGateways := false
 	if r.mergeGateways.Has(managedGC.Name) {
 		mergedGateways = true
-		r.processServiceCluster(managedGC.Name, resourceMap)
+		// processGatewayClassParamsRef has been called for this gatewayclass, its EnvoyProxy should exist in resourceTree
+		r.processServiceClusterForGatewayClass(resourceTree.EnvoyProxyForGatewayClass, managedGC, resourceMap)
 	}
 
 	for _, gtw := range gatewayList.Items {
@@ -1421,10 +1422,6 @@ func (r *gatewayAPIReconciler) processGateways(ctx context.Context, managedGC *g
 		}
 
 		gtwNamespacedName := utils.NamespacedName(&gtw).String()
-
-		if !mergedGateways {
-			r.processServiceCluster(gtwNamespacedName, resourceMap)
-		}
 
 		// Route Processing
 
@@ -1478,6 +1475,15 @@ func (r *gatewayAPIReconciler) processGateways(ctx context.Context, managedGC *g
 			r.log.Error(err, "failed to process infrastructure.parametersRef for gateway", "namespace", gtw.Namespace, "name", gtw.Name)
 		}
 
+		if !mergedGateways {
+			var ep *egv1a1.EnvoyProxy = nil
+			if gtw.Spec.Infrastructure != nil && gtw.Spec.Infrastructure.ParametersRef != nil {
+				// processGatewayParamsRef has been called for this gateway, its EnvoyProxy should exist in resourceTree
+				ep = resourceTree.GetEnvoyProxy(gtw.Namespace, gtw.Spec.Infrastructure.ParametersRef.Name)
+			}
+			r.processServiceClusterForGateway(ep, &gtw, resourceMap)
+		}
+
 		if !resourceMap.allAssociatedGateways.Has(gtwNamespacedName) {
 			resourceMap.allAssociatedGateways.Insert(gtwNamespacedName)
 			resourceTree.Gateways = append(resourceTree.Gateways, &gtw)
@@ -1487,16 +1493,55 @@ func (r *gatewayAPIReconciler) processGateways(ctx context.Context, managedGC *g
 	return nil
 }
 
-func (r *gatewayAPIReconciler) processServiceCluster(resourceName string, resourceMap *resourceMappings) {
+// Called on a GatewayClass when merged gateways mode is enabled for it.
+func (r *gatewayAPIReconciler) processServiceClusterForGatewayClass(ep *egv1a1.EnvoyProxy, gatewayClass *gwapiv1.GatewayClass, resourceMap *resourceMappings) {
 	// Skip processing if topology injector is disabled
 	if r.envoyGateway != nil && r.envoyGateway.TopologyInjectorDisabled() {
 		return
 	}
 
-	proxySvcName := proxy.ExpectedResourceHashedName(resourceName)
+	proxySvcName, proxySvcNamespace := proxy.ExpectedResourceHashedName(gatewayClass.Name), r.namespace
+
+	// Check if the service name was specified in EnvoyProxy
+	if ep != nil {
+		provider := ep.GetEnvoyProxyProvider()
+		if provider.Kubernetes != nil && provider.Kubernetes.EnvoyService != nil && provider.Kubernetes.EnvoyService.Name != nil {
+			proxySvcName = *provider.Kubernetes.EnvoyService.Name
+		}
+	}
+
 	resourceMap.allAssociatedBackendRefs.Insert(gwapiv1.BackendObjectReference{
 		Kind:      ptr.To(gwapiv1.Kind("Service")),
-		Namespace: gatewayapi.NamespacePtr(r.namespace),
+		Namespace: gatewayapi.NamespacePtr(proxySvcNamespace),
+		Name:      gwapiv1.ObjectName(proxySvcName),
+	})
+}
+
+// Called on a Gateway when merged gateways mode is not enabled for its parent GatewayClass.
+func (r *gatewayAPIReconciler) processServiceClusterForGateway(ep *egv1a1.EnvoyProxy, gateway *gwapiv1.Gateway, resourceMap *resourceMappings) {
+	// Skip processing if topology injector is disabled
+	if r.envoyGateway != nil && r.envoyGateway.TopologyInjectorDisabled() {
+		return
+	}
+
+	proxySvcName, proxySvcNamespace := proxy.ExpectedResourceHashedName(utils.NamespacedName(gateway).String()), r.namespace
+	// Check if gateway namespaced mode is used. If it is, the service's name is the same as
+	// the gateway's and it lives in the gateway's namespace not the controller's.
+	if r.gatewayNamespaceMode {
+		proxySvcName, proxySvcNamespace = gateway.Name, gateway.Namespace
+	}
+
+	// Check if the service name was specified in EnvoyProxy
+	if ep != nil {
+		provider := ep.GetEnvoyProxyProvider()
+		if provider.Kubernetes != nil && provider.Kubernetes.EnvoyService != nil && provider.Kubernetes.EnvoyService.Name != nil {
+			proxySvcName = *provider.Kubernetes.EnvoyService.Name
+		}
+	}
+
+	resourceMap.allAssociatedBackendRefs.Insert(gwapiv1.BackendObjectReference{
+		Kind:      ptr.To(gwapiv1.Kind("Service")),
+		Namespace: gatewayapi.NamespacePtr(proxySvcNamespace),
 		Name:      gwapiv1.ObjectName(proxySvcName),
 	})
 }
