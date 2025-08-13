@@ -321,7 +321,7 @@ run-experimental-conformance: prepare-ip-family ## Run Experimental Gateway API 
 	go test -v -tags experimental ./test/conformance -run TestExperimentalConformance --gateway-class=envoy-gateway --debug=true \
 		--organization=envoyproxy --project=envoy-gateway --url=https://github.com/envoyproxy/gateway --version=latest \
 		--report-output="$(CONFORMANCE_REPORT_PATH)" --contact=https://github.com/envoyproxy/gateway/blob/main/GOVERNANCE.md \
-		--mode="$(KUBE_DEPLOY_PROFILE)"
+		--mode="$(KUBE_DEPLOY_PROFILE)" --version=$(TAG)
 
 .PHONY: delete-cluster
 delete-cluster: ## Delete kind cluster.
