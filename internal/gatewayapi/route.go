@@ -2003,7 +2003,7 @@ func (t *Translator) processBackendDestinationSetting(
 			addrTypeMap[ir.FQDN]++
 			irde = ir.NewDestEndpoint(bep.Hostname, bep.FQDN.Hostname, uint32(bep.FQDN.Port), false, bep.Zone)
 		case bep.Unix != nil:
-			addrTypeMap[ir.IP]++
+			addrTypeMap[ir.UDS]++
 			irde = &ir.DestinationEndpoint{
 				Path: ptr.To(bep.Unix.Path),
 				Zone: bep.Zone,
