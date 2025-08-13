@@ -67,19 +67,19 @@ kind: SecurityPolicy
 metadata:
   name: tcp-backend-authorization-ip-security-policy
   namespace: gateway-conformance-infra
-spec: 
+spec:
   targetRefs:
-  - group: gateway.networking.k8s.io
-    kind: TCPRoute
-    name: tcp-backend-authorization-ip
+    - group: gateway.networking.k8s.io
+      kind: TCPRoute
+      name: tcp-backend-authorization-ip
   authorization:
     defaultAction: Deny
     rules:
-    - action: Allow
-      principal:
-        clientCIDRs:
-        - 192.168.254.0/24
-        # - 172.18.0.0/24
+      - action: Allow
+        principal:
+          clientCIDRs:
+            - 192.168.254.0/24
+            # - 172.18.0.0/24
 ---
 apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: SecurityPolicy
@@ -88,13 +88,13 @@ metadata:
   namespace: gateway-conformance-infra
 spec:
   targetRefs:
-  - group: gateway.networking.k8s.io
-    kind: TCPRoute
-    name: tcp-backend-authorization-fqdn
+    - group: gateway.networking.k8s.io
+      kind: TCPRoute
+      name: tcp-backend-authorization-fqdn
   authorization:
     defaultAction: Deny
     rules:
-    - action: Allow
-      principal:
-        clientCIDRs:
-        - 0.0.0.0/0
+      - action: Allow
+        principal:
+          clientCIDRs:
+            - 0.0.0.0/0
