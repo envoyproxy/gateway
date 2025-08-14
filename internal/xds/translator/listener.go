@@ -735,7 +735,7 @@ func buildTCPFilterChain(
 	}
 
 	// Add RBAC filter first if Security features exist
-	if irRoute.Security != nil && irRoute.Security.Authorization != nil {
+	if irRoute.Security != nil && irRoute.Security.Authorization != nil && len(irRoute.Security.Authorization.Rules) > 0 {
 		logger := log.Log.WithName("tcp-rbac")
 		logger.Info("Creating RBAC filter from Security features")
 
