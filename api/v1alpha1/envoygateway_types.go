@@ -711,11 +711,20 @@ type ExtensionService struct {
 type ExtensionTLS struct {
 	// CertificateRef is a reference to a Kubernetes Secret with a CA certificate in a key named "tls.crt".
 	//
-	// The CA certificate is used by Envoy Gateway the verify the server certificate presented by the extension server.
-	// At this time, Envoy Gateway does not support Client Certificate authentication of Envoy Gateway towards the extension server (mTLS).
+	// The CA certificate is used by Envoy Gateway to verify the server certificate presented by the extension server.
 	//
 	// +kubebuilder:validation:Required
 	CertificateRef gwapiv1.SecretObjectReference `json:"certificateRef"`
+
+	// ClientCertificateRef is a reference to a Kubernetes Secret with a client certificate and key
+	// for client certificate authentication (mTLS). The secret must contain both "tls.crt" and "tls.key" keys.
+	//
+	// When specified, Envoy Gateway will present this client certificate to the extension server
+	// for mTLS authentication. If not specified, only server certificate validation is performed.
+	//
+	// +optional
+	// +notImplementedHide
+	ClientCertificateRef *gwapiv1.SecretObjectReference `json:"clientCertificateRef,omitempty"`
 }
 
 // GRPCStatus defines grpc status codes as defined in https://github.com/grpc/grpc/blob/master/doc/statuscodes.md.
