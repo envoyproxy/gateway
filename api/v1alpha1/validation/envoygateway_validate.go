@@ -10,6 +10,8 @@ import (
 	"net/url"
 	"strings"
 
+	corev1 "k8s.io/api/core/v1"
+
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 )
 
@@ -206,14 +208,18 @@ func validateEnvoyGatewayExtensionManager(extensionManager *egv1a1.ExtensionMana
 	}
 
 	if extensionManager.Service.TLS != nil {
-		certificateRefKind := extensionManager.Service.TLS.CertificateRef.Kind
-
-		if certificateRefKind == nil {
-			return fmt.Errorf("certificateRef empty in extension service server TLS settings")
+		certRef := &extensionManager.Service.TLS.CertificateRef
+		if (certRef.Group != nil && *certRef.Group != corev1.GroupName) ||
+			(certRef.Kind != nil && *certRef.Kind != "Secret") {
+			return fmt.Errorf("unsupported extension server TLS certificateRef group/kind")
 		}
 
-		if *certificateRefKind != "Secret" {
-			return fmt.Errorf("unsupported extension server TLS certificateRef %v", certificateRefKind)
+		if extensionManager.Service.TLS.ClientCertificateRef != nil {
+			clientCertRef := extensionManager.Service.TLS.ClientCertificateRef
+			if (clientCertRef.Group != nil && *clientCertRef.Group != corev1.GroupName) ||
+				(clientCertRef.Kind != nil && *clientCertRef.Kind != "Secret") {
+				return fmt.Errorf("unsupported extension server mTLS clientCertificateRef group/kind")
+			}
 		}
 	}
 	return nil
