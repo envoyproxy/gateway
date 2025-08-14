@@ -718,6 +718,119 @@ func (t *Translator) addXdsTCPFilterChain(
 	return nil
 }
 
+func buildTCPRBACMatcherFromRules(rules []*ir.AuthorizationRule, defaultAction egv1a1.AuthorizationAction) *rbacconfig.RBAC {
+	// Build a list of FieldMatchers for MatcherList
+	var fieldMatchers []*matcher.Matcher_MatcherList_FieldMatcher
+
+	for _, r := range rules {
+		// Build predicate from principals (returns *matcher.Matcher_MatcherList_Predicate)
+		pred := principalsToPredicate(r.Principal)
+
+		// Action: use RBAC enum constants from generated package
+		act := rbacv3.RBAC_ALLOW
+		if r.Action == egv1a1.AuthorizationActionDeny {
+			act = rbacv3.RBAC_DENY
+		}
+
+		// Typed config for action: envoy.config.rbac.v3.Action
+		actAny, _ := proto.ToAnyWithValidation(&rbacv3.Action{Action: act})
+
+		// name for the action typed extension config (use underlying string)
+		actionName := strings.ToLower(string(r.Action))
+
+		fieldMatchers = append(fieldMatchers, &matcher.Matcher_MatcherList_FieldMatcher{
+			Predicate: pred,
+			OnMatch: &matcher.Matcher_OnMatch{
+				OnMatch: &matcher.Matcher_OnMatch_Action{
+					Action: &xdscore.TypedExtensionConfig{
+						Name:        fmt.Sprintf("tcp-authz-%s", actionName),
+						TypedConfig: actAny,
+					},
+				},
+			},
+		})
+	}
+
+	// Default action
+	def := rbacv3.RBAC_DENY
+	if defaultAction == egv1a1.AuthorizationActionAllow {
+		def = rbacv3.RBAC_ALLOW
+	}
+	defAny, _ := proto.ToAnyWithValidation(&rbacv3.Action{Action: def})
+
+	// Top-level matcher uses Matcher_MatcherList_ wrapper
+	topMatcher := &matcher.Matcher{
+		MatcherType: &matcher.Matcher_MatcherList_{
+			MatcherList: &matcher.Matcher_MatcherList{
+				Matchers: fieldMatchers,
+			},
+		},
+		OnNoMatch: &matcher.Matcher_OnMatch{
+			OnMatch: &matcher.Matcher_OnMatch_Action{
+				Action: &xdscore.TypedExtensionConfig{
+					Name:        "default",
+					TypedConfig: defAny,
+				},
+			},
+		},
+	}
+
+	return &rbacconfig.RBAC{
+		StatPrefix: "tcp_rbac_",
+		Matcher:    topMatcher,
+	}
+}
+
+// principalsToPredicate converts principals to a matcher.Matcher_MatcherList_Predicate
+func principalsToPredicate(p ir.Principal) *matcher.Matcher_MatcherList_Predicate {
+	// Build OR over CIDRs as Matcher_MatcherList_Predicate with OrMatcher
+	var preds []*matcher.Matcher_MatcherList_Predicate
+	for _, c := range p.ClientCIDRs {
+		// ValueMatch: use StringMatcher with exact AddressPrefix/prefix if needed.
+		// Here we match on the CIDR string (e.g. "10.0.0.0/8")
+		valMatcher := &matcher.StringMatcher{
+			MatchPattern: &matcher.StringMatcher_Exact{Exact: c.CIDR},
+		}
+
+		// Build SinglePredicate: Input is the source_ip typed input (name only).
+		// The generated struct uses a oneof "Matcher" for value/custom matchers.
+		single := &matcher.Matcher_MatcherList_Predicate_SinglePredicate{
+			Input: &xdscore.TypedExtensionConfig{
+				Name: "source_ip",
+			},
+			Matcher: &matcher.Matcher_MatcherList_Predicate_SinglePredicate_ValueMatch{
+				ValueMatch: valMatcher,
+			},
+		}
+
+		preds = append(preds, &matcher.Matcher_MatcherList_Predicate{
+			MatchType: &matcher.Matcher_MatcherList_Predicate_SinglePredicate_{
+				SinglePredicate: single,
+			},
+		})
+	}
+
+	switch len(preds) {
+	case 0:
+		// never match
+		return &matcher.Matcher_MatcherList_Predicate{
+			MatchType: &matcher.Matcher_MatcherList_Predicate_OrMatcher{
+				OrMatcher: &matcher.Matcher_MatcherList_Predicate_PredicateList{},
+			},
+		}
+	case 1:
+		return preds[0]
+	default:
+		return &matcher.Matcher_MatcherList_Predicate{
+			MatchType: &matcher.Matcher_MatcherList_Predicate_OrMatcher{
+				OrMatcher: &matcher.Matcher_MatcherList_Predicate_PredicateList{
+					Predicate: preds,
+				},
+			},
+		}
+	}
+}
+
 func buildTCPFilterChain(
 	irRoute *ir.TCPRoute,
 	clusterName string,
@@ -739,22 +852,53 @@ func buildTCPFilterChain(
 		logger := log.Log.WithName("tcp-rbac")
 		logger.Info("Creating RBAC filter from Security features")
 
+		// Split by action
+		allowPolicies, denyPolicies := splitTCPAuthRules(irRoute.Security.Authorization.Rules)
+		hasAllow, hasDeny := len(allowPolicies) > 0, len(denyPolicies) > 0
+
 		// Convert IR Authorization to RBAC config
-		rbacConfig := &rbacconfig.RBAC{
-			StatPrefix: "tcp_rbac_",
-			Rules: &rbacv3.RBAC{
-				Action:   rbacv3.RBAC_ALLOW,
-				Policies: convertTCPAuthRules(irRoute.Security.Authorization.Rules),
-			},
+		var rbacCfg *rbacconfig.RBAC
+
+		switch {
+		case hasAllow && hasDeny:
+			// Mixed actions: use ordered matcher and choose default action.
+			// Default ALLOW if only DENY would otherwise be configured; otherwise default DENY.
+			// Mixed actions: use ordered matcher and choose default action.
+			// Default ALLOW if only DENY would otherwise be configured; otherwise default DENY.
+			defaultAction := egv1a1.AuthorizationActionDeny
+			rbacCfg = buildTCPRBACMatcherFromRules(irRoute.Security.Authorization.Rules, defaultAction)
+
+		case hasDeny:
+			// Deny-list semantics: default ALLOW
+			rbacCfg = &rbacconfig.RBAC{
+				StatPrefix: "tcp_rbac_",
+				Rules: &rbacv3.RBAC{
+					Action:   rbacv3.RBAC_DENY,
+					Policies: denyPolicies,
+				},
+			}
+
+		case hasAllow:
+			// Allow-list semantics: default DENY
+			rbacCfg = &rbacconfig.RBAC{
+				StatPrefix: "tcp_rbac_",
+				Rules: &rbacv3.RBAC{
+					Action:   rbacv3.RBAC_ALLOW,
+					Policies: allowPolicies,
+				},
+			}
+		default:
+			// No rules
 		}
 
-		if f, err := toNetworkFilter("envoy.filters.network.rbac", rbacConfig); err == nil {
-			filters = append(filters, f)
-			logger.Info("Added RBAC filter to chain",
-				"num_policies", len(rbacConfig.Rules.Policies))
-		} else {
-			logger.Error(err, "Failed to create RBAC network filter")
-			return nil, err
+		if rbacCfg != nil {
+			if f, err := toNetworkFilter("envoy.filters.network.rbac", rbacCfg); err == nil {
+				filters = append(filters, f)
+				logger.Info("Added RBAC filter to chain")
+			} else {
+				logger.Error(err, "Failed to create RBAC network filter")
+				return nil, err
+			}
 		}
 	}
 
@@ -1251,49 +1395,6 @@ func buildSetCurrentClientCertDetails(in *ir.HeaderSettings) *hcmv3.HttpConnecti
 	return clientCertDetails
 }
 
-// convertTCPAuthRules converts IR authorization rules to Envoy RBAC policies
-func convertTCPAuthRules(rules []*ir.AuthorizationRule) map[string]*rbacv3.Policy {
-	policies := make(map[string]*rbacv3.Policy)
-
-	for _, rule := range rules {
-		// Only add ALLOW rules as policies
-		if rule.Action == egv1a1.AuthorizationActionAllow {
-			policies[rule.Name] = &rbacv3.Policy{
-				Principals: convertPrincipals(rule.Principal),
-				Permissions: []*rbacv3.Permission{{
-					Rule: &rbacv3.Permission_Any{Any: true},
-				}},
-			}
-		}
-	}
-
-	return policies
-}
-
-// convertPrincipals converts IR principals to Envoy RBAC principals
-func convertPrincipals(principal ir.Principal) []*rbacv3.Principal {
-	logger := log.FromContext(context.Background())
-	principals := []*rbacv3.Principal{}
-
-	logger.Info("Converting principals",
-		"num_cidrs", len(principal.ClientCIDRs))
-
-	for _, cidr := range principal.ClientCIDRs {
-		logger.Info("Processing CIDR",
-			"cidr", cidr.CIDR,
-			"ip", cidr.IP,
-			"mask_len", cidr.MaskLen)
-
-		principals = append(principals, &rbacv3.Principal{
-			Identifier: &rbacv3.Principal_DirectRemoteIp{
-				DirectRemoteIp: convertCIDR(cidr),
-			},
-		})
-	}
-
-	return principals
-}
-
 // convertCIDR converts IR CIDR match to Envoy CIDR range
 func convertCIDR(cidr *ir.CIDRMatch) *corev3.CidrRange {
 	logger := log.Log.WithName("cidr-converter")
@@ -1330,4 +1431,54 @@ func convertCIDR(cidr *ir.CIDRMatch) *corev3.CidrRange {
 		AddressPrefix: cidr.IP,
 		PrefixLen:     wrapperspb.UInt32(cidr.MaskLen),
 	}
+}
+
+func splitTCPAuthRules(rules []*ir.AuthorizationRule) (
+	allow map[string]*rbacv3.Policy,
+	deny map[string]*rbacv3.Policy,
+) {
+	allow = map[string]*rbacv3.Policy{}
+	deny = map[string]*rbacv3.Policy{}
+
+	for _, rule := range rules {
+		pol := &rbacv3.Policy{
+			Principals: convertPrincipals(rule.Principal),
+			Permissions: []*rbacv3.Permission{{
+				Rule: &rbacv3.Permission_Any{Any: true},
+			}},
+		}
+
+		switch rule.Action {
+		case egv1a1.AuthorizationActionAllow:
+			allow[rule.Name] = pol
+		case egv1a1.AuthorizationActionDeny:
+			deny[rule.Name] = pol
+		default:
+			// ignore unknown/unsupported actions
+		}
+	}
+	return
+}
+
+func convertPrincipals(principal ir.Principal) []*rbacv3.Principal {
+	logger := log.FromContext(context.Background())
+	principals := []*rbacv3.Principal{}
+
+	logger.Info("Converting principals",
+		"num_cidrs", len(principal.ClientCIDRs))
+
+	for _, cidr := range principal.ClientCIDRs {
+		logger.Info("Processing CIDR",
+			"cidr", cidr.CIDR,
+			"ip", cidr.IP,
+			"mask_len", cidr.MaskLen)
+
+		principals = append(principals, &rbacv3.Principal{
+			Identifier: &rbacv3.Principal_DirectRemoteIp{
+				DirectRemoteIp: convertCIDR(cidr),
+			},
+		})
+	}
+
+	return principals
 }
