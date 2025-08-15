@@ -1,0 +1,80 @@
+// Copyright Envoy Gateway Authors
+// SPDX-License-Identifier: Apache-2.0
+// The full text of the Apache license is available in the LICENSE file at
+// the root of the repo.
+
+//go:build e2e
+
+package tests
+
+import (
+	"testing"
+
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/types"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
+	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+	"sigs.k8s.io/gateway-api/conformance/utils/http"
+	"sigs.k8s.io/gateway-api/conformance/utils/kubernetes"
+	"sigs.k8s.io/gateway-api/conformance/utils/suite"
+
+	"github.com/envoyproxy/gateway/internal/gatewayapi"
+	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
+)
+
+func init() {
+	ConformanceTests = append(ConformanceTests, HTTPExtAuthTimeoutTest)
+}
+
+// HTTPExtAuthTimeoutTest tests ExtAuth timeout behavior for HTTP auth service.
+// This test verifies that when a very short timeout is configured, the auth service
+// times out and returns a 403 response.
+var HTTPExtAuthTimeoutTest = suite.ConformanceTest{
+	ShortName:   "HTTPExtAuthTimeout",
+	Description: "Test ExtAuth timeout behavior with HTTP auth service",
+	Manifests:   []string{"testdata/ext-auth-service.yaml", "testdata/ext-auth-http-timeout-securitypolicy.yaml"},
+	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
+		ns := "gateway-conformance-infra"
+		routeNN := types.NamespacedName{Name: "http-with-ext-auth", Namespace: ns}
+		gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
+		gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
+		// Wait for the http ext auth service pod to be ready
+		WaitForPods(t, suite.Client, ns, map[string]string{"app": "envoy-ext-auth"}, corev1.PodRunning, PodReady)
+
+		t.Run("ext auth with timeout behavior", func(t *testing.T) {
+			ancestorRef := gwapiv1a2.ParentReference{
+				Group:     gatewayapi.GroupPtr(gwapiv1.GroupName),
+				Kind:      gatewayapi.KindPtr(resource.KindGateway),
+				Namespace: gatewayapi.NamespacePtr(gwNN.Namespace),
+				Name:      gwapiv1.ObjectName(gwNN.Name),
+			}
+			SecurityPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "ext-auth-test", Namespace: ns}, suite.ControllerName, ancestorRef)
+
+			// With 0ms timeout, the auth service should timeout immediately
+			// This should result in a 403 response due to timeout
+			expectedResponse := http.ExpectedResponse{
+				Request: http.Request{
+					Host: "www.example.com",
+					Path: "/myapp",
+					Headers: map[string]string{
+						"Authorization": "Bearer token1",
+					},
+				},
+				Response: http.Response{
+					StatusCode: 403,
+				},
+				Namespace: ns,
+			}
+
+			req := http.MakeRequest(t, &expectedResponse, gwAddr, "HTTP", "http")
+			cReq, cResp, err := suite.RoundTripper.CaptureRoundTrip(req)
+			if err != nil {
+				t.Errorf("failed to get expected response: %v", err)
+			}
+
+			if err := http.CompareRequest(t, &req, cReq, cResp, expectedResponse); err != nil {
+				t.Errorf("failed to compare request and response: %v", err)
+			}
+		})
+	},
+}
