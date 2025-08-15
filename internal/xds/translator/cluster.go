@@ -191,11 +191,11 @@ func buildXdsCluster(args *xdsClusterArgs) (*buildClusterResult, error) {
 		cluster.TransportSocket = args.tSocket
 	}
 
-	requiresAutoHttpConfig := false
+	requiresAutoHTTPConfig := false
 	for i, ds := range args.settings {
 		if ds.TLS != nil {
-			if !requiresAutoHttpConfig && len(ds.TLS.ALPNProtocols) > 0 {
-				requiresAutoHttpConfig = true
+			if !requiresAutoHTTPConfig && len(ds.TLS.ALPNProtocols) > 0 {
+				requiresAutoHTTPConfig = true
 			}
 
 			socket, err := buildXdsUpstreamTLSSocketWthCert(ds.TLS)
@@ -226,7 +226,7 @@ func buildXdsCluster(args *xdsClusterArgs) (*buildClusterResult, error) {
 	}
 
 	// TransportSocket is required for auto HTTP config
-	if requiresAutoHttpConfig && len(cluster.TransportSocketMatches) > 0 && cluster.TransportSocket == nil {
+	if requiresAutoHTTPConfig && len(cluster.TransportSocketMatches) > 0 && cluster.TransportSocket == nil {
 		cluster.TransportSocket = cluster.TransportSocketMatches[0].TransportSocket
 		// remove TransportSocketMatches because it's meaningless to keep it
 		if len(cluster.TransportSocketMatches) == 1 {
@@ -235,7 +235,7 @@ func buildXdsCluster(args *xdsClusterArgs) (*buildClusterResult, error) {
 	}
 
 	// build common, HTTP/1 and HTTP/2  protocol options for cluster
-	epo, secrets, err := buildTypedExtensionProtocolOptions(args, requiresAutoHttpConfig)
+	epo, secrets, err := buildTypedExtensionProtocolOptions(args, requiresAutoHTTPConfig)
 	if err != nil {
 		return nil, err
 	}
@@ -798,7 +798,7 @@ func buildWeightedLocalities(metadata *corev3.Metadata, ds *ir.DestinationSettin
 	return locality
 }
 
-func buildTypedExtensionProtocolOptions(args *xdsClusterArgs, requiresAutoHttpConfig bool) (map[string]*anypb.Any, []*tlsv3.Secret, error) {
+func buildTypedExtensionProtocolOptions(args *xdsClusterArgs, requiresAutoHTTPConfig bool) (map[string]*anypb.Any, []*tlsv3.Secret, error) {
 	requiresHTTP2Options := false
 	for _, ds := range args.settings {
 		if ds.Protocol == ir.GRPC ||
@@ -816,9 +816,9 @@ func buildTypedExtensionProtocolOptions(args *xdsClusterArgs, requiresAutoHttpCo
 		(args.http1Settings.EnableTrailers || args.http1Settings.PreserveHeaderCase || args.http1Settings.HTTP10 != nil)
 
 	requiresHTTPFilters := len(args.settings) > 0 && args.settings[0].Filters != nil && args.settings[0].Filters.CredentialInjection != nil
-	requiredHttpProtocolOptions := args.useClientProtocol || requiresAutoHttpConfig ||
+	requiredHTTPProtocolOptions := args.useClientProtocol || requiresAutoHTTPConfig ||
 		requiresCommonHTTPOptions || requiresHTTP1Options || requiresHTTP2Options || requiresHTTPFilters
-	if !requiredHttpProtocolOptions {
+	if !requiredHTTPProtocolOptions {
 		return nil, nil, nil
 	}
 	protocolOptions := httpv3.HttpProtocolOptions{}
@@ -871,7 +871,7 @@ func buildTypedExtensionProtocolOptions(args *xdsClusterArgs, requiresAutoHttpCo
 				},
 			},
 		}
-	case requiresAutoHttpConfig:
+	case requiresAutoHTTPConfig:
 		// use Auto when there's a transport socket
 		protocolOptions.UpstreamProtocolOptions = &httpv3.HttpProtocolOptions_AutoConfig{
 			AutoConfig: &httpv3.HttpProtocolOptions_AutoHttpConfig{
