@@ -190,18 +190,21 @@ func TestTranslateXds(t *testing.T) {
 				require.NoError(t, file.Write(requireResourcesToYAMLString(t, routes), filepath.Join("testdata", "out", "xds-ir", inputFileName+".routes.yaml")))
 				require.NoError(t, file.Write(requireResourcesToYAMLString(t, clusters), filepath.Join("testdata", "out", "xds-ir", inputFileName+".clusters.yaml")))
 				require.NoError(t, file.Write(requireResourcesToYAMLString(t, endpoints), filepath.Join("testdata", "out", "xds-ir", inputFileName+".endpoints.yaml")))
+			} else {
+				require.Equal(t, requireTestDataOutFile(t, "xds-ir", inputFileName+".listeners.yaml"), requireResourcesToYAMLString(t, listeners))
+				require.Equal(t, requireTestDataOutFile(t, "xds-ir", inputFileName+".routes.yaml"), requireResourcesToYAMLString(t, routes))
+				require.Equal(t, requireTestDataOutFile(t, "xds-ir", inputFileName+".clusters.yaml"), requireResourcesToYAMLString(t, clusters))
+				require.Equal(t, requireTestDataOutFile(t, "xds-ir", inputFileName+".endpoints.yaml"), requireResourcesToYAMLString(t, endpoints))
+
 			}
-			require.Equal(t, requireTestDataOutFile(t, "xds-ir", inputFileName+".listeners.yaml"), requireResourcesToYAMLString(t, listeners))
-			require.Equal(t, requireTestDataOutFile(t, "xds-ir", inputFileName+".routes.yaml"), requireResourcesToYAMLString(t, routes))
-			require.Equal(t, requireTestDataOutFile(t, "xds-ir", inputFileName+".clusters.yaml"), requireResourcesToYAMLString(t, clusters))
-			require.Equal(t, requireTestDataOutFile(t, "xds-ir", inputFileName+".endpoints.yaml"), requireResourcesToYAMLString(t, endpoints))
 
 			secrets, ok := tCtx.XdsResources[resourcev3.SecretType]
 			if ok && len(secrets) > 0 {
 				if test.OverrideTestData() {
 					require.NoError(t, file.Write(requireResourcesToYAMLString(t, secrets), filepath.Join("testdata", "out", "xds-ir", inputFileName+".secrets.yaml")))
+				} else {
+					require.Equal(t, requireTestDataOutFile(t, "xds-ir", inputFileName+".secrets.yaml"), requireResourcesToYAMLString(t, secrets))
 				}
-				require.Equal(t, requireTestDataOutFile(t, "xds-ir", inputFileName+".secrets.yaml"), requireResourcesToYAMLString(t, secrets))
 			}
 
 			if cfg.requireEnvoyPatchPolicies {
