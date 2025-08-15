@@ -300,6 +300,119 @@ func Test_TLS(t *testing.T) {
 	require.Equal(t, "test-route", response.Route.Name)
 }
 
+func Test_mTLS(t *testing.T) {
+	testDir := "testdata"
+	caFile := testDir + "/ca.pem"
+	certFile := testDir + "/cert.pem"
+	keyFile := testDir + "/key.pem"
+
+	// Load server certificate
+	serverCert, err := tls.LoadX509KeyPair(certFile, keyFile)
+	require.NoError(t, err)
+
+	// Load CA certificate for client verification
+	caCert, err := os.ReadFile(caFile)
+	require.NoError(t, err)
+	caPool := x509.NewCertPool()
+	ok := caPool.AppendCertsFromPEM(caCert)
+	require.True(t, ok)
+
+	// Load client certificate (reusing the same cert/key for simplicity)
+	clientCert, err := os.ReadFile(certFile)
+	require.NoError(t, err)
+	clientKey, err := os.ReadFile(keyFile)
+	require.NoError(t, err)
+
+	lis, err := net.Listen("tcp", "localhost:0")
+	require.NoError(t, err)
+	defer lis.Close()
+
+	port := lis.Addr().(*net.TCPAddr).Port
+
+	// Configure server to require client certificates (mTLS)
+	server := grpc.NewServer(grpc.Creds(credentials.NewTLS(&tls.Config{
+		Certificates: []tls.Certificate{serverCert},
+		ClientAuth:   tls.RequireAndVerifyClientCert,
+		ClientCAs:    caPool,
+		MinVersion:   tls.VersionTLS12,
+	})))
+	extension.RegisterEnvoyGatewayExtensionServer(server, &testServer{})
+	go func() {
+		_ = server.Serve(lis)
+		defer server.GracefulStop()
+	}()
+
+	// Configure Extension Manager with both CA cert and client cert for mTLS
+	extManager := &egv1a1.ExtensionManager{
+		Service: &egv1a1.ExtensionService{
+			BackendEndpoint: egv1a1.BackendEndpoint{
+				IP: &egv1a1.IPEndpoint{
+					Address: "localhost",
+					Port:    int32(port),
+				},
+			},
+			TLS: &egv1a1.ExtensionTLS{
+				CertificateRef: gwapiv1.SecretObjectReference{
+					Name:      "ca-cert",
+					Namespace: ptr.To(gwapiv1.Namespace("default")),
+				},
+				ClientCertificateRef: &gwapiv1.SecretObjectReference{
+					Name:      "client-cert",
+					Namespace: ptr.To(gwapiv1.Namespace("default")),
+				},
+			},
+		},
+	}
+
+	// Create secrets for both CA and client certificates
+	caSecret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "ca-cert",
+			Namespace: "default",
+		},
+		Type: corev1.SecretTypeOpaque,
+		Data: map[string][]byte{
+			corev1.TLSCertKey: caCert,
+		},
+	}
+
+	clientSecret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "client-cert",
+			Namespace: "default",
+		},
+		Type: corev1.SecretTypeTLS,
+		Data: map[string][]byte{
+			corev1.TLSCertKey:       clientCert,
+			corev1.TLSPrivateKeyKey: clientKey,
+		},
+	}
+
+	fakeClient := fakeclient.NewClientBuilder().WithScheme(envoygateway.GetScheme()).WithObjects(caSecret, clientSecret).Build()
+
+	opts, err := setupGRPCOpts(context.Background(), fakeClient, extManager, "test-ns")
+	require.NoError(t, err)
+	require.NotEmpty(t, opts)
+
+	conn, err := grpc.DialContext(context.Background(), fmt.Sprintf("localhost:%d", port),
+		opts...,
+	)
+	require.NoError(t, err)
+	defer conn.Close()
+
+	client := extension.NewEnvoyGatewayExtensionClient(conn)
+	require.NotNil(t, client)
+
+	// Test that the mTLS connection works end-to-end
+	response, err := client.PostRouteModify(context.Background(), &extension.PostRouteModifyRequest{
+		Route: &routev3.Route{
+			Name: "test-mtls-route",
+		},
+	})
+	require.NoError(t, err)
+	require.Equal(t, "test-mtls-route", response.Route.Name)
+}
+
 func Test_buildServiceConfig(t *testing.T) {
 	type args struct {
 		ext *egv1a1.ExtensionManager
