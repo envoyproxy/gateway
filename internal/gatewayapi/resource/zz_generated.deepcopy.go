@@ -11,10 +11,10 @@ package resource
 
 import (
 	"github.com/envoyproxy/gateway/api/v1alpha1"
+	certificatesv1beta1 "k8s.io/api/certificates/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/gateway-api/apis/v1"
 	"sigs.k8s.io/gateway-api/apis/v1alpha2"
 	"sigs.k8s.io/gateway-api/apis/v1alpha3"
@@ -291,20 +291,15 @@ func (in *Resources) DeepCopyInto(out *Resources) {
 			}
 		}
 	}
-	if in.serviceMap != nil {
-		in, out := &in.serviceMap, &out.serviceMap
-		*out = make(map[types.NamespacedName]*corev1.Service, len(*in))
-		for key, val := range *in {
-			var outVal *corev1.Service
-			if val == nil {
-				(*out)[key] = nil
-			} else {
-				inVal := (*in)[key]
-				in, out := &inVal, &outVal
-				*out = new(corev1.Service)
+	if in.ClusterTrustBundles != nil {
+		in, out := &in.ClusterTrustBundles, &out.ClusterTrustBundles
+		*out = make([]*certificatesv1beta1.ClusterTrustBundle, len(*in))
+		for i := range *in {
+			if (*in)[i] != nil {
+				in, out := &(*in)[i], &(*out)[i]
+				*out = new(certificatesv1beta1.ClusterTrustBundle)
 				(*in).DeepCopyInto(*out)
 			}
-			(*out)[key] = outVal
 		}
 	}
 }

@@ -9,7 +9,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"sort"
 	"strings"
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -28,13 +27,7 @@ func (t *Translator) ProcessExtensionServerPolicies(policies []unstructured.Unst
 	xdsIR resource.XdsIRMap,
 ) ([]unstructured.Unstructured, error) {
 	res := []unstructured.Unstructured{}
-
-	// Sort based on timestamp
-	sort.Slice(policies, func(i, j int) bool {
-		iTime := policies[i].GetCreationTimestamp()
-		jTime := policies[j].GetCreationTimestamp()
-		return iTime.Before(&jTime)
-	})
+	// ExtensionServerPolicies are already sorted by the provider layer
 
 	// First build a map out of the gateways for faster lookup
 	gatewayMap := map[types.NamespacedName]*policyGatewayTargetContext{}

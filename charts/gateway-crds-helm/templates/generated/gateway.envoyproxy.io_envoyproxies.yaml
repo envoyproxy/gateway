@@ -614,7 +614,7 @@ spec:
                                 x-kubernetes-validations:
                                 - message: Image must include a tag and allowed characters
                                     only (e.g., 'repo:tag').
-                                  rule: self.matches('^[a-zA-Z0-9._/-]+:[a-zA-Z0-9._-]+$')
+                                  rule: self.matches('^[a-zA-Z0-9._/-]+(:[a-zA-Z0-9._-]+)?(@sha256:[a-z0-9]+)?$')
                               imageRepository:
                                 description: |-
                                   ImageRepository specifies the container image repository to be used without specifying a tag.
@@ -623,8 +623,8 @@ spec:
                                 type: string
                                 x-kubernetes-validations:
                                 - message: ImageRepository must contain only allowed
-                                    characters and must not include a tag or any colons.
-                                  rule: self.matches('^[a-zA-Z0-9._/-]+$')
+                                    characters and must not include a tag.
+                                  rule: self.matches('^[a-zA-Z0-9._-]+(:[0-9]+)?[a-zA-Z0-9._/-]+$')
                               resources:
                                 description: |-
                                   Resources required by this container.
@@ -4459,7 +4459,7 @@ spec:
                                 x-kubernetes-validations:
                                 - message: Image must include a tag and allowed characters
                                     only (e.g., 'repo:tag').
-                                  rule: self.matches('^[a-zA-Z0-9._/-]+:[a-zA-Z0-9._-]+$')
+                                  rule: self.matches('^[a-zA-Z0-9._/-]+(:[a-zA-Z0-9._-]+)?(@sha256:[a-z0-9]+)?$')
                               imageRepository:
                                 description: |-
                                   ImageRepository specifies the container image repository to be used without specifying a tag.
@@ -4468,8 +4468,8 @@ spec:
                                 type: string
                                 x-kubernetes-validations:
                                 - message: ImageRepository must contain only allowed
-                                    characters and must not include a tag or any colons.
-                                  rule: self.matches('^[a-zA-Z0-9._/-]+$')
+                                    characters and must not include a tag.
+                                  rule: self.matches('^[a-zA-Z0-9._-]+(:[0-9]+)?[a-zA-Z0-9._/-]+$')
                               resources:
                                 description: |-
                                   Resources required by this container.
@@ -10516,11 +10516,13 @@ spec:
                     description: |-
                       DrainTimeout defines the graceful drain timeout. This should be less than the pod's terminationGracePeriodSeconds.
                       If unspecified, defaults to 60 seconds.
+                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                     type: string
                   minDrainDuration:
                     description: |-
                       MinDrainDuration defines the minimum drain duration allowing time for endpoint deprogramming to complete.
                       If unspecified, defaults to 10 seconds.
+                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                     type: string
                 type: object
               telemetry:
@@ -10874,6 +10876,7 @@ spec:
                                                 description: |-
                                                   DNSRefreshRate specifies the rate at which DNS records should be refreshed.
                                                   Defaults to 30 seconds.
+                                                pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                                 type: string
                                               lookupFamily:
                                                 description: |-
@@ -11003,12 +11006,18 @@ spec:
                                                     required:
                                                     - path
                                                     type: object
+                                                  initialJitter:
+                                                    description: |-
+                                                      InitialJitter defines the maximum time Envoy will wait before the first health check.
+                                                      Envoy will randomly select a value between 0 and the initial jitter value.
+                                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                                    type: string
                                                   interval:
                                                     default: 3s
                                                     description: Interval defines
                                                       the time between active health
                                                       checks.
-                                                    format: duration
+                                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                                     type: string
                                                   tcp:
                                                     description: |-
@@ -11097,7 +11106,7 @@ spec:
                                                     description: Timeout defines the
                                                       time to wait for a health check
                                                       response.
-                                                    format: duration
+                                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                                     type: string
                                                   type:
                                                     allOf:
@@ -11160,7 +11169,7 @@ spec:
                                                       defines the base duration for
                                                       which a host will be ejected
                                                       on consecutive failures.
-                                                    format: duration
+                                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                                     type: string
                                                   consecutive5XxErrors:
                                                     default: 5
@@ -11188,7 +11197,7 @@ spec:
                                                     description: Interval defines
                                                       the time between passive health
                                                       checks.
-                                                    format: duration
+                                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                                     type: string
                                                   maxEjectionPercent:
                                                     default: 10
@@ -11283,6 +11292,7 @@ spec:
                                                         description: |-
                                                           TTL of the generated cookie if the cookie is not present. This value sets the
                                                           Max-Age attribute value.
+                                                        pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                                         type: string
                                                     required:
                                                     - name
@@ -11334,6 +11344,37 @@ spec:
                                                     be set.
                                                   rule: 'self.type == ''Cookie'' ?
                                                     has(self.cookie) : !has(self.cookie)'
+                                              endpointOverride:
+                                                description: |-
+                                                  EndpointOverride defines the configuration for endpoint override.
+                                                  When specified, the load balancer will attempt to route requests to endpoints
+                                                  based on the override information extracted from request headers or metadata.
+                                                   If the override endpoints are not available, the configured load balancer policy will be used as fallback.
+                                                properties:
+                                                  extractFrom:
+                                                    description: ExtractFrom defines
+                                                      the sources to extract endpoint
+                                                      override information from.
+                                                    items:
+                                                      description: EndpointOverrideExtractFrom
+                                                        defines a source to extract
+                                                        endpoint override information
+                                                        from.
+                                                      properties:
+                                                        header:
+                                                          description: |-
+                                                            Header defines the header to get the override endpoint addresses.
+                                                            The header value must specify at least one endpoint in `IP:Port` format or multiple endpoints in `IP:Port,IP:Port,...` format.
+                                                            For example `10.0.0.5:8080` or `[2600:4040:5204::1574:24ae]:80`.
+                                                            The IPv6 address is enclosed in square brackets.
+                                                          type: string
+                                                      type: object
+                                                    maxItems: 10
+                                                    minItems: 1
+                                                    type: array
+                                                required:
+                                                - extractFrom
+                                                type: object
                                               slowStart:
                                                 description: |-
                                                   SlowStart defines the configuration related to the slow start load balancer policy.
@@ -11346,6 +11387,7 @@ spec:
                                                       During slow start window, traffic sent to the newly added hosts will gradually increase.
                                                       Currently only supports linear growth of traffic. For additional details,
                                                       see https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/cluster/v3/cluster.proto#config-cluster-v3-cluster-slowstartconfig
+                                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                                     type: string
                                                 required:
                                                 - window
@@ -11467,19 +11509,19 @@ spec:
                                                         description: BaseInterval
                                                           is the base interval between
                                                           retries.
-                                                        format: duration
+                                                        pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                                         type: string
                                                       maxInterval:
                                                         description: |-
                                                           MaxInterval is the maximum interval between retries. This parameter is optional, but must be greater than or equal to the base_interval if set.
                                                           The default is 10 times the base_interval
-                                                        format: duration
+                                                        pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                                         type: string
                                                     type: object
                                                   timeout:
                                                     description: Timeout is the timeout
                                                       per retry attempt.
-                                                    format: duration
+                                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                                     type: string
                                                 type: object
                                               retryOn:
@@ -11511,6 +11553,7 @@ spec:
                                                       - 5xx
                                                       - gateway-error
                                                       - reset
+                                                      - reset-before-request
                                                       - connect-failure
                                                       - retriable-4xx
                                                       - refused-stream
@@ -11946,6 +11989,7 @@ spec:
                                                 description: |-
                                                   DNSRefreshRate specifies the rate at which DNS records should be refreshed.
                                                   Defaults to 30 seconds.
+                                                pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                                 type: string
                                               lookupFamily:
                                                 description: |-
@@ -12075,12 +12119,18 @@ spec:
                                                     required:
                                                     - path
                                                     type: object
+                                                  initialJitter:
+                                                    description: |-
+                                                      InitialJitter defines the maximum time Envoy will wait before the first health check.
+                                                      Envoy will randomly select a value between 0 and the initial jitter value.
+                                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                                    type: string
                                                   interval:
                                                     default: 3s
                                                     description: Interval defines
                                                       the time between active health
                                                       checks.
-                                                    format: duration
+                                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                                     type: string
                                                   tcp:
                                                     description: |-
@@ -12169,7 +12219,7 @@ spec:
                                                     description: Timeout defines the
                                                       time to wait for a health check
                                                       response.
-                                                    format: duration
+                                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                                     type: string
                                                   type:
                                                     allOf:
@@ -12232,7 +12282,7 @@ spec:
                                                       defines the base duration for
                                                       which a host will be ejected
                                                       on consecutive failures.
-                                                    format: duration
+                                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                                     type: string
                                                   consecutive5XxErrors:
                                                     default: 5
@@ -12260,7 +12310,7 @@ spec:
                                                     description: Interval defines
                                                       the time between passive health
                                                       checks.
-                                                    format: duration
+                                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                                     type: string
                                                   maxEjectionPercent:
                                                     default: 10
@@ -12355,6 +12405,7 @@ spec:
                                                         description: |-
                                                           TTL of the generated cookie if the cookie is not present. This value sets the
                                                           Max-Age attribute value.
+                                                        pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                                         type: string
                                                     required:
                                                     - name
@@ -12406,6 +12457,37 @@ spec:
                                                     be set.
                                                   rule: 'self.type == ''Cookie'' ?
                                                     has(self.cookie) : !has(self.cookie)'
+                                              endpointOverride:
+                                                description: |-
+                                                  EndpointOverride defines the configuration for endpoint override.
+                                                  When specified, the load balancer will attempt to route requests to endpoints
+                                                  based on the override information extracted from request headers or metadata.
+                                                   If the override endpoints are not available, the configured load balancer policy will be used as fallback.
+                                                properties:
+                                                  extractFrom:
+                                                    description: ExtractFrom defines
+                                                      the sources to extract endpoint
+                                                      override information from.
+                                                    items:
+                                                      description: EndpointOverrideExtractFrom
+                                                        defines a source to extract
+                                                        endpoint override information
+                                                        from.
+                                                      properties:
+                                                        header:
+                                                          description: |-
+                                                            Header defines the header to get the override endpoint addresses.
+                                                            The header value must specify at least one endpoint in `IP:Port` format or multiple endpoints in `IP:Port,IP:Port,...` format.
+                                                            For example `10.0.0.5:8080` or `[2600:4040:5204::1574:24ae]:80`.
+                                                            The IPv6 address is enclosed in square brackets.
+                                                          type: string
+                                                      type: object
+                                                    maxItems: 10
+                                                    minItems: 1
+                                                    type: array
+                                                required:
+                                                - extractFrom
+                                                type: object
                                               slowStart:
                                                 description: |-
                                                   SlowStart defines the configuration related to the slow start load balancer policy.
@@ -12418,6 +12500,7 @@ spec:
                                                       During slow start window, traffic sent to the newly added hosts will gradually increase.
                                                       Currently only supports linear growth of traffic. For additional details,
                                                       see https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/cluster/v3/cluster.proto#config-cluster-v3-cluster-slowstartconfig
+                                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                                     type: string
                                                 required:
                                                 - window
@@ -12539,19 +12622,19 @@ spec:
                                                         description: BaseInterval
                                                           is the base interval between
                                                           retries.
-                                                        format: duration
+                                                        pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                                         type: string
                                                       maxInterval:
                                                         description: |-
                                                           MaxInterval is the maximum interval between retries. This parameter is optional, but must be greater than or equal to the base_interval if set.
                                                           The default is 10 times the base_interval
-                                                        format: duration
+                                                        pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                                         type: string
                                                     type: object
                                                   timeout:
                                                     description: Timeout is the timeout
                                                       per retry attempt.
-                                                    format: duration
+                                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                                     type: string
                                                 type: object
                                               retryOn:
@@ -12583,6 +12666,7 @@ spec:
                                                       - 5xx
                                                       - gateway-error
                                                       - reset
+                                                      - reset-before-request
                                                       - connect-failure
                                                       - retriable-4xx
                                                       - refused-stream
@@ -13126,6 +13210,7 @@ spec:
                                           description: |-
                                             DNSRefreshRate specifies the rate at which DNS records should be refreshed.
                                             Defaults to 30 seconds.
+                                          pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                           type: string
                                         lookupFamily:
                                           description: |-
@@ -13250,11 +13335,17 @@ spec:
                                               required:
                                               - path
                                               type: object
+                                            initialJitter:
+                                              description: |-
+                                                InitialJitter defines the maximum time Envoy will wait before the first health check.
+                                                Envoy will randomly select a value between 0 and the initial jitter value.
+                                              pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                              type: string
                                             interval:
                                               default: 3s
                                               description: Interval defines the time
                                                 between active health checks.
-                                              format: duration
+                                              pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                               type: string
                                             tcp:
                                               description: |-
@@ -13338,7 +13429,7 @@ spec:
                                               default: 1s
                                               description: Timeout defines the time
                                                 to wait for a health check response.
-                                              format: duration
+                                              pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                               type: string
                                             type:
                                               allOf:
@@ -13396,7 +13487,7 @@ spec:
                                               description: BaseEjectionTime defines
                                                 the base duration for which a host
                                                 will be ejected on consecutive failures.
-                                              format: duration
+                                              pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                               type: string
                                             consecutive5XxErrors:
                                               default: 5
@@ -13423,7 +13514,7 @@ spec:
                                               default: 3s
                                               description: Interval defines the time
                                                 between passive health checks.
-                                              format: duration
+                                              pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                               type: string
                                             maxEjectionPercent:
                                               default: 10
@@ -13515,6 +13606,7 @@ spec:
                                                   description: |-
                                                     TTL of the generated cookie if the cookie is not present. This value sets the
                                                     Max-Age attribute value.
+                                                  pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                                   type: string
                                               required:
                                               - name
@@ -13563,6 +13655,36 @@ spec:
                                               the cookie field must be set.
                                             rule: 'self.type == ''Cookie'' ? has(self.cookie)
                                               : !has(self.cookie)'
+                                        endpointOverride:
+                                          description: |-
+                                            EndpointOverride defines the configuration for endpoint override.
+                                            When specified, the load balancer will attempt to route requests to endpoints
+                                            based on the override information extracted from request headers or metadata.
+                                             If the override endpoints are not available, the configured load balancer policy will be used as fallback.
+                                          properties:
+                                            extractFrom:
+                                              description: ExtractFrom defines the
+                                                sources to extract endpoint override
+                                                information from.
+                                              items:
+                                                description: EndpointOverrideExtractFrom
+                                                  defines a source to extract endpoint
+                                                  override information from.
+                                                properties:
+                                                  header:
+                                                    description: |-
+                                                      Header defines the header to get the override endpoint addresses.
+                                                      The header value must specify at least one endpoint in `IP:Port` format or multiple endpoints in `IP:Port,IP:Port,...` format.
+                                                      For example `10.0.0.5:8080` or `[2600:4040:5204::1574:24ae]:80`.
+                                                      The IPv6 address is enclosed in square brackets.
+                                                    type: string
+                                                type: object
+                                              maxItems: 10
+                                              minItems: 1
+                                              type: array
+                                          required:
+                                          - extractFrom
+                                          type: object
                                         slowStart:
                                           description: |-
                                             SlowStart defines the configuration related to the slow start load balancer policy.
@@ -13575,6 +13697,7 @@ spec:
                                                 During slow start window, traffic sent to the newly added hosts will gradually increase.
                                                 Currently only supports linear growth of traffic. For additional details,
                                                 see https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/cluster/v3/cluster.proto#config-cluster-v3-cluster-slowstartconfig
+                                              pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                               type: string
                                           required:
                                           - window
@@ -13691,19 +13814,19 @@ spec:
                                                 baseInterval:
                                                   description: BaseInterval is the
                                                     base interval between retries.
-                                                  format: duration
+                                                  pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                                   type: string
                                                 maxInterval:
                                                   description: |-
                                                     MaxInterval is the maximum interval between retries. This parameter is optional, but must be greater than or equal to the base_interval if set.
                                                     The default is 10 times the base_interval
-                                                  format: duration
+                                                  pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                                   type: string
                                               type: object
                                             timeout:
                                               description: Timeout is the timeout
                                                 per retry attempt.
-                                              format: duration
+                                              pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                               type: string
                                           type: object
                                         retryOn:
@@ -13734,6 +13857,7 @@ spec:
                                                 - 5xx
                                                 - gateway-error
                                                 - reset
+                                                - reset-before-request
                                                 - connect-failure
                                                 - retriable-4xx
                                                 - refused-stream
@@ -14204,6 +14328,7 @@ spec:
                                     description: |-
                                       DNSRefreshRate specifies the rate at which DNS records should be refreshed.
                                       Defaults to 30 seconds.
+                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                     type: string
                                   lookupFamily:
                                     description: |-
@@ -14327,11 +14452,17 @@ spec:
                                         required:
                                         - path
                                         type: object
+                                      initialJitter:
+                                        description: |-
+                                          InitialJitter defines the maximum time Envoy will wait before the first health check.
+                                          Envoy will randomly select a value between 0 and the initial jitter value.
+                                        pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                        type: string
                                       interval:
                                         default: 3s
                                         description: Interval defines the time between
                                           active health checks.
-                                        format: duration
+                                        pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                         type: string
                                       tcp:
                                         description: |-
@@ -14415,7 +14546,7 @@ spec:
                                         default: 1s
                                         description: Timeout defines the time to wait
                                           for a health check response.
-                                        format: duration
+                                        pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                         type: string
                                       type:
                                         allOf:
@@ -14472,7 +14603,7 @@ spec:
                                         description: BaseEjectionTime defines the
                                           base duration for which a host will be ejected
                                           on consecutive failures.
-                                        format: duration
+                                        pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                         type: string
                                       consecutive5XxErrors:
                                         default: 5
@@ -14499,7 +14630,7 @@ spec:
                                         default: 3s
                                         description: Interval defines the time between
                                           passive health checks.
-                                        format: duration
+                                        pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                         type: string
                                       maxEjectionPercent:
                                         default: 10
@@ -14591,6 +14722,7 @@ spec:
                                             description: |-
                                               TTL of the generated cookie if the cookie is not present. This value sets the
                                               Max-Age attribute value.
+                                            pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                             type: string
                                         required:
                                         - name
@@ -14638,6 +14770,36 @@ spec:
                                         the cookie field must be set.
                                       rule: 'self.type == ''Cookie'' ? has(self.cookie)
                                         : !has(self.cookie)'
+                                  endpointOverride:
+                                    description: |-
+                                      EndpointOverride defines the configuration for endpoint override.
+                                      When specified, the load balancer will attempt to route requests to endpoints
+                                      based on the override information extracted from request headers or metadata.
+                                       If the override endpoints are not available, the configured load balancer policy will be used as fallback.
+                                    properties:
+                                      extractFrom:
+                                        description: ExtractFrom defines the sources
+                                          to extract endpoint override information
+                                          from.
+                                        items:
+                                          description: EndpointOverrideExtractFrom
+                                            defines a source to extract endpoint override
+                                            information from.
+                                          properties:
+                                            header:
+                                              description: |-
+                                                Header defines the header to get the override endpoint addresses.
+                                                The header value must specify at least one endpoint in `IP:Port` format or multiple endpoints in `IP:Port,IP:Port,...` format.
+                                                For example `10.0.0.5:8080` or `[2600:4040:5204::1574:24ae]:80`.
+                                                The IPv6 address is enclosed in square brackets.
+                                              type: string
+                                          type: object
+                                        maxItems: 10
+                                        minItems: 1
+                                        type: array
+                                    required:
+                                    - extractFrom
+                                    type: object
                                   slowStart:
                                     description: |-
                                       SlowStart defines the configuration related to the slow start load balancer policy.
@@ -14650,6 +14812,7 @@ spec:
                                           During slow start window, traffic sent to the newly added hosts will gradually increase.
                                           Currently only supports linear growth of traffic. For additional details,
                                           see https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/cluster/v3/cluster.proto#config-cluster-v3-cluster-slowstartconfig
+                                        pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                         type: string
                                     required:
                                     - window
@@ -14764,19 +14927,19 @@ spec:
                                           baseInterval:
                                             description: BaseInterval is the base
                                               interval between retries.
-                                            format: duration
+                                            pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                             type: string
                                           maxInterval:
                                             description: |-
                                               MaxInterval is the maximum interval between retries. This parameter is optional, but must be greater than or equal to the base_interval if set.
                                               The default is 10 times the base_interval
-                                            format: duration
+                                            pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                             type: string
                                         type: object
                                       timeout:
                                         description: Timeout is the timeout per retry
                                           attempt.
-                                        format: duration
+                                        pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                         type: string
                                     type: object
                                   retryOn:
@@ -14807,6 +14970,7 @@ spec:
                                           - 5xx
                                           - gateway-error
                                           - reset
+                                          - reset-before-request
                                           - connect-failure
                                           - retriable-4xx
                                           - refused-stream
@@ -14897,6 +15061,18 @@ spec:
                             format: int32
                             minimum: 0
                             type: integer
+                          serviceName:
+                            description: |-
+                              ServiceName defines the service name to use in tracing configuration.
+                              If not set, Envoy Gateway will use a default service name set as
+                              "name.namespace" (e.g., "my-gateway.default").
+                              Note: This field is only supported for OpenTelemetry and Datadog tracing providers.
+                              For Zipkin, the service name in traces is always derived from the Envoy --service-cluster flag
+                              (typically "namespace/name" format). Setting this field has no effect for Zipkin.
+                            type: string
+                            x-kubernetes-validations:
+                            - message: serviceName cannot be empty if provided
+                              rule: self != ""
                           type:
                             default: OpenTelemetry
                             description: Type defines the tracing provider type.

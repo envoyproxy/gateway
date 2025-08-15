@@ -36,6 +36,8 @@ http:
               client-1: "a2V5MQ=="
             extractFrom:
               - headers: ["X-API-KEY", "X-API-KEY-2"]
+            forwardClientIDHeader: "X-API-KEY-CLIENT-ID"
+            sanitize: true
       - name: httproute/default/httproute-1/rule/1/match/0/www_foo_com
         backendWeights:
         hostname: www.foo.com

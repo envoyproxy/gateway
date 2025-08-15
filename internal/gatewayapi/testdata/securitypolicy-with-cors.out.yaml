@@ -309,7 +309,7 @@ securityPolicies:
       exposeHeaders:
       - x-header-7
       - x-header-8
-      maxAge: 33m20s
+      maxAge: 2000s
     targetRef:
       group: gateway.networking.k8s.io
       kind: HTTPRoute
@@ -348,7 +348,7 @@ securityPolicies:
       exposeHeaders:
       - x-header-7
       - x-header-8
-      maxAge: 33m20s
+      maxAge: 2000s
     targetRef:
       group: gateway.networking.k8s.io
       kind: HTTPRoute
@@ -389,7 +389,7 @@ securityPolicies:
       exposeHeaders:
       - x-header-3
       - x-header-4
-      maxAge: 16m40s
+      maxAge: 1000s
     targetRef:
       group: gateway.networking.k8s.io
       kind: Gateway
@@ -415,6 +415,7 @@ xdsIR:
       - path: /dev/stdout
     http:
     - address: 0.0.0.0
+      externalPort: 80
       hostnames:
       - '*'
       isHTTP2: true
@@ -487,6 +488,7 @@ xdsIR:
       - path: /dev/stdout
     http:
     - address: 0.0.0.0
+      externalPort: 80
       hostnames:
       - '*'
       isHTTP2: false
@@ -558,8 +560,19 @@ xdsIR:
     accessLog:
       json:
       - path: /dev/stdout
+    globalResources:
+      proxyServiceCluster:
+        name: envoy-gateway/gateway-3
+        settings:
+        - metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-3
+          protocol: TCP
     http:
     - address: 0.0.0.0
+      externalPort: 80
       hostnames:
       - '*'
       isHTTP2: false

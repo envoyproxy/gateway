@@ -12,6 +12,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -29,7 +30,9 @@ import (
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
+	"github.com/envoyproxy/gateway/internal/infrastructure/kubernetes/proxy"
 	"github.com/envoyproxy/gateway/internal/logging"
+	"github.com/envoyproxy/gateway/internal/provider/kubernetes/test"
 	"github.com/envoyproxy/gateway/internal/utils"
 )
 
@@ -1240,6 +1243,337 @@ func TestProcessSecurityPolicyObjectRefs(t *testing.T) {
 				require.Contains(t, resourceTree.ReferenceGrants, tc.referenceGrant)
 			} else {
 				require.NotContains(t, resourceTree.ReferenceGrants, tc.referenceGrant)
+			}
+		})
+	}
+}
+
+func TestProcessServiceClusterForGatewayClass(t *testing.T) {
+	testCases := []struct {
+		name            string
+		gatewayClass    *gwapiv1.GatewayClass
+		envoyProxy      *egv1a1.EnvoyProxy
+		expectedSvcName string
+	}{
+		{
+			name: "when merged gateways and no hardcoded svc name is used",
+			gatewayClass: &gwapiv1.GatewayClass{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "merged-gc",
+				},
+			},
+			envoyProxy:      nil,
+			expectedSvcName: proxy.ExpectedResourceHashedName("merged-gc"),
+		},
+		{
+			name: "when merged gateways and a hardcoded svc name is used",
+			gatewayClass: &gwapiv1.GatewayClass{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "merged-gc",
+				},
+			},
+			envoyProxy: &egv1a1.EnvoyProxy{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "merged-gc",
+				},
+				Spec: egv1a1.EnvoyProxySpec{
+					Provider: &egv1a1.EnvoyProxyProvider{
+						Type: egv1a1.ProviderTypeKubernetes,
+						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
+							EnvoyService: &egv1a1.KubernetesServiceSpec{
+								Name: ptr.To("merged-gc-svc"),
+							},
+						},
+					},
+				},
+			},
+			expectedSvcName: "merged-gc-svc",
+		},
+	}
+
+	for i := range testCases {
+		tc := testCases[i]
+		// Run the test cases.
+		t.Run(tc.name, func(t *testing.T) {
+			logger := logging.DefaultLogger(os.Stdout, egv1a1.LogLevelInfo)
+			resourceMap := newResourceMapping()
+
+			r := newGatewayAPIReconciler(logger)
+			r.namespace = "envoy-gateway-system"
+
+			r.processServiceClusterForGatewayClass(tc.envoyProxy, tc.gatewayClass, resourceMap)
+
+			require.Contains(t, resourceMap.allAssociatedBackendRefs, gwapiv1.BackendObjectReference{
+				Kind:      ptr.To(gwapiv1.Kind("Service")),
+				Namespace: gatewayapi.NamespacePtr(r.namespace),
+				Name:      gwapiv1.ObjectName(tc.expectedSvcName),
+			})
+		})
+	}
+}
+
+func TestProcessServiceClusterForGateway(t *testing.T) {
+	testCases := []struct {
+		name                  string
+		gateway               *gwapiv1.Gateway
+		envoyProxy            *egv1a1.EnvoyProxy
+		gatewayNamespacedMode bool
+		expectedSvcName       string
+		expectedSvcNamespace  string
+	}{
+		{
+			name: "no gateway namespaced mode with no hardcoded service name",
+			gateway: &gwapiv1.Gateway{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "my-gateway",
+					Namespace: "app-namespace",
+				},
+			},
+			envoyProxy:            nil,
+			gatewayNamespacedMode: false,
+			expectedSvcName:       "",
+			expectedSvcNamespace:  "",
+		},
+		{
+			name: "no gateway namespaced mode with hardcoded service name",
+			gateway: &gwapiv1.Gateway{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "my-gateway",
+					Namespace: "app-namespace",
+				},
+			},
+			envoyProxy: &egv1a1.EnvoyProxy{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "my-gateway",
+				},
+				Spec: egv1a1.EnvoyProxySpec{
+					Provider: &egv1a1.EnvoyProxyProvider{
+						Type: egv1a1.ProviderTypeKubernetes,
+						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
+							EnvoyService: &egv1a1.KubernetesServiceSpec{
+								Name: ptr.To("my-gateway-svc"),
+							},
+						},
+					},
+				},
+			},
+			gatewayNamespacedMode: false,
+			expectedSvcName:       "my-gateway-svc",
+			expectedSvcNamespace:  "",
+		},
+		{
+			name: "gateway namespaced mode with no hardcoded service name",
+			gateway: &gwapiv1.Gateway{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "my-gateway",
+					Namespace: "app-namespace",
+				},
+			},
+			envoyProxy:            nil,
+			gatewayNamespacedMode: true,
+			expectedSvcName:       "my-gateway",
+			expectedSvcNamespace:  "app-namespace",
+		},
+		{
+			name: "gateway namespaced mode with hardcoded service name",
+			gateway: &gwapiv1.Gateway{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "my-gateway",
+					Namespace: "app-namespace",
+				},
+			},
+			envoyProxy: &egv1a1.EnvoyProxy{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "my-gateway",
+				},
+				Spec: egv1a1.EnvoyProxySpec{
+					Provider: &egv1a1.EnvoyProxyProvider{
+						Type: egv1a1.ProviderTypeKubernetes,
+						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
+							EnvoyService: &egv1a1.KubernetesServiceSpec{
+								Name: ptr.To("my-gateway-svc"),
+							},
+						},
+					},
+				},
+			},
+			gatewayNamespacedMode: true,
+			expectedSvcName:       "my-gateway-svc",
+			expectedSvcNamespace:  "app-namespace",
+		},
+	}
+
+	for i := range testCases {
+		tc := testCases[i]
+		// Run the test cases.
+		t.Run(tc.name, func(t *testing.T) {
+			logger := logging.DefaultLogger(os.Stdout, egv1a1.LogLevelInfo)
+			resourceMap := newResourceMapping()
+
+			r := newGatewayAPIReconciler(logger)
+			r.namespace = "envoy-gateway-system"
+			r.gatewayNamespaceMode = tc.gatewayNamespacedMode
+
+			if tc.expectedSvcNamespace == "" {
+				tc.expectedSvcNamespace = r.namespace
+			}
+
+			if tc.expectedSvcName == "" {
+				tc.expectedSvcName = proxy.ExpectedResourceHashedName(utils.NamespacedName(tc.gateway).String())
+			}
+
+			r.processServiceClusterForGateway(tc.envoyProxy, tc.gateway, resourceMap)
+
+			require.Contains(t, resourceMap.allAssociatedBackendRefs, gwapiv1.BackendObjectReference{
+				Kind:      ptr.To(gwapiv1.Kind("Service")),
+				Namespace: gatewayapi.NamespacePtr(tc.expectedSvcNamespace),
+				Name:      gwapiv1.ObjectName(tc.expectedSvcName),
+			})
+		})
+	}
+}
+
+func newGatewayAPIReconciler(logger logging.Logger) *gatewayAPIReconciler {
+	return &gatewayAPIReconciler{
+		log:              logger,
+		classController:  "some-gateway-class",
+		backendCRDExists: true,
+		envoyGateway: &egv1a1.EnvoyGateway{
+			EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
+				ExtensionAPIs: &egv1a1.ExtensionAPISettings{
+					EnableBackend: true,
+				},
+			},
+		},
+	}
+}
+
+func TestProcessBackendRefs(t *testing.T) {
+	ns := "default"
+	ctb := test.GetClusterTrustBundle("fake-ctb")
+	secret := test.GetSecret(types.NamespacedName{Namespace: ns, Name: "fake-secret"})
+	cm := &corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: ns,
+			Name:      "fake-cm",
+		},
+		Data: map[string]string{
+			"ca.crt": "fake-ca-cert",
+		},
+	}
+
+	testCases := []struct {
+		name                   string
+		backend                *egv1a1.Backend
+		ctpShouldBeAdded       bool
+		secretShouldBeAdded    bool
+		configmapShouldBeAdded bool
+	}{
+		{
+			name: "DynamicResolver with ClusterTrustBundle",
+			backend: &egv1a1.Backend{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: ns,
+					Name:      "test-backend",
+				},
+				Spec: egv1a1.BackendSpec{
+					Type: ptr.To(egv1a1.BackendTypeDynamicResolver),
+					TLS: &egv1a1.BackendTLSSettings{
+						CACertificateRefs: []gwapiv1.LocalObjectReference{
+							{
+								Kind: gwapiv1.Kind("ClusterTrustBundle"),
+								Name: gwapiv1.ObjectName("fake-ctb"),
+							},
+						},
+					},
+				},
+			},
+			ctpShouldBeAdded: true,
+		},
+		{
+			name: "DynamicResolver with ConfigMap",
+			backend: &egv1a1.Backend{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: ns,
+					Name:      "test-backend",
+				},
+				Spec: egv1a1.BackendSpec{
+					Type: ptr.To(egv1a1.BackendTypeDynamicResolver),
+					TLS: &egv1a1.BackendTLSSettings{
+						CACertificateRefs: []gwapiv1.LocalObjectReference{
+							{
+								Kind: gwapiv1.Kind("ConfigMap"),
+								Name: gwapiv1.ObjectName("fake-cm"),
+							},
+						},
+					},
+				},
+			},
+			configmapShouldBeAdded: true,
+		},
+		{
+			name: "DynamicResolver with Secret",
+			backend: &egv1a1.Backend{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: ns,
+					Name:      "test-backend",
+				},
+				Spec: egv1a1.BackendSpec{
+					Type: ptr.To(egv1a1.BackendTypeDynamicResolver),
+					TLS: &egv1a1.BackendTLSSettings{
+						CACertificateRefs: []gwapiv1.LocalObjectReference{
+							{
+								Kind: gwapiv1.Kind("Secret"),
+								Name: gwapiv1.ObjectName("fake-secret"),
+							},
+						},
+					},
+				},
+			},
+			secretShouldBeAdded: true,
+		},
+	}
+
+	for i := range testCases {
+		tc := testCases[i]
+		// Run the test cases.
+		t.Run(tc.name, func(t *testing.T) {
+			// Add objects referenced by test cases.
+			objs := []client.Object{tc.backend, ctb, secret, cm}
+			logger := logging.DefaultLogger(os.Stdout, egv1a1.LogLevelInfo)
+
+			r := newGatewayAPIReconciler(logger)
+			r.client = fakeclient.NewClientBuilder().
+				WithScheme(envoygateway.GetScheme()).
+				WithObjects(objs...).
+				Build()
+
+			resourceTree := resource.NewResources()
+			resourceMap := newResourceMapping()
+			backend := tc.backend
+			resourceMap.allAssociatedBackendRefs.Insert(gwapiv1.BackendObjectReference{
+				Kind:      gatewayapi.KindPtr(resource.KindBackend),
+				Namespace: gatewayapi.NamespacePtr(backend.Namespace),
+				Name:      gwapiv1.ObjectName(backend.Name),
+			})
+
+			require.NoError(t, r.processBackendRefs(t.Context(), resourceTree, resourceMap))
+			if tc.ctpShouldBeAdded {
+				require.Contains(t, resourceTree.ClusterTrustBundles, ctb)
+			} else {
+				require.NotContains(t, resourceTree.ClusterTrustBundles, ctb)
+			}
+
+			if tc.secretShouldBeAdded {
+				require.Contains(t, resourceTree.Secrets, secret)
+			} else {
+				require.NotContains(t, resourceTree.Secrets, secret)
+			}
+
+			if tc.configmapShouldBeAdded {
+				require.Contains(t, resourceTree.ConfigMaps, cm)
+			} else {
+				require.NotContains(t, resourceTree.ConfigMaps, cm)
 			}
 		})
 	}

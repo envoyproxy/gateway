@@ -1,0 +1,91 @@
+# zone-aware-routing-gtw should be similar to `same-namespace` gateway, only difference
+# is having a hard-coded service name in the EnvoyProxy attached, to test zone-aware-routing
+# in that case when no ForceLocal is specified.
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: zone-aware-routing-gtw
+  namespace: gateway-conformance-infra
+spec:
+  gatewayClassName: "{GATEWAY_CLASS_NAME}"
+  listeners:
+    - name: http
+      port: 80
+      protocol: HTTP
+      allowedRoutes:
+        namespaces:
+          from: Same
+    - name: tls
+      protocol: TLS
+      port: 443
+      tls:
+        mode: Passthrough
+      allowedRoutes:
+        namespaces:
+          from: Same
+  infrastructure:
+    parametersRef:
+      group: gateway.envoyproxy.io
+      kind: EnvoyProxy
+      name: zone-aware-routing
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyProxy
+metadata:
+  name: zone-aware-routing
+  namespace: gateway-conformance-infra
+spec:
+  ipFamily: IPv4
+  provider:
+    type: Kubernetes
+    kubernetes:
+      envoyService:
+        name: zone-aware-routing-gtw
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: btp-no-force-local-zone-hardcoded-svc-name
+  namespace: gateway-conformance-infra
+spec:
+  selector:
+    app: zone-aware-backend
+  ports:
+    - protocol: TCP
+      port: 8080
+      name: http11
+      targetPort: 3000
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: btp-no-force-local-zone-hardcoded-svc-name
+  namespace: gateway-conformance-infra
+spec:
+  parentRefs:
+    - name: zone-aware-routing-gtw
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /btp-no-force-local-zone-hardcoded-svc-name
+      backendRefs:
+        - name: btp-no-force-local-zone-hardcoded-svc-name
+          port: 8080
+          weight: 1
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: BackendTrafficPolicy
+metadata:
+  name: btp-no-force-local-zone-hardcoded-svc-name
+  namespace: gateway-conformance-infra
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: btp-no-force-local-zone-hardcoded-svc-name
+  loadBalancer:
+    type: RoundRobin
+    zoneAware:
+      preferLocal:
+        minEndpointsThreshold: 1

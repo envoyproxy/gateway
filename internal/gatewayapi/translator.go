@@ -7,7 +7,6 @@ package gatewayapi
 
 import (
 	"errors"
-	"sort"
 
 	"golang.org/x/exp/maps"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -168,10 +167,7 @@ func (t *Translator) Translate(resources *resource.Resources) (*TranslateResult,
 	// Get Gateways belonging to our GatewayClass.
 	acceptedGateways, failedGateways := t.GetRelevantGateways(resources)
 
-	// Sort gateways based on timestamp.
-	sort.Slice(acceptedGateways, func(i, j int) bool {
-		return acceptedGateways[i].CreationTimestamp.Before(&(acceptedGateways[j].CreationTimestamp))
-	})
+	// Gateways are already sorted by the provider layer
 
 	// Build IR maps.
 	xdsIR, infraIR := t.InitIRs(acceptedGateways)
@@ -186,7 +182,7 @@ func (t *Translator) Translate(resources *resource.Resources) (*TranslateResult,
 	t.ProcessAddresses(acceptedGateways, xdsIR, infraIR)
 
 	// process all Backends
-	backends := t.ProcessBackends(resources.Backends)
+	backends := t.ProcessBackends(resources.Backends, resources.BackendTLSPolicies)
 
 	// Process all relevant HTTPRoutes.
 	httpRoutes := t.ProcessHTTPRoutes(resources.HTTPRoutes, acceptedGateways, resources, xdsIR)
@@ -243,7 +239,7 @@ func (t *Translator) Translate(resources *resource.Resources) (*TranslateResult,
 	}
 
 	// Process global resources that are not tied to a specific listener or route
-	if err := t.ProcessGlobalResources(resources, xdsIR); err != nil {
+	if err := t.ProcessGlobalResources(resources, xdsIR, acceptedGateways); err != nil {
 		errs = errors.Join(errs, err)
 	}
 

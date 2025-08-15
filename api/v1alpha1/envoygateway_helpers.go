@@ -109,6 +109,42 @@ func (e *EnvoyGateway) GatewayNamespaceMode() bool {
 		*e.Provider.Kubernetes.Deploy.Type == KubernetesDeployModeTypeGatewayNamespace
 }
 
+// TopologyInjectorDisabled checks whether the provided EnvoyGateway disables TopologyInjector
+func (e *EnvoyGateway) TopologyInjectorDisabled() bool {
+	if e.Provider != nil &&
+		e.Provider.Kubernetes != nil &&
+		e.Provider.Kubernetes.TopologyInjector != nil {
+		return ptr.Deref(e.Provider.Kubernetes.TopologyInjector.Disable, false)
+	}
+	return false
+}
+
+// defaultRuntimeFlags are the default runtime flags for Envoy Gateway.
+var defaultRuntimeFlags = map[RuntimeFlag]bool{
+	XDSNameSchemeV2: false,
+}
+
+// IsEnabled checks if a runtime flag is enabled in the EnvoyGateway configuration.
+func (f *RuntimeFlags) IsEnabled(flag RuntimeFlag) bool {
+	if f != nil {
+		for _, disable := range f.Disabled {
+			if disable == flag {
+				return false
+			}
+		}
+		for _, enable := range f.Enabled {
+			if enable == flag {
+				return true
+			}
+		}
+	}
+
+	if defaultValue, found := defaultRuntimeFlags[flag]; found {
+		return defaultValue
+	}
+	return false
+}
+
 // DefaultLeaderElection returns a new LeaderElection with default configuration parameters.
 func DefaultLeaderElection() *LeaderElection {
 	return &LeaderElection{

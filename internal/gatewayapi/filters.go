@@ -212,20 +212,28 @@ func (t *Translator) processURLRewriteFilter(
 		return
 	}
 
-	newURLRewrite := &ir.URLRewrite{}
-
 	if rewrite.Hostname != nil {
 		if err := t.validateHostname(string(*rewrite.Hostname)); err != nil {
 			updateRouteStatusForFilter(filterContext, err.Error())
 			return
 		}
 		redirectHost := string(*rewrite.Hostname)
-		newURLRewrite.Host = &ir.HTTPHostModifier{
-			Name: &redirectHost,
+		if filterContext.URLRewrite == nil {
+			filterContext.URLRewrite = &ir.URLRewrite{
+				Host: &ir.HTTPHostModifier{
+					Name: &redirectHost,
+				},
+			}
+		} else if filterContext.URLRewrite.Host == nil {
+			filterContext.URLRewrite.Host = &ir.HTTPHostModifier{
+				Name: &redirectHost,
+			}
 		}
 	}
 
 	if rewrite.Path != nil {
+		var pathModifier *ir.ExtendedHTTPPathModifier
+
 		switch rewrite.Path.Type {
 		case gwapiv1.FullPathHTTPPathModifier:
 			if rewrite.Path.ReplacePrefixMatch != nil {
@@ -241,7 +249,7 @@ func (t *Translator) processURLRewriteFilter(
 				return
 			}
 			if rewrite.Path.ReplaceFullPath != nil {
-				newURLRewrite.Path = &ir.ExtendedHTTPPathModifier{
+				pathModifier = &ir.ExtendedHTTPPathModifier{
 					HTTPPathModifier: ir.HTTPPathModifier{
 						FullReplace: rewrite.Path.ReplaceFullPath,
 					},
@@ -261,7 +269,7 @@ func (t *Translator) processURLRewriteFilter(
 				return
 			}
 			if rewrite.Path.ReplacePrefixMatch != nil {
-				newURLRewrite.Path = &ir.ExtendedHTTPPathModifier{
+				pathModifier = &ir.ExtendedHTTPPathModifier{
 					HTTPPathModifier: ir.HTTPPathModifier{
 						PrefixMatchReplace: rewrite.Path.ReplacePrefixMatch,
 					},
@@ -275,9 +283,14 @@ func (t *Translator) processURLRewriteFilter(
 					rewrite.Path.Type))
 			return
 		}
+		if filterContext.URLRewrite == nil {
+			filterContext.URLRewrite = &ir.URLRewrite{
+				Path: pathModifier,
+			}
+		} else if filterContext.URLRewrite.Path == nil {
+			filterContext.URLRewrite.Path = pathModifier
+		}
 	}
-
-	filterContext.URLRewrite = newURLRewrite
 }
 
 func (t *Translator) processRedirectFilter(
@@ -1019,7 +1032,7 @@ func (t *Translator) processCORSFilter(
 		AllowMethods:     allowMethods,
 		AllowHeaders:     allowHeaders,
 		ExposeHeaders:    exposeHeaders,
-		MaxAge:           ptr.To(metav1.Duration{Duration: time.Duration(corsFilter.MaxAge) * time.Second}),
+		MaxAge:           ir.MetaV1DurationPtr(time.Duration(corsFilter.MaxAge) * time.Second),
 		AllowCredentials: bool(corsFilter.AllowCredentials),
 	}
 }

@@ -44,6 +44,13 @@ func LoadResourcesFromYAMLBytes(yamlBytes []byte, addMissingResources bool) (*Lo
 		return nil, err
 	}
 
+	// Sort to:
+	// 1. ensure identical resources are not retranslated
+	//    and updates are avoided by the watchable layer
+	// 2. ensure gateway-api layer receives resources in order
+	//    which impacts translation output
+	r.Sort()
+
 	return r, nil
 }
 

@@ -432,9 +432,7 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 						LoadBalancer: &egv1a1.LoadBalancer{
 							Type: egv1a1.LeastRequestLoadBalancerType,
 							SlowStart: &egv1a1.SlowStart{
-								Window: &metav1.Duration{
-									Duration: 10000000,
-								},
+								Window: ptr.To(gwapiv1.Duration("10ms")),
 							},
 						},
 					},
@@ -459,9 +457,7 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 						LoadBalancer: &egv1a1.LoadBalancer{
 							Type: egv1a1.RoundRobinLoadBalancerType,
 							SlowStart: &egv1a1.SlowStart{
-								Window: &metav1.Duration{
-									Duration: 10000000,
-								},
+								Window: ptr.To(gwapiv1.Duration("10ms")),
 							},
 						},
 					},
@@ -486,9 +482,7 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 						LoadBalancer: &egv1a1.LoadBalancer{
 							Type: egv1a1.RandomLoadBalancerType,
 							SlowStart: &egv1a1.SlowStart{
-								Window: &metav1.Duration{
-									Duration: 10000000,
-								},
+								Window: ptr.To(gwapiv1.Duration("10ms")),
 							},
 						},
 					},
@@ -515,9 +509,7 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 						LoadBalancer: &egv1a1.LoadBalancer{
 							Type: egv1a1.ConsistentHashLoadBalancerType,
 							SlowStart: &egv1a1.SlowStart{
-								Window: &metav1.Duration{
-									Duration: 10000000,
-								},
+								Window: ptr.To(gwapiv1.Duration("10ms")),
 							},
 						},
 					},
@@ -653,9 +645,7 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 					},
 					FaultInjection: &egv1a1.FaultInjection{
 						Delay: &egv1a1.FaultInjectionDelay{
-							FixedDelay: &metav1.Duration{
-								Duration: 10000000,
-							},
+							FixedDelay: ptr.To(gwapiv1.Duration("10ms")),
 						},
 					},
 				}
@@ -1992,6 +1982,65 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 					HTTPUpgrade: []*egv1a1.ProtocolUpgradeConfig{
 						{
 							Type: "CONNECT",
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "endpointOverride field with valid configuration",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
+								Group: gwapiv1a2.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1a2.Kind("Gateway"),
+								Name:  gwapiv1a2.ObjectName("eg"),
+							},
+						},
+					},
+					ClusterSettings: egv1a1.ClusterSettings{
+						LoadBalancer: &egv1a1.LoadBalancer{
+							Type: egv1a1.RoundRobinLoadBalancerType,
+							EndpointOverride: &egv1a1.EndpointOverride{
+								ExtractFrom: []egv1a1.EndpointOverrideExtractFrom{
+									{
+										Header: ptr.To("x-custom-host"),
+									},
+								},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+
+		{
+			desc: "endpointOverride source with valid header only",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
+								Group: gwapiv1a2.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1a2.Kind("Gateway"),
+								Name:  gwapiv1a2.ObjectName("eg"),
+							},
+						},
+					},
+					ClusterSettings: egv1a1.ClusterSettings{
+						LoadBalancer: &egv1a1.LoadBalancer{
+							Type: egv1a1.RoundRobinLoadBalancerType,
+							EndpointOverride: &egv1a1.EndpointOverride{
+								ExtractFrom: []egv1a1.EndpointOverrideExtractFrom{
+									{
+										Header: ptr.To("x-custom-host"),
+									},
+								},
+							},
 						},
 					},
 				}

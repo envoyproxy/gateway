@@ -93,6 +93,31 @@ type EnvoyGatewaySpec struct {
 	//
 	// +optional
 	ExtensionAPIs *ExtensionAPISettings `json:"extensionApis,omitempty"`
+
+	// RuntimeFlags defines the runtime flags for Envoy Gateway.
+	// Unlike ExtensionAPIs, these flags are temporary and will be removed in future releases once the related features are stable.
+	RuntimeFlags *RuntimeFlags `json:"runtimeFlags,omitempty"`
+}
+
+// RuntimeFlag defines a runtime flag used to guard breaking changes or risky experimental features in new Envoy Gateway releases.
+// A runtime flag may be enabled or disabled by default and can be toggled through the EnvoyGateway resource.
+// +enum
+// +kubebuilder:validation:Enum=XDSNameSchemeV2
+type RuntimeFlag string
+
+const (
+	// XDSNameSchemeV2 indicates that the xds name scheme v2 is used.
+	// * The listener name will be generated using the protocol and port of the listener.
+	XDSNameSchemeV2 RuntimeFlag = "XDSNameSchemeV2"
+)
+
+// RuntimeFlags provide a mechanism to guard breaking changes or risky experimental features in new Envoy Gateway releases.
+// Each flag may be enabled or disabled by default and can be toggled through the EnvoyGateway resource.
+// The names of these flags will be included in the release notes alongside an explanation of the change.
+// Please note that these flags are temporary and will be removed in future releases once the related features are stable.
+type RuntimeFlags struct {
+	Enabled  []RuntimeFlag `json:"enabled,omitempty"`
+	Disabled []RuntimeFlag `json:"disabled,omitempty"`
 }
 
 type KubernetesClient struct {
@@ -118,13 +143,21 @@ type KubernetesClientRateLimit struct {
 // LeaderElection defines the desired leader election settings.
 type LeaderElection struct {
 	// LeaseDuration defines the time non-leader contenders will wait before attempting to claim leadership.
-	// It's based on the timestamp of the last acknowledged signal. The default setting is 15 seconds.
+	// It's based on the timestamp of the last acknowledged signal.
+	// The default setting is 15 seconds.
+	//
+	// +optional
 	LeaseDuration *gwapiv1.Duration `json:"leaseDuration,omitempty"`
 	// RenewDeadline represents the time frame within which the current leader will attempt to renew its leadership
-	// status before relinquishing its position. The default setting is 10 seconds.
+	// status before relinquishing its position.
+	// The default setting is 10 seconds.
+	//
+	// +optional
 	RenewDeadline *gwapiv1.Duration `json:"renewDeadline,omitempty"`
 	// RetryPeriod denotes the interval at which LeaderElector clients should perform action retries.
 	// The default setting is 2 seconds.
+	//
+	// +optional
 	RetryPeriod *gwapiv1.Duration `json:"retryPeriod,omitempty"`
 	// Disable provides the option to turn off leader election, which is enabled by default.
 	Disable *bool `json:"disable,omitempty"`
@@ -148,7 +181,7 @@ type EnvoyGatewayLogging struct {
 }
 
 // EnvoyGatewayLogComponent defines a component that supports a configured logging level.
-// +kubebuilder:validation:Enum=default;provider;gateway-api;xds-translator;xds-server;infrastructure;global-ratelimit
+// +kubebuilder:validation:Enum=default;provider;gateway-api;xds-translator;xds-server;xds;infrastructure;global-ratelimit
 type EnvoyGatewayLogComponent string
 
 const (
@@ -167,6 +200,9 @@ const (
 
 	// LogComponentXdsServerRunner defines the "xds-server" runner component.
 	LogComponentXdsServerRunner EnvoyGatewayLogComponent = "xds-server"
+
+	// LogComponentXdsRunner defines the "xds" runner component.
+	LogComponentXdsRunner EnvoyGatewayLogComponent = "xds"
 
 	// LogComponentInfrastructureRunner defines the "infrastructure" runner component.
 	LogComponentInfrastructureRunner EnvoyGatewayLogComponent = "infrastructure"
@@ -407,9 +443,9 @@ type RateLimit struct {
 
 	// Timeout specifies the timeout period for the proxy to access the ratelimit server
 	// If not set, timeout is 20ms.
+	//
 	// +optional
-	// +kubebuilder:validation:Format=duration
-	Timeout *metav1.Duration `json:"timeout,omitempty"`
+	Timeout *gwapiv1.Duration `json:"timeout,omitempty"`
 
 	// FailClosed is a switch used to control the flow of traffic
 	// when the response from the ratelimit server cannot be obtained.
@@ -675,11 +711,20 @@ type ExtensionService struct {
 type ExtensionTLS struct {
 	// CertificateRef is a reference to a Kubernetes Secret with a CA certificate in a key named "tls.crt".
 	//
-	// The CA certificate is used by Envoy Gateway the verify the server certificate presented by the extension server.
-	// At this time, Envoy Gateway does not support Client Certificate authentication of Envoy Gateway towards the extension server (mTLS).
+	// The CA certificate is used by Envoy Gateway to verify the server certificate presented by the extension server.
 	//
 	// +kubebuilder:validation:Required
 	CertificateRef gwapiv1.SecretObjectReference `json:"certificateRef"`
+
+	// ClientCertificateRef is a reference to a Kubernetes Secret with a client certificate and key
+	// for client certificate authentication (mTLS). The secret must contain both "tls.crt" and "tls.key" keys.
+	//
+	// When specified, Envoy Gateway will present this client certificate to the extension server
+	// for mTLS authentication. If not specified, only server certificate validation is performed.
+	//
+	// +optional
+	// +notImplementedHide
+	ClientCertificateRef *gwapiv1.SecretObjectReference `json:"clientCertificateRef,omitempty"`
 }
 
 // GRPCStatus defines grpc status codes as defined in https://github.com/grpc/grpc/blob/master/doc/statuscodes.md.

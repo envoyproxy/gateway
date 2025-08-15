@@ -68,14 +68,14 @@ sync-gwapi-docs: gwapi-doc-download gwapi-doc-transform gwapi-doc-download-inclu
 
 # Download the documentation files from the gateway-api repository to the local destination directory.
 gwapi-doc-download:
-	@$(LOG_TARGET)
-	@mkdir -p $(DOC_DEST_DIR)
-	@$(foreach file, $(SYNC_FILES), curl -s -o $(DOC_DEST_DIR)/$(file) $(DOC_SRC_URL)/$(file);)
+# 	@$(LOG_TARGET)
+# 	@mkdir -p $(DOC_DEST_DIR)
+# 	@$(foreach file, $(SYNC_FILES), curl -s -o $(DOC_DEST_DIR)/$(file) $(DOC_SRC_URL)/$(file);)
 
 # Transform the first line of each markdown file to a header format suitable for Hugo.
 gwapi-doc-transform:
-	@$(LOG_TARGET)
-	@$(foreach file, $(SYNC_FILES), sed -i '1s/^# \(.*\)/+++\ntitle = "\1"\n+++/' $(DOC_DEST_DIR)/$(file);)
+# 	@$(LOG_TARGET)
+# 	@$(foreach file, $(SYNC_FILES), sed -i '1s/^# \(.*\)/+++\ntitle = "\1"\n+++/' $(DOC_DEST_DIR)/$(file);)
 
 # Download included YAML files referenced within the documentation.
 gwapi-doc-download-includes:
@@ -108,15 +108,15 @@ gwapi-doc-clean-includes:
 # Remove special lines that start with '!!!' or `???` from the documentation.
 gwapi-doc-remove-special-lines:
 	@$(LOG_TARGET)
-	@$(foreach file, $(SYNC_FILES), \
-		sed -i '/^[\?!]\{3\}/d' $(DOC_DEST_DIR)/$(file);)
+# 	@$(foreach file, $(SYNC_FILES), \
+# 		sed -i '/^[\?!]\{3\}/d' $(DOC_DEST_DIR)/$(file);)
 
 # Update relative links
 gwapi-doc-update-relative-links:
-	@$(foreach file, $(SYNC_FILES), \
-		sed -i -e 's/\(\.*\]\)(\(\.\.\/[^:]*\))/\1(https:\/\/gateway-api.sigs.k8s.io\2)/g' -e 's/\(\[.*\]: \)\(\/[^:]*\)/\1https:\/\/gateway-api.sigs.k8s.io\2/g' -e 's/\(\[.*\]: \)\(\.\.\/[^:]*\)/\1https:\/\/gateway-api.sigs.k8s.io\2/g' $(DOC_DEST_DIR)/$(file);)
-	@$(foreach file, $(SYNC_FILES), \
-		sed -i -e 's/https:\/\/gateway-api.sigs.k8s.io\.\./https:\/\/gateway-api.sigs.k8s.io/g' $(DOC_DEST_DIR)/$(file);)
+# 	@$(foreach file, $(SYNC_FILES), \
+# 		sed -i -e 's/\(\.*\]\)(\(\.\.\/[^:]*\))/\1(https:\/\/gateway-api.sigs.k8s.io\2)/g' -e 's/\(\[.*\]: \)\(\/[^:]*\)/\1https:\/\/gateway-api.sigs.k8s.io\2/g' -e 's/\(\[.*\]: \)\(\.\.\/[^:]*\)/\1https:\/\/gateway-api.sigs.k8s.io\2/g' $(DOC_DEST_DIR)/$(file);)
+# 	@$(foreach file, $(SYNC_FILES), \
+# 		sed -i -e 's/https:\/\/gateway-api.sigs.k8s.io\.\./https:\/\/gateway-api.sigs.k8s.io/g' $(DOC_DEST_DIR)/$(file);)
 
 .PHONY: helm-readme-gen
 helm-readme-gen:
@@ -181,6 +181,6 @@ docs-markdown-lint:
 
 release-notes-docs: $(tools/release-notes-docs)
 	@$(LOG_TARGET)
-	@for file in $(wildcard release-notes/v*.yaml); do \
+	@for file in $(wildcard release-notes/$(shell cat VERSION).yaml); do \
 		$(tools/release-notes-docs) $$file site/content/en/news/releases/notes; \
 	done

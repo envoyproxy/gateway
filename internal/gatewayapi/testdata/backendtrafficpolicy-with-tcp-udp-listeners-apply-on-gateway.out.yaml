@@ -29,7 +29,7 @@ backendTrafficPolicies:
         type: HTTP
         unhealthyThreshold: 3
       passive:
-        baseEjectionTime: 2m40s
+        baseEjectionTime: 160s
         consecutive5XxErrors: 5
         consecutiveGatewayErrors: 0
         consecutiveLocalOriginFailures: 5
@@ -236,6 +236,21 @@ xdsIR:
     accessLog:
       json:
       - path: /dev/stdout
+    globalResources:
+      proxyServiceCluster:
+        name: default/tcp-gateway
+        settings:
+        - addressType: IP
+          endpoints:
+          - host: 7.6.5.4
+            port: 8080
+            zone: zone1
+          metadata:
+            name: envoy-default-tcp-gateway-1ec60381
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: default/tcp-gateway
+          protocol: TCP
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4
@@ -243,6 +258,7 @@ xdsIR:
       port: 19003
     tcp:
     - address: 0.0.0.0
+      externalPort: 8089
       name: default/tcp-gateway/bar
       port: 8089
       routes:
@@ -311,6 +327,7 @@ xdsIR:
             connectTimeout: 15s
     udp:
     - address: 0.0.0.0
+      externalPort: 8162
       name: default/tcp-gateway/foo
       port: 8162
       route:

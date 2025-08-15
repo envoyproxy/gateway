@@ -234,7 +234,7 @@ func TestEnvoyExtensionPolicyTarget(t *testing.T) {
 			},
 		},
 		{
-			desc: "sectionName disabled until supported -targetRef",
+			desc: "sectionName supported -targetRef",
 			mutate: func(eep *egv1a1.EnvoyExtensionPolicy) {
 				eep.Spec = egv1a1.EnvoyExtensionPolicySpec{
 					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
@@ -249,12 +249,10 @@ func TestEnvoyExtensionPolicyTarget(t *testing.T) {
 					},
 				}
 			},
-			wantErrors: []string{
-				"spec: Invalid value: \"object\": this policy does not yet support the sectionName field",
-			},
+			wantErrors: []string{},
 		},
 		{
-			desc: "sectionName disabled until supported - targetRefs",
+			desc: "sectionName - targetRefs",
 			mutate: func(eep *egv1a1.EnvoyExtensionPolicy) {
 				eep.Spec = egv1a1.EnvoyExtensionPolicySpec{
 					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
@@ -271,9 +269,7 @@ func TestEnvoyExtensionPolicyTarget(t *testing.T) {
 					},
 				}
 			},
-			wantErrors: []string{
-				"spec: Invalid value: \"object\": this policy does not yet support the sectionName field",
-			},
+			wantErrors: []string{},
 		},
 
 		// ExtProc
@@ -446,6 +442,112 @@ func TestEnvoyExtensionPolicyTarget(t *testing.T) {
 				"spec.extProc[0].processingMode.response.body: Unsupported value: \"not-a-body-mode\": supported values: \"Streamed\", \"Buffered\", \"BufferedPartial\"",
 				"spec.extProc[0].processingMode.request.body: Unsupported value: \"not-a-body-mode\": supported values: \"Streamed\", \"Buffered\", \"BufferedPartial\"",
 			},
+		},
+		{
+			desc: "valid ExtProc with request attributes and failOpen true",
+			mutate: func(sp *egv1a1.EnvoyExtensionPolicy) {
+				sp.Spec = egv1a1.EnvoyExtensionPolicySpec{
+					ExtProc: []egv1a1.ExtProc{
+						{
+							BackendCluster: egv1a1.BackendCluster{
+								BackendRefs: []egv1a1.BackendRef{
+									{
+										BackendObjectReference: gwapiv1.BackendObjectReference{
+											Name: "grpc-proc-service",
+											Port: ptr.To(gwapiv1.PortNumber(80)),
+										},
+									},
+								},
+							},
+							ProcessingMode: &egv1a1.ExtProcProcessingMode{
+								Request: &egv1a1.ProcessingModeOptions{
+									Attributes: []string{"request.headers"},
+								},
+							},
+							FailOpen: ptr.To(true),
+						},
+					},
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
+								Group: "gateway.networking.k8s.io",
+								Kind:  "Gateway",
+								Name:  "eg",
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "valid ExtProc with response attributes and failOpen true",
+			mutate: func(sp *egv1a1.EnvoyExtensionPolicy) {
+				sp.Spec = egv1a1.EnvoyExtensionPolicySpec{
+					ExtProc: []egv1a1.ExtProc{
+						{
+							BackendCluster: egv1a1.BackendCluster{
+								BackendRefs: []egv1a1.BackendRef{
+									{
+										BackendObjectReference: gwapiv1.BackendObjectReference{
+											Name: "grpc-proc-service",
+											Port: ptr.To(gwapiv1.PortNumber(80)),
+										},
+									},
+								},
+							},
+							ProcessingMode: &egv1a1.ExtProcProcessingMode{
+								Response: &egv1a1.ProcessingModeOptions{
+									Attributes: []string{"response.headers"},
+								},
+							},
+							FailOpen: ptr.To(true),
+						},
+					},
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
+								Group: "gateway.networking.k8s.io",
+								Kind:  "Gateway",
+								Name:  "eg",
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "valid ExtProc with failOpen true",
+			mutate: func(sp *egv1a1.EnvoyExtensionPolicy) {
+				sp.Spec = egv1a1.EnvoyExtensionPolicySpec{
+					ExtProc: []egv1a1.ExtProc{
+						{
+							BackendCluster: egv1a1.BackendCluster{
+								BackendRefs: []egv1a1.BackendRef{
+									{
+										BackendObjectReference: gwapiv1.BackendObjectReference{
+											Name: "grpc-proc-service",
+											Port: ptr.To(gwapiv1.PortNumber(80)),
+										},
+									},
+								},
+							},
+							FailOpen: ptr.To(true),
+						},
+					},
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
+								Group: "gateway.networking.k8s.io",
+								Kind:  "Gateway",
+								Name:  "eg",
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
 		},
 		{
 			desc: "valid ExtProc without FullDuplexStreamed body and failOpen true",

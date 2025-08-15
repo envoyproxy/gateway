@@ -95,6 +95,46 @@ httpRoutes:
   kind: HTTPRoute
   metadata:
     creationTimestamp: null
+    name: direct-response-with-value-not-found
+    namespace: default
+  spec:
+    parentRefs:
+    - name: gateway-1
+      namespace: envoy-gateway
+      sectionName: http
+    rules:
+    - filters:
+      - extensionRef:
+          group: gateway.envoyproxy.io
+          kind: HTTPRouteFilter
+          name: direct-response-value-ref-not-found
+        type: ExtensionRef
+      matches:
+      - path:
+          type: PathPrefix
+          value: /value-ref-not-found
+  status:
+    parents:
+    - conditions:
+      - lastTransitionTime: null
+        message: 'Unable to translate HTTPRouteFilter: default/direct-response-value-ref-not-found'
+        reason: UnsupportedValue
+        status: "False"
+        type: Accepted
+      - lastTransitionTime: null
+        message: 'Unable to translate HTTPRouteFilter: default/direct-response-value-ref-not-found'
+        reason: BackendNotFound
+        status: "False"
+        type: ResolvedRefs
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+      parentRef:
+        name: gateway-1
+        namespace: envoy-gateway
+        sectionName: http
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    creationTimestamp: null
     name: direct-response-too-long
     namespace: default
   spec:
@@ -132,46 +172,6 @@ httpRoutes:
         name: gateway-1
         namespace: envoy-gateway
         sectionName: http
-- apiVersion: gateway.networking.k8s.io/v1
-  kind: HTTPRoute
-  metadata:
-    creationTimestamp: null
-    name: direct-response-with-value-not-found
-    namespace: default
-  spec:
-    parentRefs:
-    - name: gateway-1
-      namespace: envoy-gateway
-      sectionName: http
-    rules:
-    - filters:
-      - extensionRef:
-          group: gateway.envoyproxy.io
-          kind: HTTPRouteFilter
-          name: direct-response-value-ref-not-found
-        type: ExtensionRef
-      matches:
-      - path:
-          type: PathPrefix
-          value: /value-ref-not-found
-  status:
-    parents:
-    - conditions:
-      - lastTransitionTime: null
-        message: 'Unable to translate HTTPRouteFilter: default/direct-response-value-ref-not-found'
-        reason: UnsupportedValue
-        status: "False"
-        type: Accepted
-      - lastTransitionTime: null
-        message: 'Unable to translate HTTPRouteFilter: default/direct-response-value-ref-not-found'
-        reason: BackendNotFound
-        status: "False"
-        type: ResolvedRefs
-      controllerName: gateway.envoyproxy.io/gatewayclass-controller
-      parentRef:
-        name: gateway-1
-        namespace: envoy-gateway
-        sectionName: http
 infraIR:
   envoy-gateway/gateway-1:
     proxy:
@@ -197,8 +197,24 @@ xdsIR:
     accessLog:
       json:
       - path: /dev/stdout
+    globalResources:
+      proxyServiceCluster:
+        name: envoy-gateway/gateway-1
+        settings:
+        - addressType: IP
+          endpoints:
+          - host: 7.6.5.4
+            port: 8080
+            zone: zone1
+          metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-1
+          protocol: TCP
     http:
     - address: 0.0.0.0
+      externalPort: 80
       hostnames:
       - '*.envoyproxy.io'
       isHTTP2: false

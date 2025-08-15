@@ -5,7 +5,7 @@
 
 package v1alpha1
 
-import metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+import gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 // HealthCheck configuration to decide which endpoints
 // are healthy and can be used for routing.
@@ -39,10 +39,9 @@ type PassiveHealthCheck struct {
 
 	// Interval defines the time between passive health checks.
 	//
-	// +kubebuilder:validation:Format=duration
 	// +kubebuilder:default="3s"
 	// +optional
-	Interval *metav1.Duration `json:"interval,omitempty"`
+	Interval *gwapiv1.Duration `json:"interval,omitempty"`
 
 	// ConsecutiveLocalOriginFailures sets the number of consecutive local origin failures triggering ejection.
 	// Parameter takes effect only when split_external_local_origin_errors is set to true.
@@ -65,10 +64,9 @@ type PassiveHealthCheck struct {
 
 	// BaseEjectionTime defines the base duration for which a host will be ejected on consecutive failures.
 	//
-	// +kubebuilder:validation:Format=duration
 	// +kubebuilder:default="30s"
 	// +optional
-	BaseEjectionTime *metav1.Duration `json:"baseEjectionTime,omitempty"`
+	BaseEjectionTime *gwapiv1.Duration `json:"baseEjectionTime,omitempty"`
 
 	// MaxEjectionPercent sets the maximum percentage of hosts in a cluster that can be ejected.
 	//
@@ -87,17 +85,21 @@ type PassiveHealthCheck struct {
 type ActiveHealthCheck struct {
 	// Timeout defines the time to wait for a health check response.
 	//
-	// +kubebuilder:validation:Format=duration
 	// +kubebuilder:default="1s"
 	// +optional
-	Timeout *metav1.Duration `json:"timeout"`
+	Timeout *gwapiv1.Duration `json:"timeout"`
 
 	// Interval defines the time between active health checks.
 	//
-	// +kubebuilder:validation:Format=duration
 	// +kubebuilder:default="3s"
 	// +optional
-	Interval *metav1.Duration `json:"interval"`
+	Interval *gwapiv1.Duration `json:"interval"`
+
+	// InitialJitter defines the maximum time Envoy will wait before the first health check.
+	// Envoy will randomly select a value between 0 and the initial jitter value.
+	//
+	// +optional
+	InitialJitter *gwapiv1.Duration `json:"initialJitter,omitempty"`
 
 	// UnhealthyThreshold defines the number of unhealthy health checks required before a backend host is marked unhealthy.
 	//

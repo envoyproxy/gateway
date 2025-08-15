@@ -7,7 +7,6 @@ package v1alpha1
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 )
 
@@ -56,8 +55,17 @@ type ClientTrafficPolicySpec struct {
 	// Note Proxy Protocol must be present when this field is set, else the connection
 	// is closed.
 	//
+	// Deprecated: Use ProxyProtocol instead.
+	//
 	// +optional
 	EnableProxyProtocol *bool `json:"enableProxyProtocol,omitempty"`
+	// ProxyProtocol configures the Proxy Protocol settings. When configured,
+	// the Proxy Protocol header will be interpreted and the Client Address
+	// will be added into the X-Forwarded-For header.
+	// If both EnableProxyProtocol and ProxyProtocol are set, ProxyProtocol takes precedence.
+	//
+	// +optional
+	ProxyProtocol *ProxyProtocolSettings `json:"proxyProtocol,omitempty"`
 	// ClientIPDetectionSettings provides configuration for determining the original client IP address for requests.
 	//
 	// +optional
@@ -150,7 +158,7 @@ type HeaderSettings struct {
 	// routing, tracing and built-in header manipulation.
 	//
 	// +optional
-	EarlyRequestHeaders *gwapiv1.HTTPHeaderFilter `json:"earlyRequestHeaders,omitempty"`
+	EarlyRequestHeaders *HTTPHeaderFilter `json:"earlyRequestHeaders,omitempty"`
 }
 
 // WithUnderscoresAction configures the action to take when an HTTP header with underscores
@@ -342,6 +350,25 @@ type HealthCheckSettings struct {
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=1024
 	Path string `json:"path"`
+}
+
+// ProxyProtocolSettings configures the Proxy Protocol settings. When configured,
+// the Proxy Protocol header will be interpreted and the Client Address
+// will be added into the X-Forwarded-For header.
+// If both EnableProxyProtocol and ProxyProtocol are set, ProxyProtocol takes precedence.
+//
+// +kubebuilder:validation:MinProperties=0
+type ProxyProtocolSettings struct {
+	// Optional allows requests without a Proxy Protocol header to be proxied.
+	// If set to true, the listener will accept requests without a Proxy Protocol header.
+	// If set to false, the listener will reject requests without a Proxy Protocol header.
+	// If not set, the default behavior is to reject requests without a Proxy Protocol header.
+	// Warning: Optional breaks conformance with the specification. Only enable if ALL traffic to the listener comes from a trusted source.
+	// For more information on security implications, see haproxy.org/download/2.1/doc/proxy-protocol.txt
+	//
+	//
+	// +optional
+	Optional *bool `json:"optional,omitempty"`
 }
 
 //+kubebuilder:object:root=true

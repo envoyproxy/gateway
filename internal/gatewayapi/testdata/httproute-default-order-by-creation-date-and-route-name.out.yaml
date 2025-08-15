@@ -44,8 +44,8 @@ httpRoutes:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: HTTPRoute
   metadata:
-    creationTimestamp: "2025-07-10T20:43:53Z"
-    name: httproute-5
+    creationTimestamp: "2025-07-12T20:47:53Z"
+    name: httproute-default
     namespace: default
   spec:
     hostnames:
@@ -61,14 +61,46 @@ httpRoutes:
       matches:
       - path:
           type: PathPrefix
-          value: /route5
+          value: /
+  status:
+    parents:
+    - conditions:
+      - lastTransitionTime: null
+        message: Route is accepted
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Resolved all the Object references for the Route
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+      parentRef:
+        name: gateway-1
+        namespace: envoy-gateway
+        sectionName: http
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    creationTimestamp: "2025-07-12T20:47:53Z"
+    name: httproute-3
+    namespace: default
+  spec:
+    hostnames:
+    - gateway.envoyproxy.io
+    parentRefs:
+    - name: gateway-1
+      namespace: envoy-gateway
+      sectionName: http
+    rules:
     - backendRefs:
-      - name: service-2
+      - name: service-1
         port: 8080
       matches:
       - path:
           type: PathPrefix
-          value: /123
+          value: /route3
   status:
     parents:
     - conditions:
@@ -143,8 +175,8 @@ httpRoutes:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: HTTPRoute
   metadata:
-    creationTimestamp: "2025-07-12T20:47:53Z"
-    name: httproute-3
+    creationTimestamp: "2025-07-10T20:43:53Z"
+    name: httproute-5
     namespace: default
   spec:
     hostnames:
@@ -160,46 +192,14 @@ httpRoutes:
       matches:
       - path:
           type: PathPrefix
-          value: /route3
-  status:
-    parents:
-    - conditions:
-      - lastTransitionTime: null
-        message: Route is accepted
-        reason: Accepted
-        status: "True"
-        type: Accepted
-      - lastTransitionTime: null
-        message: Resolved all the Object references for the Route
-        reason: ResolvedRefs
-        status: "True"
-        type: ResolvedRefs
-      controllerName: gateway.envoyproxy.io/gatewayclass-controller
-      parentRef:
-        name: gateway-1
-        namespace: envoy-gateway
-        sectionName: http
-- apiVersion: gateway.networking.k8s.io/v1
-  kind: HTTPRoute
-  metadata:
-    creationTimestamp: "2025-07-12T20:47:53Z"
-    name: httproute-default
-    namespace: default
-  spec:
-    hostnames:
-    - gateway.envoyproxy.io
-    parentRefs:
-    - name: gateway-1
-      namespace: envoy-gateway
-      sectionName: http
-    rules:
+          value: /route5
     - backendRefs:
-      - name: service-1
+      - name: service-2
         port: 8080
       matches:
       - path:
           type: PathPrefix
-          value: /
+          value: /123
   status:
     parents:
     - conditions:
@@ -335,8 +335,24 @@ xdsIR:
     accessLog:
       json:
       - path: /dev/stdout
+    globalResources:
+      proxyServiceCluster:
+        name: envoy-gateway/gateway-1
+        settings:
+        - addressType: IP
+          endpoints:
+          - host: 7.6.5.4
+            port: 8080
+            zone: zone1
+          metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-1
+          protocol: TCP
     http:
     - address: 0.0.0.0
+      externalPort: 80
       hostnames:
       - '*.envoyproxy.io'
       isHTTP2: false
@@ -354,9 +370,9 @@ xdsIR:
       - destination:
           metadata:
             kind: HTTPRoute
-            name: httproute-5
+            name: httproute-3
             namespace: default
-          name: httproute/default/httproute-5/rule/0
+          name: httproute/default/httproute-3/rule/0
           settings:
           - addressType: IP
             endpoints:
@@ -366,20 +382,20 @@ xdsIR:
               name: service-1
               namespace: default
               sectionName: "8080"
-            name: httproute/default/httproute-5/rule/0/backend/0
+            name: httproute/default/httproute-3/rule/0/backend/0
             protocol: HTTP
             weight: 1
         hostname: gateway.envoyproxy.io
         isHTTP2: false
         metadata:
           kind: HTTPRoute
-          name: httproute-5
+          name: httproute-3
           namespace: default
-        name: httproute/default/httproute-5/rule/0/match/0/gateway_envoyproxy_io
+        name: httproute/default/httproute-3/rule/0/match/0/gateway_envoyproxy_io
         pathMatch:
           distinct: false
           name: ""
-          prefix: /route5
+          prefix: /route3
       - destination:
           metadata:
             kind: HTTPRoute
@@ -441,9 +457,9 @@ xdsIR:
       - destination:
           metadata:
             kind: HTTPRoute
-            name: httproute-3
+            name: httproute-5
             namespace: default
-          name: httproute/default/httproute-3/rule/0
+          name: httproute/default/httproute-5/rule/0
           settings:
           - addressType: IP
             endpoints:
@@ -453,20 +469,20 @@ xdsIR:
               name: service-1
               namespace: default
               sectionName: "8080"
-            name: httproute/default/httproute-3/rule/0/backend/0
+            name: httproute/default/httproute-5/rule/0/backend/0
             protocol: HTTP
             weight: 1
         hostname: gateway.envoyproxy.io
         isHTTP2: false
         metadata:
           kind: HTTPRoute
-          name: httproute-3
+          name: httproute-5
           namespace: default
-        name: httproute/default/httproute-3/rule/0/match/0/gateway_envoyproxy_io
+        name: httproute/default/httproute-5/rule/0/match/0/gateway_envoyproxy_io
         pathMatch:
           distinct: false
           name: ""
-          prefix: /route3
+          prefix: /route5
       - destination:
           metadata:
             kind: HTTPRoute
@@ -530,35 +546,6 @@ xdsIR:
       - destination:
           metadata:
             kind: HTTPRoute
-            name: httproute-5
-            namespace: default
-          name: httproute/default/httproute-5/rule/1
-          settings:
-          - addressType: IP
-            endpoints:
-            - host: 7.7.7.7
-              port: 8080
-            metadata:
-              name: service-2
-              namespace: default
-              sectionName: "8080"
-            name: httproute/default/httproute-5/rule/1/backend/0
-            protocol: HTTP
-            weight: 1
-        hostname: gateway.envoyproxy.io
-        isHTTP2: false
-        metadata:
-          kind: HTTPRoute
-          name: httproute-5
-          namespace: default
-        name: httproute/default/httproute-5/rule/1/match/0/gateway_envoyproxy_io
-        pathMatch:
-          distinct: false
-          name: ""
-          prefix: /123
-      - destination:
-          metadata:
-            kind: HTTPRoute
             name: httproute-1
             namespace: default
           name: httproute/default/httproute-1/rule/2
@@ -585,6 +572,35 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /bar
+      - destination:
+          metadata:
+            kind: HTTPRoute
+            name: httproute-5
+            namespace: default
+          name: httproute/default/httproute-5/rule/1
+          settings:
+          - addressType: IP
+            endpoints:
+            - host: 7.7.7.7
+              port: 8080
+            metadata:
+              name: service-2
+              namespace: default
+              sectionName: "8080"
+            name: httproute/default/httproute-5/rule/1/backend/0
+            protocol: HTTP
+            weight: 1
+        hostname: gateway.envoyproxy.io
+        isHTTP2: false
+        metadata:
+          kind: HTTPRoute
+          name: httproute-5
+          namespace: default
+        name: httproute/default/httproute-5/rule/1/match/0/gateway_envoyproxy_io
+        pathMatch:
+          distinct: false
+          name: ""
+          prefix: /123
       - destination:
           metadata:
             kind: HTTPRoute

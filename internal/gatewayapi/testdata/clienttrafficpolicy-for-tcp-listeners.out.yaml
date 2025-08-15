@@ -11,7 +11,8 @@ clientTrafficPolicies:
       connectionLimit:
         closeDelay: 10s
         value: 3
-    enableProxyProtocol: true
+    proxyProtocol:
+      optional: false
     targetRef:
       group: gateway.networking.k8s.io
       kind: Gateway
@@ -187,6 +188,21 @@ xdsIR:
     accessLog:
       json:
       - path: /dev/stdout
+    globalResources:
+      proxyServiceCluster:
+        name: envoy-gateway/gateway-1
+        settings:
+        - addressType: IP
+          endpoints:
+          - host: 7.6.5.4
+            port: 8080
+            zone: zone1
+          metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-1
+          protocol: TCP
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4
@@ -199,9 +215,10 @@ xdsIR:
         limit:
           closeDelay: 10s
           value: 3
-      enableProxyProtocol: true
+      externalPort: 443
       name: envoy-gateway/gateway-1/tls-1
       port: 10443
+      proxyProtocol: {}
       routes:
       - destination:
           metadata:
@@ -270,9 +287,10 @@ xdsIR:
         limit:
           closeDelay: 10s
           value: 3
-      enableProxyProtocol: true
+      externalPort: 8080
       name: envoy-gateway/gateway-1/tcp-1
       port: 8080
+      proxyProtocol: {}
       routes:
       - destination:
           metadata:

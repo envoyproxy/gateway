@@ -69,30 +69,6 @@ xdsIR:
       - name: envoy-gateway-gateway-1-http
         operation:
           op: replace
-          path: /ignore_global_conn_limit
-          value: "true"
-        type: type.googleapis.com/envoy.config.listener.v3.Listener
-      name: edit-ignore-global-limit
-      namespace: envoy-gateway
-      status:
-        ancestors:
-        - ancestorRef:
-            group: gateway.networking.k8s.io
-            kind: Gateway
-            name: gateway-1
-            namespace: envoy-gateway
-          conditions:
-          - lastTransitionTime: null
-            message: Policy has been accepted.
-            observedGeneration: 10
-            reason: Accepted
-            status: "True"
-            type: Accepted
-          controllerName: gateway.envoyproxy.io/gatewayclass-controller
-    - jsonPatches:
-      - name: envoy-gateway-gateway-1-http
-        operation:
-          op: replace
           path: /per_connection_buffer_limit_bytes
           value: "1024"
         type: type.googleapis.com/envoy.config.listener.v3.Listener
@@ -113,8 +89,48 @@ xdsIR:
             status: "True"
             type: Accepted
           controllerName: gateway.envoyproxy.io/gatewayclass-controller
+    - jsonPatches:
+      - name: envoy-gateway-gateway-1-http
+        operation:
+          op: replace
+          path: /ignore_global_conn_limit
+          value: "true"
+        type: type.googleapis.com/envoy.config.listener.v3.Listener
+      name: edit-ignore-global-limit
+      namespace: envoy-gateway
+      status:
+        ancestors:
+        - ancestorRef:
+            group: gateway.networking.k8s.io
+            kind: Gateway
+            name: gateway-1
+            namespace: envoy-gateway
+          conditions:
+          - lastTransitionTime: null
+            message: Policy has been accepted.
+            observedGeneration: 10
+            reason: Accepted
+            status: "True"
+            type: Accepted
+          controllerName: gateway.envoyproxy.io/gatewayclass-controller
+    globalResources:
+      proxyServiceCluster:
+        name: envoy-gateway/gateway-1
+        settings:
+        - addressType: IP
+          endpoints:
+          - host: 7.6.5.4
+            port: 8080
+            zone: zone1
+          metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-1
+          protocol: TCP
     http:
     - address: 0.0.0.0
+      externalPort: 80
       hostnames:
       - '*'
       isHTTP2: false
