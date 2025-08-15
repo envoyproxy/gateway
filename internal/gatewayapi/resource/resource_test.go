@@ -201,3 +201,54 @@ func TestGetEndpointSlicesForBackendDualStack(t *testing.T) {
 		}
 	})
 }
+
+func TestLoadResourcesMerge(t *testing.T) {
+	r1 := NewLoadResources()
+	r1.GatewayClasses = []*gwapiv1.GatewayClass{
+		{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "foo",
+			},
+		},
+	}
+
+	r2 := NewLoadResources()
+	r2.GatewayClasses = []*gwapiv1.GatewayClass{
+		{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "bar",
+			},
+		},
+	}
+	r2.Gateways = []*gwapiv1.Gateway{
+		{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "foo",
+			},
+		},
+	}
+
+	r3 := NewLoadResources()
+	r3.GatewayClasses = []*gwapiv1.GatewayClass{
+		{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "foo",
+			},
+		},
+		{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "bar",
+			},
+		},
+	}
+	r3.Gateways = []*gwapiv1.Gateway{
+		{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "foo",
+			},
+		},
+	}
+
+	r1.Merge(r2)
+	require.Equal(t, r1, r3)
+}

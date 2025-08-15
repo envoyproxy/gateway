@@ -57,12 +57,12 @@ func TestLoadAllSupportedResourcesFromYAMLBytes(t *testing.T) {
 		require.NoError(t, file.Write(string(out), filepath.Join("testdata", "all-resources.out.yaml")))
 	}
 
-	want := &Resources{}
+	want := &LoadResources{}
 	outFile := requireTestDataFile(t, "all-resources", "out")
 	mustUnmarshal(t, outFile, want)
 
 	opts := []cmp.Option{
-		cmpopts.IgnoreFields(Resources{}, "serviceMap"),
+		cmpopts.IgnoreFields(LoadResources{}, "Resources.serviceMap"),
 		cmpopts.EquateEmpty(),
 	}
 	require.Empty(t, cmp.Diff(want, got, opts...))
