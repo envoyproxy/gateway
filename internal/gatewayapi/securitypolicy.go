@@ -1751,6 +1751,7 @@ func (t *Translator) buildExtAuth(
 		FailOpen:         policy.Spec.ExtAuth.FailOpen,
 		Traffic:          traffic,
 		RecomputeRoute:   policy.Spec.ExtAuth.RecomputeRoute,
+		Timeout:          parseExtAuthTimeout(policy.Spec.ExtAuth.Timeout),
 	}
 
 	if http != nil {
@@ -1774,6 +1775,20 @@ func (t *Translator) buildExtAuth(
 	}
 
 	return extAuth, nil
+}
+
+// parseExtAuthTimeout parses the timeout from gwapiv1.Duration to metav1.Duration.
+func parseExtAuthTimeout(timeout *gwapiv1.Duration) *metav1.Duration {
+	if timeout == nil {
+		return nil
+	}
+	d, err := time.ParseDuration(string(*timeout))
+	if err != nil {
+		return nil
+	}
+	return &metav1.Duration{
+		Duration: d,
+	}
 }
 
 func backendRefAuthority(resources *resource.Resources, backendRef *gwapiv1.BackendObjectReference, policy *egv1a1.SecurityPolicy) string {
