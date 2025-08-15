@@ -49,7 +49,6 @@ func LoadResourcesFromYAMLBytes(yamlBytes []byte, addMissingResources bool) (*Lo
 
 // loadKubernetesYAMLToResources converts a Kubernetes YAML string into GatewayAPI Resources.
 func loadKubernetesYAMLToResources(input []byte, addMissingResources bool) (*LoadResources, error) {
-
 	resources := NewLoadResources()
 	var useDefaultNamespace bool
 	providedNamespaceMap := sets.New[string]()

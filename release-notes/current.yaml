@@ -37,6 +37,7 @@ new features: |
   Introduce validation strictness levels for Lua scripts in EnvoyExtensionPolicies.
   Added metric `watchable_publish_total` counting store events in watchable message queues.
   Accessloggers of type ALS now have http2 enabled on the cluster by default.
+  Added support for loading multiple gatewayclasses and envoyproxies resources in load function.
 
 bug fixes: |
   Handle integer zone annotation values
