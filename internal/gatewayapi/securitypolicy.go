@@ -479,10 +479,11 @@ func validateSecurityPolicyForTCP(p *egv1a1.SecurityPolicy) error {
 		p.Spec.ExtAuth != nil {
 		return fmt.Errorf("only authorization is supported for TCP routes")
 	}
-	// Additionally, verify that authorization is actually specified
-	if p.Spec.Authorization == nil {
-		return fmt.Errorf("authorization must be specified for TCP routes")
-	}
+
+	// NOTE:
+	// allow an empty SecurityPolicy (no Authorization) so users can create a
+	// placeholder and fill it later. Only validate rules if Authorization is set.
+
 	// For TCP routes, we need at least one rule with ClientCIDRs
 	if len(p.Spec.Authorization.Rules) == 0 {
 		return fmt.Errorf("at least one authorization rule must be specified for TCP routes")
