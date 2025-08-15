@@ -11,6 +11,7 @@ on:
     paths:
       - "charts/gateway-helm/crds/gatewayapi-crds.yaml"
       - "test/conformance/experimental_conformance_test.go"
+      - "internal/gatewayapi/conformance/**"
   # Add workflow_dispatch to trigger this workflow manually by maintainers.
   workflow_dispatch:
 

@@ -34,7 +34,7 @@ func SkipFeatures(gatewayNamespaceMode bool) sets.Set[features.FeatureName] {
 
 	return sets.New(
 		features.GatewayStaticAddressesFeature.Name,
-		features.GatewayInfrastructurePropagationFeature.Name,
+		//features.GatewayInfrastructurePropagationFeature.Name,
 	)
 }
 
