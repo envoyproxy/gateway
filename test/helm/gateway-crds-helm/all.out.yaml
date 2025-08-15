@@ -41975,6 +41975,12 @@ spec:
                       route matching decisions. If the recomputation selects a new route, features targeting
                       the new matched route will be applied.
                     type: boolean
+                  timeout:
+                    description: |-
+                      Timeout defines the timeout for requests to the external authorization service.
+                      If not specified, defaults to 10 seconds.
+                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                    type: string
                 type: object
                 x-kubernetes-validations:
                 - message: one of grpc or http must be specified
