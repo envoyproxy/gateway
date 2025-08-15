@@ -485,8 +485,8 @@ func validateSecurityPolicyForTCP(p *egv1a1.SecurityPolicy) error {
 	// placeholder and fill it later. Only validate rules if Authorization is set.
 
 	// For TCP routes, we need at least one rule with ClientCIDRs
-	if len(p.Spec.Authorization.Rules) == 0 {
-		return fmt.Errorf("at least one authorization rule must be specified for TCP routes")
+	if p.Spec.Authorization == nil || len(p.Spec.Authorization.Rules) == 0 {
+		return nil
 	}
 
 	// Check that each rule has at least one CIDR specified and no unsupported features

@@ -15,6 +15,7 @@ import (
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/ir"
 )
 
 func Test_wildcard2regex(t *testing.T) {
@@ -768,4 +769,100 @@ func Test_parseExtAuthTimeout(t *testing.T) {
 			}
 		})
 	}
+}
+
+func Test_getRouteProtocol(t *testing.T) {
+	// nil route should default to HTTP
+	require.Equal(t, ir.HTTP, getRouteProtocol(nil))
+}
+
+func Test_validateSecurityPolicyForTCP_AllowsNilOrEmptyAuth(t *testing.T) {
+	// No Authorization present
+	p := &egv1a1.SecurityPolicy{
+		Spec: egv1a1.SecurityPolicySpec{},
+	}
+	require.NoError(t, validateSecurityPolicyForTCP(p))
+
+	// Authorization present but no rules
+	p = &egv1a1.SecurityPolicy{
+		Spec: egv1a1.SecurityPolicySpec{
+			Authorization: &egv1a1.Authorization{
+				Rules: []egv1a1.AuthorizationRule{},
+			},
+		},
+	}
+	require.NoError(t, validateSecurityPolicyForTCP(p))
+}
+
+func Test_validateSecurityPolicyForTCP_UnsupportedTopLevelFeatures(t *testing.T) {
+	// Any non-authorization feature should fail for TCP
+	cases := []struct {
+		name string
+		spec egv1a1.SecurityPolicySpec
+	}{
+		{"JWT", egv1a1.SecurityPolicySpec{JWT: &egv1a1.JWT{}}},
+		{"OIDC", egv1a1.SecurityPolicySpec{OIDC: &egv1a1.OIDC{}}},
+		{"CORS", egv1a1.SecurityPolicySpec{CORS: &egv1a1.CORS{}}},
+		{"APIKeyAuth", egv1a1.SecurityPolicySpec{APIKeyAuth: &egv1a1.APIKeyAuth{}}},
+		{"BasicAuth", egv1a1.SecurityPolicySpec{BasicAuth: &egv1a1.BasicAuth{}}},
+		{"ExtAuth", egv1a1.SecurityPolicySpec{ExtAuth: &egv1a1.ExtAuth{HTTP: &egv1a1.HTTPExtAuthService{}}}},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			p := &egv1a1.SecurityPolicy{Spec: tc.spec}
+			require.Error(t, validateSecurityPolicyForTCP(p))
+		})
+	}
+}
+
+func Test_validateSecurityPolicyForTCP_AllowRequiresCIDR(t *testing.T) {
+	// Allow rule without ClientCIDRs should error
+	p := &egv1a1.SecurityPolicy{
+		Spec: egv1a1.SecurityPolicySpec{
+			Authorization: &egv1a1.Authorization{
+				Rules: []egv1a1.AuthorizationRule{
+					{
+						Action: egv1a1.AuthorizationActionAllow,
+						// Principal with zero ClientCIDRs (default) → invalid for TCP Allow
+					},
+				},
+			},
+		},
+	}
+	require.Error(t, validateSecurityPolicyForTCP(p))
+}
+
+func Test_validateSecurityPolicyForTCP_DenyRuleOK(t *testing.T) {
+	// Deny rule is fine without CIDRs
+	p := &egv1a1.SecurityPolicy{
+		Spec: egv1a1.SecurityPolicySpec{
+			Authorization: &egv1a1.Authorization{
+				Rules: []egv1a1.AuthorizationRule{
+					{
+						Action: egv1a1.AuthorizationActionDeny,
+					},
+				},
+			},
+		},
+	}
+	require.NoError(t, validateSecurityPolicyForTCP(p))
+}
+
+func Test_validateSecurityPolicyForTCP_AllowWithCIDR_OK(t *testing.T) {
+	// Allow rule with at least one ClientCIDR should be valid
+	p := &egv1a1.SecurityPolicy{
+		Spec: egv1a1.SecurityPolicySpec{
+			Authorization: &egv1a1.Authorization{
+				Rules: []egv1a1.AuthorizationRule{
+					{
+						Action: egv1a1.AuthorizationActionAllow,
+						Principal: egv1a1.Principal{
+							ClientCIDRs: []egv1a1.CIDR{"10.0.0.0/8"},
+						},
+					},
+				},
+			},
+		},
+	}
+	require.NoError(t, validateSecurityPolicyForTCP(p))
 }
