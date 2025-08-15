@@ -2303,7 +2303,7 @@ data:
               "datasource": {
                 "uid": "$datasource"
               },
-              "definition": "label_values(envoy_cluster_name)",
+              "definition": "label_values(envoy_cluster_warming_state,envoy_cluster_name)",
               "hide": 0,
               "includeAll": true,
               "label": "Cluster",
@@ -2311,7 +2311,7 @@ data:
               "name": "cluster",
               "options": [],
               "query": {
-                "query": "label_values(envoy_cluster_name)",
+                "query": "label_values(envoy_cluster_warming_state,envoy_cluster_name)",
                 "refId": "PrometheusVariableQueryEditor-VariableQuery"
               },
               "refresh": 1,
