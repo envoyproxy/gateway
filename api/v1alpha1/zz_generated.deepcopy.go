@@ -2574,6 +2574,11 @@ func (in *ExtAuth) DeepCopyInto(out *ExtAuth) {
 		*out = new(BodyToExtAuth)
 		**out = **in
 	}
+	if in.Timeout != nil {
+		in, out := &in.Timeout, &out.Timeout
+		*out = new(v1.Duration)
+		**out = **in
+	}
 	if in.FailOpen != nil {
 		in, out := &in.FailOpen, &out.FailOpen
 		*out = new(bool)
