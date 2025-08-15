@@ -3,74 +3,6 @@ backendTrafficPolicies:
   kind: BackendTrafficPolicy
   metadata:
     creationTimestamp: null
-    name: policy-for-grpc-route
-    namespace: default
-  spec:
-    healthCheck:
-      active:
-        healthyThreshold: 1
-        interval: 3s
-        timeout: 1s
-        type: GRPC
-        unhealthyThreshold: 3
-    targetRef:
-      group: gateway.networking.k8s.io
-      kind: GRPCRoute
-      name: grpcroute-2
-  status:
-    ancestors:
-    - ancestorRef:
-        group: gateway.networking.k8s.io
-        kind: Gateway
-        name: gateway-1
-        namespace: envoy-gateway
-        sectionName: http
-      conditions:
-      - lastTransitionTime: null
-        message: Policy has been accepted.
-        reason: Accepted
-        status: "True"
-        type: Accepted
-      controllerName: gateway.envoyproxy.io/gatewayclass-controller
-- apiVersion: gateway.envoyproxy.io/v1alpha1
-  kind: BackendTrafficPolicy
-  metadata:
-    creationTimestamp: null
-    name: policy-for-grpc-route-3
-    namespace: default
-  spec:
-    healthCheck:
-      active:
-        grpc:
-          service: foo-service
-        healthyThreshold: 1
-        interval: 3s
-        timeout: 1s
-        type: GRPC
-        unhealthyThreshold: 3
-    targetRef:
-      group: gateway.networking.k8s.io
-      kind: GRPCRoute
-      name: grpcroute-3
-  status:
-    ancestors:
-    - ancestorRef:
-        group: gateway.networking.k8s.io
-        kind: Gateway
-        name: gateway-1
-        namespace: envoy-gateway
-        sectionName: http
-      conditions:
-      - lastTransitionTime: null
-        message: Policy has been accepted.
-        reason: Accepted
-        status: "True"
-        type: Accepted
-      controllerName: gateway.envoyproxy.io/gatewayclass-controller
-- apiVersion: gateway.envoyproxy.io/v1alpha1
-  kind: BackendTrafficPolicy
-  metadata:
-    creationTimestamp: null
     name: policy-for-route-1
     namespace: default
   spec:
@@ -92,7 +24,7 @@ backendTrafficPolicies:
         type: HTTP
         unhealthyThreshold: 3
       passive:
-        baseEjectionTime: 2m30s
+        baseEjectionTime: 150s
         consecutive5XxErrors: 5
         consecutiveGatewayErrors: 0
         consecutiveLocalOriginFailures: 5
@@ -103,6 +35,45 @@ backendTrafficPolicies:
       group: gateway.networking.k8s.io
       kind: HTTPRoute
       name: httproute-1
+  status:
+    ancestors:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: gateway-2
+        namespace: envoy-gateway
+        sectionName: http
+      conditions:
+      - lastTransitionTime: null
+        message: Policy has been accepted.
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: BackendTrafficPolicy
+  metadata:
+    creationTimestamp: null
+    name: policy-for-route-4
+    namespace: default
+  spec:
+    healthCheck:
+      active:
+        healthyThreshold: 3
+        http:
+          expectedResponse:
+            text: pong
+            type: Text
+          method: GET
+          path: /healthz
+        interval: 5s
+        timeout: 1s
+        type: HTTP
+        unhealthyThreshold: 3
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: httproute-4
   status:
     ancestors:
     - ancestorRef:
@@ -188,7 +159,7 @@ backendTrafficPolicies:
         type: TCP
         unhealthyThreshold: 3
       passive:
-        baseEjectionTime: 2m40s
+        baseEjectionTime: 160s
         consecutive5XxErrors: 5
         consecutiveGatewayErrors: 0
         consecutiveLocalOriginFailures: 5
@@ -199,45 +170,6 @@ backendTrafficPolicies:
       group: gateway.networking.k8s.io
       kind: HTTPRoute
       name: httproute-3
-  status:
-    ancestors:
-    - ancestorRef:
-        group: gateway.networking.k8s.io
-        kind: Gateway
-        name: gateway-2
-        namespace: envoy-gateway
-        sectionName: http
-      conditions:
-      - lastTransitionTime: null
-        message: Policy has been accepted.
-        reason: Accepted
-        status: "True"
-        type: Accepted
-      controllerName: gateway.envoyproxy.io/gatewayclass-controller
-- apiVersion: gateway.envoyproxy.io/v1alpha1
-  kind: BackendTrafficPolicy
-  metadata:
-    creationTimestamp: null
-    name: policy-for-route-4
-    namespace: default
-  spec:
-    healthCheck:
-      active:
-        healthyThreshold: 3
-        http:
-          expectedResponse:
-            text: pong
-            type: Text
-          method: GET
-          path: /healthz
-        interval: 5s
-        timeout: 1s
-        type: HTTP
-        unhealthyThreshold: 3
-    targetRef:
-      group: gateway.networking.k8s.io
-      kind: HTTPRoute
-      name: httproute-4
   status:
     ancestors:
     - ancestorRef:
@@ -292,6 +224,74 @@ backendTrafficPolicies:
   kind: BackendTrafficPolicy
   metadata:
     creationTimestamp: null
+    name: policy-for-grpc-route
+    namespace: default
+  spec:
+    healthCheck:
+      active:
+        healthyThreshold: 1
+        interval: 3s
+        timeout: 1s
+        type: GRPC
+        unhealthyThreshold: 3
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: GRPCRoute
+      name: grpcroute-2
+  status:
+    ancestors:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: gateway-1
+        namespace: envoy-gateway
+        sectionName: http
+      conditions:
+      - lastTransitionTime: null
+        message: Policy has been accepted.
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: BackendTrafficPolicy
+  metadata:
+    creationTimestamp: null
+    name: policy-for-grpc-route-3
+    namespace: default
+  spec:
+    healthCheck:
+      active:
+        grpc:
+          service: foo-service
+        healthyThreshold: 1
+        interval: 3s
+        timeout: 1s
+        type: GRPC
+        unhealthyThreshold: 3
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: GRPCRoute
+      name: grpcroute-3
+  status:
+    ancestors:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: gateway-1
+        namespace: envoy-gateway
+        sectionName: http
+      conditions:
+      - lastTransitionTime: null
+        message: Policy has been accepted.
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: BackendTrafficPolicy
+  metadata:
+    creationTimestamp: null
     name: policy-for-gateway
     namespace: envoy-gateway
   spec:
@@ -312,7 +312,7 @@ backendTrafficPolicies:
         type: HTTP
         unhealthyThreshold: 3
       passive:
-        baseEjectionTime: 2m40s
+        baseEjectionTime: 160s
         consecutive5XxErrors: 5
         consecutiveGatewayErrors: 0
         consecutiveLocalOriginFailures: 5
@@ -462,7 +462,7 @@ grpcRoutes:
   kind: GRPCRoute
   metadata:
     creationTimestamp: null
-    name: grpcroute-2
+    name: grpcroute-3
     namespace: default
   spec:
     parentRefs:
@@ -471,7 +471,7 @@ grpcRoutes:
       sectionName: http
     rules:
     - backendRefs:
-      - name: service-2
+      - name: service-3
         port: 8080
   status:
     parents:
@@ -495,7 +495,7 @@ grpcRoutes:
   kind: GRPCRoute
   metadata:
     creationTimestamp: null
-    name: grpcroute-3
+    name: grpcroute-2
     namespace: default
   spec:
     parentRefs:
@@ -504,7 +504,7 @@ grpcRoutes:
       sectionName: http
     rules:
     - backendRefs:
-      - name: service-3
+      - name: service-2
         port: 8080
   status:
     parents:
@@ -828,39 +828,6 @@ xdsIR:
       - destination:
           metadata:
             kind: GRPCRoute
-            name: grpcroute-2
-            namespace: default
-          name: grpcroute/default/grpcroute-2/rule/0
-          settings:
-          - addressType: IP
-            endpoints:
-            - host: 7.7.7.7
-              port: 8080
-            metadata:
-              name: service-2
-              namespace: default
-              sectionName: "8080"
-            name: grpcroute/default/grpcroute-2/rule/0/backend/0
-            protocol: GRPC
-            weight: 1
-        hostname: '*'
-        isHTTP2: true
-        metadata:
-          kind: GRPCRoute
-          name: grpcroute-2
-          namespace: default
-        name: grpcroute/default/grpcroute-2/rule/0/match/-1/*
-        traffic:
-          healthCheck:
-            active:
-              grpc: {}
-              healthyThreshold: 1
-              interval: 3s
-              timeout: 1s
-              unhealthyThreshold: 3
-      - destination:
-          metadata:
-            kind: GRPCRoute
             name: grpcroute-3
             namespace: default
           name: grpcroute/default/grpcroute-3/rule/0
@@ -888,6 +855,39 @@ xdsIR:
             active:
               grpc:
                 service: foo-service
+              healthyThreshold: 1
+              interval: 3s
+              timeout: 1s
+              unhealthyThreshold: 3
+      - destination:
+          metadata:
+            kind: GRPCRoute
+            name: grpcroute-2
+            namespace: default
+          name: grpcroute/default/grpcroute-2/rule/0
+          settings:
+          - addressType: IP
+            endpoints:
+            - host: 7.7.7.7
+              port: 8080
+            metadata:
+              name: service-2
+              namespace: default
+              sectionName: "8080"
+            name: grpcroute/default/grpcroute-2/rule/0/backend/0
+            protocol: GRPC
+            weight: 1
+        hostname: '*'
+        isHTTP2: true
+        metadata:
+          kind: GRPCRoute
+          name: grpcroute-2
+          namespace: default
+        name: grpcroute/default/grpcroute-2/rule/0/match/-1/*
+        traffic:
+          healthCheck:
+            active:
+              grpc: {}
               healthyThreshold: 1
               interval: 3s
               timeout: 1s

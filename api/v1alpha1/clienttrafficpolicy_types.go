@@ -7,7 +7,6 @@ package v1alpha1
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 )
 
@@ -159,7 +158,7 @@ type HeaderSettings struct {
 	// routing, tracing and built-in header manipulation.
 	//
 	// +optional
-	EarlyRequestHeaders *gwapiv1.HTTPHeaderFilter `json:"earlyRequestHeaders,omitempty"`
+	EarlyRequestHeaders *HTTPHeaderFilter `json:"earlyRequestHeaders,omitempty"`
 }
 
 // WithUnderscoresAction configures the action to take when an HTTP header with underscores

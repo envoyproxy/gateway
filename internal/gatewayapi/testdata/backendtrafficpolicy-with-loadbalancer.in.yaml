@@ -142,6 +142,11 @@ backendTrafficPolicies:
       type: RoundRobin
       slowStart:
         window: 300s
+      zoneAware:
+        preferLocal:
+          force:
+            minEndpointsInZoneThreshold: 1
+          minEndpointsThreshold: 1
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: BackendTrafficPolicy
   metadata:

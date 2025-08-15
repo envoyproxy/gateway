@@ -218,6 +218,20 @@ func (r *gatewayAPIReconciler) subscribeToResources(ctx context.Context) {
 	r.subscriptions.extensionPolicyStatuses = r.resources.ExtensionPolicyStatuses.Subscribe(ctx)
 }
 
+func (r *gatewayAPIReconciler) backendAPIDisabled() bool {
+	// we didn't check if the backend CRD exists every time for performance,
+	// please make sure r.backendCRDExists is setting correctly before calling this
+	if !r.backendCRDExists {
+		return true
+	}
+
+	if r.envoyGateway == nil || r.envoyGateway.ExtensionAPIs == nil {
+		return true
+	}
+
+	return !r.envoyGateway.ExtensionAPIs.EnableBackend
+}
+
 func byNamespaceSelectorEnabled(eg *egv1a1.EnvoyGateway) bool {
 	if eg.Provider == nil ||
 		eg.Provider.Kubernetes == nil ||
@@ -300,11 +314,11 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 					false,
 					string(gwapiv1.GatewayClassReasonInvalidParameters),
 					msg)
-				message.HandleStore(message.Metadata{
+				r.resources.GatewayClassStatuses.Store(utils.NamespacedName(gc), &gc.Status)
+				message.PublishMetric(message.Metadata{
 					Runner:  string(egv1a1.LogComponentProviderRunner),
 					Message: message.GatewayClassStatusMessageName,
-				},
-					utils.NamespacedName(gc), &gc.Status, &r.resources.GatewayClassStatuses)
+				})
 				failToProcessGCParamsRef = true
 			}
 		}
@@ -322,11 +336,11 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 				false,
 				string(gwapiv1.GatewayClassReasonAccepted),
 				fmt.Sprintf("%s: %v", status.MsgGatewayClassInvalidParams, err))
-			message.HandleStore(message.Metadata{
+			r.resources.GatewayClassStatuses.Store(utils.NamespacedName(gc), &gc.Status)
+			message.PublishMetric(message.Metadata{
 				Runner:  string(egv1a1.LogComponentProviderRunner),
 				Message: message.GatewayClassStatusMessageName,
-			},
-				utils.NamespacedName(gc), &gc.Status, &r.resources.GatewayClassStatuses)
+			})
 			failToProcessGCParamsRef = true
 		}
 
@@ -508,15 +522,22 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 		}
 	}
 
+	// Sort before storing to:
+	// 1. ensure identical resources are not retranslated
+	//    and updates are avoided by the watchable layer
+	// 2. ensure gateway-api layer receives resources in order
+	//    which impacts translation output
+	gwcResources.Sort()
+
 	// Store the Gateway Resources for the GatewayClass.
 	// The Store is triggered even when there are no Gateways associated to the
 	// GatewayClass. This would happen in case the last Gateway is removed and the
 	// Store will be required to trigger a cleanup of envoy infra resources.
-	message.HandleStore(message.Metadata{
+	r.resources.GatewayAPIResources.Store(string(r.classController), &gwcResources)
+	message.PublishMetric(message.Metadata{
 		Runner:  string(egv1a1.LogComponentProviderRunner),
 		Message: message.ProviderResourcesMessageName,
-	},
-		string(r.classController), &gwcResources, &r.resources.GatewayAPIResources)
+	})
 
 	r.log.Info("reconciled gateways successfully")
 	return reconcile.Result{}, nil
@@ -626,8 +647,8 @@ func (r *gatewayAPIReconciler) processBackendRefs(ctx context.Context, gwcResour
 			endpointSliceLabelKey = mcsapiv1a1.LabelServiceName
 
 		case egv1a1.KindBackend:
-			if !r.backendCRDExists {
-				r.log.V(6).Info("skipping Backend processing as Backend CRD is not installed")
+			if r.backendAPIDisabled() {
+				r.log.V(6).Info("skipping Backend processing as Backend API is disabled.")
 				continue
 			}
 			backend := new(egv1a1.Backend)
@@ -1359,11 +1380,11 @@ func (r *gatewayAPIReconciler) processGateways(ctx context.Context, managedGC *g
 	mergedGateways := false
 	if r.mergeGateways.Has(managedGC.Name) {
 		mergedGateways = true
-		r.processServiceCluster(managedGC.Name, resourceMap)
+		// processGatewayClassParamsRef has been called for this gatewayclass, its EnvoyProxy should exist in resourceTree
+		r.processServiceClusterForGatewayClass(resourceTree.EnvoyProxyForGatewayClass, managedGC, resourceMap)
 	}
 
 	for _, gtw := range gatewayList.Items {
-		gtw := gtw //nolint:copyloopvar
 		if r.namespaceLabel != nil {
 			if ok, err := r.checkObjectNamespaceLabels(&gtw); err != nil {
 				// If the error is transient, we return it to allow Reconcile to retry.
@@ -1385,19 +1406,14 @@ func (r *gatewayAPIReconciler) processGateways(ctx context.Context, managedGC *g
 			if terminatesTLS(&listener) {
 				for _, certRef := range listener.TLS.CertificateRefs {
 					if refsSecret(&certRef) {
-						if err := r.processSecretRef(
-							ctx,
-							resourceMap,
-							resourceTree,
-							resource.KindGateway,
-							gtw.Namespace,
-							gtw.Name,
+						if err := r.processSecretRef(ctx,
+							resourceMap, resourceTree,
+							resource.KindGateway, gtw.Namespace, gtw.Name,
 							certRef); err != nil {
 							if isTransientError(err) {
 								return err
 							}
-							r.log.Error(err,
-								"failed to process TLS SecretRef for gateway",
+							r.log.Error(err, "failed to process TLS SecretRef for gateway",
 								"gateway", gtw, "secretRef", certRef)
 						}
 					}
@@ -1406,10 +1422,6 @@ func (r *gatewayAPIReconciler) processGateways(ctx context.Context, managedGC *g
 		}
 
 		gtwNamespacedName := utils.NamespacedName(&gtw).String()
-
-		if !mergedGateways {
-			r.processServiceCluster(gtwNamespacedName, resourceMap)
-		}
 
 		// Route Processing
 
@@ -1463,6 +1475,15 @@ func (r *gatewayAPIReconciler) processGateways(ctx context.Context, managedGC *g
 			r.log.Error(err, "failed to process infrastructure.parametersRef for gateway", "namespace", gtw.Namespace, "name", gtw.Name)
 		}
 
+		if !mergedGateways {
+			var ep *egv1a1.EnvoyProxy = nil
+			if gtw.Spec.Infrastructure != nil && gtw.Spec.Infrastructure.ParametersRef != nil {
+				// processGatewayParamsRef has been called for this gateway, its EnvoyProxy should exist in resourceTree
+				ep = resourceTree.GetEnvoyProxy(gtw.Namespace, gtw.Spec.Infrastructure.ParametersRef.Name)
+			}
+			r.processServiceClusterForGateway(ep, &gtw, resourceMap)
+		}
+
 		if !resourceMap.allAssociatedGateways.Has(gtwNamespacedName) {
 			resourceMap.allAssociatedGateways.Insert(gtwNamespacedName)
 			resourceTree.Gateways = append(resourceTree.Gateways, &gtw)
@@ -1472,11 +1493,55 @@ func (r *gatewayAPIReconciler) processGateways(ctx context.Context, managedGC *g
 	return nil
 }
 
-func (r *gatewayAPIReconciler) processServiceCluster(resourceName string, resourceMap *resourceMappings) {
-	proxySvcName := proxy.ExpectedResourceHashedName(resourceName)
+// Called on a GatewayClass when merged gateways mode is enabled for it.
+func (r *gatewayAPIReconciler) processServiceClusterForGatewayClass(ep *egv1a1.EnvoyProxy, gatewayClass *gwapiv1.GatewayClass, resourceMap *resourceMappings) {
+	// Skip processing if topology injector is disabled
+	if r.envoyGateway != nil && r.envoyGateway.TopologyInjectorDisabled() {
+		return
+	}
+
+	proxySvcName, proxySvcNamespace := proxy.ExpectedResourceHashedName(gatewayClass.Name), r.namespace
+
+	// Check if the service name was specified in EnvoyProxy
+	if ep != nil {
+		provider := ep.GetEnvoyProxyProvider()
+		if provider.Kubernetes != nil && provider.Kubernetes.EnvoyService != nil && provider.Kubernetes.EnvoyService.Name != nil {
+			proxySvcName = *provider.Kubernetes.EnvoyService.Name
+		}
+	}
+
 	resourceMap.allAssociatedBackendRefs.Insert(gwapiv1.BackendObjectReference{
 		Kind:      ptr.To(gwapiv1.Kind("Service")),
-		Namespace: gatewayapi.NamespacePtr(r.namespace),
+		Namespace: gatewayapi.NamespacePtr(proxySvcNamespace),
+		Name:      gwapiv1.ObjectName(proxySvcName),
+	})
+}
+
+// Called on a Gateway when merged gateways mode is not enabled for its parent GatewayClass.
+func (r *gatewayAPIReconciler) processServiceClusterForGateway(ep *egv1a1.EnvoyProxy, gateway *gwapiv1.Gateway, resourceMap *resourceMappings) {
+	// Skip processing if topology injector is disabled
+	if r.envoyGateway != nil && r.envoyGateway.TopologyInjectorDisabled() {
+		return
+	}
+
+	proxySvcName, proxySvcNamespace := proxy.ExpectedResourceHashedName(utils.NamespacedName(gateway).String()), r.namespace
+	// Check if gateway namespaced mode is used. If it is, the service's name is the same as
+	// the gateway's and it lives in the gateway's namespace not the controller's.
+	if r.gatewayNamespaceMode {
+		proxySvcName, proxySvcNamespace = gateway.Name, gateway.Namespace
+	}
+
+	// Check if the service name was specified in EnvoyProxy
+	if ep != nil {
+		provider := ep.GetEnvoyProxyProvider()
+		if provider.Kubernetes != nil && provider.Kubernetes.EnvoyService != nil && provider.Kubernetes.EnvoyService.Name != nil {
+			proxySvcName = *provider.Kubernetes.EnvoyService.Name
+		}
+	}
+
+	resourceMap.allAssociatedBackendRefs.Insert(gwapiv1.BackendObjectReference{
+		Kind:      ptr.To(gwapiv1.Kind("Service")),
+		Namespace: gatewayapi.NamespacePtr(proxySvcNamespace),
 		Name:      gwapiv1.ObjectName(proxySvcName),
 	})
 }
@@ -1862,10 +1927,16 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 		return err
 	}
 
+	// we didn't check if the backend CRD exists every time for performance,
+	// please make sure r.backendCRDExists is setting correctly before calling this
 	r.backendCRDExists = r.crdExists(mgr, resource.KindBackend, egv1a1.GroupVersion.String())
-	if !r.backendCRDExists {
-		r.log.Info("Backend CRD not found, skipping Backend watch")
-	} else if r.envoyGateway.ExtensionAPIs != nil && r.envoyGateway.ExtensionAPIs.EnableBackend {
+	if r.backendAPIDisabled() {
+		if !r.backendCRDExists {
+			r.log.Info("Backend CRD not found, skipping Backend watch")
+		} else {
+			r.log.Info("Backend API disabled, skipping Backend watch")
+		}
+	} else {
 		// Watch Backend CRUDs and process affected *Route objects.
 		backendPredicates := []predicate.TypedPredicate[*egv1a1.Backend]{
 			predicate.TypedGenerationChangedPredicate[*egv1a1.Backend]{},
@@ -2291,18 +2362,14 @@ func (r *gatewayAPIReconciler) processGatewayParamsRef(ctx context.Context, gtw 
 		return err
 	}
 
+	// Missing secret shouldn't stop the Gateway infrastructure from coming up
 	if ep.Spec.BackendTLS != nil && ep.Spec.BackendTLS.ClientCertificateRef != nil {
 		certRef := ep.Spec.BackendTLS.ClientCertificateRef
 		if refsSecret(certRef) {
-			if err := r.processSecretRef(
-				ctx,
-				resourceMap,
-				resourceTree,
-				resource.KindGateway,
-				gtw.Namespace,
-				gtw.Name,
-				*certRef); err != nil {
-				return fmt.Errorf("failed to process TLS SecretRef for gateway %s/%s: %w", gtw.Namespace, gtw.Name, err)
+			if err := r.processSecretRef(ctx,
+				resourceMap, resourceTree, resource.KindGateway,
+				gtw.Namespace, gtw.Name, *certRef); err != nil {
+				r.log.Error(err, "failed to process ClientCertificateRef for EnvoyProxy", "namespace", gtw.Namespace, "name", gtw.Name)
 			}
 		}
 	}

@@ -460,7 +460,7 @@ func (t *Translator) validateTerminateModeAndGetTLSSecrets(listener *ListenerCon
 		secrets = append(secrets, secret)
 	}
 
-	certs, err := validateTLSSecretsData(secrets, listener.Hostname)
+	certs, err := validateTLSSecretsData(secrets)
 	if err != nil {
 		status.SetGatewayListenerStatusCondition(listener.gateway.Gateway,
 			listener.listenerStatusIdx,
@@ -1079,6 +1079,32 @@ func validateGatewayListenerSectionName(
 	if !found {
 		message := fmt.Sprintf("No section name %s found for Gateway %s",
 			string(sectionName), targetKey.String())
+
+		return &status.PolicyResolveError{
+			Reason:  gwapiv1a2.PolicyReasonTargetNotFound,
+			Message: message,
+		}
+	}
+	return nil
+}
+
+// validateRouteRuleSectionName check:
+// if the section name exists in the target Route rules.
+func validateRouteRuleSectionName(
+	sectionName gwapiv1.SectionName,
+	targetKey policyTargetRouteKey,
+	route *policyRouteTargetContext,
+) *status.PolicyResolveError {
+	found := false
+	for _, name := range GetRuleNames(route.RouteContext) {
+		if name == sectionName {
+			found = true
+			break
+		}
+	}
+	if !found {
+		message := fmt.Sprintf("No section name %s found for %s %s/%s",
+			string(sectionName), targetKey.Kind, targetKey.Namespace, targetKey.Name)
 
 		return &status.PolicyResolveError{
 			Reason:  gwapiv1a2.PolicyReasonTargetNotFound,

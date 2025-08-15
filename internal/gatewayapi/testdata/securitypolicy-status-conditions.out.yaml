@@ -255,9 +255,13 @@ securityPolicies:
   kind: SecurityPolicy
   metadata:
     creationTimestamp: null
-    name: also-target-httproute-in-gateway-1
+    name: target-httproute-in-gateway-1
     namespace: envoy-gateway
   spec:
+    cors:
+      allowOrigins:
+      - http://*.example.com
+      maxAge: 1000s
     targetRef:
       group: gateway.networking.k8s.io
       kind: HTTPRoute
@@ -280,42 +284,9 @@ securityPolicies:
   kind: SecurityPolicy
   metadata:
     creationTimestamp: null
-    name: target-grpcroute-in-gateway-2
+    name: also-target-httproute-in-gateway-1
     namespace: envoy-gateway
   spec:
-    cors:
-      allowOrigins:
-      - http://*.example.com
-      maxAge: 16m40s
-    targetRef:
-      group: gateway.networking.k8s.io
-      kind: GRPCRoute
-      name: grpcroute-1
-  status:
-    ancestors:
-    - ancestorRef:
-        group: gateway.networking.k8s.io
-        kind: Gateway
-        name: gateway-2
-        namespace: envoy-gateway
-      conditions:
-      - lastTransitionTime: null
-        message: Policy has been accepted.
-        reason: Accepted
-        status: "True"
-        type: Accepted
-      controllerName: gateway.envoyproxy.io/gatewayclass-controller
-- apiVersion: gateway.envoyproxy.io/v1alpha1
-  kind: SecurityPolicy
-  metadata:
-    creationTimestamp: null
-    name: target-httproute-in-gateway-1
-    namespace: envoy-gateway
-  spec:
-    cors:
-      allowOrigins:
-      - http://*.example.com
-      maxAge: 16m40s
     targetRef:
       group: gateway.networking.k8s.io
       kind: HTTPRoute
@@ -333,6 +304,35 @@ securityPolicies:
           already attached to it
         reason: Conflicted
         status: "False"
+        type: Accepted
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: SecurityPolicy
+  metadata:
+    creationTimestamp: null
+    name: target-grpcroute-in-gateway-2
+    namespace: envoy-gateway
+  spec:
+    cors:
+      allowOrigins:
+      - http://*.example.com
+      maxAge: 1000s
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: GRPCRoute
+      name: grpcroute-1
+  status:
+    ancestors:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: gateway-2
+        namespace: envoy-gateway
+      conditions:
+      - lastTransitionTime: null
+        message: Policy has been accepted.
+        reason: Accepted
+        status: "True"
         type: Accepted
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
 - apiVersion: gateway.envoyproxy.io/v1alpha1
@@ -453,7 +453,13 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /
-        security: {}
+        security:
+          cors:
+            allowOrigins:
+            - distinct: false
+              name: ""
+              safeRegex: http://.*\.example\.com
+            maxAge: 16m40s
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4

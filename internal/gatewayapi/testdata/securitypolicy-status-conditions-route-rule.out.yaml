@@ -199,7 +199,7 @@ securityPolicies:
         type: Accepted
       - lastTransitionTime: null
         message: 'This policy is being overridden by other securityPolicies for these
-          routes: [rule-1]'
+          route rules: [rule-1]'
         reason: Overridden
         status: "True"
         type: Overridden

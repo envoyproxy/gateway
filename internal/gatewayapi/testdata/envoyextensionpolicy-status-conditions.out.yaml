@@ -3,7 +3,7 @@ envoyExtensionPolicies:
   kind: EnvoyExtensionPolicy
   metadata:
     creationTimestamp: null
-    name: also-target-httproute-in-gateway-1
+    name: target-httproute-in-gateway-1
     namespace: envoy-gateway
   spec:
     targetRef:
@@ -28,15 +28,28 @@ envoyExtensionPolicies:
   kind: EnvoyExtensionPolicy
   metadata:
     creationTimestamp: null
-    name: not-same-namespace-httproute
+    name: also-target-httproute-in-gateway-1
     namespace: envoy-gateway
   spec:
     targetRef:
       group: gateway.networking.k8s.io
       kind: HTTPRoute
-      name: not-same-namespace-httproute
+      name: httproute-1
   status:
-    ancestors: null
+    ancestors:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: gateway-1
+        namespace: envoy-gateway
+      conditions:
+      - lastTransitionTime: null
+        message: Unable to target HTTPRoute httproute-1, another EnvoyExtensionPolicy
+          has already attached to it
+        reason: Conflicted
+        status: "False"
+        type: Accepted
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: EnvoyExtensionPolicy
   metadata:
@@ -66,32 +79,6 @@ envoyExtensionPolicies:
   kind: EnvoyExtensionPolicy
   metadata:
     creationTimestamp: null
-    name: target-httproute-in-gateway-1
-    namespace: envoy-gateway
-  spec:
-    targetRef:
-      group: gateway.networking.k8s.io
-      kind: HTTPRoute
-      name: httproute-1
-  status:
-    ancestors:
-    - ancestorRef:
-        group: gateway.networking.k8s.io
-        kind: Gateway
-        name: gateway-1
-        namespace: envoy-gateway
-      conditions:
-      - lastTransitionTime: null
-        message: Unable to target HTTPRoute httproute-1, another EnvoyExtensionPolicy
-          has already attached to it
-        reason: Conflicted
-        status: "False"
-        type: Accepted
-      controllerName: gateway.envoyproxy.io/gatewayclass-controller
-- apiVersion: gateway.envoyproxy.io/v1alpha1
-  kind: EnvoyExtensionPolicy
-  metadata:
-    creationTimestamp: null
     name: target-unknown-httproute
     namespace: envoy-gateway
   spec:
@@ -105,13 +92,13 @@ envoyExtensionPolicies:
   kind: EnvoyExtensionPolicy
   metadata:
     creationTimestamp: null
-    name: not-same-namespace-gateway
+    name: not-same-namespace-httproute
     namespace: envoy-gateway
   spec:
     targetRef:
       group: gateway.networking.k8s.io
-      kind: Gateway
-      name: not-same-namespace-gateway
+      kind: HTTPRoute
+      name: not-same-namespace-httproute
   status:
     ancestors: null
 - apiVersion: gateway.envoyproxy.io/v1alpha1
@@ -184,47 +171,20 @@ envoyExtensionPolicies:
       name: unknown-gateway
   status:
     ancestors: null
-gateways:
-- apiVersion: gateway.networking.k8s.io/v1beta1
-  kind: Gateway
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: EnvoyExtensionPolicy
   metadata:
     creationTimestamp: null
     name: not-same-namespace-gateway
-    namespace: another-namespace
+    namespace: envoy-gateway
   spec:
-    gatewayClassName: envoy-gateway-class
-    listeners:
-    - allowedRoutes:
-        namespaces:
-          from: Same
-      name: http
-      port: 80
-      protocol: HTTP
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: Gateway
+      name: not-same-namespace-gateway
   status:
-    listeners:
-    - attachedRoutes: 0
-      conditions:
-      - lastTransitionTime: null
-        message: Sending translated listener configuration to the data plane
-        reason: Programmed
-        status: "True"
-        type: Programmed
-      - lastTransitionTime: null
-        message: Listener has been successfully translated
-        reason: Accepted
-        status: "True"
-        type: Accepted
-      - lastTransitionTime: null
-        message: Listener references have been resolved
-        reason: ResolvedRefs
-        status: "True"
-        type: ResolvedRefs
-      name: http
-      supportedKinds:
-      - group: gateway.networking.k8s.io
-        kind: HTTPRoute
-      - group: gateway.networking.k8s.io
-        kind: GRPCRoute
+    ancestors: null
+gateways:
 - apiVersion: gateway.networking.k8s.io/v1beta1
   kind: Gateway
   metadata:
@@ -356,6 +316,46 @@ gateways:
       supportedKinds:
       - group: gateway.networking.k8s.io
         kind: TCPRoute
+- apiVersion: gateway.networking.k8s.io/v1beta1
+  kind: Gateway
+  metadata:
+    creationTimestamp: null
+    name: not-same-namespace-gateway
+    namespace: another-namespace
+  spec:
+    gatewayClassName: envoy-gateway-class
+    listeners:
+    - allowedRoutes:
+        namespaces:
+          from: Same
+      name: http
+      port: 80
+      protocol: HTTP
+  status:
+    listeners:
+    - attachedRoutes: 0
+      conditions:
+      - lastTransitionTime: null
+        message: Sending translated listener configuration to the data plane
+        reason: Programmed
+        status: "True"
+        type: Programmed
+      - lastTransitionTime: null
+        message: Listener has been successfully translated
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Listener references have been resolved
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      name: http
+      supportedKinds:
+      - group: gateway.networking.k8s.io
+        kind: HTTPRoute
+      - group: gateway.networking.k8s.io
+        kind: GRPCRoute
 grpcRoutes:
 - apiVersion: gateway.networking.k8s.io/v1alpha2
   kind: GRPCRoute
@@ -398,40 +398,6 @@ httpRoutes:
   kind: HTTPRoute
   metadata:
     creationTimestamp: null
-    name: not-same-namespace-httproute
-    namespace: another-namespace
-  spec:
-    parentRefs:
-    - name: not-same-namespace-gateway
-      namespace: another-namespace
-    rules:
-    - backendRefs:
-      - name: service-1
-        port: 8080
-      matches:
-      - path:
-          value: /
-  status:
-    parents:
-    - conditions:
-      - lastTransitionTime: null
-        message: No listeners included by this parent ref allowed this attachment.
-        reason: NotAllowedByListeners
-        status: "False"
-        type: Accepted
-      - lastTransitionTime: null
-        message: Resolved all the Object references for the Route
-        reason: ResolvedRefs
-        status: "True"
-        type: ResolvedRefs
-      controllerName: gateway.envoyproxy.io/gatewayclass-controller
-      parentRef:
-        name: not-same-namespace-gateway
-        namespace: another-namespace
-- apiVersion: gateway.networking.k8s.io/v1beta1
-  kind: HTTPRoute
-  metadata:
-    creationTimestamp: null
     name: httproute-1
     namespace: envoy-gateway
   spec:
@@ -462,6 +428,40 @@ httpRoutes:
       parentRef:
         name: gateway-1
         namespace: envoy-gateway
+- apiVersion: gateway.networking.k8s.io/v1beta1
+  kind: HTTPRoute
+  metadata:
+    creationTimestamp: null
+    name: not-same-namespace-httproute
+    namespace: another-namespace
+  spec:
+    parentRefs:
+    - name: not-same-namespace-gateway
+      namespace: another-namespace
+    rules:
+    - backendRefs:
+      - name: service-1
+        port: 8080
+      matches:
+      - path:
+          value: /
+  status:
+    parents:
+    - conditions:
+      - lastTransitionTime: null
+        message: No listeners included by this parent ref allowed this attachment.
+        reason: NotAllowedByListeners
+        status: "False"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Resolved all the Object references for the Route
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+      parentRef:
+        name: not-same-namespace-gateway
+        namespace: another-namespace
 infraIR:
   another-namespace/not-same-namespace-gateway:
     proxy:

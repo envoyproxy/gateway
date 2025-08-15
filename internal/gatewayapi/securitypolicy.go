@@ -15,7 +15,6 @@ import (
 	"net/mail"
 	"net/netip"
 	"net/url"
-	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -58,19 +57,7 @@ func (t *Translator) ProcessSecurityPolicies(securityPolicies []*egv1a1.Security
 	xdsIR resource.XdsIRMap,
 ) []*egv1a1.SecurityPolicy {
 	var res []*egv1a1.SecurityPolicy
-
-	// Initially, policies sort by creation timestamp
-	// or sort alphabetically by “{namespace}/{name}” if multiple policies share same timestamp.
-	sort.Slice(securityPolicies, func(i, j int) bool {
-		if securityPolicies[i].CreationTimestamp.Equal(&(securityPolicies[j].CreationTimestamp)) {
-			policyKeyI := fmt.Sprintf("%s/%s", securityPolicies[i].Namespace, securityPolicies[i].Name)
-			policyKeyJ := fmt.Sprintf("%s/%s", securityPolicies[j].Namespace, securityPolicies[j].Name)
-			return policyKeyI < policyKeyJ
-		}
-		// Not identical CreationTimestamps
-
-		return securityPolicies[i].CreationTimestamp.Before(&(securityPolicies[j].CreationTimestamp))
-	})
+	// SecurityPolicies are already sorted by the provider layer
 
 	// First build a map out of the routes and gateways for faster lookup since users might have thousands of routes or more.
 	// For gateways this probably isn't quite as necessary.
@@ -279,7 +266,7 @@ func (t *Translator) processSecurityPolicyForHTTPRoute(
 		Name:      string(currTarget.Name),
 		Namespace: policy.Namespace,
 	}
-	overriddenTargetsMessage := getOverriddenTargetsMessageForHTTPRoute(routeMap[key], currTarget.SectionName)
+	overriddenTargetsMessage := getOverriddenTargetsMessageForRoute(routeMap[key], currTarget.SectionName)
 	if overriddenTargetsMessage != "" {
 		status.SetConditionForPolicyAncestors(&policy.Status,
 			parentGateways,
@@ -359,59 +346,6 @@ func (t *Translator) processSecurityPolicyForGateway(
 			policy.Generation,
 		)
 	}
-}
-
-func getOverriddenTargetsMessageForHTTPRoute(
-	targetContext *policyRouteTargetContext,
-	sectionName *gwapiv1.SectionName,
-) string {
-	var routes []string
-	if sectionName == nil {
-		if targetContext != nil {
-			routes = targetContext.attachedToRouteRules.UnsortedList()
-		}
-	}
-	if len(routes) > 0 {
-		sort.Strings(routes)
-		return fmt.Sprintf("these routes: %v", routes)
-	}
-	return ""
-}
-
-func getOverriddenTargetsMessageForGateway(
-	targetContext *policyGatewayTargetContext,
-	listenerRouteMap map[string]sets.Set[string],
-	sectionName *gwapiv1.SectionName,
-) string {
-	var listeners, routes []string
-	if sectionName == nil {
-		if targetContext != nil {
-			listeners = targetContext.attachedToListeners.UnsortedList()
-		}
-		for _, routeSet := range listenerRouteMap {
-			routes = append(routes, routeSet.UnsortedList()...)
-		}
-	} else if listenerRouteMap != nil {
-		if routeSet, ok := listenerRouteMap[string(*sectionName)]; ok {
-			routes = routeSet.UnsortedList()
-		}
-		if routeSet, ok := listenerRouteMap[""]; ok {
-			routes = append(routes, routeSet.UnsortedList()...)
-		}
-	}
-	if len(listeners) > 0 {
-		sort.Strings(listeners)
-		if len(routes) > 0 {
-			sort.Strings(routes)
-			return fmt.Sprintf("these listeners: %v and these routes: %v", listeners, routes)
-		} else {
-			return fmt.Sprintf("these listeners: %v", listeners)
-		}
-	} else if len(routes) > 0 {
-		sort.Strings(routes)
-		return fmt.Sprintf("these routes: %v", routes)
-	}
-	return ""
 }
 
 // validateSecurityPolicy validates the SecurityPolicy.
@@ -560,21 +494,8 @@ func resolveSecurityPolicyRouteTargetRef(
 
 	// If sectionName is set, make sure its valid
 	if target.SectionName != nil {
-		found := false
-		for _, r := range route.RouteContext.(*HTTPRouteContext).Spec.Rules {
-			if r.Name != nil && *r.Name == *target.SectionName {
-				found = true
-				break
-			}
-		}
-		if !found {
-			message := fmt.Sprintf("No section name %s found for %s %s/%s",
-				string(*target.SectionName), string(target.Kind), policy.Namespace, string(target.Name))
-
-			return route.RouteContext, &status.PolicyResolveError{
-				Reason:  gwapiv1a2.PolicyReasonTargetNotFound,
-				Message: message,
-			}
+		if err := validateRouteRuleSectionName(*target.SectionName, key, route); err != nil {
+			return route.RouteContext, err
 		}
 	}
 
@@ -707,13 +628,19 @@ func (t *Translator) translateSecurityPolicyForRoute(
 			irListener := xdsIR[irKey].GetHTTPListener(irListenerName(listener))
 			if irListener != nil {
 				for _, r := range irListener.Routes {
-					// If policy target has a sectionName, check if equal from ir metadata.
-					// If not, apply all routes with the same prefix.
-					sectionMatch := true
-					if target.SectionName != nil {
-						sectionMatch = (string(*target.SectionName) == r.Metadata.SectionName)
+					// If specified the sectionName must match route rule from ir route metadata.
+					if target.SectionName != nil && string(*target.SectionName) != r.Metadata.SectionName {
+						continue
 					}
-					if strings.HasPrefix(r.Name, prefix) && sectionMatch && r.Security == nil {
+
+					// A Policy targeting the most specific scope(xRoute rule) wins over a policy
+					// targeting a lesser specific scope(xRoute).
+					if strings.HasPrefix(r.Name, prefix) {
+						// if already set - there's a specific level policy, so skip.
+						if r.Security != nil {
+							continue
+						}
+
 						r.Security = &ir.SecurityFeatures{
 							CORS:          cors,
 							JWT:           jwt,
@@ -842,15 +769,14 @@ func (t *Translator) translateSecurityPolicyForGateway(
 		if t.MergeGateways && gatewayName != policyTarget {
 			continue
 		}
-		// If specified the sectionName must match the listenerName part of the HTTPListener name
-		if target.SectionName != nil && string(*target.SectionName) != h.Name[gatewayNameEnd+1:] {
+		// If specified the sectionName must match listenerName from ir listener metadata.
+		if target.SectionName != nil && string(*target.SectionName) != h.Metadata.SectionName {
 			continue
 		}
-		// A Policy targeting the most specific scope(xRoute) wins over a policy
+		// A Policy targeting the specific scope(xRoute rule, xRoute, Gateway listener) wins over a policy
 		// targeting a lesser specific scope(Gateway).
 		for _, r := range h.Routes {
-			// If any of the features are already set, it means that a more specific
-			// policy(targeting xRoute) has already set it, so we skip it.
+			// if already set - there's a specific level policy, so skip.
 			if r.Security != nil {
 				continue
 			}
@@ -895,14 +821,21 @@ func (t *Translator) buildCORS(cors *egv1a1.CORS) *ir.CORS {
 		}
 	}
 
-	return &ir.CORS{
+	irCORS := &ir.CORS{
 		AllowOrigins:     allowOrigins,
 		AllowMethods:     cors.AllowMethods,
 		AllowHeaders:     cors.AllowHeaders,
 		ExposeHeaders:    cors.ExposeHeaders,
-		MaxAge:           cors.MaxAge,
 		AllowCredentials: cors.AllowCredentials != nil && *cors.AllowCredentials,
 	}
+
+	if cors.MaxAge != nil {
+		if d, err := time.ParseDuration(string(*cors.MaxAge)); err == nil {
+			irCORS.MaxAge = ir.MetaV1DurationPtr(d)
+		}
+	}
+
+	return irCORS
 }
 
 func containsWildcard(s string) bool {
@@ -1223,28 +1156,40 @@ func (t *Translator) buildOIDC(
 			"HMAC secret not found in secret %s/%s", t.ControllerNamespace, oidcHMACSecretName)
 	}
 
-	return &ir.OIDC{
-		Name:                   irConfigName(policy),
-		Provider:               *provider,
-		ClientID:               clientID,
-		ClientSecret:           clientSecretBytes,
-		Scopes:                 scopes,
-		Resources:              oidc.Resources,
-		RedirectURL:            redirectURL,
-		RedirectPath:           redirectPath,
-		LogoutPath:             logoutPath,
-		ForwardAccessToken:     forwardAccessToken,
-		DefaultTokenTTL:        oidc.DefaultTokenTTL,
-		RefreshToken:           refreshToken,
-		DefaultRefreshTokenTTL: oidc.DefaultRefreshTokenTTL,
-		CookieSuffix:           suffix,
-		CookieNameOverrides:    policy.Spec.OIDC.CookieNames,
-		CookieDomain:           policy.Spec.OIDC.CookieDomain,
-		CookieConfig:           policy.Spec.OIDC.CookieConfig,
-		HMACSecret:             hmacData,
-		PassThroughAuthHeader:  passThroughAuthHeader,
-		DenyRedirect:           oidc.DenyRedirect,
-	}, nil
+	irOIDC := &ir.OIDC{
+		Name:                  irConfigName(policy),
+		Provider:              *provider,
+		ClientID:              clientID,
+		ClientSecret:          clientSecretBytes,
+		Scopes:                scopes,
+		Resources:             oidc.Resources,
+		RedirectURL:           redirectURL,
+		RedirectPath:          redirectPath,
+		LogoutPath:            logoutPath,
+		ForwardAccessToken:    forwardAccessToken,
+		RefreshToken:          refreshToken,
+		CookieSuffix:          suffix,
+		CookieNameOverrides:   policy.Spec.OIDC.CookieNames,
+		CookieDomain:          policy.Spec.OIDC.CookieDomain,
+		CookieConfig:          policy.Spec.OIDC.CookieConfig,
+		HMACSecret:            hmacData,
+		PassThroughAuthHeader: passThroughAuthHeader,
+		DenyRedirect:          oidc.DenyRedirect,
+	}
+
+	if oidc.DefaultTokenTTL != nil {
+		if d, err := time.ParseDuration(string(*oidc.DefaultTokenTTL)); err == nil {
+			irOIDC.DefaultTokenTTL = ir.MetaV1DurationPtr(d)
+		}
+	}
+
+	if oidc.DefaultRefreshTokenTTL != nil {
+		if d, err := time.ParseDuration(string(*oidc.DefaultRefreshTokenTTL)); err == nil {
+			irOIDC.DefaultRefreshTokenTTL = ir.MetaV1DurationPtr(d)
+		}
+	}
+
+	return irOIDC, nil
 }
 
 func (t *Translator) buildOIDCProvider(policy *egv1a1.SecurityPolicy, resources *resource.Resources, envoyProxy *egv1a1.EnvoyProxy) (*ir.OIDCProvider, error) {

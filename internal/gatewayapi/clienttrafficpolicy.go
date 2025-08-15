@@ -18,7 +18,6 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/utils/ptr"
-	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
@@ -46,19 +45,7 @@ func (t *Translator) ProcessClientTrafficPolicies(
 	var res []*egv1a1.ClientTrafficPolicy
 
 	clientTrafficPolicies := resources.ClientTrafficPolicies
-
-	// Initially, clientTrafficPolicies sort by creation timestamp
-	// or sort alphabetically by “{namespace}/{name}” if multiple policies share same timestamp.
-	sort.Slice(clientTrafficPolicies, func(i, j int) bool {
-		if clientTrafficPolicies[i].CreationTimestamp.Equal(&(clientTrafficPolicies[j].CreationTimestamp)) {
-			policyKeyI := fmt.Sprintf("%s/%s", clientTrafficPolicies[i].Namespace, clientTrafficPolicies[i].Name)
-			policyKeyJ := fmt.Sprintf("%s/%s", clientTrafficPolicies[j].Namespace, clientTrafficPolicies[j].Name)
-			return policyKeyI < policyKeyJ
-		}
-		// Not identical CreationTimestamps
-
-		return clientTrafficPolicies[i].CreationTimestamp.Before(&(clientTrafficPolicies[j].CreationTimestamp))
-	})
+	// ClientTrafficPolicies are already sorted by the provider layer
 
 	policyMap := make(map[types.NamespacedName]sets.Set[string])
 
@@ -601,9 +588,7 @@ func buildClientTimeout(clientTimeout *egv1a1.ClientTimeout) (*ir.ClientTimeout,
 			if err != nil {
 				return nil, fmt.Errorf("invalid TCP IdleTimeout value %s", *clientTimeout.TCP.IdleTimeout)
 			}
-			irTCPTimeout.IdleTimeout = &metav1.Duration{
-				Duration: d,
-			}
+			irTCPTimeout.IdleTimeout = ir.MetaV1DurationPtr(d)
 		}
 		irClientTimeout.TCP = irTCPTimeout
 	}
@@ -615,9 +600,7 @@ func buildClientTimeout(clientTimeout *egv1a1.ClientTimeout) (*ir.ClientTimeout,
 			if err != nil {
 				return nil, fmt.Errorf("invalid HTTP RequestReceivedTimeout value %s", *clientTimeout.HTTP.RequestReceivedTimeout)
 			}
-			irHTTPTimeout.RequestReceivedTimeout = &metav1.Duration{
-				Duration: d,
-			}
+			irHTTPTimeout.RequestReceivedTimeout = ir.MetaV1DurationPtr(d)
 		}
 
 		if clientTimeout.HTTP.IdleTimeout != nil {
@@ -625,9 +608,7 @@ func buildClientTimeout(clientTimeout *egv1a1.ClientTimeout) (*ir.ClientTimeout,
 			if err != nil {
 				return nil, fmt.Errorf("invalid HTTP IdleTimeout value %s", *clientTimeout.HTTP.IdleTimeout)
 			}
-			irHTTPTimeout.IdleTimeout = &metav1.Duration{
-				Duration: d,
-			}
+			irHTTPTimeout.IdleTimeout = ir.MetaV1DurationPtr(d)
 		}
 
 		if clientTimeout.HTTP.StreamIdleTimeout != nil {
@@ -635,9 +616,7 @@ func buildClientTimeout(clientTimeout *egv1a1.ClientTimeout) (*ir.ClientTimeout,
 			if err != nil {
 				return nil, fmt.Errorf("invalid HTTP StreamIdleTimeout value %s", *clientTimeout.HTTP.StreamIdleTimeout)
 			}
-			irHTTPTimeout.StreamIdleTimeout = &metav1.Duration{
-				Duration: d,
-			}
+			irHTTPTimeout.StreamIdleTimeout = ir.MetaV1DurationPtr(d)
 		}
 		irClientTimeout.HTTP = irHTTPTimeout
 	}
@@ -968,7 +947,7 @@ func buildConnection(connection *egv1a1.ClientConnection) (*ir.ClientConnection,
 			if err != nil {
 				return nil, fmt.Errorf("invalid CloseDelay value %s", *connection.ConnectionLimit.CloseDelay)
 			}
-			irConnectionLimit.CloseDelay = ptr.To(metav1.Duration{Duration: d})
+			irConnectionLimit.CloseDelay = ir.MetaV1DurationPtr(d)
 		}
 
 		if connection.ConnectionLimit.MaxConnectionDuration != nil {
@@ -1009,7 +988,7 @@ func buildConnection(connection *egv1a1.ClientConnection) (*ir.ClientConnection,
 	return irConnection, nil
 }
 
-func translateEarlyRequestHeaders(headerModifier *gwapiv1.HTTPHeaderFilter) ([]ir.AddHeader, []string, error) {
+func translateEarlyRequestHeaders(headerModifier *egv1a1.HTTPHeaderFilter) ([]ir.AddHeader, []string, error) {
 	// Make sure the header modifier config actually exists
 	if headerModifier == nil {
 		return nil, nil, nil

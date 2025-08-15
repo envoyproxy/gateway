@@ -121,7 +121,11 @@ func TestEqualXds(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.desc, func(t *testing.T) {
-			require.Equal(t, tc.equal, cmp.Equal(tc.a, tc.b))
+			tc.a.Sort()
+			tc.b.Sort()
+			diff := cmp.Diff(tc.a, tc.b)
+			got := diff == ""
+			require.Equal(t, tc.equal, got)
 		})
 	}
 }
