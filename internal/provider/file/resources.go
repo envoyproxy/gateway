@@ -15,15 +15,15 @@ import (
 )
 
 // loadFromFilesAndDirs loads resources from specific files and directories.
-func loadFromFilesAndDirs(files, dirs []string) ([]*resource.Resources, error) {
-	var rs []*resource.Resources
+func loadFromFilesAndDirs(files, dirs []string) (*resource.LoadResources, error) {
+	rs := resource.NewLoadResources()
 
 	for _, file := range files {
 		r, err := loadFromFile(file)
 		if err != nil {
 			return nil, fmt.Errorf("failed to load resources from file %s: %w", file, err)
 		}
-		rs = append(rs, r)
+		rs.Merge(r)
 	}
 
 	for _, dir := range dirs {
@@ -31,14 +31,14 @@ func loadFromFilesAndDirs(files, dirs []string) ([]*resource.Resources, error) {
 		if err != nil {
 			return nil, err
 		}
-		rs = append(rs, r...)
+		rs.Merge(r)
 	}
 
 	return rs, nil
 }
 
 // loadFromFile loads resources from a specific file.
-func loadFromFile(path string) (*resource.Resources, error) {
+func loadFromFile(path string) (*resource.LoadResources, error) {
 	if _, err := os.Stat(path); err != nil {
 		if os.IsNotExist(err) {
 			return nil, fmt.Errorf("file %s is not exist", path)
@@ -55,13 +55,13 @@ func loadFromFile(path string) (*resource.Resources, error) {
 }
 
 // loadFromDir loads resources from all the files under a specific directory excluding subdirectories.
-func loadFromDir(path string) ([]*resource.Resources, error) {
+func loadFromDir(path string) (*resource.LoadResources, error) {
 	entries, err := os.ReadDir(path)
 	if err != nil {
 		return nil, err
 	}
 
-	var rs []*resource.Resources
+	rs := resource.NewLoadResources()
 	for _, entry := range entries {
 		// Ignoring subdirectories and all hidden files and directories.
 		if entry.IsDir() || strings.HasPrefix(entry.Name(), ".") {
@@ -73,7 +73,7 @@ func loadFromDir(path string) ([]*resource.Resources, error) {
 			return nil, fmt.Errorf("failed to load resources from file %s: %w", full, err)
 		}
 
-		rs = append(rs, r)
+		rs.Merge(r)
 	}
 
 	return rs, nil
