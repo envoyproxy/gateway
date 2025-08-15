@@ -39,16 +39,16 @@
                           "resources": [
                             {
                               "kind": "HTTPRoute",
-                              "name": "backend",
+                              "name": "backend-1",
                               "namespace": "default"
                             }
                           ]
                         }
                       }
                     },
-                    "name": "httproute/default/backend/rule/0/match/0/www_example_com",
+                    "name": "httproute/default/backend-1/rule/0/match/0/www_example_com",
                     "route": {
-                      "cluster": "httproute/default/backend/rule/0",
+                      "cluster": "httproute/default/backend-1/rule/0",
                       "upgradeConfigs": [
                         {
                           "upgradeType": "websocket"
@@ -102,16 +102,16 @@
                           "resources": [
                             {
                               "kind": "HTTPRoute",
-                              "name": "backend",
+                              "name": "backend-2",
                               "namespace": "default"
                             }
                           ]
                         }
                       }
                     },
-                    "name": "httproute/default/backend/rule/0/match/0/www_example2_com",
+                    "name": "httproute/default/backend-2/rule/0/match/0/www_example2_com",
                     "route": {
-                      "cluster": "httproute/default/backend/rule/0",
+                      "cluster": "httproute/default/backend-2/rule/0",
                       "upgradeConfigs": [
                         {
                           "upgradeType": "websocket"
