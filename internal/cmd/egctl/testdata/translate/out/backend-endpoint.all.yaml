@@ -5,6 +5,7 @@ backendTLSPolicies:
     creationTimestamp: null
     name: example-com-tls-policy
     namespace: envoy-gateway-system
+    resourceVersion: "1"
   spec:
     targetRefs:
     - group: gateway.envoyproxy.io
@@ -33,6 +34,7 @@ backends:
     creationTimestamp: null
     name: backend
     namespace: envoy-gateway-system
+    resourceVersion: "1"
   spec:
     endpoints:
     - ip:
@@ -53,6 +55,7 @@ envoyExtensionPolicies:
     creationTimestamp: null
     name: ext-proc-example
     namespace: envoy-gateway-system
+    resourceVersion: "1"
   spec:
     extProc:
     - backendRefs:
@@ -88,7 +91,10 @@ gatewayClass:
   kind: GatewayClass
   metadata:
     creationTimestamp: null
+    finalizers:
+    - gateway-exists-finalizer.gateway.networking.k8s.io
     name: eg
+    resourceVersion: "2"
   spec:
     controllerName: gateway.envoyproxy.io/gatewayclass-controller
   status:
@@ -105,6 +111,7 @@ gateways:
     creationTimestamp: null
     name: eg
     namespace: envoy-gateway-system
+    resourceVersion: "1"
   spec:
     gatewayClassName: eg
     listeners:
@@ -146,6 +153,7 @@ httpRoutes:
     creationTimestamp: null
     name: backend
     namespace: envoy-gateway-system
+    resourceVersion: "1"
   spec:
     hostnames:
     - www.example.com

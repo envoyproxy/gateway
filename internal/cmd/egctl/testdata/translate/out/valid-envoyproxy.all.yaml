@@ -5,6 +5,7 @@ envoyProxyForGatewayClass:
     creationTimestamp: null
     name: example
     namespace: default
+    resourceVersion: "1"
   spec:
     logging:
       level:
@@ -23,7 +24,10 @@ gatewayClass:
   kind: GatewayClass
   metadata:
     creationTimestamp: null
+    finalizers:
+    - gateway-exists-finalizer.gateway.networking.k8s.io
     name: eg
+    resourceVersion: "2"
   spec:
     controllerName: gateway.envoyproxy.io/gatewayclass-controller
     parametersRef:
@@ -45,6 +49,7 @@ gateways:
     creationTimestamp: null
     name: eg
     namespace: default
+    resourceVersion: "1"
   spec:
     gatewayClassName: eg
     listeners:
@@ -201,6 +206,7 @@ grpcRoutes:
     creationTimestamp: null
     name: backend
     namespace: default
+    resourceVersion: "1"
   spec:
     hostnames:
     - www.grpc-example.com
@@ -247,6 +253,7 @@ httpRoutes:
     creationTimestamp: null
     name: backend
     namespace: default
+    resourceVersion: "1"
   spec:
     hostnames:
     - www.example.com
@@ -290,6 +297,7 @@ tcpRoutes:
     creationTimestamp: null
     name: backend
     namespace: default
+    resourceVersion: "1"
   spec:
     parentRefs:
     - group: gateway.networking.k8s.io
@@ -329,6 +337,7 @@ tlsRoutes:
     creationTimestamp: null
     name: backend
     namespace: default
+    resourceVersion: "1"
   spec:
     parentRefs:
     - group: gateway.networking.k8s.io
@@ -368,6 +377,7 @@ udpRoutes:
     creationTimestamp: null
     name: backend
     namespace: default
+    resourceVersion: "1"
   spec:
     parentRefs:
     - group: gateway.networking.k8s.io

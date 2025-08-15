@@ -5,6 +5,7 @@ backends:
     creationTimestamp: null
     name: backend
     namespace: default
+    resourceVersion: "1"
   spec:
     endpoints:
     - fqdn:
@@ -23,7 +24,10 @@ gatewayClass:
   kind: GatewayClass
   metadata:
     creationTimestamp: null
+    finalizers:
+    - gateway-exists-finalizer.gateway.networking.k8s.io
     name: eg
+    resourceVersion: "2"
   spec:
     controllerName: gateway.envoyproxy.io/gatewayclass-controller
   status:
@@ -40,6 +44,7 @@ gateways:
     creationTimestamp: null
     name: eg
     namespace: default
+    resourceVersion: "1"
   spec:
     gatewayClassName: eg
     listeners:
@@ -81,6 +86,7 @@ httpRoutes:
     creationTimestamp: null
     name: backend
     namespace: default
+    resourceVersion: "1"
   spec:
     hostnames:
     - www.example.com
