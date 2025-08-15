@@ -344,6 +344,7 @@ func (t *Translator) processSecurityPolicyForHTTPRoute(
 		Kind:      string(currTarget.Kind),
 		Name:      string(currTarget.Name),
 		Namespace: policy.Namespace,
+		Protocol:  ir.HTTP,
 	}
 	overriddenTargetsMessage := getOverriddenTargetsMessageForRoute(routeMap[key], currTarget.SectionName)
 	if overriddenTargetsMessage != "" {
