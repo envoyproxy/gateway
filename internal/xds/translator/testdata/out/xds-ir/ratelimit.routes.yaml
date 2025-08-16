@@ -13,7 +13,10 @@
         rateLimits:
         - actions:
           - genericKey:
-              descriptorKey: first-route
+              descriptorKey: RULE_NAME
+              descriptorValue: test-namespace/test-policy-1/rule/0
+          - genericKey:
+              descriptorKey: ROUTE_NAME
               descriptorValue: first-route
           - headerValueMatch:
               descriptorKey: rule-0-match-0
@@ -33,7 +36,10 @@
         rateLimits:
         - actions:
           - genericKey:
-              descriptorKey: second-route
+              descriptorKey: RULE_NAME
+              descriptorValue: test-namespace/test-policy-2/rule/0
+          - genericKey:
+              descriptorKey: ROUTE_NAME
               descriptorValue: second-route
           - requestHeaders:
               descriptorKey: rule-0-match-0
@@ -48,7 +54,10 @@
         rateLimits:
         - actions:
           - genericKey:
-              descriptorKey: third-route
+              descriptorKey: RULE_NAME
+              descriptorValue: test-namespace/test-policy-3/rule/0
+          - genericKey:
+              descriptorKey: ROUTE_NAME
               descriptorValue: third-route
           - genericKey:
               descriptorKey: rule-0-match--1
@@ -63,7 +72,10 @@
         rateLimits:
         - actions:
           - genericKey:
-              descriptorKey: fourth-route
+              descriptorKey: RULE_NAME
+              descriptorValue: test-namespace/test-policy-4/rule/0
+          - genericKey:
+              descriptorKey: ROUTE_NAME
               descriptorValue: fourth-route
           - headerValueMatch:
               descriptorKey: rule-0-match-0
@@ -88,7 +100,10 @@
           rateLimits:
           - actions:
             - genericKey:
-                descriptorKey: req-and-resp-cost
+                descriptorKey: RULE_NAME
+                descriptorValue: test-namespace/test-policy-5/rule/0
+            - genericKey:
+                descriptorKey: ROUTE_NAME
                 descriptorValue: req-and-resp-cost
             - headerValueMatch:
                 descriptorKey: rule-0-match-0
@@ -102,7 +117,10 @@
               number: "12345"
           - actions:
             - genericKey:
-                descriptorKey: req-and-resp-cost
+                descriptorKey: RULE_NAME
+                descriptorValue: test-namespace/test-policy-5/rule/0
+            - genericKey:
+                descriptorKey: ROUTE_NAME
                 descriptorValue: req-and-resp-cost
             - headerValueMatch:
                 descriptorKey: rule-0-match-0
@@ -128,7 +146,10 @@
           rateLimits:
           - actions:
             - genericKey:
-                descriptorKey: req-cost
+                descriptorKey: RULE_NAME
+                descriptorValue: test-namespace/test-policy-6/rule/0
+            - genericKey:
+                descriptorKey: ROUTE_NAME
                 descriptorValue: req-cost
             - genericKey:
                 descriptorKey: rule-0-match--1
@@ -148,7 +169,10 @@
           rateLimits:
           - actions:
             - genericKey:
-                descriptorKey: res-cost
+                descriptorKey: RULE_NAME
+                descriptorValue: test-namespace/test-policy-7/rule/0
+            - genericKey:
+                descriptorKey: ROUTE_NAME
                 descriptorValue: res-cost
             - headerValueMatch:
                 descriptorKey: rule-0-match-0
@@ -160,7 +184,10 @@
                     exact: admin
           - actions:
             - genericKey:
-                descriptorKey: res-cost
+                descriptorKey: RULE_NAME
+                descriptorValue: test-namespace/test-policy-7/rule/0
+            - genericKey:
+                descriptorKey: ROUTE_NAME
                 descriptorValue: res-cost
             - headerValueMatch:
                 descriptorKey: rule-0-match-0

@@ -1,7 +1,7 @@
 name: test-namespace/test-policy-1
 domain: test-namespace/test-policy-1
 descriptors:
-  - key: test-namespace/test-policy-1/rule/0
+  - key: RULE_NAME
     value: test-namespace/test-policy-1/rule/0
     rate_limit: null
     descriptors:
