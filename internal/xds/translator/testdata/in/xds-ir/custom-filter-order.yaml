@@ -52,6 +52,7 @@ http:
           name: example1
           remoteJWKS:
             uri: https://one.example.com/jwt/public-key/jwks.json
+            cacheDuration: 300s
         - audiences:
           - two.foo.com
           claimToHeaders:
@@ -61,6 +62,7 @@ http:
           name: example2
           remoteJWKS:
             uri: http://two.example.com/jwt/public-key/jwks.json
+            cacheDuration: 300s
     envoyExtensions:
       wasms:
       - config:
