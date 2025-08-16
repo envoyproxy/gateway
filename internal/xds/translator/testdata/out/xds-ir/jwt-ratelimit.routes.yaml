@@ -13,7 +13,10 @@
         rateLimits:
         - actions:
           - genericKey:
-              descriptorKey: first-route
+              descriptorKey: RULE_NAME
+              descriptorValue: test-namespace/test-policy-1/rule/0
+          - genericKey:
+              descriptorKey: ROUTE_NAME
               descriptorValue: first-route
           - headerValueMatch:
               descriptorKey: rule-0-match-0
@@ -37,7 +40,10 @@
         rateLimits:
         - actions:
           - genericKey:
-              descriptorKey: second-route
+              descriptorKey: RULE_NAME
+              descriptorValue: test-namespace/test-policy-2/rule/0
+          - genericKey:
+              descriptorKey: ROUTE_NAME
               descriptorValue: second-route
           - requestHeaders:
               descriptorKey: rule-0-match-0
@@ -52,7 +58,10 @@
         rateLimits:
         - actions:
           - genericKey:
-              descriptorKey: third-route
+              descriptorKey: RULE_NAME
+              descriptorValue: test-namespace/test-policy-3/rule/0
+          - genericKey:
+              descriptorKey: ROUTE_NAME
               descriptorValue: third-route
           - genericKey:
               descriptorKey: rule-0-match--1

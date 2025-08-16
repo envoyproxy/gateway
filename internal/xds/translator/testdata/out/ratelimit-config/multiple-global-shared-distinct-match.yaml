@@ -1,7 +1,7 @@
 name: test-namespace/test-policy-1
 domain: test-namespace/test-policy-1
 descriptors:
-  - key: test-namespace/test-policy-1/rule/0
+  - key: RULE_NAME
     value: test-namespace/test-policy-1/rule/0
     rate_limit: null
     descriptors:
@@ -18,7 +18,7 @@ descriptors:
         detailed_metric: false
     shadow_mode: false
     detailed_metric: false
-  - key: test-namespace/test-policy-1/rule/1
+  - key: RULE_NAME
     value: test-namespace/test-policy-1/rule/1
     rate_limit: null
     descriptors:
@@ -35,7 +35,7 @@ descriptors:
         detailed_metric: false
     shadow_mode: false
     detailed_metric: false
-  - key: test-namespace/test-policy-1/rule/2
+  - key: RULE_NAME
     value: test-namespace/test-policy-1/rule/2
     rate_limit: null
     descriptors:

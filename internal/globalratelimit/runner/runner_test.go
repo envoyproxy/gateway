@@ -28,7 +28,7 @@ import (
 	"github.com/envoyproxy/gateway/internal/message"
 )
 
-func Test_subscribeAndTranslate(t *testing.T) {
+func TestSubscribeAndTranslate(t *testing.T) {
 	t.Parallel()
 
 	testxds := func(gwName string) *ir.Xds {
@@ -46,6 +46,7 @@ func Test_subscribeAndTranslate(t *testing.T) {
 									Global: &ir.GlobalRateLimit{
 										Rules: []*ir.RateLimitRule{
 											{
+												Name: "policy-0-0",
 												HeaderMatches: []*ir.StringMatch{
 													{
 														Name:     "x-user-id",
@@ -58,6 +59,7 @@ func Test_subscribeAndTranslate(t *testing.T) {
 												},
 											},
 											{
+												Name: "policy-0-1",
 												HeaderMatches: []*ir.StringMatch{
 													{
 														Name:     "x-another-user-id",
@@ -81,6 +83,7 @@ func Test_subscribeAndTranslate(t *testing.T) {
 									Global: &ir.GlobalRateLimit{
 										Rules: []*ir.RateLimitRule{
 											{
+												Name: "policy-1-0",
 												HeaderMatches: []*ir.StringMatch{
 													{
 														Name:     "x-user-id",
@@ -109,15 +112,29 @@ func Test_subscribeAndTranslate(t *testing.T) {
 			Domain: fmt.Sprintf("default/%s/listener-0", gwName),
 			Descriptors: []*rlsconfv3.RateLimitDescriptor{
 				{
-					Key:   "route-0",
-					Value: "route-0",
+					Key:   "RULE_NAME",
+					Value: "policy-0-0",
 					Descriptors: []*rlsconfv3.RateLimitDescriptor{
+						{
+							Key:   "route-0",
+							Value: "route-0",
+						},
 						{
 							Key: "rule-0-match-0",
 							RateLimit: &rlsconfv3.RateLimitPolicy{
 								Unit:            rlsconfv3.RateLimitUnit_MINUTE,
 								RequestsPerUnit: 100,
 							},
+						},
+					},
+				},
+				{
+					Key:   "RULE_NAME",
+					Value: "policy-0-1",
+					Descriptors: []*rlsconfv3.RateLimitDescriptor{
+						{
+							Key:   "route-0",
+							Value: "route-0",
 						},
 						{
 							Key: "rule-1-match-0",
@@ -129,9 +146,13 @@ func Test_subscribeAndTranslate(t *testing.T) {
 					},
 				},
 				{
-					Key:   "route-1",
-					Value: "route-1",
+					Key:   "RULE_NAME",
+					Value: "policy-1-0",
 					Descriptors: []*rlsconfv3.RateLimitDescriptor{
+						{
+							Key:   "route-1",
+							Value: "route-1",
+						},
 						{
 							Key: "rule-0-match-0",
 							RateLimit: &rlsconfv3.RateLimitPolicy{
