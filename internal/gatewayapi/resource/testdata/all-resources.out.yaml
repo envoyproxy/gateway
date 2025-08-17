@@ -383,7 +383,7 @@ securityPolicies:
       providers:
       - name: example
         remoteJWKS:
-          cacheDuration: 5m0s
+          cacheDuration: 300s
           uri: https://raw.githubusercontent.com/envoyproxy/gateway/main/examples/kubernetes/jwt/jwks.json
     targetRef:
       group: gateway.networking.k8s.io

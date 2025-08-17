@@ -2770,18 +2770,6 @@ spec:
                             RemoteJWKS defines how to fetch and cache JSON Web Key Sets (JWKS) from a remote
                             HTTP/HTTPS endpoint.
                           properties:
-                            asyncFetch:
-                              description: Fetch Jwks asynchronously in the main thread
-                                before the listener is activated. Fetched Jwks can
-                                be used by all worker threads.
-                              properties:
-                                failedRefetchDuration:
-                                  description: The duration to refetch after a failed
-                                    fetch.
-                                  type: string
-                                fastListener:
-                                  type: boolean
-                              type: object
                             backendRef:
                               description: |-
                                 BackendRef references a Kubernetes object that represents the
@@ -3775,7 +3763,11 @@ spec:
                               type: object
                             cacheDuration:
                               default: 300s
+                              description: |-
+                                Duration is a string value representing a duration in time. The format is as specified
+                                in GEP-2257, a strict subset of the syntax parsed by Golang time.ParseDuration.
                               format: duration
+                              pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                               type: string
                             uri:
                               description: |-

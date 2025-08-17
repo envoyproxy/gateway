@@ -1079,10 +1079,7 @@ type RemoteJWKS struct {
 	URI string `json:"uri"`
 
 	// Duration after which the cached JWKS should be expired. If not specified, default cache duration is 5 minutes.
-	CacheDuration *metav1.Duration `json:"cacheDuration,omitempty"`
-
-	// Fetch Jwks asynchronously in the main thread before the listener is activated. Fetched Jwks can be used by all worker threads.
-	AsyncFetch *JwksAsyncFetch `json:"asyncFetch,omitempty"`
+	CacheDuration *gwapiv1.Duration `json:"cacheDuration,omitempty"`
 }
 
 // JwksAsyncFetch is used to Fetch Jwks asynchronously in the main thread before the listener is activated.
