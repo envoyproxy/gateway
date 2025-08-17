@@ -29,7 +29,7 @@ Wait for Envoy Gateway to become available:
 kubectl wait --timeout=5m -n envoy-gateway-system deployment/envoy-gateway --for=condition=Available
 ```
 
-Install the GatewayClass, Gateway, HTTPRoute and example app:
+Install the [GatewayClass][], [Gateway][], [HTTPRoute][] and example app:
 
 ```shell
 kubectl apply -f https://github.com/envoyproxy/gateway/releases/download/{{< yaml-version >}}/quickstart.yaml -n default
@@ -95,7 +95,7 @@ curl --verbose --header "Host: www.example.com" http://localhost:8888/get
 In this quickstart, you have:
 - Installed Envoy Gateway
 - Deployed a backend service, and a gateway
-- Configured the gateway using Kubernetes Gateway API resources [Gateway](https://gateway-api.sigs.k8s.io/api-types/gateway/) and [HttpRoute](https://gateway-api.sigs.k8s.io/api-types/httproute/) to direct incoming requests over HTTP to the backend service.
+- Configured the gateway using Kubernetes Gateway API resources [Gateway][] and [HTTPRoute][] to direct incoming requests over HTTP to the backend service.
 
 Here is a suggested list of follow-on tasks to guide you in your exploration of Envoy Gateway:
 
@@ -111,7 +111,7 @@ Review the [Tasks](./) section for the scenario matching your use case.  The Env
 
 Use the steps in this section to uninstall everything from the quickstart.
 
-Delete the GatewayClass, Gateway, HTTPRoute and Example App:
+Delete the [GatewayClass][], [Gateway][], [HTTPRoute][] and Example App:
 
 ```shell
 kubectl delete -f https://github.com/envoyproxy/gateway/releases/download/{{< yaml-version >}}/quickstart.yaml --ignore-not-found=true
@@ -122,3 +122,7 @@ Delete the Gateway API CRDs and Envoy Gateway:
 ```shell
 helm uninstall eg -n envoy-gateway-system
 ```
+
+[GatewayClass]: https://gateway-api.sigs.k8s.io/api-types/gatewayclass/
+[Gateway]: https://gateway-api.sigs.k8s.io/api-types/gateway/
+[HTTPRoute]: https://gateway-api.sigs.k8s.io/api-types/httproute/

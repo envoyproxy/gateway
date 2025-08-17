@@ -6,11 +6,11 @@ This task provides instructions for configuring [Cross-Origin Resource Sharing (
 CORS defines a way for client web applications that are loaded in one domain to interact with resources in a different
 domain.
 
-Envoy Gateway introduces a new CRD called [SecurityPolicy][SecurityPolicy] that allows the user to configure CORS.
-This instantiated resource can be linked to a [Gateway][Gateway], [HTTPRoute][HTTPRoute] or [GRPCRoute][GRPCRoute] resource.
+Envoy Gateway introduces a new CRD called [SecurityPolicy][] that allows the user to configure CORS.
+This instantiated resource can be linked to a [Gateway][], [HTTPRoute][] or [GRPCRoute][] resource.
 
-You can also configure CORS using the Gateway API's [HTTPCORSFilter][HTTPCORSFilter], which offers a simpler option but
-is only supported on the [HTTPRoute][HTTPRoute] resource.
+You can also configure CORS using the Gateway API's [HTTPCORSFilter][], which offers a simpler option but
+is only supported on the [HTTPRoute][] resource.
 
 ## Prerequisites
 
@@ -266,7 +266,7 @@ kubectl delete securitypolicy/cors-example
 
 Checkout the [Developer Guide](../../../contributions/develop) to get involved in the project.
 
-[SecurityPolicy]: ../../../contributions/design/security-policy
+[SecurityPolicy]: ../../../api/extension_types#securitypolicy
 [cors]: https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS
 [Gateway]: https://gateway-api.sigs.k8s.io/api-types/gateway
 [HTTPRoute]: https://gateway-api.sigs.k8s.io/api-types/httproute
