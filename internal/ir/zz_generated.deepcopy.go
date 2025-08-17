@@ -3162,13 +3162,8 @@ func (in *RemoteJWKS) DeepCopyInto(out *RemoteJWKS) {
 	}
 	if in.CacheDuration != nil {
 		in, out := &in.CacheDuration, &out.CacheDuration
-		*out = new(v1.Duration)
+		*out = new(apisv1.Duration)
 		**out = **in
-	}
-	if in.AsyncFetch != nil {
-		in, out := &in.AsyncFetch, &out.AsyncFetch
-		*out = new(JwksAsyncFetch)
-		(*in).DeepCopyInto(*out)
 	}
 }
 
