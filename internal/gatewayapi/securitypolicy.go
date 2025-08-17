@@ -1016,7 +1016,6 @@ func (t *Translator) buildRemoteJWKS(
 		Traffic:       traffic,
 		URI:           remoteJWKS.URI,
 		CacheDuration: remoteJWKS.CacheDuration,
-		AsyncFetch:    (*ir.JwksAsyncFetch)(remoteJWKS.AsyncFetch),
 	}, nil
 }
 

@@ -8,6 +8,7 @@ package translator
 import (
 	"errors"
 	"fmt"
+	"time"
 
 	corev3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	routev3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
@@ -18,8 +19,8 @@ import (
 	"google.golang.org/protobuf/types/known/anypb"
 	"google.golang.org/protobuf/types/known/durationpb"
 	"google.golang.org/protobuf/types/known/emptypb"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/ir"
@@ -150,18 +151,14 @@ func buildJWTAuthn(irListener *ir.HTTPListener) (*jwtauthnv3.JwtAuthentication, 
 					jwksCluster = cluster.name
 				}
 
-				var duration *metav1.Duration
+				var duration *gwapiv1.Duration
 				if jwks.CacheDuration != nil {
 					duration = jwks.CacheDuration
 				}
 
-				var asyncFetch jwtauthnv3.JwksAsyncFetch
-
-				if jwks.AsyncFetch != nil {
-					asyncFetch = jwtauthnv3.JwksAsyncFetch{
-						FastListener:          jwks.AsyncFetch.FastListener,
-						FailedRefetchDuration: durationpb.New(jwks.AsyncFetch.FailedRefetchDuration.Duration),
-					}
+				timeDuration, err := time.ParseDuration(string(*duration))
+				if err != nil {
+					return nil, err
 				}
 
 				remote := &jwtauthnv3.JwtProvider_RemoteJwks{
@@ -174,8 +171,8 @@ func buildJWTAuthn(irListener *ir.HTTPListener) (*jwtauthnv3.JwtAuthentication, 
 							Timeout: &durationpb.Duration{Seconds: defaultExtServiceRequestTimeout},
 						},
 
-						CacheDuration: durationpb.New(duration.Duration),
-						AsyncFetch:    &asyncFetch,
+						CacheDuration: durationpb.New(timeDuration),
+						AsyncFetch:    &jwtauthnv3.JwksAsyncFetch{},
 					},
 				}
 

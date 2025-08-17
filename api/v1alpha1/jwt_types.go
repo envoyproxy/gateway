@@ -6,7 +6,6 @@
 package v1alpha1
 
 import (
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 )
 
@@ -116,23 +115,7 @@ type RemoteJWKS struct {
 	// +kubebuilder:default="300s"
 	// +kubebuilder:validation:Format=duration
 	// +optional
-	CacheDuration *metav1.Duration `json:"cacheDuration,omitempty"`
-
-	// Fetch Jwks asynchronously in the main thread before the listener is activated. Fetched Jwks can be used by all worker threads.
-	// +optional
-	AsyncFetch *JwksAsyncFetch `json:"asyncFetch,omitempty"`
-}
-
-// JwksAsyncFetch is used to Fetch Jwks asynchronously in the main thread before the listener is activated.
-type JwksAsyncFetch struct {
-	// If false, the listener is activated after the initial fetch is completed. The initial fetch result can be either successful or failed.
-	// If true, it is activated without waiting for the initial fetch to complete.
-
-	// +optional
-	FastListener bool `json:"fastListener,omitempty"`
-	// The duration to refetch after a failed fetch.
-	// +optional
-	FailedRefetchDuration *metav1.Duration `json:"failedRefetchDuration,omitempty"`
+	CacheDuration *gwapiv1.Duration `json:"cacheDuration,omitempty"`
 }
 
 // LocalJWKSType defines the types of values for Local JWKS.
