@@ -66,6 +66,7 @@ require (
 	golang.org/x/exp v0.0.0-20250718183923-645b1fa84792
 	golang.org/x/net v0.43.0
 	gomodules.xyz/jsonpatch/v2 v2.5.0
+	gonum.org/v1/gonum v0.16.0
 	google.golang.org/genproto/googleapis/api v0.0.0-20250728155136-f173205681a0
 	google.golang.org/grpc v1.74.2
 	google.golang.org/grpc/security/advancedtls v1.0.0

@@ -89,6 +89,7 @@ func renderMetricsTable(writer io.Writer, reports []*BenchmarkReport) {
 	// write headers
 	headers := []string{
 		"Test Name",
+		"Route Convergence Time <br> p50/p90/p99",
 		"Envoy Gateway Memory (MiB) <br> min/max/means",
 		"Envoy Gateway CPU (%) <br> min/max/means",
 		"Averaged Envoy Proxy Memory (MiB) <br> min/max/means",
@@ -97,7 +98,8 @@ func renderMetricsTable(writer io.Writer, reports []*BenchmarkReport) {
 	writeTableHeader(table, headers)
 
 	for _, report := range reports {
-		data := []string{report.Name}
+		routeConvergenceDuration := fmt.Sprintf("%s/%s/%s", report.RouteConvergence.P50, report.RouteConvergence.P90, report.RouteConvergence.P99)
+		data := []string{report.Name, routeConvergenceDuration}
 		data = append(data, getSamplesMinMaxMeans(report.Samples)...)
 		writeTableRow(table, data)
 	}
@@ -128,6 +130,11 @@ func renderProfilesTable(writer io.Writer, target, key string, titleLevel int, r
 		sort.Slice(sortedSamples, func(i, j int) bool {
 			return sortedSamples[i].ControlPlaneMem > sortedSamples[j].ControlPlaneMem
 		})
+
+		if len(sortedSamples) == 0 || sortedSamples[0].HeapProfile == nil {
+			writeSection(writer, report.Name, titleLevel+1, "No heap profile available.")
+			continue
+		}
 
 		heapPprof := sortedSamples[0].HeapProfile
 		heapPprofPath := path.Join(report.ProfilesOutputDir, fmt.Sprintf("heap.%s.pprof", report.Name))

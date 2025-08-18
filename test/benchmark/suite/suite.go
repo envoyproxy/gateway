@@ -24,6 +24,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	"sigs.k8s.io/gateway-api/conformance/utils/config"
+	"sigs.k8s.io/gateway-api/conformance/utils/tlog"
 	"sigs.k8s.io/yaml"
 
 	opt "github.com/envoyproxy/gateway/internal/cmd/options"
@@ -142,7 +143,7 @@ func NewBenchmarkTestSuite(client client.Client, options BenchmarkOptions,
 }
 
 func (b *BenchmarkTestSuite) Run(t *testing.T, tests []BenchmarkTest) {
-	t.Logf("Running %d benchmark test", len(tests))
+	tlog.Logf(t, "Running %d benchmark test", len(tests))
 
 	buf := make([]byte, 0)
 	writer := bytes.NewBuffer(buf)
@@ -151,7 +152,7 @@ func (b *BenchmarkTestSuite) Run(t *testing.T, tests []BenchmarkTest) {
 	renderEnvSettingsTable(writer)
 
 	for _, test := range tests {
-		t.Logf("Running benchmark test: %s", test.ShortName)
+		tlog.Logf(t, "Running benchmark test: %s", test.ShortName)
 
 		reports := test.Test(t, b)
 		if len(reports) == 0 {
@@ -159,7 +160,7 @@ func (b *BenchmarkTestSuite) Run(t *testing.T, tests []BenchmarkTest) {
 		}
 
 		// Generate a human-readable benchmark report for each test.
-		t.Logf("Got %d reports for test: %s", len(reports), test.ShortName)
+		tlog.Logf(t, "Got %d reports for test: %s", len(reports), test.ShortName)
 
 		if err := RenderReport(writer, test.ShortName, test.Description, 2, reports); err != nil {
 			t.Errorf("Error generating report for %s: %v", test.ShortName, err)
@@ -171,10 +172,10 @@ func (b *BenchmarkTestSuite) Run(t *testing.T, tests []BenchmarkTest) {
 		if err := os.WriteFile(reportPath, writer.Bytes(), 0o600); err != nil {
 			t.Errorf("Error writing report to path '%s': %v", reportPath, err)
 		} else {
-			t.Logf("Writing report to path '%s' successfully", reportPath)
+			tlog.Logf(t, "Writing report to path '%s' successfully", reportPath)
 		}
 	} else {
-		t.Logf("%s", writer.Bytes())
+		tlog.Logf(t, "%s", writer.Bytes())
 	}
 }
 
@@ -183,9 +184,11 @@ func (b *BenchmarkTestSuite) Run(t *testing.T, tests []BenchmarkTest) {
 // TODO: currently running benchmark test via nighthawk_client,
 // consider switching to gRPC nighthawk-service for benchmark test.
 // ref: https://github.com/envoyproxy/nighthawk/blob/main/api/client/service.proto
-func (b *BenchmarkTestSuite) Benchmark(t *testing.T, ctx context.Context, jobName, resultTitle, gatewayHostPort, hostnamePattern string, host int) (*BenchmarkReport, error) {
-	t.Logf("Running benchmark test: %s", resultTitle)
-
+func (b *BenchmarkTestSuite) Benchmark(t *testing.T, ctx context.Context,
+	jobName, resultTitle, gatewayHostPort, hostnamePattern string, host int,
+	startAt time.Time,
+) (*BenchmarkReport, error) {
+	tlog.Logf(t, "Running benchmark test: %s, start at %s", resultTitle, startAt)
 	requestHeaders := make([]string, 0, host)
 	// hostname index starts with 1
 	for i := 1; i <= host; i++ {
@@ -226,12 +229,12 @@ func (b *BenchmarkTestSuite) Benchmark(t *testing.T, ctx context.Context, jobNam
 			}
 		}
 
-		t.Logf("Job %s still not complete", jobName)
+		tlog.Logf(t, "Job %s still not complete", jobName)
 
 		// Sample the metrics and profiles at runtime.
 		// Do not consider it as an error, fail sampling should not affect test running.
 		if err := report.Sample(ctx); err != nil {
-			t.Logf("Error occurs while sampling metrics or profiles: %v", err)
+			tlog.Logf(t, "Error occurs while sampling metrics or profiles: %v", err)
 		}
 
 		return false, nil
@@ -241,7 +244,7 @@ func (b *BenchmarkTestSuite) Benchmark(t *testing.T, ctx context.Context, jobNam
 		return nil, err
 	}
 
-	t.Logf("Running benchmark test: %s successfully", resultTitle)
+	tlog.Logf(t, "Running benchmark test: %s successfully", resultTitle)
 
 	// Get nighthawk result from this benchmark test run.
 	if err = report.GetResult(ctx, jobNN); err != nil {
@@ -297,7 +300,10 @@ func prepareBenchmarkClientRuntimeArgs(gatewayHostPort string, requestHeaders []
 // has been created successfully.
 //
 // All created scaled resources will be labeled with BenchmarkTestScaledKey.
-func (b *BenchmarkTestSuite) ScaleUpHTTPRoutes(ctx context.Context, scaleRange [2]uint16, routeNameFormat, routeHostnameFormat, refGateway string, batchNumPerHost uint16, afterCreation func(*gwapiv1.HTTPRoute)) error {
+func (b *BenchmarkTestSuite) ScaleUpHTTPRoutes(ctx context.Context, scaleRange [2]uint16,
+	routeNameFormat, routeHostnameFormat, refGateway string, batchNumPerHost uint16,
+	afterCreation func(*gwapiv1.HTTPRoute, time.Time),
+) error {
 	var i, begin, end uint16
 	begin, end = scaleRange[0], scaleRange[1]
 
@@ -316,12 +322,13 @@ func (b *BenchmarkTestSuite) ScaleUpHTTPRoutes(ctx context.Context, scaleRange [
 		newRoute.Spec.ParentRefs[0].Name = gwapiv1.ObjectName(refGateway)
 		newRoute.Spec.Hostnames[0] = gwapiv1.Hostname(routeHostname)
 
+		startAt := time.Now()
 		if err := b.CreateResource(ctx, newRoute); err != nil {
 			return err
 		}
 
 		if afterCreation != nil {
-			afterCreation(newRoute)
+			afterCreation(newRoute, startAt)
 		}
 
 		counterPerBatch++
@@ -404,12 +411,12 @@ func (b *BenchmarkTestSuite) DeleteScaledResources(ctx context.Context, object c
 // RegisterCleanup registers cleanup functions for all benchmark test resources.
 func (b *BenchmarkTestSuite) RegisterCleanup(t *testing.T, ctx context.Context, object, scaledObject client.Object) {
 	t.Cleanup(func() {
-		t.Logf("Start to cleanup benchmark test resources")
+		tlog.Logf(t, "Start to cleanup benchmark test resources")
 
 		_ = b.DeleteResource(ctx, object)
 		_ = b.DeleteScaledResources(ctx, scaledObject)
 
-		t.Logf("Clean up complete!")
+		tlog.Logf(t, "Clean up complete!")
 	})
 }
 
