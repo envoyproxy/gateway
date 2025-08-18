@@ -10,6 +10,7 @@ import (
 	"reflect"
 	"testing"
 
+	listenerv3 "github.com/envoyproxy/go-control-plane/envoy/config/listener/v3"
 	routev3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
 	hcmv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/http_connection_manager/v3"
 	typev3 "github.com/envoyproxy/go-control-plane/envoy/type/v3"
@@ -133,7 +134,7 @@ func Test_splitTCPAuthRules_and_convertPrincipals(t *testing.T) {
 	// convertPrincipals should produce at least one principal for the allow rule
 	principals := convertPrincipals(rules[0].Principal)
 	require.GreaterOrEqual(t, len(principals), 1)
-	// ensure each produced principal has a non-nil identifier
+	// ensure each produced principal has a valid identifier
 	for _, p := range principals {
 		// GetAny() returns a bool, so check it directly.
 		require.True(t, p.GetAny() || p.GetRemoteIp() != nil || p.GetDirectRemoteIp() != nil,
@@ -169,4 +170,66 @@ func Test_buildTCPRBACMatcherFromRules_Basic(t *testing.T) {
 	}
 	// OnNoMatch should be set
 	require.NotNil(t, rbac.Matcher.GetOnNoMatch())
+}
+
+func Test_buildTCPFilterChain_RBACPresenceByRules(t *testing.T) {
+	// CASE A: Authorization present with >=1 rule -> RBAC filter should be added
+	routeWithRule := &ir.TCPRoute{
+		Name: "r-with-rule",
+		Destination: &ir.RouteDestination{
+			Name: "u1",
+		},
+		Security: &ir.SecurityFeatures{
+			Authorization: &ir.Authorization{
+				Rules: []*ir.AuthorizationRule{
+					{
+						Name:   "allow-10/8",
+						Action: egv1a1.AuthorizationActionAllow,
+						Principal: ir.Principal{
+							ClientCIDRs: []*ir.CIDRMatch{{CIDR: "10.0.0.0/8"}},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	// buildTCPFilterChain signature requires: (irRoute, clusterName, statPrefix, accesslog, timeout, connection)
+	fcA, err := buildTCPFilterChain(routeWithRule, "cluster-a", "stats_tcp", nil, nil, nil)
+	require.NoError(t, err, "building filter chain (rules present)")
+	require.NotNil(t, fcA)
+
+	require.True(t, hasNetworkFilter(fcA, "envoy.filters.network.rbac"),
+		"expected RBAC network filter to be present when rules >= 1")
+
+	// CASE B: Authorization nil/empty -> RBAC filter should NOT be added
+	routeNoRules := &ir.TCPRoute{
+		Name: "r-no-rules",
+		Destination: &ir.RouteDestination{
+			Name: "u1",
+		},
+		// Security absent OR Security.Authorization present but Rules empty should both skip RBAC
+		// Uncomment either variant you want to exercise:
+		// Security: nil,
+		Security: &ir.SecurityFeatures{Authorization: &ir.Authorization{Rules: nil}},
+	}
+
+	fcB, err := buildTCPFilterChain(routeNoRules, "cluster-b", "stats_tcp", nil, nil, nil)
+	require.NoError(t, err, "building filter chain (no rules)")
+	require.NotNil(t, fcB)
+
+	require.False(t, hasNetworkFilter(fcB, "envoy.filters.network.rbac"),
+		"did not expect RBAC network filter when rules are nil/empty")
+}
+
+func hasNetworkFilter(fc *listenerv3.FilterChain, name string) bool {
+	if fc == nil {
+		return false
+	}
+	for _, nf := range fc.GetFilters() {
+		if nf.GetName() == name {
+			return true
+		}
+	}
+	return false
 }
