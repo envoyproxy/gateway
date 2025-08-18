@@ -1175,7 +1175,8 @@ func (t *Translator) processUDPRouteParentRefs(udpRoute *UDPRouteContext, resour
 					Destination: &ir.RouteDestination{
 						Name:     destName,
 						Settings: destSettings,
-						Metadata: buildResourceMetadata(udpRoute, nil),
+						// udpRoute Must have a single rule, so can use index 0.
+						Metadata: buildResourceMetadata(udpRoute, udpRoute.Spec.Rules[0].Name),
 					},
 				}
 				irListener.Route = irRoute
@@ -1325,7 +1326,8 @@ func (t *Translator) processTCPRouteParentRefs(tcpRoute *TCPRouteContext, resour
 					Destination: &ir.RouteDestination{
 						Name:     destName,
 						Settings: destSettings,
-						Metadata: buildResourceMetadata(tcpRoute, nil),
+						// tcpRoute Must have a single rule, so can use index 0.
+						Metadata: buildResourceMetadata(tcpRoute, tcpRoute.Spec.Rules[0].Name),
 					},
 				}
 
