@@ -24,7 +24,7 @@ import (
 )
 
 const (
-	controlPlaneMemQL = `process_resident_memory_bytes{namespace="envoy-gateway-system", control_plane="envoy-gateway"}/1024/1024`
+	controlPlaneMemQL = `container_memory_working_set_bytes{namespace="envoy-gateway-system", control_plane="envoy-gateway"}/1024/1024`
 	controlPlaneCPUQL = `rate(process_cpu_seconds_total{namespace="envoy-gateway-system", control_plane="envoy-gateway"}[30s])*100`
 	dataPlaneMemQL    = `container_memory_working_set_bytes{namespace="envoy-gateway-system", container="envoy"}/1024/1024`
 	dataPlaneCPUQL    = `rate(container_cpu_usage_seconds_total{namespace="envoy-gateway-system", container="envoy"}[30s])*100`
