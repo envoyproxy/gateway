@@ -11,6 +11,7 @@ import (
 	"context"
 	"fmt"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/types"
@@ -56,6 +57,7 @@ var ScaleHTTPRoutes = suite.BenchmarkTest{
 				testName := fmt.Sprintf("scaling up httproutes to %d with %d routes per hostname", scale, routePerHost)
 
 				t.Run(testName, func(t *testing.T) {
+					startTime := time.Now()
 					err = bSuite.ScaleUpHTTPRoutes(ctx, [2]uint16{start, scale}, routeNameFormat, routeHostnameFormat, gatewayNN.Name, routePerHost-batch, func(route *gwapiv1.HTTPRoute) {
 						routeNN := types.NamespacedName{Name: route.Name, Namespace: route.Namespace}
 						routeNNs = append(routeNNs, routeNN)
@@ -71,7 +73,7 @@ var ScaleHTTPRoutes = suite.BenchmarkTest{
 
 					// Run benchmark test at different scale.
 					jobName := fmt.Sprintf("scale-up-httproutes-%d", scale)
-					report, err := bSuite.Benchmark(t, ctx, jobName, testName, gatewayAddr, routeHostnameFormat, int(totalHosts))
+					report, err := bSuite.Benchmark(t, ctx, jobName, testName, gatewayAddr, routeHostnameFormat, int(totalHosts), startTime)
 					require.NoError(t, err)
 
 					reports = append(reports, report)
