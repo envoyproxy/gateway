@@ -480,28 +480,41 @@ func validateSecurityPolicyForTCP(p *egv1a1.SecurityPolicy) error {
 		return fmt.Errorf("only authorization is supported for TCP routes")
 	}
 
-	// NOTE:
-	// allow an empty SecurityPolicy (no Authorization) so users can create a
-	// placeholder and fill it later. Only validate rules if Authorization is set.
-
-	// For TCP routes, we need at least one rule with ClientCIDRs
+	// Placeholder is OK: no Authorization or no rules yet.
 	if p.Spec.Authorization == nil || len(p.Spec.Authorization.Rules) == 0 {
 		return nil
 	}
 
-	// Check that each rule has at least one CIDR specified and no unsupported features
+	// Validate rules when present.
 	for i, rule := range p.Spec.Authorization.Rules {
-		if rule.Action == egv1a1.AuthorizationActionAllow && len(rule.Principal.ClientCIDRs) == 0 {
-			return fmt.Errorf("rule %d with Allow action must specify at least one ClientCIDR for TCP routes", i)
-		}
-
-		// JWT and Headers are not supported for TCP routes
+		// Unsupported selectors for TCP
 		if rule.Principal.JWT != nil {
 			return fmt.Errorf("rule %d: JWT is not supported for TCP routes", i)
 		}
-
 		if len(rule.Principal.Headers) > 0 {
 			return fmt.Errorf("rule %d: Headers are not supported for TCP routes", i)
+		}
+
+		switch rule.Action {
+		case egv1a1.AuthorizationActionAllow:
+			// Allow must specify at least one CIDR
+			if len(rule.Principal.ClientCIDRs) == 0 {
+				return fmt.Errorf("rule %d with Allow action must specify at least one ClientCIDR for TCP routes", i)
+			}
+			// All CIDRs must be valid
+			if err := validateCIDRs(rule.Principal.ClientCIDRs); err != nil {
+				return fmt.Errorf("rule %d: %w", i, err)
+			}
+
+		case egv1a1.AuthorizationActionDeny:
+			// CIDRs optional, but validate if present
+			if len(rule.Principal.ClientCIDRs) > 0 {
+				if err := validateCIDRs(rule.Principal.ClientCIDRs); err != nil {
+					return fmt.Errorf("rule %d: %w", i, err)
+				}
+			}
+		default:
+			// If the enum is already constrained, this default is never hit.
 		}
 	}
 	return nil
@@ -589,6 +602,16 @@ func resolveSecurityPolicyGatewayTargetRef(
 	gateways[key] = gateway
 
 	return gateway.GatewayContext, nil
+}
+
+// validateCIDRs checks each provided CIDR for syntactic correctness.
+func validateCIDRs(cidrs []egv1a1.CIDR) error {
+	for _, c := range cidrs {
+		if _, _, err := net.ParseCIDR(string(c)); err != nil {
+			return fmt.Errorf("invalid ClientCIDR %q: %w", c, err)
+		}
+	}
+	return nil
 }
 
 func resolveSecurityPolicyRouteTargetRef(

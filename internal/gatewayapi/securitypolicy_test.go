@@ -866,3 +866,94 @@ func Test_validateSecurityPolicyForTCP_AllowWithCIDR_OK(t *testing.T) {
 	}
 	require.NoError(t, validateSecurityPolicyForTCP(p))
 }
+
+func Test_validateSecurityPolicyForTCP_AllowWithInvalidCIDR_Errors(t *testing.T) {
+	p := &egv1a1.SecurityPolicy{
+		Spec: egv1a1.SecurityPolicySpec{
+			Authorization: &egv1a1.Authorization{
+				Rules: []egv1a1.AuthorizationRule{
+					{
+						Action: egv1a1.AuthorizationActionAllow,
+						Principal: egv1a1.Principal{
+							ClientCIDRs: []egv1a1.CIDR{"10.0.0.0/99"}, // invalid
+						},
+					},
+				},
+			},
+		},
+	}
+	require.Error(t, validateSecurityPolicyForTCP(p))
+}
+
+func Test_validateSecurityPolicyForTCP_PrincipalJWT_NotSupported(t *testing.T) {
+	p := &egv1a1.SecurityPolicy{
+		Spec: egv1a1.SecurityPolicySpec{
+			Authorization: &egv1a1.Authorization{
+				Rules: []egv1a1.AuthorizationRule{{
+					Action: egv1a1.AuthorizationActionAllow,
+					Principal: egv1a1.Principal{
+						ClientCIDRs: []egv1a1.CIDR{"10.0.0.0/8"},
+						JWT:         &egv1a1.JWTPrincipal{}, // zero value is enough to be non-nil
+					},
+				}},
+			},
+		},
+	}
+	require.Error(t, validateSecurityPolicyForTCP(p))
+}
+
+func Test_validateSecurityPolicyForTCP_PrincipalHeaders_NotSupported(t *testing.T) {
+	p := &egv1a1.SecurityPolicy{
+		Spec: egv1a1.SecurityPolicySpec{
+			Authorization: &egv1a1.Authorization{
+				Rules: []egv1a1.AuthorizationRule{{
+					Action: egv1a1.AuthorizationActionAllow,
+					Principal: egv1a1.Principal{
+						ClientCIDRs: []egv1a1.CIDR{"10.0.0.0/8"},
+						// any non-empty slice will trigger the "headers not supported" branch
+						Headers: []egv1a1.AuthorizationHeaderMatch{{}},
+					},
+				}},
+			},
+		},
+	}
+	require.Error(t, validateSecurityPolicyForTCP(p))
+}
+
+func Test_validateSecurityPolicyForTCP_DenyWithInvalidCIDR_Errors(t *testing.T) {
+	p := &egv1a1.SecurityPolicy{
+		Spec: egv1a1.SecurityPolicySpec{
+			Authorization: &egv1a1.Authorization{
+				Rules: []egv1a1.AuthorizationRule{{
+					Action: egv1a1.AuthorizationActionDeny,
+					Principal: egv1a1.Principal{
+						ClientCIDRs: []egv1a1.CIDR{"10.0.0.0/99"}, // invalid mask
+					},
+				}},
+			},
+		},
+	}
+	require.Error(t, validateSecurityPolicyForTCP(p))
+}
+
+func Test_validateSecurityPolicyForTCP_MixedRules_OK(t *testing.T) {
+	p := &egv1a1.SecurityPolicy{
+		Spec: egv1a1.SecurityPolicySpec{
+			Authorization: &egv1a1.Authorization{
+				Rules: []egv1a1.AuthorizationRule{
+					{
+						Action: egv1a1.AuthorizationActionAllow,
+						Principal: egv1a1.Principal{
+							ClientCIDRs: []egv1a1.CIDR{"192.168.0.0/16"},
+						},
+					},
+					{
+						Action:    egv1a1.AuthorizationActionDeny,
+						Principal: egv1a1.Principal{}, // no CIDR is fine
+					},
+				},
+			},
+		},
+	}
+	require.NoError(t, validateSecurityPolicyForTCP(p))
+}
