@@ -148,6 +148,16 @@ func (l *ListenerContext) SetTLSSecrets(tlsSecrets []*corev1.Secret) {
 // that can reference Gateway objects.
 type RouteContext interface {
 	client.Object
+	GetRouteType() gwapiv1.Kind
+	GetRuleNames() []gwapiv1.SectionName
+	GetHostnames() []string
+	GetParentReferences() []gwapiv1.ParentReference
+	GetRouteStatus() *gwapiv1.RouteStatus
+	GetGatewayControllerName() string
+	GetRouteParentContext(forParentRef gwapiv1.ParentReference) *RouteParentContext
+	SetRouteParentContext(forParentRef gwapiv1.ParentReference, ctx *RouteParentContext)
+	GetParentRefs() map[gwapiv1.ParentReference]*RouteParentContext
+	SetParentRefs(refs map[gwapiv1.ParentReference]*RouteParentContext)
 }
 
 // HTTPRouteContext wraps an HTTPRoute and provides helper methods for
@@ -161,6 +171,64 @@ type HTTPRouteContext struct {
 	ParentRefs map[gwapiv1.ParentReference]*RouteParentContext
 }
 
+func (r *HTTPRouteContext) GetRouteType() gwapiv1.Kind {
+	return resource.KindHTTPRoute
+}
+
+func (r *HTTPRouteContext) GetRuleNames() []gwapiv1.SectionName {
+	rs := r.Spec.Rules
+	ruleNames := make([]gwapiv1.SectionName, 0, len(rs))
+	for _, rule := range rs {
+		if rule.Name != nil {
+			ruleNames = append(ruleNames, *rule.Name)
+		}
+	}
+	return ruleNames
+}
+
+func (r *HTTPRouteContext) GetHostnames() []string {
+	hs := r.Spec.Hostnames
+	hostnames := make([]string, len(hs))
+	for i := range hs {
+		hostnames[i] = string(hs[i])
+	}
+	return hostnames
+}
+
+func (r *HTTPRouteContext) GetParentReferences() []gwapiv1.ParentReference {
+	return r.Spec.ParentRefs
+}
+
+func (r *HTTPRouteContext) GetRouteStatus() *gwapiv1.RouteStatus {
+	return &r.Status.RouteStatus
+}
+
+func (r *HTTPRouteContext) GetGatewayControllerName() string {
+	return r.GatewayControllerName
+}
+
+func (r *HTTPRouteContext) GetRouteParentContext(forParentRef gwapiv1.ParentReference) *RouteParentContext {
+	if r.ParentRefs == nil {
+		r.ParentRefs = make(map[gwapiv1.ParentReference]*RouteParentContext)
+	}
+	return r.ParentRefs[forParentRef]
+}
+
+func (r *HTTPRouteContext) SetRouteParentContext(forParentRef gwapiv1.ParentReference, ctx *RouteParentContext) {
+	if r.ParentRefs == nil {
+		r.ParentRefs = make(map[gwapiv1.ParentReference]*RouteParentContext)
+	}
+	r.ParentRefs[forParentRef] = ctx
+}
+
+func (r *HTTPRouteContext) GetParentRefs() map[gwapiv1.ParentReference]*RouteParentContext {
+	return r.ParentRefs
+}
+
+func (r *HTTPRouteContext) SetParentRefs(refs map[gwapiv1.ParentReference]*RouteParentContext) {
+	r.ParentRefs = refs
+}
+
 // GRPCRouteContext wraps a GRPCRoute and provides helper methods for
 // accessing the route's parents.
 type GRPCRouteContext struct {
@@ -170,6 +238,64 @@ type GRPCRouteContext struct {
 	*gwapiv1.GRPCRoute
 
 	ParentRefs map[gwapiv1.ParentReference]*RouteParentContext
+}
+
+func (r *GRPCRouteContext) GetRouteType() gwapiv1.Kind {
+	return resource.KindGRPCRoute
+}
+
+func (r *GRPCRouteContext) GetRuleNames() []gwapiv1.SectionName {
+	rs := r.Spec.Rules
+	ruleNames := make([]gwapiv1.SectionName, 0, len(rs))
+	for _, rule := range rs {
+		if rule.Name != nil {
+			ruleNames = append(ruleNames, *rule.Name)
+		}
+	}
+	return ruleNames
+}
+
+func (r *GRPCRouteContext) GetHostnames() []string {
+	hs := r.Spec.Hostnames
+	hostnames := make([]string, len(hs))
+	for i := range hs {
+		hostnames[i] = string(hs[i])
+	}
+	return hostnames
+}
+
+func (r *GRPCRouteContext) GetParentReferences() []gwapiv1.ParentReference {
+	return r.Spec.ParentRefs
+}
+
+func (r *GRPCRouteContext) GetRouteStatus() *gwapiv1.RouteStatus {
+	return &r.Status.RouteStatus
+}
+
+func (r *GRPCRouteContext) GetGatewayControllerName() string {
+	return r.GatewayControllerName
+}
+
+func (r *GRPCRouteContext) GetRouteParentContext(forParentRef gwapiv1.ParentReference) *RouteParentContext {
+	if r.ParentRefs == nil {
+		r.ParentRefs = make(map[gwapiv1.ParentReference]*RouteParentContext)
+	}
+	return r.ParentRefs[forParentRef]
+}
+
+func (r *GRPCRouteContext) SetRouteParentContext(forParentRef gwapiv1.ParentReference, ctx *RouteParentContext) {
+	if r.ParentRefs == nil {
+		r.ParentRefs = make(map[gwapiv1.ParentReference]*RouteParentContext)
+	}
+	r.ParentRefs[forParentRef] = ctx
+}
+
+func (r *GRPCRouteContext) GetParentRefs() map[gwapiv1.ParentReference]*RouteParentContext {
+	return r.ParentRefs
+}
+
+func (r *GRPCRouteContext) SetParentRefs(refs map[gwapiv1.ParentReference]*RouteParentContext) {
+	r.ParentRefs = refs
 }
 
 // TLSRouteContext wraps a TLSRoute and provides helper methods for
@@ -183,6 +309,64 @@ type TLSRouteContext struct {
 	ParentRefs map[gwapiv1.ParentReference]*RouteParentContext
 }
 
+func (r *TLSRouteContext) GetRouteType() gwapiv1.Kind {
+	return resource.KindTLSRoute
+}
+
+func (r *TLSRouteContext) GetRuleNames() []gwapiv1.SectionName {
+	rs := r.Spec.Rules
+	ruleNames := make([]gwapiv1.SectionName, 0, len(rs))
+	for _, rule := range rs {
+		if rule.Name != nil {
+			ruleNames = append(ruleNames, *rule.Name)
+		}
+	}
+	return ruleNames
+}
+
+func (r *TLSRouteContext) GetHostnames() []string {
+	hs := r.Spec.Hostnames
+	hostnames := make([]string, len(hs))
+	for i := range hs {
+		hostnames[i] = string(hs[i])
+	}
+	return hostnames
+}
+
+func (r *TLSRouteContext) GetParentReferences() []gwapiv1.ParentReference {
+	return r.Spec.ParentRefs
+}
+
+func (r *TLSRouteContext) GetRouteStatus() *gwapiv1.RouteStatus {
+	return &r.Status.RouteStatus
+}
+
+func (r *TLSRouteContext) GetGatewayControllerName() string {
+	return r.GatewayControllerName
+}
+
+func (r *TLSRouteContext) GetRouteParentContext(forParentRef gwapiv1.ParentReference) *RouteParentContext {
+	if r.ParentRefs == nil {
+		r.ParentRefs = make(map[gwapiv1.ParentReference]*RouteParentContext)
+	}
+	return r.ParentRefs[forParentRef]
+}
+
+func (r *TLSRouteContext) SetRouteParentContext(forParentRef gwapiv1.ParentReference, ctx *RouteParentContext) {
+	if r.ParentRefs == nil {
+		r.ParentRefs = make(map[gwapiv1.ParentReference]*RouteParentContext)
+	}
+	r.ParentRefs[forParentRef] = ctx
+}
+
+func (r *TLSRouteContext) GetParentRefs() map[gwapiv1.ParentReference]*RouteParentContext {
+	return r.ParentRefs
+}
+
+func (r *TLSRouteContext) SetParentRefs(refs map[gwapiv1.ParentReference]*RouteParentContext) {
+	r.ParentRefs = refs
+}
+
 // UDPRouteContext wraps a UDPRoute and provides helper methods for
 // accessing the route's parents.
 type UDPRouteContext struct {
@@ -192,6 +376,60 @@ type UDPRouteContext struct {
 	*gwapiv1a2.UDPRoute
 
 	ParentRefs map[gwapiv1.ParentReference]*RouteParentContext
+}
+
+func (r *UDPRouteContext) GetRouteType() gwapiv1.Kind {
+	return resource.KindUDPRoute
+}
+
+func (r *UDPRouteContext) GetRuleNames() []gwapiv1.SectionName {
+	rs := r.Spec.Rules
+	ruleNames := make([]gwapiv1.SectionName, 0, len(rs))
+	for _, rule := range rs {
+		if rule.Name != nil {
+			ruleNames = append(ruleNames, *rule.Name)
+		}
+	}
+	return ruleNames
+}
+
+func (r *UDPRouteContext) GetHostnames() []string {
+	// UDPRoute doesn't have hostnames, return empty slice
+	return []string{}
+}
+
+func (r *UDPRouteContext) GetParentReferences() []gwapiv1.ParentReference {
+	return r.Spec.ParentRefs
+}
+
+func (r *UDPRouteContext) GetRouteStatus() *gwapiv1.RouteStatus {
+	return &r.Status.RouteStatus
+}
+
+func (r *UDPRouteContext) GetGatewayControllerName() string {
+	return r.GatewayControllerName
+}
+
+func (r *UDPRouteContext) GetRouteParentContext(forParentRef gwapiv1.ParentReference) *RouteParentContext {
+	if r.ParentRefs == nil {
+		r.ParentRefs = make(map[gwapiv1.ParentReference]*RouteParentContext)
+	}
+	return r.ParentRefs[forParentRef]
+}
+
+func (r *UDPRouteContext) SetRouteParentContext(forParentRef gwapiv1.ParentReference, ctx *RouteParentContext) {
+	if r.ParentRefs == nil {
+		r.ParentRefs = make(map[gwapiv1.ParentReference]*RouteParentContext)
+	}
+	r.ParentRefs[forParentRef] = ctx
+}
+
+func (r *UDPRouteContext) GetParentRefs() map[gwapiv1.ParentReference]*RouteParentContext {
+	return r.ParentRefs
+}
+
+func (r *UDPRouteContext) SetParentRefs(refs map[gwapiv1.ParentReference]*RouteParentContext) {
+	r.ParentRefs = refs
 }
 
 // TCPRouteContext wraps a TCPRoute and provides helper methods for
@@ -205,95 +443,100 @@ type TCPRouteContext struct {
 	ParentRefs map[gwapiv1.ParentReference]*RouteParentContext
 }
 
-// GetRouteType returns the Kind of the Route object, HTTPRoute,
-// TLSRoute, TCPRoute, UDPRoute etc.
-func GetRouteType(route RouteContext) gwapiv1.Kind {
-	switch route.(type) {
-	case *HTTPRouteContext:
-		return gwapiv1.Kind(resource.KindHTTPRoute)
-	case *GRPCRouteContext:
-		return gwapiv1.Kind(resource.KindGRPCRoute)
-	case *TLSRouteContext:
-		return gwapiv1.Kind(resource.KindTLSRoute)
-	case *TCPRouteContext:
-		return gwapiv1.Kind(resource.KindTCPRoute)
-	case *UDPRouteContext:
-		return gwapiv1.Kind(resource.KindUDPRoute)
-	default:
-		panic("unknown route type: " + reflect.TypeOf(route).String())
-	}
+func (r *TCPRouteContext) GetRouteType() gwapiv1.Kind {
+	return resource.KindTCPRoute
 }
 
-// GetRuleNames returns the rule names targeted by the Route object.
-func GetRuleNames(route RouteContext) []gwapiv1.SectionName {
-	rv := reflect.ValueOf(route).Elem()
-
-	rs := rv.FieldByName("Spec").FieldByName("Rules")
-	ruleNames := make([]gwapiv1.SectionName, 0, rs.Len())
-	for i := 0; i < rs.Len(); i++ {
-		nameField := rs.Index(i).FieldByName("Name")
-		if !nameField.IsNil() {
-			ruleNames = append(ruleNames, nameField.Elem().Interface().(gwapiv1.SectionName))
+func (r *TCPRouteContext) GetRuleNames() []gwapiv1.SectionName {
+	rs := r.Spec.Rules
+	ruleNames := make([]gwapiv1.SectionName, 0, len(rs))
+	for _, rule := range rs {
+		if rule.Name != nil {
+			ruleNames = append(ruleNames, *rule.Name)
 		}
 	}
 	return ruleNames
 }
 
+func (r *TCPRouteContext) GetHostnames() []string {
+	// TCPRoute doesn't have hostnames, return empty slice
+	return []string{}
+}
+
+func (r *TCPRouteContext) GetParentReferences() []gwapiv1.ParentReference {
+	return r.Spec.ParentRefs
+}
+
+func (r *TCPRouteContext) GetRouteStatus() *gwapiv1.RouteStatus {
+	return &r.Status.RouteStatus
+}
+
+func (r *TCPRouteContext) GetGatewayControllerName() string {
+	return r.GatewayControllerName
+}
+
+func (r *TCPRouteContext) GetRouteParentContext(forParentRef gwapiv1.ParentReference) *RouteParentContext {
+	if r.ParentRefs == nil {
+		r.ParentRefs = make(map[gwapiv1.ParentReference]*RouteParentContext)
+	}
+	return r.ParentRefs[forParentRef]
+}
+
+func (r *TCPRouteContext) SetRouteParentContext(forParentRef gwapiv1.ParentReference, ctx *RouteParentContext) {
+	if r.ParentRefs == nil {
+		r.ParentRefs = make(map[gwapiv1.ParentReference]*RouteParentContext)
+	}
+	r.ParentRefs[forParentRef] = ctx
+}
+
+func (r *TCPRouteContext) GetParentRefs() map[gwapiv1.ParentReference]*RouteParentContext {
+	return r.ParentRefs
+}
+
+func (r *TCPRouteContext) SetParentRefs(refs map[gwapiv1.ParentReference]*RouteParentContext) {
+	r.ParentRefs = refs
+}
+
+// GetRouteType returns the Kind of the Route object, HTTPRoute,
+// TLSRoute, TCPRoute, UDPRoute etc.
+func GetRouteType(route RouteContext) gwapiv1.Kind {
+	return route.GetRouteType()
+}
+
+// GetRuleNames returns the rule names targeted by the Route object.
+func GetRuleNames(route RouteContext) []gwapiv1.SectionName {
+	return route.GetRuleNames()
+}
+
 // GetHostnames returns the hosts targeted by the Route object.
 func GetHostnames(route RouteContext) []string {
-	rv := reflect.ValueOf(route).Elem()
-	kind := rv.FieldByName("Kind").String()
-	if kind == resource.KindTCPRoute || kind == resource.KindUDPRoute {
-		return nil
-	}
-
-	hs := rv.FieldByName("Spec").FieldByName("Hostnames")
-	hostnames := make([]string, hs.Len())
-	for i := 0; i < len(hostnames); i++ {
-		hostnames[i] = hs.Index(i).String()
-	}
-	return hostnames
+	return route.GetHostnames()
 }
 
 // GetParentReferences returns the ParentReference of the Route object.
 func GetParentReferences(route RouteContext) []gwapiv1.ParentReference {
-	rv := reflect.ValueOf(route).Elem()
-	pr := rv.FieldByName("Spec").FieldByName("ParentRefs")
-	return pr.Interface().([]gwapiv1.ParentReference)
+	return route.GetParentReferences()
 }
 
 // GetRouteStatus returns the RouteStatus object associated with the Route.
 func GetRouteStatus(route RouteContext) *gwapiv1.RouteStatus {
-	rv := reflect.ValueOf(route).Elem()
-	rs := rv.FieldByName("Status").FieldByName("RouteStatus").Interface().(gwapiv1.RouteStatus)
-	return &rs
+	return route.GetRouteStatus()
 }
 
 // GetRouteParentContext returns RouteParentContext by using the Route objects' ParentReference.
 // It creates a new RouteParentContext and add a new RouteParentStatus to the Route's Status if the ParentReference is not found.
 func GetRouteParentContext(route RouteContext, forParentRef gwapiv1.ParentReference) *RouteParentContext {
-	rv := reflect.ValueOf(route).Elem()
-	pr := rv.FieldByName("ParentRefs")
-
-	// If the ParentRefs field is nil, initialize it.
-	if pr.IsNil() {
-		mm := reflect.MakeMap(reflect.TypeOf(map[gwapiv1.ParentReference]*RouteParentContext{}))
-		pr.Set(mm)
-	}
-
 	// If the RouteParentContext is already in the RouteContext, return it.
-	if p := pr.MapIndex(reflect.ValueOf(forParentRef)); p.IsValid() && !p.IsZero() {
-		ctx := p.Interface().(*RouteParentContext)
-		return ctx
+	if existingCtx := route.GetRouteParentContext(forParentRef); existingCtx != nil {
+		return existingCtx
 	}
 
 	// Verify that the ParentReference is present in the Route.Spec.ParentRefs.
 	// This is just a sanity check, the parentRef should always be present, otherwise it's a programming error.
 	var parentRef *gwapiv1.ParentReference
-	specParentRefs := rv.FieldByName("Spec").FieldByName("ParentRefs")
-	for i := 0; i < specParentRefs.Len(); i++ {
-		p := specParentRefs.Index(i).Interface().(gwapiv1.ParentReference)
-		if reflect.DeepEqual(p, forParentRef) {
+	specParentRefs := route.GetParentReferences()
+	for _, p := range specParentRefs {
+		if isParentRefEqual(p, forParentRef, route.GetNamespace()) {
 			parentRef = &p
 			break
 		}
@@ -304,11 +547,10 @@ func GetRouteParentContext(route RouteContext, forParentRef gwapiv1.ParentRefere
 
 	// Find the parent in the Route's Status.
 	routeParentStatusIdx := -1
-	statusParents := rv.FieldByName("Status").FieldByName("Parents")
+	routeStatus := route.GetRouteStatus()
 
-	for i := 0; i < statusParents.Len(); i++ {
-		p := statusParents.Index(i).FieldByName("ParentRef").Interface().(gwapiv1.ParentReference)
-		if isParentRefEqual(p, *parentRef, route.GetNamespace()) {
+	for i, parent := range routeStatus.Parents {
+		if isParentRefEqual(parent.ParentRef, *parentRef, route.GetNamespace()) {
 			routeParentStatusIdx = i
 			break
 		}
@@ -317,11 +559,11 @@ func GetRouteParentContext(route RouteContext, forParentRef gwapiv1.ParentRefere
 	// If the parent is not found in the Route's Status, create a new RouteParentStatus and add it to the Route's Status.
 	if routeParentStatusIdx == -1 {
 		rParentStatus := gwapiv1a2.RouteParentStatus{
-			ControllerName: gwapiv1a2.GatewayController(rv.FieldByName("GatewayControllerName").String()),
+			ControllerName: gwapiv1a2.GatewayController(route.GetGatewayControllerName()),
 			ParentRef:      forParentRef,
 		}
-		statusParents.Set(reflect.Append(statusParents, reflect.ValueOf(rParentStatus)))
-		routeParentStatusIdx = statusParents.Len() - 1
+		routeStatus.Parents = append(routeStatus.Parents, rParentStatus)
+		routeParentStatusIdx = len(routeStatus.Parents) - 1
 	}
 
 	// Also add the RouteParentContext to the RouteContext.
@@ -329,9 +571,22 @@ func GetRouteParentContext(route RouteContext, forParentRef gwapiv1.ParentRefere
 		ParentReference:      parentRef,
 		routeParentStatusIdx: routeParentStatusIdx,
 	}
-	rctx := reflect.ValueOf(ctx)
-	rctx.Elem().FieldByName(string(GetRouteType(route))).Set(rv.Field(1))
-	pr.SetMapIndex(reflect.ValueOf(forParentRef), rctx)
+
+	// Set the appropriate route field based on the route type
+	switch route.GetRouteType() {
+	case resource.KindHTTPRoute:
+		ctx.HTTPRoute = route.(*HTTPRouteContext).HTTPRoute
+	case resource.KindGRPCRoute:
+		ctx.GRPCRoute = route.(*GRPCRouteContext).GRPCRoute
+	case resource.KindTLSRoute:
+		ctx.TLSRoute = route.(*TLSRouteContext).TLSRoute
+	case resource.KindTCPRoute:
+		ctx.TCPRoute = route.(*TCPRouteContext).TCPRoute
+	case resource.KindUDPRoute:
+		ctx.UDPRoute = route.(*UDPRouteContext).UDPRoute
+	}
+
+	route.SetRouteParentContext(forParentRef, ctx)
 	return ctx
 }
 
