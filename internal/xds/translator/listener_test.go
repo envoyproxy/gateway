@@ -137,9 +137,8 @@ func Test_splitTCPAuthRules_and_convertPrincipals(t *testing.T) {
 	// convertPrincipals should produce at least one principal for the allow rule
 	principals := convertPrincipals(rules[0].Principal)
 	require.GreaterOrEqual(t, len(principals), 1)
-	// ensure each produced principal has a valid identifier
+	// GetAny() returns a bool, so check it directly.
 	for _, p := range principals {
-		// GetAny() returns a bool, so check it directly.
 		require.True(t, p.GetAny() || p.GetRemoteIp() != nil || p.GetDirectRemoteIp() != nil,
 			"expected principal to have a non-nil identifier (Any, RemoteIp, or DirectRemoteIp)")
 	}

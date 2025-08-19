@@ -29,6 +29,7 @@ import (
 	preservecasev3 "github.com/envoyproxy/go-control-plane/envoy/extensions/http/header_formatters/preserve_case/v3"
 	customheaderv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/http/original_ip_detection/custom_header/v3"
 	xffv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/http/original_ip_detection/xff/v3"
+	networkinputsv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/matching/common_inputs/network/v3"
 	quicv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/transport_sockets/quic/v3"
 	tlsv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/transport_sockets/tls/v3"
 	typev3 "github.com/envoyproxy/go-control-plane/envoy/type/v3"
@@ -842,18 +843,24 @@ func principalsToPredicate(p ir.Principal) *matcher.Matcher_MatcherList_Predicat
 		}
 
 		// Build SinglePredicate: Input is the source_ip typed input (name only).
-		// Some matcher Input variants require TypedConfig to be present (even empty)
-		// for validation. Create an empty Any for the input TypedConfig.
+		// Use the concrete typed-config for the "source_ip" input so Envoy can
+		// instantiate the input extractor. Replace the import above with the
+		// actual package path found in step 1 if different.
 		var inputAny *anypb.Any
-		if anyEmpty, err := anypb.New(&emptypb.Empty{}); err == nil {
-			inputAny = anyEmpty
+		if anyCfg, err := anypb.New(&networkinputsv3.SourceIPInput{}); err == nil {
+			inputAny = anyCfg
 		} else {
-			logger.Error(err, "failed to create empty Any for matcher input TypedConfig", "cidr", c.CIDR)
+			// Fallback: create empty Any to keep validation happy, but log — Envoy will reject this.
+			logger.Error(err, "failed to build source_ip typed-config Any, falling back to empty Any; Envoy will likely reject the listener", "cidr", c.CIDR)
+			if anyEmpty, err2 := anypb.New(&emptypb.Empty{}); err2 == nil {
+				inputAny = anyEmpty
+			}
 		}
 
 		single := &matcher.Matcher_MatcherList_Predicate_SinglePredicate{
 			Input: &xdscore.TypedExtensionConfig{
-				Name:        "source_ip",
+				// Use the canonical extension name.
+				Name:        "envoy.matching.inputs.source_ip",
 				TypedConfig: inputAny,
 			},
 			Matcher: &matcher.Matcher_MatcherList_Predicate_SinglePredicate_ValueMatch{
