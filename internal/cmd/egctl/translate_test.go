@@ -376,6 +376,7 @@ func TestTranslate(t *testing.T) {
 
 			opts := []cmp.Option{
 				cmpopts.IgnoreFields(metav1.Condition{}, "LastTransitionTime"),
+				cmpopts.IgnoreFields(metav1.ObjectMeta{}, "ResourceVersion"),
 			}
 
 			require.Empty(t, cmp.Diff(want, got, opts...))

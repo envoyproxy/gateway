@@ -32,11 +32,13 @@ import (
 	"github.com/envoyproxy/gateway/internal/xds/bootstrap"
 )
 
-const dummyClusterIP = "1.2.3.4"
+const (
+	dummyClusterIP        = "1.2.3.4"
+	defaultEnvoyProxyName = "default-envoy-proxy"
+)
 
 // LoadResourcesFromYAMLBytes will load Resources from given Kubernetes YAML string.
-// TODO: This function should be able to process arbitrary number of resources, tracked by https://github.com/envoyproxy/gateway/issues/3207.
-func LoadResourcesFromYAMLBytes(yamlBytes []byte, addMissingResources bool) (*Resources, error) {
+func LoadResourcesFromYAMLBytes(yamlBytes []byte, addMissingResources bool) (*LoadResources, error) {
 	r, err := loadKubernetesYAMLToResources(yamlBytes, addMissingResources)
 	if err != nil {
 		return nil, err
@@ -53,14 +55,16 @@ func LoadResourcesFromYAMLBytes(yamlBytes []byte, addMissingResources bool) (*Re
 }
 
 // loadKubernetesYAMLToResources converts a Kubernetes YAML string into GatewayAPI Resources.
-func loadKubernetesYAMLToResources(input []byte, addMissingResources bool) (*Resources, error) {
-	resources := NewResources()
+func loadKubernetesYAMLToResources(input []byte, addMissingResources bool) (*LoadResources, error) {
+	resources := NewLoadResources()
 	var useDefaultNamespace bool
 	providedNamespaceMap := sets.New[string]()
 	requiredNamespaceMap := sets.New[string]()
 	combinedScheme := envoygateway.GetScheme()
 	defaulter := GetGatewaySchemaDefaulter()
 	validator := GetDefaultValidator()
+	// This holds the index of one gatewayclass that needs attach default EnvoyProxy.
+	gatewayclassIndexes := make([]int, 0)
 
 	if err := IterYAMLBytes(input, func(yamlByte []byte) error {
 		var obj map[string]interface{}
@@ -131,8 +135,7 @@ func loadKubernetesYAMLToResources(input []byte, addMissingResources bool) (*Res
 				},
 				Spec: typedSpec.(egv1a1.EnvoyProxySpec),
 			}
-			// TODO: only support loading one envoyproxy for now.
-			resources.EnvoyProxyForGatewayClass = envoyProxy
+			resources.EnvoyProxies = append(resources.EnvoyProxies, envoyProxy)
 		case KindGatewayClass:
 			typedSpec := spec.Interface()
 			gatewayClass := &gwapiv1.GatewayClass{
@@ -146,11 +149,10 @@ func loadKubernetesYAMLToResources(input []byte, addMissingResources bool) (*Res
 				},
 				Spec: typedSpec.(gwapiv1.GatewayClassSpec),
 			}
-			// fill controller name by default controller name when gatewayclass controller name empty.
-			if addMissingResources && len(gatewayClass.Spec.ControllerName) == 0 {
-				gatewayClass.Spec.ControllerName = egv1a1.GatewayControllerName
+			if addMissingResources && gatewayClass.Spec.ParametersRef == nil {
+				gatewayclassIndexes = append(gatewayclassIndexes, len(resources.GatewayClasses))
 			}
-			resources.GatewayClass = gatewayClass
+			resources.GatewayClasses = append(resources.GatewayClasses, gatewayClass)
 		case KindGateway:
 			typedSpec := spec.Interface()
 			gateway := &gwapiv1.Gateway{
@@ -523,10 +525,20 @@ func loadKubernetesYAMLToResources(input []byte, addMissingResources bool) (*Res
 			}
 		}
 
-		// Add EnvoyProxy if it does not exist.
-		if resources.EnvoyProxyForGatewayClass == nil {
+		// Add default EnvoyProxy for gatewayclass.
+		if len(gatewayclassIndexes) > 0 {
 			if err := addDefaultEnvoyProxy(resources, config.DefaultNamespace); err != nil {
 				return nil, err
+			}
+
+			ns := gwapiv1.Namespace(config.DefaultNamespace)
+			for _, i := range gatewayclassIndexes {
+				resources.GatewayClasses[i].Spec.ParametersRef = &gwapiv1.ParametersReference{
+					Group:     gwapiv1.Group(egv1a1.GroupVersion.Group),
+					Kind:      KindEnvoyProxy,
+					Name:      defaultEnvoyProxyName,
+					Namespace: &ns,
+				}
 			}
 		}
 	}
@@ -624,12 +636,7 @@ func addMissingServices(requiredServices map[string]*corev1.Service, obj interfa
 	}
 }
 
-func addDefaultEnvoyProxy(resources *Resources, namespace string) error {
-	if resources.GatewayClass == nil {
-		return fmt.Errorf("the GatewayClass resource is required")
-	}
-
-	defaultEnvoyProxyName := "default-envoy-proxy"
+func addDefaultEnvoyProxy(resources *LoadResources, namespace string) error {
 	defaultBootstrapStr, err := bootstrap.GetRenderedBootstrapConfig(nil)
 	if err != nil {
 		return err
@@ -650,14 +657,7 @@ func addDefaultEnvoyProxy(resources *Resources, namespace string) error {
 			},
 		},
 	}
-	resources.EnvoyProxyForGatewayClass = ep
-	ns := gwapiv1.Namespace(namespace)
-	resources.GatewayClass.Spec.ParametersRef = &gwapiv1.ParametersReference{
-		Group:     gwapiv1.Group(gv.Group),
-		Kind:      KindEnvoyProxy,
-		Name:      defaultEnvoyProxyName,
-		Namespace: &ns,
-	}
+	resources.EnvoyProxies = append(resources.EnvoyProxies, ep)
 	return nil
 }
 

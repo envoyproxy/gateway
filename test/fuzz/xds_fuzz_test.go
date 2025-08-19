@@ -6,11 +6,15 @@
 package fuzz
 
 import (
+	"context"
 	"strings"
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/envoyproxy/gateway/internal/cmd/egctl"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
+	"github.com/envoyproxy/gateway/internal/message"
 )
 
 func FuzzGatewayAPIToXDS(f *testing.F) {
@@ -116,7 +120,15 @@ spec:
 			return
 		}
 
-		_, err = egctl.TranslateGatewayAPIToXds("default", "cluster.local", "all", rs)
+		pResources := new(message.ProviderResources)
+		loadAndReconcile := egctl.NewSimpleController(context.Background(), pResources, "default")
+		err = loadAndReconcile(rs)
+		require.NoError(t, err)
+
+		resources := pResources.GetResources()
+		require.NotEmpty(t, resources)
+
+		_, err = egctl.TranslateGatewayAPIToXds("default", "cluster.local", "all", resources[0])
 		if err != nil && strings.Contains(err.Error(), "failed to translate xds") {
 			t.Fatalf("%v", err)
 		}
