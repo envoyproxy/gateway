@@ -208,8 +208,20 @@ type TCPRouteContext struct {
 // GetRouteType returns the Kind of the Route object, HTTPRoute,
 // TLSRoute, TCPRoute, UDPRoute etc.
 func GetRouteType(route RouteContext) gwapiv1.Kind {
-	rv := reflect.ValueOf(route).Elem()
-	return gwapiv1.Kind(rv.FieldByName("Kind").String())
+	switch route.(type) {
+	case *HTTPRouteContext:
+		return gwapiv1.Kind(resource.KindHTTPRoute)
+	case *GRPCRouteContext:
+		return gwapiv1.Kind(resource.KindGRPCRoute)
+	case *TLSRouteContext:
+		return gwapiv1.Kind(resource.KindTLSRoute)
+	case *TCPRouteContext:
+		return gwapiv1.Kind(resource.KindTCPRoute)
+	case *UDPRouteContext:
+		return gwapiv1.Kind(resource.KindUDPRoute)
+	default:
+		panic("unknown route type: " + reflect.TypeOf(route).String())
+	}
 }
 
 // GetRuleNames returns the rule names targeted by the Route object.
