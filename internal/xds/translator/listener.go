@@ -889,7 +889,9 @@ func principalsToPredicate(p ir.Principal) *matcher.Matcher_MatcherList_Predicat
 		single := &matcher.Matcher_MatcherList_Predicate_SinglePredicate{
 			Input: inputCfg,
 			Matcher: &matcher.Matcher_MatcherList_Predicate_SinglePredicate_CustomMatch{
+				// Name must be non-empty or validation fails.
 				CustomMatch: &xdscore.TypedExtensionConfig{
+					Name:        "xds.ip_matcher",
 					TypedConfig: ipMatcherAny,
 				},
 			},
