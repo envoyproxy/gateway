@@ -29,7 +29,6 @@ import (
 	preservecasev3 "github.com/envoyproxy/go-control-plane/envoy/extensions/http/header_formatters/preserve_case/v3"
 	customheaderv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/http/original_ip_detection/custom_header/v3"
 	xffv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/http/original_ip_detection/xff/v3"
-	networkinputsv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/matching/common_inputs/network/v3"
 	quicv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/transport_sockets/quic/v3"
 	tlsv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/transport_sockets/tls/v3"
 	typev3 "github.com/envoyproxy/go-control-plane/envoy/type/v3"
@@ -38,7 +37,6 @@ import (
 	protobuf "google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/anypb"
 	"google.golang.org/protobuf/types/known/durationpb"
-	"google.golang.org/protobuf/types/known/emptypb"
 	"google.golang.org/protobuf/types/known/wrapperspb"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/log"
@@ -829,42 +827,71 @@ func buildTCPRBACMatcherFromRules(rules []*ir.AuthorizationRule, defaultAction e
 	}
 }
 
+func convertCIDRToXDS(cidr *ir.CIDRMatch) *xdscore.CidrRange {
+	// reuse same parsing logic as convertCIDR but return xdscore.CidrRange
+	if cidr == nil {
+		return &xdscore.CidrRange{
+			AddressPrefix: "",
+			PrefixLen:     wrapperspb.UInt32(0),
+		}
+	}
+	if cidr.CIDR != "" {
+		ip, ipNet, err := net.ParseCIDR(cidr.CIDR)
+		if err == nil {
+			ones, _ := ipNet.Mask.Size()
+			return &xdscore.CidrRange{
+				AddressPrefix: ip.String(),
+				PrefixLen:     wrapperspb.UInt32(uint32(ones)),
+			}
+		}
+		// fallback to separate fields if parse fails
+	}
+	return &xdscore.CidrRange{
+		AddressPrefix: cidr.IP,
+		PrefixLen:     wrapperspb.UInt32(cidr.MaskLen),
+	}
+}
+
 // principalsToPredicate converts principals to a matcher.Matcher_MatcherList_Predicate
 func principalsToPredicate(p ir.Principal) *matcher.Matcher_MatcherList_Predicate {
 	logger := log.FromContext(context.Background())
 
-	// Build OR over CIDRs as Matcher_MatcherList_Predicate with OrMatcher
 	var preds []*matcher.Matcher_MatcherList_Predicate
+
 	for _, c := range p.ClientCIDRs {
-		// ValueMatch: use StringMatcher with exact AddressPrefix/prefix if needed.
-		// Here we match on the CIDR string (e.g. "10.0.0.0/8")
-		valMatcher := &matcher.StringMatcher{
-			MatchPattern: &matcher.StringMatcher_Exact{Exact: c.CIDR},
-		}
+		// Build an xds IPMatcher that uses xds.core.v3.CidrRange
+		ipRange := convertCIDRToXDS(c)
 
-		// Build SinglePredicate: Input is the source_ip typed input (name only).
-		// Use the concrete typed-config for the "source_ip" input so Envoy can
-		// instantiate the input extractor. Replace the import above with the
-		// actual package path found in step 1 if different.
-		var inputAny *anypb.Any
-		if anyCfg, err := anypb.New(&networkinputsv3.SourceIPInput{}); err == nil {
-			inputAny = anyCfg
-		} else {
-			// Fallback: create empty Any to keep validation happy, but log — Envoy will reject this.
-			logger.Error(err, "failed to build source_ip typed-config Any, falling back to empty Any; Envoy will likely reject the listener", "cidr", c.CIDR)
-			if anyEmpty, err2 := anypb.New(&emptypb.Empty{}); err2 == nil {
-				inputAny = anyEmpty
-			}
-		}
-
-		single := &matcher.Matcher_MatcherList_Predicate_SinglePredicate{
-			Input: &xdscore.TypedExtensionConfig{
-				// Use the canonical extension name.
-				Name:        "envoy.matching.inputs.source_ip",
-				TypedConfig: inputAny,
+		ipMatcher := &matcher.IPMatcher{
+			RangeMatchers: []*matcher.IPMatcher_IPRangeMatcher{
+				{
+					Ranges: []*xdscore.CidrRange{ipRange},
+				},
 			},
-			Matcher: &matcher.Matcher_MatcherList_Predicate_SinglePredicate_ValueMatch{
-				ValueMatch: valMatcher,
+		}
+
+		// Marshal IPMatcher into Any for use as a custom match TypedExtensionConfig
+		ipMatcherAny, err := anypb.New(ipMatcher)
+		if err != nil {
+			logger.Error(err, "failed to marshal IPMatcher to Any, falling back to empty Any", "cidr", c.CIDR)
+			ipMatcherAny = &anypb.Any{}
+		}
+
+		// Input: source_ip input typed-config (type URL only)
+		inputCfg := &xdscore.TypedExtensionConfig{
+			Name: "envoy.matching.inputs.source_ip",
+			TypedConfig: &anypb.Any{
+				TypeUrl: "type.googleapis.com/envoy.extensions.matching.common_inputs.network.v3.SourceIP",
+			},
+		}
+
+		// SinglePredicate with CustomMatch carrying the IPMatcher typed-config
+		single := &matcher.Matcher_MatcherList_Predicate_SinglePredicate{
+			Input: inputCfg,
+			Matcher: &matcher.Matcher_MatcherList_Predicate_SinglePredicate_CustomMatch{
+				CustomMatch: &xdscore.TypedExtensionConfig{
+					TypedConfig: ipMatcherAny,
+				},
 			},
 		}
 
@@ -877,7 +904,6 @@ func principalsToPredicate(p ir.Principal) *matcher.Matcher_MatcherList_Predicat
 
 	switch len(preds) {
 	case 0:
-		// never match
 		return &matcher.Matcher_MatcherList_Predicate{
 			MatchType: &matcher.Matcher_MatcherList_Predicate_OrMatcher{
 				OrMatcher: &matcher.Matcher_MatcherList_Predicate_PredicateList{},
