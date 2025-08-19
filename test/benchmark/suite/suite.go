@@ -10,13 +10,17 @@ package suite
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
 	"path"
+	"sort"
 	"strconv"
+	"strings"
 	"testing"
 	"time"
 
+	"google.golang.org/protobuf/encoding/protojson"
 	batchv1 "k8s.io/api/batch/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
@@ -29,6 +33,7 @@ import (
 
 	opt "github.com/envoyproxy/gateway/internal/cmd/options"
 	kube "github.com/envoyproxy/gateway/internal/kubernetes"
+	"github.com/envoyproxy/gateway/test/benchmark/proto"
 	prom "github.com/envoyproxy/gateway/test/utils/prometheus"
 )
 
@@ -43,6 +48,27 @@ type BenchmarkTest struct {
 	ShortName   string
 	Description string
 	Test        func(*testing.T, *BenchmarkTestSuite) []*BenchmarkReport
+}
+
+type BenchmarkSuiteReport struct {
+	Title    string                 `json:"title"`
+	Settings map[string]string      `json:"settings,omitempty"`
+	Reports  []*BenchmarkTestReport `json:"reports,omitempty"`
+}
+
+type BenchmarkTestReport struct {
+	Title       string                 `json:"title"`
+	Description string                 `json:"description"`
+	Reports     []*BenchmarkCaseReport `json:"reports"`
+}
+
+type BenchmarkCaseReport struct {
+	Title            string        `json:"title"`
+	Result           *proto.Result `json:"result,omitempty"`
+	RouteConvergence PerfDuration
+	// Prometheus metrics and pprof profiles sampled data
+	Samples          []BenchmarkMetricSample `json:"samples,omitempty"`
+	HeapProfileImage string                  `json:"heapProfileImage,omitempty"`
 }
 
 type BenchmarkTestSuite struct {
@@ -142,14 +168,23 @@ func NewBenchmarkTestSuite(client client.Client, options BenchmarkOptions,
 	}, nil
 }
 
+var nighthawkProtoUnmarshalOptions = protojson.UnmarshalOptions{
+	DiscardUnknown: true,
+}
+
 func (b *BenchmarkTestSuite) Run(t *testing.T, tests []BenchmarkTest) {
 	tlog.Logf(t, "Running %d benchmark test", len(tests))
 
-	buf := make([]byte, 0)
-	writer := bytes.NewBuffer(buf)
-
-	writeSection(writer, "Benchmark Report", 1, "Benchmark test settings:")
-	renderEnvSettingsTable(writer)
+	suiteReport := &BenchmarkSuiteReport{
+		Title: "Benchmark Report",
+		Settings: map[string]string{
+			"rps":         os.Getenv("BENCHMARK_RPS"),
+			"connections": os.Getenv("BENCHMARK_CONNECTIONS"),
+			"duration":    os.Getenv("BENCHMARK_DURATION"),
+			"cpu":         os.Getenv("BENCHMARK_CPU_LIMITS"),
+			"memory":      os.Getenv("BENCHMARK_MEMORY_LIMITS"),
+		},
+	}
 
 	for _, test := range tests {
 		tlog.Logf(t, "Running benchmark test: %s", test.ShortName)
@@ -159,24 +194,96 @@ func (b *BenchmarkTestSuite) Run(t *testing.T, tests []BenchmarkTest) {
 			continue
 		}
 
-		// Generate a human-readable benchmark report for each test.
-		tlog.Logf(t, "Got %d reports for test: %s", len(reports), test.ShortName)
+		tCaseReports := make([]*BenchmarkCaseReport, 0, len(reports))
+		for _, r := range reports {
+			output := &proto.Output{}
+			data := trimNighthawkResult(r.Result)
+			if err := nighthawkProtoUnmarshalOptions.Unmarshal(data, output); err != nil {
+				tlog.Errorf(t, "Error unmarshalling nighthawk result for test %s: %v", test.ShortName, err)
+				tlog.Errorf(t, "with the data: %s", string(data))
+				continue
+			}
 
-		if err := RenderReport(writer, test.ShortName, test.Description, 2, reports); err != nil {
-			t.Errorf("Error generating report for %s: %v", test.ShortName, err)
+			// dump the pprof to profiles directory
+			// get the heap profile when control plane memory is at its maximum.
+			sortedSamples := make([]BenchmarkMetricSample, len(r.Samples))
+			copy(sortedSamples, r.Samples)
+			sort.Slice(sortedSamples, func(i, j int) bool {
+				return sortedSamples[i].ControlPlaneMem > sortedSamples[j].ControlPlaneMem
+			})
+			var heapPprofPath string
+			if len(sortedSamples) > 0 && sortedSamples[0].HeapProfile != nil {
+				heapPprof := sortedSamples[0].HeapProfile
+				heapPprofPath = path.Join(r.ProfilesOutputDir, fmt.Sprintf("heap.%s.pprof", r.Name))
+				_ = os.WriteFile(heapPprofPath, heapPprof, 0o600)
+
+				// The image is not be rendered yet, so it is a placeholder for the path.
+				// The image will be rendered after the test has finished.
+				rootDir := strings.SplitN(heapPprofPath, "/", 2)[0]
+				heapPprofPath = strings.TrimPrefix(heapPprofPath, rootDir+"/")
+			}
+			// let's clean the heap profile data now
+			for i := range sortedSamples {
+				sortedSamples[i].HeapProfile = nil
+			}
+
+			tCaseReports = append(tCaseReports, &BenchmarkCaseReport{
+				Title:            r.Name,
+				Result:           getGlobalResult(output),
+				RouteConvergence: r.RouteConvergence,
+				Samples:          sortedSamples,
+				HeapProfileImage: heapPprofPath,
+			})
 		}
+
+		suiteReport.Reports = append(suiteReport.Reports, &BenchmarkTestReport{
+			Title:       test.ShortName,
+			Description: test.Description,
+			Reports:     tCaseReports,
+		})
+
+		t.Logf("Got %d reports for test: %s", len(reports), test.ShortName)
 	}
 
+	data, _ := json.MarshalIndent(suiteReport, "", "  ")
 	if len(b.ReportSaveDir) > 0 {
-		reportPath := path.Join(b.ReportSaveDir, "benchmark_report.md")
-		if err := os.WriteFile(reportPath, writer.Bytes(), 0o600); err != nil {
+		reportPath := path.Join(b.ReportSaveDir, "benchmark_report.json")
+		if err := os.WriteFile(reportPath, data, 0o600); err != nil {
 			t.Errorf("Error writing report to path '%s': %v", reportPath, err)
 		} else {
 			tlog.Logf(t, "Writing report to path '%s' successfully", reportPath)
 		}
 	} else {
-		tlog.Logf(t, "%s", writer.Bytes())
+		t.Logf("%s", data)
 	}
+}
+
+func getGlobalResult(output *proto.Output) *proto.Result {
+	// just the results with name of global
+	if output == nil || output.Results == nil {
+		return nil
+	}
+
+	for _, r := range output.Results {
+		if r.Name == "global" {
+			return r
+		}
+	}
+
+	return nil
+}
+
+func trimNighthawkResult(result []byte) []byte {
+	// Trim the result to remove the lines which is not needed.
+	lines := bytes.Split(result, []byte("\n"))
+	// remove those lines starting with "[" or "Nighthawk"
+	outLines := make([][]byte, 0, len(lines))
+	for _, line := range lines {
+		if !bytes.HasPrefix(line, []byte("[")) && !bytes.HasPrefix(line, []byte("Nighthawk")) {
+			outLines = append(outLines, line)
+		}
+	}
+	return bytes.Join(outLines, []byte("\n"))
 }
 
 // Benchmark runs benchmark test as a Kubernetes Job, and return the benchmark result.
@@ -278,6 +385,7 @@ func prepareBenchmarkClientStaticArgs(options BenchmarkOptions) []string {
 		"--connections", options.Connections,
 		"--duration", options.Duration,
 		"--concurrency", options.Concurrency,
+		"--output-format", "json",
 	}
 	return staticArgs
 }

@@ -33,12 +33,12 @@ const (
 
 // BenchmarkMetricSample contains sampled metrics and profiles data.
 type BenchmarkMetricSample struct {
-	ControlPlaneMem float64
-	ControlPlaneCPU float64
-	DataPlaneMem    float64
-	DataPlaneCPU    float64
+	ControlPlaneMem float64 `json:"controlPlaneMem"`
+	ControlPlaneCPU float64 `json:"controlPlaneCPU"`
+	DataPlaneMem    float64 `json:"dataPlaneMem"`
+	DataPlaneCPU    float64 `json:"dataPlaneCPU"`
 
-	HeapProfile []byte
+	HeapProfile []byte `json:"heapProfile,omitempty"` // Memory heap profile data.
 }
 
 type BenchmarkReport struct {
