@@ -10,12 +10,15 @@ import (
 	"reflect"
 	"testing"
 
+	matcherv3 "github.com/cncf/xds/go/xds/type/matcher/v3"
 	listenerv3 "github.com/envoyproxy/go-control-plane/envoy/config/listener/v3"
+	rbacv3 "github.com/envoyproxy/go-control-plane/envoy/config/rbac/v3"
 	routev3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
 	hcmv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/http_connection_manager/v3"
 	typev3 "github.com/envoyproxy/go-control-plane/envoy/type/v3"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"google.golang.org/protobuf/encoding/prototext"
 	"google.golang.org/protobuf/proto"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
@@ -232,4 +235,173 @@ func hasNetworkFilter(fc *listenerv3.FilterChain, name string) bool {
 		}
 	}
 	return false
+}
+
+func Test_buildTCPRBACMatcherFromRules_DefaultActionAllow(t *testing.T) {
+	rules := []*ir.AuthorizationRule{
+		{
+			Name:   "allow-local",
+			Action: egv1a1.AuthorizationActionAllow,
+			Principal: ir.Principal{
+				ClientCIDRs: []*ir.CIDRMatch{{CIDR: "192.168.254.0/24"}},
+			},
+		},
+		{
+			Name:   "deny-all",
+			Action: egv1a1.AuthorizationActionDeny,
+			Principal: ir.Principal{
+				ClientCIDRs: []*ir.CIDRMatch{{CIDR: "0.0.0.0/0"}},
+			},
+		},
+	}
+
+	rbac := buildTCPRBACMatcherFromRules(rules, egv1a1.AuthorizationActionAllow)
+	require.NotNil(t, rbac)
+
+	// debug dump (visible with -v)
+	var dump string
+	mo := prototext.MarshalOptions{Multiline: true}
+	if b, err := mo.Marshal(rbac); err == nil {
+		dump = string(b)
+	} else {
+		t.Logf("failed to marshal rbac to text: %v", err)
+	}
+	t.Logf("rbac dump:\n%s", dump)
+
+	// Basic shape checks
+	require.NotNil(t, rbac.Matcher)
+	if ml := rbac.Matcher.GetMatcherList(); ml != nil {
+		require.Len(t, ml.GetMatchers(), 2, "expected two field matchers for the two rules")
+	}
+
+	// Loose textual checks
+	require.Contains(t, dump, "tcp-authz-allow")
+	require.Contains(t, dump, "tcp-authz-deny")
+	require.Contains(t, dump, "default")
+
+	// Verify default action typed-config decodes to ALLOW (zero value)
+	onNo := rbac.Matcher.GetOnNoMatch()
+	require.NotNil(t, onNo, "expected OnNoMatch to be set")
+	om := onNo.GetOnMatch()
+	require.NotNil(t, om, "expected OnNoMatch.OnMatch to be set")
+
+	v, ok := om.(*matcherv3.Matcher_OnMatch_Action)
+	require.True(t, ok, "expected OnMatch to be Action variant")
+	require.NotNil(t, v.Action, "expected TypedExtensionConfig on OnMatch.Action")
+	require.NotNil(t, v.Action.GetTypedConfig(), "expected TypedConfig on OnMatch.Action")
+
+	act := &rbacv3.Action{}
+	require.NoError(t, v.Action.GetTypedConfig().UnmarshalTo(act))
+	require.Equal(t, rbacv3.RBAC_ALLOW, act.Action)
+}
+
+func Test_buildTCPRBACMatcherFromRules_DefaultActionAllow_TCP(t *testing.T) {
+	rules := []*ir.AuthorizationRule{
+		{
+			Name:   "allow-local",
+			Action: egv1a1.AuthorizationActionAllow,
+			Principal: ir.Principal{
+				ClientCIDRs: []*ir.CIDRMatch{{CIDR: "192.168.254.0/24"}},
+			},
+		},
+		{
+			Name:   "deny-all",
+			Action: egv1a1.AuthorizationActionDeny,
+			Principal: ir.Principal{
+				ClientCIDRs: []*ir.CIDRMatch{{CIDR: "0.0.0.0/0"}},
+			},
+		},
+	}
+
+	r := buildTCPRBACMatcherFromRules(rules, egv1a1.AuthorizationActionAllow)
+	require.NotNil(t, r)
+
+	// debug dump
+	mo := prototext.MarshalOptions{Multiline: true}
+	if b, err := mo.Marshal(r); err == nil {
+		t.Logf("tcp rbac dump:\n%s", string(b))
+	}
+
+	// Basic checks
+	require.NotNil(t, r.Matcher)
+	if ml := r.Matcher.GetMatcherList(); ml != nil {
+		require.Len(t, ml.GetMatchers(), 2)
+	}
+
+	onNo := r.Matcher.GetOnNoMatch()
+	require.NotNil(t, onNo)
+
+	om := onNo.GetOnMatch()
+	require.NotNil(t, om)
+
+	v, ok := om.(*matcherv3.Matcher_OnMatch_Action)
+	require.True(t, ok)
+	require.NotNil(t, v.Action)
+	require.NotNil(t, v.Action.GetTypedConfig())
+
+	act := &rbacv3.Action{}
+	require.NoError(t, v.Action.GetTypedConfig().UnmarshalTo(act))
+	require.Equal(t, rbacv3.RBAC_ALLOW, act.Action)
+}
+
+func Test_EmptyActionProtoDefaultsToAllow(t *testing.T) {
+	act := &rbacv3.Action{} // empty
+	b, err := proto.Marshal(act)
+	require.NoError(t, err)
+
+	act2 := &rbacv3.Action{}
+	require.NoError(t, proto.Unmarshal(b, act2))
+
+	// Zero value of the enum should equal RBAC_ALLOW if RBAC_ALLOW is defined as zero.
+	require.Equal(t, rbacv3.RBAC_ALLOW, act2.Action)
+}
+
+func Test_buildRBACPerRoute_DefaultActionAllow(t *testing.T) {
+	auth := &ir.Authorization{
+		// DefaultAction on IR is the gateway API enum type
+		DefaultAction: egv1a1.AuthorizationActionAllow,
+		// no rules
+	}
+
+	rp, err := buildRBACPerRoute(auth)
+	require.NoError(t, err)
+	require.NotNil(t, rp)
+
+	// Debug: marshal to text for easier failure diagnosis in -v runs.
+	mo := prototext.MarshalOptions{Multiline: true}
+	if b, err := mo.Marshal(rp); err == nil {
+		t.Logf("rbacPerRoute dump:\n%s", string(b))
+	}
+
+	// The RBAC per-route can be represented either as a Matcher (with OnNoMatch typed-config)
+	// or as a simple Rules variant. Handle both shapes.
+	if rp.Rbac != nil {
+		// If matcher variant present:
+		if m := rp.Rbac.GetMatcher(); m != nil {
+			onNo := m.GetOnNoMatch()
+			require.NotNil(t, onNo)
+			om := onNo.GetOnMatch()
+			require.NotNil(t, om)
+
+			actVariant, ok := om.(*matcherv3.Matcher_OnMatch_Action)
+			require.True(t, ok, "expected Action variant for OnMatch")
+			require.NotNil(t, actVariant.Action)
+			require.NotNil(t, actVariant.Action.GetTypedConfig())
+
+			any := actVariant.Action.GetTypedConfig()
+			a := &rbacv3.Action{}
+			require.NoError(t, any.UnmarshalTo(a))
+			require.Equal(t, rbacv3.RBAC_ALLOW, a.Action)
+			return
+		}
+
+		// If Rules variant present:
+		if rules := rp.Rbac.GetRules(); rules != nil {
+			// Rules.Action should reflect default action
+			require.Equal(t, rbacv3.RBAC_ALLOW, rules.GetAction())
+			return
+		}
+	}
+
+	t.Fatalf("unexpected RBAC per-route shape: %+v", rp)
 }
