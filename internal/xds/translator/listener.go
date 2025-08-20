@@ -472,7 +472,7 @@ func (t *Translator) addHCMToXDSListener(
 		filterChain.TransportSocket = tSocket
 		filterChain.Name = httpsListenerFilterChainName(irListener)
 
-		if err := addServerNamesMatch(xdsListener, filterChain, irListener.Hostnames); err != nil {
+		if err := addFilterChainMatch(xdsListener, filterChain, irListener.Hostnames, irListener.TLS.ALPNProtocols); err != nil {
 			return err
 		}
 
@@ -598,7 +598,12 @@ func buildEarlyHeaderMutation(headers *ir.HeaderSettings) []*corev3.TypedExtensi
 	}
 }
 
-func addServerNamesMatch(xdsListener *listenerv3.Listener, filterChain *listenerv3.FilterChain, hostnames []string) error {
+func addFilterChainMatch(
+	xdsListener *listenerv3.Listener,
+	filterChain *listenerv3.FilterChain,
+	hostnames []string,
+	alpnProtocols []string,
+) error {
 	// Skip adding ServerNames match for:
 	// 1. nil listeners
 	// 2. UDP (QUIC) listeners used for HTTP3
@@ -615,7 +620,16 @@ func addServerNamesMatch(xdsListener *listenerv3.Listener, filterChain *listener
 		filterChain.FilterChainMatch = &listenerv3.FilterChainMatch{
 			ServerNames: hostnames,
 		}
+	}
+	if len(alpnProtocols) == 1 && alpnProtocols[0] == "h2" {
+		if filterChain.FilterChainMatch == nil {
+			filterChain.FilterChainMatch = &listenerv3.FilterChainMatch{}
+		}
+		// Add ALPN protocols to the filter chain match to prevent protocol downgrades.
+		filterChain.FilterChainMatch.ApplicationProtocols = alpnProtocols
+	}
 
+	if filterChain.FilterChainMatch != nil {
 		if err := addXdsTLSInspectorFilter(xdsListener); err != nil {
 			return err
 		}
@@ -723,7 +737,7 @@ func (t *Translator) addXdsTCPFilterChain(
 	}
 
 	if isTLSPassthrough {
-		if err := addServerNamesMatch(xdsListener, filterChain, irRoute.TLS.TLSInspectorConfig.SNIs); err != nil {
+		if err := addFilterChainMatch(xdsListener, filterChain, irRoute.TLS.TLSInspectorConfig.SNIs, []string{}); err != nil {
 			return err
 		}
 	}
@@ -733,7 +747,7 @@ func (t *Translator) addXdsTCPFilterChain(
 		if cfg := irRoute.TLS.TLSInspectorConfig; cfg != nil {
 			snis = cfg.SNIs
 		}
-		if err := addServerNamesMatch(xdsListener, filterChain, snis); err != nil {
+		if err := addFilterChainMatch(xdsListener, filterChain, snis, []string{}); err != nil {
 			return err
 		}
 		tSocket, err := buildXdsDownstreamTLSSocket(irRoute.TLS.Terminate)
