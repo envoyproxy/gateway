@@ -135,7 +135,9 @@ func renderProfilesTable(writer io.Writer, target, key string, titleLevel int, r
 		})
 
 		heapPprof := sortedSamples[0].HeapProfile
-		heapPprofPath := path.Join(report.ProfilesOutputDir, fmt.Sprintf("heap.%s.pprof", report.Name))
+		// report name contains spaces, replace them with dashes to make it URL-friendly.
+		friendlyFilename := strings.ReplaceAll(report.Name, " ", "-")
+		heapPprofPath := path.Join(report.ProfilesOutputDir, fmt.Sprintf("heap.%s.pprof", friendlyFilename))
 		_ = os.WriteFile(heapPprofPath, heapPprof, 0o600)
 
 		// The image is not be rendered yet, so it is a placeholder for the path.
@@ -143,7 +145,7 @@ func renderProfilesTable(writer io.Writer, target, key string, titleLevel int, r
 		rootDir := strings.SplitN(heapPprofPath, "/", 2)[0]
 		heapPprofPath = strings.TrimPrefix(heapPprofPath, rootDir+"/")
 		writeSection(writer, report.Name, titleLevel+1,
-			fmt.Sprintf("![%s-%s](%s.png)", key, report.Name, strings.TrimSuffix(heapPprofPath, ".pprof")))
+			fmt.Sprintf("![%s-%s](%s.png)", key, friendlyFilename, strings.TrimSuffix(heapPprofPath, ".pprof")))
 	}
 }
 
