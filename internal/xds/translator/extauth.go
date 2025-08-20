@@ -8,6 +8,7 @@ package translator
 import (
 	"errors"
 	"net/url"
+	"time"
 
 	corev3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	routev3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
@@ -125,9 +126,14 @@ func extAuthConfig(extAuth *ir.ExtAuth) *extauthv3.ExtAuthz {
 		}
 	}
 
+	timeout := durationpb.New(time.Duration(defaultExtServiceRequestTimeout) * time.Second)
+	if extAuth.Timeout != nil {
+		timeout = durationpb.New(extAuth.Timeout.Duration)
+	}
+
 	if extAuth.HTTP != nil {
 		config.Services = &extauthv3.ExtAuthz_HttpService{
-			HttpService: httpService(extAuth.HTTP),
+			HttpService: httpService(extAuth.HTTP, timeout),
 		}
 	} else if extAuth.GRPC != nil {
 		config.Services = &extauthv3.ExtAuthz_GrpcService{
@@ -135,9 +141,7 @@ func extAuthConfig(extAuth *ir.ExtAuth) *extauthv3.ExtAuthz {
 				TargetSpecifier: &corev3.GrpcService_EnvoyGrpc_{
 					EnvoyGrpc: grpcService(extAuth.GRPC),
 				},
-				Timeout: &durationpb.Duration{
-					Seconds: defaultExtServiceRequestTimeout,
-				},
+				Timeout: timeout,
 			},
 		}
 	}
@@ -145,7 +149,7 @@ func extAuthConfig(extAuth *ir.ExtAuth) *extauthv3.ExtAuthz {
 	return config
 }
 
-func httpService(http *ir.HTTPExtAuthService) *extauthv3.HttpService {
+func httpService(http *ir.HTTPExtAuthService, timeout *durationpb.Duration) *extauthv3.HttpService {
 	var (
 		uri              string
 		headersToBackend []*matcherv3.StringMatcher
@@ -171,9 +175,7 @@ func httpService(http *ir.HTTPExtAuthService) *extauthv3.HttpService {
 		HttpUpstreamType: &corev3.HttpUri_Cluster{
 			Cluster: http.Destination.Name,
 		},
-		Timeout: &durationpb.Duration{
-			Seconds: defaultExtServiceRequestTimeout,
-		},
+		Timeout: timeout,
 	}
 
 	for _, header := range http.HeadersToBackend {

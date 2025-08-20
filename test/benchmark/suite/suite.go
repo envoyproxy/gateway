@@ -183,7 +183,7 @@ func (b *BenchmarkTestSuite) Run(t *testing.T, tests []BenchmarkTest) {
 // TODO: currently running benchmark test via nighthawk_client,
 // consider switching to gRPC nighthawk-service for benchmark test.
 // ref: https://github.com/envoyproxy/nighthawk/blob/main/api/client/service.proto
-func (b *BenchmarkTestSuite) Benchmark(t *testing.T, ctx context.Context, jobName, resultTitle, gatewayHostPort, hostnamePattern string, host int) (*BenchmarkReport, error) {
+func (b *BenchmarkTestSuite) Benchmark(t *testing.T, ctx context.Context, jobName, resultTitle, gatewayHostPort, hostnamePattern string, host int, startTime time.Time) (*BenchmarkReport, error) {
 	t.Logf("Running benchmark test: %s", resultTitle)
 
 	requestHeaders := make([]string, 0, host)
@@ -230,7 +230,7 @@ func (b *BenchmarkTestSuite) Benchmark(t *testing.T, ctx context.Context, jobNam
 
 		// Sample the metrics and profiles at runtime.
 		// Do not consider it as an error, fail sampling should not affect test running.
-		if err := report.Sample(ctx); err != nil {
+		if err := report.Sample(ctx, startTime); err != nil {
 			t.Logf("Error occurs while sampling metrics or profiles: %v", err)
 		}
 
