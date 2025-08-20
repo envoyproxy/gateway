@@ -1095,7 +1095,7 @@ func validateRouteRuleSectionName(
 	targetKey policyTargetRouteKey,
 	route *policyRouteTargetContext,
 ) *status.PolicyResolveError {
-	if !route.RouteContext.HasRuleNames(sectionName) {
+	if !route.HasRuleNames(sectionName) {
 		message := fmt.Sprintf("No section name %s found for %s %s/%s",
 			string(sectionName), targetKey.Kind, targetKey.Namespace, targetKey.Name)
 
