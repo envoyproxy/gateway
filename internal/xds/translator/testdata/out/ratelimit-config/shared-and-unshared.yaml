@@ -1,0 +1,58 @@
+name: default/policy-for-route
+domain: default/policy-for-route
+descriptors:
+  - key: default/policy-for-route/rule/0
+    value: default/policy-for-route/rule/0
+    rate_limit: null
+    descriptors:
+      - key: rule-0-match-0
+        value: rule-0-match-0
+        rate_limit:
+          requests_per_unit: 3
+          unit: HOUR
+          unlimited: false
+          name: ""
+          replaces: []
+        descriptors: []
+        shadow_mode: false
+        detailed_metric: false
+    shadow_mode: false
+    detailed_metric: false
+---
+name: envoy-gateway/gateway-1/http
+domain: envoy-gateway/gateway-1/http
+descriptors:
+  - key: httproute/default/httproute-1/rule/0/match/0/gateway_envoyproxy_io
+    value: httproute/default/httproute-1/rule/0/match/0/gateway_envoyproxy_io
+    rate_limit: null
+    descriptors:
+      - key: rule-0-match-0
+        value: rule-0-match-0
+        rate_limit:
+          requests_per_unit: 3
+          unit: HOUR
+          unlimited: false
+          name: ""
+          replaces: []
+        descriptors: []
+        shadow_mode: false
+        detailed_metric: false
+    shadow_mode: false
+    detailed_metric: false
+  - key: httproute/default/httproute-2/rule/0/match/0/gateway_envoyproxy_io
+    value: httproute/default/httproute-2/rule/0/match/0/gateway_envoyproxy_io
+    rate_limit: null
+    descriptors:
+      - key: rule-0-match-0
+        value: rule-0-match-0
+        rate_limit:
+          requests_per_unit: 3
+          unit: HOUR
+          unlimited: false
+          name: ""
+          replaces: []
+        descriptors: []
+        shadow_mode: false
+        detailed_metric: false
+    shadow_mode: false
+    detailed_metric: false
