@@ -89,6 +89,7 @@ var ScaleHTTPRoutes = suite.BenchmarkTest{
 				testName := fmt.Sprintf("scaling down httproutes to %d with %d routes per hostname", scale, routePerHost)
 
 				t.Run(testName, func(t *testing.T) {
+					startTime := time.Now()
 					err = bSuite.ScaleDownHTTPRoutes(ctx, [2]uint16{start, scale}, routeNameFormat, gatewayNN.Name, func(route *gwapiv1.HTTPRoute) {
 						routeNN := routeNNs[len(routeNNs)-1]
 						routeNNs = routeNNs[:len(routeNNs)-1]
@@ -106,7 +107,7 @@ var ScaleHTTPRoutes = suite.BenchmarkTest{
 
 					// Run benchmark test at different scale.
 					jobName := fmt.Sprintf("scale-down-httproutes-%d", scale)
-					report, err := bSuite.Benchmark(t, ctx, jobName, testName, gatewayAddr, routeHostnameFormat, int(totalHosts))
+					report, err := bSuite.Benchmark(t, ctx, jobName, testName, gatewayAddr, routeHostnameFormat, int(totalHosts), startTime)
 					require.NoError(t, err)
 
 					reports = append(reports, report)
