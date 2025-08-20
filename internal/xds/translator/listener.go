@@ -734,15 +734,18 @@ func buildTCPRBACMatcherFromRules(rules []*ir.AuthorizationRule, defaultAction e
 			act = rbacv3.RBAC_DENY
 		}
 
-		// Typed config for action: envoy.config.rbac.v3.Action
-		actAny, err := anypb.New(&rbacv3.Action{Action: act})
+		// name for the action typed extension config (use underlying string)
+		actionName := strings.ToLower(string(r.Action))
+
+		// Action message must include a non-empty Name for proto validation.
+		actAny, err := anypb.New(&rbacv3.Action{
+			Name:   fmt.Sprintf("tcp-authz-%s", actionName),
+			Action: act,
+		})
 		if err != nil {
 			logger.Error(err, "failed to marshal rbac action to Any, skipping rule", "rule", r.Name)
 			continue
 		}
-
-		// name for the action typed extension config (use underlying string)
-		actionName := strings.ToLower(string(r.Action))
 
 		fieldMatchers = append(fieldMatchers, &matcher.Matcher_MatcherList_FieldMatcher{
 			Predicate: pred,
@@ -762,7 +765,11 @@ func buildTCPRBACMatcherFromRules(rules []*ir.AuthorizationRule, defaultAction e
 	if defaultAction == egv1a1.AuthorizationActionAllow {
 		def = rbacv3.RBAC_ALLOW
 	}
-	defAny, err := anypb.New(&rbacv3.Action{Action: def})
+	// Default Action must also include a non-empty Name.
+	defAny, err := anypb.New(&rbacv3.Action{
+		Name:   "default",
+		Action: def,
+	})
 	if err != nil {
 		logger.Error(err, "failed to marshal default rbac action to Any, using empty Any")
 		defAny = &anypb.Any{}
@@ -922,11 +929,9 @@ func buildTCPFilterChain(
 				// quick structural check for nil TypedConfig on common locations
 				var issues []string
 				if rbacCfg.Matcher != nil {
-					// Check OnNoMatch action typedconfig
+					// onNo.OnMatch is a oneof; check for the Action variant via type assertion
 					if onNo := rbacCfg.Matcher.OnNoMatch; onNo != nil {
-						// onNo.OnMatch is a oneof; check for the Action variant
-						switch om := onNo.OnMatch.(type) {
-						case *matcher.Matcher_OnMatch_Action:
+						if om, ok := onNo.OnMatch.(*matcher.Matcher_OnMatch_Action); ok {
 							if om.Action != nil && om.Action.TypedConfig == nil {
 								issues = append(issues, "Matcher.OnNoMatch.Action.TypedConfig")
 							}
@@ -939,13 +944,10 @@ func buildTCPFilterChain(
 							if fm == nil {
 								continue
 							}
-							if fm.OnMatch != nil {
-								// fm.OnMatch.OnMatch is a oneof; check Action variant
-								switch om := fm.OnMatch.OnMatch.(type) {
-								case *matcher.Matcher_OnMatch_Action:
-									if om.Action != nil && om.Action.TypedConfig == nil {
-										issues = append(issues, fmt.Sprintf("Matcher.MatcherList.Matchers[%d].OnMatch.Action.TypedConfig", i))
-									}
+							// fm.OnMatch.OnMatch is a oneof; check Action variant via type assertion
+							if om, ok := fm.OnMatch.OnMatch.(*matcher.Matcher_OnMatch_Action); ok {
+								if om.Action != nil && om.Action.TypedConfig == nil {
+									issues = append(issues, fmt.Sprintf("Matcher.MatcherList.Matchers[%d].OnMatch.Action.TypedConfig", i))
 								}
 							}
 							if fm.Predicate != nil {
