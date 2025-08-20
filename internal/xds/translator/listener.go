@@ -719,31 +719,10 @@ func (t *Translator) addXdsTCPFilterChain(
 }
 
 func buildTCPRBACMatcherFromRules(rules []*ir.AuthorizationRule, defaultAction egv1a1.AuthorizationAction) *rbacconfig.RBAC {
-	logger := log.Log.WithName("tcp-rbac")
-	logger.Info("Building TCP RBAC matcher from rules",
-		"num_rules", len(rules),
-		"default_action_spec", string(defaultAction),
-	)
-
 	// Build a list of FieldMatchers for MatcherList
 	var fieldMatchers []*matcher.Matcher_MatcherList_FieldMatcher
 
-	for i, r := range rules {
-		logger.Info("Processing rule",
-			"index", i,
-			"name", r.Name,
-			"action", string(r.Action),
-			"num_principal_cidrs", len(r.Principal.ClientCIDRs),
-		)
-		for j, c := range r.Principal.ClientCIDRs {
-			logger.Info("Principal CIDR",
-				"rule_index", i,
-				"cidr_index", j,
-				"cidr", c.CIDR,
-				"ip", c.IP,
-				"mask_len", c.MaskLen,
-			)
-		}
+	for _, r := range rules {
 		// Build predicate from principals (returns *matcher.Matcher_MatcherList_Predicate)
 		pred := principalsToPredicate(r.Principal)
 
@@ -752,17 +731,9 @@ func buildTCPRBACMatcherFromRules(rules []*ir.AuthorizationRule, defaultAction e
 		if r.Action == egv1a1.AuthorizationActionDeny {
 			act = rbacv3.RBAC_DENY
 		}
-		logger.Info("Resolved rule action",
-			"rule_index", i,
-			"name", r.Name,
-			"rbac_action", act.String(),
-		)
+
 		// Typed config for action: envoy.config.rbac.v3.Action
-		actAny, err := anypb.New(&rbacv3.Action{Action: act})
-		if err != nil {
-			logger.Error(err, "failed to marshal rule action to Any", "rule_index", i, "action", act.String())
-			actAny = nil
-		}
+		actAny, _ := proto.ToAnyWithValidation(&rbacv3.Action{Action: act})
 
 		// name for the action typed extension config (use underlying string)
 		actionName := strings.ToLower(string(r.Action))
@@ -779,20 +750,13 @@ func buildTCPRBACMatcherFromRules(rules []*ir.AuthorizationRule, defaultAction e
 			},
 		})
 	}
-	logger.Info("Built field matchers", "count", len(fieldMatchers))
 
 	// Default action
 	def := rbacv3.RBAC_DENY
 	if defaultAction == egv1a1.AuthorizationActionAllow {
 		def = rbacv3.RBAC_ALLOW
 	}
-	logger.Info("OnNoMatch default RBAC action", "rbac_default_action", def.String())
-
-	defAny, err := anypb.New(&rbacv3.Action{Action: def})
-	if err != nil {
-		logger.Error(err, "failed to marshal default action to Any", "default_action", def.String())
-		defAny = nil
-	}
+	defAny, _ := proto.ToAnyWithValidation(&rbacv3.Action{Action: def})
 
 	// Top-level matcher uses Matcher_MatcherList_ wrapper
 	topMatcher := &matcher.Matcher{
@@ -811,89 +775,36 @@ func buildTCPRBACMatcherFromRules(rules []*ir.AuthorizationRule, defaultAction e
 		},
 	}
 
-	logger.Info("Completed RBAC matcher construction")
-	// debug: log summary of constructed matcher
-	defaultActionStr := string(defaultAction)
-	matcherHasOnNoMatch := topMatcher.GetOnNoMatch() != nil
-	logger.Info("Completed RBAC matcher construction",
-		"num_field_matchers", len(fieldMatchers),
-		"default_action", defaultActionStr,
-		"matcher_has_on_no_match", matcherHasOnNoMatch,
-	)
-
 	return &rbacconfig.RBAC{
 		StatPrefix: "tcp_rbac_",
 		Matcher:    topMatcher,
 	}
 }
 
-func convertCIDRToXDS(cidr *ir.CIDRMatch) *xdscore.CidrRange {
-	// reuse same parsing logic as convertCIDR but return xdscore.CidrRange
-	if cidr == nil {
-		return &xdscore.CidrRange{
-			AddressPrefix: "",
-			PrefixLen:     wrapperspb.UInt32(0),
-		}
-	}
-	if cidr.CIDR != "" {
-		ip, ipNet, err := net.ParseCIDR(cidr.CIDR)
-		if err == nil {
-			ones, _ := ipNet.Mask.Size()
-			return &xdscore.CidrRange{
-				AddressPrefix: ip.String(),
-				PrefixLen:     wrapperspb.UInt32(uint32(ones)),
-			}
-		}
-		// fallback to separate fields if parse fails
-	}
-	return &xdscore.CidrRange{
-		AddressPrefix: cidr.IP,
-		PrefixLen:     wrapperspb.UInt32(cidr.MaskLen),
-	}
-}
-
 // principalsToPredicate converts principals to a matcher.Matcher_MatcherList_Predicate
 func principalsToPredicate(p ir.Principal) *matcher.Matcher_MatcherList_Predicate {
-	logger := log.FromContext(context.Background())
-
+	// Build OR over CIDRs as Matcher_MatcherList_Predicate with OrMatcher
 	var preds []*matcher.Matcher_MatcherList_Predicate
-
 	for _, c := range p.ClientCIDRs {
-		// Build an xds IPMatcher that uses xds.core.v3.CidrRange
-		ipRange := convertCIDRToXDS(c)
-
-		ipMatcher := &matcher.IPMatcher{
-			RangeMatchers: []*matcher.IPMatcher_IPRangeMatcher{
-				{
-					Ranges: []*xdscore.CidrRange{ipRange},
-				},
-			},
+		// ValueMatch: use StringMatcher with exact AddressPrefix/prefix if needed.
+		// Here we match on the CIDR string (e.g. "10.0.0.0/8")
+		valMatcher := &matcher.StringMatcher{
+			MatchPattern: &matcher.StringMatcher_Exact{Exact: c.CIDR},
 		}
 
-		// Marshal IPMatcher into Any for use as a custom match TypedExtensionConfig
-		ipMatcherAny, err := anypb.New(ipMatcher)
-		if err != nil {
-			logger.Error(err, "failed to marshal IPMatcher to Any, falling back to empty Any", "cidr", c.CIDR)
-			ipMatcherAny = &anypb.Any{}
-		}
-
-		// Input: source_ip input typed-config (type URL only)
-		inputCfg := &xdscore.TypedExtensionConfig{
-			Name: "envoy.matching.inputs.source_ip",
-			TypedConfig: &anypb.Any{
-				TypeUrl: "type.googleapis.com/envoy.extensions.matching.common_inputs.network.v3.SourceIP",
-			},
-		}
-
-		// SinglePredicate with CustomMatch carrying the IPMatcher typed-config
+		// Build SinglePredicate: Input is the source_ip typed input.
+		// Provide TypedConfig (TypeUrl) so Envoy validation passes.
 		single := &matcher.Matcher_MatcherList_Predicate_SinglePredicate{
-			Input: inputCfg,
-			Matcher: &matcher.Matcher_MatcherList_Predicate_SinglePredicate_CustomMatch{
-				// Name must be non-empty or validation fails.
-				CustomMatch: &xdscore.TypedExtensionConfig{
-					Name:        "xds.ip_matcher",
-					TypedConfig: ipMatcherAny,
+			Input: &xdscore.TypedExtensionConfig{
+				// Use the registered extension name
+				Name: "envoy.matching.inputs.source_ip",
+				// Provide the canonical TypedConfig TypeUrl so the proto is valid.
+				TypedConfig: &anypb.Any{
+					TypeUrl: "type.googleapis.com/envoy.extensions.matching.common_inputs.network.v3.SourceIPInput",
 				},
+			},
+			Matcher: &matcher.Matcher_MatcherList_Predicate_SinglePredicate_ValueMatch{
+				ValueMatch: valMatcher,
 			},
 		}
 
@@ -906,6 +817,7 @@ func principalsToPredicate(p ir.Principal) *matcher.Matcher_MatcherList_Predicat
 
 	switch len(preds) {
 	case 0:
+		// never match
 		return &matcher.Matcher_MatcherList_Predicate{
 			MatchType: &matcher.Matcher_MatcherList_Predicate_OrMatcher{
 				OrMatcher: &matcher.Matcher_MatcherList_Predicate_PredicateList{},
@@ -949,37 +861,19 @@ func buildTCPFilterChain(
 		allowPolicies, denyPolicies := splitTCPAuthRules(irRoute.Security.Authorization.Rules)
 		hasAllow, hasDeny := len(allowPolicies) > 0, len(denyPolicies) > 0
 
-		// log allow/deny names for easier debugging
-		allowNames := make([]string, 0, len(allowPolicies))
-		for n := range allowPolicies {
-			allowNames = append(allowNames, n)
-		}
-		denyNames := make([]string, 0, len(denyPolicies))
-		for n := range denyPolicies {
-			denyNames = append(denyNames, n)
-		}
-		defaultActionStr := "<unset>"
-		if irRoute.Security != nil && irRoute.Security.Authorization != nil && irRoute.Security.Authorization.DefaultAction != "" {
-			defaultActionStr = string(irRoute.Security.Authorization.DefaultAction)
-		}
-		logger.Info("Authorization split", "allow_count", len(allowPolicies), "deny_count", len(denyPolicies), "allow_names", allowNames, "deny_names", denyNames, "defaultAction", defaultActionStr)
-
 		// Convert IR Authorization to RBAC config
 		var rbacCfg *rbacconfig.RBAC
 
 		switch {
 		case hasAllow && hasDeny:
-			logger.Info("Using ordered matcher for mixed allow/deny rules")
-			// Mixed actions: use ordered matcher and derive default action from the policy.
-			// Fallback to DENY when the policy does not specify DefaultAction.
+			// Mixed actions: use ordered matcher and choose default action.
+			// Default ALLOW if only DENY would otherwise be configured; otherwise default DENY.
+			// Mixed actions: use ordered matcher and choose default action.
+			// Default ALLOW if only DENY would otherwise be configured; otherwise default DENY.
 			defaultAction := egv1a1.AuthorizationActionDeny
-			if irRoute.Security != nil && irRoute.Security.Authorization != nil && irRoute.Security.Authorization.DefaultAction != "" {
-				defaultAction = irRoute.Security.Authorization.DefaultAction
-			}
 			rbacCfg = buildTCPRBACMatcherFromRules(irRoute.Security.Authorization.Rules, defaultAction)
 
 		case hasDeny:
-			logger.Info("Using deny-list semantics (deny policies present, default ALLOW)")
 			// Deny-list semantics: default ALLOW
 			rbacCfg = &rbacconfig.RBAC{
 				StatPrefix: "tcp_rbac_",
@@ -990,7 +884,6 @@ func buildTCPFilterChain(
 			}
 
 		case hasAllow:
-			logger.Info("Using allow-list semantics (allow policies present, default DENY)")
 			// Allow-list semantics: default DENY
 			rbacCfg = &rbacconfig.RBAC{
 				StatPrefix: "tcp_rbac_",

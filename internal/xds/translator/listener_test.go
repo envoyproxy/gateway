@@ -404,3 +404,47 @@ func Test_buildRBACPerRoute_DefaultActionAllow(t *testing.T) {
 
 	t.Fatalf("unexpected RBAC per-route shape: %+v", rp)
 }
+
+func Test_ConvertPrincipals_DirectRemoteIP(t *testing.T) {
+	// Build IR principal with a CIDR
+	pr := ir.Principal{
+		ClientCIDRs: []*ir.CIDRMatch{{CIDR: "10.0.0.0/8"}},
+	}
+
+	principals := convertPrincipals(pr)
+	require.GreaterOrEqual(t, len(principals), 1, "expected at least one principal")
+
+	// The implementation creates DirectRemoteIp entries for CIDRs
+	p0 := principals[0]
+	require.NotNil(t, p0, "principal must not be nil")
+
+	dr := p0.GetDirectRemoteIp()
+	require.NotNil(t, dr, "expected DirectRemoteIp to be set")
+
+	// AddressPrefix should be the parsed IP of the CIDR
+	// ParseCIDR("10.0.0.0/8") yields ip.String() == "10.0.0.0"
+	require.Equal(t, "10.0.0.0", dr.AddressPrefix)
+}
+
+func Test_BuildTCPProxyHashPolicy_SourceIP(t *testing.T) {
+	// ConsistentHash.SourceIP true should produce a SourceIp hash policy
+	lb := &ir.LoadBalancer{
+		ConsistentHash: &ir.ConsistentHash{
+			SourceIP: func(b bool) *bool { return &b }(true),
+		},
+	}
+
+	got := buildTCPProxyHashPolicy(lb)
+	require.Len(t, got, 1, "expected one hash policy when SourceIP is true")
+
+	hp := got[0]
+	require.NotNil(t, hp, "hash policy must not be nil")
+
+	// Expect SourceIp variant
+	_, ok := hp.PolicySpecifier.(*typev3.HashPolicy_SourceIp_)
+	require.True(t, ok, "expected HashPolicy_SourceIp_ variant")
+	// And the SourceIp struct itself should be non-nil
+	if s, ok := hp.PolicySpecifier.(*typev3.HashPolicy_SourceIp_); ok {
+		require.NotNil(t, s.SourceIp, "expected SourceIp to be non-nil")
+	}
+}
