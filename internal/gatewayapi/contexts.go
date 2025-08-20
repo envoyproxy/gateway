@@ -149,11 +149,10 @@ func (l *ListenerContext) SetTLSSecrets(tlsSecrets []*corev1.Secret) {
 type RouteContext interface {
 	client.Object
 	GetRouteType() gwapiv1.Kind
-	GetRuleNames() []gwapiv1.SectionName
+	HasRuleNames(sectionName gwapiv1.SectionName) bool
 	GetHostnames() []string
 	GetParentReferences() []gwapiv1.ParentReference
 	GetRouteStatus() *gwapiv1.RouteStatus
-	GetGatewayControllerName() string
 	GetRouteParentContext(forParentRef gwapiv1.ParentReference) *RouteParentContext
 	SetRouteParentContext(forParentRef gwapiv1.ParentReference, ctx *RouteParentContext)
 }
@@ -161,9 +160,6 @@ type RouteContext interface {
 // HTTPRouteContext wraps an HTTPRoute and provides helper methods for
 // accessing the route's parents.
 type HTTPRouteContext struct {
-	// GatewayControllerName is the name of the Gateway API controller.
-	GatewayControllerName string
-
 	*gwapiv1.HTTPRoute
 
 	ParentRefs map[gwapiv1.ParentReference]*RouteParentContext
@@ -173,15 +169,16 @@ func (r *HTTPRouteContext) GetRouteType() gwapiv1.Kind {
 	return resource.KindHTTPRoute
 }
 
-func (r *HTTPRouteContext) GetRuleNames() []gwapiv1.SectionName {
+func (r *HTTPRouteContext) HasRuleNames(sectionName gwapiv1.SectionName) bool {
 	rs := r.Spec.Rules
-	ruleNames := make([]gwapiv1.SectionName, 0, len(rs))
 	for _, rule := range rs {
 		if rule.Name != nil {
-			ruleNames = append(ruleNames, *rule.Name)
+			if *rule.Name == sectionName {
+				return true
+			}
 		}
 	}
-	return ruleNames
+	return false
 }
 
 func (r *HTTPRouteContext) GetHostnames() []string {
@@ -201,10 +198,6 @@ func (r *HTTPRouteContext) GetRouteStatus() *gwapiv1.RouteStatus {
 	return &r.Status.RouteStatus
 }
 
-func (r *HTTPRouteContext) GetGatewayControllerName() string {
-	return r.GatewayControllerName
-}
-
 func (r *HTTPRouteContext) GetRouteParentContext(forParentRef gwapiv1.ParentReference) *RouteParentContext {
 	if r.ParentRefs == nil {
 		r.ParentRefs = make(map[gwapiv1.ParentReference]*RouteParentContext)
@@ -222,9 +215,6 @@ func (r *HTTPRouteContext) SetRouteParentContext(forParentRef gwapiv1.ParentRefe
 // GRPCRouteContext wraps a GRPCRoute and provides helper methods for
 // accessing the route's parents.
 type GRPCRouteContext struct {
-	// GatewayControllerName is the name of the Gateway API controller.
-	GatewayControllerName string
-
 	*gwapiv1.GRPCRoute
 
 	ParentRefs map[gwapiv1.ParentReference]*RouteParentContext
@@ -234,15 +224,16 @@ func (r *GRPCRouteContext) GetRouteType() gwapiv1.Kind {
 	return resource.KindGRPCRoute
 }
 
-func (r *GRPCRouteContext) GetRuleNames() []gwapiv1.SectionName {
+func (r *GRPCRouteContext) HasRuleNames(sectionName gwapiv1.SectionName) bool {
 	rs := r.Spec.Rules
-	ruleNames := make([]gwapiv1.SectionName, 0, len(rs))
 	for _, rule := range rs {
 		if rule.Name != nil {
-			ruleNames = append(ruleNames, *rule.Name)
+			if *rule.Name == sectionName {
+				return true
+			}
 		}
 	}
-	return ruleNames
+	return false
 }
 
 func (r *GRPCRouteContext) GetHostnames() []string {
@@ -262,10 +253,6 @@ func (r *GRPCRouteContext) GetRouteStatus() *gwapiv1.RouteStatus {
 	return &r.Status.RouteStatus
 }
 
-func (r *GRPCRouteContext) GetGatewayControllerName() string {
-	return r.GatewayControllerName
-}
-
 func (r *GRPCRouteContext) GetRouteParentContext(forParentRef gwapiv1.ParentReference) *RouteParentContext {
 	if r.ParentRefs == nil {
 		r.ParentRefs = make(map[gwapiv1.ParentReference]*RouteParentContext)
@@ -283,9 +270,6 @@ func (r *GRPCRouteContext) SetRouteParentContext(forParentRef gwapiv1.ParentRefe
 // TLSRouteContext wraps a TLSRoute and provides helper methods for
 // accessing the route's parents.
 type TLSRouteContext struct {
-	// GatewayControllerName is the name of the Gateway API controller.
-	GatewayControllerName string
-
 	*gwapiv1a2.TLSRoute
 
 	ParentRefs map[gwapiv1.ParentReference]*RouteParentContext
@@ -295,15 +279,16 @@ func (r *TLSRouteContext) GetRouteType() gwapiv1.Kind {
 	return resource.KindTLSRoute
 }
 
-func (r *TLSRouteContext) GetRuleNames() []gwapiv1.SectionName {
+func (r *TLSRouteContext) HasRuleNames(sectionName gwapiv1.SectionName) bool {
 	rs := r.Spec.Rules
-	ruleNames := make([]gwapiv1.SectionName, 0, len(rs))
 	for _, rule := range rs {
 		if rule.Name != nil {
-			ruleNames = append(ruleNames, *rule.Name)
+			if *rule.Name == sectionName {
+				return true
+			}
 		}
 	}
-	return ruleNames
+	return false
 }
 
 func (r *TLSRouteContext) GetHostnames() []string {
@@ -323,10 +308,6 @@ func (r *TLSRouteContext) GetRouteStatus() *gwapiv1.RouteStatus {
 	return &r.Status.RouteStatus
 }
 
-func (r *TLSRouteContext) GetGatewayControllerName() string {
-	return r.GatewayControllerName
-}
-
 func (r *TLSRouteContext) GetRouteParentContext(forParentRef gwapiv1.ParentReference) *RouteParentContext {
 	if r.ParentRefs == nil {
 		r.ParentRefs = make(map[gwapiv1.ParentReference]*RouteParentContext)
@@ -344,9 +325,6 @@ func (r *TLSRouteContext) SetRouteParentContext(forParentRef gwapiv1.ParentRefer
 // UDPRouteContext wraps a UDPRoute and provides helper methods for
 // accessing the route's parents.
 type UDPRouteContext struct {
-	// GatewayControllerName is the name of the Gateway API controller.
-	GatewayControllerName string
-
 	*gwapiv1a2.UDPRoute
 
 	ParentRefs map[gwapiv1.ParentReference]*RouteParentContext
@@ -356,15 +334,16 @@ func (r *UDPRouteContext) GetRouteType() gwapiv1.Kind {
 	return resource.KindUDPRoute
 }
 
-func (r *UDPRouteContext) GetRuleNames() []gwapiv1.SectionName {
+func (r *UDPRouteContext) HasRuleNames(sectionName gwapiv1.SectionName) bool {
 	rs := r.Spec.Rules
-	ruleNames := make([]gwapiv1.SectionName, 0, len(rs))
 	for _, rule := range rs {
 		if rule.Name != nil {
-			ruleNames = append(ruleNames, *rule.Name)
+			if *rule.Name == sectionName {
+				return true
+			}
 		}
 	}
-	return ruleNames
+	return false
 }
 
 func (r *UDPRouteContext) GetHostnames() []string {
@@ -378,10 +357,6 @@ func (r *UDPRouteContext) GetParentReferences() []gwapiv1.ParentReference {
 
 func (r *UDPRouteContext) GetRouteStatus() *gwapiv1.RouteStatus {
 	return &r.Status.RouteStatus
-}
-
-func (r *UDPRouteContext) GetGatewayControllerName() string {
-	return r.GatewayControllerName
 }
 
 func (r *UDPRouteContext) GetRouteParentContext(forParentRef gwapiv1.ParentReference) *RouteParentContext {
@@ -405,9 +380,6 @@ func (r *UDPRouteContext) GetParentRefs() map[gwapiv1.ParentReference]*RoutePare
 // TCPRouteContext wraps a TCPRoute and provides helper methods for
 // accessing the route's parents.
 type TCPRouteContext struct {
-	// GatewayControllerName is the name of the Gateway API controller.
-	GatewayControllerName string
-
 	*gwapiv1a2.TCPRoute
 
 	ParentRefs map[gwapiv1.ParentReference]*RouteParentContext
@@ -417,15 +389,16 @@ func (r *TCPRouteContext) GetRouteType() gwapiv1.Kind {
 	return resource.KindTCPRoute
 }
 
-func (r *TCPRouteContext) GetRuleNames() []gwapiv1.SectionName {
+func (r *TCPRouteContext) HasRuleNames(sectionName gwapiv1.SectionName) bool {
 	rs := r.Spec.Rules
-	ruleNames := make([]gwapiv1.SectionName, 0, len(rs))
 	for _, rule := range rs {
 		if rule.Name != nil {
-			ruleNames = append(ruleNames, *rule.Name)
+			if *rule.Name == sectionName {
+				return true
+			}
 		}
 	}
-	return ruleNames
+	return false
 }
 
 func (r *TCPRouteContext) GetHostnames() []string {
@@ -441,10 +414,6 @@ func (r *TCPRouteContext) GetRouteStatus() *gwapiv1.RouteStatus {
 	return &r.Status.RouteStatus
 }
 
-func (r *TCPRouteContext) GetGatewayControllerName() string {
-	return r.GatewayControllerName
-}
-
 func (r *TCPRouteContext) GetRouteParentContext(forParentRef gwapiv1.ParentReference) *RouteParentContext {
 	if r.ParentRefs == nil {
 		r.ParentRefs = make(map[gwapiv1.ParentReference]*RouteParentContext)
@@ -457,17 +426,6 @@ func (r *TCPRouteContext) SetRouteParentContext(forParentRef gwapiv1.ParentRefer
 		r.ParentRefs = make(map[gwapiv1.ParentReference]*RouteParentContext)
 	}
 	r.ParentRefs[forParentRef] = ctx
-}
-
-// GetRouteType returns the Kind of the Route object, HTTPRoute,
-// TLSRoute, TCPRoute, UDPRoute etc.
-func GetRouteType(route RouteContext) gwapiv1.Kind {
-	return route.GetRouteType()
-}
-
-// GetRuleNames returns the rule names targeted by the Route object.
-func GetRuleNames(route RouteContext) []gwapiv1.SectionName {
-	return route.GetRuleNames()
 }
 
 // GetHostnames returns the hosts targeted by the Route object.
@@ -487,7 +445,7 @@ func GetRouteStatus(route RouteContext) *gwapiv1.RouteStatus {
 
 // GetRouteParentContext returns RouteParentContext by using the Route objects' ParentReference.
 // It creates a new RouteParentContext and add a new RouteParentStatus to the Route's Status if the ParentReference is not found.
-func GetRouteParentContext(route RouteContext, forParentRef gwapiv1.ParentReference) *RouteParentContext {
+func GetRouteParentContext(route RouteContext, forParentRef gwapiv1.ParentReference, controllerName string) *RouteParentContext {
 	// If the RouteParentContext is already in the RouteContext, return it.
 	if existingCtx := route.GetRouteParentContext(forParentRef); existingCtx != nil {
 		return existingCtx
@@ -521,7 +479,7 @@ func GetRouteParentContext(route RouteContext, forParentRef gwapiv1.ParentRefere
 	// If the parent is not found in the Route's Status, create a new RouteParentStatus and add it to the Route's Status.
 	if routeParentStatusIdx == -1 {
 		rParentStatus := gwapiv1a2.RouteParentStatus{
-			ControllerName: gwapiv1a2.GatewayController(route.GetGatewayControllerName()),
+			ControllerName: gwapiv1a2.GatewayController(controllerName),
 			ParentRef:      forParentRef,
 		}
 		routeStatus.Parents = append(routeStatus.Parents, rParentStatus)
