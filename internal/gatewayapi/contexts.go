@@ -156,8 +156,6 @@ type RouteContext interface {
 	GetGatewayControllerName() string
 	GetRouteParentContext(forParentRef gwapiv1.ParentReference) *RouteParentContext
 	SetRouteParentContext(forParentRef gwapiv1.ParentReference, ctx *RouteParentContext)
-	GetParentRefs() map[gwapiv1.ParentReference]*RouteParentContext
-	SetParentRefs(refs map[gwapiv1.ParentReference]*RouteParentContext)
 }
 
 // HTTPRouteContext wraps an HTTPRoute and provides helper methods for
@@ -221,14 +219,6 @@ func (r *HTTPRouteContext) SetRouteParentContext(forParentRef gwapiv1.ParentRefe
 	r.ParentRefs[forParentRef] = ctx
 }
 
-func (r *HTTPRouteContext) GetParentRefs() map[gwapiv1.ParentReference]*RouteParentContext {
-	return r.ParentRefs
-}
-
-func (r *HTTPRouteContext) SetParentRefs(refs map[gwapiv1.ParentReference]*RouteParentContext) {
-	r.ParentRefs = refs
-}
-
 // GRPCRouteContext wraps a GRPCRoute and provides helper methods for
 // accessing the route's parents.
 type GRPCRouteContext struct {
@@ -288,14 +278,6 @@ func (r *GRPCRouteContext) SetRouteParentContext(forParentRef gwapiv1.ParentRefe
 		r.ParentRefs = make(map[gwapiv1.ParentReference]*RouteParentContext)
 	}
 	r.ParentRefs[forParentRef] = ctx
-}
-
-func (r *GRPCRouteContext) GetParentRefs() map[gwapiv1.ParentReference]*RouteParentContext {
-	return r.ParentRefs
-}
-
-func (r *GRPCRouteContext) SetParentRefs(refs map[gwapiv1.ParentReference]*RouteParentContext) {
-	r.ParentRefs = refs
 }
 
 // TLSRouteContext wraps a TLSRoute and provides helper methods for
@@ -359,14 +341,6 @@ func (r *TLSRouteContext) SetRouteParentContext(forParentRef gwapiv1.ParentRefer
 	r.ParentRefs[forParentRef] = ctx
 }
 
-func (r *TLSRouteContext) GetParentRefs() map[gwapiv1.ParentReference]*RouteParentContext {
-	return r.ParentRefs
-}
-
-func (r *TLSRouteContext) SetParentRefs(refs map[gwapiv1.ParentReference]*RouteParentContext) {
-	r.ParentRefs = refs
-}
-
 // UDPRouteContext wraps a UDPRoute and provides helper methods for
 // accessing the route's parents.
 type UDPRouteContext struct {
@@ -428,10 +402,6 @@ func (r *UDPRouteContext) GetParentRefs() map[gwapiv1.ParentReference]*RoutePare
 	return r.ParentRefs
 }
 
-func (r *UDPRouteContext) SetParentRefs(refs map[gwapiv1.ParentReference]*RouteParentContext) {
-	r.ParentRefs = refs
-}
-
 // TCPRouteContext wraps a TCPRoute and provides helper methods for
 // accessing the route's parents.
 type TCPRouteContext struct {
@@ -487,14 +457,6 @@ func (r *TCPRouteContext) SetRouteParentContext(forParentRef gwapiv1.ParentRefer
 		r.ParentRefs = make(map[gwapiv1.ParentReference]*RouteParentContext)
 	}
 	r.ParentRefs[forParentRef] = ctx
-}
-
-func (r *TCPRouteContext) GetParentRefs() map[gwapiv1.ParentReference]*RouteParentContext {
-	return r.ParentRefs
-}
-
-func (r *TCPRouteContext) SetParentRefs(refs map[gwapiv1.ParentReference]*RouteParentContext) {
-	r.ParentRefs = refs
 }
 
 // GetRouteType returns the Kind of the Route object, HTTPRoute,
