@@ -722,6 +722,7 @@ func (t *Translator) addXdsTCPFilterChain(
 func buildTCPRBACMatcherFromRules(rules []*ir.AuthorizationRule, defaultAction egv1a1.AuthorizationAction) *rbacconfig.RBAC {
 	// Build a list of FieldMatchers for MatcherList
 	var fieldMatchers []*matcher.Matcher_MatcherList_FieldMatcher
+	logger := log.Log.WithName("tcp-rbac")
 
 	for _, r := range rules {
 		// Build predicate from principals (returns *matcher.Matcher_MatcherList_Predicate)
@@ -734,7 +735,11 @@ func buildTCPRBACMatcherFromRules(rules []*ir.AuthorizationRule, defaultAction e
 		}
 
 		// Typed config for action: envoy.config.rbac.v3.Action
-		actAny, _ := proto.ToAnyWithValidation(&rbacv3.Action{Action: act})
+		actAny, err := anypb.New(&rbacv3.Action{Action: act})
+		if err != nil {
+			logger.Error(err, "failed to marshal rbac action to Any, skipping rule", "rule", r.Name)
+			continue
+		}
 
 		// name for the action typed extension config (use underlying string)
 		actionName := strings.ToLower(string(r.Action))
@@ -757,7 +762,11 @@ func buildTCPRBACMatcherFromRules(rules []*ir.AuthorizationRule, defaultAction e
 	if defaultAction == egv1a1.AuthorizationActionAllow {
 		def = rbacv3.RBAC_ALLOW
 	}
-	defAny, _ := proto.ToAnyWithValidation(&rbacv3.Action{Action: def})
+	defAny, err := anypb.New(&rbacv3.Action{Action: def})
+	if err != nil {
+		logger.Error(err, "failed to marshal default rbac action to Any, using empty Any")
+		defAny = &anypb.Any{}
+	}
 
 	// Top-level matcher uses Matcher_MatcherList_ wrapper
 	topMatcher := &matcher.Matcher{
