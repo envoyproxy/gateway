@@ -23,7 +23,7 @@ name: envoy-gateway/gateway-1/http
 domain: envoy-gateway/gateway-1/http
 descriptors:
   - key: httproute/default/httproute-1/rule/0/match/0/gateway_envoyproxy_io
-    value: httproute/default/httproute-1/rule/0/match/0/gateway_envoyproxy_io
+    value: default/policy-for-route
     rate_limit: null
     descriptors:
       - key: rule-0-match-0
@@ -40,7 +40,7 @@ descriptors:
     shadow_mode: false
     detailed_metric: false
   - key: httproute/default/httproute-2/rule/0/match/0/gateway_envoyproxy_io
-    value: httproute/default/httproute-2/rule/0/match/0/gateway_envoyproxy_io
+    value: default/policy-for-route
     rate_limit: null
     descriptors:
       - key: rule-0-match-0

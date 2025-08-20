@@ -2,7 +2,7 @@ name: first-listener
 domain: first-listener
 descriptors:
   - key: second-route
-    value: second-route
+    value: test-namespace/test-policy-2
     rate_limit: null
     descriptors:
       - key: rule-0-match-0

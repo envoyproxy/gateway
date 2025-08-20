@@ -41,7 +41,7 @@
         - actions:
           - genericKey:
               descriptorKey: httproute/default/httproute-1/rule/0/match/0/gateway_envoyproxy_io
-              descriptorValue: httproute/default/httproute-1/rule/0/match/0/gateway_envoyproxy_io
+              descriptorValue: default/policy-for-route
           - headerValueMatch:
               descriptorKey: rule-0-match-0
               descriptorValue: rule-0-match-0
@@ -80,7 +80,7 @@
         - actions:
           - genericKey:
               descriptorKey: httproute/default/httproute-2/rule/0/match/0/gateway_envoyproxy_io
-              descriptorValue: httproute/default/httproute-2/rule/0/match/0/gateway_envoyproxy_io
+              descriptorValue: default/policy-for-route
           - headerValueMatch:
               descriptorKey: rule-0-match-0
               descriptorValue: rule-0-match-0

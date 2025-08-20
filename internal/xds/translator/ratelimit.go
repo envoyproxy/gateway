@@ -364,6 +364,8 @@ func buildRouteRateLimits(route *ir.HTTPRoute) (rateLimits []*routev3.RateLimit,
 	return
 }
 
+// getBasicDescriptor returns the descriptor key and value for a rate limit rule,
+// which is used for the base descriptor.
 func getBasicDescriptor(rule *ir.RateLimitRule, routeName string) (string, string) {
 	var descriptorKey, descriptorValue string
 	if isRuleShared(rule) {
@@ -371,9 +373,10 @@ func getBasicDescriptor(rule *ir.RateLimitRule, routeName string) (string, strin
 		descriptorKey = rule.Name
 		descriptorValue = rule.Name
 	} else {
-		// For non-shared rule, use route name in descriptor
+		// For non-shared rule, use route name in descriptor key
 		descriptorKey = getRouteDescriptor(routeName)
-		descriptorValue = getRouteDescriptor(routeName)
+		// Use the policy name for the value
+		descriptorValue = stripRuleIndexSuffix(rule.Name)
 	}
 
 	return descriptorKey, descriptorValue
