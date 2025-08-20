@@ -34,6 +34,7 @@ import (
 	typev3 "github.com/envoyproxy/go-control-plane/envoy/type/v3"
 	"github.com/envoyproxy/go-control-plane/pkg/resource/v3"
 	"github.com/envoyproxy/go-control-plane/pkg/wellknown"
+	"google.golang.org/protobuf/encoding/protojson"
 	protobuf "google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/anypb"
 	"google.golang.org/protobuf/types/known/durationpb"
@@ -897,6 +898,63 @@ func buildTCPFilterChain(
 		}
 
 		if rbacCfg != nil {
+			// Diagnostic: dump RBAC proto and check for missing TypedConfig fields in Matcher
+			func() {
+				logger := log.Log.WithName("tcp-rbac-diagnostic")
+				// JSON dump for quick inspection
+				mOpts := protojson.MarshalOptions{EmitUnpopulated: true, Indent: "  "}
+				bj, err := mOpts.Marshal(rbacCfg)
+				if err == nil {
+					logger.Info("RBAC config JSON", "rbac_json", string(bj))
+				} else {
+					logger.Error(err, "failed to marshal rbac cfg to json")
+				}
+
+				// quick structural check for nil TypedConfig on common locations
+				var issues []string
+				if rbacCfg.Matcher != nil {
+					// Check OnNoMatch action typedconfig
+					if onNo := rbacCfg.Matcher.OnNoMatch; onNo != nil {
+						// onNo.OnMatch is a oneof; check for the Action variant
+						switch om := onNo.OnMatch.(type) {
+						case *matcher.Matcher_OnMatch_Action:
+							if om.Action != nil && om.Action.TypedConfig == nil {
+								issues = append(issues, "Matcher.OnNoMatch.Action.TypedConfig")
+							}
+						}
+					}
+
+					// Check matcher list entries
+					if ml := rbacCfg.Matcher.GetMatcherList(); ml != nil {
+						for i, fm := range ml.Matchers {
+							if fm == nil {
+								continue
+							}
+							if fm.OnMatch != nil {
+								// fm.OnMatch.OnMatch is a oneof; check Action variant
+								switch om := fm.OnMatch.OnMatch.(type) {
+								case *matcher.Matcher_OnMatch_Action:
+									if om.Action != nil && om.Action.TypedConfig == nil {
+										issues = append(issues, fmt.Sprintf("Matcher.MatcherList.Matchers[%d].OnMatch.Action.TypedConfig", i))
+									}
+								}
+							}
+							if fm.Predicate != nil {
+								if sp := fm.Predicate.GetSinglePredicate(); sp != nil {
+									if inp := sp.Input; inp != nil && inp.TypedConfig == nil {
+										issues = append(issues, fmt.Sprintf("Matcher.MatcherList.Matchers[%d].Predicate.SinglePredicate.Input.TypedConfig", i))
+									}
+								}
+							}
+						}
+					}
+				}
+				if len(issues) > 0 {
+					logger.Error(fmt.Errorf("missing typedconfigs"), "RBAC matcher has missing TypedConfig fields", "issues", strings.Join(issues, ", "))
+				} else {
+					logger.Info("RBAC matcher diagnostic: no missing TypedConfig fields detected")
+				}
+			}()
 			if f, err := toNetworkFilter("envoy.filters.network.rbac", rbacCfg); err == nil {
 				filters = append(filters, f)
 				logger.Info("Added RBAC filter to chain")
