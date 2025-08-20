@@ -297,7 +297,9 @@ func prepareBenchmarkClientRuntimeArgs(gatewayHostPort string, requestHeaders []
 // has been created successfully.
 //
 // All created scaled resources will be labeled with BenchmarkTestScaledKey.
-func (b *BenchmarkTestSuite) ScaleUpHTTPRoutes(ctx context.Context, scaleRange [2]uint16, routeNameFormat, routeHostnameFormat, refGateway string, batchNumPerHost uint16, afterCreation func(*gwapiv1.HTTPRoute)) error {
+func (b *BenchmarkTestSuite) ScaleUpHTTPRoutes(ctx context.Context, scaleRange [2]uint16, routeNameFormat, routeHostnameFormat, refGateway string, batchNumPerHost uint16,
+	afterCreation func(*gwapiv1.HTTPRoute, time.Time),
+) error {
 	var i, begin, end uint16
 	begin, end = scaleRange[0], scaleRange[1]
 
@@ -316,12 +318,13 @@ func (b *BenchmarkTestSuite) ScaleUpHTTPRoutes(ctx context.Context, scaleRange [
 		newRoute.Spec.ParentRefs[0].Name = gwapiv1.ObjectName(refGateway)
 		newRoute.Spec.Hostnames[0] = gwapiv1.Hostname(routeHostname)
 
+		startAt := time.Now()
 		if err := b.CreateResource(ctx, newRoute); err != nil {
 			return err
 		}
 
 		if afterCreation != nil {
-			afterCreation(newRoute)
+			afterCreation(newRoute, startAt)
 		}
 
 		counterPerBatch++
