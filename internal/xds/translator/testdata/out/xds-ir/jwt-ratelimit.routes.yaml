@@ -14,7 +14,7 @@
         - actions:
           - genericKey:
               descriptorKey: first-route
-              descriptorValue: first-route
+              descriptorValue: test-namespace/test-policy-1
           - headerValueMatch:
               descriptorKey: rule-0-match-0
               descriptorValue: rule-0-match-0
@@ -38,7 +38,7 @@
         - actions:
           - genericKey:
               descriptorKey: second-route
-              descriptorValue: second-route
+              descriptorValue: test-namespace/test-policy-2
           - requestHeaders:
               descriptorKey: rule-0-match-0
               headerName: x-user-id
@@ -53,7 +53,7 @@
         - actions:
           - genericKey:
               descriptorKey: third-route
-              descriptorValue: third-route
+              descriptorValue: test-namespace/test-policy-3
           - genericKey:
               descriptorKey: rule-0-match--1
               descriptorValue: rule-0-match--1
