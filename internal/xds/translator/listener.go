@@ -883,11 +883,15 @@ func buildTCPFilterChain(
 
 		switch {
 		case hasAllow && hasDeny:
-			// Mixed actions: use ordered matcher and choose default action.
-			// Default ALLOW if only DENY would otherwise be configured; otherwise default DENY.
-			// Mixed actions: use ordered matcher and choose default action.
-			// Default ALLOW if only DENY would otherwise be configured; otherwise default DENY.
+			// Mixed actions: use ordered matcher. Honor the SecurityPolicy.DefaultAction if present,
+			// otherwise fall back to DENY.
 			defaultAction := egv1a1.AuthorizationActionDeny
+			if irRoute.Security != nil && irRoute.Security.Authorization != nil {
+				// If the IR exposes a DefaultAction field, respect it.
+				if irRoute.Security.Authorization.DefaultAction == egv1a1.AuthorizationActionAllow {
+					defaultAction = egv1a1.AuthorizationActionAllow
+				}
+			}
 			rbacCfg = buildTCPRBACMatcherFromRules(irRoute.Security.Authorization.Rules, defaultAction)
 
 		case hasDeny:
