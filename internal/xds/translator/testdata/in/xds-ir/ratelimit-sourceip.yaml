@@ -26,6 +26,7 @@ http:
             limit:
               requests: 5
               unit: second
+            name: "test-namespace/test-policy-1/rule/0"
     pathMatch:
       exact: "foo/bar"
     destination:
@@ -47,6 +48,7 @@ http:
             limit:
               requests: 5
               unit: second
+            name: "test-namespace/test-policy-2/rule/0"
     pathMatch:
       exact: "example"
     destination:
@@ -65,6 +67,7 @@ http:
           - limit:
               requests: 5
               unit: second
+            name: "test-namespace/test-policy-3/rule/0"
     pathMatch:
       exact: "test"
     destination:
@@ -87,6 +90,7 @@ http:
             limit:
               requests: 5
               unit: second
+            name: "test-namespace/test-policy-4/rule/0"
     pathMatch:
       exact: "distinct"
     destination:
