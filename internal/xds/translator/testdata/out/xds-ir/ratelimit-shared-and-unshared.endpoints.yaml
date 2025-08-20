@@ -1,0 +1,59 @@
+- clusterName: httproute/default/httproute-1/rule/0
+  endpoints:
+  - lbEndpoints:
+    - endpoint:
+        address:
+          socketAddress:
+            address: 7.7.7.7
+            portValue: 8080
+      loadBalancingWeight: 1
+    loadBalancingWeight: 1
+    locality:
+      region: httproute/default/httproute-1/rule/0/backend/0
+    metadata:
+      filterMetadata:
+        envoy-gateway:
+          resources:
+          - kind: ""
+            name: service-1
+            namespace: default
+            sectionName: "8080"
+- clusterName: httproute/default/httproute-2/rule/0
+  endpoints:
+  - lbEndpoints:
+    - endpoint:
+        address:
+          socketAddress:
+            address: 7.7.7.7
+            portValue: 8080
+      loadBalancingWeight: 1
+    loadBalancingWeight: 1
+    locality:
+      region: httproute/default/httproute-2/rule/0/backend/0
+    metadata:
+      filterMetadata:
+        envoy-gateway:
+          resources:
+          - kind: ""
+            name: service-1
+            namespace: default
+            sectionName: "8080"
+- clusterName: envoy-gateway/gateway-1
+  endpoints:
+  - lbEndpoints:
+    - endpoint:
+        address:
+          socketAddress:
+            address: 7.6.5.4
+            portValue: 8080
+      loadBalancingWeight: 1
+    locality:
+      zone: zone1
+    metadata:
+      filterMetadata:
+        envoy-gateway:
+          resources:
+          - kind: ""
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
