@@ -448,3 +448,57 @@ func Test_BuildTCPProxyHashPolicy_SourceIP(t *testing.T) {
 		require.NotNil(t, s.SourceIp, "expected SourceIp to be non-nil")
 	}
 }
+
+// Go
+
+func Test_buildTCPFilterChain_IPAwareRoute(t *testing.T) {
+	route := &ir.TCPRoute{
+		Name: "ip-aware-route",
+		Destination: &ir.RouteDestination{
+			Name: "upstream-1",
+		},
+		Security: &ir.SecurityFeatures{
+			Authorization: &ir.Authorization{
+				Rules: []*ir.AuthorizationRule{
+					{
+						Name:   "allow-10-8",
+						Action: egv1a1.AuthorizationActionAllow,
+						Principal: ir.Principal{
+							ClientCIDRs: []*ir.CIDRMatch{
+								{CIDR: "10.0.0.0/8"},
+							},
+						},
+					},
+				},
+			},
+		},
+		LoadBalancer: &ir.LoadBalancer{
+			ConsistentHash: &ir.ConsistentHash{
+				SourceIP: func(b bool) *bool { return &b }(true),
+			},
+		},
+	}
+
+	fc, err := buildTCPFilterChain(route, "cluster-a", "stats_tcp", nil, nil, nil)
+	require.NoError(t, err)
+	require.NotNil(t, fc)
+
+	// chain name should match the route name
+	require.Equal(t, route.Name, fc.Name)
+
+	// RBAC filter present
+	require.True(t, hasNetworkFilter(fc, "envoy.filters.network.rbac"))
+
+	// TCP proxy present and typed-config references v3 TcpProxy
+	require.True(t, hasNetworkFilter(fc, "envoy.filters.network.tcp_proxy"))
+	foundTcpProxy := false
+	for _, f := range fc.GetFilters() {
+		if f.GetName() == "envoy.filters.network.tcp_proxy" {
+			foundTcpProxy = true
+			tc := f.GetTypedConfig()
+			require.NotNil(t, tc)
+			require.Contains(t, tc.GetTypeUrl(), "envoy.extensions.filters.network.tcp_proxy.v3.TcpProxy")
+		}
+	}
+	require.True(t, foundTcpProxy, "tcp proxy filter not found")
+}

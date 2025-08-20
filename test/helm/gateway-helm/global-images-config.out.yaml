@@ -50,8 +50,7 @@ data:
                       name: envoy-ratelimit
           pod:
             imagePullSecrets:
-            - name: secret3
-            - name: secret4
+            - name: regcred
         shutdownManager:
           image: private-hub/envoyproxy/gateway:abcdef12
       type: Kubernetes
@@ -476,8 +475,7 @@ spec:
           name: certs
           readOnly: true
       imagePullSecrets:
-      - name: secret1
-      - name: secret2
+      - name: regcred
       serviceAccountName: envoy-gateway
       terminationGracePeriodSeconds: 10
       volumes:
@@ -661,8 +659,7 @@ spec:
           seccompProfile:
             type: RuntimeDefault
       imagePullSecrets:
-      - name: secret1
-      - name: secret2
+      - name: regcred
       restartPolicy: Never
       serviceAccountName: gateway-helm-certgen
   ttlSecondsAfterFinished: 30

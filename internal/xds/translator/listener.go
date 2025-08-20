@@ -29,6 +29,7 @@ import (
 	preservecasev3 "github.com/envoyproxy/go-control-plane/envoy/extensions/http/header_formatters/preserve_case/v3"
 	customheaderv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/http/original_ip_detection/custom_header/v3"
 	xffv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/http/original_ip_detection/xff/v3"
+	networkinput "github.com/envoyproxy/go-control-plane/envoy/extensions/matching/common_inputs/network/v3"
 	quicv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/transport_sockets/quic/v3"
 	tlsv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/transport_sockets/tls/v3"
 	typev3 "github.com/envoyproxy/go-control-plane/envoy/type/v3"
@@ -802,26 +803,56 @@ func buildTCPRBACMatcherFromRules(rules []*ir.AuthorizationRule, defaultAction e
 func principalsToPredicate(p ir.Principal) *matcher.Matcher_MatcherList_Predicate {
 	// Build OR over CIDRs as Matcher_MatcherList_Predicate with OrMatcher
 	var preds []*matcher.Matcher_MatcherList_Predicate
-	for _, c := range p.ClientCIDRs {
-		// ValueMatch: use StringMatcher with exact AddressPrefix/prefix if needed.
-		// Here we match on the CIDR string (e.g. "10.0.0.0/8")
-		valMatcher := &matcher.StringMatcher{
-			MatchPattern: &matcher.StringMatcher_Exact{Exact: c.CIDR},
-		}
 
-		// Build SinglePredicate: Input is the source_ip typed input.
-		// Provide TypedConfig (TypeUrl) so Envoy validation passes.
-		single := &matcher.Matcher_MatcherList_Predicate_SinglePredicate{
-			Input: &xdscore.TypedExtensionConfig{
-				// Use the registered extension name
-				Name: "envoy.matching.inputs.source_ip",
-				// Provide the canonical TypedConfig TypeUrl so the proto is valid.
-				TypedConfig: &anypb.Any{
-					TypeUrl: "type.googleapis.com/envoy.extensions.matching.common_inputs.network.v3.SourceIPInput",
+	// Prepare SourceIPInput Any once (fall back to TypeUrl-only Any on error)
+	srcInputAny, err := proto.ToAnyWithValidation(&networkinput.SourceIPInput{})
+	if err != nil {
+		srcInputAny = &anypb.Any{
+			TypeUrl: "type.googleapis.com/envoy.extensions.matching.common_inputs.network.v3.SourceIPInput",
+		}
+	}
+
+	for _, c := range p.ClientCIDRs {
+		// Convert CIDR to Envoy CidrRange
+		cr := convertCIDR(c)
+
+		// Build IPMatcher with CidrRanges so matching is IP/CIDR-aware.
+		// Note: use the message names/types from the cncf/xds matcher package.
+		ipMatcher := &matcher.IPMatcher{
+			RangeMatchers: []*matcher.IPMatcher_IPRangeMatcher{
+				{
+					Ranges: []*xdscore.CidrRange{
+						{
+							AddressPrefix: cr.AddressPrefix,
+							PrefixLen:     cr.PrefixLen,
+						},
+					},
 				},
 			},
-			Matcher: &matcher.Matcher_MatcherList_Predicate_SinglePredicate_ValueMatch{
-				ValueMatch: valMatcher,
+		}
+
+		// Marshal IP matcher to Any for the typed config variant of the predicate.
+		ipMatcherAny, err := proto.ToAnyWithValidation(ipMatcher)
+		if err != nil {
+			// Fallback to type URL only if marshaling fails (keeps intent visible in proto)
+			ipMatcherAny = &anypb.Any{
+				TypeUrl: "type.googleapis.com/xds.type.matcher.v3.IPMatcher",
+			}
+		}
+
+		// Build SinglePredicate: Input is the SourceIPInput typed input,
+		// and the matcher is provided as a TypedConfig (typed matcher).
+		single := &matcher.Matcher_MatcherList_Predicate_SinglePredicate{
+			Input: &xdscore.TypedExtensionConfig{
+				Name:        "envoy.matching.inputs.source_ip",
+				TypedConfig: srcInputAny,
+			},
+			Matcher: &matcher.Matcher_MatcherList_Predicate_SinglePredicate_CustomMatch{
+				CustomMatch: &xdscore.TypedExtensionConfig{
+					// name is optional but helpful for diagnostics; the important part is TypedConfig
+					Name:        "xds.type.matcher.v3.IPMatcher",
+					TypedConfig: ipMatcherAny,
+				},
 			},
 		}
 
