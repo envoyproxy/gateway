@@ -217,16 +217,7 @@ func buildRouteRateLimits(route *ir.HTTPRoute) (rateLimits []*routev3.RateLimit,
 		var rlActions []*routev3.RateLimit_Action
 
 		// Create the route descriptor using the rule's shared attribute
-		var descriptorKey, descriptorValue string
-		if isRuleShared(rule) {
-			// For shared rule, use full rule name
-			descriptorKey = rule.Name
-			descriptorValue = rule.Name
-		} else {
-			// For non-shared rule, use route name in descriptor
-			descriptorKey = getRouteDescriptor(route.Name)
-			descriptorValue = descriptorKey
-		}
+		descriptorKey, descriptorValue := getBasicDescriptor(rule, route.Name)
 
 		// Create a generic key action for the route descriptor.
 		routeDescriptor := &routev3.RateLimit_Action{
@@ -373,6 +364,21 @@ func buildRouteRateLimits(route *ir.HTTPRoute) (rateLimits []*routev3.RateLimit,
 	return
 }
 
+func getBasicDescriptor(rule *ir.RateLimitRule, routeName string) (string, string) {
+	var descriptorKey, descriptorValue string
+	if isRuleShared(rule) {
+		// For shared rule, use full rule name
+		descriptorKey = rule.Name
+		descriptorValue = rule.Name
+	} else {
+		// For non-shared rule, use route name in descriptor
+		descriptorKey = getRouteDescriptor(routeName)
+		descriptorValue = getRouteDescriptor(routeName)
+	}
+
+	return descriptorKey, descriptorValue
+}
+
 func rateLimitCostToHitsAddend(c *ir.RateLimitCost) *routev3.RateLimit_HitsAddend {
 	ret := &routev3.RateLimit_HitsAddend{}
 	if c.Number != nil {
@@ -503,25 +509,20 @@ func addRateLimitDescriptor(
 		return
 	}
 
-	var descriptorKey string
-	if isRuleShared(rule) {
-		descriptorKey = rule.Name
-	} else {
-		descriptorKey = getRouteDescriptor(route.Name)
-	}
+	descriptorKey, descriptorValue := getBasicDescriptor(rule, route.Name)
 
 	// Find or create descriptor in domainDescriptors[domain]
 	var descriptorRule *rlsconfv3.RateLimitDescriptor
 	found := false
 	for _, d := range domainDescriptors[domain] {
-		if d.Key == descriptorKey {
+		if d.Key == descriptorKey && d.GetValue() == descriptorValue {
 			descriptorRule = d
 			found = true
 			break
 		}
 	}
 	if !found {
-		descriptorRule = &rlsconfv3.RateLimitDescriptor{Key: descriptorKey, Value: descriptorKey}
+		descriptorRule = &rlsconfv3.RateLimitDescriptor{Key: descriptorKey, Value: descriptorValue}
 		domainDescriptors[domain] = append(domainDescriptors[domain], descriptorRule)
 	}
 
