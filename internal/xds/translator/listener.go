@@ -849,8 +849,6 @@ func principalsToPredicate(p ir.Principal) *matcher.Matcher_MatcherList_Predicat
 			},
 			Matcher: &matcher.Matcher_MatcherList_Predicate_SinglePredicate_CustomMatch{
 				CustomMatch: &xdscore.TypedExtensionConfig{
-					// name is optional but helpful for diagnostics; the important part is TypedConfig
-					Name:        "xds.type.matcher.v3.IPMatcher",
 					TypedConfig: ipMatcherAny,
 				},
 			},
