@@ -56,6 +56,7 @@ func Test_subscribeAndTranslate(t *testing.T) {
 													Requests: 100,
 													Unit:     ir.RateLimitUnit(egv1a1.RateLimitUnitMinute),
 												},
+												Name: "default/policy-for-route/rule/0",
 											},
 											{
 												HeaderMatches: []*ir.StringMatch{
@@ -68,6 +69,7 @@ func Test_subscribeAndTranslate(t *testing.T) {
 													Requests: 10,
 													Unit:     ir.RateLimitUnit(egv1a1.RateLimitUnitSecond),
 												},
+												Name: "default/policy-for-route/rule/1",
 											},
 										},
 									},
@@ -91,6 +93,7 @@ func Test_subscribeAndTranslate(t *testing.T) {
 													Requests: 100,
 													Unit:     ir.RateLimitUnit(egv1a1.RateLimitUnitMinute),
 												},
+												Name: "default/policy-for-route1/rule/0",
 											},
 										},
 									},
@@ -110,7 +113,7 @@ func Test_subscribeAndTranslate(t *testing.T) {
 			Descriptors: []*rlsconfv3.RateLimitDescriptor{
 				{
 					Key:   "route-0",
-					Value: "route-0",
+					Value: "default/policy-for-route",
 					Descriptors: []*rlsconfv3.RateLimitDescriptor{
 						{
 							Key: "rule-0-match-0",
@@ -130,7 +133,7 @@ func Test_subscribeAndTranslate(t *testing.T) {
 				},
 				{
 					Key:   "route-1",
-					Value: "route-1",
+					Value: "default/policy-for-route1",
 					Descriptors: []*rlsconfv3.RateLimitDescriptor{
 						{
 							Key: "rule-0-match-0",
