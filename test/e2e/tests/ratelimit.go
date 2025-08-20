@@ -950,7 +950,7 @@ var RateLimitGlobalSharedGatewayHeaderMatchTest = suite.ConformanceTest{
 }
 
 var RateLimitGlobalMergeTest = suite.ConformanceTest{
-	ShortName:   "RateLimitGlobalMergeTest",
+	ShortName:   "RateLimitGlobalMerge",
 	Description: "Limit requests with matching headers across multiple routes, verifying both shared and unshared rate limit behaviors",
 	Manifests:   []string{"testdata/ratelimit-global-shared-and-unshared-header-match.yaml"},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
