@@ -89,7 +89,8 @@ func renderMetricsTable(writer io.Writer, reports []*BenchmarkReport) {
 	// write headers
 	headers := []string{
 		"Test Name",
-		"Envoy Gateway Memory (MiB) <br> min/max/means",
+		"Envoy Gateway Memory Container (MiB) <br> min/max/means",
+		"Envoy Gateway Memory Process (MiB) <br> min/max/means",
 		"Envoy Gateway CPU (%) <br> min/max/means",
 		"Averaged Envoy Proxy Memory (MiB) <br> min/max/means",
 		"Averaged Envoy Proxy CPU (%) <br> min/max/means",
@@ -126,7 +127,11 @@ func renderProfilesTable(writer io.Writer, target, key string, titleLevel int, r
 		sortedSamples := make([]BenchmarkMetricSample, len(report.Samples))
 		copy(sortedSamples, report.Samples)
 		sort.Slice(sortedSamples, func(i, j int) bool {
-			return sortedSamples[i].ControlPlaneMem > sortedSamples[j].ControlPlaneMem
+			return sortedSamples[i].ControlPlaneContainerMem > sortedSamples[j].ControlPlaneContainerMem
+		})
+
+		sort.Slice(sortedSamples, func(i, j int) bool {
+			return sortedSamples[i].ControlPlaneProcessMem > sortedSamples[j].ControlPlaneProcessMem
 		})
 
 		heapPprof := sortedSamples[0].HeapProfile
@@ -190,19 +195,22 @@ func writeTableDelimiter(table *tabwriter.Writer, n int) {
 }
 
 func getSamplesMinMaxMeans(samples []BenchmarkMetricSample) []string {
-	cpMem := make([]float64, 0, len(samples))
+	cpcMem := make([]float64, 0, len(samples))
+	cppMem := make([]float64, 0, len(samples))
 	cpCPU := make([]float64, 0, len(samples))
 	dpMem := make([]float64, 0, len(samples))
 	dpCPU := make([]float64, 0, len(samples))
 	for _, sample := range samples {
-		cpMem = append(cpMem, sample.ControlPlaneMem)
+		cpcMem = append(cpcMem, sample.ControlPlaneContainerMem)
+		cppMem = append(cppMem, sample.ControlPlaneProcessMem)
 		cpCPU = append(cpCPU, sample.ControlPlaneCPU)
 		dpMem = append(dpMem, sample.DataPlaneMem)
 		dpCPU = append(dpCPU, sample.DataPlaneCPU)
 	}
 
 	return []string{
-		getMetricsMinMaxMeans(cpMem),
+		getMetricsMinMaxMeans(cpcMem),
+		getMetricsMinMaxMeans(cppMem),
 		getMetricsMinMaxMeans(cpCPU),
 		getMetricsMinMaxMeans(dpMem),
 		getMetricsMinMaxMeans(dpCPU),
