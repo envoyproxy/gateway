@@ -1,0 +1,122 @@
+gateways:
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: Gateway
+    metadata:
+      namespace: envoy-gateway
+      name: gateway-1
+    spec:
+      gatewayClassName: envoy-gateway-class
+      listeners:
+        - name: http
+          protocol: HTTP
+          port: 8080
+          allowedRoutes:
+            namespaces:
+              from: All
+httpRoutes:
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: HTTPRoute
+    metadata:
+      namespace: default
+      name: httproute-1
+    spec:
+      hostnames:
+        - gateway.envoyproxy.io
+      parentRefs:
+        - namespace: envoy-gateway
+          name: gateway-1
+          sectionName: http
+      rules:
+        - matches:
+            - path:
+                value: "/foo"
+          backendRefs:
+            - name: service-1
+              port: 8080
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: HTTPRoute
+    metadata:
+      namespace: default
+      name: httproute-2
+    spec:
+      hostnames:
+        - gateway.envoyproxy.io
+      parentRefs:
+        - namespace: envoy-gateway
+          name: gateway-1
+          sectionName: http
+      rules:
+        - matches:
+            - path:
+                value: "/bar"
+          backendRefs:
+            - name: service-1
+              port: 8080
+backendTrafficPolicies:
+  - apiVersion: gateway.envoyproxy.io/v1alpha1
+    kind: BackendTrafficPolicy
+    metadata:
+      namespace: envoy-gateway
+      name: policy-for-gateway1
+    spec:
+      targetRefs:
+        - group: gateway.networking.k8s.io
+          kind: Gateway
+          name: gateway-1
+      rateLimit:
+        type: Global
+        global:
+          rules:
+            - limit:
+                requests: 21
+                unit: Hour
+              shared: true
+            - clientSelectors:
+                - headers:
+                    - name: x-user-id
+                      value: three
+              limit:
+                requests: 3
+                unit: Hour
+              shared: true
+            - clientSelectors:
+                - headers:
+                    - name: x-user-id
+                      value: four
+              limit:
+                requests: 3
+                unit: Hour
+              shared: false
+  - apiVersion: gateway.envoyproxy.io/v1alpha1
+    kind: BackendTrafficPolicy
+    metadata:
+      namespace: default
+      name: policy-for-route
+    spec:
+      targetRefs:
+        - group: gateway.networking.k8s.io
+          kind: HTTPRoute
+          name: httproute-1
+        - group: gateway.networking.k8s.io
+          kind: HTTPRoute
+          name: httproute-2
+      rateLimit:
+        type: Global
+        global:
+          rules:
+            - clientSelectors:
+                - headers:
+                    - name: x-user-id
+                      value: one
+              limit:
+                requests: 3
+                unit: Hour
+              shared: true
+            - clientSelectors:
+                - headers:
+                    - name: x-user-id
+                      value: two
+              limit:
+                requests: 3
+                unit: Hour
+              shared: false

@@ -28,6 +28,7 @@ http:
             limit:
               requests: 5
               unit: second
+            name: "test-namespace/test-policy-1/rule/0"
     destination:
       name: "first-route-dest"
       settings:
@@ -52,6 +53,7 @@ http:
             limit:
               requests: 5
               unit: second
+            name: "test-namespace/test-policy-2/rule/0"
     pathMatch:
       exact: "example"
     destination:
@@ -76,6 +78,7 @@ http:
             limit:
               requests: 5
               unit: second
+            name: "test-namespace/test-policy-3/rule/0"
           - headerMatches:
             - name: "x-user-id"
               exact: "two"
@@ -87,6 +90,7 @@ http:
             limit:
               requests: 10
               unit: second
+            name: "test-namespace/test-policy-3/rule/1"
     destination:
       name: "third-route-dest"
       settings:
