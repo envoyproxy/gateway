@@ -30,7 +30,7 @@ const (
 	controlPlaneProcessMemQL   = `go_memstats_heap_inuse_bytes{namespace="envoy-gateway-system", control_plane="envoy-gateway"}/1024/1024`
 	controlPlaneCPUQL          = `rate(process_cpu_seconds_total{namespace="envoy-gateway-system", control_plane="envoy-gateway"}[%DURATIONs])*100`
 	dataPlaneMemQL             = `container_memory_working_set_bytes{namespace="envoy-gateway-system", container="envoy"}/1024/1024`
-	dataPlaneCPUQLFormat       = `rate(container_cpu_usage_seconds_total{namespace="envoy-gateway-system", container="envoy"}[%ds])*100`
+	dataPlaneCPUQLFormat       = `rate(container_cpu_usage_seconds_total{namespace="envoy-gateway-system", container="envoy"}[%DURATIONs])*100`
 	DurationFormatter          = "%DURATION"
 )
 
@@ -128,14 +128,15 @@ func (r *BenchmarkReport) sampleMetrics(ctx context.Context, sample *BenchmarkMe
 
 	// Get duration
 	durationSeconds := int(time.Since(startTime).Seconds())
-	cpCPUQL := strings.ReplaceAll(controlPlaneCPUQL, DurationFormatter, fmt.Sprintf("%d", durationSeconds))
+	durationStr := fmt.Sprintf("%d", durationSeconds)
+	cpCPUQL := strings.ReplaceAll(controlPlaneCPUQL, DurationFormatter, durationStr)
 
 	cpCPU, qErr := r.promClient.QuerySum(ctx, cpCPUQL)
 	if qErr != nil {
 		err = errors.Join(err, fmt.Errorf("failed to query control plane cpu: %w", qErr))
 	}
 
-	dpCPUQL := fmt.Sprintf(dataPlaneCPUQLFormat, durationSeconds)
+	dpCPUQL := strings.ReplaceAll(dataPlaneCPUQLFormat, DurationFormatter, durationStr)
 	dpCPU, qErr := r.promClient.QueryAvg(ctx, dpCPUQL)
 	if qErr != nil {
 		err = errors.Join(err, fmt.Errorf("failed to query data plane cpu: %w", qErr))
