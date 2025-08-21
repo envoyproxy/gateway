@@ -48,7 +48,7 @@ type BenchmarkMetricSample struct {
 type BenchmarkReport struct {
 	Name              string
 	ProfilesOutputDir string
-	RouteConvergence  PerfDuration
+	RouteConvergence  *PerfDuration
 	// Nighthawk benchmark result
 	Result []byte
 	// Prometheus metrics and pprof profiles sampled data

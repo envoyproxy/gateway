@@ -99,7 +99,14 @@ func renderMetricsTable(writer io.Writer, reports []*BenchmarkReport) {
 	writeTableHeader(table, headers)
 
 	for _, report := range reports {
-		routeConvergenceDuration := fmt.Sprintf("%s/%s/%s", report.RouteConvergence.P50, report.RouteConvergence.P90, report.RouteConvergence.P99)
+		routeConvergenceDuration := "N/A"
+		if report.RouteConvergence != nil {
+			routeConvergenceDuration = fmt.Sprintf("%s/%s/%s",
+				report.RouteConvergence.P50,
+				report.RouteConvergence.P90,
+				report.RouteConvergence.P99)
+		}
+
 		data := []string{report.Name, routeConvergenceDuration}
 		data = append(data, getSamplesMinMaxMeans(report.Samples)...)
 		writeTableRow(table, data)

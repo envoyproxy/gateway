@@ -172,6 +172,6 @@ func getRouteConvergenceDuration(durations map[string]time.Duration) suite.PerfD
 	}
 }
 
-func convertFloat64ToDuration(f float64) time.Duration {
+func convertFloat64ToDuration(f *float64) time.Duration {
 	return time.Duration(f) * time.Microsecond
 }
