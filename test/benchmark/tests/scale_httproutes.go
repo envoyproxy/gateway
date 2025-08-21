@@ -158,20 +158,20 @@ var ScaleHTTPRoutes = suite.BenchmarkTest{
 	},
 }
 
-func getRouteConvergenceDuration(durations map[string]time.Duration) suite.PerfDuration {
+func getRouteConvergenceDuration(durations map[string]time.Duration) *suite.PerfDuration {
 	weights := make([]float64, 0, len(durations))
 	for _, d := range durations {
 		weights = append(weights, float64(d.Microseconds()))
 	}
 	sort.Float64s(weights)
 
-	return suite.PerfDuration{
+	return &suite.PerfDuration{
 		P99: convertFloat64ToDuration(stat.Quantile(0.99, stat.Empirical, weights, nil)),
 		P90: convertFloat64ToDuration(stat.Quantile(0.9, stat.Empirical, weights, nil)),
 		P50: convertFloat64ToDuration(stat.Quantile(0.5, stat.Empirical, weights, nil)),
 	}
 }
 
-func convertFloat64ToDuration(f *float64) time.Duration {
+func convertFloat64ToDuration(f float64) time.Duration {
 	return time.Duration(f) * time.Microsecond
 }
