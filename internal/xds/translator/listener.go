@@ -802,98 +802,69 @@ func buildTCPRBACMatcherFromRules(rules []*ir.AuthorizationRule, defaultAction e
 
 // principalsToPredicate converts principals to a matcher.Matcher_MatcherList_Predicate
 func principalsToPredicate(p ir.Principal) *matcher.Matcher_MatcherList_Predicate {
-	// Build OR over CIDRs as Matcher_MatcherList_Predicate with OrMatcher
-	var preds []*matcher.Matcher_MatcherList_Predicate
-
-	// Prepare SourceIPInput Any once (fall back to TypeUrl-only Any on error)
-	srcInputAny, err := proto.ToAnyWithValidation(&networkinput.SourceIPInput{})
+	// Pack SourceIPInput with anypb.New (no validation)
+	srcInputAny, err := anypb.New(&networkinput.SourceIPInput{})
 	if err != nil {
 		srcInputAny = &anypb.Any{
 			TypeUrl: "type.googleapis.com/envoy.extensions.matching.common_inputs.network.v3.SourceIPInput",
 		}
 	}
 
+	// Aggregate all CIDRs into one Ip matcher
+	var ranges []*corev3.CidrRange
 	for _, c := range p.ClientCIDRs {
-		// Convert CIDR to Envoy CidrRange
 		cr := convertCIDR(c)
-
-		// Skip if convertCIDR returned an empty/invalid range (prevents empty cidrRanges)
-		if cr == nil || cr.AddressPrefix == "" {
+		if cr == nil || cr.AddressPrefix == "" || cr.PrefixLen == nil {
 			log.Log.WithName("tcp-rbac").Info("skipping empty/invalid CIDR", "cidr", c)
 			continue
 		}
-
-		// Copy into a fresh CidrRange literal to avoid any cross-package/version surprises.
-		crCopy := &corev3.CidrRange{
+		ranges = append(ranges, &corev3.CidrRange{
 			AddressPrefix: cr.AddressPrefix,
-			PrefixLen:     wrapperspb.UInt32(0),
-		}
-		// cr is guaranteed non-nil here, only check PrefixLen
-		if cr.PrefixLen != nil {
-			crCopy.PrefixLen = wrapperspb.UInt32(cr.PrefixLen.GetValue())
-		}
-		// Defensive debug: log what's going to be placed into the matcher
-		log.Log.WithName("tcp-rbac").Info("building ip matcher (prepared)", "cidr", c.CIDR, "addr", crCopy.AddressPrefix, "prefix_len", crCopy.GetPrefixLen().GetValue())
-
-		// Build the Envoy runtime Ip matcher (envoy.extensions.matching.input_matchers.ip.v3.Ip)
-		ipListMatcher := &matchingip.Ip{
-			CidrRanges: []*corev3.CidrRange{crCopy},
-		}
-		// Ensure we won't send an Ip matcher with an empty list
-		if len(ipListMatcher.CidrRanges) == 0 {
-			log.Log.WithName("tcp-rbac").Error(nil, "ip matcher has no cidr ranges, skipping predicate", "cidr", c)
-			continue
-		}
-
-		ipMatcherAny, err := proto.ToAnyWithValidation(ipListMatcher)
-		if err != nil {
-			// Fallback to Envoy registered type URL for the input_matcher
-			ipMatcherAny = &anypb.Any{
-				TypeUrl: "type.googleapis.com/envoy.extensions.matching.input_matchers.ip.v3.Ip",
-			}
-		}
-
-		// Build SinglePredicate: Input is the SourceIPInput typed input,
-		// and the matcher is provided as a TypedConfig (typed matcher).
-		single := &matcher.Matcher_MatcherList_Predicate_SinglePredicate{
-			Input: &xdscore.TypedExtensionConfig{
-				Name:        "envoy.matching.inputs.source_ip",
-				TypedConfig: srcInputAny,
-			},
-			Matcher: &matcher.Matcher_MatcherList_Predicate_SinglePredicate_CustomMatch{
-				CustomMatch: &xdscore.TypedExtensionConfig{
-					// Registered extension name so proto validation passes and Envoy can resolve the matcher.
-					Name:        "envoy.matching.matchers.ip",
-					TypedConfig: ipMatcherAny,
-				},
-			},
-		}
-
-		preds = append(preds, &matcher.Matcher_MatcherList_Predicate{
-			MatchType: &matcher.Matcher_MatcherList_Predicate_SinglePredicate_{
-				SinglePredicate: single,
-			},
+			PrefixLen:     wrapperspb.UInt32(cr.PrefixLen.GetValue()),
 		})
 	}
 
-	switch len(preds) {
-	case 0:
-		// never match
+	// No valid ranges => return a never-match predicate
+	if len(ranges) == 0 {
 		return &matcher.Matcher_MatcherList_Predicate{
 			MatchType: &matcher.Matcher_MatcherList_Predicate_OrMatcher{
 				OrMatcher: &matcher.Matcher_MatcherList_Predicate_PredicateList{},
 			},
 		}
-	case 1:
-		return preds[0]
-	default:
-		return &matcher.Matcher_MatcherList_Predicate{
-			MatchType: &matcher.Matcher_MatcherList_Predicate_OrMatcher{
-				OrMatcher: &matcher.Matcher_MatcherList_Predicate_PredicateList{
-					Predicate: preds,
+	}
+
+	// Build Ip matcher and pack with anypb.New (skip validation)
+	ipListMatcher := &matchingip.Ip{CidrRanges: ranges}
+
+	// Debug: log what we're packing
+	mopts := protojson.MarshalOptions{EmitUnpopulated: true}
+	if jb, err := mopts.Marshal(ipListMatcher); err == nil {
+		log.Log.WithName("tcp-rbac").Info("packing Ip matcher", "ip_matcher", string(jb))
+	}
+
+	ipMatcherAny, err := anypb.New(ipListMatcher)
+	if err != nil {
+		ipMatcherAny = &anypb.Any{
+			TypeUrl: "type.googleapis.com/envoy.extensions.matching.input_matchers.ip.v3.Ip",
+		}
+	}
+
+	// SinglePredicate: SourceIP input + Ip custom matcher
+	return &matcher.Matcher_MatcherList_Predicate{
+		MatchType: &matcher.Matcher_MatcherList_Predicate_SinglePredicate_{
+			SinglePredicate: &matcher.Matcher_MatcherList_Predicate_SinglePredicate{
+				Input: &xdscore.TypedExtensionConfig{
+					Name:        "envoy.matching.inputs.source_ip",
+					TypedConfig: srcInputAny,
+				},
+				Matcher: &matcher.Matcher_MatcherList_Predicate_SinglePredicate_CustomMatch{
+					CustomMatch: &xdscore.TypedExtensionConfig{
+						Name:        "envoy.matching.matchers.ip",
+						TypedConfig: ipMatcherAny,
+					},
 				},
 			},
-		}
+		},
 	}
 }
 
@@ -925,20 +896,16 @@ func buildTCPFilterChain(
 		// Convert IR Authorization to RBAC config
 		var rbacCfg *rbacconfig.RBAC
 
-		switch {
-		case hasAllow && hasDeny:
-			// Mixed actions: use ordered matcher. Honor the SecurityPolicy.DefaultAction if present,
-			// otherwise fall back to DENY.
-			defaultAction := egv1a1.AuthorizationActionDeny
-			if irRoute.Security != nil && irRoute.Security.Authorization != nil {
-				// If the IR exposes a DefaultAction field, respect it.
-				if irRoute.Security.Authorization.DefaultAction == egv1a1.AuthorizationActionAllow {
-					defaultAction = egv1a1.AuthorizationActionAllow
-				}
-			}
-			rbacCfg = buildTCPRBACMatcherFromRules(irRoute.Security.Authorization.Rules, defaultAction)
+		// Require homogeneous rule sets. Support two modes:
+		//  - deny-list: one or more DENY rules -> RBAC Action = DENY (default ALLOW)
+		//  - allow-list: one or more ALLOW rules -> RBAC Action = ALLOW (default DENY)
+		// Mixed ALLOW+DENY rules are rejected to avoid ambiguous semantics.
+		if hasAllow && hasDeny {
+			logger.Error(nil, "mixed ALLOW and DENY rules are not supported; pick either allow-list or deny-list semantics")
+			return nil, fmt.Errorf("mixed ALLOW and DENY rules are not supported")
+		}
 
-		case hasDeny:
+		if hasDeny {
 			// Deny-list semantics: default ALLOW
 			rbacCfg = &rbacconfig.RBAC{
 				StatPrefix: "tcp_rbac_",
@@ -947,8 +914,7 @@ func buildTCPFilterChain(
 					Policies: denyPolicies,
 				},
 			}
-
-		case hasAllow:
+		} else if hasAllow {
 			// Allow-list semantics: default DENY
 			rbacCfg = &rbacconfig.RBAC{
 				StatPrefix: "tcp_rbac_",
@@ -957,10 +923,7 @@ func buildTCPFilterChain(
 					Policies: allowPolicies,
 				},
 			}
-		default:
-			// No rules
 		}
-
 		if rbacCfg != nil {
 			// Diagnostic: dump RBAC proto and check for missing TypedConfig fields in Matcher
 			func() {
