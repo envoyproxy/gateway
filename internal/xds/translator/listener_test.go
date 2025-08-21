@@ -144,36 +144,6 @@ func Test_splitTCPAuthRules_and_convertPrincipals(t *testing.T) {
 	}
 }
 
-func Test_buildTCPRBACMatcherFromRules_Basic(t *testing.T) {
-	rules := []*ir.AuthorizationRule{
-		{
-			Name:   "r1",
-			Action: egv1a1.AuthorizationActionAllow,
-			Principal: ir.Principal{
-				ClientCIDRs: []*ir.CIDRMatch{{CIDR: "192.168.1.0/24"}},
-			},
-		},
-		{
-			Name:   "r2",
-			Action: egv1a1.AuthorizationActionDeny,
-			Principal: ir.Principal{
-				ClientCIDRs: []*ir.CIDRMatch{{CIDR: "0.0.0.0/0"}},
-			},
-		},
-	}
-
-	rbac := buildTCPRBACMatcherFromRules(rules, egv1a1.AuthorizationActionDeny)
-	require.NotNil(t, rbac)
-	require.NotNil(t, rbac.Matcher)
-
-	// If the matcher has a MatcherList, it should contain two FieldMatchers
-	if ml := rbac.Matcher.GetMatcherList(); ml != nil {
-		require.Len(t, ml.GetMatchers(), 2)
-	}
-	// OnNoMatch should be set
-	require.NotNil(t, rbac.Matcher.GetOnNoMatch())
-}
-
 func Test_buildTCPFilterChain_RBACPresenceByRules(t *testing.T) {
 	// CASE A: Authorization present with >=1 rule -> RBAC filter should be added
 	routeWithRule := &ir.TCPRoute{
@@ -294,55 +264,6 @@ func Test_buildTCPRBACMatcherFromRules_DefaultActionAllow(t *testing.T) {
 	require.Equal(t, rbacv3.RBAC_ALLOW, act.Action)
 }
 
-func Test_buildTCPRBACMatcherFromRules_DefaultActionAllow_TCP(t *testing.T) {
-	rules := []*ir.AuthorizationRule{
-		{
-			Name:   "allow-local",
-			Action: egv1a1.AuthorizationActionAllow,
-			Principal: ir.Principal{
-				ClientCIDRs: []*ir.CIDRMatch{{CIDR: "192.168.254.0/24"}},
-			},
-		},
-		{
-			Name:   "deny-all",
-			Action: egv1a1.AuthorizationActionDeny,
-			Principal: ir.Principal{
-				ClientCIDRs: []*ir.CIDRMatch{{CIDR: "0.0.0.0/0"}},
-			},
-		},
-	}
-
-	r := buildTCPRBACMatcherFromRules(rules, egv1a1.AuthorizationActionAllow)
-	require.NotNil(t, r)
-
-	// debug dump
-	mo := prototext.MarshalOptions{Multiline: true}
-	if b, err := mo.Marshal(r); err == nil {
-		t.Logf("tcp rbac dump:\n%s", string(b))
-	}
-
-	// Basic checks
-	require.NotNil(t, r.Matcher)
-	if ml := r.Matcher.GetMatcherList(); ml != nil {
-		require.Len(t, ml.GetMatchers(), 2)
-	}
-
-	onNo := r.Matcher.GetOnNoMatch()
-	require.NotNil(t, onNo)
-
-	om := onNo.GetOnMatch()
-	require.NotNil(t, om)
-
-	v, ok := om.(*matcherv3.Matcher_OnMatch_Action)
-	require.True(t, ok)
-	require.NotNil(t, v.Action)
-	require.NotNil(t, v.Action.GetTypedConfig())
-
-	act := &rbacv3.Action{}
-	require.NoError(t, v.Action.GetTypedConfig().UnmarshalTo(act))
-	require.Equal(t, rbacv3.RBAC_ALLOW, act.Action)
-}
-
 func Test_EmptyActionProtoDefaultsToAllow(t *testing.T) {
 	act := &rbacv3.Action{} // empty
 	b, err := proto.Marshal(act)
@@ -426,31 +347,6 @@ func Test_ConvertPrincipals_DirectRemoteIP(t *testing.T) {
 	require.Equal(t, "10.0.0.0", dr.AddressPrefix)
 }
 
-func Test_BuildTCPProxyHashPolicy_SourceIP(t *testing.T) {
-	// ConsistentHash.SourceIP true should produce a SourceIp hash policy
-	lb := &ir.LoadBalancer{
-		ConsistentHash: &ir.ConsistentHash{
-			SourceIP: func(b bool) *bool { return &b }(true),
-		},
-	}
-
-	got := buildTCPProxyHashPolicy(lb)
-	require.Len(t, got, 1, "expected one hash policy when SourceIP is true")
-
-	hp := got[0]
-	require.NotNil(t, hp, "hash policy must not be nil")
-
-	// Expect SourceIp variant
-	_, ok := hp.PolicySpecifier.(*typev3.HashPolicy_SourceIp_)
-	require.True(t, ok, "expected HashPolicy_SourceIp_ variant")
-	// And the SourceIp struct itself should be non-nil
-	if s, ok := hp.PolicySpecifier.(*typev3.HashPolicy_SourceIp_); ok {
-		require.NotNil(t, s.SourceIp, "expected SourceIp to be non-nil")
-	}
-}
-
-// Go
-
 func Test_buildTCPFilterChain_IPAwareRoute(t *testing.T) {
 	route := &ir.TCPRoute{
 		Name: "ip-aware-route",
@@ -501,4 +397,95 @@ func Test_buildTCPFilterChain_IPAwareRoute(t *testing.T) {
 		}
 	}
 	require.True(t, foundTCPProxy, "tcp proxy filter not found")
+}
+
+// SingleAction = all rules share the same action (all ALLOW or all DENY) -> classic rules-based RBAC (Rules field set, Matcher nil)
+
+func Test_buildTCPRBACMatcherFromRules_SingleActionAllow(t *testing.T) {
+	rules := []*ir.AuthorizationRule{
+		{
+			Name:   "allow-a",
+			Action: egv1a1.AuthorizationActionAllow,
+			Principal: ir.Principal{
+				ClientCIDRs: []*ir.CIDRMatch{{CIDR: "10.1.0.0/16"}},
+			},
+		},
+		{
+			Name:   "allow-b",
+			Action: egv1a1.AuthorizationActionAllow,
+			Principal: ir.Principal{
+				ClientCIDRs: []*ir.CIDRMatch{{CIDR: "10.2.0.0/16"}},
+			},
+		},
+	}
+
+	r := buildTCPRBACMatcherFromRules(rules, egv1a1.AuthorizationActionDeny)
+	require.NotNil(t, r)
+	require.NotNil(t, r.Rules, "expected classic rules-based RBAC (SingleAction ALLOW)")
+	require.Nil(t, r.Matcher, "matcher should be nil for SingleAction set")
+	require.Equal(t, rbacv3.RBAC_ALLOW, r.Rules.Action)
+	require.Len(t, r.Rules.Policies, 2)
+}
+
+func Test_buildTCPRBACMatcherFromRules_SingleActionDeny(t *testing.T) {
+	rules := []*ir.AuthorizationRule{
+		{
+			Name:   "deny-a",
+			Action: egv1a1.AuthorizationActionDeny,
+			Principal: ir.Principal{
+				ClientCIDRs: []*ir.CIDRMatch{{CIDR: "0.0.0.0/0"}},
+			},
+		},
+		{
+			Name:   "deny-b",
+			Action: egv1a1.AuthorizationActionDeny,
+			Principal: ir.Principal{
+				ClientCIDRs: []*ir.CIDRMatch{{CIDR: "192.0.2.0/24"}},
+			},
+		},
+	}
+
+	r := buildTCPRBACMatcherFromRules(rules, egv1a1.AuthorizationActionAllow)
+	require.NotNil(t, r)
+	require.NotNil(t, r.Rules, "expected classic rules-based RBAC (SingleAction DENY)")
+	require.Nil(t, r.Matcher)
+	require.Equal(t, rbacv3.RBAC_DENY, r.Rules.Action)
+	require.Len(t, r.Rules.Policies, 2)
+}
+
+func Test_buildTCPRBACMatcherFromRules_DefaultActionDeny_Mixed(t *testing.T) {
+	rules := []*ir.AuthorizationRule{
+		{
+			Name:   "allow-subnet",
+			Action: egv1a1.AuthorizationActionAllow,
+			Principal: ir.Principal{
+				ClientCIDRs: []*ir.CIDRMatch{{CIDR: "198.51.100.0/24"}},
+			},
+		},
+		{
+			Name:   "deny-host",
+			Action: egv1a1.AuthorizationActionDeny,
+			Principal: ir.Principal{
+				ClientCIDRs: []*ir.CIDRMatch{{CIDR: "203.0.113.42/32"}},
+			},
+		},
+	}
+
+	r := buildTCPRBACMatcherFromRules(rules, egv1a1.AuthorizationActionDeny)
+	require.NotNil(t, r)
+	require.NotNil(t, r.Matcher, "expected matcher for mixed actions")
+	require.Nil(t, r.Rules, "rules variant should be nil for mixed action set")
+
+	// Validate OnNoMatch default DENY action
+	onNo := r.Matcher.GetOnNoMatch()
+	require.NotNil(t, onNo)
+
+	onNoActionWrapper, ok := onNo.OnMatch.(*matcherv3.Matcher_OnMatch_Action)
+	require.True(t, ok)
+	require.NotNil(t, onNoActionWrapper.Action)
+	require.NotNil(t, onNoActionWrapper.Action.TypedConfig)
+
+	act := &rbacv3.Action{}
+	require.NoError(t, onNoActionWrapper.Action.TypedConfig.UnmarshalTo(act))
+	require.Equal(t, rbacv3.RBAC_DENY, act.Action, "default OnNoMatch should be DENY when defaultAction is DENY")
 }

@@ -12,6 +12,7 @@ import (
 	"net"
 	"strconv"
 	"strings"
+	"unicode"
 
 	xdscore "github.com/cncf/xds/go/xds/core/v3"
 	matcher "github.com/cncf/xds/go/xds/type/matcher/v3"
@@ -728,7 +729,7 @@ func buildTCPRBACMatcherFromRules(rules []*ir.AuthorizationRule, defaultAction e
 		return nil
 	}
 
-	// Detect homogeneous action set (all ALLOW or all DENY) and fall back to classic rules-based RBAC.
+	// Detect SingleAction action set (all ALLOW or all DENY) and fall back to classic rules-based RBAC.
 	first := rules[0].Action
 	allSame := true
 	for _, r := range rules[1:] {
@@ -770,9 +771,11 @@ func buildTCPRBACMatcherFromRules(rules []*ir.AuthorizationRule, defaultAction e
 			act = rbacv3.RBAC_DENY
 		}
 
-		actionName := fmt.Sprintf("tcp-authz-%s", strings.ToLower(string(r.Action)))
+		safeRuleName := sanitizeMatcherActionName(r.Name)
+		// Extension config + action name include rule name + action for clarity
+		actionExtName := fmt.Sprintf("tcp-authz-%s-%s", safeRuleName, strings.ToLower(string(r.Action)))
 		actAny, err := anypb.New(&rbacv3.Action{
-			Name:   actionName,
+			Name:   actionExtName,
 			Action: act,
 		})
 		if err != nil {
@@ -785,7 +788,7 @@ func buildTCPRBACMatcherFromRules(rules []*ir.AuthorizationRule, defaultAction e
 			OnMatch: &matcher.Matcher_OnMatch{
 				OnMatch: &matcher.Matcher_OnMatch_Action{
 					Action: &xdscore.TypedExtensionConfig{
-						Name:        actionName,
+						Name:        actionExtName,
 						TypedConfig: actAny,
 					},
 				},
@@ -826,6 +829,21 @@ func buildTCPRBACMatcherFromRules(rules []*ir.AuthorizationRule, defaultAction e
 		StatPrefix: "tcp_rbac_",
 		Matcher:    topMatcher,
 	}
+}
+
+func sanitizeMatcherActionName(in string) string {
+	if in == "" {
+		return "unnamed"
+	}
+	var b strings.Builder
+	for _, r := range in {
+		if unicode.IsLetter(r) || unicode.IsDigit(r) || r == '_' {
+			b.WriteRune(unicode.ToLower(r))
+		} else {
+			b.WriteByte('_')
+		}
+	}
+	return b.String()
 }
 
 // principalsToPredicate converts principals to a matcher.Matcher_MatcherList_Predicate
@@ -929,7 +947,7 @@ func buildTCPFilterChain(
 			}
 		}
 
-		// Delegate to builder; it will return a classic rules-based RBAC for homogeneous
+		// Delegate to builder; it will return a classic rules-based RBAC for SingleAction
 		// rule sets and a matcher-based RBAC for mixed sets.
 		rbacCfg := buildTCPRBACMatcherFromRules(irRoute.Security.Authorization.Rules, defaultAction)
 
