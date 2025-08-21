@@ -70,7 +70,7 @@ var ScaleHTTPRoutes = suite.BenchmarkTest{
 					startTime := time.Now()
 					convergenceTimeByHost := map[string]time.Duration{}
 					err = bSuite.ScaleUpHTTPRoutes(ctx, [2]uint16{start, scale}, routeNameFormat, routeHostnameFormat, gatewayNN.Name, routePerHost-batch,
-						func(route *gwapiv1.HTTPRoute, createdAt time.Time) {
+						func(route *gwapiv1.HTTPRoute, applyAt time.Time) {
 							routeNN := types.NamespacedName{Name: route.Name, Namespace: route.Namespace}
 							routeNNs = append(routeNNs, routeNN)
 							host := string(route.Spec.Hostnames[0])
@@ -92,7 +92,7 @@ var ScaleHTTPRoutes = suite.BenchmarkTest{
 								},
 							}, bSuite.TimeoutConfig.RequiredConsecutiveSuccesses, bSuite.TimeoutConfig.MaxTimeToConsistency)
 
-							d := time.Since(createdAt)
+							d := time.Since(applyAt)
 							convergenceTimeByHost[host] = d
 
 							t.Logf("Create HTTPRoute: %s with hostname %s, and became ready after %s", routeNN.String(), host, d)

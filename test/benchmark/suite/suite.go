@@ -318,13 +318,13 @@ func (b *BenchmarkTestSuite) ScaleUpHTTPRoutes(ctx context.Context, scaleRange [
 		newRoute.Spec.ParentRefs[0].Name = gwapiv1.ObjectName(refGateway)
 		newRoute.Spec.Hostnames[0] = gwapiv1.Hostname(routeHostname)
 
-		startAt := time.Now()
 		if err := b.CreateResource(ctx, newRoute); err != nil {
 			return err
 		}
+		applyAt := time.Now()
 
 		if afterCreation != nil {
-			afterCreation(newRoute, startAt)
+			afterCreation(newRoute, applyAt)
 		}
 
 		counterPerBatch++
