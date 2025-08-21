@@ -115,7 +115,16 @@ func expectedProxyContainers(infra *ir.ProxyInfra,
 		TopologyInjectorDisabled: topologyInjectorDisabled,
 	}
 
-	args, err := common.BuildProxyArgs(infra, shutdownConfig, bootstrapConfigOptions, fmt.Sprintf("$(%s)", envoyPodEnvVar), gatewayNamespaceMode)
+	serviceCluster := infra.Name
+	if !gatewayNamespaceMode {
+		if infra.GetProxyConfig().GetEnvoyProxyProvider().Kubernetes.EnvoyService.Name != nil {
+			serviceCluster = *infra.GetProxyConfig().GetEnvoyProxyProvider().Kubernetes.EnvoyService.Name
+		} else {
+			serviceCluster = ExpectedResourceHashedName(serviceCluster)
+		}
+	}
+
+	args, err := common.BuildProxyArgs(infra, shutdownConfig, bootstrapConfigOptions, serviceCluster, fmt.Sprintf("$(%s)", envoyPodEnvVar), gatewayNamespaceMode)
 	if err != nil {
 		return nil, err
 	}

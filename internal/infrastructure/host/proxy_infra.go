@@ -76,7 +76,7 @@ func (i *Infra) CreateOrUpdateProxyInfra(ctx context.Context, infra *ir.Infra) e
 	if i.EnvoyGateway != nil {
 		bootstrapConfigOptions.TopologyInjectorDisabled = i.EnvoyGateway.TopologyInjectorDisabled()
 	}
-	args, err := common.BuildProxyArgs(proxyInfra, proxyConfig.Spec.Shutdown, bootstrapConfigOptions, proxyName, false)
+	args, err := common.BuildProxyArgs(proxyInfra, proxyConfig.Spec.Shutdown, bootstrapConfigOptions, proxyName, proxyName, false)
 	if err != nil {
 		return err
 	}

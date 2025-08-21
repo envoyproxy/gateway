@@ -29,14 +29,10 @@ func BuildProxyArgs(
 	infra *ir.ProxyInfra,
 	shutdownConfig *egv1a1.ShutdownConfig,
 	bootstrapConfigOptions *bootstrap.RenderBootstrapConfigOptions,
+	serviceCluster string,
 	serviceNode string,
 	gatewayNamespaceMode bool,
 ) ([]string, error) {
-	serviceCluster := infra.Name
-	if gatewayNamespaceMode {
-		serviceCluster = fmt.Sprintf("%s/%s", infra.Namespace, infra.Name)
-	}
-
 	if bootstrapConfigOptions != nil {
 		// Configure local Envoy ServiceCluster
 		bootstrapConfigOptions.ServiceClusterName = ptr.To(serviceCluster)
