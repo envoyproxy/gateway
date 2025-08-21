@@ -896,16 +896,19 @@ func buildTCPFilterChain(
 		// Convert IR Authorization to RBAC config
 		var rbacCfg *rbacconfig.RBAC
 
-		// Require homogeneous rule sets. Support two modes:
-		//  - deny-list: one or more DENY rules -> RBAC Action = DENY (default ALLOW)
-		//  - allow-list: one or more ALLOW rules -> RBAC Action = ALLOW (default DENY)
-		// Mixed ALLOW+DENY rules are rejected to avoid ambiguous semantics.
-		if hasAllow && hasDeny {
-			logger.Error(nil, "mixed ALLOW and DENY rules are not supported; pick either allow-list or deny-list semantics")
-			return nil, fmt.Errorf("mixed ALLOW and DENY rules are not supported")
-		}
+		switch {
+		case hasAllow && hasDeny:
+			// Mixed actions: use ordered matcher. Honor the SecurityPolicy.DefaultAction if present,
+			// otherwise fall back to DENY.
+			defaultAction := egv1a1.AuthorizationActionDeny
+			if irRoute.Security != nil && irRoute.Security.Authorization != nil {
+				if irRoute.Security.Authorization.DefaultAction == egv1a1.AuthorizationActionAllow {
+					defaultAction = egv1a1.AuthorizationActionAllow
+				}
+			}
+			rbacCfg = buildTCPRBACMatcherFromRules(irRoute.Security.Authorization.Rules, defaultAction)
 
-		if hasDeny {
+		case hasDeny:
 			// Deny-list semantics: default ALLOW
 			rbacCfg = &rbacconfig.RBAC{
 				StatPrefix: "tcp_rbac_",
@@ -914,7 +917,8 @@ func buildTCPFilterChain(
 					Policies: denyPolicies,
 				},
 			}
-		} else if hasAllow {
+
+		case hasAllow:
 			// Allow-list semantics: default DENY
 			rbacCfg = &rbacconfig.RBAC{
 				StatPrefix: "tcp_rbac_",
