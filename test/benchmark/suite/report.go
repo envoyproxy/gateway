@@ -48,6 +48,7 @@ type BenchmarkMetricSample struct {
 type BenchmarkReport struct {
 	Name              string
 	ProfilesOutputDir string
+	RouteConvergence  *PerfDuration
 	// Nighthawk benchmark result
 	Result []byte
 	// Prometheus metrics and pprof profiles sampled data
@@ -55,6 +56,12 @@ type BenchmarkReport struct {
 
 	kubeClient kube.CLIClient
 	promClient *prom.Client
+}
+
+type PerfDuration struct {
+	P50 time.Duration `json:"p50"`
+	P90 time.Duration `json:"p90"`
+	P99 time.Duration `json:"p99"`
 }
 
 func NewBenchmarkReport(name, profilesOutputDir string, kubeClient kube.CLIClient, promClient *prom.Client) *BenchmarkReport {

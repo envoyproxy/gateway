@@ -10,13 +10,18 @@ package tests
 import (
 	"context"
 	"fmt"
+	"sort"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/require"
+	"gonum.org/v1/gonum/stat"
 	"k8s.io/apimachinery/pkg/types"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
+	"sigs.k8s.io/gateway-api/conformance/utils/http"
 	"sigs.k8s.io/gateway-api/conformance/utils/kubernetes"
+	"sigs.k8s.io/gateway-api/conformance/utils/roundtripper"
+	"sigs.k8s.io/gateway-api/conformance/utils/tlog"
 
 	"github.com/envoyproxy/gateway/test/benchmark/suite"
 )
@@ -56,17 +61,50 @@ var ScaleHTTPRoutes = suite.BenchmarkTest{
 				routePerHost := scale / totalHosts
 				testName := fmt.Sprintf("scaling up httproutes to %d with %d routes per hostname", scale, routePerHost)
 
+				r := roundtripper.DefaultRoundTripper{
+					Debug:         true,
+					TimeoutConfig: bSuite.TimeoutConfig,
+				}
 				t.Run(testName, func(t *testing.T) {
+					tlog.Logf(t, "Start scaling up HTTPRoutes to %d with %d routes per hostname", scale, routePerHost)
 					startTime := time.Now()
-					err = bSuite.ScaleUpHTTPRoutes(ctx, [2]uint16{start, scale}, routeNameFormat, routeHostnameFormat, gatewayNN.Name, routePerHost-batch, func(route *gwapiv1.HTTPRoute) {
-						routeNN := types.NamespacedName{Name: route.Name, Namespace: route.Namespace}
-						routeNNs = append(routeNNs, routeNN)
+					convergenceTimeByHost := map[string]time.Duration{}
+					err = bSuite.ScaleUpHTTPRoutes(ctx, [2]uint16{start, scale}, routeNameFormat, routeHostnameFormat, gatewayNN.Name, routePerHost-batch,
+						func(route *gwapiv1.HTTPRoute, applyAt time.Time) {
+							routeNN := types.NamespacedName{Name: route.Name, Namespace: route.Namespace}
+							routeNNs = append(routeNNs, routeNN)
+							host := string(route.Spec.Hostnames[0])
+							gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, bSuite.Client, bSuite.TimeoutConfig,
+								bSuite.ControllerName, kubernetes.NewGatewayRef(gatewayNN), routeNN)
 
-						t.Logf("Create HTTPRoute: %s with hostname %s", routeNN.String(), route.Spec.Hostnames[0])
-					})
+							req := http.MakeRequest(t, &http.ExpectedResponse{
+								Request: http.Request{
+									Host: host,
+									Path: "/",
+								},
+								Response: http.Response{
+									StatusCode: 200,
+								},
+							}, gwAddr, "HTTP", "HTTP")
+							http.WaitForConsistentResponse(t, &r, req, http.ExpectedResponse{
+								Response: http.Response{
+									StatusCode: 200,
+								},
+							}, bSuite.TimeoutConfig.RequiredConsecutiveSuccesses, bSuite.TimeoutConfig.MaxTimeToConsistency)
+
+							d := time.Since(applyAt)
+							convergenceTimeByHost[host] = d
+
+							t.Logf("Create HTTPRoute: %s with hostname %s, and became ready after %s", routeNN.String(), host, d)
+						})
 					require.NoError(t, err)
 					start = scale
 					batch = routePerHost
+
+					// Check if we have convergence time for all hosts.
+					if len(convergenceTimeByHost) != int(totalHosts) {
+						t.Fatalf("Expected convergence time for %d hosts, but got %d", totalHosts, len(convergenceTimeByHost))
+					}
 
 					gatewayAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, bSuite.Client, bSuite.TimeoutConfig,
 						bSuite.ControllerName, kubernetes.NewGatewayRef(gatewayNN), routeNNs...)
@@ -75,6 +113,7 @@ var ScaleHTTPRoutes = suite.BenchmarkTest{
 					jobName := fmt.Sprintf("scale-up-httproutes-%d", scale)
 					report, err := bSuite.Benchmark(t, ctx, jobName, testName, gatewayAddr, routeHostnameFormat, int(totalHosts), startTime)
 					require.NoError(t, err)
+					report.RouteConvergence = getRouteConvergenceDuration(convergenceTimeByHost)
 
 					reports = append(reports, report)
 				})
@@ -117,4 +156,22 @@ var ScaleHTTPRoutes = suite.BenchmarkTest{
 
 		return
 	},
+}
+
+func getRouteConvergenceDuration(durations map[string]time.Duration) *suite.PerfDuration {
+	weights := make([]float64, 0, len(durations))
+	for _, d := range durations {
+		weights = append(weights, float64(d.Microseconds()))
+	}
+	sort.Float64s(weights)
+
+	return &suite.PerfDuration{
+		P99: convertFloat64ToDuration(stat.Quantile(0.99, stat.Empirical, weights, nil)),
+		P90: convertFloat64ToDuration(stat.Quantile(0.9, stat.Empirical, weights, nil)),
+		P50: convertFloat64ToDuration(stat.Quantile(0.5, stat.Empirical, weights, nil)),
+	}
+}
+
+func convertFloat64ToDuration(f float64) time.Duration {
+	return time.Duration(f) * time.Microsecond
 }
