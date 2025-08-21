@@ -491,14 +491,14 @@ func Test_buildTCPFilterChain_IPAwareRoute(t *testing.T) {
 
 	// TCP proxy present and typed-config references v3 TcpProxy
 	require.True(t, hasNetworkFilter(fc, "envoy.filters.network.tcp_proxy"))
-	foundTcpProxy := false
+	foundTCPProxy := false
 	for _, f := range fc.GetFilters() {
 		if f.GetName() == "envoy.filters.network.tcp_proxy" {
-			foundTcpProxy = true
+			foundTCPProxy = true
 			tc := f.GetTypedConfig()
 			require.NotNil(t, tc)
 			require.Contains(t, tc.GetTypeUrl(), "envoy.extensions.filters.network.tcp_proxy.v3.TcpProxy")
 		}
 	}
-	require.True(t, foundTcpProxy, "tcp proxy filter not found")
+	require.True(t, foundTCPProxy, "tcp proxy filter not found")
 }

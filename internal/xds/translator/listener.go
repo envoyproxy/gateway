@@ -30,6 +30,7 @@ import (
 	customheaderv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/http/original_ip_detection/custom_header/v3"
 	xffv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/http/original_ip_detection/xff/v3"
 	networkinput "github.com/envoyproxy/go-control-plane/envoy/extensions/matching/common_inputs/network/v3"
+	matchingip "github.com/envoyproxy/go-control-plane/envoy/extensions/matching/input_matchers/ip/v3"
 	quicv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/transport_sockets/quic/v3"
 	tlsv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/transport_sockets/tls/v3"
 	typev3 "github.com/envoyproxy/go-control-plane/envoy/type/v3"
@@ -816,27 +817,21 @@ func principalsToPredicate(p ir.Principal) *matcher.Matcher_MatcherList_Predicat
 		// Convert CIDR to Envoy CidrRange
 		cr := convertCIDR(c)
 
-		// Build IPMatcher with CidrRanges so matching is IP/CIDR-aware.
-		// Note: use the message names/types from the cncf/xds matcher package.
-		ipMatcher := &matcher.IPMatcher{
-			RangeMatchers: []*matcher.IPMatcher_IPRangeMatcher{
+		// Build the Envoy runtime Ip matcher (envoy.extensions.matching.input_matchers.ip.v3.Ip)
+		// which is usable in MatcherList CustomMatch.
+		ipListMatcher := &matchingip.Ip{
+			CidrRanges: []*corev3.CidrRange{
 				{
-					Ranges: []*xdscore.CidrRange{
-						{
-							AddressPrefix: cr.AddressPrefix,
-							PrefixLen:     cr.PrefixLen,
-						},
-					},
+					AddressPrefix: cr.AddressPrefix,
+					PrefixLen:     cr.PrefixLen,
 				},
 			},
 		}
-
-		// Marshal IP matcher to Any for the typed config variant of the predicate.
-		ipMatcherAny, err := proto.ToAnyWithValidation(ipMatcher)
+		ipMatcherAny, err := proto.ToAnyWithValidation(ipListMatcher)
 		if err != nil {
-			// Fallback to type URL only if marshaling fails (keeps intent visible in proto)
+			// Fallback to Envoy registered type URL for the input_matcher
 			ipMatcherAny = &anypb.Any{
-				TypeUrl: "type.googleapis.com/xds.type.matcher.v3.IPMatcher",
+				TypeUrl: "type.googleapis.com/envoy.extensions.matching.input_matchers.ip.v3.Ip",
 			}
 		}
 
