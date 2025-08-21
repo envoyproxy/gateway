@@ -823,11 +823,20 @@ func principalsToPredicate(p ir.Principal) *matcher.Matcher_MatcherList_Predicat
 			continue
 		}
 
+		// Defensive: log the converted range for debugging so we can see what's being sent
+		log.Log.WithName("tcp-rbac").Info("building ip matcher", "cidr", c.CIDR, "address_prefix", cr.AddressPrefix)
+
 		// Build the Envoy runtime Ip matcher (envoy.extensions.matching.input_matchers.ip.v3.Ip)
 		// using the converted CidrRange directly so the typedConfig contains a non-empty slice.
 		ipListMatcher := &matchingip.Ip{
 			CidrRanges: []*corev3.CidrRange{cr},
 		}
+		// Ensure we won't send an Ip matcher with an empty list
+		if len(ipListMatcher.CidrRanges) == 0 {
+			log.Log.WithName("tcp-rbac").Error(nil, "ip matcher has no cidr ranges, skipping predicate", "cidr", c)
+			continue
+		}
+
 		ipMatcherAny, err := proto.ToAnyWithValidation(ipListMatcher)
 		if err != nil {
 			// Fallback to Envoy registered type URL for the input_matcher
