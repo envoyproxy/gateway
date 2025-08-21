@@ -834,7 +834,11 @@ func principalsToPredicate(p ir.Principal) *matcher.Matcher_MatcherList_Predicat
 	}
 
 	// Build Ip matcher and pack with anypb.New (skip validation)
-	ipListMatcher := &matchingip.Ip{CidrRanges: ranges}
+	ipListMatcher := &matchingip.Ip{
+		CidrRanges: ranges,
+		// Required by Envoy proto validation; any non-empty string is acceptable.
+		StatPrefix: "tcp_rbac_ip",
+	}
 
 	// Debug: log what we're packing
 	mopts := protojson.MarshalOptions{EmitUnpopulated: true}
