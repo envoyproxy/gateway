@@ -722,30 +722,61 @@ func (t *Translator) addXdsTCPFilterChain(
 }
 
 func buildTCPRBACMatcherFromRules(rules []*ir.AuthorizationRule, defaultAction egv1a1.AuthorizationAction) *rbacconfig.RBAC {
-	// Build a list of FieldMatchers for MatcherList
-	var fieldMatchers []*matcher.Matcher_MatcherList_FieldMatcher
 	logger := log.Log.WithName("tcp-rbac")
 
+	if len(rules) == 0 {
+		return nil
+	}
+
+	// Detect homogeneous action set (all ALLOW or all DENY) and fall back to classic rules-based RBAC.
+	first := rules[0].Action
+	allSame := true
+	for _, r := range rules[1:] {
+		if r.Action != first {
+			allSame = false
+			break
+		}
+	}
+	if allSame {
+		policies := map[string]*rbacv3.Policy{}
+		for _, r := range rules {
+			policies[r.Name] = &rbacv3.Policy{
+				Principals: convertPrincipals(r.Principal),
+				Permissions: []*rbacv3.Permission{{
+					Rule: &rbacv3.Permission_Any{Any: true},
+				}},
+			}
+		}
+		actionEnum := rbacv3.RBAC_ALLOW
+		if first == egv1a1.AuthorizationActionDeny {
+			actionEnum = rbacv3.RBAC_DENY
+		}
+		return &rbacconfig.RBAC{
+			StatPrefix: "tcp_rbac_",
+			Rules: &rbacv3.RBAC{
+				Action:   actionEnum,
+				Policies: policies,
+			},
+		}
+	}
+
+	// Mixed actions -> ordered matcher path.
+	var fieldMatchers []*matcher.Matcher_MatcherList_FieldMatcher
 	for _, r := range rules {
-		// Build predicate from principals (returns *matcher.Matcher_MatcherList_Predicate)
 		pred := principalsToPredicate(r.Principal)
 
-		// Action: use RBAC enum constants from generated package
 		act := rbacv3.RBAC_ALLOW
 		if r.Action == egv1a1.AuthorizationActionDeny {
 			act = rbacv3.RBAC_DENY
 		}
 
-		// name for the action typed extension config (use underlying string)
-		actionName := strings.ToLower(string(r.Action))
-
-		// Action message must include a non-empty Name for proto validation.
+		actionName := fmt.Sprintf("tcp-authz-%s", strings.ToLower(string(r.Action)))
 		actAny, err := anypb.New(&rbacv3.Action{
-			Name:   fmt.Sprintf("tcp-authz-%s", actionName),
+			Name:   actionName,
 			Action: act,
 		})
 		if err != nil {
-			logger.Error(err, "failed to marshal rbac action to Any, skipping rule", "rule", r.Name)
+			logger.Error(err, "failed to marshal action Any, skipping rule", "rule", r.Name)
 			continue
 		}
 
@@ -754,7 +785,7 @@ func buildTCPRBACMatcherFromRules(rules []*ir.AuthorizationRule, defaultAction e
 			OnMatch: &matcher.Matcher_OnMatch{
 				OnMatch: &matcher.Matcher_OnMatch_Action{
 					Action: &xdscore.TypedExtensionConfig{
-						Name:        fmt.Sprintf("tcp-authz-%s", actionName),
+						Name:        actionName,
 						TypedConfig: actAny,
 					},
 				},
@@ -762,22 +793,19 @@ func buildTCPRBACMatcherFromRules(rules []*ir.AuthorizationRule, defaultAction e
 		})
 	}
 
-	// Default action
 	def := rbacv3.RBAC_DENY
 	if defaultAction == egv1a1.AuthorizationActionAllow {
 		def = rbacv3.RBAC_ALLOW
 	}
-	// Default Action must also include a non-empty Name.
 	defAny, err := anypb.New(&rbacv3.Action{
 		Name:   "default",
 		Action: def,
 	})
 	if err != nil {
-		logger.Error(err, "failed to marshal default rbac action to Any, using empty Any")
+		logger.Error(err, "failed to marshal default action Any")
 		defAny = &anypb.Any{}
 	}
 
-	// Top-level matcher uses Matcher_MatcherList_ wrapper
 	topMatcher := &matcher.Matcher{
 		MatcherType: &matcher.Matcher_MatcherList_{
 			MatcherList: &matcher.Matcher_MatcherList{
@@ -893,45 +921,18 @@ func buildTCPFilterChain(
 		logger := log.Log.WithName("tcp-rbac")
 		logger.Info("Creating RBAC filter from Security features")
 
-		// Split by action
-		allowPolicies, denyPolicies := splitTCPAuthRules(irRoute.Security.Authorization.Rules)
-		hasAllow, hasDeny := len(allowPolicies) > 0, len(denyPolicies) > 0
-
-		// Convert IR Authorization to RBAC config
-		var rbacCfg *rbacconfig.RBAC
-
-		switch {
-		case hasAllow && hasDeny:
-			// Mixed actions: use ordered matcher. Honor the SecurityPolicy.DefaultAction if present,
-			// otherwise fall back to DENY.
-			defaultAction := egv1a1.AuthorizationActionDeny
-			if irRoute.Security != nil && irRoute.Security.Authorization != nil {
-				if irRoute.Security.Authorization.DefaultAction == egv1a1.AuthorizationActionAllow {
-					defaultAction = egv1a1.AuthorizationActionAllow
-				}
-			}
-			rbacCfg = buildTCPRBACMatcherFromRules(irRoute.Security.Authorization.Rules, defaultAction)
-
-		case hasDeny:
-			// Deny-list semantics: default ALLOW
-			rbacCfg = &rbacconfig.RBAC{
-				StatPrefix: "tcp_rbac_",
-				Rules: &rbacv3.RBAC{
-					Action:   rbacv3.RBAC_DENY,
-					Policies: denyPolicies,
-				},
-			}
-
-		case hasAllow:
-			// Allow-list semantics: default DENY
-			rbacCfg = &rbacconfig.RBAC{
-				StatPrefix: "tcp_rbac_",
-				Rules: &rbacv3.RBAC{
-					Action:   rbacv3.RBAC_ALLOW,
-					Policies: allowPolicies,
-				},
+		// Determine default action (fall back to DENY)
+		defaultAction := egv1a1.AuthorizationActionDeny
+		if irRoute.Security != nil && irRoute.Security.Authorization != nil {
+			if irRoute.Security.Authorization.DefaultAction == egv1a1.AuthorizationActionAllow {
+				defaultAction = egv1a1.AuthorizationActionAllow
 			}
 		}
+
+		// Delegate to builder; it will return a classic rules-based RBAC for homogeneous
+		// rule sets and a matcher-based RBAC for mixed sets.
+		rbacCfg := buildTCPRBACMatcherFromRules(irRoute.Security.Authorization.Rules, defaultAction)
+
 		if rbacCfg != nil {
 			// Diagnostic: dump RBAC proto and check for missing TypedConfig fields in Matcher
 			func() {
