@@ -112,8 +112,7 @@ infraIR:
     proxy:
       listeners:
       - address: null
-        http3:
-          quicPort: 443
+        http3: {}
         name: envoy-gateway/gateway-1/tls
         ports:
         - containerPort: 10443
@@ -154,8 +153,7 @@ xdsIR:
       externalPort: 443
       hostnames:
       - '*'
-      http3:
-        quicPort: 443
+      http3: {}
       isHTTP2: false
       metadata:
         kind: Gateway
