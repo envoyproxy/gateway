@@ -18,7 +18,6 @@ import (
 	typev3 "github.com/envoyproxy/go-control-plane/envoy/type/v3"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"google.golang.org/protobuf/encoding/prototext"
 	"google.golang.org/protobuf/proto"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
@@ -108,42 +107,6 @@ func Test_buildTCPProxyHashPolicy(t *testing.T) {
 	}
 }
 
-func Test_splitTCPAuthRules_and_convertPrincipals(t *testing.T) {
-	rules := []*ir.AuthorizationRule{
-		{
-			Name:   "allow-net",
-			Action: egv1a1.AuthorizationActionAllow,
-			Principal: ir.Principal{
-				ClientCIDRs: []*ir.CIDRMatch{{CIDR: "10.0.0.0/8"}},
-			},
-		},
-		{
-			Name:   "deny-all",
-			Action: egv1a1.AuthorizationActionDeny,
-			Principal: ir.Principal{
-				ClientCIDRs: []*ir.CIDRMatch{{CIDR: "0.0.0.0/0"}},
-			},
-		},
-	}
-
-	allow, deny := splitTCPAuthRules(rules)
-	require.Len(t, allow, 1)
-	require.Len(t, deny, 1)
-	_, ok := allow["allow-net"]
-	require.True(t, ok)
-	_, ok = deny["deny-all"]
-	require.True(t, ok)
-
-	// convertPrincipals should produce at least one principal for the allow rule
-	principals := convertPrincipals(rules[0].Principal)
-	require.GreaterOrEqual(t, len(principals), 1)
-	// GetAny() returns a bool, so check it directly.
-	for _, p := range principals {
-		require.True(t, p.GetAny() || p.GetRemoteIp() != nil || p.GetDirectRemoteIp() != nil,
-			"expected principal to have a non-nil identifier (Any, RemoteIp, or DirectRemoteIp)")
-	}
-}
-
 func Test_buildTCPFilterChain_RBACPresenceByRules(t *testing.T) {
 	// CASE A: Authorization present with >=1 rule -> RBAC filter should be added
 	routeWithRule := &ir.TCPRoute{
@@ -227,26 +190,11 @@ func Test_buildTCPRBACMatcherFromRules_DefaultActionAllow(t *testing.T) {
 	rbac := buildTCPRBACMatcherFromRules(rules, egv1a1.AuthorizationActionAllow)
 	require.NotNil(t, rbac)
 
-	// debug dump (visible with -v)
-	var dump string
-	mo := prototext.MarshalOptions{Multiline: true}
-	if b, err := mo.Marshal(rbac); err == nil {
-		dump = string(b)
-	} else {
-		t.Logf("failed to marshal rbac to text: %v", err)
-	}
-	t.Logf("rbac dump:\n%s", dump)
-
 	// Basic shape checks
 	require.NotNil(t, rbac.Matcher)
 	if ml := rbac.Matcher.GetMatcherList(); ml != nil {
 		require.Len(t, ml.GetMatchers(), 2, "expected two field matchers for the two rules")
 	}
-
-	// Loose textual checks
-	require.Contains(t, dump, "tcp-authz-allow")
-	require.Contains(t, dump, "tcp-authz-deny")
-	require.Contains(t, dump, "default")
 
 	// Verify default action typed-config decodes to ALLOW (zero value)
 	onNo := rbac.Matcher.GetOnNoMatch()
@@ -278,25 +226,14 @@ func Test_EmptyActionProtoDefaultsToAllow(t *testing.T) {
 
 func Test_buildRBACPerRoute_DefaultActionAllow(t *testing.T) {
 	auth := &ir.Authorization{
-		// DefaultAction on IR is the gateway API enum type
 		DefaultAction: egv1a1.AuthorizationActionAllow,
-		// no rules
 	}
 
 	rp, err := buildRBACPerRoute(auth)
 	require.NoError(t, err)
 	require.NotNil(t, rp)
 
-	// Debug: marshal to text for easier failure diagnosis in -v runs.
-	mo := prototext.MarshalOptions{Multiline: true}
-	if b, err := mo.Marshal(rp); err == nil {
-		t.Logf("rbacPerRoute dump:\n%s", string(b))
-	}
-
-	// The RBAC per-route can be represented either as a Matcher (with OnNoMatch typed-config)
-	// or as a simple Rules variant. Handle both shapes.
 	if rp.Rbac != nil {
-		// If matcher variant present:
 		if m := rp.Rbac.GetMatcher(); m != nil {
 			onNo := m.GetOnNoMatch()
 			require.NotNil(t, onNo)
@@ -304,25 +241,20 @@ func Test_buildRBACPerRoute_DefaultActionAllow(t *testing.T) {
 			require.NotNil(t, om)
 
 			actVariant, ok := om.(*matcherv3.Matcher_OnMatch_Action)
-			require.True(t, ok, "expected Action variant for OnMatch")
+			require.True(t, ok)
 			require.NotNil(t, actVariant.Action)
 			require.NotNil(t, actVariant.Action.GetTypedConfig())
 
-			any := actVariant.Action.GetTypedConfig()
 			a := &rbacv3.Action{}
-			require.NoError(t, any.UnmarshalTo(a))
+			require.NoError(t, actVariant.Action.GetTypedConfig().UnmarshalTo(a))
 			require.Equal(t, rbacv3.RBAC_ALLOW, a.Action)
 			return
 		}
-
-		// If Rules variant present:
 		if rules := rp.Rbac.GetRules(); rules != nil {
-			// Rules.Action should reflect default action
 			require.Equal(t, rbacv3.RBAC_ALLOW, rules.GetAction())
 			return
 		}
 	}
-
 	t.Fatalf("unexpected RBAC per-route shape: %+v", rp)
 }
 
@@ -488,4 +420,19 @@ func Test_buildTCPRBACMatcherFromRules_DefaultActionDeny_Mixed(t *testing.T) {
 	act := &rbacv3.Action{}
 	require.NoError(t, onNoActionWrapper.Action.TypedConfig.UnmarshalTo(act))
 	require.Equal(t, rbacv3.RBAC_DENY, act.Action, "default OnNoMatch should be DENY when defaultAction is DENY")
+}
+
+func Test_sanitizeMatcherActionName(t *testing.T) {
+	cases := map[string]string{
+		"":                "unnamed",
+		"Allow-Net":       "allow_net",
+		"deny.ALL":        "deny_all",
+		"MiXeD_123":       "mixed_123",
+		"spaces and tabs": "spaces_and_tabs",
+		"Ünicode*Chars!":  "ünicode_chars_", // preserves unicode letters, replaces others
+	}
+	for in, want := range cases {
+		got := sanitizeMatcherActionName(in)
+		require.Equal(t, want, got, "input=%q", in)
+	}
 }

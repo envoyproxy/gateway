@@ -6,7 +6,6 @@
 package translator
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"net"
@@ -37,7 +36,6 @@ import (
 	typev3 "github.com/envoyproxy/go-control-plane/envoy/type/v3"
 	"github.com/envoyproxy/go-control-plane/pkg/resource/v3"
 	"github.com/envoyproxy/go-control-plane/pkg/wellknown"
-	"google.golang.org/protobuf/encoding/protojson"
 	protobuf "google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/anypb"
 	"google.golang.org/protobuf/types/known/durationpb"
@@ -861,7 +859,6 @@ func principalsToPredicate(p ir.Principal) *matcher.Matcher_MatcherList_Predicat
 	for _, c := range p.ClientCIDRs {
 		cr := convertCIDR(c)
 		if cr == nil || cr.AddressPrefix == "" || cr.PrefixLen == nil {
-			log.Log.WithName("tcp-rbac").Info("skipping empty/invalid CIDR", "cidr", c)
 			continue
 		}
 		ranges = append(ranges, &corev3.CidrRange{
@@ -884,12 +881,6 @@ func principalsToPredicate(p ir.Principal) *matcher.Matcher_MatcherList_Predicat
 		CidrRanges: ranges,
 		// Required by Envoy proto validation; any non-empty string is acceptable.
 		StatPrefix: "tcp_rbac_ip",
-	}
-
-	// Debug: log what we're packing
-	mopts := protojson.MarshalOptions{EmitUnpopulated: true}
-	if jb, err := mopts.Marshal(ipListMatcher); err == nil {
-		log.Log.WithName("tcp-rbac").Info("packing Ip matcher", "ip_matcher", string(jb))
 	}
 
 	ipMatcherAny, err := anypb.New(ipListMatcher)
@@ -928,93 +919,29 @@ func buildTCPFilterChain(
 ) (*listenerv3.FilterChain, error) {
 	var filters []*listenerv3.Filter
 
-	// Create access logs
 	al, err := buildXdsAccessLog(accesslog, ir.ProxyAccessLogTypeRoute)
 	if err != nil {
 		return nil, err
 	}
 
-	// Add RBAC filter first if Security features exist
+	// Add RBAC first (if any rules)
 	if irRoute.Security != nil && irRoute.Security.Authorization != nil && len(irRoute.Security.Authorization.Rules) > 0 {
-		logger := log.Log.WithName("tcp-rbac")
-		logger.Info("Creating RBAC filter from Security features")
-
-		// Determine default action (fall back to DENY)
 		defaultAction := egv1a1.AuthorizationActionDeny
-		if irRoute.Security != nil && irRoute.Security.Authorization != nil {
-			if irRoute.Security.Authorization.DefaultAction == egv1a1.AuthorizationActionAllow {
-				defaultAction = egv1a1.AuthorizationActionAllow
-			}
+		if irRoute.Security.Authorization.DefaultAction == egv1a1.AuthorizationActionAllow {
+			defaultAction = egv1a1.AuthorizationActionAllow
 		}
 
-		// Delegate to builder; it will return a classic rules-based RBAC for SingleAction
-		// rule sets and a matcher-based RBAC for mixed sets.
 		rbacCfg := buildTCPRBACMatcherFromRules(irRoute.Security.Authorization.Rules, defaultAction)
-
 		if rbacCfg != nil {
-			// Diagnostic: dump RBAC proto and check for missing TypedConfig fields in Matcher
-			func() {
-				logger := log.Log.WithName("tcp-rbac-diagnostic")
-				// JSON dump for quick inspection
-				mOpts := protojson.MarshalOptions{EmitUnpopulated: true, Indent: "  "}
-				bj, err := mOpts.Marshal(rbacCfg)
-				if err == nil {
-					logger.Info("RBAC config JSON", "rbac_json", string(bj))
-				} else {
-					logger.Error(err, "failed to marshal rbac cfg to json")
-				}
-
-				// quick structural check for nil TypedConfig on common locations
-				var issues []string
-				if rbacCfg.Matcher != nil {
-					// onNo.OnMatch is a oneof; check for the Action variant via type assertion
-					if onNo := rbacCfg.Matcher.OnNoMatch; onNo != nil {
-						if om, ok := onNo.OnMatch.(*matcher.Matcher_OnMatch_Action); ok {
-							if om.Action != nil && om.Action.TypedConfig == nil {
-								issues = append(issues, "Matcher.OnNoMatch.Action.TypedConfig")
-							}
-						}
-					}
-
-					// Check matcher list entries
-					if ml := rbacCfg.Matcher.GetMatcherList(); ml != nil {
-						for i, fm := range ml.Matchers {
-							if fm == nil {
-								continue
-							}
-							// fm.OnMatch.OnMatch is a oneof; check Action variant via type assertion
-							if om, ok := fm.OnMatch.OnMatch.(*matcher.Matcher_OnMatch_Action); ok {
-								if om.Action != nil && om.Action.TypedConfig == nil {
-									issues = append(issues, fmt.Sprintf("Matcher.MatcherList.Matchers[%d].OnMatch.Action.TypedConfig", i))
-								}
-							}
-							if fm.Predicate != nil {
-								if sp := fm.Predicate.GetSinglePredicate(); sp != nil {
-									if inp := sp.Input; inp != nil && inp.TypedConfig == nil {
-										issues = append(issues, fmt.Sprintf("Matcher.MatcherList.Matchers[%d].Predicate.SinglePredicate.Input.TypedConfig", i))
-									}
-								}
-							}
-						}
-					}
-				}
-				if len(issues) > 0 {
-					logger.Error(fmt.Errorf("missing typedconfigs"), "RBAC matcher has missing TypedConfig fields", "issues", strings.Join(issues, ", "))
-				} else {
-					logger.Info("RBAC matcher diagnostic: no missing TypedConfig fields detected")
-				}
-			}()
 			if f, err := toNetworkFilter("envoy.filters.network.rbac", rbacCfg); err == nil {
 				filters = append(filters, f)
-				logger.Info("Added RBAC filter to chain")
 			} else {
-				logger.Error(err, "Failed to create RBAC network filter")
 				return nil, err
 			}
 		}
 	}
 
-	// Add connection limit filter if configured
+	// Connection limit (if configured)
 	if connection != nil && connection.ConnectionLimit != nil {
 		cl := buildConnectionLimitFilter(statPrefix, connection)
 		if clf, err := toNetworkFilter(networkConnectionLimit, cl); err == nil {
@@ -1024,7 +951,7 @@ func buildTCPFilterChain(
 		}
 	}
 
-	// Always add TCP proxy filter last
+	// TCP proxy last
 	mgr := &tcpv3.TcpProxy{
 		AccessLog:  al,
 		StatPrefix: statPrefix,
@@ -1033,26 +960,19 @@ func buildTCPFilterChain(
 		},
 		HashPolicy: buildTCPProxyHashPolicy(irRoute.LoadBalancer),
 	}
-
-	// Add timeout if configured
 	if timeout != nil && timeout.TCP != nil && timeout.TCP.IdleTimeout != nil {
 		mgr.IdleTimeout = durationpb.New(timeout.TCP.IdleTimeout.Duration)
 	}
-
-	// Add the TCP proxy filter (always last)
 	if mgrf, err := toNetworkFilter(wellknown.TCPProxy, mgr); err == nil {
 		filters = append(filters, mgrf)
 	} else {
 		return nil, err
 	}
 
-	// Build the filter chain
-	filterChain := &listenerv3.FilterChain{
+	return &listenerv3.FilterChain{
 		Filters: filters,
 		Name:    tlsListenerFilterChainName(irRoute),
-	}
-
-	return filterChain, nil
+	}, nil
 }
 
 func buildConnectionLimitFilter(statPrefix string, connection *ir.ClientConnection) *connection_limitv3.ConnectionLimit {
@@ -1509,88 +1429,47 @@ func buildSetCurrentClientCertDetails(in *ir.HeaderSettings) *hcmv3.HttpConnecti
 
 // convertCIDR converts IR CIDR match to Envoy CIDR range
 func convertCIDR(cidr *ir.CIDRMatch) *corev3.CidrRange {
-	logger := log.Log.WithName("cidr-converter")
+	if cidr == nil {
+		return nil
+	}
 
-	// Use the full CIDR notation instead of separate fields
 	if cidr.CIDR != "" {
 		ip, ipNet, err := net.ParseCIDR(cidr.CIDR)
 		if err != nil {
-			logger.Error(err, "Failed to parse CIDR", "cidr", cidr.CIDR)
+			// fallback to separate fields if provided
+			if cidr.IP == "" {
+				log.Log.WithName("cidr-converter").Error(err, "failed to parse CIDR", "cidr", cidr.CIDR)
+				return nil
+			}
 			return &corev3.CidrRange{
 				AddressPrefix: cidr.IP,
 				PrefixLen:     wrapperspb.UInt32(cidr.MaskLen),
 			}
 		}
-
 		ones, _ := ipNet.Mask.Size()
-		logger.Info("Parsed CIDR successfully",
-			"ip", ip.String(),
-			"prefix_len", ones,
-			"cidr", cidr.CIDR)
-
 		return &corev3.CidrRange{
 			AddressPrefix: ip.String(),
 			PrefixLen:     wrapperspb.UInt32(uint32(ones)),
 		}
 	}
 
-	// Fall back to using the separate IP and mask length fields
-	logger.Info("Using separate IP and mask fields",
-		"ip", cidr.IP,
-		"mask_len", cidr.MaskLen)
-
+	if cidr.IP == "" {
+		return nil
+	}
 	return &corev3.CidrRange{
 		AddressPrefix: cidr.IP,
 		PrefixLen:     wrapperspb.UInt32(cidr.MaskLen),
 	}
 }
 
-func splitTCPAuthRules(rules []*ir.AuthorizationRule) (
-	allow map[string]*rbacv3.Policy,
-	deny map[string]*rbacv3.Policy,
-) {
-	allow = map[string]*rbacv3.Policy{}
-	deny = map[string]*rbacv3.Policy{}
-
-	for _, rule := range rules {
-		pol := &rbacv3.Policy{
-			Principals: convertPrincipals(rule.Principal),
-			Permissions: []*rbacv3.Permission{{
-				Rule: &rbacv3.Permission_Any{Any: true},
-			}},
-		}
-
-		switch rule.Action {
-		case egv1a1.AuthorizationActionAllow:
-			allow[rule.Name] = pol
-		case egv1a1.AuthorizationActionDeny:
-			deny[rule.Name] = pol
-		default:
-			// ignore unknown/unsupported actions
-		}
-	}
-	return
-}
-
 func convertPrincipals(principal ir.Principal) []*rbacv3.Principal {
-	logger := log.FromContext(context.Background())
 	principals := []*rbacv3.Principal{}
-
-	logger.Info("Converting principals",
-		"num_cidrs", len(principal.ClientCIDRs))
-
 	for _, cidr := range principal.ClientCIDRs {
-		logger.Info("Processing CIDR",
-			"cidr", cidr.CIDR,
-			"ip", cidr.IP,
-			"mask_len", cidr.MaskLen)
-
 		principals = append(principals, &rbacv3.Principal{
 			Identifier: &rbacv3.Principal_DirectRemoteIp{
 				DirectRemoteIp: convertCIDR(cidr),
 			},
 		})
 	}
-
 	return principals
 }
