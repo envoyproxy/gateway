@@ -62,10 +62,10 @@ helm-generate.%:
 	@if [ ${CHART_NAME} == "gateway-addons-helm" ]; then \
   		$(call log, "Run jsonnet generate for dashboards in chart: ${CHART_NAME}!"); \
   		workDir="charts/${CHART_NAME}/dashboards"; \
-  		cd $$workDir && ../../../go tool jb install && cd ../../..; \
+  		cd $$workDir && ../../../$(GO_TOOL) jb install && cd ../../..; \
   		for file in $$(find $${workDir} -maxdepth 1 -name '*.libsonnet'); do \
   		    name=$$(basename $$file .libsonnet); \
-  		    go tool jsonnet -J $${workDir}/vendor $${workDir}/$${name}.libsonnet > $${workDir}/$${name}.gen.json; \
+  		    $(GO_TOOL) jsonnet -J $${workDir}/vendor $${workDir}/$${name}.libsonnet > $${workDir}/$${name}.gen.json; \
   		done \
   	fi
 

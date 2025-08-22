@@ -13,6 +13,8 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"strings"
+	"time"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -24,18 +26,21 @@ import (
 )
 
 const (
-	controlPlaneMemQL = `container_memory_working_set_bytes{namespace="envoy-gateway-system", control_plane="envoy-gateway"}/1024/1024`
-	controlPlaneCPUQL = `rate(process_cpu_seconds_total{namespace="envoy-gateway-system", control_plane="envoy-gateway"}[30s])*100`
-	dataPlaneMemQL    = `container_memory_working_set_bytes{namespace="envoy-gateway-system", container="envoy"}/1024/1024`
-	dataPlaneCPUQL    = `rate(container_cpu_usage_seconds_total{namespace="envoy-gateway-system", container="envoy"}[30s])*100`
+	controlPlaneContainerMemQL = `process_resident_memory_bytes{namespace="envoy-gateway-system", control_plane="envoy-gateway"}/1024/1024`
+	controlPlaneProcessMemQL   = `go_memstats_heap_inuse_bytes{namespace="envoy-gateway-system", control_plane="envoy-gateway"}/1024/1024`
+	controlPlaneCPUQL          = `rate(process_cpu_seconds_total{namespace="envoy-gateway-system", control_plane="envoy-gateway"}[%DURATIONs])*100`
+	dataPlaneMemQL             = `container_memory_working_set_bytes{namespace="envoy-gateway-system", container="envoy"}/1024/1024`
+	dataPlaneCPUQLFormat       = `rate(container_cpu_usage_seconds_total{namespace="envoy-gateway-system", container="envoy"}[%DURATIONs])*100`
+	DurationFormatter          = "%DURATION"
 )
 
 // BenchmarkMetricSample contains sampled metrics and profiles data.
 type BenchmarkMetricSample struct {
-	ControlPlaneMem float64
-	ControlPlaneCPU float64
-	DataPlaneMem    float64
-	DataPlaneCPU    float64
+	ControlPlaneContainerMem float64
+	ControlPlaneProcessMem   float64
+	ControlPlaneCPU          float64
+	DataPlaneMem             float64
+	DataPlaneCPU             float64
 
 	HeapProfile []byte
 }
@@ -43,6 +48,7 @@ type BenchmarkMetricSample struct {
 type BenchmarkReport struct {
 	Name              string
 	ProfilesOutputDir string
+	RouteConvergence  *PerfDuration
 	// Nighthawk benchmark result
 	Result []byte
 	// Prometheus metrics and pprof profiles sampled data
@@ -50,6 +56,12 @@ type BenchmarkReport struct {
 
 	kubeClient kube.CLIClient
 	promClient *prom.Client
+}
+
+type PerfDuration struct {
+	P50 time.Duration `json:"p50"`
+	P90 time.Duration `json:"p90"`
+	P99 time.Duration `json:"p99"`
 }
 
 func NewBenchmarkReport(name, profilesOutputDir string, kubeClient kube.CLIClient, promClient *prom.Client) *BenchmarkReport {
@@ -61,10 +73,10 @@ func NewBenchmarkReport(name, profilesOutputDir string, kubeClient kube.CLIClien
 	}
 }
 
-func (r *BenchmarkReport) Sample(ctx context.Context) (err error) {
+func (r *BenchmarkReport) Sample(ctx context.Context, startTime time.Time) (err error) {
 	sample := BenchmarkMetricSample{}
 
-	if mErr := r.sampleMetrics(ctx, &sample); mErr != nil {
+	if mErr := r.sampleMetrics(ctx, &sample, startTime); mErr != nil {
 		err = errors.Join(mErr)
 	}
 
@@ -105,27 +117,40 @@ func (r *BenchmarkReport) GetResult(ctx context.Context, job *types.NamespacedNa
 	return nil
 }
 
-func (r *BenchmarkReport) sampleMetrics(ctx context.Context, sample *BenchmarkMetricSample) (err error) {
+func (r *BenchmarkReport) sampleMetrics(ctx context.Context, sample *BenchmarkMetricSample, startTime time.Time) (err error) {
 	// Sample memory
-	cpMem, qErr := r.promClient.QuerySum(ctx, controlPlaneMemQL)
+	cpcMem, qErr := r.promClient.QuerySum(ctx, controlPlaneContainerMemQL)
 	if qErr != nil {
-		err = errors.Join(fmt.Errorf("failed to query control plane memory: %w", qErr))
+		err = errors.Join(fmt.Errorf("failed to query control plane container memory: %w", qErr))
+	}
+	cppMem, qErr := r.promClient.QuerySum(ctx, controlPlaneProcessMemQL)
+	if qErr != nil {
+		err = errors.Join(fmt.Errorf("failed to query control plane process memory: %w", qErr))
 	}
 	dpMem, qErr := r.promClient.QueryAvg(ctx, dataPlaneMemQL)
 	if qErr != nil {
 		err = errors.Join(err, fmt.Errorf("failed to query data plane memory: %w", qErr))
 	}
 	// Sample cpu
-	cpCPU, qErr := r.promClient.QuerySum(ctx, controlPlaneCPUQL)
+
+	// Get duration
+	durationSeconds := int(time.Since(startTime).Seconds())
+	durationStr := fmt.Sprintf("%d", durationSeconds)
+	cpCPUQL := strings.ReplaceAll(controlPlaneCPUQL, DurationFormatter, durationStr)
+
+	cpCPU, qErr := r.promClient.QuerySum(ctx, cpCPUQL)
 	if qErr != nil {
 		err = errors.Join(err, fmt.Errorf("failed to query control plane cpu: %w", qErr))
 	}
-	dpCPU, qErr := r.promClient.QueryAvg(ctx, dataPlaneCPUQL)
+
+	dpCPUQL := strings.ReplaceAll(dataPlaneCPUQLFormat, DurationFormatter, durationStr)
+	dpCPU, qErr := r.promClient.QueryAvg(ctx, dpCPUQL)
 	if qErr != nil {
 		err = errors.Join(err, fmt.Errorf("failed to query data plane cpu: %w", qErr))
 	}
 
-	sample.ControlPlaneMem = cpMem
+	sample.ControlPlaneContainerMem = cpcMem
+	sample.ControlPlaneProcessMem = cppMem
 	sample.ControlPlaneCPU = cpCPU
 	sample.DataPlaneMem = dpMem
 	sample.DataPlaneCPU = dpCPU
