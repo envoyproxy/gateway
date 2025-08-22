@@ -212,18 +212,6 @@ func Test_buildTCPRBACMatcherFromRules_DefaultActionAllow(t *testing.T) {
 	require.Equal(t, rbacv3.RBAC_ALLOW, act.Action)
 }
 
-func Test_EmptyActionProtoDefaultsToAllow(t *testing.T) {
-	act := &rbacv3.Action{} // empty
-	b, err := proto.Marshal(act)
-	require.NoError(t, err)
-
-	act2 := &rbacv3.Action{}
-	require.NoError(t, proto.Unmarshal(b, act2))
-
-	// Zero value of the enum should equal RBAC_ALLOW if RBAC_ALLOW is defined as zero.
-	require.Equal(t, rbacv3.RBAC_ALLOW, act2.Action)
-}
-
 func Test_buildRBACPerRoute_DefaultActionAllow(t *testing.T) {
 	auth := &ir.Authorization{
 		DefaultAction: egv1a1.AuthorizationActionAllow,

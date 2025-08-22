@@ -833,6 +833,7 @@ func (t *Translator) translateSecurityPolicyForRoute(
 					if target.SectionName != nil {
 						sectionMatch = (string(*target.SectionName) == r.Metadata.SectionName)
 					}
+
 					// A Policy targeting the most specific scope(xRoute rule) wins over a policy
 					// targeting a lesser specific scope(xRoute).
 					if strings.HasPrefix(r.Name, prefix) && sectionMatch {
@@ -840,6 +841,7 @@ func (t *Translator) translateSecurityPolicyForRoute(
 						if r.Security != nil {
 							continue
 						}
+
 						r.Security = &ir.SecurityFeatures{
 							CORS:          cors,
 							JWT:           jwt,
