@@ -4,8 +4,7 @@ global:
   # -- Global override for image registry
   imageRegistry: ""
   # -- Global override for image pull secrets
-  imagePullSecrets:
-    - name: regcred
+  imagePullSecrets: []
 
   # If set, these override image-specific values: useful when installing the chart in a private registry environment.
   # Override image-specific values directly if a global override is not desired.
