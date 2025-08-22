@@ -5,88 +5,39 @@ ecosystem = "Go"
 vulnerability.ignore = true
 
 [[PackageOverrides]]
-name = "github.com/AdaLogics/go-fuzz-headers"
-version = "0.0.0-20230811130428-ced1acdcaa24"
-ecosystem = "Go"
-license.override = ["Apache-2.0"]
-reason = "Unidentified license since package version is missing in pkg.go.dev"
-
-[[PackageOverrides]]
-name = "github.com/asaskevich/govalidator"
-version = "0.0.0-20230301143203-a9d515a09cc2"
-ecosystem = "Go"
-license.override = ["MIT"]
-reason = "Unidentified license, remove once https://github.com/google/deps.dev/issues/87 is resolved"
-
-[[PackageOverrides]]
-name = "github.com/distribution/distribution/v3"
-version = "3.0.0-beta.1"
-ecosystem = "Go"
-license.override = ["Apache-2.0"]
-reason = "Unidentified license, remove once https://github.com/google/deps.dev/issues/105 is resolved"
-
-[[PackageOverrides]]
-name = "github.com/docker/go-metrics"
-version = "0.0.1"
-ecosystem = "Go"
-license.override = ["Apache-2.0"]
-reason = "This package has dual license - the code is licensed under the Apache 2.0 license and the docs under CC-BY-SA-4.0 license"
-
-[[PackageOverrides]]
 name = "github.com/go-sql-driver/mysql"
-version = "1.8.1"
+version = "1.9.3"
 ecosystem = "Go"
 license.ignore = true
-reason = "This package has MPL-2.0 which is not approved in CNCF Allowlist, but it has an exception. See https://github.com/cncf/foundation/blob/main/license-exceptions/CNCF-licensing-exceptions.csv"
+reason = "This package is licensed under the MPL-2.0 license, which is not included in the CNCF allowlist, but it is covered by an exception. See https://github.com/cncf/foundation/blob/main/license-exceptions/CNCF-licensing-exceptions.csv"
 
 [[PackageOverrides]]
 name = "github.com/hashicorp/errwrap"
 version = "1.1.0"
 ecosystem = "Go"
 license.ignore = true
-reason = "This package has MPL-2.0 which is not approved in CNCF Allowlist, but it has an exception. See https://github.com/cncf/foundation/blob/main/license-exceptions/CNCF-licensing-exceptions.csv"
+reason = "This package is licensed under the MPL-2.0 license, which is not included in the CNCF allowlist, but it is covered by an exception. See https://github.com/cncf/foundation/blob/main/license-exceptions/CNCF-licensing-exceptions.csv"
 
 [[PackageOverrides]]
 name = "github.com/hashicorp/go-multierror"
 version = "1.1.1"
 ecosystem = "Go"
 license.ignore = true
-reason = "This package has MPL-2.0 which is not approved in CNCF Allowlist, but it has an exception. See https://github.com/cncf/foundation/blob/main/license-exceptions/CNCF-licensing-exceptions.csv"
+reason = "This package is licensed under the MPL-2.0 license, which is not included in the CNCF allowlist, but it is covered by an exception. See https://github.com/cncf/foundation/blob/main/license-exceptions/CNCF-licensing-exceptions.csv"
 
 [[PackageOverrides]]
-name = "github.com/hashicorp/hcl"
-version = "1.0.0"
+name = "github.com/hashicorp/golang-lru/v2"
+version = "2.0.7"
 ecosystem = "Go"
 license.ignore = true
-reason = "This package has MPL-2.0 which is not approved in CNCF Allowlist, but it has an exception. See https://github.com/cncf/foundation/blob/main/license-exceptions/CNCF-licensing-exceptions.csv"
+reason = "This package is licensed under the MPL-2.0 license, which is not included in the CNCF allowlist, but it is covered by an exception. See https://github.com/cncf/foundation/blob/main/license-exceptions/CNCF-licensing-exceptions.csv"
 
 [[PackageOverrides]]
 name = "github.com/opencontainers/go-digest"
 version = "1.0.0"
 ecosystem = "Go"
 license.override = ["Apache-2.0"]
-reason = "This package has dual license - the code is licensed under the Apache 2.0 license and the docs under CC-BY-SA-4.0 license"
-
-[[PackageOverrides]]
-name = "github.com/shoenig/go-m1cpu"
-version = "0.1.6"
-ecosystem = "Go"
-license.ignore = true
-reason = "This package has MPL-2.0 which is not approved in CNCF Allowlist, but it has an exception. See https://github.com/cncf/foundation/blob/main/license-exceptions/cncf-exceptions-2023-08-31.spdx"
-
-[[PackageOverrides]]
-name = "github.com/golang/groupcache"
-version = "0.0.0-20241129210726-2c02b8208cf8"
-ecosystem = "Go"
-license.override = ["Apache-2.0"]
-reason = "Unidentified license, remove once https://github.com/google/deps.dev/issues/119 is resolved"
-
-[[PackageOverrides]]
-name = "golang.org/x/crypto"
-version = "0.31.0"
-ecosystem = "Go"
-license.override = ["BSD-3-Clause"]
-reason = "Unidentified license, remove once https://github.com/google/deps.dev/issues/120 is resolved"
+reason = "This package is dual-licensed: the code under the Apache 2.0 license and the documentation under the CC-BY-SA-4.0 license"
 
 [[PackageOverrides]]
 name = "stdlib"
