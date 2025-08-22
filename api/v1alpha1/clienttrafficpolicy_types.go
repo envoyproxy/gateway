@@ -159,6 +159,11 @@ type HeaderSettings struct {
 	//
 	// +optional
 	EarlyRequestHeaders *HTTPHeaderFilter `json:"earlyRequestHeaders,omitempty"`
+
+	// LateResponseHeaders defines settings for global response header modification.
+	//
+	// +optional
+	LateResponseHeaders *HTTPHeaderFilter `json:"lateResponseHeaders,omitempty"`
 }
 
 // WithUnderscoresAction configures the action to take when an HTTP header with underscores
