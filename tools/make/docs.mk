@@ -136,19 +136,19 @@ helm-readme-gen.%:
 	fi
 
 	# generate helm readme doc
-	@go tool helm-docs --template-files=tools/helm-docs/readme.${CHART_NAME}.gotmpl -g charts/${CHART_NAME} -f values.yaml -o README.md
+	$(GO_TOOL) helm-docs --template-files=tools/helm-docs/readme.${CHART_NAME}.gotmpl -g charts/${CHART_NAME} -f values.yaml -o README.md
 
 	# change the placeholder to title before api helm docs generated: split by '-' and capitalize the first letters
 	$(eval CHART_TITLE := $(shell echo "$(CHART_NAME)" | sed -E 's/\<./\U&/g; s/-/ /g' | awk '{for(i=1;i<=NF;i++){ $$i=toupper(substr($$i,1,1)) substr($$i,2) }}1'))
 	sed 's/{CHART-NAME}/$(CHART_TITLE)/g' tools/helm-docs/api.gotmpl > tools/helm-docs/api.${CHART_NAME}.gotmpl
-	@go tool helm-docs --template-files=tools/helm-docs/api.${CHART_NAME}.gotmpl -g charts/${CHART_NAME} -f values.yaml -o api.md
+	$(GO_TOOL) helm-docs --template-files=tools/helm-docs/api.${CHART_NAME}.gotmpl -g charts/${CHART_NAME} -f values.yaml -o api.md
 	mv charts/${CHART_NAME}/api.md site/content/en/latest/install/${CHART_NAME}-api.md
 	rm tools/helm-docs/api.${CHART_NAME}.gotmpl
 
 .PHONY: docs-api-gen
 docs-api-gen:
 	@$(LOG_TARGET)
-	go tool crd-ref-docs \
+	$(GO_TOOL) crd-ref-docs \
 	--source-path=api/v1alpha1 \
 	--config=tools/crd-ref-docs/config.yaml \
 	--templates-dir=tools/crd-ref-docs/templates \

@@ -77,9 +77,9 @@ endif
 .PHONY: manifests
 manifests: generate-gwapi-manifests ## Generate WebhookConfiguration and CustomResourceDefinition objects.
 	@$(LOG_TARGET)
-	@go tool controller-gen crd:allowDangerousTypes=true paths="./api/..." output:crd:artifacts:config=charts/gateway-helm/crds/generated
+	$(GO_TOOL) controller-gen crd:allowDangerousTypes=true paths="./api/..." output:crd:artifacts:config=charts/gateway-helm/crds/generated
 	@mkdir -p charts/gateway-helm/templates/generated
-	@go tool controller-gen crd:allowDangerousTypes=true paths="./api/..." output:crd:artifacts:config=charts/gateway-crds-helm/templates/generated
+	$(GO_TOOL) controller-gen crd:allowDangerousTypes=true paths="./api/..." output:crd:artifacts:config=charts/gateway-crds-helm/templates/generated
 	@for file in charts/gateway-crds-helm/templates/generated/*.yaml; do \
 		sed -i.bak '1s/^/{{- if .Values.crds.envoyGateway.enabled }}\n/' $$file && \
 		echo '{{- end }}' >> $$file && \
@@ -107,12 +107,12 @@ generate-gwapi-manifests: ## Generate Gateway API manifests and make it consiste
 kube-generate: ## Generate code containing DeepCopy, DeepCopyInto, and DeepCopyObject method implementations.
 # Note that the paths can't just be "./..." with the header file, or the tool will panic on run. Sorry.
 	@$(LOG_TARGET)
-	@go tool controller-gen $(CONTROLLERGEN_OBJECT_FLAGS) paths="{$(ROOT_DIR)/api/...,$(ROOT_DIR)/internal/ir/...,$(ROOT_DIR)/internal/gatewayapi/...}"
+	$(GO_TOOL) controller-gen $(CONTROLLERGEN_OBJECT_FLAGS) paths="{$(ROOT_DIR)/api/...,$(ROOT_DIR)/internal/ir/...,$(ROOT_DIR)/internal/gatewayapi/...}"
 
 .PHONY: kube-test
 kube-test: manifests generate ## Run Kubernetes provider tests.
 	@$(LOG_TARGET)
-	KUBEBUILDER_ASSETS="$(shell go tool setup-envtest use $(ENVTEST_K8S_VERSION) -p path)" go test --tags=integration,celvalidation ./... -coverprofile cover.out
+	KUBEBUILDER_ASSETS="$(shell $(GO_TOOL) setup-envtest use $(ENVTEST_K8S_VERSION) -p path)" go test --tags=integration,celvalidation ./... -coverprofile cover.out
 
 ##@ Kubernetes Deployment
 
@@ -326,7 +326,7 @@ run-experimental-conformance: prepare-ip-family ## Run Experimental Gateway API 
 .PHONY: delete-cluster
 delete-cluster: ## Delete kind cluster.
 	@$(LOG_TARGET)
-	@go tool kind delete cluster --name envoy-gateway
+	$(GO_TOOL) kind delete cluster --name envoy-gateway
 
 .PHONY: generate-manifests
 generate-manifests: helm-generate.gateway-helm ## Generate Kubernetes release manifests.
