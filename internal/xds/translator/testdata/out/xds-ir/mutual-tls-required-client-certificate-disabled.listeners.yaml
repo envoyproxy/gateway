@@ -3,7 +3,11 @@
       address: '::'
       portValue: 10080
   filterChains:
-  - filters:
+  - filterChainMatch:
+      applicationProtocols:
+      - h2
+      - http/1.1
+    filters:
     - name: envoy.filters.network.http_connection_manager
       typedConfig:
         '@type': type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
@@ -55,6 +59,10 @@
         disableStatefulSessionResumption: true
         disableStatelessSessionResumption: true
         requireClientCertificate: false
+  listenerFilters:
+  - name: envoy.filters.listener.tls_inspector
+    typedConfig:
+      '@type': type.googleapis.com/envoy.extensions.filters.listener.tls_inspector.v3.TlsInspector
   maxConnectionsToAcceptPerSocketEvent: 1
   name: first-listener
   perConnectionBufferLimitBytes: 32768

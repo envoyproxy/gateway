@@ -104,8 +104,6 @@
       portValue: 8443
   filterChains:
   - filterChainMatch:
-      applicationProtocols:
-      - h2
       serverNames:
       - bar.example.com
     filters:

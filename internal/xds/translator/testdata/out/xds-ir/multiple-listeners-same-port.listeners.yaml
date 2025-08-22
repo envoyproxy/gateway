@@ -32,6 +32,9 @@
     name: third-listener
   filterChains:
   - filterChainMatch:
+      applicationProtocols:
+      - h2
+      - http/1.1
       serverNames:
       - foo.com
     filters:
@@ -77,6 +80,9 @@
         disableStatefulSessionResumption: true
         disableStatelessSessionResumption: true
   - filterChainMatch:
+      applicationProtocols:
+      - h2
+      - http/1.1
       serverNames:
       - foo.net
     filters:

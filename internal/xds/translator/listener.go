@@ -621,7 +621,7 @@ func addFilterChainMatch(
 			ServerNames: hostnames,
 		}
 	}
-	if len(alpnProtocols) == 1 && alpnProtocols[0] == "h2" {
+	if len(alpnProtocols) > 1 {
 		if filterChain.FilterChainMatch == nil {
 			filterChain.FilterChainMatch = &listenerv3.FilterChainMatch{}
 		}
