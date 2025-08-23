@@ -293,6 +293,9 @@ const (
 	// EnvoyFilterBuffer defines the Envoy HTTP buffer filter
 	EnvoyFilterBuffer EnvoyFilter = "envoy.filters.http.buffer"
 
+	// EnvoyFilterHeaderMutation defines the Envoy HTTP header mutation filter
+	EnvoyFilterHeaderMutation EnvoyFilter = "envoy.filters.http.header_mutation"
+
 	// StatFormatterRouteName defines the Route Name formatter for stats
 	StatFormatterRouteName string = "%ROUTE_NAME%"
 
