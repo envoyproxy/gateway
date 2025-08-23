@@ -1422,7 +1422,8 @@ func TestProcessServiceClusterForGateway(t *testing.T) {
 				tc.expectedSvcName = proxy.ExpectedResourceHashedName(utils.NamespacedName(tc.gateway).String())
 			}
 
-			r.processServiceClusterForGateway(tc.envoyProxy, tc.gateway, resourceMap)
+			gwcResource := resource.NewResources()
+			r.processServiceClusterForGateway(tc.envoyProxy, tc.gateway, resourceMap, gwcResource)
 
 			require.Contains(t, resourceMap.allAssociatedBackendRefs, gwapiv1.BackendObjectReference{
 				Kind:      ptr.To(gwapiv1.Kind("Service")),
