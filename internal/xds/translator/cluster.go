@@ -88,6 +88,22 @@ const (
 	EndpointTypeDynamicResolver
 )
 
+var (
+	dummyTLSContext = &tlsv3.UpstreamTlsContext{
+		CommonTlsContext: &tlsv3.CommonTlsContext{
+			TlsCertificateSdsSecretConfigs: nil,
+			ValidationContextType:          nil,
+		},
+	}
+	dummyAny, _          = proto.ToAnyWithValidation(dummyTLSContext)
+	dummyTransportSocket = &corev3.TransportSocket{
+		Name: "dummy.transport_socket",
+		ConfigType: &corev3.TransportSocket_TypedConfig{
+			TypedConfig: dummyAny,
+		},
+	}
+)
+
 func buildEndpointType(settings []*ir.DestinationSetting) EndpointType {
 	// Get endpoint address type for xds cluster by returning the first DestinationSetting's AddressType,
 	// since there's no Mixed AddressType among all the DestinationSettings.
@@ -191,8 +207,13 @@ func buildXdsCluster(args *xdsClusterArgs) (*buildClusterResult, error) {
 		cluster.TransportSocket = args.tSocket
 	}
 
+	requiresAutoHTTPConfig := false
 	for i, ds := range args.settings {
 		if ds.TLS != nil {
+			if !requiresAutoHTTPConfig {
+				requiresAutoHTTPConfig = true
+			}
+
 			socket, err := buildXdsUpstreamTLSSocketWthCert(ds.TLS)
 			if err != nil {
 				// TODO: Log something here
@@ -220,8 +241,14 @@ func buildXdsCluster(args *xdsClusterArgs) (*buildClusterResult, error) {
 		}
 	}
 
+	// TransportSocket is required for auto HTTP config
+	if requiresAutoHTTPConfig && cluster.TransportSocket == nil {
+		// we need a dummy transport socket to pass the validation
+		cluster.TransportSocket = dummyTransportSocket
+	}
+
 	// build common, HTTP/1 and HTTP/2  protocol options for cluster
-	epo, secrets, err := buildTypedExtensionProtocolOptions(args)
+	epo, secrets, err := buildTypedExtensionProtocolOptions(args, requiresAutoHTTPConfig)
 	if err != nil {
 		return nil, err
 	}
@@ -784,7 +811,7 @@ func buildWeightedLocalities(metadata *corev3.Metadata, ds *ir.DestinationSettin
 	return locality
 }
 
-func buildTypedExtensionProtocolOptions(args *xdsClusterArgs) (map[string]*anypb.Any, []*tlsv3.Secret, error) {
+func buildTypedExtensionProtocolOptions(args *xdsClusterArgs, requiresAutoHTTPConfig bool) (map[string]*anypb.Any, []*tlsv3.Secret, error) {
 	requiresHTTP2Options := false
 	for _, ds := range args.settings {
 		if ds.Protocol == ir.GRPC ||
@@ -802,16 +829,14 @@ func buildTypedExtensionProtocolOptions(args *xdsClusterArgs) (map[string]*anypb
 		(args.http1Settings.EnableTrailers || args.http1Settings.PreserveHeaderCase || args.http1Settings.HTTP10 != nil)
 
 	requiresHTTPFilters := len(args.settings) > 0 && args.settings[0].Filters != nil && args.settings[0].Filters.CredentialInjection != nil
-
-	if !requiresCommonHTTPOptions && !requiresHTTP1Options && !requiresHTTP2Options && !args.useClientProtocol && !requiresHTTPFilters {
+	requiredHTTPProtocolOptions := args.useClientProtocol || requiresAutoHTTPConfig ||
+		requiresCommonHTTPOptions || requiresHTTP1Options || requiresHTTP2Options || requiresHTTPFilters
+	if !requiredHTTPProtocolOptions {
 		return nil, nil, nil
 	}
-
 	protocolOptions := httpv3.HttpProtocolOptions{}
-
 	if requiresCommonHTTPOptions {
 		protocolOptions.CommonHttpProtocolOptions = &corev3.HttpProtocolOptions{}
-
 		if args.timeout != nil && args.timeout.HTTP != nil {
 			if args.timeout.HTTP.ConnectionIdleTimeout != nil {
 				protocolOptions.CommonHttpProtocolOptions.IdleTimeout = durationpb.New(args.timeout.HTTP.ConnectionIdleTimeout.Duration)
@@ -829,26 +854,7 @@ func buildTypedExtensionProtocolOptions(args *xdsClusterArgs) (map[string]*anypb
 		}
 	}
 
-	http1opts := &corev3.Http1ProtocolOptions{}
-	if args.http1Settings != nil {
-		http1opts.EnableTrailers = args.http1Settings.EnableTrailers
-		if args.http1Settings.PreserveHeaderCase {
-			preservecaseAny, _ := proto.ToAnyWithValidation(&preservecasev3.PreserveCaseFormatterConfig{})
-			http1opts.HeaderKeyFormat = &corev3.Http1ProtocolOptions_HeaderKeyFormat{
-				HeaderFormat: &corev3.Http1ProtocolOptions_HeaderKeyFormat_StatefulFormatter{
-					StatefulFormatter: &corev3.TypedExtensionConfig{
-						Name:        "preserve_case",
-						TypedConfig: preservecaseAny,
-					},
-				},
-			}
-		}
-		if args.http1Settings.HTTP10 != nil {
-			http1opts.AcceptHttp_10 = true
-			http1opts.DefaultHostForHttp_10 = ptr.Deref(args.http1Settings.HTTP10.DefaultHost, "")
-		}
-	}
-
+	http1Opts, http2Opts := buildHTTP1Settings(args.http1Settings), buildHTTP2Settings(args.http2Settings)
 	// When setting any Typed Extension Protocol Options, UpstreamProtocolOptions are mandatory
 	// If translation requires HTTP2 enablement or HTTP1 trailers, set appropriate setting
 	// Default to http1 otherwise
@@ -858,15 +864,15 @@ func buildTypedExtensionProtocolOptions(args *xdsClusterArgs) (map[string]*anypb
 	case args.useClientProtocol:
 		protocolOptions.UpstreamProtocolOptions = &httpv3.HttpProtocolOptions_UseDownstreamProtocolConfig{
 			UseDownstreamProtocolConfig: &httpv3.HttpProtocolOptions_UseDownstreamHttpConfig{
-				HttpProtocolOptions:  http1opts,
-				Http2ProtocolOptions: buildHTTP2Settings(args.http2Settings),
+				HttpProtocolOptions:  http1Opts,
+				Http2ProtocolOptions: http2Opts,
 			},
 		}
 	case requiresHTTP2Options:
 		protocolOptions.UpstreamProtocolOptions = &httpv3.HttpProtocolOptions_ExplicitHttpConfig_{
 			ExplicitHttpConfig: &httpv3.HttpProtocolOptions_ExplicitHttpConfig{
 				ProtocolConfig: &httpv3.HttpProtocolOptions_ExplicitHttpConfig_Http2ProtocolOptions{
-					Http2ProtocolOptions: buildHTTP2Settings(args.http2Settings),
+					Http2ProtocolOptions: http2Opts,
 				},
 			},
 		}
@@ -874,8 +880,16 @@ func buildTypedExtensionProtocolOptions(args *xdsClusterArgs) (map[string]*anypb
 		protocolOptions.UpstreamProtocolOptions = &httpv3.HttpProtocolOptions_ExplicitHttpConfig_{
 			ExplicitHttpConfig: &httpv3.HttpProtocolOptions_ExplicitHttpConfig{
 				ProtocolConfig: &httpv3.HttpProtocolOptions_ExplicitHttpConfig_HttpProtocolOptions{
-					HttpProtocolOptions: http1opts,
+					HttpProtocolOptions: http1Opts,
 				},
+			},
+		}
+	case requiresAutoHTTPConfig:
+		// use Auto when there's a transport socket
+		protocolOptions.UpstreamProtocolOptions = &httpv3.HttpProtocolOptions_AutoConfig{
+			AutoConfig: &httpv3.HttpProtocolOptions_AutoHttpConfig{
+				HttpProtocolOptions:  http1Opts,
+				Http2ProtocolOptions: http2Opts,
 			},
 		}
 	default:
@@ -1179,6 +1193,30 @@ func (httpRoute *HTTPRouteTranslator) asClusterArgs(name string,
 	}
 
 	return clusterArgs
+}
+
+func buildHTTP1Settings(opts *ir.HTTP1Settings) *corev3.Http1ProtocolOptions {
+	http1Opts := &corev3.Http1ProtocolOptions{}
+	if opts != nil {
+		http1Opts.EnableTrailers = opts.EnableTrailers
+		if opts.PreserveHeaderCase {
+			preservecaseAny, _ := proto.ToAnyWithValidation(&preservecasev3.PreserveCaseFormatterConfig{})
+			http1Opts.HeaderKeyFormat = &corev3.Http1ProtocolOptions_HeaderKeyFormat{
+				HeaderFormat: &corev3.Http1ProtocolOptions_HeaderKeyFormat_StatefulFormatter{
+					StatefulFormatter: &corev3.TypedExtensionConfig{
+						Name:        "preserve_case",
+						TypedConfig: preservecaseAny,
+					},
+				},
+			}
+		}
+		if opts.HTTP10 != nil {
+			http1Opts.AcceptHttp_10 = true
+			http1Opts.DefaultHostForHttp_10 = ptr.Deref(opts.HTTP10.DefaultHost, "")
+		}
+	}
+
+	return http1Opts
 }
 
 func buildHTTP2Settings(opts *ir.HTTP2Settings) *corev3.Http2ProtocolOptions {
