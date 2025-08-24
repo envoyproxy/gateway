@@ -55,6 +55,7 @@ http:
           name: example1
           remoteJWKS:
             uri: https://two.example.com/jwt/public-key/jwks.json
+            cacheDuration: 300s
   - destination:
       name: httproute/default/httproute-2/rule/0
       settings:
@@ -95,3 +96,5 @@ http:
           name: example1
           remoteJWKS:
             uri: https://one.example.com/jwt/public-key/jwks.json
+            cacheDuration: 300s
+

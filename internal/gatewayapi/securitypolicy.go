@@ -1012,9 +1012,10 @@ func (t *Translator) buildRemoteJWKS(
 	}
 
 	return &ir.RemoteJWKS{
-		Destination: rd,
-		Traffic:     traffic,
-		URI:         remoteJWKS.URI,
+		Destination:   rd,
+		Traffic:       traffic,
+		URI:           remoteJWKS.URI,
+		CacheDuration: remoteJWKS.CacheDuration,
 	}, nil
 }
 
