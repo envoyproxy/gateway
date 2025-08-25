@@ -24,7 +24,7 @@ func (r *gatewayAPIReconciler) getExtensionRefFilters(ctx context.Context) ([]un
 		uExtResourceList := &unstructured.UnstructuredList{}
 		uExtResourceList.SetGroupVersionKind(gvk)
 		if err := r.client.List(ctx, uExtResourceList); err != nil {
-			r.log.Info("no associated resources found for %s", gvk.String())
+			r.log.Info("no associated resources found", "GVK", gvk.String())
 			return nil, fmt.Errorf("failed to list %s: %w", gvk.String(), err)
 		}
 
@@ -57,7 +57,7 @@ func (r *gatewayAPIReconciler) getExtensionBackendResources(ctx context.Context)
 		uExtResourceList := &unstructured.UnstructuredList{}
 		uExtResourceList.SetGroupVersionKind(gvk)
 		if err := r.client.List(ctx, uExtResourceList); err != nil {
-			r.log.Info("no associated backend resources found for %s", gvk.String())
+			r.log.Info("no associated backend resources found", "GVK", gvk.String())
 			return nil, fmt.Errorf("failed to list %s: %w", gvk.String(), err)
 		}
 
