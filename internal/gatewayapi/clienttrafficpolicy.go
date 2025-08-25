@@ -959,6 +959,10 @@ func buildConnection(connection *egv1a1.ClientConnection) (*ir.ClientConnection,
 		irConnection.BufferLimitBytes = ptr.To(uint32(bufferLimit))
 	}
 
+	if connection.MaxAcceptPerSocketEvent != nil {
+		irConnection.MaxAcceptPerSocketEvent = ptr.To(*connection.MaxAcceptPerSocketEvent)
+	}
+
 	return irConnection, nil
 }
 
