@@ -7,6 +7,7 @@ on:
     paths:
       - "charts/gateway-helm/crds/gatewayapi-crds.yaml"
       - "test/conformance/experimental_conformance_test.go"
+      - "internal/gatewayapi/conformance/suite.go"
   pull_request:
     paths:
       - "charts/gateway-helm/crds/gatewayapi-crds.yaml"
