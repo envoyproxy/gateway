@@ -1481,7 +1481,7 @@ func (r *gatewayAPIReconciler) processGateways(ctx context.Context, managedGC *g
 				// processGatewayParamsRef has been called for this gateway, its EnvoyProxy should exist in resourceTree
 				ep = resourceTree.GetEnvoyProxy(gtw.Namespace, gtw.Spec.Infrastructure.ParametersRef.Name)
 			}
-			r.processServiceClusterForGateway(ep, &gtw, resourceMap)
+			r.processServiceClusterForGateway(ep, &gtw, resourceMap, resourceTree)
 		}
 
 		if !resourceMap.allAssociatedGateways.Has(gtwNamespacedName) {
@@ -1518,7 +1518,7 @@ func (r *gatewayAPIReconciler) processServiceClusterForGatewayClass(ep *egv1a1.E
 }
 
 // Called on a Gateway when merged gateways mode is not enabled for its parent GatewayClass.
-func (r *gatewayAPIReconciler) processServiceClusterForGateway(ep *egv1a1.EnvoyProxy, gateway *gwapiv1.Gateway, resourceMap *resourceMappings) {
+func (r *gatewayAPIReconciler) processServiceClusterForGateway(ep *egv1a1.EnvoyProxy, gateway *gwapiv1.Gateway, resourceMap *resourceMappings, resourceTree *resource.Resources) {
 	// Skip processing if topology injector is disabled
 	if r.envoyGateway != nil && r.envoyGateway.TopologyInjectorDisabled() {
 		return
@@ -1529,6 +1529,12 @@ func (r *gatewayAPIReconciler) processServiceClusterForGateway(ep *egv1a1.EnvoyP
 	// the gateway's and it lives in the gateway's namespace not the controller's.
 	if r.gatewayNamespaceMode {
 		proxySvcName, proxySvcNamespace = gateway.Name, gateway.Namespace
+	}
+
+	// when gateway's EnvoyProxy is nil and gatewayclass 's EnvoyProxy is not nil
+	// the specified proxySvcName should get from gatewayclass's EnvoyProxy
+	if ep == nil && resourceTree.EnvoyProxyForGatewayClass != nil {
+		ep = resourceTree.EnvoyProxyForGatewayClass
 	}
 
 	// Check if the service name was specified in EnvoyProxy
