@@ -25,6 +25,7 @@ http:
             limit:
               requests: 5
               unit: second
+            name: "test-namespace/test-policy-1/rule/0"
     pathMatch:
       exact: "foo/bar"
     destination:
@@ -46,6 +47,7 @@ http:
             limit:
               requests: 5
               unit: second
+            name: "test-namespace/test-policy-2/rule/0"
     pathMatch:
       exact: "example"
     destination:
@@ -64,6 +66,7 @@ http:
           - limit:
               requests: 5
               unit: second
+            name: "test-namespace/test-policy-3/rule/0"
     pathMatch:
       exact: "test"
     destination:
@@ -86,6 +89,7 @@ http:
             limit:
               requests: 5
               unit: second
+            name: "test-namespace/test-policy-4/rule/0"
     pathMatch:
       exact: "foo/bar/login"
     destination:
@@ -111,6 +115,7 @@ http:
               number: 12345
             responseCost:
               format: "%DYNAMIC_METADATA(something.com:key)%"
+            name: "test-namespace/test-policy-5/rule/0"
     pathMatch:
       exact: "foo/bar"
     destination:
@@ -131,6 +136,7 @@ http:
               unit: second
             requestCost:
               number: 12345
+            name: "test-namespace/test-policy-6/rule/0"
     pathMatch:
       exact: "test"
     destination:
@@ -155,6 +161,7 @@ http:
               unit: second
             responseCost:
               format: "%DYNAMIC_METADATA(something.com:key)%"
+            name: "test-namespace/test-policy-7/rule/0"
     pathMatch:
       exact: "foo/bar/login"
     destination:
