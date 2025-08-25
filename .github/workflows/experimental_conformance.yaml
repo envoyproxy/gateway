@@ -23,6 +23,7 @@ jobs:
   experimental-conformance-test:
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
         target:
           - version: v1.30.13
