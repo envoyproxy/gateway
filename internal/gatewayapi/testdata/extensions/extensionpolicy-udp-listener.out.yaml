@@ -252,6 +252,11 @@ xdsIR:
                 type: Accepted
               controllerName: gateway.envoyproxy.io/gatewayclass-controller
       externalPort: 162
+      metadata:
+        kind: Gateway
+        name: gateway-1
+        namespace: envoy-gateway
+        sectionName: udp1
       name: envoy-gateway/gateway-1/udp1
       port: 10162
     - address: 0.0.0.0
@@ -283,5 +288,10 @@ xdsIR:
                 type: Accepted
               controllerName: gateway.envoyproxy.io/gatewayclass-controller
       externalPort: 163
+      metadata:
+        kind: Gateway
+        name: gateway-1
+        namespace: envoy-gateway
+        sectionName: udp2
       name: envoy-gateway/gateway-1/udp2
       port: 10163

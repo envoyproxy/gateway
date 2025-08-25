@@ -640,6 +640,11 @@ xdsIR:
     tcp:
     - address: 0.0.0.0
       externalPort: 6443
+      metadata:
+        kind: Gateway
+        name: gateway-3
+        namespace: envoy-gateway
+        sectionName: tls-1
       name: envoy-gateway/gateway-3/tls-1
       port: 6443
       routes:
