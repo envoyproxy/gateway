@@ -50,9 +50,9 @@ var HTTP3Test = suite.ConformanceTest{
 			TimeoutConfig: suite.TimeoutConfig,
 		}
 
-		expected := http.ExpectedResponse{
+		http3ReqFooExpected := http.ExpectedResponse{
 			Request: http.Request{
-				Host: "mtls.example.com",
+				Host: "foo.example.com",
 				Path: "/",
 			},
 			Response: http.Response{
@@ -63,13 +63,56 @@ var HTTP3Test = suite.ConformanceTest{
 
 		// This test uses the same key/cert pair as both a client cert and server cert
 		// Both backend and client treat the self-signed cert as a trusted CA
-		cPem, keyPem, _, err := GetTLSSecret(suite.Client, types.NamespacedName{Name: "example-com-tls", Namespace: ConformanceInfraNamespace})
+		cPem, keyPem, _, err := GetTLSSecret(suite.Client, types.NamespacedName{Name: "wildcard-example-com-tls", Namespace: ConformanceInfraNamespace})
 		if err != nil {
 			t.Fatalf("unexpected error finding TLS secret: %v", err)
 		}
 
-		req := http.MakeRequest(t, &expected, gwAddr, "HTTPS", "https")
-		WaitForConsistentMTLSResponse(t, quicRoundTripper, req, expected, suite.TimeoutConfig.RequiredConsecutiveSuccesses, suite.TimeoutConfig.MaxTimeToConsistency,
-			cPem, keyPem, "www.example.com")
+		http3ReqFoo := http.MakeRequest(t, &http3ReqFooExpected, gwAddr, "HTTPS", "https")
+		WaitForConsistentMTLSResponse(t, quicRoundTripper, http3ReqFoo, http3ReqFooExpected, suite.TimeoutConfig.RequiredConsecutiveSuccesses, suite.TimeoutConfig.MaxTimeToConsistency,
+			cPem, keyPem, "foo.example.com")
+
+		http3ReqBarExpected := http.ExpectedResponse{
+			Request: http.Request{
+				Host: "bar.example.com",
+				Path: "/",
+			},
+			Response: http.Response{
+				StatusCode: 200,
+			},
+			Namespace: ConformanceInfraNamespace,
+		}
+		http3ReqBar := http.MakeRequest(t, &http3ReqBarExpected, gwAddr, "HTTPS", "https")
+		WaitForConsistentMTLSResponse(t, quicRoundTripper, http3ReqBar, http3ReqBarExpected, suite.TimeoutConfig.RequiredConsecutiveSuccesses, suite.TimeoutConfig.MaxTimeToConsistency,
+			cPem, keyPem, "bar.example.com")
+
+		// Test that the HTTP requests also work
+		httpReqFooExpected := http.ExpectedResponse{
+			Request: http.Request{
+				Host: "foo.example.com",
+				Path: "/",
+			},
+			Response: http.Response{
+				StatusCode: 200,
+			},
+			Namespace: ConformanceInfraNamespace,
+		}
+		httpReqFoo := http.MakeRequest(t, &httpReqFooExpected, gwAddr, "HTTPS", "https")
+		WaitForConsistentMTLSResponse(t, suite.RoundTripper, httpReqFoo, httpReqFooExpected, suite.TimeoutConfig.RequiredConsecutiveSuccesses, suite.TimeoutConfig.MaxTimeToConsistency,
+			cPem, keyPem, "foo.example.com")
+
+		httpReqBarExpected := http.ExpectedResponse{
+			Request: http.Request{
+				Host: "bar.example.com",
+				Path: "/",
+			},
+			Response: http.Response{
+				StatusCode: 200,
+			},
+			Namespace: ConformanceInfraNamespace,
+		}
+		httpReqBar := http.MakeRequest(t, &httpReqBarExpected, gwAddr, "HTTPS", "https")
+		WaitForConsistentMTLSResponse(t, suite.RoundTripper, httpReqBar, httpReqBarExpected, suite.TimeoutConfig.RequiredConsecutiveSuccesses, suite.TimeoutConfig.MaxTimeToConsistency,
+			cPem, keyPem, "bar.example.com")
 	},
 }
