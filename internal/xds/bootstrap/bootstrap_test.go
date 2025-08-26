@@ -192,6 +192,18 @@ func TestGetRenderedBootstrapConfig(t *testing.T) {
 				TopologyInjectorDisabled: true,
 			},
 		},
+		{
+			name: "topology-injector-enabled",
+			opts: &RenderBootstrapConfigOptions{
+				ProxyMetrics: &egv1a1.ProxyMetrics{
+					Prometheus: &egv1a1.ProxyPrometheusProvider{
+						Disable: true,
+					},
+				},
+				SdsConfig:                sds,
+				TopologyInjectorDisabled: false,
+			},
+		},
 	}
 
 	for _, tc := range cases {
