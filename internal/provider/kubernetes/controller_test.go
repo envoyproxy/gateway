@@ -1603,6 +1603,12 @@ func TestIsTransientError(t *testing.T) {
 	serviceUnavailableErr := kerrors.NewServiceUnavailable("service unavailable")
 	badRequestErr := kerrors.NewBadRequest("bad request")
 
+	// new test errors for context
+	canceledErr := context.Canceled
+	deadlineExceededErr := context.DeadlineExceeded
+	wrappedCanceledErr := fmt.Errorf("wrapped: %w", context.Canceled)
+	wrappedDeadlineExceededErr := fmt.Errorf("wrapped: %w", context.DeadlineExceeded)
+
 	testCases := []struct {
 		name     string
 		err      error
@@ -1614,6 +1620,10 @@ func TestIsTransientError(t *testing.T) {
 		{"ServiceUnavailable", serviceUnavailableErr, true},
 		{"BadRequest", badRequestErr, false},
 		{"NilError", nil, false},
+		{"ContextCanceled", canceledErr, true},
+		{"ContextDeadlineExceeded", deadlineExceededErr, true},
+		{"WrappedContextCanceled", wrappedCanceledErr, true},
+		{"WrappedContextDeadlineExceeded", wrappedDeadlineExceededErr, true},
 	}
 
 	for _, tc := range testCases {
@@ -1623,3 +1633,4 @@ func TestIsTransientError(t *testing.T) {
 		})
 	}
 }
+
