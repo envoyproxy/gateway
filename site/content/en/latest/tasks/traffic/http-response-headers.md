@@ -440,6 +440,164 @@ spec:
 {{% /tab %}}
 {{< /tabpane >}}
 
+## Late Header Modification
+
+In some cases it may be necessary to modify response headers globally. For example, you may want to add a security header (such as `Strict-Transport-Security`) to all routes. Envoy Gateway supports this functionality using the [ClientTrafficPolicy][] API.
+
+A [ClientTrafficPolicy][] resource can be attached to a [Gateway][] resource to configure late header modification for all its routes. In the following example we will demonstrate how late header modification can be configured.
+
+{{< tabpane text=true >}}
+{{% tab header="Apply from stdin" %}}
+
+```shell
+cat <<EOF | kubectl apply -f -
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: http-headers
+spec:
+  parentRefs:
+    - name: eg
+  hostnames:
+    - headers.example
+  rules:
+    - matches:
+      - path:
+          type: PathPrefix
+          value: /
+      backendRefs:
+        - group: ""
+          kind: Service
+          name: backend
+          port: 3000
+          weight: 1
+      filters:
+        - type: ResponseHeaderModifier
+          responseHeaderModifier:
+            add:
+              - name: late-added-header
+                value: filter
+              - name: late-set-header
+                value: filter
+              - name: late-removed-header
+                value: filter
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: ClientTrafficPolicy
+metadata:
+  name: enable-late-headers
+  namespace: default
+spec:
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: Gateway
+    name: eg
+  headers:
+    lateResponseHeaders:
+      add:
+        - name: "late-added-header"
+          value: "late"
+      set:
+        - name: "late-set-header"
+          value: "late"
+      remove:
+        - "late-removed-header"
+EOF
+```
+
+{{% /tab %}}
+{{% tab header="Apply from file" %}}
+Save and apply the following resource to your cluster:
+
+```yaml
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: http-headers
+spec:
+  parentRefs:
+    - name: eg
+  hostnames:
+    - headers.example
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      backendRefs:
+        - group: ""
+          kind: Service
+          name: backend
+          port: 3000
+          weight: 1
+      filters:
+        - type: ResponseHeaderModifier
+          responseHeaderModifier:
+            add:
+              - name: late-added-header
+                value: filter
+              - name: late-set-header
+                value: filter
+              - name: late-removed-header
+                value: filter
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: ClientTrafficPolicy
+metadata:
+  name: enable-late-headers
+  namespace: default
+spec:
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: Gateway
+    name: eg
+  headers:
+    lateResponseHeaders:
+      add:
+        - name: "late-added-header"
+          value: "late"
+      set:
+        - name: "late-set-header"
+          value: "late"
+      remove:
+        - "late-removed-header"
+```
+
+{{% /tab %}}
+{{< /tabpane >}}
+
+Querying `headers.example/get` should result in a `200` response from the example `Gateway` with the following headers:
+
+- `late-added-header` contains backend (example app), filter (RouteFilter), and late (ClientTrafficPolicy) values.
+- `late-set-header` contains only the late value, since the ClientTrafficPolicy overwrote all others.
+- `late-removed-header` is missing entirely - again, due to the ClientTrafficPolicy.
+
+```console
+$ curl -vvv "http://${GATEWAY_HOST}/get" \
+  --header "Host: headers.example" \
+  --header "X-Echo-Set-Header: late-added-header:backend,late-set-header:backend,late-removed-header:backend"
+
+...
+> GET /get HTTP/1.1
+> Host: headers.example
+> User-Agent: curl/7.81.0
+> Accept: */*
+> X-Echo-Set-Header: late-added-header:backend,late-set-header:backend,late-removed-header:backend
+>
+
+< HTTP/1.1 200 OK
+< content-type: application/json
+< late-added-header: backend
+< late-added-header: filter
+< late-added-header: late
+< late-set-header: late
+<
+...
+```
+
 [HTTPRoute]: https://gateway-api.sigs.k8s.io/api-types/httproute/
 [Gateway API documentation]: https://gateway-api.sigs.k8s.io/
 [req_filter]: https://gateway-api.sigs.k8s.io/reference/spec#gateway.networking.k8s.io/v1.HTTPHeaderFilter
+[Gateway]: https://gateway-api.sigs.k8s.io/api-types/gateway/
+[ClientTrafficPolicy]: ../../../api/extension_types#clienttrafficpolicy
