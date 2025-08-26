@@ -15,7 +15,6 @@ import (
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
-	"github.com/envoyproxy/gateway/internal/ir"
 )
 
 func Test_wildcard2regex(t *testing.T) {
@@ -769,11 +768,6 @@ func Test_parseExtAuthTimeout(t *testing.T) {
 			}
 		})
 	}
-}
-
-func Test_getRouteProtocol(t *testing.T) {
-	// nil route should default to HTTP
-	require.Equal(t, ir.HTTP, getRouteProtocol(nil))
 }
 
 func Test_validateSecurityPolicyForTCP_AllowsNilOrEmptyAuth(t *testing.T) {

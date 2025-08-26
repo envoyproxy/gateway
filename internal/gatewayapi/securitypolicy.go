@@ -50,18 +50,6 @@ const (
 	oidcHMACSecretKey  = "hmac-secret"
 )
 
-func getRouteProtocol(route RouteContext) ir.AppProtocol {
-	if route == nil {
-		return ir.HTTP
-	}
-
-	if GetRouteType(route) == resource.KindTCPRoute {
-		return ir.TCP
-	}
-
-	return ir.HTTP
-}
-
 func (t *Translator) ProcessSecurityPolicies(securityPolicies []*egv1a1.SecurityPolicy,
 	gateways []*GatewayContext,
 	routes []RouteContext,
@@ -79,7 +67,6 @@ func (t *Translator) ProcessSecurityPolicies(securityPolicies []*egv1a1.Security
 			Kind:      string(GetRouteType(route)),
 			Name:      route.GetName(),
 			Namespace: route.GetNamespace(),
-			Protocol:  getRouteProtocol(route),
 		}
 		routeMap[key] = &policyRouteTargetContext{RouteContext: route, attachedToRouteRules: make(sets.Set[string])}
 	}
@@ -344,7 +331,6 @@ func (t *Translator) processSecurityPolicyForHTTPRoute(
 		Kind:      string(currTarget.Kind),
 		Name:      string(currTarget.Name),
 		Namespace: policy.Namespace,
-		Protocol:  ir.HTTP,
 	}
 	overriddenTargetsMessage := getOverriddenTargetsMessageForRoute(routeMap[key], currTarget.SectionName)
 	if overriddenTargetsMessage != "" {
@@ -624,7 +610,6 @@ func resolveSecurityPolicyRouteTargetRef(
 		Kind:      string(target.Kind),
 		Name:      string(target.Name),
 		Namespace: policy.Namespace,
-		Protocol:  ir.HTTP,
 	}
 	route, ok := routes[key]
 
@@ -682,7 +667,6 @@ func resolveSecurityPolicyTCPRouteTargetRef(
 		Kind:      string(target.Kind),
 		Name:      string(target.Name),
 		Namespace: policy.Namespace,
-		Protocol:  ir.TCP,
 	}
 	route, ok := routes[key]
 	if !ok {
@@ -801,9 +785,8 @@ func (t *Translator) translateSecurityPolicyForRoute(
 		}
 
 		irKey := t.getIRKey(gtwCtx.Gateway)
-
-		// Handle TCP routes differently from HTTP routes
-		if getRouteProtocol(route) == ir.TCP {
+		// Handle TCP routes differently from HTTP routes (determine by Kind)
+		if GetRouteType(route) == resource.KindTCPRoute {
 			for _, listener := range parentRefCtx.listeners {
 				irListener := xdsIR[irKey].GetTCPListener(irListenerName(listener))
 				if irListener != nil {
@@ -822,21 +805,18 @@ func (t *Translator) translateSecurityPolicyForRoute(
 			// Nothing more to do for TCP for this parentRef
 			continue
 		}
-
 		for _, listener := range parentRefCtx.listeners {
 			irListener := xdsIR[irKey].GetHTTPListener(irListenerName(listener))
 			if irListener != nil {
 				for _, r := range irListener.Routes {
-					// If policy target has a sectionName, check if equal from ir metadata.
-					// If not, apply all routes with the same prefix.
-					sectionMatch := true
-					if target.SectionName != nil {
-						sectionMatch = (string(*target.SectionName) == r.Metadata.SectionName)
+					// If specified the sectionName must match route rule from ir route metadata.
+					if target.SectionName != nil && string(*target.SectionName) != r.Metadata.SectionName {
+						continue
 					}
 
 					// A Policy targeting the most specific scope(xRoute rule) wins over a policy
 					// targeting a lesser specific scope(xRoute).
-					if strings.HasPrefix(r.Name, prefix) && sectionMatch {
+					if strings.HasPrefix(r.Name, prefix) {
 						// if already set - there's a specific level policy, so skip.
 						if r.Security != nil {
 							continue
