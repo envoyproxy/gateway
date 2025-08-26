@@ -180,6 +180,18 @@ func TestGetRenderedBootstrapConfig(t *testing.T) {
 				IPFamily: ptr.To(egv1a1.IPv6),
 			},
 		},
+		{
+			name: "topology-injector-disabled",
+			opts: &RenderBootstrapConfigOptions{
+				ProxyMetrics: &egv1a1.ProxyMetrics{
+					Prometheus: &egv1a1.ProxyPrometheusProvider{
+						Disable: true,
+					},
+				},
+				SdsConfig:                sds,
+				TopologyInjectorDisabled: true,
+			},
+		},
 	}
 
 	for _, tc := range cases {
