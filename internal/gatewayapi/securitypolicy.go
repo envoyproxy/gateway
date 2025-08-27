@@ -960,6 +960,14 @@ func (t *Translator) translateSecurityPolicyForGateway(
 	//
 	// Note: there are multiple features in a security policy, even if some of them
 	// are invalid, we still want to apply the valid ones.
+	// Defensive checks to avoid nil derefs (diagnose panic)
+	if gateway == nil {
+		return fmt.Errorf("translateSecurityPolicyForGateway: gateway context is nil for policy %s/%s", policy.Namespace, policy.Name)
+	}
+	if gateway.Gateway == nil {
+		return fmt.Errorf("translateSecurityPolicyForGateway: embedded Gateway is nil for gateway context %v (policy %s/%s)", gateway, policy.Namespace, policy.Name)
+	}
+
 	irKey := t.getIRKey(gateway.Gateway)
 	x, ok := xdsIR[irKey]
 	if !ok || x == nil {
@@ -970,9 +978,11 @@ func (t *Translator) translateSecurityPolicyForGateway(
 	if target.SectionName != nil {
 		sectionName = string(*target.SectionName)
 	}
+
 	// Detect if target is TCP listener (or all listeners TCP when sectionName empty).
 	isTCPListener := false
 	if sectionName != "" {
+		// defensive loop: ensure gateway.Spec is available
 		for _, l := range gateway.Spec.Listeners {
 			spDebugf("gateway=%s checking listener name=%s proto=%s targetSection=%s", gateway.Name, l.Name, l.Protocol, sectionName)
 			if string(l.Name) == sectionName && l.Protocol == gwapiv1.TCPProtocolType {
@@ -997,15 +1007,31 @@ func (t *Translator) translateSecurityPolicyForGateway(
 
 	if isTCPListener {
 		// Apply ONLY Authorization to all TCP routes under the targeted listener(s).
-		for _, tl := range x.TCP {
+		for i, tl := range x.TCP {
+			if tl == nil {
+				spDebugf("gateway=%s tcpListener[%d] is nil - skipping", gateway.Name, i)
+				continue
+			}
+			// defensive: ensure metadata present
+			if tl.Metadata == nil {
+				spDebugf("gateway=%s tcpListener[%d] metadata nil - skipping (name=%s)", gateway.Name, i, tl.Name)
+				continue
+			}
+
 			// Listener name format: namespace/gatewayName/listenerName
 			if t.MergeGateways && !strings.HasPrefix(tl.Name, policyTarget) {
+				spDebugf("gateway=%s tcpListener=%s skip (mergeGateways policyTarget=%s)", gateway.Name, tl.Name, policyTarget)
 				continue
 			}
 			if sectionName != "" && tl.Metadata.SectionName != sectionName {
+				spDebugf("gateway=%s tcpListener=%s skip (section mismatch wanted=%s got=%s)",
+					gateway.Name, tl.Name, sectionName, tl.Metadata.SectionName)
 				continue
 			}
 			for _, r := range tl.Routes {
+				if r == nil {
+					continue
+				}
 				if r.Security != nil {
 					continue
 				}
@@ -1017,20 +1043,35 @@ func (t *Translator) translateSecurityPolicyForGateway(
 		return errs
 	}
 
+	// HTTP branch: defensive nil checks for listeners/metadata
 	for _, h := range x.HTTP {
+		if h == nil {
+			continue
+		}
 		// A HTTPListener name has the format namespace/gatewayName/listenerName
 		gatewayNameEnd := strings.LastIndex(h.Name, "/")
+		if gatewayNameEnd <= 0 || gatewayNameEnd >= len(h.Name) {
+			spDebugf("gateway=%s httpListener=%s malformed name - skipping", gateway.Name, h.Name)
+			continue
+		}
 		gatewayName := h.Name[0:gatewayNameEnd]
 		if t.MergeGateways && gatewayName != policyTarget {
 			continue
 		}
 		// If specified the sectionName must match listenerName from ir listener metadata.
+		if h.Metadata == nil {
+			spDebugf("gateway=%s httpListener=%s metadata nil - skipping", gateway.Name, h.Name)
+			continue
+		}
 		if target.SectionName != nil && string(*target.SectionName) != h.Metadata.SectionName {
 			continue
 		}
 		// A Policy targeting the specific scope(xRoute rule, xRoute, Gateway listener) wins over a policy
 		// targeting a lesser specific scope(Gateway).
 		for _, r := range h.Routes {
+			if r == nil {
+				continue
+			}
 			// if already set - there's a specific level policy, so skip.
 			if r.Security != nil {
 				continue
