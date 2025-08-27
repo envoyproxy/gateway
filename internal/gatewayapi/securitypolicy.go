@@ -1013,19 +1013,28 @@ func (t *Translator) translateSecurityPolicyForGateway(
 				continue
 			}
 			// defensive: ensure metadata present
-			if tl.Metadata == nil {
-				spDebugf("gateway=%s tcpListener[%d] metadata nil - skipping (name=%s)", gateway.Name, i, tl.Name)
-				continue
+			// Listener name format: namespace/gatewayName/listenerName
+			// compute effective section name from metadata if present, else fallback to name suffix
+			effectiveSection := ""
+			if tl.Metadata != nil && tl.Metadata.SectionName != "" {
+				effectiveSection = tl.Metadata.SectionName
+			} else {
+				// fallback: last path segment of tl.Name (`namespace/gateway/listener`)
+				if idx := strings.LastIndex(tl.Name, "/"); idx >= 0 && idx < len(tl.Name)-1 {
+					effectiveSection = tl.Name[idx+1:]
+				} else {
+					effectiveSection = tl.Name
+				}
+				spDebugf("gateway=%s tcpListener[%d] metadata nil - derived section=%s from name=%s", gateway.Name, i, effectiveSection, tl.Name)
 			}
 
-			// Listener name format: namespace/gatewayName/listenerName
 			if t.MergeGateways && !strings.HasPrefix(tl.Name, policyTarget) {
 				spDebugf("gateway=%s tcpListener=%s skip (mergeGateways policyTarget=%s)", gateway.Name, tl.Name, policyTarget)
 				continue
 			}
-			if sectionName != "" && tl.Metadata.SectionName != sectionName {
+			if sectionName != "" && effectiveSection != sectionName {
 				spDebugf("gateway=%s tcpListener=%s skip (section mismatch wanted=%s got=%s)",
-					gateway.Name, tl.Name, sectionName, tl.Metadata.SectionName)
+					gateway.Name, tl.Name, sectionName, effectiveSection)
 				continue
 			}
 			for _, r := range tl.Routes {
