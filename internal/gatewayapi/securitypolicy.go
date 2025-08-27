@@ -869,6 +869,10 @@ func (t *Translator) translateSecurityPolicyForRoute(
 	return errs
 }
 
+func spDebugf(format string, args ...interface{}) {
+	fmt.Printf("SPDEBUG "+format+"\n", args...)
+}
+
 func (t *Translator) translateSecurityPolicyForGateway(
 	policy *egv1a1.SecurityPolicy,
 	gateway *GatewayContext,
@@ -957,9 +961,11 @@ func (t *Translator) translateSecurityPolicyForGateway(
 	// Note: there are multiple features in a security policy, even if some of them
 	// are invalid, we still want to apply the valid ones.
 	irKey := t.getIRKey(gateway.Gateway)
-	// Should exist since we've validated this
-	x := xdsIR[irKey]
-
+	x, ok := xdsIR[irKey]
+	if !ok || x == nil {
+		spDebugf("gateway=%s policy=%s/%s no IR found (irKey=%s ok=%v x==nil=%v)", gateway.Name, policy.Namespace, policy.Name, irKey, ok, x == nil)
+		return fmt.Errorf("no IR found for gateway %s (cannot apply SecurityPolicy)", irKey)
+	}
 	sectionName := ""
 	if target.SectionName != nil {
 		sectionName = string(*target.SectionName)
@@ -968,6 +974,7 @@ func (t *Translator) translateSecurityPolicyForGateway(
 	isTCPListener := false
 	if sectionName != "" {
 		for _, l := range gateway.Spec.Listeners {
+			spDebugf("gateway=%s checking listener name=%s proto=%s targetSection=%s", gateway.Name, l.Name, l.Protocol, sectionName)
 			if string(l.Name) == sectionName && l.Protocol == gwapiv1.TCPProtocolType {
 				isTCPListener = true
 				break
@@ -983,6 +990,8 @@ func (t *Translator) translateSecurityPolicyForGateway(
 		}
 		isTCPListener = allTCP
 	}
+	spDebugf("gateway=%s policy=%s/%s sectionName=%q isTCPListener=%v mergeGateways=%v tcpListenersIR=%d httpListenersIR=%d",
+		gateway.Name, policy.Namespace, policy.Name, sectionName, isTCPListener, t.MergeGateways, len(x.TCP), len(x.HTTP))
 
 	policyTarget := irStringKey(policy.Namespace, string(target.Name))
 
