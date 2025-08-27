@@ -1,0 +1,300 @@
+clientTrafficPolicies:
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: ClientTrafficPolicy
+  metadata:
+    creationTimestamp: null
+    name: non-default-max-accept
+    namespace: envoy-gateway
+  spec:
+    connection:
+      maxAcceptPerSocketEvent: 3
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: Gateway
+      name: gateway-1
+      sectionName: http-2
+  status:
+    ancestors:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: gateway-1
+        namespace: envoy-gateway
+        sectionName: http-2
+      conditions:
+      - lastTransitionTime: null
+        message: Policy has been accepted.
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: ClientTrafficPolicy
+  metadata:
+    creationTimestamp: null
+    name: disabled-max-accept
+    namespace: envoy-gateway
+  spec:
+    connection:
+      maxAcceptPerSocketEvent: 0
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: Gateway
+      name: gateway-1
+      sectionName: http-3
+  status:
+    ancestors:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: gateway-1
+        namespace: envoy-gateway
+        sectionName: http-3
+      conditions:
+      - lastTransitionTime: null
+        message: Policy has been accepted.
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: ClientTrafficPolicy
+  metadata:
+    creationTimestamp: null
+    name: default-max-accept
+    namespace: envoy-gateway
+  spec:
+    connection: {}
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: Gateway
+      name: gateway-1
+  status:
+    ancestors:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: gateway-1
+        namespace: envoy-gateway
+      conditions:
+      - lastTransitionTime: null
+        message: There are existing ClientTrafficPolicies that are overriding these
+          sections [http-2 http-3]
+        reason: Overridden
+        status: "True"
+        type: Overridden
+      - lastTransitionTime: null
+        message: Policy has been accepted.
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+gateways:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: Gateway
+  metadata:
+    creationTimestamp: null
+    name: gateway-1
+    namespace: envoy-gateway
+  spec:
+    gatewayClassName: envoy-gateway-class
+    listeners:
+    - allowedRoutes:
+        namespaces:
+          from: Same
+      name: http-1
+      port: 8081
+      protocol: HTTP
+    - allowedRoutes:
+        namespaces:
+          from: Same
+      name: http-2
+      port: 8082
+      protocol: HTTP
+    - allowedRoutes:
+        namespaces:
+          from: Same
+      name: http-3
+      port: 8083
+      protocol: HTTP
+  status:
+    listeners:
+    - attachedRoutes: 0
+      conditions:
+      - lastTransitionTime: null
+        message: Sending translated listener configuration to the data plane
+        reason: Programmed
+        status: "True"
+        type: Programmed
+      - lastTransitionTime: null
+        message: Listener has been successfully translated
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Listener references have been resolved
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      name: http-1
+      supportedKinds:
+      - group: gateway.networking.k8s.io
+        kind: HTTPRoute
+      - group: gateway.networking.k8s.io
+        kind: GRPCRoute
+    - attachedRoutes: 0
+      conditions:
+      - lastTransitionTime: null
+        message: Sending translated listener configuration to the data plane
+        reason: Programmed
+        status: "True"
+        type: Programmed
+      - lastTransitionTime: null
+        message: Listener has been successfully translated
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Listener references have been resolved
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      name: http-2
+      supportedKinds:
+      - group: gateway.networking.k8s.io
+        kind: HTTPRoute
+      - group: gateway.networking.k8s.io
+        kind: GRPCRoute
+    - attachedRoutes: 0
+      conditions:
+      - lastTransitionTime: null
+        message: Sending translated listener configuration to the data plane
+        reason: Programmed
+        status: "True"
+        type: Programmed
+      - lastTransitionTime: null
+        message: Listener has been successfully translated
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Listener references have been resolved
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      name: http-3
+      supportedKinds:
+      - group: gateway.networking.k8s.io
+        kind: HTTPRoute
+      - group: gateway.networking.k8s.io
+        kind: GRPCRoute
+infraIR:
+  envoy-gateway/gateway-1:
+    proxy:
+      listeners:
+      - address: null
+        name: envoy-gateway/gateway-1/http-1
+        ports:
+        - containerPort: 8081
+          name: http-8081
+          protocol: HTTP
+          servicePort: 8081
+      - address: null
+        name: envoy-gateway/gateway-1/http-2
+        ports:
+        - containerPort: 8082
+          name: http-8082
+          protocol: HTTP
+          servicePort: 8082
+      - address: null
+        name: envoy-gateway/gateway-1/http-3
+        ports:
+        - containerPort: 8083
+          name: http-8083
+          protocol: HTTP
+          servicePort: 8083
+      metadata:
+        labels:
+          gateway.envoyproxy.io/owning-gateway-name: gateway-1
+          gateway.envoyproxy.io/owning-gateway-namespace: envoy-gateway
+        ownerReference:
+          kind: GatewayClass
+          name: envoy-gateway-class
+      name: envoy-gateway/gateway-1
+      namespace: envoy-gateway-system
+xdsIR:
+  envoy-gateway/gateway-1:
+    accessLog:
+      json:
+      - path: /dev/stdout
+    globalResources:
+      proxyServiceCluster:
+        name: envoy-gateway/gateway-1
+        settings:
+        - addressType: IP
+          endpoints:
+          - host: 7.6.5.4
+            port: 8080
+            zone: zone1
+          metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-1
+          protocol: TCP
+    http:
+    - address: 0.0.0.0
+      connection: {}
+      externalPort: 8081
+      hostnames:
+      - '*'
+      isHTTP2: false
+      metadata:
+        kind: Gateway
+        name: gateway-1
+        namespace: envoy-gateway
+        sectionName: http-1
+      name: envoy-gateway/gateway-1/http-1
+      path:
+        escapedSlashesAction: UnescapeAndRedirect
+        mergeSlashes: true
+      port: 8081
+    - address: 0.0.0.0
+      connection:
+        maxAcceptPerSocketEvent: 3
+      externalPort: 8082
+      hostnames:
+      - '*'
+      isHTTP2: false
+      metadata:
+        kind: Gateway
+        name: gateway-1
+        namespace: envoy-gateway
+        sectionName: http-2
+      name: envoy-gateway/gateway-1/http-2
+      path:
+        escapedSlashesAction: UnescapeAndRedirect
+        mergeSlashes: true
+      port: 8082
+    - address: 0.0.0.0
+      connection:
+        maxAcceptPerSocketEvent: 0
+      externalPort: 8083
+      hostnames:
+      - '*'
+      isHTTP2: false
+      metadata:
+        kind: Gateway
+        name: gateway-1
+        namespace: envoy-gateway
+        sectionName: http-3
+      name: envoy-gateway/gateway-1/http-3
+      path:
+        escapedSlashesAction: UnescapeAndRedirect
+        mergeSlashes: true
+      port: 8083
+    readyListener:
+      address: 0.0.0.0
+      ipFamily: IPv4
+      path: /ready
+      port: 19003
