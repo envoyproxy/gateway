@@ -25,7 +25,7 @@ func (r *gatewayAPIReconciler) getExtensionRefFilters(ctx context.Context) ([]un
 		uExtResourceList.SetGroupVersionKind(gvk)
 		if err := r.client.List(ctx, uExtResourceList); err != nil {
 			r.log.Info("no associated resources found", "GVK", gvk.String())
-			return nil, err
+			return nil, fmt.Errorf("failed to list %s: %w", gvk.String(), err)
 		}
 
 		uExtResources := uExtResourceList.Items
@@ -58,7 +58,7 @@ func (r *gatewayAPIReconciler) getExtensionBackendResources(ctx context.Context)
 		uExtResourceList.SetGroupVersionKind(gvk)
 		if err := r.client.List(ctx, uExtResourceList); err != nil {
 			r.log.Info("no associated backend resources found", "GVK", gvk.String())
-			return nil, err
+			return nil, fmt.Errorf("failed to list %s: %w", gvk.String(), err)
 		}
 
 		uExtResources := uExtResourceList.Items
@@ -86,8 +86,7 @@ func (r *gatewayAPIReconciler) getExtensionBackendResources(ctx context.Context)
 func (r *gatewayAPIReconciler) getHTTPRouteFilter(ctx context.Context, name, namespace string) (*egv1a1.HTTPRouteFilter, error) {
 	hrf := new(egv1a1.HTTPRouteFilter)
 	if err := r.client.Get(ctx, types.NamespacedName{Namespace: namespace, Name: name}, hrf); err != nil {
-		r.log.Info("failed to get HTTPRouteFilter", "name", name, "namespace", namespace)
-		return nil, err
+		return nil, fmt.Errorf("failed to get HTTPRouteFilter: %w", err)
 	}
 	return hrf, nil
 }
