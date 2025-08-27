@@ -9,12 +9,16 @@ import (
 	"regexp"
 	"testing"
 
+	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
+	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/ptr"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
-
-	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 )
 
 func Test_wildcard2regex(t *testing.T) {
@@ -950,4 +954,96 @@ func Test_validateSecurityPolicyForTCP_MixedRules_OK(t *testing.T) {
 		},
 	}
 	require.NoError(t, validateSecurityPolicyForTCP(p))
+}
+
+func Test_translateSecurityPolicyForGateway_TCPListener_MetadataNil_Fallback(t *testing.T) {
+	t.Parallel()
+
+	// Build policy
+	policy := &egv1a1.SecurityPolicy{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-policy",
+			Namespace: "default",
+			UID:       types.UID("uid-test"),
+		},
+		Spec: egv1a1.SecurityPolicySpec{
+			Authorization: &egv1a1.Authorization{
+				Rules: []egv1a1.AuthorizationRule{
+					{
+						Action: egv1a1.AuthorizationActionAllow,
+						Principal: egv1a1.Principal{
+							ClientCIDRs: []egv1a1.CIDR{"10.0.0.0/8"},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	// Prepare IR with TCP listeners (no Metadata -> trigger fallback to name suffix)
+	fooRoute := &ir.TCPRoute{Name: "route-foo"}
+	barRoute := &ir.TCPRoute{Name: "route-bar"}
+
+	tlFoo := &ir.TCPListener{
+		CoreListenerDetails: ir.CoreListenerDetails{
+			Name:    "default/tcp-gateway/foo", // format: ns/gw/listener
+			Address: "0.0.0.0",
+			Port:    10000,
+		},
+		Routes: []*ir.TCPRoute{fooRoute},
+	}
+	tlBar := &ir.TCPListener{
+		CoreListenerDetails: ir.CoreListenerDetails{
+			Name:    "default/tcp-gateway/bar",
+			Address: "0.0.0.0",
+			Port:    10001,
+		},
+		Routes: []*ir.TCPRoute{barRoute},
+	}
+
+	irKey := "default/tcp-gateway"
+	x := &ir.Xds{TCP: []*ir.TCPListener{tlFoo, tlBar}}
+	xdsMap := resource.XdsIRMap{irKey: x}
+
+	gw := &GatewayContext{
+		Gateway: &gwapiv1.Gateway{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "tcp-gateway",
+				Namespace: "default",
+			},
+			Spec: gwapiv1.GatewaySpec{
+				Listeners: []gwapiv1.Listener{
+					{
+						Name:     gwapiv1.SectionName("foo"),
+						Protocol: gwapiv1.TCPProtocolType,
+						Port:     9000,
+					},
+					{
+						Name:     gwapiv1.SectionName("bar"),
+						Protocol: gwapiv1.TCPProtocolType,
+						Port:     9001,
+					},
+				},
+			},
+		},
+	}
+
+	tr := &Translator{}
+
+	section := gwapiv1a2.SectionName("foo")
+	target := gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
+		LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
+			Group: gwapiv1a2.Group(gwapiv1.GroupName),
+			Kind:  gwapiv1a2.Kind(resource.KindGateway),
+			Name:  gwapiv1a2.ObjectName("tcp-gateway"),
+		},
+		SectionName: &section,
+	}
+
+	err := tr.translateSecurityPolicyForGateway(policy, gw, target, resource.NewResources(), xdsMap)
+	require.NoError(t, err)
+
+	require.NotNil(t, fooRoute.Security, "foo route security should be set")
+	require.NotNil(t, fooRoute.Security.Authorization, "foo route authorization should be set")
+	require.Nil(t, barRoute.Security, "bar route security should remain nil")
 }

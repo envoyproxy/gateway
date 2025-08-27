@@ -869,10 +869,6 @@ func (t *Translator) translateSecurityPolicyForRoute(
 	return errs
 }
 
-func spDebugf(format string, args ...interface{}) {
-	fmt.Printf("SPDEBUG "+format+"\n", args...)
-}
-
 func (t *Translator) translateSecurityPolicyForGateway(
 	policy *egv1a1.SecurityPolicy,
 	gateway *GatewayContext,
@@ -971,7 +967,6 @@ func (t *Translator) translateSecurityPolicyForGateway(
 	irKey := t.getIRKey(gateway.Gateway)
 	x, ok := xdsIR[irKey]
 	if !ok || x == nil {
-		spDebugf("gateway=%s policy=%s/%s no IR found (irKey=%s ok=%v x==nil=%v)", gateway.Name, policy.Namespace, policy.Name, irKey, ok, x == nil)
 		return fmt.Errorf("no IR found for gateway %s (cannot apply SecurityPolicy)", irKey)
 	}
 	sectionName := ""
@@ -984,7 +979,6 @@ func (t *Translator) translateSecurityPolicyForGateway(
 	if sectionName != "" {
 		// defensive loop: ensure gateway.Spec is available
 		for _, l := range gateway.Spec.Listeners {
-			spDebugf("gateway=%s checking listener name=%s proto=%s targetSection=%s", gateway.Name, l.Name, l.Protocol, sectionName)
 			if string(l.Name) == sectionName && l.Protocol == gwapiv1.TCPProtocolType {
 				isTCPListener = true
 				break
@@ -1000,16 +994,13 @@ func (t *Translator) translateSecurityPolicyForGateway(
 		}
 		isTCPListener = allTCP
 	}
-	spDebugf("gateway=%s policy=%s/%s sectionName=%q isTCPListener=%v mergeGateways=%v tcpListenersIR=%d httpListenersIR=%d",
-		gateway.Name, policy.Namespace, policy.Name, sectionName, isTCPListener, t.MergeGateways, len(x.TCP), len(x.HTTP))
 
 	policyTarget := irStringKey(policy.Namespace, string(target.Name))
 
 	if isTCPListener {
 		// Apply ONLY Authorization to all TCP routes under the targeted listener(s).
-		for i, tl := range x.TCP {
+		for _, tl := range x.TCP {
 			if tl == nil {
-				spDebugf("gateway=%s tcpListener[%d] is nil - skipping", gateway.Name, i)
 				continue
 			}
 			// defensive: ensure metadata present
@@ -1020,21 +1011,18 @@ func (t *Translator) translateSecurityPolicyForGateway(
 				effectiveSection = tl.Metadata.SectionName
 			} else {
 				// fallback: last path segment of tl.Name (`namespace/gateway/listener`)
+				// TODO: remove fallback once IR builder guarantees tl.Metadata.SectionName is populated.
 				if idx := strings.LastIndex(tl.Name, "/"); idx >= 0 && idx < len(tl.Name)-1 {
 					effectiveSection = tl.Name[idx+1:]
 				} else {
 					effectiveSection = tl.Name
 				}
-				spDebugf("gateway=%s tcpListener[%d] metadata nil - derived section=%s from name=%s", gateway.Name, i, effectiveSection, tl.Name)
 			}
 
 			if t.MergeGateways && !strings.HasPrefix(tl.Name, policyTarget) {
-				spDebugf("gateway=%s tcpListener=%s skip (mergeGateways policyTarget=%s)", gateway.Name, tl.Name, policyTarget)
 				continue
 			}
 			if sectionName != "" && effectiveSection != sectionName {
-				spDebugf("gateway=%s tcpListener=%s skip (section mismatch wanted=%s got=%s)",
-					gateway.Name, tl.Name, sectionName, effectiveSection)
 				continue
 			}
 			for _, r := range tl.Routes {
@@ -1060,7 +1048,6 @@ func (t *Translator) translateSecurityPolicyForGateway(
 		// A HTTPListener name has the format namespace/gatewayName/listenerName
 		gatewayNameEnd := strings.LastIndex(h.Name, "/")
 		if gatewayNameEnd <= 0 || gatewayNameEnd >= len(h.Name) {
-			spDebugf("gateway=%s httpListener=%s malformed name - skipping", gateway.Name, h.Name)
 			continue
 		}
 		gatewayName := h.Name[0:gatewayNameEnd]
@@ -1069,7 +1056,6 @@ func (t *Translator) translateSecurityPolicyForGateway(
 		}
 		// If specified the sectionName must match listenerName from ir listener metadata.
 		if h.Metadata == nil {
-			spDebugf("gateway=%s httpListener=%s metadata nil - skipping", gateway.Name, h.Name)
 			continue
 		}
 		if target.SectionName != nil && string(*target.SectionName) != h.Metadata.SectionName {
