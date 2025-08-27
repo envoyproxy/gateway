@@ -57,7 +57,7 @@ func (r *gatewayAPIReconciler) getExtensionBackendResources(ctx context.Context)
 		uExtResourceList := &unstructured.UnstructuredList{}
 		uExtResourceList.SetGroupVersionKind(gvk)
 		if err := r.client.List(ctx, uExtResourceList); err != nil {
-			r.log.Info("no associated resources found for %s", gvk.String())
+			r.log.Info("no associated backend resources found for %s", gvk.String())
 			return nil, fmt.Errorf("failed to list %s: %w", gvk.String(), err)
 		}
 
@@ -122,6 +122,7 @@ func (r *gatewayAPIReconciler) processRouteFilterConfigMapRef(
 			resourceMap.allAssociatedConfigMaps.Insert(utils.NamespacedName(configMap).String())
 			resourceTree.ConfigMaps = append(resourceTree.ConfigMaps, configMap)
 			r.log.Info("processing ConfigMap", "namespace", filter.Namespace, "name", string(filter.Spec.DirectResponse.Body.ValueRef.Name))
+
 		}
 	}
 }
