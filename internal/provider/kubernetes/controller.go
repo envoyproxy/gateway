@@ -1481,6 +1481,11 @@ func (r *gatewayAPIReconciler) processGateways(ctx context.Context, managedGC *g
 				// processGatewayParamsRef has been called for this gateway, its EnvoyProxy should exist in resourceTree
 				ep = resourceTree.GetEnvoyProxy(gtw.Namespace, gtw.Spec.Infrastructure.ParametersRef.Name)
 			}
+			// when gateway's EnvoyProxy is nil and gatewayclass 's EnvoyProxy is not nil
+			// the specified proxySvcName should get from gatewayclass's EnvoyProxy
+			if ep == nil && resourceTree.EnvoyProxyForGatewayClass != nil {
+				ep = resourceTree.EnvoyProxyForGatewayClass
+			}
 			r.processServiceClusterForGateway(ep, &gtw, resourceMap)
 		}
 
