@@ -8,8 +8,10 @@ admin:
     socket_address:
       address: {{ .AdminServer.Address }}
       port_value: {{ .AdminServer.Port }}
+{{- if not .TopologyInjectorDisabled }}
 cluster_manager:
   local_cluster_name: {{ .ServiceClusterName }}
+{{- end }}
 node:
   locality:
     zone: $(ENVOY_SERVICE_ZONE)
