@@ -53,6 +53,7 @@ func TestExperimentalConformance(t *testing.T) {
 		opts.SkipTests = append(opts.SkipTests,
 			tests.UDPRouteTest.ShortName,
 		)
+		opts.SkipProvisionalTests = true
 	}
 
 	t.Logf("Running experimental conformance tests with %s GatewayClass\n cleanup: %t\n debug: %t\n enable all features: %t \n conformance profiles: [%v]",
