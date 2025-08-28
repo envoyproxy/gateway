@@ -9,6 +9,9 @@ import (
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 )
 
+// TLSOCSPKey is the key for the OCSP field in a TLS secret.
+const TLSOCSPKey = "tls.ocsp"
+
 type ClientTLSSettings struct {
 	// ClientValidation specifies the configuration to validate the client
 	// initiating the TLS connection to the Gateway listener.
