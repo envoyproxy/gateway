@@ -198,7 +198,12 @@ func (t *Translator) processSecurityPolicyForRoute(
 	// Find the parent Gateways for the route and add it to the
 	// gatewayRouteMap, which will be used to check policy override.
 	// The parent gateways are also used to set the status of the policy.
-	// Parent gateways (+ build gatewayRouteMap only for HTTP for override semantics)
+	// Gateway scope (e.g. when a Gateway-level policy is overridden by a
+	// route- or rule-level policy). Previously we skipped populating this
+	// structure for TCP routes which meant Gateway-level override
+	// detection could not “see” TCP route attachments. We now treat TCP
+	// and HTTP uniformly here so getOverriddenTargetsMessageForGateway
+	// has a complete view.
 	parentRefs := GetParentReferences(targetedRoute)
 	for _, p := range parentRefs {
 		if p.Kind == nil || *p.Kind == resource.KindGateway {
@@ -211,21 +216,23 @@ func (t *Translator) processSecurityPolicyForRoute(
 				Name:      string(p.Name),
 			}
 
-			if !isTCP { // HTTP override tracking
-				key := gwNN.String()
-				if _, ok := gatewayRouteMap[key]; !ok {
-					gatewayRouteMap[key] = make(map[string]sets.Set[string])
-				}
-				listenerRouteMap := gatewayRouteMap[key]
-				sectionName := ""
-				if p.SectionName != nil {
-					sectionName = string(*p.SectionName)
-				}
-				if _, ok := listenerRouteMap[sectionName]; !ok {
-					listenerRouteMap[sectionName] = make(sets.Set[string])
-				}
-				listenerRouteMap[sectionName].Insert(utils.NamespacedName(targetedRoute).String())
+			key := gwNN.String()
+			if _, ok := gatewayRouteMap[key]; !ok {
+				gatewayRouteMap[key] = make(map[string]sets.Set[string])
 			}
+			listenerRouteMap := gatewayRouteMap[key]
+
+			// SectionName (listener) may be nil (whole gateway parentRef)
+			sectionName := ""
+			if p.SectionName != nil {
+				sectionName = string(*p.SectionName)
+			}
+			if _, ok := listenerRouteMap[sectionName]; !ok {
+				listenerRouteMap[sectionName] = make(sets.Set[string])
+			}
+			// Track this route (namespaced) under the listener (or whole gateway key "").
+			listenerRouteMap[sectionName].Insert(utils.NamespacedName(targetedRoute).String())
+
 			parentGateways = append(parentGateways, getAncestorRefForPolicy(gwNN, p.SectionName))
 		}
 	}
@@ -276,6 +283,7 @@ func (t *Translator) processSecurityPolicyForRoute(
 
 	// Set Accepted condition if it is unset
 	status.SetAcceptedForPolicyAncestors(&policy.Status, parentGateways, t.GatewayControllerName, policy.Generation)
+
 	// Check if this policy is overridden by other policies targeting at route rule levels
 	// Override condition (HTTP only; TCP has single rule semantics)
 	if !isTCP {
@@ -630,10 +638,12 @@ func resolveSecurityPolicyRouteTargetRef(
 
 	isTCP := target.Kind == resource.KindTCPRoute
 
-	// If sectionName is set, validate (skip validation for TCPRoute synthetic sections)
-	if target.SectionName != nil && !isTCP {
-		if err := validateRouteRuleSectionName(*target.SectionName, key, route); err != nil {
-			return route.RouteContext, err
+	// Disallow sectionName for TCPRoute (no rule granularity).
+	if isTCP && target.SectionName != nil {
+		return route.RouteContext, &status.PolicyResolveError{
+			Reason: gwapiv1a2.PolicyReasonTargetNotFound,
+			Message: fmt.Sprintf("sectionName %q not supported for TCPRoute %s/%s; omit sectionName to target the whole route",
+				string(*target.SectionName), policy.Namespace, string(target.Name)),
 		}
 	}
 
