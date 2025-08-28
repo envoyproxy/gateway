@@ -13,6 +13,8 @@ new features: |
 bug fixes: |
   Fixed %ROUTE_KIND% operator to be lower-cased when used by clusterStatName in EnvoyProxy API.
   Fixed maxAcceptPerSocketEvent being ignored in ClientTrafficPolicy
+  Fixed the topologyInjectorDisabled and the local cluster was not defined.
+  Fixed log formatting of improper key-value pairs to avoid DPANIC in controller-runtime logger.
 
 # Enhancements that improve performance.
 performance improvements: |
