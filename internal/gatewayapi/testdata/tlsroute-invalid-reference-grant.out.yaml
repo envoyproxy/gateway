@@ -123,5 +123,10 @@ xdsIR:
     tcp:
     - address: 0.0.0.0
       externalPort: 443
+      metadata:
+        kind: Gateway
+        name: gateway-tlsroute-referencegrant
+        namespace: gateway-conformance-infra
+        sectionName: https
       name: gateway-conformance-infra/gateway-tlsroute-referencegrant/https
       port: 10443

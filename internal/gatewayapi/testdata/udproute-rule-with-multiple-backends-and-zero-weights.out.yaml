@@ -127,6 +127,11 @@ xdsIR:
     udp:
     - address: 0.0.0.0
       externalPort: 90
+      metadata:
+        kind: Gateway
+        name: gateway-1
+        namespace: envoy-gateway
+        sectionName: udp
       name: envoy-gateway/gateway-1/udp
       port: 10090
       route:
