@@ -777,13 +777,22 @@ func (t *Translator) translateSecurityPolicyForRoute(
 				irListener := xdsIR[irKey].GetTCPListener(irListenerName(listener))
 				if irListener != nil {
 					for _, r := range irListener.Routes {
-						// Match TCPRoute IR entries using the same prefix semantics as HTTP.
-						// (TCP currently has only whole-route scope; HasPrefix keeps parity & future-proofs.)
-						if strings.HasPrefix(r.Name, prefix) {
+						// Debug variables for comparison with old logic.
+						expectedRouteName := strings.TrimSuffix(prefix, "/")
+						hasPrefix := strings.HasPrefix(r.Name, prefix)
+						exactOldMatch := r.Name == expectedRouteName
+
+						fmt.Printf("[SECURITYPOLICY TCP DEBUG] policy=%s/%s listener=%s irRoute=%s prefix=%q expectedRouteName=%q hasPrefix=%v exactOldMatch=%v securityAlreadySet=%v\n",
+							policy.Namespace, policy.Name, listener.Name, r.Name, prefix, expectedRouteName, hasPrefix, exactOldMatch, r.Security != nil)
+
+						// Match TCPRoute IR entries using prefix semantics (future-proof).
+						if hasPrefix {
 							// A Policy targeting the specific scope (TCPRoute) wins over a lesser scope (Gateway)
 							if r.Security != nil {
 								continue
 							}
+							fmt.Printf("[SECURITYPOLICY TCP DEBUG] APPLY policy=%s/%s to irRoute=%s (prefix=%q expectedRouteName=%q)\n",
+								policy.Namespace, policy.Name, r.Name, prefix, expectedRouteName)
 							r.Security = &ir.SecurityFeatures{
 								Authorization: authorization,
 							}
