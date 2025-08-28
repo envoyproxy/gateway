@@ -776,11 +776,14 @@ func (t *Translator) translateSecurityPolicyForRoute(
 			for _, listener := range parentRefCtx.listeners {
 				irListener := xdsIR[irKey].GetTCPListener(irListenerName(listener))
 				if irListener != nil {
-					// For TCP routes, we need exact route name matching (not prefix)
-					expectedRouteName := strings.TrimSuffix(prefix, "/")
 					for _, r := range irListener.Routes {
-						// A Policy targeting the specific scope (TCPRoute) wins over a lesser scope (Gateway)
-						if r.Name == expectedRouteName && r.Security == nil {
+						// Match TCPRoute IR entries using the same prefix semantics as HTTP.
+						// (TCP currently has only whole-route scope; HasPrefix keeps parity & future-proofs.)
+						if strings.HasPrefix(r.Name, prefix) {
+							// A Policy targeting the specific scope (TCPRoute) wins over a lesser scope (Gateway)
+							if r.Security != nil {
+								continue
+							}
 							r.Security = &ir.SecurityFeatures{
 								Authorization: authorization,
 							}
