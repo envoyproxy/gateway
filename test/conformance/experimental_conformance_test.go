@@ -49,13 +49,11 @@ func TestExperimentalConformance(t *testing.T) {
 	// TODO: Not sure why this happens, need to investigate.
 	// There's similar test from EG but passed.
 	// Skipping UDPRoute tests for dual stack as it fails.
-	t.Logf("IPFamily: %s", ege2etest.IPFamily)
 	if ege2etest.IPFamily == "dual" {
 		opts.SkipTests = append(opts.SkipTests,
 			tests.UDPRouteTest.ShortName,
 		)
 	}
-	t.Logf("Skipping tests: %v", opts.SkipTests)
 
 	t.Logf("Running experimental conformance tests with %s GatewayClass\n cleanup: %t\n debug: %t\n enable all features: %t \n conformance profiles: [%v]",
 		*flags.GatewayClassName, *flags.CleanupBaseResources, *flags.ShowDebug, *flags.EnableAllSupportedFeatures, opts.ConformanceProfiles)
