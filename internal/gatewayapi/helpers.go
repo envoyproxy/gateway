@@ -386,7 +386,7 @@ func irListenerPortName(proto ir.ProtocolType, port int32) string {
 func irRoutePrefix(route RouteContext) string {
 	// add a "/" at the end of the prefix to prevent mismatching routes with the
 	// same prefix. For example, route prefix "/foo/" should not match a route "/foobar".
-	return fmt.Sprintf("%s/%s/%s/", strings.ToLower(string(GetRouteType(route))), route.GetNamespace(), route.GetName())
+	return fmt.Sprintf("%s/%s/%s/", strings.ToLower(string(route.GetRouteType())), route.GetNamespace(), route.GetName())
 }
 
 func irRouteName(route RouteContext, ruleIdx, matchIdx int) string {
@@ -394,7 +394,7 @@ func irRouteName(route RouteContext, ruleIdx, matchIdx int) string {
 }
 
 func irTCPRouteName(route RouteContext) string {
-	return fmt.Sprintf("%s/%s/%s", strings.ToLower(string(GetRouteType(route))), route.GetNamespace(), route.GetName())
+	return fmt.Sprintf("%s/%s/%s", strings.ToLower(string(route.GetRouteType())), route.GetNamespace(), route.GetName())
 }
 
 func irUDPRouteName(route RouteContext) string {
