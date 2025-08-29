@@ -228,6 +228,10 @@ xdsIR:
       - path: /dev/stdout
     globalResources:
       proxyServiceCluster:
+        metadata:
+          name: envoy-envoy-gateway-gateway-a-37c12ef1
+          namespace: envoy-gateway-system
+          sectionName: "8080"
         name: envoy-gateway/gateway-b
         settings:
         - metadata:

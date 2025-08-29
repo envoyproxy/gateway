@@ -265,6 +265,9 @@ xdsIR:
             name: gateway-1
     globalResources:
       proxyServiceCluster:
+        metadata:
+          name: envoy-envoy-gateway-gateway-1-196ae069
+          sectionName: "8080"
         name: envoy-gateway/gateway-2
         settings:
         - metadata:
