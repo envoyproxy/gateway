@@ -646,7 +646,16 @@ func resolveSecurityPolicyRouteTargetRef(
 				string(*target.SectionName), policy.Namespace, string(target.Name)),
 		}
 	}
-
+	// HTTPRoute rule-level validation
+	if !isTCP && target.SectionName != nil {
+		section := string(*target.SectionName)
+		if !httpRouteRuleExists(route, section) {
+			return route.RouteContext, &status.PolicyResolveError{
+				Reason:  gwapiv1a2.PolicyReasonTargetNotFound,
+				Message: fmt.Sprintf("No section name %s found for HTTPRoute %s/%s", section, key.Namespace, key.Name),
+			}
+		}
+	}
 	if target.SectionName == nil {
 		// Whole route attachment
 		if route.attached {
@@ -660,16 +669,16 @@ func resolveSecurityPolicyRouteTargetRef(
 		route.attached = true
 	} else {
 		// Section (rule) attachment (for TCP this is a synthetic identifier)
-		ruleName := string(*target.SectionName)
-		if route.attachedToRouteRules.Has(ruleName) {
-			message := fmt.Sprintf("Unable to target %s rule %s/%s, another SecurityPolicy has already attached to it",
-				string(target.Kind), string(target.Name), ruleName)
+		routeRuleName := string(*target.SectionName)
+		if route.attachedToRouteRules.Has(routeRuleName) {
+			message := fmt.Sprintf("Unable to target RouteRule %s/%s, another SecurityPolicy has already attached to it",
+				string(target.Name), routeRuleName)
 			return route.RouteContext, &status.PolicyResolveError{
 				Reason:  gwapiv1a2.PolicyReasonConflicted,
 				Message: message,
 			}
 		}
-		route.attachedToRouteRules.Insert(ruleName)
+		route.attachedToRouteRules.Insert(routeRuleName)
 	}
 
 	routes[key] = route
@@ -776,23 +785,11 @@ func (t *Translator) translateSecurityPolicyForRoute(
 			for _, listener := range parentRefCtx.listeners {
 				irListener := xdsIR[irKey].GetTCPListener(irListenerName(listener))
 				if irListener != nil {
+					// For TCP routes, we need exact route name matching (not prefix)
+					expectedRouteName := strings.TrimSuffix(prefix, "/")
 					for _, r := range irListener.Routes {
-						// Debug variables for comparison with old logic.
-						expectedRouteName := strings.TrimSuffix(prefix, "/")
-						hasPrefix := strings.HasPrefix(r.Name, prefix)
-						exactOldMatch := r.Name == expectedRouteName
-
-						fmt.Printf("[SECURITYPOLICY TCP DEBUG] policy=%s/%s listener=%s irRoute=%s prefix=%q expectedRouteName=%q hasPrefix=%v exactOldMatch=%v securityAlreadySet=%v\n",
-							policy.Namespace, policy.Name, listener.Name, r.Name, prefix, expectedRouteName, hasPrefix, exactOldMatch, r.Security != nil)
-
-						// Match TCPRoute IR entries using prefix semantics (future-proof).
-						if hasPrefix {
-							// A Policy targeting the specific scope (TCPRoute) wins over a lesser scope (Gateway)
-							if r.Security != nil {
-								continue
-							}
-							fmt.Printf("[SECURITYPOLICY TCP DEBUG] APPLY policy=%s/%s to irRoute=%s (prefix=%q expectedRouteName=%q)\n",
-								policy.Namespace, policy.Name, r.Name, prefix, expectedRouteName)
+						// A Policy targeting the specific scope (TCPRoute) wins over a lesser scope (Gateway)
+						if r.Name == expectedRouteName && r.Security == nil {
 							r.Security = &ir.SecurityFeatures{
 								Authorization: authorization,
 							}
@@ -1968,4 +1965,17 @@ func defaultAuthorizationRuleName(policy *egv1a1.SecurityPolicy, index int) stri
 		"%s/authorization/rule/%s",
 		irConfigName(policy),
 		strconv.Itoa(index))
+}
+
+// httpRouteRuleExists checks if a rule (section name) exists on the HTTPRoute.
+func httpRouteRuleExists(route *policyRouteTargetContext, section string) bool {
+	if route == nil || route.RouteContext == nil {
+		return false
+	}
+	for _, rn := range GetRuleNames(route.RouteContext) {
+		if string(rn) == section {
+			return true
+		}
+	}
+	return false
 }
