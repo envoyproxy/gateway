@@ -414,6 +414,7 @@ func (t *Translator) processSecurityPolicyForGateway(
 		)
 	}
 
+	// Set Accepted condition if it is unset
 	status.SetAcceptedForPolicyAncestors(&policy.Status, parentGateways, t.GatewayControllerName, policy.Generation)
 
 	// Check if this policy is overridden by other policies targeting at route and listener levels
@@ -631,7 +632,10 @@ func resolveSecurityPolicyRouteTargetRef(
 	}
 	route, ok := routes[key]
 
-	// Route not found (not an error – may be managed by another controller)
+	// Route not found
+	// It's not an error if the gateway is not found because the SecurityPolicy
+	// may be reconciled by multiple controllers, and the gateway may not be managed
+	// by this controller.
 	if !ok {
 		return nil, nil
 	}
@@ -682,6 +686,7 @@ func resolveSecurityPolicyRouteTargetRef(
 	}
 
 	routes[key] = route
+
 	return route.RouteContext, nil
 }
 
@@ -933,7 +938,8 @@ func (t *Translator) translateSecurityPolicyForGateway(
 	//
 	// Note: there are multiple features in a security policy, even if some of them
 	// are invalid, we still want to apply the valid ones.
-	// Defensive checks to avoid nil derefs (diagnose panic)
+	// Defensive checks: translateSecurityPolicyForGateway expects a valid GatewayContext
+	// but we validate here to avoid panics when tests or upstream callers pass a nil/partial context.
 	if gateway == nil {
 		return fmt.Errorf("translateSecurityPolicyForGateway: gateway context is nil for policy %s/%s", policy.Namespace, policy.Name)
 	}

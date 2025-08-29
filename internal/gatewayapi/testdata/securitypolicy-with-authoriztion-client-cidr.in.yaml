@@ -13,6 +13,20 @@ gateways:
       allowedRoutes:
         namespaces:
           from: All
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: Gateway
+  metadata:
+    namespace: envoy-gateway
+    name: gateway-tcp
+  spec:
+    gatewayClassName: envoy-gateway-class
+    listeners:
+    - name: foo
+      protocol: TCP
+      port: 8088
+    - name: bar
+      protocol: TCP
+      port: 8089
 httpRoutes:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: HTTPRoute
@@ -71,6 +85,21 @@ httpRoutes:
       backendRefs:
       - name: service-1
         port: 8080
+tcpRoutes:
+- apiVersion: gateway.networking.k8s.io/v1alpha2
+  kind: TCPRoute
+  metadata:
+    namespace: default
+    name: tcpr-app
+  spec:
+    parentRefs:
+    - namespace: envoy-gateway
+      name: gateway-tcp
+      sectionName: foo
+    rules:
+    - backendRefs:
+      - name: tcp-backend
+        port: 9000
 securityPolicies:
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: SecurityPolicy
@@ -126,3 +155,65 @@ securityPolicies:
       kind: HTTPRoute
       name: httproute-3
     authorization: {}
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: SecurityPolicy
+  metadata:
+    namespace: envoy-gateway
+    name: sp-gw-tcp-whole
+  spec:
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: Gateway
+      name: gateway-tcp
+    authorization:
+      defaultAction: Allow
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: SecurityPolicy
+  metadata:
+    namespace: envoy-gateway
+    name: sp-gw-tcp-listener-foo
+  spec:
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: Gateway
+      name: gateway-tcp
+      sectionName: foo
+    authorization:
+      defaultAction: Allow
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: SecurityPolicy
+  metadata:
+    namespace: default
+    name: sp-tcpr-app
+  spec:
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: TCPRoute
+      name: tcpr-app
+    authorization:
+      defaultAction: Deny
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: SecurityPolicy
+  metadata:
+    namespace: default
+    name: sp-tcpr-app-conflict
+  spec:
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: TCPRoute
+      name: tcpr-app
+    authorization:
+      defaultAction: Allow
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: SecurityPolicy
+  metadata:
+    namespace: default
+    name: sp-tcpr-app-invalid-section
+  spec:
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: TCPRoute
+      name: tcpr-app
+      sectionName: bogus
+    authorization:
+      defaultAction: Allow
