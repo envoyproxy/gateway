@@ -64,6 +64,9 @@ func allFeatures(gatewayNamespaceMode bool) sets.Set[features.FeatureName] {
 			result.Insert(feature.Name)
 		}
 	}
+	for _, feature := range features.UDPRouteFeatures {
+		result.Insert(feature.Name)
+	}
 	return result
 }
 
