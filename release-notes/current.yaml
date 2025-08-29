@@ -12,9 +12,10 @@ new features: |
 
 bug fixes: |
   Fixed %ROUTE_KIND% operator to be lower-cased when used by clusterStatName in EnvoyProxy API.
-  Fixed maxAcceptPerSocketEvent being ignored in ClientTrafficPolicy
+  Fixed maxAcceptPerSocketEvent being ignored in ClientTrafficPolicy.
   Fixed the topologyInjectorDisabled and the local cluster was not defined.
   Fixed log formatting of improper key-value pairs to avoid DPANIC in controller-runtime logger.
+  Fixed handling of context-related transient errors to prevent incorrect state reconciliation and unintended behavior.
   Fixed the controller cannot read the EnvoyProxy attached gatewayclass only.
 
 # Enhancements that improve performance.
