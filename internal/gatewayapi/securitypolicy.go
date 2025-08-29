@@ -89,6 +89,7 @@ func (t *Translator) ProcessSecurityPolicies(securityPolicies []*egv1a1.Security
 	// 4. Finally, the policies targeting Gateways
 
 	// Process the policies targeting RouteRules
+	// Process the policies targeting RouteRules (HTTP + now TCP)
 	for _, currPolicy := range securityPolicies {
 		policyName := utils.NamespacedName(currPolicy)
 		targetRefs := getPolicyTargetRefs(currPolicy.Spec.PolicyTargetReferences, routes)
@@ -100,13 +101,13 @@ func (t *Translator) ProcessSecurityPolicies(securityPolicies []*egv1a1.Security
 					handledPolicies[policyName] = policy
 					res = append(res, policy)
 				}
-
-				t.processSecurityPolicyForHTTPRoute(resources, xdsIR,
+				t.processSecurityPolicyForRoute(resources, xdsIR,
 					routeMap, gatewayRouteMap, policy, currTarget)
 			}
 		}
 	}
-	// Process the policies targeting xRoutes
+
+	// Process the policies targeting whole xRoutes (HTTP + TCP)
 	for _, currPolicy := range securityPolicies {
 		policyName := utils.NamespacedName(currPolicy)
 		targetRefs := getPolicyTargetRefs(currPolicy.Spec.PolicyTargetReferences, routes)
@@ -118,8 +119,7 @@ func (t *Translator) ProcessSecurityPolicies(securityPolicies []*egv1a1.Security
 					handledPolicies[policyName] = policy
 					res = append(res, policy)
 				}
-
-				t.processSecurityPolicyForHTTPRoute(resources, xdsIR,
+				t.processSecurityPolicyForRoute(resources, xdsIR,
 					routeMap, gatewayRouteMap, policy, currTarget)
 			}
 		}
@@ -170,7 +170,7 @@ func (t *Translator) ProcessSecurityPolicies(securityPolicies []*egv1a1.Security
 	return res
 }
 
-func (t *Translator) processSecurityPolicyForHTTPRoute(
+func (t *Translator) processSecurityPolicyForRoute(
 	resources *resource.Resources,
 	xdsIR resource.XdsIRMap,
 	routeMap map[policyTargetRouteKey]*policyRouteTargetContext,
@@ -183,12 +183,14 @@ func (t *Translator) processSecurityPolicyForHTTPRoute(
 		parentGateways []gwapiv1a2.ParentReference
 		resolveErr     *status.PolicyResolveError
 	)
-
-	targetedRoute, resolveErr = resolveSecurityPolicyRouteTargetRef(policy, currTarget, routeMap)
 	// Skip if the route is not found
 	// It's not necessarily an error because the SecurityPolicy may be
 	// reconciled by multiple controllers. And the other controller may
 	// have the target route.
+	isTCP := currTarget.Kind == resource.KindTCPRoute
+
+	// Unified resolution (TCP + HTTP/other routes use same helper now).
+	targetedRoute, resolveErr = resolveSecurityPolicyRouteTargetRef(policy, currTarget, routeMap)
 	if targetedRoute == nil {
 		return
 	}
@@ -196,6 +198,12 @@ func (t *Translator) processSecurityPolicyForHTTPRoute(
 	// Find the parent Gateways for the route and add it to the
 	// gatewayRouteMap, which will be used to check policy override.
 	// The parent gateways are also used to set the status of the policy.
+	// Gateway scope (e.g. when a Gateway-level policy is overridden by a
+	// route- or rule-level policy). Previously we skipped populating this
+	// structure for TCP routes which meant Gateway-level override
+	// detection could not “see” TCP route attachments. We now treat TCP
+	// and HTTP uniformly here so getOverriddenTargetsMessageForGateway
+	// has a complete view.
 	parentRefs := GetParentReferences(targetedRoute)
 	for _, p := range parentRefs {
 		if p.Kind == nil || *p.Kind == resource.KindGateway {
@@ -213,6 +221,8 @@ func (t *Translator) processSecurityPolicyForHTTPRoute(
 				gatewayRouteMap[key] = make(map[string]sets.Set[string])
 			}
 			listenerRouteMap := gatewayRouteMap[key]
+
+			// SectionName (listener) may be nil (whole gateway parentRef)
 			sectionName := ""
 			if p.SectionName != nil {
 				sectionName = string(*p.SectionName)
@@ -220,7 +230,9 @@ func (t *Translator) processSecurityPolicyForHTTPRoute(
 			if _, ok := listenerRouteMap[sectionName]; !ok {
 				listenerRouteMap[sectionName] = make(sets.Set[string])
 			}
+			// Track this route (namespaced) under the listener (or whole gateway key "").
 			listenerRouteMap[sectionName].Insert(utils.NamespacedName(targetedRoute).String())
+
 			parentGateways = append(parentGateways, getAncestorRefForPolicy(gwNN, p.SectionName))
 		}
 	}
@@ -233,21 +245,33 @@ func (t *Translator) processSecurityPolicyForHTTPRoute(
 			policy.Generation,
 			resolveErr,
 		)
-
 		return
 	}
 
-	if err := validateSecurityPolicy(policy); err != nil {
-		status.SetTranslationErrorForPolicyAncestors(&policy.Status,
-			parentGateways,
-			t.GatewayControllerName,
-			policy.Generation,
-			status.Error2ConditionMsg(fmt.Errorf("invalid SecurityPolicy: %w", err)),
-		)
-
-		return
+	// Validation per protocol
+	if isTCP {
+		if err := validateSecurityPolicyForTCP(policy); err != nil {
+			status.SetTranslationErrorForPolicyAncestors(&policy.Status,
+				parentGateways,
+				t.GatewayControllerName,
+				policy.Generation,
+				status.Error2ConditionMsg(fmt.Errorf("invalid SecurityPolicy for TCP route: %w", err)),
+			)
+			return
+		}
+	} else {
+		if err := validateSecurityPolicy(policy); err != nil {
+			status.SetTranslationErrorForPolicyAncestors(&policy.Status,
+				parentGateways,
+				t.GatewayControllerName,
+				policy.Generation,
+				status.Error2ConditionMsg(fmt.Errorf("invalid SecurityPolicy: %w", err)),
+			)
+			return
+		}
 	}
 
+	// Translate
 	if err := t.translateSecurityPolicyForRoute(policy, targetedRoute, currTarget, resources, xdsIR); err != nil {
 		status.SetTranslationErrorForPolicyAncestors(&policy.Status,
 			parentGateways,
@@ -261,22 +285,25 @@ func (t *Translator) processSecurityPolicyForHTTPRoute(
 	status.SetAcceptedForPolicyAncestors(&policy.Status, parentGateways, t.GatewayControllerName, policy.Generation)
 
 	// Check if this policy is overridden by other policies targeting at route rule levels
-	key := policyTargetRouteKey{
-		Kind:      string(currTarget.Kind),
-		Name:      string(currTarget.Name),
-		Namespace: policy.Namespace,
-	}
-	overriddenTargetsMessage := getOverriddenTargetsMessageForRoute(routeMap[key], currTarget.SectionName)
-	if overriddenTargetsMessage != "" {
-		status.SetConditionForPolicyAncestors(&policy.Status,
-			parentGateways,
-			t.GatewayControllerName,
-			egv1a1.PolicyConditionOverridden,
-			metav1.ConditionTrue,
-			egv1a1.PolicyReasonOverridden,
-			"This policy is being overridden by other securityPolicies for "+overriddenTargetsMessage,
-			policy.Generation,
-		)
+	// Override condition (HTTP only; TCP has single rule semantics)
+	if !isTCP {
+		key := policyTargetRouteKey{
+			Kind:      string(currTarget.Kind),
+			Name:      string(currTarget.Name),
+			Namespace: policy.Namespace,
+		}
+		overriddenTargetsMessage := getOverriddenTargetsMessageForRoute(routeMap[key], currTarget.SectionName)
+		if overriddenTargetsMessage != "" {
+			status.SetConditionForPolicyAncestors(&policy.Status,
+				parentGateways,
+				t.GatewayControllerName,
+				egv1a1.PolicyConditionOverridden,
+				metav1.ConditionTrue,
+				egv1a1.PolicyReasonOverridden,
+				"This policy is being overridden by other securityPolicies for "+overriddenTargetsMessage,
+				policy.Generation,
+			)
+		}
 	}
 }
 
@@ -316,7 +343,65 @@ func (t *Translator) processSecurityPolicyForGateway(
 			policy.Generation,
 			resolveErr,
 		)
+		return
+	}
 
+	// Added: protocol-aware validation (mirrors route handling) + mixed-protocol whole-gateway guard
+	isTCPListener := false
+	hasHTTP := false
+	hasTCP := false
+	for _, l := range targetedGateway.Spec.Listeners {
+		switch l.Protocol {
+		case gwapiv1.TCPProtocolType:
+			hasTCP = true
+		case gwapiv1.HTTPProtocolType, gwapiv1.HTTPSProtocolType:
+			hasHTTP = true
+		default:
+			// ignore other protocols for now
+		}
+	}
+
+	if currTarget.SectionName != nil {
+		sec := string(*currTarget.SectionName)
+		for _, l := range targetedGateway.Spec.Listeners {
+			if string(l.Name) == sec && l.Protocol == gwapiv1.TCPProtocolType {
+				isTCPListener = true
+				break
+			}
+		}
+	} else {
+		// whole gateway target
+		if hasTCP && !hasHTTP { // all TCP
+			isTCPListener = true
+		}
+		// Mixed protocol whole-gateway target is disallowed (avoids silent partial application)
+		if hasHTTP && hasTCP {
+			status.SetTranslationErrorForPolicyAncestors(&policy.Status,
+				parentGateways,
+				t.GatewayControllerName,
+				policy.Generation,
+				status.Error2ConditionMsg(fmt.Errorf(
+					"cannot attach SecurityPolicy to entire Gateway %s: mixed protocols (HTTP + TCP) detected; specify sectionName to target individual listeners",
+					gatewayNN.String(),
+				)),
+			)
+			return
+		}
+	}
+
+	var vErr error
+	if isTCPListener {
+		vErr = validateSecurityPolicyForTCP(policy)
+	} else {
+		vErr = validateSecurityPolicy(policy)
+	}
+	if vErr != nil {
+		status.SetTranslationErrorForPolicyAncestors(&policy.Status,
+			parentGateways,
+			t.GatewayControllerName,
+			policy.Generation,
+			status.Error2ConditionMsg(fmt.Errorf("invalid SecurityPolicy: %w", vErr)),
+		)
 		return
 	}
 
@@ -329,7 +414,6 @@ func (t *Translator) processSecurityPolicyForGateway(
 		)
 	}
 
-	// Set Accepted condition if it is unset
 	status.SetAcceptedForPolicyAncestors(&policy.Status, parentGateways, t.GatewayControllerName, policy.Generation)
 
 	// Check if this policy is overridden by other policies targeting at route and listener levels
@@ -382,6 +466,59 @@ func validateSecurityPolicy(p *egv1a1.SecurityPolicy) error {
 	if basicAuth != nil {
 		if err := validateBasicAuth(basicAuth); err != nil {
 			return err
+		}
+	}
+	return nil
+}
+
+// validateSecurityPolicyForTCP validates that the SecurityPolicy is valid for TCP routes.
+// Only authorization is allowed for TCP routes.
+func validateSecurityPolicyForTCP(p *egv1a1.SecurityPolicy) error {
+	// For TCP routes, only authorization is supported
+	if p.Spec.CORS != nil ||
+		p.Spec.JWT != nil ||
+		p.Spec.OIDC != nil ||
+		p.Spec.APIKeyAuth != nil ||
+		p.Spec.BasicAuth != nil ||
+		p.Spec.ExtAuth != nil {
+		return fmt.Errorf("only authorization is supported for TCP (routes/listeners)")
+	}
+
+	// Placeholder is OK: no Authorization or no rules yet.
+	if p.Spec.Authorization == nil || len(p.Spec.Authorization.Rules) == 0 {
+		return nil
+	}
+
+	// Validate rules when present.
+	for i, rule := range p.Spec.Authorization.Rules {
+		// Unsupported selectors for TCP
+		if rule.Principal.JWT != nil {
+			return fmt.Errorf("rule %d: JWT is not supported for TCP routes", i)
+		}
+		if len(rule.Principal.Headers) > 0 {
+			return fmt.Errorf("rule %d: Headers are not supported for TCP routes", i)
+		}
+
+		switch rule.Action {
+		case egv1a1.AuthorizationActionAllow:
+			// Allow must specify at least one CIDR
+			if len(rule.Principal.ClientCIDRs) == 0 {
+				return fmt.Errorf("rule %d with Allow action must specify at least one ClientCIDR for TCP routes", i)
+			}
+			// All CIDRs must be valid
+			if err := validateCIDRs(rule.Principal.ClientCIDRs); err != nil {
+				return fmt.Errorf("rule %d: %w", i, err)
+			}
+
+		case egv1a1.AuthorizationActionDeny:
+			// CIDRs optional, but validate if present
+			if len(rule.Principal.ClientCIDRs) > 0 {
+				if err := validateCIDRs(rule.Principal.ClientCIDRs); err != nil {
+					return fmt.Errorf("rule %d: %w", i, err)
+				}
+			}
+		default:
+			// If the enum is already constrained, this default is never hit.
 		}
 	}
 	return nil
@@ -471,6 +608,16 @@ func resolveSecurityPolicyGatewayTargetRef(
 	return gateway.GatewayContext, nil
 }
 
+// validateCIDRs checks each provided CIDR for syntactic correctness.
+func validateCIDRs(cidrs []egv1a1.CIDR) error {
+	for _, c := range cidrs {
+		if _, _, err := net.ParseCIDR(string(c)); err != nil {
+			return fmt.Errorf("invalid ClientCIDR %q: %w", c, err)
+		}
+	}
+	return nil
+}
+
 func resolveSecurityPolicyRouteTargetRef(
 	policy *egv1a1.SecurityPolicy,
 	target gwapiv1a2.LocalPolicyTargetReferenceWithSectionName,
@@ -484,27 +631,36 @@ func resolveSecurityPolicyRouteTargetRef(
 	}
 	route, ok := routes[key]
 
-	// Route not found
-	// It's not an error if the gateway is not found because the SecurityPolicy
-	// may be reconciled by multiple controllers, and the gateway may not be managed
-	// by this controller.
+	// Route not found (not an error – may be managed by another controller)
 	if !ok {
 		return nil, nil
 	}
 
-	// If sectionName is set, make sure its valid
-	if target.SectionName != nil {
-		if err := validateRouteRuleSectionName(*target.SectionName, key, route); err != nil {
-			return route.RouteContext, err
+	isTCP := target.Kind == resource.KindTCPRoute
+
+	// Disallow sectionName for TCPRoute (no rule granularity).
+	if isTCP && target.SectionName != nil {
+		return route.RouteContext, &status.PolicyResolveError{
+			Reason: gwapiv1a2.PolicyReasonTargetNotFound,
+			Message: fmt.Sprintf("sectionName %q not supported for TCPRoute %s/%s; omit sectionName to target the whole route",
+				string(*target.SectionName), policy.Namespace, string(target.Name)),
 		}
 	}
-
+	// HTTPRoute rule-level validation
+	if !isTCP && target.SectionName != nil {
+		section := string(*target.SectionName)
+		if !httpRouteRuleExists(route, section) {
+			return route.RouteContext, &status.PolicyResolveError{
+				Reason:  gwapiv1a2.PolicyReasonTargetNotFound,
+				Message: fmt.Sprintf("No section name %s found for HTTPRoute %s/%s", section, key.Namespace, key.Name),
+			}
+		}
+	}
 	if target.SectionName == nil {
-		// Check if another policy targeting the same xRoute exists
+		// Whole route attachment
 		if route.attached {
 			message := fmt.Sprintf("Unable to target %s %s, another SecurityPolicy has already attached to it",
 				string(target.Kind), string(target.Name))
-
 			return route.RouteContext, &status.PolicyResolveError{
 				Reason:  gwapiv1a2.PolicyReasonConflicted,
 				Message: message,
@@ -512,6 +668,7 @@ func resolveSecurityPolicyRouteTargetRef(
 		}
 		route.attached = true
 	} else {
+		// Section (rule) attachment (for TCP this is a synthetic identifier)
 		routeRuleName := string(*target.SectionName)
 		if route.attachedToRouteRules.Has(routeRuleName) {
 			message := fmt.Sprintf("Unable to target RouteRule %s/%s, another SecurityPolicy has already attached to it",
@@ -525,7 +682,6 @@ func resolveSecurityPolicyRouteTargetRef(
 	}
 
 	routes[key] = route
-
 	return route.RouteContext, nil
 }
 
@@ -624,6 +780,26 @@ func (t *Translator) translateSecurityPolicyForRoute(
 		}
 
 		irKey := t.getIRKey(gtwCtx.Gateway)
+		// Handle TCP routes differently from HTTP routes (determine by Kind)
+		if GetRouteType(route) == resource.KindTCPRoute {
+			for _, listener := range parentRefCtx.listeners {
+				irListener := xdsIR[irKey].GetTCPListener(irListenerName(listener))
+				if irListener != nil {
+					// For TCP routes, we need exact route name matching (not prefix)
+					expectedRouteName := strings.TrimSuffix(prefix, "/")
+					for _, r := range irListener.Routes {
+						// A Policy targeting the specific scope (TCPRoute) wins over a lesser scope (Gateway)
+						if r.Name == expectedRouteName && r.Security == nil {
+							r.Security = &ir.SecurityFeatures{
+								Authorization: authorization,
+							}
+						}
+					}
+				}
+			}
+			// Nothing more to do for TCP for this parentRef
+			continue
+		}
 		for _, listener := range parentRefCtx.listeners {
 			irListener := xdsIR[irKey].GetHTTPListener(irListenerName(listener))
 			if irListener != nil {
@@ -757,25 +933,118 @@ func (t *Translator) translateSecurityPolicyForGateway(
 	//
 	// Note: there are multiple features in a security policy, even if some of them
 	// are invalid, we still want to apply the valid ones.
+	// Defensive checks to avoid nil derefs (diagnose panic)
+	if gateway == nil {
+		return fmt.Errorf("translateSecurityPolicyForGateway: gateway context is nil for policy %s/%s", policy.Namespace, policy.Name)
+	}
+	if gateway.Gateway == nil {
+		return fmt.Errorf("translateSecurityPolicyForGateway: embedded Gateway is nil for gateway context %v (policy %s/%s)", gateway, policy.Namespace, policy.Name)
+	}
+
 	irKey := t.getIRKey(gateway.Gateway)
 	// Should exist since we've validated this
-	x := xdsIR[irKey]
+	x, ok := xdsIR[irKey]
+	if !ok || x == nil {
+		return fmt.Errorf("no IR found for gateway %s (cannot apply SecurityPolicy)", irKey)
+	}
+	sectionName := ""
+	if target.SectionName != nil {
+		sectionName = string(*target.SectionName)
+	}
+
+	// Detect if target is TCP listener (or all listeners TCP when sectionName empty).
+	isTCPListener := false
+	if sectionName != "" {
+		// defensive loop: ensure gateway.Spec is available
+		for _, l := range gateway.Spec.Listeners {
+			if string(l.Name) == sectionName && l.Protocol == gwapiv1.TCPProtocolType {
+				isTCPListener = true
+				break
+			}
+		}
+	} else {
+		allTCP := true
+		for _, l := range gateway.Spec.Listeners {
+			if l.Protocol != gwapiv1.TCPProtocolType {
+				allTCP = false
+				break
+			}
+		}
+		isTCPListener = allTCP
+	}
 
 	policyTarget := irStringKey(policy.Namespace, string(target.Name))
+
+	if isTCPListener {
+		// Apply ONLY Authorization to all TCP routes under the targeted listener(s).
+		for _, tl := range x.TCP {
+			if tl == nil {
+				continue
+			}
+			// defensive: ensure metadata present
+			// Listener name format: namespace/gatewayName/listenerName
+			// compute effective section name from metadata if present, else fallback to name suffix
+			effectiveSection := ""
+			if tl.Metadata != nil && tl.Metadata.SectionName != "" {
+				effectiveSection = tl.Metadata.SectionName
+			} else {
+				// fallback: last path segment of tl.Name (`namespace/gateway/listener`)
+				// TODO: remove fallback once IR builder guarantees tl.Metadata.SectionName is populated.
+				if idx := strings.LastIndex(tl.Name, "/"); idx >= 0 && idx < len(tl.Name)-1 {
+					effectiveSection = tl.Name[idx+1:]
+				} else {
+					effectiveSection = tl.Name
+				}
+			}
+
+			if t.MergeGateways && !strings.HasPrefix(tl.Name, policyTarget) {
+				continue
+			}
+			if sectionName != "" && effectiveSection != sectionName {
+				continue
+			}
+			for _, r := range tl.Routes {
+				if r == nil {
+					continue
+				}
+				if r.Security != nil {
+					continue
+				}
+				r.Security = &ir.SecurityFeatures{
+					Authorization: authorization,
+				}
+			}
+		}
+		return errs
+	}
+
+	// HTTP branch: defensive nil checks for listeners/metadata
 	for _, h := range x.HTTP {
+		if h == nil {
+			continue
+		}
 		// A HTTPListener name has the format namespace/gatewayName/listenerName
 		gatewayNameEnd := strings.LastIndex(h.Name, "/")
+		if gatewayNameEnd <= 0 || gatewayNameEnd >= len(h.Name) {
+			continue
+		}
 		gatewayName := h.Name[0:gatewayNameEnd]
 		if t.MergeGateways && gatewayName != policyTarget {
 			continue
 		}
 		// If specified the sectionName must match listenerName from ir listener metadata.
+		if h.Metadata == nil {
+			continue
+		}
 		if target.SectionName != nil && string(*target.SectionName) != h.Metadata.SectionName {
 			continue
 		}
 		// A Policy targeting the specific scope(xRoute rule, xRoute, Gateway listener) wins over a policy
 		// targeting a lesser specific scope(Gateway).
 		for _, r := range h.Routes {
+			if r == nil {
+				continue
+			}
 			// if already set - there's a specific level policy, so skip.
 			if r.Security != nil {
 				continue
@@ -1696,4 +1965,17 @@ func defaultAuthorizationRuleName(policy *egv1a1.SecurityPolicy, index int) stri
 		"%s/authorization/rule/%s",
 		irConfigName(policy),
 		strconv.Itoa(index))
+}
+
+// httpRouteRuleExists checks if a rule (section name) exists on the HTTPRoute.
+func httpRouteRuleExists(route *policyRouteTargetContext, section string) bool {
+	if route == nil || route.RouteContext == nil {
+		return false
+	}
+	for _, rn := range GetRuleNames(route.RouteContext) {
+		if string(rn) == section {
+			return true
+		}
+	}
+	return false
 }
