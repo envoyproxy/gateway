@@ -147,7 +147,7 @@ func (t *Translator) ProcessGRPCFilters(parentRef *RouteParentContext,
 		case gwapiv1.GRPCRouteFilterResponseHeaderModifier:
 			t.processResponseHeaderModifierFilter(filter.ResponseHeaderModifier, httpFiltersContext)
 		case gwapiv1.GRPCRouteFilterRequestMirror:
-			err := t.processRequestMirrorFilter(i, filter.RequestMirror, httpFiltersContext, resources)
+			err := t.processGRPCRequestMirrorFilter(i, filter.RequestMirror, httpFiltersContext, resources)
 			if err != nil {
 				return nil, err
 			}
@@ -961,6 +961,61 @@ func (t *Translator) processRequestMirrorFilter(
 	serviceNamespace := NamespaceDerefOr(mirrorBackend.Namespace, filterNs)
 	err = t.validateBackendRef(mirrorBackendRef, filterContext.Route,
 		resources, serviceNamespace, resource.KindHTTPRoute)
+	if err != nil {
+		return status.NewRouteStatusError(
+			fmt.Errorf("failed to validate the RequestMirror filter: %w", err), err.Reason()).WithType(gwapiv1.RouteConditionResolvedRefs)
+	}
+
+	destName := fmt.Sprintf("%s-mirror-%d", irRouteDestinationName(filterContext.Route, filterContext.RuleIdx), filterIdx)
+	settingName := irDestinationSettingName(destName, -1 /*unused*/)
+	ds, _, err := t.processDestination(settingName, mirrorBackendRef, filterContext.ParentRef, filterContext.Route, resources)
+	if err != nil {
+		return err
+	}
+
+	routeDst := &ir.RouteDestination{
+		Name:     destName,
+		Settings: []*ir.DestinationSetting{ds},
+	}
+
+	var percent *float32
+	if f := mirrorFilter.Fraction; f != nil {
+		percent = ptr.To(100 * float32(f.Numerator) / float32(ptr.Deref(f.Denominator, int32(100))))
+	} else if p := mirrorFilter.Percent; p != nil {
+		percent = ptr.To(float32(*p))
+	}
+
+	filterContext.Mirrors = append(filterContext.Mirrors, &ir.MirrorPolicy{Destination: routeDst, Percentage: percent})
+	return nil
+}
+
+func (t *Translator) processGRPCRequestMirrorFilter(
+	filterIdx int,
+	mirrorFilter *gwapiv1.HTTPRequestMirrorFilter,
+	filterContext *HTTPFiltersContext,
+	resources *resource.Resources,
+) (err status.Error) {
+	// Make sure the config actually exists
+	if mirrorFilter == nil {
+		return nil
+	}
+
+	mirrorBackend := mirrorFilter.BackendRef
+
+	// Wrap the filter's BackendObjectReference into a BackendRef so we can use existing tooling to check it
+	weight := int32(1)
+	mirrorBackendRef := gwapiv1.GRPCBackendRef{
+		BackendRef: gwapiv1.BackendRef{
+			BackendObjectReference: mirrorBackend,
+			Weight:                 &weight,
+		},
+	}
+
+	// This sets the status on the HTTPRoute, should the usage be changed so that the status message reflects that the backendRef is from the filter?
+	filterNs := filterContext.Route.GetNamespace()
+	serviceNamespace := NamespaceDerefOr(mirrorBackend.Namespace, filterNs)
+	err = t.validateBackendRef(mirrorBackendRef, filterContext.Route,
+		resources, serviceNamespace, resource.KindGRPCRoute)
 	if err != nil {
 		return status.NewRouteStatusError(
 			fmt.Errorf("failed to validate the RequestMirror filter: %w", err), err.Reason()).WithType(gwapiv1.RouteConditionResolvedRefs)
