@@ -934,11 +934,15 @@ func (t *Translator) processExtensionRefHTTPFilter(extFilter *gwapiv1.LocalObjec
 	t.processUnresolvedHTTPFilter(errMsg, filterContext)
 }
 
-func (t *Translator) processRequestMirrorFilter(
+// processRequestMirrorFilterCommon contains the shared logic for processing request mirror filters
+// for both HTTP and gRPC routes.
+func (t *Translator) processRequestMirrorFilterCommon(
 	filterIdx int,
 	mirrorFilter *gwapiv1.HTTPRequestMirrorFilter,
 	filterContext *HTTPFiltersContext,
 	resources *resource.Resources,
+	backendRef interface{}, // Can be either gwapiv1.HTTPBackendRef or gwapiv1.GRPCBackendRef
+	routeKind gwapiv1.Kind,
 ) (err status.Error) {
 	// Make sure the config actually exists
 	if mirrorFilter == nil {
@@ -947,20 +951,11 @@ func (t *Translator) processRequestMirrorFilter(
 
 	mirrorBackend := mirrorFilter.BackendRef
 
-	// Wrap the filter's BackendObjectReference into a BackendRef so we can use existing tooling to check it
-	weight := int32(1)
-	mirrorBackendRef := gwapiv1.HTTPBackendRef{
-		BackendRef: gwapiv1.BackendRef{
-			BackendObjectReference: mirrorBackend,
-			Weight:                 &weight,
-		},
-	}
-
-	// This sets the status on the HTTPRoute, should the usage be changed so that the status message reflects that the backendRef is from the filter?
+	// This sets the status on the Route, should the usage be changed so that the status message reflects that the backendRef is from the filter?
 	filterNs := filterContext.Route.GetNamespace()
 	serviceNamespace := NamespaceDerefOr(mirrorBackend.Namespace, filterNs)
-	err = t.validateBackendRef(mirrorBackendRef, filterContext.Route,
-		resources, serviceNamespace, resource.KindHTTPRoute)
+	err = t.validateBackendRef(backendRef, filterContext.Route,
+		resources, serviceNamespace, routeKind)
 	if err != nil {
 		return status.NewRouteStatusError(
 			fmt.Errorf("failed to validate the RequestMirror filter: %w", err), err.Reason()).WithType(gwapiv1.RouteConditionResolvedRefs)
@@ -968,7 +963,7 @@ func (t *Translator) processRequestMirrorFilter(
 
 	destName := fmt.Sprintf("%s-mirror-%d", irRouteDestinationName(filterContext.Route, filterContext.RuleIdx), filterIdx)
 	settingName := irDestinationSettingName(destName, -1 /*unused*/)
-	ds, _, err := t.processDestination(settingName, mirrorBackendRef, filterContext.ParentRef, filterContext.Route, resources)
+	ds, _, err := t.processDestination(settingName, backendRef, filterContext.ParentRef, filterContext.Route, resources)
 	if err != nil {
 		return err
 	}
@@ -989,59 +984,50 @@ func (t *Translator) processRequestMirrorFilter(
 	return nil
 }
 
+func (t *Translator) processRequestMirrorFilter(
+	filterIdx int,
+	mirrorFilter *gwapiv1.HTTPRequestMirrorFilter,
+	filterContext *HTTPFiltersContext,
+	resources *resource.Resources,
+) (err status.Error) {
+	if mirrorFilter == nil {
+		return nil
+	}
+
+	// Wrap the filter's BackendObjectReference into a BackendRef so we can use existing tooling to check it
+	weight := int32(1)
+	mirrorBackendRef := gwapiv1.HTTPBackendRef{
+		BackendRef: gwapiv1.BackendRef{
+			BackendObjectReference: mirrorFilter.BackendRef,
+			Weight:                 &weight,
+		},
+	}
+
+	return t.processRequestMirrorFilterCommon(filterIdx, mirrorFilter, filterContext, resources,
+		mirrorBackendRef, resource.KindHTTPRoute)
+}
+
 func (t *Translator) processGRPCRequestMirrorFilter(
 	filterIdx int,
 	mirrorFilter *gwapiv1.HTTPRequestMirrorFilter,
 	filterContext *HTTPFiltersContext,
 	resources *resource.Resources,
 ) (err status.Error) {
-	// Make sure the config actually exists
 	if mirrorFilter == nil {
 		return nil
 	}
-
-	mirrorBackend := mirrorFilter.BackendRef
 
 	// Wrap the filter's BackendObjectReference into a BackendRef so we can use existing tooling to check it
 	weight := int32(1)
 	mirrorBackendRef := gwapiv1.GRPCBackendRef{
 		BackendRef: gwapiv1.BackendRef{
-			BackendObjectReference: mirrorBackend,
+			BackendObjectReference: mirrorFilter.BackendRef,
 			Weight:                 &weight,
 		},
 	}
 
-	// This sets the status on the GRPCRoute, should the usage be changed so that the status message reflects that the backendRef is from the filter?
-	filterNs := filterContext.Route.GetNamespace()
-	serviceNamespace := NamespaceDerefOr(mirrorBackend.Namespace, filterNs)
-	err = t.validateBackendRef(mirrorBackendRef, filterContext.Route,
-		resources, serviceNamespace, resource.KindGRPCRoute)
-	if err != nil {
-		return status.NewRouteStatusError(
-			fmt.Errorf("failed to validate the RequestMirror filter: %w", err), err.Reason()).WithType(gwapiv1.RouteConditionResolvedRefs)
-	}
-
-	destName := fmt.Sprintf("%s-mirror-%d", irRouteDestinationName(filterContext.Route, filterContext.RuleIdx), filterIdx)
-	settingName := irDestinationSettingName(destName, -1 /*unused*/)
-	ds, _, err := t.processDestination(settingName, mirrorBackendRef, filterContext.ParentRef, filterContext.Route, resources)
-	if err != nil {
-		return err
-	}
-
-	routeDst := &ir.RouteDestination{
-		Name:     destName,
-		Settings: []*ir.DestinationSetting{ds},
-	}
-
-	var percent *float32
-	if f := mirrorFilter.Fraction; f != nil {
-		percent = ptr.To(100 * float32(f.Numerator) / float32(ptr.Deref(f.Denominator, int32(100))))
-	} else if p := mirrorFilter.Percent; p != nil {
-		percent = ptr.To(float32(*p))
-	}
-
-	filterContext.Mirrors = append(filterContext.Mirrors, &ir.MirrorPolicy{Destination: routeDst, Percentage: percent})
-	return nil
+	return t.processRequestMirrorFilterCommon(filterIdx, mirrorFilter, filterContext, resources,
+		mirrorBackendRef, resource.KindGRPCRoute)
 }
 
 func (t *Translator) processCORSFilter(
