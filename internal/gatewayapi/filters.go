@@ -941,7 +941,7 @@ func (t *Translator) processRequestMirrorFilterCommon(
 	mirrorFilter *gwapiv1.HTTPRequestMirrorFilter,
 	filterContext *HTTPFiltersContext,
 	resources *resource.Resources,
-	backendRef interface{}, // Can be either gwapiv1.HTTPBackendRef or gwapiv1.GRPCBackendRef
+	backendRef interface{}, // Must be gwapiv1.HTTPBackendRef for HTTP routes or gwapiv1.GRPCBackendRef for gRPC routes
 	routeKind gwapiv1.Kind,
 ) (err status.Error) {
 	// Make sure the config actually exists
@@ -949,11 +949,9 @@ func (t *Translator) processRequestMirrorFilterCommon(
 		return nil
 	}
 
-	mirrorBackend := mirrorFilter.BackendRef
-
 	// This sets the status on the Route, should the usage be changed so that the status message reflects that the backendRef is from the filter?
 	filterNs := filterContext.Route.GetNamespace()
-	serviceNamespace := NamespaceDerefOr(mirrorBackend.Namespace, filterNs)
+	serviceNamespace := NamespaceDerefOr(mirrorFilter.BackendRef.Namespace, filterNs)
 	err = t.validateBackendRef(backendRef, filterContext.Route,
 		resources, serviceNamespace, routeKind)
 	if err != nil {
@@ -994,7 +992,7 @@ func (t *Translator) processRequestMirrorFilter(
 		return nil
 	}
 
-	// Wrap the filter's BackendObjectReference into a BackendRef so we can use existing tooling to check it
+	// Wrap the filter's BackendObjectReference into an HTTPBackendRef so we can use existing tooling to check it
 	weight := int32(1)
 	mirrorBackendRef := gwapiv1.HTTPBackendRef{
 		BackendRef: gwapiv1.BackendRef{
@@ -1017,7 +1015,7 @@ func (t *Translator) processGRPCRequestMirrorFilter(
 		return nil
 	}
 
-	// Wrap the filter's BackendObjectReference into a BackendRef so we can use existing tooling to check it
+	// Wrap the filter's BackendObjectReference into a GRPCBackendRef so we can use existing tooling to check it
 	weight := int32(1)
 	mirrorBackendRef := gwapiv1.GRPCBackendRef{
 		BackendRef: gwapiv1.BackendRef{
