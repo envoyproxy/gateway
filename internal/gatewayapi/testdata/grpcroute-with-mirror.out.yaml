@@ -124,6 +124,8 @@ xdsIR:
     http:
       - address: 0.0.0.0
         externalPort: 80
+        hostnames:
+          - "*"
         isHTTP2: true
         metadata:
           kind: Gateway
@@ -154,8 +156,8 @@ xdsIR:
                   name: grpcroute/default/grpcroute-1/rule/0/backend/0
                   protocol: GRPC
                   weight: 1
-            hostname: gateway.envoyproxy.io
-            isHTTP2: false
+            hostname: "*"
+            isHTTP2: true
             metadata:
               kind: GRPCRoute
               name: grpcroute-1
@@ -169,17 +171,13 @@ xdsIR:
                         - host: 7.7.7.7
                           port: 8080
                       metadata:
-                        name: service-1
+                        name: service-2
                         namespace: default
                         sectionName: "8080"
-                      name: httproute/default/grpcroute-1/rule/0-mirror-0/backend/-1
+                      name: grpcroute/default/grpcroute-1/rule/0-mirror-0/backend/-1
                       protocol: GRPC
                       weight: 1
-            name: httproute/default/grpcroute-1/rule/0/match/0/gateway_envoyproxy_io
-            pathMatch:
-              distinct: false
-              name: ""
-              prefix: /
+            name: grpcroute/default/grpcroute-1/rule/0/match/-1/*
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4
