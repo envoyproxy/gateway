@@ -1011,7 +1011,7 @@ func (t *Translator) processGRPCRequestMirrorFilter(
 		},
 	}
 
-	// This sets the status on the HTTPRoute, should the usage be changed so that the status message reflects that the backendRef is from the filter?
+	// This sets the status on the GRPCRoute, should the usage be changed so that the status message reflects that the backendRef is from the filter?
 	filterNs := filterContext.Route.GetNamespace()
 	serviceNamespace := NamespaceDerefOr(mirrorBackend.Namespace, filterNs)
 	err = t.validateBackendRef(mirrorBackendRef, filterContext.Route,
