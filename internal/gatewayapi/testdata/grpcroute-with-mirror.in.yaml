@@ -29,9 +29,9 @@ grpcRoutes:
       - name: service-1
         port: 8080
       filters:
-        - type: RequestMirror
-          requestMirror:
-            backendRef:
-                kind: Service
-                name: service-2
-                port: 8080
+      - type: RequestMirror
+        requestMirror:
+          backendRef:
+            kind: Service
+            name: service-2
+            port: 8080
