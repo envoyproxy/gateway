@@ -3550,6 +3550,7 @@ _Appears in:_
 | `consecutive5XxErrors` | _integer_ |  false  | 5 | Consecutive5xxErrors sets the number of consecutive 5xx errors triggering ejection. |
 | `baseEjectionTime` | _[Duration](https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.Duration)_ |  false  | 30s | BaseEjectionTime defines the base duration for which a host will be ejected on consecutive failures. |
 | `maxEjectionPercent` | _integer_ |  false  | 10 | MaxEjectionPercent sets the maximum percentage of hosts in a cluster that can be ejected. |
+| `failurePercentageThreshold` | _integer_ |  false  | 85 | FailurePercentageThreshold sets the failure percentage threshold for outlier detection.<br />If the failure percentage of a given host is greater than or equal to this value, it will be ejected.<br />Defaults to 85. |
 
 
 #### PathEscapedSlashAction
