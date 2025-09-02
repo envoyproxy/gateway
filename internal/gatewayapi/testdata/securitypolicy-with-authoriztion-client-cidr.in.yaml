@@ -17,6 +17,20 @@ gateways:
   kind: Gateway
   metadata:
     namespace: envoy-gateway
+    name: gateway-2
+  spec:
+    gatewayClassName: envoy-gateway-class
+    listeners:
+    - name: http
+      protocol: HTTP
+      port: 80
+      allowedRoutes:
+        namespaces:
+          from: All
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: Gateway
+  metadata:
+    namespace: envoy-gateway
     name: gateway-tcp
   spec:
     gatewayClassName: envoy-gateway-class
@@ -24,9 +38,35 @@ gateways:
     - name: foo
       protocol: TCP
       port: 8088
+      allowedRoutes:
+        namespaces:
+          from: All
     - name: bar
       protocol: TCP
       port: 8089
+      allowedRoutes:
+        namespaces:
+          from: All
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: Gateway
+  metadata:
+    namespace: envoy-gateway
+    name: gateway-mixed
+  spec:
+    gatewayClassName: envoy-gateway-class
+    listeners:
+    - name: http
+      protocol: HTTP
+      port: 80
+      allowedRoutes:
+        namespaces:
+          from: All
+    - name: foo
+      protocol: TCP
+      port: 8443
+      allowedRoutes:
+        namespaces:
+          from: All
 httpRoutes:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: HTTPRoute
@@ -39,6 +79,25 @@ httpRoutes:
     parentRefs:
     - namespace: envoy-gateway
       name: gateway-1
+      sectionName: http
+    rules:
+    - matches:
+      - path:
+          value: "/foo"
+      backendRefs:
+      - name: service-1
+        port: 8080
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    namespace: default
+    name: httproute-gw-2
+  spec:
+    hostnames:
+    - www.example.com
+    parentRefs:
+    - namespace: envoy-gateway
+      name: gateway-2
       sectionName: http
     rules:
     - matches:
@@ -85,12 +144,30 @@ httpRoutes:
       backendRefs:
       - name: service-1
         port: 8080
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    namespace: default
+    name: hr-app-mixed
+  spec:
+    parentRefs:
+    - namespace: envoy-gateway
+      name: gateway-mixed
+      sectionName: http
+    rules:
+    - matches:
+      - path:
+          type: PathPrefix
+          value: /
+      backendRefs:
+      - name: service-1
+        port: 8080
 tcpRoutes:
 - apiVersion: gateway.networking.k8s.io/v1alpha2
   kind: TCPRoute
   metadata:
     namespace: default
-    name: tcpr-app
+    name: tcpr-app-foo
   spec:
     parentRefs:
     - namespace: envoy-gateway
@@ -98,8 +175,36 @@ tcpRoutes:
       sectionName: foo
     rules:
     - backendRefs:
-      - name: tcp-backend
-        port: 9000
+      - name: service-1
+        port: 8163
+- apiVersion: gateway.networking.k8s.io/v1alpha2
+  kind: TCPRoute
+  metadata:
+    namespace: default
+    name: tcpr-app-bar
+  spec:
+    parentRefs:
+    - namespace: envoy-gateway
+      name: gateway-tcp
+      sectionName: bar
+    rules:
+    - backendRefs:
+      - name: service-1
+        port: 8163
+- apiVersion: gateway.networking.k8s.io/v1alpha2
+  kind: TCPRoute
+  metadata:
+    namespace: default
+    name: tcpr-app-mixed
+  spec:
+    parentRefs:
+    - namespace: envoy-gateway
+      name: gateway-mixed
+      sectionName: foo
+    rules:
+    - backendRefs:
+      - name: service-1
+        port: 8163
 securityPolicies:
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: SecurityPolicy
@@ -111,6 +216,25 @@ securityPolicies:
       group: gateway.networking.k8s.io
       kind: Gateway
       name: gateway-1
+    authorization:
+      defaultAction: Deny
+      rules:
+      - action: Allow
+        principal:
+          clientCIDRs:
+          - 10.0.1.0/24
+          - 10.0.2.0/24
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: SecurityPolicy
+  metadata:
+    namespace: envoy-gateway
+    name: policy-for-section-name   # This policy should gateway-2 section name http
+  spec:
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: Gateway
+      name: gateway-2
+      sectionName: http
     authorization:
       defaultAction: Deny
       rules:
@@ -166,12 +290,20 @@ securityPolicies:
       kind: Gateway
       name: gateway-tcp
     authorization:
-      defaultAction: Allow
+      defaultAction: Deny
+      rules:
+      - action: Allow
+        name: allow-private-vpc
+        principal:
+          clientCIDRs:
+          - 10.0.0.0/8
+          - 172.16.0.0/12
+          - 192.168.0.0/16
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: SecurityPolicy
   metadata:
     namespace: envoy-gateway
-    name: sp-gw-tcp-listener-foo
+    name: sp-gw-tcp-section-foo   # This policy should attach sectionName foo
   spec:
     targetRef:
       group: gateway.networking.k8s.io
@@ -179,41 +311,96 @@ securityPolicies:
       name: gateway-tcp
       sectionName: foo
     authorization:
-      defaultAction: Allow
+      defaultAction: Deny
+      rules:
+      - action: Allow
+        name: allow-private-vpc
+        principal:
+          clientCIDRs:
+          - 10.0.0.0/8
+          - 172.16.0.0/12
+          - 192.168.0.0/16
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: SecurityPolicy
   metadata:
     namespace: default
-    name: sp-tcpr-app
+    name: sp-tcpr-app-bar   # This policy should attach tcproute bar
   spec:
     targetRef:
       group: gateway.networking.k8s.io
       kind: TCPRoute
-      name: tcpr-app
+      name: tcpr-app-bar
     authorization:
       defaultAction: Deny
+      rules:
+      - action: Allow
+        name: allow-private-vpc
+        principal:
+          clientCIDRs:
+          - 10.0.0.0/8
+          - 172.16.0.0/12
+          - 192.168.0.0/16
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: SecurityPolicy
   metadata:
     namespace: default
-    name: sp-tcpr-app-conflict
+    name: sp-tcpr-app-conflict  # This policy should NOT attach tcproute bar due to conflict with above policy
   spec:
     targetRef:
       group: gateway.networking.k8s.io
       kind: TCPRoute
-      name: tcpr-app
+      name: tcpr-app-bar
     authorization:
-      defaultAction: Allow
+      defaultAction: Deny
+      rules:
+      - action: Allow
+        name: allow-private-vpc
+        principal:
+          clientCIDRs:
+          - 10.0.0.0/8
+          - 172.16.0.0/12
+          - 192.168.0.0/16
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: SecurityPolicy
   metadata:
-    namespace: default
-    name: sp-tcpr-app-invalid-section
+    namespace: envoy-gateway
+    name: sp-tcpr-app-invalid-section   # This policy should NOT attach tcproute bar due to invalid section
   spec:
     targetRef:
       group: gateway.networking.k8s.io
-      kind: TCPRoute
-      name: tcpr-app
+      kind: Gateway
+      name: gateway-tcp
       sectionName: bogus
     authorization:
-      defaultAction: Allow
+      defaultAction: Deny
+      rules:
+      - action: Allow
+        name: allow-private-vpc
+        principal:
+          clientCIDRs:
+          - 10.0.0.0/8
+          - 172.16.0.0/12
+          - 192.168.0.0/16
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: SecurityPolicy
+  metadata:
+    namespace: envoy-gateway
+    name: sp-mixed-gateway   # This policy should attach to gateway-mixed, applying to all routes, but only whats supported
+  spec:
+    targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: gateway-mixed
+    authorization:
+      defaultAction: Deny
+      rules:
+      - action: Allow
+        principal:
+          clientCIDRs:
+          - 10.0.0.0/24
+    cors:
+      allowOrigins:
+      - https://example.com
+      allowMethods:
+      - GET
+      - POST

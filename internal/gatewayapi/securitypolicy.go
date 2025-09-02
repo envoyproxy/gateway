@@ -346,18 +346,15 @@ func (t *Translator) processSecurityPolicyForGateway(
 		return
 	}
 
-	// Added: protocol-aware validation (mirrors route handling) + mixed-protocol whole-gateway guard
+	// Determine protocol composition.
 	isTCPListener := false
-	hasHTTP := false
-	hasTCP := false
+	hasHTTP, hasTCP := false, false
 	for _, l := range targetedGateway.Spec.Listeners {
 		switch l.Protocol {
 		case gwapiv1.TCPProtocolType:
 			hasTCP = true
 		case gwapiv1.HTTPProtocolType, gwapiv1.HTTPSProtocolType:
 			hasHTTP = true
-		default:
-			// ignore other protocols for now
 		}
 	}
 
@@ -369,26 +366,12 @@ func (t *Translator) processSecurityPolicyForGateway(
 				break
 			}
 		}
-	} else {
-		// whole gateway target
-		if hasTCP && !hasHTTP { // all TCP
-			isTCPListener = true
-		}
-		// Mixed protocol whole-gateway target is disallowed (avoids silent partial application)
-		if hasHTTP && hasTCP {
-			status.SetTranslationErrorForPolicyAncestors(&policy.Status,
-				parentGateways,
-				t.GatewayControllerName,
-				policy.Generation,
-				status.Error2ConditionMsg(fmt.Errorf(
-					"cannot attach SecurityPolicy to entire Gateway %s: mixed protocols (HTTP + TCP) detected; specify sectionName to target individual listeners",
-					gatewayNN.String(),
-				)),
-			)
-			return
-		}
+	} else if hasTCP && !hasHTTP {
+		// Whole gateway target and ONLY TCP listeners.
+		isTCPListener = true
 	}
 
+	// Validation: only‑TCP => TCP rules; otherwise general validation.
 	var vErr error
 	if isTCPListener {
 		vErr = validateSecurityPolicyForTCP(policy)
@@ -957,7 +940,17 @@ func (t *Translator) translateSecurityPolicyForGateway(
 	if target.SectionName != nil {
 		sectionName = string(*target.SectionName)
 	}
-
+	// Detect protocol composition of the Gateway (needed for mixed whole-gateway handling)
+	hasHTTP, hasTCP := false, false
+	for _, l := range gateway.Spec.Listeners {
+		switch l.Protocol {
+		case gwapiv1.HTTPProtocolType, gwapiv1.HTTPSProtocolType:
+			hasHTTP = true
+		case gwapiv1.TCPProtocolType:
+			hasTCP = true
+		}
+	}
+	isMixedWholeGateway := sectionName == "" && hasHTTP && hasTCP
 	// Detect if target is TCP listener (or all listeners TCP when sectionName empty).
 	isTCPListener := false
 	if sectionName != "" {
@@ -1073,6 +1066,26 @@ func (t *Translator) translateSecurityPolicyForGateway(
 					r.DirectResponse = &ir.CustomResponse{
 						StatusCode: ptr.To(uint32(500)),
 					}
+				}
+			}
+		}
+	}
+	// NEW: For a mixed-protocol whole-gateway target, also apply ONLY Authorization to TCP listeners.
+	if isMixedWholeGateway && authorization != nil {
+		for _, tl := range x.TCP {
+			if tl == nil {
+				continue
+			}
+			// When merging gateways ensure the listener belongs to this gateway target.
+			if t.MergeGateways && !strings.HasPrefix(tl.Name, policyTarget) {
+				continue
+			}
+			for _, r := range tl.Routes {
+				if r == nil || r.Security != nil {
+					continue
+				}
+				r.Security = &ir.SecurityFeatures{
+					Authorization: authorization,
 				}
 			}
 		}
