@@ -147,7 +147,7 @@ func (t *Translator) ProcessGRPCFilters(parentRef *RouteParentContext,
 		case gwapiv1.GRPCRouteFilterResponseHeaderModifier:
 			t.processResponseHeaderModifierFilter(filter.ResponseHeaderModifier, httpFiltersContext)
 		case gwapiv1.GRPCRouteFilterRequestMirror:
-			err := t.processGRPCRequestMirrorFilter(i, filter.RequestMirror, httpFiltersContext, resources)
+			err := t.processRequestMirrorFilter(i, filter.RequestMirror, httpFiltersContext, resources)
 			if err != nil {
 				return nil, err
 			}
@@ -1001,16 +1001,6 @@ func (t *Translator) processRequestMirrorFilter(
 	return nil
 }
 
-func (t *Translator) processGRPCRequestMirrorFilter(
-	filterIdx int,
-	mirrorFilter *gwapiv1.HTTPRequestMirrorFilter,
-	filterContext *HTTPFiltersContext,
-	resources *resource.Resources,
-) (err status.Error) {
-	// Simply delegate to the unified processRequestMirrorFilter function
-	// which now handles both HTTP and gRPC routes
-	return t.processRequestMirrorFilter(filterIdx, mirrorFilter, filterContext, resources)
-}
 
 func (t *Translator) processCORSFilter(
 	corsFilter *gwapiv1.HTTPCORSFilter,
