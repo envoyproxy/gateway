@@ -945,22 +945,22 @@ func (t *Translator) processRequestMirrorFilter(
 		return nil
 	}
 
+	// Get the route type from the filter context to determine the correct BackendRef type
+	routeType := filterContext.Route.GetRouteType()
 	weight := int32(1)
 	mirrorBackend := mirrorFilter.BackendRef
-
-	// Create a DirectBackendRef for the mirror backend (no filters needed)
 	mirrorBackendRef := DirectBackendRef{
 		BackendRef: &gwapiv1.BackendRef{
-			BackendObjectReference: mirrorBackend,
+			BackendObjectReference: mirrorFilter.BackendRef,
 			Weight:                 &weight,
 		},
 	}
 
-	// This sets the status on the HTTPRoute, should the usage be changed so that the status message reflects that the backendRef is from the filter?
+	// This sets the status on the Route, should the usage be changed so that the status message reflects that the backendRef is from the filter?
 	filterNs := filterContext.Route.GetNamespace()
 	serviceNamespace := NamespaceDerefOr(mirrorBackend.Namespace, filterNs)
 	err = t.validateBackendRef(mirrorBackendRef, filterContext.Route,
-		resources, serviceNamespace, resource.KindHTTPRoute)
+		resources, serviceNamespace, routeType)
 	if err != nil {
 		return status.NewRouteStatusError(
 			fmt.Errorf("failed to validate the RequestMirror filter: %w", err), err.Reason()).WithType(gwapiv1.RouteConditionResolvedRefs)

@@ -12,6 +12,7 @@ new features: |
 bug fixes: |
   Fix 500 errors caused by partially invalid BackendRefs; traffic is now correctly routed between valid backends and 500 responses according to their configured weights.
   Fixed certificate SAN overlap detection in gateway listeners.
+  Fix panic with request mirror with GRPCRoute.
 
 # Enhancements that improve performance.
 performance improvements: |
