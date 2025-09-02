@@ -140,9 +140,8 @@
       address: 0.0.0.0
       portValue: 11443
       protocol: UDP
-  drainType: MODIFY_ONLY
-  filterChains:
-  - filters:
+  defaultFilterChain:
+    filters:
     - name: envoy.filters.network.http_connection_manager
       typedConfig:
         '@type': type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
@@ -166,11 +165,11 @@
           configSource:
             ads: {}
             resourceApiVersion: V3
-          routeConfigName: envoy-gateway/gateway-2/https-http3
+          routeConfigName: http-1443
         serverHeaderTransformation: PASS_THROUGH
         statPrefix: https-1443
         useRemoteAddress: true
-    name: envoy-gateway/gateway-2/https-http3
+    name: http-1443
     transportSocket:
       name: envoy.transport_sockets.quic
       typedConfig:
@@ -189,6 +188,7 @@
               tlsMinimumProtocolVersion: TLSv1_2
           disableStatefulSessionResumption: true
           disableStatelessSessionResumption: true
+  drainType: MODIFY_ONLY
   name: udp-1443
   udpListenerConfig:
     downstreamSocketConfig: {}
