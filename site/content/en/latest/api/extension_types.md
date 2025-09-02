@@ -1327,6 +1327,9 @@ EnvoyGatewayHostInfrastructureProvider defines configuration for the Host Infras
 _Appears in:_
 - [EnvoyGatewayInfrastructureProvider](#envoygatewayinfrastructureprovider)
 
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `envoyVersion` | _string_ |  false  |  | EnvoyVersion defines the version of the Envoy proxy to run.<br />If not set, the version against Envoy Gateway is built will be used. |
 
 
 #### EnvoyGatewayInfrastructureProvider
