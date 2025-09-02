@@ -430,7 +430,13 @@ type EnvoyGatewayInfrastructureProvider struct {
 
 // EnvoyGatewayHostInfrastructureProvider defines configuration for the Host Infrastructure provider.
 type EnvoyGatewayHostInfrastructureProvider struct {
-	// TODO: Add config as use cases are better understood.
+	// TODO: Add other config options as use cases are better understood.
+
+	// EnvoyVersion defines the version of the Envoy proxy to run.
+	// If not set, the version against Envoy Gateway is built will be used.
+	//
+	// +optional
+	EnvoyVersion string `json:"envoyVersion,omitempty"`
 }
 
 // RateLimit defines the configuration associated with the Rate Limit Service

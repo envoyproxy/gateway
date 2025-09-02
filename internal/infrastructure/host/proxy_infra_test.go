@@ -7,7 +7,6 @@ package host
 
 import (
 	"bytes"
-	"context"
 	"os"
 	"path"
 	"testing"
@@ -79,7 +78,7 @@ func TestInfraCreateProxy(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			err = infra.CreateOrUpdateProxyInfra(context.Background(), tc.infra)
+			err = infra.CreateOrUpdateProxyInfra(t.Context(), tc.infra)
 			if tc.expect {
 				require.NoError(t, err)
 			} else {
@@ -92,7 +91,7 @@ func TestInfraCreateProxy(t *testing.T) {
 func TestInfra_runEnvoy_stopEnvoy(t *testing.T) {
 	tmpdir := t.TempDir()
 	// Ensures that all the required binaries are available.
-	err := func_e.Run(context.Background(), []string{"--version"}, api.HomeDir(tmpdir))
+	err := func_e.Run(t.Context(), []string{"--version"}, api.HomeDir(tmpdir))
 	require.NoError(t, err)
 
 	i := &Infra{proxyContextMap: make(map[string]*proxyContext), HomeDir: tmpdir}
@@ -104,11 +103,75 @@ func TestInfra_runEnvoy_stopEnvoy(t *testing.T) {
 			"admin: {address: {socket_address: {address: '127.0.0.1', port_value: 9901}}}",
 		}
 		out := &bytes.Buffer{}
-		i.runEnvoy(context.Background(), out, "test", args)
+		i.runEnvoy(t.Context(), out, "", "test", args)
 		require.Len(t, i.proxyContextMap, 1)
 		i.stopEnvoy("test")
 		require.Empty(t, i.proxyContextMap)
 		// If the cleanup didn't work, the error due to "address already in use" will be tried to be written to the nil logger,
 		// which will panic.
+	}
+}
+
+func TestExtractSemver(t *testing.T) {
+	tests := []struct {
+		image   string
+		want    string
+		wantErr bool
+	}{
+		{"docker.io/envoyproxy/envoy:distroless-v1.35.0", "1.35.0", false},
+		{"envoyproxy/envoy:v1.28.1", "1.28.1", false},
+		{"envoyproxy/envoy:latest", "", true},
+		{"envoyproxy/envoy", "", true},
+		{"envoyproxy/envoy:distroless-v1.35", "", true},
+		{"envoyproxy/envoy:distroless-v1.35.0-extra", "1.35.0", false},
+		{"envoyproxy/envoy:1.2.3", "1.2.3", false},
+		{"envoyproxy/envoy:foo-2.3.4-bar", "2.3.4", false},
+	}
+	for _, tc := range tests {
+		t.Run(tc.image, func(t *testing.T) {
+			got, err := extractSemver(tc.image)
+			if tc.wantErr {
+				require.Error(t, err)
+			} else {
+				require.NoError(t, err)
+				require.Equal(t, tc.want, got)
+			}
+		})
+	}
+}
+
+func TestGetEnvoyVersion(t *testing.T) {
+	tests := []struct {
+		name         string
+		defaultImage string
+		envoyVersion string
+		want         string
+	}{
+		{"default release version", "docker.io/envoyproxy/envoy:distroless-v1.35.0", "", "1.35.0"},
+		{"dev version", "docker.io/envoyproxy/envoy:distroless-dev", "", ""},
+		{"custom version 1.2.3", "docker.io/envoyproxy/envoy:distroless-v1.36.0", "1.2.3", "1.2.3"},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			infra := &Infra{
+				defaultEnvoyImage: tc.defaultImage,
+				EnvoyGateway: &egv1a1.EnvoyGateway{
+					EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
+						Provider: &egv1a1.EnvoyGatewayProvider{
+							Type: egv1a1.ProviderTypeCustom,
+							Custom: &egv1a1.EnvoyGatewayCustomProvider{
+								Infrastructure: &egv1a1.EnvoyGatewayInfrastructureProvider{
+									Host: &egv1a1.EnvoyGatewayHostInfrastructureProvider{
+										EnvoyVersion: tc.envoyVersion,
+									},
+								},
+							},
+						},
+					},
+				},
+			}
+			require.Equal(t, tc.want, infra.getEnvoyVersion())
+		})
 	}
 }
