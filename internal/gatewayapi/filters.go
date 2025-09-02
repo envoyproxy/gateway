@@ -1001,7 +1001,6 @@ func (t *Translator) processRequestMirrorFilter(
 	return nil
 }
 
-
 func (t *Translator) processCORSFilter(
 	corsFilter *gwapiv1.HTTPCORSFilter,
 	filterContext *HTTPFiltersContext,
