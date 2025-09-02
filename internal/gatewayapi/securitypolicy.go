@@ -285,25 +285,22 @@ func (t *Translator) processSecurityPolicyForRoute(
 	status.SetAcceptedForPolicyAncestors(&policy.Status, parentGateways, t.GatewayControllerName, policy.Generation)
 
 	// Check if this policy is overridden by other policies targeting at route rule levels
-	// Override condition (HTTP only; TCP has single rule semantics)
-	if !isTCP {
-		key := policyTargetRouteKey{
-			Kind:      string(currTarget.Kind),
-			Name:      string(currTarget.Name),
-			Namespace: policy.Namespace,
-		}
-		overriddenTargetsMessage := getOverriddenTargetsMessageForRoute(routeMap[key], currTarget.SectionName)
-		if overriddenTargetsMessage != "" {
-			status.SetConditionForPolicyAncestors(&policy.Status,
-				parentGateways,
-				t.GatewayControllerName,
-				egv1a1.PolicyConditionOverridden,
-				metav1.ConditionTrue,
-				egv1a1.PolicyReasonOverridden,
-				"This policy is being overridden by other securityPolicies for "+overriddenTargetsMessage,
-				policy.Generation,
-			)
-		}
+	key := policyTargetRouteKey{
+		Kind:      string(currTarget.Kind),
+		Name:      string(currTarget.Name),
+		Namespace: policy.Namespace,
+	}
+	overriddenTargetsMessage := getOverriddenTargetsMessageForRoute(routeMap[key], currTarget.SectionName)
+	if overriddenTargetsMessage != "" {
+		status.SetConditionForPolicyAncestors(&policy.Status,
+			parentGateways,
+			t.GatewayControllerName,
+			egv1a1.PolicyConditionOverridden,
+			metav1.ConditionTrue,
+			egv1a1.PolicyReasonOverridden,
+			"This policy is being overridden by other securityPolicies for "+overriddenTargetsMessage,
+			policy.Generation,
+		)
 	}
 }
 
