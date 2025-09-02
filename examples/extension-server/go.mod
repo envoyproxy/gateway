@@ -9,11 +9,7 @@ require (
 	github.com/urfave/cli/v2 v2.27.7
 	google.golang.org/grpc v1.75.0
 	google.golang.org/protobuf v1.36.8
-<<<<<<< HEAD
 	k8s.io/apimachinery v0.33.4
-=======
-	k8s.io/apimachinery v0.33.3
->>>>>>> ebb549dd7... bump go mod
 	sigs.k8s.io/controller-runtime v0.21.0
 	sigs.k8s.io/gateway-api v1.3.1-0.20250527223622-54df0a899c1c
 	sigs.k8s.io/gateway-api-inference-extension v0.5.1

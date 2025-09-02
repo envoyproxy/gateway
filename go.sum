@@ -11,13 +11,8 @@ fortio.org/cli v1.10.0 h1:BsJXuBrJxBLqE+62gHSOQBRzY+EvE/sF1MnjIexUSI8=
 fortio.org/cli v1.10.0/go.mod h1:DNxA/oD3cQaOtTean8Sgr78lJrwGLIs06X8U/G3va+M=
 fortio.org/dflag v1.8.1 h1:2ax/9IvIwMb0zPE3yZEDp9D+UewfZzj5B8UKT79tblU=
 fortio.org/dflag v1.8.1/go.mod h1:M2K61nLYfB4pAsp7mZzBtjqLP6dX11R9Vm+1I4F+sVg=
-<<<<<<< HEAD
-fortio.org/fortio v1.71.1 h1:lEZep6YlBA7epR2tFS0Ta2wNlVptyTyF71f3RrTl00s=
-fortio.org/fortio v1.71.1/go.mod h1:blqZjtGZRGpQkTj1vjF+7eCqhvi2z3HPW0aY2kXh7NI=
-=======
 fortio.org/fortio v1.71.2 h1:HipkVJRN9hEgYTBCg6MH/nDH/ZD697mHpP3/EZ4STNE=
 fortio.org/fortio v1.71.2/go.mod h1:bGdlE8jblg96VHaX/c1Jjhy0uwtYfDLBYiU5LAeDhnI=
->>>>>>> ebb549dd7... bump go mod
 fortio.org/log v1.17.2 h1:JPX/ApDXDoGzsNtXw0AJI4ai6tl9wHp4Ch6bVs1OK0Y=
 fortio.org/log v1.17.2/go.mod h1:1V7bPfFI7ZVTdtN9DnUCAN0ilEMs5VgKjHIDRO7Mjzk=
 fortio.org/safecast v1.2.0 h1:ckQJNenMJHycqPsi/QrzA4EUX5WQkyd+hGO4mxt/a8w=
@@ -485,13 +480,8 @@ github.com/mxk/go-flowrate v0.0.0-20140419014527-cca7078d478f/go.mod h1:ZdcZmHo+
 github.com/nxadm/tail v1.4.4/go.mod h1:kenIhsEOeOJmVchQTgglprH7qJGnHDVpk1VPCcaMI8A=
 github.com/nxadm/tail v1.4.8 h1:nPr65rt6Y5JFSKQO7qToXr7pePgD6Gwiw05lkbyAQTE=
 github.com/nxadm/tail v1.4.8/go.mod h1:+ncqLTQzXmGhMZNUePPaPqPvBxHAIsmXswZKocGu+AU=
-<<<<<<< HEAD
-github.com/ohler55/ojg v1.26.9 h1:/ij3M08tC8w7NzI/uEPl6qxeSXJEqWDDNfmpbWcUdGw=
-github.com/ohler55/ojg v1.26.9/go.mod h1:/Y5dGWkekv9ocnUixuETqiL58f+5pAsUfg5P8e7Pa2o=
-=======
 github.com/ohler55/ojg v1.26.10 h1:qXq8A0AjzwvO+rKJWv9apNVWxyu3He8lgGZZ+AoEdLA=
 github.com/ohler55/ojg v1.26.10/go.mod h1:/Y5dGWkekv9ocnUixuETqiL58f+5pAsUfg5P8e7Pa2o=
->>>>>>> ebb549dd7... bump go mod
 github.com/oklog/ulid v1.3.1 h1:EGfNDEx6MqHz8B3uNV6QAib1UR2Lm97sHi3ocA6ESJ4=
 github.com/oklog/ulid v1.3.1/go.mod h1:CirwcVhetQ6Lv90oh/F+FBtV6XMibvdAFo93nm5qn4U=
 github.com/onsi/ginkgo v1.6.0/go.mod h1:lLunBs/Ym6LB5Z9jYTR76FiuTmxDTDusOGeTQH+WWjE=
@@ -615,13 +605,8 @@ github.com/stretchr/testify v1.7.0/go.mod h1:6Fq8oRcR53rry900zMqJjRRixrwX3KX962/
 github.com/stretchr/testify v1.7.1/go.mod h1:6Fq8oRcR53rry900zMqJjRRixrwX3KX962/h/Wwjteg=
 github.com/stretchr/testify v1.8.0/go.mod h1:yNjHg4UonilssWZ8iaSj1OCr/vHnekPRkoO+kdMU+MU=
 github.com/stretchr/testify v1.8.1/go.mod h1:w2LPCIKwWwSfY2zedu0+kehJoqGctiVI29o6fzry7u4=
-<<<<<<< HEAD
-github.com/stretchr/testify v1.11.0 h1:ib4sjIrwZKxE5u/Japgo/7SJV3PvgjGiRNAvTVGqQl8=
-github.com/stretchr/testify v1.11.0/go.mod h1:wZwfW3scLgRK+23gO65QZefKpKQRnfz6sD981Nm4B6U=
-=======
 github.com/stretchr/testify v1.11.1 h1:7s2iGBzp5EwR7/aIZr8ao5+dra3wiQyKjjFuvgVKu7U=
 github.com/stretchr/testify v1.11.1/go.mod h1:wZwfW3scLgRK+23gO65QZefKpKQRnfz6sD981Nm4B6U=
->>>>>>> ebb549dd7... bump go mod
 github.com/subosito/gotenv v1.6.0 h1:9NlTDc1FTs4qu0DDq7AEtTPNw6SVm7uBMsUCUjABIf8=
 github.com/subosito/gotenv v1.6.0/go.mod h1:Dk4QP5c2W3ibzajGcXpNraDfq2IrhjMIvMSWPKKo0FU=
 github.com/sylabs/sif/v2 v2.21.1 h1:GZ0b5//AFAqJEChd8wHV/uSKx/l1iuGYwjR8nx+4wPI=
@@ -901,13 +886,8 @@ gopkg.in/yaml.v3 v3.0.1 h1:fxVm/GzAzEWqLHuvctI91KS9hhNmmWOoWu0XTYJS7CA=
 gopkg.in/yaml.v3 v3.0.1/go.mod h1:K4uyk7z7BCEPqu6E+C64Yfv1cQ7kz7rIZviUmN+EgEM=
 gotest.tools/v3 v3.5.2 h1:7koQfIKdy+I8UTetycgUqXWSDwpgv193Ka+qRsmBY8Q=
 gotest.tools/v3 v3.5.2/go.mod h1:LtdLGcnqToBH83WByAAi/wiwSFCArdFIUV/xxN4pcjA=
-<<<<<<< HEAD
-helm.sh/helm/v3 v3.18.5 h1:Cc3Z5vd6kDrZq9wO9KxKLNEickiTho6/H/dBNRVSos4=
-helm.sh/helm/v3 v3.18.5/go.mod h1:L/dXDR2r539oPlFP1PJqKAC1CUgqHJDLkxKpDGrWnyg=
-=======
 helm.sh/helm/v3 v3.18.6 h1:S/2CqcYnNfLckkHLI0VgQbxgcDaU3N4A/46E3n9wSNY=
 helm.sh/helm/v3 v3.18.6/go.mod h1:L/dXDR2r539oPlFP1PJqKAC1CUgqHJDLkxKpDGrWnyg=
->>>>>>> ebb549dd7... bump go mod
 honnef.co/go/tools v0.0.0-20190102054323-c2f93a96b099/go.mod h1:rf3lG4BRIbNafJWhAfAdb/ePZxsR/4RtNHQocxwk9r4=
 honnef.co/go/tools v0.0.0-20190523083050-ea95bdfd59fc/go.mod h1:rf3lG4BRIbNafJWhAfAdb/ePZxsR/4RtNHQocxwk9r4=
 k8s.io/api v0.33.4 h1:oTzrFVNPXBjMu0IlpA2eDDIU49jsuEorGHB4cvKupkk=
