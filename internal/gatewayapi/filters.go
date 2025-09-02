@@ -951,7 +951,7 @@ func (t *Translator) processRequestMirrorFilter(
 	mirrorBackend := mirrorFilter.BackendRef
 
 	// Create the appropriate BackendRef type based on the route type
-	var mirrorBackendRef interface{}
+	var mirrorBackendRef BackendRefContext
 	if routeType == resource.KindGRPCRoute {
 		mirrorBackendRef = gwapiv1.GRPCBackendRef{
 			BackendRef: gwapiv1.BackendRef{
