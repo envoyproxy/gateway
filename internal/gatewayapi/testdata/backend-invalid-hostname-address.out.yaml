@@ -40,25 +40,6 @@ backends:
   kind: Backend
   metadata:
     creationTimestamp: null
-    name: backend-fqdn
-    namespace: default
-  spec:
-    endpoints:
-    - ip:
-        address: 127.0.0.3
-        port: 3000
-  status:
-    conditions:
-    - lastTransitionTime: null
-      message: 'The Backend was not accepted: IP address 127.0.0.3 in the loopback
-        range is not supported'
-      reason: Accepted
-      status: "False"
-      type: Invalid
-- apiVersion: gateway.envoyproxy.io/v1alpha1
-  kind: Backend
-  metadata:
-    creationTimestamp: null
     name: backend-ip
     namespace: default
   spec:

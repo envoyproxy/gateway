@@ -66,11 +66,10 @@ backends:
   status:
     conditions:
     - lastTransitionTime: null
-      message: 'The Backend was not accepted: IP address 127.0.0.1 in the loopback
-        range is not supported'
+      message: The Backend was accepted
       reason: Accepted
-      status: "False"
-      type: Invalid
+      status: "True"
+      type: Accepted
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: Backend
   metadata:
@@ -272,10 +271,9 @@ httpRoutes:
         status: "True"
         type: Accepted
       - lastTransitionTime: null
-        message: 'Failed to process route rule 0 backendRef 0: IP address 127.0.0.1
-          in the loopback range is not supported.'
-        reason: InvalidAddress
-        status: "False"
+        message: Resolved all the Object references for the Route
+        reason: ResolvedRefs
+        status: "True"
         type: ResolvedRefs
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
@@ -448,8 +446,24 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /2
-      - directResponse:
-          statusCode: 500
+      - destination:
+          metadata:
+            kind: HTTPRoute
+            name: httproute-4
+            namespace: default
+          name: httproute/default/httproute-4/rule/0
+          settings:
+          - addressType: IP
+            endpoints:
+            - host: 127.0.0.1
+              port: 3001
+            metadata:
+              kind: Backend
+              name: backend-ip-localhost
+              namespace: default
+            name: httproute/default/httproute-4/rule/0/backend/0
+            protocol: HTTP
+            weight: 1
         hostname: '*'
         isHTTP2: false
         metadata:

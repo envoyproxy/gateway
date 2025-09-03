@@ -70,15 +70,10 @@ func validateBackend(backend *egv1a1.Backend, backendTLSPolicies []*gwapiv1a3.Ba
 				return routeErr
 			}
 		} else if ep.IP != nil {
-			ip, err := netip.ParseAddr(ep.IP.Address)
+			_, err := netip.ParseAddr(ep.IP.Address)
 			if err != nil {
 				return status.NewRouteStatusError(
 					fmt.Errorf("IP address %s is invalid", ep.IP.Address),
-					status.RouteReasonInvalidAddress,
-				)
-			} else if ip.IsLoopback() {
-				return status.NewRouteStatusError(
-					fmt.Errorf("IP address %s in the loopback range is not supported", ep.IP.Address),
 					status.RouteReasonInvalidAddress,
 				)
 			}
