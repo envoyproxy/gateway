@@ -42,6 +42,7 @@ func DefaultEnvoyProxyKubeProvider() *EnvoyProxyKubernetesProvider {
 	}
 }
 
+// DefaultEnvoyProxyHpaMetrics returns a default HPA metrics spec for EnvoyProxy.
 func DefaultEnvoyProxyHpaMetrics() []autoscalingv2.MetricSpec {
 	return []autoscalingv2.MetricSpec{
 		{
@@ -72,6 +73,16 @@ func (e *EnvoyProxy) NeedToSwitchPorts() bool {
 	}
 
 	return !*e.Spec.Provider.Kubernetes.UseListenerPortAsContainerPort
+}
+
+// GetEnvoyProxyCustomProvider returns the EnvoyProxyCustomProvider of EnvoyProxyProvider or
+// a nil EnvoyProxyCustomProvider if unspecified. If EnvoyProxyProvider is not of
+// type "Custom", a nil EnvoyProxyCustomProvider is returned.
+func (r *EnvoyProxyProvider) GetEnvoyProxyCustomProvider() *EnvoyProxyCustomProvider {
+	if r.Type != ProviderTypeCustom {
+		return nil
+	}
+	return r.Custom
 }
 
 // GetEnvoyProxyKubeProvider returns the EnvoyProxyKubernetesProvider of EnvoyProxyProvider or
@@ -115,6 +126,15 @@ func (r *EnvoyProxyProvider) GetEnvoyProxyKubeProvider() *EnvoyProxyKubernetesPr
 	}
 
 	return r.Kubernetes
+}
+
+// GetEnvoyVersion returns the version of Envoy to use.
+// This method gracefully handles nil pointers.
+func (e *EnvoyProxyCustomProvider) GetEnvoyVersion() string {
+	if e == nil || e.Envoy == nil || e.Envoy.Version == nil {
+		return ""
+	}
+	return *e.Envoy.Version
 }
 
 // DefaultEnvoyProxyLoggingLevel returns envoy proxy  v1alpha1.LogComponentGatewayDefault log level.
