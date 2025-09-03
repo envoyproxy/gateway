@@ -9,12 +9,15 @@ import (
 	"math"
 	"reflect"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 	"k8s.io/utils/ptr"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/ir"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 )
 
 func TestInt64ToUint32(t *testing.T) {
@@ -190,6 +193,90 @@ func TestBuildHTTPProtocolUpgradeConfig(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			got := buildHTTPProtocolUpgradeConfig(tc.cfgs)
+			require.Equal(t, tc.expected, got)
+		})
+	}
+}
+
+func TestBuildPassiveHealthCheck(t *testing.T) {
+	cases := []struct {
+		name     string
+		policy   egv1a1.HealthCheck
+		expected *ir.OutlierDetection
+	}{
+		{
+			name: "nil passive health check",
+			policy: egv1a1.HealthCheck{
+				Passive: nil,
+			},
+			expected: nil,
+		},
+		{
+			name: "basic passive health check",
+			policy: egv1a1.HealthCheck{
+				Passive: &egv1a1.PassiveHealthCheck{
+					Interval:             ptr.To(gwapiv1.Duration("10s")),
+					BaseEjectionTime:     ptr.To(gwapiv1.Duration("30s")),
+					MaxEjectionPercent:   ptr.To[int32](10),
+					Consecutive5xxErrors: ptr.To[uint32](5),
+				},
+			},
+			expected: &ir.OutlierDetection{
+				Interval:             ptr.To(metav1.Duration{Duration: 10 * time.Second}),
+				BaseEjectionTime:     ptr.To(metav1.Duration{Duration: 30 * time.Second}),
+				MaxEjectionPercent:   ptr.To[int32](10),
+				Consecutive5xxErrors: ptr.To[uint32](5),
+			},
+		},
+		{
+			name: "passive health check with failure percentage threshold",
+			policy: egv1a1.HealthCheck{
+				Passive: &egv1a1.PassiveHealthCheck{
+					Interval:                   ptr.To(gwapiv1.Duration("10s")),
+					BaseEjectionTime:           ptr.To(gwapiv1.Duration("30s")),
+					MaxEjectionPercent:         ptr.To[int32](10),
+					Consecutive5xxErrors:       ptr.To[uint32](5),
+					FailurePercentageThreshold: ptr.To[uint32](90),
+				},
+			},
+			expected: &ir.OutlierDetection{
+				Interval:                   ptr.To(metav1.Duration{Duration: 10 * time.Second}),
+				BaseEjectionTime:           ptr.To(metav1.Duration{Duration: 30 * time.Second}),
+				MaxEjectionPercent:         ptr.To[int32](10),
+				Consecutive5xxErrors:       ptr.To[uint32](5),
+				FailurePercentageThreshold: ptr.To[uint32](90),
+			},
+		},
+		{
+			name: "passive health check with all fields",
+			policy: egv1a1.HealthCheck{
+				Passive: &egv1a1.PassiveHealthCheck{
+					SplitExternalLocalOriginErrors: ptr.To(true),
+					Interval:                       ptr.To(gwapiv1.Duration("10s")),
+					ConsecutiveLocalOriginFailures: ptr.To[uint32](3),
+					ConsecutiveGatewayErrors:       ptr.To[uint32](2),
+					Consecutive5xxErrors:           ptr.To[uint32](5),
+					BaseEjectionTime:               ptr.To(gwapiv1.Duration("30s")),
+					MaxEjectionPercent:             ptr.To[int32](10),
+					FailurePercentageThreshold:     ptr.To[uint32](85),
+				},
+			},
+			expected: &ir.OutlierDetection{
+				SplitExternalLocalOriginErrors: ptr.To(true),
+				Interval:                       ptr.To(metav1.Duration{Duration: 10 * time.Second}),
+				ConsecutiveLocalOriginFailures: ptr.To[uint32](3),
+				ConsecutiveGatewayErrors:       ptr.To[uint32](2),
+				Consecutive5xxErrors:           ptr.To[uint32](5),
+				BaseEjectionTime:               ptr.To(metav1.Duration{Duration: 30 * time.Second}),
+				MaxEjectionPercent:             ptr.To[int32](10),
+				FailurePercentageThreshold:     ptr.To[uint32](85),
+			},
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			got := buildPassiveHealthCheck(tc.policy)
 			require.Equal(t, tc.expected, got)
 		})
 	}

@@ -73,6 +73,16 @@ type PassiveHealthCheck struct {
 	// +kubebuilder:default=10
 	// +optional
 	MaxEjectionPercent *int32 `json:"maxEjectionPercent,omitempty"`
+
+	// FailurePercentageThreshold sets the failure percentage threshold for outlier detection.
+	// If the failure percentage of a given host is greater than or equal to this value, it will be ejected.
+	// Defaults to 85.
+	//
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=100
+	// +kubebuilder:default=85
+	// +optional
+	FailurePercentageThreshold *uint32 `json:"failurePercentageThreshold,omitempty"`
 }
 
 // ActiveHealthCheck defines the active health check configuration.
