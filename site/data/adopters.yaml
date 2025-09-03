@@ -83,3 +83,6 @@ adopters:
     logo: "/logos/verve.png"
     url: "https://www.verve.com"
     description: "Verve is using Envoy Gateway for VLB+, a cost-effective Load Balancer optimized for ad-tech."
+  - name: "Sophotech"
+    logo: "/logos/sophotech.svg"
+    description: "Sophotech is using Envoy Gateway to power ingress in Kubernetes environments, giving secure, consistent, and easy-to-manage traffic routing."

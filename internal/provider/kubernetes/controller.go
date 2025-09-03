@@ -256,7 +256,9 @@ func isTransientError(err error) bool {
 		kerrors.IsServiceUnavailable(err) ||
 		kerrors.IsStoreReadError(err) ||
 		kerrors.IsInternalError(err) ||
-		kerrors.IsUnexpectedServerError(err)
+		kerrors.IsUnexpectedServerError(err) ||
+		errors.Is(err, context.Canceled) ||
+		errors.Is(err, context.DeadlineExceeded)
 }
 
 // Reconcile handles reconciling all resources in a single call. Any resource event should enqueue the
@@ -1480,6 +1482,11 @@ func (r *gatewayAPIReconciler) processGateways(ctx context.Context, managedGC *g
 			if gtw.Spec.Infrastructure != nil && gtw.Spec.Infrastructure.ParametersRef != nil {
 				// processGatewayParamsRef has been called for this gateway, its EnvoyProxy should exist in resourceTree
 				ep = resourceTree.GetEnvoyProxy(gtw.Namespace, gtw.Spec.Infrastructure.ParametersRef.Name)
+			}
+			// when gateway's EnvoyProxy is nil and gatewayclass 's EnvoyProxy is not nil
+			// the specified proxySvcName should get from gatewayclass's EnvoyProxy
+			if ep == nil && resourceTree.EnvoyProxyForGatewayClass != nil {
+				ep = resourceTree.EnvoyProxyForGatewayClass
 			}
 			r.processServiceClusterForGateway(ep, &gtw, resourceMap)
 		}

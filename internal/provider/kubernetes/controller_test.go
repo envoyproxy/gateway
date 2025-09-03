@@ -1314,12 +1314,13 @@ func TestProcessServiceClusterForGatewayClass(t *testing.T) {
 
 func TestProcessServiceClusterForGateway(t *testing.T) {
 	testCases := []struct {
-		name                  string
-		gateway               *gwapiv1.Gateway
-		envoyProxy            *egv1a1.EnvoyProxy
-		gatewayNamespacedMode bool
-		expectedSvcName       string
-		expectedSvcNamespace  string
+		name                   string
+		gateway                *gwapiv1.Gateway
+		envoyProxy             *egv1a1.EnvoyProxy
+		gatewayClassEnvoyProxy *egv1a1.EnvoyProxy
+		gatewayNamespacedMode  bool
+		expectedSvcName        string
+		expectedSvcNamespace   string
 	}{
 		{
 			name: "no gateway namespaced mode with no hardcoded service name",
@@ -1401,6 +1402,34 @@ func TestProcessServiceClusterForGateway(t *testing.T) {
 			expectedSvcName:       "my-gateway-svc",
 			expectedSvcNamespace:  "app-namespace",
 		},
+		{
+			name: "no gateway namespaced mode with no hardcoded service name attached gatewayclass",
+			gateway: &gwapiv1.Gateway{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "my-gateway",
+					Namespace: "app-namespace",
+				},
+			},
+			envoyProxy: nil,
+			gatewayClassEnvoyProxy: &egv1a1.EnvoyProxy{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "my-gateway",
+				},
+				Spec: egv1a1.EnvoyProxySpec{
+					Provider: &egv1a1.EnvoyProxyProvider{
+						Type: egv1a1.ProviderTypeKubernetes,
+						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
+							EnvoyService: &egv1a1.KubernetesServiceSpec{
+								Name: ptr.To("my-gateway-svc"),
+							},
+						},
+					},
+				},
+			},
+			gatewayNamespacedMode: false,
+			expectedSvcName:       "my-gateway-svc",
+			expectedSvcNamespace:  "",
+		},
 	}
 
 	for i := range testCases {
@@ -1420,6 +1449,10 @@ func TestProcessServiceClusterForGateway(t *testing.T) {
 
 			if tc.expectedSvcName == "" {
 				tc.expectedSvcName = proxy.ExpectedResourceHashedName(utils.NamespacedName(tc.gateway).String())
+			}
+
+			if tc.envoyProxy == nil && tc.gatewayClassEnvoyProxy != nil {
+				tc.envoyProxy = tc.gatewayClassEnvoyProxy
 			}
 
 			r.processServiceClusterForGateway(tc.envoyProxy, tc.gateway, resourceMap)
@@ -1603,6 +1636,12 @@ func TestIsTransientError(t *testing.T) {
 	serviceUnavailableErr := kerrors.NewServiceUnavailable("service unavailable")
 	badRequestErr := kerrors.NewBadRequest("bad request")
 
+	// new test errors for context
+	canceledErr := context.Canceled
+	deadlineExceededErr := context.DeadlineExceeded
+	wrappedCanceledErr := fmt.Errorf("wrapped: %w", context.Canceled)
+	wrappedDeadlineExceededErr := fmt.Errorf("wrapped: %w", context.DeadlineExceeded)
+
 	testCases := []struct {
 		name     string
 		err      error
@@ -1614,6 +1653,10 @@ func TestIsTransientError(t *testing.T) {
 		{"ServiceUnavailable", serviceUnavailableErr, true},
 		{"BadRequest", badRequestErr, false},
 		{"NilError", nil, false},
+		{"ContextCanceled", canceledErr, true},
+		{"ContextDeadlineExceeded", deadlineExceededErr, true},
+		{"WrappedContextCanceled", wrappedCanceledErr, true},
+		{"WrappedContextDeadlineExceeded", wrappedDeadlineExceededErr, true},
 	}
 
 	for _, tc := range testCases {
