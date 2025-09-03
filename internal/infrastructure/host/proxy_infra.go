@@ -83,7 +83,7 @@ func (i *Infra) CreateOrUpdateProxyInfra(ctx context.Context, infra *ir.Infra) e
 	if err != nil {
 		return err
 	}
-	i.runEnvoy(ctx, os.Stdout, i.getEnvoyVersion(), proxyName, args)
+	i.runEnvoy(ctx, os.Stdout, i.getEnvoyVersion(proxyConfig), proxyName, args)
 	return nil
 }
 
@@ -128,28 +128,25 @@ func (i *Infra) stopEnvoy(proxyName string) {
 }
 
 // getEnvoyVersion returns the version of Envoy to use.
-func (i *Infra) getEnvoyVersion() string {
-	if i.EnvoyGateway != nil &&
-		i.EnvoyGateway.Provider != nil &&
-		i.EnvoyGateway.Provider.Custom != nil &&
-		i.EnvoyGateway.Provider.Custom.Infrastructure != nil &&
-		i.EnvoyGateway.Provider.Custom.Infrastructure.Host != nil &&
-		i.EnvoyGateway.Provider.Custom.Infrastructure.Host.EnvoyVersion != "" {
-		return i.EnvoyGateway.Provider.Custom.Infrastructure.Host.EnvoyVersion
+func (i *Infra) getEnvoyVersion(proxyConfig *egv1a1.EnvoyProxy) string {
+	// Note these helper functions gracefully handle nil pointer dereferencing, so it's safe to
+	// chain method calls.
+	version := proxyConfig.GetEnvoyProxyProvider().GetEnvoyProxyCustomProvider().GetEnvoyVersion()
+	if version == "" {
+		// If the version is not explicitly set, use the default version EG is built with.
+		// This is only populated to a concrete version in release branches.
+		// For `main` it may fail. In that case, we return an empty version and let the func-e library
+		// decide what version to use.
+		// This keeps the old behaviour for backwards compatibility.
+		version, _ = extractSemver(i.defaultEnvoyImage)
 	}
 
-	// If the version is not explicitly set, use the default version EG is built with.
-	// This is only populated to a concrete version in release branches.
-	// For `main` it may fail. In that case, we return an empty version and let the func-e library
-	// decide what version to use.
-	// This keeps the old behaviour for backwards compatibility.
-	envoyVersion, _ := extractSemver(i.defaultEnvoyImage)
-	if envoyVersion == "" {
+	if version == "" {
 		i.Logger.Info("no explicit Envoy version is set and " +
 			"could not extract a default version from the default Envoy image")
 	}
 
-	return envoyVersion
+	return version
 }
 
 // extractSemver takes an image reference like "docker.io/envoyproxy/envoy:distroless-v1.35.0"

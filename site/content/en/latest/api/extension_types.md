@@ -965,6 +965,21 @@ _Appears in:_
 | `attributes` | _object (keys:string, values:string)_ |  false  |  | Additional Attributes to set for the generated cookie. |
 
 
+#### CustomEnvoySpec
+
+
+
+CustomEnvoySpec defines the desired state of the Envoy proxy.
+It allows configuring the version of Envoy to run and other settings.
+
+_Appears in:_
+- [EnvoyProxyCustomProvider](#envoyproxycustomprovider)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `version` | _string_ |  false  |  | Version is the version of Envoy to use.  If unspecified, the version<br />against Envoy Gateway is built will be used. |
+
+
 #### CustomHeaderExtensionSettings
 
 
@@ -1327,9 +1342,6 @@ EnvoyGatewayHostInfrastructureProvider defines configuration for the Host Infras
 _Appears in:_
 - [EnvoyGatewayInfrastructureProvider](#envoygatewayinfrastructureprovider)
 
-| Field | Type | Required | Default | Description |
-| ---   | ---  | ---      | ---     | ---         |
-| `envoyVersion` | _string_ |  false  |  | EnvoyVersion defines the version of the Envoy proxy to run.<br />If not set, the version against Envoy Gateway is built will be used. |
 
 
 #### EnvoyGatewayInfrastructureProvider
@@ -1634,6 +1646,20 @@ EnvoyProxy is the schema for the envoyproxies API.
 | `status` | _[EnvoyProxyStatus](#envoyproxystatus)_ |  true  |  | EnvoyProxyStatus defines the actual state of EnvoyProxy. |
 
 
+#### EnvoyProxyCustomProvider
+
+
+
+EnvoyProxyCustomProvider defines configuration for the Custom resource provider.
+
+_Appears in:_
+- [EnvoyProxyProvider](#envoyproxyprovider)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `envoy` | _[CustomEnvoySpec](#customenvoyspec)_ |  false  |  | Envoy configures the desired state of the Envoy proxy.<br />If unspecified, default settings for the managed Envoy proxy are applied. |
+
+
 #### EnvoyProxyKubernetesProvider
 
 
@@ -1668,6 +1694,7 @@ _Appears in:_
 | ---   | ---  | ---      | ---     | ---         |
 | `type` | _[ProviderType](#providertype)_ |  true  |  | Type is the type of resource provider to use. A resource provider provides<br />infrastructure resources for running the data plane, e.g. Envoy proxy, and<br />optional auxiliary control planes. Supported types are "Kubernetes". |
 | `kubernetes` | _[EnvoyProxyKubernetesProvider](#envoyproxykubernetesprovider)_ |  false  |  | Kubernetes defines the desired state of the Kubernetes resource provider.<br />Kubernetes provides infrastructure resources for running the data plane,<br />e.g. Envoy proxy. If unspecified and type is "Kubernetes", default settings<br />for managed Kubernetes resources are applied. |
+| `custom` | _[EnvoyProxyCustomProvider](#envoyproxycustomprovider)_ |  false  |  | Custom provides configuration for running the data plane, e.g. Envoy proxy.<br />If unspecified and type is "Custom", default settings for the custom provider<br />are applied. |
 
 
 #### EnvoyProxySpec

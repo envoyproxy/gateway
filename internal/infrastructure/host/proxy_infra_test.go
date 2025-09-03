@@ -14,6 +14,7 @@ import (
 	"github.com/stretchr/testify/require"
 	func_e "github.com/tetratelabs/func-e"
 	"github.com/tetratelabs/func-e/api"
+	"k8s.io/utils/ptr"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/crypto"
@@ -144,34 +145,107 @@ func TestGetEnvoyVersion(t *testing.T) {
 	tests := []struct {
 		name         string
 		defaultImage string
-		envoyVersion string
+		provider     *egv1a1.EnvoyProxyProvider
 		want         string
 	}{
-		{"default release version", "docker.io/envoyproxy/envoy:distroless-v1.35.0", "", "1.35.0"},
-		{"dev version", "docker.io/envoyproxy/envoy:distroless-dev", "", ""},
-		{"custom version 1.2.3", "docker.io/envoyproxy/envoy:distroless-v1.36.0", "1.2.3", "1.2.3"},
+		{
+			name:         "k8s provider default release version",
+			defaultImage: "docker.io/envoyproxy/envoy:distroless-v1.35.0",
+			provider:     egv1a1.DefaultEnvoyProxyProvider(),
+			want:         "1.35.0",
+		},
+		{
+			name:         "k8s provider dev version",
+			defaultImage: "docker.io/envoyproxy/envoy:distroless-dev",
+			provider:     egv1a1.DefaultEnvoyProxyProvider(),
+			want:         "",
+		},
+		{
+			name:         "custom provider unset",
+			defaultImage: "docker.io/envoyproxy/envoy:distroless-v1.35.0",
+			provider:     &egv1a1.EnvoyProxyProvider{Type: egv1a1.ProviderTypeCustom},
+			want:         "1.35.0",
+		},
+		{
+			name:         "custom provider envoy unset",
+			defaultImage: "docker.io/envoyproxy/envoy:distroless-v1.35.0",
+			provider: &egv1a1.EnvoyProxyProvider{
+				Type:   egv1a1.ProviderTypeCustom,
+				Custom: &egv1a1.EnvoyProxyCustomProvider{},
+			},
+			want: "1.35.0",
+		},
+		{
+			name:         "custom provider envoy version unset",
+			defaultImage: "docker.io/envoyproxy/envoy:distroless-v1.35.0",
+			provider: &egv1a1.EnvoyProxyProvider{
+				Type:   egv1a1.ProviderTypeCustom,
+				Custom: &egv1a1.EnvoyProxyCustomProvider{Envoy: &egv1a1.CustomEnvoySpec{}},
+			},
+			want: "1.35.0",
+		},
+		{
+			name:         "custom provider envoy version empty",
+			defaultImage: "docker.io/envoyproxy/envoy:distroless-v1.35.0",
+			provider: &egv1a1.EnvoyProxyProvider{
+				Type:   egv1a1.ProviderTypeCustom,
+				Custom: &egv1a1.EnvoyProxyCustomProvider{Envoy: &egv1a1.CustomEnvoySpec{Version: ptr.To("")}},
+			},
+			want: "1.35.0",
+		},
+		{
+			name:         "custom provider unset dev version",
+			defaultImage: "docker.io/envoyproxy/envoy:distroless-dev",
+			provider:     &egv1a1.EnvoyProxyProvider{Type: egv1a1.ProviderTypeCustom},
+			want:         "",
+		},
+		{
+			name:         "custom provider envoy unset dev version",
+			defaultImage: "docker.io/envoyproxy/envoy:distroless-dev",
+			provider: &egv1a1.EnvoyProxyProvider{
+				Type:   egv1a1.ProviderTypeCustom,
+				Custom: &egv1a1.EnvoyProxyCustomProvider{},
+			},
+			want: "",
+		},
+		{
+			name:         "custom provider envoy version unset dev version",
+			defaultImage: "docker.io/envoyproxy/envoy:distroless-dev",
+			provider: &egv1a1.EnvoyProxyProvider{
+				Type:   egv1a1.ProviderTypeCustom,
+				Custom: &egv1a1.EnvoyProxyCustomProvider{Envoy: &egv1a1.CustomEnvoySpec{}},
+			},
+			want: "",
+		},
+		{
+			name:         "custom provider envoy version empty dev version",
+			defaultImage: "docker.io/envoyproxy/envoy:distroless-dev",
+			provider: &egv1a1.EnvoyProxyProvider{
+				Type:   egv1a1.ProviderTypeCustom,
+				Custom: &egv1a1.EnvoyProxyCustomProvider{Envoy: &egv1a1.CustomEnvoySpec{Version: ptr.To("")}},
+			},
+			want: "",
+		},
+		{
+			name:         "custom provider envoy version custom",
+			defaultImage: "docker.io/envoyproxy/envoy:distroless-v1.35.0",
+			provider: &egv1a1.EnvoyProxyProvider{
+				Type:   egv1a1.ProviderTypeCustom,
+				Custom: &egv1a1.EnvoyProxyCustomProvider{Envoy: &egv1a1.CustomEnvoySpec{Version: ptr.To("1.2.3")}},
+			},
+			want: "1.2.3",
+		},
 	}
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			infra := &Infra{
-				defaultEnvoyImage: tc.defaultImage,
-				EnvoyGateway: &egv1a1.EnvoyGateway{
-					EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
-						Provider: &egv1a1.EnvoyGatewayProvider{
-							Type: egv1a1.ProviderTypeCustom,
-							Custom: &egv1a1.EnvoyGatewayCustomProvider{
-								Infrastructure: &egv1a1.EnvoyGatewayInfrastructureProvider{
-									Host: &egv1a1.EnvoyGatewayHostInfrastructureProvider{
-										EnvoyVersion: tc.envoyVersion,
-									},
-								},
-							},
-						},
-					},
+			infra := &Infra{defaultEnvoyImage: tc.defaultImage}
+			proxyConfig := &egv1a1.EnvoyProxy{
+				Spec: egv1a1.EnvoyProxySpec{
+					Provider: tc.provider,
 				},
 			}
-			require.Equal(t, tc.want, infra.getEnvoyVersion())
+			require.Equal(t, tc.want, infra.getEnvoyVersion(proxyConfig))
 		})
 	}
 }

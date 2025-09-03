@@ -342,6 +342,12 @@ type EnvoyProxyProvider struct {
 	//
 	// +optional
 	Kubernetes *EnvoyProxyKubernetesProvider `json:"kubernetes,omitempty"`
+	// Custom provides configuration for running the data plane, e.g. Envoy proxy.
+	// If unspecified and type is "Custom", default settings for the custom provider
+	// are applied.
+	//
+	// +optional
+	Custom *EnvoyProxyCustomProvider `json:"custom,omitempty"`
 }
 
 // ShutdownConfig defines configuration for graceful envoy shutdown process.
@@ -402,6 +408,27 @@ type EnvoyProxyKubernetesProvider struct {
 
 	// EnvoyServiceAccount defines the desired state of the Envoy service account resource.
 	EnvoyServiceAccount *KubernetesServiceAccountSpec `json:"envoyServiceAccount,omitempty"`
+}
+
+// EnvoyProxyCustomProvider defines configuration for the Custom resource provider.
+type EnvoyProxyCustomProvider struct {
+	// Envoy configures the desired state of the Envoy proxy.
+	// If unspecified, default settings for the managed Envoy proxy are applied.
+	//
+	// +optional
+	Envoy *CustomEnvoySpec `json:"envoy,omitempty"`
+}
+
+// CustomEnvoySpec defines the desired state of the Envoy proxy.
+// It allows configuring the version of Envoy to run and other settings.
+type CustomEnvoySpec struct {
+	// Version is the version of Envoy to use.  If unspecified, the version
+	// against Envoy Gateway is built will be used.
+	//
+	// +optional
+	Version *string `json:"version,omitempty"`
+
+	// TODO: Add more settings as we get a better understanding of use cases.
 }
 
 type KubernetesServiceAccountSpec struct {
