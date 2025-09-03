@@ -1692,7 +1692,7 @@ _Appears in:_
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `type` | _[ProviderType](#providertype)_ |  true  |  | Type is the type of resource provider to use. A resource provider provides<br />infrastructure resources for running the data plane, e.g. Envoy proxy, and<br />optional auxiliary control planes. Supported types are "Kubernetes". |
+| `type` | _[ProviderType](#providertype)_ |  true  |  | Type is the type of resource provider to use. A resource provider provides<br />infrastructure resources for running the data plane, e.g. Envoy proxy, and<br />optional auxiliary control planes. Supported types are "Kubernetes"and "Custom". |
 | `kubernetes` | _[EnvoyProxyKubernetesProvider](#envoyproxykubernetesprovider)_ |  false  |  | Kubernetes defines the desired state of the Kubernetes resource provider.<br />Kubernetes provides infrastructure resources for running the data plane,<br />e.g. Envoy proxy. If unspecified and type is "Kubernetes", default settings<br />for managed Kubernetes resources are applied. |
 | `custom` | _[EnvoyProxyCustomProvider](#envoyproxycustomprovider)_ |  false  |  | Custom provides configuration for running the data plane, e.g. Envoy proxy.<br />If unspecified and type is "Custom", default settings for the custom provider<br />are applied. |
 
