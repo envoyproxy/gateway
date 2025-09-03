@@ -331,7 +331,7 @@ type ProxyTelemetry struct {
 type EnvoyProxyProvider struct {
 	// Type is the type of resource provider to use. A resource provider provides
 	// infrastructure resources for running the data plane, e.g. Envoy proxy, and
-	// optional auxiliary control planes. Supported types are "Kubernetes".
+	// optional auxiliary control planes. Supported types are "Kubernetes"and "Custom".
 	//
 	// +unionDiscriminator
 	Type ProviderType `json:"type"`
