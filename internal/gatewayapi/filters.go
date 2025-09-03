@@ -945,22 +945,34 @@ func (t *Translator) processRequestMirrorFilter(
 		return nil
 	}
 
+	// Get the route type from the filter context to determine the correct BackendRef type
+	routeType := GetRouteType(filterContext.Route)
+	weight := int32(1)
 	mirrorBackend := mirrorFilter.BackendRef
 
-	// Wrap the filter's BackendObjectReference into a BackendRef so we can use existing tooling to check it
-	weight := int32(1)
-	mirrorBackendRef := gwapiv1.HTTPBackendRef{
-		BackendRef: gwapiv1.BackendRef{
-			BackendObjectReference: mirrorBackend,
-			Weight:                 &weight,
-		},
+	// Create the appropriate BackendRef type based on the route type
+	var mirrorBackendRef BackendRefContext
+	if routeType == resource.KindGRPCRoute {
+		mirrorBackendRef = gwapiv1.GRPCBackendRef{
+			BackendRef: gwapiv1.BackendRef{
+				BackendObjectReference: mirrorBackend,
+				Weight:                 &weight,
+			},
+		}
+	} else {
+		mirrorBackendRef = gwapiv1.HTTPBackendRef{
+			BackendRef: gwapiv1.BackendRef{
+				BackendObjectReference: mirrorBackend,
+				Weight:                 &weight,
+			},
+		}
 	}
 
-	// This sets the status on the HTTPRoute, should the usage be changed so that the status message reflects that the backendRef is from the filter?
+	// This sets the status on the Route, should the usage be changed so that the status message reflects that the backendRef is from the filter?
 	filterNs := filterContext.Route.GetNamespace()
 	serviceNamespace := NamespaceDerefOr(mirrorBackend.Namespace, filterNs)
 	err = t.validateBackendRef(mirrorBackendRef, filterContext.Route,
-		resources, serviceNamespace, resource.KindHTTPRoute)
+		resources, serviceNamespace, routeType)
 	if err != nil {
 		return status.NewRouteStatusError(
 			fmt.Errorf("failed to validate the RequestMirror filter: %w", err), err.Reason()).WithType(gwapiv1.RouteConditionResolvedRefs)
