@@ -385,7 +385,7 @@ securityPolicies:
   kind: SecurityPolicy
   metadata:
     namespace: envoy-gateway
-    name: sp-mixed-gateway   # This policy should attach to gateway-mixed, applying to all routes, but only whats supported
+    name: sp-mixed-gateway   # This policy should attach to gateway-mixed, applying to all listeners, but only whats supported
   spec:
     targetRefs:
     - group: gateway.networking.k8s.io
