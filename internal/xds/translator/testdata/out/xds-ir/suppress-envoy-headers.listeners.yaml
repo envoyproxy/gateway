@@ -4,6 +4,9 @@
       portValue: 10080
   filterChains:
   - filterChainMatch:
+      applicationProtocols:
+      - h2
+      - http/1.1
       serverNames:
       - foo.com
     filters:

@@ -14,7 +14,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestAddServerNamesMatch(t *testing.T) {
+func TestAddFilterChainMatch(t *testing.T) {
 	tests := []struct {
 		name               string
 		xdsListener        *listenerv3.Listener
@@ -97,7 +97,7 @@ func TestAddServerNamesMatch(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			filterChain := &listenerv3.FilterChain{}
 
-			err := addServerNamesMatch(tt.xdsListener, filterChain, tt.hostnames)
+			err := addFilterChainMatch(tt.xdsListener, filterChain, tt.hostnames, []string{})
 			require.NoError(t, err)
 
 			// Check if filter chain match was added
