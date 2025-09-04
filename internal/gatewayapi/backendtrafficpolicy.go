@@ -48,7 +48,7 @@ func (t *Translator) ProcessBackendTrafficPolicies(resources *resource.Resources
 	routeMap := map[policyTargetRouteKey]*policyRouteTargetContext{}
 	for _, route := range routes {
 		key := policyTargetRouteKey{
-			Kind:      string(GetRouteType(route)),
+			Kind:      string(route.GetRouteType()),
 			Name:      route.GetName(),
 			Namespace: route.GetNamespace(),
 		}
