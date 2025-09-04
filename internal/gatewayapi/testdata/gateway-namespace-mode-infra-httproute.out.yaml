@@ -402,6 +402,10 @@ xdsIR:
       - path: /dev/stdout
     globalResources:
       proxyServiceCluster:
+        metadata:
+          name: gateway-3
+          namespace: test-ns
+          sectionName: "8080"
         name: test-ns/gateway-3
         settings:
         - metadata:
