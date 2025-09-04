@@ -8,6 +8,7 @@ package translator
 import (
 	"errors"
 	"fmt"
+	"time"
 
 	corev3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	routev3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
@@ -19,6 +20,7 @@ import (
 	"google.golang.org/protobuf/types/known/durationpb"
 	"google.golang.org/protobuf/types/known/emptypb"
 	"k8s.io/utils/ptr"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/ir"
@@ -149,6 +151,16 @@ func buildJWTAuthn(irListener *ir.HTTPListener) (*jwtauthnv3.JwtAuthentication, 
 					jwksCluster = cluster.name
 				}
 
+				var duration *gwapiv1.Duration
+				if jwks.CacheDuration != nil {
+					duration = jwks.CacheDuration
+				}
+
+				timeDuration, err := time.ParseDuration(string(*duration))
+				if err != nil {
+					return nil, err
+				}
+
 				remote := &jwtauthnv3.JwtProvider_RemoteJwks{
 					RemoteJwks: &jwtauthnv3.RemoteJwks{
 						HttpUri: &corev3.HttpUri{
@@ -158,7 +170,8 @@ func buildJWTAuthn(irListener *ir.HTTPListener) (*jwtauthnv3.JwtAuthentication, 
 							},
 							Timeout: &durationpb.Duration{Seconds: defaultExtServiceRequestTimeout},
 						},
-						CacheDuration: &durationpb.Duration{Seconds: 5 * 60},
+
+						CacheDuration: durationpb.New(timeDuration),
 						AsyncFetch:    &jwtauthnv3.JwksAsyncFetch{},
 					},
 				}
