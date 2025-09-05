@@ -53,11 +53,42 @@ func TestValidateEnvoyProxy(t *testing.T) {
 				},
 				Spec: egv1a1.EnvoyProxySpec{
 					Provider: &egv1a1.EnvoyProxyProvider{
+						Type: egv1a1.ProviderType("unsupported"),
+					},
+				},
+			},
+			expected: false,
+		},
+		{
+			name: "nil custom provider",
+			proxy: &egv1a1.EnvoyProxy{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "test",
+					Name:      "test",
+				},
+				Spec: egv1a1.EnvoyProxySpec{
+					Provider: &egv1a1.EnvoyProxyProvider{
 						Type: egv1a1.ProviderTypeCustom,
 					},
 				},
 			},
 			expected: false,
+		},
+		{
+			name: "valid custom provider",
+			proxy: &egv1a1.EnvoyProxy{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "test",
+					Name:      "test",
+				},
+				Spec: egv1a1.EnvoyProxySpec{
+					Provider: &egv1a1.EnvoyProxyProvider{
+						Type:   egv1a1.ProviderTypeCustom,
+						Custom: &egv1a1.EnvoyProxyCustomProvider{},
+					},
+				},
+			},
+			expected: true,
 		},
 		{
 			name: "nil envoy service",
