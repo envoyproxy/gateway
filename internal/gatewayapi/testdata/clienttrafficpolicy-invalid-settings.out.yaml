@@ -957,6 +957,11 @@ xdsIR:
     tcp:
     - address: 0.0.0.0
       externalPort: 8443
+      metadata:
+        kind: Gateway
+        name: gateway-1
+        namespace: default
+        sectionName: tcp-1
       name: default/gateway-1/tcp-1
       port: 8443
       tls:
@@ -969,6 +974,11 @@ xdsIR:
         minVersion: "1.2"
     - address: 0.0.0.0
       externalPort: 5000
+      metadata:
+        kind: Gateway
+        name: gateway-1
+        namespace: default
+        sectionName: tcp-2
       name: default/gateway-1/tcp-2
       port: 5000
       routes:
@@ -1050,6 +1060,11 @@ xdsIR:
     tcp:
     - address: 0.0.0.0
       externalPort: 8443
+      metadata:
+        kind: Gateway
+        name: gateway-2
+        namespace: default
+        sectionName: tcp-1
       name: default/gateway-2/tcp-1
       port: 8443
       tls:
@@ -1062,6 +1077,11 @@ xdsIR:
         minVersion: "1.2"
     - address: 0.0.0.0
       externalPort: 5000
+      metadata:
+        kind: Gateway
+        name: gateway-2
+        namespace: default
+        sectionName: tcp-2
       name: default/gateway-2/tcp-2
       port: 5000
   default/gateway-3:
@@ -1133,6 +1153,11 @@ xdsIR:
     tcp:
     - address: 0.0.0.0
       externalPort: 8443
+      metadata:
+        kind: Gateway
+        name: gateway-3
+        namespace: default
+        sectionName: tcp-1
       name: default/gateway-3/tcp-1
       port: 8443
       tls:
@@ -1145,5 +1170,10 @@ xdsIR:
         minVersion: "1.2"
     - address: 0.0.0.0
       externalPort: 5000
+      metadata:
+        kind: Gateway
+        name: gateway-3
+        namespace: default
+        sectionName: tcp-2
       name: default/gateway-3/tcp-2
       port: 5000

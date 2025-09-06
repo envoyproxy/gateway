@@ -92,6 +92,7 @@ tcpRoutes:
       - group: gateway.envoyproxy.io
         kind: Backend
         name: backend-ip
+      name: rule-1
   status:
     parents:
     - conditions:
@@ -137,6 +138,11 @@ xdsIR:
     tcp:
     - address: 0.0.0.0
       externalPort: 90
+      metadata:
+        kind: Gateway
+        name: gateway-1
+        namespace: envoy-gateway
+        sectionName: tcp
       name: envoy-gateway/gateway-1/tcp
       port: 10090
       routes:
@@ -145,6 +151,7 @@ xdsIR:
             kind: TCPRoute
             name: tcproute-1
             namespace: default
+            sectionName: rule-1
           name: tcproute/default/tcproute-1/rule/-1
           settings:
           - addressType: IP
