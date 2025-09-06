@@ -178,5 +178,10 @@ xdsIR:
     udp:
     - address: 0.0.0.0
       externalPort: 80
+      metadata:
+        kind: Gateway
+        name: gateway-2
+        namespace: envoy-gateway
+        sectionName: udp
       name: envoy-gateway/gateway-2/udp
       port: 10080

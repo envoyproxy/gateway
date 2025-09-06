@@ -2439,7 +2439,6 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /route-2
-        traffic: {}
       - directResponse:
           statusCode: 500
         hostname: '*'
@@ -2453,7 +2452,6 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /
-        traffic: {}
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4
@@ -2493,7 +2491,6 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /route-2
-        traffic: {}
       - directResponse:
           statusCode: 500
         hostname: '*'
@@ -2507,7 +2504,6 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /
-        traffic: {}
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4
@@ -2547,7 +2543,6 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /route-2
-        traffic: {}
       - directResponse:
           statusCode: 500
         hostname: '*'
@@ -2561,7 +2556,6 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /
-        traffic: {}
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4
@@ -2601,7 +2595,6 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /route-2
-        traffic: {}
       - directResponse:
           statusCode: 500
         hostname: '*'
@@ -2615,7 +2608,6 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /
-        traffic: {}
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4
@@ -2655,7 +2647,6 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /route-2
-        traffic: {}
       - directResponse:
           statusCode: 500
         hostname: '*'
@@ -2669,7 +2660,6 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /
-        traffic: {}
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4
@@ -2709,7 +2699,6 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /route-2
-        traffic: {}
       - directResponse:
           statusCode: 500
         hostname: '*'
@@ -2723,7 +2712,6 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /
-        traffic: {}
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4
@@ -2763,7 +2751,6 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /route-2
-        traffic: {}
       - directResponse:
           statusCode: 500
         hostname: '*'
@@ -2777,7 +2764,6 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /
-        traffic: {}
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4
@@ -2817,7 +2803,6 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /route-2
-        traffic: {}
       - directResponse:
           statusCode: 500
         hostname: '*'
@@ -2831,7 +2816,6 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /
-        traffic: {}
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4
@@ -2871,7 +2855,6 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /route-2
-        traffic: {}
       - directResponse:
           statusCode: 500
         hostname: '*'
@@ -2885,7 +2868,6 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /
-        traffic: {}
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4
@@ -2925,7 +2907,6 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /route-2
-        traffic: {}
       - directResponse:
           statusCode: 500
         hostname: '*'
@@ -2939,7 +2920,6 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /
-        traffic: {}
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4
@@ -2979,7 +2959,6 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /route-2
-        traffic: {}
       - directResponse:
           statusCode: 500
         hostname: '*'
@@ -2993,7 +2972,6 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /
-        traffic: {}
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4
@@ -3033,7 +3011,6 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /route-2
-        traffic: {}
       - directResponse:
           statusCode: 500
         hostname: '*'
@@ -3047,7 +3024,6 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /
-        traffic: {}
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4
@@ -3087,7 +3063,6 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /route-2
-        traffic: {}
       - directResponse:
           statusCode: 500
         hostname: '*'
@@ -3101,7 +3076,6 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /
-        traffic: {}
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4
@@ -3141,7 +3115,6 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /route-2
-        traffic: {}
       - directResponse:
           statusCode: 500
         hostname: '*'
@@ -3155,7 +3128,6 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /
-        traffic: {}
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4
@@ -3195,7 +3167,6 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /route-2
-        traffic: {}
       - directResponse:
           statusCode: 500
         hostname: '*'
@@ -3209,7 +3180,6 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /
-        traffic: {}
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4
@@ -3249,7 +3219,6 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /route-2
-        traffic: {}
       - directResponse:
           statusCode: 500
         hostname: '*'
@@ -3263,7 +3232,6 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /
-        traffic: {}
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4
@@ -3303,7 +3271,6 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /route-2
-        traffic: {}
       - directResponse:
           statusCode: 500
         hostname: '*'
@@ -3317,7 +3284,6 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /
-        traffic: {}
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4
@@ -3367,7 +3333,6 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /route-2
-        traffic: {}
       - directResponse:
           statusCode: 500
         hostname: '*'
@@ -3381,7 +3346,6 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /
-        traffic: {}
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4

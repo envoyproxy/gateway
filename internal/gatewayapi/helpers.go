@@ -782,3 +782,68 @@ func getOverriddenTargetsMessageForGateway(
 	}
 	return ""
 }
+
+func getOverriddenAndMergedTargetsMessageForGateway(
+	targetContext *policyGatewayTargetContext,
+	listenerRouteMap map[string]sets.Set[string],
+	listenerMergeMap map[string]sets.Set[string],
+	sectionName *gwapiv1.SectionName,
+) (string, string) {
+	var overrideListeners, overrideRoutes, mergedRoutes []string
+	var overrideMessage, mergedMessage string
+
+	// Get merged targets
+	if sectionName == nil {
+		for _, routeSet := range listenerMergeMap {
+			mergedRoutes = append(mergedRoutes, routeSet.UnsortedList()...)
+		}
+	} else if listenerMergeMap != nil {
+		if routeSet, ok := listenerMergeMap[string(*sectionName)]; ok {
+			mergedRoutes = routeSet.UnsortedList()
+		}
+		if routeSet, ok := listenerMergeMap[""]; ok {
+			mergedRoutes = append(mergedRoutes, routeSet.UnsortedList()...)
+		}
+	}
+
+	// Get overridden targets
+	if sectionName == nil {
+		if targetContext != nil {
+			overrideListeners = targetContext.attachedToListeners.UnsortedList()
+		}
+		for _, routeSet := range listenerRouteMap {
+			overrideRoutes = append(overrideRoutes, routeSet.UnsortedList()...)
+		}
+	} else if listenerRouteMap != nil {
+		if routeSet, ok := listenerRouteMap[string(*sectionName)]; ok {
+			overrideRoutes = routeSet.UnsortedList()
+		}
+		if routeSet, ok := listenerRouteMap[""]; ok {
+			overrideRoutes = append(overrideRoutes, routeSet.UnsortedList()...)
+		}
+	}
+
+	// Exclude merged routes from overridden routes
+	mergedRouteSet := sets.New(mergedRoutes...)
+	overrideRouteSet := sets.New(overrideRoutes...)
+	overrideRoutes = overrideRouteSet.Difference(mergedRouteSet).UnsortedList()
+
+	if len(overrideListeners) > 0 {
+		sort.Strings(overrideListeners)
+		if len(overrideRoutes) > 0 {
+			sort.Strings(overrideRoutes)
+			overrideMessage = fmt.Sprintf("these listeners: %v and these routes: %v", overrideListeners, overrideRoutes)
+		} else {
+			overrideMessage = fmt.Sprintf("these listeners: %v", overrideListeners)
+		}
+	} else if len(overrideRoutes) > 0 {
+		sort.Strings(overrideRoutes)
+		overrideMessage = fmt.Sprintf("these routes: %v", overrideRoutes)
+	}
+
+	if len(mergedRoutes) > 0 {
+		sort.Strings(mergedRoutes)
+		mergedMessage = fmt.Sprintf("these routes: %v", mergedRoutes)
+	}
+	return overrideMessage, mergedMessage
+}

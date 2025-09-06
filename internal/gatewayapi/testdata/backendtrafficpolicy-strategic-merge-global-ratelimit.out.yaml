@@ -38,20 +38,13 @@ backendTrafficPolicies:
         kind: Gateway
         name: gateway-1
         namespace: envoy-gateway
+        sectionName: http
       conditions:
       - lastTransitionTime: null
         message: Merged with policy envoy-gateway/policy-for-gateway1
         reason: Merged
         status: "True"
         type: Merged
-      controllerName: gateway.envoyproxy.io/gatewayclass-controller
-    - ancestorRef:
-        group: gateway.networking.k8s.io
-        kind: Gateway
-        name: gateway-1
-        namespace: envoy-gateway
-        sectionName: http
-      conditions:
       - lastTransitionTime: null
         message: Policy has been accepted.
         reason: Accepted
