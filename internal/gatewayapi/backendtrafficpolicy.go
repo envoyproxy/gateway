@@ -772,12 +772,12 @@ func applyTrafficFeatureToRoute(
 	}
 }
 
-func mergeBackendTrafficPolicy(patch, origin *egv1a1.BackendTrafficPolicy) (*egv1a1.BackendTrafficPolicy, error) {
-	if patch.Spec.MergeType == nil || origin == nil {
-		return patch.DeepCopy(), nil
+func mergeBackendTrafficPolicy(routePolicy, gwPolicy *egv1a1.BackendTrafficPolicy) (*egv1a1.BackendTrafficPolicy, error) {
+	if routePolicy.Spec.MergeType == nil || gwPolicy == nil {
+		return routePolicy.DeepCopy(), nil
 	}
 
-	return utils.Merge(origin, patch, *patch.Spec.MergeType)
+	return utils.Merge[*egv1a1.BackendTrafficPolicy](gwPolicy, routePolicy, *routePolicy.Spec.MergeType)
 }
 
 func (t *Translator) buildTrafficFeatures(policy *egv1a1.BackendTrafficPolicy, resources *resource.Resources) (*ir.TrafficFeatures, error) {
