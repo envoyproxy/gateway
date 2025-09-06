@@ -613,7 +613,7 @@ func (t *Translator) translateBackendTrafficPolicyForRoute(
 }
 
 func (t *Translator) translateBackendTrafficPolicyForRouteWithMerge(
-	policy *egv1a1.BackendTrafficPolicy, parentPolicy *egv1a1.BackendTrafficPolicy,
+	policy, parentPolicy *egv1a1.BackendTrafficPolicy,
 	target gwapiv1a2.LocalPolicyTargetReferenceWithSectionName,
 	gatewayNN types.NamespacedName, listenerName *gwapiv1a2.SectionName, route RouteContext,
 	xdsIR resource.XdsIRMap, resources *resource.Resources,
