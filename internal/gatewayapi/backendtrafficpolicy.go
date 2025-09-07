@@ -548,7 +548,19 @@ func mergeBackendTrafficPolicy(routePolicy, gwPolicy *egv1a1.BackendTrafficPolic
 		return routePolicy.DeepCopy(), nil
 	}
 
-	return utils.Merge[*egv1a1.BackendTrafficPolicy](gwPolicy, routePolicy, *routePolicy.Spec.MergeType)
+	mergedPolicy, err := utils.Merge(gwPolicy, routePolicy, *routePolicy.Spec.MergeType)
+	if err != nil {
+		return nil, err
+	}
+
+	// Special handling for compression field
+	// If route policy has compression field (including empty array), it should override gateway policy
+	// Note: to disable compression in route level, set compression to empty array i.e compression: []
+	if routePolicy.Spec.Compression != nil {
+		mergedPolicy.Spec.Compression = routePolicy.Spec.Compression
+	}
+
+	return mergedPolicy, nil
 }
 
 func (t *Translator) buildTrafficFeatures(policy *egv1a1.BackendTrafficPolicy, resources *resource.Resources) (*ir.TrafficFeatures, error) {
@@ -1175,7 +1187,7 @@ func defaultResponseOverrideRuleName(policy *egv1a1.BackendTrafficPolicy, index 
 }
 
 func buildCompression(compression []*egv1a1.Compression) []*ir.Compression {
-	if compression == nil {
+	if len(compression) == 0 {
 		return nil
 	}
 	irCompression := make([]*ir.Compression, 0, len(compression))
