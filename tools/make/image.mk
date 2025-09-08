@@ -7,7 +7,7 @@ include tools/make/env.mk
 DOCKER := docker
 DOCKER_SUPPORTED_API_VERSION ?= 1.32
 
-# Determine image files by looking into build/docker/*/Dockerfile
+# Determine image files by looking into tools/docker/*/Dockerfile
 IMAGES_DIR ?= $(wildcard ${ROOT_DIR}tools/docker/*)
 # Determine images names by stripping out the dir names
 IMAGES ?= envoy-gateway
