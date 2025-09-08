@@ -1007,8 +1007,8 @@ github.com/tsaarni/certyaml v0.10.0 h1:8ZWHO4Zg4VHUf7YblZNju44PcG5M+YtlJawiArYUH
 github.com/tsaarni/certyaml v0.10.0/go.mod h1:rI1wDTE/VQIglHOyGbjfvqb+5mWTVT5uLFVDDcT1sq8=
 github.com/tsaarni/x500dn v1.0.0 h1:LvaWTkqRpse4VHBhB5uwf3wytokK4vF9IOyNAEyiA+U=
 github.com/tsaarni/x500dn v1.0.0/go.mod h1:QaHa3EcUKC4dfCAZmj8+ZRGLKukWgpGv9H3oOCsAbcE=
-github.com/ulikunitz/xz v0.5.12 h1:37Nm15o69RwBkXM0J6A5OlE67RZTfzUxTj8fB3dfcsc=
-github.com/ulikunitz/xz v0.5.12/go.mod h1:nbz6k7qbPmH4IRqmfOplQw/tblSgqTqBwxkY0oWt/14=
+github.com/ulikunitz/xz v0.5.15 h1:9DNdB5s+SgV3bQ2ApL10xRc35ck0DuIX/isZvIk+ubY=
+github.com/ulikunitz/xz v0.5.15/go.mod h1:nbz6k7qbPmH4IRqmfOplQw/tblSgqTqBwxkY0oWt/14=
 github.com/ultraware/funlen v0.2.0 h1:gCHmCn+d2/1SemTdYMiKLAHFYxTYz7z9VIDRaTGyLkI=
 github.com/ultraware/funlen v0.2.0/go.mod h1:ZE0q4TsJ8T1SQcjmkhN/w+MceuatI6pBFSxxyteHIJA=
 github.com/ultraware/whitespace v0.2.0 h1:TYowo2m9Nfj1baEQBjuHzvMRbp19i+RCcRYrSWoFa+g=
