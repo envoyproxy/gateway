@@ -15,7 +15,7 @@ This document describes how Envoy Gateway manages [static metadata][] for variou
 ## Configuration 
 
 Envoy Gateway propagates certain attributes of [Gateway-API][gw_api] resources to XDS resources. Attributes include:
-- Metadata: Kind, Group/Version, Name, Namespace and Annotations (belonging to the `metadata.gateway.envoyproxy.io` namespace)
+- Metadata: Kind, Group/Version, Name, Namespace and Annotations (belonging to the `gateway.envoyproxy.io` namespace)
 - Spec: SectionName (Listener Name, RouteRule Name, Port Name), in-spec annotations (e.g. Gateway Annotations)
 
 Future enhancements may include:
