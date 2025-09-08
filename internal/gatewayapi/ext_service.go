@@ -97,15 +97,22 @@ func (t *Translator) processExtServiceDestination(
 	var (
 		backendTLS *ir.TLSUpstreamConfig
 		ds         *ir.DestinationSetting
+		err        error
 	)
 
 	backendNamespace := NamespaceDerefOr(backendRef.Namespace, policyNamespacedName.Namespace)
 
 	switch KindDerefOr(backendRef.Kind, resource.KindService) {
 	case resource.KindService:
-		ds = t.processServiceDestinationSetting(settingName, backendRef.BackendObjectReference, backendNamespace, protocol, resources, envoyProxy)
+		ds, err = t.processServiceDestinationSetting(settingName, backendRef.BackendObjectReference, backendNamespace, protocol, resources, envoyProxy)
+		if err != nil {
+			return nil, err
+		}
 	case resource.KindServiceImport:
-		ds = t.processServiceImportDestinationSetting(settingName, backendRef.BackendObjectReference, backendNamespace, protocol, resources, envoyProxy)
+		ds, err = t.processServiceImportDestinationSetting(settingName, backendRef.BackendObjectReference, backendNamespace, protocol, resources, envoyProxy)
+		if err != nil {
+			return nil, err
+		}
 	case egv1a1.KindBackend:
 		if !t.BackendEnabled {
 			return nil, fmt.Errorf("resource %s of type Backend cannot be used since Backend is disabled in Envoy Gateway configuration", string(backendRef.Name))
@@ -128,7 +135,6 @@ func (t *Translator) processExtServiceDestination(
 			"mixed endpointslice address type for the same backendRef is not supported")
 	}
 
-	var err error
 	backendTLS, err = t.applyBackendTLSSetting(
 		backendRef.BackendObjectReference,
 		backendNamespace,
