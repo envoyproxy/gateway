@@ -620,26 +620,16 @@ func resolveSecurityPolicyRouteTargetRef(
 		return nil, nil
 	}
 
-	isTCP := target.Kind == resource.KindTCPRoute
-
-	// Disallow sectionName for TCPRoute (no rule granularity).
-	if isTCP && target.SectionName != nil {
-		return route.RouteContext, &status.PolicyResolveError{
-			Reason: gwapiv1a2.PolicyReasonTargetNotFound,
-			Message: fmt.Sprintf("sectionName %q not supported for TCPRoute %s/%s; omit sectionName to target the whole route",
-				string(*target.SectionName), policy.Namespace, string(target.Name)),
-		}
-	}
-	// HTTPRoute rule-level validation
-	if !isTCP && target.SectionName != nil {
+	if target.SectionName != nil {
 		section := string(*target.SectionName)
-		if !httpRouteRuleExists(route, section) {
+		if !routeRuleExists(route, section) {
 			return route.RouteContext, &status.PolicyResolveError{
 				Reason:  gwapiv1a2.PolicyReasonTargetNotFound,
-				Message: fmt.Sprintf("No section name %s found for HTTPRoute %s/%s", section, key.Namespace, key.Name),
+				Message: fmt.Sprintf("No section name %s found for %s %s/%s", section, key.Kind, key.Namespace, key.Name),
 			}
 		}
 	}
+
 	if target.SectionName == nil {
 		// Whole route attachment
 		if route.attached {
@@ -652,7 +642,6 @@ func resolveSecurityPolicyRouteTargetRef(
 		}
 		route.attached = true
 	} else {
-		// Section (rule) attachment (for TCP this is a synthetic identifier)
 		routeRuleName := string(*target.SectionName)
 		if route.attachedToRouteRules.Has(routeRuleName) {
 			message := fmt.Sprintf("Unable to target RouteRule %s/%s, another SecurityPolicy has already attached to it",
@@ -1983,8 +1972,8 @@ func defaultAuthorizationRuleName(policy *egv1a1.SecurityPolicy, index int) stri
 		strconv.Itoa(index))
 }
 
-// httpRouteRuleExists checks if a rule (section name) exists on the HTTPRoute.
-func httpRouteRuleExists(route *policyRouteTargetContext, section string) bool {
+// RouteRuleExists checks if a rule (section name) exists on the Route.
+func routeRuleExists(route *policyRouteTargetContext, section string) bool {
 	if route == nil || route.RouteContext == nil {
 		return false
 	}
