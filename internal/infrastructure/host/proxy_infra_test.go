@@ -161,77 +161,47 @@ func TestGetEnvoyVersion(t *testing.T) {
 			want:         "",
 		},
 		{
-			name:         "custom provider unset",
-			defaultImage: "docker.io/envoyproxy/envoy:distroless-v1.35.0",
-			provider:     &egv1a1.EnvoyProxyProvider{Type: egv1a1.ProviderTypeCustom},
-			want:         "1.35.0",
-		},
-		{
-			name:         "custom provider envoy unset",
+			name:         "host provider envoy version unset",
 			defaultImage: "docker.io/envoyproxy/envoy:distroless-v1.35.0",
 			provider: &egv1a1.EnvoyProxyProvider{
-				Type:   egv1a1.ProviderTypeCustom,
-				Custom: &egv1a1.EnvoyProxyCustomProvider{},
+				Type: egv1a1.EnvoyProxyProviderTypeHost,
+				Host: &egv1a1.EnvoyProxyHostProvider{},
 			},
 			want: "1.35.0",
 		},
 		{
-			name:         "custom provider envoy version unset",
+			name:         "host provider envoy version empty",
 			defaultImage: "docker.io/envoyproxy/envoy:distroless-v1.35.0",
 			provider: &egv1a1.EnvoyProxyProvider{
-				Type:   egv1a1.ProviderTypeCustom,
-				Custom: &egv1a1.EnvoyProxyCustomProvider{Envoy: &egv1a1.CustomEnvoySpec{}},
+				Type: egv1a1.EnvoyProxyProviderTypeHost,
+				Host: &egv1a1.EnvoyProxyHostProvider{EnvoyVersion: ptr.To("")},
 			},
 			want: "1.35.0",
 		},
 		{
-			name:         "custom provider envoy version empty",
+			name:         "host provider envoy version unset dev version",
+			defaultImage: "docker.io/envoyproxy/envoy:distroless-dev",
+			provider: &egv1a1.EnvoyProxyProvider{
+				Type: egv1a1.EnvoyProxyProviderTypeHost,
+				Host: &egv1a1.EnvoyProxyHostProvider{},
+			},
+			want: "",
+		},
+		{
+			name:         "host provider envoy version empty dev version",
+			defaultImage: "docker.io/envoyproxy/envoy:distroless-dev",
+			provider: &egv1a1.EnvoyProxyProvider{
+				Type: egv1a1.EnvoyProxyProviderTypeHost,
+				Host: &egv1a1.EnvoyProxyHostProvider{EnvoyVersion: ptr.To("")},
+			},
+			want: "",
+		},
+		{
+			name:         "host provider envoy version custom",
 			defaultImage: "docker.io/envoyproxy/envoy:distroless-v1.35.0",
 			provider: &egv1a1.EnvoyProxyProvider{
-				Type:   egv1a1.ProviderTypeCustom,
-				Custom: &egv1a1.EnvoyProxyCustomProvider{Envoy: &egv1a1.CustomEnvoySpec{Version: ptr.To("")}},
-			},
-			want: "1.35.0",
-		},
-		{
-			name:         "custom provider unset dev version",
-			defaultImage: "docker.io/envoyproxy/envoy:distroless-dev",
-			provider:     &egv1a1.EnvoyProxyProvider{Type: egv1a1.ProviderTypeCustom},
-			want:         "",
-		},
-		{
-			name:         "custom provider envoy unset dev version",
-			defaultImage: "docker.io/envoyproxy/envoy:distroless-dev",
-			provider: &egv1a1.EnvoyProxyProvider{
-				Type:   egv1a1.ProviderTypeCustom,
-				Custom: &egv1a1.EnvoyProxyCustomProvider{},
-			},
-			want: "",
-		},
-		{
-			name:         "custom provider envoy version unset dev version",
-			defaultImage: "docker.io/envoyproxy/envoy:distroless-dev",
-			provider: &egv1a1.EnvoyProxyProvider{
-				Type:   egv1a1.ProviderTypeCustom,
-				Custom: &egv1a1.EnvoyProxyCustomProvider{Envoy: &egv1a1.CustomEnvoySpec{}},
-			},
-			want: "",
-		},
-		{
-			name:         "custom provider envoy version empty dev version",
-			defaultImage: "docker.io/envoyproxy/envoy:distroless-dev",
-			provider: &egv1a1.EnvoyProxyProvider{
-				Type:   egv1a1.ProviderTypeCustom,
-				Custom: &egv1a1.EnvoyProxyCustomProvider{Envoy: &egv1a1.CustomEnvoySpec{Version: ptr.To("")}},
-			},
-			want: "",
-		},
-		{
-			name:         "custom provider envoy version custom",
-			defaultImage: "docker.io/envoyproxy/envoy:distroless-v1.35.0",
-			provider: &egv1a1.EnvoyProxyProvider{
-				Type:   egv1a1.ProviderTypeCustom,
-				Custom: &egv1a1.EnvoyProxyCustomProvider{Envoy: &egv1a1.CustomEnvoySpec{Version: ptr.To("1.2.3")}},
+				Type: egv1a1.EnvoyProxyProviderTypeHost,
+				Host: &egv1a1.EnvoyProxyHostProvider{EnvoyVersion: ptr.To("1.2.3")},
 			},
 			want: "1.2.3",
 		},

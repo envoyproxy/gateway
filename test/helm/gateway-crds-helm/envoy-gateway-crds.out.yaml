@@ -7081,23 +7081,18 @@ spec:
                   If unspecified, the "Kubernetes" resource provider is used with default configuration
                   parameters.
                 properties:
-                  custom:
+                  host:
                     description: |-
-                      Custom provides configuration for running the data plane, e.g. Envoy proxy.
-                      If unspecified and type is "Custom", default settings for the custom provider
+                      Host provides runtime deployment of the data plane as a child process on the
+                      host environment.
+                      If unspecified and type is "Host", default settings for the custom provider
                       are applied.
                     properties:
-                      envoy:
+                      envoyVersion:
                         description: |-
-                          Envoy configures the desired state of the Envoy proxy.
-                          If unspecified, default settings for the managed Envoy proxy are applied.
-                        properties:
-                          version:
-                            description: |-
-                              Version is the version of Envoy to use.  If unspecified, the version
-                              against Envoy Gateway is built will be used.
-                            type: string
-                        type: object
+                          EnvoyVersion is the version of Envoy to use. If unspecified, the version
+                          against which Envoy Gateway is built will be used.
+                        type: string
                     type: object
                   kubernetes:
                     description: |-
@@ -17129,10 +17124,10 @@ spec:
                     description: |-
                       Type is the type of resource provider to use. A resource provider provides
                       infrastructure resources for running the data plane, e.g. Envoy proxy, and
-                      optional auxiliary control planes. Supported types are "Kubernetes"and "Custom".
+                      optional auxiliary control planes. Supported types are "Kubernetes"and "Host".
                     enum:
                     - Kubernetes
-                    - Custom
+                    - Host
                     type: string
                 required:
                 - type

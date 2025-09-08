@@ -965,21 +965,6 @@ _Appears in:_
 | `attributes` | _object (keys:string, values:string)_ |  false  |  | Additional Attributes to set for the generated cookie. |
 
 
-#### CustomEnvoySpec
-
-
-
-CustomEnvoySpec defines the desired state of the Envoy proxy.
-It allows configuring the version of Envoy to run and other settings.
-
-_Appears in:_
-- [EnvoyProxyCustomProvider](#envoyproxycustomprovider)
-
-| Field | Type | Required | Default | Description |
-| ---   | ---  | ---      | ---     | ---         |
-| `version` | _string_ |  false  |  | Version is the version of Envoy to use.  If unspecified, the version<br />against Envoy Gateway is built will be used. |
-
-
 #### CustomHeaderExtensionSettings
 
 
@@ -1646,18 +1631,18 @@ EnvoyProxy is the schema for the envoyproxies API.
 | `status` | _[EnvoyProxyStatus](#envoyproxystatus)_ |  true  |  | EnvoyProxyStatus defines the actual state of EnvoyProxy. |
 
 
-#### EnvoyProxyCustomProvider
+#### EnvoyProxyHostProvider
 
 
 
-EnvoyProxyCustomProvider defines configuration for the Custom resource provider.
+EnvoyProxyHostProvider defines configuration for the "Host" resource provider.
 
 _Appears in:_
 - [EnvoyProxyProvider](#envoyproxyprovider)
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `envoy` | _[CustomEnvoySpec](#customenvoyspec)_ |  false  |  | Envoy configures the desired state of the Envoy proxy.<br />If unspecified, default settings for the managed Envoy proxy are applied. |
+| `envoyVersion` | _string_ |  false  |  | EnvoyVersion is the version of Envoy to use. If unspecified, the version<br />against which Envoy Gateway is built will be used. |
 
 
 #### EnvoyProxyKubernetesProvider
@@ -1692,9 +1677,24 @@ _Appears in:_
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `type` | _[ProviderType](#providertype)_ |  true  |  | Type is the type of resource provider to use. A resource provider provides<br />infrastructure resources for running the data plane, e.g. Envoy proxy, and<br />optional auxiliary control planes. Supported types are "Kubernetes"and "Custom". |
+| `type` | _[EnvoyProxyProviderType](#envoyproxyprovidertype)_ |  true  |  | Type is the type of resource provider to use. A resource provider provides<br />infrastructure resources for running the data plane, e.g. Envoy proxy, and<br />optional auxiliary control planes. Supported types are "Kubernetes"and "Host". |
 | `kubernetes` | _[EnvoyProxyKubernetesProvider](#envoyproxykubernetesprovider)_ |  false  |  | Kubernetes defines the desired state of the Kubernetes resource provider.<br />Kubernetes provides infrastructure resources for running the data plane,<br />e.g. Envoy proxy. If unspecified and type is "Kubernetes", default settings<br />for managed Kubernetes resources are applied. |
-| `custom` | _[EnvoyProxyCustomProvider](#envoyproxycustomprovider)_ |  false  |  | Custom provides configuration for running the data plane, e.g. Envoy proxy.<br />If unspecified and type is "Custom", default settings for the custom provider<br />are applied. |
+| `host` | _[EnvoyProxyHostProvider](#envoyproxyhostprovider)_ |  false  |  | Host provides runtime deployment of the data plane as a child process on the<br />host environment.<br />If unspecified and type is "Host", default settings for the custom provider<br />are applied. |
+
+
+#### EnvoyProxyProviderType
+
+_Underlying type:_ _string_
+
+EnvoyProxyProviderType defines the types of providers supported by Envoy Proxy.
+
+_Appears in:_
+- [EnvoyProxyProvider](#envoyproxyprovider)
+
+| Value | Description |
+| ----- | ----------- |
+| `Kubernetes` | EnvoyProxyProviderTypeKubernetes defines the "Kubernetes" provider.<br /> | 
+| `Host` | EnvoyProxyProviderTypeHost defines the "Host" provider.<br /> | 
 
 
 #### EnvoyProxySpec
@@ -3698,7 +3698,6 @@ ProviderType defines the types of providers supported by Envoy Gateway.
 
 _Appears in:_
 - [EnvoyGatewayProvider](#envoygatewayprovider)
-- [EnvoyProxyProvider](#envoyproxyprovider)
 
 | Value | Description |
 | ----- | ----------- |

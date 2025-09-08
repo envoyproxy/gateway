@@ -19,7 +19,7 @@ import (
 // DefaultEnvoyProxyProvider returns a new EnvoyProxyProvider with default settings.
 func DefaultEnvoyProxyProvider() *EnvoyProxyProvider {
 	return &EnvoyProxyProvider{
-		Type: ProviderTypeKubernetes,
+		Type: EnvoyProxyProviderTypeKubernetes,
 	}
 }
 
@@ -75,21 +75,21 @@ func (e *EnvoyProxy) NeedToSwitchPorts() bool {
 	return !*e.Spec.Provider.Kubernetes.UseListenerPortAsContainerPort
 }
 
-// GetEnvoyProxyCustomProvider returns the EnvoyProxyCustomProvider of EnvoyProxyProvider or
-// a nil EnvoyProxyCustomProvider if unspecified. If EnvoyProxyProvider is not of
-// type "Custom", a nil EnvoyProxyCustomProvider is returned.
-func (r *EnvoyProxyProvider) GetEnvoyProxyCustomProvider() *EnvoyProxyCustomProvider {
-	if r.Type != ProviderTypeCustom {
+// GetEnvoyProxyHostProvider returns the EnvoyProxyHostProvider of EnvoyProxyProvider or
+// a nil EnvoyProxyHostProvider if unspecified. If EnvoyProxyProvider is not of
+// type "Host", a nil EnvoyProxyHostProvider is returned.
+func (r *EnvoyProxyProvider) GetEnvoyProxyHostProvider() *EnvoyProxyHostProvider {
+	if r.Type != EnvoyProxyProviderTypeHost {
 		return nil
 	}
-	return r.Custom
+	return r.Host
 }
 
 // GetEnvoyProxyKubeProvider returns the EnvoyProxyKubernetesProvider of EnvoyProxyProvider or
 // a default EnvoyProxyKubernetesProvider if unspecified. If EnvoyProxyProvider is not of
 // type "Kubernetes", a nil EnvoyProxyKubernetesProvider is returned.
 func (r *EnvoyProxyProvider) GetEnvoyProxyKubeProvider() *EnvoyProxyKubernetesProvider {
-	if r.Type != ProviderTypeKubernetes {
+	if r.Type != EnvoyProxyProviderTypeKubernetes {
 		return nil
 	}
 
@@ -130,11 +130,11 @@ func (r *EnvoyProxyProvider) GetEnvoyProxyKubeProvider() *EnvoyProxyKubernetesPr
 
 // GetEnvoyVersion returns the version of Envoy to use.
 // This method gracefully handles nil pointers.
-func (e *EnvoyProxyCustomProvider) GetEnvoyVersion() string {
-	if e == nil || e.Envoy == nil || e.Envoy.Version == nil {
+func (e *EnvoyProxyHostProvider) GetEnvoyVersion() string {
+	if e == nil || e.EnvoyVersion == nil {
 		return ""
 	}
-	return *e.Envoy.Version
+	return *e.EnvoyVersion
 }
 
 // DefaultEnvoyProxyLoggingLevel returns envoy proxy  v1alpha1.LogComponentGatewayDefault log level.
