@@ -168,8 +168,24 @@ xdsIR:
     accessLog:
       json:
       - path: /dev/stdout
+    globalResources:
+      proxyServiceCluster:
+        name: envoy-gateway/gateway-1
+        settings:
+        - addressType: IP
+          endpoints:
+          - host: 7.6.5.4
+            port: 8080
+            zone: zone1
+          metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-1
+          protocol: TCP
     http:
     - address: 0.0.0.0
+      externalPort: 80
       hostnames:
       - '*'
       isHTTP2: true
@@ -214,7 +230,7 @@ xdsIR:
             name: httproute/default/httproute-1/rule/0/backend/1
             protocol: HTTP
             weight: 1
-          statName: HTTPRoute/default/httproute-1/foo/0/default/service-3|default/service-4
+          statName: httproute/default/httproute-1/foo/0/default/service-3|default/service-4
         hostname: gateway.envoyproxy.io
         isHTTP2: false
         metadata:
@@ -246,7 +262,7 @@ xdsIR:
             name: httproute/default/httproute-1/rule/1/backend/0
             protocol: HTTP
             weight: 1
-          statName: HTTPRoute/default/httproute-1/fallback/1/default/service-1
+          statName: httproute/default/httproute-1/fallback/1/default/service-1
         hostname: gateway.envoyproxy.io
         isHTTP2: false
         metadata:
@@ -310,7 +326,7 @@ xdsIR:
             name: grpcroute/default/grpcroute-1/rule/0/backend/3
             protocol: GRPC
             weight: 1
-          statName: GRPCRoute/default/grpcroute-1/-/0/default/service-1|default/service-2|default/service-3|default/service-4
+          statName: grpcroute/default/grpcroute-1/-/0/default/service-1|default/service-2|default/service-3|default/service-4
         hostname: '*'
         isHTTP2: true
         metadata:

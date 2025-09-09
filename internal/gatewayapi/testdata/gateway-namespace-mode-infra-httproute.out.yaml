@@ -290,6 +290,7 @@ xdsIR:
       - path: /dev/stdout
     http:
     - address: 0.0.0.0
+      externalPort: 80
       hostnames:
       - '*'
       isHTTP2: false
@@ -316,6 +317,7 @@ xdsIR:
             - host: 7.7.7.7
               port: 8080
             metadata:
+              kind: Service
               name: service-1
               namespace: default
               sectionName: "8080"
@@ -344,6 +346,7 @@ xdsIR:
       - path: /dev/stdout
     http:
     - address: 0.0.0.0
+      externalPort: 80
       hostnames:
       - '*'
       isHTTP2: false
@@ -370,6 +373,7 @@ xdsIR:
             - host: 7.7.7.7
               port: 8080
             metadata:
+              kind: Service
               name: service-2
               namespace: default
               sectionName: "8080"
@@ -396,8 +400,19 @@ xdsIR:
     accessLog:
       json:
       - path: /dev/stdout
+    globalResources:
+      proxyServiceCluster:
+        name: test-ns/gateway-3
+        settings:
+        - metadata:
+            name: gateway-3
+            namespace: test-ns
+            sectionName: "8080"
+          name: test-ns/gateway-3
+          protocol: TCP
     http:
     - address: 0.0.0.0
+      externalPort: 80
       hostnames:
       - '*'
       isHTTP2: false

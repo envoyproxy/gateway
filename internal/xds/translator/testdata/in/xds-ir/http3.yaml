@@ -1,12 +1,12 @@
 http:
 - address: 0.0.0.0
-  http3:
-    quicPort: 443
+  http3: {}
   hostnames:
   - '*'
   isHTTP2: false
   name: envoy-gateway/gateway-1/tls
   port: 10443
+  externalPort: 443
   path:
     mergeSlashes: true
     escapedSlashesAction: UnescapeAndRedirect

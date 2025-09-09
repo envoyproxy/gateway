@@ -34,6 +34,9 @@ E2E_TIMEOUT ?= 20m
 E2E_REDIRECT ?=
 E2E_TEST_ARGS ?= -v -tags e2e -timeout $(E2E_TIMEOUT)
 
+DOCKER_MAC_NET_CONNECT ?= true
+HOMEBREW_GOPROXY ?=
+
 KUBE_DEPLOY_PROFILE ?= default
 KUBE_DEPLOY_HELM_VALUES_FILE = $(ROOT_DIR)/test/config/helm/$(KUBE_DEPLOY_PROFILE).yaml
 KUBE_DEPLOY_EG_CONFIG_FILE = $(ROOT_DIR)/test/config/envoy-gateaway-config/$(KUBE_DEPLOY_PROFILE).yaml
@@ -74,9 +77,9 @@ endif
 .PHONY: manifests
 manifests: generate-gwapi-manifests ## Generate WebhookConfiguration and CustomResourceDefinition objects.
 	@$(LOG_TARGET)
-	@go tool controller-gen crd:allowDangerousTypes=true paths="./api/..." output:crd:artifacts:config=charts/gateway-helm/crds/generated
+	$(GO_TOOL) controller-gen crd:allowDangerousTypes=true paths="./api/..." output:crd:artifacts:config=charts/gateway-helm/crds/generated
 	@mkdir -p charts/gateway-helm/templates/generated
-	@go tool controller-gen crd:allowDangerousTypes=true paths="./api/..." output:crd:artifacts:config=charts/gateway-crds-helm/templates/generated
+	$(GO_TOOL) controller-gen crd:allowDangerousTypes=true paths="./api/..." output:crd:artifacts:config=charts/gateway-crds-helm/templates/generated
 	@for file in charts/gateway-crds-helm/templates/generated/*.yaml; do \
 		sed -i.bak '1s/^/{{- if .Values.crds.envoyGateway.enabled }}\n/' $$file && \
 		echo '{{- end }}' >> $$file && \
@@ -104,12 +107,12 @@ generate-gwapi-manifests: ## Generate Gateway API manifests and make it consiste
 kube-generate: ## Generate code containing DeepCopy, DeepCopyInto, and DeepCopyObject method implementations.
 # Note that the paths can't just be "./..." with the header file, or the tool will panic on run. Sorry.
 	@$(LOG_TARGET)
-	@go tool controller-gen $(CONTROLLERGEN_OBJECT_FLAGS) paths="{$(ROOT_DIR)/api/...,$(ROOT_DIR)/internal/ir/...,$(ROOT_DIR)/internal/gatewayapi/...}"
+	$(GO_TOOL) controller-gen $(CONTROLLERGEN_OBJECT_FLAGS) paths="{$(ROOT_DIR)/api/...,$(ROOT_DIR)/internal/ir/...,$(ROOT_DIR)/internal/gatewayapi/...}"
 
 .PHONY: kube-test
 kube-test: manifests generate ## Run Kubernetes provider tests.
 	@$(LOG_TARGET)
-	KUBEBUILDER_ASSETS="$(shell go tool setup-envtest use $(ENVTEST_K8S_VERSION) -p path)" go test --tags=integration,celvalidation ./... -coverprofile cover.out
+	KUBEBUILDER_ASSETS="$(shell $(GO_TOOL) setup-envtest use $(ENVTEST_K8S_VERSION) -p path)" go test --tags=integration,celvalidation ./... -coverprofile cover.out
 
 ##@ Kubernetes Deployment
 
@@ -190,7 +193,7 @@ resilience: create-cluster kube-install-image kube-install-examples-image kube-d
 .PHONY: e2e
 e2e: create-cluster kube-install-image kube-deploy \
 	install-ratelimit install-eg-addons kube-install-examples-image \
-	e2e-prepare run-e2e delete-cluster
+	e2e-prepare setup-mac-net-connect run-e2e delete-cluster
 
 .PHONY: install-ratelimit
 install-ratelimit:
@@ -214,6 +217,11 @@ e2e-prepare: prepare-ip-family ## Prepare the environment for running e2e tests
 	kubectl wait --timeout=5m -n envoy-gateway-system deployment/envoy-gateway --for=condition=Available
 	kubectl apply -f $(KUBE_DEPLOY_EG_CONFIG_FILE)
 	kubectl apply -f test/config/gatewayclass.yaml
+
+.PHONY: setup-mac-net-connect
+setup-mac-net-connect:
+	@$(LOG_TARGET)
+	DOCKER_MAC_NET_CONNECT=$(DOCKER_MAC_NET_CONNECT) HOMEBREW_GOPROXY=$(HOMEBREW_GOPROXY) tools/hack/manage-mac-net-connect.sh setup
 
 .PHONY: run-e2e
 run-e2e: ## Run e2e tests
@@ -310,12 +318,15 @@ run-experimental-conformance: prepare-ip-family ## Run Experimental Gateway API 
 	@$(LOG_TARGET)
 	kubectl wait --timeout=$(WAIT_TIMEOUT) -n envoy-gateway-system deployment/envoy-gateway --for=condition=Available
 	kubectl apply -f test/config/gatewayclass.yaml
-	go test -v -tags experimental ./test/conformance -run TestExperimentalConformance --gateway-class=envoy-gateway --debug=true --organization=envoyproxy --project=envoy-gateway --url=https://github.com/envoyproxy/gateway --version=latest --report-output="$(CONFORMANCE_REPORT_PATH)" --contact=https://github.com/envoyproxy/gateway/blob/main/GOVERNANCE.md
+	go test -v -tags experimental ./test/conformance -run TestExperimentalConformance --gateway-class=envoy-gateway --debug=true \
+		--organization=envoyproxy --project=envoy-gateway --url=https://github.com/envoyproxy/gateway --version=latest \
+		--report-output="$(CONFORMANCE_REPORT_PATH)" --contact=https://github.com/envoyproxy/gateway/blob/main/GOVERNANCE.md \
+		--mode="$(KUBE_DEPLOY_PROFILE)" --version=$(TAG)
 
 .PHONY: delete-cluster
 delete-cluster: ## Delete kind cluster.
 	@$(LOG_TARGET)
-	@go tool kind delete cluster --name envoy-gateway
+	$(GO_TOOL) kind delete cluster --name envoy-gateway
 
 .PHONY: generate-manifests
 generate-manifests: helm-generate.gateway-helm ## Generate Kubernetes release manifests.

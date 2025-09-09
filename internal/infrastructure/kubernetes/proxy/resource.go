@@ -8,6 +8,7 @@ package proxy
 import (
 	"fmt"
 	"path/filepath"
+	"time"
 
 	"github.com/containers/image/v5/docker/reference"
 	corev1 "k8s.io/api/core/v1"
@@ -76,6 +77,7 @@ func enablePrometheus(infra *ir.ProxyInfra) bool {
 func expectedProxyContainers(infra *ir.ProxyInfra,
 	containerSpec *egv1a1.KubernetesContainerSpec,
 	shutdownConfig *egv1a1.ShutdownConfig, shutdownManager *egv1a1.ShutdownManager,
+	topologyInjectorDisabled bool,
 	controllerNamespace, dnsDomain string, gatewayNamespaceMode bool,
 ) ([]corev1.Container, error) {
 	ports := make([]corev1.ContainerPort, 0, 2)
@@ -100,6 +102,7 @@ func expectedProxyContainers(infra *ir.ProxyInfra,
 	}
 
 	maxHeapSizeBytes := calculateMaxHeapSizeBytes(containerSpec.Resources)
+
 	// Get the default Bootstrap
 	bootstrapConfigOptions := &bootstrap.RenderBootstrapConfigOptions{
 		ProxyMetrics: proxyMetrics,
@@ -107,8 +110,9 @@ func expectedProxyContainers(infra *ir.ProxyInfra,
 			Certificate: filepath.Join("/sds", common.SdsCertFilename),
 			TrustedCA:   filepath.Join("/sds", common.SdsCAFilename),
 		},
-		MaxHeapSizeBytes: maxHeapSizeBytes,
-		XdsServerHost:    ptr.To(fmt.Sprintf("%s.%s.svc.%s", config.EnvoyGatewayServiceName, controllerNamespace, dnsDomain)),
+		MaxHeapSizeBytes:         maxHeapSizeBytes,
+		XdsServerHost:            ptr.To(fmt.Sprintf("%s.%s.svc.%s.", config.EnvoyGatewayServiceName, controllerNamespace, dnsDomain)),
+		TopologyInjectorDisabled: topologyInjectorDisabled,
 	}
 
 	args, err := common.BuildProxyArgs(infra, shutdownConfig, bootstrapConfigOptions, fmt.Sprintf("$(%s)", envoyPodEnvVar), gatewayNamespaceMode)
@@ -257,7 +261,11 @@ func expectedShutdownManagerImage(shutdownManager *egv1a1.ShutdownManager) strin
 func expectedShutdownManagerArgs(cfg *egv1a1.ShutdownConfig) []string {
 	args := []string{"envoy", "shutdown-manager"}
 	if cfg != nil && cfg.DrainTimeout != nil {
-		args = append(args, fmt.Sprintf("--ready-timeout=%.0fs", cfg.DrainTimeout.Seconds()+10))
+		d, err := time.ParseDuration(string(*cfg.DrainTimeout))
+		if err != nil {
+			return nil
+		}
+		args = append(args, fmt.Sprintf("--ready-timeout=%.0fs", d.Seconds()+10))
 	}
 	return args
 }
@@ -270,11 +278,19 @@ func expectedShutdownPreStopCommand(cfg *egv1a1.ShutdownConfig) []string {
 	}
 
 	if cfg.DrainTimeout != nil {
-		command = append(command, fmt.Sprintf("--drain-timeout=%.0fs", cfg.DrainTimeout.Seconds()))
+		d, err := time.ParseDuration(string(*cfg.DrainTimeout))
+		if err != nil {
+			return nil
+		}
+		command = append(command, fmt.Sprintf("--drain-timeout=%.0fs", d.Seconds()))
 	}
 
 	if cfg.MinDrainDuration != nil {
-		command = append(command, fmt.Sprintf("--min-drain-duration=%.0fs", cfg.MinDrainDuration.Seconds()))
+		d, err := time.ParseDuration(string(*cfg.MinDrainDuration))
+		if err != nil {
+			return nil
+		}
+		command = append(command, fmt.Sprintf("--min-drain-duration=%.0fs", d.Seconds()))
 	}
 
 	return command

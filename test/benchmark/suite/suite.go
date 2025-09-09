@@ -183,7 +183,7 @@ func (b *BenchmarkTestSuite) Run(t *testing.T, tests []BenchmarkTest) {
 // TODO: currently running benchmark test via nighthawk_client,
 // consider switching to gRPC nighthawk-service for benchmark test.
 // ref: https://github.com/envoyproxy/nighthawk/blob/main/api/client/service.proto
-func (b *BenchmarkTestSuite) Benchmark(t *testing.T, ctx context.Context, jobName, resultTitle, gatewayHostPort, hostnamePattern string, host int) (*BenchmarkReport, error) {
+func (b *BenchmarkTestSuite) Benchmark(t *testing.T, ctx context.Context, jobName, resultTitle, gatewayHostPort, hostnamePattern string, host int, startTime time.Time) (*BenchmarkReport, error) {
 	t.Logf("Running benchmark test: %s", resultTitle)
 
 	requestHeaders := make([]string, 0, host)
@@ -230,7 +230,7 @@ func (b *BenchmarkTestSuite) Benchmark(t *testing.T, ctx context.Context, jobNam
 
 		// Sample the metrics and profiles at runtime.
 		// Do not consider it as an error, fail sampling should not affect test running.
-		if err := report.Sample(ctx); err != nil {
+		if err := report.Sample(ctx, startTime); err != nil {
 			t.Logf("Error occurs while sampling metrics or profiles: %v", err)
 		}
 
@@ -297,7 +297,9 @@ func prepareBenchmarkClientRuntimeArgs(gatewayHostPort string, requestHeaders []
 // has been created successfully.
 //
 // All created scaled resources will be labeled with BenchmarkTestScaledKey.
-func (b *BenchmarkTestSuite) ScaleUpHTTPRoutes(ctx context.Context, scaleRange [2]uint16, routeNameFormat, routeHostnameFormat, refGateway string, batchNumPerHost uint16, afterCreation func(*gwapiv1.HTTPRoute)) error {
+func (b *BenchmarkTestSuite) ScaleUpHTTPRoutes(ctx context.Context, scaleRange [2]uint16, routeNameFormat, routeHostnameFormat, refGateway string, batchNumPerHost uint16,
+	afterCreation func(*gwapiv1.HTTPRoute, time.Time),
+) error {
 	var i, begin, end uint16
 	begin, end = scaleRange[0], scaleRange[1]
 
@@ -319,9 +321,10 @@ func (b *BenchmarkTestSuite) ScaleUpHTTPRoutes(ctx context.Context, scaleRange [
 		if err := b.CreateResource(ctx, newRoute); err != nil {
 			return err
 		}
+		applyAt := time.Now()
 
 		if afterCreation != nil {
-			afterCreation(newRoute)
+			afterCreation(newRoute, applyAt)
 		}
 
 		counterPerBatch++

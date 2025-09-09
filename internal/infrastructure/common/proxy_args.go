@@ -7,6 +7,9 @@ package common
 
 import (
 	"fmt"
+	"time"
+
+	"k8s.io/utils/ptr"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/ir"
@@ -29,9 +32,19 @@ func BuildProxyArgs(
 	serviceNode string,
 	gatewayNamespaceMode bool,
 ) ([]string, error) {
-	// If IPFamily is not set, try to determine it from the infrastructure.
-	if bootstrapConfigOptions != nil && bootstrapConfigOptions.IPFamily == nil {
-		bootstrapConfigOptions.IPFamily = getIPFamily(infra)
+	serviceCluster := infra.Name
+	if gatewayNamespaceMode {
+		serviceCluster = fmt.Sprintf("%s/%s", infra.Namespace, infra.Name)
+	}
+
+	if bootstrapConfigOptions != nil {
+		// Configure local Envoy ServiceCluster
+		bootstrapConfigOptions.ServiceClusterName = ptr.To(serviceCluster)
+
+		// If IPFamily is not set, try to determine it from the infrastructure.
+		if bootstrapConfigOptions.IPFamily == nil {
+			bootstrapConfigOptions.IPFamily = getIPFamily(infra)
+		}
 	}
 
 	bootstrapConfigOptions.GatewayNamespaceMode = gatewayNamespaceMode
@@ -50,11 +63,6 @@ func BuildProxyArgs(
 	}
 
 	logging := infra.Config.Spec.Logging
-
-	serviceCluster := infra.Name
-	if gatewayNamespaceMode {
-		serviceCluster = fmt.Sprintf("%s/%s", infra.Namespace, infra.Name)
-	}
 
 	args := []string{
 		fmt.Sprintf("--service-cluster %s", serviceCluster),
@@ -77,7 +85,11 @@ func BuildProxyArgs(
 	// Default drain timeout.
 	drainTimeout := 60.0
 	if shutdownConfig != nil && shutdownConfig.DrainTimeout != nil {
-		drainTimeout = shutdownConfig.DrainTimeout.Seconds()
+		d, err := time.ParseDuration(string(*shutdownConfig.DrainTimeout))
+		if err != nil {
+			return nil, err
+		}
+		drainTimeout = d.Seconds()
 	}
 	args = append(args, fmt.Sprintf("--drain-time-s %.0f", drainTimeout))
 

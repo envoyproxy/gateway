@@ -7,7 +7,6 @@ package gatewayapi
 
 import (
 	"fmt"
-	"sort"
 
 	"k8s.io/apimachinery/pkg/types"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
@@ -20,10 +19,7 @@ import (
 )
 
 func (t *Translator) ProcessEnvoyPatchPolicies(envoyPatchPolicies []*egv1a1.EnvoyPatchPolicy, xdsIR resource.XdsIRMap) {
-	// Sort based on priority
-	sort.Slice(envoyPatchPolicies, func(i, j int) bool {
-		return envoyPatchPolicies[i].Spec.Priority < envoyPatchPolicies[j].Spec.Priority
-	})
+	// EnvoyPatchPolicies are already sorted by the provider layer (priority, then timestamp, then name)
 
 	for _, policy := range envoyPatchPolicies {
 		var (

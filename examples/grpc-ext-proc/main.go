@@ -280,15 +280,18 @@ func (s *extProcServer) Process(srv envoy_service_proc_v3.ExternalProcessor_Proc
 				DynamicMetadata: emittedDynamicMetadata,
 			}
 
-			break
 		case *envoy_service_proc_v3.ProcessingRequest_ResponseHeaders:
 
 			respXDSRouteName := ""
+			requestPath := ""
 
 			if req.Attributes != nil {
 				if epa, ok := req.Attributes["envoy.filters.http.ext_proc"]; ok {
 					if rsa, ok := epa.Fields["xds.route_name"]; ok {
 						respXDSRouteName = rsa.GetStringValue()
+					}
+					if rpa, ok := epa.Fields["request.path"]; ok {
+						requestPath = rpa.GetStringValue()
 					}
 				}
 			}
@@ -329,6 +332,16 @@ func (s *extProcServer) Process(srv envoy_service_proc_v3.ExternalProcessor_Proc
 				},
 			}
 
+			if requestPath != "" {
+				rhq.Response.HeaderMutation.SetHeaders = append(rhq.Response.HeaderMutation.SetHeaders,
+					&envoy_api_v3_core.HeaderValueOption{
+						Header: &envoy_api_v3_core.HeaderValue{
+							Key:      "x-response-request-path",
+							RawValue: []byte(requestPath),
+						},
+					})
+			}
+
 			resp = &envoy_service_proc_v3.ProcessingResponse{
 				Response: &envoy_service_proc_v3.ProcessingResponse_ResponseHeaders{
 					ResponseHeaders: rhq,
@@ -349,7 +362,7 @@ func (s *extProcServer) Process(srv envoy_service_proc_v3.ExternalProcessor_Proc
 					},
 				},
 			}
-			break
+
 		default:
 			log.Printf("Unknown Request type %v\n", v)
 		}

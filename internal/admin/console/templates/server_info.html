@@ -1,0 +1,43 @@
+{{template "base.html" .}}
+
+{{define "server-info-content"}}
+<div class="card">
+    <div class="card-header">
+        <h1 class="card-title">{{.Title}}</h1>
+        <div style="display: flex; align-items: center; gap: 1rem;">
+            <label>
+                <input type="checkbox" id="auto-refresh"> Auto-refresh (30s)
+            </label>
+            <button class="btn btn-secondary" onclick="EnvoyGatewayAdmin.refresh()">
+                Refresh
+            </button>
+        </div>
+    </div>
+    <div class="card-body">
+        <p>This page displays detailed information about the Envoy Gateway server status and components.</p>
+
+        <div id="server-info">
+            <div class="loading"></div> Loading server information...
+        </div>
+    </div>
+</div>
+
+
+
+
+
+
+<div class="card">
+    <div class="card-header">
+        <h2 class="card-title">⚙️ EnvoyGateway Configuration</h2>
+    </div>
+    <div class="card-body">
+        <p>Current EnvoyGateway configuration loaded from the config file or defaults.</p>
+
+        <div id="envoy-gateway-config">
+            <div class="loading"></div> Loading EnvoyGateway configuration...
+        </div>
+    </div>
+</div>
+
+{{end}}

@@ -8,11 +8,6 @@
     - match:
         pathSeparatedPrefix: /foo1
       name: httproute/default/httproute-1/rule/0/match/0/www_foo_com
-      responseHeadersToAdd:
-      - append: true
-        header:
-          key: alt-svc
-          value: h3=":443"; ma=86400
       route:
         cluster: httproute/default/httproute-1/rule/0
         upgradeConfigs:
@@ -25,11 +20,6 @@
     - match:
         pathSeparatedPrefix: /foo2
       name: httproute/default/httproute-2/rule/0/match/0/www_foo_com
-      responseHeadersToAdd:
-      - append: true
-        header:
-          key: alt-svc
-          value: h3=":443"; ma=86400
       route:
         cluster: httproute/default/httproute-2/rule/0
         upgradeConfigs:

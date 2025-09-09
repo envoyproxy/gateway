@@ -26,34 +26,55 @@ func init() {
 
 var OpenTelemetryTracingTest = suite.ConformanceTest{
 	ShortName:   "OpenTelemetryTracing",
-	Description: "Make sure OpenTelemetry tracing is working",
-	Manifests:   []string{"testdata/tracing-otel.yaml"},
+	Description: "Make sure OpenTelemetry tracing is working (default and custom service name)",
+	Manifests:   []string{"testdata/tracing-otel.yaml", "testdata/tracing-otel-custom-service-name.yaml"},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
-		t.Run("tempo", func(t *testing.T) {
-			ns := "gateway-conformance-infra"
-			routeNN := types.NamespacedName{Name: "tracing-otel", Namespace: ns}
-			gwNN := types.NamespacedName{Name: "tracing-otel", Namespace: ns}
-			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
-
-			expectedResponse := httputils.ExpectedResponse{
-				Request: httputils.Request{
-					Path: "/otel",
-				},
-				Response: httputils.Response{
-					StatusCode: 200,
-				},
-				Namespace: ns,
-			}
-			// make sure listener is ready
-			httputils.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
-
-			tags := map[string]string{
-				"component":    "proxy",
-				"provider":     "otel",
-				"service.name": naming.ServiceName(gwNN),
-			}
-			tracing.ExpectedTraceCount(t, suite, gwAddr, expectedResponse, tags)
-		})
+		cases := []struct {
+			name        string
+			routeName   string
+			gwName      string
+			path        string
+			expectedSvc string
+		}{
+			{
+				name:        "default-service-name",
+				routeName:   "tracing-otel",
+				gwName:      "tracing-otel",
+				path:        "/otel",
+				expectedSvc: naming.ServiceName(types.NamespacedName{Name: "tracing-otel", Namespace: "gateway-conformance-infra"}),
+			},
+			{
+				name:        "custom-service-name",
+				routeName:   "tracing-otel-custom-service-name",
+				gwName:      "tracing-otel-custom-service-name",
+				path:        "/custom-service",
+				expectedSvc: "my-custom-service",
+			},
+		}
+		for _, tc := range cases {
+			t.Run(tc.name, func(t *testing.T) {
+				ns := "gateway-conformance-infra"
+				routeNN := types.NamespacedName{Name: tc.routeName, Namespace: ns}
+				gwNN := types.NamespacedName{Name: tc.gwName, Namespace: ns}
+				gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
+				expectedResponse := httputils.ExpectedResponse{
+					Request: httputils.Request{
+						Path: tc.path,
+					},
+					Response: httputils.Response{
+						StatusCode: 200,
+					},
+					Namespace: ns,
+				}
+				httputils.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
+				tags := map[string]string{
+					"component":    "proxy",
+					"provider":     "otel",
+					"service.name": tc.expectedSvc,
+				}
+				tracing.ExpectedTraceCount(t, suite, gwAddr, expectedResponse, tags)
+			})
+		}
 	},
 }
 
@@ -94,33 +115,54 @@ var ZipkinTracingTest = suite.ConformanceTest{
 
 var DatadogTracingTest = suite.ConformanceTest{
 	ShortName:   "DatadogTracing",
-	Description: "Make sure Datadog tracing is working",
-	Manifests:   []string{"testdata/tracing-datadog.yaml"},
+	Description: "Make sure Datadog tracing is working (default and custom service name)",
+	Manifests:   []string{"testdata/tracing-datadog.yaml", "testdata/tracing-datadog-custom-service-name.yaml"},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
-		t.Run("tempo", func(t *testing.T) {
-			ns := "gateway-conformance-infra"
-			routeNN := types.NamespacedName{Name: "tracing-datadog", Namespace: ns}
-			gwNN := types.NamespacedName{Name: "eg-special-case-datadog", Namespace: ns}
-			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
-
-			expectedResponse := httputils.ExpectedResponse{
-				Request: httputils.Request{
-					Path: "/datadog",
-				},
-				Response: httputils.Response{
-					StatusCode: 200,
-				},
-				Namespace: ns,
-			}
-			// make sure listener is ready
-			httputils.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
-
-			tags := map[string]string{
-				"component":    "proxy",
-				"provider":     "datadog",
-				"service.name": fmt.Sprintf("%s.%s", gwNN.Name, gwNN.Namespace),
-			}
-			tracing.ExpectedTraceCount(t, suite, gwAddr, expectedResponse, tags)
-		})
+		cases := []struct {
+			name        string
+			routeName   string
+			gwName      string
+			path        string
+			expectedSvc string
+		}{
+			{
+				name:        "default-service-name",
+				routeName:   "tracing-datadog",
+				gwName:      "eg-special-case-datadog",
+				path:        "/datadog",
+				expectedSvc: fmt.Sprintf("%s.%s", "eg-special-case-datadog", "gateway-conformance-infra"),
+			},
+			{
+				name:        "custom-service-name",
+				routeName:   "tracing-datadog-custom-service-name",
+				gwName:      "tracing-datadog-custom-service-name",
+				path:        "/datadog-custom-service",
+				expectedSvc: "my-custom-service",
+			},
+		}
+		for _, tc := range cases {
+			t.Run(tc.name, func(t *testing.T) {
+				ns := "gateway-conformance-infra"
+				routeNN := types.NamespacedName{Name: tc.routeName, Namespace: ns}
+				gwNN := types.NamespacedName{Name: tc.gwName, Namespace: ns}
+				gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
+				expectedResponse := httputils.ExpectedResponse{
+					Request: httputils.Request{
+						Path: tc.path,
+					},
+					Response: httputils.Response{
+						StatusCode: 200,
+					},
+					Namespace: ns,
+				}
+				httputils.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
+				tags := map[string]string{
+					"component":    "proxy",
+					"provider":     "datadog",
+					"service.name": tc.expectedSvc,
+				}
+				tracing.ExpectedTraceCount(t, suite, gwAddr, expectedResponse, tags)
+			})
+		}
 	},
 }

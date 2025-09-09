@@ -112,8 +112,7 @@ infraIR:
     proxy:
       listeners:
       - address: null
-        http3:
-          quicPort: 443
+        http3: {}
         name: envoy-gateway/gateway-1/tls
         ports:
         - containerPort: 10443
@@ -134,12 +133,27 @@ xdsIR:
     accessLog:
       json:
       - path: /dev/stdout
+    globalResources:
+      proxyServiceCluster:
+        name: envoy-gateway/gateway-1
+        settings:
+        - addressType: IP
+          endpoints:
+          - host: 7.6.5.4
+            port: 8080
+            zone: zone1
+          metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-1
+          protocol: TCP
     http:
     - address: 0.0.0.0
+      externalPort: 443
       hostnames:
       - '*'
-      http3:
-        quicPort: 443
+      http3: {}
       isHTTP2: false
       metadata:
         kind: Gateway

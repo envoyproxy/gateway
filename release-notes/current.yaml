@@ -2,58 +2,21 @@ date: Pending
 
 # Changes that are expected to cause an incompatibility with previous versions, such as deletions or modifications to existing APIs.
 breaking changes: |
-  Use gateway name as proxy fleet name for gateway namespace mode.
-  Endpoints that are absent from service discovery are removed even if their active health checks succeed.
 
 # Updates addressing vulnerabilities, security flaws, or compliance requirements.
 security updates: |
-  Disable automountServiceAccountToken for proxy and ratelimit deployments and serviceAccounts
 
 # New features or capabilities added in this release.
 new features: |
-  Added support for percentage-based request mirroring
-  Add an option to OIDC authentication to bypass it and defer to JWT when the request contains an "Authorization: Bearer ..." header.
-  Added support for configuring Subject Alternative Names (SANs) for upstream TLS validation via `BackendTLSPolicy.validation.subjectAltNames`.
-  Added support for local rate limit header.
-  Added XDS metadata for clusters and endpoints from xRoutes and referenced backend resources (Backend, Service, ServiceImport).
-  Added support for setting ownerreference to infra resources when enable gateway namespace mode.
-  Added support for configuring hostname in active HTTP healthchecks.
-  Added support for GatewayInfrastructure in gateway namespace mode.
-  Added support for configuring maxConnectionsToAcceptPerSocketEvent in listener via ClientTrafficPolicy.
-  Added support for setting GatewayClass ownerreference to infra resources when all cases except gateway namespace mode.
-  Added support for setting previous priorities retry predicate.
-  Added support for using extension server policies to in PostTranslateModify hook.
-  Added support for configuring cluster stat name for HTTPRoute and GRPCRoute in EnvoyProxy CRD.
-  Added support for configuring `SameSite` attribute for Oauth cookies for OIDC authentication.
-  Added support for configuring the cache sync period for K8s provider.
-  Added support for fallback to first key when load ca certificate from Secret or ConfigMap.
-  Added support for configuring user provided name to generated HorizontalPodAutoscaler and PodDisruptionBudget resources.
-  Added support for client certificate validation (SPKI, hash, SAN) in ClientTrafficPolicy.
-  Added support for OIDC RP initialized logout. If the end session endpoint is explicitly specified or discovered from the issuer's well-known url, the end session endpoint will be invoked when the user logs out.
-  Added support for specifying deployment annotations through the helm chart.
-  Added support for customizing the name of the ServiceAccount used by the Proxy.
-  Added support for custom backendRefs via extension server using PostClusterModify hook.
-  Added support for SecurityPolicy and EnvoyExtensionPolicy to target ServiceImport via BackendRefs.
-  Introduce validation strictness levels for Lua scripts in EnvoyExtensionPolicies.
-  Added metric `watchable_publish_total` counting store events in watchable message queues.
-
+  Added support for mTLS configuration for ExtensionServer
 
 bug fixes: |
-  Handle integer zone annotation values
-  Fixed issue where WASM cache init failure caused routes with WASM-less EnvoyExtensionPolicies to have 500 direct responses.
-  Fixed issue which UDP listeners were not created in the Envoy proxy config when Gateway was created.
-  Keep ALPN configuration for listeners with overlapping certificates when ALPN is explicitly set in ClientTrafficPolicy.
-  Fixed issue that switch on wrong SubjectAltNameType enum value in BackendTLSPolicy.
-  Fixed issue that BackendTLSPolicy should not reference ConfigMap or Secret across namespace.
-  Fixed bug in certificate SANs overlap detection in listeners.
-  Fixed issue where EnvoyExtensionPolicy ExtProc body processing mode is set to FullDuplexStreamed, but trailers were not sent.
-  Fixed validation issue where EnvoyExtensionPolicy ExtProc failOpen is true, and body processing mode FullDuplexStreamed is not rejected.
-  Add ConfigMap indexers for EnvoyExtensionPolicies to reconcile Lua changes
-  Fixed issue that default accesslog format not working.
-  Fixed validation errors when the rateLimit url for Redis in the EnvoyGateway API includes multiple comma separated hosts.
-  Fixes addresses in status of DualStack NodePort Gateways.
-  Fixed issue that not able to override the prometheus annotation in EnvoyProxy CRD.
-
+  Fixed %ROUTE_KIND% operator to be lower-cased when used by clusterStatName in EnvoyProxy API.
+  Fixed maxAcceptPerSocketEvent being ignored in ClientTrafficPolicy.
+  Fixed the topologyInjectorDisabled and the local cluster was not defined.
+  Fixed log formatting of improper key-value pairs to avoid DPANIC in controller-runtime logger.
+  Fixed handling of context-related transient errors to prevent incorrect state reconciliation and unintended behavior.
+  Fixed the controller cannot read the EnvoyProxy attached gatewayclass only.
 
 # Enhancements that improve performance.
 performance improvements: |

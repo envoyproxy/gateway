@@ -146,14 +146,17 @@ securityPolicies:
     uid: 08335a80-83ba-4592-888f-6ac0bba44ce4
   spec:
     oidc:
-      clientID: client2.oauth.foo.com
+      clientIDRef:
+        group: null
+        kind: null
+        name: client2-secret
       clientSecret:
         group: null
         kind: null
         name: client2-secret
       cookieDomain: example.com
-      defaultRefreshTokenTTL: 48h0m0s
-      defaultTokenTTL: 1h0m0s
+      defaultRefreshTokenTTL: 48h
+      defaultTokenTTL: 1h
       forwardAccessToken: true
       logoutPath: /foo/logout
       provider:
@@ -201,8 +204,8 @@ securityPolicies:
         group: null
         kind: null
         name: client1-secret
-      defaultRefreshTokenTTL: 24h0m0s
-      defaultTokenTTL: 30m0s
+      defaultRefreshTokenTTL: 24h
+      defaultTokenTTL: 30m
       forwardAccessToken: true
       logoutPath: /bar/logout
       provider:
@@ -238,8 +241,24 @@ xdsIR:
     accessLog:
       json:
       - path: /dev/stdout
+    globalResources:
+      proxyServiceCluster:
+        name: envoy-gateway/gateway-1
+        settings:
+        - addressType: IP
+          endpoints:
+          - host: 7.6.5.4
+            port: 8080
+            zone: zone1
+          metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-1
+          protocol: TCP
     http:
     - address: 0.0.0.0
+      externalPort: 80
       hostnames:
       - '*'
       isHTTP2: false

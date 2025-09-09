@@ -7,6 +7,7 @@ package registry
 
 import (
 	"context"
+	"crypto/tls"
 	"crypto/x509"
 	"errors"
 	"fmt"
@@ -133,6 +134,16 @@ func NewInMemoryManager(cfg egv1a1.ExtensionManager, server extension.EnvoyGatew
 // FailOpen returns true if the extension manager is configured to fail open, and false otherwise.
 func (m *Manager) FailOpen() bool {
 	return m.extension.FailOpen
+}
+
+// GetTranslationHookConfig returns the translation hook configuration.
+func (m *Manager) GetTranslationHookConfig() *egv1a1.TranslationConfig {
+	if m.extension.Hooks == nil ||
+		m.extension.Hooks.XDSTranslator == nil ||
+		m.extension.Hooks.XDSTranslator.Translation == nil {
+		return nil
+	}
+	return m.extension.Hooks.XDSTranslator.Translation
 }
 
 // HasExtension checks to see whether a given Group and Kind has an
@@ -292,6 +303,15 @@ func setupGRPCOpts(ctx context.Context, client k8scli.Client, ext *egv1a1.Extens
 		if err != nil {
 			return nil, fmt.Errorf("failed to get root CA certificates: %w", err)
 		}
+
+		// Sanity check to ensure that the client certificate reference is valid if mTLS is configured
+		if ext.Service.TLS.ClientCertificateRef != nil {
+			_, clientCertErr := getClientCertificateFromSecret(ctx, client, ext, namespace)
+			if clientCertErr != nil {
+				return nil, fmt.Errorf("failed to get client certificate for mTLS: %w", clientCertErr)
+			}
+		}
+
 		creds, err := getGRPCCredentials(client, ext, namespace)
 		if err != nil {
 			return nil, fmt.Errorf("failed to get gRPC TLS credentials: %w", err)
@@ -328,12 +348,21 @@ func setupGRPCOpts(ctx context.Context, client k8scli.Client, ext *egv1a1.Extens
 }
 
 func getGRPCCredentials(client k8scli.Client, ext *egv1a1.ExtensionManager, namespace string) (credentials.TransportCredentials, error) {
-	return advancedtls.NewClientCreds(&advancedtls.Options{
+	options := &advancedtls.Options{
 		RootOptions: advancedtls.RootCertificateOptions{
 			// A callback function that dynamically loads root CA certificates from secret
 			GetRootCertificates: createGetRootCertificatesHandler(client, ext, namespace),
 		},
-	})
+	}
+
+	// Add client certificate options for mTLS if configured
+	if ext.Service.TLS.ClientCertificateRef != nil {
+		options.IdentityOptions = advancedtls.IdentityCertificateOptions{
+			GetIdentityCertificatesForClient: createGetClientCertificatesHandler(client, ext, namespace),
+		}
+	}
+
+	return advancedtls.NewClientCreds(options)
 }
 
 func createGetRootCertificatesHandler(client k8scli.Client, ext *egv1a1.ExtensionManager, namespace string) func(*advancedtls.ConnectionInfo) (*advancedtls.RootCertificates, error) {
@@ -364,6 +393,46 @@ func getCertPoolFromSecret(ctx context.Context, client k8scli.Client, ext *egv1a
 		return nil, errors.New("failed to append certificates from CA secret")
 	}
 	return cp, nil
+}
+
+func createGetClientCertificatesHandler(client k8scli.Client, ext *egv1a1.ExtensionManager, namespace string) func(*tls.CertificateRequestInfo) (*tls.Certificate, error) {
+	return func(certReqInfo *tls.CertificateRequestInfo) (*tls.Certificate, error) {
+		ctx := context.Background()
+		cert, err := getClientCertificateFromSecret(ctx, client, ext, namespace)
+		if err != nil {
+			return nil, err
+		}
+		return cert, nil
+	}
+}
+
+func getClientCertificateFromSecret(ctx context.Context, client k8scli.Client, ext *egv1a1.ExtensionManager, namespace string) (*tls.Certificate, error) {
+	if ext.Service.TLS.ClientCertificateRef == nil {
+		return nil, errors.New("client certificate reference is nil")
+	}
+
+	certRef := *ext.Service.TLS.ClientCertificateRef
+	secret, _, err := kubernetes.ValidateSecretObjectReference(ctx, client, &certRef, namespace)
+	if err != nil {
+		return nil, fmt.Errorf("failed to validate client certificate reference: %w", err)
+	}
+
+	certPEMBytes, ok := secret.Data[corev1.TLSCertKey]
+	if !ok {
+		return nil, fmt.Errorf("no client certificate found in Kubernetes Secret %s in namespace %s", secret.GetName(), secret.GetNamespace())
+	}
+
+	keyPEMBytes, ok := secret.Data[corev1.TLSPrivateKeyKey]
+	if !ok {
+		return nil, fmt.Errorf("no client private key found in Kubernetes Secret %s in namespace %s", secret.GetName(), secret.GetNamespace())
+	}
+
+	cert, err := tls.X509KeyPair(certPEMBytes, keyPEMBytes)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load client certificate and key: %w", err)
+	}
+
+	return &cert, nil
 }
 
 func fractionOrDefault(fraction *gwapiv1.Fraction, defaultValue float64) float64 {

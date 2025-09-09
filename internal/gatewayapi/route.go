@@ -8,7 +8,6 @@ package gatewayapi
 import (
 	"fmt"
 	"net"
-	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -55,11 +54,7 @@ type RoutesTranslator interface {
 func (t *Translator) ProcessHTTPRoutes(httpRoutes []*gwapiv1.HTTPRoute, gateways []*GatewayContext, resources *resource.Resources, xdsIR resource.XdsIRMap) []*HTTPRouteContext {
 	var relevantHTTPRoutes []*HTTPRouteContext
 
-	// always sort initially by creation time stamp. Later on, additional sorting based on matcher type and
-	// match length may occur.
-	sort.Slice(httpRoutes, func(i, j int) bool {
-		return httpRoutes[i].CreationTimestamp.Before(&(httpRoutes[j].CreationTimestamp))
-	})
+	// HTTPRoutes are already sorted by the provider layer
 
 	for _, h := range httpRoutes {
 		if h == nil {
@@ -88,6 +83,8 @@ func (t *Translator) ProcessHTTPRoutes(httpRoutes []*gwapiv1.HTTPRoute, gateways
 
 func (t *Translator) ProcessGRPCRoutes(grpcRoutes []*gwapiv1.GRPCRoute, gateways []*GatewayContext, resources *resource.Resources, xdsIR resource.XdsIRMap) []*GRPCRouteContext {
 	var relevantGRPCRoutes []*GRPCRouteContext
+
+	// GRPCRoutes are already sorted by the provider layer
 
 	for _, g := range grpcRoutes {
 		if g == nil {
@@ -328,7 +325,7 @@ func processRouteTimeout(irRoute *ir.HTTPRoute, rule gwapiv1.HTTPRouteRule) {
 			if err != nil {
 				d, _ = time.ParseDuration(HTTPRequestTimeout)
 			}
-			irRoute.Timeout = ptr.To(metav1.Duration{Duration: d})
+			irRoute.Timeout = ir.MetaV1DurationPtr(d)
 		}
 
 		// Only set the IR Route Timeout to the backend request timeout
@@ -339,7 +336,7 @@ func processRouteTimeout(irRoute *ir.HTTPRoute, rule gwapiv1.HTTPRouteRule) {
 			if err != nil {
 				d, _ = time.ParseDuration(HTTPRequestTimeout)
 			}
-			irRoute.Timeout = ptr.To(metav1.Duration{Duration: d})
+			irRoute.Timeout = ir.MetaV1DurationPtr(d)
 		}
 	}
 }
@@ -359,14 +356,14 @@ func processRouteRetry(irRoute *ir.HTTPRoute, rule gwapiv1.HTTPRouteRule) {
 		if err == nil {
 			res.PerRetry = &ir.PerRetryPolicy{
 				BackOff: &ir.BackOffPolicy{
-					BaseInterval: ptr.To(metav1.Duration{Duration: backoff}),
+					BaseInterval: ir.MetaV1DurationPtr(backoff),
 				},
 			}
 			// xref: https://gateway-api.sigs.k8s.io/geps/gep-1742/#timeout-values
 			if rule.Timeouts != nil && rule.Timeouts.BackendRequest != nil {
 				backendRequestTimeout, err := time.ParseDuration(string(*rule.Timeouts.BackendRequest))
 				if err == nil {
-					res.PerRetry.Timeout = &metav1.Duration{Duration: backendRequestTimeout}
+					res.PerRetry.Timeout = ir.MetaV1DurationPtr(backendRequestTimeout)
 				}
 			}
 		}
@@ -438,7 +435,7 @@ func (t *Translator) processHTTPRouteRule(
 				if err != nil {
 					return nil, status.NewRouteStatusError(err, gwapiv1.RouteReasonUnsupportedValue)
 				}
-				sessionPersistence.Cookie.TTL = &metav1.Duration{Duration: ttl}
+				sessionPersistence.Cookie.TTL = ir.MetaV1DurationPtr(ttl)
 			}
 		case *rule.SessionPersistence.Type == gwapiv1.HeaderBasedSessionPersistence:
 			sessionPersistence = &ir.SessionPersistence{
@@ -919,6 +916,7 @@ func filterEGPrefix(in map[string]string) map[string]string {
 
 func (t *Translator) ProcessTLSRoutes(tlsRoutes []*gwapiv1a2.TLSRoute, gateways []*GatewayContext, resources *resource.Resources, xdsIR resource.XdsIRMap) []*TLSRouteContext {
 	var relevantTLSRoutes []*TLSRouteContext
+	// TLSRoutes are already sorted by the provider layer
 
 	for _, tls := range tlsRoutes {
 		if tls == nil {
@@ -1065,6 +1063,7 @@ func (t *Translator) ProcessUDPRoutes(udpRoutes []*gwapiv1a2.UDPRoute, gateways 
 	xdsIR resource.XdsIRMap,
 ) []*UDPRouteContext {
 	var relevantUDPRoutes []*UDPRouteContext
+	// UDPRoutes are already sorted by the provider layer
 
 	for _, u := range udpRoutes {
 		if u == nil {
@@ -1215,6 +1214,7 @@ func (t *Translator) ProcessTCPRoutes(tcpRoutes []*gwapiv1a2.TCPRoute, gateways 
 	xdsIR resource.XdsIRMap,
 ) []*TCPRouteContext {
 	var relevantTCPRoutes []*TCPRouteContext
+	// TCPRoutes are already sorted by the provider layer
 
 	for _, tcp := range tcpRoutes {
 		if tcp == nil {
@@ -1418,7 +1418,7 @@ func (t *Translator) processDestination(name string, backendRefContext BackendRe
 		ds = t.processServiceDestinationSetting(name, backendRef.BackendObjectReference, backendNamespace, protocol, resources, envoyProxy)
 		svc := resources.GetService(backendNamespace, string(backendRef.Name))
 		ds.IPFamily = getServiceIPFamily(svc)
-		ds.ZoneAwareRouting = processZoneAwareRouting(svc)
+		ds.PreferLocal = processPreferLocalZone(svc)
 
 	case egv1a1.KindBackend:
 		ds = t.processBackendDestinationSetting(name, backendRef.BackendObjectReference, backendNamespace, protocol, resources)
@@ -1427,6 +1427,18 @@ func (t *Translator) processDestination(name string, backendRefContext BackendRe
 		if t.isCustomBackendResource(backendRef.Group, KindDerefOr(backendRef.Kind, resource.KindService)) {
 			// Add the custom backend resource to ExtensionRefFilters so it can be processed by the extension system
 			unstructuredRef = t.processBackendExtensions(backendRef.BackendObjectReference, backendNamespace, resources)
+
+			// Check if the custom backend resource was found
+			if unstructuredRef == nil {
+				return nil, nil, status.NewRouteStatusError(
+					fmt.Errorf("custom backend %s %s/%s not found",
+						KindDerefOr(backendRef.Kind, resource.KindService),
+						backendNamespace,
+						backendRef.Name),
+					gwapiv1.RouteReasonBackendNotFound,
+				).WithType(gwapiv1.RouteConditionResolvedRefs)
+			}
+
 			return &ir.DestinationSetting{
 				Name:            name,
 				Weight:          &weight,
@@ -1449,7 +1461,6 @@ func (t *Translator) processDestination(name string, backendRefContext BackendRe
 		},
 		resources,
 		envoyProxy,
-		ds.IsDynamicResolver,
 	)
 	if tlsErr != nil {
 		return nil, nil, status.NewRouteStatusError(tlsErr, status.RouteReasonInvalidBackendTLS)
@@ -1539,7 +1550,7 @@ func (t *Translator) processServiceImportDestinationSetting(
 		// Fall back to Service ClusterIP routing
 		backendIps := resources.GetServiceImport(backendNamespace, string(backendRef.Name)).Spec.IPs
 		for _, ip := range backendIps {
-			ep := ir.NewDestEndpoint(ip, uint32(*backendRef.Port), false, nil)
+			ep := ir.NewDestEndpoint(nil, ip, uint32(*backendRef.Port), false, nil)
 			endpoints = append(endpoints, ep)
 		}
 	}
@@ -1586,17 +1597,17 @@ func (t *Translator) processServiceDestinationSetting(
 		endpoints, addrType = getIREndpointsFromEndpointSlices(endpointSlices, servicePort.Name, servicePort.Protocol)
 	} else {
 		// Fall back to Service ClusterIP routing
-		ep := ir.NewDestEndpoint(service.Spec.ClusterIP, uint32(*backendRef.Port), false, nil)
+		ep := ir.NewDestEndpoint(nil, service.Spec.ClusterIP, uint32(*backendRef.Port), false, nil)
 		endpoints = append(endpoints, ep)
 	}
 
 	return &ir.DestinationSetting{
-		Name:             name,
-		Protocol:         protocol,
-		Endpoints:        endpoints,
-		AddressType:      addrType,
-		ZoneAwareRouting: processZoneAwareRouting(service),
-		Metadata:         buildResourceMetadata(service, ptr.To(gwapiv1.SectionName(strconv.Itoa(int(*backendRef.Port))))),
+		Name:        name,
+		Protocol:    protocol,
+		Endpoints:   endpoints,
+		AddressType: addrType,
+		PreferLocal: processPreferLocalZone(service),
+		Metadata:    buildResourceMetadata(service, ptr.To(gwapiv1.SectionName(strconv.Itoa(int(*backendRef.Port))))),
 	}
 }
 
@@ -1616,14 +1627,17 @@ func getBackendFilters(routeType gwapiv1.Kind, backendRefContext BackendRefConte
 	return nil
 }
 
-func processZoneAwareRouting(svc *corev1.Service) *ir.ZoneAwareRouting {
+func processPreferLocalZone(svc *corev1.Service) *ir.PreferLocalZone {
 	if svc == nil {
 		return nil
 	}
 
 	if trafficDist := svc.Spec.TrafficDistribution; trafficDist != nil {
-		return &ir.ZoneAwareRouting{
-			MinSize: 1,
+		return &ir.PreferLocalZone{
+			MinEndpointsThreshold: ptr.To[uint64](1),
+			Force: &ir.ForceLocalZone{
+				MinEndpointsInZoneThreshold: ptr.To[uint32](1),
+			},
 		}
 	}
 
@@ -1632,8 +1646,11 @@ func processZoneAwareRouting(svc *corev1.Service) *ir.ZoneAwareRouting {
 	// https://kubernetes.io/docs/concepts/services-networking/topology-aware-routing/#enabling-topology-aware-routing
 	// https://github.com/kubernetes/kubernetes/blob/9d9e1afdf78bce0a517cc22557457f942040ca19/staging/src/k8s.io/endpointslice/utils.go#L355-L368
 	if val, ok := svc.Annotations[corev1.AnnotationTopologyMode]; ok && val == "Auto" || val == "auto" {
-		return &ir.ZoneAwareRouting{
-			MinSize: 3,
+		return &ir.PreferLocalZone{
+			MinEndpointsThreshold: ptr.To[uint64](3),
+			Force: &ir.ForceLocalZone{
+				MinEndpointsInZoneThreshold: ptr.To[uint32](3),
+			},
 		}
 	}
 
@@ -1840,12 +1857,12 @@ func getIREndpointsFromEndpointSlice(endpointSlice *discoveryv1.EndpointSlice, p
 				// Drain the endpoint if it is being terminated
 				draining := *conditions.Terminating
 				for _, address := range endpoint.Addresses {
-					ep := ir.NewDestEndpoint(address, uint32(*endpointPort.Port), draining, endpoint.Zone)
+					ep := ir.NewDestEndpoint(nil, address, uint32(*endpointPort.Port), draining, endpoint.Zone)
 					endpoints = append(endpoints, ep)
 				}
 			} else if conditions.Ready == nil || *conditions.Ready {
 				for _, address := range endpoint.Addresses {
-					ep := ir.NewDestEndpoint(address, uint32(*endpointPort.Port), false, endpoint.Zone)
+					ep := ir.NewDestEndpoint(nil, address, uint32(*endpointPort.Port), false, endpoint.Zone)
 					endpoints = append(endpoints, ep)
 				}
 			}
@@ -1980,13 +1997,13 @@ func (t *Translator) processBackendDestinationSetting(
 			ip := net.ParseIP(bep.IP.Address)
 			if ip != nil {
 				addrTypeMap[ir.IP]++
-				irde = ir.NewDestEndpoint(bep.IP.Address, uint32(bep.IP.Port), false, bep.Zone)
+				irde = ir.NewDestEndpoint(bep.Hostname, bep.IP.Address, uint32(bep.IP.Port), false, bep.Zone)
 			}
 		case bep.FQDN != nil:
 			addrTypeMap[ir.FQDN]++
-			irde = ir.NewDestEndpoint(bep.FQDN.Hostname, uint32(bep.FQDN.Port), false, bep.Zone)
+			irde = ir.NewDestEndpoint(bep.Hostname, bep.FQDN.Hostname, uint32(bep.FQDN.Port), false, bep.Zone)
 		case bep.Unix != nil:
-			addrTypeMap[ir.IP]++
+			addrTypeMap[ir.UDS]++
 			irde = &ir.DestinationEndpoint{
 				Path: ptr.To(bep.Unix.Path),
 				Zone: bep.Zone,
@@ -2066,7 +2083,7 @@ func getStatPattern(routeContext RouteContext, parentRef *RouteParentContext) st
 func buildStatName(pattern string, route RouteContext, ruleName *gwapiv1.SectionName, idx int, refs []string) string {
 	statName := strings.ReplaceAll(pattern, egv1a1.StatFormatterRouteName, route.GetName())
 	statName = strings.ReplaceAll(statName, egv1a1.StatFormatterRouteNamespace, route.GetNamespace())
-	statName = strings.ReplaceAll(statName, egv1a1.StatFormatterRouteKind, route.GetObjectKind().GroupVersionKind().Kind)
+	statName = strings.ReplaceAll(statName, egv1a1.StatFormatterRouteKind, strings.ToLower(route.GetObjectKind().GroupVersionKind().Kind))
 	if ruleName == nil {
 		statName = strings.ReplaceAll(statName, egv1a1.StatFormatterRouteRuleName, "-")
 	} else {

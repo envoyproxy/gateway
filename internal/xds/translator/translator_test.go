@@ -46,6 +46,7 @@ type testFileConfig struct {
 	requireEnvoyPatchPolicies bool
 	dnsDomain                 string
 	errMsg                    string
+	runtimeFlags              *egv1a1.RuntimeFlags
 }
 
 func TestTranslateXds(t *testing.T) {
@@ -134,6 +135,11 @@ func TestTranslateXds(t *testing.T) {
 		"tracing-unknown-provider-type": {
 			errMsg: "unknown tracing provider type: AwesomeTelemetry",
 		},
+		"xds-name-scheme-v2": {
+			runtimeFlags: &egv1a1.RuntimeFlags{
+				Enabled: []egv1a1.RuntimeFlag{egv1a1.XDSNameSchemeV2},
+			},
+		},
 	}
 
 	inputFiles, err := filepath.Glob(filepath.Join("testdata", "in", "xds-ir", "*.yaml"))
@@ -162,7 +168,8 @@ func TestTranslateXds(t *testing.T) {
 				GlobalRateLimit: &GlobalRateLimitSettings{
 					ServiceURL: ratelimit.GetServiceURL("envoy-gateway-system", dnsDomain),
 				},
-				FilterOrder: x.FilterOrder,
+				FilterOrder:  x.FilterOrder,
+				RuntimeFlags: cfg.runtimeFlags,
 			}
 			tCtx, err := tr.Translate(x)
 			if !strings.HasSuffix(inputFileName, "partial-invalid") && len(cfg.errMsg) == 0 {
@@ -317,6 +324,15 @@ func TestTranslateXdsWithExtensionErrorsWhenFailOpen(t *testing.T) {
 							egv1a1.XDSCluster,
 							egv1a1.XDSTranslation,
 						},
+						// Enable listeners and routes for PostTranslateModifyHook for these tests
+						Translation: &egv1a1.TranslationConfig{
+							Listener: &egv1a1.ListenerTranslationConfig{
+								IncludeAll: ptr.To(true),
+							},
+							Route: &egv1a1.RouteTranslationConfig{
+								IncludeAll: ptr.To(true),
+							},
+						},
 					},
 				},
 			}
@@ -448,6 +464,15 @@ func TestTranslateXdsWithExtensionErrorsWhenFailClosed(t *testing.T) {
 							egv1a1.XDSVirtualHost,
 							egv1a1.XDSHTTPListener,
 							egv1a1.XDSTranslation,
+						},
+						// Enable listeners and routes for PostTranslateModifyHook for these tests
+						Translation: &egv1a1.TranslationConfig{
+							Listener: &egv1a1.ListenerTranslationConfig{
+								IncludeAll: ptr.To(true),
+							},
+							Route: &egv1a1.RouteTranslationConfig{
+								IncludeAll: ptr.To(true),
+							},
 						},
 					},
 				},

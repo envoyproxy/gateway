@@ -187,7 +187,7 @@ func TestSecurityPolicyTarget(t *testing.T) {
 			wantErrors: []string{},
 		},
 		{
-			desc: "sectionName disabled until supported for kind xRoute - targetRef",
+			desc: "sectionName supported for kind xRoute - targetRef",
 			mutate: func(sp *egv1a1.SecurityPolicy) {
 				sp.Spec = egv1a1.SecurityPolicySpec{
 					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
@@ -202,12 +202,10 @@ func TestSecurityPolicyTarget(t *testing.T) {
 					},
 				}
 			},
-			wantErrors: []string{
-				"spec: Invalid value: \"object\": this policy supports the sectionName field only for kind Gateway",
-			},
+			wantErrors: []string{},
 		},
 		{
-			desc: "sectionName disabled until supported for kind xRoute - targetRefs",
+			desc: "sectionName supported for kind xRoute - targetRefs",
 			mutate: func(sp *egv1a1.SecurityPolicy) {
 				sp.Spec = egv1a1.SecurityPolicySpec{
 					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
@@ -224,9 +222,7 @@ func TestSecurityPolicyTarget(t *testing.T) {
 					},
 				}
 			},
-			wantErrors: []string{
-				"spec: Invalid value: \"object\": this policy supports the sectionName field only for kind Gateway",
-			},
+			wantErrors: []string{},
 		},
 
 		// cors
@@ -881,6 +877,71 @@ func TestSecurityPolicyTarget(t *testing.T) {
 				"spec.extAuth.grpc: Invalid value: \"object\": BackendRefs only supports Service, ServiceImport, and Backend kind.",
 			},
 		},
+		{
+			desc: "GRPC external auth service with timeout",
+			mutate: func(sp *egv1a1.SecurityPolicy) {
+				sp.Spec = egv1a1.SecurityPolicySpec{
+					ExtAuth: &egv1a1.ExtAuth{
+						GRPC: &egv1a1.GRPCExtAuthService{
+							BackendCluster: egv1a1.BackendCluster{
+								BackendRefs: []egv1a1.BackendRef{
+									{
+										BackendObjectReference: gwapiv1.BackendObjectReference{
+											Name: "grpc-auth-service",
+											Port: ptr.To(gwapiv1.PortNumber(15001)),
+										},
+									},
+								},
+							},
+						},
+						Timeout: ptr.To(gwapiv1.Duration("50s")),
+					},
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
+								Group: "gateway.networking.k8s.io",
+								Kind:  "Gateway",
+								Name:  "eg",
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "HTTP external auth service with timeout",
+			mutate: func(sp *egv1a1.SecurityPolicy) {
+				sp.Spec = egv1a1.SecurityPolicySpec{
+					ExtAuth: &egv1a1.ExtAuth{
+						HTTP: &egv1a1.HTTPExtAuthService{
+							BackendCluster: egv1a1.BackendCluster{
+								BackendRefs: []egv1a1.BackendRef{
+									{
+										BackendObjectReference: gwapiv1.BackendObjectReference{
+											Name: "http-auth-service",
+											Port: ptr.To(gwapiv1.PortNumber(8080)),
+										},
+									},
+								},
+							},
+							Path: ptr.To("/auth"),
+						},
+						Timeout: ptr.To(gwapiv1.Duration("2s")),
+					},
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
+								Group: "gateway.networking.k8s.io",
+								Kind:  "Gateway",
+								Name:  "eg",
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
 
 		// JWT
 		{
@@ -1319,12 +1380,8 @@ func TestSecurityPolicyTarget(t *testing.T) {
 										NumRetries: ptr.To(int32(3)),
 										PerRetry: &egv1a1.PerRetryPolicy{
 											BackOff: &egv1a1.BackOffPolicy{
-												BaseInterval: &metav1.Duration{
-													Duration: time.Second * 1,
-												},
-												MaxInterval: &metav1.Duration{
-													Duration: time.Second * 10,
-												},
+												BaseInterval: ptr.To(gwapiv1.Duration("1s")),
+												MaxInterval:  ptr.To(gwapiv1.Duration("10s")),
 											},
 										},
 										RetryOn: &egv1a1.RetryOn{
@@ -1339,7 +1396,7 @@ func TestSecurityPolicyTarget(t *testing.T) {
 							AuthorizationEndpoint: ptr.To("https://accounts.google.com/o/oauth2/v2/auth"),
 							TokenEndpoint:         ptr.To("https://oauth2.googleapis.com/token"),
 						},
-						ClientID: "client-id",
+						ClientID: ptr.To("client-id"),
 						ClientSecret: gwapiv1b1.SecretObjectReference{
 							Name: "secret",
 						},
@@ -1370,9 +1427,7 @@ func TestSecurityPolicyTarget(t *testing.T) {
 									Retry: &egv1a1.Retry{
 										NumRetries: ptr.To(int32(3)),
 										PerRetry: &egv1a1.PerRetryPolicy{
-											Timeout: &metav1.Duration{
-												Duration: time.Second * 10,
-											},
+											Timeout: ptr.To(gwapiv1.Duration("10s")),
 										},
 										RetryOn: &egv1a1.RetryOn{
 											HTTPStatusCodes: []egv1a1.HTTPStatus{500},
@@ -1384,7 +1439,7 @@ func TestSecurityPolicyTarget(t *testing.T) {
 							AuthorizationEndpoint: ptr.To("https://accounts.google.com/o/oauth2/v2/auth"),
 							TokenEndpoint:         ptr.To("https://oauth2.googleapis.com/token"),
 						},
-						ClientID: "client-id",
+						ClientID: ptr.To("client-id"),
 						ClientSecret: gwapiv1b1.SecretObjectReference{
 							Name: "secret",
 						},
@@ -1392,6 +1447,68 @@ func TestSecurityPolicyTarget(t *testing.T) {
 				}
 			},
 			wantErrors: []string{"Retry timeout is not supported", "HTTPStatusCodes is not supported"},
+		},
+		{
+			desc: "oidc-without-clientid",
+			mutate: func(sp *egv1a1.SecurityPolicy) {
+				sp.Spec = egv1a1.SecurityPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetSelectors: []egv1a1.TargetSelector{
+							{
+								Group: ptr.To(gwapiv1a2.Group("gateway.networking.k8s.io")),
+								Kind:  "HTTPRoute",
+								MatchLabels: map[string]string{
+									"eg/namespace": "reference-apps",
+								},
+							},
+						},
+					},
+					OIDC: &egv1a1.OIDC{
+						Provider: egv1a1.OIDCProvider{
+							Issuer:                "https://accounts.google.com",
+							AuthorizationEndpoint: ptr.To("https://accounts.google.com/o/oauth2/v2/auth"),
+							TokenEndpoint:         ptr.To("https://oauth2.googleapis.com/token"),
+						},
+						ClientSecret: gwapiv1b1.SecretObjectReference{
+							Name: "secret",
+						},
+					},
+				}
+			},
+			wantErrors: []string{"only one of clientID or clientIDRef must be set"},
+		},
+		{
+			desc: "oidc-two-clientids",
+			mutate: func(sp *egv1a1.SecurityPolicy) {
+				sp.Spec = egv1a1.SecurityPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetSelectors: []egv1a1.TargetSelector{
+							{
+								Group: ptr.To(gwapiv1a2.Group("gateway.networking.k8s.io")),
+								Kind:  "HTTPRoute",
+								MatchLabels: map[string]string{
+									"eg/namespace": "reference-apps",
+								},
+							},
+						},
+					},
+					OIDC: &egv1a1.OIDC{
+						Provider: egv1a1.OIDCProvider{
+							Issuer:                "https://accounts.google.com",
+							AuthorizationEndpoint: ptr.To("https://accounts.google.com/o/oauth2/v2/auth"),
+							TokenEndpoint:         ptr.To("https://oauth2.googleapis.com/token"),
+						},
+						ClientID: ptr.To("client-id"),
+						ClientIDRef: &gwapiv1b1.SecretObjectReference{
+							Name: "secret",
+						},
+						ClientSecret: gwapiv1b1.SecretObjectReference{
+							Name: "secret",
+						},
+					},
+				}
+			},
+			wantErrors: []string{"only one of clientID or clientIDRef must be set"},
 		},
 	}
 

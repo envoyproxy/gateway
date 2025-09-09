@@ -33,8 +33,10 @@ import (
 	"sigs.k8s.io/yaml"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 	"github.com/envoyproxy/gateway/internal/ir"
+	"github.com/envoyproxy/gateway/internal/utils"
 	"github.com/envoyproxy/gateway/internal/utils/field"
 	"github.com/envoyproxy/gateway/internal/utils/file"
 	"github.com/envoyproxy/gateway/internal/utils/test"
@@ -315,6 +317,83 @@ func TestTranslate(t *testing.T) {
 				},
 			)
 
+			svc := corev1.Service{
+				ObjectMeta: metav1.ObjectMeta{
+					// Matches proxy.ExpectedResourceHashedName()
+					Name:      fmt.Sprintf("%s-%s", config.EnvoyPrefix, utils.GetHashedName(string(translator.GatewayClassName), 48)),
+					Namespace: translator.ControllerNamespace,
+					Labels:    make(map[string]string),
+				},
+				Spec: corev1.ServiceSpec{
+					ClusterIP: "6.7.8.9",
+					Ports: []corev1.ServicePort{
+						{
+							Name:       "http",
+							Port:       8080,
+							TargetPort: intstr.IntOrString{IntVal: 8080},
+							Protocol:   corev1.ProtocolTCP,
+						},
+					},
+				},
+			}
+
+			endPtSlice := discoveryv1.EndpointSlice{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      svc.Name,
+					Namespace: svc.Namespace,
+					Labels: map[string]string{
+						discoveryv1.LabelServiceName: svc.Name,
+					},
+				},
+				AddressType: discoveryv1.AddressTypeIPv4,
+				Ports: []discoveryv1.EndpointPort{
+					{
+						Name:     ptr.To("http"),
+						Port:     ptr.To[int32](8080),
+						Protocol: ptr.To(corev1.ProtocolTCP),
+					},
+				},
+				Endpoints: []discoveryv1.Endpoint{
+					{
+						Addresses: []string{
+							"7.6.5.4",
+						},
+						Conditions: discoveryv1.EndpointConditions{
+							Ready: ptr.To(true),
+						},
+						Zone: ptr.To("zone1"),
+					},
+				},
+			}
+
+			if translator.MergeGateways {
+				svc.Labels[OwningGatewayClassLabel] = string(translator.GatewayClassName)
+				resources.Services = append(resources.Services, &svc)
+				resources.EndpointSlices = append(resources.EndpointSlices, &endPtSlice)
+			} else {
+				for _, g := range resources.Gateways {
+					gSvc := svc
+					if gatewayNamespaceMode {
+						// In gateway namespace mode, the service name is the same as the gateway name
+						// and the namespace is the gateway namespace.
+						gSvc.Name = g.Name
+						gSvc.Namespace = g.Namespace
+					} else {
+						gSvc.Name = fmt.Sprintf("%s-%s", config.EnvoyPrefix, utils.GetHashedName(fmt.Sprintf("%s/%s", g.Namespace, g.Name), 48))
+					}
+
+					gSvc.Labels[OwningGatewayNameLabel] = g.Name
+					gSvc.Labels[OwningGatewayNamespaceLabel] = g.Namespace
+					gEndPtSlice := endPtSlice
+					gEndPtSlice.Name = gSvc.Name
+					gEndPtSlice.Labels[discoveryv1.LabelServiceName] = gSvc.Name
+					gEndPtSlice.Labels[OwningGatewayNameLabel] = g.Name
+					gEndPtSlice.Labels[OwningGatewayNamespaceLabel] = g.Namespace
+					resources.Services = append(resources.Services, &gSvc)
+					resources.EndpointSlices = append(resources.EndpointSlices, &gEndPtSlice)
+				}
+			}
+
 			resources.Namespaces = append(resources.Namespaces, &corev1.Namespace{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "envoy-gateway",
@@ -344,7 +423,6 @@ func TestTranslate(t *testing.T) {
 
 			opts := []cmp.Option{
 				cmpopts.IgnoreFields(metav1.Condition{}, "LastTransitionTime"),
-				cmpopts.IgnoreFields(resource.Resources{}, "serviceMap"),
 				cmp.Transformer("ClearXdsEqual", xdsWithoutEqual),
 				cmpopts.IgnoreTypes(ir.PrivateBytes{}),
 				cmpopts.EquateEmpty(),
@@ -514,6 +592,82 @@ func TestTranslateWithExtensionKinds(t *testing.T) {
 				},
 			)
 
+			svc := corev1.Service{
+				ObjectMeta: metav1.ObjectMeta{
+					// Matches proxy.ExpectedResourceHashedName()
+					Name:      fmt.Sprintf("%s-%s", config.EnvoyPrefix, utils.GetHashedName(string(translator.GatewayClassName), 48)),
+					Namespace: translator.ControllerNamespace,
+					Labels:    make(map[string]string),
+				},
+				Spec: corev1.ServiceSpec{
+					ClusterIP: "6.7.8.9",
+					Ports: []corev1.ServicePort{
+						{
+							Name:       "http",
+							Port:       8080,
+							TargetPort: intstr.IntOrString{IntVal: 8080},
+							Protocol:   corev1.ProtocolTCP,
+						},
+					},
+				},
+			}
+
+			endPtSlice := discoveryv1.EndpointSlice{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      svc.Name,
+					Namespace: svc.Namespace,
+					Labels: map[string]string{
+						discoveryv1.LabelServiceName: svc.Name,
+					},
+				},
+				AddressType: discoveryv1.AddressTypeIPv4,
+				Ports: []discoveryv1.EndpointPort{
+					{
+						Name:     ptr.To("http"),
+						Port:     ptr.To[int32](8080),
+						Protocol: ptr.To(corev1.ProtocolTCP),
+					},
+				},
+				Endpoints: []discoveryv1.Endpoint{
+					{
+						Addresses: []string{
+							"7.6.5.4",
+						},
+						Conditions: discoveryv1.EndpointConditions{
+							Ready: ptr.To(true),
+						},
+						Zone: ptr.To("zone1"),
+					},
+				},
+			}
+
+			if translator.MergeGateways {
+				svc.Labels[OwningGatewayClassLabel] = string(translator.GatewayClassName)
+				resources.Services = append(resources.Services, &svc)
+				resources.EndpointSlices = append(resources.EndpointSlices, &endPtSlice)
+			} else {
+				for _, g := range resources.Gateways {
+					if g == nil {
+						panic("nil Gateway")
+					}
+					gSvc := svc
+					gSvc.
+						Labels[OwningGatewayNameLabel] = g.
+						Name
+					gSvc.Labels[OwningGatewayNamespaceLabel] = g.
+						Namespace
+					// Matches proxy.ExpectedResourceHashedName()
+					gSvc.Name = fmt.Sprintf("%s-%s", config.EnvoyPrefix, utils.GetHashedName(fmt.Sprintf("%s/%s", g.Namespace, g.Name), 48))
+					gEndPtSlice := endPtSlice
+					gEndPtSlice.Name = gSvc.Name
+					gEndPtSlice.Labels[discoveryv1.LabelServiceName] = gSvc.Name
+					gEndPtSlice.Labels[OwningGatewayNameLabel] = g.Name
+					gEndPtSlice.Labels[OwningGatewayNamespaceLabel] = g.Namespace
+					resources.Services = append(resources.Services, &gSvc)
+					resources.EndpointSlices = append(resources.EndpointSlices, &gEndPtSlice)
+				}
+			}
+
 			resources.Namespaces = append(resources.Namespaces, &corev1.Namespace{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "envoy-gateway",
@@ -547,7 +701,6 @@ func TestTranslateWithExtensionKinds(t *testing.T) {
 
 			opts := []cmp.Option{
 				cmpopts.IgnoreFields(metav1.Condition{}, "LastTransitionTime"),
-				cmpopts.IgnoreFields(resource.Resources{}, "serviceMap"),
 			}
 			require.Empty(t, cmp.Diff(want, got, opts...))
 		})

@@ -6,13 +6,16 @@
 package v1alpha1
 
 import (
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 )
 
-const OIDCClientSecretKey = "client-secret"
+const (
+	OIDCClientSecretKey = "client-secret"
+	OIDCClientIDKey     = "client-id"
+)
 
 // OIDC defines the configuration for the OpenID Connect (OIDC) authentication.
+// +kubebuilder:validation:XValidation:rule="(has(self.clientID) && !has(self.clientIDRef)) || (!has(self.clientID) && has(self.clientIDRef))", message="only one of clientID or clientIDRef must be set"
 type OIDC struct {
 	// The OIDC Provider configuration.
 	Provider OIDCProvider `json:"provider"`
@@ -20,8 +23,20 @@ type OIDC struct {
 	// The client ID to be used in the OIDC
 	// [Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest).
 	//
+	// Only one of clientID or clientIDRef must be set.
+	// +optional
 	// +kubebuilder:validation:MinLength=1
-	ClientID string `json:"clientID"`
+	ClientID *string `json:"clientID,omitempty"`
+
+	// The Kubernetes secret which contains the client ID to be used in the
+	// [Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest).
+	// Exactly one of clientID or clientIDRef must be set.
+	// This is an Opaque secret. The client ID should be stored in the key "client-id".
+	//
+	// Only one of clientID or clientIDRef must be set.
+	//
+	// +optional
+	ClientIDRef *gwapiv1.SecretObjectReference `json:"clientIDRef,omitempty"`
 
 	// The Kubernetes secret which contains the OIDC client secret to be used in the
 	// [Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest).
@@ -94,7 +109,7 @@ type OIDC struct {
 	// OAuth flow will fail.
 	//
 	// +optional
-	DefaultTokenTTL *metav1.Duration `json:"defaultTokenTTL,omitempty"`
+	DefaultTokenTTL *gwapiv1.Duration `json:"defaultTokenTTL,omitempty"`
 
 	// RefreshToken indicates whether the Envoy should automatically refresh the
 	// id token and access token when they expire.
@@ -111,8 +126,9 @@ type OIDC struct {
 	//
 	// If not specified, defaults to 604800s (one week).
 	// Note: this field is only applicable when the "refreshToken" field is set to true.
+	//
 	// +optional
-	DefaultRefreshTokenTTL *metav1.Duration `json:"defaultRefreshTokenTTL,omitempty"`
+	DefaultRefreshTokenTTL *gwapiv1.Duration `json:"defaultRefreshTokenTTL,omitempty"`
 
 	// Skips OIDC authentication when the request contains a header that will be extracted by the JWT filter. Unless
 	// explicitly stated otherwise in the extractFrom field, this will be the "Authorization: Bearer ..." header.

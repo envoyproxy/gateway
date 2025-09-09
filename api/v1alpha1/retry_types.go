@@ -6,7 +6,7 @@
 package v1alpha1
 
 import (
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 )
 
 // Retry defines the retry strategy to be applied.
@@ -51,7 +51,7 @@ type RetryOn struct {
 }
 
 // TriggerEnum specifies the conditions that trigger retries.
-// +kubebuilder:validation:Enum={"5xx","gateway-error","reset","connect-failure","retriable-4xx","refused-stream","retriable-status-codes","cancelled","deadline-exceeded","internal","resource-exhausted","unavailable"}
+// +kubebuilder:validation:Enum={"5xx","gateway-error","reset","reset-before-request","connect-failure","retriable-4xx","refused-stream","retriable-status-codes","cancelled","deadline-exceeded","internal","resource-exhausted","unavailable"}
 type TriggerEnum string
 
 const (
@@ -65,6 +65,8 @@ const (
 	GatewayError TriggerEnum = "gateway-error"
 	// The upstream server does not respond at all (disconnect/reset/read timeout.)
 	Reset TriggerEnum = "reset"
+	// Like reset, but only retry if the request headers have not been sent to the upstream server.
+	ResetBeforeRequest TriggerEnum = "reset-before-request"
 	// Connection failure to the upstream server (connect timeout, etc.). (Included in *5xx*)
 	ConnectFailure TriggerEnum = "connect-failure"
 	// The upstream server responds with a retriable 4xx response code.
@@ -94,8 +96,7 @@ type PerRetryPolicy struct {
 	// Timeout is the timeout per retry attempt.
 	//
 	// +optional
-	// +kubebuilder:validation:Format=duration
-	Timeout *metav1.Duration `json:"timeout,omitempty"`
+	Timeout *gwapiv1.Duration `json:"timeout,omitempty"`
 	// Backoff is the backoff policy to be applied per retry attempt. gateway uses a fully jittered exponential
 	// back-off algorithm for retries. For additional details,
 	// see https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_filters/router_filter#config-http-filters-router-x-envoy-max-retries
@@ -107,13 +108,12 @@ type PerRetryPolicy struct {
 type BackOffPolicy struct {
 	// BaseInterval is the base interval between retries.
 	//
-	// +kubebuilder:validation:Format=duration
-	BaseInterval *metav1.Duration `json:"baseInterval,omitempty"`
+	// +optional
+	BaseInterval *gwapiv1.Duration `json:"baseInterval,omitempty"`
 	// MaxInterval is the maximum interval between retries. This parameter is optional, but must be greater than or equal to the base_interval if set.
 	// The default is 10 times the base_interval
 	//
 	// +optional
-	// +kubebuilder:validation:Format=duration
-	MaxInterval *metav1.Duration `json:"maxInterval,omitempty"`
+	MaxInterval *gwapiv1.Duration `json:"maxInterval,omitempty"`
 	// we can add rate limited based backoff config here if we want to.
 }

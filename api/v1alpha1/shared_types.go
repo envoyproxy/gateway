@@ -231,7 +231,7 @@ type KubernetesContainerSpec struct {
 	// Image specifies the EnvoyProxy container image to be used including a tag, instead of the default image.
 	// This field is mutually exclusive with ImageRepository.
 	//
-	// +kubebuilder:validation:XValidation:rule="self.matches('^[a-zA-Z0-9._/-]+:[a-zA-Z0-9._-]+$')",message="Image must include a tag and allowed characters only (e.g., 'repo:tag')."
+	// +kubebuilder:validation:XValidation:rule="self.matches('^[a-zA-Z0-9._-]+(:[0-9]+)?(/[a-zA-Z0-9._/-]+)?(:[a-zA-Z0-9._-]+)?(@sha256:[a-z0-9]+)?$')",message="Image must include a tag and allowed characters only (e.g., 'repo:tag')."
 	// +optional
 	Image *string `json:"image,omitempty"`
 
@@ -239,7 +239,7 @@ type KubernetesContainerSpec struct {
 	// The default tag will be used.
 	// This field is mutually exclusive with Image.
 	//
-	// +kubebuilder:validation:XValidation:rule="self.matches('^[a-zA-Z0-9._/-]+$')",message="ImageRepository must contain only allowed characters and must not include a tag or any colons."
+	// +kubebuilder:validation:XValidation:rule="self.matches('^[a-zA-Z0-9._-]+(:[0-9]+)?[a-zA-Z0-9._/-]+$')",message="ImageRepository must contain only allowed characters and must not include a tag."
 	// +optional
 	ImageRepository *string `json:"imageRepository,omitempty"`
 
@@ -879,4 +879,85 @@ type CustomRedirect struct {
 	// +kubebuilder:default=302
 	// +kubebuilder:validation:Enum=301;302
 	StatusCode *int `json:"statusCode,omitempty"`
+}
+
+// HTTPHeaderFilter has been copied from the upstream Gateway API project
+// https://github.com/kubernetes-sigs/gateway-api/blob/main/apis/v1/httproute_types.go
+// and edited to increase the maxItems from 16 to 64
+// Remove this definition and reuse the upstream one once it supports items more than 64
+
+// HTTPHeaderFilter defines a filter that modifies the headers of an HTTP
+// request or response. Only one action for a given header name is
+// permitted. Filters specifying multiple actions of the same or different
+// type for any one header name are invalid. Configuration to set or add
+// multiple values for a header must use RFC 7230 header value formatting,
+// separating each value with a comma.
+type HTTPHeaderFilter struct {
+	// Set overwrites the request with the given header (name, value)
+	// before the action.
+	//
+	// Input:
+	//   GET /foo HTTP/1.1
+	//   my-header: foo
+	//
+	// Config:
+	//   set:
+	//   - name: "my-header"
+	//     value: "bar"
+	//
+	// Output:
+	//   GET /foo HTTP/1.1
+	//   my-header: bar
+	//
+	// +optional
+	// +listType=map
+	// +listMapKey=name
+	// +kubebuilder:validation:MaxItems=64
+	Set []gwapiv1.HTTPHeader `json:"set,omitempty"`
+
+	// Add adds the given header(s) (name, value) to the request
+	// before the action. It appends to any existing values associated
+	// with the header name.
+	//
+	// Input:
+	//   GET /foo HTTP/1.1
+	//   my-header: foo
+	//
+	// Config:
+	//   add:
+	//   - name: "my-header"
+	//     value: "bar,baz"
+	//
+	// Output:
+	//   GET /foo HTTP/1.1
+	//   my-header: foo,bar,baz
+	//
+	// +optional
+	// +listType=map
+	// +listMapKey=name
+	// +kubebuilder:validation:MaxItems=64
+	Add []gwapiv1.HTTPHeader `json:"add,omitempty"`
+
+	// Remove the given header(s) from the HTTP request before the action. The
+	// value of Remove is a list of HTTP header names. Note that the header
+	// names are case-insensitive (see
+	// https://datatracker.ietf.org/doc/html/rfc2616#section-4.2).
+	//
+	// Input:
+	//   GET /foo HTTP/1.1
+	//   my-header1: foo
+	//   my-header2: bar
+	//   my-header3: baz
+	//
+	// Config:
+	//   remove: ["my-header1", "my-header3"]
+	//
+	// Output:
+	//   GET /foo HTTP/1.1
+	//   my-header2: bar
+	//
+	// +optional
+	// +listType=set
+	// +kubebuilder:validation:MaxItems=64
+	Remove []string `json:"remove,omitempty"`
 }

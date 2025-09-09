@@ -72,6 +72,7 @@ func buildXdsRoute(httpRoute *ir.HTTPRoute, httpListener *ir.HTTPListener) (*rou
 		router.Action = &routev3.Route_Redirect{Redirect: buildXdsRedirectAction(httpRoute)}
 	case httpRoute.URLRewrite != nil:
 		routeAction := buildXdsURLRewriteAction(httpRoute.Destination.Name, httpRoute.URLRewrite, httpRoute.PathMatch)
+		routeAction.IdleTimeout = idleTimeout(httpRoute)
 		if httpRoute.Mirrors != nil {
 			routeAction.RequestMirrorPolicies = buildXdsRequestMirrorPolicies(httpRoute.Mirrors)
 		}
@@ -82,8 +83,7 @@ func buildXdsRoute(httpRoute *ir.HTTPRoute, httpListener *ir.HTTPListener) (*rou
 
 		router.Action = &routev3.Route_Route{Route: routeAction}
 	default:
-		backendWeights := httpRoute.Destination.ToBackendWeights()
-		routeAction := buildXdsRouteAction(backendWeights, httpRoute.Destination)
+		routeAction := buildXdsRouteAction(httpRoute)
 		routeAction.IdleTimeout = idleTimeout(httpRoute)
 
 		if httpRoute.Mirrors != nil {
@@ -284,10 +284,11 @@ func buildXdsStringMatcher(irMatch *ir.StringMatch) *matcherv3.StringMatcher {
 	return stringMatcher
 }
 
-func buildXdsRouteAction(backendWeights *ir.BackendWeights, dest *ir.RouteDestination) *routev3.RouteAction {
+func buildXdsRouteAction(route *ir.HTTPRoute) *routev3.RouteAction {
+	backendWeights := route.Destination.ToBackendWeights()
 	// only use weighted cluster when there are invalid weights
-	if dest.NeedsClusterPerSetting() || backendWeights.Invalid != 0 {
-		return buildXdsWeightedRouteAction(backendWeights, dest.Settings)
+	if route.NeedsClusterPerSetting() || backendWeights.Invalid != 0 {
+		return buildXdsWeightedRouteAction(backendWeights, route.Destination.Settings)
 	}
 
 	return &routev3.RouteAction{
@@ -625,7 +626,11 @@ func buildHashPolicy(httpRoute *ir.HTTPRoute) []*routev3.RouteAction_HashPolicy 
 			},
 		}
 		if ch.Cookie.TTL != nil {
-			hashPolicy.GetCookie().Ttl = durationpb.New(ch.Cookie.TTL.Duration)
+			d, err := time.ParseDuration(string(*ch.Cookie.TTL))
+			if err != nil {
+				return nil
+			}
+			hashPolicy.GetCookie().Ttl = durationpb.New(d)
 		}
 		if ch.Cookie.Attributes != nil {
 			attributes := make([]*routev3.RouteAction_HashPolicy_CookieAttribute, 0, len(ch.Cookie.Attributes))
@@ -771,6 +776,7 @@ func buildRetryOn(triggers []ir.TriggerEnum) (string, error) {
 		ir.Error5XX:             "5xx",
 		ir.GatewayError:         "gateway-error",
 		ir.Reset:                "reset",
+		ir.ResetBeforeRequest:   "reset-before-request",
 		ir.ConnectFailure:       "connect-failure",
 		ir.Retriable4XX:         "retriable-4xx",
 		ir.RefusedStream:        "refused-stream",

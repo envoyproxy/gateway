@@ -10,6 +10,7 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 	"github.com/envoyproxy/gateway/internal/ir"
@@ -18,7 +19,26 @@ import (
 const envoyTLSSecretName = "envoy"
 
 // ProcessGlobalResources processes global resources that are not tied to a specific listener or route
-func (t *Translator) ProcessGlobalResources(resources *resource.Resources, xdsIRs resource.XdsIRMap) error {
+func (t *Translator) ProcessGlobalResources(resources *resource.Resources, xdsIRs resource.XdsIRMap, gateways []*GatewayContext) error {
+	// Add the ProxyServiceCluster information for each gateway to the IR map
+	for _, gateway := range gateways {
+		// Get the gateway IR key and RouteDestination representing the ProxyServiceCluster
+		irKey, rDest := t.processServiceClusterForGateway(gateway, resources)
+
+		if xdsIRs[irKey] == nil {
+			continue
+		}
+		if xdsIRs[irKey].GlobalResources == nil {
+			xdsIRs[irKey].GlobalResources = &ir.GlobalResources{}
+		}
+		xdsIRs[irKey].GlobalResources.ProxyServiceCluster = rDest
+
+		// For merged gateways we only need to process once
+		if t.MergeGateways {
+			break
+		}
+	}
+
 	// Get the envoy client TLS secret. It is used for envoy to establish a TLS connection with control plane components,
 	// including the rate limit server and the wasm HTTP server.
 	envoyTLSSecret := resources.GetSecret(t.ControllerNamespace, envoyTLSSecretName)
@@ -28,7 +48,9 @@ func (t *Translator) ProcessGlobalResources(resources *resource.Resources, xdsIR
 
 	for _, xdsIR := range xdsIRs {
 		if containsGlobalRateLimit(xdsIR.HTTP) || containsWasm(xdsIR.HTTP) {
-			xdsIR.GlobalResources = &ir.GlobalResources{}
+			if xdsIR.GlobalResources == nil {
+				xdsIR.GlobalResources = &ir.GlobalResources{}
+			}
 			xdsIR.GlobalResources.EnvoyClientCertificate = &ir.TLSCertificate{
 				Name:        irGlobalConfigName(envoyTLSSecret),
 				Certificate: envoyTLSSecret.Data[corev1.TLSCertKey],
@@ -36,7 +58,39 @@ func (t *Translator) ProcessGlobalResources(resources *resource.Resources, xdsIR
 			}
 		}
 	}
+
 	return nil
+}
+
+// processServiceClusterForGateway returns the matching IR key for a gateway and builds a RouteDestination to represent the ProxyServiceCluster
+func (t *Translator) processServiceClusterForGateway(gateway *GatewayContext, resources *resource.Resources) (string, *ir.RouteDestination) {
+	irKey := t.getIRKey(gateway.Gateway)
+	labels := OwnerLabels(gateway.Gateway, t.MergeGateways)
+
+	svcClusterNamespace := t.ControllerNamespace
+	if t.GatewayNamespaceMode {
+		svcClusterNamespace = gateway.Namespace
+	}
+	svcCluster := resources.GetServiceByLabels(labels, svcClusterNamespace)
+
+	// Service lookup fails on first iteration
+	if svcCluster == nil {
+		return "", nil
+	}
+
+	bRef := gwapiv1.BackendObjectReference{
+		Group:     GroupPtr(svcCluster.GroupVersionKind().Group),
+		Kind:      KindPtr(svcCluster.Kind),
+		Name:      gwapiv1.ObjectName(svcCluster.Name),
+		Namespace: NamespacePtr(svcCluster.Namespace),
+		Port:      PortNumPtr(svcCluster.Spec.Ports[0].Port),
+	}
+	dst := t.processServiceDestinationSetting(irKey, bRef, svcCluster.Namespace, ir.AppProtocol(svcCluster.Spec.Ports[0].Protocol), resources, resources.EnvoyProxyForGatewayClass)
+
+	return irKey, &ir.RouteDestination{
+		Name:     dst.Name,
+		Settings: []*ir.DestinationSetting{dst},
+	}
 }
 
 func irGlobalConfigName(object metav1.Object) string {

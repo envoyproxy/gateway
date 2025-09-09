@@ -3,7 +3,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.17.3
+    controller-gen.kubebuilder.io/version: v0.18.0
   name: backends.gateway.envoyproxy.io
 spec:
   group: gateway.envoyproxy.io
@@ -92,6 +92,13 @@ spec:
                       - hostname
                       - port
                       type: object
+                    hostname:
+                      description: Hostname defines an optional hostname for the backend
+                        endpoint.
+                      maxLength: 253
+                      minLength: 1
+                      pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                      type: string
                     ip:
                       description: IP defines an IP endpoint. Supports both IPv4 and
                         IPv6 addresses.
@@ -156,8 +163,9 @@ spec:
               tls:
                 description: |-
                   TLS defines the TLS settings for the backend.
-                  TLS.CACertificateRefs and TLS.WellKnownCACertificates can only be specified for DynamicResolver backends.
-                  TLS.InsecureSkipVerify can be specified for any Backends
+                  If TLS is specified here and a BackendTLSPolicy is also configured for the backend, the final TLS settings will
+                  be a merge of both configurations. In case of overlapping fields, the values defined in the BackendTLSPolicy will
+                  take precedence.
                 properties:
                   caCertificateRefs:
                     description: |-
@@ -171,8 +179,6 @@ spec:
                       If CACertificateRefs is empty or unspecified, then WellKnownCACertificates must be
                       specified. Only one of CACertificateRefs or WellKnownCACertificates may be specified,
                       not both.
-
-                      Only used for DynamicResolver backends.
                     items:
                       description: |-
                         LocalObjectReference identifies an API object within the namespace of the
@@ -224,8 +230,6 @@ spec:
                       If WellKnownCACertificates is unspecified or empty (""), then CACertificateRefs
                       must be specified with at least one entry for a valid configuration. Only one of
                       CACertificateRefs or WellKnownCACertificates may be specified, not both.
-
-                      Only used for DynamicResolver backends.
                     enum:
                     - System
                     type: string

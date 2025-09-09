@@ -169,8 +169,8 @@ envoyExtensionPolicies:
       - lastTransitionTime: null
         message: "Wasm: secret default/my-pull-secret-1 does not exist\nLua: validation
           failed for lua body in policy with name envoyextensionpolicy/default/policy-for-httproute-4/lua/0:
-          failed to validate with envoy_on_response: <string>:614: attempt to call
-          a non-function object\nstack traceback:\n\t<string>:614: in function 'envoy_on_response'\n\t<string>:615:
+          failed to validate with envoy_on_response: <string>:612: attempt to call
+          a non-function object\nstack traceback:\n\t<string>:612: in function 'envoy_on_response'\n\t<string>:613:
           in main chunk\n\t[G]: ?."
         reason: Invalid
         status: "False"
@@ -704,6 +704,7 @@ xdsIR:
       - path: /dev/stdout
     http:
     - address: 0.0.0.0
+      externalPort: 80
       hostnames:
       - '*'
       isHTTP2: false
@@ -851,6 +852,7 @@ xdsIR:
       - path: /dev/stdout
     http:
     - address: 0.0.0.0
+      externalPort: 80
       hostnames:
       - '*'
       isHTTP2: false
@@ -932,8 +934,19 @@ xdsIR:
     accessLog:
       json:
       - path: /dev/stdout
+    globalResources:
+      proxyServiceCluster:
+        name: default/gateway-3
+        settings:
+        - metadata:
+            name: envoy-default-gateway-1-bfd08ef4
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: default/gateway-3
+          protocol: TCP
     http:
     - address: 0.0.0.0
+      externalPort: 80
       hostnames:
       - '*'
       isHTTP2: false

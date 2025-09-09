@@ -16,12 +16,11 @@ jobs:
     runs-on: ubuntu-22.04
     steps:
     - name: Checkout code
-      uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+      uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8  # v5.0.0
     - name: Run scanner
-      uses: google/osv-scanner-action/osv-scanner-action@40a8940a65eab1544a6af759e43d936201a131a2  # v2.0.3
-      continue-on-error: true  # remove this after https://github.com/google/deps.dev/issues/146 has been resolved
+      uses: google/osv-scanner-action/osv-scanner-action@90b209d0ea55cea1da9fc0c4e65782cc6acb6e2e  # v2.2.2
       with:
-        scan-args: |-
-          --licenses=Apache-2.0,BSD-2-Clause,BSD-2-Clause-FreeBSD,BSD-3-Clause,MIT,ISC,Python-2.0,PostgreSQL,X11,Zlib
+        scan-args: |-  # See allowed licenses at https://github.com/cncf/foundation/blob/main/policies-guidance/allowed-third-party-license-policy.md#approved-licenses-for-allowlist
+          --licenses=Apache-2.0,0BSD,BSD-2-Clause,BSD-2-Clause-FreeBSD,BSD-3-Clause,MIT,MIT-0,ISC,OpenSSL,OpenSSL-standalone,PSF-2.0,Python-2.0,Python-2.0.1,PostgreSQL,SSLeay-standalone,UPL-1.0,X11,Zlib
           --config tools/osv-scanner/license-scan-config.toml
           ./

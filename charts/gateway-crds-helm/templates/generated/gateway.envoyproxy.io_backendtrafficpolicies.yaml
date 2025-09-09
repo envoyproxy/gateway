@@ -4,7 +4,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.17.3
+    controller-gen.kubebuilder.io/version: v0.18.0
   name: backendtrafficpolicies.gateway.envoyproxy.io
 spec:
   group: gateway.envoyproxy.io
@@ -177,6 +177,7 @@ spec:
                     description: |-
                       DNSRefreshRate specifies the rate at which DNS records should be refreshed.
                       Defaults to 30 seconds.
+                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                     type: string
                   lookupFamily:
                     description: |-
@@ -235,6 +236,7 @@ spec:
                     properties:
                       fixedDelay:
                         description: FixedDelay specifies the fixed delay duration
+                        pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                         type: string
                       percentage:
                         default: 100
@@ -345,11 +347,17 @@ spec:
                         required:
                         - path
                         type: object
+                      initialJitter:
+                        description: |-
+                          InitialJitter defines the maximum time Envoy will wait before the first health check.
+                          Envoy will randomly select a value between 0 and the initial jitter value.
+                        pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                        type: string
                       interval:
                         default: 3s
                         description: Interval defines the time between active health
                           checks.
-                        format: duration
+                        pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                         type: string
                       tcp:
                         description: |-
@@ -423,7 +431,7 @@ spec:
                         default: 1s
                         description: Timeout defines the time to wait for a health
                           check response.
-                        format: duration
+                        pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                         type: string
                       type:
                         allOf:
@@ -474,7 +482,7 @@ spec:
                         default: 30s
                         description: BaseEjectionTime defines the base duration for
                           which a host will be ejected on consecutive failures.
-                        format: duration
+                        pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                         type: string
                       consecutive5XxErrors:
                         default: 5
@@ -499,7 +507,7 @@ spec:
                         default: 3s
                         description: Interval defines the time between passive health
                           checks.
-                        format: duration
+                        pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                         type: string
                       maxEjectionPercent:
                         default: 10
@@ -618,6 +626,7 @@ spec:
                             description: |-
                               TTL of the generated cookie if the cookie is not present. This value sets the
                               Max-Age attribute value.
+                            pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                             type: string
                         required:
                         - name
@@ -661,6 +670,34 @@ spec:
                     - message: If consistent hash type is cookie, the cookie field
                         must be set.
                       rule: 'self.type == ''Cookie'' ? has(self.cookie) : !has(self.cookie)'
+                  endpointOverride:
+                    description: |-
+                      EndpointOverride defines the configuration for endpoint override.
+                      When specified, the load balancer will attempt to route requests to endpoints
+                      based on the override information extracted from request headers or metadata.
+                       If the override endpoints are not available, the configured load balancer policy will be used as fallback.
+                    properties:
+                      extractFrom:
+                        description: ExtractFrom defines the sources to extract endpoint
+                          override information from.
+                        items:
+                          description: EndpointOverrideExtractFrom defines a source
+                            to extract endpoint override information from.
+                          properties:
+                            header:
+                              description: |-
+                                Header defines the header to get the override endpoint addresses.
+                                The header value must specify at least one endpoint in `IP:Port` format or multiple endpoints in `IP:Port,IP:Port,...` format.
+                                For example `10.0.0.5:8080` or `[2600:4040:5204::1574:24ae]:80`.
+                                The IPv6 address is enclosed in square brackets.
+                              type: string
+                          type: object
+                        maxItems: 10
+                        minItems: 1
+                        type: array
+                    required:
+                    - extractFrom
+                    type: object
                   slowStart:
                     description: |-
                       SlowStart defines the configuration related to the slow start load balancer policy.
@@ -673,6 +710,7 @@ spec:
                           During slow start window, traffic sent to the newly added hosts will gradually increase.
                           Currently only supports linear growth of traffic. For additional details,
                           see https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/cluster/v3/cluster.proto#config-cluster-v3-cluster-slowstartconfig
+                        pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                         type: string
                     required:
                     - window
@@ -993,12 +1031,14 @@ spec:
                                 unit:
                                   description: |-
                                     RateLimitUnit specifies the intervals for setting rate limits.
-                                    Valid RateLimitUnit values are "Second", "Minute", "Hour", and "Day".
+                                    Valid RateLimitUnit values are "Second", "Minute", "Hour", "Day", "Month" and "Year".
                                   enum:
                                   - Second
                                   - Minute
                                   - Hour
                                   - Day
+                                  - Month
+                                  - Year
                                   type: string
                               required:
                               - requests
@@ -1242,12 +1282,14 @@ spec:
                                 unit:
                                   description: |-
                                     RateLimitUnit specifies the intervals for setting rate limits.
-                                    Valid RateLimitUnit values are "Second", "Minute", "Hour", and "Day".
+                                    Valid RateLimitUnit values are "Second", "Minute", "Hour", "Day", "Month" and "Year".
                                   enum:
                                   - Second
                                   - Minute
                                   - Hour
                                   - Day
+                                  - Month
+                                  - Year
                                   type: string
                               required:
                               - requests
@@ -1746,18 +1788,18 @@ spec:
                           baseInterval:
                             description: BaseInterval is the base interval between
                               retries.
-                            format: duration
+                            pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                             type: string
                           maxInterval:
                             description: |-
                               MaxInterval is the maximum interval between retries. This parameter is optional, but must be greater than or equal to the base_interval if set.
                               The default is 10 times the base_interval
-                            format: duration
+                            pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                             type: string
                         type: object
                       timeout:
                         description: Timeout is the timeout per retry attempt.
-                        format: duration
+                        pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                         type: string
                     type: object
                   retryOn:
@@ -1786,6 +1828,7 @@ spec:
                           - 5xx
                           - gateway-error
                           - reset
+                          - reset-before-request
                           - connect-failure
                           - retriable-4xx
                           - refused-stream

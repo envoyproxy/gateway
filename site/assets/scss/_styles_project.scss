@@ -10,6 +10,7 @@ $dark: #1E1B4B;
 $gray-100: #F5F3FF;
 $gray-200: #E9E8FF;
 $white: #ffffff;
+$light-purple: #8c87ec;
 
 
 // Gradient colors
@@ -86,6 +87,51 @@ $gradient-end: #4F46E5; // Indigo
 
   &:hover {
     background: rgba(255, 255, 255, 0.2);
+    border-color: rgba(255, 255, 255, 0.4);
+    color: $white !important;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    text-decoration: none !important;
+  }
+
+  &:active {
+    transform: translateY(0);
+    background: rgba(255, 255, 255, 0.25);
+    color: $white !important;
+  }
+
+  &:focus {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.3);
+    color: $white !important;
+  }
+
+  &:visited {
+    color: $white !important;
+  }
+}
+
+
+
+.btn-light-purple {
+  background: $light-purple;
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  color: $white !important;
+  padding: 0.625rem 1.5rem;
+  font-size: 1rem;
+  font-weight: 500;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  text-decoration: none;
+  letter-spacing: 0.02em;
+  border-radius: 9999px;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+
+  &:hover {
+    background: $primary;
     border-color: rgba(255, 255, 255, 0.4);
     color: $white !important;
     transform: translateY(-2px);
@@ -620,6 +666,11 @@ nav.foldable-nav {
       color: $white;
     }
   }
+}
+
+.btn-sm {
+  padding: 0.4rem 0.8rem;
+  font-size: 0.8rem;
 }
 
 // Alert boxes
@@ -1718,5 +1769,53 @@ footer {
     max-width: 800px;
     margin-left: auto;
     margin-right: auto;
+  }
+}
+
+// AI Chat Container Styling
+.ai-chat-container {
+  width: 80vw;
+  max-width: 1400px;
+  height: 80vh;
+  border: none;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  margin: 2rem auto;
+  transition: box-shadow 0.3s ease;
+
+  &:hover {
+    box-shadow: 0 8px 12px rgba(0, 0, 0, 0.15);
+  }
+
+  iframe {
+    width: 100%;
+    height: 100%;
+    border: none;
+  }
+
+  // Responsive adjustments
+  @media (max-width: 768px) {
+    width: 95vw;
+    height: 70vh;
+  }
+
+  @media (max-width: 480px) {
+    width: 100vw;
+    height: 60vh;
+    border-radius: 0;
+    margin: 0 -1rem;
+  }
+}
+
+// Details element styling for boilerplate content
+details {
+  summary {
+    font-size: 1.2rem;
+    margin-bottom: 0.5rem;
+
+    &:hover {
+      text-decoration: underline;
+    }
   }
 }

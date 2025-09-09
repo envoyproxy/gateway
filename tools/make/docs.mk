@@ -68,14 +68,14 @@ sync-gwapi-docs: gwapi-doc-download gwapi-doc-transform gwapi-doc-download-inclu
 
 # Download the documentation files from the gateway-api repository to the local destination directory.
 gwapi-doc-download:
-	@$(LOG_TARGET)
-	@mkdir -p $(DOC_DEST_DIR)
-	@$(foreach file, $(SYNC_FILES), curl -s -o $(DOC_DEST_DIR)/$(file) $(DOC_SRC_URL)/$(file);)
+# 	@$(LOG_TARGET)
+# 	@mkdir -p $(DOC_DEST_DIR)
+# 	@$(foreach file, $(SYNC_FILES), curl -s -o $(DOC_DEST_DIR)/$(file) $(DOC_SRC_URL)/$(file);)
 
 # Transform the first line of each markdown file to a header format suitable for Hugo.
 gwapi-doc-transform:
-	@$(LOG_TARGET)
-	@$(foreach file, $(SYNC_FILES), sed -i '1s/^# \(.*\)/+++\ntitle = "\1"\n+++/' $(DOC_DEST_DIR)/$(file);)
+# 	@$(LOG_TARGET)
+# 	@$(foreach file, $(SYNC_FILES), sed -i '1s/^# \(.*\)/+++\ntitle = "\1"\n+++/' $(DOC_DEST_DIR)/$(file);)
 
 # Download included YAML files referenced within the documentation.
 gwapi-doc-download-includes:
@@ -108,15 +108,15 @@ gwapi-doc-clean-includes:
 # Remove special lines that start with '!!!' or `???` from the documentation.
 gwapi-doc-remove-special-lines:
 	@$(LOG_TARGET)
-	@$(foreach file, $(SYNC_FILES), \
-		sed -i '/^[\?!]\{3\}/d' $(DOC_DEST_DIR)/$(file);)
+# 	@$(foreach file, $(SYNC_FILES), \
+# 		sed -i '/^[\?!]\{3\}/d' $(DOC_DEST_DIR)/$(file);)
 
 # Update relative links
 gwapi-doc-update-relative-links:
-	@$(foreach file, $(SYNC_FILES), \
-		sed -i -e 's/\(\.*\]\)(\(\.\.\/[^:]*\))/\1(https:\/\/gateway-api.sigs.k8s.io\2)/g' -e 's/\(\[.*\]: \)\(\/[^:]*\)/\1https:\/\/gateway-api.sigs.k8s.io\2/g' -e 's/\(\[.*\]: \)\(\.\.\/[^:]*\)/\1https:\/\/gateway-api.sigs.k8s.io\2/g' $(DOC_DEST_DIR)/$(file);)
-	@$(foreach file, $(SYNC_FILES), \
-		sed -i -e 's/https:\/\/gateway-api.sigs.k8s.io\.\./https:\/\/gateway-api.sigs.k8s.io/g' $(DOC_DEST_DIR)/$(file);)
+# 	@$(foreach file, $(SYNC_FILES), \
+# 		sed -i -e 's/\(\.*\]\)(\(\.\.\/[^:]*\))/\1(https:\/\/gateway-api.sigs.k8s.io\2)/g' -e 's/\(\[.*\]: \)\(\/[^:]*\)/\1https:\/\/gateway-api.sigs.k8s.io\2/g' -e 's/\(\[.*\]: \)\(\.\.\/[^:]*\)/\1https:\/\/gateway-api.sigs.k8s.io\2/g' $(DOC_DEST_DIR)/$(file);)
+# 	@$(foreach file, $(SYNC_FILES), \
+# 		sed -i -e 's/https:\/\/gateway-api.sigs.k8s.io\.\./https:\/\/gateway-api.sigs.k8s.io/g' $(DOC_DEST_DIR)/$(file);)
 
 .PHONY: helm-readme-gen
 helm-readme-gen:
@@ -136,19 +136,19 @@ helm-readme-gen.%:
 	fi
 
 	# generate helm readme doc
-	@go tool helm-docs --template-files=tools/helm-docs/readme.${CHART_NAME}.gotmpl -g charts/${CHART_NAME} -f values.yaml -o README.md
+	$(GO_TOOL) helm-docs --template-files=tools/helm-docs/readme.${CHART_NAME}.gotmpl -g charts/${CHART_NAME} -f values.yaml -o README.md
 
 	# change the placeholder to title before api helm docs generated: split by '-' and capitalize the first letters
 	$(eval CHART_TITLE := $(shell echo "$(CHART_NAME)" | sed -E 's/\<./\U&/g; s/-/ /g' | awk '{for(i=1;i<=NF;i++){ $$i=toupper(substr($$i,1,1)) substr($$i,2) }}1'))
 	sed 's/{CHART-NAME}/$(CHART_TITLE)/g' tools/helm-docs/api.gotmpl > tools/helm-docs/api.${CHART_NAME}.gotmpl
-	@go tool helm-docs --template-files=tools/helm-docs/api.${CHART_NAME}.gotmpl -g charts/${CHART_NAME} -f values.yaml -o api.md
+	$(GO_TOOL) helm-docs --template-files=tools/helm-docs/api.${CHART_NAME}.gotmpl -g charts/${CHART_NAME} -f values.yaml -o api.md
 	mv charts/${CHART_NAME}/api.md site/content/en/latest/install/${CHART_NAME}-api.md
 	rm tools/helm-docs/api.${CHART_NAME}.gotmpl
 
 .PHONY: docs-api-gen
 docs-api-gen:
 	@$(LOG_TARGET)
-	go tool crd-ref-docs \
+	$(GO_TOOL) crd-ref-docs \
 	--source-path=api/v1alpha1 \
 	--config=tools/crd-ref-docs/config.yaml \
 	--templates-dir=tools/crd-ref-docs/templates \
@@ -174,13 +174,13 @@ docs-release-gen:
 .PHONY: docs-check-links
 docs-check-links: # Check for broken links in the docs
 	@$(LOG_TARGET)
-	linkinator site/public/ -r --concurrency 25 --skip $(LINKINATOR_IGNORE) --verbosity error
+	linkinator site/public/ -r --concurrency 25 --retry-errors --retry --retry-errors-jitter --retry-errors-count 5 --skip $(LINKINATOR_IGNORE) --verbosity error
 
 docs-markdown-lint:
 	markdownlint -c .github/markdown_lint_config.json site/content/*
 
 release-notes-docs: $(tools/release-notes-docs)
 	@$(LOG_TARGET)
-	@for file in $(wildcard release-notes/v*.yaml); do \
+	@for file in $(wildcard release-notes/$(shell cat VERSION).yaml); do \
 		$(tools/release-notes-docs) $$file site/content/en/news/releases/notes; \
 	done
