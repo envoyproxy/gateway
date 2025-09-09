@@ -20,6 +20,7 @@ import (
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/status"
 	"github.com/envoyproxy/gateway/internal/ir"
+	"github.com/envoyproxy/gateway/internal/logging"
 	"github.com/envoyproxy/gateway/internal/wasm"
 )
 
@@ -103,6 +104,9 @@ type Translator struct {
 	// gateway listener port into a non privileged port
 	// and reuses the specified value.
 	ListenerPortShiftDisabled bool
+
+	// Logger is the logr implementation used by Envoy Gateway.
+	Logger logging.Logger
 }
 
 type TranslateResult struct {

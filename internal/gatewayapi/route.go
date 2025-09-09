@@ -25,6 +25,7 @@ import (
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/status"
 	"github.com/envoyproxy/gateway/internal/ir"
+	"github.com/envoyproxy/gateway/internal/utils"
 	"github.com/envoyproxy/gateway/internal/utils/regex"
 )
 
@@ -226,10 +227,21 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 			settingName := irDestinationSettingName(destName, i)
 			ds, unstructuredRef, err := t.processDestination(settingName, backendRef, parentRef, httpRoute, resources)
 			if err != nil {
-				errs.Add(status.NewRouteStatusError(
-					fmt.Errorf("failed to process route rule %d backendRef %d: %w", ruleIdx, i, err),
-					err.Reason(),
-				))
+				// Gateway API conformance: When backendRef Service exists but has no endpoints,
+				// the ResolvedRefs condition should NOT be set to False.
+				// Since we cannot reflect this error in the route status, we log it so users can check the issue.
+				if err.Reason() == status.RouteReasonEndpointsNotFound {
+					t.Logger.Error(err, "failed to process route rule by no ready endpoints, so return 503 status code",
+						"httpRoute", utils.NamespacedName(httpRoute.HTTPRoute),
+						"rule", ruleIdx,
+						"backendRef", i,
+					)
+				} else {
+					errs.Add(status.NewRouteStatusError(
+						fmt.Errorf("failed to process route rule %d backendRef %d: %w", ruleIdx, i, err),
+						err.Reason(),
+					))
+				}
 				failedProcessDestination = true
 				continue
 			}
@@ -677,10 +689,21 @@ func (t *Translator) processGRPCRouteRules(grpcRoute *GRPCRouteContext, parentRe
 			settingName := irDestinationSettingName(destName, i)
 			ds, _, err := t.processDestination(settingName, backendRef, parentRef, grpcRoute, resources)
 			if err != nil {
-				errs.Add(status.NewRouteStatusError(
-					fmt.Errorf("failed to process route rule %d backendRef %d: %w", ruleIdx, i, err),
-					err.Reason(),
-				))
+				// Gateway API conformance: When backendRef Service exists but has no endpoints,
+				// the ResolvedRefs condition should NOT be set to False.
+				// Since we cannot reflect this error in the route status, we log it so users can check the issue.
+				if err.Reason() == status.RouteReasonEndpointsNotFound {
+					t.Logger.Error(err, "failed to process route rule by no ready endpoints, so return 503 status code",
+						"grpcRoute", utils.NamespacedName(grpcRoute.GRPCRoute),
+						"rule", ruleIdx,
+						"backendRef", i,
+					)
+				} else {
+					errs.Add(status.NewRouteStatusError(
+						fmt.Errorf("failed to process route rule %d backendRef %d: %w", ruleIdx, i, err),
+						err.Reason(),
+					))
+				}
 				failedProcessDestination = true
 				continue
 			}
