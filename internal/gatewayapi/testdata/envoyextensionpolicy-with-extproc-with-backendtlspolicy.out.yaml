@@ -358,6 +358,9 @@ xdsIR:
               name: envoyextensionpolicy/default/policy-for-gateway/extproc/0
               settings:
               - addressType: IP
+                endpoints:
+                - host: 7.7.7.7
+                  port: 8000
                 metadata:
                   kind: Service
                   name: grpc-backend
@@ -429,6 +432,9 @@ xdsIR:
               name: envoyextensionpolicy/default/policy-for-gateway/extproc/0
               settings:
               - addressType: IP
+                endpoints:
+                - host: 7.7.7.7
+                  port: 8000
                 metadata:
                   kind: Service
                   name: grpc-backend

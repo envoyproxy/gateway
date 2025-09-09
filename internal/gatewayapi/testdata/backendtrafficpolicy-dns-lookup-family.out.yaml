@@ -359,7 +359,11 @@ xdsIR:
             namespace: envoy-gateway
           name: accesslog_otel_0_1
           settings:
-          - metadata:
+          - addressType: IP
+            endpoints:
+            - host: 7.7.7.7
+              port: 8080
+            metadata:
               kind: Service
               name: logs
               namespace: default

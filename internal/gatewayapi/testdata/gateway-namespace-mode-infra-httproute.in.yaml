@@ -121,27 +121,33 @@ services:
   - apiVersion: v1
     kind: Service
     metadata:
-      namespace: default
-      name: service-2
-    spec:
-      clusterIP: 2.2.2.2
-      ports:
-        - name: http
-          port: 8080
-          protocol: TCP
-          targetPort: 8080
-  - apiVersion: v1
-    kind: Service
-    metadata:
       namespace: test-ns
       name: service-3
     spec:
-      clusterIP: 2.2.2.2
+      clusterIP: 3.3.3.3
       ports:
         - name: http
           port: 8080
           protocol: TCP
           targetPort: 8080
+endpointSlices:
+  - apiVersion: discovery.k8s.io/v1
+    kind: EndpointSlice
+    metadata:
+      namespace: test-ns
+      name: endpointslice-service-3
+      labels:
+        kubernetes.io/service-name: service-3
+    addressType: IPv4
+    ports:
+      - name: http
+        protocol: TCP
+        port: 8080
+    endpoints:
+      - addresses:
+          - 7.7.7.7
+        conditions:
+          ready: true
 namespaces:
   - apiVersion: v1
     kind: Namespace

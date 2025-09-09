@@ -39,6 +39,75 @@ services:
     - port: 8004
       name: grpc
       protocol: TCP
+endpointSlices:
+- apiVersion: discovery.k8s.io/v1
+  kind: EndpointSlice
+  metadata:
+    name: endpointslice-grpc-backend-1
+    namespace: envoy-gateway
+    labels:
+      kubernetes.io/service-name: grpc-backend-1
+  addressType: IPv4
+  ports:
+    - name: grpc
+      protocol: TCP
+      port: 8001
+  endpoints:
+    - addresses:
+        - 7.7.7.1
+      conditions:
+        ready: true
+- apiVersion: discovery.k8s.io/v1
+  kind: EndpointSlice
+  metadata:
+    name: endpointslice-grpc-backend-2
+    namespace: envoy-gateway
+    labels:
+      kubernetes.io/service-name: grpc-backend-2
+  addressType: IPv4
+  ports:
+    - name: grpc
+      protocol: TCP
+      port: 8002
+  endpoints:
+    - addresses:
+        - 7.7.7.2
+      conditions:
+        ready: true
+- apiVersion: discovery.k8s.io/v1
+  kind: EndpointSlice
+  metadata:
+    name: endpointslice-grpc-backend-3
+    namespace: default
+    labels:
+      kubernetes.io/service-name: grpc-backend-3
+  addressType: IPv4
+  ports:
+    - name: grpc
+      protocol: TCP
+      port: 8003
+  endpoints:
+    - addresses:
+        - 7.7.7.3
+      conditions:
+        ready: true
+- apiVersion: discovery.k8s.io/v1
+  kind: EndpointSlice
+  metadata:
+    name: endpointslice-grpc-backend-4
+    namespace: default
+    labels:
+      kubernetes.io/service-name: grpc-backend-4
+  addressType: IPv4
+  ports:
+    - name: grpc
+      protocol: TCP
+      port: 8004
+  endpoints:
+    - addresses:
+        - 7.7.7.4
+      conditions:
+        ready: true
 gateways:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: Gateway
