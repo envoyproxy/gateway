@@ -49,14 +49,14 @@ endpointSlices:
       kubernetes.io/service-name: headless-service
   addressType: IPv4
   ports:
-    - name: http
-      protocol: TCP
-      port: 80
+  - name: http
+    protocol: TCP
+    port: 80
   endpoints:
-    - addresses:
-        - 7.7.7.7
-      conditions:
-        ready: true
+  - addresses:
+    - 7.7.7.7
+    conditions:
+      ready: true
 envoyProxyForGatewayClass:
   apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: EnvoyProxy

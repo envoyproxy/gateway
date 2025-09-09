@@ -29,14 +29,14 @@ endpointSlices:
       kubernetes.io/service-name: grpc-backend
   addressType: IPv4
   ports:
-    - name: grpc
-      protocol: TCP
-      port: 9000
+  - name: grpc
+    protocol: TCP
+    port: 9000
   endpoints:
-    - addresses:
-        - 7.7.7.1
-      conditions:
-        ready: true
+  - addresses:
+    - 7.7.7.1
+    conditions:
+      ready: true
 - apiVersion: discovery.k8s.io/v1
   kind: EndpointSlice
   metadata:
@@ -46,14 +46,14 @@ endpointSlices:
       kubernetes.io/service-name: grpc-backend-2
   addressType: IPv4
   ports:
-    - name: grpc
-      protocol: TCP
-      port: 8000
+  - name: grpc
+    protocol: TCP
+    port: 8000
   endpoints:
-    - addresses:
-        - 7.7.7.2
-      conditions:
-        ready: true
+  - addresses:
+    - 7.7.7.2
+    conditions:
+      ready: true
 gateways:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: Gateway
