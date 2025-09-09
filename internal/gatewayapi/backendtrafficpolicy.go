@@ -18,7 +18,6 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/utils/ptr"
-	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
@@ -1077,9 +1076,28 @@ func buildResponseOverride(policy *egv1a1.BackendTrafficPolicy, resources *resou
 			}
 
 			if override.Response.ResponseHeaderModifier != nil {
-				response.ResponseHeaderModifier = &gwapiv1.HTTPHeaderFilter{
-					Add: override.Response.ResponseHeaderModifier.Add,
-					Set: override.Response.ResponseHeaderModifier.Set,
+				rhm := override.Response.ResponseHeaderModifier
+
+				for _, h := range rhm.Add {
+					response.AddResponseHeaders = append(
+						response.AddResponseHeaders,
+						ir.AddHeader{
+							Name:   string(h.Name),
+							Value:  []string{h.Value},
+							Append: true,
+						},
+					)
+				}
+
+				for _, h := range rhm.Set {
+					response.AddResponseHeaders = append(
+						response.AddResponseHeaders,
+						ir.AddHeader{
+							Name:   string(h.Name),
+							Value:  []string{h.Value},
+							Append: false,
+						},
+					)
 				}
 			}
 

@@ -440,34 +440,23 @@ func (c *customResponse) buildResponseAction(r ir.ResponseOverrideRule) (*anypb.
 		})
 	}
 
-	if r.Response.ResponseHeaderModifier != nil {
-		headerModifier := r.Response.ResponseHeaderModifier
-
-		// Process Add headers
-		for _, header := range headerModifier.Add {
-			response.ResponseHeadersToAdd = append(response.ResponseHeadersToAdd, &corev3.HeaderValueOption{
-				Header: &corev3.HeaderValue{
-					Key:   string(header.Name),
-					Value: header.Value,
-				},
-				AppendAction: corev3.HeaderValueOption_APPEND_IF_EXISTS_OR_ADD,
-			})
+	// Process headers
+	for _, header := range r.Response.AddResponseHeaders {
+		appendAction :=corev3.HeaderValueOption_OVERWRITE_IF_EXISTS_OR_ADD
+		if header.Append {
+			appendAction = corev3.HeaderValueOption_APPEND_IF_EXISTS_OR_ADD
 		}
-
-		// Process Set headers
-		for _, header := range headerModifier.Set {
-			response.ResponseHeadersToAdd = append(response.ResponseHeadersToAdd, &corev3.HeaderValueOption{
-				Header: &corev3.HeaderValue{
-					Key:   string(header.Name),
-					Value: header.Value,
-				},
-				AppendAction: corev3.HeaderValueOption_OVERWRITE_IF_EXISTS_OR_ADD,
-			})
-		}
-
-		// Note: Header removal is explicitly prevented at the API level via CEL validation
-		// LocalResponsePolicy does not support header removal
+		response.ResponseHeadersToAdd = append(response.ResponseHeadersToAdd, &corev3.HeaderValueOption{
+			Header: &corev3.HeaderValue{
+				Key:   string(header.Name),
+				Value: header.Value[0],
+			},
+			AppendAction: appendAction,
+		})
 	}
+
+	// Note: Header removal is explicitly prevented at the API level via CEL validation
+	// LocalResponsePolicy does not support header removal
 
 	if r.Response.StatusCode != nil {
 		response.StatusCode = &wrapperspb.UInt32Value{Value: *r.Response.StatusCode}

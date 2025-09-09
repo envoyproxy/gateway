@@ -844,7 +844,24 @@ func (t *Translator) processExtensionRefHTTPFilter(extFilter *gwapiv1.LocalObjec
 
 					if hrf.Spec.DirectResponse.ResponseHeaderModifier != nil {
 						// Pass the ResponseHeaderModifier directly to the DirectResponse IR
-						dr.ResponseHeaderModifier = hrf.Spec.DirectResponse.ResponseHeaderModifier
+						rhm:= hrf.Spec.DirectResponse.ResponseHeaderModifier
+						if rhm != nil {
+							for h := range rhm.Add {
+								dr.AddResponseHeaders = append(dr.AddResponseHeaders, ir.AddHeader{
+									Name:   string(rhm.Add[h].Name),
+									Append: true,
+									Value: []string{rhm.Add[h].Value},
+								})
+							}
+							for h := range rhm.Set {
+								dr.AddResponseHeaders = append(dr.AddResponseHeaders, ir.AddHeader{
+									Name:   string(rhm.Set[h].Name),
+									Append: false,
+									Value: []string{rhm.Set[h].Value},
+								})
+							}
+							dr.RemoveResponseHeaders = append(dr.RemoveResponseHeaders, rhm.Remove...)
+						}
 
 						// Also process the ResponseHeaderModifier to populate the filter context headers
 						// This ensures headers are also applied at the route level

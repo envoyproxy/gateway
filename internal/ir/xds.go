@@ -640,12 +640,11 @@ type CustomResponse struct {
 	// StatusCode will be used for the response's status code.
 	StatusCode *uint32 `json:"statusCode,omitempty"`
 
-	// ResponseHeaderModifier defines headers to add, set or remove from the response.
-	// This allows the response policy to append, add or override headers
-	// of the original response before it is sent to a downstream client.
-	//
-	// +optional
-	ResponseHeaderModifier *gwapiv1.HTTPHeaderFilter `json:"responseHeaderModifier,omitempty"`
+	// AddResponseHeaders defines header/value sets to be added to the headers of response.
+	AddResponseHeaders []AddHeader `json:"addResponseHeaders,omitempty" yaml:"addResponseHeaders,omitempty"`
+
+	// RemoveResponseHeaders defines a list of headers to be removed from response.
+	RemoveResponseHeaders []string `json:"removeResponseHeaders,omitempty" yaml:"removeResponseHeaders,omitempty"`
 }
 
 // Validate the fields within the CustomResponse structure
