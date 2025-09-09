@@ -1978,5 +1978,5 @@ func routeRuleExists(route *policyRouteTargetContext, section string) bool {
 		return false
 	}
 	// Use the RouteContext.HasRuleNames method introduced in the refactor.
-	return route.RouteContext.HasRuleNames(gwapiv1.SectionName(section))
+	return route.HasRuleNames(gwapiv1.SectionName(section))
 }
