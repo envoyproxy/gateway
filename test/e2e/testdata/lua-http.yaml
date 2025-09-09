@@ -53,6 +53,24 @@ spec:
         - name: infra-backend-v1
           port: 8080
 ---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: example-route-4-with-lua-404
+  namespace: gateway-conformance-infra
+spec:
+  parentRefs:
+    - name: same-namespace
+  hostnames: ["www.example.com"]
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /route4
+      backendRefs:
+        - name: infra-backend-v1
+          port: 8080
+---
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -97,4 +115,24 @@ spec:
         function envoy_on_response(response_handle)
           response_handle:headers():add("X-Custom-Lua-Header", "lua_value_2")
           response_handle:headers():add("X-Custom-Lua-Another-Header", "lua_another_value")
+        end
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyExtensionPolicy
+metadata:
+  name: example-lua-404
+  namespace: gateway-conformance-infra
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: example-route-4-with-lua-404
+  lua:
+    - type: Inline
+      inline: |
+        function envoy_on_request(request_handle)
+          request_handle:respond(
+            { [":status"] = "404" },
+            "Not Found"
+          )
         end

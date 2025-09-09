@@ -113,6 +113,42 @@ var HTTPLuaTest = suite.ConformanceTest{
 			}
 		})
 
+		t.Run("http route with lua 404 response", func(t *testing.T) {
+			ns := "gateway-conformance-infra"
+			routeNN := types.NamespacedName{Name: "example-route-4-with-lua-404", Namespace: ns}
+			gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
+			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
+
+			ancestorRef := gwapiv1a2.ParentReference{
+				Group:     gatewayapi.GroupPtr(gwapiv1.GroupName),
+				Kind:      gatewayapi.KindPtr(resource.KindGateway),
+				Namespace: gatewayapi.NamespacePtr(gwNN.Namespace),
+				Name:      gwapiv1.ObjectName(gwNN.Name),
+			}
+			EnvoyExtensionPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "example-lua-404", Namespace: ns}, suite.ControllerName, ancestorRef)
+
+			expectedResponse := http.ExpectedResponse{
+				Request: http.Request{
+					Host: "www.example.com",
+					Path: "/route4",
+				},
+				Response: http.Response{
+					StatusCode: 404,
+				},
+				Namespace: ns,
+			}
+
+			req := http.MakeRequest(t, &expectedResponse, gwAddr, "HTTP", "http")
+			cReq, cResp, err := suite.RoundTripper.CaptureRoundTrip(req)
+			if err != nil {
+				t.Errorf("failed to get expected response: %v", err)
+			}
+
+			if err := http.CompareRequest(t, &req, cReq, cResp, expectedResponse); err != nil {
+				t.Errorf("failed to compare request and response: %v", err)
+			}
+		})
+
 		t.Run("http route without lua filter", func(t *testing.T) {
 			ns := "gateway-conformance-infra"
 			routeNN := types.NamespacedName{Name: "example-route-3-without-lua", Namespace: ns}

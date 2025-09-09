@@ -9,6 +9,8 @@ import (
 	"strings"
 	"testing"
 
+	"k8s.io/utils/ptr"
+
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 )
 
@@ -205,5 +207,23 @@ func Test_Validate(t *testing.T) {
 				t.Errorf("Expected error with substring: %v", tt.expectedErrSubstring)
 			}
 		})
+	}
+}
+
+func TestLuaValidator_OriginalCodeUntouchedWithPointer(t *testing.T) {
+	originalCode := ptr.To(`function envoy_on_request(request_handle)
+                     request_handle:logInfo("Hello from Lua!")
+                   end`)
+
+	if err := NewLuaValidator(*originalCode, egv1a1.LuaValidationStrict).Validate(); err != nil {
+		t.Errorf("Validation failed unexpectedly: %v", err)
+	}
+
+	// Verify the original string is exactly as we expect
+	expectedCode := `function envoy_on_request(request_handle)
+                     request_handle:logInfo("Hello from Lua!")
+                   end`
+	if *originalCode != expectedCode {
+		t.Errorf("lua code was modified, expected: %q, got: %q", expectedCode, *originalCode)
 	}
 }
