@@ -570,8 +570,10 @@ func isModifiableHeader(headerName string) bool {
 }
 
 func (t *Translator) processResponseHeaderModifierFilter(
-	headerModifier *gwapiv1.HTTPHeaderFilter, filterContext *HTTPFiltersContext,
+	headerModifier *gwapiv1.HTTPHeaderFilter,
+	filterContext *HTTPFiltersContext,
 ) {
+	// Make sure the header modifier config actually exists
 	if headerModifier == nil {
 		return
 	}
@@ -857,20 +859,20 @@ func (t *Translator) processExtensionRefHTTPFilter(extFilter *gwapiv1.LocalObjec
 
 					if hrf.Spec.DirectResponse.ResponseHeaderModifier != nil {
 						// Pass the ResponseHeaderModifier directly to the DirectResponse IR
-						rhm:= hrf.Spec.DirectResponse.ResponseHeaderModifier
+						rhm := hrf.Spec.DirectResponse.ResponseHeaderModifier
 						if rhm != nil {
 							for h := range rhm.Add {
 								dr.AddResponseHeaders = append(dr.AddResponseHeaders, ir.AddHeader{
 									Name:   string(rhm.Add[h].Name),
 									Append: true,
-									Value: []string{rhm.Add[h].Value},
+									Value:  []string{rhm.Add[h].Value},
 								})
 							}
 							for h := range rhm.Set {
 								dr.AddResponseHeaders = append(dr.AddResponseHeaders, ir.AddHeader{
 									Name:   string(rhm.Set[h].Name),
 									Append: false,
-									Value: []string{rhm.Set[h].Value},
+									Value:  []string{rhm.Set[h].Value},
 								})
 							}
 							dr.RemoveResponseHeaders = append(dr.RemoveResponseHeaders, rhm.Remove...)
