@@ -219,6 +219,7 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 		destName := irRouteDestinationName(httpRoute, ruleIdx)
 		allDs := []*ir.DestinationSetting{}
 		failedProcessDestination := false
+		failedNoReadyEndpoints := false
 		hasDynamicResolver := false
 		backendRefNames := make([]string, len(rule.BackendRefs))
 		backendCustomRefs := []*ir.UnstructuredRef{}
@@ -236,13 +237,14 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 						"rule", ruleIdx,
 						"backendRef", i,
 					)
+					failedNoReadyEndpoints = true
 				} else {
 					errs.Add(status.NewRouteStatusError(
 						fmt.Errorf("failed to process route rule %d backendRef %d: %w", ruleIdx, i, err),
 						err.Reason(),
 					))
+					failedProcessDestination = true
 				}
-				failedProcessDestination = true
 				continue
 			}
 			if unstructuredRef != nil {
@@ -284,7 +286,7 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 				}
 			// return 503 if endpoints does not exist
 			// the error is already added to the error list when processing the destination
-			case failedProcessDestination && len(allDs) == 0:
+			case failedNoReadyEndpoints && len(allDs) == 0:
 				irRoute.DirectResponse = &ir.CustomResponse{
 					StatusCode: ptr.To(uint32(503)),
 				}
@@ -683,6 +685,7 @@ func (t *Translator) processGRPCRouteRules(grpcRoute *GRPCRouteContext, parentRe
 		destName := irRouteDestinationName(grpcRoute, ruleIdx)
 		allDs := []*ir.DestinationSetting{}
 		failedProcessDestination := false
+		failedNoReadyEndpoints := false
 
 		backendRefNames := make([]string, len(rule.BackendRefs))
 		for i, backendRef := range rule.BackendRefs {
@@ -698,13 +701,14 @@ func (t *Translator) processGRPCRouteRules(grpcRoute *GRPCRouteContext, parentRe
 						"rule", ruleIdx,
 						"backendRef", i,
 					)
+					failedNoReadyEndpoints = true
 				} else {
 					errs.Add(status.NewRouteStatusError(
 						fmt.Errorf("failed to process route rule %d backendRef %d: %w", ruleIdx, i, err),
 						err.Reason(),
 					))
+					failedProcessDestination = true
 				}
-				failedProcessDestination = true
 				continue
 			}
 
@@ -736,7 +740,7 @@ func (t *Translator) processGRPCRouteRules(grpcRoute *GRPCRouteContext, parentRe
 				}
 			// return 503 if endpoints does not exist
 			// the error is already added to the error list when processing the destination
-			case failedProcessDestination && len(allDs) == 0:
+			case failedNoReadyEndpoints && len(allDs) == 0:
 				irRoute.DirectResponse = &ir.CustomResponse{
 					StatusCode: ptr.To(uint32(503)),
 				}
