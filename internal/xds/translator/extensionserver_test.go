@@ -309,7 +309,7 @@ func (t *testingExtensionServer) PostTranslateModify(_ context.Context, req *pb.
 	for idx, cluster := range req.Clusters {
 		response.Clusters[idx] = proto.Clone(cluster).(*clusterV3.Cluster)
 		if cluster.Name == "first-route" {
-			response.Clusters[idx].ConnectTimeout = durationpb.New(time.Second * 3)
+			response.Clusters[idx].ConnectTimeout = durationpb.New(time.Second * 30)
 		}
 	}
 
