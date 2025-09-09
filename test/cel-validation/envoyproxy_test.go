@@ -53,7 +53,7 @@ func TestEnvoyProxyProvider(t *testing.T) {
 					},
 				}
 			},
-			wantErrors: []string{"Unsupported value: \"foo\": supported values: \"Kubernetes\", \"Custom\""},
+			wantErrors: []string{"Unsupported value: \"foo\": supported values: \"Kubernetes\", \"Host\""},
 		},
 		{
 			desc: "invalid service type",
