@@ -178,7 +178,7 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 		irRoutes []*ir.HTTPRoute
 		errs     = &status.MultiStatusError{}
 	)
-	pattern := getStatPattern(httpRoute, parentRef)
+	pattern := getStatPattern(httpRoute, parentRef, t.GatewayControllerName)
 
 	// process each HTTPRouteRule, generate a unique Xds IR HTTPRoute per match of the rule
 	for ruleIdx, rule := range httpRoute.Spec.Rules {
@@ -632,7 +632,7 @@ func (t *Translator) processGRPCRouteRules(grpcRoute *GRPCRouteContext, parentRe
 		irRoutes []*ir.HTTPRoute
 		errs     = &status.MultiStatusError{}
 	)
-	pattern := getStatPattern(grpcRoute, parentRef)
+	pattern := getStatPattern(grpcRoute, parentRef, t.GatewayControllerName)
 
 	// compute matches, filters, backends
 	for ruleIdx, rule := range grpcRoute.Spec.Rules {
@@ -872,7 +872,7 @@ func (t *Translator) processHTTPRouteParentRefListener(route RouteContext, route
 		irListener := xdsIR[irKey].GetHTTPListener(irListenerName(listener))
 
 		if irListener != nil {
-			if GetRouteType(route) == resource.KindGRPCRoute {
+			if route.GetRouteType() == resource.KindGRPCRoute {
 				irListener.IsHTTP2 = true
 			}
 			irListener.Routes = append(irListener.Routes, perHostRoutes...)
@@ -1364,7 +1364,7 @@ func (t *Translator) processTCPRouteParentRefs(tcpRoute *TCPRouteContext, resour
 func (t *Translator) processDestination(name string, backendRefContext BackendRefContext,
 	parentRef *RouteParentContext, route RouteContext, resources *resource.Resources,
 ) (ds *ir.DestinationSetting, unstructuredRef *ir.UnstructuredRef, err status.Error) {
-	routeType := GetRouteType(route)
+	routeType := route.GetRouteType()
 	weight := uint32(1)
 	backendRef := GetBackendRef(backendRefContext)
 	if backendRef.Weight != nil {
@@ -1388,7 +1388,7 @@ func (t *Translator) processDestination(name string, backendRefContext BackendRe
 	}
 
 	var envoyProxy *egv1a1.EnvoyProxy
-	gatewayCtx := GetRouteParentContext(route, *parentRef.ParentReference).GetGateway()
+	gatewayCtx := GetRouteParentContext(route, *parentRef.ParentReference, t.GatewayControllerName).GetGateway()
 	if gatewayCtx != nil {
 		envoyProxy = gatewayCtx.envoyProxy
 	}
@@ -1716,7 +1716,7 @@ func (t *Translator) processAllowedListenersForParentRefs(routeContext RouteCont
 		}
 		relevantRoute = true
 
-		parentRefCtx := GetRouteParentContext(routeContext, parentRef)
+		parentRefCtx := GetRouteParentContext(routeContext, parentRef, t.GatewayControllerName)
 		// Reset conditions since they will be recomputed during translation
 		parentRefCtx.ResetConditions(routeContext)
 
@@ -1735,7 +1735,7 @@ func (t *Translator) processAllowedListenersForParentRefs(routeContext RouteCont
 
 		var allowedListeners []*ListenerContext
 		for _, listener := range selectedListeners {
-			acceptedKind := GetRouteType(routeContext)
+			acceptedKind := routeContext.GetRouteType()
 			if listener.AllowsKind(gwapiv1.RouteGroupKind{Group: GroupPtr(gwapiv1.GroupName), Kind: acceptedKind}) &&
 				listener.AllowsNamespace(resources.GetNamespace(routeContext.GetNamespace())) {
 				allowedListeners = append(allowedListeners, listener)
@@ -2051,10 +2051,10 @@ func backendAppProtocolToIRAppProtocol(ap egv1a1.AppProtocolType, defaultProtoco
 	}
 }
 
-func getStatPattern(routeContext RouteContext, parentRef *RouteParentContext) string {
+func getStatPattern(routeContext RouteContext, parentRef *RouteParentContext, controllerName string) string {
 	var pattern string
 	var envoyProxy *egv1a1.EnvoyProxy
-	gatewayCtx := GetRouteParentContext(routeContext, *parentRef.ParentReference).GetGateway()
+	gatewayCtx := GetRouteParentContext(routeContext, *parentRef.ParentReference, controllerName).GetGateway()
 	if gatewayCtx != nil {
 		envoyProxy = gatewayCtx.envoyProxy
 	}
