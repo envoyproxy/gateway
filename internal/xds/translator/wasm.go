@@ -125,9 +125,7 @@ func wasmConfig(wasm ir.Wasm) (*wasmfilterv3.Wasm, error) {
 						HttpUpstreamType: &corev3.HttpUri_Cluster{
 							Cluster: wasmHTTPServiceClusterName,
 						},
-						Timeout: &durationpb.Duration{
-							Seconds: defaultExtServiceRequestTimeout,
-						},
+						Timeout: durationpb.New(defaultExtServiceRequestTimeout),
 					},
 					Sha256: wasm.Code.SHA256,
 				},
