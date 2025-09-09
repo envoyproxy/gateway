@@ -755,7 +755,7 @@ func (t *Translator) translateSecurityPolicyForRoute(
 
 		irKey := t.getIRKey(gtwCtx.Gateway)
 		// Handle TCP routes differently from HTTP routes (determine by Kind)
-		if GetRouteType(route) == resource.KindTCPRoute {
+		if route.GetRouteType() == resource.KindTCPRoute {
 			for _, listener := range parentRefCtx.listeners {
 				irListener := xdsIR[irKey].GetTCPListener(irListenerName(listener))
 				if irListener != nil {
@@ -1977,10 +1977,6 @@ func routeRuleExists(route *policyRouteTargetContext, section string) bool {
 	if route == nil || route.RouteContext == nil {
 		return false
 	}
-	for _, rn := range GetRuleNames(route.RouteContext) {
-		if string(rn) == section {
-			return true
-		}
-	}
-	return false
+	// Use the RouteContext.HasRuleNames method introduced in the refactor.
+	return route.RouteContext.HasRuleNames(gwapiv1.SectionName(section))
 }
