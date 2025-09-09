@@ -20,7 +20,7 @@ httpRoutes:
     namespace: default
     name: httproute
     labels:
-      app: web-service  
+      app: web-service
   spec:
     hostnames:
     - gateway.envoyproxy.io
@@ -41,7 +41,7 @@ httpRoutes:
     namespace: envoy-gateway
     name: httproute
     labels:
-      app: web-service  
+      app: web-service
   spec:
     hostnames:
     - gateway.envoyproxy.io
@@ -66,15 +66,15 @@ backendTrafficPolicies:
   spec:
     targetSelectors:
     - group: gateway.networking.k8s.io
-      kind: HTTPRoute 
+      kind: HTTPRoute
       matchLabels:
-        app: web-service    
+        app: web-service
     useClientProtocol: true
 services:
 - apiVersion: v1
   kind: Service
   metadata:
-    namespace: default 
+    namespace: default
     name: service-1
   spec:
     ports:
@@ -98,7 +98,7 @@ endpointSlices:
     name: endpointslice-service-1
     namespace: default
     labels:
-      kubernetes.io/service-name: service-1 
+      kubernetes.io/service-name: service-1
   addressType: IPv4
   ports:
   - name: http
