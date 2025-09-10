@@ -57,7 +57,6 @@ type HTTPURLRewriteFilter struct {
 }
 
 // HTTPDirectResponseFilter defines the configuration to return a fixed response.
-// +kubebuilder:validation:XValidation:rule="!has(self.responseHeaderModifier) || !has(self.responseHeaderModifier.remove) || size(self.responseHeaderModifier.remove) == 0",message="responseHeaderModifier.remove is not supported for DirectResponse"
 type HTTPDirectResponseFilter struct {
 	// Content Type of the direct response. This will be set in the Content-Type header.
 	//
@@ -76,6 +75,7 @@ type HTTPDirectResponseFilter struct {
 
 	// ResponseHeaderModifier defines the headers of the direct response.
 	// +optional
+	// +kubebuilder:validation:XValidation:rule="!has(self.remove) || size(self.remove) == 0",message="responseHeaderModifier.remove is not supported for DirectResponse"
 	ResponseHeaderModifier *gwapiv1.HTTPHeaderFilter `json:"responseHeaderModifier,omitempty"`
 }
 

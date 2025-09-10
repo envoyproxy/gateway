@@ -2068,6 +2068,10 @@ spec:
                               - name
                               x-kubernetes-list-type: map
                           type: object
+                          x-kubernetes-validations:
+                          - message: Remove is not supported for ResponseHeaderModifier
+                              in CustomResponse
+                            rule: '!has(self.remove) || size(self.remove) == 0'
                         statusCode:
                           description: |-
                             Status Code of the Custom Response
@@ -22243,16 +22247,16 @@ spec:
                         - name
                         x-kubernetes-list-type: map
                     type: object
+                    x-kubernetes-validations:
+                    - message: responseHeaderModifier.remove is not supported for
+                        DirectResponse
+                      rule: '!has(self.remove) || size(self.remove) == 0'
                   statusCode:
                     description: |-
                       Status Code of the HTTP response
                       If unset, defaults to 200.
                     type: integer
                 type: object
-                x-kubernetes-validations:
-                - message: responseHeaderModifier.remove is not supported for DirectResponse
-                  rule: '!has(self.responseHeaderModifier) || !has(self.responseHeaderModifier.remove)
-                    || size(self.responseHeaderModifier.remove) == 0'
               urlRewrite:
                 description: HTTPURLRewriteFilter define rewrites of HTTP URL components
                   such as path and host

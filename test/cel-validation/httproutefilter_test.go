@@ -184,7 +184,7 @@ func TestHTTPRouteFilter(t *testing.T) {
 					},
 				}
 			},
-			wantErrors: []string{"spec.directResponse: Invalid value: \"object\": responseHeaderModifier.remove is not supported for DirectResponse"},
+			wantErrors: []string{"spec.directResponse.responseHeaderModifier: Invalid value: \"object\": responseHeaderModifier.remove is not supported for DirectResponse"},
 		},
 	}
 

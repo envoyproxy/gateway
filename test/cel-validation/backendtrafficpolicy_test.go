@@ -2017,6 +2017,84 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 			},
 			wantErrors: []string{},
 		},
+		{
+			desc: "custom response with valid responseHeaderModifier - no remove",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
+								Group: gwapiv1a2.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1a2.Kind("Gateway"),
+								Name:  gwapiv1a2.ObjectName("eg"),
+							},
+						},
+					},
+					ResponseOverride: []*egv1a1.ResponseOverride{
+						{
+							Match: egv1a1.CustomResponseMatch{
+								StatusCodes: []egv1a1.StatusCodeMatch{
+									{
+										Value: ptr.To(500),
+									},
+								},
+							},
+							Response: &egv1a1.CustomResponse{
+								StatusCode: ptr.To(503),
+								ResponseHeaderModifier: &gwapiv1.HTTPHeaderFilter{
+									Set: []gwapiv1.HTTPHeader{
+										{Name: "x-custom-header", Value: "custom-value"},
+									},
+									Add: []gwapiv1.HTTPHeader{
+										{Name: "x-added-header", Value: "added-value"},
+									},
+								},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "custom response with invalid responseHeaderModifier - remove not allowed",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
+								Group: gwapiv1a2.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1a2.Kind("Gateway"),
+								Name:  gwapiv1a2.ObjectName("eg"),
+							},
+						},
+					},
+					ResponseOverride: []*egv1a1.ResponseOverride{
+						{
+							Match: egv1a1.CustomResponseMatch{
+								StatusCodes: []egv1a1.StatusCodeMatch{
+									{
+										Value: ptr.To(500),
+									},
+								},
+							},
+							Response: &egv1a1.CustomResponse{
+								StatusCode: ptr.To(503),
+								ResponseHeaderModifier: &gwapiv1.HTTPHeaderFilter{
+									Set: []gwapiv1.HTTPHeader{
+										{Name: "x-custom-header", Value: "custom-value"},
+									},
+									Remove: []string{"x-remove-header"},
+								},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{
+				"Remove is not supported for ResponseHeaderModifier in CustomResponse",
+			},
+		},
 
 		{
 			desc: "endpointOverride source with valid header only",

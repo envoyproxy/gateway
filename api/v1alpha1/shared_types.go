@@ -773,6 +773,7 @@ type CustomResponse struct {
 	// Note: Header removal is not supported for responseOverride.
 	//
 	// +optional
+	// +kubebuilder:validation:XValidation:rule="!has(self.remove) || size(self.remove) == 0",message="Remove is not supported for ResponseHeaderModifier in CustomResponse"
 	ResponseHeaderModifier *gwapiv1.HTTPHeaderFilter `json:"responseHeaderModifier,omitempty"`
 }
 
