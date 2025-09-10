@@ -243,7 +243,8 @@ xdsIR:
           value:
           - set-502
         directResponse:
-          statusCode: 500
+          body: '{"error": "Internal Server Error"}'
+          statusCode: 502
         hostname: '*.envoyproxy.io'
         isHTTP2: false
         metadata:
@@ -261,7 +262,8 @@ xdsIR:
           value:
           - text/plain
         directResponse:
-          statusCode: 500
+          body: OK
+          statusCode: 200
         hostname: '*.envoyproxy.io'
         isHTTP2: false
         metadata:

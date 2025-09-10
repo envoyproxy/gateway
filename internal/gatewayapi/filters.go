@@ -585,6 +585,7 @@ func (t *Translator) processResponseHeaderModifierFilter(
 			emptyFilterConfig = false
 		}
 		for _, addHeader := range headersToAdd {
+			emptyFilterConfig = false
 			if addHeader.Name == "" {
 				updateRouteStatusForFilter(
 					filterContext,
@@ -642,6 +643,7 @@ func (t *Translator) processResponseHeaderModifierFilter(
 			emptyFilterConfig = false
 		}
 		for _, setHeader := range headersToSet {
+
 			if setHeader.Name == "" {
 				updateRouteStatusForFilter(
 					filterContext,
@@ -856,7 +858,9 @@ func (t *Translator) processExtensionRefHTTPFilter(extFilter *gwapiv1.LocalObjec
 						}
 						filterContext.AddResponseHeaders = append(filterContext.AddResponseHeaders, newHeader)
 					}
+					filterContext.DirectResponse = dr
 
+					// Add response headers from the direct response filter.
 					// Headers must be added to the filter context to get applied to the response.
 					rhm := hrf.Spec.DirectResponse.ResponseHeaderModifier
 					if rhm != nil {
