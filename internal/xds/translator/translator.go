@@ -473,6 +473,9 @@ func (t *Translator) processHTTPListenerXdsTranslation(
 		if err = patchResources(tCtx, httpListener.Routes); err != nil {
 			errs = errors.Join(errs, err)
 		}
+
+		// Ensure listener filters are correctly sorted
+		tcpXDSListener.ListenerFilters = sortListenerFilters(tcpXDSListener.ListenerFilters)
 	}
 
 	return errs
@@ -831,6 +834,9 @@ func (t *Translator) processTCPListenerXdsTranslation(
 				errs = errors.Join(errs, err)
 			}
 		}
+
+		// Ensure listener filters are correctly sorted
+		xdsListener.ListenerFilters = sortListenerFilters(xdsListener.ListenerFilters)
 	}
 
 	return errs
