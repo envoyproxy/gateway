@@ -946,7 +946,7 @@ func (t *Translator) processRequestMirrorFilter(
 	}
 
 	// Get the route type from the filter context to determine the correct BackendRef type
-	routeType := GetRouteType(filterContext.Route)
+	routeType := filterContext.Route.GetRouteType()
 	weight := int32(1)
 	mirrorBackend := mirrorFilter.BackendRef
 
