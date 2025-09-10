@@ -581,7 +581,7 @@ func TestGetPolicyTargetRefs(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			results := getPolicyTargetRefs(tc.policy, tc.targets)
+			results := getPolicyTargetRefs(tc.policy, tc.targets, "default")
 			require.ElementsMatch(t, results, tc.results)
 		})
 	}
