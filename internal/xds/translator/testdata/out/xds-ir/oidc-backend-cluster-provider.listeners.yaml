@@ -52,7 +52,7 @@
               retryPolicy:
                 numRetries: 3
                 retryBackOff:
-                  baseInterval: 1s
+                  baseInterval: 0.500s
                   maxInterval: 5s
                 retryOn: 5xx,gateway-error,reset
               signoutPath:

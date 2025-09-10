@@ -163,7 +163,7 @@ func (t *Translator) ProcessClientTrafficPolicies(
 	// Policy with no section set (targeting all sections)
 	for _, currPolicy := range clientTrafficPolicies {
 		policyName := utils.NamespacedName(currPolicy)
-		targetRefs := getPolicyTargetRefs(currPolicy.Spec.PolicyTargetReferences, gateways)
+		targetRefs := getPolicyTargetRefs(currPolicy.Spec.PolicyTargetReferences, gateways, currPolicy.Namespace)
 		for _, currTarget := range targetRefs {
 			if !hasSectionName(&currTarget) {
 
