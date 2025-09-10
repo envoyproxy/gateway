@@ -451,8 +451,6 @@ xdsIR:
                   endpoints:
                   - host: 7.7.7.7
                     port: 80
-                  - host: 7.7.7.8
-                    port: 80
                   metadata:
                     kind: Service
                     name: http-backend
@@ -461,7 +459,11 @@ xdsIR:
                   name: securitypolicy/default/policy-for-gateway-1/extauth/0/backend/0
                   protocol: HTTP
                   weight: 1
-                - metadata:
+                - addressType: IP
+                  endpoints:
+                  - host: 7.7.7.8
+                    port: 80
+                  metadata:
                     kind: Service
                     name: http-backend2
                     namespace: envoy-gateway

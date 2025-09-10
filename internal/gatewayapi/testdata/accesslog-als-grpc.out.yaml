@@ -91,7 +91,11 @@ xdsIR:
             namespace: envoy-gateway-system
           name: accesslog_als_0_0
           settings:
-          - metadata:
+          - addressType: IP
+            endpoints:
+            - host: 7.7.7.7
+              port: 50051
+            metadata:
               kind: Service
               name: access-logger
               namespace: default

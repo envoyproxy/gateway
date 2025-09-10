@@ -292,6 +292,21 @@ xdsIR:
     accessLog:
       json:
       - path: /dev/stdout
+    globalResources:
+      proxyServiceCluster:
+        name: envoy-gateway/gateway-legacy-only
+        settings:
+        - addressType: IP
+          endpoints:
+          - host: 7.6.5.4
+            port: 8080
+            zone: zone1
+          metadata:
+            name: envoy-envoy-gateway-gateway-legacy-only-77ed7bb0
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-legacy-only
+          protocol: TCP
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4
@@ -319,8 +334,13 @@ xdsIR:
       proxyServiceCluster:
         name: envoy-gateway/gateway-new-api-only
         settings:
-        - metadata:
-            name: envoy-envoy-gateway-gateway-precedence-test-6c6824c3
+        - addressType: IP
+          endpoints:
+          - host: 7.6.5.4
+            port: 8080
+            zone: zone1
+          metadata:
+            name: envoy-envoy-gateway-gateway-new-api-only-384278b9
             namespace: envoy-gateway-system
             sectionName: "8080"
           name: envoy-gateway/gateway-new-api-only
@@ -351,6 +371,21 @@ xdsIR:
     accessLog:
       json:
       - path: /dev/stdout
+    globalResources:
+      proxyServiceCluster:
+        name: envoy-gateway/gateway-precedence-test
+        settings:
+        - addressType: IP
+          endpoints:
+          - host: 7.6.5.4
+            port: 8080
+            zone: zone1
+          metadata:
+            name: envoy-envoy-gateway-gateway-precedence-test-6c6824c3
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-precedence-test
+          protocol: TCP
     http:
     - address: 0.0.0.0
       externalPort: 80
