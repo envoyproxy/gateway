@@ -286,6 +286,42 @@ func TestValidateConfigMapForReconcile(t *testing.T) {
 	}
 }
 
+// TestValidateBackendTrafficPolicyForReconcileWithRedirectResponseOverride tests the validateBackendTrafficPolicyForReconcile
+// predicate function with a redirect response override.
+func TestValidateBackendTrafficPolicyForReconcileWithRedirectResponseOverride(t *testing.T) {
+	btpWithRedirect := &egv1a1.BackendTrafficPolicy{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "response-override",
+			Namespace: "envoy-gateway-system",
+		},
+		Spec: egv1a1.BackendTrafficPolicySpec{
+			ResponseOverride: []*egv1a1.ResponseOverride{
+				{
+					Match: egv1a1.CustomResponseMatch{
+						StatusCodes: []egv1a1.StatusCodeMatch{
+							{
+								Type: &[]egv1a1.StatusCodeValueType{egv1a1.StatusCodeValueTypeRange}[0],
+								Range: &egv1a1.StatusCodeRange{
+									Start: 500,
+									End:   511,
+								},
+							},
+						},
+					},
+					// Using redirect instead of response causes ro.Response to be nil
+					Redirect: &egv1a1.CustomRedirect{
+						Hostname:   &[]gwapiv1.PreciseHostname{"custom-errors.example.com"}[0],
+						StatusCode: &[]int{302}[0],
+						Scheme:     &[]string{"https"}[0],
+					},
+				},
+			},
+		},
+	}
+	result := configMapBtpIndexFunc(btpWithRedirect)
+	require.Empty(t, result)
+}
+
 // TestValidateSecretForReconcile tests the validateSecretForReconcile
 // predicate function.
 func TestValidateSecretForReconcile(t *testing.T) {
