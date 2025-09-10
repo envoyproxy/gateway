@@ -49,17 +49,11 @@ func (m *ProxyTopologyInjector) Handle(ctx context.Context, req admission.Reques
 	}
 
 	pod := &corev1.Pod{}
-	if getErr := m.Get(ctx, podName, pod); getErr != nil {
+	if err := m.Get(ctx, podName, pod); err != nil {
 		// Cache isn't guaranteed to be updated yet so if m.Get() fails
 		// try getting the pod from API server directly.
-		if m.APIReader != nil {
-			if err := m.APIReader.Get(ctx, podName, pod); err != nil {
-				logger.Error(err, "apiReader get pod failed", "pod", podName.String())
-				topologyInjectorEventsTotal.WithFailure(metrics.ReasonError).Increment()
-				return admission.Allowed("internal error, skipped")
-			}
-		} else {
-			logger.Error(getErr, "get pod failed", "pod", podName.String())
+		if err = m.APIReader.Get(ctx, podName, pod); err != nil {
+			logger.Error(err, "get pod failed", "pod", podName.String())
 			topologyInjectorEventsTotal.WithFailure(metrics.ReasonError).Increment()
 			return admission.Allowed("internal error, skipped")
 		}
