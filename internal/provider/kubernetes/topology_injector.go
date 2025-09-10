@@ -9,7 +9,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"time"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -50,17 +49,9 @@ func (m *ProxyTopologyInjector) Handle(ctx context.Context, req admission.Reques
 	}
 
 	pod := &corev1.Pod{}
-	// Cache isn't guaranteed to be updated yet, so we retry a few times.
-	var getErr error
-	for i := 0; i < 2; i++ {
-		getErr = m.Get(ctx, podName, pod)
-		if getErr == nil {
-			break
-		}
-		time.Sleep(10 * time.Millisecond)
-	}
-	// If the pod is not found in the cache, try to get it from the API server directly.
-	if getErr != nil {
+	if getErr := m.Get(ctx, podName, pod); getErr != nil {
+		// Cache isn't guaranteed to be updated yet so if m.Get() fails
+		// try getting the pod from API server directly.
 		if m.APIReader != nil {
 			if err := m.APIReader.Get(ctx, podName, pod); err != nil {
 				logger.Error(err, "apiReader get pod failed", "pod", podName.String())
