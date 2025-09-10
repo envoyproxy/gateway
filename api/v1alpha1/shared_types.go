@@ -749,7 +749,6 @@ type StatusCodeRange struct {
 }
 
 // CustomResponse defines the configuration for returning a custom response.
-// +kubebuilder:validation:XValidation:rule="!(has(self.responseHeaderModifier) && has(self.responseHeaderModifier.remove) && size(self.responseHeaderModifier.remove) != 0)",message="responseHeaderModifier.remove is not supported for responseOverride - header removal is not supported by LocalResponsePolicy"
 type CustomResponse struct {
 	// Content Type of the response. This will be set in the Content-Type header.
 	//
@@ -767,14 +766,6 @@ type CustomResponse struct {
 	//
 	// +optional
 	StatusCode *int `json:"statusCode,omitempty"`
-
-	// ResponseHeaderModifier defines headers to add, set or remove from the response.
-	// This allows the response policy to append, add or override headers
-	// of the final response before it is sent to a downstream client.
-	// Note: Header removal is not supported for responseOverride.
-	//
-	// +optional
-	ResponseHeaderModifier *gwapiv1.HTTPHeaderFilter `json:"responseHeaderModifier,omitempty"`
 }
 
 // ResponseValueType defines the types of values for the response body supported by Envoy Gateway.

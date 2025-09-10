@@ -40,21 +40,8 @@ http:
                     - value: 404
                 name: backendtrafficpolicy/default/policy-for-gateway/responseoverride/rule/0
                 response:
+                  body: gateway-1 Not Found
                   contentType: text/plain
-                  body: '{"status":"%RESPONSE_CODE%","message":"Resource not found","timestamp":"%START_TIME%"}'
-                  responseHeaderModifier:
-                    add:
-                      - name: X-Custom-Error
-                        value: "Not Found"
-                      - name: X-Gateway-Source
-                        value: "Envoy Gateway"
-                      - name: X-Processing-Time
-                        value: "%DURATION%"
-                    set:
-                      - name: Cache-Control
-                        value: "no-cache, no-store"
-                      - name: X-Response-Modified
-                        value: "true"
               - match:
                   statusCodes:
                     - value: 500
@@ -63,20 +50,11 @@ http:
                         start: 501
                 name: backendtrafficpolicy/default/policy-for-gateway/responseoverride/rule/1
                 response:
-                  contentType: application/json
                   body: |
                     {
                       "error": "Internal Server Error"
                     }
-                  responseHeaderModifier:
-                    add:
-                      - name: X-Error-Type
-                        value: "Internal"
-                      - name: X-Error-Source
-                        value: "BackendTrafficPolicy"
-                    set:
-                      - name: X-Server-Error
-                        value: "true"
+                  contentType: application/json
               - match:
                   statusCodes:
                     - value: 401
@@ -115,10 +93,3 @@ http:
                 name: backendtrafficpolicy/default/policy-for-route/responseoverride/rule/0
                 response:
                   statusCode: 404
-                  responseHeaderModifier:
-                    add:
-                      - name: X-Custom-403-Handler
-                        value: "Forbidden-to-NotFound"
-                    set:
-                      - name: X-Status-Override
-                        value: "403-to-404"

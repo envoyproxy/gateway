@@ -1,3 +1,4 @@
+---
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
@@ -43,30 +44,12 @@ spec:
         body:
           type: Inline
           inline: "%RESPONSE_CODE% Oops! Your request is not found."
-        responseHeaderModifier:
-          add:
-            - name: X-Add-Header
-              value: "added-404"
-            - name: X-Error-Type
-              value: "not-found"
-          set:
-            - name: X-Set-Header
-              value: "set-404"
-            - name: Cache-Control
-              value: "no-cache"
     - match:
         statusCodes:
           - type: Value
             value: 403
       response:
         statusCode: 404
-        responseHeaderModifier:
-          add:
-            - name: X-Add-Header
-              value: "added-403"
-          set:
-            - name: X-Set-Header
-              value: "set-403"
     - match:
         statusCodes:
           - type: Value
@@ -83,10 +66,3 @@ spec:
             group: ""
             kind: ConfigMap
             name: response-override-config
-        responseHeaderModifier:
-          add:
-            - name: X-Add-Header
-              value: "added-500"
-          set:
-            - name: X-Set-Header
-              value: "set-500"

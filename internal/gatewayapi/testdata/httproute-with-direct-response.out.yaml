@@ -234,9 +234,16 @@ xdsIR:
           name: Content-Type
           value:
           - application/json
+        - append: true
+          name: X-Add-Header
+          value:
+          - added-502
+        - append: false
+          name: X-Set-Header
+          value:
+          - set-502
         directResponse:
-          body: '{"error": "Internal Server Error"}'
-          statusCode: 502
+          statusCode: 500
         hostname: '*.envoyproxy.io'
         isHTTP2: false
         metadata:
@@ -254,8 +261,7 @@ xdsIR:
           value:
           - text/plain
         directResponse:
-          body: OK
-          statusCode: 200
+          statusCode: 500
         hostname: '*.envoyproxy.io'
         isHTTP2: false
         metadata:

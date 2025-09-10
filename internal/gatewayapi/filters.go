@@ -857,25 +857,24 @@ func (t *Translator) processExtensionRefHTTPFilter(extFilter *gwapiv1.LocalObjec
 						filterContext.AddResponseHeaders = append(filterContext.AddResponseHeaders, newHeader)
 					}
 
+					// Headers must be added to the filter context to get applied to the response.
 					rhm := hrf.Spec.DirectResponse.ResponseHeaderModifier
 					if rhm != nil {
 						for h := range rhm.Add {
-							dr.AddResponseHeaders = append(dr.AddResponseHeaders, ir.AddHeader{
+							filterContext.AddResponseHeaders = append(filterContext.AddResponseHeaders, ir.AddHeader{
 								Name:   string(rhm.Add[h].Name),
 								Append: true,
 								Value:  []string{rhm.Add[h].Value},
 							})
 						}
 						for h := range rhm.Set {
-							dr.AddResponseHeaders = append(dr.AddResponseHeaders, ir.AddHeader{
+							filterContext.AddResponseHeaders = append(filterContext.AddResponseHeaders, ir.AddHeader{
 								Name:   string(rhm.Set[h].Name),
 								Append: false,
 								Value:  []string{rhm.Set[h].Value},
 							})
 						}
-						dr.RemoveResponseHeaders = append(dr.RemoveResponseHeaders, rhm.Remove...)
 					}
-					filterContext.DirectResponse = dr
 				}
 
 				if hrf.Spec.CredentialInjection != nil {

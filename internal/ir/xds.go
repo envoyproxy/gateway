@@ -627,12 +627,6 @@ type CustomResponse struct {
 
 	// StatusCode will be used for the response's status code.
 	StatusCode *uint32 `json:"statusCode,omitempty"`
-
-	// AddResponseHeaders defines header/value sets to be added to the headers of response.
-	AddResponseHeaders []AddHeader `json:"addResponseHeaders,omitempty" yaml:"addResponseHeaders,omitempty"`
-
-	// RemoveResponseHeaders defines a list of headers to be removed from response.
-	RemoveResponseHeaders []string `json:"removeResponseHeaders,omitempty" yaml:"removeResponseHeaders,omitempty"`
 }
 
 // Validate the fields within the CustomResponse structure

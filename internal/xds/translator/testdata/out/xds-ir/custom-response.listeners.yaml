@@ -27,8 +27,7 @@
                       typedConfig:
                         '@type': type.googleapis.com/envoy.extensions.http.custom_response.local_response_policy.v3.LocalResponsePolicy
                         bodyFormat:
-                          textFormat: '{"status":"%RESPONSE_CODE%","message":"Resource
-                            not found","timestamp":"%START_TIME%"}'
+                          textFormat: gateway-1 Not Found
                         responseHeadersToAdd:
                         - appendAction: OVERWRITE_IF_EXISTS_OR_ADD
                           header:

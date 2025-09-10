@@ -138,6 +138,13 @@ httpFilters:
           group: ""
           kind: ConfigMap
           name: value-ref-response
+      responseHeaderModifier:
+        add:
+        - name: X-Add-Header
+          value: "added-502"
+        set:
+        - name: X-Set-Header
+          value: "set-502"
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: HTTPRouteFilter
   metadata:
