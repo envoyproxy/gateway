@@ -57,7 +57,7 @@ var ResponseOverrideTest = suite.ConformanceTest{
 }
 
 func verifyCustomResponse(t *testing.T, timeoutConfig config.TimeoutConfig, gwAddr,
-	path, expectedContentType, expectedBody string, expectedStatusCode int,
+	path, expectedContentType, expectedBody string, expectedStatusCode int, expectedHeaders ...map[string]string,
 ) {
 	reqURL := url.URL{
 		Scheme: "http",
@@ -94,6 +94,17 @@ func verifyCustomResponse(t *testing.T, timeoutConfig config.TimeoutConfig, gwAd
 		if expectedStatusCode != rsp.StatusCode {
 			tlog.Logf(t, "expected status code to be %d but got %d", expectedStatusCode, rsp.StatusCode)
 			return false
+		}
+
+		// Verify expected headers if provided
+		if len(expectedHeaders) > 0 {
+			for headerName, expectedValue := range expectedHeaders[0] {
+				actualValue := rsp.Header.Get(headerName)
+				if actualValue != expectedValue {
+					tlog.Logf(t, "expected header %s to be %s but got %s", headerName, expectedValue, actualValue)
+					return false
+				}
+			}
 		}
 
 		return true
