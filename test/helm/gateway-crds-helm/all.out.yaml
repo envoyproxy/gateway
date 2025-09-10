@@ -39224,7 +39224,7 @@ spec:
                   return a fixed response.
                 properties:
                   body:
-                    description: Body of the Response
+                    description: Body of the direct response.
                     properties:
                       inline:
                         description: Inline contains the value as an inline string.
@@ -39289,14 +39289,12 @@ spec:
                       rule: 'has(self.valueRef) ? self.valueRef.kind == ''ConfigMap''
                         : true'
                   contentType:
-                    description: Content Type of the response. This will be set in
-                      the Content-Type header.
+                    description: Content Type of the direct response. This will be
+                      set in the Content-Type header.
                     type: string
                   responseHeaderModifier:
-                    description: |-
-                      ResponseHeaderModifier defines headers to add, set or remove from the response.
-                      This allows the response policy to append, add or override headers
-                      of the final response before it is sent to a downstream client.
+                    description: ResponseHeaderModifier defines the headers of the
+                      direct response.
                     properties:
                       add:
                         description: |-
@@ -39430,6 +39428,10 @@ spec:
                       If unset, defaults to 200.
                     type: integer
                 type: object
+                x-kubernetes-validations:
+                - message: responseHeaderModifier.remove is not supported for DirectResponse
+                  rule: '!has(self.responseHeaderModifier) || !has(self.responseHeaderModifier.remove)
+                    || size(self.responseHeaderModifier.remove) == 0'
               urlRewrite:
                 description: HTTPURLRewriteFilter define rewrites of HTTP URL components
                   such as path and host
