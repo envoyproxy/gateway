@@ -33,7 +33,7 @@ func TestExtAuthConfigWithTimeout(t *testing.T) {
 					Authority:   "test-authority",
 				},
 			},
-			expectedTimeout: durationpb.New(time.Duration(defaultExtServiceRequestTimeout) * time.Second),
+			expectedTimeout: durationpb.New(defaultExtServiceRequestTimeout),
 		},
 		{
 			name: "GRPC custom timeout specified in milliseconds - should use custom timeout",
