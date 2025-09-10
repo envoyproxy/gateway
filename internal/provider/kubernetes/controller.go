@@ -1267,7 +1267,7 @@ func (r *gatewayAPIReconciler) processBtpConfigMapRefs(
 ) error {
 	for _, policy := range resourceTree.BackendTrafficPolicies {
 		for _, ro := range policy.Spec.ResponseOverride {
-			if ro.Response.Body != nil && ro.Response.Body.ValueRef != nil && string(ro.Response.Body.ValueRef.Kind) == resource.KindConfigMap {
+			if ro.Response != nil && ro.Response.Body != nil && ro.Response.Body.ValueRef != nil && string(ro.Response.Body.ValueRef.Kind) == resource.KindConfigMap {
 				configMap := new(corev1.ConfigMap)
 				err := r.client.Get(ctx,
 					types.NamespacedName{Namespace: policy.Namespace, Name: string(ro.Response.Body.ValueRef.Name)},

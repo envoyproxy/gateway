@@ -103,7 +103,7 @@ func extractTargetRefs(policy *unstructured.Unstructured, gateways []*GatewayCon
 	if err := json.Unmarshal(specAsJSON, &targetRefs); err != nil {
 		return nil, fmt.Errorf("no targets found for the policy")
 	}
-	ret := getPolicyTargetRefs(targetRefs, gateways)
+	ret := getPolicyTargetRefs(targetRefs, gateways, policy.GetNamespace())
 	if len(ret) == 0 {
 		return nil, fmt.Errorf("no targets found for the policy")
 	}
