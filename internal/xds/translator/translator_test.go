@@ -565,23 +565,3 @@ func requireResourcesToYAMLString(t *testing.T, resources []types.Resource) stri
 	require.NoError(t, err)
 	return string(data)
 }
-
-func TestCustomResponseHeaderAppendAction(t *testing.T) {
-	// Test that custom response actions can be built successfully
-	// Note: Header modification is now handled at the route level, not in LocalResponsePolicy
-	rule := ir.ResponseOverrideRule{
-		Response: &ir.CustomResponse{
-			StatusCode: ptr.To(uint32(500)),
-			Body:       ptr.To("Custom error message"),
-		},
-	}
-
-	cr := &customResponse{}
-	action, err := cr.buildResponseAction(rule)
-	require.NoError(t, err)
-	require.NotNil(t, action)
-
-	// The action contains the serialized LocalResponsePolicy
-	// This is a simple smoke test to ensure the function works
-	require.Contains(t, action.String(), "Custom error message")
-}

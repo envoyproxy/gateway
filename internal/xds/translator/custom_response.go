@@ -442,13 +442,13 @@ func (c *customResponse) buildResponseAction(r ir.ResponseOverrideRule) (*anypb.
 
 	// Process headers
 	for _, header := range r.Response.AddResponseHeaders {
-		appendAction :=corev3.HeaderValueOption_OVERWRITE_IF_EXISTS_OR_ADD
+		appendAction := corev3.HeaderValueOption_OVERWRITE_IF_EXISTS_OR_ADD
 		if header.Append {
 			appendAction = corev3.HeaderValueOption_APPEND_IF_EXISTS_OR_ADD
 		}
 		response.ResponseHeadersToAdd = append(response.ResponseHeadersToAdd, &corev3.HeaderValueOption{
 			Header: &corev3.HeaderValue{
-				Key:   string(header.Name),
+				Key:   header.Name,
 				Value: header.Value[0],
 			},
 			AppendAction: appendAction,
