@@ -140,8 +140,10 @@ func newOrderedHTTPFilter(filter *hcmv3.HttpFilter) *OrderedHTTPFilter {
 		order = 307
 	case isFilterType(filter, egv1a1.EnvoyFilterCompressor):
 		order = 308
-	case isFilterType(filter, egv1a1.EnvoyFilterRouter):
+	case isFilterType(filter, egv1a1.EnvoyFilterHeaderMutation):
 		order = 309
+	case isFilterType(filter, egv1a1.EnvoyFilterRouter):
+		order = 310
 	}
 
 	return &OrderedHTTPFilter{
