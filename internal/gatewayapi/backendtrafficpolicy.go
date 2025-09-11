@@ -1105,7 +1105,7 @@ func buildResponseOverride(policy *egv1a1.BackendTrafficPolicy, resources *resou
 				return nil, err
 			}
 
-			rhm := ro.Response.ResponseHeaderModifier
+			rhm := ro.Response.Header
 			if rhm != nil {
 				for h := range rhm.Add {
 					response.AddResponseHeaders = append(response.AddResponseHeaders, ir.AddHeader{

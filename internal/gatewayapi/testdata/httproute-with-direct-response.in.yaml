@@ -138,7 +138,7 @@ httpFilters:
           group: ""
           kind: ConfigMap
           name: value-ref-response
-      responseHeaderModifier:
+      header:
         add:
         - name: X-Add-Header
           value: "added-502"

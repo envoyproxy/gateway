@@ -140,7 +140,7 @@ backendTrafficPolicies:
           inline: gateway-1 Not Found
           type: Inline
         contentType: text/plain
-        responseHeaderModifier:
+        header:
           add:
           - name: X-Add-Header
             value: added-404

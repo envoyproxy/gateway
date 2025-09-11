@@ -132,7 +132,7 @@ backendTrafficPolicies:
             body:
               type: Inline
               inline: "gateway-1 Not Found"
-            responseHeaderModifier:
+            header:
               add:
                 - name: X-Add-Header
                   value: "added-404"

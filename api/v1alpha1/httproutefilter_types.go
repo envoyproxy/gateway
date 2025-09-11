@@ -73,10 +73,10 @@ type HTTPDirectResponseFilter struct {
 	// +optional
 	StatusCode *int `json:"statusCode,omitempty"`
 
-	// ResponseHeaderModifier defines the headers of the direct response.
+	// Header defines the headers of the direct response.
 	// +optional
-	// +kubebuilder:validation:XValidation:rule="!has(self.remove) || size(self.remove) == 0",message="responseHeaderModifier.remove is not supported for DirectResponse"
-	ResponseHeaderModifier *gwapiv1.HTTPHeaderFilter `json:"responseHeaderModifier,omitempty"`
+	// +kubebuilder:validation:XValidation:rule="!has(self.remove) || size(self.remove) == 0",message="header.remove is not supported for DirectResponse"
+	Header *gwapiv1.HTTPHeaderFilter `json:"header,omitempty"`
 }
 
 // HTTPPathModifierType defines the type of path redirect or rewrite.

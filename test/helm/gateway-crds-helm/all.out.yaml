@@ -19247,9 +19247,9 @@ spec:
                           description: Content Type of the response. This will be
                             set in the Content-Type header.
                           type: string
-                        responseHeaderModifier:
+                        header:
                           description: |-
-                            ResponseHeaderModifier defines headers to add, set or remove from the response.
+                            Header defines headers to add, set or remove from the response.
                             This allows the response policy to append, add or override headers
                             of the final response before it is sent to a downstream client.
                             Note: Header removal is not supported for responseOverride.
@@ -19381,8 +19381,7 @@ spec:
                               x-kubernetes-list-type: map
                           type: object
                           x-kubernetes-validations:
-                          - message: Remove is not supported for ResponseHeaderModifier
-                              in CustomResponse
+                          - message: Remove is not supported for header in CustomResponse
                             rule: '!has(self.remove) || size(self.remove) == 0'
                         statusCode:
                           description: |-
@@ -39429,9 +39428,8 @@ spec:
                     description: Content Type of the direct response. This will be
                       set in the Content-Type header.
                     type: string
-                  responseHeaderModifier:
-                    description: ResponseHeaderModifier defines the headers of the
-                      direct response.
+                  header:
+                    description: Header defines the headers of the direct response.
                     properties:
                       add:
                         description: |-
@@ -39560,8 +39558,7 @@ spec:
                         x-kubernetes-list-type: map
                     type: object
                     x-kubernetes-validations:
-                    - message: responseHeaderModifier.remove is not supported for
-                        DirectResponse
+                    - message: header.remove is not supported for DirectResponse
                       rule: '!has(self.remove) || size(self.remove) == 0'
                   statusCode:
                     description: |-

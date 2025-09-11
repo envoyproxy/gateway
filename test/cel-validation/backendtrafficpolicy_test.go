@@ -2018,7 +2018,7 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 			wantErrors: []string{},
 		},
 		{
-			desc: "custom response with valid responseHeaderModifier - no remove",
+			desc: "custom response with valid header - no remove",
 			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
 				btp.Spec = egv1a1.BackendTrafficPolicySpec{
 					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
@@ -2041,7 +2041,7 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 							},
 							Response: &egv1a1.CustomResponse{
 								StatusCode: ptr.To(503),
-								ResponseHeaderModifier: &gwapiv1.HTTPHeaderFilter{
+								Header: &gwapiv1.HTTPHeaderFilter{
 									Set: []gwapiv1.HTTPHeader{
 										{Name: "x-custom-header", Value: "custom-value"},
 									},
@@ -2057,7 +2057,7 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 			wantErrors: []string{},
 		},
 		{
-			desc: "custom response with invalid responseHeaderModifier - remove not allowed",
+			desc: "custom response with invalid header - remove not allowed",
 			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
 				btp.Spec = egv1a1.BackendTrafficPolicySpec{
 					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
@@ -2080,7 +2080,7 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 							},
 							Response: &egv1a1.CustomResponse{
 								StatusCode: ptr.To(503),
-								ResponseHeaderModifier: &gwapiv1.HTTPHeaderFilter{
+								Header: &gwapiv1.HTTPHeaderFilter{
 									Set: []gwapiv1.HTTPHeader{
 										{Name: "x-custom-header", Value: "custom-value"},
 									},
@@ -2092,7 +2092,7 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 				}
 			},
 			wantErrors: []string{
-				"Remove is not supported for ResponseHeaderModifier in CustomResponse",
+				"Remove is not supported for Header in CustomResponse",
 			},
 		},
 

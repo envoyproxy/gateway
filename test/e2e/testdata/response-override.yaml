@@ -44,7 +44,7 @@ spec:
         body:
           type: Inline
           inline: "%RESPONSE_CODE% Oops! Your request is not found."
-        responseHeaderModifier:
+        header:
           add:
             - name: X-Add-Header
               value: "added-404"
@@ -61,7 +61,7 @@ spec:
             value: 403
       response:
         statusCode: 404
-        responseHeaderModifier:
+        header:
           add:
             - name: X-Add-Header
               value: "added-403"
@@ -84,7 +84,7 @@ spec:
             group: ""
             kind: ConfigMap
             name: response-override-config
-        responseHeaderModifier:
+        header:
           add:
             - name: X-Add-Header
               value: "added-500"

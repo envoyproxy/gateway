@@ -767,14 +767,14 @@ type CustomResponse struct {
 	// +optional
 	StatusCode *int `json:"statusCode,omitempty"`
 
-	// ResponseHeaderModifier defines headers to add, set or remove from the response.
+	// Header defines headers to add, set or remove from the response.
 	// This allows the response policy to append, add or override headers
 	// of the final response before it is sent to a downstream client.
 	// Note: Header removal is not supported for responseOverride.
 	//
 	// +optional
-	// +kubebuilder:validation:XValidation:rule="!has(self.remove) || size(self.remove) == 0",message="Remove is not supported for ResponseHeaderModifier in CustomResponse"
-	ResponseHeaderModifier *gwapiv1.HTTPHeaderFilter `json:"responseHeaderModifier,omitempty"`
+	// +kubebuilder:validation:XValidation:rule="!has(self.remove) || size(self.remove) == 0",message="Remove is not supported for header in CustomResponse"
+	Header *gwapiv1.HTTPHeaderFilter `json:"header,omitempty"`
 }
 
 // ResponseValueType defines the types of values for the response body supported by Envoy Gateway.

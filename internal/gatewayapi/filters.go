@@ -862,7 +862,7 @@ func (t *Translator) processExtensionRefHTTPFilter(extFilter *gwapiv1.LocalObjec
 
 					// Add response headers from the direct response filter.
 					// Headers must be added to the filter context to get applied to the response.
-					rhm := hrf.Spec.DirectResponse.ResponseHeaderModifier
+					rhm := hrf.Spec.DirectResponse.Header
 					if rhm != nil {
 						for h := range rhm.Add {
 							filterContext.AddResponseHeaders = append(filterContext.AddResponseHeaders, ir.AddHeader{

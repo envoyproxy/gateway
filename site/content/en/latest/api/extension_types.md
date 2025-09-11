@@ -1015,7 +1015,7 @@ _Appears in:_
 | `contentType` | _string_ |  false  |  | Content Type of the response. This will be set in the Content-Type header. |
 | `body` | _[CustomResponseBody](#customresponsebody)_ |  false  |  | Body of the Custom Response<br />Supports Envoy command operators for dynamic content (see https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#command-operators). |
 | `statusCode` | _integer_ |  false  |  | Status Code of the Custom Response<br />If unset, does not override the status of response. |
-| `responseHeaderModifier` | _[HTTPHeaderFilter](#httpheaderfilter)_ |  false  |  | ResponseHeaderModifier defines headers to add, set or remove from the response.<br />This allows the response policy to append, add or override headers<br />of the final response before it is sent to a downstream client.<br />Note: Header removal is not supported for responseOverride. |
+| `header` | _[HTTPHeaderFilter](#httpheaderfilter)_ |  false  |  | Header defines headers to add, set or remove from the response.<br />This allows the response policy to append, add or override headers<br />of the final response before it is sent to a downstream client.<br />Note: Header removal is not supported for responseOverride. |
 
 
 #### CustomResponseBody
@@ -2264,7 +2264,7 @@ _Appears in:_
 | `contentType` | _string_ |  false  |  | Content Type of the direct response. This will be set in the Content-Type header. |
 | `body` | _[CustomResponseBody](#customresponsebody)_ |  false  |  | Body of the direct response. |
 | `statusCode` | _integer_ |  false  |  | Status Code of the HTTP response<br />If unset, defaults to 200. |
-| `responseHeaderModifier` | _[HTTPHeaderFilter](#httpheaderfilter)_ |  false  |  | ResponseHeaderModifier defines the headers of the direct response. |
+| `header` | _[HTTPHeaderFilter](#httpheaderfilter)_ |  false  |  | Header defines the headers of the direct response. |
 
 
 #### HTTPExtAuthService

@@ -1479,8 +1479,8 @@ func (in *CustomResponse) DeepCopyInto(out *CustomResponse) {
 		*out = new(int)
 		**out = **in
 	}
-	if in.ResponseHeaderModifier != nil {
-		in, out := &in.ResponseHeaderModifier, &out.ResponseHeaderModifier
+	if in.Header != nil {
+		in, out := &in.Header, &out.Header
 		*out = new(v1.HTTPHeaderFilter)
 		(*in).DeepCopyInto(*out)
 	}
@@ -3341,8 +3341,8 @@ func (in *HTTPDirectResponseFilter) DeepCopyInto(out *HTTPDirectResponseFilter) 
 		*out = new(int)
 		**out = **in
 	}
-	if in.ResponseHeaderModifier != nil {
-		in, out := &in.ResponseHeaderModifier, &out.ResponseHeaderModifier
+	if in.Header != nil {
+		in, out := &in.Header, &out.Header
 		*out = new(v1.HTTPHeaderFilter)
 		(*in).DeepCopyInto(*out)
 	}
