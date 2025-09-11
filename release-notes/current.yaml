@@ -19,6 +19,7 @@ bug fixes: |
   Fixed the controller cannot read the EnvoyProxy attached gatewayclass only.
   Fixed handling of millisecond-level retry durations and token TTLs in OIDC authn.
   Fixed indexer and controller crashing when BackendTrafficPolicy has a redirect response override.
+  Fixed Lua validator log level to be suppressed by default.
   Fixed ProxyTopologyInjector cache sync race condition that caused injection failures
 
 # Enhancements that improve performance.
