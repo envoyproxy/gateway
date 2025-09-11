@@ -22,8 +22,6 @@ import (
 func (t *Translator) ProcessBackends(backends []*egv1a1.Backend, backendTLSPolicies []*gwapiv1a3.BackendTLSPolicy) []*egv1a1.Backend {
 	var res []*egv1a1.Backend
 	for _, backend := range backends {
-		backend := backend
-
 		// Ensure Backends are enabled
 		if !t.BackendEnabled {
 			status.UpdateBackendStatusAcceptedCondition(backend, false,
