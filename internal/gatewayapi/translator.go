@@ -280,7 +280,7 @@ func (t *Translator) GetRelevantGateways(resources *resource.Resources) (
 
 		if gateway.Spec.GatewayClassName == t.GatewayClassName {
 			gc := &GatewayContext{
-				Gateway: gateway.DeepCopy(),
+				Gateway: gateway,
 			}
 
 			// Gateways that are not accepted by the controller because they reference an invalid EnvoyProxy.
