@@ -17940,8 +17940,7 @@ spec:
                               Defaults to 200 only
                             items:
                               description: HTTPStatus defines the http status code.
-                              exclusiveMaximum: true
-                              maximum: 600
+                              maximum: 599
                               minimum: 100
                               type: integer
                             type: array
@@ -19074,8 +19073,7 @@ spec:
                           The retriable-status-codes trigger must also be configured for these status codes to trigger a retry.
                         items:
                           description: HTTPStatus defines the http status code.
-                          exclusiveMaximum: true
-                          maximum: 600
+                          maximum: 599
                           minimum: 100
                           type: integer
                         type: array
@@ -21419,8 +21417,7 @@ spec:
                                       items:
                                         description: HTTPStatus defines the http status
                                           code.
-                                        exclusiveMaximum: true
-                                        maximum: 600
+                                        maximum: 599
                                         minimum: 100
                                         type: integer
                                       type: array
@@ -21845,8 +21842,7 @@ spec:
                                   items:
                                     description: HTTPStatus defines the http status
                                       code.
-                                    exclusiveMaximum: true
-                                    maximum: 600
+                                    maximum: 599
                                     minimum: 100
                                     type: integer
                                   type: array
@@ -34300,8 +34296,7 @@ spec:
                                                           description: HTTPStatus
                                                             defines the http status
                                                             code.
-                                                          exclusiveMaximum: true
-                                                          maximum: 600
+                                                          maximum: 599
                                                           minimum: 100
                                                           type: integer
                                                         type: array
@@ -34768,8 +34763,7 @@ spec:
                                                     items:
                                                       description: HTTPStatus defines
                                                         the http status code.
-                                                      exclusiveMaximum: true
-                                                      maximum: 600
+                                                      maximum: 599
                                                       minimum: 100
                                                       type: integer
                                                     type: array
@@ -35319,8 +35313,7 @@ spec:
                                                           description: HTTPStatus
                                                             defines the http status
                                                             code.
-                                                          exclusiveMaximum: true
-                                                          maximum: 600
+                                                          maximum: 599
                                                           minimum: 100
                                                           type: integer
                                                         type: array
@@ -35787,8 +35780,7 @@ spec:
                                                     items:
                                                       description: HTTPStatus defines
                                                         the http status code.
-                                                      exclusiveMaximum: true
-                                                      maximum: 600
+                                                      maximum: 599
                                                       minimum: 100
                                                       type: integer
                                                     type: array
@@ -36427,8 +36419,7 @@ spec:
                                                   items:
                                                     description: HTTPStatus defines
                                                       the http status code.
-                                                    exclusiveMaximum: true
-                                                    maximum: 600
+                                                    maximum: 599
                                                     minimum: 100
                                                     type: integer
                                                   type: array
@@ -36872,8 +36863,7 @@ spec:
                                               items:
                                                 description: HTTPStatus defines the
                                                   http status code.
-                                                exclusiveMaximum: true
-                                                maximum: 600
+                                                maximum: 599
                                                 minimum: 100
                                                 type: integer
                                               type: array
@@ -37452,8 +37442,7 @@ spec:
                                             items:
                                               description: HTTPStatus defines the
                                                 http status code.
-                                              exclusiveMaximum: true
-                                              maximum: 600
+                                              maximum: 599
                                               minimum: 100
                                               type: integer
                                             type: array
@@ -37895,8 +37884,7 @@ spec:
                                         items:
                                           description: HTTPStatus defines the http
                                             status code.
-                                          exclusiveMaximum: true
-                                          maximum: 600
+                                          maximum: 599
                                           minimum: 100
                                           type: integer
                                         type: array
@@ -39298,8 +39286,7 @@ spec:
                                         items:
                                           description: HTTPStatus defines the http
                                             status code.
-                                          exclusiveMaximum: true
-                                          maximum: 600
+                                          maximum: 599
                                           minimum: 100
                                           type: integer
                                         type: array
@@ -39731,8 +39718,7 @@ spec:
                                     items:
                                       description: HTTPStatus defines the http status
                                         code.
-                                      exclusiveMaximum: true
-                                      maximum: 600
+                                      maximum: 599
                                       minimum: 100
                                       type: integer
                                     type: array
@@ -40215,8 +40201,7 @@ spec:
                                         items:
                                           description: HTTPStatus defines the http
                                             status code.
-                                          exclusiveMaximum: true
-                                          maximum: 600
+                                          maximum: 599
                                           minimum: 100
                                           type: integer
                                         type: array
@@ -40648,8 +40633,7 @@ spec:
                                     items:
                                       description: HTTPStatus defines the http status
                                         code.
-                                      exclusiveMaximum: true
-                                      maximum: 600
+                                      maximum: 599
                                       minimum: 100
                                       type: integer
                                     type: array
@@ -41327,8 +41311,7 @@ spec:
                                               items:
                                                 description: HTTPStatus defines the
                                                   http status code.
-                                                exclusiveMaximum: true
-                                                maximum: 600
+                                                maximum: 599
                                                 minimum: 100
                                                 type: integer
                                               type: array
@@ -41771,8 +41754,7 @@ spec:
                                           items:
                                             description: HTTPStatus defines the http
                                               status code.
-                                            exclusiveMaximum: true
-                                            maximum: 600
+                                            maximum: 599
                                             minimum: 100
                                             type: integer
                                           type: array
@@ -42384,8 +42366,7 @@ spec:
                                         items:
                                           description: HTTPStatus defines the http
                                             status code.
-                                          exclusiveMaximum: true
-                                          maximum: 600
+                                          maximum: 599
                                           minimum: 100
                                           type: integer
                                         type: array
@@ -42817,8 +42798,7 @@ spec:
                                     items:
                                       description: HTTPStatus defines the http status
                                         code.
-                                      exclusiveMaximum: true
-                                      maximum: 600
+                                      maximum: 599
                                       minimum: 100
                                       type: integer
                                     type: array
