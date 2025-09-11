@@ -12,6 +12,7 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
+	"time"
 
 	corev3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	routev3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
@@ -27,7 +28,7 @@ import (
 const (
 	defaultHTTPSPort                uint64 = 443
 	defaultHTTPPort                 uint64 = 80
-	defaultExtServiceRequestTimeout        = 10 // 10 seconds
+	defaultExtServiceRequestTimeout        = 10 * time.Second
 )
 
 // urlCluster is a cluster that is created from a URL.

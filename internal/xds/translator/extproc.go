@@ -95,9 +95,7 @@ func extProcConfig(extProc ir.ExtProc) *extprocv3.ExternalProcessor {
 			TargetSpecifier: &corev3.GrpcService_EnvoyGrpc_{
 				EnvoyGrpc: grpcExtProcService(extProc),
 			},
-			Timeout: &durationpb.Duration{
-				Seconds: defaultExtServiceRequestTimeout,
-			},
+			Timeout: durationpb.New(defaultExtServiceRequestTimeout),
 		},
 	}
 

@@ -8,6 +8,7 @@ package translator
 import (
 	"errors"
 	"fmt"
+	"time"
 
 	corev3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	routev3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
@@ -156,9 +157,9 @@ func buildJWTAuthn(irListener *ir.HTTPListener) (*jwtauthnv3.JwtAuthentication, 
 							HttpUpstreamType: &corev3.HttpUri_Cluster{
 								Cluster: jwksCluster,
 							},
-							Timeout: &durationpb.Duration{Seconds: defaultExtServiceRequestTimeout},
+							Timeout: durationpb.New(defaultExtServiceRequestTimeout),
 						},
-						CacheDuration: &durationpb.Duration{Seconds: 5 * 60},
+						CacheDuration: durationpb.New(5 * time.Minute),
 						AsyncFetch:    &jwtauthnv3.JwksAsyncFetch{},
 					},
 				}

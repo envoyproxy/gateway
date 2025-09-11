@@ -9,6 +9,8 @@ import (
 	"strings"
 	"testing"
 
+	"k8s.io/utils/ptr"
+
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 )
 
@@ -16,7 +18,7 @@ func Test_Validate(t *testing.T) {
 	type args struct {
 		name                 string
 		code                 string
-		validation           egv1a1.LuaValidation
+		proxy                *egv1a1.EnvoyProxy
 		expectedErrSubstring string
 	}
 	tests := []args{
@@ -28,7 +30,7 @@ func Test_Validate(t *testing.T) {
 		{
 			name: "logInfo: envoy_on_response",
 			code: `function envoy_on_response(response_handle)
-                     response_handle:logInfo("Goodbye.")
+                     response_handle:logInfo("This log should not be printed.")
                    end`,
 			expectedErrSubstring: "",
 		},
@@ -156,7 +158,11 @@ func Test_Validate(t *testing.T) {
 			code: `function envoy_on_request(request_handle)
                      request_handle:unknownApi()
                    end`,
-			validation:           egv1a1.LuaValidationSyntax,
+			proxy: &egv1a1.EnvoyProxy{
+				Spec: egv1a1.EnvoyProxySpec{
+					LuaValidation: ptr.To(egv1a1.LuaValidationSyntax),
+				},
+			},
 			expectedErrSubstring: "",
 		},
 		{
@@ -173,7 +179,11 @@ func Test_Validate(t *testing.T) {
 
                      last:setBytes("<html><b>Not Found<b></html>")
                    end`,
-			validation:           egv1a1.LuaValidationSyntax,
+			proxy: &egv1a1.EnvoyProxy{
+				Spec: egv1a1.EnvoyProxySpec{
+					LuaValidation: ptr.To(egv1a1.LuaValidationSyntax),
+				},
+			},
 			expectedErrSubstring: "<string> at EOF:   syntax error",
 		},
 		{
@@ -190,13 +200,17 @@ func Test_Validate(t *testing.T) {
 
                      last:setBytes("<html><b>Not Found<b></html>")
                    end`,
-			validation:           egv1a1.LuaValidationDisabled,
+			proxy: &egv1a1.EnvoyProxy{
+				Spec: egv1a1.EnvoyProxySpec{
+					LuaValidation: ptr.To(egv1a1.LuaValidationDisabled),
+				},
+			},
 			expectedErrSubstring: "",
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			l := NewLuaValidator(tt.code, tt.validation)
+			l := NewLuaValidator(tt.code, tt.proxy)
 			if err := l.Validate(); err != nil && tt.expectedErrSubstring == "" {
 				t.Errorf("Unexpected error: %v", err)
 			} else if err != nil && !strings.Contains(err.Error(), tt.expectedErrSubstring) {

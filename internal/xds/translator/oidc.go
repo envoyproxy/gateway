@@ -132,9 +132,7 @@ func oauth2Config(securityFeatures *ir.SecurityFeatures) (*oauth2v3.OAuth2, erro
 				HttpUpstreamType: &corev3.HttpUri_Cluster{
 					Cluster: tokenEndpointCluster,
 				},
-				Timeout: &durationpb.Duration{
-					Seconds: defaultExtServiceRequestTimeout,
-				},
+				Timeout: durationpb.New(defaultExtServiceRequestTimeout),
 			},
 			AuthorizationEndpoint: oidc.Provider.AuthorizationEndpoint,
 			RedirectUri:           oidc.RedirectURL,
@@ -190,15 +188,11 @@ func oauth2Config(securityFeatures *ir.SecurityFeatures) (*oauth2v3.OAuth2, erro
 	}
 
 	if oidc.DefaultTokenTTL != nil {
-		oauth2.Config.DefaultExpiresIn = &durationpb.Duration{
-			Seconds: int64(oidc.DefaultTokenTTL.Seconds()),
-		}
+		oauth2.Config.DefaultExpiresIn = durationpb.New(oidc.DefaultTokenTTL.Duration)
 	}
 
 	if oidc.DefaultRefreshTokenTTL != nil {
-		oauth2.Config.DefaultRefreshTokenExpiresIn = &durationpb.Duration{
-			Seconds: int64(oidc.DefaultRefreshTokenTTL.Seconds()),
-		}
+		oauth2.Config.DefaultRefreshTokenExpiresIn = durationpb.New(oidc.DefaultRefreshTokenTTL.Duration)
 	}
 
 	if oidc.CookieNameOverrides != nil &&
@@ -364,12 +358,8 @@ func buildNonRouteRetryPolicy(rr *ir.Retry) (*corev3.RetryPolicy, error) {
 
 	if rr.PerRetry != nil && rr.PerRetry.BackOff != nil {
 		rp.RetryBackOff = &corev3.BackoffStrategy{
-			BaseInterval: &durationpb.Duration{
-				Seconds: int64(rr.PerRetry.BackOff.BaseInterval.Seconds()),
-			},
-			MaxInterval: &durationpb.Duration{
-				Seconds: int64(rr.PerRetry.BackOff.MaxInterval.Seconds()),
-			},
+			BaseInterval: durationpb.New(rr.PerRetry.BackOff.BaseInterval.Duration),
+			MaxInterval:  durationpb.New(rr.PerRetry.BackOff.MaxInterval.Duration),
 		}
 	}
 

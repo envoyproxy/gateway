@@ -8,7 +8,6 @@ package translator
 import (
 	"errors"
 	"net/url"
-	"time"
 
 	corev3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	routev3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
@@ -126,7 +125,7 @@ func extAuthConfig(extAuth *ir.ExtAuth) *extauthv3.ExtAuthz {
 		}
 	}
 
-	timeout := durationpb.New(time.Duration(defaultExtServiceRequestTimeout) * time.Second)
+	timeout := durationpb.New(defaultExtServiceRequestTimeout)
 	if extAuth.Timeout != nil {
 		timeout = durationpb.New(extAuth.Timeout.Duration)
 	}
