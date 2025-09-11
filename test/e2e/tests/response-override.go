@@ -69,6 +69,7 @@ var ResponseOverrideTest = suite.ConformanceTest{
 				"X-Add-Header": "added-403",
 				"X-Set-Header": "set-403",
 			})
+			verifyCustomResponse(t, suite.TimeoutConfig, gwAddr, "/status/401", "", "", 301)
 		})
 	},
 }

@@ -8,7 +8,8 @@ security updates: |
 
 # New features or capabilities added in this release.
 new features: |
-  Added support for mTLS configuration for ExtensionServer
+  Added support for mTLS configuration for ExtensionServer.
+  Added support for late response headers in ClientTrafficPolicy.
 
 bug fixes: |
   Fixed %ROUTE_KIND% operator to be lower-cased when used by clusterStatName in EnvoyProxy API.
@@ -19,6 +20,7 @@ bug fixes: |
   Fixed the controller cannot read the EnvoyProxy attached gatewayclass only.
   Fixed handling of millisecond-level retry durations and token TTLs in OIDC authn.
   Fixed indexer and controller crashing when BackendTrafficPolicy has a redirect response override.
+  Fixed Lua validator log level to be suppressed by default.
 
 # Enhancements that improve performance.
 performance improvements: |

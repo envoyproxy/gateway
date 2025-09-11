@@ -91,3 +91,15 @@ spec:
           set:
             - name: X-Set-Header
               value: "set-500"
+    - match:
+        statusCodes:
+          - type: Value
+            value: 401
+      redirect:
+        scheme: https
+        hostname: www.redirect.com
+        port: 8443
+        statusCode: 301
+        path:
+          type: ReplaceFullPath
+          replaceFullPath: /status/301
