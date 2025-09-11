@@ -466,7 +466,6 @@ func (t *Translator) buildLua(
 	envoyProxy *egv1a1.EnvoyProxy,
 ) (*ir.Lua, error) {
 	var luaCode *string
-	var luaValidation egv1a1.LuaValidation
 	var err error
 	if lua.Type == egv1a1.LuaValueTypeValueRef {
 		luaCode, err = getLuaBodyFromLocalObjectReference(lua.ValueRef, resources, policy.Namespace)
@@ -476,12 +475,8 @@ func (t *Translator) buildLua(
 	if err != nil {
 		return nil, err
 	}
-	if envoyProxy != nil && envoyProxy.Spec.LuaValidation != nil {
-		luaValidation = *envoyProxy.Spec.LuaValidation
-	} else {
-		luaValidation = egv1a1.LuaValidationStrict
-	}
-	if err = luavalidator.NewLuaValidator(*luaCode, luaValidation).Validate(); err != nil {
+
+	if err = luavalidator.NewLuaValidator(*luaCode, envoyProxy).Validate(); err != nil {
 		return nil, fmt.Errorf("validation failed for lua body in policy with name %v: %w", name, err)
 	}
 	return &ir.Lua{
