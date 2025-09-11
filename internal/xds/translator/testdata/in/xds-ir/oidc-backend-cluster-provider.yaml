@@ -54,7 +54,7 @@ http:
               numRetries: 3
               perRetry:
                 backOff:
-                  baseInterval: 1s
+                  baseInterval: 500ms
                   maxInterval: 5s
               retryOn:
                 triggers:
