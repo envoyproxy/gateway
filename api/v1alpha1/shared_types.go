@@ -516,8 +516,7 @@ type KubernetesHorizontalPodAutoscalerSpec struct {
 
 // HTTPStatus defines the http status code.
 // +kubebuilder:validation:Minimum=100
-// +kubebuilder:validation:Maximum=600
-// +kubebuilder:validation:ExclusiveMaximum=true
+// +kubebuilder:validation:Maximum=599
 type HTTPStatus int
 
 // MergeType defines the type of merge operation
