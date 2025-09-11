@@ -254,11 +254,6 @@ $ curl -vvv --header "Host: headers.example" "http://${GATEWAY_HOST}/get" --head
 
 Headers can be removed from a request by simply supplying a list of header names.
 
-Setting headers is similar to adding headers. If the request does not have the header configured by the filter, then it
-will be added, but unlike [adding request headers](#adding-request-headers) which will append the value of the header if
-the request already contains it, setting a header will cause the value to be replaced by the value configured in the
-filter.
-
 {{< tabpane text=true >}}
 {{% tab header="Apply from stdin" %}}
 
