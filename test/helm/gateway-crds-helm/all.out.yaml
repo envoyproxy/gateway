@@ -43435,7 +43435,6 @@ spec:
                       By default, its unset.
                     properties:
                       sameSite:
-                        default: Strict
                         enum:
                         - Lax
                         - Strict
