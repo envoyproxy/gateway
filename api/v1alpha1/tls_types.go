@@ -75,7 +75,7 @@ type TLSSettings struct {
 	// 2. Other Routes: ALPN is disabled.
 	// 3. Backends: proxy uses the appropriate ALPN options for the backend protocol.
 	// When an empty list is provided, the ALPN TLS extension is disabled.
-	// Supported values are:
+	// Typical Supported values are:
 	// - http/1.0
 	// - http/1.1
 	// - h2
@@ -85,7 +85,6 @@ type TLSSettings struct {
 }
 
 // ALPNProtocol specifies the protocol to be negotiated using ALPN
-// +kubebuilder:validation:Enum=http/1.0;http/1.1;h2
 type ALPNProtocol string
 
 // When adding ALPN constants, they must be values that are defined
