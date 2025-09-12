@@ -64,7 +64,7 @@ func setupCreateOrUpdateProxyDaemonSet(gatewayNamespaceMode bool) (*appsv1.Daemo
 	infra.Proxy.Config = &egv1a1.EnvoyProxy{
 		Spec: egv1a1.EnvoyProxySpec{
 			Provider: &egv1a1.EnvoyProxyProvider{
-				Type: egv1a1.ProviderTypeKubernetes,
+				Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
 				Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
 					// Use daemonset, instead of deployment.
 					EnvoyDaemonSet: egv1a1.DefaultKubernetesDaemonSet(egv1a1.DefaultEnvoyProxyImage),
@@ -154,7 +154,7 @@ func TestCreateOrUpdateProxyDaemonSet(t *testing.T) {
 					Config: &egv1a1.EnvoyProxy{
 						Spec: egv1a1.EnvoyProxySpec{
 							Provider: &egv1a1.EnvoyProxyProvider{
-								Type: egv1a1.ProviderTypeKubernetes,
+								Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
 								Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
 									EnvoyDaemonSet: &egv1a1.KubernetesDaemonSetSpec{
 										Container: &egv1a1.KubernetesContainerSpec{
@@ -190,7 +190,7 @@ func TestCreateOrUpdateProxyDaemonSet(t *testing.T) {
 					Config: &egv1a1.EnvoyProxy{
 						Spec: egv1a1.EnvoyProxySpec{
 							Provider: &egv1a1.EnvoyProxyProvider{
-								Type: egv1a1.ProviderTypeKubernetes,
+								Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
 								Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
 									EnvoyDaemonSet: &egv1a1.KubernetesDaemonSetSpec{
 										Pod: &egv1a1.KubernetesPodSpec{
@@ -231,7 +231,7 @@ func TestCreateOrUpdateProxyDaemonSet(t *testing.T) {
 					Config: &egv1a1.EnvoyProxy{
 						Spec: egv1a1.EnvoyProxySpec{
 							Provider: &egv1a1.EnvoyProxyProvider{
-								Type: egv1a1.ProviderTypeKubernetes,
+								Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
 								Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
 									EnvoyDaemonSet: &egv1a1.KubernetesDaemonSetSpec{
 										Pod: &egv1a1.KubernetesPodSpec{
@@ -271,7 +271,7 @@ func TestCreateOrUpdateProxyDaemonSet(t *testing.T) {
 					Config: &egv1a1.EnvoyProxy{
 						Spec: egv1a1.EnvoyProxySpec{
 							Provider: &egv1a1.EnvoyProxyProvider{
-								Type: egv1a1.ProviderTypeKubernetes,
+								Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
 								Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
 									EnvoyDaemonSet: &egv1a1.KubernetesDaemonSetSpec{
 										Pod: &egv1a1.KubernetesPodSpec{
