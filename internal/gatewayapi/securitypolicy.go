@@ -484,7 +484,7 @@ func validateSecurityPolicyForTCP(p *egv1a1.SecurityPolicy) error {
 		case egv1a1.AuthorizationActionAllow:
 			// Allow must specify at least one CIDR
 			if len(rule.Principal.ClientCIDRs) == 0 {
-				return fmt.Errorf("rule %d with Allow action must specify at least one ClientCIDR for TCP routes", i)
+				return fmt.Errorf("rule %d with Allow action must specify at least one ClientCIDR for TCP routes: TCP authorization can only be performed based on client IP address (CIDR); header-based or JWT-based authorization is not supported", i)
 			}
 			// All CIDRs must be valid
 			if err := validateCIDRs(rule.Principal.ClientCIDRs); err != nil {
