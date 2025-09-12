@@ -45,7 +45,7 @@ var TCPRouteAuthzWithClientIP = suite.ConformanceTest{
 			Kind:        gatewayapi.KindPtr(resource.KindGateway),
 			Namespace:   gatewayapi.NamespacePtr(gwNN.Namespace),
 			Name:        gwapiv1.ObjectName(gwNN.Name),
-			SectionName: &ipSection, // fixed unnecessary conversion
+			SectionName: &ipSection,
 		}
 		SecurityPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "tcp-backend-authorization-ip-security-policy", Namespace: ns}, suite.ControllerName, ancestorRefIP)
 
@@ -56,7 +56,7 @@ var TCPRouteAuthzWithClientIP = suite.ConformanceTest{
 			Kind:        gatewayapi.KindPtr(resource.KindGateway),
 			Namespace:   gatewayapi.NamespacePtr(gwNN.Namespace),
 			Name:        gwapiv1.ObjectName(gwNN.Name),
-			SectionName: &fqdnSection, // fixed unnecessary conversion
+			SectionName: &fqdnSection,
 		}
 		SecurityPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "tcp-backend-authorization-fqdn-security-policy", Namespace: ns}, suite.ControllerName, ancestorRefFqdn)
 

@@ -60,6 +60,8 @@ const (
 	// https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/network/connection_limit/v3/connection_limit.proto
 	networkConnectionLimit                    = "envoy.filters.network.connection_limit"
 	defaultMaxAcceptConnectionsPerSocketEvent = 1
+	// Stat prefix for the IP matcher used in TCP RBAC ordered matcher path.
+	tcpRBACIPMatcherStatPrefix = "tcp_rbac_ip"
 )
 
 func http1ProtocolOptions(opts *ir.HTTP1Settings) *corev3.Http1ProtocolOptions {
@@ -670,8 +672,6 @@ func (t *Translator) addXdsTCPFilterChain(
 }
 
 func buildTCPRBACMatcherFromRules(rules []*ir.AuthorizationRule, defaultAction egv1a1.AuthorizationAction) *rbacconfig.RBAC {
-	logger := log.Log.WithName("tcp-rbac")
-
 	if len(rules) == 0 {
 		return nil
 	}
@@ -726,7 +726,8 @@ func buildTCPRBACMatcherFromRules(rules []*ir.AuthorizationRule, defaultAction e
 			Action: act,
 		})
 		if err != nil {
-			logger.Error(err, "failed to marshal action Any, skipping rule", "rule", r.Name)
+			// logger creation only on error path.
+			log.Log.WithName("tcp-rbac").Error(err, "failed to marshal action Any, skipping rule", "rule", r.Name)
 			continue
 		}
 
@@ -752,7 +753,7 @@ func buildTCPRBACMatcherFromRules(rules []*ir.AuthorizationRule, defaultAction e
 		Action: def,
 	})
 	if err != nil {
-		logger.Error(err, "failed to marshal default action Any")
+		log.Log.WithName("tcp-rbac").Error(err, "failed to marshal default action Any")
 		defAny = &anypb.Any{}
 	}
 
@@ -829,7 +830,7 @@ func principalsToPredicate(p ir.Principal) *matcher.Matcher_MatcherList_Predicat
 	ipListMatcher := &matchingip.Ip{
 		CidrRanges: ranges,
 		// Required by Envoy proto validation; any non-empty string is acceptable.
-		StatPrefix: "tcp_rbac_ip",
+		StatPrefix: tcpRBACIPMatcherStatPrefix,
 	}
 
 	ipMatcherAny, err := anypb.New(ipListMatcher)
