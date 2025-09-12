@@ -72,7 +72,7 @@ func (t *Translator) ProcessClientTrafficPolicies(
 			if hasSectionName(&currTarget) {
 				policy, found := handledPolicies[policyName]
 				if !found {
-					policy = currPolicy.DeepCopy()
+					policy = currPolicy
 					handledPolicies[policyName] = policy
 					res = append(res, policy)
 				}
@@ -169,7 +169,7 @@ func (t *Translator) ProcessClientTrafficPolicies(
 
 				policy, found := handledPolicies[policyName]
 				if !found {
-					policy = currPolicy.DeepCopy()
+					policy = currPolicy
 					res = append(res, policy)
 					handledPolicies[policyName] = policy
 				}

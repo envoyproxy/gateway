@@ -109,7 +109,7 @@ func (t *Translator) ProcessBackendTrafficPolicies(resources *resource.Resources
 			if currTarget.Kind != resource.KindGateway {
 				policy, found := handledPolicies[policyName]
 				if !found {
-					policy = currPolicy.DeepCopy()
+					policy = currPolicy
 					handledPolicies[policyName] = policy
 					res = append(res, policy)
 				}
@@ -237,7 +237,7 @@ func (t *Translator) ProcessBackendTrafficPolicies(resources *resource.Resources
 			if currTarget.Kind == resource.KindGateway {
 				policy, found := handledPolicies[policyName]
 				if !found {
-					policy = currPolicy.DeepCopy()
+					policy = currPolicy
 					handledPolicies[policyName] = policy
 					res = append(res, policy)
 				}
@@ -545,7 +545,7 @@ func applyTrafficFeatureToRoute(route RouteContext,
 
 func mergeBackendTrafficPolicy(routePolicy, gwPolicy *egv1a1.BackendTrafficPolicy) (*egv1a1.BackendTrafficPolicy, error) {
 	if routePolicy.Spec.MergeType == nil || gwPolicy == nil {
-		return routePolicy.DeepCopy(), nil
+		return routePolicy, nil
 	}
 
 	return utils.Merge[*egv1a1.BackendTrafficPolicy](gwPolicy, routePolicy, *routePolicy.Spec.MergeType)
