@@ -11,20 +11,25 @@ import (
 	"net"
 	"strconv"
 	"strings"
+	"unicode"
 
 	xdscore "github.com/cncf/xds/go/xds/core/v3"
 	matcher "github.com/cncf/xds/go/xds/type/matcher/v3"
 	corev3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	listenerv3 "github.com/envoyproxy/go-control-plane/envoy/config/listener/v3"
+	rbacv3 "github.com/envoyproxy/go-control-plane/envoy/config/rbac/v3"
 	tls_inspectorv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/listener/tls_inspector/v3"
 	connection_limitv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/connection_limit/v3"
 	hcmv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/http_connection_manager/v3"
+	rbacconfig "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/rbac/v3"
 	tcpv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/tcp_proxy/v3"
 	udpv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/udp/udp_proxy/v3"
 	early_header_mutationv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/http/early_header_mutation/header_mutation/v3"
 	preservecasev3 "github.com/envoyproxy/go-control-plane/envoy/extensions/http/header_formatters/preserve_case/v3"
 	customheaderv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/http/original_ip_detection/custom_header/v3"
 	xffv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/http/original_ip_detection/xff/v3"
+	networkinput "github.com/envoyproxy/go-control-plane/envoy/extensions/matching/common_inputs/network/v3"
+	matchingip "github.com/envoyproxy/go-control-plane/envoy/extensions/matching/input_matchers/ip/v3"
 	quicv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/transport_sockets/quic/v3"
 	tlsv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/transport_sockets/tls/v3"
 	typev3 "github.com/envoyproxy/go-control-plane/envoy/type/v3"
@@ -35,6 +40,7 @@ import (
 	"google.golang.org/protobuf/types/known/durationpb"
 	"google.golang.org/protobuf/types/known/wrapperspb"
 	"k8s.io/utils/ptr"
+	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/ir"
@@ -54,6 +60,8 @@ const (
 	// https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/network/connection_limit/v3/connection_limit.proto
 	networkConnectionLimit                    = "envoy.filters.network.connection_limit"
 	defaultMaxAcceptConnectionsPerSocketEvent = 1
+	// Stat prefix for the IP matcher used in TCP RBAC ordered matcher path.
+	tcpRBACIPMatcherStatPrefix = "tcp_rbac_ip"
 )
 
 func http1ProtocolOptions(opts *ir.HTTP1Settings) *corev3.Http1ProtocolOptions {
@@ -630,45 +638,11 @@ func (t *Translator) addXdsTCPFilterChain(
 
 	// Append port to the statPrefix.
 	statPrefix = strings.Join([]string{statPrefix, strconv.Itoa(int(xdsListener.Address.GetSocketAddress().GetPortValue()))}, "-")
-	al, error := buildXdsAccessLog(accesslog, ir.ProxyAccessLogTypeRoute)
-	if error != nil {
-		return error
-	}
-	mgr := &tcpv3.TcpProxy{
-		AccessLog:  al,
-		StatPrefix: statPrefix,
-		ClusterSpecifier: &tcpv3.TcpProxy_Cluster{
-			Cluster: clusterName,
-		},
-		HashPolicy: buildTCPProxyHashPolicy(irRoute.LoadBalancer),
-	}
 
-	if timeout != nil && timeout.TCP != nil {
-		if timeout.TCP.IdleTimeout != nil {
-			mgr.IdleTimeout = durationpb.New(timeout.TCP.IdleTimeout.Duration)
-		}
-	}
-
-	var filters []*listenerv3.Filter
-
-	if connection != nil && connection.ConnectionLimit != nil {
-		cl := buildConnectionLimitFilter(statPrefix, connection)
-		if clf, err := toNetworkFilter(networkConnectionLimit, cl); err == nil {
-			filters = append(filters, clf)
-		} else {
-			return err
-		}
-	}
-
-	if mgrf, err := toNetworkFilter(wellknown.TCPProxy, mgr); err == nil {
-		filters = append(filters, mgrf)
-	} else {
+	// Build the filter chain using our new function
+	filterChain, err := buildTCPFilterChain(irRoute, clusterName, statPrefix, accesslog, timeout, connection)
+	if err != nil {
 		return err
-	}
-
-	filterChain := &listenerv3.FilterChain{
-		Name:    tlsListenerFilterChainName(irRoute),
-		Filters: filters,
 	}
 
 	if isTLSPassthrough {
@@ -695,6 +669,260 @@ func (t *Translator) addXdsTCPFilterChain(
 	xdsListener.FilterChains = append(xdsListener.FilterChains, filterChain)
 
 	return nil
+}
+
+func buildTCPRBACMatcherFromRules(rules []*ir.AuthorizationRule, defaultAction egv1a1.AuthorizationAction) *rbacconfig.RBAC {
+	if len(rules) == 0 {
+		return nil
+	}
+
+	// Detect SingleAction action set (all ALLOW or all DENY) and fall back to classic rules-based RBAC.
+	first := rules[0].Action
+	allSame := true
+	for _, r := range rules[1:] {
+		if r.Action != first {
+			allSame = false
+			break
+		}
+	}
+	if allSame {
+		policies := map[string]*rbacv3.Policy{}
+		for _, r := range rules {
+			policies[r.Name] = &rbacv3.Policy{
+				Principals: convertPrincipals(r.Principal),
+				Permissions: []*rbacv3.Permission{{
+					Rule: &rbacv3.Permission_Any{Any: true},
+				}},
+			}
+		}
+		actionEnum := rbacv3.RBAC_ALLOW
+		if first == egv1a1.AuthorizationActionDeny {
+			actionEnum = rbacv3.RBAC_DENY
+		}
+		return &rbacconfig.RBAC{
+			StatPrefix: "tcp_rbac_",
+			Rules: &rbacv3.RBAC{
+				Action:   actionEnum,
+				Policies: policies,
+			},
+		}
+	}
+
+	// Mixed actions -> ordered matcher path.
+	var fieldMatchers []*matcher.Matcher_MatcherList_FieldMatcher
+	for _, r := range rules {
+		pred := principalsToPredicate(r.Principal)
+
+		act := rbacv3.RBAC_ALLOW
+		if r.Action == egv1a1.AuthorizationActionDeny {
+			act = rbacv3.RBAC_DENY
+		}
+
+		safeRuleName := sanitizeMatcherActionName(r.Name)
+		// Extension config + action name include rule name + action for clarity
+		actionExtName := fmt.Sprintf("tcp-authz-%s-%s", safeRuleName, strings.ToLower(string(r.Action)))
+		actAny, err := anypb.New(&rbacv3.Action{
+			Name:   actionExtName,
+			Action: act,
+		})
+		if err != nil {
+			// logger creation only on error path.
+			log.Log.WithName("tcp-rbac").Error(err, "failed to marshal action Any, skipping rule", "rule", r.Name)
+			continue
+		}
+
+		fieldMatchers = append(fieldMatchers, &matcher.Matcher_MatcherList_FieldMatcher{
+			Predicate: pred,
+			OnMatch: &matcher.Matcher_OnMatch{
+				OnMatch: &matcher.Matcher_OnMatch_Action{
+					Action: &xdscore.TypedExtensionConfig{
+						Name:        actionExtName,
+						TypedConfig: actAny,
+					},
+				},
+			},
+		})
+	}
+
+	def := rbacv3.RBAC_DENY
+	if defaultAction == egv1a1.AuthorizationActionAllow {
+		def = rbacv3.RBAC_ALLOW
+	}
+	defAny, err := anypb.New(&rbacv3.Action{
+		Name:   "default",
+		Action: def,
+	})
+	if err != nil {
+		log.Log.WithName("tcp-rbac").Error(err, "failed to marshal default action Any")
+		defAny = &anypb.Any{}
+	}
+
+	topMatcher := &matcher.Matcher{
+		MatcherType: &matcher.Matcher_MatcherList_{
+			MatcherList: &matcher.Matcher_MatcherList{
+				Matchers: fieldMatchers,
+			},
+		},
+		OnNoMatch: &matcher.Matcher_OnMatch{
+			OnMatch: &matcher.Matcher_OnMatch_Action{
+				Action: &xdscore.TypedExtensionConfig{
+					Name:        "default",
+					TypedConfig: defAny,
+				},
+			},
+		},
+	}
+
+	return &rbacconfig.RBAC{
+		StatPrefix: "tcp_rbac_",
+		Matcher:    topMatcher,
+	}
+}
+
+func sanitizeMatcherActionName(in string) string {
+	if in == "" {
+		return "unnamed"
+	}
+	var b strings.Builder
+	for _, r := range in {
+		if unicode.IsLetter(r) || unicode.IsDigit(r) || r == '_' {
+			b.WriteRune(unicode.ToLower(r))
+		} else {
+			b.WriteByte('_')
+		}
+	}
+	return b.String()
+}
+
+// principalsToPredicate converts principals to a matcher.Matcher_MatcherList_Predicate
+func principalsToPredicate(p ir.Principal) *matcher.Matcher_MatcherList_Predicate {
+	// Pack SourceIPInput with anypb.New (no validation)
+	srcInputAny, err := anypb.New(&networkinput.SourceIPInput{})
+	if err != nil {
+		srcInputAny = &anypb.Any{
+			TypeUrl: "type.googleapis.com/envoy.extensions.matching.common_inputs.network.v3.SourceIPInput",
+		}
+	}
+
+	// Aggregate all CIDRs into one Ip matcher
+	var ranges []*corev3.CidrRange
+	for _, c := range p.ClientCIDRs {
+		cr := convertCIDR(c)
+		if cr == nil || cr.AddressPrefix == "" || cr.PrefixLen == nil {
+			continue
+		}
+		ranges = append(ranges, &corev3.CidrRange{
+			AddressPrefix: cr.AddressPrefix,
+			PrefixLen:     wrapperspb.UInt32(cr.PrefixLen.GetValue()),
+		})
+	}
+
+	// No valid ranges => return a never-match predicate
+	if len(ranges) == 0 {
+		return &matcher.Matcher_MatcherList_Predicate{
+			MatchType: &matcher.Matcher_MatcherList_Predicate_OrMatcher{
+				OrMatcher: &matcher.Matcher_MatcherList_Predicate_PredicateList{},
+			},
+		}
+	}
+
+	// Build Ip matcher and pack with anypb.New (skip validation)
+	ipListMatcher := &matchingip.Ip{
+		CidrRanges: ranges,
+		// Required by Envoy proto validation; any non-empty string is acceptable.
+		StatPrefix: tcpRBACIPMatcherStatPrefix,
+	}
+
+	ipMatcherAny, err := anypb.New(ipListMatcher)
+	if err != nil {
+		ipMatcherAny = &anypb.Any{
+			TypeUrl: "type.googleapis.com/envoy.extensions.matching.input_matchers.ip.v3.Ip",
+		}
+	}
+
+	// SinglePredicate: SourceIP input + Ip custom matcher
+	return &matcher.Matcher_MatcherList_Predicate{
+		MatchType: &matcher.Matcher_MatcherList_Predicate_SinglePredicate_{
+			SinglePredicate: &matcher.Matcher_MatcherList_Predicate_SinglePredicate{
+				Input: &xdscore.TypedExtensionConfig{
+					Name:        "envoy.matching.inputs.source_ip",
+					TypedConfig: srcInputAny,
+				},
+				Matcher: &matcher.Matcher_MatcherList_Predicate_SinglePredicate_CustomMatch{
+					CustomMatch: &xdscore.TypedExtensionConfig{
+						Name:        "envoy.matching.matchers.ip",
+						TypedConfig: ipMatcherAny,
+					},
+				},
+			},
+		},
+	}
+}
+
+func buildTCPFilterChain(
+	irRoute *ir.TCPRoute,
+	clusterName string,
+	statPrefix string,
+	accesslog *ir.AccessLog,
+	timeout *ir.ClientTimeout,
+	connection *ir.ClientConnection,
+) (*listenerv3.FilterChain, error) {
+	var filters []*listenerv3.Filter
+
+	al, err := buildXdsAccessLog(accesslog, ir.ProxyAccessLogTypeRoute)
+	if err != nil {
+		return nil, err
+	}
+
+	// Add RBAC first (if any rules)
+	if irRoute.Security != nil && irRoute.Security.Authorization != nil && len(irRoute.Security.Authorization.Rules) > 0 {
+		defaultAction := egv1a1.AuthorizationActionDeny
+		if irRoute.Security.Authorization.DefaultAction == egv1a1.AuthorizationActionAllow {
+			defaultAction = egv1a1.AuthorizationActionAllow
+		}
+
+		rbacCfg := buildTCPRBACMatcherFromRules(irRoute.Security.Authorization.Rules, defaultAction)
+		if rbacCfg != nil {
+			if f, err := toNetworkFilter("envoy.filters.network.rbac", rbacCfg); err == nil {
+				filters = append(filters, f)
+			} else {
+				return nil, err
+			}
+		}
+	}
+
+	// Connection limit (if configured)
+	if connection != nil && connection.ConnectionLimit != nil {
+		cl := buildConnectionLimitFilter(statPrefix, connection)
+		if clf, err := toNetworkFilter(networkConnectionLimit, cl); err == nil {
+			filters = append(filters, clf)
+		} else {
+			return nil, err
+		}
+	}
+
+	// TCP proxy last
+	mgr := &tcpv3.TcpProxy{
+		AccessLog:  al,
+		StatPrefix: statPrefix,
+		ClusterSpecifier: &tcpv3.TcpProxy_Cluster{
+			Cluster: clusterName,
+		},
+		HashPolicy: buildTCPProxyHashPolicy(irRoute.LoadBalancer),
+	}
+	if timeout != nil && timeout.TCP != nil && timeout.TCP.IdleTimeout != nil {
+		mgr.IdleTimeout = durationpb.New(timeout.TCP.IdleTimeout.Duration)
+	}
+	if mgrf, err := toNetworkFilter(wellknown.TCPProxy, mgr); err == nil {
+		filters = append(filters, mgrf)
+	} else {
+		return nil, err
+	}
+
+	return &listenerv3.FilterChain{
+		Filters: filters,
+		Name:    tlsListenerFilterChainName(irRoute),
+	}, nil
 }
 
 func buildConnectionLimitFilter(statPrefix string, connection *ir.ClientConnection) *connection_limitv3.ConnectionLimit {
@@ -1147,4 +1375,51 @@ func buildSetCurrentClientCertDetails(in *ir.HeaderSettings) *hcmv3.HttpConnecti
 	}
 
 	return clientCertDetails
+}
+
+// convertCIDR converts IR CIDR match to Envoy CIDR range
+func convertCIDR(cidr *ir.CIDRMatch) *corev3.CidrRange {
+	if cidr == nil {
+		return nil
+	}
+
+	if cidr.CIDR != "" {
+		ip, ipNet, err := net.ParseCIDR(cidr.CIDR)
+		if err != nil {
+			// fallback to separate fields if provided
+			if cidr.IP == "" {
+				log.Log.WithName("cidr-converter").Error(err, "failed to parse CIDR", "cidr", cidr.CIDR)
+				return nil
+			}
+			return &corev3.CidrRange{
+				AddressPrefix: cidr.IP,
+				PrefixLen:     wrapperspb.UInt32(cidr.MaskLen),
+			}
+		}
+		ones, _ := ipNet.Mask.Size()
+		return &corev3.CidrRange{
+			AddressPrefix: ip.String(),
+			PrefixLen:     wrapperspb.UInt32(uint32(ones)),
+		}
+	}
+
+	if cidr.IP == "" {
+		return nil
+	}
+	return &corev3.CidrRange{
+		AddressPrefix: cidr.IP,
+		PrefixLen:     wrapperspb.UInt32(cidr.MaskLen),
+	}
+}
+
+func convertPrincipals(principal ir.Principal) []*rbacv3.Principal {
+	principals := []*rbacv3.Principal{}
+	for _, cidr := range principal.ClientCIDRs {
+		principals = append(principals, &rbacv3.Principal{
+			Identifier: &rbacv3.Principal_DirectRemoteIp{
+				DirectRemoteIp: convertCIDR(cidr),
+			},
+		})
+	}
+	return principals
 }
