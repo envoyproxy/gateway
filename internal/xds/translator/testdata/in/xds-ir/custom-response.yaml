@@ -40,6 +40,15 @@ http:
                     - value: 404
                 name: backendtrafficpolicy/default/policy-for-gateway/responseoverride/rule/0
                 response:
+                  addResponseHeaders:
+                    - append: true
+                      name: X-Add-Header
+                      value:
+                        - added-404
+                    - append: false
+                      name: X-Set-Header
+                      value:
+                        - set-404
                   body: gateway-1 Not Found
                   contentType: text/plain
               - match:

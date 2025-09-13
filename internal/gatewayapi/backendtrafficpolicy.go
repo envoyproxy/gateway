@@ -1105,6 +1105,24 @@ func buildResponseOverride(policy *egv1a1.BackendTrafficPolicy, resources *resou
 				return nil, err
 			}
 
+			rhm := ro.Response.Header
+			if rhm != nil {
+				for h := range rhm.Add {
+					response.AddResponseHeaders = append(response.AddResponseHeaders, ir.AddHeader{
+						Name:   string(rhm.Add[h].Name),
+						Append: true,
+						Value:  []string{rhm.Add[h].Value},
+					})
+				}
+				for h := range rhm.Set {
+					response.AddResponseHeaders = append(response.AddResponseHeaders, ir.AddHeader{
+						Name:   string(rhm.Set[h].Name),
+						Append: false,
+						Value:  []string{rhm.Set[h].Value},
+					})
+				}
+			}
+
 			rules = append(rules, ir.ResponseOverrideRule{
 				Name:     defaultResponseOverrideRuleName(policy, index),
 				Match:    match,
