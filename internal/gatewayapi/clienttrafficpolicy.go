@@ -72,7 +72,7 @@ func (t *Translator) ProcessClientTrafficPolicies(
 			if hasSectionName(&currTarget) {
 				policy, found := handledPolicies[policyName]
 				if !found {
-					policy = currPolicy.DeepCopy()
+					policy = currPolicy
 					handledPolicies[policyName] = policy
 					res = append(res, policy)
 				}
@@ -169,7 +169,7 @@ func (t *Translator) ProcessClientTrafficPolicies(
 
 				policy, found := handledPolicies[policyName]
 				if !found {
-					policy = currPolicy.DeepCopy()
+					policy = currPolicy
 					res = append(res, policy)
 					handledPolicies[policyName] = policy
 				}
@@ -657,15 +657,27 @@ func translateListenerHeaderSettings(headerSettings *egv1a1.HeaderSettings, http
 		}
 	}
 
+	var errs error
+
 	if headerSettings.EarlyRequestHeaders != nil {
-		headersToAdd, headersToRemove, err := translateEarlyRequestHeaders(headerSettings.EarlyRequestHeaders)
+		headersToAdd, headersToRemove, err := translateHeaderModifier(headerSettings.EarlyRequestHeaders, "EarlyRequestHeaders")
 		if err != nil {
-			return err
+			errs = errors.Join(errs, err)
 		}
 		httpIR.Headers.EarlyAddRequestHeaders = headersToAdd
 		httpIR.Headers.EarlyRemoveRequestHeaders = headersToRemove
 	}
-	return nil
+
+	if headerSettings.LateResponseHeaders != nil {
+		headersToAdd, headersToRemove, err := translateHeaderModifier(headerSettings.LateResponseHeaders, "LateResponseHeaders")
+		if err != nil {
+			errs = errors.Join(errs, err)
+		}
+		httpIR.Headers.LateAddResponseHeaders = headersToAdd
+		httpIR.Headers.LateRemoveResponseHeaders = headersToRemove
+	}
+
+	return errs
 }
 
 func translateHTTP1Settings(http1Settings *egv1a1.HTTP1Settings, connLimitSettings *ir.ConnectionLimit, httpIR *ir.HTTPListener) error {
@@ -990,7 +1002,7 @@ func buildConnection(connection *egv1a1.ClientConnection) (*ir.ClientConnection,
 	return irConnection, nil
 }
 
-func translateEarlyRequestHeaders(headerModifier *egv1a1.HTTPHeaderFilter) ([]ir.AddHeader, []string, error) {
+func translateHeaderModifier(headerModifier *egv1a1.HTTPHeaderFilter, modType string) ([]ir.AddHeader, []string, error) {
 	// Make sure the header modifier config actually exists
 	if headerModifier == nil {
 		return nil, nil, nil
@@ -1009,18 +1021,18 @@ func translateEarlyRequestHeaders(headerModifier *egv1a1.HTTPHeaderFilter) ([]ir
 		for _, addHeader := range headersToAdd {
 			emptyFilterConfig = false
 			if addHeader.Name == "" {
-				errs = errors.Join(errs, fmt.Errorf("EarlyRequestHeaders cannot add a header with an empty name"))
+				errs = errors.Join(errs, fmt.Errorf("%s cannot add a header with an empty name", modType))
 				// try to process the rest of the headers and produce a valid config.
 				continue
 			}
 			// Per Gateway API specification on HTTPHeaderName, : and / are invalid characters in header names
 			if strings.ContainsAny(string(addHeader.Name), "/:") {
-				errs = errors.Join(errs, fmt.Errorf("EarlyRequestHeaders cannot add a header with a '/' or ':' character in them. Header: '%q'", string(addHeader.Name)))
+				errs = errors.Join(errs, fmt.Errorf("%s cannot add a header with a '/' or ':' character in them. Header: '%q'", modType, string(addHeader.Name)))
 				continue
 			}
 			// Gateway API specification allows only valid value as defined by RFC 7230
 			if !HeaderValueRegexp.MatchString(addHeader.Value) {
-				errs = errors.Join(errs, fmt.Errorf("EarlyRequestHeaders cannot add a header with an invalid value. Header: '%q'", string(addHeader.Name)))
+				errs = errors.Join(errs, fmt.Errorf("%s cannot add a header with an invalid value. Header: '%q'", modType, string(addHeader.Name)))
 				continue
 			}
 			// Check if the header is a duplicate
@@ -1055,17 +1067,17 @@ func translateEarlyRequestHeaders(headerModifier *egv1a1.HTTPHeaderFilter) ([]ir
 		for _, setHeader := range headersToSet {
 
 			if setHeader.Name == "" {
-				errs = errors.Join(errs, fmt.Errorf("EarlyRequestHeaders cannot set a header with an empty name"))
+				errs = errors.Join(errs, fmt.Errorf("%s cannot set a header with an empty name", modType))
 				continue
 			}
 			// Per Gateway API specification on HTTPHeaderName, : and / are invalid characters in header names
 			if strings.ContainsAny(string(setHeader.Name), "/:") {
-				errs = errors.Join(errs, fmt.Errorf("EarlyRequestHeaders cannot set a header with a '/' or ':' character in them. Header: '%q'", string(setHeader.Name)))
+				errs = errors.Join(errs, fmt.Errorf("%s cannot set a header with a '/' or ':' character in them. Header: '%q'", modType, string(setHeader.Name)))
 				continue
 			}
 			// Gateway API specification allows only valid value as defined by RFC 7230
 			if !HeaderValueRegexp.MatchString(setHeader.Value) {
-				errs = errors.Join(errs, fmt.Errorf("EarlyRequestHeaders cannot set a header with an invalid value. Header: '%q'", string(setHeader.Name)))
+				errs = errors.Join(errs, fmt.Errorf("%s cannot set a header with an invalid value. Header: '%q'", modType, string(setHeader.Name)))
 				continue
 			}
 
@@ -1100,7 +1112,7 @@ func translateEarlyRequestHeaders(headerModifier *egv1a1.HTTPHeaderFilter) ([]ir
 		}
 		for _, removedHeader := range headersToRemove {
 			if removedHeader == "" {
-				errs = errors.Join(errs, fmt.Errorf("EarlyRequestHeaders cannot remove a header with an empty name"))
+				errs = errors.Join(errs, fmt.Errorf("%s cannot remove a header with an empty name", modType))
 				continue
 			}
 
@@ -1121,7 +1133,7 @@ func translateEarlyRequestHeaders(headerModifier *egv1a1.HTTPHeaderFilter) ([]ir
 
 	// Update the status if the filter failed to configure any valid headers to add/remove
 	if len(AddRequestHeaders) == 0 && len(RemoveRequestHeaders) == 0 && !emptyFilterConfig {
-		errs = errors.Join(errs, fmt.Errorf("EarlyRequestHeaders did not provide valid configuration to add/set/remove any headers"))
+		errs = errors.Join(errs, fmt.Errorf("%s did not provide valid configuration to add/set/remove any headers", modType))
 	}
 
 	return AddRequestHeaders, RemoveRequestHeaders, errs

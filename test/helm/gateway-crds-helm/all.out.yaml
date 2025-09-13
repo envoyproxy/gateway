@@ -17963,8 +17963,7 @@ spec:
                               Defaults to 200 only
                             items:
                               description: HTTPStatus defines the http status code.
-                              exclusiveMaximum: true
-                              maximum: 600
+                              maximum: 599
                               minimum: 100
                               type: integer
                             type: array
@@ -19319,8 +19318,7 @@ spec:
                           The retriable-status-codes trigger must also be configured for these status codes to trigger a retry.
                         items:
                           description: HTTPStatus defines the http status code.
-                          exclusiveMaximum: true
-                          maximum: 600
+                          maximum: 599
                           minimum: 100
                           type: integer
                         type: array
@@ -20352,6 +20350,136 @@ spec:
                       EnableEnvoyHeaders configures Envoy Proxy to add the "X-Envoy-" headers to requests
                       and responses.
                     type: boolean
+                  lateResponseHeaders:
+                    description: LateResponseHeaders defines settings for global response
+                      header modification.
+                    properties:
+                      add:
+                        description: |-
+                          Add adds the given header(s) (name, value) to the request
+                          before the action. It appends to any existing values associated
+                          with the header name.
+
+                          Input:
+                            GET /foo HTTP/1.1
+                            my-header: foo
+
+                          Config:
+                            add:
+                            - name: "my-header"
+                              value: "bar,baz"
+
+                          Output:
+                            GET /foo HTTP/1.1
+                            my-header: foo,bar,baz
+                        items:
+                          description: HTTPHeader represents an HTTP Header name and
+                            value as defined by RFC 7230.
+                          properties:
+                            name:
+                              description: |-
+                                Name is the name of the HTTP Header to be matched. Name matching MUST be
+                                case-insensitive. (See https://tools.ietf.org/html/rfc7230#section-3.2).
+
+                                If multiple entries specify equivalent header names, the first entry with
+                                an equivalent name MUST be considered for a match. Subsequent entries
+                                with an equivalent header name MUST be ignored. Due to the
+                                case-insensitivity of header names, "foo" and "Foo" are considered
+                                equivalent.
+                              maxLength: 256
+                              minLength: 1
+                              pattern: ^[A-Za-z0-9!#$%&'*+\-.^_\x60|~]+$
+                              type: string
+                            value:
+                              description: Value is the value of HTTP Header to be
+                                matched.
+                              maxLength: 4096
+                              minLength: 1
+                              type: string
+                          required:
+                          - name
+                          - value
+                          type: object
+                        maxItems: 64
+                        type: array
+                        x-kubernetes-list-map-keys:
+                        - name
+                        x-kubernetes-list-type: map
+                      remove:
+                        description: |-
+                          Remove the given header(s) from the HTTP request before the action. The
+                          value of Remove is a list of HTTP header names. Note that the header
+                          names are case-insensitive (see
+                          https://datatracker.ietf.org/doc/html/rfc2616#section-4.2).
+
+                          Input:
+                            GET /foo HTTP/1.1
+                            my-header1: foo
+                            my-header2: bar
+                            my-header3: baz
+
+                          Config:
+                            remove: ["my-header1", "my-header3"]
+
+                          Output:
+                            GET /foo HTTP/1.1
+                            my-header2: bar
+                        items:
+                          type: string
+                        maxItems: 64
+                        type: array
+                        x-kubernetes-list-type: set
+                      set:
+                        description: |-
+                          Set overwrites the request with the given header (name, value)
+                          before the action.
+
+                          Input:
+                            GET /foo HTTP/1.1
+                            my-header: foo
+
+                          Config:
+                            set:
+                            - name: "my-header"
+                              value: "bar"
+
+                          Output:
+                            GET /foo HTTP/1.1
+                            my-header: bar
+                        items:
+                          description: HTTPHeader represents an HTTP Header name and
+                            value as defined by RFC 7230.
+                          properties:
+                            name:
+                              description: |-
+                                Name is the name of the HTTP Header to be matched. Name matching MUST be
+                                case-insensitive. (See https://tools.ietf.org/html/rfc7230#section-3.2).
+
+                                If multiple entries specify equivalent header names, the first entry with
+                                an equivalent name MUST be considered for a match. Subsequent entries
+                                with an equivalent header name MUST be ignored. Due to the
+                                case-insensitivity of header names, "foo" and "Foo" are considered
+                                equivalent.
+                              maxLength: 256
+                              minLength: 1
+                              pattern: ^[A-Za-z0-9!#$%&'*+\-.^_\x60|~]+$
+                              type: string
+                            value:
+                              description: Value is the value of HTTP Header to be
+                                matched.
+                              maxLength: 4096
+                              minLength: 1
+                              type: string
+                          required:
+                          - name
+                          - value
+                          type: object
+                        maxItems: 64
+                        type: array
+                        x-kubernetes-list-map-keys:
+                        - name
+                        x-kubernetes-list-type: map
+                    type: object
                   preserveXRequestID:
                     description: |-
                       PreserveXRequestID configures Envoy to keep the X-Request-ID header if passed for a request that is edge
@@ -20809,17 +20937,13 @@ spec:
                       2. Other Routes: ALPN is disabled.
                       3. Backends: proxy uses the appropriate ALPN options for the backend protocol.
                       When an empty list is provided, the ALPN TLS extension is disabled.
-                      Supported values are:
+                      Typical Supported values are:
                       - http/1.0
                       - http/1.1
                       - h2
                     items:
                       description: ALPNProtocol specifies the protocol to be negotiated
                         using ALPN
-                      enum:
-                      - http/1.0
-                      - http/1.1
-                      - h2
                       type: string
                     type: array
                   ciphers:
@@ -21890,8 +22014,7 @@ spec:
                                       items:
                                         description: HTTPStatus defines the http status
                                           code.
-                                        exclusiveMaximum: true
-                                        maximum: 600
+                                        maximum: 599
                                         minimum: 100
                                         type: integer
                                       type: array
@@ -22401,8 +22524,7 @@ spec:
                                   items:
                                     description: HTTPStatus defines the http status
                                       code.
-                                    exclusiveMaximum: true
-                                    maximum: 600
+                                    maximum: 599
                                     minimum: 100
                                     type: integer
                                   type: array
@@ -24012,17 +24134,13 @@ spec:
                       2. Other Routes: ALPN is disabled.
                       3. Backends: proxy uses the appropriate ALPN options for the backend protocol.
                       When an empty list is provided, the ALPN TLS extension is disabled.
-                      Supported values are:
+                      Typical Supported values are:
                       - http/1.0
                       - http/1.1
                       - h2
                     items:
                       description: ALPNProtocol specifies the protocol to be negotiated
                         using ALPN
-                      enum:
-                      - http/1.0
-                      - http/1.1
-                      - h2
                       type: string
                     type: array
                   ciphers:
@@ -34931,8 +35049,7 @@ spec:
                                                           description: HTTPStatus
                                                             defines the http status
                                                             code.
-                                                          exclusiveMaximum: true
-                                                          maximum: 600
+                                                          maximum: 599
                                                           minimum: 100
                                                           type: integer
                                                         type: array
@@ -35491,8 +35608,7 @@ spec:
                                                     items:
                                                       description: HTTPStatus defines
                                                         the http status code.
-                                                      exclusiveMaximum: true
-                                                      maximum: 600
+                                                      maximum: 599
                                                       minimum: 100
                                                       type: integer
                                                     type: array
@@ -36044,8 +36160,7 @@ spec:
                                                           description: HTTPStatus
                                                             defines the http status
                                                             code.
-                                                          exclusiveMaximum: true
-                                                          maximum: 600
+                                                          maximum: 599
                                                           minimum: 100
                                                           type: integer
                                                         type: array
@@ -36604,8 +36719,7 @@ spec:
                                                     items:
                                                       description: HTTPStatus defines
                                                         the http status code.
-                                                      exclusiveMaximum: true
-                                                      maximum: 600
+                                                      maximum: 599
                                                       minimum: 100
                                                       type: integer
                                                     type: array
@@ -37261,8 +37375,7 @@ spec:
                                                   items:
                                                     description: HTTPStatus defines
                                                       the http status code.
-                                                    exclusiveMaximum: true
-                                                    maximum: 600
+                                                    maximum: 599
                                                     minimum: 100
                                                     type: integer
                                                   type: array
@@ -37796,8 +37909,7 @@ spec:
                                               items:
                                                 description: HTTPStatus defines the
                                                   http status code.
-                                                exclusiveMaximum: true
-                                                maximum: 600
+                                                maximum: 599
                                                 minimum: 100
                                                 type: integer
                                               type: array
@@ -38378,8 +38490,7 @@ spec:
                                             items:
                                               description: HTTPStatus defines the
                                                 http status code.
-                                              exclusiveMaximum: true
-                                              maximum: 600
+                                              maximum: 599
                                               minimum: 100
                                               type: integer
                                             type: array
@@ -38909,8 +39020,7 @@ spec:
                                         items:
                                           description: HTTPStatus defines the http
                                             status code.
-                                          exclusiveMaximum: true
-                                          maximum: 600
+                                          maximum: 599
                                           minimum: 100
                                           type: integer
                                         type: array
@@ -40338,8 +40448,7 @@ spec:
                                         items:
                                           description: HTTPStatus defines the http
                                             status code.
-                                          exclusiveMaximum: true
-                                          maximum: 600
+                                          maximum: 599
                                           minimum: 100
                                           type: integer
                                         type: array
@@ -40858,8 +40967,7 @@ spec:
                                     items:
                                       description: HTTPStatus defines the http status
                                         code.
-                                      exclusiveMaximum: true
-                                      maximum: 600
+                                      maximum: 599
                                       minimum: 100
                                       type: integer
                                     type: array
@@ -41347,8 +41455,7 @@ spec:
                                         items:
                                           description: HTTPStatus defines the http
                                             status code.
-                                          exclusiveMaximum: true
-                                          maximum: 600
+                                          maximum: 599
                                           minimum: 100
                                           type: integer
                                         type: array
@@ -41867,8 +41974,7 @@ spec:
                                     items:
                                       description: HTTPStatus defines the http status
                                         code.
-                                      exclusiveMaximum: true
-                                      maximum: 600
+                                      maximum: 599
                                       minimum: 100
                                       type: integer
                                     type: array
@@ -42557,8 +42663,7 @@ spec:
                                               items:
                                                 description: HTTPStatus defines the
                                                   http status code.
-                                                exclusiveMaximum: true
-                                                maximum: 600
+                                                maximum: 599
                                                 minimum: 100
                                                 type: integer
                                               type: array
@@ -43090,8 +43195,7 @@ spec:
                                           items:
                                             description: HTTPStatus defines the http
                                               status code.
-                                            exclusiveMaximum: true
-                                            maximum: 600
+                                            maximum: 599
                                             minimum: 100
                                             type: integer
                                           type: array
@@ -43331,7 +43435,6 @@ spec:
                       By default, its unset.
                     properties:
                       sameSite:
-                        default: Strict
                         enum:
                         - Lax
                         - Strict
@@ -43821,8 +43924,7 @@ spec:
                                         items:
                                           description: HTTPStatus defines the http
                                             status code.
-                                          exclusiveMaximum: true
-                                          maximum: 600
+                                          maximum: 599
                                           minimum: 100
                                           type: integer
                                         type: array
@@ -44341,8 +44443,7 @@ spec:
                                     items:
                                       description: HTTPStatus defines the http status
                                         code.
-                                      exclusiveMaximum: true
-                                      maximum: 600
+                                      maximum: 599
                                       minimum: 100
                                       type: integer
                                     type: array

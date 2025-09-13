@@ -216,7 +216,11 @@ func (c *ControllerResources) DeepCopy() *ControllerResources {
 		return nil
 	}
 	out := make(ControllerResources, len(*c))
-	copy(out, *c)
+	for i, res := range *c {
+		if res != nil {
+			out[i] = res.DeepCopy()
+		}
+	}
 	return &out
 }
 

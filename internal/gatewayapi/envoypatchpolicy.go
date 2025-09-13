@@ -23,7 +23,7 @@ func (t *Translator) ProcessEnvoyPatchPolicies(envoyPatchPolicies []*egv1a1.Envo
 
 	for _, policy := range envoyPatchPolicies {
 		var (
-			policy       = policy.DeepCopy()
+			policy       = policy
 			ancestorRefs []gwapiv1a2.ParentReference
 			resolveErr   *status.PolicyResolveError
 			targetKind   string

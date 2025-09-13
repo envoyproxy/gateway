@@ -14,7 +14,6 @@ import (
 
 	xdscore "github.com/cncf/xds/go/xds/core/v3"
 	matcher "github.com/cncf/xds/go/xds/type/matcher/v3"
-	mutation_rulesv3 "github.com/envoyproxy/go-control-plane/envoy/config/common/mutation_rules/v3"
 	corev3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	listenerv3 "github.com/envoyproxy/go-control-plane/envoy/config/listener/v3"
 	tls_inspectorv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/listener/tls_inspector/v3"
@@ -548,58 +547,8 @@ func buildEarlyHeaderMutation(headers *ir.HeaderSettings) []*corev3.TypedExtensi
 		return nil
 	}
 
-	var mutationRules []*mutation_rulesv3.HeaderMutation
-
-	for _, header := range headers.EarlyAddRequestHeaders {
-		var appendAction corev3.HeaderValueOption_HeaderAppendAction
-		if header.Append {
-			appendAction = corev3.HeaderValueOption_APPEND_IF_EXISTS_OR_ADD
-		} else {
-			appendAction = corev3.HeaderValueOption_OVERWRITE_IF_EXISTS_OR_ADD
-		}
-		// Allow empty headers to be set, but don't add the config to do so unless necessary
-		if len(header.Value) == 0 {
-			mutationRules = append(mutationRules, &mutation_rulesv3.HeaderMutation{
-				Action: &mutation_rulesv3.HeaderMutation_Append{
-					Append: &corev3.HeaderValueOption{
-						Header: &corev3.HeaderValue{
-							Key: header.Name,
-						},
-						AppendAction:   appendAction,
-						KeepEmptyValue: true,
-					},
-				},
-			})
-		} else {
-			for _, val := range header.Value {
-				mutationRules = append(mutationRules, &mutation_rulesv3.HeaderMutation{
-					Action: &mutation_rulesv3.HeaderMutation_Append{
-						Append: &corev3.HeaderValueOption{
-							Header: &corev3.HeaderValue{
-								Key:   header.Name,
-								Value: val,
-							},
-							AppendAction:   appendAction,
-							KeepEmptyValue: val == "",
-						},
-					},
-				})
-			}
-		}
-	}
-
-	for _, header := range headers.EarlyRemoveRequestHeaders {
-		mr := &mutation_rulesv3.HeaderMutation{
-			Action: &mutation_rulesv3.HeaderMutation_Remove{
-				Remove: header,
-			},
-		}
-
-		mutationRules = append(mutationRules, mr)
-	}
-
 	earlyHeaderMutationAny, _ := proto.ToAnyWithValidation(&early_header_mutationv3.HeaderMutation{
-		Mutations: mutationRules,
+		Mutations: buildHeaderMutationRules(headers.EarlyAddRequestHeaders, headers.EarlyRemoveRequestHeaders),
 	})
 
 	return []*corev3.TypedExtensionConfig{
