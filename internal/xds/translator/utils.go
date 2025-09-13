@@ -189,12 +189,14 @@ func addClusterFromURL(url string, tCtx *types.ResourceVersionTable) error {
 		Weight:    ptr.To[uint32](1),
 		Endpoints: []*ir.DestinationEndpoint{ir.NewDestEndpoint(nil, uc.hostname, uc.port, false, nil)},
 		Name:      destinationSettingName(uc.name),
+		Metadata:  nil, // todo miss metadata
 	}
 
 	clusterArgs := &xdsClusterArgs{
 		name:         uc.name,
 		settings:     []*ir.DestinationSetting{ds},
 		endpointType: uc.endpointType,
+		metadata:     ds.Metadata,
 	}
 	if uc.tls {
 		if tSocket, err = buildXdsUpstreamTLSSocket(uc.hostname); err != nil {
