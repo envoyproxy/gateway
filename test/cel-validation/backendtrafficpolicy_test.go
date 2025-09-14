@@ -2125,6 +2125,79 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 			},
 			wantErrors: []string{},
 		},
+		{
+			desc: "valid compression field only",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
+								Group: gwapiv1a2.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1a2.Kind("Gateway"),
+								Name:  gwapiv1a2.ObjectName("eg"),
+							},
+						},
+					},
+					Compression: []*egv1a1.Compression{
+						{
+							Type: egv1a1.GzipCompressorType,
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "valid compressor field only",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
+								Group: gwapiv1a2.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1a2.Kind("Gateway"),
+								Name:  gwapiv1a2.ObjectName("eg"),
+							},
+						},
+					},
+					Compressor: []*egv1a1.Compression{
+						{
+							Type: egv1a1.GzipCompressorType,
+							Gzip: &egv1a1.GzipCompressor{},
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "both compression and compressor fields specified - should fail",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
+								Group: gwapiv1a2.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1a2.Kind("Gateway"),
+								Name:  gwapiv1a2.ObjectName("eg"),
+							},
+						},
+					},
+					Compression: []*egv1a1.Compression{
+						{
+							Type: egv1a1.GzipCompressorType,
+						},
+					},
+					Compressor: []*egv1a1.Compression{
+						{
+							Type:   egv1a1.BrotliCompressorType,
+							Brotli: &egv1a1.BrotliCompressor{},
+						},
+					},
+				}
+			},
+			wantErrors: []string{"either compression or compressor can be set, not both"},
+		},
 	}
 
 	for _, tc := range cases {
