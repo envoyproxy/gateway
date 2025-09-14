@@ -119,6 +119,7 @@ const (
 // ClientValidationContext holds configuration that can be used to validate the client initiating the TLS connection
 // to the Gateway.
 // By default, no client specific configuration is validated.
+// +kubebuilder:validation:XValidation:rule="has(self.onlyVerifyLeafCertificateCrl) ? has(self.crlRef) : true", message="onlyVerifyLeafCertificateCrl can be set only if crlRef is set"
 type ClientValidationContext struct {
 	// Optional set to true accepts connections even when a client doesn't present a certificate.
 	// Defaults to false, which rejects connections without a valid client certificate.
@@ -158,6 +159,21 @@ type ClientValidationContext struct {
 	// matches one of the specified matchers
 	// +optional
 	SubjectAltNames *SubjectAltNames `json:"subjectAltNames,omitempty"`
+
+	// A reference to a Kubernetes ConfigMap or a Kubernetes Secret,
+	// containing the certificate revocation list in PEM format
+	// Expects the content in a key named `crl.pem`.
+	//
+	// References to a resource in different namespace are invalid UNLESS there
+	// is a ReferenceGrant in the target namespace that allows the crl
+	// to be attached.
+	// +optional
+	CrlRef *gwapiv1.SecretObjectReference `json:"crlRef,omitempty"`
+
+	// If this option is set to true,  Envoy will only verify the certificate at the end of the certificate chain against the CRL.
+	// Defaults to false, which will verify the entire certificate chain against the CRL.
+	// +optional
+	OnlyVerifyLeafCertificateCrl *bool `json:"onlyVerifyLeafCertificateCrl,omitempty"`
 }
 
 type SubjectAltNames struct {
