@@ -85,5 +85,10 @@ xdsIR:
     tcp:
     - address: 0.0.0.0
       externalPort: 80
+      metadata:
+        kind: Gateway
+        name: gateway-1
+        namespace: envoy-gateway
+        sectionName: tcp
       name: envoy-gateway/gateway-1/tcp
       port: 10080

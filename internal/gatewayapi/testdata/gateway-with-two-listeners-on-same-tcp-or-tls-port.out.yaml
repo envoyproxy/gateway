@@ -141,6 +141,11 @@ xdsIR:
     tcp:
     - address: 0.0.0.0
       externalPort: 162
+      metadata:
+        kind: Gateway
+        name: gateway-1
+        namespace: envoy-gateway
+        sectionName: tcp1
       name: envoy-gateway/gateway-1/tcp1
       port: 10162
       routes:
