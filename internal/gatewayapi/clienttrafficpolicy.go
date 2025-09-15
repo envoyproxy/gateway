@@ -691,7 +691,7 @@ func translateHTTP1Settings(http1Settings *egv1a1.HTTP1Settings, connection *ir.
 	if connection != nil {
 		if connection.ConnectionLimit != nil {
 			if connection.ConnectionLimit.MaxConnectionDuration != nil {
-				httpIR.HTTP1.DisableSafeMaxConnectionDuration = http1Settings.DisableSafeMaxConnectionDuration
+				httpIR.HTTP1.DisableSafeMaxConnectionDuration = ptr.Deref(http1Settings.DisableSafeMaxConnectionDuration, false)
 			}
 		}
 	}

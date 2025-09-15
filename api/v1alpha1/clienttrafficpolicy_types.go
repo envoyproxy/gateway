@@ -343,7 +343,7 @@ type HTTP1Settings struct {
 	// Has no effect unless maxConnectionDuration is set.
 	//
 	// +optional
-	DisableSafeMaxConnectionDuration bool `json:"disableSafeMaxConnectionDuration,omitempty"`
+	DisableSafeMaxConnectionDuration *bool `json:"disableSafeMaxConnectionDuration,omitempty"`
 }
 
 // HTTP10Settings provides HTTP/1.0 configuration on the listener.
