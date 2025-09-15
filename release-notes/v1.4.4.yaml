@@ -1,0 +1,12 @@
+date: September 15, 2025
+
+security updates: |
+  Updated go mod package `xz` to fix cve-2025-58058.
+  Updated distroless image to resolve glibc CVEs.
+
+bug fixes: |
+  Fixed issue where handling of context-related transient errors to prevent incorrect state reconciliation and unintended behavior.
+  Fixed issue where the `exclusiveMaximum` field in CRD is being set incorrectly.
+  Fixed issue where validation for grpc routes with extension ref filters.
+  Fixed issue where route status has dangling conditions and not cleanup.
+  Fixed issue where add missing patch annotations to `Compression` struct for proper `Merge`.
