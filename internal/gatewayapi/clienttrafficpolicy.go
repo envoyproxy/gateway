@@ -447,7 +447,7 @@ func (t *Translator) translateClientTrafficPolicyForListener(policy *egv1a1.Clie
 		translatePathSettings(policy.Spec.Path, httpIR)
 
 		// Translate HTTP1 Settings
-		if err = translateHTTP1Settings(policy.Spec.HTTP1, ptr.Deref(connection, ir.ClientConnection{}).ConnectionLimit, httpIR); err != nil {
+		if err = translateHTTP1Settings(policy.Spec.HTTP1, connection, httpIR); err != nil {
 			err = perr.WithMessage(err, "HTTP1")
 			errs = errors.Join(errs, err)
 		}
@@ -680,7 +680,7 @@ func translateListenerHeaderSettings(headerSettings *egv1a1.HeaderSettings, http
 	return errs
 }
 
-func translateHTTP1Settings(http1Settings *egv1a1.HTTP1Settings, connLimitSettings *ir.ConnectionLimit, httpIR *ir.HTTPListener) error {
+func translateHTTP1Settings(http1Settings *egv1a1.HTTP1Settings, connection *ir.ClientConnection, httpIR *ir.HTTPListener) error {
 	if http1Settings == nil {
 		return nil
 	}
@@ -688,9 +688,11 @@ func translateHTTP1Settings(http1Settings *egv1a1.HTTP1Settings, connLimitSettin
 		EnableTrailers:     ptr.Deref(http1Settings.EnableTrailers, false),
 		PreserveHeaderCase: ptr.Deref(http1Settings.PreserveHeaderCase, false),
 	}
-	if connLimitSettings != nil {
-		if connLimitSettings.MaxConnectionDuration != nil {
-			httpIR.HTTP1.DisableSafeMaxConnectionDuration = http1Settings.DisableSafeMaxConnectionDuration
+	if connection != nil {
+		if connection.ConnectionLimit != nil {
+			if connection.ConnectionLimit.MaxConnectionDuration != nil {
+				httpIR.HTTP1.DisableSafeMaxConnectionDuration = http1Settings.DisableSafeMaxConnectionDuration
+			}
 		}
 	}
 
