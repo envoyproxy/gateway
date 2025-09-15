@@ -2837,7 +2837,8 @@ spec:
                       maxConnectionDuration:
                         description: |-
                           MaxConnectionDuration is the maximum amount of time a connection can remain established
-                          before being drained and/or closed.
+                          (usually via TCP/HTTP Keepalive packets) before being drained and/or closed.
+                          If not specified, there is no limit.
                         pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                         type: string
                       maxRequestsPerConnection:

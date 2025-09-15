@@ -86,7 +86,8 @@ type ConnectionLimit struct {
 	// +optional
 	CloseDelay *gwapiv1.Duration `json:"closeDelay,omitempty"`
 	// MaxConnectionDuration is the maximum amount of time a connection can remain established
-	// before being drained and/or closed.
+	// (usually via TCP/HTTP Keepalive packets) before being drained and/or closed.
+	// If not specified, there is no limit.
 	//
 	// +optional
 	MaxConnectionDuration *gwapiv1.Duration `json:"maxConnectionDuration,omitempty"`
