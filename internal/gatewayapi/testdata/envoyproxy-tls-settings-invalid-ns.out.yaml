@@ -287,6 +287,10 @@ xdsIR:
     tcp:
     - address: 0.0.0.0
       externalPort: 445
+      metadata:
+        kind: Gateway
+        name: gateway-tls
+        namespace: envoy-gateway
       name: envoy-gateway/gateway-tls/
       port: 10445
       routes:
