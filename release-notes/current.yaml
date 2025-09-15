@@ -8,10 +8,9 @@ security updates: |
 
 # New features or capabilities added in this release.
 new features: |
-  Added support for mTLS configuration for ExtensionServer
-  Added max connection/stream duration and max requests per connection to ClientTrafficPolicy
   Added support for mTLS configuration for ExtensionServer.
   Added support for late response headers in ClientTrafficPolicy.
+  Added max connection/stream duration and max requests per connection to ClientTrafficPolicy.
 
 bug fixes: |
   Fixed %ROUTE_KIND% operator to be lower-cased when used by clusterStatName in EnvoyProxy API.
