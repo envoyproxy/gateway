@@ -1,4 +1,4 @@
-FROM golang:1.24.6 AS builder
+FROM golang:1.24.7 AS builder
 
 ARG GO_LDFLAGS=""
 
