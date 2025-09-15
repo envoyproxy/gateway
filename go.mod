@@ -1,6 +1,6 @@
 module github.com/envoyproxy/gateway
 
-go 1.24.6
+go 1.24.7
 
 // Replace the otelgrpc version because of k8s.io/client-go v0.33.3
 replace go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc v0.61.0 => go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc v0.58.0
