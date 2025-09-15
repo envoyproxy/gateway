@@ -19,7 +19,7 @@ global:
       pullSecrets: []
     ratelimit:
       # This is the full image name including the hub, repo, and tag.
-      image: "docker.io/envoyproxy/ratelimit:3e085e5b"
+      image: "docker.io/envoyproxy/ratelimit:e74a664a"
       # Specify image pull policy if default behavior isn't desired.
       # Default behavior: latest images will be Always else IfNotPresent.
       pullPolicy: IfNotPresent
