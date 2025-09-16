@@ -1,0 +1,36 @@
+date: September 16, 2024
+
+# Changes that are expected to cause an incompatibility with previous versions, such as deletions or modifications to existing APIs.
+breaking changes: |
+
+# Updates addressing vulnerabilities, security flaws, or compliance requirements.
+security updates: |
+  Updated distroless image to resolve glibc CVEs.
+  Bumped Go version to 1.24.7.
+
+# New features or capabilities added in this release.
+new features: |
+
+bug fixes: |
+  Fixed cluster stat name generation to use lowercase names.
+  Resolved nil pointer dereference in configmap indexer.
+  Corrected log formatting to avoid DPANIC errors.
+  Improved context error handling throughout the codebase.
+  Fixed issues with topology injector and local cluster configuration.
+  Updated HTTP status code validation maximum from 600 to 599.
+  Enhanced proxy protocol filter placement as first listener filter.
+
+# Enhancements that improve performance.
+performance improvements: |
+  Optimized pod cache operations.
+  Reduced DeepCopy operations in gateway-api layer.
+  Removed reflection from RouteContext to reduce memory allocations.
+
+# Deprecated features or APIs.
+deprecations: |
+
+# Other notable changes not covered by the above sections.
+Other changes: |
+  Updated BackendTrafficPolicy compression configuration validation.
+  Improved image validation regex for container images.
+  Enhanced targetRef selection for target selectors.

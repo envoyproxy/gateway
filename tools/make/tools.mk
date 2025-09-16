@@ -19,7 +19,7 @@ tools/release-notes-docs = $(tools.bindir)/release-notes-docs
 $(tools.bindir)/%.d/venv: $(tools.srcdir)/%/requirements.txt
 	mkdir -p $(@D)
 	python3 -m venv $@
-	$@/bin/pip3 install -r $< || (rm -rf $@; exit 1)
+	$@/bin/pip3 install --trusted-host pypi.org --trusted-host files.pythonhosted.org --disable-pip-version-check -r $< || (rm -rf $@; exit 1)
 $(tools.bindir)/%: $(tools.bindir)/%.d/venv	
 	@if [ -e $(tools.srcdir)/$*/$*.sh ]; then \
 		ln -sf ../../$(tools.srcdir)/$*/$*.sh $@; \
