@@ -903,7 +903,7 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 				}
 			},
 			wantErrors: []string{
-				`spec.HealthCheck.active.http.expectedStatuses[2]: Invalid value: 601: spec.HealthCheck.active.http.expectedStatuses[2] in body should be less than 600`,
+				`spec.HealthCheck.active.http.expectedStatuses[2]: Invalid value: 601: spec.HealthCheck.active.http.expectedStatuses[2] in body should be less than or equal to 599`,
 			},
 		},
 		{
