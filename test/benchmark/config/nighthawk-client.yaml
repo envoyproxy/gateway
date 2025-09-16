@@ -11,6 +11,7 @@ spec:
         - name: nighthawk-client
           image: envoyproxy/nighthawk-dev:latest
           imagePullPolicy: IfNotPresent
-          args: ["nighthawk_client"]  # Fill-up args at runtime
+          command:
+            - /usr/local/bin/nighthawk_client
       restartPolicy: Never
   backoffLimit: 3
