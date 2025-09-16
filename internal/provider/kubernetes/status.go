@@ -103,8 +103,16 @@ func (r *gatewayAPIReconciler) subscribeAndUpdateStatus(ctx context.Context, ext
 							errChan <- err
 							panic(err)
 						}
-						hCopy := h.DeepCopy()
-						hCopy.Status.Parents = mergeRouteParentStatus(h.Namespace, r.envoyGateway.Gateway.ControllerName, h.Status.Parents, val.Parents)
+						hCopy := &gwapiv1.HTTPRoute{
+							TypeMeta:   h.TypeMeta,
+							ObjectMeta: h.ObjectMeta,
+							Spec:       h.Spec,
+							Status: gwapiv1.HTTPRouteStatus{
+								RouteStatus: gwapiv1.RouteStatus{
+									Parents: mergeRouteParentStatus(h.Namespace, r.envoyGateway.Gateway.ControllerName, h.Status.Parents, val.Parents),
+								},
+							},
+						}
 						return hCopy
 					}),
 				})
@@ -133,8 +141,16 @@ func (r *gatewayAPIReconciler) subscribeAndUpdateStatus(ctx context.Context, ext
 							errChan <- err
 							panic(err)
 						}
-						gCopy := g.DeepCopy()
-						gCopy.Status.Parents = mergeRouteParentStatus(g.Namespace, r.envoyGateway.Gateway.ControllerName, g.Status.Parents, val.Parents)
+						gCopy := &gwapiv1.GRPCRoute{
+							TypeMeta:   g.TypeMeta,
+							ObjectMeta: g.ObjectMeta,
+							Spec:       g.Spec,
+							Status: gwapiv1.GRPCRouteStatus{
+								RouteStatus: gwapiv1.RouteStatus{
+									Parents: mergeRouteParentStatus(g.Namespace, r.envoyGateway.Gateway.ControllerName, g.Status.Parents, val.Parents),
+								},
+							},
+						}
 						return gCopy
 					}),
 				})
@@ -165,8 +181,16 @@ func (r *gatewayAPIReconciler) subscribeAndUpdateStatus(ctx context.Context, ext
 							errChan <- err
 							panic(err)
 						}
-						tCopy := t.DeepCopy()
-						tCopy.Status.Parents = mergeRouteParentStatus(t.Namespace, r.envoyGateway.Gateway.ControllerName, t.Status.Parents, val.Parents)
+						tCopy := &gwapiv1a2.TLSRoute{
+							TypeMeta:   t.TypeMeta,
+							ObjectMeta: t.ObjectMeta,
+							Spec:       t.Spec,
+							Status: gwapiv1a2.TLSRouteStatus{
+								RouteStatus: gwapiv1.RouteStatus{
+									Parents: mergeRouteParentStatus(t.Namespace, r.envoyGateway.Gateway.ControllerName, t.Status.Parents, val.Parents),
+								},
+							},
+						}
 						return tCopy
 					}),
 				})
@@ -197,8 +221,16 @@ func (r *gatewayAPIReconciler) subscribeAndUpdateStatus(ctx context.Context, ext
 							errChan <- err
 							panic(err)
 						}
-						tCopy := t.DeepCopy()
-						tCopy.Status.Parents = mergeRouteParentStatus(t.Namespace, r.envoyGateway.Gateway.ControllerName, t.Status.Parents, val.Parents)
+						tCopy := &gwapiv1a2.TCPRoute{
+							TypeMeta:   t.TypeMeta,
+							ObjectMeta: t.ObjectMeta,
+							Spec:       t.Spec,
+							Status: gwapiv1a2.TCPRouteStatus{
+								RouteStatus: gwapiv1.RouteStatus{
+									Parents: mergeRouteParentStatus(t.Namespace, r.envoyGateway.Gateway.ControllerName, t.Status.Parents, val.Parents),
+								},
+							},
+						}
 						return tCopy
 					}),
 				})
@@ -229,8 +261,16 @@ func (r *gatewayAPIReconciler) subscribeAndUpdateStatus(ctx context.Context, ext
 							errChan <- err
 							panic(err)
 						}
-						uCopy := u.DeepCopy()
-						uCopy.Status.Parents = mergeRouteParentStatus(u.Namespace, r.envoyGateway.Gateway.ControllerName, u.Status.Parents, val.Parents)
+						uCopy := &gwapiv1a2.UDPRoute{
+							TypeMeta:   u.TypeMeta,
+							ObjectMeta: u.ObjectMeta,
+							Spec:       u.Spec,
+							Status: gwapiv1a2.UDPRouteStatus{
+								RouteStatus: gwapiv1.RouteStatus{
+									Parents: mergeRouteParentStatus(u.Namespace, r.envoyGateway.Gateway.ControllerName, u.Status.Parents, val.Parents),
+								},
+							},
+						}
 						return uCopy
 					}),
 				})
@@ -261,8 +301,12 @@ func (r *gatewayAPIReconciler) subscribeAndUpdateStatus(ctx context.Context, ext
 							errChan <- err
 							panic(err)
 						}
-						tCopy := t.DeepCopy()
-						tCopy.Status = *val
+						tCopy := &egv1a1.EnvoyPatchPolicy{
+							TypeMeta:   t.TypeMeta,
+							ObjectMeta: t.ObjectMeta,
+							Spec:       t.Spec,
+							Status:     *val,
+						}
 						return tCopy
 					}),
 				})
@@ -293,8 +337,12 @@ func (r *gatewayAPIReconciler) subscribeAndUpdateStatus(ctx context.Context, ext
 							errChan <- err
 							panic(err)
 						}
-						tCopy := t.DeepCopy()
-						tCopy.Status = *val
+						tCopy := &egv1a1.ClientTrafficPolicy{
+							TypeMeta:   t.TypeMeta,
+							ObjectMeta: t.ObjectMeta,
+							Spec:       t.Spec,
+							Status:     *val,
+						}
 						return tCopy
 					}),
 				})
@@ -325,8 +373,12 @@ func (r *gatewayAPIReconciler) subscribeAndUpdateStatus(ctx context.Context, ext
 							errChan <- err
 							panic(err)
 						}
-						tCopy := t.DeepCopy()
-						tCopy.Status = *val
+						tCopy := &egv1a1.BackendTrafficPolicy{
+							TypeMeta:   t.TypeMeta,
+							ObjectMeta: t.ObjectMeta,
+							Spec:       t.Spec,
+							Status:     *val,
+						}
 						return tCopy
 					}),
 				})
@@ -357,8 +409,12 @@ func (r *gatewayAPIReconciler) subscribeAndUpdateStatus(ctx context.Context, ext
 							errChan <- err
 							panic(err)
 						}
-						tCopy := t.DeepCopy()
-						tCopy.Status = *val
+						tCopy := &egv1a1.SecurityPolicy{
+							TypeMeta:   t.TypeMeta,
+							ObjectMeta: t.ObjectMeta,
+							Spec:       t.Spec,
+							Status:     *val,
+						}
 						return tCopy
 					}),
 				})
@@ -387,8 +443,12 @@ func (r *gatewayAPIReconciler) subscribeAndUpdateStatus(ctx context.Context, ext
 							errChan <- err
 							panic(err)
 						}
-						tCopy := t.DeepCopy()
-						tCopy.Status = *val
+						tCopy := &gwapiv1a3.BackendTLSPolicy{
+							TypeMeta:   t.TypeMeta,
+							ObjectMeta: t.ObjectMeta,
+							Spec:       t.Spec,
+							Status:     *val,
+						}
 						return tCopy
 					}),
 				})
@@ -419,8 +479,12 @@ func (r *gatewayAPIReconciler) subscribeAndUpdateStatus(ctx context.Context, ext
 							errChan <- err
 							panic(err)
 						}
-						tCopy := t.DeepCopy()
-						tCopy.Status = *val
+						tCopy := &egv1a1.EnvoyExtensionPolicy{
+							TypeMeta:   t.TypeMeta,
+							ObjectMeta: t.ObjectMeta,
+							Spec:       t.Spec,
+							Status:     *val,
+						}
 						return tCopy
 					}),
 				})
@@ -451,8 +515,12 @@ func (r *gatewayAPIReconciler) subscribeAndUpdateStatus(ctx context.Context, ext
 							errChan <- err
 							panic(err)
 						}
-						tCopy := t.DeepCopy()
-						tCopy.Status = *val
+						tCopy := &egv1a1.Backend{
+							TypeMeta:   t.TypeMeta,
+							ObjectMeta: t.ObjectMeta,
+							Spec:       t.Spec,
+							Status:     *val,
+						}
 						return tCopy
 					}),
 				})
